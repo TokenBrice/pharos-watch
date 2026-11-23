@@ -1,8 +1,8 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { getCronQualityReasons } from "@shared/lib/cron-quality-reasons";
+import { getCronQualityReasons as qualReasons } from "@shared/lib/cron-quality-reasons";
 import type { DatabaseSync } from "node:sqlite";
 import type { D1Database } from "@shared/types/cloudflare-runtime";
-import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { createLatestSchemaSqlite as mkSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import type { StablecoinData } from "@shared/types/supply";
 import type { DexApiPool } from "../../lib/dex-api-common";
@@ -11,656 +11,249 @@ import type { CronProgressReporter, CronProgressUpdate, CronResult } from "../..
 import type { LlamaPool, PoolEntry } from "../dex-liquidity/types";
 import type { PoolProcessingRejection } from "../dex-liquidity/process-pool-types";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
-import * as priceValidation from "../../lib/price-validation";
-import * as realPoolShaping from "../../lib/dex-api-pool-shaping";
+import * as priceVal from "../../lib/price-validation";
+import * as poolShaping from "../../lib/dex-api-pool-shaping";
 import { CRON_TIMEOUT_MS, createSlotDeadline } from "../../lib/cron-timeouts";
-import { getCronMetadataBudgetBytes } from "../../lib/cron-metadata-persistence";
-import { DexLiquidityCronMetadataSchema } from "../../lib/schemas";
-import * as v2Enrichment from "../dex-liquidity/constant-product-v2";
-import * as quoterEnrichment from "../dex-liquidity/enrich-quoter-v2-targets";
-import * as v4Enrichment from "../dex-liquidity/uniswap-v4-identity";
-import * as priceRefresh from "../dex-liquidity/price-refresh";
+import { getCronMetadataBudgetBytes as metaBudget } from "../../lib/cron-metadata-persistence";
+import { DexLiquidityCronMetadataSchema as MetaSchema } from "../../lib/schemas";
+import * as v2Enrich from "../dex-liquidity/constant-product-v2";
+import * as quoterEnrich from "../dex-liquidity/enrich-quoter-v2-targets";
+import * as v4Enrich from "../dex-liquidity/uniswap-v4-identity";
+import * as priceRef from "../dex-liquidity/price-refresh";
 import { CURVE_CHAINS } from "../dex-liquidity/constants";
-import { buildStagedPoolWriteback } from "../dex-liquidity/staged-pool-writeback";
+import { buildStagedPoolWriteback as buildWb } from "../dex-liquidity/staged-pool-writeback";
 
-afterEach(() => {
-  vi.restoreAllMocks();
-});
+afterEach(() => { vi.restoreAllMocks(); });
 
-const phaseFixtures = vi.hoisted(() => {
-  function primary(overrides: Record<string, unknown> = {}) {
-    return {
-      pools: [],
-      rawPoolCount: 0,
-      poolRejections: [] as PoolProcessingRejection[],
-      dexProjects: new Set<string>(),
-      protocolTvlCaps: new Map<string, number>(),
-      curvePayloads: [],
-      curveFailedChains: [],
-      graphApiKey: "graph-key",
-      dlYieldsAvailable: true,
-      dlProtocolsAvailable: true,
-      ...overrides,
-    };
-  }
-
-  function stagedPools() {
-    return {
-      registryEvaluatedAtSec: Math.floor(Date.now() / 1000),
-      mergedCount: 0,
-      skippedCount: 0,
-      skippedByExactIdentityCount: 0,
-      skippedByUniqueDerivedIdentityCount: 0,
-      skippedByOptionalWildcardIdentityCount: 0,
-      skippedByAuthoritativeProtocolCount: 0,
-      skipDimensions: [],
-      priceObservations: new Map(),
-      registryRowsRead: 0,
-      registryMultiSourcePools: 0,
-      registryFamilyBySource: {},
-      deadPoolUnindexedChainSkips: {},
-    };
-  }
-
-  function diagnostics(extra: Record<string, unknown> = {}) {
-    return {
-      protocolTvlQuarantine: { reason: "fallback-protocol-tvl-exceeds-headroom", poolCount: 0, protocolCount: 0, tvlUsd: 0 },
-      globalProtocolOverCapUsd: 0,
-      measuredTargetFunnel: { stageOrigin: "scheduled", groups: [], groupsOmitted: 0, sourceFailures: [], sourceFailuresOmitted: 0 },
-      routeRemovalEvidence: new Map(), ...extra,
-    };
-  }
-
-  function scored(extra: Record<string, unknown> = {}) {
-    return {
-      scoredMetrics: new Map(),
-      measuredTargetInventory: { mode: "active", active: [], shadow: [] },
-      scores: new Map([["usdt-tether", { coverageClass: "primary", tvl: 0 }]]),
-      globalAgg: { totalTvl: 0 },
-      retainedPoolsByStablecoin: new Map(),
-      tvlStabilityMap: new Map(),
-      diagnostics: diagnostics({ fallbackCounters: { tvlDepthMcapFallback: 2, retainedExclusionBlockedDex: 1 } }), ...extra,
-    };
-  }
-
-  function create(overrides: Record<string, unknown> = {}) {
-    return {
-      directApi: { pools: [], ok: true, degraded: false, errors: [] as string[] },
-      uniV3: {
-        uniV3PoolFees: new Map(),
-        uniV3SymbolFees: new Map(),
-        uniV3PriceObs: new Map(),
-        uniV3ExecutionCandidates: new Map(),
-        failedChains: [],
-        chainFailures: [],
-      },
-      uniswapV4: {
-        uniswapV4ExecutionCandidates: new Map(), failedChains: [], chainFailures: [], exactAnsweredPoolIdsByChain: new Map(),
-      },
-      primary: primary(),
-      curve: { curvePoolMap: new Map(), priceObservations: new Map() },
-      knownPools: {
-        exactKeys: new Set<string>(),
-        exactStablecoinIdsByKey: new Map<string, Set<string>>(),
-        derivedKeyCounts: new Map<string, number>(),
-        derivedToExactKeys: new Map<string, Set<string>>(),
-        wildcardKeyCounts: new Map<string, number>(),
-        wildcardToExactKeys: new Map<string, Set<string>>(),
-        concreteFeeVariantKeys: new Map<string, Set<string>>(),
-      },
-      poolMetrics: { metrics: new Map(), rejections: [] },
-      stagedPools: stagedPools(),
-      scores: scored(),
-      stablecoinsCache: { kind: "error" as const, reason: "missing-cache" as const, updatedAt: null },
-      challenger: { publishedStablecoins: 0, skippedStablecoins: 0 },
-      ...overrides,
-    };
-  }
-
+const fx = vi.hoisted(() => {
+  const primary = (o: Record<string, unknown> = {}) => ({ pools: [], rawPoolCount: 0, poolRejections: [] as PoolProcessingRejection[], dexProjects: new Set<string>(), protocolTvlCaps: new Map<string, number>(), curvePayloads: [], curveFailedChains: [], graphApiKey: "graph-key", dlYieldsAvailable: true, dlProtocolsAvailable: true, ...o });
+  const stagedPools = () => ({ registryEvaluatedAtSec: Math.floor(Date.now() / 1e3), mergedCount: 0, skippedCount: 0, skippedByExactIdentityCount: 0, skippedByUniqueDerivedIdentityCount: 0, skippedByOptionalWildcardIdentityCount: 0, skippedByAuthoritativeProtocolCount: 0, skipDimensions: [], priceObservations: new Map(), registryRowsRead: 0, registryMultiSourcePools: 0, registryFamilyBySource: {}, deadPoolUnindexedChainSkips: {} });
+  const diagnostics = (e: Record<string, unknown> = {}) => ({ protocolTvlQuarantine: { reason: "fallback-protocol-tvl-exceeds-headroom", poolCount: 0, protocolCount: 0, tvlUsd: 0 }, globalProtocolOverCapUsd: 0, measuredTargetFunnel: { stageOrigin: "scheduled", groups: [], groupsOmitted: 0, sourceFailures: [], sourceFailuresOmitted: 0 }, routeRemovalEvidence: new Map(), ...e });
+  const scored = (e: Record<string, unknown> = {}) => ({ scoredMetrics: new Map(), measuredTargetInventory: { mode: "active", active: [], shadow: [] }, scores: new Map([["usdt-tether", { coverageClass: "primary", tvl: 0 }]]), globalAgg: { totalTvl: 0 }, retainedPoolsByStablecoin: new Map(), tvlStabilityMap: new Map(), diagnostics: diagnostics({ fallbackCounters: { tvlDepthMcapFallback: 2, retainedExclusionBlockedDex: 1 } }), ...e });
+  const create = (o: Record<string, unknown> = {}) => ({
+    directApi: { pools: [], ok: true, degraded: false, errors: [] as string[] },
+    uniV3: { uniV3PoolFees: new Map(), uniV3SymbolFees: new Map(), uniV3PriceObs: new Map(), uniV3ExecutionCandidates: new Map(), failedChains: [], chainFailures: [] },
+    uniswapV4: { uniswapV4ExecutionCandidates: new Map(), failedChains: [], chainFailures: [], exactAnsweredPoolIdsByChain: new Map() },
+    primary: primary(), curve: { curvePoolMap: new Map(), priceObservations: new Map() },
+    knownPools: { exactKeys: new Set<string>(), exactStablecoinIdsByKey: new Map<string, Set<string>>(), derivedKeyCounts: new Map<string, number>(), derivedToExactKeys: new Map<string, Set<string>>(), wildcardKeyCounts: new Map<string, number>(), wildcardToExactKeys: new Map<string, Set<string>>(), concreteFeeVariantKeys: new Map<string, Set<string>>() },
+    poolMetrics: { metrics: new Map(), rejections: [] }, stagedPools: stagedPools(), scores: scored(),
+    stablecoinsCache: { kind: "error" as const, reason: "missing-cache" as const, updatedAt: null }, challenger: { publishedStablecoins: 0, skippedStablecoins: 0 }, ...o,
+  });
   let current = create();
-  return {
-    primary, stagedPools, scored, diagnostics,
-    get current() {
-      return current;
-    },
-    reset(overrides: Record<string, unknown> = {}) {
-      current = create(overrides);
-    },
-  };
+  return { primary, stagedPools, scored, diagnostics, get current() { return current; }, reset(o: Record<string, unknown> = {}) { current = create(o); } };
 });
 
-function makeDirectApiResult() {
-  return phaseFixtures.current.directApi;
-}
+const directRes = () => fx.current.directApi;
+const deferred = <T,>() => { let resolve!: (v: T) => void; return { promise: new Promise<T>((r) => { resolve = r; }), resolve }; };
 
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  const promise = new Promise<T>((res) => {
-    resolve = res;
-  });
-  return { promise, resolve };
-}
-
-vi.mock("../dex-liquidity/subgraph-source-families", () => ({
-  fetchUniV3Data: vi.fn(async () => phaseFixtures.current.uniV3),
-  fetchUniswapV4Data: vi.fn(async () => phaseFixtures.current.uniswapV4),
-}));
-
-vi.mock("../dex-liquidity/fetch-primary", () => ({
-  fetchDataSources: vi.fn(async () => phaseFixtures.current.primary),
-  buildCurveLookups: vi.fn(async () => phaseFixtures.current.curve),
-  buildKnownPoolAddresses: vi.fn(() => phaseFixtures.current.knownPools),
-}));
-
-vi.mock("../dex-liquidity/process-pools", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../dex-liquidity/process-pools")>()),
-  processPoolMetrics: vi.fn(() => phaseFixtures.current.poolMetrics),
-}));
-
+vi.mock("../dex-liquidity/subgraph-source-families", () => ({ fetchUniV3Data: vi.fn(async () => fx.current.uniV3), fetchUniswapV4Data: vi.fn(async () => fx.current.uniswapV4) }));
+vi.mock("../dex-liquidity/fetch-primary", () => ({ fetchDataSources: vi.fn(async () => fx.current.primary), buildCurveLookups: vi.fn(async () => fx.current.curve), buildKnownPoolAddresses: vi.fn(() => fx.current.knownPools) }));
+vi.mock("../dex-liquidity/process-pools", async (io) => ({ ...(await io<typeof import("../dex-liquidity/process-pools")>()), processPoolMetrics: vi.fn(() => fx.current.poolMetrics) }));
 vi.mock("../dex-liquidity/staging-merge", async () => {
-  const { buildStagedPoolWriteback } = await import("../dex-liquidity/staged-pool-writeback");
-  const { captureObservedPoolPrices } = await import("../dex-liquidity/price-refresh");
-  return {
-    mergeStagedPools: vi.fn<typeof import("../dex-liquidity/staging-merge").mergeStagedPools>(async (_db, metrics, _known, now, _tracked, _references, _confirmation, _counters, _signal, priceObservations) => ({
-      ...phaseFixtures.current.stagedPools,
-      stagedWriteback: buildStagedPoolWriteback(metrics, now),
-      observedThisRun: captureObservedPoolPrices({ metrics, priceObservations }, now),
-    })),
-  };
+  const { buildStagedPoolWriteback: wb } = await import("../dex-liquidity/staged-pool-writeback");
+  const { captureObservedPoolPrices: cap } = await import("../dex-liquidity/price-refresh");
+  return { mergeStagedPools: vi.fn<typeof import("../dex-liquidity/staging-merge").mergeStagedPools>(async (_db, m, _k, now, _t, _r, _c, _cn, _s, obs) => ({ ...fx.current.stagedPools, stagedWriteback: wb(m, now), observedThisRun: cap({ metrics: m, priceObservations: obs }, now) })) };
 });
+vi.mock("../dex-liquidity/scoring", () => ({ loadCurrentDexScoringGenerationId: vi.fn(async () => null), computeStablecoinScores: vi.fn(async () => fx.current.scores), publishStablecoinScoreTargets: vi.fn(async () => {}), computeDexPrices: vi.fn(async () => {}) }));
+vi.mock("../dex-liquidity/persistence", () => ({ persistScores: vi.fn(async (_db, _m, _s, _g, nowSec: number) => ({ generationId: `dex-liquidity-${nowSec}` })), writeHistoricalSnapshots: vi.fn(async () => {}), buildDexLiquidityPublicationGenerationId: (s: number) => `dex-liquidity-${s}` }));
 
-vi.mock("../dex-liquidity/scoring", () => ({
-  loadCurrentDexScoringGenerationId: vi.fn(async () => null),
-  computeStablecoinScores: vi.fn(async () => phaseFixtures.current.scores),
-  publishStablecoinScoreTargets: vi.fn(async () => {}),
-  computeDexPrices: vi.fn(async () => {}),
-}));
-
-vi.mock("../dex-liquidity/persistence", () => ({
-  persistScores: vi.fn(async (_db, _metrics, _scores, _globalAgg, nowSec: number) => ({
-    generationId: `dex-liquidity-${nowSec}`,
-  })),
-  writeHistoricalSnapshots: vi.fn(async () => {}),
-  buildDexLiquidityPublicationGenerationId: (startSec: number) => `dex-liquidity-${startSec}`,
-}));
-
-// SQLite round-trips live in scoring-stage.test.ts; this buffer exchanges the same encoded input.
-const scoringStage = vi.hoisted(() => ({
-  chunks: [] as Array<{ payload: string; payloadBytes: number; recordCount: number }>,
-  sourceSlotStartedAt: 0,
-  syncStartSec: 0,
-}));
-
+const stageBuf = vi.hoisted(() => ({ chunks: [] as Array<{ payload: string; payloadBytes: number; recordCount: number }>, sourceSlotStartedAt: 0, syncStartSec: 0 }));
 vi.mock("../dex-liquidity/scoring-stage", async () => {
-  const actual = await vi.importActual<typeof import("../dex-liquidity/scoring-stage")>(
-    "../dex-liquidity/scoring-stage",
-  );
-  const loadStoredStage = async () => {
-    const decoded = actual.decodeDexLiquidityScoringStageChunks(scoringStage.chunks);
-    return {
-      generationId: `dex-liquidity-scoring-stage:${scoringStage.sourceSlotStartedAt}`,
-      sourceSlotStartedAt: scoringStage.sourceSlotStartedAt,
-      syncStartSec: scoringStage.syncStartSec,
-      sourceState: decoded.sourceState,
-      poolState: decoded.poolState,
-    };
-  };
+  const a = await vi.importActual<typeof import("../dex-liquidity/scoring-stage")>("../dex-liquidity/scoring-stage");
+  const load = async () => { const d = a.decodeDexLiquidityScoringStageChunks(stageBuf.chunks); return { generationId: `dex-liquidity-scoring-stage:${stageBuf.sourceSlotStartedAt}`, sourceSlotStartedAt: stageBuf.sourceSlotStartedAt, syncStartSec: stageBuf.syncStartSec, sourceState: d.sourceState, poolState: d.poolState }; };
   return {
-    ...actual,
-    persistDexLiquidityScoringStage: vi.fn(
-      async (_db: D1Database, input: Parameters<typeof actual.persistDexLiquidityScoringStage>[1]) => {
-        scoringStage.chunks = [];
-        let recordCount = 0;
-        let payloadBytes = 0;
-        for (const chunk of actual.encodeDexLiquidityScoringStageChunks(
-          input.sourceState,
-          input.poolState,
-          actual.DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES,
-          true,
-        )) {
-          scoringStage.chunks.push({ ...chunk });
-          recordCount += chunk.recordCount;
-          payloadBytes += chunk.payloadBytes;
-        }
-        scoringStage.sourceSlotStartedAt = input.sourceSlotStartedAt;
-        scoringStage.syncStartSec = input.syncStartSec;
-        return {
-          generationId: `dex-liquidity-scoring-stage:${input.sourceSlotStartedAt}`,
-          sourceSlotStartedAt: input.sourceSlotStartedAt,
-          chunkCount: scoringStage.chunks.length,
-          recordCount,
-          payloadBytes,
-          retention: {
-            cutoff: 0,
-            deletedRows: 0,
-            deletedChunkRows: 0,
-            deletedStageRows: 0,
-            oldestRemainingAt: null,
-            durationMs: 0,
-            error: null,
-          },
-        };
-      },
-    ),
-    loadDexLiquidityScoringStage: vi.fn(loadStoredStage),
-    loadDexLiquidityScoringStageWhenReady: vi.fn(loadStoredStage),
-    markDexLiquidityScoringStageConsumed: vi.fn(async () => {}),
-  };
-});
-
-vi.mock("../dex-liquidity/challenger-publish", async () => {
-  const actual = await vi.importActual<typeof import("../dex-liquidity/challenger-publish")>(
-    "../dex-liquidity/challenger-publish",
-  );
-  return {
-    ...actual,
-    publishDexPriceChallengerSnapshots: vi.fn(async () => phaseFixtures.current.challenger),
-  };
-});
-
-vi.mock("../dex-liquidity/fetch-fallbacks", () => ({
-  getFallbackTargets: vi.fn(() => []),
-}));
-
-vi.mock("../dex-liquidity/fetch-fluid", () => ({ fetchFluidPools: vi.fn(async () => makeDirectApiResult()) }));
-vi.mock("../dex-liquidity/fetch-balancer", () => ({ fetchBalancerPools: vi.fn(async () => makeDirectApiResult()) }));
-vi.mock("../dex-liquidity/fetch-raydium", () => ({ fetchRaydiumPools: vi.fn(async () => makeDirectApiResult()) }));
-vi.mock("../dex-liquidity/fetch-orca", () => ({ fetchOrcaPools: vi.fn(async () => makeDirectApiResult()) }));
-vi.mock("../dex-liquidity/fetch-meteora", () => ({ fetchMeteoraPools: vi.fn(async () => makeDirectApiResult()) }));
-vi.mock("../dex-liquidity/fetch-pancakeswap", () => ({
-  fetchPancakeSwapPools: vi.fn(async () => makeDirectApiResult()),
-}));
-vi.mock("../dex-liquidity/fetch-slipstream", () => ({
-  fetchSlipstreamPools: vi.fn(async () => makeDirectApiResult()),
-}));
-vi.mock("../dex-liquidity/fetch-aero", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../dex-liquidity/fetch-aero")>()),
-  fetchAeroSlipstreamPools: vi.fn(async () => makeDirectApiResult()),
-  fetchAeroBasicPools: vi.fn(async () => makeDirectApiResult()),
-}));
-vi.mock("../dex-liquidity/fetch-uniswap-v3-bsc", () => ({
-  fetchUniswapV3BscShadowPools: vi.fn(async () => makeDirectApiResult()),
-}));
-vi.mock("../../lib/stablecoins-cache", async () => {
-  const actual = await vi.importActual<typeof import("../../lib/stablecoins-cache")>("../../lib/stablecoins-cache");
-  return {
-    ...actual,
-    loadStablecoinsCache: vi.fn(async () => phaseFixtures.current.stablecoinsCache),
-  };
-});
-vi.mock("../../lib/dex-api-common", async () => {
-  const actual = await vi.importActual<typeof import("../../lib/dex-api-common")>("../../lib/dex-api-common");
-  return {
-    ...actual,
-    convertToGtNewPools: vi.fn(() => new Map()),
-    extractPriceObservations: vi.fn(() => new Map()),
-  };
-});
-
-import {
-  DEX_LIQUIDITY_STAGE_LEAD_SEC,
-  getCronSlotStartedAtForSchedule,
-} from "@shared/lib/cron-jobs";
-import {
-  consumeDexLiquidityScoringStage as consumeScoringStage,
-  filterPrimaryPoolsPreferDirectApi,
-  stageDexLiquidityScoring,
-} from "../dex-liquidity/orchestrator";
-import {
-  MissingDexLiquidityScoringStageError,
-  loadDexLiquidityScoringStage,
-  loadDexLiquidityScoringStageWhenReady,
-  markDexLiquidityScoringStageConsumed,
-  persistDexLiquidityScoringStage as persistStage,
-} from "../dex-liquidity/scoring-stage";
-import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
-import { convertToGtNewPools, extractPriceObservations } from "../../lib/dex-api-common";
-import { buildCurveLookups, fetchDataSources, buildKnownPoolAddresses } from "../dex-liquidity/fetch-primary";
-import { fetchUniV3Data } from "../dex-liquidity/subgraph-source-families";
-import { fetchFluidPools } from "../dex-liquidity/fetch-fluid";
-import { fetchBalancerPools } from "../dex-liquidity/fetch-balancer";
-import { fetchRaydiumPools } from "../dex-liquidity/fetch-raydium";
-import { fetchOrcaPools } from "../dex-liquidity/fetch-orca";
-import { fetchMeteoraPools } from "../dex-liquidity/fetch-meteora";
-import { fetchPancakeSwapPools } from "../dex-liquidity/fetch-pancakeswap";
-import { fetchSlipstreamPools } from "../dex-liquidity/fetch-slipstream";
-import { fetchUniswapV3BscShadowPools } from "../dex-liquidity/fetch-uniswap-v3-bsc";
-import {
-  computeDexPrices,
-  computeStablecoinScores,
-  publishStablecoinScoreTargets as publishTargets,
-  loadCurrentDexScoringGenerationId,
-} from "../dex-liquidity/scoring";
-import { logCronRun } from "../../lib/cron-logger";
-import { persistScores, writeHistoricalSnapshots } from "../dex-liquidity/persistence";
-import { publishDexPriceChallengerSnapshots } from "../dex-liquidity/challenger-publish";
-import { buildSymbolLookups } from "../dex-liquidity/pool-helpers";
-import { processPoolMetrics } from "../dex-liquidity/process-pools";
-import { mergeStagedPools } from "../dex-liquidity/staging-merge";
-import * as registryPersistence from "../dex-discovery/persistence";
-import { readDexSourcePaginationState } from "../dex-liquidity/source-pagination-state";
-import { runPruneCronHistory } from "../prune-cron-history";
-
-/** Cache reads must miss: a fabricated row is a corrupt circuit record and fails closed. */
-function firstRowFor(sql: string) {
-  return async () => (sql.includes("FROM cache") ? null : { cnt: 0 });
-}
-
-function emptyStatement(sql: string) {
-  return {
-    bind: () => ({
-      all: async () => ({ results: [], success: true }),
-      first: firstRowFor(sql),
-      run: async () => ({ success: true, meta: {} }),
+    ...a, loadDexLiquidityScoringStage: vi.fn(load), loadDexLiquidityScoringStageWhenReady: vi.fn(load), markDexLiquidityScoringStageConsumed: vi.fn(async () => {}),
+    persistDexLiquidityScoringStage: vi.fn(async (_db: D1Database, input: Parameters<typeof a.persistDexLiquidityScoringStage>[1]) => {
+      stageBuf.chunks = []; let recordCount = 0, payloadBytes = 0;
+      for (const c of a.encodeDexLiquidityScoringStageChunks(input.sourceState, input.poolState, a.DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES, true)) { stageBuf.chunks.push({ ...c }); recordCount += c.recordCount; payloadBytes += c.payloadBytes; }
+      stageBuf.sourceSlotStartedAt = input.sourceSlotStartedAt; stageBuf.syncStartSec = input.syncStartSec;
+      return { generationId: `dex-liquidity-scoring-stage:${input.sourceSlotStartedAt}`, sourceSlotStartedAt: input.sourceSlotStartedAt, chunkCount: stageBuf.chunks.length, recordCount, payloadBytes, retention: { cutoff: 0, deletedRows: 0, deletedChunkRows: 0, deletedStageRows: 0, oldestRemainingAt: null, durationMs: 0, error: null } };
     }),
-    all: async () => ({ results: [], success: true }),
-    first: firstRowFor(sql),
-    run: async () => ({ success: true, meta: {} }),
   };
-}
+});
+vi.mock("../dex-liquidity/challenger-publish", async () => ({ ...(await vi.importActual<typeof import("../dex-liquidity/challenger-publish")>("../dex-liquidity/challenger-publish")), publishDexPriceChallengerSnapshots: vi.fn(async () => fx.current.challenger) }));
+vi.mock("../dex-liquidity/fetch-fallbacks", () => ({ getFallbackTargets: vi.fn(() => []) }));
+vi.mock("../dex-liquidity/fetch-fluid", () => ({ fetchFluidPools: vi.fn(async () => directRes()) }));
+vi.mock("../dex-liquidity/fetch-balancer", () => ({ fetchBalancerPools: vi.fn(async () => directRes()) }));
+vi.mock("../dex-liquidity/fetch-raydium", () => ({ fetchRaydiumPools: vi.fn(async () => directRes()) }));
+vi.mock("../dex-liquidity/fetch-orca", () => ({ fetchOrcaPools: vi.fn(async () => directRes()) }));
+vi.mock("../dex-liquidity/fetch-meteora", () => ({ fetchMeteoraPools: vi.fn(async () => directRes()) }));
+vi.mock("../dex-liquidity/fetch-pancakeswap", () => ({ fetchPancakeSwapPools: vi.fn(async () => directRes()) }));
+vi.mock("../dex-liquidity/fetch-slipstream", () => ({ fetchSlipstreamPools: vi.fn(async () => directRes()) }));
+vi.mock("../dex-liquidity/fetch-aero", async (io) => ({ ...(await io<typeof import("../dex-liquidity/fetch-aero")>()), fetchAeroSlipstreamPools: vi.fn(async () => directRes()), fetchAeroBasicPools: vi.fn(async () => directRes()) }));
+vi.mock("../dex-liquidity/fetch-uniswap-v3-bsc", () => ({ fetchUniswapV3BscShadowPools: vi.fn(async () => directRes()) }));
+vi.mock("../../lib/stablecoins-cache", async () => ({ ...(await vi.importActual<typeof import("../../lib/stablecoins-cache")>("../../lib/stablecoins-cache")), loadStablecoinsCache: vi.fn(async () => fx.current.stablecoinsCache) }));
+vi.mock("../../lib/dex-api-common", async () => ({ ...(await vi.importActual<typeof import("../../lib/dex-api-common")>("../../lib/dex-api-common")), convertToGtNewPools: vi.fn(() => new Map()), extractPriceObservations: vi.fn(() => new Map()) }));
 
-const db = makeNoopD1({
-  prepare: emptyStatement,
-  batch: async () => [],
-  exec: async () => ({ count: 0, duration: 0 }),
-  dump: async () => new ArrayBuffer(0),
+import { DEX_LIQUIDITY_STAGE_LEAD_SEC as STAGE_LEAD, getCronSlotStartedAtForSchedule as slotAt } from "@shared/lib/cron-jobs";
+import { consumeDexLiquidityScoringStage as consumeStageFn, filterPrimaryPoolsPreferDirectApi as filterPools, stageDexLiquidityScoring as stageFn } from "../dex-liquidity/orchestrator";
+import { MissingDexLiquidityScoringStageError as MissingStageErr, loadDexLiquidityScoringStage as loadStage, loadDexLiquidityScoringStageWhenReady as loadStageReady, markDexLiquidityScoringStageConsumed as markConsumed, persistDexLiquidityScoringStage as persistStage } from "../dex-liquidity/scoring-stage";
+import { loadStablecoinsCache as loadCache } from "../../lib/stablecoins-cache";
+import { convertToGtNewPools as convGt, extractPriceObservations as extObs } from "../../lib/dex-api-common";
+import { buildCurveLookups as buildCurve, fetchDataSources as fetchSrcs, buildKnownPoolAddresses as buildKnown } from "../dex-liquidity/fetch-primary";
+import { fetchUniV3Data as fetchV3 } from "../dex-liquidity/subgraph-source-families";
+import { fetchFluidPools as fetchFluid } from "../dex-liquidity/fetch-fluid";
+import { fetchBalancerPools as fetchBal } from "../dex-liquidity/fetch-balancer";
+import { fetchRaydiumPools as fetchRay } from "../dex-liquidity/fetch-raydium";
+import { fetchOrcaPools as fetchOrca } from "../dex-liquidity/fetch-orca";
+import { fetchMeteoraPools as fetchMet } from "../dex-liquidity/fetch-meteora";
+import { fetchPancakeSwapPools as fetchCake } from "../dex-liquidity/fetch-pancakeswap";
+import { fetchSlipstreamPools as fetchSlip } from "../dex-liquidity/fetch-slipstream";
+import { fetchUniswapV3BscShadowPools as fetchBscSh } from "../dex-liquidity/fetch-uniswap-v3-bsc";
+import { computeDexPrices as compPrices, computeStablecoinScores as compScores, publishStablecoinScoreTargets as pubTargets, loadCurrentDexScoringGenerationId as loadGenId } from "../dex-liquidity/scoring";
+import { logCronRun } from "../../lib/cron-logger";
+import { persistScores, writeHistoricalSnapshots as writeHist } from "../dex-liquidity/persistence";
+import { publishDexPriceChallengerSnapshots as pubChall } from "../dex-liquidity/challenger-publish";
+import { buildSymbolLookups } from "../dex-liquidity/pool-helpers";
+import { processPoolMetrics as procMetrics } from "../dex-liquidity/process-pools";
+import { mergeStagedPools as mergeStaged } from "../dex-liquidity/staging-merge";
+import * as regPersist from "../dex-discovery/persistence";
+import { readDexSourcePaginationState as readPag } from "../dex-liquidity/source-pagination-state";
+import { runPruneCronHistory as pruneHistory } from "../prune-cron-history";
+
+const vm = vi.mocked, js = JSON.stringify, jp = JSON.parse, nowS = () => Math.floor(Date.now() / 1e3);
+const USDT = "usdt-tether", USDC = "usdc-circle", GK = "graph-key", STG_JOB = "sync-dex-liquidity-stage";
+const firstRowFor = (sql: string) => async () => (sql.includes("FROM cache") ? null : { cnt: 0 });
+const emptyStmt = (sql: string) => ({ bind: () => ({ all: async () => ({ results: [], success: true }), first: firstRowFor(sql), run: async () => ({ success: true, meta: {} }) }), all: async () => ({ results: [], success: true }), first: firstRowFor(sql), run: async () => ({ success: true, meta: {} }) });
+const db = makeNoopD1({ prepare: emptyStmt, batch: async () => [], exec: async () => ({ count: 0, duration: 0 }), dump: async () => new ArrayBuffer(0) });
+const guardDb = (tables: Array<MockTableConfig & { alsoMatch?: string }>, ov: Record<string, unknown> = {}) => makeNoopD1({
+  prepare: (sql: string) => {
+    const t = tables.find(({ match, alsoMatch }) => sql.includes(match) && (!alsoMatch || sql.includes(alsoMatch)));
+    if (t) return mockD1([t]).prepare(sql);
+    if (sql.includes("FROM cache") || sql.includes("INTO cache")) return emptyStmt(sql);
+    throw new Error(`Unexpected D1 query in sync-dex-liquidity test: ${sql}`);
+  },
+  ...ov,
 });
 
-/** A guard fixture that silently answers an unmodelled query hides SQL drift. */
-function strictStubOrThrow(sql: string) {
-  // Incidental cache traffic stays permissive; unknown guard SQL must still fail.
-  if (sql.includes("FROM cache") || sql.includes("INTO cache")) {
-    return emptyStatement(sql);
-  }
-  throw new Error(`Unexpected D1 query in sync-dex-liquidity test: ${sql}`);
+async function runCycle(database: D1Database = db, gk: string | null = GK, sig?: AbortSignal, cgKey?: string | null, rpcs?: Map<string, ChainRpcConfig>, prog?: CronProgressReporter, opts?: { publishShadowTargets?: boolean }): Promise<CronResult> {
+  await stageFn(database, gk, sig, cgKey, rpcs, prog);
+  return consumeStageFn(database, sig, prog, undefined, opts);
 }
-
-function guardDatabase(tables: Array<MockTableConfig & { alsoMatch?: string }>, overrides: Record<string, unknown> = {}) {
-  return makeNoopD1({
-    prepare: (sql: string) => {
-      const table = tables.find(({ match, alsoMatch }) => sql.includes(match) && (!alsoMatch || sql.includes(alsoMatch)));
-      return table ? mockD1([table]).prepare(sql) : strictStubOrThrow(sql);
-    },
-    ...overrides,
-  });
-}
-
-/** Drive the scheduled composition: the stage producer followed by its consumer. */
-async function runScoringCycle(
-  database: D1Database = db,
-  graphApiKey: string | null = "graph-key",
-  signal?: AbortSignal,
-  coingeckoApiKey?: string | null,
-  chainRpcs?: Map<string, ChainRpcConfig>,
-  reportProgress?: CronProgressReporter,
-  options?: { publishShadowTargets?: boolean },
-): Promise<CronResult> {
-  await stageDexLiquidityScoring(database, graphApiKey, signal, coingeckoApiKey, chainRpcs, reportProgress);
-  return await consumeScoringStage(database, signal, reportProgress, undefined, options);
-}
-
-function readMetadata(result: CronResult) { return JSON.parse(result.metadata ?? "{}"); }
-const stageSource = () => stageDexLiquidityScoring(db, "graph-key");
-
-function apiResult(pools: DexApiPool[] = [], extra: Partial<Awaited<ReturnType<typeof fetchOrcaPools>>> = {}) {
-  return { pools, ok: true, degraded: false, errors: [] as string[], ...extra };
-}
-
-function apiPool(overrides: Partial<DexApiPool> & Pick<DexApiPool, "balances">): DexApiPool {
-  return {
-    source: "fluid", chain: "Ethereum", poolAddress: "0x1111111111111111111111111111111111111111", poolType: "fluid",
-    tokens: [{ address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", symbol: "USDC", decimals: 6 }, { address: "0xdac17f958d2ee523a2206206994597c13d831ec7", symbol: "USDT", decimals: 6 }],
-    price: 1, tvlUsd: 100_000, volume24hUsd: 10_000, feeRate: 0.0001, ...overrides,
-  };
-}
-
-function llamaPool(overrides: Pick<LlamaPool, "pool" | "chain" | "project" | "symbol" | "tvlUsd" | "underlyingTokens"> & Partial<LlamaPool>): LlamaPool {
-  return {
-    volumeUsd1d: null, volumeUsd7d: null, stablecoin: false, apyBase: null, apyReward: null,
-    apy: 0, sigma: 0, exposure: "multi", count: 20, ...overrides,
-  };
-}
-
-function makeTrackedStablecoin(id: string, symbol: string, price: number): StablecoinData {
-  const nowSec = Math.floor(Date.now() / 1000);
-  return {
-    id,
-    name: symbol,
-    symbol,
-    geckoId: null,
-    pegType: "peggedUSD",
-    pegMechanism: "fiat-backed",
-    price,
-    priceSource: "pyth",
-    priceConfidence: "single-source",
-    priceUpdatedAt: nowSec,
-    priceObservedAt: nowSec,
-    priceObservedAtMode: "upstream",
-    priceSyncedAt: nowSec,
-    consensusSources: ["pyth"],
-    agreeSources: ["pyth"],
-    supplySource: "defillama",
-    circulating: { peggedUSD: 1_000_000 },
-    circulatingPrevDay: {},
-    circulatingPrevWeek: {},
-    circulatingPrevMonth: {},
-    chainCirculating: {},
-    chains: [],
-  };
-}
+const readMeta = (r: CronResult) => jp(r.metadata ?? "{}");
+const stageSrc = () => stageFn(db, GK);
+const apiRes = (pools: DexApiPool[] = [], extra: Partial<Awaited<ReturnType<typeof fetchOrca>>> = {}) => ({ pools, ok: true, degraded: false, errors: [] as string[], ...extra });
+const apiPool = (o: Partial<DexApiPool> & Pick<DexApiPool, "balances">): DexApiPool => ({
+  source: "fluid", chain: "Ethereum", poolAddress: "0x1111111111111111111111111111111111111111", poolType: "fluid",
+  tokens: [{ address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", symbol: "USDC", decimals: 6 }, { address: "0xdac17f958d2ee523a2206206994597c13d831ec7", symbol: "USDT", decimals: 6 }],
+  price: 1, tvlUsd: 1e5, volume24hUsd: 1e4, feeRate: 0.0001, ...o,
+});
+const llamaPool = (o: Pick<LlamaPool, "pool" | "chain" | "project" | "symbol" | "tvlUsd" | "underlyingTokens"> & Partial<LlamaPool>): LlamaPool => ({
+  volumeUsd1d: null, volumeUsd7d: null, stablecoin: false, apyBase: null, apyReward: null, apy: 0, sigma: 0, exposure: "multi", count: 20, ...o,
+});
+const mkCoin = (id: string, symbol: string, price: number): StablecoinData => {
+  const n = nowS();
+  return { id, name: symbol, symbol, geckoId: null, pegType: "peggedUSD", pegMechanism: "fiat-backed", price, priceSource: "pyth", priceConfidence: "single-source", priceUpdatedAt: n, priceObservedAt: n, priceObservedAtMode: "upstream", priceSyncedAt: n, consensusSources: ["pyth"], agreeSources: ["pyth"], supplySource: "defillama", circulating: { peggedUSD: 1e6 }, circulatingPrevDay: {}, circulatingPrevWeek: {}, circulatingPrevMonth: {}, chainCirculating: {}, chains: [] };
+};
 
 describe("dex liquidity scoring stage cycle", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    phaseFixtures.reset();
-    vi.mocked(convertToGtNewPools).mockReturnValue(new Map());
-    vi.mocked(extractPriceObservations).mockReturnValue(new Map());
-    vi.mocked(loadCurrentDexScoringGenerationId).mockResolvedValue(null);
+    vi.clearAllMocks(); fx.reset();
+    vm(convGt).mockReturnValue(new Map()); vm(extObs).mockReturnValue(new Map()); vm(loadGenId).mockResolvedValue(null);
   });
 
   it("overlaps only the independent serial CL capture families and settles them before staging", async () => {
-    const v4Started = deferred<void>();
-    const quoterFinished = deferred<void>();
-    const order: string[] = [];
-    const refresh = vi.spyOn(priceRefresh, "refreshPoolPrices");
-    vi.spyOn(quoterEnrichment, "enrichQuoterV2ExecutionTargets").mockImplementationOnce(async () => {
-      order.push("quoter-start");
-      await v4Started.promise;
-      order.push("quoter-end");
-      quoterFinished.resolve();
-      return { exactPoolCount: 0, exactCapableAssets: [], telemetry: [] };
-    });
-    vi.spyOn(v4Enrichment, "enrichUniswapV4ExecutionTargets").mockImplementationOnce(async () => {
-      order.push("v4-start");
-      v4Started.resolve();
-      await quoterFinished.promise;
-      order.push("v4-end");
-      return [];
-    });
-    await stageSource();
+    const v4S = deferred<void>(), qEnd = deferred<void>(), order: string[] = [], ref = vi.spyOn(priceRef, "refreshPoolPrices");
+    vi.spyOn(quoterEnrich, "enrichQuoterV2ExecutionTargets").mockImplementationOnce(async () => { order.push("quoter-start"); await v4S.promise; order.push("quoter-end"); qEnd.resolve(); return { exactPoolCount: 0, exactCapableAssets: [], telemetry: [] }; });
+    vi.spyOn(v4Enrich, "enrichUniswapV4ExecutionTargets").mockImplementationOnce(async () => { order.push("v4-start"); v4S.resolve(); await qEnd.promise; order.push("v4-end"); return []; });
+    await stageSrc();
     expect(order).toEqual(["quoter-start", "v4-start", "quoter-end", "v4-end"]);
-    expect(refresh.mock.invocationCallOrder[0]).toBeGreaterThan(vi.mocked(mergeStagedPools).mock.invocationCallOrder[0]!);
+    expect(ref.mock.invocationCallOrder[0]).toBeGreaterThan(vm(mergeStaged).mock.invocationCallOrder[0]!);
     expect(persistStage).toHaveBeenCalledOnce();
   });
 
   it("evaluates late source-stage exact captures at the consumer clock without restamping registry volume", async () => {
-    const sourceClock = Date.parse("2026-10-11T12:10:00Z") / 1000;
-    const consumerClock = sourceClock + 360;
-    phaseFixtures.current.stagedPools.registryEvaluatedAtSec = sourceClock + 180;
-    const clock = vi.spyOn(Date, "now").mockReturnValue(sourceClock * 1000);
+    const srcClk = Date.parse("2026-10-11T12:10:00Z") / 1e3, consClk = srcClk + 360;
+    fx.current.stagedPools.registryEvaluatedAtSec = srcClk + 180;
+    const clock = vi.spyOn(Date, "now").mockReturnValue(srcClk * 1e3);
     try {
-      await stageSource();
-      expect(scoringStage.syncStartSec).toBe(sourceClock);
-      clock.mockReturnValue(consumerClock * 1000);
-      await consumeScoringStage(db);
-      const calls = vi.mocked(computeStablecoinScores).mock.calls;
-      const call = calls[calls.length - 1]!;
-      expect(call[4]).toBe(consumerClock);
-      expect(call[9]).toBe(sourceClock + 180);
-      // A pinned block captured four minutes into the stage is not future
-      // relative to consumption; the old stage-start clock rejected it.
-      expect(sourceClock + 240).toBeLessThanOrEqual(Number(call[4]));
-      expect(scoringStage.syncStartSec).toBe(sourceClock);
-      expect(vi.mocked(publishDexPriceChallengerSnapshots).mock.lastCall?.[1]).toMatchObject({
-        snapshotAt: sourceClock, generationId: expect.any(String),
-      });
-    } finally {
-      clock.mockRestore();
-    }
+      await stageSrc(); expect(stageBuf.syncStartSec).toBe(srcClk);
+      clock.mockReturnValue(consClk * 1e3); await consumeStageFn(db);
+      const call = vm(compScores).mock.lastCall!;
+      expect([call[4], call[9], stageBuf.syncStartSec]).toEqual([consClk, srcClk + 180, srcClk]);
+      expect(srcClk + 240).toBeLessThanOrEqual(Number(call[4]));
+      expect(vm(pubChall).mock.lastCall?.[1]).toMatchObject({ snapshotAt: srcClk, generationId: expect.any(String) });
+    } finally { clock.mockRestore(); }
   });
 
-  it.each(["registry", "stage", "after-stage"] as const)(
-    "leaves a fetched tail retryable after %s failure and acknowledges its replay",
-    async (failure) => {
-      const fixture = createLatestSchemaSqlite();
-      const database = {
-        ...db,
-        prepare: (sql: string) => sql.includes("dex_source_pagination_state")
-          ? fixture.db.prepare(sql) : db.prepare(sql),
-      } as D1Database;
-      const controller = new AbortController();
-      const failureError = new Error(`injected ${failure} failure`);
-      const persistedStage = vi.mocked(persistStage).getMockImplementation()!;
-      const fetchTail = async () => {
-        vi.mocked(fetchOrcaPools).mockResolvedValueOnce(apiResult([], { pendingPaginationUpdates: [{
-            sourceKey: "orca:solana", cursor: "page9", cycleStartedAt: 100, nowSec: 100,
-            completed: false, pagesFetched: 4, diagnostics: [],
-            expectedRevision: (await readDexSourcePaginationState(database, "orca:solana")).revision!,
-            generation: crypto.randomUUID(),
-          }] }));
-      };
-      try {
-        await fetchTail();
-        if (failure === "registry") {
-          vi.spyOn(registryPersistence, "upsertStagedPools").mockRejectedValueOnce(failureError);
-        } else if (failure === "stage") {
-          vi.mocked(persistStage).mockRejectedValueOnce(failureError);
-        } else {
-          vi.mocked(persistStage).mockImplementationOnce(async (...args) => {
-            const result = await persistedStage(...args);
-            controller.abort(failureError);
-            return result;
-          });
-        }
-        const first = stageDexLiquidityScoring(database, "graph-key", controller.signal);
-        if (failure === "registry") await first;
-        else await expect(first).rejects.toBe(failureError);
-        expect(await readDexSourcePaginationState(database, "orca:solana")).toMatchObject({ cursor: null });
-        await fetchTail();
-        await stageDexLiquidityScoring(database, "graph-key");
-        expect(await readDexSourcePaginationState(database, "orca:solana")).toMatchObject({ cursor: "page9" });
-      } finally {
-        fixture.sqlite.close();
-      }
-    },
-  );
+  it.each(["registry", "stage", "after-stage"] as const)("leaves a fetched tail retryable after %s failure and acknowledges its replay", async (fail) => {
+    const h = mkSqlite(), database = { ...db, prepare: (sql: string) => sql.includes("dex_source_pagination_state") ? h.db.prepare(sql) : db.prepare(sql) } as D1Database;
+    const ctrl = new AbortController(), err = new Error(`injected ${fail} failure`), origP = vm(persistStage).getMockImplementation()!;
+    const fetchTail = async () => {
+      vm(fetchOrca).mockResolvedValueOnce(apiRes([], { pendingPaginationUpdates: [{ sourceKey: "orca:solana", cursor: "page9", cycleStartedAt: 100, nowSec: 100, completed: false, pagesFetched: 4, diagnostics: [], expectedRevision: (await readPag(database, "orca:solana")).revision!, generation: crypto.randomUUID() }] }));
+    };
+    try {
+      await fetchTail();
+      if (fail === "registry") vi.spyOn(regPersist, "upsertStagedPools").mockRejectedValueOnce(err);
+      else if (fail === "stage") vm(persistStage).mockRejectedValueOnce(err);
+      else vm(persistStage).mockImplementationOnce(async (...a) => { const r = await origP(...a); ctrl.abort(err); return r; });
+      const first = stageFn(database, GK, ctrl.signal);
+      if (fail === "registry") await first; else await expect(first).rejects.toBe(err);
+      expect(await readPag(database, "orca:solana")).toMatchObject({ cursor: null });
+      await fetchTail(); await stageFn(database, GK);
+      expect(await readPag(database, "orca:solana")).toMatchObject({ cursor: "page9" });
+    } finally { h.sqlite.close(); }
+  });
+
   it("scopes Yearn vaults", async () => {
-    const refresh = priceRefresh.refreshPoolPrices;
-    vi.spyOn(priceRefresh, "refreshPoolPrices").mockImplementationOnce(async (...args) => {
-      const summary = await refresh(...args);
-      summary.demand.networks = Array(100).fill({ network: "ethereum", pools: 1, requests: 1 });
-      return summary;
-    });
+    const orig = priceRef.refreshPoolPrices;
+    vi.spyOn(priceRef, "refreshPoolPrices").mockImplementationOnce(async (...a) => { const s = await orig(...a); s.demand.networks = Array(100).fill({ network: "ethereum", pools: 1, requests: 1 }); return s; });
     const real = await vi.importActual<typeof import("../dex-liquidity/process-pools")>("../dex-liquidity/process-pools");
-    const pools = Array.from({ length: 67 }, (_, i) => llamaPool({ pool: `7d89af7a-24c9-4292-aa38-0000000000${i + 10}`, project: "yearn-finance", chain: "Ethereum",
-      symbol: "", poolMeta: null, underlyingTokens: ["0x0000000000000000000000000000000000000000"], exposure: "single",
-      tvlUsd: i ? 2_000_000 : 11_399_064 }));
-    vi.mocked(processPoolMetrics).mockImplementationOnce(real.processPoolMetrics);
-    Object.assign(phaseFixtures.current.primary, { pools, rawPoolCount: 67, dexProjects: new Set(["uniswap-v3"]), nonDexProjects: new Set(["yearn-finance"]) });
-    for (const [job, result] of [["sync-dex-liquidity-stage", await stageSource()], ["sync-dex-liquidity", await consumeScoringStage(db)]] as const) {
-      expect(Buffer.byteLength(result.metadata!)).toBeLessThanOrEqual(getCronMetadataBudgetBytes(job));
-      expect(result.status).toBe("ok");
-      const metadata = readMetadata(result);
-      expect(metadata.reason).toBeUndefined();
-      expect(metadata.poolRejections[0]).toMatchObject({ scope: "non-dex-project", protocol: "yearn-finance" });
-      expect(metadata.poolRejectionMateriality).toMatchObject({ rejectedPoolCount: 67, rejectedPoolTvlUsd: 143_399_064,
-        outOfScopeRejectedPoolCount: 67, candidateRejectedPoolCount: 0, candidateRejectedPoolTvlUsd: 0, detailsOmitted: 63, material: false });
+    const pools = Array.from({ length: 67 }, (_, i) => llamaPool({ pool: `7d89af7a-24c9-4292-aa38-0000000000${i + 10}`, project: "yearn-finance", chain: "Ethereum", symbol: "", poolMeta: null, underlyingTokens: ["0x0000000000000000000000000000000000000000"], exposure: "single", tvlUsd: i ? 2e6 : 11_399_064 }));
+    vm(procMetrics).mockImplementationOnce(real.processPoolMetrics);
+    Object.assign(fx.current.primary, { pools, rawPoolCount: 67, dexProjects: new Set(["uniswap-v3"]), nonDexProjects: new Set(["yearn-finance"]) });
+    for (const [job, res] of [[STG_JOB, await stageSrc()], ["sync-dex-liquidity", await consumeStageFn(db)]] as const) {
+      expect(Buffer.byteLength(res.metadata!)).toBeLessThanOrEqual(metaBudget(job)); expect(res.status).toBe("ok");
+      const m = readMeta(res); expect(m.reason).toBeUndefined();
+      expect(m.poolRejections[0]).toMatchObject({ scope: "non-dex-project", protocol: "yearn-finance" });
+      expect(m.poolRejectionMateriality).toMatchObject({ rejectedPoolCount: 67, rejectedPoolTvlUsd: 143_399_064, outOfScopeRejectedPoolCount: 67, candidateRejectedPoolCount: 0, candidateRejectedPoolTvlUsd: 0, detailsOmitted: 63, material: false });
     }
-    const chunk = scoringStage.chunks[0]!;
-    const [header, ...rest] = chunk.payload.split("\n");
-    const legacy = JSON.parse(header!);
-    delete legacy.pool.poolRejections[0].scope;
-    chunk.payload = [JSON.stringify(legacy), ...rest].join("\n");
-    chunk.payloadBytes = Buffer.byteLength(chunk.payload);
-    vi.mocked(persistScores).mockClear();
-    const held = await consumeScoringStage(db);
-    expect([held.status, readMetadata(held).reason, readMetadata(held).poolRejections[0].scope])
-      .toEqual(["degraded", "pool-rejection-scope-unavailable", "unknown-project"]);
+    const ch = stageBuf.chunks[0]!, [hdr, ...rest] = ch.payload.split("\n"), leg = jp(hdr!);
+    delete leg.pool.poolRejections[0].scope;
+    ch.payload = [js(leg), ...rest].join("\n"); ch.payloadBytes = Buffer.byteLength(ch.payload);
+    vm(persistScores).mockClear();
+    const held = await consumeStageFn(db);
+    expect([held.status, readMeta(held).reason, readMeta(held).poolRejections[0].scope]).toEqual(["degraded", "pool-rejection-scope-unavailable", "unknown-project"]);
     expect(persistScores).not.toHaveBeenCalled();
   });
 
   it("throws on catastrophic source failure instead of silently returning", async () => {
-    phaseFixtures.reset({ primary: null });
-    await expect(runScoringCycle()).rejects.toThrow("catastrophic source failure");
+    fx.reset({ primary: null });
+    await expect(runCycle()).rejects.toThrow("catastrophic source failure");
   });
 
   it.each([
-    {
-      label: "surfaces a missing mandatory staging table from the producer",
-      producer: vi.mocked(mergeStagedPools),
-      message: "D1_ERROR: no such table: dex_pool_registry",
-    },
-    {
-      label: "surfaces a missing mandatory history table from the scoring producer",
-      producer: vi.mocked(computeStablecoinScores),
-      message: "D1_ERROR: no such table: dex_liquidity_history",
-    },
-  ])("$label", async ({ producer, message }) => {
-    producer.mockRejectedValueOnce(new Error(message));
-    await expect(runScoringCycle()).rejects.toThrow(message);
+    ["surfaces a missing mandatory staging table from the producer", vm(mergeStaged), "D1_ERROR: no such table: dex_pool_registry"],
+    ["surfaces a missing mandatory history table from the scoring producer", vm(compScores), "D1_ERROR: no such table: dex_liquidity_history"],
+  ])("%s", async (_l, prod, msg) => {
+    prod.mockRejectedValueOnce(new Error(msg));
+    await expect(runCycle()).rejects.toThrow(msg);
   });
 
   it("returns degraded when non-catastrophic critical source family fails", async () => {
-    phaseFixtures.reset({ primary: phaseFixtures.primary({ dlProtocolsAvailable: false }) });
-
-    const result = await runScoringCycle();
-
-    expect(result.status).toBe("degraded");
-    const metadata = readMetadata(result);
-    expect(metadata.failedSources).toContain("defillama-protocols");
-    expect(metadata.fallbackMode).toContain("dl-protocols-unavailable");
-    expect(metadata.rowsWritten).toBe(0);
-    expect(metadata.persistence?.skipped).toBe(true);
-    expect(metadata.persistence?.skippedReason).toBe("defillama-protocols-unavailable");
-    expect(persistScores).not.toHaveBeenCalled();
-    expect(publishTargets).not.toHaveBeenCalled();
-    expect(computeDexPrices).not.toHaveBeenCalled();
-    expect(publishDexPriceChallengerSnapshots).not.toHaveBeenCalled();
-    expect(writeHistoricalSnapshots).not.toHaveBeenCalled();
+    fx.reset({ primary: fx.primary({ dlProtocolsAvailable: false }) });
+    const res = await runCycle(), m = readMeta(res);
+    expect(res.status).toBe("degraded"); expect(m.failedSources).toContain("defillama-protocols"); expect(m.fallbackMode).toContain("dl-protocols-unavailable");
+    expect(m).toMatchObject({ rowsWritten: 0, persistence: { skipped: true, skippedReason: "defillama-protocols-unavailable" } });
+    for (const fn of [persistScores, pubTargets, compPrices, pubChall, writeHist]) expect(fn).not.toHaveBeenCalled();
   });
 
   it("records the failed critical source as the stage degraded reason", async () => {
-    phaseFixtures.reset({ primary: phaseFixtures.primary({ dlProtocolsAvailable: false }) });
-
-    const result = await stageSource();
-
-    expect(result.status).toBe("degraded");
-    expect(readMetadata(result).reason).toBe("defillama-protocols-unavailable");
-    const fixture = createLatestSchemaSqlite();
+    fx.reset({ primary: fx.primary({ dlProtocolsAvailable: false }) });
+    const res = await stageSrc();
+    expect(res.status).toBe("degraded"); expect(readMeta(res).reason).toBe("defillama-protocols-unavailable");
+    const h = mkSqlite();
     try {
-      await logCronRun(fixture.db, "sync-dex-liquidity-stage", async () => result);
-      const run = fixture.sqlite
-        .prepare("SELECT status, degraded_reason FROM cron_runs WHERE job = ?")
-        .get("sync-dex-liquidity-stage") as
-          | { status: string; degraded_reason: string | null }
-          | undefined;
-      expect(run).toEqual({ status: "degraded", degraded_reason: "defillama-protocols-unavailable" });
-    } finally {
-      fixture.sqlite.close();
-    }
+      await logCronRun(h.db, STG_JOB, async () => res);
+      expect(h.sqlite.prepare("SELECT status, degraded_reason FROM cron_runs WHERE job = ?").get(STG_JOB)).toEqual({ status: "degraded", degraded_reason: "defillama-protocols-unavailable" });
+    } finally { h.sqlite.close(); }
   });
 
   it("returns degraded when DL fails but Curve succeeds", async () => {
-    vi.mocked(fetchDataSources).mockResolvedValueOnce(phaseFixtures.primary({ curvePayloads: [{ data: { poolData: [] } }], dlYieldsAvailable: false, dlProtocolsAvailable: false }));
-
-    const result = await runScoringCycle();
-
-    expect(result.status).toBe("degraded");
-    const metadata = readMetadata(result);
-    expect(metadata.failedSources).toContain("defillama-yields");
-    expect(persistScores).not.toHaveBeenCalled();
-    expect(publishTargets).not.toHaveBeenCalled();
-    expect(publishDexPriceChallengerSnapshots).not.toHaveBeenCalled();
+    vm(fetchSrcs).mockResolvedValueOnce(fx.primary({ curvePayloads: [{ data: { poolData: [] } }], dlYieldsAvailable: false, dlProtocolsAvailable: false }));
+    const res = await runCycle();
+    expect(res.status).toBe("degraded"); expect(readMeta(res).failedSources).toContain("defillama-yields");
+    for (const fn of [persistScores, pubTargets, pubChall]) expect(fn).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -670,1432 +263,501 @@ describe("dex liquidity scoring stage cycle", () => {
     ["FROM cron_runs", "cron-history-read-failed"],
     ["SELECT value, updated_at FROM cache WHERE key = ?", "anchor-review-decision-read-failed"],
     ["FROM dex_liquidity_run_rows r", "coin-tvl-read-failed"],
-    // The walk-back read past an unobserved prior publication is its own failure path.
     ["ORDER BY g.started_at DESC, g.generation_id DESC", "coin-tvl-read-failed"],
   ])("retains accepted rows and generation when %s is unreadable", async (match, reason) => {
-    const fixture = createLatestSchemaSqlite();
-    const pendingReview = reason === "coin-tvl-read-failed";
-    const unobservedPrior = match.startsWith("ORDER BY g.started_at");
-    const reviewClock = pendingReview
-      ? vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-11-20T11:16:00Z"))
-      : undefined;
+    const h = mkSqlite(), pend = reason === "coin-tvl-read-failed", unobs = match.startsWith("ORDER BY g.started_at");
+    const revClk = pend ? vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-11-20T11:16:00Z")) : undefined;
     try {
-      fixture.sqlite.prepare(`INSERT INTO dex_liquidity_publication_generations
-        (generation_id, started_at, state, expected_row_count, created_at)
-        VALUES ('accepted', 1700000000, 'published', 2, 1700000000)`).run();
-      const insert = fixture.sqlite.prepare(`INSERT INTO dex_liquidity
-        (stablecoin_id, symbol, total_tvl_usd, liquidity_score, coverage_class, updated_at,
-         publication_generation_id, publication_state)
-        VALUES (?, 'USD', ?, 80, 'primary', 1700000000, 'accepted', 'published')`);
-      insert.run("usdt-tether", 100);
-      insert.run("__global__", 100);
-      if (pendingReview) {
-        insert.run("susdat-saturn", 3_000_000);
-        fixture.sqlite.exec(`INSERT INTO dex_liquidity_run_rows
-          (generation_id, stablecoin_id, symbol, total_tvl_usd, updated_at, coverage_class)
-          VALUES ('accepted', 'susdat-saturn', 'sUSDat', ${unobservedPrior ? 0 : 3000000},
-            1700000000, '${unobservedPrior ? "unobserved" : "primary"}')`);
-        phaseFixtures.current.scores.scores.set("susdat-saturn", { coverageClass: "primary", tvl: 2_579_000 });
+      h.sqlite.prepare("INSERT INTO dex_liquidity_publication_generations (generation_id, started_at, state, expected_row_count, created_at) VALUES ('accepted', 1700000000, 'published', 2, 1700000000)").run();
+      const ins = h.sqlite.prepare("INSERT INTO dex_liquidity (stablecoin_id, symbol, total_tvl_usd, liquidity_score, coverage_class, updated_at, publication_generation_id, publication_state) VALUES (?, 'USD', ?, 80, 'primary', 1700000000, 'accepted', 'published')");
+      ins.run(USDT, 100); ins.run("__global__", 100);
+      if (pend) {
+        ins.run("susdat-saturn", 3e6);
+        h.sqlite.exec(`INSERT INTO dex_liquidity_run_rows (generation_id, stablecoin_id, symbol, total_tvl_usd, updated_at, coverage_class) VALUES ('accepted', 'susdat-saturn', 'sUSDat', ${unobs ? 0 : 3000000}, 1700000000, '${unobs ? "unobserved" : "primary"}')`);
+        fx.current.scores.scores.set("susdat-saturn", { coverageClass: "primary", tvl: 2_579_000 });
       }
-      if (pendingReview || reason === "anchor-review-decision-read-failed") {
-        const insertProductive = fixture.sqlite.prepare(`INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata)
-          VALUES ('sync-dex-liquidity', ?, 1000, 'degraded', ?)`);
-        const carriedAnchor = JSON.stringify({
-          sourceCoverage: { poolRejectionCoverage: {
-            reason: "material-pool-rejections", material: true, baselineBeforeSec: 1_794_741_390,
-            baselineTvlUsdByCoin: { "susdat-saturn": 4_811_562.319125249 }, coins: [], coinsOmitted: 0,
-          } },
-        });
-        insertProductive.run(1699999999, carriedAnchor);
-        insertProductive.run(1700000000, carriedAnchor);
-        const insertSkipped = fixture.sqlite.prepare(`INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata)
-          VALUES ('sync-dex-liquidity', ?, 1000, 'degraded', '{"persistence":{"skipped":true}}')`);
-        for (let i = 1; i <= 12; i++) {
-          insertProductive.run(1700000001, '{"sourceCoverage":{"dlYieldsAvailable":"unavailable"}}');
-          insertSkipped.run(1700000000 + i * 3600);
-        }
+      if (pend || reason === "anchor-review-decision-read-failed") {
+        const insP = h.sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata) VALUES ('sync-dex-liquidity', ?, 1000, 'degraded', ?)");
+        const anchor = js({ sourceCoverage: { poolRejectionCoverage: { reason: "material-pool-rejections", material: true, baselineBeforeSec: 1_794_741_390, baselineTvlUsdByCoin: { "susdat-saturn": 4_811_562.319125249 }, coins: [], coinsOmitted: 0 } } });
+        insP.run(1699999999, anchor); insP.run(1700000000, anchor);
+        const insS = h.sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata) VALUES ('sync-dex-liquidity', ?, 1000, 'degraded', '{\"persistence\":{\"skipped\":true}}')");
+        for (let i = 1; i <= 12; i++) { insP.run(1700000001, '{"sourceCoverage":{"dlYieldsAvailable":"unavailable"}}'); insS.run(1700000000 + i * 3600); }
       }
-      const failedReadDb = mockD1([{ match, rows: [], throwError: new Error("baseline read failed") }]);
-      const database = {
-        ...fixture.db,
-        prepare: (sql: string) => {
-          if (!sql.includes(match)) return fixture.db.prepare(sql);
-          if (reason !== "anchor-review-decision-read-failed") return failedReadDb.prepare(sql);
-          const statement = fixture.db.prepare(sql);
-          return { ...statement, bind: (...bindings: unknown[]) =>
-            (bindings[0] === "dex-liquidity:anchor-review:2142" ? failedReadDb.prepare(sql) : statement).bind(...bindings) };
-        },
-      };
-      let result = await runScoringCycle(database, "graph-key");
+      const failDb = mockD1([{ match, rows: [], throwError: new Error("baseline read failed") }]);
+      const database = { ...h.db, prepare: (sql: string) => { if (!sql.includes(match)) return h.db.prepare(sql); if (reason !== "anchor-review-decision-read-failed") return failDb.prepare(sql); const st = h.db.prepare(sql); return { ...st, bind: (...b: unknown[]) => (b[0] === "dex-liquidity:anchor-review:2142" ? failDb.prepare(sql) : st).bind(...b) }; } };
+      let res = await runCycle(database, GK);
       if (reason === "anchor-review-decision-read-failed") {
-        expect(readMetadata(result).sourceCoverage.baselineReadFailures).toEqual([reason]);
-        const clock = vi.spyOn(Date, "now").mockReturnValue((1700000001 + 7 * 86_400) * 1000);
-        const prune = await runPruneCronHistory(fixture.db);
-        clock.mockRestore();
-        expect(prune.status).toBe("ok");
-        expect(readMetadata(prune).cronRunsDeleted).toBe(1);
-        result = await runScoringCycle(database, "graph-key");
+        expect(readMeta(res).sourceCoverage.baselineReadFailures).toEqual([reason]);
+        const clk = vi.spyOn(Date, "now").mockReturnValue((1700000001 + 7 * 86_400) * 1e3);
+        const prune = await pruneHistory(h.db); clk.mockRestore();
+        expect(prune.status).toBe("ok"); expect(readMeta(prune).cronRunsDeleted).toBe(1);
+        res = await runCycle(database, GK);
       }
-      expect(result.status).toBe("degraded");
-      const metadata = readMetadata(result);
-      expect(metadata).toMatchObject({
-        reason: "required-baseline-read-failed",
-        rowsWritten: 0,
-        sourceCoverage: { baselineReadFailures: [reason] },
-        persistence: { skipped: true, skippedReason: "required-baseline-read-failed" },
-      });
-      expect(DexLiquidityCronMetadataSchema.safeParse(metadata).success).toBe(true);
-      expect(fixture.sqlite.prepare(`SELECT stablecoin_id, total_tvl_usd, updated_at,
-        publication_generation_id FROM dex_liquidity ORDER BY stablecoin_id`).all()).toEqual([
-        { stablecoin_id: "__global__", total_tvl_usd: 100, updated_at: 1700000000, publication_generation_id: "accepted" },
-        ...(pendingReview ? [{ stablecoin_id: "susdat-saturn", total_tvl_usd: 3_000_000, updated_at: 1700000000, publication_generation_id: "accepted" }] : []),
-        { stablecoin_id: "usdt-tether", total_tvl_usd: 100, updated_at: 1700000000, publication_generation_id: "accepted" },
+      const m = readMeta(res);
+      expect(res.status).toBe("degraded");
+      expect(m).toMatchObject({ reason: "required-baseline-read-failed", rowsWritten: 0, sourceCoverage: { baselineReadFailures: [reason] }, persistence: { skipped: true, skippedReason: "required-baseline-read-failed" } });
+      expect(MetaSchema.safeParse(m).success).toBe(true);
+      expect(h.sqlite.prepare("SELECT stablecoin_id, total_tvl_usd, updated_at, publication_generation_id FROM dex_liquidity ORDER BY stablecoin_id").all()).toEqual([
+        { stablecoin_id: "__global__", total_tvl_usd: 100, updated_at: 1.7e9, publication_generation_id: "accepted" },
+        ...(pend ? [{ stablecoin_id: "susdat-saturn", total_tvl_usd: 3e6, updated_at: 1.7e9, publication_generation_id: "accepted" }] : []),
+        { stablecoin_id: USDT, total_tvl_usd: 100, updated_at: 1.7e9, publication_generation_id: "accepted" },
       ]);
-      expect(persistScores).not.toHaveBeenCalled();
-      expect(publishTargets).not.toHaveBeenCalled();
-      expect(computeDexPrices).not.toHaveBeenCalled();
-      expect(writeHistoricalSnapshots).not.toHaveBeenCalled();
-      expect(markDexLiquidityScoringStageConsumed).not.toHaveBeenCalled();
-    } finally {
-      reviewClock?.mockRestore();
-      fixture.sqlite.close();
-    }
+      for (const fn of [persistScores, pubTargets, compPrices, writeHist, markConsumed]) expect(fn).not.toHaveBeenCalled();
+    } finally { revClk?.mockRestore(); h.sqlite.close(); }
   });
 
-  it.each([
-    ["GROUP BY coverage_class", "coverage-classes-read-failed"],
-    ["SELECT stablecoin_id, pool_count", "watchlist-read-failed"],
-    ["FROM dex_liquidity_run_rows r", "coin-tvl-read-failed"],
-  ])("does not turn optional %s telemetry into a publication hold", async (match, reason) => {
-    const failedReadDb = mockD1([{ match, rows: [], throwError: new Error("optional baseline unavailable") }]);
-    const database = { ...db, prepare: (sql: string) => sql.includes(match) ? failedReadDb.prepare(sql) : db.prepare(sql) };
-    const result = await runScoringCycle(database, "graph-key");
-    expect(result.status).toBe("ok");
-    expect(readMetadata(result).sourceCoverage.baselineReadFailures).toEqual([reason]);
-    expect(persistScores).toHaveBeenCalledOnce();
-    expect(publishTargets).toHaveBeenCalledOnce();
-  });
-
-  it("degrades and skips persistence instead of tripping hard value guard when DL yields is unavailable", async () => {
-    vi.mocked(fetchDataSources).mockResolvedValueOnce(phaseFixtures.primary({ dexProjects: new Set<string>(["curve"]), curvePayloads: [{ data: { poolData: [] } }], dlYieldsAvailable: false }));
-    vi.mocked(computeStablecoinScores).mockResolvedValueOnce(phaseFixtures.scored({ scores: new Map([["usdt-tether", { coverageClass: "primary", tvl: 2_000_000_000 }]]), globalAgg: { totalTvl: 2_000_000_000 }, diagnostics: phaseFixtures.diagnostics() }) as unknown as Awaited<ReturnType<typeof computeStablecoinScores>>);
-    const guardDb = guardDatabase([
-      { match: "COUNT(*) as cnt FROM dex_liquidity", rows: [], first: { cnt: 165 } },
-      { match: "SELECT total_tvl_usd, updated_at, chain_tvl_json FROM dex_liquidity WHERE stablecoin_id = '__global__'", rows: [], first: { total_tvl_usd: 6_000_000_000, updated_at: 1_777_556_412 } },
-      { match: "GROUP BY coverage_class", rows: [] },
-      { match: "ORDER BY total_tvl_usd DESC", rows: [{ stablecoin_id: "usdt-tether", total_tvl_usd: 4_000_000_000 }] },
-      { match: "SELECT r.stablecoin_id, r.total_tvl_usd, r.protocol_tvl_json", rows: [] },
-      { match: "FROM cron_runs", rows: [] },
-      { match: "WHERE stablecoin_id IN", rows: [] },
-    ], { batch: db.batch, exec: db.exec, dump: db.dump });
-
-    const result = await runScoringCycle(guardDb, "graph-key");
-
-    expect(result.status).toBe("degraded");
-    const metadata = readMetadata(result);
-    expect(metadata.failedSources).toContain("defillama-yields");
-    expect(metadata.rowsWritten).toBe(0);
-    expect(metadata.persistence?.skipped).toBe(true);
-    expect(metadata.persistence?.skippedReason).toBe("defillama-yields-unavailable");
-    expect(metadata.sourceCoverage?.currentGlobalTvl).toBe(2_000_000_000);
-    expect(metadata.sourceCoverage?.nearValueGuard).toBe(true);
-    // A critical source failure suppresses the hard abort but must not blank
-    // the guard evaluation that says why the run is degraded.
-    expect(metadata.sourceCoverage?.nearCoverageGuard).toBe(true);
-    expect(metadata.sourceCoverage?.hardCoverageGuard).toBe(true);
-    expect(persistScores).not.toHaveBeenCalled();
-    expect(publishTargets).not.toHaveBeenCalled();
-    expect(computeDexPrices).not.toHaveBeenCalled();
-    expect(publishDexPriceChallengerSnapshots).not.toHaveBeenCalled();
-  });
-
-  it.each(["critical-source", "coverage", "value", "persistence"] as const)(
-    "retains the measured target catalog after %s rejection and publishes only after accepted liquidity",
-    async (rejection) => {
-      let catalog = "accepted-targets";
-      vi.mocked(publishTargets).mockImplementationOnce(async () => { catalog = "candidate-targets"; });
-      if (rejection === "critical-source") phaseFixtures.current.primary.dlYieldsAvailable = false;
-      if (rejection === "persistence") vi.mocked(persistScores).mockRejectedValueOnce(new Error("liquidity publication failed"));
-      const guardDb = guardDatabase([
-      { match: "SELECT coverage_class, COUNT(*) as cnt", rows: [] },
-      { match: "COUNT(*) as cnt FROM dex_liquidity", rows: [], first: { cnt: rejection === "coverage" ? 100 : 0 } },
-      { match: "SELECT total_tvl_usd, updated_at, chain_tvl_json FROM dex_liquidity WHERE stablecoin_id = '__global__'", rows: [], first: rejection === "value"
-                ? { total_tvl_usd: 1_000_000_000, updated_at: 1_777_556_412 }
-                : { total_tvl_usd: null, updated_at: null } },
-      { match: "GROUP BY coverage_class", rows: [] },
-      { match: "ORDER BY total_tvl_usd DESC", rows: [] },
-      { match: "FROM cron_runs", rows: [] },
-      { match: "WHERE stablecoin_id IN", rows: [] },
-      { match: "SELECT r.stablecoin_id, r.total_tvl_usd, r.protocol_tvl_json", rows: [] },
-    ]);
-      if (rejection === "critical-source") {
-        expect((await runScoringCycle(guardDb, "graph-key")).status).toBe("degraded");
-      } else {
-        await expect(runScoringCycle(guardDb, "graph-key")).rejects.toThrow(
-          rejection === "persistence" ? "liquidity publication failed" : "coverage guard tripped",
-        );
-      }
-      expect(catalog).toBe("accepted-targets");
-      expect(publishTargets).not.toHaveBeenCalled();
-
-      phaseFixtures.reset();
-      expect((await runScoringCycle()).status).toBe("ok");
-      expect(catalog).toBe("candidate-targets");
-      expect(publishTargets).toHaveBeenCalledOnce();
-      expect(vi.mocked(publishTargets).mock.invocationCallOrder[0]).toBeGreaterThan(
-        vi.mocked(persistScores).mock.invocationCallOrder[vi.mocked(persistScores).mock.invocationCallOrder.length - 1]!,
-      );
+  it.each([["GROUP BY coverage_class", "coverage-classes-read-failed"], ["SELECT stablecoin_id, pool_count", "watchlist-read-failed"], ["FROM dex_liquidity_run_rows r", "coin-tvl-read-failed"]])(
+    "does not turn optional %s telemetry into a publication hold",
+    async (match, reason) => {
+      const failDb = mockD1([{ match, rows: [], throwError: new Error("optional baseline unavailable") }]);
+      const res = await runCycle({ ...db, prepare: (sql: string) => sql.includes(match) ? failDb.prepare(sql) : db.prepare(sql) }, GK);
+      expect(res.status).toBe("ok"); expect(readMeta(res).sourceCoverage.baselineReadFailures).toEqual([reason]);
+      expect(persistScores).toHaveBeenCalledOnce(); expect(pubTargets).toHaveBeenCalledOnce();
     },
   );
 
-  it("publishes successful source inputs without direct CEX depth traffic or metadata", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch");
-    const result = await runScoringCycle();
+  it("degrades and skips persistence instead of tripping hard value guard when DL yields is unavailable", async () => {
+    vm(fetchSrcs).mockResolvedValueOnce(fx.primary({ dexProjects: new Set(["curve"]), curvePayloads: [{ data: { poolData: [] } }], dlYieldsAvailable: false }));
+    vm(compScores).mockResolvedValueOnce(fx.scored({ scores: new Map([[USDT, { coverageClass: "primary", tvl: 2e9 }]]), globalAgg: { totalTvl: 2e9 }, diagnostics: fx.diagnostics() }) as unknown as Awaited<ReturnType<typeof compScores>>);
+    const gdb = guardDb([
+      { match: "COUNT(*) as cnt FROM dex_liquidity", rows: [], first: { cnt: 165 } },
+      { match: "SELECT total_tvl_usd, updated_at, chain_tvl_json FROM dex_liquidity WHERE stablecoin_id = '__global__'", rows: [], first: { total_tvl_usd: 6e9, updated_at: 1_777_556_412 } },
+      { match: "GROUP BY coverage_class", rows: [] }, { match: "ORDER BY total_tvl_usd DESC", rows: [{ stablecoin_id: USDT, total_tvl_usd: 4e9 }] },
+      { match: "SELECT r.stablecoin_id, r.total_tvl_usd, r.protocol_tvl_json", rows: [] }, { match: "FROM cron_runs", rows: [] }, { match: "WHERE stablecoin_id IN", rows: [] },
+    ], { batch: db.batch, exec: db.exec, dump: db.dump });
+    const res = await runCycle(gdb, GK), m = readMeta(res);
+    expect(res.status).toBe("degraded"); expect(m.failedSources).toContain("defillama-yields");
+    expect(m).toMatchObject({ rowsWritten: 0, persistence: { skipped: true, skippedReason: "defillama-yields-unavailable" }, sourceCoverage: { currentGlobalTvl: 2e9, nearValueGuard: true, nearCoverageGuard: true, hardCoverageGuard: true } });
+    for (const fn of [persistScores, pubTargets, compPrices, pubChall]) expect(fn).not.toHaveBeenCalled();
+  });
 
-    expect(result.status).toBe("ok");
-    const metadata = readMetadata(result);
-    expect(metadata.failedSources).toEqual([]);
-    expect(metadata.stagedPoolsSkippedByExactIdentity).toBe(0);
-    expect(metadata.stagedPoolsSkippedByUniqueDerivedIdentity).toBe(0);
-    expect(metadata.sourceCoverage?.nearCoverageGuard).toBe(false);
-    expect(metadata.sourceCoverage?.weakCoverageCoins).toBe(0);
-    expect(metadata.sourceCoverage).not.toHaveProperty("directCexOrderbookDepth");
-    expect(fetchSpy).not.toHaveBeenCalled();
-    expect(persistScores).toHaveBeenCalledWith(
-      expect.objectContaining({ prepare: expect.any(Function), batch: expect.any(Function) }),
-      expect.any(Map),
-      phaseFixtures.current.scores.scores,
-      phaseFixtures.current.scores.globalAgg,
-      expect.any(Number),
-      phaseFixtures.current.scores.tvlStabilityMap,
-      undefined,
-      phaseFixtures.current.scores.diagnostics.routeRemovalEvidence,
-      phaseFixtures.current.scores.retainedPoolsByStablecoin,
-      undefined,
-    );
-    expect(metadata.sourceCoverage?.qualityDriftSeverity).toBe("none");
-    expect(metadata.sourceCoverage?.qualityDriftFlags).toEqual([]);
-    expect(metadata.sourceCoverage?.coinsWithoutMeasuredBalances).toBe(0);
-    expect(metadata.sourceCoverage?.protocolTvlQuarantine?.tvlUsd).toBe(0);
+  it.each(["critical-source", "coverage", "value", "persistence"] as const)("retains the measured target catalog after %s rejection and publishes only after accepted liquidity", async (rej) => {
+    let cat = "accepted-targets";
+    vm(pubTargets).mockImplementationOnce(async () => { cat = "candidate-targets"; });
+    if (rej === "critical-source") fx.current.primary.dlYieldsAvailable = false;
+    if (rej === "persistence") vm(persistScores).mockRejectedValueOnce(new Error("liquidity publication failed"));
+    const gdb = guardDb([
+      { match: "SELECT coverage_class, COUNT(*) as cnt", rows: [] }, { match: "COUNT(*) as cnt FROM dex_liquidity", rows: [], first: { cnt: rej === "coverage" ? 100 : 0 } },
+      { match: "SELECT total_tvl_usd, updated_at, chain_tvl_json FROM dex_liquidity WHERE stablecoin_id = '__global__'", rows: [], first: rej === "value" ? { total_tvl_usd: 1e9, updated_at: 1_777_556_412 } : { total_tvl_usd: null, updated_at: null } },
+      { match: "GROUP BY coverage_class", rows: [] }, { match: "ORDER BY total_tvl_usd DESC", rows: [] }, { match: "FROM cron_runs", rows: [] },
+      { match: "WHERE stablecoin_id IN", rows: [] }, { match: "SELECT r.stablecoin_id, r.total_tvl_usd, r.protocol_tvl_json", rows: [] },
+    ]);
+    if (rej === "critical-source") expect((await runCycle(gdb, GK)).status).toBe("degraded");
+    else await expect(runCycle(gdb, GK)).rejects.toThrow(rej === "persistence" ? "liquidity publication failed" : "coverage guard tripped");
+    expect(cat).toBe("accepted-targets"); expect(pubTargets).not.toHaveBeenCalled();
+    fx.reset(); expect((await runCycle()).status).toBe("ok"); expect(cat).toBe("candidate-targets"); expect(pubTargets).toHaveBeenCalledOnce();
+    expect(vm(pubTargets).mock.invocationCallOrder[0]).toBeGreaterThan(vm(persistScores).mock.invocationCallOrder.slice(-1)[0]!);
+  });
+
+  it("publishes successful source inputs without direct CEX depth traffic or metadata", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch"), res = await runCycle(), m = readMeta(res);
+    expect(res.status).toBe("ok");
+    expect(m).toMatchObject({ failedSources: [], stagedPoolsSkippedByExactIdentity: 0, stagedPoolsSkippedByUniqueDerivedIdentity: 0, sourceCoverage: { nearCoverageGuard: false, weakCoverageCoins: 0, qualityDriftSeverity: "none", qualityDriftFlags: [], coinsWithoutMeasuredBalances: 0, protocolTvlQuarantine: { tvlUsd: 0 } } });
+    expect(m.sourceCoverage).not.toHaveProperty("directCexOrderbookDepth"); expect(fetchSpy).not.toHaveBeenCalled();
+    expect(persistScores).toHaveBeenCalledWith(expect.objectContaining({ prepare: expect.any(Function), batch: expect.any(Function) }), expect.any(Map), fx.current.scores.scores, fx.current.scores.globalAgg, expect.any(Number), fx.current.scores.tvlStabilityMap, undefined, fx.current.scores.diagnostics.routeRemovalEvidence, fx.current.scores.retainedPoolsByStablecoin, undefined);
   });
 
   it("carries partial-source telemetry through the stage into consumer metadata", async () => {
-    vi.mocked(fetchPancakeSwapPools).mockResolvedValueOnce(apiResult([], { degraded: true, errors: ["bsc: The operation was aborted due to timeout"], degradedChains: ["bsc"] }));
-
-    const stageResult = await stageSource();
-    const stageQuality = getCronQualityReasons(readMetadata(stageResult));
-    expect(readMetadata(stageResult).directApiSourceSummary.sourceWarnings).toEqual(["pancakeswap-api: bsc: The operation was aborted due to timeout"]);
-    expect(stageResult.status).toBe("ok");
-    expect(stageQuality).toEqual(["source-partial:pancakeswap-api:bsc", "direct-api-source-warnings"]);
-    const result = await consumeScoringStage(db);
-
-    const metadata = readMetadata(result);
-    expect(metadata.degradedSources).toEqual(["pancakeswap-api:bsc"]);
-    expect(metadata.failedSources).toEqual([]);
-    expect(getCronQualityReasons(metadata)).toEqual(stageQuality);
+    vm(fetchCake).mockResolvedValueOnce(apiRes([], { degraded: true, errors: ["bsc: The operation was aborted due to timeout"], degradedChains: ["bsc"] }));
+    const sRes = await stageSrc(), sq = qualReasons(readMeta(sRes));
+    expect(readMeta(sRes).directApiSourceSummary.sourceWarnings).toEqual(["pancakeswap-api: bsc: The operation was aborted due to timeout"]);
+    expect(sRes.status).toBe("ok"); expect(sq).toEqual(["source-partial:pancakeswap-api:bsc", "direct-api-source-warnings"]);
+    const m = readMeta(await consumeStageFn(db));
+    expect(m).toMatchObject({ degradedSources: ["pancakeswap-api:bsc"], failedSources: [] }); expect(qualReasons(m)).toEqual(sq);
   });
 
   it("reports failed optional stage sources as findings without failing successful staging", async () => {
-    phaseFixtures.reset({ uniswapV4: {
-      uniswapV4ExecutionCandidates: new Map(), failedChains: ["ethereum", "arbitrum"], chainFailures: [],
-      exactAnsweredPoolIdsByChain: new Map(),
-    } });
-    const result = await stageSource();
-    expect(result.status).toBe("ok");
-    expect(getCronQualityReasons(readMetadata(result))).toEqual([
-      "source-failed:uniswap-v4-subgraph:ethereum", "source-failed:uniswap-v4-subgraph:arbitrum",
-    ]);
+    fx.reset({ uniswapV4: { uniswapV4ExecutionCandidates: new Map(), failedChains: ["ethereum", "arbitrum"], chainFailures: [], exactAnsweredPoolIdsByChain: new Map() } });
+    const res = await stageSrc();
+    expect(res.status).toBe("ok"); expect(qualReasons(readMeta(res))).toEqual(["source-failed:uniswap-v4-subgraph:ethereum", "source-failed:uniswap-v4-subgraph:arbitrum"]);
   });
 
   it("loads the source slot derived from the registered stage and consumer offsets", async () => {
-    await stageSource();
-    const scheduledAtMs = Date.parse("2026-09-22T12:16:00Z");
-    const consumerSlot = getCronSlotStartedAtForSchedule("halfHourlyChartsOffset", scheduledAtMs);
-    const sourceSlot = getCronSlotStartedAtForSchedule("halfHourlyOffset", scheduledAtMs);
-
-    await consumeScoringStage(db, undefined, undefined, consumerSlot);
-
-    expect(consumerSlot - DEX_LIQUIDITY_STAGE_LEAD_SEC).toBe(sourceSlot);
-    expect(loadDexLiquidityScoringStageWhenReady).toHaveBeenLastCalledWith(
-      expect.objectContaining({ prepare: expect.any(Function), batch: expect.any(Function) }),
-      expect.objectContaining({ expectedSourceSlotStartedAt: sourceSlot }),
-      undefined,
-    );
+    await stageSrc();
+    const atMs = Date.parse("2026-09-22T12:16:00Z"), cSlot = slotAt("halfHourlyChartsOffset", atMs), sSlot = slotAt("halfHourlyOffset", atMs);
+    await consumeStageFn(db, undefined, undefined, cSlot);
+    expect(cSlot - STAGE_LEAD).toBe(sSlot);
+    expect(loadStageReady).toHaveBeenLastCalledWith(expect.objectContaining({ prepare: expect.any(Function), batch: expect.any(Function) }), expect.objectContaining({ expectedSourceSlotStartedAt: sSlot }), undefined);
   });
-
 
   it("publishes active and shadow measured targets during the daily inventory cycle", async () => {
-    await runScoringCycle(
-      db,
-      "graph-key",
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      { publishShadowTargets: true },
-    );
-
-    const scoreCalls = vi.mocked(computeStablecoinScores).mock.calls;
-    expect(scoreCalls[scoreCalls.length - 1]?.[8]).toBe("active-and-shadow");
+    await runCycle(db, GK, undefined, undefined, undefined, undefined, { publishShadowTargets: true });
+    expect(vm(compScores).mock.lastCall?.[8]).toBe("active-and-shadow");
   });
 
-
-
   it("accepts compacted production-scale primary rows while reporting raw counts", async () => {
-    const rawPoolCount = 15_430;
-    const lookups = buildSymbolLookups();
-    const [trackedKey] = lookups.chainAddressToId.keys();
-    expect(trackedKey).toBeDefined();
-    const separator = trackedKey!.indexOf(":");
-    const trackedChain = trackedKey!.slice(0, separator);
-    const trackedAddress = trackedKey!.slice(separator + 1);
-    const trackedPool: LlamaPool = llamaPool({
-      pool: "tracked-pool",
-      chain: trackedChain,
-      project: "scale-dex",
-      symbol: "TRACKED-QUOTE",
-      tvlUsd: 1_000_000,
-      volumeUsd1d: 50_000,
-      volumeUsd7d: 300_000,
-      underlyingTokens: [trackedAddress, "unknown-quote"],
-    });
-    const nowSec = Math.floor(Date.now() / 1000);
-    vi.mocked(fetchDataSources).mockResolvedValueOnce(phaseFixtures.primary({
-      pools: [trackedPool], rawPoolCount, dexProjects: new Set(["scale-dex"]),
-      curvePayloads: [
-        { readStartedAtSec: nowSec - 1, generatedTimeMs: (nowSec - 10) * 1000 },
-        { readStartedAtSec: nowSec - 1, generatedTimeMs: (nowSec + 3600) * 1000 },
-      ],
-    }));
-    const progressUpdates: CronProgressUpdate[] = [];
-
-    const result = await runScoringCycle(db, "graph-key", undefined, undefined, undefined, async (update) => {
-      progressUpdates.push(update);
-    });
-
-    const knownPoolCalls = vi.mocked(buildKnownPoolAddresses).mock.calls;
-    const processPoolCalls = vi.mocked(processPoolMetrics).mock.calls;
-    expect(knownPoolCalls[knownPoolCalls.length - 1]?.[0]).toEqual([trackedPool]);
-    expect(processPoolCalls[processPoolCalls.length - 1]?.[0]?.pools).toEqual([trackedPool]);
-    expect(readMetadata(result)).toMatchObject({ rowsRead: rawPoolCount });
-    expect(progressUpdates.find((update) => update.stage === "primary-sources-loaded")).toMatchObject({
-      metadata: {
-        countTotals: { defillamaPools: rawPoolCount },
-        curveBulkReads: [
-          { chain: CURVE_CHAINS[0], readStartedAtSec: nowSec - 1, cacheGeneratedAtSec: nowSec - 10 },
-          { chain: CURVE_CHAINS[1], readStartedAtSec: nowSec - 1, cacheGeneratedAtSec: null },
-        ],
-      },
-    });
-    expect(progressUpdates.find((update) => update.stage === "pool-processing")).toMatchObject({
-      itemsTotal: rawPoolCount,
-      metadata: {
-        countTotals: {
-          primaryPools: rawPoolCount,
-          primaryPoolsRetained: 1,
-        },
-      },
-    });
+    const rawPoolCount = 15_430, [tk] = buildSymbolLookups().chainAddressToId.keys(); expect(tk).toBeDefined();
+    const sep = tk!.indexOf(":"), tracked = llamaPool({ pool: "tracked-pool", chain: tk!.slice(0, sep), project: "scale-dex", symbol: "TRACKED-QUOTE", tvlUsd: 1e6, volumeUsd1d: 5e4, volumeUsd7d: 3e5, underlyingTokens: [tk!.slice(sep + 1), "unknown-quote"] }), now = nowS();
+    vm(fetchSrcs).mockResolvedValueOnce(fx.primary({ pools: [tracked], rawPoolCount, dexProjects: new Set(["scale-dex"]), curvePayloads: [{ readStartedAtSec: now - 1, generatedTimeMs: (now - 10) * 1e3 }, { readStartedAtSec: now - 1, generatedTimeMs: (now + 3600) * 1e3 }] }));
+    const updates: CronProgressUpdate[] = [], res = await runCycle(db, GK, undefined, undefined, undefined, async (u) => { updates.push(u); });
+    expect(vm(buildKnown).mock.lastCall?.[0]).toEqual([tracked]);
+    expect(vm(procMetrics).mock.lastCall?.[0]?.pools).toEqual([tracked]);
+    expect(readMeta(res)).toMatchObject({ rowsRead: rawPoolCount });
+    expect(updates.find((u) => u.stage === "primary-sources-loaded")).toMatchObject({ metadata: { countTotals: { defillamaPools: rawPoolCount }, curveBulkReads: [{ chain: CURVE_CHAINS[0], readStartedAtSec: now - 1, cacheGeneratedAtSec: now - 10 }, { chain: CURVE_CHAINS[1], readStartedAtSec: now - 1, cacheGeneratedAtSec: null }] } });
+    expect(updates.find((u) => u.stage === "pool-processing")).toMatchObject({ itemsTotal: rawPoolCount, metadata: { countTotals: { primaryPools: rawPoolCount, primaryPoolsRetained: 1 } } });
   });
 
   it("releases consumed source graphs before materializing staged pools", async () => {
-    const lookups = buildSymbolLookups();
-    const trackedEntry = [...lookups.chainAddressToId].find(
-      ([key, stablecoinId]) => key.startsWith("ethereum:") && stablecoinId === "usdt-tether",
-    );
-    const quoteEntry = [...lookups.chainAddressToId].find(
-      ([key, stablecoinId]) => key.startsWith("ethereum:") && stablecoinId === "usdc-circle",
-    );
-    expect(trackedEntry).toBeDefined();
-    expect(quoteEntry).toBeDefined();
-    const chain = "ethereum";
-    const address = trackedEntry![0].slice("ethereum:".length);
-    const quoteAddress = quoteEntry![0].slice("ethereum:".length);
-    const primaryPool: LlamaPool = llamaPool({
-      pool: "primary-pool",
-      chain,
-      project: "memory-dex",
-      symbol: "TRACKED-QUOTE",
-      tvlUsd: 1_000_000,
-      volumeUsd1d: 50_000,
-      volumeUsd7d: 300_000,
-      stablecoin: false,
-      underlyingTokens: [address, quoteAddress],
+    const ents = [...buildSymbolLookups().chainAddressToId], te = ents.find(([k, id]) => k.startsWith("ethereum:") && id === USDT), qe = ents.find(([k, id]) => k.startsWith("ethereum:") && id === USDC);
+    expect(te).toBeDefined(); expect(qe).toBeDefined();
+    const chain = "ethereum", addr = te![0].slice(9), qAddr = qe![0].slice(9);
+    const srcData = fx.primary({ pools: [llamaPool({ pool: "primary-pool", chain, project: "memory-dex", symbol: "TRACKED-QUOTE", tvlUsd: 1e6, volumeUsd1d: 5e4, volumeUsd7d: 3e5, stablecoin: false, underlyingTokens: [addr, qAddr] })], rawPoolCount: 1, dexProjects: new Set(["memory-dex"]) });
+    const dPool: DexApiPool = { source: "fluid", chain, poolAddress: "0x1111111111111111111111111111111111111111", poolType: "fluid-dex", tokens: [{ address: addr, symbol: "TRACKED", decimals: 18 }, { address: qAddr, symbol: "QUOTE", decimals: 18 }], price: 1, tvlUsd: 1e6, volume24hUsd: 5e4, feeRate: 0.0005, balances: [1e6, 1e6] };
+    const dRes = apiRes([dPool], { pagination: { state: "partial", headRefreshed: true, pagesFetched: 5, cursor: "next-page", cycleCompleted: false } });
+    const cRes = apiRes([{ ...dPool, source: "pancakeswap", poolAddress: "0x3333333333333333333333333333333333333333", poolType: "pancakeswap-v3" }]);
+    const curvePoolMap = new Map([["curve-key", {} as never]]), uniV3PoolFees = new Map([["fee-key", 500]]), uniV3ExecutionCandidates = new Map([["candidate-key", []]]);
+    vm(fetchFluid).mockResolvedValueOnce(dRes); vm(fetchCake).mockResolvedValueOnce(cRes); vm(fetchRay).mockResolvedValueOnce(apiRes([], { warnings: ["release-warning"] }));
+    vm(fetchSrcs).mockImplementationOnce(async () => {
+      for (const fn of [fetchFluid, fetchBal, fetchCake, fetchMet, fetchRay, fetchOrca, fetchSlip]) expect(fn).toHaveBeenCalledOnce();
+      expect([dRes.pools, cRes.pools]).toEqual([[], []]);
+      return srcData;
     });
-    const sourceData = phaseFixtures.primary({ pools: [primaryPool], rawPoolCount: 1, dexProjects: new Set(["memory-dex"]) });
-    const directPool: DexApiPool = {
-      source: "fluid",
-      chain,
-      poolAddress: "0x1111111111111111111111111111111111111111",
-      poolType: "fluid-dex",
-      tokens: [
-        { address, symbol: "TRACKED", decimals: 18 },
-        { address: quoteAddress, symbol: "QUOTE", decimals: 18 },
-      ],
-      price: 1,
-      tvlUsd: 1_000_000,
-      volume24hUsd: 50_000,
-      feeRate: 0.0005,
-      balances: [1_000_000, 1_000_000],
-    };
-    const pancakePool: DexApiPool = {
-      ...directPool,
-      source: "pancakeswap",
-      poolAddress: "0x3333333333333333333333333333333333333333",
-      poolType: "pancakeswap-v3",
-    };
-    const directResult = apiResult([directPool], { pagination: {
-        state: "partial" as const,
-        headRefreshed: true,
-        pagesFetched: 5,
-        cursor: "next-page",
-        cycleCompleted: false,
-      } });
-    const pancakeResult = apiResult([pancakePool]);
-    const curvePoolMap = new Map([["curve-key", {} as never]]);
-    const uniV3PoolFees = new Map([["fee-key", 500]]);
-    const uniV3ExecutionCandidates = new Map([["candidate-key", []]]);
-
-    vi.mocked(fetchFluidPools).mockResolvedValueOnce(directResult);
-    vi.mocked(fetchPancakeSwapPools).mockResolvedValueOnce(pancakeResult);
-    vi.mocked(fetchRaydiumPools).mockResolvedValueOnce(apiResult([], { warnings: ["release-warning"] }));
-    vi.mocked(fetchDataSources).mockImplementationOnce(async () => {
-      expect(fetchFluidPools).toHaveBeenCalledOnce();
-      expect(fetchBalancerPools).toHaveBeenCalledOnce();
-      expect(fetchPancakeSwapPools).toHaveBeenCalledOnce();
-      expect(fetchMeteoraPools).toHaveBeenCalledOnce();
-      expect(fetchRaydiumPools).toHaveBeenCalledOnce();
-      expect(fetchOrcaPools).toHaveBeenCalledOnce();
-      expect(fetchSlipstreamPools).toHaveBeenCalledOnce();
-      expect(directResult.pools).toEqual([]);
-      expect(pancakeResult.pools).toEqual([]);
-      return sourceData;
+    vm(buildCurve).mockResolvedValueOnce({ curvePoolMap, curvePoolCandidatesByFingerprint: new Map(), priceObservations: new Map() });
+    vm(fetchV3).mockResolvedValueOnce({ uniV3PoolFees, uniV3SymbolFees: new Map(), uniV3PriceObs: new Map(), uniV3ExecutionCandidates, failedChains: [], failedChainReasons: {}, chainFailures: [] });
+    vm(mergeStaged).mockImplementationOnce(async (_db, m, _k, now, _t, _r, conf, _c, _s, obs) => {
+      expect([srcData.pools, srcData.dexProjects.size, dRes.pools, cRes.pools, curvePoolMap.size, uniV3PoolFees.size, uniV3ExecutionCandidates.size]).toEqual([[], 0, [], [], 1, 1, 1]);
+      expect(conf?.enforcedChainsByProtocol.get("fluid")).toBeUndefined(); expect(conf?.confirmedExactKeysByProtocol.get("fluid")).toBeUndefined();
+      return { ...fx.stagedPools(), stagedWriteback: buildWb(m, now), observedThisRun: priceRef.captureObservedPoolPrices({ metrics: m, priceObservations: obs }, now) };
     });
-    vi.mocked(buildCurveLookups).mockResolvedValueOnce({
-      curvePoolMap,
-      curvePoolCandidatesByFingerprint: new Map(),
-      priceObservations: new Map(),
-    });
-    vi.mocked(fetchUniV3Data).mockResolvedValueOnce({
-      uniV3PoolFees,
-      uniV3SymbolFees: new Map(),
-      uniV3PriceObs: new Map(),
-      uniV3ExecutionCandidates,
-      failedChains: [],
-      failedChainReasons: {},
-      chainFailures: [],
-    });
-    vi.mocked(mergeStagedPools).mockImplementationOnce(
-      async (_db, _metrics, _known, _now, _trackedDeployments, _references, confirmation, _counters, _signal, priceObservations) => {
-        expect(sourceData.pools).toEqual([]);
-        expect(sourceData.dexProjects.size).toBe(0);
-        expect(directResult.pools).toEqual([]);
-        expect(pancakeResult.pools).toEqual([]);
-        expect(curvePoolMap.size).toBe(1);
-        expect(uniV3PoolFees.size).toBe(1);
-        expect(uniV3ExecutionCandidates.size).toBe(1);
-        expect(confirmation?.enforcedChainsByProtocol.get("fluid")).toBeUndefined();
-        expect(confirmation?.confirmedExactKeysByProtocol.get("fluid")).toBeUndefined();
-        return {
-          ...phaseFixtures.stagedPools(),
-          stagedWriteback: buildStagedPoolWriteback(_metrics, _now),
-          observedThisRun: priceRefresh.captureObservedPoolPrices({ metrics: _metrics, priceObservations }, _now),
-        };
-      },
-    );
-
-    const startedAt = Math.floor(Date.now() / 1000);
-    const result = await runScoringCycle();
-    expect(mergeStagedPools).toHaveBeenCalledOnce();
-    const scoreCalls = vi.mocked(computeStablecoinScores).mock.calls;
-    const scoreCall = scoreCalls[scoreCalls.length - 1];
-    const pancakeTargets = scoreCall?.[5];
-    expect([...pancakeTargets!.values()]).toContainEqual(
-      expect.objectContaining({
-        stablecoinId: "usdt-tether",
-        adapterProfileId: "pancakeswap-v3-quoter-v2",
-        poolId: "ethereum:0x3333333333333333333333333333333333333333",
-        poolTokenAddresses: [address, quoteAddress],
-        tokenIn: expect.objectContaining({ address, trackedAssetId: "usdt-tether" }),
-        tokenOut: expect.objectContaining({ address: quoteAddress, trackedAssetId: "usdc-circle" }),
-        feePips: 500,
-        retainedTvlUsd: 1_000_000,
-        capturedAt: expect.any(Number),
-      }),
-    );
-    expect([...pancakeTargets!.values()].every((target) => target.capturedAt >= startedAt)).toBe(true);
-    const metadata = readMetadata(result);
-    expect(metadata.directApiSourceSummary?.sourceWarnings).toContain("raydium-api: release-warning");
-    expect(metadata.directApiSourceSummary?.pagination).toContainEqual({
-      source: "fluid-dex-api",
-      state: "partial",
-      headRefreshed: true,
-      pagesFetched: 5,
-      cursor: "next-page",
-      cycleCompleted: false,
-    });
+    const startedAt = nowS(), res = await runCycle();
+    expect(mergeStaged).toHaveBeenCalledOnce();
+    const targets = [...vm(compScores).mock.lastCall![5]!.values()];
+    expect(targets).toContainEqual(expect.objectContaining({ stablecoinId: USDT, adapterProfileId: "pancakeswap-v3-quoter-v2", poolId: "ethereum:0x3333333333333333333333333333333333333333", poolTokenAddresses: [addr, qAddr], tokenIn: expect.objectContaining({ address: addr, trackedAssetId: USDT }), tokenOut: expect.objectContaining({ address: qAddr, trackedAssetId: USDC }), feePips: 500, retainedTvlUsd: 1e6, capturedAt: expect.any(Number) }));
+    expect(targets.every((t) => t.capturedAt >= startedAt)).toBe(true);
+    const m = readMeta(res);
+    expect(m.directApiSourceSummary?.sourceWarnings).toContain("raydium-api: release-warning");
+    expect(m.directApiSourceSummary?.pagination).toContainEqual({ source: "fluid-dex-api", state: "partial", headRefreshed: true, pagesFetched: 5, cursor: "next-page", cycleCompleted: false });
   });
 
   it("keeps the run ok when an optional direct API source is unavailable but coverage stays intact", async () => {
-    vi.mocked(fetchRaydiumPools).mockResolvedValueOnce(apiResult([], { ok: false, degraded: true, errors: ["query poolType type error"] }));
-
-    const result = await runScoringCycle();
-
-    expect(result.status).toBe("ok");
-    const metadata = readMetadata(result);
-    expect(metadata.failedSources).toContain("raydium-api");
-    expect(metadata.fallbackMode).toContain("raydium-api-unavailable");
-    expect(metadata.sourceCoverage?.sourceDegradedFamilies).toEqual([]);
-    expect(persistScores).toHaveBeenCalled();
+    vm(fetchRay).mockResolvedValueOnce(apiRes([], { ok: false, degraded: true, errors: ["query poolType type error"] }));
+    const res = await runCycle(), m = readMeta(res);
+    expect(res.status).toBe("ok"); expect(m.failedSources).toContain("raydium-api"); expect(m.fallbackMode).toContain("raydium-api-unavailable");
+    expect(m.sourceCoverage?.sourceDegradedFamilies).toEqual([]); expect(persistScores).toHaveBeenCalled();
   });
 
   it("carries BSC Uniswap V3 direct candidates into the shadow target accumulator", async () => {
-    const pool: DexApiPool = apiPool({ source: "uniswap-v3-shadow", chain: "bsc", poolAddress: "0xf150d29d92e7460a1531cbc9d1abeab33d6998e4", poolType: "uniswap-v3", tokens: [
-        { address: "0x55d398326f99059ff775485246999027b3197955", symbol: "USDT", decimals: 18 },
-        { address: "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d", symbol: "USD1", decimals: 18 },
-      ], tvlUsd: 2_000_000, volume24hUsd: 50_000, balances: [1_000_000, 1_000_000] });
-    vi.mocked(fetchUniswapV3BscShadowPools).mockResolvedValueOnce(apiResult([pool]));
-
-    await runScoringCycle();
-
-    const scoreCalls = vi.mocked(computeStablecoinScores).mock.calls;
-    const scoreCall = scoreCalls[scoreCalls.length - 1];
-    const shadowTargets = scoreCall?.[7];
-    expect([...shadowTargets!.values()]).toContainEqual(
-      expect.objectContaining({
-        stablecoinId: "usdt-tether",
-        adapterProfileId: "uniswap-v3-quoter-v2",
-        chain: "bsc",
-        poolId: "bsc:0xf150d29d92e7460a1531cbc9d1abeab33d6998e4",
-        feePips: 100,
-        retainedTvlUsd: 2_000_000,
-      }),
-    );
+    vm(fetchBscSh).mockResolvedValueOnce(apiRes([apiPool({ source: "uniswap-v3-shadow", chain: "bsc", poolAddress: "0xf150d29d92e7460a1531cbc9d1abeab33d6998e4", poolType: "uniswap-v3", tokens: [{ address: "0x55d398326f99059ff775485246999027b3197955", symbol: "USDT", decimals: 18 }, { address: "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d", symbol: "USD1", decimals: 18 }], tvlUsd: 2e6, volume24hUsd: 5e4, balances: [1e6, 1e6] })]));
+    await runCycle();
+    expect([...vm(compScores).mock.lastCall![7]!.values()]).toContainEqual(expect.objectContaining({ stablecoinId: USDT, adapterProfileId: "uniswap-v3-quoter-v2", chain: "bsc", poolId: "bsc:0xf150d29d92e7460a1531cbc9d1abeab33d6998e4", feePips: 100, retainedTvlUsd: 2e6 }));
   });
 
   it("waits for direct API fetches before loading primary and subgraph sources", async () => {
-    const fluidGate = deferred<ReturnType<typeof makeDirectApiResult>>();
-    const entered = deferred<void>();
-    vi.mocked(fetchFluidPools).mockImplementationOnce(() => {
-      entered.resolve();
-      return fluidGate.promise;
-    });
-
-    const syncPromise = runScoringCycle();
-
-    try {
-      await entered.promise;
-      expect(fetchDataSources).not.toHaveBeenCalled();
-      expect(fetchUniV3Data).not.toHaveBeenCalled();
-    } finally {
-      fluidGate.resolve(makeDirectApiResult());
-      await syncPromise;
-    }
-    expect(fetchDataSources).toHaveBeenCalledOnce();
-    expect(fetchUniV3Data).toHaveBeenCalledOnce();
+    const gate = deferred<ReturnType<typeof directRes>>(), entered = deferred<void>();
+    vm(fetchFluid).mockImplementationOnce(() => { entered.resolve(); return gate.promise; });
+    const p = runCycle();
+    try { await entered.promise; expect(fetchSrcs).not.toHaveBeenCalled(); expect(fetchV3).not.toHaveBeenCalled(); }
+    finally { gate.resolve(directRes()); await p; }
+    expect(fetchSrcs).toHaveBeenCalledOnce(); expect(fetchV3).toHaveBeenCalledOnce();
   });
 
   it("threads tracked stablecoin cache prices into direct API conversion and observations", async () => {
-    let convertedStablecoinPrices: Map<string, number> | undefined;
-    let observedStablecoinPrices: Map<string, number> | undefined;
-    const fluidPool: DexApiPool = apiPool({ poolType: "fluid-dex", tvlUsd: 500_000, volume24hUsd: 120_000, balances: [250_000, 250_000] });
-    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
-      kind: "ok",
-      updatedAt: 123,
-      payload: {
-        peggedAssets: [
-          makeTrackedStablecoin("usdc-circle", "USDC", 0.97),
-          makeTrackedStablecoin("usdt-tether", "USDT", 1.01),
-          makeTrackedStablecoin("ignored-zero", "ZERO", 0),
-        ],
-      },
-    });
-    vi.mocked(fetchFluidPools).mockResolvedValueOnce(apiResult([fluidPool]));
-    vi.mocked(convertToGtNewPools).mockImplementationOnce((...args) => {
-      convertedStablecoinPrices = new Map(args[4]);
-      return new Map([["usdc-circle", []]]);
-    });
-    vi.mocked(extractPriceObservations).mockImplementationOnce((...args) => {
-      observedStablecoinPrices = new Map(args[4]);
-      return new Map([["usdc-circle", []]]);
-    });
-
-    await runScoringCycle();
-
-    expect(convertedStablecoinPrices).toBeInstanceOf(Map);
-    expect(Array.from(convertedStablecoinPrices?.entries() ?? [])).toEqual([
-      ["usdc-circle", 0.97],
-      ["usdt-tether", 1.01],
-    ]);
-
-    expect(observedStablecoinPrices).toBeInstanceOf(Map);
-    expect(Array.from(observedStablecoinPrices?.entries() ?? [])).toEqual([
-      ["usdc-circle", 0.97],
-      ["usdt-tether", 1.01],
-    ]);
+    let conv: Map<string, number> | undefined, obs: Map<string, number> | undefined;
+    vm(loadCache).mockResolvedValueOnce({ kind: "ok", updatedAt: 123, payload: { peggedAssets: [mkCoin(USDC, "USDC", 0.97), mkCoin(USDT, "USDT", 1.01), mkCoin("ignored-zero", "ZERO", 0)] } });
+    vm(fetchFluid).mockResolvedValueOnce(apiRes([apiPool({ poolType: "fluid-dex", tvlUsd: 5e5, volume24hUsd: 12e4, balances: [25e4, 25e4] })]));
+    vm(convGt).mockImplementationOnce((...a) => { conv = new Map(a[4]); return new Map([[USDC, []]]); });
+    vm(extObs).mockImplementationOnce((...a) => { obs = new Map(a[4]); return new Map([[USDC, []]]); });
+    await runCycle();
+    for (const m of [conv, obs]) { expect(m).toBeInstanceOf(Map); expect([...(m?.entries() ?? [])]).toEqual([[USDC, 0.97], [USDT, 1.01]]); }
   });
 
-  it.each([[false, true], [true, false], [true, true]])("requires both clocks to retain ratio prices (market %s, ratio %s)", async (hasMarketMark, hasRatioClock) => {
-    const now = 1_790_000_000;
-    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
-    phaseFixtures.current.stagedPools.registryEvaluatedAtSec = now;
-    const admitted = hasMarketMark && hasRatioClock;
-    let observations: unknown;
-    const retainedSnapshot: { pool?: PoolEntry } = {};
-    const score = vi.mocked(computeStablecoinScores).getMockImplementation()!;
-    vi.mocked(computeStablecoinScores).mockImplementationOnce(async (...args) => {
-      retainedSnapshot.pool = structuredClone(args[1].get("usdc-circle")?.pools.find((pool) => pool.source === "direct_api"));
-      return score(...args);
-    });
-    const publishPrices = vi.mocked(computeDexPrices).getMockImplementation()!;
-    vi.mocked(computeDexPrices).mockImplementationOnce(async (...args) => {
-      observations = structuredClone(args[0].exactPriceEvidenceByStablecoin?.get("usdc-circle"));
-      return publishPrices(...args);
-    });
-    vi.spyOn(priceValidation, "loadPriceValidationReferences").mockResolvedValueOnce({
-      rates: { peggedEUR: 1.25 }, type: "fresh", updatedAt: now,
-    });
-    const observedAt = now - 60;
-    const counterpartyPrice = { stablecoinId: "eurc-circle", priceUsd: 1.25, observedAtSec: observedAt, observedAtMode: "upstream", source: "kraken+coinbase" };
-    if (hasMarketMark) {
-      vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
-        kind: "ok", updatedAt: now, payload: { peggedAssets: [{
-          ...makeTrackedStablecoin("eurc-circle", "EURC", 1.25),
-          priceSource: "kraken+coinbase", priceConfidence: "high", agreeSources: ["kraken", "coinbase"],
-          priceObservedAt: observedAt,
-        }] },
-      });
-    }
-    vi.mocked(convertToGtNewPools).mockImplementation(realPoolShaping.convertToGtNewPools);
-    vi.mocked(extractPriceObservations).mockImplementation(realPoolShaping.extractPriceObservations);
-    vi.mocked(fetchFluidPools).mockResolvedValueOnce(apiResult([apiPool({ tokens: [
-          { address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", symbol: "USDC", decimals: 6 },
-          { address: "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c", symbol: "EURC", decimals: 6 },
-        ], price: 0.8, ratioObservedAtSec: hasRatioClock ? now - 20 : undefined,
-        tvlUsd: 1_000_000, volume24hUsd: 100_000, balances: [500_000, 400_000] })]));
-
-    await runScoringCycle();
-
-    expect(observations).toEqual(admitted ? [expect.objectContaining({
-      price: expect.closeTo(1), observedAt, counterpartyPrice,
-    })] : undefined);
-    const converted = vi.mocked(convertToGtNewPools).mock.results.flatMap((result) =>
-      result.type === "return" ? result.value.get("usdc-circle") ?? [] : [],
-    );
-    expect(converted).toEqual([
-      expect.objectContaining({
-        address: "0x1111111111111111111111111111111111111111", tvlUsd: 1_000_000,
-        price: admitted ? expect.closeTo(1) : 0,
-        priceObservedAt: admitted ? observedAt : null,
-        measurement: expect.objectContaining({ tvlMeasured: true, priceMeasured: admitted }),
-      }),
-    ]);
-    expect(converted[0]?.priceCounterparty).toEqual(admitted ? counterpartyPrice : undefined);
-    const retained = retainedSnapshot.pool;
-    expect(retained).toMatchObject({ source: "direct_api", tvlUsd: 1_000_000 });
-    expect(retained?.price).toEqual(admitted ? expect.closeTo(1) : undefined);
-    expect(retained?.priceObservedAt).toBe(admitted ? observedAt : undefined);
-    expect(retained?.priceCounterparty).toEqual(admitted ? counterpartyPrice : undefined);
+  it.each([[false, true], [true, false], [true, true]])("requires both clocks to retain ratio prices (market %s, ratio %s)", async (hasMark, hasClk) => {
+    const now = 1.79e9, obsAt = now - 60, adm = hasMark && hasClk;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1e3); fx.current.stagedPools.registryEvaluatedAtSec = now;
+    let observations: unknown; const snap: { pool?: PoolEntry } = {}, origS = vm(compScores).getMockImplementation()!, origP = vm(compPrices).getMockImplementation()!;
+    vm(compScores).mockImplementationOnce(async (...a) => { snap.pool = structuredClone(a[1].get(USDC)?.pools.find((p) => p.source === "direct_api")); return origS(...a); });
+    vm(compPrices).mockImplementationOnce(async (...a) => { observations = structuredClone(a[0].exactPriceEvidenceByStablecoin?.get(USDC)); return origP(...a); });
+    vi.spyOn(priceVal, "loadPriceValidationReferences").mockResolvedValueOnce({ rates: { peggedEUR: 1.25 }, type: "fresh", updatedAt: now });
+    const cp = { stablecoinId: "eurc-circle", priceUsd: 1.25, observedAtSec: obsAt, observedAtMode: "upstream", source: "kraken+coinbase" };
+    if (hasMark) vm(loadCache).mockResolvedValueOnce({ kind: "ok", updatedAt: now, payload: { peggedAssets: [{ ...mkCoin("eurc-circle", "EURC", 1.25), priceSource: "kraken+coinbase", priceConfidence: "high", agreeSources: ["kraken", "coinbase"], priceObservedAt: obsAt }] } });
+    vm(convGt).mockImplementation(poolShaping.convertToGtNewPools); vm(extObs).mockImplementation(poolShaping.extractPriceObservations);
+    vm(fetchFluid).mockResolvedValueOnce(apiRes([apiPool({ tokens: [{ address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", symbol: "USDC", decimals: 6 }, { address: "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c", symbol: "EURC", decimals: 6 }], price: 0.8, ratioObservedAtSec: hasClk ? now - 20 : undefined, tvlUsd: 1e6, volume24hUsd: 1e5, balances: [5e5, 4e5] })]));
+    await runCycle();
+    expect(observations).toEqual(adm ? [expect.objectContaining({ price: expect.closeTo(1), observedAt: obsAt, counterpartyPrice: cp })] : undefined);
+    const conv = vm(convGt).mock.results.flatMap((r) => r.type === "return" ? r.value.get(USDC) ?? [] : []);
+    expect(conv).toEqual([expect.objectContaining({ address: "0x1111111111111111111111111111111111111111", tvlUsd: 1e6, price: adm ? expect.closeTo(1) : 0, priceObservedAt: adm ? obsAt : null, measurement: expect.objectContaining({ tvlMeasured: true, priceMeasured: adm }) })]);
+    expect(conv[0]?.priceCounterparty).toEqual(adm ? cp : undefined);
+    expect(snap.pool).toMatchObject({ source: "direct_api", tvlUsd: 1e6 });
+    expect(snap.pool?.price).toEqual(adm ? expect.closeTo(1) : undefined); expect(snap.pool?.priceObservedAt).toBe(adm ? obsAt : undefined); expect(snap.pool?.priceCounterparty).toEqual(adm ? cp : undefined);
   });
 
   it("records drift and evidence telemetry when previous run metadata exists", async () => {
-    vi.mocked(fetchDataSources).mockResolvedValueOnce(phaseFixtures.primary({ protocolTvlCaps: new Map<string, number>([["curve", 50]]) }));
-    vi.mocked(fetchFluidPools).mockResolvedValueOnce(apiResult([
-        apiPool({ poolAddress: "0xfluid-pool", balances: [50_000_000_000, 50_000_000_000] }),
-      ]));
-    vi.mocked(extractPriceObservations).mockReturnValueOnce(
-      new Map([
-        [
-          "usdc-circle",
-          [
-            {
-              sourceFamily: "gecko_terminal",
-              price: 1,
-              tvl: 100,
-              chain: "Ethereum",
-              protocol: "curve",
-            },
-          ],
-        ],
-      ]),
-    );
-    vi.mocked(computeStablecoinScores).mockResolvedValueOnce(phaseFixtures.scored({ scores: new Map([
-        [
-          "usdc-circle",
-          {
-            coverageClass: "fallback",
-            coverageConfidence: 0.55,
-            tvl: 100,
-            balanceMeasuredTvlUsd: 0,
-            sourceMix: { gecko_terminal: { poolCount: 1, tvlUsd: 100 } },
-          },
-        ],
-      ]), globalAgg: { totalTvl: 100 }, retainedPoolsByStablecoin: new Map([
-        [
-          "usdc-circle",
-          [
-            {
-              source: "gecko_terminal",
-              tvlUsd: 100,
-              project: "curve",
-              extra: { measurement: { balanceMeasured: false } },
-            },
-          ],
-        ],
-      ]), diagnostics: phaseFixtures.diagnostics({ protocolTvlQuarantine: { reason: "fallback-protocol-tvl-exceeds-headroom", poolCount: 1, protocolCount: 1, tvlUsd: 50 }, globalProtocolOverCapUsd: 60 }) }) as unknown as Awaited<ReturnType<typeof computeStablecoinScores>>);
-
-    const driftDb = guardDatabase([
+    vm(fetchSrcs).mockResolvedValueOnce(fx.primary({ protocolTvlCaps: new Map([["curve", 50]]) }));
+    vm(fetchFluid).mockResolvedValueOnce(apiRes([apiPool({ poolAddress: "0xfluid-pool", balances: [5e10, 5e10] })]));
+    vm(extObs).mockReturnValueOnce(new Map([[USDC, [{ sourceFamily: "gecko_terminal", price: 1, tvl: 100, chain: "Ethereum", protocol: "curve" }]]]));
+    vm(compScores).mockResolvedValueOnce(fx.scored({
+      scores: new Map([[USDC, { coverageClass: "fallback", coverageConfidence: 0.55, tvl: 100, balanceMeasuredTvlUsd: 0, sourceMix: { gecko_terminal: { poolCount: 1, tvlUsd: 100 } } }]]),
+      globalAgg: { totalTvl: 100 }, retainedPoolsByStablecoin: new Map([[USDC, [{ source: "gecko_terminal", tvlUsd: 100, project: "curve", extra: { measurement: { balanceMeasured: false } } }]]]),
+      diagnostics: fx.diagnostics({ protocolTvlQuarantine: { reason: "fallback-protocol-tvl-exceeds-headroom", poolCount: 1, protocolCount: 1, tvlUsd: 50 }, globalProtocolOverCapUsd: 60 }),
+    }) as unknown as Awaited<ReturnType<typeof compScores>>);
+    const driftDb = guardDb([
       { match: "COUNT(*) as cnt FROM dex_liquidity", rows: [], first: { cnt: 5 } },
       { match: "SELECT total_tvl_usd, updated_at, chain_tvl_json FROM dex_liquidity WHERE stablecoin_id = '__global__'", rows: [], first: { total_tvl_usd: 100 } },
-      { match: "GROUP BY coverage_class", rows: [] },
-      { match: "ORDER BY total_tvl_usd DESC", rows: [{ stablecoin_id: "usdc-circle", total_tvl_usd: 100 }] },
+      { match: "GROUP BY coverage_class", rows: [] }, { match: "ORDER BY total_tvl_usd DESC", rows: [{ stablecoin_id: USDC, total_tvl_usd: 100 }] },
       { match: "SELECT r.stablecoin_id, r.total_tvl_usd, r.protocol_tvl_json", rows: [] },
-      { match: "SELECT started_at, status, metadata", alsoMatch: "cron_runs", rows: [{ started_at: 1, status: "ok", metadata: JSON.stringify({
-        stagedPoolsMerged: 10,
-        stagedPoolsSkipped: 0,
-        sourceCoverage: {
-          dlYieldsAvailable: true,
-          dlProtocolsAvailable: true,
-          currentGlobalTvl: 100,
-          priceObservationCoins: 5,
-          measuredBalanceCoveragePct: 0.5,
-          weakCoverageCoins: 0,
-          // Conditions already observed once: this run is the
-          // second consecutive one, so each flag confirms.
-          qualityDriftCandidates: [
-            { flag: "price-observation-drop", consecutiveRuns: 1, baselineValue: 5, observedValue: 1 },
-            { flag: "measured-balance-drop", consecutiveRuns: 1, baselineValue: 0.5, observedValue: 0 },
-            { flag: "watchlist-pool-drop:usdc-circle", consecutiveRuns: 1, baselineValue: 5, observedValue: 1 },
-          ],
-        },
-      }) }] },
-      { match: "WHERE stablecoin_id IN", rows: [{ stablecoin_id: "usdc-circle", pool_count: 5, coverage_confidence: 0.9, total_tvl_usd: 100, balance_measured_tvl_usd: 50 }] },
+      { match: "SELECT started_at, status, metadata", alsoMatch: "cron_runs", rows: [{ started_at: 1, status: "ok", metadata: js({ stagedPoolsMerged: 10, stagedPoolsSkipped: 0, sourceCoverage: { dlYieldsAvailable: true, dlProtocolsAvailable: true, currentGlobalTvl: 100, priceObservationCoins: 5, measuredBalanceCoveragePct: 0.5, weakCoverageCoins: 0, qualityDriftCandidates: [{ flag: "price-observation-drop", consecutiveRuns: 1, baselineValue: 5, observedValue: 1 }, { flag: "measured-balance-drop", consecutiveRuns: 1, baselineValue: 0.5, observedValue: 0 }, { flag: "watchlist-pool-drop:usdc-circle", consecutiveRuns: 1, baselineValue: 5, observedValue: 1 }] } }) }] },
+      { match: "WHERE stablecoin_id IN", rows: [{ stablecoin_id: USDC, pool_count: 5, coverage_confidence: 0.9, total_tvl_usd: 100, balance_measured_tvl_usd: 50 }] },
     ], { batch: db.batch, exec: db.exec, dump: db.dump });
-
-    const result = await runScoringCycle(driftDb, "graph-key");
-    const metadata = readMetadata(result);
-
-    expect(metadata.sourceCoverage?.qualityDriftSeverity).toBe("high");
-    expect(metadata.sourceCoverage?.qualityDriftFlags).toEqual(
-      expect.arrayContaining(["price-observation-drop", "measured-balance-drop", "watchlist-pool-drop:usdc-circle"]),
-    );
-    expect(metadata.sourceCoverage?.coinsWithoutMeasuredBalances).toBe(1);
-    expect(metadata.sourceCoverage?.coinsGtOnly).toBe(1);
-    expect(metadata.sourceCoverage?.coinsCrawlerOnly).toBe(1);
-    expect(metadata.sourceCoverage?.coinsPriceOnlyNoMeasuredLiquidity).toBe(1);
-    expect(DexLiquidityCronMetadataSchema.parse(metadata).sourceCoverage?.globalProtocolOverCapUsd).toBe(60);
-    expect(DexLiquidityCronMetadataSchema.parse(metadata).sourceCoverage?.protocolTvlQuarantine).toEqual({
-      reason: "fallback-protocol-tvl-exceeds-headroom", poolCount: 1, protocolCount: 1, tvlUsd: 50,
-    });
-    expect(metadata.sourceCoverage?.topAssetCoverageDeltas).toEqual([
-      expect.objectContaining({ stablecoinId: "usdc-circle", poolCountPctDelta: -0.8 }),
-      expect.objectContaining({ stablecoinId: "usdt-tether", poolCountPctDelta: null }),
-      expect.objectContaining({ stablecoinId: "dai-makerdao", poolCountPctDelta: null }),
-      expect.objectContaining({ stablecoinId: "usds-sky", poolCountPctDelta: null }),
-      expect.objectContaining({ stablecoinId: "usde-ethena", poolCountPctDelta: null }),
-    ]);
+    const m = readMeta(await runCycle(driftDb, GK));
+    expect(m.sourceCoverage).toMatchObject({ qualityDriftSeverity: "high", coinsWithoutMeasuredBalances: 1, coinsGtOnly: 1, coinsCrawlerOnly: 1, coinsPriceOnlyNoMeasuredLiquidity: 1 });
+    expect(m.sourceCoverage?.qualityDriftFlags).toEqual(expect.arrayContaining(["price-observation-drop", "measured-balance-drop", "watchlist-pool-drop:usdc-circle"]));
+    expect(MetaSchema.parse(m).sourceCoverage).toMatchObject({ globalProtocolOverCapUsd: 60, protocolTvlQuarantine: { reason: "fallback-protocol-tvl-exceeds-headroom", poolCount: 1, protocolCount: 1, tvlUsd: 50 } });
+    expect(m.sourceCoverage?.topAssetCoverageDeltas).toEqual([[USDC, -0.8], [USDT, null], ["dai-makerdao", null], ["usds-sky", null], ["usde-ethena", null]].map(([stablecoinId, poolCountPctDelta]) => expect.objectContaining({ stablecoinId, poolCountPctDelta })));
   });
 });
 
 describe("dex liquidity stage same-hour recovery", () => {
-  const openDatabases: DatabaseSync[] = [];
-  const scheduledAtMs = Date.parse("2026-09-23T15:16:00Z");
-  const consumerSlot = getCronSlotStartedAtForSchedule("halfHourlyChartsOffset", scheduledAtMs);
-  const sourceSlot = consumerSlot - DEX_LIQUIDITY_STAGE_LEAD_SEC;
-  const halfHourSlot = getCronSlotStartedAtForSchedule(
-    "halfHourlyChartsOffset",
-    Date.parse("2026-09-23T15:46:00Z"),
-  );
+  const openDbs: DatabaseSync[] = [], schedMs = Date.parse("2026-09-23T15:16:00Z");
+  const cSlot = slotAt("halfHourlyChartsOffset", schedMs), sSlot = cSlot - STAGE_LEAD, hSlot = slotAt("halfHourlyChartsOffset", Date.parse("2026-09-23T15:46:00Z"));
+  let h: { sqlite: DatabaseSync; db: D1Database }, realStg: typeof import("../dex-liquidity/scoring-stage");
+  beforeAll(async () => { realStg = await vi.importActual<typeof import("../dex-liquidity/scoring-stage")>("../dex-liquidity/scoring-stage"); });
+  const consume = (opts?: Parameters<typeof consumeStageFn>[4], slot = cSlot, sig?: AbortSignal) => consumeStageFn(h.db, sig, undefined, slot, opts);
+  const recErr = () => h.sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status, slot_started_at) VALUES ('sync-dex-liquidity-stage', ?, 83449, 'error', ?)").run(sSlot + 13, sSlot);
+  const recLease = (until = Math.floor(schedMs / 1e3) + 300) => h.sqlite.prepare("INSERT INTO cron_leases (job, lease_owner, lease_until, heartbeat_at, updated_at) VALUES ('sync-dex-liquidity-stage', 'stage-owner', ?, ?, ?)").run(until, Math.floor(schedMs / 1e3), Math.floor(schedMs / 1e3));
+  const usePoll = () => { vi.useRealTimers(); vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] }); vi.setSystemTime(schedMs); };
+  const stageHr = () => stageFn(h.db, GK, undefined, undefined, undefined, undefined, sSlot);
+  const stgState = () => h.sqlite.prepare("SELECT state FROM dex_liquidity_scoring_stages WHERE source_slot_started_at = ?").get(sSlot);
+  const cntTbl = (t: string) => h.sqlite.prepare(`SELECT COUNT(*) AS count FROM ${t}`).get();
 
-  interface RecoveryHarness {
-    sqlite: DatabaseSync;
-    db: D1Database;
-  }
-
-  let harness: RecoveryHarness;
-  let actualScoringStage: typeof import("../dex-liquidity/scoring-stage");
-
-  beforeAll(async () => {
-    actualScoringStage = await vi.importActual<typeof import("../dex-liquidity/scoring-stage")>(
-      "../dex-liquidity/scoring-stage",
-    );
-  });
-
-  function openHarness(): RecoveryHarness {
-    const harness = createLatestSchemaSqlite();
-    openDatabases.push(harness.sqlite);
-    return harness;
-  }
-
-  function consumeStage(harness: RecoveryHarness, options?: Parameters<typeof consumeScoringStage>[4], slot = consumerSlot, signal?: AbortSignal) {
-    return consumeScoringStage(harness.db, signal, undefined, slot, options);
-  }
-
-  function recordStageRunError(harness: RecoveryHarness) {
-    harness.sqlite.prepare(
-      `INSERT INTO cron_runs (job, started_at, duration_ms, status, slot_started_at)
-       VALUES ('sync-dex-liquidity-stage', ?, 83_449, 'error', ?)`,
-    ).run(sourceSlot + 13, sourceSlot);
-  }
-
-  function recordLiveStageLease(harness: RecoveryHarness, leaseUntil = Math.floor(scheduledAtMs / 1000) + 300) {
-    harness.sqlite.prepare(
-      `INSERT INTO cron_leases (job, lease_owner, lease_until, heartbeat_at, updated_at)
-       VALUES ('sync-dex-liquidity-stage', 'stage-owner', ?, ?, ?)`,
-    ).run(leaseUntil, Math.floor(scheduledAtMs / 1000), Math.floor(scheduledAtMs / 1000));
-  }
-
-  function usePollingClock() {
-    vi.useRealTimers();
-    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
-    vi.setSystemTime(scheduledAtMs);
-  }
-
-  /** Produce the exact slot's real stage generation through the real producer. */
-  async function stageHourGeneration(harness: RecoveryHarness) {
-    await stageDexLiquidityScoring(
-      harness.db,
-      "graph-key",
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      sourceSlot,
-    );
-  }
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-    vi.useRealTimers();
-    for (const sqlite of openDatabases.splice(0)) sqlite.close();
-  });
-
+  afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); for (const s of openDbs.splice(0)) s.close(); });
   beforeEach(() => {
-    // Pin the incident clock so slot ages, leases, and run stamps are exact.
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(scheduledAtMs);
-    vi.clearAllMocks();
-    phaseFixtures.reset();
-    vi.mocked(loadCurrentDexScoringGenerationId).mockResolvedValue(null);
-    // SQLite owns producer, persistence, load and consumption; scoring/publication remain mocked.
-    vi.mocked(persistStage).mockImplementation(
-      actualScoringStage.persistDexLiquidityScoringStage,
-    );
-    vi.mocked(loadDexLiquidityScoringStage).mockImplementation(
-      actualScoringStage.loadDexLiquidityScoringStage,
-    );
-    vi.mocked(loadDexLiquidityScoringStageWhenReady).mockImplementation(
-      actualScoringStage.loadDexLiquidityScoringStageWhenReady,
-    );
-    vi.mocked(markDexLiquidityScoringStageConsumed).mockImplementation(
-      actualScoringStage.markDexLiquidityScoringStageConsumed,
-    );
-    harness = openHarness();
+    vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(schedMs); vi.clearAllMocks(); fx.reset();
+    vm(loadGenId).mockResolvedValue(null);
+    vm(persistStage).mockImplementation(realStg.persistDexLiquidityScoringStage); vm(loadStage).mockImplementation(realStg.loadDexLiquidityScoringStage);
+    vm(loadStageReady).mockImplementation(realStg.loadDexLiquidityScoringStageWhenReady); vm(markConsumed).mockImplementation(realStg.markDexLiquidityScoringStageConsumed);
+    h = mkSqlite(); openDbs.push(h.sqlite);
   });
 
   it("consumes ready output once across both ticks and retries of :16", async () => {
-    const refresh = vi.spyOn(priceRefresh, "refreshPoolPrices");
-    await stageHourGeneration(harness);
-    await consumeStage(harness);
-    vi.mocked(loadCurrentDexScoringGenerationId).mockResolvedValue(`dex-liquidity-${Math.floor(scheduledAtMs / 1_000)}`);
-    for (const slot of [consumerSlot, halfHourSlot]) {
-      const result = await consumeStage(harness, undefined, slot);
-      expect(result.status).toBe("skipped_neutral");
-      expect(readMetadata(result).reason).toBe("liquidity-cadence-reuse");
-    }
-    expect(persistScores).toHaveBeenCalledOnce();
-    expect(markDexLiquidityScoringStageConsumed).toHaveBeenCalledOnce();
-    expect(refresh).toHaveBeenCalledOnce();
+    const ref = vi.spyOn(priceRef, "refreshPoolPrices");
+    await stageHr(); await consume();
+    vm(loadGenId).mockResolvedValue(`dex-liquidity-${Math.floor(schedMs / 1e3)}`);
+    for (const slot of [cSlot, hSlot]) { const r = await consume(undefined, slot); expect(r.status).toBe("skipped_neutral"); expect(readMeta(r).reason).toBe("liquidity-cadence-reuse"); }
+    expect(persistScores).toHaveBeenCalledOnce(); expect(markConsumed).toHaveBeenCalledOnce(); expect(ref).toHaveBeenCalledOnce();
   });
 
   it("reuses accepted output when the consumed marker failed without rescoring", async () => {
-    await stageHourGeneration(harness);
-    vi.mocked(markDexLiquidityScoringStageConsumed).mockRejectedValueOnce(new Error("marker unavailable"));
-    await consumeStage(harness);
-    vi.mocked(loadCurrentDexScoringGenerationId).mockResolvedValue(`dex-liquidity-${Math.floor(scheduledAtMs / 1_000)}`);
-    const result = await consumeStage(harness, undefined, halfHourSlot);
-    expect(result.status).toBe("skipped_neutral");
-    expect(persistScores).toHaveBeenCalledOnce();
+    await stageHr(); vm(markConsumed).mockRejectedValueOnce(new Error("marker unavailable")); await consume();
+    vm(loadGenId).mockResolvedValue(`dex-liquidity-${Math.floor(schedMs / 1e3)}`);
+    expect((await consume(undefined, hSlot)).status).toBe("skipped_neutral"); expect(persistScores).toHaveBeenCalledOnce();
   });
 
   it("skips an incompatible v9 stage before publication", async () => {
-    await stageHourGeneration(harness);
-    harness.sqlite.exec(`UPDATE dex_liquidity_scoring_stage_chunks
-      SET payload_json = replace(payload_json, '"schemaVersion":10', '"schemaVersion":9'), payload_bytes = payload_bytes - 1
-      WHERE chunk_index = 0;
-      UPDATE dex_liquidity_scoring_stages SET payload_bytes = payload_bytes - 1;`);
-    const result = await consumeStage(harness);
-    expect(result.status).toBe("skipped_neutral");
-    expect(readMetadata(result)).toMatchObject({
-      reason: "scoring-stage-payload-version-mismatch",
-      payloadVersion: 9,
-      persistence: { generationId: null, skipped: true, publicationStarted: false },
-    });
-    expect(persistScores).not.toHaveBeenCalled();
-    expect(markDexLiquidityScoringStageConsumed).not.toHaveBeenCalled();
+    await stageHr();
+    h.sqlite.exec("UPDATE dex_liquidity_scoring_stage_chunks SET payload_json = replace(payload_json, '\"schemaVersion\":10', '\"schemaVersion\":9'), payload_bytes = payload_bytes - 1 WHERE chunk_index = 0; UPDATE dex_liquidity_scoring_stages SET payload_bytes = payload_bytes - 1;");
+    const res = await consume();
+    expect(res.status).toBe("skipped_neutral");
+    expect(readMeta(res)).toMatchObject({ reason: "scoring-stage-payload-version-mismatch", payloadVersion: 9, persistence: { generationId: null, skipped: true, publicationStarted: false } });
+    expect(persistScores).not.toHaveBeenCalled(); expect(markConsumed).not.toHaveBeenCalled();
   });
 
   it("leaves a source ready when a candidate is rejected by source guards", async () => {
-    vi.mocked(fetchDataSources).mockResolvedValueOnce({ ...phaseFixtures.current.primary, dlProtocolsAvailable: false });
-    await stageHourGeneration(harness);
-    await consumeStage(harness);
-    expect(markDexLiquidityScoringStageConsumed).not.toHaveBeenCalled();
-    expect(harness.sqlite.prepare(
-      `SELECT state FROM dex_liquidity_scoring_stages WHERE source_slot_started_at = ?`,
-    ).get(sourceSlot)).toEqual({ state: "ready" });
+    vm(fetchSrcs).mockResolvedValueOnce({ ...fx.current.primary, dlProtocolsAvailable: false });
+    await stageHr(); await consume();
+    expect(markConsumed).not.toHaveBeenCalled(); expect(stgState()).toEqual({ state: "ready" });
   });
 
   it.each([
-    { label: "refuses recovery after its inherited invocation deadline before claiming the source lease", ageMs: 900_000, reason: "invocation-deadline-exhausted" },
-    { label: "refuses recovery with only consumer headroom before claiming the source lease", ageMs: CRON_TIMEOUT_MS["sync-dex-liquidity"]! - 120_000, reason: "consumer-headroom-exhausted" },
-  ])("$label", async ({ ageMs, reason }) => {
-    recordStageRunError(harness);
-    await expect(consumeStage(harness, {
-      deadline: createSlotDeadline(Date.now() - ageMs),
-      stageRecovery: { graphApiKey: "heavy-graph-key" },
-    })).rejects.toThrow(reason);
-    expect(fetchDataSources).not.toHaveBeenCalled();
-    expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM cron_leases").get()).toEqual({ count: 0 });
+    ["refuses recovery after its inherited invocation deadline before claiming the source lease", 9e5, "invocation-deadline-exhausted"],
+    ["refuses recovery with only consumer headroom before claiming the source lease", CRON_TIMEOUT_MS["sync-dex-liquidity"]! - 12e4, "consumer-headroom-exhausted"],
+  ])("%s", async (_l, ageMs, reason) => {
+    recErr();
+    await expect(consume({ deadline: createSlotDeadline(Date.now() - ageMs), stageRecovery: { graphApiKey: "heavy-graph-key" } })).rejects.toThrow(reason);
+    expect(fetchSrcs).not.toHaveBeenCalled(); expect(cntTbl("cron_leases")).toEqual({ count: 0 });
   });
 
   it.each(["publication", "reuse"] as const)("passes the %s event deadline through recovery without using the old source slot", async (mode) => {
-    recordStageRunError(harness);
-    if (mode === "reuse") vi.setSystemTime(halfHourSlot * 1_000);
-    const deadline = createSlotDeadline(Date.now() - 120_000);
-    const v2 = vi.spyOn(v2Enrichment, "enrichEvmV2ExecutionModels");
-    const quoter = vi.spyOn(quoterEnrichment, "enrichQuoterV2ExecutionTargets");
-    const v4 = vi.spyOn(v4Enrichment, "enrichUniswapV4ExecutionTargets");
-    const options = {
-      deadline,
-      stageReadyDeadlineMs: Date.now() + 90_000,
-      stageRecovery: { graphApiKey: "graph-key" },
-    };
-    if (mode === "publication") {
-      await consumeStage(harness, options);
-    } else {
-      await consumeStage(harness, options, halfHourSlot);
+    recErr(); if (mode === "reuse") vi.setSystemTime(hSlot * 1e3);
+    const dl = createSlotDeadline(Date.now() - 12e4);
+    const spies = [vi.spyOn(v2Enrich, "enrichEvmV2ExecutionModels"), vi.spyOn(quoterEnrich, "enrichQuoterV2ExecutionTargets"), vi.spyOn(v4Enrich, "enrichUniswapV4ExecutionTargets")];
+    await consume({ deadline: dl, stageReadyDeadlineMs: Date.now() + 9e4, stageRecovery: { graphApiKey: GK } }, mode === "publication" ? cSlot : hSlot);
+    for (const s of spies) {
+      expect(s).toHaveBeenCalledTimes(1);
+      expect(s.mock.calls[0]![0].deadline).toMatchObject({ eventEntryMs: dl.eventEntryMs, platformDeadlineMs: Math.min(dl.latestAdmissionMs(0, 12e4), dl.eventEntryMs + CRON_TIMEOUT_MS["sync-dex-liquidity"]! - 12e4) });
     }
-    for (const enrichment of [v2, quoter, v4]) {
-      expect(enrichment).toHaveBeenCalledTimes(1);
-      expect(enrichment.mock.calls[0]![0].deadline).toMatchObject({
-        eventEntryMs: deadline.eventEntryMs, platformDeadlineMs: Math.min(deadline.latestAdmissionMs(0, 120_000), deadline.eventEntryMs + CRON_TIMEOUT_MS["sync-dex-liquidity"]! - 120_000),
-      });
-    }
-    expect(deadline.eventEntryMs).not.toBe(sourceSlot * 1_000);
+    expect(dl.eventEntryMs).not.toBe(sSlot * 1e3);
   });
 
   it("re-runs an errored source stage inline and publishes with recovery metadata", async () => {
-    recordStageRunError(harness);
-
-    const result = await consumeStage(harness, {
-      stageReadyDeadlineMs: scheduledAtMs + 90_000,
-      stageRecovery: { graphApiKey: "graph-key" },
-    });
-
-    expect(result.status).toBe("ok");
-    expect(readMetadata(result)).toMatchObject({
-      stageRecovery: {
-        reason: "stage-run-errored",
-        sourceSlotStartedAt: sourceSlot,
-        generationId: `dex-liquidity-scoring-stage:${sourceSlot}`,
-        stageResult: {
-          status: "ok",
-          metadata: { graphApiKeyConfigured: true, targetEnrichment: [] },
-        },
-      },
-      measuredTargetFunnel: { stageOrigin: "recovery", graphApiKeyConfigured: true },
-    });
-    expect(readMetadata(result).priceRefresh).toMatchObject({ requests: 0 });
-    // Exact-slot recovery must consume its generation and release the fencing lease.
-    expect(
-      harness.sqlite
-        .prepare(`SELECT state FROM dex_liquidity_scoring_stages WHERE source_slot_started_at = ?`)
-        .get(sourceSlot),
-    ).toEqual({ state: "consumed" });
-    expect(
-      harness.sqlite
-        .prepare(`SELECT lease_until FROM cron_leases WHERE job = 'sync-dex-liquidity-stage'`)
-        .get(),
-    ).toBeUndefined();
+    recErr();
+    const res = await consume({ stageReadyDeadlineMs: schedMs + 9e4, stageRecovery: { graphApiKey: GK } });
+    expect(res.status).toBe("ok");
+    expect(readMeta(res)).toMatchObject({ stageRecovery: { reason: "stage-run-errored", sourceSlotStartedAt: sSlot, generationId: `dex-liquidity-scoring-stage:${sSlot}`, stageResult: { status: "ok", metadata: { graphApiKeyConfigured: true, targetEnrichment: [] } } }, measuredTargetFunnel: { stageOrigin: "recovery", graphApiKeyConfigured: true }, priceRefresh: { requests: 0 } });
+    expect(stgState()).toEqual({ state: "consumed" });
+    expect(h.sqlite.prepare("SELECT lease_until FROM cron_leases WHERE job = 'sync-dex-liquidity-stage'").get()).toBeUndefined();
   });
 
   it("re-runs a failed stage generation inline instead of waiting out the deadline", async () => {
-    await stageHourGeneration(harness);
-    harness.sqlite
-      .prepare(`UPDATE dex_liquidity_scoring_stages SET state = 'failed' WHERE source_slot_started_at = ?`)
-      .run(sourceSlot);
-
-    const result = await consumeStage(harness, {
-      stageReadyDeadlineMs: scheduledAtMs + 90_000,
-      stageRecovery: { graphApiKey: "graph-key" },
-    });
-
-    expect(result.status).toBe("ok");
-    expect(readMetadata(result).stageRecovery).toMatchObject({
-      reason: "stage-generation-failed",
-      sourceSlotStartedAt: sourceSlot,
-    });
+    await stageHr(); h.sqlite.prepare("UPDATE dex_liquidity_scoring_stages SET state = 'failed' WHERE source_slot_started_at = ?").run(sSlot);
+    const res = await consume({ stageReadyDeadlineMs: schedMs + 9e4, stageRecovery: { graphApiKey: GK } });
+    expect(res.status).toBe("ok"); expect(readMeta(res).stageRecovery).toMatchObject({ reason: "stage-generation-failed", sourceSlotStartedAt: sSlot });
   });
 
   it("recovers a never-started stage once the readiness deadline has passed", async () => {
-
-    const result = await consumeStage(harness, {
-      stageReadyDeadlineMs: scheduledAtMs - 1,
-      stageRecovery: { graphApiKey: "graph-key" },
-    });
-
-    expect(result.status).toBe("ok");
-    expect(readMetadata(result).stageRecovery).toMatchObject({
-      reason: "stage-missing",
-      sourceSlotStartedAt: sourceSlot,
-    });
+    const res = await consume({ stageReadyDeadlineMs: schedMs - 1, stageRecovery: { graphApiKey: GK } });
+    expect(res.status).toBe("ok"); expect(readMeta(res).stageRecovery).toMatchObject({ reason: "stage-missing", sourceSlotStartedAt: sSlot });
   });
 
   it.each([null, "", "   "])("refuses misconfigured caller recovery without Graph (%j), not a heavy role restriction", async (graphApiKey) => {
-
-    await expect(consumeStage(harness, {
-      stageReadyDeadlineMs: scheduledAtMs - 1,
-      stageRecovery: { graphApiKey },
-    })).rejects.toThrow("missing-graph-api-key");
-
-    expect(fetchDataSources).not.toHaveBeenCalled();
-    expect(persistScores).not.toHaveBeenCalled();
-    expect(publishTargets).not.toHaveBeenCalled();
-    for (const table of ["dex_liquidity_scoring_stages", "dex_liquidity_scoring_stage_chunks", "cron_leases"]) {
-      expect(harness.sqlite.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get()).toEqual({ count: 0 });
-    }
+    await expect(consume({ stageReadyDeadlineMs: schedMs - 1, stageRecovery: { graphApiKey } })).rejects.toThrow("missing-graph-api-key");
+    for (const fn of [fetchSrcs, persistScores, pubTargets]) expect(fn).not.toHaveBeenCalled();
+    for (const t of ["dex_liquidity_scoring_stages", "dex_liquidity_scoring_stage_chunks", "cron_leases"]) expect(cntTbl(t)).toEqual({ count: 0 });
   });
 
-  it.each([1, 10_000])("carries compaction quarantine across real stage serialization into consumer quality (TVL=%s)", async (tvlUsd) => {
-    phaseFixtures.reset();
-    const rejection = { reason: "invalid-pool-identity" as const, poolIds: ["malformed-primary"], count: 1, tvlUsd };
-    vi.mocked(fetchDataSources).mockResolvedValueOnce({ ...phaseFixtures.current.primary, poolRejections: [rejection] });
-    await stageHourGeneration(harness);
-    const result = await consumeStage(harness, {
-      stageReadyDeadlineMs: scheduledAtMs - 1,
-      stageRecovery: { graphApiKey: null },
-    });
-    expect(result.status).toBe(tvlUsd >= 10_000 ? "degraded" : "ok");
-    expect(readMetadata(result)).toMatchObject({
-      poolRejections: [],
-      poolRejectionMateriality: { rejectedPoolCount: 1, rejectedPoolTvlUsd: tvlUsd, material: tvlUsd >= 10_000 ? null : false },
-    });
+  it.each([1, 1e4])("carries compaction quarantine across real stage serialization into consumer quality (TVL=%s)", async (tvlUsd) => {
+    fx.reset(); vm(fetchSrcs).mockResolvedValueOnce({ ...fx.current.primary, poolRejections: [{ reason: "invalid-pool-identity", poolIds: ["malformed-primary"], count: 1, tvlUsd }] });
+    await stageHr();
+    const res = await consume({ stageReadyDeadlineMs: schedMs - 1, stageRecovery: { graphApiKey: null } });
+    expect(res.status).toBe(tvlUsd >= 1e4 ? "degraded" : "ok");
+    expect(readMeta(res)).toMatchObject({ poolRejections: [], poolRejectionMateriality: { rejectedPoolCount: 1, rejectedPoolTvlUsd: tvlUsd, material: tvlUsd >= 1e4 ? null : false } });
   });
 
   it("consumes a ready source stage without requiring recovery credentials", async () => {
-    await stageHourGeneration(harness);
-    vi.mocked(fetchDataSources).mockClear();
-
-    const result = await consumeStage(harness, {
-      stageReadyDeadlineMs: scheduledAtMs - 1,
-      stageRecovery: { graphApiKey: null },
-    });
-
-    expect(result.status).toBe("ok");
-    expect(fetchDataSources).not.toHaveBeenCalled();
-    expect(publishTargets).toHaveBeenCalledOnce();
-    expect(harness.sqlite.prepare(
-      `SELECT state FROM dex_liquidity_scoring_stages WHERE source_slot_started_at = ?`,
-    ).get(sourceSlot)).toEqual({ state: "consumed" });
+    await stageHr(); vm(fetchSrcs).mockClear();
+    const res = await consume({ stageReadyDeadlineMs: schedMs - 1, stageRecovery: { graphApiKey: null } });
+    expect(res.status).toBe("ok"); expect(fetchSrcs).not.toHaveBeenCalled(); expect(pubTargets).toHaveBeenCalledOnce(); expect(stgState()).toEqual({ state: "consumed" });
   });
 
   it("recovers inline with heavy's configured Graph key at the half-hour tick", async () => {
-    recordStageRunError(harness);
-    vi.setSystemTime(halfHourSlot * 1_000);
-    const result = await consumeStage(harness, { stageRecovery: { graphApiKey: "heavy-graph-key" } }, halfHourSlot);
-    expect(result.status).toBe("ok");
-    expect(fetchDataSources).toHaveBeenCalled();
-    expect(publishTargets).toHaveBeenCalledOnce();
-    expect(readMetadata(result).stageRecovery).toMatchObject({ reason: "stage-run-errored" });
-    expect(harness.sqlite.prepare(
-      `SELECT state FROM dex_liquidity_scoring_stages WHERE source_slot_started_at = ?`,
-    ).get(sourceSlot)).toEqual({ state: "consumed" });
+    recErr(); vi.setSystemTime(hSlot * 1e3);
+    const res = await consume({ stageRecovery: { graphApiKey: "heavy-graph-key" } }, hSlot);
+    expect(res.status).toBe("ok"); expect(fetchSrcs).toHaveBeenCalled(); expect(pubTargets).toHaveBeenCalledOnce();
+    expect(readMeta(res).stageRecovery).toMatchObject({ reason: "stage-run-errored" }); expect(stgState()).toEqual({ state: "consumed" });
   });
 
   it("fails fast with a machine-readable reason when a terminal stage has no recovery", async () => {
-    recordStageRunError(harness);
-
-    await expect(consumeStage(harness, {
-      stageReadyDeadlineMs: scheduledAtMs + 90_000,
-    })).rejects.toThrow(`DEX liquidity scoring stage run errored for source slot ${sourceSlot}`);
-    // No rewrite happened: the terminal slot was refused, not staged.
-    expect(
-      harness.sqlite
-        .prepare(`SELECT COUNT(*) AS count FROM dex_liquidity_scoring_stages`)
-        .get(),
-    ).toEqual({ count: 0 });
+    recErr();
+    await expect(consume({ stageReadyDeadlineMs: schedMs + 9e4 })).rejects.toThrow(`DEX liquidity scoring stage run errored for source slot ${sSlot}`);
+    expect(cntTbl("dex_liquidity_scoring_stages")).toEqual({ count: 0 });
   });
 
   it("returns a nonproductive producer-running neutral at the unchanged readiness deadline", async () => {
-    usePollingClock();
-    recordLiveStageLease(harness);
-    let completed = false;
-    const pending = consumeStage(harness, {
-      stageReadyDeadlineMs: scheduledAtMs + 90_000,
-      stageRecovery: { graphApiKey: null },
-    }).then((result) => {
-      completed = true;
-      return result;
-    });
-    await vi.advanceTimersByTimeAsync(89_999);
-    expect(completed).toBe(false);
-    await vi.advanceTimersByTimeAsync(1);
-    const result = await pending;
-    expect(Date.now()).toBe(scheduledAtMs + 90_000);
-    expect(result).toMatchObject({
-      status: "skipped_neutral", itemCount: 0,
-      productivity: { productive: false, reason: "scoring-stage-producer-running" },
-    });
-    expect(readMetadata(result)).toMatchObject({
-      reason: "scoring-stage-producer-running", sourceSlotStartedAt: sourceSlot,
-      readinessDeadlineMs: scheduledAtMs + 90_000,
-      persistence: { generationId: null, skipped: true, skippedReason: "scoring-stage-producer-running" },
-      d1Cost: { coverage: "partial" },
-    });
-    expect(readMetadata(result).d1Cost.bindingCalls).toBeGreaterThan(0);
-    expect(fetchDataSources).not.toHaveBeenCalled();
-    expect(persistScores).not.toHaveBeenCalled();
-    expect(publishTargets).not.toHaveBeenCalled();
-    expect(markDexLiquidityScoringStageConsumed).not.toHaveBeenCalled();
-    for (const table of ["dex_liquidity_scoring_stages", "dex_liquidity_scoring_stage_chunks", "dex_liquidity"]) {
-      expect(harness.sqlite.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get()).toEqual({ count: 0 });
-    }
-    expect(harness.sqlite.prepare(
-      `SELECT lease_owner FROM cron_leases WHERE job = 'sync-dex-liquidity-stage'`,
-    ).get()).toEqual({ lease_owner: "stage-owner" });
+    usePoll(); recLease(); let done = false;
+    const pend = consume({ stageReadyDeadlineMs: schedMs + 9e4, stageRecovery: { graphApiKey: null } }).then((r) => { done = true; return r; });
+    await vi.advanceTimersByTimeAsync(89_999); expect(done).toBe(false);
+    await vi.advanceTimersByTimeAsync(1); const res = await pend;
+    expect(Date.now()).toBe(schedMs + 9e4);
+    expect(res).toMatchObject({ status: "skipped_neutral", itemCount: 0, productivity: { productive: false, reason: "scoring-stage-producer-running" } });
+    expect(readMeta(res)).toMatchObject({ reason: "scoring-stage-producer-running", sourceSlotStartedAt: sSlot, readinessDeadlineMs: schedMs + 9e4, persistence: { generationId: null, skipped: true, skippedReason: "scoring-stage-producer-running" }, d1Cost: { coverage: "partial" } });
+    expect(readMeta(res).d1Cost.bindingCalls).toBeGreaterThan(0);
+    for (const fn of [fetchSrcs, persistScores, pubTargets, markConsumed]) expect(fn).not.toHaveBeenCalled();
+    for (const t of ["dex_liquidity_scoring_stages", "dex_liquidity_scoring_stage_chunks", "dex_liquidity"]) expect(cntTbl(t)).toEqual({ count: 0 });
+    expect(h.sqlite.prepare("SELECT lease_owner FROM cron_leases WHERE job = 'sync-dex-liquidity-stage'").get()).toEqual({ lease_owner: "stage-owner" });
   });
 
   it.each(["absent", "expired"] as const)("does not classify an %s producer lease as a live wait", async (lease) => {
-    usePollingClock();
-    if (lease === "expired") recordLiveStageLease(harness, Math.floor(scheduledAtMs / 1000) + 60);
-    const rejected = expect(consumeStage(harness, {
-      stageReadyDeadlineMs: scheduledAtMs + 90_000,
-    })).rejects.toBeInstanceOf(MissingDexLiquidityScoringStageError);
-    await vi.advanceTimersByTimeAsync(90_000);
-    await rejected;
-    expect(Date.now()).toBe(scheduledAtMs + 90_000);
-    expect(fetchDataSources).not.toHaveBeenCalled();
-    expect(persistScores).not.toHaveBeenCalled();
-    expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM dex_liquidity_scoring_stages").get()).toEqual({ count: 0 });
+    usePoll(); if (lease === "expired") recLease(Math.floor(schedMs / 1e3) + 60);
+    const rej = expect(consume({ stageReadyDeadlineMs: schedMs + 9e4 })).rejects.toBeInstanceOf(MissingStageErr);
+    await vi.advanceTimersByTimeAsync(9e4); await rej;
+    expect(Date.now()).toBe(schedMs + 9e4); expect(fetchSrcs).not.toHaveBeenCalled(); expect(persistScores).not.toHaveBeenCalled();
+    expect(cntTbl("dex_liquidity_scoring_stages")).toEqual({ count: 0 });
   });
 
   it("keeps producer probe failures as errors instead of neutral waits", async () => {
-    harness.sqlite.exec("DROP TABLE cron_leases");
-    await expect(consumeStage(harness, {
-      stageReadyDeadlineMs: scheduledAtMs - 1,
-    })).rejects.toThrow("no such table: cron_leases");
-    expect(fetchDataSources).not.toHaveBeenCalled();
-    expect(persistScores).not.toHaveBeenCalled();
+    h.sqlite.exec("DROP TABLE cron_leases");
+    await expect(consume({ stageReadyDeadlineMs: schedMs - 1 })).rejects.toThrow("no such table: cron_leases");
+    expect(fetchSrcs).not.toHaveBeenCalled(); expect(persistScores).not.toHaveBeenCalled();
   });
 
   it("propagates cancellation during a live producer wait without publishing", async () => {
-    usePollingClock();
-    recordLiveStageLease(harness);
-    const controller = new AbortController();
-    const failure = new Error("slot budget exhausted");
-    const rejected = expect(consumeStage(harness, {
-      stageReadyDeadlineMs: scheduledAtMs + 90_000,
-      stageRecovery: { graphApiKey: "graph-key" },
-    }, consumerSlot, controller.signal)).rejects.toBe(failure);
-    await vi.advanceTimersByTimeAsync(10_000);
-    controller.abort(failure);
-    await rejected;
-    expect(Date.now()).toBe(scheduledAtMs + 10_000);
-    expect(fetchDataSources).not.toHaveBeenCalled();
-    expect(persistScores).not.toHaveBeenCalled();
-    expect(markDexLiquidityScoringStageConsumed).not.toHaveBeenCalled();
-    expect(vi.getTimerCount()).toBe(0);
+    usePoll(); recLease(); const ctrl = new AbortController(), fail = new Error("slot budget exhausted");
+    const rej = expect(consume({ stageReadyDeadlineMs: schedMs + 9e4, stageRecovery: { graphApiKey: GK } }, cSlot, ctrl.signal)).rejects.toBe(fail);
+    await vi.advanceTimersByTimeAsync(1e4); ctrl.abort(fail); await rej;
+    expect(Date.now()).toBe(schedMs + 1e4); expect(vi.getTimerCount()).toBe(0);
+    for (const fn of [fetchSrcs, persistScores, markConsumed]) expect(fn).not.toHaveBeenCalled();
   });
 
   it("publishes the same late exact stage at :46 after a producer-running :16 wait", async () => {
-    recordLiveStageLease(harness);
-    const waiting = await consumeStage(harness, {
-      stageReadyDeadlineMs: scheduledAtMs - 1,
-      stageRecovery: { graphApiKey: null },
-    });
-    expect(waiting.status).toBe("skipped_neutral");
-    expect(readMetadata(waiting).reason).toBe("scoring-stage-producer-running");
-    expect(persistScores).not.toHaveBeenCalled();
-    expect(markDexLiquidityScoringStageConsumed).not.toHaveBeenCalled();
-    vi.setSystemTime(scheduledAtMs + 120_000);
-    await stageHourGeneration(harness);
-    vi.mocked(fetchDataSources).mockClear();
+    recLease();
+    const w = await consume({ stageReadyDeadlineMs: schedMs - 1, stageRecovery: { graphApiKey: null } });
+    expect(w.status).toBe("skipped_neutral"); expect(readMeta(w).reason).toBe("scoring-stage-producer-running");
+    expect(persistScores).not.toHaveBeenCalled(); expect(markConsumed).not.toHaveBeenCalled();
+    vi.setSystemTime(schedMs + 12e4); await stageHr(); vm(fetchSrcs).mockClear();
     vi.setSystemTime(Date.parse("2026-09-23T15:46:00Z"));
-
-    const result = await consumeStage(harness, { stageRecovery: { graphApiKey: null } }, halfHourSlot);
-
-    expect(result.status).toBe("ok");
-    expect(fetchDataSources).not.toHaveBeenCalled();
-    expect(persistScores).toHaveBeenCalledOnce();
-    expect(readMetadata(result)).toMatchObject({
-      stageRecovery: {
-        reason: "stage-unconsumed",
-        sourceSlotStartedAt: sourceSlot,
-        generationId: `dex-liquidity-scoring-stage:${sourceSlot}`,
-      },
-    });
-    expect(
-      harness.sqlite
-        .prepare(`SELECT state FROM dex_liquidity_scoring_stages WHERE source_slot_started_at = ?`)
-        .get(sourceSlot),
-    ).toEqual({ state: "consumed" });
+    const res = await consume({ stageRecovery: { graphApiKey: null } }, hSlot);
+    expect(res.status).toBe("ok"); expect(fetchSrcs).not.toHaveBeenCalled(); expect(persistScores).toHaveBeenCalledOnce();
+    expect(readMeta(res)).toMatchObject({ stageRecovery: { reason: "stage-unconsumed", sourceSlotStartedAt: sSlot, generationId: `dex-liquidity-scoring-stage:${sSlot}` } });
+    expect(stgState()).toEqual({ state: "consumed" });
   });
 
   it("re-runs a terminally failed source stage from the half-hour tick", async () => {
-    recordStageRunError(harness);
-    vi.setSystemTime(Date.parse("2026-09-23T15:46:00Z"));
-
-    const result = await consumeStage(harness, { stageRecovery: { graphApiKey: "graph-key" } }, halfHourSlot);
-
-    expect(result.status).toBe("ok");
-    expect(readMetadata(result).stageRecovery).toMatchObject({
-      reason: "stage-run-errored",
-      sourceSlotStartedAt: sourceSlot,
-    });
-    expect(
-      harness.sqlite
-        .prepare(`SELECT state FROM dex_liquidity_scoring_stages WHERE source_slot_started_at = ?`)
-        .get(sourceSlot),
-    ).toEqual({ state: "consumed" });
+    recErr(); vi.setSystemTime(Date.parse("2026-09-23T15:46:00Z"));
+    const res = await consume({ stageRecovery: { graphApiKey: GK } }, hSlot);
+    expect(res.status).toBe("ok"); expect(readMeta(res).stageRecovery).toMatchObject({ reason: "stage-run-errored", sourceSlotStartedAt: sSlot }); expect(stgState()).toEqual({ state: "consumed" });
   });
 
   it("still skips neutral at the half-hour tick when the hour's stage was consumed", async () => {
-    await stageHourGeneration(harness);
-    harness.sqlite
-      .prepare(`UPDATE dex_liquidity_scoring_stages SET state = 'consumed' WHERE source_slot_started_at = ?`)
-      .run(sourceSlot);
-    vi.mocked(loadCurrentDexScoringGenerationId).mockResolvedValue("dex-liquidity-current");
-    vi.setSystemTime(Date.parse("2026-09-23T15:46:00Z"));
-
-    const result = await consumeStage(harness, { stageRecovery: { graphApiKey: "graph-key" } }, halfHourSlot);
-
-    expect(result.status).toBe("skipped_neutral");
-    expect(readMetadata(result)).toMatchObject({
-      cadenceReuse: true,
-      persistence: { generationId: "dex-liquidity-current" },
-    });
+    await stageHr(); h.sqlite.prepare("UPDATE dex_liquidity_scoring_stages SET state = 'consumed' WHERE source_slot_started_at = ?").run(sSlot);
+    vm(loadGenId).mockResolvedValue("dex-liquidity-current"); vi.setSystemTime(Date.parse("2026-09-23T15:46:00Z"));
+    const res = await consume({ stageRecovery: { graphApiKey: GK } }, hSlot);
+    expect(res.status).toBe("skipped_neutral"); expect(readMeta(res)).toMatchObject({ cadenceReuse: true, persistence: { generationId: "dex-liquidity-current" } });
   });
 });
 
 function makeOrcaPair() {
-  const sol = "So11111111111111111111111111111111111111112";
-  const usdc = "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1";
-  const primary: LlamaPool = llamaPool({
-    pool: "4f44c5d5-b1c2-4b1c-a111-123456789abc",
-    chain: "Solana",
-    project: "orca-dex",
-    symbol: "SOL-USDC",
-    tvlUsd: 29_000_000,
-    volumeUsd1d: 2_500_000,
-    volumeUsd7d: 17_000_000,
-    underlyingTokens: [sol, usdc],
-  });
-  const direct: DexApiPool = apiPool({ source: "orca", chain: "solana", poolAddress: "9j7M8s9d5M5x6o8N9vQm3P4r5T6u7V8w9X1y2Z3a4Bc", poolType: "orca-whirlpool", tokens: [
-      { address: usdc, symbol: "USDC", decimals: 6 },
-      { address: sol, symbol: "SOL", decimals: 9 },
-    ], price: 150, tvlUsd: 29_000_000, volume24hUsd: 2_500_000, balances: [100_000, 200_000] });
-  return { primary, direct };
+  const sol = "So11111111111111111111111111111111111111112", usdc = "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1";
+  return {
+    primary: llamaPool({ pool: "4f44c5d5-b1c2-4b1c-a111-123456789abc", chain: "Solana", project: "orca-dex", symbol: "SOL-USDC", tvlUsd: 29e6, volumeUsd1d: 2.5e6, volumeUsd7d: 17e6, underlyingTokens: [sol, usdc] }),
+    direct: apiPool({ source: "orca", chain: "solana", poolAddress: "9j7M8s9d5M5x6o8N9vQm3P4r5T6u7V8w9X1y2Z3a4Bc", poolType: "orca-whirlpool", tokens: [{ address: usdc, symbol: "USDC", decimals: 6 }, { address: sol, symbol: "SOL", decimals: 9 }], price: 150, tvlUsd: 29e6, volume24hUsd: 2.5e6, balances: [1e5, 2e5] }),
+  };
 }
 
 describe("filterPrimaryPoolsPreferDirectApi", () => {
+  const USDS_MINT = "USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA", USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+  const solMap = new Map([[`solana:${USDS_MINT}`, "usds-sky"], [`solana:${USDC_MINT}`, USDC]]);
+
   it("does not let an absurd direct-API pool suppress a healthy primary pool", () => {
-    const pools: LlamaPool[] = [
-      llamaPool({
-        pool: "0xpool",
-        chain: "Fantom",
-        project: "balancer-stable",
-        symbol: "USDC-USDT",
-        tvlUsd: 2_500_000,
-        volumeUsd1d: 250_000,
-        volumeUsd7d: 1_500_000,
-        stablecoin: true,
-        underlyingTokens: ["0xusdc", "0xusdt"],
-        count: 2,
-      }),
-    ];
-    const directApiPools: DexApiPool[] = [
-      apiPool({ source: "balancer", chain: "Fantom", poolAddress: "0xpool", poolType: "balancer-stable", tokens: [
-          { address: "0xusdc", symbol: "USDC", decimals: 6 },
-          { address: "0xusdt", symbol: "USDT", decimals: 6 },
-        ], tvlUsd: 337_000_000_000, volume24hUsd: 100_000, balances: [1_000_000, 1_000_000] }),
-    ];
-
-    const result = filterPrimaryPoolsPreferDirectApi(pools, directApiPools);
-
-    expect(result.filteredPools).toHaveLength(1);
-    expect(result.skippedByExactIdentity).toBe(0);
-    expect(result.skippedByUniqueDerivedIdentity).toBe(0);
-    expect(result.skippedByOptionalWildcardIdentity).toBe(0);
+    const r = filterPools([llamaPool({ pool: "0xpool", chain: "Fantom", project: "balancer-stable", symbol: "USDC-USDT", tvlUsd: 2.5e6, volumeUsd1d: 25e4, volumeUsd7d: 1.5e6, stablecoin: true, underlyingTokens: ["0xusdc", "0xusdt"], count: 2 })], [apiPool({ source: "balancer", chain: "Fantom", poolAddress: "0xpool", poolType: "balancer-stable", tokens: [{ address: "0xusdc", symbol: "USDC", decimals: 6 }, { address: "0xusdt", symbol: "USDT", decimals: 6 }], tvlUsd: 337e9, volume24hUsd: 1e5, balances: [1e6, 1e6] })]);
+    expect(r).toMatchObject({ skippedByExactIdentity: 0, skippedByUniqueDerivedIdentity: 0, skippedByOptionalWildcardIdentity: 0 }); expect(r.filteredPools).toHaveLength(1);
   });
 
   it("deduplicates an Orca DL pool via unique derived identity when fee metadata is missing", () => {
     const { primary, direct } = makeOrcaPair();
-    const pools = [primary];
-    const directApiPools = [direct];
-
-    const result = filterPrimaryPoolsPreferDirectApi(pools, directApiPools);
-
-    expect(result.filteredPools).toHaveLength(0);
-    expect(result.skippedByExactIdentity).toBe(0);
-    expect(result.skippedByUniqueDerivedIdentity).toBe(1);
-    expect(result.skippedByOptionalWildcardIdentity).toBe(0);
+    expect(filterPools([primary], [direct])).toMatchObject({ filteredPools: [], skippedByExactIdentity: 0, skippedByUniqueDerivedIdentity: 1, skippedByOptionalWildcardIdentity: 0 });
   });
 
   it("deduplicates a Balancer V3 DL stable pool via na-variant derived identity when DL omits the stable subtype", () => {
-    const pools: LlamaPool[] = [
-      llamaPool({
-        pool: "0511276f-4d37-4919-95ab-6cdf418ddd08",
-        chain: "Plasma",
-        project: "balancer-v3",
-        symbol: "USDAI-WAPLAUSDT0",
-        tvlUsd: 547_701,
-        stablecoin: true,
-        underlyingTokens: ["0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef", "0xe0126f0c4451b2b917064a93040fd4770d6774b5"],
-        apy: 1.39196,
-        count: 180,
-      }),
-    ];
-    const directApiPools: DexApiPool[] = [
-      apiPool({ source: "balancer", chain: "Plasma", poolAddress: "0x01e2c7fcde2b8d5d1413732c4e274ba5b06b1e54", poolType: "balancer-stable", tokens: [
-          { address: "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef", symbol: "USDai", decimals: 18 },
-          { address: "0xe0126f0c4451b2b917064a93040fd4770d6774b5", symbol: "waPlaUSDT0", decimals: 18 },
-        ], price: 0.999939, tvlUsd: 547_664.8, volume24hUsd: 5_900.52, balances: [240_716.79906230856, 301_609.539917] }),
-    ];
-
-    const result = filterPrimaryPoolsPreferDirectApi(pools, directApiPools);
-
-    expect(result.filteredPools).toHaveLength(0);
-    expect(result.skippedByExactIdentity).toBe(0);
-    expect(result.skippedByUniqueDerivedIdentity).toBe(1);
-    expect(result.skippedByOptionalWildcardIdentity).toBe(0);
+    const t0 = "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef", t1 = "0xe0126f0c4451b2b917064a93040fd4770d6774b5";
+    expect(filterPools([llamaPool({ pool: "0511276f-4d37-4919-95ab-6cdf418ddd08", chain: "Plasma", project: "balancer-v3", symbol: "USDAI-WAPLAUSDT0", tvlUsd: 547_701, stablecoin: true, underlyingTokens: [t0, t1], apy: 1.39196, count: 180 })], [apiPool({ source: "balancer", chain: "Plasma", poolAddress: "0x01e2c7fcde2b8d5d1413732c4e274ba5b06b1e54", poolType: "balancer-stable", tokens: [{ address: t0, symbol: "USDai", decimals: 18 }, { address: t1, symbol: "waPlaUSDT0", decimals: 18 }], price: 0.999939, tvlUsd: 547_664.8, volume24hUsd: 5_900.52, balances: [240_716.79906230856, 301_609.539917] })]))
+      .toMatchObject({ filteredPools: [], skippedByExactIdentity: 0, skippedByUniqueDerivedIdentity: 1, skippedByOptionalWildcardIdentity: 0 });
   });
 
   it("deduplicates a DL raydium-amm stable pair against the direct Raydium pool via the tracked-pair stability hint", () => {
-    // DL calls USDS-USDC stable; the untyped native pair needs the tracked hint to avoid doubling ~$9.1M TVL.
-    const USDS_MINT = "USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA";
-    const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
-    const pools: LlamaPool[] = [
-      llamaPool({
-        pool: "5b6c56a9-3b81-48ee-bee7-3f0dcd862e4d",
-        chain: "Solana",
-        project: "raydium-amm",
-        symbol: "USDS-USDC",
-        tvlUsd: 9_101_152,
-        volumeUsd1d: 1_034_471,
-        stablecoin: true,
-        underlyingTokens: [USDS_MINT, USDC_MINT],
-      }),
-    ];
-    const directPool = (poolAddress: string, tvlUsd: number): DexApiPool => ({
-      source: "raydium",
-      chain: "solana",
-      poolAddress,
-      poolType: "raydium-amm",
-      tokens: [
-        { address: USDS_MINT, symbol: "USDS", decimals: 6 },
-        { address: USDC_MINT, symbol: "USDC", decimals: 6 },
-      ],
-      price: 1,
-      tvlUsd,
-      volume24hUsd: tvlUsd / 9,
-      feeRate: 0.0025,
-      balances: [tvlUsd / 2, tvlUsd / 2],
-    });
-    const chainAddressToId = new Map([
-      [`solana:${USDS_MINT}`, "usds-sky"],
-      [`solana:${USDC_MINT}`, "usdc-circle"],
-    ]);
-    const singleTwin = [directPool("AS5MV3ib4bfudpsb65yfmyQwrB9nRbY4rEqMSpjwbAcT", 9_101_153)];
-
-    const withHint = filterPrimaryPoolsPreferDirectApi(pools, singleTwin, chainAddressToId);
-    expect(withHint.filteredPools).toHaveLength(0);
-    expect(withHint.skippedByUniqueDerivedIdentity).toBe(1);
-
-    // Ambiguous native twins cannot suppress a possible third DL pool, including via wildcard fallback.
-    const ambiguousTwins = [...singleTwin, directPool("7kJb5ZQF2jWc5m9R8t2xVb4nD6yPeHhTQ3sLuNvAaBbC", 56_127)];
-    const ambiguous = filterPrimaryPoolsPreferDirectApi(pools, ambiguousTwins, chainAddressToId);
-    expect(ambiguous.filteredPools).toHaveLength(1);
+    const pools = [llamaPool({ pool: "5b6c56a9-3b81-48ee-bee7-3f0dcd862e4d", chain: "Solana", project: "raydium-amm", symbol: "USDS-USDC", tvlUsd: 9_101_152, volumeUsd1d: 1_034_471, stablecoin: true, underlyingTokens: [USDS_MINT, USDC_MINT] })];
+    const mkRay = (poolAddress: string, tvlUsd: number): DexApiPool => ({ source: "raydium", chain: "solana", poolAddress, poolType: "raydium-amm", tokens: [{ address: USDS_MINT, symbol: "USDS", decimals: 6 }, { address: USDC_MINT, symbol: "USDC", decimals: 6 }], price: 1, tvlUsd, volume24hUsd: tvlUsd / 9, feeRate: 0.0025, balances: [tvlUsd / 2, tvlUsd / 2] });
+    const single = [mkRay("AS5MV3ib4bfudpsb65yfmyQwrB9nRbY4rEqMSpjwbAcT", 9_101_153)];
+    expect(filterPools(pools, single, solMap)).toMatchObject({ filteredPools: [], skippedByUniqueDerivedIdentity: 1 });
+    expect(filterPools(pools, [...single, mkRay("7kJb5ZQF2jWc5m9R8t2xVb4nD6yPeHhTQ3sLuNvAaBbC", 56_127)], solMap).filteredPools).toHaveLength(1);
   });
 
   it("deduplicates a DL Concentrated raydium-amm pool against the identical direct Raydium CLMM pool", () => {
-    // 2026-08-19: DL Raydium needs the poolMeta CLMM hint to match native concentrated identity and avoid doubled TVL.
-    const USDS_MINT = "USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA";
-    const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
-    const pools: LlamaPool[] = [
-      llamaPool({
-        pool: "5b6c56a9-3b81-48ee-bee7-3f0dcd862e4d",
-        chain: "Solana",
-        project: "raydium-amm",
-        symbol: "USDS-USDC",
-        poolMeta: "Concentrated - 0.01%",
-        tvlUsd: 3_234_788,
-        volumeUsd1d: 1_034_471,
-        stablecoin: true,
-        underlyingTokens: [USDS_MINT, USDC_MINT],
-      }),
-    ];
-    const directApiPools: DexApiPool[] = [
-      apiPool({ source: "raydium", chain: "solana", poolAddress: "AS5MV3ib4bfudpsb65yfmyQwrB9nRbY4rEqMSpjwbAcT", poolType: "raydium-clmm", tokens: [
-          { address: USDS_MINT, symbol: "USDS", decimals: 6 },
-          { address: USDC_MINT, symbol: "USDC", decimals: 6 },
-        ], tvlUsd: 3_234_790, volume24hUsd: 1_034_500, balances: [1_617_000, 1_617_500] }),
-    ];
-    const chainAddressToId = new Map([
-      [`solana:${USDS_MINT}`, "usds-sky"],
-      [`solana:${USDC_MINT}`, "usdc-circle"],
-    ]);
-
-    const result = filterPrimaryPoolsPreferDirectApi(pools, directApiPools, chainAddressToId);
-
-    expect(result.filteredPools).toHaveLength(0);
-    expect(result.skippedByUniqueDerivedIdentity).toBe(1);
+    expect(filterPools([llamaPool({ pool: "5b6c56a9-3b81-48ee-bee7-3f0dcd862e4d", chain: "Solana", project: "raydium-amm", symbol: "USDS-USDC", poolMeta: "Concentrated - 0.01%", tvlUsd: 3_234_788, volumeUsd1d: 1_034_471, stablecoin: true, underlyingTokens: [USDS_MINT, USDC_MINT] })], [apiPool({ source: "raydium", chain: "solana", poolAddress: "AS5MV3ib4bfudpsb65yfmyQwrB9nRbY4rEqMSpjwbAcT", poolType: "raydium-clmm", tokens: [{ address: USDS_MINT, symbol: "USDS", decimals: 6 }, { address: USDC_MINT, symbol: "USDC", decimals: 6 }], tvlUsd: 3_234_790, volume24hUsd: 1_034_500, balances: [1_617_000, 1_617_500] })], solMap))
+      .toMatchObject({ filteredPools: [], skippedByUniqueDerivedIdentity: 1 });
   });
 
   it("does not use optional wildcard dedup when multiple direct API Orca pools share the same pair", () => {
     const { primary, direct } = makeOrcaPair();
-    const pools = [primary];
-    const directApiPools = [direct, {
-      ...direct,
-      poolAddress: "8k6N7m5b4V3c2X1z9Y8w7u6T5r4e3W2q1P9o8i7u6Y5",
-      tvlUsd: 500_000, volume24hUsd: 50_000, feeRate: 0.0005, balances: [10_000, 20_000],
-    }];
-
-    const result = filterPrimaryPoolsPreferDirectApi(pools, directApiPools);
-
-    expect(result.filteredPools).toHaveLength(1);
-    expect(result.skippedByOptionalWildcardIdentity).toBe(0);
+    const r = filterPools([primary], [direct, { ...direct, poolAddress: "8k6N7m5b4V3c2X1z9Y8w7u6T5r4e3W2q1P9o8i7u6Y5", tvlUsd: 5e5, volume24hUsd: 5e4, feeRate: 0.0005, balances: [1e4, 2e4] }]);
+    expect(r.filteredPools).toHaveLength(1); expect(r.skippedByOptionalWildcardIdentity).toBe(0);
   });
 
   it("uses optional wildcard matching for a stable pair without a direct stability hint", () => {
     const { primary, direct } = makeOrcaPair();
-    const usds = "USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA";
-    primary.underlyingTokens = [usds, direct.tokens[0].address];
-    primary.symbol = "USDS-USDC";
-    primary.stablecoin = true;
-    direct.tokens[1] = { address: usds, symbol: "USDS", decimals: 6 };
-    direct.price = 1;
-    const unrelated = { ...primary, pool: "unrelated", underlyingTokens: ["another-token", "different-token"] };
-    const result = filterPrimaryPoolsPreferDirectApi([primary, unrelated], [direct]);
-    expect(result.filteredPools.map((pool) => pool.pool)).toEqual(["unrelated"]);
-    expect(result.skippedByOptionalWildcardIdentity).toBe(1);
-    expect(result.skippedByUniqueDerivedIdentity).toBe(0);
-    expect(result.skippedByExactIdentity).toBe(0);
+    Object.assign(primary, { underlyingTokens: [USDS_MINT, direct.tokens[0].address], symbol: "USDS-USDC", stablecoin: true });
+    direct.tokens[1] = { address: USDS_MINT, symbol: "USDS", decimals: 6 }; direct.price = 1;
+    const r = filterPools([primary, { ...primary, pool: "unrelated", underlyingTokens: ["another-token", "different-token"] }], [direct]);
+    expect(r.filteredPools.map((p) => p.pool)).toEqual(["unrelated"]);
+    expect(r).toMatchObject({ skippedByOptionalWildcardIdentity: 1, skippedByUniqueDerivedIdentity: 0, skippedByExactIdentity: 0 });
   });
 
   it("prefers a healthy exact-address direct pool", () => {
     const { primary, direct } = makeOrcaPair();
-    const result = filterPrimaryPoolsPreferDirectApi([{ ...primary, pool: direct.poolAddress }], [direct]);
-    expect(result.filteredPools).toEqual([]);
-    expect(result.skippedByExactIdentity).toBe(1);
-    expect(result.skippedByUniqueDerivedIdentity).toBe(0);
-    expect(result.skippedByOptionalWildcardIdentity).toBe(0);
+    expect(filterPools([{ ...primary, pool: direct.poolAddress }], [direct])).toMatchObject({ filteredPools: [], skippedByExactIdentity: 1, skippedByUniqueDerivedIdentity: 0, skippedByOptionalWildcardIdentity: 0 });
   });
 
   it("retains both primary pools when their derived identity is ambiguous", () => {
-    const { primary, direct } = makeOrcaPair();
-    const result = filterPrimaryPoolsPreferDirectApi([primary, { ...primary, pool: "second-primary" }], [direct]);
-    expect(result.filteredPools.map((pool) => pool.pool)).toEqual([primary.pool, "second-primary"]);
-    expect(result.skippedByUniqueDerivedIdentity).toBe(0);
-    expect(result.skippedByOptionalWildcardIdentity).toBe(0);
+    const { primary, direct } = makeOrcaPair(), r = filterPools([primary, { ...primary, pool: "second-primary" }], [direct]);
+    expect(r.filteredPools.map((p) => p.pool)).toEqual([primary.pool, "second-primary"]);
+    expect(r).toMatchObject({ skippedByUniqueDerivedIdentity: 0, skippedByOptionalWildcardIdentity: 0 });
   });
 });

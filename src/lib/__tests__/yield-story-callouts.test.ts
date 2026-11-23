@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import { buildYieldStoryCallouts } from "@/lib/yield-story-callouts";
-import { row } from "./yield-story-callouts.test-support";
+import type { YieldViewModelRow } from "@/lib/yield-view-model";
+
+function row(id: string, overrides: Partial<YieldViewModelRow>): YieldViewModelRow {
+  return {
+    id, symbol: id.toUpperCase(), name: id, apy30d: 0, safetyGrade: "B",
+    yieldStability: null, sourceTvlUsd: null, warningSignals: [], ...overrides,
+  } as YieldViewModelRow;
+}
 
 describe("buildYieldStoryCallouts", () => {
   it("selects top yield, stable A-grade yield, and largest tracked market deterministically", () => {
