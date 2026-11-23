@@ -16,22 +16,26 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-13",
-    "reviewer": "Pharos production health reserve review 2026-10-13",
+    "reviewedAt": "2026-11-23",
+    "reviewer": "Pharos reserve report refresh 2026-11-23 (#2143)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Kempen ZARP agreed-upon procedures report dated October 1, 2026, covering September 30 reserve balances",
-        "url": "https://kempengroup.co.za/wp-content/uploads/2026/10/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-10-01-signed.pdf"
+        "label": "Kempen ZARP agreed-upon procedures report dated November 1, 2026, covering October 31 reserve balances",
+        "url": "https://kempengroup.co.za/wp-content/uploads/2026/11/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-11-01-signed.pdf"
       },
       {
-        "label": "ZARP transparency report index",
-        "url": "https://www.zarpstablecoin.com/transparency/"
+        "label": "Kempen publication page: November 18, 2026, linking the November 1 signed ZARP agreed-upon-procedures report",
+        "url": "https://kempengroup.co.za/zarp-stablecoin-digital-report-november-2026/"
+      },
+      {
+        "label": "Kempen Audit publication feed (ZARP report index)",
+        "url": "https://kempengroup.co.za/category/kempen-audit/feed/"
       }
     ],
-    "rationale": "Kempen Audit's October 1, 2026 agreed-upon procedures report verifies September 30 bank balances of R89,485,830 at Old Mutual Wealth Trust Company JHB and R3,618,969 at Standard Bank. The attached management report states R93,104,798.40 of cash and equivalents against 77,605,468.69 circulating ZARP as at September 30, 2026 at 16:26. The bank components are printed in whole rand and total R93,104,799, R0.60 above the management total; the four whole-token chain figures total 77,605,469, 0.31 above management circulation. These display-precision differences are retained rather than replacing the reported totals. Kempen gives factual findings under ISRS 4400 (Revised), explicitly not an assurance opinion. The complete curated composition remains 100% ZAR fiat reserves; the report does not establish the custody or maturity of instruments beyond the named bank and trust accounts. The October 13 review downloaded and visually checked the current report linked by ZARP's official transparency page. The balance clock remains September 30, not the October 1 report date or the page's newer live counters.",
-    "compositionBasis": "Kempen Audit ISRS 4400 (Revised) agreed-upon procedures report on ZARP's September 30, 2026 reserve balances",
-    "compositionAsOf": "2026-09-30",
+    "rationale": "Kempen Audit's November 1, 2026 agreed-upon procedures report verifies October 31 bank balances of R88,734,746 at Old Mutual Wealth Trust Company JHB and R3,486,326 at Standard Bank. The attached management report states R92,221,072.07 of cash and equivalents against 84,723,278.62 circulating ZARP as at October 31, 2026 at 16:26. The bank components are printed in whole rand and total R92,221,072, R0.07 below the management total; the four whole-token chain figures (39,830,591 Ethereum, 19,020,260 Solana, 15,852,428 Base, and 10,020,000.00 Polygon) total 84,723,279, 0.38 above management circulation. These display-precision differences are retained rather than replacing the reported totals. Kempen gives factual findings under ISRS 4400 (Revised), explicitly not an assurance opinion. The complete curated composition remains 100% ZAR fiat reserves; the report does not establish the custody or maturity of instruments beyond the named bank and trust accounts. The November 23 review downloaded and visually checked the signed four-page report published on Kempen Group's site on November 18, 2026; ZARP's transparency page still linked October, so live discovery reads Kempen's audit RSS feed filtered to ZARP. The balance clock remains October 31, not the November 1 report date, the November 18 publication date, or the issuer page's newer live counters.",
+    "compositionBasis": "Kempen Audit ISRS 4400 (Revised) agreed-upon procedures report on ZARP's October 31, 2026 reserve balances",
+    "compositionAsOf": "2026-10-31",
     "scope": "full-composition",
     "knownUnknownExposure": "The report verifies rand balances in the Old Mutual Wealth trust account and Standard Bank accounts, but does not provide a reserve-asset subcategory or establish statutory bankruptcy remoteness and rehypothecation terms.",
     "knownUnknownExposurePct": 0,

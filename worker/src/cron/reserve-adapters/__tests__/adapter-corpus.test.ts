@@ -17,7 +17,13 @@ import { CORPUS_BACKLOG as CAPTURE_BACKLOG, CORPUS_CASES as CAPTURE_CASES, CORPU
 import { AFI_PROOF_PAYLOAD } from "./afi-proof.test-support";
 import { MEGAUSD_BACKING, MEGAUSD_URL } from "./megausd-custody.test-support";
 import { NOW_SEC as LIQUITY_NOW_SEC, TROVE_MANAGER, v1Network } from "./liquity-v1.test-support";
-import { BLOCK_TIME_SEC as KAVA_BLOCK_TIME_SEC, KAVA_LCD_FIXTURES, TOTAL_COLLATERAL_URL, kavaNetwork } from "./kava-cdp.test-support";
+import {
+  ARCHIVE_TOTAL_COLLATERAL_URL,
+  BLOCK_TIME_SEC as KAVA_BLOCK_TIME_SEC,
+  KAVA_LCD_FIXTURES,
+  TOTAL_COLLATERAL_URL,
+  kavaNetwork,
+} from "./kava-cdp.test-support";
 import { BALANCE_SHEET_ENDPOINT, BALANCE_SHEET_SAMPLE } from "./frax.test-support";
 import { UNITED_POR_ENDPOINT, UNITED_POR_PAYLOAD } from "./united-por.test-support";
 import { ZEPHYR_ENDPOINT, ZEPHYR_CAPTURE } from "./zephyr-scanner.test-support";
@@ -400,8 +406,11 @@ const NUMERIC_CORPUS_CASES: Record<string, NumericAdapterCorpusCase> = {
       displayUrl: TOTAL_COLLATERAL_URL,
     },
     drift: {
-      label: "the required totalCollateral endpoint returns HTTP 503",
-      network: kavaNetwork({ [TOTAL_COLLATERAL_URL]: { status: 503, body: "upstream unavailable" } }),
+      label: "the required totalCollateral endpoint returns HTTP 503 on every configured LCD origin",
+      network: kavaNetwork({
+        [TOTAL_COLLATERAL_URL]: { status: 503, body: "upstream unavailable" },
+        [ARCHIVE_TOTAL_COLLATERAL_URL]: { status: 503, body: "upstream unavailable" },
+      }),
       outcome: "error",
       error: /503/,
     },
