@@ -16,23 +16,61 @@ import { buildPriceValidationContext } from "../price-validation";
 
 const NOW = new Date("2026-07-16T06:22:00.000Z");
 
+const PRUNING_URLS = [
+  "https://rpc.kava.io/header",
+  "https://api.kava.io/kava/pricefeed/v1beta1/markets",
+  "https://api.kava.io/kava/pricefeed/v1beta1/prices/usdx:usd",
+  "https://api.kava.io/kava/pricefeed/v1beta1/rawprices/usdx:usd",
+] as const;
+
+const ARCHIVE_URLS = [
+  "https://rpc.data.kava.io/header",
+  "https://api.data.kava.io/kava/pricefeed/v1beta1/markets",
+  "https://api.data.kava.io/kava/pricefeed/v1beta1/prices/usdx:usd",
+  "https://api.data.kava.io/kava/pricefeed/v1beta1/rawprices/usdx:usd",
+] as const;
+
+interface FixtureOverrides {
+  block?: unknown;
+  markets?: unknown;
+  aggregate?: unknown;
+  raw?: unknown;
+}
+
 function ok(body: unknown): { response: Response; body: unknown } {
   return { response: new Response(null, { status: 200 }), body };
 }
 
+function fail(status: number): { response: Response; body: null } {
+  return { response: new Response(null, { status }), body: null };
+}
+
+function responseForFamily(url: string, overrides: FixtureOverrides): { response: Response; body: unknown } {
+  if (url.endsWith("/header")) return ok(overrides.block ?? { result: structuredClone(fixture.block.block) });
+  if (url.endsWith("/markets")) return ok(overrides.markets ?? structuredClone(fixture.markets));
+  if (url.endsWith("/prices/usdx:usd")) return ok(overrides.aggregate ?? structuredClone(fixture.aggregate));
+  if (url.endsWith("/rawprices/usdx:usd")) return ok(overrides.raw ?? structuredClone(fixture.raw));
+  throw new Error(`unexpected Kava URL: ${url}`);
+}
+
+function isPruningUrl(url: string): boolean {
+  return url.startsWith("https://rpc.kava.io/") || url.startsWith("https://api.kava.io/");
+}
+
+function isArchiveUrl(url: string): boolean {
+  return url.startsWith("https://rpc.data.kava.io/") || url.startsWith("https://api.data.kava.io/");
+}
+
 function installFixtureResponses(
-  overrides: {
-    block?: unknown;
-    markets?: unknown;
-    aggregate?: unknown;
-    raw?: unknown;
-  } = {},
+  overrides: FixtureOverrides = {},
+  perFamily?: {
+    pruning?: FixtureOverrides;
+    archive?: FixtureOverrides;
+  },
 ): void {
   fetchJsonWithRetryMock.mockImplementation(async (url: string) => {
-    if (url === "https://rpc.kava.io/header") return ok(overrides.block ?? { result: structuredClone(fixture.block.block) });
-    if (url.endsWith("/markets")) return ok(overrides.markets ?? structuredClone(fixture.markets));
-    if (url.endsWith("/prices/usdx:usd")) return ok(overrides.aggregate ?? structuredClone(fixture.aggregate));
-    if (url.endsWith("/rawprices/usdx:usd")) return ok(overrides.raw ?? structuredClone(fixture.raw));
+    if (isPruningUrl(url)) return responseForFamily(url, perFamily?.pruning ?? overrides);
+    if (isArchiveUrl(url)) return responseForFamily(url, perFamily?.archive ?? overrides);
     throw new Error(`unexpected Kava URL: ${url}`);
   });
 }
@@ -49,7 +87,8 @@ describe("Kava USDX pricefeed", () => {
     vi.restoreAllMocks();
   });
 
-  it("accepts the exact USDX market with a fresh block and authorized unexpired raw oracle", async () => {
+  it("accepts the exact USDX market from the pruning host family first", async () => {
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => undefined);
     installFixtureResponses();
 
     await expect(fetchKavaUsdxPrice()).resolves.toEqual({
@@ -61,19 +100,20 @@ describe("Kava USDX pricefeed", () => {
       dispersionBps: 0,
     });
 
-    expect(fetchJsonWithRetryMock.mock.calls.map(([url]) => url)).toEqual([
-      "https://rpc.kava.io/header",
-      "https://api.data.kava.io/kava/pricefeed/v1beta1/markets",
-      "https://api.data.kava.io/kava/pricefeed/v1beta1/prices/usdx:usd",
-      "https://api.data.kava.io/kava/pricefeed/v1beta1/rawprices/usdx:usd",
-    ]);
+    expect(fetchJsonWithRetryMock.mock.calls.map(([url]) => url)).toEqual([...PRUNING_URLS]);
     for (const [, , retries, options] of fetchJsonWithRetryMock.mock.calls) {
       expect(retries).toBe(0);
       expect(options).toMatchObject({ timeoutMs: 2_200, maxResponseBytes: 256 * 1024 });
     }
+    expect(infoSpy).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(String(infoSpy.mock.calls[0]?.[0]))).toMatchObject({
+      event: "kava_pricefeed_served",
+      metadata: { hostFamily: "pruning", blockHeight: 21658182 },
+    });
   });
 
   it("returns a high-confidence upstream authoritative override for USDX", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => undefined);
     installFixtureResponses();
 
     const override = await kavaUsdxPricefeedProvider.fetchLivePrice?.(
@@ -106,6 +146,7 @@ describe("Kava USDX pricefeed", () => {
   });
 
   it("is wired into the authoritative provider registry for USDX", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => undefined);
     installFixtureResponses();
 
     const overrides = await fetchAuthoritativeLivePriceOverrides([
@@ -157,7 +198,7 @@ describe("Kava USDX pricefeed", () => {
     await expect(fetchKavaUsdxPrice()).resolves.toBeNull();
   });
 
-  it("fails closed when the Kava block is stale, from another chain, or malformed", async () => {
+  it("fails closed when the Kava block is stale, from another chain, or malformed on every family", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
     for (const block of [
       { result: { header: { ...fixture.block.block.header, time: "2026-07-16T06:10:00Z" } } },
@@ -169,7 +210,10 @@ describe("Kava USDX pricefeed", () => {
       fetchJsonWithRetryMock.mockReset();
       installFixtureResponses({ block });
       await expect(fetchKavaUsdxPrice()).resolves.toBeNull();
-      expect(fetchJsonWithRetryMock).toHaveBeenCalledTimes(1);
+      expect(fetchJsonWithRetryMock.mock.calls.map(([url]) => url)).toEqual([
+        "https://rpc.kava.io/header",
+        "https://rpc.data.kava.io/header",
+      ]);
     }
   });
 
@@ -236,34 +280,90 @@ describe("Kava USDX pricefeed", () => {
     await expect(fetchKavaUsdxPrice()).resolves.toBeNull();
   });
 
-  it("fails closed on endpoint schema drift and HTTP failure", async () => {
+  it("fails closed on endpoint schema drift and HTTP failure across every family", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
     installFixtureResponses({ aggregate: { price: { market_id: "usdx:usd", price: 0.66 } } });
     await expect(fetchKavaUsdxPrice()).resolves.toBeNull();
 
     fetchJsonWithRetryMock.mockReset();
-    fetchJsonWithRetryMock.mockResolvedValueOnce({
-      response: new Response(null, { status: 503 }),
-      body: null,
-    });
+    fetchJsonWithRetryMock.mockResolvedValue(fail(503));
     await expect(fetchKavaUsdxPrice()).resolves.toBeNull();
+    expect(fetchJsonWithRetryMock.mock.calls.map(([url]) => url)).toEqual([
+      "https://rpc.kava.io/header",
+      "https://rpc.data.kava.io/header",
+    ]);
   });
 
-  it.each([
-    "https://rpc.kava.io/header",
-    "https://api.data.kava.io/kava/pricefeed/v1beta1/markets",
-    "https://api.data.kava.io/kava/pricefeed/v1beta1/prices/usdx:usd",
-    "https://api.data.kava.io/kava/pricefeed/v1beta1/rawprices/usdx:usd",
-  ])("fails closed without further requests when %s returns the incident's HTTP 502", async (failedUrl) => {
+  it.each(PRUNING_URLS.map((url, index) => [url, index] as const))(
+    "fails over cleanly to the archive host family from /header when pruning %s returns HTTP 502 without mixing families",
+    async (failedUrl, failIndex) => {
+      vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      const infoSpy = vi.spyOn(console, "info").mockImplementation(() => undefined);
+      const archiveBlock = {
+        result: { header: { ...fixture.block.block.header, height: "21658999" } },
+      };
+      const archiveAggregate = { price: { market_id: "usdx:usd", price: "0.670000000000000000" } };
+      const archiveRaw = {
+        raw_prices: [{ ...fixture.raw.raw_prices[0], price: "0.670000000000000000" }],
+      };
+      installFixtureResponses({}, {
+        pruning: {},
+        archive: { block: archiveBlock, aggregate: archiveAggregate, raw: archiveRaw },
+      });
+      const baseImpl = fetchJsonWithRetryMock.getMockImplementation()!;
+      fetchJsonWithRetryMock.mockImplementation(async (url: string) =>
+        url === failedUrl ? fail(502) : baseImpl(url),
+      );
+
+      await expect(fetchKavaUsdxPrice()).resolves.toMatchObject({
+        price: 0.67,
+        blockHeight: 21658999,
+      });
+
+      expect(fetchJsonWithRetryMock.mock.calls.map(([url]) => url)).toEqual([
+        ...PRUNING_URLS.slice(0, failIndex + 1),
+        ...ARCHIVE_URLS,
+      ]);
+      expect(infoSpy).toHaveBeenCalledTimes(1);
+      expect(JSON.parse(String(infoSpy.mock.calls[0]?.[0]))).toMatchObject({
+        event: "kava_pricefeed_served",
+        metadata: { hostFamily: "archive", blockHeight: 21658999 },
+      });
+    },
+  );
+
+  it("fails over to archive when pruning serves a stale block header and never mixes hosts", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    installFixtureResponses();
-    const fixtureResponse = fetchJsonWithRetryMock.getMockImplementation()!;
-    fetchJsonWithRetryMock.mockImplementation(async (url: string) => url === failedUrl
-      ? { response: new Response(null, { status: 502 }), body: null }
-      : fixtureResponse(url));
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    installFixtureResponses({}, {
+      pruning: {
+        block: { result: { header: { ...fixture.block.block.header, time: "2026-07-16T06:10:00Z" } } },
+      },
+      archive: {},
+    });
+
+    await expect(fetchKavaUsdxPrice()).resolves.toMatchObject({
+      price: 0.66,
+      blockHeight: 21658182,
+    });
+    expect(fetchJsonWithRetryMock.mock.calls.map(([url]) => url)).toEqual([
+      "https://rpc.kava.io/header",
+      ...ARCHIVE_URLS,
+    ]);
+    expect(JSON.parse(String(infoSpy.mock.calls[0]?.[0]))).toMatchObject({
+      event: "kava_pricefeed_served",
+      metadata: { hostFamily: "archive" },
+    });
+  });
+
+  it("fails closed returning null when both pruning and archive families return HTTP 502", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    fetchJsonWithRetryMock.mockResolvedValue(fail(502));
 
     await expect(fetchKavaUsdxPrice()).resolves.toBeNull();
-    const calls = fetchJsonWithRetryMock.mock.calls;
-    expect(calls[calls.length - 1]?.[0]).toBe(failedUrl);
+    expect(fetchJsonWithRetryMock.mock.calls.map(([url]) => url)).toEqual([
+      "https://rpc.kava.io/header",
+      "https://rpc.data.kava.io/header",
+    ]);
   });
 });

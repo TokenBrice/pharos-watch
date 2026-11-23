@@ -3,18 +3,23 @@ import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import usdx from "@shared/data/stablecoins/coins/usdx-kava.json";
 import { adaptKavaCdpState, type KavaCdpState } from "../kava-cdp";
 import {
+  ARCHIVE_KAVA_LCD_FIXTURES,
+  ARCHIVE_LCD_ORIGIN,
+  ARCHIVE_TOTAL_COLLATERAL_URL,
   BANK_SUPPLY,
   BLOCK_TIME_ISO,
   BLOCK_TIME_SEC,
   CDP_PARAMS,
+  KAVA_LCD_FIXTURES,
   LATEST_BLOCK,
+  LCD_ORIGIN,
   PRICEFEED_PRICES,
   TOTAL_COLLATERAL,
   TOTAL_COLLATERAL_URL,
   TOTAL_PRINCIPAL,
   kavaNetwork,
 } from "./kava-cdp.test-support";
-import { runAdapter } from "./reserve-adapter.test-support";
+import { installAdapterNetwork, runAdapter, runAdapterWithFakeTimers } from "./reserve-adapter.test-support";
 
 function makeState(overrides: Partial<KavaCdpState> = {}): KavaCdpState {
   return {
@@ -157,6 +162,104 @@ describe("adaptKavaCdpState", () => {
 });
 
 describe("fetchKavaCdpReserves", () => {
+  it("reads from the primary pruning LCD origin first without touching the archive fallback", async () => {
+    const { result, network } = await runAdapter("kava-cdp", makeCoin(), {
+      network: kavaNetwork(),
+      nowSec: BLOCK_TIME_SEC,
+    });
+    expect(result.slices).toHaveLength(7);
+    expect(network.requests.map((request) => request.url)).toEqual(Object.keys(KAVA_LCD_FIXTURES));
+    expect(network.requests.every((request) => request.url.startsWith(`${LCD_ORIGIN}/`))).toBe(true);
+  });
+
+  it("fails over to the archive fallback when primary returns HTTP 502, binding collateral and latest block to the same origin", async () => {
+    const archiveBlock: KavaCdpState["block"] = {
+      block: { header: { ...LATEST_BLOCK.block.header, height: "23626256" } },
+    };
+    const network = installAdapterNetwork({
+      json: {
+        [TOTAL_COLLATERAL_URL]: { status: 502, body: "Bad Gateway" },
+        ...ARCHIVE_KAVA_LCD_FIXTURES,
+        [`${ARCHIVE_LCD_ORIGIN}/cosmos/base/tendermint/v1beta1/blocks/latest`]: archiveBlock,
+      },
+    });
+    const { result } = await runAdapterWithFakeTimers(() =>
+      runAdapter("kava-cdp", makeCoin(), {
+        network,
+        nowSec: BLOCK_TIME_SEC,
+      }),
+    );
+    expect(result.slices).toHaveLength(7);
+    expect(result.metadata?.details).toMatchObject({ blockHeight: 23626256 });
+    const archiveUrls = network.requests
+      .map((request) => request.url)
+      .filter((url) => url.startsWith(`${ARCHIVE_LCD_ORIGIN}/`));
+    expect(archiveUrls).toEqual(Object.keys(ARCHIVE_KAVA_LCD_FIXTURES));
+    expect(network.requests.some((request) => request.url === `${LCD_ORIGIN}/cosmos/base/tendermint/v1beta1/blocks/latest`)).toBe(false);
+  });
+
+  it("never mixes origins when a mid-sequence primary read fails with HTTP 502", async () => {
+    const archiveBlock: KavaCdpState["block"] = {
+      block: { header: { ...LATEST_BLOCK.block.header, height: "23626300" } },
+    };
+    const archiveCollateral = structuredClone(TOTAL_COLLATERAL);
+    archiveCollateral.total_collateral.find((row) => row.collateral_type === "busd-a")!.amount.amount = "96207769963709";
+    const network = installAdapterNetwork({
+      json: {
+        ...KAVA_LCD_FIXTURES,
+        [`${LCD_ORIGIN}/cosmos/base/tendermint/v1beta1/blocks/latest`]: { status: 502, body: "Bad Gateway" },
+        ...ARCHIVE_KAVA_LCD_FIXTURES,
+        [ARCHIVE_TOTAL_COLLATERAL_URL]: archiveCollateral,
+        [`${ARCHIVE_LCD_ORIGIN}/cosmos/base/tendermint/v1beta1/blocks/latest`]: archiveBlock,
+      },
+    });
+    const { result } = await runAdapterWithFakeTimers(() =>
+      runAdapter("kava-cdp", makeCoin(), {
+        network,
+        nowSec: BLOCK_TIME_SEC,
+      }),
+    );
+    expect(result.metadata?.details).toMatchObject({ blockHeight: 23626300 });
+    expect(result.metadata?.totalReserveUsd).toBeCloseTo(expectedTotalCollateralUsd + 100_000, 4);
+    const urls = network.requests.map((request) => request.url);
+    const firstArchiveIndex = urls.findIndex((url) => url.startsWith(`${ARCHIVE_LCD_ORIGIN}/`));
+    expect(firstArchiveIndex).toBeGreaterThan(0);
+    expect(urls.slice(firstArchiveIndex)).toEqual(Object.keys(ARCHIVE_KAVA_LCD_FIXTURES));
+  });
+
+  it("fails closed when every configured origin returns HTTP 502", async () => {
+    await expect(
+      runAdapterWithFakeTimers(() =>
+        runAdapter("kava-cdp", makeCoin(), {
+          network: {
+            json: {
+              [TOTAL_COLLATERAL_URL]: { status: 502, body: "Bad Gateway" },
+              [ARCHIVE_TOTAL_COLLATERAL_URL]: { status: 502, body: "Bad Gateway" },
+            },
+          },
+          nowSec: BLOCK_TIME_SEC,
+          validate: false,
+        }),
+      ),
+    ).rejects.toThrow(/502/);
+  });
+
+  it("propagates cancellation without probing the archive fallback", async () => {
+    const controller = new AbortController();
+    controller.abort(new Error("kava-cdp cancelled"));
+    const network = installAdapterNetwork({
+      json: { ...KAVA_LCD_FIXTURES, ...ARCHIVE_KAVA_LCD_FIXTURES },
+    });
+
+    await expect(runAdapter("kava-cdp", makeCoin(), {
+      network,
+      signal: controller.signal,
+      nowSec: BLOCK_TIME_SEC,
+      validate: false,
+    })).rejects.toThrow("kava-cdp cancelled");
+    expect(network.requests.every((request) => !request.url.startsWith(`${ARCHIVE_LCD_ORIGIN}/`))).toBe(true);
+  });
+
   it("rejects incomplete valuation at the HTTP boundary without replacement weights", async () => {
     const collateral = structuredClone(TOTAL_COLLATERAL);
     collateral.total_collateral.find((row) => row.collateral_type === "swp-a")!.amount.amount = "1000000000";
@@ -171,10 +274,11 @@ describe("fetchKavaCdpReserves", () => {
     expect(result.warnings).toContainEqual(expect.objectContaining({ code: "collateral-coverage-incomplete", effect: "fatal" }));
   });
 
-  it("fails closed when an upstream response drops a required field", async () => {
+  it("fails closed when an upstream response drops a required field on every origin", async () => {
     await expect(runAdapter("kava-cdp", makeCoin(), {
       network: kavaNetwork({
         [TOTAL_COLLATERAL_URL]: { total_collateral: undefined },
+        [ARCHIVE_TOTAL_COLLATERAL_URL]: { total_collateral: undefined },
       }),
       nowSec: BLOCK_TIME_SEC,
       validate: false,

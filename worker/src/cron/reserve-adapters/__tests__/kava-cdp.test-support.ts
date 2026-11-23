@@ -7,8 +7,10 @@ import type {
   KavaPricefeedPricesPayload,
 } from "../kava-cdp";
 
-const LCD_ORIGIN = "https://api.data.kava.io";
+const LCD_ORIGIN = "https://api.kava.io";
+const ARCHIVE_LCD_ORIGIN = "https://api.data.kava.io";
 const TOTAL_COLLATERAL_URL = `${LCD_ORIGIN}/kava/cdp/v1beta1/totalCollateral`;
+const ARCHIVE_TOTAL_COLLATERAL_URL = `${ARCHIVE_LCD_ORIGIN}/kava/cdp/v1beta1/totalCollateral`;
 
 // Captured 2026-09-09 from the public Kava LCD (https://api.data.kava.io).
 const TOTAL_COLLATERAL: KavaCdpTotalsPayload = {
@@ -81,25 +83,34 @@ const BLOCK_TIME_SEC = Math.floor(Date.parse(BLOCK_TIME_ISO) / 1000);
 const LATEST_BLOCK: KavaBlockPayload = {
   block: { header: { chain_id: "kava_2222-10", height: "22494995", time: BLOCK_TIME_ISO } },
 };
-const KAVA_LCD_FIXTURES: Record<string, unknown> = {
-  [TOTAL_COLLATERAL_URL]: TOTAL_COLLATERAL,
-  [`${LCD_ORIGIN}/kava/cdp/v1beta1/totalPrincipal`]: TOTAL_PRINCIPAL,
-  [`${LCD_ORIGIN}/kava/cdp/v1beta1/params`]: CDP_PARAMS,
-  [`${LCD_ORIGIN}/kava/pricefeed/v1beta1/prices`]: PRICEFEED_PRICES,
-  [`${LCD_ORIGIN}/cosmos/bank/v1beta1/supply/by_denom?denom=usdx`]: BANK_SUPPLY,
-  [`${LCD_ORIGIN}/cosmos/base/tendermint/v1beta1/blocks/latest`]: LATEST_BLOCK,
-};
+function buildKavaLcdFixtures(origin: string): Record<string, unknown> {
+  return {
+    [`${origin}/kava/cdp/v1beta1/totalCollateral`]: TOTAL_COLLATERAL,
+    [`${origin}/kava/cdp/v1beta1/totalPrincipal`]: TOTAL_PRINCIPAL,
+    [`${origin}/kava/cdp/v1beta1/params`]: CDP_PARAMS,
+    [`${origin}/kava/pricefeed/v1beta1/prices`]: PRICEFEED_PRICES,
+    [`${origin}/cosmos/bank/v1beta1/supply/by_denom?denom=usdx`]: BANK_SUPPLY,
+    [`${origin}/cosmos/base/tendermint/v1beta1/blocks/latest`]: LATEST_BLOCK,
+  };
+}
+
+const KAVA_LCD_FIXTURES: Record<string, unknown> = buildKavaLcdFixtures(LCD_ORIGIN);
+const ARCHIVE_KAVA_LCD_FIXTURES: Record<string, unknown> = buildKavaLcdFixtures(ARCHIVE_LCD_ORIGIN);
 
 function kavaNetwork(overrides: Record<string, unknown> = {}) {
   return { json: { ...KAVA_LCD_FIXTURES, ...overrides } };
 }
 export {
+  ARCHIVE_KAVA_LCD_FIXTURES,
+  ARCHIVE_LCD_ORIGIN,
+  ARCHIVE_TOTAL_COLLATERAL_URL,
   BANK_SUPPLY,
   BLOCK_TIME_ISO,
   BLOCK_TIME_SEC,
   CDP_PARAMS,
   KAVA_LCD_FIXTURES,
   LATEST_BLOCK,
+  LCD_ORIGIN,
   PRICEFEED_PRICES,
   TOTAL_COLLATERAL,
   TOTAL_COLLATERAL_URL,

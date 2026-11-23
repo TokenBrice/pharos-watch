@@ -2,8 +2,10 @@ import { z } from "zod";
 import type { ReserveSlice } from "@shared/types/reserves";
 import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
+import { rethrowIfAborted } from "../../lib/abort";
 import {
   fetchJsonWithRetry,
+  isHttpJsonInput,
   notApplicableFreshnessMetadata,
   parseBoundedDecimals,
   requireJsonInput,
@@ -333,21 +335,20 @@ function parsePayload<T>(schema: z.ZodType<T>, payload: unknown, label: string):
   return result.data;
 }
 
-export async function fetchKavaCdpReserves(
-  _coin: ReserveAdapterCoin,
-  config: LiveReservesConfig,
+async function fetchKavaCdpReservesFromInput(
+  totalCollateralUrl: string,
+  nowSec: number,
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
-  const input = requireJsonInput(config.inputs.primary, ADAPTER_KEY);
-  const lcdBase = new URL(input.url).origin;
-  const nowSec = ctx?.nowSec ?? Math.floor(Date.now() / 1_000);
+  const lcdBase = new URL(totalCollateralUrl).origin;
 
   // Sequential reads keep the attempt inside the orchestrator's shared
-  // connection budget; every fetch runs through the adapter I/O limiter.
+  // connection budget; every fetch runs through the adapter I/O limiter and
+  // binds all six module/block reads to one LCD origin.
   const collateral = parsePayload(
     KavaCdpTotalsSchema,
-    await fetchJsonWithRetry<unknown>(input.url, signal, 12_000, ctx),
+    await fetchJsonWithRetry<unknown>(totalCollateralUrl, signal, 12_000, ctx),
     "totalCollateral",
   );
   const principal = parsePayload(
@@ -377,4 +378,30 @@ export async function fetchKavaCdpReserves(
   );
 
   return adaptKavaCdpState({ collateral, principal, params, prices, supply, block, nowSec });
+}
+
+export async function fetchKavaCdpReserves(
+  _coin: ReserveAdapterCoin,
+  config: LiveReservesConfig,
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+): Promise<AdapterResult> {
+  const input = requireJsonInput(config.inputs.primary, ADAPTER_KEY);
+  const candidateUrls = [
+    input.url,
+    ...(config.inputs.fallbacks ?? []).filter(isHttpJsonInput).map((fallback) => fallback.url),
+  ];
+
+  let lastError: unknown = null;
+  for (const totalCollateralUrl of candidateUrls) {
+    const nowSec = ctx?.nowSec ?? Math.floor(Date.now() / 1_000);
+    try {
+      return await fetchKavaCdpReservesFromInput(totalCollateralUrl, nowSec, signal, ctx);
+    } catch (error) {
+      rethrowIfAborted(error, signal);
+      lastError = error;
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
 }
