@@ -319,10 +319,18 @@ export function admitExitExecutionCertificate(args: {
     if (externalShares) {
       const gasFees = point.fees.filter((fee) => fee.kind === "gas");
       const native = certificate.feeReferences.find((reference) => reference.assetKey === "asset:eth");
+      // `nativeUsdFeed.maxAgeSec` is the feed's capture-time heartbeat bound; evaluation-time
+      // freshness of `feeReferences` is enforced below against `model.priceMaxAgeSec`.
       if (review.producer.chain !== "ethereum" || gasFees.length !== 1 || gasFees[0]!.assetKey !== "asset:eth" ||
           BigInt(gasFees[0]!.rawUnits) <= 0n || !native || native.deployment !== "ethereum:native:eth" ||
           native.decimals !== 18 || native.sourceId !== `chainlink:${externalShares.nativeUsdFeed.address.toLowerCase()}` ||
-          !fresh(native.observedAtSec, Math.min(model.priceMaxAgeSec, externalShares.nativeUsdFeed.maxAgeSec)) ||
+          assessExitExecutionPriceLegFreshness(
+            native,
+            certificate.observedAtSec,
+            Math.min(model.priceMaxAgeSec, externalShares.nativeUsdFeed.maxAgeSec),
+            model.futureSkewSec,
+            certificate.observedAtSec,
+          ).status !== "ok" ||
           !certificate.prerequisites.includes("ordinary-token-approval") ||
           !certificate.prerequisites.includes("pinned-transaction-gas-estimate")) return unavailable("execution-custodian-gas-unproven");
     }
