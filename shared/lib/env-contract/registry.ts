@@ -143,6 +143,12 @@ const ENV_BINDING_DEFINITIONS = [
     runtimes: { worker: { status: "optional" } },
   },
   {
+    key: "WORKER_V9_QUEUE_MODE",
+    valueType: "string",
+    description: "Heavy-only Safety Score V9 Queue continuation switch: off or missing (inert in Release 1) runs monolithic :22/:52; literal on enables chunked Queue continuations after Release 2 provisions and binds pharos-v9-continuation.",
+    runtimes: { worker: { status: "optional" } },
+  },
+  {
     key: "RESERVE_CONTINUATION_QUEUE",
     valueType: "Queue<ReserveContinuationMessage>",
     description: "Public-only bounded reserve continuation/tail and one-shot slot catch-up wakeup Queue; D1 checkpoint, slot and event fences remain execution authority.",
