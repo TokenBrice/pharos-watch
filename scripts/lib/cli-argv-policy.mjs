@@ -102,6 +102,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("scripts/maintenance/worker-evidence-report.mjs"),
     strict("scripts/maintenance/worker-incident-bundle.mjs"),
     strict("worker/scripts/audit-mint-burn-conservation-admission.ts"),
+    strict("worker/scripts/build-safety-score-v9-admission-receipt.ts"),
     strict("worker/scripts/calibrate-v9-resource.ts"),
     strict("worker/scripts/capture-report-cards-fixed-input.ts"),
     strict("worker/scripts/check-safety-score-v9-anchor-gate.ts"),
