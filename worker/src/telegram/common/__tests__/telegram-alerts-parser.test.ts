@@ -28,7 +28,7 @@ describe("resolveTicker", () => {
   });
 
   it("returns ambiguous for duplicate tickers", () => {
-    const result = resolveTicker("GUSD");
+    const result = resolveTicker("USDQ");
     expect(result.status).toBe("ambiguous");
     expect(result.matches.length).toBe(2);
   });

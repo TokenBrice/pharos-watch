@@ -51,7 +51,7 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(body).toHaveProperty("hourly");
     expect(Array.isArray(body.coins)).toBe(true);
     expect(body).not.toHaveProperty("stablecoinId");
-    expect(parsed.data?.publication).toMatchObject({ legsScope: "non-admitted", admittedCount: 129, pendingAdmissionCount: 4 });
+    expect(parsed.data?.publication).toMatchObject({ legsScope: "non-admitted", admittedCount: 119, pendingAdmissionCount: 4 });
     expect(parsed.data?.publication?.legs).toContainEqual(expect.objectContaining({
       stablecoinId: "meusd-mezo", chainId: "ethereum", status: "disabled", reason: "operator-disabled",
     }));

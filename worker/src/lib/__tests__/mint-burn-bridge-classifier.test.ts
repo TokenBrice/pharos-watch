@@ -176,8 +176,16 @@ describe("receipt-bound bridge classification", () => {
 
   it("preserves mint uncertainty and operation order under malformed or incomplete bridge evidence", () => {
     for (const mutation of ["equal-fee", "invalid-data", "unaligned-unrelated-log", "invalid-message", "missing-packet", "zero-recipient"] as const) {
-      const fixture = sample(mutation === "missing-packet" ? "usdai-executor-receive" : mutation === "zero-recipient" ? "gldon-receive" : "v2-receive-fee");
-      const config = receiptConfig(fixture, bridgeConfigs);
+      let fixture: BridgeReceipt;
+      let config: typeof bridgeConfigs[number];
+      if (mutation === "zero-recipient") {
+        const source = arrange("usdai-executor-receive");
+        config = bridgeConfigs.find((entry) => entry.stablecoinId === "usdz-anzen")!;
+        fixture = rebindReceipt(source.fixture, source.config, config);
+      } else {
+        fixture = sample(mutation === "missing-packet" ? "usdai-executor-receive" : "v2-receive-fee");
+        config = receiptConfig(fixture, bridgeConfigs);
+      }
       if (mutation === "equal-fee") {
         const principal = logFor(fixture, "0x2"), fee = logFor(fixture, "0x4");
         fee.data = principal.data; fee.topics[2] = principal.topics[2];
