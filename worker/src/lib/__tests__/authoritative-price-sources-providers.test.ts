@@ -5,6 +5,7 @@ import {
   createAidRedeemerFixture,
   expectPinnedLaneTransportRejections,
   expectPostRpcAgeAndAbort,
+  fetchEvmBlockNumberMock,
   fetchEvmCallHexAtBlockMock as evmCall,
   fetchEvmRpcBatchMock as evmBatch,
   freshParent,
@@ -44,6 +45,9 @@ import { inheritedTrackedPriceProvider } from "../authoritative-price-sources/in
 import { iusdInfinifiProvider } from "../authoritative-price-sources/infinifi-iusd";
 import { createProtocolRedeemProvider } from "../authoritative-price-sources/protocol-redeem-provider";
 import { encodeUint256 } from "../evm-selectors";
+import { createAuthoritativeLivePriceOverrideStats as overrideStats } from "../authoritative-price-sources";
+import { buildPriceValidationContext } from "../price-validation";
+import { validatePublishedAssetPrice } from "../price-publish-policy";
 import * as extraction from "../historical-depeg-extraction";
 import { m0ExtensionProvider } from "../authoritative-price-sources/m0-extension";
 import { nusdSynapsePoolProvider } from "../authoritative-price-sources/nusd-synapse-pool";
@@ -155,6 +159,54 @@ const historicalParent = vi.hoisted(() => vi.fn());
 vi.mock("../historical-market-prices", () => ({
   fetchMarketBackfillPriceSeries: historicalParent,
 }));
+
+describe("aidUsdcRedeemerProvider", () => {
+  const NOW = 1_795_531_300;
+  let fx: ReturnType<typeof createAidRedeemerFixture>;
+  beforeEach(() => {
+    vi.useFakeTimers(); vi.setSystemTime(NOW * 1000); resetMocks();
+    fx = createAidRedeemerFixture(NOW); fx.mockHealthy();
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it("publishes fallback non-depeg-authoritative AID quote and blocks sAID parent upgrade", async () => {
+    const res = await fetchAidUsdcRedeemerPrice(fx.context());
+    expect(res).toMatchObject({
+      source: "protocol-redeem", confidence: "fallback", observedAt: NOW - 45, observedAtMode: "local_fetch",
+      metadata: { inheritedFrom: "usdc-circle", parentSource: "bitstamp+coingecko+kraken", parentReplaySafe: true },
+    });
+    expect(res!.price).toBeCloseTo(0.99985 * 0.999, 10);
+    expect(evmBatch.mock.calls[1][1]).toHaveLength(23);
+    expect(classifyPrimaryDepegTrust({ price: res!.price, priceSource: res!.source, priceConfidence: res!.confidence, priceObservedAt: res!.observedAt, priceObservedAtMode: res!.observedAtMode }, NOW)).toBe("confirm_required");
+    expect(validatePublishedAssetPrice({ asset: { price: res!.price, priceSource: res!.source, priceConfidence: res!.confidence }, validationContext: buildPriceValidationContext({ stablecoinId: "aid-gaib" }) }).accepted).toBe(true);
+    fx.mockHealthy(NOW - 90);
+    expect(await fetchAidUsdcRedeemerPrice(fx.context())).toMatchObject({ observedAt: NOW - 90, observedAtMode: "upstream" });
+    fx.mockHealthy();
+    const stats = overrideStats();
+    const overrides = await fetchLiveOverrides([unpricedChild("aid-gaib"), unpricedChild("said-gaib"), fx.context().assetsById.get("usdc-circle")!], { stats });
+    expect([...overrides.keys()]).toEqual(["aid-gaib"]);
+    expect(stats.assetAttempts).toContainEqual(expect.objectContaining({ assetId: "said-gaib", rejectionClass: "untrusted-parent:aid-gaib:confidence-fallback" }));
+    expect(aidUsdcRedeemerProvider.liveMissingOnly).toBe(true);
+    expect(aidUsdcRedeemerProvider.matches("said-gaib")).toBe(false);
+    evmBatch.mockReset();
+    expect(await aidUsdcRedeemerProvider.fetchLivePrice!(freshParent("aid-gaib", 1, "coingecko", { nowSec: NOW }), fx.context())).toBeNull();
+    expect(evmBatch).not.toHaveBeenCalled();
+  });
+
+  it.each(AID_REDEEMER_REJECTION_CASES)("rejects AID redeemer [%s] (%s)", async (index, value, reason) => {
+    fx.state[index] = value; fx.mockHealthy();
+    const c = fx.context(); expect(await fetchAidUsdcRedeemerPrice(c)).toBeNull();
+    expect(c.lastRejectionReason).toBe(`aid-usdc-redeemer:${reason}`);
+  });
+
+  it("rejects missing/stale parent, head/state/reorg/age failures and propagates abort", async () => {
+    evmBatch.mockReset(); expect(await fetchAidUsdcRedeemerPrice(fx.context(null))).toBeNull();
+    expect(await fetchAidUsdcRedeemerPrice(fx.context(freshParent("usdc-circle", 1, "coingecko+defillama", { nowSec: NOW, observedAt: NOW - 86400 })))).toBeNull();
+    expect(evmBatch).not.toHaveBeenCalled();
+    await expectPinnedLaneTransportRejections({ fetchPrice: fetchAidUsdcRedeemerPrice, makeContext: () => fx.context(), lanePrefix: "aid-usdc-redeemer", nowSec: NOW, hash: fx.hash, state: fx.state });
+    await expectPostRpcAgeAndAbort({ fetchPrice: fetchAidUsdcRedeemerPrice, agingContext: fx.context(freshParent("usdc-circle", 1, "coingecko+defillama", { nowSec: NOW, observedAt: NOW - 890 })), healthyContext: () => fx.context(), lanePrefix: "aid-usdc-redeemer", nowSec: NOW, hash: fx.hash, state: fx.state });
+  });
+});
 
 describe("capCusdProvider", () => {
   const quote = (raw: bigint) => `0x${encodeUint256(raw)}` as const;
