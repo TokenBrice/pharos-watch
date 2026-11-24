@@ -168,7 +168,7 @@ describe("adaptChainlinkNavResponse", () => {
   };
 
   // WTGXX is quarantined today; its keyed row keeps a reactivated feed classified.
-  it.each(["fiusd-sygnum", "wtgxx-wisdomtree"])("projects %s's native fund-share slice onto its reviewed singleton classification", (id) => {
+  it.each(["vbill-vaneck", "wtgxx-wisdomtree"])("projects %s's native fund-share slice onto its reviewed singleton classification", (id) => {
     const coin = TRACKED_META_BY_ID.get(id)!;
     const config = coin.liveReservesConfig!;
     expect(config.adapter).toBe("chainlink-nav");
@@ -188,7 +188,7 @@ describe("adaptChainlinkNavResponse", () => {
     expect(classifications[0]?.classificationKey).toMatch(/^registry-reviewed:/);
   });
 
-  it.each([{ ...params, navScope: "portfolio" as const }, TRACKED_META_BY_ID.get("mtbill-midas")!.liveReservesConfig!.params as ChainlinkNavParams])("keeps portfolio NAV visible but degrades unverified composition", (portfolio) => {
+  it.each([{ ...params, navScope: "portfolio" as const }, TRACKED_META_BY_ID.get("mf-one-midas")!.liveReservesConfig!.params as ChainlinkNavParams])("keeps portfolio NAV visible but degrades unverified composition", (portfolio) => {
     const result = adaptChainlinkNavResponse(
       { navPerToken: 1_119_000n, navDecimals: 6, totalSupply: 500_000_000n, tokenDecimals: 6, roundId: 384n, updatedAt: 1773405239 },
       portfolio,
@@ -263,7 +263,7 @@ describe("parseOndoPriceData", () => {
 });
 
 describe("fetchChainlinkNavCore", () => {
-  it.each(["mre7yield-midas", "mglobal-midas-fasanara"])("uses the reviewed %s round window when reading the reserve NAV for pricing", (id) => {
+  it.each(["mf-one-midas", "mglobal-midas-fasanara"])("uses the reviewed %s round window when reading the reserve NAV for pricing", (id) => {
     const liveReservesConfig = TRACKED_META_BY_ID.get(id)!.liveReservesConfig!;
     const fingerprint = computeLiveReserveConfigFingerprint(liveReservesConfig);
     const observedAt = 1_781_083_007;

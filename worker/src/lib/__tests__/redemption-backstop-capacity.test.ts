@@ -4,7 +4,6 @@ import { liveSnapshot } from "./redemption-backstop-sources.test-support";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { adaptCapVaultState } from "../../cron/reserve-adapters/cap-vault";
 import { makeCapAsset } from "../../cron/reserve-adapters/__tests__/cap-vault.test-support";
-import { LIVE_RESERVE_FRESHNESS_SEC } from "../live-reserve-policy";
 
 const now = 1_780_000_000;
 const baseSnapshot = (metadata: Record<string, unknown>) => liveSnapshot("lusd-liquity", metadata, {
@@ -222,28 +221,6 @@ describe("resolveRedemptionCapacity — reserve-sync over-provisioned clamp", ()
       resolutionState: "missing-capacity", immediateCapacityUsd: null,
       capacityRejectionReason: "redeemable-capacity-unobserved",
     });
-  });
-
-  it.each([
-    ["legacy", undefined, now, null, "redeemable-capacity-unobserved"],
-    ["valued", now, now, 112_000, undefined],
-    ["expired", now, now + LIVE_RESERVE_FRESHNESS_SEC + 1, null, "stale"],
-    ["expired valuation", now - LIVE_RESERVE_FRESHNESS_SEC - 1, now, null, "stale-source-timestamp"],
-  ] as const)("admits the %s USD3 throttle only with a current dollar valuation", async (_name, sourceTimestamp, clock, amount, reason) => {
-    const stablecoinId = "usd3-reserve-protocol";
-    const snapshot = liveSnapshot(stablecoinId, {
-      freshnessMode: "not-applicable", redemption: {
-        capacityUsd: sourceTimestamp === undefined ? 100_000 : 112_000,
-        capacityRatioOfSupply: 0.1, capacityKind: "live-direct", freshnessKind: "same-run-onchain",
-        sourceTimestamp, routeStatus: "open", routeStatusSource: "onchain", settlementDelaySec: 0,
-      },
-    }, { fetchedAt: now, source: "reserve-protocol-dtf" });
-    const result = await resolveRedemptionCapacity(
-      {} as D1Database, stablecoinId, { kind: "reserve-sync-metadata" }, 1_120_000, clock,
-      { reserveSnapshotMetadata: snapshot },
-    );
-    expect(result.immediateCapacityUsd).toBe(amount);
-    expect(result.capacityRejectionReason).toBe(reason);
   });
 
   it.each([

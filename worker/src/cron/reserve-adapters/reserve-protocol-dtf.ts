@@ -475,19 +475,6 @@ export async function fetchReserveProtocolDtfReserves(
       ),
     );
   }
-  const usesBasketValuation = coin.id === "usd3-reserve-protocol";
-  // The full-backing quote and each collateral plugin price share the RToken's
-  // block. The low end marks the shares conservatively in USD.
-  const basketUnitValueUsd = usesBasketValuation && fullyCollateralized && rawBasketStatus === COLLATERAL_STATUS_SOUND &&
-    rawTotalSupply != null && rawTotalSupply > 0n && unknownExposurePct === 0 &&
-    pricedComponents.every(({ rawStatus }) => rawStatus === COLLATERAL_STATUS_SOUND)
-    ? pricedComponents.reduce((sum, { entry, price, tokenDecimals }) =>
-      sum + decimalNumberFromBigInt(entry.quantity * price.low, tokenDecimals + PRICE_DECIMALS), 0) /
-      decimalNumberFromBigInt(rawTotalSupply, rTokenDecimals)
-    : null;
-  const basketValuation = basketUnitValueUsd != null && Number.isFinite(basketUnitValueUsd) && basketUnitValueUsd > 0
-    ? { usdPerShare: basketUnitValueUsd, observedAt: plan.observedBlock.timestamp }
-    : null;
   let redemption = buildRedemptionTelemetry(
     rTokenAddress,
     rTokenDecimals,
@@ -495,7 +482,7 @@ export async function fetchReserveProtocolDtfReserves(
     rawTotalSupply,
     fullyCollateralized,
     rawBasketStatus,
-    usesBasketValuation ? basketValuation : { usdPerShare: 1, observedAt: 0 },
+    { usdPerShare: 1, observedAt: 0 },
   );
   if (redemption && rawTotalSupply != null && outputLegs.length === quoteEntries.length) {
     const outputValuation = await buildRedemptionOutputValuation({
@@ -524,10 +511,6 @@ export async function fetchReserveProtocolDtfReserves(
         basketHandler,
         quoteAmount: quoteAmount.toString(),
         ...(rawRedemptionAvailable != null ? { redemptionThrottleRaw: rawRedemptionAvailable.toString() } : {}),
-        ...(basketValuation ? { redemptionCapacityValuation: {
-          basis: "reserve-protocol-basket-price-low",
-          ...basketValuation,
-        } } : {}),
         components: componentMetadata,
       }),
       unknownExposurePct,

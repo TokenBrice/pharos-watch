@@ -9,19 +9,17 @@ import { installAdapterNetwork, runAdapter, type AdapterNetwork } from "./reserv
 import eusd from "@shared/data/stablecoins/coins/eusd-electronic-usd.json";
 
 const coin = {
-  id: "usd3-reserve-protocol",
-  symbol: "USD3",
+  id: "fixture-dtf-coin",
+  symbol: "FDTF",
   contracts: [{ chain: "ethereum", address: "0x0d86883faf4ffd7aeb116390af37746f45b6f378", decimals: 18 }],
 };
 
-// Synthetic tracked-output basket: live USD3 now correctly retains unresolved
-// receipt identities and cannot certify these underlying-output identities.
 vi.mock("@shared/lib/redemption-backstop-configs", async (importOriginal) => {
   const actual = await importOriginal<typeof BackstopConfigs>();
   return { ...actual, REDEMPTION_BACKSTOP_CONFIGS: {
     ...actual.REDEMPTION_BACKSTOP_CONFIGS,
     "fixture-dtf-basket": {
-      ...actual.REDEMPTION_BACKSTOP_CONFIGS["usd3-reserve-protocol"],
+      ...actual.REDEMPTION_BACKSTOP_CONFIGS["eusd-electronic-usd"],
       outputAssets: ["susds-sky", "usdc-circle", "steakusdc-steakhouse"],
       unresolvedOutputAssetKeys: undefined, unresolvedOutputDisposition: undefined,
       capacityModel: { kind: "reserve-sync-metadata" },
@@ -89,7 +87,7 @@ function createOnchainConfig(twoComponents = false): LiveReservesConfig {
     adapter: "reserve-protocol-dtf",
     version: 1,
     semantics: "collateral-mix",
-    breakerScope: "usd3-reserve-protocol",
+    breakerScope: "fixture-dtf-coin",
     display: {
       url: "https://app.reserve.org/ethereum/token/0x0d86883faf4ffd7aeb116390af37746f45b6f378",
       label: "Reserve Protocol",
@@ -328,29 +326,22 @@ describe("reserve-protocol-dtf adapter", () => {
     });
   });
 
-  it.each([
-    [100n, 100, 1],
-    [80n, 100, 1.25],
-  ])("caps the throttle by %s shares and applies the dated basket value", async (totalShares, capacityUsd, usdPerShare) => {
-    mockReserveProtocolOnchain({ redemptionAvailable: 120n * ONE, totalSupply: totalShares * ONE });
+  it("caps the throttle by total supply at par share value", async () => {
+    mockReserveProtocolOnchain({ redemptionAvailable: 120n * ONE, totalSupply: 80n * ONE });
 
     const result = await fetchReserveProtocolDtfReserves(coin as never, createOnchainConfig(), signal);
     expect(result.metadata?.observedBlock).toEqual({ chain: "ethereum", number: 12345, timestamp: 1776154391 });
     expect(activeNetwork.rpcCalls.filter((call) => call.method === "eth_call").every((call) => call.block === "0x3039")).toBe(true);
 
     expect(result.metadata?.redemption).toMatchObject({
-      capacityUsd,
+      capacityUsd: 80,
       capacityRatioOfSupply: 1,
-      sourceTimestamp: 1776154391,
       capacityKind: "live-direct",
       freshnessKind: "same-run-onchain",
       routeStatus: "open",
       routeStatusSource: "onchain",
       holderEligibility: "any-holder",
       settlementDelaySec: 0,
-    });
-    expect(result.metadata?.details?.redemptionCapacityValuation).toEqual({
-      basis: "reserve-protocol-basket-price-low", usdPerShare, observedAt: 1776154391,
     });
     expect(result.metadata?.redemption?.routeStatusReason).toContain("redemptionAvailable() throttle read");
   });
@@ -419,14 +410,6 @@ describe("reserve-protocol-dtf adapter", () => {
 
     const result = await fetchReserveProtocolDtfReserves(valuationCoin as never, createOnchainConfig(), signal);
 
-    expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 40, routeStatus: "open" });
-    expect(result.metadata?.redemption?.outputValuation).toBeUndefined();
-    expect(activeNetwork.rpcCalls.some((call) => call.selector === CONVERT_TO_ASSETS_SELECTOR)).toBe(false);
-  });
-
-  it("does not certify underlying-output valuation for live USD3's unresolved receipts", async () => {
-    mockReserveProtocolOnchain();
-    const result = await fetchReserveProtocolDtfReserves(coin as never, createOnchainConfig(), signal);
     expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 40, routeStatus: "open" });
     expect(result.metadata?.redemption?.outputValuation).toBeUndefined();
     expect(activeNetwork.rpcCalls.some((call) => call.selector === CONVERT_TO_ASSETS_SELECTOR)).toBe(false);
@@ -593,7 +576,6 @@ describe("reserve-protocol-dtf adapter", () => {
     expect(result.metadata?.redemption?.routeStatusReason).toContain(
       "basket status is 1 and fullyCollateralized() is false",
     );
-    expect(result.metadata?.redemption?.capacityUsd).toBeUndefined();
   });
 
   it.each([

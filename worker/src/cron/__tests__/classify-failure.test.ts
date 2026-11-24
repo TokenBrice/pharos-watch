@@ -57,7 +57,7 @@ const CASES: Case[] = [
   {
     name: "adapter-exception + source date outside the reviewed bound",
     reason: "adapter-exception",
-    lastError: "ondo-usdy: source-date-out-of-bounds: stale-or-future-source",
+    lastError: "chainlink-nav: source-date-out-of-bounds: stale-or-future-source",
     expected: "validation",
   },
   {

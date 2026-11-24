@@ -59,7 +59,7 @@ describe("buildReserveFetchNotice", () => {
       const reserves = makeReserves({ mode, sync: {
         enabled: true, status: "error", stale: true, bootstrap: false, lastError: "source rejected",
         acknowledgedFeed: {
-          stablecoinId: "mtbill-midas", adapterKey: "midas-mtbill", failureCategory: "unknown",
+          stablecoinId: "yzusd-yuzu", adapterKey: "accountable", failureCategory: "unknown",
           warningCodes: [], errorPrefix: "source", owner: "ops", reason: "Await issuer update",
           reviewedAt: 1791244800, expiresAt: 1791849600,
           sources: [{ url: "https://example.com/report", evidenceDate: "2026-09-18" }],

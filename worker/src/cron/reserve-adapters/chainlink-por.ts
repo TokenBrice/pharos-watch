@@ -16,20 +16,12 @@ import {
   pinnedEvmTokenReader,
   requireOnchainInput,
   reserveDegradedWarning,
-  reserveInfoWarning,
   type MultichainSupplyAggregate,
   type ScopedLiabilitySupply,
 } from "./helpers";
 import { buildDocumentedRedemptionTelemetry } from "./redemption";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 import { decodeUint256Word } from "./abi-decode";
-import {
-  BACKED_INVENTORY_OWNERS,
-  BACKED_POLICIES,
-  fetchIssuerCirculation,
-  fetchVerifiedBackedCirculation,
-  type ChainlinkPorCirculationOutcome,
-} from "./backed-liabilities";
 const DEFAULT_MAX_ORACLE_AGE_SEC = 2 * DAY_SECONDS;
 
 export type ChainlinkPorReserveUnit = NonNullable<LiveReserveAdapterParamsByKey["chainlink-por"]["reserveUnit"]>;
@@ -95,7 +87,6 @@ export function adaptChainlinkPorResponse(
   data: ChainlinkPorData,
   params: ChainlinkPorParams,
   supply?: ChainlinkPorSupplyAggregate | null,
-  circulation?: ChainlinkPorCirculationOutcome | null,
 ): AdapterResult {
   if (data.reserves <= 0n) {
     throw new Error("chainlink-por: feed reported zero or negative reserves");
@@ -122,47 +113,14 @@ export function adaptChainlinkPorResponse(
         reserveObservedAt: data.updatedAt,
       })
     : undefined;
-  const probeActive = params.issuerCirculationProbe != null && comparesSupply;
-  const circulatingTokens = probeActive ? circulation?.aggregate?.circulatingTokens : undefined;
-  // Issuer-published circulation must stay inside the on-chain gross supply
-  // envelope; a circulation figure above what is minted is implausible and
-  // withholds the coverage verdict instead of shrinking the liability.
-  const circulationPlausible =
-    circulatingTokens != null && (supplyTokens == null || circulatingTokens <= supplyTokens * 1.001);
-  // When a probe is configured, gross totalSupply is proven non-authoritative
-  // (it includes unsold issuer pre-mint inventory), so a failed or implausible
-  // probe publishes NO coverage ratio rather than a misleading gross one.
-  // A timestamp-less endpoint stays diagnostic unless the reviewed inventory
-  // policy has independently reproduced every deployment at current blocks.
-  const verifiedCirculation = circulationPlausible && circulation?.aggregate?.verifiedAt != null
-    && coverage?.supplyCoverageComplete === true;
-  const circulationTimes = circulation?.aggregate?.observations?.map((row) => row.timestamp);
-  const circulationObservedAt = circulationTimes?.length
-    ? { min: Math.min(...circulationTimes), max: Math.max(...circulationTimes) }
-    : undefined;
-  const circulationSkewSec = circulationObservedAt
-    ? Math.max(Math.abs(data.updatedAt - circulationObservedAt.min), Math.abs(data.updatedAt - circulationObservedAt.max))
-    : undefined;
-  const temporalPolicy = params.issuerCirculationProbe;
-  const temporalReason: LiabilityRatioUnavailableReason | undefined = verifiedCirculation
-    ? temporalPolicy?.maxReserveSupplySkewSec == null || !temporalPolicy.temporalReview
-      ? "reserve-supply-temporal-policy-unreviewed"
-      : circulationTimes?.some((timestamp) => !Number.isFinite(timestamp) || timestamp <= 0)
-        || circulationSkewSec == null || circulationSkewSec > temporalPolicy.maxReserveSupplySkewSec
-        ? "reserve-supply-time-skew"
-        : undefined
-    : undefined;
   const liabilityBasis = coverage?.ratioUnavailableReason === "not-comparable" ? undefined
-    : !probeActive && coverage != null && coverage.ratioUnavailableReason == null ? "onchain-total-supply"
-    : verifiedCirculation && temporalReason == null ? "onchain-verified-issuer-circulation" : undefined;
-  const liabilityTokens = liabilityBasis === "onchain-verified-issuer-circulation" ? circulatingTokens
-    : liabilityBasis === "onchain-total-supply" ? supplyTokens : undefined;
+    : coverage != null && coverage.ratioUnavailableReason == null ? "onchain-total-supply" : undefined;
+  const liabilityTokens = liabilityBasis === "onchain-total-supply" ? supplyTokens : undefined;
   const collateralizationRatio =
     liabilityTokens != null && liabilityTokens > 0 ? reserveValue / liabilityTokens : undefined;
   const ratioUnavailableReason: LiabilityRatioUnavailableReason | undefined =
     !comparesSupply ? "not-comparable"
-    : verifiedCirculation && circulatingTokens === 0 ? "zero-liability-denominator"
-    : temporalReason ?? (liabilityTokens === 0 ? "zero-liability-denominator" : coverage?.ratioUnavailableReason);
+    : liabilityTokens === 0 ? "zero-liability-denominator" : coverage?.ratioUnavailableReason;
 
   const warnings: LiveReserveWarning[] = buildCoverageShortfallWarnings({
     code: "por-reserve-under-supply",
@@ -175,37 +133,7 @@ export function adaptChainlinkPorResponse(
       `Chainlink PoR reserves cover ${(collateralizationRatio * 100).toFixed(2)}% of multichain token supply (possible scope mismatch)`,
     ));
   }
-  if (probeActive && !verifiedCirculation) {
-    warnings.push(reserveDegradedWarning(
-      "por-circulation-freshness-unverified",
-      "Issuer circulation has no independently verified source timestamp; retained as diagnostic only, with coverage ratio withheld",
-    ));
-  }
-  if (probeActive && circulation?.failure) {
-    warnings.push(
-      reserveDegradedWarning(
-        "por-circulation-probe-failed",
-        `Issuer circulation probe failed; no authoritative coverage ratio this run: ${circulation.failure.reason}`,
-      ),
-    );
-  }
-  if (probeActive && circulatingTokens != null && !circulationPlausible) {
-    warnings.push(
-      reserveDegradedWarning(
-        "por-circulation-implausible",
-        `Issuer-reported circulating supply (${circulatingTokens.toFixed(2)}) exceeds on-chain multichain supply; no authoritative coverage ratio this run`,
-      ),
-    );
-  }
   warnings.push(...(coverage?.warnings ?? []));
-  if (temporalReason) {
-    warnings.push(reserveInfoWarning(
-      temporalReason,
-      temporalReason === "reserve-supply-temporal-policy-unreviewed"
-        ? "Issuer circulation is verified but no source-reviewed reserve/circulation skew policy is configured; ratio withheld"
-        : `Reserve/circulation observations differ by ${circulationSkewSec ?? "unavailable"} seconds; ratio withheld (bound ${temporalPolicy?.maxReserveSupplySkewSec ?? "unreviewed"})`,
-    ));
-  }
 
   const primaryContribution = supply?.contributions[0];
 
@@ -250,38 +178,6 @@ export function adaptChainlinkPorResponse(
               : {}),
           }
         : {}),
-      ...(probeActive
-        ? {
-            ...(liabilityBasis != null ? { liabilityBasis } : {}),
-            ...(circulation?.aggregate
-              ? {
-                  circulatingSupplyTokens: circulation.aggregate.circulatingTokens,
-                  circulationContributions: circulation.aggregate.contributions,
-                  ...(circulation.aggregate.verifiedAt != null ? {
-                    circulationVerifiedAt: circulation.aggregate.verifiedAt,
-                    circulationObservations: circulation.aggregate.observations,
-                    circulationExcludedInventoryOwners: [...BACKED_INVENTORY_OWNERS],
-                  } : {}),
-                }
-              : {}),
-            ...(circulation?.failure
-              ? {
-                  circulationProbeFailure: {
-                    reason: circulation.failure.reason,
-                    ...(circulation.failure.unmatchedDeployments
-                      ? { unmatchedDeployments: circulation.failure.unmatchedDeployments }
-                      : {}),
-                  },
-                }
-              : {}),
-          }
-        : {}),
-      ...(probeActive ? {
-        reserveObservedAt: data.updatedAt,
-        ...(circulationObservedAt ? { supplyObservedAt: circulationObservedAt } : {}),
-        ...(circulationSkewSec != null ? { ratioSkewSec: circulationSkewSec } : {}),
-        ...(temporalPolicy?.temporalReview ? { circulationTemporalReview: temporalPolicy.temporalReview } : {}),
-      } : {}),
       ...(ratioUnavailableReason ? { ratioUnavailableReason } : {}),
       ...(collateralizationRatio != null ? { collateralizationRatio } : {}),
     },
@@ -345,13 +241,6 @@ export async function fetchChainlinkPorReserves(
     return adaptChainlinkPorResponse({ reserves: answer, decimals, roundId, updatedAt }, params, null);
   }
 
-  if (params.issuerCirculationProbe && BACKED_POLICIES[coin.id]) {
-    const verified = await fetchVerifiedBackedCirculation(coin, params, input.chain, params.issuerCirculationProbe, signal, ctx);
-    return adaptChainlinkPorResponse({ reserves: answer, decimals, roundId, updatedAt }, params,
-      verified.supply, verified.circulation);
-  }
-
-  const allContracts = coin.contracts ?? [];
   const liabilityScope = params.liabilityScope;
   // A reviewed issuer-native scope reads exactly its included chains, each at
   // a pinned block with on-chain decimals. Without one, totalSupply is
@@ -388,9 +277,5 @@ export async function fetchChainlinkPorReserves(
         ),
       });
 
-  const circulation = params.issuerCirculationProbe
-    ? await fetchIssuerCirculation(params.issuerCirculationProbe, allContracts, signal, ctx)
-    : null;
-
-  return adaptChainlinkPorResponse({ reserves: answer, decimals, roundId, updatedAt }, params, supplyAggregate, circulation);
+  return adaptChainlinkPorResponse({ reserves: answer, decimals, roundId, updatedAt }, params, supplyAggregate);
 }

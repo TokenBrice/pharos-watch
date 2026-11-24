@@ -60,7 +60,6 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, Adapte
   "fidd-independent-assurance": lazyAdapter(() => import("./fidd-independent-assurance").then((mod) => mod.fetchFiddIndependentAssuranceReserves)),
   "flying-tulip-ftusd": lazyAdapter(() => import("./flying-tulip-ftusd").then((mod) => mod.fetchFlyingTulipFtUsdReserves)),
   "frax-balance-sheet": lazyAdapter(() => import("./frax").then((mod) => mod.fetchFraxBalanceSheetReserves)),
-  "frax-fpi-collateral": lazyAdapter(() => import("./frax").then((mod) => mod.fetchFraxFpiCollateralReserves)),
   fx: lazyAdapter(() => import("./fx").then((mod) => mod.fetchFxReserves)),
   "gemini-independent-assurance": lazyAdapter(() => import("./gemini-independent-assurance").then((mod) => mod.fetchGeminiIndependentAssuranceReserves)),
   gho: lazyAdapter(() => import("./gho").then((mod) => mod.fetchGhoReserves)),
@@ -92,7 +91,6 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, Adapte
   "moc-v3-buckets": lazyAdapter(() => import("./usdrif-rif").then((mod) => mod.fetchUsdrifRifReserves)),
   "money-llamma": lazyAdapter(() => import("./money-llamma").then((mod) => mod.fetchMoneyReserves)),
   "monolith-lender": lazyAdapter(() => import("./monolith-lender").then((mod) => mod.fetchMonolithLenderReserves)),
-  "nest-vault-positions": lazyAdapter(() => import("./nest-vault-positions").then((mod) => mod.fetchNestVaultPositionsReserves)),
   "origin-vault-balances": lazyAdapter(() => import("./origin-vault-balances").then((mod) => mod.fetchOriginVaultBalancesReserves)),
   "parallelizer-balances": lazyAdapter(() => import("./parallelizer-balances").then((mod) => mod.fetchParallelizerBalancesReserves)),
   "quantoz-transparency": lazyAdapter(() => import("./quantoz-transparency").then((mod) => mod.fetchQuantozTransparencyReserves)),
@@ -103,9 +101,6 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, Adapte
   "reserve-protocol-dtf": lazyAdapter(() => import("./reserve-protocol-dtf").then((mod) => mod.fetchReserveProtocolDtfReserves)),
   reservoir: lazyAdapter(() => import("./reservoir").then((mod) => mod.fetchReservoirReserves)),
   "rlusd-independent-assurance": lazyAdapter(() => import("./independent-assurance").then((mod) => mod.fetchIndependentAssuranceAdapter)),
-  "ondo-ousg": lazyAdapter(() => import("./ondo-ousg").then((mod) => mod.fetchOndoOusgReserves)),
-  "ondo-usdy": lazyAdapter(() => import("./ondo-usdy").then((mod) => mod.fetchOndoUsdyReserves)),
-  "midas-mtbill": lazyAdapter(() => import("./midas-mtbill").then((mod) => mod.fetchMidasMtbillReserves)),
   "river-protocol-info": lazyAdapter(() => import("./river-protocol-info").then((mod) => mod.fetchRiverProtocolInfoReserves)),
   "sgforge-coinvertible": lazyAdapter(() => import("./sgforge-coinvertible").then((mod) => mod.fetchSgForgeCoinvertibleReserves)),
   "solstice-attestation": lazyAdapter(() => import("./solstice-attestation").then((mod) => mod.fetchSolsticeAttestationReserves)),
@@ -113,7 +108,6 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, Adapte
   "sky-makercore": lazyAdapter(() => import("./sky-makercore").then((mod) => mod.fetchSkyMakercoreReserves)),
   "solomon-chancery": lazyAdapter(() => import("./solomon-chancery").then((mod) => mod.fetchSolomonChanceryReserves)),
 
-  "spiko-api": lazyAdapter(() => import("./spiko-api").then((mod) => mod.fetchSpikoApiReserves)),
   "superstate-liquidity": lazyAdapter(() => import("./superstate-liquidity").then((mod) => mod.fetchSuperstateLiquidityReserves)),
   "theo-thusd-redemption": lazyAdapter(() => import("./theo-thusd-redemption").then((mod) => mod.fetchTheoThusdRedemptionReserves)),
   "paxos-independent-assurance": lazyAdapter(() => import("./paxos-independent-assurance").then((mod) => mod.fetchPaxosIndependentAssuranceReserves)),
@@ -134,11 +128,8 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, Adapte
   "zephyr-scanner": lazyAdapter(() => import("./zephyr-scanner").then((mod) => mod.fetchZephyrScannerReserves)),
   "onre-holdings-csv": lazyAdapter(() => import("./onre-holdings-csv").then((mod) => mod.fetchOnreHoldingsCsvReserves)),
   "avant-reserves-api": lazyAdapter(() => import("./avant-reserves-api").then((mod) => mod.fetchAvantReservesApiReserves)),
-  "afi-proof": lazyAdapter(() => import("./afi-proof").then((mod) => mod.fetchAfiProofReserves)),
   "frnt-ledgerlens": lazyAdapter(() => import("./frnt-ledgerlens").then((mod) => mod.fetchFrntLedgerlensReserves)),
   "coinbase-oned-por": lazyAdapter(() => import("./coinbase-oned-por").then((mod) => mod.fetchCoinbaseOnedPorReserves)),
-  "blackrock-brsrv-holdings": lazyAdapter(() => import("./blackrock-brsrv-holdings").then((mod) => mod.fetchBlackrockBrsrvHoldingsReserves)),
-  "chinaamc-holdings-api": lazyAdapter(() => import("./chinaamc-holdings-api").then((mod) => mod.fetchChinaamcHoldingsReserves)),
 };
 
 const ADAPTER_INPUT_POLICIES: Partial<Record<LiveReserveAdapterKey, Pick<ReserveAdapterDefinition, "fallbackInputRole">>> = {

@@ -227,7 +227,7 @@ export function adaptChainlinkNavResponse(data: ChainlinkNavData, params: Chainl
 
 /**
  * Shared NAV-read core. Fetches oracle + token data, validates freshness, and
- * produces an AdapterResult. Used by the `chainlink-nav`, `ondo-ousg`, and
+ * produces an AdapterResult. Used by the `chainlink-nav` and
  * `superstate-liquidity` registry-bound adapters.
  */
 export async function fetchChainlinkNavCore(

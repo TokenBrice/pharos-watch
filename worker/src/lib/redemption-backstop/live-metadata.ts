@@ -24,10 +24,6 @@ import {
   type ReserveSnapshotMetadataRecord,
 } from "../live-reserves/store";
 import {
-  parseAcceptedFpiControllerV9RouteState,
-  type FpiControllerV9RouteState,
-} from "../fpi-controller-redemption-route";
-import {
   parseAcceptedSfrxusdCrosschainV9RouteState,
   type SfrxusdCrosschainV9RouteState,
 } from "../sfrxusd-crosschain-redemption-route";
@@ -64,7 +60,6 @@ export interface RedemptionBackstopLiveMetadata {
   routeStatusSource: RedemptionRouteStatusSource | null;
   routeStatusReason: string | null;
   routeStatusReviewedAt: string | null;
-  v9FpiControllerRouteState: FpiControllerV9RouteState | null;
   v9SfrxusdCrosschainRouteState: SfrxusdCrosschainV9RouteState | null;
   v9OutputValuation?: LiveReserveRedemptionOutputValuation | null;
   outputAssetKeys?: string[] | null;
@@ -600,7 +595,6 @@ export function readRedemptionBackstopLiveMetadata(
     routeStatusSource: preserveRouteStatus ? resolvedRouteStatus.routeStatusSource : null,
     routeStatusReason: preserveRouteStatus ? resolvedRouteStatus.routeStatusReason : null,
     routeStatusReviewedAt: preserveRouteStatus ? resolvedRouteStatus.routeStatusReviewedAt : null,
-    v9FpiControllerRouteState: parseAcceptedFpiControllerV9RouteState(redemptionTelemetry.v9RouteAttempt),
     v9SfrxusdCrosschainRouteState:
       hasScoringEligibleFreshness &&
       !hasBlockingWarnings &&

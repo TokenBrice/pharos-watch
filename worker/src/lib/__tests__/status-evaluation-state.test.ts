@@ -1403,8 +1403,8 @@ describe("review expiry reminders", () => {
 
   function reserveReview(stablecoinId: string, remainingSec: number): ReserveFeedReview {
     return {
-      stablecoinId, adapterKey: "midas-mtbill", failureCategory: "unknown",
-      warningCodes: [], errorPrefix: "primary:http-json: midas-mtbill:stale-portfolio-timestamp",
+      stablecoinId, adapterKey: "accountable", failureCategory: "unknown",
+      warningCodes: [], errorPrefix: "primary:http-json: accountable:stale-portfolio-timestamp",
       owner: "ops", reason: "Reviewed stale portfolio evidence.",
       sources: [{ url: "https://example.com/reserve-evidence", evidenceDate: "2023-11-13" }],
       reviewedAt: nowSec - 86400, expiresAt: nowSec + remainingSec,
