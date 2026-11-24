@@ -39,6 +39,9 @@ import { createReviewedAssetRegistry, createReviewedRegistryReferenceExpander } 
 import { usesPrimaryRedemptionReviewTerms } from "../redemption-exit-route-observations";
 import { allocationReviewClockSec as reviewAdmissionClockSec } from "@shared/types/safety-score-v9-allocation";
 
+/** v10.53 rule: physical-commodity delivery has no applicable same-notional USD capacity. */
+export const PHYSICAL_DELIVERY_CAPACITY_POLICY_RULE_ID = "v9.exit.physical-delivery-capacity";
+
 // Immutable imported evaluation input; validation failures stay asset-local.
 const classifications = createReviewedAssetRegistry({
   rows: classificationsAsset.entries,
@@ -725,7 +728,11 @@ export function compileRouteFactorStatuses(
   ] as const) {
     const explicitlyMissing = explicitMissing?.some((field) => field === factorKey) === true;
     const existing = factorStatuses[factorKey];
-    if (existing && (!explicitlyMissing || existing.observationState !== "known")) continue;
+    // A reviewed missing-field list cannot reopen a physical-delivery capacity
+    // the producer already ruled not applicable.
+    const physicalDeliveryNotApplicable = existing?.applicability.state === "not-applicable" &&
+      existing.applicability.policyRuleId === PHYSICAL_DELIVERY_CAPACITY_POLICY_RULE_ID;
+    if (existing && (physicalDeliveryNotApplicable || !explicitlyMissing || existing.observationState !== "known")) continue;
     factorStatuses[factorKey] = missing || explicitlyMissing
       ? missingLocalFact(context, {
           componentKey: `exit-route:${route.routeKey}:${factorKey}`, reasonCode: "missing-same-notional-route",

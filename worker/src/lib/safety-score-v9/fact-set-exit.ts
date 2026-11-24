@@ -21,6 +21,7 @@ import { canonicalV9RouteKey } from "@shared/lib/safety-score-v9/facts";
 import {
   createV9EvidenceReference,
   createV9FactStatus,
+  notApplicableV9Fact,
   requiredV9Applicability,
 } from "@shared/lib/safety-score-v9/evidence";
 import {
@@ -81,6 +82,7 @@ import {
   assertKnownComponentEvidenceCurrent,
   createRuntimeGapVerdict,
   evidenceGapClassificationsFor,
+  PHYSICAL_DELIVERY_CAPACITY_POLICY_RULE_ID,
   type AssetBuildContext,
 } from "./fact-set-context";
 
@@ -343,6 +345,20 @@ function capacityEvidenceTierForObservation(
   }
 }
 
+
+const PHYSICAL_DELIVERY_CAPACITY_NOT_APPLICABLE_RATIONALE =
+  "Physical-commodity delivery redeems for metal rather than dollars; same-notional USD exit capacity is not applicable.";
+
+function physicalDeliveryCapacityNotApplicableStatus(evidenceRefIds: readonly string[]): V9FactStatusV2 {
+  return createV9FactStatus({
+    applicability: notApplicableV9Fact(
+      PHYSICAL_DELIVERY_CAPACITY_POLICY_RULE_ID,
+      PHYSICAL_DELIVERY_CAPACITY_NOT_APPLICABLE_RATIONALE,
+    ),
+    observationState: "known",
+    evidenceRefIds,
+  });
+}
 
 function buildRoute(
   context: AssetBuildContext,
@@ -666,6 +682,18 @@ function buildRoute(
       });
     }
   }
+  // Physical-commodity delivery redeems for metal rather than dollars, so
+  // same-notional USD capacity is not applicable (2026-11-24 owner ruling 5).
+  // `route.status` remains missing while V9ExitRouteFactV2Schema requires
+  // non-empty capacityCurve for known route status; `factorStatuses.capacity`
+  // carries the explicit machine-readable not-applicable disposition and Exit
+  // projects route applicability from it without granting dollar credit.
+  const physicalDeliveryCapacityNotApplicable =
+    args.disposition !== "rejected" &&
+    executionAdmission?.state !== "unavailable" &&
+    output.kind === "physical-commodity-delivery" &&
+    output.sameNotionalEligible === false &&
+    !usableCapacity;
   return {
     routeKey,
     routeId: args.observation.routeId,
@@ -699,7 +727,11 @@ function buildRoute(
     physicalResourceKeys: args.review.physicalResourceKeys,
     status: routeStatus,
     factorStatuses: {
-      ...(routeState !== "known" ? { capacity: routeStatus } : {}),
+      ...(physicalDeliveryCapacityNotApplicable
+        ? { capacity: physicalDeliveryCapacityNotApplicableStatus([evidenceId]) }
+        : routeState !== "known"
+          ? { capacity: routeStatus }
+          : {}),
       ...(output.status.observationState !== "known" ? { output: output.status } : {}),
       ...rejectedFactorStatuses,
     },
@@ -1113,6 +1145,7 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
     routeId: string; routeFamily: V9ExitRouteFactV2["routeFamily"];
     evidenceIds: readonly string[]; capacityGapId: string;
     channelEvidenceId?: string;
+    capacityNonApplicabilityAdmitted: boolean;
   } | null = null;
   if (
     redemption?.provider === "reserve-sync-metadata" &&
@@ -1135,8 +1168,12 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
         reason: "Captured redemption resolutionState is missing-capacity for an open live-direct telemetry rail." },
     }, context.fixedInput.clockSec));
     const message = "The configured live-only redemption route has unavailable capacity telemetry.";
-    unavailableRail = { routeId, routeFamily: "protocol-redemption", evidenceIds: [evidenceId], capacityGapId: routeGap(context, routeKey, "capacity", "missing",
-      "missing-runtime-route-evidence", "producer-failed", message, [evidenceId]) };
+    unavailableRail = {
+      routeId, routeFamily: "protocol-redemption", evidenceIds: [evidenceId],
+      capacityGapId: routeGap(context, routeKey, "capacity", "missing",
+        "missing-runtime-route-evidence", "producer-failed", message, [evidenceId]),
+      capacityNonApplicabilityAdmitted: false,
+    };
   } else if (quarantine && quarantineScope && !routes.some((route) => route.lane === "redemption")) {
     const routeKey = quarantineScope.routeKey!;
     // Authored nondisclosure may carry the rail to the issuer cause; every other
@@ -1158,6 +1195,7 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
         path: optionalExitV9Path(routeKey), message: cause.message,
         evidenceRefIds: evidenceIds, causeScope: quarantineScope, causeProof: cause.causeProof,
       })),
+      capacityNonApplicabilityAdmitted: false,
     };
   } else if (
     config?.reviewedAt && config.docs?.length &&
@@ -1188,10 +1226,13 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
         "missing-runtime-route-evidence", "unresearched",
         "The reviewed redemption channel has no admitted same-notional capacity observation; an empty DEX census does not establish its exhaustion.",
         [evidenceId]),
+      capacityNonApplicabilityAdmitted: true,
     };
   }
   if (unavailableRail) {
-    const { routeId, routeFamily, evidenceIds, capacityGapId, channelEvidenceId } = unavailableRail;
+    const {
+      routeId, routeFamily, evidenceIds, capacityGapId, channelEvidenceId, capacityNonApplicabilityAdmitted,
+    } = unavailableRail;
     const routeKey = canonicalV9RouteKey("redemption", generationId, routeId);
     const status = createV9FactStatus({
       applicability: requiredV9Applicability("v9.exit.same-notional-route"),
@@ -1208,8 +1249,18 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
       existingChannelEvidenceId: channelEvidenceId,
       defaultOutputStatus: status,
     });
+    // Only the documented-reviewed-channel branch admits capacity N/A for
+    // physical-commodity delivery; live-telemetry-missing and reserve-quarantine
+    // branches represent producer failures/quarantines and must keep their causes.
+    const physicalDeliveryCapacityNotApplicable =
+      capacityNonApplicabilityAdmitted &&
+      channelEvidenceId !== undefined &&
+      projectedTerms.output.kind === "physical-commodity-delivery" &&
+      projectedTerms.output.sameNotionalEligible === false;
     const factorStatuses: V9ExitRouteFactV2["factorStatuses"] = {
-      capacity: status,
+      capacity: physicalDeliveryCapacityNotApplicable
+        ? physicalDeliveryCapacityNotApplicableStatus(evidenceIds)
+        : status,
       ...projectedTerms.factorStatuses,
     };
     if (!projectedTerms.costKnown) {
@@ -1498,7 +1549,13 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
     };
   }
   // A withdrawn channel does not make the observation of independent channels incomplete.
-  const statuses = routes.filter((route) => !route.routeSuspension).flatMap((route) => [route.status, route.output.status]);
+  // Likewise, a physical-delivery route whose USD capacity is explicitly
+  // not-applicable does not add a missing-capacity gap to portfolio exitStatus.
+  const statuses = routes.filter((route) => !route.routeSuspension).flatMap((route) =>
+    route.factorStatuses?.capacity?.applicability.state === "not-applicable"
+      ? [route.output.status]
+      : [route.status, route.output.status],
+  );
   const gapIds = [...new Set(statuses.flatMap((status) => status.gapIds))];
   const evidenceRefIds = [...new Set(routes.flatMap((route) => [route.status, route.output.status]).flatMap((status) => status.evidenceRefIds))];
   // "known" asserts the whole exit surface is observed (it upgrades evidence

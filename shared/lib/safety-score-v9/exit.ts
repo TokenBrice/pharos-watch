@@ -638,14 +638,19 @@ function evaluateRoute(
   request: V9ExitStressRequest,
   envelope: V9ValidatedPolicyEnvelope,
 ): V9ExitRouteTrace {
+  const routeAttributionCause = route.applicability === "not-applicable"
+    ? { cause: null, causeGapIds: [] as readonly string[], excluded: false }
+    : routeCause(route);
   const attribution = {
     routeId: route.routeId,
     lane: route.lane,
     routeFamily: route.routeFamily,
-    cause: routeCause(route).cause,
-    causeGapIds: routeCause(route).causeGapIds,
-    scoringDisposition: v9ScoringDisposition(routeCause(route).cause),
-    effectiveScoringWeight: routeCause(route).excluded ? 0 : 1,
+    cause: routeAttributionCause.cause,
+    causeGapIds: routeAttributionCause.causeGapIds,
+    scoringDisposition: route.applicability === "not-applicable"
+      ? ("not-applicable" as const)
+      : v9ScoringDisposition(routeAttributionCause.cause),
+    effectiveScoringWeight: route.applicability === "not-applicable" || routeAttributionCause.excluded ? 0 : 1,
     confidenceDimensions: null,
     capacityEvidenceTier: route.capacityEvidenceTier ?? "unknown",
     rawSameNotionalCostBps: null,
@@ -942,6 +947,9 @@ function mapOutputQuality(route: V9ExitRouteFactV2): V9ExitOutputQuality {
 }
 
 function statusApplicability(route: V9ExitRouteFactV2): V9ExitEvaluationRoute["applicability"] {
+  if (route.factorStatuses?.capacity?.applicability.state === "not-applicable") {
+    return "not-applicable";
+  }
   return route.status.applicability.state;
 }
 
@@ -1176,12 +1184,15 @@ export function evaluateV9Exit(
     .sort((left, right) => right.score - left.score || compareText(left.route.routeKey, right.route.routeKey));
   const diagnosticReasons = traces.flatMap((trace) => (trace.exclusionReason ? [trace.exclusionReason] : []));
   pillarMetadata.causeGapIds = uniqueSorted([...pillarMetadata.causeGapIds, ...traces.flatMap((trace) => trace.causeGapIds),
-    ...routes.flatMap((route) => Object.keys(route.factorStatuses ?? {}).flatMap((key) =>
+    ...routes.filter((route) => route.applicability !== "not-applicable").flatMap((route) => Object.keys(route.factorStatuses ?? {}).flatMap((key) =>
       routeCause(route, key as keyof NonNullable<V9ExitRouteFactV2["factorStatuses"]>).causeGapIds))]);
   pillarMetadata.supportedComponentKeys = evaluated.map((candidate) => candidate.route.routeKey).sort(compareText);
   pillarMetadata.limitedEvidenceCauses = [];
   const excludedCause = (trace: V9ExitRouteTrace) => {
     const route = routes.find((route) => route.routeKey === trace.routeKey)!;
+    if (route.applicability === "not-applicable") {
+      return { cause: null, causes: [] as V9EvidenceCause[], causeGapIds: [] as string[], excluded: false };
+    }
     return trace.exclusionReason === "unproven-settlement-bound" ? routeCause(route, "settlement")
       : trace.exclusionReason === "unresolved-exit-output" ? routeCause(route, "output")
         : routeCause(route, "capacity").cause !== null ? routeCause(route, "capacity") : routeCause(route);

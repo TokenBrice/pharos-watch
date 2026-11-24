@@ -791,7 +791,13 @@ function exitPillar(
       return retainedGapIds.has(gap.gapId) || (!diagnosticGapIds.has(gap.gapId) && (routeKey === null || !keys.has(routeKey)));
     }));
   }
-  const mechanismExitFacts = asset.mechanismExitFacts ?? [];
+  // Physical metal delivery redeems for commodity bars/coins rather than USD, so
+  // same-notional dollar exit capacity is not applicable to a physical-redemption
+  // right (2026-11-24 owner ruling 5). Only non-physical mechanism exit facts
+  // (such as `protocol-redemption`) explain a missing same-notional USD route.
+  const mechanismExitFacts = (asset.mechanismExitFacts ?? []).filter(
+    (fact) => fact.factKey !== "physical-redemption",
+  );
   const hasRetainedRuntimeRoute = result.routes.some((trace) => {
     if (!trace.included) return false;
     const route = asset.exitRoutes.find((candidate) => candidate.routeKey === trace.routeKey);
@@ -861,6 +867,15 @@ function exitPillar(
         isDexMeasuredExecutionObservationHistoryMature(primary.observationHistory))) &&
     envelope.policy.semantic.exit.strongEvidenceKinds.includes(primary.evidenceKind);
   const diagnosticGapIds = diagnosticOptionalExitGapIds(asset, result, gapIndex);
+  const notApplicableRouteKeys = new Set(
+    result.routes
+      .filter((route) => route.scoringDisposition === "not-applicable")
+      .map((route) => route.routeKey),
+  );
+  const isNotApplicableRouteGap = (gap: V9AssetFactsV3["gaps"][number]): boolean => {
+    const routeKey = gap.causeScope?.routeKey ?? (gap.path.kind === "optional-exit" ? gap.path.routeKey : null);
+    return routeKey !== null && notApplicableRouteKeys.has(routeKey);
+  };
   const pillar: V9PillarEvaluation = {
     ...pillarCauseMetadata({
       ...result, causeGapIds: result.causeGapIds.filter((id) => !diagnosticGapIds.has(id)),
@@ -879,19 +894,21 @@ function exitPillar(
     evidenceLevel: primaryStrong ? "strong" : "adequate",
     reasons: canonicalReasons(
       effectiveReasons.flatMap(({ code, sourceCode, profileFactKeys, profileResponsibility: responsibility }) => {
-        const matchingGaps =
-          gapIndex.byDomainAndCode.get(gapDomainAndCodeKey("exit", sourceCode)) ?? [];
+        const matchingGaps = (
+          gapIndex.byDomainAndCode.get(gapDomainAndCodeKey("exit", sourceCode)) ?? []
+        ).filter((gap) => !isNotApplicableRouteGap(gap));
         const exitGaps = gapsForV9Ids(gapIndex, asset.exitStatus.gapIds);
         const equivalentCodes = EXIT_ROUTE_GAP_EQUIVALENTS[sourceCode] ?? [];
         const equivalentSurfaceGaps = exitGaps.filter((gap) => {
           if (gap.ownerDomain !== "exit" || (gap.causeScope !== undefined && gap.causeScope.pillar !== "exit") || !equivalentCodes.includes(gap.reasonCode)) return false;
+          if (isNotApplicableRouteGap(gap)) return false;
           if (gap.path.kind === "local-component") return gap.path.componentKey === "exit-routes";
           const routeKey = gap.causeScope?.routeKey;
           return routeKey != null && asset.exitRoutes.some((route) => route.routeKey === routeKey);
         });
         const settlementGaps = sourceCode === "unproven-settlement-bound"
           ? gapsForV9Ids(gapIndex, asset.exitRoutes
-              .filter((route) => route.settlementBoundUnproven)
+              .filter((route) => route.settlementBoundUnproven && !notApplicableRouteKeys.has(route.routeKey))
               .flatMap((route) => route.factorStatuses?.settlement?.gapIds ?? []))
           : [];
         const causalGaps = settlementGaps.length > 0
