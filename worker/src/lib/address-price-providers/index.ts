@@ -44,12 +44,13 @@ const NEXT_PRICE_GENERATION_SEC = 15 * 60;
  * `corroboration` is the hourly cohort: every asset missing a price or short of
  * three consensus sources, so thin coverage is discovered.
  *
- * `coverage-refresh` is the 15-minute cohort: only rows this lane already
- * prices plus rows with no price at all. An exact-address quote lives for one
- * publication window (`maxTrustedAgeSec` of `coingecko-onchain-address`) and is
- * never replayable from `price_cache`, so a row it prices must be re-observed
- * every generation or it drops to no price. Rows with a fresh price from any
- * other lane are left to the hourly pass instead of spending the request cap.
+ * `coverage-refresh` is the 15-minute cohort: rows this lane already prices,
+ * fallback/low-confidence rows whose previous publication corroborated with
+ * this lane, and rows with no price at all. An exact-address quote lives for
+ * one publication window (`maxTrustedAgeSec` of `coingecko-onchain-address`)
+ * and is never replayable from `price_cache`, so any row depending on it must
+ * be re-observed every generation or it drops to no price. Other priced rows
+ * stay on the hourly pass instead of spending the request cap.
  */
 export type AddressPriceTargetCohort = "corroboration" | "coverage-refresh";
 
@@ -97,6 +98,7 @@ function shouldTargetAsset(
   lowConfidencePrice: boolean;
   missingPrice: boolean;
   addressLaneOwned: boolean;
+  addressLaneCorroborated: boolean;
   include: boolean;
 } {
   const previous = previousAssetsById?.get(asset.id);
@@ -117,6 +119,12 @@ function shouldTargetAsset(
     priceSource === "coingecko-low-volume";
   const expiring = expiresBeforeNextGeneration(previous ?? asset, nowSec);
   const addressLaneOwned = normalizePricingSourceKeys(priceSource ?? "").includes(COINGECKO_ONCHAIN_PROVIDER);
+  const agreeSources = asset.agreeSources ?? previous?.agreeSources ?? [];
+  const consensusSources = asset.consensusSources ?? previous?.consensusSources ?? [];
+  const addressLaneCorroborated =
+    !missingPrice &&
+    (priceConfidence === "fallback" || priceConfidence === "low") &&
+    normalizePricingSourceKeys([...agreeSources, ...consensusSources]).includes(COINGECKO_ONCHAIN_PROVIDER);
   return {
     previousSourceDepth,
     previousMissingGenerations,
@@ -126,6 +134,7 @@ function shouldTargetAsset(
     lowConfidencePrice,
     missingPrice,
     addressLaneOwned,
+    addressLaneCorroborated,
     // `expiring` is deliberately not an inclusion reason on its own: thin
     // coverage is already captured by `previousSourceDepth < 3`, so an
     // expiring-only rule would re-target deep high-confidence majors every run
@@ -133,10 +142,10 @@ function shouldTargetAsset(
     // and appending a non-replay-safe lane to their consensus provenance.
     // `expiring` still orders cohorts among assets included for other reasons.
     include: cohort === "coverage-refresh"
-      // Rows this lane already prices cannot survive a generation without a
-      // re-read, and rows with no price at all need a first quote before they
-      // can ever be corroborated. Everything else stays on the hourly cohort.
-      ? missingPrice || addressLaneOwned
+      // Rows this lane prices or corroborates at fallback/low confidence cannot
+      // survive a generation without a re-read, and missing rows need a first
+      // quote before they can be corroborated. Everything else stays hourly.
+      ? missingPrice || addressLaneOwned || addressLaneCorroborated
       : !previousAssetsById ||
         previousSourceDepth < 3 ||
         missingPrice ||
@@ -292,7 +301,9 @@ export function buildAddressPriceTargets(params: {
       metadataDeployments,
       providerChainMap: chainMap,
     });
-    if (params.cohort === "coverage-refresh" && targeting.addressLaneOwned) laneOwnedIds.add(asset.id);
+    if (params.cohort === "coverage-refresh" && (targeting.addressLaneOwned || targeting.addressLaneCorroborated)) {
+      laneOwnedIds.add(asset.id);
+    }
     const hint = params.deploymentHints?.get(asset.id);
     const hintedDeployments = hint
       ? deployments.filter((deployment) =>

@@ -52,46 +52,29 @@ describe("short-lived fallback refresh", () => {
     expect(assets[3].price).toBeNull();
   });
 
-  it("skips reviewed gaps with stale source labels but keeps current source-owned composites", async () => {
-    const reviewedGapIds = new Set([
-      "m-m0", "xo-exodus", "usdk-kast", "usda-avalon", "wusd-worldwide", "usdn-smardex",
-    ]);
+  it("skips reviewed gaps with stale source labels, keeps current source-owned/corroborated rows, and keeps missing M/XO unreviewed", async () => {
+    expect([...resolveStablecoinPriceGapReviews(["m-m0", "xo-exodus"], Date.UTC(2026, 9, 16) / 1000).activeById.keys()]).toEqual([]);
+    const reviewedGapIds = new Set(["m-m0", "xo-exodus", "usdk-kast", "usda-avalon", "wusd-worldwide", "usdn-smardex"]);
     await runShortLivedPriceRefresh({
       assets: [
         priced("m-m0", "coingecko+defillama-contract"), priced("xo-exodus", "coingecko+jupiter"),
         makePeggedAsset({ id: "usdk-kast", price: null }),
         { ...priced("usda-avalon", "defillama-contract"), price: null },
         { ...priced("wusd-worldwide", "jupiter"), price: null },
-        { ...priced("usdn-smardex", "defillama-contract+jupiter"), priceObservedAt: null,
-          priceUpdatedAt: null, priceSyncedAt: null },
+        { ...priced("usdn-smardex", "defillama-contract+jupiter"), priceObservedAt: null, priceUpdatedAt: null, priceSyncedAt: null },
+        { ...priced("pmusd-precious-metals", "coingecko-onchain-address"), agreeSources: ["coingecko-onchain-address", "defillama-contract"] },
+        { ...priced("usdt-tether", "coingecko-onchain-address"), priceConfidence: "low", consensusSources: ["coingecko-onchain-address", "defillama-contract"] },
+        { ...priced("usdc-circle", "coingecko"), priceConfidence: "single-source", consensusSources: ["coingecko", "defillama-contract", "jupiter"] },
       ],
       reviewedGapIds,
     });
     expect(contracts.runDlContractPasses).toHaveBeenCalledWith(
-      [expect.objectContaining({ id: "m-m0", price: null })], undefined, expect.any(AbortSignal), undefined,
+      ["m-m0", "pmusd-precious-metals", "usdt-tether"].map((id) => expect.objectContaining({ id, price: null })),
+      undefined, expect.any(AbortSignal), undefined,
     );
     expect(jupiter.runJupiterPass).toHaveBeenCalledWith(
-      [expect.objectContaining({ id: "xo-exodus", price: null })], undefined, undefined,
-      expect.any(AbortSignal), undefined, undefined,
-    );
-  });
-
-  it("keeps missing M and XO in both recovery passes under the production review registry", async () => {
-    const ids = ["m-m0", "xo-exodus"];
-    const reviewedGapIds = new Set(
-      resolveStablecoinPriceGapReviews(ids, Date.UTC(2026, 9, 16) / 1000).activeById.keys(),
-    );
-    expect([...reviewedGapIds]).toEqual([]);
-    await runShortLivedPriceRefresh({
-      assets: ids.map((id) => makePeggedAsset({ id, price: null, priceSource: "missing" })),
-      reviewedGapIds,
-    });
-    const expectedCohort = ids.map((id) => expect.objectContaining({ id, price: null }));
-    expect(contracts.runDlContractPasses).toHaveBeenCalledWith(
-      expectedCohort, undefined, expect.any(AbortSignal), undefined,
-    );
-    expect(jupiter.runJupiterPass).toHaveBeenCalledWith(
-      expectedCohort, undefined, undefined, expect.any(AbortSignal), undefined, undefined,
+      [expect.objectContaining({ id: "xo-exodus", price: null })],
+      undefined, undefined, expect.any(AbortSignal), undefined, undefined,
     );
   });
 

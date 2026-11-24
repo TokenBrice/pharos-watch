@@ -14,6 +14,7 @@ export interface AddressPriceAssetLike {
   chains?: string[];
   price?: number | null;
   circulating?: Record<string, number>;
+  agreeSources?: string[];
   consensusSources?: string[];
   priceSource?: string | null;
   priceConfidence?: string | null;
