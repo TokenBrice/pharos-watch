@@ -973,7 +973,7 @@ describe("Safety Score v9 public NR cap suppression", () => {
       caps: [cap("parent", 64, "parent", "Wrapper parent limit.", true)],
       dependency: {
         assetId: "serial-fund-wrapper",
-        serial: [{ upstreamAssetId: "buidl-blackrock", score: 67, ratingStatus: "rated", blocked: false, limitedEvidenceCauses: [], causeGapIds: [], dependencyType: "wrapper", wrapperForm: "pure" }],
+        serial: [{ upstreamAssetId: "buidl-blackrock", score: 67, ratingStatus: "rated", blocked: false, limitedEvidenceCauses: [], causeGapIds: [] }],
         basket: [], cycleBlocked: false,
       },
     });
