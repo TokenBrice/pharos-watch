@@ -971,12 +971,7 @@ describe("reviewed CCIP vault-share plans", () => {
     const plan = REVIEWED_ECONOMIC_SUPPLY_PLANS.get("susdat-saturn")!;
     const source = plan.escrows[0]!.inFlightSource;
     if (!source || !("kind" in source) || source.kind !== "evm-ccip-pending") return;
-    // The 2026-11-20/23 reviews confirmed the v1.6.1 -> v2.0.0 migration: the
-    // active Ethereum LockReleaseTokenPool 2.0.0 holds 0 sUSDat while its
-    // dedicated ERC20LockBox 2.0.0 holds exact wei backing for BSC+Monad+X Layer.
-    // ReviewedEconomicSupplyPlanSchema currently requires escrow.account ===
-    // lane.*.tokenPoolAddress, so these D02 dates move only after CCIP 2.0.0
-    // separate-LockBox escrow support lands and re-proves every lane.
+    // Pending CCIP 2.0.0 separate-LockBox escrow support.
     expect(plan.reviewer).toContain("D02 evidence lane");
     expect([plan.reviewedAtSec, plan.expiresAtSec]).toEqual([1793120053, 1795712053]);
   });
@@ -985,14 +980,7 @@ describe("reviewed CCIP vault-share plans", () => {
     const plan = REVIEWED_ECONOMIC_SUPPLY_PLANS.get("syrupusdt-maple")!;
     const source = plan.escrows[0]!.inFlightSource;
     if (!source || !("kind" in source) || source.kind !== "evm-ccip-pending") return;
-    // X Layer (0xd7f1eb70a6a471548a2fab5e0af5eb8cb289d547, 100 raw seed) was
-    // deferred out of coins/risk-review so the live 5-chain D02 plan stays
-    // active until 2026-11-26: on 2026-11-10 Chainlink RBACTimelock moved 1 raw
-    // unit out of LockReleaseTokenPool 1.5.1 into staged ERC20LockBox 2.0.0
-    // (0x55d5cd35...), so the 1.5.1 pool alone is 1 raw unit below sum(5 remotes)
-    // + failed Mantle->Eth message and cannot pass exact single-account escrow
-    // conservation; these D02 dates move only once multi-escrow / CCIP 2.0.0
-    // LockBox migration completes and a 6-chain plan replaces D02.
+    // Pending CCIP 2.0.0 LockBox migration and 6-chain replacement for D02.
     expect(plan.reviewer).toContain("D02 evidence lane");
     expect([plan.reviewedAtSec, plan.expiresAtSec]).toEqual([1793120053, 1795712053]);
   });

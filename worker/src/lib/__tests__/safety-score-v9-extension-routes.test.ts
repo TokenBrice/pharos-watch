@@ -986,69 +986,35 @@ describe("captured local-fiat output and cost references", () => {
 
   it("admits bUSD0 wait-to-maturity queued settlement without altering capacity or cost gaps", () => {
     const clk = utc(2026, 11, 24, 2, 17, 58);
+    const id = "busd0-usual";
+    const routeId = `redemption:${id}:queue-redeem`;
     const row = mkFull({
-      stablecoinId: "busd0-usual",
-      routeFamily: "queue-redeem",
-      settlementModel: "queued",
-      settlementDelaySec: undefined,
-      capacitySemantics: "eventual-only",
-      capacityConfidence: "documented-bound",
-      feeConfidence: "undisclosed-reviewed",
-      updatedAt: clk,
+      stablecoinId: id, routeFamily: "queue-redeem", settlementModel: "queued", settlementDelaySec: undefined,
+      capacitySemantics: "eventual-only", capacityConfidence: "documented-bound", feeConfidence: "undisclosed-reviewed", updatedAt: clk,
     });
-    const base = obs0(row);
     setObs(row, [{
-      ...base,
-      routeId: "redemption:busd0-usual:queue-redeem",
-      routeFamily: "eventual-redemption",
-      output: trk("usd0-usual"),
-      settlementHorizonSec: 30 * DAY,
-      scoreEligible: false,
-      observedAt: clk,
-      freshnessSeconds: 0,
+      ...obs0(row), routeId, routeFamily: "eventual-redemption", output: trk("usd0-usual"),
+      settlementHorizonSec: 30 * DAY, scoreEligible: false, observedAt: clk, freshnessSeconds: 0,
     }]);
     const f = stub(row, clk);
     setRawPeg(f, { "usd0-usual": { currentDeviationBps: 0, priceObservedAt: clk } });
-    const rev = rev0(f, "busd0-usual");
-    expect(rev).toMatchObject({
-      lane: "redemption",
-      routeId: "redemption:busd0-usual:queue-redeem",
-      settlementModel: "queued",
-      settlementSlaSec: 48_943_800,
-      settlementBoundUnproven: false,
-      settlementHorizonSec: 48_943_800,
-      coverageClass: "diagnostic",
+    expect(rev0(f, id)).toMatchObject({
+      lane: "redemption", routeId, settlementModel: "queued", settlementSlaSec: 48_943_800,
+      settlementBoundUnproven: false, settlementHorizonSec: 48_943_800, coverageClass: "diagnostic",
     });
 
-    const fixed = mkFixed({ assetId: "busd0-usual", clockSec: clk });
-    Object.assign(fixed, {
-      redemptionBackstopMap: { "busd0-usual": row },
-      redemptionGenerationId: "redemption:busd0-maturity-test",
-      redemptionStale: false,
-    });
+    const fixed = mkFixed({ assetId: id, clockSec: clk });
+    Object.assign(fixed, { redemptionBackstopMap: { [id]: row }, redemptionGenerationId: "redemption:busd0-maturity-test", redemptionStale: false });
     fixed.inputFreshness.redemptionBackstops = { updatedAt: clk, ageSeconds: 0, stale: false };
-    fixed.pegDataById["usd0-usual"] = {
-      ...fixed.pegDataById["busd0-usual"]!,
-      id: "usd0-usual",
-      symbol: "USD0",
-      currentDeviationBps: 0,
-      priceObservedAt: clk,
-      priceUpdatedAt: clk,
-    };
+    fixed.pegDataById["usd0-usual"] = { ...fixed.pegDataById[id]!, id: "usd0-usual", symbol: "USD0", currentDeviationBps: 0, priceObservedAt: clk, priceUpdatedAt: clk };
     const rebuilt = rebuildFixed(fixed);
-    const reviewed = mkExt({ assetId: "busd0-usual", clockSec: clk, registryFingerprint: rebuilt.registryFingerprint });
-    reviewed.assets[0]!.routeReviews = routeRevs(rebuilt, "busd0-usual");
-    reviewed.assets[0]!.retainedRoutes = retRed(rebuilt, "busd0-usual");
+    const reviewed = mkExt({ assetId: id, clockSec: clk, registryFingerprint: rebuilt.registryFingerprint });
+    reviewed.assets[0]!.routeReviews = routeRevs(rebuilt, id);
+    reviewed.assets[0]!.retainedRoutes = retRed(rebuilt, id);
     const compiled = compileFacts(rebuilt, reviewed).assets[0]!;
-    const route = compiled.exitRoutes.find((r) => r.routeId === "redemption:busd0-usual:queue-redeem")!;
-    expect(route.settlementModel).toBe("queued");
-    expect(route.settlementSlaSec).toBe(48_943_800);
-    expect(route.factorStatuses?.settlement).toMatchObject({
-      observationState: "known",
-      gapIds: [],
-    });
-    expect(route.factorStatuses?.capacity).toMatchObject({
-      observationState: "missing",
+    expect(compiled.exitRoutes.find((r) => r.routeId === routeId)).toMatchObject({
+      settlementModel: "queued", settlementSlaSec: 48_943_800,
+      factorStatuses: { settlement: { observationState: "known", gapIds: [] }, capacity: { observationState: "missing" } },
     });
     expect(compiled.gaps.some((g) => g.gapId.endsWith(":settlement"))).toBe(false);
     expect(compiled.gaps.some((g) => g.gapId.endsWith(":capacity"))).toBe(true);

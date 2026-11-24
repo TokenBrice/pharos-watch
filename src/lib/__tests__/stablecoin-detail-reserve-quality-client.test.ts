@@ -375,52 +375,14 @@ describe("reserve score admission", () => {
       .toMatch(/this one covers selected slices only, has manual review confidence and has no composition date\.$/);
 
     const filingUrl = "https://www.sec.gov/Archives/edgar/data/1974395/000162828026073949/fcc-20260930.htm";
-    const filedReview = review({
-      reviewedAt: "2026-11-23",
-      compositionAsOf: "2026-09-30",
-      sources: [{ label: "Q3 2026 10-Q", url: filingUrl }],
-      compositionFiling: {
-        regulator: "sec",
-        form: "10-Q",
-        accession: "0001628280-26-073949",
-        periodEnd: "2026-09-30",
-        filedAt: "2026-11-16",
-        url: filingUrl,
-      },
-    });
+    const compositionFiling = { regulator: "sec" as const, form: "10-Q" as const, accession: "0001628280-26-073949", periodEnd: "2026-09-30", filedAt: "2026-11-16", url: filingUrl };
+    const filedBase = { reviewedAt: "2026-11-23", compositionAsOf: "2026-09-30", sources: [{ label: "Q3 2026 10-Q", url: filingUrl }], compositionFiling };
+    const filedReview = review(filedBase);
     const filedAt = Date.parse("2026-09-30") / 1_000;
     expect(filedReview).toMatchObject({ blockers: [], compositionAtSec: filedAt, maxAgeSec: 135 * day });
     expect(describeReserveScoreAdmission(filedReview, out, filedAt + 136 * day))
       .toMatch(/within 135 days; this one is dated 2026-09-30, 136 days before scoring\.$/);
-
-    const predatedReview = review({
-      reviewedAt: "2026-10-15",
-      compositionAsOf: "2026-09-30",
-      sources: [{ label: "Q3 2026 10-Q", url: filingUrl }],
-      compositionFiling: {
-        regulator: "sec",
-        form: "10-Q",
-        accession: "0001628280-26-073949",
-        periodEnd: "2026-09-30",
-        filedAt: "2026-11-16",
-        url: filingUrl,
-      },
-    });
-    expect(predatedReview).toMatchObject({ maxAgeSec: 38 * day });
-
-    const badFiledReview = review({
-      reviewedAt: "2026-11-23",
-      compositionAsOf: "2026-09-30",
-      sources: [{ label: "Other", url: "https://example.com/other" }],
-      compositionFiling: {
-        regulator: "sec",
-        form: "10-Q",
-        accession: "0001628280-26-073949",
-        periodEnd: "2026-09-30",
-        filedAt: "2026-11-16",
-        url: filingUrl,
-      },
-    });
-    expect(badFiledReview).toMatchObject({ maxAgeSec: 38 * day });
+    expect(review({ ...filedBase, reviewedAt: "2026-10-15" })).toMatchObject({ maxAgeSec: 38 * day });
+    expect(review({ ...filedBase, sources: [{ label: "Other", url: "https://example.com/other" }] })).toMatchObject({ maxAgeSec: 38 * day });
   });
 });

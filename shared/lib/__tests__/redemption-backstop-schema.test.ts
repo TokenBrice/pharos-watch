@@ -351,31 +351,19 @@ describe("redemption backstop schema", () => {
   it("enforces MAX_REDEMPTION_OUTPUT_ASSETS on collateral outputAssets and unresolvedOutputAssetKeys", () => {
     const base = {
       ...(settlementReviewConfig("atomic", undefined) as Record<string, unknown>),
-      routeFamily: "collateral-redeem",
-      accessModel: "permissionless-onchain",
-      executionModel: "deterministic-onchain",
-      outputAssetType: "mixed-collateral",
+      routeFamily: "collateral-redeem", accessModel: "permissionless-onchain",
+      executionModel: "deterministic-onchain", outputAssetType: "mixed-collateral",
     };
     const atCap = Array.from({ length: MAX_REDEMPTION_OUTPUT_ASSETS }, (_, i) => `asset:tok${i}`);
     const overCap = [...atCap, `asset:tok${MAX_REDEMPTION_OUTPUT_ASSETS}`];
-
     expect(MAX_REDEMPTION_OUTPUT_ASSETS).toBe(32);
-    expect(RedemptionBackstopConfigSchema.safeParse({ ...base, outputAssets: atCap }).success).toBe(true);
-    const overOutput = RedemptionBackstopConfigSchema.safeParse({ ...base, outputAssets: overCap });
-    expect(overOutput.success).toBe(false);
-    if (!overOutput.success) {
-      expect(overOutput.error.issues).toContainEqual(
-        expect.objectContaining({ code: "too_big", path: ["outputAssets"], maximum: MAX_REDEMPTION_OUTPUT_ASSETS }),
-      );
-    }
-
-    expect(RedemptionBackstopConfigSchema.safeParse({ ...base, unresolvedOutputAssetKeys: atCap }).success).toBe(true);
-    const overUnresolved = RedemptionBackstopConfigSchema.safeParse({ ...base, unresolvedOutputAssetKeys: overCap });
-    expect(overUnresolved.success).toBe(false);
-    if (!overUnresolved.success) {
-      expect(overUnresolved.error.issues).toContainEqual(
-        expect.objectContaining({ code: "too_big", path: ["unresolvedOutputAssetKeys"], maximum: MAX_REDEMPTION_OUTPUT_ASSETS }),
-      );
+    for (const field of ["outputAssets", "unresolvedOutputAssetKeys"] as const) {
+      expect(RedemptionBackstopConfigSchema.safeParse({ ...base, [field]: atCap }).success).toBe(true);
+      const over = RedemptionBackstopConfigSchema.safeParse({ ...base, [field]: overCap });
+      expect(over.success).toBe(false);
+      if (!over.success) {
+        expect(over.error.issues).toContainEqual(expect.objectContaining({ code: "too_big", path: [field], maximum: MAX_REDEMPTION_OUTPUT_ASSETS }));
+      }
     }
   });
 });

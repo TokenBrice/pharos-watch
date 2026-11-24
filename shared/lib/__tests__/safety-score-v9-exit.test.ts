@@ -1103,92 +1103,42 @@ describe("bounded settlement subfactors", () => {
   });
 
   it("excludes physical-delivery routes with not-applicable USD capacity without dollar credit or unresolved-output reasons", () => {
-    const naCapacityStatus = {
-      applicability: {
-        state: "not-applicable" as const,
-        policyRuleId: "v9.exit.physical-delivery-capacity",
-        rationale: "Physical-commodity delivery redeems for metal rather than dollars; same-notional USD exit capacity is not applicable.",
-        gapId: null,
-      },
-      observationState: "known" as const,
-      evidenceRefIds: ["ev:physical"],
-      gapIds: [],
-    };
     const missingStatus = gap("U", "physical-placeholder");
     const settlementGap = gap("C", "physical-settlement");
     const projectedPhysical = projectV9ExitEvaluationRoute({
-      routeKey: "redemption:gen:redemption:gold:offchain-issuer",
-      routeId: "redemption:gold:offchain-issuer",
-      lane: "redemption",
-      sourceGenerationId: "gen",
-      routeFamily: "eventual-redemption",
-      holderAccess: "institutional-eligible",
-      executionModel: "discretionary",
-      executionCertainty: "conditional",
-      modelConfidence: "low",
-      observationConfidence: "low",
-      capacityEvidenceTier: "documented",
-      observationHistory: null,
-      evidenceKind: "documented-terms",
-      coverageClass: "diagnostic",
-      capacityScoringHorizon: "eventual",
-      settlementModel: "bounded-delay",
-      settlementSlaSec: null,
-      queueDepthUsd: null,
-      dailyLimitUsd: null,
-      minRedeemUsd: null,
-      settlementEvidenceRefIds: ["ev:physical"],
-      physicalResourceKeys: ["issuer:gold"],
-      status: missingStatus.status,
-      factorStatuses: { capacity: naCapacityStatus, settlement: settlementGap.status },
-      scoreEligible: false,
-      request: null,
-      capacityCurve: [],
-      output: {
-        status: {
-          applicability: { state: "required", policyRuleId: "v9.exit.output-valuation", rationale: null, gapId: null },
-          observationState: "known",
-          evidenceRefIds: ["ev:physical-out"],
-          gapIds: [],
+      routeKey: "redemption:gen:redemption:gold:offchain-issuer", routeId: "redemption:gold:offchain-issuer",
+      lane: "redemption", sourceGenerationId: "gen", routeFamily: "eventual-redemption",
+      holderAccess: "institutional-eligible", executionModel: "discretionary", executionCertainty: "conditional",
+      modelConfidence: "low", observationConfidence: "low", capacityEvidenceTier: "documented", observationHistory: null,
+      evidenceKind: "documented-terms", coverageClass: "diagnostic", capacityScoringHorizon: "eventual",
+      settlementModel: "bounded-delay", settlementSlaSec: null, queueDepthUsd: null, dailyLimitUsd: null, minRedeemUsd: null,
+      settlementEvidenceRefIds: ["ev:physical"], physicalResourceKeys: ["issuer:gold"], status: missingStatus.status,
+      factorStatuses: {
+        capacity: {
+          applicability: { state: "not-applicable", policyRuleId: "v9.exit.physical-delivery-capacity", rationale: "Physical-commodity delivery redeems for metal rather than dollars; same-notional USD exit capacity is not applicable.", gapId: null },
+          observationState: "known", evidenceRefIds: ["ev:physical"], gapIds: [],
         },
-        kind: "physical-commodity-delivery",
-        sameNotionalEligible: false,
-        assetKeys: ["commodity:xau"],
-        basketWeights: [],
-        valuation: null,
+        settlement: settlementGap.status,
       },
-      failureDomains: [{ kind: "redemption-rail", key: "gold" }],
+      scoreEligible: false, request: null, capacityCurve: [], failureDomains: [{ kind: "redemption-rail", key: "gold" }],
+      output: {
+        status: { applicability: { state: "required", policyRuleId: "v9.exit.output-valuation", rationale: null, gapId: null }, observationState: "known", evidenceRefIds: ["ev:physical-out"], gapIds: [] },
+        kind: "physical-commodity-delivery", sameNotionalEligible: false, assetKeys: ["commodity:xau"], basketWeights: [], valuation: null,
+      },
     });
-    expect(projectedPhysical.applicability).toBe("not-applicable");
-    expect(projectedPhysical.outputResolved).toBe(false);
+    expect(projectedPhysical).toMatchObject({ applicability: "not-applicable", outputResolved: false });
 
-    // Alone (e.g. xgz-goldzip after dust filtering): no dollar credit, no unresolved-exit-output, stays bounded at 50 (not 0 or excluded-a-b).
-    // Non-capacity factor gaps on the N/A route (e.g. C settlement) must not leak into causeGapIds or limitedEvidenceCauses.
     const alone = evaluateV9Exit({
-      circulatingUsd: 20_000_000,
-      portfolioStatus: "reviewed-complete",
-      gaps: [missingStatus.gap, settlementGap.gap],
-      routes: [projectedPhysical],
+      circulatingUsd: 20_000_000, portfolioStatus: "reviewed-complete",
+      gaps: [missingStatus.gap, settlementGap.gap], routes: [projectedPhysical],
     }, V9_CANDIDATE_POLICY_V1);
-    expect(alone).toMatchObject({
-      score: 50,
-      aggregationDisposition: "included",
-      primaryRouteKey: null,
-      limitedEvidenceCauses: ["U"],
-      causeGapIds: [],
-    });
+    expect(alone).toMatchObject({ score: 50, aggregationDisposition: "included", primaryRouteKey: null, limitedEvidenceCauses: ["U"], causeGapIds: [] });
     expect(alone.reasons).not.toContain("unresolved-exit-output");
     expect(alone.routes[0]).toMatchObject({
-      included: false,
-      score: null,
-      scoringDisposition: "not-applicable",
-      effectiveScoringWeight: 0,
-      exclusionReason: null,
-      cause: null,
-      causeGapIds: [],
+      included: false, score: null, scoringDisposition: "not-applicable",
+      effectiveScoringWeight: 0, exclusionReason: null, cause: null, causeGapIds: [],
     });
 
-    // Beside a real USD route: Exit evaluates solely from the remaining route.
     const usd = dexRoute({ routeKey: "dex:gold:usdc" });
     const withUsd = evalRoutes([usd, projectedPhysical]);
     const usdOnly = evalRoutes([usd]);
