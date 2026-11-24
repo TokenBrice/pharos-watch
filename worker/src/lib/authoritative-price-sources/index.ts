@@ -29,6 +29,7 @@ import { stbtCurvePoolProvider } from "./stbt-curve-pool";
 import { usd3CurvePoolProvider } from "./usd3-curve-pool";
 import { mentoFpmmProvider } from "./mento-fpmm";
 import { mentoBrokerProvider } from "./mento-broker";
+import { aidUsdcRedeemerProvider } from "./aid-usdc-redeemer";
 import { capCusdProvider } from "./cap-cusd";
 import { deuroEurcBridgeProvider } from "./deuro-eurc-bridge";
 import { erc4626NavProvider, previewRedeemProvider } from "./erc4626-nav";
@@ -65,6 +66,7 @@ export { getFreshSingleSourceNavParentId, resolveVaultNavSupplyPrice } from "./e
 export { projectPriceDerivation } from "./helpers";
 
 const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
+  aidUsdcRedeemerProvider,
   capCusdProvider,
   deuroEurcBridgeProvider,
   iusdInfinifiProvider,
