@@ -18,21 +18,21 @@ Provider membership is discovery evidence, not an admission decision. A CoinGeck
 
 ## Listing Classes
 
-The listing class separates the research catalog from the core monetary aggregate.
+Under Policy 2.0, a stablecoin is a fixed-par money claim — designed to stay worth one unit of a currency or metal — that is not a share in an investment fund. Fixed-$1 debt claims (such as YLDS and STBT) qualify as `core-stablecoin`; shares in investment funds (such as BUIDL, even when targeting a $1 NAV) and exchange earn products (such as GUSD) do not. Investor gating (KYC, allowlists, accredited-investor or qualified-purchaser rules) never decides the listing class and is reflected only in exit and accessibility scoring.
 
-| Class | Inclusion test | Aggregate treatment |
+The listing class separates the research catalog from the core monetary aggregate. Policy 2.0 retires `cash-equivalent` and `stable-value-investment`: `core-stablecoin` versus `tokenized-fund` is an authored instrument decision in `listing-decisions.json`, not derived mechanically from `flags.navToken` or `mechanismArchetype`. `flags.navToken` remains a pricing flag only.
+
+| Class | Inclusion test | Aggregate and scoring treatment |
 | --- | --- | --- |
-| `core-stablecoin` | A transferable stable-value monetary instrument that is not a tracked variant, NAV/fund cash equivalent, or credit investment | Included in the core aggregate while active |
-| `cash-equivalent` | A non-variant with `flags.navToken === true`, or a non-variant classified as `mechanismArchetype: "tbill"` | Included in the core aggregate while active; NAV-aware pricing applies only to rows with `flags.navToken === true`, while `tbill` rows without that flag keep ordinary peg-price bounds |
+| `core-stablecoin` | A fixed-par money claim (including fixed-$1 debt claims) that is not a tracked variant or an investment-fund share | Included in the core monetary aggregate while active (`CORE_AGGREGATE_LISTING_CLASSES` contains only `core-stablecoin`) |
 | `stablecoin-variant` | A direct tracked child with `variantOf` and `variantKind` | Tracked and analyzed, but excluded from parent-inclusive aggregate totals to prevent double counting |
-| `stable-value-investment` | A non-variant classified as `mechanismArchetype: "rwa-credit-fund"`, or held outside core aggregates by an unresolved exact-product mechanism review | Tracked on its separate investment surface, excluded from the core monetary aggregate |
-| `excluded` | Fails the scope or instrument tests | Historical record only; never active |
+| `tokenized-fund` | An investment-fund share retained in the active catalog because it backs tracked stablecoins or participates in reserve/dependency coverage | Tracked outside core monetary aggregates with no Safety Score letter grade (fund holdings, NAV source, redemption terms, and investor eligibility remain visible and continue feeding downstream dependency scoring) |
+| `review-hold` | A non-delisted, non-variant asset with `mechanismArchetype: null` and a valid unresolved `mechanismArchetypeReview` | Tracked and monitored while exact-product qualification is pending, but excluded from core monetary aggregates |
+| `excluded` | Fails the scope or instrument tests (including delisted non-dependency funds and exchange earn products) | Historical record only; never active |
 
-Class precedence follows the guard's branches: delisted → `excluded`; `variantOf` → `stablecoin-variant`; credit-fund archetype → `stable-value-investment`; NAV/T-bill → `cash-equivalent`; remaining unresolved mechanism hold → `stable-value-investment`; otherwise `core-stablecoin`. `npm run check:stablecoin-data` enforces catalog coverage and this order.
+Class precedence follows the guard's branches: delisted → `excluded`; `variantOf` → `stablecoin-variant`; unresolved mechanism review with `mechanismArchetype: null` → `review-hold`; otherwise the authored class in `listing-decisions.json` must be `core-stablecoin` or `tokenized-fund`. `npm run check:stablecoin-data` enforces catalog coverage and this order.
 
-An unresolved mechanism review preserves delisted, variant, credit-fund and NAV/T-bill invariants before applying its hold. Remaining unresolved mechanisms require `stable-value-investment`; the currently authored class cannot validate itself or promote an unresolved asset into core aggregates. USDR Ring is held on that basis pending exact-product qualification; its listing class does not assert a proven credit-fund mechanism.
-
-USDrf follows the credit-fund branch because RealFi describes a managed off-chain credit portfolio. Its lifecycle is separate from that instrument classification: promotion to active did not change its class.
+An unresolved mechanism review preserves delisted and variant invariants before applying `review-hold`; `flags.navToken` does not override the hold. Remaining unresolved mechanisms require `review-hold` so the currently authored class cannot validate itself or promote an unresolved asset into core aggregates. R25 rcUSD is held on that basis pending exact-product reserve and holder-claim qualification.
 
 ## Instrument Eligibility
 
