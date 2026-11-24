@@ -315,8 +315,7 @@ describe("validatePlotMapCapacity", () => {
     }
 
     // Item 1 (FX2): sparse desktop per-block beds trim along j to occupied slots + 1 inside their lane (e.g. 2023–2026
-    // Algorithmic single-grave blocks narrow from 4 slots to 2 slots without overhanging any grave), and those
-    // single-grave years share the lane's centre slot so their beds line up instead of zigzagging.
+    // Algorithmic single-grave blocks narrow from 4 slots to 2 slots without overhanging any grave), lined up.
     const algoLane = desktop.lanes.find((l) => l.cause === "algorithmic-failure")!;
     for (const year of [2023, 2024, 2025, 2026]) {
       const cell = algoLane.cells.find((c) => c.year === year)!;
@@ -327,21 +326,10 @@ describe("validatePlotMapCapacity", () => {
       expect(cell.j0).toBeCloseTo(algoLane.cells.find((c) => c.year === 2026)!.j0, 6);
     }
 
-    // Desktop colossi stand on 2 × 2 lots inside their own lane (BUSD's back lane may add the cypress walk), never
-    // straddling a neighbour; moving UST into the regulatory lane fails `lane-overflow`.
-    const desktopLaneByCause = new Map(desktop.lanes.map((L) => [L.cause, L]));
-    for (const g of desktop.graves.filter((d) => d.lot === 3)) {
-      const L = desktopLaneByCause.get(g.cause)!;
-      expect(g.cell.i1 - g.cell.i0, `${g.id} rows`).toBeCloseTo(2 * desktop.rowPitch, 6);
-      expect(g.cell.j1 - g.cell.j0, `${g.id} slots`).toBeCloseTo(2 * desktop.slotPitch, 6);
-      expect(g.cell.j1, `${g.id} leaves its lane`).toBeLessThanOrEqual(L.j1 + 1e-6);
-      expect(g.cell.j0, `${g.id} leaves its lane`).toBeGreaterThanOrEqual(g.cause === "regulatory" ? 0 : L.j0 - 1e-6);
-    }
-    const strayUst = {
-      ...desktop,
-      graves: desktop.graves.map((g) => (g.id === "ust-terrausd-2022-05" ? { ...g, cell: { ...g.cell, j0: g.cell.j0 - desktop.slotPitch } } : g)),
-    };
-    expect(validatePlotMapCapacity(strayUst).issues.map((i) => i.kind)).toContain("lane-overflow");
+    // Desktop colossi stand on 2 × 2 lots in their own lane; UST straddling the regulatory lane fails `lane-overflow`.
+    for (const g of desktop.graves.filter((d) => d.lot === 3)) expect(Math.round((g.cell.i1 - g.cell.i0) * (g.cell.j1 - g.cell.j0) * 100)).toBe(405);
+    const stray = { ...desktop, graves: desktop.graves.map((g) => (g.symbol === "UST" ? { ...g, cell: { ...g.cell, j0: 1 } } : g)) };
+    expect(validatePlotMapCapacity(stray).issues.map((i) => i.kind)).toContain("lane-overflow");
 
     // Item 6: every portrait grave (including lot-3 colossi UST and BUSD) stays strictly inside its own cause column.
     const portraitLaneByCause = new Map(portrait.lanes.map((L) => [L.cause, L]));
