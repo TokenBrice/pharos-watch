@@ -587,6 +587,8 @@ export function runGitleaksConfigSelfTest(
     const legacyUsdvPool = ["DmXXwEcK2c7fuVoW6TBzF5", "UDByhuQBHZS1qHnwprvHFH"].join("");
     const spikoAuthority = ["GhRFGntEPkDi3ass8HYPqd", "qWMZQ4F4hs8a3QfNtT622h"].join("");
     const midasProspectusUuid = ["d80ceabb-07a6-4dc4", "-9020-70ec86b4f42f"].join("");
+    const midasMtbillFinalTermsUuid = ["bf215cdc-f549-474d", "-8ca9-5a1810fabeb8"].join("");
+    const ondoUsdyDailyArchiveRlkey = ["nik1v5slekrzx5", "fbi0zan5sk3"].join("");
     const apyxAttestationUuid = ["0386fd1d-2316-4320", "-b799-96ec6c4e827e"].join("");
     const matrixdockUuids = [
       ["3cad87ae-7846-4bfe", "-ba2e-411fbf166f60"].join(""),
@@ -695,10 +697,27 @@ export function runGitleaksConfigSelfTest(
         "shared/data/stablecoins/coins/mhyper-midas.json",
         "shared/data/stablecoins/domains/compliance/mtbill-midas.json",
         "shared/lib/redemption-backstop-configs/offchain-issuer/non-usd-and-tokenized.ts",
+        evidenceGapPath,
         ledgerPath,
       ].map((path) => ({
         path,
         value: { url: `https://3475141875-files.gitbook.io/a.pdf?alt=media&token=${midasProspectusUuid}` },
+      })),
+      ...[evidenceGapPath, ledgerPath].map((path) => ({
+        path,
+        value: { url: `https://3475141875-files.gitbook.io/a.pdf?alt=media&token=${midasMtbillFinalTermsUuid}` },
+      })),
+      ...["shared/data/safety-score-v9/reserve-bound-facts-v1.json", ledgerPath].map((path) => ({
+        path,
+        value: { url: `https://www.dropbox.com/scl/fo/a/b?rlkey=${ondoUsdyDailyArchiveRlkey}` },
+      })),
+      ...[
+        "shared/data/safety-score-v9/lane-emitter-descriptors-v1.generated.json",
+        "shared/data/safety-score-v9/incident-runtime-v1.generated.json",
+        "shared/data/safety-score-v9/incident-review-key-migration-v1.generated.json",
+      ].map((path) => ({
+        path,
+        value: { routeIds: ["susds-base-l1-token-bridge", "susds-base-l2-governance-relay"] },
       })),
       {
         path: "shared/data/stablecoins/domains/reserves/apyusd-apyx.json",
