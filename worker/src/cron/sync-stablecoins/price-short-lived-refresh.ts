@@ -1,5 +1,5 @@
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
+import { normalizePricingSourceKeys, splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
@@ -21,6 +21,22 @@ export interface ShortLivedRefreshSummary {
   resolved: number;
   failedPasses: string[];
   timedOut: boolean;
+}
+
+function isShortLivedLaneActiveForAsset(
+  asset: Pick<
+    PeggedAsset,
+    "price" | "priceSource" | "priceConfidence" | "priceObservedAt" | "priceUpdatedAt" | "priceSyncedAt" | "agreeSources" | "consensusSources"
+  >,
+  source: string,
+): boolean {
+  if (splitCompositePriceSource(asset.priceSource ?? "").includes(source)) return true;
+  if (!hasPublishableCurrentPrice(asset)) return false;
+  if (asset.priceConfidence !== "fallback" && asset.priceConfidence !== "low") return false;
+  return normalizePricingSourceKeys([
+    ...(asset.agreeSources ?? []),
+    ...(asset.consensusSources ?? []),
+  ]).includes(source);
 }
 
 export async function runShortLivedPriceRefresh(params: {
@@ -45,8 +61,11 @@ export async function runShortLivedPriceRefresh(params: {
       if (!ACTIVE_META_BY_ID.has(asset.id)) return false;
       const hasCurrentPrice = hasPublishableCurrentPrice(asset);
       const sourceOwned = splitCompositePriceSource(asset.priceSource ?? "").includes(source);
+      const laneActive = isShortLivedLaneActiveForAsset(asset, source);
+      // Reviewed price gaps keep only the lane-owned exception; corroboration
+      // alone must not sustain a price the review keeps missing.
       return (!params.reviewedGapIds?.has(asset.id) || (hasCurrentPrice && sourceOwned)) &&
-        (sourceOwned || !hasCurrentPrice);
+        (laneActive || !hasCurrentPrice);
     }).map((asset) => ({ ...asset }));
     applyTrackedAssetOverrides(assets);
     for (const asset of assets) clearPriceMetadata(asset);

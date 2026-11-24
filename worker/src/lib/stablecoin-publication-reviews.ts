@@ -208,7 +208,7 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     stablecoinId: "hbd-hive",
     owner: "ops",
     reason:
-      "Re-reviewed 2026-11-22 12:38 UTC: HBD's admitted price path remains the native Hive internal market (hive-native-cg), requiring a non-self trade within 900 seconds plus spread, depth, turnover and a fresh HIVE/USD parent; production /api/stablecoins currently publishes price missing. Fresh reads at 12:37 UTC from api.hive.blog and api.deathwing.me agree on bid/ask 0.0368/0.0369 HBD per HIVE (0.2717% spread), 126.041/427.613 HBD of depth within 2%, and 2,576.818 HBD of 24h volume; api.deathwing.me's newest trade is 12:29:30 UTC (247 rows over 24h) and a replay of the 97 quarter-hour boundaries over the prior 24 hours finds 32 without a trade inside 900 seconds, so intermittent missing runs remain justified. CoinGecko hive_dollar is $1.44 ($851,143 24h volume) at 12:36:27 UTC, far outside the existing $1.19 bound; its only two tickers are the duplicated Upbit-family HBD/BTC book (Upbit $1.44 / $426,354 and Upbit Indonesia $1.38 / $409,239). HBD has no reviewed contract deployment for DEX, contract or exact-address recovery. Keep HBD active and its missing runs missing; all admission gates preserved. Owner ops re-reviews the native-trade cadence or establishes another admitted market by this review's expiry, 2026-12-06 12:38 UTC.",
+      "Re-reviewed 2026-11-22 12:38 UTC (reason corrected 2026-11-24 14:37 UTC; expiry unchanged): HBD's admitted native price path (hive-native-cg) requires at least 500 HBD of order-book depth on each side within 2% of mid, plus spread, 900-second trade recency, 1,000 HBD 24h turnover and a fresh HIVE/USD parent. Production rejects the native lane for insufficient_depth (2026-11-24 13:30 UTC: 443.541 HBD bid / 588.857 HBD ask against the 500 HBD per-side floor; 2026-11-22 12:37 UTC reads from api.hive.blog and api.deathwing.me measured 126.041/427.613 HBD at 0.2717% spread, and fresh 2026-11-24 14:37 UTC reads measure 125.662/519.938 HBD at 0.7995% spread), not the 900-second trade cadence. When CoinGecko hive_dollar rises above the existing $1.19 USD bound ($1.44 at 2026-11-22 12:36:27 UTC from duplicated Upbit-family HBD/BTC tickers; above $1.19 across 2026-11-21..23 and 2026-11-24 02:15..02:45 UTC), direct CoinGecko is also rejected, leaving HBD missing. HBD has no reviewed contract deployment for DEX, contract or exact-address recovery. Keep HBD active and its missing runs missing; all admission gates preserved. Owner ops re-reviews native book depth or establishes another admitted market by this review's expiry, 2026-12-06 12:38 UTC.",
     sources: [
       "https://api.hive.blog",
       "https://api.deathwing.me",
@@ -248,6 +248,58 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     ],
     reviewedAt: Date.UTC(2026, 10, 22, 12, 0) / 1000,
     expiresAt: Date.UTC(2026, 11, 6, 12, 0) / 1000,
+  },
+  {
+    stablecoinId: "spusd-soulpeg",
+    owner: "ops",
+    reason:
+      "Reviewed 2026-11-24 14:37 UTC with fresh GETs (owner decision #12): CoinGecko soulpeg-usd remains frozen at $0.991029 ($6,660,966.28 cap, $49.65 24h vol) last updated 2026-11-21T01:25:49Z (outside the 15-minute primary budget); both tickers — PancakeSwap (v2) ($0.996934, last traded 2026-11-20T15:25:50Z) and Uniswap V3 (BSC) ($0.991029, last traded 2026-11-20T17:24:55Z) — are flagged is_stale true. DefiLlama detail 413 publishes price null (circulating $54,693,539.91) and coins.llama.fi returns {} for coingecko:soulpeg-usd and BSC 0x40ff3dea2eec93a7b71879874dc4407918da77a6. Exact-contract BSC DexScreener returns []. GeckoTerminal BSC pools hold only sub-floor liquidity with zero 24h volume and zero 24h trades: PancakeSwap V2 SPUSD/USDC holds $8,564.42 and Uniswap V3 SPUSD/USDC holds $3,631.65, far below the unchanged $50K floor. No protocol-redemption USD quote exists because ordinary unwrap returns the SoulPeg sUSDC receipt rather than USDC. Keep spUSD active and the price missing without admitting a stale mark; all admission gates preserved. Owner ops rechecks for an admitted observed market by 2026-12-08 14:37 UTC.",
+    sources: [
+      "https://api.coingecko.com/api/v3/simple/price?ids=soulpeg-usd&vs_currencies=usd&include_market_cap=true&include_24hr_vol=true&include_last_updated_at=true",
+      "https://api.coingecko.com/api/v3/coins/soulpeg-usd/tickers",
+      "https://stablecoins.llama.fi/stablecoin/413",
+      "https://coins.llama.fi/prices/current/coingecko:soulpeg-usd,bsc:0x40ff3dea2eec93a7b71879874dc4407918da77a6",
+      "https://api.dexscreener.com/token-pairs/v1/bsc/0x40ff3dea2eec93a7b71879874dc4407918da77a6",
+      "https://api.geckoterminal.com/api/v2/networks/bsc/tokens/0x40ff3dea2eec93a7b71879874dc4407918da77a6/pools",
+    ],
+    reviewedAt: Date.UTC(2026, 10, 24, 14, 37) / 1000,
+    expiresAt: Date.UTC(2026, 11, 8, 14, 37) / 1000,
+  },
+  {
+    stablecoinId: "usdplus-streamflow",
+    owner: "ops",
+    reason:
+      "Reviewed 2026-11-24 14:37 UTC with fresh GETs (owner decision #12): CoinGecko usd-2 remains frozen at $0.999019 ($1,678,918.05 cap, $8,461.79 24h vol) last updated 2026-11-19T09:05:24Z (outside the 15-minute primary budget); its sole Meteora ticker ($0.999019, last traded 2026-11-19T01:04:29Z) is flagged is_stale true. DefiLlama detail 426 publishes price null (circulating $1,681,176.71) and coins.llama.fi returns {} for coingecko:usd-2 and Solana mint usdsfJbX78ktZUnoRC7dwvvQz7xH3WdkpGne76gdUia. Exact-contract Solana DexScreener returns []. GeckoTerminal's Meteora USD+/USDC pool (HgHXbwA6yeVzP69VQZFSjYNgKnUFPPwi8Ns3PSpu162p) holds $189,907.98 at $1.0207 spot with zero 24h volume and zero 24h trades (USD+/SOL holds $671.11, zero volume). Jupiter Price v3 reports $0.999465 (block 470669300) with $14.59 liquidity, rejected below the unchanged $50K floor. No M0-extension inherited or protocol-par route is admitted while the fixed-unit M claim remains unproven and wM is unpriced. Keep USD+ active and the price missing without admitting a stale mark; all admission gates preserved. Owner ops rechecks for an admitted observed market by 2026-12-08 14:37 UTC.",
+    sources: [
+      "https://api.coingecko.com/api/v3/simple/price?ids=usd-2&vs_currencies=usd&include_market_cap=true&include_24hr_vol=true&include_last_updated_at=true",
+      "https://api.coingecko.com/api/v3/coins/usd-2/tickers",
+      "https://stablecoins.llama.fi/stablecoin/426",
+      "https://coins.llama.fi/prices/current/coingecko:usd-2,solana:usdsfJbX78ktZUnoRC7dwvvQz7xH3WdkpGne76gdUia",
+      "https://api.dexscreener.com/token-pairs/v1/solana/usdsfJbX78ktZUnoRC7dwvvQz7xH3WdkpGne76gdUia",
+      "https://api.geckoterminal.com/api/v2/networks/solana/tokens/usdsfJbX78ktZUnoRC7dwvvQz7xH3WdkpGne76gdUia/pools",
+      "https://lite-api.jup.ag/price/v3?ids=usdsfJbX78ktZUnoRC7dwvvQz7xH3WdkpGne76gdUia",
+    ],
+    reviewedAt: Date.UTC(2026, 10, 24, 14, 37) / 1000,
+    expiresAt: Date.UTC(2026, 11, 8, 14, 37) / 1000,
+  },
+  {
+    stablecoinId: "sbold-k3-capital",
+    owner: "ops",
+    reason:
+      "Reviewed 2026-11-24 14:37 UTC with fresh GETs and pinned Ethereum RPC reads (owner decision #12, tied to exploit supply hold and issue #2106): K3 Capital's sBOLD ERC-4626 vault (0x50bd66d59911f5e086ec87ae43c811e0d059dd11) was exploited on 2026-11-18 and remains paused. At finalized Ethereum block 26485580 (2026-11-24T14:21:11Z, hash 0xbbb630a7cb02fa746e26acfa6954159edfa8ddab6b058a5115c18b5473ba9465), paused() is true, totalAssets() reads 4.571961 BOLD (Blockscout shows 1.000000 BOLD in the vault wallet), totalSupply() reads 4.372e19 sBOLD, and convertToAssets(1e18) returns 0, so Pricing v6.84 tombstones the cached-rate rescue (protocol-redeem-cached-rate) rather than republishing a pre-exploit rate. CoinGecko sbold-by-k3-capital returns {} with 0 tickers, coins.llama.fi returns {}, Ethereum DexScreener returns [], and GeckoTerminal's largest Ethereum pool holds $49.36 with zero 24h volume. Tied to the existing REVIEWED_ONCHAIN_SUPPLY_HOLDS economic-float-unreconciled hold and issue #2106 (owner decision 2026-11-23: wait for K3 recovery outcome with no fixed deadline before choosing restore or cemetery; #2106 follow-up re-check due 2026-11-26). Keep price missing and supply withheld; all admission gates preserved. This source review neither satisfies nor alters the lifecycle decision under #2106; owner ops re-reviews by 2026-12-08 14:37 UTC.",
+    sources: [
+      "https://api.coingecko.com/api/v3/simple/price?ids=sbold-by-k3-capital&vs_currencies=usd&include_market_cap=true&include_24hr_vol=true&include_last_updated_at=true",
+      "https://api.coingecko.com/api/v3/coins/sbold-by-k3-capital/tickers",
+      "https://coins.llama.fi/prices/current/coingecko:sbold-by-k3-capital,ethereum:0x50bd66d59911f5e086ec87ae43c811e0d059dd11",
+      "https://api.dexscreener.com/token-pairs/v1/ethereum/0x50bd66d59911f5e086ec87ae43c811e0d059dd11",
+      "https://api.geckoterminal.com/api/v2/networks/eth/tokens/0x50bd66d59911f5e086ec87ae43c811e0d059dd11/pools",
+      "https://eth.blockscout.com/api/v2/tokens/0x50bd66d59911f5e086ec87ae43c811e0d059dd11",
+      "https://eth.blockscout.com/api/v2/addresses/0x50bd66d59911f5e086ec87ae43c811e0d059dd11/token-balances",
+      "https://x.com/k3_capital/status/2123395654214967426",
+      "https://github.com/TokenBrice/pharos-watch/issues/2106",
+    ],
+    reviewedAt: Date.UTC(2026, 10, 24, 14, 37) / 1000,
+    expiresAt: Date.UTC(2026, 11, 8, 14, 37) / 1000,
   },
 ];
 

@@ -26,6 +26,8 @@ import type { PeggedAsset } from "../enrich-prices-shared";
 import { nextDexRefreshCursor, planDexRefresh, runPriceDexRefresh } from "../price-dex-refresh";
 import { makePeggedAsset } from "./_fixtures";
 import * as shortLived from "../price-short-lived-refresh";
+import * as dlContract from "../enrich-prices-defillama-pass";
+import * as jupiterPass from "../enrich-prices-jupiter-pass";
 
 const { sleepWithSignalMock } = vi.hoisted(() => ({
   // Provider pacing (DexScreener 1100 ms between batches, CoinGecko on-chain
@@ -366,45 +368,24 @@ describe("DEX refresh continuity", () => {
     }));
   });
 
-  it("recovers a non-closed refresh breaker when no candidate batch remains", async () => {
+  it("recovers an open refresh breaker without a probe on an empty cohort and stays a no-op when closed", async () => {
     const fetch = prepareRefresh();
     setPublished(makePeggedAsset({ id, symbol: "USDaf", price: 0.99, priceSource: "coingecko",
       priceConfidence: "single-source", priceObservedAt: now, priceObservedAtMode: "upstream" }));
+    const recordOutcome = vi.spyOn(circuit, "recordOutcomeSafe");
+    expect(await runRefresh()).toMatchObject({ cohortSize: 0, attemptedBatches: 0, errorClasses: [], cacheWritten: true });
+    expect(recordOutcome).not.toHaveBeenCalled();
+
     for (let attempt = 0; attempt < 3; attempt++) await circuit.recordOutcome(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES_REFRESH, false);
     expect((await circuit.getCircuitRecord(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES_REFRESH)).state).toBe("open");
     const recover = vi.spyOn(lifecycle, "recoverProviderOnNoCandidates");
-
-    const summary = await runRefresh();
-
-    // The empty cohort must not consume a probe or a provider verdict; it
-    // applies the documented no-candidate recovery instead of leaving the
-    // breaker open until a future slot happens to have candidates again.
-    expect(recover).toHaveBeenCalledWith(expect.objectContaining({
-      circuitSource: CIRCUIT_SOURCE.DEXSCREENER_PRICES_REFRESH,
-    }));
+    expect(await runRefresh({ syncStartSec: now + 60 })).toMatchObject({ cohortSize: 0, attemptedBatches: 0, resolved: 0, deferredBatches: 0, errorClasses: [], cacheWritten: true });
+    expect(recover).toHaveBeenCalledWith(expect.objectContaining({ circuitSource: CIRCUIT_SOURCE.DEXSCREENER_PRICES_REFRESH }));
     expect(fetch).not.toHaveBeenCalled();
-    expect(summary).toMatchObject({ cohortSize: 0, attemptedBatches: 0, resolved: 0, deferredBatches: 0,
-      errorClasses: [], cacheWritten: true });
     expect(lifecycle.recordProviderOutcomeSafe).toHaveBeenCalledWith(expect.objectContaining({
       circuitSource: CIRCUIT_SOURCE.DEXSCREENER_PRICES_REFRESH, attempted: 0, successful: 0,
     }));
-    const record = await circuit.getCircuitRecord(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES_REFRESH);
-    expect(record.state).toBe("closed");
-    expect(record.consecutiveFailures).toBe(0);
-  });
-
-  it("writes no circuit outcome for an empty cohort while the breaker is healthy", async () => {
-    prepareRefresh();
-    setPublished(makePeggedAsset({ id, symbol: "USDaf", price: 0.99, priceSource: "coingecko",
-      priceConfidence: "single-source", priceObservedAt: now, priceObservedAtMode: "upstream" }));
-    const recordOutcome = vi.spyOn(circuit, "recordOutcomeSafe");
-
-    const summary = await runRefresh();
-
-    expect(summary).toMatchObject({ cohortSize: 0, attemptedBatches: 0, errorClasses: [], cacheWritten: true });
-    // A no-candidate run never fabricates an upstream success: the recovery is
-    // a no-op on a closed breaker.
-    expect(recordOutcome).not.toHaveBeenCalled();
+    expect(await circuit.getCircuitRecord(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES_REFRESH)).toMatchObject({ state: "closed", consecutiveFailures: 0 });
   });
 
   it("persists only newly fetched observations and retains routing hints after a failed refresh", async () => {
@@ -464,13 +445,13 @@ describe("DEX refresh continuity", () => {
     }));
   });
 
-  it("propagates parent cancellation without writing a refresh or provider outcome", async () => {
+  it("propagates parent cancellation and unexpected executor errors without overwriting existing evidence", async () => {
     const fetch = prepareRefresh();
     const oldValue = JSON.stringify({ observations: [observation(now - 60)], targets: [target], cursor: 0 });
     await setCacheIfNewer(db, DEX_REFRESH_CACHE_KEY, oldValue, now - 60);
     let started!: () => void;
     const startedPromise = new Promise<void>((resolve) => { started = resolve; });
-    fetch.mockImplementation((_assets, _fx, _db, signal) => new Promise((_resolve, reject) => {
+    fetch.mockImplementationOnce((_assets, _fx, _db, signal) => new Promise((_resolve, reject) => {
       signal!.addEventListener("abort", () => reject(signal!.reason), { once: true });
       started();
     }));
@@ -481,14 +462,6 @@ describe("DEX refresh continuity", () => {
     await startedPromise;
     parent.abort(reason);
     await rejected;
-    expect(await getCache(db, DEX_REFRESH_CACHE_KEY)).toMatchObject({ value: oldValue, updatedAt: now - 60 });
-    expect(lifecycle.recordProviderOutcomeSafe).not.toHaveBeenCalled();
-  });
-
-  it("propagates unexpected executor errors without overwriting existing evidence", async () => {
-    const fetch = prepareRefresh();
-    const oldValue = JSON.stringify({ observations: [observation(now - 60)], targets: [target], cursor: 0 });
-    await setCacheIfNewer(db, DEX_REFRESH_CACHE_KEY, oldValue, now - 60);
     const failure = new TypeError("unexpected decoder failure");
     fetch.mockRejectedValueOnce(failure);
     await expect(runRefresh()).rejects.toBe(failure);
@@ -692,38 +665,59 @@ describe("exact-address coverage refresh", () => {
 
   it("runs no address request when the provider is unconfigured or the row is under a reviewed gap", async () => {
     prepareAddressRefresh(usdc());
-    const cg = mockFetch([{ match: (request) => onchainRequest(request.url), respond: (request) =>
-      coingeckoResponse(new URL(request.url).pathname.split("/tokens/multi/")[1]!.split(",")[0]!, "0.9822", "120000") }]);
-
-    const disabled = await runRefresh();
-    expect(disabled.addressRefresh).toMatchObject({ enabled: false, targetCount: 0, resolved: 0 });
+    const cg = mockFetch(onchainRoutes());
+    expect((await runRefresh()).addressRefresh).toMatchObject({ enabled: false, targetCount: 0, resolved: 0 });
     expect(cg.getHistory().filter((entry) => onchainRequest(entry.url))).toEqual([]);
-
-    const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "wusd-worldwide");
-    expect(review).toBeDefined();
-    prepareRefresh();
+    const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "wusd-worldwide")!;
     setPublished(makePeggedAsset({ id: "wusd-worldwide", symbol: "WUSD", price: null }));
     cg.mockClear();
-    const acknowledged = await runRefresh({ syncStartSec: review!.reviewedAt + 60, addressProvider });
-    expect(acknowledged.addressRefresh).toMatchObject({ enabled: true, cohortSize: 0, targetCount: 0, resolved: 0 });
+    expect((await runRefresh({ syncStartSec: review.reviewedAt + 60, addressProvider })).addressRefresh)
+      .toMatchObject({ enabled: true, cohortSize: 0, targetCount: 0, resolved: 0 });
     expect(cg.getHistory().filter((entry) => onchainRequest(entry.url))).toEqual([]);
   });
 
   it("keeps the DEX lane and the staged payload intact when the address lane spends its deadline", async () => {
     vi.useFakeTimers();
     prepareAddressRefresh(usdc());
-    vi.spyOn(addressProviders, "collectAddressPriceProviderQuotes").mockImplementation((params) => {
-      let rejectRequest!: (reason?: unknown) => void;
-      const pending = new Promise<AddressPriceProviderCollectionResult>((_resolve, reject) => { rejectRequest = reject; });
-      params.signal!.addEventListener("abort", () => rejectRequest(params.signal!.reason), { once: true });
-      return pending;
-    });
-
+    vi.spyOn(addressProviders, "collectAddressPriceProviderQuotes").mockImplementation((params) =>
+      new Promise<AddressPriceProviderCollectionResult>((_resolve, reject) => {
+        params.signal!.addEventListener("abort", () => reject(params.signal!.reason), { once: true });
+      }));
     const pending = runRefresh({ addressProvider });
     await vi.advanceTimersByTimeAsync(25_000);
-
     await expect(pending).resolves.toMatchObject({ cacheWritten: true,
       addressRefresh: { enabled: true, timedOut: true, resolved: 0, failureClasses: [] } });
     expect(await getCache(db, DEX_REFRESH_CACHE_KEY)).not.toBeNull();
+  });
+
+  it("keeps severe-downside fallback corroboration across two 15-minute slots without oscillating", async () => {
+    vi.mocked(shortLived.runShortLivedPriceRefresh).mockRestore();
+    vi.spyOn(jupiterPass, "runJupiterPass").mockResolvedValue({ resolved: 0, failures: [] });
+    vi.spyOn(dlContract, "runDlContractPasses").mockImplementation(async (cohort) => {
+      const row = cohort.find((asset) => asset.id === "pmusd-precious-metals");
+      if (row) Object.assign(row, { price: 0.407, priceSource: "defillama-contract", priceConfidence: "fallback",
+        priceObservedAt: Math.floor(Date.now() / 1_000) - 30, priceObservedAtMode: "upstream" });
+      return { resolved: row ? 1 : 0, failures: [], pass1: row ? 1 : 0, pass1b: 0 };
+    });
+    mockFetch([{ match: (req) => onchainRequest(req.url) && req.url.includes("/networks/eth/"),
+      respond: (req) => coingeckoResponse(new URL(req.url).pathname.split("/tokens/multi/")[1]!.split(",")[0]!, "0.408", "120000") },
+    { match: (req) => onchainRequest(req.url), status: 404, body: { error: "not found" } }]);
+    const runSlot = async (slotSec: number, published: PeggedAsset) => {
+      vi.setSystemTime(slotSec * 1_000);
+      prepareAddressRefresh(published);
+      expect(await runRefresh({ syncStartSec: slotSec, addressProvider }))
+        .toMatchObject({ addressRefresh: { resolved: 1 }, contractRefresh: { resolved: 1 } });
+      vi.setSystemTime((slotSec + 360) * 1_000);
+      const next = makePeggedAsset({ id: "pmusd-precious-metals", symbol: "pmUSD", price: null });
+      await runPostEnrichmentPricePipeline({ assets: [next], db, syncStartSec: slotSec + 360,
+        validationContexts: createValidationContextResolver(), authoritativeOverrides: new Map(),
+        authoritativeOverrideStats: createAuthoritativeLivePriceOverrideStats(), priceCache: new Map() }, "");
+      return next;
+    };
+    const expected = { price: 0.408, priceSource: "coingecko-onchain-address", priceConfidence: "fallback",
+      agreeSources: ["coingecko-onchain-address", "defillama-contract"] };
+    const slot1 = await runSlot(now, makePeggedAsset({ id: "pmusd-precious-metals", symbol: "pmUSD", price: null }));
+    expect(slot1).toMatchObject(expected);
+    expect(await runSlot(now + 900, slot1)).toMatchObject(expected);
   });
 });

@@ -11,10 +11,12 @@ import {
   SUPPRESSED_REASON_LABELS,
   formatCoarseDurationSec,
   formatDurationSec,
+  formatUtcTimestamp,
   getAgeSec,
   getDisplayedLivePeakDeviationBps,
   getDuration,
   getLiveCurrentDeviationBps,
+  getLiveCurrentDeviationObservedAtSec,
   getLockMetadata,
   getResolution,
   getTierMeta,
@@ -87,6 +89,7 @@ export function ActiveDepegOutlook({ stablecoinId, symbol, deviationBps }: Activ
   const resolution = getResolution(row);
   const meta = getTierMeta(resolution.tier, getTierVocabulary(row));
   const current = getLiveCurrentDeviationBps(row);
+  const currentAsOf = formatUtcTimestamp(getLiveCurrentDeviationObservedAtSec(row));
   const peak = getDisplayedLivePeakDeviationBps(row);
   const ageSec = getAgeSec(row);
   const duration = getDuration(row);
@@ -145,6 +148,16 @@ export function ActiveDepegOutlook({ stablecoinId, symbol, deviationBps }: Activ
               : <>{symbol} is off its peg</>}
           </h2>
           <p className="mt-1 text-sm text-foreground/75">
+            {current != null ? (
+              <>
+                {currentAsOf ? (
+                  <>Resolver snapshot as of <span className="whitespace-nowrap tabular-nums">{currentAsOf}</span></>
+                ) : (
+                  "Resolver snapshot"
+                )}
+                {" · "}
+              </>
+            ) : null}
             {peak != null ? <>Peak <span className="tabular-nums">{formatDeviationBps(peak)}</span> {side} · </> : null}
             since {formatUtcDate(row.startedAt)}
           </p>

@@ -20,22 +20,11 @@ afterEach(() => {
 });
 
 describe("address price providers", () => {
-  it("enables no provider when the allowlist is unset", () => {
-    expect(isCoingeckoOnchainAddressEnabled({ cgApiKey: "cg" })).toBe(false);
-  });
-
   it("retains only the explicitly allowlisted CoinGecko Onchain provider", () => {
-    expect(isCoingeckoOnchainAddressEnabled({
-      enabledProviders: "coingecko-onchain-address,dexpaprika-address,moralis-address",
-      cgApiKey: "cg",
-    })).toBe(true);
-    expect(isCoingeckoOnchainAddressEnabled({
-      enabledProviders: "coingecko-onchain-address",
-    })).toBe(false);
-    expect(isCoingeckoOnchainAddressEnabled({
-      enabledProviders: "none",
-      cgApiKey: "cg",
-    })).toBe(false);
+    expect(isCoingeckoOnchainAddressEnabled({ cgApiKey: "cg" })).toBe(false);
+    expect(isCoingeckoOnchainAddressEnabled({ enabledProviders: "coingecko-onchain-address,dexpaprika-address,moralis-address", cgApiKey: "cg" })).toBe(true);
+    expect(isCoingeckoOnchainAddressEnabled({ enabledProviders: "coingecko-onchain-address" })).toBe(false);
+    expect(isCoingeckoOnchainAddressEnabled({ enabledProviders: "none", cgApiKey: "cg" })).toBe(false);
   });
 
   it("targets only missing or low-depth rows on CoinGecko-supported chains", () => {
@@ -45,98 +34,37 @@ describe("address price providers", () => {
         ["deep", { id: "deep", symbol: "DEEP", consensusSources: ["a", "b", "c"] }],
       ]),
       assets: [
-        {
-          id: "thin",
-          symbol: "THIN",
-          address: "base:0x0000000000000000000000000000000000000001",
-          price: 1,
-          priceSource: "coingecko+defillama-list",
-          priceObservedAt: 1_800_000_000,
-        },
-        {
-          id: "deep",
-          symbol: "DEEP",
-          address: "base:0x0000000000000000000000000000000000000002",
-          price: 1,
-          priceSource: "coingecko+defillama-list",
-          priceObservedAt: 1_800_000_000,
-        },
+        { id: "thin", symbol: "THIN", address: "base:0x0000000000000000000000000000000000000001", price: 1, priceSource: "coingecko+defillama-list", priceObservedAt: 1_800_000_000 },
+        { id: "deep", symbol: "DEEP", address: "base:0x0000000000000000000000000000000000000002", price: 1, priceSource: "coingecko+defillama-list", priceObservedAt: 1_800_000_000 },
       ],
     });
-
-    expect(targets).toMatchObject([{
-      stablecoinId: "thin",
-      chain: "base",
-      providerChainId: "base",
-      address: "0x0000000000000000000000000000000000000001",
-    }]);
+    expect(targets).toMatchObject([{ stablecoinId: "thin", chain: "base", providerChainId: "base", address: "0x0000000000000000000000000000000000000001" }]);
   });
 
-  it("refreshes the rows this lane prices before rows that only lost a price", () => {
+  it("refreshes lane-owned rows, then rows that lost a price, then rows this lane only corroborates", () => {
     const assets = [
-      {
-        id: "lane-owned",
-        symbol: "USDA",
-        address: "berachain:0xff12470a969dd362eb6595ffb44c82c959fe9acc",
-        price: 0.975,
-        priceSource: "coingecko-onchain-address",
-        priceConfidence: "fallback",
-        priceObservedAt: 1_800_000_000,
-      },
-      {
-        id: "priced-elsewhere",
-        symbol: "THIN",
-        address: "base:0x0000000000000000000000000000000000000001",
-        price: 1,
-        priceSource: "coingecko",
-        priceObservedAt: 1_800_000_000,
-      },
-      {
-        id: "no-price",
-        symbol: "NONE",
-        address: "base:0x0000000000000000000000000000000000000002",
-        price: null,
-      },
+      { id: "lane-owned", symbol: "USDA", address: "berachain:0xff12470a969dd362eb6595ffb44c82c959fe9acc", price: 0.975, priceSource: "coingecko-onchain-address", priceConfidence: "fallback", priceObservedAt: 1_800_000_000 },
+      { id: "corroborated-fallback", symbol: "PMUSD", address: "base:0x0000000000000000000000000000000000000003", price: 0.408, priceSource: "defillama-contract", priceConfidence: "fallback", agreeSources: ["defillama-contract", "coingecko-onchain-address"], priceObservedAt: 1_800_000_000 },
+      { id: "priced-elsewhere", symbol: "THIN", address: "base:0x0000000000000000000000000000000000000001", price: 1, priceSource: "coingecko", priceConfidence: "single-source", consensusSources: ["coingecko", "coingecko-onchain-address"], priceObservedAt: 1_800_000_000 },
+      { id: "no-price", symbol: "NONE", address: "base:0x0000000000000000000000000000000000000002", price: null },
     ];
-    const shared = {
-      assets,
-      previousAssetsById: new Map(assets.map((asset) => [asset.id, asset])),
-      nowSec: 1_800_000_100,
-    };
+    const shared = { assets, previousAssetsById: new Map(assets.map((asset) => [asset.id, asset])), nowSec: 1_800_000_100 };
 
-    expect(buildAddressPriceTargets({ ...shared, cohort: "coverage-refresh" })
-      .map((target) => target.stablecoinId))
-      .toEqual(["lane-owned", "no-price"]);
-    // The hourly cohort still discovers a thin row whose fresh price comes from
-    // somewhere else, because coverage depth rather than lifetime drives it.
+    expect(buildAddressPriceTargets({ ...shared, cohort: "coverage-refresh" }).map((target) => target.stablecoinId))
+      .toEqual(["lane-owned", "no-price", "corroborated-fallback"]);
     expect(buildAddressPriceTargets(shared).map((target) => target.stablecoinId))
-      .toEqual(expect.arrayContaining(["lane-owned", "priced-elsewhere", "no-price"]));
+      .toEqual(expect.arrayContaining(["lane-owned", "corroborated-fallback", "priced-elsewhere", "no-price"]));
   });
 
   it("narrows a hinted row to its last successful deployment and ignores unknown hints", () => {
-    const asset = {
-      id: "lane-owned",
-      symbol: "USDA",
-      address: "0x0000000000000000000000000000000000000003",
-      chains: ["ethereum", "base"],
-      price: 0.975,
-      priceSource: "coingecko-onchain-address",
-      priceConfidence: "fallback",
-      priceObservedAt: 1_800_000_000,
-    };
+    const asset = { id: "lane-owned", symbol: "USDA", address: "0x0000000000000000000000000000000000000003", chains: ["ethereum", "base"], price: 0.975, priceSource: "coingecko-onchain-address", priceConfidence: "fallback", priceObservedAt: 1_800_000_000 };
     const targetChains = (hint?: { chain: string; address: string }) =>
-      buildAddressPriceTargets({
-        assets: [asset],
-        cohort: "coverage-refresh",
-        ...(hint ? { deploymentHints: new Map([[asset.id, hint]]) } : {}),
-      }).map((target) => target.chain);
+      buildAddressPriceTargets({ assets: [asset], cohort: "coverage-refresh", ...(hint ? { deploymentHints: new Map([[asset.id, hint]]) } : {}) }).map((target) => target.chain);
 
     expect(targetChains()).toEqual(["base", "ethereum"]);
     expect(targetChains({ chain: "base", address: asset.address })).toEqual(["base"]);
-    // A hint the canonical metadata no longer lists never invents a target.
     expect(targetChains({ chain: "solana", address: asset.address })).toEqual(["base", "ethereum"]);
-    expect(targetChains({ chain: "base", address: "0x0000000000000000000000000000000000000004" }))
-      .toEqual(["base", "ethereum"]);
+    expect(targetChains({ chain: "base", address: "0x0000000000000000000000000000000000000004" })).toEqual(["base", "ethereum"]);
   });
 
   it("treats bare EVM fallback addresses as undecidable and non-EVM addresses as Solana", () => {
@@ -147,20 +75,10 @@ describe("address price providers", () => {
   it("builds targets from explicit chain hints and bare Solana addresses", () => {
     const targets = buildAddressPriceTargets({
       assets: [
-        {
-          id: "chain-hint",
-          symbol: "CHAIN",
-          address: "0x0000000000000000000000000000000000000003",
-          chains: ["Base"],
-        },
-        {
-          id: "bare-solana",
-          symbol: "SOL",
-          address: "So11111111111111111111111111111111111111112",
-        },
+        { id: "chain-hint", symbol: "CHAIN", address: "0x0000000000000000000000000000000000000003", chains: ["Base"] },
+        { id: "bare-solana", symbol: "SOL", address: "So11111111111111111111111111111111111111112" },
       ],
     });
-
     expect(targets).toEqual(expect.arrayContaining([
       expect.objectContaining({ stablecoinId: "chain-hint", chain: "base", providerChainId: "base" }),
       expect.objectContaining({ stablecoinId: "bare-solana", chain: "solana", providerChainId: "solana" }),
@@ -168,74 +86,30 @@ describe("address price providers", () => {
   });
 
   it("reports the live provider's empty and circuit-blocked branches", async () => {
-    const empty = await collectAddressPriceProviderQuotes({
-      targets: [],
-      sourceAllowed: true,
-      config: { cgApiKey: "cg" },
-      nowSec: 1_800_000_000,
-    });
+    const empty = await collectAddressPriceProviderQuotes({ targets: [], sourceAllowed: true, config: { cgApiKey: "cg" }, nowSec: 1_800_000_000 });
     expect(empty.providerOutcome).toBe("success");
     expect(empty.diagnostics[0]?.stage).toBe("no-candidates");
 
-    const blocked = await collectAddressPriceProviderQuotes({
-      targets: [makeTarget()],
-      sourceAllowed: false,
-      config: { cgApiKey: "cg" },
-      nowSec: 1_800_000_000,
-    });
+    const blocked = await collectAddressPriceProviderQuotes({ targets: [makeTarget()], sourceAllowed: false, config: { cgApiKey: "cg" }, nowSec: 1_800_000_000 });
     expect(blocked.providerOutcome).toBe("neutral");
-    expect(blocked.diagnostics[0]?.assetAttempts?.[0]).toMatchObject({
-      state: "skipped",
-      skipReason: "circuit-open",
-    });
+    expect(blocked.diagnostics[0]?.assetAttempts?.[0]).toMatchObject({ state: "skipped", skipReason: "circuit-open" });
   });
 
   it("collects successful quotes through the live single-provider path", async () => {
     const target = makeTarget();
-    const fetchMock = mockFetch([{
-      match: () => true,
-      respond: () => coingeckoResponse(target.address, "1.001", "75000", "10000"),
-    }]);
-
-    const result = await collectAddressPriceProviderQuotes({
-      targets: [target],
-      sourceAllowed: true,
-      config: { cgApiKey: "cg" },
-      nowSec: 1_800_000_000,
-    });
-
+    const fetchMock = mockFetch([{ match: () => true, respond: () => coingeckoResponse(target.address, "1.001", "75000", "10000") }]);
+    const result = await collectAddressPriceProviderQuotes({ targets: [target], sourceAllowed: true, config: { cgApiKey: "cg" }, nowSec: 1_800_000_000 });
     expect(result.providerOutcome).toBe("success");
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(result.quotesByStablecoinId.get(target.stablecoinId)).toEqual([expect.objectContaining({
-      stablecoinId: "fixture-usd",
-      source: "coingecko-onchain-address",
-      priceUsd: 1.001,
-      observedAt: 1_800_000_000,
-      observedAtMode: "local_fetch",
+      stablecoinId: "fixture-usd", source: "coingecko-onchain-address", priceUsd: 1.001, observedAt: 1_800_000_000, observedAtMode: "local_fetch",
     })]);
   });
+
   it("rejects an unreviewed CoinGecko quote without parseable liquidity", async () => {
     const target = makeTarget();
-    mockFetch([{
-      match: () => true,
-      body: {
-        data: [{
-          attributes: {
-            address: target.address,
-            price_usd: "1.001",
-          },
-        }],
-      },
-    }]);
-
-    const result = await runCoingeckoOnchainAddressProvider(
-      [target],
-      "cg-key",
-      undefined,
-      1_800_000_000,
-      Date.now() + 60_000,
-    );
-
+    mockFetch([{ match: () => true, body: { data: [{ attributes: { address: target.address, price_usd: "1.001" } }] } }]);
+    const result = await runCoingeckoOnchainAddressProvider([target], "cg-key", undefined, 1_800_000_000, Date.now() + 60_000);
     expect(result.quotes).toEqual([]);
     expect(result.rejectedTargets).toEqual({ "missing-liquidity": 1 });
   });

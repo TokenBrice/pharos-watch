@@ -15,6 +15,7 @@ import {
   formatUtcTimestamp,
   getDuration,
   getDisplayedLivePeakDeviationBps,
+  getLiveCurrentDeviationObservedAtSec,
   getLockMetadata,
   isCumulativeIncidence,
   isDdrInfrastructureReason,
@@ -93,6 +94,7 @@ export function LiveFacts({ row }: { row: DdrV2ResponseRow }) {
   const ageSec = live.ageSec;
   const peakDeviationBps = getDisplayedLivePeakDeviationBps(row);
   const deviationHeld = isLiveCurrentDeviationHeld(row);
+  const currentAsOf = formatUtcTimestamp(getLiveCurrentDeviationObservedAtSec(row));
   const status = live.eventState;
 
   return (
@@ -111,6 +113,11 @@ export function LiveFacts({ row }: { row: DdrV2ResponseRow }) {
       ) : live.currentDeviationBps != null ? (
         <span>
           Now <span className="pharos-numeric text-foreground">{formatBps(live.currentDeviationBps)}</span>
+          {currentAsOf ? (
+            <>
+              {" "}(as of <span className="whitespace-nowrap tabular-nums">{currentAsOf}</span>)
+            </>
+          ) : null}
         </span>
       ) : null}
       {status ? <span className="text-foreground/70">{DDR_EVENT_STATE_LABELS[status]}</span> : null}

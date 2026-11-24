@@ -395,6 +395,10 @@ export async function fetchGuardedCurvePoolPrice(
   context: LivePriceContext,
   signal?: AbortSignal,
 ): Promise<CurrentPriceOverride | null> {
+  const reject = (reason: string): null => {
+    context.lastRejectionReason = `${config.source}:${reason}`;
+    return null;
+  };
   const quoteParent = resolveTrustedOverrideParent(
     context,
     USDC_CIRCLE_ID,
@@ -404,19 +408,21 @@ export async function fetchGuardedCurvePoolPrice(
       allowFreshReplaySafeSingleSourceParent: true,
     },
   );
-  if (!quoteParent) return null;
+  if (!quoteParent) return reject("parent-unavailable");
   const maxObservationAgeSec = getPricingSourceRegistryEntry(config.source)?.maxTrustedAgeSec;
-  if (maxObservationAgeSec == null || Math.floor(Date.now() / 1000) - quoteParent.trustedParent.observedAt > maxObservationAgeSec) return null;
+  if (maxObservationAgeSec == null || Math.floor(Date.now() / 1000) - quoteParent.trustedParent.observedAt > maxObservationAgeSec) {
+    return reject("parent-age");
+  }
 
   // Configured Worker RPCs first; public endpoints are only the fallback tail.
   const rpcOptions = { signal, chainRpcs: context.chainRpcs, extraRpcUrls: getPublicFallbackRpcUrls(config.chain) };
   const blockNumber = await fetchEvmBlockNumber(config.chain, rpcOptions);
-  if (blockNumber == null) return null;
+  if (blockNumber == null) return reject("block-unavailable");
   const blockTimestamp = await fetchEvmBlockTimestamp(config.chain, blockNumber, rpcOptions);
   const nowSec = Math.floor(Date.now() / 1000);
-  if (blockTimestamp == null || blockTimestamp > nowSec + 60 || nowSec - blockTimestamp > config.maxBlockAgeSec) {
-    return null;
-  }
+  if (blockTimestamp == null) return reject("block-age-unavailable");
+  if (blockTimestamp > nowSec + 60) return reject("block-age-future");
+  if (nowSec - blockTimestamp > config.maxBlockAgeSec) return reject("block-age-stale");
 
   const encodeQuote = (inputTokens: number): string => {
     const inputRaw = BigInt(inputTokens) * 10n ** BigInt(config.quoteInputDecimals);
@@ -432,37 +438,47 @@ export async function fetchGuardedCurvePoolPrice(
     method: "eth_call",
     params: [{ to: config.pool, data }, `0x${blockNumber.toString(16)}`],
   })), rpcOptions);
-  if (!results || results.length !== 6) return null;
+  if (!results || results.length !== 6) return reject("state-unavailable");
   const [coin0Raw, coin1Raw, balance0Raw, balance1Raw, smallQuoteRaw, impactQuoteRaw] = results.map(
     (value) => typeof value === "string" && isHexResult(value) ? value : null,
   );
+  if (
+    coin0Raw == null || coin1Raw == null ||
+    balance0Raw == null || balance1Raw == null ||
+    smallQuoteRaw == null || impactQuoteRaw == null
+  ) {
+    return reject("state-unavailable");
+  }
 
-  if (decodeAddressWord(coin0Raw) !== config.tokens[0].address || decodeAddressWord(coin1Raw) !== config.tokens[1].address) return null;
-  const balance0 = balance0Raw ? decodeUint256WordBigInt(balance0Raw) : null;
-  const balance1 = balance1Raw ? decodeUint256WordBigInt(balance1Raw) : null;
-  if (balance0 == null || balance1 == null) return null;
+  const coin0 = decodeAddressWord(coin0Raw);
+  const coin1 = decodeAddressWord(coin1Raw);
+  if (coin0 == null || coin1 == null) return reject("state-malformed");
+  if (coin0 !== config.tokens[0].address || coin1 !== config.tokens[1].address) return reject("identity");
+  const balance0 = decodeUint256WordBigInt(balance0Raw);
+  const balance1 = decodeUint256WordBigInt(balance1Raw);
+  if (balance0 == null || balance1 == null) return reject("state-malformed");
   if (
     decimalFromRaw(balance0, config.tokens[0].decimals) < config.tokens[0].minBalance ||
     decimalFromRaw(balance1, config.tokens[1].decimals) < config.tokens[1].minBalance
   ) {
-    return null;
+    return reject("inventory");
   }
 
   const smallPrice = quoteUsdcPrice(
-    smallQuoteRaw ? decodeUint256WordBigInt(smallQuoteRaw) : null,
+    decodeUint256WordBigInt(smallQuoteRaw),
     config.smallQuoteTokens,
   );
   const impactPrice = quoteUsdcPrice(
-    impactQuoteRaw ? decodeUint256WordBigInt(impactQuoteRaw) : null,
+    decodeUint256WordBigInt(impactQuoteRaw),
     config.impactQuoteTokens,
   );
-  if (smallPrice == null || impactPrice == null) return null;
-  if (Math.abs(impactPrice - smallPrice) / smallPrice > config.maxQuoteImpactRatio) return null;
+  if (smallPrice == null || impactPrice == null) return reject("quote-invalid");
+  if (Math.abs(impactPrice - smallPrice) / smallPrice > config.maxQuoteImpactRatio) return reject("quote-depth");
 
   // Multiplication must preserve the older dependency clock under this route's budget.
   const parentClockSelected = quoteParent.trustedParent.observedAt < blockTimestamp;
   const observedAt = parentClockSelected ? quoteParent.trustedParent.observedAt : blockTimestamp;
-  if (Math.floor(Date.now() / 1000) - observedAt > maxObservationAgeSec) return null;
+  if (Math.floor(Date.now() / 1000) - observedAt > maxObservationAgeSec) return reject("dependency-age");
   return {
     price: smallPrice * quoteParent.trustedParent.price,
     source: config.source,
@@ -754,6 +770,7 @@ export async function resolveVaultAssetsPerShareWithCache(
   // stage or run rescues with it (R2). An exploited vault keeps no pre-exploit price.
   if (liveError == null && !context.vaultRateCacheOnly) {
     context.vaultRateWrites?.set(asset.id, { rate: 0, observedAt: nowSec });
+    context.lastRejectionReason = "vault-rate-rejected";
     return null;
   }
 
