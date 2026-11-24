@@ -58,11 +58,11 @@ Use a variable reference and neutral Variable labeling for VAR. Active non-NAV O
 
 ### Listing Class And Lifecycle
 
-`shared/data/stablecoins/listing-decisions.json` assigns exactly one listing class to every catalog ID, and the compact ledger stores only that class mapping. Listing class is separate from lifecycle, which stays on the per-coin catalog row. Aggregate helpers include active core and cash-equivalent rows, exclude variants from parent-inclusive totals, and report stable-value investments separately.
+`shared/data/stablecoins/listing-decisions.json` assigns exactly one listing class to every catalog ID, and the compact ledger stores only that class mapping. Listing class is separate from lifecycle, which stays on the per-coin catalog row. Aggregate helpers include active `core-stablecoin` rows only, exclude `stablecoin-variant` rows from parent-inclusive totals, and keep `tokenized-fund` and `review-hold` rows outside core monetary aggregates.
 
 [Stablecoin Listing Policy](https://pharos.watch/docs/listing-policy/) owns class tests, precedence, lifecycle, eligibility and review rules.
 
-An unresolved mechanism review cannot validate its currently authored class by identity. CI preserves delisted, variant, credit-fund, and NAV/T-bill precedence first; a remaining unresolved mechanism stays `stable-value-investment` until resolved rather than entering core aggregates.
+An unresolved mechanism review cannot validate a `core-stablecoin` assignment by identity. CI preserves delisted, variant, and tokenized-fund precedence first; a remaining unresolved mechanism stays `review-hold` until resolved rather than entering core aggregates.
 
 ### Additional Metadata
 

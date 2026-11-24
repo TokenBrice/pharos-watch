@@ -303,7 +303,7 @@ Mapping cheatsheet:
 - `cdp`: crypto-backed + decentralized + overcollateralized vaults (DAI, LUSD, crvUSD)
 - `synthetic-delta-neutral`: crypto + hedging in `pegMechanism` (USDe, USR)
 - `algorithmic`: mechanism archetype for reflexive/programmatic peg mechanisms; it is not tied to `flags.backing`. Current active entries with this archetype remain classified by actual collateral base.
-- `rwa-credit-fund`: tokenized share of a managed credit/fund book whose value comes from NAV rather than a redeemable cash float; it selects `stable-value-investment` for non-variants. An unresolved mechanism review can also select that class under [listing-class precedence](../listing-policy.md#listing-classes).
+- `rwa-credit-fund`: tokenized share of a managed credit/fund book whose value comes from NAV rather than a redeemable cash float; non-variants receive an authored `tokenized-fund` decision under [listing-class precedence](../listing-policy.md#listing-classes), where unresolved mechanism reviews sit in `review-hold` until resolved.
 - `commodity-claim`: redeemable claim on allocated physical commodity (PAXG, XAUT).
 
 Wrappers (with `variantOf` set) generally inherit the parent's archetype; omit on the child if uncertain.

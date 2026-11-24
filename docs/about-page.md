@@ -20,7 +20,7 @@ Use shared `src/lib/nav-config.ts`, not a copied menu roster. Peg Tracker links 
 
 ## Content Notes
 
-`DATA_SOURCE_GROUPS` is the current visible disclosure roster. Adding a major source or externally visible feature updates its runtime copy alongside the owning domain contract. Counts and current memberships derive from shared projections/registries, never a hand-counted doc list. The hero headline is the active universe (`HEADLINE_STABLECOIN_COUNT`, "Active stablecoins"); its KPI strip decomposes it into Core, Variants and Stable-value, then adds Upcoming and a Sources count outside that sum. Upcoming and the "upcoming launches" copy count pre-launch coins that have not launched, as `/upcoming/` and `/learn/mechanisms/` do: a launched row awaiting data is live, not upcoming. Cemetery uses merged curated-plus-frozen count, matching public export, not curated JSON alone.
+`DATA_SOURCE_GROUPS` is the current visible disclosure roster. Adding a major source or externally visible feature updates its runtime copy alongside the owning domain contract. Counts and current memberships derive from shared projections/registries, never a hand-counted doc list. The hero headline is the active stablecoin universe (`HEADLINE_STABLECOIN_COUNT`, "Active stablecoins": core, variants, and review-hold, excluding tokenized funds); its KPI strip shows Core and Variants alongside Tokenized funds, Upcoming, and a Sources count outside that sum. Upcoming and the "upcoming launches" copy count pre-launch coins that have not launched, as `/upcoming/` and `/learn/mechanisms/` do: a launched row awaiting data is live, not upcoming. Cemetery uses merged curated-plus-frozen count, matching public export, not curated JSON alone.
 
 Midas mTBILL source disclosure distinguishes its registry-committed issuer checkpoint and aggregate from the matching historical API composition rows. Keep issuer-reported provenance and original-date freshness explicit; SAVE origin verification grants no independent financial assurance, custody allocation or redemption capacity. Ondo USDY's dated issuer portfolio supplies fund-level composition separately from manual LLC-report maintenance; composition grants no all-USDY liability reconciliation, financial assurance or redemption capacity.
 
@@ -38,7 +38,7 @@ Source-family disclosure must remain honest about depth:
 - [Redemption](./redemption-backstops.md) owns diagnostic versus measured capacity, modeled routes and direct queue/controller admission. Reserve composition, scoped exit telemetry and executable holder proceeds are not interchangeable.
 - Regulatory source copy discloses MiCA NCA/register and GENIUS implementation-watch sources; EUR reference coverage names eurostablecoins.xyz where consumed. L2BEAT is static chain/bridge-review evidence, not a live Worker fetch.
 
-PSI copy describes its current cadence and formula inputs (active-depeg severity, cap breadth, DEWS breadth, seven-day cap trend) through [Stability Index](./stability-index.md), using the core stablecoin/cash-equivalent aggregate, excluding tracked variants/investments.
+PSI copy describes its current cadence and formula inputs (active-depeg severity, cap breadth, DEWS breadth, seven-day cap trend) through [Stability Index](./stability-index.md), using the core stablecoin aggregate, excluding tracked variants, tokenized funds, and review-hold listings.
 
 ## Update Rules
 
