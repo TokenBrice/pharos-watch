@@ -35,6 +35,10 @@ export interface NonUsdShareMemberRule {
   inactiveFrom: number | null;
 }
 
+export type NonUsdShareCoinMeta = Pick<StablecoinMeta, "id" | "status" | "frozenAt"> & {
+  flags: Pick<StablecoinMeta["flags"], "pegCurrency">;
+};
+
 /**
  * Build date-fenced core membership for `/api/non-usd-share`:
  * - Dates strictly before `cutoverSec` use the frozen listing-policy v1 membership.
@@ -42,13 +46,14 @@ export interface NonUsdShareMemberRule {
  * Frozen rows contribute only before their recorded lifecycle cutoff.
  */
 export function buildNonUsdShareCoreMembers(options: {
-  coins?: readonly Pick<StablecoinMeta, "id" | "status" | "frozenAt" | "flags">[];
+  coins?: readonly NonUsdShareCoinMeta[];
   v1ActiveIds?: ReadonlySet<string>;
   v1NonActiveIds?: ReadonlySet<string>;
   currentCoreIds?: ReadonlySet<string>;
   cutoverSec?: number;
 } = {}): Map<string, NonUsdShareMemberRule> {
-  const coins = options.coins ?? WORKER_TRACKED_STABLECOINS;
+  const coins: readonly NonUsdShareCoinMeta[] =
+    options.coins ?? WORKER_TRACKED_STABLECOINS;
   const v1ActiveIds = options.v1ActiveIds ?? CORE_AGGREGATE_V1_MEMBER_IDS;
   const v1NonActiveIds = options.v1NonActiveIds ?? CORE_AGGREGATE_V1_NON_ACTIVE_MEMBER_IDS;
   const currentCoreIds = options.currentCoreIds

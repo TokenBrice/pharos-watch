@@ -6,7 +6,7 @@ import { CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC } from "@shared/lib/stablecoin
 import { CORE_AGGREGATE_V1_MEMBER_IDS } from "@shared/lib/stablecoins/aggregate-universe-v1";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { findAsOfSnapshot, MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC } from "@shared/lib/rate-series";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { StablecoinChartPoint } from "@shared/types/supply";
 
 export interface StructuralSupplementalChartConfig {
