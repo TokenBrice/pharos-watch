@@ -109,6 +109,18 @@ export const PRICING_SOURCE_REGISTRY_DEX_SEARCH = [
     defaultObservedAtMode: "upstream",
   }),
   definePricingSource(PRICING_SOURCE_PRESETS.softDex, {
+    key: "uniswap-v2-exact",
+    label: "Uniswap V2 exact-pool quote",
+    shortLabel: "Uniswap V2 exact",
+    depegSourceFamily: "dex:uniswap-v2",
+    maxTrustedAgeSec: 5 * 60,
+    defaultWeight: 1,
+    isReplaySafe: false,
+    freshnessKind: "upstream",
+    supportsUpstreamObservedAt: true,
+    defaultObservedAtMode: "upstream",
+  }),
+  definePricingSource(PRICING_SOURCE_PRESETS.softDex, {
     key: "uniswap-v3-dex",
     label: "Uniswap V3",
     shortLabel: "Uniswap V3",

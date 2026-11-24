@@ -181,22 +181,20 @@ describe("authoritative-price-sources", () => {
       ["syusd-aegis", "yusd-aegis", "0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64", 18, 1_041_919_601_032_091_731n, 1.0419196],
       ["sbold-k3-capital", "bold-liquity", "0x50bd66d59911f5e086ec87ae43c811e0d059dd11", 18, 1_041_000_000_000_000_000n, 1.041],
       ["ybold-yearn", "bold-liquity", "0x9f4330700a36b29952869fac9b33f45eedd8a3d8", 18, 1_000_000_000_000_000_000n, 1],
+      ["stusds-sky", "usds-sky", "0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9", 18, 1_091_926_607_975_342_696n, 1.0919266],
+      ["steakeurcv-steakhouse", "eurcv-societe-generale-forge", "0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f", 18, 1_029_725_808_929_638_800n, 1.0297258],
     ];
 
     for (const [id, parentId, vault, vaultDecimals, outputRaw, expectedRatio] of cases) {
       fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${outputRaw.toString(16).padStart(64, "0")}`);
       const overrides = await fetchLiveOverrides([
         asset(id, { circulating: { peggedUSD: 1_000_000 } }),
-        freshParent(parentId, 1, "coingecko+pyth", { nowSec }),
+        freshParent(parentId, 1, parentId === "eurcv-societe-generale-forge" ? "coingecko+kraken" : "coingecko+pyth", { nowSec }),
       ]);
       expect(fetchEvmCallHexAtBlockMock).toHaveBeenLastCalledWith(
-        "ethereum", vault,
-        `0x07a2d13a${(10n ** BigInt(vaultDecimals)).toString(16).padStart(64, "0")}`,
-        "latest", expect.any(Object),
+        "ethereum", vault, `0x07a2d13a${(10n ** BigInt(vaultDecimals)).toString(16).padStart(64, "0")}`, "latest", expect.any(Object),
       );
-      expect(overrides.get(id)).toMatchObject({
-        source: "protocol-redeem", confidence: "high", metadata: { inheritedFrom: parentId },
-      });
+      expect(overrides.get(id)).toMatchObject({ source: "protocol-redeem", confidence: "high", metadata: { inheritedFrom: parentId } });
       expect(overrides.get(id)?.price).toBeCloseTo(expectedRatio, 6);
     }
   });

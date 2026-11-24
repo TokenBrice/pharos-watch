@@ -280,8 +280,8 @@ describe("YieldAnalysisClient", () => {
       expected: "Yield tracking is expected for this stablecoin, but the latest ranking snapshot is not available yet.",
     },
     {
-      id: "bd-basedollar",
-      coin: staticCoin("bd-basedollar", "Base Dollar", "BD", false),
+      id: "usdc-circle",
+      coin: staticCoin("usdc-circle", "USD Coin", "USDC", false),
       expected:
         "This stablecoin doesn't currently have yield data tracked. The protocol may not expose a yield-bearing pool, or the source is not on the curated allowlist.",
     },

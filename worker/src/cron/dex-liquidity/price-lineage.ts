@@ -1,6 +1,12 @@
 import { isCanonicalPricePoolKey } from "@shared/lib/pricing-source-pool-provenance";
 import { getPricingSourceRegistryEntry, PRICING_SOURCE_REGISTRY } from "@shared/lib/pricing-source-registry";
-import { BINANCE_MARKETS, BITSTAMP_MARKETS, COINBASE_PRODUCTS, KRAKEN_MARKETS } from "@shared/lib/pricing-provider-config";
+import {
+  BINANCE_MARKETS,
+  BITSTAMP_MARKETS,
+  COINBASE_PRODUCTS,
+  KRAKEN_MARKETS,
+  krakenMarketMatchesAsset,
+} from "@shared/lib/pricing-provider-config";
 import { CURVE_POOL_CONFIGS, type CurvePoolConfig } from "@shared/lib/curve-pool-configs";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { canonicalTronAddress } from "@shared/lib/tron-address";
@@ -80,7 +86,7 @@ const hardMarkets = PRICING_SOURCE_REGISTRY.filter((source) => source.trustTier 
 
 export function configuredPrimaryUpstreamKeys(stablecoinId: string): Set<string> {
   const symbol = WORKER_TRACKED_META_BY_ID.get(stablecoinId)?.symbol.toUpperCase();
-  const keys = new Set(hardMarkets.flatMap(({ key }) => directUsdVenueKeys(key, symbol) ?? []));
+  const keys = new Set(hardMarkets.flatMap(({ key }) => directUsdVenueKeys(key, symbol, stablecoinId) ?? []));
   const visited = new Set<string>();
   const queue = [stablecoinId];
   while (queue.length > 0) {
@@ -106,13 +112,18 @@ export function admitsRollbackDexVote(upstreamKeys: readonly string[] | undefine
 }
 
 /** Coinbase stablecoin-quoted books also depend on the Bitstamp USD conversion. */
-export function directUsdVenueKeys(source: string, symbol: string | undefined): string[] | undefined {
+export function directUsdVenueKeys(source: string, symbol: string | undefined, stablecoinId?: string): string[] | undefined {
   const normalizedSymbol = symbol?.trim().toUpperCase();
   if (!normalizedSymbol) return;
   if (source === "binance" && BINANCE_MARKETS.some((row) => row.symbol === normalizedSymbol && row.pair === normalizedSymbol + "USD")) {
     return ["venue:binance"];
   }
-  if (source === "kraken" && KRAKEN_MARKETS.some((row) => row.symbol === normalizedSymbol && row.requestPair === normalizedSymbol + "USD")) {
+  if (
+    source === "kraken" &&
+    KRAKEN_MARKETS.some(
+      (row) => krakenMarketMatchesAsset(row, normalizedSymbol, stablecoinId) && row.requestPair === normalizedSymbol + "USD",
+    )
+  ) {
     return ["venue:kraken"];
   }
   if (source === "bitstamp" && BITSTAMP_MARKETS.some((row) => row.symbol === normalizedSymbol && row.pair === normalizedSymbol + "/USD")) {
@@ -142,7 +153,7 @@ export function getDexObservationLineage(row: DexPriceObs): DexObservationLineag
   if (!isCanonicalPricePoolKey(key)) return null;
   const published = readDexPriceLineage(mark);
   const symbol = WORKER_TRACKED_META_BY_ID.get(mark.stablecoinId)?.symbol;
-  const venueKeys = mark.source.split("+").map((source) => directUsdVenueKeys(source, symbol));
+  const venueKeys = mark.source.split("+").map((source) => directUsdVenueKeys(source, symbol, mark.stablecoinId));
   if (published.upstreamKeys?.length === 0 || (published.pricePoolKeys?.length === 0 && !published.upstreamKeys)) return null;
   if (!published.upstreamKeys?.length && venueKeys.some((keys) => keys == null)) return null;
   const inferredVenues = venueKeys.flatMap((keys) => keys ?? []);

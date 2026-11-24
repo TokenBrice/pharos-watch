@@ -24,6 +24,7 @@ import {
   isHardPricingTrustTier,
   isListAggregatorOnlyPair,
 } from "@shared/lib/pricing-source-policy";
+import { matchesCuratedKrakenAsset } from "@shared/lib/pricing-provider-config";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { validatePricingSourceFreshness } from "../../lib/pricing-source-freshness";
 import {
@@ -217,7 +218,10 @@ export function buildPrimaryConsensusResults(params: {
     }
 
     const symbol = asset.symbol.toUpperCase();
-    const krakenUpstreamObservedAt = params.quoteMaps.krakenObservedAtBySymbol.get(symbol);
+    const krakenAllowedForAsset = matchesCuratedKrakenAsset(symbol, asset.id);
+    const krakenUpstreamObservedAt = krakenAllowedForAsset
+      ? params.quoteMaps.krakenObservedAtBySymbol.get(symbol)
+      : undefined;
     const hasKrakenUpstreamClock = krakenUpstreamObservedAt != null;
     // The depth book may age out while the remaining providers are collected;
     // a stale book stays rejected and is never re-clocked to local fetch time.
@@ -236,14 +240,18 @@ export function buildPrimaryConsensusResults(params: {
       dlListQuote,
       binancePrice: params.quoteMaps.binancePrices.get(asset.symbol.toUpperCase()) ?? null,
       binanceObservedAt: params.quoteMaps.binanceObservedAt,
-      krakenPrice: hasKrakenUpstreamClock
-        ? (freshKrakenUpstreamClock != null ? (params.quoteMaps.krakenPrices.get(symbol) ?? null) : null)
-        : (params.quoteMaps.krakenPrices.get(symbol) ?? null),
-      krakenObservedAt: hasKrakenUpstreamClock ? null : params.quoteMaps.krakenObservedAt,
+      krakenPrice: !krakenAllowedForAsset
+        ? null
+        : hasKrakenUpstreamClock
+          ? (freshKrakenUpstreamClock != null ? (params.quoteMaps.krakenPrices.get(symbol) ?? null) : null)
+          : (params.quoteMaps.krakenPrices.get(symbol) ?? null),
+      krakenObservedAt: !krakenAllowedForAsset || hasKrakenUpstreamClock ? null : params.quoteMaps.krakenObservedAt,
       krakenMarketObservedAt: freshKrakenUpstreamClock,
-      krakenQuoteBasis: hasKrakenUpstreamClock
-        ? (freshKrakenUpstreamClock != null ? "bid-ask-midpoint" : undefined)
-        : params.quoteMaps.krakenQuoteBasisBySymbol.get(symbol),
+      krakenQuoteBasis: !krakenAllowedForAsset
+        ? undefined
+        : hasKrakenUpstreamClock
+          ? (freshKrakenUpstreamClock != null ? "bid-ask-midpoint" : undefined)
+          : params.quoteMaps.krakenQuoteBasisBySymbol.get(symbol),
       bitstampPrice: params.quoteMaps.bitstampPrices.get(asset.symbol.toUpperCase()) ?? null,
       bitstampObservedAt: params.quoteMaps.bitstampObservedAtBySymbol.get(asset.symbol.toUpperCase()) ?? null,
       coinbasePrice: params.quoteMaps.coinbasePrices.get(asset.symbol.toUpperCase()) ?? null,

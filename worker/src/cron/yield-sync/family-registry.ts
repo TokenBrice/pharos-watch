@@ -148,6 +148,7 @@ const YIELD_SOURCE_KEY_ROUTES: readonly YieldSourceKeyRoute[] = [
     { routeOrder: 1, prefix: "protocol-api:vaults-fyi:", venueProtocol: "vaults-fyi", chainSegmentIndex: 2, family: null },
     { routeOrder: 2, prefix: "protocol-api:bima-susbd", venueProtocol: "bima", chainSegmentIndex: null, family: null },
     { routeOrder: 3, prefix: "protocol-api:etherfuse-cetes-current-issuance", venueProtocol: "etherfuse", chainSegmentIndex: null, family: null },
+    { routeOrder: 12, prefix: "onchain:bd-basedollar", venueProtocol: "base-dollar", chainSegmentIndex: null, family: null },
     { routeOrder: OPTIONAL_YIELD_SOURCES.ondo.routeOrder, prefix: OPTIONAL_YIELD_SOURCES.ondo.legacySourceKey,
       venueProtocol: OPTIONAL_YIELD_SOURCES.ondo.venueProtocol, chainSegmentIndex: null, family: null },
   ].sort((a, b) => a.routeOrder - b.routeOrder).map(({ routeOrder: _routeOrder, ...route }) => route),

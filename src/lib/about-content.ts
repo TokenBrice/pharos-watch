@@ -69,7 +69,7 @@ export const DATA_SOURCE_GROUPS = [
     label: "Supply & price",
     summary: "Market aggregators, centralized exchanges, on-chain oracles, NAV publishers, and direct DEX quotes.",
     sources:
-      "DefiLlama, CoinGecko, GeckoTerminal, CoinMarketCap, DexScreener, DexPaprika, Alchemy Prices API, Moralis Token Prices, Birdeye, Jupiter Price API, Binance, Kraken spot, Bitstamp, Coinbase, Kava Pricefeed, Chainlink NAV feeds, Superstate and JPMorgan money-market NAV feeds, Curve, Fluid, Balancer, Uniswap V3/V4, Raydium, Orca, Meteora, PancakeSwap, Aerodrome, Velodrome, Aero, Mento, Zephyr Scanner, Movement REST, direct protocol redemption or FX-par quotes, and Hive internal market (HBD/HIVE), with a CoinGecko HIVE/USD conversion dependency (one soft CoinGecko-family observation, not two independent votes).",
+      "DefiLlama, CoinGecko, GeckoTerminal, CoinMarketCap, DexScreener, DexPaprika, Alchemy Prices API, Moralis Token Prices, Birdeye, Jupiter Price API, Binance, Kraken spot, Bitstamp, Coinbase, Kava Pricefeed, Chainlink NAV feeds, Superstate and JPMorgan money-market NAV feeds, Curve, Fluid, Balancer, Uniswap V2/V3/V4, Raydium, Orca, Meteora, PancakeSwap, Aerodrome, Velodrome, Aero, Mento, Zephyr Scanner, Movement REST, direct protocol redemption or FX-par quotes, and Hive internal market (HBD/HIVE), with a CoinGecko HIVE/USD conversion dependency (one soft CoinGecko-family observation, not two independent votes).",
     documentation: { label: "Hive market API documentation", href: "https://developers.hive.io/apidefinitions/#condenser_api.get_order_book" },
   },
   {

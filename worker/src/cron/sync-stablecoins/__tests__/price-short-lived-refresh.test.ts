@@ -54,13 +54,13 @@ describe("short-lived fallback refresh", () => {
 
   it("skips reviewed gaps with stale or merely corroborating labels, keeps current source-owned/corroborated rows, and keeps missing M/XO unreviewed", async () => {
     expect([...resolveStablecoinPriceGapReviews(["m-m0", "xo-exodus"], Date.UTC(2026, 9, 16) / 1000).activeById.keys()]).toEqual([]);
-    const reviewedGapIds = new Set(["m-m0", "xo-exodus", "usdk-kast", "usda-avalon", "wusd-worldwide", "usdn-smardex", "aid-gaib"]);
+    const reviewedGapIds = new Set(["m-m0", "xo-exodus", "usdk-kast", "usda-avalon", "dllr-sovryn", "usdn-smardex", "aid-gaib"]);
     await runShortLivedPriceRefresh({
       assets: [
         priced("m-m0", "coingecko+defillama-contract"), priced("xo-exodus", "coingecko+jupiter"),
         makePeggedAsset({ id: "usdk-kast", price: null }),
         { ...priced("usda-avalon", "defillama-contract"), price: null },
-        { ...priced("wusd-worldwide", "jupiter"), price: null },
+        { ...priced("dllr-sovryn", "jupiter"), price: null },
         { ...priced("usdn-smardex", "defillama-contract+jupiter"), priceObservedAt: null, priceUpdatedAt: null, priceSyncedAt: null },
         { ...priced("pmusd-precious-metals", "coingecko-onchain-address"), agreeSources: ["coingecko-onchain-address", "defillama-contract"] },
         { ...priced("aid-gaib", "coingecko-onchain-address"), agreeSources: ["coingecko-onchain-address", "defillama-contract"] },

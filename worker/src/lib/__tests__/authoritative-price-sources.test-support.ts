@@ -1,10 +1,17 @@
-import { vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { gunzipSync } from "node:zlib";
+import { expect, vi } from "vitest";
 import { mockRegistry } from "../../test-helpers/cron";
 import type * as WorkerRuntimeRegistry from "@shared/lib/stablecoins/worker-runtime-registry";
+import type { LivePriceContext } from "../authoritative-price-sources/helpers";
+import deuroRawCode from "./fixtures/deuro-bridge-code.json";
+import usduRuntime from "./fixtures/usdu-uniswap-v3-runtime.json";
 
 export const fetchEvmCallHexAtBlockMock = vi.fn();
 export const fetchEvmRpcBatchMock = vi.fn();
 export const fetchEvmBlockNumberMock = vi.fn();
+export const fetchEvmBlockHeaderMock = vi.fn();
 export const fetchEvmBlockTimestampMock = vi.fn();
 export const resolveClosestBlockAtOrBeforeTimestampMock = vi.fn();
 
@@ -116,6 +123,7 @@ vi.mock("../evm-rpc", () => ({
   fetchEvmRpcBatch: (...args: unknown[]) => fetchEvmRpcBatchMock(...args),
   fetchEvmCallHexAtBlock: (...args: unknown[]) => fetchEvmCallHexAtBlockMock(...args),
   fetchEvmBlockNumber: (...args: unknown[]) => fetchEvmBlockNumberMock(...args),
+  fetchEvmBlockHeader: (...args: unknown[]) => fetchEvmBlockHeaderMock(...args),
   fetchEvmBlockTimestamp: (...args: unknown[]) => fetchEvmBlockTimestampMock(...args),
   resolveClosestBlockAtOrBeforeTimestamp: (...args: unknown[]) => resolveClosestBlockAtOrBeforeTimestampMock(...args),
   isHexResult: (value: string | null | undefined): value is `0x${string}` => typeof value === "string" && /^0x[0-9a-fA-F]*$/.test(value),
@@ -124,6 +132,11 @@ vi.mock("../evm-rpc", () => ({
 export function resetAuthoritativePriceSourceMocks(): void {
   fetchEvmCallHexAtBlockMock.mockReset();
   fetchEvmBlockNumberMock.mockReset().mockResolvedValue(33_333_333);
+  fetchEvmBlockHeaderMock.mockReset().mockImplementation(async () => ({
+    number: 33_333_333,
+    hash: "0xabc" as const,
+    timestamp: Math.floor(Date.now() / 1_000) - 30,
+  }));
   fetchEvmBlockTimestampMock.mockReset().mockImplementation(async () => Math.floor(Date.now() / 1_000) - 30);
   resolveClosestBlockAtOrBeforeTimestampMock.mockReset();
 }
@@ -274,6 +287,7 @@ export function fetchLiveOverrides(
   options?: AuthoritativeLivePriceOverrideOptions,
   validationReferences?: Parameters<typeof fetchAuthoritativeLivePriceOverrides>[2],
 ): Promise<Map<string, CurrentPriceOverride>> {
+
   return fetchAuthoritativeLivePriceOverrides(assets, undefined, validationReferences, options);
 }
 
@@ -354,3 +368,337 @@ export const WAVE2_USDU_POOL: readonly string[] = [
 export const WAVE2_USDU_BAD: readonly (readonly [number, string])[] = [
   [0, WAVE2_USDU_POOL[1]], [2, uWord(999_000_000n)], [3, uWord(999n * 10n ** 18n)], [5, uWord(90_000_000n)],
 ];
+
+export const A7A5_UNISWAP_V2_FIXTURE = {
+  id: "a7a5-old-vector",
+  now: 1_795_531_200,
+  block: 26_485_668,
+  a7a5: "0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9",
+  usdt: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+  pair: "0x14d7aab5b4bca6a02e52ac22520b033bf35f4091",
+  factory: "0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f",
+  reserve0: 3_017_951_809_083n,
+  reserve1: 35_422_280_840n,
+} as const;
+
+let cachedA7a5RuntimeCodes: readonly string[] | null = null;
+export function getA7a5RuntimeCodes(): readonly string[] {
+  if (!cachedA7a5RuntimeCodes) {
+    const path = fileURLToPath(new URL("./fixtures/a7a5-uniswap-v2-runtime.json.gz", import.meta.url).href);
+    const entries = JSON.parse(gunzipSync(readFileSync(path)).toString("utf8")) as { label: string; code: string }[];
+    cachedA7a5RuntimeCodes = [
+      entries.find((row) => row.label === "a7a5")!.code,
+      usduRuntime.find((row) => row.label === "usdt")!.code,
+      entries.find((row) => row.label === "pair")!.code,
+      entries.find((row) => row.label === "factory")!.code,
+    ];
+  }
+  return cachedA7a5RuntimeCodes;
+}
+
+export function encodeA7a5Abi(types: string, values: readonly unknown[]): `0x${string}` {
+  return encodeAbiParameters(parseAbiParameters(types), values);
+}
+
+export function makeA7a5ParentContext(
+  overrides: Partial<PeggedAsset> & { nowSec?: number; observedAt?: number | null } = {},
+) {
+  return {
+    assetsById: new Map([[
+      "usdt-tether",
+      freshParent("usdt-tether", 0.999215, "coingecko", {
+        nowSec: A7A5_UNISWAP_V2_FIXTURE.now,
+        priceConfidence: "single-source",
+        observedAt: A7A5_UNISWAP_V2_FIXTURE.now - 20,
+        priceObservedAtMode: "upstream",
+        ...overrides,
+      }),
+    ]]),
+  };
+}
+
+export function mockA7a5UniswapV2Rpc(overrides: Record<number, `0x${string}`> = {}): void {
+  const { now, a7a5, usdt, pair, factory, reserve0, reserve1 } = A7A5_UNISWAP_V2_FIXTURE;
+  const rows: `0x${string}`[] = [
+    encodeA7a5Abi("address", [a7a5]),
+    encodeA7a5Abi("address", [usdt]),
+    encodeA7a5Abi("address", [factory]),
+    encodeA7a5Abi("address", [pair]),
+    encodeA7a5Abi("uint112,uint112,uint32", [reserve0, reserve1, now - 3600]),
+    encodeA7a5Abi("uint256", [6n]),
+    encodeA7a5Abi("uint256", [6n]),
+    encodeA7a5Abi("bool", [false]),
+    encodeA7a5Abi("bool", [false]),
+    encodeA7a5Abi("bool", [false]),
+    encodeA7a5Abi("bool", [false]),
+    encodeA7a5Abi("bool", [false]),
+    encodeA7a5Abi("uint256", [0n]),
+    encodeA7a5Abi("uint256", [0n]),
+    encodeA7a5Abi("uint256", [reserve0]),
+    encodeA7a5Abi("uint256", [reserve1]),
+  ];
+  for (const [index, value] of Object.entries(overrides)) rows[Number(index)] = value;
+  const codes = getA7a5RuntimeCodes();
+  fetchEvmRpcBatchMock.mockReset().mockImplementation(async (_chain, calls: { method: string }[]) =>
+    calls[0]?.method === "eth_getCode" ? codes : rows);
+}
+
+const aidRawCode = JSON.parse(
+  gunzipSync(readFileSync(fileURLToPath(new URL("./fixtures/aid-redeemer-code.json.gz", import.meta.url).href))).toString("utf8"),
+) as Record<"redeemer" | "beacon" | "redeemerImpl" | "aid" | "aidImpl", string>;
+
+const decodeBase64Hex = (b64: string): `0x${string}` => `0x${Buffer.from(b64, "base64").toString("hex")}`;
+export const evmWord = (n: bigint): `0x${string}` => `0x${n.toString(16).padStart(64, "0")}`;
+const evmAddressWord = (addrWithout0x: string): `0x${string}` => `0x${addrWithout0x.padStart(64, "0")}`;
+
+const AID_CODES = [
+  aidRawCode.redeemer,
+  aidRawCode.beacon,
+  aidRawCode.redeemerImpl,
+  aidRawCode.aid,
+  aidRawCode.aidImpl,
+].map(decodeBase64Hex);
+
+const DEURO_CODES = {
+  bridge: decodeBase64Hex(deuroRawCode.bridge),
+  token: decodeBase64Hex(deuroRawCode.token),
+  eursBridge: decodeBase64Hex(deuroRawCode.eursBridge),
+  eurs: decodeBase64Hex(deuroRawCode.eurs),
+  eursDelegate: decodeBase64Hex(deuroRawCode.eursDelegate),
+};
+
+export function createAidRedeemerFixture(nowSec: number) {
+  const hash = `0x${"ab".repeat(32)}`;
+  const state: unknown[] = [
+    ...AID_CODES,
+    evmAddressWord("c787e7f060acab38d30aceb539355b328024e8b8"),
+    evmAddressWord("2db74834f556e1f19ed397e5f935a983e4c2f38b"),
+    evmAddressWord("b835004007296f5278fbf85f090af7195361e946"),
+    evmAddressWord("18f52b3fb465118731d9e0d276d4eb3599d57596"),
+    evmAddressWord("a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"),
+    evmWord(18n),
+    evmWord(6n),
+    evmWord(10n ** 12n),
+    evmWord(10n),
+    evmWord(10_000n * 10n ** 18n),
+    evmWord(5_781_860_388_989_964_899n),
+    evmWord(1n),
+    evmWord(0n),
+    evmWord(18n),
+    evmWord(6n),
+    evmWord(0n),
+    evmWord(0n),
+    evmWord(55_817_542_746n),
+  ];
+  const context = (parent?: PeggedAsset | null): LivePriceContext => ({
+    assetsById: new Map(
+      parent === null
+        ? []
+        : [[
+            "usdc-circle",
+            parent ?? freshParent("usdc-circle", 0.99985, "bitstamp+coingecko+kraken", {
+              nowSec,
+              observedAt: nowSec - 45,
+              priceObservedAtMode: "local_fetch",
+            }),
+          ]],
+    ),
+  });
+  const mockHealthy = (ts = nowSec - 12) => {
+    fetchEvmRpcBatchMock
+      .mockReset()
+      .mockResolvedValueOnce([{ number: "0x19422ef", hash, timestamp: `0x${ts.toString(16)}` }])
+      .mockImplementationOnce(async () => state)
+      .mockResolvedValueOnce([{ hash }]);
+  };
+  return { hash, state, context, mockHealthy };
+}
+
+export const AID_REDEEMER_REJECTION_CASES: readonly (readonly [number, unknown, string])[] = [
+  [0, "0x6000", "state-invalid-or-code-mismatch"],
+  [1, "0x6000", "state-invalid-or-code-mismatch"],
+  [2, "0x6000", "state-invalid-or-code-mismatch"],
+  [3, "0x6000", "state-invalid-or-code-mismatch"],
+  [4, "0x6000", "state-invalid-or-code-mismatch"],
+  [13, "0x01", "state-invalid-or-code-mismatch"],
+  [5, evmWord(0n), "identity-mismatch"],
+  [6, evmWord(0n), "identity-mismatch"],
+  [7, evmWord(0n), "identity-mismatch"],
+  [8, evmWord(0n), "identity-mismatch"],
+  [9, evmWord(0n), "identity-mismatch"],
+  [10, evmWord(6n), "identity-mismatch"],
+  [11, evmWord(18n), "identity-mismatch"],
+  [12, evmWord(1n), "identity-mismatch"],
+  [18, evmWord(6n), "identity-mismatch"],
+  [19, evmWord(18n), "identity-mismatch"],
+  [16, evmWord(0n), "redemption-disabled"],
+  [17, evmWord(1n), "redemption-disabled"],
+  [20, evmWord(1n), "redemption-disabled"],
+  [21, evmWord(1n), "redemption-disabled"],
+  [13, evmWord(10_000n), "fee-invalid"],
+  [14, evmWord(999n * 10n ** 18n), "capacity-insufficient"],
+  [15, evmWord(9_001n * 10n ** 18n), "capacity-insufficient"],
+  [22, evmWord(999n * 10n ** 6n), "capacity-insufficient"],
+];
+
+export const EURC_BRIDGE_REJECTION_CASES: readonly (readonly [number, unknown, string])[] = [
+  [0, "0x6000", "state-invalid-or-code-mismatch"],
+  [1, "0x6000", "state-invalid-or-code-mismatch"],
+  [2, evmWord(0n), "identity-or-redemption-disabled"],
+  [3, evmWord(0n), "identity-or-redemption-disabled"],
+  [4, evmWord(999n * 10n ** 18n), "capacity-insufficient"],
+  [4, evmWord(496_000n * 10n ** 18n + 1n), "capacity-insufficient"],
+  [5, evmWord(0n), "identity-or-redemption-disabled"],
+  [6, evmWord(495_999n * 10n ** 6n), "capacity-insufficient"],
+  [7, evmWord(18n), "identity-or-redemption-disabled"],
+  [8, evmWord(1n), "identity-or-redemption-disabled"],
+  [9, evmWord(1n), "identity-or-redemption-disabled"],
+  [4, "0x01", "state-invalid-or-code-mismatch"],
+];
+
+export const EURS_BRIDGE_REJECTION_CASES: readonly (readonly [number, unknown, string])[] = [
+  [0, "0x6000", "state-invalid-or-code-mismatch"],
+  [1, "0x6000", "state-invalid-or-code-mismatch"],
+  [2, "0x6000", "state-invalid-or-code-mismatch"],
+  [3, "0x6000", "state-invalid-or-code-mismatch"],
+  [4, evmWord(0n), "identity-or-redemption-disabled"],
+  [5, evmWord(1n), "identity-or-redemption-disabled"],
+  [6, evmWord(0n), "identity-or-redemption-disabled"],
+  [7, evmWord(0n), "identity-or-redemption-disabled"],
+  [8, evmWord(999n * 10n ** 18n), "capacity-insufficient"],
+  [8, evmWord(52_080_560_000_000_000_000_001n), "capacity-insufficient"],
+  [9, evmWord(0n), "identity-or-redemption-disabled"],
+  [10, evmWord(5_208_007n), "capacity-insufficient"],
+  [11, evmWord(6n), "identity-or-redemption-disabled"],
+  [12, evmWord(1n), "identity-or-redemption-disabled"],
+  [13, evmWord(1n), "identity-or-redemption-disabled"],
+  [8, "0x01", "state-invalid-or-code-mismatch"],
+];
+
+function makeBadHeadCases(nowSec: number, hash: string): readonly (readonly [unknown, string])[] {
+  return [
+    [null, "head-unavailable"],
+    [[{ number: "invalid", hash, timestamp: "0x1" }], "head-invalid"],
+    [[{ number: "0x0", hash, timestamp: "0x1" }], "head-invalid"],
+    [[{ number: "0x123", hash, timestamp: `0x${(nowSec - 301).toString(16)}` }], "head-stale-or-invalid"],
+  ];
+}
+
+export async function expectPinnedLaneTransportRejections(opts: {
+  fetchPrice: (context: LivePriceContext, signal?: AbortSignal) => Promise<unknown>;
+  makeContext: () => LivePriceContext;
+  lanePrefix: string;
+  nowSec: number;
+  hash: string;
+  state: unknown[];
+  checkHeads?: boolean;
+}): Promise<void> {
+  if (opts.checkHeads !== false) {
+    for (const [res, reason] of makeBadHeadCases(opts.nowSec, opts.hash)) {
+      fetchEvmRpcBatchMock.mockReset().mockResolvedValueOnce(res);
+      const c = opts.makeContext();
+      expect(await opts.fetchPrice(c)).toBeNull();
+      expect(c.lastRejectionReason).toBe(`${opts.lanePrefix}:${reason}`);
+    }
+  }
+  const head = [{ number: "0x123", hash: opts.hash, timestamp: `0x${(opts.nowSec - 5).toString(16)}` }];
+  for (const [b2, b3, reason] of [
+    [null, [{ hash: opts.hash }], "state-unavailable"],
+    [opts.state.slice(0, -1), [{ hash: opts.hash }], "state-invalid"],
+    [opts.state, [{ hash: evmWord(99n) }], "canonical-check-failed"],
+  ] as const) {
+    fetchEvmRpcBatchMock.mockReset().mockResolvedValueOnce(head).mockResolvedValueOnce(b2).mockResolvedValueOnce(b3);
+    const c = opts.makeContext();
+    expect(await opts.fetchPrice(c)).toBeNull();
+    expect(c.lastRejectionReason).toBe(`${opts.lanePrefix}:${reason}`);
+  }
+}
+
+export async function expectPostRpcAgeAndAbort(opts: {
+  fetchPrice: (context: LivePriceContext, signal?: AbortSignal) => Promise<unknown>;
+  agingContext: LivePriceContext;
+  healthyContext: () => LivePriceContext;
+  lanePrefix: string;
+  nowSec: number;
+  hash: string;
+  state: unknown[];
+}): Promise<void> {
+  fetchEvmRpcBatchMock
+    .mockReset()
+    .mockResolvedValueOnce([{ number: "0x123", hash: opts.hash, timestamp: `0x${(opts.nowSec - 5).toString(16)}` }])
+    .mockImplementationOnce(async () => {
+      vi.setSystemTime((opts.nowSec + 20) * 1000);
+      return opts.state;
+    })
+    .mockResolvedValueOnce([{ hash: opts.hash }]);
+  expect(await opts.fetchPrice(opts.agingContext)).toBeNull();
+  expect(opts.agingContext.lastRejectionReason).toBe(`${opts.lanePrefix}:dependency-age`);
+  const err = new DOMException("aborted", "AbortError");
+  fetchEvmRpcBatchMock.mockReset().mockRejectedValueOnce(err);
+  await expect(opts.fetchPrice(opts.healthyContext(), AbortSignal.abort())).rejects.toBe(err);
+}
+
+export function createDeuroBridgeFixtures(nowSec: number) {
+  const hash = `0x${"12".repeat(32)}`;
+  const eurcState: unknown[] = [
+    DEURO_CODES.bridge,
+    DEURO_CODES.token,
+    evmAddressWord("1abaea1f7c830bd89acc67ec4af516284b1bc33c"),
+    evmAddressWord("ba3f535bbcccca2a154b573ca6c5a49baae0a3ea"),
+    evmWord(496_000n * 10n ** 18n),
+    evmWord(1n),
+    evmWord(496_000n * 10n ** 6n),
+    evmWord(6n),
+    evmWord(0n),
+    evmWord(0n),
+  ];
+  const eursState: unknown[] = [
+    DEURO_CODES.eursBridge,
+    DEURO_CODES.token,
+    DEURO_CODES.eurs,
+    DEURO_CODES.eursDelegate,
+    evmAddressWord("25d772b21b0e5197f2dc8169e3aa976b16be04ac"),
+    evmWord(0n),
+    evmAddressWord("db25f211ab05b1c97d595516f45794528a807ad8"),
+    evmAddressWord("ba3f535bbcccca2a154b573ca6c5a49baae0a3ea"),
+    evmWord(52_080_075_361_433_047_967_739n),
+    evmWord(1n),
+    evmWord(5_208_056n),
+    evmWord(2n),
+    evmWord(0n),
+    evmWord(0n),
+  ];
+  const context = (opts: { eurc?: boolean; eurs?: boolean; eursObservedAt?: number } = { eurc: true }): LivePriceContext => {
+    const assetsById = new Map<string, PeggedAsset>();
+    if (opts.eurc) {
+      assetsById.set("eurc-circle", {
+        id: "eurc-circle",
+        price: 1.15,
+        priceSource: "coingecko+kraken",
+        priceConfidence: "high",
+        priceObservedAt: nowSec - 60,
+        priceObservedAtMode: "local_fetch",
+        priceSyncedAt: nowSec,
+      } as PeggedAsset);
+    }
+    if (opts.eurs) {
+      assetsById.set("eurs-stasis", {
+        id: "eurs-stasis",
+        price: 1.09,
+        priceSource: "coingecko",
+        priceConfidence: "single-source",
+        priceObservedAt: opts.eursObservedAt ?? nowSec - 60,
+        priceObservedAtMode: "upstream",
+        priceSyncedAt: nowSec,
+      } as PeggedAsset);
+    }
+    return { assetsById };
+  };
+  const mockHealthy = (laneValues = eurcState) => {
+    fetchEvmRpcBatchMock
+      .mockResolvedValueOnce([{ number: "0x123", hash, timestamp: `0x${(nowSec - 12).toString(16)}` }])
+      .mockImplementationOnce(async () => laneValues)
+      .mockResolvedValueOnce([{ hash }]);
+  };
+  return { hash, eurcState, eursState, context, mockHealthy };
+}

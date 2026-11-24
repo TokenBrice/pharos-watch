@@ -454,7 +454,7 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
   });
 
   it("retains unknown compact continuity and still honors review expiry", async () => {
-    const review = reviewFor("wusd-worldwide");
+    const review = reviewFor("dllr-sovryn");
     const first = priceCoverage(
       [{ id: review.stablecoinId, price: null }], [review.stablecoinId],
       {
@@ -484,7 +484,7 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     expect(next.missingActiveAssets[0]).toMatchObject({ consecutiveMissingGenerations: null, alertEligible: true });
   });
 
-  it.each(["wusd-worldwide", "aid-gaib", "bd-basedollar", "dllr-sovryn", "gbpe-monerium", "deuro-deuro", "fusd-finchain", "xusd-babelfish"])("keeps %s missing while acknowledged, re-alerts at expiry, and clears on a real price", (id) => {
+  it.each(["aid-gaib", "dllr-sovryn", "gbpe-monerium", "deuro-deuro", "fusd-finchain", "xusd-babelfish"])("keeps %s missing while acknowledged, re-alerts at expiry, and clears on a real price", (id) => {
     const review = reviewFor(id);
     const ids = [review.stablecoinId, "usdt-tether"];
     const first = priceCoverage(
@@ -748,34 +748,27 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     expect(missingAgain.acknowledgedGapIds).toEqual([]);
   });
 
-  it("renews the WUSD source review without retiring the October 23 lifecycle question", () => {
-    const id = "wusd-worldwide";
-    const review = reviewFor(id);
-    expect(review).toMatchObject({ owner: "ops", reviewedAt: Date.UTC(2026, 10, 22, 12, 38) / 1000 });
-    expect(review.expiresAt).toBe(Date.UTC(2026, 11, 6, 12, 38) / 1000);
-    expect(review.expiresAt - review.reviewedAt).toBeLessThanOrEqual(30 * 86_400);
-    expect(review.reason).toContain("2026-11-22 12:38 UTC");
-    expect(review.reason).toContain("2026-08-21 22:51:40 UTC");
-    expect(review.reason).toContain("$1.17");
-    expect(review.reason).toContain("zero tickers");
-    expect(review.reason).toContain("$1,183.06");
-    expect(review.reason).toContain("$50K per-pool floor");
-    expect(review.reason).toContain("NXDOMAIN");
-    expect(review.reason).toContain("Owner decision 2026-10-29: keep active pending a primary discontinuation source; freeze if one appears");
-    expect(review.reason).toContain("Keep the price missing; all admission gates preserved");
-    expect(review.reason).toContain("lifecycle/redemption-route decision stays open");
-    expect(review.sources).toContain("https://dns.google/resolve?name=wallet.wspn.io&type=A");
-    expect(review.sources.some((source) => source.includes("support.coins.ph"))).toBe(true);
-    expect(review.sources).toContain("https://wspn.io/solutions/");
-    const coin = COINS.find((entry) => entry.id === id)!;
-    expect(coin.contracts).toHaveLength(3);
-    const coverage = priceCoverage([{ id, price: null }], [id], {
-      nowSec: review.reviewedAt, priceGapReviews: [review],
-    });
-    expect(coverage).toMatchObject({
-      missingActiveIds: [id], acknowledgedGapIds: [id], pricedActiveIds: [],
-      invalidGapReviewIds: [], expiredGapReviewIds: [], alertEligibleIds: [],
-    });
+  it.each([
+    ["wusd-worldwide", "discretionary", "https://developer.wspn.io/6223538m0.md", "NXDOMAIN", 3],
+    ["bd-basedollar", "ordinary-redemption", "https://stablecoins.llama.fi/stablecoin/434", "inventory floor", 1],
+  ] as const)("closes %s's gap review with a sourced 2026-11-24 scope delisting", (id, exitMechanism, sourceUrl, reasonSnippet, contractCount) => {
+    const coin = TRACKED_META_BY_ID.get(id)!;
+    expect(coin).toBeDefined();
+    expect(ACTIVE_IDS.has(id)).toBe(false);
+    expect(READABLE_IDS.has(id)).toBe(true);
+    expect(coin.status).toBe("delisted");
+    expect(coin.exitMechanism).toBe(exitMechanism);
+    expect(coin.liveReservesConfig).toBeUndefined();
+    expect(coin.listingStatusReview?.changedAt).toBe("2026-11-24");
+    expect(coin.listingStatusReview?.source?.url).toBe(sourceUrl);
+    expect(coin.listingStatusReview?.reason).toContain(reasonSnippet);
+    expect(coin.listingStatusReview?.reviewBy).toBeUndefined();
+    expect(coin.frozenAt).toBeUndefined();
+    expect(coin.obituary).toBeUndefined();
+    expect(GAP_REVIEWS.find((entry) => entry.stablecoinId === id)).toBeUndefined();
+    expect(priceCoverage([{ id, price: null }], [], { nowSec: Date.UTC(2026, 10, 24) / 1000 }))
+      .toMatchObject({ complete: true, missingPriceCount: 0, acknowledgedGapIds: [] });
+    expect(coin.contracts).toHaveLength(contractCount);
   });
 
   it("retires the recovered IDRT and USDp reviews alongside retired USDK", () => {
@@ -845,7 +838,7 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
   });
 
   it("rejects a review dated after the evaluation clock as invalid evidence", () => {
-    const review = reviewFor("wusd-worldwide");
+    const review = reviewFor("dllr-sovryn");
     const resolveAt = (nowSec: number, candidate = review) => resolveGapReviews([candidate.stablecoinId], nowSec, [candidate]);
     expect(resolveAt(review.reviewedAt - 1)).toMatchObject({ invalidGapReviewIds: [review.stablecoinId], expiredGapReviewIds: [] });
     expect(resolveAt(review.reviewedAt - 1).activeById.size).toBe(0);
@@ -962,7 +955,7 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
   });
 
   it("decodes complete object/tuple details equally across legacy slots, malformed provenance and review expiry", () => {
-    const review = reviewFor("wusd-worldwide");
+    const review = reviewFor("dllr-sovryn");
     const coin = COINS.find((entry) => entry.id === review.stablecoinId)!;
     const tuples: unknown[][] = [
       [coin.id, 2, 0.99, "unknown-source", review.reviewedAt, "no-accepted-price"],

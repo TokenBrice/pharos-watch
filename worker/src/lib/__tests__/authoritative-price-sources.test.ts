@@ -31,6 +31,8 @@ import {
   prioritizeAuthoritativeLivePriceCandidates,
 } from "../authoritative-price-sources";
 import { m0ExtensionProvider } from "../authoritative-price-sources/m0-extension";
+import { applyProtocolPriceOverrides, createValidationContextResolver } from "../../cron/sync-stablecoins/pricing";
+import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { CIRCUIT_SOURCE } from "../constants";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import {
@@ -1178,6 +1180,36 @@ describe("authoritative-price-sources", () => {
       expect(stats.attemptedCount + stats.skippedBudget + stats.skippedCircuitOpen).toBe(stats.candidateCount);
     } finally {
       warnSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it.each([
+    { assetFields: { id: "usdaf-asymmetry", symbol: "USDaf" }, source: "uniswap-v4-exact",
+      ordinaryPrice: 0.988425988054, nowMs: 1_790_117_350 * 1000, observationAge: 20 },
+    { assetFields: { id: "usdu-universal", symbol: "USDU" }, source: "uniswap-v3-exact",
+      ordinaryPrice: 1.000298588359182, nowMs: 1_790_981_071 * 1000, observationAge: 20 },
+    { assetFields: { id: "usdv-solomon", symbol: "USDv" }, source: "jupiter-exact",
+      ordinaryPrice: 0.998882, nowMs: 1_790_102_400 * 1000, observationAge: 30 },
+  ])("keeps $source severe-downside publication guarded while admitting the fresh ordinary quote", ({
+    assetFields, source, ordinaryPrice, nowMs, observationAge,
+  }) => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(nowMs);
+      const now = Math.floor(Date.now() / 1000);
+      const run = (price: number) => {
+        const row = { ...assetFields, price: null, pegType: "peggedUSD" } as unknown as PeggedAsset;
+        return applyProtocolPriceOverrides({
+          assets: [row],
+          overrides: new Map([[row.id, { price, source, confidence: "fallback" as const, observedAt: now - observationAge, observedAtMode: "upstream" as const }]]),
+          validationContexts: createValidationContextResolver(),
+          syncStartSec: now,
+        });
+      };
+      expect(run(ordinaryPrice)).toBe(1);
+      expect(run(0.2)).toBe(0);
+    } finally {
       vi.useRealTimers();
     }
   });

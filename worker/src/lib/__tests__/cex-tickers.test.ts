@@ -23,6 +23,7 @@ import {
   fetchKrakenPrices,
 } from "../cex-tickers";
 import { ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { KRAKEN_MARKETS } from "@shared/lib/pricing-provider-config";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { createDeferredPromise } from "./deferred.test-support";
 
@@ -629,9 +630,9 @@ describe("fetchCoinbasePrices", () => {
 });
 
 describe("fetchKrakenPrices", () => {
-  const depthPairs = ["AUDX", "BRL1", "EURC", "EUROP", "MXNB", "PAXG", "QCAD", "TGBP", "XAUT", "ZCHF"] as const;
+  const depthPairs = ["AUDX", "BRL1", "EURC", "EURCV", "EUROP", "MXNB", "OUSD", "PAXG", "QCAD", "TGBP", "USDD", "XAUT", "ZCHF"] as const;
 
-  it("reads the ten clocked Kraken markets from /0/public/Depth?count=1 using the older top-of-book timestamp and keeps other markets on batched /0/public/Ticker", async () => {
+  it("reads the thirteen clocked Kraken markets from /0/public/Depth?count=1 using the older top-of-book timestamp and keeps other markets on batched /0/public/Ticker", async () => {
     const nowSec = 1_800_000_000;
     const clock = vi.spyOn(Date, "now").mockReturnValue(nowSec * 1_000);
     try {
@@ -666,6 +667,13 @@ describe("fetchKrakenPrices", () => {
               result: { MXNBUSD: { bids: [["0.05224", "573269", nowSec - 764]], asks: [["0.05230", "62972", nowSec - 71]] } },
             });
           }
+          if (pair === "USDDUSD") {
+            // Live-style standing ask left 35 hours old beside a fresh bid: withheld, never re-clocked.
+            return Response.json({
+              error: [],
+              result: { USDDUSD: { bids: [["0.9960", "500", nowSec - 30]], asks: [["1.0000", "85529", nowSec - 125_000]] } },
+            });
+          }
           if (pair === "TGBPUSD") {
             // Ask timestamp is older than bid timestamp; older timestamp governs observedAt.
             return Response.json({
@@ -693,8 +701,8 @@ describe("fetchKrakenPrices", () => {
         "https://api.kraken.com/0/public/Ticker?pair=DAIUSD,USDCUSD,USDTUSD",
         ...depthPairs.map((symbol) => `https://api.kraken.com/0/public/Depth?pair=${symbol}USD&count=1`),
       ]);
-      // 9 inter-request pacing sleeps across 10 serial Depth calls.
-      expect(sleepWithSignalMock).toHaveBeenCalledTimes(9);
+      // 12 inter-request pacing sleeps across 13 serial Depth calls.
+      expect(sleepWithSignalMock).toHaveBeenCalledTimes(12);
       expect(sleepWithSignalMock.mock.calls.every(([ms]) => ms === 250)).toBe(true);
 
       // Batched Ticker markets remain undated / local_fetch.
@@ -711,9 +719,12 @@ describe("fetchKrakenPrices", () => {
       expect(outcome.value.quoteBasisBySymbol?.get("TGBP")).toBe("bid-ask-midpoint");
       expect(outcome.value.prices.get("EURC")).toBeCloseTo(1.0901, 6);
       expect(outcome.value.observedAtBySymbol.get("EURC")).toBe(nowSec + 2);
+      expect(outcome.value.observedAtBySymbol.get("EURCV")).toBe(nowSec - 20);
+      expect(outcome.value.observedAtBySymbol.get("OUSD")).toBe(nowSec - 20);
       // Stale MXNB book stays withheld and is never re-clocked to fetch time.
       expect(outcome.value.prices.has("MXNB")).toBe(false);
       expect(outcome.value.observedAtBySymbol.has("MXNB")).toBe(false);
+      expect(outcome.value.prices.has("USDD")).toBe(false);
       expect(outcome.value.diagnostics).toContainEqual({
         source: "kraken",
         stage: "primary",
@@ -721,9 +732,9 @@ describe("fetchKrakenPrices", () => {
         status: 200,
         ok: true,
         success: true,
-        candidateCount: 10,
-        resolvedCount: 9,
-        rejectionReasonCounts: { stale: 1 },
+        candidateCount: 13,
+        resolvedCount: 11,
+        rejectionReasonCounts: { stale: 2 },
       });
     } finally {
       clock.mockRestore();
@@ -893,52 +904,21 @@ describe("fetchKrakenPrices", () => {
     expect(outcome.value.diagnostics).toEqual([]);
   });
 
-  it("requests the reviewed CASH and USDGO markets and prefers their bid/ask midpoints", async () => {
-    const requestedUrls: string[] = [];
-    mockFetch([{
-      match: (request) => {
-        requestedUrls.push(request.url);
-        return true;
-      },
-      body: {
-        error: [],
-        result: {
-          // Live ticker shapes observed 2026-10-30.
-          CASHUSD: { a: ["1.00000000", "101"], b: ["0.99970000", "101"], c: ["1.00070000", "1900.92179"] },
-          USDGOUSD: { a: ["1.00001000", "41158"], b: ["0.99993000", "15239"], c: ["0.99993000", "344.90729"] },
-        },
-      },
-    }]);
-
-    const symbols = ["CASH", "USDGO"];
-    const outcome = await fetchKrakenPrices(symbols);
-
-    for (const symbol of symbols) expect(KRAKEN_KNOWN_SYMBOLS).toContain(symbol);
-    expect(requestedUrls).toEqual([
-      "https://api.kraken.com/0/public/Ticker?pair=CASHUSD,USDGOUSD",
-    ]);
-    expect(outcome.kind).toBe("ok");
-    expect(outcome.value.prices.get("CASH")).toBeCloseTo(0.99985, 8);
-    expect(outcome.value.prices.get("USDGO")).toBeCloseTo(0.99997, 8);
-    expect(outcome.value.prices.size).toBe(2);
-  });
-
   it("requests the 2026-10-30 reviewed Kraken books on Ticker (USD) and Depth (clocked FX)", async () => {
     const nowSec = 1_800_000_000;
     const clock = vi.spyOn(Date, "now").mockReturnValue(nowSec * 1_000);
     try {
       const requestedUrls: string[] = [];
       mockFetch([{
-        match: (request) => {
-          requestedUrls.push(request.url);
-          return true;
-        },
+        match: (request) => { requestedUrls.push(request.url); return true; },
         respond: (request) => {
           const url = new URL(request.url);
           if (url.pathname === "/0/public/Ticker") {
             return Response.json({
               error: [],
               result: {
+                CASHUSD: { a: ["1.00000000", "101"], b: ["0.99970000", "101"], c: ["1.00070000", "1900.92179"] },
+                USDGOUSD: { a: ["1.00001000", "41158"], b: ["0.99993000", "15239"], c: ["0.99993000", "344.90729"] },
                 USDPTUSD: { a: ["1.00044000", "100000"], b: ["0.99955000", "100000"], c: ["1.00044000", "247.41593"] },
                 USDSMUSD: { a: ["1.00050000", "24985"], b: ["0.99950000", "23177"], c: ["0.99950000", "6.03650"] },
                 USDSUIUSD: { a: ["1.00039000", "9974"], b: ["1.00020000", "12813"], c: ["1.00014000", "9973.75794"] },
@@ -957,34 +937,24 @@ describe("fetchKrakenPrices", () => {
         },
       }], { requireMatch: true });
 
-      const symbols = ["ZCHF", "USDSM", "USDSUI", "USDPT", "EUROP", "QCAD", "AUDX", "BRL1"];
+      const symbols = ["CASH", "USDGO", "ZCHF", "USDSM", "USDSUI", "USDPT", "EUROP", "QCAD", "AUDX", "BRL1"];
       const outcome = await fetchKrakenPrices(symbols);
-
       for (const symbol of symbols) expect(KRAKEN_KNOWN_SYMBOLS).toContain(symbol);
       expect(requestedUrls).toEqual([
-        "https://api.kraken.com/0/public/Ticker?pair=USDPTUSD,USDSMUSD,USDSUIUSD",
-        "https://api.kraken.com/0/public/Depth?pair=AUDXUSD&count=1",
-        "https://api.kraken.com/0/public/Depth?pair=BRL1USD&count=1",
-        "https://api.kraken.com/0/public/Depth?pair=EUROPUSD&count=1",
-        "https://api.kraken.com/0/public/Depth?pair=QCADUSD&count=1",
-        "https://api.kraken.com/0/public/Depth?pair=ZCHFUSD&count=1",
+        "https://api.kraken.com/0/public/Ticker?pair=CASHUSD,USDGOUSD,USDPTUSD,USDSMUSD,USDSUIUSD",
+        ...["AUDX", "BRL1", "EUROP", "QCAD", "ZCHF"].map((s) => `https://api.kraken.com/0/public/Depth?pair=${s}USD&count=1`),
       ]);
       expect(outcome.kind).toBe("ok");
-      expect(outcome.value.prices.get("AUDX")).toBeCloseTo(0.70345, 8);
-      expect(outcome.value.observedAtBySymbol.get("AUDX")).toBe(nowSec - 25);
-      expect(outcome.value.prices.get("BRL1")).toBeCloseTo(0.18263, 8);
-      expect(outcome.value.observedAtBySymbol.get("BRL1")).toBe(nowSec - 20);
-      expect(outcome.value.prices.get("EUROP")).toBeCloseTo(1.11515, 8);
-      expect(outcome.value.observedAtBySymbol.get("EUROP")).toBe(nowSec - 30);
-      expect(outcome.value.prices.get("QCAD")).toBeCloseTo(0.71475, 8);
-      expect(outcome.value.observedAtBySymbol.get("QCAD")).toBe(nowSec - 50);
-      expect(outcome.value.prices.get("USDPT")).toBeCloseTo(0.999995, 8);
-      expect(outcome.value.prices.get("USDSM")).toBeCloseTo(1.0, 8);
-      expect(outcome.value.prices.get("USDSUI")).toBeCloseTo(1.000295, 8);
-      expect(outcome.value.prices.get("ZCHF")).toBeCloseTo(1.210695, 8);
-      expect(outcome.value.observedAtBySymbol.get("ZCHF")).toBe(nowSec - 60);
-      expect(outcome.value.observedAtBySymbol.has("USDPT")).toBe(false);
-      expect(outcome.value.prices.size).toBe(8);
+      for (const [s, p, ts] of [
+        ["CASH", 0.99985, undefined], ["USDGO", 0.99997, undefined], ["USDPT", 0.999995, undefined],
+        ["USDSM", 1.0, undefined], ["USDSUI", 1.000295, undefined],
+        ["AUDX", 0.70345, nowSec - 25], ["BRL1", 0.18263, nowSec - 20], ["EUROP", 1.11515, nowSec - 30],
+        ["QCAD", 0.71475, nowSec - 50], ["ZCHF", 1.210695, nowSec - 60],
+      ] as const) {
+        expect(outcome.value.prices.get(s)).toBeCloseTo(p, 8);
+        expect(outcome.value.observedAtBySymbol.get(s)).toBe(ts);
+      }
+      expect(outcome.value.prices.size).toBe(10);
     } finally {
       clock.mockRestore();
     }
@@ -1156,8 +1126,18 @@ describe("exchange symbol allowlists", () => {
     }
   });
 
-  it("maps every curated CEX symbol to exactly one tracked stablecoin id", () => {
+  it("maps every curated CEX symbol to one tracked owner or an explicit active stablecoinId", () => {
+    const scopedKrakenBySymbol = new Map(
+      KRAKEN_MARKETS.filter((market) => market.stablecoinId != null).map((market) => [market.symbol, market.stablecoinId!]),
+    );
+    const nonKrakenSymbols = new Set([...BINANCE_KNOWN_SYMBOLS, ...BITSTAMP_KNOWN_SYMBOLS, ...COINBASE_KNOWN_SYMBOLS]);
     for (const symbol of allKnownSymbols) {
+      const scopedId = scopedKrakenBySymbol.get(symbol);
+      if (scopedId && !nonKrakenSymbols.has(symbol)) {
+        const owner = ACTIVE_STABLECOINS.find((stablecoin) => stablecoin.id === scopedId);
+        expect(owner?.symbol.toUpperCase(), `${symbol} scoped Kraken id ${scopedId} must match an active coin`).toBe(symbol);
+        continue;
+      }
       const matchingIds = TRACKED_STABLECOINS
         .filter((stablecoin) => stablecoin.symbol.toUpperCase() === symbol)
         .map((stablecoin) => stablecoin.id);

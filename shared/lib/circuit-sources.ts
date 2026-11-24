@@ -40,7 +40,7 @@ export const CIRCUIT_SOURCE_REGISTRY = {
   USD3_CURVE_POOL: { key: "usd3-curve-pool", scope: "asset-scoped" },
   MENTO_FPMM: { key: "mento-fpmm", scope: "asset-scoped" },
   MENTO_BROKER: { key: "mento-broker", scope: "asset-scoped" },
-  BD_AERODROME: { key: "bd-aerodrome", scope: "asset-scoped" },
+  BD_AERODROME: { key: "bd-aerodrome", scope: "retired" },
   USDV_JUPITER: { key: "usdv-jupiter", scope: "asset-scoped" },
   SUSD_SOLAYER_NAV: { key: "susd-solayer-nav", scope: "asset-scoped" },
   USDAF_UNISWAP_V4: { key: "usdaf-uniswap-v4", scope: "asset-scoped" },
@@ -49,6 +49,7 @@ export const CIRCUIT_SOURCE_REGISTRY = {
   RWAUSDI_CHAINLINK_NAV: { key: "rwausdi-chainlink-nav", scope: "asset-scoped" },
   NUSD_SYNAPSE_POOL: { key: "nusd-synapse-pool", scope: "asset-scoped" },
   USDU_FINANCE_CURVE_POOL: { key: "usdu-finance-curve-pool", scope: "asset-scoped" },
+  A7A5_UNISWAP_V2: { key: "a7a5-uniswap-v2", scope: "asset-scoped" },
   // Single-asset members share this breaker with multi-asset redemption providers.
   PROTOCOL_REDEEM: { key: "protocol-redeem", scope: "source-wide" },
   CURVE_ONCHAIN: { key: "curve-onchain", scope: "source-wide" },

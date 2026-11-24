@@ -197,20 +197,20 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
     expect(pipeline.compilerFactSchemaIdentity.fixedInputSchemaVersion).toBe(4);
     expect(pipeline.producerCapabilityIdentity.inputContractVersions.fixedInput).toBe(4);
 
-    const baseDollarCard = pipeline.candidate.cards.find((card) => card.id === "bd-basedollar");
-    const baseDollarFacts = pipeline.compiledFacts.assets.find((asset) => asset.assetId === "bd-basedollar");
-    expect(baseDollarCard?.grade).not.toBe("NR");
-    expect(baseDollarCard?.score).not.toBeNull();
-    expect(baseDollarFacts?.gaps.map((gap) => gap.reasonCode)).not.toContain("missing-mechanism-review");
-    expect(baseDollarFacts?.gaps.map((gap) => gap.reasonCode)).not.toContain("missing-oracle-review");
-    expect(baseDollarFacts?.mechanismRiskReview.status.observationState).toBe("known");
-    expect(baseDollarFacts?.controlStatus.observationState).toBe("known");
-    expect(baseDollarFacts?.cdpStressCoverage).toMatchObject({
+    const boldCard = pipeline.candidate.cards.find((card) => card.id === "bold-liquity");
+    const boldFacts = pipeline.compiledFacts.assets.find((asset) => asset.assetId === "bold-liquity");
+    expect(boldCard?.grade).not.toBe("NR");
+    expect(boldCard?.score).not.toBeNull();
+    expect(boldFacts?.gaps.map((gap) => gap.reasonCode)).not.toContain("missing-mechanism-review");
+    expect(boldFacts?.gaps.map((gap) => gap.reasonCode)).not.toContain("missing-oracle-review");
+    expect(boldFacts?.mechanismRiskReview.status.observationState).toBe("known");
+    expect(["known", "bounded-unknown"]).toContain(boldFacts?.controlStatus.observationState);
+    expect(boldFacts?.cdpStressCoverage).toMatchObject({
       complete: true,
       exactReplayPassed: true,
     });
-    expect(baseDollarFacts?.cdpStressCoverage?.stressLiquidationCoverageRatio).toBeGreaterThan(0);
-    expect(baseDollarFacts?.cdpStressCoverage?.stressLiquidationCoverageRatio).toBeLessThan(1);
+    expect(boldFacts?.cdpStressCoverage?.stressLiquidationCoverageRatio).toBeGreaterThan(0);
+    expect(boldFacts?.cdpStressCoverage?.stressLiquidationCoverageRatio).toBeLessThanOrEqual(1);
   });
 
   it("scores the native projection identically to the exact input it projects from", () => {

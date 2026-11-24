@@ -41,6 +41,25 @@ export const GT_API_BASE = "https://api.geckoterminal.com/api/v2";
 export const STAGED_POOL_PRICE_MAX_AGE_HOURS = 24;
 
 /**
+ * Guarded exact Uniswap V2 pool policy thresholds (single authority, R5).
+ * Reuses the $50,000 DEX observation TVL floor, adds a $20,000 per-side USD
+ * floor to enforce two-sided depth without creating a 0.3%-fee cliff at $50k
+ * total TVL, caps positive balance-vs-reserve drift at 50 bps (strictly
+ * rejecting balance < reserve deficits), caps `blockTimestampLast` age at 24h
+ * (`STAGED_POOL_PRICE_MAX_AGE_HOURS`), and matches sibling exact-pool 500-bps
+ * sell-impact protection on canonical 0.30%-fee constant-product quotes.
+ */
+export const UNISWAP_V2_EXACT_POOL_GUARD = {
+  minTvlUsd: DEX_PRICE_OBSERVATION_MIN_TVL_USD,
+  minSideLiquidityUsd: 20_000,
+  maxReserveBalanceDriftBps: 50,
+  maxLastTradeAgeSec: STAGED_POOL_PRICE_MAX_AGE_HOURS * 3600,
+  maxQuoteImpactBps: 500,
+  feeNumerator: 997n,
+  feeDenominator: 1000n,
+} as const;
+
+/**
  * Pool-type-adjusted TVL multipliers for liquidity score quality weighting.
  * Values are expert-judgment calibration, not measured slippage; last table
  * change 2026-09-23, last reviewed 2026-08-19 (Liquidity v6 Phase 2).

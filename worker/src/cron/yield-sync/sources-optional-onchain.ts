@@ -34,36 +34,6 @@ export interface LiquityV2SpSourceConfig {
   branches: readonly { activePool: string; stabilityPool: string }[];
 }
 
-export const BASEDOLLAR_SP_CONFIG: LiquityV2SpSourceConfig = {
-  stablecoinId: OPTIONAL_YIELD_SOURCES.baseDollar.stablecoinId,
-  chain: "base",
-  eventPrefix: "basedollar",
-  sourceLabel: OPTIONAL_YIELD_SOURCES.baseDollar.yieldSource,
-  collateralRegistry: "0x7551ebfc8340b7f91874942be9c653733d4fb04f",
-  branches: [
-    {
-      activePool: "0x254a8267d4e12a8c0f283274632a18a33e49f7c0",
-      stabilityPool: "0x7d837bf114785642d225d1101145ddb8af4ba438",
-    },
-    {
-      activePool: "0x1021fefc406c9573ab3579fc55be13e3300ef6b1",
-      stabilityPool: "0xc65a05737d31e0f42c0806c739f3c88dd009c05f",
-    },
-    {
-      activePool: "0x1b9a62798e8bae0cea4eb21b4b3775359beb819f",
-      stabilityPool: "0x4eb3b6970fd358d34195b5d40e4eb64e0e3c0b6a",
-    },
-    {
-      activePool: "0xcaa72df531554087318eaf24646958500668b230",
-      stabilityPool: "0x6bd55dd953507641c84a03956760f83d29d65726",
-    },
-    {
-      activePool: "0xddac84ab417677f553cced8ababf497226112218",
-      stabilityPool: "0x25afbb09d9804482ed8e24295be4a12704fe93ea",
-    },
-  ],
-};
-
 // Liquity V2 mainnet: the three immutable collateral branches (wstETH, WETH,
 // rETH). ActivePool/StabilityPool addresses mirror the reviewed branch table in
 // shared/data/stablecoins/coins/bold-liquity.json.

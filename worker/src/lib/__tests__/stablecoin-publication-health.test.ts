@@ -284,7 +284,7 @@ describe("stablecoin publication health", () => {
 
   it("recomputes reviews for compact legacy state and re-arms an acknowledged streak at exact expiry", async () => {
     const { sqlite, db } = fixtures.open();
-    const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "wusd-worldwide")!;
+    const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "dllr-sovryn")!;
     insertRun(sqlite, "sync-stablecoins", review.expiresAt - 60, {
       activePublicationCoverage: publicationCoverage(),
       activePriceCoverage: priceCoverage({
@@ -385,7 +385,7 @@ describe("stablecoin publication health", () => {
     "keeps duplicate precedence and tolerant ID fallback (verbose=%s, explicit IDs=%s)",
     async (verbose, explicitIds) => {
       const { sqlite, db } = fixtures.open();
-      const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "wusd-worldwide")!;
+      const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "dllr-sovryn")!;
       const id = review.stablecoinId;
       const nowSec = review.expiresAt - 1;
       const tuple = [id, 3, 0.99, "unknown-source", review.reviewedAt, "no-accepted-price",

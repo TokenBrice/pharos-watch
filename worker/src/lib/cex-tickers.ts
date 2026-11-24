@@ -47,7 +47,7 @@ const COINBASE_MAX_RETRY_DELAY_MS = 10_000;
 const KRAKEN_TICKER_ENDPOINT = "api.kraken.com/0/public/Ticker";
 const KRAKEN_DEPTH_ENDPOINT = "api.kraken.com/0/public/Depth";
 // Kraken `/0/public/Depth` rejects multi-pair queries and rate-limits by IP;
-// 250ms serial spacing caps the 10-pair sweep at <= 4 req/s on 1 connection.
+// 250ms serial spacing caps the configured depth sweep at <= 4 req/s on 1 connection.
 const KRAKEN_DEPTH_REQUEST_INTERVAL_MS = 250;
 const KRAKEN_DEPTH_RATE_LIMIT_COOLDOWN_MS = 2_000;
 const BITSTAMP_TICKER_ENDPOINT = "www.bitstamp.net/api/v2/ticker/";

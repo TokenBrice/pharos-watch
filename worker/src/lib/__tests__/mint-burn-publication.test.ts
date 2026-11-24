@@ -48,7 +48,7 @@ describe("mint/burn durable publication admission", () => {
   it("explicitly grandfathers every pre-gate key without fabricating scan coverage", async () => {
     const { db } = fixtures.open();
     const legacy = MINT_BURN_CONFIGS.filter(isGrandfatheredMintBurnConfig);
-    expect(legacy).toHaveLength(133);
+    expect(legacy).toHaveLength(131);
     const scope = await readContext(db, end, MINT_BURN_CONFIGS);
     const enabledLegacy = legacy.filter((entry) => !isMintBurnBridgeSpoke(entry.stablecoinId, entry.chain.chainId));
     expect(scope.configs).toEqual(enabledLegacy);
