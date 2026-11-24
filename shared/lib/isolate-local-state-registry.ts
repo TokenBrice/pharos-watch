@@ -32,6 +32,14 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "The deployed stablecoin registry (contracts and tradedContracts) is authoritative.",
   },
   {
+    sourcePath: "worker/src/lib/price-publish-policy.ts",
+    stateNames: ["contractFillLineageById"],
+    owner: "DefiLlama contract fill-default lineage grouping",
+    kind: "cache",
+    resetOrTtl: "Built once per isolate from the bundled tracked registry and the static inherited, ERC-4626 and preview-redeem parent maps; resets on isolate recycle or deploy.",
+    durableTruth: "The deployed stablecoin registry and authoritative price-source configuration are authoritative; the map only memoizes their connected lineage groups.",
+  },
+  {
     sourcePath: "shared/lib/client-ip-hash.ts",
     stateNames: ["cachedSecret", "cachedKey"],
     owner: "Pages and Worker client-IP hashing",
