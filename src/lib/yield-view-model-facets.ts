@@ -39,7 +39,7 @@ import {
 import { YIELD_TYPE_LABELS } from "@shared/lib/classification";
 import { gradeRange } from "@shared/lib/report-card-core";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import { isTokenizedFundListingClass } from "@shared/lib/stablecoins/listing-governance";
+import { isTokenizedFundListingClass } from "@shared/lib/stablecoins/listing-class";
 import type { PegCurrency } from "@shared/types/core";
 import type { YieldBenchmarkKey, YieldType } from "@shared/types/yield-vocabulary";
 import type { YieldWorkbenchRanking } from "@/lib/yield-row-types";

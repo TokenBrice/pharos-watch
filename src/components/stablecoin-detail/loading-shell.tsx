@@ -8,7 +8,7 @@ import { BackToSource } from "@/components/back-to-source";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT, TOKENIZED_FUND_BADGE } from "@shared/lib/classification";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import { isTokenizedFundListingClass } from "@shared/lib/stablecoins/listing-governance";
+import { isTokenizedFundListingClass } from "@shared/lib/stablecoins/listing-class";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 
 interface StablecoinDetailLoadingShellProps {

@@ -563,7 +563,12 @@ function assertPreviousReaderSource() {
   // No public card, breakdown, or trace schema changed; every pre-dust input still parses
   // identically (verified by substituting fd0259e97's two files, which restores the prior
   // 45c54905… digest).
-  if (hash.digest("hex") !== "28090be64f07c33f83e68f3bba8013a5520abd76cd0123861156330119e3c66f") throw new Error("Pre-dust reader source/refinement inputs changed");
+  // Listing policy 2.0 refresh: stablecoin-taxonomy.ts retires the cash-equivalent and
+  // stable-value-investment listing classes for tokenized-fund and review-hold and exports
+  // LISTING_CLASS_VALUES. ListingClass is not part of any card, breakdown or trace schema, so
+  // every pre-dust input still parses identically (verified by substituting 92c90ca72's
+  // stablecoin-taxonomy.ts, which restores the prior 28090be6… digest).
+  if (hash.digest("hex") !== "2cc5ddfdd505f9da681fd944255ba6a54e670a6dd51b62c37a20c452a8496c4a") throw new Error("Pre-dust reader source/refinement inputs changed");
 }
 
 export async function previousReader() {

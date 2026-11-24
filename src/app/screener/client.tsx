@@ -31,7 +31,7 @@ import {
   CLIENT_ACTIVE_META_BY_ID,
   CLIENT_TRACKED_STABLECOINS,
 } from "@shared/lib/stablecoins/client-registry";
-import { isTokenizedFundListingClass } from "@shared/lib/stablecoins/listing-governance";
+import { isTokenizedFundListingClass } from "@shared/lib/stablecoins/listing-class";
 import { isThreatBand, resolveMechanismArchetype } from "@shared/lib/classification";
 import { getResolvedBlacklistStatusLabel } from "@shared/lib/blacklist-status";
 import { isIncludedInArchetype } from "@shared/lib/stablecoins/mechanism-membership";

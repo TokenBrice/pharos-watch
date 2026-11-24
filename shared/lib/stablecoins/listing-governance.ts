@@ -1,7 +1,9 @@
 import listingDecisionsAsset from "../../data/stablecoins/listing-decisions.json";
 import { type ListingClass } from "../../types/stablecoin-taxonomy";
+import { isCoreAggregateListingClass, isTokenizedFundListingClass } from "./listing-class";
 
 export type { ListingClass };
+export { isCoreAggregateListingClass, isTokenizedFundListingClass };
 
 export interface ListingDecisionRegistry {
   schemaVersion: 1;
@@ -17,18 +19,6 @@ export const LISTING_CLASS_BY_ID: ReadonlyMap<string, ListingClass> = new Map(
 
 export function getListingClass(stablecoinId: string): ListingClass | null {
   return LISTING_CLASS_BY_ID.get(stablecoinId) ?? null;
-}
-
-const CORE_AGGREGATE_LISTING_CLASSES: ReadonlySet<ListingClass> = new Set([
-  "core-stablecoin",
-]);
-
-export function isCoreAggregateListingClass(listingClass: ListingClass | null | undefined): boolean {
-  return listingClass != null && CORE_AGGREGATE_LISTING_CLASSES.has(listingClass);
-}
-
-export function isTokenizedFundListingClass(listingClass: ListingClass | null | undefined): boolean {
-  return listingClass === "tokenized-fund";
 }
 
 export function isTokenizedFundId(stablecoinId: string): boolean {

@@ -8,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { DetailQuote } from "@/lib/stablecoin-detail-view-model-types";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import { isTokenizedFundListingClass } from "@shared/lib/stablecoins/listing-governance";
+import { isTokenizedFundListingClass } from "@shared/lib/stablecoins/listing-class";
 import { formatShortDate } from "@shared/lib/format";
 import type { CoinState } from "@shared/lib/coin-state";
 import type { StablecoinVerdict, StablecoinVerdictArchetype } from "@shared/lib/stablecoin-verdict";
