@@ -302,4 +302,47 @@ describe("YieldLeaderboardControls", () => {
     fireEvent.click(pill);
     expect(onFilterChange).toHaveBeenCalledWith("watchlist", "all");
   });
+
+  it("toggles Include tokenized funds and displays the fund count", () => {
+    const onFilterChange = vi.fn();
+    const withFund = [
+      ...rows,
+      makeYieldRanking({
+        id: "buidl-blackrock",
+        symbol: "BUIDL",
+        name: "BUIDL",
+        safetyScore: 80,
+      }),
+    ];
+
+    const { rerender } = render(
+      <YieldLeaderboardControls
+        viewModel={buildYieldViewModel(prepareYieldUniverse(withFund, null), {})}
+        hasExplicitFilterParams={false}
+        onFilterChange={onFilterChange}
+        onClearFilters={vi.fn()}
+        onApplyPreset={vi.fn()}
+      />,
+    );
+
+    const toggle = screen.getByRole("button", { name: /Include tokenized funds/i });
+    expect(toggle.getAttribute("aria-pressed")).toBe("false");
+    expect(toggle.textContent).toContain("1");
+    fireEvent.click(toggle);
+    expect(onFilterChange).toHaveBeenCalledWith("includeFunds", "true");
+
+    rerender(
+      <YieldLeaderboardControls
+        viewModel={buildYieldViewModel(prepareYieldUniverse(withFund, null), { includeFunds: "true" })}
+        hasExplicitFilterParams
+        onFilterChange={onFilterChange}
+        onClearFilters={vi.fn()}
+        onApplyPreset={vi.fn()}
+      />,
+    );
+    const activeToggle = screen.getByRole("button", { name: /Include tokenized funds/i });
+    expect(activeToggle.getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(activeToggle);
+    expect(onFilterChange).toHaveBeenCalledWith("includeFunds", "all");
+  });
 });

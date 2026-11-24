@@ -89,6 +89,9 @@ describe("ScreenerToolbar primary bar and collapsible All filters drawer", () =>
     fireEvent.click(screen.getByRole("button", { name: "Unfreezable" }));
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ blacklistable: ["no"] }));
 
+    fireEvent.click(screen.getByRole("button", { name: /Include tokenized funds/i }));
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ includeFunds: true }));
+
     // Expanding the drawer exposes the full 18-control panel.
     fireEvent.click(toggle);
     expect(panel.classList.contains("hidden")).toBe(false);

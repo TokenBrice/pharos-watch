@@ -127,6 +127,33 @@ describe("applyFilters", () => {
       expected: ["usdc-circle", "dai-makerdao", "eurs-stasis", "newcoin"],
     },
     {
+      name: "excludes tokenized fund rows by default and admits them with includeFunds or exact coins",
+      rows: [
+        makeRow({ id: "usdc-circle" }),
+        makeRow({ id: "buidl-blackrock", name: "BUIDL", symbol: "BUIDL", isTokenizedFund: true }),
+      ],
+      filters: {},
+      expected: ["usdc-circle"],
+    },
+    {
+      name: "includes tokenized fund rows when includeFunds is enabled",
+      rows: [
+        makeRow({ id: "usdc-circle" }),
+        makeRow({ id: "buidl-blackrock", name: "BUIDL", symbol: "BUIDL", isTokenizedFund: true }),
+      ],
+      filters: { includeFunds: true },
+      expected: ["usdc-circle", "buidl-blackrock"],
+    },
+    {
+      name: "admits explicit tokenized fund IDs in exact coins mode",
+      rows: [
+        makeRow({ id: "usdc-circle" }),
+        makeRow({ id: "buidl-blackrock", name: "BUIDL", symbol: "BUIDL", isTokenizedFund: true }),
+      ],
+      filters: { coins: ["buidl-blackrock"] },
+      expected: ["buidl-blackrock"],
+    },
+    {
       name: "filters by DEWS max, excluding unrated rows",
       filters: { dewsMax: 40 },
       expected: ["usdc-circle", "dai-makerdao"],

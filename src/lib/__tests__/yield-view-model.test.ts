@@ -586,6 +586,43 @@ describe("buildYieldViewModel", () => {
     expect(smallCohortRow?.cohortPercentile?.value).toBeNull();
   });
 
+  it("excludes tokenized funds by default, includes them with includeFunds=true, and suggests toggling them on when searched", () => {
+    const withFundRows = [
+      ...rows,
+      makeYieldRanking({
+        id: "buidl-blackrock",
+        symbol: "BUIDL",
+        name: "BlackRock USD Institutional Digital Liquidity Fund",
+        yieldType: "nav-appreciation",
+        warningSignals: [],
+        safetyScore: 80,
+        pharosYieldScore: 75,
+      }),
+    ];
+    const universe = prepareYieldUniverse(withFundRows, null);
+
+    const defaultView = buildYieldViewModel(universe, { risk: "any" });
+    expect(defaultView.visibleRows.map((row) => row.id)).not.toContain("buidl-blackrock");
+    expect(defaultView.totalRows).toBe(rows.length);
+
+    const includedView = buildYieldViewModel(universe, { risk: "any", includeFunds: "true" });
+    expect(includedView.visibleRows.map((row) => row.id)).toContain("buidl-blackrock");
+    expect(includedView.totalRows).toBe(withFundRows.length);
+    expect(includedView.invalidParamKeys).toEqual([]);
+
+    const searchedHidden = buildYieldViewModel(universe, { risk: "any", q: "BUIDL" });
+    expect(searchedHidden.emptyState.isEmpty).toBe(true);
+    expect(searchedHidden.emptyState.suggestions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ filterKey: "includeFunds", targetValue: "true", gain: 1 }),
+      ]),
+    );
+
+    const invalid = buildYieldViewModel(universe, { includeFunds: "nope" });
+    expect(invalid.filters.includeFunds).toBe("exclude");
+    expect(invalid.invalidParamKeys).toEqual(["includeFunds"]);
+  });
+
   it("registers a descriptor for every YieldViewModelFilters key (no drift)", () => {
     // Guards the invariant that every filter key has a registry entry, or the
     // row predicates, active-summary chips, and empty-state suggestion ranker

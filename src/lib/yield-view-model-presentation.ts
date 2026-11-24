@@ -75,6 +75,13 @@ function buildEmptyStateSuggestions(
       scored.push({ filterKey: "risk", targetValue: YIELD_RISK_ANY_PARAM, gain, label: "Show all risk levels" });
     }
   }
+  if (filters.includeFunds === "exclude") {
+    const withFunds: YieldViewModelFilters = { ...filters, includeFunds: "include" };
+    const gain = countRowsMatchingFilters(facets, withFunds);
+    if (gain > 0) {
+      scored.push({ filterKey: "includeFunds", targetValue: "true", gain, label: "Include tokenized funds" });
+    }
+  }
   scored.sort((left, right) => right.gain - left.gain);
   return scored.slice(0, EMPTY_STATE_SUGGESTION_LIMIT);
 }

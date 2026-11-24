@@ -150,6 +150,8 @@ export function YieldLeaderboardControls({
   const attentionCount = attentionPreset?.count ?? 0;
   const attentionActive = attentionPreset?.active ?? false;
   const showWatching = watchlistCount > 0 || watchlistActive;
+  const tokenizedFundCount = options.includeFunds.find((option) => option.value === "include")?.count ?? 0;
+  const includeFundsActive = filters.includeFunds === "include";
   // The gated icon chip above already applies this preset; rendering the preset
   // chip too would put two identical controls in the same views row.
   const visiblePresets = presets.filter((preset) => preset.key !== "watchlist-warnings");
@@ -191,6 +193,16 @@ export function YieldLeaderboardControls({
             className={cn("h-3.5 w-3.5 transition-transform", showFilters ? "rotate-180" : "rotate-0")}
           />
         </button>
+
+        <ChipButton
+          label="Include tokenized funds"
+          count={tokenizedFundCount > 0 ? tokenizedFundCount : undefined}
+          active={includeFundsActive}
+          ariaPressed={includeFundsActive}
+          dataActive={includeFundsActive}
+          title="Include tracked tokenized funds (not stablecoins) in yield rankings"
+          onClick={() => onFilterChange("includeFunds", includeFundsActive ? "all" : "true")}
+        />
 
         {!showFilters
           ? activeFilterSummaries.map((summary) => (

@@ -26,6 +26,7 @@ export type YieldSourcePostureFilter = "all" | YieldSourcePosture | "watch-only"
 export type YieldTrendingFilter = "all" | "rising";
 export type YieldWatchlistFilter = "all" | "only";
 export type YieldAttentionFilter = "all" | "watchlist";
+export type YieldIncludeFundsFilter = "exclude" | "include";
 
 export interface YieldViewModelUrlParams {
   /** Risk-tolerance band; absent = `YIELD_LANDING_RISK_BUDGET`, `any` = no band. */
@@ -45,6 +46,7 @@ export interface YieldViewModelUrlParams {
   trending?: string | null;
   watchlist?: string | null;
   attention?: string | null;
+  includeFunds?: string | null;
 }
 
 export interface YieldFilterOption<T extends string = string> {
@@ -69,6 +71,7 @@ export interface YieldViewModelFilters {
   trending: YieldTrendingFilter;
   watchlist: YieldWatchlistFilter;
   attention: YieldAttentionFilter;
+  includeFunds: YieldIncludeFundsFilter;
 }
 
 // Priority order for the "other" peg bucket sort. USD is excluded because it is
@@ -128,6 +131,7 @@ export const DEFAULT_FILTERS: YieldViewModelFilters = {
   trending: "all",
   watchlist: "all",
   attention: "all",
+  includeFunds: "exclude",
 };
 
 /**

@@ -163,4 +163,11 @@ export const YIELD_FILTER_AXIS_REGISTRY: readonly YieldFilterAxisDescriptor[] = 
     describeRelax: () => "Drop trending filter",
     relaxTargetValue: null,
   },
+  {
+    key: "includeFunds",
+    isActive: (filters) => filters.includeFunds !== DEFAULT_FILTERS.includeFunds,
+    matches: (facet, filters) => filters.includeFunds === "include" || !facet.isTokenizedFund,
+    describeRelax: () => "Exclude tokenized funds",
+    relaxTargetValue: null,
+  },
 ];

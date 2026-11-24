@@ -31,6 +31,7 @@ import {
   CLIENT_ACTIVE_META_BY_ID,
   CLIENT_TRACKED_STABLECOINS,
 } from "@shared/lib/stablecoins/client-registry";
+import { isTokenizedFundListingClass } from "@shared/lib/stablecoins/listing-governance";
 import { isThreatBand, resolveMechanismArchetype } from "@shared/lib/classification";
 import { getResolvedBlacklistStatusLabel } from "@shared/lib/blacklist-status";
 import { isIncludedInArchetype } from "@shared/lib/stablecoins/mechanism-membership";
@@ -64,8 +65,10 @@ const SCREENABLE_COINS = CLIENT_TRACKED_STABLECOINS
       mechanismIncluded: isIncludedInArchetype(meta, mechanism),
       custodyModel: resolveCustodyModel(meta),
       blacklistable: projectBlacklistable(meta.blacklistStatus),
+      isTokenizedFund: isTokenizedFundListingClass(meta.listingClass),
     };
   });
+const SCREENABLE_FUND_COUNT = SCREENABLE_COINS.filter((entry) => entry.isTokenizedFund).length;
 
 const EXPORT_COLUMNS: CsvColumn<ScreenerRow>[] = [
   { header: "id", accessor: (row) => row.id },
@@ -254,7 +257,7 @@ export function ScreenerClient() {
     }
 
     const rows: ScreenerRow[] = [];
-    for (const { meta, mechanism, mechanismIncluded, custodyModel, blacklistable } of SCREENABLE_COINS) {
+    for (const { meta, mechanism, mechanismIncluded, custodyModel, blacklistable, isTokenizedFund } of SCREENABLE_COINS) {
       const safety = safetyById[meta.id] ?? null;
       const pegCoin = pegById.get(meta.id);
       const mintAuthorityScore = safetyPublicationAvailable
@@ -266,6 +269,7 @@ export function ScreenerClient() {
         name: meta.name,
         symbol: meta.symbol,
         lifecycle: meta.status ?? "active",
+        isTokenizedFund,
         type: meta.flags.governance,
         mechanism,
         mechanismIncluded,
@@ -412,14 +416,20 @@ export function ScreenerClient() {
     generations[0] ?? null,
   ) ?? "unknown";
 
-  const totalTracked = SCREENABLE_COINS.length;
-  const totalRows = hasStablecoinRows ? allRows.length : totalTracked;
+  const includeFundsScope = filters.includeFunds || filters.coins.length > 0;
+  const totalTracked = includeFundsScope
+    ? SCREENABLE_COINS.length
+    : SCREENABLE_COINS.length - SCREENABLE_FUND_COUNT;
+  const totalRows = hasStablecoinRows
+    ? (includeFundsScope ? allRows.length : allRows.filter((row) => !row.isTokenizedFund).length)
+    : totalTracked;
   const matchingRows = filteredRows.length;
   const active = hasActiveFilters(filters) || normalizedSearch.length > 0;
   const activeFilterCount = countActiveScreenerFilters(filters) + (normalizedSearch.length > 0 ? 1 : 0);
-  // One coin-count story: the screener universe is the full tracked registry
-  // (visible pre-launch and frozen rows included), unlike the active-only dashboard table.
-  // Policy-withheld quarantined and delisted records remain detail-only.
+  // One coin-count story: the default screener universe is tracked stablecoins
+  // (visible pre-launch and frozen rows included; tokenized funds opt-in via
+  // `includeFunds`), unlike the active-only dashboard table. Policy-withheld
+  // quarantined and delisted records remain detail-only.
   // The live matched count is the toolbar's One Beam (frost) figure.
 
   return (
@@ -430,6 +440,7 @@ export function ScreenerClient() {
         onSearchChange={setSearchQuery}
         matchingRows={matchingRows}
         totalRows={totalRows}
+        fundCount={SCREENABLE_FUND_COUNT}
         dataState={dataState}
         activeFilterCount={activeFilterCount}
         onChange={setFilters}

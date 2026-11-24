@@ -6,6 +6,7 @@ import type {
   YieldBenchmarkFilter,
   YieldDepthFilter,
   YieldFilterOption,
+  YieldIncludeFundsFilter,
   YieldOpportunityFilter,
   YieldPegFilter,
   YieldSourceChangedFilter,
@@ -29,7 +30,7 @@ import type {
 } from "@shared/types/yield";
 import type { YieldWorkbenchRanking } from "@/lib/yield-row-types";
 
-export type { YieldAttentionFilter, YieldBenchmarkFilter, YieldDepthFilter, YieldFilterOption, YieldOpportunityFilter, YieldPegFilter, YieldSourceChangedFilter, YieldSourceConfidenceFilter, YieldSourcePostureFilter, YieldViewModelFilters, YieldViewModelUrlParams, YieldWarningsFilter, YieldWatchlistFilter };
+export type { YieldAttentionFilter, YieldBenchmarkFilter, YieldDepthFilter, YieldFilterOption, YieldIncludeFundsFilter, YieldOpportunityFilter, YieldPegFilter, YieldSourceChangedFilter, YieldSourceConfidenceFilter, YieldSourcePostureFilter, YieldViewModelFilters, YieldViewModelUrlParams, YieldWarningsFilter, YieldWatchlistFilter };
 
 export interface YieldViewModelOptions {
   peg: YieldFilterOption<YieldPegFilter>[];
@@ -46,6 +47,7 @@ export interface YieldViewModelOptions {
   sourcePosture: YieldFilterOption<YieldSourcePostureFilter>[];
   watchlist: YieldFilterOption<YieldWatchlistFilter>[];
   attention: YieldFilterOption<YieldAttentionFilter>[];
+  includeFunds: YieldFilterOption<YieldIncludeFundsFilter>[];
 }
 
 export type YieldPresetKey = "treasury-grade" | "best-dollar" | "non-usd" | "new-rising" | "watchlist-warnings";
@@ -103,6 +105,7 @@ export type YieldViewModelRow = YieldWorkbenchRanking & {
 
 export interface YieldRowFacet {
   row: YieldWorkbenchRanking;
+  isTokenizedFund: boolean;
   peg: PegCurrency | null;
   benchmarkKey: YieldBenchmarkKey;
   opportunity: Exclude<YieldOpportunityFilter, "all">;

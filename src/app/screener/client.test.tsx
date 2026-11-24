@@ -628,4 +628,33 @@ describe("ScreenerClient freshness notices", () => {
     expect(row?.supplyUsd).toBeNull();
     expect(supplyColumn?.accessor(row!, 0)).toBe("");
   });
+
+  it("excludes tokenized funds by default and admits them when includeFunds=true", () => {
+    mocks.useStablecoins.mockReturnValue({
+      data: {
+        peggedAssets: [
+          makeStablecoin({ id: "usdc-circle" }),
+          makeStablecoin({ id: "buidl-blackrock", name: "BUIDL", symbol: "BUIDL" }),
+        ],
+      },
+      isLoading: false,
+      error: null,
+      dataUpdatedAt: 1_700_000_000,
+      meta: null,
+      refetch,
+    });
+
+    const view = render(<ScreenerClient />);
+    const defaultRows = (mocks.ScreenerTable.mock.calls.at(-1)?.[0] as { rows: ScreenerRow[] }).rows;
+    expect(defaultRows.some((row) => row.id === "usdc-circle")).toBe(true);
+    expect(defaultRows.some((row) => row.id === "buidl-blackrock")).toBe(false);
+
+    mocks.useUrlFilters.mockReturnValue({
+      searchParams: new URLSearchParams("includeFunds=true"),
+      replaceParams: vi.fn(),
+    });
+    view.rerender(<ScreenerClient />);
+    const withFundsRows = (mocks.ScreenerTable.mock.calls.at(-1)?.[0] as { rows: ScreenerRow[] }).rows;
+    expect(withFundsRows.some((row) => row.id === "buidl-blackrock")).toBe(true);
+  });
 });

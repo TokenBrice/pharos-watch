@@ -9,6 +9,7 @@ import type {
   YieldBenchmarkFilter,
   YieldDepthFilter,
   YieldAttentionFilter,
+  YieldIncludeFundsFilter,
   YieldOpportunityFilter,
   YieldPegFilter,
   YieldSourceChangedFilter,
@@ -54,6 +55,11 @@ function normalizeOption<T extends string>(
   fallback: T,
 ): T {
   return value != null && validValues.has(value as T) ? value as T : fallback;
+}
+
+function parseIncludeFundsParam(value: string | null | undefined): YieldIncludeFundsFilter {
+  if (value === "true" || value === "include") return "include";
+  return DEFAULT_FILTERS.includeFunds;
 }
 
 function parseRiskBudgetParam(value: string | null | undefined): YieldRiskBudgetKey {
@@ -131,6 +137,7 @@ export function normalizeFilters(rawParams: YieldViewModelUrlParams, options: Yi
     trending: normalizeOption(params.trending, validTrending, DEFAULT_FILTERS.trending),
     watchlist: normalizeOption(params.watchlist, validWatchlist, DEFAULT_FILTERS.watchlist),
     attention: normalizeOption(params.attention, validAttention, DEFAULT_FILTERS.attention),
+    includeFunds: parseIncludeFundsParam(params.includeFunds),
   };
 
   // A param that names a band (including the landing band and the "any"/"all"
@@ -154,6 +161,7 @@ export function normalizeFilters(rawParams: YieldViewModelUrlParams, options: Yi
     trending: filters.trending === DEFAULT_FILTERS.trending ? null : filters.trending,
     watchlist: filters.watchlist === DEFAULT_FILTERS.watchlist ? null : filters.watchlist,
     attention: filters.attention === DEFAULT_FILTERS.attention ? null : filters.attention,
+    includeFunds: filters.includeFunds === "include" ? "true" : null,
   };
 
   // Explicit neutral values still matter when the active band supplies a

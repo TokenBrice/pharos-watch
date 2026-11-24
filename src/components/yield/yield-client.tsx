@@ -312,6 +312,7 @@ export function YieldClient() {
       trending: searchParams.get("trending"),
       watchlist: searchParams.get("watchlist"),
       attention: searchParams.get("attention"),
+      includeFunds: searchParams.get("includeFunds"),
     }),
     [searchParams],
   );
@@ -332,9 +333,12 @@ export function YieldClient() {
       }),
     [data?.benchmarks, data?.provenance?.benchmark, data?.provenance?.benchmarks, urlParams, yieldUniverse],
   );
-  // Compare/selection universe ignores the landing risk band so a selected
-  // D-grade row does not vanish from the drawer.
-  const comparisonRows = useMemo(() => selectVisibleYieldRows(yieldUniverse, { risk: riskBudgetUrlValue("all") }), [yieldUniverse]);
+  // Compare/selection universe ignores the landing risk band and tokenized-fund
+  // filter so a selected row or detail-fallback fund stays visible in the drawer.
+  const comparisonRows = useMemo(
+    () => selectVisibleYieldRows(yieldUniverse, { risk: riskBudgetUrlValue("all"), includeFunds: "true" }),
+    [yieldUniverse],
+  );
   const visibleRows = viewModel.visibleRows;
   const storyCallouts = useMemo(() => buildYieldStoryCallouts(visibleRows), [visibleRows]);
   const activeFilterSummaries = useMemo(() => getYieldActiveFilterSummaries(viewModel), [viewModel]);
@@ -383,12 +387,14 @@ export function YieldClient() {
   // benchmark rows honest.
   const currencyCounts = useMemo(() => {
     const counts: Record<string, number> = {};
+    const includeFunds = viewModel.filters.includeFunds === "include";
     for (const facet of yieldUniverse.rowFacets) {
       if (facet.peg === null) continue;
+      if (!includeFunds && facet.isTokenizedFund) continue;
       counts[facet.peg] = (counts[facet.peg] ?? 0) + 1;
     }
     return counts;
-  }, [yieldUniverse.rowFacets]);
+  }, [viewModel.filters.includeFunds, yieldUniverse.rowFacets]);
 
   useEffect(() => {
     if (!data || isLoading || error) return;

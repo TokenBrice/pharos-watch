@@ -188,6 +188,7 @@ interface ScreenerToolbarProps {
   onSearchChange?: (value: string) => void;
   matchingRows: number;
   totalRows: number;
+  fundCount?: number;
   dataState: NonNullable<TablePaginationProps["dataState"]>;
   activeFilterCount: number;
   onChange: (next: ScreenerFilters) => void;
@@ -204,6 +205,7 @@ export function ScreenerToolbar({
   onSearchChange,
   matchingRows,
   totalRows,
+  fundCount = 0,
   dataState,
   activeFilterCount,
   onChange,
@@ -272,7 +274,8 @@ export function ScreenerToolbar({
               </span>
               <span className="text-sm font-medium text-muted-foreground">
                 of <span className="pharos-numeric text-foreground">{totalRows.toLocaleString("en-US")}</span>{" "}
-                screenable coins {active ? "matching" : "(pre-launch and frozen included)"}
+                screenable coins{" "}
+                {active ? "matching" : "(pre-launch and frozen included; tokenized funds excluded)"}
               </span>
             </p>
           ) : (
@@ -331,6 +334,20 @@ export function ScreenerToolbar({
               </button>
             );
           })}
+          <button
+            type="button"
+            aria-pressed={filters.includeFunds}
+            title="Include tracked tokenized funds (not stablecoins) in screener results"
+            onClick={() => update("includeFunds", !filters.includeFunds)}
+            className={`pharos-focus-ring pharos-control-pill min-h-11 gap-1 whitespace-nowrap px-2.5 py-1 text-xs sm:min-h-8${
+              filters.includeFunds ? " pharos-control-pill-active" : ""
+            }`}
+          >
+            <span>Include tokenized funds</span>
+            {fundCount > 0 ? (
+              <span className="pharos-numeric text-3xs opacity-75">{fundCount}</span>
+            ) : null}
+          </button>
         </div>
 
         {/* Compact Grade / Mechanism / Peg / Supply chips */}

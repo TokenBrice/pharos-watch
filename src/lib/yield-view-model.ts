@@ -38,6 +38,8 @@ export { isYieldBlockingCoinState } from "@/lib/yield-view-model-facets";
 export interface PreparedYieldUniverse {
   rowFacets: YieldRowFacet[];
   options: YieldViewModelOptions;
+  nonFundOptions: YieldViewModelOptions;
+  nonFundRowCount: number;
   cohortIndex: ReadonlyMap<string, CohortBucket>;
 }
 
@@ -47,7 +49,17 @@ export function prepareYieldUniverse(
   coinStatesById: ReadonlyMap<string, readonly CoinState[]> | null = null,
 ): PreparedYieldUniverse {
   const rowFacets = buildYieldRowFacets(rows, watchlistIds, coinStatesById);
-  return { rowFacets, options: buildYieldOptions(rowFacets), cohortIndex: buildYieldCohortIndex(rows) };
+  const tokenizedFundCount = rowFacets.reduce((sum, facet) => sum + (facet.isTokenizedFund ? 1 : 0), 0);
+  const nonFundFacets = tokenizedFundCount > 0 ? rowFacets.filter((facet) => !facet.isTokenizedFund) : rowFacets;
+  const options = buildYieldOptions(rowFacets, tokenizedFundCount);
+  const nonFundOptions = tokenizedFundCount > 0 ? buildYieldOptions(nonFundFacets, tokenizedFundCount) : options;
+  return {
+    rowFacets,
+    options,
+    nonFundOptions,
+    nonFundRowCount: nonFundFacets.length,
+    cohortIndex: buildYieldCohortIndex(rows),
+  };
 }
 
 /** Filtered, ranked rows for auxiliary views that skip the full view model. */
@@ -87,18 +99,21 @@ export function buildYieldViewModel(
   params: YieldViewModelUrlParams,
   buildOptions: Omit<BuildYieldViewModelOptions, "watchlistIds"> = {},
 ): YieldViewModel {
-  const { rowFacets, options: filterOptions, cohortIndex } = universe;
+  const { rowFacets, cohortIndex } = universe;
+  const wantsFunds = params.includeFunds === "true" || params.includeFunds === "include";
+  const filterOptions = wantsFunds ? universe.options : universe.nonFundOptions;
   const { filters, normalizedParams, invalidParamKeys } = normalizeFilters(params, filterOptions);
   const visibleFacets = rowFacets.filter((facet) => rowMatchesYieldFilters(facet, filters));
   const visibleRows = rankYieldRows(visibleFacets, filters, cohortIndex);
   const { presets, matchingPreset } = buildYieldPresets(rowFacets, filters);
+  const totalRows = filters.includeFunds === "include" ? rowFacets.length : universe.nonFundRowCount;
 
   return {
     filters,
     options: filterOptions,
     normalizedParams,
     invalidParamKeys,
-    totalRows: rowFacets.length,
+    totalRows,
     visibleRows,
     emptyState: buildYieldEmptyState(rowFacets.length, visibleRows, rowFacets, filters, filterOptions),
     comparisonLabel: getYieldComparisonLabel(filters),
