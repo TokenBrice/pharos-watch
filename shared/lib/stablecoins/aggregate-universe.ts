@@ -1,4 +1,9 @@
-import { getListingClass, isCoreAggregateListingClass, type ListingClass } from "./listing-governance";
+import {
+  getListingClass,
+  isCoreAggregateListingClass,
+  isTokenizedFundId,
+  type ListingClass,
+} from "./listing-governance";
 
 export const CORE_STABLECOIN_AGGREGATE_UNIVERSE = "core-stablecoins-v1" as const;
 
@@ -16,6 +21,10 @@ function hasListingClass(stablecoinId: string, listingClass: ListingClass): bool
 
 export function filterCoreAggregateStablecoins<T extends StablecoinIdentity>(rows: readonly T[]): T[] {
   return rows.filter((row) => isCoreAggregateStablecoinId(row.id));
+}
+
+export function filterTokenizedFunds<T extends StablecoinIdentity>(rows: readonly T[]): T[] {
+  return rows.filter((row) => isTokenizedFundId(row.id));
 }
 
 export function filterStablecoinsByListingClass<T extends StablecoinIdentity>(

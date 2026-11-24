@@ -34,12 +34,14 @@ export const STABLECOIN_EXIT_MECHANISM_VALUES = [
   "discretionary",
 ] as const;
 
-export type ListingClass =
-  | "core-stablecoin"
-  | "cash-equivalent"
-  | "stablecoin-variant"
-  | "stable-value-investment"
-  | "excluded";
+export const LISTING_CLASS_VALUES = [
+  "core-stablecoin",
+  "stablecoin-variant",
+  "tokenized-fund",
+  "review-hold",
+  "excluded",
+] as const;
+export type ListingClass = (typeof LISTING_CLASS_VALUES)[number];
 
 export const MECHANISM_ARCHETYPE_REVIEW_DISPOSITION_VALUES = ["resolved", "unresolved"] as const;
 

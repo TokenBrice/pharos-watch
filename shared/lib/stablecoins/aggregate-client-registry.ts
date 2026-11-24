@@ -1,7 +1,7 @@
 import type { StablecoinClientMeta } from "../../types/stablecoin-client-meta";
 import { CLIENT_ACTIVE_STABLECOINS } from "./client-registry";
 import { filterStablecoinsByListingClass } from "./aggregate-universe";
-import { isCoreAggregateListingClass } from "./listing-governance";
+import { isCoreAggregateListingClass, isTokenizedFundListingClass } from "./listing-governance";
 
 const CLIENT_CORE_AGGREGATE_ACTIVE_STABLECOINS: readonly StablecoinClientMeta[] =
   CLIENT_ACTIVE_STABLECOINS.filter((stablecoin) => isCoreAggregateListingClass(stablecoin.listingClass));
@@ -17,4 +17,11 @@ const CLIENT_ACTIVE_VARIANT_STABLECOINS: readonly StablecoinClientMeta[] = filte
 
 export const CLIENT_ACTIVE_VARIANT_IDS: ReadonlySet<string> = new Set(
   CLIENT_ACTIVE_VARIANT_STABLECOINS.map((stablecoin) => stablecoin.id),
+);
+
+const CLIENT_ACTIVE_TOKENIZED_FUNDS: readonly StablecoinClientMeta[] =
+  CLIENT_ACTIVE_STABLECOINS.filter((stablecoin) => isTokenizedFundListingClass(stablecoin.listingClass));
+
+export const CLIENT_ACTIVE_TOKENIZED_FUND_IDS: ReadonlySet<string> = new Set(
+  CLIENT_ACTIVE_TOKENIZED_FUNDS.map((stablecoin) => stablecoin.id),
 );

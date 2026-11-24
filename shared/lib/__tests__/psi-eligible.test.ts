@@ -9,7 +9,8 @@ import {
   PSI_ELIGIBLE_STABLECOINS,
 } from "../psi-eligible";
 import {
-  ACTIVE_STABLE_VALUE_INVESTMENT_IDS,
+  ACTIVE_REVIEW_HOLD_IDS,
+  ACTIVE_TOKENIZED_FUND_IDS,
   ACTIVE_VARIANT_IDS,
   CORE_AGGREGATE_ACTIVE_IDS,
   CORE_AGGREGATE_ACTIVE_STABLECOINS,
@@ -29,8 +30,8 @@ describe("PSI eligibility", () => {
     }
   });
 
-  it("keeps variants monitored but excludes them from the PSI monetary aggregate", () => {
-    for (const id of [...ACTIVE_VARIANT_IDS, ...ACTIVE_STABLE_VALUE_INVESTMENT_IDS]) {
+  it("keeps variants, tokenized funds, and review holds monitored but outside the PSI monetary aggregate", () => {
+    for (const id of [...ACTIVE_VARIANT_IDS, ...ACTIVE_TOKENIZED_FUND_IDS, ...ACTIVE_REVIEW_HOLD_IDS]) {
       expect(PSI_ELIGIBLE_IDS.has(id)).toBe(true);
       expect(PSI_ELIGIBLE_META_BY_ID.has(id)).toBe(true);
       expect(CORE_PSI_ELIGIBLE_IDS.has(id)).toBe(false);

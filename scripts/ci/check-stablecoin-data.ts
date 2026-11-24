@@ -16,6 +16,7 @@ import { classifyPegClass, normalizePegTypeFromCurrency } from "@shared/lib/peg-
 import { hasRuntimeOnchainSupplyPath } from "@shared/lib/onchain-supply-probe";
 import type { DeadStablecoin } from "@shared/types/cemetery";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
+import { LISTING_CLASS_VALUES } from "@shared/types/stablecoin-taxonomy";
 import { NativeBankDenomSchema } from "@shared/types/stablecoin-meta-primitives";
 import { isValidIsoDateOnly } from "@shared/types/date-primitives";
 import { MANIFEST_SOURCES } from "@shared/data/live-reserves/independent-assurance";
@@ -67,14 +68,6 @@ const ACTIVE_DEAD_LLAMA_ID_OVERLAP_ALLOWLIST = new Set([
   // keeps its historical May 2026 assessment distinct from Native Markets/Hermetica USDH.
   "65::usdh-hubble::usdh-hubble-2026-05",
 ]);
-
-const LISTING_CLASS_VALUES = [
-  "core-stablecoin",
-  "cash-equivalent",
-  "stablecoin-variant",
-  "stable-value-investment",
-  "excluded",
-] as const;
 
 const ListingDecisionRegistrySchema: z.ZodType<ListingDecisionRegistry> = z
   .object({
@@ -613,36 +606,53 @@ export function getListingGovernanceIssues(
     const holdListingClass = coin.mechanismArchetype == null
       && coin.mechanismArchetypeReview?.disposition === "unresolved"
       && MechanismArchetypeReviewSchema.safeParse(coin.mechanismArchetypeReview).success;
-    const expectedListingClass = coin.status === "delisted"
-      ? "excluded"
-      : coin.variantOf
-        ? "stablecoin-variant"
-        : coin.mechanismArchetype === "rwa-credit-fund"
-          ? "stable-value-investment"
-          : coin.flags.navToken === true || coin.mechanismArchetype === "tbill"
-            ? "cash-equivalent"
-            : holdListingClass
-              ? "stable-value-investment"
-              : "core-stablecoin";
-    if (listingClass !== expectedListingClass) {
-      issues.push(
-        `listing-decisions.json class for "${coin.id}" is ${listingClass}; expected ${expectedListingClass}`,
-      );
-    }
 
     if (coin.status === "delisted") {
       if (listingClass !== "excluded") {
-        issues.push(`listing-decisions.json must classify delisted "${coin.id}" as excluded`);
+        issues.push(
+          `listing-decisions.json class for "${coin.id}" is ${listingClass}; delisted assets must be excluded`,
+        );
       }
-    } else if (listingClass === "excluded") {
+      continue;
+    }
+
+    if (coin.priceBasis != null) {
+      issues.push(`priceBasis is reserved for sourced delisting records; remove it from "${coin.id}"`);
+    }
+    if (coin.exitMechanism != null) {
+      issues.push(`exitMechanism is reserved for sourced delisting records; remove it from "${coin.id}"`);
+    }
+
+    if (listingClass === "excluded") {
       issues.push(`listing-decisions.json marks non-delisted "${coin.id}" as excluded`);
-    } else {
-      if (coin.priceBasis != null) {
-        issues.push(`priceBasis is reserved for sourced delisting records; remove it from "${coin.id}"`);
+      continue;
+    }
+
+    if (coin.variantOf) {
+      if (listingClass !== "stablecoin-variant") {
+        issues.push(
+          `listing-decisions.json class for "${coin.id}" is ${listingClass}; expected stablecoin-variant (variantOf "${coin.variantOf}")`,
+        );
       }
-      if (coin.exitMechanism != null) {
-        issues.push(`exitMechanism is reserved for sourced delisting records; remove it from "${coin.id}"`);
+      continue;
+    }
+
+    if (holdListingClass) {
+      if (listingClass !== "review-hold") {
+        issues.push(
+          `listing-decisions.json class for "${coin.id}" is ${listingClass}; expected review-hold (unresolved mechanism review)`,
+        );
       }
+      continue;
+    }
+
+    if (listingClass !== "core-stablecoin" && listingClass !== "tokenized-fund") {
+      const reason = listingClass === "stablecoin-variant"
+        ? "variantOf is absent"
+        : "no valid unresolved mechanism review with null mechanismArchetype";
+      issues.push(
+        `listing-decisions.json class for "${coin.id}" is ${listingClass} (${reason}); expected core-stablecoin or tokenized-fund`,
+      );
     }
   }
 

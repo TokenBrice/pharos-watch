@@ -9,6 +9,9 @@
     "yieldBearing": true,
     "rwa": true
   },
+  "variantOf": "m-m0",
+  "variantKind": "pure-wrapper",
+  "pegReferenceId": "m-m0",
   "infrastructures": [
     "m0"
   ],
@@ -19,7 +22,7 @@
     "disposition": "resolved",
     "reviewedAt": "2026-11-15",
     "reviewer": "Pharos Streamflow USD+ addition review",
-    "rationale": "The issuer identifies Treasury-backed M0 infrastructure and daily additional-token distributions, supporting the Treasury mechanism without NAV appreciation. M0 lineage establishes infrastructure membership; a complete deployed fixed-unit parent claim has not been proved, so no variant relationship is asserted.",
+    "rationale": "The issuer identifies Treasury-backed M0 infrastructure and daily additional-token distributions, supporting the Treasury mechanism without NAV appreciation. M0 lineage and the pinned M-vault balance establish the pure-wrapper variant relationship to M0 M, while a complete reproducible-build proof of every deployed mint path remains open.",
     "sources": [
       {
         "label": "Streamflow USD+ issuer guide",

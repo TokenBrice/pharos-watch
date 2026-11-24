@@ -346,7 +346,7 @@ describe("reserve public-label guard", () => {
   });
 });
 
-describe("listing class during unresolved mechanism review", () => {
+describe("listing class precedence and unresolved mechanism review", () => {
   const coin: StablecoinMeta = {
     id: "fixture-usd",
     name: "Fixture USD",
@@ -362,8 +362,8 @@ describe("listing class during unresolved mechanism review", () => {
   };
   const decisions = {
     schemaVersion: 1,
-    policyVersion: "fixture",
-    listingClassById: { "fixture-usd": "stable-value-investment" },
+    policyVersion: "2.0",
+    listingClassById: { "fixture-usd": "review-hold" },
   };
   const review: NonNullable<StablecoinMeta["mechanismArchetypeReview"]> = {
     disposition: "unresolved",
@@ -373,42 +373,61 @@ describe("listing class during unresolved mechanism review", () => {
     sources: [{ label: "Issuer disclosure", url: "https://example.com/token" }],
   };
 
-  it("holds the non-core ledger class while a sourced dated review is unresolved", () => {
+  it("holds review-hold while a sourced dated review is unresolved, even with navToken set", () => {
     expect(getListingGovernanceIssues([{ ...coin, mechanismArchetypeReview: review }], decisions)).toEqual([]);
+    expect(getListingGovernanceIssues([
+      { ...coin, flags: { ...coin.flags, navToken: true }, mechanismArchetypeReview: review },
+    ], decisions)).toEqual([]);
   });
 
-  it.each(["core-stablecoin", "cash-equivalent"])("rejects unjustified %s promotion during unresolved review", (listingClass) => {
+  it.each(["core-stablecoin", "tokenized-fund"])("rejects %s during unresolved review and preserves variant precedence", (listingClass) => {
     expect(getListingGovernanceIssues([{ ...coin, mechanismArchetypeReview: review }], {
       ...decisions, listingClassById: { [coin.id]: listingClass },
-    })).toContain(`listing-decisions.json class for "fixture-usd" is ${listingClass}; expected stable-value-investment`);
+    })).toContain(
+      `listing-decisions.json class for "fixture-usd" is ${listingClass}; expected review-hold (unresolved mechanism review)`,
+    );
     expect(getListingGovernanceIssues([{ ...coin, variantOf: "usdc-circle", mechanismArchetypeReview: review }], {
       ...decisions, listingClassById: { [coin.id]: listingClass },
-    })).toContain(`listing-decisions.json class for "fixture-usd" is ${listingClass}; expected stablecoin-variant`);
+    })).toContain(
+      `listing-decisions.json class for "fixture-usd" is ${listingClass}; expected stablecoin-variant (variantOf "usdc-circle")`,
+    );
   });
 
-  it("retains known NAV precedence during unresolved review", () => {
-    expect(getListingGovernanceIssues([{ ...coin, flags: { ...coin.flags, navToken: true }, mechanismArchetypeReview: review }], {
-      ...decisions, listingClassById: { [coin.id]: "cash-equivalent" },
-    })).toEqual([]);
+  it("accepts authored core-stablecoin or tokenized-fund regardless of navToken or archetype", () => {
+    for (const listingClass of ["core-stablecoin", "tokenized-fund"] as const) {
+      expect(getListingGovernanceIssues([
+        { ...coin, mechanismArchetype: "tbill", flags: { ...coin.flags, navToken: true } },
+      ], { ...decisions, listingClassById: { [coin.id]: listingClass } })).toEqual([]);
+      expect(getListingGovernanceIssues([
+        { ...coin, mechanismArchetype: "rwa-credit-fund", flags: { ...coin.flags, navToken: false } },
+      ], { ...decisions, listingClassById: { [coin.id]: listingClass } })).toEqual([]);
+    }
+    expect(getListingGovernanceIssues([coin], {
+      ...decisions, listingClassById: { [coin.id]: "stablecoin-variant" },
+    })).toEqual([
+      'listing-decisions.json class for "fixture-usd" is stablecoin-variant (variantOf is absent); expected core-stablecoin or tokenized-fund',
+    ]);
   });
 
-  it("resumes normal core precedence once the review is resolved without an archetype", () => {
+  it("requires authored core-stablecoin or tokenized-fund once the review is resolved without an archetype", () => {
     const resolvedCoin = { ...coin, mechanismArchetypeReview: { ...review, disposition: "resolved" as const } };
     expect(getListingGovernanceIssues([resolvedCoin], decisions)).toEqual([
-      'listing-decisions.json class for "fixture-usd" is stable-value-investment; expected core-stablecoin',
+      'listing-decisions.json class for "fixture-usd" is review-hold (no valid unresolved mechanism review with null mechanismArchetype); expected core-stablecoin or tokenized-fund',
     ]);
-    expect(getListingGovernanceIssues([resolvedCoin], {
-      ...decisions, listingClassById: { "fixture-usd": "core-stablecoin" },
-    })).toEqual([]);
+    for (const listingClass of ["core-stablecoin", "tokenized-fund"] as const) {
+      expect(getListingGovernanceIssues([resolvedCoin], {
+        ...decisions, listingClassById: { "fixture-usd": listingClass },
+      })).toEqual([]);
+    }
   });
 
   it.each([
     { ...review, reviewedAt: "not-a-date" },
     { ...review, sources: [] },
     { ...review, sources: [{ label: "Invalid source", url: "not-a-url" }] },
-  ])("does not hold a class on invalid review provenance", (invalidReview) => {
+  ])("does not hold review-hold on invalid review provenance", (invalidReview) => {
     expect(getListingGovernanceIssues([{ ...coin, mechanismArchetypeReview: invalidReview }], decisions)).toEqual([
-      'listing-decisions.json class for "fixture-usd" is stable-value-investment; expected core-stablecoin',
+      'listing-decisions.json class for "fixture-usd" is review-hold (no valid unresolved mechanism review with null mechanismArchetype); expected core-stablecoin or tokenized-fund',
     ]);
   });
 
@@ -416,6 +435,11 @@ describe("listing class during unresolved mechanism review", () => {
     expect(getListingGovernanceIssues([{
       ...coin, status: "delisted", mechanismArchetypeReview: review,
     }], { ...decisions, listingClassById: { "fixture-usd": "excluded" } })).toEqual([]);
+    expect(getListingGovernanceIssues([{
+      ...coin, status: "delisted", mechanismArchetypeReview: review,
+    }], decisions)).toEqual([
+      'listing-decisions.json class for "fixture-usd" is review-hold; delisted assets must be excluded',
+    ]);
     expect(getListingGovernanceIssues([{
       ...coin, mechanismArchetypeReview: review,
     }], { ...decisions, listingClassById: { "fixture-usd": "excluded" } })).toContain(

@@ -27,6 +27,7 @@ import {
   STABLECOIN_CLIENT_DETAIL_FIELDS,
   STABLECOIN_CLIENT_LIST_FIELDS,
 } from "../../shared/types/stablecoin-client-meta.ts";
+import { LISTING_CLASS_VALUES as TAXONOMY_LISTING_CLASS_VALUES } from "../../shared/types/stablecoin-taxonomy.ts";
 import { resolveMintAuthorityStatusKind } from "../../shared/lib/classification/mint-authority.ts";
 import { resolveMechanismArchetype } from "../../shared/lib/classification/resolve-mechanism-archetype.ts";
 import { getHeroPegLabel } from "../../shared/lib/classification.ts";
@@ -74,13 +75,7 @@ const ALERTS_FIELD = "alerts";
 const GENIUS_FIELD = "genius";
 const LISTING_CLASS_FIELD = "listingClass";
 const CHAIN_IDS_FIELD = "chainIds";
-const LISTING_CLASS_VALUES = new Set([
-  "core-stablecoin",
-  "cash-equivalent",
-  "stablecoin-variant",
-  "stable-value-investment",
-  "excluded",
-]);
+const LISTING_CLASS_VALUES = new Set(TAXONOMY_LISTING_CLASS_VALUES);
 function readListingClassById(sourcePath = LISTING_DECISIONS_JSON_ABS) {
   const parsed = JSON.parse(readFileSync(sourcePath, "utf8"));
   if (!isPlainObject(parsed?.listingClassById)) {

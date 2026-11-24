@@ -8,8 +8,7 @@
     "backing": "rwa-backed",
     "governance": "centralized",
     "yieldBearing": true,
-    "rwa": true,
-    "navToken": true
+    "rwa": true
   },
   "collateral": "Short-dated U.S. Treasury bills, overnight Treasury repo, a government money market fund, and cash held by Figure Certificate Company (FCC), an SEC-registered face-amount certificate company; qualified assets are on deposit with UMB Bank N.A. and Flagstar Bank N.A.",
   "pegMechanism": "Registered face-amount certificate issued and surrendered at $0.01 per certificate; daily simple interest at SOFR minus 35bps (minimum 0%), paid monthly in USD and automatically reinvested unless opted out; mint and surrender through Figure Certificate Company subject to KYC and offering terms; registered under the Securities Act of 1933 and Investment Company Act of 1940",

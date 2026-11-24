@@ -21,9 +21,16 @@ export function getListingClass(stablecoinId: string): ListingClass | null {
 
 const CORE_AGGREGATE_LISTING_CLASSES: ReadonlySet<ListingClass> = new Set([
   "core-stablecoin",
-  "cash-equivalent",
 ]);
 
 export function isCoreAggregateListingClass(listingClass: ListingClass | null | undefined): boolean {
   return listingClass != null && CORE_AGGREGATE_LISTING_CLASSES.has(listingClass);
+}
+
+export function isTokenizedFundListingClass(listingClass: ListingClass | null | undefined): boolean {
+  return listingClass === "tokenized-fund";
+}
+
+export function isTokenizedFundId(stablecoinId: string): boolean {
+  return isTokenizedFundListingClass(getListingClass(stablecoinId));
 }

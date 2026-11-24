@@ -32,7 +32,7 @@ import {
 import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import { BLUECHIP_GATES, BLUECHIP_LEDE, BLUECHIP_REFUSALS, BLUECHIP_WHAT_IT_MEANS } from "./bluechip-content";
 import {
-  ACTIVE_STABLE_VALUE_INVESTMENT_COUNT,
+  ACTIVE_TOKENIZED_FUND_COUNT,
   ACTIVE_VARIANT_STABLECOIN_COUNT,
   CORE_AGGREGATE_STABLECOIN_COUNT,
   DEAD_STABLECOIN_COUNT,
@@ -366,7 +366,7 @@ export function AboutPageContent() {
     { label: "Active", value: HEADLINE_STABLECOIN_COUNT },
     { label: "Core", value: CORE_AGGREGATE_STABLECOIN_COUNT },
     { label: "Variants", value: ACTIVE_VARIANT_STABLECOIN_COUNT },
-    { label: "Stable-value", value: ACTIVE_STABLE_VALUE_INVESTMENT_COUNT },
+    { label: "Tokenized funds", value: ACTIVE_TOKENIZED_FUND_COUNT },
     { label: "Upcoming", value: UPCOMING_STABLECOIN_COUNT },
     { label: "Sources", value: "50+" },
   ];
@@ -403,7 +403,7 @@ export function AboutPageContent() {
               className="w-full max-w-4xl text-xl font-semibold leading-snug tracking-tight text-foreground/95 [text-wrap:balance] sm:text-2xl"
             >
               Every stablecoin makes two promises at once: that it will redeem at par, and that it can be redeemed at
-              all. Pharos watches both across active stablecoins, tracked variants, stable-value investments, and the
+              all. Pharos watches both across active stablecoins, tracked variants, tokenized funds, and the
               chains and reserves beneath them so desks, treasuries, and researchers can read the peg the way
               navigators read weather.
             </p>
