@@ -375,7 +375,7 @@ export function buildPrimarySourceCandidates(
     }),
   ].filter((source): source is SourcePrice => source != null);
   for (const source of baseSources) {
-    source.upstreamKeys ??= directUsdVenueKeys(source.source, asset.symbol);
+    source.upstreamKeys ??= directUsdVenueKeys(source.source, asset.symbol, asset.id);
     if (source.source === "kraken" && collected.krakenQuoteBasis === "last-trade" && source.observedAt == null) {
       source.nonVotingReason = "undated-trade";
     }

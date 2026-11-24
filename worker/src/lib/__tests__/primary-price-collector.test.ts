@@ -640,6 +640,9 @@ describe("buildPrimarySourceCandidates", () => {
     expect(directUsdVenueKeys("kraken", "tGBP")).toEqual(["venue:kraken"]);
     expect(directUsdVenueKeys("kraken", "USDsui")).toEqual(["venue:kraken"]);
     expect(directUsdVenueKeys("coinbase", "EURC")).toEqual(["venue:coinbase", "venue:bitstamp"]);
+    expect(directUsdVenueKeys("kraken", "OUSD", "ousd-open-standard")).toEqual(["venue:kraken"]);
+    expect(directUsdVenueKeys("kraken", "OUSD", "ousd-origin-protocol")).toBeUndefined();
+    expect(directUsdVenueKeys("kraken", "OUSD")).toBeUndefined();
 
     const nowSec = 1_800_000_000;
     const { sources } = buildPrimarySourceCandidates(

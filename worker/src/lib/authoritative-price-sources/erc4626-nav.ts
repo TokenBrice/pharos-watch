@@ -96,6 +96,7 @@ const ERC4626_NAV_VAULTS: readonly Erc4626NavVaultConfig[] = [
   defineRegistryErc4626NavVault({ id: "bbqusdc-steakhouse-v2", parentId: USDC_CIRCLE_ID, chain: ETHEREUM_CHAIN }),
   defineRegistryErc4626NavVault({ id: "hyperusdca-hyperithm", parentId: USDC_CIRCLE_ID, chain: "monad" }),
   defineRegistryErc4626NavVault({ id: "ethenausdc-steakhouse", parentId: USDC_CIRCLE_ID, chain: "base" }),
+  defineRegistryErc4626NavVault({ id: "stusds-sky", parentId: USDS_SKY_ID, chain: ETHEREUM_CHAIN }),
 ];
 
 const ERC4626_NAV_VAULTS_BY_ID = new Map<string, Erc4626NavVaultConfig>(

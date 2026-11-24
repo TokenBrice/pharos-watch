@@ -417,7 +417,7 @@ function independentlyPricedUsdMark({ asset, dexRow, now }: DepegAssetDecisionIn
     isAffirmativeDexPriceRow(dexRow, now, "depeg") ? dexRow : undefined;
   const lineage = readDexPriceLineage("upstreamKeys" in asset || "pricePoolKeys" in asset ? asset : joined);
   return [...sources].every((source) => {
-    if (directUsdVenueKeys(source, asset.symbol)?.length) return true;
+    if (directUsdVenueKeys(source, asset.symbol, asset.id)?.length) return true;
     const poolMarket = getPricingSourceRegistryEntry(source)?.trustTier === "soft_dex" || source === "curve-onchain";
     return poolMarket && !!lineage.pricePoolKeys?.length && !!lineage.upstreamKeys?.length;
   });
