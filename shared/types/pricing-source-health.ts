@@ -5,7 +5,6 @@ export const PRICE_SOURCE_HEALTH_BUCKET_KEYS = [
   "coingecko",
   "hive-native-cg",
   "coingecko-low-volume",
-  "coingecko-native-implied",
   "defillama",
   "defillama-list",
   "coingecko-mirror",
