@@ -6,7 +6,9 @@ import { StablecoinIdentityTransition } from "@/components/view-transitions";
 import { STABLECOIN_DETAIL_IDENTITY_LOGO_SIZE } from "@/components/stablecoin-detail/constants";
 import { BackToSource } from "@/components/back-to-source";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
+import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT, TOKENIZED_FUND_BADGE } from "@shared/lib/classification";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { isTokenizedFundListingClass } from "@shared/lib/stablecoins/listing-governance";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 
 interface StablecoinDetailLoadingShellProps {
@@ -41,6 +43,7 @@ export function StablecoinDetailLoadingShell({
   heading,
 }: StablecoinDetailLoadingShellProps) {
   const Title = titleAs;
+  const isTokenizedFund = isTokenizedFundListingClass(CLIENT_TRACKED_META_BY_ID.get(coin.id)?.listingClass);
   return (
     <div>
       <BackToSource className="mb-2" />
@@ -64,6 +67,15 @@ export function StablecoinDetailLoadingShell({
                     {titleAs === "h1" && heading && heading !== coin.name ? <span className="sr-only"> ({coin.symbol})</span> : null}
                   </Title>
                   <span className="text-base font-mono tabular-nums text-muted-foreground">{coin.symbol}</span>
+                  {isTokenizedFund ? (
+                    <span
+                      data-tokenized-fund-badge
+                      title={TOKENIZED_FUND_BADGE.notice}
+                      className={`inline-flex h-5 items-center rounded-full border px-2.5 text-xs font-semibold leading-none ${TOKENIZED_FUND_BADGE.cls}`}
+                    >
+                      {TOKENIZED_FUND_BADGE.label}
+                    </span>
+                  ) : null}
                 </div>
                 <p className="text-sm text-muted-foreground">
                   {GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance} ·{" "}

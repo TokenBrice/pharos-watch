@@ -56,5 +56,17 @@ describe("detail verdict lane", () => {
     expect(container.querySelector("[data-hero-verdict-lane]")).toBeNull();
     expect(container.querySelector(`#hero-verdict-${coin.id}`)).toBeNull();
     expect(container.textContent).not.toContain("Institutional");
+    expect(container.querySelector("[data-tokenized-fund-badge]")).toBeNull();
+    expect(container.querySelector("[data-tokenized-fund-notice]")).toBeNull();
+  });
+
+  it("shows the tokenized fund badge and notice on active tokenized fund detail pages", () => {
+    const fund = makeStablecoinMeta({ id: "buidl-blackrock", name: "BlackRock USD Institutional Digital Liquidity Fund", symbol: "BUIDL" });
+    const { container } = render(<HeroChipRail coin={fund} verdict={{ archetype: "uncategorized", label: "Uncategorized" }} />);
+    const badge = container.querySelector("[data-tokenized-fund-badge]");
+    const notice = container.querySelector("[data-tokenized-fund-notice]");
+    expect(badge?.textContent).toContain("Tokenized fund — not a stablecoin");
+    expect(badge?.getAttribute("title")).toContain("backs stablecoins Pharos follows");
+    expect(notice?.textContent).toContain("Not counted in stablecoin totals and not Safety-graded");
   });
 });

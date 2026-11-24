@@ -287,6 +287,14 @@ describe("HeroCard", () => {
     expect(goldHtml).toContain("+1.00%");
     expect(goldHtml).toContain("+2.28%");
     expect(goldHtml).not.toContain("-99.98%");
+
+    const fundHtml = renderHero({
+      coin: { id: "buidl-blackrock", name: "BlackRock USD Institutional Digital Liquidity Fund", symbol: "BUIDL" },
+      coinData: { id: "buidl-blackrock", name: "BlackRock USD Institutional Digital Liquidity Fund", symbol: "BUIDL" },
+    });
+    expect(fundHtml).toContain("Tokenized fund — not a stablecoin");
+    expect(fundHtml).toContain("Not counted in stablecoin totals and not Safety-graded");
+    expect(html).not.toContain("Tokenized fund — not a stablecoin");
   });
 });
 
