@@ -8,7 +8,7 @@ import type { CemeteryRegisterRow } from "@/lib/cemetery-register";
 import { formatCemeteryPeak } from "@/lib/cemetery-stats";
 import { cn } from "@/lib/utils";
 import { isRowActivation } from "@/lib/row-activation";
-import { CemeteryCauseGlyphUse } from "./cemetery-cause-glyph";
+import { CemeteryCauseGlyph } from "./cemetery-cause-glyph";
 import { CemeteryRegisterAutopsy } from "./cemetery-register-autopsy";
 import { formatCemeteryPeg, formatRegisterDeathDate } from "./cemetery-register-model";
 import styles from "./cemetery-register.module.css";
@@ -33,7 +33,6 @@ export interface CemeteryRegisterRowPairProps {
   expanded: boolean;
   highlightClassName: string | undefined;
   columnCount: number;
-  glyphIdPrefix?: string;
   onToggle: (id: string, open: boolean) => void;
   onShowOnField: (id: string) => void;
 }
@@ -46,7 +45,6 @@ export const CemeteryRegisterRowPair = memo(function CemeteryRegisterRowPair({
   expanded,
   highlightClassName,
   columnCount,
-  glyphIdPrefix,
   onToggle,
   onShowOnField,
 }: CemeteryRegisterRowPairProps) {
@@ -106,7 +104,7 @@ export const CemeteryRegisterRowPair = memo(function CemeteryRegisterRowPair({
                 )}
               </div>
               <div className={styles.mobileCause}>
-                <CemeteryCauseGlyphUse cause={row.cause} idPrefix={glyphIdPrefix} size="xs" />
+                <CemeteryCauseGlyph cause={row.cause} size="xs" />
                 <span className="min-w-0 truncate">{causeLabel}</span>
               </div>
             </div>
@@ -114,7 +112,7 @@ export const CemeteryRegisterRowPair = memo(function CemeteryRegisterRowPair({
         </TableCell>
         <TableCell className="hidden md:table-cell">
           <span className="inline-flex items-center gap-1.5 align-middle">
-            <CemeteryCauseGlyphUse cause={row.cause} idPrefix={glyphIdPrefix} size="sm" />
+            <CemeteryCauseGlyph cause={row.cause} size="sm" />
             {causeLabel}
           </span>
         </TableCell>
@@ -167,7 +165,7 @@ export const CemeteryRegisterRowPair = memo(function CemeteryRegisterRowPair({
         className="bg-muted/30 hover:bg-muted/30"
       >
         <TableCell colSpan={columnCount} className="whitespace-normal p-0">
-          <CemeteryRegisterAutopsy row={row} expanded={expanded} glyphIdPrefix={glyphIdPrefix} onShowOnField={onShowOnField} />
+          <CemeteryRegisterAutopsy row={row} expanded={expanded} onShowOnField={onShowOnField} />
         </TableCell>
       </TableRow>
     </>
@@ -180,15 +178,7 @@ export const CemeteryRegisterRowPair = memo(function CemeteryRegisterRowPair({
  * CSS unless it is the `:target`, it carries everything a `#<id>` link needs
  * without JS. Any interaction that unfolds rows swaps in the full row pair.
  */
-export function CemeteryRegisterFoldedRow({
-  row,
-  columnCount,
-  glyphIdPrefix,
-}: {
-  row: CemeteryRegisterRow;
-  columnCount: number;
-  glyphIdPrefix?: string;
-}) {
+export function CemeteryRegisterFoldedRow({ row, columnCount }: { row: CemeteryRegisterRow; columnCount: number }) {
   return (
     <TableRow id={row.id} data-folded="" rowIntent="static">
       <TableCell colSpan={columnCount} className={cn(styles.folded, "whitespace-normal px-4 py-3")}>
@@ -206,7 +196,6 @@ export function CemeteryRegisterFoldedRow({
           ) : (
             ` ${row.name} · `
           )}
-          <CemeteryCauseGlyphUse cause={row.cause} idPrefix={glyphIdPrefix} size="xs" className={styles.foldedGlyph} />
           {`${CAUSE_META[row.cause].label} · ${formatRegisterDeathDate(row.deathDate)}`}
         </p>
         {row.epitaph ? <p className={styles.foldedEpitaph}>{row.epitaph}</p> : null}

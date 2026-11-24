@@ -5,7 +5,7 @@ import { CAUSE_BG_CLASS, causeColorVars } from "@/lib/cemetery-cause-style";
 import { buildRegisterHref, cemeteryCauseAnchor } from "@/lib/cemetery-selection";
 import { formatCemeteryPeak, type CemeteryCauseStats, type CemeteryStats } from "@/lib/cemetery-stats";
 import styles from "./cemetery-below-fold.module.css";
-import { CemeteryCauseGlyph } from "./cemetery-cause-glyph";
+import { CemeteryCauseGlyph, CemeteryCauseGlyphDefs } from "./cemetery-cause-glyph";
 import { CemeterySectionHeader } from "./cemetery-section-header";
 
 export interface CemeteryCausesProps {
@@ -215,6 +215,8 @@ export function CemeteryCauses({ stats }: CemeteryCausesProps) {
   const pattern = stats.patterns.find((p) => p.key === "abandoned-most-common");
   return (
     <section id="causes" aria-labelledby="causes-heading" className="scroll-mt-24 space-y-3">
+      {/* the page's one cause-marker sheet: the band, register and charts below all `<use>` it */}
+      <CemeteryCauseGlyphDefs />
       <CemeterySectionHeader
         id="causes-heading"
         kicker="Causes of death"

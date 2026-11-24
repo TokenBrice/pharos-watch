@@ -332,11 +332,6 @@
   display: inline-block;
 }
 
-.foldedGlyph {
-  margin-inline: 0.1rem 0.25rem;
-  vertical-align: -0.15em;
-}
-
 .foldedEpitaph {
   font-style: italic;
   color: var(--muted-foreground);

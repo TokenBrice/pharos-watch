@@ -1,13 +1,13 @@
+"use client";
+
 /**
  * Cemetery cause gravestone marker drawn read-only from `graveGeometry` — the
- * exact five stone shapes shown in the hero legend. Boundary-agnostic: no hooks,
- * no client directive; cause colours come solely from `causeColorVars`
- * (`CAUSE_HEX` / `CAUSE_HEX_DARK` via `shared/lib/classification.ts`).
+ * exact five stone shapes shown in the hero legend. Cause colours come solely
+ * from `causeColorVars` (`CAUSE_HEX` / `CAUSE_HEX_DARK` via `shared/lib/classification.ts`).
  *
- * Low-count surfaces (causes band, chart legends/lanes) use `CemeteryCauseGlyph`
- * directly. High-count repeated rows (the Autopsy Register) mount one
- * `CemeteryCauseGlyphDefs` symbol host and reference it with `CemeteryCauseGlyphUse`
- * so per-row markup stays tiny and works without JS.
+ * The page mounts one `CemeteryCauseGlyphDefs` symbol sheet; every marker (causes band, register, charts) is a
+ * `<use>` of it, so a marker costs a few dozen bytes and works without JS. A client module on purpose: a server
+ * component that renders a marker sends the RSC flight a client reference with two props, never the polygons.
  */
 import type { ReactElement } from "react";
 import { CAUSE_ORDER, type CauseOfDeath } from "@shared/lib/cause-of-death";
@@ -110,44 +110,19 @@ function CauseGlyphMarks({ geometry }: { geometry: PlotGraveGeometry }): ReactEl
   );
 }
 
-/** Inline decorative gravestone marker for one cause of death (`aria-hidden`; pair with visible text). */
-export function CemeteryCauseGlyph({
-  cause,
-  size = "sm",
-  className,
-}: {
-  cause: CauseOfDeath;
-  size?: CemeteryCauseGlyphSize;
-  className?: string;
-}): ReactElement {
-  const { geometry, viewBox } = GLYPHS[cause];
-  return (
-    <svg
-      aria-hidden="true"
-      focusable="false"
-      data-cause-glyph={cause}
-      data-cause-archetype={PLOT_ARCHETYPE_BY_CAUSE[cause]}
-      viewBox={viewBox}
-      preserveAspectRatio="xMidYMax meet"
-      className={cn(styles.glyph, styles.glyphRoot, SIZE_CLASS[size], className)}
-      style={causeColorVars(cause)}
-    >
-      <CauseGlyphMarks geometry={geometry} />
-    </svg>
-  );
-}
+const GLYPH_ID = "cem-cg";
 
-/** 0×0 symbol host mounted once for repeated register rows (never `display: none`). */
-export function CemeteryCauseGlyphDefs({ idPrefix }: { idPrefix: string }): ReactElement {
+/** The 0×0 symbol sheet every marker uses, mounted once per page (never `display: none`, so `<use>` resolves). */
+export function CemeteryCauseGlyphDefs(): ReactElement {
   return (
-    <svg aria-hidden="true" focusable="false" className={styles.glyphDefs}>
+    <svg aria-hidden="true" className={styles.glyphDefs}>
       <defs>
         {CAUSE_ORDER.map((cause) => {
           const { geometry, viewBox } = GLYPHS[cause];
           return (
             <symbol
               key={cause}
-              id={`${idPrefix}-${cause}`}
+              id={`${GLYPH_ID}-${cause}`}
               viewBox={viewBox}
               preserveAspectRatio="xMidYMax meet"
               className={styles.glyphRoot}
@@ -162,29 +137,19 @@ export function CemeteryCauseGlyphDefs({ idPrefix }: { idPrefix: string }): Reac
   );
 }
 
-/** Lightweight `<use>` reference to `CemeteryCauseGlyphDefs` (falls back to inline if no prefix is supplied). */
-export function CemeteryCauseGlyphUse({
+/** Decorative gravestone marker for one cause of death (`aria-hidden`; pair with visible text). */
+export function CemeteryCauseGlyph({
   cause,
-  idPrefix,
   size = "sm",
   className,
 }: {
   cause: CauseOfDeath;
-  idPrefix?: string;
   size?: CemeteryCauseGlyphSize;
   className?: string;
 }): ReactElement {
-  if (!idPrefix) return <CemeteryCauseGlyph cause={cause} size={size} className={className} />;
   return (
-    <svg
-      aria-hidden="true"
-      focusable="false"
-      data-cause-glyph={cause}
-      data-cause-archetype={PLOT_ARCHETYPE_BY_CAUSE[cause]}
-      className={cn(styles.glyph, styles.glyphRoot, SIZE_CLASS[size], className)}
-      style={causeColorVars(cause)}
-    >
-      <use href={`#${idPrefix}-${cause}`} />
+    <svg aria-hidden="true" className={cn(styles.glyph, SIZE_CLASS[size], className)}>
+      <use href={`#${GLYPH_ID}-${cause}`} />
     </svg>
   );
 }

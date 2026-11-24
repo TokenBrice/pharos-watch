@@ -11,7 +11,7 @@ import type { CemeteryRegisterRow } from "@/lib/cemetery-register";
 import { cemeteryCauseAnchor } from "@/lib/cemetery-selection";
 import { formatCemeteryPeak } from "@/lib/cemetery-stats";
 import { digestDisplay } from "@/lib/fonts/digest";
-import { CemeteryCauseGlyphUse } from "./cemetery-cause-glyph";
+import { CemeteryCauseGlyph } from "./cemetery-cause-glyph";
 import { formatCemeteryPeg, formatRegisterDeathDate } from "./cemetery-register-model";
 import styles from "./cemetery-register.module.css";
 
@@ -27,7 +27,6 @@ export interface CemeteryRegisterAutopsyProps {
    * expanded.
    */
   expanded: boolean;
-  glyphIdPrefix?: string;
   onShowOnField: (id: string) => void;
 }
 
@@ -35,7 +34,7 @@ export interface CemeteryRegisterAutopsyProps {
  * One record's autopsy. The epitaph is set as a Newsreader italic pull line:
  * the sanctioned cemetery serif carve-out (design-invariants allowlist).
  */
-export function CemeteryRegisterAutopsy({ row, expanded, glyphIdPrefix, onShowOnField }: CemeteryRegisterAutopsyProps) {
+export function CemeteryRegisterAutopsy({ row, expanded, onShowOnField }: CemeteryRegisterAutopsyProps) {
   const { copied, copy } = useCopyToClipboard();
   const [allContracts, setAllContracts] = useState(false);
   const contracts = allContracts ? row.contracts : row.contracts.slice(0, CONTRACT_PREVIEW_COUNT);
@@ -98,7 +97,7 @@ export function CemeteryRegisterAutopsy({ row, expanded, glyphIdPrefix, onShowOn
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] content-start gap-x-4 gap-y-2 text-sm">
           <dt className="text-muted-foreground">Cause</dt>
           <dd className="flex min-w-0 flex-wrap items-center gap-x-1.5">
-            <CemeteryCauseGlyphUse cause={row.cause} idPrefix={glyphIdPrefix} size="sm" />
+            <CemeteryCauseGlyph cause={row.cause} size="sm" />
             <span>{causeLabel}</span>
             <a
               href={`#${cemeteryCauseAnchor(row.cause)}`}

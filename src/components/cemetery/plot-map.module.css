@@ -11,6 +11,15 @@
  * One light from the east-north-east; one hairline weight (0.6 px, non-scaling); no filters; no idle animation.
  */
 
+/* The kit's `.scene .e` hairline under the short `ce` alias `plotClass` emits (route-HTML budget). First rule of the
+   sheet, so every cemetery rule below still wins a tie against it exactly as it did against the kit's `.e`. */
+.map :global(.ce) {
+  stroke: var(--edge);
+  stroke-width: 0.6px;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: round;
+}
+
 /* ------------------------------------------------------------------ tokens: surveyor's daylight */
 .tokens {
   composes: tokens from "../scene/scene-tokens.module.css";

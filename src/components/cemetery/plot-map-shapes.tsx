@@ -239,11 +239,17 @@ export function plotCauseClass(cause: CauseOfDeath): string {
   return styles[`c-${CAUSE_ABBR[cause]}`];
 }
 
+/**
+ * The kit's hairline edge (`e`) under a two-letter alias scoped to `.map` (restated as the first rule of
+ * `plot-map.module.css`). About 1,300 faces carry it, so the kit's module class alone cost ~28 KB of route HTML.
+ */
+const EDGE_CLASS = "ce";
+
 /** Maps prototype class tokens ("st-t e") to CSS-module classes: the cemetery's, else the scene kit's faces. */
 function plotClass(tokens: string): string {
   return tokens
     .split(" ")
-    .map((t) => styles[t] ?? kit[t] ?? t)
+    .map((t) => (t === "e" ? EDGE_CLASS : styles[t] ?? kit[t] ?? t))
     .join(" ");
 }
 
