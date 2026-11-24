@@ -167,15 +167,38 @@ describe("critical publication provider collection", () => {
     expect(messages.includes("[primary-prices] CG price API failed:")).toBe(warnsFetchFail);
   });
 
-  it("carries Kraken Depth upstream clocks without stamping local-fetch time on Depth-only batches", async () => {
+  it("carries Kraken Depth upstream clocks and scopes colliding OUSD symbols to ousd-open-standard", async () => {
     const db = mockD1([]);
+    const now = 1_800_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
     vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, key) => key === CIRCUIT_SOURCE.KRAKEN_PRICES);
-    const plan = await buildPrimaryPricePlan([{ ...TEST_ASSET, id: "eurc-circle", symbol: "EURC" }], db), observedAt = plan.nowSec - 12;
-    vi.mocked(fetchKrakenPrices).mockResolvedValue({ kind: "ok", value: { prices: new Map([["EURC", 1.1]]), observedAtBySymbol: new Map([["EURC", observedAt]]), quoteBasisBySymbol: new Map([["EURC", "bid-ask-midpoint"]]), diagnostics: [] } });
+    const originOnly = await buildPrimaryPricePlan([{ id: "ousd-origin-protocol", name: "Origin Dollar", symbol: "OUSD" }], db);
+    expect(originOnly.krakenSymbols).toEqual([]);
+    const assets: PeggedAsset[] = [
+      { ...TEST_ASSET, id: "eurcv-societe-generale-forge", symbol: "EURCV", pegType: "peggedEUR" },
+      { ...TEST_ASSET, id: "ousd-open-standard", symbol: "OUSD", geckoId: "open-usd" },
+      { ...TEST_ASSET, id: "ousd-origin-protocol", symbol: "OUSD", geckoId: "origin-dollar" },
+    ];
+    const plan = await buildPrimaryPricePlan(assets, db);
+    expect(plan.krakenSymbols).toEqual(["EURCV", "OUSD"]);
+    const observedAt = now - 12;
+    vi.mocked(fetchKrakenPrices).mockResolvedValue({
+      kind: "ok",
+      value: {
+        prices: new Map([["EURCV", 1.0975], ["OUSD", 0.99995]]),
+        observedAtBySymbol: new Map([["EURCV", observedAt], ["OUSD", observedAt]]),
+        quoteBasisBySymbol: new Map([["EURCV", "bid-ask-midpoint"], ["OUSD", "bid-ask-midpoint"]]),
+        diagnostics: [],
+      },
+    });
     const outcomes = vi.spyOn(circuit, "recordOutcomeSafe");
     const { quoteMaps } = await collectPrimaryProviderQuotes({ db, plan });
-    expect([quoteMaps.krakenPrices.get("EURC"), quoteMaps.krakenObservedAtBySymbol.get("EURC"), quoteMaps.krakenObservedAt]).toEqual([1.1, observedAt, null]);
-    expect(outcomes.mock.calls.map(([, k, ok]) => [k, ok])).toEqual([[CIRCUIT_SOURCE.KRAKEN_PRICES, true]]);
+    expect(quoteMaps.krakenObservedAt).toBeNull();
+    expect(outcomes.mock.calls.map(([, key, ok]) => [key, ok])).toEqual([[CIRCUIT_SOURCE.KRAKEN_PRICES, true]]);
+    const { results } = await fetchPrimaryPrices(assets, db);
+    expect(results.get("eurcv-societe-generale-forge")).toMatchObject({ source: "kraken", observedAt, observedAtMode: "upstream" });
+    expect(results.get("ousd-open-standard")).toMatchObject({ source: "kraken", observedAt, observedAtMode: "upstream" });
+    expect(results.has("ousd-origin-protocol")).toBe(false);
   });
 
   it("keeps a collected quote when no-candidate breaker recovery cannot persist its circuit record", async () => {

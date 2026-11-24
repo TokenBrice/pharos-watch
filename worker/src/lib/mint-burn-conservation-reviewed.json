@@ -136,137 +136,6 @@
     },
     {
       "chainId": "base",
-      "stablecoinId": "bd-basedollar",
-      "address": "0x252d36f435582ecb01686448d21e8c9ea0b2ca65",
-      "decimals": 18,
-      "disposition": "admitted",
-      "unsupportedReason": null,
-      "eventSet": "transfer",
-      "invariant": "transfer-supply",
-      "identity": {
-        "explorerSourceUrl": "https://base.blockscout.com/address/0x252d36f435582ecb01686448d21e8c9ea0b2ca65?tab=contract",
-        "sourceVerified": true,
-        "contractName": "BoldToken",
-        "proxy": {
-          "isProxy": false,
-          "kind": "none",
-          "implementation": null,
-          "implementationSourceVerified": null
-        },
-        "externalMatches": [
-          {
-            "source": "defillama",
-            "llamaId": 434,
-            "value": "0x252d36f435582ecb01686448d21e8c9ea0b2ca65",
-            "matches": true,
-            "detail": "stablecoins.llama.fi/stablecoin/434 -> address \"base:0x252D36F435582EcB01686448d21e8C9eA0B2Ca65\", name Base Dollar, symbol BD, url https://basedollar.org (matches registry links)"
-          },
-          {
-            "source": "coingecko",
-            "geckoId": null,
-            "value": null,
-            "matches": false,
-            "detail": "registry geckoId null; pro-api /coins/base-dollar -> 404; /search?query=base%20dollar -> no coins. DefiLlama lists gecko_id 'base-dollar' but CoinGecko has no such coin indexed."
-          }
-        ],
-        "onChain": {
-          "block": 51661820,
-          "blockHash": "0xfcd1405205a2561205e9a6fd1edc3f7d3cdc7521d8cf6df6bfc72ca0f699c269",
-          "decimals": 18,
-          "symbol": "BD",
-          "name": "Base Dollar",
-          "totalSupplyRaw": "140628777393512264614916",
-          "hasCode": true
-        }
-      },
-      "supplyPaths": [
-        {
-          "function": "mint(address,uint256)",
-          "internal": "_mint",
-          "emitsZeroTransfer": true,
-          "sameAmount": true,
-          "note": "guarded by _requireCallerIsBOorAP (BorrowerOperations/ActivePool allowlists set by owner/collateralRegistry); OZ v4.9.0 _mint reverts on account==0, adds amount to _totalSupply, emits Transfer(0,account,amount)"
-        },
-        {
-          "function": "burn(address,uint256)",
-          "internal": "_burn",
-          "emitsZeroTransfer": true,
-          "sameAmount": true,
-          "note": "guarded by _requireCallerIsCRorBOorTMorSP (CollateralRegistry/BorrowerOperations/TroveManager/StabilityPool); OZ v4.9.0 _burn reverts on account==0, subtracts amount from _totalSupply, emits Transfer(account,0,amount)"
-        },
-        {
-          "function": "sendToPool(address,address,uint256)",
-          "internal": "_transfer",
-          "emitsZeroTransfer": false,
-          "sameAmount": null,
-          "note": "StabilityPool-only balance move; OZ _transfer requires from!=0 and to!=0, no supply change"
-        },
-        {
-          "function": "returnFromPool(address,address,uint256)",
-          "internal": "_transfer",
-          "emitsZeroTransfer": false,
-          "sameAmount": null,
-          "note": "StabilityPool-only balance move; OZ _transfer requires from!=0 and to!=0, no supply change"
-        },
-        {
-          "function": "transfer(address,uint256)",
-          "internal": "_transfer",
-          "emitsZeroTransfer": false,
-          "sameAmount": null,
-          "note": "BoldToken override adds _requireValidRecipient(recipient): recipient must not be 0 nor the token contract; then OZ _transfer also requires from!=0/to!=0. No zero-address Transfer possible."
-        },
-        {
-          "function": "transferFrom(address,address,uint256)",
-          "internal": "_transfer",
-          "emitsZeroTransfer": false,
-          "sameAmount": null,
-          "note": "same _requireValidRecipient(recipient) guard as transfer; OZ _transfer enforces from!=0/to!=0"
-        }
-      ],
-      "unpairedPaths": [],
-      "totalSupplyView": {
-        "isStoredSum": true,
-        "note": "OZ v4.9.0 totalSupply() returns _totalSupply; only _mint/_burn write it (verified by grep over the full verified source set: exactly 3 references, declaration + the two paired writes)"
-      },
-      "zeroRecipientTransferReverts": true,
-      "zeroRecipientTransferBurns": null,
-      "identityIssue": "no-external-match: CoinGecko has no listing for this asset (registry geckoId null; /coins/base-dollar 404; search 'base dollar' empty). DefiLlama llamaId 434 address matches exactly and on-chain name()/symbol()/decimals() = 'Base Dollar'/'BD'/18 match the registry, so identity is otherwise unambiguous. Verification nuance (not an address disagreement): Blockscout verification is PARTIAL (is_fully_verified=false, submitted source compiled with constructor string constants name='Test Base Dollar', symbol='TBD'), while the deployed storage holds name='Base Dollar', symbol='BD' (OZ stores name/symbol in storage written by the constructor, so runtime bytecode is constant-independent). Sourcify reports runtimeMatch='match' (full) with creationMatch=null for the same source; the runtime logic reviewed here is byte-exact against on-chain code (eth_getCode == verified deployed_bytecode).",
-      "notes": "Liquity BoldToken fork (BUSL-1.1, compiler 0.8.24, OZ v4.9.0 + ERC20Permit + Liquity Ownable; no _beforeTokenTransfer/_afterTokenTransfer overrides, no direct _totalSupply writes outside OZ _mint/_burn, no other 'emit Transfer' sites). Reverse pairing: no path can emit a zero-address Transfer without a matching supply change (zero recipient/sender reverts everywhere; _mint/_burn revert on account==0 so Transfer(0,0,x) is impossible). Mint/burn are permissioned to Liquity-branch contracts only; privilege cannot move supply without the paired event. Quantitative: full-history (deploy block 49,406,521 -> head) mints 170990176124536958812829 - burns 30361398731024694197913 == totalSupply 140628777393512264614916 exactly; last-24h and prior-48h windows have zero mint/burn events with unchanged supply (last mint 2026-09-18T05:41Z block 51460375, last burn 2026-09-17T06:42Z block 51418988), so admission windows will legitimately be 0-event/0-delta and the plan's second-window rule for zero-event windows applies.",
-      "windows": [
-        {
-          "fromBlock": 51620763,
-          "fromBlockHash": "0xe2dc993159530217914e180e5c5355c0dcea4aa1db538285701bbea36d8fed9f",
-          "fromTimestamp": 1790030873,
-          "toBlock": 51663963,
-          "toBlockHash": "0xea029ee702a579fdc3f82b5e056a92b1147075e7318e9dc67c2d47ad3f849183",
-          "toTimestamp": 1790117273,
-          "mintRaw": "0",
-          "burnRaw": "0",
-          "supplyDeltaRaw": "0",
-          "residualRaw": "0",
-          "logCount": 0,
-          "journalSha256": "46a85c7fb530ae7add66683aafc68a5329748ba06ce5140273d2baac140101a0"
-        },
-        {
-          "fromBlock": 51577563,
-          "fromBlockHash": "0xe25779e81ead61b10ea93041d39017568d74fee6f8fb8cc7577abdcfc003c29c",
-          "fromTimestamp": 1789944473,
-          "toBlock": 51620763,
-          "toBlockHash": "0xe2dc993159530217914e180e5c5355c0dcea4aa1db538285701bbea36d8fed9f",
-          "toTimestamp": 1790030873,
-          "mintRaw": "0",
-          "burnRaw": "0",
-          "supplyDeltaRaw": "0",
-          "residualRaw": "0",
-          "logCount": 0,
-          "journalSha256": "46a85c7fb530ae7add66683aafc68a5329748ba06ce5140273d2baac140101a0"
-        }
-      ],
-      "reviewedAt": "2026-09-22",
-      "reviewer": "P4ChainProbe"
-    },
-    {
-      "chainId": "base",
       "stablecoinId": "ousd-open-standard",
       "address": "0xb2000000000000000000002feb517dfec7415344",
       "decimals": 6,
@@ -852,7 +721,14 @@
             "changeTopic": "0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b"
           }
         },
-        "receiptEvent": { "signature": "Burned(address,address,uint256)", "topicHash": "0x6ab368f832c266c8eb942b84fbcaa20aedc24a699d2a05fae2568028733b1d09", "topicArity": 3, "dataWords": 1, "accountTopic": 2, "amountSlot": 0 }
+        "receiptEvent": {
+          "signature": "Burned(address,address,uint256)",
+          "topicHash": "0x6ab368f832c266c8eb942b84fbcaa20aedc24a699d2a05fae2568028733b1d09",
+          "topicArity": 3,
+          "dataWords": 1,
+          "accountTopic": 2,
+          "amountSlot": 0
+        }
       },
       "supplyBurnProofEvidence": "Verified Erc20Privileged.sol _burn:164-185 subtracts totalSupply, then emits Transfer and Burned(sender,burnFrom,value); Burned declaration:254. Ordinary Erc20Core._transfer never emits Burned. Receipt evidence preserves internal and batch burns without trusting the top-level selector.",
       "eventSet": "transfer",
@@ -2252,7 +2128,15 @@
           "law": "paired-supply-zero-transfers-v1",
           "mintEvidence": "source-only"
         },
-        "directCalls": [{ "signature": "burn(address,uint256)", "selector": "0x9dc29fac", "dataWords": 2, "amountSlot": 1, "account": 0 }]
+        "directCalls": [
+          {
+            "signature": "burn(address,uint256)",
+            "selector": "0x9dc29fac",
+            "dataWords": 2,
+            "amountSlot": 1,
+            "account": 0
+          }
+        ]
       },
       "supplyBurnProofEvidence": "Dai.sol:139-148 direct burn(usr,wad) decrements stored totalSupply and emits exactly Transfer(usr,0,wad); no external calls. Require successful transaction addressed to this token with exact calldata and matching receipt. Internal calls without separate path evidence remain review_required.",
       "eventSet": "transfer",
@@ -2554,7 +2438,15 @@
           "law": "paired-supply-zero-transfers-v1",
           "mintEvidence": "source-only"
         },
-        "directCalls": [{ "signature": "burn(uint256)", "selector": "0x42966c68", "dataWords": 1, "amountSlot": 0, "account": "sender" }]
+        "directCalls": [
+          {
+            "signature": "burn(uint256)",
+            "selector": "0x42966c68",
+            "dataWords": 1,
+            "amountSlot": 0,
+            "account": "sender"
+          }
+        ]
       },
       "supplyBurnProofEvidence": "contracts/ERC20.sol:80-94 burn(value) calls _burn(msg.sender,value), decreases totalSupply, and emits the matching Transfer; no external calls. Validate direct transaction destination, sender, exact calldata, successful receipt and event identity.",
       "eventSet": "transfer",
@@ -3420,7 +3312,15 @@
             "changeTopic": "0x600005b3559a025151f4a40f36d9939d94cf5194016895d4ef6362b211e4c3b5"
           }
         },
-        "directCalls": [{ "signature": "burnTokens(uint256)", "selector": "0x6d1b229d", "dataWords": 1, "amountSlot": 0, "account": "sender" }]
+        "directCalls": [
+          {
+            "signature": "burnTokens(uint256)",
+            "selector": "0x6d1b229d",
+            "dataWords": 1,
+            "amountSlot": 0,
+            "account": "sender"
+          }
+        ]
       },
       "supplyBurnProofEvidence": "Current delegate EURSToken.sol:247-261 burnTokens(value) subtracts tokensCount and emits Transfer(msg.sender,0,value). Require successful direct token transaction and exact sender/amount receipt binding; ordinary/delegated transfers do not prove this path.",
       "eventSet": "transfer",
@@ -4358,7 +4258,15 @@
           "law": "paired-supply-zero-transfers-v1",
           "mintEvidence": "source-only"
         },
-        "directCalls": [{ "signature": "burn(uint256)", "selector": "0x42966c68", "dataWords": 1, "amountSlot": 0, "account": "sender" }]
+        "directCalls": [
+          {
+            "signature": "burn(uint256)",
+            "selector": "0x42966c68",
+            "dataWords": 1,
+            "amountSlot": 0,
+            "account": "sender"
+          }
+        ]
       },
       "supplyBurnProofEvidence": "GhoToken.sol:49-60 facilitator burn(amount) calls ERC20._burn(msg.sender,amount), decreasing totalSupply and emitting the same amount (ERC20.sol:174-184). Require direct successful token transaction and matching calldata/sender/event; facilitator bucket bookkeeping alone is not proof.",
       "eventSet": "transfer",
@@ -6093,7 +6001,14 @@
           "law": "paired-supply-zero-transfers-v1",
           "mintEvidence": "source-only"
         },
-        "receiptEvent": { "signature": "Exit(address,address,uint256,address,uint256)", "topicHash": "0xe0c82280a1164680e0cf43be7db4c4c9f985423623ad7a544fb76c772bdc6043", "topicArity": 4, "dataWords": 2, "accountTopic": 3, "amountSlot": 1 }
+        "receiptEvent": {
+          "signature": "Exit(address,address,uint256,address,uint256)",
+          "topicHash": "0xe0c82280a1164680e0cf43be7db4c4c9f985423623ad7a544fb76c772bdc6043",
+          "topicArity": 4,
+          "dataWords": 2,
+          "accountTopic": 3,
+          "amountSlot": 1
+        }
       },
       "supplyBurnProofEvidence": "Verified BoringVault.sol:117-134 exit calls _burn(from,shareAmount) then emits Exit(to,asset,assetAmount,from,shareAmount). Indexed from is topic3; shares are data word1, not collateral word0. Pair exact tuple multiplicities across the receipt, including below-cutoff Transfers.",
       "eventSet": "transfer",
@@ -7480,7 +7395,14 @@
           "law": "paired-supply-zero-transfers-v1",
           "mintEvidence": "source-only"
         },
-        "receiptEvent": { "signature": "Withdraw(address,address,address,uint256,uint256)", "topicHash": "0xfbde797d201c681b91056529119e0b02407c7bb96a4a2c75c01fc9667232c8db", "topicArity": 4, "dataWords": 2, "accountTopic": 3, "amountSlot": 1 }
+        "receiptEvent": {
+          "signature": "Withdraw(address,address,address,uint256,uint256)",
+          "topicHash": "0xfbde797d201c681b91056529119e0b02407c7bb96a4a2c75c01fc9667232c8db",
+          "topicArity": 4,
+          "dataWords": 2,
+          "accountTopic": 3,
+          "amountSlot": 1
+        }
       },
       "supplyBurnProofEvidence": "MaplePool.sol:1118-1132 calls ERC20._burn(owner,shares) then emits Withdraw(caller,receiver,owner,assets,shares); totalSupply subtraction is at 684-691. Owner is topic3 and shares data word1. Transfer/transferFrom do not emit Withdraw.",
       "eventSet": "transfer",
@@ -7570,7 +7492,14 @@
           "law": "paired-supply-zero-transfers-v1",
           "mintEvidence": "source-only"
         },
-        "receiptEvent": { "signature": "Withdraw(address,address,address,uint256,uint256)", "topicHash": "0xfbde797d201c681b91056529119e0b02407c7bb96a4a2c75c01fc9667232c8db", "topicArity": 4, "dataWords": 2, "accountTopic": 3, "amountSlot": 1 }
+        "receiptEvent": {
+          "signature": "Withdraw(address,address,address,uint256,uint256)",
+          "topicHash": "0xfbde797d201c681b91056529119e0b02407c7bb96a4a2c75c01fc9667232c8db",
+          "topicArity": 4,
+          "dataWords": 2,
+          "accountTopic": 3,
+          "amountSlot": 1
+        }
       },
       "supplyBurnProofEvidence": "Byte-identical verified MaplePool source to syrupUSDC:1118-1132 pairs _burn(owner,shares) with Withdraw(caller,receiver,owner,assets,shares); totalSupply subtraction at 684-691. Match token emitter, indexed owner and raw shares, never collateral assets.",
       "eventSet": "transfer",
@@ -9259,7 +9188,15 @@
           "law": "paired-supply-zero-transfers-v1",
           "mintEvidence": "source-only"
         },
-        "directCalls": [{ "signature": "burn(address,uint256)", "selector": "0x9dc29fac", "dataWords": 2, "amountSlot": 1, "account": 0 }]
+        "directCalls": [
+          {
+            "signature": "burn(address,uint256)",
+            "selector": "0x9dc29fac",
+            "dataWords": 2,
+            "amountSlot": 1,
+            "account": 0
+          }
+        ]
       },
       "supplyBurnProofEvidence": "src/dss/usdd.sol:92-101 direct burn(usr,wad) subtracts totalSupply and emits Transfer(usr,0,wad), without external calls. Require successful direct token destination and full calldata/sender/receipt identity.",
       "eventSet": "transfer",
@@ -11347,9 +11284,27 @@
           }
         },
         "directCalls": [
-          { "signature": "burn(uint256)", "selector": "0x42966c68", "dataWords": 1, "amountSlot": 0, "account": "sender" },
-          { "signature": "burn(address,uint256)", "selector": "0x9dc29fac", "dataWords": 2, "amountSlot": 1, "account": 0 },
-          { "signature": "burnFor(address,uint256)", "selector": "0x1dd319cb", "dataWords": 2, "amountSlot": 1, "account": 0 }
+          {
+            "signature": "burn(uint256)",
+            "selector": "0x42966c68",
+            "dataWords": 1,
+            "amountSlot": 0,
+            "account": "sender"
+          },
+          {
+            "signature": "burn(address,uint256)",
+            "selector": "0x9dc29fac",
+            "dataWords": 2,
+            "amountSlot": 1,
+            "account": 0
+          },
+          {
+            "signature": "burnFor(address,uint256)",
+            "selector": "0x1dd319cb",
+            "dataWords": 2,
+            "amountSlot": 1,
+            "account": 0
+          }
         ]
       },
       "supplyBurnProofEvidence": "YieldCoin.sol:165-194 burn overloads/burnFor reach ERC20._burn:108-117, subtracting stored supply and emitting the exact amount. The fund-admin transferFrom bypass never changes supply. Validate successful direct-call destination, complete calldata and unique matching token burn receipt; internal unproved calls stay review_required.",
@@ -11761,100 +11716,6 @@
       ],
       "reviewedAt": "2026-09-22",
       "reviewer": "SemA42"
-    },
-    {
-      "chainId": "ethereum",
-      "stablecoinId": "wusd-worldwide",
-      "address": "0x7cd017ca5ddb86861fa983a34b5f495c6f898c41",
-      "decimals": 18,
-      "disposition": "admitted",
-      "unsupportedReason": null,
-      "eventSet": "transfer",
-      "invariant": "transfer-supply",
-      "identity": {
-        "explorerSourceUrl": "https://eth.blockscout.com/address/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41?tab=contract",
-        "sourceVerified": true,
-        "contractName": "ERC1967Proxy",
-        "proxy": {
-          "isProxy": true,
-          "kind": "eip1967",
-          "implementation": "0x3ac7b6769c5e4a5c17986bd39d9d8b2e9e09227e",
-          "implementationSourceVerified": true
-        },
-        "externalMatches": [
-          {
-            "source": "coingecko",
-            "geckoId": "worldwide-usd",
-            "value": "0x7cd017ca5ddb86861fa983a34b5f495c6f898c41",
-            "matches": true,
-            "decimalPlace": 18
-          }
-        ],
-        "onChain": {
-          "block": 26035726,
-          "blockHash": "0x486ff375d89fd9eb82a4c0479da96b9e587d7b1625a306a785176fdfb22561c4",
-          "decimals": 18,
-          "symbol": "WUSD",
-          "totalSupplyRaw": "552285910674061405030000",
-          "hasCode": true
-        }
-      },
-      "supplyPaths": [
-        {
-          "function": "mint(address,uint256)",
-          "internal": "_mint",
-          "emitsZeroTransfer": true,
-          "sameAmount": true,
-          "note": "ERC20F.mint (MINTER_ROLE + access-registry check on recipient) -> ERC20Upgradeable._mint: _totalSupply += amount, emit Transfer(address(0), account, amount); requires account != address(0)"
-        },
-        {
-          "function": "burn(uint256)",
-          "internal": "_burn",
-          "emitsZeroTransfer": true,
-          "sameAmount": true,
-          "note": "ERC20F.burn (BURNER_ROLE; amount > 0) -> _burn(_msgSender(), amount): _totalSupply -= amount, emit Transfer(account, address(0), amount)"
-        }
-      ],
-      "unpairedPaths": [],
-      "totalSupplyView": {
-        "isStoredSum": true,
-        "note": "ERC20Upgradeable.totalSupply() returns stored _totalSupply; written only inside _mint/_burn"
-      },
-      "zeroRecipientTransferReverts": true,
-      "identityIssue": null,
-      "notes": "recoverTokens(account,amount) (RECOVERY_ROLE) moves balances via _transfer(account, _msgSender(), amount) - ordinary Transfer event, no supply change, not a zero-address transfer. AccessRegistry (allowlist) gating and Pausable revert (fail closed). Salvage only touches third-party ERC20s. EIP-1967 slot matches Blockscout implementation (ERC20F, verified). UUPS upgrade gated by UPGRADER_ROLE (upgradeability recorded only).",
-      "windows": [
-        {
-          "fromBlock": 26028679,
-          "fromBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
-          "fromTimestamp": 1790027531,
-          "toBlock": 26035829,
-          "toBlockHash": "0x4df831986cf42d63dedd9b7a8fc200634d7447a170a79d7286de98c8fbc3df4c",
-          "toTimestamp": 1790113931,
-          "mintRaw": "0",
-          "burnRaw": "0",
-          "supplyDeltaRaw": "0",
-          "residualRaw": "0",
-          "logCount": 0,
-          "journalSha256": "24f31168d7fa9669e76e7977f4ca5c07c406aed563c7226b6bdb830976a6c1de"
-        },
-        {
-          "fromBlock": 26021533,
-          "fromBlockHash": "0x27c4caf42458c180212f9670de38e6bb407a9c566c4ff10ce88cab9980ede229",
-          "fromTimestamp": 1789941131,
-          "toBlock": 26028679,
-          "toBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
-          "toTimestamp": 1790027531,
-          "mintRaw": "0",
-          "burnRaw": "0",
-          "supplyDeltaRaw": "0",
-          "residualRaw": "0",
-          "logCount": 0,
-          "journalSha256": "24f31168d7fa9669e76e7977f4ca5c07c406aed563c7226b6bdb830976a6c1de"
-        }
-      ],
-      "reviewedAt": "2026-09-22",
-      "reviewer": "SemA34"
     },
     {
       "chainId": "ethereum",

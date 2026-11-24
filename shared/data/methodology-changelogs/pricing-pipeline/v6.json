@@ -1,6 +1,6 @@
 [
   {
-    "version": "6.94",
+    "version": "6.95",
     "title": "Listing policy v2 market-wide supply perimeter cutover and date-fenced history continuity",
     "date": "2026-11-26",
     "effectiveAt": 1795651200,
@@ -10,6 +10,23 @@
       "`/api/non-usd-share` (`worker/src/lib/non-usd-share-history.ts`) and structural supplemental chart overlays (`worker/src/lib/stablecoin-charts-reconciliation.ts`) fence membership at the cutover date: dates before the cutover retain the frozen `core-stablecoins-v1` membership while dates from the cutover onward use current v2 membership, preserving published history without restatement.",
       "`sync-stablecoin-charts` tracks the published aggregate perimeter in D1 cache key `stablecoin-charts:perimeter` and accepts planned `core-stablecoins-v1` -> `core-stablecoins-v2` finite bucket drift (including EUR/GBP fund-share step-downs) once with explicit structured logging and metadata, while keeping point-count collapse, history truncation, invalid values, `peggedUSD` loss, malformed perimeter metadata, and ordinary post-cutover drift fail-closed.",
       "Headline supply and market-cap charts render a dashed cutover reference line and short neutral note whenever the visible window spans the boundary. Pricing consensus, fallback lifetimes, and per-asset supply admission rules are unchanged. Activation is provisionally 2026-11-26 00:00 UTC (1795651200); re-date effectiveAt at release."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.94",
+    "title": "Kraken books for USDD, Open USD and EURCV, stUSDS vault NAV, A7A5 Uniswap V2 exact pool, AID USDC redeemer and dEURO EURS bridge",
+    "date": "2026-11-24",
+    "effectiveAt": 1795546200,
+    "summary": "Wave 3 of the pricing review adds sources for coins that were CoinGecko-only or unpriced: Kraken books for USDD, Open USD and EURCV with exact-coin scoping for colliding symbols, an ERC-4626 NAV route for stUSDS, a guarded missing-only Uniswap V2 exact-pool reader for A7A5, a GAIB USDC redeemer route for AID, and a second dEURO bridge over EURS.",
+    "impact": [
+      "Kraken: USDD/USD (TRON DAO Reserve USDD), OUSD/USD and EURCV/USD join as clocked Depth books; USDD's standing ask can sit for hours, so a stale side withholds its quote rather than letting an old book vote join KRAKEN_MARKETS after identity review, moving about $2.66B from CoinGecko-only toward exchange-corroborated prices. Kraken's OUSD is Open Standard's Open USD, not Origin Dollar, so KRAKEN_MARKETS entries may pin an exact stablecoinId and both OUSD-symbol coins stay isolated across collection, consensus and lineage. EURCV's Kraken quote also lets the registered steakEURCV ERC-4626 route resolve its parent.",
+      "stUSDS joins the ERC-4626 NAV vault routes over USDS.",
+      "A7A5 (RUB peg): a missing-only uniswap-v2-exact reader for the Ethereum A7A5/USDT pair 0x14d7…4091 checks canonical factory and pair identity with pinned code hashes, reads reserves with their block clock, requires two-sided depth, bounds sell impact and unsynced inventory, values USDT through its trusted quote and dates the result at the older input. Fallback confidence, not replay-safe and never depeg-authoritative.",
+      "AID: GAIB's StablecoinRedeemer BeaconProxy (pinned proxy, beacon and implementation code) prices missing AID at 1 - fee times trusted USDC, gated on settlement balance, daily headroom and redemption state, at fallback confidence because the 10,000 AID/day route cannot vouch for the full supply; sAID cannot inherit a fallback parent.",
+      "dEURO: with its EURC bridge empty, the EURS bridge becomes a second reviewed lane with 2-decimal EURS scaling and balance, minter and coverage checks; it fails closed when its thin surplus lapses.",
+      "Lifecycle: WUSD (Worldwide USD) and BD (Base Dollar) are delisted by owner decision after weeks without a market, ending their price-gap reviews. Activation is provisional; re-date effectiveAt at release."
     ],
     "commits": [],
     "reconstructed": false

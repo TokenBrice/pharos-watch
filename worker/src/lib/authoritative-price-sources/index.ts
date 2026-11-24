@@ -20,13 +20,14 @@ import { susdSolayerNavProvider } from "./susd-solayer";
 import { usdafUniswapV4Provider } from "./usdaf-uniswap-v4";
 import { usduFinanceCurvePoolProvider } from "./usdu-finance-curve-pool";
 import { usduUniswapV3Provider } from "./usdu-uniswap-v3";
-import { bdAerodromeProvider } from "./bd-aerodrome";
+import { a7a5UniswapV2Provider } from "./a7a5-uniswap-v2";
 import { moveusdOrcaProvider } from "./moveusd-orca";
 import { azndCurvePoolProvider } from "./aznd-curve-pool";
 import { swanusdCurvePoolProvider } from "./swanusd-curve-pool";
 import { stbtCurvePoolProvider } from "./stbt-curve-pool";
 import { mentoFpmmProvider } from "./mento-fpmm";
 import { mentoBrokerProvider } from "./mento-broker";
+import { aidUsdcRedeemerProvider } from "./aid-usdc-redeemer";
 import { capCusdProvider } from "./cap-cusd";
 import { deuroEurcBridgeProvider } from "./deuro-eurc-bridge";
 import { erc4626NavProvider, previewRedeemProvider } from "./erc4626-nav";
@@ -62,6 +63,7 @@ export { getFreshSingleSourceNavParentId, resolveVaultNavSupplyPrice } from "./e
 export { projectPriceDerivation } from "./helpers";
 
 const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
+  aidUsdcRedeemerProvider,
   capCusdProvider,
   deuroEurcBridgeProvider,
   iusdInfinifiProvider,
@@ -74,12 +76,12 @@ const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
   swanusdCurvePoolProvider,
   stbtCurvePoolProvider,
   usduFinanceCurvePoolProvider,
-  bdAerodromeProvider,
   moveusdOrcaProvider,
   usdvJupiterProvider,
   susdSolayerNavProvider,
   usdafUniswapV4Provider,
   usduUniswapV3Provider,
+  a7a5UniswapV2Provider,
   mentoFpmmProvider,
   kavaUsdxPricefeedProvider,
   erc4626NavProvider,

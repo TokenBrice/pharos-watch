@@ -485,7 +485,7 @@ describe("bounded same-chain provider census", () => {
 });
 
 describe("transfer census admission and execution budgets", () => {
-  const assets = ["aa-falconx-mev-capital", "asusdf-astherus", "bbqusdc-steakhouse", "bd-basedollar", "dusd-dialectic", "eearn-ember"];
+  const assets = ["aa-falconx-mev-capital", "asusdf-astherus", "bbqusdc-steakhouse", "dusd-dialectic", "eearn-ember", "fusd-freedom-dollar"];
   const chains = ["ethereum", "bsc", "base", "arbitrum", "optimism", "polygon"];
   const budget = TRANSFER_MATERIALITY_CAPTURE_BUDGET;
   const input = (ids = assets, clock = CLOCK) => ({

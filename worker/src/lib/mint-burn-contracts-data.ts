@@ -136,7 +136,6 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
   { stablecoinId: "alusd-alchemix", dustThreshold: 10_000 },
   { stablecoinId: "fidd-fidelity", dustThreshold: 10_000 },
   // --- Top-150 supported expansion (Ethereum only) ---
-  { stablecoinId: "wusd-worldwide", dustThreshold: 10_000 },
   { stablecoinId: "sbc-brale", dustThreshold: 10_000 },
   {
     stablecoinId: "ousd-origin-protocol",
@@ -304,23 +303,6 @@ export const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
     stablecoinId: "bold-liquity",
     dustThreshold: 10_000,
     startBlock: ETHEREUM_COVERAGE_FLOOR_BLOCK,
-    events: transferMintBurn(),
-  },
-  {
-    // Base Dollar BoldToken deployed through the CREATE2 factory in tx
-    // 0x559cff503b5db0b09c36d3506ce761cc992ac8d82925d77be40b1de7dfbb9479.
-    // The verified token emits canonical zero-address Transfer rows for both
-    // protocol mints and debt-repayment burns. Its 200 BD MIN_DEBT and observed
-    // 300/1,000/2,700 BD borrower mints require a lower threshold than the
-    // tracker default; 100 BD retains normal debt activity while excluding
-    // sub-economic interest-distribution churn.
-    chain: BASE,
-    stablecoinId: "bd-basedollar",
-    dustThreshold: 100,
-    startBlock: 49_406_521,
-    tier: "extended",
-    startBlockSource: "blockscout-base-create2-deployment-2026-08-01",
-    startBlockConfidence: "high",
     events: transferMintBurn(),
   },
   {

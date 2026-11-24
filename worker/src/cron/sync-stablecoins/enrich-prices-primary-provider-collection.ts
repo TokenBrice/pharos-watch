@@ -19,7 +19,6 @@ import { throwIfAborted } from "../../lib/abort";
 import {
   BITSTAMP_KNOWN_SYMBOLS,
   COINBASE_KNOWN_SYMBOLS,
-  KRAKEN_KNOWN_SYMBOLS,
   fetchBinancePricesForRun,
   fetchBitstampPrices,
   fetchCoinbasePrices,
@@ -36,7 +35,7 @@ import {
 } from "../../lib/depeg-helpers";
 import { fetchCurveOnchainPrices, fetchCurveOracleEma } from "../../lib/curve-onchain";
 import { CURVE_POOL_CONFIGS, type CurveSellGuardRejectionReason } from "@shared/lib/curve-pool-configs";
-import { CEX_PROVIDER_AUDIT_CONFIG, COINBASE_PRODUCTS } from "@shared/lib/pricing-provider-config";
+import { CEX_PROVIDER_AUDIT_CONFIG, COINBASE_PRODUCTS, matchesCuratedKrakenAsset } from "@shared/lib/pricing-provider-config";
 import { CEX_UPSTREAM_MAX_FUTURE_SKEW_SEC } from "@shared/lib/pricing-source-policy";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { PriceValidationReferences } from "../../lib/price-validation";
@@ -254,7 +253,6 @@ export async function buildPrimaryPricePlan(
   const dexPriceSourceTelemetry = createDexPriceSourceLoadTelemetry();
   const { dexPriceRows: dexRows, dexPriceSources } = await loadDexPrices(db, nowSec, undefined, dexPriceSourceTelemetry);
   const coinbaseKnownSet = new Set(COINBASE_KNOWN_SYMBOLS);
-  const krakenKnownSet = new Set(KRAKEN_KNOWN_SYMBOLS);
   const bitstampKnownSet = new Set(BITSTAMP_KNOWN_SYMBOLS);
   const curveEligibleIds = new Set(CURVE_POOL_CONFIGS.map((config) => config.stablecoinId));
   curveEligibleIds.add("crvusd-curve");
@@ -272,7 +270,7 @@ export async function buildPrimaryPricePlan(
       hasValidGeckoId ||
       (dlListPrices?.has(asset.id) ?? false) ||
       coinbaseKnownSet.has(symbolUpper) ||
-      krakenKnownSet.has(symbolUpper) ||
+      matchesCuratedKrakenAsset(symbolUpper, asset.id) ||
       bitstampKnownSet.has(symbolUpper) ||
       curveEligibleIds.has(asset.id) ||
       navEligible ||
@@ -345,7 +343,13 @@ export async function buildPrimaryPricePlan(
 
   const candidateSymbolsUpper = [...new Set(candidates.map((asset) => asset.symbol.toUpperCase()))];
   const coinbaseSymbols = candidateSymbolsUpper.filter((symbol) => coinbaseKnownSet.has(symbol));
-  const krakenSymbols = candidateSymbolsUpper.filter((symbol) => krakenKnownSet.has(symbol));
+  const krakenSymbols = [
+    ...new Set(
+      candidates
+        .filter((asset) => matchesCuratedKrakenAsset(asset.symbol, asset.id))
+        .map((asset) => asset.symbol.toUpperCase()),
+    ),
+  ];
   const curveRequested = candidates.some((asset) => curveEligibleIds.has(asset.id));
   const shouldFetchBitstamp = candidateSymbolsUpper.some((symbol) => bitstampKnownSet.has(symbol)) ||
     (curveAllowed && curveRequested) ||

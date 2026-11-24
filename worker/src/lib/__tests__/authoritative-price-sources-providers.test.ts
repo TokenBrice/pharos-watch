@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  AID_REDEEMER_REJECTION_CASES,
   asset,
+  createAidRedeemerFixture,
+  expectPinnedLaneTransportRejections,
+  expectPostRpcAgeAndAbort,
   fetchEvmCallHexAtBlockMock as evmCall,
   fetchEvmRpcBatchMock as evmBatch,
   freshParent,
@@ -19,8 +23,19 @@ import {
   WAVE2_USDU_BAD,
   WAVE2_USDU_POOL,
   wave2Head,
+  A7A5_UNISWAP_V2_FIXTURE as A7A5_FX,
+  encodeA7a5Abi as abi,
+  fetchEvmBlockHeaderMock as evmBlockHeader,
+  getA7a5RuntimeCodes,
+  makeA7a5ParentContext as a7a5Ctx,
+  mockA7a5UniswapV2Rpc as setA7a5Rpc,
 } from "./authoritative-price-sources.test-support";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
+import { a7a5UniswapV2Provider, fetchA7a5UniswapV2Price, quoteUniswapV2ExactIn } from "../authoritative-price-sources/a7a5-uniswap-v2";
+import { aidUsdcRedeemerProvider, fetchAidUsdcRedeemerPrice } from "../authoritative-price-sources/aid-usdc-redeemer";
+import { classifyPrimaryDepegTrust } from "@shared/lib/depeg-primary-trust";
+import { hasDepegAuthoritativeSource, isReplaySafePriceSource } from "@shared/lib/pricing-source-policy";
+import { isPublicImpactCircuitKey } from "@shared/lib/public-health";
 import { capCusdProvider } from "../authoritative-price-sources/cap-cusd";
 import type { LivePriceContext } from "../authoritative-price-sources/helpers";
 import { CACHED_VAULT_RATE_MAX_AGE_SEC } from "../authoritative-price-sources/helpers";
@@ -578,5 +593,86 @@ describe("Wave 2 authoritative adapters", () => {
       expect(await run(unpricedChild("usdu-usdu-finance"))).toBeNull();
     }
     expect(await run(unpricedChild("usdu-usdu-finance"), null)).toBeNull();
+  });
+});
+
+describe("A7A5 exact Uniswap v2 recovery", () => {
+  const { id: ID, now: NOW, block: BLOCK, a7a5: A7A5, usdt: USDT, pair: PAIR, reserve0: R0, reserve1: R1 } = A7A5_FX;
+  beforeEach(() => {
+    vi.useFakeTimers(); vi.setSystemTime(NOW * 1000); resetMocks();
+    fetchEvmBlockNumberMock.mockResolvedValue(BLOCK);
+    evmBlockHeader.mockResolvedValue({ number: BLOCK, hash: "0xabc", timestamp: NOW - 5 });
+    setA7a5Rpc();
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it("publishes guarded fallback quote with oldest clock, RUB policy and non-authoritative depeg trust", async () => {
+    expect(a7a5UniswapV2Provider.matches(ID)).toBe(true);
+    expect(a7a5UniswapV2Provider.matches("usdt-tether")).toBe(false);
+    expect(isPublicImpactCircuitKey(a7a5UniswapV2Provider.liveCircuitSource!)).toBe(false);
+    expect(quoteUniswapV2ExactIn(0n, R0, R1)).toBe(0n);
+    const res = await fetchA7a5UniswapV2Price(a7a5Ctx());
+    expect(res).toMatchObject({ source: "uniswap-v2-exact", confidence: "fallback", observedAt: NOW - 20, observedAtMode: "upstream" });
+    expect(res?.price).toBeCloseTo(0.01168893297894, 12);
+    expect(isReplaySafePriceSource(res!.source)).toBe(false);
+    expect(hasDepegAuthoritativeSource([res!.source])).toBe(false);
+    expect(classifyPrimaryDepegTrust({ price: res!.price, priceSource: res!.source, priceConfidence: res!.confidence, priceObservedAt: res!.observedAt, priceObservedAtMode: res!.observedAtMode, agreeSources: [res!.source] }, NOW)).toBe("confirm_required");
+    const vc = buildPriceValidationContext({ stablecoinId: ID }), vr = { rates: { peggedRUB: 0.0122 }, type: "fresh" as const, updatedAt: NOW };
+    expect(validatePublishedAssetPrice({ asset: { price: res!.price, priceSource: res!.source, priceConfidence: res!.confidence, agreeSources: [res!.source] }, validationContext: vc, validationReferences: vr }).accepted).toBe(true);
+    expect(validatePublishedAssetPrice({ asset: { price: 0.004, priceSource: res!.source, priceConfidence: res!.confidence, agreeSources: [res!.source] }, validationContext: vc, validationReferences: vr })).toMatchObject({ accepted: false, reason: "severe_downside_requires_corroboration" });
+    setA7a5Rpc({ 14: abi("uint256", [R0 + (R0 * 40n) / 10_000n]) });
+    expect(await fetchA7a5UniswapV2Price(a7a5Ctx({ priceSource: "binance", priceObservedAtMode: "local_fetch" }))).toMatchObject({ observedAt: NOW - 20, observedAtMode: "local_fetch" });
+    expect(await fetchA7a5UniswapV2Price(a7a5Ctx({ observedAt: NOW - 2 }))).toMatchObject({ observedAt: NOW - 5, observedAtMode: "upstream" });
+  });
+
+  it.each([
+    ["identity", { 0: abi("address", [USDT]) }], ["identity", { 1: abi("address", [A7A5]) }],
+    ["identity", { 2: abi("address", [PAIR]) }], ["identity", { 3: abi("address", [A7A5]) }],
+    ["identity", { 5: abi("uint256", [18n]) }], ["identity", { 6: abi("uint256", [18n]) }],
+    ...[7, 8, 9, 10, 11].map((i) => ["execution-disabled", { [i]: abi("bool", [true]) }] as const),
+    ...[12, 13].map((i) => ["execution-disabled", { [i]: abi("uint256", [1n]) }] as const),
+    ["pool-state", { 4: abi("uint112,uint112,uint32", [0n, R1, NOW - 60]) }],
+    ["pool-stale", { 4: abi("uint112,uint112,uint32", [R0, R1, 0]) }],
+    ["pool-stale", { 4: abi("uint112,uint112,uint32", [R0, R1, NOW - 4]) }],
+    ["pool-stale", { 4: abi("uint112,uint112,uint32", [R0, R1, NOW - 5 - 86_401]) }],
+    ["inventory-drift", { 14: abi("uint256", [R0 - 1n]) }], ["inventory-drift", { 15: abi("uint256", [R1 - 1n]) }],
+    ["inventory-drift", { 14: abi("uint256", [R0 + (R0 * 51n) / 10_000n]) }], ["inventory-drift", { 15: abi("uint256", [R1 + (R1 * 51n) / 10_000n]) }],
+    ["quote-depth", { 4: abi("uint112,uint112,uint32", [1_400_000_000_000n, R1, NOW - 60]), 14: abi("uint256", [1_400_000_000_000n]) }],
+    ["inventory", { 4: abi("uint112,uint112,uint32", [R0, 19_000_000_000n, NOW - 60]), 15: abi("uint256", [19_000_000_000n]) }],
+    ["tvl-floor", { 4: abi("uint112,uint112,uint32", [R0, 24_000_000_000n, NOW - 60]), 15: abi("uint256", [24_000_000_000n]) }],
+    ["state-malformed", { 4: abi("uint256", [1n]) }],
+  ] as const)("fails closed: %s", async (reason, overrides) => {
+    setA7a5Rpc(overrides);
+    const ctx: LivePriceContext = a7a5Ctx();
+    expect(await fetchA7a5UniswapV2Price(ctx)).toBeNull();
+    expect(ctx.lastRejectionReason).toBe(`uniswap-v2-exact:${reason}`);
+  });
+
+  it("rejects changed runtime, missing state, reorgs, stale clocks, aborts and skips incumbents", async () => {
+    const codes = getA7a5RuntimeCodes(), ctx: LivePriceContext = a7a5Ctx();
+    evmBatch.mockResolvedValueOnce(["0x1234", ...codes.slice(1)]);
+    expect(await fetchA7a5UniswapV2Price(ctx)).toBeNull(); expect(ctx.lastRejectionReason).toBe("uniswap-v2-exact:runtime-code");
+    evmBatch.mockResolvedValueOnce(codes).mockResolvedValueOnce(null);
+    expect(await fetchA7a5UniswapV2Price(ctx)).toBeNull(); expect(ctx.lastRejectionReason).toBe("uniswap-v2-exact:state-unavailable");
+    setA7a5Rpc();
+    evmBlockHeader.mockResolvedValueOnce({ number: BLOCK, hash: "0xa", timestamp: NOW - 5 }).mockResolvedValueOnce({ number: BLOCK, hash: "0xb", timestamp: NOW - 5 });
+    expect(await fetchA7a5UniswapV2Price(ctx)).toBeNull(); expect(ctx.lastRejectionReason).toBe("uniswap-v2-exact:canonical-check");
+    evmBlockHeader.mockResolvedValueOnce({ number: BLOCK, hash: "0xa", timestamp: NOW - 300 });
+    expect(await fetchA7a5UniswapV2Price(ctx)).toBeNull(); expect(ctx.lastRejectionReason).toBe("uniswap-v2-exact:block-age");
+    evmBlockHeader.mockResolvedValueOnce({ number: BLOCK, hash: "0xa", timestamp: NOW - 5 }).mockImplementationOnce(async () => {
+      vi.setSystemTime((NOW + 280) * 1000); return { number: BLOCK, hash: "0xa", timestamp: NOW - 5 };
+    });
+    expect(await fetchA7a5UniswapV2Price(ctx)).toBeNull(); expect(ctx.lastRejectionReason).toBe("uniswap-v2-exact:dependency-age");
+    vi.setSystemTime(NOW * 1000);
+    for (const bad of [{ assetsById: new Map() }, a7a5Ctx({ priceSource: "cached" })] as LivePriceContext[]) {
+      expect(await fetchA7a5UniswapV2Price(bad)).toBeNull(); expect(bad.lastRejectionReason).toBe("uniswap-v2-exact:parent-unavailable");
+    }
+    const staleParent: LivePriceContext = a7a5Ctx({ priceObservedAt: NOW - 300 });
+    expect(await fetchA7a5UniswapV2Price(staleParent)).toBeNull(); expect(staleParent.lastRejectionReason).toBe("uniswap-v2-exact:parent-age");
+    const ac = new AbortController(); ac.abort();
+    await expect(fetchA7a5UniswapV2Price(a7a5Ctx(), ac.signal)).rejects.toThrow();
+    evmBatch.mockClear();
+    expect(await a7a5UniswapV2Provider.fetchLivePrice!(freshParent(ID, 0.012, "coingecko", { nowSec: NOW, priceConfidence: "single-source" }), a7a5Ctx())).toBeNull();
+    expect(evmBatch).not.toHaveBeenCalled();
   });
 });

@@ -6,7 +6,16 @@ export const BINANCE_MARKETS: readonly {
   { pair: "USDCUSD", symbol: "USDC" },
 ] as const;
 
-export const KRAKEN_MARKETS = [
+export interface KrakenMarketConfig {
+  readonly symbol: string;
+  readonly requestPair: string;
+  readonly responseKeys: readonly string[];
+  readonly clockedDepth?: true;
+  /** Exact tracked stablecoin id when multiple tracked assets share `symbol`. */
+  readonly stablecoinId?: string;
+}
+
+export const KRAKEN_MARKETS: readonly KrakenMarketConfig[] = [
   // 2026-10-30: Kraken's online AUDX/USD book is the Aussie Dollar Token; the
   // CoinGecko `aussie-dollar-token` ticker set is exactly this Kraken market.
   { symbol: "AUDX", requestPair: "AUDXUSD", responseKeys: ["AUDXUSD"], clockedDepth: true },
@@ -18,6 +27,10 @@ export const KRAKEN_MARKETS = [
   { symbol: "CASH", requestPair: "CASHUSD", responseKeys: ["CASHUSD"] },
   { symbol: "DAI", requestPair: "DAIUSD", responseKeys: ["DAIUSD"] },
   { symbol: "EURC", requestPair: "EURCUSD", responseKeys: ["EURCUSD"], clockedDepth: true },
+  // 2026-11-24: Kraken lists SG-FORGE EUR CoinVertible as direct-USD EURCV/USD
+  // (mirroring EURC/EUROP); CoinGecko's `societe-generale-forge-eurcv` ticker
+  // set pins this exact market, and SG-FORGE / Kraken jointly announced the listing.
+  { symbol: "EURCV", requestPair: "EURCVUSD", responseKeys: ["EURCVUSD"], clockedDepth: true },
   // 2026-10-30: Kraken lists Schuman Financial's EUROP; CoinGecko's `schuman-europ`
   // ticker set includes this exact market, and Kraken publishes no contract address.
   { symbol: "EUROP", requestPair: "EUROPUSD", responseKeys: ["EUROPUSD"], clockedDepth: true },
@@ -29,6 +42,12 @@ export const KRAKEN_MARKETS = [
   // corroborates mxnb-juno instead of leaving it a pool-challenge-downgraded
   // single-source CoinGecko row.
   { symbol: "MXNB", requestPair: "MXNBUSD", responseKeys: ["MXNBUSD"], clockedDepth: true },
+  // 2026-11-24: Kraken's online OUSD/USD book is Bridge / Open Standard Open USD
+  // (`ousd-open-standard`, listed 2026-09-30), NOT Origin Dollar (`ousd-origin-protocol`,
+  // which has no Kraken market). CoinGecko's `open-usd` ticker set pins this market;
+  // `stablecoinId` scopes the join so both OUSD-symbol coins stay isolated. Tight (~1 bp)
+  // market-made book refreshed roughly every 70s, well within Kraken's 600s Depth window.
+  { symbol: "OUSD", stablecoinId: "ousd-open-standard", requestPair: "OUSDUSD", responseKeys: ["OUSDUSD"], clockedDepth: true },
   { symbol: "PAXG", requestPair: "PAXGUSD", responseKeys: ["PAXGUSD"], clockedDepth: true },
   { symbol: "PYUSD", requestPair: "PYUSDUSD", responseKeys: ["PYUSDUSD"] },
   // 2026-10-30: Kraken's QCAD/USD book is Stablecorp QCAD; CoinGecko's
@@ -40,6 +59,12 @@ export const KRAKEN_MARKETS = [
   { symbol: "TGBP", requestPair: "TGBPUSD", responseKeys: ["TGBPUSD"], clockedDepth: true },
   { symbol: "USD1", requestPair: "USD1USD", responseKeys: ["USD1USD"] },
   { symbol: "USDC", requestPair: "USDCUSD", responseKeys: ["USDCUSD"] },
+  // 2026-11-24: Kraken's online USDD/USD book is TRON DAO Reserve USDD v2
+  // (`usdd-tron-dao-reserve`); CoinGecko's `usdd` ticker set lists this exact
+  // market. Its top-of-book levels can sit for hours (a 35-hour-old ask was
+  // observed at listing), so it reads clocked Depth: a stale side withholds the
+  // quote instead of letting an old book vote as a fresh local-fetch midpoint.
+  { symbol: "USDD", requestPair: "USDDUSD", responseKeys: ["USDDUSD"], clockedDepth: true },
   // 2026-10-30: Kraken lists OSL/Anchorage USDGO as USDGO/USD; CoinGecko's `usdgo`
   // ticker set includes this exact market, whose online bid/ask outlives CG's last trade.
   { symbol: "USDGO", requestPair: "USDGOUSD", responseKeys: ["USDGOUSD"] },
@@ -61,6 +86,23 @@ export const KRAKEN_MARKETS = [
   // `frankencoin` ticker set contains this exact market. CHF peg, direct USD book.
   { symbol: "ZCHF", requestPair: "ZCHFUSD", responseKeys: ["ZCHFUSD"], clockedDepth: true },
 ] as const;
+
+export function krakenMarketMatchesAsset(
+  market: KrakenMarketConfig,
+  symbol: string | undefined,
+  stablecoinId?: string,
+): boolean {
+  const normalizedSymbol = symbol?.trim().toUpperCase();
+  if (!normalizedSymbol || market.symbol !== normalizedSymbol) return false;
+  return market.stablecoinId == null || market.stablecoinId === stablecoinId;
+}
+
+export function matchesCuratedKrakenAsset(
+  symbol: string | undefined,
+  stablecoinId?: string,
+): boolean {
+  return KRAKEN_MARKETS.some((market) => krakenMarketMatchesAsset(market, symbol, stablecoinId));
+}
 
 export const BITSTAMP_MARKETS = [
   // 2026-10-30: PYUSD/USD dropped. The book is listed but untraded

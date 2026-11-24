@@ -327,7 +327,6 @@ describe("buildLiquityV2RedemptionMetadata", () => {
 describe("reviewed plain-token branches", () => {
   it.each([
     ["feusd-felix", "WHYPE"],
-    ["bd-basedollar", "WETH"],
   ])("values %s %s without probing WETH-style payable fallbacks", async (coinId, name) => {
     const { config } = resolveAdapterCoin("liquity-v2-branches", coinId);
     const params = parseLiveReserveAdapterParams("liquity-v2-branches", config.params);
@@ -370,49 +369,6 @@ describe("reviewed plain-token branches", () => {
       ...boldParams,
       branches: boldParams.branches.map((branch) => ({ ...branch, kind: "unknown" })),
     })).toThrow();
-  });
-});
-
-describe("Base Dollar production bindings", () => {
-  const config = resolveAdapterCoin("liquity-v2-branches", "bd-basedollar").config;
-  const params = config.params as {
-    sourceUrls: string[];
-    branches: Array<{
-      name: string;
-      holder: string;
-      token: { chain: string; address: string; decimals: number };
-      priceToken?: { chain: string; address: string };
-    }>;
-    mechanismMetrics: {
-      supplyTokenAddress: string;
-      branches: Array<{
-        name: string;
-        troveManagerAddress: string;
-        stabilityPoolAddress: string;
-      }>;
-    };
-  };
-
-  it("keeps five uniquely named branch bindings with matching mechanism targets", () => {
-    // One identity anchor binds this config to the reviewed Base Dollar launch book.
-    expect(config.inputs.primary).toMatchObject({ kind: "onchain-evm", chain: "base" });
-    expect(params.mechanismMetrics.supplyTokenAddress).toBe("0x252d36f435582ecb01686448d21e8c9ea0b2ca65");
-
-    const address = /^0x[0-9a-fA-F]{40}$/;
-    const branchNames = params.branches.map((branch) => branch.name);
-    expect(params.branches).toHaveLength(5);
-    expect(new Set(branchNames).size).toBe(branchNames.length);
-    for (const branch of params.branches) {
-      expect(branch.holder).toMatch(address);
-      expect(branch.token.address).toMatch(address);
-      if (branch.priceToken) expect(branch.priceToken.address).toMatch(address);
-    }
-    expect(params.mechanismMetrics.branches.map((entry) => entry.name)).toEqual(branchNames);
-    for (const mechanism of params.mechanismMetrics.branches) {
-      expect(mechanism.troveManagerAddress).toMatch(address);
-      expect(mechanism.stabilityPoolAddress).toMatch(address);
-    }
-    expect(params.sourceUrls.some((url) => url.includes("DeployLiquity2.s.sol"))).toBe(true);
   });
 });
 

@@ -132,14 +132,13 @@ apr                  = remainingLqtyRewards * dailyIssuanceFactor * lqtyPriceUsd
 
 #### Special-case Tier 1 estimator: Liquity V2 Stability Pools
 
-Base Dollar and Liquity V2 itself share one deterministic branch reader (`fetchLiquityV2StabilityPoolSource`), parameterized by chain, CollateralRegistry, and branch table:
+Liquity V2 uses a deterministic branch reader (`fetchLiquityV2StabilityPoolSource`), parameterized by chain, CollateralRegistry, and branch table:
 
-| Coin            | Chain    | Branches                                | Source key            | Label                                          |
-| --------------- | -------- | --------------------------------------- | --------------------- | ---------------------------------------------- |
-| `bold-liquity`  | Ethereum | wstETH, WETH, rETH                      | `onchain:bold-liquity`  | `Liquity V2 Stability Pools (interest-only)`   |
-| `bd-basedollar` | Base     | WETH, wstETH, rETH, cbBTC, cbETH        | `onchain:bd-basedollar` | `Base Dollar Stability Pools (interest-only)`  |
+| Coin           | Chain    | Branches         | Source key             | Label                                        |
+| -------------- | -------- | ---------------- | ---------------------- | -------------------------------------------- |
+| `bold-liquity` | Ethereum | wstETH, WETH, rETH | `onchain:bold-liquity` | `Liquity V2 Stability Pools (interest-only)` |
 
-Both rows publish `yieldType: lending-vault`, and `sourceTvlUsd` is the total deposit token held across that deployment's Stability Pools. Neither BOLD nor BD is yield-bearing itself — the Stability Pool is the deposit venue, as with LUSD — so both are standalone source-registry entries rather than yield-bearing manifest assets.
+This row publishes `yieldType: lending-vault`, and `sourceTvlUsd` is the total deposit token held across the deployment's Stability Pools. BOLD is not yield-bearing itself — the Stability Pool is the deposit venue, as with LUSD — so it is a standalone source-registry entry rather than a yield-bearing manifest asset. (`bd-basedollar` previously shared this reader; its live entry was retired on 2026-11-24 upon delisting while `onchain:bd-basedollar` remains in `YIELD_SOURCE_KEY_ROUTES` for historical row attribution.)
 
 This row is what keeps BOLD off its own wrapper's numbers. `bold-liquity` has no curated DeFiLlama pool and no variant-map entry: the tracked Yearn `yBOLD` wrapper owns the Yearn venue, and its linked-variant projection reaches BOLD only as a lower-evidence `lending-opportunity` alternative.
 

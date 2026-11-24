@@ -37,6 +37,8 @@ const REMOVED_STABLECOIN_IDS = [
   "253",
   "uscc-legacy",
   "pht-pht",
+  "wusd-worldwide",
+  "bd-basedollar",
 ] as const;
 
 describe("mint-burn-contracts removals", () => {

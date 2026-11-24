@@ -999,8 +999,8 @@ describe("handleBackfillSupplyHistory", () => {
 
   it("backfills USD-valued Base Dollar supply from historical totalSupply without a CoinGecko ID", async () => {
     const db = mockD1([{ match: "INTO supply_history", rows: [] }]);
-    const actual = await vi.importActual<typeof import("@shared/lib/psi-eligible")>("@shared/lib/psi-eligible");
-    const baseDollar = actual.PSI_ELIGIBLE_META_BY_ID.get("bd-basedollar")!;
+    const actual = await vi.importActual<typeof import("@shared/lib/stablecoins/registry")>("@shared/lib/stablecoins/registry");
+    const baseDollar = actual.TRACKED_META_BY_ID.get("bd-basedollar")!;
     psiEligibleMocks.stablecoins.splice(0, psiEligibleMocks.stablecoins.length, baseDollar);
     psiEligibleMocks.metaById.set(baseDollar.id, baseDollar);
     expect(baseDollar).toMatchObject({

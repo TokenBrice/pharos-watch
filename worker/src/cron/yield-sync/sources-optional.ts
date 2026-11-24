@@ -9,7 +9,6 @@ import {
   fetchReProtocolReusdSource,
 } from "./sources-optional-nav";
 import {
-  BASEDOLLAR_SP_CONFIG,
   fetchBprotocolLqtyOnlySource,
   fetchCurveScrvusdCurrentRateSource,
   fetchLiquityV2StabilityPoolSource,
@@ -41,7 +40,6 @@ interface TrackedOptionalSourceEntry {
 const OPTIONAL_SOURCE_READERS = {
   scrvusd: (signal, context) => fetchCurveScrvusdCurrentRateSource(context.startSec, signal, context.chainRpcs),
   lusd: (signal, context) => fetchBprotocolLqtyOnlySource(context.startSec, signal, context.chainRpcs, context.coingeckoApiKey),
-  baseDollar: (signal, context) => fetchLiquityV2StabilityPoolSource(context.startSec, BASEDOLLAR_SP_CONFIG, signal, context.chainRpcs),
   bold: (signal, context) => fetchLiquityV2StabilityPoolSource(context.startSec, LIQUITY_V2_SP_CONFIG, signal, context.chainRpcs),
   ybold: (signal) => fetchYearnYboldSource(signal),
   gtusdcMorpho: (signal, context) => fetchMorphoNetVaultSource(OPTIONAL_YIELD_SOURCES.gtusdcMorpho, context.startSec, signal),

@@ -12,15 +12,6 @@
     },
     {
       "chainId": "base",
-      "stablecoinId": "bd-basedollar",
-      "address": "0x252d36f435582ecb01686448d21e8c9ea0b2ca65",
-      "decimals": 18,
-      "disposition": "admitted",
-      "eventSet": "transfer",
-      "invariant": "transfer-supply"
-    },
-    {
-      "chainId": "base",
       "stablecoinId": "ousd-open-standard",
       "address": "0xb2000000000000000000002feb517dfec7415344",
       "decimals": 6,
@@ -1467,15 +1458,6 @@
       "chainId": "ethereum",
       "stablecoinId": "wsrusd-reservoir",
       "address": "0xd3fd63209fa2d55b07a0f6db36c2f43900be3094",
-      "decimals": 18,
-      "disposition": "admitted",
-      "eventSet": "transfer",
-      "invariant": "transfer-supply"
-    },
-    {
-      "chainId": "ethereum",
-      "stablecoinId": "wusd-worldwide",
-      "address": "0x7cd017ca5ddb86861fa983a34b5f495c6f898c41",
       "decimals": 18,
       "disposition": "admitted",
       "eventSet": "transfer",

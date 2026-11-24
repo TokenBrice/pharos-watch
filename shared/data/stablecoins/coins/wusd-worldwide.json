@@ -63,22 +63,15 @@
       "asOf": "2026-10-19"
     }
   ],
-  "liveReservesConfig": {
-    "adapter": "curated-validated",
-    "version": 1,
-    "semantics": "attestation-mix",
-    "breakerScope": "wusd-worldwide",
-    "display": {
-      "url": "https://wspn.io/",
-      "label": "WSPN Payment"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
-      }
+  "launchDate": "2023-12-07",
+  "status": "delisted",
+  "exitMechanism": "discretionary",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "Owner-approved scope delisting: CoinGecko frozen at $1.17 since 2026-08-21 (0 tickers, 404), largest DEX pools $235/$1,183/$270 ($0 volume), supply flat (~$648K), and portal wallet.wspn.io NXDOMAIN with unverified corporate exit. Not a death finding.",
+    "source": {
+      "label": "WSPN bank withdrawal and corporate conversion documentation",
+      "url": "https://developer.wspn.io/6223538m0.md"
     }
-  },
-  "launchDate": "2023-12-07"
+  }
 }

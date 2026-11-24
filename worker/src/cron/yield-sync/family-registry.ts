@@ -151,6 +151,7 @@ const YIELD_SOURCE_KEY_ROUTES: readonly YieldSourceKeyRoute[] = [
     { routeOrder: 5, prefix: "protocol-api:ondo-usdy-oracle", venueProtocol: "ondo-yield-assets", chainSegmentIndex: null, family: null },
     { routeOrder: 5, prefix: "protocol-api:ondo-usdy-continuous-oracle", venueProtocol: "ondo-yield-assets", chainSegmentIndex: null, family: null },
     { routeOrder: 6, prefix: "protocol-api:midas-mmev-nav-oracle", venueProtocol: "midas-rwa", chainSegmentIndex: null, family: null },
+    { routeOrder: 12, prefix: "onchain:bd-basedollar", venueProtocol: "base-dollar", chainSegmentIndex: null, family: null },
   ].sort((a, b) => a.routeOrder - b.routeOrder).map(({ routeOrder: _routeOrder, ...route }) => route),
   ...SUPPLEMENTAL_SOURCE_FAMILY_KEYS.flatMap((family) =>
     SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY[family].routes.map((route) => ({ ...route, family })),

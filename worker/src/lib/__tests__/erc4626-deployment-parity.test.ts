@@ -35,8 +35,16 @@ describe("ERC-4626 deployment parity", () => {
   });
 
   it("preserves every NAV deployment triple, trust flag and route order", () => {
-    expect(navConfigs).toHaveLength(48);
-    expect(navConfigs[47]).toMatchObject({ id: "sgho-aave", parentId: "gho-aave", chain: "ethereum" });
+    expect(navConfigs).toHaveLength(49);
+    expect(navConfigs[47]).toMatchObject({
+      id: "stusds-sky",
+      parentId: "usds-sky",
+      chain: "ethereum",
+      vault: "0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9",
+      vaultDecimals: 18,
+      assetDecimals: 18,
+    });
+    expect(navConfigs[48]).toMatchObject({ id: "sgho-aave", parentId: "gho-aave", chain: "ethereum" });
     expect(digest(navConfigs.slice(0, 47))).toBe("046e3607bcf44822a7107c737e30db8089284367ccf2a6fd06cc739eb2e0bf61");
   });
 });
