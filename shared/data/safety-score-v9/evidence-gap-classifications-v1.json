@@ -60732,36 +60732,6 @@
       "rationale": "CASH is redeemable to USD via Bridge, whose ACH documentation states \"the same day ACH transaction limit is $1 million\" and publishes bank/cutoff-dependent settlement timing. This payment-rail transaction ceiling and compliant-order processing commitment do not establish CASH-specific issuer-wide funded executable capacity; reserves are not an execution facility."
     },
     {
-      "id": "xnd-20261106-cgo-comtech-capacity",
-      "assetId": "cgo-comtech",
-      "scope": {
-        "pillar": "exit",
-        "componentKey": "exit-route",
-        "factorKey": "capacity",
-        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:cgo-comtech:offchain-issuer",
-        "exposureId": null,
-        "requiredDatum": "capacity"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-11-06T19:14:04Z",
-      "reviewer": "Safety unknowns campaign 2026-11-06 — c-xnd (owner exit-capacity ruling)",
-      "sourcesRefs": [
-        "source:1b2b92c51c501c7f85645ea1",
-        "source:a5cdf1d4f432aa6a082c07b1"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:e725d9d0bb0c5bbd48255ac7",
-        "surface:b978cbb33c47e68a6b7f16d9",
-        "surface:a5885db02497cb12168e5e0b",
-        "surface:cda659fe83efc9cadf44af5c",
-        "surface:cfbbb1e1b2a4d8ae606e2e0e",
-        "surface:871d6901429b1ea6d279eb65",
-        "surface:fc4dcfa3f2978d53b5854de3"
-      ],
-      "rationale": "The currently retrievable ComTech-issued terms and FAQ establish the physical-gold delivery entitlement, despite inconsistent minimum-lot descriptions. Neither publishes an executable upper processing amount, funded payout facility or committed completion SLA. Gold ownership and minimum denominations are not capacity."
-    },
-    {
       "id": "xnd-20261106-cgusd-cygnus-finance-capacity",
       "assetId": "cgusd-cygnus-finance",
       "scope": {
@@ -60812,31 +60782,6 @@
         "surface:6f3eed9b3a6f12da940a8f91"
       ],
       "rationale": "The exact AllUnity CHFAU issuer channel has a documented par redemption right and compliance process. The current white paper and EMT policy publish no numerical executable redemption limit, funded facility size or binding completion SLA. Potential recovery limits are unquantified; reserve backing and a processing aim are not capacity."
-    },
-    {
-      "id": "xnd-20261106-dgld-gold-token-sa-capacity",
-      "assetId": "dgld-gold-token-sa",
-      "scope": {
-        "pillar": "exit",
-        "componentKey": "exit-route",
-        "factorKey": "capacity",
-        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:dgld-gold-token-sa:offchain-issuer",
-        "exposureId": null,
-        "requiredDatum": "capacity"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-11-06T19:14:04Z",
-      "reviewer": "Safety unknowns campaign 2026-11-06 — c-xnd (owner exit-capacity ruling)",
-      "sourcesRefs": [
-        "source:b97772fa3dbeb8a55355e8fa",
-        "source:3f205f2dc729d48fea6b7121"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:08992319d75bf0ac1e6056e0",
-        "surface:11a8d3004c1a4938b1f93136"
-      ],
-      "rationale": "The exact GTSA physical-gold delivery channel is established by current terms and FAQ. Neither inspected disclosure commits an executable processing amount/limit, funded facility size or end-to-end completion SLA; co-owned gold inventory and delivery minimums do not establish capacity."
     },
     {
       "id": "xnd-20261106-emxn-telcoin-capacity",
@@ -61372,31 +61317,6 @@
       "rationale": "GBPe's issuer rail is contractual non-EUR redemption subject to an additional agreement and discretionary limits. The reviewed public terms publish no executable amount, limit, funded facility or completion SLA; par entitlement and backing are not capacity."
     },
     {
-      "id": "xnd-20261106-ggbr-goldfish-gold-capacity",
-      "assetId": "ggbr-goldfish-gold",
-      "scope": {
-        "pillar": "exit",
-        "componentKey": "exit-route",
-        "factorKey": "capacity",
-        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:ggbr-goldfish-gold:offchain-issuer",
-        "exposureId": null,
-        "requiredDatum": "capacity"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-11-06T19:14:03Z",
-      "reviewer": "Safety unknowns campaign 2026-11-06 — c-xnd (owner exit-capacity ruling)",
-      "sourcesRefs": [
-        "source:345708fbb1162c7f600005d7",
-        "source:79e8f1c49fa681734ecc08a2"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:1599f20a0f8d6c496974766e",
-        "surface:a00db14b10a3ddceb9a7255d"
-      ],
-      "rationale": "The GGBR dealer route documents physical redemption and a 10,000-GGBR minimum, but no executable upper amount, funded dealer facility or committed final-delivery SLA. The published processing timing and in-situ reserve quantity do not establish capacity. The minimum differs from the repository's older 1,000-GGBR observation; no capacity is inferred from either."
-    },
-    {
       "id": "xnd-20261106-gldon-ondo-capacity",
       "assetId": "gldon-ondo",
       "scope": {
@@ -61918,57 +61838,6 @@
         "surface:6ef83cb1ab41496be4b651c6"
       ],
       "rationale": "Tempo identifies mainnet pathUSD as Bridge-issued and redeemable to USDC through Bridge. Bridge terms publish conditional processing and risk-based customer limits without numerical values. No executable redemption amount, funded payout facility or committed completion bound is published in these reviewed surfaces; backing and DEX quote-token roles are not capacity."
-    },
-    {
-      "id": "xnd-20261106-paxg-paxos-capacity",
-      "assetId": "paxg-paxos",
-      "scope": {
-        "pillar": "exit",
-        "componentKey": "exit-route",
-        "factorKey": "capacity",
-        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:paxg-paxos:offchain-issuer",
-        "exposureId": null,
-        "requiredDatum": "capacity"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-11-06T19:14:44Z",
-      "reviewer": "Safety unknowns campaign 2026-11-06 — c-xnd (owner exit-capacity ruling)",
-      "sourcesRefs": [
-        "source:d03595d8f5913319b77fea7d",
-        "source:449e29dd430db44304cb61bf"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:307fdf36d19347db305fdf16",
-        "surface:a82a1e1d39492589385708ae",
-        "surface:20111568436a47457c4fe91c"
-      ],
-      "rationale": "PAXG terms establish allocated-gold redemption subject to a per-bar minimum, due diligence and customer delivery arrangements. The minimum is not maximum executable capacity; best-effort conversion timing is not a completion commitment. No quantitative payout throughput or funded delivery facility is published in the reviewed product/general terms. Gold backing is not redemption capacity."
-    },
-    {
-      "id": "xnd-20261106-pgold-pleasing-capacity",
-      "assetId": "pgold-pleasing",
-      "scope": {
-        "pillar": "exit",
-        "componentKey": "exit-route",
-        "factorKey": "capacity",
-        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:pgold-pleasing:offchain-issuer",
-        "exposureId": null,
-        "requiredDatum": "capacity"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-11-06T19:14:44Z",
-      "reviewer": "Safety unknowns campaign 2026-11-06 — c-xnd (owner exit-capacity ruling)",
-      "sourcesRefs": [
-        "source:298f904794182672430eadbc",
-        "source:6ab1999faeef7fb6d22a9fe7"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:ccb1773d94368c71a1efccb1",
-        "surface:42591ec1f5cef3113975d7e6"
-      ],
-      "rationale": "Pleasing documents KYC-gated PGOLD physical redemption and support-arranged pickup. A minimum application size is disclosed, but no executable maximum amount, committed facility size or completion SLA is published; the terms expressly permit delays. Vaulted gold and proof-of-reserve reporting are not delivery capacity."
     },
     {
       "id": "xnd-20261106-pusd-plume-capacity",
@@ -62961,112 +62830,6 @@
         "surface:2af6c8a6e21cd1b248378ebc"
       ],
       "rationale": "WSPN corporate-account documentation establishes WUSD-to-USD conversion and bank withdrawal subject to administrator approval. No executable payout amount, quantitative limit, funded facility size or committed final completion bound is specified; example values, balances and reserves are not capacity."
-    },
-    {
-      "id": "xnd-20261106-xagm-matrixdock-capacity",
-      "assetId": "xagm-matrixdock",
-      "scope": {
-        "pillar": "exit",
-        "componentKey": "exit-route",
-        "factorKey": "capacity",
-        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:xagm-matrixdock:offchain-issuer",
-        "exposureId": null,
-        "requiredDatum": "capacity"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-11-06T19:15:34Z",
-      "reviewer": "Safety unknowns campaign 2026-11-06 — c-xnd (owner exit-capacity ruling)",
-      "sourcesRefs": [
-        "source:45224530834334cbd1940ec2",
-        "source:88c5c6af8cbcc69800ccb0d9"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:f022d7515e7eead77fe2dbb8",
-        "surface:4ef30655e62fbc0a7d2aacd1"
-      ],
-      "rationale": "Current XAGm documentation establishes stablecoin proceeds after a conditional silver sale and physical silver redemption subject to inventory. T+3 starts after accepted execution; physical minimums and reserves are not capacity. No throughput/facility or unconditional final completion bound is published."
-    },
-    {
-      "id": "xnd-20261106-xaum-matrixdock-capacity",
-      "assetId": "xaum-matrixdock",
-      "scope": {
-        "pillar": "exit",
-        "componentKey": "exit-route",
-        "factorKey": "capacity",
-        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:xaum-matrixdock:offchain-issuer",
-        "exposureId": null,
-        "requiredDatum": "capacity"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-11-06T19:15:34Z",
-      "reviewer": "Safety unknowns campaign 2026-11-06 — c-xnd (owner exit-capacity ruling)",
-      "sourcesRefs": [
-        "source:cb695d1c0bfe5077beae4bd3",
-        "source:e34053bc7d5c32fae33975e7"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:a19922af19ed0fa41cdbf63b",
-        "surface:8c93b684a22db1d29a57dcc3"
-      ],
-      "rationale": "Current XAUm documentation establishes physical-gold redemption by request and issuer confirmation, subject to inventory, plus conditional stablecoin sale proceeds. The physical minimum is not capacity; no funded facility, executable throughput or final physical completion bound is published."
-    },
-    {
-      "id": "xnd-20261106-xaut-tether-capacity",
-      "assetId": "xaut-tether",
-      "scope": {
-        "pillar": "exit",
-        "componentKey": "exit-route",
-        "factorKey": "capacity",
-        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:xaut-tether:offchain-issuer",
-        "exposureId": null,
-        "requiredDatum": "capacity"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-11-06T19:15:46Z",
-      "reviewer": "Safety unknowns campaign 2026-11-06 — c-xnd (owner exit-capacity ruling)",
-      "sourcesRefs": [
-        "source:3dd9f4bdbecfcb63014c7b46",
-        "source:76b9173b55769efd5e45de9e"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:75f014872a8f6a9bb9d0d19b",
-        "surface:ee0dcda8231e36642172753d",
-        "surface:52102cd9c1685e4e80c6daad",
-        "surface:8f02556b2059d52e376f061e"
-      ],
-      "rationale": "The exact XAUT issuer rail permits verified-holder physical gold redemption and an optional broker sale. Current terms state reasonable efforts and delay rights; the fee schedule gives a 430-token lot convention. Neither discloses an executable amount/limit, funded facility size or committed completion SLA. Gold-bar lots and reserve backing are not redemption capacity."
-    },
-    {
-      "id": "xnd-20261106-xgz-goldzip-capacity",
-      "assetId": "xgz-goldzip",
-      "scope": {
-        "pillar": "exit",
-        "componentKey": "exit-route",
-        "factorKey": "capacity",
-        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:xgz-goldzip:offchain-issuer",
-        "exposureId": null,
-        "requiredDatum": "capacity"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-11-06T19:15:46Z",
-      "reviewer": "Safety unknowns campaign 2026-11-06 — c-xnd (owner exit-capacity ruling)",
-      "sourcesRefs": [
-        "source:e69b57b2e21651c498fa2316",
-        "source:c79f6d2f30d5c773ac3596a8",
-        "source:d82e6a76c49faac52232b064"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:1aa7da12656eea1c671a76e0",
-        "surface:5d76f5949c01d4f18b42066a",
-        "surface:6d25d337342565d006927cd4",
-        "surface:1c8ec674e586977aac2a2d83",
-        "surface:312ab8f09851bafc156b56dd"
-      ],
-      "rationale": "The configured ordinary physical-bar redemption route is distinct from the special USDT exit for timely issuer-change objections. The current notice confirms ordinary rights remain available. Ordinary terms publish minimum lots and appointment mechanics but no executable amount/limit, funded facility size or committed delivery SLA; minimum bars and reserves are not capacity. The separate special exit has a 14-Business-Day commitment and must not be attributed to ordinary physical redemption."
     },
     {
       "id": "xnd-20261106-xo-exodus-capacity",
@@ -68490,6 +68253,80 @@
         "surface:8d43adad69f437b04486d65f"
       ],
       "rationale": "No USDK-specific redemption terms, numeric executable capacity bound, or committed liquidity floor were found across KAST's published legal surfaces or KAST/M0 product documentation. https://docs.kast.finance/ redirects to KAST's legal index (https://www.kast.xyz/en/legal); the KAST Terms and Conditions of Service (effective 2026-07-07) never name USDK and define \"Acceptable Tokens\" as USDT and USDC only, and neither the KAST Asset Account Terms (last updated 2026-10-29), KAST USD Reserve Account Terms, nor KAST Risk Disclosure mentions USDK. The platform-wide clauses that do bear on virtual-asset movement and conversion through KAST — KAST ToS Balance Limits and Adjustments (discretionary minimum and maximum transfer/processing limits modifiable without prior notice), KAST ToS Crypto Swap Services (unilateral right to restrict or suspend Swap functionality at sole discretion), and KAST Asset Account Terms Sections 1.5 and 4.10 (governing Solana-based assets in the Asset Account, with discretionary supported-asset selection and in-app Convert min/max and frequency limits) — publish no numeric redemption capacity bound. KAST's launch release (2025-04-09), M0's KAST case study, and M0's Solana protocol docs confirm USDK is a Solana M0 extension whose m_ext/ext_swap unwrap path is permissioned (requiring whitelisted unwrappers) rather than a permissionless public on-chain exit, with no published numeric USDK redemption capacity floor."
+    },
+    {
+      "id": "a1-20261124-vchf-vnx-exit-capacity",
+      "assetId": "vchf-vnx",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:29c6c496-1eae-4d4e-8f23-e87cbd98110c:redemption:vchf-vnx:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T12:45:00Z",
+      "reviewer": "Pharos 2026-11-24 v10.54 run (A1 lane, owner ruling 2026-11-24)",
+      "sourcesRefs": [
+        "source:f78bfbeccf780a568188ec9b",
+        "source:70690ba822e398b07036f8d6",
+        "source:c81e6c9df30809d5d23bd7fb",
+        "source:73c12063d02d81995c60db29"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:ede0f06f736509fa272169b8",
+        "surface:6f473d46fcfbcfe8e71740a6",
+        "surface:ef3a523a9f046f979042fc0e",
+        "surface:5d778810f0762761267466ef",
+        "surface:dc952751cac30d562f4feb29",
+        "surface:c3fc15ae8dcba3a48f2bf1fa",
+        "surface:8232093ad5f14b703acb0a08",
+        "surface:3ec3801d7a0d8bc35ac27597",
+        "surface:d33583e42a299425400a1bec",
+        "surface:9ff46d2a2b1291219c203018",
+        "surface:04285fa947d37cf608692016",
+        "surface:95cba69efd9d4695081ed2a2"
+      ],
+      "rationale": "No binding executable redemption capacity bound is published for VNX Swiss Franc (VCHF) on its offchain-issuer redemption route. Although VNX Global Ltd.'s non-binding institutional GitBook pages state a \">=10% of total reserves\" (\"at least 10%\") T+0 fiat cash floor and a \">10% of supply\" daily redemption-pressure review trigger (alongside a CHF 100,000 institutional minimum), the governing VNX Global Terms (VNX-Global-Terms.pdf, Clause 3.2) place reserve composition \"within the sole control and at the sole and absolute discretion of the Company\", reserve \"the right to delay the redemption or withdrawal of VNX Stablecoins if such delay is necessitated by the illiquidity or unavailability or loss of any VNX Stablecoin Reserves\", and reserve \"the right to redeem VNX Stablecoins by in-kind redemptions of securities and other assets held in VNX Stablecoin Reserves\". In addition, VNX's own GitBook pages contradict each other—and liquidity-buffers contradicts itself on the same page—stating \"15%\" (\"a further 15% redeemable within 48 hours\" on reserve-transparency; \"The additional 15% layer\" and \"~25% of reserves\" in liquidity-buffers prose) versus \"90%\" (\"90% of total reserves\" / \">=90%\" in 48-hour deposits in liquidity-buffers overview/table, reserve-management table, investment-policy, and stablecoin-specific-risks). Consequently, the published \">=10%\" T+0 cash floor is not a binding capacity bound, and no binding same-notional executable capacity bound is published."
+    },
+    {
+      "id": "a1-20261124-vgbp-vnx-exit-capacity",
+      "assetId": "vgbp-vnx",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:29c6c496-1eae-4d4e-8f23-e87cbd98110c:redemption:vgbp-vnx:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T12:45:00Z",
+      "reviewer": "Pharos 2026-11-24 v10.54 run (A1 lane, owner ruling 2026-11-24)",
+      "sourcesRefs": [
+        "source:f78bfbeccf780a568188ec9b",
+        "source:70690ba822e398b07036f8d6",
+        "source:c81e6c9df30809d5d23bd7fb",
+        "source:73c12063d02d81995c60db29"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:ede0f06f736509fa272169b8",
+        "surface:6f473d46fcfbcfe8e71740a6",
+        "surface:ef3a523a9f046f979042fc0e",
+        "surface:5d778810f0762761267466ef",
+        "surface:dc952751cac30d562f4feb29",
+        "surface:c3fc15ae8dcba3a48f2bf1fa",
+        "surface:8232093ad5f14b703acb0a08",
+        "surface:3ec3801d7a0d8bc35ac27597",
+        "surface:d33583e42a299425400a1bec",
+        "surface:9ff46d2a2b1291219c203018",
+        "surface:04285fa947d37cf608692016",
+        "surface:37a60a5b8d249cb3b61e99cf"
+      ],
+      "rationale": "No binding executable redemption capacity bound is published for VNX British Pound (VGBP) on its offchain-issuer redemption route. Although VNX Global Ltd.'s non-binding institutional GitBook pages state a \">=10% of total reserves\" (\"at least 10%\") T+0 fiat cash floor and a \">10% of supply\" daily redemption-pressure review trigger (alongside a GBP 100,000 institutional minimum), the governing VNX Global Terms (VNX-Global-Terms.pdf, Clause 3.2) place reserve composition \"within the sole control and at the sole and absolute discretion of the Company\", reserve \"the right to delay the redemption or withdrawal of VNX Stablecoins if such delay is necessitated by the illiquidity or unavailability or loss of any VNX Stablecoin Reserves\", and reserve \"the right to redeem VNX Stablecoins by in-kind redemptions of securities and other assets held in VNX Stablecoin Reserves\". In addition, VNX's own GitBook pages contradict each other—and liquidity-buffers contradicts itself on the same page—stating \"15%\" (\"a further 15% redeemable within 48 hours\" on reserve-transparency; \"The additional 15% layer\" and \"~25% of reserves\" in liquidity-buffers prose) versus \"90%\" (\"90% of total reserves\" / \">=90%\" in 48-hour deposits in liquidity-buffers overview/table, reserve-management table, investment-policy, and stablecoin-specific-risks). Consequently, the published \">=10%\" T+0 cash floor is not a binding capacity bound, and no binding same-notional executable capacity bound is published."
     }
   ],
   "sourceObservations": [
@@ -103692,6 +103529,50 @@
         "excerpt": "unwrap(amount): Convert extension to $M (requires whitelisted_unwrapper) ... Only whitelisted unwrappers can call unwrap directly",
         "assertion": "M0's Solana protocol documentation confirms that extension unwrap back to $M via the M0 Solana framework is permissioned to whitelisted unwrappers rather than a permissionless public on-chain exit, and publishes no numeric USDK redemption capacity floor."
       }
+    },
+    {
+      "id": "source:f78bfbeccf780a568188ec9b",
+      "value": {
+        "url": "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf",
+        "observedAt": "2026-11-24T12:42:24Z",
+        "datumAsOf": null,
+        "location": "Clause 3.2 (VNX Stablecoins) and Annex II (Types of VNX Stablecoins)",
+        "excerpt": "The composition of VNX Stablecoin Reserves used to back VNX Stablecoins is within the sole control and at the sole and absolute discretion of the Company. ... The Company reserves the right to delay the redemption or withdrawal of VNX Stablecoins if such delay is necessitated by the illiquidity or unavailability or loss of any VNX Stablecoin Reserves held by to back VNX Stablecoins, and the Company reserves the right to redeem VNX Stablecoins by in-kind redemptions of securities and other assets held in VNX Stablecoin Reserves.",
+        "assertion": "The governing VNX Global Terms reserve sole and absolute discretion over reserve composition, reserve the right to delay redemption on reserve illiquidity, unavailability or loss, and reserve the right to redeem in kind; Annex II lists CHF/GBP 100,000 minimum issuance thresholds and no maximum or funded redemption capacity bound. Because these binding terms supersede non-binding GitBook claims (including the >=10% T+0 cash floor), no binding executable redemption capacity bound is published."
+      }
+    },
+    {
+      "id": "source:70690ba822e398b07036f8d6",
+      "value": {
+        "url": "https://vnx.gitbook.io/vnx-global/institutional/reserve/liquidity-buffers",
+        "observedAt": "2026-11-24T12:42:26Z",
+        "datumAsOf": null,
+        "location": "Overview, Key benefits, How it works, and Buffer structure table (fetched as liquidity-buffers.md)",
+        "excerpt": "at least 10% of total reserves in immediately accessible (T+0) fiat cash, plus an additional 90% in bank deposits redeemable within 48 hours. ... the additional 90% in deposits redeemable within 48 hours brings total committed liquid coverage to ~25% of reserves. ... The additional 15% layer sits in short-tenor bank deposits with redemption within 48 hours ... T+0 cash | ≥10% of total reserves | Same-day ... 48-hour deposits | 90% of total reserves | ≤48 hours",
+        "assertion": "This non-binding institutional GitBook page publishes a \">=10% of total reserves\" T+0 fiat cash floor, but contradicts itself on the same page between \"an additional 90%\" / \"90% of total reserves\" and \"The additional 15% layer\" / \"~25% of reserves\" for the 48-hour deposit tier. Superseded by VNX-Global-Terms.pdf Clause 3.2 (sole discretion, delay, and in-kind redemption), it does not publish a binding capacity bound."
+      }
+    },
+    {
+      "id": "source:c81e6c9df30809d5d23bd7fb",
+      "value": {
+        "url": "https://vnx.gitbook.io/vnx-global/transparency/reserve-transparency",
+        "observedAt": "2026-11-24T12:42:26Z",
+        "datumAsOf": null,
+        "location": "What to verify — Liquidity coverage (fetched as reserve-transparency.md)",
+        "excerpt": "Liquidity coverage — at least 10% of reserves stays in T+0 cash, with a further 15% redeemable within 48 hours.",
+        "assertion": "The Reserve Transparency page repeats the non-binding \"at least 10%\" T+0 cash floor alongside \"a further 15% redeemable within 48 hours\", directly contradicting the \">=90%\" / \"further 90%\" 48-hour deposit figures on reserve-management, investment-policy, and stablecoin-specific-risks; no binding executable redemption capacity bound is published."
+      }
+    },
+    {
+      "id": "source:73c12063d02d81995c60db29",
+      "value": {
+        "url": "https://vnx.gitbook.io/vnx-global/institutional/products/minting-and-redemption",
+        "observedAt": "2026-11-24T12:42:26Z",
+        "datumAsOf": null,
+        "location": "Edge cases and failure modes (fetched as minting-and-redemption.md)",
+        "excerpt": "Redemption pressure — daily redemptions >10% of supply trigger liquidity-position review and emergency reserve-tranche access. ... Customer eligibility — VCHF/VGBP minimum transaction threshold is CHF/GBP 100,000; verified Customers only.",
+        "assertion": "The institutional Minting and Redemption page defines daily redemptions above 10% of supply as an internal liquidity-position review trigger and sets a CHF/GBP 100,000 minimum threshold, without publishing a binding capacity bound, daily payout floor, or queue limit."
+      }
     }
   ],
   "searchedSurfaceObservations": [
@@ -118994,6 +118875,34 @@
     {
       "id": "surface:8d43adad69f437b04486d65f",
       "value": "https://www.kast.xyz/en/legal/kast-usd-reserve-account"
+    },
+    {
+      "id": "surface:6f473d46fcfbcfe8e71740a6",
+      "value": "https://vnx.gitbook.io/vnx-global/institutional/reserve/liquidity-buffers"
+    },
+    {
+      "id": "surface:5d778810f0762761267466ef",
+      "value": "https://vnx.gitbook.io/vnx-global/institutional/reserve/investment-policy"
+    },
+    {
+      "id": "surface:dc952751cac30d562f4feb29",
+      "value": "https://vnx.gitbook.io/vnx-global/transparency/reserve-transparency"
+    },
+    {
+      "id": "surface:3ec3801d7a0d8bc35ac27597",
+      "value": "https://vnx.gitbook.io/vnx-global/institutional/risk/stablecoin-specific-risks"
+    },
+    {
+      "id": "surface:d33583e42a299425400a1bec",
+      "value": "https://vnx.gitbook.io/vnx-global/developer/flows/redeem-flow"
+    },
+    {
+      "id": "surface:95cba69efd9d4695081ed2a2",
+      "value": "https://vnx.io/swiss-franc"
+    },
+    {
+      "id": "surface:37a60a5b8d249cb3b61e99cf",
+      "value": "https://vnx.io/british-pound"
     }
   ]
 }

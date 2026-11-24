@@ -553,7 +553,17 @@ function assertPreviousReaderSource() {
   // `.max(16)` output bounds with the shared MAX_REDEMPTION_OUTPUT_ASSETS = 32. A looser max only;
   // every pre-dust input still parses identically (verified by substituting 07a0afb4e's
   // exit-route.ts, which restores the prior d4029dcc… digest).
-  if (hash.digest("hex") !== "45c5490553fd1deb5fe3ee3ca109cfef36f2e16801d356f7d10adde9a1810177") throw new Error("Pre-dust reader source/refinement inputs changed");
+  // v10.54 refresh, two closure files, both additive or narrowly scoped:
+  // - safety-score-v9-facts.ts exports PHYSICAL_DELIVERY_CAPACITY_POLICY_RULE_ID and adds a scoped
+  //   V9ExitRouteFactV2Schema exemption for diagnostic, score-ineligible redemption-lane
+  //   physical-commodity-delivery routes (sameNotionalEligible false, not-applicable route and
+  //   capacity status under that exact rule id);
+  // - safety-score-v9-supply-attribution.ts adds optional, strict CCIP LockBox bindings and
+  //   multi-account escrow backing for reviewed supply plans.
+  // No public card, breakdown, or trace schema changed; every pre-dust input still parses
+  // identically (verified by substituting fd0259e97's two files, which restores the prior
+  // 45c54905… digest).
+  if (hash.digest("hex") !== "28090be64f07c33f83e68f3bba8013a5520abd76cd0123861156330119e3c66f") throw new Error("Pre-dust reader source/refinement inputs changed");
 }
 
 export async function previousReader() {

@@ -4,7 +4,7 @@ import { supplyAttributionPinMaxAgeSec, V9_CANDIDATE_POLICY_V1 } from "@shared/l
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
-import { CurveLzPendingCheckpointSchema, type CurveLzPendingCheckpoint, type CurveLzPendingRead, type EconomicSupplyObservation, type EconomicSupplyReference, type ReviewedEconomicSupplyPlan, type ReviewedEconomicDeploymentPartition } from "@shared/types/safety-score-v9-supply-attribution";
+import { CurveLzPendingCheckpointSchema, escrowBackingAccounts, type CurveLzPendingCheckpoint, type CurveLzPendingRead, type EconomicSupplyObservation, type EconomicSupplyReference, type ReviewedEconomicSupplyPlan, type ReviewedEconomicDeploymentPartition } from "@shared/types/safety-score-v9-supply-attribution";
 import type { SupplyAttributionRejectionCode } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { rethrowIfAborted, throwIfAborted } from "../abort";
 import type { ChainRpcConfig } from "../chain-registry";
@@ -559,9 +559,10 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
         addEvmRead(row, row.deploymentKey, row.read.kind === "evm-balance" ? row.read.account : undefined);
       }
     }
-    for (const rule of [...plan.exclusions, ...plan.escrows.map(escrow => ({
-      id: escrow.id, deploymentKey: escrow.canonicalDeploymentKey, account: escrow.account,
-    }))]) {
+    for (const rule of [...plan.exclusions, ...plan.escrows.flatMap(escrow =>
+      escrowBackingAccounts(escrow).map(({ id, account }) => ({
+        id, deploymentKey: escrow.canonicalDeploymentKey, account,
+      })))]) {
       const row = plan.deployments.find(row => row.deploymentKey === rule.deploymentKey);
       if (row) addEvmRead(row, rule.id, rule.account);
     }
@@ -765,7 +766,8 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
       if (!observation) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId };
       observations.push(observation);
     }
-    for (const rule of [...plan.exclusions, ...plan.escrows.map(escrow => ({ id: escrow.id, deploymentKey: escrow.canonicalDeploymentKey, account: escrow.account }))]) {
+    for (const rule of [...plan.exclusions, ...plan.escrows.flatMap(escrow =>
+      escrowBackingAccounts(escrow).map(({ id, account }) => ({ id, deploymentKey: escrow.canonicalDeploymentKey, account })))]) {
       const row = plan.deployments.find(row => row.deploymentKey === rule.deploymentKey)!;
       failedRouteId = row.routeId ?? row.deploymentKey;
       const observation = row.read.kind === "cosmos-bank-supply"

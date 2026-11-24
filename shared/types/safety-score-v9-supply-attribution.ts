@@ -279,10 +279,18 @@ const CcipSourceStartWitnessSchema = z.discriminatedUnion("kind", [
     reason: z.literal("history-origin-witness-unavailable"),
   }),
 ]);
+const CcipLockBoxSchema = z.strictObject({
+  account: EvmAddressSchema,
+  lockBoxRuntimeCodeSha256: Sha256Schema,
+  tokenPoolAddress: EvmAddressSchema,
+  tokenPoolRuntimeCodeSha256: Sha256Schema,
+  staged: z.literal(true).optional(),
+});
 export const CcipPendingReadSchema = z.strictObject({
   kind: z.literal("evm-ccip-pending"), sourceId: CanonicalTextSchema,
   chainId: CanonicalChainIdSchema, finality: z.literal("finalized"),
   amountDecimals: z.number().int().min(0).max(36),
+  lockBoxes: z.array(CcipLockBoxSchema).min(1).max(8).optional(),
   lanes: z.array(z.strictObject({
     id: CanonicalTextSchema, version: z.enum(["1.5", "1.6", "2.0.0"]),
     source: CcipSideSchema, destination: CcipSideSchema,
@@ -301,6 +309,19 @@ export const CcipPendingReadSchema = z.strictObject({
       lane.source.chainSelector === "0" || lane.destination.chainSelector === "0") ||
     !source.lanes.some(lane => lane.source.chainId === source.chainId || lane.destination.chainId === source.chainId)) {
     ctx.addIssue({ code: "custom", message: "CCIP requires unique directed pool/lane identities and an exact canonical amount anchor" });
+  }
+  if (source.lockBoxes) {
+    const canonicalSides = source.lanes.flatMap(lane => [lane.source, lane.destination].filter(side => side.chainId === source.chainId));
+    const canonicalTokens = new Set(canonicalSides.map(side => side.tokenAddress));
+    const lanePools = new Map(canonicalSides.map(side => [side.tokenPoolAddress, side.tokenPoolRuntimeCodeSha256]));
+    if (canonicalTokens.size !== 1 ||
+      new Set(source.lockBoxes.map(row => row.account)).size !== source.lockBoxes.length ||
+      new Set(source.lockBoxes.map(row => row.tokenPoolAddress)).size !== source.lockBoxes.length ||
+      source.lockBoxes.some(row => row.account === row.tokenPoolAddress || lanePools.has(row.account) ||
+        (row.staged ? lanePools.has(row.tokenPoolAddress)
+          : lanePools.get(row.tokenPoolAddress) !== row.tokenPoolRuntimeCodeSha256))) {
+      ctx.addIssue({ code: "custom", message: "CCIP LockBox bindings must uniquely bind canonical pools without aliasing lane pools" });
+    }
   }
   for (const lane of source.lanes) {
     const witness = lane.sourceStartWitness;
@@ -332,6 +353,9 @@ export const CcipPendingCheckpointSchema = z.strictObject({
 export type CcipPendingCheckpoint = z.infer<typeof CcipPendingCheckpointSchema>;
 const CcipPendingProofSchema = z.strictObject({
   sourceDigest: Sha256Schema, checkpointDigest: Sha256Schema, discoveryDigest: Sha256Schema,
+  lockBoxes: z.array(z.strictObject({
+    account: EvmAddressSchema, tokenPoolAddress: EvmAddressSchema,
+  })).min(1).max(8).optional(),
   pins: z.array(z.strictObject({
     chainId: CanonicalChainIdSchema, anchor: z.number().int().nonnegative(),
     anchorHash: EvmWordSchema, observedAtSec: UnixSecondsSchema,
@@ -362,6 +386,7 @@ export const ReviewedEconomicSupplyPlanSchema = z.strictObject({
   excludedRegistryDeploymentKeys: z.array(CanonicalTextSchema), exclusions: z.array(BalanceRuleSchema).max(64),
   escrows: z.array(z.strictObject({
     id: CanonicalTextSchema, canonicalDeploymentKey: CanonicalTextSchema, account: CanonicalTextSchema,
+    additionalAccounts: z.array(CanonicalTextSchema).min(1).max(7).optional(),
     receiptDeploymentKeys: z.array(CanonicalTextSchema).min(1), independentReceiptLiability: z.literal(false),
     receiptClaimSources: z.array(z.strictObject({ deploymentKey: CanonicalTextSchema, source: ApiAmountReadSchema })).max(64),
     inFlightSource: PendingAmountReadSchema.nullable(),
@@ -370,16 +395,22 @@ export const ReviewedEconomicSupplyPlanSchema = z.strictObject({
   const keys = plan.deployments.map(row => row.deploymentKey);
   const ids = [...plan.exclusions, ...plan.escrows].map(row => row.id);
   const receipts = plan.escrows.flatMap(row => row.receiptDeploymentKeys);
-  if (new Set(keys).size !== keys.length || new Set(ids).size !== ids.length || new Set(receipts).size !== receipts.length || new Set(plan.escrows.map(row => `${row.canonicalDeploymentKey}:${row.account}`)).size !== plan.escrows.length) ctx.addIssue({ code: "custom", message: "Duplicate census, balance rule or escrow receipt" });
+  const escrowAccountPairs = plan.escrows.flatMap(row => [row.account, ...(row.additionalAccounts ?? [])].map(account => `${row.canonicalDeploymentKey}:${account}`));
+  if (new Set(keys).size !== keys.length || new Set(ids).size !== ids.length || new Set(receipts).size !== receipts.length || new Set(escrowAccountPairs).size !== escrowAccountPairs.length) ctx.addIssue({ code: "custom", message: "Duplicate census, balance rule or escrow receipt" });
   const balances = [...plan.exclusions.map(row => `${row.deploymentKey}:${row.account.toLowerCase()}`),
-    ...plan.escrows.map(row => `${row.canonicalDeploymentKey}:${row.account.toLowerCase()}`)];
+    ...plan.escrows.flatMap(row => [row.account, ...(row.additionalAccounts ?? [])].map(account => `${row.canonicalDeploymentKey}:${account.toLowerCase()}`))];
   if (new Set(balances).size !== balances.length) ctx.addIssue({ code: "custom", message: "Exclusions and escrows must use distinct economic balance identities" });
   if ((plan.accountingFamily === "independent-liability" && plan.escrows.length > 0) ||
     (plan.accountingFamily !== "independent-liability" && plan.escrows.length === 0)) ctx.addIssue({ code: "custom", message: "Accounting family must match its reviewed escrow rules" });
   if (plan.referencePriceSource !== null && plan.referencePriceSource.sourceId !== plan.sourceId) ctx.addIssue({ code: "custom", message: "Reference source identity differs from reviewed source binding" });
   for (const escrow of plan.escrows) {
+    const accounts = [escrow.account, ...(escrow.additionalAccounts ?? [])];
     const subsetKeys = escrow.receiptClaimSources.map(row => row.deploymentKey);
     if (new Set(subsetKeys).size !== subsetKeys.length || subsetKeys.some(key => !escrow.receiptDeploymentKeys.includes(key))) ctx.addIssue({ code: "custom", message: "Receipt subset observations require unique exact receipt identities" });
+    if (escrow.additionalAccounts !== undefined &&
+      (escrow.inFlightSource === null || !("kind" in escrow.inFlightSource) || escrow.inFlightSource.kind !== "evm-ccip-pending")) {
+      ctx.addIssue({ code: "custom", message: "Multi-account escrow backing requires authenticated CCIP LockBox bindings" });
+    }
     if (escrow.inFlightSource !== null && "kind" in escrow.inFlightSource) {
       const canonical = plan.deployments.find(row => row.deploymentKey === escrow.canonicalDeploymentKey);
       if (!canonical || canonical.chainId !== escrow.inFlightSource.chainId ||
@@ -389,12 +420,20 @@ export const ReviewedEconomicSupplyPlanSchema = z.strictObject({
       }
       if (escrow.inFlightSource.kind === "evm-ccip-pending") {
         const source = escrow.inFlightSource;
+        const lanePools = new Set(source.lanes.flatMap(lane => [lane.source, lane.destination]
+          .filter(side => side.chainId === source.chainId).map(side => side.tokenPoolAddress)));
+        const lockBoxes = source.lockBoxes ?? [];
+        const lockBoxAccounts = new Set(lockBoxes.map(row => row.account));
+        const bindsActiveLanePool = accounts.some(account => lanePools.has(account) ||
+          lockBoxes.some(row => row.account === account && !row.staged));
         if (source.amountDecimals !== canonical?.decimals ||
-          !source.lanes.some(lane => lane.source.tokenPoolAddress === escrow.account || lane.destination.tokenPoolAddress === escrow.account) ||
+          !bindsActiveLanePool ||
+          accounts.some(account => !lanePools.has(account) && !lockBoxAccounts.has(account)) ||
+          lockBoxes.some(row => !accounts.includes(row.account)) ||
           source.lanes.some(lane => [lane.source, lane.destination].some(side =>
             !plan.deployments.some(row => row.chainId === side.chainId && row.address === side.tokenAddress &&
               row.decimals === side.decimals && row.claimUnit === canonical?.claimUnit)))) {
-          ctx.addIssue({ code: "custom", message: "CCIP escrow lanes must bind the exact pool and same-claim holding census" });
+          ctx.addIssue({ code: "custom", message: "CCIP escrow lanes must bind the exact pool or LockBox and same-claim holding census" });
         }
       }
       if (escrow.inFlightSource.kind === "evm-curve-lz-pending") {
@@ -444,6 +483,7 @@ export const ReviewedEconomicSupplyPlanSchema = z.strictObject({
       }
     } else if (source.kind === "evm-ccip-pending") {
       if (source.chainId !== canonical?.chainId || source.amountDecimals !== canonical?.decimals ||
+        source.lockBoxes !== undefined ||
         source.lanes.some(lane => [lane.source, lane.destination].some(side =>
           !plan.deployments.some(row => row.chainId === side.chainId && row.address === side.tokenAddress &&
             row.decimals === side.decimals && row.claimUnit === canonical?.claimUnit)))) {
@@ -541,6 +581,14 @@ export const ReviewedEconomicSupplyPlanEnvelopeSchema = ReviewedEconomicSupplyPl
   providerRowExclusionReviews: z.array(z.object({ assetId: CanonicalTextSchema }).passthrough()).optional(),
 });
 export type ReviewedEconomicSupplyPlan = z.infer<typeof ReviewedEconomicSupplyPlanSchema>;
+export function escrowBackingAccounts(
+  escrow: Pick<ReviewedEconomicSupplyPlan["escrows"][number], "id" | "account" | "additionalAccounts">,
+): Array<{ id: string; account: string }> {
+  return [
+    { id: escrow.id, account: escrow.account },
+    ...(escrow.additionalAccounts ?? []).map(account => ({ id: `${escrow.id}:${account.toLowerCase()}`, account })),
+  ];
+}
 const EconomicSupplyObservationSchema = z.strictObject({
   id: CanonicalTextSchema, deploymentKey: CanonicalTextSchema, amount: DecimalSchema,
   observedAtSec: UnixSecondsSchema, anchor: CanonicalTextSchema, anchorHash: CanonicalTextSchema, responseSha256: Sha256Schema,

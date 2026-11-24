@@ -381,6 +381,22 @@ export async function observeCcipPending(input: {
         for (const request of requests) byKey.set(`${side.chainId}:${stableJsonStringifyV1(request)}`, request);
       }
     }
+    if (input.source.lockBoxes) {
+      const canonicalBlock = { blockHash: input.headers.get(input.source.chainId)!.hash, requireCanonical: true };
+      let byKey = authenticationReads.get(input.source.chainId);
+      if (!byKey) { byKey = new Map(); authenticationReads.set(input.source.chainId, byKey); }
+      for (const lockBox of input.source.lockBoxes) {
+        const requests: Parameters<typeof fetchEvmRpcBatch>[1][number][] = [
+          { method: "eth_getCode", params: [lockBox.tokenPoolAddress, canonicalBlock] },
+          { method: "eth_getCode", params: [lockBox.account, canonicalBlock] },
+          { method: "eth_call", params: [{ to: lockBox.tokenPoolAddress, data: call("getToken()") }, canonicalBlock] },
+          { method: "eth_call", params: [{ to: lockBox.tokenPoolAddress, data: call("getLockBox()") }, canonicalBlock] },
+          { method: "eth_call", params: [{ to: lockBox.account, data: call("getToken()") }, canonicalBlock] },
+          ...(lockBox.staged ? [{ method: "eth_call", params: [{ to: lockBox.tokenPoolAddress, data: call("getSupportedChains()") }, canonicalBlock] }] : []),
+        ];
+        for (const request of requests) byKey.set(`${input.source.chainId}:${stableJsonStringifyV1(request)}`, request);
+      }
+    }
     for (const [chain, byKey] of authenticationReads) {
       const entries = [...byKey];
       for (let from = 0; from < entries.length; from += 32) {
@@ -393,6 +409,36 @@ export async function observeCcipPending(input: {
         if (!results || results.length !== chunk.length) continue;
         for (let i = 0; i < results.length; i++) {
           if (results[i] !== null && results[i] !== undefined) pinnedReads.set(chunk[i]![0], results[i]);
+        }
+      }
+    }
+    if (input.source.lockBoxes) {
+      const canonicalPin = input.headers.get(input.source.chainId)!;
+      const canonicalBlock = { blockHash: canonicalPin.hash, requireCanonical: true };
+      const canonicalSide = input.source.lanes.flatMap(lane => [lane.source, lane.destination])
+        .find(side => side.chainId === input.source.chainId);
+      if (!canonicalSide) fail("lockbox-token-mismatch");
+      context = { laneId: null, chainId: input.source.chainId, pinObservedAtSec: canonicalPin.timestamp, phase: "lane-authentication" };
+      for (const lockBox of input.source.lockBoxes) {
+        const code = await rpc(input.source.chainId, [
+          { method: "eth_getCode", params: [lockBox.tokenPoolAddress, canonicalBlock] },
+          { method: "eth_getCode", params: [lockBox.account, canonicalBlock] },
+        ]);
+        if (code.some((value, index) => typeof value !== "string" || value === "0x" || !HEX.test(value) ||
+          sha256Hex(value) !== (index === 0 ? lockBox.tokenPoolRuntimeCodeSha256 : lockBox.lockBoxRuntimeCodeSha256))) fail("runtime-mismatch");
+        const binding = await rpc(input.source.chainId, [
+          { method: "eth_call", params: [{ to: lockBox.tokenPoolAddress, data: call("getToken()") }, canonicalBlock] },
+          { method: "eth_call", params: [{ to: lockBox.tokenPoolAddress, data: call("getLockBox()") }, canonicalBlock] },
+          { method: "eth_call", params: [{ to: lockBox.account, data: call("getToken()") }, canonicalBlock] },
+          ...(lockBox.staged ? [{ method: "eth_call", params: [{ to: lockBox.tokenPoolAddress, data: call("getSupportedChains()") }, canonicalBlock] }] : []),
+        ]);
+        if (binding[0] !== addressWord(canonicalSide.tokenAddress)) fail("pool-token-mismatch");
+        if (binding[2] !== addressWord(canonicalSide.tokenAddress)) fail("lockbox-token-mismatch");
+        if (binding[1] !== addressWord(lockBox.account)) fail("lockbox-binding-mismatch");
+        if (lockBox.staged) {
+          if (typeof binding[3] !== "string" || !HEX.test(binding[3])) fail("staged-pool-active");
+          const [supported] = decodeAbiParameters(parseAbiParameters("uint64[]"), binding[3] as `0x${string}`);
+          if (supported.length !== 0) fail("staged-pool-active");
         }
       }
     }
@@ -707,7 +753,9 @@ export async function observeCcipPending(input: {
       return { status: "rejected", reason: "history-incomplete", checkpoint };
     }
     const amount = proofs.reduce((sum, lane) => sum + BigInt(lane.amount), 0n).toString();
-    const proof: Proof = { sourceDigest, checkpointDigest: sha256Hex(serialized), discoveryDigest, lanes: proofs,
+    const proof: Proof = { sourceDigest, checkpointDigest: sha256Hex(serialized), discoveryDigest,
+      ...(input.source.lockBoxes ? { lockBoxes: input.source.lockBoxes.map(({ account, tokenPoolAddress }) => ({ account, tokenPoolAddress })) } : {}),
+      lanes: proofs,
       pins: chains.map(chainId => { const pin = input.headers.get(chainId)!; return { chainId, anchor: pin.number, anchorHash: pin.hash, observedAtSec: pin.timestamp }; }) };
     return { status: "accepted", amount, proof, responseSha256: sha256Hex(stableJsonStringifyV1({ proof, amount })), checkpoint };
   } catch (error) {

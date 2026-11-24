@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockRegistry } from "../../../../test-helpers/cron";
 import { BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC } from "@shared/types/live-reserve-adapter-policy";
 import type * as FetchRetry from "../../../../lib/fetch-retry";
@@ -8,6 +8,7 @@ import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-ad
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import type { ReserveNavSnapshotRow } from "../../../../lib/reserve-nav-price";
 
+const nowSec = () => Math.floor(Date.now() / 1000);
 const supply = vi.fn();
 vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({ stablecoins: [{
   id: "jltxx-jpmorgan", name: "JPMorgan OnChain Liquidity-Token Money Market Fund", symbol: "JLTXX",
@@ -31,7 +32,7 @@ vi.mock("../onchain-supply", async (importOriginal) => ({
     return raw == null || raw <= 0n ? null : {
       chain: "ethereum", contractAddress: "0x09864f52b035ae22ee739dfa5c748fa080d07bd8",
       rawShares: raw.toString(), decimals: 2, blockNumber: 100,
-      blockHash: `0x${"a".repeat(64)}`, observedAt: Math.floor(Date.now() / 1000),
+      blockHash: `0x${"a".repeat(64)}`, observedAt: nowSec(),
     };
   },
 }));
@@ -40,9 +41,11 @@ import { fetchFiatCoinGeckoTokens } from "../fiat-cg";
 import * as structuredLog from "../../../../lib/structured-log";
 
 const withheldLog = vi.spyOn(structuredLog, "logWorkerEvent");
+const run = (db: D1Database, cg: Parameters<typeof fetchFiatCoinGeckoTokens>[0] = {}) =>
+  fetchFiatCoinGeckoTokens(cg, undefined, undefined, undefined, db);
 
 function snapshotDb(metadata: unknown, source = "jpmorgan-nav", overrides: Partial<ReserveNavSnapshotRow> = {}): D1Database {
-  const now = Math.floor(Date.now() / 1000);
+  const now = nowSec();
   const fingerprint = computeLiveReserveConfigFingerprint(ACTIVE_STABLECOINS[0].liveReservesConfig!);
   const row: ReserveNavSnapshotRow = {
     source, fetched_at: now, metadata: JSON.stringify(metadata),
@@ -56,7 +59,7 @@ function snapshotDb(metadata: unknown, source = "jpmorgan-nav", overrides: Parti
   ], { assertMatchesUsed: true });
 }
 
-function classSnapshot(classAssetsUsd: number, sourceTimestamp = Math.floor(Date.now() / 1000 / 86400) * 86400) {
+function classSnapshot(classAssetsUsd: number, sourceTimestamp = Math.floor(nowSec() / 86400) * 86400) {
   return {
     navPerToken: 1, sourceTimestamp, freshnessMode: "verified",
     details: {
@@ -73,13 +76,15 @@ function classSnapshot(classAssetsUsd: number, sourceTimestamp = Math.floor(Date
 
 describe("NAV telemetry supply admission without a previous cache row", () => {
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime("2026-11-24T11:54:00.999Z");
     supply.mockReset().mockResolvedValue(62_671_284_229n);
     withheldLog.mockClear();
   });
+  afterEach(() => vi.useRealTimers());
 
   it("values two-decimal native shares at observed NAV, without fabricating a market quote", async () => {
-    const rows = await fetchFiatCoinGeckoTokens({}, undefined, undefined, undefined,
-      snapshotDb({ ...classSnapshot(626_712_842.29 * 0.9973), navPerToken: 0.9973 }));
+    const rows = await run(snapshotDb({ ...classSnapshot(626_712_842.29 * 0.9973), navPerToken: 0.9973 }));
     expect(rows).toEqual([expect.objectContaining({
       id: "jltxx-jpmorgan", price: null, supplySource: "onchain-total-supply",
       circulating: { peggedUSD: 626_712_842.29 * 0.9973 },
@@ -89,8 +94,7 @@ describe("NAV telemetry supply admission without a previous cache row", () => {
 
   it("withholds a funded missing native leg instead of publishing a partial class", async () => {
     supply.mockResolvedValue(60_000_000_000n);
-    expect(await fetchFiatCoinGeckoTokens({}, undefined, undefined, undefined,
-      snapshotDb(classSnapshot(700_000_000)))).toEqual([]);
+    expect(await run(snapshotDb(classSnapshot(700_000_000)))).toEqual([]);
     expect(withheldLog).toHaveBeenCalledWith(expect.objectContaining({
       event: "reserve-nav-supply-withheld",
       metadata: expect.objectContaining({ rule: "R4", reason: "class-assets-supply-divergence" }),
@@ -99,15 +103,12 @@ describe("NAV telemetry supply admission without a previous cache row", () => {
 
   it("admits a rounded class total within the reviewed tolerance", async () => {
     supply.mockResolvedValue(60_000_000_000n);
-    const rows = await fetchFiatCoinGeckoTokens({}, undefined, undefined, undefined,
-      snapshotDb(classSnapshot(602_000_000)));
+    const rows = await run(snapshotDb(classSnapshot(602_000_000)));
     expect(rows[0]).toMatchObject({ circulating: { peggedUSD: 600_000_000 }, supplySource: "onchain-total-supply" });
   });
 
   it("withholds missing class assets even when NAV is fresh", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    expect(await fetchFiatCoinGeckoTokens({}, undefined, undefined, undefined,
-      snapshotDb({ navPerToken: 1, sourceTimestamp: now }))).toEqual([]);
+    expect(await run(snapshotDb({ navPerToken: 1, sourceTimestamp: nowSec() }))).toEqual([]);
     expect(withheldLog).toHaveBeenCalledWith(expect.objectContaining({
       metadata: expect.objectContaining({ rule: "R4", reason: "class-assets-unavailable" }),
     }));
@@ -116,37 +117,37 @@ describe("NAV telemetry supply admission without a previous cache row", () => {
   it("does not bypass native-share admission with a positive CoinGecko price and market cap", async () => {
     supply.mockResolvedValue(60_000_000_000n);
     const cg = { "jpmorgan-onchain-liquidity-token-money-market-fund": {
-      usd: 1.2, usd_market_cap: 900_000_000, last_updated_at: Math.floor(Date.now() / 1000),
+      usd: 1.2, usd_market_cap: 900_000_000, last_updated_at: nowSec(),
     } };
-    expect(await fetchFiatCoinGeckoTokens(cg, undefined, undefined, undefined,
-      snapshotDb(classSnapshot(700_000_000)))).toEqual([]);
-    const admitted = await fetchFiatCoinGeckoTokens(cg, undefined, undefined, undefined,
-      snapshotDb(classSnapshot(600_000_000)));
+    expect(await run(snapshotDb(classSnapshot(700_000_000)), cg)).toEqual([]);
+    const admitted = await run(snapshotDb(classSnapshot(600_000_000)), cg);
     expect(admitted[0]).toMatchObject({ circulating: { peggedUSD: 720_000_000 }, price: 1.2 });
   });
 
   it.each([null, { navPerToken: 1 }, { navPerToken: 0, sourceTimestamp: 1 }])("withholds admission when NAV is unavailable (%s)", async (metadata) => {
-    expect(await fetchFiatCoinGeckoTokens({}, undefined, undefined, undefined, snapshotDb(metadata))).toEqual([]);
+    expect(await run(snapshotDb(metadata))).toEqual([]);
   });
 
   it("withholds stale issuer NAV even if a fresh fetch repeats it", async () => {
-    const staleDate = Math.floor(Date.now() / 1000 / 86400) * 86400 - BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC - 86400;
-    expect(await fetchFiatCoinGeckoTokens({}, undefined, undefined, undefined,
-      snapshotDb(classSnapshot(626_712_842.29, staleDate)))).toEqual([]);
+    const staleDate = Math.floor(nowSec() / 86400) * 86400 - BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC - 86400;
+    expect(await run(snapshotDb(classSnapshot(626_712_842.29, staleDate)))).toEqual([]);
     expect(withheldLog).toHaveBeenCalledWith(expect.objectContaining({
       metadata: expect.objectContaining({ reason: "class-assets-unavailable" }),
     }));
   });
 
-  it("requires a reviewed source cadence and legal/native perimeter, not a default skew", async () => {
-    const metadata = classSnapshot(626_712_842.29);
-    const { supplyAdmissionReview: _review, ...details } = metadata.details;
-    expect(await fetchFiatCoinGeckoTokens({}, undefined, undefined, undefined,
-      snapshotDb({ ...metadata, details }))).toEqual([]);
-    expect(withheldLog).toHaveBeenCalledWith(expect.objectContaining({
-      metadata: expect.objectContaining({ reason: "native-class-temporal-review-unavailable" }),
-    }));
-  });
+  it.each(["2026-11-24T11:54:00.999Z", "2026-11-24T23:30:00Z"])(
+    "requires a reviewed source cadence and legal/native perimeter, not a default skew (%s)",
+    async (iso) => {
+      vi.setSystemTime(iso);
+      const metadata = classSnapshot(626_712_842.29);
+      const { supplyAdmissionReview: _review, ...details } = metadata.details;
+      expect(await run(snapshotDb({ ...metadata, details }))).toEqual([]);
+      expect(withheldLog).toHaveBeenCalledWith(expect.objectContaining({
+        metadata: expect.objectContaining({ reason: "native-class-temporal-review-unavailable" }),
+      }));
+    },
+  );
 
   it.each([
     { config_fingerprint: null },
@@ -155,13 +156,11 @@ describe("NAV telemetry supply admission without a previous cache row", () => {
     { last_attempt_id: "failed-latest" },
     { pending_attempt_id: "pending" },
   ])("withholds issuer-class supply without current success and latest-attempt binding: %j", async (binding) => {
-    expect(await fetchFiatCoinGeckoTokens({}, undefined, undefined, undefined,
-      snapshotDb(classSnapshot(626_712_842.29), "jpmorgan-nav", binding))).toEqual([]);
+    expect(await run(snapshotDb(classSnapshot(626_712_842.29), "jpmorgan-nav", binding))).toEqual([]);
   });
 
   it("requires positive readable on-chain supply despite a valid NAV", async () => {
     supply.mockResolvedValue(null);
-    expect(await fetchFiatCoinGeckoTokens({}, undefined, undefined, undefined,
-      snapshotDb(classSnapshot(626_712_842.29)))).toEqual([]);
+    expect(await run(snapshotDb(classSnapshot(626_712_842.29)))).toEqual([]);
   });
 });
