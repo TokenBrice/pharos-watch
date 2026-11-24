@@ -549,7 +549,11 @@ function assertPreviousReaderSource() {
   // breakdown, or trace schema changed; strict public objects and refinements remain byte-identical
   // for all pre-dust inputs (verified by substituting 76689b225's three files, which restores the
   // prior 29c92c0f… digest).
-  if (hash.digest("hex") !== "d4029dccefb5b213c4fe5bd04dd0eb8542927a9361c159e3c6201fe008f34c40") throw new Error("Pre-dust reader source/refinement inputs changed");
+  // Redemption v4.55 payout-basket refresh: exit-route.ts replaces the literal 16-member
+  // `.max(16)` output bounds with the shared MAX_REDEMPTION_OUTPUT_ASSETS = 32. A looser max only;
+  // every pre-dust input still parses identically (verified by substituting 07a0afb4e's
+  // exit-route.ts, which restores the prior d4029dcc… digest).
+  if (hash.digest("hex") !== "45c5490553fd1deb5fe3ee3ca109cfef36f2e16801d356f7d10adde9a1810177") throw new Error("Pre-dust reader source/refinement inputs changed");
 }
 
 export async function previousReader() {

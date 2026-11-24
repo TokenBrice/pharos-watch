@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { ExitExecutionCertificateSchema, ExitExecutionModelReviewSchema, ExitRouteObservationSchema, ExitRouteOutputSchema } from "../exit-route";
+import {
+  ExitExecutionCertificateSchema,
+  ExitExecutionModelReviewSchema,
+  ExitRouteObservationSchema,
+  ExitRouteOutputSchema,
+  MAX_REDEMPTION_OUTPUT_ASSETS,
+} from "../exit-route";
 import { makeExecutionCertificate, executionClockSec, executionReview } from "../../lib/__tests__/safety-score-v9-exit-execution.test-support";
 
 function observation() {
@@ -98,5 +104,13 @@ describe("exit output quote domains", () => {
     }).success).toBe(true);
     expect(ExitRouteOutputSchema.safeParse({ kind: "fiat" }).success).toBe(false);
     expect(ExitRouteOutputSchema.safeParse({ kind: "fiat", currency: "USD", assetKeys: ["commodity:xau"] }).success).toBe(false);
+  });
+
+  it("caps collateral assetKeys at MAX_REDEMPTION_OUTPUT_ASSETS", () => {
+    const atCap = Array.from({ length: MAX_REDEMPTION_OUTPUT_ASSETS }, (_, i) => `asset:tok${i}`);
+    expect(ExitRouteOutputSchema.safeParse({ kind: "collateral", assetKeys: atCap }).success).toBe(true);
+    expect(
+      ExitRouteOutputSchema.safeParse({ kind: "collateral", assetKeys: [...atCap, `asset:tok${MAX_REDEMPTION_OUTPUT_ASSETS}`] }).success,
+    ).toBe(false);
   });
 });

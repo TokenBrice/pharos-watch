@@ -3,7 +3,7 @@ import {
   defineRecordEntries,
 } from "@shared/lib/redemption-backstop-configs/factory";
 
-import { RedemptionBackstopConfigSchema } from "@shared/lib/redemption-backstop-configs/schema";
+import { MAX_REDEMPTION_OUTPUT_ASSETS, RedemptionBackstopConfigSchema } from "@shared/lib/redemption-backstop-configs/schema";
 import {
   getAllowedRedemptionCapacityWarningReason,
   isRedemptionFreshnessAllowedByPolicy,
@@ -429,8 +429,11 @@ describe("validateRedemptionBackstopRegistry", () => {
     ).toEqual([]);
   });
 
-  it("aligns configured output baskets to the 16-member exit-route asset-key bound", () => {
-    const outputAssets = Array.from({ length: 16 }, (_, index) => `tracked-stablecoin-${index}`);
+  it("aligns configured output baskets to the shared exit-route asset-key bound", () => {
+    const outputAssets = Array.from(
+      { length: MAX_REDEMPTION_OUTPUT_ASSETS },
+      (_, index) => `tracked-stablecoin-${index}`,
+    );
     expect(
       RedemptionBackstopConfigSchema.safeParse({
         ...baseConfig,
@@ -442,12 +445,12 @@ describe("validateRedemptionBackstopRegistry", () => {
     const oversized = RedemptionBackstopConfigSchema.safeParse({
       ...baseConfig,
       outputAssetType: "stable-basket",
-      outputAssets: [...outputAssets, "tracked-stablecoin-16"],
+      outputAssets: [...outputAssets, `tracked-stablecoin-${MAX_REDEMPTION_OUTPUT_ASSETS}`],
     });
     expect(oversized.success).toBe(false);
     if (!oversized.success) {
       expect(oversized.error.issues).toContainEqual(
-        expect.objectContaining({ code: "too_big", path: ["outputAssets"], maximum: 16 }),
+        expect.objectContaining({ code: "too_big", path: ["outputAssets"], maximum: MAX_REDEMPTION_OUTPUT_ASSETS }),
       );
     }
 

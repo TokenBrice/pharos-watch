@@ -1,5 +1,21 @@
 [
   {
+    "version": "4.55",
+    "title": "32-member payout baskets, satUSD collateral set, bUSD0 maturity settlement, and route corrections",
+    "date": "2026-11-24",
+    "effectiveAt": 1795474800,
+    "summary": "Payout baskets may hold up to 32 members under one shared schema bound, satUSD declares its complete 22-asset collateral payout set across 11 chains, bUSD0 reviews its issuer settlement as queued to par maturity, and cUSD, USDR and suiUSDe route configs are updated from primary on-chain reads. Weights, ladders and freshness budgets are unchanged.",
+    "impact": [
+      "Payout baskets may hold up to 32 members (MAX_REDEMPTION_OUTPUT_ASSETS in shared/types/exit-route.ts, replacing the prior 16-member cap across ExitRouteOutput.assetKeys, execution identities and request outputs, live-reserve output keys and basket weights, and the redemption config schema).",
+      "satUSD (satusd-river) declares its complete 22-asset collateral payout set across all 11 deployed chains (Ethereum, Arbitrum, Base, BSC, Sonic, BOB, Bitlayer, BSquared, Hemi, BEVM/GEB and X Layer) as mixed-collateral and drops unresolvedOutputDisposition. Standalone output-asset quality moves from 65 to 45; Safety Score Exit output quality is unchanged.",
+      "bUSD0 (busd0-usual) reviews its issuer route settlement as queued until par maturity 2028-06-11T11:30Z (Usd0PP.getEndTime() pinned at Ethereum block 26480750), using a fixed 48,943,800-second delay from the 2026-11-23 review (conservative as time passes; expires 2027-11-23). The $0.92 governance floor stays excluded, and unestablished capacity and cost gaps are unchanged. Usd0PP's unwrap is pausable (whenNotPaused); scoring the queued maturity settlement despite that condition is an owner ruling for this route, not a general relaxation of conditional settlement.",
+      "Route config corrections from primary on-chain reads: cusd-cap payout outputAssets is reduced from [usdc-circle, wtgxx-wisdomtree] to [usdc-circle] after WTGXX left the cUSD vault assets() list at Ethereum block 26481069; usdr-rise moves from a formula fee to fixed 0 bps after verified RISE SwapFacility._swapExtensions and MExtension._unwrap reads confirmed no protocol fee deduction (removing cost from missingScoringFields while keeping capacity missing); and suiusde-ethena moves from undisclosed-reviewed to documented-variable with a hard 0–100 bps fee ceiling (constants::max_fee_bps() = 100 bps, 10 bps current USDC default fee at Sui checkpoint 348506669).",
+      "Component weights, score ladders and freshness budgets are unchanged. Provisional activation aligns with Safety Score v10.53 (2026-11-23 23:00 UTC, 1795474800)."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "4.54",
     "title": "Settlement-clocked redemption capacity",
     "date": "2026-11-19",
