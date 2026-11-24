@@ -6,10 +6,11 @@ import { fnv1a32 } from "@shared/lib/fnv1a";
 import { ChartDataTable, type ChartDataTableColumn } from "@/components/chart-primitives/data-table";
 import { PharosChartTooltip, TooltipLabel } from "@/components/pharos-chart-tooltip";
 import { useCemeterySelection } from "@/components/cemetery/cemetery-selection-context";
-import { CAUSE_BG_CLASS, CAUSE_TEXT_FILL_CLASS, causeColorVars } from "@/lib/cemetery-cause-style";
+import { CAUSE_TEXT_FILL_CLASS, causeColorVars } from "@/lib/cemetery-cause-style";
 import { logTicks } from "@/lib/chart-ticks";
 import { cn } from "@/lib/utils";
 import styles from "./cemetery-below-fold.module.css";
+import { CemeteryCauseGlyph } from "./cemetery-cause-glyph";
 
 export interface PeakDotDatum {
   id: string;
@@ -230,10 +231,11 @@ export function PeakByCauseChart({
         <p className="pharos-empty-note mt-5">No record has a recorded peak market cap.</p>
       ) : (
         <div className="mt-5 flex">
-          <div aria-hidden="true" className="hidden w-44 shrink-0 pr-4 lg:block">
+          <div aria-hidden="true" className="hidden w-48 shrink-0 pr-4 lg:block">
             {lanes.map((lane) => (
-              <div key={lane.cause} className="flex h-16 items-center justify-end pt-4 text-right text-sm text-foreground">
-                {CAUSE_META[lane.cause].label}
+              <div key={lane.cause} className="flex h-16 items-center justify-end gap-2 pt-4 text-right text-sm text-foreground">
+                <span>{CAUSE_META[lane.cause].label}</span>
+                <CemeteryCauseGlyph cause={lane.cause} size="sm" />
               </div>
             ))}
           </div>
@@ -417,10 +419,7 @@ export function PeakByCauseChart({
                       <span className="font-mono tabular-nums text-foreground">{tip.dot.dateLabel}</span>
                     </div>
                     <div className="flex items-center gap-1.5 text-muted-foreground">
-                      <span
-                        className={cn("inline-block size-2 shrink-0 rounded-full", CAUSE_BG_CLASS)}
-                        style={causeColorVars(tip.cause)}
-                      />
+                      <CemeteryCauseGlyph cause={tip.cause} size="xs" />
                       {CAUSE_META[tip.cause].label}
                     </div>
                   </div>
@@ -442,7 +441,12 @@ export function PeakByCauseChart({
       <div className="mt-5 space-y-3">
         <div>{footnote}</div>
         <details className="group">
-          <summary className="pharos-focus-ring -my-1.5 w-fit cursor-pointer rounded-sm py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground">
+          <summary
+            className={cn(
+              styles.disclosureSummary,
+              "pharos-focus-ring -my-2.5 inline-flex min-h-11 w-fit cursor-pointer items-center rounded-sm py-2.5 text-xs font-medium text-muted-foreground hover:text-foreground sm:-my-1.5 sm:min-h-0 sm:py-1.5",
+            )}
+          >
             Data table
           </summary>
           <ChartDataTable

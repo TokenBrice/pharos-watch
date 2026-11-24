@@ -1,8 +1,230 @@
 /*
- * Layout rules for the cemetery sections below the hero that utilities cannot
- * express: subgrid alignment across fact cells and cause columns, and the
- * chart data tables' caption.
+ * Layout and editorial continuity rules for the cemetery sections below the
+ * hero: signpost-plate kickers, Newsreader section titles, gravestone cause
+ * glyphs (drawn read-only from `graveGeometry`), subgrid alignment across fact
+ * cells and cause columns, styled disclosure chevrons, and chart data-table
+ * captions.
  */
+
+/* Signpost-plate section kicker: mirrors `.signpost` in the hero plot map. */
+.kicker {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 2px 9px 3px;
+  border-radius: 3px;
+  background: color-mix(in oklab, var(--card) 92%, transparent);
+  border: 1px solid oklch(0.2 0 0 / 0.14);
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.06em;
+  color: color-mix(in oklab, var(--foreground) 84%, transparent);
+}
+
+:global(.dark) .kicker {
+  border-color: oklch(1 0 0 / 0.14);
+}
+
+/* Newsreader section and chart-card titles (`digestDisplay.variable` on `/cemetery/` defines `--font-newsreader`). */
+.sectionTitle {
+  font-family: var(--font-newsreader, var(--font-serif));
+  font-size: 1.5rem;
+  font-weight: 500;
+  line-height: 1.16;
+  letter-spacing: -0.014em;
+  font-optical-sizing: auto;
+  color: var(--foreground);
+  text-wrap: balance;
+}
+
+.cardTitle {
+  font-family: var(--font-newsreader, var(--font-serif));
+  font-size: 1.25rem;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.012em;
+  font-optical-sizing: auto;
+  color: var(--foreground);
+  text-wrap: balance;
+}
+
+/* FAQ wrapper: pairs a signpost-plate kicker with FaqSection's own `<h2>` in Newsreader. */
+.faq > .kicker {
+  margin-bottom: 0.375rem;
+}
+
+.faq h2 {
+  font-family: var(--font-newsreader, var(--font-serif));
+  font-size: 1.5rem;
+  font-weight: 500;
+  line-height: 1.16;
+  letter-spacing: -0.014em;
+  font-optical-sizing: auto;
+  color: var(--foreground);
+  text-wrap: balance;
+}
+
+/*
+ * Styled disclosure summary for chart data tables and mobile cause definitions:
+ * strips the native browser triangle and renders the cemetery's CSS chevron.
+ */
+.disclosureSummary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  list-style: none;
+}
+
+.disclosureSummary::-webkit-details-marker {
+  display: none;
+}
+
+.disclosureSummary::after {
+  content: "";
+  width: 0.42rem;
+  height: 0.42rem;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-20%) rotate(45deg);
+  transition: transform 150ms;
+}
+
+details[open] > .disclosureSummary::after {
+  transform: translateY(20%) rotate(-135deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .disclosureSummary::after {
+    transition: none;
+  }
+}
+
+:global(:root[data-motion="reduced"]) .disclosureSummary::after {
+  transition: none;
+}
+
+/*
+ * Cause gravestone glyphs: 0×0 symbol host (never `display: none` so `<use>`
+ * references resolve) plus theme-aware isometric stone facets driven solely by
+ * `--cause-hex` / `--cause-hex-dark` from `causeColorVars`.
+ */
+.glyphDefs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.glyph {
+  display: inline-block;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+.glyphXs {
+  width: 0.875rem;
+  height: 1rem;
+}
+
+.glyphSm {
+  width: 1.05rem;
+  height: 1.2rem;
+}
+
+.glyphMd {
+  width: 1.35rem;
+  height: 1.55rem;
+}
+
+.glyphRoot {
+  composes: tokens from "./plot-map.module.css";
+  --g-cause: var(--cause-hex);
+  --g-edge: color-mix(in oklab, var(--g-cause) 42%, var(--edge));
+  --g-st-tint-e: 30%;
+  --g-st-tint-t: 44%;
+  --g-st-tint-s: 58%;
+  --g-col-tint: 42%;
+  --g-pl-tint: 16%;
+  --g-med-fill: var(--g-cause);
+  --g-med-stroke: var(--stone-e);
+}
+
+:global(.dark) .glyphRoot {
+  --g-cause: var(--cause-hex-dark);
+  --g-edge: color-mix(in oklab, var(--g-cause) 28%, var(--inscr));
+  --g-st-tint-e: 42%;
+  --g-st-tint-t: 52%;
+  --g-st-tint-s: 58%;
+  --g-col-tint: 48%;
+  --g-pl-tint: 18%;
+  --g-med-fill: var(--g-cause);
+  --g-med-stroke: var(--lawn);
+}
+
+.gE {
+  stroke: var(--g-edge);
+  stroke-width: 0.75px;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: round;
+}
+
+.gStE {
+  fill: color-mix(in oklab, var(--stone-e), var(--g-cause) var(--g-st-tint-e));
+}
+
+.gStT {
+  fill: color-mix(in oklab, var(--stone-t), var(--g-cause) var(--g-st-tint-t));
+}
+
+.gStS {
+  fill: color-mix(in oklab, var(--stone-s), var(--g-cause) var(--g-st-tint-s));
+}
+
+.gCol {
+  fill: color-mix(in oklab, var(--stone-t), var(--g-cause) var(--g-col-tint));
+}
+
+.gBrk {
+  fill: color-mix(in oklab, var(--brk), var(--g-cause) 16%);
+}
+
+.gPlE {
+  fill: color-mix(in oklab, var(--plinth-e), var(--g-cause) var(--g-pl-tint));
+}
+
+.gPlT {
+  fill: color-mix(in oklab, var(--plinth-t), var(--g-cause) var(--g-pl-tint));
+}
+
+.gPlS {
+  fill: color-mix(in oklab, var(--plinth-s), var(--g-cause) var(--g-pl-tint));
+}
+
+.gCrack {
+  stroke: var(--mouth);
+  stroke-width: 0.85px;
+  vector-effect: non-scaling-stroke;
+  fill: none;
+}
+
+.gMouth {
+  fill: var(--mouth);
+}
+
+.gSeal {
+  fill: var(--seal);
+}
+
+.gMed {
+  fill: var(--g-med-fill);
+  stroke: var(--g-med-stroke);
+  stroke-width: 0.7px;
+  vector-effect: non-scaling-stroke;
+}
 
 /*
  * Key facts: every cell spans three rows of the parent grid (label, figure,

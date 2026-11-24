@@ -5,10 +5,11 @@ import { CAUSE_META, CAUSE_ORDER } from "@shared/lib/cause-of-death";
 import { ChartDataTable, type ChartDataTableColumn } from "@/components/chart-primitives/data-table";
 import { ControlPillToggle } from "@/components/control-pill-toggle";
 import { PharosChartTooltip, TooltipLabel } from "@/components/pharos-chart-tooltip";
-import { CAUSE_BG_CLASS, CAUSE_TEXT_FILL_CLASS, causeColorVars } from "@/lib/cemetery-cause-style";
+import { CAUSE_TEXT_FILL_CLASS, causeColorVars } from "@/lib/cemetery-cause-style";
 import { niceTicks } from "@/lib/chart-ticks";
 import { cn } from "@/lib/utils";
 import styles from "./cemetery-below-fold.module.css";
+import { CemeteryCauseGlyph } from "./cemetery-cause-glyph";
 
 /** One year of chart B. Arrays follow `CAUSE_ORDER`. */
 export interface DeathsByYearDatum {
@@ -194,7 +195,7 @@ export function DeathsByYearChart({
           onChange={setMode}
           ariaLabel="Bar values"
           className="flex shrink-0 gap-1 self-start"
-          buttonClassName="min-h-8 px-3 py-1"
+          buttonClassName="min-h-11 px-3 py-1 sm:min-h-8"
         />
       </div>
 
@@ -343,10 +344,7 @@ export function DeathsByYearChart({
                         return (
                           <div key={cause} className="flex items-center justify-between gap-4 text-xs">
                             <span className="flex items-center gap-1.5 text-muted-foreground">
-                              <span
-                                className={cn("inline-block size-2 shrink-0 rounded-full", CAUSE_BG_CLASS)}
-                                style={causeColorVars(cause)}
-                              />
+                              <CemeteryCauseGlyph cause={cause} size="xs" />
                               {CAUSE_META[cause].label}
                             </span>
                             <span className="font-mono tabular-nums text-foreground">
@@ -403,7 +401,12 @@ export function DeathsByYearChart({
       <div className="mt-5 space-y-3">
         <div>{footnote}</div>
         <details className="group">
-          <summary className="pharos-focus-ring -my-1.5 w-fit cursor-pointer rounded-sm py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground">
+          <summary
+            className={cn(
+              styles.disclosureSummary,
+              "pharos-focus-ring -my-2.5 inline-flex min-h-11 w-fit cursor-pointer items-center rounded-sm py-2.5 text-xs font-medium text-muted-foreground hover:text-foreground sm:-my-1.5 sm:min-h-0 sm:py-1.5",
+            )}
+          >
             Data table
           </summary>
           <ChartDataTable

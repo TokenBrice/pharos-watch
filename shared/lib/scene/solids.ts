@@ -138,3 +138,25 @@ export function shadowMark(p: SceneProjection, foot: readonly [number, number, n
   }
   return screenPolygon(cls, hull(all));
 }
+
+/**
+ * Deterministic contact-shadow band along an axis-aligned footprint's south (+j) and west (−i) base edges (facing
+ * away from the ENE light), resting on plane `z`. Emitted inside the solid's body group so it occludes in draw order.
+ */
+export function contactShadowMark(
+  p: SceneProjection,
+  foot: readonly [number, number, number, number],
+  z = 0,
+  band = 0.045,
+  cls = "contact",
+): SceneMark {
+  const [i0, i1, j0, j1] = foot;
+  return worldPolygon(p, cls, [
+    [i0 - band, j0, z],
+    [i0, j0, z],
+    [i0, j1, z],
+    [i1, j1, z],
+    [i1, j1 + band, z],
+    [i0 - band, j1 + band, z],
+  ]);
+}

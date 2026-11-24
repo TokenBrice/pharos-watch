@@ -64,8 +64,9 @@ export function PlotMapRecordCard({ row, editorialTitle, flowers, onLeaveFlower,
       {preview ? (
         <p className={styles.cardObituary}>{getObituaryLead(row.obituary)}</p>
       ) : variant === "inspector" ? (
-        // A scrollable region must be reachable by keyboard (focusable) to be scrolled without a pointer.
-        <p className={`${styles.cardObituary} ${styles.cardObituaryFull}`} tabIndex={0} aria-label={`Obituary of ${row.name}`}>
+        // A scrollable region must be reachable by keyboard (focusable) to be scrolled without a pointer, and named as a
+        // region (a paragraph's role takes no author name).
+        <p className={`${styles.cardObituary} ${styles.cardObituaryFull}`} role="region" tabIndex={0} aria-label={`Obituary of ${row.name}`}>
           {row.obituary}
         </p>
       ) : (
@@ -79,15 +80,15 @@ export function PlotMapRecordCard({ row, editorialTitle, flowers, onLeaveFlower,
         </div>
         <div>
           <dt>Peak</dt>
-          <dd>{row.peak === null ? <span title="Peak market cap not recorded">not recorded</span> : formatCemeteryPeak(row.peak)}</dd>
+          <dd>{row.peak === null ? "not recorded" : formatCemeteryPeak(row.peak)}</dd>
         </div>
         <div>
           <dt>Peg</dt>
-          <dd>{formatCemeteryPeg(row.pegCurrency)}</dd>
+          <dd className={styles.cardGridWords}>{formatCemeteryPeg(row.pegCurrency)}</dd>
         </div>
         <div>
           <dt>Record</dt>
-          <dd>{row.tracked ? "Tracked archive" : "Curated"}</dd>
+          <dd className={styles.cardGridWords}>{row.tracked ? "Tracked archive" : "Curated"}</dd>
         </div>
       </dl>
       {preview ? (
@@ -98,8 +99,8 @@ export function PlotMapRecordCard({ row, editorialTitle, flowers, onLeaveFlower,
         <>
           <ul className={styles.cardLinks}>
             <li>
-              <a href={row.sourceUrl} target="_blank" rel="noopener noreferrer">
-                Source<span aria-hidden="true">&nbsp;↗</span>
+              <a className={styles.cardExternalLink} href={row.sourceUrl} target="_blank" rel="noopener noreferrer">
+                Source
                 <span className="sr-only"> (opens in a new tab)</span>
               </a>
             </li>
