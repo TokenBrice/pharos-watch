@@ -8,7 +8,7 @@ export const BLACKLIST_TRACKER_METHODOLOGY_VERSION = "4.63";
 export const BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL = methodologyLabel(BLACKLIST_TRACKER_METHODOLOGY_VERSION);
 export const BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH = "/methodology/blacklist-tracker-changelog/";
 
-export const CHAIN_HEALTH_METHODOLOGY_VERSION = "1.9";
+export const CHAIN_HEALTH_METHODOLOGY_VERSION = "1.91";
 export const CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL = methodologyLabel(CHAIN_HEALTH_METHODOLOGY_VERSION);
 export const CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH = "/methodology/chain-health-changelog/";
 
@@ -32,7 +32,7 @@ export const MINT_BURN_FLOW_METHODOLOGY_VERSION = "6.47";
 export const MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL = methodologyLabel(MINT_BURN_FLOW_METHODOLOGY_VERSION);
 export const MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH = "/methodology/mint-burn-flow-changelog/";
 
-export const PRICING_PIPELINE_METHODOLOGY_VERSION = "6.93";
+export const PRICING_PIPELINE_METHODOLOGY_VERSION = "6.94";
 export const PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL = methodologyLabel(PRICING_PIPELINE_METHODOLOGY_VERSION);
 export const PRICING_PIPELINE_METHODOLOGY_CHANGELOG_PATH = "/methodology/pricing-pipeline-changelog/";
 
@@ -45,7 +45,7 @@ export const SAFETY_SCORE_METHODOLOGY_VERSION = currentSafetyScoreVersion.curren
 export const SAFETY_SCORE_METHODOLOGY_VERSION_LABEL = methodologyLabel(SAFETY_SCORE_METHODOLOGY_VERSION);
 export const SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH = "/methodology/scoring-changelog/";
 
-export const PSI_METHODOLOGY_VERSION = "3.70";
+export const PSI_METHODOLOGY_VERSION = "3.71";
 export const PSI_METHODOLOGY_VERSION_LABEL = methodologyLabel(PSI_METHODOLOGY_VERSION);
 export const PSI_METHODOLOGY_CHANGELOG_PATH = "/methodology/stability-index-changelog/";
 

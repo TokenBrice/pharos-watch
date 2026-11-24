@@ -103,8 +103,9 @@ export function StabilityIndexMethodologySection() {
       <p>
         The Pharos Stability Index (PSI) is a market-level 0&ndash;100 health score for the stablecoin ecosystem. It is
         recomputed every {PSI_REFRESH_MINUTES} minutes from live depeg conditions and stress signals, then aggregated into daily history
-        snapshots. Its monetary aggregate contains active core stablecoins; tracked variants, tokenized funds, and
-        review-hold listings remain browsable but do not count as independent supply.
+        snapshots. Under listing policy v2 (v3.71, <code className="text-xs">core-stablecoins-v2</code>), tokenized fund shares leave the core
+        aggregate on a dated cutover; published history is not restated and pre-cutover replays keep the frozen{" "}
+        <code className="text-xs">core-stablecoins-v1</code> membership. Tracked variants, tokenized funds, and review-hold listings remain browsable but do not count as independent supply.
       </p>
       <p>{PSI_REFERENCE_ADMISSION_DESCRIPTION}</p>
       <p>
