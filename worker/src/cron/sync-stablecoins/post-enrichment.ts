@@ -46,6 +46,7 @@ import {
   validateFallbackPriceCandidate,
   validatePublishedAssetPrice,
 } from "../../lib/price-publish-policy";
+import type { OpenConfirmedDepegReference } from "../../lib/open-confirmed-depegs";
 import type { NativePegQuoteSession } from "../../lib/native-peg-quotes";
 import {
   assetPriceObservationClock,
@@ -80,6 +81,7 @@ export interface PostEnrichmentInput {
   validationContexts: { get: (asset: PeggedAsset) => PriceValidationContext };
   primaryPriceResults?: Map<string, PrimaryPriceResult>;
   previousTrustedPrices?: Map<string, TrustedPriceReference>;
+  openConfirmedDepegs?: ReadonlyMap<string, OpenConfirmedDepegReference>;
   authoritativeOverrides: Map<string, ProtocolPriceOverride>;
   authoritativeOverrideStats: AuthoritativeLivePriceOverrideStats;
   /** The same replay snapshot used to establish trusted-price continuity. */
@@ -153,6 +155,7 @@ export async function runPostEnrichmentPricePipeline(
       validationContext: validationContexts.get(asset),
       validationReferences,
       previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
+      openConfirmedDepeg: input.openConfirmedDepegs?.get(asset.id) ?? null,
     });
     if (!decision.accepted) {
       const authoritativeOverride = input.authoritativeOverrides.get(asset.id);
@@ -180,6 +183,9 @@ export async function runPostEnrichmentPricePipeline(
       );
       clearPriceMetadata(asset);
       rejectedCount++;
+    } else if (decision.confidenceCap === "low") {
+      asset.priceConfidence = "low";
+      if (decision.publicationReason) asset.pricePublicationReason = decision.publicationReason;
     }
   }
 
@@ -242,9 +248,14 @@ export async function runPostEnrichmentPricePipeline(
     };
     const priceCache = input.priceCache;
     for (const asset of stillMissing) {
+      const primaryPriceResult = input.primaryPriceResults?.get(asset.id);
+      const openConfirmedDepeg = input.openConfirmedDepegs?.get(asset.id) ?? null;
       const candidates = staged.get(asset.id) ?? [];
       const datedCandidates = candidates.filter((candidate) => !candidate.recentActivity);
-      const candidatePrices = Object.fromEntries(datedCandidates.map((candidate) => [candidate.source, candidate.price]));
+      const datedCandidatePrices = Object.fromEntries(datedCandidates.map((candidate) => [candidate.source, candidate.price]));
+      const sharedCandidatePrices = primaryPriceResult?.allPrices
+        ? { ...primaryPriceResult.allPrices, ...datedCandidatePrices }
+        : datedCandidatePrices;
       for (const [candidateIndex, candidate] of candidates.entries()) {
         if (isWithheldByPrimaryQualityGate(asset, candidate.source, candidate.price)) {
           priceObservationEffectiveness.publication.policyRejected++;
@@ -253,16 +264,21 @@ export async function runPostEnrichmentPricePipeline(
         const agreeSources = [...new Set([candidate.source, ...datedCandidates
           .filter((other) => pricesAgreeWithinBps(candidate.price, other.price, DIVERGENCE_THRESHOLD_BPS))
           .map((other) => other.source)])];
+        const candidatePrices = candidate.recentActivity
+          ? { ...sharedCandidatePrices, [candidate.source]: candidate.price }
+          : sharedCandidatePrices;
         const decision = validateFallbackPriceCandidate({
           price: candidate.price,
           source: candidate.source,
           confidence: "fallback",
           agreeSources,
           candidatePrices,
+          upstreamKeysBySource: primaryPriceResult?.upstreamKeysBySource,
           validationContext: validationContexts.get(asset),
           validationReferences,
           previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
           listFillDefault: asset.priceListFillDefault ?? null,
+          openConfirmedDepeg,
         });
         if (!decision.accepted) {
           priceObservationEffectiveness.publication.policyRejected++;
@@ -274,12 +290,15 @@ export async function runPostEnrichmentPricePipeline(
           asset,
           price: candidate.price,
           source: candidate.source,
-          confidence: "fallback",
+          confidence: decision.confidenceCap ?? "fallback",
           observedAt: candidate.observedAt,
           observedAtMode: candidate.observedAtMode,
-          consensusSources: candidates.map((row) => row.source),
+          consensusSources: decision.publicationReason && primaryPriceResult?.allPrices
+            ? [...new Set([...candidates.map((row) => row.source), ...Object.keys(primaryPriceResult.allPrices)])]
+            : candidates.map((row) => row.source),
           agreeSources,
           syncedAt: candidate.recentActivity?.collectedAt ?? input.syncStartSec,
+          pricePublicationReason: decision.publicationReason,
         });
         cachedFallbackCount++;
         break;

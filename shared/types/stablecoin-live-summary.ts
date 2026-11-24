@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { NominalPriceReferenceSchema, PriceConfidenceSchema, PriceObservedAtModeSchema } from "./price";
+import { NominalPriceReferenceSchema, PriceConfidenceSchema, PriceObservedAtModeSchema, PricePublicationReasonSchema } from "./price";
 import { PriceDerivationSchema } from "./price";
 import { CurrentPegSchema } from "./current-peg";
 import { SupplyChangeBaselinesSchema } from "./supply";
@@ -18,6 +18,7 @@ export const StablecoinLiveSummarySchema = z.object({
   price: z.number().nullable(),
   priceSource: z.string().nullable(),
   priceConfidence: PriceConfidenceSchema.nullable(),
+  pricePublicationReason: PricePublicationReasonSchema.optional(),
   priceUpdatedAt: z.number().nullable(),
   priceObservedAt: z.number().nullable(),
   priceObservedAtMode: PriceObservedAtModeSchema.nullable().optional(),

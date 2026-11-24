@@ -24,6 +24,7 @@ import {
   validatePrimaryPriceCandidate,
   validatePublishedAssetPrice,
 } from "../../lib/price-publish-policy";
+import type { OpenConfirmedDepegReference } from "../../lib/open-confirmed-depegs";
 import { projectPriceDerivation, type AuthoritativeLivePriceOverrideStats, type CurrentPriceOverride } from "../../lib/authoritative-price-sources";
 import {
   getRegistryLivePriceDiagnosticTarget,
@@ -96,6 +97,8 @@ export interface AcceptedPriceCandidate {
   sourceConfidenceProfile?: PeggedAsset["priceSourceConfidenceProfile"];
   /** Only a parent-derived winning quote carries this; every other stamp clears it. */
   priceDerivation?: PeggedAsset["priceDerivation"];
+  /** Only a continuity-admitted `low`-confidence display quote carries this; every other stamp clears it. */
+  pricePublicationReason?: PeggedAsset["pricePublicationReason"];
 }
 
 export function applyAcceptedPriceCandidate(input: AcceptedPriceCandidate): void {
@@ -113,6 +116,7 @@ export function applyAcceptedPriceCandidate(input: AcceptedPriceCandidate): void
     input.sourceConfidenceProfile,
   );
   if (input.priceDerivation) input.asset.priceDerivation = input.priceDerivation;
+  if (input.pricePublicationReason) input.asset.pricePublicationReason = input.pricePublicationReason;
   // The marker describes the intake list quote, not this replacement quote.
   delete input.asset.priceListFillDefault;
 }
@@ -190,6 +194,7 @@ interface ApplyPrimaryCandidateInput {
   asset: PeggedAsset;
   candidate: PrimaryPriceWithFiatPremiumEvidence;
   previousTrustedPrice: PreviousTrustedPrice | null;
+  openConfirmedDepeg?: OpenConfirmedDepegReference | null;
   validationContext: PriceValidationContext;
   validationReferences?: PriceValidationReferences;
   syncStartSec: number;
@@ -202,6 +207,7 @@ function applyPrimaryCandidate(input: ApplyPrimaryCandidateInput): string | null
     asset,
     candidate,
     previousTrustedPrice,
+    openConfirmedDepeg,
     validationContext,
     validationReferences,
     syncStartSec,
@@ -218,6 +224,7 @@ function applyPrimaryCandidate(input: ApplyPrimaryCandidateInput): string | null
     validationContext,
     validationReferences,
     previousTrustedPrice,
+    openConfirmedDepeg,
     // The list's claimed upstream attribution describes intake, not this fetched primary quote.
     listFillDefault: asset.priceListFillDefault ? { ...asset.priceListFillDefault, upstreamSource: null } : null,
   });
@@ -229,7 +236,7 @@ function applyPrimaryCandidate(input: ApplyPrimaryCandidateInput): string | null
     asset,
     price: candidate.price,
     source: candidate.source,
-    confidence: candidate.confidence,
+    confidence: decision.confidenceCap ?? candidate.confidence,
     observedAt: candidate.observedAt ?? null,
     observedAtMode: candidate.observedAtMode ?? null,
     consensusSources: candidate.candidateSources,
@@ -237,6 +244,7 @@ function applyPrimaryCandidate(input: ApplyPrimaryCandidateInput): string | null
     syncedAt: syncStartSec,
     selectedSource: candidate.selectedSource ?? candidate.source,
     sourceConfidenceProfile: candidate.priceSourceConfidenceProfile ?? null,
+    pricePublicationReason: decision.publicationReason,
   });
   if (candidate.priceQuoteBasis) asset.priceQuoteBasis = candidate.priceQuoteBasis;
   if (candidate.upstreamKeys) asset.upstreamKeys = candidate.upstreamKeys;
@@ -257,7 +265,10 @@ export function getPrimaryCandidatePricesForCurrentAsset(
   const primaryPriceResult = primaryPriceResults.get(asset.id);
   if (!primaryPriceResult?.allPrices) return undefined;
   if (asset.priceSource !== primaryPriceResult.source) return undefined;
-  if (asset.priceConfidence !== primaryPriceResult.confidence) return undefined;
+  const confidenceMatches =
+    asset.priceConfidence === primaryPriceResult.confidence ||
+    (asset.priceConfidence === "low" && asset.pricePublicationReason === "open-confirmed-depeg-continuity");
+  if (!confidenceMatches) return undefined;
 
   const currentPrice = asset.price as number;
   const tolerance = Math.max(1e-12, Math.abs(primaryPriceResult.price) * 1e-9);
@@ -380,6 +391,7 @@ export function prevalidatePrices(input: {
   assets: PeggedAsset[];
   primaryPriceResults?: Map<string, PrimaryPriceResult>;
   previousTrustedPrices?: Map<string, PreviousTrustedPrice>;
+  openConfirmedDepegs?: ReadonlyMap<string, OpenConfirmedDepegReference>;
   validationContexts: ValidationContextResolver;
   validationReferences?: PriceValidationReferences;
   logLabel: string;
@@ -388,6 +400,7 @@ export function prevalidatePrices(input: {
     assets,
     primaryPriceResults,
     previousTrustedPrices,
+    openConfirmedDepegs,
     validationContexts,
     validationReferences,
     logLabel,
@@ -404,6 +417,7 @@ export function prevalidatePrices(input: {
       validationContext: validationContexts.get(asset),
       validationReferences,
       previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
+      openConfirmedDepeg: openConfirmedDepegs?.get(asset.id) ?? null,
     });
     if (!decision.accepted) {
       logWorkerEventArgs("handler", "warn",
@@ -411,6 +425,9 @@ export function prevalidatePrices(input: {
         `$${asset.price} (${decision.reason})`,
       );
       clearPriceMetadata(asset);
+    } else if (decision.confidenceCap === "low") {
+      asset.priceConfidence = "low";
+      if (decision.publicationReason) asset.pricePublicationReason = decision.publicationReason;
     }
   }
 }
@@ -425,6 +442,7 @@ export function applyConsensusResults(input: {
   assets: PeggedAsset[];
   primaryPriceResults: Map<string, PrimaryPriceResult>;
   previousTrustedPrices?: Map<string, PreviousTrustedPrice>;
+  openConfirmedDepegs?: ReadonlyMap<string, OpenConfirmedDepegReference>;
   validationContexts: ValidationContextResolver;
   validationReferences?: PriceValidationReferences;
   syncStartSec: number;
@@ -435,6 +453,7 @@ export function applyConsensusResults(input: {
     assets,
     primaryPriceResults,
     previousTrustedPrices,
+    openConfirmedDepegs,
     validationContexts,
     validationReferences,
     syncStartSec,
@@ -461,6 +480,7 @@ export function applyConsensusResults(input: {
         asset,
         candidate: primaryPriceResult,
         previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
+        openConfirmedDepeg: openConfirmedDepegs?.get(asset.id) ?? null,
         validationContext: validationContexts.get(asset),
         validationReferences,
         syncStartSec,
@@ -528,6 +548,7 @@ function publishNominalPriceReference(asset: PeggedAsset, reference: NominalPric
   asset.agreeSources = [];
   asset.priceSourceConfidenceProfile = null;
   delete asset.priceDerivation;
+  delete asset.pricePublicationReason;
   delete asset.priceListFillDefault;
 }
 

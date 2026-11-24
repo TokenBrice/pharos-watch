@@ -5,6 +5,7 @@ import type { BinanceFetchSession } from "../../lib/cex-tickers";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import { createEmptyGtProbeStats } from "../../lib/geckoterminal-price-probe-stats";
+import { loadOpenConfirmedDepegs, summarizeOpenDepegContinuity } from "../../lib/open-confirmed-depegs";
 import {
   applyConsensusResults,
   applyProtocolPriceOverrides,
@@ -56,6 +57,7 @@ export async function runStablecoinsPricingStage(
 ) {
   const validationContexts = createValidationContextResolver();
   const replayPriceCache = options.replayPriceCache ?? await loadReplayPriceCacheForTrustedContinuity(options.db);
+  const openConfirmedDepegs = await loadOpenConfirmedDepegs(options.db);
   const previousTrustedPrices = buildPreviousTrustedPriceLookup(
     options.previousAssetsById,
     options.syncStartSec,
@@ -119,6 +121,7 @@ export async function runStablecoinsPricingStage(
     assets: options.assets,
     primaryPriceResults,
     previousTrustedPrices,
+    openConfirmedDepegs: openConfirmedDepegs.byId,
     validationContexts,
     validationReferences: options.validationReferences,
     syncStartSec: options.syncStartSec,
@@ -129,6 +132,7 @@ export async function runStablecoinsPricingStage(
     assets: options.assets,
     primaryPriceResults,
     previousTrustedPrices,
+    openConfirmedDepegs: openConfirmedDepegs.byId,
     validationContexts,
     validationReferences: options.validationReferences,
     logLabel: "Pre-rejected bad price",
@@ -179,6 +183,7 @@ export async function runStablecoinsPricingStage(
     validationContexts,
     primaryPriceResults,
     previousTrustedPrices,
+    openConfirmedDepegs: openConfirmedDepegs.byId,
     authoritativeOverrides,
     authoritativeOverrideStats,
     previousMissingGenerationsById: options.previousMissingGenerationsById,
@@ -188,6 +193,12 @@ export async function runStablecoinsPricingStage(
   }, "");
   if (isAbortResult(priceCompletion)) return priceCompletion;
   const { priceCacheEntries, ...metadata } = priceCompletion;
+  const openDepegContinuity = summarizeOpenDepegContinuity(
+    openConfirmedDepegs,
+    options.assets
+      .filter((asset) => !hasMissingPrice(asset) && asset.pricePublicationReason === "open-confirmed-depeg-continuity")
+      .map((asset) => asset.id),
+  );
   const {
     authoritativeOverrideCount, rejectedCount, cachedFallbackCount,
     priceObservationEffectiveness,
@@ -213,12 +224,14 @@ export async function runStablecoinsPricingStage(
       rejectedPrices: rejectedCount,
       cachedFallbackPrices: cachedFallbackCount,
       priceObservationEffectiveness,
+      openDepegContinuity,
     },
   });
 
   return {
     metadata: {
       ...metadata,
+      openDepegContinuity,
       enrichStats: null,
       priceValidationStats,
       gtProbe,

@@ -52,6 +52,7 @@ export const handleStablecoinSummary = async (
     priceUsd: isObservedPrice(coin) ? coin.price ?? null : null,
     priceSource: coin.priceSource,
     priceConfidence: isObservedPrice(coin) ? coin.priceConfidence ?? null : null,
+    ...(isObservedPrice(coin) && coin.pricePublicationReason ? { pricePublicationReason: coin.pricePublicationReason } : {}),
     priceObservedAt,
     priceSyncedAt: coin.priceSyncedAt ?? null,
     priceUpdatedAt: coin.priceUpdatedAt ?? null,

@@ -195,6 +195,8 @@ Downside corroboration counts independent families: CoinGecko-derived lanes shar
 
 The publication gate also compares the upstream identities carried for each primary candidate. Two severe candidates that share a venue or conversion pool cannot corroborate each other. Independent candidates can corroborate the same severe direction outside the normal price agreement band. When upstream identities are absent, the source-family rule applies.
 
+When a fixed-peg asset already has an open, confirmed row in `depeg_events` (`ended_at IS NULL`, excluding reviewed disputes and never `depeg_pending`), and at least two live independent source families (`depegSourceFamily` plus disjoint `upstreamKeys` where carried, excluding `cached_replay` and `nominal_reference`) confirm that same direction beyond the peg threshold and agree within `OPEN_DEPEG_CONTINUITY_MAX_SPREAD_BPS` (500 bps), publication waives severe-downside all-list-aggregator withholding, the 5%–50% `fallback_search` dead zone, and non-recovery temporal-jump withholding. Staged fallback validation merges same-run primary candidates into its candidate pool under the same independence rule. Any quote admitted only by this path publishes at `priceConfidence: "low"` with `pricePublicationReason: "open-confirmed-depeg-continuity"` (projected on `/api/stablecoins`, `/api/stablecoin/:id`, `/api/stablecoin-summary/:id`, `/api/stablecoin-live-summary/:id`, and `/api/peg-summary`, and cleared whenever replaced, nominal, or unavailable). Outside that condition — including no open confirmed event, `depeg_pending` only, a single source family, shared upstream identity, spread > 500 bps, opposite or recovery-direction moves, cached replays, hard numeric/exact-par/fill-default failures, or an unavailable open-depeg read (`open-depeg-read-failed`, `open-depeg-limit-reached`, `open-depeg-row-invalid`) — standard publication rules stay unchanged, and `sync-stablecoins` metadata records `openDepegContinuity` (plus `quality.openDepegContinuityUnavailableReason` on read unavailability without degrading publication).
+
 ### Publication Pool Challenge
 
 `sync-stablecoins` invokes the pool challenge after primary consensus on every 15-minute publication. It remains a critical depeg safeguard: current published challenger pools can downgrade a weak soft-source result or replace it under the independent-protocol rules below; the hourly fallback/address corroboration phase does not replace this check.
@@ -261,6 +263,7 @@ Solayer sUSD needs a dated market quote with `parityQuoteUnit: "accrued-token"` 
 - Hard single-source prices require `upstream` freshness, except legacy unset modes on upstream-capable sources; explicit `local_fetch` remains `confirm_required`
 - The `coingecko-native-implied` live pricing lane is retired and emits no live marks; legacy rows remain non-replay-safe and non-authoritative, while downstream depeg detection retains its own traded-pair native-peg checks separately
 - Weak fixed-peg price jumps versus the previous trusted price are withheld until corroboration arrives
+- Open confirmed depeg continuity quotes publish at `priceConfidence: "low"` (`pricePublicationReason: "open-confirmed-depeg-continuity"`), remain `confirm_required` in `classifyPrimaryDepegTrust()`, are excluded from `price_cache`, `previousTrustedPrices`, nominal-par displacement, parent inheritance, and exit-output price lookups, and cannot open, close, deepen, flip, extend trusted coverage on, or confirm depeg events by themselves
 
 ---
 
@@ -276,7 +279,7 @@ The final cached price can carry one of four confidence states:
 | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `high`          | 2 or more independent sources agree, or a validated authoritative override succeeded                                                                 |
 | `single-source` | only one live source produced a usable price, or a 2-source agreeing cluster was downgraded because every agreeing member is a list-style aggregator |
-| `low`           | multiple sources existed but failed to form a strong agreeing cluster                                                                                |
+| `low`           | multiple sources existed but failed to form a strong agreeing cluster, or open confirmed depeg continuity admitted a display quote (`pricePublicationReason: "open-confirmed-depeg-continuity"`) |
 | `fallback`      | price came from enrichment rather than primary consensus                                                                                             |
 
 Downstream consumers use these tags for display, depeg confirmation, and risk handling.

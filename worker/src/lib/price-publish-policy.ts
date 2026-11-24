@@ -5,13 +5,18 @@ import {
 } from "@shared/lib/pricing-source-registry";
 import {
   FIXED_PEG_SEVERE_DOWNSIDE_RATIO,
+  OPEN_DEPEG_CONTINUITY_MAX_SPREAD_BPS,
+  WEAK_FALLBACK_FIXED_PEG_DEPEG_BPS,
   hasDepegAuthoritativeSource,
   isUncorroboratedDefiLlamaListFillQuote,
   isUncorroboratedDefiLlamaReferenceQuote,
   type DefiLlamaListFillDefaultQuote,
 } from "@shared/lib/pricing-source-policy";
+import { classifyDirectionalSignal, deriveDepegSignal, type DepegDirection } from "@shared/lib/depeg-signals";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
+import { getDepegThresholdBps } from "./depeg-threshold-policy";
+import type { OpenConfirmedDepegReference } from "./open-confirmed-depegs";
 import { pricesAgreeWithinBps } from "./price-divergence";
 import { haveDisjointPriceInputs, type UpstreamKeysBySource } from "./price-consensus";
 import {
@@ -24,10 +29,9 @@ import {
   type PriceValidationDecision,
   type PriceValidationReferences,
 } from "./price-validation";
-import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/price";
+import type { PriceConfidence, PriceObservedAtMode, PricePublicationReason } from "@shared/types/price";
 
 const WEAK_FIXED_PEG_JUMP_WITHHOLD_BPS = 2_000;
-const WEAK_FALLBACK_FIXED_PEG_DEPEG_BPS = 500;
 
 export interface TrustedPriceReference {
   price: number;
@@ -41,6 +45,10 @@ export interface TrustedPriceReference {
 export interface PublishablePriceDecision {
   accepted: boolean;
   reason: string;
+  /** Present only when open confirmed depeg continuity admitted a quote that must publish at `low` confidence. */
+  confidenceCap?: "low";
+  /** Machine-readable provenance for rows admitted only by open confirmed depeg continuity. */
+  publicationReason?: PricePublicationReason;
 }
 
 interface PricePublicationDecision extends PublishablePriceDecision {
@@ -65,6 +73,8 @@ export interface PublishablePriceInput {
   previousTrustedPrice?: TrustedPriceReference | null;
   /** Per-response DefiLlama list fill-default marker carried from intake. */
   listFillDefault?: DefiLlamaListFillDefaultQuote | null;
+  /** Open confirmed `depeg_events` direction when available; null/undefined disables continuity. */
+  openConfirmedDepeg?: OpenConfirmedDepegReference | null;
 }
 
 /** Dated USD candidates with all verified upstream price-formation identities. */
@@ -300,6 +310,85 @@ export function shouldWithholdTemporalJump(input: PublishablePriceInput): boolea
   return moveBps >= WEAK_FIXED_PEG_JUMP_WITHHOLD_BPS;
 }
 
+function isOpenConfirmedDepegDirectionConfirmed(
+  price: number,
+  referencePrice: number,
+  pegType: string | undefined,
+  expectedDirection: DepegDirection,
+): boolean {
+  const signal = deriveDepegSignal(price, referencePrice);
+  const thresholdBps = getDepegThresholdBps(pegType);
+  return classifyDirectionalSignal(signal, thresholdBps, expectedDirection) === "confirm";
+}
+
+function isOpenConfirmedDepegRecoveryJump(
+  input: PublishablePriceInput,
+  referencePrice: number | null,
+): boolean {
+  const openDirection = input.openConfirmedDepeg?.direction;
+  const previousPrice = input.previousTrustedPrice?.price;
+  if (!openDirection || referencePrice == null || !Number.isFinite(referencePrice) || referencePrice <= 0) {
+    return false;
+  }
+  if (previousPrice == null || !Number.isFinite(previousPrice) || previousPrice <= 0) {
+    return false;
+  }
+  const previousSignal = deriveDepegSignal(previousPrice, referencePrice);
+  const candidateSignal = deriveDepegSignal(input.price, referencePrice);
+  if (!previousSignal || !candidateSignal) return false;
+  // Moving back toward par from a deeper trusted quote in the open event's direction
+  // is a recovery jump and must stay governed by the normal temporal-jump guard.
+  return previousSignal.direction === openDirection && candidateSignal.absRawBps < previousSignal.absRawBps;
+}
+
+function hasOpenConfirmedDepegContinuity(
+  input: PublishablePriceInput,
+  referencePrice: number | null,
+): boolean {
+  const openDirection = input.openConfirmedDepeg?.direction;
+  if (!openDirection || !isFixedPegContext(input.validationContext)) return false;
+  if (referencePrice == null || !Number.isFinite(referencePrice) || referencePrice <= 0) return false;
+  if (!input.candidatePrices) return false;
+
+  const pegType = input.validationContext.pegType;
+  if (!isOpenConfirmedDepegDirectionConfirmed(input.price, referencePrice, pegType, openDirection)) {
+    return false;
+  }
+
+  const selectedSources = new Set(sourceParts(input.source));
+  if (selectedSources.size === 0) return false;
+
+  const keys = input.upstreamKeysBySource;
+  const eligibleQuotes: Array<{
+    source: string;
+    family: string;
+    price: number;
+    upstreamKeys: readonly string[] | undefined;
+  }> = [];
+
+  for (const [rawSource, price] of Object.entries(input.candidatePrices)) {
+    if (typeof price !== "number" || !Number.isFinite(price) || price <= 0) continue;
+    const normalized = normalizePricingSourceKeys(rawSource);
+    if (normalized.length !== 1) continue;
+    const source = normalized[0]!;
+    const entry = getPricingSourceRegistryEntry(source);
+    if (!entry || entry.isRetired) continue;
+    if (entry.trustTier === "cached_replay" || entry.trustTier === "nominal_reference") continue;
+    const upstreamKeys = keys?.[rawSource] ?? keys?.[source];
+    if (keys && upstreamKeys?.length === 0) continue;
+    if (!isOpenConfirmedDepegDirectionConfirmed(price, referencePrice, pegType, openDirection)) continue;
+    if (!pricesAgreeWithinBps(input.price, price, OPEN_DEPEG_CONTINUITY_MAX_SPREAD_BPS)) continue;
+    eligibleQuotes.push({ source, family: entry.depegSourceFamily, price, upstreamKeys });
+  }
+
+  return eligibleQuotes.some((left, index) => eligibleQuotes.slice(index + 1).some((right) =>
+    left.family !== right.family &&
+    (selectedSources.has(left.source) || selectedSources.has(right.source)) &&
+    pricesAgreeWithinBps(left.price, right.price, OPEN_DEPEG_CONTINUITY_MAX_SPREAD_BPS) &&
+    (!keys || haveDisjointPriceInputs({ upstreamKeys: left.upstreamKeys }, { upstreamKeys: right.upstreamKeys })),
+  ));
+}
+
 function evaluatePriceForPublication(input: PublishablePriceInput): PricePublicationDecision {
   const decision = validatePriceCandidate(
     input.price,
@@ -340,15 +429,35 @@ function evaluatePriceForPublication(input: PublishablePriceInput): PricePublica
     return { ...base, accepted: false, reason: "list_fill_default_requires_corroboration", gates: ["price-validation", "list-fill-default-corroboration"] };
   }
 
-  if (!allowsSevereDownsidePublication(input)) {
-    return { ...base, accepted: false, reason: "severe_downside_requires_corroboration", gates: ["price-validation", "severe-downside-corroboration"] };
-  }
+  const severeDownsideAllowed = allowsSevereDownsidePublication(input);
+  const weakFallbackAllowed = allowsWeakFallbackFixedPegDepegPublication(input);
+  const temporalJumpWithheld = !corroboratedFiatPremium && shouldWithholdTemporalJump(input);
 
-  if (!allowsWeakFallbackFixedPegDepegPublication(input)) {
-    return { ...base, accepted: false, reason: "weak_fallback_depeg_requires_corroboration", gates: ["price-validation", "fallback-depeg-corroboration"] };
-  }
+  if (!severeDownsideAllowed || !weakFallbackAllowed || temporalJumpWithheld) {
+    const recoveryJumpWithheld = temporalJumpWithheld && isOpenConfirmedDepegRecoveryJump(input, base.referencePrice);
+    if (!recoveryJumpWithheld && hasOpenConfirmedDepegContinuity(input, base.referencePrice)) {
+      return {
+        ...base,
+        accepted: true,
+        reason: "open_confirmed_depeg_continuity",
+        confidenceCap: "low",
+        publicationReason: "open-confirmed-depeg-continuity",
+        gates: [
+          "price-validation",
+          ...(!severeDownsideAllowed ? ["severe-downside-corroboration"] : []),
+          ...(!weakFallbackAllowed ? ["fallback-depeg-corroboration"] : []),
+          ...(temporalJumpWithheld ? ["temporal-jump-corroboration"] : []),
+          "open-confirmed-depeg-continuity",
+        ],
+      };
+    }
 
-  if (!corroboratedFiatPremium && shouldWithholdTemporalJump(input)) {
+    if (!severeDownsideAllowed) {
+      return { ...base, accepted: false, reason: "severe_downside_requires_corroboration", gates: ["price-validation", "severe-downside-corroboration"] };
+    }
+    if (!weakFallbackAllowed) {
+      return { ...base, accepted: false, reason: "weak_fallback_depeg_requires_corroboration", gates: ["price-validation", "fallback-depeg-corroboration"] };
+    }
     return { ...base, accepted: false, reason: "temporal_jump_requires_corroboration", gates: ["price-validation", "temporal-jump-corroboration"] };
   }
 
@@ -362,7 +471,12 @@ function validatePriceForPublication(input: PublishablePriceInput): PublishableP
     return { accepted: false, reason: "provider_identity_mismatch" };
   }
   const decision = evaluatePriceForPublication(input);
-  return { accepted: decision.accepted, reason: decision.reason };
+  return {
+    accepted: decision.accepted,
+    reason: decision.reason,
+    ...(decision.confidenceCap ? { confidenceCap: decision.confidenceCap } : {}),
+    ...(decision.publicationReason ? { publicationReason: decision.publicationReason } : {}),
+  };
 }
 
 export function validatePrimaryPriceCandidate(
@@ -396,6 +510,7 @@ export function validatePublishedAssetPrice(input: {
   validationContext: PriceValidationContext;
   validationReferences?: PriceValidationReferences;
   previousTrustedPrice?: TrustedPriceReference | null;
+  openConfirmedDepeg?: OpenConfirmedDepegReference | null;
 }): PublishablePriceDecision {
   return validatePriceForPublication({
     price: input.asset.price ?? 0,
@@ -410,5 +525,6 @@ export function validatePublishedAssetPrice(input: {
     validationReferences: input.validationReferences,
     previousTrustedPrice: input.previousTrustedPrice,
     listFillDefault: input.asset.priceListFillDefault ?? null,
+    openConfirmedDepeg: input.openConfirmedDepeg,
   });
 }

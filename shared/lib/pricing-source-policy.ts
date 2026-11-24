@@ -5,6 +5,15 @@ import { normalizePricingSourceKeys } from "./pricing-sources";
 
 export const FIXED_PEG_SEVERE_DOWNSIDE_RATIO = 0.5;
 
+/** Fixed-peg deviation ceiling (bps) for uncorroborated `fallback_search` quotes. */
+export const WEAK_FALLBACK_FIXED_PEG_DEPEG_BPS = 500;
+
+/**
+ * Maximum inter-family spread (bps) for publishing a `low`-confidence display price
+ * via open confirmed depeg continuity across at least two independent source families.
+ */
+export const OPEN_DEPEG_CONTINUITY_MAX_SPREAD_BPS = 500;
+
 /**
  * Minimum CoinGecko 24h USD trading volume below which a quote diverging
  * materially from its fixed peg/FX reference is quarantined as a junk print.

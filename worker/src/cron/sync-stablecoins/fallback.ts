@@ -28,6 +28,7 @@ import {
   prevalidatePrices,
 } from "./pricing";
 import { createAuthoritativeLivePriceOverrideStats, fetchAuthoritativeLivePriceOverrides } from "../../lib/authoritative-price-sources";
+import { loadOpenConfirmedDepegs, summarizeOpenDepegContinuity } from "../../lib/open-confirmed-depegs";
 import { isAbortResult, runSharedPriceCompletion } from "./post-enrichment";
 import { overlayFallbackCuratedAggregateSupply, runFallbackIntakePhase } from "./fallback-intake";
 import {
@@ -200,8 +201,9 @@ export async function syncViaCoingeckoFallback(
     if (asset.supplyRestored === true) asset.supplyRestoreMode = "outage-fallback";
     else delete asset.supplyRestoreMode;
   }
+  const openConfirmedDepegs = await loadOpenConfirmedDepegs(db);
   prevalidatePrices({
-    assets, previousTrustedPrices, validationContexts, validationReferences,
+    assets, previousTrustedPrices, openConfirmedDepegs: openConfirmedDepegs.byId, validationContexts, validationReferences,
     logLabel: "Pre-rejected fallback price",
   });
   const authoritativeOverrideStats = createAuthoritativeLivePriceOverrideStats();
@@ -224,11 +226,17 @@ export async function syncViaCoingeckoFallback(
   );
   const priceCompletion = await runSharedPriceCompletion({
     chainRpcs, assets, db, syncStartSec, signal, fxFallbackRates,
-    validationReferences, validationContexts, previousTrustedPrices, authoritativeOverrides,
-    authoritativeOverrideStats, previousMissingGenerationsById, priceCache: replayPriceCache,
+    validationReferences, validationContexts, previousTrustedPrices, openConfirmedDepegs: openConfirmedDepegs.byId,
+    authoritativeOverrides, authoritativeOverrideStats, previousMissingGenerationsById, priceCache: replayPriceCache,
   }, "fallback-");
   if (isAbortResult(priceCompletion)) return priceCompletion;
   const { priceCacheEntries, ...pricingMetadata } = priceCompletion;
+  const openDepegContinuity = summarizeOpenDepegContinuity(
+    openConfirmedDepegs,
+    assets
+      .filter((asset) => !hasMissingPrice(asset) && asset.pricePublicationReason === "open-confirmed-depeg-continuity")
+      .map((asset) => asset.id),
+  );
   await reportStablecoinsStage(reportProgress, "fallback-price-validation", "Validated CoinGecko fallback prices", {
     itemsDone: assets.length - assets.filter(hasMissingPrice).length,
     itemsTotal: assets.length,
@@ -238,6 +246,7 @@ export async function syncViaCoingeckoFallback(
       rejectedPrices: pricingMetadata.rejectedCount,
       cachedFallbackPrices: pricingMetadata.cachedFallbackCount,
       priceObservationEffectiveness: pricingMetadata.priceObservationEffectiveness,
+      openDepegContinuity,
     },
   });
 
@@ -261,6 +270,7 @@ export async function syncViaCoingeckoFallback(
       input: {
         enrichStats,
         ...pricingMetadata,
+        openDepegContinuity,
         trackedCoverage,
       },
     },

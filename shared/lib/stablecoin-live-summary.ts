@@ -14,7 +14,7 @@ const NATIVE_SUPPLY_BASELINE_SOURCES = new Set([
 /** Nominal references never become observed display prices, regardless of transport. */
 export function normalizeStablecoinLiveSummary(summary: StablecoinLiveSummary): StablecoinLiveSummary {
   if (isObservedPrice(summary)) return summary;
-  const { priceDerivation: _derivation, ...rest } = summary;
+  const { priceDerivation: _derivation, pricePublicationReason: _publicationReason, ...rest } = summary;
   return {
     ...rest,
     price: null,
@@ -129,6 +129,7 @@ export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse, s
     price: detail.price ?? null,
     priceSource: detail.priceSource ?? null,
     priceConfidence: detail.priceConfidence ?? null,
+    ...(detail.pricePublicationReason ? { pricePublicationReason: detail.pricePublicationReason } : {}),
     priceUpdatedAt: detail.priceUpdatedAt ?? null,
     priceObservedAt: detail.priceObservedAt === undefined ? detail.priceUpdatedAt ?? null : detail.priceObservedAt,
     priceObservedAtMode: detail.priceObservedAtMode,

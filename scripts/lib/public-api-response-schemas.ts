@@ -8,7 +8,7 @@ import { DependencyScenariosResponseSchema } from "@shared/types/dependency-scen
 import { z } from "zod";
 import { ApiMetaEnvelopeSchema } from "@pharos/contracts/api-meta";
 
-import { NominalPriceReferenceSchema, PriceConfidenceSchema, PriceObservedAtModeSchema } from "@shared/types/price";
+import { NominalPriceReferenceSchema, PriceConfidenceSchema, PriceObservedAtModeSchema, PricePublicationReasonSchema } from "@shared/types/price";
 import { ChainsResponseSchema } from "@shared/types/chains";
 import {
   DependencyGraphNodeSchema,
@@ -112,6 +112,7 @@ export const StablecoinSummaryResponseSchema = z.object({
   priceUsd: z.number().nullable(),
   priceSource: z.string().nullable(),
   priceConfidence: PriceConfidenceSchema.nullable(),
+  pricePublicationReason: PricePublicationReasonSchema.optional(),
   /** Source observation clock; null when no observed quote was published. */
   priceObservedAt: z.number().nullable(),
   priceSyncedAt: z.number().nullable(),
