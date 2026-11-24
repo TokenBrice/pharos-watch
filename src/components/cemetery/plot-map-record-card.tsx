@@ -64,8 +64,9 @@ export function PlotMapRecordCard({ row, editorialTitle, flowers, onLeaveFlower,
       {preview ? (
         <p className={styles.cardObituary}>{getObituaryLead(row.obituary)}</p>
       ) : variant === "inspector" ? (
-        // A scrollable region must be reachable by keyboard (focusable) to be scrolled without a pointer.
-        <p className={`${styles.cardObituary} ${styles.cardObituaryFull}`} tabIndex={0} aria-label={`Obituary of ${row.name}`}>
+        // A scrollable region must be reachable by keyboard (focusable) to be scrolled without a pointer, and named as a
+        // region (a paragraph's role takes no author name).
+        <p className={`${styles.cardObituary} ${styles.cardObituaryFull}`} role="region" tabIndex={0} aria-label={`Obituary of ${row.name}`}>
           {row.obituary}
         </p>
       ) : (

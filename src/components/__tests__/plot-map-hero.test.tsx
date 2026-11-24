@@ -1,5 +1,8 @@
 // @vitest-environment jsdom
 
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import postcss, { AtRule } from "postcss";
 import type { ComponentType } from "react";
 import { useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -395,6 +398,29 @@ describe("PlotMapRecordCard", () => {
     );
     expect(screen.getByText("Peg").nextElementSibling?.textContent).toBe(PEG_LABELS_SHORT[pegCurrency]);
     expect(screen.queryByText(pegCurrency)).toBeNull();
+  });
+
+  it("docks without whole-card or sideways scroll bars: only the named obituary region gives way", () => {
+    const row = rows.find((r) => r.tracked)!;
+    render(<PlotMapRecordCard row={row} flowers={0} onLeaveFlower={() => {}} onReadRegister={() => {}} onClose={() => {}} variant="inspector" />);
+    expect(screen.getByRole("region", { name: `Obituary of ${row.name}` }).tabIndex).toBe(0);
+    for (const label of ["Peg", "Record"]) expect(screen.getByText(label).nextElementSibling?.className).toMatch(/cardGridWords/);
+
+    const sheet = postcss.parse(readFileSync(resolve(__dirname, "../cemetery/plot-map.module.css"), "utf8"));
+    const decls = (selector: string, media?: string) => {
+      const found: Record<string, string> = {};
+      sheet.walkRules((rule) => {
+        const parent = rule.parent;
+        const inMedia = parent instanceof AtRule && parent.name === "media" ? parent.params : undefined;
+        if (rule.selector === selector && inMedia === media) rule.walkDecls((d) => void (found[d.prop] = d.value));
+      });
+      return found;
+    };
+    expect(decls(".inspector", "(min-width: 1280px)")).toMatchObject({ display: "flex", overflow: "hidden auto" });
+    expect(decls(".inspector > .card", "(min-width: 1280px)")).toMatchObject({ "min-height": "0" });
+    expect(decls(".inspector .cardObituaryFull", "(min-width: 1280px)")).toMatchObject({ flex: "0 1 auto" });
+    expect(decls(".cardObituaryFull")).not.toHaveProperty("max-height");
+    expect(decls(".cardGrid .cardGridWords")).toMatchObject({ "white-space": "normal" });
   });
 });
 
