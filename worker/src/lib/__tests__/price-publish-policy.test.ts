@@ -105,6 +105,8 @@ describe("validatePrimaryPriceCandidate — severe downside with directional cor
   it.each(severeCases)("%s", (label, input, accepted, reason) => {
     const id = label.includes("AZND") ? "aznd-mu-digital" : label.includes("VUSD") ? "vusd-virtue" : undefined;
     const decision = validatePrimaryPriceCandidate({ ...input, validationContext: id ? { ...USD_CONTEXT, stablecoinId: id } : USD_CONTEXT });
+    expect(decision).not.toHaveProperty("confidenceCap");
+    expect(decision).not.toHaveProperty("publicationReason");
     expect(decision.accepted).toBe(accepted);
     if (reason) expect(decision.reason).toBe(reason);
   });

@@ -7,7 +7,7 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "@shared/lib/depeg-closure";
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC, DEPEG_SEVERITY_BPS, DEX_PROTOCOL_SOURCE_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { CORE_PSI_ELIGIBLE_IDS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
-import { derivePegRates, getPegReference, isParityPrice, normalizePegType } from "@shared/lib/peg-rates";
+import { derivePegRates, getPegReference, isReferenceParityPrice, normalizePegType } from "@shared/lib/peg-rates";
 import { getCommodityOuncesAtQuote } from "@shared/lib/commodity-median";
 import { getLegacyReferenceClosureStart, getReferenceMarket, getReferenceMarketClosureStart, getReferenceSessionState } from "@shared/lib/reference-market-hours";
 import { deriveAuthoritativePegSignal } from "./authoritative-peg-signal";
@@ -273,7 +273,7 @@ export async function computeAndStoreStabilityIndex(
   const priceById = new Map<string, { price: number; observedAt: number | null; upstreamObservedAt: number | null }>();
   for (const coin of tracked) {
     if (coin.priceSource !== "coingecko-native-implied" &&
-        isParityPrice(coin) && coin.price != null && typeof coin.price === "number" && coin.price > 0) {
+        isReferenceParityPrice(coin) && coin.price != null && typeof coin.price === "number" && coin.price > 0) {
       const upstreamObservedAt = sourceObservationClock(coin);
       priceById.set(coin.id, { price: coin.price, upstreamObservedAt,
         observedAt: (perObservation && !legacyFxPegById.has(coin.id)) || coin.id === "xagm-matrixdock"

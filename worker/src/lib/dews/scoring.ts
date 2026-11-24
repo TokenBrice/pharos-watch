@@ -3,7 +3,7 @@ import { getMintBurnPressureUnavailableReason } from "../mint-burn-scoring";
 import { z } from "zod";
 import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import { DEWS_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
-import { getPegReference, isParityPrice, normalizePegType } from "@shared/lib/peg-rates";
+import { getPegReference, isReferenceParityPrice, normalizePegType } from "@shared/lib/peg-rates";
 import { getCommodityOuncesAtQuote } from "@shared/lib/commodity-median";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { deriveDepegSignal } from "@shared/lib/depeg-signals";
@@ -203,7 +203,7 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       scheduled || hasEntitlement ? { assetId: meta.id, commodityEntitlement: asset.commodityEntitlement, quoteObservedAtSec } : undefined);
     const pegRefFor = (ounces: number | null) => pegReferenceTrusted && pegType != null && ounces != null
       ? getPegReference(pegType, scheduled && selected ? { [pegType]: selected.usdPerUnit } : pegRates, ounces) : null;
-    const parityPrice = isParityPrice(asset) ? asset.price ?? null : null;
+    const parityPrice = isReferenceParityPrice(asset) ? asset.price ?? null : null;
     const primaryClock = nowSec != null && parityPrice != null && (scheduled || hasEntitlement)
       ? getDewsPrimaryQuoteClock(asset, nowSec) : null;
     const primaryOunces = ouncesAt(primaryClock);

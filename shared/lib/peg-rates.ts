@@ -123,6 +123,15 @@ export function isParityPrice(asset: PegRateAsset): boolean {
   });
 }
 
+/**
+ * A parity price that may feed peg references and scores. An open-depeg
+ * continuity price is a low-confidence display quote: it may show the coin's
+ * deviation but must not move peer medians, PSI or DEWS by itself.
+ */
+export function isReferenceParityPrice(asset: PegRateAsset): boolean {
+  return asset.pricePublicationReason !== "open-confirmed-depeg-continuity" && isParityPrice(asset);
+}
+
 export function selectedFxMedianContributor(
   asset: PegRateAsset,
   observedAtSec = asset.priceObservedAt ?? null,
@@ -175,7 +184,7 @@ export function derivePegRates(
     const meta = metaById?.get(asset.id);
     const flags = meta?.flags;
     if (flags?.navToken || flags?.pegCurrency === "OTHER" || flags?.pegCurrency === "VAR"
-      || !isParityPrice(asset)) continue;
+      || !isReferenceParityPrice(asset)) continue;
     const peg = normalizePegType(asset.pegType);
     const registryPeg = pegTypeFromCurrency(flags?.pegCurrency);
     if (registryPeg && peg !== registryPeg) continue;

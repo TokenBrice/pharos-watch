@@ -17,7 +17,7 @@ import {
   isCoingeckoAggregatorSource,
   isReplaySafePriceSource,
 } from "@shared/lib/pricing-source-policy";
-import { evaluateCoingeckoMicroVolumeOutlier } from "../../lib/coingecko-simple-price";
+import { measureCoingeckoMicroVolumeDeviation } from "../../lib/coingecko-simple-price";
 import { HIVE_MARKET_POLICY } from "../../lib/hive-market-price";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -258,13 +258,14 @@ export async function runPostEnrichmentPricePipeline(
       if (asset.id === "hbd-hive" && input.hiveVetoPrice != null) {
         return !pricesAgreeWithinBps(price, input.hiveVetoPrice, HIVE_MARKET_POLICY.cgDivergenceVetoMaxBps);
       }
+      // This run's CoinGecko read already measured volume below the floor; an
+      // older staged CoinGecko quote for the same coin inherits that verdict.
       if (input.rejectedCgReasons?.get(asset.id) === COINGECKO_MICRO_VOLUME_OUTLIER_REASON) {
-        return evaluateCoingeckoMicroVolumeOutlier({
+        return measureCoingeckoMicroVolumeDeviation({
           price,
-          volume24hUsd: 0,
           context: validationContexts.get(asset),
           references: validationReferences,
-        }).status === "rejected";
+        }) !== null;
       }
       return false;
     };

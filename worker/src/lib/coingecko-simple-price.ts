@@ -66,24 +66,30 @@ export function evaluateCoingeckoMicroVolumeOutlier(input: {
   if (input.volume24hUsd >= COINGECKO_MICRO_VOLUME_MIN_USD) {
     return { status: "ok" };
   }
-  if (!isFixedPegContext(input.context)) {
-    return { status: "ok" };
-  }
+  const outlier = measureCoingeckoMicroVolumeDeviation(input);
+  return outlier
+    ? { status: "rejected", reason: COINGECKO_MICRO_VOLUME_OUTLIER_REASON, volume24hUsd: input.volume24hUsd, ...outlier }
+    : { status: "ok" };
+}
+
+/**
+ * The deviation half of the micro-volume quarantine: a fixed-peg quote more
+ * than 500 bps from its peg/FX reference. NAV and variable pegs never qualify.
+ * Callers apply it only once a same-run CoinGecko read established volume
+ * below the floor; it never infers volume.
+ */
+export function measureCoingeckoMicroVolumeDeviation(input: {
+  price: number;
+  context: PriceValidationContext;
+  references?: PriceValidationReferences;
+}): { referencePrice: number; deviationBps: number } | null {
+  if (!isFixedPegContext(input.context)) return null;
   const referencePrice = getReferencePriceForContext(input.context, input.references);
-  if (referencePrice == null || !Number.isFinite(referencePrice) || referencePrice <= 0) {
-    return { status: "ok" };
-  }
+  if (referencePrice == null || !Number.isFinite(referencePrice) || referencePrice <= 0) return null;
   const deviation = relativeBps(input.price, referencePrice);
-  if (deviation != null && deviation.absRawBps > COINGECKO_MICRO_VOLUME_OUTLIER_MAX_DEVIATION_BPS) {
-    return {
-      status: "rejected",
-      reason: COINGECKO_MICRO_VOLUME_OUTLIER_REASON,
-      volume24hUsd: input.volume24hUsd,
-      referencePrice,
-      deviationBps: deviation.absRawBps,
-    };
-  }
-  return { status: "ok" };
+  return deviation != null && deviation.absRawBps > COINGECKO_MICRO_VOLUME_OUTLIER_MAX_DEVIATION_BPS
+    ? { referencePrice, deviationBps: deviation.absRawBps }
+    : null;
 }
 
 export async function fetchCoingeckoSimplePrices(

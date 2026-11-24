@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
+import { derivePegRates, getPegReference, isParityPrice, isReferenceParityPrice } from "@shared/lib/peg-rates";
 import { REFERENCE_INTRADAY_BUDGET_SEC } from "@shared/lib/reference-admission";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { PegAssetBase } from "@shared/types/price";
@@ -40,6 +40,14 @@ describe("derivePegRates", () => {
     expect(result.rates.peggedEUR).toBe(1.2);
     expect(result.counts.peggedEUR).toBe(1);
     expect(result.contributors?.peggedEUR?.map(({ assetId }) => assetId)).toEqual(["market"]);
+  });
+
+  it("keeps open-depeg continuity display prices out of peer references", () => {
+    const continuity = { ...asset("continuity", "peggedEUR", 0.4, 2_000_000), priceSource: "coingecko",
+      priceConfidence: "low" as const, pricePublicationReason: "open-confirmed-depeg-continuity" as const };
+    expect(isParityPrice(continuity)).toBe(true);
+    expect(isReferenceParityPrice(continuity)).toBe(false);
+    expect(derivePegRates([continuity, asset("market", "peggedEUR", 1.2, 2_000_000)]).counts.peggedEUR).toBe(1);
   });
 
   it("uses the same eligible source-clocked fiat peers for its median, count and clocks", () => {

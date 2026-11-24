@@ -22,6 +22,7 @@ import {
   isReasonablePrice,
   isSevereFixedPegDownside,
   loadPriceValidationReferences,
+  projectFxReferenceEvidence,
   validatePriceCandidate,
   validatePriceCandidateAgainstReference,
   type PriceValidationReferences,
@@ -440,5 +441,27 @@ describe("validatePriceCandidate", () => {
 
     expect(result.accepted).toBe(false);
     expect(result.reasonCode).toBe("fiat_upper_band_requires_corroboration");
+  });
+});
+
+describe("projectFxReferenceEvidence", () => {
+  const fxAt = 1_795_400_000;
+  const observation = { pegKey: "peggedEUR", usdPerUnit: 1.1, source: "openExchangeRates", cadence: "intraday", observedAtSec: fxAt } as const;
+  const state = (overrides: Record<string, unknown> = {}) => ({
+    rates: { peggedEUR: 1.1 }, usableSyncAt: fxAt + 10, usableAgeSec: 10, mode: "live", metadataIdentity: "verified",
+    sourceUpdatedAtByPeg: { peggedEUR: fxAt }, sourceCadenceByPeg: { peggedEUR: "intraday" }, sourceModeByPeg: { peggedEUR: "live" },
+    sourceDateByPeg: {}, sourceLastSuccessAtBySource: {}, consecutiveFallbackRuns: 0, observations: { peggedEUR: observation },
+    referenceSessionEvidenceByPeg: { peggedEUR: { sessionOpenedAtSec: fxAt - 3_600, preCloseUsdPerUnit: 1.09, firstInSessionObservedAtSec: fxAt } },
+    ...overrides,
+  }) as unknown as Parameters<typeof projectFxReferenceEvidence>[0];
+
+  it("projects only verified observations matching the selected rate and clock, with session evidence and a generation", () => {
+    const projected = projectFxReferenceEvidence(state());
+    expect(projected?.peggedEUR).toMatchObject({ observation, preCloseUsdPerUnit: 1.09, firstInSessionObservedAtSec: fxAt, sessionOpenedAtSec: fxAt - 3_600 });
+    expect(projected?.peggedEUR?.generation).toMatch(/^fx:1795400010:[0-9a-f]{64}$/);
+    expect(projectFxReferenceEvidence(state({ metadataIdentity: "unverified" }))).toBeUndefined();
+    expect(projectFxReferenceEvidence(state({ observations: undefined }))).toBeUndefined();
+    expect(projectFxReferenceEvidence(state({ rates: { peggedEUR: 1.2 } }))).toEqual({});
+    expect(projectFxReferenceEvidence(state({ sourceUpdatedAtByPeg: { peggedEUR: fxAt - 60 } }))).toEqual({});
   });
 });

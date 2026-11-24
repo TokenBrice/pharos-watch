@@ -63,8 +63,9 @@ const UINT = parseAbiParameters("uint256");
  * verifies unpaused SwapFacility approval and bidirectional HubPortal swap
  * paths, and confirms Ethereum mUSD holds at least 1:1 `$M` backing against at
  * least $1M supply before inheriting `musd-metamask`'s trusted live price.
- * Soft single-source provenance stays `single-source` (never upgraded to hard
- * `protocol-redeem` / `high`).
+ * A soft single-source mUSD quote keeps its own source and `single-source`
+ * confidence; a multi-source trusted mUSD quote publishes as `protocol-redeem`
+ * / `high`, exactly like the other verified 1:1 inherited-wrapper routes.
  */
 async function fetchM0ExtensionPrice(
   context: LivePriceContext,
