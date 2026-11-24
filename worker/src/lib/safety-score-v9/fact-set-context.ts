@@ -22,7 +22,11 @@ import type {
   V9FactStatusV2,
   V9FailureDomainRef,
 } from "@shared/types/safety-score-v9-facts";
-import type { V9AssetFactsV3, V9ExitRouteFactV2 } from "@shared/types/safety-score-v9-facts";
+import {
+  PHYSICAL_DELIVERY_CAPACITY_POLICY_RULE_ID,
+  type V9AssetFactsV3,
+  type V9ExitRouteFactV2,
+} from "@shared/types/safety-score-v9-facts";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
 import type { SafetyScoreV9VerifiedEmptyExitWitness } from "./publication-assessment";
 import type {
@@ -39,8 +43,8 @@ import { createReviewedAssetRegistry, createReviewedRegistryReferenceExpander } 
 import { usesPrimaryRedemptionReviewTerms } from "../redemption-exit-route-observations";
 import { allocationReviewClockSec as reviewAdmissionClockSec } from "@shared/types/safety-score-v9-allocation";
 
-/** v10.53 rule: physical-commodity delivery has no applicable same-notional USD capacity. */
-export const PHYSICAL_DELIVERY_CAPACITY_POLICY_RULE_ID = "v9.exit.physical-delivery-capacity";
+/** Re-exported from shared/types/safety-score-v9-facts.ts (single authority). */
+export { PHYSICAL_DELIVERY_CAPACITY_POLICY_RULE_ID };
 
 // Immutable imported evaluation input; validation failures stay asset-local.
 const classifications = createReviewedAssetRegistry({
@@ -746,7 +750,10 @@ export function compileRouteFactorStatuses(
             routeKey: route.routeKey, exposureId: null, requiredDatum: factorKey },
         }).status
       : (knownFactorStatus ??= deepFreeze(createV9FactStatus({
-          applicability: route.status.applicability, observationState: "known",
+          applicability: route.status.applicability.state === "not-applicable"
+            ? requiredV9Applicability("v9.exit.route-factors")
+            : route.status.applicability,
+          observationState: "known",
           evidenceRefIds: route.status.evidenceRefIds,
         })));
   }

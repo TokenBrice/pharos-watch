@@ -144,8 +144,13 @@ const NOT_RATED_REASONS: Record<Exclude<RedemptionBackstopEntry["resolutionState
   failed: "The last route refresh failed",
 };
 
+const PHYSICAL_DELIVERY_EXCLUSION_NOTE = "Physical delivery: USD capacity not applicable";
+
 /** A resolved route without a score has eventual capacity only; the route score reads immediate capacity. */
 function notRatedReason(entry: RedemptionBackstopEntry): string {
+  if (entry.resolutionState === "missing-capacity" && entry.outputAssetType === "physical-commodity-delivery") {
+    return "Physical delivery has no USD redemption capacity to rate";
+  }
   if (entry.resolutionState !== "resolved") return NOT_RATED_REASONS[entry.resolutionState];
   return entry.capacityScore == null
     ? "Only eventual capacity is published, and the route score needs immediate capacity"
@@ -160,7 +165,11 @@ function notRatedReason(entry: RedemptionBackstopEntry): string {
 function notRatedVerdict(entry: RedemptionBackstopEntry, usage: readonly ExitRouteUsageRow[] | null): string {
   const counted = usage?.find((row) => row.key === "counted");
   const exclusion = counted && counted.figure === null && counted.note
-    ? `; Exit does not count it either (${counted.note.startsWith("Exit ") ? counted.note : counted.note.charAt(0).toLowerCase() + counted.note.slice(1)})`
+    ? entry.resolutionState === "missing-capacity" &&
+      entry.outputAssetType === "physical-commodity-delivery" &&
+      counted.note === PHYSICAL_DELIVERY_EXCLUSION_NOTE
+      ? "; Exit does not count it either"
+      : `; Exit does not count it either (${counted.note.startsWith("Exit ") ? counted.note : counted.note.charAt(0).toLowerCase() + counted.note.slice(1)})`
     : "";
   return `${notRatedReason(entry)}${exclusion}.`;
 }
@@ -308,9 +317,14 @@ function exitDivergenceNote(
 }
 
 /** Why the Exit pillar evaluated this route but did not credit it. */
-function exitExclusionNote(route: ExitAlternativeRoute, size: string): string {
+function exitExclusionNote(route: ExitAlternativeRoute, size: string, entry?: RedemptionBackstopEntry): string {
   if (route.capacity?.executableUsd === 0) return `Clears nothing ${size}`;
-  if (route.exclusionReason === null) return "Evaluated, not counted";
+  if (route.exclusionReason === null) {
+    if (entry?.outputAssetType === "physical-commodity-delivery" && !route.routeSuspension) {
+      return PHYSICAL_DELIVERY_EXCLUSION_NOTE;
+    }
+    return "Evaluated, not counted";
+  }
   const note = EXIT_EXCLUSION_NOTES[route.exclusionReason];
   return note ? note(size) : humanizeSafetyScoreV9Value(route.exclusionReason);
 }
@@ -363,7 +377,7 @@ export function buildExitRouteUsage(
       else if (ownRoute === null) counted(null, NOT_COUNTED, "Not in the Exit evaluation");
       else if (ownRoute.included && ownRoute.score !== null) {
         counted(Math.round(ownRoute.score), null, entry.score == null ? evidenceNote(ownRoute.capacityEvidenceTier) : null);
-      } else counted(null, NOT_COUNTED, exitExclusionNote(ownRoute, size));
+      } else counted(null, NOT_COUNTED, exitExclusionNote(ownRoute, size, entry));
     }
     best(null, "None counted", `So the Exit pillar scores ${Math.round(pillarScore)}`);
     return rows;
@@ -392,7 +406,7 @@ export function buildExitRouteUsage(
       entry.score == null ? evidenceNote(ownRoute.capacityEvidenceTier) : score === entry.score ? SAME_SCORE_NOTE : `Re-scored ${size}`,
     );
   } else if (ownRoute !== null) {
-    counted(null, NOT_COUNTED, exitExclusionNote(ownRoute, size));
+    counted(null, NOT_COUNTED, exitExclusionNote(ownRoute, size, entry));
   } else {
     counted(null, NOT_COUNTED, "Not in the Exit evaluation");
   }

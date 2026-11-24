@@ -1054,35 +1054,14 @@ describe("cause-aware Exit and max-feasible portfolios", () => {
 
   it("caps cause-U unavailable Exit at priorVerifiedEmptyExitCeiling without fabricating no-viable-exit-path (v10.50)", () => {
     const missing = gap("U", "unavailable-census");
-    const ceiling = {
-      scoreCeiling: 0,
-      verifiedAtSec: 1_795_000_000,
-      sourceGenerationId: "dex-liquidity-1795000000",
-      maxAgeSec: 172_800,
-    };
-    const uncapped = evaluateV9Exit({
-      circulatingUsd: 20_000_000, portfolioStatus: "incomplete",
-      portfolioFactStatus: missing.status, gaps: [missing.gap], routes: [],
-    }, V9_CANDIDATE_POLICY_V1);
-    expect(uncapped.score).toBe(50);
-
-    const capped = evaluateV9Exit({
-      circulatingUsd: 20_000_000, portfolioStatus: "incomplete",
-      portfolioFactStatus: missing.status, gaps: [missing.gap], routes: [],
-      priorVerifiedEmptyExitCeiling: ceiling,
-    }, V9_CANDIDATE_POLICY_V1);
-    expect(capped.score).toBe(0);
-    expect(capped.aggregationDisposition).toBe("included");
-    expect(capped.limitedEvidenceCauses).toEqual(["U"]);
+    const ceiling = { scoreCeiling: 0, verifiedAtSec: 1_795_000_000, sourceGenerationId: "dex-liquidity-1795000000", maxAgeSec: 172_800 };
+    const base = { portfolioStatus: "incomplete" as const, portfolioFactStatus: missing.status, gaps: [missing.gap] };
+    expect(evalRoutes([], base).score).toBe(50);
+    const capped = evalRoutes([], { ...base, priorVerifiedEmptyExitCeiling: ceiling });
+    expect(capped).toMatchObject({ score: 0, aggregationDisposition: "included", limitedEvidenceCauses: ["U"] });
     expect(capped.reasons).toContain("missing-same-notional-route");
     expect(capped.reasons).not.toContain("no-viable-exit-path");
-
-    // Any positive score-eligible route ignores the prior verified-empty ceiling.
-    const recovered = evaluateV9Exit({
-      circulatingUsd: 20_000_000,
-      routes: [route()],
-      priorVerifiedEmptyExitCeiling: ceiling,
-    }, V9_CANDIDATE_POLICY_V1);
+    const recovered = evalRoutes([route()], { priorVerifiedEmptyExitCeiling: ceiling });
     expect(recovered.score).toBeGreaterThan(0);
     expect(recovered.primaryRouteKey).not.toBeNull();
   });
@@ -1103,46 +1082,38 @@ describe("bounded settlement subfactors", () => {
   });
 
   it("excludes physical-delivery routes with not-applicable USD capacity without dollar credit or unresolved-output reasons", () => {
-    const missingStatus = gap("U", "physical-placeholder");
     const settlementGap = gap("C", "physical-settlement");
-    const projectedPhysical = projectV9ExitEvaluationRoute({
+    const naCap = {
+      applicability: { state: "not-applicable" as const, policyRuleId: "v9.exit.physical-delivery-capacity", rationale: "Physical delivery.", gapId: null },
+      observationState: "known" as const, evidenceRefIds: ["ev:physical"], gapIds: [] as string[],
+    };
+    const basePhysical = {
       routeKey: "redemption:gen:redemption:gold:offchain-issuer", routeId: "redemption:gold:offchain-issuer",
-      lane: "redemption", sourceGenerationId: "gen", routeFamily: "eventual-redemption",
-      holderAccess: "institutional-eligible", executionModel: "discretionary", executionCertainty: "conditional",
-      modelConfidence: "low", observationConfidence: "low", capacityEvidenceTier: "documented", observationHistory: null,
-      evidenceKind: "documented-terms", coverageClass: "diagnostic", capacityScoringHorizon: "eventual",
-      settlementModel: "bounded-delay", settlementSlaSec: null, queueDepthUsd: null, dailyLimitUsd: null, minRedeemUsd: null,
-      settlementEvidenceRefIds: ["ev:physical"], physicalResourceKeys: ["issuer:gold"], status: missingStatus.status,
-      factorStatuses: {
-        capacity: {
-          applicability: { state: "not-applicable", policyRuleId: "v9.exit.physical-delivery-capacity", rationale: "Physical-commodity delivery redeems for metal rather than dollars; same-notional USD exit capacity is not applicable.", gapId: null },
-          observationState: "known", evidenceRefIds: ["ev:physical"], gapIds: [],
-        },
-        settlement: settlementGap.status,
-      },
-      scoreEligible: false, request: null, capacityCurve: [], failureDomains: [{ kind: "redemption-rail", key: "gold" }],
+      lane: "redemption" as const, sourceGenerationId: "gen", routeFamily: "eventual-redemption" as const,
+      holderAccess: "institutional-eligible" as const, executionModel: "discretionary" as const, executionCertainty: "conditional" as const,
+      modelConfidence: "low" as const, observationConfidence: "low" as const, capacityEvidenceTier: "documented" as const, observationHistory: null,
+      evidenceKind: "documented-terms" as const, coverageClass: "diagnostic" as const, capacityScoringHorizon: "eventual" as const,
+      settlementModel: "bounded-delay" as const, settlementSlaSec: null, queueDepthUsd: null, dailyLimitUsd: null, minRedeemUsd: null,
+      settlementEvidenceRefIds: ["ev:physical"], physicalResourceKeys: ["issuer:gold"], status: naCap,
+      factorStatuses: { capacity: naCap, settlement: settlementGap.status },
+      scoreEligible: false, request: null, capacityCurve: [], failureDomains: [{ kind: "redemption-rail" as const, key: "gold" }],
       output: {
-        status: { applicability: { state: "required", policyRuleId: "v9.exit.output-valuation", rationale: null, gapId: null }, observationState: "known", evidenceRefIds: ["ev:physical-out"], gapIds: [] },
-        kind: "physical-commodity-delivery", sameNotionalEligible: false, assetKeys: ["commodity:xau"], basketWeights: [], valuation: null,
+        status: { applicability: { state: "required" as const, policyRuleId: "v9.exit.output-valuation", rationale: null, gapId: null }, observationState: "known" as const, evidenceRefIds: ["ev:physical-out"], gapIds: [] as string[] },
+        kind: "physical-commodity-delivery" as const, sameNotionalEligible: false as const, assetKeys: ["commodity:xau"], basketWeights: [], valuation: null,
       },
-    });
+    };
+    const projectedPhysical = projectV9ExitEvaluationRoute(basePhysical);
     expect(projectedPhysical).toMatchObject({ applicability: "not-applicable", outputResolved: false });
+    const reqMissing = gap("U", "req-cap").status;
+    expect(projectV9ExitEvaluationRoute({ ...basePhysical, status: reqMissing, output: { ...basePhysical.output, kind: "fiat", sameNotionalEligible: undefined } }).applicability).toBe("required");
+    expect(projectV9ExitEvaluationRoute({ ...basePhysical, status: reqMissing, factorStatuses: { capacity: { ...naCap, applicability: { ...naCap.applicability, policyRuleId: "v9.other" } } } }).applicability).toBe("required");
 
-    const alone = evaluateV9Exit({
-      circulatingUsd: 20_000_000, portfolioStatus: "reviewed-complete",
-      gaps: [missingStatus.gap, settlementGap.gap], routes: [projectedPhysical],
-    }, V9_CANDIDATE_POLICY_V1);
+    const alone = evalRoutes([projectedPhysical], { portfolioStatus: "reviewed-complete", gaps: [settlementGap.gap] });
     expect(alone).toMatchObject({ score: 50, aggregationDisposition: "included", primaryRouteKey: null, limitedEvidenceCauses: ["U"], causeGapIds: [] });
     expect(alone.reasons).not.toContain("unresolved-exit-output");
-    expect(alone.routes[0]).toMatchObject({
-      included: false, score: null, scoringDisposition: "not-applicable",
-      effectiveScoringWeight: 0, exclusionReason: null, cause: null, causeGapIds: [],
-    });
+    expect(alone.routes[0]).toMatchObject({ included: false, score: null, scoringDisposition: "not-applicable", effectiveScoringWeight: 0, exclusionReason: null, cause: null, causeGapIds: [] });
 
     const usd = dexRoute({ routeKey: "dex:gold:usdc" });
-    const withUsd = evalRoutes([usd, projectedPhysical]);
-    const usdOnly = evalRoutes([usd]);
-    expect(withUsd.score).toBe(usdOnly.score);
-    expect(withUsd.primaryRouteKey).toBe(usd.routeKey);
+    expect(evalRoutes([usd, projectedPhysical])).toMatchObject({ score: evalRoutes([usd]).score, primaryRouteKey: usd.routeKey });
   });
 });

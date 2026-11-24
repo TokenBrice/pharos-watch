@@ -16,6 +16,13 @@ export function authenticateCcipPendingObservation(source: CcipPendingRead, obse
         return !holding || holding.anchor !== String(pin.anchor) || holding.anchorHash !== pin.anchorHash || holding.observedAtSec !== pin.observedAtSec; }))) return false;
   const anchor = proof.pins.find(pin => pin.chainId === source.chainId);
   if (!anchor || observation.anchor !== String(anchor.anchor) || observation.anchorHash !== anchor.anchorHash || observation.observedAtSec !== anchor.observedAtSec) return false;
+  if (source.lockBoxes) {
+    if (!proof.lockBoxes || proof.lockBoxes.length !== source.lockBoxes.length ||
+      proof.lockBoxes.some((row, i) => row.account !== source.lockBoxes![i]!.account ||
+        row.tokenPoolAddress !== source.lockBoxes![i]!.tokenPoolAddress)) return false;
+  } else if (proof.lockBoxes !== undefined) {
+    return false;
+  }
   return proof.lanes.every((row, i) => {
     const lane = source.lanes[i]!, witness = lane.sourceStartWitness;
     if (witness?.kind === "unavailable") return false;
