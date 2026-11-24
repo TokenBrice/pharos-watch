@@ -1,11 +1,15 @@
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import {
+  CORE_STABLECOIN_AGGREGATE_UNIVERSE,
   CORE_STABLECOIN_AGGREGATE_UNIVERSE_V1,
   CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE,
+  CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC,
   getCoreAggregateUniverseForTimestamp,
   type CoreStablecoinAggregateUniverse,
 } from "@shared/lib/stablecoins/aggregate-universe";
-import { getCache, setCacheIfNewer } from "../lib/db-cache";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { getCache, prepareCacheUpsert } from "../lib/db-cache";
+import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import type { CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
 import { fetchTextWithRetry } from "../lib/fetch-retry";
@@ -21,6 +25,7 @@ import {
 } from "../lib/stablecoin-charts-payload";
 import {
   assessStablecoinChartContinuityWithCutover,
+  isPlannedChartPerimeterCutover,
   parseStablecoinChartsPerimeterRecord,
   STABLECOIN_CHART_CONTINUITY_THRESHOLDS,
   STABLECOIN_CHARTS_PERIMETER_CACHE_KEY,
@@ -366,11 +371,17 @@ async function runStablecoinChartsPublication(
   const latestCandidateDate = payload.reduce((max, point) => Math.max(max, point.date), 0);
   const candidateUniverse: CoreStablecoinAggregateUniverse =
     getCoreAggregateUniverseForTimestamp(latestCandidateDate);
+  const latestPreviousDate = previousPayload?.reduce((max, point) => Math.max(max, point.date), 0) ?? 0;
   // A cached chart written before perimeter tracking existed was produced under
-  // core-stablecoins-v1, so the first post-cutover run transitions v1 -> v2 once.
+  // core-stablecoins-v1 (including a same-day pre-deploy v1 run on cutover day).
+  // Once a baseline extends past the cutover day, a missing perimeter row must
+  // never re-arm the one-shot v1 -> v2 cutover waiver.
   const previousUniverse: CoreStablecoinAggregateUniverse | null = previousPayload == null
     ? null
-    : parsedPreviousPerimeter?.universe ?? CORE_STABLECOIN_AGGREGATE_UNIVERSE_V1;
+    : parsedPreviousPerimeter?.universe
+      ?? (latestPreviousDate < CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC + DAY_SECONDS
+        ? CORE_STABLECOIN_AGGREGATE_UNIVERSE_V1
+        : CORE_STABLECOIN_AGGREGATE_UNIVERSE);
   const continuityAssessment = previousPayload == null
     ? { blockingFindings: [], acceptedCutoverFindings: [] }
     : assessStablecoinChartContinuityWithCutover(previousPayload, payload, {
@@ -415,7 +426,7 @@ async function runStablecoinChartsPublication(
     });
   }
 
-  const isPerimeterCutover = previousUniverse != null && previousUniverse !== candidateUniverse;
+  const isPerimeterCutover = isPlannedChartPerimeterCutover(previousUniverse, candidateUniverse);
   const acceptedCutoverFindings = continuityAssessment.acceptedCutoverFindings;
   if (isPerimeterCutover) {
     logWorkerEvent({
@@ -433,31 +444,76 @@ async function runStablecoinChartsPublication(
     });
   }
 
-  const cacheResult = await setCacheIfNewer(
+  const perimeterRecord: StablecoinChartsPerimeterRecord = {
+    universe: candidateUniverse,
+    cutoverDate: CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE,
+    ...(isPerimeterCutover && previousUniverse != null
+      ? { acceptedFromUniverse: previousUniverse, acceptedAt: syncStartSec }
+      : {}),
+  };
+  throwIfAborted(signal);
+  const chartWriteStmt = prepareCacheUpsert(
     db,
-    "stablecoin-charts",
-    JSON.stringify(payload),
+    { key: "stablecoin-charts", value: JSON.stringify(payload), updatedAt: syncStartSec },
+    "if-newer",
+  );
+  // Persist payload and perimeter identity in one atomic D1 batch so a failed
+  // perimeter write rolls back the chart write and never leaves the one-shot
+  // cutover waiver re-armable.
+  const perimeterWriteStmt = db.prepare(
+    `INSERT INTO cache (key, value, updated_at)
+     SELECT ?, ?, ? WHERE EXISTS (
+       SELECT 1 FROM cache WHERE key = ? AND updated_at = ?
+     )
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+  ).bind(
+    STABLECOIN_CHARTS_PERIMETER_CACHE_KEY,
+    JSON.stringify(perimeterRecord),
     syncStartSec,
+    "stablecoin-charts",
+    syncStartSec,
+  );
+  const [chartWriteResult, perimeterWriteResult] = await runWithOverloadRetry(
+    () => db.batch([chartWriteStmt, perimeterWriteStmt]),
+    3,
     signal,
   );
+  throwIfAborted(signal);
+  const chartWritten = (chartWriteResult?.meta?.changes ?? 0) > 0;
+  const perimeterWritten = (perimeterWriteResult?.meta?.changes ?? 0) > 0;
+  if (chartWritten && !perimeterWritten) {
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoin-charts",
+      level: "error",
+      event: "chart-perimeter-write-unconfirmed",
+      message: "Chart cache wrote but perimeter cache write was not confirmed",
+      metadata: {
+        perimeterUniverse: candidateUniverse,
+        previousPerimeterUniverse: previousUniverse,
+        syncStartSec,
+      },
+    });
+    return createCronResult({
+      status: "degraded",
+      itemCount: 0,
+      metadata: {
+        reason: "chart-perimeter-write-unconfirmed",
+        perimeterUniverse: candidateUniverse,
+        previousPerimeterUniverse: previousUniverse,
+        syncStartSec,
+        lastWriteAdvanced: false,
+      },
+    });
+  }
+  const cacheResult = {
+    written: chartWritten,
+    skippedBecauseNewer: !chartWritten,
+  };
   let lastWriteAdvanced = false;
   let canonicalReadbackUpdatedAt: number | null = null;
   if (cacheResult.written) {
     lastWriteAdvanced = true;
-    const perimeterRecord: StablecoinChartsPerimeterRecord = {
-      universe: candidateUniverse,
-      cutoverDate: CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE,
-      ...(isPerimeterCutover
-        ? { acceptedFromUniverse: previousUniverse, acceptedAt: syncStartSec }
-        : {}),
-    };
-    await setCacheIfNewer(
-      db,
-      STABLECOIN_CHARTS_PERIMETER_CACHE_KEY,
-      JSON.stringify(perimeterRecord),
-      syncStartSec,
-      signal,
-    );
     logWorkerEvent({
       scope: "lib",
       job: "sync-stablecoin-charts",
@@ -471,6 +527,13 @@ async function runStablecoinChartsPublication(
       },
     });
   } else {
+    logWorkerEvent({
+      scope: "lib",
+      level: "info",
+      event: "cache_write_skipped_newer",
+      message: "Skipped cache write because existing data is newer",
+      metadata: { key: "stablecoin-charts", syncStartSec },
+    });
     const canonicalCache = await getCache(db, "stablecoin-charts");
     canonicalReadbackUpdatedAt = canonicalCache?.updatedAt ?? null;
     if (canonicalCache && canonicalCache.updatedAt > syncStartSec) {

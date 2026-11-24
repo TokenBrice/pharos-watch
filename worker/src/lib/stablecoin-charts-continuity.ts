@@ -1,5 +1,6 @@
 import {
-  CORE_STABLECOIN_AGGREGATE_UNIVERSES,
+  CORE_STABLECOIN_AGGREGATE_UNIVERSE,
+  CORE_STABLECOIN_AGGREGATE_UNIVERSE_V1,
   CoreStablecoinAggregateUniverseSchema,
   type CoreStablecoinAggregateUniverse,
 } from "@shared/lib/stablecoins/aggregate-universe";
@@ -32,6 +33,22 @@ export interface StablecoinChartsPerimeterRecord {
   acceptedAt?: number;
 }
 
+export function isPlannedChartPerimeterCutover(
+  previousUniverse: CoreStablecoinAggregateUniverse | null | undefined,
+  nextUniverse: CoreStablecoinAggregateUniverse | null | undefined,
+): boolean {
+  return previousUniverse === CORE_STABLECOIN_AGGREGATE_UNIVERSE_V1
+    && nextUniverse === CORE_STABLECOIN_AGGREGATE_UNIVERSE;
+}
+
+function isChartPerimeterUniverseRegression(
+  previousUniverse: CoreStablecoinAggregateUniverse | null | undefined,
+  nextUniverse: CoreStablecoinAggregateUniverse | null | undefined,
+): boolean {
+  return previousUniverse === CORE_STABLECOIN_AGGREGATE_UNIVERSE
+    && nextUniverse === CORE_STABLECOIN_AGGREGATE_UNIVERSE_V1;
+}
+
 export function parseStablecoinChartsPerimeterRecord(raw: string): StablecoinChartsPerimeterRecord | null {
   const parsed = parseJson(raw);
   if (!parsed.ok || parsed.value == null || typeof parsed.value !== "object" || Array.isArray(parsed.value)) {
@@ -45,7 +62,9 @@ export function parseStablecoinChartsPerimeterRecord(raw: string): StablecoinCha
   const acceptedFrom = value.acceptedFromUniverse === undefined
     ? null
     : CoreStablecoinAggregateUniverseSchema.safeParse(value.acceptedFromUniverse);
-  if (acceptedFrom && !acceptedFrom.success) return null;
+  if (acceptedFrom && (!acceptedFrom.success || !isPlannedChartPerimeterCutover(acceptedFrom.data, universe.data))) {
+    return null;
+  }
   if (value.acceptedAt !== undefined && (typeof value.acceptedAt !== "number" || !Number.isFinite(value.acceptedAt) || value.acceptedAt <= 0)) {
     return null;
   }
@@ -61,7 +80,8 @@ export type ChartContinuityCode =
   | "point-count-collapse"
   | "history-start-truncated"
   | "bucket-missing"
-  | "bucket-value-drift";
+  | "bucket-value-drift"
+  | "perimeter-universe-regression";
 
 export interface ChartContinuityFinding {
   code: ChartContinuityCode;
@@ -80,11 +100,6 @@ export interface ChartContinuityAssessment {
   acceptedCutoverFindings: ChartContinuityFinding[];
 }
 
-function isKnownUniverse(value: unknown): value is CoreStablecoinAggregateUniverse {
-  return typeof value === "string"
-    && (CORE_STABLECOIN_AGGREGATE_UNIVERSES as readonly string[]).includes(value);
-}
-
 function latestPoint(points: readonly StablecoinChartPoint[]): StablecoinChartPoint | null {
   let latest: StablecoinChartPoint | null = null;
   for (const point of points) {
@@ -95,12 +110,11 @@ function latestPoint(points: readonly StablecoinChartPoint[]): StablecoinChartPo
 
 /**
  * Compare a candidate publication with the previously published payload.
- * When `previousUniverse !== nextUniverse` (both valid known core aggregate
- * universes), finite non-negative bucket-value drift and non-USD bucket
- * disappearances are accepted once and returned in `acceptedCutoverFindings`
- * so a planned perimeter cutover publishes cleanly without freezing in
- * `degraded`. Truncation, point-count collapse, invalid bucket values, and
- * `peggedUSD` disappearance always remain blocking.
+ * Only a forward `core-stablecoins-v1` -> `core-stablecoins-v2` cutover accepts
+ * finite non-negative non-USD bucket-value drift and non-USD bucket removals
+ * once (returned in `acceptedCutoverFindings`). Truncation, point-count collapse,
+ * invalid bucket values, `peggedUSD` disappearance or drift, and backward
+ * `v2` -> `v1` universe regressions always remain blocking.
  */
 export function assessStablecoinChartContinuityWithCutover(
   previous: readonly StablecoinChartPoint[],
@@ -128,10 +142,11 @@ export function assessStablecoinChartContinuityWithCutover(
     blockingFindings.push({ code: "history-start-truncated", previous: previousOldest, next: nextOldest });
   }
 
-  const isPlannedCutover =
-    isKnownUniverse(options.previousUniverse)
-    && isKnownUniverse(options.nextUniverse)
-    && options.previousUniverse !== options.nextUniverse;
+  if (isChartPerimeterUniverseRegression(options.previousUniverse, options.nextUniverse)) {
+    blockingFindings.push({ code: "perimeter-universe-regression", previous: 2, next: 1 });
+  }
+
+  const isPlannedCutover = isPlannedChartPerimeterCutover(options.previousUniverse, options.nextUniverse);
 
   const previousLatest = latestPoint(previous);
   const nextLatest = latestPoint(next);
@@ -158,7 +173,7 @@ export function assessStablecoinChartContinuityWithCutover(
       if (ratio < STABLECOIN_CHART_CONTINUITY_THRESHOLDS.perBucketRatioFloor
         || ratio > STABLECOIN_CHART_CONTINUITY_THRESHOLDS.perBucketRatioCeiling) {
         const finding: ChartContinuityFinding = { code: "bucket-value-drift", previous: previousValue, next: nextValue, bucket };
-        if (isPlannedCutover) {
+        if (isPlannedCutover && bucket !== "peggedUSD") {
           acceptedCutoverFindings.push(finding);
         } else {
           blockingFindings.push(finding);
@@ -167,16 +182,4 @@ export function assessStablecoinChartContinuityWithCutover(
     }
   }
   return { blockingFindings, acceptedCutoverFindings };
-}
-
-/**
- * Compare a candidate publication with the previously published payload. An
- * absent or empty baseline returns no findings (nothing to preserve); the
- * caller reports that absence rather than treating it as healthy continuity.
- */
-export function assessStablecoinChartContinuity(
-  previous: readonly StablecoinChartPoint[],
-  next: readonly StablecoinChartPoint[],
-): ChartContinuityFinding[] {
-  return assessStablecoinChartContinuityWithCutover(previous, next).blockingFindings;
 }

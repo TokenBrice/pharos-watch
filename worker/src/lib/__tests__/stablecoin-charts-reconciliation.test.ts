@@ -1,26 +1,27 @@
 import { describe, expect, it } from "vitest";
-import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC } from "@shared/lib/stablecoins/aggregate-universe";
+import { ACTIVE_META_BY_ID, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC } from "@shared/lib/rate-series";
 import {
   buildDateFencedSupplementalChartConfigs,
   mergeStructuralSupplementalHistoryIntoCharts,
-  STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS,
+  STRUCTURAL_SUPPLEMENTAL_CHART_OVERLAYS,
 } from "../stablecoin-charts-reconciliation";
 
 describe("stablecoin-charts reconciliation", () => {
   it("excludes llama-backed charts while preserving the audited empty BRZ legacy chart", () => {
-    const llamaBacked = STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.filter(
-      ({ id }) => ACTIVE_META_BY_ID.get(id)?.llamaId != null,
+    const llamaBacked = STRUCTURAL_SUPPLEMENTAL_CHART_OVERLAYS.filter(
+      ({ id }) => TRACKED_META_BY_ID.get(id)?.llamaId != null,
     );
     expect(llamaBacked).toEqual([{ id: "brz-transfero", pegType: "peggedREAL" }]);
     const forbidden = [
       "audm-mento", "cadm-mento", "chfm-mento", "copm-mento", "gbpm-mento", "zarm-mento",
     ];
-    expect(STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.filter(({ id }) => forbidden.includes(id))).toEqual([]);
+    expect(STRUCTURAL_SUPPLEMENTAL_CHART_OVERLAYS.filter(({ id }) => forbidden.includes(id))).toEqual([]);
   });
 
   it("excludes a DefiLlama-charted asset that carries no registry llamaId", () => {
-    expect(STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.map(({ id }) => id)).not.toContain("sofid-sofi");
+    expect(STRUCTURAL_SUPPLEMENTAL_CHART_OVERLAYS.map(({ id }) => id)).not.toContain("sofid-sofi");
   });
 
   it("merges structural supplemental history into the base chart series", () => {
@@ -90,7 +91,7 @@ describe("stablecoin-charts reconciliation", () => {
   });
 
   it("fences v1-only and v2-only supplemental overlays cleanly across the cutover timestamp", () => {
-    const cutover = 1_795_651_200;
+    const cutover = CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC;
     const pre = cutover - 86_400;
     const post = cutover + 86_400;
     const v1Fund = ACTIVE_META_BY_ID.get("eutbl-spiko")!;

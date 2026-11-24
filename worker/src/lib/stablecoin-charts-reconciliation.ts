@@ -65,12 +65,6 @@ function toStructuralSupplementalConfig(meta: StablecoinMeta): StructuralSupplem
   return { id: meta.id, pegType };
 }
 
-export const STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS: StructuralSupplementalChartConfig[] =
-  CORE_AGGREGATE_ACTIVE_STABLECOINS.flatMap((meta) => {
-    const config = toStructuralSupplementalConfig(meta);
-    return config ? [config] : [];
-  });
-
 /**
  * Date-fenced structural supplemental chart overlays across the listing-policy v2
  * cutover: pre-cutover chart dates retain frozen v1 overlays so past history is not
