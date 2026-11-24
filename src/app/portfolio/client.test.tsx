@@ -6,6 +6,7 @@ import { readFileSync } from "node:fs";
 import { compile } from "tailwindcss";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { PORTFOLIO_PRESETS } from "./presets";
 import { PortfolioClient } from "./client";
 import PortfolioPage from "./page";
 import type { ReportCardsV9Response } from "@shared/types/report-cards-v9-current";
@@ -315,6 +316,27 @@ describe("PortfolioClient URL sync and risk workspace", () => {
     renderPortfolio([{ coinId: "usdc-circle", amount: 100 }, { coinId: "usdv-solomon", amount: 300 }], makeReportCardsV9Response({ cards: [makeV9Card({ id: "usdc-circle", score: 80 })] }));
     expect(screen.getByRole("alert").textContent).toContain("portfolio-card-unavailable");
     expect(screen.getByLabelText("Safety grade A-, score 80")).toBeTruthy();
+  });
+
+  it("computes a weighted safety aggregate for Treasury Heavy and labels manually held funds as ungraded", () => {
+    const treasury = PORTFOLIO_PRESETS.find((preset) => preset.title === "Treasury Heavy")!;
+    const cards = [...treasury.holdings]
+      .sort((a, b) => a.coinId.localeCompare(b.coinId))
+      .map((holding) => makeV9Card({ id: holding.coinId, score: 80 }));
+    const view = renderPortfolio([...treasury.holdings], makeReportCardsV9Response({ cards }));
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(view.container.textContent).not.toContain("portfolio-card-not-rated");
+    view.unmount();
+
+    const fundCard = makeV9Card({
+      id: "buidl-blackrock",
+      grade: "NR",
+      score: null,
+      ratingStatus: "not-rated",
+    });
+    renderPortfolio([{ coinId: "buidl-blackrock", amount: 100 }], makeReportCardsV9Response({ cards: [fundCard] }));
+    expect(screen.getByText("Tokenized fund · not graded")).toBeTruthy();
+    expect(screen.queryByLabelText("Safety grade NR")).toBeNull();
   });
 });
 

@@ -37,6 +37,7 @@ import { PORTFOLIO_PRESETS } from "./presets";
 import { buildV9PortfolioProjection } from "@/lib/safety-score-v9-consumers";
 import { Card, CardContent } from "@/components/ui/card";
 import { SafetyGradeBadge } from "@/components/safety-scores/safety-grade-badge";
+import { isClientTokenizedFundId } from "@shared/lib/stablecoins/aggregate-client-registry";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { ECONOMIC_CONTROL_LABEL } from "@shared/lib/classification";
@@ -391,17 +392,22 @@ export function PortfolioClient() {
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                 {heldCards.map((card) => {
                   const meta = CLIENT_TRACKED_META_BY_ID.get(card.id);
-                  const partial = describePartialEvidence(card);
+                  const isFund = isClientTokenizedFundId(card.id);
+                  const partial = isFund ? null : describePartialEvidence(card);
                   const state = coinStates.byId.get(card.id)?.[0];
                   return (
                     <Link key={card.id} href={buildStablecoinUrl(card.id)} className="pharos-card-shell p-3">
                       <p className="truncate text-sm font-medium">{meta?.symbol ?? card.id}</p>
-                      {card.ratingStatus === "pipeline-gap" || card.grade === null ? (
+                      {card.ratingStatus === "pipeline-gap" || (!isFund && card.grade === null) ? (
                         <p className="mt-2 text-sm">
                           Pipeline gap ·{" "}
                           {card.reasonCodes.includes("all-pillars-pipeline-gap")
                             ? "all pillars unavailable"
                             : "fewer than two pillars available"}
+                        </p>
+                      ) : isFund ? (
+                        <p className="mt-2 text-xs font-medium text-muted-foreground">
+                          Tokenized fund · not graded
                         </p>
                       ) : (
                         <SafetyGradeBadge grade={card.grade} score={card.score} showScore size="sm" className="mt-2 whitespace-nowrap" />
