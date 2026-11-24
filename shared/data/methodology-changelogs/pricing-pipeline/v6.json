@@ -2,14 +2,14 @@
   {
     "version": "6.95",
     "title": "Listing policy v2 market-wide supply perimeter cutover and date-fenced history continuity",
-    "date": "2026-11-26",
-    "effectiveAt": 1795651200,
+    "date": "2026-11-25",
+    "effectiveAt": 1795564800,
     "summary": "Listing policy v2 removes tokenized fund shares from the core stablecoin aggregate on a dated cutover (core-stablecoins-v2) without restating published history. Market-wide perimeter fencing, date-fenced chart overlays and non-USD share cohorts, one-shot chart continuity cutover acceptance, and explicit chart step markers keep historical series honest across the boundary.",
     "impact": [
-      "Shared aggregate universe identity advances to `core-stablecoins-v2` with a single cutover-date authority (`CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE = \"2026-11-26\"`), registered as a `marketWide: true` entry in `SUPPLY_PERIMETER_CHANGES` so cross-boundary market totals, ATH comparisons, weekly recap ranges, and homepage 7d/30d supply deltas are withheld instead of misreporting the perimeter step as outflows.",
+      "Shared aggregate universe identity advances to `core-stablecoins-v2` with a single cutover-date authority (`CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE = \"2026-11-25\"`), registered as a `marketWide: true` entry in `SUPPLY_PERIMETER_CHANGES` so cross-boundary market totals, ATH comparisons, weekly recap ranges, homepage 7d/30d supply deltas, and `/alt-pegs/` 1-year deltas are withheld instead of misreporting the perimeter step as outflows.",
       "`/api/non-usd-share` (`worker/src/lib/non-usd-share-history.ts`) and structural supplemental chart overlays (`worker/src/lib/stablecoin-charts-reconciliation.ts`) fence membership at the cutover date: dates before the cutover retain the frozen `core-stablecoins-v1` membership while dates from the cutover onward use current v2 membership, preserving published history without restatement.",
-      "`sync-stablecoin-charts` tracks the published aggregate perimeter in D1 cache key `stablecoin-charts:perimeter` and accepts planned `core-stablecoins-v1` -> `core-stablecoins-v2` finite bucket drift (including EUR/GBP fund-share step-downs) once with explicit structured logging and metadata, while keeping point-count collapse, history truncation, invalid values, `peggedUSD` loss, malformed perimeter metadata, and ordinary post-cutover drift fail-closed.",
-      "Headline supply and market-cap charts render a dashed cutover reference line and short neutral note whenever the visible window spans the boundary. Pricing consensus, fallback lifetimes, and per-asset supply admission rules are unchanged. Activation is provisionally 2026-11-26 00:00 UTC (1795651200); re-date effectiveAt at release."
+      "`sync-stablecoin-charts` tracks the published aggregate perimeter atomically in D1 cache key `stablecoin-charts:perimeter` and accepts forward `core-stablecoins-v1` -> `core-stablecoins-v2` non-USD bucket drift (including EUR/GBP fund-share step-downs) once with explicit structured logging and metadata, while keeping point-count collapse, history truncation, invalid values, `peggedUSD` loss or drift, backward `v2` -> `v1` regressions, malformed perimeter metadata, and ordinary post-cutover drift fail-closed.",
+      "Headline supply and market-cap charts render a dashed cutover reference line and short neutral note whenever the visible window spans the boundary. Pricing consensus, fallback lifetimes, and per-asset supply admission rules are unchanged. Activation is 2026-11-25 00:00 UTC (1795564800); re-date effectiveAt if deploy slips."
     ],
     "commits": [],
     "reconstructed": false

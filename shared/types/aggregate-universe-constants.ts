@@ -13,7 +13,7 @@ export type CoreStablecoinAggregateUniverse = (typeof CORE_STABLECOIN_AGGREGATE_
  * Historical dates strictly before this instant keep the frozen v1 membership;
  * dates from this instant onward use the v2 core aggregate.
  */
-export const CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE = "2026-11-26" as const;
+export const CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE = "2026-11-25" as const;
 export const CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC =
   Date.parse(`${CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE}T00:00:00Z`) / 1000;
 

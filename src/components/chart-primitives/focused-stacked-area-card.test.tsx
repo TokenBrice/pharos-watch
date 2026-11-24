@@ -224,10 +224,10 @@ describe("FocusedStackedAreaCard stack admission", () => {
   it("renders a perimeter reference line and note only when a marker falls inside the visible window", () => {
     const marker = {
       id: "core-stablecoins-v2",
-      date: "2026-11-26",
-      tsMs: Date.UTC(2026, 10, 26),
+      date: "2026-11-25",
+      tsMs: Date.UTC(2026, 10, 25),
       shortLabel: "Listing policy v2",
-      note: "Listing policy v2 (Nov 26, 2026): tokenized fund shares leave core totals; prior history is unchanged.",
+      note: "Listing policy v2 (Nov 25, 2026): Pharos totals and non-USD cohorts exclude tokenized fund shares; prior history is unchanged (provider-sourced charts may still include some).",
     };
     const { container } = render(
       <FocusedStackedAreaCard

@@ -26,7 +26,7 @@ export const MARKET_PERIMETER_MARKERS: readonly MarketPerimeterMarker[] = [
     date: CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE,
     tsMs: CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC * 1000,
     shortLabel: "Listing policy v2",
-    note: `Listing policy v2 (${formatUtcShortDate(CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC)}): tokenized fund shares leave core totals; prior history is unchanged.`,
+    note: `Listing policy v2 (${formatUtcShortDate(CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC)}): Pharos totals and non-USD cohorts exclude tokenized fund shares; prior history is unchanged (provider-sourced charts may still include some).`,
   },
 ] as const;
 
@@ -174,9 +174,10 @@ export const SUPPLY_PERIMETER_CHANGES = [
     evidenceUrl: "https://github.com/TokenBrice/pharos-watch/issues/2169",
     marketWide: false,
   },
-  // Listing policy v2 (core-stablecoins-v2): tokenized fund shares leave the core stablecoin
-  // aggregate on a dated cutover; pre-cutover published history stays on core-stablecoins-v1
-  // without restatement. Whole-market comparisons across this boundary are withheld.
+  // Listing policy v2 (core-stablecoins-v2): Pharos stablecoin totals and non-USD cohorts exclude
+  // tokenized fund shares from the cutover without restating pre-cutover core-stablecoins-v1
+  // history; provider-sourced /api/stablecoin-charts may still include llamaId fund shares while
+  // non-llamaId fund overlays end at the cutover. Whole-market comparisons across this boundary are withheld.
   {
     stablecoinId: null as string | null,
     changedAt: CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC,
