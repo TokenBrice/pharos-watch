@@ -518,6 +518,9 @@ const V9RouteOutputValuationV2Schema = z
     }
   });
 
+/** v10.53 rule: physical-commodity delivery has no applicable same-notional USD capacity. */
+export const PHYSICAL_DELIVERY_CAPACITY_POLICY_RULE_ID = "v9.exit.physical-delivery-capacity";
+
 const V9RouteOutputV2Schema = z
   .object({
     status: V9FactStatusV2Schema,
@@ -678,7 +681,18 @@ const V9ExitRouteFactV2Schema = V9ExitRouteFactBaseSchema
     if (route.coverageClass === "diagnostic" && route.scoreEligible) {
       issue(ctx, ["scoreEligible"], "Diagnostic coverage cannot be score eligible");
     }
-    if (route.status.observationState === "known" || route.status.observationState === "stale") {
+    const physicalDeliveryCapacityNotApplicable =
+      route.lane === "redemption" &&
+      route.status.applicability.state === "not-applicable" &&
+      route.status.applicability.policyRuleId === PHYSICAL_DELIVERY_CAPACITY_POLICY_RULE_ID &&
+      route.status.observationState === "known" &&
+      route.output.kind === "physical-commodity-delivery" &&
+      route.output.sameNotionalEligible === false &&
+      route.factorStatuses?.capacity?.applicability.state === "not-applicable" &&
+      route.factorStatuses.capacity.applicability.policyRuleId === PHYSICAL_DELIVERY_CAPACITY_POLICY_RULE_ID &&
+      !route.scoreEligible &&
+      route.coverageClass === "diagnostic";
+    if ((route.status.observationState === "known" || route.status.observationState === "stale") && !physicalDeliveryCapacityNotApplicable) {
       if (route.request === null || route.capacityCurve.length === 0) {
         ctx.addIssue({ code: "custom", message: "Observed routes require request and capacity facts" });
       }

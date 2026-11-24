@@ -507,20 +507,17 @@ describe("Safety Score v9 fact evaluation", () => {
       });
     const certifyRouteC = (asset: V9AssetFactsV3, gap: V9AssetFactsV3["gaps"][number], routeKey: string, factorKey: string) => {
       const scope = { pillar: "exit" as const, componentKey: "exit-route", factorKey, routeKey, exposureId: null, requiredDatum: factorKey };
-      const resolved = resolveV9EvidenceCause({
+      const res = resolveV9EvidenceCause({
         assetId: asset.assetId, scope, asOfSec: AS_OF_SEC, sourceGenerationId: "fixture:research", evidenceReferences: asset.evidence,
         classification: {
-          id: `classification:${gap.gapId}`, assetId: asset.assetId, scope, cause: "C",
-          reviewedAt: "1970-01-01T00:10:00Z", reviewer: "fixture-reviewer",
-          sources: [{ url: "https://issuer.example/disclosure", observedAt: "1970-01-01T00:08:20Z", datumAsOf: null, location: "Disclosure section", excerpt: "Settlement timeline is not published.", assertion: "Settlement timeline is not disclosed" }],
-          assertion: "researched-nondisclosure", searchedSurfaces: ["https://issuer.example/disclosure"], rationale: "Fixture reviewer searched the issuer disclosure.",
+          id: `cls:${gap.gapId}`, assetId: asset.assetId, scope, cause: "C", reviewedAt: "1970-01-01T00:10:00Z", reviewer: "r",
+          sources: [{ url: "https://issuer.example/d", observedAt: "1970-01-01T00:08:20Z", datumAsOf: null, location: "s", excerpt: "Not published.", assertion: "Not disclosed" }],
+          assertion: "researched-nondisclosure", searchedSurfaces: ["https://issuer.example/d"], rationale: "Searched.",
         },
       });
-      if (resolved.causeProof.cause !== "C") throw new Error("Fixture C proof was not admitted");
-      Object.assign(gap, { causeScope: scope, causeProof: resolved.causeProof, evidenceRefIds: resolved.causeProof.evidenceRefIds, responsibility: resolved.responsibility });
-      for (const ref of resolved.evidenceReferences) {
-        if (!asset.evidence.some((e) => e.evidenceId === ref.evidenceId)) asset.evidence.push(ref);
-      }
+      if (res.causeProof.cause !== "C") throw new Error("C proof rejected");
+      Object.assign(gap, { causeScope: scope, causeProof: res.causeProof, evidenceRefIds: res.causeProof.evidenceRefIds, responsibility: res.responsibility });
+      for (const ref of res.evidenceReferences) if (!asset.evidence.some((e) => e.evidenceId === ref.evidenceId)) asset.evidence.push(ref);
     };
     const mkVal = (basis: "commodity-delivery" | "reviewed-par", refKey: string, unit: number, src: string) => ({
       basis, referenceAssetKey: refKey, unitValueUsd: unit, expectedUnitValueUsd: unit, valueRetentionRatio: 1,
@@ -528,7 +525,7 @@ describe("Safety Score v9 fact evaluation", () => {
       confidence: "high" as const, freshness: { state: "current" as const, ageSec: 0, maxAgeSec: 86_400 }, evidenceRefIds: ["evidence:base"],
     });
     const mkRoute = (
-      routeKey: string, routeId: string, capGapId: string,
+      routeKey: string, routeId: string, status: V9AssetFactsV3["exitRoutes"][number]["status"],
       factorStatuses: V9AssetFactsV3["exitRoutes"][number]["factorStatuses"],
       output: V9AssetFactsV3["exitRoutes"][number]["output"],
     ): V9AssetFactsV3["exitRoutes"][number] => ({
@@ -538,12 +535,15 @@ describe("Safety Score v9 fact evaluation", () => {
       evidenceKind: "documented-terms", coverageClass: "diagnostic", capacityScoringHorizon: "eventual",
       settlementModel: "bounded-delay", settlementSlaSec: null, queueDepthUsd: null, dailyLimitUsd: null, minRedeemUsd: null,
       settlementEvidenceRefIds: ["evidence:base"], physicalResourceKeys: ["issuer:alpha"],
-      status: reqStatus("v9.exit.same-notional-route", "missing", [capGapId]), factorStatuses,
-      scoreEligible: false, request: null, capacityCurve: [], output, failureDomains: [{ kind: "redemption-rail", key: "alpha" }],
+      status, factorStatuses, scoreEligible: false, request: null, capacityCurve: [], output,
+      failureDomains: [{ kind: "redemption-rail", key: "alpha" }],
     });
     const physOut: V9AssetFactsV3["exitRoutes"][number]["output"] = {
       status: knownStatus(), kind: "physical-commodity-delivery", sameNotionalEligible: false,
       assetKeys: ["commodity:xau"], basketWeights: [], valuation: mkVal("commodity-delivery", "commodity:xau", 2_500, "commodity-ref"),
+    };
+    const usdOut: V9AssetFactsV3["exitRoutes"][number]["output"] = {
+      status: knownStatus(), kind: "fiat", assetKeys: ["fiat:USD"], basketWeights: [], valuation: mkVal("reviewed-par", "fiat:USD", 1, "fiat-ref"),
     };
     const resetExit = (asset: V9AssetFactsV3, gaps: V9AssetFactsV3["gaps"], exitStatus: V9AssetFactsV3["exitStatus"], exitRoutes: V9AssetFactsV3["exitRoutes"]) => {
       asset.gaps = [...asset.gaps.filter((g) => g.ownerDomain !== "exit"), ...gaps];
@@ -557,26 +557,30 @@ describe("Safety Score v9 fact evaluation", () => {
     const RULE_RF = "v9.exit.route-factors";
     const ms = (rule: string, id: string) => reqStatus(rule, "missing", [id]);
     const xgz = nativeCore();
-    const physCapGap = mkGap("alpha:gap:route:phys:capacity", "missing-runtime-route-evidence", RULE_SN, physKey, "Placeholder capacity gap on physical-delivery route.", "capacity");
-    const physSettleGap = mkGap("alpha:gap:exit-route:phys:settlement", "missing-same-notional-route", RULE_RF, physKey, "Physical delivery settlement timeline is undisclosed.");
+    const physSettleGap = mkGap("alpha:gap:exit-route:phys:settlement", "missing-same-notional-route", RULE_RF, physKey, "Physical settlement undisclosed.");
     certifyRouteC(xgz.asset, physSettleGap, physKey, "settlement");
-    resetExit(xgz.asset, [physCapGap, physSettleGap], knownStatus(), [
-      mkRoute(physKey, "redemption:alpha:offchain-issuer", physCapGap.gapId, { capacity: naCap, settlement: ms(RULE_RF, physSettleGap.gapId) }, physOut),
-    ]);
+    const xgzRoute = mkRoute(physKey, "redemption:alpha:offchain-issuer", naCap, { capacity: naCap, settlement: ms(RULE_RF, physSettleGap.gapId) }, physOut);
+    resetExit(xgz.asset, [physSettleGap], knownStatus(), [xgzRoute]);
+    expect(V9AssetFactsV3Schema.safeParse(xgz.asset).success).toBe(true);
+    for (const bad of [
+      { ...xgzRoute, output: usdOut },
+      { ...xgzRoute, scoreEligible: true },
+      { ...xgzRoute, coverageClass: "exact-lower-bound" as const },
+      { ...xgzRoute, factorStatuses: { ...xgzRoute.factorStatuses, capacity: createV9FactStatus({ applicability: { state: "not-applicable", policyRuleId: "v9.other", rationale: "other", gapId: null }, observationState: "known", evidenceRefIds: ["evidence:base"] }) } },
+    ]) expect(V9AssetFactsV3Schema.safeParse({ ...xgz.asset, exitRoutes: [bad] }).success).toBe(false);
     const xgzExit = evalCore(xgz.core).scoreInput.pillars.exit;
     expect(xgzExit).toMatchObject({ score: unknownQuality("exit", "U", P.policy.semantic), limitedEvidenceCauses: ["U"], limitingCauseGapIds: [], causeGapIds: [] });
     expect(xgzExit.reasons.some((r) => r.cause === "C")).toBe(false);
 
     const kag = nativeCore();
-    const physCostU = mkGap("alpha:gap:exit-route:phys:cost", "missing-same-notional-route", RULE_RF, physKey, "Physical delivery cost is unresearched.", "cost");
-    const usdSettleC = mkGap("alpha:gap:exit-route:usd:settlement", "missing-same-notional-route", RULE_RF, usdKey, "Physical-to-USD settlement is undisclosed.");
-    const usdCapC = mkGap("alpha:gap:route:usd:capacity", "missing-runtime-route-evidence", RULE_SN, usdKey, "Physical-to-USD capacity is undisclosed.");
+    const physCostU = mkGap("alpha:gap:exit-route:phys:cost", "missing-same-notional-route", RULE_RF, physKey, "Physical cost unresearched.", "cost");
+    const usdSettleC = mkGap("alpha:gap:exit-route:usd:settlement", "missing-same-notional-route", RULE_RF, usdKey, "USD settlement undisclosed.");
+    const usdCapC = mkGap("alpha:gap:route:usd:capacity", "missing-runtime-route-evidence", RULE_SN, usdKey, "USD capacity undisclosed.");
     certifyRouteC(kag.asset, usdSettleC, usdKey, "settlement");
     certifyRouteC(kag.asset, usdCapC, usdKey, "capacity");
-    resetExit(kag.asset, [physCapGap, physCostU, usdSettleC, usdCapC], ms(RULE_SN, usdCapC.gapId), [
-      mkRoute(physKey, "redemption:alpha:offchain-issuer", physCapGap.gapId, { capacity: naCap, cost: ms(RULE_RF, physCostU.gapId) }, physOut),
-      mkRoute(usdKey, "physical-to-usd:alpha", usdCapC.gapId, { capacity: ms(RULE_SN, usdCapC.gapId), settlement: ms(RULE_RF, usdSettleC.gapId) },
-        { status: knownStatus(), kind: "fiat", assetKeys: ["fiat:USD"], basketWeights: [], valuation: mkVal("reviewed-par", "fiat:USD", 1, "fiat-ref") }),
+    resetExit(kag.asset, [physCostU, usdSettleC, usdCapC], ms(RULE_SN, usdCapC.gapId), [
+      mkRoute(physKey, "redemption:alpha:offchain-issuer", naCap, { capacity: naCap, cost: ms(RULE_RF, physCostU.gapId) }, physOut),
+      mkRoute(usdKey, "physical-to-usd:alpha", ms(RULE_SN, usdCapC.gapId), { capacity: ms(RULE_SN, usdCapC.gapId), settlement: ms(RULE_RF, usdSettleC.gapId) }, usdOut),
     ]);
     const kagExit = evalCore(kag.core).scoreInput.pillars.exit;
     expect(kagExit.limitedEvidenceCauses).toEqual(["C"]);

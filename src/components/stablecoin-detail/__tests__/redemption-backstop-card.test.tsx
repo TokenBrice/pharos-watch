@@ -436,161 +436,94 @@ describe("RedemptionBackstopCard", () => {
   });
 
   it("renders v4 capacity horizon, exit correlation, cost scenarios, and confidence detail", () => {
-    const html = renderToStaticMarkup(
-      <RedemptionBackstopCard
-        entry={{
-          ...BASE_ENTRY,
-          capacitySemantics: "immediate-bounded",
-          capacityConfidence: "live-direct",
-          immediateCapacityUsd: 4_000_000,
-          immediateCapacityRatio: 0.08,
-          routeExitCorrelation: "independent-issuer-rail",
-          eventualRedeemabilityScore: 82,
-          capacityProfile: {
-            immediateUsd: 4_000_000,
-            dailyLimitUsd: 1_500_000,
-            queuedUsd: 12_000_000,
-            eventualUsd: 20_000_000,
-            scoringUsd: 1_500_000,
-            scoringHorizon: "daily",
-            capacityProfileConfidence: "live-direct",
-            modeledExitSizeUsd: 2_000_000,
-          },
-          costScenarioScores: {
-            retail: 40,
-            activeUser: 80,
-            institutional: 100,
-          },
-          confidenceDetails: {
-            capacityEvidenceQuality: 90,
-            feeEvidenceQuality: 70,
-            routeStatusFreshness: 80,
-            holderCohortBreadth: 60,
-            sourceQuality: 95,
-            reviewedDocAgeDays: 12,
-            reasons: ["live telemetry reviewed"],
-          },
-        }}
-      />,
-    );
-
-    expect(html).toContain("Daily Capacity");
-    expect(html).toContain("$1.5M");
-    expect(html).toContain("Current modeled capacity is daily-limited");
+    const html = renderToStaticMarkup(<RedemptionBackstopCard entry={{
+      ...BASE_ENTRY, capacitySemantics: "immediate-bounded", capacityConfidence: "live-direct",
+      immediateCapacityUsd: 4_000_000, immediateCapacityRatio: 0.08, routeExitCorrelation: "independent-issuer-rail", eventualRedeemabilityScore: 82,
+      capacityProfile: { immediateUsd: 4_000_000, dailyLimitUsd: 1_500_000, queuedUsd: 12_000_000, eventualUsd: 20_000_000, scoringUsd: 1_500_000, scoringHorizon: "daily", capacityProfileConfidence: "live-direct", modeledExitSizeUsd: 2_000_000 },
+      costScenarioScores: { retail: 40, activeUser: 80, institutional: 100 },
+      confidenceDetails: { capacityEvidenceQuality: 90, feeEvidenceQuality: 70, routeStatusFreshness: 80, holderCohortBreadth: 60, sourceQuality: 95, reviewedDocAgeDays: 12, reasons: ["live telemetry reviewed"] },
+    }} />);
+    for (const s of [
+      "Daily Capacity", "$1.5M", "Current modeled capacity is daily-limited", "Scoring capacity: $1.5M", "Eventual capacity: $20.0M",
+      "Modeled exit: $2.0M", "Eventual score: 82/100", "Retail cost: 40/100", "Active-user cost: 80/100", "Institutional cost: 100/100",
+      "Confidence detail", "Capacity evidence: 90/100", "Fee evidence: 70/100", "Route freshness: 80/100", "Holder breadth: 60/100",
+      "Source quality: 95/100", "Reviewed docs age: 12d", "live telemetry reviewed",
+    ]) expect(html).toContain(s);
     expect(html).toMatch(/Exit correlation:\s*<span[^>]*>independent issuer rail</);
-    expect(html).toContain("Scoring capacity: $1.5M");
-    expect(html).toContain("Eventual capacity: $20.0M");
     expect(html).not.toContain("Queued capacity: $12.0M");
-    expect(html).toContain("Modeled exit: $2.0M");
-    expect(html).toContain("Eventual score: 82/100");
-    // Retail and institutional cost are distinct scores; swapping them must fail.
-    expect(html).toContain("Retail cost: 40/100");
-    expect(html).toContain("Active-user cost: 80/100");
-    expect(html).toContain("Institutional cost: 100/100");
-    expect(html).toContain("Confidence detail");
-    expect(html).toContain("Capacity evidence: 90/100");
-    expect(html).toContain("Fee evidence: 70/100");
-    expect(html).toContain("Route freshness: 80/100");
-    expect(html).toContain("Holder breadth: 60/100");
-    expect(html).toContain("Source quality: 95/100");
-    expect(html).toContain("Reviewed docs age: 12d");
-    expect(html).toContain("live telemetry reviewed");
   });
 
   it("drops the score track for an unrated route and folds the resolution summary into review notes", () => {
-    const unrated: RedemptionBackstopEntry = {
-      ...BASE_ENTRY,
-      score: null,
-      sourceMode: "static",
-      resolutionState: "missing-capacity",
-      routeStatus: "unknown",
-      modelConfidence: "low",
-    };
+    const unrated: RedemptionBackstopEntry = { ...BASE_ENTRY, score: null, sourceMode: "static", resolutionState: "missing-capacity", routeStatus: "unknown", modelConfidence: "low" };
     const scoredImages = render(<RedemptionBackstopCard entry={BASE_ENTRY} />).container.querySelectorAll("[role='img']").length;
     const { container } = render(<RedemptionBackstopCard entry={unrated} />);
     const viewModel = buildRedemptionBackstopCardViewModel(unrated);
-
     expect(container.querySelectorAll("[role='img']").length).toBe(scoredImages - 1);
-    // `MethodologyHint` draws its trigger once per breakpoint branch (sheet
-    // below md, popover from md), one of them CSS-hidden, so the pill may
-    // occur twice in the DOM.
     expect(within(container).getAllByText("Not rated").length).toBeGreaterThan(0);
     expect(onSummaryLayer(within(container).getAllByText(viewModel.modelConfidenceLabel))).toBeTruthy();
-    // The verdict states the gap once; no "missing capacity" or "status unknown" chip restates it.
     expect(onSummaryLayer(within(container).getAllByText("No executable redemption capacity could be measured."))).toBeTruthy();
     expect(container.textContent).not.toMatch(/missing capacity|status unknown/i);
-
-    const summary = within(container).getByText(viewModel.resolutionSummary!);
-    expect(summary.closest("details")?.querySelector("summary")?.textContent).toMatch(/Review notes/);
+    expect(within(container).getByText(viewModel.resolutionSummary!).closest("details")?.querySelector("summary")?.textContent).toMatch(/Review notes/);
   });
 
   it("collapses an unrated route Exit does not count into one line and promotes Exit's best route", () => {
-    const unrated: RedemptionBackstopEntry = {
-      ...BASE_ENTRY, score: null, capacityScore: null, resolutionState: "missing-capacity", routeStatus: "unknown",
-    };
+    const unrated: RedemptionBackstopEntry = { ...BASE_ENTRY, score: null, capacityScore: null, resolutionState: "missing-capacity", routeStatus: "unknown" };
     const card = makeV9Card();
     const primary = card.breakdowns!.exit.primaryRoute!;
     card.breakdowns!.exit.alternatives = [{
       key: `redemption:gen-1:redemption:${unrated.stablecoinId}:${unrated.routeFamily}`,
-      routeId: `redemption:${unrated.stablecoinId}:${unrated.routeFamily}`,
-      lane: "redemption",
-      label: "Issuer redemption",
-      routeFamily: "issuer-redemption",
-      score: null,
-      included: false,
-      exclusionReason: "unresolved-exit-output",
-      confidenceDimensions: null,
-      capacityEvidenceTier: "unknown",
-      rawSameNotionalCostBps: null,
-      capacity: null,
+      routeId: `redemption:${unrated.stablecoinId}:${unrated.routeFamily}`, lane: "redemption", label: "Issuer redemption",
+      routeFamily: "issuer-redemption", score: null, included: false, exclusionReason: "unresolved-exit-output",
+      confidenceDimensions: null, capacityEvidenceTier: "unknown", rawSameNotionalCostBps: null, capacity: null,
     }];
     render(<RedemptionRouteSection entry={unrated} reportCard={card} coinId={unrated.stablecoinId} />);
     const root = moduleRoot();
-
-    expect(root.querySelector("p.text-sm")?.textContent).toBe(
-      "No executable redemption capacity could be measured; Exit does not count it either (output asset unresolved).",
-    );
-    // What is known is promoted as one plain fact, not a half-empty inset.
+    expect(root.querySelector("p.text-sm")?.textContent).toBe("No executable redemption capacity could be measured; Exit does not count it either (output asset unresolved).");
     const best = within(root).getByRole("group", { name: "How Exit uses this route" });
     expect(best.textContent).toContain(`Exit's best route${Math.round(primary.score!)}`);
     expect(best.closest(".pharos-inset")).toBeNull();
     expect(root.textContent).not.toMatch(/Not counted|Not credited|status unknown|missing capacity/i);
   });
 
+  it("explains physical-delivery not-applicable capacity on uncredited alternatives", () => {
+    const physical: RedemptionBackstopEntry = { ...BASE_ENTRY, score: null, capacityScore: null, resolutionState: "missing-capacity", routeStatus: "unknown", outputAssetType: "physical-commodity-delivery" };
+    const card = makeV9Card();
+    const alt = {
+      key: `redemption:gen-1:redemption:${physical.stablecoinId}:${physical.routeFamily}`, routeId: `redemption:${physical.stablecoinId}:${physical.routeFamily}`,
+      lane: "redemption" as const, label: "Issuer redemption", routeFamily: "eventual-redemption" as const, score: null, included: false,
+      exclusionReason: null, confidenceDimensions: null, capacityEvidenceTier: "documented" as const, rawSameNotionalCostBps: null, capacity: null,
+    };
+    card.breakdowns!.exit.alternatives = [alt];
+    const cells = usageCells(card, physical);
+    expect(cells.counted).toMatchObject({ figure: null, value: "Not counted", note: "Physical delivery: USD capacity not applicable" });
+    expectShortNotes(cells);
+    expect(usageCells(card, BASE_ENTRY).counted?.note).toBe("Evaluated, not counted");
+    card.breakdowns!.exit.alternatives = [{ ...alt, routeSuspension: { routeId: alt.routeId, channel: "Issuer", suspendedAt: "2026-10-01", reason: "Halted", reviewer: "ops", reviewedAt: "2026-10-02", sources: [{ url: "https://example.com", quote: "Halted" }] } }];
+    expect(usageCells(card, physical).counted?.note).toBe("Evaluated, not counted");
+    card.breakdowns!.exit.alternatives = [alt];
+    render(<RedemptionRouteSection entry={physical} reportCard={card} coinId={physical.stablecoinId} />);
+    expect(moduleRoot().querySelector("p.text-sm")?.textContent).toBe("Physical delivery has no USD redemption capacity to rate; Exit does not count it either.");
+  });
+
   it("puts source citations and provenance inside the fold and the review date on the footer line", () => {
     render(<RedemptionBackstopCard entry={{ ...BASE_ENTRY, docs: DOCS }} />);
     const root = moduleRoot();
-
-    const link = within(root).getByRole("link", { name: "Reserve feed", hidden: true });
-    const fold = link.closest("details");
+    const fold = within(root).getByRole("link", { name: "Reserve feed", hidden: true }).closest("details");
     expect(fold?.open).toBe(false);
     expect(fold?.contains(within(root).getByText(formatRedemptionDocsProvenance("proof-of-reserves")))).toBe(true);
     expect(within(root).getByText(/2026-03-30/).closest("details")).toBeNull();
   });
 
   it("shows a non-open route status as the state chip and the impairment reason in review notes", () => {
-    const reason =
-      "Active severe depeg of 8332 bps started 2026-03-22; static redemption route requires current live-open evidence before it can score.";
-    render(
-      <RedemptionBackstopCard
-        entry={{
-          ...BASE_ENTRY,
-          score: null,
-          resolutionState: "impaired",
-          routeStatus: "degraded",
-          routeStatusSource: "market-implied",
-          routeStatusReason: reason,
-          routeStatusReviewedAt: "2026-04-14",
-          modelConfidence: "low",
-        }}
-      />,
-    );
+    const reason = "Active severe depeg of 8332 bps started 2026-03-22; static redemption route requires current live-open evidence before it can score.";
+    render(<RedemptionBackstopCard entry={{
+      ...BASE_ENTRY, score: null, resolutionState: "impaired", routeStatus: "degraded", routeStatusSource: "market-implied",
+      routeStatusReason: reason, routeStatusReviewedAt: "2026-04-14", modelConfidence: "low",
+    }} />);
     const root = moduleRoot();
-
-    // One pill per `MethodologyHint` breakpoint branch; see above.
     expect(within(root).getAllByText("Not rated").length).toBeGreaterThan(0);
     const routeStatus = formatRedemptionRouteStatus("degraded").toLowerCase();
-    expect(within(root).getByText((content) => content.toLowerCase() === routeStatus)).toBeTruthy();
+    expect(within(root).getByText((c) => c.toLowerCase() === routeStatus)).toBeTruthy();
     expect(within(root).getByText(reason).closest("details")).not.toBeNull();
   });
 });
@@ -606,12 +539,7 @@ describe("RedemptionBackstopCard footer freshness", () => {
     const time = view.container.querySelector("time[data-state]")!;
     return { time, state: time.getAttribute("data-state"), label: time.querySelector(".sr-only")?.textContent ?? "", unmount: view.unmount };
   }
-  const lane = (meta?: Record<string, unknown> | null, error: unknown = null) => ({
-    dataUpdatedAt: generationMs,
-    error,
-    hasData: true,
-    meta: meta as never,
-  });
+  const lane = (meta?: Record<string, unknown> | null, error: unknown = null) => ({ dataUpdatedAt: generationMs, error, hasData: true, meta: meta as never });
 
   it("stays neutral through 4d and warns only past the shared public band", async () => {
     const at16h = await footerTime(lane(), 16 * HOUR);

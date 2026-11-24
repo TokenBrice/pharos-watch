@@ -1,5 +1,11 @@
 import type { V9ReasonCode, V9ValidatedPolicyEnvelope } from "../../types/safety-score-v9";
-import type { V9AssetFactsBase, V9ExitRouteFactV2, V9FactStatusV2, V9FactGapV3 } from "../../types/safety-score-v9-facts";
+import {
+  PHYSICAL_DELIVERY_CAPACITY_POLICY_RULE_ID,
+  type V9AssetFactsBase,
+  type V9ExitRouteFactV2,
+  type V9FactStatusV2,
+  type V9FactGapV3,
+} from "../../types/safety-score-v9-facts";
 import type { ExitExecutionCertificate, ExitRouteObservationHistory, PhysicalToUsdTrace, ExitRouteCapacityEvidenceTier } from "../../types/exit-route";
 import type { V9CauseContribution, V9ConfidenceDimensions, V9EvidenceCause } from "../../types/safety-score-v9-causes";
 import type {
@@ -947,7 +953,12 @@ function mapOutputQuality(route: V9ExitRouteFactV2): V9ExitOutputQuality {
 }
 
 function statusApplicability(route: V9ExitRouteFactV2): V9ExitEvaluationRoute["applicability"] {
-  if (route.factorStatuses?.capacity?.applicability.state === "not-applicable") {
+  if (
+    route.output.kind === "physical-commodity-delivery" &&
+    route.output.sameNotionalEligible === false &&
+    route.factorStatuses?.capacity?.applicability.state === "not-applicable" &&
+    route.factorStatuses.capacity.applicability.policyRuleId === PHYSICAL_DELIVERY_CAPACITY_POLICY_RULE_ID
+  ) {
     return "not-applicable";
   }
   return route.status.applicability.state;
