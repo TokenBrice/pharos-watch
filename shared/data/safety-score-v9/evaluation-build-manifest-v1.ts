@@ -102,7 +102,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/chain-rpc-registry.ts",
-      "sha256": "dd9de2d32fce0d1c130287769f07a02075fe4a3c771dfb491f2818ba3a59cb68"
+      "sha256": "2d50950472bac2327dd0167d0554ebc20de586f594c078198225b2172e786c3f"
     },
     {
       "path": "shared/lib/classification/pegs.ts",
@@ -262,7 +262,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/pricing-source-policy.ts",
-      "sha256": "85521ad376e5f64dc2de00c161649ddfb1c52b266fa1bf7dbee9be1d530e075d"
+      "sha256": "57c770106f45c6e572d4b0323481f3fafe0c71c57dc79965a3b9b56e316afea1"
     },
     {
       "path": "shared/lib/pricing-source-registry-aggregators.ts",
@@ -270,7 +270,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/pricing-source-registry-dex-search.ts",
-      "sha256": "f5829ab697fc3e1d65ba6bfd53a78252585300e4083890d59ca46e80df3a6d9a"
+      "sha256": "c6151d9c7a3063480d7ba2abe3928c1031acc0cbb84c33dd1d5efd0ecf9ee718"
     },
     {
       "path": "shared/lib/pricing-source-registry-market-feeds.ts",
@@ -282,7 +282,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/pricing-source-registry-special.ts",
-      "sha256": "3790e6b91780f31d5826adc0f83b3edf2f4bb072c7f712fb44f7140ffcdf0380"
+      "sha256": "84f05dc425424574410bfbf7aa93622a4f68e8be38737cf22c75d6cd8448fa87"
     },
     {
       "path": "shared/lib/pricing-source-registry.ts",
@@ -866,11 +866,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/peg.ts",
-      "sha256": "a892fa42419e8409ca025d737a446388a90bebef7acb5fa46335e938df6095b0"
+      "sha256": "5cbceb66808221ca28db4d3704bf0b2bff13c9fb442a8cf7a3739c7ca5e7967e"
     },
     {
       "path": "shared/types/price.ts",
-      "sha256": "8e0a83925306e59c78ad496a38814dee93860327e95ceddef18dea0a42c19549"
+      "sha256": "51c2cb74770797d186f3121c258acb4e5003623dbf98e2c0c5d2668dc3e93f22"
     },
     {
       "path": "shared/types/pricing-source-health.ts",
@@ -1363,7 +1363,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-11-24-block-26485484-shock-coverage.json.gz"
     }
   ],
-  "digest": "c92b9981eb9c6dc40634a21913b1a35a8c9af74a6e0c4b7b09087c8005f462d5"
+  "digest": "348ffd9788b04352ab35ea4a19e5de95ef4e203b9c24ad087eb28c02c421f94c"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
