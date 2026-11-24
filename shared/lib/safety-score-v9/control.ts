@@ -172,7 +172,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
   const bindingControlFailureDomains = controls
     .filter(isControlEconomicallyRelevant)
     .filter((control) => isKnownRequired(control.status))
-    .filter((control) => controlBinding(control))
+    .filter((control) => controlBinding(control, provenNullShareDeploymentBound(facts, control)))
     .flatMap((control) => control.failureDomains);
   const failureDomains = canonicalDomains([
     ...bindingControlFailureDomains,
@@ -192,7 +192,10 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       !component.binding && component.score !== null && component.effectiveScoringWeight > 0 &&
       component.controlKeys.length > 0 && component.controlKeys.every((key) => {
         const control = controlsByKey.get(key);
-        return control?.economicLossScope === "deployment" && control.materialSupplyShare !== null;
+        if (control?.economicLossScope !== "deployment") return false;
+        if (control.materialSupplyShare !== null) return true;
+        const bound = provenNullShareDeploymentBound(facts, control);
+        return bound !== null && bound < materialShareThreshold;
       })));
   const score = critical
     ? null
@@ -784,7 +787,7 @@ function normalizeControlComponents(
       .filter(
         (control) =>
           control.economicLossScope === "deployment" &&
-          !controlBinding(control),
+          !controlBinding(control, provenNullShareDeploymentBound(facts, control)),
       )
       .map((control) => control.controlKey),
   ]);

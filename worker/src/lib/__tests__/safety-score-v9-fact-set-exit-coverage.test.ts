@@ -259,6 +259,271 @@ describe("configured redemption channel census", () => {
       getConfig.mockRestore();
     }
   });
+
+  function compileUnavailableChannel(
+    overrideConfig: RedemptionBackstopConfig,
+    options?: {
+      assetId?: string;
+      atClockSec?: number;
+      withOutputPeg?: boolean;
+      staleOutputPeg?: boolean;
+      liveDirectMissingCapacity?: boolean;
+    },
+  ) {
+    const assetId = options?.assetId ?? "alpha";
+    const atClockSec = options?.atClockSec ?? clockSec;
+    const draft = exactFixedInput({ assetId, clockSec: atClockSec });
+    draft.dexLiqMap[assetId]!.exitRouteObservations = [];
+    draft.dexLiqMap[assetId]!.exitRouteObservationCoverage = {
+      status: "populated", capabilityMatrixVersion: DEX_ROUTE_CAPABILITY_MATRIX_VERSION,
+      retainedPoolCount: 0, observationCount: 0, scoreEligibleObservationCount: 0,
+      scoreEligiblePoolCount: 0, unsupportedPoolCount: 0, evidenceCounts: {}, unsupportedReasons: {},
+    };
+    if (options?.withOutputPeg !== false) {
+      const outputObservedAt = options?.staleOutputPeg
+        ? atClockSec - 400 * 86_400
+        : atClockSec - 60;
+      draft.pegDataById["usdc-circle"] = {
+        ...draft.pegDataById[assetId]!,
+        id: "usdc-circle",
+        symbol: "USDC",
+        pegCurrency: "USD",
+        currentDeviationBps: 0,
+        priceObservedAt: outputObservedAt,
+        priceUpdatedAt: outputObservedAt,
+      };
+    }
+    if (options?.liveDirectMissingCapacity) {
+      draft.redemptionBackstopMap[assetId] = {
+        ...makeSupplyFullRedemption({ stablecoinId: assetId, resolutionState: "missing-capacity", capacityProfile: undefined, updatedAt: atClockSec }),
+        provider: "reserve-sync-metadata",
+        capacityBasis: "live-direct-telemetry",
+        routeStatus: "open",
+      };
+      draft.redemptionGenerationId = "redemption:live-direct-missing";
+      draft.redemptionStale = false;
+      draft.inputFreshness.redemptionBackstops = { updatedAt: atClockSec, ageSeconds: 0, stale: false };
+    }
+    const fixed = rebuildFixed(draft);
+    const reviewed = structuredClone(extension({ assetId, clockSec: atClockSec, registryFingerprint: fixed.registryFingerprint }));
+    reviewed.assets[0]!.routeReviews = [];
+    const getConfig = vi.spyOn(redemptionBackstops, "getRedemptionBackstopConfig").mockReturnValue(overrideConfig);
+    try {
+      const factSet = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed);
+      const asset = factSet.assets[0]!;
+      const route = asset.exitRoutes.find((candidate) => candidate.lane === "redemption")!;
+      const evaluated = evaluateV9FactSet(factSet, V9_CANDIDATE_POLICY_V1).assets[0]!;
+      return { asset, route, evaluated };
+    } finally {
+      getConfig.mockRestore();
+    }
+  }
+
+  it("projects reviewed, sourced, current non-capacity terms onto an unavailable rail while keeping capacity and measurement confidence unknown", () => {
+    const sourcedConfig: RedemptionBackstopConfig = {
+      routeFamily: "stablecoin-redeem",
+      accessModel: "permissionless-onchain",
+      holderEligibility: "any-holder",
+      executionModel: "deterministic-onchain",
+      settlementModel: "atomic",
+      outputAssetType: "stable-single",
+      outputAssets: ["usdc-circle"],
+      capacityModel: { kind: "unquantified" },
+      costModel: fixedFee(4900, "Fixed 4,900 bps discount"),
+      reviewedAt: "2026-10-03",
+      docs: [{ label: "Verified contract and terms", url: "https://example.com/terms", supports: ["route", "access", "settlement", "fees"] }],
+      v9RouteReviewTerms: {
+        scoringDisposition: "bounded-terms-gap",
+        missingScoringFields: ["capacity"],
+        rationale: "Payout, access, atomic settlement, and fixed rate are verified; raw capacity is unquantified.",
+        reviewedAt: "2026-10-03",
+        docs: [{ label: "Verified contract and terms", url: "https://example.com/terms", supports: ["route", "access", "settlement", "fees"] }],
+      },
+    };
+    const { route, evaluated } = compileUnavailableChannel(sourcedConfig);
+    expect(route).toMatchObject({
+      holderAccess: "permissionless",
+      executionModel: "deterministic",
+      executionCertainty: "unknown",
+      modelConfidence: "unknown",
+      observationConfidence: "unknown",
+      capacityEvidenceTier: "unknown",
+      settlementModel: "atomic",
+      settlementSlaSec: 0,
+      scoreEligible: false,
+      coverageClass: "diagnostic",
+      request: null,
+      capacityCurve: [],
+      output: {
+        status: { observationState: "known" },
+        kind: "tracked-stablecoin",
+        assetKeys: ["usdc-circle"],
+      },
+    });
+    expect(route.output.valuation).not.toBeNull();
+    expect(route.factorStatuses.access?.observationState).toBe("known");
+    expect(route.factorStatuses.holderEligibility?.observationState).toBe("known");
+    expect(route.factorStatuses.settlement?.observationState).toBe("known");
+    expect(route.factorStatuses.cost?.observationState).toBe("known");
+    expect(route.factorStatuses.output?.observationState).toBe("known");
+    expect(route.factorStatuses.capacity?.observationState).toBe("missing");
+    expect(route.factorStatuses.capacityEvidenceTier?.observationState).toBe("missing");
+    expect(route.factorStatuses.observationConfidence?.observationState).toBe("missing");
+    expect(route.factorStatuses.executionConfidence?.observationState).toBe("missing");
+    expect(evaluated.exit.score).toBe(50);
+    expect(evaluated.exit.primaryRouteKey).toBeNull();
+    expect(evaluated.exit.reasons).not.toContain("unresolved-exit-output");
+    expect(evaluated.exit.reasons).toContain("missing-runtime-route-evidence");
+  });
+
+  it("projects reviewed settlementDelaySec, publishedFeeSchedule, and non-rejected terms evidence on live-direct missing-capacity rails", () => {
+    const scheduledConfig: RedemptionBackstopConfig = {
+      routeFamily: "queue-redeem",
+      accessModel: "whitelisted-onchain",
+      holderEligibility: "whitelisted-primary",
+      executionModel: "rules-based-nav",
+      settlementModel: "queued",
+      outputAssetType: "stable-single",
+      outputAssets: ["usdc-circle"],
+      capacityModel: { kind: "reserve-sync-metadata", requiredOutputAssetKeys: ["usdc-circle"] },
+      costModel: { kind: "dynamic-or-unclear", confidence: "formula", feeModelKind: "documented-variable", feeBpsMin: 0, feeBpsMax: 100 },
+      v9RouteCostTerms: {
+        feeBpsMin: 0,
+        feeBpsMax: 100,
+        publishedFeeSchedule: {
+          reviewedAt: "2026-10-03",
+          reviewer: "test-review",
+          rationale: "On-chain cap bounds redemption fee at 100 bps.",
+          docs: [{ label: "Fee cap", url: "https://example.com/fees", supports: ["fees"] }],
+        },
+      },
+      v9RouteReviewTerms: {
+        settlementDelaySec: 259_200,
+        minRedeemUsd: 10_000,
+        reviewedAt: "2026-10-03",
+        docs: [{ label: "Queue SLA", url: "https://example.com/sla", supports: ["settlement"] }],
+      },
+      reviewedAt: "2026-10-03",
+      docs: [{ label: "Protocol docs", url: "https://example.com/docs", supports: ["route", "access"] }],
+    };
+    const { asset, route, evaluated } = compileUnavailableChannel(scheduledConfig, { liveDirectMissingCapacity: true });
+    expect(route).toMatchObject({
+      holderAccess: "allowlisted",
+      executionModel: "queued",
+      settlementModel: "queued",
+      settlementSlaSec: 259_200,
+      minRedeemUsd: 10_000,
+      scoreEligible: false,
+      coverageClass: "diagnostic",
+    });
+    expect(route.factorStatuses.access?.observationState).toBe("known");
+    expect(route.factorStatuses.holderEligibility?.observationState).toBe("known");
+    expect(route.factorStatuses.settlement?.observationState).toBe("known");
+    expect(route.factorStatuses.cost?.observationState).toBe("known");
+    expect(route.factorStatuses.output?.observationState).toBe("known");
+    expect(route.factorStatuses.capacity?.observationState).toBe("missing");
+    // Known static factors must cite the observed terms witness, never the rejected telemetry record.
+    for (const key of ["access", "holderEligibility", "settlement", "cost"] as const) {
+      const refs = route.factorStatuses[key]!.evidenceRefIds;
+      expect(refs).toEqual(["alpha:redemption-configured-channel"]);
+      expect(asset.evidence.find((e) => e.evidenceId === refs[0])?.disposition).toBe("observed");
+    }
+    expect(evaluated.exit.primaryRouteKey).toBeNull();
+  });
+
+  it("fails closed when terms are stale, unsourced, unpriced, explicitly missing, unknown-eligibility, collateral, or non-atomic without SLA", () => {
+    const baseSourced: RedemptionBackstopConfig = {
+      routeFamily: "stablecoin-redeem",
+      accessModel: "permissionless-onchain",
+      holderEligibility: "any-holder",
+      executionModel: "deterministic-onchain",
+      settlementModel: "atomic",
+      outputAssetType: "stable-single",
+      outputAssets: ["usdc-circle"],
+      capacityModel: { kind: "unquantified" },
+      costModel: fixedFee(25),
+      reviewedAt: "2026-10-03",
+      docs: [{ label: "Terms", url: "https://example.com/terms", supports: ["route", "access", "settlement", "fees"] }],
+    };
+
+    // 1. Stale config (> 365d): census witness stays diagnostic, all static terms stay unknown
+    const stale = compileUnavailableChannel(baseSourced, {
+      atClockSec: Date.parse("2027-10-05T00:00:00Z") / 1_000,
+    });
+    expect(stale.route.holderAccess).toBe("unknown");
+    expect(stale.route.settlementSlaSec).toBeNull();
+    expect(stale.route.output.status.observationState).toBe("missing");
+    expect(stale.route.factorStatuses.access?.observationState).toBe("missing");
+    expect(stale.route.factorStatuses.cost?.observationState).toBe("bounded-unknown");
+    expect(stale.route.factorStatuses.settlement?.observationState).toBe("missing");
+
+    // 2. Unsourced factors (only supports: ["route"]): access, settlement, cost stay unknown
+    const unsourced = compileUnavailableChannel({
+      ...baseSourced,
+      docs: [{ label: "Route only", url: "https://example.com/route", supports: ["route"] }],
+    });
+    expect(unsourced.route.holderAccess).toBe("unknown");
+    expect(unsourced.route.settlementSlaSec).toBeNull();
+    expect(unsourced.route.factorStatuses.access?.observationState).toBe("missing");
+    expect(unsourced.route.factorStatuses.holderEligibility?.observationState).toBe("missing");
+    expect(unsourced.route.factorStatuses.settlement?.observationState).toBe("missing");
+    expect(unsourced.route.factorStatuses.cost?.observationState).toBe("bounded-unknown");
+
+    // 3. Explicit holderEligibility: "unknown" stays unknown even on permissionless-onchain
+    const unknownElig = compileUnavailableChannel({
+      ...baseSourced,
+      holderEligibility: "unknown",
+    });
+    expect(unknownElig.route.holderAccess).toBe("unknown");
+    expect(unknownElig.route.factorStatuses.access?.observationState).toBe("missing");
+    expect(unknownElig.route.factorStatuses.holderEligibility?.observationState).toBe("missing");
+
+    // 4. Explicit missingScoringFields overrides static fee and settlement
+    const explicitGap = compileUnavailableChannel({
+      ...baseSourced,
+      v9RouteReviewTerms: {
+        scoringDisposition: "bounded-terms-gap",
+        missingScoringFields: ["capacity", "cost", "settlement"],
+        rationale: "Legacy fixed fee and atomic settlement are not established for the current rail.",
+        reviewedAt: "2026-10-03",
+        docs: [{ label: "Review", url: "https://example.com/review", supports: ["route"] }],
+      },
+    });
+    expect(explicitGap.route.settlementSlaSec).toBeNull();
+    expect(explicitGap.route.factorStatuses.settlement?.observationState).toBe("missing");
+    expect(explicitGap.route.factorStatuses.cost?.observationState).toBe("bounded-unknown");
+    expect(explicitGap.route.factorStatuses.access?.observationState).toBe("known");
+
+    // 5. Same-day default without explicit reviewed SLA stays unknown
+    const sameDayNoSla = compileUnavailableChannel({
+      ...baseSourced,
+      routeFamily: "offchain-issuer",
+      accessModel: "issuer-api",
+      holderEligibility: "verified-customer",
+      executionModel: "rules-based-nav",
+      settlementModel: "same-day",
+    });
+    expect(sameDayNoSla.route.settlementSlaSec).toBeNull();
+    expect(sameDayNoSla.route.factorStatuses.settlement?.observationState).toBe("missing");
+
+    // 6. Unpriced or stale tracked output stays unknown
+    const unpricedOut = compileUnavailableChannel(baseSourced, { withOutputPeg: false });
+    expect(unpricedOut.route.output.status.observationState).toBe("missing");
+    expect(unpricedOut.route.output.valuation).toBeNull();
+    const staleOut = compileUnavailableChannel(baseSourced, { staleOutputPeg: true });
+    expect(staleOut.route.output.status.observationState).toBe("missing");
+    expect(staleOut.route.output.valuation).toBeNull();
+
+    // 7. Collateral output never synthesizes USD-normalized valuation without a runtime observation
+    const collateralOut = compileUnavailableChannel({
+      ...baseSourced,
+      routeFamily: "collateral-redeem",
+      outputAssetType: "mixed-collateral",
+      outputAssets: undefined,
+    });
+    expect(collateralOut.route.output.status.observationState).toBe("missing");
+    expect(collateralOut.route.output.valuation).toBeNull();
+  });
 });
 
 describe("reviewed execution-model gap expiry", () => {

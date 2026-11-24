@@ -1047,12 +1047,12 @@ describe("escrow and unmatched-supply evidence log citations (#1683)", () => {
     expect(row("susde-ethena").reasonCodes.filter((code) => code.includes("bridge-supply"))).toEqual([]);
   });
 
-  it("keeps sUSN's probe at ethereum plus eight probed representation legs", () => {
+  it("keeps sUSN's probe at ethereum plus ten probed representation legs (with Sui in escrow residual)", () => {
     // The probe roster is the reviewed plan matched against the catalog, not
     // the catalog's contracts list alone; pin what the probe actually reads.
     const probe = selectCuratedAggregateOnchainSupplyProbeContracts(ACTIVE_META_BY_ID.get("susn-noon")!)!;
     expect(probe.map(({ contract }) => contract.chain)).toEqual([
-      "ethereum", "zksync", "sophon", "starknet", "hyperevm", "base", "citrea", "berachain", "tac",
+      "ethereum", "zksync", "sophon", "starknet", "hyperevm", "base", "citrea", "berachain", "tac", "solana", "bsc",
     ]);
     expect(CURATED_AGGREGATE_ESCROW_RESIDUALS["susn-noon"]).toEqual({
       escrowAddress: "0xe24a3dc889621612422a64e6388927901608b91d",
@@ -1216,9 +1216,10 @@ describe("escrow and unmatched-supply evidence log citations (#1683)", () => {
     expect(byKey.get("ambiguous-chain:alpha:base")).toMatchObject({ reviewState: "unmatched", supplyUsd: 4.5 });
     expect(review.unknownRouteSupplyShare).toBeCloseTo(0.045, 9);
     expect(review.unreviewedRouteSupplyShare).toBe(0);
-    // …yet appears in neither diagnostic list, while the at-bar Arbitrum and
-    // Ethereum bounds stay required under typed causes and the only unproven
-    // join is the sub-bar Base bound, whose control cannot carry its share.
+    // …yet appears in neither diagnostic list, while the at-bar Ethereum bound
+    // stays required under its typed cause, single-route Arbitrum keeps its
+    // exact 4% share, and the only unproven join is the sub-bar Base bound,
+    // whose control cannot carry its share.
     expect(adapted.review.diagnostics?.unmatchedRowIdentities).toEqual([]);
     expect(adapted.review.diagnostics?.unprovenRouteJoins).toEqual([{
       deploymentRouteKey: `base:${base}`,
@@ -1230,7 +1231,6 @@ describe("escrow and unmatched-supply evidence log citations (#1683)", () => {
       joinedControlSupplyShare: null,
     }]);
     expect(adapted.review.diagnostics?.deploymentSupplyCensus).toEqual([
-      { deploymentRouteKey: `arbitrum:${arb}`, code: V9_DEPLOYMENT_SUPPLY_SHARE_REQUIRES_REVIEWED_ESCROW },
       { deploymentRouteKey: `ethereum:${eth}`, code: V9_DEPLOYMENT_SUPPLY_SHARE_REQUIRES_REVIEWED_ESCROW },
     ]);
   });

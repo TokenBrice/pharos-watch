@@ -674,6 +674,7 @@ const V9EvidencePolicySchema = z
         reviewedReserveClassificationMaxAgeSec: z.number().int().positive(),
         reviewedReserveCompositionMaxAgeSec: z.number().int().positive(),
         reviewedReserveCompositionGraceSec: z.number().int().positive(),
+        regulatorPeriodicFilingCompositionMaxAgeSec: z.number().int().positive(),
         onchainObservationMaxAgeSec: z.number().int().positive(),
         standingStructureMaxAgeSec: z.number().int().positive(),
       })

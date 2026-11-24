@@ -132,13 +132,13 @@ describe("deployment supply census admission", () => {
     ]);
   });
 
-  it("documents 0.009999 and requires the datum at exactly 0.01", () => {
+  it("admits 0.099999 as an upper bound and requires the datum at exactly 0.10", () => {
     const { review: below } = review(packet({
-      deployments: [row(ETH_ROUTE, 0.009999), row(ETH_SECOND_ROUTE, 0), row(BASE_ROUTE, 0.001)],
+      deployments: [row(ETH_ROUTE, 0.099999), row(ETH_SECOND_ROUTE, 0), row(BASE_ROUTE, 0.05)],
       conservation: {
         aggregateSupplyUsd: AGGREGATE_USD,
-        measuredSupplyUsd: 0.9999 + 0 + 0.1,
-        measuredShareSum: 0.009999 + 0 + 0.001,
+        measuredSupplyUsd: 9.9999 + 0 + 5,
+        measuredShareSum: 0.099999 + 0 + 0.05,
         relativeTolerance: 1e-12,
         absoluteToleranceUsd: 0.000001,
         rosterComplete: true,
@@ -146,15 +146,18 @@ describe("deployment supply census admission", () => {
       },
     }));
     const belowRows = new Map(below!.selectedBridgeRoutes.map((route) => [route.deploymentRouteKey, route]));
-    expect(belowRows.get(ETH_ROUTE)?.supplyShare).toBe(0.009999);
-    expect(belowRows.get(ETH_ROUTE)?.supplyShare).toBeLessThan(0.01);
+    expect(belowRows.get(ETH_ROUTE)).toMatchObject({ evidenceKind: "upper-bound", supplyShare: 0.099999 });
+    expect(belowRows.get(ETH_ROUTE)?.supplyShare).toBeLessThan(0.1);
+    expect(belowRows.get(BASE_ROUTE)).toMatchObject({ evidenceKind: "upper-bound", supplyShare: 0.05 });
+    expect(safetyScoreV9RouteSupplyShare(below, ETH_ROUTE)).toBeNull();
+    expect(safetyScoreV9RouteSupplyShare(below, BASE_ROUTE)).toBeNull();
 
     const { review: atBar, censusDiagnostics: atBarDiagnostics } = review(packet({
-      deployments: [row(ETH_ROUTE, 0.01), row(ETH_SECOND_ROUTE, 0), row(BASE_ROUTE, 0.001)],
+      deployments: [row(ETH_ROUTE, 0.1), row(ETH_SECOND_ROUTE, 0), row(BASE_ROUTE, 0.001)],
       conservation: {
         aggregateSupplyUsd: AGGREGATE_USD,
-        measuredSupplyUsd: 1 + 0 + 0.1,
-        measuredShareSum: 0.011,
+        measuredSupplyUsd: 10 + 0 + 0.1,
+        measuredShareSum: 0.101,
         relativeTolerance: 1e-12,
         absoluteToleranceUsd: 0.000001,
         rosterComplete: true,
@@ -167,6 +170,57 @@ describe("deployment supply census admission", () => {
       deploymentRouteKey: ETH_ROUTE,
       code: V9_DEPLOYMENT_SUPPLY_SHARE_REQUIRES_REVIEWED_ESCROW,
     });
+  });
+
+  it("keeps an exact single-route provider share when a sub-material census bound is no tighter", () => {
+    const base = fixedInput(packet({
+      deployments: [row(ETH_ROUTE, 0.05), row(ETH_SECOND_ROUTE, 0.91), row(BASE_ROUTE, 0.04)],
+      conservation: {
+        aggregateSupplyUsd: AGGREGATE_USD,
+        measuredSupplyUsd: 100,
+        measuredShareSum: 1,
+        relativeTolerance: 1e-12,
+        absoluteToleranceUsd: 0.000001,
+        rosterComplete: true,
+        conserved: true,
+      },
+    }));
+    const input = {
+      ...base,
+      chainCirculatingById: { [ASSET_ID]: { ethereum: { current: 96 }, base: { current: 4 } } },
+    } as SafetyScoreV9CompilerInput;
+    const { review: result } = buildSafetyScoreV9SupplyAdmission(input, ASSET_ID, profile());
+    const byKey = new Map(result!.selectedBridgeRoutes.map((route) => [route.deploymentRouteKey, route]));
+    // Multi-route ethereum admits the 5% upper bound and keeps the residual.
+    expect(byKey.get(ETH_ROUTE)).toMatchObject({ evidenceKind: "upper-bound", supplyShare: 0.05 });
+    expect(safetyScoreV9RouteSupplyShare(result, ETH_ROUTE)).toBeNull();
+    // Single-route base already has an exact 4% provider share, so a 4% upper bound does not downgrade it.
+    expect(byKey.get(BASE_ROUTE)?.evidenceKind).toBeUndefined();
+    expect(safetyScoreV9RouteSupplyShare(result, BASE_ROUTE)).toBeCloseTo(0.04, 12);
+  });
+
+  it("rejects census admission when provider chain rows do not conserve to aggregate supply", () => {
+    const base = fixedInput(packet({
+      deployments: [row(ETH_ROUTE, 0.05), row(ETH_SECOND_ROUTE, 0.37), row(BASE_ROUTE, 0.001)],
+      conservation: {
+        aggregateSupplyUsd: AGGREGATE_USD,
+        measuredSupplyUsd: 42.1,
+        measuredShareSum: 0.421,
+        relativeTolerance: 1e-12,
+        absoluteToleranceUsd: 0.000001,
+        rosterComplete: true,
+        conserved: true,
+      },
+    }));
+    const input = {
+      ...base,
+      chainCirculatingById: { [ASSET_ID]: { ethereum: { current: 90 }, base: { current: 30 } } },
+    } as SafetyScoreV9CompilerInput;
+    const { review: result, censusDiagnostics } = buildSafetyScoreV9SupplyAdmission(input, ASSET_ID, profile());
+    expect(result!.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
+    expect(censusDiagnostics).toEqual([
+      { deploymentRouteKey: null, code: "census-rejected:conservation-breach" },
+    ]);
   });
 
   it("keeps a bound out of every control share join, deployment or global scope", () => {

@@ -1,5 +1,7 @@
+import { resolveChainId } from "@shared/types/chain-identity";
 import { normalizeDeploymentId } from "@shared/types/deployment-id";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC, V9_SCOPED_QUESTION_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
+import { V9_AMBIGUOUS_CHAIN_ROUTE_PREFIX } from "@shared/lib/safety-score-v9/facts";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { compileReviewedMintControlScopes, resolveV1005MintAuthorityProfile, partialControlScopeSemantics, weightedReviewIsCurrent, sortV1005ProcessDiagnostics, v1005ProofIsClosed, v1005ReviewIsCurrent, type V9ReviewedControlProjection } from "@shared/lib/safety-score-v9/control-scope";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
@@ -165,10 +167,19 @@ interface MintControlDeploymentScope {
   materialSupplyShare: number;
 }
 
+function deploymentChainId(deploymentKey: string): string | null {
+  const separator = deploymentKey.indexOf(":");
+  if (separator <= 0) return null;
+  return resolveChainId(deploymentKey.slice(0, separator));
+}
+
 /**
- * Resolve a reviewed deployment-local authority onto a complete liability
- * partition. Durable native issuance reaches the root claim, not just the
- * supply currently residing on the minter's chain.
+ * Resolve a reviewed deployment-local authority onto a reconciled liability
+ * partition. Each referenced deployment must match one exact `selected-reviewed`
+ * row on the same canonical chain (never `upper-bound`, `selected-unresolved`,
+ * `unmatched`, or a chain carrying an ambiguous residual), even when unrelated
+ * rows in the partition remain unresolved. Durable native issuance reaches the
+ * root claim, not just the supply currently residing on the minter's chain.
  */
 function resolveMintControlDeploymentScopes(
   control: MintAuthorityControl,
@@ -181,25 +192,52 @@ function resolveMintControlDeploymentScopes(
   if (supplyReview === null || supplyReview.selectedBridgeRoutes.length === 0) return null;
 
   const rows = supplyReview.selectedBridgeRoutes;
-  const totalShare = rows.reduce((sum, row) => sum + row.supplyShare, 0);
-  const completePartition =
-    rows.every(
-      (row) =>
-        row.reviewState === "selected-reviewed" &&
-        Number.isFinite(row.supplyShare) &&
-        row.supplyShare >= 0 &&
-        row.supplyShare <= 1,
-    ) &&
+  let reviewedShare = 0;
+  let unreviewedShare = 0;
+  let unmatchedShare = 0;
+  const rowByDeployment = new Map<string, (typeof rows)[number]>();
+  const duplicateDeployments = new Set<string>();
+  const ambiguousChains = new Set<string>();
+  for (const row of rows) {
+    if (!Number.isFinite(row.supplyShare) || row.supplyShare < 0 || row.supplyShare > 1) return null;
+    if (row.reviewState === "selected-reviewed") reviewedShare += row.supplyShare;
+    else if (row.reviewState === "selected-unresolved") unreviewedShare += row.supplyShare;
+    else if (row.reviewState === "unmatched") unmatchedShare += row.supplyShare;
+    else return null;
+    if (rowByDeployment.has(row.deploymentRouteKey)) duplicateDeployments.add(row.deploymentRouteKey);
+    else rowByDeployment.set(row.deploymentRouteKey, row);
+    if (row.deploymentRouteKey.startsWith(V9_AMBIGUOUS_CHAIN_ROUTE_PREFIX)) {
+      const lastColon = row.deploymentRouteKey.lastIndexOf(":");
+      const chain = lastColon > 0 ? resolveChainId(row.deploymentRouteKey.slice(lastColon + 1)) : null;
+      if (chain !== null) ambiguousChains.add(chain);
+    }
+  }
+  const totalShare = reviewedShare + unreviewedShare + unmatchedShare;
+  const reconciledPartition =
+    Number.isFinite(supplyReview.selectedRouteSupplyShare) &&
+    Number.isFinite(supplyReview.unreviewedRouteSupplyShare) &&
+    Number.isFinite(supplyReview.unknownRouteSupplyShare) &&
     Math.abs(totalShare - 1) <= MINT_CONTROL_SUPPLY_RECONCILIATION_TOLERANCE &&
-    Math.abs(supplyReview.selectedRouteSupplyShare - 1) <= MINT_CONTROL_SUPPLY_RECONCILIATION_TOLERANCE &&
-    supplyReview.unknownRouteSupplyShare <= MINT_CONTROL_SUPPLY_RECONCILIATION_TOLERANCE &&
-    supplyReview.unreviewedRouteSupplyShare <= MINT_CONTROL_SUPPLY_RECONCILIATION_TOLERANCE;
-  if (!completePartition) return null;
+    Math.abs(reviewedShare - supplyReview.selectedRouteSupplyShare) <= MINT_CONTROL_SUPPLY_RECONCILIATION_TOLERANCE &&
+    Math.abs(unreviewedShare - supplyReview.unreviewedRouteSupplyShare) <= MINT_CONTROL_SUPPLY_RECONCILIATION_TOLERANCE &&
+    Math.abs(unmatchedShare - supplyReview.unknownRouteSupplyShare) <= MINT_CONTROL_SUPPLY_RECONCILIATION_TOLERANCE;
+  if (!reconciledPartition) return null;
 
-  const rowByDeployment = new Map(rows.map((row) => [row.deploymentRouteKey, row]));
-  const matched = deploymentRefs.map((deploymentKey) => rowByDeployment.get(deploymentKey));
+  const matched = deploymentRefs.map((deploymentKey) => {
+    if (duplicateDeployments.has(deploymentKey)) return undefined;
+    const row = rowByDeployment.get(deploymentKey);
+    if (row === undefined || row.reviewState !== "selected-reviewed" || row.evidenceKind === "upper-bound") {
+      return undefined;
+    }
+    const deploymentChain = deploymentChainId(deploymentKey);
+    const rowChain = deploymentChainId(row.deploymentRouteKey);
+    if (deploymentChain === null || rowChain !== deploymentChain || ambiguousChains.has(deploymentChain)) {
+      return undefined;
+    }
+    return row;
+  });
   if (matched.some((row) => row === undefined)) return null;
-  if (rootIssuance && matched.some((row) => row?.reviewedRouteKind === "native")) return null;
+  if (rootIssuance && matched.some((row) => row!.reviewedRouteKind !== "controlled")) return null;
   // Reaching every reconciled deployment is economically asset-wide even when
   // the review happens to enumerate those deployments one by one.
   if (deploymentRefs.length === rows.length) return null;

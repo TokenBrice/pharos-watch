@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "10.52",
+  "releaseVersion": "10.53",
   "semantic": {
     "unknownQuality": {
       "backing": { "C": 35, "U": 50 },
@@ -334,7 +334,8 @@
         "reviewedReserveCompositionMaxAgeSec": 2678400,
         "onchainObservationMaxAgeSec": 17280,
         "standingStructureMaxAgeSec": 7776000,
-        "reviewedReserveCompositionGraceSec": 604800
+        "reviewedReserveCompositionGraceSec": 604800,
+        "regulatorPeriodicFilingCompositionMaxAgeSec": 11664000
       }
     },
     "materiality": {

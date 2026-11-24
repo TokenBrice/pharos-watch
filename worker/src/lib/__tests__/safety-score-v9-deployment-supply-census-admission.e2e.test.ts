@@ -348,9 +348,10 @@ describe("v10.38 deployment supply census admission (end to end)", () => {
     expect(evaluated.reasons.map((reason) => reason.code)).toContain("runtime-bridge-materiality-unavailable");
   });
 
-  it("requires the datum at the strict 1% bar recorded by the boundary generation", () => {
+  it("proves 1% immaterial for control materiality while keeping the 1% documentation bar strict", () => {
     expect(SafetyScoreV9DeploymentSupplyCensusSchema.parse(atBarPacket)).toEqual(atBarPacket);
     expect(atBarPacket.deployments[0]!.shareUpper).toBeGreaterThanOrEqual(0.01);
+    expect(atBarPacket.deployments[0]!.shareUpper).toBeLessThan(0.1);
 
     const { review: admitted, censusDiagnostics } = buildSafetyScoreV9SupplyAdmission(
       fixedInput({
@@ -364,18 +365,89 @@ describe("v10.38 deployment supply census admission (end to end)", () => {
       profileWithRoutes([BOUNDARY_ROUTE]),
     );
     const review = admitted!;
-    // No reviewed escrow rule exists, so ≥1% never becomes a share or a bound.
-    expect(review.selectedBridgeRoutes.some((row) => row.evidenceKind === "upper-bound")).toBe(false);
-    expect(censusDiagnostics).toContainEqual({
+    // 1% <= shareUpper < 10%: admitted as an immateriality upper bound, never a share.
+    expect(review.selectedBridgeRoutes.find((row) => row.deploymentRouteKey === BOUNDARY_ROUTE)).toMatchObject({
+      evidenceKind: "upper-bound",
+      reviewState: "selected-reviewed",
+    });
+    expect(safetyScoreV9RouteSupplyShare(review, BOUNDARY_ROUTE)).toBeNull();
+    expect(censusDiagnostics).toEqual([]);
+
+    const { control, facts } = factsFromReview(review);
+    expect(control.materialSupplyShare).toBeNull();
+    expect(provenNullShareDeploymentBound(facts, control)).toBeCloseTo(atBarPacket.deployments[0]!.shareUpper, 12);
+    // Documentation class keeps its strict 1% bar: 1% is NOT classified as documentation.
+    const gap = materialityGap(control.controlKey);
+    expect(classifyV9DocumentationGap(V9_CANDIDATE_POLICY_V1, documentationFacts(facts, gap), gap)).toBeNull();
+
+    // Control materiality uses the 10% deployment materiality bar: the bound proves
+    // the deployment immaterial and non-binding without becoming a published share.
+    const evaluated = evaluateV9EconomicControl(makeEconomicControlArgs({
+      facts,
+      bridge: { status: requiredKnown("bridge"), routes: [{ controlKey: control.controlKey, tier: "issuer-native-burn-mint" }] },
+    }));
+    expect(evaluated.reasons.map((reason) => reason.code)).not.toContain("runtime-bridge-materiality-unavailable");
+    expect(evaluated.reasons.map((reason) => reason.code)).not.toContain("selected-bridge-route-unresolved");
+  });
+
+  it("requires the datum at the 10% materiality bar and admits 9.99% only as an upper bound", () => {
+    const makeThresholdPacket = (shareUpper: number) =>
+      packetFromRows([{
+        ...boundaryRequiredRow,
+        supplyUsdUpper: shareUpper * 1_000_000_000,
+        shareUpper,
+      }], {
+        aggregateSupplyUsd: 1_000_000_000,
+        observedAtSec: BOUNDARY_CLOCK_SEC,
+      });
+
+    const subMaterial = buildSafetyScoreV9SupplyAdmission(
+      fixedInput({
+        assetId: "census-boundary",
+        clockSec: BOUNDARY_CLOCK_SEC,
+        aggregateUsd: 1_000_000_000,
+        chains: { ethereum: 1_000_000_000 },
+        packet: makeThresholdPacket(0.0999),
+      }),
+      "census-boundary",
+      profileWithRoutes([BOUNDARY_ROUTE]),
+    );
+    expect(subMaterial.censusDiagnostics).toEqual([]);
+    expect(safetyScoreV9RouteSupplyShare(subMaterial.review, BOUNDARY_ROUTE)).toBeNull();
+    const subFacts = factsFromReview(subMaterial.review!);
+    const subEval = evaluateV9EconomicControl(makeEconomicControlArgs({
+      facts: subFacts.facts,
+      bridge: { status: requiredKnown("bridge"), routes: [{ controlKey: subFacts.control.controlKey, tier: "external-lock-mint" }] },
+    }));
+    expect(subEval.reasons.map((reason) => reason.code)).not.toContain("runtime-bridge-materiality-unavailable");
+    expect(subEval.structuralFailures).toContainEqual(expect.objectContaining({
+      kind: "peripheral-bridge",
+      binding: false,
+      materialSharePct: null,
+    }));
+
+    const atMaterial = buildSafetyScoreV9SupplyAdmission(
+      fixedInput({
+        assetId: "census-boundary",
+        clockSec: BOUNDARY_CLOCK_SEC,
+        aggregateUsd: 1_000_000_000,
+        chains: { ethereum: 1_000_000_000 },
+        packet: makeThresholdPacket(0.1),
+      }),
+      "census-boundary",
+      profileWithRoutes([BOUNDARY_ROUTE]),
+    );
+    expect(atMaterial.review!.selectedBridgeRoutes.some((row) => row.evidenceKind === "upper-bound")).toBe(false);
+    expect(atMaterial.censusDiagnostics).toContainEqual({
       deploymentRouteKey: BOUNDARY_ROUTE,
       code: V9_DEPLOYMENT_SUPPLY_SHARE_REQUIRES_REVIEWED_ESCROW,
     });
-
-    const { control, facts } = factsFromReview(review);
-    expect(provenNullShareDeploymentBound(facts, control)).not.toBeNull();
-    expect(provenNullShareDeploymentBound(facts, control)!).toBeGreaterThanOrEqual(0.01);
-    const gap = materialityGap(control.controlKey);
-    expect(classifyV9DocumentationGap(V9_CANDIDATE_POLICY_V1, documentationFacts(facts, gap), gap)).toBeNull();
+    const atFacts = factsFromReview(atMaterial.review!);
+    const atEval = evaluateV9EconomicControl(makeEconomicControlArgs({
+      facts: atFacts.facts,
+      bridge: { status: requiredKnown("bridge"), routes: [{ controlKey: atFacts.control.controlKey, tier: "external-lock-mint" }] },
+    }));
+    expect(atEval.reasons.map((reason) => reason.code)).toContain("runtime-bridge-materiality-unavailable");
   });
 
   it("returns every deployment datum to required when the recorded bound is expired", () => {
@@ -410,33 +482,50 @@ describe("v10.38 deployment supply census admission (end to end)", () => {
     expect(expired).toEqual(current);
   });
 
-  it("never admits a recorded ≥1% generation as a share and keeps the ordinary lane", () => {
-    const input = fixedInput({
+  it("admits recorded <10% bounds when chains conserve to aggregate and rejects ≥10% or non-conserving chains", () => {
+    const profile = profileWithRoutes(recordedRows.map((row) => row.routeId));
+    expect(SafetyScoreV9DeploymentSupplyCensusSchema.parse(recordedPacket)).toEqual(recordedPacket);
+    const baseRow = recordedRows.find((row) => row.chainId === "base")!;
+    const ethRow = recordedRows.find((row) => row.chainId === "ethereum")!;
+    expect(baseRow.shareUpper).toBeGreaterThanOrEqual(0.01);
+    expect(baseRow.shareUpper).toBeLessThan(0.1);
+    expect(ethRow.shareUpper).toBeGreaterThanOrEqual(0.1);
+
+    // Conserved provider chains (55B + 20B = 75B aggregate): base (5.74% < 10%)
+    // is admitted as an upper bound (never a share), while ethereum (63.2% ≥ 10%)
+    // stays required under V9_DEPLOYMENT_SUPPLY_SHARE_REQUIRES_REVIEWED_ESCROW.
+    const conservedInput = fixedInput({
+      assetId: USDC_ASSET,
+      clockSec: RECORDED_CLOCK_SEC,
+      aggregateUsd: recordedGeneration.aggregateSupplyUsd,
+      chains: { ethereum: 55_000_000_000, base: 20_000_000_000 },
+      packet: recordedPacket,
+    });
+    const conserved = buildSafetyScoreV9SupplyAdmission(conservedInput, USDC_ASSET, profile);
+    expect(conserved.review!.selectedBridgeRoutes.find((row) => row.deploymentRouteKey === baseRow.routeId))
+      .toMatchObject({ evidenceKind: "upper-bound", reviewState: "selected-reviewed" });
+    expect(safetyScoreV9RouteSupplyShare(conserved.review, baseRow.routeId)).toBeNull();
+    expect(conserved.review!.selectedBridgeRoutes.some((row) =>
+      row.deploymentRouteKey === ethRow.routeId && row.evidenceKind === "upper-bound")).toBe(false);
+    expect(conserved.censusDiagnostics).toEqual([
+      { deploymentRouteKey: ethRow.routeId, code: V9_DEPLOYMENT_SUPPLY_SHARE_REQUIRES_REVIEWED_ESCROW },
+    ]);
+
+    // Non-conserving provider chains (100B + 20B = 120B ≠ 75B aggregate): fail
+    // closed with conservation-breach and preserve the ordinary lane verbatim.
+    const mismatchedInput = fixedInput({
       assetId: USDC_ASSET,
       clockSec: RECORDED_CLOCK_SEC,
       aggregateUsd: recordedGeneration.aggregateSupplyUsd,
       chains: recordedGeneration.chainSupplyUsdByChainId,
       packet: recordedPacket,
     });
-    const profile = profileWithRoutes(recordedRows.map((row) => row.routeId));
-    expect(SafetyScoreV9DeploymentSupplyCensusSchema.parse(recordedPacket)).toEqual(recordedPacket);
-    const withCensusAdmission = buildSafetyScoreV9SupplyAdmission(input, USDC_ASSET, profile);
+    const withCensusAdmission = buildSafetyScoreV9SupplyAdmission(mismatchedInput, USDC_ASSET, profile);
     const withCensus = withCensusAdmission.review!;
-    expect(recordedRows.every((row) => row.shareUpper >= 0.01)).toBe(true);
     expect(withCensus.selectedBridgeRoutes.some((row) => row.evidenceKind === "upper-bound")).toBe(false);
-    expect(withCensusAdmission.censusDiagnostics).toEqual(
-      recordedRows
-        .map((row) => row.routeId)
-        .sort()
-        .map((routeId) => ({ deploymentRouteKey: routeId, code: V9_DEPLOYMENT_SUPPLY_SHARE_REQUIRES_REVIEWED_ESCROW })),
-    );
-    for (const row of recordedRows) {
-      // Whatever the ordinary lane attributes, no census row is admitted.
-      expect(withCensus.selectedBridgeRoutes.some((candidate) => candidate.deploymentRouteKey === row.routeId &&
-        candidate.evidenceKind === "upper-bound")).toBe(false);
-    }
-    // The published partition is exactly the one the capture had before the
-    // census existed: a non-admitting packet only adds its reasoned band.
+    expect(withCensusAdmission.censusDiagnostics).toEqual([
+      { deploymentRouteKey: null, code: "census-rejected:conservation-breach" },
+    ]);
     const withoutCensus = buildSafetyScoreV9SupplyReview(
       fixedInput({
         assetId: USDC_ASSET,
@@ -524,12 +613,9 @@ describe("v10.38 deployment supply census admission (end to end)", () => {
     };
     expect(scoringSurface(replay.pipeline.candidate)).toEqual(scoringSurface(baseline.pipeline.candidate));
     const band = replay.pipeline.bridgeJoinDiagnostics.find((row) => row.assetId === USDC_ASSET);
-    expect(band?.deploymentSupplyCensus).toEqual(
-      recordedRows
-        .map((row) => row.routeId)
-        .sort()
-        .map((routeId) => ({ deploymentRouteKey: routeId, code: V9_DEPLOYMENT_SUPPLY_SHARE_REQUIRES_REVIEWED_ESCROW })),
-    );
+    expect(band?.deploymentSupplyCensus).toEqual([
+      { deploymentRouteKey: null, code: "census-rejected:conservation-breach" },
+    ]);
     expect(baseline.pipeline.bridgeJoinDiagnostics
       .find((row) => row.assetId === USDC_ASSET)?.deploymentSupplyCensus).toBeUndefined();
   });

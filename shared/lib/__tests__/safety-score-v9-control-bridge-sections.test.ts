@@ -187,4 +187,90 @@ describe("Safety Score v9 control bridge sections", () => {
       expect.objectContaining({ code: "runtime-bridge-materiality-unavailable", path: materialityPath }),
     );
   });
+
+  it("proves a null-share bridge deployment immaterial from a <10% census upper bound without publishing it as a share", () => {
+    const deploymentKey = "base:0x1111111111111111111111111111111111111111";
+    const control = bridgeControl("bridge:census-immaterial", {
+      deploymentKey,
+      materialSupplyShare: null,
+      failureDomains: [{ kind: "bridge-route", key: deploymentKey }],
+    });
+    const makeFacts = (boundShare: number, supplyStatus = requiredKnown("supply")) => ({
+      ...baseFacts([control]),
+      supply: makeSupplyPartition({
+        status: supplyStatus,
+        routes: [
+          {
+            deploymentRouteKey: "ethereum:0xnative",
+            supplyShare: 1 - boundShare - 0.01,
+            reviewState: "selected-reviewed",
+            reviewedRouteKind: "native",
+          },
+          {
+            deploymentRouteKey: deploymentKey,
+            supplyShare: boundShare,
+            reviewState: "selected-reviewed",
+            reviewedRouteKind: "controlled",
+            evidenceKind: "upper-bound",
+          },
+          {
+            deploymentRouteKey: "ambiguous-chain:fixture-asset:base",
+            supplyShare: 0.01,
+            reviewState: "unmatched",
+          },
+        ],
+      }),
+    });
+
+    // Sub-material (5% < 10%, >= 1%): clears materiality reasons, non-binding,
+    // excludes failure domains, and keeps materialSharePct / materialSupplyShare null.
+    const subMaterialFacts = makeFacts(0.05);
+    expect(provenNullShareDeploymentBound(subMaterialFacts, control)).toBeCloseTo(0.05, 12);
+    const subMaterial = evaluateV9EconomicControl(args({
+      facts: subMaterialFacts,
+      bridge: {
+        status: boundedUnknown("bridge"),
+        routes: [{ controlKey: control.controlKey, tier: "external-lock-mint" }],
+      },
+    }));
+    expect(subMaterial.reasons.map((reason) => reason.code)).not.toContain("runtime-bridge-materiality-unavailable");
+    expect(subMaterial.components.find((c) => c.controlKeys.includes(control.controlKey))?.binding).toBe(false);
+    expect(subMaterial.failureDomains.some((d) => d.key === deploymentKey)).toBe(false);
+    expect(subMaterial.structuralFailures).toContainEqual(expect.objectContaining({
+      kind: "peripheral-bridge",
+      binding: false,
+      materialSharePct: null,
+    }));
+    expect(subMaterial.controlFacts?.find((c) => c.controlKey === control.controlKey)?.materialSupplyShare).toBeNull();
+
+    // At threshold (10% >= 10%): fails closed with runtime-bridge-materiality-unavailable.
+    const atThresholdFacts = makeFacts(MATERIAL_SHARE_THRESHOLD);
+    const atThreshold = evaluateV9EconomicControl(args({
+      facts: atThresholdFacts,
+      bridge: {
+        status: requiredKnown("bridge"),
+        routes: [{ controlKey: control.controlKey, tier: "external-lock-mint" }],
+      },
+    }));
+    expect(atThreshold.reasons.map((reason) => reason.code)).toContain("runtime-bridge-materiality-unavailable");
+    expect(atThreshold.components.find((c) => c.controlKeys.includes(control.controlKey))?.binding).toBe(true);
+    expect(atThreshold.structuralFailures).toContainEqual(expect.objectContaining({
+      kind: "material-bridge",
+      binding: true,
+      materialSharePct: null,
+    }));
+
+    // Stale / non-known supply status: bound is ignored and materiality fails closed.
+    const staleFacts = makeFacts(0.05, boundedUnknown("supply"));
+    expect(provenNullShareDeploymentBound(staleFacts, control)).toBeNull();
+    const stale = evaluateV9EconomicControl(args({
+      facts: staleFacts,
+      bridge: {
+        status: requiredKnown("bridge"),
+        routes: [{ controlKey: control.controlKey, tier: "external-lock-mint" }],
+      },
+    }));
+    expect(stale.reasons.map((reason) => reason.code)).toContain("runtime-bridge-materiality-unavailable");
+    expect(stale.components.find((c) => c.controlKeys.includes(control.controlKey))?.binding).toBe(true);
+  });
 });

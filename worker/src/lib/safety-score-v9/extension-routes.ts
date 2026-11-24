@@ -289,7 +289,7 @@ function metalDeliveryReference(
   };
 }
 
-function buildOutputReview(
+export function buildOutputReview(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   observation: ExitRouteObservation,
   sourceGenerationId: string,
@@ -744,7 +744,9 @@ function buildSafetyScoreV9ComposedDexRoutes(
     .sort((left, right) => compareText(left.observation.routeId, right.observation.routeId));
 }
 
-function redemptionHolderAccess(entry: RedemptionBackstopEntry): RouteReview["holderAccess"] {
+export function redemptionHolderAccess(
+  entry: Pick<RedemptionBackstopEntry, "accessModel" | "holderEligibility">,
+): RouteReview["holderAccess"] {
   if (entry.accessModel === "permissionless-onchain") return "permissionless";
   if (entry.accessModel === "whitelisted-onchain" || entry.holderEligibility === "whitelisted-primary") {
     return "allowlisted";
@@ -759,7 +761,9 @@ function redemptionHolderAccess(entry: RedemptionBackstopEntry): RouteReview["ho
   return "unknown";
 }
 
-function redemptionExecutionModel(entry: RedemptionBackstopEntry): RouteReview["executionModel"] {
+export function redemptionExecutionModel(
+  entry: Pick<RedemptionBackstopEntry, "queueEnabled" | "executionModel">,
+): RouteReview["executionModel"] {
   if (entry.queueEnabled) return "queued";
   if (entry.executionModel === "deterministic-onchain" || entry.executionModel === "deterministic-basket") {
     return "deterministic";
@@ -922,7 +926,7 @@ function redemptionReviewTerms(entry: RedemptionBackstopEntry, clockSec: number,
   };
 }
 
-function redemptionSettlement(
+export function redemptionSettlement(
   settlementModel: RedemptionSettlementModel,
   settlementDelaySec: number | undefined,
 ): {

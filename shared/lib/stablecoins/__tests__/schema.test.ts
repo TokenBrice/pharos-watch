@@ -2,7 +2,7 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import type { z } from "zod";
 import type { StablecoinMeta, StablecoinObituary, StablecoinListingStatusReview } from "../../../types/stablecoin-meta-schemas";
 import { StablecoinMetaStructuralSchema, StablecoinObituarySchema, StablecoinListingStatusReviewSchema } from "../../../types/stablecoin-meta-schemas";
-import { isValidIsin, StablecoinFlagsSchema } from "../../../types/stablecoin-meta-primitives";
+import { isValidIsin, ReserveReviewSchema, StablecoinFlagsSchema } from "../../../types/stablecoin-meta-primitives";
 import {
   parseStablecoinMetaAssets,
   StablecoinComplianceSidecarSchema,
@@ -1050,6 +1050,39 @@ describe("StablecoinMeta schema — PoR / composition lockstep", () => {
     expect(() => parseAssets([coin("2026-07-12", standin)])).toThrow(/PoR lockstep/);
     expect(() => parseCoin({ id: "fixture-lockstep-no-composition", reserves, proofOfReserves: { type: "self-reported", url: "https://example.com/por", latestReport } })).not.toThrow();
     expect(() => parseAssets([coin("2026-06-30", undefined)])).not.toThrow();
+
+    const filingUrl = "https://www.sec.gov/Archives/edgar/data/1974395/000162828026073949/fcc-20260930.htm";
+    const filedCoin = makeCoin({
+      id: "fixture-lockstep-filed",
+      reserves,
+      proofOfReserves: { type: "independent-audit", url: "https://example.com/por", latestReport },
+      reserveReview: {
+        ...reserveReview("2026-09-30"),
+        reviewedAt: "2026-11-23",
+        sources: [{ label: "Q3 2026 Form 10-Q", url: filingUrl }],
+        compositionFiling: {
+          regulator: "sec",
+          form: "10-Q",
+          accession: "0001628280-26-073949",
+          periodEnd: "2026-09-30",
+          filedAt: "2026-11-16",
+          url: filingUrl,
+        },
+      },
+    });
+    expect(() => parseAssets([filedCoin])).not.toThrow();
+    expect(() => parseAssets([{
+      ...filedCoin,
+      reserveReview: { ...(filedCoin.reserveReview as Record<string, unknown>), confidence: "probable" },
+    }])).toThrow(/PoR lockstep/);
+    expect(() => parseAssets([{
+      ...filedCoin,
+      proofOfReserves: {
+        type: "independent-audit",
+        url: "https://example.com/por",
+        latestReport: { ...latestReport, periodEnd: "2026-10-31", publishedAt: "2026-11-10" },
+      },
+    }])).toThrow(/PoR lockstep/);
   });
 });
 
@@ -1124,5 +1157,78 @@ describe("StablecoinMeta catalog — live reserve invariants", () => {
       if (p.riskMap?.ETH && p.riskMap.ETH !== CANONICAL_ETH_RESERVE_RISK) mismatches.push(`${coin.id}:risk-map:ETH:${p.riskMap.ETH}`);
     }
     expect(mismatches).toEqual([]);
+  });
+
+  it("validates reserveReview.compositionFiling strictly and fails closed on mismatches", () => {
+    const filingUrl = "https://www.sec.gov/Archives/edgar/data/1974395/000162828026073949/fcc-20260930.htm";
+    const baseReview = {
+      reviewedAt: "2026-11-23",
+      reviewer: "Fixture reviewer",
+      confidence: "verified" as const,
+      sources: [{ label: "Q3 2026 Form 10-Q", url: filingUrl }],
+      rationale: "Schedules I and V.",
+      compositionBasis: "Unaudited Q3 2026 Form 10-Q.",
+      compositionAsOf: "2026-09-30",
+      compositionFiling: {
+        regulator: "sec" as const,
+        form: "10-Q" as const,
+        accession: "0001628280-26-073949",
+        periodEnd: "2026-09-30",
+        filedAt: "2026-11-16",
+        url: filingUrl,
+      },
+      scope: "full-composition" as const,
+      knownUnknownExposure: "Unaudited interim filing.",
+      knownUnknownExposurePct: 0,
+    };
+
+    expect(ReserveReviewSchema.safeParse(baseReview).success).toBe(true);
+    expect(ReserveReviewSchema.safeParse({
+      ...baseReview,
+      compositionFiling: { ...baseReview.compositionFiling, form: "10-K" as const },
+    }).success).toBe(true);
+    expect(ReserveReviewSchema.safeParse({
+      ...baseReview,
+      reviewedAt: "2026-11-16",
+    }).success).toBe(true);
+
+    expectIssue(ReserveReviewSchema, {
+      ...baseReview,
+      reviewedAt: "2026-10-15",
+    }, ["compositionFiling", "filedAt"]);
+
+    expectIssue(ReserveReviewSchema, {
+      ...baseReview,
+      compositionFiling: { ...baseReview.compositionFiling, accession: "1628280-26-073949" },
+    }, ["compositionFiling", "accession"]);
+    expectIssue(ReserveReviewSchema, {
+      ...baseReview,
+      compositionFiling: { ...baseReview.compositionFiling, periodEnd: "2026-06-30" },
+    }, ["compositionFiling", "periodEnd"]);
+    expectIssue(ReserveReviewSchema, {
+      ...baseReview,
+      compositionFiling: { ...baseReview.compositionFiling, filedAt: "2026-09-29" },
+    }, ["compositionFiling", "filedAt"]);
+    expectIssue(ReserveReviewSchema, {
+      ...baseReview,
+      compositionFiling: { ...baseReview.compositionFiling, url: "https://example.com/10q.htm" },
+      sources: [{ label: "External", url: "https://example.com/10q.htm" }],
+    }, ["compositionFiling", "url"]);
+    expectIssue(ReserveReviewSchema, {
+      ...baseReview,
+      compositionFiling: {
+        ...baseReview.compositionFiling,
+        url: "https://www.sec.gov/Archives/edgar/data/../other/fcc.htm",
+      },
+      sources: [{ label: "Traversal", url: "https://www.sec.gov/Archives/edgar/data/../other/fcc.htm" }],
+    }, ["compositionFiling", "url"]);
+    expectIssue(ReserveReviewSchema, {
+      ...baseReview,
+      sources: [{ label: "Different URL", url: "https://www.sec.gov/Archives/edgar/data/1974395/000162828026073949/" }],
+    }, ["compositionFiling", "url"]);
+    expectIssue(ReserveReviewSchema, {
+      ...baseReview,
+      scope: "selected-slices",
+    }, ["compositionFiling"]);
   });
 });
