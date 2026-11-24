@@ -80,6 +80,20 @@ function buildEmptyStateSuggestions(
     const gain = countRowsMatchingFilters(facets, withFunds);
     if (gain > 0) {
       scored.push({ filterKey: "includeFunds", targetValue: "true", gain, label: "Include tokenized funds" });
+    } else if (RISK_BUDGET_FILTER_KEYS.some((key) => filters[key] !== DEFAULT_FILTERS[key])) {
+      const unbandedWithFunds: YieldViewModelFilters = { ...withFunds };
+      for (const key of RISK_BUDGET_FILTER_KEYS) {
+        (unbandedWithFunds as Record<keyof YieldViewModelFilters, unknown>)[key] = DEFAULT_FILTERS[key];
+      }
+      const jointGain = countRowsMatchingFilters(facets, unbandedWithFunds);
+      if (jointGain > 0) {
+        scored.push({
+          filterKey: "risk+includeFunds",
+          targetValue: YIELD_RISK_ANY_PARAM,
+          gain: jointGain,
+          label: "Include tokenized funds & show all risk levels",
+        });
+      }
     }
   }
   scored.sort((left, right) => right.gain - left.gain);

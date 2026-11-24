@@ -586,7 +586,7 @@ describe("buildYieldViewModel", () => {
     expect(smallCohortRow?.cohortPercentile?.value).toBeNull();
   });
 
-  it("excludes tokenized funds by default, includes them with includeFunds=true, and suggests toggling them on when searched", () => {
+  it("excludes tokenized funds by default, exempts ungraded funds from the default Safety floor when included, and recovers them via suggestions", () => {
     const withFundRows = [
       ...rows,
       makeYieldRanking({
@@ -594,27 +594,70 @@ describe("buildYieldViewModel", () => {
         symbol: "BUIDL",
         name: "BlackRock USD Institutional Digital Liquidity Fund",
         yieldType: "nav-appreciation",
+        warningSignals: ["safety-unrated"],
+        safetyGrade: "NR",
+        safetyScore: 40,
+        pharosYieldScore: null,
+        provenance: makeYieldProvenance({ usedDefaultSafety: true }),
+      }),
+      makeYieldRanking({
+        id: "usyc-hashnote",
+        symbol: "USYC",
+        name: "Circle USYC",
+        yieldType: "nav-appreciation",
+        warningSignals: ["safety-unrated", "yield-spike"],
+        safetyGrade: "NR",
+        safetyScore: 40,
+        pharosYieldScore: null,
+        provenance: makeYieldProvenance({ usedDefaultSafety: true }),
+      }),
+      makeYieldRanking({
+        id: "unrated-stablecoin",
+        symbol: "UNR",
+        name: "Unrated Stablecoin",
+        yieldType: "lending-vault",
         warningSignals: [],
-        safetyScore: 80,
-        pharosYieldScore: 75,
+        safetyGrade: "NR",
+        safetyScore: 40,
+        pharosYieldScore: null,
+        provenance: makeYieldProvenance({ usedDefaultSafety: true }),
       }),
     ];
     const universe = prepareYieldUniverse(withFundRows, null);
 
-    const defaultView = buildYieldViewModel(universe, { risk: "any" });
-    expect(defaultView.visibleRows.map((row) => row.id)).not.toContain("buidl-blackrock");
-    expect(defaultView.totalRows).toBe(rows.length);
+    // Default opportunistic landing band (minSafety=50, warnings=hide) excludes funds by default.
+    const defaultLanding = buildYieldViewModel(universe, {});
+    expect(defaultLanding.visibleRows.map((row) => row.id)).not.toContain("buidl-blackrock");
+    expect(defaultLanding.visibleRows.map((row) => row.id)).not.toContain("unrated-stablecoin");
+    expect(defaultLanding.totalRows).toBe(rows.length + 1);
 
-    const includedView = buildYieldViewModel(universe, { risk: "any", includeFunds: "true" });
-    expect(includedView.visibleRows.map((row) => row.id)).toContain("buidl-blackrock");
-    expect(includedView.totalRows).toBe(withFundRows.length);
-    expect(includedView.invalidParamKeys).toEqual([]);
+    // Toggling includeFunds=true on the default landing band reveals ungraded funds without inventing a score,
+    // keeps unrated stablecoins blocked by minSafety=50, and still hides funds with real investment warnings.
+    const includedLanding = buildYieldViewModel(universe, { includeFunds: "true" });
+    const buidlRow = includedLanding.visibleRows.find((row) => row.id === "buidl-blackrock");
+    expect(buidlRow).toBeDefined();
+    expect(buidlRow?.isTokenizedFund).toBe(true);
+    expect(buidlRow?.safetyGrade).toBe("NR");
+    expect(includedLanding.visibleRows.map((row) => row.id)).not.toContain("unrated-stablecoin");
+    expect(includedLanding.visibleRows.map((row) => row.id)).not.toContain("usyc-hashnote");
+    expect(includedLanding.totalRows).toBe(withFundRows.length);
+    expect(includedLanding.invalidParamKeys).toEqual([]);
 
-    const searchedHidden = buildYieldViewModel(universe, { risk: "any", q: "BUIDL" });
-    expect(searchedHidden.emptyState.isEmpty).toBe(true);
-    expect(searchedHidden.emptyState.suggestions).toEqual(
+    // Searching a hidden clean ungraded fund under the default landing band suggests includeFunds=true.
+    const searchedCleanFund = buildYieldViewModel(universe, { q: "BUIDL" });
+    expect(searchedCleanFund.emptyState.isEmpty).toBe(true);
+    expect(searchedCleanFund.emptyState.suggestions).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ filterKey: "includeFunds", targetValue: "true", gain: 1 }),
+      ]),
+    );
+
+    // Searching a hidden fund with a real investment warning under the default landing band suggests lifting both.
+    const searchedWarnedFund = buildYieldViewModel(universe, { q: "USYC" });
+    expect(searchedWarnedFund.emptyState.isEmpty).toBe(true);
+    expect(searchedWarnedFund.emptyState.suggestions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ filterKey: "risk+includeFunds", targetValue: "any", gain: 1 }),
       ]),
     );
 

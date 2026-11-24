@@ -1,6 +1,10 @@
 import { EXTERNAL_OPPORTUNITY_YIELD_TYPES } from "@shared/lib/yield-opportunity-risk";
 import { getYieldRankingBenchmarkKey } from "@/lib/yield-benchmark";
-import { YIELD_FILTER_AXIS_REGISTRY } from "@/lib/yield-view-model-filter-axes";
+import {
+  YIELD_FILTER_AXIS_REGISTRY,
+  isUngradedTokenizedFundFacet,
+  selectRowInvestmentWarningSignals,
+} from "@/lib/yield-view-model-filter-axes";
 import { formatTvlOption } from "@/lib/yield-view-model-helpers";
 import type {
   YieldCohortPercentile,
@@ -44,7 +48,6 @@ import type { PegCurrency } from "@shared/types/core";
 import type { YieldBenchmarkKey, YieldType } from "@shared/types/yield-vocabulary";
 import type { YieldWorkbenchRanking } from "@/lib/yield-row-types";
 import { getYieldWorkbenchSourceRole } from "@/lib/yield-workbench-row";
-import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
 import { COIN_STATE_KIND_VALUES, type CoinState } from "@shared/lib/coin-state";
 
 function getYieldRankingPeg(rankingId: string): PegCurrency | null {
@@ -120,15 +123,16 @@ function buildYieldRowFacet(
   const inWatchlist = watchlistIds?.has(row.id) ?? false;
   const sourceChanged = row.provenance?.sourceSwitch === true;
   const coinStates = resolveYieldRowCoinStates(row, statesById);
+  const meta = TRACKED_META_BY_ID.get(row.id);
+  const isTokenizedFund = isTokenizedFundListingClass(meta?.listingClass);
   // A blocking coin or venue state is a warning too, so every warnings-hidden
   // risk band (the landing band included) and watchlist attention read it.
-  const hasWarning = selectInvestmentWarningSignals(row.warningSignals).length > 0
+  const hasWarning = selectRowInvestmentWarningSignals(row.warningSignals, isTokenizedFund).length > 0
     || coinStates.some(isYieldBlockingCoinState);
   const observations = row.sourceRisk?.observationCount30d;
-  const meta = TRACKED_META_BY_ID.get(row.id);
   return {
     row,
-    isTokenizedFund: isTokenizedFundListingClass(meta?.listingClass),
+    isTokenizedFund,
     peg: meta?.flags.pegCurrency ?? getYieldRankingPeg(row.id),
     benchmarkKey: getYieldRankingBenchmarkKey(row),
     opportunity: getOpportunity(row),
@@ -223,7 +227,11 @@ export function buildYieldOptions(facets: readonly YieldRowFacet[], totalFundCou
     if (facet.needsWatchlistAttention) watchlistAttentionCount += 1;
     depthCounts.set(facet.sourceDepthLens, (depthCounts.get(facet.sourceDepthLens) ?? 0) + 1);
     postureCounts.set(facet.sourcePosture, (postureCounts.get(facet.sourcePosture) ?? 0) + 1);
-    if (row.safetyScore !== null) {
+    if (isUngradedTokenizedFundFacet(facet)) {
+      for (const threshold of MIN_SAFETY_OPTIONS) {
+        safetyCounts.set(threshold, (safetyCounts.get(threshold) ?? 0) + 1);
+      }
+    } else if (row.safetyScore !== null) {
       for (const threshold of MIN_SAFETY_OPTIONS) {
         if (row.safetyScore >= threshold) safetyCounts.set(threshold, (safetyCounts.get(threshold) ?? 0) + 1);
       }
@@ -449,6 +457,7 @@ export function rankYieldRows(
     .toSorted((a, b) => compareYieldRankOrder(a.row, b.row))
     .map((facet, index) => ({
       ...facet.row,
+      isTokenizedFund: facet.isTokenizedFund,
       peg: facet.peg,
       viewRank: index + 1,
       rankLabel: `#${index + 1} in ${comparisonLabel}`,

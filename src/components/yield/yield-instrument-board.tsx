@@ -198,7 +198,7 @@ function YieldInstrumentRowBase({
           </p>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5 pl-5">
             {row.coinStates?.[0] ? <CoinStateChip state={row.coinStates[0]} /> : null}
-            <YieldZoneChip safetyScore={displayedSafetyScore} apy30d={row.apy30d} benchmarkRate={resolvedBenchmark.rate} />
+            <YieldZoneChip safetyScore={row.isTokenizedFund ? null : displayedSafetyScore} apy30d={row.apy30d} benchmarkRate={resolvedBenchmark.rate} />
             <span className="text-3xs font-medium text-muted-foreground">
               {YIELD_TYPE_LABELS[row.yieldType] ?? row.yieldType}
             </span>
@@ -240,10 +240,11 @@ function YieldInstrumentRowBase({
               safetySrLabel={labels.safetySrLabel}
               opportunityDerived={isOpportunityDerivedYieldRow(row)}
               usedDefaultSafety={usedDefaultSafety}
+              tokenizedFund={row.isTokenizedFund}
             />
           </div>
           <div className="mt-1.5 font-mono text-3xs tabular-nums text-muted-foreground">
-            {displayedSafetyScore !== null ? `${Math.round(displayedSafetyScore)}/100` : "unscored"}
+            {row.isTokenizedFund ? "Tokenized fund" : displayedSafetyScore !== null ? `${Math.round(displayedSafetyScore)}/100` : "unscored"}
           </div>
         </TableCell>
 

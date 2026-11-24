@@ -78,8 +78,8 @@ export interface YieldRiskBudgetState {
 }
 
 export interface YieldEmptyStateSuggestion {
-  /** A filter axis, or `risk` to lift the whole risk band at once. */
-  filterKey: keyof YieldViewModelFilters | "risk";
+  /** A filter axis, `risk` to lift the whole risk band, or `risk+includeFunds` to also admit funds. */
+  filterKey: keyof YieldViewModelFilters | "risk" | "risk+includeFunds";
   targetValue: string | null;
   gain: number;
   label: string;
@@ -92,6 +92,7 @@ export interface YieldCohortPercentile {
 }
 
 export type YieldViewModelRow = YieldWorkbenchRanking & {
+  isTokenizedFund?: boolean;
   peg: PegCurrency | null;
   viewRank: number;
   rankLabel: string;

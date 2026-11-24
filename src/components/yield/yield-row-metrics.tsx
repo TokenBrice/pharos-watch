@@ -15,7 +15,7 @@ import { YIELD_OPPORTUNITY_SAFETY_DESCRIPTION } from "@shared/lib/yield-opportun
 import { formatScore } from "@shared/lib/format";
 import { formatYieldWarningSignal, formatYieldWarningSignalDescription } from "@/lib/yield-constants";
 import { PYS_DEFAULT_SAFETY_SCORE } from "@shared/lib/yield-scoring";
-import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
+import { selectRowInvestmentWarningSignals } from "@/lib/yield-view-model-filter-axes";
 import { formatYieldSourceRiskSummary, getYieldSourceDepthDisplay } from "@/lib/yield-source-risk";
 import type { YieldSourceConfidenceStyle, YieldSourceFreshnessDisplay, YieldSourceRiskDriver } from "@/lib/yield-source-risk";
 import { YIELD_SOURCE_FACT_LABELS, type YieldRankChangeChipDisplay } from "@/lib/yield-presentation";
@@ -203,6 +203,7 @@ export function YieldSafetyBadge({
   safetySrLabel,
   opportunityDerived = false,
   usedDefaultSafety = false,
+  tokenizedFund = false,
   compact = false,
 }: {
   grade: YieldViewModelRow["safetyGrade"];
@@ -212,8 +213,22 @@ export function YieldSafetyBadge({
   opportunityDerived?: boolean;
   /** True when the score is the conservative default, not a measured Safety Score. */
   usedDefaultSafety?: boolean;
+  /** True when the asset is a Policy 2.0 tokenized fund (not graded on Safety Score). */
+  tokenizedFund?: boolean;
   compact?: boolean;
 }) {
+  if (tokenizedFund) {
+    return (
+      <Badge
+        variant="outline"
+        className={`${compact ? "px-1.5 py-0.5 text-3xs" : "px-1.5 py-0.5 text-2xs"} whitespace-nowrap border-border/60 bg-muted/40 font-medium text-muted-foreground`}
+        title="Tokenized fund — not graded on Safety Score"
+        aria-label={safetySrLabel}
+      >
+        Not graded
+      </Badge>
+    );
+  }
   // A Royco Dawn tranche grade and an external-opportunity grade publish into
   // the same field as the underlying card and render in the same visual
   // language. The marker keeps them from reading as the stablecoin's Safety
@@ -367,7 +382,8 @@ export function YieldSignalsIndicator({
   sourceRiskSummary: string | null;
   variant?: "board" | "mobile";
 }) {
-  const warningSignalCount = selectInvestmentWarningSignals(row.warningSignals).length;
+  const investmentSignals = selectRowInvestmentWarningSignals(row.warningSignals, Boolean(row.isTokenizedFund));
+  const warningSignalCount = investmentSignals.length;
 
   if (warningSignalCount === 0 && !sourceRiskSummary) {
     // The row's state chip already speaks for a coin or venue in an exceptional state.
@@ -438,8 +454,8 @@ export function YieldSignalsIndicator({
       </TooltipTrigger>
       <TooltipContent className="max-w-[300px]">
         <ul className="space-y-2 text-xs">
-          {selectInvestmentWarningSignals(row.warningSignals).map((signal, index) => {
-            const isLast = index === selectInvestmentWarningSignals(row.warningSignals).length - 1;
+          {investmentSignals.map((signal, index) => {
+            const isLast = index === investmentSignals.length - 1;
             return (
               <li key={signal}>
                 <span className="font-medium text-foreground">{formatYieldWarningSignal(signal)}</span>

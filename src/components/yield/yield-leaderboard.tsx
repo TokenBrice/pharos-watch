@@ -605,10 +605,11 @@ export function YieldMobileCard({
           safetySrLabel={safetySrLabel}
           opportunityDerived={isOpportunityDerivedSafety(row.provenance?.safetyProvenance)}
           usedDefaultSafety={usedDefaultSafety}
+          tokenizedFund={row.isTokenizedFund}
           compact
         />
         <YieldZoneChip
-          safetyScore={usedDefaultSafety ? null : safetyScore}
+          safetyScore={row.isTokenizedFund || usedDefaultSafety ? null : safetyScore}
           apy30d={row.apy30d}
           benchmarkRate={resolvedBenchmark.rate}
         />
