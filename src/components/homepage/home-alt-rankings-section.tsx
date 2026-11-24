@@ -56,8 +56,8 @@ const HOME_ALT_COLUMN_PREFERENCE_NAMESPACE = "pharos-home-alt-table-v3";
 const UNIVERSE_OPTIONS: readonly { value: HomeAltUniverse; label: string }[] = [
   { value: "core", label: "Core" },
   { value: "variants", label: "Variants" },
-  { value: "catalog", label: "All" },
-  { value: "funds", label: "Funds" },
+  { value: "catalog", label: "All stablecoins" },
+  { value: "funds", label: "Tokenized funds" },
 ];
 
 const PEG_QUICK_FILTERS: readonly { value: HomeAltPegFilter; label: string }[] = [

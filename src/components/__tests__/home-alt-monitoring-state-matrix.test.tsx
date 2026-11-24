@@ -272,17 +272,18 @@ describe("HomeAltRankingsSection loading and quick filters", () => {
     expect((m.tableProps.mock.calls.at(-1)?.[0] as { eligibleIds?: ReadonlySet<string> }).eligibleIds?.has("usdc-circle")).toBe(true);
   });
 
-  it("exposes Funds universe and excludes tokenized funds from Core and All", () => {
+  it("exposes Tokenized funds universe and excludes tokenized funds from Core and All stablecoins", () => {
     const setActiveUniverse = vi.fn();
     setupRankings("ready", "empty");
     m.filters.mockReturnValue({ activeFilters: [], activePeg: "all", setActivePeg: vi.fn(), activeUniverse: "catalog", setActiveUniverse });
     const view = render(<HomeAltRankingsSection titleId="rankings-title" />);
 
+    expect(screen.getByRole("button", { name: "All stablecoins" })).toBeTruthy();
     const catalogIds = (m.tableProps.mock.calls.at(-1)?.[0] as { eligibleIds?: ReadonlySet<string> }).eligibleIds!;
     expect(catalogIds.has("usdc-circle")).toBe(true);
     expect(catalogIds.has("buidl-blackrock")).toBe(false);
 
-    fireEvent.click(screen.getByRole("button", { name: "Funds" }));
+    fireEvent.click(screen.getByRole("button", { name: "Tokenized funds" }));
     expect(setActiveUniverse).toHaveBeenCalledWith("funds");
 
     m.filters.mockReturnValue({ activeFilters: [], activePeg: "all", setActivePeg: vi.fn(), activeUniverse: "funds", setActiveUniverse });

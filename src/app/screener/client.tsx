@@ -259,6 +259,7 @@ export function ScreenerClient() {
     const rows: ScreenerRow[] = [];
     for (const { meta, mechanism, mechanismIncluded, custodyModel, blacklistable, isTokenizedFund } of SCREENABLE_COINS) {
       const safety = safetyById[meta.id] ?? null;
+      const suppressFundSafety = isTokenizedFund && safety?.ratingStatus !== "pipeline-gap";
       const pegCoin = pegById.get(meta.id);
       const mintAuthorityScore = safetyPublicationAvailable
         ? resolveMintAuthorityScoreDisplay(safety?.mint)
@@ -279,23 +280,24 @@ export function ScreenerClient() {
         dewsScore: stressData?.signals[meta.id]?.score ?? null,
         dewsBand: dewsBand !== undefined && isThreatBand(dewsBand) ? dewsBand : null,
         liquidityScore: dexData?.[meta.id]?.liquidityScore ?? null,
-        safetyGrade: safety?.grade ?? null,
-        safetyScore: safety?.score ?? null,
-        ratingStatus: safety?.ratingStatus ?? null,
-        partialEvidence: safety?.partialEvidence ?? null,
-        pillars: safety?.pillars,
-        safetyBackingScore: safety?.pillars.backing.score ?? null,
-        safetyExitScore: safety?.pillars.exit.score ?? null,
-        safetyControlScore: safety?.pillars.control.score ?? null,
-        safetyEvidence:
-          safety?.ratingStatus === "pipeline-gap"
+        safetyGrade: suppressFundSafety ? null : (safety?.grade ?? null),
+        safetyScore: suppressFundSafety ? null : (safety?.score ?? null),
+        ratingStatus: suppressFundSafety ? (safety ? "not-rated" : null) : (safety?.ratingStatus ?? null),
+        partialEvidence: suppressFundSafety ? null : (safety?.partialEvidence ?? null),
+        pillars: suppressFundSafety ? undefined : safety?.pillars,
+        safetyBackingScore: suppressFundSafety ? null : (safety?.pillars.backing.score ?? null),
+        safetyExitScore: suppressFundSafety ? null : (safety?.pillars.exit.score ?? null),
+        safetyControlScore: suppressFundSafety ? null : (safety?.pillars.control.score ?? null),
+        safetyEvidence: suppressFundSafety
+          ? null
+          : safety?.ratingStatus === "pipeline-gap"
             ? "pipeline-gap"
             : safety?.ratingStatus === "not-rated"
               ? "nr"
               : safety?.evidence.level ?? null,
-        safetyWeakestPillar: safety?.weakestPillar?.pillar ?? null,
-        safetyWeakestScore: safety?.weakestPillar?.score ?? null,
-        safetyBindingCapReason: safety?.bindingCapReason ?? null,
+        safetyWeakestPillar: suppressFundSafety ? null : (safety?.weakestPillar?.pillar ?? null),
+        safetyWeakestScore: suppressFundSafety ? null : (safety?.weakestPillar?.score ?? null),
+        safetyBindingCapReason: suppressFundSafety ? null : (safety?.bindingCapReason ?? null),
         custodyModel,
         blacklistable,
         mintAuthority: meta.mintAuthorityStatus ?? "unknown",
@@ -334,6 +336,19 @@ export function ScreenerClient() {
         row.id.toLowerCase().includes(normalizedSearch),
     );
   }, [allRows, filters, normalizedSearch, scoreFilterDataState]);
+  const hiddenFundMatchCount = useMemo(() => {
+    if (scoreFilterDataState !== "ready" || filters.includeFunds || filters.coins.length > 0 || filteredRows.length > 0) {
+      return 0;
+    }
+    const matchingFunds = applyFilters(allRows, { ...filters, includeFunds: true }).filter((row) => row.isTokenizedFund);
+    if (!normalizedSearch) return matchingFunds.length;
+    return matchingFunds.filter(
+      (row) =>
+        row.symbol.toLowerCase().includes(normalizedSearch) ||
+        row.name.toLowerCase().includes(normalizedSearch) ||
+        row.id.toLowerCase().includes(normalizedSearch),
+    ).length;
+  }, [allRows, filteredRows.length, filters, normalizedSearch, scoreFilterDataState]);
   const { sortKey, sortDirection, toggleSort, getAriaSortValue } = useSort<ScreenerSortKey>("safetyScore", "desc");
   const sortedRows = useMemo(
     () => sortScreenerRows(filteredRows, sortKey, sortDirection),
@@ -479,6 +494,8 @@ export function ScreenerClient() {
           dataState={dataState}
           onClearFilters={active ? resetFilters : undefined}
           hasActiveFilters={active}
+          hiddenFundMatchCount={hiddenFundMatchCount}
+          onIncludeFunds={hiddenFundMatchCount > 0 ? () => setFilters({ ...filters, includeFunds: true }) : undefined}
           sort={{ sortKey, sortDirection, toggleSort, getAriaSortValue }}
           selectedIds={selectedIds}
           onToggleSelect={handleToggleSelect}

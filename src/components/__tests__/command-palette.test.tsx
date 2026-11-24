@@ -278,6 +278,22 @@ describe("CommandPalette", () => {
     expect(row.querySelector('[aria-label="Safety grade A"]')?.textContent).toBe("A");
   });
 
+  it("shows Not graded instead of NR for tokenized funds even when report-card cache carries NR", () => {
+    queryClient.setQueryData(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9Table.queryKey, {
+      data: {
+        cards: [
+          { id: "buidl-blackrock", grade: "NR", score: null },
+        ],
+      },
+      meta: { updatedAt: Date.now() / 1000, ageSeconds: 0, status: "fresh" },
+    });
+    renderPalette();
+    fireEvent.change(screen.getByRole("combobox", { name: "Search" }), { target: { value: "BUIDL" } });
+    const row = screen.getByRole("option", { name: /BlackRock USD Institutional Digital Liquidity Fund/i });
+    expect(row.textContent).toContain("Not graded");
+    expect(row.querySelector('[aria-label="Safety grade NR"]')).toBeNull();
+  });
+
   it("surfaces route-contextual dossier actions and top verb hint chips", () => {
     pathnameMock.current = "/stablecoin/usdc-circle/";
     renderPalette();

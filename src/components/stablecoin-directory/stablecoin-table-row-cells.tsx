@@ -84,13 +84,21 @@ function PinnedCell({ row, model }: RowCellsProps) {
 }
 
 function MobileRiskSummary({ model }: { model: StablecoinTableRowModel }) {
-  const partial = model.reportCard ? describePartialEvidence(model.reportCard) : null;
+  const isUngradedFund = model.isTokenizedFund && model.reportCard?.ratingStatus !== "pipeline-gap";
+  const partial = !isUngradedFund && model.reportCard ? describePartialEvidence(model.reportCard) : null;
   return (
     <span
       className={`mt-1 min-w-0 items-center gap-1 ${model.isOverview ? "flex md:hidden" : "flex lg:hidden"}`}
       aria-label="Mobile risk summary"
     >
-      {model.reportCard ? (
+      {isUngradedFund ? (
+        <span
+          className="inline-flex h-5 items-center justify-center rounded-sm border border-border/60 bg-muted/40 px-1.5 text-3xs font-medium leading-none text-muted-foreground"
+          title="Tokenized fund — not graded on Safety Score"
+        >
+          Not graded
+        </span>
+      ) : model.reportCard ? (
         <span
           className={`inline-flex h-5 min-w-5 items-center justify-center rounded-sm border px-1 pharos-numeric text-3xs font-semibold leading-none ${getSafetyGradeBadgeClassName(model.reportCard.grade)}`}
           title={`${model.reportCard.grade === null ? "Pipeline gap" : `Safety grade ${model.reportCard.grade}`}${partial ? ` · ${partial.summary}` : ""}`}
@@ -265,7 +273,8 @@ function MarketCells({ row, model }: RowCellsProps) {
 }
 
 function RiskCells({ row, model }: RowCellsProps) {
-  const partial = model.reportCard ? describePartialEvidence(model.reportCard) : null;
+  const isUngradedFund = model.isTokenizedFund && model.reportCard?.ratingStatus !== "pipeline-gap";
+  const partial = !isUngradedFund && model.reportCard ? describePartialEvidence(model.reportCard) : null;
   const stabilityCell = model.meta?.flags.navToken || model.pegScore === null
     ? <span className="text-muted-foreground">—</span>
     : <span className={pegScoreColor(model.pegScore)}>{model.pegScore}</span>;
@@ -277,7 +286,15 @@ function RiskCells({ row, model }: RowCellsProps) {
     <>
       {row.isVisible("grade") ? (
         <TableCell className="px-3 py-2 text-center">
-          {model.reportCard ? (
+          {isUngradedFund ? (
+            <Badge
+              variant="outline"
+              className="rounded-full border-border/60 bg-muted/40 px-2 py-0.5 text-xs font-medium text-muted-foreground"
+              title="Tokenized fund — not graded on Safety Score"
+            >
+              Not graded
+            </Badge>
+          ) : model.reportCard ? (
             <>
             <Badge
               variant="outline"
