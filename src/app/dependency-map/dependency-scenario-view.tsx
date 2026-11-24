@@ -8,6 +8,7 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
 import { cn } from "@/lib/utils";
+import { isClientTokenizedFundId } from "@shared/lib/stablecoins/aggregate-client-registry";
 import type { ReportCardGrade } from "@shared/types/report-card-grade";
 
 type Scenario = DependencyScenarioArtifact["scenarios"][number];
@@ -68,6 +69,16 @@ export function DependencyScenarioChange({ selection, assetId }: { selection: De
     return (
       <span className="inline-flex rounded-md border border-border/70 bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground">
         Modeled Pipeline gap · {row.modeledPartialEvidence?.excludedPillars.length === 3 ? "all pillars unavailable" : "fewer than two pillars available"} · change unavailable{partial && ` · ${partial.gaps.map(formatPartialEvidenceGap).join(" · ")}`}
+      </span>
+    );
+  }
+  if (isClientTokenizedFundId(assetId)) {
+    return (
+      <span
+        className="inline-flex rounded-md border border-border/70 bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground"
+        title="Tokenized fund — not graded on Safety Score"
+      >
+        Not graded · tokenized fund
       </span>
     );
   }
@@ -139,11 +150,16 @@ export function DependencyScenarioView({ response, roots, selection, selectedId,
                 </TableRow>
               </TableHeader>
               <TableBody>{selection.scenario?.results.map(row => {
-                const partial = describePartialEvidence({ ratingStatus: row.publishedRatingStatus, partialEvidence: row.publishedPartialEvidence, pillars: row.publishedPillars });
-                const publishedText = row.publishedRatingStatus === "pipeline-gap" ? "Pipeline gap" : row.publishedGrade;
-                const modeledText = row.modeledRatingStatus === "pipeline-gap" ? "Pipeline gap" : row.modeledGrade;
-                const publishedGrade: ReportCardGrade | null = row.publishedRatingStatus === "pipeline-gap" ? null : row.publishedGrade;
-                const modeledGrade: ReportCardGrade | null = row.modeledRatingStatus === "pipeline-gap" ? null : row.modeledGrade;
+                const isFund = isClientTokenizedFundId(row.assetId);
+                const publishedPipelineGap = row.publishedRatingStatus === "pipeline-gap";
+                const modeledPipelineGap = row.modeledRatingStatus === "pipeline-gap";
+                const partial = isFund && !publishedPipelineGap
+                  ? null
+                  : describePartialEvidence({ ratingStatus: row.publishedRatingStatus, partialEvidence: row.publishedPartialEvidence, pillars: row.publishedPillars });
+                const publishedText = publishedPipelineGap ? "Pipeline gap" : isFund ? "Not graded" : row.publishedGrade;
+                const modeledText = modeledPipelineGap ? "Pipeline gap" : isFund ? "Not graded" : row.modeledGrade;
+                const publishedGrade: ReportCardGrade | null = publishedPipelineGap || isFund ? null : row.publishedGrade;
+                const modeledGrade: ReportCardGrade | null = modeledPipelineGap || isFund ? null : row.modeledGrade;
                 return (
                   <TableRow rowIntent="static" className="border-t border-border" key={row.assetId}>
                     <TableCell className="p-2">
@@ -155,12 +171,35 @@ export function DependencyScenarioView({ response, roots, selection, selectedId,
                       </div>
                     </TableCell>
                     <TableCell className="p-2">
-                      <span className="sr-only">{publishedText} → {modeledText}</span>
-                      <span aria-hidden="true" className="inline-flex items-center gap-1.5">
-                        <SafetyGradeBadge grade={publishedGrade} size="xs" />
-                        <span className="text-xs text-muted-foreground">→</span>
-                        <SafetyGradeBadge grade={modeledGrade} size="xs" />
-                      </span>
+                      {isFund && !publishedPipelineGap && !modeledPipelineGap ? (
+                        <span
+                          className="inline-flex rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-xs font-medium text-muted-foreground"
+                          title="Tokenized fund — not graded on Safety Score"
+                        >
+                          Not graded
+                        </span>
+                      ) : (
+                        <>
+                          <span className="sr-only">{publishedText} → {modeledText}</span>
+                          <span aria-hidden="true" className="inline-flex items-center gap-1.5">
+                            {isFund && !publishedPipelineGap ? (
+                              <span className="inline-flex rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                                Not graded
+                              </span>
+                            ) : (
+                              <SafetyGradeBadge grade={publishedGrade} size="xs" />
+                            )}
+                            <span className="text-xs text-muted-foreground">→</span>
+                            {isFund && !modeledPipelineGap ? (
+                              <span className="inline-flex rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                                Not graded
+                              </span>
+                            ) : (
+                              <SafetyGradeBadge grade={modeledGrade} size="xs" />
+                            )}
+                          </span>
+                        </>
+                      )}
                       {partial && (
                         <span className="block text-xs text-muted-foreground" title={partial.summary}>
                           Published: {partial.gaps.map(formatPartialEvidenceGap).join(" · ")}

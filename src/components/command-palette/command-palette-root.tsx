@@ -16,7 +16,10 @@ import { useWatchlist } from "@/hooks/use-watchlist";
 import { useCoinStates } from "@/hooks/use-coin-states";
 import { CoinStateChip } from "@/components/coin-state-chip";
 import { SafetyGradeBadge } from "@/components/safety-scores/safety-grade-badge";
-import { isClientTokenizedFundId } from "@shared/lib/stablecoins/aggregate-client-registry";
+import {
+  CLIENT_ACTIVE_TOKENIZED_FUND_IDS,
+  isClientTokenizedFundId,
+} from "@shared/lib/stablecoins/aggregate-client-registry";
 import type { ReportCardGrade } from "@shared/types/report-card-grade";
 import { groupCommandPaletteResults } from "@/components/command-palette/command-palette-model";
 import { clampCommandPaletteSelectedIndex } from "@/components/command-palette/command-palette-actions";
@@ -436,7 +439,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                 const currentIndex = flatIndex++;
                 const isSelected = currentIndex === selectedIndex;
                 const coinState = item.coinId ? coinStates.get(item.coinId)?.[0] : undefined;
-                const isTokenizedFund = item.coinId ? isClientTokenizedFundId(item.coinId) : false;
+                const isTokenizedFund = item.coinId ? CLIENT_ACTIVE_TOKENIZED_FUND_IDS.has(item.coinId) : false;
                 const safetyGrade = item.coinId ? cachedSafetyGrades.get(item.coinId) : undefined;
 
                 return (
