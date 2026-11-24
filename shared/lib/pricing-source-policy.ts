@@ -5,6 +5,31 @@ import { normalizePricingSourceKeys } from "./pricing-sources";
 
 export const FIXED_PEG_SEVERE_DOWNSIDE_RATIO = 0.5;
 
+/** Fixed-peg deviation ceiling (bps) for uncorroborated `fallback_search` quotes. */
+export const WEAK_FALLBACK_FIXED_PEG_DEPEG_BPS = 500;
+
+/**
+ * Maximum inter-family spread (bps) for publishing a `low`-confidence display price
+ * via open confirmed depeg continuity across at least two independent source families.
+ */
+export const OPEN_DEPEG_CONTINUITY_MAX_SPREAD_BPS = 500;
+
+/**
+ * Minimum CoinGecko 24h USD trading volume below which a quote diverging
+ * materially from its fixed peg/FX reference is quarantined as a junk print.
+ */
+export const COINGECKO_MICRO_VOLUME_MIN_USD = 1_000;
+
+/**
+ * Maximum allowed deviation (in basis points) from a fixed peg/FX reference
+ * for a CoinGecko quote whose observed 24h USD volume is below
+ * `COINGECKO_MICRO_VOLUME_MIN_USD`.
+ */
+export const COINGECKO_MICRO_VOLUME_OUTLIER_MAX_DEVIATION_BPS = 500;
+
+export const COINGECKO_MICRO_VOLUME_OUTLIER_REASON = "coingecko_micro_volume_outlier";
+export const HIVE_MARKET_DIVERGENCE_VETO_REASON = "hive_market_divergence_veto";
+
 /**
  * Maximum relative bid/ask spread (basis points of the midpoint) for a CEX
  * two-sided book to contribute a quote. A wider book is not a price, and its
@@ -138,6 +163,130 @@ export function isUncorroboratedDefiLlamaListFillQuote(input: {
   return true;
 }
 
+/**
+ * Minimum number of unrelated assets sharing one verbatim DefiLlama contract
+ * price before the quote is treated as a provider placeholder/redirect.
+ * Unlike the stablecoins list (where wrapped variants are counted without
+ * explicit lineage), contract detection collapses same-asset, same-token,
+ * and variant/wrapper lineage into one related group first.
+ */
+const DEFILLAMA_CONTRACT_FILL_DEFAULT_MIN_UNRELATED_ASSET_COUNT = 2;
+
+export interface DefiLlamaContractQuoteRow {
+  id?: unknown;
+  price?: unknown;
+  /** Canonical lineage/wrapper group ID (e.g. transitive variantOf / vault parent root). */
+  lineageGroup?: string | null;
+  /** Normalized underlying token identity (e.g. `chain:address` coin ID). */
+  tokenKey?: string | null;
+}
+
+export interface DefiLlamaContractFillDefaultQuote {
+  value: number;
+}
+
+function countUnrelatedContractQuoteGroups(rows: readonly (readonly string[])[]): number {
+  if (rows.length <= 1) return rows.length;
+  const parent = rows.map((_, index) => index);
+  const find = (index: number): number => {
+    let root = index;
+    while (parent[root] !== root) root = parent[root];
+    let cursor = index;
+    while (parent[cursor] !== root) {
+      const next = parent[cursor];
+      parent[cursor] = root;
+      cursor = next;
+    }
+    return root;
+  };
+  const ownerByTag = new Map<string, number>();
+  for (let index = 0; index < rows.length; index += 1) {
+    for (const tag of rows[index]) {
+      const existing = ownerByTag.get(tag);
+      if (existing === undefined) {
+        ownerByTag.set(tag, index);
+      } else {
+        const leftRoot = find(existing);
+        const rightRoot = find(index);
+        if (leftRoot !== rightRoot) parent[rightRoot] = leftRoot;
+      }
+    }
+  }
+  const roots = new Set<number>();
+  for (let index = 0; index < rows.length; index += 1) roots.add(find(index));
+  return roots.size;
+}
+
+/**
+ * Prices `coins.llama.fi` repeats verbatim across at least
+ * `DEFILLAMA_CONTRACT_FILL_DEFAULT_MIN_UNRELATED_ASSET_COUNT` unrelated asset
+ * groups. Rows sharing an asset ID, variant/wrapper lineage group, or
+ * underlying token key collapse into one related group.
+ */
+export function detectDefiLlamaContractFillDefaultPrices(
+  rows: Iterable<DefiLlamaContractQuoteRow>,
+): Set<number> {
+  const groupsByPrice = new Map<number, string[][]>();
+  let anonymousRows = 0;
+  for (const row of rows) {
+    const price = row.price;
+    if (typeof price !== "number" || !Number.isFinite(price) || price <= 0) continue;
+    const rawId = row.id;
+    const assetKey =
+      typeof rawId === "string" && rawId.trim().length > 0
+        ? rawId.trim()
+        : typeof rawId === "number" && Number.isFinite(rawId)
+          ? String(rawId)
+          : `#anonymous-${anonymousRows++}`;
+    const tags = [`entity:${assetKey}`];
+    const lineage = typeof row.lineageGroup === "string" ? row.lineageGroup.trim() : "";
+    if (lineage.length > 0 && lineage !== assetKey) {
+      tags.push(`entity:${lineage}`);
+    }
+    const tokenKey = typeof row.tokenKey === "string" ? row.tokenKey.trim() : "";
+    if (tokenKey.length > 0) {
+      tags.push(`token:${tokenKey}`);
+    }
+    const bucket = groupsByPrice.get(price) ?? [];
+    bucket.push(tags);
+    groupsByPrice.set(price, bucket);
+  }
+
+  const fillDefaultPrices = new Set<number>();
+  for (const [price, priceRows] of groupsByPrice) {
+    if (
+      countUnrelatedContractQuoteGroups(priceRows) >=
+      DEFILLAMA_CONTRACT_FILL_DEFAULT_MIN_UNRELATED_ASSET_COUNT
+    ) {
+      fillDefaultPrices.add(price);
+    }
+  }
+  return fillDefaultPrices;
+}
+
+/**
+ * Whether an admitted quote is a repeated DefiLlama contract placeholder with
+ * no corroborating independent non-DefiLlama source family.
+ */
+export function isUncorroboratedDefiLlamaContractFillQuote(input: {
+  price: number;
+  fillDefault: DefiLlamaContractFillDefaultQuote | null | undefined;
+  sources: readonly (string | null | undefined)[] | string | null | undefined;
+}): boolean {
+  const fillDefault = input.fillDefault;
+  if (
+    fillDefault == null ||
+    !Number.isFinite(fillDefault.value) ||
+    fillDefault.value <= 0 ||
+    !Number.isFinite(input.price) ||
+    input.price !== fillDefault.value
+  ) {
+    return false;
+  }
+
+  return isDefiLlamaFamilyListOnlyQuote(input.sources);
+}
+
 function isDefiLlamaFamilyListSourcePart(source: string): boolean {
   const entry = getPricingSourceRegistryEntry(source);
   return entry?.isListAggregator === true && entry.depegSourceFamily === "defillama";
@@ -157,6 +306,22 @@ function isDefiLlamaFamilyListOnlyQuote(
     families.add(entry.depegSourceFamily);
   }
   return families.size === 1 && families.has("defillama");
+}
+
+/**
+ * Whether every part of `sources` is a CoinGecko list-aggregator feed
+ * (`coingecko`, `coingecko-low-volume`, `coingecko-mirror`), excluding the
+ * native Hive cross-rate (`hive-native-cg`, which is not a list aggregator).
+ */
+export function isCoingeckoAggregatorSource(
+  sources: readonly (string | null | undefined)[] | string | null | undefined,
+): boolean {
+  const parts = normalizePricingSourceKeys(sources);
+  if (parts.length === 0) return false;
+  return parts.every((part) => {
+    const entry = getPricingSourceRegistryEntry(part);
+    return entry?.depegSourceFamily === "coingecko" && entry.isListAggregator === true;
+  });
 }
 
 /**

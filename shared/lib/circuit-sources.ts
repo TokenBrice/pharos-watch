@@ -45,6 +45,10 @@ export const CIRCUIT_SOURCE_REGISTRY = {
   SUSD_SOLAYER_NAV: { key: "susd-solayer-nav", scope: "asset-scoped" },
   USDAF_UNISWAP_V4: { key: "usdaf-uniswap-v4", scope: "asset-scoped" },
   USDU_UNISWAP_V3: { key: "usdu-uniswap-v3", scope: "asset-scoped" },
+  M0_EXTENSION: { key: "m0-extension", scope: "asset-scoped" },
+  RWAUSDI_CHAINLINK_NAV: { key: "rwausdi-chainlink-nav", scope: "asset-scoped" },
+  NUSD_SYNAPSE_POOL: { key: "nusd-synapse-pool", scope: "asset-scoped" },
+  USDU_FINANCE_CURVE_POOL: { key: "usdu-finance-curve-pool", scope: "asset-scoped" },
   // Single-asset members share this breaker with multi-asset redemption providers.
   PROTOCOL_REDEEM: { key: "protocol-redeem", scope: "source-wide" },
   CURVE_ONCHAIN: { key: "curve-onchain", scope: "source-wide" },

@@ -1,6 +1,6 @@
 import { logWorkerEvent, logWorkerEventArgs } from "../../lib/structured-log";
 import { ChainPartitionProvenanceSchema, decodePublishedPegType, StablecoinListResponseSchema, SupplyChainGuardProvenanceSchema } from "@shared/types/supply";
-import { PriceDerivationSchema } from "@shared/types/price";
+import { PriceDerivationSchema, PricePublicationReasonSchema } from "@shared/types/price";
 import type { PriceSourceHealth } from "@shared/types/status";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { CHAIN_META } from "@shared/types/chain-identity";
@@ -220,6 +220,7 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload, runStar
         supplyPerimeter: _ignoredSupplyPerimeter,
         supplyChainGuard: _ignoredSupplyChainGuard,
         priceDerivation: _ignoredPriceDerivation,
+        pricePublicationReason: _ignoredPricePublicationReason,
         priceListFillDefault: _ignoredPriceListFillDefault,
         ...rest
       } = asset as PeggedAsset & { gecko_id?: unknown };
@@ -248,6 +249,7 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload, runStar
       const supplyObservedAt = normalizeOptionalTimestamp(asset.supplyObservedAt);
       const supplyChainGuard = SupplyChainGuardProvenanceSchema.safeParse(asset.supplyChainGuard);
       const priceDerivation = PriceDerivationSchema.safeParse(asset.priceDerivation);
+      const pricePublicationReason = PricePublicationReasonSchema.safeParse(asset.pricePublicationReason);
       const hold = reviewedOnchainSupplyHoldFields(asset, runStartedAt);
       const historicalBuckets = (window: "day" | "week" | "month", previous: PeggedAsset["circulatingPrevDay"]) => {
         const legacy = toPegBuckets(previous);
@@ -262,6 +264,9 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload, runStar
         price: hasUsablePrice ? asset.price : null,
         priceSource: hasUsablePrice ? (asset.priceSource ?? MISSING_PRICE_SOURCE) : MISSING_PRICE_SOURCE,
         priceConfidence: hasUsablePrice ? normalizedConfidence : null,
+        ...(hasUsablePrice && normalizedConfidence === "low" && pricePublicationReason.success
+          ? { pricePublicationReason: pricePublicationReason.data }
+          : {}),
         priceUpdatedAt: hasUsablePrice ? priceObservedAt : null,
         priceObservedAt: hasUsablePrice ? priceObservedAt : null,
         priceObservedAtMode: hasUsablePrice ? priceObservedAtMode : null,
@@ -366,6 +371,7 @@ export function stampPriceMetadata(
 ): void {
   asset.priceSource = source;
   delete asset.priceDerivation;
+  delete asset.pricePublicationReason;
   delete asset.priceQuoteBasis;
   delete asset.pricePoolKeys;
   delete asset.upstreamKeys;
@@ -390,6 +396,7 @@ export function stampPriceMetadata(
 export function clearPriceMetadata(asset: PeggedAsset): void {
   asset.price = null;
   delete asset.priceDerivation;
+  delete asset.pricePublicationReason;
   delete asset.priceQuoteBasis;
   delete asset.pricePoolKeys;
   delete asset.upstreamKeys;

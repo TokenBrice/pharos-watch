@@ -41,7 +41,7 @@ function publicationInput(path: "main" | "fallback", db: D1Database, assets: Peg
     enrichStats: null, priceValidationStats: {}, rejectedCount: 0, gtProbe: { stats: createEmptyGtProbeStats() },
   } } } : { ...base, metadata: { path, input: {
     enrichStats: {}, authoritativeOverrideCount: 0, rejectedCount: 0,
-    cachedFallbackCount: 0, nativePegCorrectionCount: 0, nativePegFillCount: 0,
+    cachedFallbackCount: 0,
   } } };
 }
 
@@ -198,7 +198,7 @@ async function publishSupplyPacket(asset: PeggedAsset, path: "main" | "fallback"
   } : {
     ...base,
     metadata: { path: "fallback", input: { enrichStats: {}, authoritativeOverrideCount: 0, rejectedCount: 0,
-      cachedFallbackCount: 0, nativePegCorrectionCount: 0, nativePegFillCount: 0 } },
+      cachedFallbackCount: 0 } },
   };
   await runStablecoinsPostIntakePublication(input);
   const cached: { peggedAssets: PeggedAsset[] } = JSON.parse((await getCache(db, "stablecoins"))!.value);
@@ -359,7 +359,7 @@ describe("stablecoins publication cohort", () => {
     } satisfies StablecoinsPostIntakePublicationContext : {
       ...base,
       metadata: { path: "fallback", input: { enrichStats: {}, authoritativeOverrideCount: 0, rejectedCount: 0,
-        cachedFallbackCount: 0, nativePegCorrectionCount: 0, nativePegFillCount: 0 } },
+        cachedFallbackCount: 0 } },
     } satisfies StablecoinsPostIntakePublicationContext;
     const result = await runStablecoinsPostIntakePublication(input);
     const cached = JSON.parse((await getCache(db, "stablecoins"))!.value);

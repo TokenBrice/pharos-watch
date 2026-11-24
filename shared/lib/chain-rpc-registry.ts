@@ -78,6 +78,9 @@ export const EXTRA_FALLBACK_RPC_URLS: Readonly<Record<string, readonly string[]>
   // dRPC as an independent second operator behind rpc.hemi.network; verified
   // 2026-09-24 returning the same VCRED totalSupply and Safe balanceOf reads.
   hemi: ["https://hemi.drpc.org"],
+  // Independent Monad operators verified 2026-11-24 supporting pinned-block
+  // eth_getCode/eth_call batches and closing-header rechecks.
+  monad: ["https://monad-mainnet.drpc.org", "https://rpc2.monad.xyz"],
 };
 
 // Reviewed supply profile. These fallbacks intentionally differ from the Worker

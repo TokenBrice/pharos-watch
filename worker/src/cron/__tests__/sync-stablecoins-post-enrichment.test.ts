@@ -1,43 +1,15 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { DatabaseSync } from "node:sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
-import { normalizeStablecoinsPayload, stampPriceMetadata } from "../sync-stablecoins/shared";
+import { normalizeStablecoinsPayload } from "../sync-stablecoins/shared";
 import {
   loadPriceCorroborationObservations,
   writePriceCorroborationObservations,
 } from "../sync-stablecoins/price-corroboration-observations";
 import * as detection from "../detect-depegs";
 import * as confirmation from "../confirm-pending-depegs";
-
-vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@shared/lib/stablecoins/registry")>();
-  const eurc = actual.TRACKED_META_BY_ID.get("eurc-circle");
-  if (!eurc) throw new Error("missing EURC test metadata");
-  return {
-    ...actual,
-    TRACKED_META_BY_ID: new Map([
-      ...actual.TRACKED_META_BY_ID,
-      ["eurc-circle", {
-        ...eurc,
-        geckoId: "euro-coin",
-        flags: { ...eurc.flags, pegCurrency: "EUR", navToken: false },
-      }],
-    ]),
-  };
-});
-
-const fetchCurrentNativePegImpliedUsdQuotesMock = vi.fn();
-
-vi.mock("../../lib/native-peg-implied-prices", async () => {
-  const actual = await vi.importActual<typeof import("../../lib/native-peg-implied-prices")>("../../lib/native-peg-implied-prices");
-  return {
-    ...actual,
-    fetchCurrentNativePegImpliedUsdQuotes: (...args: unknown[]) => fetchCurrentNativePegImpliedUsdQuotesMock(...args),
-  };
-});
-
 import type { PeggedAsset } from "../sync-stablecoins/enrich-prices";
 import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
 import { isAbortResult, runDepegPipeline, runPostEnrichmentPricePipeline } from "../sync-stablecoins/post-enrichment";
@@ -78,15 +50,7 @@ function makeAsset(overrides: Partial<PeggedAsset> = {}): PeggedAsset {
   });
 }
 
-function nativeQuote(updatedAt = 1_700_000_000, status = "admitted") {
-  return new Map([["eurc-circle", {
-    stablecoinId: "eurc-circle", pegCurrency: "EUR", nativePrice: 1,
-    priceUsd: 1.08, updatedAt, referencePriceUsd: 1.08, referenceType: "fresh",
-    referenceAdmission: { status, decisionAtSec: 1_700_000_050 },
-  }]]);
-}
-
-function nativePipelineInput(
+function pipelineInput(
   asset: PeggedAsset,
   db: D1Database = mockD1(),
 ): Parameters<typeof runPostEnrichmentPricePipeline>[0] {
@@ -154,10 +118,6 @@ describe("runDepegPipeline capacity holds", () => {
 });
 
 describe("runPostEnrichmentPricePipeline", () => {
-  beforeEach(() => {
-    fetchCurrentNativePegImpliedUsdQuotesMock.mockReset().mockResolvedValue(new Map());
-  });
-
   it.each([
     ["gbpm-mento", "peggedGBP", 1.32, "coingecko-low-volume", 40 * 3600, 900, true],
     ["usdt-tether", "peggedUSD", 1, "coinmarketcap", 1200, 900, true],
@@ -166,6 +126,8 @@ describe("runPostEnrichmentPricePipeline", () => {
     ["usdt-tether", "peggedUSD", 1, "coinmarketcap", 7292, 900, true],
     ["usdt-tether", "peggedUSD", 1, "coinmarketcap", 8401, 900, false],
     ["usdt-tether", "peggedUSD", 1, "coingecko-onchain-address", 901, 900, false],
+    ["usdt-tether", "peggedUSD", 0.998, "defillama-contract", 2 * 3600, 900, true],
+    ["usdt-tether", "peggedUSD", 0.998, "defillama-contract", 3 * 3600 + 60, 900, false],
     ["gbpm-mento", "peggedGBP", 1.32, "coingecko-low-volume", 41 * 3600, 3601, true],
     ["usdt-tether", "peggedUSD", 1, "coingecko-low-volume", 40 * 3600, 4501, false],
     ["usdt-tether", "peggedUSD", 1, "cached", 60, 30, false],
@@ -226,7 +188,7 @@ describe("runPostEnrichmentPricePipeline", () => {
         { ...observation(missing.id), observedAt: now - 3600 },
       ], now - 30);
       const result = await runPostEnrichmentPricePipeline({
-        ...nativePipelineInput(missing, db), assets: [missing, priced], priceCache: new Map(),
+        ...pipelineInput(missing, db), assets: [missing, priced], priceCache: new Map(),
       }, "");
       if (isAbortResult(result)) throw new Error("unexpected abort");
       expect(missing.price).toBe(1);
@@ -248,13 +210,35 @@ describe("runPostEnrichmentPricePipeline", () => {
         .toBe(effectiveness.eligibleObservationCount);
       // Even with no missing assets, the read measures observations that are not needed.
       const second = await runPostEnrichmentPricePipeline({
-        ...nativePipelineInput(priced, db), priceCache: new Map(),
+        ...pipelineInput(priced, db), priceCache: new Map(),
       }, "");
       if (isAbortResult(second)) throw new Error("unexpected abort");
       expect(second.priceObservationEffectiveness?.publication).toEqual({
         alreadyPriced: 1, assetAbsent: 2, policyRejected: 0, selected: 0, notNeededAfterSelection: 0,
       });
       expect(second.cachedFallbackCount).toBe(0);
+      // Repeated staged defillama-contract placeholders across unrelated assets are rejected via policyRejected.
+      const nusd = makeAsset({ id: "nusd-nexus", pegType: "peggedUSD", price: null, priceSource: undefined, priceConfidence: null });
+      const usdu = makeAsset({ id: "usdu-usdu-finance", pegType: "peggedUSD", price: null, priceSource: undefined, priceConfidence: null });
+      const ausd = makeAsset({ id: "ausd-agora", pegType: "peggedUSD", price: null, priceSource: undefined, priceConfidence: null });
+      const iusd = makeAsset({ id: "iusd-initia", pegType: "peggedUSD", price: null, priceSource: undefined, priceConfidence: null });
+      await writePriceCorroborationObservations(db, [
+        { id: nusd.id, source: "defillama-contract", price: 0.99987355779, observedAt: now - 120, observedAtMode: "upstream" },
+        { id: usdu.id, source: "defillama-contract", price: 0.99987355779, observedAt: now - 120, observedAtMode: "upstream" },
+        { id: ausd.id, source: "defillama-contract", price: 0.999746, observedAt: now - 120, observedAtMode: "upstream" },
+        { id: iusd.id, source: "defillama-contract", price: 0.999746, observedAt: now - 120, observedAtMode: "upstream" },
+      ], now - 10);
+      const fillResult = await runPostEnrichmentPricePipeline({
+        ...pipelineInput(nusd, db), assets: [nusd, usdu, ausd, iusd], priceCache: new Map(),
+      }, "");
+      if (isAbortResult(fillResult)) throw new Error("unexpected abort");
+      expect(nusd.price).toBeNull();
+      expect(usdu.price).toBeNull();
+      expect(ausd.price).toBe(0.999746);
+      expect(iusd.price).toBe(0.999746);
+      expect(fillResult.priceObservationEffectiveness?.publication).toEqual({
+        alreadyPriced: 0, assetAbsent: 0, policyRejected: 2, selected: 2, notNeededAfterSelection: 0,
+      });
     } finally {
       clock.mockRestore();
       sqlite.close();
@@ -308,202 +292,29 @@ describe("runPostEnrichmentPricePipeline", () => {
     }
   });
 
-  it("replaces weak non-USD fiat prices with fresh native-implied USD prices", async () => {
-    const asset = makeAsset();
-    const db = mockD1();
-    fetchCurrentNativePegImpliedUsdQuotesMock.mockResolvedValue(nativeQuote());
-
-    const result = await runPostEnrichmentPricePipeline(nativePipelineInput(asset, db), "");
-
-    expect(isAbortResult(result)).toBe(false);
-    if (isAbortResult(result)) {
-      throw new Error("unexpected abort result");
-    }
-    expect(result.nativePegCorrectionCount).toBe(1);
-    expect(result.nativePegFillCount).toBe(0);
-    expect(result.rejectedCount).toBe(0);
-    expect(asset.price).toBe(1.08);
-    expect(asset.priceSource).toBe("coingecko-native-implied");
-    expect(asset.priceSelectedSource).toBe("coingecko-native-implied");
-    expect(asset.priceConfidence).toBe("single-source");
-    expect(asset.priceObservedAt).toBe(1_700_000_000);
-    expect(asset.priceObservedAtMode).toBe("upstream");
-    expect(asset.priceSyncedAt).toBe(1_700_000_050);
-    expect(asset.consensusSources).toEqual(["coingecko-native-implied"]);
-    expect(asset.agreeSources).toEqual(["coingecko-native-implied"]);
-    expect(
-      db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO price_cache")),
-    ).toBe(false);
-  });
-
-  it("does not replace multi-hard-source authoritative agreement with a native-implied quote", async () => {
-    const asset = makeAsset({
-      price: 1.1,
-      priceSource: "binance+kraken",
-      priceConfidence: "high",
-      agreeSources: ["binance", "kraken"],
-      consensusSources: ["binance", "kraken"],
-    });
-    fetchCurrentNativePegImpliedUsdQuotesMock.mockResolvedValue(nativeQuote());
-
-    const result = await runPostEnrichmentPricePipeline(nativePipelineInput(asset), "");
-
-    expect(isAbortResult(result)).toBe(false);
-    if (isAbortResult(result)) {
-      throw new Error("unexpected abort result");
-    }
-    expect(result.nativePegCorrectionCount).toBe(0);
-    expect(result.nativePegFillCount).toBe(0);
-    expect(asset.price).toBe(1.1);
-    expect(asset.priceSource).toBe("binance+kraken");
-    expect(asset.priceConfidence).toBe("high");
-  });
-
-  it("does not fill from a native-implied quote past the lane's registry budget", async () => {
-    const asset = makeAsset({ price: null, priceSource: undefined, priceConfidence: null });
-    fetchCurrentNativePegImpliedUsdQuotesMock.mockResolvedValue(nativeQuote(1_700_000_050 - 1_200));
-
-    const result = await runPostEnrichmentPricePipeline(nativePipelineInput(asset), "");
-
-    expect(isAbortResult(result)).toBe(false);
-    if (isAbortResult(result)) throw new Error("unexpected abort result");
-    expect(result.nativePegFillCount).toBe(0);
-    expect(result.nativePegCorrectionCount).toBe(0);
-    expect(asset.price).toBeNull();
-  });
-
-  it("does not let an older native-implied quote displace a fresher incumbent", async () => {
-    const asset = makeAsset({ price: 1.12, priceObservedAt: 1_700_000_040 });
-    fetchCurrentNativePegImpliedUsdQuotesMock.mockResolvedValue(nativeQuote(1_700_000_000));
-
-    const result = await runPostEnrichmentPricePipeline(nativePipelineInput(asset), "");
-
-    expect(isAbortResult(result)).toBe(false);
-    if (isAbortResult(result)) throw new Error("unexpected abort result");
-    expect(result.nativePegCorrectionCount).toBe(0);
-    expect(asset.price).toBe(1.12);
-    expect(asset.priceSource).toBe("coingecko");
-  });
-
-  it.each([1.122, null])("keeps a held FX conversion indicative with incumbent %s", async (price) => {
-    const asset = makeAsset({ price });
-    fetchCurrentNativePegImpliedUsdQuotesMock.mockResolvedValue(nativeQuote(1_700_000_000, "held-closed-session"));
-
-    const result = await runPostEnrichmentPricePipeline(nativePipelineInput(asset), "");
-
-    expect(result).toMatchObject({ nativePegCorrectionCount: 0, nativePegFillCount: 0 });
-    expect(asset.price).toBe(price);
-  });
-
   it.each([true, false])("publishes BRZ pool-backed premiums when upstreams are independent (%s)", async (independent) => {
     const asset = makeAsset({ id: "brz-transfero", symbol: "BRZ", pegType: "peggedREAL", price: null });
-    const premium = 0.2 * 1.23;
-    const syncStartSec = Math.floor(Date.now() / 1000);
-    const sources = ["curve-dex", "uniswap-v3-dex"];
-    const observedAt = syncStartSec - 60;
-    const consensus = computePriceConsensus(sources.map((source) => ({
-      source, price: premium, observedAt, observedAtMode: "upstream", weight: 1,
-    })), 0.2, 50)!;
+    const premium = 0.2 * 1.23, syncStartSec = Math.floor(Date.now() / 1000), sources = ["curve-dex", "uniswap-v3-dex"], observedAt = syncStartSec - 60;
+    const consensus = computePriceConsensus(sources.map((source) => ({ source, price: premium, observedAt, observedAtMode: "upstream", weight: 1 })), 0.2, 50)!;
     const input = {
-      ...nativePipelineInput(asset),
+      ...pipelineInput(asset),
       syncStartSec,
       validationReferences: { rates: { peggedREAL: 0.2 }, type: "fresh" as const, updatedAt: observedAt },
       primaryPriceResults: new Map<string, PrimaryPriceWithFiatPremiumEvidence>([[asset.id, {
-        ...consensus,
-        dlPrice: null, cgPrice: null, candidateSources: sources,
+        ...consensus, dlPrice: null, cgPrice: null, candidateSources: sources,
         fiatPremiumEvidence: {
           "curve-dex": { priceUsd: premium, observedAtSec: observedAt, upstreamKeys: ["ethereum:pool-a"] },
           "uniswap-v3-dex": { priceUsd: premium, observedAtSec: observedAt, upstreamKeys: [independent ? "ethereum:pool-b" : "ethereum:pool-a"] },
         },
       }]]),
     };
-
     applyConsensusResults({ ...input, reason: "primary" });
     expect(asset.price).toBe(independent ? premium : null);
     prevalidatePrices({ ...input, logLabel: "premium test" });
     const result = await runPostEnrichmentPricePipeline(input, "");
 
-    expect(result).toMatchObject({ rejectedCount: 0, nativePegCorrectionCount: 0 });
+    expect(result).toMatchObject({ rejectedCount: 0 });
     expect(asset.price).toBe(independent ? premium : null);
-  });
-
-  it("corrects an undated incumbent despite its newer sync clock", async () => {
-    // A DefiLlama list quote carries no source observation. `stampPriceMetadata`
-    // records observedAt=null and puts the sync clock in priceUpdatedAt, which is
-    // a publication stamp, not evidence that the incumbent is fresher.
-    const asset = makeAsset({ price: 1.12 });
-    stampPriceMetadata(
-      asset, "defillama", "single-source", null, null,
-      ["defillama"], ["defillama"], 1_700_000_050, "defillama", null,
-    );
-    expect(asset.priceObservedAt).toBeNull();
-    expect(asset.priceUpdatedAt).toBeNull();
-    expect(asset.priceSyncedAt).toBe(1_700_000_050);
-    fetchCurrentNativePegImpliedUsdQuotesMock.mockResolvedValue(nativeQuote(1_700_000_000));
-
-    const result = await runPostEnrichmentPricePipeline(nativePipelineInput(asset), "");
-
-    expect(isAbortResult(result)).toBe(false);
-    if (isAbortResult(result)) throw new Error("unexpected abort result");
-    expect(result.nativePegCorrectionCount).toBe(1);
-    expect(asset.price).toBe(1.08);
-    expect(asset.priceSource).toBe("coingecko-native-implied");
-    expect(asset.priceObservedAt).toBe(1_700_000_000);
-  });
-
-  it("replaces high-confidence mixed-source output when only one hard source disagrees with native pricing", async () => {
-    const asset = makeAsset({
-      price: 1.1,
-      priceSource: "kraken+coingecko",
-      priceConfidence: "high",
-      agreeSources: ["kraken", "coingecko"],
-      consensusSources: ["kraken", "coingecko"],
-    });
-    fetchCurrentNativePegImpliedUsdQuotesMock.mockResolvedValue(nativeQuote());
-
-    const result = await runPostEnrichmentPricePipeline(nativePipelineInput(asset), "");
-
-    expect(isAbortResult(result)).toBe(false);
-    if (isAbortResult(result)) {
-      throw new Error("unexpected abort result");
-    }
-    expect(result.nativePegCorrectionCount).toBe(1);
-    expect(result.nativePegFillCount).toBe(0);
-    expect(asset.price).toBe(1.08);
-    expect(asset.priceSource).toBe("coingecko-native-implied");
-    expect(asset.priceSelectedSource).toBe("coingecko-native-implied");
-    expect(asset.priceConfidence).toBe("single-source");
-  });
-
-  it("fills missing supported non-USD fiat prices from the native-implied lane", async () => {
-    const asset = makeAsset({
-      price: null,
-      priceSource: undefined,
-      priceConfidence: null,
-    });
-    const db = mockD1([
-      {
-        match: "SELECT asset_id, price, updated_at, source, confidence, observed_at, observed_at_mode, synced_at, agree_sources_json, consensus_sources_json FROM price_cache",
-        rows: [],
-      },
-    ]);
-    fetchCurrentNativePegImpliedUsdQuotesMock.mockResolvedValue(nativeQuote());
-
-    const result = await runPostEnrichmentPricePipeline(nativePipelineInput(asset, db), "");
-
-    expect(isAbortResult(result)).toBe(false);
-    if (isAbortResult(result)) {
-      throw new Error("unexpected abort result");
-    }
-    expect(result.nativePegCorrectionCount).toBe(0);
-    expect(result.nativePegFillCount).toBe(1);
-    expect(asset.price).toBe(1.08);
-    expect(asset.priceSource).toBe("coingecko-native-implied");
-    expect(asset.priceSelectedSource).toBe("coingecko-native-implied");
-    expect(asset.priceConfidence).toBe("single-source");
-    expect(
-      db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO price_cache")),
-    ).toBe(false);
   });
 
   it("stages replay-safe prices without writing price_cache before canonical publication", async () => {
@@ -517,7 +328,7 @@ describe("runPostEnrichmentPricePipeline", () => {
     const incumbent = stored();
 
     const result = await runPostEnrichmentPricePipeline({
-      ...nativePipelineInput(asset, db),
+      ...pipelineInput(asset, db),
       validationReferences: undefined,
     }, "");
 
@@ -612,6 +423,37 @@ describe("runPostEnrichmentPricePipeline", () => {
       if (isAbortResult(result)) throw new Error("unexpected abort");
       expect(asset.price ?? null).toBe(expected);
       if (expected != null) expect(asset).toMatchObject({ priceSource: "cached", priceConfidence: "fallback" });
+    } finally {
+      clock.mockRestore();
+      sqlite.close();
+    }
+  });
+
+  it.each([
+    [1.13, null],
+    [0.96, 0.96],
+  ] as const)("applies HBD Hive veto to cached/staged CoinGecko fallbacks ($%s -> %s)", async (cgPrice, expected) => {
+    const now = 1_800_000_000;
+    const clock = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const sqlite = new DatabaseSync(":memory:");
+    sqlite.exec("CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL)");
+    const db = createSqliteD1(sqlite);
+    await writePriceCorroborationObservations(db, [{
+      id: "hbd-hive", source: "coingecko-low-volume", price: cgPrice, observedAt: now - 60, observedAtMode: "upstream",
+    }], now);
+    const asset = makeAsset({ id: "hbd-hive", symbol: "HBD", geckoId: "hive_dollar", pegType: "peggedUSD",
+      circulating: { peggedUSD: 9_800_000 }, price: null, priceSource: undefined, priceConfidence: null, priceObservedAt: null, priceObservedAtMode: null });
+    try {
+      const result = await runPostEnrichmentPricePipeline({
+        assets: [asset], db, syncStartSec: now, hiveVetoPrice: 0.93,
+        priceCache: new Map([["hbd-hive", { price: cgPrice, updatedAt: now - 60, source: "coingecko", confidence: "single-source",
+          observedAt: now - 60, observedAtMode: "upstream", syncedAt: now - 60, agreeSources: ["coingecko"], consensusSources: ["coingecko"] }]]),
+        validationContexts: { get: makeValidationContext }, previousTrustedPrices: new Map(),
+        authoritativeOverrides: new Map(), authoritativeOverrideStats: createAuthoritativeLivePriceOverrideStats(),
+      }, "");
+      if (isAbortResult(result)) throw new Error("unexpected abort");
+      expect(asset.price ?? null).toBe(expected);
+      if (expected == null) expect(result.priceObservationEffectiveness?.publication.policyRejected).toBe(1);
     } finally {
       clock.mockRestore();
       sqlite.close();

@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { PriceConfidenceSchema, PriceObservedAtModeSchema, NominalPriceReferenceSchema, PriceSourceConfidenceProfileSchema } from "./price";
+import {
+  PriceConfidenceSchema,
+  PriceObservedAtModeSchema,
+  NominalPriceReferenceSchema,
+  PricePublicationReasonSchema,
+  PriceSourceConfidenceProfileSchema,
+} from "./price";
 import { CurrentPegSchema } from "./current-peg";
 import { FxReferenceEvidenceMapSchema, SelectedPegReferencesSchema } from "./fx-reference";
 import { SfraxStockPerimeterObservationSchema } from "./sfrax-supply";
@@ -33,6 +39,7 @@ export const StablecoinDetailResponseSchema = z.object({
   price: z.number().nullable().optional(),
   priceSource: z.string().nullable().optional(),
   priceConfidence: PriceConfidenceSchema.nullable().optional(),
+  pricePublicationReason: PricePublicationReasonSchema.optional(),
   priceUpdatedAt: z.number().nullable().optional(),
   priceObservedAt: z.number().nullable().optional(),
   /** Canonical parent derivation of the overlaid publication quote only. */
@@ -229,6 +236,7 @@ const StablecoinDataRawSchema = z.object({
   price: z.number().nullable(),
   priceSource: z.string().nullable(),
   priceConfidence: PriceConfidenceSchema.nullable().optional(),
+  pricePublicationReason: PricePublicationReasonSchema.optional(),
   priceUpdatedAt: z.number().nullable().optional(),
   priceObservedAt: z.number().nullable().optional(),
   priceObservedAtMode: PriceObservedAtModeSchema.nullable().optional(),
@@ -293,6 +301,7 @@ export const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) =>
   price: asset.price,
   priceSource: asset.priceSource,
   priceConfidence: asset.priceConfidence ?? null,
+  ...(asset.pricePublicationReason != null ? { pricePublicationReason: asset.pricePublicationReason } : {}),
   priceUpdatedAt: asset.priceUpdatedAt ?? null,
   priceObservedAt: asset.priceObservedAt === undefined ? asset.priceUpdatedAt ?? null : asset.priceObservedAt,
   priceObservedAtMode: asset.priceObservedAtMode ?? null,

@@ -3,9 +3,14 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { CURVE_ORACLE_MAX_STALENESS_SEC } from "../../lib/curve-onchain";
 import { fetchCoingeckoSimplePrices, type CoingeckoSimplePriceEntry } from "../../lib/coingecko-simple-price";
-import { fetchHiveNativeHbdPrice } from "../../lib/hive-market-price";
+import { fetchHiveNativeHbdPrice, type HiveVetoSignal } from "../../lib/hive-market-price";
 import type { HiveNativePriceQuote } from "@shared/types/hive-market-price";
-import { createPricingAssetAttempt, endpointLabel, type PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
+import {
+  createPricingAssetAttempt,
+  endpointLabel,
+  type PricingProviderAttemptDiagnostic,
+  type PricingProviderRejectionReason,
+} from "../../lib/pricing-provider-diagnostics";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { shouldAttemptFetch, recordOutcomeSafe, recoverBreakerOnNoCandidateSafe } from "../../lib/circuit-breaker";
 import { mapWithConcurrency } from "../../lib/concurrency";
@@ -30,7 +35,7 @@ import {
   type LoadedDexPrices,
 } from "../../lib/depeg-helpers";
 import { fetchCurveOnchainPrices, fetchCurveOracleEma } from "../../lib/curve-onchain";
-import { CURVE_POOL_CONFIGS } from "@shared/lib/curve-pool-configs";
+import { CURVE_POOL_CONFIGS, type CurveSellGuardRejectionReason } from "@shared/lib/curve-pool-configs";
 import { CEX_PROVIDER_AUDIT_CONFIG, COINBASE_PRODUCTS } from "@shared/lib/pricing-provider-config";
 import { CEX_UPSTREAM_MAX_FUTURE_SKEW_SEC } from "@shared/lib/pricing-source-policy";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
@@ -97,6 +102,8 @@ export interface PrimaryConsensusQuoteMaps {
   curveOracleObservedAt: number | null;
   navPrices: Map<string, NavTelemetryQuote>;
   hiveNativeQuote: HiveNativePriceQuote | null;
+  hiveVetoMid: HiveVetoSignal | null;
+  hiveVetoUnavailableReason: string | null;
 }
 
 export function createEmptyPrimaryConsensusQuoteMaps(): PrimaryConsensusQuoteMaps {
@@ -119,6 +126,8 @@ export function createEmptyPrimaryConsensusQuoteMaps(): PrimaryConsensusQuoteMap
     curveOracleObservedAt: null,
     navPrices: new Map(),
     hiveNativeQuote: null,
+    hiveVetoMid: null,
+    hiveVetoUnavailableReason: null,
   };
 }
 
@@ -529,7 +538,52 @@ export async function collectPrimaryProviderQuotes(params: {
               quoteMaps.curveObservedAtByCoinId.set(id, observedAt);
             }
             quoteMaps.curvePricePoolKeysByCoinId = outcome.value.pricePoolKeysByCoinId;
-            return isSuccessfulOutcome(outcome);
+            const sellGuardRejections = outcome.value.sellGuardRejections ?? [];
+            const rejectionReasonCounts: Partial<Record<PricingProviderRejectionReason, number>> = {};
+            const sellGuardRejectionCounts: Partial<Record<CurveSellGuardRejectionReason, number>> = {};
+            for (const rejection of sellGuardRejections) {
+              sellGuardRejectionCounts[rejection.reason] = (sellGuardRejectionCounts[rejection.reason] ?? 0) + 1;
+              const providerReason: PricingProviderRejectionReason =
+                rejection.reason === "rpc"
+                  ? "upstream-error"
+                  : rejection.reason === "impact"
+                    ? "price-rejected"
+                    : "missing-liquidity";
+              rejectionReasonCounts[providerReason] = (rejectionReasonCounts[providerReason] ?? 0) + 1;
+            }
+            if (outcome.kind === "upstream-error") {
+              rejectionReasonCounts["upstream-error"] = (rejectionReasonCounts["upstream-error"] ?? 0) + 1;
+            }
+            const assetAttempts = sellGuardRejections.map((rejection) =>
+              createPricingAssetAttempt({
+                assetId: rejection.stablecoinId,
+                adapter: "curve-onchain",
+                source: "curve-onchain",
+                chain: rejection.chain,
+                target: rejection.poolAddress.toLowerCase(),
+                state: "attempted",
+                result: rejection.reason === "rpc" ? "failed" : "rejected",
+                rejectionClass: rejection.reason,
+                candidateAt: nowSec,
+                observedAt: null,
+              }),
+            );
+            const success = isSuccessfulOutcome(outcome);
+            providerDiagnostics.push({
+              source: "curve-onchain",
+              stage: "primary",
+              endpoint: "curve-onchain",
+              status: null,
+              ok: outcome.kind !== "upstream-error",
+              success,
+              candidateCount: new Set(CURVE_POOL_CONFIGS.map((config) => config.stablecoinId)).size,
+              resolvedCount: outcome.value.prices.size,
+              ...(Object.keys(rejectionReasonCounts).length > 0 ? { rejectionReasonCounts } : {}),
+              ...(Object.keys(sellGuardRejectionCounts).length > 0 ? { sellGuardRejectionCounts } : {}),
+              ...(outcome.kind === "upstream-error" && outcome.reason ? { errorMessage: outcome.reason } : {}),
+              ...(assetAttempts.length > 0 ? { assetAttempts } : {}),
+            });
+            return success;
           });
         }
       }
@@ -580,30 +634,48 @@ export async function collectPrimaryProviderQuotes(params: {
 
   // The native observer starts only after every earlier provider/body drains.
   // Its CG parent is dependency-only and never becomes a stablecoin candidate.
-  if (plan.candidates.some((asset) => asset.id === "hbd-hive") && sourceAllowed.hiveMarket) {
-    const parent = sourceAllowed.cg ? quoteMaps.cgQuotes.get("hive") : undefined;
-    const result = await fetchHiveNativeHbdPrice(parent ? { id: "hive", ...parent } : undefined, { signal, generation: nowSec });
-    quoteMaps.hiveNativeQuote = result.quote;
-    const reason = result.diagnostic.rejectionReason;
-    providerDiagnostics.push({
-      source: "hive-native-cg", stage: "primary", endpoint: result.diagnostic.node ?? "hive-market",
-      status: null, ok: result.transportHealthy, success: result.quote != null,
-      candidateCount: 1, resolvedCount: result.quote ? 1 : 0,
-      ...(reason ? { rejectionReasonCounts: { [result.transportHealthy ? "price-rejected" : "upstream-error"]: 1 } } : {}),
-      nativeMarket: result.diagnostic,
-      assetAttempts: [createPricingAssetAttempt({
-        assetId: "hbd-hive", adapter: "hive-native-cg", state: "attempted",
-        result: result.quote ? "resolved" : result.transportHealthy ? "rejected" : "failed",
-        ...(reason ? { rejectionClass: reason } : {}),
-        candidateAt: nowSec, observedAt: result.quote?.observedAt ?? null,
-      })],
-    });
-    // Parent absence is not a Hive outage, and each native sample has one
-    // aggregate circuit outcome, never one D1 write per physical RPC.
-    if (result.diagnostic.rpcCount > 0 && reason !== "aborted" && reason !== "deadline_exceeded") {
-      await recordOutcomeSafe(db, CIRCUIT_SOURCE.HIVE_MARKET, result.transportHealthy);
+  if (plan.candidates.some((asset) => asset.id === "hbd-hive")) {
+    if (sourceAllowed.hiveMarket) {
+      const parent = sourceAllowed.cg ? quoteMaps.cgQuotes.get("hive") : undefined;
+      const result = await fetchHiveNativeHbdPrice(parent ? { id: "hive", ...parent } : undefined, { signal, generation: nowSec });
+      quoteMaps.hiveNativeQuote = result.quote;
+      quoteMaps.hiveVetoMid = result.vetoMid;
+      quoteMaps.hiveVetoUnavailableReason = result.vetoMid
+        ? null
+        : (result.diagnostic.rejectionReason ?? "hive_market_unavailable");
+      const reason = result.diagnostic.rejectionReason;
+      providerDiagnostics.push({
+        source: "hive-native-cg", stage: "primary", endpoint: result.diagnostic.node ?? "hive-market",
+        status: null, ok: result.transportHealthy, success: result.quote != null,
+        candidateCount: 1, resolvedCount: result.quote ? 1 : 0,
+        ...(reason ? { rejectionReasonCounts: { [result.transportHealthy ? "price-rejected" : "upstream-error"]: 1 } } : {}),
+        nativeMarket: result.diagnostic,
+        assetAttempts: [createPricingAssetAttempt({
+          assetId: "hbd-hive", adapter: "hive-native-cg", state: "attempted",
+          result: result.quote ? "resolved" : result.transportHealthy ? "rejected" : "failed",
+          ...(reason ? { rejectionClass: reason } : {}),
+          candidateAt: nowSec, observedAt: result.quote?.observedAt ?? null,
+        })],
+      });
+      // Parent absence is not a Hive outage, and each native sample has one
+      // aggregate circuit outcome, never one D1 write per physical RPC.
+      if (result.diagnostic.rpcCount > 0 && reason !== "aborted" && reason !== "deadline_exceeded") {
+        await recordOutcomeSafe(db, CIRCUIT_SOURCE.HIVE_MARKET, result.transportHealthy);
+      }
+      throwIfAborted(signal);
+    } else {
+      quoteMaps.hiveVetoMid = null;
+      quoteMaps.hiveVetoUnavailableReason = "circuit_open";
+      providerDiagnostics.push({
+        source: "hive-native-cg", stage: "primary", endpoint: "hive-market",
+        status: null, ok: false, success: false,
+        candidateCount: 1, resolvedCount: 0,
+        assetAttempts: [createPricingAssetAttempt({
+          assetId: "hbd-hive", adapter: "hive-native-cg", state: "skipped",
+          skipReason: "circuit-open", candidateAt: nowSec,
+        })],
+      });
     }
-    throwIfAborted(signal);
   }
 
   return { quoteMaps, providerDiagnostics };

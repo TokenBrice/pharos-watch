@@ -7,16 +7,18 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
  *
  * Extracted to eliminate code duplication (Q-002, Q-011, CC-001).
  */
-import { getPricingSourceRegistryEntry, isPricingSourceSoftGuardrailExempt } from "@shared/lib/pricing-source-registry";
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
 import { pricesAgreeWithinBps } from "../../lib/price-divergence";
 import { loadPriceCorroborationObservations, type PriceObservationEffectiveness } from "./price-corroboration-observations";
 import {
-  countDepegAuthoritativeSources,
+  COINGECKO_MICRO_VOLUME_OUTLIER_REASON,
+  detectDefiLlamaContractFillDefaultPrices,
   getPriceCacheMaxAgeSec,
+  isCoingeckoAggregatorSource,
   isReplaySafePriceSource,
-  isSingleSourceDepegAuthoritative,
 } from "@shared/lib/pricing-source-policy";
+import { measureCoingeckoMicroVolumeDeviation } from "../../lib/coingecko-simple-price";
+import { HIVE_MARKET_POLICY } from "../../lib/hive-market-price";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
@@ -41,16 +43,12 @@ import {
   type PriceValidationReferences,
 } from "../../lib/price-validation";
 import {
+  resolveContractFillLineageGroup,
   type TrustedPriceReference,
   validateFallbackPriceCandidate,
   validatePublishedAssetPrice,
 } from "../../lib/price-publish-policy";
-import {
-  COINGECKO_NATIVE_IMPLIED_SOURCE,
-  computePriceDivergenceBps,
-  fetchCurrentNativePegImpliedUsdQuotes,
-  NATIVE_PEG_PRICE_GUARD_MAX_DRIFT_BPS,
-} from "../../lib/native-peg-implied-prices";
+import type { OpenConfirmedDepegReference } from "../../lib/open-confirmed-depegs";
 import type { NativePegQuoteSession } from "../../lib/native-peg-quotes";
 import {
   assetPriceObservationClock,
@@ -80,27 +78,25 @@ export interface PostEnrichmentInput {
   db: D1Database;
   syncStartSec: number;
   signal?: AbortSignal;
-  coingeckoApiKey?: string | null;
   fxFallbackRates?: Record<string, number>;
   validationReferences?: PriceValidationReferences;
   validationContexts: { get: (asset: PeggedAsset) => PriceValidationContext };
   primaryPriceResults?: Map<string, PrimaryPriceResult>;
   previousTrustedPrices?: Map<string, TrustedPriceReference>;
+  openConfirmedDepegs?: ReadonlyMap<string, OpenConfirmedDepegReference>;
   authoritativeOverrides: Map<string, ProtocolPriceOverride>;
   authoritativeOverrideStats: AuthoritativeLivePriceOverrideStats;
   /** The same replay snapshot used to establish trusted-price continuity. */
   priceCache: ReadonlyMap<string, PriceCacheEntry>;
-  nativePegSession?: NativePegQuoteSession;
+  rejectedCgReasons?: ReadonlyMap<string, string>;
+  hiveVetoPrice?: number | null;
 }
 
 export interface PriceValidationResult {
   priceObservationEffectiveness?: PriceObservationEffectiveness;
   rejectedCount: number;
   cachedFallbackCount: number;
-  nativePegCorrectionCount: number;
-  nativePegFillCount: number;
   priceCacheEntries: PriceCacheWriteEntry[];
-  providerDiagnostics: PricingProviderAttemptDiagnostic[];
 }
 
 export interface SharedPriceCompletionInput extends PostEnrichmentInput {
@@ -139,174 +135,50 @@ export async function runPostEnrichmentPricePipeline(
     assets,
     db,
     signal,
-    coingeckoApiKey,
     validationReferences,
     validationContexts,
     previousTrustedPrices,
-    nativePegSession,
   } = input;
-
-  const getCurrentSourceParts = (asset: PeggedAsset): string[] => (
-    asset.agreeSources && asset.agreeSources.length > 0
-      ? asset.agreeSources
-      : asset.priceSource
-        ? splitCompositePriceSource(asset.priceSource)
-        : []
-  );
-
-  const hasStrongNativePegBypassAuthority = (asset: PeggedAsset): boolean => {
-    if (isPricingSourceSoftGuardrailExempt(asset.priceSource)) {
-      return true;
-    }
-
-    const currentSourceParts = getCurrentSourceParts(asset);
-    if (asset.priceConfidence === "single-source") {
-      return currentSourceParts.length === 1 &&
-        isSingleSourceDepegAuthoritative(currentSourceParts[0], asset.priceObservedAtMode);
-    }
-
-    if (asset.priceConfidence === "high") {
-      return countDepegAuthoritativeSources(currentSourceParts) >= 2;
-    }
-
-    return false;
-  };
-
-  const nativePegHardeningCandidates = assets.filter((asset) => (
-    validationContexts.get(asset).pegClass === "fiat_fx"
-  ));
-
-  const providerDiagnostics: PricingProviderAttemptDiagnostic[] = [];
-  const nativePegImpliedUsdQuotes = await fetchCurrentNativePegImpliedUsdQuotes(
-    nativePegHardeningCandidates.map((asset) => {
-      const meta = ACTIVE_META_BY_ID.get(asset.id);
-      const validationContext = validationContexts.get(asset);
-      return {
-        stablecoinId: asset.id,
-        geckoId: meta?.geckoId ?? asset.geckoId ?? null,
-        pegCurrency: meta?.flags?.pegCurrency ?? null,
-        pegType: validationContext.pegType ?? null,
-      };
-    }),
-    validationReferences,
-    signal,
-    coingeckoApiKey,
-    { diagnostics: providerDiagnostics, stage: "fallback" },
-    nativePegSession,
-  );
 
   // --- Reject unreasonable prices BEFORE caching ---
   let rejectedCount = 0;
-  let nativePegCorrectionCount = 0;
-  let nativePegFillCount = 0;
-  const nativePegMaxTrustedAgeSec =
-    getPricingSourceRegistryEntry(COINGECKO_NATIVE_IMPLIED_SOURCE)?.maxTrustedAgeSec ?? null;
+  const publishedContractFillDefaults = detectDefiLlamaContractFillDefaultPrices(
+    assets.flatMap((asset) =>
+      typeof asset.price === "number" &&
+      Number.isFinite(asset.price) &&
+      asset.price > 0 &&
+      splitCompositePriceSource(asset.priceSource ?? "").includes("defillama-contract")
+        ? [{
+            id: asset.id,
+            price: asset.price,
+            lineageGroup: resolveContractFillLineageGroup(asset.id),
+            tokenKey: asset.address?.trim() || undefined,
+          }]
+        : [],
+    ),
+  );
   for (const asset of assets) {
-    const nativePegImpliedUsd = nativePegImpliedUsdQuotes.get(asset.id);
-    const fiatPremiumEvidence = getFiatPremiumEvidenceForCurrentAsset(asset, input.primaryPriceResults);
-    const currentHasPrice = asset.price != null && typeof asset.price === "number";
-    const currentHasStrongBypassAuthority = currentHasPrice && hasStrongNativePegBypassAuthority(asset);
-    const nativePegDivergenceBps =
-      currentHasPrice && nativePegImpliedUsd != null
-        ? computePriceDivergenceBps(asset.price as number, nativePegImpliedUsd.priceUsd)
-        : null;
-
-    const validateCurrentPrice = () => {
-      const candidatePrices = getPostEnrichmentCandidatePricesForCurrentAsset(asset, input.primaryPriceResults);
-      return validatePublishedAssetPrice({
-        asset,
-        candidatePrices,
-        upstreamKeysBySource: candidatePrices && input.primaryPriceResults?.get(asset.id)?.upstreamKeysBySource,
-        fiatPremiumEvidence,
-        validationContext: validationContexts.get(asset),
-        validationReferences,
-        previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
-      });
-    };
-
-    const tryApplyNativePegImpliedPrice = (reason: "fill" | "correction"): boolean => {
-      if (nativePegImpliedUsd == null || nativePegImpliedUsd.updatedAt == null ||
-        nativePegImpliedUsd.referenceAdmission?.status !== "admitted") return false;
-      // The lane's own registry budget is the admission gate; the shared fetch
-      // uses the wider depeg budget for its different consumers.
-      const ageSec = nativePegImpliedUsd.referenceAdmission.decisionAtSec - nativePegImpliedUsd.updatedAt;
-      if (nativePegMaxTrustedAgeSec == null
-        || ageSec < 0 || ageSec > nativePegMaxTrustedAgeSec) {
-        logWorkerEventArgs("handler", "warn",
-          `[sync-stablecoins] Skipped native-peg ${reason} for ${asset.symbol} (id=${asset.id}): ` +
-          `quote is ${ageSec}s old, budget ${nativePegMaxTrustedAgeSec ?? "unknown"}s`,
-        );
-        return false;
-      }
-      const nativeDecision = validatePublishedAssetPrice({
-        asset: {
-          price: nativePegImpliedUsd.priceUsd,
-          priceSource: COINGECKO_NATIVE_IMPLIED_SOURCE,
-          priceConfidence: "single-source",
-          agreeSources: [COINGECKO_NATIVE_IMPLIED_SOURCE],
-        },
-        validationContext: validationContexts.get(asset),
-        validationReferences,
-        previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
-      });
-      if (!nativeDecision.accepted) {
-        const action = reason === "fill" ? "fill" : "correction";
-        logWorkerEventArgs("handler", "warn",
-          `[sync-stablecoins] Skipped native-peg ${action} for ${asset.symbol} (id=${asset.id}): ` +
-          `${nativeDecision.reason}`,
-        );
-        return false;
-      }
-
-      if (reason === "fill") {
-        logWorkerEventArgs("handler", "warn",
-          `[sync-stablecoins] Filled missing non-USD fiat price for ${asset.symbol} (id=${asset.id}): ` +
-          `$${nativePegImpliedUsd.priceUsd.toFixed(6)} via ${nativePegImpliedUsd.pegCurrency} conversion`,
-        );
-        nativePegFillCount++;
-      } else {
-        logWorkerEventArgs("handler", "warn",
-          `[sync-stablecoins] Corrected weak non-USD fiat price for ${asset.symbol} (id=${asset.id}): ` +
-          `$${asset.price} from ${asset.priceSource ?? "unknown"} -> $${nativePegImpliedUsd.priceUsd.toFixed(6)} ` +
-          `via ${nativePegImpliedUsd.pegCurrency} conversion (${nativePegDivergenceBps}bps divergence)`,
-        );
-        nativePegCorrectionCount++;
-      }
-
-      applyAcceptedPriceCandidate({
-        asset,
-        price: nativePegImpliedUsd.priceUsd,
-        source: COINGECKO_NATIVE_IMPLIED_SOURCE,
-        confidence: "single-source",
-        observedAt: nativePegImpliedUsd.updatedAt,
-        observedAtMode: "upstream",
-        consensusSources: [COINGECKO_NATIVE_IMPLIED_SOURCE],
-        agreeSources: [COINGECKO_NATIVE_IMPLIED_SOURCE],
-        syncedAt: input.syncStartSec,
-        selectedSource: COINGECKO_NATIVE_IMPLIED_SOURCE,
-      });
-      return true;
-    };
-
-    if (!currentHasPrice) {
-      tryApplyNativePegImpliedPrice("fill");
-    } else if (
-      !currentHasStrongBypassAuthority &&
-      nativePegImpliedUsd?.updatedAt != null &&
-      // Only a named market observation can outrank the native quote.
-      nativePegImpliedUsd.updatedAt >= (assetPriceObservationClock(asset) ?? 0) &&
-      nativePegDivergenceBps != null &&
-      nativePegDivergenceBps > NATIVE_PEG_PRICE_GUARD_MAX_DRIFT_BPS &&
-      (!fiatPremiumEvidence || validateCurrentPrice().reason !== "corroborated_fiat_premium")
-    ) {
-      tryApplyNativePegImpliedPrice("correction");
-    }
-
     if (asset.price == null || typeof asset.price !== "number") continue;
     // Nominal par was validated when applied and carries no observation clock to age.
     if (asset.priceObservedAtMode === "nominal_reference") continue;
 
-    const decision = validateCurrentPrice();
+    const fiatPremiumEvidence = getFiatPremiumEvidenceForCurrentAsset(asset, input.primaryPriceResults);
+    const candidatePrices = getPostEnrichmentCandidatePricesForCurrentAsset(asset, input.primaryPriceResults);
+    const decision = validatePublishedAssetPrice({
+      asset,
+      candidatePrices,
+      upstreamKeysBySource: candidatePrices && input.primaryPriceResults?.get(asset.id)?.upstreamKeysBySource,
+      fiatPremiumEvidence,
+      contractFillDefault:
+        splitCompositePriceSource(asset.priceSource ?? "").includes("defillama-contract") &&
+        publishedContractFillDefaults.has(asset.price)
+          ? { value: asset.price }
+          : null,
+      validationContext: validationContexts.get(asset),
+      validationReferences,
+      previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
+      openConfirmedDepeg: input.openConfirmedDepegs?.get(asset.id) ?? null,
+    });
     if (!decision.accepted) {
       const authoritativeOverride = input.authoritativeOverrides.get(asset.id);
       const currentPrice = asset.price;
@@ -333,6 +205,9 @@ export async function runPostEnrichmentPricePipeline(
       );
       clearPriceMetadata(asset);
       rejectedCount++;
+    } else if (decision.confidenceCap === "low") {
+      asset.priceConfidence = "low";
+      if (decision.publicationReason) asset.pricePublicationReason = decision.publicationReason;
     }
   }
 
@@ -374,25 +249,103 @@ export async function runPostEnrichmentPricePipeline(
     else if (!hasMissingPrice(asset)) priceObservationEffectiveness.publication.alreadyPriced += observations.length;
   }
   if (stillMissing.length > 0) {
+    const isWithheldByPrimaryQualityGate = (
+      asset: PeggedAsset,
+      source: string | null | undefined,
+      price: number,
+    ): boolean => {
+      if (!isCoingeckoAggregatorSource(source)) return false;
+      if (asset.id === "hbd-hive" && input.hiveVetoPrice != null) {
+        return !pricesAgreeWithinBps(price, input.hiveVetoPrice, HIVE_MARKET_POLICY.cgDivergenceVetoMaxBps);
+      }
+      // This run's CoinGecko read already measured volume below the floor; an
+      // older staged CoinGecko quote for the same coin inherits that verdict.
+      if (input.rejectedCgReasons?.get(asset.id) === COINGECKO_MICRO_VOLUME_OUTLIER_REASON) {
+        return measureCoingeckoMicroVolumeDeviation({
+          price,
+          context: validationContexts.get(asset),
+          references: validationReferences,
+        }) !== null;
+      }
+      return false;
+    };
     const priceCache = input.priceCache;
+    const contractQuoteRows: { id: string; price: number; lineageGroup: string; tokenKey?: string }[] = [];
+    for (const [id, observations] of staged) {
+      for (const observation of observations) {
+        if (observation.source !== "defillama-contract") continue;
+        contractQuoteRows.push({
+          id,
+          price: observation.price,
+          lineageGroup: resolveContractFillLineageGroup(id),
+          tokenKey: observation.chain && observation.target ? `${observation.chain}:${observation.target}` : undefined,
+        });
+      }
+    }
+    for (const asset of assets) {
+      if (
+        typeof asset.price === "number" &&
+        Number.isFinite(asset.price) &&
+        asset.price > 0 &&
+        splitCompositePriceSource(asset.priceSource ?? "").includes("defillama-contract")
+      ) {
+        contractQuoteRows.push({
+          id: asset.id,
+          price: asset.price,
+          lineageGroup: resolveContractFillLineageGroup(asset.id),
+          tokenKey: asset.address?.trim() || undefined,
+        });
+      }
+    }
     for (const asset of stillMissing) {
+      const cached = priceCache.get(asset.id);
+      if (cached?.source === "defillama-contract" && typeof cached.price === "number" && cached.price > 0) {
+        contractQuoteRows.push({
+          id: asset.id,
+          price: cached.price,
+          lineageGroup: resolveContractFillLineageGroup(asset.id),
+          tokenKey: asset.address?.trim() || undefined,
+        });
+      }
+    }
+    const stagedContractFillDefaults = detectDefiLlamaContractFillDefaultPrices(contractQuoteRows);
+
+    for (const asset of stillMissing) {
+      const primaryPriceResult = input.primaryPriceResults?.get(asset.id);
+      const openConfirmedDepeg = input.openConfirmedDepegs?.get(asset.id) ?? null;
       const candidates = staged.get(asset.id) ?? [];
       const datedCandidates = candidates.filter((candidate) => !candidate.recentActivity);
-      const candidatePrices = Object.fromEntries(datedCandidates.map((candidate) => [candidate.source, candidate.price]));
+      const datedCandidatePrices = Object.fromEntries(datedCandidates.map((candidate) => [candidate.source, candidate.price]));
+      const sharedCandidatePrices = primaryPriceResult?.allPrices
+        ? { ...primaryPriceResult.allPrices, ...datedCandidatePrices }
+        : datedCandidatePrices;
       for (const [candidateIndex, candidate] of candidates.entries()) {
+        if (isWithheldByPrimaryQualityGate(asset, candidate.source, candidate.price)) {
+          priceObservationEffectiveness.publication.policyRejected++;
+          continue;
+        }
         const agreeSources = [...new Set([candidate.source, ...datedCandidates
           .filter((other) => pricesAgreeWithinBps(candidate.price, other.price, DIVERGENCE_THRESHOLD_BPS))
           .map((other) => other.source)])];
+        const candidatePrices = candidate.recentActivity
+          ? { ...sharedCandidatePrices, [candidate.source]: candidate.price }
+          : sharedCandidatePrices;
         const decision = validateFallbackPriceCandidate({
           price: candidate.price,
           source: candidate.source,
           confidence: "fallback",
           agreeSources,
           candidatePrices,
+          upstreamKeysBySource: primaryPriceResult?.upstreamKeysBySource,
           validationContext: validationContexts.get(asset),
           validationReferences,
           previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
           listFillDefault: asset.priceListFillDefault ?? null,
+          openConfirmedDepeg,
+          contractFillDefault:
+            candidate.source === "defillama-contract" && stagedContractFillDefaults.has(candidate.price)
+              ? { value: candidate.price }
+              : null,
         });
         if (!decision.accepted) {
           priceObservationEffectiveness.publication.policyRejected++;
@@ -404,12 +357,15 @@ export async function runPostEnrichmentPricePipeline(
           asset,
           price: candidate.price,
           source: candidate.source,
-          confidence: "fallback",
+          confidence: decision.confidenceCap ?? "fallback",
           observedAt: candidate.observedAt,
           observedAtMode: candidate.observedAtMode,
-          consensusSources: candidates.map((row) => row.source),
+          consensusSources: decision.publicationReason && primaryPriceResult?.allPrices
+            ? [...new Set([...candidates.map((row) => row.source), ...Object.keys(primaryPriceResult.allPrices)])]
+            : candidates.map((row) => row.source),
           agreeSources,
           syncedAt: candidate.recentActivity?.collectedAt ?? input.syncStartSec,
+          pricePublicationReason: decision.publicationReason,
         });
         cachedFallbackCount++;
         break;
@@ -417,8 +373,9 @@ export async function runPostEnrichmentPricePipeline(
       if (!hasMissingPrice(asset)) continue;
       const cached = priceCache.get(asset.id);
       if (!cached) continue;
+      if (isWithheldByPrimaryQualityGate(asset, cached.source, cached.price)) continue;
       const observedAt = priceCacheObservationClock(cached);
-      if ((cached.source === "defillama" || cached.source === "defillama-list") &&
+      if ((cached.source === "defillama" || cached.source === "defillama-list" || cached.source === "defillama-contract") &&
         (cached.observedAtMode !== "upstream" || cached.hasExplicitClocks === false || observedAt == null)) continue;
       // The cached USD value of a foreign NAV also contains the FX rate from that run.
       const navAge = cached.source === "chainlink-nav" && ACTIVE_META_BY_ID.get(asset.id)?.flags.pegCurrency === "USD"
@@ -429,7 +386,8 @@ export async function runPostEnrichmentPricePipeline(
         }).accepted) continue;
       } else {
         const maxAgeSec = getPriceCacheMaxAgeSec(cached.source, PRICE_CACHE_TTL);
-        if (cached.updatedAt > now || now - cached.updatedAt >= maxAgeSec) continue;
+        const replayClock = cached.source === "defillama-contract" ? observedAt! : cached.updatedAt;
+        if (replayClock > now || now - replayClock >= maxAgeSec) continue;
       }
       const cachedAgreeSources =
         cached.agreeSources && cached.agreeSources.length > 0
@@ -448,6 +406,10 @@ export async function runPostEnrichmentPricePipeline(
         validationReferences,
         previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
         listFillDefault: asset.priceListFillDefault ?? null,
+        contractFillDefault:
+          cached.source === "defillama-contract" && stagedContractFillDefaults.has(cached.price)
+            ? { value: cached.price }
+            : null,
       });
       if (!decision.accepted) continue;
 
@@ -470,10 +432,7 @@ export async function runPostEnrichmentPricePipeline(
     priceObservationEffectiveness,
     rejectedCount,
     cachedFallbackCount,
-    nativePegCorrectionCount,
-    nativePegFillCount,
     priceCacheEntries,
-    providerDiagnostics,
   };
 }
 

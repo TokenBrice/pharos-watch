@@ -18,7 +18,13 @@ import {
 import { clearPriceMetadata, loadPreviousStablecoinsById } from "./shared";
 import { applyTrackedAssetOverrides } from "./phase-helpers";
 import { buildDexScreenerTargets, runDexScreenerPass, type DexScreenerBatchTarget } from "./enrich-prices-dexscreener-pass";
-import { DEX_REFRESH_CACHE_KEY, PRICE_CORROBORATION_OBSERVATIONS_KEY, toV1PriceObservation, type PriceCorroborationObservation } from "./price-corroboration-observations";
+import {
+  DEX_REFRESH_CACHE_KEY,
+  PRICE_CORROBORATION_OBSERVATIONS_KEY,
+  filterStageablePriceObservations,
+  toV1PriceObservation,
+  type PriceCorroborationObservation,
+} from "./price-corroboration-observations";
 import { loadFxRatesForPriceBounds } from "./enrich-prices-progress";
 import type { PeggedAsset } from "./enrich-prices-shared";
 import { resolveStablecoinPriceGapReviews } from "../../lib/stablecoin-publication-coverage";
@@ -489,7 +495,10 @@ export async function runPriceDexRefresh(params: {
   await recordProviderOutcomeSafe({ db: params.db, circuitSource: CIRCUIT_SOURCE.DEXSCREENER_PRICES_REFRESH,
     attempted: summary.attemptedBatches, successful: successfulBatches });
   const written = await setCacheIfNewer(params.db, DEX_REFRESH_CACHE_KEY, JSON.stringify({
-    observations: [...addressObservations, ...shortLived.observations, ...observations.map(toV1PriceObservation)],
+    observations: filterStageablePriceObservations(
+      [...addressObservations, ...shortLived.observations, ...observations.map(toV1PriceObservation)],
+      params.syncStartSec,
+    ),
     targets: [...plan.targetsById.values()],
     // Hints outlive the slots that produced them but never a delisting.
     addressTargets: [...addressTargets.values()].filter((target) => previousAssetsById.has(target.id)),

@@ -1,10 +1,12 @@
 import { describe, it, expect } from "vitest";
 import {
+  detectDefiLlamaContractFillDefaultPrices,
   detectDefiLlamaListFillDefaultPrices,
   hasDepegAuthoritativeSource,
   isReplaySafePriceSource,
 } from "@shared/lib/pricing-source-policy";
 import {
+  resolveContractFillLineageGroup,
   validateFallbackPriceCandidate,
   validatePrimaryPriceCandidate,
   validatePublishedAssetPrice,
@@ -84,481 +86,151 @@ describe("validatePrimaryPriceCandidate — severe downside with directional cor
       previousTrustedPrice: { price: 1, source: "coingecko", confidence: "single-source", observedAt: null, agreeSources: ["coingecko"] },
     })).toMatchObject({ accepted: false, reason: "temporal_jump_requires_corroboration" });
   });
-  it("rejects an uncorroborated AZND exact-pool severe downside", () => {
-    const decision = validatePrimaryPriceCandidate({
-      price: 0.38,
-      source: "curve-thin-onchain",
-      confidence: "fallback",
-      agreeSources: ["curve-thin-onchain"],
-      validationContext: { ...USD_CONTEXT, stablecoinId: "aznd-mu-digital" },
-    });
+  const severeCases: Array<[string, Omit<Parameters<typeof validatePrimaryPriceCandidate>[0], "validationContext">, boolean, string?]> = [
+    ["rejects uncorroborated AZND exact-pool severe downside", { price: 0.38, source: "curve-thin-onchain", confidence: "fallback", agreeSources: ["curve-thin-onchain"] }, false, "severe_downside_requires_corroboration"],
+    ["rejects uncorroborated AZND exact-pool temporal jump", { price: 0.7, source: "curve-thin-onchain", confidence: "fallback", agreeSources: ["curve-thin-onchain"], previousTrustedPrice: { price: 1, source: "pyth", confidence: "high", observedAt: null, agreeSources: ["pyth"] } }, false, "temporal_jump_requires_corroboration"],
+    ["rejects severe downside with single source", { price: 0.38, source: "pyth", confidence: "low", agreeSources: ["pyth"] }, false, "severe_downside_requires_corroboration"],
+    ["keeps VUSD dex-promoted subject to severe-downside corroboration", { price: 0.38, source: "dex-promoted", confidence: "single-source", agreeSources: ["dex-promoted"], candidatePrices: { "dex-promoted": 0.38 } }, false, "severe_downside_requires_corroboration"],
+    ["accepts severe downside when 2+ candidate sources confirm", { price: 0.38, source: "pyth", confidence: "low", agreeSources: ["pyth"], candidatePrices: { coingecko: 0.39, pyth: 0.38, "defillama-list": 0.51 } }, true],
+    ["rejects severe downside when only correlated list aggregators corroborate", { price: 0.38, source: "coingecko+defillama-list", confidence: "low", agreeSources: ["coingecko", "defillama-list"], candidatePrices: { coingecko: 0.39, "defillama-list": 0.38 } }, false, "severe_downside_requires_corroboration"],
+    ["accepts corroborated severe downside despite large jump from previous trusted price", { price: 0.1525, source: "coingecko+defillama-list", confidence: "low", agreeSources: ["coingecko", "defillama-list"], candidatePrices: { coingecko: 0.1525, "defillama-list": 0.1524, pyth: 0.151, "dex-promoted": 1.0007 }, previousTrustedPrice: { price: 1.0007, source: "pyth", confidence: "high", observedAt: null, agreeSources: ["pyth"] } }, true],
+    ["rejects severe downside when only 1 candidate source is severe", { price: 0.45, source: "pyth", confidence: "low", agreeSources: ["pyth"], candidatePrices: { coingecko: 0.92, pyth: 0.45 } }, false, "severe_downside_requires_corroboration"],
+    ["allows exempt sources without candidatePrices", { price: 0.3, source: "pool-tvl-weighted", confidence: "low", agreeSources: ["pool-tvl-weighted"] }, true],
+    ["allows high confidence with 2+ agree sources", { price: 0.35, source: "coingecko+pyth", confidence: "high", agreeSources: ["coingecko", "pyth"] }, true],
+    ["rejects severe downside corroborated only by CoinGecko paths", { price: 0.38, source: "coingecko+coingecko-onchain-address", confidence: "high", agreeSources: ["coingecko", "coingecko-onchain-address"], candidatePrices: { coingecko: 0.38, "coingecko-onchain-address": 0.38 } }, false, "severe_downside_requires_corroboration"],
+    ["allows when previous trusted price was also severe downside", { price: 0.38, source: "pyth", confidence: "low", agreeSources: ["pyth"], previousTrustedPrice: { price: 0.4, source: "coingecko", confidence: "low", observedAt: null, agreeSources: ["coingecko"] } }, true],
+    ["does not trigger directional corroboration for non-severe prices", { price: 0.85, source: "pyth", confidence: "low", agreeSources: ["pyth"], candidatePrices: { coingecko: 0.3, pyth: 0.85 } }, true],
+  ];
 
-    expect(decision.accepted).toBe(false);
-    expect(decision.reason).toBe("severe_downside_requires_corroboration");
-  });
-
-  it("rejects an uncorroborated AZND exact-pool temporal jump", () => {
-    const decision = validatePrimaryPriceCandidate({
-      price: 0.7,
-      source: "curve-thin-onchain",
-      confidence: "fallback",
-      agreeSources: ["curve-thin-onchain"],
-      validationContext: { ...USD_CONTEXT, stablecoinId: "aznd-mu-digital" },
-      previousTrustedPrice: {
-        price: 1,
-        source: "pyth",
-        confidence: "high",
-        observedAt: null,
-        agreeSources: ["pyth"],
-      },
-    });
-
-    expect(decision.accepted).toBe(false);
-    expect(decision.reason).toBe("temporal_jump_requires_corroboration");
-  });
-
-  it("rejects severe downside with single source and no corroboration", () => {
-    const decision = validatePrimaryPriceCandidate({
-      price: 0.38,
-      source: "pyth",
-      confidence: "low",
-      agreeSources: ["pyth"],
-      validationContext: USD_CONTEXT,
-    });
-    expect(decision.accepted).toBe(false);
-    expect(decision.reason).toBe("severe_downside_requires_corroboration");
-  });
-
-  it("keeps a VUSD dex-promoted aggregate subject to severe-downside corroboration", () => {
-    const decision = validatePrimaryPriceCandidate({
-      price: 0.38,
-      source: "dex-promoted",
-      confidence: "single-source",
-      agreeSources: ["dex-promoted"],
-      candidatePrices: { "dex-promoted": 0.38 },
-      validationContext: { ...USD_CONTEXT, stablecoinId: "vusd-virtue" },
-    });
-
-    expect(decision.accepted).toBe(false);
-    expect(decision.reason).toBe("severe_downside_requires_corroboration");
-  });
-
-  it("accepts severe downside when 2+ candidate sources confirm severe downside", () => {
-    const decision = validatePrimaryPriceCandidate({
-      price: 0.38,
-      source: "pyth",
-      confidence: "low",
-      agreeSources: ["pyth"],
-      candidatePrices: { coingecko: 0.39, pyth: 0.38, "defillama-list": 0.51 },
-      validationContext: USD_CONTEXT,
-    });
-    // coingecko 0.39 < 0.50 and pyth 0.38 < 0.50 → 2 severe → accepted
-    expect(decision.accepted).toBe(true);
-  });
-
-  it("rejects severe downside when only correlated list aggregators corroborate", () => {
-    const decision = validatePrimaryPriceCandidate({
-      price: 0.38,
-      source: "coingecko+defillama-list",
-      confidence: "low",
-      agreeSources: ["coingecko", "defillama-list"],
-      candidatePrices: { coingecko: 0.39, "defillama-list": 0.38 },
-      validationContext: USD_CONTEXT,
-    });
-
-    expect(decision.accepted).toBe(false);
-    expect(decision.reason).toBe("severe_downside_requires_corroboration");
-  });
-
-  it("accepts corroborated severe downside despite a large jump from previous trusted price", () => {
-    const decision = validatePrimaryPriceCandidate({
-      price: 0.1525,
-      source: "coingecko+defillama-list",
-      confidence: "low",
-      agreeSources: ["coingecko", "defillama-list"],
-      candidatePrices: {
-        coingecko: 0.1525,
-        "defillama-list": 0.1524,
-        pyth: 0.151,
-        "dex-promoted": 1.0007,
-      },
-      validationContext: USD_CONTEXT,
-      previousTrustedPrice: {
-        price: 1.0007,
-        source: "pyth",
-        confidence: "high",
-        observedAt: null,
-        agreeSources: ["pyth"],
-      },
-    });
-    expect(decision.accepted).toBe(true);
-  });
-
-  it("rejects severe downside when only 1 candidate source is in severe downside", () => {
-    const decision = validatePrimaryPriceCandidate({
-      price: 0.45,
-      source: "pyth",
-      confidence: "low",
-      agreeSources: ["pyth"],
-      candidatePrices: { coingecko: 0.92, pyth: 0.45 },
-      validationContext: USD_CONTEXT,
-    });
-    // only pyth 0.45 < 0.50 → 1 severe → rejected
-    expect(decision.accepted).toBe(false);
-    expect(decision.reason).toBe("severe_downside_requires_corroboration");
-  });
-
-  it("still allows exempt sources without candidatePrices", () => {
-    const decision = validatePrimaryPriceCandidate({
-      price: 0.3,
-      source: "pool-tvl-weighted",
-      confidence: "low",
-      agreeSources: ["pool-tvl-weighted"],
-      validationContext: USD_CONTEXT,
-    });
-    expect(decision.accepted).toBe(true);
-  });
-
-  it("still allows high confidence with 2+ agree sources", () => {
-    const decision = validatePrimaryPriceCandidate({
-      price: 0.35,
-      source: "coingecko+pyth",
-      confidence: "high",
-      agreeSources: ["coingecko", "pyth"],
-      validationContext: USD_CONTEXT,
-    });
-    expect(decision.accepted).toBe(true);
-  });
-
-  it("rejects severe downside corroborated only by correlated CoinGecko paths", () => {
-    const decision = validatePrimaryPriceCandidate({
-      price: 0.38,
-      source: "coingecko+coingecko-onchain-address",
-      confidence: "high",
-      agreeSources: ["coingecko", "coingecko-onchain-address"],
-      candidatePrices: { coingecko: 0.38, "coingecko-onchain-address": 0.38 },
-      validationContext: USD_CONTEXT,
-    });
-
-    expect(decision.accepted).toBe(false);
-    expect(decision.reason).toBe("severe_downside_requires_corroboration");
-  });
-
-  it("still allows when previous trusted price was also severe downside", () => {
-    const decision = validatePrimaryPriceCandidate({
-      price: 0.38,
-      source: "pyth",
-      confidence: "low",
-      agreeSources: ["pyth"],
-      validationContext: USD_CONTEXT,
-      previousTrustedPrice: {
-        price: 0.4,
-        source: "coingecko",
-        confidence: "low",
-        observedAt: null,
-        agreeSources: ["coingecko"],
-      },
-    });
-    expect(decision.accepted).toBe(true);
-  });
-
-  it("does not trigger directional corroboration for non-severe prices", () => {
-    const decision = validatePrimaryPriceCandidate({
-      price: 0.85,
-      source: "pyth",
-      confidence: "low",
-      agreeSources: ["pyth"],
-      candidatePrices: { coingecko: 0.3, pyth: 0.85 },
-      validationContext: USD_CONTEXT,
-    });
-    // price 0.85 is NOT severe downside, so the check doesn't trigger at all
-    expect(decision.accepted).toBe(true);
+  it.each(severeCases)("%s", (label, input, accepted, reason) => {
+    const id = label.includes("AZND") ? "aznd-mu-digital" : label.includes("VUSD") ? "vusd-virtue" : undefined;
+    const decision = validatePrimaryPriceCandidate({ ...input, validationContext: id ? { ...USD_CONTEXT, stablecoinId: id } : USD_CONTEXT });
+    expect(decision).not.toHaveProperty("confidenceCap");
+    expect(decision).not.toHaveProperty("publicationReason");
+    expect(decision.accepted).toBe(accepted);
+    if (reason) expect(decision.reason).toBe(reason);
   });
 });
 
 describe("validatePublishedAssetPrice — candidatePrices as a separate argument", () => {
-  it("uses separately passed candidatePrices for severe-downside corroboration", () => {
+  it.each([true, false])("enforces severe-downside corroboration (with candidatePrices: %s)", (withCandidates) => {
     const decision = validatePublishedAssetPrice({
-      asset: {
-        price: 0.38,
-        priceSource: "pyth",
-        priceConfidence: "low",
-        agreeSources: ["pyth"],
-      },
-      candidatePrices: { coingecko: 0.39, pyth: 0.38, "defillama-list": 0.51 },
+      asset: { price: 0.38, priceSource: "pyth", priceConfidence: "low", agreeSources: ["pyth"] },
+      ...(withCandidates ? { candidatePrices: { coingecko: 0.39, pyth: 0.38, "defillama-list": 0.51 } } : {}),
       validationContext: USD_CONTEXT,
     });
-
-    expect(decision.accepted).toBe(true);
-  });
-
-  it("rejects the same severe downside when no candidatePrices are passed", () => {
-    const decision = validatePublishedAssetPrice({
-      asset: {
-        price: 0.38,
-        priceSource: "pyth",
-        priceConfidence: "low",
-        agreeSources: ["pyth"],
-      },
-      validationContext: USD_CONTEXT,
-    });
-
-    expect(decision.accepted).toBe(false);
-    expect(decision.reason).toBe("severe_downside_requires_corroboration");
+    expect(decision.accepted).toBe(withCandidates);
+    if (!withCandidates) expect(decision.reason).toBe("severe_downside_requires_corroboration");
   });
 });
 
-describe("DefiLlama exact-reference defaults", () => {
-  it("rejects a sole DefiLlama list quote at exactly the peg reference", () => {
-    expect(validatePrimaryPriceCandidate({
-      price: 1, source: "defillama-list", confidence: "single-source",
-      agreeSources: ["defillama-list"], validationContext: USD_CONTEXT,
-    })).toMatchObject({ accepted: false, reason: "exact_par_list_price_requires_corroboration" });
+describe("DefiLlama exact-reference and fill defaults", () => {
+  const FILL = 0.9990120985638516;
+  const LIST_FILL = { value: FILL, upstreamSource: "defillama" };
+  const CONTRACT_FILL = 0.99987355779;
+
+  it.each([
+    ["sole list exact-par", () => validatePrimaryPriceCandidate({ price: 1, source: "defillama-list", confidence: "single-source", agreeSources: ["defillama-list"], validationContext: USD_CONTEXT }), false, "exact_par_list_price_requires_corroboration"],
+    ["retained list exact-par", () => validatePublishedAssetPrice({ asset: { price: 1, priceSource: "defillama", priceConfidence: "single-source", agreeSources: ["defillama"] }, validationContext: USD_CONTEXT }), false, "exact_par_list_price_requires_corroboration"],
+    ["sole contract exact-par", () => validateFallbackPriceCandidate({ price: 1, source: "defillama-contract", confidence: "fallback", agreeSources: ["defillama-contract"], validationContext: USD_CONTEXT }), false, "exact_par_list_price_requires_corroboration"],
+    ["corroborated exact-par", () => validatePrimaryPriceCandidate({ price: 1, source: "coingecko+defillama-list", confidence: "high", agreeSources: ["coingecko", "defillama-list"], validationContext: USD_CONTEXT }), true, undefined],
+    ["non-reference list quote", () => validatePrimaryPriceCandidate({ price: 0.999, source: "defillama-list", confidence: "single-source", agreeSources: ["defillama-list"], validationContext: USD_CONTEXT }), true, undefined],
+    ["sole list fill default", () => validatePrimaryPriceCandidate({ price: FILL, source: "defillama-list", confidence: "single-source", agreeSources: ["defillama-list"], listFillDefault: LIST_FILL, validationContext: USD_CONTEXT }), false, "list_fill_default_requires_corroboration"],
+    ["retained list fill default", () => validatePublishedAssetPrice({ asset: { price: FILL, priceSource: "defillama", priceConfidence: "single-source", agreeSources: ["defillama"], priceListFillDefault: LIST_FILL }, validationContext: USD_CONTEXT }), false, "list_fill_default_requires_corroboration"],
+    ["cg-attributed list fill", () => validatePublishedAssetPrice({ asset: { price: FILL, priceSource: "coingecko", priceConfidence: "single-source", agreeSources: ["coingecko"], priceListFillDefault: { value: FILL, upstreamSource: "coingecko" } }, validationContext: USD_CONTEXT }), false, "list_fill_default_requires_corroboration"],
+    ["contract at list fill default", () => validateFallbackPriceCandidate({ price: FILL, source: "defillama-contract", confidence: "fallback", agreeSources: ["defillama-contract"], listFillDefault: LIST_FILL, validationContext: USD_CONTEXT }), false, "list_fill_default_requires_corroboration"],
+    ["corroborated list fill", () => validatePublishedAssetPrice({ asset: { price: FILL, priceSource: "coingecko+defillama-list", priceConfidence: "high", agreeSources: ["coingecko", "defillama-list"], priceListFillDefault: LIST_FILL }, validationContext: USD_CONTEXT }), true, undefined],
+    ["unflagged list price", () => validatePrimaryPriceCandidate({ price: FILL, source: "defillama-list", confidence: "single-source", agreeSources: ["defillama-list"], validationContext: USD_CONTEXT }), true, undefined],
+    ["uncorroborated contract fill", () => validateFallbackPriceCandidate({ price: CONTRACT_FILL, source: "defillama-contract", confidence: "fallback", agreeSources: ["defillama-contract"], contractFillDefault: { value: CONTRACT_FILL }, validationContext: USD_CONTEXT }), false, "contract_fill_default_requires_corroboration"],
+    ["corroborated contract fill", () => validateFallbackPriceCandidate({ price: CONTRACT_FILL, source: "defillama-contract", confidence: "fallback", agreeSources: ["defillama-contract", "coinmarketcap"], contractFillDefault: { value: CONTRACT_FILL }, validationContext: USD_CONTEXT }), true, undefined],
+  ])("evaluates %s", (_label, run, accepted, reason) => {
+    const decision = run();
+    expect(decision.accepted).toBe(accepted);
+    if (reason) expect(decision.reason).toBe(reason);
   });
 
-  it("rejects a retained sole DefiLlama list price at exactly the reference", () => {
-    expect(validatePublishedAssetPrice({
-      asset: { price: 1, priceSource: "defillama", priceConfidence: "single-source", agreeSources: ["defillama"] },
-      validationContext: USD_CONTEXT,
-    })).toMatchObject({ accepted: false, reason: "exact_par_list_price_requires_corroboration" });
-  });
-
-  it("rejects a sole DefiLlama contract quote at exactly the reference", () => {
-    expect(validateFallbackPriceCandidate({
-      price: 1, source: "defillama-contract", confidence: "fallback",
-      agreeSources: ["defillama-contract"], validationContext: USD_CONTEXT,
-    })).toMatchObject({ accepted: false, reason: "exact_par_list_price_requires_corroboration" });
-  });
-
-  it("admits an exact-reference quote corroborated by another source family", () => {
-    expect(validatePrimaryPriceCandidate({
-      price: 1, source: "coingecko+defillama-list", confidence: "high",
-      agreeSources: ["coingecko", "defillama-list"], validationContext: USD_CONTEXT,
-    }).accepted).toBe(true);
-  });
-
-  it("keeps non-reference DefiLlama list quotes admitted", () => {
-    expect(validatePrimaryPriceCandidate({
-      price: 0.999, source: "defillama-list", confidence: "single-source",
-      agreeSources: ["defillama-list"], validationContext: USD_CONTEXT,
-    }).accepted).toBe(true);
-  });
-
-  it("applies to the exact non-USD peg reference", () => {
-    const phpContext: PriceValidationContext = {
-      stablecoinId: "test-php",
-      pegCurrency: "PHP",
-      pegType: "peggedPHP",
-      pegClass: "fiat_fx",
-      navToken: false,
-      tracked: true,
-    };
-    const references = {
-      rates: { peggedPHP: 0.01755 },
-      type: "fresh" as const,
-      updatedAt: 1_800_000_000,
-    };
-    expect(validatePrimaryPriceCandidate({
-      price: 0.01755, source: "defillama-list", confidence: "single-source",
-      agreeSources: ["defillama-list"], validationContext: phpContext, validationReferences: references,
-    })).toMatchObject({ accepted: false, reason: "exact_par_list_price_requires_corroboration" });
-    expect(validatePrimaryPriceCandidate({
-      price: 0.0175, source: "defillama-list", confidence: "single-source",
-      agreeSources: ["defillama-list"], validationContext: phpContext, validationReferences: references,
-    }).accepted).toBe(true);
-  });
-});
-
-describe("DefiLlama list fill defaults", () => {
-  const FILL_DEFAULT = 0.9990120985638516;
-  const LIST_FILL = { value: FILL_DEFAULT, upstreamSource: "defillama" };
-
-  it("flags a value repeated across five distinct list assets and not one shared by four", () => {
-    const distinctRows = (count: number, price: number) =>
-      Array.from({ length: count }, (_, index) => ({ id: `list-${index}`, price }));
-
-    expect(detectDefiLlamaListFillDefaultPrices(distinctRows(5, FILL_DEFAULT))).toEqual(new Set([FILL_DEFAULT]));
-    expect(detectDefiLlamaListFillDefaultPrices(distinctRows(4, 0.999520515794015)).size).toBe(0);
-  });
-
-  it("rejects a sole DefiLlama list quote at a per-response fill default", () => {
-    expect(validatePrimaryPriceCandidate({
-      price: FILL_DEFAULT, source: "defillama-list", confidence: "single-source",
-      agreeSources: ["defillama-list"], listFillDefault: LIST_FILL, validationContext: USD_CONTEXT,
-    })).toMatchObject({ accepted: false, reason: "list_fill_default_requires_corroboration" });
-  });
-
-  it("rejects a retained list-attributed quote stamped from the raw list", () => {
-    expect(validatePublishedAssetPrice({
-      asset: {
-        price: FILL_DEFAULT, priceSource: "defillama", priceConfidence: "single-source",
-        agreeSources: ["defillama"], priceListFillDefault: LIST_FILL,
-      },
-      validationContext: USD_CONTEXT,
-    })).toMatchObject({ accepted: false, reason: "list_fill_default_requires_corroboration" });
-  });
-
-  it("covers a fill default the list itself attributes to coingecko", () => {
-    expect(validatePublishedAssetPrice({
-      asset: {
-        price: FILL_DEFAULT, priceSource: "coingecko", priceConfidence: "single-source",
-        agreeSources: ["coingecko"],
-        priceListFillDefault: { value: FILL_DEFAULT, upstreamSource: "coingecko" },
-      },
-      validationContext: USD_CONTEXT,
-    })).toMatchObject({ accepted: false, reason: "list_fill_default_requires_corroboration" });
-  });
-
-  it("rejects a fill default offered by the DefiLlama contract fallback lane", () => {
-    expect(validateFallbackPriceCandidate({
-      price: FILL_DEFAULT, source: "defillama-contract", confidence: "fallback",
-      agreeSources: ["defillama-contract"], listFillDefault: LIST_FILL, validationContext: USD_CONTEXT,
-    })).toMatchObject({ accepted: false, reason: "list_fill_default_requires_corroboration" });
-  });
-
-  it("admits a fill-default value corroborated by another source family", () => {
-    expect(validatePublishedAssetPrice({
-      asset: {
-        price: FILL_DEFAULT, priceSource: "coingecko+defillama-list", priceConfidence: "high",
-        agreeSources: ["coingecko", "defillama-list"], priceListFillDefault: LIST_FILL,
-      },
-      validationContext: USD_CONTEXT,
-    }).accepted).toBe(true);
-  });
-
-  it("leaves the same value admitted when the response did not flag it", () => {
-    expect(validatePrimaryPriceCandidate({
-      price: FILL_DEFAULT, source: "defillama-list", confidence: "single-source",
-      agreeSources: ["defillama-list"], validationContext: USD_CONTEXT,
-    }).accepted).toBe(true);
+  it("applies exact-reference checks to non-USD pegs and detects list/contract fill defaults", () => {
+    const phpContext: PriceValidationContext = { stablecoinId: "test-php", pegCurrency: "PHP", pegType: "peggedPHP", pegClass: "fiat_fx", navToken: false, tracked: true };
+    const references = { rates: { peggedPHP: 0.01755 }, type: "fresh" as const, updatedAt: 1_800_000_000 };
+    expect(validatePrimaryPriceCandidate({ price: 0.01755, source: "defillama-list", confidence: "single-source", agreeSources: ["defillama-list"], validationContext: phpContext, validationReferences: references })).toMatchObject({ accepted: false, reason: "exact_par_list_price_requires_corroboration" });
+    expect(validatePrimaryPriceCandidate({ price: 0.0175, source: "defillama-list", confidence: "single-source", agreeSources: ["defillama-list"], validationContext: phpContext, validationReferences: references }).accepted).toBe(true);
+    const listRows = (n: number, price: number) => Array.from({ length: n }, (_, i) => ({ id: `list-${i}`, price }));
+    expect(detectDefiLlamaListFillDefaultPrices(listRows(5, FILL))).toEqual(new Set([FILL]));
+    expect(detectDefiLlamaListFillDefaultPrices(listRows(4, 0.999520515794015)).size).toBe(0);
+    const contractRows = (ids: string[], tokenKey?: string) => ids.map((id) => ({ id, price: CONTRACT_FILL, lineageGroup: resolveContractFillLineageGroup(id), tokenKey }));
+    expect(detectDefiLlamaContractFillDefaultPrices(contractRows(["nusd-nexus", "usdu-usdu-finance"]))).toEqual(new Set([CONTRACT_FILL]));
+    expect(detectDefiLlamaContractFillDefaultPrices(contractRows(["rwausdi-multipli", "m-m0", "nusd-nexus", "usdu-usdu-finance"]))).toEqual(new Set([CONTRACT_FILL]));
+    for (const related of [
+      contractRows(["ausd-agora", "iusd-initia"]),
+      contractRows(["m-m0", "wm-m0", "mantrausd-mantra"]),
+      contractRows(["pyusd-paypal", "pyusdx-moonpay"]),
+      contractRows(["gho-aave", "stkgho-umbrella-aave"]),
+      contractRows(["nusd-nexus", "usdu-usdu-finance"], "ethereum:0xshared"),
+    ]) {
+      expect(detectDefiLlamaContractFillDefaultPrices(related).size).toBe(0);
+    }
   });
 });
 
 describe("validatePrimaryPriceCandidate — weak fallback fixed-peg depegs", () => {
   it("accepts a legacy exact-pool display route without granting depeg authority", () => {
     const decision = validatePrimaryPriceCandidate({
-      price: 0.01621,
-      source: "uniswap-v3-exact",
-      confidence: "fallback",
-      agreeSources: ["uniswap-v3-exact"],
-      validationContext: {
-        stablecoinId: "test-php",
-        pegCurrency: "PHP",
-        pegType: "peggedPHP",
-        pegClass: "fiat_fx",
-        navToken: false,
-        tracked: true,
-      },
-      validationReferences: {
-        rates: { peggedPHP: 0.01755 },
-        type: "fresh",
-        updatedAt: Math.floor(Date.now() / 1000),
-      },
+      price: 0.01621, source: "uniswap-v3-exact", confidence: "fallback", agreeSources: ["uniswap-v3-exact"],
+      validationContext: { stablecoinId: "test-php", pegCurrency: "PHP", pegType: "peggedPHP", pegClass: "fiat_fx", navToken: false, tracked: true },
+      validationReferences: { rates: { peggedPHP: 0.01755 }, type: "fresh", updatedAt: Math.floor(Date.now() / 1000) },
     });
-
     expect(decision.accepted).toBe(true);
     expect(hasDepegAuthoritativeSource(["uniswap-v3-exact"])).toBe(false);
     expect(isReplaySafePriceSource("uniswap-v3-exact")).toBe(false);
   });
 
-  it("rejects a depeg-sized single-source address-provider quote", () => {
-    const decision = validatePrimaryPriceCandidate({
-      price: 0.9459920248,
-      source: "coingecko-onchain-address",
-      confidence: "single-source",
-      agreeSources: ["coingecko-onchain-address"],
-      validationContext: USD_CONTEXT,
-    });
+  const weakCases: Array<[string, "primary" | "fallback", Omit<Parameters<typeof validatePrimaryPriceCandidate>[0], "validationContext">, boolean, string?]> = [
+    ["rejects depeg-sized address-provider quote", "primary", { price: 0.9459920248, source: "coingecko-onchain-address", confidence: "single-source", agreeSources: ["coingecko-onchain-address"] }, false, "weak_fallback_depeg_requires_corroboration"],
+    ["accepts near-peg address-provider quote", "primary", { price: 0.99967, source: "coingecko-onchain-address", confidence: "single-source", agreeSources: ["coingecko-onchain-address"] }, true],
+    ["allows exact DefiLlama contract fallback", "primary", { price: 0.9459920248, source: "defillama-contract", confidence: "single-source", agreeSources: ["defillama-contract"] }, true],
+    ["allows depeg-sized hard-source quotes", "primary", { price: 0.9459920248, source: "pyth", confidence: "single-source", agreeSources: ["pyth"] }, true],
+    ["accepts severe exact-address fallback corroborated by independent quote", "fallback", { price: 0.3904, source: "dexscreener-exact", confidence: "fallback", agreeSources: ["dexscreener-exact"], candidatePrices: { coingecko: 0.390247, "dexscreener-exact": 0.3904 } }, true],
+    ["rejects severe fallback evidence from list aggregators only", "fallback", { price: 0.3904, source: "coinmarketcap", confidence: "fallback", agreeSources: ["coinmarketcap"], candidatePrices: { coingecko: 0.390247, "defillama-list": 0.3903, coinmarketcap: 0.3904 } }, false, "severe_downside_requires_corroboration"],
+    ["does not use severe candidate evidence to admit non-severe fallback", "fallback", { price: 0.94, source: "dexscreener-exact", confidence: "fallback", agreeSources: ["dexscreener-exact"], candidatePrices: { coingecko: 0.390247, pyth: 0.3904, "dexscreener-exact": 0.94 } }, false, "weak_fallback_depeg_requires_corroboration"],
+  ];
 
-    expect(decision.accepted).toBe(false);
-    expect(decision.reason).toBe("weak_fallback_depeg_requires_corroboration");
+  it.each(weakCases)("%s", (_name, mode, input, accepted, reason) => {
+    const decision = (mode === "primary" ? validatePrimaryPriceCandidate : validateFallbackPriceCandidate)({ ...input, validationContext: USD_CONTEXT });
+    expect(decision.accepted).toBe(accepted);
+    if (reason) expect(decision.reason).toBe(reason);
   });
+});
 
-  it("still accepts a near-peg address-provider quote", () => {
-    const decision = validatePrimaryPriceCandidate({
-      price: 0.99967,
-      source: "coingecko-onchain-address",
-      confidence: "single-source",
-      agreeSources: ["coingecko-onchain-address"],
-      validationContext: USD_CONTEXT,
+describe("open confirmed depeg continuity", () => {
+  const prev = (price: number) => ({ price, source: "pyth", confidence: "high" as const, observedAt: null, agreeSources: ["pyth"] });
+  type ContinuityExtra = Pick<Parameters<typeof validatePrimaryPriceCandidate>[0], "previousTrustedPrice" | "upstreamKeysBySource">;
+  const cases: Array<[string, "primary" | "fallback", number, string, "high" | "single-source" | "fallback", Record<string, number>, "above" | "below" | null | undefined, boolean, string, boolean, ContinuityExtra?]> = [
+    ["pmUSD-like primary list aggregators publish low", "primary", 0.40765, "coingecko+defillama-list", "single-source", { coingecko: 0.4078, "defillama-list": 0.4075 }, "below", true, "open_confirmed_depeg_continuity", true],
+    ["pmUSD-like fallback list aggregators publish low", "fallback", 0.408, "defillama-contract", "fallback", { coingecko: 0.4078, "defillama-contract": 0.408 }, "below", true, "open_confirmed_depeg_continuity", true],
+    ["weak-fallback 5-50% dead zone (below) publishes low", "fallback", 0.75, "dexscreener-exact", "fallback", { "dexscreener-exact": 0.75, coingecko: 0.76 }, "below", true, "open_confirmed_depeg_continuity", true],
+    ["weak-fallback 5-50% dead zone (above) publishes low", "fallback", 1.1, "dexscreener-exact", "fallback", { "dexscreener-exact": 1.1, coingecko: 1.105 }, "above", true, "open_confirmed_depeg_continuity", true],
+    ["deepening temporal jump from par publishes low", "primary", 0.408, "coingecko+defillama-list", "single-source", { coingecko: 0.408, "defillama-list": 0.4075 }, "below", true, "open_confirmed_depeg_continuity", true, { previousTrustedPrice: prev(1) }],
+    ["already-corroborated hard severe downside keeps normal acceptance", "primary", 0.408, "coingecko+curve-onchain", "high", { coingecko: 0.408, "curve-onchain": 0.4075 }, "below", true, "within_reference_band", false],
+    ["no open event keeps severe downside withheld", "primary", 0.408, "coingecko+defillama-list", "single-source", { coingecko: 0.408, "defillama-list": 0.4075 }, null, false, "severe_downside_requires_corroboration", false],
+    ["unavailable open event state keeps dead zone withheld", "fallback", 0.75, "dexscreener-exact", "fallback", { "dexscreener-exact": 0.75, coingecko: 0.76 }, undefined, false, "weak_fallback_depeg_requires_corroboration", false],
+    ["single family CG+CG-onchain stays withheld", "fallback", 0.408, "coingecko-onchain-address", "fallback", { coingecko: 0.408, "coingecko-onchain-address": 0.4075 }, "below", false, "severe_downside_requires_corroboration", false],
+    ["single family DL list+contract stays withheld", "fallback", 0.408, "defillama-contract", "fallback", { "defillama-list": 0.408, "defillama-contract": 0.4075 }, "below", false, "severe_downside_requires_corroboration", false],
+    ["shared upstream identity stays withheld", "primary", 0.408, "coingecko+defillama-list", "single-source", { coingecko: 0.408, "defillama-list": 0.4075 }, "below", false, "severe_downside_requires_corroboration", false, { upstreamKeysBySource: { coingecko: ["pool:shared"], "defillama-list": ["pool:shared"] } }],
+    ["inter-family spread > 500 bps stays withheld", "primary", 0.4, "coingecko", "single-source", { coingecko: 0.4, "defillama-list": 0.43 }, "below", false, "severe_downside_requires_corroboration", false],
+    ["direction mismatch stays withheld", "fallback", 1.1, "dexscreener-exact", "fallback", { "dexscreener-exact": 1.1, coingecko: 1.105 }, "below", false, "weak_fallback_depeg_requires_corroboration", false],
+    ["recovery temporal jump toward peg stays withheld", "primary", 0.9, "coingecko+defillama-list", "single-source", { coingecko: 0.9, "defillama-list": 0.901 }, "below", false, "temporal_jump_requires_corroboration", false, { previousTrustedPrice: prev(0.4) }],
+    ["recovery jump to par on open above stays withheld", "primary", 1, "coingecko+defillama-list", "single-source", { coingecko: 1, "defillama-list": 1 }, "above", false, "temporal_jump_requires_corroboration", false, { previousTrustedPrice: prev(1.3) }],
+  ];
+
+  it.each(cases)("%s", (_name, mode, price, source, confidence, candidatePrices, openDir, accepted, reason, lowCap, extra) => {
+    const decision = (mode === "primary" ? validatePrimaryPriceCandidate : validateFallbackPriceCandidate)({
+      price, source, confidence, agreeSources: source.split("+"), candidatePrices,
+      openConfirmedDepeg: openDir ? { direction: openDir } : openDir,
+      validationContext: USD_CONTEXT, ...extra,
     });
-
-    expect(decision.accepted).toBe(true);
-  });
-
-  it("does not block exact DefiLlama contract fallback prices", () => {
-    const decision = validatePrimaryPriceCandidate({
-      price: 0.9459920248,
-      source: "defillama-contract",
-      confidence: "single-source",
-      agreeSources: ["defillama-contract"],
-      validationContext: USD_CONTEXT,
+    expect(decision).toEqual({
+      accepted, reason,
+      ...(lowCap ? { confidenceCap: "low", publicationReason: "open-confirmed-depeg-continuity" } : {}),
     });
-
-    expect(decision.accepted).toBe(true);
-  });
-
-  it("allows depeg-sized hard-source quotes", () => {
-    const decision = validatePrimaryPriceCandidate({
-      price: 0.9459920248,
-      source: "pyth",
-      confidence: "single-source",
-      agreeSources: ["pyth"],
-      validationContext: USD_CONTEXT,
-    });
-
-    expect(decision.accepted).toBe(true);
-  });
-
-  it("accepts a severe exact-address fallback corroborated by a same-run independent quote", () => {
-    const decision = validateFallbackPriceCandidate({
-      price: 0.3904,
-      source: "dexscreener-exact",
-      confidence: "fallback",
-      agreeSources: ["dexscreener-exact"],
-      candidatePrices: {
-        coingecko: 0.390247,
-        "dexscreener-exact": 0.3904,
-      },
-      validationContext: USD_CONTEXT,
-    });
-
-    expect(decision.accepted).toBe(true);
-  });
-
-  it("still rejects severe fallback evidence from list aggregators only", () => {
-    const decision = validateFallbackPriceCandidate({
-      price: 0.3904,
-      source: "coinmarketcap",
-      confidence: "fallback",
-      agreeSources: ["coinmarketcap"],
-      candidatePrices: {
-        coingecko: 0.390247,
-        "defillama-list": 0.3903,
-        coinmarketcap: 0.3904,
-      },
-      validationContext: USD_CONTEXT,
-    });
-
-    expect(decision.accepted).toBe(false);
-    expect(decision.reason).toBe("severe_downside_requires_corroboration");
-  });
-
-  it("does not use severe candidate evidence to admit a non-severe fallback quote", () => {
-    const decision = validateFallbackPriceCandidate({
-      price: 0.94,
-      source: "dexscreener-exact",
-      confidence: "fallback",
-      agreeSources: ["dexscreener-exact"],
-      candidatePrices: {
-        coingecko: 0.390247,
-        pyth: 0.3904,
-        "dexscreener-exact": 0.94,
-      },
-      validationContext: USD_CONTEXT,
-    });
-
-    expect(decision.accepted).toBe(false);
-    expect(decision.reason).toBe("weak_fallback_depeg_requires_corroboration");
   });
 });

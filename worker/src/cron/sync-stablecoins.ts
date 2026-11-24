@@ -62,12 +62,12 @@ export async function syncStablecoins(
   if (startAbort) return withD1Cost(startAbort);
   const syncStartSec = Math.floor(Date.now() / 1000);
   const binanceSession = createBinanceFetchSession();
-  // Per-run memo shared by native-peg hardening, depeg detection, and
-  // pending-depeg confirmation. Their geckoId sets overlap but are rarely
-  // identical, so a later caller reuses a cached batch only when it already
-  // covers every id that caller needs — coverage-based reuse, not general
-  // partial-overlap deduplication. Failed/non-2xx/malformed batches are evicted
-  // so they never suppress a later caller's own attempt.
+  // Per-run memo shared by depeg detection and pending-depeg confirmation.
+  // Their geckoId sets overlap but are rarely identical, so a later caller
+  // reuses a cached batch only when it already covers every id that caller
+  // needs — coverage-based reuse, not general partial-overlap deduplication.
+  // Failed/non-2xx/malformed batches are evicted so they never suppress a
+  // later caller's own attempt.
   const nativePegSession = createNativePegQuoteSession();
   const intake = await loadStablecoinsIntake({
     reportPartitionSummary: (summary) => { onchainPartition = summary; },
@@ -126,7 +126,6 @@ export async function syncStablecoins(
     chainRpcs,
     binanceSession,
     reportProgress,
-    nativePegSession,
   });
   if (!("priceCacheEntries" in pricingStage)) return withD1Cost(pricingStage);
   deriveExactParListNativeQuantities(

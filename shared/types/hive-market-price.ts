@@ -23,6 +23,7 @@ export const HiveMarketDiagnosticSchema = z.object({
     tradeDivergenceMax: finite, parentMaxAgeSec: finite, parentFutureSkewSec: finite,
     sourceMaxAgeSec: finite, rpcTimeoutMs: finite, observerTimeoutMs: finite,
     maxResponseBytes: finite, bookLimit: finite, tradeLimit: finite,
+    cgDivergenceVetoMaxBps: finite.optional(),
   }),
   node: z.string().nullable(),
   methods: z.array(z.string()).max(5),
@@ -41,6 +42,10 @@ export const HiveMarketDiagnosticSchema = z.object({
   price: finite.nullable(), usdBid: finite.nullable(), usdAsk: finite.nullable(),
   observedAt: finite.nullable(), observedAtMode: z.literal("local_fetch"),
   rejectionReason: HiveMarketRejectionSchema.nullable(),
+  vetoMidPrice: finite.nullable().optional(),
+  vetoStatus: z.enum(["agreed", "vetoed", "no_cg_quote", "unavailable"]).nullable().optional(),
+  vetoReason: z.string().nullable().optional(),
+  vetoDivergenceBps: finite.nullable().optional(),
 });
 export type HiveMarketDiagnostic = z.infer<typeof HiveMarketDiagnosticSchema>;
 export type HiveNativePriceQuote = {

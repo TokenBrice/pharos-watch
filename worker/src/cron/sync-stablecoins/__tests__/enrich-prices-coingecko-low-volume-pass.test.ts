@@ -6,7 +6,10 @@ import { shouldAttemptFetch, recordOutcomeSafe } from "../../../lib/circuit-brea
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makePeggedAsset } from "./_fixtures";
 
-vi.mock("../../../lib/coingecko-simple-price", () => ({ fetchCoingeckoSimplePrices: vi.fn() }));
+vi.mock("../../../lib/coingecko-simple-price", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../lib/coingecko-simple-price")>()),
+  fetchCoingeckoSimplePrices: vi.fn(),
+}));
 vi.mock("../../../lib/circuit-breaker", () => ({ shouldAttemptFetch: vi.fn(), recordOutcomeSafe: vi.fn() }));
 
 beforeEach(() => {
@@ -27,18 +30,6 @@ function mockCoingeckoPrices(quotes: Readonly<Record<string, number>>, observedA
     ])),
   });
 }
-
-type LowVolumeRecoveryCase = {
-  id: string;
-  geckoId: string;
-  price: number;
-  observedAt: number;
-  nowMs: number;
-  assetFields: Parameters<typeof makePeggedAsset>[0];
-  expiredFields: Parameters<typeof makePeggedAsset>[0];
-  fxRates?: Record<string, number>;
-  responseJson?: boolean;
-};
 
 describe("LOW_VOLUME_CG_FALLBACK_IDS registry invariant", () => {
   it("only references IDs present in the active stablecoin registry", () => {
@@ -111,83 +102,29 @@ describe("runCoingeckoLowVolumePass", () => {
     }
   });
 
-  it.each<LowVolumeRecoveryCase>([
-    ...([
-      ["fusd-freedom-dollar", "freedom-dollar", 0.997906, 1790853290],
-      ["chfau-allunity", "allunity-chf", 1.2, 1791267900],
-    ] as const).map(([id, geckoId, price, observedAt]) => {
-      const pegType = id === "chfau-allunity" ? "peggedCHF" : "peggedUSD";
-      return {
-        id, geckoId, price, observedAt, nowMs: 1791299423 * 1000, responseJson: false,
-        assetFields: { pegType, supplySource: "defillama", circulating: { peggedUSD: 123 } },
-        expiredFields: { pegType },
-        fxRates: { peggedCHF: 1.2 },
-      };
-    }),
-    ...([
-      ["cgusd-cygnus-finance", "cygnus-finance-global-usd", 0.991614, 1791903934, "peggedUSD"],
-      ["wm-m0", "wrappedm-by-m0", 0.999229, 1792012792, "peggedUSD"],
-      ["mxne-real-mxn", "real-mxn", 0.054597, 1792021431, "peggedMXN"],
-      ["usdfc-secured-finance", "usdfc", 0.950358, 1792002424, "peggedUSD"],
-    ] as const).map(([id, geckoId, price, observedAt, pegType]) => ({
-      id, geckoId, price, observedAt, nowMs: 1792043600 * 1000,
-      assetFields: {
-        pegType, supplyRestored: true, supplySource: "coingecko-fallback", supplyObservedAt: observedAt,
-        circulating: { [pegType]: 123 },
-      },
-      expiredFields: { pegType },
-      fxRates: { peggedMXN: 0.055 },
-    })),
-    {
-      id: "hbd-hive", geckoId: "hive_dollar", price: 0.990063,
-      observedAt: Date.UTC(2026, 8, 28, 18, 49, 20) / 1000, nowMs: Date.UTC(2026, 8, 30, 15),
-      responseJson: false,
-      assetFields: {
-        symbol: "HBD", supplyRestored: true, supplySource: "coingecko-fallback",
-        supplyObservedAt: Date.UTC(2026, 8, 28, 18, 49, 20) / 1000, circulating: { peggedUSD: 32_677_939 },
-      },
-      expiredFields: { symbol: "HBD" },
-    },
-    {
-      id: "brlv-crown", geckoId: "crown-brlv", price: 0.200255,
-      observedAt: 1_791_806_930, nowMs: 1_791_885_552 * 1000,
-      assetFields: {
-        symbol: "BRLV", pegType: "peggedREAL", supplyRestored: true, supplySource: "coingecko-fallback",
-        supplyObservedAt: 1_791_806_930, circulating: { peggedREAL: 73_888_563 },
-      },
-      expiredFields: { symbol: "BRLV", pegType: "peggedREAL" },
-      fxRates: { peggedREAL: 0.2006 },
-    },
-    ...([
-      ["nxusd-nereus", "nxusd", 1.0218116165811697, 1_791_761_973],
-      ["usdh-hermetica", "hermetica-usdh", 0.9997925123055649, 1_791_780_809],
-    ] as const).map(([id, geckoId, price, observedAt]) => ({
-      id, geckoId, price, observedAt, nowMs: 1_791_787_489 * 1000,
-      assetFields: { supplySource: "defillama", circulating: { peggedUSD: 123 } },
-      expiredFields: {},
-    })),
-  ])("recovers reviewed $id price without upgrading supply, confidence, or observation time, then expires it", async ({
-    id, geckoId, price, observedAt, nowMs, assetFields, expiredFields, fxRates, responseJson = true,
-  }) => {
-    const actual = await vi.importActual<{ fetchCoingeckoSimplePrices: typeof fetchCoingeckoSimplePrices }>(
-      "../../../lib/coingecko-simple-price",
-    );
+  it.each([
+    ["fusd-freedom-dollar", "freedom-dollar", 0.997906, 1790853290, 1791299423, "peggedUSD", { supplySource: "defillama", circulating: { peggedUSD: 123 } }, undefined, false],
+    ["chfau-allunity", "allunity-chf", 1.2, 1791267900, 1791299423, "peggedCHF", { supplySource: "defillama", circulating: { peggedUSD: 123 } }, { peggedCHF: 1.2 }, false],
+    ["cgusd-cygnus-finance", "cygnus-finance-global-usd", 0.991614, 1791903934, 1792043600, "peggedUSD", { supplyRestored: true, supplySource: "coingecko-fallback", supplyObservedAt: 1791903934, circulating: { peggedUSD: 123 } }, undefined, true],
+    ["wm-m0", "wrappedm-by-m0", 0.999229, 1792012792, 1792043600, "peggedUSD", { supplyRestored: true, supplySource: "coingecko-fallback", supplyObservedAt: 1792012792, circulating: { peggedUSD: 123 } }, undefined, true],
+    ["mxne-real-mxn", "real-mxn", 0.054597, 1792021431, 1792043600, "peggedMXN", { supplyRestored: true, supplySource: "coingecko-fallback", supplyObservedAt: 1792021431, circulating: { peggedMXN: 123 } }, { peggedMXN: 0.055 }, true],
+    ["usdfc-secured-finance", "usdfc", 0.950358, 1792002424, 1792043600, "peggedUSD", { supplyRestored: true, supplySource: "coingecko-fallback", supplyObservedAt: 1792002424, circulating: { peggedUSD: 123 } }, undefined, true],
+    ["hbd-hive", "hive_dollar", 0.990063, Date.UTC(2026, 8, 28, 18, 49, 20) / 1000, Date.UTC(2026, 8, 30, 15) / 1000, "peggedUSD", { symbol: "HBD", supplyRestored: true, supplySource: "coingecko-fallback", supplyObservedAt: Date.UTC(2026, 8, 28, 18, 49, 20) / 1000, circulating: { peggedUSD: 32_677_939 } }, undefined, false],
+    ["brlv-crown", "crown-brlv", 0.200255, 1_791_806_930, 1_791_885_552, "peggedREAL", { symbol: "BRLV", supplyRestored: true, supplySource: "coingecko-fallback", supplyObservedAt: 1_791_806_930, circulating: { peggedREAL: 73_888_563 } }, { peggedREAL: 0.2006 }, true],
+    ["nxusd-nereus", "nxusd", 1.0218116165811697, 1_791_761_973, 1_791_787_489, "peggedUSD", { supplySource: "defillama", circulating: { peggedUSD: 123 } }, undefined, true],
+    ["usdh-hermetica", "hermetica-usdh", 0.9997925123055649, 1_791_780_809, 1_791_787_489, "peggedUSD", { supplySource: "defillama", circulating: { peggedUSD: 123 } }, undefined, true],
+  ] as const)("recovers reviewed %s without upgrading supply/clock, then expires", async (id, geckoId, price, observedAt, nowSec, pegType, fields, fxRates, responseJson) => {
+    const actual = await vi.importActual<{ fetchCoingeckoSimplePrices: typeof fetchCoingeckoSimplePrices }>("../../../lib/coingecko-simple-price");
     vi.mocked(fetchCoingeckoSimplePrices).mockImplementation(actual.fetchCoingeckoSimplePrices);
     vi.useFakeTimers();
-    vi.setSystemTime(nowMs);
+    vi.setSystemTime(nowSec * 1000);
     const quotes = { [geckoId]: { usd: price, last_updated_at: observedAt } };
-    vi.stubGlobal("fetch", vi.fn(async () => responseJson
-      ? Response.json(quotes)
-      : new Response(JSON.stringify(quotes), { status: 200 })));
-    const asset = makePeggedAsset({ id, price: null, ...assetFields });
+    vi.stubGlobal("fetch", vi.fn(async () => responseJson ? Response.json(quotes) : new Response(JSON.stringify(quotes), { status: 200 })));
+    const asset = makePeggedAsset({ id, price: null, pegType, ...fields });
     expect(await runCoingeckoLowVolumePass([asset], null, fxRates)).toEqual({ resolved: 1, failures: [] });
-    expect(asset).toMatchObject({
-      price, priceSource: "coingecko-low-volume", priceConfidence: "fallback",
-      priceObservedAt: observedAt, priceObservedAtMode: "upstream",
-      ...assetFields,
-    });
+    expect(asset).toMatchObject({ price, priceSource: "coingecko-low-volume", priceConfidence: "fallback", priceObservedAt: observedAt, priceObservedAtMode: "upstream", pegType, ...fields });
     vi.setSystemTime((observedAt + 7 * 86400 + 1) * 1000);
-    const expired = makePeggedAsset({ id, price: null, ...expiredFields });
+    const expired = makePeggedAsset({ id, price: null, pegType });
     expect(await runCoingeckoLowVolumePass([expired], null, fxRates)).toEqual({ resolved: 0, failures: [] });
     expect(expired.price).toBeNull();
   });
@@ -263,5 +200,26 @@ describe("runCoingeckoLowVolumePass", () => {
     expect(result).toEqual({ resolved: 7, failures: [] });
     expect(assets.map(({ price }) => price)).toEqual(Object.values(quotes));
     expect(assets.every(({ priceSource }) => priceSource === "coingecko-low-volume")).toBe(true);
+  });
+
+  it("rejects micro-volume outliers while keeping near-peg and unknown-volume low-volume quotes", async () => {
+    const observedAt = Math.floor(Date.now() / 1000) - 3600;
+    vi.mocked(fetchCoingeckoSimplePrices).mockResolvedValue({
+      kind: "ok",
+      value: new Map([
+        ["freedom-dollar", { price: 0.85, observedAt, observedAtMode: "upstream", volume24hUsd: 7 }],
+        ["usdfc", { price: 0.98, observedAt, observedAtMode: "upstream", volume24hUsd: 7 }],
+        ["nxusd", { price: 0.85, observedAt, observedAtMode: "upstream", volume24hUsd: null }],
+      ]),
+    });
+    const assets = [
+      makePeggedAsset({ id: "fusd-freedom-dollar", price: null }),
+      makePeggedAsset({ id: "usdfc-secured-finance", price: null }),
+      makePeggedAsset({ id: "nxusd-nereus", price: null }),
+    ];
+    expect(await runCoingeckoLowVolumePass(assets, null, undefined)).toEqual({ resolved: 2, failures: [] });
+    expect(assets[0].price).toBeNull();
+    expect(assets[1].price).toBe(0.98);
+    expect(assets[2].price).toBe(0.85);
   });
 });

@@ -1,5 +1,22 @@
 export type CurveRouteType = "direct" | "one-hop" | "trusted-wrapper" | "chained-hop";
 
+export type CurveSellGuardRejectionReason =
+  | "insufficient-sell-depth"
+  | "input-balance"
+  | "impact"
+  | "rpc";
+
+export interface CurveSellGuardConfig {
+  /** Minimum pool inventory of the quote/reference token (`inputIndex`) that a seller receives on exit. */
+  minSellDepthQuoteTokens: number;
+  /** Minimum pool inventory of the target stablecoin (`outputIndex`) on the sell-input side. */
+  minSellInputBalanceTokens: number;
+  /** Small sell quote size in target-stablecoin units (`outputIndex`) checked against the buy quote. */
+  smallQuoteTokens: number;
+  /** Impact sell quote size in target-stablecoin units (`outputIndex`) checked against `smallQuoteTokens`. */
+  impactQuoteTokens: number;
+}
+
 export interface CurvePoolConfig {
   stablecoinId: string;
   poolAddress: string;
@@ -9,7 +26,7 @@ export interface CurvePoolConfig {
   outputDecimals: number;
   chain: string;
   terminalQuoteAsset: "USDC";
-  sellGuard?: { minBalanceTokens: number; smallQuoteTokens: number; impactQuoteTokens: number };
+  sellGuard?: CurveSellGuardConfig;
   /** Use get_dy_underlying selector for metapools (e.g., LUSD/3Crv) */
   useUnderlying?: boolean;
   /** Hop ratio in the intermediate token, multiplied by that token's resolved USD price. */
@@ -19,6 +36,13 @@ export interface CurvePoolConfig {
   /** Maximum allowed dependency depth. Chained hops must opt in with maxHopDepth > 1. */
   maxHopDepth?: number;
 }
+
+const PMUSD_SELL_GUARD: CurveSellGuardConfig = {
+  minSellDepthQuoteTokens: 25_000,
+  minSellInputBalanceTokens: 100_000,
+  smallQuoteTokens: 1_000,
+  impactQuoteTokens: 10_000,
+};
 
 function priceRoute(
   stablecoinId: string,
@@ -120,10 +144,15 @@ export const CURVE_POOL_CONFIGS: CurvePoolConfig[] = [
   }),
   // ── Hop pools (paired against crvUSD or PYUSD, resolved via two-phase pricing) ──
 
-  // pmUSD/crvUSD (factory-stable-ng, ~$19.4M TVL)
+  // pmUSD/crvUSD (factory-stable-ng, ~$1.5M TVL; coins(0)=pmUSD 18dp, coins(1)=crvUSD 18dp)
   priceRoute("pmusd-precious-metals", "0xEcb0F0d68C19BdAaDAEbE24f6752A4Db34e2c2cb", {
     inputDecimals: 18, hop: { viaStablecoinId: "crvusd-curve" }, routeType: "one-hop",
-    sellGuard: { minBalanceTokens: 100_000, smallQuoteTokens: 1_000, impactQuoteTokens: 100_000 },
+    sellGuard: PMUSD_SELL_GUARD,
+  }),
+  // pmUSD/frxUSD (factory-stable-ng, ~$1.4M TVL; coins(0)=pmUSD 18dp, coins(1)=frxUSD 18dp)
+  priceRoute("pmusd-precious-metals", "0xBf5047039F2980C21eB5692c790BAd8A9533b900", {
+    inputDecimals: 18, hop: { viaStablecoinId: "frxusd-frax" },
+    routeType: "chained-hop", maxHopDepth: 2, sellGuard: PMUSD_SELL_GUARD,
   }),
   // crvUSD/frxUSD (factory-stable-ng, ~$13.1M TVL)
   priceRoute("frxusd-frax", "0x13e12BB0E6A2f1A3d6901a59a9d585e89A6243e1", {

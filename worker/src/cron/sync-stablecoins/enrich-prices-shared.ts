@@ -1,5 +1,5 @@
 import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
-import type { NominalPriceReference, PriceConfidence, PriceObservedAtMode, PriceSourceConfidenceProfile } from "@shared/types/price";
+import type { NominalPriceReference, PriceConfidence, PriceObservedAtMode, PricePublicationReason, PriceSourceConfidenceProfile } from "@shared/types/price";
 import type { ChainPartitionProvenance, StablecoinData, SupplyChainGuardProvenance, SupplyGapFillProvenance, SupplyRestoreMode, SupplyUnavailableReason } from "@shared/types/supply";
 import type { SupplyChangeBaselines } from "@shared/lib/supply";
 import type { PriceDerivation } from "@shared/types/price";
@@ -15,6 +15,10 @@ export interface PriceValidationStats {
   singleSource: number;
   cgOnly: number;
   low: number;
+  cgMicroVolumeRejected?: number;
+  cgVolumeUnavailable?: number;
+  hiveDivergenceVetoed?: number;
+  hiveVetoUnavailable?: number;
 }
 
 export interface PrimaryPriceResult extends Pick<StablecoinData, "priceQuoteBasis" | "upstreamKeys" | "pricePoolKeys"> {
@@ -56,6 +60,8 @@ export interface PeggedAsset extends Pick<StablecoinData, "circulatingNative" | 
   price?: number | null;
   priceSource?: string;
   priceConfidence?: PriceConfidence | null;
+  /** Set only when open confirmed depeg continuity admitted a `low`-confidence display price. */
+  pricePublicationReason?: PricePublicationReason;
   priceUpdatedAt?: number | null;
   priceObservedAt?: number | null;
   priceObservedAtMode?: PriceObservedAtMode | null;

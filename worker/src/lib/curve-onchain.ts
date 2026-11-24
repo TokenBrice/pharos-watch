@@ -14,19 +14,36 @@ import type { ChainRpcConfig } from "./chain-registry";
 import type { FetcherOutcome } from "./fetcher-result";
 
 import { encodeUint256 } from "./evm-selectors";
-import type { CurvePoolConfig, CurveRouteType } from "@shared/lib/curve-pool-configs";
+import type {
+  CurvePoolConfig,
+  CurveRouteType,
+  CurveSellGuardRejectionReason,
+} from "@shared/lib/curve-pool-configs";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
+import { median, weightedMedian } from "@shared/lib/stats";
 import { canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
+
+export type { CurveSellGuardRejectionReason };
 
 /** Maximum accepted block-timestamp staleness for the Curve PriceAggregator EMA oracle (seconds). */
 export const CURVE_ORACLE_MAX_STALENESS_SEC = 300;
-const CURVE_MAX_QUOTE_IMPACT_RATIO = 0.05;
+export const CURVE_MAX_QUOTE_IMPACT_RATIO = 0.05;
 const CURVE_BALANCES_SELECTOR = "0x4903b0d1";
+const HEX_UINT256_PREFIX_RE = /^0x[\da-f]{64}/i;
 
 // get_dy(int128,int128,uint256) selector
 const GET_DY_SELECTOR = "0x5e0d443f";
 // get_dy_underlying(int128,int128,uint256) selector
 const GET_DY_UNDERLYING_SELECTOR = "0x07211ef7";
+
+export interface CurveSellGuardRejection {
+  stablecoinId: string;
+  chain: string;
+  poolAddress: string;
+  reason: CurveSellGuardRejectionReason;
+  quoteDepthTokens?: number;
+  inputBalanceTokens?: number;
+}
 
 /**
  * Fetch implied prices via Curve get_dy for a batch of pool configurations.
@@ -34,7 +51,9 @@ const GET_DY_UNDERLYING_SELECTOR = "0x07211ef7";
  *
  * Block number + timestamp are fetched once per distinct chain and all
  * get_dy calls are pinned to that block. Each resolved USD quote carries the
- * oldest block or USDC/USD observation on its route.
+ * oldest block or USDC/USD observation on its route; multiple passing routes
+ * for one stablecoin combine via USD quote-depth-weighted median into a single
+ * `curve-onchain` observation dated by the oldest contributing clock.
  */
 export interface CurveOnchainBatch {
   prices: Map<string, number>;
@@ -42,11 +61,17 @@ export interface CurveOnchainBatch {
   pricePoolKeysByCoinId: Map<string, readonly string[]>;
   routeTypeByCoinId: Map<string, CurveRouteType>;
   hopDepthByCoinId: Map<string, number>;
+  sellGuardRejections?: CurveSellGuardRejection[];
 }
 
 export interface UsdcUsdMark {
   price: number;
   observedAt: number;
+}
+
+interface RawCurveRouteQuote {
+  impliedPrice: number;
+  quoteDepthTokens?: number;
 }
 
 export async function fetchCurveOnchainPrices(
@@ -61,6 +86,7 @@ export async function fetchCurveOnchainPrices(
     pricePoolKeysByCoinId: new Map(),
     routeTypeByCoinId: new Map<string, CurveRouteType>(),
     hopDepthByCoinId: new Map<string, number>(),
+    sellGuardRejections: [],
   };
 
   const nowSec = Math.floor(Date.now() / 1000);
@@ -102,7 +128,15 @@ export async function fetchCurveOnchainPrices(
     blockByChain.set(entry.chain, { blockNumber: entry.blockNumber, blockTimestamp: entry.blockTimestamp });
   }
 
-  const rawPrices = new Map<string, number>();
+  const configsById = new Map<string, CurvePoolConfig[]>();
+  for (const config of configs) {
+    const list = configsById.get(config.stablecoinId) ?? [];
+    list.push(config);
+    configsById.set(config.stablecoinId, list);
+  }
+
+  const rawQuotes = new Map<CurvePoolConfig, RawCurveRouteQuote>();
+  const sellGuardRejections: CurveSellGuardRejection[] = [];
   let rpcAttempts = 0;
   let rpcThrows = 0;
 
@@ -134,11 +168,37 @@ export async function fetchCurveOnchainPrices(
       const impliedPrice = inputFloat / outputFloat;
 
       if (impliedPrice > 0 && impliedPrice < 10_000) {
-        if (config.sellGuard && !await passesSellGuard(config, selector, block.blockNumber, impliedPrice, signal, chainRpcs)) {
-          logWorkerEventArgs("lib", "warn", `[curve-onchain] ${config.stablecoinId}: sell-depth-or-impact rejected`);
-          continue;
+        if (config.sellGuard) {
+          const guardResult = await evaluateSellGuard(
+            config, selector, block.blockNumber, impliedPrice, signal, chainRpcs,
+          );
+          if (!guardResult.passed) {
+            sellGuardRejections.push({
+              stablecoinId: config.stablecoinId,
+              chain: config.chain,
+              poolAddress: config.poolAddress,
+              reason: guardResult.reason,
+              ...(guardResult.quoteDepthTokens != null ? { quoteDepthTokens: guardResult.quoteDepthTokens } : {}),
+              ...(guardResult.inputBalanceTokens != null ? { inputBalanceTokens: guardResult.inputBalanceTokens } : {}),
+            });
+            logWorkerEventArgs(
+              "lib",
+              "warn",
+              `[curve-onchain] ${config.stablecoinId} (${config.poolAddress}): sellGuard rejected (${guardResult.reason})`,
+            );
+            continue;
+          }
+          rawQuotes.set(config, { impliedPrice, quoteDepthTokens: guardResult.quoteDepthTokens });
+        } else {
+          const isMultiRoute = (configsById.get(config.stablecoinId)?.length ?? 0) > 1;
+          const quoteDepthTokens = isMultiRoute && !config.useUnderlying
+            ? await fetchQuoteDepthTokens(config, block.blockNumber, signal, chainRpcs)
+            : undefined;
+          rawQuotes.set(config, {
+            impliedPrice,
+            ...(quoteDepthTokens != null ? { quoteDepthTokens } : {}),
+          });
         }
-        rawPrices.set(config.stablecoinId, impliedPrice);
       }
     } catch (err) {
       if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
@@ -147,36 +207,41 @@ export async function fetchCurveOnchainPrices(
     }
   }
 
-  // Phase 2: Resolve hop prices, build final results stamped with the pool's
-  // chain-block timestamp. Dependencies resolve recursively so explicitly
-  // allowed chained hops multiply by the final USD price of the via asset.
+  // Phase 2: Resolve hop prices, combine multi-route coins via quote-depth-weighted
+  // median, and stamp each resolved coin with its oldest contributing observation.
   const prices = new Map<string, number>();
   const observedAtByCoinId = new Map<string, number>();
   const pricePoolKeysByCoinId = new Map<string, readonly string[]>();
   const routeTypeByCoinId = new Map<string, CurveRouteType>();
   const hopDepthByCoinId = new Map<string, number>();
-  const configById = new Map(configs.map((config) => [config.stablecoinId, config]));
   const resolutionCache = new Map<string, CurveResolvedPrice | null>();
   const resolving = new Set<string>();
 
-  for (const config of configs) {
-    const resolved = resolveCurveConfig(config, {
+  for (const stablecoinId of configsById.keys()) {
+    const resolved = resolveCurveStablecoin(stablecoinId, {
       blockByChain,
-      configById,
-      rawPrices,
+      configsById,
+      rawQuotes,
       resolving,
       resolutionCache,
       usdcUsd,
     });
     if (!resolved) continue;
-    prices.set(config.stablecoinId, resolved.price);
-    observedAtByCoinId.set(config.stablecoinId, resolved.observedAt);
-    if (resolved.pricePoolKeys) pricePoolKeysByCoinId.set(config.stablecoinId, resolved.pricePoolKeys);
-    routeTypeByCoinId.set(config.stablecoinId, resolved.routeType);
-    hopDepthByCoinId.set(config.stablecoinId, resolved.hopDepth);
+    prices.set(stablecoinId, resolved.price);
+    observedAtByCoinId.set(stablecoinId, resolved.observedAt);
+    if (resolved.pricePoolKeys) pricePoolKeysByCoinId.set(stablecoinId, resolved.pricePoolKeys);
+    routeTypeByCoinId.set(stablecoinId, resolved.routeType);
+    hopDepthByCoinId.set(stablecoinId, resolved.hopDepth);
   }
 
-  const value: CurveOnchainBatch = { prices, observedAtByCoinId, pricePoolKeysByCoinId, routeTypeByCoinId, hopDepthByCoinId };
+  const value: CurveOnchainBatch = {
+    prices,
+    observedAtByCoinId,
+    pricePoolKeysByCoinId,
+    routeTypeByCoinId,
+    hopDepthByCoinId,
+    sellGuardRejections,
+  };
 
   if (rpcAttempts > 0 && rpcThrows === rpcAttempts) {
     return { kind: "upstream-error", value, reason: "all Curve pool RPC calls threw" };
@@ -204,40 +269,104 @@ function encodeGetDy(selector: string, i: number, j: number, dx: bigint): string
   return `${selector}${encodeUint256(i)}${encodeUint256(j)}${encodeUint256(dx)}`;
 }
 
-async function passesSellGuard(
+function meetsTokenFloor(rawAmount: bigint, decimals: number, minTokens: number): boolean {
+  if (!Number.isFinite(minTokens) || minTokens < 0) return false;
+  if (Number.isInteger(minTokens)) {
+    return rawAmount >= BigInt(minTokens) * 10n ** BigInt(decimals);
+  }
+  return Number(rawAmount) / 10 ** decimals >= minTokens;
+}
+
+type SellGuardOutcome =
+  | { passed: true; quoteDepthTokens: number; inputBalanceTokens: number }
+  | {
+    passed: false;
+    reason: CurveSellGuardRejectionReason;
+    quoteDepthTokens?: number;
+    inputBalanceTokens?: number;
+  };
+
+async function evaluateSellGuard(
   config: CurvePoolConfig,
   selector: string,
   blockNumber: number,
   buyPrice: number,
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
-): Promise<boolean> {
+): Promise<SellGuardOutcome> {
   const guard = config.sellGuard!;
   const inputScale = 10 ** config.inputDecimals;
   const outputScale = 10n ** BigInt(config.outputDecimals);
+  const gas = config.useUnderlying ? "0x7A120" : undefined;
   const encodeSell = (tokens: number) => encodeGetDy(
     selector, config.outputIndex, config.inputIndex, BigInt(tokens) * outputScale,
   );
-  const result = await fetchEvmRpcBatch(config.chain, [
-    `${CURVE_BALANCES_SELECTOR}${encodeUint256(config.inputIndex)}`,
-    `${CURVE_BALANCES_SELECTOR}${encodeUint256(config.outputIndex)}`,
-    encodeSell(guard.smallQuoteTokens),
-    encodeSell(guard.impactQuoteTokens),
-  ].map((data) => ({
-    method: "eth_call",
-    params: [{ to: config.poolAddress, data }, `0x${blockNumber.toString(16)}`],
-  })), { signal, chainRpcs });
-  if (!result || result.length !== 4) return false;
-  const [inputBalance, outputBalance, smallOutput, impactOutput] = result.map((word) =>
-    typeof word === "string" && /^0x[\da-f]{64}/i.test(word) ? Number(BigInt(word.slice(0, 66))) : 0);
-  const smallPrice = smallOutput / inputScale / guard.smallQuoteTokens;
-  const impactPrice = impactOutput / inputScale / guard.impactQuoteTokens;
-  return inputBalance / inputScale >= guard.minBalanceTokens &&
-    outputBalance / Number(outputScale) >= guard.minBalanceTokens &&
-    smallOutput <= inputBalance && impactOutput <= inputBalance &&
-    smallPrice > 0 && impactPrice > 0 &&
+  let result: unknown[] | null;
+  try {
+    result = await fetchEvmRpcBatch(config.chain, [
+      `${CURVE_BALANCES_SELECTOR}${encodeUint256(config.inputIndex)}`,
+      `${CURVE_BALANCES_SELECTOR}${encodeUint256(config.outputIndex)}`,
+      encodeSell(guard.smallQuoteTokens),
+      encodeSell(guard.impactQuoteTokens),
+    ].map((data) => ({
+      method: "eth_call",
+      params: [{ to: config.poolAddress, data, ...(gas ? { gas } : {}) }, `0x${blockNumber.toString(16)}`],
+    })), { signal, chainRpcs });
+  } catch (err) {
+    if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+    return { passed: false, reason: "rpc" };
+  }
+  if (!result || result.length !== 4 || !result.every((word) => typeof word === "string" && HEX_UINT256_PREFIX_RE.test(word))) {
+    return { passed: false, reason: "rpc" };
+  }
+  const [quoteBalanceRaw, sellInputBalanceRaw, smallOutputRaw, impactOutputRaw] = result.map(
+    (word) => BigInt((word as string).slice(0, 66)),
+  );
+  const quoteDepthTokens = Number(quoteBalanceRaw) / inputScale;
+  const inputBalanceTokens = Number(sellInputBalanceRaw) / Number(outputScale);
+  if (!meetsTokenFloor(quoteBalanceRaw, config.inputDecimals, guard.minSellDepthQuoteTokens)) {
+    return { passed: false, reason: "insufficient-sell-depth", quoteDepthTokens, inputBalanceTokens };
+  }
+  if (!meetsTokenFloor(sellInputBalanceRaw, config.outputDecimals, guard.minSellInputBalanceTokens)) {
+    return { passed: false, reason: "input-balance", quoteDepthTokens, inputBalanceTokens };
+  }
+  const smallPrice = Number(smallOutputRaw) / inputScale / guard.smallQuoteTokens;
+  const impactPrice = Number(impactOutputRaw) / inputScale / guard.impactQuoteTokens;
+  const impactPassed =
+    smallOutputRaw <= quoteBalanceRaw &&
+    impactOutputRaw <= quoteBalanceRaw &&
+    Number.isFinite(smallPrice) && smallPrice > 0 &&
+    Number.isFinite(impactPrice) && impactPrice > 0 &&
     Math.abs(smallPrice / buyPrice - 1) <= CURVE_MAX_QUOTE_IMPACT_RATIO &&
     Math.abs(impactPrice / smallPrice - 1) <= CURVE_MAX_QUOTE_IMPACT_RATIO;
+  if (!impactPassed) {
+    return { passed: false, reason: "impact", quoteDepthTokens, inputBalanceTokens };
+  }
+  return { passed: true, quoteDepthTokens, inputBalanceTokens };
+}
+
+async function fetchQuoteDepthTokens(
+  config: CurvePoolConfig,
+  blockNumber: number,
+  signal?: AbortSignal,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+): Promise<number | undefined> {
+  try {
+    const result = await fetchEvmRpcBatch(config.chain, [{
+      method: "eth_call",
+      params: [
+        { to: config.poolAddress, data: `${CURVE_BALANCES_SELECTOR}${encodeUint256(config.inputIndex)}` },
+        `0x${blockNumber.toString(16)}`,
+      ],
+    }], { signal, chainRpcs });
+    const word = result?.[0];
+    if (typeof word !== "string" || !HEX_UINT256_PREFIX_RE.test(word)) return undefined;
+    const tokens = Number(BigInt(word.slice(0, 66))) / 10 ** config.inputDecimals;
+    return Number.isFinite(tokens) && tokens > 0 ? tokens : undefined;
+  } catch (err) {
+    if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+    return undefined;
+  }
 }
 
 interface CurveResolvedPrice {
@@ -248,37 +377,70 @@ interface CurveResolvedPrice {
   pricePoolKeys: readonly string[] | null;
 }
 
+interface CurveResolvedRoute extends CurveResolvedPrice {
+  quoteDepthUsd?: number;
+}
+
 interface CurveResolutionContext {
   blockByChain: Map<string, { blockNumber: number; blockTimestamp: number }>;
-  configById: Map<string, CurvePoolConfig>;
-  rawPrices: Map<string, number>;
+  configsById: Map<string, CurvePoolConfig[]>;
+  rawQuotes: Map<CurvePoolConfig, RawCurveRouteQuote>;
   resolving: Set<string>;
   resolutionCache: Map<string, CurveResolvedPrice | null>;
   usdcUsd: UsdcUsdMark;
 }
 
-function resolveCurveConfig(
-  config: CurvePoolConfig,
+const ROUTE_TYPE_PRIORITY: Record<CurveRouteType, number> = {
+  direct: 0,
+  "trusted-wrapper": 1,
+  "one-hop": 2,
+  "chained-hop": 3,
+};
+
+function resolveCurveStablecoin(
+  stablecoinId: string,
   context: CurveResolutionContext,
 ): CurveResolvedPrice | null {
-  if (context.resolutionCache.has(config.stablecoinId)) {
-    return context.resolutionCache.get(config.stablecoinId) ?? null;
+  if (context.resolutionCache.has(stablecoinId)) {
+    return context.resolutionCache.get(stablecoinId) ?? null;
   }
-  if (context.resolving.has(config.stablecoinId)) {
-    context.resolutionCache.set(config.stablecoinId, null);
+  if (context.resolving.has(stablecoinId)) {
     return null;
   }
 
+  const configs = context.configsById.get(stablecoinId);
+  if (!configs || configs.length === 0) {
+    if (context.resolving.size === 0) context.resolutionCache.set(stablecoinId, null);
+    return null;
+  }
+
+  context.resolving.add(stablecoinId);
+  const passing: CurveResolvedRoute[] = [];
+  for (const config of configs) {
+    const resolved = resolveSingleCurveConfig(config, context);
+    if (resolved) passing.push(resolved);
+  }
+  context.resolving.delete(stablecoinId);
+
+  const combined = combineResolvedCurveRoutes(passing);
+  if (combined !== null || context.resolving.size === 0) {
+    context.resolutionCache.set(stablecoinId, combined);
+  }
+  return combined;
+}
+
+function resolveSingleCurveConfig(
+  config: CurvePoolConfig,
+  context: CurveResolutionContext,
+): CurveResolvedRoute | null {
   const routeType = getCurveRouteType(config);
   if (!isCurveRouteShapeAllowed(config, routeType)) {
-    context.resolutionCache.set(config.stablecoinId, null);
     return null;
   }
 
-  const raw = context.rawPrices.get(config.stablecoinId);
+  const raw = context.rawQuotes.get(config);
   const block = context.blockByChain.get(config.chain);
   if (raw == null || !block) {
-    context.resolutionCache.set(config.stablecoinId, null);
     return null;
   }
 
@@ -286,52 +448,94 @@ function resolveCurveConfig(
   const poolKey = config.useUnderlying ? null : canonicalExitRouteScopedKey(config.chain, config.poolAddress);
 
   if (!config.hop) {
-    const resolved = config.terminalQuoteAsset === "USDC" ? normalizeResolvedCurvePrice(
-      raw * context.usdcUsd.price, Math.min(block.blockTimestamp, context.usdcUsd.observedAt),
-      routeType, 0, poolKey ? [poolKey] : null,
-    ) : null;
-    context.resolutionCache.set(config.stablecoinId, resolved);
-    return resolved;
+    if (config.terminalQuoteAsset !== "USDC") return null;
+    const quoteAssetUsdPrice = context.usdcUsd.price;
+    const quoteDepthUsd = raw.quoteDepthTokens != null ? raw.quoteDepthTokens * quoteAssetUsdPrice : undefined;
+    return normalizeResolvedCurveRoute(
+      raw.impliedPrice * quoteAssetUsdPrice,
+      Math.min(block.blockTimestamp, context.usdcUsd.observedAt),
+      routeType,
+      0,
+      poolKey ? [poolKey] : null,
+      quoteDepthUsd,
+    );
   }
 
-  const viaConfig = context.configById.get(config.hop.viaStablecoinId);
-  if (!viaConfig) {
-    context.resolutionCache.set(config.stablecoinId, null);
+  if (!context.configsById.has(config.hop.viaStablecoinId)) {
     return null;
   }
 
-  context.resolving.add(config.stablecoinId);
-  const via = resolveCurveConfig(viaConfig, context);
-  context.resolving.delete(config.stablecoinId);
-
+  const via = resolveCurveStablecoin(config.hop.viaStablecoinId, context);
   if (!via) {
-    context.resolutionCache.set(config.stablecoinId, null);
     return null;
   }
 
   const hopDepth = via.hopDepth + 1;
   if (hopDepth > getMaxCurveHopDepth(config, routeType)) {
-    context.resolutionCache.set(config.stablecoinId, null);
     return null;
   }
 
-  const finalPrice = raw * via.price;
+  const quoteAssetUsdPrice = via.price;
+  const finalPrice = raw.impliedPrice * quoteAssetUsdPrice;
   const observedAt = Math.min(block.blockTimestamp, via.observedAt);
   const pricePoolKeys = poolKey && via.pricePoolKeys ? [poolKey, ...via.pricePoolKeys] : null;
-  const resolved = normalizeResolvedCurvePrice(finalPrice, observedAt, routeType, hopDepth, pricePoolKeys);
-  context.resolutionCache.set(config.stablecoinId, resolved);
-  return resolved;
+  const quoteDepthUsd = raw.quoteDepthTokens != null ? raw.quoteDepthTokens * quoteAssetUsdPrice : undefined;
+  return normalizeResolvedCurveRoute(finalPrice, observedAt, routeType, hopDepth, pricePoolKeys, quoteDepthUsd);
 }
 
-function normalizeResolvedCurvePrice(
+function combineResolvedCurveRoutes(passing: readonly CurveResolvedRoute[]): CurveResolvedPrice | null {
+  if (passing.length === 0) return null;
+  if (passing.length === 1) {
+    const only = passing[0]!;
+    return {
+      price: only.price,
+      observedAt: only.observedAt,
+      routeType: only.routeType,
+      hopDepth: only.hopDepth,
+      pricePoolKeys: only.pricePoolKeys,
+    };
+  }
+
+  const allHaveDepth = passing.every(
+    (route) => route.quoteDepthUsd != null && Number.isFinite(route.quoteDepthUsd) && route.quoteDepthUsd > 0,
+  );
+  const combinedPrice = allHaveDepth
+    ? weightedMedian(passing.map((route) => ({ value: route.price, weight: route.quoteDepthUsd! })))
+    : median(passing.map((route) => route.price));
+  if (combinedPrice == null || !Number.isFinite(combinedPrice) || combinedPrice <= 0 || combinedPrice >= 10_000) {
+    return null;
+  }
+
+  const observedAt = Math.min(...passing.map((route) => route.observedAt));
+  const pricePoolKeys = passing.every((route) => route.pricePoolKeys != null)
+    ? [...new Set(passing.flatMap((route) => route.pricePoolKeys!))]
+    : null;
+  const hopDepth = Math.max(...passing.map((route) => route.hopDepth));
+  const routeType = passing.reduce<CurveRouteType>(
+    (mostDependent, route) =>
+      ROUTE_TYPE_PRIORITY[route.routeType] > ROUTE_TYPE_PRIORITY[mostDependent] ? route.routeType : mostDependent,
+    passing[0]!.routeType,
+  );
+  return { price: combinedPrice, observedAt, routeType, hopDepth, pricePoolKeys };
+}
+
+function normalizeResolvedCurveRoute(
   price: number,
   observedAt: number,
   routeType: CurveRouteType,
   hopDepth: number,
   pricePoolKeys: readonly string[] | null,
-): CurveResolvedPrice | null {
+  quoteDepthUsd: number | undefined,
+): CurveResolvedRoute | null {
   if (!Number.isFinite(price) || price <= 0 || price >= 10_000) return null;
-  return { price, observedAt, routeType, hopDepth, pricePoolKeys };
+  return {
+    price,
+    observedAt,
+    routeType,
+    hopDepth,
+    pricePoolKeys,
+    ...(quoteDepthUsd != null && Number.isFinite(quoteDepthUsd) && quoteDepthUsd > 0 ? { quoteDepthUsd } : {}),
+  };
 }
 
 function getCurveRouteType(config: CurvePoolConfig): CurveRouteType {

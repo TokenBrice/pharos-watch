@@ -456,7 +456,7 @@ describe("buildChainRpcs", () => {
 
   it.each([
     ["plume", "Plume", "https://rpc.plume.org", "https://explorer.plumenetwork.xyz"],
-    ["monad", "Monad", "https://rpc.monad.xyz", "https://explorer.monad.xyz"],
+    ["monad", "Monad", "https://rpc.monad.xyz", "https://explorer.monad.xyz", "https://monad-mainnet.drpc.org"],
     ["mantle", "Mantle", "https://rpc.mantle.xyz", "https://mantlescan.xyz"],
     ["morph-l2", "Morph", "https://rpc.morphl2.io", "https://explorer.morphl2.io"],
     ["abcore", "AB Core", "https://rpc.core.ab.org", "https://explorer.core.ab.org"],

@@ -1,11 +1,11 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { PriceCacheEntry } from "../../lib/price-cache";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import type { NativePegQuoteSession } from "../../lib/native-peg-quotes";
 import type { BinanceFetchSession } from "../../lib/cex-tickers";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import { createEmptyGtProbeStats } from "../../lib/geckoterminal-price-probe-stats";
+import { loadOpenConfirmedDepegs, summarizeOpenDepegContinuity } from "../../lib/open-confirmed-depegs";
 import {
   applyConsensusResults,
   applyProtocolPriceOverrides,
@@ -50,7 +50,6 @@ interface StablecoinsPricingStageOptions {
   coingeckoApiKey?: string | null;
   chainRpcs?: Map<string, ChainRpcConfig>;
   binanceSession?: BinanceFetchSession;
-  nativePegSession?: NativePegQuoteSession;
 }
 
 export async function runStablecoinsPricingStage(
@@ -58,6 +57,7 @@ export async function runStablecoinsPricingStage(
 ) {
   const validationContexts = createValidationContextResolver();
   const replayPriceCache = options.replayPriceCache ?? await loadReplayPriceCacheForTrustedContinuity(options.db);
+  const openConfirmedDepegs = await loadOpenConfirmedDepegs(options.db);
   const previousTrustedPrices = buildPreviousTrustedPriceLookup(
     options.previousAssetsById,
     options.syncStartSec,
@@ -86,6 +86,8 @@ export async function runStablecoinsPricingStage(
     results: primaryPriceResults,
     stats: priceValidationStats,
     providerDiagnostics: primaryProviderDiagnostics = [],
+    rejectedCgReasons,
+    hiveVetoPrice,
   } = await fetchPrimaryPrices(
     options.assets,
     options.db,
@@ -119,15 +121,18 @@ export async function runStablecoinsPricingStage(
     assets: options.assets,
     primaryPriceResults,
     previousTrustedPrices,
+    openConfirmedDepegs: openConfirmedDepegs.byId,
     validationContexts,
     validationReferences: options.validationReferences,
     syncStartSec: options.syncStartSec,
     reason: "primary",
+    rejectedCgReasons,
   });
   prevalidatePrices({
     assets: options.assets,
     primaryPriceResults,
     previousTrustedPrices,
+    openConfirmedDepegs: openConfirmedDepegs.byId,
     validationContexts,
     validationReferences: options.validationReferences,
     logLabel: "Pre-rejected bad price",
@@ -173,23 +178,30 @@ export async function runStablecoinsPricingStage(
     db: options.db,
     syncStartSec: options.syncStartSec,
     signal: options.signal,
-    coingeckoApiKey: options.coingeckoApiKey,
     fxFallbackRates: options.fxFallbackRates,
     validationReferences: options.validationReferences,
     validationContexts,
     primaryPriceResults,
     previousTrustedPrices,
+    openConfirmedDepegs: openConfirmedDepegs.byId,
     authoritativeOverrides,
     authoritativeOverrideStats,
     previousMissingGenerationsById: options.previousMissingGenerationsById,
     priceCache: replayPriceCache,
-    nativePegSession: options.nativePegSession,
+    rejectedCgReasons,
+    hiveVetoPrice,
   }, "");
   if (isAbortResult(priceCompletion)) return priceCompletion;
-  const { priceCacheEntries, providerDiagnostics: nativePegProviderDiagnostics, ...metadata } = priceCompletion;
+  const { priceCacheEntries, ...metadata } = priceCompletion;
+  const openDepegContinuity = summarizeOpenDepegContinuity(
+    openConfirmedDepegs,
+    options.assets
+      .filter((asset) => !hasMissingPrice(asset) && asset.pricePublicationReason === "open-confirmed-depeg-continuity")
+      .map((asset) => asset.id),
+  );
   const {
     authoritativeOverrideCount, rejectedCount, cachedFallbackCount,
-    nativePegCorrectionCount, nativePegFillCount, priceObservationEffectiveness,
+    priceObservationEffectiveness,
   } = metadata;
 
   if (authoritativeOverrideCount > 0) {
@@ -199,12 +211,6 @@ export async function runStablecoinsPricingStage(
   }
   if (rejectedCount > 0) {
     logWorkerEventArgs("handler", "info", `[sync-stablecoins] Rejected ${rejectedCount} unreasonable prices`);
-  }
-  if (nativePegCorrectionCount > 0) {
-    logWorkerEventArgs("handler", "info", `[sync-stablecoins] Corrected ${nativePegCorrectionCount} weak non-USD fiat prices via native-implied translations`);
-  }
-  if (nativePegFillCount > 0) {
-    logWorkerEventArgs("handler", "info", `[sync-stablecoins] Filled ${nativePegFillCount} missing non-USD fiat prices via native-implied translations`);
   }
   if (cachedFallbackCount > 0) {
     logWorkerEventArgs("handler", "info", `[sync-stablecoins] Applied ${cachedFallbackCount} cached fallback prices`);
@@ -216,24 +222,21 @@ export async function runStablecoinsPricingStage(
       authoritativeOverrides: authoritativeOverrideCount,
       authoritativeOverrideStats,
       rejectedPrices: rejectedCount,
-      nativePegCorrections: nativePegCorrectionCount,
-      nativePegFills: nativePegFillCount,
       cachedFallbackPrices: cachedFallbackCount,
       priceObservationEffectiveness,
+      openDepegContinuity,
     },
   });
 
   return {
     metadata: {
       ...metadata,
+      openDepegContinuity,
       enrichStats: null,
       priceValidationStats,
       gtProbe,
     },
     priceCacheEntries,
-    providerDiagnostics: [
-      ...primaryProviderDiagnostics,
-      ...nativePegProviderDiagnostics,
-    ],
+    providerDiagnostics: primaryProviderDiagnostics,
   };
 }

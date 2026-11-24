@@ -1,9 +1,11 @@
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
-import { fetchCoingeckoSimplePrices } from "../../lib/coingecko-simple-price";
+import { evaluateCoingeckoMicroVolumeOutlier, fetchCoingeckoSimplePrices } from "../../lib/coingecko-simple-price";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { isSuccessfulOutcome } from "../../lib/fetcher-result";
+import { buildPriceValidationContext, type PriceValidationReferences } from "../../lib/price-validation";
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import {
   applyResolvedPrice,
   hasMissingPrice,
@@ -111,11 +113,39 @@ export async function runCoingeckoLowVolumePass(
     failures.push(COINGECKO_LOW_VOLUME_SOURCE);
   }
 
+  const references: PriceValidationReferences | undefined = fxRates
+    ? {
+        rates: fxRates,
+        type: "fresh",
+        updatedAt: null,
+        updatedAtByPeg: Object.fromEntries(Object.keys(fxRates).map((pegKey) => [pegKey, null])),
+        typeByPeg: Object.fromEntries(Object.keys(fxRates).map((pegKey) => [pegKey, "fresh" as const])),
+      }
+    : undefined;
+
   for (const { asset, index } of candidates) {
     const geckoId = ACTIVE_META_BY_ID.get(asset.id)?.geckoId;
     const quote = geckoId ? outcome.value.get(geckoId) : undefined;
     if (!quote) continue;
     if (!isUsableFallbackPrice(asset, quote.price, fxRates)) continue;
+    const microVolCheck = evaluateCoingeckoMicroVolumeOutlier({
+      price: quote.price,
+      volume24hUsd: quote.volume24hUsd,
+      context: buildPriceValidationContext({
+        stablecoinId: asset.id,
+        pegType: asset.pegType,
+        navToken: asset.navToken,
+        commodityOunces: asset.commodityOunces,
+      }),
+      references,
+    });
+    if (microVolCheck.status === "rejected") {
+      logWorkerEventArgs("handler", "warn",
+        `[enrich-prices] Rejected coingecko-low-volume quote for ${asset.symbol} (id=${asset.id}): ${microVolCheck.reason} ` +
+        `(vol=$${microVolCheck.volume24hUsd.toFixed(2)}, dev=${Math.round(microVolCheck.deviationBps)}bps)`,
+      );
+      continue;
+    }
     if (quote.observedAt != null && (
       quote.observedAt <= 0 ||
       !isFreshFallbackObservedAt(

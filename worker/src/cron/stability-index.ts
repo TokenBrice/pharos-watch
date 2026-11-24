@@ -7,7 +7,7 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "@shared/lib/depeg-closure";
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC, DEPEG_SEVERITY_BPS, DEX_PROTOCOL_SOURCE_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { CORE_PSI_ELIGIBLE_IDS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
-import { derivePegRates, getPegReference, isParityPrice, normalizePegType } from "@shared/lib/peg-rates";
+import { derivePegRates, getPegReference, isReferenceParityPrice, normalizePegType } from "@shared/lib/peg-rates";
 import { getCommodityOuncesAtQuote } from "@shared/lib/commodity-median";
 import { getLegacyReferenceClosureStart, getReferenceMarket, getReferenceMarketClosureStart, getReferenceSessionState } from "@shared/lib/reference-market-hours";
 import { deriveAuthoritativePegSignal } from "./authoritative-peg-signal";
@@ -39,7 +39,6 @@ import { auditVerdictNotInSql } from "../lib/depeg-audit";
 import { PEG_SCORE_EXCLUDED_AUDIT_VERDICTS } from "@shared/types/depeg-audit";
 import { reviewedDepegDisputeSql } from "@shared/data/depegs/reviewed-depeg-disposition-sql";
 import { getDepegRecoveryThresholdBps, getDepegThresholdBps } from "../lib/depeg-threshold-policy";
-import { COINGECKO_NATIVE_IMPLIED_SOURCE } from "../lib/native-peg-implied-prices";
 import { POOL_CHALLENGE_MIN_TVL } from "../lib/price-depeg-voting-policy";
 import { isEarlierSupplyPerimeter, isAmbiguousSupplyPerimeterDay } from "@shared/lib/supply-perimeter-changes";
 import { isReplaySafePriceSource } from "@shared/lib/pricing-source-policy";
@@ -273,8 +272,8 @@ export async function computeAndStoreStabilityIndex(
 
   const priceById = new Map<string, { price: number; observedAt: number | null; upstreamObservedAt: number | null }>();
   for (const coin of tracked) {
-    if (coin.priceSource !== COINGECKO_NATIVE_IMPLIED_SOURCE &&
-        isParityPrice(coin) && coin.price != null && typeof coin.price === "number" && coin.price > 0) {
+    if (coin.priceSource !== "coingecko-native-implied" &&
+        isReferenceParityPrice(coin) && coin.price != null && typeof coin.price === "number" && coin.price > 0) {
       const upstreamObservedAt = sourceObservationClock(coin);
       priceById.set(coin.id, { price: coin.price, upstreamObservedAt,
         observedAt: (perObservation && !legacyFxPegById.has(coin.id)) || coin.id === "xagm-matrixdock"

@@ -18,6 +18,7 @@ import type { PriceValidationReferences } from "../price-validation";
 import { usdvJupiterProvider } from "./usdv-jupiter";
 import { susdSolayerNavProvider } from "./susd-solayer";
 import { usdafUniswapV4Provider } from "./usdaf-uniswap-v4";
+import { usduFinanceCurvePoolProvider } from "./usdu-finance-curve-pool";
 import { usduUniswapV3Provider } from "./usdu-uniswap-v3";
 import { bdAerodromeProvider } from "./bd-aerodrome";
 import { moveusdOrcaProvider } from "./moveusd-orca";
@@ -30,6 +31,9 @@ import { mentoBrokerProvider } from "./mento-broker";
 import { capCusdProvider } from "./cap-cusd";
 import { deuroEurcBridgeProvider } from "./deuro-eurc-bridge";
 import { erc4626NavProvider, previewRedeemProvider } from "./erc4626-nav";
+import { m0ExtensionProvider } from "./m0-extension";
+import { nusdSynapsePoolProvider } from "./nusd-synapse-pool";
+import { rwausdiChainlinkNavProvider } from "./rwausdi-chainlink-nav";
 import {
   CACHED_VAULT_RATE_SOURCE,
   type CurrentPriceOverride,
@@ -63,6 +67,9 @@ const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
   capCusdProvider,
   deuroEurcBridgeProvider,
   iusdInfinifiProvider,
+  m0ExtensionProvider,
+  rwausdiChainlinkNavProvider,
+  nusdSynapsePoolProvider,
   inheritedTrackedPriceProvider,
   mentoBrokerProvider,
   protocolParProvider,
@@ -70,6 +77,7 @@ const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
   swanusdCurvePoolProvider,
   stbtCurvePoolProvider,
   usd3CurvePoolProvider,
+  usduFinanceCurvePoolProvider,
   bdAerodromeProvider,
   moveusdOrcaProvider,
   usdvJupiterProvider,
@@ -595,8 +603,9 @@ export async function fetchAuthoritativeLivePriceOverrides(
 
   // Same-run parent dependencies: a child that prices from a tracked parent row
   // must not read that row before the parent's own attempt has settled, or a
-  // rescue chain such as wm-m0 -> m-m0 -> usdn-noble loses its parent price.
-  // Blocked children stay queued while every ready candidate keeps a lane busy.
+  // rescue chain such as musd-metamask -> m-m0 -> wm-m0/usdn-noble loses its
+  // parent price. Blocked children stay queued while every ready candidate keeps
+  // a lane busy.
   const candidateIndexByAssetId = new Map(prioritizedCandidates.map((candidate, index) => [candidate.asset.id, index]));
   const parentIndexByCandidateIndex = new Map<number, number>();
   for (const [index, candidate] of prioritizedCandidates.entries()) {

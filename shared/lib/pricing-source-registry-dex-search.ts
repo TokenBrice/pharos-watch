@@ -209,10 +209,18 @@ export const PRICING_SOURCE_REGISTRY_DEX_SEARCH = [
     label: "Jupiter",
     shortLabel: "Jupiter",
     depegSourceFamily: "fallback:jupiter",
-    maxTrustedAgeSec: 15 * 60,
+    // Jupiter quotes carry a Solana getBlockTime upstream clock and admit up to
+    // ~15m of slot lag at fetch time; a 30m upstream window covers the :09->:15
+    // staging handoff plus one missed refresh slot without stretching local_fetch.
+    maxTrustedAgeSec: 30 * 60,
     defaultWeight: 1,
     freshnessKind: "upstream",
     supportsUpstreamObservedAt: true,
+    requiresObservedAt: true,
+    defaultObservedAtMode: "upstream",
+    capabilities: {
+      hasUpstreamTimestamp: true,
+    },
   }),
   definePricingSource(PRICING_SOURCE_PRESETS.fallbackSearch, {
     key: "coinmarketcap",

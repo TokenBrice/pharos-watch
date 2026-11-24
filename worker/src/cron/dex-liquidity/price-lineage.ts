@@ -1,7 +1,7 @@
 import { isCanonicalPricePoolKey } from "@shared/lib/pricing-source-pool-provenance";
 import { getPricingSourceRegistryEntry, PRICING_SOURCE_REGISTRY } from "@shared/lib/pricing-source-registry";
 import { BINANCE_MARKETS, BITSTAMP_MARKETS, COINBASE_PRODUCTS, KRAKEN_MARKETS } from "@shared/lib/pricing-provider-config";
-import { CURVE_POOL_CONFIGS } from "@shared/lib/curve-pool-configs";
+import { CURVE_POOL_CONFIGS, type CurvePoolConfig } from "@shared/lib/curve-pool-configs";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { canonicalTronAddress } from "@shared/lib/tron-address";
 import { canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
@@ -70,19 +70,32 @@ export interface DexObservationLineage {
 
 export const CURVE_USDC_USD_VENUE_KEY = "venue:bitstamp";
 
-const curveConfigById = new Map(CURVE_POOL_CONFIGS.map((config) => [config.stablecoinId, config]));
+const curveConfigsById = new Map<string, CurvePoolConfig[]>();
+for (const config of CURVE_POOL_CONFIGS) {
+  const existing = curveConfigsById.get(config.stablecoinId) ?? [];
+  existing.push(config);
+  curveConfigsById.set(config.stablecoinId, existing);
+}
 const hardMarkets = PRICING_SOURCE_REGISTRY.filter((source) => source.trustTier === "hard_market");
 
 export function configuredPrimaryUpstreamKeys(stablecoinId: string): Set<string> {
   const symbol = WORKER_TRACKED_META_BY_ID.get(stablecoinId)?.symbol.toUpperCase();
   const keys = new Set(hardMarkets.flatMap(({ key }) => directUsdVenueKeys(key, symbol) ?? []));
   const visited = new Set<string>();
-  let config = curveConfigById.get(stablecoinId);
-  while (config && !visited.has(config.stablecoinId)) {
-    visited.add(config.stablecoinId);
-    keys.add(canonicalExitRouteScopedKey(config.chain, config.poolAddress));
+  const queue = [stablecoinId];
+  while (queue.length > 0) {
+    const currentId = queue.shift()!;
+    if (visited.has(currentId)) continue;
+    visited.add(currentId);
+    const configs = curveConfigsById.get(currentId);
+    if (!configs || configs.length === 0) continue;
     keys.add(CURVE_USDC_USD_VENUE_KEY);
-    config = config.hop && curveConfigById.get(config.hop.viaStablecoinId);
+    for (const config of configs) {
+      keys.add(canonicalExitRouteScopedKey(config.chain, config.poolAddress));
+      if (config.hop && !visited.has(config.hop.viaStablecoinId)) {
+        queue.push(config.hop.viaStablecoinId);
+      }
+    }
   }
   return keys;
 }

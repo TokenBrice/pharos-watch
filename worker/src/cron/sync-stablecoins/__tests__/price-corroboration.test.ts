@@ -3,7 +3,12 @@ import { DatabaseSync } from "node:sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import * as enrichment from "../enrich-prices";
 import * as shared from "../shared";
-import { PRICE_CORROBORATION_OBSERVATIONS_KEY, loadPriceCorroborationObservations, writePriceCorroborationObservations } from "../price-corroboration-observations";
+import {
+  PRICE_CORROBORATION_OBSERVATIONS_KEY,
+  filterStageablePriceObservations,
+  loadPriceCorroborationObservations,
+  writePriceCorroborationObservations,
+} from "../price-corroboration-observations";
 import type { AddressPriceQuote } from "../../../lib/address-price-providers";
 import type { PeggedAsset } from "../enrich-prices";
 import {
@@ -31,7 +36,11 @@ function quote(stablecoinId: string, priceUsd: number): AddressPriceQuote {
 describe("hourly price corroboration", () => {
   it("restores curated fallback hints without changing published rows and preserves original missing priority", async () => {
     const published = [
-      makePeggedAsset({ id: "susd1plus-lorenzo", symbol: "sUSD1+", price: 0.99, priceSource: "coingecko", priceObservedAt: 1_800_000_000 }),
+      makePeggedAsset({
+        id: "susd1plus-lorenzo", symbol: "sUSD1+", price: 0.99,
+        priceSource: "coinmarketcap", priceConfidence: "fallback", priceObservedAt: 1_800_000_000,
+      }),
+      makePeggedAsset({ id: "a7a5-old-vector", symbol: "A7A5", price: null, geckoId: "wrong-generation" }),
       makePeggedAsset({ id: "usdv-solomon", symbol: "USDv", price: null, geckoId: "wrong-generation" }),
     ];
     const original = structuredClone(published);
@@ -44,8 +53,10 @@ describe("hourly price corroboration", () => {
     try {
       await expect(runPriceCorroboration({ db: {} as D1Database, syncStartSec: 1_800_000_540, chainRpcs })).rejects.toBe(stop);
       const args = collect.mock.calls[0];
+      expect(args[0]).toHaveLength(2);
       expect(args[0][0]).toMatchObject({ cmcSlug: "lorenzo-staked-usd1", navToken: true, price: null });
-      expect(args[0][1].geckoId).toBeUndefined();
+      expect(args[0][1]).toMatchObject({ id: "a7a5-old-vector", geckoId: "a7a5", price: null });
+      expect(args[8]).toEqual(new Set(["a7a5-old-vector"]));
       expect(published).toEqual(original);
     } finally {
       load.mockRestore();
@@ -59,9 +70,9 @@ describe("hourly price corroboration", () => {
     sqlite.exec("CREATE TABLE price_cache (asset_id TEXT PRIMARY KEY, price REAL, updated_at INTEGER, source TEXT, confidence TEXT, observed_at INTEGER, observed_at_mode TEXT, synced_at INTEGER, agree_sources_json TEXT, consensus_sources_json TEXT)");
     const db = createSqliteD1(sqlite);
     const previous = makePeggedAsset({
-      id: "usdt-tether", price: 1, priceSource: "coingecko", priceConfidence: "single-source",
+      id: "usdt-tether", price: 1, priceSource: "coinmarketcap", priceConfidence: "fallback",
       priceObservedAt: 1_799_999_900, priceObservedAtMode: "upstream",
-      agreeSources: ["coingecko"], consensusSources: ["coingecko"],
+      agreeSources: ["coinmarketcap"], consensusSources: ["coinmarketcap"],
     });
     const previousLoad = vi.spyOn(shared, "loadPreviousStablecoinsById").mockResolvedValue({
       previousAssetsById: new Map([[previous.id, previous]]), cacheState: { state: "ok" },
@@ -114,22 +125,38 @@ describe("hourly price corroboration", () => {
     }
   });
 
-  it("makes a 15-minute quote usable at the next publication by collecting at :09", async () => {
+  it("makes a 15-minute quote usable at the next publication by collecting at :09 and skips unreachable quotes", async () => {
     const sqlite = new DatabaseSync(":memory:");
     sqlite.exec("CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL)");
     const db = createSqliteD1(sqlite);
     const hour = 1_800_000_000;
+    const slot09 = hour + 9 * 60;
     const publicationSelection = hour + 17 * 60;
-    const observation = { id: "usdt-tether", source: "defillama-contract", price: 1, observedAtMode: "upstream" as const };
+    const local15m = { id: "usdt-tether", source: "coingecko-onchain-address", price: 1, observedAtMode: "local_fetch" as const };
     try {
       // Previously fetched at :02, with the source clock already one minute old.
-      await writePriceCorroborationObservations(db, [{ ...observation, observedAt: hour + 60 }], hour);
+      await writePriceCorroborationObservations(db, [{ ...local15m, observedAt: hour + 60 }], hour);
       expect((await loadPriceCorroborationObservations(db, publicationSelection)).summary.discarded.sourceExpired).toBe(1);
-      // The same upstream age after the :09 checks leaves seven minutes of headroom.
-      await writePriceCorroborationObservations(db, [{ ...observation, observedAt: hour + 9 * 60 }], hour + 9 * 60);
+      // The same age after the :09 checks leaves seven minutes of headroom.
+      await writePriceCorroborationObservations(db, [{ ...local15m, observedAt: slot09 }], slot09);
       const { summary } = await loadPriceCorroborationObservations(db, publicationSelection);
       expect(summary.eligibleObservationCount).toBe(1);
       expect(summary.minimumFreshnessHeadroomSec).toBe(7 * 60);
+      // 3h upstream defillama-contract survives 2h old, while 5m TTL lanes and already-expiring quotes are not staged.
+      const filtered = filterStageablePriceObservations([
+        { id: "a7a5-old-vector", source: "defillama-contract", price: 0.0124, observedAt: slot09 - 2 * 3600, observedAtMode: "upstream" },
+        { id: "a7a5-old-vector", source: "defillama-contract", price: 0.0124, observedAt: slot09 - (3 * 3600 - 300), observedAtMode: "upstream" },
+        { id: "a7a5-old-vector", source: "defillama-contract", price: 0.0124, observedAt: slot09, observedAtMode: "local_fetch" },
+        { id: "gbpm-mento", source: "mento-fpmm", price: 1.32, observedAt: slot09, observedAtMode: "upstream" },
+        { id: "aznd-mu-digital", source: "curve-thin-onchain", price: 0.999, observedAt: slot09, observedAtMode: "upstream" },
+      ], slot09);
+      expect(filtered).toEqual([
+        { id: "a7a5-old-vector", source: "defillama-contract", price: 0.0124, observedAt: slot09 - 2 * 3600, observedAtMode: "upstream" },
+      ]);
+      await writePriceCorroborationObservations(db, filtered, slot09 + 1);
+      const contractLoad = await loadPriceCorroborationObservations(db, publicationSelection);
+      expect(contractLoad.summary.eligibleObservationCount).toBe(1);
+      expect(contractLoad.summary.minimumFreshnessHeadroomSec).toBe(52 * 60);
     } finally {
       sqlite.close();
     }
@@ -170,20 +197,22 @@ describe("hourly price corroboration", () => {
     expect(isPriceCorroborationSlot(1_800_002_700)).toBe(false);
   });
 
-  it("selects only missing and fewer-than-three-source publication rows", () => {
+  it("selects only active missing, fallback, and low-confidence publication rows", () => {
     const assets = [
-      makePeggedAsset({ id: "missing", price: null }),
-      makePeggedAsset({ id: "thin", price: 1, priceSource: "coingecko", priceObservedAt: 1_800_000_000, consensusSources: ["coingecko"] }),
-      makePeggedAsset({
-        id: "deep",
-        price: 1,
-        priceSource: "coingecko+defillama-list+protocol-redeem",
-        priceObservedAt: 1_800_000_000,
-        consensusSources: ["coingecko", "defillama-list", "protocol-redeem"],
-      }),
+      makePeggedAsset({ id: "a7a5-old-vector", price: null }),
+      makePeggedAsset({ id: "nusd-nexus", price: 0.999, priceSource: "defillama-contract", priceConfidence: "fallback", priceObservedAt: 1_800_000_000 }),
+      makePeggedAsset({ id: "m-m0", price: 0.999, priceSource: "coingecko", priceConfidence: "low", priceObservedAt: 1_800_000_000 }),
+      makePeggedAsset({ id: "usdc-circle", price: 1, priceSource: "coingecko", priceConfidence: "single-source", priceObservedAt: 1_800_000_000, consensusSources: ["coingecko"] }),
+      makePeggedAsset({ id: "usdt-tether", price: 1, priceSource: "coingecko+binance", priceConfidence: "high", priceObservedAt: 1_800_000_000, consensusSources: ["coingecko", "binance"] }),
+      makePeggedAsset({ id: "usdv-solomon", price: null }),
+      makePeggedAsset({ id: "untracked-token", price: null }),
     ];
 
-    expect(buildPriceCorroborationCohort(assets).map((asset) => asset.id)).toEqual(["missing", "thin"]);
+    expect(buildPriceCorroborationCohort(assets).map((asset) => asset.id)).toEqual([
+      "a7a5-old-vector",
+      "nusd-nexus",
+      "m-m0",
+    ]);
   });
 
   it("preserves published references while merging corroborating provenance", () => {

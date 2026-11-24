@@ -371,6 +371,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
         asset.price != null && Number.isFinite(asset.price) && asset.price > 0 ? asset.price : null,
       priceSource: asset?.priceSource ?? undefined,
       priceConfidence: asset?.priceConfidence ?? null,
+      ...(asset?.pricePublicationReason ? { pricePublicationReason: asset.pricePublicationReason } : {}),
       priceObservedAt: asset?.currentPeg?.currentPriceUnavailable ? null : asset?.priceObservedAt ?? null,
       priceObservedAtMode: asset?.priceObservedAtMode ?? null,
       ...(asset?.nominalPriceReference ? { nominalPriceReference: asset.nominalPriceReference } : {}),

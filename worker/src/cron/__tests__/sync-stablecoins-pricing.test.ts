@@ -157,6 +157,20 @@ describe("pricing application helpers", () => {
     expect(assets[0].priceObservedAt).toBe(age <= 900 ? 1_800_000_000 - age : null);
   });
 
+  it("clears CoinGecko-family intake prices when primary rejected CG, but retains DefiLlama intake", () => {
+    const assets = [
+      makeAsset({ id: "hbd-hive", price: 1.13, priceSource: "coingecko-mirror", priceObservedAt: 1_800_000_000 - 30, priceObservedAtMode: "upstream" }),
+      makeAsset({ id: "usdt-tether", price: 1.0, priceSource: "defillama", priceObservedAt: 1_800_000_000 - 30, priceObservedAtMode: "upstream" }),
+    ];
+    applyConsensusResults({
+      assets, primaryPriceResults: new Map(), validationContexts: createValidationContextResolver(),
+      syncStartSec: 1_800_000_000, reason: "primary",
+      rejectedCgReasons: new Map([["hbd-hive", "hive_market_divergence_veto"], ["usdt-tether", "coingecko_micro_volume_outlier"]]),
+    });
+    expect(assets[0].price).toBeNull();
+    expect(assets[1].price).toBe(1.0);
+  });
+
   it.each([900, 901])("bounds rejected-candidate retention at the CG budget (age=%i)", (age) => {
     const assets = [
       makeAsset({

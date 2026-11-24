@@ -260,7 +260,7 @@ A dated `no-parity-quote-by-design` review acknowledges Solayer sUSD's `primary-
 Primary-price trust gates:
 
 - `authoritative`: fresh observed `single-source` with exactly one policy-admitted authoritative source, or `high` with at least two authoritative sources or one upstream-capable authoritative source (`classifyPrimaryDepegTrust()` in `worker/src/lib/depeg-trust-policy.ts`)
-- `confirm_required`: cached, fallback, low-confidence, stale, or otherwise source-policy-ineligible primary prices
+- `confirm_required`: cached, fallback, low-confidence (including display quotes published via `pricePublicationReason: "open-confirmed-depeg-continuity"`), stale, or otherwise source-policy-ineligible primary prices. Continuity display quotes require an already open confirmed `depeg_events` row (`depeg_pending` does not qualify) and cannot open, close, deepen peaks, flip direction, extend trusted coverage, or confirm pending rows
 - `unusable`: invalid/missing/non-finite price, or a non-observed price (`priceObservedAtMode: "nominal_reference"`, an unsupported mode, or any `protocol-par` source component). Since pricing v6.38 the nominal par routes publish par this way whenever no trusted market quote is admitted, so par can neither open, confirm nor recover an event; an open row stays open (tracked coins are never orphan-closed) until observed price evidence decides it, while a trusted market discount on those assets is evaluated like any other primary price
 
 Stage 1 treats a last trade with an explicitly unknown market clock as unavailable primary evidence. Successive polls of a standalone Kraken display price supply zero qualifying observations for pending persistence.

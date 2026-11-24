@@ -119,19 +119,22 @@ describe("inheritedTrackedPriceProvider", () => {
     )).resolves.toMatchObject({ price: 0.9702, source: "protocol-redeem" });
   });
 
-  it("requires reported single-source confidence for M rather than upgrading a thin high-confidence parent", async () => {
-    const parent = freshParent("wm-m0", 0.98, "coingecko", { nowSec });
+  it("requires reported single-source confidence for wM from M and preserves fresh own wM markets", async () => {
+    const parent = freshParent("m-m0", 0.98, "coingecko", { nowSec });
     const context = { assetsById: new Map([[parent.id, parent]]) };
     await expect(inheritedTrackedPriceProvider.fetchLivePrice!(
-      unpricedChild("m-m0"), context,
+      unpricedChild("wm-m0"), context,
     )).resolves.toBeNull();
     context.assetsById.set(parent.id, { ...parent, priceConfidence: "single-source" });
     await expect(inheritedTrackedPriceProvider.fetchLivePrice!(
-      unpricedChild("m-m0"), context,
+      unpricedChild("wm-m0"), context,
     )).resolves.toMatchObject({
       price: 0.98, source: "coingecko", confidence: "single-source",
-      metadata: { inheritedFrom: "wm-m0", parentReplaySafe: true },
+      metadata: { inheritedFrom: "m-m0", parentReplaySafe: true },
     });
+    await expect(inheritedTrackedPriceProvider.fetchLivePrice!(
+      freshParent("wm-m0", 0.96, "coingecko", { nowSec, priceConfidence: "single-source" }), context,
+    )).resolves.toBeNull();
   });
 
   it("does not publish a derived price with a missing or cached redemption parent", async () => {
@@ -144,24 +147,19 @@ describe("inheritedTrackedPriceProvider", () => {
     )).resolves.toBeNull();
   });
 
-  it.each(["m-m0", "usdk-kast"])("does not upgrade wM low-volume fallback into a trusted %s parent", async (id) => {
-    const parent = {
-      ...freshParent("wm-m0", 0.999229, "coingecko-low-volume", { nowSec }),
-      priceConfidence: "fallback" as const,
-    };
-    const result = await inheritedTrackedPriceProvider.fetchLivePrice!(
-      unpricedChild(id), { assetsById: new Map([[parent.id, parent]]) },
-    );
-    // USDK's reviewed M0 redemption par may fill the gap; it never becomes the
-    // untrusted parent's observation.
-    if (id === "usdk-kast") {
-      expect(result).toEqual({
-        price: 1, source: "protocol-par", confidence: null, observedAt: null,
-        observedAtMode: "nominal_reference",
-      });
-      return;
+  it.each(["wm-m0", "usdk-kast"])("does not upgrade untrusted M fallback, cached, or stale quotes into %s", async (id) => {
+    for (const parent of [
+      { ...freshParent("m-m0", 0.999229, "coingecko-low-volume", { nowSec }), priceConfidence: "fallback" as const },
+      freshParent("m-m0", 0.999229, "cached", { nowSec }),
+      freshParent("m-m0", 0.999229, "coingecko", { nowSec, observedAt: nowSec - 10_000, priceConfidence: "single-source" }),
+    ]) {
+      const result = await inheritedTrackedPriceProvider.fetchLivePrice!(
+        unpricedChild(id), { assetsById: new Map([[parent.id, parent]]) },
+      );
+      expect(result).toEqual(id === "usdk-kast"
+        ? { price: 1, source: "protocol-par", confidence: null, observedAt: null, observedAtMode: "nominal_reference" }
+        : null);
     }
-    expect(result).toBeNull();
   });
 
   it("replays the tracked parent's historical market observations and preserves unavailable history", async () => {

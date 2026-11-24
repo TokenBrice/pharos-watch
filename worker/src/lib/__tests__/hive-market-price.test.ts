@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import samples from "./fixtures/hive-market-samples.json";
 import { HiveMarketDiagnosticSchema } from "@shared/types/hive-market-price";
-import { fetchHiveNativeHbdPrice, HIVE_MARKET_POLICY, type HiveUsdParent } from "../hive-market-price";
+import { HIVE_MARKET_DIVERGENCE_VETO_REASON } from "@shared/lib/pricing-source-policy";
+import { evaluateHiveCgDivergenceVeto, fetchHiveNativeHbdPrice, HIVE_MARKET_POLICY, type HiveUsdParent } from "../hive-market-price";
 
 const NOW = 1_792_391_400;
 const date = (time: number) => new Date(time * 1000).toISOString().slice(0, 19);
@@ -59,9 +60,14 @@ describe("Hive native market admission", () => {
     const data = sample();
     const fetcher = mockSample({ ...data, book: samples.priorBook });
     const result = await fetchHiveNativeHbdPrice(parent());
+    expect(result.quote).toBeNull();
     expect(result.diagnostic.rejectionReason).toBe("insufficient_depth");
     expect(result.diagnostic.bidDepthHbd).toBeCloseTo(448.939, 3);
     expect(result.diagnostic.askDepthHbd).toBeCloseTo(104.488, 3);
+    expect(result.vetoMid).toMatchObject({ admittedForPublication: false, rejectionReason: "insufficient_depth" });
+    expect(result.vetoMid?.price).toBeCloseTo(0.05 / result.diagnostic.mid!, 8);
+    expect(result.diagnostic.vetoMidPrice).toBe(result.vetoMid?.price);
+    expect(HiveMarketDiagnosticSchema.safeParse(result.diagnostic).success).toBe(true);
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
   it.each([499_999, 500_000])("enforces milliunit depth boundary %i", async (depth) => {
@@ -238,7 +244,9 @@ describe("bounded serial transport", () => {
   it("distinguishes unavailable inventory from an observed empty side", async () => {
     const data = sample();
     data.book.bids[0].hbd = 0; mockSample(data);
-    expect((await fetchHiveNativeHbdPrice(parent())).diagnostic).toMatchObject({ bidDepthHbd: 0, rejectionReason: "insufficient_depth" });
+    const zeroBid = await fetchHiveNativeHbdPrice(parent());
+    expect(zeroBid.diagnostic).toMatchObject({ bidDepthHbd: 0, rejectionReason: "insufficient_depth", vetoMidPrice: null });
+    expect(zeroBid.vetoMid).toBeNull();
     Reflect.deleteProperty(data.book.bids[0], "hbd"); mockSample(data);
     expect((await fetchHiveNativeHbdPrice(parent())).diagnostic).toMatchObject({ bidDepthHbd: null, rejectionReason: "invalid_response" });
   });
@@ -247,5 +255,15 @@ describe("bounded serial transport", () => {
     expect((await fetchHiveNativeHbdPrice(parent())).diagnostic.rejectionReason).toBe("head_stale");
     data.head.time = date(NOW); mockSample(data, { ...data.head, head_block_number: 122 });
     expect((await fetchHiveNativeHbdPrice(parent())).diagnostic.rejectionReason).toBe("head_stale");
+  });
+  it.each([
+    [1.13, 0.93, null, "vetoed"],
+    [0.97, 0.93, null, "agreed"],
+    [1.13, null, "rpc_timeout", "unavailable"],
+  ] as const)("evaluates HBD CG divergence veto (%s vs %s -> %s)", (cgPrice, hiveVetoMid, unavailableReason, expected) => {
+    const decision = evaluateHiveCgDivergenceVeto({ cgPrice, hiveVetoMid, unavailableReason });
+    expect(decision.status).toBe(expected);
+    if (decision.status === "vetoed") expect(decision.reason).toBe(HIVE_MARKET_DIVERGENCE_VETO_REASON);
+    if (decision.status === "unavailable") expect(decision.reason).toBe("rpc_timeout");
   });
 });

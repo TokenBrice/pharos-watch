@@ -1,4 +1,12 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
+import { evaluateCoingeckoMicroVolumeOutlier } from "../../lib/coingecko-simple-price";
+import { evaluateHiveCgDivergenceVeto, HIVE_MARKET_POLICY } from "../../lib/hive-market-price";
+import {
+  createPricingAssetAttempt,
+  MAX_ASSET_ATTEMPTS_PER_DIAGNOSTIC,
+  type PricingAssetAttemptRecord,
+  type PricingProviderAttemptDiagnostic,
+} from "../../lib/pricing-provider-diagnostics";
 import {
   getReferencePriceForContext,
   validatePriceCandidate,
@@ -11,6 +19,8 @@ import { computePriceConsensus, type SourcePrice } from "../../lib/price-consens
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
 import {
   CEX_UPSTREAM_MAX_FUTURE_SKEW_SEC,
+  COINGECKO_MICRO_VOLUME_MIN_USD,
+  COINGECKO_MICRO_VOLUME_OUTLIER_MAX_DEVIATION_BPS,
   isHardPricingTrustTier,
   isListAggregatorOnlyPair,
 } from "@shared/lib/pricing-source-policy";
@@ -63,8 +73,17 @@ export function buildPrimaryConsensusResults(params: {
   stats: PriceValidationStats;
   validationContexts?: ValidationContextResolver;
   dexPriceSourceTelemetry?: DexPriceSourceLoadTelemetry;
+  providerDiagnostics?: PricingProviderAttemptDiagnostic[];
+  rejectedCgReasons?: Map<string, string>;
 }): void {
   logDexPriceSourceLoadTelemetry(params.dexPriceSourceTelemetry);
+
+  const cgAssetAttempts: PricingAssetAttemptRecord[] = [];
+  let cgCandidateCount = 0;
+  let cgResolvedCount = 0;
+  let cgVolumeUnavailableCount = 0;
+  let cgRejectedCount = 0;
+  const hiveDiagnostic = params.providerDiagnostics?.find((d) => d.source === "hive-native-cg")?.nativeMarket;
 
   for (const asset of params.candidates) {
     // Resolved once per asset: the caller's resolver is a pure dlListPrices
@@ -72,7 +91,131 @@ export function buildPrimaryConsensusResults(params: {
     const dlListQuote = params.resolveDlListQuote(asset.id);
     const geckoId = isUsableGeckoId(asset.geckoId) ? asset.geckoId : null;
     const cgQuote = geckoId ? (params.quoteMaps.cgQuotes.get(geckoId) ?? null) : null;
-    const cgPrice = cgQuote?.price ?? null;
+    const rawCgPrice = cgQuote?.price ?? null;
+    const context =
+      params.validationContexts?.get(asset) ??
+      buildPriceValidationContext({
+        stablecoinId: String(asset.id),
+        pegType: asset.pegType,
+        navToken: asset.navToken,
+        commodityOunces: asset.commodityOunces,
+      });
+    const pegRef = context.navToken ? null : getReferencePriceForContext(context, params.references);
+
+    let cgPrice: number | null = cgQuote?.observedAtMode === "upstream" ? rawCgPrice : null;
+    if (cgPrice != null && cgQuote != null) {
+      cgCandidateCount++;
+      const microVolCheck = evaluateCoingeckoMicroVolumeOutlier({
+        price: cgPrice,
+        volume24hUsd: cgQuote.volume24hUsd,
+        context,
+        references: params.references,
+      });
+      if (microVolCheck.status === "volume_unavailable") {
+        cgVolumeUnavailableCount++;
+        params.stats.cgVolumeUnavailable = (params.stats.cgVolumeUnavailable ?? 0) + 1;
+      } else if (microVolCheck.status === "rejected") {
+        cgPrice = null;
+        cgRejectedCount++;
+        params.stats.cgMicroVolumeRejected = (params.stats.cgMicroVolumeRejected ?? 0) + 1;
+        params.rejectedCgReasons?.set(asset.id, microVolCheck.reason);
+        cgAssetAttempts.push(createPricingAssetAttempt({
+          assetId: asset.id,
+          adapter: "coingecko",
+          source: "coingecko",
+          state: "attempted",
+          result: "rejected",
+          rejectionClass: microVolCheck.reason,
+          candidateAt: params.nowSec,
+          observedAt: cgQuote.observedAt ?? null,
+        }));
+        logWorkerEventArgs("handler", "warn",
+          `[primary-prices] coingecko-quote-filter ${JSON.stringify({
+            stablecoinId: asset.id,
+            symbol: asset.symbol,
+            reason: microVolCheck.reason,
+            price: rawCgPrice,
+            referencePrice: microVolCheck.referencePrice,
+            deviationBps: Math.round(microVolCheck.deviationBps),
+            volume24hUsd: microVolCheck.volume24hUsd,
+            minVolumeUsd: COINGECKO_MICRO_VOLUME_MIN_USD,
+            maxDeviationBps: COINGECKO_MICRO_VOLUME_OUTLIER_MAX_DEVIATION_BPS,
+          })}`,
+        );
+      }
+    }
+
+    if (asset.id === "hbd-hive") {
+      const hiveVetoPrice = params.quoteMaps.hiveVetoMid?.price ?? params.quoteMaps.hiveNativeQuote?.price ?? null;
+      if (cgPrice != null) {
+        const veto = evaluateHiveCgDivergenceVeto({
+          cgPrice,
+          hiveVetoMid: hiveVetoPrice,
+          unavailableReason: params.quoteMaps.hiveVetoUnavailableReason,
+        });
+        if (veto.status === "vetoed") {
+          cgPrice = null;
+          cgRejectedCount++;
+          params.stats.hiveDivergenceVetoed = (params.stats.hiveDivergenceVetoed ?? 0) + 1;
+          params.rejectedCgReasons?.set(asset.id, veto.reason);
+          cgAssetAttempts.push(createPricingAssetAttempt({
+            assetId: asset.id,
+            adapter: "coingecko",
+            source: "coingecko",
+            state: "attempted",
+            result: "rejected",
+            rejectionClass: veto.reason,
+            candidateAt: params.nowSec,
+            observedAt: cgQuote?.observedAt ?? null,
+          }));
+          if (hiveDiagnostic) {
+            hiveDiagnostic.vetoStatus = "vetoed";
+            hiveDiagnostic.vetoReason = veto.reason;
+            hiveDiagnostic.vetoDivergenceBps = Math.round(veto.divergenceBps);
+          }
+          logWorkerEventArgs("handler", "warn",
+            `[primary-prices] hbd-hive-veto ${JSON.stringify({
+              stablecoinId: asset.id,
+              reason: veto.reason,
+              cgPrice: rawCgPrice,
+              hiveMidPrice: veto.hiveMidPrice,
+              divergenceBps: Math.round(veto.divergenceBps),
+              maxDivergenceBps: HIVE_MARKET_POLICY.cgDivergenceVetoMaxBps,
+            })}`,
+          );
+        } else if (veto.status === "agreed") {
+          if (hiveDiagnostic) {
+            hiveDiagnostic.vetoStatus = "agreed";
+            hiveDiagnostic.vetoReason = null;
+            hiveDiagnostic.vetoDivergenceBps = Math.round(veto.divergenceBps);
+          }
+        } else {
+          params.stats.hiveVetoUnavailable = (params.stats.hiveVetoUnavailable ?? 0) + 1;
+          if (hiveDiagnostic) {
+            hiveDiagnostic.vetoStatus = "unavailable";
+            hiveDiagnostic.vetoReason = veto.reason;
+            hiveDiagnostic.vetoDivergenceBps = null;
+          }
+          logWorkerEventArgs("handler", "info",
+            `[primary-prices] hbd-hive-veto-unavailable ${JSON.stringify({
+              stablecoinId: asset.id,
+              reason: veto.reason,
+            })}`,
+          );
+        }
+      } else if (hiveDiagnostic) {
+        hiveDiagnostic.vetoStatus = hiveVetoPrice != null ? "no_cg_quote" : "unavailable";
+        hiveDiagnostic.vetoReason = hiveVetoPrice != null
+          ? null
+          : (params.quoteMaps.hiveVetoUnavailableReason ?? "hive_market_unavailable");
+        hiveDiagnostic.vetoDivergenceBps = null;
+      }
+    }
+
+    if (cgPrice != null) {
+      cgResolvedCount++;
+    }
+
     const symbol = asset.symbol.toUpperCase();
     const krakenUpstreamObservedAt = params.quoteMaps.krakenObservedAtBySymbol.get(symbol);
     const hasKrakenUpstreamClock = krakenUpstreamObservedAt != null;
@@ -87,7 +230,7 @@ export function buildPrimaryConsensusResults(params: {
       maxFutureSkewSec: CEX_UPSTREAM_MAX_FUTURE_SKEW_SEC,
     }).accepted ? krakenUpstreamObservedAt : undefined;
     const collectedQuotes: PrimaryCollectedQuotes = {
-      cgPrice: cgQuote?.observedAtMode === "upstream" ? cgPrice : null,
+      cgPrice,
       cgObservedAt: cgQuote?.observedAt ?? null,
       cgObservedAtMode: cgQuote?.observedAtMode ?? null,
       dlListQuote,
@@ -118,15 +261,6 @@ export function buildPrimaryConsensusResults(params: {
     const dexRow = params.dexRows.get(asset.id);
     const eligibleDexAggregate =
       dexRow && isPrimaryPublicationDexAggregateEligible(asset.id, dexRow, params.nowSec) ? dexRow : undefined;
-    const context =
-      params.validationContexts?.get(asset) ??
-      buildPriceValidationContext({
-        stablecoinId: String(asset.id),
-        pegType: asset.pegType,
-        navToken: asset.navToken,
-        commodityOunces: asset.commodityOunces,
-      });
-    const pegRef = context.navToken ? null : getReferencePriceForContext(context, params.references);
     const consensusMode = context.navToken ? "nav" : "fixed";
     const sourceBuildOptions = {
       divergenceThresholdBps: DIVERGENCE_THRESHOLD_BPS,
@@ -253,6 +387,23 @@ export function buildPrimaryConsensusResults(params: {
         );
       }
     }
+  }
+
+  if (params.providerDiagnostics && (cgAssetAttempts.length > 0 || cgVolumeUnavailableCount > 0)) {
+    params.providerDiagnostics.push({
+      source: "coingecko",
+      stage: "primary",
+      endpoint: "api.coingecko.com/api/v3/simple/price",
+      status: 200,
+      ok: true,
+      success: true,
+      candidateCount: cgCandidateCount,
+      resolvedCount: cgResolvedCount,
+      ...(cgRejectedCount > 0 ? { rejectionReasonCounts: { "price-rejected": cgRejectedCount } } : {}),
+      ...(cgAssetAttempts.length > 0
+        ? { assetAttempts: cgAssetAttempts.slice(0, MAX_ASSET_ATTEMPTS_PER_DIAGNOSTIC) }
+        : {}),
+    });
   }
 }
 

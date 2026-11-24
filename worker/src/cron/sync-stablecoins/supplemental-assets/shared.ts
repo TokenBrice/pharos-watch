@@ -206,6 +206,7 @@ export function resolveSupplementalContractPrice(
   priceData: SupplementalDefiLlamaPriceData,
   meta: StablecoinMeta,
   fxRates?: Record<string, number>,
+  contractFillDefaultPrices?: ReadonlySet<number>,
 ): SupplementalPriceResolution | null {
   const priceKey = getSupplementalDefiLlamaContractPriceKey(meta);
   if (!priceKey) return null;
@@ -213,6 +214,7 @@ export function resolveSupplementalContractPrice(
   const dlEntry = priceData.coins[priceKey];
   const dlPrice = toPositiveFiniteNumber(dlEntry?.price);
   if (dlPrice == null) return null;
+  if (contractFillDefaultPrices?.has(dlPrice)) return null;
   if (dlEntry?.symbol?.trim().toUpperCase() !== meta.symbol.trim().toUpperCase()) return null;
   if (
     typeof dlEntry.confidence !== "number" ||

@@ -76,9 +76,10 @@ async function applyCanonicalDetailOverlay(
     if ("currentSupplyRestored" in detail || "currentSupplyUnavailableReason" in detail || "currentSupplyExcludedChains" in detail
       || "currentSupplyComparisonExcludedChains" in detail || "currentSupplySource" in detail
       || "currentCirculatingPrevWeekUSD" in detail || "currentCirculatingPrevMonthUSD" in detail
-      || "currentCirculatingNative" in detail || "supplyChangeBaselines" in detail || "priceDerivation" in detail || "nominalPriceReference" in detail || "currentPeg" in detail) {
+      || "currentCirculatingNative" in detail || "supplyChangeBaselines" in detail || "priceDerivation" in detail || "pricePublicationReason" in detail || "nominalPriceReference" in detail || "currentPeg" in detail) {
       delete detail.currentPeg;
       delete detail.priceDerivation;
+      delete detail.pricePublicationReason;
       delete detail.nominalPriceReference;
       delete detail.currentSupplyRestored;
       delete detail.currentSupplyUnavailableReason;
@@ -223,6 +224,7 @@ async function applyCanonicalDetailOverlay(
         ...(coin.currentPeg ? { currentPeg: coin.currentPeg } : {}),
         priceSource: coin.priceSource,
         priceConfidence: coin.priceConfidence,
+        ...(coin.pricePublicationReason ? { pricePublicationReason: coin.pricePublicationReason } : {}),
         priceUpdatedAt: coin.priceUpdatedAt,
         priceObservedAt: observedAt,
         priceObservedAtMode: coin.priceObservedAtMode,

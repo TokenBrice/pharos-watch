@@ -1,11 +1,14 @@
 import { LEGACY_SOLOMON_USDV_ID } from "../../lib/solomon-usdv-identity";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { detectDefiLlamaContractFillDefaultPrices } from "@shared/lib/pricing-source-policy";
+import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { CHAIN_META, resolveChainId } from "@shared/types/chain-identity";
 import { CIRCUIT_SOURCE, DEFILLAMA_COINS } from "../../lib/constants";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { throwIfAborted } from "../../lib/abort";
 import { recordOutcome, shouldAttemptFetch } from "../../lib/circuit-breaker";
+import { resolveContractFillLineageGroup } from "../../lib/price-publish-policy";
 import { DLPriceEntrySchema, DLPriceResponseSchema } from "../../lib/schemas";
 import { endpointLabel, type PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 import {
@@ -13,6 +16,7 @@ import {
   hasMissingPrice,
   type PeggedAsset,
 } from "./enrich-prices-shared";
+import { clearPriceMetadata } from "./shared";
 import {
   type DlContractPassResult,
   type FallbackPriceQuote,
@@ -22,7 +26,7 @@ import {
 } from "./enrich-prices-pass-common";
 import { TRACKED_ASSET_ADDRESS_OVERRIDES } from "./tracked-asset-overrides";
 
-const DL_CONTRACT_MAX_AGE_SEC = 15 * 60;
+const DL_CONTRACT_MAX_AGE_SEC = getPricingSourceRegistryEntry("defillama-contract")!.maxTrustedAgeSec!;
 const DL_CONTRACT_MIN_CONFIDENCE = 0.8;
 const DL_CONTRACT_MAX_URL_LENGTH = 8_000;
 const DL_CONTRACT_MAX_BATCHES = 8;
@@ -282,35 +286,47 @@ function buildPrimaryContractCoinIds(asset: PeggedAsset): string[] {
   return [addressToCoinId(rawAddress)];
 }
 
-function applyDefiLlamaContractPrices(
+interface SelectedDefiLlamaContractQuote {
+  coinId: string;
+  quote: DefiLlamaContractQuote;
+}
+
+function selectDefiLlamaContractQuotes(
   assets: PeggedAsset[],
   lookups: readonly DefiLlamaContractLookup[],
   prices: Map<string, DefiLlamaContractQuote>,
   fxRates: Record<string, number> | undefined,
-): number {
-  const freshestByIndex = new Map<number, DefiLlamaContractQuote>();
+): Map<number, SelectedDefiLlamaContractQuote> {
+  const freshestByIndex = new Map<number, SelectedDefiLlamaContractQuote>();
   for (const lookup of lookups) {
     const quote = prices.get(lookup.coinId);
     const previous = freshestByIndex.get(lookup.index);
     if (
       quote != null &&
-      (!previous || quote.observedAt > previous.observedAt) &&
+      (!previous || quote.observedAt > previous.quote.observedAt) &&
       isDefiLlamaContractQuoteUsable(assets[lookup.index], quote, fxRates)
     ) {
-      freshestByIndex.set(lookup.index, quote);
+      freshestByIndex.set(lookup.index, { coinId: lookup.coinId, quote });
     }
   }
-  for (const [index, quote] of freshestByIndex) {
-    applyResolvedPrice(
-      assets[index],
-      quote.price,
-      "defillama-contract",
-      "single-source",
-      quote.observedAt,
-      quote.observedAtMode,
-    );
+  return freshestByIndex;
+}
+
+function toContractFillDefaultRows(
+  assets: readonly PeggedAsset[],
+  entries: Iterable<readonly [number, SelectedDefiLlamaContractQuote]>,
+) {
+  const rows: { id: string; price: number; lineageGroup: string; tokenKey: string }[] = [];
+  for (const [index, entry] of entries) {
+    const asset = assets[index];
+    rows.push({
+      id: asset.id,
+      price: entry.quote.price,
+      lineageGroup: resolveContractFillLineageGroup(asset.id),
+      tokenKey: entry.coinId,
+    });
   }
-  return freshestByIndex.size;
+  return rows;
 }
 
 export async function runDlContractPasses(
@@ -321,6 +337,7 @@ export async function runDlContractPasses(
 ): Promise<DlContractPassResult> {
   let pass1Count = 0;
   let pass1bCount = 0;
+  let fillDefaultRejectedCount = 0;
   const failures: string[] = [];
   const diagnostics: PricingProviderAttemptDiagnostic[] = [];
   const budget = { remaining: DL_CONTRACT_MAX_BATCHES };
@@ -335,6 +352,8 @@ export async function runDlContractPasses(
       }
     }
 
+    const pass1Selected = new Map<number, SelectedDefiLlamaContractQuote>();
+    const pass1Applied = new Map<number, SelectedDefiLlamaContractQuote>();
     if (withAddress.length > 0) {
       throwIfAborted(signal);
       const pass1Prices = await fetchPriceMapByIds(
@@ -344,7 +363,27 @@ export async function runDlContractPasses(
         signal,
         db,
       );
-      pass1Count += applyDefiLlamaContractPrices(assets, withAddress, pass1Prices.prices, fxRates);
+      const selected = selectDefiLlamaContractQuotes(assets, withAddress, pass1Prices.prices, fxRates);
+      const pass1FillDefaults = detectDefiLlamaContractFillDefaultPrices(
+        toContractFillDefaultRows(assets, selected),
+      );
+      for (const [index, entry] of selected) {
+        pass1Selected.set(index, entry);
+        if (pass1FillDefaults.has(entry.quote.price)) {
+          fillDefaultRejectedCount += 1;
+          continue;
+        }
+        applyResolvedPrice(
+          assets[index],
+          entry.quote.price,
+          "defillama-contract",
+          "single-source",
+          entry.quote.observedAt,
+          entry.quote.observedAtMode,
+        );
+        pass1Applied.set(index, entry);
+        pass1Count += 1;
+      }
       diagnostics.push(...pass1Prices.diagnostics);
       if (pass1Prices.failed) {
         failures.push("dl-contracts");
@@ -372,12 +411,52 @@ export async function runDlContractPasses(
           signal,
           db,
         );
-        pass1bCount += applyDefiLlamaContractPrices(assets, altLookups, pass1bPrices.prices, fxRates);
+        const selected = selectDefiLlamaContractQuotes(assets, altLookups, pass1bPrices.prices, fxRates);
+        const combinedFillDefaults = detectDefiLlamaContractFillDefaultPrices([
+          ...toContractFillDefaultRows(assets, pass1Selected),
+          ...toContractFillDefaultRows(assets, selected),
+        ]);
+        // If pass 1b reveals a placeholder price already applied to one asset in pass 1,
+        // withhold that pass 1 row too so later fallback passes can seek a real market quote.
+        for (const [index, entry] of pass1Applied) {
+          if (!combinedFillDefaults.has(entry.quote.price)) continue;
+          clearPriceMetadata(assets[index]);
+          pass1Applied.delete(index);
+          pass1Count -= 1;
+          fillDefaultRejectedCount += 1;
+        }
+        for (const [index, entry] of selected) {
+          if (combinedFillDefaults.has(entry.quote.price)) {
+            fillDefaultRejectedCount += 1;
+            continue;
+          }
+          applyResolvedPrice(
+            assets[index],
+            entry.quote.price,
+            "defillama-contract",
+            "single-source",
+            entry.quote.observedAt,
+            entry.quote.observedAtMode,
+          );
+          pass1bCount += 1;
+        }
         diagnostics.push(...pass1bPrices.diagnostics);
         if (pass1bPrices.failed && !failures.includes("dl-contracts")) {
           failures.push("dl-contracts");
         }
       }
+    }
+
+    if (fillDefaultRejectedCount > 0) {
+      diagnostics.push({
+        source: "defillama-contract",
+        stage: "fallback",
+        endpoint: endpointLabel(`${DEFILLAMA_COINS}/prices/current/`),
+        status: 200,
+        ok: true,
+        success: true,
+        rejectionReasonCounts: { "contract-fill-default": fillDefaultRejectedCount },
+      });
     }
   } catch (error) {
     if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));

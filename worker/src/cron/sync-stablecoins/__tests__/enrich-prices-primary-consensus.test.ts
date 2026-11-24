@@ -25,7 +25,6 @@ import { referenceState } from "../../depeg-detection/__tests__/reference-fixtur
 import {
   createEmptyPrimaryConsensusQuoteMaps,
   type PrimaryConsensusQuoteMaps,
-  type PrimaryDexPriceSources,
   type PrimaryDexRows,
 } from "../enrich-prices-primary-provider-collection";
 import type { PeggedAsset, PriceValidationStats, PrimaryPriceResult } from "../enrich-prices-shared";
@@ -470,95 +469,43 @@ describe("buildPrimaryConsensusResults", () => {
       if (input.aggregatorLegsOnly) {
         asset.geckoId = "usd-coin";
         quoteMaps.cgQuotes.set("usd-coin", { price: 0.9999, observedAt: nowSec - 30, observedAtMode: "upstream" });
-      } else {
-        delete asset.geckoId;
-      }
+      } else delete asset.geckoId;
       if (input.withIndependentLegs && !input.aggregatorLegsOnly) {
-        quoteMaps.krakenPrices.set("USDC", 0.9999);
-        quoteMaps.krakenObservedAt = nowSec - 60;
-        quoteMaps.binancePrices.set("USDC", 1.0001);
-        quoteMaps.binanceObservedAt = nowSec - 30;
+        quoteMaps.krakenPrices.set("USDC", 0.9999); quoteMaps.krakenObservedAt = nowSec - 60;
+        quoteMaps.binancePrices.set("USDC", 1.0001); quoteMaps.binanceObservedAt = nowSec - 30;
       }
-      const dexRows = new Map([[
-        asset.id,
-        {
-          stablecoin_id: asset.id,
-          dex_price_usd: input.dexPrice ?? 0.999936,
-          deviation_from_primary_bps: 0,
-          source_pool_count: 748,
-          source_total_tvl: sourceTotalTvl,
-          updated_at: nowSec - 1,
-          aggregateObservedAt: input.dexAgeSec == null ? null : nowSec - input.dexAgeSec,
-        },
-      ]]) as PrimaryDexRows;
-      const results = new Map<string, PrimaryPriceResult>();
-      buildPrimaryConsensusResults({
-        candidates: [asset],
-        quoteMaps,
-        dexRows,
-        dexPriceSources: new Map() as PrimaryDexPriceSources,
-        nowSec,
-        resolveDlListQuote: () => undefined,
-        results,
-        stats: createStats(),
-      });
-      return results.get(asset.id);
+      const dexRows = new Map([[asset.id, { stablecoin_id: asset.id, dex_price_usd: input.dexPrice ?? 0.999936, deviation_from_primary_bps: 0, source_pool_count: 748, source_total_tvl: sourceTotalTvl, updated_at: nowSec - 1, aggregateObservedAt: input.dexAgeSec == null ? null : nowSec - input.dexAgeSec }]]) as PrimaryDexRows;
+      return consensusFor(asset, quoteMaps, { dexRows, nowSec });
     }
 
     it("keeps a DEX aggregate older than the primary budget from ageing fresh agreement", () => {
-      // The previous hourly DEX run's row, 50 minutes old: still inside its own
-      // 75-minute window, outside the 30-minute primary budget.
       const result = build({ dexAgeSec: 3_018, withIndependentLegs: true });
-
       expect(result?.agreeSources).not.toContain("dex-promoted");
       expect(result?.candidateSources).not.toContain("dex-promoted");
-      expect(result?.confidence).toBe("high");
-      expect(result?.observedAt).toBe(nowSec - 60);
+      expect(result).toMatchObject({ confidence: "high", observedAt: nowSec - 60 });
     });
 
     it("admits a DEX aggregate inside the strictest co-leg window as an agreeing leg", () => {
       const result = build({ dexAgeSec: 100, withIndependentLegs: true });
-
       expect(result?.agreeSources).toContain("dex-promoted");
       expect(result?.observedAt).toBe(nowSec - 100);
     });
 
     it("keeps a DEX aggregate past a co-leg's window from failing the composite's freshness", () => {
-      // 20 minutes old: inside the 30-minute primary budget, outside CoinGecko's
-      // 15-minute window, so admitting it stamped USDC stale for every
-      // authoritative child priced from it.
-      const result = build({ dexAgeSec: 1_200, withIndependentLegs: true, aggregatorLegsOnly: true });
-
-      expect(result?.candidateSources).not.toContain("dex-promoted");
-      expect(result?.observedAt).toBe(nowSec - 30);
-      expect(validateCompositePricingSourceFreshness({
-        source: result!.source,
-        observedAt: result!.observedAt,
-        observedAtMode: result!.observedAtMode,
-        nowSec,
-        requireObservedAt: true,
-      }).accepted).toBe(true);
+      const result = build({ dexAgeSec: 1_200, withIndependentLegs: true, aggregatorLegsOnly: true })!;
+      expect(result.candidateSources).not.toContain("dex-promoted");
+      expect(result.observedAt).toBe(nowSec - 30);
+      expect(validateCompositePricingSourceFreshness({ source: result.source, observedAt: result.observedAt, observedAtMode: result.observedAtMode, nowSec, requireObservedAt: true }).accepted).toBe(true);
     });
 
     it.each([0.999936, 0.4])("keeps an older DEX aggregate as the sole leg with its own clock ($%s)", (price) => {
-      const result = build({ dexAgeSec: 3_018, withIndependentLegs: false, dexPrice: price });
+      expect(build({ dexAgeSec: 3_018, withIndependentLegs: false, dexPrice: price })).toMatchObject({ source: "dex-promoted", price, confidence: "single-source", observedAt: nowSec - 3_018 });
+    });
 
-      expect(result).toMatchObject({
-        source: "dex-promoted",
-        price,
-        confidence: "single-source",
-        observedAt: nowSec - 3_018,
+    it.each([["usdc-circle", 250_000, 60, false], ["vusd-virtue", 249_999, 60, false], ["vusd-virtue", 250_000, 4500, true], ["vusd-virtue", 250_000, 4501, false]] as const)(
+      "preserves the %s aggregate tier at TVL %s and original age %s", (id, tvl, dexAgeSec, accepted) => {
+        expect(build({ dexAgeSec, withIndependentLegs: false }, { ...usdc, id }, tvl) != null).toBe(accepted);
       });
-    });
-
-    it.each([
-      ["usdc-circle", 250_000, 60, false],
-      ["vusd-virtue", 249_999, 60, false],
-      ["vusd-virtue", 250_000, 4500, true],
-      ["vusd-virtue", 250_000, 4501, false],
-    ] as const)("preserves the %s aggregate tier at TVL %s and original age %s", (id, tvl, dexAgeSec, accepted) => {
-      expect(build({ dexAgeSec, withIndependentLegs: false }, { ...usdc, id }, tvl) != null).toBe(accepted);
-    });
 
     it.each([null, 21_600, 4500])("rejects original age %s despite fresh publication", (dexAgeSec) => {
       expect(build({ dexAgeSec, withIndependentLegs: false })).toBeUndefined();
@@ -567,64 +514,28 @@ describe("buildPrimaryConsensusResults", () => {
   });
 
   describe("promoted DEX protocol lane", () => {
-    // pmUSD at the 2026-11-02 06:45 UTC run, when its open depeg event went blind.
     const nowSec = 1_793_601_977;
-    const pmusd: PeggedAsset = {
-      id: "pmusd-precious-metals", name: "Precious Metals USD", symbol: "pmUSD",
-      geckoId: "precious-metals-usd", pegType: "peggedUSD",
-    };
+    const pmusd: PeggedAsset = { id: "pmusd-precious-metals", name: "Precious Metals USD", symbol: "pmUSD", geckoId: "precious-metals-usd", pegType: "peggedUSD" };
+    const routePoolKey = "ethereum:0xecb0f0d68c19bdaadaebe24f6752a4db34e2c2cb", independentPoolKeys = ["ethereum:0x0000000000000000000000000000000000000001"];
 
-    const routePoolKey = "ethereum:0xecb0f0d68c19bdaadaebe24f6752a4db34e2c2cb";
-    const independentPoolKeys = ["ethereum:0x0000000000000000000000000000000000000001"];
-
-    function build(
-      laneAgeSec: number, cgPrice: number | null = 0.534161,
-      pricePoolKeys: string[] | null = independentPoolKeys, protocol = "curve",
-    ): PrimaryPriceResult | undefined {
+    function build(laneAgeSec: number, cgPrice: number | null = 0.534161, pricePoolKeys: string[] | null = independentPoolKeys, protocol = "curve"): PrimaryPriceResult | undefined {
       const quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
-      if (cgPrice != null) {
-        quoteMaps.cgQuotes.set("precious-metals-usd", { price: cgPrice, observedAt: nowSec - 20, observedAtMode: "upstream" });
-      }
+      if (cgPrice != null) quoteMaps.cgQuotes.set("precious-metals-usd", { price: cgPrice, observedAt: nowSec - 20, observedAtMode: "upstream" });
       quoteMaps.curvePrices.set(pmusd.id, 0.53416);
       quoteMaps.curveObservedAtByCoinId.set(pmusd.id, nowSec - 30);
       quoteMaps.curvePricePoolKeysByCoinId.set(pmusd.id, [routePoolKey]);
-      const results = new Map<string, PrimaryPriceResult>();
-      buildPrimaryConsensusResults({
-        candidates: [pmusd],
-        quoteMaps,
-        dexRows: new Map() as PrimaryDexRows,
-        dexPriceSources: new Map([[pmusd.id, [{
-          protocol, chain: "ethereum", price: 0.53416, tvl: 7_684_693, updatedAt: nowSec - laneAgeSec, pricePoolKeys: pricePoolKeys ?? undefined,
-        }]]]) as PrimaryDexPriceSources,
-        nowSec,
-        resolveDlListQuote: () => undefined,
-        results,
-        stats: createStats(),
-      });
-      return results.get(pmusd.id);
+      return consensusFor(pmusd, quoteMaps, { dexPriceSources: new Map([[pmusd.id, [{ protocol, chain: "ethereum", price: 0.53416, tvl: 7_684_693, updatedAt: nowSec - laneAgeSec, pricePoolKeys: pricePoolKeys ?? undefined }]]]), nowSec });
     }
 
-    const trustOf = (result: PrimaryPriceResult) => classifyPrimaryDepegTrust({
-      price: result.price,
-      priceSource: result.source,
-      priceConfidence: result.confidence,
-      priceObservedAt: result.observedAt,
-      priceObservedAtMode: result.observedAtMode,
-      agreeSources: result.agreeSources,
-    }, nowSec);
+    const trustOf = (r: PrimaryPriceResult) => classifyPrimaryDepegTrust({ price: r.price, priceSource: r.source, priceConfidence: r.confidence, priceObservedAt: r.observedAt, priceObservedAtMode: r.observedAtMode, agreeSources: r.agreeSources }, nowSec);
 
     it.each([
       ["curve", "same pool", [routePoolKey]], ["curve", "explicitly unavailable", []],
       ["uniswap-v3", "overlapping conversion pool", [...independentPoolKeys, routePoolKey]],
-      ["uniswap-v3", "explicitly unavailable", []],
-      ["uniswap-v3", "unregistered chain", ["unverified:fake-pool"]],
+      ["uniswap-v3", "explicitly unavailable", []], ["uniswap-v3", "unregistered chain", ["unverified:fake-pool"]],
     ])("keeps the %s leg diagnostic-only with %s provenance", (protocol, _provenance, pricePoolKeys) => {
-      const dexSource = `${protocol}-dex`;
-      const result = build(90, 0.545, pricePoolKeys, protocol);
-      expect(result).toMatchObject({
-        source: "curve-onchain", confidence: "low", observedAt: nowSec - 30,
-        agreeSources: ["curve-onchain"], diagnosticPrices: { [dexSource]: 0.53416 },
-      });
+      const dexSource = `${protocol}-dex`, result = build(90, 0.545, pricePoolKeys, protocol);
+      expect(result).toMatchObject({ source: "curve-onchain", confidence: "low", observedAt: nowSec - 30, agreeSources: ["curve-onchain"], diagnosticPrices: { [dexSource]: 0.53416 } });
       expect(result?.allPrices).not.toHaveProperty(dexSource);
       expect(result?.candidateSources).toContain(dexSource);
       expect(trustOf(result!)).toBe("confirm_required");
@@ -635,149 +546,63 @@ describe("buildPrimaryConsensusResults", () => {
     });
 
     it("keeps a lane past the strictest co-leg window from ageing fresh hard agreement past the depeg budget", () => {
-      // 34 minutes old: inside the 35-minute protocol-source budget, outside the
-      // 30-minute primary budget, so it stamped the composite untrusted.
-      const result = build(2_071);
-
-      expect(result).toMatchObject({ source: "coingecko+curve-onchain", confidence: "high", observedAt: nowSec - 30 });
-      expect(trustOf(result!)).toBe("authoritative");
-      expect(validateCompositePricingSourceFreshness({
-        source: result!.source,
-        observedAt: result!.observedAt,
-        observedAtMode: result!.observedAtMode,
-        nowSec,
-        requireObservedAt: true,
-      }).accepted).toBe(true);
-      // The held lane was read this run: it stays an available candidate, so the
-      // three-source depth that keeps pmUSD out of the corroboration probes holds.
-      expect(result!.candidateSources).toEqual(["coingecko", "curve-onchain", "curve-dex"]);
-      expect(result!.agreeSources).not.toContain("curve-dex");
+      const result = build(2_071)!;
+      expect(result).toMatchObject({ source: "coingecko+curve-onchain", confidence: "high", observedAt: nowSec - 30, candidateSources: ["coingecko", "curve-onchain", "curve-dex"] });
+      expect(trustOf(result)).toBe("authoritative");
+      expect(validateCompositePricingSourceFreshness({ source: result.source, observedAt: result.observedAt, observedAtMode: result.observedAtMode, nowSec, requireObservedAt: true }).accepted).toBe(true);
+      expect(result.agreeSources).not.toContain("curve-dex");
     });
 
     it("drops a lane inside the primary budget too while the fresh legs agree", () => {
-      const result = build(1_500);
-
+      const result = build(1_500)!;
       expect(result).toMatchObject({ source: "coingecko+curve-onchain", observedAt: nowSec - 30 });
-      expect(result!.candidateSources).toContain("curve-dex");
+      expect(result.candidateSources).toContain("curve-dex");
     });
 
     it("admits a lane inside the strictest co-leg window as an agreeing leg", () => {
       const result = build(100);
-
       expect(result?.agreeSources).toContain("curve-dex");
       expect(result?.observedAt).toBe(nowSec - 100);
     });
 
-    it("keeps Curve agreement through a missing CoinGecko leg, dated by the older lane", () => {
-      const result = build(1_500, null);
-
+    it.each([[null, false], [0.545, true]] as const)("keeps Curve agreement through missing/divergent CG (%s), dated by the older lane", (cgPrice, hasDisagree) => {
+      const result = build(1_500, cgPrice)!;
       expect(result).toMatchObject({ source: "curve-dex+curve-onchain", confidence: "high", observedAt: nowSec - 1_500 });
-      expect(trustOf(result!)).toBe("authoritative");
-    });
-
-    it("keeps Curve agreement through a CoinGecko leg more than 50 bps away, dated by the older lane", () => {
-      // 0.5450 sits about 200 bps from the Curve quote, outside the agreement threshold.
-      const result = build(1_500, 0.545);
-
-      expect(result).toMatchObject({ source: "curve-dex+curve-onchain", confidence: "high", observedAt: nowSec - 1_500 });
-      expect(result!.disagreeSources).toContain("coingecko");
-      expect(trustOf(result!)).toBe("authoritative");
-    });
-
-    it("does not let a list-aggregator pair block a lane that agrees with a diverging hard leg", () => {
-      // CoinGecko and DefiLlama-list agree with each other but are later reduced
-      // to `single-source`; Curve on-chain diverges. The 25-minute curve-dex lane
-      // agrees with Curve and must rejoin, restoring the pre-6.68 authoritative
-      // composite instead of the downgraded list pair outvoting Curve.
-      const quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
-      quoteMaps.cgQuotes.set("precious-metals-usd", {
-        price: 0.545,
-        observedAt: nowSec - 20,
-        observedAtMode: "upstream",
-      });
-      quoteMaps.curvePrices.set(pmusd.id, 0.53416);
-      quoteMaps.curveObservedAtByCoinId.set(pmusd.id, nowSec - 30);
-      quoteMaps.curvePricePoolKeysByCoinId.set(pmusd.id, [routePoolKey]);
-      const results = new Map<string, PrimaryPriceResult>();
-      const stats = createStats();
-      buildPrimaryConsensusResults({
-        candidates: [pmusd],
-        quoteMaps,
-        dexRows: new Map() as PrimaryDexRows,
-        dexPriceSources: new Map([[pmusd.id, [{
-          protocol: "curve", chain: "ethereum", price: 0.53416, tvl: 7_684_693, updatedAt: nowSec - 1_500, pricePoolKeys: independentPoolKeys,
-        }]]]) as PrimaryDexPriceSources,
-        nowSec,
-        resolveDlListQuote: () => ({ price: 0.54505, observedAt: nowSec - 25, observedAtMode: "upstream" }),
-        results,
-        stats,
-      });
-      applyListAggregatorDowngrade(results, stats);
-
-      const result = results.get(pmusd.id)!;
-      expect(result).toMatchObject({
-        source: "curve-dex+curve-onchain",
-        confidence: "high",
-        observedAt: nowSec - 1_500,
-      });
-      expect(result.disagreeSources).toEqual(expect.arrayContaining(["coingecko", "defillama-list"]));
+      if (hasDisagree) expect(result.disagreeSources).toContain("coingecko");
       expect(trustOf(result)).toBe("authoritative");
     });
 
-    it("does not rejoin a lane that lands in the list pair's group instead of the hard leg's", () => {
-      // The CoinGecko/list pair sits about 53 bps from Curve, so a 25-minute lane
-      // at 0.535 agrees with both. Rejoining it creates a three-source cluster
-      // with the pair, not Curve: the composite is dated 1,500 s old, fails its
-      // CoinGecko leg's freshness, and escapes the list-pair downgrade. The lane
-      // must stay held; the fresh list pair is the correct single-source result.
+    it.each([
+      [0.545, 0.54505, 0.53416, "curve-dex+curve-onchain", "high", nowSec - 1_500, "authoritative"],
+      [0.537, 0.537, 0.535, "coingecko+defillama-list", "single-source", nowSec - 25, "confirm_required"],
+    ] as const)("handles list-pair vs Curve rejoin (cg=%s lane=%s -> %s)", (cgPrice, dlPrice, lanePrice, source, confidence, observedAt, trust) => {
       const quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
-      quoteMaps.cgQuotes.set("precious-metals-usd", {
-        price: 0.537,
-        observedAt: nowSec - 20,
-        observedAtMode: "upstream",
-      });
+      quoteMaps.cgQuotes.set("precious-metals-usd", { price: cgPrice, observedAt: nowSec - 20, observedAtMode: "upstream" });
       quoteMaps.curvePrices.set(pmusd.id, 0.53416);
       quoteMaps.curveObservedAtByCoinId.set(pmusd.id, nowSec - 30);
       quoteMaps.curvePricePoolKeysByCoinId.set(pmusd.id, [routePoolKey]);
-      const results = new Map<string, PrimaryPriceResult>();
-      const stats = createStats();
+      const results = new Map<string, PrimaryPriceResult>(), stats = createStats();
       buildPrimaryConsensusResults({
-        candidates: [pmusd],
-        quoteMaps,
-        dexRows: new Map() as PrimaryDexRows,
-        dexPriceSources: new Map([[pmusd.id, [{
-          protocol: "curve", chain: "ethereum", price: 0.535, tvl: 7_684_693, updatedAt: nowSec - 1_500, pricePoolKeys: independentPoolKeys,
-        }]]]) as PrimaryDexPriceSources,
-        nowSec,
-        resolveDlListQuote: () => ({ price: 0.537, observedAt: nowSec - 25, observedAtMode: "upstream" }),
-        results,
-        stats,
+        candidates: [pmusd], quoteMaps, dexRows: new Map(), nowSec, results, stats,
+        dexPriceSources: new Map([[pmusd.id, [{ protocol: "curve", chain: "ethereum", price: lanePrice, tvl: 7_684_693, updatedAt: nowSec - 1_500, pricePoolKeys: independentPoolKeys }]]]),
+        resolveDlListQuote: () => ({ price: dlPrice, observedAt: nowSec - 25, observedAtMode: "upstream" }),
       });
       applyListAggregatorDowngrade(results, stats);
-
       const result = results.get(pmusd.id)!;
-      expect(result).toMatchObject({
-        source: "coingecko+defillama-list",
-        confidence: "single-source",
-        observedAt: nowSec - 25,
-      });
-      expect(result.agreeSources).not.toContain("curve-dex");
-      expect(result.candidateSources).toContain("curve-dex");
-      expect(validateCompositePricingSourceFreshness({
-        source: result.source,
-        observedAt: result.observedAt,
-        observedAtMode: result.observedAtMode,
-        nowSec,
-        requireObservedAt: true,
-      }).accepted).toBe(true);
+      expect(result).toMatchObject({ source, confidence, observedAt });
+      expect(trustOf(result)).toBe(trust);
+      if (confidence === "high") expect(result.disagreeSources).toEqual(expect.arrayContaining(["coingecko", "defillama-list"]));
+      else {
+        expect(result.agreeSources).not.toContain("curve-dex");
+        expect(result.candidateSources).toContain("curve-dex");
+        expect(validateCompositePricingSourceFreshness({ source: result.source, observedAt: result.observedAt, observedAtMode: result.observedAtMode, nowSec, requireObservedAt: true }).accepted).toBe(true);
+      }
     });
 
     it("does not rescue a missing CoinGecko leg with a lane past the primary budget", () => {
-      const result = build(2_071, null);
-
-      expect(result).toMatchObject({ source: "curve-onchain", confidence: "single-source", observedAt: nowSec - 30 });
-      expect(trustOf(result!)).toBe("confirm_required");
-      expect(result!.candidateSources).toEqual(["curve-onchain", "curve-dex"]);
+      const result = build(2_071, null)!;
+      expect(result).toMatchObject({ source: "curve-onchain", confidence: "single-source", observedAt: nowSec - 30, candidateSources: ["curve-onchain", "curve-dex"] });
+      expect(trustOf(result)).toBe("confirm_required");
     });
   });
 
@@ -798,5 +623,54 @@ describe("buildPrimaryConsensusResults", () => {
       stats: createStats(),
     });
     expect(results.size).toBe(0);
+  });
+
+  it("quarantines CG micro-volume outliers, records R1 unknown volume, and exempts NAV", () => {
+    const nowSec = 1_800_000_000, quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
+    quoteMaps.cgQuotes.set("a7a5", { price: 0.001774, observedAt: nowSec - 10, observedAtMode: "upstream", volume24hUsd: 7.06 });
+    quoteMaps.cgQuotes.set("u", { price: 0.85, observedAt: nowSec - 10, observedAtMode: "upstream", volume24hUsd: null });
+    quoteMaps.cgQuotes.set("n", { price: 1.4, observedAt: nowSec - 10, observedAtMode: "upstream", volume24hUsd: 5 });
+    const results = new Map<string, PrimaryPriceResult>(), stats = createStats(), rejectedCgReasons = new Map<string, string>();
+    const providerDiagnostics: Parameters<typeof buildPrimaryConsensusResults>[0]["providerDiagnostics"] = [];
+    buildPrimaryConsensusResults({
+      candidates: [
+        { id: "a7a5-old-vector", name: "A7A5", symbol: "A7A5", geckoId: "a7a5", pegType: "peggedRUB" },
+        { id: "u", name: "U", symbol: "U", geckoId: "u", pegType: "peggedUSD" },
+        { id: "n", name: "N", symbol: "N", geckoId: "n", pegType: "peggedUSD", navToken: true },
+      ],
+      references: { rates: { peggedRUB: 0.01218 }, type: "fresh", updatedAt: nowSec },
+      quoteMaps, dexRows: new Map(), dexPriceSources: new Map(), nowSec,
+      resolveDlListQuote: () => undefined, results, stats, providerDiagnostics, rejectedCgReasons,
+    });
+    expect(results.has("a7a5-old-vector")).toBe(false);
+    expect([results.get("u")?.price, results.get("n")?.price]).toEqual([0.85, 1.4]);
+    expect(rejectedCgReasons.get("a7a5-old-vector")).toBe("coingecko_micro_volume_outlier");
+    expect(stats).toMatchObject({ cgMicroVolumeRejected: 1, cgVolumeUnavailable: 1, cgOnly: 2 });
+    expect(providerDiagnostics[0]?.assetAttempts?.[0]).toMatchObject({ assetId: "a7a5-old-vector", result: "rejected", rejectionClass: "coingecko_micro_volume_outlier" });
+  });
+
+  it.each([
+    [1.13, 0.93, null, undefined, "hive_market_divergence_veto", "vetoed"],
+    [0.96, 0.93, null, 0.96, undefined, "agreed"],
+    [null, 0.93, null, undefined, undefined, "no_cg_quote"],
+    [1.13, null, "rpc_timeout", 1.13, undefined, "unavailable"],
+  ] as const)("HBD Hive veto-only check (cg=%s hive=%s -> %s)", (cgUsd, hiveMid, unavail, expectedPrice, expectedReject, status) => {
+    const nowSec = 1_800_000_000, quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
+    if (cgUsd != null) quoteMaps.cgQuotes.set("hive_dollar", { price: cgUsd, observedAt: nowSec - 10, observedAtMode: "upstream", volume24hUsd: 200_000 });
+    if (hiveMid != null) quoteMaps.hiveVetoMid = { price: hiveMid, observedAt: nowSec - 5, observedAtMode: "local_fetch", admittedForPublication: false, rejectionReason: "insufficient_depth" };
+    quoteMaps.hiveVetoUnavailableReason = unavail;
+    const nativeMarket = { vetoStatus: null as string | null, vetoReason: null as string | null, vetoDivergenceBps: null as number | null };
+    const results = new Map<string, PrimaryPriceResult>(), stats = createStats(), rejectedCgReasons = new Map<string, string>();
+    buildPrimaryConsensusResults({
+      candidates: [{ id: "hbd-hive", name: "HBD", symbol: "HBD", geckoId: "hive_dollar", pegType: "peggedUSD" }],
+      quoteMaps, dexRows: new Map(), dexPriceSources: new Map(), nowSec, resolveDlListQuote: () => undefined,
+      results, stats, rejectedCgReasons,
+      providerDiagnostics: [{ source: "hive-native-cg", stage: "primary", endpoint: "api.hive.blog", status: null, ok: true, success: false, nativeMarket: nativeMarket as never }],
+    });
+    expect(results.get("hbd-hive")?.price).toBe(expectedPrice);
+    expect(rejectedCgReasons.get("hbd-hive")).toBe(expectedReject);
+    expect(nativeMarket.vetoStatus).toBe(status);
+    if (status === "unavailable") expect(stats.hiveVetoUnavailable).toBe(1);
+    if (status === "vetoed") expect(stats.hiveDivergenceVetoed).toBe(1);
   });
 });

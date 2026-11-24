@@ -3,7 +3,7 @@ import type { PegCurrency } from "./core";
 import { type DepegAuditVerdict, DepegAuditVerdictSchema } from "./depeg-audit";
 import { MethodologyEnvelopeSchema } from "./methodology-envelope";
 import { z } from "zod";
-import { DepegPrimaryTrustSchema, NominalPriceReferenceSchema, PriceConfidenceSchema, PriceObservedAtModeSchema } from "./price";
+import { DepegPrimaryTrustSchema, NominalPriceReferenceSchema, PriceConfidenceSchema, PriceObservedAtModeSchema, PricePublicationReasonSchema } from "./price";
 import { issue } from "./safety-schema-primitives";
 import { AdmittedDeviationBpsSchema, ReferenceAdmissionSchema } from "./reference-admission";
 
@@ -115,6 +115,7 @@ export const PegSummaryCoinSchema = z.object({
   price: z.number().finite().positive().nullable().optional(),
   priceSource: z.string().optional(),
   priceConfidence: PriceConfidenceSchema.nullable().optional(),
+  pricePublicationReason: PricePublicationReasonSchema.optional(),
   priceUpdatedAt: z.number().nullable().optional(),
   priceObservedAt: z.number().nullable().optional(),
   priceObservedAtMode: PriceObservedAtModeSchema.nullable().optional(),

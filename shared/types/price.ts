@@ -5,6 +5,9 @@ export const DetailProviderSchema = z.enum(DETAIL_PROVIDER_VALUES);
 
 const PRICE_CONFIDENCE_VALUES = ["high", "single-source", "low", "fallback"] as const;
 export type PriceConfidence = (typeof PRICE_CONFIDENCE_VALUES)[number];
+const PRICE_PUBLICATION_REASON_VALUES = ["open-confirmed-depeg-continuity"] as const;
+export type PricePublicationReason = (typeof PRICE_PUBLICATION_REASON_VALUES)[number];
+export const PricePublicationReasonSchema = z.enum(PRICE_PUBLICATION_REASON_VALUES);
 const PRICE_OBSERVED_AT_MODE_VALUES = ["upstream", "local_fetch", "unknown", "nominal_reference", "unsupported"] as const;
 export type PriceObservedAtMode = (typeof PRICE_OBSERVED_AT_MODE_VALUES)[number];
 const DEPEG_PRIMARY_TRUST_VALUES = ["authoritative", "confirm_required", "unusable"] as const;
@@ -53,6 +56,7 @@ export interface PegAssetBase {
   price?: number | null;
   priceSource?: string | null;
   priceConfidence?: PriceConfidence | null;
+  pricePublicationReason?: PricePublicationReason;
   priceUpdatedAt?: number | null;
   priceObservedAt?: number | null;
   priceObservedAtMode?: PriceObservedAtMode | null;

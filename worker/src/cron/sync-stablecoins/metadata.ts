@@ -1,4 +1,5 @@
 import type { PriceObservationEffectiveness } from "./price-corroboration-observations";
+import type { OpenDepegContinuitySummary } from "../../lib/open-confirmed-depegs";
 import type {
   DepegHoldReason,
   DepegObservationCensus,
@@ -418,9 +419,8 @@ function sizeGuardMetadataForRung(
     missingPrices: guard.metadata.missingPrices,
     canonicalDeduplication: guard.metadata.canonicalDeduplication,
     rejectedPrices: guard.metadata.rejectedPrices,
-    nativePegCorrections: guard.metadata.nativePegCorrections,
-    nativePegFills: guard.metadata.nativePegFills,
     priceObservationEffectiveness: guard.metadata.priceObservationEffectiveness,
+    openDepegContinuity: guard.metadata.openDepegContinuity,
     depegErrorCount: guard.metadata.depegErrorCount,
     depegHeldReason: guard.metadata.depegHeldReason,
     stalenessCheckFailed: guard.metadata.stalenessCheckFailed,
@@ -449,11 +449,18 @@ function sizeGuardMetadataForRung(
 function sizeGuardTerminalMetadata(guard: StablecoinsMetadataSizeGuardInput): Record<string, unknown> {
   const quality = guard.metadata.quality as Record<string, unknown> | undefined;
   const census = quality?.depegObservation as DepegObservationCensus | null | undefined;
+  const continuity = guard.metadata.openDepegContinuity as OpenDepegContinuitySummary | undefined;
   return {
     reason: "stablecoins-metadata-over-budget",
     metadataCompactedBySizeGuard: true,
     sizeGuardEvidenceDropped: true,
     nativeMarket: guard.metadata.nativeMarket ? { evidenceOmitted: true, reason: "metadata-size-guard" } : undefined,
+    openDepegContinuity: continuity ? {
+      status: continuity.status,
+      ...(continuity.unavailableReason ? { unavailableReason: continuity.unavailableReason } : {}),
+      openEventCount: continuity.openEventCount,
+      publishedCount: continuity.publishedCount,
+    } : undefined,
     originalMetadataBytes: guard.originalMetadataBytes,
     rowsRead: guard.metadata.rowsRead,
     rowsWritten: guard.metadata.rowsWritten,
@@ -526,9 +533,8 @@ export function buildStablecoinsSyncResult(input: {
   authoritativeOverrideCount?: number;
   authoritativeOverrideStats?: AuthoritativeLivePriceOverrideStats;
   rejectedCount: number;
-  nativePegCorrectionCount?: number;
-  nativePegFillCount?: number;
   priceObservationEffectiveness?: PriceObservationEffectiveness;
+  openDepegContinuity?: OpenDepegContinuitySummary;
   stalenessWarning: boolean;
   stalenessSummary?: { compared: number; identical: number; identicalRatio: number } | null;
   stalenessCheckFailed: boolean;
@@ -636,9 +642,8 @@ export function buildStablecoinsSyncResult(input: {
     providerDiagnostics: compactDiagnosticValue(input.providerDiagnostics ?? []),
     nativeMarket: input.providerDiagnostics?.find((diagnostic) => diagnostic.nativeMarket)?.nativeMarket,
     rejectedPrices: input.rejectedCount,
-    nativePegCorrections: input.nativePegCorrectionCount ?? 0,
-    nativePegFills: input.nativePegFillCount ?? 0,
     priceObservationEffectiveness: input.priceObservationEffectiveness,
+    ...(input.openDepegContinuity ? { openDepegContinuity: input.openDepegContinuity } : {}),
     missingPrices: finalMissing,
     priceSourceHealth,
     pricingSourceAuditReport: {
@@ -678,11 +683,15 @@ export function buildStablecoinsSyncResult(input: {
   // informational finding that never degrades a completed publication (ADR-35).
   const depegObservation = depegObservationQuality(input);
   const preferredNativeSupply = preferredNativeSupplyQuality(input.assets);
+  const openDepegContinuityUnavailable = input.openDepegContinuity?.status === "unavailable"
+    ? input.openDepegContinuity.unavailableReason ?? "open-depeg-read-failed"
+    : null;
   const qualityReasons = [
     ...(degradedReason ? [degradedReason] : []),
     ...(supplyQuarantined ? ["supply-chain-dropout-quarantine"] : []),
     ...depegObservation.reasons,
     ...(preferredNativeSupply ? [preferredNativeSupply.reason] : []),
+    ...(openDepegContinuityUnavailable ? ["open-depeg-continuity-unavailable"] : []),
   ];
   if (qualityReasons.length > 0 || depegObservation.fields) {
     metadata.quality = {
@@ -694,6 +703,7 @@ export function buildStablecoinsSyncResult(input: {
       } : {}),
       ...depegObservation.fields,
       ...(preferredNativeSupply ? { preferredNativeSupply } : {}),
+      ...(openDepegContinuityUnavailable ? { openDepegContinuityUnavailableReason: openDepegContinuityUnavailable } : {}),
     };
   }
   if (input.stalenessWarning) metadata.stalenessWarning = true;
@@ -765,9 +775,8 @@ export function buildFallbackStablecoinsSyncResult(input: {
   authoritativeOverrideStats?: AuthoritativeLivePriceOverrideStats;
   rejectedCount: number;
   cachedFallbackCount: number;
-  nativePegCorrectionCount: number;
-  nativePegFillCount: number;
   priceObservationEffectiveness?: PriceObservationEffectiveness;
+  openDepegContinuity?: OpenDepegContinuitySummary;
   stalenessWarning: boolean;
   stalenessSummary?: { compared: number; identical: number; identicalRatio: number } | null;
   stalenessCheckFailed: boolean;
@@ -812,8 +821,12 @@ export function buildFallbackStablecoinsSyncResult(input: {
   }, publicationGap);
   const depegObservation = depegObservationQuality(input);
   const preferredNativeSupply = preferredNativeSupplyQuality(input.assets);
+  const openDepegContinuityUnavailable = input.openDepegContinuity?.status === "unavailable"
+    ? input.openDepegContinuity.unavailableReason ?? "open-depeg-read-failed"
+    : null;
   const qualityReasons = [...(degradedReason ? [degradedReason] : []), ...depegObservation.reasons,
-    ...(preferredNativeSupply ? [preferredNativeSupply.reason] : [])];
+    ...(preferredNativeSupply ? [preferredNativeSupply.reason] : []),
+    ...(openDepegContinuityUnavailable ? ["open-depeg-continuity-unavailable"] : [])];
 
   return {
     status: degradedReason ? "degraded" : "ok",
@@ -830,9 +843,8 @@ export function buildFallbackStablecoinsSyncResult(input: {
       providerDiagnostics: input.providerDiagnostics,
       nativeMarket: input.providerDiagnostics.find((diagnostic) => diagnostic.nativeMarket)?.nativeMarket,
       rejectedPrices: input.rejectedCount,
-      nativePegCorrections: input.nativePegCorrectionCount,
-      nativePegFills: input.nativePegFillCount,
       priceObservationEffectiveness: input.priceObservationEffectiveness,
+      ...(input.openDepegContinuity ? { openDepegContinuity: input.openDepegContinuity } : {}),
       cachedFallbackPrices: input.cachedFallbackCount,
       authoritativeOverrides: input.authoritativeOverrideCount,
       authoritativeOverrideStats: input.authoritativeOverrideStats,
@@ -847,6 +859,7 @@ export function buildFallbackStablecoinsSyncResult(input: {
           ...(qualityReasons.length > 1 ? { reasons: qualityReasons } : {}),
           ...depegObservation.fields,
           ...(preferredNativeSupply ? { preferredNativeSupply } : {}),
+          ...(openDepegContinuityUnavailable ? { openDepegContinuityUnavailableReason: openDepegContinuityUnavailable } : {}),
         },
       } : {}),
       ...(input.depegHeldReason ? { depegHeldReason: input.depegHeldReason } : {}),

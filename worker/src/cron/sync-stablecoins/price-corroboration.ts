@@ -1,5 +1,6 @@
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { shouldAttemptFetch, recordOutcomeDecision } from "../../lib/circuit-breaker";
 import { savePriceCache, type PriceCacheWriteEntry } from "../../lib/price-cache";
@@ -15,11 +16,13 @@ import {
 import { enrichMissingPrices, type EnrichmentStats } from "./enrich-prices";
 import type { PeggedAsset } from "./enrich-prices-shared";
 import { clearPriceMetadata, loadPreviousStablecoinsById } from "./shared";
-import { writePriceCorroborationObservations, type PriceCorroborationObservation } from "./price-corroboration-observations";
+import {
+  filterStageablePriceObservations,
+  writePriceCorroborationObservations,
+  type PriceCorroborationObservation,
+} from "./price-corroboration-observations";
 import { applyTrackedAssetOverrides } from "./phase-helpers";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-
-const PRICE_CORROBORATION_SOURCE_DEPTH = 3;
 
 export function isPriceCorroborationSlot(scheduledAtSec: number): boolean {
   // Collect after the :09 status checks, before the :15 primary publication.
@@ -73,8 +76,20 @@ function sourceList(asset: PeggedAsset): string[] {
   return asset.priceSource ? splitCompositePriceSource(asset.priceSource) : [];
 }
 
+/**
+ * Scope hourly staging to active tracked rows that actually need fallback
+ * recovery or corroboration: missing prices (including reviewed gaps and
+ * nominal-par-only rows) and rows currently priced at `fallback` or `low`
+ * confidence. Active `high` and `single-source` primary rows already re-price
+ * every 15 minutes and cannot consume staged fallback observations.
+ */
 function isPriceCorroborationCandidate(asset: PeggedAsset): boolean {
-  return !hasPublishableCurrentPrice(asset) || sourceList(asset).length < PRICE_CORROBORATION_SOURCE_DEPTH;
+  if (!ACTIVE_META_BY_ID.has(asset.id)) return false;
+  return (
+    !hasPublishableCurrentPrice(asset) ||
+    asset.priceConfidence === "fallback" ||
+    asset.priceConfidence === "low"
+  );
 }
 
 export function buildPriceCorroborationCohort(assets: Iterable<PeggedAsset>): PeggedAsset[] {
@@ -238,13 +253,17 @@ export async function runPriceCorroboration(params: {
   }
 
   const fallbackProbesById = new Map(fallbackProbes.map((asset) => [asset.id, asset]));
-  // Only this run's fetched observations enter the handoff, never published references.
-  const observations = cohort.flatMap((asset) => {
-    const fallback = fallbackObservation(fallbackProbesById.get(asset.id));
-    return [...(fallback ? [fallback] : []), ...addressObservations(addressQuotes.get(asset.id))]
-      .map((observation) => ({ ...observation, id: asset.id, observedAtMode: observation.observedAtMode ?? null,
-        ...(observation.source === "dexscreener-exact" ? dexTargets.get(asset.id) : {}) }));
-  });
+  // Only this run's fetched observations that can survive to the next
+  // publication enter the handoff, never published references or already-expiring quotes.
+  const observations = filterStageablePriceObservations(
+    cohort.flatMap((asset) => {
+      const fallback = fallbackObservation(fallbackProbesById.get(asset.id));
+      return [...(fallback ? [fallback] : []), ...addressObservations(addressQuotes.get(asset.id))]
+        .map((observation) => ({ ...observation, id: asset.id, observedAtMode: observation.observedAtMode ?? null,
+          ...(observation.source === "dexscreener-exact" ? dexTargets.get(asset.id) : {}) }));
+    }),
+    params.syncStartSec,
+  );
   await writePriceCorroborationObservations(params.db, observations, params.syncStartSec, params.signal);
   const entries = buildPriceCorroborationCacheEntries({
     publishedAssets: cohort,

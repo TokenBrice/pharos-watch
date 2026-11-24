@@ -30,6 +30,7 @@ import {
   createAuthoritativeLivePriceOverrideStats,
   prioritizeAuthoritativeLivePriceCandidates,
 } from "../authoritative-price-sources";
+import { m0ExtensionProvider } from "../authoritative-price-sources/m0-extension";
 import { CIRCUIT_SOURCE } from "../constants";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import {
@@ -1086,6 +1087,15 @@ describe("authoritative-price-sources", () => {
   it("waits for a same-pass parent even when the child is scheduled first, without idling a lane", async () => {
     vi.useFakeTimers();
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const nowSec = Math.floor(Date.now() / 1000);
+    const m0Spy = vi.spyOn(m0ExtensionProvider, "fetchLivePrice").mockResolvedValue({
+      price: 0.999812,
+      source: "coingecko",
+      confidence: "single-source",
+      observedAt: nowSec - 60,
+      observedAtMode: "upstream",
+      metadata: { inheritedFrom: "musd-metamask", parentReplaySafe: true },
+    });
     try {
       fetchEvmCallHexAtBlockMock.mockImplementation(
         (_chain: string, _to: string, _data: string, _block: number | "latest", options?: { signal?: AbortSignal }) =>
@@ -1093,16 +1103,15 @@ describe("authoritative-price-sources", () => {
             options?.signal?.addEventListener("abort", () => reject(options.signal?.reason), { once: true });
           }),
       );
-      const nowSec = Math.floor(Date.now() / 1000);
       const stats = createAuthoritativeLivePriceOverrideStats();
       const run = fetchLiveOverrides(
         [
-          // `usdn-noble` inherits `m-m0`, which is itself a candidate; the
+          // `wm-m0` inherits `m-m0`, which is itself a candidate; the
           // circuit-backed `cusd-cap` probe sits ahead of both in the queue.
-          unpricedChild("usdn-noble"),
+          unpricedChild("wm-m0"),
           unpricedChild("cusd-cap", { circulating: { peggedUSD: 114_000_000 } }),
           unpricedChild("m-m0"),
-          freshParent("wm-m0", 0.999812, "coingecko", { nowSec, priceConfidence: "single-source" }),
+          freshParent("musd-metamask", 0.999812, "coingecko", { nowSec, priceConfidence: "single-source" }),
           freshParent("usdc-circle", 1, "protocol-redeem", { nowSec }),
         ],
         { stats },
@@ -1119,9 +1128,9 @@ describe("authoritative-price-sources", () => {
       // The child only resolves from the parent's own same-pass override.
       expect(overrides.get("m-m0")).toMatchObject({
         price: 0.999812,
-        metadata: { inheritedFrom: "wm-m0" },
+        metadata: { inheritedFrom: "musd-metamask" },
       });
-      expect(overrides.get("usdn-noble")).toMatchObject({
+      expect(overrides.get("wm-m0")).toMatchObject({
         price: 0.999812,
         metadata: { inheritedFrom: "m-m0" },
       });
@@ -1134,6 +1143,7 @@ describe("authoritative-price-sources", () => {
         timedOut: false,
       });
     } finally {
+      m0Spy.mockRestore();
       warnSpy.mockRestore();
       vi.useRealTimers();
     }

@@ -108,10 +108,10 @@ interface NativePegSessionEntry {
 /**
  * Per-run memo of CoinGecko native-peg batch responses.
  *
- * The quarter-hourly sync calls `fetchCurrentNativePegQuotes` from three
- * independent stages (post-enrichment native-peg hardening, depeg detection
- * hydration, pending-depeg confirmation) with overlapping — but rarely
- * identical — request sets.  Memoizing whole call results would therefore
+ * The quarter-hourly sync calls `fetchCurrentNativePegQuotes` from two
+ * independent stages (depeg detection hydration and pending-depeg confirmation)
+ * with overlapping — but rarely identical — request sets. Memoizing whole call
+ * results would therefore
  * almost never hit, so the session caches the underlying batch responses
  * keyed by CoinGecko `vs_currencies` value, and a later caller reuses a
  * cached batch whenever that batch already covers every geckoId it needs.

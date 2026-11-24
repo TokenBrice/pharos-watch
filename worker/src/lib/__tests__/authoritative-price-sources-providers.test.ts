@@ -12,6 +12,17 @@ import {
   resetAuthoritativePriceSourceMocks as resetMocks,
   resolveClosestBlockAtOrBeforeTimestampMock as closestBlock,
   unpricedChild,
+  mockWave2Batch,
+  WAVE2_M0_BAD,
+  WAVE2_M0_GOOD,
+  WAVE2_NOW,
+  WAVE2_NUSD_BAD,
+  WAVE2_NUSD_GOOD,
+  WAVE2_RWA_BAD,
+  WAVE2_RWA_GOOD,
+  WAVE2_USDU_BAD,
+  WAVE2_USDU_POOL,
+  wave2Head,
 } from "./authoritative-price-sources.test-support";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { capCusdProvider } from "../authoritative-price-sources/cap-cusd";
@@ -30,10 +41,19 @@ import { iusdInfinifiProvider } from "../authoritative-price-sources/infinifi-iu
 import { createProtocolRedeemProvider } from "../authoritative-price-sources/protocol-redeem-provider";
 import { encodeUint256 } from "../evm-selectors";
 import * as extraction from "../historical-depeg-extraction";
+import { m0ExtensionProvider } from "../authoritative-price-sources/m0-extension";
+import { rwausdiChainlinkNavProvider } from "../authoritative-price-sources/rwausdi-chainlink-nav";
+import { nusdSynapsePoolProvider } from "../authoritative-price-sources/nusd-synapse-pool";
+import { usduFinanceCurvePoolProvider } from "../authoritative-price-sources/usdu-finance-curve-pool";
 import { moveusdOrcaProvider } from "../authoritative-price-sources/moveusd-orca";
 import { fetchSolanaAccountBatch, fetchSolanaAccounts, SOLANA_TOKEN_PROGRAM } from "../chain-observation";
 import { publicKeyBytes } from "../../cron/dex-liquidity/solana/program-address";
 import { ORCA_WHIRLPOOL_PROGRAM_ID } from "../../cron/dex-liquidity/solana/whirlpool-quote";
+
+vi.mock("viem/utils", async (original) => {
+  const actual = await original<typeof import("viem/utils")>();
+  return { ...actual, keccak256: (v: `0x${string}`) => /^0x[0-9a-f]{64}$/i.test(v) ? v : actual.keccak256(v) };
+});
 
 vi.mock("../chain-observation", async (original) => ({
   ...await original<typeof import("../chain-observation")>(), fetchSolanaAccountBatch: vi.fn(), fetchSolanaAccounts: vi.fn(),
@@ -627,5 +647,80 @@ describe("idleCdoTrancheProvider", () => {
     const context = { assetsById: new Map() };
     await expect(idleCdoTrancheProvider.fetchLivePrice!(asset("unknown-tranche"), context)).resolves.toBeNull();
     await expect(idleCdoTrancheProvider.fetchLivePrice!(unpricedChild(ID), context)).resolves.toBeNull();
+  });
+});
+
+describe("Wave 2 authoritative adapters", () => {
+  const ctxOf = (p: PeggedAsset | null): LivePriceContext => ({ assetsById: p ? new Map([[p.id, p]]) : new Map() });
+  const badHash = [{ hash: `0x${"ef".repeat(32)}` }];
+  const checkGuards = async (
+    prov: { fetchLivePrice?: (a: PeggedAsset, c: LivePriceContext) => Promise<unknown> },
+    id: string, prefix: string, parent: PeggedAsset | null,
+    good: readonly unknown[], bad: readonly (readonly [number, string, string])[],
+  ) => {
+    for (const [i, v, r] of bad) {
+      const s = [...good]; s[i] = v; mockWave2Batch(s);
+      const c = ctxOf(parent); expect(await prov.fetchLivePrice!(unpricedChild(id), c)).toBeNull();
+      expect(c.lastRejectionReason).toBe(`${prefix}:${r}`);
+    }
+    mockWave2Batch([...good], wave2Head(), badHash);
+    const c = ctxOf(parent); expect(await prov.fetchLivePrice!(unpricedChild(id), c)).toBeNull();
+    expect(c.lastRejectionReason).toBe(`${prefix}:canonical-check`);
+  };
+  beforeEach(() => { resetMocks(); evmBatch.mockReset(); vi.useFakeTimers(); vi.setSystemTime(WAVE2_NOW * 1_000); });
+  afterEach(() => vi.useRealTimers());
+
+  it("m0ExtensionProvider verifies M0/mUSD state and fails closed on guards", async () => {
+    const musd = freshParent("musd-metamask", 0.9991, "coingecko", { nowSec: WAVE2_NOW, priceConfidence: "single-source" });
+    const run = (a: PeggedAsset, c: LivePriceContext) => m0ExtensionProvider.fetchLivePrice!(a, c);
+    mockWave2Batch(WAVE2_M0_GOOD);
+    expect(await run(unpricedChild("m-m0"), ctxOf(musd))).toMatchObject({
+      price: 0.9991, source: "coingecko", confidence: "single-source", observedAt: WAVE2_NOW - 60, metadata: { inheritedFrom: "musd-metamask", parentReplaySafe: true },
+    });
+    for (const [t, p] of [[freshParent("m-m0", 1, "coingecko"), musd], [unpricedChild("m-m0"), null], [unpricedChild("m-m0"), freshParent("musd-metamask", 1, "coingecko", { nowSec: WAVE2_NOW })]] as const) {
+      expect(await run(t, ctxOf(p))).toBeNull();
+    }
+    await checkGuards(m0ExtensionProvider, "m-m0", "m0-extension", musd, WAVE2_M0_GOOD, WAVE2_M0_BAD);
+    evmBatch.mockReset().mockResolvedValueOnce(wave2Head(WAVE2_NOW - 301));
+    const c = ctxOf(musd); expect(await run(unpricedChild("m-m0"), c)).toBeNull();
+    expect(c.lastRejectionReason).toBe("m0-extension:head-stale-or-invalid");
+  });
+
+  it("rwausdiChainlinkNavProvider verifies Monad Chainlink NAV and freshness", async () => {
+    const run = (a: PeggedAsset) => rwausdiChainlinkNavProvider.fetchLivePrice!(a, ctxOf(null));
+    mockWave2Batch(WAVE2_RWA_GOOD);
+    expect(await run(unpricedChild("rwausdi-multipli"))).toEqual({
+      price: 1.0025, source: "chainlink-nav", confidence: "single-source", observedAt: WAVE2_NOW - 3600, observedAtMode: "upstream",
+    });
+    expect(await run(freshParent("rwausdi-multipli", 1, "coingecko"))).toBeNull();
+    await checkGuards(rwausdiChainlinkNavProvider, "rwausdi-multipli", "rwausdi-chainlink-nav", null, WAVE2_RWA_GOOD, WAVE2_RWA_BAD);
+  });
+
+  it("nusdSynapsePoolProvider quotes pinned NexusPool USDC exit and fails closed", async () => {
+    const usdc = freshParent("usdc-circle", 0.9995, "coingecko+pyth", { nowSec: WAVE2_NOW });
+    const run = (a: PeggedAsset, p: PeggedAsset | null = usdc) => nusdSynapsePoolProvider.fetchLivePrice!(a, ctxOf(p));
+    mockWave2Batch(WAVE2_NUSD_GOOD);
+    expect(await run(unpricedChild("nusd-nexus"))).toMatchObject({
+      price: 1.0005 * 0.9995, source: "protocol-redeem", confidence: "fallback", observedAt: WAVE2_NOW - 60, observedAtMode: "upstream",
+    });
+    expect(await run(freshParent("nusd-nexus", 1, "coingecko"))).toBeNull();
+    expect(await run(unpricedChild("nusd-nexus"), null)).toBeNull();
+    await checkGuards(nusdSynapsePoolProvider, "nusd-nexus", "nusd-synapse-pool", usdc, WAVE2_NUSD_GOOD, WAVE2_NUSD_BAD);
+  });
+
+  it("usduFinanceCurvePoolProvider quotes USDU/USDC Curve pool and isolates from usdu-universal", async () => {
+    const usdc = freshParent("usdc-circle", 0.9998, "coingecko+pyth", { nowSec: WAVE2_NOW });
+    const run = (a: PeggedAsset, p: PeggedAsset | null = usdc) => usduFinanceCurvePoolProvider.fetchLivePrice!(a, ctxOf(p));
+    evmBatch.mockResolvedValue(WAVE2_USDU_POOL);
+    expect([usduFinanceCurvePoolProvider.matches("usdu-usdu-finance"), usduFinanceCurvePoolProvider.matches("usdu-universal")]).toEqual([true, false]);
+    expect(await run(unpricedChild("usdu-usdu-finance"))).toMatchObject({
+      price: 0.975353 * 0.9998, source: "curve-thin-onchain", confidence: "fallback", observedAt: WAVE2_NOW - 60, observedAtMode: "upstream",
+    });
+    expect(await run(freshParent("usdu-usdu-finance", 0.98, "coingecko"))).toBeNull();
+    for (const [i, v] of WAVE2_USDU_BAD) {
+      const s = [...WAVE2_USDU_POOL]; s[i] = v; evmBatch.mockResolvedValueOnce(s);
+      expect(await run(unpricedChild("usdu-usdu-finance"))).toBeNull();
+    }
+    expect(await run(unpricedChild("usdu-usdu-finance"), null)).toBeNull();
   });
 });
