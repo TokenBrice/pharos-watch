@@ -39,6 +39,7 @@ import { buildAiDisclosureLine, formatAiSummaryDate } from "@/components/ai-summ
 import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
 import { buildFreezeControlDescriptor, describeFreezeControl } from "@/lib/stablecoin-detail-blacklistability-client";
 import { isBlacklistStablecoin } from "@shared/lib/blacklist";
+import { isReserveDriftAlertEligible } from "@/lib/stablecoin-detail-client-coin";
 import { buildStaticCompareHref } from "@/lib/compare-links";
 import { buildContractDeploymentParts } from "@/lib/contract-deployment-summary";
 import { PUBLIC_DATASET_CURRENT_DATE } from "@/lib/datasets/public-dataset-current";
@@ -477,11 +478,23 @@ function buildBackingAnswer(coin: StablecoinMeta): string {
   return [lead, evidence, `Pharos classifies the backing as ${backingLabel}.`].join(" ");
 }
 
-function buildAlertCommand(coin: StablecoinMeta): string {
-  if (isTokenizedFundId(coin.id)) {
-    return coin.flags.navToken ? `/subscribe dews ${coin.id}` : `/subscribe dews,depeg ${coin.id}`;
+function buildAlertCommand(coin: StablecoinMeta): string | null {
+  const tokenizedFund = isTokenizedFundId(coin.id);
+  const navToken = coin.flags.navToken === true;
+  const types: string[] = [];
+  if (!navToken) {
+    types.push("dews", "depeg");
   }
-  return `/subscribe dews,depeg,safety ${coin.id}`;
+  if (!tokenizedFund) {
+    types.push("safety");
+  }
+  if ((tokenizedFund || navToken) && isReserveDriftAlertEligible(coin)) {
+    types.push("reserve");
+  }
+  if (types.length === 0 && isBlacklistStablecoin(coin.symbol.toUpperCase())) {
+    types.push("freeze");
+  }
+  return types.length > 0 ? `/subscribe ${types.join(",")} ${coin.id}` : null;
 }
 
 /**
@@ -502,9 +515,11 @@ export function buildStablecoinFaqItems(coin: StablecoinMeta, release?: Snapshot
   const identityAnswer = [
     coin.oneLiner
       ? normalizeWhitespace(stripTermMarkup(coin.oneLiner))
-      : coin.flags.navToken
-        ? `${coin.name} (${coin.symbol}) is a ${backingLabel} yield-bearing token with ${pegLabel} and a ${governanceLabel} governance model.`
-        : `${coin.name} (${coin.symbol}) is a ${backingLabel} stablecoin tracking ${pegLabel}, with a ${governanceLabel} governance model.`,
+      : isActiveStablecoinMeta(coin) && isTokenizedFundId(coin.id)
+        ? `${coin.name} (${coin.symbol}) is a ${backingLabel} tokenized fund with ${pegLabel} and a ${governanceLabel} governance model.`
+        : coin.flags.navToken
+          ? `${coin.name} (${coin.symbol}) is a ${backingLabel} yield-bearing token with ${pegLabel} and a ${governanceLabel} governance model.`
+          : `${coin.name} (${coin.symbol}) is a ${backingLabel} stablecoin tracking ${pegLabel}, with a ${governanceLabel} governance model.`,
     coin.pegMechanism
       ? coin.flags.navToken
         ? `Pharos records its ${pegLabel} accounting mechanism as: ${summarizeText(coin.pegMechanism, 240)}`
@@ -605,12 +620,18 @@ export function StablecoinDetailSeoContent({
   );
   const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
   const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
+  const active = isActiveStablecoinMeta(coin);
+  const activeTokenizedFund = active && isTokenizedFundId(coin.id);
   const summaryUpdatedAt = summary?.updatedAt ? formatAiSummaryDate(summary.updatedAt) : null;
   // Live claims are withheld until the interactive dossier has their inputs.
+  // Active tokenized funds and inactive records have no interactive Safety Score,
+  // so omit a grade-claiming summary instead of promising one.
   const summaryText = summary
     ? hasAvailableAiSummaryClaims(summary.text, summary.claimTokens)
       ? resolveAiSummaryClaims(summary.text, summary.claimTokens).text
-      : AI_SUMMARY_UNAVAILABLE_NOTICE
+      : active && !activeTokenizedFund
+        ? AI_SUMMARY_UNAVAILABLE_NOTICE
+        : null
     : null;
   const compareHref = buildStaticCompareHref([coin.id]);
   const alertCommand = buildAlertCommand(coin);
@@ -618,7 +639,6 @@ export function StablecoinDetailSeoContent({
   const historicalContext = STABLECOIN_HISTORICAL_CONTEXT[coin.id];
   const jurisdiction = formatJurisdiction(coin);
   const hasContracts = (coin.contracts?.length ?? 0) > 0;
-  const active = isActiveStablecoinMeta(coin);
 
   // Below the dossier the folded profile is one more module in the page's
   // run, so its title takes the module scale ("Explore next" above it), not
@@ -635,7 +655,10 @@ export function StablecoinDetailSeoContent({
   // printed as "not specified".
   const profileBody = (
     <div className="space-y-4">
-      <dl className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-4" aria-label="Stablecoin taxonomy">
+      <dl
+        className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-4"
+        aria-label={activeTokenizedFund ? "Tokenized fund taxonomy" : "Stablecoin taxonomy"}
+      >
         <div>
           <dt className={FACT_LABEL_CLASS}>Governance</dt>
           <dd className="mt-1">
@@ -733,12 +756,12 @@ export function StablecoinDetailSeoContent({
 
       <SameTickerStablecoins coin={coin} />
 
-      {summary ? (
+      {summary && summaryText ? (
         <div className="pharos-inset px-3 py-2.5">
           <p className="pharos-label">
             AI summary{summaryUpdatedAt ? ` / Updated ${summaryUpdatedAt}` : ""}
           </p>
-          <p className="mt-1 text-sm leading-relaxed text-foreground">{summarizeText(summaryText ?? "", 520)}</p>
+          <p className="mt-1 text-sm leading-relaxed text-foreground">{summarizeText(summaryText, 520)}</p>
           {(() => {
             const disclosure = buildAiDisclosureLine(summary);
             return disclosure ? (
@@ -749,13 +772,17 @@ export function StablecoinDetailSeoContent({
       ) : null}
 
       <p className="border-t border-border/50 pt-3 text-xs leading-relaxed text-muted-foreground">
-        From Pharos&apos;s reviewed coin profile.
+        From Pharos&apos;s reviewed {activeTokenizedFund ? "tokenized fund" : "coin"} profile.
         {active
-          ? afterDossier
-            ? " Live price, supply, reserve, liquidity and safety data are in the dossier above"
-            : " Live price, supply, reserve, liquidity and safety data load in the dossier on this page"
+          ? activeTokenizedFund
+            ? afterDossier
+              ? " Tokenized fund — not a stablecoin; not Safety-graded. Live price, supply, reserve, and liquidity data are in the dossier above"
+              : " Tokenized fund — not a stablecoin; not Safety-graded. Live price, supply, reserve, and liquidity data load in the dossier on this page"
+            : afterDossier
+              ? " Live price, supply, reserve, liquidity and safety data are in the dossier above"
+              : " Live price, supply, reserve, liquidity and safety data load in the dossier on this page"
           : " This inactive record is not part of current live monitoring"}
-        {summaryUpdatedAt ? `; the summary above was last updated ${summaryUpdatedAt}` : ""}.
+        {summaryText && summaryUpdatedAt ? `; the summary above was last updated ${summaryUpdatedAt}` : ""}.
       </p>
     </div>
   );
@@ -770,7 +797,9 @@ export function StablecoinDetailSeoContent({
               ? `${coin.name} (${coin.symbol}) delisted stablecoin record`
               : coin.status === "quarantined"
                 ? `${coin.name} (${coin.symbol}) quarantined stablecoin record`
-                : `${coin.name} (${coin.symbol}) stablecoin analytics`}
+                : activeTokenizedFund
+                  ? `${coin.name} (${coin.symbol}) tokenized fund profile`
+                  : `${coin.name} (${coin.symbol}) stablecoin analytics`}
         </h1>
       ) : null}
 
@@ -833,7 +862,7 @@ export function StablecoinDetailSeoContent({
                     Compare {coin.symbol}
                   </IntentLink>
                 ) : null}
-                {isActiveStablecoinMeta(coin) ? (
+                {active && alertCommand ? (
                   <IntentLink href="/pharoswatchbot/#getting-started" className={ACTION_LINK_CLASS}>
                     <Bell aria-hidden="true" className={ACTION_ICON_CLASS} />
                     Telegram alerts
@@ -848,13 +877,15 @@ export function StablecoinDetailSeoContent({
                   API access
                 </IntentLink>
               </div>
-              {isActiveStablecoinMeta(coin) ? (
-                <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                  Alert command:{" "}
-                  <code className="rounded-sm bg-muted/60 px-1.5 py-0.5 font-mono text-2xs text-foreground">
-                    {alertCommand}
-                  </code>
-                </p>
+              {active ? (
+                alertCommand ? (
+                  <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                    Alert command:{" "}
+                    <code className="rounded-sm bg-muted/60 px-1.5 py-0.5 font-mono text-2xs text-foreground">
+                      {alertCommand}
+                    </code>
+                  </p>
+                ) : null
               ) : (
                 <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
                   This record preserves static and historical context; live actions are available only for active assets.

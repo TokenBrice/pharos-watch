@@ -131,6 +131,24 @@ describe("stablecoin markdown", () => {
     expect(md).not.toContain("{{grade}}");
   });
 
+  it("uses tokenized-fund framing and suppresses live Safety Score notices for active funds and frozen archives", () => {
+    for (const id of ["buidl-blackrock", "eutbl-spiko"] as const) {
+      const md = renderStablecoinDetail(id, { [id]: claimedSummary }, MARKDOWN_FIXTURE_RELEASE);
+      expect(md).toContain("Tokenized Fund Profile");
+      expect(md).toContain("Build-time tokenized fund profile");
+      expect(md).toContain("Tokenized fund — not a stablecoin; not Safety-graded");
+      expect(md).not.toContain("Stablecoin Analytics");
+      expect(md).not.toContain("Build-time stablecoin profile");
+      expect(md).not.toContain("The current Safety Score and live assessment are available on the interactive page.");
+      expect(md).not.toContain("{{grade}}");
+    }
+
+    const frozenMd = renderStablecoinDetail("fpi-frax", { "fpi-frax": claimedSummary }, MARKDOWN_FIXTURE_RELEASE);
+    expect(frozenMd).toContain("Stablecoin Analytics");
+    expect(frozenMd).toContain("frozen Pharos archive");
+    expect(frozenMd).not.toContain("The current Safety Score and live assessment are available on the interactive page.");
+  });
+
   it.each(["usdt-tether", "usdc-circle"] as const)("puts Quick answers and reviewed Sources before Contracts for %s", (id) => {
     vi.useFakeTimers({ toFake: ["Date"] });
     try {

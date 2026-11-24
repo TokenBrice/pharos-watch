@@ -41,6 +41,7 @@ import { usePortfolio } from "@/hooks/use-portfolio";
 import { useWatchlist } from "@/hooks/use-watchlist";
 import { formatRelativeAgeSeconds } from "@shared/lib/relative-time";
 import { formatCurrency, formatShortDate } from "@shared/lib/format";
+import { isBlacklistStablecoin } from "@shared/lib/blacklist";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { isClientTokenizedFundId } from "@shared/lib/stablecoins/aggregate-client-registry";
 import { buildStablecoinUrl } from "@shared/lib/urls";
@@ -280,23 +281,88 @@ function HeroPortfolioAction({
   );
 }
 
+interface HeroAlertRecommendation {
+  command: string;
+  description: string;
+  ariaLabel: string;
+}
+
+function resolveHeroAlertRecommendation({
+  coinId,
+  coinSymbol,
+  tokenizedFund,
+  navToken,
+  reserveDriftAlertEligible,
+}: {
+  coinId: string;
+  coinSymbol: string;
+  tokenizedFund: boolean;
+  navToken: boolean;
+  reserveDriftAlertEligible: boolean;
+}): HeroAlertRecommendation | null {
+  const types: Array<"dews" | "depeg" | "safety" | "reserve" | "freeze"> = [];
+  if (!navToken) {
+    types.push("dews", "depeg");
+  }
+  if (!tokenizedFund) {
+    types.push("safety");
+  }
+  if ((tokenizedFund || navToken) && reserveDriftAlertEligible) {
+    types.push("reserve");
+  }
+  if (types.length === 0 && isBlacklistStablecoin(coinSymbol.toUpperCase())) {
+    types.push("freeze");
+  }
+  if (types.length === 0) return null;
+
+  const key = types.join(",");
+  let description: string;
+  switch (key) {
+    case "dews,depeg,safety":
+      description = "Get DEWS stress, depeg, and safety grade changes directly in @PharosWatchBot.";
+      break;
+    case "dews,depeg,reserve":
+      description = "Get DEWS stress, depeg, and live reserve-mix drift alerts directly in @PharosWatchBot.";
+      break;
+    case "dews,depeg":
+      description = "Get DEWS stress and depeg alerts directly in @PharosWatchBot.";
+      break;
+    case "safety,reserve":
+      description = "Get safety grade and live reserve-mix drift alerts directly in @PharosWatchBot.";
+      break;
+    case "safety":
+      description = "Get safety grade changes directly in @PharosWatchBot.";
+      break;
+    case "reserve":
+      description = "Get live reserve-mix drift alerts directly in @PharosWatchBot.";
+      break;
+    default:
+      description = "Get issuer freeze and blacklist alerts directly in @PharosWatchBot.";
+      break;
+  }
+
+  return {
+    command: `/subscribe ${types.join(", ")} ${coinId}`,
+    description,
+    ariaLabel: types.includes("depeg")
+      ? `Alerts: get Telegram alerts for ${coinSymbol} depegs and risk changes`
+      : `Alerts: get Telegram alerts for ${coinSymbol} risk changes`,
+  };
+}
+
 function HeroAlertsAction({
   coinId,
   coinSymbol,
-  tokenizedFund = false,
-  navToken = false,
+  recommendation,
   triggerClassName,
 }: {
   coinId: string;
   coinSymbol: string;
-  tokenizedFund?: boolean;
-  navToken?: boolean;
+  recommendation: HeroAlertRecommendation;
   triggerClassName: string;
 }) {
   const [copied, setCopied] = useState(false);
-  const subscribeCommand = tokenizedFund
-    ? (navToken ? `/subscribe dews ${coinId}` : `/subscribe dews, depeg ${coinId}`)
-    : `/subscribe dews, depeg, safety ${coinId}`;
+  const subscribeCommand = recommendation.command;
   const deepLink = `https://t.me/PharosWatchBot?startapp=coin_${coinId}`;
 
   useEffect(() => {
@@ -316,7 +382,7 @@ function HeroAlertsAction({
         <button
           type="button"
           className={triggerClassName}
-          aria-label={`Alerts: get Telegram alerts for ${coinSymbol} depegs and risk changes`}
+          aria-label={recommendation.ariaLabel}
         >
           <Bell className="size-4 shrink-0" aria-hidden="true" />
           <span>Alerts</span>
@@ -326,9 +392,7 @@ function HeroAlertsAction({
         <div className="space-y-1">
           <p className="text-sm font-semibold text-foreground">Telegram alerts for {coinSymbol}</p>
           <p className="text-xs leading-relaxed text-muted-foreground">
-            {tokenizedFund
-              ? "Get DEWS stress and market alerts directly in @PharosWatchBot."
-              : "Get DEWS stress, depeg, and safety grade changes directly in @PharosWatchBot."}
+            {recommendation.description}
           </p>
         </div>
         <div className="flex items-center gap-1.5 rounded-md border border-border/60 bg-muted/40 p-2">
@@ -442,6 +506,16 @@ export function HeroIdentityHeader({
   const watched = hydrated && watchlist.has(coin.id);
   const activeCoin = isActiveStablecoinMeta(coin);
   const isTokenizedFund = activeCoin && isClientTokenizedFundId(coin.id);
+  const reserveDriftAlertEligible = "reserveDriftAlertEligible" in coin && coin.reserveDriftAlertEligible === true;
+  const alertRecommendation = activeCoin
+    ? resolveHeroAlertRecommendation({
+        coinId: coin.id,
+        coinSymbol: coin.symbol,
+        tokenizedFund: isTokenizedFund,
+        navToken: coin.flags.navToken === true,
+        reserveDriftAlertEligible,
+      })
+    : null;
   const showYieldWorkbench = hasStaticYieldWorkbench(coin);
   const verdictId = model.state || isHeroVerdictShown(verdict) ? `hero-verdict-${coin.id}` : null;
   const verdictLine = isTokenizedFund ? null : buildSafetyVerdictLine(reportCard);
@@ -539,12 +613,11 @@ export function HeroIdentityHeader({
           {activeCoin ? (
             <HeroPortfolioAction coinId={coin.id} coinSymbol={coin.symbol} triggerClassName={labelledActionClass} />
           ) : null}
-          {activeCoin ? (
+          {alertRecommendation ? (
             <HeroAlertsAction
               coinId={coin.id}
               coinSymbol={coin.symbol}
-              tokenizedFund={isTokenizedFund}
-              navToken={coin.flags.navToken === true}
+              recommendation={alertRecommendation}
               triggerClassName={labelledActionClass}
             />
           ) : null}
