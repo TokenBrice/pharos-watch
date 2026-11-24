@@ -45713,40 +45713,6 @@
       "rationale": "Re-read the GUSD hub, product page and help article on 2026-10-29. GUSD is quoted as a Gate-set fixed conversion ('1 GUSD = 1 USDT / 1 USDC / 1 USD1', value 'always pegged to 1 USDT/USDC') with daily reward distribution, not an accruing NAV. The reviewed surfaces publish no independently administered reserve NAV methodology, no valuation inputs or marks for the mixed Treasury/stablecoin basket, no publication cadence and no dated reserve-to-liability NAV reconciliation. The product page adds only Total Subscription and Est. APR. The navValuation datum is therefore unpublished rather than zero or fixed by an evidenced policy; the bounded-unknown disposition is re-based on 2026-10-29 primary observation."
     },
     {
-      "id": "rs049-gusd-gate-oracle-profile-20261029",
-      "assetId": "gusd-gate",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "economic-control:oracle",
-        "factorKey": null,
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "economic-control:oracle"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-29T19:15:00Z",
-      "reviewer": "Research sprint RS-049 (2026-10-29)",
-      "sourcesRefs": [
-        "source:db5e756ee205f79198a59edd",
-        "source:c20069259079354529832f10",
-        "source:e06382abba9516e5ec1c5d31",
-        "source:e9b1d9df298f2dacbf21b941"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:a17f704c7e0297963e73fcc9",
-        "surface:e5aa57331595fb918753b0ee",
-        "surface:b49769b86b65407e5875cec7",
-        "surface:e2a0d0d092af8b9666614a60",
-        "surface:9361dff889da024ddf9ccf3b",
-        "surface:30737124a021d220b8895d4f",
-        "surface:3b8b63df3d141e0a27a1ecfe",
-        "surface:3adefb52820d1d03e7886e5b",
-        "surface:04331fcf933eed5bb3e5ced6"
-      ],
-      "rationale": "Checked the GUSD hub, product page, help article, exchange proof-of-reserves page, the July 2026 transparency coverage and the Gate Chain/Gate Layer documentation index on 2026-10-29 for an oracle or pricing profile. Gate publishes only an issuer-set fixed conversion ('1 GUSD = 1 USDT / 1 USDC / 1 USD1'); its help article says the value is 'always pegged to 1 USDT/USDC'. No reviewed surface names a price feed, oracle vendor, index, fallback, staleness or deviation rule, or a privileged internal pricing policy even though GUSD is accepted as Unified Account and Crypto Loan collateral (the product markets it as 'Tradable, collateralizable'). The Gate Layer docs index advertises only 'Native LayerZero integration and ecosystem bridges'. A price-sensitive control therefore exists (collateral valuation plus the issuer conversion) but its feed/controller topology and valuation policy are undisclosed, so the oracle inventory — an issuer-publishable datum — remains unpublished. This is not a not-applicable determination and not a claim that no oracle exists."
-    },
-    {
       "id": "rs049-weusd-picwe-assurance-reconciliation-20261029",
       "assetId": "weusd-picwe",
       "scope": {
@@ -46160,70 +46126,6 @@
       "rationale": "The exact USDnr valuation authority and oracle/feed inventory is undisclosed. Nerona publishes a 1:1 wM conversion executed through a Uniswap V3 pool and an anti-manipulation NAV ceiling/floor for the staked vault, but names no feed, controller, deviation or staleness limit, publisher identity or fallback for either instrument; the M0 documentation that governs the backing describes only periodic validator-signed off-chain collateral attestation reported through the MinterGateway, with no feed inventory, threshold or fallback topology. No oracleless exemption is inferred from fixed-parity redemption."
     },
     {
-      "id": "rs063-apxusd-oracle-profile-20261029",
-      "assetId": "apxusd-apyx",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "economic-control:oracle",
-        "factorKey": null,
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "economic-control:oracle"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-29T19:18:00Z",
-      "reviewer": "RS-063 research sprint 2026-10-29",
-      "sourcesRefs": [
-        "source:2ae0b0f216b0aa258131164c",
-        "source:29719270d1fbb7980c3dca50",
-        "source:295ea5f3c8171e060c29110a",
-        "source:f003d4d1a1e6f311d8b18ddb"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:fdb79373fa24840898a2ac4e",
-        "surface:06462597a99b378919c46d69",
-        "surface:1c052df4919282521c2b2bd6",
-        "surface:5564cacb65d8d6e80a7fb3c4",
-        "surface:2cacac65b47116409280f592",
-        "surface:56cbc1fcff6e5d36ef0f16c7",
-        "surface:5fa1a1d86cb3f3c1f98fc8c4",
-        "surface:90b65a1857cc458cfad69a6e",
-        "surface:0bac8d2b97a50b7ccc109a89",
-        "surface:102f4969ef2a43f72962cbb7",
-        "surface:5026565bdae118cc033b1ca5",
-        "surface:eca3aee8351263233c5d0a93",
-        "surface:233406e289a3107cd4ce4944",
-        "surface:516b202a28af6d2fe67315ed",
-        "surface:d3174e6d7f783cfad6330bc8",
-        "surface:6773640520ce9e5db6835af8",
-        "surface:0917cbaa1e17ec5f98ade532",
-        "surface:017d257b3fadaaf0ea7358c9",
-        "surface:e3389ed038757d4e9e89bb26",
-        "surface:266bd8940f195bfa6a587981",
-        "surface:3b53a2fe3162047f5b6bd0bb",
-        "surface:e48fbc46df50cbddc813f151",
-        "surface:451f7312a0c9d03888a60cce",
-        "surface:839bc3a7e9f5173417666fdf",
-        "surface:9bfcaee7fd5a33d0a5f5cb5b",
-        "surface:c7c5e8aedaa26d0438410369",
-        "surface:dcb8bf2bed07219128a54b55",
-        "surface:a119cc9e07a1aaa3accd06c7",
-        "surface:8371b7d915f6a47b6f263b40",
-        "surface:ed7f4d38a0ac10ce54391de0",
-        "surface:9584870bc2ef10b40eacb654",
-        "surface:9bc858f79c261ff9afd19f8e",
-        "surface:922c667b3e1d7ae49942a14b",
-        "surface:d94b6e4dc7abb07d0b2c30a8",
-        "surface:5ee685a26872c96c409b2079",
-        "surface:9d48b1af65bbd18ca2af341c",
-        "surface:843a86465f125f36dfe665bc",
-        "surface:ff3d739bccf531447067789f",
-        "surface:b12077bfbbc8f71fe74f848e"
-      ],
-      "rationale": "The complete oracle economic-control review for apxUSD is not published. All 37 issuer documentation pages enumerated by https://docs.apyx.fi/llms.txt were retrieved on 2026-10-29; the only oracle reference in that corpus is the generic 'Oracle failure' bullet on the risk page, and no page names a feed provider, oracle deployment address, heartbeat, staleness or deviation bound, fallback path, liquidation dependency or price-sensitive branch census. The issuer's public repository does publish the internal-rate oracle it operates: ApxUSDRateOracle stores a 1e18 apxUSD:USDC rate written by a restricted AccessManager authority for Curve Stableswap-NG pools, and the family's ApyUSDRateOracle prices apyUSD from ERC-4626 convertToAssets multiplied by a restricted, bounded adjustment. That establishes a known top-level privileged-internal-pricing artefact, but the issuer's authoritative address table lists only the Curve apxUSD-USDC venue 0xE1B96555BbecA40E583BbB41a11C68Ca4706A414 and no oracle deployment address, authority identity, signer set or update policy. The review therefore stays bounded: the missing deployed-oracle identity, its authority and update policy, and the unreviewed applicability of apxUSD as collateral or quote asset in third-party deployments mean aggregate oracle applicability cannot be compiled. Do not convert the single internal rate into a not-applicable, oracleless or external-feed finding."
-    },
-    {
       "id": "rs-064-axcnh-anchorx-custody-continuity-20261029",
       "assetId": "axcnh-anchorx",
       "scope": {
@@ -46585,40 +46487,6 @@
         "surface:29b905fed91fb6b0c26b5145"
       ],
       "rationale": "SBC is issued across thirty named blockchains with an issuer-native LayerZero OFT rail, but the aggregate deployment-control inventory remains bounded by unpublished controller approval semantics. The reviewed issuer surfaces publish program-level token controls (denylist, freeze, clawback) and a generic threshold key-management posture, and the LayerZero announcement names DVNs only generically; no SBC surface publishes control identities, signer sets, thresholds, timelocks, cap semantics, economic-loss scope, complete peer inventory or remote administrator bindings. Existing pinned owner/ProxyAdmin/delegate observations are preserved unchanged, and no safe-authority, zero-incident or complete-execution-reach conclusion is inferred. Incident screening remains a separate IR-lane datum and is not claimed resolved here."
-    },
-    {
-      "id": "rs079-usdtb-ethena-oracle-20261029",
-      "assetId": "usdtb-ethena",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "economic-control:oracle",
-        "factorKey": null,
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "economic-control:oracle"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-29T19:24:46Z",
-      "reviewer": "OpenAI Codex research sprint 2026-10-29 (RS-079)",
-      "sourcesRefs": [
-        "source:5233f19a7506fd4aa9416c8b",
-        "source:6666717304026a27225e341f",
-        "source:81d4611b9f072df2afdc8543",
-        "source:1f2882224109e3abab17c805",
-        "source:2390ad4bf7c03a329db95e24"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:6954a396abb9f849ca116240",
-        "surface:8d8eefbf9d82d0d09ddf426f",
-        "surface:77fdfdbdacfeae8f4040ea34",
-        "surface:0931a8d76fe52bdc665f54f6",
-        "surface:04ba9a5ee2600a6bc10dc075",
-        "surface:b475ee2e97723fa28d104731",
-        "surface:44ec74a3fddb44a8ba7dc642",
-        "surface:83a540f8ff7add37f50f8881"
-      ],
-      "rationale": "USDtb's stabilization path is an issuer-operated mint/redeem against BUIDL reserve value administered through Anchorage Digital Bank, but the issuer corpus publishes no oracle or privileged-valuation profile: no feed inventory, controller, tier, staleness/fallback topology, override authority or feed-failure handling appears in the documentation index, introduction, transparency, mint-and-redeem, key-addresses, website terms or product pages. The reserve dashboard discloses only held assets. This entry records the researched documentary omission for the oracle inventory; no oracleless exemption and no internal-pricing tier are inferred from mint/redeem parity."
     },
     {
       "id": "rs-080-acrdx-anemoy-apollo-oracle-profile-20261029",
@@ -55724,68 +55592,6 @@
       "rationale": "The aggregate JTRSY deployment-control inventory remains bounded because the issuer publishes no controller roster for its deployments: the Anemoy fund page names only the chains that may hold fund shares (Ethereum, Base, Arbitrum, and more), and Centrifuge publishes protocol contract addresses (Hub, Spoke 0xEC3582fcDc34078a4B7a8c75a5a3AE46f48525aB, Root, Protocol Guardian, Ops Guardian, adapters) plus the Root/ProtocolGuardian/OpsGuardian administrative contract set without any fund-specific ward roster, signer set, approval threshold, timelock, remote-admin binding, cap semantics, claim-impairment scope or deployment-scoped incident disposition. Centrifuge's share-bridge guide additionally excludes Solana (centrifugeId 7) as a target network, so the catalogued Solana JTRSY deployment's issuance and transfer architecture is undocumented. Existing pinned ward observations (Root, BalanceSheet and Spoke wards = 1; Centrifuge 4-of-9 Safe via Root's ProtocolGuardian) are retained unchanged. This records documentary omission only: it asserts no safe-authority, zero-incident or complete-execution-reach conclusion, and it does not assert anything about the deployment-scoped materialSupplyShare datums, which remain a producer/attribution matter."
     },
     {
-      "id": "rs2-020-frxusd-oracle-profile-20261030",
-      "assetId": "frxusd-frax",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "economic-control:oracle",
-        "factorKey": null,
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "economic-control:oracle"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-30T11:03:11Z",
-      "reviewer": "RS2-020 research sprint 2026-10-30",
-      "sourcesRefs": [
-        "source:27b65f36054d68f3f3e28a52",
-        "source:0c42c7df8df5a572e70395e4",
-        "source:c80f8361e92d2190b9e0400c",
-        "source:e6bccc48b10c5d1f1d467a98",
-        "source:317a8b51cc60f1a41e9f9e70"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:81d9fa909ca9f860e6dab16e",
-        "surface:76a8bd51e78c41249a727afb",
-        "surface:89a1b23c14eb5daa4f6dcc08",
-        "surface:3922816693a45c90afa9ac56",
-        "surface:21e2e61a90a3040347d2a36b"
-      ],
-      "rationale": "Frax publishes the frxUSD stabilization mechanism but no oracle and liquidation profile for it. The current issuer pages document 1:1 enshrined-custodian mint/burn against $1.00 of cash-equivalent reserves, the delegated issuer role of Frax Inc, fixed 1:1 mint and redemption against USDC, USDB, BUIDL, USTB and WTGXX, and cross-chain OFT/mintable-adapter representations; separately, Frax lists third-party feeds available to Fraxtal dApps (API3, RedStone) and the per-pair oracles used by Fraxlend lending markets. None of these surfaces states which feed, if any, values frxUSD issuance or its reserve collateral, nor any valuation method, staleness or fallback policy, override authority, control reference or liquidation branch, and the third-party market feeds cannot be attributed to the issuer path. This entry records the researched documentary omission only: it does not assert that frxUSD is oracleless, does not convert the documented 1:1 parity into a reviewed not-applicable disposition, and leaves the compiled oracle gap open. The registry also flags an archetype-not-permitted queue/policy mismatch for this asset, which is routed to the v9 policy maintainer rather than resolved here."
-    },
-    {
-      "id": "rs2-020-frxusd-oracle-tier-20261030",
-      "assetId": "frxusd-frax",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "economic-control:oracle",
-        "factorKey": "tier",
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "tier"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-30T11:03:11Z",
-      "reviewer": "RS2-020 research sprint 2026-10-30",
-      "sourcesRefs": [
-        "source:27b65f36054d68f3f3e28a52",
-        "source:0c42c7df8df5a572e70395e4",
-        "source:c80f8361e92d2190b9e0400c",
-        "source:e6bccc48b10c5d1f1d467a98",
-        "source:317a8b51cc60f1a41e9f9e70"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:81d9fa909ca9f860e6dab16e",
-        "surface:76a8bd51e78c41249a727afb",
-        "surface:89a1b23c14eb5daa4f6dcc08",
-        "surface:3922816693a45c90afa9ac56",
-        "surface:21e2e61a90a3040347d2a36b"
-      ],
-      "rationale": "The frxUSD oracle tier cannot be established from published primary sources. Frax publishes the 1:1 enshrined-custodian mint/burn model, fixed 1:1 mint and redemption against USDC, USDB and tokenized Treasury funds, the frxUSD cross-chain architecture, third-party feed vendors available to Fraxtal dApps, and per-pair oracles used by Fraxlend markets, but no surface states which feed, if any, values frxUSD issuance or collateral, nor any staleness, fallback, override or liquidation branch, so no opacity or transparency tier is inferable. This records documentary omission only: no tier is inferred from the existence of third-party feeds and no oracleless exemption is claimed from the documented 1:1 parity. The compiled oracle profile and tier gaps stay open; the archetype-not-permitted policy binding is routed to the v9 policy maintainer."
-    },
-    {
       "id": "rs2021-syrupusdg-bridge-routes-20261030",
       "assetId": "syrupusdg-maple",
       "scope": {
@@ -55939,57 +55745,6 @@
         "surface:ff7e7cffef30fb33e04696fb"
       ],
       "rationale": "The asset-level deployment-control component aggregates the four syrupUSDG CCIP representations and the Ethereum canonical pool. The issuer publishes addresses, a Token Admin timelock label for Arbitrum and Ink, and nothing on signer sets, thresholds, human independence, key custody, upgrade or registry administration, while the provider directory publishes pool type and version only. Per-deployment materiality and incident state remain open in this shard, so the aggregate control identity cannot be certified from public evidence. This is researched non-disclosure of the aggregate deployment-control datum; it makes no safe-controller finding and leaves the compiled gap open."
-    },
-    {
-      "id": "rs2021-wsrusd-oracle-profile-20261030",
-      "assetId": "wsrusd-reservoir",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "economic-control:oracle",
-        "factorKey": null,
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "economic-control:oracle"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-30T11:10:00Z",
-      "reviewer": "RS2-021 research shard 2026-10-30 (ControlIdentity)",
-      "sourcesRefs": [
-        "source:a186d4da4f0fb9c85fca99ae",
-        "source:7740195a8c5fbfa2b676ca0b"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:1646c3bb70a16c9c7d8f414b",
-        "surface:1632f0a08d5af66324917f43",
-        "surface:c6e100a4397b3eee06c92354"
-      ],
-      "rationale": "wsrUSD is an ERC-4626 savings wrapper whose value accrues from a governance-set contract-internal rate; the issuer publishes the compounding formula and that the rate is set from the protocol balance sheet, but no oracle or feed census, no feed addresses, no heartbeat or staleness policy, no fallback or deviation circuit and no statement covering how integrated venues price the share. There is therefore no published oracle profile to read or verify. This records researched non-disclosure of the oracle topology; it does not assert that wsrUSD is oracle-independent, does not price any risk and leaves the oracle profile open."
-    },
-    {
-      "id": "rs2021-wsrusd-oracle-tier-20261030",
-      "assetId": "wsrusd-reservoir",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "economic-control:oracle",
-        "factorKey": "tier",
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "tier"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-30T11:10:00Z",
-      "reviewer": "RS2-021 research shard 2026-10-30 (ControlIdentity)",
-      "sourcesRefs": [
-        "source:a186d4da4f0fb9c85fca99ae",
-        "source:7740195a8c5fbfa2b676ca0b"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:1646c3bb70a16c9c7d8f414b",
-        "surface:1632f0a08d5af66324917f43"
-      ],
-      "rationale": "The oracle tier datum asks which price source class backs wsrUSD valuation. The issuer publishes only the contract-internal cumulative rate and that governance maintains it; it does not publish an external feed, a named oracle operator, a market-price path, or any comparison against a secondary market, so no tier can be established from issuer evidence. This is researched non-disclosure of the tier datum; no tier, quality class or scoring conclusion is asserted here."
     },
     {
       "id": "rs2021-wsrusd-ethereum-adapter-control-20261030",
@@ -65009,33 +64764,6 @@
       "rationale": "Neither liquidityHorizon nor finite maturityDaysMax is published for Apyx's Other (unclassified external reserve balance) slice (accountable:apyx:deployment:other; $4,368.84 at Accountable ts 1795104060170). Because Apyx's Accountable dashboard and documentation disclose no exhaustive constituent roster or contractual tenor bound for Other (and Wolf & Company attestations cover securities only), no maturityDaysMax or maturity-applicability exclusion can be established."
     },
     {
-      "id": "resv0-20261123-dllr-sovryn-reserve-composition",
-      "assetId": "dllr-sovryn",
-      "scope": {
-        "pillar": "backing",
-        "componentKey": "reserve-composition",
-        "factorKey": null,
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "reserve-composition"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-11-23T23:30:00Z",
-      "reviewer": "Night RESV curation pass 2026-11-23 (resv-0)",
-      "sourcesRefs": [
-        "source:43891b7bc550b6f453344e7e",
-        "source:e68393c752941f1c8e196d92"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:1931c230fb412dc93f66d3ab",
-        "surface:5eb4ed3946f8cdec21fdb89b",
-        "surface:e4ccfcdb30c3d70f0149ad9a",
-        "surface:4a57e1eda0a2f4d3ce2b4a39"
-      ],
-      "rationale": "At pinned Rootstock block 9437737 (2026-11-23T23:19:47Z), Sovryn ZUSD remains replaced by ZeroEmergencyHalt (0xe0e757e8...) and ZUSD.balanceOf(Mynt MassetManager) reverts with Zero: emergency shutdown, preventing a readable on-chain denominator against 633,670.56 DLLR supply (120,624.72 DOC readable). Sovryn forum recovery manifest (topic 3611, last posted 2026-11-10) and Mynt docs publish no current whole-book DLLR reserve composition or recoverable ZUSD valuation."
-    },
-    {
       "id": "night-20261123-dola-swanusd-lp-liquidity",
       "assetId": "dola-inverse-finance",
       "scope": {
@@ -68414,6 +68142,354 @@
         "surface:dfd011f5188d071a3fcf332c"
       ],
       "rationale": "The datum is the deployment-scoped incident disposition of the SLVon BNB Chain LayerZero route. Ondo publishes a portfolio-level incident narrative (its bridges stayed live through the March-April 2026 incidents, its multi-DVN configuration was unaffected by the Kelp DAO exploit, and it froze attacker funds after Drift) but no route-scoped incident register, no per-deployment incident state and no commitment that the SLVon BNB route was verified unaffected. The DeFiLlama hacks register contains no record naming Ondo or SLVon, which is absence of a reported event rather than a reviewed disposition; a negative-incident review bound to this route is the artifact that would establish the datum, and none exists. The incident state is therefore not disclosed at deployment scope."
+    },
+    {
+      "id": "xgld-unitas-collateral-redeem-exit-capacity-20261124",
+      "assetId": "xgld-unitas",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:5bb621ae-8cbb-4470-adcd-b42fb95f9e4d:redemption:xgld-unitas:collateral-redeem",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T08:35:00Z",
+      "reviewer": "Pharos 2026-11-24 day run (R1/F1, owner ruling 3 live re-verification)",
+      "sourcesRefs": [
+        "source:b463e4e38c9dc3effd7b726e",
+        "source:35817d3a558615e3e0e561c5"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:00f8f6efcd743fe321e1a808",
+        "surface:2b21e91058a7b0ebac3a3307",
+        "surface:c437effa4642e242b84f1bc4",
+        "surface:24b85e3ded8237ef1c6f57d2",
+        "surface:ac356d61605eb9b1369cff54",
+        "surface:5984aafb6c6032c80f624cdd",
+        "surface:999bea95a439e17acae2ae84",
+        "surface:62be4f000c86670846a1c434",
+        "surface:878f953e7bf6a499d8ffaa36",
+        "surface:1bf399e91d1cda41555442c1"
+      ],
+      "rationale": "No committed or immediately executable XAUt redemption capacity bound is publicly disclosed for Unitas XGLD. Per owner ruling 3, XGLD redemption is a 7-day queued off-chain OES + Bybit Stake & Borrow unwind (\"Strategy exposure is reduced as needed\" before \"XAUt is released through the Redemption Contract\"), not an atomic on-chain route. Live docs.unitas.so/overview/xgld.md (re-verified 2026-11-24) publishes only the BSC XGLD, BSC XAUt, and Base XGLD token addresses, and mainnet-program-and-address-index.md publishes Solana USDu-side program, Fund Vault (multisig), and Collateral Ops (Mint/Redeem executor) identities only — neither publishes an XGLD-specific Fund Vault or Redemption Contract address, any numeric collateral deployment limit, or any committed XAUt redemption liquidity buffer, and the platform Terms of Service (2026-08-27) cover USDu/sUSDu only and do not address XGLD."
+    },
+    {
+      "id": "r4-20261124-aa-falconx-mev-capital-exit-capacity",
+      "assetId": "aa-falconx-mev-capital",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:5bb621ae-8cbb-4470-adcd-b42fb95f9e4d:redemption:aa-falconx-mev-capital:stablecoin-redeem",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T10:15:00Z",
+      "reviewer": "Pharos 2026-11-24 day run (R4 lane, owner ruling 5)",
+      "sourcesRefs": [
+        "source:f60e591ba3e796888c2eaa7d",
+        "source:dd9b01f6dacb3601044054e1",
+        "source:07abf54fb5639c7a2d42859b"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:cef6f49d7f3b6c03161d9944",
+        "surface:ea6bce37b5cc58ade4928ce1",
+        "surface:844ef7e6a8e6f9a50ad7d220",
+        "surface:4d510f9c470593698951c861",
+        "surface:6a0393a08710251aba4d112c",
+        "surface:72cff9af98d304dcc7c7ab93",
+        "surface:bb7e2c000026f6b2bc161527",
+        "surface:24cb27c9b708f25391189063",
+        "surface:0a6d8280f24522679128b334",
+        "surface:32344f93dcfd49f7f144f272"
+      ],
+      "rationale": "No executable redemption capacity bound, funded liquidity buffer, or queue limit is published for the Ethereum AA_FalconXUSDC Pareto Credit Vault route. Current Pareto Credit Vaults documentation states that deposited USDC is transferred directly to the whitelisted borrower wallet for the lending cycle and that withdrawals are settled only when the borrower repays at the end of Cycle II (or within 72 hours under a conditional early-exit trigger when next-cycle rates fall by >=1% or per the non-public Credit Agreement). Pinned Ethereum state at block 26480780 confirms the IdleCDOEpochVariant minter proxy (0x433d5b175148da32ffe1e1a37a939e1b7e79be4d) holds 0 USDC against 130,047,227.01 AA_FalconXUSDC totalSupply, so executable capacity is not observable on-chain and depends on off-chain borrower repayment not bound by public terms."
+    },
+    {
+      "id": "r4-20261124-buidl-blackrock-exit-capacity",
+      "assetId": "buidl-blackrock",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:5bb621ae-8cbb-4470-adcd-b42fb95f9e4d:redemption:buidl-blackrock:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T08:45:00Z",
+      "reviewer": "Pharos 2026-11-24 day run (R4 lane, owner ruling 5)",
+      "sourcesRefs": [
+        "source:2f4f9aa826861d377cc7c852",
+        "source:d9703737a14af777556ac8da",
+        "source:4383dccf07df2e8f38fb0e0f"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:1c9739ca24eba01962ae465a",
+        "surface:666d07e1137670b73688eec3",
+        "surface:8a13ef8e479bbc0376017a59",
+        "surface:988432dfce05a25d2517cdeb",
+        "surface:2f341c6f6a373bfec411d92d",
+        "surface:0c71428b24c67b5cd7b70600",
+        "surface:f711af32e3b3f43a3135b6a4"
+      ],
+      "rationale": "No numeric same-notional executable redemption capacity, daily liquidity cap, or funded cash floor is publicly disclosed for the direct BlackRock BUIDL offchain-issuer USD fund redemption route. The Securitize BUIDL offering page and launch release describe daily business-day USD redemptions (8:00 AM to 3:00 PM ET transfer-agent cutoff for same-day settlement) for Qualified Purchasers ($5M launch initial minimum; $100k SEC Form D/A minimum), state that \"Any discussion of liquidity is purely speculative\", and defer binding fund terms to private offering documents. Neither the SEC Form D/A filing (signed 2026-07-23) nor Securitize Markets terms discloses a committed redemption capacity bound or queue depth; fund AUM is not executable route capacity."
+    },
+    {
+      "id": "r4-20261124-cadc-cad-coin-exit-capacity",
+      "assetId": "cadc-cad-coin",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:5bb621ae-8cbb-4470-adcd-b42fb95f9e4d:redemption:cadc-cad-coin:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T08:45:00Z",
+      "reviewer": "Pharos 2026-11-24 day run (R4 lane, owner ruling 5)",
+      "sourcesRefs": [
+        "source:edf6c088d638a43efac014c0",
+        "source:bc3a6925f8c2c3394fa8d2f7",
+        "source:8f49e1536c6e1a3b489c4eec"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:eaede0ca936d07672bf8e5bd",
+        "surface:1f03fac849ff21b8e2730c6f",
+        "surface:add2da782e431fa9a73d5251",
+        "surface:eb2627186c6639420415141b",
+        "surface:91db793889ab6bcadc46b50d",
+        "surface:5a4fecbe78f4633c9e580942",
+        "surface:900314db459487bfecc23c86",
+        "surface:aeb25ee7a55d422a71b91c4a",
+        "surface:117eee3fa4c60169a72e92ab",
+        "surface:ca1911cf4aea776e72e8a4c9",
+        "surface:df83ff84017901c6f66680e3"
+      ],
+      "rationale": "No numeric same-notional executable redemption capacity, daily payout limit, or funded liquidity floor is published for CADC. The Ontario Securities Commission decision (2026-10-22) and Loon Terms of Service (February 2026) establish 1:1 CAD redemption exclusively for onboarded Authorized Participants with Canadian bank accounts, note that there is no minimum or maximum issuance cap, and preserve suspension rights during forks, security incidents, or operational events without stating a redemption throughput ceiling or committed cash buffer. PayTrie's CADC FAQs (updated 2026-10-27) split rails at CAD 10,000 (Interac e-Transfer below CAD 10,000; wire transfer above CAD 10,000) and state that large OTC orders outside website maximums are handled by email without publishing the website maximums or aggregate daily redemption capacity."
+    },
+    {
+      "id": "r4-20261124-hlscope-hamilton-lane-exit-capacity",
+      "assetId": "hlscope-hamilton-lane",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:5bb621ae-8cbb-4470-adcd-b42fb95f9e4d:redemption:hlscope-hamilton-lane:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T08:45:00Z",
+      "reviewer": "Pharos 2026-11-24 day run (R4 lane, owner ruling 5)",
+      "sourcesRefs": [
+        "source:b935b83742358bd45418a9ba",
+        "source:a4e434fc7c730cba4e005167"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:8048df1b49940f3f0e74c948",
+        "surface:8def22c5d24fc73b5f9d1ce3",
+        "surface:001c925e6ab9702e471b077c",
+        "surface:96a0dc42c2c9e3cb05022259",
+        "surface:6dd52b93725cafd15448ed86",
+        "surface:3837e77fc951d352c5c5e6ad"
+      ],
+      "rationale": "No committed executable redemption capacity floor, current queue depth, or guaranteed payout allocation is published for HLSCOPE. The master fund Private Placement Memorandum (Hamilton Lane Senior Credit Opportunities Fund S.A. SICAV-RAIF, December 2025, p. 18) limits aggregate quarterly Net Redemptions to a 5% NAV Gate (deferring excess requests to the next quarter, waivable only in Board discretion); a redemption gate is an upper deferral ceiling rather than guaranteed funded liquidity. The Securitize HLSCOPE feeder offering page (rendered via r.jina.ai) further states that \"Full redemptions are not guaranteed and may be subject to delays due to market conditions or blockchain settlement mechanics\", and that the separate Ethereum RLUSD instant pool (\"up to 5% of the total AUM\") is \"available at GP discretion and may be disabled for any or no reason\"."
+    },
+    {
+      "id": "r4-20261124-inalpha-nest-exit-capacity",
+      "assetId": "inalpha-nest",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:5bb621ae-8cbb-4470-adcd-b42fb95f9e4d:redemption:inalpha-nest:queue-redeem",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T10:15:00Z",
+      "reviewer": "Pharos 2026-11-24 day run (R4 lane, owner ruling 5)",
+      "sourcesRefs": [
+        "source:32db3e1d66a85f93c4e718ae",
+        "source:552bf821a60957bc7f6661c0",
+        "source:3560dbb528d8f38700cb2ffb",
+        "source:53047364691a7563f3272ff4",
+        "source:f8192fb572505746422ca405"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:32adec4b35d58f4c56fc4566",
+        "surface:ef4a02556e308b3562d49bdf",
+        "surface:0d5be7a2036b8594c754da55",
+        "surface:ec404ddccb2b83d3758137b3",
+        "surface:480f2c69616bec7868c18e01",
+        "surface:68b4fab7ba3c1de88d54145b",
+        "surface:85049a2a6026ed8ac1557c00",
+        "surface:aef8959c14671b431bd32d29",
+        "surface:8a6e13ca74a6da93fbd962ab",
+        "surface:95fe04f47f65224ec55efbb1",
+        "surface:6c8f99d6f3215aec98be7e05",
+        "surface:613f0d9685e5efdbd4b74122",
+        "surface:f3d81f0001e93c4756cc936e",
+        "surface:2f955a6adb3f9024dddaddc2"
+      ],
+      "rationale": "No committed executable redemption capacity, Liquidity Schedule entry, or funded payout bound is published for legacy inALPHA (0x64ab176c545bb85eca75d53c3ffcb361deafb855, slug nest-alpha-lp-vault). While active Nest vaults listed in /v1/vaults (e.g., nest-alpha-vault) do publish a per-date Liquidity Schedule commitment (\"the total dollar value of redemptions Plume commits to fulfilling by then\"), the tracked legacy inALPHA vault is absent from Nest's 14-vault active /v1/vaults list, returns HTTP 404 (\"Liquidity schedule is not configured for vault 'nest-alpha-lp-vault'\") on /v1/vaults/nest-alpha-lp-vault/liquidity-schedule, and returns HTTP 400 (\"Vault 'nest-alpha-lp-vault' does not support Nest redemptions\") on /redemption-windows even when called with valid chainId and redemptionAsset parameters. General Nest documentation describes only a non-binding 3% to 10% target buffer for active vaults, states that \"Instant redemption availability is not guaranteed\", and makes queued settlement \"subject to available liquidity and the vault's operating schedule\", while /positions and /price confirm residual legacy state (1.979688 totalSupply, $1.89 NAV, $0.41 pUSD liquidAssets) with no published redemption commitment."
+    },
+    {
+      "id": "r4-20261124-m-m0-exit-capacity",
+      "assetId": "m-m0",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:5bb621ae-8cbb-4470-adcd-b42fb95f9e4d:redemption:m-m0:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T08:45:00Z",
+      "reviewer": "Pharos 2026-11-24 day run (R4 lane, owner ruling 5)",
+      "sourcesRefs": [
+        "source:3ae9131a545de2bdd28745bd",
+        "source:5b035e7e4e713cd257900ff6",
+        "source:c3b5c4cf8b46f59540cccb65"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:7f8ba77bf392738cb30cdc3e",
+        "surface:d227a73cb1f1102a542a9b95",
+        "surface:9bf511ba245d1ff15df18c34",
+        "surface:74c37050995307b1002d2b8b",
+        "surface:d281d97764f3923c9ff063c4",
+        "surface:840d616d51e6cdfd62b63069",
+        "surface:f2f6e2f849b274a743c3cd9e",
+        "surface:27e5204b918e6c03113a861d"
+      ],
+      "rationale": "No executable redemption capacity bound, daily liquidity cap, or funded cash floor is published for the direct institutional M (M0) offchain-issuer redemption route. M0's MinterGateway documentation confirms that on-chain burnM(minter, amount) only reduces a Minter's $M debt obligation while backing U.S. Treasury collateral is held off-chain in Minter SPVs; on-chain collateral attestations are reserve-backing telemetry rather than executable USD payout capacity. M0's Liquidity documentation states that primary-market direct redemption requires onboarding with an Issuer and that Onchain Orchestration relies on dynamic solver quotes without a published aggregate capacity floor. Minter One Ltd (MXON) Website Terms of Use (March 2026, Section 2) explicitly state that \"Any services provided by Minter One will be subject to separate written agreements entered into between Minter One and the relevant counterparty\" and publish no redemption capacity schedule."
+    },
+    {
+      "id": "r4-20261124-mre7yield-midas-exit-capacity",
+      "assetId": "mre7yield-midas",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:5bb621ae-8cbb-4470-adcd-b42fb95f9e4d:redemption:mre7yield-midas:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T08:45:00Z",
+      "reviewer": "Pharos 2026-11-24 day run (R4 lane, owner ruling 5)",
+      "sourcesRefs": [
+        "source:00613bcfc5ed95c97b837252",
+        "source:a1300f73c6574a33e6750413"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:f2a23a5df5c43dedd774de5d",
+        "surface:6a6e7b4d0de089dc0bb62e38",
+        "surface:0020641864ec6f3ef44ca230"
+      ],
+      "rationale": "No numeric same-notional executable redemption capacity, funded liquidity buffer, daily limit, or queue depth is published for Midas mRe7YIELD. The signed Final Terms (ISIN CH1423447536, Update 2025) state that the Redemption Amount is calculated \"on the basis of a hypothetical best-efforts liquidation of assets reflecting the number of shares of the Underlying that corresponds to the number of Tokens redeemed\", list Minimum Investment Amount USD 1.00 and Maximum Investment Amount n/a, and publish no committed payout allocation or funded redemption facility. The governing Base Prospectus (Update 2025) likewise publishes no guaranteed executable capacity bound for mRe7YIELD."
+    },
+    {
+      "id": "r4-20261124-mtbill-midas-exit-capacity",
+      "assetId": "mtbill-midas",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:5bb621ae-8cbb-4470-adcd-b42fb95f9e4d:redemption:mtbill-midas:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T08:45:00Z",
+      "reviewer": "Pharos 2026-11-24 day run (R4 lane, owner ruling 5)",
+      "sourcesRefs": [
+        "source:cef13ad44eade2626a37723c",
+        "source:81e6a57b7367ed2ef9ab1842"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:9fa457888368458fd6e6fef0",
+        "surface:a3c6a754e78e7642e918d774",
+        "surface:0020641864ec6f3ef44ca230"
+      ],
+      "rationale": "No committed executable redemption capacity floor, funded payout allocation, or current queue depth is published for the Midas mTBILL offchain-issuer redemption route. The signed Final Terms (dated 2026-07-14, Section 3) specify a 1-business-day Realisation Period, \"Minimum Investment Amount: not applicable\", \"Maximum Investment Amount: not applicable\", and \"Redemption Gates: 25% of the aggregate number of outstanding mTokens per settlement day\"; per the 2026 Base Prospectus, Redemption Gates cap redemptions per period with excess requests deferred rather than guaranteeing funded liquidity. The 2026 Base Prospectus further states that \"Instant redemption may be made available by the Issuer but is not guaranteed and depends on the availability of sufficient liquidity\" sourced from external liquidity arrangements. Consistent with the mHYPER precedent, neither the 25% upper gate nor unguaranteed instant capacity establishes executable standard-route capacity."
+    },
+    {
+      "id": "r4-20261124-tryb-bilira-exit-capacity",
+      "assetId": "tryb-bilira",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:5bb621ae-8cbb-4470-adcd-b42fb95f9e4d:redemption:tryb-bilira:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T08:45:00Z",
+      "reviewer": "Pharos 2026-11-24 day run (R4 lane, owner ruling 5)",
+      "sourcesRefs": [
+        "source:b51bc5efd2fd600c8339af5b",
+        "source:5ee832f573bb5adf683faeab"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:b6bacf9499cac4ca77fadd6a",
+        "surface:630768c7f10ec8e6f0f05959",
+        "surface:5813fcb16082ed3ac7980326",
+        "surface:1d8cfecedce785812066e49c"
+      ],
+      "rationale": "No numeric same-notional executable redemption capacity, daily TRYB throughput cap, or committed liquidity buffer floor is published by BiLira. The TRYB Terms of Use (last edited 2026-11-08, Sections 3.8, 3.13, 3.15-3.16) establish an eventual 1:1 TRY conversion right through the Platform alongside broad discretionary prohibition/blacklisting powers, and defer unaddressed operational terms to the Framework Agreement. The BiLira Framework Agreement provides that Turkish Lira withdrawal requests are processed on the same day \"subject to FAST transaction limits and cash balance remuneration rules\" without publishing a fixed numeric redemption capacity bound, daily aggregate limit, or funded payout commitment."
+    },
+    {
+      "id": "r4-20261124-usdk-kast-exit-capacity",
+      "assetId": "usdk-kast",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:5bb621ae-8cbb-4470-adcd-b42fb95f9e4d:redemption:usdk-kast:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T10:15:00Z",
+      "reviewer": "Pharos 2026-11-24 day run (R4 lane, owner ruling 5)",
+      "sourcesRefs": [
+        "source:80a15e1c2adf91d4ef32c32a",
+        "source:79df416c367a12ad0ff07653",
+        "source:29742cb440b8dfb1a3c947d9",
+        "source:ccbb5d8a7bca5678ca0a487a"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:01846247c7c41bdb81bcd45f",
+        "surface:a757a8e9d63fc67add5a1e9c",
+        "surface:c1b7f74bf4c5d4352d67853f",
+        "surface:2e44ac87fcb73d3518eeec5e",
+        "surface:250c3c9cf0f1ed6739b528e1",
+        "surface:2210a9b9f84ffcf28b1b1d59",
+        "surface:f62f7af559843df64dde413f",
+        "surface:c451294e16a0d42240d7917b",
+        "surface:9bf2b795c1372dff6c2ffc0c",
+        "surface:8d43adad69f437b04486d65f"
+      ],
+      "rationale": "No USDK-specific redemption terms, numeric executable capacity bound, or committed liquidity floor were found across KAST's published legal surfaces or KAST/M0 product documentation. https://docs.kast.finance/ redirects to KAST's legal index (https://www.kast.xyz/en/legal); the KAST Terms and Conditions of Service (effective 2026-07-07) never name USDK and define \"Acceptable Tokens\" as USDT and USDC only, and neither the KAST Asset Account Terms (last updated 2026-10-29), KAST USD Reserve Account Terms, nor KAST Risk Disclosure mentions USDK. The platform-wide clauses that do bear on virtual-asset movement and conversion through KAST — KAST ToS Balance Limits and Adjustments (discretionary minimum and maximum transfer/processing limits modifiable without prior notice), KAST ToS Crypto Swap Services (unilateral right to restrict or suspend Swap functionality at sole discretion), and KAST Asset Account Terms Sections 1.5 and 4.10 (governing Solana-based assets in the Asset Account, with discretionary supported-asset selection and in-app Convert min/max and frequency limits) — publish no numeric redemption capacity bound. KAST's launch release (2025-04-09), M0's KAST case study, and M0's Solana protocol docs confirm USDK is a Solana M0 extension whose m_ext/ext_swap unwrap path is permissioned (requiring whitelisted unwrappers) rather than a permissionless public on-chain exit, with no published numeric USDK redemption capacity floor."
     }
   ],
   "sourceObservations": [
@@ -103275,6 +103351,347 @@
         "excerpt": "\"symbol\":\"sfrxUSD\",\"chain\":\"celo\"",
         "assertion": "Live Mento Reserve API reports the Celo sfrxUSD position (6.3047% of collateral; 816,321.359743 sfrxUSD at Celo block 83575585) without disclosing a whole-position liquidity horizon or realization SLA."
       }
+    },
+    {
+      "id": "source:b463e4e38c9dc3effd7b726e",
+      "value": {
+        "url": "https://docs.unitas.so/overview/xgld.md",
+        "observedAt": "2026-11-24T08:31:00Z",
+        "datumAsOf": null,
+        "location": "XGLD — Yield Distribution, Redemption Flow & Risk Controls",
+        "excerpt": "1. XAUt is held by the XGLD Fund Vault 2. XAUt is mirrored for CEX execution through OES 3. USDT is borrowed against XAUt through BYBIT Stake & Borrow ... 3. Strategy exposure is reduced as needed 4. XAUt is released through the Redemption Contract ... Strategy deployment only occurs within defined collateral limits and can be reduced as market conditions change.",
+        "assertion": "XGLD redemption is a 7-day queued off-chain OES and Bybit Stake & Borrow unwind; live overview/xgld.md publishes only token addresses (BSC XGLD, BSC XAUt, Base XGLD) and discloses neither the XGLD Fund Vault address, the Redemption Contract address, numeric collateral limits, nor any committed XAUt redemption capacity buffer."
+      }
+    },
+    {
+      "id": "source:35817d3a558615e3e0e561c5",
+      "value": {
+        "url": "https://docs.unitas.so/mainnet-program-and-address-index.md",
+        "observedAt": "2026-11-24T08:31:00Z",
+        "datumAsOf": null,
+        "location": "Mainnet Program & Address Index",
+        "excerpt": "Core Programs: Guardian Program ... USDu Program ... sUSDu Program ... Vault Program",
+        "assertion": "Live Unitas Mainnet Program & Address Index publishes Solana USDu-side program, Fund Vault (multisig), and Collateral Ops (Mint/Redeem executor) identities only, and publishes no XGLD-specific Fund Vault or Redemption Contract address."
+      }
+    },
+    {
+      "id": "source:f60e591ba3e796888c2eaa7d",
+      "value": {
+        "url": "https://docs.pareto.credit/product/credit-vaults.md",
+        "observedAt": "2026-11-24T08:31:35Z",
+        "datumAsOf": null,
+        "location": "Credit Vaults — Flow of funds and Redeems",
+        "excerpt": "Assets deposited into a Credit Vault are sent directly to borrower wallets. ... At the end of Cycle II, the borrower repays interest and any requested withdrawals. Users who requested to exit can now claim their funds.",
+        "assertion": "Deposited USDC is lent out to the borrower during each cycle and withdrawals depend on off-chain borrower repayment at cycle end; no numeric redemption capacity floor or buffer is disclosed."
+      }
+    },
+    {
+      "id": "source:dd9b01f6dacb3601044054e1",
+      "value": {
+        "url": "https://docs.pareto.credit/product/users/lenders/guides/redeem.md",
+        "observedAt": "2026-11-24T08:31:35Z",
+        "datumAsOf": null,
+        "location": "Redeem — cycle buffer period, Queue contract, and Early exit",
+        "excerpt": "Users can withdraw during the cycle buffer period, i.e., the 6 to 24 hours between the end of the previous lending cycle and the start of the new one. ... At the end of the following cycle (Cycle II), the borrower repays interest and any requested withdrawals.",
+        "assertion": "The redeem guide describes cycle-buffer scheduling, the Queue contract, and conditional 72-hour early exit without publishing any guaranteed redemption capacity bound or funded reserve buffer."
+      }
+    },
+    {
+      "id": "source:07abf54fb5639c7a2d42859b",
+      "value": {
+        "url": "https://api-ethereum-mainnet.n.dwellir.com",
+        "observedAt": "2026-11-24T09:59:55Z",
+        "datumAsOf": "2026-11-23T22:19:47Z",
+        "location": "Ethereum block 26480780 (hash 0xeb2864c5a2ff50ed9640856fcc8f0ef98c2180b97b44178419636b4912f7f32e): AA_FalconXUSDC 0xc26a6fa2c37b38e549a4a1807543801db684f99c and IdleCDOEpochVariant proxy 0x433d5b175148da32ffe1e1a37a939e1b7e79be4d",
+        "excerpt": "AA_FalconX.minter()=0x433d5b175148da32ffe1e1a37a939e1b7e79be4d; AA_FalconX.totalSupply()=130047227011891439893840862; USDC.balanceOf(0x433d5b175148da32ffe1e1a37a939e1b7e79be4d)=0",
+        "assertion": "Pinned Ethereum state confirms AA_FalconXUSDC minter() is IdleCDOEpochVariant proxy 0x433d5b175148da32ffe1e1a37a939e1b7e79be4d with 130,047,227.01 AA_FalconXUSDC totalSupply and 0 idle USDC on-chain, establishing that executable redemption liquidity is off-chain borrower repayment rather than an on-chain measurable reserve."
+      }
+    },
+    {
+      "id": "source:2f4f9aa826861d377cc7c852",
+      "value": {
+        "url": "https://securitize.io/blackrock/buidl",
+        "observedAt": "2026-11-24T08:37:10Z",
+        "datumAsOf": null,
+        "location": "Daily USD Liquidity and Footnote (3) (rendered via r.jina.ai)",
+        "excerpt": "The ability to convert BUIDL into USD every business day settling. ... Requests for redemptions must be received in good order by the Transfer Agent between 8:00 AM and 3:00 PM ET on the applicable Redemption Date to achieve same-day settlement.",
+        "assertion": "The public BUIDL product page discloses daily business-day USD redemption cutoffs and private-placement disclaimers but publishes no numeric redemption capacity limit, daily cap, or funded cash floor."
+      }
+    },
+    {
+      "id": "source:d9703737a14af777556ac8da",
+      "value": {
+        "url": "https://securitize.io/learn/press/blackrock-launches-first-tokenized-fund-buidl-on-the-ethereum-network",
+        "observedAt": "2026-11-24T08:37:30Z",
+        "datumAsOf": "2026-10-22",
+        "location": "Fund terms and Disclosures (rendered via r.jina.ai)",
+        "excerpt": "The Fund will issue shares pursuant to Rule 506(c) under the Securities Act of 1933 and Section3(c)(7) of the Investment Company Act. The Fund's initial investment minimum is $5 million. ... Any discussion of liquidity is purely speculative. ... Offers to sell, or the solicitations of offers to buy any security can only be made to qualified investors through official offering documents",
+        "assertion": "The Securitize launch notice confirms Reg D 506(c) / 3(c)(7) private-placement status, explicitly disclaims liquidity assurances, and defers binding terms to non-public offering documents without publishing a redemption capacity bound."
+      }
+    },
+    {
+      "id": "source:4383dccf07df2e8f38fb0e0f",
+      "value": {
+        "url": "https://www.sec.gov/Archives/edgar/data/2013810/000201381026000002/primary_doc.xml",
+        "observedAt": "2026-11-24T08:34:10Z",
+        "datumAsOf": "2026-07-23",
+        "location": "SEC Form D/A for BlackRock USD Institutional Digital Liquidity Fund Ltd. (CIK 0002013810)",
+        "excerpt": "<minimumInvestmentAccepted>100000</minimumInvestmentAccepted> ... <totalOfferingAmount>Indefinite</totalOfferingAmount><totalAmountSold>5135523412</totalAmountSold>",
+        "assertion": "The SEC Form D/A filing reports indefinite offering size and $100,000 minimum investment but discloses no redemption capacity bound, daily cap, or liquidity buffer."
+      }
+    },
+    {
+      "id": "source:edf6c088d638a43efac014c0",
+      "value": {
+        "url": "https://www.osc.ca/en/securities-law/orders-rulings-decisions/cadc-reserve-trust-and-loon-payments-inc",
+        "observedAt": "2026-11-24T08:34:25Z",
+        "datumAsOf": "2026-10-22",
+        "location": "OSC Decision dated October 22, 2026 — CADC Reserve Trust and Loon Payments Inc., paras. 23-29",
+        "excerpt": "23. CADC Tokens will be issued and sold on a continuous basis and there is no minimum or maximum number of CADC Tokens that may be issued. ... 24(b) burning CADC Tokens redeemed by an Authorized Participant and withdrawing the Canadian dollars owed in connection with the redemption into the Reserve Account",
+        "assertion": "The OSC decision establishes Authorized Participant 1:1 CAD redemption against segregated reserves without publishing any numeric daily redemption capacity bound or throughput floor."
+      }
+    },
+    {
+      "id": "source:bc3a6925f8c2c3394fa8d2f7",
+      "value": {
+        "url": "https://loon.finance/terms-of-service",
+        "observedAt": "2026-11-24T08:43:20Z",
+        "datumAsOf": null,
+        "location": "Loon Terms of Service (Last Updated: February 2026) — CADC Services and Risk/Suspension clauses",
+        "excerpt": "Loon commits to redeem 1 CADC for 1 CAD, subject to these Terms, applicable law, and any fees where applicable. ... Redemptions may be suspended, which could restrict liquidity and adversely affect value.",
+        "assertion": "Loon's governing Authorized Participant Terms establish conditional 1:1 CAD redemption and explicit suspension rights without publishing any executable capacity bound or daily limit."
+      }
+    },
+    {
+      "id": "source:8f49e1536c6e1a3b489c4eec",
+      "value": {
+        "url": "https://faq.paytrie.com/help/can-i-mint-and-redeem-cadc-via-otc",
+        "observedAt": "2026-11-24T08:34:25Z",
+        "datumAsOf": "2026-10-27",
+        "location": "PayTrie CADC FAQs — Can I buy and sell CADC via OTC? (Last updated 27 Oct, 2026)",
+        "excerpt": "Yes, Paytrie has the ability to process large OTC orders outside of the maximum amounts available on the website. To request an OTC order, please send an email to otc@paytrie.com.",
+        "assertion": "PayTrie references unspecified website maximums and email-based OTC handling without publishing numeric daily redemption limits or funded liquidity capacity."
+      }
+    },
+    {
+      "id": "source:b935b83742358bd45418a9ba",
+      "value": {
+        "url": "https://www.hamiltonlane.com/getContentAsset/f266e02e-c9a9-42f7-a85a-4d5ece6100bf/dfc3d011-8f63-43f6-9ed8-4b444333a1d0/HL-SCOPE-SA-SICAV-RAIF-PPM-December-2025.pdf?language=en-US",
+        "observedAt": "2026-11-24T08:34:15Z",
+        "datumAsOf": "2025-12-01",
+        "location": "Hamilton Lane Senior Credit Opportunities Fund S.A. SICAV-RAIF PPM (December 2025), p. 18 — Redemptions, Generally & Gate, Other Circumstances",
+        "excerpt": "After the second anniversary of the Launch Date, aggregate Net Redemptions for all Shareholders will be limited per calendar quarter to 5% of the NAV of the Fund as of the end of the preceding quarter. The Board of Directors in its sole discretion may waive such restrictions (each a \"Gate\") either partially (by determining a higher percentage) or in its entirety, based on the AIFM's analysis of available liquidity.",
+        "assertion": "The governing master fund PPM establishes a 5% quarterly Net Redemption Gate that caps and defers redemptions rather than guaranteeing a funded payout floor or publishing current redemption queue depth."
+      }
+    },
+    {
+      "id": "source:a4e434fc7c730cba4e005167",
+      "value": {
+        "url": "https://securitize.io/primary-market/hl-scope",
+        "observedAt": "2026-11-24T08:37:33Z",
+        "datumAsOf": "2026-11-12",
+        "location": "Securitize HLSCOPE Fund Profile — Footnotes (6), (7), (10) and Two Ways To Redeem (rendered via r.jina.ai)",
+        "excerpt": "(7) Monthly redemptions are available during a monthly notice period with the fund. Full redemptions are not guaranteed and may be subject to delays due to market conditions or blockchain settlement mechanics. ... Utilizes a liquidity pool of up to 5% of the total AUM of the fund ... (10) Redemptions via a liquidity pool are available at GP discretion and may be disabled for any or no reason.",
+        "assertion": "The Securitize feeder product page confirms monthly redemptions are not guaranteed and the optional Ethereum RLUSD pool (up to 5% AUM) is discretionary and revocable without publishing committed executable capacity."
+      }
+    },
+    {
+      "id": "source:32db3e1d66a85f93c4e718ae",
+      "value": {
+        "url": "https://docs.nest.credit/llms.mdx/about/liquidity-and-redemptions",
+        "observedAt": "2026-11-24T08:33:05Z",
+        "datumAsOf": null,
+        "location": "Liquidity & Redemptions — Redemption Windows and Liquidity Management",
+        "excerpt": "The waiting period determines when a request becomes eligible for fulfillment, not when funds are guaranteed to arrive. Actual settlement remains subject to available liquidity and the vault's operating schedule. ... Vaults target keeping a liquidity buffer in the range of 3% - 10% of the vault NAV held in highly liquid assets (stablecoins / tbills) to facilitate redemptions.",
+        "assertion": "Nest docs describe only a non-binding 3%-10% target buffer across vaults and make actual queued settlement contingent on available liquidity rather than a guaranteed capacity floor."
+      }
+    },
+    {
+      "id": "source:552bf821a60957bc7f6661c0",
+      "value": {
+        "url": "https://docs.nest.credit/llms.mdx/about/vault-operations-and-valuation",
+        "observedAt": "2026-11-24T08:33:05Z",
+        "datumAsOf": null,
+        "location": "Vault Operations & Valuation — Instant Redemption",
+        "excerpt": "Instant redemption availability is not guaranteed. It depends on current vault liquidity, supported redemption assets, chain-specific balances, and vault configuration.",
+        "assertion": "Nest vault operations documentation explicitly disclaims guaranteed instant redemption capacity."
+      }
+    },
+    {
+      "id": "source:3560dbb528d8f38700cb2ffb",
+      "value": {
+        "url": "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/positions",
+        "observedAt": "2026-11-24T08:31:55Z",
+        "datumAsOf": null,
+        "location": "Nest Core API — nest-alpha-lp-vault positions (legacy 0x64ab176c545bb85eca75d53c3ffcb361deafb855)",
+        "excerpt": "{\"data\":{\"vaultAddress\":\"0x64ab176c545bb85eca75d53c3ffcb361deafb855\",\"positions\":{\"liquidAssets\":[{\"symbol\":\"USDC\",\"position\":{\"value\":0}},{\"symbol\":\"pUSD\",\"position\":{\"value\":0.410183}}]},\"supplyByChain\":{\"1\":{\"supply\":1.979688},\"98866\":{\"supply\":0}}}}",
+        "assertion": "Nest Core API confirms legacy inALPHA (0x64ab176c545bb85eca75d53c3ffcb361deafb855) has only 1.979688 residual shares and $0.410183 liquid pUSD and is absent from the active /v1/vaults list."
+      }
+    },
+    {
+      "id": "source:53047364691a7563f3272ff4",
+      "value": {
+        "url": "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/liquidity-schedule",
+        "observedAt": "2026-11-24T09:59:05Z",
+        "datumAsOf": null,
+        "location": "Nest Core API — GET /v1/vaults/nest-alpha-lp-vault/liquidity-schedule (HTTP 404)",
+        "excerpt": "{\"error\":\"Liquidity schedule is not configured for vault 'nest-alpha-lp-vault'\"}",
+        "assertion": "Unlike active Nest vaults (such as nest-alpha-vault, which returns HTTP 200 dated liquidityUsd commitments), legacy inALPHA has no configured Liquidity Schedule entry and is absent from Nest's active vault list."
+      }
+    },
+    {
+      "id": "source:f8192fb572505746422ca405",
+      "value": {
+        "url": "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/redemption-windows?chainId=1&redemptionAsset=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "observedAt": "2026-11-24T09:59:29Z",
+        "datumAsOf": null,
+        "location": "Nest Core API — GET /v1/vaults/nest-alpha-lp-vault/redemption-windows with valid Ethereum USDC parameters (HTTP 400)",
+        "excerpt": "{\"error\":\"Vault 'nest-alpha-lp-vault' does not support Nest redemptions\"}",
+        "assertion": "Nest Core API explicitly rejects redemption-window queries for legacy inALPHA (HTTP 400: vault does not support Nest redemptions; identical HTTP 400 body returned for Plume pUSD, and HTTP 400 parameter validation error without query params)."
+      }
+    },
+    {
+      "id": "source:3ae9131a545de2bdd28745bd",
+      "value": {
+        "url": "https://docs.m0.org/raw/protocol/minting-burning.md",
+        "observedAt": "2026-11-24T08:33:45Z",
+        "datumAsOf": null,
+        "location": "Minting & Burning (MinterGateway) — Burning $M and Collateral System",
+        "excerpt": "$M tokens can be burned to reduce a Minter's outstanding debt. ... $M is backed by offchain collateral, typically real-world assets like U.S. Treasury Bills held in Special Purpose Vehicles (SPVs).",
+        "assertion": "On-chain burnM() only decrements Minter debt without transferring USD/USDC on-chain; off-chain collateral backing does not provide an on-chain executable redemption capacity bound."
+      }
+    },
+    {
+      "id": "source:5b035e7e4e713cd257900ff6",
+      "value": {
+        "url": "https://docs.m0.org/raw/build/accessing-liquidity.md",
+        "observedAt": "2026-11-24T08:33:45Z",
+        "datumAsOf": null,
+        "location": "Liquidity — Primary Market Liquidity (Direct with Issuers) and Supported Routes",
+        "excerpt": "For large-scale minting/redeeming of your stablecoin extension directly against supported stablecoins or USD. This involves an onboarding process with the Issuer of the desired stablecoin. ... Check the API, not this page, before you build a route. Chain and asset coverage changes regularly.",
+        "assertion": "M0 liquidity documentation defers direct primary redemption to issuer onboarding and solver quotes without publishing any numeric redemption capacity floor or daily bound."
+      }
+    },
+    {
+      "id": "source:c3b5c4cf8b46f59540cccb65",
+      "value": {
+        "url": "https://www.mxon.co/terms-of-use",
+        "observedAt": "2026-11-24T08:32:10Z",
+        "datumAsOf": null,
+        "location": "Minter One Ltd Website Terms of Use (Last updated: March 2026), Section 2",
+        "excerpt": "Nothing on this Website constitutes an offer or solicitation to provide services, and no binding agreement is created by use of the Website or submission of the contact form. Any services provided by Minter One will be subject to separate written agreements entered into between Minter One and the relevant counterparty.",
+        "assertion": "MXON (Minter One) places all institutional issuance and redemption services under private bilateral agreements and discloses no public redemption capacity bound."
+      }
+    },
+    {
+      "id": "source:00613bcfc5ed95c97b837252",
+      "value": {
+        "url": "https://2732961456-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FsPjk0ggBxEJCCnVFFkDR%2Fuploads%2FYUqswmPoBMklqxjG6bwA%2FMidas_Final_Terms_mRE7YIELD_Update_2025.pdf?alt=media",
+        "observedAt": "2026-11-24T08:32:15Z",
+        "datumAsOf": null,
+        "location": "Midas Final Terms mRE7YIELD Update 2025 (ISIN CH1423447536) — Redemption Amount and Investment Limits",
+        "excerpt": "The Redemption Amount is calculated on the basis of a hypothetical best-efforts liquidation of assets reflecting the number of shares of the Underlying that corresponds to the number of Tokens redeemed by the Tokenholder. ... Minimum Investment Amount USD 1.00 Maximum Investment Amount n/a",
+        "assertion": "The governing mRe7YIELD Final Terms define best-efforts liquidation of underlying Re7 Liquidity Fund shares and publish no numeric redemption capacity bound, daily liquidity floor, or queue limit."
+      }
+    },
+    {
+      "id": "source:a1300f73c6574a33e6750413",
+      "value": {
+        "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FhkJf4UxNukH071S6e4GA%2FMidas_Prospectus_Update_2025%20(1).pdf?alt=media",
+        "observedAt": "2026-11-24T08:32:15Z",
+        "datumAsOf": null,
+        "location": "Midas Base Prospectus Update 2025 — Redemption Mechanics",
+        "excerpt": "Redemption Fees are all management fees and all fees hypothetically arising from a liquidation process.",
+        "assertion": "The governing 2025 Base Prospectus defines liquidation-based redemption without disclosing any committed executable USD capacity floor or funded liquidity buffer for mRe7YIELD."
+      }
+    },
+    {
+      "id": "source:cef13ad44eade2626a37723c",
+      "value": {
+        "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FUDquVH8yRhSxnVqxp0X4%2F20260714_mTBILL_FT_signed_final.pdf?alt=media&token=bf215cdc-f549-474d-8ca9-5a1810fabeb8",
+        "observedAt": "2026-11-24T08:32:20Z",
+        "datumAsOf": "2026-07-14",
+        "location": "mTBILL Signed Final Terms (2026-07-14), Section 3 — Subscription, Redemption",
+        "excerpt": "Maximum Investment Amount not applicable Minimum Investment Amount not applicable Realisation Period 1 Business Day Redemption Fees up to 0.05% Redemption Gates 25% of the aggregate number of outstanding mTokens per settlement day",
+        "assertion": "The signed mTBILL Final Terms disclose a 25% per settlement day Redemption Gate (upper cap) and no minimum/maximum investment amounts, but publish no funded executable capacity floor or queue depth."
+      }
+    },
+    {
+      "id": "source:81e6a57b7367ed2ef9ab1842",
+      "value": {
+        "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media&token=d80ceabb-07a6-4dc4-9020-70ec86b4f42f",
+        "observedAt": "2026-11-24T08:32:22Z",
+        "datumAsOf": null,
+        "location": "Midas Software GmbH Base Prospectus 2026 — Redemption Gates and Instant Redemption Capacity",
+        "excerpt": "Where specified, Redemption Gates may cap redemptions per period, with excess requests deferred. ... Instant redemption may be made available by the Issuer but is not guaranteed and depends on the availability of sufficient liquidity. ... The Issuer may source such capacity from external liquidity arrangements",
+        "assertion": "The 2026 Base Prospectus confirms Redemption Gates are deferral caps and that Instant Redemption Capacity is non-guaranteed and dependent on external liquidity availability."
+      }
+    },
+    {
+      "id": "source:b51bc5efd2fd600c8339af5b",
+      "value": {
+        "url": "https://www.bilira.co/en/legal-information/tryb-terms-of-use",
+        "observedAt": "2026-11-24T08:34:20Z",
+        "datumAsOf": "2026-11-08",
+        "location": "TRYB Terms of Use (Last edited: 2026-11-08), Sections 3.8, 3.13, and 3.16",
+        "excerpt": "3.8. The Company undertakes that you can always purchase: one (1) TRYB in exchange for one (1) TRY; and convert one (1) TRYB into one (1) TRY through the Platform. ... 3.13. The Company reserves and maintains the right, when it deems necessary, to prohibit: sending, receiving, transferring, swapping, purchasing, redeeming ... 3.16. in the absence of any specific provision in these Terms in relation to a specified situation, the provisions of the Framework Agreement shall apply.",
+        "assertion": "The TRYB Terms of Use establish an eventual 1:1 TRY conversion right and broad prohibition powers without publishing any numeric redemption capacity bound, daily cap, or funded buffer."
+      }
+    },
+    {
+      "id": "source:5ee832f573bb5adf683faeab",
+      "value": {
+        "url": "https://www.bilira.co/en/legal-information/framework-agreement",
+        "observedAt": "2026-11-24T08:43:20Z",
+        "datumAsOf": null,
+        "location": "BiLira Framework Agreement — Turkish Lira deposits and withdrawals",
+        "excerpt": "Turkish Lira withdrawal requests shall be processed on the same day, subject to FAST transaction limits and cash balance remuneration rules. ... The Platform shall not be liable for delays occurring outside its control in Turkish lira and crypto asset deposits and withdrawals.",
+        "assertion": "The Framework Agreement subjects TRY withdrawals to external FAST transaction limits and disclaims third-party delays without publishing a numeric TRYB redemption capacity floor or aggregate daily ceiling."
+      }
+    },
+    {
+      "id": "source:80a15e1c2adf91d4ef32c32a",
+      "value": {
+        "url": "https://www.kast.xyz/en/legal/terms-and-conditions-of-service",
+        "observedAt": "2026-11-24T08:34:22Z",
+        "datumAsOf": "2026-07-07",
+        "location": "KAST Terms and Conditions of Service (Effective Jul 7, 2026) — Wallet and Card Balance (Balance Limits and Adjustments), Crypto Swap Services, and Definitions (Acceptable Tokens)",
+        "excerpt": "Balance Limits and Adjustments: The Company or the Partners may set minimum and maximum limits on the amount of Virtual Assets that may be transferred or processed through the Platform for use in connection with the Services. These limits, as outlined on the Platform, may be modified at the Company's or Partners' discretion. ... Kast reserves the right to restrict or suspend Swap functionality for certain users, regions, or transactions at its sole discretion, including for compliance or risk management purposes.",
+        "assertion": "No USDK-specific redemption terms appear in KAST's Terms and Conditions of Service (which never name USDK and list only USDT and USDC as Acceptable Tokens); the platform-wide virtual-asset transfer and Swap clauses bearing on asset movement reserve unilateral discretionary limits and suspension rights without publishing any numeric capacity bound."
+      }
+    },
+    {
+      "id": "source:79df416c367a12ad0ff07653",
+      "value": {
+        "url": "https://www.kast.xyz/en/legal/kast-asset-account-terms",
+        "observedAt": "2026-11-24T10:00:54Z",
+        "datumAsOf": "2026-10-29",
+        "location": "KAST Asset Account Terms (Last Updated 29 October 2026) — Supported Solana-based Assets and Section 4.10 Limits",
+        "excerpt": "KAST may determine from time to time which Solana-based assets may be deposited, held, withdrawn, converted or otherwise used through the Asset Account. ... 4.10 Limits. KAST may apply minimum and maximum transaction amounts, frequency limits (including a limit on the number of Convert that may be submitted within a given period) and other limits to the Convert Feature, as disclosed in the App.",
+        "assertion": "KAST's Solana Asset Account Terms do not name USDK and publish no numeric withdrawal or conversion capacity bound, leaving supported Solana asset withdrawals and Convert limits to KAST's in-app discretion."
+      }
+    },
+    {
+      "id": "source:29742cb440b8dfb1a3c947d9",
+      "value": {
+        "url": "https://www.kast.xyz/en/newsroom/press-releases/kast-strengthens-its-banking-alternative-platform-with-its-own-stablecoins",
+        "observedAt": "2026-11-24T08:34:22Z",
+        "datumAsOf": "2025-04-09",
+        "location": "KAST Newsroom Press Release (Apr 9, 2025) — Launch of KAST stablecoins on Solana with M0",
+        "excerpt": "Both stablecoins will launch exclusively on the Solana blockchain in the coming months, in partnership with M^0",
+        "assertion": "KAST's stablecoin launch announcement and M0 build materials describe USDK as an M0-powered Solana payment stablecoin without publishing any numeric redemption capacity limit or funded liquidity commitment."
+      }
+    },
+    {
+      "id": "source:ccbb5d8a7bca5678ca0a487a",
+      "value": {
+        "url": "https://docs.m0.org/raw/protocol/solana.md",
+        "observedAt": "2026-11-24T10:00:54Z",
+        "datumAsOf": null,
+        "location": "M0 On Solana — Program Specifications: M Extension Framework (m_ext) and Swap Facility (ext_swap)",
+        "excerpt": "unwrap(amount): Convert extension to $M (requires whitelisted_unwrapper) ... Only whitelisted unwrappers can call unwrap directly",
+        "assertion": "M0's Solana protocol documentation confirms that extension unwrap back to $M via the M0 Solana framework is permissioned to whitelisted unwrappers rather than a permissionless public on-chain exit, and publishes no numeric USDK redemption capacity floor."
+      }
     }
   ],
   "searchedSurfaceObservations": [
@@ -118433,6 +118850,150 @@
     {
       "id": "surface:e4fa9f0e8e0140ccbdf749b2",
       "value": "https://api.github.com/orgs/hubbleprotocol/repos?per_page=30"
+    },
+    {
+      "id": "surface:bb7e2c000026f6b2bc161527",
+      "value": "https://docs.idle.finance/developers/yield-tranches/methods"
+    },
+    {
+      "id": "surface:24cb27c9b708f25391189063",
+      "value": "https://eth.blockscout.com/api/v2/smart-contracts/0xc26a6fa2c37b38e549a4a1807543801db684f99c"
+    },
+    {
+      "id": "surface:0a6d8280f24522679128b334",
+      "value": "https://eth.blockscout.com/api/v2/smart-contracts/0x433d5b175148da32ffe1e1a37a939e1b7e79be4d"
+    },
+    {
+      "id": "surface:0c71428b24c67b5cd7b70600",
+      "value": "https://www.sec.gov/Archives/edgar/data/2013810/000201381026000002/primary_doc.xml"
+    },
+    {
+      "id": "surface:eaede0ca936d07672bf8e5bd",
+      "value": "https://www.osc.ca/en/securities-law/orders-rulings-decisions/cadc-reserve-trust-and-loon-payments-inc"
+    },
+    {
+      "id": "surface:1f03fac849ff21b8e2730c6f",
+      "value": "https://loon.finance/"
+    },
+    {
+      "id": "surface:add2da782e431fa9a73d5251",
+      "value": "https://loon.finance/support-centre"
+    },
+    {
+      "id": "surface:eb2627186c6639420415141b",
+      "value": "https://loon.finance/cadc-partners"
+    },
+    {
+      "id": "surface:91db793889ab6bcadc46b50d",
+      "value": "https://loon.finance/terms-of-service"
+    },
+    {
+      "id": "surface:5a4fecbe78f4633c9e580942",
+      "value": "https://loon.finance/prospectus"
+    },
+    {
+      "id": "surface:900314db459487bfecc23c86",
+      "value": "https://faq.paytrie.com/en/help/cadc-faqs"
+    },
+    {
+      "id": "surface:aeb25ee7a55d422a71b91c4a",
+      "value": "https://faq.paytrie.com/help/can-i-mint-and-redeem-cadc-via-otc"
+    },
+    {
+      "id": "surface:117eee3fa4c60169a72e92ab",
+      "value": "https://faq.paytrie.com/help/what-are-the-fees-for-cadc"
+    },
+    {
+      "id": "surface:ca1911cf4aea776e72e8a4c9",
+      "value": "https://faq.paytrie.com/help/what-payment-methods-do-you-accept"
+    },
+    {
+      "id": "surface:df83ff84017901c6f66680e3",
+      "value": "https://paytrie.com/cadc"
+    },
+    {
+      "id": "surface:96a0dc42c2c9e3cb05022259",
+      "value": "https://www.hamiltonlane.com/en-us/archive/scope-row"
+    },
+    {
+      "id": "surface:480f2c69616bec7868c18e01",
+      "value": "https://docs.nest.credit/llms.mdx/security-and-compliance/terms-and-conditions"
+    },
+    {
+      "id": "surface:85049a2a6026ed8ac1557c00",
+      "value": "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/price"
+    },
+    {
+      "id": "surface:8a6e13ca74a6da93fbd962ab",
+      "value": "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/liquidity-schedule"
+    },
+    {
+      "id": "surface:95fe04f47f65224ec55efbb1",
+      "value": "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/redemption-windows"
+    },
+    {
+      "id": "surface:6c8f99d6f3215aec98be7e05",
+      "value": "https://api.nest.credit/v1/vaults"
+    },
+    {
+      "id": "surface:613f0d9685e5efdbd4b74122",
+      "value": "https://eth.blockscout.com/api/v2/smart-contracts/0x64ab176c545bb85eca75d53c3ffcb361deafb855"
+    },
+    {
+      "id": "surface:f3d81f0001e93c4756cc936e",
+      "value": "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/redemption-windows?chainId=1&redemptionAsset=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+    },
+    {
+      "id": "surface:2f955a6adb3f9024dddaddc2",
+      "value": "https://api.nest.credit/v1/vaults/nest-alpha-vault/liquidity-schedule"
+    },
+    {
+      "id": "surface:d227a73cb1f1102a542a9b95",
+      "value": "https://docs.m0.org/raw/build/accessing-liquidity.md"
+    },
+    {
+      "id": "surface:d281d97764f3923c9ff063c4",
+      "value": "https://docs.m0.org/raw/issuers/overview.md"
+    },
+    {
+      "id": "surface:840d616d51e6cdfd62b63069",
+      "value": "https://docs.m0.org/raw/protocol/roles.md"
+    },
+    {
+      "id": "surface:f2f6e2f849b274a743c3cd9e",
+      "value": "https://docs.m0.org/raw/api-reference/protocol/recipes/network-supply.md"
+    },
+    {
+      "id": "surface:9fa457888368458fd6e6fef0",
+      "value": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FUDquVH8yRhSxnVqxp0X4%2F20260714_mTBILL_FT_signed_final.pdf?alt=media&token=bf215cdc-f549-474d-8ca9-5a1810fabeb8"
+    },
+    {
+      "id": "surface:a3c6a754e78e7642e918d774",
+      "value": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media&token=d80ceabb-07a6-4dc4-9020-70ec86b4f42f"
+    },
+    {
+      "id": "surface:250c3c9cf0f1ed6739b528e1",
+      "value": "https://www.m0.org/blog/how-kast-builds-stablecoin-products-with-m0"
+    },
+    {
+      "id": "surface:2210a9b9f84ffcf28b1b1d59",
+      "value": "https://docs.m0.org/raw/protocol/solana.md"
+    },
+    {
+      "id": "surface:f62f7af559843df64dde413f",
+      "value": "https://www.kast.xyz/"
+    },
+    {
+      "id": "surface:c451294e16a0d42240d7917b",
+      "value": "https://docs.kast.finance/"
+    },
+    {
+      "id": "surface:9bf2b795c1372dff6c2ffc0c",
+      "value": "https://www.kast.xyz/en/legal/kast-asset-account-terms"
+    },
+    {
+      "id": "surface:8d43adad69f437b04486d65f",
+      "value": "https://www.kast.xyz/en/legal/kast-usd-reserve-account"
     }
   ]
 }

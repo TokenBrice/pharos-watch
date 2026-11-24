@@ -60,6 +60,45 @@
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
   },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "Canonical Ethereum wsrUSD is the non-upgradeable Savingcoin ERC-4626 wrapper (0xd3fd63209fa2d55b07a0f6db36c2f43900be3094) whose verified source prices share deposits and redemptions by compounding compoundFactorAccum with the MANAGER-controlled currentRate (RAY 1e27) via update(uint256 rate). At pinned Ethereum finalized block 26481778 (hash 0x06d88f294bbf91ddb2c3713946dec8335282fce343b93aa6ddc956405075824b, 2026-11-24T01:39:35Z), asset() returns rUSD 0x09d4214c03d01f49544c0448dbe3a27f768f2b34, currentRate is 1,847,694,885,981,350,000, compoundFactorAccum is 1,107,862,487,291,034,258,111,962,252, lastTimestamp is 1794329783, totalSupply is 85,433,092.321907 wsrUSD, totalAssets is 94,850,249.710119 rUSD, and convertToAssets(1e18) is 1.110228450501687822 rUSD. Pinned hasRole reads at the same block confirm MANAGER is held by Reservoir's 3-of-5 Safe 0x4E8a4894275780f571AaD53122e641D9f50Ff04f and DEFAULT_ADMIN_ROLE is held by EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602. This establishes a discretionary internal savings-rate setter with no external price feed or borrower-liquidation branch; parent rUSD reserve valuation and LayerZero bridge controls remain separate.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-11-24",
+      "reviewer": "Pharos R1 primary-source oracle review 2026-11-24 (owner ruling 1)",
+      "rationale": "Verified Savingcoin at Ethereum 0xd3fd63209fa2d55b07a0f6db36c2f43900be3094 computes share-to-rUSD conversion from MANAGER-controlled update(uint256) savings-rate compounding; this wrapper-local savings-rate authority governs share issuance and redemption with no borrower-collateral liquidation branches.",
+      "sources": [
+        {
+          "label": "Verified Ethereum wsrUSD Savingcoin source (update, totalAssets, convertToAssets, accessed 2026-11-24)",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094"
+        },
+        {
+          "label": "Reservoir srUSD and wsrUSD savings documentation (governance-set interest rate, accessed 2026-11-24)",
+          "url": "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd.md"
+        }
+      ]
+    },
+    "reviewedAt": "2026-11-24",
+    "reviewer": "Pharos R1 primary-source oracle review 2026-11-24 (owner ruling 1)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Verified Ethereum wsrUSD Savingcoin source (accessed 2026-11-24)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094"
+      },
+      {
+        "label": "Reservoir srUSD and wsrUSD savings documentation (accessed 2026-11-24)",
+        "url": "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd.md"
+      },
+      {
+        "label": "Pinned Ethereum finalized block 26481778 (hash 0x06d88f294bbf91ddb2c3713946dec8335282fce343b93aa6ddc956405075824b, 2026-11-24T01:39:35Z) wsrUSD Savingcoin state and role reads",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "wsrUSD has native Ethereum ERC-4626 issuance and 20 catalogued bridge representations. Rechecked 2026-10-05: all 18 remote EVM OFT runtimes remain equivalent to the verified direct OFT after compiler-identified immutable normalization. Their owner is Reservoir EOA 0xb7570e32... and EndpointV2 delegates are independently code-empty EOA 0xadc0e55b.... The correct Berachain EID 30362 reciprocates with Ethereum; Plume's Ethereum-side peer remains zero. Endpoint owners, message-library/DVN administration, Solana/Tempo bridge execution and generation-bound materiality are not exhaustively closed, so manual-review confidence and partial certificates remain.",

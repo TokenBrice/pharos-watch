@@ -40,6 +40,61 @@
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
   },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "frxUSD custodian mint and redemption contracts include an owner-settable issuer-pushed NAV/S oracle in the Ethereum USTB custodian alongside fixed 1:1 decimal-parity custodians for other reserves. At pinned Ethereum finalized block 26481778 (hash 0x06d88f294bbf91ddb2c3713946dec8335282fce343b93aa6ddc956405075824b, 2026-11-24T01:39:35Z), verified FrxUSDCustodianWithOracle (USTB custodian 0x5fbAa3A3B489199338fbD85F7E3D444dc0504F33, impl 0x7617E69d47C1c18E2E3bB0b470aa0fbBD45b57DA, mintCap 5,000,000, frxUSDMinted 0) converts shares and assets via an onlyOwner-settable custodianOracle (setCustodianOracle) pointing to verified SuperstateOracle 0xe4fa682f94610ccd170680cc3b045d77d9e528a8 (getCustodianOraclePrice 11,290,407 at 6 decimals, maximumOracleDelay 604,800 s / 7 days, pricePerShare 88,570) — an Ownable2Step contract where Superstate's owner pushes NAV/S checkpoints via addCheckpoint and extrapolates them forward (SuperstateOracle.latestRoundData() returns updatedAt = block.timestamp, so the custodian's maximumOracleDelay check cannot trigger against it and SuperstateOracle's own CHECKPOINT_EXPIRATION_PERIOD of 432,000 s / 5 days is the effective staleness bound). Meanwhile, verified Ethereum custodians for WTGXX (0x860Cc723935FC9A15fF8b1A94237a711DFeF7857, impl FrxUSDCustodianWithReceiver 0x4DB9c0e8893B565f7419cf3886062845a8CBc529, pricePerShare 1e18, frxUSDMinted 2,000,015), BUIDL (0xe827abf9f462ac4f147753d86bc5f91e186e4e9c, impl FrxUSDCustodian 0xBcCD08e2996a5c748E01FDE3FecA959dEe24276b, pricePerShare 1,000,000, frxUSDMinted 0), and USDC (0x4F95C5bA0C7c69FB2f9340E190cCeE890B3bd87c, impl FrxUSDCustodianUsdc 0x0A2D27A86a2eA07bcc34e457c65AECA7631c0f10, pricePerShare 1,000,000, frxUSDMinted 279,022,058.6198) convert at fixed 1:1 decimal parity. Because an issuer-pushed, owner-settable price oracle sits in the custodian mint/redemption path, frxUSD is classified as privileged internal pricing; no borrower-collateral liquidation engine exists.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-11-24",
+      "reviewer": "Pharos R1 primary-source oracle review 2026-11-24 (owner ruling 1)",
+      "rationale": "frxUSD custodian mint/redeem vaults convert collateral at top-level 1:1 decimal parity or through a single owner-settable, issuer-pushed SuperstateOracle NAV/S feed in the USTB custodian, with no borrower-owned CDP collateral markets or liquidation branches.",
+      "sources": [
+        {
+          "label": "Frax FrxUSDCustodian documentation (ERC-4626-style 1:1 mint/redeem custodian architecture, accessed 2026-11-24)",
+          "url": "https://docs.frax.com/fraxnet/contracts/frxUsdCustodians"
+        },
+        {
+          "label": "Verified Ethereum FrxUSDCustodianWithOracle implementation (setCustodianOracle, getCustodianOraclePrice, accessed 2026-11-24)",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7617E69d47C1c18E2E3bB0b470aa0fbBD45b57DA"
+        }
+      ]
+    },
+    "reviewedAt": "2026-11-24",
+    "reviewer": "Pharos R1 primary-source oracle review 2026-11-24 (owner ruling 1)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Frax FrxUSDCustodian documentation (accessed 2026-11-24)",
+        "url": "https://docs.frax.com/fraxnet/contracts/frxUsdCustodians"
+      },
+      {
+        "label": "Verified Ethereum FrxUSDCustodianWithOracle implementation (accessed 2026-11-24)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7617E69d47C1c18E2E3bB0b470aa0fbBD45b57DA"
+      },
+      {
+        "label": "Verified Ethereum SuperstateOracle source (Ownable2Step addCheckpoint NAV/S extrapolation, accessed 2026-11-24)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe4fa682f94610ccd170680cc3b045d77d9e528a8"
+      },
+      {
+        "label": "Verified Ethereum FrxUSDCustodian (BUIDL) implementation (accessed 2026-11-24)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xBcCD08e2996a5c748E01FDE3FecA959dEe24276b"
+      },
+      {
+        "label": "Verified Ethereum FrxUSDCustodianWithReceiver (WTGXX) implementation (accessed 2026-11-24)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4DB9c0e8893B565f7419cf3886062845a8CBc529"
+      },
+      {
+        "label": "Verified Ethereum FrxUSDCustodianUsdc implementation (accessed 2026-11-24)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0A2D27A86a2eA07bcc34e457c65AECA7631c0f10"
+      },
+      {
+        "label": "Pinned Ethereum finalized block 26481778 (hash 0x06d88f294bbf91ddb2c3713946dec8335282fce343b93aa6ddc956405075824b, 2026-11-24T01:39:35Z) frxUSD custodian oracle and conversion state reads",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "frxUSD has native issuance on Ethereum and Fraxtal, Fraxtal canonical-side lockbox and L2 bridge machinery, and established LayerZero/FraxZero OFT representations on other chains. The reviewed cross-chain routes depend on external messaging, endpoint configuration, peer/DVN/rate-limit settings, and lock/mint or burn/mint contracts outside issuer-native redemption, so Pharos scores the overall route as external lock/mint. The Tempo deployment is now reviewed as a FraxOFTMintableAdapterTIP20 bridge representation; the conflicting Tempo architecture-page status is retained as an evidence note rather than silently resolved.",

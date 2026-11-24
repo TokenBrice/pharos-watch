@@ -622,6 +622,63 @@
       }
     },
     {
+      "incidentId": "dllr-sovryn-2026-11-07-zusd-emergency-halt",
+      "assetId": "dllr-sovryn",
+      "domain": "operational",
+      "kind": "material-operational-outage",
+      "occurredAt": "2026-11-07",
+      "status": "active",
+      "scope": {
+        "kind": "root-claim"
+      },
+      "posture": {
+        "category": "reserve",
+        "blocker": "active-material-incident"
+      },
+      "reviewedAt": "2026-11-24",
+      "reviewer": "Day R5 Safety Score review 2026-11-24 (owner ruling 6)",
+      "primarySources": [
+        {
+          "label": "Sovryn mitigation and recovery manifest (November 9; published November 10): minting and redemption against DOC and ZUSD stopped under SIP-0097",
+          "url": "https://forum.sovryn.com/t/sovryn-mitigation-and-recovery-manifest/3611",
+          "publishedAt": "2026-11-10"
+        },
+        {
+          "label": "Rootstock Blockscout: verified ZeroEmergencyHalt implementation reverting every delegated ZUSD call",
+          "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0xe0E757E8fcf336658036202834aEE10ce03debDA",
+          "publishedAt": "2026-11-07"
+        },
+        {
+          "label": "Rootstock Blockscout: pinned block 9438812 (2026-11-24T08:30:27Z) confirming active ZeroEmergencyHalt, 80.965% nominal ZUSD share via slot 57, and reverting Mynt redemptions",
+          "url": "https://rootstock.blockscout.com/block/9438812",
+          "publishedAt": "2026-11-24"
+        },
+        {
+          "label": "Rootstock Blockscout: SIP-0097 ZUSD proxy ImplementationChanged transaction at block 9392592 (2026-11-07T20:05:28Z)",
+          "url": "https://rootstock.blockscout.com/tx/0x7a1c49ba842cc0c5ee7aac75a8adf60fbdd4958b6b16322b6826fc5e2d2119a1",
+          "publishedAt": "2026-11-07"
+        }
+      ],
+      "finding": "On 2026-11-07T20:05:28Z (Rootstock block 9392592, tx 0x7a1c49ba842cc0c5ee7aac75a8adf60fbdd4958b6b16322b6826fc5e2d2119a1), governance proposal SIP-0097 upgraded the ZUSD proxy (0xdb107fa69e33f05180a4c2ce9c2e7cb481645c2d) to ZeroEmergencyHalt (0xe0e757e8fcf336658036202834aee10ce03debda), causing every delegated ZUSD call including balanceOf to revert with \"Zero: emergency shutdown\". At pinned Rootstock block 9438812 (2026-11-24T08:30:27Z), ZUSD remains halted; ZUSD proxy storage slot 57 holds 513,076.565385379406493309 ZUSD for Mynt MassetManager (identical to pre-halt block 9392591) alongside 120,624.718465306245685181 DOC (exact sum 633,701.283850685652178490 matching DLLR.totalSupply() to 0 wei; 80.965% nominal ZUSD). Shared Mynt basket checks cause both redeem(DOC, 1e18) and redeem(ZUSD, 1e18) to revert with \"Zero: emergency shutdown\". This is an active reserve and conversion halt enacted via authorized governance containment, not a DLLR mint-key compromise or an established whole-token holder write-down; realizedHolderLossPct is intentionally omitted.",
+      "remediation": {
+        "state": "in-progress",
+        "lastVerifiedAt": "2026-11-24",
+        "summary": "At pinned Rootstock block 9438812 (2026-11-24T08:30:27Z), ZUSD.getImplementation() remains ZeroEmergencyHalt and both Mynt DOC and ZUSD redemption calls continue to revert. Sovryn's November 10 recovery manifest states containment and restoration conditions without a reopening date or reconciled ZUSD recovery valuation.",
+        "sources": [
+          {
+            "label": "Sovryn mitigation and recovery manifest (November 9; published November 10)",
+            "url": "https://forum.sovryn.com/t/sovryn-mitigation-and-recovery-manifest/3611",
+            "publishedAt": "2026-11-10"
+          },
+          {
+            "label": "Rootstock Blockscout: pinned block 9438812 (2026-11-24T08:30:27Z) re-verifying active ZeroEmergencyHalt",
+            "url": "https://rootstock.blockscout.com/block/9438812",
+            "publishedAt": "2026-11-24"
+          }
+        ]
+      }
+    },
+    {
       "incidentId": "eurc-circle-wanchain-cardano-2026-07-unauthorized-release",
       "assetId": "eurc-circle",
       "domain": "control",

@@ -496,7 +496,7 @@ describe("reviewed live unknown residuals", () => {
       { tokenSymbol, chain, tokenAddress, totalValueUsd: 40, category: "asset:owned:frax" },
     ] }, meta.id, meta.contracts);
     expect(slices[0]?.sourceKey).toBe(`frax-balance-sheet:${chain}:${tokenAddress}`);
-    const clockSec = Date.UTC(2026, 10, 20) / 1_000;
+    const clockSec = Date.UTC(2026, 10, 25) / 1_000; // after frax-frax oracleRisk review (2026-11-24)
     const reviewed = { ...meta, id: "alpha" };
     expect(buildReviewedReserveClassifications([historical], meta, clockSec)[0]?.trackedAssetDisposition).toBeUndefined();
     const { alpha, result } = compile([{ ...slices[0]!, pct: 40 }, historical], reviewed, clockSec);

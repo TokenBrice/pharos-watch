@@ -7210,7 +7210,7 @@
           "url": "https://wiki.sovryn.com/en/sovryn-dapp/sovryn-dollar"
         },
         {
-          "label": "Rootstock public RPC used for the journaled eth_call reads at block 9071724",
+          "label": "Rootstock public RPC used for pinned eth_call and eth_getStorageAt reads (block 9071724 historical; blocks 9392591 and 9438812 halt verification)",
           "url": "https://public-node.rsk.co"
         },
         {
@@ -7220,14 +7220,39 @@
         {
           "label": "Rootstock Blockscout: DLLR token 0xc1411567d2670e24d9c4daaa7cda95686e1250aa",
           "url": "https://rootstock.blockscout.com/token/0xc1411567d2670e24d9c4daaa7cda95686e1250aa"
+        },
+        {
+          "label": "Sovryn mitigation and recovery manifest (November 9; published November 10)",
+          "url": "https://forum.sovryn.com/t/sovryn-mitigation-and-recovery-manifest/3611"
+        },
+        {
+          "label": "Rootstock Blockscout: SIP-0097 ZUSD ImplementationChanged transaction (block 9392592, 2026-11-07T20:05:28Z)",
+          "url": "https://rootstock.blockscout.com/tx/0x7a1c49ba842cc0c5ee7aac75a8adf60fbdd4958b6b16322b6826fc5e2d2119a1"
+        },
+        {
+          "label": "Rootstock Blockscout: verified ZeroEmergencyHalt implementation 0xe0E757E8fcf336658036202834aEE10ce03debDA",
+          "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0xe0E757E8fcf336658036202834aEE10ce03debDA"
+        },
+        {
+          "label": "Rootstock Blockscout: ZUSD proxy 0xdb107fa69e33f05180a4c2ce9c2e7cb481645c2d",
+          "url": "https://rootstock.blockscout.com/address/0xdb107fa69e33f05180a4c2ce9c2e7cb481645c2d"
+        },
+        {
+          "label": "Rootstock Blockscout: pinned verification block 9438812 (2026-11-24T08:30:27Z)",
+          "url": "https://rootstock.blockscout.com/block/9438812"
         }
       ],
-      "notes": "Measured on-chain 2026-07-20 at Rootstock block 9071724 via cast eth_call against https://public-node.rsk.co (evidence: agents/tmp/mech3-parts/evidence/dllr-sovryn.json). DLLR totalSupply() = 1,817,239.921692042 and the Mynt MassetManager 0x5f7772...7582 held exactly 1,817,239.921692042 ZUSD and 0 DOC at the same block, so the aggregator's at-par internal backing is exactly 1:1 to the wei; this is the reported collateralizationRatio, an oracleless internal-accounting figure (Mynt values bAssets at par by design), not a market-value ratio. DLLR's Mynt layer is a 1:1 bAsset aggregator: the builder-portal documentation and verified mint-authority review establish that it mints and redeems DLLR only against deposited accepted bAssets (currently ZUSD and DOC), creates no borrower vaults, and runs no liquidation engine, so collateralizationParameters, liquidationMechanics, backstop, and branchIsolation are structurally not applicable at this layer; collateral and liquidation risk live in the upstream Sovryn Zero and Money On Chain protocols. Holders can redeem DLLR 1:1 for basket bAssets through the MassetManager, and the measured reserve equals supply exactly, supporting adequate structuralRedemption. shutdownAndBadDebt is limited: no wind-down, settlement, or recapitalization facility exists at the Mynt layer, so an upstream bAsset failure transmits to DLLR holders at par; Sovryn GovernorAlpha behind a 48-hour Timelock administers the accepted-bAsset basket. Not established: the upstream ZUSD/DOC collateral quality and mechanism state (reviewed under their own assets), the market value of the ZUSD backing relative to par, and any redemption-fee or suspension conditions beyond the documented 1:1 convert path.",
+      "notes": "Original 2026-07-20 structural review (block 9071724) preserved for the four not-applicable Mynt aggregator components (collateralizationParameters, liquidationMechanics, backstop, branchIsolation) and liquidationCapacityRatio. Component-level adverse update at pinned Rootstock block 9438812 (2026-11-24T08:30:27Z; hash 0x65673856d020dc3ca24024d3c1dd22826dfd03b5c2be07041040cdea31a753f4; evidence: agents/2026-11-23-unknowns-assessment/day/evidence/F4/dllr-sovryn/ via research:dwellir-rpc --provider alchemy and day/evidence/R5/dllr-sovryn/rootstock-pinned-9438812.json): on 2026-11-07T20:05:28Z (block 9392592, tx 0x7a1c49ba842cc0c5ee7aac75a8adf60fbdd4958b6b16322b6826fc5e2d2119a1), SIP-0097 upgraded the ZUSD proxy (0xdb107fa69e33f05180a4c2ce9c2e7cb481645c2d) to ZeroEmergencyHalt (0xe0e757e8fcf336658036202834aee10ce03debda), which reverts every delegated call with \"Zero: emergency shutdown\". At block 9438812, ZUSD.getImplementation() still returns ZeroEmergencyHalt, ZUSD.balanceOf(Mynt) reverts with \"Zero: emergency shutdown\", and both Mynt redeem(DOC, 1e18) and redeem(ZUSD, 1e18) calls revert with \"Zero: emergency shutdown\". Direct storage read of ZUSD _balances[Mynt] (slot 57) returns 513,076.565385379406493309 ZUSD — matching pre-halt block 9392591 ZUSD.balanceOf(Mynt) byte-for-byte — while DOC.balanceOf(Mynt) is 120,624.718465306245685181 DOC and DLLR.totalSupply() is 633,701.283850685652178490 DLLR (0 wei difference; nominal basket 80.965051% ZUSD, 19.034949% DOC). Because 80.97% of the nominal basket is contract-halted with no recoverable valuation or reopening date, collateralizationRatio is unavailable (superseding July's 1.0 internal-accounting ratio), shutdownAndBadDebt is failed (upstream bAsset halt propagated across the unisolated Mynt basket with no quarantine or settlement facility), and structuralRedemption is failed (all Mynt DOC and ZUSD conversion paths revert). No realized holder loss percentage is asserted.",
       "metrics": {
-        "collateralizationRatio": 1,
+        "collateralizationRatio": null,
         "liquidationCapacityRatio": null
       },
       "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "unavailable",
+          "rationale": "ZUSD (80.965% of nominal Mynt basket at Rootstock block 9438812 via proxy storage slot 57) is halted in ZeroEmergencyHalt and ZUSD.balanceOf(Mynt) reverts with Zero: emergency shutdown, so recoverable collateralization cannot be measured at par.",
+          "sourceUrl": "https://forum.sovryn.com/t/sovryn-mitigation-and-recovery-manifest/3611"
+        },
         "liquidationCapacityRatio": {
           "state": "not-applicable",
           "rationale": "The Mynt aggregator creates no borrower debt positions and runs no liquidation engine; minting and redemption are 1:1 conversions against accepted bAssets, so there is no debt-offset liquidation capacity to measure.",
@@ -7235,8 +7260,8 @@
         }
       },
       "analogousMetrics": {
-        "zusdShareOfBacking": 1,
-        "docShareOfBacking": 0
+        "zusdShareOfBacking": 0.809651,
+        "docShareOfBacking": 0.190349
       },
       "components": {
         "collateralizationParameters": {
@@ -7260,10 +7285,62 @@
           "sourceUrl": "https://build.sovryn.com/builder-portal/smart-contracts/mynt"
         },
         "shutdownAndBadDebt": {
-          "quality": "limited"
+          "applicability": "measured",
+          "quality": "failed",
+          "review": {
+            "reviewedAt": "2026-11-24T08:30:27Z",
+            "reviewer": "Day R5 Safety Score review 2026-11-24 (owner ruling 6)",
+            "rationale": "At pinned Rootstock block 9438812 (2026-11-24T08:30:27Z; hash 0x65673856d020dc3ca24024d3c1dd22826dfd03b5c2be07041040cdea31a753f4), ZUSD remains upgraded to ZeroEmergencyHalt (0xe0e757e8fcf336658036202834aee10ce03debda) from SIP-0097 (block 9392592, 2026-11-07T20:05:28Z). ZUSD accounts for 513,076.565385 of 633,701.283851 nominal Mynt basket units (80.965% via proxy storage slot 57, matching pre-halt block 9392591 byte-for-byte). Because Mynt lacks bAsset isolation, quarantine, or orderly wind-down/settlement mechanics, the upstream ZUSD emergency halt disables the entire Mynt aggregator — including the 120,624.718465 DOC leg — with no reopening date in Sovryn's recovery manifest. Graded failed, matching CDP shutdown precedents usdq-quill and msusd-metronome.",
+            "sources": [
+              {
+                "label": "Rootstock public RPC used for pinned eth_call and eth_getStorageAt reads (block 9071724 historical; blocks 9392591 and 9438812 halt verification)",
+                "url": "https://public-node.rsk.co"
+              },
+              {
+                "label": "Sovryn mitigation and recovery manifest (November 9; published November 10)",
+                "url": "https://forum.sovryn.com/t/sovryn-mitigation-and-recovery-manifest/3611"
+              },
+              {
+                "label": "Rootstock Blockscout: SIP-0097 ZUSD ImplementationChanged transaction (block 9392592, 2026-11-07T20:05:28Z)",
+                "url": "https://rootstock.blockscout.com/tx/0x7a1c49ba842cc0c5ee7aac75a8adf60fbdd4958b6b16322b6826fc5e2d2119a1"
+              },
+              {
+                "label": "Rootstock Blockscout: verified ZeroEmergencyHalt implementation 0xe0E757E8fcf336658036202834aEE10ce03debDA",
+                "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0xe0E757E8fcf336658036202834aEE10ce03debDA"
+              },
+              {
+                "label": "Rootstock Blockscout: pinned verification block 9438812 (2026-11-24T08:30:27Z)",
+                "url": "https://rootstock.blockscout.com/block/9438812"
+              }
+            ]
+          }
         },
         "structuralRedemption": {
-          "quality": "adequate"
+          "applicability": "measured",
+          "quality": "failed",
+          "review": {
+            "reviewedAt": "2026-11-24T08:30:27Z",
+            "reviewer": "Day R5 Safety Score review 2026-11-24 (owner ruling 6)",
+            "rationale": "At pinned Rootstock block 9438812 (2026-11-24T08:30:27Z; hash 0x65673856d020dc3ca24024d3c1dd22826dfd03b5c2be07041040cdea31a753f4), both Mynt MassetManager redemption paths — redeem(DOC, 1e18) and redeem(ZUSD, 1e18), called from DLLR holder BabelFish 0x1440d19436bEEaf8517896bffB957A88ec95a00F — revert with \"Zero: emergency shutdown\" because shared basket checks invoke halted ZUSD.balanceOf(Mynt). Sovryn's recovery manifest confirms minting and redemption against both DOC and ZUSD are stopped with no reopening date. Graded failed, matching CDP precedent msusd-metronome.",
+            "sources": [
+              {
+                "label": "Rootstock public RPC used for pinned eth_call and eth_getStorageAt reads (block 9071724 historical; blocks 9392591 and 9438812 halt verification)",
+                "url": "https://public-node.rsk.co"
+              },
+              {
+                "label": "Sovryn mitigation and recovery manifest (November 9; published November 10)",
+                "url": "https://forum.sovryn.com/t/sovryn-mitigation-and-recovery-manifest/3611"
+              },
+              {
+                "label": "Rootstock Blockscout: verified ZeroEmergencyHalt implementation 0xe0E757E8fcf336658036202834aEE10ce03debDA",
+                "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0xe0E757E8fcf336658036202834aEE10ce03debDA"
+              },
+              {
+                "label": "Rootstock Blockscout: pinned verification block 9438812 (2026-11-24T08:30:27Z)",
+                "url": "https://rootstock.blockscout.com/block/9438812"
+              }
+            ]
+          }
         }
       }
     },

@@ -64,6 +64,69 @@
     "reviewer": "FreezeWatch v4.5 self-leg review 2026-10-19",
     "reviewedAt": "2026-10-19"
   },
+  "oracleRisk": {
+    "tier": "single-source-or-laggy",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "Legacy FRAX on-chain mint/redeem valuation reads single-source external Chainlink price feeds without staleness, round-completeness, zero-price, or secondary-feed failover checks, alongside governance-set collateral constants. At pinned Ethereum block 26480400 (hash 0x4fa2811c26f7681db0c934cf425a6cb66ba4a8255cf891beab6f875f84e57cd2, 2026-11-23T21:03:23Z), verified FraxPoolV3 (0x2fe065e6ffef9ac95ab39e5042744d695f560729, owner 0xb1748c79709f4ba2dd82834b8c82d4a505003f27, timelock 0x8412ebf45bac1b340bbe8f318b928c466c4e39ca) reads single Chainlink proxies for FRAX/USD (0xb9e1e3a9feff48998e45fa90847ed4d467e8bcfd, aggregator 0x8f73090a7c58b8bdcc9a93cbb6816e5cc4f01e8c, getFRAXPrice 994,256; mint threshold 1,003,333, redeem threshold 993,333) and FXS/USD (0x6ebc52c8c1089be9eb3945c4350b68b8e4c2233f, aggregator 0xc1c54d09554cf65d74a289805c2731cf6ea57373, getFXSPrice 198,989) directly via unguarded latestRoundData() (discarding updatedAt, roundId, and answeredInRound; feeds replaceable via onlyByOwnGov setOracles()), while pricing its six registered collaterals (LUSD, sUSD, USDP, DAI, FEI, USDC) via governance-writable collateral_prices[] constants (each 1,000,000 = $1.00; setCollateralPrice is onlyByOwnGov). On FRAXStablecoin (0x853d955acef822db058eb8505911ed77f175b99e, global_collateral_ratio 945,000, collateral_ratio_paused true), eth_usd_consumer_address points to ChainlinkETHUSDPriceConsumer (0xba6c6eac41a24f9d39032513f66d738b3559f15a, unguarded latestRoundData() on 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419), frax_eth_oracle_address points to FRAXOracleWrapper (0x2a6ddd9401b14d0443d0738b8a78fd5b99829a80, onlyByOwnGov-replaceable Chainlink FRAX/ETH wrapper whose getFRAXPrice() reverts at block 26480400), and fxs_eth_oracle_address points to a single-pair Uniswap V2 TWAP (0x3b11da52030420c663d263ad4415a8a02e5f8cf8). Legacy FRAX has no borrower-collateral CDP liquidation engine.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-11-24",
+      "reviewer": "Pharos R1 primary-source oracle review 2026-11-24 (owner ruling 1)",
+      "rationale": "Legacy FRAX is classified under the tbill/protocol-reserve mechanism archetype and does not operate a borrower-owned CDP collateral or liquidation engine. On-chain price sensitivity sits at the top-level FraxPoolV3 / FRAXStablecoin single-source external Chainlink reference feeds (consumed without staleness or failover guards) alongside governance-set collateral_prices[].",
+      "sources": [
+        {
+          "label": "Verified Ethereum FraxPoolV3 source (collateral_prices, setCollateralPrice, setOracles, unguarded latestRoundData)",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2fe065e6ffef9ac95ab39e5042744d695f560729"
+        },
+        {
+          "label": "Verified Ethereum FRAXStablecoin source (oracle addresses and collateral ratio state)",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x853d955acef822db058eb8505911ed77f175b99e"
+        },
+        {
+          "label": "Frax balance sheet API",
+          "url": "https://api.frax.finance/v2/frax/balance-sheet/latest"
+        }
+      ]
+    },
+    "reviewedAt": "2026-11-24",
+    "reviewer": "Pharos R1 primary-source oracle review 2026-11-24 (owner ruling 1)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Verified Ethereum FRAXStablecoin source (Blockscout)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x853d955acef822db058eb8505911ed77f175b99e"
+      },
+      {
+        "label": "Verified Ethereum FraxPoolV3 source (Blockscout)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2fe065e6ffef9ac95ab39e5042744d695f560729"
+      },
+      {
+        "label": "Verified Ethereum ChainlinkETHUSDPriceConsumer source (Blockscout)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xba6c6eac41a24f9d39032513f66d738b3559f15a"
+      },
+      {
+        "label": "Verified Ethereum FRAXOracleWrapper source (Blockscout)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2a6ddd9401b14d0443d0738b8a78fd5b99829a80"
+      },
+      {
+        "label": "Verified Ethereum UniswapPairOracle_USDT_WETH source (Blockscout)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3b11da52030420c663d263ad4415a8a02e5f8cf8"
+      },
+      {
+        "label": "Chainlink FRAX/USD EACAggregatorProxy (Blockscout)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb9e1e3a9feff48998e45fa90847ed4d467e8bcfd"
+      },
+      {
+        "label": "Chainlink FXS/USD EACAggregatorProxy (Blockscout)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6ebc52c8c1089be9eb3945c4350b68b8e4c2233f"
+      },
+      {
+        "label": "Pinned Ethereum block 26480400 (hash 0x4fa2811c26f7681db0c934cf425a6cb66ba4a8255cf891beab6f875f84e57cd2, 2026-11-23T21:03:23Z) FRAX oracle state reads",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Legacy FRAX is Ethereum-native; its 13 tracked EVM CrossChainCanonical deployments are issuer-operated bridge representations administered by per-chain Frax controls. ZKsync Era's current owner/timelock is a 3-of-5 Safe, superseding the historical EOA observation; Polygon zkEVM retains a separate EOA timelock alongside its 3-of-5 owner Safe. Controls and historical Multichain/FraxFerry ingress remain scored under Bridge Risk. Fraxtal WFRAX is a distinct gas-token wrapper and is not a tracked FRAX route. Peripheral non-EVM routes are preserved: NEAR via Rainbow Bridge lock-mint, Osmosis via Axelar, and Solana via Wormhole.",

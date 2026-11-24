@@ -20,6 +20,45 @@
     "reviewer": "OpenAI Codex GUSD publication review",
     "reviewedAt": "2026-08-17"
   },
+  "oracleRisk": {
+    "tier": "oracleless",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "Gate GUSD is subscribed and redeemed against USDT, USDC, or USD1 on Gate with no price oracle or NAV feed in the issuer subscription/redemption path. Per Gate's product disclosure (https://miniapp.gate.com/gusd, accessed 2026-11-24), GUSD is a principal-protected RWA-backed yield product that quotes a fixed 1:1 conversion rate for the original subscription asset within Gate's unpublished per-currency quota (cross-asset or beyond-quota redemptions carry a redemption-time fee) while distributing daily yield in GUSD rather than adjusting a per-token conversion price through an oracle or NAV contract. Venue-level acceptance of GUSD as Gate Unified Account and Crypto Loan collateral (whose exchange-side collateral valuation policy is undisclosed) sits outside the issuer subscription/redemption path. At pinned Ethereum finalized block 26481778 (hash 0x06d88f294bbf91ddb2c3713946dec8335282fce343b93aa6ddc956405075824b, 2026-11-24T01:39:35Z), UUPS proxy 0xaf6186b3521b60e27396b5d23b48abc34bf585c5 resolves to implementation 0xc181faf98a90993bba78af4a9d5dde37d3dbadaf (totalSupply 320,000,000 GUSD at 6 decimals), an issuer-controlled ERC-20 with no published price feed or pricing contract; confidence remains probable because the implementation source is unverified on Blockscout/Sourcify.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-11-24",
+      "reviewer": "Pharos R1/F1 primary-source oracle review 2026-11-24 (owner ruling 1)",
+      "rationale": "Gate GUSD's issuer subscription and redemption path uses fixed 1:1 conversion for the original subscription asset within Gate's unpublished per-currency quota (with a redemption-time fee for cross-asset or beyond-quota exits) and distributes daily yield in additional GUSD rather than via an accruing NAV or price oracle; that issuer path has no borrower-owned collateral markets or liquidation branches. Venue-level use of GUSD as Gate Unified Account / Crypto Loan collateral (with undisclosed exchange-side collateral valuation) is out of scope of the issuer subscription/redemption path.",
+      "sources": [
+        {
+          "label": "Gate GUSD canonical product disclosure (1:1 subscription/redemption and daily yield distribution, accessed 2026-11-24)",
+          "url": "https://miniapp.gate.com/gusd"
+        },
+        {
+          "label": "Pinned Ethereum finalized block 26481778 (hash 0x06d88f294bbf91ddb2c3713946dec8335282fce343b93aa6ddc956405075824b, 2026-11-24T01:39:35Z) GUSD proxy implementation and supply read",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
+        }
+      ]
+    },
+    "reviewedAt": "2026-11-24",
+    "reviewer": "Pharos R1/F1 primary-source oracle review 2026-11-24 (owner ruling 1)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Gate GUSD canonical product disclosure (accessed 2026-11-24)",
+        "url": "https://miniapp.gate.com/gusd"
+      },
+      {
+        "label": "Ethereum Gate GUSD proxy metadata (accessed 2026-11-24)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xaf6186b3521b60e27396b5d23b48abc34bf585c5"
+      },
+      {
+        "label": "Pinned Ethereum finalized block 26481778 (hash 0x06d88f294bbf91ddb2c3713946dec8335282fce343b93aa6ddc956405075824b, 2026-11-24T01:39:35Z) GUSD proxy implementation and supply read",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "Ethereum GUSD is the issuer-native home token. The issuer-listed GateLayer deployment is a LayerZero OFT representation paired with an Ethereum OFTAdapter lockbox for that exact token. Reciprocal live peers and the Ethereum adapter's verified lock/release source establish the rail; GateLayer's generic network bridge being marked TBD is not evidence that this token-specific rail is absent. GateLayer implementation source, DVN configuration, and local privileged mint surfaces remain incompletely reviewed.",
