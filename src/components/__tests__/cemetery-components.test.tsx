@@ -89,6 +89,11 @@ describe("CemeteryCauses", () => {
     expect(peakLabel).toContain("Algorithmic Failure $1.1B (90%)");
     expect(peakLabel).toContain("Liquidity Drain no records");
     expect(peakLabel).toContain("Regulatory not recorded");
+
+    // Peak copy stays honest (size at peak, never holder loss or "failures" across discontinued causes).
+    const causesText = document.body.textContent ?? "";
+    expect(causesText).toContain("few large coins");
+    expect(causesText).not.toMatch(/few large failures|destroyed|wiped/i);
   });
 });
 
@@ -433,6 +438,7 @@ describe("CemeteryRegister", () => {
       });
 
       expect(host.querySelector("#register")?.hasAttribute("data-enhanced")).toBe(false);
+      expect(host.innerHTML).not.toContain("↗");
     });
 
     it("links tracked archive names to their profile in the static HTML, full and folded rows alike", () => {

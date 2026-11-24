@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { DataTableEmptyRow, DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
 import { TableCell, TableRow } from "@/components/table";
 import { useHydrated } from "@/hooks/use-hydrated";
@@ -14,6 +14,7 @@ import {
   type CemeteryRegisterSortKey,
 } from "@/lib/cemetery-selection";
 import { cn } from "@/lib/utils";
+import { CemeteryCauseGlyphDefs } from "./cemetery-cause-glyph";
 import { CemeterySectionHeader } from "./cemetery-section-header";
 import { useCemeterySelection, type CemeterySelectionHandler } from "./cemetery-selection-context";
 import {
@@ -84,6 +85,7 @@ export function CemeteryRegister({ rows, filterOptions }: CemeteryRegisterProps)
   const { searchParams, isReady, replaceParams } = useUrlFilters();
   const hydrated = useHydrated();
   const reducedMotion = usePrefersReducedMotion();
+  const glyphIdPrefix = `cemetery-register-glyph-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
 
   const [showAll, setShowAll] = useState(false);
   const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(() => new Set());
@@ -264,6 +266,7 @@ export function CemeteryRegister({ rows, filterOptions }: CemeteryRegisterProps)
       // trailing child margin would no longer collapse through it and would add space below the register.
       className={cn(styles.register, "flex min-w-0 flex-col gap-3")}
     >
+      <CemeteryCauseGlyphDefs idPrefix={glyphIdPrefix} />
       <CemeterySectionHeader
         id="register-heading"
         kicker="Autopsy register"
@@ -290,6 +293,7 @@ export function CemeteryRegister({ rows, filterOptions }: CemeteryRegisterProps)
             queryValue={queryValue}
             resultLine={resultLine}
             options={filterOptions}
+            glyphIdPrefix={glyphIdPrefix}
             onQueryChange={handleQueryChange}
             onCauseChange={(cause) => writeFilters({ ...filters, cause })}
             onFacetChange={(key, value) =>
@@ -301,7 +305,7 @@ export function CemeteryRegister({ rows, filterOptions }: CemeteryRegisterProps)
       >
         {view.map(({ row, folded }) =>
           folded && compactFolds ? (
-            <CemeteryRegisterFoldedRow key={row.id} row={row} columnCount={COLUMN_COUNT} />
+            <CemeteryRegisterFoldedRow key={row.id} row={row} columnCount={COLUMN_COUNT} glyphIdPrefix={glyphIdPrefix} />
           ) : (
             <CemeteryRegisterRowPair
               key={row.id}
@@ -311,6 +315,7 @@ export function CemeteryRegister({ rows, filterOptions }: CemeteryRegisterProps)
               expanded={expandedIds.has(row.id)}
               highlightClassName={highlight?.id === row.id ? highlightClassName : undefined}
               columnCount={COLUMN_COUNT}
+              glyphIdPrefix={glyphIdPrefix}
               onToggle={handleToggle}
               onShowOnField={handleShowOnField}
             />

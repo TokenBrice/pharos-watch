@@ -25,13 +25,13 @@ interface FactCell {
 
 /**
  * Hairlines between cells, by position among the visible cells: a 2 × 2 grid
- * below `md`, one row from `md`.
+ * below `lg`, one row from `lg`.
  */
 const CELL_POSITION_CLASSES = [
   "",
   "border-l",
-  "border-t md:border-t-0 md:border-l",
-  "border-l border-t md:border-t-0",
+  "border-t lg:border-t-0 lg:border-l",
+  "border-l border-t lg:border-t-0",
 ] as const;
 
 const NOT_RECORDED_VALUE = (
@@ -127,11 +127,11 @@ export function CemeteryKeyFacts({ stats, datasetMeta }: CemeteryKeyFactsProps) 
         Key facts
       </h2>
       <div className="pharos-card-shell overflow-hidden">
-        <dl className={cells.length === 4 ? "grid grid-cols-2 md:grid-cols-4" : "grid grid-cols-2 md:grid-cols-3"}>
+        <dl className={cells.length === 4 ? "grid grid-cols-2 lg:grid-cols-4" : "grid grid-cols-2 lg:grid-cols-3"}>
           {cells.map((cell, index) => (
             <div
               key={cell.key}
-              className={`${styles.fact} min-w-0 border-border/60 px-4 py-4 md:px-5 md:py-5 ${CELL_POSITION_CLASSES[index]} ${cells.length === 3 && index === 2 ? "col-span-2 md:col-span-1" : ""}`}
+              className={`${styles.fact} min-w-0 border-border/60 px-4 py-4 md:px-5 md:py-5 ${CELL_POSITION_CLASSES[index]} ${cells.length === 3 && index === 2 ? "col-span-2 lg:col-span-1" : ""}`}
             >
               <dt className="pharos-label">{cell.label}</dt>
               <dd className="pharos-numeric text-[1.35rem] font-semibold leading-tight text-foreground md:text-[1.75rem]">

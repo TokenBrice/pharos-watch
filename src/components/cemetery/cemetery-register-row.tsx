@@ -4,11 +4,11 @@ import { CAUSE_META } from "@shared/lib/cause-of-death";
 import { MECHANISM_ARCHETYPE_SHORT_LABELS } from "@shared/lib/classification";
 import { TableCell, TableRow } from "@/components/table";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import { causeColorVars } from "@/lib/cemetery-cause-style";
 import type { CemeteryRegisterRow } from "@/lib/cemetery-register";
 import { formatCemeteryPeak } from "@/lib/cemetery-stats";
 import { cn } from "@/lib/utils";
 import { isRowActivation } from "@/lib/row-activation";
+import { CemeteryCauseGlyphUse } from "./cemetery-cause-glyph";
 import { CemeteryRegisterAutopsy } from "./cemetery-register-autopsy";
 import { formatCemeteryPeg, formatRegisterDeathDate } from "./cemetery-register-model";
 import styles from "./cemetery-register.module.css";
@@ -33,6 +33,7 @@ export interface CemeteryRegisterRowPairProps {
   expanded: boolean;
   highlightClassName: string | undefined;
   columnCount: number;
+  glyphIdPrefix?: string;
   onToggle: (id: string, open: boolean) => void;
   onShowOnField: (id: string) => void;
 }
@@ -45,6 +46,7 @@ export const CemeteryRegisterRowPair = memo(function CemeteryRegisterRowPair({
   expanded,
   highlightClassName,
   columnCount,
+  glyphIdPrefix,
   onToggle,
   onShowOnField,
 }: CemeteryRegisterRowPairProps) {
@@ -73,8 +75,6 @@ export const CemeteryRegisterRowPair = memo(function CemeteryRegisterRowPair({
         // "static" drops the shared hover accent (brand frost), which never appears below the cemetery hero;
         // the primitive's neutral hover background remains.
         rowIntent="static"
-        // The cause marks in this row read their colour from these custom properties.
-        style={causeColorVars(row.cause)}
         className={cn("cursor-pointer", expanded && "border-b-0 bg-muted/30 hover:bg-muted/30", highlightClassName)}
       >
         <TableCell className="w-full max-w-0 px-2 py-2.5 sm:px-3">
@@ -106,15 +106,15 @@ export const CemeteryRegisterRowPair = memo(function CemeteryRegisterRowPair({
                 )}
               </div>
               <div className={styles.mobileCause}>
-                <span aria-hidden="true" className={styles.dot} />
+                <CemeteryCauseGlyphUse cause={row.cause} idPrefix={glyphIdPrefix} size="xs" />
                 <span className="min-w-0 truncate">{causeLabel}</span>
               </div>
             </div>
           </div>
         </TableCell>
         <TableCell className="hidden md:table-cell">
-          <span className="inline-flex items-center gap-1.5">
-            <span aria-hidden="true" className={styles.dot} />
+          <span className="inline-flex items-center gap-1.5 align-middle">
+            <CemeteryCauseGlyphUse cause={row.cause} idPrefix={glyphIdPrefix} size="sm" />
             {causeLabel}
           </span>
         </TableCell>
@@ -167,7 +167,7 @@ export const CemeteryRegisterRowPair = memo(function CemeteryRegisterRowPair({
         className="bg-muted/30 hover:bg-muted/30"
       >
         <TableCell colSpan={columnCount} className="whitespace-normal p-0">
-          <CemeteryRegisterAutopsy row={row} expanded={expanded} onShowOnField={onShowOnField} />
+          <CemeteryRegisterAutopsy row={row} expanded={expanded} glyphIdPrefix={glyphIdPrefix} onShowOnField={onShowOnField} />
         </TableCell>
       </TableRow>
     </>
@@ -180,9 +180,17 @@ export const CemeteryRegisterRowPair = memo(function CemeteryRegisterRowPair({
  * CSS unless it is the `:target`, it carries everything a `#<id>` link needs
  * without JS. Any interaction that unfolds rows swaps in the full row pair.
  */
-export function CemeteryRegisterFoldedRow({ row, columnCount }: { row: CemeteryRegisterRow; columnCount: number }) {
+export function CemeteryRegisterFoldedRow({
+  row,
+  columnCount,
+  glyphIdPrefix,
+}: {
+  row: CemeteryRegisterRow;
+  columnCount: number;
+  glyphIdPrefix?: string;
+}) {
   return (
-    <TableRow id={row.id} data-folded="" rowIntent="static" style={causeColorVars(row.cause)}>
+    <TableRow id={row.id} data-folded="" rowIntent="static">
       <TableCell colSpan={columnCount} className={cn(styles.folded, "whitespace-normal px-4 py-3")}>
         {/* Template strings keep each run one text node (no React `<!-- -->` separators in the HTML). */}
         <p>
@@ -198,14 +206,13 @@ export function CemeteryRegisterFoldedRow({ row, columnCount }: { row: CemeteryR
           ) : (
             ` ${row.name} · `
           )}
-          <span aria-hidden="true" className={styles.dot} />
+          <CemeteryCauseGlyphUse cause={row.cause} idPrefix={glyphIdPrefix} size="xs" className={styles.foldedGlyph} />
           {`${CAUSE_META[row.cause].label} · ${formatRegisterDeathDate(row.deathDate)}`}
         </p>
         {row.epitaph ? <p className={styles.foldedEpitaph}>{row.epitaph}</p> : null}
         <p className={styles.obituary}>{row.obituary}</p>
-        <a href={row.sourceUrl} target="_blank" rel="noopener noreferrer" className="pharos-prose-link">
+        <a href={row.sourceUrl} target="_blank" rel="noopener noreferrer" className={cn("pharos-prose-link", styles.externalLink)}>
           {`Source: ${row.sourceLabel}`}
-          <span aria-hidden="true">&nbsp;↗</span>
           <span className="sr-only"> (opens in a new tab)</span>
         </a>
       </TableCell>

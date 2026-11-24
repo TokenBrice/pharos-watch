@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { formatUtcDayLabel } from "@shared/lib/format";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { CemeteryDatasetCopyCitation } from "@/components/cemetery/cemetery-dataset-copy";
@@ -13,7 +13,7 @@ const TELEGRAM_CHANNEL_URL = "https://t.me/pharoswatch";
 /** Cemetery event class on the Timeline, all time (the Timeline defaults to 7 days). */
 const TIMELINE_CEMETERY_HREF = "/timeline/?type=cemetery.*&window=alltime";
 
-const LINK_BUTTON_CLASS = buttonVariants({ variant: "outline", size: "sm", className: "pharos-focus-ring" });
+const LINK_BUTTON_CLASS = buttonVariants({ variant: "outline", size: "sm", className: "pharos-focus-ring min-h-11 sm:min-h-8" });
 
 /** `updatedAt` is the latest record's `recordedAt`: when a record was last added, not a last-edit time. */
 function formatLatestRecordAdded(date: string): string {
@@ -62,7 +62,16 @@ export function CemeteryDataset() {
         <div className="grid lg:grid-cols-2">
           <div className="min-w-0 space-y-3 px-4 py-4 md:px-5 md:py-5">
             <p className="pharos-numeric text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-              {facts.join(" · ")} · source checksum <span className="normal-case">{meta.sourceChecksumShort}</span>
+              {/* Each fact stays on one line; a wrap falls only after a separator. */}
+              {facts.map((part) => (
+                <Fragment key={part}>
+                  <span className="whitespace-nowrap">{part}</span>
+                  {"\u00a0· "}
+                </Fragment>
+              ))}
+              <span className="whitespace-nowrap">
+                source checksum <span className="normal-case">{meta.sourceChecksumShort}</span>
+              </span>
             </p>
             <div className="flex flex-wrap gap-2">
               <DatasetLink href={meta.jsonUrl}>JSON</DatasetLink>

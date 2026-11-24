@@ -8,6 +8,7 @@ import { CemeteryHero } from "@/components/cemetery/cemetery-hero";
 import { CemeteryKeyFacts } from "@/components/cemetery/cemetery-key-facts";
 import { CemeteryRegister } from "@/components/cemetery/cemetery-register";
 import { CemeterySelectionProvider } from "@/components/cemetery/cemetery-selection-context";
+import belowFoldStyles from "@/components/cemetery/cemetery-below-fold.module.css";
 import { getPortraitAspectRatio } from "@/components/cemetery/plot-map-portrait-aspect";
 import { FaqSection } from "@/components/faq-section";
 import { JsonLdScript } from "@/components/json-ld-script";
@@ -18,6 +19,7 @@ import atlasManifest from "@/lib/cemetery-logo-atlas.generated.json";
 import { toPlotLogoAtlas } from "@/lib/cemetery-plot-map-input";
 import { buildCemeteryRegisterRows, buildRegisterFilterOptions } from "@/lib/cemetery-register";
 import { buildCemeteryFaq, buildCemeteryStats } from "@/lib/cemetery-stats";
+import { digestDisplay } from "@/lib/fonts/digest";
 import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { sortCemeteryCoins } from "@shared/lib/cemetery";
@@ -49,7 +51,7 @@ export default function CemeteryPage() {
   const schemaCoins = sortCemeteryCoins(CEMETERY_ENTRIES, "newest");
 
   return (
-    <div className="space-y-6">
+    <div className={`${digestDisplay.variable} space-y-6`}>
       <BreadcrumbJsonLd
         items={[
           { name: "Home", url: "/" },
@@ -93,7 +95,8 @@ export default function CemeteryPage() {
         <CemeteryContext stats={stats} caseStudies={buildCemeteryCaseStudyLinks(CEMETERY_ENTRIES)} />
         <CemeteryDataset />
       </CemeterySelectionProvider>
-      <div id="faq" className="scroll-mt-24">
+      <div id="faq" className={`${belowFoldStyles.faq} scroll-mt-24`}>
+        <p className={belowFoldStyles.kicker}>Questions</p>
         <FaqSection items={buildCemeteryFaq(stats)} includeJsonLd />
       </div>
     </div>

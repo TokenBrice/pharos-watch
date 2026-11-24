@@ -18,7 +18,7 @@ export function CemeteryDatasetCopyCitation({ citation, ariaLabel }: { citation:
         type="button"
         onClick={() => void copy(citation)}
         aria-label={ariaLabel}
-        className={buttonVariants({ variant: "outline", size: "sm", className: "pharos-focus-ring" })}
+        className={buttonVariants({ variant: "outline", size: "sm", className: "pharos-focus-ring min-h-11 sm:min-h-8" })}
       >
         <Icon aria-hidden="true" className="size-3.5" />
         Copy citation
