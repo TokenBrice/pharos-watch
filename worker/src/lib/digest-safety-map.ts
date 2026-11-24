@@ -92,7 +92,7 @@ export function buildDigestSafetyMapCaptions(
     tweetHook: `See ${mapReference}.`,
     telegramAppendixHtml: [
       `<b>${mapHeading}</b>`,
-      `Graded supply: ${mappedSupply} across ${summary.gradedCount} coins (incl. variants and stable-value investments)`,
+      `Graded supply: ${mappedSupply} across ${summary.gradedCount} coins (incl. variants; tokenized funds are not graded)`,
       `A tier: ${aTier.count} coins · ${aSharePct}%`,
       `C/D/F tiers: ${outerCount} coins · ${outerSharePct}%`,
     ].join("\n"),
