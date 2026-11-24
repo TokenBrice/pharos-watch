@@ -401,6 +401,15 @@ describe("non-USD share producer aggregation", () => {
     sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(JSON.stringify(payload), NON_USD_SHARE_HISTORY_KEY);
 
     expect(await readNonUsdShareHistory(db)).toEqual({ status: "cohort-mismatch", points: null, updatedAt: null });
+
+    for (const blankIdentity of ["", "   \t\n"]) {
+      payload.cohortIdentity = blankIdentity;
+      sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(JSON.stringify(payload), NON_USD_SHARE_HISTORY_KEY);
+      expect(await readNonUsdShareHistory(db)).toEqual({ status: "invalid", points: null, updatedAt: null });
+    }
+
+    payload.cohortIdentity = "prior-deploy-cohort";
+    sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(JSON.stringify(payload), NON_USD_SHARE_HISTORY_KEY);
     await publishNonUsdShareHistory(db, now + 60);
     expect(await readNonUsdShareHistory(db)).toMatchObject({ status: "ok", updatedAt: now, points: [{ total: 100 }] });
   });

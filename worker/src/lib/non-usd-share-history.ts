@@ -408,7 +408,7 @@ export async function readNonUsdShareHistory(db: D1Database): Promise<
   if (!marker || cached.updatedAt !== marker.updatedAt) return { status: "invalid", points: null, updatedAt: null };
   const parsed = parseJson(cached.value);
   if (!parsed.ok || !isRecord(parsed.value) || parsed.value.sourceMarker !== marker.value
-    || typeof parsed.value.cohortIdentity !== "string") {
+    || typeof parsed.value.cohortIdentity !== "string" || parsed.value.cohortIdentity.trim().length === 0) {
     return { status: "invalid", points: null, updatedAt: null };
   }
   const points = NonUsdShareResponseSchema.safeParse(parsed.value.points);
