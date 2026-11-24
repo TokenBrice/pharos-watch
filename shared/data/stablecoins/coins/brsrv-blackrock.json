@@ -1,12 +1,4 @@
 {
-  "liveReservesConfig": {
-    "adapter": "blackrock-brsrv-holdings",
-    "version": 1,
-    "semantics": "collateral-mix",
-    "breakerScope": "brsrv-blackrock",
-    "display": { "url": "https://www.blackrock.com/cash/en-us/products/351891/blackrock-daily-reinvestment-stablecoin-reserve-vehicle", "label": "BlackRock BRSRV securities holdings" },
-    "inputs": { "primary": { "kind": "http-html", "url": "https://www.blackrock.com/cash/en-us/products/351891/fund/1464253357814.ajax?fileType=csv&fileName=RSVXX_holdings&dataType=fund" } }
-  },
   "id": "brsrv-blackrock",
   "name": "BlackRock Daily Reinvestment Stablecoin Reserve Vehicle",
   "symbol": "BRSRV",
@@ -121,5 +113,14 @@
     "attestorTier": "self",
     "cadence": "daily-nav"
   },
-  "launchDate": "2026-08-03"
+  "launchDate": "2026-08-03",
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "SEC-registered 1940 Act Rule 2a-7 money-market fund share (RSVXX OnChain Shares), not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
+    "source": {
+      "label": "BlackRock BRSRV prospectus",
+      "url": "https://www.blackrock.com/cash/literature/prospectus/pro-brsrv.pdf"
+    }
+  }
 }

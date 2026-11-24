@@ -35,23 +35,6 @@
     }
   ],
   "governanceQuality": "single-entity",
-  "liveReservesConfig": {
-    "adapter": "curated-validated",
-    "version": 1,
-    "semantics": "collateral-mix",
-    "breakerScope": "spusd-soulpeg",
-    "display": {
-      "url": "https://docs.soulpeg.io/",
-      "label": "SoulPeg docs"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "bsc",
-        "rpcMode": "public-rpc"
-      }
-    }
-  },
   "notices": [
     {
       "type": "info",
@@ -72,5 +55,15 @@
         "url": "https://docs.soulpeg.io/"
       }
     ]
+  },
+  "status": "delisted",
+  "exitMechanism": "discretionary",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "One-way sUSDC wrapper whose unwrap returns non-transferable sUSDC receipts rather than USDC, leaving USDC redemption strictly owner/operator-controlled with unresolved backing; discretionary exit (listing policy 2.0).",
+    "source": {
+      "label": "SoulPeg Token Lifecycle documentation",
+      "url": "https://docs.soulpeg.io/docs/protocol/token-lifecycle"
+    }
   }
 }

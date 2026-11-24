@@ -177,27 +177,13 @@
     "yieldSource": "Spiko Amundi Overnight Swap Fund CHF NAV",
     "yieldType": "nav-appreciation"
   },
-  "liveReservesConfig": {
-    "adapter": "spiko-api",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "chfsafo-spiko",
-    "display": {
-      "url": "https://www.spiko.io/",
-      "label": "Spiko public share-class API"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "http-json",
-        "url": "https://public-api.spiko.io/share-classes/chfSAFO/totals"
-      }
-    },
-    "params": {
-      "shareClassSymbol": "chfSAFO",
-      "slice": {
-        "name": "Spiko Amundi Overnight Swap Fund (CHF) shares",
-        "risk": "medium"
-      }
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "Allowlisted AMF-authorized UCITS CHF accumulating fund share using overnight total-return swaps, not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
+    "source": {
+      "label": "Spiko CHFSAFO key information document",
+      "url": "https://cdn.spiko.finance/legal_docs/EN/KID_chfSAFO_EN.pdf"
     }
   }
 }

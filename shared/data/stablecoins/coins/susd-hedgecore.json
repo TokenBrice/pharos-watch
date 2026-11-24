@@ -44,23 +44,6 @@
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "single-entity",
-  "liveReservesConfig": {
-    "adapter": "curated-validated",
-    "version": 1,
-    "semantics": "collateral-mix",
-    "breakerScope": "susd-hedgecore",
-    "display": {
-      "url": "https://docs.hedgecore.io/docs/protocol/yield-generation",
-      "label": "HedgeCore docs"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "bsc",
-        "rpcMode": "public-rpc"
-      }
-    }
-  },
   "yieldConfig": {
     "yieldSource": "HedgeCore Venus strategy yield",
     "yieldType": "lending-vault"
@@ -85,5 +68,15 @@
         "url": "https://docs.hedgecore.io/docs/protocol/yield-generation"
       }
     ]
+  },
+  "status": "delisted",
+  "exitMechanism": "discretionary",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "One-way wrapper over hedge-locked hUSDC receipts with unwrapping intentionally removed in HUSDCWrapper.sol and operator sweep/burn controls, leaving no protocol exit; discretionary exit (listing policy 2.0).",
+    "source": {
+      "label": "HedgeCore HUSDCWrapper.sol verified source",
+      "url": "https://github.com/hedgecore-org/hedgecore-contracts/blob/main/contracts/HUSDCWrapper.sol"
+    }
   }
 }

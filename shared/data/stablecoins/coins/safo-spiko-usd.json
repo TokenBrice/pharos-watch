@@ -127,29 +127,6 @@
     "yieldSource": "Spiko Amundi Overnight Swap Fund USD NAV",
     "yieldType": "nav-appreciation"
   },
-  "liveReservesConfig": {
-    "adapter": "spiko-api",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "safo-spiko-usd",
-    "display": {
-      "url": "https://www.spiko.io/spiko-dollar",
-      "label": "Spiko public share-class API"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "http-json",
-        "url": "https://public-api.spiko.io/share-classes/SAFO/totals"
-      }
-    },
-    "params": {
-      "shareClassSymbol": "SAFO",
-      "slice": {
-        "name": "Spiko Amundi Overnight Swap Fund shares",
-        "risk": "medium"
-      }
-    }
-  },
   "launchDate": "2026-03-19",
   "mechanismArchetype": "ucits-trs-fund",
   "mechanismArchetypeReview": {
@@ -179,5 +156,14 @@
         "url": "https://geco.amf-france.org/back-office/document/download/429960"
       }
     ]
+  },
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "Allowlisted AMF-authorized UCITS USD accumulating fund share using overnight total-return swaps, not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
+    "source": {
+      "label": "Spiko Dollar product page",
+      "url": "https://www.spiko.io/spiko-dollar"
+    }
   }
 }

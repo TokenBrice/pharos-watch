@@ -89,26 +89,6 @@
   "collateralQuality": "exotic",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",
-  "liveReservesConfig": {
-    "adapter": "nest-vault-positions",
-    "version": 1,
-    "semantics": "collateral-mix",
-    "breakerScope": "nopal-nest",
-    "display": {
-      "url": "https://www.nest.credit/",
-      "label": "Nest Credit API"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "http-json",
-        "url": "https://api.nest.credit/v1/vaults/nest-opal-vault/positions"
-      }
-    },
-    "params": {
-      "priceUrl": "https://api.nest.credit/v1/vaults/nest-opal-vault/price",
-      "lastPriceUpdateUrl": "https://api.nest.credit/v1/vaults/nest-opal-vault/last-price-update"
-    }
-  },
   "yieldConfig": {
     "yieldSource": "Nest BlackOpal LiquidStone II Vault NAV",
     "yieldType": "nav-appreciation"
@@ -120,5 +100,14 @@
       "message": "nOPAL holds BlackOpal LiquidStone II tokenised credit positions. The token references a dollar base but behaves like a credit vault share rather than a 1:1 par stablecoin."
     }
   ],
-  "launchDate": "2025-10-30"
+  "launchDate": "2025-10-30",
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "NAV-priced Nest credit vault share wrapping BlackOpal LiquidStone II positions, not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
+    "source": {
+      "label": "Nest Credit documentation",
+      "url": "https://docs.nest.credit/"
+    }
+  }
 }

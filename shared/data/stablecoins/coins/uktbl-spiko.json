@@ -101,29 +101,6 @@
     "yieldSource": "Spiko UK T-Bills MMF NAV",
     "yieldType": "nav-appreciation"
   },
-  "liveReservesConfig": {
-    "adapter": "spiko-api",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "uktbl-spiko",
-    "display": {
-      "url": "https://www.spiko.io/spiko-treasury-bills-pound",
-      "label": "Spiko public share-class API"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "http-json",
-        "url": "https://public-api.spiko.io/share-classes/UKTBL/totals"
-      }
-    },
-    "params": {
-      "shareClassSymbol": "UKTBL",
-      "slice": {
-        "name": "Spiko UK T-Bills Money Market Fund shares",
-        "risk": "low"
-      }
-    }
-  },
   "notices": [
     {
       "type": "warning",
@@ -131,5 +108,14 @@
       "message": "CoinGecko reports a live price and market cap but little or no secondary-market volume; Pharos treats UKTBL as a NAV-priced fund share."
     }
   ],
-  "launchDate": "2025-10-15"
+  "launchDate": "2025-10-15",
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "Allowlisted AMF-authorized UCITS GBP Treasury-bill money-market fund share, not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
+    "source": {
+      "label": "Spiko UK T-Bills product page",
+      "url": "https://www.spiko.io/spiko-treasury-bills-pound"
+    }
+  }
 }

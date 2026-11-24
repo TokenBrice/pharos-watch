@@ -92,35 +92,6 @@
     "yieldSource": "Midas mRe7YIELD strategy",
     "yieldType": "nav-appreciation"
   },
-  "liveReservesConfig": {
-    "adapter": "chainlink-nav",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "mre7yield-midas",
-    "display": {
-      "url": "https://midas.app/mre7yield",
-      "label": "Midas mRe7YIELD NAV"
-    },
-    "scoring": {
-      "maxSourceAgeSec": 1209600
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "alchemy"
-      }
-    },
-    "params": {
-      "navScope": "portfolio",
-      "oracleAddress": "0x0a2a51f2f206447de3e3a80fcf92240244722395",
-      "tokenAddress": "0x87c9053c819bb28e0d73d33059e1b3da80afb0cf",
-      "sourceKey": "chainlink-nav:token:0x87c9053c819bb28e0d73d33059e1b3da80afb0cf",
-      "assetLabel": "Re7-managed DeFi yield strategy NAV",
-      "assetRisk": "high",
-      "maxOracleAgeSec": 1209600
-    }
-  },
   "notices": [
     {
       "type": "warning",
@@ -146,5 +117,14 @@
         "url": "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/9Xz2l1mKa8bDtQufrvS0/KID_mRe7YIELD.pdf"
       }
     ]
+  },
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "NAV-accreting debt certificate tracking Re7 Capital DeFi yield strategies, not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
+    "source": {
+      "label": "Midas mRe7YIELD product page",
+      "url": "https://midas.app/mre7yield"
+    }
   }
 }

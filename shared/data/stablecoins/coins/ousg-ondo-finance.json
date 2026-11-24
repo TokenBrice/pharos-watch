@@ -90,46 +90,18 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
-  "liveReservesConfig": {
-    "adapter": "ondo-ousg",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "ousg-ondo",
-    "scoring": {
-      "maxSourceAgeSec": 345600
-    },
-    "display": {
-      "url": "https://ondo.finance/ousg",
-      "label": "Ondo OUSG portfolio"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "etherscan-proxy"
-      }
-    },
-    "params": {
-      "navScope": "portfolio",
-      "oracleAddress": "0x9Cad45a8BF0Ed41Ff33074449B357C7a1fAb4094",
-      "tokenAddress": "0x1b19c19393e2d034d8ff31ff34c81252fcbbee92",
-      "sourceKey": "chainlink-nav:token:0x1b19c19393e2d034d8ff31ff34c81252fcbbee92",
-      "assetLabel": "OUSG tokenized Treasury fund portfolio",
-      "assetRisk": "low",
-      "oracleMethod": "getAssetPrice",
-      "maxOracleAgeSec": 345600,
-      "redemptionCapacity": {
-        "managerAddress": "0x93358db73B6cd4b98D89c8F5f230E81a95c2643a",
-        "usdcAddress": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-        "routerAddress": "0x99B8d1D1c17a10CD1A878d1A44c11fd7E4daD7bC",
-        "sourceAddress": "0x9F205E1aC7698F59EdbAa0a28C4A4c4ed605b722",
-        "pauseSelector": "0xb235d468"
-      }
-    }
-  },
   "yieldConfig": {
     "yieldSource": "Ondo Finance T-bill fund",
     "yieldType": "nav-appreciation"
   },
-  "launchDate": "2023-01-26"
+  "launchDate": "2023-01-26",
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "Qualified-purchaser NAV-accreting Treasury fund-of-funds share, not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
+    "source": {
+      "label": "Ondo OUSG documentation",
+      "url": "https://docs.ondo.finance/qualified-access-products/ousg"
+    }
+  }
 }

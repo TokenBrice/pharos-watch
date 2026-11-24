@@ -1,20 +1,4 @@
 {
-  "liveReservesConfig": {
-    "adapter": "chainlink-nav",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "uscc-superstate",
-    "display": { "url": "https://superstate.com/assets/uscc", "label": "Superstate USCC NAV oracle" },
-    "inputs": { "primary": { "kind": "onchain-evm", "chain": "ethereum", "rpcMode": "etherscan-proxy" } },
-    "params": {
-      "navScope": "native-fund-share",
-      "oracleAddress": "0xAfFd8F5578E8590665de561bdE9E7BAdb99300d9",
-      "tokenAddress": "0x14d60e7fdc0d71d8611742720e4c50e7a974020c",
-      "sourceKey": "chainlink-nav:token:0x14d60e7fdc0d71d8611742720e4c50e7a974020c",
-      "assetLabel": "Bitwise Crypto Carry Fund share exposure",
-      "assetRisk": "high"
-    }
-  },
   "id": "uscc-superstate",
   "name": "Bitwise Crypto Carry Fund",
   "symbol": "USCC",
@@ -39,5 +23,14 @@
   "custodyModel": "unknown",
   "governanceQuality": "single-entity",
   "notices": [{"type": "info", "title": "Conditional market-day redemption", "message": "USCC is a restricted private-fund share with variable NAV. Ordinary USD or USDC payouts follow market-day T+1/T+2 processing, but the issuer's factsheet permits modifying or terminating the redemption program. The $100,000 minimum is for initial investment, not a published redemption minimum."}],
-  "yieldConfig": {"yieldSource": "Bitwise crypto basis, carry and staking strategy", "yieldType": "nav-appreciation"}
+  "yieldConfig": {"yieldSource": "Bitwise crypto basis, carry and staking strategy", "yieldType": "nav-appreciation"},
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "Qualified-purchaser allowlisted crypto carry and staking fund share (Bitwise/Superstate USCC), not a fixed-par stablecoin; no active stablecoin links it as a tracked dependency (listing policy 2.0).",
+    "source": {
+      "label": "Superstate USCC investor terms",
+      "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc"
+    }
+  }
 }

@@ -108,5 +108,14 @@
       "message": "The prospectus prohibits token transfers for on-chain investors. Redemption through the transfer agent or Token Distributor is the recognized exit, subject to liquidity gates and suspension powers."
     }
   ],
-  "launchDate": "2026-05-06"
+  "launchDate": "2026-05-06",
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "Transfer-restricted accumulating prime USD money-market fund share (Fidelity International Cayman SPC), not a fixed-par stablecoin; no active stablecoin links it (listing policy 2.0).",
+    "source": {
+      "label": "Fidelity International FILQ prospectus",
+      "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf"
+    }
+  }
 }

@@ -153,28 +153,14 @@
     "yieldSource": "Spiko Amundi Overnight Swap Fund EUR NAV",
     "yieldType": "nav-appreciation"
   },
-  "liveReservesConfig": {
-    "adapter": "spiko-api",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "eursafo-spiko",
-    "display": {
-      "url": "https://www.spiko.io/spiko-euro",
-      "label": "Spiko public share-class API"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "http-json",
-        "url": "https://public-api.spiko.io/share-classes/eurSAFO/totals"
-      }
-    },
-    "params": {
-      "shareClassSymbol": "eurSAFO",
-      "slice": {
-        "name": "Spiko Amundi Overnight Swap Fund (EUR) shares",
-        "risk": "medium"
-      }
+  "launchDate": "2026-03-19",
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "Allowlisted AMF-authorized UCITS EUR accumulating fund share using overnight total-return swaps, not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
+    "source": {
+      "label": "Spiko Euro product page",
+      "url": "https://www.spiko.io/spiko-euro"
     }
-  },
-  "launchDate": "2026-03-19"
+  }
 }

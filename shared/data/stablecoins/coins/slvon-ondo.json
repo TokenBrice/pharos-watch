@@ -107,5 +107,14 @@
         "url": "https://docs.ondo.finance/ondo-global-markets/important-notes"
       }
     ]
+  },
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "Tokenized iShares Silver Trust (SLV) ETF tracker debt security without metal or ETF delivery rights, not a fixed-weight metal stablecoin; no active stablecoin links it (listing policy 2.0).",
+    "source": {
+      "label": "Ondo Global Markets overview",
+      "url": "https://docs.ondo.finance/ondo-global-markets/overview"
+    }
   }
 }

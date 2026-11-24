@@ -79,36 +79,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "unknown",
   "governanceQuality": "single-entity",
-  "liveReservesConfig": {
-    "adapter": "chainlink-nav",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "iauon-ondo",
-    "scoring": {
-      "maxSourceAgeSec": 345600
-    },
-    "display": {
-      "url": "https://app.ondo.finance/assets/iauon",
-      "label": "Ondo IAUon"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
-      }
-    },
-    "params": {
-      "navScope": "portfolio",
-      "oracleAddress": "0x1f09475Fe4D212fC24611bAE180201869956c238",
-      "tokenAddress": "0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf",
-      "assetLabel": "iShares Gold Trust (IAU) ETF shares",
-      "assetRisk": "low",
-      "sourceKey": "chainlink-nav:iauon-ondo",
-      "oracleMethod": "latestRoundData",
-      "maxOracleAgeSec": 345600
-    }
-  },
   "notices": [
     {
       "type": "info",
@@ -133,5 +103,14 @@
         "url": "https://docs.ondo.finance/ondo-global-markets/important-notes"
       }
     ]
+  },
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "Tokenized iShares Gold Trust (IAU) ETF tracker debt security without metal or ETF delivery rights, not a fixed-weight metal stablecoin; no active stablecoin links it (listing policy 2.0).",
+    "source": {
+      "label": "Ondo Global Markets overview",
+      "url": "https://docs.ondo.finance/ondo-global-markets/overview"
+    }
   }
 }

@@ -128,31 +128,6 @@
     "yieldSource": "Anemoy Apollo Diversified Credit Fund NAV",
     "yieldType": "nav-appreciation"
   },
-  "liveReservesConfig": {
-    "adapter": "chronicle-nav",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "acrdx-anemoy-apollo",
-    "display": {
-      "url": "https://chroniclelabs.org/dashboard/proof-of-asset/anemoy-tokenized-apollo-acrdx",
-      "label": "Chronicle Proof of Asset: Apollo ACRDX"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
-      }
-    },
-    "params": {
-      "navScope": "native-fund-share",
-      "consumerAddress": "0x9a3bF392f86acd1b1EC07d026B326302eAED7488",
-      "tokenAddress": "0x9477724bb54ad5417de8baff29e59df3fb4da74f",
-      "assetLabel": "Apollo Diversified Credit Fund NAV",
-      "assetRisk": "high",
-      "maxOracleAgeSec": 345600
-    }
-  },
   "notices": [
     {
       "type": "info",
@@ -160,5 +135,14 @@
       "message": "ACRDX overlaps economically with ACRED private-credit exposure, but uses a distinct Anemoy / Centrifuge issuer route and token contract set."
     }
   ],
-  "launchDate": "2025-09-16"
+  "launchDate": "2025-09-16",
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "Permissioned NAV-accreting private-credit feeder fund share (Anemoy/Centrifuge Apollo credit fund), not a fixed-par stablecoin; no active stablecoin links it (listing policy 2.0).",
+    "source": {
+      "label": "Anemoy ACRDX announcement",
+      "url": "https://www.anemoy.io/news/acrdx-launched"
+    }
+  }
 }
