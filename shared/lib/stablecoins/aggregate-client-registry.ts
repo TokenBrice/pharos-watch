@@ -25,3 +25,14 @@ const CLIENT_ACTIVE_TOKENIZED_FUNDS: readonly StablecoinClientMeta[] =
 export const CLIENT_ACTIVE_TOKENIZED_FUND_IDS: ReadonlySet<string> = new Set(
   CLIENT_ACTIVE_TOKENIZED_FUNDS.map((stablecoin) => stablecoin.id),
 );
+
+/**
+ * Active tracked stablecoins excluding tokenized funds: core stablecoins,
+ * tracked variants, and review-hold coins. Used for "All" stablecoin views.
+ */
+const CLIENT_ACTIVE_ALL_STABLECOINS: readonly StablecoinClientMeta[] =
+  CLIENT_ACTIVE_STABLECOINS.filter((stablecoin) => !isTokenizedFundListingClass(stablecoin.listingClass));
+
+export const CLIENT_ACTIVE_ALL_STABLECOIN_IDS: ReadonlySet<string> = new Set(
+  CLIENT_ACTIVE_ALL_STABLECOINS.map((stablecoin) => stablecoin.id),
+);

@@ -8,6 +8,7 @@ import {
   CORE_AGGREGATE_ACTIVE_STABLECOINS,
 } from "../aggregate-registry";
 import {
+  CLIENT_ACTIVE_ALL_STABLECOIN_IDS,
   CLIENT_ACTIVE_TOKENIZED_FUND_IDS,
   CLIENT_ACTIVE_VARIANT_IDS,
   CLIENT_CORE_AGGREGATE_ACTIVE_IDS,
@@ -47,9 +48,22 @@ describe("core stablecoin aggregate universe", () => {
 
     expect(CLIENT_ACTIVE_VARIANT_IDS.size).toBe(ACTIVE_VARIANT_STABLECOINS.length);
     expect(CLIENT_ACTIVE_TOKENIZED_FUND_IDS.size).toBe(ACTIVE_TOKENIZED_FUNDS.length);
+    expect(CLIENT_ACTIVE_ALL_STABLECOIN_IDS.size).toBe(
+      CORE_AGGREGATE_ACTIVE_STABLECOINS.length +
+        ACTIVE_VARIANT_STABLECOINS.length +
+        ACTIVE_REVIEW_HOLD_STABLECOINS.length,
+    );
     for (const fund of ACTIVE_TOKENIZED_FUNDS) {
       expect(CLIENT_ACTIVE_TOKENIZED_FUND_IDS.has(fund.id)).toBe(true);
+      expect(CLIENT_ACTIVE_ALL_STABLECOIN_IDS.has(fund.id)).toBe(false);
       expect(isTokenizedFundId(fund.id)).toBe(true);
+    }
+    for (const stablecoin of [
+      ...CORE_AGGREGATE_ACTIVE_STABLECOINS,
+      ...ACTIVE_VARIANT_STABLECOINS,
+      ...ACTIVE_REVIEW_HOLD_STABLECOINS,
+    ]) {
+      expect(CLIENT_ACTIVE_ALL_STABLECOIN_IDS.has(stablecoin.id)).toBe(true);
     }
   });
 

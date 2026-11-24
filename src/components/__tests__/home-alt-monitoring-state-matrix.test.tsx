@@ -271,6 +271,27 @@ describe("HomeAltRankingsSection loading and quick filters", () => {
     expect(screen.getByTestId("stablecoin-table")).toBeTruthy();
     expect((m.tableProps.mock.calls.at(-1)?.[0] as { eligibleIds?: ReadonlySet<string> }).eligibleIds?.has("usdc-circle")).toBe(true);
   });
+
+  it("exposes Funds universe and excludes tokenized funds from Core and All", () => {
+    const setActiveUniverse = vi.fn();
+    setupRankings("ready", "empty");
+    m.filters.mockReturnValue({ activeFilters: [], activePeg: "all", setActivePeg: vi.fn(), activeUniverse: "catalog", setActiveUniverse });
+    const view = render(<HomeAltRankingsSection titleId="rankings-title" />);
+
+    const catalogIds = (m.tableProps.mock.calls.at(-1)?.[0] as { eligibleIds?: ReadonlySet<string> }).eligibleIds!;
+    expect(catalogIds.has("usdc-circle")).toBe(true);
+    expect(catalogIds.has("buidl-blackrock")).toBe(false);
+
+    fireEvent.click(screen.getByRole("button", { name: "Funds" }));
+    expect(setActiveUniverse).toHaveBeenCalledWith("funds");
+
+    m.filters.mockReturnValue({ activeFilters: [], activePeg: "all", setActivePeg: vi.fn(), activeUniverse: "funds", setActiveUniverse });
+    view.rerender(<HomeAltRankingsSection titleId="rankings-title" />);
+    const fundIds = (m.tableProps.mock.calls.at(-1)?.[0] as { eligibleIds?: ReadonlySet<string> }).eligibleIds!;
+    expect(fundIds.has("buidl-blackrock")).toBe(true);
+    expect(fundIds.has("usdc-circle")).toBe(false);
+    expect(view.container.textContent).toContain("tracked tokenized funds");
+  });
 });
 
 describe("RecentFreezesCard authoritative totals", () => {

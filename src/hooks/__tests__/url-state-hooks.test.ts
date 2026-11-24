@@ -78,7 +78,7 @@ describe("useHomeAltFilters", () => {
     expect(result.current.activeFilters).toEqual(["fiat-non-usd-peg"]);
   });
 
-  it("defaults to the core universe and exposes variants through the URL", async () => {
+  it("defaults to the core universe and exposes variants, catalog, and funds through the URL", async () => {
     const { result } = renderHook(() => useHomeAltFilters());
 
     expect(result.current.activeUniverse).toBe("core");
@@ -90,6 +90,14 @@ describe("useHomeAltFilters", () => {
 
     expect(result.current.activeUniverse).toBe("variants");
     expect(window.location.search).toBe("?variant=variants");
+
+    await act(async () => {
+      result.current.setActiveUniverse("funds");
+      await Promise.resolve();
+    });
+
+    expect(result.current.activeUniverse).toBe("funds");
+    expect(window.location.search).toBe("?variant=funds");
 
     await act(async () => {
       result.current.setActiveUniverse("core");

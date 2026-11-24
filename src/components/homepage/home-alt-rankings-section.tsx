@@ -20,6 +20,8 @@ import { StablecoinOverviewSkeleton } from "@/components/stablecoin-directory/st
 import { ACTIVE_PEGS, pegCoinCount } from "@/lib/peg-landing";
 import { CLIENT_ACTIVE_IDS } from "@shared/lib/stablecoins/client-registry";
 import {
+  CLIENT_ACTIVE_ALL_STABLECOIN_IDS,
+  CLIENT_ACTIVE_TOKENIZED_FUND_IDS,
   CLIENT_ACTIVE_VARIANT_IDS,
   CLIENT_CORE_AGGREGATE_ACTIVE_IDS,
 } from "@shared/lib/stablecoins/aggregate-client-registry";
@@ -55,6 +57,7 @@ const UNIVERSE_OPTIONS: readonly { value: HomeAltUniverse; label: string }[] = [
   { value: "core", label: "Core" },
   { value: "variants", label: "Variants" },
   { value: "catalog", label: "All" },
+  { value: "funds", label: "Funds" },
 ];
 
 const PEG_QUICK_FILTERS: readonly { value: HomeAltPegFilter; label: string }[] = [
@@ -101,7 +104,9 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
       ? CLIENT_CORE_AGGREGATE_ACTIVE_IDS
       : activeUniverse === "variants"
         ? CLIENT_ACTIVE_VARIANT_IDS
-        : CLIENT_ACTIVE_IDS;
+        : activeUniverse === "funds"
+          ? CLIENT_ACTIVE_TOKENIZED_FUND_IDS
+          : CLIENT_ACTIVE_ALL_STABLECOIN_IDS;
 
   const pinnedInUniverseCount = useMemo(
     () => pinned.pinnedIds.filter((id) => universeEligibleIds.has(id)).length,
@@ -189,10 +194,12 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
             <p className="text-sm text-muted-foreground">
               Showing <span className="pharos-numeric text-foreground">{filteredRowCount.toLocaleString("en-US")}</span>{" "}
               {activeUniverse === "core"
-                ? "core stablecoins and cash equivalents"
+                ? "core stablecoins"
                 : activeUniverse === "variants"
                   ? "tracked variants, excluded from core market aggregates"
-                  : "active catalog listings, with variants tracked separately"}{" "}
+                  : activeUniverse === "funds"
+                    ? "tracked tokenized funds (not stablecoins; excluded from stablecoin aggregates and Safety grades)"
+                    : "active stablecoins (core, variants, and review-hold; tokenized funds excluded)"}{" "}
               with market data. Inactive lifecycle states excluded,{" "}
               <Link
                 href="/screener/"
