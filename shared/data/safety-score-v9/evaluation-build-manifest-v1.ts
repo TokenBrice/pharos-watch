@@ -717,6 +717,10 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "4f96c6e70cc70e837330c7804de9312fd1c8807408615390f91de39c6efce7f7"
     },
     {
+      "path": "shared/lib/stablecoins/listing-class.ts",
+      "sha256": "ababf3b57812a1962477eb1a0fd10feb65dc62a4051823a38c284fd507ea728b"
+    },
+    {
       "path": "shared/lib/stablecoins/listing-governance.ts",
       "sha256": "9d597df957b2ab012b3612c4d5081500ac40f6e67bee472f1d5e7fc07a412e84"
     },
@@ -1367,7 +1371,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-11-24-block-26485484-shock-coverage.json.gz"
     }
   ],
-  "digest": "9c19f9a46be1064e1f82cd8ec327f656b5cc9699814762dfcf8182278e56dfa3"
+  "digest": "c2181ef7d5cd835bea261a81d83ac3b84b25832a9716938206b922e75ea3346b"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
