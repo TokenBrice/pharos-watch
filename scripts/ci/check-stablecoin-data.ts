@@ -1,5 +1,6 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import ts from "typescript";
 import { z } from "zod";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { CHAIN_META } from "@shared/types/chain-identity";
@@ -659,38 +660,121 @@ export function getListingGovernanceIssues(
   return issues;
 }
 
+export interface ReviewedLiveAdapterTokenizedFundLink {
+  linkerCoinId: string;
+  adapter: string;
+  adapterFile: string;
+  mapName: string;
+}
+
 /**
  * Reviewed active `tokenized-fund` listings whose sole active non-fund linker
  * lives in a live reserve adapter's `coinId` map rather than static coin or
- * reserve sidecar data. Remove an entry when the adapter link retires.
+ * reserve sidecar data. Bound to the adapter map and active linker coin below;
+ * remove an entry when the adapter link retires.
  */
-export const REVIEWED_LIVE_ADAPTER_ONLY_TOKENIZED_FUND_LINKS: Readonly<Record<string, string>> = {
-  "jaaa-janus-henderson-anemoy": "usdf-falcon via worker/src/cron/reserve-adapters/falcon.ts",
-  "jtrsy-anemoy": "usdf-falcon via worker/src/cron/reserve-adapters/falcon.ts",
+export const REVIEWED_LIVE_ADAPTER_ONLY_TOKENIZED_FUND_LINKS: Readonly<
+  Record<string, ReviewedLiveAdapterTokenizedFundLink>
+> = {
+  "jaaa-janus-henderson-anemoy": {
+    linkerCoinId: "usdf-falcon",
+    adapter: "falcon",
+    adapterFile: "worker/src/cron/reserve-adapters/falcon.ts",
+    mapName: "FALCON_TRACKED_RWA_ASSETS",
+  },
+  "jtrsy-anemoy": {
+    linkerCoinId: "usdf-falcon",
+    adapter: "falcon",
+    adapterFile: "worker/src/cron/reserve-adapters/falcon.ts",
+    mapName: "FALCON_TRACKED_RWA_ASSETS",
+  },
 };
+
+function unwrapExpression(expr: ts.Expression): ts.Expression {
+  let current = expr;
+  while (
+    ts.isParenthesizedExpression(current) ||
+    ts.isAsExpression(current) ||
+    ts.isSatisfiesExpression(current)
+  ) {
+    current = current.expression;
+  }
+  return current;
+}
+
+function propertyNameText(name: ts.PropertyName): string | null {
+  if (ts.isIdentifier(name) || ts.isStringLiteral(name) || ts.isNoSubstitutionTemplateLiteral(name)) {
+    return name.text;
+  }
+  return null;
+}
+
+export function extractAdapterMappedCoinIds(
+  adapterFile: string,
+  mapName: string,
+  repoRoot = process.cwd(),
+): Set<string> {
+  const filePath = join(repoRoot, adapterFile);
+  const source = ts.createSourceFile(filePath, readFileSync(filePath, "utf8"), ts.ScriptTarget.Latest, true);
+  const coinIds = new Set<string>();
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === mapName &&
+      node.initializer
+    ) {
+      const init = unwrapExpression(node.initializer);
+      if (ts.isObjectLiteralExpression(init)) {
+        for (const prop of init.properties) {
+          if (!ts.isPropertyAssignment(prop)) continue;
+          const entry = unwrapExpression(prop.initializer);
+          if (!ts.isObjectLiteralExpression(entry)) continue;
+          for (const entryProp of entry.properties) {
+            if (!ts.isPropertyAssignment(entryProp) || propertyNameText(entryProp.name) !== "coinId") continue;
+            const value = unwrapExpression(entryProp.initializer);
+            if (ts.isStringLiteral(value) || ts.isNoSubstitutionTemplateLiteral(value)) {
+              coinIds.add(value.text);
+            }
+          }
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return coinIds;
+}
 
 /**
  * Advisory policy 2.0 retention check: every active `tokenized-fund` must be
  * linked by at least one active non-fund asset in static dependencies, reserve
  * sidecar `coinId` slices, or `dependencyReview.relationships` (or appear in
- * `REVIEWED_LIVE_ADAPTER_ONLY_TOKENIZED_FUND_LINKS`). `nonLinkDispositions` do
- * not qualify.
+ * `REVIEWED_LIVE_ADAPTER_ONLY_TOKENIZED_FUND_LINKS` backed by an active linker
+ * coin and matching adapter `coinId` entry). `nonLinkDispositions` do not
+ * qualify.
  */
 export function getUnlinkedActiveTokenizedFundWarnings(
   coins: readonly StablecoinMeta[],
   listingDecisions: unknown = listingDecisionsAsset,
-  liveAdapterOnlyLinks: Readonly<Record<string, string>> = REVIEWED_LIVE_ADAPTER_ONLY_TOKENIZED_FUND_LINKS,
+  liveAdapterOnlyLinks: Readonly<
+    Record<string, ReviewedLiveAdapterTokenizedFundLink>
+  > = REVIEWED_LIVE_ADAPTER_ONLY_TOKENIZED_FUND_LINKS,
+  resolveAdapterCoinIds: (adapterFile: string, mapName: string) => ReadonlySet<string> = (adapterFile, mapName) =>
+    extractAdapterMappedCoinIds(adapterFile, mapName),
 ): string[] {
   const decisionsResult = ListingDecisionRegistrySchema.safeParse(listingDecisions);
   if (!decisionsResult.success) return [];
 
   const { listingClassById } = decisionsResult.data;
+  const activeNonFundById = new Map<string, StablecoinMeta>();
   const linkedByActiveNonFund = new Set<string>();
   for (const coin of coins) {
     if (!isActiveStablecoinMeta(coin)) continue;
     const coinClass = listingClassById[coin.id];
     if (coinClass === "tokenized-fund" || coinClass === "excluded") continue;
 
+    activeNonFundById.set(coin.id, coin);
     for (const dependency of coin.dependencies ?? []) {
       linkedByActiveNonFund.add(dependency.id);
     }
@@ -704,12 +788,38 @@ export function getUnlinkedActiveTokenizedFundWarnings(
     }
   }
 
+  const adapterCoinIdsCache = new Map<string, ReadonlySet<string>>();
+  const getAdapterCoinIds = (adapterFile: string, mapName: string): ReadonlySet<string> => {
+    const cacheKey = `${adapterFile}::${mapName}`;
+    let cached = adapterCoinIdsCache.get(cacheKey);
+    if (!cached) {
+      cached = resolveAdapterCoinIds(adapterFile, mapName);
+      adapterCoinIdsCache.set(cacheKey, cached);
+    }
+    return cached;
+  };
+
   const warnings: string[] = [];
   for (const coin of coins) {
     if (!isActiveStablecoinMeta(coin)) continue;
     if (listingClassById[coin.id] !== "tokenized-fund") continue;
     if (linkedByActiveNonFund.has(coin.id)) continue;
-    if (Object.prototype.hasOwnProperty.call(liveAdapterOnlyLinks, coin.id)) continue;
+    const adapterLink = Object.prototype.hasOwnProperty.call(liveAdapterOnlyLinks, coin.id)
+      ? liveAdapterOnlyLinks[coin.id]
+      : undefined;
+    if (adapterLink) {
+      const linker = activeNonFundById.get(adapterLink.linkerCoinId);
+      const linkerUsesAdapter =
+        linker?.liveReservesConfig?.adapter === adapterLink.adapter &&
+        linker.liveReservesConfig.suspended == null;
+      if (linkerUsesAdapter && getAdapterCoinIds(adapterLink.adapterFile, adapterLink.mapName).has(coin.id)) {
+        continue;
+      }
+      warnings.push(
+        `active tokenized-fund "${coin.id}" has a stale reviewed live-adapter link (${adapterLink.linkerCoinId} via ${adapterLink.adapterFile}#${adapterLink.mapName})`,
+      );
+      continue;
+    }
     warnings.push(
       `active tokenized-fund "${coin.id}" has no active non-fund linker in static dependencies, reserves, or dependencyReview (delist at next review or record a reviewed live-adapter link)`,
     );

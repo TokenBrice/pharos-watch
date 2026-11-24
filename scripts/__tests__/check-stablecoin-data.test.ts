@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import listingDecisionsAsset from "@shared/data/stablecoins/listing-decisions.json";
 import {
   computeLiveReserveConfigFingerprint,
   isReserveSupplyAdmissionBootstrapAuthorized,
 } from "@shared/lib/live-reserve-adapters";
 import {
+  extractAdapterMappedCoinIds,
   getCollidingSymbolContractIssues,
   getCommodityProtocolSlugIssue,
   getContractDeploymentIssues,
@@ -544,13 +546,79 @@ describe("listing class precedence and unresolved mechanism review", () => {
       },
     ], baseDecisions, {})).toEqual([]);
     expect(getUnlinkedActiveTokenizedFundWarnings([{ ...fund, status: "quarantined" }], baseDecisions, {})).toEqual([]);
-    expect(getUnlinkedActiveTokenizedFundWarnings([
+    const falconLinker: StablecoinMeta = {
+      ...coin,
+      id: "usdf-falcon",
+      symbol: "USDf",
+      liveReservesConfig: {
+        adapter: "falcon",
+        version: 1,
+        semantics: "collateral-mix",
+        inputs: { primary: { kind: "http-json", url: "https://example.com/falcon" } },
+      },
+    };
+    const falconFundCoins = [
       { ...coin, id: "jaaa-janus-henderson-anemoy", symbol: "JAAA" },
       { ...coin, id: "jtrsy-anemoy", symbol: "JTRSY" },
-    ], {
+      falconLinker,
+    ];
+    const falconDecisions = {
       ...baseDecisions,
-      listingClassById: { "jaaa-janus-henderson-anemoy": "tokenized-fund", "jtrsy-anemoy": "tokenized-fund" },
-    }, REVIEWED_LIVE_ADAPTER_ONLY_TOKENIZED_FUND_LINKS)).toEqual([]);
+      listingClassById: {
+        "jaaa-janus-henderson-anemoy": "tokenized-fund",
+        "jtrsy-anemoy": "tokenized-fund",
+        "usdf-falcon": "core-stablecoin",
+      },
+    };
+    expect(getUnlinkedActiveTokenizedFundWarnings(
+      falconFundCoins,
+      falconDecisions,
+      REVIEWED_LIVE_ADAPTER_ONLY_TOKENIZED_FUND_LINKS,
+    )).toEqual([]);
+    expect(getUnlinkedActiveTokenizedFundWarnings(
+      falconFundCoins,
+      falconDecisions,
+      REVIEWED_LIVE_ADAPTER_ONLY_TOKENIZED_FUND_LINKS,
+      () => new Set(["jtrsy-anemoy"]),
+    )).toEqual([
+      expect.stringContaining('active tokenized-fund "jaaa-janus-henderson-anemoy" has a stale reviewed live-adapter link'),
+    ]);
+    expect(getUnlinkedActiveTokenizedFundWarnings(
+      falconFundCoins.slice(0, 2),
+      falconDecisions,
+      REVIEWED_LIVE_ADAPTER_ONLY_TOKENIZED_FUND_LINKS,
+    )).toEqual([
+      expect.stringContaining('active tokenized-fund "jaaa-janus-henderson-anemoy" has a stale reviewed live-adapter link'),
+      expect.stringContaining('active tokenized-fund "jtrsy-anemoy" has a stale reviewed live-adapter link'),
+    ]);
+  });
+
+  it("binds the reviewed live-adapter-only allowlist to the Falcon adapter map and live catalog", () => {
+    const falconRwaCoinIds = extractAdapterMappedCoinIds(
+      "worker/src/cron/reserve-adapters/falcon.ts",
+      "FALCON_TRACKED_RWA_ASSETS",
+    );
+    const allowlistedIds = Object.keys(REVIEWED_LIVE_ADAPTER_ONLY_TOKENIZED_FUND_LINKS).sort();
+    expect(allowlistedIds).toEqual(["jaaa-janus-henderson-anemoy", "jtrsy-anemoy"]);
+    for (const [coinId, link] of Object.entries(REVIEWED_LIVE_ADAPTER_ONLY_TOKENIZED_FUND_LINKS)) {
+      const adapterCoinIds = extractAdapterMappedCoinIds(link.adapterFile, link.mapName);
+      expect(adapterCoinIds.has(coinId), `${coinId} must remain mapped in ${link.adapterFile}#${link.mapName}`).toBe(true);
+      const linker = TRACKED_META_BY_ID.get(link.linkerCoinId);
+      expect(linker?.status ?? "active", `${link.linkerCoinId} must remain active`).toBe("active");
+      expect(linker?.liveReservesConfig?.adapter).toBe(link.adapter);
+      expect(linker?.liveReservesConfig?.suspended).toBeUndefined();
+    }
+
+    const unlinkedWithoutAllowlist = getUnlinkedActiveTokenizedFundWarnings(
+      TRACKED_STABLECOINS,
+      listingDecisionsAsset,
+      {},
+    );
+    const unlinkedFalconMappedIds = [...falconRwaCoinIds]
+      .filter((id) => unlinkedWithoutAllowlist.some((warning) => warning.includes(`"${id}"`)))
+      .sort();
+    expect(unlinkedFalconMappedIds).toEqual(allowlistedIds);
+    expect(getUnlinkedActiveTokenizedFundWarnings(TRACKED_STABLECOINS, listingDecisionsAsset)).toEqual([]);
   });
 });
 

@@ -196,6 +196,7 @@ describe("methodology registry", () => {
 
   it("aligns every listing-policy v2 cutover changelog entry with the shared cutover constant", () => {
     for (const [key, version, priorVersion] of [
+      ["safety-score", "10.55", "10.54"],
       ["stability-index", "3.71", "3.70"],
       ["chain-health", "1.91", "1.9"],
       ["pricing-pipeline", "6.95", "6.94"],
