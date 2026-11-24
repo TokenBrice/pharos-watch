@@ -26,13 +26,19 @@ import {
   PLOT_POST_HEIGHT,
   PLOT_PROJECTIONS,
   PLOT_UNIT,
+  PORTRAIT_TOP_MARGIN,
   bbox,
   cypressGeometry,
+  desktopPerimeterSegments,
   gateGeometry,
+  graveAnchorOffsetI,
   graveGeometry,
+  graveGroundMarksLayout,
   graveHitHull,
+  gravePlinthFootprint,
   lampGeometry,
   lighthouseGeometry,
+  lotPadCell,
   plotShapeOf,
   postGeometry,
   project,
@@ -93,22 +99,23 @@ export interface PlotMapPreset {
   northTerrace: number;
   /** Lawn between the front lane and the south curb (j). */
   southMargin: number;
-  /** Lawn and lighthouse bastion east of the oldest block (i). */
+  /** Lawn between the oldest block and the east curb (i). */
   eastTerrace: number;
+  /** Calendar years strictly before this cut-off share one oldest block; null = one block per calendar year. */
+  mergeBefore: number | null;
   /** R11 budget: longest empty run of rows inside a bed; null = not budgeted (the portrait plan makes no R11 claim). */
   maxEmptyBedRows: number | null;
 }
 
 /**
- * Lane depths were chosen by the prototype's `tools/search-depths.mjs` (shared year blocks: the most compact plan
- * whose in-bed empty runs stay ≤ 3 rows at the 15 px floor). Re-check with {@link validatePlotMapCapacity} when a
- * year block grows.
+ * Lane depths and early-year merging keep the desktop plain-stone face above the 15 px floor with headroom for
+ * future calendar years, and hold in-bed empty runs ≤ 3 rows (see {@link validatePlotMapCapacity}).
  */
 const PLOT_MAP_PRESETS: Readonly<Record<PlotMapPresetName, PlotMapPreset>> = {
   desktop: {
     name: "desktop",
     projection: "dimetric",
-    depth: { abandoned: 7, "counterparty-failure": 4, "liquidity-drain": 3, "algorithmic-failure": 3, regulatory: 1 },
+    depth: { abandoned: 8, "counterparty-failure": 4, "liquidity-drain": 3, "algorithmic-failure": 4, regulatory: 1 },
     slotPitch: 0.92,
     rowPitch: 1.1,
     lanePath: 0.56,
@@ -117,22 +124,24 @@ const PLOT_MAP_PRESETS: Readonly<Record<PlotMapPresetName, PlotMapPreset>> = {
     avenue: 1.5,
     northTerrace: 0.95,
     southMargin: 0.5,
-    eastTerrace: 2.0,
+    eastTerrace: 0.55,
+    mergeBefore: 2022,
     maxEmptyBedRows: 3,
   },
   portrait: {
     name: "portrait",
     projection: "portrait",
-    depth: { abandoned: 4, "counterparty-failure": 3, "liquidity-drain": 2, "algorithmic-failure": 2, regulatory: 1 },
-    slotPitch: 1,
-    rowPitch: 1,
-    lanePath: 0.3,
-    yearPath: 0.5,
-    emptyYears: 0.7,
+    depth: { abandoned: 4, "counterparty-failure": 3, "liquidity-drain": 2, "algorithmic-failure": 2, regulatory: 2 },
+    slotPitch: 0.92,
+    rowPitch: 1.9,
+    lanePath: 0.34,
+    yearPath: 2.55,
+    emptyYears: 1.3,
     avenue: 0,
     northTerrace: 0,
     southMargin: 0,
     eastTerrace: 0,
+    mergeBefore: null,
     maxEmptyBedRows: null,
   },
 };
@@ -156,19 +165,31 @@ const PLOT_SCENE = {
   verge: 1.2,
   /** Depth of the headland slab under the lawn. */
   slab: 0.9,
-  /** Lighthouse centre: west of the east edge, south of the sea wall. */
-  lighthouseInset: 1.0,
-  lighthouseJ: 0.2,
+  /** NE headland rock apothem and j centre; i is derived from the slab east edge so the rock seats flush as a prow. */
+  lighthouseApothem: 1.1,
+  lighthouseJ: 0.15,
   /** Signpost posts stand at this fraction of the avenue width. */
   postAt: 0.52,
 } as const;
 
 /** Viewport-level layout constants the hero, zoom and placement helpers share (CSS px unless stated). */
 export const PLOT_LAYOUT = {
-  /** R1 reference: 1440×800 with the real chrome; the frame follows the 1368 px content box. */
+  /**
+   * R1 reference: 1440×800 has a 1368 px content column; height-fit clamps the live desktop frame to
+   * `min(1368, max(floorWidth, heightFit))` (floor-clamped at 15.0 px when `floorWidth <= 1368`, leaving
+   * `1368 − floorWidth` px of column headroom before the gate fails).
+   */
   reference: { viewportWidth: 1440, viewportHeight: 800, frameWidth: 1368 },
+  /** Portrait reference: full-bleed 390 px phone viewport. */
+  portraitReference: { viewportWidth: 390, frameWidth: 390 },
   /** Sticky chrome (3 px status strip + 56 px nav) + 8 px: the top of the visible band. */
   chromeTop: 67,
+  /**
+   * Vertical chrome (top nav + event rail + route head minus sky overlap) subtracted by desktop height-fit sizing
+   * (`width: min(100%, max(var(--floor-w), calc((100dvh - var(--fit-chrome)) * var(--plot-ar))))`). Shared by CSS,
+   * capacity checks and tests so the continuous rule never has a height cliff or undercuts the 15 px face floor.
+   */
+  fitChromePx: 205,
   /** Zoom toolbar row ("← Whole cemetery" + section chip). */
   zoomBar: 52,
   zoomSideInset: 24,
@@ -180,13 +201,49 @@ export const PLOT_LAYOUT = {
   zoomFloorFacePx: 28,
   /** Plain-stone face width (world units): the column / urn pedestal, the narrowest 1×1 face. */
   plainFace: 0.58,
-  /** R1 floor: plain stone ≥ 15 px at the reference viewport. */
+  /** R1 floor: plain stone ≥ 15 px at the desktop reference viewport. */
   faceFloorPx: 15,
+  /** Portrait floor: plain stone ≥ 15 px at the full-bleed 390 px phone reference (matches desktop floor; never undercut). */
+  portraitFaceFloorPx: 15,
   /** Large lots may start in rows 0…3 of their block. */
   maxLotRow: 3,
   /** Large-lot position combinations searched exhaustively per block (2022's three lots: 20 × 16 × 28 = 8,960). */
   lotSearchBudget: 50_000,
+  /**
+   * Maximum share of any grave's medallion disc allowed under later-drawn solid faces at rest (desktop and portrait).
+   * At 0.40, every grave retains ≥ 60 % unobstructed medallion area before hover spotlighting.
+   */
+  maxMedallionOcclusion: 0.4,
+  /** Desktop viewports audited by `zoom-drops-colossus` so section zoom keeps every colossus and ≥ 28 px faces. */
+  zoomCheckViewports: [
+    [1024, 768],
+    [1280, 720],
+    [1366, 650],
+    [1440, 800],
+    [1440, 900],
+  ] as readonly (readonly [number, number])[],
 } as const;
+
+/** Minimum desktop frame width (CSS px) at which a plain 1×1 stone stays at or above `PLOT_LAYOUT.faceFloorPx` (15 px). */
+function desktopFloorFrameWidth(viewBoxWidth: number): number {
+  return Math.ceil((PLOT_LAYOUT.faceFloorPx * viewBoxWidth) / (PLOT_LAYOUT.plainFace * PLOT_UNIT));
+}
+
+/**
+ * Rendered desktop frame width (CSS px) under the continuous floor-clamped height-fit rule
+ * `min(columnWidth, max(floorWidth, (viewportHeight - fitChromePx) * (vbW / vbH)))`.
+ */
+function desktopFittedFrameWidth(
+  map: Pick<DesktopPlotMap, "viewBox" | "floorWidth">,
+  viewportWidth: number,
+  viewportHeight: number,
+): number {
+  const pagePad = viewportWidth >= 1280 ? 36 : viewportWidth >= 1024 ? 20 : 16;
+  const columnWidth = Math.min(viewportWidth, 1920) - 2 * pagePad;
+  const aspect = map.viewBox[2] / map.viewBox[3];
+  const heightFit = Math.max(0, viewportHeight - PLOT_LAYOUT.fitChromePx) * aspect;
+  return Math.min(columnWidth, Math.max(map.floorWidth, heightFit));
+}
 
 const YEAR_MS = 365.25 * 864e5;
 const DAY_MS = 864e5;
@@ -265,27 +322,30 @@ export interface PlotLane {
   count: number;
   /** Occupied extent along i (first → last block holding a grave of this cause); null for an empty lane. */
   bed: { i0: number; i1: number } | null;
-  /** Bed cells: one raised turf cell per year block inside the bed. */
-  cells: { year: number; i0: number; i1: number }[];
+  /** Bed cells: one raised turf cell per occupied year block inside the bed (trimmed along i & j on portrait, trimmed along j on sparse desktop blocks). */
+  cells: { year: number; i0: number; i1: number; j0: number; j1: number }[];
   /** Grave ids, oldest first. */
   ids: string[];
 }
 
 export interface PlotYearBlock {
-  /** "2026", or "2019-2020" for a strip standing in for years with no recorded death. */
+  /** "2026", or "2018-2021" / "2019-2020" for a multi-year merged or empty block. */
   key: string;
   /** First (earliest) year of the block. */
   year: number;
   years: number[];
+  /** Calendar years inside this block with no recorded death (unavailable ≠ zero). */
+  emptyYears: number[];
   empty: boolean;
   count: number;
   rows: number;
   i0: number;
   i1: number;
-  /** "2026" or "2019–20". */
+  /** "2026" or "2018–21". */
   label: string;
-  /** Desktop stamp: "2026 · 30"; empty strip: "2019–20". */
+  /** Desktop stamp: "2026 · 30", "2018–21 · 6"; empty strip: "2019–20". */
   text: string;
+  /** Empty-years disclosure: "none recorded" on an empty strip, or "2019–20 none recorded" on a merged block with gaps. */
   sub: string | null;
   /** Stamp anchor (desktop: under the headland's cut face; portrait: left grid edge, block middle). */
   stamp: PlotPoint;
@@ -425,6 +485,8 @@ export interface PlotSectionCamera {
 
 export interface DesktopPlotMap extends PlotMapBase {
   preset: "desktop";
+  /** Minimum frame width (CSS px) where a plain 1×1 stone stays ≥ `PLOT_LAYOUT.faceFloorPx` (passed to CSS as `--floor-w`). */
+  floorWidth: number;
   frame: { iA: number; iB: number; jN: number; jB: number; jVerge: number; slab: number };
   /** Canonical order (front lane first = left → right on screen). */
   signposts: PlotSignpost[];
@@ -432,7 +494,7 @@ export interface DesktopPlotMap extends PlotMapBase {
   cypress: PlotCypress[];
   lamps: { year: number; i: number; j: number }[];
   gate: { i0: number; i1: number; j: number };
-  lighthouse: { i: number; j: number; lantern: PlotPoint; top: PlotPoint };
+  lighthouse: { i: number; j: number; apothem: number; rockZ0: number; lantern: PlotPoint; top: PlotPoint };
   /** The beam's pivot (the lantern). */
   beamOrigin: PlotPoint;
   colossi: PlotColossus[];
@@ -447,10 +509,22 @@ export interface DesktopPlotMap extends PlotMapBase {
   };
 }
 
+export interface PortraitPlotCypress {
+  year: number;
+  /** Null for an empty-year bare planting bed, never zero. */
+  count: number | null;
+  i: number;
+  j: number;
+  /** 0 for a bare planting bed on an empty year strip. */
+  height: number;
+}
+
 export interface PortraitPlotMap extends PlotMapBase {
   preset: "portrait";
   /** Column heads, canonical order left → right; x0/x1 = the column's screen span on the top edge. */
   columns: { cause: CauseOfDeath; label: string; count: number; x0: number; x1: number }[];
+  /** Formal cypresses planted along the walk's gravel year paths (height ∝ year deaths; bare beds on empty years). */
+  cypress: PortraitPlotCypress[];
 }
 
 export type CemeteryPlotMap = DesktopPlotMap | PortraitPlotMap;
@@ -459,6 +533,29 @@ export interface BuildCemeteryPlotMapOptions<P extends PlotMapPresetName = PlotM
   /** Latest recorded `deathDate`; defaults to the latest in `entries` (the `buildCemeteryStats` rule). */
   asOf?: string;
   preset: P;
+}
+
+/** Formats an inclusive calendar-year range ("2019", "2019–20", "1999–2000"). */
+function formatYearSpan(lo: number, hi: number): string {
+  if (lo === hi) return String(lo);
+  return Math.floor(lo / 100) === Math.floor(hi / 100) ? `${lo}–${String(hi).slice(2)}` : `${lo}–${hi}`;
+}
+
+/** Formats sorted calendar years as comma-separated contiguous ranges ("2015, 2019–20"). */
+function formatYearRanges(years: readonly number[]): string {
+  if (!years.length) return "";
+  const ranges: string[] = [];
+  let lo = years[0];
+  let hi = years[0];
+  for (let k = 1; k < years.length; k++) {
+    if (years[k] === hi + 1) hi = years[k];
+    else {
+      ranges.push(formatYearSpan(lo, hi));
+      lo = hi = years[k];
+    }
+  }
+  ranges.push(formatYearSpan(lo, hi));
+  return ranges.join(", ");
 }
 
 /** Integer hundredths of a world unit (`+ 0` folds −0 into 0 so the model survives a JSON round trip exactly). */
@@ -474,16 +571,27 @@ function deathTime(id: string, deathDate: string): { t: number; year: number } {
 interface Working extends PlotGrave {
   t: number;
   rank: number;
+  estTopZ: number;
 }
 
 /** A block's packing: large lots at fixed (row, slot) and the 1×1 placements that follow from them. */
 interface LotPlan {
   rows: number;
   own: number;
+  risk: number;
   tie: number;
   lots: { g: Working; r: number; s: number }[];
   at: Map<string, { r: number; s: number }>;
 }
+
+/** Approximate resting stone height (world units) for occlusion-aware packing (tallest north/behind-tall). */
+const PACK_BASE_HEIGHT: Readonly<Record<PlotArchetype, number>> = {
+  pillow: 0.72,
+  "split-arch": 0.98,
+  "sealed-tablet": 0.9,
+  "broken-column": 1.16,
+  urn: 1.08,
+};
 
 /** Depth sort: A paints before B when A's footprint lies north or west of B's, else by footprint centre. */
 function depthSort<T extends { foot: PlotCell; box: PlotBox; key: string }>(objs: readonly T[]): T[] {
@@ -558,6 +666,13 @@ export function buildCemeteryPlotMap(entries: readonly CemeteryPlotMapInput[], o
     const rnd = seededStream(seed);
     const lean = weather === 4 && lot === 1 ? hundredths((rnd() < 0.5 ? -1 : 1) * (1.2 + 1.8 * rnd())) / 100 : 0;
     const archetype = PLOT_ARCHETYPE_BY_CAUSE[e.causeOfDeath];
+    const heightFactor = peakClass === null ? neutralHeight : hundredths(plotHeightFactorOf(e.peakMcap as number)) / 100;
+    const estTopZ =
+      lot === 3
+        ? archetype === "broken-column"
+          ? 6.9
+          : 3.26
+        : (peakClass === null ? 0.1 : peakClass * 0.1) + PACK_BASE_HEIGHT[archetype] * heightFactor * (lot === 2 ? 1.2 : 1);
     return {
       id: e.id,
       name: e.name,
@@ -567,11 +682,12 @@ export function buildCemeteryPlotMap(entries: readonly CemeteryPlotMapInput[], o
       year,
       t,
       rank: rank.get(e.id) as number,
+      estTopZ,
       peak: peakClass === null ? null : (e.peakMcap as number),
       peakClass,
       unrecorded: peakClass === null,
       steps: peakClass,
-      heightFactor: peakClass === null ? neutralHeight : hundredths(plotHeightFactorOf(e.peakMcap as number)) / 100,
+      heightFactor,
       lot,
       archetype,
       shape: plotShapeOf(archetype, lot),
@@ -620,64 +736,201 @@ export function buildCemeteryPlotMap(entries: readonly CemeteryPlotMapInput[], o
     laneMembers[cause] = mine;
   }
 
-  // ---- pack each calendar year: large lots at fixed (row, slot), then 1×1 graves row-major in their own lane.
-  const years = [...new Set(graves.map((g) => g.year))].sort((a, b) => a - b);
-  const firstYear = years[0];
-  const lastYear = years[years.length - 1];
+  // ---- pack each year block: years strictly before `preset.mergeBefore` share one oldest block (preserving each
+  // grave's real date/order and disclosing any internal empty years); later years get one block each.
+  const occupiedYears = [...new Set(graves.map((g) => g.year))].sort((a, b) => a - b);
+  const occupiedSet = new Set(occupiedYears);
+  const firstYear = occupiedYears[0];
+  const lastYear = occupiedYears[occupiedYears.length - 1];
+  interface PackedGroup {
+    years: number[];
+    emptyYears: number[];
+    members: Working[];
+  }
+  const groups: PackedGroup[] = [];
+  const earlyYears = preset.mergeBefore === null ? [] : occupiedYears.filter((y) => y < preset.mergeBefore!);
+  if (earlyYears.length > 0) {
+    const lo = earlyYears[0];
+    const hi = earlyYears[earlyYears.length - 1];
+    const span: number[] = [];
+    const emptyYears: number[] = [];
+    for (let y = lo; y <= hi; y++) {
+      span.push(y);
+      if (!occupiedSet.has(y)) emptyYears.push(y);
+    }
+    groups.push({ years: span, emptyYears, members: graves.filter((g) => g.year >= lo && g.year <= hi).sort(byRank) });
+  }
+  for (const year of occupiedYears) {
+    if (preset.mergeBefore !== null && year < preset.mergeBefore) continue;
+    groups.push({ years: [year], emptyYears: [], members: graves.filter((g) => g.year === year).sort(byRank) });
+  }
   // Slot −1 is a virtual slot on the cypress walk: only large lots may step onto it ("stand outside the beds").
+  // Pack newest → oldest so on desktop a lot-3 monument at row 0 reserves its east-facing stair forecourt slots in the
+  // immediately east (older) block when no empty-year strip separates them.
   const northVirtual = preset.northTerrace >= preset.slotPitch * 0.9 ? 1 : 0;
-  const blockRows = new Map<number, number>();
-  const greedyYears = new Set<number>();
-  for (const year of years) {
-    const members = graves.filter((g) => g.year === year).sort(byRank);
+  const isDesktop = preset.name === "desktop";
+  /** Rows (along i) and slots (along j) occupied by a grave: portrait caps width to its own cause column. */
+  const lotSpanI = (g: Pick<Working, "lot">) => (isDesktop ? g.lot : g.lot === 3 ? 2 : g.lot);
+  const lotSpanJ = (g: Pick<Working, "lot" | "cause">) => (isDesktop ? g.lot : Math.min(g.lot, laneGeo[g.cause].depth));
+  const groupRows = new Map<number, number>();
+  const greedyBlocks = new Set<number>();
+  const westForecourtByGroup = new Map<number, Set<number>>();
+  for (let gi = groups.length - 1; gi >= 0; gi--) {
+    const group = groups[gi];
+    const { members } = group;
     const large = members.filter((g) => g.lot > 1);
     const small = members.filter((g) => g.lot === 1);
+    const blockedWestSlots = isDesktop ? (westForecourtByGroup.get(gi) ?? new Set<number>()) : new Set<number>();
+    const smallByCause = new Map<CauseOfDeath, Working[]>(CAUSE_ORDER.map((c) => [c, small.filter((g) => g.cause === c)]));
 
     const fill = (lots: { g: Working; r: number; s: number }[]) => {
-      const occ: boolean[][] = [];
-      const free = (r: number, s: number) => !(occ[r] && occ[r][s + northVirtual]);
-      const mark = (r: number, s: number, k: number) => {
-        for (let a = 0; a < k; a++) {
-          occ[r + a] = occ[r + a] || [];
-          for (let b = 0; b < k; b++) occ[r + a][s + b + northVirtual] = true;
+      const occHeight: number[][] = [];
+      const free = (r: number, s: number) => !(occHeight[r] && occHeight[r][s + northVirtual]);
+      const mark = (r: number, s: number, spanI: number, spanJ: number, h: number) => {
+        for (let a = 0; a < spanI; a++) {
+          occHeight[r + a] = occHeight[r + a] || [];
+          for (let b = 0; b < spanJ; b++) occHeight[r + a][s + b + northVirtual] = h;
         }
       };
       for (const { g, r, s } of lots) {
-        for (let a = 0; a < g.lot; a++) for (let b = 0; b < g.lot; b++) if (!free(r + a, s + b)) return null;
-        mark(r, s, g.lot);
+        const spanI = lotSpanI(g);
+        const spanJ = lotSpanJ(g);
+        for (let a = 0; a < spanI; a++) for (let b = 0; b < spanJ; b++) if (!free(r + a, s + b)) return null;
+        mark(r, s, spanI, spanJ, g.estTopZ);
       }
-      const at = new Map<string, { r: number; s: number }>();
-      const cursor = Object.fromEntries(CAUSE_ORDER.map((c) => [c, { r: 0, s: 0 }])) as Record<CauseOfDeath, { r: number; s: number }>;
-      for (const g of small) {
-        const L = laneGeo[g.cause];
-        const cur = cursor[g.cause];
-        let r = cur.r;
-        let s = cur.s;
-        for (;;) {
-          if (s >= L.depth) {
-            r++;
-            s = 0;
+      // Same-block east forecourt: a lot-3 monument at r > 0 reserves row r − 1 across its j slots on desktop.
+      const internalBlocked = new Set<string>();
+      if (isDesktop) {
+        for (const { g, r, s } of lots) {
+          if (g.lot !== 3 || r <= 0) continue;
+          for (let b = 0; b < g.lot; b++) {
+            const fs = s + b;
+            if (fs < 0) continue;
+            if (!free(r - 1, fs)) return null;
+            internalBlocked.add(`${r - 1}:${fs}`);
           }
-          if (free(r, L.slot0 + s)) break;
-          s++;
         }
-        mark(r, L.slot0 + s, 1);
-        at.set(g.id, { r, s: L.slot0 + s });
-        cur.r = r;
-        cur.s = s + 1;
       }
-      return { rows: Math.max(1, occ.length), at };
+
+      let minRows = Math.max(
+        1,
+        occHeight.length,
+        ...CAUSE_ORDER.map((c) => Math.ceil((smallByCause.get(c)?.length ?? 0) / laneGeo[c].depth)),
+      );
+      if (blockedWestSlots.size > 0) {
+        const lotHitsWest = (rows: number) =>
+          lots.some(({ g, r, s }) => r + lotSpanI(g) - 1 === rows - 1 && Array.from({ length: lotSpanJ(g) }, (_, b) => s + b).some((sl) => blockedWestSlots.has(sl)));
+        while (lotHitsWest(minRows)) minRows++;
+      }
+      // Upper bound on rows needed: even if every large lot + forecourt slot occupies one lane, packing still terminates.
+      const extraRowsBound = Math.max(
+        4,
+        lots.reduce((sum, o) => sum + lotSpanI(o.g) + 1, 0) + (blockedWestSlots.size > 0 ? 1 : 0),
+      );
+
+      for (let targetRows = minRows; targetRows <= minRows + extraRowsBound; targetRows++) {
+        const hGrid = occHeight.map((row) => (row ? [...row] : []));
+        const freeSlot = (r: number, s: number) => {
+          if (r === targetRows - 1 && blockedWestSlots.has(s)) return false;
+          if (internalBlocked.has(`${r}:${s}`)) return false;
+          return !(hGrid[r] && hGrid[r][s + northVirtual]);
+        };
+        const heightAt = (r: number, s: number) => (r >= 0 && hGrid[r] ? (hGrid[r][s + northVirtual] ?? 0) : 0);
+        const setH = (r: number, s: number, h: number) => {
+          hGrid[r] = hGrid[r] || [];
+          hGrid[r][s + northVirtual] = h;
+        };
+        const at = new Map<string, { r: number; s: number }>();
+        let ok = true;
+        let risk = 0;
+        for (const cause of CAUSE_ORDER) {
+          const list = smallByCause.get(cause)!;
+          if (!list.length) continue;
+          const L = laneGeo[cause];
+          const rowAvail: number[][] = [];
+          for (let r = 0; r < targetRows; r++) {
+            const av: number[] = [];
+            for (let k = 0; k < L.depth; k++) if (freeSlot(r, L.slot0 + k)) av.push(L.slot0 + k);
+            rowAvail.push(av);
+          }
+          const totalAvail = rowAvail.reduce((a, b) => a + b.length, 0);
+          if (totalAvail < list.length) {
+            ok = false;
+            break;
+          }
+          // Keep each lane compact within the minimal rows it needs, using only spare slots inside those rows.
+          let acc = 0;
+          let laneRows = 0;
+          for (let r = 0; r < targetRows && acc < list.length; r++) {
+            acc += rowAvail[r].length;
+            laneRows = r + 1;
+          }
+          let idx = 0;
+          for (let r = 0; r < laneRows && idx < list.length; r++) {
+            const avail = rowAvail[r];
+            if (!avail.length) continue;
+            const remaining = list.length - idx;
+            // Single grave in a multi-slot lane: centre in safe slots clear of any same-row colossus's south stairs.
+            if (list.length === 1 && avail.length > 1) {
+              const safe = avail.filter((s) => !lots.some(({ g, r: lr, s: ls }) => g.lot === 3 && r >= lr && r < lr + g.lot && s === ls + g.lot));
+              const pool = safe.length ? safe : avail;
+              const chosenSlot = pool[Math.floor((pool.length - 1) / 2)];
+              const g = list[idx++];
+              setH(r, chosenSlot, g.estTopZ);
+              at.set(g.id, { r, s: chosenSlot });
+              continue;
+            }
+            const scored = avail.map((s) => {
+              const occSlot = isDesktop ? s + 1 : s;
+              const inLane = occSlot >= L.slot0 && occSlot < L.slot0 + L.depth;
+              const occH = r > 0 && inLane ? heightAt(r - 1, occSlot) : 0;
+              return { s, occH };
+            });
+            const futureAvail = rowAvail.slice(r + 1, laneRows).reduce((a, b) => a + b.length, 0);
+            const minNeedHere = Math.max(0, remaining - futureAvail);
+            const canSkip = avail.length - minNeedHere;
+            let keepCount = Math.min(avail.length, remaining);
+            if (canSkip > 0 && r < laneRows - 1) {
+              const highRisk = scored.filter((x) => x.occH >= 1.2).length;
+              keepCount = avail.length - Math.min(canSkip, highRisk);
+            }
+            // Prefer lowest-occlusion slots (ties: south-most on partial rows, where SE lies on the lane path).
+            const picked = [...scored].sort((a, b) => a.occH - b.occH || b.s - a.s).slice(0, keepCount);
+            // Pair tallest stones in this row with highest-risk / north-most chosen slots so tall faces clear SE neighbours.
+            picked.sort((a, b) => b.occH - a.occH || a.s - b.s);
+            const take = list.slice(idx, idx + picked.length);
+            const ordered = [...take].sort((a, b) => b.estTopZ - a.estTopZ || a.rank - b.rank);
+            for (let k = 0; k < ordered.length; k++) {
+              const slot = picked[k].s;
+              const occH = picked[k].occH;
+              if (occH > 0) risk += Math.max(0, occH - ordered[k].estTopZ + 0.35);
+              setH(r, slot, ordered[k].estTopZ);
+              at.set(ordered[k].id, { r, s: slot });
+            }
+            idx += ordered.length;
+          }
+          if (idx < list.length) {
+            ok = false;
+            break;
+          }
+        }
+        if (ok) return { rows: targetRows, risk, at };
+      }
+      return null;
     };
 
-    // Minimise rows (plan length), then keep lots inside their own lane, then prefer early rows and the north.
-    // Exhaustive over every clash-free combination while that stays within budget; beyond it (many ≥ $1B deaths
-    // in one year) each lot, in chronological order, takes its best position given the lots before it.
+    // Desktop minimises rows (plan length), then own-lane share, then occlusion risk.
+    // Portrait has vertical room and tappable cause column heads, so every lot stays inside its own cause column
+    // (ranking own-lane strictly above fewer rows).
     const search = (maxRow: number): { plan: LotPlan | null; greedy: boolean } => {
       const candidates = large.map((g) => {
         const L = laneGeo[g.cause];
+        const spanJ = lotSpanJ(g);
         const out: { r: number; s: number; own: number }[] = [];
-        for (let s = Math.max(northVirtual ? -1 : 0, L.slot0 - (g.lot - 1)); s <= Math.min(slots - g.lot, L.slot0 + L.depth - 1); s++) {
-          const own = Math.min(s + g.lot, L.slot0 + L.depth) - Math.max(s, L.slot0);
+        const sMin = isDesktop ? Math.max(northVirtual ? -1 : 0, L.slot0 - (spanJ - 1)) : L.slot0;
+        const sMax = isDesktop ? Math.min(slots - spanJ, L.slot0 + L.depth - 1) : L.slot0 + L.depth - spanJ;
+        for (let s = sMin; s <= sMax; s++) {
+          const own = Math.min(s + spanJ, L.slot0 + L.depth) - Math.max(s, L.slot0);
           for (let r = 0; r <= maxRow; r++) out.push({ r, s, own });
         }
         return out;
@@ -686,13 +939,24 @@ export function buildCemeteryPlotMap(entries: readonly CemeteryPlotMapInput[], o
         const res = fill(lots);
         if (!res) return best;
         const tie = lots.reduce((a, c) => a + c.r * 100 + (c.s + northVirtual), 0);
-        if (!best || res.rows < best.rows || (res.rows === best.rows && (own > best.own || (own === best.own && tie < best.tie)))) {
-          return { rows: res.rows, own, tie, lots, at: res.at };
+        const better = !best
+          ? true
+          : isDesktop
+            ? res.rows < best.rows ||
+              (res.rows === best.rows &&
+                (own > best.own ||
+                  (own === best.own && (res.risk < best.risk - 1e-6 || (Math.abs(res.risk - best.risk) <= 1e-6 && tie < best.tie)))))
+            : own > best.own ||
+              (own === best.own &&
+                (res.rows < best.rows ||
+                  (res.rows === best.rows && (res.risk < best.risk - 1e-6 || (Math.abs(res.risk - best.risk) <= 1e-6 && tie < best.tie)))));
+        if (better) {
+          return { rows: res.rows, own, risk: res.risk, tie, lots, at: res.at };
         }
         return best;
       };
-      const clashes = (lots: LotPlan["lots"], c: { r: number; s: number }, k: number) =>
-        lots.some((o) => c.r < o.r + o.g.lot && o.r < c.r + k && c.s < o.s + o.g.lot && o.s < c.s + k);
+      const clashes = (lots: LotPlan["lots"], c: { r: number; s: number }, spanI: number, spanJ: number) =>
+        lots.some((o) => c.r < o.r + lotSpanI(o.g) && o.r < c.r + spanI && c.s < o.s + lotSpanJ(o.g) && o.s < c.s + spanJ);
       const combinations = candidates.reduce((a, c) => a * c.length, 1);
       if (combinations <= PLOT_LAYOUT.lotSearchBudget) {
         let best: LotPlan | null = null;
@@ -701,94 +965,153 @@ export function buildCemeteryPlotMap(entries: readonly CemeteryPlotMapInput[], o
             best = consider(best, chosen, own);
             return;
           }
+          const spanI = lotSpanI(large[idx]);
+          const spanJ = lotSpanJ(large[idx]);
           for (const c of candidates[idx]) {
-            if (!clashes(chosen, c, large[idx].lot)) walk(idx + 1, [...chosen, { g: large[idx], r: c.r, s: c.s }], own + c.own);
+            if (!clashes(chosen, c, spanI, spanJ)) walk(idx + 1, [...chosen, { g: large[idx], r: c.r, s: c.s }], own + c.own);
           }
         };
         walk(0, [], 0);
         return { plan: best, greedy: false };
       }
-      let placed: LotPlan | null = { rows: 0, own: 0, tie: 0, lots: [], at: new Map() };
+      let placed: LotPlan | null = { rows: 0, own: 0, risk: 0, tie: 0, lots: [], at: new Map() };
       for (let idx = 0; idx < large.length && placed; idx++) {
         const before: LotPlan = placed;
         let pick: LotPlan | null = null;
+        const spanI = lotSpanI(large[idx]);
+        const spanJ = lotSpanJ(large[idx]);
         for (const c of candidates[idx]) {
-          if (!clashes(before.lots, c, large[idx].lot)) pick = consider(pick, [...before.lots, { g: large[idx], r: c.r, s: c.s }], before.own + c.own);
+          if (!clashes(before.lots, c, spanI, spanJ)) pick = consider(pick, [...before.lots, { g: large[idx], r: c.r, s: c.s }], before.own + c.own);
         }
         placed = pick;
       }
       return { plan: placed, greedy: true };
     };
     // Large lots start in rows 0…3; only a block that cannot fit them there searches deeper (flagged by
-    // validatePlotMapCapacity as "lot-rows").
+    // validatePlotMapCapacity as "lot-rows"). Bounded explicitly so pathological inputs never spin.
     let found = search(PLOT_LAYOUT.maxLotRow);
-    for (let maxRow = PLOT_LAYOUT.maxLotRow + 1; !found.plan; maxRow++) found = search(maxRow);
+    const maxRowLimit = PLOT_LAYOUT.maxLotRow + Math.max(4, large.length * 4 + 4);
+    for (let maxRow = PLOT_LAYOUT.maxLotRow + 1; !found.plan && maxRow <= maxRowLimit; maxRow++) found = search(maxRow);
+    if (!found.plan) throw new Error(`buildCemeteryPlotMap: could not pack block ${group.years[0]} within ${maxRowLimit} rows`);
     const chosen = found.plan;
     for (const { g, r, s } of chosen.lots) {
       const L = laneGeo[g.cause];
       g.row = r;
       g.slot = s;
-      g.overhang = s < L.slot0 || s + g.lot > L.slot0 + L.depth;
+      g.overhang = s < L.slot0 || s + lotSpanJ(g) > L.slot0 + L.depth;
+      if (isDesktop && g.lot === 3 && r === 0 && gi > 0) {
+        const prevEnd = groups[gi - 1].years[groups[gi - 1].years.length - 1];
+        // When the next older block touches this one across a single yearPath (no empty-year strip), reserve its west-most row.
+        if (prevEnd + 1 === group.years[0]) {
+          const fc = westForecourtByGroup.get(gi - 1) ?? new Set<number>();
+          for (let b = 0; b < g.lot; b++) if (s + b >= 0) fc.add(s + b);
+          westForecourtByGroup.set(gi - 1, fc);
+        }
+      }
     }
     for (const g of small) {
       const at = chosen.at.get(g.id)!;
       g.row = at.r;
       g.slot = at.s;
     }
-    blockRows.set(year, chosen.rows);
-    if (found.greedy) greedyYears.add(year);
+    groupRows.set(group.years[0], chosen.rows);
+    if (found.greedy) greedyBlocks.add(group.years[0]);
   }
 
   // ---- year blocks along i, laid from the oldest (east, i = 0) toward the gate (west, negative i).
-  const eastToWest: { years: number[]; empty: boolean; rows: number; i0: number; i1: number }[] = [];
+  const eastToWest: { years: number[]; emptyYears: number[]; empty: boolean; rows: number; i0: number; i1: number }[] = [];
   let iCursor = 0;
-  for (let y = firstYear; y <= lastYear; y++) {
-    const rows = blockRows.get(y);
-    if (rows === undefined) {
-      const prev = eastToWest[eastToWest.length - 1];
-      if (prev && prev.empty) {
-        prev.years.push(y);
-        continue;
+  for (let k = 0; k < groups.length; k++) {
+    const group = groups[k];
+    if (k > 0) {
+      const prevEnd = groups[k - 1].years[groups[k - 1].years.length - 1];
+      const gapStart = prevEnd + 1;
+      const gapEnd = group.years[0] - 1;
+      if (gapStart <= gapEnd) {
+        const gapYears: number[] = [];
+        for (let y = gapStart; y <= gapEnd; y++) gapYears.push(y);
+        const i1 = iCursor;
+        const i0 = i1 - hundredths(preset.emptyYears);
+        eastToWest.push({ years: gapYears, emptyYears: gapYears, empty: true, rows: 0, i0, i1 });
+        iCursor = i0 - hundredths(preset.yearPath);
       }
-      const i1 = iCursor;
-      const i0 = i1 - hundredths(preset.emptyYears);
-      eastToWest.push({ years: [y], empty: true, rows: 0, i0, i1 });
-      iCursor = i0 - hundredths(preset.yearPath);
-      continue;
     }
+    const rows = groupRows.get(group.years[0])!;
     const i1 = iCursor;
     const i0 = i1 - rows * RP;
-    eastToWest.push({ years: [y], empty: false, rows, i0, i1 });
+    eastToWest.push({ years: group.years, emptyYears: group.emptyYears, empty: false, rows, i0, i1 });
     iCursor = i0 - hundredths(preset.yearPath);
   }
   const westToEast = eastToWest.reverse();
   const iAvenue = westToEast[0].i0;
   const iWest = iAvenue - hundredths(preset.avenue);
   const iEast = hundredths(preset.eastTerrace);
-  const blockOfYear = new Map(westToEast.filter((b) => !b.empty).map((b) => [b.years[0], b]));
+  const blockOfYear = new Map<number, (typeof westToEast)[number]>();
+  for (const b of westToEast) if (!b.empty) for (const y of b.years) blockOfYear.set(y, b);
 
-  // ---- cells: row 0 (the block's oldest graves) at the block's east edge, so rows added for newer deaths grow
-  // the block westward and never move an existing lot.
-  for (const g of graves) {
-    const B = blockOfYear.get(g.year)!;
-    const i1 = B.i1 - g.row * RP;
-    const i0 = i1 - g.lot * RP;
-    const j0 = jOfSlot(g.slot);
-    const j1 = jOfSlot(g.slot + g.lot - 1) + SP;
-    g.cell = { i0: i0 / 100, i1: i1 / 100, j0: j0 / 100, j1: j1 / 100 };
-    // The stone stands at the west third of its lot; the mound runs east toward the light.
-    g.anchor = { i: (i0 + (g.lot === 1 ? 30 : g.lot === 2 ? 78 : 150)) / 100, j: Math.round((j0 + j1) / 2) / 100 };
+  // ---- cells:
+  // Desktop: row 0 (the block's oldest graves) at the block's east edge, so rows added for newer deaths grow westward
+  // and never move an existing lot.
+  // Portrait: anchor each lane's rows from the TOP of its year block (`B.i0`, newest at the top directly under the
+  // sticky year band) and centre sparse `j` spans symmetrically inside their cause column so lone stones & trimmed
+  // beds never sit lopsided or leave blank walls at the top of a year.
+  if (isDesktop) {
+    for (const g of graves) {
+      const B = blockOfYear.get(g.year)!;
+      const spanI = lotSpanI(g);
+      const spanJ = lotSpanJ(g);
+      const i1 = B.i1 - g.row * RP;
+      const i0 = i1 - spanI * RP;
+      const j0 = jOfSlot(g.slot);
+      const j1 = jOfSlot(g.slot + spanJ - 1) + SP;
+      g.cell = { i0: i0 / 100, i1: i1 / 100, j0: j0 / 100, j1: j1 / 100 };
+      // Per-archetype west anchor keeps square pedestals (column/urn) and large plinths inside their lot/pad.
+      const offsetI = hundredths(graveAnchorOffsetI(g.shape, g.lot, g.steps, preset.projection));
+      g.anchor = { i: (i0 + offsetI) / 100, j: Math.round((j0 + j1) / 2) / 100 };
+    }
+  } else {
+    const laneOccRows = new Map<string, number>();
+    const laneOccJ = new Map<string, { minJ0: number; maxJ1: number }>();
+    for (const g of graves) {
+      const B = blockOfYear.get(g.year)!;
+      const key = `${B.years[0]}:${g.cause}`;
+      const endRow = g.row + lotSpanI(g);
+      laneOccRows.set(key, Math.max(laneOccRows.get(key) ?? 0, endRow));
+      const j0 = jOfSlot(g.slot);
+      const j1 = jOfSlot(g.slot + lotSpanJ(g) - 1) + SP;
+      const prev = laneOccJ.get(key);
+      laneOccJ.set(key, prev ? { minJ0: Math.min(prev.minJ0, j0), maxJ1: Math.max(prev.maxJ1, j1) } : { minJ0: j0, maxJ1: j1 });
+    }
+    for (const g of graves) {
+      const B = blockOfYear.get(g.year)!;
+      const key = `${B.years[0]}:${g.cause}`;
+      const occRows = laneOccRows.get(key)!;
+      const occJ = laneOccJ.get(key)!;
+      const L = laneGeo[g.cause];
+      const spanI = lotSpanI(g);
+      const spanJ = lotSpanJ(g);
+      const i1 = B.i0 + (occRows - g.row) * RP;
+      const i0 = i1 - spanI * RP;
+      const dj = Math.round(((L.j0 + L.j1) - (occJ.minJ0 + occJ.maxJ1)) / 2);
+      const j0 = jOfSlot(g.slot) + dj;
+      const j1 = jOfSlot(g.slot + spanJ - 1) + SP + dj;
+      g.cell = { i0: i0 / 100, i1: i1 / 100, j0: j0 / 100, j1: j1 / 100 };
+      const offsetI = hundredths(graveAnchorOffsetI(g.shape, g.lot, g.steps, preset.projection));
+      g.anchor = { i: (i0 + offsetI) / 100, j: Math.round((j0 + j1) / 2) / 100 };
+    }
   }
 
   const blocks: PlotYearBlock[] = westToEast.map((b) => {
-    const ids = graves.filter((g) => !b.empty && g.year === b.years[0]).sort(byRank).map((g) => g.id);
+    const yearSet = new Set(b.years);
+    const ids = b.empty ? [] : graves.filter((g) => yearSet.has(g.year)).sort(byRank).map((g) => g.id);
     const lo = b.years[0];
     const hi = b.years[b.years.length - 1];
-    const label = b.empty ? (lo === hi ? String(lo) : `${lo}–${String(hi).slice(2)}`) : String(lo);
+    const label = formatYearSpan(lo, hi);
     return {
-      key: b.empty && lo !== hi ? `${lo}-${hi}` : String(lo),
+      key: lo !== hi ? `${lo}-${hi}` : String(lo),
       year: lo,
       years: [...b.years],
+      emptyYears: [...b.emptyYears],
       empty: b.empty,
       count: ids.length,
       rows: b.rows,
@@ -796,18 +1119,20 @@ export function buildCemeteryPlotMap(entries: readonly CemeteryPlotMapInput[], o
       i1: b.i1 / 100,
       label,
       text: b.empty ? label : `${label} · ${ids.length}`,
-      sub: b.empty ? "none recorded" : null,
+      sub: b.empty ? "none recorded" : b.emptyYears.length ? `${formatYearRanges(b.emptyYears)} none recorded` : null,
       stamp: [0, 0],
       stampAngle: 0,
       span: { y0: 0, y1: 0 },
       ids,
-      greedyLots: !b.empty && greedyYears.has(lo),
+      greedyLots: !b.empty && greedyBlocks.has(lo),
     };
   });
 
   const lanes: PlotLane[] = CAUSE_ORDER.map((cause) => {
     const L = laneGeo[cause];
     const mine = laneMembers[cause];
+    const laneJ0 = L.j0 / 100;
+    const laneJ1 = L.j1 / 100;
     const bed = mine.length ? { i0: Math.min(...mine.map((g) => g.cell.i0)), i1: Math.max(...mine.map((g) => g.cell.i1)) } : null;
     return {
       cause,
@@ -816,13 +1141,60 @@ export function buildCemeteryPlotMap(entries: readonly CemeteryPlotMapInput[], o
       hexDark: CAUSE_HEX_DARK[cause],
       depth: L.depth,
       slot0: L.slot0,
-      j0: L.j0 / 100,
-      j1: L.j1 / 100,
+      j0: laneJ0,
+      j1: laneJ1,
       count: mine.length,
       bed,
-      cells: bed
-        ? blocks.filter((b) => !b.empty && !(b.i1 <= bed.i0 + 1e-6 || b.i0 >= bed.i1 - 1e-6)).map((b) => ({ year: b.year, i0: b.i0, i1: b.i1 }))
-        : [],
+      cells: isDesktop
+        ? bed
+          ? blocks
+              .flatMap((b) => {
+                if (b.empty || b.i1 <= bed.i0 + 1e-6 || b.i0 >= bed.i1 - 1e-6) return [];
+                // Skip emitting a narrow 1-slot lane bed under a block occupied solely by a lot-3 colossus (its raised lot pad is its bed).
+                const yearSet = new Set(b.years);
+                const inBlock = mine.filter((g) => yearSet.has(g.year));
+                if (inBlock.length > 0 && inBlock.every((g) => g.lot === 3)) return [];
+                // On desktop, trim sparse per-block beds along j to occupied slots + 1 (centered symmetrically inside the lane)
+                // so wide lanes with 1–2 graves in a year do not paint mostly-empty slabs (C-07).
+                let cellJ0 = laneJ0;
+                let cellJ1 = laneJ1;
+                if (inBlock.length > 0 && L.depth >= 3) {
+                  const occJ0 = Math.max(laneJ0, Math.min(...inBlock.map((g) => g.cell.j0)));
+                  const occJ1 = Math.min(laneJ1, Math.max(...inBlock.map((g) => g.cell.j1)));
+                  const targetSpan = Math.min(laneJ1 - laneJ0, occJ1 - occJ0 + preset.slotPitch);
+                  if (targetSpan < laneJ1 - laneJ0 - 1e-6) {
+                    const mid = (occJ0 + occJ1) / 2;
+                    let lo = mid - targetSpan / 2;
+                    let hi = mid + targetSpan / 2;
+                    if (lo < laneJ0) {
+                      hi += laneJ0 - lo;
+                      lo = laneJ0;
+                    }
+                    if (hi > laneJ1) {
+                      lo -= hi - laneJ1;
+                      hi = laneJ1;
+                    }
+                    cellJ0 = hundredths(Math.max(laneJ0, lo)) / 100;
+                    cellJ1 = hundredths(Math.min(laneJ1, hi)) / 100;
+                  }
+                }
+                return [{ year: b.year, i0: b.i0, i1: b.i1, j0: cellJ0, j1: cellJ1 }];
+              })
+          : []
+        : blocks.flatMap((b) => {
+            if (b.empty) return [];
+            const yearSet = new Set(b.years);
+            const inBlock = mine.filter((g) => yearSet.has(g.year));
+            // Portrait: beds hug their occupied rows and occupied slots; empty lane-years remain quiet lawn (no bare
+            // curb bars), and pure lot > 1 blocks stand on their own raised curbed lot pads.
+            if (inBlock.length === 0) return [];
+            if (inBlock.every((g) => g.lot > 1)) return [];
+            const occI0 = Math.min(...inBlock.map((g) => g.cell.i0));
+            const occI1 = Math.max(...inBlock.map((g) => g.cell.i1));
+            const occJ0 = Math.min(...inBlock.map((g) => g.cell.j0));
+            const occJ1 = Math.max(...inBlock.map((g) => g.cell.j1));
+            return [{ year: b.year, i0: hundredths(occI0) / 100, i1: hundredths(occI1) / 100, j0: hundredths(occJ0) / 100, j1: hundredths(occJ1) / 100 }];
+          }),
       ids: mine.map((g) => g.id),
     };
   });
@@ -921,7 +1293,7 @@ export function buildCemeteryPlotMap(entries: readonly CemeteryPlotMapInput[], o
   };
   const finalGraves = (order: string[]): PlotGrave[] => {
     const drawIndex = new Map(order.map((key, k) => [key, k]));
-    return graves.map(({ t: _t, rank: _rank, ...g }) => ({ ...g, draw: drawIndex.get(`grave:${g.id}`) as number }));
+    return graves.map(({ t: _t, rank: _rank, estTopZ: _estTopZ, ...g }) => ({ ...g, draw: drawIndex.get(`grave:${g.id}`) as number }));
   };
 
   if (preset.name === "portrait") {
@@ -940,18 +1312,71 @@ function buildPortrait(
   finalGraves: (order: string[]) => PlotGrave[],
 ): PortraitPlotMap {
   const { site, blocks, lanes } = base;
-  // Phones: no lighthouse or sea block, only a thin sea-wall strip above the newest block.
-  const top = site.iAvenue - 0.3;
+  // Phones: coastal sea strip + low sea wall above the newest block's top year band; headland strata at the oldest end.
+  const top = site.iAvenue - PORTRAIT_TOP_MARGIN;
   const I = site.iOldest;
   const J = site.jSouth;
-  const ext: PlotPoint[] = [project(proj, top - 0.55, -0.35, 0), project(proj, I + 0.35, J + 0.35, -0.6), project(proj, I + 0.35, -0.35, -0.6), project(proj, top - 0.55, J + 0.35, 0)];
+  const side = 0.32;
+  const slab = 0.62;
+  const ext: PlotPoint[] = [
+    project(proj, top, -side, 0),
+    project(proj, I + 0.42, J + side, -slab),
+    project(proj, I + 0.42, -side, -slab),
+    project(proj, top, J + side, 0),
+  ];
   for (const g of graves) ext.push(...geo.get(g.id)!.pts);
+
+  // Slender cypresses planted strictly in open lawn bays of non-empty year blocks (never in empty-year strips like
+  // 2019–20, never mid-path in a gravel walkway, and clear of every bed, grave and sticky year band).
+  const maxBlockCount = Math.max(1, ...blocks.map((b) => b.count));
+  const clearOfGraves = (ci: number, cj: number) =>
+    graves.every((g) => g.cell.i1 < ci - 0.85 || g.cell.i0 > ci + 0.45 || g.cell.j1 < cj - 0.36 || g.cell.j0 > cj + 0.36);
+  const cypress: PortraitPlotCypress[] = [];
+  const addCypress = (year: number, count: number, ci: number, cj: number, height: number) => {
+    const i = hundredths(ci) / 100;
+    const j = hundredths(cj) / 100;
+    if (!clearOfGraves(i, j)) return false;
+    cypress.push({ year, count, i, j, height: hundredths(height) / 100 });
+    ext.push(project(proj, i, j, height));
+    return true;
+  };
+  // Deterministic lane rotation across blocks so lawn cypresses form an organic staggered grove.
+  const laneOrderByBlock = [
+    ["counterparty-failure", "algorithmic-failure", "liquidity-drain", "regulatory", "abandoned"],
+    ["algorithmic-failure", "regulatory", "counterparty-failure", "abandoned", "liquidity-drain"],
+    ["counterparty-failure", "regulatory", "algorithmic-failure", "abandoned", "liquidity-drain"],
+    ["abandoned", "liquidity-drain", "counterparty-failure", "regulatory", "algorithmic-failure"],
+  ] as const;
+  const laneByCause = new Map(lanes.map((L) => [L.cause, L]));
+  for (let q = 0; q < blocks.length; q++) {
+    const b = blocks[q];
+    if (b.empty) continue;
+    const yearSet = new Set(b.years);
+    const h = 0.52 + 0.28 * (b.count / maxBlockCount);
+    const maxForBlock = b.rows >= 6 ? 2 : 1;
+    const order = laneOrderByBlock[q % laneOrderByBlock.length];
+    let placed = 0;
+    for (const cause of order) {
+      if (placed >= maxForBlock) break;
+      const L = laneByCause.get(cause);
+      if (!L) continue;
+      const inLane = graves.filter((g) => g.cause === cause && yearSet.has(g.year));
+      const openI0 = inLane.length > 0 ? Math.max(...inLane.map((g) => g.cell.i1)) + 1.05 : b.i0 + 0.85;
+      const openI1 = b.i1 - 0.42;
+      if (openI1 - openI0 < 0.2) continue;
+      const ci = Math.min(openI1, openI0 + Math.min(1.1, (openI1 - openI0) * 0.42));
+      const cj = (L.j0 + L.j1) / 2;
+      if (addCypress(b.year, b.count, ci, cj, placed === 0 ? h : h * 0.88)) placed++;
+    }
+  }
+  cypress.sort((a, b) => a.i - b.i || a.j - b.j);
+
   const eb = bbox(ext);
   const viewBox: [number, number, number, number] = [round1(eb.x0 - 2), round1(eb.y0 - 2), round1(eb.x1 - eb.x0 + 4), round1(eb.y1 - eb.y0 + 4)];
-  // Back to front: higher on the page (smaller i) first; ties by j descending (south faces show on the left).
+  // Back to front: higher on the page (smaller i) first; ties by j ascending (right → left, matching ENE oblique faces).
   const order = graves
     .slice()
-    .sort((a, b) => Math.round((a.cell.i0 - b.cell.i0) * 100) || Math.round((b.cell.j0 - a.cell.j0) * 100))
+    .sort((a, b) => Math.round((a.cell.i0 - b.cell.i0) * 100) || Math.round((a.cell.j0 - b.cell.j0) * 100))
     .map((g) => `grave:${g.id}`);
   for (const b of blocks) b.stamp = [round1(project(proj, (b.i0 + b.i1) / 2, J, 0)[0]), round1((b.span.y0 + b.span.y1) / 2)];
   const i0 = blocks[0].i0;
@@ -968,6 +1393,7 @@ function buildPortrait(
       x0: round1(project(proj, i0, L.j1, 0)[0]),
       x1: round1(project(proj, i0, L.j0, 0)[0]),
     })),
+    cypress,
   };
 }
 
@@ -1009,11 +1435,20 @@ function buildDesktop(
     lamps.push({ year: b.year, i: li, j: lj });
     addObject(`lamp:${b.year}`, { i0: li - 0.08, i1: li + 0.08, j0: lj - 0.08, j1: lj + 0.08 }, lampGeometry(proj, li, lj).pts, true);
   }
-  const gate = { i0: w2(W + 0.12), i1: w2(W + AV - 0.12), j: J };
-  addObject("gate", { i0: gate.i0, i1: gate.i1, j0: J, j1: J + 0.34 }, gateGeometry(proj, gate.i0, gate.i1, J).pts);
-  const LH = { i: w2(I - PLOT_SCENE.lighthouseInset), j: PLOT_SCENE.lighthouseJ };
-  const lh = lighthouseGeometry(proj, LH.i, LH.j);
-  addObject("lighthouse", { i0: LH.i - 1.18, i1: LH.i + 1.18, j0: LH.j - 1.18, j1: LH.j + 1.18 }, lh.pts);
+  const gate = { i0: W, i1: site.iAvenue, j: J };
+  addObject("gate", { i0: gate.i0, i1: gate.i1, j0: J, j1: w2(J + rim) }, gateGeometry(proj, gate.i0, gate.i1, J).pts);
+  // Headland promontory past the NE corner: rock drops flush to the slab floor (−slab), with its SW corner on iB so
+  // every visible vertical rock face sits outside the lawn and earth-e.
+  const lhApothem = PLOT_SCENE.lighthouseApothem;
+  const lhRockZ0 = -slab;
+  const lhBevel = lhApothem * (Math.SQRT2 - 1);
+  const LH = { i: Math.ceil((frame.iB + lhBevel) * 100) / 100, j: PLOT_SCENE.lighthouseJ };
+  const lh = lighthouseGeometry(proj, LH.i, LH.j, { apothem: lhApothem, rockZ0: lhRockZ0 });
+  addObject(
+    "lighthouse",
+    { i0: w2(LH.i - lhApothem), i1: w2(LH.i + lhApothem), j0: w2(LH.j - lhApothem), j1: w2(LH.j + lhApothem) },
+    lh.pts,
+  );
   const postI = w2(W + AV * PLOT_SCENE.postAt);
   const signposts: PlotSignpost[] = [];
   for (const L of [...lanes].reverse()) {
@@ -1055,12 +1490,13 @@ function buildDesktop(
   for (const c of cypress) ext.push(cypressGeometry(proj, c.i, c.j, c.height).top);
   const eb = bbox(ext);
   const pad = 6;
-  const viewBox: [number, number, number, number] = [round1(eb.x0 - pad), round1(eb.y0 - pad * 2.2), round1(eb.x1 - eb.x0 + 2 * pad), round1(eb.y1 - eb.y0 + pad * 6)];
+  const viewBox: [number, number, number, number] = [round1(eb.x0 - pad), round1(eb.y0 - pad * 2.2), round1(eb.x1 - eb.x0 + 2 * pad), round1(eb.y1 - eb.y0 + pad * 8.2)];
 
-  // Skyline: the wall crest (west and north) plus every drawn point; `edges` keeps only what `obstacles` misses.
+  // Skyline: the wall crest (west and north, ending at the headland rock) plus every drawn point.
+  const northCrestEnd = Math.min(iB, w2(LH.i - lhApothem));
   const crest: PlotPoint[] = [];
   for (let q = 0; q <= 60; q++) crest.push(P(iA, jB - (q / 60) * (jB - jN), 0.5));
-  for (let q = 0; q <= 80; q++) crest.push(P(iA + (q / 80) * (iB - iA), jN, 0.5));
+  for (let q = 0; q <= 80; q++) crest.push(P(iA + (q / 80) * (northCrestEnd - iA), jN, 0.5));
   const sky = crest.concat(...objs.map((o) => o.pts)).sort((a, b) => a[0] - b[0] || a[1] - b[1]);
   const prefixTop: PlotPoint[] = [];
   let minY = Infinity;
@@ -1075,6 +1511,7 @@ function buildDesktop(
   const out: DesktopPlotMap = {
     ...base,
     preset: "desktop",
+    floorWidth: desktopFloorFrameWidth(viewBox[2]),
     viewBox,
     graves: finalGraves(drawOrder),
     drawOrder,
@@ -1083,7 +1520,7 @@ function buildDesktop(
     cypress,
     lamps,
     gate,
-    lighthouse: { i: LH.i, j: LH.j, lantern: roundPoint(lh.lantern), top: roundPoint(lh.top) },
+    lighthouse: { i: LH.i, j: LH.j, apothem: lhApothem, rockZ0: lhRockZ0, lantern: roundPoint(lh.lantern), top: roundPoint(lh.top) },
     beamOrigin: roundPoint(lh.lantern),
     colossi: [],
     sectionCameras: [],
@@ -1134,23 +1571,89 @@ export function fitSectionCamera(
   const availW = viewport.frameWidth - L.zoomSideInset;
   const availH = Math.min(frameHeight, viewport.viewportHeight - L.chromeTop) - L.zoomBar - L.zoomBottomGap;
   const faceUnits = L.plainFace * PLOT_UNIT;
-  const needZ = L.zoomTargetFacePx / (faceUnits * scale);
+  const needTarget = L.zoomTargetFacePx / (faceUnits * scale);
+  const needFloor = L.zoomFloorFacePx / (faceUnits * scale);
   const years = [...new Set(list.map((g) => g.year))].sort((a, b) => a - b);
-  const fit = (ms: PlotGrave[]): CameraFit => {
-    const x0 = Math.min(...ms.map((m) => m.screen.box.x0));
-    const x1 = Math.max(...ms.map((m) => m.screen.box.x1));
-    const y0 = Math.min(...ms.map((m) => m.screen.box.y0));
-    const y1 = Math.max(...ms.map((m) => m.screen.box.y1));
+  const colossusIds = list.filter((g) => g.lot === 3).map((g) => g.id);
+  const definingId =
+    list
+      .filter((g) => g.peak !== null)
+      .sort((a, b) => (b.peak as number) - (a.peak as number) || a.laneIndex - b.laneIndex)[0]?.id ?? null;
+  /**
+   * Framing box for one grave: full hit box by default; when `cropColossi` is enabled on a height-bound viewport,
+   * lot-3 colossi frame their podium + medallion so the shaft top may crop at the frame top without dropping the
+   * section below the 28 px zoom floor (F3).
+   */
+  const boxOf = (m: PlotGrave, cropColossi: boolean): PlotBox => {
+    if (!cropColossi || m.lot !== 3) return m.screen.box;
+    return {
+      ...m.screen.box,
+      y0: Math.max(m.screen.box.y0, m.screen.medal.y - m.screen.medal.r - 14),
+    };
+  };
+  const fit = (ms: PlotGrave[], cropColossi = false): CameraFit => {
+    const boxes = ms.map((m) => boxOf(m, cropColossi));
+    const x0 = Math.min(...boxes.map((b) => b.x0));
+    const x1 = Math.max(...boxes.map((b) => b.x1));
+    const y0 = Math.min(...boxes.map((b) => b.y0));
+    const y1 = Math.max(...boxes.map((b) => b.y1));
     return { x0, x1, y0, y1, z: Math.min(availW / ((x1 - x0) * scale), availH / ((y1 - y0) * scale), L.zoomMaxScale), ms };
   };
-  let best = fit(list);
+  let best = fit(list, false);
   let span: [number, number] = [years[0], years[years.length - 1]];
-  if (best.z < needZ) {
-    let cand: { f: CameraFit; a: number; b: number } | null = null;
-    for (let a = 0; a < years.length; a++) {
-      for (let b = a; b < years.length; b++) {
-        const f = fit(list.filter((g) => g.year >= years[a] && g.year <= years[b]));
-        if (f.z >= needZ && (!cand || f.ms.length > cand.f.ms.length || (f.ms.length === cand.f.ms.length && f.z > cand.f.z))) cand = { f, a: years[a], b: years[b] };
+  // Whole section already reaches the target (or the 28 px floor when keeping the defining grave would otherwise clip).
+  if (best.z < needTarget && !(definingId !== null && best.z >= needFloor)) {
+    const buildRuns = (cropColossi: boolean) => {
+      const runs: { f: CameraFit; a: number; b: number; hasColossi: boolean; hasDefining: boolean }[] = [];
+      for (let a = 0; a < years.length; a++) {
+        for (let b = a; b < years.length; b++) {
+          const ms = list.filter((g) => g.year >= years[a] && g.year <= years[b]);
+          const ids = new Set(ms.map((m) => m.id));
+          runs.push({
+            f: fit(ms, cropColossi),
+            a: years[a],
+            b: years[b],
+            hasColossi: colossusIds.every((id) => ids.has(id)),
+            hasDefining: definingId !== null && ids.has(definingId),
+          });
+        }
+      }
+      return runs;
+    };
+    const allRuns = buildRuns(false);
+    const pickMostGraves = (pool: typeof allRuns) => {
+      let chosen: (typeof allRuns)[number] | null = null;
+      for (const r of pool) {
+        if (!chosen || r.f.ms.length > chosen.f.ms.length || (r.f.ms.length === chosen.f.ms.length && r.f.z > chosen.f.z)) {
+          chosen = r;
+        }
+      }
+      return chosen;
+    };
+    let cand: (typeof allRuns)[number] | null = null;
+    if (colossusIds.length > 0) {
+      // Sections with a lot-3 colossus must keep it in frame AND meet the 28 px floor: try whole colossus first,
+      // then frame colossi by podium + medallion (allowing upper shaft to crop at the frame top) so zoom reaches ≥ 28 px.
+      const withColossi = allRuns.filter((r) => r.hasColossi);
+      cand =
+        pickMostGraves(withColossi.filter((r) => r.f.z >= needTarget)) ??
+        pickMostGraves(withColossi.filter((r) => r.f.z >= needFloor));
+      if (!cand) {
+        const croppedWithColossi = buildRuns(true).filter((r) => r.hasColossi);
+        cand =
+          pickMostGraves(croppedWithColossi.filter((r) => r.f.z >= needTarget)) ??
+          pickMostGraves(croppedWithColossi.filter((r) => r.f.z >= needFloor));
+        if (!cand && croppedWithColossi.length > 0) {
+          const maxZ = Math.max(...croppedWithColossi.map((r) => r.f.z));
+          cand = pickMostGraves(croppedWithColossi.filter((r) => r.f.z >= maxZ * 0.95));
+        }
+      }
+    } else {
+      const eligible = allRuns.filter((r) => r.f.z >= needTarget);
+      if (eligible.length > 0) {
+        const maxCount = Math.max(...eligible.map((r) => r.f.ms.length));
+        const nearBestWithDefining = eligible.filter((r) => r.hasDefining && r.f.ms.length >= maxCount * 0.85);
+        cand = pickMostGraves(nearBestWithDefining.length > 0 ? nearBestWithDefining : eligible);
       }
     }
     if (cand) {
@@ -1181,55 +1684,442 @@ export function fitSectionCamera(
   };
 }
 
-export type PlotCapacityIssueKind = "overlap" | "lane-overflow" | "block-overflow" | "lot-rows" | "lot-search" | "empty-run" | "face-floor" | "zoom-floor";
+export type PlotCapacityIssueKind =
+  | "overlap"
+  | "lane-overflow"
+  | "block-overflow"
+  | "lot-rows"
+  | "lot-search"
+  | "empty-run"
+  | "face-floor"
+  | "zoom-floor"
+  | "perimeter-crossing"
+  | "rock-clip"
+  | "empty-year-disclosure"
+  | "forecourt"
+  | "ground-mark-off-lot"
+  | "curb-overhang"
+  | "zoom-drops-colossus"
+  | "medallion-occluded";
 
 export type PlotCapacityIssue = CapacityIssue<PlotCapacityIssueKind>;
 
-/** The kit's capacity report; `facePx` is the plain-stone face at the R1 reference viewport (desktop only). */
-export type PlotCapacityReport = CapacityReport<PlotCapacityIssueKind>;
-
 /**
- * Checks the plan constants against the data: no two lots overlap; every 1×1 grave stays inside its own lane
- * and every lot inside its year block and the site; large lots start in rows 0…3; and, on the desktop, no in-bed
- * empty run longer than the preset's R11 budget (3 rows), the plain stone keeps the 15 px floor at 1440×800 and
- * every section zoom reaches 28 px. A failing report means data growth needs a re-tune of the depths or pitches.
+ * The kit's capacity report extended with live height-fit diagnostics:
+ * - `facePx`: plain-stone face at the preset's reference column width (`1368 px` desktop content box, `390 px` portrait).
+ * - `fittedFacePx`: plain-stone face at the live rendered frame (`desktopFittedFrameWidth(map, 1440, 800)` on desktop,
+ *   where height-fit clamps at `floorWidth` until `floorWidth > 1368`; identical to `facePx` on portrait).
+ * - `columnHeadroomPx`: remaining column width (`1368 − floorWidth`) before desktop trips the 15 px floor; `null` on portrait.
  */
-export function validatePlotMapCapacity(map: CemeteryPlotMap): PlotCapacityReport {
+export interface PlotCapacityReport extends CapacityReport<PlotCapacityIssueKind> {
+  fittedFacePx: number;
+  columnHeadroomPx: number | null;
+}
+
+type PlotCapacityCheck = (map: CemeteryPlotMap, eps: number) => PlotCapacityIssue[];
+
+function cellsOverlap(a: PlotCell, b: PlotCell, eps: number): boolean {
+  return a.i0 < b.i1 - eps && b.i0 < a.i1 - eps && a.j0 < b.j1 - eps && b.j0 < a.j1 - eps;
+}
+
+function checkFootprintOverlaps(map: CemeteryPlotMap, eps: number): PlotCapacityIssue[] {
+  return footprintOverlaps(map.graves, (g) => g.cell, eps).map(([a, b]) => ({
+    kind: "overlap",
+    message: `${a.id} overlaps ${b.id}`,
+  }));
+}
+
+function checkGraveBounds(map: CemeteryPlotMap, eps: number): PlotCapacityIssue[] {
   const issues: PlotCapacityIssue[] = [];
-  const eps = 1e-6;
   const lane = Object.fromEntries(map.lanes.map((L) => [L.cause, L])) as Record<CauseOfDeath, PlotLane>;
-  const block = new Map(map.blocks.filter((b) => !b.empty).map((b) => [b.year, b]));
+  const block = new Map<number, PlotYearBlock>();
+  for (const b of map.blocks) if (!b.empty) for (const y of b.years) block.set(y, b);
   const { site } = map;
-  for (const [a, b] of footprintOverlaps(map.graves, (g) => g.cell, eps)) issues.push({ kind: "overlap", message: `${a.id} overlaps ${b.id}` });
   for (const g of map.graves) {
     const L = lane[g.cause];
-    const B = block.get(g.year)!;
+    const B = block.get(g.year);
     const { cell } = g;
-    const inLane = g.lot === 1 ? cell.j0 >= L.j0 - eps && cell.j1 <= L.j1 + eps : cell.j0 < L.j1 - eps && cell.j1 > L.j0 + eps;
+    const inLane =
+      map.preset === "portrait" || g.lot === 1
+        ? cell.j0 >= L.j0 - eps && cell.j1 <= L.j1 + eps
+        : cell.j0 < L.j1 - eps && cell.j1 > L.j0 + eps;
     if (!inLane || cell.j0 < -eps || cell.j1 > site.jFront + eps) {
       issues.push({ kind: "lane-overflow", message: `${g.id} (${g.lot}×${g.lot}) leaves the ${L.label} lane or the site` });
     }
-    if (cell.i0 < B.i0 - eps || cell.i1 > B.i1 + eps) issues.push({ kind: "block-overflow", message: `${g.id} leaves its ${g.year} block` });
-    if (g.lot > 1 && g.row > PLOT_LAYOUT.maxLotRow) issues.push({ kind: "lot-rows", message: `${g.id} needed row ${g.row} (> ${PLOT_LAYOUT.maxLotRow}) of its ${g.year} block` });
+    if (!B || cell.i0 < B.i0 - eps || cell.i1 > B.i1 + eps) {
+      issues.push({ kind: "block-overflow", message: `${g.id} leaves its ${g.year} block` });
+    }
+    if (g.lot > 1 && g.row > PLOT_LAYOUT.maxLotRow) {
+      issues.push({ kind: "lot-rows", message: `${g.id} needed row ${g.row} (> ${PLOT_LAYOUT.maxLotRow}) of its ${g.year} block` });
+    }
   }
-  for (const b of map.blocks) {
-    if (b.greedyLots) issues.push({ kind: "lot-search", message: `the ${b.year} block has too many ≥ $1B lots for the exhaustive search` });
-  }
+  return issues;
+}
+
+function checkLotSearch(map: CemeteryPlotMap): PlotCapacityIssue[] {
+  return map.blocks
+    .filter((b) => b.greedyLots)
+    .map((b) => ({ kind: "lot-search", message: `the ${b.label} block has too many ≥ $1B lots for the exhaustive search` }));
+}
+
+function checkEmptyRuns(map: CemeteryPlotMap): PlotCapacityIssue[] {
   const maxEmptyRows = PLOT_MAP_PRESETS[map.preset].maxEmptyBedRows;
-  for (const r of map.emptyRuns) {
-    if (maxEmptyRows !== null && r.maxEmptyRowsInBed > maxEmptyRows) {
-      issues.push({ kind: "empty-run", message: `${CAUSE_META[r.cause].label} bed has ${r.maxEmptyRowsInBed} empty rows (> ${maxEmptyRows})` });
+  if (maxEmptyRows === null) return [];
+  return map.emptyRuns
+    .filter((r) => r.maxEmptyRowsInBed > maxEmptyRows)
+    .map((r) => ({ kind: "empty-run", message: `${CAUSE_META[r.cause].label} bed has ${r.maxEmptyRowsInBed} empty rows (> ${maxEmptyRows})` }));
+}
+
+function checkLegibilityFloors(map: CemeteryPlotMap): PlotCapacityIssue[] {
+  const issues: PlotCapacityIssue[] = [];
+  if (map.preset === "portrait") {
+    const facePx = faceFloorPx(PLOT_LAYOUT.plainFace, PLOT_LAYOUT.portraitReference.frameWidth, map.viewBox[2], PLOT_UNIT);
+    if (facePx < PLOT_LAYOUT.portraitFaceFloorPx) {
+      issues.push({
+        kind: "face-floor",
+        message: `plain stone ${facePx} px at ${PLOT_LAYOUT.portraitReference.viewportWidth} px portrait (< ${PLOT_LAYOUT.portraitFaceFloorPx})`,
+      });
+    }
+    return issues;
+  }
+  const ref = PLOT_LAYOUT.reference;
+  const facePx = faceFloorPx(PLOT_LAYOUT.plainFace, ref.frameWidth, map.viewBox[2], PLOT_UNIT);
+  if (facePx < PLOT_LAYOUT.faceFloorPx) {
+    const fittedWidth = desktopFittedFrameWidth(map, ref.viewportWidth, ref.viewportHeight);
+    const fittedFacePx = faceFloorPx(PLOT_LAYOUT.plainFace, fittedWidth, map.viewBox[2], PLOT_UNIT);
+    const headroomPx = ref.frameWidth - map.floorWidth;
+    issues.push({
+      kind: "face-floor",
+      message: `plain stone ${fittedFacePx} px at ${ref.viewportWidth}×${ref.viewportHeight} (${Math.round(fittedWidth)} px fitted frame; column max ${facePx} px at ${ref.frameWidth} px, headroom ${headroomPx} px, floor ${PLOT_LAYOUT.faceFloorPx} px)`,
+    });
+  }
+  for (const c of map.sectionCameras) {
+    if (c.facePx < PLOT_LAYOUT.zoomFloorFacePx) {
+      issues.push({ kind: "zoom-floor", message: `${CAUSE_META[c.cause].label} zoom reaches ${c.facePx} px (< ${PLOT_LAYOUT.zoomFloorFacePx})` });
     }
   }
-  let facePx: number | null = null;
-  if (map.preset === "desktop") {
-    facePx = faceFloorPx(PLOT_LAYOUT.plainFace, PLOT_LAYOUT.reference.frameWidth, map.viewBox[2], PLOT_UNIT);
-    if (facePx < PLOT_LAYOUT.faceFloorPx) issues.push({ kind: "face-floor", message: `plain stone ${facePx} px at 1440×800 (< ${PLOT_LAYOUT.faceFloorPx})` });
-    for (const c of map.sectionCameras) {
-      if (c.facePx < PLOT_LAYOUT.zoomFloorFacePx) issues.push({ kind: "zoom-floor", message: `${CAUSE_META[c.cause].label} zoom reaches ${c.facePx} px (< ${PLOT_LAYOUT.zoomFloorFacePx})` });
+  return issues;
+}
+
+/**
+ * Ensures no wall, curb or railing run crosses any drawn object footprint (lighthouse rock, gate, signposts, graves),
+ * and no site structure overlaps a grave lot.
+ */
+function checkPerimeterCrossings(map: CemeteryPlotMap, eps: number): PlotCapacityIssue[] {
+  if (map.preset !== "desktop") return [];
+  const issues: PlotCapacityIssue[] = [];
+  const lh = map.lighthouse;
+  const lhCell: PlotCell = { i0: lh.i - lh.apothem, i1: lh.i + lh.apothem, j0: lh.j - lh.apothem, j1: lh.j + lh.apothem };
+  const rim = map.frame.iB - map.site.iEast;
+  const gateCell: PlotCell = { i0: map.gate.i0, i1: map.gate.i1, j0: map.gate.j, j1: map.gate.j + rim };
+  const structures: { key: string; cell: PlotCell }[] = [
+    { key: "lighthouse", cell: lhCell },
+    { key: "gate", cell: gateCell },
+    ...map.signposts.map((s) => ({ key: `post:${s.cause}`, cell: { i0: s.i - 0.05, i1: s.i + 0.05, j0: s.j - 0.05, j1: s.j + 0.05 } })),
+  ];
+  const objects = [...structures, ...map.graves.map((g) => ({ key: `grave:${g.id}`, cell: g.cell }))];
+  for (const seg of desktopPerimeterSegments(map)) {
+    for (const obj of objects) {
+      if (cellsOverlap(seg.cell, obj.cell, eps)) {
+        issues.push({ kind: "perimeter-crossing", message: `${seg.key} crosses ${obj.key}` });
+      }
     }
   }
-  return { ok: issues.length === 0, issues, facePx };
+  for (const structure of structures) {
+    for (const g of map.graves) {
+      if (cellsOverlap(structure.cell, g.cell, eps)) {
+        issues.push({ kind: "perimeter-crossing", message: `${structure.key} overlaps grave:${g.id}` });
+      }
+    }
+  }
+  return issues;
+}
+
+/**
+ * Ensures a below-grade lighthouse rock bastion sits outside the headland slab's east or north cutaway edge so its
+ * subterranean faces never paint over the lawn or earth-e.
+ */
+function checkLighthouseHeadland(map: CemeteryPlotMap, eps: number): PlotCapacityIssue[] {
+  if (map.preset !== "desktop") return [];
+  const lh = map.lighthouse;
+  if (lh.rockZ0 >= -eps) return [];
+  const swI = lh.i - lh.apothem * (Math.SQRT2 - 1);
+  const southJ = lh.j + lh.apothem;
+  if (swI < map.frame.iB - eps && southJ > map.frame.jN + eps) {
+    return [{
+      kind: "rock-clip",
+      message: `lighthouse rock (z0=${lh.rockZ0}) cuts inside the headland slab (swI=${round1(swI)} < iB=${map.frame.iB}, southJ=${round1(southJ)} > jN=${map.frame.jN})`,
+    }];
+  }
+  return [];
+}
+
+/**
+ * Ensures every empty calendar year in [firstYear, lastYear] is explicitly disclosed ("none recorded", unavailable ≠ 0)
+ * in both its year block and, on desktop, its cypress entry.
+ */
+function checkEmptyYearDisclosure(map: CemeteryPlotMap): PlotCapacityIssue[] {
+  const issues: PlotCapacityIssue[] = [];
+  const occupied = new Set(map.graves.map((g) => g.year));
+  const blockByYear = new Map<number, PlotYearBlock>();
+  for (const b of map.blocks) {
+    for (const y of b.years) {
+      if (blockByYear.has(y)) issues.push({ kind: "empty-year-disclosure", message: `calendar year ${y} appears in more than one block` });
+      blockByYear.set(y, b);
+    }
+  }
+  for (let y = map.firstYear; y <= map.lastYear; y++) {
+    const b = blockByYear.get(y);
+    if (!b) {
+      issues.push({ kind: "empty-year-disclosure", message: `calendar year ${y} is missing from map.blocks` });
+      continue;
+    }
+    if (occupied.has(y)) continue;
+    const disclosed = b.emptyYears.includes(y) && Boolean(b.sub && b.sub.includes("none recorded"));
+    if (!disclosed) {
+      issues.push({ kind: "empty-year-disclosure", message: `empty calendar year ${y} is not disclosed as "none recorded" on block ${b.key}` });
+    }
+    if (map.preset === "desktop") {
+      const tree = map.cypress.find((c) => c.year === y);
+      if (!tree || tree.count !== null || tree.height !== 0 || !tree.label.includes("none recorded")) {
+        issues.push({ kind: "empty-year-disclosure", message: `empty calendar year ${y} cypress is missing or encodes zero instead of unavailable` });
+      }
+    }
+  }
+  return issues;
+}
+
+/** Ensures no grave occupies the east-facing stair forecourt of any lot-3 colossus on desktop. */
+function checkForecourt(map: CemeteryPlotMap, eps: number): PlotCapacityIssue[] {
+  if (map.preset !== "desktop") return [];
+  const issues: PlotCapacityIssue[] = [];
+  const yearPath = PLOT_MAP_PRESETS.desktop.yearPath;
+  for (const col of map.graves) {
+    if (col.lot !== 3) continue;
+    const zone: PlotCell = { i0: col.cell.i1, i1: col.cell.i1 + yearPath + 0.5, j0: col.cell.j0, j1: col.cell.j1 };
+    for (const g of map.graves) {
+      if (g.id === col.id) continue;
+      if (cellsOverlap(zone, g.cell, eps)) {
+        issues.push({ kind: "forecourt", message: `${g.id} intrudes on the east stair forecourt of ${col.id}` });
+      }
+    }
+  }
+  return issues;
+}
+
+/** Ensures every grave's plinth (or colossus podium) sits strictly inside its lot (and lot pad for lot > 1). */
+function checkCurbOverhang(map: CemeteryPlotMap, eps: number): PlotCapacityIssue[] {
+  const issues: PlotCapacityIssue[] = [];
+  const lane = Object.fromEntries(map.lanes.map((L) => [L.cause, L])) as Record<CauseOfDeath, PlotLane>;
+  for (const g of map.graves) {
+    const plinth = gravePlinthFootprint(g, map.projection);
+    const support = g.lot > 1 ? lotPadCell(g.cell) : g.cell;
+    if (plinth.i0 < support.i0 - eps || plinth.i1 > support.i1 + eps || plinth.j0 < support.j0 - eps || plinth.j1 > support.j1 + eps) {
+      issues.push({ kind: "curb-overhang", message: `${g.id} plinth extends past its ${g.lot > 1 ? "lot pad" : "cell/bed"}` });
+    }
+    if (g.lot === 1) {
+      const L = lane[g.cause];
+      const bedCell = L.cells.find((c) => g.cell.i0 >= c.i0 - eps && g.cell.i1 <= c.i1 + eps);
+      const bedJ0 = bedCell ? bedCell.j0 : L.j0;
+      const bedJ1 = bedCell ? bedCell.j1 : L.j1;
+      if (plinth.j0 < bedJ0 - eps || plinth.j1 > bedJ1 + eps) {
+        issues.push({ kind: "curb-overhang", message: `${g.id} plinth overhangs its ${L.label} lane curb` });
+      }
+    }
+  }
+  return issues;
+}
+
+/** Ensures mounds, bronze plaques and footstones stay strictly inside their lot/pad and never cross a lane path or another bed. */
+function checkGroundMarksOnLot(map: CemeteryPlotMap, eps: number): PlotCapacityIssue[] {
+  const issues: PlotCapacityIssue[] = [];
+  const lane = Object.fromEntries(map.lanes.map((L) => [L.cause, L])) as Record<CauseOfDeath, PlotLane>;
+  const block = new Map<number, PlotYearBlock>();
+  for (const b of map.blocks) if (!b.empty) for (const y of b.years) block.set(y, b);
+  for (const g of map.graves) {
+    const layout = graveGroundMarksLayout(g, map.projection);
+    const support = g.lot > 1 ? lotPadCell(g.cell) : g.cell;
+    const L = lane[g.cause];
+    const B = block.get(g.year);
+    const items: [string, PlotCell | null][] = [
+      ["mound", layout.mound],
+      ["bronze", layout.bronze],
+      ["footstone", layout.footstone],
+    ];
+    for (const [kind, rect] of items) {
+      if (!rect) continue;
+      if (rect.i0 < support.i0 - eps || rect.i1 > support.i1 + eps || rect.j0 < support.j0 - eps || rect.j1 > support.j1 + eps) {
+        issues.push({ kind: "ground-mark-off-lot", message: `${g.id} ${kind} leaves its ${g.lot > 1 ? "lot pad" : "lot"}` });
+      }
+      const bedCell = g.lot === 1 ? L.cells.find((c) => g.cell.i0 >= c.i0 - eps && g.cell.i1 <= c.i1 + eps) : undefined;
+      const bedJ0 = bedCell ? bedCell.j0 : L.j0;
+      const bedJ1 = bedCell ? bedCell.j1 : L.j1;
+      if (g.lot === 1 && (rect.j0 < bedJ0 - eps || rect.j1 > bedJ1 + eps || !B || rect.i0 < B.i0 - eps || rect.i1 > B.i1 + eps)) {
+        issues.push({ kind: "ground-mark-off-lot", message: `${g.id} ${kind} crosses a lane path or bed curb` });
+      }
+    }
+    if (layout.bronze && layout.footstone && cellsOverlap(layout.bronze, layout.footstone, eps)) {
+      issues.push({ kind: "ground-mark-off-lot", message: `${g.id} bronze plaque overlaps its footstone` });
+    }
+  }
+  return issues;
+}
+
+/**
+ * Ensures section zoom never drops a section's lot-3 colossus AND never drops below `PLOT_LAYOUT.zoomFloorFacePx`
+ * (28 px) across standard desktop viewports, evaluated at the real floor-clamped rendered frame width.
+ */
+function checkZoomKeepsColossus(map: CemeteryPlotMap): PlotCapacityIssue[] {
+  if (map.preset !== "desktop") return [];
+  const issues: PlotCapacityIssue[] = [];
+  for (const cause of CAUSE_ORDER) {
+    const colossi = map.graves.filter((g) => g.cause === cause && g.lot === 3);
+    if (!colossi.length) continue;
+    const stored = map.sectionCameras.find((c) => c.cause === cause);
+    if (stored) {
+      for (const col of colossi) {
+        if (!stored.ids.includes(col.id)) {
+          issues.push({ kind: "zoom-drops-colossus", message: `${CAUSE_META[cause].label} section camera drops ${col.id}` });
+        }
+      }
+      if (stored.facePx < PLOT_LAYOUT.zoomFloorFacePx) {
+        issues.push({
+          kind: "zoom-drops-colossus",
+          message: `${CAUSE_META[cause].label} section camera drops to ${stored.facePx} px (< ${PLOT_LAYOUT.zoomFloorFacePx})`,
+        });
+      }
+    }
+    for (const [w, h] of PLOT_LAYOUT.zoomCheckViewports) {
+      const frameWidth = desktopFittedFrameWidth(map, w, h);
+      const cam = fitSectionCamera(map, cause, { frameWidth, viewportHeight: h });
+      if (!cam) continue;
+      for (const col of colossi) {
+        if (!cam.ids.includes(col.id)) {
+          issues.push({ kind: "zoom-drops-colossus", message: `${CAUSE_META[cause].label} zoom at ${w}×${h} drops ${col.id}` });
+        }
+      }
+      if (cam.facePx < PLOT_LAYOUT.zoomFloorFacePx) {
+        issues.push({
+          kind: "zoom-drops-colossus",
+          message: `${CAUSE_META[cause].label} zoom at ${w}×${h} (${Math.round(frameWidth)} px frame) reaches ${cam.facePx} px (< ${PLOT_LAYOUT.zoomFloorFacePx})`,
+        });
+      }
+    }
+  }
+  return issues;
+}
+
+function pointInPolygon(px: number, py: number, poly: readonly PlotPoint[]): boolean {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i];
+    const [xj, yj] = poly[j];
+    if (yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+/** Deterministic 25-point concentric sample grid inside the unit disc (centre + 8 inner + 16 outer). */
+const MEDALLION_SAMPLES: readonly (readonly [number, number])[] = (() => {
+  const out: [number, number][] = [[0, 0]];
+  for (const [radius, count] of [[0.42, 8], [0.82, 16]] as const) {
+    for (let k = 0; k < count; k++) {
+      const th = (k / count) * 2 * Math.PI;
+      out.push([radius * Math.cos(th), radius * Math.sin(th)]);
+    }
+  }
+  return out;
+})();
+
+/**
+ * Ensures no grave's medallion disc is occluded beyond `PLOT_LAYOUT.maxMedallionOcclusion` by later-drawn grave solid
+ * faces (measured deterministically on both desktop and portrait presets).
+ */
+function checkMedallionOcclusion(map: CemeteryPlotMap): PlotCapacityIssue[] {
+  const proj = PLOT_PROJECTIONS[map.projection];
+  const byKey = new Map(map.graves.map((g) => [`grave:${g.id}`, g]));
+  const ordered = map.drawOrder.flatMap((key) => {
+    const g = byKey.get(key);
+    if (!g) return [];
+    const geo = graveGeometry(proj, g);
+    const polys = geo.body
+      .filter((m): m is Extract<typeof m, { kind: "polygon" }> => m.kind === "polygon" && !m.cls.startsWith("hatch"))
+      .map((m) => m.points);
+    const box = bbox(polys.flat());
+    return [{ g, medal: geo.medal, polys, box }];
+  });
+  const issues: PlotCapacityIssue[] = [];
+  const limit = PLOT_LAYOUT.maxMedallionOcclusion;
+  for (let i = 0; i < ordered.length; i++) {
+    const { g, medal } = ordered[i];
+    if (medal.r <= 0) continue;
+    let covered = 0;
+    for (const [dx, dy] of MEDALLION_SAMPLES) {
+      const sx = medal.x + dx * medal.r;
+      const sy = medal.y + dy * medal.r;
+      for (let j = i + 1; j < ordered.length; j++) {
+        const o = ordered[j];
+        if (sx < o.box.x0 || sx > o.box.x1 || sy < o.box.y0 || sy > o.box.y1) continue;
+        if (o.polys.some((poly) => pointInPolygon(sx, sy, poly))) {
+          covered++;
+          break;
+        }
+      }
+    }
+    const share = covered / MEDALLION_SAMPLES.length;
+    if (share > limit + 1e-9) {
+      issues.push({
+        kind: "medallion-occluded",
+        message: `${g.id} (${map.preset}) medallion ${Math.round(share * 100)}% occluded (> ${Math.round(limit * 100)}%)`,
+      });
+    }
+  }
+  return issues;
+}
+
+/** Ordered capacity/scene-lint checks. Adding a new issue kind is one check function appended here. */
+const PLOT_CAPACITY_CHECKS: readonly PlotCapacityCheck[] = [
+  checkFootprintOverlaps,
+  checkGraveBounds,
+  checkLotSearch,
+  checkEmptyRuns,
+  checkLegibilityFloors,
+  checkPerimeterCrossings,
+  checkLighthouseHeadland,
+  checkEmptyYearDisclosure,
+  checkForecourt,
+  checkCurbOverhang,
+  checkGroundMarksOnLot,
+  checkZoomKeepsColossus,
+  checkMedallionOcclusion,
+];
+
+/**
+ * Checks the plan constants and scene invariants against the data: no two lots overlap; every 1×1 grave stays inside
+ * its own lane and every lot inside its year block and the site; large lots start in rows 0…3; empty calendar years
+ * stay explicitly disclosed; plain stones keep the 15 px floor on both desktop (1440×800) and portrait (390 px); and,
+ * on the desktop, no in-bed empty run exceeds the preset's R11 budget (3 rows), no perimeter run crosses an object
+ * footprint, the headland rock seats clear of the slab, and every section zoom reaches 28 px.
+ */
+export function validatePlotMapCapacity(map: CemeteryPlotMap): PlotCapacityReport {
+  const eps = 1e-6;
+  const issues: PlotCapacityIssue[] = [];
+  for (const check of PLOT_CAPACITY_CHECKS) issues.push(...check(map, eps));
+  if (map.preset === "portrait") {
+    const facePx = faceFloorPx(PLOT_LAYOUT.plainFace, PLOT_LAYOUT.portraitReference.frameWidth, map.viewBox[2], PLOT_UNIT);
+    return { ok: issues.length === 0, issues, facePx, fittedFacePx: facePx, columnHeadroomPx: null };
+  }
+  const ref = PLOT_LAYOUT.reference;
+  const facePx = faceFloorPx(PLOT_LAYOUT.plainFace, ref.frameWidth, map.viewBox[2], PLOT_UNIT);
+  const fittedWidth = desktopFittedFrameWidth(map, ref.viewportWidth, ref.viewportHeight);
+  const fittedFacePx = faceFloorPx(PLOT_LAYOUT.plainFace, fittedWidth, map.viewBox[2], PLOT_UNIT);
+  return {
+    ok: issues.length === 0,
+    issues,
+    facePx,
+    fittedFacePx,
+    columnHeadroomPx: ref.frameWidth - map.floorWidth,
+  };
 }
 
 // ---------------------------------------------------------------------------

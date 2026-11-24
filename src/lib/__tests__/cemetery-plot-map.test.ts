@@ -182,18 +182,28 @@ describe("buildCemeteryPlotMap: year cypress", () => {
 });
 
 describe("buildCemeteryPlotMap: year blocks", () => {
-  it("puts every real grave inside its own year's block and nowhere else", () => {
+  it("puts every real grave inside its year's block, merges pre-2022 on desktop, and discloses empty years", () => {
     for (const b of desktop.blocks) {
-      const expected = desktop.graves.filter((g) => !b.empty && g.year === b.year).map((g) => g.id).sort();
+      const expected = desktop.graves.filter((g) => !b.empty && b.years.includes(g.year)).map((g) => g.id).sort();
       expect([...b.ids].sort()).toEqual(expected);
       expect(b.count).toBe(expected.length);
     }
     for (const g of desktop.graves) {
-      const block = desktop.blocks.find((b) => !b.empty && b.year === g.year)!;
+      const block = desktop.blocks.find((b) => !b.empty && b.years.includes(g.year))!;
       expect(g.cell.i0).toBeGreaterThanOrEqual(block.i0);
       expect(g.cell.i1).toBeLessThanOrEqual(block.i1);
     }
     expect(desktop.blocks.reduce((n, b) => n + b.count, 0)).toBe(CEMETERY_ENTRIES.length);
+    const oldest = desktop.blocks[desktop.blocks.length - 1];
+    expect(oldest).toMatchObject({
+      key: "2018-2021",
+      years: [2018, 2019, 2020, 2021],
+      emptyYears: [2019, 2020],
+      empty: false,
+      text: "2018–21 · 6",
+      sub: "2019–20 none recorded",
+    });
+    expect(portrait.blocks.find((b) => b.key === "2019-2020")).toMatchObject({ empty: true, sub: "none recorded" });
   });
 });
 
@@ -225,13 +235,27 @@ describe("colossus chips", () => {
 });
 
 describe("section cameras", () => {
-  it("falls back to the contiguous run of years with the most graves when the whole section stays under the floor", () => {
+  it("falls back to a legible contiguous run of years, keeps every section's colossus, and holds ≥ 28 px zoom floor across standard viewports", () => {
+    const fittedFrameWidth = (w: number, h: number) => {
+      const pad = w >= 1280 ? 36 : w >= 1024 ? 20 : 16;
+      const columnW = Math.max(0, w - 2 * pad);
+      const heightFit = Math.max(0, h - PLOT_LAYOUT.fitChromePx) * (desktop.viewBox[2] / desktop.viewBox[3]);
+      return Math.min(columnW, Math.max(desktop.floorWidth, heightFit));
+    };
     for (const cause of CAUSE_ORDER) {
       const narrow = fitSectionCamera(desktop, cause, { frameWidth: 700, viewportHeight: 800 })!;
       const whole = fitSectionCamera(desktop, cause, { frameWidth: 4000, viewportHeight: 4000 })!;
       expect(whole.partial).toBe(false);
+      const colossi = desktop.graves.filter((g) => g.cause === cause && g.lot === 3);
+      for (const [w, h] of PLOT_LAYOUT.zoomCheckViewports) {
+        const cam = fitSectionCamera(desktop, cause, { frameWidth: fittedFrameWidth(w, h), viewportHeight: h })!;
+        expect(cam.facePx, `${cause} at ${w}×${h}`).toBeGreaterThanOrEqual(PLOT_LAYOUT.zoomFloorFacePx);
+        for (const col of colossi) {
+          expect(cam.ids, `${cause} drops ${col.id} at ${w}×${h}`).toContain(col.id);
+        }
+      }
       if (!narrow.partial) continue;
-      expect(narrow.facePx).toBeGreaterThanOrEqual(PLOT_LAYOUT.zoomTargetFacePx - 0.05);
+      expect(narrow.facePx).toBeGreaterThanOrEqual(PLOT_LAYOUT.zoomFloorFacePx);
       const years = [...new Set(desktop.graves.filter((g) => g.cause === cause).map((g) => g.year))];
       expect(years).toContain(narrow.span[0]);
       expect(years).toContain(narrow.span[1]);
@@ -241,10 +265,122 @@ describe("section cameras", () => {
 });
 
 describe("validatePlotMapCapacity", () => {
-  it("passes on the current data in both presets", () => {
-    expect(validatePlotMapCapacity(desktop)).toMatchObject({ ok: true, issues: [] });
-    expect(validatePlotMapCapacity(desktop).facePx).toBeGreaterThanOrEqual(PLOT_LAYOUT.faceFloorPx);
-    expect(validatePlotMapCapacity(portrait)).toMatchObject({ ok: true, issues: [] });
+  it("passes on the current data in both presets and enforces the portrait 15 px face floor", () => {
+    const desktopReport = validatePlotMapCapacity(desktop);
+    expect(desktopReport).toMatchObject({ ok: true, issues: [] });
+    expect(desktopReport.facePx).toBeGreaterThanOrEqual(PLOT_LAYOUT.faceFloorPx);
+    expect(desktopReport.fittedFacePx).toBeGreaterThanOrEqual(PLOT_LAYOUT.faceFloorPx);
+    expect(desktopReport.columnHeadroomPx).toBe(PLOT_LAYOUT.reference.frameWidth - desktop.floorWidth);
+    expect(desktopReport.columnHeadroomPx!).toBeGreaterThan(0);
+
+    const portraitReport = validatePlotMapCapacity(portrait);
+    expect(portraitReport).toMatchObject({ ok: true, issues: [] });
+    expect(portraitReport.facePx).not.toBeNull();
+    expect(portraitReport.facePx!).toBeGreaterThanOrEqual(PLOT_LAYOUT.portraitFaceFloorPx);
+    expect(portraitReport.fittedFacePx).toBe(portraitReport.facePx);
+    expect(portraitReport.columnHeadroomPx).toBeNull();
+
+    // Portrait growth (+2027 / +2028) keeps the vertical column width and 15 px face floor intact.
+    const future = [
+      ...CEMETERY_ENTRIES,
+      ...Array.from({ length: 25 }, (_, k) => row(CAUSE_ORDER[k % CAUSE_ORDER.length], `2027-${String(1 + (k % 12)).padStart(2, "0")}-15`, { id: `p27-${k}` })),
+      ...Array.from({ length: 25 }, (_, k) => row(CAUSE_ORDER[k % CAUSE_ORDER.length], `2028-${String(1 + (k % 12)).padStart(2, "0")}-15`, { id: `p28-${k}` })),
+    ];
+    const futurePortrait = validatePlotMapCapacity(buildCemeteryPlotMap(future, { preset: "portrait" }));
+    expect(futurePortrait.ok).toBe(true);
+    expect(futurePortrait.facePx).toBeGreaterThanOrEqual(PLOT_LAYOUT.portraitFaceFloorPx);
+
+    // Widening the portrait viewBox past the 390 px face floor must fail `face-floor` loudly.
+    const widePortrait = {
+      ...portrait,
+      viewBox: [portrait.viewBox[0], portrait.viewBox[1], 320, portrait.viewBox[3]] as [number, number, number, number],
+    };
+    const wideReport = validatePlotMapCapacity(widePortrait);
+    expect(wideReport.ok).toBe(false);
+    expect(wideReport.facePx).toBeLessThan(PLOT_LAYOUT.portraitFaceFloorPx);
+    expect(wideReport.issues.map((i) => i.kind)).toContain("face-floor");
+
+    // Item 1: floor-clamped continuous height-fit holds plain stones ≥ 15 px across desktop viewports without a 560 px cliff.
+    const ar = desktop.viewBox[2] / desktop.viewBox[3];
+    const fittedWidth = (w: number, h: number) => {
+      const pad = w >= 1280 ? 36 : w >= 1024 ? 20 : 16;
+      return Math.min(w - 2 * pad, Math.max(desktop.floorWidth, Math.max(0, h - PLOT_LAYOUT.fitChromePx) * ar));
+    };
+    expect(fittedWidth(1440, 559)).toBeCloseTo(fittedWidth(1440, 560), 6);
+    for (const [w, h] of [[1280, 600], [1280, 720]] as const) {
+      expect(fittedWidth(w, h)).toBe(w - 72);
+    }
+    for (const [w, h] of [[1366, 650], [1366, 768], [1440, 560], [1440, 800], [1440, 900], [1536, 864], [1920, 950], [1920, 1080]] as const) {
+      expect(fittedWidth(w, h)).toBeGreaterThanOrEqual(desktop.floorWidth);
+    }
+
+    // Item 1 (FX2): sparse desktop per-block beds trim along j to occupied slots + 1 inside their lane (e.g. 2024–2026
+    // Algorithmic single-grave blocks narrow from 4 slots to 2 slots without overhanging any grave).
+    const algoLane = desktop.lanes.find((l) => l.cause === "algorithmic-failure")!;
+    for (const year of [2024, 2025, 2026]) {
+      const cell = algoLane.cells.find((c) => c.year === year)!;
+      expect(cell).toBeDefined();
+      expect(cell.j1 - cell.j0).toBeCloseTo(2 * desktop.slotPitch, 2);
+      expect(cell.j0).toBeGreaterThanOrEqual(algoLane.j0 - 1e-6);
+      expect(cell.j1).toBeLessThanOrEqual(algoLane.j1 + 1e-6);
+    }
+
+    // Item 6: every portrait grave (including lot-3 colossi UST and BUSD) stays strictly inside its own cause column.
+    const portraitLaneByCause = new Map(portrait.lanes.map((L) => [L.cause, L]));
+    for (const g of portrait.graves) {
+      const L = portraitLaneByCause.get(g.cause)!;
+      expect(g.overhang, `${g.id} overhangs its portrait column`).toBe(false);
+      expect(g.cell.j0).toBeGreaterThanOrEqual(L.j0 - 1e-6);
+      expect(g.cell.j1).toBeLessThanOrEqual(L.j1 + 1e-6);
+    }
+    const overflowPortrait = {
+      ...portrait,
+      graves: portrait.graves.map((g) =>
+        g.id === "busd-binance-usd-2023-02" ? { ...g, cell: { ...g.cell, j1: portraitLaneByCause.get(g.cause)!.j1 + 0.5 } } : g,
+      ),
+    };
+    expect(validatePlotMapCapacity(overflowPortrait).issues.map((i) => i.kind)).toContain("lane-overflow");
+
+    // A1 & NW-05: no portrait colossus overlaps any newer grave, and no portrait stone's shaft overlaps a plinth above it in its column.
+    const proj = PLOT_PROJECTIONS[portrait.projection];
+    const portraitBoxes = new Map(
+      portrait.graves.map((g) => {
+        const pts = graveGeometry(proj, g).pts;
+        return [
+          g.id,
+          {
+            x0: Math.min(...pts.map((pt) => pt[0])),
+            x1: Math.max(...pts.map((pt) => pt[0])),
+            y0: Math.min(...pts.map((pt) => pt[1])),
+            y1: Math.max(...pts.map((pt) => pt[1])),
+          },
+        ];
+      }),
+    );
+    for (const col of portrait.graves.filter((g) => g.lot === 3)) {
+      const cBox = portraitBoxes.get(col.id)!;
+      for (const other of portrait.graves) {
+        if (other.id === col.id || other.year <= col.year) continue;
+        const oBox = portraitBoxes.get(other.id)!;
+        const overlaps = cBox.x0 < oBox.x1 && oBox.x0 < cBox.x1 && cBox.y0 < oBox.y1 && oBox.y0 < cBox.y1;
+        expect(overlaps, `${col.id} overlaps newer portrait grave ${other.id}`).toBe(false);
+      }
+    }
+    for (const b of portrait.blocks) {
+      if (b.empty) continue;
+      for (const L of portrait.lanes) {
+        const inLane = portrait.graves.filter((g) => b.years.includes(g.year) && g.cause === L.cause);
+        for (const upper of inLane) {
+          for (const lower of inLane) {
+            if (upper.id === lower.id || upper.cell.i1 > lower.cell.i0 + 1e-6) continue;
+            const uBox = portraitBoxes.get(upper.id)!;
+            const lBox = portraitBoxes.get(lower.id)!;
+            if (uBox.x1 <= lBox.x0 || lBox.x1 <= uBox.x0) continue;
+            expect(lBox.y0, `${b.key} ${lower.id} shaft overlaps ${upper.id} plinth`).toBeGreaterThan(uBox.y1);
+          }
+        }
+      }
+    }
   });
 
   it("fails loudly when one year's deaths stretch a bed past the empty-run budget", () => {
@@ -279,6 +415,84 @@ describe("validatePlotMapCapacity", () => {
     expect(report.issues.map((i) => i.kind)).toContain("lot-search");
     expect(report.issues.map((i) => i.kind)).not.toContain("overlap");
   });
+
+  it.each([
+    [
+      "perimeter-crossing",
+      () => ({ ...desktop, graves: desktop.graves.map((g, k) => (k === 0 ? { ...g, cell: { ...g.cell, j0: -0.2 } } : g)) }),
+    ],
+    [
+      "perimeter-crossing",
+      () => ({ ...desktop, gate: { ...desktop.gate, i0: desktop.gate.i0 - 0.2 } }),
+    ],
+    [
+      "rock-clip",
+      () => ({ ...desktop, lighthouse: { ...desktop.lighthouse, i: desktop.frame.iB - 0.1, rockZ0: -0.55 } }),
+    ],
+    [
+      "empty-year-disclosure",
+      () => ({ ...desktop, blocks: desktop.blocks.map((b) => (b.emptyYears.length ? { ...b, sub: null } : b)) }),
+    ],
+    [
+      "forecourt",
+      () => {
+        const busd = desktop.graves.find((g) => g.id === "busd-binance-usd-2023-02")!;
+        const target = desktop.graves.find((g) => g.id === "fusd-fantom-usd-2022-06")!;
+        return {
+          ...desktop,
+          graves: desktop.graves.map((g) =>
+            g.id === target.id
+              ? { ...g, cell: { i0: busd.cell.i1 + 0.46, i1: busd.cell.i1 + 1.56, j0: busd.cell.j1 - 0.92, j1: busd.cell.j1 } }
+              : g,
+          ),
+        };
+      },
+    ],
+    [
+      "curb-overhang",
+      () => ({
+        ...desktop,
+        graves: desktop.graves.map((g, k) => (k === 0 ? { ...g, anchor: { ...g.anchor, i: g.cell.i0 - 0.2 } } : g)),
+      }),
+    ],
+    [
+      "ground-mark-off-lot",
+      () => ({
+        ...desktop,
+        graves: desktop.graves.map((g) =>
+          g.id === "usdn-neutrino-usd-2022-04"
+            ? { ...g, anchor: { ...g.anchor, j: g.cell.j1 + 0.4 } }
+            : g,
+        ),
+      }),
+    ],
+    [
+      "zoom-drops-colossus",
+      () => ({
+        ...desktop,
+        sectionCameras: desktop.sectionCameras.map((c) =>
+          c.cause === "algorithmic-failure" ? { ...c, ids: c.ids.filter((id) => id !== "ust-terrausd-2022-05") } : c,
+        ),
+      }),
+    ],
+    [
+      "medallion-occluded",
+      () => {
+        const front = desktop.graves.find((g) => g.draw === desktop.graves.length - 1) ?? desktop.graves[desktop.graves.length - 1];
+        const back = desktop.graves.find((g) => g.draw < front.draw)!;
+        return {
+          ...desktop,
+          graves: desktop.graves.map((g) =>
+            g.id === back.id ? { ...g, anchor: { ...front.anchor }, cell: { ...front.cell } } : g,
+          ),
+        };
+      },
+    ],
+  ] as const)("scene linter flags %s on crafted failing maps", (expectedKind, mutate) => {
+    const report = validatePlotMapCapacity(mutate());
+    expect(report.ok).toBe(false);
+    expect(report.issues.map((i) => i.kind)).toContain(expectedKind);
+  });
 });
 
 const dimetric = PLOT_PROJECTIONS.dimetric;
@@ -304,16 +518,27 @@ function stone(overrides: Partial<PlotGraveShapeInput> = {}): PlotGraveShapeInpu
 const classes = (marks: PlotMark[]) => marks.map((m) => ("cls" in m ? m.cls : m.kind));
 
 describe("graveGeometry", () => {
-  it("draws one plinth box per step, and an outlined, hatched plinth for an unrecorded peak", () => {
+  it("draws one plinth box per step, and a solid neutral hatched plinth for an unrecorded peak with stone-only lean", () => {
     const plinthFaces = (marks: PlotMark[]) => classes(marks).filter((c) => c.startsWith("pl-")).length;
     for (const steps of [0, 1, 2, 3, 4] as const) expect(plinthFaces(graveGeometry(dimetric, stone({ steps })).body)).toBe(3 * steps);
 
-    const unrecorded = graveGeometry(dimetric, stone({ steps: null }));
-    expect(classes(unrecorded.body).filter((c) => c === "pl-open eo")).toHaveLength(3);
-    expect(classes(unrecorded.body)).toContain("hatch");
+    const unrecorded = graveGeometry(dimetric, stone({ steps: null, lean: 1.5 }));
+    expect(classes(unrecorded.plinth)).toEqual([
+      "pl-nr-s e",
+      "pl-nr-e e",
+      "pl-nr-t e",
+      "hatch-plinth",
+      "hatch-plinth",
+      "hatch-plinth",
+    ]);
+    expect(classes(unrecorded.body).some((c) => c.includes("eo"))).toBe(false);
+    expect(classes(unrecorded.stone)).toContain("hatch");
+    expect(unrecorded.lean).not.toBeNull();
+    expect(unrecorded.contact.length).toBeGreaterThan(0);
+    expect(classes(unrecorded.body)).not.toContain("contact");
     const floorStone = graveGeometry(dimetric, stone({ steps: 0 }));
     expect(classes(floorStone.body)).not.toContain("hatch");
-    // It stands on its outlined plinth, never on the bare ground of the 0-step class.
+    // It stands on its neutral hatched plinth, never on the bare ground of the 0-step class.
     expect(unrecorded.topZ).toBeCloseTo(floorStone.topZ + PLOT_STEP_HEIGHT, 9);
   });
 
@@ -323,10 +548,36 @@ describe("graveGeometry", () => {
     expect(tablet).toContain("seal e");
     expect(tablet).not.toContain("crack");
     const lot3 = { lot: 3 as const, steps: 4 as const, cell: { i0: 0, i1: 3.3, j0: 0, j1: 2.76 }, anchor: { i: 1.5, j: 1.38 } };
-    const mausoleum = graveGeometry(dimetric, stone({ ...lot3, shape: plotShapeOf("sealed-tablet", 3) }));
-    expect(classes(mausoleum.body)).not.toContain("crack");
-    expect(classes(mausoleum.body)).toContain("door e");
+    const mausoleum = graveGeometry(dimetric, stone({ ...lot3, shape: plotShapeOf("sealed-tablet", 3), weather: 3 }));
+    const mClasses = classes(mausoleum.body);
+    expect(mClasses).not.toContain("crack");
+    expect(mClasses).toContain("door e");
+    // A3: cella weathering and medallion paint before the front portico columns.
+    const firstCol = mClasses.indexOf("col e");
+    expect(mClasses.indexOf("medallion")).toBeGreaterThan(-1);
+    expect(mClasses.indexOf("medallion")).toBeLessThan(firstCol);
+    expect(mClasses.indexOf("moss")).toBeLessThan(firstCol);
+    // D5: colossal column omits any fallen drum (only one fracture cap on the snapped shaft).
+    const ustGeo = graveGeometry(dimetric, stone({ ...lot3, shape: plotShapeOf("broken-column", 3) }));
+    expect(classes(ustGeo.body).filter((c) => c === "brk e")).toHaveLength(1);
+    // A1: portrait colossi cap relief while keeping UST strictly taller than BUSD.
+    const ustPortrait = graveGeometry(PLOT_PROJECTIONS.portrait, stone({ ...lot3, shape: plotShapeOf("broken-column", 3) }));
+    const busdPortrait = graveGeometry(PLOT_PROJECTIONS.portrait, stone({ ...lot3, shape: plotShapeOf("sealed-tablet", 3) }));
+    expect(ustPortrait.topZ).toBeGreaterThan(busdPortrait.topZ);
+    expect(ustPortrait.topZ).toBeLessThan(3);
+    expect(busdPortrait.topZ).toBeLessThan(2);
     expect(classes(graveGeometry(dimetric, stone({ shape: "broken-column" })).body)).toContain("brk e");
+  });
+
+  it("lays bronze archive plaque and non-USD footstone side by side along j without overlap", () => {
+    const dual = graveGeometry(dimetric, stone({ archived: true, footstone: "€" }));
+    const gClasses = classes(dual.ground);
+    expect(gClasses).toContain("bronze e");
+    expect(gClasses).toContain("glyph");
+    const bronze = dual.ground.find((m) => "cls" in m && m.cls === "bronze e")!;
+    const glyph = dual.ground.find((m) => m.kind === "glyph")!;
+    expect(bronze.kind).toBe("polygon");
+    expect(glyph.kind).toBe("glyph");
   });
 
   it("adds lichen from w2 and moss from w3 only", () => {
@@ -339,12 +590,44 @@ describe("graveGeometry", () => {
 });
 
 describe("scene structure", () => {
-  it("builds the portrait structure from the portrait model", () => {
+  it("builds the portrait cemetery walk: lane + year gravel paths, top-anchored centered curbed beds, lawn cypresses and oblique stone depth", () => {
     const tall = buildCemeteryPlotMap(CEMETERY_ENTRIES, { preset: "portrait" });
     const site = portraitSiteMarks(tall);
-    const crossPaths = site.ground.filter((m) => "cls" in m && m.cls === "gravel");
-    expect(crossPaths).toHaveLength(tall.blocks.length - 1);
+    const gravelPaths = site.ground.filter((m) => "cls" in m && m.cls === "gravel");
+    expect(gravelPaths).toHaveLength((tall.blocks.length - 1) + (tall.lanes.length - 1));
     expect(site.beds.map((b) => b.cause).sort()).toEqual(tall.lanes.map((L) => L.cause).sort());
+    expect(site.trees.length).toBe(tall.cypress.length);
+    expect(tall.cypress.length).toBeGreaterThanOrEqual(6);
+    // NW-01: no empty-year (`height: 0`) tree pit bleeding through `2019–20 · none recorded`.
+    expect(tall.cypress.every((c) => c.height > 0 && c.count !== null)).toBe(true);
+    const emptyBlock = tall.blocks.find((b) => b.empty)!;
+    expect(tall.cypress.some((c) => c.i >= emptyBlock.i0 - 0.3 && c.i <= emptyBlock.i1 + 0.3)).toBe(false);
+
+    // NW-05: portrait beds anchor from the top of each year block (`b.i0`), trim along `j` around centered lone graves,
+    // and omit empty `bare` curb bars (empty lane-years stay quiet lawn).
+    const y2026 = tall.blocks.find((b) => b.key === "2026")!;
+    const reg2026 = tall.lanes.find((l) => l.cause === "regulatory")!.cells.find((c) => c.year === 2026)!;
+    expect(reg2026.i0).toBeCloseTo(y2026.i0, 2);
+    expect(reg2026.i1 - reg2026.i0).toBeLessThan((y2026.i1 - y2026.i0) / 2);
+    expect(tall.lanes.find((l) => l.cause === "regulatory")!.cells.find((c) => c.year === 2022)).toBeUndefined();
+
+    const algoLane = tall.lanes.find((l) => l.cause === "algorithmic-failure")!;
+    const algo2026 = algoLane.cells.find((c) => c.year === 2026)!;
+    expect(algo2026.j1 - algo2026.j0).toBeCloseTo(tall.slotPitch, 2);
+    expect((algo2026.j0 + algo2026.j1) / 2).toBeCloseTo((algoLane.j0 + algoLane.j1) / 2, 2);
+
+    // FX3 Item 3: front-oblique portrait projection gives stones non-zero shaded left side faces (`st-s`).
+    const sampleGrave = tall.graves.find((g) => g.lot === 1 && g.shape === "urn")!;
+    const sampleGeo = graveGeometry(PLOT_PROJECTIONS.portrait, sampleGrave);
+    const sidePoly = sampleGeo.stone.find((m): m is Extract<PlotMark, { kind: "polygon" }> => m.kind === "polygon" && m.cls.startsWith("st-s"));
+    expect(sidePoly).toBeDefined();
+    const xs = sidePoly!.points.map((pt) => pt[0]);
+    expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThan(1.5);
+
+    // FX3 Item 5: SSR skeleton option omits cypress detail while keeping identical ground/bed structure and viewBox.
+    const skel = portraitSiteMarks(tall, { detail: false });
+    expect(skel.trees).toEqual([]);
+    expect(skel.beds).toHaveLength(site.beds.length);
   });
 });
 
