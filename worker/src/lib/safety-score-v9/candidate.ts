@@ -1,5 +1,6 @@
 import { SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v9/evaluation-build-manifest-v1";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { isTokenizedFundId } from "@shared/lib/stablecoins/listing-governance";
 import { computeReportCardsRegistryFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
 import type { SafetyScoreV9CurrentCard, V9ReserveCompositionAdmission } from "@shared/types/safety-score-v9-public";
 import type { V9ExtensionRegistryMeta } from "./extension";
@@ -80,6 +81,7 @@ import {
   type SafetyScoreV9AcceptedPublicationBaseline,
   type SafetyScoreV9DexExpiryWitness,
   type SafetyScoreV9ExpiredMeasuredExitRoutes,
+  type SafetyScoreV9InternalExitRouteSummary,
 } from "./publication-assessment";
 
 // Rollout UTC epoch seconds (2026-11-20T08:00:00Z); earlier fixed scoring clocks omit the diagnostic.
@@ -163,6 +165,8 @@ export interface SafetyScoreV9CandidatePipelineResult {
   bridgeJoinDiagnostics: readonly SafetyScoreV9BridgeJoinDiagnostic[];
   measuredExitExpiry: SafetyScoreV9MeasuredExitExpiryResult;
   verifiedEmptyExitBaselineOptions: BuildAcceptedBaselineVerifiedEmptyOptions;
+  /** Pre-projection Backing scores of internally rated ungraded tokenized funds for the lender-collateral projection. */
+  lenderCollateralBackingScoresByAssetId: Readonly<Record<string, number>>;
 }
 
 export interface SafetyScoreV9PublicationResult {
@@ -174,6 +178,8 @@ export interface SafetyScoreV9PublicationResult {
   bridgeJoinDiagnostics: readonly SafetyScoreV9BridgeJoinDiagnostic[];
   measuredExitExpiry: SafetyScoreV9MeasuredExitExpiryResult;
   verifiedEmptyExitBaselineOptions: BuildAcceptedBaselineVerifiedEmptyOptions;
+  /** Pre-projection Backing scores of internally rated ungraded tokenized funds for the lender-collateral projection. */
+  lenderCollateralBackingScoresByAssetId: Readonly<Record<string, number>>;
 }
 
 /** Quarantined expired-route assets and the witnesses the next baseline retains. */
@@ -800,7 +806,59 @@ function buildSafetyScoreV9CandidatePipeline(
     candidateIdentity: z.infer<typeof SafetyScoreV9CandidateIdentityV1Schema>;
     retained: { extension: SafetyScoreV9FactSetExtensionV2; compiledFacts: CompiledV9FactSetV3; evaluatedSet: Readonly<V9EvaluatedSet> } | null;
   } | null = null;
+  const internalLenderBackingScores = new Map<string, number>();
+  const internalVerifiedEmptyExitState = new Map<string, "verified-empty" | "positive-route">();
+  const internalExitRoutes = new Map<string, SafetyScoreV9InternalExitRouteSummary>();
+  const recordInternalTokenizedFundState = (asset: V9EvaluatedAsset): void => {
+    if (asset.trace.ratingStatus === "pipeline-gap" || !isTokenizedFundId(asset.assetId)) return;
+    const backing = asset.scoreInput.pillars.backing;
+    if (
+      asset.trace.ratingStatus === "rated" &&
+      backing.aggregationDisposition !== "excluded-a-b" &&
+      backing.score !== null &&
+      Number.isFinite(backing.score) &&
+      backing.score >= 0 &&
+      backing.score <= 100
+    ) {
+      internalLenderBackingScores.set(asset.assetId, backing.score);
+    }
+    const exitPillar = asset.scoreInput.pillars.exit;
+    const exitDisposition = exitPillar.aggregationDisposition ?? "included";
+    const isVerifiedEmpty =
+      asset.trace.ratingStatus === "rated" &&
+      exitPillar.score === 0 &&
+      exitDisposition === "included" &&
+      asset.exit.primaryRouteKey === null &&
+      exitPillar.reasons.some((reason) => reason.code === "no-viable-exit-path" && reason.cause === "D");
+    if (isVerifiedEmpty) {
+      internalVerifiedEmptyExitState.set(asset.assetId, "verified-empty");
+    } else {
+      const hasPositiveExitRoute =
+        asset.exit.primaryRouteKey !== null ||
+        asset.exit.routes.some(
+          (route) => route.included || (route.capacityPoint !== null && route.capacityPoint.executableUsd > 0),
+        ) ||
+        (exitPillar.score !== null &&
+          exitPillar.score > 0 &&
+          !exitPillar.reasons.some(
+            (reason) =>
+              reason.code === "missing-same-notional-route" ||
+              reason.code === "missing-runtime-route-evidence",
+          ));
+      if (hasPositiveExitRoute) {
+        internalVerifiedEmptyExitState.set(asset.assetId, "positive-route");
+      }
+    }
+    internalExitRoutes.set(asset.assetId, {
+      primaryRouteKey: asset.exit.primaryRouteKey,
+      diversificationRouteKey: asset.exit.diversificationRouteKey,
+      diversificationBonus: asset.exit.diversificationBonus,
+    });
+  };
   const recompile = () => {
+    internalLenderBackingScores.clear();
+    internalVerifiedEmptyExitState.clear();
+    internalExitRoutes.clear();
     fixedInput = input.fixedInputOwner.value ?? input.fixedInputOwner.reload();
     input.fixedInputOwner.value = fixedInput;
     extensionSource = streamExtension ? createSafetyScoreV9BaselineExtensionSource(fixedInput, extensionOptions) : null;
@@ -831,7 +889,10 @@ function buildSafetyScoreV9CandidatePipeline(
         // Classify the whole cohort before the first card is counted, so even an
         // inherited (foreign) witness resolves at its owner.
         const factsById = new Map(compiledFacts!.assets.map((asset) => [asset.assetId, asset]));
-        for (const asset of evaluatedSet.assets) registerDocumentationAsset(documentation, policy, asset, factsById.get(asset.assetId)!);
+        for (const asset of evaluatedSet.assets) {
+          recordInternalTokenizedFundState(asset);
+          registerDocumentationAsset(documentation, policy, asset, factsById.get(asset.assetId)!);
+        }
         for (const asset of evaluatedSet.assets) countDocumentationCard(documentation, asset);
         publication = publishEvaluatedCandidate();
       } else {
@@ -841,6 +902,7 @@ function buildSafetyScoreV9CandidatePipeline(
         const projected = evaluateValidatedV9FactSetForPublication(factOwner, policy, (asset, facts) => {
           // Register before counting or projecting: route-scoped diagnostics need
           // this asset's Exit admission, and the trace reads the same union.
+          recordInternalTokenizedFundState(asset);
           registerDocumentationAsset(documentation, policy, asset, facts);
           countDocumentationCard(documentation, asset);
           projector.project(publicProjectionInput(asset));
@@ -851,8 +913,12 @@ function buildSafetyScoreV9CandidatePipeline(
       }
       if (input.measuredExitExpiry === undefined) break;
       const { acceptedPublication, routes } = input.measuredExitExpiry;
-      const expiry = resolveMeasuredExitExpiry(routes,
-        applySafetyScoreV9GradeHysteresis(publication.candidate, acceptedPublication), acceptedPublication);
+      const expiry = resolveMeasuredExitExpiry(
+        routes,
+        applySafetyScoreV9GradeHysteresis(publication.candidate, acceptedPublication),
+        acceptedPublication,
+        Object.fromEntries(internalExitRoutes),
+      );
       for (const [assetId, witnesses] of Object.entries(expiry.witnessesByAssetId)) {
         if (!expiryWitnesses.has(assetId)) expiryWitnesses.set(assetId, witnesses);
       }
@@ -987,7 +1053,17 @@ function buildSafetyScoreV9CandidatePipeline(
     ...(verifiedEmptyExitByAssetId === undefined ? {} : { priorVerifiedEmptyExitByAssetId: verifiedEmptyExitByAssetId }),
     observedAtByAssetId: Object.fromEntries([...dexObservedAtSec].sort(([left], [right]) => compareText(left, right))),
     verifiedEmptyCarryMaxAgeSec: policy.policy.semantic.exit.verifiedEmptyCarryMaxAgeSec,
+    ...(internalVerifiedEmptyExitState.size === 0
+      ? {}
+      : {
+          internalExitStateByAssetId: Object.fromEntries(
+            [...internalVerifiedEmptyExitState].sort(([left], [right]) => compareText(left, right)),
+          ),
+        }),
   };
+  const lenderCollateralBackingScoresByAssetId = Object.fromEntries(
+    [...internalLenderBackingScores].sort(([left], [right]) => compareText(left, right)),
+  );
   if (retained === null) {
     return {
       candidate,
@@ -998,6 +1074,7 @@ function buildSafetyScoreV9CandidatePipeline(
       bridgeJoinDiagnostics,
       measuredExitExpiry,
       verifiedEmptyExitBaselineOptions,
+      lenderCollateralBackingScoresByAssetId,
     };
   }
 
@@ -1017,5 +1094,6 @@ function buildSafetyScoreV9CandidatePipeline(
     bridgeJoinDiagnostics,
     measuredExitExpiry,
     verifiedEmptyExitBaselineOptions,
+    lenderCollateralBackingScoresByAssetId,
   };
 }

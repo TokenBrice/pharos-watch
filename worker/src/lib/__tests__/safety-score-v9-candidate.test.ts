@@ -44,11 +44,20 @@ import {
 } from "../../test-helpers/v9-fixed-input";
 import { localControl } from "./safety-score-v9-fact-set.test-support";
 import { eligibleReserveMeta } from "./safety-score-v9-reserve-admission.test-support";
-import { normalizeSafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
+import { normalizeNativeV9Input, normalizeSafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
+import { createNativeSafetyScoreV9CohortInput } from "./fixtures/safety-score-v9-full-registry-input";
 import {
   buildSafetyScoreV9AcceptedPublicationBaseline,
   projectExpiredMeasuredExitRoutes,
 } from "../safety-score-v9/publication-assessment";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { canonicalizeLenderBookObservation, deriveLenderBookObservationIdentity } from "@shared/lib/safety-score-v9/lender-book-registry";
+import { LenderBookObservationSchema, type LenderCollateralBacking } from "@shared/types/safety-score-v9-lender-book";
+import type { V9PublicationHealth } from "@shared/types/report-cards-v9";
+import { mockD1 } from "@shared/test-utils/mock-d1";
+import { buildSafetyScoreV9LenderCollateralProjection } from "../safety-score-v9/accepted-projections";
+import * as acceptedProjectionReaders from "../safety-score-v9/accepted-projection-readers";
+import { captureLenderCollateralBacking } from "../safety-score-v9/capture";
 
 // One day past the newest reviewed registry date the usdc-circle capture below
 // reads, so the extension's "review is later than the scoring clock" guard stays
@@ -953,6 +962,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
       bridgeJoinDiagnostics: full.bridgeJoinDiagnostics,
       measuredExitExpiry: full.measuredExitExpiry,
       verifiedEmptyExitBaselineOptions: full.verifiedEmptyExitBaselineOptions,
+      lenderCollateralBackingScoresByAssetId: full.lenderCollateralBackingScoresByAssetId,
     });
     expect(() =>
       evaluateValidatedV9FactSet(structuredClone(full.compiledFacts), clockBoundPolicy),
@@ -1382,5 +1392,122 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     // Sanity check: concentrated-collateral limit actually engaged on usdtb-ethena & eur0-usual.
     expect(after.candidate.cards.find((c) => c.id === "usdtb-ethena")!.scoreTrace.wrapperParentLimit?.parentKind).toBe("concentrated-collateral");
     expect(after.candidate.cards.find((c) => c.id === "eur0-usual")!.scoreTrace.wrapperParentLimit?.parentKind).toBe("concentrated-collateral");
+  });
+
+  it("retains tokenized-fund internal Backing across two publication runs for Morpho lender-book dependents (NS-02)", async () => {
+    const VAULT_ID = "kpkusdcyield-kpk";
+    const FUND_ID = "eutbl-spiko";
+    const USDC_ID = "usdc-circle";
+    const EUTBL_ADDR = "0xa0769f7a8fc65e47de93797b4e21c073c117fc80";
+    const USDC_ADDR = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
+    const MORPHO_CORE = "0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb";
+    const IRM = "0x870ac11d48b15db9a138cf899d20f13f79ba00bc";
+    const ACCOUNT = "0x4f74895557bea2de5d51d8c06e944da92dbc8550";
+    const WORD = `0x${"a".repeat(64)}`;
+    const vaultAddr = ACTIVE_META_BY_ID.get(VAULT_ID)!.contracts!.find((c) => c.chain === "ethereum")!.address.toLowerCase();
+
+    const makeBook = (clockSec: number) => {
+      const payload = {
+        schemaVersion: 1 as const, assetId: VAULT_ID, acquiredAtSec: clockSec - 60, maxAgeSec: 28_800,
+        status: "ok" as const, censusScope: "complete-nav-accounted-current-book" as const,
+        deployments: [{
+          chain: "ethereum", vault: vaultAddr, kind: "vault-v2" as const,
+          pin: { chain: "ethereum", number: 26_191_269, hash: WORD, timestampSec: clockSec - 100, finality: "finalized" as const },
+          loanToken: USDC_ADDR, loanDecimals: 6, totalAssetsRaw: "1000000", totalSupplyRaw: "1000000000000000000",
+          idleAssetsRaw: "0", reconciledAssetsRaw: "1000000", reconciliationResidualRaw: "0",
+          codeHashes: { [vaultAddr]: WORD, [ACCOUNT]: WORD, [MORPHO_CORE]: WORD },
+          selectorsRead: ["0x01e1d114", "0x38d52e0f"],
+          markets: [{
+            account: ACCOUNT, adapter: ACCOUNT, morpho: MORPHO_CORE,
+            marketId: `0x${"1".repeat(64)}`, loanToken: USDC_ADDR, collateralToken: EUTBL_ADDR,
+            oracle: "0x839940de5043e7c6edaf063714afe7f20de5ff12", irm: IRM, lltvRaw: "915000000000000000",
+            supplySharesRaw: "1000000", positionBorrowSharesRaw: "0", positionCollateralRaw: "0",
+            marketSupplyAssetsRaw: "1000000", marketSupplySharesRaw: "1000000000000",
+            marketBorrowAssetsRaw: "500000", marketBorrowSharesRaw: "500000000000",
+            marketLastUpdateSec: clockSec - 120, marketFeeRaw: "0", includedAssetsRaw: "1000000",
+            accruedMethod: "adapter-expected-supply-assets" as const, collateralMode: "collateralized" as const,
+          }],
+        }],
+      };
+      return LenderBookObservationSchema.parse(canonicalizeLenderBookObservation({
+        ...payload, ...deriveLenderBookObservationIdentity(payload),
+      }));
+    };
+
+    const buildRunInput = (clockSec: number, lenderCollateralBacking?: LenderCollateralBacking) => {
+      const base = createNativeSafetyScoreV9CohortInput([FUND_ID, VAULT_ID, USDC_ID], clockSec);
+      const { baseInputGenerationId: _base, ...draft } = base;
+      const fixedInput = normalizeNativeV9Input({
+        ...draft,
+        liveReserveProvenanceMap: {
+          ...draft.liveReserveProvenanceMap,
+          [VAULT_ID]: {
+            ...(draft.liveReserveProvenanceMap[VAULT_ID] ?? { source: "morpho-vault", fetchedAt: clockSec - 60 }),
+            lenderBookObservation: makeBook(clockSec),
+          },
+        },
+        ...(lenderCollateralBacking ? { lenderCollateralBacking } : {}),
+      });
+      return { fixedInput, publishedAtSec: clockSec + 10 };
+    };
+
+    const runTwoCycles = async (mockFundsAsGraded: boolean) => {
+      const fundSpy = mockFundsAsGraded ? vi.spyOn(listingGovernance, "isTokenizedFundId").mockReturnValue(false) : null;
+      const run2ClockSec = PUBLISHED_AT_SEC + 60;
+      try {
+        // Run 1: publish initial cohort and build accepted lender-collateral projection.
+        const run1 = buildSafetyScoreV9Candidate(buildRunInput(AS_OF_SEC));
+        const projection = buildSafetyScoreV9LenderCollateralProjection(
+          run1.candidate,
+          run1.lenderCollateralBackingScoresByAssetId,
+        );
+        const health: V9PublicationHealth = {
+          schemaVersion: 2, status: "current", acceptedPublicationGenerationId: run1.candidate.publicationGenerationId,
+          acceptedAtSec: run1.candidate.publishedAtSec, attemptedAtSec: run1.candidate.publishedAtSec, heldSinceSec: null, reasons: [],
+        };
+        const readerSpy = vi.spyOn(acceptedProjectionReaders, "loadSafetyScoreV9LenderCollateralState").mockResolvedValue({
+          kind: "accepted", projection, health,
+        });
+        let captured!: LenderCollateralBacking;
+        try {
+          const run2Draft = buildRunInput(run2ClockSec);
+          const provenanceMap = new Map(Object.entries(run2Draft.fixedInput.liveReserveProvenanceMap));
+          captured = await captureLenderCollateralBacking(mockD1(), provenanceMap, run2Draft.fixedInput.registryFingerprint, run2ClockSec);
+        } finally {
+          readerSpy.mockRestore();
+        }
+        // Run 2: evaluate vault with Run 1's captured lender-collateral backing bundle.
+        const run2 = buildSafetyScoreV9Candidate(buildRunInput(run2ClockSec, captured));
+        return { run1, projection, captured, run2 };
+      } finally {
+        fundSpy?.mockRestore();
+      }
+    };
+
+    const before = await runTwoCycles(true);
+    const after = await runTwoCycles(false);
+
+    // Run 1: fund is published NR after v10.55, yet internal Backing score is preserved in lender projection.
+    const fundBeforeScore = before.run1.candidate.cards.find((c) => c.id === FUND_ID)!.pillars.backing.score!;
+    expect(after.run1.candidate.cards.find((c) => c.id === FUND_ID)).toMatchObject({ ratingStatus: "not-rated", grade: "NR", score: null });
+    expect(after.run1.lenderCollateralBackingScoresByAssetId[FUND_ID]).toBe(fundBeforeScore);
+    expect(after.projection.byAssetId[FUND_ID]?.backingScore).toBe(fundBeforeScore);
+    // Regression guard: without internal backing scores, the ungraded fund card would drop out of the projection.
+    expect(buildSafetyScoreV9LenderCollateralProjection(after.run1.candidate).byAssetId[FUND_ID]).toBeUndefined();
+
+    // Run 2: vault resolves EUTBL via previous-accepted-backing (not static class fallback) and stays identical before vs after.
+    const afterLender = after.run2.compiledFacts.assets.find((a) => a.assetId === VAULT_ID)!.lenderBook!;
+    expect(afterLender.collaterals[0]).toMatchObject({
+      trackedAssetId: FUND_ID,
+      qualitySource: "previous-accepted-backing",
+      fallbackReason: null,
+      quality: fundBeforeScore,
+    });
+    expect(after.run2.candidate.cards.find((c) => c.id === VAULT_ID)).toEqual(
+      before.run2.candidate.cards.find((c) => c.id === VAULT_ID),
+    );
+    const { baseInputGenerationId: _ab, factSetDigest: _af, ...afterTrace } = after.run2.evaluatedSet.assets.find((a) => a.assetId === VAULT_ID)!.trace;
+    const { baseInputGenerationId: _bb, factSetDigest: _bf, ...beforeTrace } = before.run2.evaluatedSet.assets.find((a) => a.assetId === VAULT_ID)!.trace;
+    expect(afterTrace).toEqual(beforeTrace);
   });
 });

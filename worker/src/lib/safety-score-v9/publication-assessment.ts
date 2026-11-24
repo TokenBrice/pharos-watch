@@ -83,10 +83,17 @@ export type SafetyScoreV9ExpiredMeasuredExitRoutes = ReturnType<typeof projectEx
  * same route has a newer embedded window inside its budget; an absent row or a
  * newer outer snapshot never clears one.
  */
+export interface SafetyScoreV9InternalExitRouteSummary {
+  primaryRouteKey: string | null;
+  diversificationRouteKey: string | null;
+  diversificationBonus: number;
+}
+
 export function resolveMeasuredExitExpiry(
   routes: SafetyScoreV9ExpiredMeasuredExitRoutes,
   candidate: Pick<SafetyScoreV9CurrentResponse, "cards">,
   acceptedPublication: SafetyScoreV9AcceptedPublicationBaseline | null = null,
+  internalExitRoutesByAssetId: Readonly<Record<string, SafetyScoreV9InternalExitRouteSummary>> = {},
 ): { assetIds: string[]; witnessesByAssetId: Record<string, SafetyScoreV9DexExpiryWitness[]> } {
   const acceptedById = new Map(acceptedPublication?.cards.map((card) => [card.id, card]));
   const witnessesByAssetId: Record<string, SafetyScoreV9DexExpiryWitness[]> = {};
@@ -97,7 +104,13 @@ export function resolveMeasuredExitExpiry(
       return latest === undefined || latest.observationWindowEndedAt <= witness.observationWindowEndedAt ||
         routes.clockSec - latest.observationWindowEndedAt > witness.freshnessMaxSec;
     });
-    const detected = expiredContributingRouteIds(routes, card, acceptedById.get(card.id), acceptedPublication)
+    const detected = expiredContributingRouteIds(
+      routes,
+      card,
+      acceptedById.get(card.id),
+      acceptedPublication,
+      internalExitRoutesByAssetId[card.id],
+    )
       .filter((routeId) => !retained.some((witness) => witness.routeId === routeId))
       .map((routeId) => ({ routeId, dexGenerationId: routes.dexGenerationId, ...windows!.get(routeId)! }));
     const witnesses = [...retained, ...detected].sort((left, right) => compareText(left.routeId, right.routeId));
@@ -110,8 +123,9 @@ export function expiredMeasuredExitAssetIdsFromRoutes(
   routes: SafetyScoreV9ExpiredMeasuredExitRoutes,
   candidate: SafetyScoreV9CurrentResponse,
   acceptedPublication: SafetyScoreV9AcceptedPublicationBaseline | null = null,
+  internalExitRoutesByAssetId: Readonly<Record<string, SafetyScoreV9InternalExitRouteSummary>> = {},
 ): string[] {
-  return resolveMeasuredExitExpiry(routes, candidate, acceptedPublication).assetIds;
+  return resolveMeasuredExitExpiry(routes, candidate, acceptedPublication, internalExitRoutesByAssetId).assetIds;
 }
 
 function expiredContributingRouteIds(
@@ -119,13 +133,20 @@ function expiredContributingRouteIds(
   card: SafetyScoreV9CurrentResponse["cards"][number],
   accepted: SafetyScoreV9AcceptedCardBaseline | undefined,
   acceptedPublication: SafetyScoreV9AcceptedPublicationBaseline | null,
+  internalExitRoutes?: SafetyScoreV9InternalExitRouteSummary,
 ): string[] {
   const exit = card.breakdowns?.exit;
+  const ungradedFundExit = exit == null && isUngradedTokenizedFundCard(card) ? internalExitRoutes : undefined;
+  const primaryRouteKey = exit?.primaryRoute?.key ?? ungradedFundExit?.primaryRouteKey ?? undefined;
+  const diversificationRouteKey =
+    exit?.diversification && exit.diversification.bonus > 0
+      ? exit.diversification.routeKey
+      : ungradedFundExit && ungradedFundExit.diversificationBonus > 0 && ungradedFundExit.diversificationRouteKey !== null
+        ? ungradedFundExit.diversificationRouteKey
+        : undefined;
   const contributingRoutes = new Set([
-    exit?.primaryRoute?.key,
-    ...(exit?.diversification && exit.diversification.bonus > 0
-      ? [exit.diversification.routeKey]
-      : []),
+    primaryRouteKey,
+    ...(diversificationRouteKey ? [diversificationRouteKey] : []),
   ]);
   // Once a stale route leaves selection (or makes the card NR), its former
   // contribution must not disappear from the freshness gate as well.
@@ -232,6 +253,8 @@ export interface BuildAcceptedBaselineVerifiedEmptyOptions {
   priorVerifiedEmptyExitByAssetId?: Readonly<Record<string, SafetyScoreV9VerifiedEmptyExitWitness>>;
   observedAtByAssetId?: Readonly<Record<string, number>>;
   verifiedEmptyCarryMaxAgeSec?: number;
+  /** Pre-projection Exit state for ungraded tokenized funds whose public card withholds Exit scores and breakdowns. */
+  internalExitStateByAssetId?: Readonly<Record<string, "verified-empty" | "positive-route">>;
 }
 
 /**
@@ -320,9 +343,14 @@ export function buildSafetyScoreV9AcceptedPublicationBaseline(
   const carryMaxAgeSec = verifiedEmptyOptions.verifiedEmptyCarryMaxAgeSec ?? DEFAULT_VERIFIED_EMPTY_EXIT_CARRY_MAX_AGE_SEC;
   const observedAtByAssetId = verifiedEmptyOptions.observedAtByAssetId;
   const priorVerifiedEmpty = verifiedEmptyOptions.priorVerifiedEmptyExitByAssetId;
+  const internalExitStateByAssetId = verifiedEmptyOptions.internalExitStateByAssetId;
   const verifiedEmptyEntries: Array<[string, SafetyScoreV9VerifiedEmptyExitWitness]> = [];
   for (const card of publication.cards) {
-    if (isCardVerifiedEmptyExit(card)) {
+    const ungradedFund = isUngradedTokenizedFundCard(card);
+    const verifiedEmpty = ungradedFund
+      ? internalExitStateByAssetId?.[card.id] === "verified-empty"
+      : isCardVerifiedEmptyExit(card);
+    if (verifiedEmpty) {
       const observedAt = observedAtByAssetId?.[card.id];
       const verifiedAtSec =
         observedAt !== undefined && Number.isInteger(observedAt) && observedAt > 0 && observedAt <= publication.publishedAtSec
@@ -338,7 +366,10 @@ export function buildSafetyScoreV9AcceptedPublicationBaseline(
       ]);
       continue;
     }
-    if (!hasCardPositiveExitRoute(card)) {
+    const positiveExitRoute = ungradedFund
+      ? internalExitStateByAssetId?.[card.id] === "positive-route"
+      : hasCardPositiveExitRoute(card);
+    if (!positiveExitRoute) {
       const prior = priorVerifiedEmpty?.[card.id];
       if (
         prior !== undefined &&

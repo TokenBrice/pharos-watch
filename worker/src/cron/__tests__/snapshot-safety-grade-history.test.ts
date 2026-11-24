@@ -73,11 +73,13 @@ describe("snapshotSafetyGradeHistory", () => {
     mockLoadActiveSafetyScoreIndex.mockResolvedValue({ kind: "v9", snapshot: current });
     await snapshotSafetyGradeHistory(db);
     const previousRows = sqlite.prepare("SELECT * FROM safety_score_history_v2").all();
+    expect(previousRows.map((row) => (row as { stablecoin_id: string }).stablecoin_id)).toEqual(["usdc-circle"]);
     mockFetchLatestSafetyScoreHistoryV2Rows.mockResolvedValue(previousRows);
     const gap = makeReportCardsV9PipelineGapCard("control", "A", { id: "usdc-circle" });
     const unseededGap = makeReportCardsV9PipelineGapCard(null, "A", { id: "usdt-tether" });
+    const preCutoverRatedFund = makeWorkerV9Card({ id: "buidl-blackrock", grade: "B-", score: 67, ratingStatus: "rated" });
     mockLoadActiveSafetyScoreIndex.mockResolvedValue({
-      kind: "v9", snapshot: makeReportCardsV9Response({ updatedAt: current.updatedAt, cards: [gap, unseededGap] }),
+      kind: "v9", snapshot: makeReportCardsV9Response({ updatedAt: current.updatedAt, cards: [gap, unseededGap, preCutoverRatedFund] }),
     });
     expect(await snapshotSafetyGradeHistory(db)).toMatchObject({ itemCount: 0 });
     expect(sqlite.prepare("SELECT * FROM safety_score_history_v2").all()).toEqual(previousRows);

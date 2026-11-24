@@ -9,6 +9,7 @@ import { SafetyScoreV9PublicationIdentitySchema } from "@shared/types/safety-sco
 import { Sha256Schema, UnixSecondsSchema } from "@shared/types/safety-schema-primitives";
 import { LenderCollateralBackingSchema, type LenderCollateralBacking } from "@shared/types/safety-score-v9-lender-book";
 import { resolveCauseGapId } from "@shared/types/safety-score-v9-public-cause-gaps";
+import { isUngradedTokenizedFundCard } from "@shared/types/safety-score-v9-public-attribution";
 import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
 import { buildSafetyScoreV9PublicationIdentity } from "../report-cards-v9-cache";
 import { logWorkerEvent } from "../structured-log";
@@ -91,18 +92,26 @@ export function buildSafetyScoreV9AcceptedBaselineProjection(
 
 export function buildSafetyScoreV9LenderCollateralProjection(
   publication: Readonly<SafetyScoreV9CurrentResponse>,
+  internalLenderBackingScoresByAssetId: Readonly<Record<string, number>> = {},
 ): SafetyScoreV9LenderCollateralProjectionV1 {
   const byAssetId: LenderCollateralBacking["byAssetId"] = {};
   // Retain the full eligible inventory; capture owns only registry-bound subsetting.
+  // Ungraded tokenized funds withhold public grades/pillars while keeping their
+  // internal evaluated Backing score available for Morpho lender-book dependents.
   for (const card of publication.cards) {
     const backing = card.pillars.backing;
-    if (card.ratingStatus !== "rated" || backing.aggregationDisposition === "excluded-a-b" ||
-        backing.score === null || !Number.isFinite(backing.score) || backing.score < 0 || backing.score > 100) continue;
+    const backingScore = card.ratingStatus === "rated"
+      ? backing.score
+      : isUngradedTokenizedFundCard(card)
+        ? (internalLenderBackingScoresByAssetId[card.id] ?? null)
+        : null;
+    if (backing.aggregationDisposition === "excluded-a-b" ||
+        backingScore === null || !Number.isFinite(backingScore) || backingScore < 0 || backingScore > 100) continue;
     const sourceCause = (["D", "C", "U"] as const).find((cause) => backing.limitedEvidenceCauses?.includes(cause)) ?? null;
     const sourceGapIds = [...new Set((backing.causeGapRefs ?? []).map((ref) => resolveCauseGapId(publication, card, ref)))].sort(compareCodeUnits);
     if ((sourceCause === "C" || sourceCause === "U") && sourceGapIds.length === 0) continue;
     byAssetId[card.id] = {
-      assetId: card.id, backingScore: backing.score,
+      assetId: card.id, backingScore,
       cardSha256: sha256Hex(stableJsonStringifyV1(card)), sourceCause, sourceGapIds,
     };
   }
@@ -203,13 +212,16 @@ export function buildSafetyScoreV9AcceptedProjections(
   publication: Readonly<SafetyScoreV9CurrentResponse>,
   dexExpiryByAssetId: Readonly<Record<string, SafetyScoreV9DexExpiryWitness[]>> = {},
   verifiedEmptyOptions: BuildAcceptedBaselineVerifiedEmptyOptions = {},
+  internalLenderBackingScoresByAssetId: Readonly<Record<string, number>> = {},
 ): { baseline: string; lender: string; cohort: string } {
   const projections = {
     cohort: serializeSafetyScoreV9CohortProjection(buildSafetyScoreV9CohortProjection(publication)),
     baseline: serializeSafetyScoreV9AcceptedBaselineProjection(
       buildSafetyScoreV9AcceptedBaselineProjection(publication, dexExpiryByAssetId, verifiedEmptyOptions),
     ),
-    lender: serializeSafetyScoreV9LenderCollateralProjection(buildSafetyScoreV9LenderCollateralProjection(publication)),
+    lender: serializeSafetyScoreV9LenderCollateralProjection(
+      buildSafetyScoreV9LenderCollateralProjection(publication, internalLenderBackingScoresByAssetId),
+    ),
   };
   const cohortBytes = new TextEncoder().encode(projections.cohort).byteLength;
   const baselineBytes = new TextEncoder().encode(projections.baseline).byteLength;
