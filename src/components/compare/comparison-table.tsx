@@ -26,7 +26,7 @@ import { formatPegOccupancy } from "@shared/lib/peg-format";
 import { GENIUS_STATUS_SHORT_LABELS } from "@shared/lib/genius";
 import { MICA_STATUS_BADGE_STYLES } from "@shared/lib/mica";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import { isTokenizedFundId } from "@shared/lib/stablecoins/listing-governance";
+import { isClientTokenizedFundId } from "@shared/lib/stablecoins/aggregate-client-registry";
 import { getSupplyChangePercent } from "@/components/stablecoin-directory/stablecoin-table-logic";
 import { getVariantAccessibleLabel } from "@shared/lib/variant-display";
 import { projectTopDriver } from "@shared/lib/safety-score-v9/public-top-driver";
@@ -360,7 +360,7 @@ function blacklistLabel(coin: ComparisonCoinEntry): string {
 
 function safetyGradeLabel(coin: ComparisonCoinEntry): ReactNode {
   const card = coin.safetyCard;
-  const isUngradedFund = isTokenizedFundId(coin.meta.id)
+  const isUngradedFund = isClientTokenizedFundId(coin.meta.id)
     || (card?.ratingStatus === "not-rated" && card.nrReasons.some((reason) => reason.code === "tokenized-fund-not-graded"));
   if (isUngradedFund && card?.ratingStatus !== "pipeline-gap") {
     return (
@@ -402,7 +402,7 @@ function safetyGradeLabel(coin: ComparisonCoinEntry): ReactNode {
 
 function safetyGradeKey(coin: ComparisonCoinEntry): string {
   const card = coin.safetyCard;
-  const isUngradedFund = isTokenizedFundId(coin.meta.id)
+  const isUngradedFund = isClientTokenizedFundId(coin.meta.id)
     || (card?.ratingStatus === "not-rated" && card.nrReasons.some((reason) => reason.code === "tokenized-fund-not-graded"));
   if (isUngradedFund && card?.ratingStatus !== "pipeline-gap") return "tokenized-fund-not-graded";
   if (!card) return NULL_KEY;

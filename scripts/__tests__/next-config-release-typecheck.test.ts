@@ -217,6 +217,9 @@ describe("client bundle honors build-ID exclusions", () => {
     expect(clientModules.length).toBeGreaterThan(100);
     const { dependencies, unresolved } = buildClientDependencies(process.cwd(), clientModules);
     expect([unresolved, findExcludedClientImports(clientModules, dependencies), dependencies.has("src/lib/homepage-static-snapshot.ts")]).toEqual([[], [], false]);
+    expect(BUILD_ID_EXCLUDED_PATHS).toContain("shared/data/stablecoins/listing-decisions.json");
+    expect(dependencies.has("shared/data/stablecoins/listing-decisions.json")).toBe(false);
+    expect(dependencies.has("shared/lib/stablecoins/listing-governance.ts")).toBe(false);
     expect([...dependencies.keys()].filter((f) => /process\.env\.SITE_SESSION_SIGNING_KEY\b/u.test(readFileSync(f, "utf8")))).toEqual([]);
     expect([...dependencies.keys()].filter((f) => !BUILD_ID_INPUT_DIRECTORIES.some((d) => f.startsWith(`${d}/`)))).toEqual([]);
   });

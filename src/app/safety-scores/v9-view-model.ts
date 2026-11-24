@@ -1,7 +1,7 @@
 import { formatCurrency } from "@shared/lib/format";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import { isTokenizedFundId } from "@shared/lib/stablecoins/listing-governance";
+import { isClientTokenizedFundId } from "@shared/lib/stablecoins/aggregate-client-registry";
 import { gradeRange, scoreToGrade } from "@shared/lib/report-card-core";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import type { SafetyGradeSupplyMix } from "@/components/safety-scores/safety-grade-distribution-bar";
@@ -65,7 +65,7 @@ function cardGroup(card: V9ConsumerCard): Exclude<GradeFilter, "all"> {
 
 /** Tokenized funds are tracked for reserve and dependency transparency, not ranked on Safety Scores. */
 export function excludeTokenizedFundCards<T extends { id: string }>(cards: readonly T[] | undefined): T[] {
-  return (cards ?? []).filter((card) => !isTokenizedFundId(card.id));
+  return (cards ?? []).filter((card) => !isClientTokenizedFundId(card.id));
 }
 
 export function buildV9GradeCounts(

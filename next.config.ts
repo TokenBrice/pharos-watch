@@ -34,7 +34,7 @@ export const BUILD_ID_INPUT_FILES = [
  * `safety-score-v9/chain-maturity-reviews-v1.ts`,
  * `safety-score-v9/methodology-policy-candidate-v1.json`, and the client
  * `stablecoins/` catalogs (`canonical-order`, `coins.client.*`,
- * `coins.compliance.*`, `coins.telegram-mini-app.*`, `listing-decisions`).
+ * `coins.compliance.*`, `coins.telegram-mini-app.*`).
  */
 const SERVER_ONLY_SHARED_BUILD_ID_EXCLUSIONS = [
   "shared/data/annotations",
@@ -75,6 +75,7 @@ const SERVER_ONLY_SHARED_BUILD_ID_EXCLUSIONS = [
   "shared/data/stablecoins/coins.generated.json",
   "shared/data/stablecoins/coins.worker-full.generated.json",
   "shared/data/stablecoins/coins.worker-runtime.generated.json",
+  "shared/data/stablecoins/listing-decisions.json",
 ] as const;
 
 /**
