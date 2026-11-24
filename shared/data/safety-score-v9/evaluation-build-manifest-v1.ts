@@ -294,7 +294,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/collateral-redeem.ts",
-      "sha256": "0b8d251a3a890936550426d84455c4752036c72757f6da50d6ce4b3dea200e00"
+      "sha256": "52a04091d510795c7be6f6f990b59adc5994f09801697073e11762efc6f05177"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/factory.ts",
@@ -1363,7 +1363,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-11-24-block-26485484-shock-coverage.json.gz"
     }
   ],
-  "digest": "a52967248e18f7bdd7b80ddfca3dece582855fcd280c63bfccf1962a34e6b512"
+  "digest": "0b6a1dd79fe6ca0ef6ce8bd443152f4b44ee0950211314f9192a91371141dcf6"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
