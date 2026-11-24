@@ -630,9 +630,9 @@ describe("fetchCoinbasePrices", () => {
 });
 
 describe("fetchKrakenPrices", () => {
-  const depthPairs = ["AUDX", "BRL1", "EURC", "EURCV", "EUROP", "MXNB", "OUSD", "PAXG", "QCAD", "TGBP", "XAUT", "ZCHF"] as const;
+  const depthPairs = ["AUDX", "BRL1", "EURC", "EURCV", "EUROP", "MXNB", "OUSD", "PAXG", "QCAD", "TGBP", "USDD", "XAUT", "ZCHF"] as const;
 
-  it("reads the twelve clocked Kraken markets from /0/public/Depth?count=1 using the older top-of-book timestamp and keeps other markets on batched /0/public/Ticker", async () => {
+  it("reads the thirteen clocked Kraken markets from /0/public/Depth?count=1 using the older top-of-book timestamp and keeps other markets on batched /0/public/Ticker", async () => {
     const nowSec = 1_800_000_000;
     const clock = vi.spyOn(Date, "now").mockReturnValue(nowSec * 1_000);
     try {
@@ -650,7 +650,6 @@ describe("fetchKrakenPrices", () => {
               result: {
                 USDTZUSD: { c: ["1.0002"] },
                 USDCUSD: { c: ["0.9998"] },
-                USDDUSD: { a: ["1.0000"], b: ["0.9960"], c: ["0.9960"] },
                 DAIUSD: { c: ["1.0000"] },
                 // Must be ignored by Ticker even if returned, because EURC is depth-owned.
                 EURCUSD: { a: ["1.1000"], b: ["1.1000"], c: ["1.1000"] },
@@ -666,6 +665,13 @@ describe("fetchKrakenPrices", () => {
             return Response.json({
               error: [],
               result: { MXNBUSD: { bids: [["0.05224", "573269", nowSec - 764]], asks: [["0.05230", "62972", nowSec - 71]] } },
+            });
+          }
+          if (pair === "USDDUSD") {
+            // Live-style standing ask left 35 hours old beside a fresh bid: withheld, never re-clocked.
+            return Response.json({
+              error: [],
+              result: { USDDUSD: { bids: [["0.9960", "500", nowSec - 30]], asks: [["1.0000", "85529", nowSec - 125_000]] } },
             });
           }
           if (pair === "TGBPUSD") {
@@ -689,25 +695,22 @@ describe("fetchKrakenPrices", () => {
         },
       }], { requireMatch: true });
 
-      const outcome = await fetchKrakenPrices([...depthPairs, "USDT", "USDC", "USDD", "DAI"]);
+      const outcome = await fetchKrakenPrices([...depthPairs, "USDT", "USDC", "DAI"]);
       expect(outcome.kind).toBe("ok");
       expect(requestedUrls).toEqual([
-        "https://api.kraken.com/0/public/Ticker?pair=DAIUSD,USDCUSD,USDDUSD,USDTUSD",
+        "https://api.kraken.com/0/public/Ticker?pair=DAIUSD,USDCUSD,USDTUSD",
         ...depthPairs.map((symbol) => `https://api.kraken.com/0/public/Depth?pair=${symbol}USD&count=1`),
       ]);
-      // 11 inter-request pacing sleeps across 12 serial Depth calls.
-      expect(sleepWithSignalMock).toHaveBeenCalledTimes(11);
+      // 12 inter-request pacing sleeps across 13 serial Depth calls.
+      expect(sleepWithSignalMock).toHaveBeenCalledTimes(12);
       expect(sleepWithSignalMock.mock.calls.every(([ms]) => ms === 250)).toBe(true);
 
       // Batched Ticker markets remain undated / local_fetch.
       expect(outcome.value.prices.get("USDT")).toBeCloseTo(1.0002, 4);
       expect(outcome.value.prices.get("USDC")).toBeCloseTo(0.9998, 4);
-      expect(outcome.value.prices.get("USDD")).toBeCloseTo(0.998, 4);
       expect(outcome.value.prices.get("DAI")).toBeCloseTo(1.0, 4);
       expect(outcome.value.quoteBasisBySymbol?.get("USDC")).toBe("last-trade");
-      expect(outcome.value.quoteBasisBySymbol?.get("USDD")).toBe("bid-ask-midpoint");
       expect(outcome.value.observedAtBySymbol.has("USDC")).toBe(false);
-      expect(outcome.value.observedAtBySymbol.has("USDD")).toBe(false);
       expect(outcome.value.prices.has("BTC")).toBe(false);
 
       // Clocked Depth markets carry upstream older-of-(bid, ask) timestamps.
@@ -721,6 +724,7 @@ describe("fetchKrakenPrices", () => {
       // Stale MXNB book stays withheld and is never re-clocked to fetch time.
       expect(outcome.value.prices.has("MXNB")).toBe(false);
       expect(outcome.value.observedAtBySymbol.has("MXNB")).toBe(false);
+      expect(outcome.value.prices.has("USDD")).toBe(false);
       expect(outcome.value.diagnostics).toContainEqual({
         source: "kraken",
         stage: "primary",
@@ -728,9 +732,9 @@ describe("fetchKrakenPrices", () => {
         status: 200,
         ok: true,
         success: true,
-        candidateCount: 12,
+        candidateCount: 13,
         resolvedCount: 11,
-        rejectionReasonCounts: { stale: 1 },
+        rejectionReasonCounts: { stale: 2 },
       });
     } finally {
       clock.mockRestore();

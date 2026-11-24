@@ -61,9 +61,10 @@ export const KRAKEN_MARKETS: readonly KrakenMarketConfig[] = [
   { symbol: "USDC", requestPair: "USDCUSD", responseKeys: ["USDCUSD"] },
   // 2026-11-24: Kraken's online USDD/USD book is TRON DAO Reserve USDD v2
   // (`usdd-tron-dao-reserve`); CoinGecko's `usdd` ticker set lists this exact
-  // market. Standing book (~40 bps spread) with hours-old top-of-book levels,
-  // so it rides the batched Ticker path rather than clocked Depth.
-  { symbol: "USDD", requestPair: "USDDUSD", responseKeys: ["USDDUSD"] },
+  // market. Its top-of-book levels can sit for hours (a 35-hour-old ask was
+  // observed at listing), so it reads clocked Depth: a stale side withholds the
+  // quote instead of letting an old book vote as a fresh local-fetch midpoint.
+  { symbol: "USDD", requestPair: "USDDUSD", responseKeys: ["USDDUSD"], clockedDepth: true },
   // 2026-10-30: Kraken lists OSL/Anchorage USDGO as USDGO/USD; CoinGecko's `usdgo`
   // ticker set includes this exact market, whose online bid/ask outlives CG's last trade.
   { symbol: "USDGO", requestPair: "USDGOUSD", responseKeys: ["USDGOUSD"] },

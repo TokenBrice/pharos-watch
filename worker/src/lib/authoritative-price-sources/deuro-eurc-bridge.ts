@@ -230,8 +230,9 @@ export async function fetchDeuroEurcBridgePrice(context: LivePriceContext, signa
     if (eurcResult) return eurcResult;
   }
   if (eursParent) {
-    context.lastRejectionReason = null;
-    return evaluateEursBridgeLane(eursParent, pinnedHead, options, reject);
+    const eursResult = await evaluateEursBridgeLane(eursParent, pinnedHead, options, reject);
+    if (eursResult) context.lastRejectionReason = null;
+    return eursResult;
   }
   return null;
 }
