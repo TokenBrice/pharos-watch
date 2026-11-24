@@ -133,6 +133,7 @@
     "worker/src/lib/api-freshness.ts": 97.9,
     "worker/src/lib/api-pagination.ts": 97.7,
     "worker/src/lib/auth.ts": 100,
+    "worker/src/lib/authoritative-price-sources/a7a5-uniswap-v2.ts": 100,
     "worker/src/lib/authoritative-price-sources/aznd-curve-pool.ts": 98.4,
     "worker/src/lib/authoritative-price-sources/bd-aerodrome.ts": 98.1,
     "worker/src/lib/authoritative-price-sources/cap-cusd.ts": 100,

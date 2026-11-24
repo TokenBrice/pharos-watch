@@ -49,6 +49,7 @@ export const CIRCUIT_SOURCE_REGISTRY = {
   RWAUSDI_CHAINLINK_NAV: { key: "rwausdi-chainlink-nav", scope: "asset-scoped" },
   NUSD_SYNAPSE_POOL: { key: "nusd-synapse-pool", scope: "asset-scoped" },
   USDU_FINANCE_CURVE_POOL: { key: "usdu-finance-curve-pool", scope: "asset-scoped" },
+  A7A5_UNISWAP_V2: { key: "a7a5-uniswap-v2", scope: "asset-scoped" },
   // Single-asset members share this breaker with multi-asset redemption providers.
   PROTOCOL_REDEEM: { key: "protocol-redeem", scope: "source-wide" },
   CURVE_ONCHAIN: { key: "curve-onchain", scope: "source-wide" },

@@ -1,10 +1,15 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { gunzipSync } from "node:zlib";
 import { vi } from "vitest";
 import { mockRegistry } from "../../test-helpers/cron";
 import type * as WorkerRuntimeRegistry from "@shared/lib/stablecoins/worker-runtime-registry";
+import usduRuntime from "./fixtures/usdu-uniswap-v3-runtime.json";
 
 export const fetchEvmCallHexAtBlockMock = vi.fn();
 export const fetchEvmRpcBatchMock = vi.fn();
 export const fetchEvmBlockNumberMock = vi.fn();
+export const fetchEvmBlockHeaderMock = vi.fn();
 export const fetchEvmBlockTimestampMock = vi.fn();
 export const resolveClosestBlockAtOrBeforeTimestampMock = vi.fn();
 
@@ -116,6 +121,7 @@ vi.mock("../evm-rpc", () => ({
   fetchEvmRpcBatch: (...args: unknown[]) => fetchEvmRpcBatchMock(...args),
   fetchEvmCallHexAtBlock: (...args: unknown[]) => fetchEvmCallHexAtBlockMock(...args),
   fetchEvmBlockNumber: (...args: unknown[]) => fetchEvmBlockNumberMock(...args),
+  fetchEvmBlockHeader: (...args: unknown[]) => fetchEvmBlockHeaderMock(...args),
   fetchEvmBlockTimestamp: (...args: unknown[]) => fetchEvmBlockTimestampMock(...args),
   resolveClosestBlockAtOrBeforeTimestamp: (...args: unknown[]) => resolveClosestBlockAtOrBeforeTimestampMock(...args),
   isHexResult: (value: string | null | undefined): value is `0x${string}` => typeof value === "string" && /^0x[0-9a-fA-F]*$/.test(value),
@@ -124,6 +130,11 @@ vi.mock("../evm-rpc", () => ({
 export function resetAuthoritativePriceSourceMocks(): void {
   fetchEvmCallHexAtBlockMock.mockReset();
   fetchEvmBlockNumberMock.mockReset().mockResolvedValue(33_333_333);
+  fetchEvmBlockHeaderMock.mockReset().mockImplementation(async () => ({
+    number: 33_333_333,
+    hash: "0xabc" as const,
+    timestamp: Math.floor(Date.now() / 1_000) - 30,
+  }));
   fetchEvmBlockTimestampMock.mockReset().mockImplementation(async () => Math.floor(Date.now() / 1_000) - 30);
   resolveClosestBlockAtOrBeforeTimestampMock.mockReset();
 }
@@ -274,6 +285,7 @@ export function fetchLiveOverrides(
   options?: AuthoritativeLivePriceOverrideOptions,
   validationReferences?: Parameters<typeof fetchAuthoritativeLivePriceOverrides>[2],
 ): Promise<Map<string, CurrentPriceOverride>> {
+
   return fetchAuthoritativeLivePriceOverrides(assets, undefined, validationReferences, options);
 }
 
@@ -354,3 +366,77 @@ export const WAVE2_USDU_POOL: readonly string[] = [
 export const WAVE2_USDU_BAD: readonly (readonly [number, string])[] = [
   [0, WAVE2_USDU_POOL[1]], [2, uWord(999_000_000n)], [3, uWord(999n * 10n ** 18n)], [5, uWord(90_000_000n)],
 ];
+
+export const A7A5_UNISWAP_V2_FIXTURE = {
+  id: "a7a5-old-vector",
+  now: 1_795_531_200,
+  block: 26_485_668,
+  a7a5: "0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9",
+  usdt: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+  pair: "0x14d7aab5b4bca6a02e52ac22520b033bf35f4091",
+  factory: "0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f",
+  reserve0: 3_017_951_809_083n,
+  reserve1: 35_422_280_840n,
+} as const;
+
+let cachedA7a5RuntimeCodes: readonly string[] | null = null;
+export function getA7a5RuntimeCodes(): readonly string[] {
+  if (!cachedA7a5RuntimeCodes) {
+    const path = fileURLToPath(new URL("./fixtures/a7a5-uniswap-v2-runtime.json.gz", import.meta.url).href);
+    const entries = JSON.parse(gunzipSync(readFileSync(path)).toString("utf8")) as { label: string; code: string }[];
+    cachedA7a5RuntimeCodes = [
+      entries.find((row) => row.label === "a7a5")!.code,
+      usduRuntime.find((row) => row.label === "usdt")!.code,
+      entries.find((row) => row.label === "pair")!.code,
+      entries.find((row) => row.label === "factory")!.code,
+    ];
+  }
+  return cachedA7a5RuntimeCodes;
+}
+
+export function encodeA7a5Abi(types: string, values: readonly unknown[]): `0x${string}` {
+  return encodeAbiParameters(parseAbiParameters(types), values);
+}
+
+export function makeA7a5ParentContext(
+  overrides: Partial<PeggedAsset> & { nowSec?: number; observedAt?: number | null } = {},
+) {
+  return {
+    assetsById: new Map([[
+      "usdt-tether",
+      freshParent("usdt-tether", 0.999215, "coingecko", {
+        nowSec: A7A5_UNISWAP_V2_FIXTURE.now,
+        priceConfidence: "single-source",
+        observedAt: A7A5_UNISWAP_V2_FIXTURE.now - 20,
+        priceObservedAtMode: "upstream",
+        ...overrides,
+      }),
+    ]]),
+  };
+}
+
+export function mockA7a5UniswapV2Rpc(overrides: Record<number, `0x${string}`> = {}): void {
+  const { now, a7a5, usdt, pair, factory, reserve0, reserve1 } = A7A5_UNISWAP_V2_FIXTURE;
+  const rows: `0x${string}`[] = [
+    encodeA7a5Abi("address", [a7a5]),
+    encodeA7a5Abi("address", [usdt]),
+    encodeA7a5Abi("address", [factory]),
+    encodeA7a5Abi("address", [pair]),
+    encodeA7a5Abi("uint112,uint112,uint32", [reserve0, reserve1, now - 3600]),
+    encodeA7a5Abi("uint256", [6n]),
+    encodeA7a5Abi("uint256", [6n]),
+    encodeA7a5Abi("bool", [false]),
+    encodeA7a5Abi("bool", [false]),
+    encodeA7a5Abi("bool", [false]),
+    encodeA7a5Abi("bool", [false]),
+    encodeA7a5Abi("bool", [false]),
+    encodeA7a5Abi("uint256", [0n]),
+    encodeA7a5Abi("uint256", [0n]),
+    encodeA7a5Abi("uint256", [reserve0]),
+    encodeA7a5Abi("uint256", [reserve1]),
+  ];
+  for (const [index, value] of Object.entries(overrides)) rows[Number(index)] = value;
+  const codes = getA7a5RuntimeCodes();
+  fetchEvmRpcBatchMock.mockReset().mockImplementation(async (_chain, calls: { method: string }[]) =>
+    calls[0]?.method === "eth_getCode" ? codes : rows);
+}
