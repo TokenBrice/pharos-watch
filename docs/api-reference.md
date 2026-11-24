@@ -1066,10 +1066,10 @@ Modeled issuer/protocol redemption routes and effective-exit scoring for configu
 {
   "coins": {},
   "methodology": {
-    "version": "4.54",
-    "versionLabel": "v4.54",
-    "currentVersion": "4.54",
-    "currentVersionLabel": "v4.54",
+    "version": "4.55",
+    "versionLabel": "v4.55",
+    "currentVersion": "4.55",
+    "currentVersionLabel": "v4.55",
     "changelogPath": "/methodology/redemption-backstop-changelog/",
     "asOf": 0,
     "isCurrent": true,

@@ -22,7 +22,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/evidence-gap-classifications-v1.json",
-      "sha256": "a10084d42dbd4b38ecd80ec9c507e4c9f5e57590aba17fd4908a5612b5bd6d82"
+      "sha256": "248f8417e253dee6b7fa7f311b86bfb2fe0cca51461150d7e120c45fd3bbbf8f"
     },
     {
       "path": "shared/data/safety-score-v9/exit-execution-model-reviews-v1.json",
@@ -30,11 +30,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/incident-reviews-v1.json",
-      "sha256": "e14eed4ea43e328477f8a9b8ca52117fd1e3ccecd6a067c40751e398b7f5ec6f"
+      "sha256": "eedb3cea7157294fddead605a85f3c205a05d5aed48dcd950032d778515e332b"
     },
     {
       "path": "shared/data/safety-score-v9/incident-runtime-v1.generated.json",
-      "sha256": "6ed8bbe41f1bfdbc5cc1cbda6ca987e3942b9d454f93977537bcee6ca7e20770"
+      "sha256": "7e89177308fb00743eb35bf8119a216afa3c811331edfa0a9b9b88491fbef8e0"
     },
     {
       "path": "shared/data/safety-score-v9/lane-emitter-descriptors-v1.generated.json",
@@ -50,7 +50,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/mechanism-review-overlays-v1.json",
-      "sha256": "df1891d66a365930291e93d176983554d28096db3fc3b3f74949c5f145172dc7"
+      "sha256": "4f35acd01452d78e530e41f185e888c8d138a0e446971a1a892a3c17bfd67b1d"
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
@@ -82,15 +82,15 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/stablecoins/coins.generated.json",
-      "sha256": "8de5a078c544839afc19c7ca947becde11831257ae2931f2ad1e8ec92d5e153b"
+      "sha256": "6834781055139e1dc93fde4580d9bb55b7c9973052cce6554714551de82613bc"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-full.generated.json",
-      "sha256": "484f8515aaeb65dd3eeb60ef3bcc4b6276c1aec107daecf835252ab0bce11a8c"
+      "sha256": "e19ac25baff19d6b9eb0ad39fa0dae6c1118a716dd7af65c3ca6df339374a24f"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-runtime.generated.json",
-      "sha256": "f4d81f398f974cbda9c24d3a6bdd8e13f85294a1988a2f931a065ead015080cf"
+      "sha256": "f5023ecd7b8f2f894f549e25df106553bdbea7b062e1feb6454de8c638397edd"
     },
     {
       "path": "shared/lib/base64.ts",
@@ -294,7 +294,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/collateral-redeem.ts",
-      "sha256": "6a5135cc5c6fc86908748fc386d7f8bdf26a9a8a3ec3c512da9d924f08ac5b8a"
+      "sha256": "0b8d251a3a890936550426d84455c4752036c72757f6da50d6ce4b3dea200e00"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/factory.ts",
@@ -354,7 +354,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/queue-redeem.ts",
-      "sha256": "7419ab7439a84451a40b5d6d9dd439b422abe54ffc29a6f5b383c6cbe09926f0"
+      "sha256": "d005c37ab0fe9b14a1a4d59f64af3201f0c9d5a76d73421582a62fd4dff9b55b"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/review-dates.ts",
@@ -538,7 +538,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/evaluate-asset.ts",
-      "sha256": "81f1bd1509867581e84fc19094264685cd203bd912735e14f16fcf64fec23a2b"
+      "sha256": "0f1c58acaf40185276be3d43b2d42900e4ecd5fb5d265c47f61b212c63d1d49a"
     },
     {
       "path": "shared/lib/safety-score-v9/evaluate-set.ts",
@@ -558,7 +558,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/exit.ts",
-      "sha256": "68ed27de9582fe55b50b988250d52460e736ca5a8707f2ea30cda51bdadfa393"
+      "sha256": "7cd918b3832b18bf7dcbc67f7ddbb136e8bdb8dcc4c5849f6cba57a7f4409029"
     },
     {
       "path": "shared/lib/safety-score-v9/fact-shard.ts",
@@ -830,7 +830,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/exit-route.ts",
-      "sha256": "8f413e3d586616f07d28d754f0ce15c0e14edf1db8a0efaf6ec280dab6466793"
+      "sha256": "7763a5de9f50bbd0d9b18e36f0542373b99187a124bd8dee938e633766b2431d"
     },
     {
       "path": "shared/types/fx-reference.ts",
@@ -1198,7 +1198,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension-mechanism.ts",
-      "sha256": "d94298069edebc02b460889c29f3ec905c1cbf7d2174a31a07b969f70b881e0d"
+      "sha256": "d1d16833c92c7312390a7d2dc9bb02d9b314c5fcb4e25532b51fc245afddff53"
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension-mint.ts",
@@ -1258,7 +1258,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-context.ts",
-      "sha256": "fad68340ac00d11ef06b4d72cabe7abf240a81dbbe6557fb4f86d85359914884"
+      "sha256": "583f500e80139a778c3748231fba817ee12514590783477377bbf0ce72a1e79e"
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-control.ts",
@@ -1266,7 +1266,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-exit.ts",
-      "sha256": "b64e4897114292b14ab57e98617dd7f4cca79240dbdcc5045a36a54a2ae05704"
+      "sha256": "48c59c189b8d3821c909006c79baaaa24c002e302e9811b7e5ab1f6defe1135a"
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-lender-book.ts",
@@ -1363,7 +1363,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-11-22-block-26470421-shock-coverage.json.gz"
     }
   ],
-  "digest": "d885f2a4fe96cdd6be51c3e18a4cea47983281509472bed5ff1790cb2f4731ea"
+  "digest": "095de4d121689202ad39fbd06448ef8b20e55bc19a64bf94ecac964c225668fb"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
