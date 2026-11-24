@@ -1,7 +1,6 @@
 /**
- * Server-side helper for the portrait slot's reserved box: the portrait plan's viewBox aspect (`"w / h"`), so the
- * slot holds the plan's height before the client mounts it (CLS). Pure and deterministic; lives outside the
- * `"use client"` slot module so a Server Component can call it.
+ * Server-side helper exporting the portrait plan's viewBox aspect (`"w / h"`). Used by `PlotMapPortraitSlot` to lock
+ * the lightweight SSR skeleton to the exact aspect of the hydrated walk (0 CLS).
  */
 import { buildCemeteryPlotMap } from "@/lib/cemetery-plot-map";
 import { toPlotMapInput } from "@/lib/cemetery-plot-map-input";

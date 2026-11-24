@@ -64,7 +64,7 @@ const GENERATED_BY = "scripts/maintenance/build-og-cemetery.ts";
 const REFRESH_COMMAND = "npm run build:og-cemetery";
 
 /** Bump when the composition, crop or rendering pipeline changes so the signature rotates. */
-export const OG_CEMETERY_GENERATOR_VERSION = 2;
+export const OG_CEMETERY_GENERATOR_VERSION = 3;
 
 export const OG_CEMETERY_WIDTH = 1200;
 export const OG_CEMETERY_HEIGHT = 630;
@@ -78,7 +78,7 @@ export const OG_CEMETERY_RENDER = {
   pagePad: 36,
   deviceScaleFactor: 2,
   /** CSS px kept above the route head's top edge. */
-  cropAboveHead: 30,
+  cropAboveHead: 26,
 } as const;
 
 /**
@@ -186,7 +186,11 @@ export async function buildOgCemeteryDocument(repoRoot = REPO_ROOT): Promise<OgC
       "div",
       { className: "tokens og-root", style: plotTokenStyle(atlas) },
       h(PlotMapDefs),
-      h("main", { className: "og-page" }, h("section", { className: "hero", style: desktopLayoutStyle(layout) }, head, scene)),
+      h(
+        "main",
+        { className: "og-page" },
+        h("section", { className: "hero", style: desktopLayoutStyle(layout) }, head, h("div", { className: "stageWrap" }, scene)),
+      ),
     ),
   );
 
@@ -204,6 +208,9 @@ export async function buildOgCemeteryDocument(repoRoot = REPO_ROOT): Promise<OgC
     `html,body{margin:0;padding:0;}`,
     `body{width:${viewportWidth}px;color:var(--foreground);font-family:"Geist",system-ui,sans-serif;-webkit-font-smoothing:antialiased;}`,
     `.og-root{background:var(--sky-0);}`,
+    // Fit the full plate including every year stamp (down to 2018–21) cleanly inside the 1440×756 (1200×630) crop
+    // while keeping `.head` full width and `.figure` locked to the lighthouse lantern via the shared `--stage-w` rule.
+    `.og-root .hero{--stage-w:1148px;}`,
     `.og-page{padding:48px ${pagePad}px 0;overflow:hidden;}`,
     // The rest pose (`desktopPlotLayout`) is solved for the route head's measured height (`EST.headH` in
     // plot-map-scene.tsx: title, two-line lead, links); the card's head keeps at least that height so the plan and the

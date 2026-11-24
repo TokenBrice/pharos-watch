@@ -1,11 +1,11 @@
 {
   "generatedBy": "scripts/maintenance/build-og-cemetery.ts",
-  "generatorVersion": 2,
+  "generatorVersion": 3,
   "render": {
     "viewportWidth": 1440,
     "pagePad": 36,
     "deviceScaleFactor": 2,
-    "cropAboveHead": 30
+    "cropAboveHead": 26
   },
   "png": {
     "palette": true,
@@ -15,7 +15,7 @@
     "effort": 10,
     "compressionLevel": 9
   },
-  "documentSha256": "a2f3f0d54495ef2118a2e86963559ab3559a6098f7c47d0729dba9a4a00e73be",
+  "documentSha256": "71a13a8cd8f34bc4b9f7f1ca79a906af281b4fe39190f057cb96b6152d137107",
   "summary": {
     "total": 134,
     "firstYear": 2018,
@@ -24,8 +24,8 @@
     "atlasImageSha256": "04aefc317a7ce7283f60b6afb0c8238b4e95bad5bc4cf831340f1010d537e35b"
   },
   "image": {
-    "sha256": "d0c57308a69dc0b7e678142f0d60c682e337eac4ea4d61f471a378f352b6fb72",
-    "bytes": 148544,
+    "sha256": "2279f2b11e866a185028ce0d097361e457d2676cc306d2a25ef1882918804556",
+    "bytes": 139314,
     "width": 1200,
     "height": 630
   }

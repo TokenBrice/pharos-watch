@@ -380,18 +380,36 @@
   canvas {
     transition: none !important;
   }
-  /* The scene opts these transforms into motion independently of theme transitions. */
+  /* The scene opts these transforms and spotlight/dim fills into motion independently of theme transitions. */
   [data-plot-world] {
-    transition: transform 600ms var(--ease) !important;
+    transition: transform var(--scene-dur-pan) var(--ease) !important;
   }
-  [data-plot-beam] > g {
-    transition: transform 460ms var(--ease) !important;
+  [data-plot-beam][data-beam-moved="true"] > g {
+    transition: transform var(--scene-dur-beam) var(--ease) !important;
   }
-  :root[data-motion="reduced"] :is([data-plot-world], [data-plot-beam] > g) {
+  [data-plot-svg] :is([data-plot-layer="objects"], [data-plot-layer="ground"], [data-plot-layer="front"]) *,
+  [data-plot-svg] [data-plot-ring],
+  [data-plot-portrait-svg] :is([data-plot-layer="objects"], g) * {
+    transition:
+      fill var(--scene-dur-fast) var(--ease),
+      stroke var(--scene-dur-fast) var(--ease),
+      opacity var(--scene-dur-fast) var(--ease) !important;
+  }
+  :root[data-motion="reduced"] :is(
+      [data-plot-world],
+      [data-plot-beam] > g,
+      [data-plot-svg] *,
+      [data-plot-portrait-svg] *
+    ) {
     transition: none !important;
   }
   @media (prefers-reduced-motion: reduce) {
-    :root:not([data-motion="full"]) :is([data-plot-world], [data-plot-beam] > g) {
+    :root:not([data-motion="full"]) :is(
+        [data-plot-world],
+        [data-plot-beam] > g,
+        [data-plot-svg] *,
+        [data-plot-portrait-svg] *
+      ) {
       transition: none !important;
     }
   }

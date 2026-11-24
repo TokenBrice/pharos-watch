@@ -96,6 +96,7 @@ describe("PlotMapPortraitSlot", () => {
     expect(new Set(ids)).toEqual(new Set(rows.map((r) => `walk-${r.id}`)));
     expect(buttons.filter((b) => b.tabIndex === 0).map((b) => b.id)).toEqual([`walk-${portraitMap.keyboard.initialId}`]);
     expect(buttons.every((b) => b.getAttribute("aria-pressed") === "false")).toBe(true);
+    expect(container.querySelector("[data-plot-portrait-trees]")?.children.length).toBe(portraitMap.cypress.length);
     expect(selection.registerPinGrave).toHaveBeenCalledTimes(1);
   });
 
