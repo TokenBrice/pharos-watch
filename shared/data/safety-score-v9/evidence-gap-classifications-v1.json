@@ -67705,6 +67705,715 @@
         "surface:0df441fafd03057a82046399"
       ],
       "rationale": "The required datum is a published maximum realization horizon (liquidityHorizon) for the shared Mento Reserve's Celo LayerZero OFT sfrxUSD slice (mento:reserve:sfrxusd, 6.3047% in live API; 816,321.359743 sfrxUSD at Celo block 83575585). Because assetClass is protocol-position (in maturityNotApplicableClasses), no maturityDaysMax gap opens — only liquidityHorizon is open. Consistent with uw-sfrxusd-frax-a9becd93de387e60 and uw-usdaf-asymmetry-e476196236f5ce5e, Frax allocates sfrxUSD across its mixed Benchmark Yield Strategy (carry-trade, DeFi AMO, Treasury venues), disables direct canonical Ethereum ERC-4626 withdrawals in favor of Fraxtal MintRedeemer/RemoteHop, and neither Frax nor Mento publishes a guaranteed whole-position realization deadline for Celo OFT sfrxUSD."
+    },
+    {
+      "id": "rs2-001-usdso-arbitrum-incidentstate-20261030",
+      "assetId": "usdso-somnia",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "control:bridge-meta:usdso-somnia:69fb4357c3e4fef51ba3",
+        "factorKey": "incidentState",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "incidentState"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-30T11:03:34Z",
+      "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
+      "sourcesRefs": [
+        "source:e05c0585fddba79901f29247",
+        "source:02e5f6f352e4400d32466aae",
+        "source:db27ed32ad706c72be79e3e1"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:d1deab5e5c82e994611a0268",
+        "surface:5fbf13bc7b2e91b9b39f6f2e",
+        "surface:c83a831aba185aff2943f186",
+        "surface:faa9687e57f228640cba27d2",
+        "surface:e66f3d14fb566967e451e073",
+        "surface:7d4dccadc8e07f22081a41ea",
+        "surface:fa3d0ed06dc074210b6cc698",
+        "surface:dfd011f5188d071a3fcf332c"
+      ],
+      "rationale": "No primary surface establishes the incident state of the arbitrum USDso CrossChainRouter administrator usdso-arbitrum-router-administrator (compiled control bridge-meta:usdso-somnia:69fb4357c3e4fef51ba3; controller 0x3da490b19f300e7cb2280426c8ad536db2df445c, 3-of-6 Safe). Frax documents the router's RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the custodian 1:1 PSM without an incident register, chain-specific disposition or remediation attestation; the issuer's 2026-10-29 status statement addresses the market-wide Binance incident only, says Frax assets and contracts were unaffected, and records a precautionary LayerZero operational pause on the messaging layer this route depends on without a dated per-route resolution; the USDso website terms impose no incident-disclosure obligation on the issuer and the issuer security page is an audit index; the independent DeFiLlama incident dataset (1,330 records retrieved 2026-10-30) contains no Frax, frxUSD, USDso or Somnia entry. The exact incidentState datum for this control is therefore researched non-disclosure - not established incident-free, active or resolved - and the 2026-10-29 reviewer-scoped execution-scope question on the same control remains open."
+    },
+    {
+      "id": "rs2-001-usdso-avalanche-incidentstate-20261030",
+      "assetId": "usdso-somnia",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "control:bridge-meta:usdso-somnia:55b8414b1f6264f048ac",
+        "factorKey": "incidentState",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "incidentState"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-30T11:03:34Z",
+      "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
+      "sourcesRefs": [
+        "source:e05c0585fddba79901f29247",
+        "source:02e5f6f352e4400d32466aae",
+        "source:db27ed32ad706c72be79e3e1"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:d1deab5e5c82e994611a0268",
+        "surface:5fbf13bc7b2e91b9b39f6f2e",
+        "surface:c83a831aba185aff2943f186",
+        "surface:faa9687e57f228640cba27d2",
+        "surface:e66f3d14fb566967e451e073",
+        "surface:7d4dccadc8e07f22081a41ea",
+        "surface:fa3d0ed06dc074210b6cc698",
+        "surface:dfd011f5188d071a3fcf332c"
+      ],
+      "rationale": "No primary surface establishes the incident state of the avalanche USDso CrossChainRouter administrator usdso-avalanche-router-administrator (compiled control bridge-meta:usdso-somnia:55b8414b1f6264f048ac; controller 0xbf1ff4d8b05f0871ca3f49e49ff1ca8aeebd3b4b, 3-of-6 Safe). Frax documents the router's RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the custodian 1:1 PSM without an incident register, chain-specific disposition or remediation attestation; the issuer's 2026-10-29 status statement addresses the market-wide Binance incident only, says Frax assets and contracts were unaffected, and records a precautionary LayerZero operational pause on the messaging layer this route depends on without a dated per-route resolution; the USDso website terms impose no incident-disclosure obligation on the issuer and the issuer security page is an audit index; the independent DeFiLlama incident dataset (1,330 records retrieved 2026-10-30) contains no Frax, frxUSD, USDso or Somnia entry. The exact incidentState datum for this control is therefore researched non-disclosure - not established incident-free, active or resolved - and the 2026-10-29 reviewer-scoped execution-scope question on the same control remains open."
+    },
+    {
+      "id": "rs2-001-usdso-base-incidentstate-20261030",
+      "assetId": "usdso-somnia",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "control:bridge-meta:usdso-somnia:8068a43c343664e0defb",
+        "factorKey": "incidentState",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "incidentState"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-30T11:03:34Z",
+      "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
+      "sourcesRefs": [
+        "source:e05c0585fddba79901f29247",
+        "source:02e5f6f352e4400d32466aae",
+        "source:db27ed32ad706c72be79e3e1"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:d1deab5e5c82e994611a0268",
+        "surface:5fbf13bc7b2e91b9b39f6f2e",
+        "surface:c83a831aba185aff2943f186",
+        "surface:faa9687e57f228640cba27d2",
+        "surface:e66f3d14fb566967e451e073",
+        "surface:7d4dccadc8e07f22081a41ea",
+        "surface:fa3d0ed06dc074210b6cc698",
+        "surface:dfd011f5188d071a3fcf332c"
+      ],
+      "rationale": "No primary surface establishes the incident state of the base USDso CrossChainRouter administrator usdso-base-router-administrator (compiled control bridge-meta:usdso-somnia:8068a43c343664e0defb; controller 0xcbfd4ef00a8cf91fd1e1fe97dc05910772c15e53, 3-of-6 Safe). Frax documents the router's RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the custodian 1:1 PSM without an incident register, chain-specific disposition or remediation attestation; the issuer's 2026-10-29 status statement addresses the market-wide Binance incident only, says Frax assets and contracts were unaffected, and records a precautionary LayerZero operational pause on the messaging layer this route depends on without a dated per-route resolution; the USDso website terms impose no incident-disclosure obligation on the issuer and the issuer security page is an audit index; the independent DeFiLlama incident dataset (1,330 records retrieved 2026-10-30) contains no Frax, frxUSD, USDso or Somnia entry. The exact incidentState datum for this control is therefore researched non-disclosure - not established incident-free, active or resolved - and the 2026-10-29 reviewer-scoped execution-scope question on the same control remains open."
+    },
+    {
+      "id": "rs2-001-usdso-bsc-incidentstate-20261030",
+      "assetId": "usdso-somnia",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "control:bridge-meta:usdso-somnia:42fd9b84c23eebde3f60",
+        "factorKey": "incidentState",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "incidentState"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-30T11:03:34Z",
+      "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
+      "sourcesRefs": [
+        "source:e05c0585fddba79901f29247",
+        "source:02e5f6f352e4400d32466aae",
+        "source:db27ed32ad706c72be79e3e1"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:d1deab5e5c82e994611a0268",
+        "surface:5fbf13bc7b2e91b9b39f6f2e",
+        "surface:c83a831aba185aff2943f186",
+        "surface:faa9687e57f228640cba27d2",
+        "surface:e66f3d14fb566967e451e073",
+        "surface:7d4dccadc8e07f22081a41ea",
+        "surface:fa3d0ed06dc074210b6cc698",
+        "surface:dfd011f5188d071a3fcf332c"
+      ],
+      "rationale": "No primary surface establishes the incident state of the bsc USDso CrossChainRouter administrator usdso-bsc-router-administrator (compiled control bridge-meta:usdso-somnia:42fd9b84c23eebde3f60; controller 0xb1eff95b323d60cc04b1a44ca1dbcbc935ae2c84, 3-of-6 Safe). Frax documents the router's RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the custodian 1:1 PSM without an incident register, chain-specific disposition or remediation attestation; the issuer's 2026-10-29 status statement addresses the market-wide Binance incident only, says Frax assets and contracts were unaffected, and records a precautionary LayerZero operational pause on the messaging layer this route depends on without a dated per-route resolution; the USDso website terms impose no incident-disclosure obligation on the issuer and the issuer security page is an audit index; the independent DeFiLlama incident dataset (1,330 records retrieved 2026-10-30) contains no Frax, frxUSD, USDso or Somnia entry. The exact incidentState datum for this control is therefore researched non-disclosure - not established incident-free, active or resolved - and the 2026-10-29 reviewer-scoped execution-scope question on the same control remains open."
+    },
+    {
+      "id": "rs2-001-usdso-ethereum-incidentstate-20261030",
+      "assetId": "usdso-somnia",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "control:bridge-meta:usdso-somnia:42fef50c4c870cd52b82",
+        "factorKey": "incidentState",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "incidentState"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-30T11:03:34Z",
+      "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
+      "sourcesRefs": [
+        "source:e05c0585fddba79901f29247",
+        "source:02e5f6f352e4400d32466aae",
+        "source:db27ed32ad706c72be79e3e1"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:d1deab5e5c82e994611a0268",
+        "surface:5fbf13bc7b2e91b9b39f6f2e",
+        "surface:c83a831aba185aff2943f186",
+        "surface:faa9687e57f228640cba27d2",
+        "surface:e66f3d14fb566967e451e073",
+        "surface:7d4dccadc8e07f22081a41ea",
+        "surface:fa3d0ed06dc074210b6cc698",
+        "surface:dfd011f5188d071a3fcf332c"
+      ],
+      "rationale": "No primary surface establishes the incident state of the ethereum USDso CrossChainRouter administrator usdso-ethereum-router-administrator (compiled control bridge-meta:usdso-somnia:42fef50c4c870cd52b82; controller 0xb1748c79709f4ba2dd82834b8c82d4a505003f27, 3-of-5 Safe). Frax documents the router's RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the custodian 1:1 PSM without an incident register, chain-specific disposition or remediation attestation; the issuer's 2026-10-29 status statement addresses the market-wide Binance incident only, says Frax assets and contracts were unaffected, and records a precautionary LayerZero operational pause on the messaging layer this route depends on without a dated per-route resolution; the USDso website terms impose no incident-disclosure obligation on the issuer and the issuer security page is an audit index; the independent DeFiLlama incident dataset (1,330 records retrieved 2026-10-30) contains no Frax, frxUSD, USDso or Somnia entry. The exact incidentState datum for this control is therefore researched non-disclosure - not established incident-free, active or resolved - and the 2026-10-29 reviewer-scoped execution-scope question on the same control remains open."
+    },
+    {
+      "id": "rs2-001-usdso-fraxtal-incidentstate-20261030",
+      "assetId": "usdso-somnia",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "control:bridge-meta:usdso-somnia:d886dfb70dd2956c0d9e",
+        "factorKey": "incidentState",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "incidentState"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-30T11:03:34Z",
+      "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
+      "sourcesRefs": [
+        "source:e05c0585fddba79901f29247",
+        "source:02e5f6f352e4400d32466aae",
+        "source:db27ed32ad706c72be79e3e1"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:d1deab5e5c82e994611a0268",
+        "surface:5fbf13bc7b2e91b9b39f6f2e",
+        "surface:c83a831aba185aff2943f186",
+        "surface:faa9687e57f228640cba27d2",
+        "surface:e66f3d14fb566967e451e073",
+        "surface:7d4dccadc8e07f22081a41ea",
+        "surface:fa3d0ed06dc074210b6cc698",
+        "surface:dfd011f5188d071a3fcf332c"
+      ],
+      "rationale": "No primary surface establishes the incident state of the fraxtal USDso CrossChainRouter administrator usdso-fraxtal-router-administrator (compiled control bridge-meta:usdso-somnia:d886dfb70dd2956c0d9e; controller 0x5f25218ed9474b721d6a38c115107428e832fa2e, 3-of-6 Safe). Frax documents the router's RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the custodian 1:1 PSM without an incident register, chain-specific disposition or remediation attestation; the issuer's 2026-10-29 status statement addresses the market-wide Binance incident only, says Frax assets and contracts were unaffected, and records a precautionary LayerZero operational pause on the messaging layer this route depends on without a dated per-route resolution; the USDso website terms impose no incident-disclosure obligation on the issuer and the issuer security page is an audit index; the independent DeFiLlama incident dataset (1,330 records retrieved 2026-10-30) contains no Frax, frxUSD, USDso or Somnia entry. The exact incidentState datum for this control is therefore researched non-disclosure - not established incident-free, active or resolved - and the 2026-10-29 reviewer-scoped execution-scope question on the same control remains open."
+    },
+    {
+      "id": "rs2-001-usdso-ink-incidentstate-20261030",
+      "assetId": "usdso-somnia",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "control:bridge-meta:usdso-somnia:9a3c67a5d8dcfa7114ab",
+        "factorKey": "incidentState",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "incidentState"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-30T11:03:34Z",
+      "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
+      "sourcesRefs": [
+        "source:e05c0585fddba79901f29247",
+        "source:02e5f6f352e4400d32466aae",
+        "source:db27ed32ad706c72be79e3e1"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:d1deab5e5c82e994611a0268",
+        "surface:5fbf13bc7b2e91b9b39f6f2e",
+        "surface:c83a831aba185aff2943f186",
+        "surface:faa9687e57f228640cba27d2",
+        "surface:e66f3d14fb566967e451e073",
+        "surface:7d4dccadc8e07f22081a41ea",
+        "surface:fa3d0ed06dc074210b6cc698",
+        "surface:dfd011f5188d071a3fcf332c"
+      ],
+      "rationale": "No primary surface establishes the incident state of the ink USDso CrossChainRouter administrator usdso-ink-router-administrator (compiled control bridge-meta:usdso-somnia:9a3c67a5d8dcfa7114ab; controller 0x91ebc17cd330dd694225133455583fbca54b8ec8, 3-of-6 Safe). Frax documents the router's RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the custodian 1:1 PSM without an incident register, chain-specific disposition or remediation attestation; the issuer's 2026-10-29 status statement addresses the market-wide Binance incident only, says Frax assets and contracts were unaffected, and records a precautionary LayerZero operational pause on the messaging layer this route depends on without a dated per-route resolution; the USDso website terms impose no incident-disclosure obligation on the issuer and the issuer security page is an audit index; the independent DeFiLlama incident dataset (1,330 records retrieved 2026-10-30) contains no Frax, frxUSD, USDso or Somnia entry. The exact incidentState datum for this control is therefore researched non-disclosure - not established incident-free, active or resolved - and the 2026-10-29 reviewer-scoped execution-scope question on the same control remains open."
+    },
+    {
+      "id": "rs2-001-usdso-linea-incidentstate-20261030",
+      "assetId": "usdso-somnia",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "control:bridge-meta:usdso-somnia:188d7123dcaf70d71f38",
+        "factorKey": "incidentState",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "incidentState"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-30T11:03:34Z",
+      "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
+      "sourcesRefs": [
+        "source:e05c0585fddba79901f29247",
+        "source:02e5f6f352e4400d32466aae",
+        "source:db27ed32ad706c72be79e3e1"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:d1deab5e5c82e994611a0268",
+        "surface:5fbf13bc7b2e91b9b39f6f2e",
+        "surface:c83a831aba185aff2943f186",
+        "surface:faa9687e57f228640cba27d2",
+        "surface:e66f3d14fb566967e451e073",
+        "surface:7d4dccadc8e07f22081a41ea",
+        "surface:fa3d0ed06dc074210b6cc698",
+        "surface:dfd011f5188d071a3fcf332c"
+      ],
+      "rationale": "No primary surface establishes the incident state of the linea USDso CrossChainRouter administrator usdso-linea-router-administrator (compiled control bridge-meta:usdso-somnia:188d7123dcaf70d71f38; controller 0x0e5a5284820e350ffce7fe7ba3364fac1c53eafd, 3-of-6 Safe). Frax documents the router's RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the custodian 1:1 PSM without an incident register, chain-specific disposition or remediation attestation; the issuer's 2026-10-29 status statement addresses the market-wide Binance incident only, says Frax assets and contracts were unaffected, and records a precautionary LayerZero operational pause on the messaging layer this route depends on without a dated per-route resolution; the USDso website terms impose no incident-disclosure obligation on the issuer and the issuer security page is an audit index; the independent DeFiLlama incident dataset (1,330 records retrieved 2026-10-30) contains no Frax, frxUSD, USDso or Somnia entry. The exact incidentState datum for this control is therefore researched non-disclosure - not established incident-free, active or resolved - and the 2026-10-29 reviewer-scoped execution-scope question on the same control remains open."
+    },
+    {
+      "id": "rs2-001-usdso-optimism-incidentstate-20261030",
+      "assetId": "usdso-somnia",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "control:bridge-meta:usdso-somnia:6e1b5a645b64c6f27d13",
+        "factorKey": "incidentState",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "incidentState"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-30T11:03:34Z",
+      "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
+      "sourcesRefs": [
+        "source:e05c0585fddba79901f29247",
+        "source:02e5f6f352e4400d32466aae",
+        "source:db27ed32ad706c72be79e3e1"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:d1deab5e5c82e994611a0268",
+        "surface:5fbf13bc7b2e91b9b39f6f2e",
+        "surface:c83a831aba185aff2943f186",
+        "surface:faa9687e57f228640cba27d2",
+        "surface:e66f3d14fb566967e451e073",
+        "surface:7d4dccadc8e07f22081a41ea",
+        "surface:fa3d0ed06dc074210b6cc698",
+        "surface:dfd011f5188d071a3fcf332c"
+      ],
+      "rationale": "No primary surface establishes the incident state of the optimism USDso CrossChainRouter administrator usdso-optimism-router-administrator (compiled control bridge-meta:usdso-somnia:6e1b5a645b64c6f27d13; controller 0x419e672d625f998dd07a7ecf2e06b896f8717cb2, 3-of-6 Safe). Frax documents the router's RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the custodian 1:1 PSM without an incident register, chain-specific disposition or remediation attestation; the issuer's 2026-10-29 status statement addresses the market-wide Binance incident only, says Frax assets and contracts were unaffected, and records a precautionary LayerZero operational pause on the messaging layer this route depends on without a dated per-route resolution; the USDso website terms impose no incident-disclosure obligation on the issuer and the issuer security page is an audit index; the independent DeFiLlama incident dataset (1,330 records retrieved 2026-10-30) contains no Frax, frxUSD, USDso or Somnia entry. The exact incidentState datum for this control is therefore researched non-disclosure - not established incident-free, active or resolved - and the 2026-10-29 reviewer-scoped execution-scope question on the same control remains open."
+    },
+    {
+      "id": "rs2-001-usdso-plume-incidentstate-20261030",
+      "assetId": "usdso-somnia",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "control:bridge-meta:usdso-somnia:bb9ace8f28b2475871ce",
+        "factorKey": "incidentState",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "incidentState"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-30T11:03:34Z",
+      "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
+      "sourcesRefs": [
+        "source:e05c0585fddba79901f29247",
+        "source:02e5f6f352e4400d32466aae",
+        "source:db27ed32ad706c72be79e3e1"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:d1deab5e5c82e994611a0268",
+        "surface:5fbf13bc7b2e91b9b39f6f2e",
+        "surface:c83a831aba185aff2943f186",
+        "surface:faa9687e57f228640cba27d2",
+        "surface:e66f3d14fb566967e451e073",
+        "surface:7d4dccadc8e07f22081a41ea",
+        "surface:fa3d0ed06dc074210b6cc698",
+        "surface:dfd011f5188d071a3fcf332c"
+      ],
+      "rationale": "No primary surface establishes the incident state of the plume USDso CrossChainRouter administrator usdso-plume-router-administrator (compiled control bridge-meta:usdso-somnia:bb9ace8f28b2475871ce; controller 0x77ddd3ec570eeaf2c513de3c833c5e82a721978b, 3-of-6 Safe). Frax documents the router's RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the custodian 1:1 PSM without an incident register, chain-specific disposition or remediation attestation; the issuer's 2026-10-29 status statement addresses the market-wide Binance incident only, says Frax assets and contracts were unaffected, and records a precautionary LayerZero operational pause on the messaging layer this route depends on without a dated per-route resolution; the USDso website terms impose no incident-disclosure obligation on the issuer and the issuer security page is an audit index; the independent DeFiLlama incident dataset (1,330 records retrieved 2026-10-30) contains no Frax, frxUSD, USDso or Somnia entry. The exact incidentState datum for this control is therefore researched non-disclosure - not established incident-free, active or resolved - and the 2026-10-29 reviewer-scoped execution-scope question on the same control remains open."
+    },
+    {
+      "id": "rs2-001-usdso-polygon-incidentstate-20261030",
+      "assetId": "usdso-somnia",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "control:bridge-meta:usdso-somnia:711784f41d860f18ddf1",
+        "factorKey": "incidentState",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "incidentState"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-30T11:03:34Z",
+      "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
+      "sourcesRefs": [
+        "source:e05c0585fddba79901f29247",
+        "source:02e5f6f352e4400d32466aae",
+        "source:db27ed32ad706c72be79e3e1"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:d1deab5e5c82e994611a0268",
+        "surface:5fbf13bc7b2e91b9b39f6f2e",
+        "surface:c83a831aba185aff2943f186",
+        "surface:faa9687e57f228640cba27d2",
+        "surface:e66f3d14fb566967e451e073",
+        "surface:7d4dccadc8e07f22081a41ea",
+        "surface:fa3d0ed06dc074210b6cc698",
+        "surface:dfd011f5188d071a3fcf332c"
+      ],
+      "rationale": "No primary surface establishes the incident state of the polygon USDso CrossChainRouter administrator usdso-polygon-router-administrator (compiled control bridge-meta:usdso-somnia:711784f41d860f18ddf1; controller 0xdbf59eda454679bb157b3b048ba54c4d762b559e, 3-of-6 Safe). Frax documents the router's RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the custodian 1:1 PSM without an incident register, chain-specific disposition or remediation attestation; the issuer's 2026-10-29 status statement addresses the market-wide Binance incident only, says Frax assets and contracts were unaffected, and records a precautionary LayerZero operational pause on the messaging layer this route depends on without a dated per-route resolution; the USDso website terms impose no incident-disclosure obligation on the issuer and the issuer security page is an audit index; the independent DeFiLlama incident dataset (1,330 records retrieved 2026-10-30) contains no Frax, frxUSD, USDso or Somnia entry. The exact incidentState datum for this control is therefore researched non-disclosure - not established incident-free, active or resolved - and the 2026-10-29 reviewer-scoped execution-scope question on the same control remains open."
+    },
+    {
+      "id": "rs2-001-usdso-somnia-incidentstate-20261030",
+      "assetId": "usdso-somnia",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "control:bridge-meta:usdso-somnia:d25e999bc71fb940280b",
+        "factorKey": "incidentState",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "incidentState"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-30T11:03:34Z",
+      "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
+      "sourcesRefs": [
+        "source:e05c0585fddba79901f29247",
+        "source:02e5f6f352e4400d32466aae",
+        "source:db27ed32ad706c72be79e3e1"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:d1deab5e5c82e994611a0268",
+        "surface:5fbf13bc7b2e91b9b39f6f2e",
+        "surface:c83a831aba185aff2943f186",
+        "surface:faa9687e57f228640cba27d2",
+        "surface:e66f3d14fb566967e451e073",
+        "surface:7d4dccadc8e07f22081a41ea",
+        "surface:fa3d0ed06dc074210b6cc698",
+        "surface:dfd011f5188d071a3fcf332c"
+      ],
+      "rationale": "No primary surface establishes the incident state of the somnia USDso CrossChainRouter administrator usdso-somnia-router-administrator (compiled control bridge-meta:usdso-somnia:d25e999bc71fb940280b; controller 0x9527e19f55d1afce9f1e9edcea79552bf41983f9, 3-of-6 Safe). Frax documents the router's RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the custodian 1:1 PSM without an incident register, chain-specific disposition or remediation attestation; the issuer's 2026-10-29 status statement addresses the market-wide Binance incident only, says Frax assets and contracts were unaffected, and records a precautionary LayerZero operational pause on the messaging layer this route depends on without a dated per-route resolution; the USDso website terms impose no incident-disclosure obligation on the issuer and the issuer security page is an audit index; the independent DeFiLlama incident dataset (1,330 records retrieved 2026-10-30) contains no Frax, frxUSD, USDso or Somnia entry. The exact incidentState datum for this control is therefore researched non-disclosure - not established incident-free, active or resolved - and the 2026-10-29 reviewer-scoped execution-scope question on the same control remains open."
+    },
+    {
+      "id": "rs2-001-usdso-sonic-incidentstate-20261030",
+      "assetId": "usdso-somnia",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "control:bridge-meta:usdso-somnia:1f7beccb77caca323d6c",
+        "factorKey": "incidentState",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "incidentState"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-30T11:03:34Z",
+      "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
+      "sourcesRefs": [
+        "source:e05c0585fddba79901f29247",
+        "source:02e5f6f352e4400d32466aae",
+        "source:db27ed32ad706c72be79e3e1"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:d1deab5e5c82e994611a0268",
+        "surface:5fbf13bc7b2e91b9b39f6f2e",
+        "surface:c83a831aba185aff2943f186",
+        "surface:faa9687e57f228640cba27d2",
+        "surface:e66f3d14fb566967e451e073",
+        "surface:7d4dccadc8e07f22081a41ea",
+        "surface:fa3d0ed06dc074210b6cc698",
+        "surface:dfd011f5188d071a3fcf332c"
+      ],
+      "rationale": "No primary surface establishes the incident state of the sonic USDso CrossChainRouter administrator usdso-sonic-router-administrator (compiled control bridge-meta:usdso-somnia:1f7beccb77caca323d6c; controller 0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac, 3-of-6 Safe). Frax documents the router's RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the custodian 1:1 PSM without an incident register, chain-specific disposition or remediation attestation; the issuer's 2026-10-29 status statement addresses the market-wide Binance incident only, says Frax assets and contracts were unaffected, and records a precautionary LayerZero operational pause on the messaging layer this route depends on without a dated per-route resolution; the USDso website terms impose no incident-disclosure obligation on the issuer and the issuer security page is an audit index; the independent DeFiLlama incident dataset (1,330 records retrieved 2026-10-30) contains no Frax, frxUSD, USDso or Somnia entry. The exact incidentState datum for this control is therefore researched non-disclosure - not established incident-free, active or resolved - and the 2026-10-29 reviewer-scoped execution-scope question on the same control remains open."
+    },
+    {
+      "id": "rs2-001-usdso-stable-incidentstate-20261030",
+      "assetId": "usdso-somnia",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "control:bridge-meta:usdso-somnia:9abb3b6ef5565bd18940",
+        "factorKey": "incidentState",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "incidentState"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-30T11:03:34Z",
+      "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
+      "sourcesRefs": [
+        "source:e05c0585fddba79901f29247",
+        "source:02e5f6f352e4400d32466aae",
+        "source:db27ed32ad706c72be79e3e1"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:d1deab5e5c82e994611a0268",
+        "surface:5fbf13bc7b2e91b9b39f6f2e",
+        "surface:c83a831aba185aff2943f186",
+        "surface:faa9687e57f228640cba27d2",
+        "surface:e66f3d14fb566967e451e073",
+        "surface:7d4dccadc8e07f22081a41ea",
+        "surface:fa3d0ed06dc074210b6cc698",
+        "surface:dfd011f5188d071a3fcf332c"
+      ],
+      "rationale": "No primary surface establishes the incident state of the stable USDso CrossChainRouter administrator usdso-stable-router-administrator (compiled control bridge-meta:usdso-somnia:9abb3b6ef5565bd18940; controller 0x0c46f54bf9ef8fd58e2d294b8cea488204ecb3d8, 3-of-6 Safe). Frax documents the router's RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the custodian 1:1 PSM without an incident register, chain-specific disposition or remediation attestation; the issuer's 2026-10-29 status statement addresses the market-wide Binance incident only, says Frax assets and contracts were unaffected, and records a precautionary LayerZero operational pause on the messaging layer this route depends on without a dated per-route resolution; the USDso website terms impose no incident-disclosure obligation on the issuer and the issuer security page is an audit index; the independent DeFiLlama incident dataset (1,330 records retrieved 2026-10-30) contains no Frax, frxUSD, USDso or Somnia entry. The exact incidentState datum for this control is therefore researched non-disclosure - not established incident-free, active or resolved - and the 2026-10-29 reviewer-scoped execution-scope question on the same control remains open."
+    },
+    {
+      "id": "rs2-001-usdso-unichain-incidentstate-20261030",
+      "assetId": "usdso-somnia",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "control:bridge-meta:usdso-somnia:e23456a7fdf8b226e930",
+        "factorKey": "incidentState",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "incidentState"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-30T11:03:34Z",
+      "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
+      "sourcesRefs": [
+        "source:e05c0585fddba79901f29247",
+        "source:02e5f6f352e4400d32466aae",
+        "source:db27ed32ad706c72be79e3e1"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:d1deab5e5c82e994611a0268",
+        "surface:5fbf13bc7b2e91b9b39f6f2e",
+        "surface:c83a831aba185aff2943f186",
+        "surface:faa9687e57f228640cba27d2",
+        "surface:e66f3d14fb566967e451e073",
+        "surface:7d4dccadc8e07f22081a41ea",
+        "surface:fa3d0ed06dc074210b6cc698",
+        "surface:dfd011f5188d071a3fcf332c"
+      ],
+      "rationale": "No primary surface establishes the incident state of the unichain USDso CrossChainRouter administrator usdso-unichain-router-administrator (compiled control bridge-meta:usdso-somnia:e23456a7fdf8b226e930; controller 0x6f8fddfd4f6a1456ba5632c919bef74b64dd032d, 3-of-6 Safe). Frax documents the router's RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the custodian 1:1 PSM without an incident register, chain-specific disposition or remediation attestation; the issuer's 2026-10-29 status statement addresses the market-wide Binance incident only, says Frax assets and contracts were unaffected, and records a precautionary LayerZero operational pause on the messaging layer this route depends on without a dated per-route resolution; the USDso website terms impose no incident-disclosure obligation on the issuer and the issuer security page is an audit index; the independent DeFiLlama incident dataset (1,330 records retrieved 2026-10-30) contains no Frax, frxUSD, USDso or Somnia entry. The exact incidentState datum for this control is therefore researched non-disclosure - not established incident-free, active or resolved - and the 2026-10-29 reviewer-scoped execution-scope question on the same control remains open."
+    },
+    {
+      "id": "rs2-001-usdso-worldchain-incidentstate-20261030",
+      "assetId": "usdso-somnia",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "control:bridge-meta:usdso-somnia:7b35bd9cae5c3abe99f5",
+        "factorKey": "incidentState",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "incidentState"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-30T11:03:34Z",
+      "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
+      "sourcesRefs": [
+        "source:e05c0585fddba79901f29247",
+        "source:02e5f6f352e4400d32466aae",
+        "source:db27ed32ad706c72be79e3e1"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:d1deab5e5c82e994611a0268",
+        "surface:5fbf13bc7b2e91b9b39f6f2e",
+        "surface:c83a831aba185aff2943f186",
+        "surface:faa9687e57f228640cba27d2",
+        "surface:e66f3d14fb566967e451e073",
+        "surface:7d4dccadc8e07f22081a41ea",
+        "surface:fa3d0ed06dc074210b6cc698",
+        "surface:dfd011f5188d071a3fcf332c"
+      ],
+      "rationale": "No primary surface establishes the incident state of the worldchain USDso CrossChainRouter administrator usdso-worldchain-router-administrator (compiled control bridge-meta:usdso-somnia:7b35bd9cae5c3abe99f5; controller 0xf57d47c3ea11c12253dbc0beaf097d5c206e8773, 3-of-6 Safe). Frax documents the router's RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the custodian 1:1 PSM without an incident register, chain-specific disposition or remediation attestation; the issuer's 2026-10-29 status statement addresses the market-wide Binance incident only, says Frax assets and contracts were unaffected, and records a precautionary LayerZero operational pause on the messaging layer this route depends on without a dated per-route resolution; the USDso website terms impose no incident-disclosure obligation on the issuer and the issuer security page is an audit index; the independent DeFiLlama incident dataset (1,330 records retrieved 2026-10-30) contains no Frax, frxUSD, USDso or Somnia entry. The exact incidentState datum for this control is therefore researched non-disclosure - not established incident-free, active or resolved - and the 2026-10-29 reviewer-scoped execution-scope question on the same control remains open."
+    },
+    {
+      "id": "l56-nopal-arc-incident-state-20261010",
+      "assetId": "nopal-nest",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "control:bridge-meta:nopal-nest:1f55d8f7ee498c4a99f4",
+        "factorKey": "incidentState",
+        "routeKey": null,
+        "exposureId": "arc:0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
+        "requiredDatum": "incidentState"
+      },
+      "reviewedAt": "2026-10-10T23:33:01Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (L56NBASIS)",
+      "sourcesRefs": [
+        "source:e73bb89faf05ae9fcfeb4dbb",
+        "source:615050d143149103eca8d2ab"
+      ],
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "searchedSurfacesRefs": [
+        "surface:068574e7ad90b7b1feaed997",
+        "surface:8b10932d8fd8aef0ee0347b8",
+        "surface:d0386bb5ff64102ded9c55bd",
+        "surface:9a535af19ca622b7cda1a9e3"
+      ],
+      "rationale": "The current issuer security policy, audit index, exact nOPAL registry and repository advisory index were successfully retrieved. The policy permits private reporting and direct communication, while the public index says no advisories are published. None provides an independently supported, deployment-specific incident history or current active/resolved status for arc:0x119dd7daff816f29d7ee47596ae5e4bdc4299165. Retain unknown incidentState; the absence of a published advisory cannot establish no incident or a clean-control fact."
+    },
+    {
+      "id": "rs226-ceur-celo-monad-incident-state",
+      "assetId": "ceur-celo",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "control:bridge-meta:ceur-celo:cc413f370390375acf08",
+        "factorKey": "incidentState",
+        "routeKey": null,
+        "exposureId": "monad:0x4d502d735b4c574b487ed641ae87ceae884731c7",
+        "requiredDatum": "incidentState"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-30T11:10:00Z",
+      "reviewer": "RS2-026 research sprint 2026-10-30 (Safety Score evidence-gap batch 2)",
+      "sourcesRefs": [
+        "source:7435afbca78fbeaa7cd57001",
+        "source:295352ef9724266c0e74e750",
+        "source:1a95fc69217ad8240fa9aab5"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:d20ca712ba7d4dd314ed1a2d",
+        "surface:9cef74d870ddbeb0b659a2ff",
+        "surface:09a17200a9a500e7a82546cd"
+      ],
+      "rationale": "The exact missing datum is a disposition for any current or past incident scoped to the Monad EURm deployment monad:0x4d502d735b4c574b487ed641ae87ceae884731c7. Mento publishes the deployment address, burn-and-mint bridge type, Reserve holdings and governance scope; it publishes no NTT manager or transceiver incident log, pause history or deployment-scoped incident disposition, and no negative-incident review has been admitted for this control. This records issuer non-disclosure only and asserts no incident-free finding."
+    },
+    {
+      "id": "rs2-023-pyu-3d0f-inc-54095d6f",
+      "assetId": "pyusdx-moonpay",
+      "scope": {
+        "componentKey": "control:bridge-meta:pyusdx-moonpay:3d0f90d393a6efb0b9e6",
+        "exposureId": null,
+        "factorKey": "incidentState",
+        "pillar": "control",
+        "requiredDatum": "incidentState",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-30T11:01:00Z",
+      "reviewer": "RS2-023 research sprint 2026-10-30",
+      "sourcesRefs": [
+        "source:ec5d8d73c441870213a4dd62",
+        "source:2e1d168cb28296b9bb5eaea1",
+        "source:875ce00a93d4de3659c36a1d"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:6b8a61aa62dc525e38ed7dc6",
+        "surface:5f9b7725c4f7b7ff934d2714",
+        "surface:ae09abb7363e34b9a45abfc3",
+        "surface:11eb699a6e806ce05dcf2a7d"
+      ],
+      "rationale": "No deployment-scoped incident register, status page, post-mortem or explicit negative-incident disposition is published for the 0G PYUSDx lane: the issuer documentation describes controls and mechanics but publishes no incident history, and 0G is not among the documented chains. The compiled incidentState factor therefore stays unknown and no negative incident review can be authored from issuer evidence. This records issuer non-disclosure only: it asserts no incident-free finding and leaves the incident datum open."
+    },
+    {
+      "id": "rs2-009-acred-solana-incident-state-20261030",
+      "assetId": "acred-apollo-securitize",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "control:bridge-meta:acred-apollo-securitize:304fae0405987dbe982e",
+        "factorKey": "incidentState",
+        "routeKey": null,
+        "exposureId": "solana:FubtUcvhSCr3VPXEcxouoQjKQ7NWTCzXyECe76B7L3f8",
+        "requiredDatum": "incidentState"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-30T00:00:00Z",
+      "reviewer": "RS2-009 research sprint 2026-10-30 (batch 2)",
+      "sourcesRefs": [
+        "source:ece35c53a4063f3a84b34667",
+        "source:a5479a36df0c2bd8ed7e7149"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:574c5cd8b8ffdef5b24f40ce",
+        "surface:91abd6f91a32dd7223eb8259"
+      ],
+      "rationale": "The Solana ACRED lane is identified by the issuer launch announcement (six networks, daily-NAV native redemptions), and its signer/on-ramp controls are authored; what no retrieved issuer surface publishes is a deployment-scoped incident disposition for the Solana representation. The current product page is client-rendered and carries only fund copy. incidentState therefore stays unknown; no clean-control or incident finding is asserted."
+    },
+    {
+      "id": "rs2-012-usdnr-nerona-fluent-bridge-incident-20261030",
+      "assetId": "usdnr-nerona",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "control:bridge-meta:usdnr-nerona:9767bdcee69e2739813f",
+        "factorKey": "incidentState",
+        "routeKey": null,
+        "exposureId": "fluent:0xd48e565561416de59da1050ed70b8d75e8ef28f9",
+        "requiredDatum": "incidentState"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-30T11:36:00Z",
+      "reviewer": "RS2-012 research sprint 2026-10-30 (Safety Score open-evidence batch 2)",
+      "sourcesRefs": [
+        "source:1be964bfaad7bfe559addf09",
+        "source:ae5c428d60fd68d8f0a2a2dc",
+        "source:3c6f1c0c0aa26221b5107c44"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:b2a27aa341b92990b3d0c837",
+        "surface:789352f43718ec274b317559",
+        "surface:d34187850852513127ee43ec",
+        "surface:8d6ea28b7fd22613ee8c9f0a",
+        "surface:d3e1f8acc186496961e8df28"
+      ],
+      "rationale": "Beyond the topology silence, the issuer disclosed a dated interruption of this surface: on 2026-06-29 its official account announced that 'USDnr Mint & Bridge services are under maintenance' with transactions possibly queued or delayed, and on 2026-07-01 it posted 'We are back to normal folks' in reply. Those posts establish an interruption and a restoration claim but publish no root cause, no affected control, no scope, no impact assessment and no confirmation that no security event occurred; no incident report exists on the docs surfaces. The exact incident state for this control is therefore not reconcilable and is recorded as researched non-disclosure: explicitly not incident-free, not active and not resolved."
+    },
+    {
+      "id": "rs2-016-susds-ethereum-home-lane-incident-state-factor-20261030",
+      "assetId": "susds-sky",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "control:bridge-meta:susds-sky:ff3a25bd8a94ec855f0c",
+        "factorKey": "incidentState",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "incidentState"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-30T11:04:55Z",
+      "reviewer": "RS2-016 research sprint 2026-10-30",
+      "sourcesRefs": [
+        "source:4fe22edb7cb1c6945a6d433e",
+        "source:1a8c0f56267458c625c0d1af",
+        "source:45dae7b14f5af052a380e1c9",
+        "source:8a7f10aac280071097b7e306"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:85b4f5274bf4be818e09b2e1",
+        "surface:15308a4eff811852faf6a315",
+        "surface:fb7b9942567c6e79483cdd89",
+        "surface:d925da3b9ddb1049bb0de562",
+        "surface:bf232e43c263f3fcd303bef2",
+        "surface:c6ac85694137776f0e37d6cb",
+        "surface:7a2709202f06a2dc84a70630"
+      ],
+      "rationale": "The deployment-scoped incidentState factor for the sUSDS Ethereum home lane is unresolved because neither Pharos nor Sky publishes a disposition for this control: Sky's security documentation covers the spell process, instant-access modules, the GSM delay and a bug bounty, the SkyLink guide index offers only the Base ETH bridge and USDS-Solana guides, and no per-route incident register or escrow/gateway incident disposition is published. This is the same researched nondisclosure recorded for the paired deployment-control gap, not a second omission; no zero-incident conclusion is inferred."
+    },
+    {
+      "id": "rs2-010-v9g-c1fa5d98c410cfa9",
+      "assetId": "slvon-ondo",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "control:bridge-meta:slvon-ondo:e3832d5b78815b0a9c35",
+        "factorKey": "incidentState",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "incidentState"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-30T11:02:00Z",
+      "reviewer": "RS2-010 research shard 2026-10-30",
+      "sourcesRefs": [
+        "source:5dc4efeaf63ab873ed7da3fa",
+        "source:2017c4c7d3b561b8647f33e1",
+        "source:7552d2fbea064c10058eb9a6"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:dfd9726a6696238d6f01bfa3",
+        "surface:c1d8610175c46c00f53f8cf1",
+        "surface:30a4a5a25958af96988e2eaf",
+        "surface:9299a60f0a4d9e228557be25",
+        "surface:dfd011f5188d071a3fcf332c"
+      ],
+      "rationale": "The datum is the deployment-scoped incident disposition of the SLVon BNB Chain LayerZero route. Ondo publishes a portfolio-level incident narrative (its bridges stayed live through the March-April 2026 incidents, its multi-DVN configuration was unaffected by the Kelp DAO exploit, and it froze attacker funds after Drift) but no route-scoped incident register, no per-deployment incident state and no commitment that the SLVon BNB route was verified unaffected. The DeFiLlama hacks register contains no record naming Ondo or SLVon, which is absence of a reported event rather than a reviewed disposition; a negative-incident review bound to this route is the artifact that would establish the datum, and none exists. The incident state is therefore not disclosed at deployment scope."
     }
   ],
   "sourceObservations": [
