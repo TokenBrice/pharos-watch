@@ -69,47 +69,6 @@ export const PSI_HISTORICAL_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview
  * (and reported) so their gaps alert again until renewed or resolved. */
 export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] = [
   {
-    stablecoinId: "wusd-worldwide",
-    owner: "ops",
-    reason:
-      "Re-reviewed 2026-11-22 12:38 UTC with fresh GETs and RPC reads: CoinGecko worldwide-usd still reports $1.17 ($1.37 24h volume) frozen at 2026-08-21 22:51:40 UTC (~93 days old) and its tickers endpoint returns 404 (zero tickers), so the only published mark is not an observed market. DefiLlama detail 234 publishes no price (daily circulating $647,761.35 on 2026-11-22, minted 0) and coins.llama.fi returns no quote. Exact-contract totalSupply() reads confirm 589,715.75 WUSD on Ethereum (finalized block 26470611) and 58,045.60 WUSD on Polygon (block 97763730), summing to $647,761.35. Exact-contract DexScreener reads for 0x7cd017ca5ddb86861fa983a34b5f495c6f898c41 on Ethereum and Polygon remain empty. GeckoTerminal returns only sub-floor pools with zero 24h volume: the largest Ethereum pool holds $235.20, the largest Polygon pool $1,183.06, and the largest Viction pool $270.43, all below the unchanged $50K per-pool floor. The documented wallet.wspn.io still resolves only to an NXDOMAIN load-balancer CNAME (prd-public-498604239.ap-southeast-1.elb.amazonaws.com). Coins.ph ended convert-sell on 2026-08-04 while allowing withdrawals; a venue delisting is not an issuer termination. Issuer channels show no end-of-life signal: wspn.io/solutions and developer.wspn.io/5768563m0.md both return HTTP 200. Owner decision 2026-10-29: keep active pending a primary discontinuation source; freeze if one appears. Keep the price missing; all admission gates preserved. The predecessor's October 23 lifecycle/redemption-route decision stays open with owner ops and is neither satisfied nor extended by this source review, which expires 2026-12-06 12:38 UTC.",
-    sources: [
-      "https://support.coins.ph/hc/en-us/articles/60655699647641-WUSD-Delisting-on-August-4-2026",
-      "https://stablecoins.llama.fi/stablecoin/234",
-      "https://api.coingecko.com/api/v3/simple/price?ids=worldwide-usd&vs_currencies=usd&include_last_updated_at=true",
-      "https://coins.llama.fi/prices/current/coingecko:worldwide-usd,ethereum:0x7cd017ca5ddb86861fa983a34b5f495c6f898c41",
-      "https://api.coingecko.com/api/v3/coins/worldwide-usd/tickers",
-      "https://api.dexscreener.com/token-pairs/v1/ethereum/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41",
-      "https://api.dexscreener.com/token-pairs/v1/polygon/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41",
-      "https://api.geckoterminal.com/api/v2/networks/eth/tokens/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41/pools",
-      "https://api.geckoterminal.com/api/v2/networks/polygon_pos/tokens/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41/pools",
-      "https://api.geckoterminal.com/api/v2/networks/tomochain/tokens/0xba73e59f11597c1c13b0d9114688efb6a6d430f6/pools",
-      "https://etherscan.io/token/0x7Cd017ca5ddb86861FA983a34b5F495C6F898c41",
-      "https://polygonscan.com/token/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41",
-      "https://developer.wspn.io/5768563m0.md",
-      "https://wspn.io/solutions/",
-      "https://dns.google/resolve?name=wallet.wspn.io&type=A",
-    ],
-    reviewedAt: Date.UTC(2026, 10, 22, 12, 38) / 1000,
-    expiresAt: Date.UTC(2026, 11, 6, 12, 38) / 1000,
-  },
-  {
-    stablecoinId: "bd-basedollar",
-    owner: "ops",
-    reason:
-      "Re-reviewed 2026-11-22 12:38 UTC: the existing aerodrome-exact adapter still correctly rejects inventory. At Base block 60803444 (hash 0xc13ec1308a0819d31c87a56ae256b4fbe25ad3eaead06a0cde832193300fe69a), reviewed Aero BD/USDC pool 0x11cc6f32930c20e3cfb01fc35bd37ed20d3ed82f holds 7,674.23 BD and 6,068.04 USDC with balanceOf() matching getReserves(), both still below the unchanged 10,000-unit inventory floor. GeckoTerminal reports $13,819.44 liquidity ($204.58 24h volume) on BD/USDC and DexScreener reports only a $0.29 BD/VVV pair; CoinGecko search returns no listing and DefiLlama id 434 publishes no price (onCoinGecko false). The protocol's nominal collateral-redemption entitlement is not an observed dollar quote. Keep BD active and the price missing; all admission gates preserved. Owner ops rechecks inventory or an admissible alternate market by 2026-12-06 12:38 UTC.",
-    sources: [
-      "https://basescan.org/address/0x11cc6f32930c20e3cfb01fc35bd37ed20d3ed82f#readContract",
-      "https://api.coingecko.com/api/v3/search?query=base%20dollar",
-      "https://api.dexscreener.com/token-pairs/v1/base/0x252d36f435582ecb01686448d21e8c9ea0b2ca65",
-      "https://api.geckoterminal.com/api/v2/networks/base/tokens/0x252d36f435582ecb01686448d21e8c9ea0b2ca65/pools",
-      "https://stablecoins.llama.fi/stablecoin/434",
-      "https://docs.basedollar.org/",
-    ],
-    reviewedAt: Date.UTC(2026, 10, 22, 12, 38) / 1000,
-    expiresAt: Date.UTC(2026, 11, 6, 12, 38) / 1000,
-  },
-  {
     stablecoinId: "dllr-sovryn",
     owner: "ops",
     reason:

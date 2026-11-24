@@ -75,6 +75,29 @@ describe("registry universes", () => {
   });
 
   it.each([
+    ["wusd-worldwide", "discretionary", "https://developer.wspn.io/6223538m0.md"],
+    ["bd-basedollar", "ordinary-redemption", "https://stablecoins.llama.fi/stablecoin/434"],
+  ] as const)("preserves %s as a readable 2026-11-24 scope delisting, not a frozen or live instrument", (id, exitMechanism, sourceUrl) => {
+    const coin = DELISTED_STABLECOINS.find((entry) => entry.id === id);
+    expect(coin).toMatchObject({
+      status: "delisted",
+      exitMechanism,
+      listingStatusReview: {
+        changedAt: "2026-11-24",
+        source: { url: sourceUrl },
+      },
+    });
+    expect(getListingClass(id)).toBe("excluded");
+    expect(ACTIVE_IDS.has(id)).toBe(false);
+    expect(READABLE_IDS.has(id)).toBe(true);
+    expect(FROZEN_IDS.has(id)).toBe(false);
+    expect(FROZEN_SNAPSHOTS_BY_ID.has(id)).toBe(false);
+    expect(coin?.liveReservesConfig).toBeUndefined();
+    expect(coin?.frozenAt).toBeUndefined();
+    expect(coin?.obituary).toBeUndefined();
+  });
+
+  it.each([
     ["usdkg-gold-dollar", "2026-10-19", "regulatory", "2026-10-05"],
     ["fxd-fathom", "2026-11-08", "abandoned", "2026-08-26"],
   ])("preserves %s as a readable frozen identity, not an active producer", (id, frozenAt, causeOfDeath, deathDate) => {

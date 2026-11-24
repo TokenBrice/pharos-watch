@@ -21,7 +21,6 @@ import { usdafUniswapV4Provider } from "./usdaf-uniswap-v4";
 import { usduFinanceCurvePoolProvider } from "./usdu-finance-curve-pool";
 import { usduUniswapV3Provider } from "./usdu-uniswap-v3";
 import { a7a5UniswapV2Provider } from "./a7a5-uniswap-v2";
-import { bdAerodromeProvider } from "./bd-aerodrome";
 import { moveusdOrcaProvider } from "./moveusd-orca";
 import { azndCurvePoolProvider } from "./aznd-curve-pool";
 import { swanusdCurvePoolProvider } from "./swanusd-curve-pool";
@@ -81,7 +80,6 @@ const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
   stbtCurvePoolProvider,
   usd3CurvePoolProvider,
   usduFinanceCurvePoolProvider,
-  bdAerodromeProvider,
   moveusdOrcaProvider,
   usdvJupiterProvider,
   susdSolayerNavProvider,

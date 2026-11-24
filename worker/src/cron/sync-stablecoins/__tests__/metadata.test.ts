@@ -280,11 +280,11 @@ describe("stablecoins pricing metadata", () => {
       active: { totalAssets: ACTIVE_IDS.size, sourceDistribution: { missing: 2 }, confidenceDistribution: { high: ACTIVE_IDS.size - 2 } },
     });
 
-    const review = STABLECOIN_PRICE_GAP_REVIEWS.find((e) => e.stablecoinId === "wusd-worldwide")!;
+    const review = STABLECOIN_PRICE_GAP_REVIEWS.find((e) => e.stablecoinId === "dllr-sovryn")!;
     expect(review).toBeDefined();
     const weighted = ACTIVE_STABLECOINS.map((a): PeggedAsset => {
       const circulating: Record<string, number> = a.id === "usdt-tether" ? { peggedUSD: 300e9 } : a.id === "eurc-circle" ? { peggedEUR: 3e9 } : a.id === "usdy-ondo-finance" ? { peggedUSD: 2e9 } : { peggedUSD: 0 };
-      if (a.id === "wusd-worldwide") return { ...identity(a), price: null, priceSource: "missing", priceConfidence: null, circulating };
+      if (a.id === "dllr-sovryn") return { ...identity(a), price: null, priceSource: "missing", priceConfidence: null, circulating };
       if (a.id === "usdy-ondo-finance") return { ...identity(a), price: 1, priceSource: "chainlink-nav", priceConfidence: "single-source", circulating };
       return { ...identity(a), price: 1, priceSource: "coingecko", priceConfidence: "high", circulating };
     });

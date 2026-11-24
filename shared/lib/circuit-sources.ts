@@ -40,7 +40,7 @@ export const CIRCUIT_SOURCE_REGISTRY = {
   USD3_CURVE_POOL: { key: "usd3-curve-pool", scope: "asset-scoped" },
   MENTO_FPMM: { key: "mento-fpmm", scope: "asset-scoped" },
   MENTO_BROKER: { key: "mento-broker", scope: "asset-scoped" },
-  BD_AERODROME: { key: "bd-aerodrome", scope: "asset-scoped" },
+  BD_AERODROME: { key: "bd-aerodrome", scope: "retired" },
   USDV_JUPITER: { key: "usdv-jupiter", scope: "asset-scoped" },
   SUSD_SOLAYER_NAV: { key: "susd-solayer-nav", scope: "asset-scoped" },
   USDAF_UNISWAP_V4: { key: "usdaf-uniswap-v4", scope: "asset-scoped" },

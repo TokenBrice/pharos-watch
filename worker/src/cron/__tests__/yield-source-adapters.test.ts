@@ -13,7 +13,7 @@ vi.mock("../../lib/fetch-retry", async (importOriginal) => ({
 
 import { RATE_DERIVED_CONFIGS } from "../../lib/yield-config/yield-config-rate-sources";
 import { fetchZephyrZysSource } from "../../lib/yield-source-adapters/zephyr";
-import { BASEDOLLAR_SP_CONFIG, LIQUITY_V2_SP_CONFIG, fetchCurveScrvusdCurrentRateSource, fetchLiquityV2StabilityPoolSource, type LiquityV2SpSourceConfig } from "../yield-sync/sources-optional-onchain";
+import { LIQUITY_V2_SP_CONFIG, fetchCurveScrvusdCurrentRateSource, fetchLiquityV2StabilityPoolSource, type LiquityV2SpSourceConfig } from "../yield-sync/sources-optional-onchain";
 import { fetchBeefySources, fetchMorphoVaultSources, fetchPendleMarketSources, fetchYearnKongSources, fetchYearnYboldSource } from "../yield-sync/sources-optional-vaults";
 import { fetchHashnoteUsycSource, fetchReProtocolReusdSource } from "../yield-sync/sources-optional-nav";
 
@@ -404,7 +404,6 @@ describe("fetchLiquityV2StabilityPoolSource", () => {
   }
 
   describe.each([
-    { name: "Base Dollar", config: BASEDOLLAR_SP_CONFIG },
     { name: "Liquity V2", config: LIQUITY_V2_SP_CONFIG },
   ])("($name)", ({ config }) => {
     afterEach(cleanupYieldSourceTest);

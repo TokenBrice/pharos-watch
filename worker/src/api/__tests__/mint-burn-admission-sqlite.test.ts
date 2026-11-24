@@ -191,7 +191,7 @@ describe("fetchAggregateData tracked-pair filter on real SQLite", () => {
     const trackedPairs = getMintBurnTrackedPairs(
       MINT_BURN_CONFIGS.filter((config) => config.chain.chainId !== "ethereum"),
     );
-    expect(trackedPairs.has("bd-basedollar|base")).toBe(true);
+    expect(trackedPairs.has("ousd-open-standard|base")).toBe(true);
     expect(trackedPairs.has("usdai-usd-ai|arbitrum")).toBe(true);
     // Same coin on an untracked chain must not leak into the aggregates.
     expect(getMintBurnTrackedPairs(MINT_BURN_CONFIGS).has("usdt-tether|base")).toBe(false);
@@ -202,7 +202,7 @@ describe("fetchAggregateData tracked-pair filter on real SQLite", () => {
       insertHourly(sqlite, "usdt-tether", "ethereum", NOW - 25 * HOUR, 4);
       insertHourly(sqlite, "usdt-tether", "ethereum", NOW - 8 * 24 * HOUR, 2);
       // Other tracked pairs on non-ethereum chains.
-      insertHourly(sqlite, "bd-basedollar", "base", NOW - HOUR, 100);
+      insertHourly(sqlite, "ousd-open-standard", "base", NOW - HOUR, 100);
       insertHourly(sqlite, "usdai-usd-ai", "arbitrum", NOW - 2 * HOUR, 50);
       // Decoys: untracked (coin, chain) pairs inside every window.
       insertHourly(sqlite, "usdt-tether", "base", NOW - HOUR, 999);
@@ -252,7 +252,7 @@ describe("fetchAggregateData tracked-pair filter on real SQLite", () => {
       expect(data.net7dMap.get("usdt-tether")?.netUsd).toBe(14);
       expect(data.net30dMap.get("usdt-tether")?.netUsd).toBe(16);
       expect(data.net90dMap.get("usdt-tether")?.netUsd).toBe(16);
-      expect(data.net90dMap.get("bd-basedollar")?.netUsd).toBe(100);
+      expect(data.net90dMap.get("ousd-open-standard")?.netUsd).toBe(100);
       expect(data.net90dMap.get("usdai-usd-ai")?.netUsd).toBe(50);
       expect(data.net90dMap.has("ghost-coin")).toBe(false);
       // The untracked usdt/base decoy must not inflate the usdt aggregate.
@@ -260,7 +260,7 @@ describe("fetchAggregateData tracked-pair filter on real SQLite", () => {
       expect(data.net90dMap.has("usdt-tether")).toBe(true);
 
       expect(data.hourlyRows.map((row) => `${row.stablecoin_id}|${row.chain_id}`).sort()).toEqual([
-        "bd-basedollar|base",
+        "ousd-open-standard|base",
         "usdai-usd-ai|arbitrum",
         "usdt-tether|ethereum",
       ]);

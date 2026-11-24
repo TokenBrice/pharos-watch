@@ -107,7 +107,7 @@ describe("handleMintBurnFlows contract tests", () => {
         hourly: [
           flowHour(now, { stablecoin_id: "usdc-circle", mint_count: 2, burn_count: 1, mint_volume_usd: 40_000_000, burn_volume_usd: 10_000_000, net_flow_usd: 30_000_000, mint_unresolved_event_count: 0, burn_unresolved_event_count: 0 }),
           flowHour(now, { stablecoin_id: "usdai-usd-ai", chain_id: "arbitrum", mint_count: 0, burn_count: 3, mint_volume_usd: 0, burn_volume_usd: 50_000_000, net_flow_usd: -50_000_000 }),
-          /* An unpriced mint withholds the largest known net. */ flowHour(now, { stablecoin_id: "bd-basedollar", chain_id: "base", burn_count: 1, mint_unpriced_event_count: 1, burn_unpriced_event_count: 0, mint_volume_usd: 0, burn_volume_usd: 90_000_000, net_flow_usd: -90_000_000 }),
+          /* An unpriced mint withholds the largest known net. */ flowHour(now, { stablecoin_id: "ousd-open-standard", chain_id: "base", burn_count: 1, mint_unpriced_event_count: 1, burn_unpriced_event_count: 0, mint_volume_usd: 0, burn_volume_usd: 90_000_000, net_flow_usd: -90_000_000 }),
         ],
         baseline: [
           {
