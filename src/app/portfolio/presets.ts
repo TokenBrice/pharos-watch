@@ -15,7 +15,7 @@ export const PORTFOLIO_PRESETS: readonly PortfolioPreset[] = [
     description: "A mix tilted toward tokenized T-bills and institutional cash wrappers.",
     holdings: [
       { coinId: "buidl-blackrock", amount: 30 },
-      { coinId: "usdy-ondo-finance", amount: 25 },
+      { coinId: "ustb-superstate", amount: 25 },
       { coinId: "usyc-hashnote", amount: 25 },
       { coinId: "usdc-circle", amount: 20 },
     ],

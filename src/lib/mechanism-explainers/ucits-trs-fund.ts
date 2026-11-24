@@ -18,9 +18,7 @@ export const content: ArchetypeContent = {
     { headline: "Counterparty and collateral loss", body: "Daily unwind provisions do not guarantee recovery after counterparty default. Current collateral, enforceable netting, reuse and encumbrance must be scoped separately." },
     { headline: "Custody and stressed recovery", body: "UCITS status and an appointed auditor are not substitutes for independently reconciled assets and liabilities or exact insolvency priority. Fund, custodian and redemption continuity can fail at different layers." },
   ],
-  representativeCoins: [
-    { coinId: "eursafo-spiko", note: "EURSAFO represents the exact EUR share class of SAFO, combining physical securities with a portfolio-wide TRS strategy; it is not a Treasury-only fund." },
-  ],
+  representativeCoins: [],
   variations: [
     { id: "unswapped-sleeves", title: "Partially unswapped portfolios", body: "A cash or money-market sleeve may remain outside the swaps. Its presence does not establish how much of the current book is covered; complete component evidence remains necessary." },
   ],

@@ -696,7 +696,6 @@ export function runGitleaksConfigSelfTest(
       ...[
         "shared/data/stablecoins/coins/mhyper-midas.json",
         "shared/data/stablecoins/domains/compliance/mtbill-midas.json",
-        "shared/lib/redemption-backstop-configs/offchain-issuer/non-usd-and-tokenized.ts",
         evidenceGapPath,
         ledgerPath,
       ].map((path) => ({
@@ -747,13 +746,6 @@ export function runGitleaksConfigSelfTest(
         path: evidenceGapPath,
         value: { componentKey: `control:mint-meta:krusdc-keyrock:${["fe24dc6831", "77afe51d19"].join("")}` },
       },
-      ...[
-        ["58c911b9-1ab7-495c", "-97ba-d379fe9c4e5e"].join(""),
-        ["9bfe7105-c648-406b", "-b51c-b9c4431bc335"].join(""),
-      ].map((uuid) => ({
-        path: "shared/lib/redemption-backstop-configs/offchain-issuer/coverage-and-stablecoin-audit.ts",
-        value: { url: `https://3475141875-files.gitbook.io/a.pdf?alt=media&token=${uuid}` },
-      })),
       ...["raydium-wave4-simulation", "solana-clmm-wave4-pinned"].map((fixture) => ({
         path: `worker/src/cron/dex-liquidity/__tests__/fixtures/${fixture}.json`,
         value: { tokenMintIn: solanaUsdcInputMint },

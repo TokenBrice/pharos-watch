@@ -158,7 +158,7 @@ describe("mechanism explainer guard", () => {
   const content = (): DraftContent => ({
     tbill: {
       archetype: "tbill",
-      representativeCoins: [{ coinId: "ousg-ondo-finance", note: "Redeems through OUSGInstantManager." }],
+      representativeCoins: [{ coinId: "ustb-superstate", note: "NAV-accreting short-duration Treasury fund share." }],
       whatToWatch: [],
     },
     "synthetic-delta-neutral": {
@@ -174,37 +174,23 @@ describe("mechanism explainer guard", () => {
   };
 
   it("passes on the authored sources", () => {
-    expect(mechanismExplainerIssues(process.cwd())).toEqual([]);
+    expect(mechanismExplainerIssues()).toEqual([]);
   });
 
   it.each([
     ["a content/archetype mismatch", world((draft) => { draft.tbill.archetype = "cdp"; }), [`${PREFIX}tbill content declares archetype cdp`]],
     ["an untracked representative coin", world((draft) => { draft.tbill.representativeCoins = [...draft.tbill.representativeCoins, { coinId: "ghost-coin", note: "" }]; }), [`${PREFIX}tbill representative coin ghost-coin is not tracked`]],
-    ["a coin resolving to another archetype", { ...world(), resolveArchetype: () => "cdp" }, [`${PREFIX}tbill representative coin ousg-ondo-finance resolves to cdp`]],
+    ["a coin resolving to another archetype", { ...world(), resolveArchetype: () => "cdp" }, [`${PREFIX}tbill representative coin ustb-superstate resolves to cdp`]],
     ["a quarterly claim without a quarterly mechanism", {
       archetypes: ["rwa-credit-fund"],
-      content: { ...content(), "rwa-credit-fund": { archetype: "rwa-credit-fund", representativeCoins: [{ coinId: "ousg-ondo-finance", note: "Quarterly redemptions." }], whatToWatch: [] } },
+      content: { ...content(), "rwa-credit-fund": { archetype: "rwa-credit-fund", representativeCoins: [{ coinId: "ustb-superstate", note: "Quarterly redemptions." }], whatToWatch: [] } },
       resolveArchetype: () => "rwa-credit-fund",
-    }, [`${PREFIX}ousg-ondo-finance claims quarterly redemptions without a reviewed quarterly mechanism`]],
+    }, [`${PREFIX}ustb-superstate claims quarterly redemptions without a reviewed quarterly mechanism`]],
     ["a full DEWS coverage claim", world((draft) => { draft.tbill.whatToWatch = ["DEWS gives full coverage of venues."]; }), [`${PREFIX}tbill DEWS bullet claims full coverage: DEWS gives full coverage of venues.`]],
     ["an archetype with no NAV wrapper", { ...world(), activeNavMembers: [] }, [`${PREFIX}synthetic-delta-neutral has no active NAV wrapper to qualify DEWS coverage`]],
     ["a NAV bullet that overstates coverage", world((draft) => { draft["synthetic-delta-neutral"].whatToWatch = ["DEWS covers every wrapper."]; }), [`${PREFIX}synthetic-delta-neutral DEWS bullet overstates coverage: DEWS covers every wrapper.`]],
     ["a NAV archetype with no DEWS bullet", world((draft) => { draft["synthetic-delta-neutral"].whatToWatch = ["Watch redemption terms."]; }), [`${PREFIX}synthetic-delta-neutral DEWS bullet no longer names the NAV exception`]],
-    ["a missing OUSG note", world((draft) => { draft.tbill.representativeCoins = []; }), [`${PREFIX}tbill OUSG example is missing its note`]],
-    ["an OUSG note contradicting its reserves", world((draft) => { draft.tbill.representativeCoins = [{ coinId: "ousg-ondo-finance", note: "Mostly BUIDL, but OUSGInstantManager redeems." }]; }), [`${PREFIX}OUSG note names a reserve mix its reviewed composition contradicts`]],
-    ["an OUSG note without its redemption route", world((draft) => { draft.tbill.representativeCoins = [{ coinId: "ousg-ondo-finance", note: "Redeems daily at NAV." }]; }), [`${PREFIX}OUSG note no longer names the OUSGInstantManager route`]],
   ])("flags %s", (_name, overrides, expected) => {
-    expect(mechanismExplainerIssues(process.cwd(), overrides)).toEqual(expected);
-  });
-
-  it("flags reviewed reserves that no longer lead with State Street or that cannot be read", () => {
-    const reserves = "shared/data/stablecoins/domains/reserves/ousg-ondo-finance.json";
-    withTempRepo("pharos-mechanism-reserves", { [reserves]: JSON.stringify({ reserves: [{ name: "BUIDL", pct: 60 }] }) }, (cwd) => {
-      expect(mechanismExplainerIssues(cwd, world())).toEqual([`${PREFIX}OUSG reviewed reserves no longer lead with State Street (BUIDL)`]);
-    });
-    withTempRepo("pharos-mechanism-reserves", { [reserves]: "not JSON" }, (cwd) => {
-      expect(mechanismExplainerIssues(cwd, world())).toHaveLength(1);
-      expect(mechanismExplainerIssues(cwd, world())[0]).toContain(`${reserves}: `);
-    });
+    expect(mechanismExplainerIssues(overrides)).toEqual(expected);
   });
 });

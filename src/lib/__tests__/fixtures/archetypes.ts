@@ -12,7 +12,7 @@
  *   - variant:     Yield-bearing wrapper of a parent coin (sUSDe wraps USDe)
  *   - algorithmic: Algorithmic / partially-collateralized model (USDD)
  *   - nonUsd:      Non-USD peg (EURC, EUR)
- *   - navToken:    NAV / RWA token classification (USDY)
+ *   - navToken:    NAV / RWA token classification (USYC)
  *   - sparse:      Mid-cap with sparse blacklist + flow signal (FDUSD)
  *   - frozen:      Status === "frozen" with obituary (USR-Resolv)
  *   - midSupply:   Below-floor or recent-launch low supply that may surface
@@ -26,7 +26,7 @@ export const ARCHETYPE_COINS = {
   variant: "susde-ethena",
   algorithmic: "usdd-tron-dao-reserve",
   nonUsd: "eurc-circle",
-  navToken: "usdy-ondo-finance",
+  navToken: "usyc-hashnote",
   sparse: "fdusd-first-digital",
   frozen: "usr-resolv",
   midSupply: "cadd-cad-digital",

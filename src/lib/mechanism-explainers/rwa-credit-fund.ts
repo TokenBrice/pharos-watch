@@ -13,7 +13,7 @@ export const content: ArchetypeContent = {
     {
       id: "institutional-subscription",
       title: "Institutional subscription",
-      body: "A KYC/AML-verified accredited investor or qualified purchaser subscribes through a transfer agent (Securitize for the Apollo and Hamilton Lane funds, Anemoy for the Janus Henderson CLO, Tradable for the structured-receivable PC-series) with USD or an approved stablecoin. The fund manager deploys capital into senior secured loans, CLO tranches, direct-lending facilities, or structured receivables according to the disclosed mandate.",
+      body: "A KYC/AML-verified accredited investor or qualified purchaser subscribes through a transfer agent or fund platform (Anemoy for the Janus Henderson CLO, Midas for Fasanara private-credit mandates, Tradable for the structured-receivable PC-series) with USD or an approved stablecoin. The fund manager deploys capital into senior secured loans, CLO tranches, direct-lending facilities, or structured receivables according to the disclosed mandate.",
     },
     {
       id: "credit-portfolio-nav",
@@ -46,24 +46,8 @@ export const content: ArchetypeContent = {
   ],
   representativeCoins: [
     {
-      coinId: "acred-apollo-securitize",
-      note: "Apollo Diversified Credit Fund tokenized via Securitize. Multi-strategy private credit including direct lending, structured credit, and performing credit; quarterly redemption window; qualified-purchaser only.",
-    },
-    {
-      coinId: "acrdx-anemoy-apollo",
-      note: "Anemoy's tokenized share class of Apollo Diversified Credit. Same underlying fund as ACRED through a different transfer agent.",
-    },
-    {
       coinId: "jaaa-janus-henderson-anemoy",
       note: "Janus Henderson AAA CLO ETF (JAAA) tokenized via Anemoy. Holders are exposed to the senior-most tranche of the CLO market; daily fund NAV in the underlying ETF, on-chain accrual via the wrapper.",
-    },
-    {
-      coinId: "hlscope-hamilton-lane",
-      note: "Hamilton Lane Senior Credit Opportunities Securitize Fund. Senior secured direct lending; redemption on demand at the on-chain daily NAV; institutional accreditation required.",
-    },
-    {
-      coinId: "stac-securitize",
-      note: "Securitize Tokenized AAA CLO Fund. Senior-most CLO tranches managed by Securitize Capital; comparable risk-return profile to JAAA, different transfer-agent stack.",
     },
     {
       coinId: "mf-one-midas",
@@ -78,12 +62,12 @@ export const content: ArchetypeContent = {
     {
       id: "senior-secured-private-credit",
       title: "Senior secured private credit",
-      body: "ACRED, ACRDX, and HLSCOPE hold first-lien direct loans on private companies. Recovery expectations are highest in this sub-category; the spread above Treasuries is the smallest within the credit-fund cohort.",
+      body: "Senior secured direct-lending funds hold first-lien loans on private companies. Recovery expectations are highest in this sub-category; the spread above Treasuries is the smallest within the credit-fund cohort.",
     },
     {
       id: "clo-tranche-tokens",
       title: "CLO tranche tokens",
-      body: "JAAA and STAC expose holders to the AAA-rated tranche of collateralized loan obligations. Investment-grade rated but subject to CLO structural complexity: the AAA tranche has never failed in a U.S. CLO, but it is not bankruptcy-remote in an extreme credit cycle.",
+      body: "JAAA and similar wrappers expose holders to the AAA-rated tranche of collateralized loan obligations. Investment-grade rated but subject to CLO structural complexity: the AAA tranche has never failed in a U.S. CLO, but it is not bankruptcy-remote in an extreme credit cycle.",
     },
     {
       id: "multi-strategy-structured-credit",

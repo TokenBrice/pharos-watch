@@ -58,6 +58,14 @@
 /compare/pyusd-paypal-vs-usdc-circle/ /compare/usdc-circle-vs-pyusd-paypal/ 301
 /compare/pyusd-paypal-vs-usdc-circle /compare/usdc-circle-vs-pyusd-paypal/ 301
 
+# Retired static comparison pages whose coin left active tracking.
+/compare/usdy-ondo-finance-vs-buidl-blackrock/ /compare/ 301
+/compare/usdy-ondo-finance-vs-buidl-blackrock /compare/ 301
+/compare/jpyc-jpyc-vs-jpysc-sbi-startale/ /compare/ 301
+/compare/jpyc-jpyc-vs-jpysc-sbi-startale /compare/ 301
+/compare/usdy-ondo-finance-vs-usyc-hashnote/ /compare/ 301
+/compare/usdy-ondo-finance-vs-usyc-hashnote /compare/ 301
+
 # The resolver consolidated these transient apxUSD fragments into the durable
 # June 2 incident. Preserve already-crawled event URLs as one-hop canonicals.
 /depeg/apxusd-2026-06-03/ /depeg/apxusd-2026-06-02/ 301

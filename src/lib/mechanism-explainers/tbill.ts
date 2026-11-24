@@ -6,7 +6,7 @@ export const content: ArchetypeContent = {
   subtitle:
     "Short-duration Treasuries support two families: NAV-accreting tokens and par-stable $1 tokens with separately distributed or retained yield.",
   lead: [
-    "T-Bill / RWA tokens put short-duration U.S. government-securities exposure on-chain, through fund shares or reserve-backed dollar tokens. Subscriptions arrive as USD or permitted stablecoins, and reserves hold Treasury bills, repos, and cash. The wrapper determines the price model: USDY and OUSG accrue yield in a rising per-unit net asset value (NAV), while BENJI and BUIDL target a stable $1 unit and distribute yield through additional units. Reserve-backed $1 tokens can instead route yield to a staked wrapper or retain it at the issuer.",
+    "T-Bill / RWA tokens put short-duration U.S. government-securities exposure on-chain, through fund shares or reserve-backed dollar tokens. Subscriptions arrive as USD or permitted stablecoins, and reserves hold Treasury bills, repos, and cash. The wrapper determines the price model: USYC and USTB accrue yield in a rising per-unit net asset value (NAV), while BENJI and BUIDL target a stable $1 unit and distribute yield through additional units. Reserve-backed $1 tokens can instead route yield to a staked wrapper or retain it at the issuer.",
     "Treasury yield is real, but the legal claim and exit rail differ by product. Fund shares generally restrict holders and transfers, with redemptions through a transfer agent; freely transferable reserve-backed dollars still have permissioned primary mint and redemption rails. Read the specific wrapper rather than assuming every Treasury-backed token trades at $1 or appreciates in price.",
   ],
   howItWorks: [
@@ -23,7 +23,7 @@ export const content: ArchetypeContent = {
     {
       id: "token-units",
       title: "Token units",
-      body: "How the yield reaches the holder depends on the wrapper, and this archetype carries two families. NAV-accreting share classes let per-unit price drift up: USDY and OUSG appreciate at the published NAV. Par-stable tokens hold the unit at $1 and move the yield elsewhere: BENJI rebases share count daily, BUIDL mints new units, and the reserve-backed $1 tokens built on the same T-Bill collateral (USDtb, USD0, frxUSD) pass yield through a separate staked wrapper or retain it at the issuer. Roughly half the coins Pharos tracks under this archetype are par-stable rather than NAV-accreting; the detail page reads the coin’s NAV flag. Redemption is bank-wire or stablecoin-out, settled at NAV for fund shares and at par for the rest.",
+      body: "How the yield reaches the holder depends on the wrapper, and this archetype carries two families. NAV-accreting share classes let per-unit price drift up: USYC and USTB appreciate at the published NAV. Par-stable tokens hold the unit at $1 and move the yield elsewhere: BENJI rebases share count daily, BUIDL mints new units, and the reserve-backed $1 tokens built on the same T-Bill collateral (USDtb, USD0, frxUSD) pass yield through a separate staked wrapper or retain it at the issuer. Roughly half the coins Pharos tracks under this archetype are par-stable rather than NAV-accreting; the detail page reads the coin’s NAV flag. Redemption is bank-wire or stablecoin-out, settled at NAV for fund shares and at par for the rest.",
     },
   ],
   riskProfile: [
@@ -33,7 +33,7 @@ export const content: ArchetypeContent = {
     },
     {
       headline: "Redemption gating and transfer restrictions",
-      body: "Fund shares are securities, not cash: transfers are restricted to whitelisted addresses, and primary-market redemption can be paused, queued, rate-limited, or settled T+N. The par-stable tokens built on the same reserve usually transfer freely, but their mint and redeem rails stay permissioned, so the same gating applies at the exit. Terms are per-issuer and have to be read per-issuer. OUSG, for one, advertises instant redemption while its own docs set 24-hour global and per-investor caps, allow instant redemption to be limited by available USDC liquidity, and expose paused-redemption states for integrators. A daily-NAV ticker does not turn a permissioned claim into cash.",
+      body: "Fund shares are securities, not cash: transfers are restricted to whitelisted addresses, and primary-market redemption can be paused, queued, rate-limited, or settled T+N. The par-stable tokens built on the same reserve usually transfer freely, but their mint and redeem rails stay permissioned, so the same gating applies at the exit. Terms are per-issuer and have to be read per-issuer. Immediate stablecoin redemption buffers are typically capped by available USDC liquidity, with larger requests falling back to bank-wire cutoffs and T+0 or T+1 settlement. A daily-NAV ticker does not turn a permissioned claim into cash.",
     },
     {
       headline: "Custodian and fund-administrator failure",
@@ -54,12 +54,12 @@ export const content: ArchetypeContent = {
       note: "On-chain share record for Franklin Templeton's FOBXX, an SEC-registered U.S. government money market fund. Stable $1.00 NAV; yield distributed by daily rebasing of share count.",
     },
     {
-      coinId: "usdy-ondo-finance",
-      note: "NAV-appreciating dollar token backed by short-term U.S. Treasury bills and bank demand deposits, verified daily against the issuer's accounts by an independent verification agent. Permissioned for non-U.S. investors; bank-wire redemption at daily NAV.",
+      coinId: "usyc-hashnote",
+      note: "Circle USYC, a NAV-accreting short-duration U.S. Treasury and reverse-repo fund share. Subscriptions and redemptions run through USDC at published NAV, with one-block settlement inside the instant redemption buffer and T+0/T+1 settlement above it.",
     },
     {
-      coinId: "ousg-ondo-finance",
-      note: "NAV-accreting share class for U.S. Qualified Purchasers. Instant T+0 mint/redeem against USDC via OUSGInstantManager; whitelisted transfer only.",
+      coinId: "ustb-superstate",
+      note: "Invesco's tokenized short-duration U.S. government securities fund on Superstate infrastructure for accredited investors and Qualified Purchasers. Accrues yield in rising NAV with BNY Mellon custody and same-day USD or liquidity-gated USDC redemption.",
     },
     {
       coinId: "usdtb-ethena",
@@ -75,7 +75,7 @@ export const content: ArchetypeContent = {
     {
       id: "nav-accruing-fund-shares",
       title: "NAV-accreting fund shares",
-      body: "USDY, OUSG, and USYC let per-unit price drift up over time. Pharos flags these as NAV tokens and shows \"NAV\" instead of bps on peg-deviation tables: price drift is signal, not depeg.",
+      body: "USYC, USTB, and VBILL let per-unit price drift up over time. Pharos flags these as NAV tokens and shows \"NAV\" instead of bps on peg-deviation tables: price drift is signal, not depeg.",
     },
     {
       id: "hybrid-yield-bearing-stablecoins",

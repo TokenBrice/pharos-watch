@@ -63,7 +63,7 @@ export function makeHealthyHealthResponse(): HealthResponse {
 export function assetScopedHealth(): HealthResponse {
   const health = makeHealthyHealthResponse();
   const missingActiveAssets = [
-    { stablecoinId: "usdy-ondo-finance", symbol: "USDY", marketCapUsd: null,
+    { stablecoinId: "usyc-hashnote", symbol: "USYC", marketCapUsd: null,
       lastKnownMarketCapUsd: 2_344_462_796.3038855, lastKnownMarketCapObservedAt: 1_700_000_000 - 7 * 86400,
       consecutiveMissingGenerations: 10 },
     { stablecoinId: "frnt-wyoming", symbol: "FRNT", marketCapUsd: 967_947.92,
@@ -75,7 +75,7 @@ export function assetScopedHealth(): HealthResponse {
   }));
   health.stablecoinPublication = {
     status: "incomplete", expectedActiveCount: 396, presentActiveCount: 395, waivedActiveCount: 0,
-    missingActiveIds: ["usdy-ondo-finance"], waivedActiveIds: [], expiredWaiverIds: [], observedAt: 1_700_000_000,
+    missingActiveIds: ["usyc-hashnote"], waivedActiveIds: [], expiredWaiverIds: [], observedAt: 1_700_000_000,
   };
   health.activePriceCoverage = {
     status: "incomplete", expectedActiveCount: 396, presentActiveCount: 395, pricedActiveCount: 394,

@@ -46,7 +46,7 @@ describe("buildCompareSelectionInsights", () => {
 
   it.each([
     ["usde-ethena", "susde-ethena"],
-    ["usyc-hashnote", "usdy-ondo-finance", "ustb-superstate"],
+    ["usyc-hashnote", "ustb-superstate"],
   ])("omits the peg-cleaner read and peg target for a NAV-bearing set (%s)", (...ids) => {
     const insights = build(ids)!;
     expect(insights.lens).toBeNull();
