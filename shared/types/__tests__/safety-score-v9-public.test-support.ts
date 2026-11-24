@@ -569,7 +569,10 @@ function assertPreviousReaderSource() {
   // isUngradedTokenizedFundCard (only matching tokenized-fund-not-graded NR cards); and
   // report-cards-v9.ts adds optional notRatedReason on SafetyGradesResponseSchema. Every
   // pre-dust input still parses identically (verified against base commit 3660bd95c).
-  if (hash.digest("hex") !== "ac9397e4f2690855d99d8f3aeb4edfdbdcac57f6fbf085333ce7240503623cf3") throw new Error("Pre-dust reader source/refinement inputs changed");
+  // Delist-code adapter prune (b793b64c9): live-reserve-core.ts removes 9 retired adapter keys
+  // from ADAPTER_KEYS (unused by reserve-input.ts or any public card, breakdown, or trace schema);
+  // substituting c4726bf73's live-reserve-core.ts restores the prior ac9397e4… digest.
+  if (hash.digest("hex") !== "143576d9f838ca4e9933a4daf8eabd6015bc215e29ce2f9699e8e37824c1ee10") throw new Error("Pre-dust reader source/refinement inputs changed");
 }
 
 export async function previousReader() {

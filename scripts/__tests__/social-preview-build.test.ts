@@ -22,10 +22,12 @@ import type { SocialCardDossier } from "../../shared/lib/social-card/spec";
 import { createTempRepoTracker } from "./helpers/test-state";
 
 // Keeps every catalog entry unless a case samples it: the full catalog makes path-parity runs registry-wide.
-const catalogSample = vi.hoisted(() => ({ every: 1 }));
+const catalogSample = vi.hoisted(() => ({ every: 1, paths: null as ReadonlySet<string> | null }));
 vi.mock("../lib/social-card-catalog", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../lib/social-card-catalog")>();
-  const sample = <T,>(items: readonly T[]) => items.filter((_, index) => index % catalogSample.every === 0);
+  const sample = <T extends { path: string }>(items: readonly T[]) => catalogSample.paths
+    ? items.filter((item) => catalogSample.paths!.has(item.path))
+    : items.filter((_, index) => index % catalogSample.every === 0);
   return {
     ...actual,
     buildSocialCardCatalog: (paths: readonly string[]) => {
@@ -108,14 +110,18 @@ describe("evergreen destination previews", () => {
     await expect(build("check")).rejects.toThrow("Social preview exceeds 500 KB: public/cover.png");
   });
 
-  it("names every route identically on the catalog fast path and the injected-entries path", async () => {
+  const makeRepoMap = () => {
     const root = makeTempDir();
     mkdirSync(join(root, "src"));
     for (const dir of ["public", "scripts", "shared", "worker", "src/app"]) symlinkSync(join(process.cwd(), dir), join(root, dir));
-    const map = async (load?: typeof loadSocialPreviewEntries) => {
+    return async (load?: typeof loadSocialPreviewEntries) => {
       await buildSocialPreviewImages({ repoRoot: root, mode: "map", load });
       return JSON.parse(readFileSync(join(root, SOCIAL_PREVIEW_MAP_PATH), "utf8")) as Record<string, { url: string }>;
     };
+  };
+
+  it("names every route identically on the catalog fast path and the injected-entries path", async () => {
+    const map = makeRepoMap();
     catalogSample.every = 40;
     try {
       const fast = await map();
@@ -128,7 +134,9 @@ describe("evergreen destination previews", () => {
 
   it("renders only requested missing drawn and authored keys in memory and rejects unknown keys", async () => {
     expect((await renderMissingSocialPreviewBuffers(process.cwd(), new Set())).size).toBe(0);
-    const previewMap = JSON.parse(readFileSync(join(process.cwd(), SOCIAL_PREVIEW_MAP_PATH), "utf8")) as Record<string, { url: string }>;
+    catalogSample.paths = new Set(["/about/", "/cemetery/"]);
+    let previewMap: Record<string, { url: string }>;
+    try { previewMap = await makeRepoMap()(); } finally { catalogSample.paths = null; }
     const drawnKey = socialPreviewAssetIdentity(previewMap["/about/"]!.url)!.key;
     const authoredKey = socialPreviewAssetIdentity(previewMap["/cemetery/"]!.url)!.key;
     const buffers = await renderMissingSocialPreviewBuffers(process.cwd(), new Set([drawnKey, authoredKey]), { workers: 1 });

@@ -50,9 +50,9 @@ describe("Compact public cause contracts", () => {
       .toEqual([true, false]);
     card.pillars.backing.reasons[0] = { ...card.pillars.backing.reasons[0]!, negligibleDexRoute: true } as typeof card.pillars.backing.reasons[0];
     expect(reader.card.safeParse(card).success).toBe(false);
-    // v10.48 consciously extends the charged vocabulary past the pre-dust freeze;
-    // the pre-dust reader rejects the addition (asserted above via the frozen enum).
-    expect(V9ReasonCodeSchema.options).toEqual([...PRE_DUST_REASON_CODES, "expired-reviewed-reserve-composition"]);
+    // v10.48 and v10.55 consciously extend the reason vocabulary past the pre-dust freeze;
+    // the pre-dust reader rejects those additions (asserted via the frozen enum).
+    expect(V9ReasonCodeSchema.options).toEqual([...PRE_DUST_REASON_CODES, "expired-reviewed-reserve-composition", "tokenized-fund-not-graded"]);
   });
   it("validates distinct obligation summaries independently of the retained witness count", () => {
     const response = boundedResponse();
