@@ -60,8 +60,11 @@ export async function runShortLivedPriceRefresh(params: {
     const assets = params.assets.filter((asset) => {
       if (!ACTIVE_META_BY_ID.has(asset.id)) return false;
       const hasCurrentPrice = hasPublishableCurrentPrice(asset);
+      const sourceOwned = splitCompositePriceSource(asset.priceSource ?? "").includes(source);
       const laneActive = isShortLivedLaneActiveForAsset(asset, source);
-      return (!params.reviewedGapIds?.has(asset.id) || (hasCurrentPrice && laneActive)) &&
+      // Reviewed price gaps keep only the lane-owned exception; corroboration
+      // alone must not sustain a price the review keeps missing.
+      return (!params.reviewedGapIds?.has(asset.id) || (hasCurrentPrice && sourceOwned)) &&
         (laneActive || !hasCurrentPrice);
     }).map((asset) => ({ ...asset }));
     applyTrackedAssetOverrides(assets);

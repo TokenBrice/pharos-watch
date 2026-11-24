@@ -226,6 +226,7 @@ function compareAddressPriceTargets(
   left: AddressPriceTarget,
   right: AddressPriceTarget,
   laneOwnedIds: ReadonlySet<string>,
+  laneCorroboratedIds: ReadonlySet<string>,
 ): number {
   // In the coverage-refresh cohort, a row this lane prices has a quote that
   // lapses at the next publication while a merely-missing row has none to
@@ -241,6 +242,12 @@ function compareAddressPriceTargets(
   if (left.recentlyMissingPrice !== right.recentlyMissingPrice) {
     return left.recentlyMissingPrice ? -1 : 1;
   }
+  // A fallback/low row this lane only corroborates still loses its
+  // corroboration at the next publication, but it has a price to keep, so it
+  // ranks after rows with none and ahead of ordinary low-depth refreshes.
+  const leftCorroborated = laneCorroboratedIds.has(left.stablecoinId);
+  const rightCorroborated = laneCorroboratedIds.has(right.stablecoinId);
+  if (leftCorroborated !== rightCorroborated) return leftCorroborated ? -1 : 1;
   if (left.expiresBeforeNextGeneration !== right.expiresBeforeNextGeneration) {
     return left.expiresBeforeNextGeneration ? -1 : 1;
   }
@@ -279,6 +286,7 @@ export function buildAddressPriceTargets(params: {
   const targets: AddressPriceTarget[] = [];
   const seen = new Set<string>();
   const laneOwnedIds = new Set<string>();
+  const laneCorroboratedIds = new Set<string>();
 
   for (const asset of params.assets) {
     const targeting = shouldTargetAsset(
@@ -301,9 +309,8 @@ export function buildAddressPriceTargets(params: {
       metadataDeployments,
       providerChainMap: chainMap,
     });
-    if (params.cohort === "coverage-refresh" && (targeting.addressLaneOwned || targeting.addressLaneCorroborated)) {
-      laneOwnedIds.add(asset.id);
-    }
+    if (params.cohort === "coverage-refresh" && targeting.addressLaneOwned) laneOwnedIds.add(asset.id);
+    else if (params.cohort === "coverage-refresh" && targeting.addressLaneCorroborated) laneCorroboratedIds.add(asset.id);
     const hint = params.deploymentHints?.get(asset.id);
     const hintedDeployments = hint
       ? deployments.filter((deployment) =>
@@ -341,7 +348,7 @@ export function buildAddressPriceTargets(params: {
     }
   }
 
-  targets.sort((left, right) => compareAddressPriceTargets(left, right, laneOwnedIds));
+  targets.sort((left, right) => compareAddressPriceTargets(left, right, laneOwnedIds, laneCorroboratedIds));
   return targets;
 }
 

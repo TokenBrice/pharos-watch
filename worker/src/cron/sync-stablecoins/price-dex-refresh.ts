@@ -23,7 +23,7 @@ import { loadFxRatesForPriceBounds } from "./enrich-prices-progress";
 import type { PeggedAsset } from "./enrich-prices-shared";
 import { resolveStablecoinPriceGapReviews } from "../../lib/stablecoin-publication-coverage";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import { isShortLivedLaneActiveForAsset, runShortLivedPriceRefresh, type ShortLivedRefreshSummary } from "./price-short-lived-refresh";
+import { runShortLivedPriceRefresh, type ShortLivedRefreshSummary } from "./price-short-lived-refresh";
 
 const REFRESH_BUDGET_MS = 45_000;
 // 45-second envelope / (five-second request ceiling + 1.1-second DexScreener pacing).
@@ -286,7 +286,7 @@ async function runAddressRefresh(params: {
       .filter((asset) => ACTIVE_META_BY_ID.has(asset.id) &&
         (!params.reviewedGapIds.has(asset.id) ||
           (hasPublishableCurrentPrice(asset) &&
-            isShortLivedLaneActiveForAsset(asset, "coingecko-onchain-address")))),
+            splitCompositePriceSource(asset.priceSource ?? "").includes("coingecko-onchain-address")))),
     previousAssetsById: params.previousAssetsById,
     nowSec: params.syncStartSec,
     cohort: "coverage-refresh",

@@ -41,7 +41,7 @@ describe("address price providers", () => {
     expect(targets).toMatchObject([{ stablecoinId: "thin", chain: "base", providerChainId: "base", address: "0x0000000000000000000000000000000000000001" }]);
   });
 
-  it("refreshes the rows this lane prices or corroborates before rows that only lost a price", () => {
+  it("refreshes lane-owned rows, then rows that lost a price, then rows this lane only corroborates", () => {
     const assets = [
       { id: "lane-owned", symbol: "USDA", address: "berachain:0xff12470a969dd362eb6595ffb44c82c959fe9acc", price: 0.975, priceSource: "coingecko-onchain-address", priceConfidence: "fallback", priceObservedAt: 1_800_000_000 },
       { id: "corroborated-fallback", symbol: "PMUSD", address: "base:0x0000000000000000000000000000000000000003", price: 0.408, priceSource: "defillama-contract", priceConfidence: "fallback", agreeSources: ["defillama-contract", "coingecko-onchain-address"], priceObservedAt: 1_800_000_000 },
@@ -51,7 +51,7 @@ describe("address price providers", () => {
     const shared = { assets, previousAssetsById: new Map(assets.map((asset) => [asset.id, asset])), nowSec: 1_800_000_100 };
 
     expect(buildAddressPriceTargets({ ...shared, cohort: "coverage-refresh" }).map((target) => target.stablecoinId))
-      .toEqual(["corroborated-fallback", "lane-owned", "no-price"]);
+      .toEqual(["lane-owned", "no-price", "corroborated-fallback"]);
     expect(buildAddressPriceTargets(shared).map((target) => target.stablecoinId))
       .toEqual(expect.arrayContaining(["lane-owned", "corroborated-fallback", "priced-elsewhere", "no-price"]));
   });

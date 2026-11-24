@@ -52,9 +52,9 @@ describe("short-lived fallback refresh", () => {
     expect(assets[3].price).toBeNull();
   });
 
-  it("skips reviewed gaps with stale source labels, keeps current source-owned/corroborated rows, and keeps missing M/XO unreviewed", async () => {
+  it("skips reviewed gaps with stale or merely corroborating labels, keeps current source-owned/corroborated rows, and keeps missing M/XO unreviewed", async () => {
     expect([...resolveStablecoinPriceGapReviews(["m-m0", "xo-exodus"], Date.UTC(2026, 9, 16) / 1000).activeById.keys()]).toEqual([]);
-    const reviewedGapIds = new Set(["m-m0", "xo-exodus", "usdk-kast", "usda-avalon", "wusd-worldwide", "usdn-smardex"]);
+    const reviewedGapIds = new Set(["m-m0", "xo-exodus", "usdk-kast", "usda-avalon", "wusd-worldwide", "usdn-smardex", "aid-gaib"]);
     await runShortLivedPriceRefresh({
       assets: [
         priced("m-m0", "coingecko+defillama-contract"), priced("xo-exodus", "coingecko+jupiter"),
@@ -63,6 +63,7 @@ describe("short-lived fallback refresh", () => {
         { ...priced("wusd-worldwide", "jupiter"), price: null },
         { ...priced("usdn-smardex", "defillama-contract+jupiter"), priceObservedAt: null, priceUpdatedAt: null, priceSyncedAt: null },
         { ...priced("pmusd-precious-metals", "coingecko-onchain-address"), agreeSources: ["coingecko-onchain-address", "defillama-contract"] },
+        { ...priced("aid-gaib", "coingecko-onchain-address"), agreeSources: ["coingecko-onchain-address", "defillama-contract"] },
         { ...priced("usdt-tether", "coingecko-onchain-address"), priceConfidence: "low", consensusSources: ["coingecko-onchain-address", "defillama-contract"] },
         { ...priced("usdc-circle", "coingecko"), priceConfidence: "single-source", consensusSources: ["coingecko", "defillama-contract", "jupiter"] },
       ],

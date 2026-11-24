@@ -172,7 +172,7 @@ export async function runJupiterPass(
         if (blockId == null || !isFreshJupiterBlock(blockId, slotReference.value)) continue;
         if (liquidity != null && (!Number.isFinite(liquidity) || liquidity < JUPITER_MIN_LIQUIDITY_USD)) {
           const counts = diagnostic.rejectionReasonCounts ??= {};
-          counts["missing-liquidity"] = (counts["missing-liquidity"] ?? 0) + 1;
+          counts["price-rejected"] = (counts["price-rejected"] ?? 0) + 1;
           continue;
         }
 
