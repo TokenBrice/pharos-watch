@@ -16,36 +16,59 @@ Listing governance is checked in and deterministic:
 
 Provider membership is discovery evidence, not an admission decision. A CoinGecko category, DefiLlama row, symbol, name, or nominal price never proves that an asset belongs in Pharos.
 
+## Policy 2.0 Revision (Effective 2026-11-25)
+
+Effective **2026-11-25** (UTC; single date authority `CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE`), Listing Policy 2.0 replaces the mechanical `navToken`/`tbill` → `cash-equivalent` rule with an authored fixed-par, non-fund instrument test, retires `cash-equivalent` and `stable-value-investment`, introduces `tokenized-fund` and `review-hold`, delists non-linked investment funds and NAV-priced investment claims in place, and switches core monetary aggregates from `core-stablecoins-v1` to `core-stablecoins-v2`.
+
+- **Cutover and history:** Published history is never restated. Pre-cutover series and replays retain frozen `core-stablecoins-v1` membership (`shared/data/stablecoins/core-aggregate-v1-members.json`), cross-boundary market comparisons and headline 7d/30d supply deltas are withheld across the cutover, and headline supply charts mark the step with a reference line and neutral note.
+- **Fund surfaces:** Active `tokenized-fund` listings are excluded from the default screener, homepage headline totals, rankings, and Safety Score leaderboards. They remain browsable via the dedicated Tokenized Funds filter and profile surfaces with a "Not a stablecoin" badge and a fund panel (holdings, NAV source, redemption terms, investor eligibility) in place of a Safety Score letter grade.
+
 ## Listing Classes
 
-Under Policy 2.0, a stablecoin is a fixed-par money claim — designed to stay worth one unit of a currency or metal — that is not a share in an investment fund. Fixed-$1 debt claims (such as YLDS and STBT) qualify as `core-stablecoin`; shares in investment funds (such as BUIDL, even when targeting a $1 NAV) and exchange earn products (such as GUSD) do not. Investor gating (KYC, allowlists, accredited-investor or qualified-purchaser rules) never decides the listing class and is reflected only in exit and accessibility scoring.
+Under Policy 2.0, an asset qualifies as `core-stablecoin` only if it passes two tests:
+
+1. **Fixed par:** The unit is designed to stay worth one unit of a currency or a fixed weight of a precious metal, with any yield paid as additional units (rebasing or distributions) or through a separate wrapper token — never through a rising unit price set by the NAV or valuation of a pool. Fixed-$1 debt claims (such as YLDS and STBT) pass; NAV-accreting debt certificates, ETF trackers, and pool/vault shares whose unit value floats with portfolio valuation do not.
+2. **Not a fund share or exchange earn product:** Shares in investment funds (such as BUIDL, even when targeting a $1 NAV) and exchange earn products (an exchange-captive yield balance redeemable only inside a single exchange account ecosystem rather than an open transferable monetary claim, such as Gate GUSD) do not qualify.
+
+Investor gating (KYC, allowlists, accredited-investor, qualified-purchaser, or transfer restrictions) never decides listing class or admission and is reflected only in exit and accessibility scoring.
 
 The listing class separates the research catalog from the core monetary aggregate. Policy 2.0 retires `cash-equivalent` and `stable-value-investment`: `core-stablecoin` versus `tokenized-fund` is an authored instrument decision in `listing-decisions.json`, not derived mechanically from `flags.navToken` or `mechanismArchetype`. `flags.navToken` remains a pricing flag only.
 
 | Class | Inclusion test | Aggregate and scoring treatment |
 | --- | --- | --- |
-| `core-stablecoin` | A fixed-par money claim (including fixed-$1 debt claims) that is not a tracked variant or an investment-fund share | Included in the core monetary aggregate while active (`CORE_AGGREGATE_LISTING_CLASSES` contains only `core-stablecoin`) |
+| `core-stablecoin` | A fixed-par money claim (including fixed-$1 debt claims) that is not a tracked variant, an investment-fund share, or an exchange earn product | Included in the core monetary aggregate while active (`CORE_AGGREGATE_LISTING_CLASSES` contains only `core-stablecoin`) |
 | `stablecoin-variant` | A direct tracked child with `variantOf` and `variantKind` | Tracked and analyzed, but excluded from parent-inclusive aggregate totals to prevent double counting |
-| `tokenized-fund` | An investment-fund share retained in the active catalog because it backs tracked stablecoins or participates in reserve/dependency coverage | Tracked outside core monetary aggregates with no Safety Score letter grade (fund holdings, NAV source, redemption terms, and investor eligibility remain visible and continue feeding downstream dependency scoring) |
+| `tokenized-fund` | An investment-fund share or other NAV-priced investment claim retained in the active catalog because at least one active non-fund stablecoin links it as reserve or collateral backing | Tracked outside core monetary aggregates with no Safety Score letter grade (fund holdings, NAV source, redemption terms, and investor eligibility remain visible and continue feeding downstream dependency scoring) |
 | `review-hold` | A non-delisted, non-variant asset with `mechanismArchetype: null` and a valid unresolved `mechanismArchetypeReview` | Tracked and monitored while exact-product qualification is pending, but excluded from core monetary aggregates |
-| `excluded` | Fails the scope or instrument tests (including delisted non-dependency funds and exchange earn products) | Historical record only; never active |
+| `excluded` | Fails the scope or instrument tests (including delisted unlinked funds, NAV-priced investment claims, and exchange earn products) | Historical record only; never active |
 
-Class precedence follows the guard's branches: delisted → `excluded`; `variantOf` → `stablecoin-variant`; unresolved mechanism review with `mechanismArchetype: null` → `review-hold`; otherwise the authored class in `listing-decisions.json` must be `core-stablecoin` or `tokenized-fund`. `npm run check:stablecoin-data` enforces catalog coverage and this order.
+An accreting vault or strategy share whose deposit and exit asset is a single tracked stablecoin (`variantOf` + `variantKind`) stays a `stablecoin-variant` of that parent and remains outside core totals; an accreting share with no tracked parent is evaluated under the instrument test as a fund or NAV claim. The listing class stored on a `frozen` or `quarantined` row reflects its classification at review and is re-tested under current instrument and link rules upon any reactivation.
 
-An unresolved mechanism review preserves delisted and variant invariants before applying `review-hold`; `flags.navToken` does not override the hold. Remaining unresolved mechanisms require `review-hold` so the currently authored class cannot validate itself or promote an unresolved asset into core aggregates. R25 rcUSD is held on that basis pending exact-product reserve and holder-claim qualification.
+Class precedence follows the guard's branches: delisted → `excluded`; `variantOf` → `stablecoin-variant`; unresolved mechanism review with `mechanismArchetype: null` → `review-hold`; otherwise the authored class in `listing-decisions.json` must be `core-stablecoin` or `tokenized-fund`. `npm run check:stablecoin-data` enforces catalog coverage, `policyVersion: "2.0"`, and this order.
+
+An unresolved mechanism review preserves delisted and variant invariants before applying `review-hold`; `flags.navToken` does not override the hold. Remaining unresolved mechanisms require `review-hold` so the currently authored class cannot validate itself or promote an unresolved asset into core aggregates. Every `review-hold` row requires a dated `reviewBy` follow-up deadline so an unresolved hold cannot sit open indefinitely; by `reviewBy`, reviewers must resolve the mechanism into an authored `core-stablecoin`/`tokenized-fund` decision, move the asset to `delisted`, or record a fresh dated review extending the hold. R25 rcUSD is held on that basis pending exact-product reserve and holder-claim qualification.
+
+### Tokenized Fund Retention
+
+An investment-fund share or NAV-priced investment claim stays active as `tokenized-fund` only while linked by at least one active non-fund asset (`core-stablecoin`, `stablecoin-variant`, or `review-hold`).
+
+- **What counts as a link:** An explicit canonical `id` reference from an active non-fund asset in (1) coin `dependencies`, (2) reserves sidecar `reserves[].coinId`, (3) `dependencyReview.relationships`, or (4) a live reserve adapter's `coinId` mapping (such as Falcon USDf's live adapter mapping for JAAA and JTRSY). There is no materiality floor. `reserveReview.nonLinkDispositions` (including `candidateCoinIds`) and unlabelled reserve slices without a `coinId` do not count as links.
+- **Maintenance and delisting:** `npm run check:stablecoin-data` warns if an active `tokenized-fund` has no static non-fund linker outside the guard's explicit reviewed live-adapter-only list. When an active `tokenized-fund` loses its last qualifying link from active non-fund assets, it is delisted in place at the next review (`status: "delisted"`, class `excluded`).
+- **Reactivation and re-admission:** Reactivating a quarantined `tokenized-fund` or re-admitting a previously delisted fund as `tokenized-fund` requires a qualifying link from an active non-fund asset plus normal runtime admission checks; it does not require proof that the fund's underlying instrument changed.
 
 ## Instrument Eligibility
 
-An in-scope asset must make a stable-value claim that users can test through an ordinary transfer, trade, redemption, or modeled NAV path. It must also have a distinct, verifiable identity and enough public evidence to explain the issuer, backing, peg mechanism, and holder exit.
+An in-scope stablecoin must make a fixed-par monetary claim (one unit of a currency or a fixed weight of a metal) that users can test through an ordinary transfer, trade, or redemption. Investment-fund shares and other NAV-priced investment claims are out of scope unless retained as `tokenized-fund` under [Tokenized Fund Retention](#tokenized-fund-retention). Every admitted asset must also have a distinct, verifiable identity and enough public evidence to explain the issuer, backing, peg or valuation mechanism, and holder exit.
 
 Before active admission or pre-launch promotion, reviewers must demonstrate a fetchable current price and a positive circulating-supply or market-cap path for the exact asset. The research packet records both sources and observations; catalog validation separately checks that the metadata identifies a supported live-data path. A filled profile or static page alone does not establish admission, and a listing or promotion also needs the committed Safety Score admission receipt enforced by `npm run check:new-asset-evidence-packet` ([addition procedure](https://github.com/TokenBrice/pharos-watch/blob/main/docs/process/adding-a-stablecoin.md)).
 
 The following are out of scope:
 
+- investment-fund shares, NAV-priced debt certificates or vault shares, ETF trackers, and ordinary equity, credit, or commodity interests — except active `tokenized-fund` rows retained solely under [Tokenized Fund Retention](#tokenized-fund-retention)
+- exchange earn products whose claim is redeemable only inside a single exchange account ecosystem rather than as an open monetary claim
 - non-withdrawable exchange account balances, reward balances, points, or internal credits
 - permissioned, deal-specific notes or receivables whose displayed unit value is contractual accounting par rather than a transferable monetary price
 - instruments whose only holder exit is issuer discretion or a private bilateral process
-- ordinary equity, credit, commodity, or fund interests with no modeled stable monetary or cash-equivalent reference
 - duplicate wrappers or provider aliases that do not represent a distinct holder instrument
 - assets admitted only because an aggregator categorized them as a stablecoin
 - assets that require an open-ended manual supply patch or fabricated par price
@@ -73,9 +96,9 @@ A positive number is not sufficient when its semantics are wrong. Contractual pa
 | --- | --- | --- | --- |
 | `pre-launch` | Announced or researched, not yet admitted | Excluded | Upcoming profile |
 | `pre-launch` with `launchPhase: "launched"` | Publicly issued on-chain, but no admitted price or supply lane yet | Excluded | "Launched – awaiting data" profile with launch date, missing lane and review date; listed apart from upcoming coins |
-| `active` or omitted | In scope and admitted to live monitoring | Included according to listing class | Live profile and eligible active surfaces |
+| `active` or omitted | Admitted to live monitoring (in-scope stablecoin, variant, review-hold, or dependency-linked `tokenized-fund`) | Included according to listing class | Live profile and eligible active surfaces |
 | `quarantined` | Temporarily withheld because no positive circulating-supply or market-cap path can currently be established | Excluded immediately | Read-only profile with reason and review date |
-| `delisted` | Reviewed as outside listing scope | Excluded permanently unless a new scope decision is approved | Read-only profile with reason and source |
+| `delisted` | Reviewed as outside listing scope (or an unlinked investment fund) | Excluded permanently unless the instrument changes or a fund gains a qualifying active-stablecoin link | Read-only profile with reason and source |
 | `frozen` | Previously active instrument has ended or failed and is archived | Excluded | Archived profile and cemetery record |
 
 Only active rows enter ordinary live producers and score recomputation. Quarantined and delisted records keep static detail pages but are excluded from the screener, compare, aggregates, alerts and ordinary provider refreshes. A separately reviewed reserve-only supply prerequisite may use bounded recovery without changing that lifecycle or the active producer/generation census.
@@ -90,11 +113,11 @@ An expired authored bootstrap field fails `check:stablecoin-data` until removed 
 
 A missing live price does not by itself move an active asset to quarantine or delist, and it is never papered over with a substitute quote. When every admissible price lane is empty and the asset's lifecycle is otherwise sound, the gap may instead carry a reviewed price-gap acknowledgement (`STABLECOIN_PRICE_GAP_REVIEWS` in `worker/src/lib/stablecoin-publication-reviews.ts`): a dated registry entry naming an owner, a concrete reason, at least one public `https` source, and an expiry no more than roughly 30 days after the review. An acknowledged gap stays published as missing — missing counts, affected market-cap exposure, and per-asset rejection detail are unchanged — but it stops producing public health warnings and admin warning causes. Renewal requires a fresh review with new evidence; expiry is automatic, so the gap alerts again until the asset is re-sourced, frozen, or delisted. Acknowledgement never applies to a depeg, never applies to an asset that already has a price, and never substitutes for the lifecycle disposition, which keeps its own dated review.
 
-Delist when the instrument itself fails scope, including account-only balances, private contractual-par notes, misleading provider artifacts, or assets without a meaningful transferable or redemption claim. A delisted record requires a dated reason and public source.
+Delist when the instrument itself fails scope — including investment-fund shares and NAV-priced investment claims with no qualifying link from an active non-fund stablecoin, exchange earn products, account-only balances, private contractual-par notes, misleading provider artifacts, or assets without a meaningful transferable or redemption claim. A delisted record requires a dated reason and public source.
 
 An out-of-scope pre-launch row follows the same delisting path: retain its sourced catalog record and read-only profile, change its listing class to `excluded`, and remove it from upcoming surfaces. The retained profile preserves its canonical URL.
 
-Freeze only a previously active stablecoin that has effectively ended or failed and whose historical market record belongs in the cemetery. Record the freeze date and sourced obituary, preserve its identity and historical data as a read-only archive, and remove it from live collection and aggregates.
+Freeze only a previously active tracked instrument (stablecoin, variant, or retained tokenized fund) that has effectively ended or failed and whose historical market record belongs in the cemetery. Record the freeze date and sourced obituary, preserve its identity and historical data as a read-only archive, and remove it from live collection and aggregates.
 
 ## Ongoing Runtime Review
 
@@ -110,7 +133,7 @@ An incumbent with a price-pipeline failure remains active while the failure is i
 
 ## Re-Admission
 
-Re-admission is exceptional. It requires new evidence that the instrument changed, not merely that a provider relisted it. The same reviewed change updates the catalog lifecycle and listing class so historical scope decisions and active publication cannot disagree.
+Re-admission of a delisted stablecoin is exceptional. It requires new evidence that the instrument changed, not merely that a provider relisted it. The sole exception is dependency-driven re-admission of a previously delisted investment fund under [Tokenized Fund Retention](#tokenized-fund-retention), which admits the fund as `tokenized-fund` (outside core aggregates and Safety Score grades) when an active non-fund stablecoin establishes a qualifying link and normal runtime admission checks pass. In both cases, the reviewed change updates the catalog lifecycle and listing class together so historical scope decisions and active publication cannot disagree.
 
 The recorded application is the 2026-09-29 `sofid-sofi` re-admission. The 2026-07 quarantine reason — no positive market cap on any permitted source — no longer held: CoinGecko `sofiusd` began publishing a positive price and market cap (0.999461 USD and ≈328.75M USD cap with ≈12.3M USD daily volume, observed 2026-09-29), DefiLlama carries the asset (`llamaId = 430`, ≈328.81M `peggedUSD`), and the tracked deployments corroborate the circulating figure (Ethereum `totalSupply` 100,077,224 plus Solana mint supply 228,886,850.23 = 328,964,074.23). Publication binds DefiLlama list supply (`llamaId: "430"`) while CoinGecko remains the detail/price provider (`geckoId: sofiusd`), so no curated on-chain aggregate is admitted; SoFiUSD has no nominal-par override and its price comes from ordinary admitted consensus (see [Pricing Pipeline](./pricing-pipeline.md)).
 
