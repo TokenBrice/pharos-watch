@@ -1063,7 +1063,7 @@ describe("discovery native supply aggregates", () => {
   });
 
   it.each([0n, 1n, 7_000_000n])("includes observed 0G stock, including a real zero (%s)", async (raw) => {
-    const { id, contracts, supplies, units } = cases[1];
+    const { id, contracts, supplies, units } = cases[0];
     const observed = [...supplies];
     observed[4] = raw;
     installReads(contracts, observed);
@@ -1078,7 +1078,7 @@ describe("discovery native supply aggregates", () => {
   });
 
   it("withholds PYUSDx when a native deployment is missing from the contract roster", async () => {
-    const { id, contracts, supplies } = cases[1];
+    const { id, contracts, supplies } = cases[0];
     installReads(contracts, supplies);
     for (const missing of contracts) {
       await expect(fetchCuratedAggregateOnChainMcap(makeMeta({
@@ -1089,7 +1089,7 @@ describe("discovery native supply aggregates", () => {
   });
 
   it.each([NaN, Infinity])("withholds PYUSDx rather than publishing a non-finite valuation (%s)", async (price) => {
-    const { id, contracts, supplies } = cases[1];
+    const { id, contracts, supplies } = cases[0];
     installReads(contracts, supplies);
     await expect(fetchCuratedAggregateOnChainMcap(
       makeMeta({ id, name: id, symbol: id, contracts }), price, buildChainRpcs(),
@@ -1097,7 +1097,7 @@ describe("discovery native supply aggregates", () => {
   });
 
   it("withholds the complete PYUSDx aggregate on a 0G RPC exception", async () => {
-    const { id, contracts, supplies } = cases[1];
+    const { id, contracts, supplies } = cases[0];
     installReads(contracts, supplies);
     const nativeRead = fetchErc20TotalSupplyMock.getMockImplementation()!;
     fetchErc20TotalSupplyMock.mockImplementation(async (input, ...args) => {

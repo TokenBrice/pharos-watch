@@ -389,7 +389,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
       price: null, circulating: {}, supplySource: "onchain-supply-withheld",
     });
     expect(probeTrackedTokenSupplyMock).not.toHaveBeenCalled();
-    expect(fetchErc20TotalSupplyMock).not.toHaveBeenCalled();
+    expect(fetchErc20TotalSupplyMock).toHaveBeenCalledTimes(1);
   });
 
   it("uses curated aggregate on-chain supply when CoinGecko market cap is stale", async () => {
@@ -443,7 +443,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
 
     expect(row).toMatchObject({
       price: 1.12,
-      priceSource: "coingecko",
+      priceSource: "coingecko-low-volume",
       supplySource: "onchain-total-supply",
     });
     // USD values: Ink is reallocated out of the Ethereum total, not summed.

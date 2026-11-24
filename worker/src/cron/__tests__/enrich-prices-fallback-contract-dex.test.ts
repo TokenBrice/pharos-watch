@@ -336,7 +336,7 @@ describe("enrichMissingPrices", () => {
 
   it.each([
     ["explicit address", makePeggedAsset({ id: "mystery-usd", name: "Mystery USD", symbol: "MUSD", price: 0, address: "0xabc", chains: ["Base"] }), "base", "0xabc", "MUSD", "1.0004", true, true],
-    ["tracked metadata", makePeggedAsset({ id: "gusd-gate", name: "GUSD", symbol: "GUSD", price: 0 }), "ethereum", "0xaf6186b3521b60e27396b5d23b48abc34bf585c5", "GUSD", "0.999", false, true],
+    ["tracked metadata", makePeggedAsset({ id: "gusd-gemini", name: "Gemini Dollar", symbol: "GUSD", price: 0 }), "ethereum", "0x056fd409e1d7a124bd7017459dfea2f387b6d5cd", "GUSD", "0.999", false, true],
     ["symbol mismatch", makePeggedAsset({ id: "usdo-openeden", name: "OpenDollar USDO", symbol: "USDO", price: 0 }), "ethereum", "0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe", "cUSDO", "1.047", false, false],
   ])("handles exact DexScreener token lookup (%s)", async (_label, fixture, chain, address, pairSymbol, priceUsd, viaEnrich, resolves) => {
     const assets = [{ ...fixture }];

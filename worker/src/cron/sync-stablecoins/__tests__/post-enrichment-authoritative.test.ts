@@ -87,7 +87,7 @@ describe("runSharedPriceCompletion authoritative repair", () => {
     ["chainlink-nav", "upstream", 48 * 3600, false],
   ] as const)("replays %s only within its original observation policy", async (source, mode, age, accepted) => {
     const now = Math.floor(Date.now() / 1000);
-    const id = source === "defillama" ? "usdt-tether" : accepted ? "mre7yield-midas" : "eutbl-spiko";
+    const id = source === "defillama" ? "usdt-tether" : accepted ? "mf-one-midas" : "eutbl-spiko";
     const asset: PeggedAsset = { id, name: id, symbol: id, pegType: id === "eutbl-spiko" ? "peggedEUR" : "peggedUSD", price: null };
     const observedAt = now - age;
     const result = await runSharedPriceCompletion({

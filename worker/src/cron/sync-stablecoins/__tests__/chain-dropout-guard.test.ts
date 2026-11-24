@@ -101,22 +101,28 @@ describe("chain dropout guard", () => {
   });
 
   it.each(["small", "low-chart", "large", "list-share", "ambiguous", "chart"])("keeps only permitted native remainder after a fill-default read failure (%s)", async (mode) => {
-    const amounts = { xlayer: 477_000_000, ink: mode === "large" ? 50_000_000 : 5_000_000 };
-    const asset: PeggedAsset = { ...usdg(), id: "usdg-paxos", priceListFillDefault: { value: 0.000055, upstreamSource: null },
+    const amounts = { ...OUSD_AMOUNTS, solana: mode === "large" ? 50_000_000 : OUSD_AMOUNTS.solana };
+    const asset: PeggedAsset = { ...usdg(), id: "ousd-open-standard", priceListFillDefault: { value: 0.000055, upstreamSource: null },
       circulating: { peggedUSD: Object.values(amounts).reduce((a, b) => a + b) / 1e6 + (mode === "list-share" ? 45 : 0) },
-      chainCirculating: Object.fromEntries(Object.entries(amounts).map(([chain, amount]) => [CHAIN_META[chain].name, { current: mode === "list-share" && chain === "ink" ? 50 : amount / 1e6 }])) };
+      chainCirculating: Object.fromEntries(Object.entries(amounts).map(([chain, amount]) => [CHAIN_META[chain].name, { current: mode === "list-share" && chain === "solana" ? 50 : amount / 1e6 }])) };
     const state = savedState(asset.id, ...Object.entries(amounts).map(([chainId, baselineUsd]) => ({ ...baseline(chainId, baselineUsd, NOW - 8 * DAY, NOW - 8 * DAY),
       ...(mode === "ambiguous" ? { ambiguousSince: NOW - DAY, heldTotalUsd: null } : {}) })));
-    mocks.onchain.mockImplementation(async ({ chain }: { chain: keyof typeof amounts }) => chain === "ink" ? null : BigInt(amounts[chain]) * 10n ** 6n);
-    if (mode === "chart") mocks.chart.mockResolvedValue(chartPoint(5_000_000, NOW));
+    mocks.onchain.mockImplementation(async ({ chain }: { chain: keyof typeof amounts }) => BigInt(amounts[chain]) * 10n ** 6n);
+    if (mode === "chart") mocks.chart.mockResolvedValue(chartPoint(4_000_000, NOW));
     if (mode === "low-chart") mocks.chart.mockResolvedValue(chartPoint(100, NOW));
-    const result = await runGuard(asset, { state });
-    const partial = mode === "small" || mode === "low-chart";
-    expect(getCirculatingRawOrNull(asset)).toBe(partial ? 477_000_000 : null);
-    expect(result.unavailableAssetIds).toEqual(partial ? [] : [asset.id]);
-    if (partial) expect(asset).toMatchObject({ supplyObservedAt: NOW,
-      supplyChainGuard: { status: "chains-unavailable", partialCoverage: true, quarantinedSince: NOW - 8 * DAY },
-      chainCirculating: { Ink: { current: null }, "X Layer": { current: 477_000_000 } } });
+    const rosterLen = CHAIN_DROPOUT_ONCHAIN_ROSTER.length;
+    CHAIN_DROPOUT_ONCHAIN_ROSTER.push(...Object.keys(amounts).map((chainId) => ({ assetId: asset.id, chainId })));
+    try {
+      const result = await runGuard(asset, { state, chainRpcs: buildChainRpcs("test-placeholder") });
+      const partial = mode === "small" || mode === "low-chart";
+      expect(getCirculatingRawOrNull(asset)).toBe(partial ? 478_000_000 : null);
+      expect(result.unavailableAssetIds).toEqual(partial ? [] : [asset.id]);
+      if (partial) expect(asset).toMatchObject({ supplyObservedAt: NOW,
+        supplyChainGuard: { status: "chains-unavailable", partialCoverage: true, quarantinedSince: NOW - 8 * DAY },
+        chainCirculating: { Solana: { current: null }, Ethereum: { current: 150_000_000 } } });
+    } finally {
+      CHAIN_DROPOUT_ONCHAIN_ROSTER.length = rosterLen;
+    }
   });
 
   it.each([

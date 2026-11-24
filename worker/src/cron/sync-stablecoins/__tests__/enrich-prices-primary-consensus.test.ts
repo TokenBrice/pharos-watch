@@ -426,7 +426,7 @@ describe("buildPrimaryConsensusResults", () => {
   });
 
   it("admits a five-day issuer NAV round and expires it one second after the configured budget", () => {
-    const id = "mre7yield-midas";
+    const id = "mf-one-midas";
     const meta = TRACKED_META_BY_ID.get(id)!;
     const fingerprint = computeLiveReserveConfigFingerprint(meta.liveReservesConfig!);
     const observedAt = 1_790_000_000;

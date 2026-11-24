@@ -244,48 +244,77 @@ describe("XRPL issued-currency supply", () => {
     }
   });
 
-  it("sums the full OUSG perimeter and partitions an admitted cap only after every leg succeeds", async () => {
-    let xrplAvailable = true, solanaAmount = "0";
-    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+  it("sums the full EURCV perimeter and partitions an admitted cap only after every leg succeeds", async () => {
+    const eurcvMeta = TRACKED_META_BY_ID.get("eurcv-societe-generale-forge")!;
+    const eurcvXrpl = eurcvMeta.contracts!.find(entry => entry.chain === "xrpl")!;
+    const [eurcvCurrency, eurcvAccount] = eurcvXrpl.address.split(".");
+    const eurcvStellarIssuer = eurcvMeta.contracts!.find(entry => entry.chain === "stellar")!.address;
+    const eurcvGateway = {
+      result: {
+        ...gatewayFixture.result,
+        account: eurcvAccount,
+        balances: {},
+        obligations: { [eurcvCurrency]: "1584220.172977231" },
+      },
+    };
+    const ethBlock = { number: "0x7b", hash: `0x${"ab".repeat(32)}`, timestamp: `0x${observedAt.toString(16)}` };
+    let xrplAvailable = true, solanaAmount = "200000000";
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.startsWith("https://horizon.stellar.org")) {
+        return url.includes("/assets?")
+          ? Response.json({
+            _embedded: {
+              records: [{
+                asset_code: "EURCV", asset_issuer: eurcvStellarIssuer,
+                balances: { authorized: "15000000.0000000", authorized_to_maintain_liabilities: "0.0000000", unauthorized: "0.0000000" },
+                claimable_balances_amount: "0.0000000", liquidity_pools_amount: "0.0000000", contracts_amount: "0.0000000",
+              }],
+            },
+          })
+          : Response.json({ history_latest_ledger_closed_at: xrplFixture.ledgerClosedAt });
+      }
       const request = JSON.parse(String(init?.body));
       if (request.method === "gateway_balances") return Response.json(xrplAvailable
-        ? gatewayFixture : { result: { status: "error", error: "actNotFound" } });
+        ? eurcvGateway : { result: { status: "error", error: "actNotFound" } });
       if (request.method === "ledger") return Response.json(ledgerFixture);
       if (request.method === "getTokenSupply") return Response.json({ jsonrpc: "2.0", id: 1,
-        result: { context: { slot: 465436215 }, value: { amount: solanaAmount, decimals: 6, uiAmount: 0 } },
+        result: { context: { slot: 465436215 }, value: { amount: solanaAmount, decimals: 2, uiAmount: 2_000_000 } },
       });
-      const raw = request.params[0].to.toLowerCase() === meta.contracts!.find(entry => entry.chain === "ethereum")!.address
-        ? 1121340573244524372905069n : 0n;
+      if (request.method === "getBlockTime") return Response.json({ jsonrpc: "2.0", id: 1, result: observedAt });
+      if (request.method === "eth_blockNumber") return Response.json({ jsonrpc: "2.0", id: 1, result: ethBlock.number });
+      if (request.method === "eth_getBlockByNumber") return Response.json({ jsonrpc: "2.0", id: 1, result: ethBlock });
+      const raw = 140_000_000n * 10n ** 18n;
       return Response.json({ jsonrpc: "2.0", id: 1, result: `0x${raw.toString(16).padStart(64, "0")}` });
     });
     vi.stubGlobal("fetch", fetchMock);
-    const price = 117.14;
-    const total = (1121340.5732445243 + 1584220.172977231) * price;
-    const aggregate = await fetchCuratedAggregateOnChainMcap(meta, price, keyedChainRpcs());
+    const price = 1.1;
+    const total = (140_000_000 + 1584220.172977231 + 15_000_000 + 2_000_000) * price;
+    const aggregate = await fetchCuratedAggregateOnChainMcap(eurcvMeta, price, keyedChainRpcs());
     expect(aggregate).toMatchObject({
       observedAt,
       chainCirculating: {
         Ethereum: { chainId: "ethereum" },
-        Polygon: { current: 0, chainId: "polygon" }, Solana: { current: 0, chainId: "solana" },
+        Stellar: { current: 15_000_000 * price, chainId: "stellar" },
+        Solana: { current: 2_000_000 * price, chainId: "solana" },
         "XRP Ledger": { current: 1584220.172977231 * price, chainId: "xrpl" },
       },
     });
     expect(aggregate!.mcap).toBeCloseTo(total, 6);
-    expect(aggregate!.chainCirculating!.Ethereum.current).toBeCloseTo(1121340.5732445243 * price, 6);
-    const partition = await fetchOnChainSupplyPartition(meta, total * 1.05, price, undefined, keyedChainRpcs());
+    expect(aggregate!.chainCirculating!.Ethereum.current).toBeCloseTo(140_000_000 * price, 6);
+    const partition = await fetchOnChainSupplyPartition(eurcvMeta, total * 1.05, price, undefined, keyedChainRpcs());
     expect(partition).toMatchObject({ chainPartition: { admission: "entered", observedAt } });
-    if (!("chainCirculating" in partition)) throw new Error("expected a complete OUSG partition");
+    if (!("chainCirculating" in partition)) throw new Error("expected a complete EURCV partition");
     expect(Object.values(partition.chainCirculating!).reduce((sum, row) => {
       if (typeof row.current !== "number") throw new Error("expected observed numeric chain stock");
       return sum + row.current;
     }, 0)).toBeCloseTo(total * 1.05, 6);
     for (solanaAmount of [" ", "0x0", "-1"]) {
-      expect(await fetchCuratedAggregateOnChainMcap(meta, price, keyedChainRpcs())).toBeNull();
+      expect(await fetchCuratedAggregateOnChainMcap(eurcvMeta, price, keyedChainRpcs())).toBeNull();
     }
-    solanaAmount = "0";
+    solanaAmount = "200000000";
     xrplAvailable = false;
-    expect(await fetchCuratedAggregateOnChainMcap(meta, price, keyedChainRpcs())).toBeNull();
-    expect(await fetchOnChainSupplyPartition(meta, total, price, undefined, keyedChainRpcs()))
+    expect(await fetchCuratedAggregateOnChainMcap(eurcvMeta, price, keyedChainRpcs())).toBeNull();
+    expect(await fetchOnChainSupplyPartition(eurcvMeta, total, price, undefined, keyedChainRpcs()))
       .toEqual({ reason: "partition-invalid", ratio: null });
   });
 
