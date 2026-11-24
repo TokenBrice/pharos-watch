@@ -389,3 +389,7 @@ e9ffbf3f450f9f461080c069472f7144b29a843e:worker/src/lib/__tests__/scheduler-live
 # Not a credential.
 84bfb13e175f8eacda78b3152d8c2ddc66e98b06:shared/lib/safety-score-v9/open-questions.ts:generic-api-key:113
 84bfb13e175f8eacda78b3152d8c2ddc66e98b06:shared/lib/safety-score-v9/open-questions.ts:generic-api-key:345
+# Safety Score v10.54 (#2318): an exit-coverage test table pairs the factor key "access"
+# with its expected policyRuleId string "v9.exit.route-factors"; generic-api-key reads
+# the pair as a credential assignment. Not a credential.
+5b506949f389d9ad22c35836b7812c2074559ea7:worker/src/lib/__tests__/safety-score-v9-fact-set-exit-coverage.test.ts:generic-api-key:1753
