@@ -280,15 +280,35 @@ describe("LiveReservesConfigSchema adapter policy validation", () => {
   );
 
   it("keeps params-gated capacity explicit rather than inheriting ungated telemetry", () => {
-    const definition = LIVE_RESERVE_ADAPTER_DEFINITIONS["chainlink-nav"];
-    expect(definition.redemptionTelemetry).toEqual({ capacity: "direct", capacityParamsGated: true, fee: "none" });
+    expect(LIVE_RESERVE_ADAPTER_DEFINITIONS["chainlink-nav"].redemptionTelemetry).toEqual({ capacity: "none", fee: "none" });
     expect(LIVE_RESERVE_ADAPTER_DEFINITIONS["superstate-liquidity"].redemptionTelemetry).toEqual({ capacity: "direct", fee: "none" });
+    expect(LIVE_RESERVE_ADAPTER_DEFINITIONS["evm-branch-balances"].redemptionTelemetry).toEqual({
+      capacity: "direct",
+      capacityParamsGated: true,
+      fee: "current-bps",
+    });
     const address = "0x0000000000000000000000000000000000000001";
-    const params = { navScope: "native-fund-share", oracleAddress: address, tokenAddress: address, assetLabel: "Fund", assetRisk: "low" };
-    expect(parseLiveReserveAdapterParams("chainlink-nav", params)).not.toHaveProperty("redemptionCapacity");
-    const redemptionCapacity = { managerAddress: address, usdcAddress: address, routerAddress: address, sourceAddress: address };
-    expect(parseLiveReserveAdapterParams("chainlink-nav", { ...params, redemptionCapacity })).toEqual({ ...params, redemptionCapacity });
-    expect(() => parseLiveReserveAdapterParams("chainlink-nav", { ...params, redemptionCapacity: {} })).toThrow();
+    const navParams = { navScope: "native-fund-share", oracleAddress: address, tokenAddress: address, assetLabel: "Fund", assetRisk: "low" };
+    expect(parseLiveReserveAdapterParams("chainlink-nav", navParams)).toEqual(navParams);
+    expect(() => parseLiveReserveAdapterParams("chainlink-nav", { ...navParams, oracleMethod: "getPriceData" })).toThrow();
+    expect(() => parseLiveReserveAdapterParams("chainlink-nav", { ...navParams, redemptionCapacity: {} })).toThrow();
+    const branchParams = {
+      branches: [{ name: "USDC", holder: address, token: { chain: "berachain", address, decimals: 6 }, risk: "low" }],
+    };
+    expect(parseLiveReserveAdapterParams("evm-branch-balances", branchParams)).not.toHaveProperty("redemptionCapacity");
+    const redemptionCapacity = {
+      kind: "honey-factory-vaults",
+      factoryAddress: address,
+      expectedHoneyAddress: address,
+      maxAssets: 4,
+      stableAssets: [{ address, decimals: 6 }],
+      sourceUrls: ["https://example.com/honey"],
+    };
+    expect(parseLiveReserveAdapterParams("evm-branch-balances", { ...branchParams, redemptionCapacity })).toEqual({
+      ...branchParams,
+      redemptionCapacity,
+    });
+    expect(() => parseLiveReserveAdapterParams("evm-branch-balances", { ...branchParams, redemptionCapacity: {} })).toThrow();
   });
 
   it("admits both ERC-4626 config generations for the measured exposure cutover", () => {

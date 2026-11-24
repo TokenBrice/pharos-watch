@@ -104,13 +104,14 @@ describe("DEX deployment coverage ownership", () => {
   });
 
   it("invalidates an old unsupported provider snapshot on the reviewed Soroban identity", () => {
-    const address = TRACKED_STABLECOINS.find((coin) => coin.id === "chfsafo-spiko")
+    const address = ACTIVE_STABLECOINS.find((coin) => coin.id === "eutbl-spiko")
       ?.contracts?.find((contract) => contract.chain === "stellar")?.address;
     expect(address).toBeDefined();
+    const tokenId = address!.slice(address!.indexOf("-") + 1);
+    expect(getDexDiscoveryProviders("stellar", tokenId)).toEqual(["aquarius"]);
     expect(getDexDiscoveryProviders("stellar", address!)).toEqual(["aquarius"]);
-    expect(getDexDiscoveryProviders("stellar", `chfSAFO-${address}`)).toEqual(["aquarius"]);
-    expect(isCensusProviderSetSupersededByRegistry("stellar", address!, [])).toBe(true);
-    expect(getDexDiscoveryProviders("ethereum", address!)).not.toContain("aquarius");
+    expect(isCensusProviderSetSupersededByRegistry("stellar", tokenId, [])).toBe(true);
+    expect(getDexDiscoveryProviders("ethereum", tokenId)).not.toContain("aquarius");
   });
 
   it("registers the Cosmos census providers by chain and denom shape", () => {

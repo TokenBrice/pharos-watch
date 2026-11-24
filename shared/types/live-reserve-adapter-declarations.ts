@@ -595,19 +595,9 @@ const chainlinkNavParamsSchema = z
       .max(160)
       .regex(/^[a-z0-9][a-z0-9._-]*:[a-z0-9][a-z0-9._:/-]*$/)
       .optional(),
-    oracleMethod: z.enum(["latestRoundData", "getPrice", "getPriceData", "getAssetPrice"]).optional(),
+    oracleMethod: z.literal("latestRoundData").optional(),
     ...OptionalEvmRpcFields,
     ...OptionalOracleFreshnessFields,
-    redemptionCapacity: z
-      .object({
-        managerAddress: EvmAddressSchema,
-        usdcAddress: EvmAddressSchema,
-        routerAddress: EvmAddressSchema,
-        sourceAddress: EvmAddressSchema,
-        pauseSelector: EvmSelectorSchema.optional(),
-      })
-      .strict()
-      .optional(),
   })
   .strict();
 
@@ -2410,10 +2400,7 @@ const ADAPTER_DECLARATIONS = {
     preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
     configValidation: CONFIG_SINGLE_ASSET_V1_V2,
-    // Redemption capacity is emitted only for coins whose params carry a
-    // redemptionCapacity block (currently OUSG); plain NAV-feed coins never
-    // emit and are not unused-telemetry candidates.
-    redemptionTelemetry: { capacity: "direct", capacityParamsGated: true, fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: TIMESTAMPED_FEED_VALIDATION,
   },
   "jpmorgan-nav": {
