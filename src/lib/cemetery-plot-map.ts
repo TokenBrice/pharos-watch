@@ -630,6 +630,30 @@ export function buildCemeteryPlotMap(entries: readonly CemeteryPlotMapInput[], o
 export function buildCemeteryPlotMap(entries: readonly CemeteryPlotMapInput[], options: BuildCemeteryPlotMapOptions<"portrait">): PortraitPlotMap;
 export function buildCemeteryPlotMap(entries: readonly CemeteryPlotMapInput[], options: BuildCemeteryPlotMapOptions): CemeteryPlotMap;
 export function buildCemeteryPlotMap(entries: readonly CemeteryPlotMapInput[], options: BuildCemeteryPlotMapOptions): CemeteryPlotMap {
+  // Legibility outranks plan length: a block whose stones hide one another's medallions gets one more row and is packed
+  // again (bounded; anything still hidden is reported by `validatePlotMapCapacity`).
+  const minBlockRows = new Map<number, number>();
+  let map = packCemeteryPlotMap(entries, options, minBlockRows);
+  for (let pass = 0; pass < PLOT_LEGIBILITY_PASSES; pass++) {
+    const hidden = occludedMedallions(map);
+    if (!hidden.length) break;
+    for (const { grave } of hidden) {
+      const block = map.blocks.find((b) => !b.empty && b.years.includes(grave.year));
+      if (block) minBlockRows.set(block.year, Math.max(minBlockRows.get(block.year) ?? 0, block.rows + 1));
+    }
+    map = packCemeteryPlotMap(entries, options, minBlockRows);
+  }
+  return map;
+}
+
+/** Re-packing passes {@link buildCemeteryPlotMap} may spend lengthening blocks whose medallions are hidden. */
+const PLOT_LEGIBILITY_PASSES = 3;
+
+function packCemeteryPlotMap(
+  entries: readonly CemeteryPlotMapInput[],
+  options: BuildCemeteryPlotMapOptions,
+  minBlockRows: ReadonlyMap<number, number>,
+): CemeteryPlotMap {
   const preset = PLOT_MAP_PRESETS[options.preset];
   if (!preset) throw new Error(`buildCemeteryPlotMap: unknown preset ${String(options.preset)}`);
   if (entries.length === 0) throw new Error("buildCemeteryPlotMap needs at least one cemetery entry");
@@ -764,14 +788,22 @@ export function buildCemeteryPlotMap(entries: readonly CemeteryPlotMapInput[], o
     if (preset.mergeBefore !== null && year < preset.mergeBefore) continue;
     groups.push({ years: [year], emptyYears: [], members: graves.filter((g) => g.year === year).sort(byRank) });
   }
-  // Slot −1 is a virtual slot on the cypress walk: only large lots may step onto it ("stand outside the beds").
-  // Pack newest → oldest so on desktop a lot-3 monument at row 0 reserves its east-facing stair forecourt slots in the
-  // immediately east (older) block when no empty-year strip separates them.
+  // Slot −1 is a virtual slot on the cypress walk: only the back lane's large lots may step onto it ("stand outside the
+  // beds"). Pack newest → oldest so on desktop a lot-3 monument at row 0 reserves its east-facing stair forecourt slots in
+  // the immediately east (older) block when no empty-year strip separates them.
   const northVirtual = preset.northTerrace >= preset.slotPitch * 0.9 ? 1 : 0;
   const isDesktop = preset.name === "desktop";
-  /** Rows (along i) and slots (along j) occupied by a grave: portrait caps width to its own cause column. */
-  const lotSpanI = (g: Pick<Working, "lot">) => (isDesktop ? g.lot : g.lot === 3 ? 2 : g.lot);
-  const lotSpanJ = (g: Pick<Working, "lot" | "cause">) => (isDesktop ? g.lot : Math.min(g.lot, laneGeo[g.cause].depth));
+  /** Slots a large lot of this cause may cover on desktop: its own lane, plus the cypress walk for the back lane. */
+  const walkable = (cause: CauseOfDeath) => northVirtual === 1 && laneGeo[cause].slot0 === 0;
+  const ownSlots = (cause: CauseOfDeath) => laneGeo[cause].depth + (walkable(cause) ? 1 : 0);
+  /**
+   * Rows (along i) and slots (along j) occupied by a grave. Every lot stays inside its own cause lane (the back lane may
+   * add the cypress walk), so a colossus stands on a 2 × 2 lot rather than straddling its neighbours; architecture and
+   * height, not footprint, carry its class. Portrait caps width to its own cause column.
+   */
+  const lotSpanI = (g: Pick<Working, "lot">) => (g.lot === 3 ? 2 : g.lot);
+  const lotSpanJ = (g: Pick<Working, "lot" | "cause">) =>
+    isDesktop ? Math.min(lotSpanI(g), ownSlots(g.cause)) : Math.min(g.lot, laneGeo[g.cause].depth);
   const groupRows = new Map<number, number>();
   const greedyBlocks = new Set<number>();
   const westForecourtByGroup = new Map<number, Set<number>>();
@@ -798,12 +830,17 @@ export function buildCemeteryPlotMap(entries: readonly CemeteryPlotMapInput[], o
         for (let a = 0; a < spanI; a++) for (let b = 0; b < spanJ; b++) if (!free(r + a, s + b)) return null;
         mark(r, s, spanI, spanJ, g.estTopZ);
       }
-      // Same-block east forecourt: a lot-3 monument at r > 0 reserves row r − 1 across its j slots on desktop.
+      // Same-block east forecourt: a lot-3 monument at r > 0 reserves row r − 1 across its j slots on desktop. Its back
+      // court (the row just west of it) stays empty too: a stone there would hide its medallion behind the podium.
       const internalBlocked = new Set<string>();
       if (isDesktop) {
         for (const { g, r, s } of lots) {
+          if (g.lot !== 3) continue;
+          for (let b = 0; b < lotSpanJ(g); b++) if (s + b >= 0) internalBlocked.add(`${r + lotSpanI(g)}:${s + b}`);
+        }
+        for (const { g, r, s } of lots) {
           if (g.lot !== 3 || r <= 0) continue;
-          for (let b = 0; b < g.lot; b++) {
+          for (let b = 0; b < lotSpanJ(g); b++) {
             const fs = s + b;
             if (fs < 0) continue;
             if (!free(r - 1, fs)) return null;
@@ -814,6 +851,7 @@ export function buildCemeteryPlotMap(entries: readonly CemeteryPlotMapInput[], o
 
       let minRows = Math.max(
         1,
+        minBlockRows.get(group.years[0]) ?? 0,
         occHeight.length,
         ...CAUSE_ORDER.map((c) => Math.ceil((smallByCause.get(c)?.length ?? 0) / laneGeo[c].depth)),
       );
@@ -870,11 +908,15 @@ export function buildCemeteryPlotMap(entries: readonly CemeteryPlotMapInput[], o
             const avail = rowAvail[r];
             if (!avail.length) continue;
             const remaining = list.length - idx;
-            // Single grave in a multi-slot lane: centre in safe slots clear of any same-row colossus's south stairs.
+            // Single grave in a multi-slot lane: the lane's centre slot (so single-grave years line up along the lane), or
+            // the nearest safe slot clear of a same-lane, same-row colossus's south stairs.
             if (list.length === 1 && avail.length > 1) {
-              const safe = avail.filter((s) => !lots.some(({ g, r: lr, s: ls }) => g.lot === 3 && r >= lr && r < lr + g.lot && s === ls + g.lot));
+              const safe = avail.filter(
+                (s) => !lots.some(({ g, r: lr, s: ls }) => g.lot === 3 && g.cause === cause && r >= lr && r < lr + lotSpanI(g) && s === ls + lotSpanJ(g)),
+              );
               const pool = safe.length ? safe : avail;
-              const chosenSlot = pool[Math.floor((pool.length - 1) / 2)];
+              const centre = L.slot0 + Math.floor((L.depth - 1) / 2);
+              const chosenSlot = pool.reduce((best, s) => (Math.abs(s - centre) < Math.abs(best - centre) ? s : best), pool[0]);
               const g = list[idx++];
               setH(r, chosenSlot, g.estTopZ);
               at.set(g.id, { r, s: chosenSlot });
@@ -927,8 +969,8 @@ export function buildCemeteryPlotMap(entries: readonly CemeteryPlotMapInput[], o
         const L = laneGeo[g.cause];
         const spanJ = lotSpanJ(g);
         const out: { r: number; s: number; own: number }[] = [];
-        const sMin = isDesktop ? Math.max(northVirtual ? -1 : 0, L.slot0 - (spanJ - 1)) : L.slot0;
-        const sMax = isDesktop ? Math.min(slots - spanJ, L.slot0 + L.depth - 1) : L.slot0 + L.depth - spanJ;
+        const sMin = isDesktop && walkable(g.cause) ? -1 : L.slot0;
+        const sMax = L.slot0 + L.depth - spanJ;
         for (let s = sMin; s <= sMax; s++) {
           const own = Math.min(s + spanJ, L.slot0 + L.depth) - Math.max(s, L.slot0);
           for (let r = 0; r <= maxRow; r++) out.push({ r, s, own });
@@ -1004,7 +1046,7 @@ export function buildCemeteryPlotMap(entries: readonly CemeteryPlotMapInput[], o
         // When the next older block touches this one across a single yearPath (no empty-year strip), reserve its west-most row.
         if (prevEnd + 1 === group.years[0]) {
           const fc = westForecourtByGroup.get(gi - 1) ?? new Set<number>();
-          for (let b = 0; b < g.lot; b++) if (s + b >= 0) fc.add(s + b);
+          for (let b = 0; b < lotSpanJ(g); b++) if (s + b >= 0) fc.add(s + b);
           westForecourtByGroup.set(gi - 1, fc);
         }
       }
@@ -1013,6 +1055,18 @@ export function buildCemeteryPlotMap(entries: readonly CemeteryPlotMapInput[], o
       const at = chosen.at.get(g.id)!;
       g.row = at.r;
       g.slot = at.s;
+    }
+    // A lane of small stones in a closed block made deep by another lane sits mid-block, so its bed never shows more
+    // than `maxEmptyBedRows` bare rows (the newest block keeps east anchoring, so new deaths never move a stone).
+    if (isDesktop && preset.maxEmptyBedRows !== null && gi < groups.length - 1) {
+      for (const cause of CAUSE_ORDER) {
+        const mine = members.filter((g) => g.cause === cause);
+        if (!mine.length || mine.some((g) => g.lot > 1)) continue;
+        const used = Math.max(...mine.map((g) => g.row)) + 1;
+        if (chosen.rows - used <= preset.maxEmptyBedRows) continue;
+        const shift = Math.floor((chosen.rows - used) / 2);
+        for (const g of mine) g.row += shift;
+      }
     }
     groupRows.set(group.years[0], chosen.rows);
     if (found.greedy) greedyBlocks.add(group.years[0]);
@@ -1735,16 +1789,16 @@ function checkGraveBounds(map: CemeteryPlotMap, eps: number): PlotCapacityIssue[
   const block = new Map<number, PlotYearBlock>();
   for (const b of map.blocks) if (!b.empty) for (const y of b.years) block.set(y, b);
   const { site } = map;
+  // Every grave stays inside its own lane; on desktop the back lane's large lots may also stand on the cypress walk.
+  const backLane = map.lanes.reduce((a, b) => (b.j0 < a.j0 ? b : a));
   for (const g of map.graves) {
     const L = lane[g.cause];
     const B = block.get(g.year);
     const { cell } = g;
-    const inLane =
-      map.preset === "portrait" || g.lot === 1
-        ? cell.j0 >= L.j0 - eps && cell.j1 <= L.j1 + eps
-        : cell.j0 < L.j1 - eps && cell.j1 > L.j0 + eps;
+    const laneJ0 = map.preset === "desktop" && g.lot > 1 && L === backLane ? 0 : L.j0;
+    const inLane = cell.j0 >= laneJ0 - eps && cell.j1 <= L.j1 + eps;
     if (!inLane || cell.j0 < -eps || cell.j1 > site.jFront + eps) {
-      issues.push({ kind: "lane-overflow", message: `${g.id} (${g.lot}×${g.lot}) leaves the ${L.label} lane or the site` });
+      issues.push({ kind: "lane-overflow", message: `${g.id} (lot ${g.lot}) leaves the ${L.label} lane or the site` });
     }
     if (!B || cell.i0 < B.i0 - eps || cell.i1 > B.i1 + eps) {
       issues.push({ kind: "block-overflow", message: `${g.id} leaves its ${g.year} block` });
@@ -2036,6 +2090,15 @@ const MEDALLION_SAMPLES: readonly (readonly [number, number])[] = (() => {
  * faces (measured deterministically on both desktop and portrait presets).
  */
 function checkMedallionOcclusion(map: CemeteryPlotMap): PlotCapacityIssue[] {
+  const limit = PLOT_LAYOUT.maxMedallionOcclusion;
+  return occludedMedallions(map).map(({ grave, share }) => ({
+    kind: "medallion-occluded",
+    message: `${grave.id} (${map.preset}) medallion ${Math.round(share * 100)}% occluded (> ${Math.round(limit * 100)}%)`,
+  }));
+}
+
+/** Graves whose medallion is more than `maxMedallionOcclusion` covered by later-drawn solid faces, with the covered share. */
+function occludedMedallions(map: CemeteryPlotMap): { grave: PlotGrave; share: number }[] {
   const proj = PLOT_PROJECTIONS[map.projection];
   const byKey = new Map(map.graves.map((g) => [`grave:${g.id}`, g]));
   const ordered = map.drawOrder.flatMap((key) => {
@@ -2048,7 +2111,7 @@ function checkMedallionOcclusion(map: CemeteryPlotMap): PlotCapacityIssue[] {
     const box = bbox(polys.flat());
     return [{ g, medal: geo.medal, polys, box }];
   });
-  const issues: PlotCapacityIssue[] = [];
+  const hidden: { grave: PlotGrave; share: number }[] = [];
   const limit = PLOT_LAYOUT.maxMedallionOcclusion;
   for (let i = 0; i < ordered.length; i++) {
     const { g, medal } = ordered[i];
@@ -2067,14 +2130,9 @@ function checkMedallionOcclusion(map: CemeteryPlotMap): PlotCapacityIssue[] {
       }
     }
     const share = covered / MEDALLION_SAMPLES.length;
-    if (share > limit + 1e-9) {
-      issues.push({
-        kind: "medallion-occluded",
-        message: `${g.id} (${map.preset}) medallion ${Math.round(share * 100)}% occluded (> ${Math.round(limit * 100)}%)`,
-      });
-    }
+    if (share > limit + 1e-9) hidden.push({ grave: g, share });
   }
-  return issues;
+  return hidden;
 }
 
 /** Ordered capacity/scene-lint checks. Adding a new issue kind is one check function appended here. */

@@ -314,16 +314,22 @@ describe("validatePlotMapCapacity", () => {
       expect(fittedWidth(w, h)).toBeGreaterThanOrEqual(desktop.floorWidth);
     }
 
-    // Item 1 (FX2): sparse desktop per-block beds trim along j to occupied slots + 1 inside their lane (e.g. 2024–2026
-    // Algorithmic single-grave blocks narrow from 4 slots to 2 slots without overhanging any grave).
+    // Item 1 (FX2): sparse desktop per-block beds trim along j to occupied slots + 1 inside their lane (e.g. 2023–2026
+    // Algorithmic single-grave blocks narrow from 4 slots to 2 slots without overhanging any grave), lined up.
     const algoLane = desktop.lanes.find((l) => l.cause === "algorithmic-failure")!;
-    for (const year of [2024, 2025, 2026]) {
+    for (const year of [2023, 2024, 2025, 2026]) {
       const cell = algoLane.cells.find((c) => c.year === year)!;
       expect(cell).toBeDefined();
       expect(cell.j1 - cell.j0).toBeCloseTo(2 * desktop.slotPitch, 2);
       expect(cell.j0).toBeGreaterThanOrEqual(algoLane.j0 - 1e-6);
       expect(cell.j1).toBeLessThanOrEqual(algoLane.j1 + 1e-6);
+      expect(cell.j0).toBeCloseTo(algoLane.cells.find((c) => c.year === 2026)!.j0, 6);
     }
+
+    // Desktop colossi stand on 2 × 2 lots in their own lane; UST straddling the regulatory lane fails `lane-overflow`.
+    for (const g of desktop.graves.filter((d) => d.lot === 3)) expect(Math.round((g.cell.i1 - g.cell.i0) * (g.cell.j1 - g.cell.j0) * 100)).toBe(405);
+    const stray = { ...desktop, graves: desktop.graves.map((g) => (g.symbol === "UST" ? { ...g, cell: { ...g.cell, j0: 1 } } : g)) };
+    expect(validatePlotMapCapacity(stray).issues.map((i) => i.kind)).toContain("lane-overflow");
 
     // Item 6: every portrait grave (including lot-3 colossi UST and BUSD) stays strictly inside its own cause column.
     const portraitLaneByCause = new Map(portrait.lanes.map((L) => [L.cause, L]));
