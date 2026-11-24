@@ -10,11 +10,11 @@ import {
 } from "../../types/stablecoin-meta-primitives";
 
 const expiry = policy.semantic.evidence.evidenceExpiry;
-export const NAMED_FIRM_RESERVE_REPORT_MAX_AGE_SEC = expiry.namedFirmReserveReportMaxAgeSec;
+const NAMED_FIRM_RESERVE_REPORT_MAX_AGE_SEC = expiry.namedFirmReserveReportMaxAgeSec;
 // Monthly reports commonly land in the first week after month-end.
 export const REVIEWED_RESERVE_COMPOSITION_ADMISSION_MAX_AGE_SEC =
   expiry.reviewedReserveCompositionMaxAgeSec + expiry.reviewedReserveCompositionGraceSec;
-export const REGULATOR_PERIODIC_FILING_COMPOSITION_MAX_AGE_SEC =
+const REGULATOR_PERIODIC_FILING_COMPOSITION_MAX_AGE_SEC =
   expiry.regulatorPeriodicFilingCompositionMaxAgeSec;
 
 const REGULATOR_SET: ReadonlySet<string> = new Set(RESERVE_COMPOSITION_FILING_REGULATOR_VALUES);
