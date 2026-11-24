@@ -13,7 +13,6 @@ import {
   sourceRefRouteCapacityAccess,
   sourceRefRouteCapacityFees,
 } from "./shared";
-import { NEST_NAV_VAULT_CONFIGS } from "./queue-redeem-nest-nav";
 import {
   REVIEWED_EXIT_CREDIT_AT,
   REVIEWED_FIRST_WAVE_AT,
@@ -379,31 +378,6 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "The access model records the currently executable contract path. Holder eligibility remains issuer-discretionary because the published Machine Terms retain Verified-User admission, suspension, and revocation, with no promised appeal SLA. U.S. persons and other Prohibited Persons or Jurisdictions are ineligible, and EU/EEA-originating transactions may be refused.",
       "Settlement is available only in Ethereum USDC after the operator frees accounting-token liquidity; there is no committed alternate settlement asset, and the operator may cease the Machine without notice.",
       "Fresh Makina route telemetry computes currently available queue liquidity as max(0, the Machine's idle Ethereum USDC minus the USDC liability of DUSD shares locked in the AsyncRedeemer). Because finalization is operator-batched and has no proven maximum completion bound, an open route is published as unproven settlement capacity rather than a measured zero-capacity exit. If the same-block onchain proof fails validation, the route remains missing-capacity rather than falling back to AUM, full supply, deployed positions, or a static ratio.",
-    ],
-  }),
-  "acred-apollo-securitize": defineReviewedQueueRedeemConfig(REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT, {
-    accessModel: "issuer-api",
-    settlementModel: "queued",
-    executionModel: "rules-based-nav",
-    outputAssetType: "stable-basket",
-    outputAssets: ["usdc-circle", "usdg-paxos"],
-    costModel: fixedFee(0, "RWA.xyz lists 0% ACRED redemption fees"),
-    docs: [
-      sourceRef(
-        "Apollo / Securitize ACRED launch",
-        "https://www.nasdaq.com/press-release/apollo-and-securitize-announce-partnership-and-launch-tokenized-access-credit-fund",
-        ["route", "access", "settlement"],
-      ),
-      sourceRefFull("RWA.xyz ACRED profile", "https://app.rwa.xyz/assets/ACRED"),
-      sourceRef(
-        "Securitize ACRED fund page",
-        "https://securitize.io/primary-market/apollo-diversified-credit-securitize-fund",
-        ["route", "settlement"],
-      ),
-    ],
-    notes: [
-      "Securitize launch materials describe ACRED as offering native redemptions at daily NAV for qualifying Securitize Markets investors, while public RWA.xyz metadata lists quarterly redemption timing; Pharos therefore models the route as queued documented-bound NAV redemption rather than immediate liquidity",
-      "Output declared 2026-07-19: the current Securitize ACRED fund page lists redemption off-ramps as USDC and USDG (proceeds paid at NAV on the quarterly repurchase cycle), so the nav placeholder type was replaced with the documented stablecoin basket; the queued settlement model is unchanged.",
     ],
   }),
   "usdf-falcon": defineQueueRedeemConfig({
@@ -836,45 +810,6 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "The 30% ratio is a reviewed heuristic reflecting delta-neutral AVAX hedge composition rather than a published instant-liquidity floor",
     ],
   }),
-  "usp-pikudao": defineQueueRedeemConfig({
-    outputAssets: ["usdc-circle"],
-    accessModel: "whitelisted-onchain",
-    settlementModel: "days",
-    capacityModel: { kind: "unquantified" },
-    costModel: fixedFee(20, "Piku docs list a 20 bps redemption fee"),
-    reviewedAt: REVIEWED_QUEUE_REDEMPTION_AT,
-    docs: [
-      sourceRef("Piku docs", "https://docs.piku.co/piku", ["route", "capacity", "access", "fees", "settlement"]),
-      sourceRef("Piku website", "https://piku.co/", ["route"]),
-      sourceRef(
-        "Piku USP vault holder terms",
-        "https://piku.co/app/detail/USP",
-        ["route", "fees", "settlement"],
-      ),
-    ],
-    v9RouteReviewTerms: {
-      scoringDisposition: "bounded-terms-gap",
-      missingScoringFields: ["settlement"],
-      rationale: "The USP page states processing within 48 hours, but governing Terms sections 4.5 and 5.3 permit delay for illiquidity, unavailability or loss of backing assets and at the issuer's sole discretion. They promise commercially reasonable efforts and say completion may take several business days. No unconditional completed-holder-payout maximum is established. Reviewed by Sol curation campaign 2026-10-09 (Lane47Babelfish) at 2026-10-09T10:36:33Z.",
-      reviewedAt: "2026-10-09",
-      docs: [
-        sourceRef(
-          "Piku USP vault holder terms",
-          "https://piku.co/app/detail/USP",
-          ["route", "settlement"],
-        ),
-        sourceRef(
-          "Piku governing Terms of Use, sections 4.5 and 5.3 (last updated June 2, 2026)",
-          "https://docs.piku.co/piku/terms-of-use.md",
-          ["route", "settlement"],
-        ),
-      ],
-    },
-    notes: [
-      "Piku's exact USP vault page describes FIFO redemptions processed within 48 hours, a 2-day redemption period, and a 0.20% redemption fee.",
-      "The unsupported 10% documented-bound capacity assumption was withdrawn on 2026-10-20. Current issuer sources describe a liquidity buffer and backing liquidation without a numeric committed throughput or executable cash-capacity bound.",
-    ],
-  }),
   "aznd-mu-digital": defineReviewedQueueRedeemConfig(REVIEWED_QUEUE_REDEMPTION_AT, {
     outputAssets: ["usdc-circle"],
     accessModel: "whitelisted-onchain",
@@ -1218,27 +1153,6 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     docs: [
       sourceRefFull("Hyperbeat USDT vault", "https://docs.hyperbeat.org/hyperbeat-earn/usdt-vault"),
       sourceRef("Hyperbeat addresses", "https://docs.hyperbeat.org/resources/addresses", ["route"]),
-    ],
-  }),
-  ...NEST_NAV_VAULT_CONFIGS,
-  "inalpha-nest": defineReviewedQueueRedeemConfig(REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT, {
-    outputAssets: ["usdc-circle", "pusd-plume"],
-    accessModel: "issuer-api",
-    settlementModel: "days",
-    executionModel: "rules-based-nav",
-    outputAssetType: "stable-basket",
-    costModel: undisclosedReviewedFee(
-      "Legacy inALPHA's exact public sources do not establish a current complete redemption-fee schedule; the active nALPHA token and its quotes are a different claim",
-    ),
-    docs: [
-      sourceRef("Nest conditional liquidity and redemptions", "https://docs.nest.credit/about/liquidity-and-redemptions", ["settlement"]),
-      sourceRef("Exact legacy inALPHA share and NAV", "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/price", ["route"]),
-      sourceRef("Exact legacy inALPHA positions", "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/positions", ["route"]),
-    ],
-    notes: [
-      "Legacy inALPHA is the Ethereum/Plume share token 0x64ab176c545bb85eca75d53c3ffcb361deafb855, not the active nALPHA vault at 0x593ccca4c4bf58b7526a4c164ceef4003c6388db.",
-      "Current active-vault redemption estimates cannot be transplanted to this legacy token; its exact all-in cost and final settlement bound remain unestablished.",
-      "Output type corrected 2026-07-19: the documented payout assets (pUSD or USDC) were already declared, so the nav placeholder type was replaced with stable-basket, matching the four sibling Nest vault entries retyped in the 2026-07-15 output wave; the delayed-NAV settlement semantics are unchanged.",
     ],
   }),
   "busd0-usual": defineReviewedQueueRedeemConfig(REVIEWED_STABLECOIN_AUDIT_AT, {

@@ -1,9 +1,7 @@
 import { LIVE_RESERVE_FRESHNESS_SEC } from "../../../lib/live-reserve-policy";
 import { fetchEearnSuiSupply } from "./sui-vault-supply";
-import { fetchUsdySuiSupply } from "./usdy-sui-supply";
 import { fetchAptosSupply } from "./usdy-aptos-supply";
 import { fetchStellarSupply, observeStellarSupply } from "./stellar-supply";
-import { fetchNobleSupply } from "./noble-supply";
 import { fetchXrplSupply, XrplSupplyValidationError } from "./xrpl-supply";
 import { logWorkerEventArgs } from "../../../lib/structured-log";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
@@ -207,12 +205,8 @@ async function readContractSupplyRaw(input: {
   const evmContext = input.family === "evm" && input.chainRpcs
     ? { chainRpcs: input.chainRpcs }
     : undefined;
-  const reader = reviewedOnchainSupplyReader(input.meta, supplyContract);
 
   if (input.family === "sui") {
-    if (reader === "usdy-sui") {
-      return fetchUsdySuiSupply(supplyContract.address, supplyContract.decimals, input.signal);
-    }
     return fetchEearnSuiSupply(supplyContract.address, supplyContract.decimals, input.signal);
   }
 
@@ -220,7 +214,6 @@ async function readContractSupplyRaw(input: {
     const stellarAddress = input.stellarAssetCode ? `${input.stellarAssetCode}-${supplyContract.address}` : supplyContract.address;
     return fetchStellarSupply(stellarAddress, supplyContract.decimals, input.signal);
   }
-  if (input.family === "noble") return fetchNobleSupply(supplyContract.address, supplyContract.decimals, input.signal);
 
   if (input.family === "starknet") {
     return fetchStarknetTotalSupply({
@@ -500,8 +493,8 @@ async function fetchOnChainSupplyForContract(input: {
           ? await observeSolanaTokenSupply(supplyContract.address, supplySignal, { jsonRequestExecutor }, rpcUrl, fallbackRpcUrl)
           : family === "stellar" && stateClockRequired
             ? await observeStellarSupply(stellarAddress, decimals, supplySignal)
-            : reader === "buidl-aptos" || reader === "usdy-aptos"
-              ? await fetchAptosSupply(supplyContract.address, decimals, supplySignal, reader === "buidl-aptos" ? "BUIDL" : "USDY")
+            : reader === "buidl-aptos"
+              ? await fetchAptosSupply(supplyContract.address, decimals, supplySignal, "BUIDL")
               : undefined;
     if (clockedSupply === null) return reject("state-clock-unavailable", undefined, "legs-unreadable");
     if (clockedSupply) {

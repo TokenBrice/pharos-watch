@@ -109,7 +109,7 @@ describe("reviewed business-day completion bounds", () => {
     expect(resolveReviewedRedemptionSettlementDelay(review, Date.parse("2027-10-10T00:00:01Z") / 1_000)).toBeUndefined();
     expect(checkCalendarHorizon(Date.parse(date) / 1_000)).toBe(expected);
   });
-  it.each(["euri-banking-circle", "brlv-crown", "fusd-finchain", "mre7yield-midas", "mmev-midas", "mhyper-midas"])("does not turn reviewed %s normal terms into an unconditional scalar", (id) => {
+  it.each(["euri-banking-circle", "brlv-crown", "fusd-finchain"])("does not turn reviewed %s normal terms into an unconditional scalar", (id) => {
     const config = getRedemptionBackstopConfig(id)!;
     expect(resolveReviewedRedemptionSettlementDelay(config.v9RouteReviewTerms, clock)).toBeUndefined();
     expect(RedemptionBackstopConfigSchema.safeParse({ ...config, v9RouteReviewTerms: { ...config.v9RouteReviewTerms, settlementDelaySec: 3 * 86400 } }).success).toBe(false);

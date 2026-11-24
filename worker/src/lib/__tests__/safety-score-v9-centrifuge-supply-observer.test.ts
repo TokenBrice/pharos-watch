@@ -308,7 +308,7 @@ describe("Centrifuge reviewed deployment observer", () => {
     });
   });
 
-  it.each(["jtrsy-anemoy", "acrdx-anemoy-apollo"])("reads the rotated Token-2022 authority for %s and rejects its predecessor", async (assetId) => {
+  it.each(["jtrsy-anemoy"])("reads the rotated Token-2022 authority for %s and rejects its predecessor", async (assetId) => {
     const route = buildReviewedDeploymentRouteInventory(assetId)!.routes.find(row => row.chainId === "solana")!;
     const identity = expectedCentrifugeDeploymentIdentity(
       assetId,

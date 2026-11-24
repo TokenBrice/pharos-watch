@@ -14,8 +14,6 @@ import {
 import {
   CURVE_STABLESWAP_NG_DEPLOYMENTS,
   CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT,
-  CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS,
-  CURVE_STABLESWAP_NG_ETHERLINK_FACTORY,
 } from "@shared/lib/measured-execution-deployment-policies";
 import {
   fetchEvmBlockHeader,
@@ -47,7 +45,7 @@ export const CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID =
   DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwapNg;
 
 export interface CurveStableSwapNgPoolPolicy {
-  chain: "ethereum" | "etherlink";
+  chain: "ethereum";
   stablecoinId: string;
   poolAddress: `0x${string}`;
   expectedPoolCodeHash: `0x${string}`;
@@ -66,19 +64,16 @@ export interface CurveStableSwapNgPoolPolicy {
 
 /** Projects one reviewed deployment identity, plus its factory binding, into the producer policy shape. */
 function toCurveStableSwapNgPolicy(
-  deployment: (typeof CURVE_STABLESWAP_NG_DEPLOYMENTS)[number] | (typeof CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS)[number],
+  deployment: (typeof CURVE_STABLESWAP_NG_DEPLOYMENTS)[number],
   mode: "active" | "shadow" = "active",
 ): CurveStableSwapNgPoolPolicy {
-  const factory = deployment.chain === "etherlink"
-    ? CURVE_STABLESWAP_NG_ETHERLINK_FACTORY
-    : CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT;
   return {
     chain: deployment.chain,
     stablecoinId: deployment.stablecoinId,
     poolAddress: deployment.poolAddress,
     expectedPoolCodeHash: deployment.poolCodeHash,
-    factoryAddress: factory.address,
-    expectedFactoryCodeHash: factory.codeHash,
+    factoryAddress: CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT.address,
+    expectedFactoryCodeHash: CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT.codeHash,
     factoryPoolIndex: deployment.factoryPoolIndex,
     poolTokens: deployment.poolTokens,
     inputIndex: deployment.inputIndex,
@@ -99,7 +94,6 @@ export const CURVE_DUSD_USDC_STABLESWAP_NG_POLICY: CurveStableSwapNgPoolPolicy =
 const CURVE_STABLESWAP_NG_POLICIES: readonly CurveStableSwapNgPoolPolicy[] = [
   CURVE_USDG_USDC_STABLESWAP_NG_POLICY,
   CURVE_DUSD_USDC_STABLESWAP_NG_POLICY,
-  ...CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS.map((deployment) => toCurveStableSwapNgPolicy(deployment, "shadow")),
 ];
 
 export interface CurveStableSwapNgRuntimeEvidence {

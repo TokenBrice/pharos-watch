@@ -1,15 +1,11 @@
-import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { OPTIONAL_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
 import { type ChainRpcConfig } from "../../lib/chain-registry";
 import { fetchZephyrZysSource } from "../../lib/yield-source-adapters/zephyr";
 import { runTimedOptionalSource } from "./sources-rpc";
 import type { ResolvedYield } from "./types";
 
-import { loadMidasMmevOracleAnchorRow, loadOndoOracleAnchorRow } from "./optional-nav-history";
 import {
   fetchHashnoteUsycSource,
-  fetchMidasMmevNavOracleSource,
-  fetchOndoUsdyOracleSource,
   fetchReProtocolReusdSource,
 } from "./sources-optional-nav";
 import {
@@ -51,30 +47,6 @@ const OPTIONAL_SOURCE_READERS = {
   gtusdcMorpho: (signal, context) => fetchMorphoNetVaultSource(OPTIONAL_YIELD_SOURCES.gtusdcMorpho, context.startSec, signal),
   bbqusdcMorpho: (signal, context) => fetchMorphoNetVaultSource(OPTIONAL_YIELD_SOURCES.bbqusdcMorpho, context.startSec, signal),
   hashnote: (signal) => fetchHashnoteUsycSource(signal),
-  midas: async (signal, context) => {
-    const candidate = await fetchMidasMmevNavOracleSource({
-      loadAnchor: async (observedAt) => {
-        const anchor = await loadMidasMmevOracleAnchorRow(context.db, observedAt);
-        return anchor?.source_observed_at != null
-          ? { exchangeRate: anchor.exchange_rate, observedAt: anchor.source_observed_at } : null;
-      },
-      nowSec: context.startSec,
-      signal,
-      chainRpcs: context.chainRpcs,
-    });
-    return candidate?.yield ?? null;
-  },
-  ondo: async (signal, context) => {
-    const anchorRow = await loadOndoOracleAnchorRow(context.db, context.startSec);
-    const daysDelta = anchorRow ? (context.startSec - anchorRow.recorded_at) / DAY_SECONDS : 0;
-    return fetchOndoUsdyOracleSource(
-      anchorRow?.exchange_rate ?? null,
-      daysDelta,
-      anchorRow?.recorded_at ?? null,
-      signal,
-      context.chainRpcs,
-    );
-  },
   re: (signal) => fetchReProtocolReusdSource(signal),
   zephyr: (signal) => fetchZephyrZysSource(signal),
 } satisfies Record<keyof typeof OPTIONAL_YIELD_SOURCES,

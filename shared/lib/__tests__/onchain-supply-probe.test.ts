@@ -66,13 +66,13 @@ describe("supportsOnchainSupplyProbe", () => {
   });
 
   it("requires XRPL issued-currency identity and native amount encoding", () => {
-    const contract = TRACKED_META_BY_ID.get("ousg-ondo-finance")!.contracts!.find(entry => entry.chain === "xrpl")!;
+    const contract = TRACKED_META_BY_ID.get("eurcv-societe-generale-forge")!.contracts!.find(entry => entry.chain === "xrpl")!;
     expect(onchainSupplyProbeFamily(contract)).toBe("xrpl");
     for (const invalid of [
       { ...contract, decimals: 6 },
       { ...contract, amountEncoding: undefined },
       { ...contract, amountEncoding: { kind: "fixed-decimal" as const } },
-      ...["OUSG.bad", "XRP.rHuiXXjHLpMP8ZE9sSQU5aADQVWDwv6h5p", `${contract.address}.extra`]
+      ...["EURCV.bad", "XRP.rHuiXXjHLpMP8ZE9sSQU5aADQVWDwv6h5p", `${contract.address}.extra`]
         .map(address => ({ ...contract, address })),
     ]) expect(onchainSupplyProbeFamily(invalid)).toBeNull();
   });
@@ -137,10 +137,6 @@ describe("curated on-chain supply paths", () => {
     { id: "buidl-blackrock", chains: ["ethereum", "ethereum", "bsc", "optimism", "arbitrum", "avalanche", "polygon", "solana", "aptos", "tempo"], zero: [] },
     { id: "usyc-hashnote", chains: ["ethereum", "bsc", "solana", "arc"], zero: ["arc"] },
     { id: "jtrsy-anemoy", chains: ["ethereum", "base", "arbitrum", "avalanche", "plume", "bsc", "monad", "solana", "pharos", "xlayer", "arc"], zero: ["solana", "xlayer", "arc"] },
-    { id: "nopal-nest", chains: ["ethereum", "plume", "bsc", "solana", "plasma", "worldchain", "avalanche", "arc", "monad", "robinhood"], zero: ["plasma"] },
-    { id: "acred-apollo-securitize", chains: ["aptos", "avalanche", "ethereum", "ink", "polygon", "sei", "solana"], zero: [] },
-    { id: "brsrv-blackrock", chains: ["ethereum", "tempo", "solana"], zero: ["tempo", "solana"] },
-    { id: "stac-securitize", chains: ["ethereum", "solana"], zero: [] },
     { id: "syrupusdg-maple", chains: ["ethereum", "robinhood", "arbitrum", "ink", "solana"], zero: ["ink", "solana"], canonical: "ethereum" },
     { id: "strusd-tori", chains: ["ethereum", "monad", "pharos"], zero: [], canonical: "ethereum" },
     { id: "uty-xsy", chains: ["base", "avalanche", "katana"], zero: ["avalanche", "katana"], canonical: "base" },
@@ -153,7 +149,6 @@ describe("curated on-chain supply paths", () => {
     { id: "susdai-usd-ai", chains: ["arbitrum", "ethereum", "base", "plasma", "solana", "arc"], zero: [] },
     { id: "reusd-re-protocol", chains: ["ethereum", "avalanche", "arbitrum", "base", "bsc", "ink", "plasma", "katana", "tempo", "solana", "berachain", "monad", "sei", "megaeth", "tempo"], zero: ["berachain", "megaeth"] },
     { id: "eurcv-societe-generale-forge", chains: ["ethereum", "xrpl", "stellar", "solana"], zero: [] },
-    { id: "jpysc-sbi-startale", chains: ["ethereum"], zero: [] },
     { id: "zchf-frankencoin", chains: ["ethereum", "optimism", "gnosis", "base", "arbitrum", "polygon", "avalanche", "sonic"], zero: ["avalanche", "sonic"] },
     { id: "euri-banking-circle", chains: ["ethereum", "bsc"], zero: [] },
   ])("requires the complete reviewed NAV roster and accounting policy for $id", ({ id, chains, zero, canonical }) => {
@@ -206,7 +201,7 @@ describe("curated on-chain supply paths", () => {
     expect(prefersOnChainSupplyMcap(TRACKED_META_BY_ID.get("jtrsy-anemoy")!)).toBe(true);
     expect(prefersOnChainSupplyMcap(TRACKED_META_BY_ID.get("usdcx-movement")!)).toBe(true);
     expect(selectSingleOnchainSupplyProbeContract(meta)?.chain).toBe("ethereum");
-    for (const id of ["eurc-circle", "eurcv-societe-generale-forge", "jpysc-sbi-startale", "brla-brla-digital", "zchf-frankencoin", "euri-banking-circle"]) {
+    for (const id of ["eurc-circle", "eurcv-societe-generale-forge", "brla-brla-digital", "zchf-frankencoin", "euri-banking-circle"]) {
       expect(prefersReviewedNativeFiatSupply(TRACKED_META_BY_ID.get(id)!)).toBe(true);
     }
     expect(prefersReviewedNativeFiatSupply(TRACKED_META_BY_ID.get("kau-kinesis")!)).toBe(false);
@@ -400,17 +395,11 @@ describe("curated on-chain supply paths", () => {
 
   it.each([
     { id: "yusd-yieldfi", chains: ["ethereum", "arbitrum", "base", "optimism", "sonic", "plume", "katana", "bsc", "avalanche", "plasma"] },
-    { id: "rwausdi-multipli", chains: ["ethereum", "base", "monad", "arbitrum", "xlayer", "robinhood", "pharos"],
-      endpoints: { pharos: "https://rpc.pharos.xyz" }, fallback: { pharos: undefined }, runtime: true },
     { id: "savusd-avant", chains: ["avalanche", "ethereum", "linea", "plasma", "berachain", "bsc", "monad", "katana", "megaeth", "sei"],
       canonical: "avalanche", zero: ["katana"], endpoints: { megaeth: "https://mainnet.megaeth.com/rpc" } },
     { id: "cusdo-openeden", chains: ["ethereum", "base", "bsc", "solana", "klaytn"], mint: "BnANu5CtUogLqcvBNByJuwaRvRxNtVuDcAytwjsUUtqs" },
-    { id: "iauon-ondo", chains: ["ethereum", "bsc", "solana", "hyperevm"],
-      mint: "M77ZvkZ8zW5udRbuJCbuwSwavRa7bGAZYMTwru8ondo", zero: ["hyperevm"] },
     { id: "susdai-usd-ai", chains: ["arbitrum", "ethereum", "base", "plasma", "solana", "arc"], mint: "sUSDai6Y3GxysDEtA9BVcEFTaog6UZpYUVxJiMhAKYE" },
     { id: "syusd-aegis", chains: ["ethereum", "bsc"] },
-    { id: "slvon-ondo", chains: ["ethereum", "bsc", "solana", "hyperevm"], mint: "M77ZvkZ8zW5udRbuJCbuwSwavRa7bGAZYMTwru8ondo" },
-    { id: "mhyper-midas", chains: ["ethereum", "monad", "plasma", "katana"] },
     { id: "sdola-inverse-finance", chains: ["ethereum", "base", "optimism", "arbitrum", "berachain"],
       zeroFlags: [undefined, true, true, true, true] },
     { id: "usdk-kast", chains: ["solana"], mint: "usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX", runtime: true },
@@ -423,20 +412,16 @@ describe("curated on-chain supply paths", () => {
     { id: "syrupusdc-maple", chains: ["ethereum", "base", "arbitrum", "solana", "ink", "monad", "robinhood", "tempo", "arc"],
       canonical: "ethereum", mint: "AvZZF1YaZDziPY2RCK4oJrRVrbN3mTD9NL24hPeaZeUj", endpoints: { monad: "https://rpc.monad.xyz" } },
     { id: "witry-brix", chains: ["ethereum", "megaeth"], canonical: "ethereum" },
-    { id: "usd3-reserve-protocol", chains: ["ethereum", "base"], canonical: "ethereum" },
     { id: "brlv-crown", chains: ["base", "ethereum", "tempo"], zero: ["ethereum", "tempo"],
       endpoints: { base: undefined, ethereum: undefined, tempo: "https://rpc.tempo.xyz" } },
     { id: "syzusd-yuzu", chains: ["plasma", "ethereum", "monad", "hyperevm", "sei", "pharos", "berachain", "aptos", "base"], canonical: "plasma",
       zero: ["hyperevm", "base"],
       endpoints: { plasma: "https://rpc.plasma.to", monad: "https://rpc.monad.xyz" } },
     { id: "idrt-rupiah-token", chains: ["ethereum", "bsc", "polygon"], prefer: true },
-    { id: "ntbill-nest", chains: ["ethereum", "plume", "arbitrum", "bsc", "solana"],
-      mint: "2sA2jW9e8EYJkLFpq9hkhxfVUQBwVGJwq6iP4TmTKrL4", zeroFlags: [undefined, undefined, true, true, undefined],
-      endpoints: { plume: "https://rpc.plume.org" } },
     { id: "susdc-spark-v1", chains: ["ethereum", "arbitrum", "base", "optimism", "unichain"],
       zeroFlags: [true, true, true, true, true], endpoints: { unichain: "https://mainnet.unichain.org" } },
 
-  ])("selects reviewed aggregate policy for $id", ({ id, chains, canonical, mint, zero, zeroFlags, endpoints, fallback, runtime, prefer }) => {
+  ])("selects reviewed aggregate policy for $id", ({ id, chains, canonical, mint, zero, zeroFlags, endpoints, runtime, prefer }) => {
     const contracts = chains.map((chain, index) => ({
       chain,
       address: chain === "solana" ? mint! : `0x${String(index + 1).padStart(40, "0")}`,
@@ -456,9 +441,6 @@ describe("curated on-chain supply paths", () => {
     if (zeroFlags) expect(selected?.map((entry) => entry.config.allowZeroSupply)).toEqual(zeroFlags);
     for (const [chain, rpcUrl] of Object.entries(endpoints ?? {})) {
       expect(selected?.find((entry) => entry.config.chain === chain)?.config.rpcUrl).toBe(rpcUrl);
-    }
-    for (const [chain, rpcUrl] of Object.entries(fallback ?? {})) {
-      expect(selected?.find((entry) => entry.config.chain === chain)?.config.fallbackRpcUrl).toBe(rpcUrl);
     }
     if (runtime) expect(hasRuntimeOnchainSupplyPath(meta)).toBe(true);
   });
@@ -510,25 +492,10 @@ describe("curated on-chain supply paths", () => {
 
   it.each([
     {
-      id: "uscc-superstate",
-      contracts: [
-        { chain: "ethereum", address: "0x14d60e7fdc0d71d8611742720e4c50e7a974020c", decimals: 6 },
-        { chain: "plume", address: "0x4c21b7577c8fe8b0b0669165ee7c8f67fa1454cf", decimals: 6 },
-        { chain: "solana", address: "BTRR3sj1Bn2ZjuemgbeQ6SCtf84iXS81CS7UDTSxUCaK", decimals: 6 },
-      ],
-    },
-    {
       id: "pyusdx-moonpay",
       contracts: ["ethereum", "arbitrum", "monad", "base", "0g"].map((chain) => ({
         chain, address: "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d", decimals: 6,
       })),
-    },
-    {
-      id: "fiusd-sygnum",
-      contracts: [
-        { chain: "zksync", address: "0x2ab105a3ead22731082b790ca9a00d9a3a7627f9", decimals: 2 },
-        { chain: "arbitrum", address: "0xcded6b899edba762d793f44ed295248049440e1e", decimals: 2 },
-      ],
     },
   ])("requires every reviewed native deployment for $id", ({ id, contracts }) => {
     const meta = makeMeta([...contracts].reverse(), id);
@@ -582,56 +549,7 @@ describe("curated on-chain supply paths", () => {
     }
   });
 
-  // Shape: Centrifuge V3 burn/mint share bridge. Every reviewed deployment is
-  // configured, including two that read exactly zero today - the Solana leg only
-  // became configurable once allowZeroSupply started governing Solana reads.
-  it("sums every reviewed ACRDX deployment including its zero-supply legs", () => {
-    const share = "0x9477724bb54ad5417de8baff29e59df3fb4da74f";
-    const spoke = "0x2fabf1c784b8583d63c00c5c9c0377d8cf1a3245";
-    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta([
-      { chain: "ethereum", address: share, decimals: 18 },
-      { chain: "plume", address: share, decimals: 18 },
-      { chain: "monad", address: spoke, decimals: 18 },
-      { chain: "base", address: share, decimals: 18 },
-      { chain: "optimism", address: spoke, decimals: 18 },
-      { chain: "solana", address: "ACDR3LGFrMuDZSDRyJjncFCzo5c8xkQxhWx4im4Vmq8G", decimals: 6 },
-    ], "acrdx-anemoy-apollo"));
-
-    expect(selected?.map((entry) => entry.config.chain)).toEqual([
-      "ethereum",
-      "plume",
-      "monad",
-      "optimism",
-      "base",
-      "solana",
-    ]);
-    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["acrdx-anemoy-apollo"]).toBeUndefined();
-    expect(selected?.find((entry) => entry.config.chain === "base")?.config.allowZeroSupply).toBe(true);
-    expect(selected?.find((entry) => entry.config.chain === "solana")?.config.allowZeroSupply).toBe(true);
-    // Optimism is in the worker chain registry, so it needs no pinned endpoint.
-    expect(selected?.find((entry) => entry.config.chain === "optimism")?.config.rpcUrl).toBeUndefined();
-  });
-
-  it("resolves the summed mRe7YIELD and conserved sUSN Starknet legs", () => {
-    const mre7 = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta([
-      { chain: "ethereum", address: "0x87c9053c819bb28e0d73d33059e1b3da80afb0cf", decimals: 18 },
-      { chain: "tac", address: "0x0a72ed3c34352ab2dd912b30f2252638c873d6f0", decimals: 18 },
-      { chain: "etherlink", address: "0x733d504435a49fc8c4e9759e756c2846c92f0160", decimals: 18 },
-      {
-        chain: "starknet",
-        address: "0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc",
-        decimals: 18,
-      },
-    ], "mre7yield-midas"));
-
-    expect(mre7?.map((entry) => entry.config.chain)).toEqual(["ethereum", "etherlink", "starknet", "tac"]);
-    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["mre7yield-midas"]).toBeUndefined();
-    expect(mre7?.find((entry) => entry.config.chain === "etherlink")?.config.rpcUrl)
-      .toBe("https://node.mainnet.etherlink.com");
-    expect(mre7?.find((entry) => entry.config.chain === "tac")?.config.rpcUrl).toBe("https://rpc-public.tac.build");
-    // The Starknet reader carries its own endpoints, so the leg pins none.
-    expect(mre7?.find((entry) => entry.config.chain === "starknet")?.config.rpcUrl).toBeUndefined();
-
+  it("resolves the conserved sUSN Starknet leg", () => {
     const susnMeta = TRACKED_META_BY_ID.get("susn-noon")!;
     const susn = selectCuratedAggregateOnchainSupplyProbeContracts(susnMeta);
 
@@ -661,7 +579,6 @@ describe("curated on-chain supply paths", () => {
       ["brlv-crown", [{ chain: "base", address: "0xd2047ebdb205ee6862b69ae9fb3501652cc97d36", decimals: 18 }]],
       ["syzusd-yuzu", [{ chain: "plasma", address: "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6", decimals: 18 }]],
       ["idrt-rupiah-token", [{ chain: "ethereum", address: "0x998ffe1e43facffb941dc337dd0468d52ba5b48a", decimals: 2 }]],
-      ["ntbill-nest", [{ chain: "plume", address: "0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9", decimals: 6 }]],
       ["cngn-compliant-naira", [{ chain: "base", address: "0x46c85152bfe9f96829aa94755d9f915f9b10ef5f", decimals: 6 }]],
     ] as const;
 
@@ -687,7 +604,7 @@ describe("hasRuntimeOnchainSupplyPath", () => {
 });
 
 
-it.each(["mre7yield-midas", "cusdo-openeden", "syzusd-yuzu", "susdc-spark", "syrupusdc-maple", "susdt-spark", "susds-sky", "sdai-sky", "scrvusd-curve", "gldon-ondo", "xgld-unitas"])("covers every supply-reviewed deployment for %s and rejects a missing leg", (id) => {
+it.each(["cusdo-openeden", "syzusd-yuzu", "susdc-spark", "syrupusdc-maple", "susdt-spark", "susds-sky", "sdai-sky", "scrvusd-curve", "xgld-unitas"])("covers every supply-reviewed deployment for %s and rejects a missing leg", (id) => {
   const meta = TRACKED_META_BY_ID.get(id)!;
   const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta)!;
   expect(selected.map(({ contract }) => `${contract.chain}:${contract.address}`).sort()).toEqual(
@@ -699,7 +616,7 @@ it.each(["mre7yield-midas", "cusdo-openeden", "syzusd-yuzu", "susdc-spark", "syr
 });
 
 it("conserves the reviewed tail's lock/mint stock and sums its direct burn/mint stock", () => {
-  for (const id of ["scrvusd-curve", "gldon-ondo", "xgld-unitas"]) {
+  for (const id of ["scrvusd-curve", "xgld-unitas"]) {
     const meta = TRACKED_META_BY_ID.get(id)!;
     const routes = meta.bridgeRouteRisk!.routes!;
     const locked = routes.filter((route) => route.semantics === "lock-mint");
@@ -745,11 +662,9 @@ it("fails a canonical roster closed on an unselected registered deployment unles
 });
 
 const WITHHELD_INCOMPLETE_ROSTER_IDS = new Set([
-  "bc3m-backed", // registered fantom deployment not in aggregateContracts
   "bib01-backed", // registered fantom deployment not in aggregateContracts
   "cadd-cad-digital", // registered solana and tempo deployments not in aggregateContracts
   "dgld-gold-token-sa", // registered solana deployment not in aggregateContracts
-  "hlscope-hamilton-lane", // registered tron deployment has no supported probe family
   "jpym-mento", // registered monad deployment not in aggregateContracts
   "mxnb-juno", // registered arc deployment not in aggregateContracts
   "sdusd-dtrinity", // registered sonic deployment not in aggregateContracts
@@ -801,14 +716,14 @@ it("does not publish cNGN destination float as a global on-chain total without B
 
 
 it("fails a summed aggregate closed when the registry adds a deployment before probe review", () => {
-  const meta = TRACKED_META_BY_ID.get("mre7yield-midas")!;
+  const meta = TRACKED_META_BY_ID.get("eutbl-spiko")!;
   expect(selectCuratedAggregateOnchainSupplyProbeContracts({
     ...meta,
-    contracts: [...meta.contracts!, { chain: "optimism", address: "0x0000000000000000000000000000000000000001", decimals: 18 }],
+    contracts: [...meta.contracts!, { chain: "optimism", address: "0x0000000000000000000000000000000000000001", decimals: 5 }],
   })).toBeNull();
 });
 
-it.each(["hlscope-hamilton-lane", "vnxau-vnx", "dgld-gold-token-sa", "jpym-mento"])(
+it.each(["vnxau-vnx", "dgld-gold-token-sa", "jpym-mento"])(
   "withholds the incomplete summed roster for %s until every tracked deployment has reviewed accounting", (id) => {
     expect(selectCuratedAggregateOnchainSupplyProbeContracts(TRACKED_META_BY_ID.get(id)!)).toBeNull();
   },

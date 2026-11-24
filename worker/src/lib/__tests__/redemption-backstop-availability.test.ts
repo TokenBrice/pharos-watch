@@ -469,7 +469,7 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
         expect(result.get("cusd-cap")).not.toHaveProperty("outputImpairedShare");
         expect(result.get("cusd-cap")?.routeStatusReason).toContain("share is unquantified");
       }
-      expect(result.get("gusd-gate")?.outputImpairedShare).toBe(1);
+      expect(result.get("usyc-hashnote")?.outputImpairedShare).toBe(1);
       expect(result.has("usdn-noble")).toBe(false);
     },
   );

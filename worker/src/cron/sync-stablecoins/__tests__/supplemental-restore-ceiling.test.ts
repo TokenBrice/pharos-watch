@@ -319,7 +319,7 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
     expect(previousAssetsById.get("paxg-paxos")?.chainCirculating?.Ethereum).toEqual({ current: 100 });
     expect(previousAssetsById.get("usdc-circle")?.chainCirculating?.Ethereum?.circulatingPrevDay).toBe(0);
   });
-  it.each(["cngn-compliant-naira", "mre7yield-midas", "cusdo-openeden", "syzusd-yuzu"])(
+  it.each(["cngn-compliant-naira", "cusdo-openeden", "syzusd-yuzu"])(
     "does not restore obsolete on-chain roster for %s through either supplemental path", (id) => {
       const previous = asset({ id, symbol: id, circulating: { peggedUSD: 100 },
         supplySource: "onchain-total-supply", supplyObservedAt: NOW_SEC - 60,

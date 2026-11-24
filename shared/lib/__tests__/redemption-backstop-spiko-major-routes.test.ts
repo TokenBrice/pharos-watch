@@ -6,8 +6,8 @@ import { resolveRedemptionCostBpsAtNotional, resolveV9RedemptionRouteCostBpsAtNo
 import { COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS as familyConfigs } from "../redemption-backstop-configs/offchain-issuer/coverage-and-stablecoin-audit";
 
 const clock = Date.parse("2026-11-07T12:00:00Z") / 1000;
-const spikoIds = ["ustbl-spiko", "safo-spiko-usd", "spkcc-spiko", "uktbl-spiko", "gbpsafo-spiko", "eutbl-spiko", "eursafo-spiko", "eurspkcc-spiko"];
-const midasIds = ["mf-one-midas", "mglobal-midas-fasanara", "mhyper-midas", "mmev-midas", "mapollo-midas"];
+const spikoIds = ["ustbl-spiko", "eutbl-spiko"];
+const midasIds = ["mf-one-midas", "mglobal-midas-fasanara"];
 
 /**
  * `reviewedAt` is curated review metadata, not a scoring input, so pin the
@@ -35,7 +35,7 @@ describe("reviewed Spiko and major-issuer route boundaries", () => {
     expect(resolveReviewedRedemptionSettlementDelay(config.v9RouteReviewTerms, clock)).toBeUndefined();
   });
 
-  it.each(["eutbl-spiko", "eursafo-spiko", "ustbl-spiko", "safo-spiko-usd"])(
+  it.each(["eutbl-spiko", "ustbl-spiko"])(
     "retains %s zero fund exit fees but explicitly withholds completed settlement", (id) => {
       const config = getRedemptionBackstopConfig(id)!;
       expect(resolveRedemptionCostBpsAtNotional(config.costModel, 100_000)).toBe(0);
@@ -48,14 +48,6 @@ describe("reviewed Spiko and major-issuer route boundaries", () => {
       expect(config.v9RouteReviewTerms).not.toHaveProperty("businessDayTerms");
     },
   );
-
-  it("keeps GBPSAFO's independent review and merged factor gaps", () => {
-    const terms = getRedemptionBackstopConfig("gbpsafo-spiko")!.v9RouteReviewTerms;
-    expect(terms).toMatchObject({
-      missingScoringFields: ["capacity", "settlement", "cost"],
-    });
-    expectReviewDateWithinBudget(terms?.reviewedAt, "gbpsafo-spiko");
-  });
 
   it.each(["rlusd-ripple", "tusd-trueusd", "usdgo-osl", "ylds-figure"])(
     "retains %s issuer-only zero fee without a completion scalar", (id) => {

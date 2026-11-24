@@ -3,10 +3,8 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { getUsycNavFreshness, OPTIONAL_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
-import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
-import * as evmRpc from "../../../lib/evm-rpc";
 import {
   STANDALONE_TRACKED_OPTIONAL_SOURCE_REGISTRY,
   TRACKED_OPTIONAL_SOURCE_REGISTRY,
@@ -46,32 +44,6 @@ describe("tracked optional source registry coverage", () => {
       expect(
         activeYieldBearingIds.has(entry.stablecoinId) || entry.intendedDormant === undefined,
       ).toBe(true);
-    }
-  });
-
-  it("reads the USDY wrapper and isolates its anchors from the old oracle series", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
-    const evmRead = vi.spyOn(evmRpc, "fetchEvmUint256AtBlock").mockResolvedValue(1_085_000_000_000_000_000n);
-    try {
-      const { stablecoinId, sourceKey, legacySourceKey } = OPTIONAL_YIELD_SOURCES.ondo;
-      const reader = TRACKED_OPTIONAL_SOURCE_REGISTRY.find((source) => source.stablecoinId === stablecoinId)!;
-      const startSec = Date.UTC(2026, 10, 18) / 1_000;
-      const anchorAt = startSec - 7 * DAY_SECONDS;
-      const insert = sqlite.prepare(`INSERT INTO yield_history
-        (stablecoin_id, source_key, apy, data_source, exchange_rate, recorded_at)
-        VALUES (?, ?, 0, 'protocol-api', ?, ?)`);
-      insert.run(stablecoinId, legacySourceKey, 1.0835, anchorAt);
-      await expect(reader.run({ db, startSec })).resolves.toMatchObject({ sourceKey, observationKind: "anchor-only" });
-      expect(evmRead).toHaveBeenCalledWith("ethereum", "0x87b126e5518b6a1Bb8465779b4607C45C643DF90",
-        "0x98d5fdca", "latest", expect.any(Object));
-
-      insert.run(stablecoinId, sourceKey, 1.0835, anchorAt);
-      const observation = await reader.run({ db, startSec });
-      expect(observation).toMatchObject({ sourceKey, comparisonAnchorObservedAt: anchorAt });
-      expect(observation?.currentApy).toBeCloseTo(7.4855, 4);
-    } finally {
-      evmRead.mockRestore();
-      sqlite.close();
     }
   });
 

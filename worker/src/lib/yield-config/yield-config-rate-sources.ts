@@ -136,31 +136,18 @@ export const PRICE_DERIVED_FALLBACK_IDS = new Set([
   // though navToken metadata also enables this lane. APY remains unavailable
   // until supply_history has the required 7-45 day priced comparison anchor.
   "earnusd-lido",
-  "filqa-fidelity-international",
-  "fiusd-sygnum",
-  "cumiu-chinaamc",
-  "uscc-superstate",
-  "umint-ubs",
 ]);
 
 export const RATE_DERIVED_CONFIGS: RateDerivedConfig[] = [
   { stablecoinId: "buidl-blackrock", spreadBps: 20, label: "T-bill proxy (net of 0.20% fee)", benchmarkOverrideKey: "USD_EFFR" },
   { stablecoinId: "cgusd-cygnus-finance", spreadBps: 35, label: "T-bill proxy (net of 0.35% protocol fee)", benchmarkOverrideKey: "USD_EFFR" },
   { stablecoinId: "ylds-figure", spreadBps: 50, label: "T-bill proxy (net of 0.50% fee)", benchmarkOverrideKey: "USD_EFFR" },
-  { stablecoinId: "mtbill-midas", spreadBps: 0, label: "T-bill proxy", benchmarkOverrideKey: "USD_EFFR" },
-  { stablecoinId: "ousg-ondo-finance", spreadBps: 50, label: "T-bill proxy (net of 0.50% fee)", benchmarkOverrideKey: "USD_EFFR" },
   { stablecoinId: "susd-solayer", spreadBps: 0, label: "T-bill proxy", benchmarkOverrideKey: "USD_EFFR" },
   { stablecoinId: "benji-franklin-templeton", spreadBps: 20, label: "T-bill proxy (net of 0.20% fee)", benchmarkOverrideKey: "USD_EFFR" },
   { stablecoinId: "wtgxx-wisdomtree", spreadBps: 25, label: "T-bill proxy (net of 0.25% fee)", benchmarkOverrideKey: "USD_EFFR" },
   { stablecoinId: "ustbl-spiko", spreadBps: 10, label: "T-bill proxy (net of 0.10% fee)", benchmarkOverrideKey: "USD_EFFR" },
   { stablecoinId: "eutbl-spiko", spreadBps: 15, label: "EUR T-bill proxy (net of 0.15% fee)", benchmarkCurrency: "EUR", benchmarkOverrideKey: "EUR" },
-  { stablecoinId: "uktbl-spiko", spreadBps: 15, label: "GBP T-bill proxy (net of 0.15% fee)", benchmarkCurrency: "GBP", benchmarkOverrideKey: "GBP" },
-  { stablecoinId: "eursafo-spiko", spreadBps: 0, label: "Amundi Smart Cash overnight swap proxy (EUR)", benchmarkCurrency: "EUR" },
-  { stablecoinId: "gbpsafo-spiko", spreadBps: 0, label: "Amundi Smart Cash overnight swap proxy (GBP)", benchmarkCurrency: "GBP" },
-  { stablecoinId: "eurspkcc-spiko", spreadBps: 0, label: "Cash-and-carry strategy proxy (EUR risk-free leg)", benchmarkCurrency: "EUR" },
   { stablecoinId: "fusd-finchain", spreadBps: 0, label: "Tokenized T-bill/MMF reserve-yield proxy", benchmarkOverrideKey: "USD_EFFR" },
-  { stablecoinId: "safo-spiko-usd", spreadBps: 0, label: "Amundi Smart Cash overnight swap proxy (USD)" },
-  { stablecoinId: "spkcc-spiko", spreadBps: 0, label: "Cash-and-carry strategy proxy (USD risk-free leg)" },
   { stablecoinId: "witry-brix", spreadBps: 0, label: "BIST TLREF overnight proxy (TRY)", benchmarkCurrency: "TRY" },
   { stablecoinId: "a7a5-old-vector", spreadBps: 100, label: "CBR key-rate reserve-yield proxy (net of 1.00pp)", benchmarkCurrency: "RUB", benchmarkOverrideKey: "RUB" },
 ];
@@ -186,16 +173,6 @@ const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason>
     since: "2026-11-16",
     nextReviewAt: "2027-01-15",
     note: "Launched, awaiting data: price and supply lanes pass, but the Safety new-asset evidence gate blocks active admission; the reviewed rebase-index reader is archived until promotion",
-  },
-  "susd-hedgecore": {
-    code: "no-public-yield-source",
-    since: "2026-09-27",
-    note: "Venus gross APY pin quarantined: holder rewards pass through 93%, and on-chain exchange-rate reads revert; no measured holder-return equivalence",
-  },
-  "bc3m-backed": {
-    code: "no-public-yield-source",
-    since: "2026-09-27",
-    note: "USD supply-history prices cannot measure EUR-denominated holder return; price-derived yield is unavailable without native-currency return evidence",
   },
   "usdb-blast": {
     code: "no-public-yield-source",
@@ -243,12 +220,6 @@ const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason>
     nextReviewAt: "2026-09-12",
     note: "2026-08-12 review: the official Hive RPC exposes the protocol-set hbd_interest_rate through dynamic global properties, but Pharos has no reviewed Hive savings-rate adapter or freshness contract yet; keep uncovered until that reusable reader is implemented",
   },
-  "gusd-gate": {
-    code: "off-chain-account-product",
-    since: "2026-04-14",
-    nextReviewAt: "2026-10-09",
-    note: "2026-07-09 review: keep intentional gap for Gate account-product yield; no public runtime APY feed is wired or confirmed for holder-rate resolution",
-  },
   "pc0000031-tradable": {
     code: "private-credit-note",
     since: "2026-04-14",
@@ -294,12 +265,6 @@ const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason>
     since: "2026-04-14",
     note: "pre-launch asset with no reliable runtime yield source yet",
   },
-  // https://www.blackrock.com/cash/literature/prospectus/pro-brsrv.pdf
-  "brsrv-blackrock": {
-    code: "issuer-distributed-yield",
-    since: "2026-10-03",
-    note: "BlackRock publishes a dated RSVXX seven-day SEC yield and daily distribution factor, with daily share reinvestment unless cash dividends are elected; no reviewed distribution-return reader is wired, and stable $1 NAV growth cannot measure holder income",
-  },
   // https://www.matrixdock.com/stbt
   "stbt-matrixdock": {
     code: "issuer-distributed-yield",
@@ -311,12 +276,6 @@ const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason>
     code: "issuer-distributed-yield",
     since: "2026-10-03",
     note: "JLTXX reinvests daily dividends in same-class shares; the stable $1 NAV feed does not measure distributions, and no reviewed dividend-return adapter consumes the issuer's quoted fund yield",
-  },
-  // https://public-api.spiko.io/share-classes/chfSAFO/totals
-  "chfsafo-spiko": {
-    code: "source-family-adapter-unimplemented",
-    since: "2026-10-03",
-    note: "Spiko publishes CHF share-class NAV, but no reviewed native-CHF NAV-history yield adapter is wired; USD supply-history returns include CHF exchange-rate changes and cannot measure fund income alone",
   },
 };
 

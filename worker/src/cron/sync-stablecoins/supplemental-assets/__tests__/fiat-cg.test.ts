@@ -5,19 +5,17 @@ import type { MockRegistryStablecoin } from "../../../../test-helpers/cron/mock-
 import * as evmRpc from "../../../../lib/evm-rpc";
 import type * as FetchRetry from "../../../../lib/fetch-retry";
 import ftusd from "@shared/data/stablecoins/coins/ftusd-flying-tulip.json";
-import fiusd from "@shared/data/stablecoins/coins/fiusd-sygnum.json";
 import aa from "@shared/data/stablecoins/coins/aa-falconx-mev-capital.json";
 import zsd from "@shared/data/stablecoins/coins/zsd-zephyr-protocol.json";
 import zys from "@shared/data/stablecoins/coins/zys-zephyr-protocol.json";
-import usdy from "@shared/data/stablecoins/coins/usdy-ondo-finance.json";
+import ustb from "@shared/data/stablecoins/coins/ustb-superstate.json";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import buidl from "@shared/data/stablecoins/coins/buidl-blackrock.json";
 import usyc from "@shared/data/stablecoins/coins/usyc-hashnote.json";
 import reusd from "@shared/data/stablecoins/coins/reusd-re-protocol.json";
-import usp from "@shared/data/stablecoins/coins/usp-pikudao.json";
-import usd3 from "@shared/data/stablecoins/coins/usd3-reserve-protocol.json";
+import dusd from "@shared/data/stablecoins/coins/dusd-dialectic.json";
 import hbd from "@shared/data/stablecoins/coins/hbd-hive.json";
-import eursafo from "@shared/data/stablecoins/coins/eursafo-spiko.json";
+import eutbl from "@shared/data/stablecoins/coins/eutbl-spiko.json";
 
 const fetchWithRetryMock = vi.fn();
 const probeTrackedTokenSupplyMock = vi.fn();
@@ -46,11 +44,11 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
         pegCurrency: "USD", backing: "rwa-backed", governance: "centralized", yieldBearing: true, navToken: true,
       },
     },
-    ...[fiusd, aa, zsd, zys].map(coin),
-    { ...usdy, flags: { ...usdy.flags, pegCurrency: "USD" } },
+    ...[aa, zsd, zys].map(coin),
+    { ...ustb, flags: { ...ustb.flags, pegCurrency: "USD" } },
     { ...hbd, flags: { ...hbd.flags, pegCurrency: "USD" } },
-    ...[buidl, usyc, reusd, usp, usd3].map((meta) => ({ ...meta, flags: { ...meta.flags, pegCurrency: "USD" } })),
-    eursafo,
+    ...[buidl, usyc, reusd, dusd].map((meta) => ({ ...meta, flags: { ...meta.flags, pegCurrency: "USD" } })),
+    eutbl,
   ],
   });
 });
@@ -204,22 +202,22 @@ describe("fetchFiatCoinGeckoTokens", () => {
     }
   });
 
-  it("publishes USDY from its configured supplemental source when the DefiLlama list omits it", async () => {
-    const marketCap = 2_356_848_686.3214035;
+  it("publishes USTB from its configured supplemental source when the DefiLlama list omits it", async () => {
+    const marketCap = 84_341_804.96;
     fetchWithRetryMock.mockResolvedValueOnce(jsonResponse({ coins: {
-      "coingecko:ondo-us-dollar-yield": { price: 1.16, timestamp: nowSec - 60 },
+      [`coingecko:${ustb.geckoId}`]: { price: 1.16, timestamp: nowSec - 60 },
     } }));
 
     const result = await fetchFiatCoinGeckoTokens({
-      "ondo-us-dollar-yield": {
+      [ustb.geckoId!]: {
         usd: 1.15,
         usd_market_cap: marketCap,
         last_updated_at: nowSec,
       },
     });
 
-    expect(result.find((asset) => asset.id === "usdy-ondo-finance")).toMatchObject({
-      id: "usdy-ondo-finance",
+    expect(result.find((asset) => asset.id === ustb.id)).toMatchObject({
+      id: ustb.id,
       price: 1.16,
       priceSource: "coingecko-mirror",
       priceObservedAt: nowSec - 60,
@@ -232,22 +230,21 @@ describe("fetchFiatCoinGeckoTokens", () => {
       valuationObservedAtSec: nowSec,
       chainCirculating: {},
     });
-    // The shared fixture still probes unpriced plain-par ftUSD, never USDY.
+    // The shared fixture still probes unpriced plain-par ftUSD, never USTB.
     expect(probeTrackedTokenSupplyMock.mock.calls.map(([meta]) => meta.id)).toEqual(["ftusd-flying-tulip"]);
   });
 
-  it.each([
-    [reusd.id, reusd.geckoId, 1.11, 351_324_232.3378745],
-    [usp.id, usp.geckoId, 1.15, 4_855_649.434067997],
-  ])("publishes DefiLlama-delisted %s from its CoinGecko supplemental source", async (id, geckoId, price, marketCap) => {
+  it("publishes DefiLlama-delisted reUSD from its CoinGecko supplemental source", async () => {
     fetchWithRetryMock.mockImplementationOnce(emptyPrices);
+    const price = 1.11;
+    const marketCap = 351_324_232.3378745;
 
     const result = await fetchFiatCoinGeckoTokens({
-      [geckoId!]: { usd: price, usd_market_cap: marketCap, last_updated_at: nowSec },
+      [reusd.geckoId!]: { usd: price, usd_market_cap: marketCap, last_updated_at: nowSec },
     });
 
-    expect(result.find((asset) => asset.id === id)).toMatchObject({
-      id,
+    expect(result.find((asset) => asset.id === reusd.id)).toMatchObject({
+      id: reusd.id,
       price,
       priceSource: "coingecko",
       priceObservedAt: nowSec,
@@ -336,12 +333,12 @@ describe("fetchFiatCoinGeckoTokens", () => {
     }
   });
 
-  it("does not invent USDY supply or par when its current market observations are unavailable", async () => {
+  it("does not invent USTB supply or par when its current market observations are unavailable", async () => {
     fetchWithRetryMock.mockImplementationOnce(emptyPrices);
 
     const result = await fetchFiatCoinGeckoTokens({});
 
-    expect(result.find((asset) => asset.id === "usdy-ondo-finance")).toBeUndefined();
+    expect(result.find((asset) => asset.id === ustb.id)).toBeUndefined();
     expect(probeTrackedTokenSupplyMock.mock.calls.map(([meta]) => meta.id)).toEqual(["ftusd-flying-tulip"]);
   });
 
@@ -380,7 +377,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
       },
     });
 
-    expect(result.map((asset) => asset.id)).toEqual(["ftusd-flying-tulip", "fiusd-sygnum", buidl.id, usyc.id]);
+    expect(result.map((asset) => asset.id)).toEqual(["ftusd-flying-tulip", buidl.id, usyc.id]);
     expect(result.find((asset) => asset.id === "ftusd-flying-tulip")).toMatchObject({
       id: "ftusd-flying-tulip",
       supplySource: "coingecko-fallback",
@@ -392,7 +389,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
       price: null, circulating: {}, supplySource: "onchain-supply-withheld",
     });
     expect(probeTrackedTokenSupplyMock).not.toHaveBeenCalled();
-    expect(fetchErc20TotalSupplyMock).toHaveBeenCalledTimes(1);
+    expect(fetchErc20TotalSupplyMock).not.toHaveBeenCalled();
   });
 
   it("uses curated aggregate on-chain supply when CoinGecko market cap is stale", async () => {
@@ -411,7 +408,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
       },
     });
 
-    expect(result.map((asset) => asset.id)).toEqual(["ftusd-flying-tulip", "fiusd-sygnum", buidl.id, usyc.id]);
+    expect(result.map((asset) => asset.id)).toEqual(["ftusd-flying-tulip", buidl.id, usyc.id]);
     const ftusd = result.find((asset) => asset.id === "ftusd-flying-tulip")!;
     expect(ftusd.chainCirculating?.Ethereum).not.toHaveProperty("circulatingPrevDay");
     expect(ftusd).toMatchObject({
@@ -431,66 +428,28 @@ describe("fetchFiatCoinGeckoTokens", () => {
     expect(probeTrackedTokenSupplyMock).toHaveBeenCalledTimes(2);
   });
 
-  it("publishes DefiLlama-delisted USD3 from its Ethereum-canonical roster when the CoinGecko cap is stale", async () => {
+  it("publishes DUSD from its Ethereum-canonical roster when the CoinGecko cap is stale", async () => {
     fetchWithRetryMock.mockImplementationOnce(emptyPrices);
     probeTrackedTokenSupplyMock.mockImplementation(async (_meta, input) => {
       if (input.chain === "ethereum") return 1_557_829_462_801_000_000_000_000n;
-      if (input.chain === "base") return 14_928_115_493_000_000_000_000n;
+      if (input.chain === "ink") return 14_928_115_493_000_000_000_000n;
       return null;
     });
 
     const result = await fetchFiatCoinGeckoTokens({
-      "web-3-dollar": { usd: 1.12, usd_market_cap: 1_761_714.26, last_updated_at: nowSec - 25 * 60 * 60 },
+      [dusd.geckoId!]: { usd: 1.12, usd_market_cap: 1_761_714.26, last_updated_at: nowSec - 25 * 60 * 60 },
     });
-    const row = result.find((asset) => asset.id === "usd3-reserve-protocol");
+    const row = result.find((asset) => asset.id === dusd.id);
 
     expect(row).toMatchObject({
       price: 1.12,
-      priceSource: "coingecko-low-volume",
+      priceSource: "coingecko",
       supplySource: "onchain-total-supply",
     });
-    // USD values: Base is reallocated out of the Ethereum total, not summed.
+    // USD values: Ink is reallocated out of the Ethereum total, not summed.
     expect(row?.circulating?.peggedUSD).toBeCloseTo(1_557_829.462801 * 1.12, 4);
     expect(row?.chainCirculating?.Ethereum?.current).toBeCloseTo((1_557_829.462801 - 14_928.115493) * 1.12, 4);
-    expect(row?.chainCirculating?.Base?.current).toBeCloseTo(14_928.115493 * 1.12, 4);
-  });
-
-  it.each([0n, null])("requires FIUSD's complete native stock despite a fresh positive CG cap (Arbitrum=%s)", async (arbitrumSupply) => {
-    fetchWithRetryMock.mockImplementationOnce(emptyPrices);
-    probeTrackedTokenSupplyMock.mockImplementation(async (_meta, input) =>
-      input.chain === "zksync" ? 151_766n : null,
-    );
-    fetchErc20TotalSupplyMock.mockImplementation(async (input) =>
-      input.chain === "arbitrum" ? arbitrumSupply : null,
-    );
-    const result = await fetchFiatCoinGeckoTokens({
-      "sygnum-fiusd-liquidity-fund": {
-        usd: 12_048.93,
-        usd_market_cap: 48_167_525.5038,
-        last_updated_at: nowSec,
-      },
-    });
-    if (arbitrumSupply === null) {
-      expect(result).toEqual([expect.objectContaining({
-        id: "fiusd-sygnum", price: 12_048.93, priceObservedAt: nowSec,
-        circulating: {}, supplySource: "onchain-supply-withheld",
-        supplyUnavailableReason: undefined,
-        chainCirculating: {
-          zkSync: { current: null, chainId: "zksync" },
-          Arbitrum: { current: null, chainId: "arbitrum" },
-        },
-      }), ...withheld]);
-    } else {
-      expect(result).toEqual([expect.objectContaining({
-        id: "fiusd-sygnum",
-        supplySource: "onchain-total-supply",
-        circulating: { peggedUSD: 1517.66 * 12_048.93 },
-        chainCirculating: {
-          zkSync: { current: 1517.66 * 12_048.93, chainId: "zksync" },
-          Arbitrum: { current: 0, chainId: "arbitrum" },
-        },
-      }), ...withheld]);
-    }
+    expect(row?.chainCirculating?.Ink?.current).toBeCloseTo(14_928.115493 * 1.12, 4);
   });
 
   it("skips NAV supply fallback when the price lane is missing instead of par-valuing", async () => {
@@ -501,10 +460,6 @@ describe("fetchFiatCoinGeckoTokens", () => {
     });
 
     expect(result).toEqual([
-      expect.objectContaining({
-        id: "fiusd-sygnum", price: null, circulating: {},
-        supplyUnavailableReason: undefined,
-      }),
       ...withheld,
     ]);
     const susdsProbeCalls = probeTrackedTokenSupplyMock.mock.calls.filter(
@@ -545,11 +500,8 @@ describe("fetchFiatCoinGeckoTokens", () => {
       });
     }
     const previousAssetsById = new Map([["usdc-circle", { id: "usdc-circle", name: "USDC", symbol: "USDC" }]]);
-    const result = await fetchFiatCoinGeckoTokens({ susds: { usd_market_cap: 0 },
-      ...(!available ? { "sygnum-fiusd-liquidity-fund": {
-        usd: 12_048.93, last_updated_at: Math.floor(Date.now() / 1000),
-      } } : {}),
-    }, undefined, undefined, undefined, undefined, previousAssetsById);
+    const result = await fetchFiatCoinGeckoTokens({ susds: { usd_market_cap: 0 } },
+      undefined, undefined, undefined, undefined, previousAssetsById);
     if (available) {
       const susds = result.find((asset) => asset.id === "susds-sky");
       expect(susds).toMatchObject({
@@ -562,10 +514,6 @@ describe("fetchFiatCoinGeckoTokens", () => {
       expect(susds?.supplyObservedAt).toBe(observedAt);
     } else {
       expect(result).toEqual([
-        expect.objectContaining({
-          id: "fiusd-sygnum", price: 12_048.93, circulating: {},
-          supplyUnavailableReason: undefined,
-        }),
         ...withheld,
       ]);
       expect(resolveVaultNavSupplyPriceMock.mock.calls.filter(([id]) => id === "susds-sky")).toHaveLength(1);
@@ -630,11 +578,11 @@ describe("fiat CoinGecko NAV continuity", () => {
     vi.spyOn(console, "info").mockImplementation(() => {});
     vi.stubGlobal("fetch", vi.fn().mockImplementation(() => Promise.resolve(Response.json({ coins: {} }))));
     const nowSec = Math.floor(Date.now() / 1000), marketCap = 1_798_801_917.8;
-    const rows = await fetchFiatCoinGeckoTokens({ [eursafo.geckoId]: {
+    const rows = await fetchFiatCoinGeckoTokens({ [eutbl.geckoId]: {
       usd: 1.14, usd_market_cap: marketCap, last_updated_at: nowSec,
     } });
-    const row = rows.find((asset) => asset.id === eursafo.id)!;
-    expect(row).toMatchObject({ id: eursafo.id, supplySource: "coingecko-fallback", supplyObservedAt: nowSec,
+    const row = rows.find((asset) => asset.id === eutbl.id)!;
+    expect(row).toMatchObject({ id: eutbl.id, supplySource: "coingecko-fallback", supplyObservedAt: nowSec,
       circulating: { peggedEUR: marketCap }, chainCirculating: {},
     });
     expect(reviewedOnchainSupplyHoldFields(row, nowSec)).toBeNull();

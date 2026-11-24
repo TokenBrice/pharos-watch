@@ -1243,12 +1243,12 @@ describe("evaluateYieldSourcesCooperative", () => {
 
   it("excludes protocol-api NAV seed rows from rolling APY stats", async () => {
     const startSec = 1776729600;
-    const sourceKey = "protocol-api:midas-mmev-nav-oracle";
+    const sourceKey = "protocol-api:hashnote-usyc";
     const result = await evaluateYieldSourcesCooperative(baseEvaluationInput({
       resolved: [
         {
-          id: "mmev-midas",
-          symbol: "mMEV",
+          id: "usyc-hashnote",
+          symbol: "USYC",
           yield: resolvedYield({
             currentApy: 6,
             apyBase: 6,
@@ -1260,19 +1260,19 @@ describe("evaluateYieldSourcesCooperative", () => {
             sourceKey,
             sourceObservedAt: startSec,
             comparisonAnchorObservedAt: startSec - 7 * 86400,
-            yieldSource: "Midas mMEV/USD Oracle",
+            yieldSource: "Hashnote USYC",
             yieldType: "nav-appreciation",
           }),
         },
       ],
       startSec,
-      safetyScores: new Map([["mmev-midas", { score: 74, grade: "B" }]]),
+      safetyScores: new Map([["usyc-hashnote", { score: 74, grade: "B" }]]),
       sourceHistory: new Map([
         [
-          buildHistoryKey("mmev-midas", sourceKey),
+          buildHistoryKey("usyc-hashnote", sourceKey),
           [
             {
-              stablecoin_id: "mmev-midas",
+              stablecoin_id: "usyc-hashnote",
               source_key: sourceKey,
               recorded_at: startSec - 6 * 86400,
               source_observed_at: startSec - 6 * 86400,
@@ -1281,12 +1281,12 @@ describe("evaluateYieldSourcesCooperative", () => {
               apy_base: null,
               source_tvl_usd: null,
               data_source: "protocol-api",
-              yield_source: "Midas mMEV/USD Oracle",
+              yield_source: "Hashnote USYC",
               yield_type: "nav-appreciation",
               exchange_rate: 1.01,
             },
             {
-              stablecoin_id: "mmev-midas",
+              stablecoin_id: "usyc-hashnote",
               source_key: sourceKey,
               recorded_at: startSec - 5 * 86400,
               source_observed_at: startSec - 5 * 86400,
@@ -1295,12 +1295,12 @@ describe("evaluateYieldSourcesCooperative", () => {
               apy_base: null,
               source_tvl_usd: null,
               data_source: "protocol-api",
-              yield_source: "Midas mMEV/USD Oracle",
+              yield_source: "Hashnote USYC",
               yield_type: "nav-appreciation",
               exchange_rate: 1.02,
             },
             {
-              stablecoin_id: "mmev-midas",
+              stablecoin_id: "usyc-hashnote",
               source_key: sourceKey,
               recorded_at: startSec - 1 * 86400,
               source_observed_at: startSec - 1 * 86400 - 3600,
@@ -1309,14 +1309,14 @@ describe("evaluateYieldSourcesCooperative", () => {
               apy_base: 5,
               source_tvl_usd: null,
               data_source: "protocol-api",
-              yield_source: "Midas mMEV/USD Oracle",
+              yield_source: "Hashnote USYC",
               yield_type: "nav-appreciation",
               exchange_rate: 1.05,
             },
           ],
         ],
       ]),
-      stablecoinSupplyById: new Map([["mmev-midas", 100_000_000]]),
+      stablecoinSupplyById: new Map([["usyc-hashnote", 100_000_000]]),
     }), { yieldToEventLoop: () => Promise.resolve() });
 
     const [source] = result.evaluatedSources;

@@ -176,46 +176,6 @@ export const USDE_REVIEWED_REDEMPTION_TERMS: ReviewedRedemptionTerms = {
 
 const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
   ...DISCOVERY_STABLECOIN_REDEEM_CONFIGS,
-  "spusd-soulpeg": defineStablecoinRedeemConfig({
-    reviewedAt: "2026-10-11",
-    accessModel: "permissionless-onchain",
-    holderEligibility: "any-holder",
-    settlementModel: "atomic",
-    executionModel: "deterministic-onchain",
-    outputAssetType: "stable-single",
-    unresolvedOutputAssetKeys: ["asset:susdc-soulpeg"],
-    unresolvedOutputDisposition: "reviewed-external",
-    capacityModel: { kind: "unquantified" },
-    costModel: fixedFee(
-      0,
-      "The verified StUSDCWrapper.unwrap burns SPUSD and transfers the same token-unit amount of sUSDC without a protocol conversion fee; BNB gas and any subsequent USDC redemption are separate",
-    ),
-    v9RouteReviewTerms: {
-      settlementModel: "atomic",
-      settlementDelaySec: 0,
-      scoringDisposition: "bounded-terms-gap",
-      missingScoringFields: ["capacity"],
-      rationale: "Successful unwrap is synchronous receipt conversion, not a USDC payout. The output has no tracked priceable identity and no fresh same-notional receipt-transfer execution or capacity measurement is admitted; neither historic receipt balances nor token supply establish executable capacity.",
-      reviewedAt: "2026-10-11",
-      docs: [
-        sourceRef("SoulPeg holder wrap and unwrap guide", "https://docs.soulpeg.io/docs/spusd/how-to-wrap", ["route", "access", "settlement", "fees"]),
-        sourceRef("Exact BSC StUSDCWrapper verified unwrap implementation", "https://sourcify.dev/server/v2/contract/56/0x0e8fb2e774b827711e0f86069931c1321113238e?fields=sources,abi", ["route", "access", "settlement", "fees"]),
-      ],
-    },
-    docs: [
-      sourceRef("SoulPeg SPUSD overview and exact token/wrapper identities", "https://docs.soulpeg.io/docs/spusd/overview", ["route", "access", "settlement", "fees"]),
-      sourceRef("SoulPeg holder wrap and unwrap guide", "https://docs.soulpeg.io/docs/spusd/how-to-wrap", ["route", "access", "settlement", "fees"]),
-      sourceRef("Exact BSC StUSDCWrapper verified unwrap implementation", "https://sourcify.dev/server/v2/contract/56/0x0e8fb2e774b827711e0f86069931c1321113238e?fields=sources,abi", ["route", "access", "settlement", "fees"]),
-      sourceRef("SoulPeg sUSDC lifecycle and privileged USDC redemption", "https://docs.soulpeg.io/docs/protocol/token-lifecycle", ["route", "access"]),
-      sourceRef("SoulPeg service terms dated August 17, 2026", "https://www.soulpeg.io/terms", ["access"]),
-    ],
-    notes: [
-      "Source review 2026-10-11T08:41:38Z by Sol curation campaign 2026-10-11 (G47CHFm): BSC SPUSD 0x40ff3dea2eec93a7b71879874dc4407918da77a6 uses StUSDCWrapper 0x0e8fb2e774b827711e0f86069931c1321113238e. unwrap(uint256) is externally callable, requires a positive amount and enough unlocked SPUSD, burns from msg.sender through the wrapper's token role, then requires a successful equal-amount sUSDC.transfer to msg.sender. Entry access is public; successful execution remains subject to investor lock state, wrapper burn authorization and sUSDC transfer restrictions. No current role, pause, lock or transfer-state pin was performed in this lane.",
-      "The immediate output is SoulPeg sUSDC, identified in the existing October 3 pinned reserve review as proxy 0xc603ef9cab5e4131c52f6b8bcf06cc0568c32a24. asset:susdc-soulpeg is diagnostic only, not Circle USDC and not a $1-valued output. Preserve the original October 3 identity observation; this source review does not refresh that pin or the underlying strategy book.",
-      "Issuer lifecycle documentation describes sUSDC-to-USDC earlyRedeem as admin-controlled and dependent on sufficient USDC reserves. The separately retrieved verified implementation 0x6cb98d3d1a46941aecfa6aa9f048377b985e49df uses onlyOperatorOrOwner and requires totalStaked[user] >= amount. A secondary SPUSD holder's acquired receipt does not by itself establish that user-level staking entitlement. No composed public USDC payout route, holder entitlement or funded completion bound is authored.",
-      "The atomic settlement and zero protocol conversion fee describe only a successful unwrap to the receipt. No zero gas/all-in cost, full-supply capacity, current successful execution or eventual USDC SLA is inferred. Exit should remain evidence-limited until a genuinely priceable, admitted same-notional holder exit exists.",
-    ],
-  }),
   "usdfr-forest-road": defineStablecoinRedeemConfig({
     reviewedAt: "2026-10-07",
     accessModel: "whitelisted-onchain",
@@ -448,37 +408,6 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     notes: [
       "Origin docs still describe pro-rata basket redemption semantics; current OUSD collateral is USDC only",
       "Fresh Origin vault telemetry reads the vault's idle stablecoin balances as current direct redemption capacity; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
-    ],
-  }),
-  "ousg-ondo-finance": defineReviewedStablecoinRedeemConfig(REVIEWED_DIRECT_REDEMPTION_AT, {
-    reviewedAt: REVIEWED_EXIT_CREDIT_AT,
-    outputAssets: ["usdc-circle"],
-    accessModel: "whitelisted-onchain",
-    executionModel: "rules-based-nav",
-    capacityModel: {
-      kind: "reserve-sync-metadata",
-      fallbackUsd: 50_000_000,
-      confidence: "documented-bound",
-      basis: "live-direct-telemetry",
-    },
-    costModel: {
-      ...documentedVariableFee("$5K, Instant Redemption, 0% Fee", "documented-variable"),
-      feeBpsMax: 0,
-    },
-    docs: [
-      sourceRef("Ondo OUSG", "https://ondo.finance/ousg", ["route", "capacity", "fees", "access"]),
-      sourceRef("Ondo OUSG redeeming", "https://docs.ondo.finance/qualified-access-products/ousg/redeeming", [
-        "route",
-        "settlement",
-      ]),
-      sourceRef("Ondo OUSG instant limits", "https://docs.ondo.finance/qualified-access-products/ousg/instant-limits", [
-        "capacity",
-      ]),
-    ],
-    notes: [
-      "Token transfers restricted to KYC-verified whitelisted addresses on-chain",
-      "Fresh live telemetry reads the OUSG InstantManager router's current default-route USDC capacity as the immediate redeemable bound, replacing the prior full-supply model.",
-      "The $50M fallback applies only when that live router read is unavailable: Ondo publishes a $50M global instant-redemption limit across all investors within a rolling 24-hour window, which bounds the route well below OUSG's outstanding NAV.",
     ],
   }),
   "ustb-superstate": defineStablecoinRedeemConfig({
@@ -1989,7 +1918,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
 const FINALIZED_STABLECOIN_REDEEM_BACKSTOP_REGISTRY = finalizeBackstopRegistry(
   defineRecordEntries(RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS, { sourceFilePath: SOURCE_FILE_PATH }),
   [
-    { stablecoinIds: ["ousg-ondo-finance", "u-united-stables", "usd0-usual"] },
+    { stablecoinIds: ["u-united-stables", "usd0-usual"] },
     { stablecoinIds: ["dusd-dtrinity", "yousd-yield-optimizer"], reviewedAt: REVIEWED_REMEDIATION_AT },
     {
       stablecoinIds: ["pusd-polymarket", "susd-solayer", "usx-dforce", "xdai-gnosis"],

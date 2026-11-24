@@ -691,7 +691,7 @@ describe("overlayFallbackCuratedAggregateSupply", () => {
 
   it("replaces fresh CoinGecko supply and incompatible history on a successful preferred read", async () => {
     const native = makeAsset({
-      id: "stac-securitize", supplySource: "onchain-total-supply", supplyObservedAt: NOW_SEC - 60,
+      id: "usyc-hashnote", supplySource: "onchain-total-supply", supplyObservedAt: NOW_SEC - 60,
       supplyRestored: true, circulating: { peggedUSD: 300 },
       chainCirculating: { Ethereum: { current: 100 }, Solana: { current: 200 } },
     });

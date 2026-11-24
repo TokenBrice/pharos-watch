@@ -58,13 +58,12 @@ describe("receipt-bound bridge classification", () => {
     for (const config of bridgeConfigs) {
       const originals = config.stablecoinId === "eurc-circle"
         ? BRIDGE_RECEIPTS.filter((fixture) => ["v1-send-direct", "v1-receive-direct", "v2-send-direct", "v2-receive"].includes(fixture.name))
-        : config.stablecoinId === "gldon-ondo" ? [sample("usdai-send")]
-          : config.stablecoinId === "usdz-anzen" ? [sample("usdai-send"), sample("gldon-receive")]
+        : config.stablecoinId === "usdz-anzen" ? [sample("usdai-send"), sample("usdai-executor-receive")]
           : BRIDGE_RECEIPTS.filter((fixture) => receiptConfig(fixture, bridgeConfigs) === config && !fixture.name.startsWith("native-") && fixture.name !== "economic-burn");
       expect(originals.length, config.stablecoinId).toBeGreaterThan(0);
       for (const original of originals) {
         const source = receiptConfig(original, bridgeConfigs), fixture = source === config ? original : rebindReceipt(original, source, config);
-        if (config.stablecoinId === "usdz-anzen" && original.name === "gldon-receive") {
+        if (config.stablecoinId === "usdz-anzen" && original.name === "usdai-executor-receive") {
           logFor(fixture, BRIDGE_TOPICS.oftReceived).topics[2] = zero;
           logFor(fixture, BRIDGE_TOPICS.transfer).topics[2] = `0x${"0".repeat(60)}dead`;
         }

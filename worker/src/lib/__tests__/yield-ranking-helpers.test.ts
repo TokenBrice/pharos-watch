@@ -26,14 +26,11 @@ function safety(yieldType: "nav-appreciation" | "lending-opportunity", underlyin
 }
 
 describe("normalized yield qualification and final scoring", () => {
-  it.each(["protocol-api:ondo-usdy-oracle", "protocol-api:ondo-usdy-continuous-oracle"])(
-    "keeps the %s anchor through exactly 45 days",
-    (sourceKey) => {
-      const input = { dataSource: "protocol-api", sourceKey, sourceAgeSeconds: 60 };
-      expect(classifyYieldSourceFreshness({ ...input, comparisonAnchorAgeSeconds: 45 * 86400 })).toBe("fresh");
-      expect(classifyYieldSourceFreshness({ ...input, comparisonAnchorAgeSeconds: 45 * 86400 + 1 })).toBe("stale");
-    },
-  );
+  it("keeps the price-derived anchor through exactly 45 days", () => {
+    const input = { dataSource: "price-derived", sourceKey: "price-derived", sourceAgeSeconds: 60 };
+    expect(classifyYieldSourceFreshness({ ...input, comparisonAnchorAgeSeconds: 45 * 86400 })).toBe("fresh");
+    expect(classifyYieldSourceFreshness({ ...input, comparisonAnchorAgeSeconds: 45 * 86400 + 1 })).toBe("stale");
+  });
   it.each(["nav-appreciation", "lending-opportunity"] as const)("consumes canonical %s safety without changing warning order", yieldType => {
     const resolution = safety(yieldType);
     const result = qualifyYieldEvidence({ ...evidence, safety: resolution });

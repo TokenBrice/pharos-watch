@@ -55,9 +55,6 @@ describe("getRankingStaleThresholdMs", () => {
     expect(getRankingStaleThresholdMs("protocol-api", "protocol-api:hashnote-usyc")).toBe(
       SLOW_NAV_SOURCE_STALE_THRESHOLD_MS,
     );
-    expect(getRankingStaleThresholdMs("protocol-api", "protocol-api:midas-mmev-nav-oracle")).toBe(
-      SLOW_NAV_SOURCE_STALE_THRESHOLD_MS,
-    );
     expect(getRankingStaleThresholdMs("protocol-api", "protocol-api:re-protocol-reusd")).toBe(
       SLOW_NAV_SOURCE_STALE_THRESHOLD_MS,
     );
@@ -79,11 +76,8 @@ describe("getRankingStaleThresholdMs", () => {
 });
 
 describe("getComparisonAnchorStaleThresholdMs", () => {
-  it("uses the full intentional anchor window for price and long-horizon NAV sources", () => {
+  it("uses the full intentional anchor window for price-derived sources", () => {
     expect(getComparisonAnchorStaleThresholdMs("price-derived", "price-derived")).toBe(
-      LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
-    );
-    expect(getComparisonAnchorStaleThresholdMs("protocol-api", "protocol-api:midas-mmev-nav-oracle")).toBe(
       LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
     );
   });

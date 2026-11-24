@@ -1,4 +1,3 @@
-import type { RedemptionDocSource } from "../../../types/redemption";
 import type { RedemptionBackstopConfig, RedemptionV9RouteReviewTerms, ReviewedRedemptionTerms } from "../shared";
 import { defineConfigFamily } from "../factory";
 import {
@@ -19,40 +18,6 @@ import {
   REVIEWED_STABLECOIN_AUDIT_AT,
 } from "./shared";
 
-function midasBusinessDayReview(businessDays: 6 | 10): RedemptionV9RouteReviewTerms {
-  return {
-    businessDayTerms: {
-      businessDays, calendarId: "frankfurt-banking-target",
-      cutoff: { time: businessDays === 6 ? "23:59" : null, timezone: "Europe/Berlin" },
-      assurance: "binding-guarantee", conditional: true,
-      conditions: businessDays === 6
-        ? [
-            "Business Day means any day other than Saturday or Sunday on which relevant commercial banks and/or commercial banks in Frankfurt are open for general business; unidentified relevant banks remain conditional, not assumed to share the Frankfurt calendar",
-            "15% of aggregate outstanding mTokens per settlement day redemption gate; condition 8.3 subjects processing to applicable gates",
-            "Market-disruption valuation postponement and fallback determination under condition 12; condition 12.4 pays five Business Days after the postponed or fallback-determined Valuation Date, without overriding redemption gates",
-            "Qualified subordination under condition 14 restricts payment; instant Deferred Price Method holdback is not standard-route completion or capacity",
-          ]
-        : [
-            "Business Day means a day on which (i) relevant Clearing Systems are open, (ii) relevant commercial banks are open, and/or (iii) banks in Frankfurt are open; unidentified relevant systems/banks remain conditional, not assumed to share the Frankfurt calendar",
-            "The ten-Business-Day period begins only after issuer notice of exercise of the Issuer Call Option or issuer notice of receipt of the Tokenholder Order Request Form; no request-to-notice maximum is specified",
-            "Condition 6 postpones valuation during Market Disruption Events; condition 7.3 postpones fixing and/or payment for underlying illiquidity by the number of days necessary for prevailing market conditions",
-            "Qualified subordination under condition 8 restricts payment",
-          ],
-      accessPrerequisites: businessDays === 6
-        ? ["Greenlisted eligible holder; completed irrevocable redemption order and transfer of mTokens to the issuer wallet or specified redemption-request smart contract; compatible USDC payout wallet"]
-        : ["Greenlisted holder; Tokens transferred to the Issuer before disbursement; compatible payout wallet or bank details as required by the chosen settlement currency"],
-      startEvent: businessDays === 6
-        ? "Redemption Request Effective Date under condition 8.1: completed redemption form and token transfer, or the date specified in the Issuer's Regular Call Notice; normal stages remain subject to gates"
-        : "Issuer notice of exercise of the Issuer Call Option or issuer notice of receipt of the Tokenholder Order Request Form under condition 5.3",
-      ...(businessDays === 6 ? { stages: [{ name: "realisation", businessDays: 1 }, { name: "payment-after-realisation", businessDays: 5 }] } : {}),
-    },
-    reviewedAt: "2026-10-11",
-    docs: businessDays === 6 ? [
-      sourceRef("Signed July 17, 2026 mHYPER final terms: USDC output, 23:59 CET/CEST cutoff, one-day realisation and 15% gate; reviewed by Sol curation campaign 2026-10-11 (P7MidasFusdSettlement)", "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FMgKVyFHWPLrKpyKjdQqL%2F20260714_mHYPER_FT_signed_final.pdf?alt=media", ["settlement", "access"]),
-      sourceRef("Midas July 17, 2026 base: Business Day definition and conditions 8.1, 8.3(c), 12 and 14; reviewed by Sol curation campaign 2026-10-11 (P7MidasFusdSettlement)", "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media", ["settlement", "access"]),
-    ] : [sourceRef("Midas governing July 17, 2025 base: Business Day definition, notice-dependent payment (5.3), market disruption (6), illiquidity deferral (7.3) and qualified subordination (8); reviewed by Sol curation campaign 2026-10-11 (P7MidasFusdSettlement)", "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FhkJf4UxNukH071S6e4GA%2FMidas_Prospectus_Update_2025%20(1).pdf?alt=media", ["settlement", "access"])],
-  };
-}
 function assertKnownTableKeys(
   label: string,
   ids: readonly string[],
@@ -80,8 +45,7 @@ function assertExactTableKeys(
 
 /** Midas liquid-yield-token (LYT) vaults share an identical issuer-API NAV-redemption
  *  shape, settlement, and the standard `liquid-yield-token` doc; they differ only in the
- *  fee/note token name and the per-product page URL. mre7yield-midas diverges (different
- *  reviewed date, `smart-contracts` doc, and note) and stays inline below. */
+ *  fee/note token name and the per-product page URL. */
 const midasLytBase: RedemptionBackstopConfig = {
   ...issuerBase,
   ...documentedBoundSupplyFull("2026-05-14"),
@@ -128,109 +92,18 @@ const MIDAS_LYT_VAULTS: readonly {
       url: "https://blog.midas.app/mglobal-is-now-live-on-the-aave-horizon-rwa-market/",
     },
   },
-  {
-    id: "mhyper-midas", ticker: "mHYPER", productUrl: "https://midas.app/mhyper",
-    feeDisclosure: {
-      statement:
-        "The signed July 17, 2026 mHYPER Final Terms specify Redemption Fees 0% for standard redemption; the separate 0.5% Instant Redemption Fee and up-to-50% deferred-price holdback do not establish standard-route all-in execution cost or funded capacity.",
-      feeBpsMax: 0,
-      label: "Midas mHYPER signed Final Terms (July 17, 2026; reviewed October 9, 2026)",
-      url: "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FMgKVyFHWPLrKpyKjdQqL%2F20260714_mHYPER_FT_signed_final.pdf?alt=media",
-    },
-    termsGap: {
-      missingScoringFields: ["capacity", "settlement"],
-      rationale:
-        "The captured fee and vault observations remain unchanged; daily limits alone are not funded capacity. The signed July 17, 2026 mHYPER Final Terms and incorporated 2026 base specify one Business Day realisation plus five Business Days payment from the Redemption Request Effective Date under condition 8.1, with 23:59 CET/CEST cutoff, relevant commercial-bank/Frankfurt Business Day definition and 15% of aggregate outstanding mTokens per settlement day gate. These exact terms are curated in businessDayTerms. Conditions 12.2-12.5 allow postponed/fallback valuation and payment five Business Days after that valuation, without overriding gates; condition 14 restricts subordinated payment. No unconditional same-notional request-to-completion maximum is disclosed.",
-    },
-  },
-  {
-    id: "mmev-midas", ticker: "mMEV", productUrl: "https://docs.midas.app/tokens/mmev",
-    feeDisclosure: {
-      statement: "Tokenholder Fee 0.50 percent redemption fee and 10 percent interest fee",
-      feeBpsMax: 50,
-      label: "Midas mMEV Final Terms",
-      url: "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/uu3D8USyAPPyq1a6Qy7k/Midas_Final_Terms_mMEV_Update_2025.pdf",
-    },
-    termsGap: {
-      missingScoringFields: ["capacity", "settlement", "cost"],
-      rationale:
-        "The existing discontinued-product and post-retirement capacity/cost findings remain unchanged. The July 17, 2025 mMEV Final Terms incorporate the 2025 base: its condition 5.3 requires payment within ten Business Days only after issuer notice for a Greenlisted holder, with token delivery, the exact relevant-clearing-system/commercial-bank/Frankfurt definition, market-disruption and underlying-illiquidity deferrals, and qualified subordination retained in the reviewed businessDayTerms. No unconditional request-to-completion maximum is disclosed; these terms do not prove a residual executable route or reopen the discontinued channel.",
-    },
-  },
-  {
-    id: "mapollo-midas", ticker: "mAPOLLO", productUrl: "https://midas.app/mapollo",
-    feeDisclosure: {
-      statement:
-        "mAPOLLO Final Terms signed July 17, 2026 list Redemption Fees 0% for standard redemption; the separate Instant Redemption Fee of 0.5% does not apply to this route, and all-in transaction cost is not asserted zero.",
-      feeBpsMax: 0,
-      label: "Midas mAPOLLO Final Terms (signed 2026-07-17; reviewed 2026-10-03)",
-      url: "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2F7sSYvDMJYrWvBsvKGQFI%2F20260714_mAPOLLO_FT_signed_final.pdf?alt=media",
-    },
-    termsGap: {
-      missingScoringFields: ["capacity", "settlement"],
-      rationale:
-        "The reviewed standard-redemption fee is retained: the mAPOLLO Final Terms signed July 17, 2026 list Redemption Fees 0% and a separate 0.5% Instant Redemption Fee. The shared Midas liquidity architecture establishes a redemption mechanism, but the mAPOLLO materials publish no current executable capacity or binding calendar-day fallback SLA, so capacity and settlement remain withheld.",
-    },
-  },
 ];
 
 const MIDAS_LYT_CONFIGS = defineConfigFamily(
   MIDAS_LYT_VAULTS,
-  ({ id, ticker, productUrl, feeDisclosure, termsGap }) => {
+  ({ ticker, productUrl, feeDisclosure, termsGap }) => {
     const docs = [
       sourceRefFull(`Midas ${ticker}`, productUrl),
       ...(feeDisclosure ? [sourceRef(feeDisclosure.label, feeDisclosure.url, ["fees"])] : []),
-      ...(id === "mhyper-midas" ? [
-        sourceRef(
-          "mHYPER signed July 17, 2026 terms: exact USDC output, standard fee and conditional redemption rules",
-          "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FMgKVyFHWPLrKpyKjdQqL%2F20260714_mHYPER_FT_signed_final.pdf?alt=media",
-          ["route", "fees", "access", "settlement"],
-        ),
-      ] : []),
       ...midasLytBase.docs!,
     ];
-    const calendarReview = id === "mapollo-midas"
-      ? {
-          businessDayTerms: {
-            businessDays: 6,
-            calendarId: "frankfurt-banking-target" as const,
-            cutoff: { time: "23:59", timezone: "Europe/Berlin" },
-            assurance: "binding-guarantee" as const,
-            conditional: true,
-            conditions: [
-              "15% per-settlement-day redemption gate",
-              "Market-disruption valuation/payment deferrals and qualified subordination; instant deferred-price holdback is not standard-route capacity",
-            ],
-            startEvent: "Accepted standard redemption after applicable gates",
-            stages: [
-              { name: "realisation", businessDays: 1 },
-              { name: "payment-after-realisation", businessDays: 5 },
-            ],
-          },
-          reviewedAt: "2026-10-10",
-          docs: [
-            sourceRef(
-              "mAPOLLO signed July 17, 2026 final terms: USDC output, 23:59 CET/CEST cutoff, one-day realisation and 15% gate",
-              "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2F7sSYvDMJYrWvBsvKGQFI%2F20260714_mAPOLLO_FT_signed_final.pdf?alt=media",
-              ["route", "fees", "settlement"],
-            ),
-            sourceRef(
-              "Midas July 17, 2026 base prospectus: condition 8.3(c) five-business-day payment; condition 12 market-disruption deferrals",
-              "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media",
-              ["settlement"],
-            ),
-          ],
-        }
-      : id === "mhyper-midas" || id === "mmev-midas"
-        ? midasBusinessDayReview(id === "mhyper-midas" ? 6 : 10)
-        : null;
     return {
       ...midasLytBase,
-      ...(id === "mhyper-midas" || id === "mapollo-midas" ? {
-        outputAssetType: "stable-single" as const,
-        outputAssets: ["usdc-circle"],
-        reviewedAt: id === "mapollo-midas" ? "2026-10-10" : "2026-10-09",
-      } : {}),
       costModel: feeDisclosure
         ? feeDisclosure.feeBpsMax === 0
           ? fixedFee(0, feeDisclosure.statement)
@@ -249,7 +122,6 @@ const MIDAS_LYT_CONFIGS = defineConfigFamily(
           rationale: termsGap.rationale,
           reviewedAt: "2026-09-04",
           docs: [...docs],
-          ...(calendarReview ? { ...calendarReview, docs: [...docs, ...calendarReview.docs!] } : {}),
         },
       } : {}),
       notes: [
@@ -260,7 +132,7 @@ const MIDAS_LYT_CONFIGS = defineConfigFamily(
 );
 
 /** Spiko fund redemptions share the current withdrawal recipe and SICAV prospectus.
- *  Only EUTBL and eurSAFO have documented instant-withdrawal eligibility; this is
+ *  Only EUTBL has documented instant-withdrawal eligibility; this is
  *  investor/bank/day scope, not coin-wide liquidity or a currency-based capability. */
 const spikoDepositsRef = () =>
   sourceRef(
@@ -291,7 +163,7 @@ const spikoProspectus = () =>
     "access",
     "settlement",
   ]);
-const spikoProspectusSettlementReview = (settlementSupported = false): RedemptionV9RouteReviewTerms => ({
+const spikoProspectusSettlementReview = (): RedemptionV9RouteReviewTerms => ({
   settlementModel: "days",
   scoringDisposition: "bounded-terms-gap",
   missingScoringFields: ["settlement"],
@@ -301,20 +173,6 @@ const spikoProspectusSettlementReview = (settlementSupported = false): Redemptio
     sourceRef(
       "Spiko SICAV prospectus",
       "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
-      settlementSupported ? ["route", "settlement"] : ["route"],
-    ),
-  ],
-});
-const spikoCashAndCarrySettlementReview = (): RedemptionV9RouteReviewTerms => ({
-  settlementModel: "days",
-  scoringDisposition: "bounded-terms-gap",
-  missingScoringFields: ["settlement"],
-  rationale: "The October 19, 2026 Cash & Carry prospectus p13 centralizes redemption orders on D-1 before 11:00 Paris time, executes on D and pays on D+1 (working day). France, UK and US holidays and TARGET/CME closures defer centralization/NAV. Article 3 settles redemptions within a maximum of five days following share valuation; the discretionary 10% net-redemption gate carries unexecuted orders to later centralizations without priority. These are conditional payment terms after eligible registered-share requests, not an unconditional request-to-completion maximum. No matching reviewed calendar exists, and no business-day or elapsed-second scalar is inferred.",
-  reviewedAt: "2026-11-06",
-  docs: [
-    sourceRef(
-      "Spiko Cash & Carry prospectus, October 19, 2026, pp13-16 and Article 3: conditional payment and gates",
-      "https://cdn.spiko.finance/legal_docs/EN/Prospectus_SPKCC_EN.pdf",
       ["route", "settlement"],
     ),
   ],
@@ -325,44 +183,19 @@ const SPIKO_FEE_DISCLOSURES: Record<string, { statement: string; url: string }> 
     statement: "There are no exit costs for this Product. EUR 0",
     url: "https://cdn.spiko.finance/legal_docs/EN/KID_EUTBL_EN.pdf",
   },
-  "eursafo-spiko": {
-    statement: "No exit cost applies to this Product. 0 EUR",
-    url: "https://cdn.spiko.finance/legal_docs/EN/KID_eurSAFO_EN.pdf",
-  },
   "ustbl-spiko": {
     statement: "There are no exit costs for this Product. USD 0",
     url: "https://cdn.spiko.finance/legal_docs/EN/KID_USTBL_EN.pdf",
   },
-  "safo-spiko-usd": {
-    statement: "No exit costs apply to this Product. USD 0",
-    url: "https://cdn.spiko.finance/legal_docs/EN/KID_SAFO_EN.pdf",
-  },
-  "gbpsafo-spiko": {
-    statement: "No exit costs apply to this Product. GBP 0",
-    url: "https://cdn.spiko.finance/legal_docs/EN/KID_gbpSAFO_EN.pdf",
-  },
-  "uktbl-spiko": {
-    statement: "There are no exit costs applicable to this Product. GBP 0",
-    url: "https://cdn.spiko.finance/legal_docs/EN/KID_UKTBL_EN.pdf",
-  },
-  "eurspkcc-spiko": {
-    statement: "There are no exit costs for this Product. EUR 0",
-    url: "https://cdn.spiko.finance/legal_docs/EN/KID_eurSPKCC_EN.pdf",
-  },
-  "spkcc-spiko": {
-    statement: "There are no exit costs for this Product. USD 0",
-    url: "https://cdn.spiko.finance/legal_docs/EN/KID_SPKCC_EN.pdf",
-  },
 };
 
-/** Eight Spiko funds retain documented eventual-only NAV redemption and zero fund
+/** Two Spiko funds retain documented eventual-only NAV redemption and zero fund
  *  exit fees. Instant eligibility is explicitly class-scoped, never inferred from
  *  EUR denomination. Each fund keeps its product references and independent review. */
 const SPIKO_FUNDS: readonly {
   id: string;
   ticker: string;
   shareClassId: string;
-  productRef: RedemptionDocSource | null;
   note: string;
   settlementReview: () => RedemptionV9RouteReviewTerms;
 }[] = [
@@ -370,108 +203,20 @@ const SPIKO_FUNDS: readonly {
     id: "ustbl-spiko",
     ticker: "USTBL",
     shareClassId: "USTBL",
-    productRef: null,
     note: "Modeled as account-gated fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
     settlementReview: () => ({
-      ...spikoProspectusSettlementReview(true),
+      ...spikoProspectusSettlementReview(),
       rationale: "The September 1, 2026 SICAV prospectus p21 settles USTBL redemptions on D for registered-share orders cleared before 11:30 Paris time; later orders roll to the next business day. France/US holidays and Paris/New York exchange closures defer clearing/NAV. Electronic-money-token transfer may not start on centralization day and may be refused in favor of bank transfer. The discretionary 10% net-assets gate and suspensions can defer requests; unexecuted orders carry forward without priority. Ordinary D settlement is conditional, and no matching reviewed calendar or unconditional final-receipt scalar is established.",
       reviewedAt: "2026-11-06",
       docs: [sourceRef("Spiko SICAV prospectus, September 1, 2026, pp21-23: USTBL settlement and gates", "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf", ["route", "settlement"])],
     }),
   },
   {
-    id: "safo-spiko-usd",
-    ticker: "SAFO",
-    shareClassId: "SAFO",
-    productRef: sourceRef("Spiko dollar fund", "https://www.spiko.io/spiko-dollar", ["capacity", "fees", "access"]),
-    note: "Modeled as account-gated Spiko / Amundi fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
-    settlementReview: () => ({
-      ...spikoProspectusSettlementReview(true),
-      rationale: "The September 1, 2026 SICAV prospectus p61 settles SAFO redemptions on D+1 (business day) after registered-share orders cleared before 15:00 Paris time; later orders roll forward. NAV/centralization requires at least one of Paris or New York open for a full session. If the relevant currency market is closed on D+1, settlement moves to its next open day. The discretionary 25% net-assets gate and suspensions can defer requests; unexecuted orders carry forward without priority. These conditional payment terms lack a matching reviewed calendar and do not establish an unconditional final-receipt scalar.",
-      reviewedAt: "2026-11-06",
-      docs: [sourceRef("Spiko SICAV prospectus, September 1, 2026, pp61-63: SAFO conditional settlement and 25% gate", "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf", ["route", "settlement"])],
-    }),
-  },
-  {
-    id: "spkcc-spiko",
-    ticker: "SPKCC",
-    shareClassId: "SPKCC",
-    productRef: sourceRef("Spiko cash and carry fund", "https://www.spiko.io/spiko-cash-and-carry", ["capacity", "fees", "access"]),
-    note: "Modeled as account-gated Spiko cash-and-carry fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
-    settlementReview: spikoCashAndCarrySettlementReview,
-  },
-  {
-    id: "uktbl-spiko",
-    ticker: "UKTBL",
-    shareClassId: "UKTBL",
-    productRef: sourceRef("Spiko UK Treasury bills fund", "https://www.spiko.io/spiko-treasury-bills-pound", [
-      "capacity",
-      "fees",
-      "access",
-    ]),
-    note: "Modeled as account-gated GBP money-market fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
-    settlementReview: () => ({
-      ...spikoProspectusSettlementReview(),
-      rationale: "The September 1, 2026 SICAV prospectus p44 settles UKTBL redemptions on D for registered-share orders cleared before 11:30 Paris time; later orders roll to the next business day. France/UK holidays and Paris/London exchange closures defer clearing/NAV. The discretionary 10% net-assets gate and suspensions can defer requests; unexecuted orders carry forward without priority. Ordinary D settlement is conditional, and no matching reviewed calendar or unconditional final-receipt scalar is established.",
-      reviewedAt: "2026-11-06",
-      docs: [sourceRef("Spiko SICAV prospectus, September 1, 2026, pp44-46: UKTBL settlement and gates", "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf", ["route", "settlement"])],
-    }),
-  },
-  {
-    id: "gbpsafo-spiko",
-    ticker: "GBPSAFO",
-    shareClassId: "gbpSAFO",
-    productRef: sourceRef("Spiko pound fund", "https://www.spiko.io/spiko-pound", ["capacity", "fees", "access"]),
-    note: "Modeled as account-gated Spiko / Amundi GBP fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
-    settlementReview: () => ({
-      settlementModel: "days",
-      scoringDisposition: "bounded-terms-gap",
-      missingScoringFields: ["capacity", "settlement", "cost"],
-      rationale:
-        "Reviewed 2026-10-20: the SICAV prospectus permits 25% sub-fund redemption gates, deferred orders without priority, market closures and suspensions. Ordinary D+1 settlement does not establish an unconditional final-bank-receipt maximum or same-notional stressed executable capacity. Zero fund exit commission excludes investor-paid DLT transfer fees (prospectus p66); Terms of Use v2.2 article 11.3.2 requires external holders to pay the transfer into the internal wallet, while article 14.3 sponsors internal-wallet costs only. No generic all-in fee ceiling is established. Existing capacity, settlement and cost gaps and the original review start are retained.",
-      reviewedAt: "2026-09-04",
-      docs: [
-        sourceRef(
-          "Spiko SICAV prospectus (published 2026-09-01)",
-          "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
-          ["route", "capacity", "settlement", "fees"],
-        ),
-        sourceRef(
-          "Spiko GBPSAFO KID",
-          "https://cdn.spiko.finance/legal_docs/EN/KID_gbpSAFO_EN.pdf",
-          ["fees", "settlement"],
-        ),
-        sourceRef(
-          "Spiko Terms of Use v2.2, June 30, 2026, articles 11.3.2 and 14.3; retrieved 2026-10-20",
-          "https://cdn.spiko.finance/legal_docs/EN/Terms_of_Use_EN.pdf",
-          ["route", "fees", "access"],
-        ),
-      ],
-    }),
-  },
-  {
     id: "eutbl-spiko",
     ticker: "EUTBL",
     shareClassId: "EUTBL",
-    productRef: null,
     note: "Modeled as account-gated fund-share redemption at NAV; instant withdrawals are eligibility-limited and standard withdrawals remain bank-rail dependent.",
-    settlementReview: () => spikoProspectusSettlementReview(true),
-  },
-  {
-    id: "eursafo-spiko",
-    ticker: "EURSAFO",
-    shareClassId: "eurSAFO",
-    productRef: sourceRef("Spiko euro fund", "https://www.spiko.io/spiko-euro", ["capacity", "fees", "access"]),
-    note: "Modeled as account-gated Spiko / Amundi EUR fund-share redemption at NAV; instant withdrawals are eligibility-limited and standard withdrawals remain bank-rail dependent.",
-    settlementReview: () => spikoProspectusSettlementReview(true),
-  },
-  {
-    id: "eurspkcc-spiko",
-    ticker: "EURSPKCC",
-    shareClassId: "eurSPKCC",
-    productRef: sourceRef("Spiko cash and carry fund", "https://www.spiko.io/spiko-cash-and-carry", ["capacity", "fees", "access"]),
-    note: "Modeled as account-gated Spiko EUR cash-and-carry fund-share redemption at NAV; standard withdrawals remain bank-rail dependent, and instant-withdrawal support is not established for this class.",
-    settlementReview: spikoCashAndCarrySettlementReview,
+    settlementReview: spikoProspectusSettlementReview,
   },
 ];
 assertExactTableKeys(
@@ -483,8 +228,8 @@ assertExactTableKeys(
 
 const SPIKO_FUND_CONFIGS = defineConfigFamily(
   SPIKO_FUNDS,
-  ({ id, ticker, shareClassId, productRef, note, settlementReview }) => {
-    const baseDocs = shareClassId === "EUTBL" || shareClassId === "eurSAFO" ? spikoInstantBaseDocs() : spikoBaseDocs();
+  ({ id, ticker, shareClassId, note, settlementReview }) => {
+    const baseDocs = shareClassId === "EUTBL" ? spikoInstantBaseDocs() : spikoBaseDocs();
     const feeDisclosure = SPIKO_FEE_DISCLOSURES[id];
     return {
       ...issuerBase,
@@ -495,7 +240,6 @@ const SPIKO_FUND_CONFIGS = defineConfigFamily(
       v9RouteReviewTerms: settlementReview(),
       docs: [
         ...baseDocs,
-        ...(productRef ? [productRef] : []),
         sourceRef(`Spiko ${ticker} KID`, feeDisclosure.url, ["fees"]),
         spikoProspectus(),
       ],
@@ -507,8 +251,7 @@ const SPIKO_FUND_CONFIGS = defineConfigFamily(
   },
 );
 
-/** bIB01 and bC3M share these two Backed sourceRefs verbatim (the redemption docs and
- *  the product-structure page); each product keeps its own middle docRef, cost, and notes. */
+/** bIB01 Backed sourceRefs (the redemption docs and the product-structure page). */
 const backedRedemptionRef = () =>
   sourceRefFull("Backed redemption docs", "https://docs.backed.fi/backed-platform/issuance-and-redemption/redemption");
 const backedProductStructureRef = () =>
@@ -674,37 +417,6 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       "Modeled as verified-user bank-rail redemption, not as an on-chain permissionless stablecoin swap; reserve visibility still depends on Fluid's self-reported on-chain treasury balance.",
     ],
   },
-  "mre7yield-midas": {
-    ...issuerBase,
-    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
-    settlementModel: "days",
-    v9RouteReviewTerms: midasBusinessDayReview(10),
-    outputAssetType: "nav",
-    costModel: {
-      ...documentedVariableFee("Tokenholder Fee 0.50 percent redemption fee and 10 percent interest fee", "documented-variable"),
-      feeBpsMax: 50,
-    },
-    docs: [
-      sourceRefFull("Midas mRe7YIELD", "https://docs.midas.app/tokens/mre7yield"),
-      sourceRef("Midas smart contracts", "https://docs.midas.app/protocol-mechanics/smart-contracts", [
-        "route",
-        "access",
-      ]),
-      sourceRef(
-        "Midas mRe7YIELD Final Terms",
-        "https://2732961456-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FsPjk0ggBxEJCCnVFFkDR%2Fuploads%2FYUqswmPoBMklqxjG6bwA%2FMidas_Final_Terms_mRE7YIELD_Update_2025.pdf?alt=media",
-        ["fees"],
-      ),
-      sourceRef(
-        "Midas incorporated 2025 Base Prospectus, General Terms 5.3",
-        "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FhkJf4UxNukH071S6e4GA%2FMidas_Prospectus_Update_2025%20(1).pdf?alt=media",
-        ["route", "settlement"],
-      ),
-    ],
-    notes: [
-      "mRe7YIELD is a NAV-accreting strategy token, so the route is modeled as issuer/platform NAV redemption rather than same-day stablecoin par liquidity.",
-    ],
-  },
   ...MIDAS_LYT_CONFIGS,
   "benji-franklin-templeton": {
     ...issuerBase,
@@ -851,79 +563,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       "Modeled as whitelisted professional-investor redemption through the Anemoy / Centrifuge fund rail; tokenized CLO-fund NAV processing is slower and more access-limited than on-chain stablecoin liquidity.",
     ],
   },
-  "acrdx-anemoy-apollo": {
-    ...issuerBase,
-    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
-    settlementModel: "queued",
-    outputAssetType: "nav",
-    costModel: fixedFee(
-      0,
-      "Anemoy's June 2026 ACRDX factsheet lists Entry/exit fees $0 for the USDC subscription/redemption rail. This is the issuer entry/exit fee only: brokerage, custody, banking, administration, audit, network gas and any separate stablecoin conversion or third-party charges are outside that zero. Quarterly repurchases remain queued and do not establish a completion SLA.",
-    ),
-    docs: [
-      sourceRef("Anemoy ACRDX launch", "https://www.anemoy.io/news/acrdx-launched", [
-        "route",
-        "capacity",
-        "access",
-        "settlement",
-      ]),
-      sourceRefFull("RWA.xyz ACRDX profile", "https://app.rwa.xyz/assets/ACRDX"),
-      sourceRef("Centrifuge investor docs", "https://docs.centrifuge.io/user/investor/", [
-        "route",
-        "access",
-        "settlement",
-      ]),
-      sourceRef(
-        "Anemoy ACRDX June 2026 factsheet, Key Facts (reviewed 2026-10-05)",
-        "https://centrifuge-files.mypinata.cloud/ipfs/bafkreigpp4zkwecojcuipjnzyclrfgzaqe6tu5vedvujw6u73c3xfwbx5m",
-        ["route", "fees"],
-      ),
-    ],
-    notes: [
-      "Modeled as qualified-investor NAV redemption through the Anemoy / Centrifuge issuer rail, mirroring the Apollo credit fund template while preserving queued private-credit settlement risk.",
-    ],
-  },
   ...SPIKO_FUND_CONFIGS,
-  "stac-securitize": {
-    ...issuerBase,
-    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
-    settlementModel: "queued",
-    outputAssetType: "nav",
-    costModel: undisclosedReviewedFee(
-      "Securitize materials describe STAC subscriptions and redemptions at fund NAV; public materials reviewed do not publish one fixed STAC redemption fee",
-    ),
-    docs: [
-      sourceRefFull("Securitize STAC", "https://securitize.io/primary-market/Securitize-BNY-CLO-Fund"),
-      sourceRef(
-        "Securitize STAC launch",
-        "https://securitize.io/learn/press/Securitize-Launches-Tokenized-AAA-CLO-Fund-with-BNY",
-        ["route", "capacity", "access", "settlement"],
-      ),
-    ],
-    notes: [
-      "Modeled as qualified-investor Securitize primary-market redemption at NAV, not as secondary exchange liquidity.",
-    ],
-  },
-  "hlscope-hamilton-lane": {
-    ...issuerBase,
-    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
-    settlementModel: "queued",
-    outputAssetType: "nav",
-    costModel: undisclosedReviewedFee(
-      "Securitize / Hamilton Lane materials describe SCOPE feeder-fund redemption features; public materials reviewed do not publish one fixed HLSCOPE redemption fee",
-    ),
-    docs: [
-      sourceRefFull("Securitize HLSCOPE", "https://securitize.io/primary-market/hl-scope"),
-      sourceRef(
-        "Hamilton Lane SCOPE via Securitize",
-        "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
-        ["route", "capacity", "access", "settlement"],
-      ),
-    ],
-    notes: [
-      "Modeled as a Securitize client redemption route for qualified Hamilton Lane SCOPE feeder-fund investors, preserving private-credit feeder settlement and access limits.",
-    ],
-  },
   "bib01-backed": {
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
@@ -939,21 +579,6 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ],
     notes: [
       "Modeled as Backed primary-market redemption for approved customers; T+3 processing and market-hours execution make it slower than secondary DEX exits.",
-    ],
-  },
-  "bc3m-backed": {
-    ...issuerBase,
-    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
-    settlementModel: "days",
-    outputAssetType: "nav",
-    costModel: fixedFee(50, "Backed lists a 0.5% issuance/redemption fee for bC3M"),
-    docs: [
-      backedRedemptionRef(),
-      sourceRef("Backed bC3M product", "https://assets.backed.fi/products/bc3m", ["capacity", "fees", "access"]),
-      backedProductStructureRef(),
-    ],
-    notes: [
-      "Modeled as Backed primary-market redemption for approved customers; bC3M remains a EUR-denominated NAV tracker rather than a euro stablecoin cash claim.",
     ],
   },
   "cadd-cad-digital": {

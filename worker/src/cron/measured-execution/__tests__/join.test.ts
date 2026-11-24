@@ -1,6 +1,4 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS } from "@shared/lib/measured-execution-deployment-policies";
-import { capabilityForPool, requiresP4DexScoreEligibleCapabilityCoverage } from "@shared/lib/p4-exit-route-capability-policy";
 import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-capacity";
 
 vi.mock("../quoter-v2", async () => {
@@ -58,7 +56,6 @@ import {
 import {
   CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID,
   CURVE_USDG_USDC_STABLESWAP_NG_POLICY,
-  getCurveStableSwapNgPolicy,
 } from "../curve-stableswap-ng";
 import {
   CURVE_NXUSD_METAPOOL_POLICY,
@@ -964,32 +961,6 @@ describe("measured execution join AMM invariants", () => {
       gatedCount: 1,
       failuresByReason: { "uniswap-v3-quoter-v2:quote-failed": 1 },
     });
-  });
-
-  it.each(CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS)("keeps $stablecoinId NG evidence activation-pending through coverage assembly", (deployment) => {
-    const policy = getCurveStableSwapNgPolicy(deployment.chain, deployment.poolAddress)!;
-    const { measuredTarget, profile } = makeCurveStableSwapNgRoute(policy);
-    const pool = makeJoinPool(measuredTarget, { project: "curve", chain: deployment.chain });
-    joinDexMeasuredExecutionEvidence({
-      poolsByStablecoin: new Map([[measuredTarget.stablecoinId, [pool]]]),
-      evidence: {
-        quoteGenerationId: "curve-ng-quote-generation", targetGenerationId: "curve-ng-target-generation",
-        publishedAt: 1_060, byTargetId: new Map([[measuredTarget.targetId, makeJoinQuote(measuredTarget, profile)]]),
-      },
-      nowSec: 1_060,
-    });
-    expect(pool.extra?.executionCapabilityGate?.reason).toBe("activation-pending");
-    expect(capabilityForPool(pool).id).toBe("measured-adapter-shadow");
-    expect(requiresP4DexScoreEligibleCapabilityCoverage(pool)).toBe(true);
-    expect(buildP4DexExitRouteObservations({
-      stablecoinId: measuredTarget.stablecoinId, retainedPools: [pool], observedAt: 1_060,
-    }).observations).toHaveLength(0);
-    delete pool.extra!.executionCapabilityGate;
-    expect(capabilityForPool(pool).id).toBe("measured-adapter-shadow");
-    expect(requiresP4DexScoreEligibleCapabilityCoverage(pool)).toBe(true);
-    expect(buildP4DexExitRouteObservations({
-      stablecoinId: measuredTarget.stablecoinId, retainedPools: [pool], observedAt: 1_060,
-    }).observations).toHaveLength(0);
   });
 
   it("joins USDG NG evidence without displacing reserves before consumer-side 3/3 maturity", () => {

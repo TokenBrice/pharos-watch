@@ -24,7 +24,7 @@ function fullActiveIntake(omitIds: string[] = []): PeggedAsset[] {
 }
 
 describe("restoreMissingTrackedAssets", () => {
-  it.each(["cngn-compliant-naira", "mre7yield-midas", "cusdo-openeden", "syzusd-yuzu"])(
+  it.each(["cngn-compliant-naira", "cusdo-openeden", "syzusd-yuzu"])(
     "does not restore obsolete on-chain roster for %s", (id) => {
       const previous = asset({ id, symbol: id, circulating: { peggedUSD: 100 },
         supplySource: "onchain-total-supply", supplyObservedAt: NOW_SEC - 60,

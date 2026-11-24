@@ -144,22 +144,6 @@ export const REVIEWED_LIVE_RESERVE_SOURCE_NOTES: Record<string, LiveReserveSourc
     scoreGradePlausible: false,
     note: "Require a current checkpoint-pinned V1 object/PSM/treasury and full liability census, plus LP underlying reserves/supply. LP face values may include BUCK itself. V2 collateral and partial custody/supply probes cannot establish legacy BUCK backing.",
   },
-  "filqa-fidelity-international": {
-    sourceUrl: "https://www.fidelityinternational.com/legal/documents/en/hffs.en.xx.6470869.pdf",
-    sourceQuality: "static-validated",
-    expectedAdapterFamily: "token-class fund portfolio reader with legal pro-rata and denominator attribution",
-    freshnessEvidence: "Reviewed 2026-10-15: direct factsheet access is 403, but issuer text recovered through its mirror now reports August 31 whole-fund weights (45 days old). No October token-class portfolio or token/fund liability reconciliation was retrieved; prospectus permissions and current NAV do not supply those facts.",
-    scoreGradePlausible: false,
-    note: "Require reachable current dated token-class portfolio and token/fund share-liability reconciliation. Current NAV alone cannot update holdings or prove that the whole-fund allocations are the tracked token's attributed reserve book.",
-  },
-  "slvon-ondo": {
-    sourceUrl: "https://app.ondo.finance/api/v2/assets/slvon/info",
-    sourceQuality: "weak-proof",
-    expectedAdapterFamily: "Ondo token-specific SLV-share/cash-in-transit reserve accounting",
-    freshnessEvidence: "Reviewed 2026-10-07: dated topHoldings says Physical Silver 100% for the underlying SLV ETF; token supply, TVL and market cap fields are null.",
-    scoreGradePlausible: false,
-    note: "Require dated issuer-owned SLV shares/cash-in-transit and matched SLVon liabilities. Underlying ETF gold/silver disclosures and pooled Global Markets reports do not establish this wrapper's allocation; retain the unresolved share/cash envelope.",
-  },
   "aid-gaib": {
     sourceUrl: "https://aid.gaib.ai/transparency",
     sourceQuality: "weak-proof",
@@ -200,14 +184,6 @@ export const REVIEWED_LIVE_RESERVE_SOURCE_NOTES: Record<string, LiveReserveSourc
     scoreGradePlausible: false,
     note: "Require current cash/HQLA asset amounts and categories with matching all-chain liability scope. Signed supply does not sign reserve composition; liability clocks and policy percentages cannot stand in for measured reserve accounting.",
   },
-  "umint-ubs": {
-    sourceUrl: "https://gov.ethenafoundation.com/t/reserve-fund-ubs-money-market-investment-fund-umint/474",
-    sourceQuality: "weak-proof",
-    expectedAdapterFamily: "exact uMINT fund/share accounting and current portfolio reader",
-    freshnessEvidence: "Reviewed 2026-10-15: UBS launch and production releases are retrievable. The January 2025 native disclosure names UBS (Irl) Select Money Market Fund - USD, but supplies no current measured portfolio, exact underlying share class or native valuation-feed/controller address.",
-    scoreGradePlausible: false,
-    note: "Require current exact native fund/share holdings, assets and share-liability attribution. The historical named feeder mandate is public, but does not supply current inventory or a native token-to-fund reconciliation. Do not invent Treasury weights or equate the reserves endpoint 404 (no liveReservesConfig) with zero assets.",
-  },
   "fusd-freedom-dollar": {
     sourceUrl: "https://www.freedomdollar.com/en",
     sourceQuality: "weak-proof",
@@ -232,14 +208,6 @@ export const REVIEWED_LIVE_RESERVE_SOURCE_NOTES: Record<string, LiveReserveSourc
     scoreGradePlausible: false,
     note: "Require dated measured KGS reserves/bank evidence and complete matching circulating liabilities. BNB/Tron supply observes tokens only; it cannot independently verify custodial bank deposits.",
   },
-  "usp-pikudao": {
-    sourceUrl: "https://public-api.piku.co/v1/tokens/usp",
-    sourceQuality: "weak-proof",
-    expectedAdapterFamily: "whole-USP strategy and buffer reserve accounting reader",
-    freshnessEvidence: "Reviewed 2026-10-07: public JSON returns price, APY and 20 bps redemption fee, without reserve amounts, allocations or measurement clock.",
-    scoreGradePlausible: false,
-    note: "Require dated complete allocations, stable buffers, net strategy assets/liabilities and custody scope. Historical newsletter or single BMMF solvency cannot represent changing whole-USP strategies; price API success is not reserve measurement.",
-  },
   "xgz-goldzip": {
     sourceUrl: "https://goldzip.info/transparency/",
     sourceQuality: "weak-proof",
@@ -256,14 +224,6 @@ export const REVIEWED_LIVE_RESERVE_SOURCE_NOTES: Record<string, LiveReserveSourc
     scoreGradePlausible: false,
     note: "Require current dated product-specific off-chain reserve accounting and matched liabilities. Cardano supply cannot validate custody. Anzens USDA and Anzen USDz are different issuers; anzen-usdz is not a suitable binding.",
   },
-  "hlscope-hamilton-lane": {
-    sourceUrl: "https://www.hamiltonlane.com/en-us/strategies/evergreen/global/senior-credit-opportunities-fund",
-    sourceQuality: "weak-proof",
-    expectedAdapterFamily: "exact tokenized feeder/share-class NAV and asset-liability attribution reader",
-    freshnessEvidence: "Reviewed 2026-10-07: manager share-class performance remains dated 31/08/2026; no tokenized-feeder reserve accounting was found.",
-    scoreGradePlausible: false,
-    note: "Require exact feeder/share-class identity, dated NAV, assets and liabilities. Main-fund NAV, target allocations and monthly performance cannot establish tokenized-feeder holdings; supply cannot verify private-credit assets.",
-  },
   "audf-forte": {
     sourceUrl: "https://www.forteaud.com/api/documents/view/audf-reserves-report-august-2026",
     sourceQuality: "static-validated",
@@ -279,14 +239,6 @@ export const REVIEWED_LIVE_RESERVE_SOURCE_NOTES: Record<string, LiveReserveSourc
     freshnessEvidence: "Reviewed 2026-10-07: primary docs are reachable; the October 5 sidecar records a current 16-minter census, newer than the obsolete failed Control Tower retrieval note. Static docs list 12 markets.",
     scoreGradePlausible: false,
     note: "Require complete current authorization/market census and independent productive LP/PT valuation. The unresolved issue is full productive-collateral look-through, not absence of any market census. Historical partial decomposition or only the known frxUSD leg cannot establish complete backing.",
-  },
-  "gldon-ondo": {
-    sourceUrl: "https://app.ondo.finance/api/v2/assets/gldon/info",
-    sourceQuality: "weak-proof",
-    expectedAdapterFamily: "GLDon-specific daily reserve and liability verification reader",
-    freshnessEvidence: "Reviewed 2026-10-15: official info JSON remains underlying-ETF metadata, not wrapper reserves. The issuer-linked archive yields an October 12, 2026 8pm ET Ankura report with $1,706,290,808.28 program assets and $1,599,477,597.46 liabilities, but no GLDon-specific book.",
-    scoreGradePlausible: false,
-    note: "Require the actual GLDon-specific dated reserve/liability verification. Product createdAt is not a reserve date; underlying SPDR gold, OUSG or USDon inventories cannot substitute for GLDon issuer-owned ETF-share/cash accounting.",
   },
   "zaru-blocktower": {
     sourceUrl: "https://framerusercontent.com/assets/Q3LUtjT3Rql8mWBWWS6RfU5c4.pdf",
@@ -335,14 +287,6 @@ export const REVIEWED_LIVE_RESERVE_SOURCE_NOTES: Record<string, LiveReserveSourc
     freshnessEvidence: "Reviewed 2026-10-07: Accountable source DNS fails; a fresh pinned asset() call reverts on the tracked token. Accepted deposit tokens are documented, not deployed allocation.",
     scoreGradePlausible: false,
     note: "Require restored complete dated strategy accounting. DNS failure means unavailable evidence, not an empty portfolio. Reject erc4626-single-asset on the tracked token and idle deposit-token balances as full backing.",
-  },
-  "isc-international-stable-currency": {
-    sourceUrl: "https://isc.money/api/reserve-balances",
-    sourceQuality: "weak-proof",
-    expectedAdapterFamily: "ISC measured holdings parser with source clock and self-held-token exclusion",
-    freshnessEvidence: "Reviewed 2026-10-07: Reserve A/B JSON and composition coefficients still lack portfolio measurement time; holdings include substantial own ISC amounts.",
-    scoreGradePlausible: false,
-    note: "Require dated actual measured holdings, self-held ISC exclusion and liability reconciliation. Price history, coefficients or request time cannot date reserve composition or value circular own-token balances as independent backing.",
   },
   "usdh-hermetica": {
     sourceUrl: "https://blog.hermetica.fi/archive",
@@ -455,22 +399,6 @@ export const REVIEWED_LIVE_RESERVE_SOURCE_NOTES: Record<string, LiveReserveSourc
     freshnessEvidence: "Reviewed 2026-10-07: reachable official index lists wARS/wBRL/wMXN/wCOP/wCLP, without a verified wPEN certificate.",
     scoreGradePlausible: false,
     note: "Require a current PEN-specific dated report and liability scope. An index no-match is unavailable evidence, not empty reserves; sibling-currency substitution and a no-match adapter binding are invalid.",
-  },
-  "jpysc-sbi-startale": {
-    sourceUrl: "https://www.sbigroup.co.jp/news/pdf/group/2026/0907_a.pdf",
-    sourceQuality: "static-validated",
-    expectedAdapterFamily: "current complete trust-property statement and liability disclosure reader",
-    freshnessEvidence: "Reviewed 2026-10-07: September 7 release measures JPY 1 billion short-term JGB investment against approximately JPY 20.1 billion issuance. Statutory-page access times out; announcement is not a rolling complete book.",
-    scoreGradePlausible: false,
-    note: "Require a current complete trust-property statement and exact liability scope. Do not infer a cash-only residual by subtraction or turn the statutory 50% investment ceiling into measured composition. The stated investment is JPY 1 billion, not JPY 10 billion.",
-  },
-  "inalpha-nest": {
-    sourceUrl: "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/positions",
-    sourceQuality: "weak-proof",
-    expectedAdapterFamily: "nest-vault-positions after current complete position and accountant reconciliation",
-    freshnessEvidence: "Reviewed 2026-10-07: current positions/price/last-price-update APIs respond but show dust NAV versus positions and February accountant clocks. The authored binding remains suspended.",
-    scoreGradePlausible: false,
-    note: "Require complete positions reconciled to current accountant prices and liabilities before revival. Reuse the existing Nest URLs, params and source keys rather than a new adapter; HTTP success and request time cannot renew February accounting.",
   },
 };
 

@@ -167,14 +167,7 @@ async function readOnchain(candidate: Candidate, chainRpcs: Map<string, ChainRpc
   const meta = ACTIVE_META_BY_ID.get(assetId);
   const contracts = meta?.contracts?.filter((contract) => contract.chain === chainId) ?? [];
   const config = chainRpcs.get(chainId);
-  // Reviewed Pharos state-only routes are admitted solely for this roster's supply reads.
-  const plan = REVIEWED_ONCHAIN_SUPPLY_PLANS[assetId];
-  const repairDeployment = (plan?.aggregateContracts ?? plan?.repairContracts ?? [])
-    .find((deployment) => deployment.chain === chainId && deployment.dropoutRepair);
-  const endpoints = repairDeployment?.dropoutRepair === "pharos-state-only"
-    ? config?.endpoints.filter((endpoint) => endpoint.position === "supplemental" && endpoint.stateHistory === "archive"
-      && endpoint.logsHistory === "none" && !endpoint.routingDisabled) ?? []
-    : registryRpcEndpoints(config);
+  const endpoints = registryRpcEndpoints(config);
   const urls = endpoints.filter((endpoint) => endpoint.operator !== "dwellir").map((endpoint) => endpoint.url);
   const supplyFallback = meta && selectCuratedAggregateOnchainSupplyProbeContracts(meta)
     ?.find(({ config: profile }) => profile.chain === chainId)?.config.fallbackRpcUrl;

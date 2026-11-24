@@ -1,4 +1,4 @@
-import { CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS, QUOTER_V2_REVIEWED_RETAINED_POOLS } from "@shared/lib/measured-execution-deployment-policies";
+import { QUOTER_V2_REVIEWED_RETAINED_POOLS } from "@shared/lib/measured-execution-deployment-policies";
 import { buildDexMeasuredExecutionTargetId, DEX_MEASURED_TARGET_SCHEMA_VERSION } from "@shared/types/measured-execution";
 import type { SourcePoolGraph } from "../types";
 import { getDexMeasuredExecutionDeployment, isDexMeasuredExecutionDeploymentScoreEligible } from "../../measured-execution/registry";
@@ -15,7 +15,6 @@ const PINNED_REVIEWED_POOLS = [
       return { ...policy, stablecoinId, inputIndex, outputIndex: inputIndex === 0 ? 1 : 0 };
     });
   }),
-  ...CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS.map((pool) => ({ ...pool, protocol: "curve", feePips: undefined })),
   {
     adapterProfileId: "uniswap-v3-quoter-v2", protocol: "uniswap-v3", chain: "xlayer",
     stablecoinId: "satusd-river", poolAddress: "0x849aea45a38e0ee2459be4cec52cb5d73bfc5761", feePips: 3000,

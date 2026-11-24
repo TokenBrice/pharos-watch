@@ -842,25 +842,6 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "Vaults above the holder conversion barrier cannot be selected, so the route is a documented stress-floor mechanism with execution constraints rather than an instant redeem-all buffer",
       ],
     }),
-    "fpi-frax": defineLiveCollateralConfig({
-      outputAssets: ["asset:frax"],
-      reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
-      outputAssetType: "mixed-collateral",
-      costModel: documentedVariableFee(
-        "CPI-indexed redemption price grows on-chain per second at 12-month US CPI-U rate; 100% collateral ratio maintained via AMOs", "documented-variable",
-      ),
-      docs: [
-        sourceRefRouteCapacity(
-          "Frax Price Index overview",
-          "https://docs.frax.finance/frax-price-index/overview-cpi-peg-and-mechanics",
-        ),
-        sourceRef("Frax website", "https://frax.com/", ["route"]),
-      ],
-      notes: [
-        "Tracked metadata describes FPI as redeemable against a fully collateralized FRAX-backed system with the redemption price moving on-chain with CPI rather than staying fixed at $1",
-        "Fresh FPI collateral telemetry uses the FRAX-denominated stable buckets of FPI's collateral as live proxy redemption capacity; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
-      ],
-    }),
     "hbd-hive": defineReviewedCollateralConfig(REVIEWED_HIVE_HBD_AT, {
       outputAssets: ["asset:hive"],
       settlementModel: "days",

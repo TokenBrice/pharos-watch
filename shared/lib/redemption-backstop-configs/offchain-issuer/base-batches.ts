@@ -8,7 +8,6 @@ import {
   sourceRefFull,
   sourceRefRouteCapacity,
   sourceRefRouteCapacityAccess,
-  sourceRefRouteCapacityFees,
 } from "../shared";
 import { reviewedDirectRedemptionSupplyFull, REVIEWED_NON_USD_BATCH_AT, REVIEWED_REMEDIATION_AT } from "./shared";
 
@@ -76,31 +75,6 @@ const DOCUMENTED_BOUND_SOURCE_REFS: Partial<Record<string, RedemptionDocs>> = {
   ],
   "eusd-telcoin": [
     sourceRefFull("Telcoin Digital Asset Bank terms", "https://bank.telco.in/terms-of-use"),
-  ],
-  "gusd-gate": [
-    sourceRef("Gate GUSD product", "https://www.gate.com/staking/USDT?isDebtType=1&pid=33", [
-      "route",
-      "fees",
-      "access",
-      "settlement",
-    ]),
-    sourceRefFull("Gate GUSD minting and redemption guide", "https://www.gate.com/help/lend/staking/46831"),
-    sourceRef(
-      "Gate GUSD Flexible US Treasury upgrade announcement (2026-07-27)",
-      "https://www.gate.com/announcements/article/100840",
-      ["route", "fees", "access", "settlement"],
-    ),
-    sourceRefRouteCapacityFees("Gate GUSD overview", "https://www.gate.com/gusd"),
-    sourceRef(
-      "Gate Learn GUSD redemption fees (last updated 2026-03-29; reviewed 2026-10-03)",
-      "https://www.gate.com/learn/articles/gusd-redemption-flexible-exit-options-for-stable-and-transparent-yield/11559",
-      ["fees", "settlement"],
-    ),
-    sourceRef(
-      "Gate GUSD zero-fee redemption quota announcement (2026-07-16; reviewed 2026-10-07)",
-      "https://miniapp.gate.com/announcements/article/100710",
-      ["route", "fees", "access"],
-    ),
   ],
   "reur-royal-euro": [sourceRefRouteCapacityAccess("REUR", "https://www.rcoins.digital/REUR.html")],
   "rusd-royal-dollar": [sourceRefRouteCapacityAccess("RUSD", "https://www.rcoins.digital/RUSD.html")],
@@ -315,27 +289,6 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
       "a7a5-old-vector": {
         ...reviewedDirectRedemptionBase,
         docs: DOCUMENTED_BOUND_SOURCE_REFS["a7a5-old-vector"],
-      },
-      "gusd-gate": {
-        ...reviewedDirectRedemptionBase,
-        docs: DOCUMENTED_BOUND_SOURCE_REFS["gusd-gate"],
-        ...documentedBoundSupplyFull("2026-08-18"),
-        outputAssets: ["usdc-circle"],
-        // The fee-free quota makes the charge variable, with Gate's
-        // published fast-redemption fee as the ceiling.
-        costModel: {
-          ...documentedVariableFee(
-            "Gate Learn (last updated 2026-03-29) prices GUSD redemption to USDC at 0.05% for standard redemption (credited D+3) and 0.1% for fast redemption (typically within 10 minutes). The modeled same-day route is the fast path, so 10 bps remains the ceiling. Gate's July 16, 2026 announcement makes the zero-fee quota original-currency-specific and calculated from cumulative minted minus cumulative redeemed in that currency; excess follows standard fees, and the authenticated redemption page controls the actual quote", "documented-variable",
-          ),
-          feeBpsMin: 0,
-          feeBpsMax: 10,
-        },
-        notes: [
-          "Gate's 2026-07-27 GUSD upgrade announcement advertises instant credit, and the help centre states fast redemption is typically credited within 5 minutes. Settlement is nonetheless retained at same-day because the current product-page FAQ defers the actual arrival time to the authenticated redemption page and documents a standard redemption path credited on D+3, so no public SLA bounds the full-supply capacity this route models.",
-          "Gate's July 16, 2026 zero-fee quota applies only to redemption in the original subscription currency. Per-currency eligibility is cumulative minted minus cumulative redeemed in that currency, not an unlimited zero-fee entitlement; excess is charged under the standard schedule. This cost quota is not funded redemption capacity or a speed guarantee.",
-          "Access is Gate-account-internal and jurisdiction-gated: the announcement states that users in the UK and other restricted regions cannot access the service.",
-          "Fee provenance reviewed 2026-10-07 against Gate's July 16 zero-quota announcement and Gate Learn's 0.05% standard (D+3) / 0.1% fast terms. Pharos retains the 0–10 bps issuer range and does not pair the cheaper standard fee with same-day settlement.",
-        ],
       },
     },
     { sourceFilePath: SOURCE_FILE_PATH },

@@ -15,8 +15,6 @@ import {
   CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT,
   UNISWAP_V4_DEPLOYMENT,
   getReviewedUniswapV4Deployment,
-  CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS,
-  CURVE_STABLESWAP_NG_ETHERLINK_FACTORY,
 } from "./measured-execution-deployment-policies";
 import {
   CURVE_STABLESWAP_ADAPTER_PROFILE_ID,
@@ -37,7 +35,7 @@ const CURVE_3POOL_LP_TOKEN = CURVE_STABLESWAP_DEPLOYMENT.lpTokenAddress;
 const CURVE_3POOL_TOKEN_ADDRESSES = CURVE_STABLESWAP_DEPLOYMENT.poolTokens.map((token) => token.address);
 
 interface CurveStableSwapNgReviewedPolicy {
-  chain: "ethereum" | "etherlink";
+  chain: "ethereum";
   stablecoinId: string;
   poolAddress: string;
   poolCodeHash: string;
@@ -50,7 +48,7 @@ interface CurveStableSwapNgReviewedPolicy {
 }
 
 const CURVE_STABLESWAP_NG_REVIEWED_POLICIES: readonly CurveStableSwapNgReviewedPolicy[] =
-  [...CURVE_STABLESWAP_NG_DEPLOYMENTS, ...CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS].map((deployment) => ({
+  CURVE_STABLESWAP_NG_DEPLOYMENTS.map((deployment) => ({
     chain: deployment.chain,
     stablecoinId: deployment.stablecoinId,
     poolAddress: deployment.poolAddress,
@@ -58,8 +56,8 @@ const CURVE_STABLESWAP_NG_REVIEWED_POLICIES: readonly CurveStableSwapNgReviewedP
     poolTokenAddresses: deployment.poolTokens.map((token) => token.address),
     tokenInAddress: deployment.poolTokens[deployment.inputIndex].address,
     tokenOutAddress: deployment.poolTokens[deployment.outputIndex].address,
-    factoryAddress: deployment.chain === "etherlink" ? CURVE_STABLESWAP_NG_ETHERLINK_FACTORY.address : CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT.address,
-    factoryCodeHash: deployment.chain === "etherlink" ? CURVE_STABLESWAP_NG_ETHERLINK_FACTORY.codeHash : CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT.codeHash,
+    factoryAddress: CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT.address,
+    factoryCodeHash: CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT.codeHash,
     factoryPoolIndex: deployment.factoryPoolIndex,
   }));
 

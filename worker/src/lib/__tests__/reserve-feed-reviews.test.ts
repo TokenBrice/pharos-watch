@@ -82,9 +82,7 @@ describe("reserve feed review policy", () => {
       expect(result.expiredIds).toEqual(offset < 0 ? [] : [review.stablecoinId]);
     }
   });
-  it("retires Yuzu, dates nWISDOM and retains the exact error/category boundary", async () => {
-    const r = RESERVE_FEED_REVIEWS.find((r) => r.stablecoinId === "nwisdom-nest")!;
-    expect([r.reviewedAt, r.expiresAt]).toEqual(["2026-11-22T12:38:00Z", "2026-12-06T12:38:00Z"].map((s) => Date.parse(s) / 1000));
+  it("retires Yuzu and retains the exact error/category boundary", async () => {
     expect(RESERVE_FEED_REVIEWS.some((r) => r.stablecoinId === "yzusd-yuzu")).toBe(false);
     expect(review.failureCategory).toBe("unknown");
     expect(review.errorPrefix).toBe(accountable + "exposure_split has no contemporaneous timeline reserve total for reconciliation");
@@ -113,7 +111,13 @@ describe("reserve feed review policy", () => {
     await check({ ...s, ...skipped }, r, r, history(r));
   });
   it("pins verified stalled clocks, including clean ok attempts", async () => {
-    const r = { ...RESERVE_FEED_REVIEWS.find((r) => r.stablecoinId === "nwisdom-nest")!, warningCodes: [] };
+    const r: Review = {
+      ...review,
+      failureCategory: null,
+      warningCodes: [],
+      errorPrefix: null,
+      sourceTimestamp: review.reviewedAt - 10 * 86_400,
+    };
     const s = state(r, { lastStatus: "ok" });
     await check(s, r);
     for (const metadata of [{ ...s.metadata, sourceTimestamp: r.sourceTimestamp! + 1 }, { ...s.metadata, freshnessMode: "unverified" as const }]) {

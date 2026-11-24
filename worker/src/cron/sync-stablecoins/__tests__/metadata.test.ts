@@ -116,8 +116,8 @@ describe("stablecoins pricing metadata", () => {
   it.each(["main", "fallback"] as const)("keeps preferred native supply findings as bounded quality on the %s path", (path) => {
     const assets: PeggedAsset[] = ACTIVE_STABLECOINS.map((coin): PeggedAsset => ({
       ...identity(coin), price: 1,
-      circulating: coin.id === "stac-securitize" || coin.id === "sfrax-frax" ? {} : { peggedUSD: coin.id === "myrc-blox" ? 0 : 1 },
-      supplySource: coin.id === "stac-securitize" || coin.id === "sfrax-frax" ? "onchain-supply-withheld" : coin.id === "eurc-circle" ? "onchain-circulating-supply" : "onchain-total-supply",
+      circulating: coin.id === "usyc-hashnote" || coin.id === "sfrax-frax" ? {} : { peggedUSD: coin.id === "myrc-blox" ? 0 : 1 },
+      supplySource: coin.id === "usyc-hashnote" || coin.id === "sfrax-frax" ? "onchain-supply-withheld" : coin.id === "eurc-circle" ? "onchain-circulating-supply" : "onchain-total-supply",
       ...(coin.id === "myrc-blox" || coin.id === "eurc-circle" ? { supplyRestored: true } : {}),
     }));
     const input = { ...syncInput(assets), providerDiagnostics: [], cacheKey: "stablecoins", syncStartSec: 1_777_000_000, authoritativeOverrideCount: 0, cachedFallbackCount: 0, activePriceCoverage: evaluateStablecoinActivePriceCoverage(assets) };
@@ -125,7 +125,7 @@ describe("stablecoins pricing metadata", () => {
     const result = build(false);
     const metadata = JSON.parse(result.metadata!);
     const expectedRestoredIds = ACTIVE_STABLECOINS.filter((c) => c.id === "myrc-blox" || c.id === "eurc-circle").map((c) => c.id);
-    const finding = { reason: "preferred-native-supply-unavailable", unavailableIds: { ids: ["stac-securitize"], total: 1, truncated: 0 }, restoredIds: { ids: expectedRestoredIds, total: 2, truncated: 0 } };
+    const finding = { reason: "preferred-native-supply-unavailable", unavailableIds: { ids: ["usyc-hashnote"], total: 1, truncated: 0 }, restoredIds: { ids: expectedRestoredIds, total: 2, truncated: 0 } };
     expect(result.status).toBe("ok");
     expect(metadata.reason).toBeUndefined();
     expect(metadata.capabilities).toMatchObject({ stablecoinsCache: true, depegPipeline: true });
@@ -144,7 +144,7 @@ describe("stablecoins pricing metadata", () => {
   it.each(["main", "fallback"] as const)("does not report healthy, observed-zero or reviewed-held preferred supply on the %s path", (path) => {
     const assets: PeggedAsset[] = ACTIVE_STABLECOINS.map((coin): PeggedAsset => ({
       ...identity(coin), price: 1,
-      circulating: coin.id === "sfrax-frax" ? {} : { peggedUSD: coin.id === "stac-securitize" ? 0 : 1 },
+      circulating: coin.id === "sfrax-frax" ? {} : { peggedUSD: coin.id === "usyc-hashnote" ? 0 : 1 },
       supplySource: coin.id === "sfrax-frax" ? "onchain-supply-withheld" : coin.id === "eurc-circle" ? "onchain-circulating-supply" : "onchain-total-supply",
     }));
     const input = { ...syncInput(assets), providerDiagnostics: [], cacheKey: "stablecoins", syncStartSec: 1_777_000_000, authoritativeOverrideCount: 0, cachedFallbackCount: 0, activePriceCoverage: evaluateStablecoinActivePriceCoverage(assets) };
@@ -283,9 +283,9 @@ describe("stablecoins pricing metadata", () => {
     const review = STABLECOIN_PRICE_GAP_REVIEWS.find((e) => e.stablecoinId === "wusd-worldwide")!;
     expect(review).toBeDefined();
     const weighted = ACTIVE_STABLECOINS.map((a): PeggedAsset => {
-      const circulating: Record<string, number> = a.id === "usdt-tether" ? { peggedUSD: 300e9 } : a.id === "eurc-circle" ? { peggedEUR: 3e9 } : a.id === "usdy-ondo-finance" ? { peggedUSD: 2e9 } : { peggedUSD: 0 };
+      const circulating: Record<string, number> = a.id === "usdt-tether" ? { peggedUSD: 300e9 } : a.id === "eurc-circle" ? { peggedEUR: 3e9 } : a.id === "usyc-hashnote" ? { peggedUSD: 2e9 } : { peggedUSD: 0 };
       if (a.id === "wusd-worldwide") return { ...identity(a), price: null, priceSource: "missing", priceConfidence: null, circulating };
-      if (a.id === "usdy-ondo-finance") return { ...identity(a), price: 1, priceSource: "chainlink-nav", priceConfidence: "single-source", circulating };
+      if (a.id === "usyc-hashnote") return { ...identity(a), price: 1, priceSource: "chainlink-nav", priceConfidence: "single-source", circulating };
       return { ...identity(a), price: 1, priceSource: "coingecko", priceConfidence: "high", circulating };
     });
     const active = JSON.parse(buildStablecoinsSyncResult({ ...syncInput(weighted), syncStartSec: review.reviewedAt + Math.floor((review.expiresAt - review.reviewedAt) / 2) }).metadata!).priceSourceHealth.active;

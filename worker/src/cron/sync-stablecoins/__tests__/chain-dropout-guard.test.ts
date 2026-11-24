@@ -52,7 +52,7 @@ const DAY = 86400;
 const LATE_NOW = Date.parse("2026-11-10T00:00:00Z") / 1000;
 const xlayerContract = ACTIVE_META_BY_ID.get("usdg-paxos")!.contracts!.find((entry) => entry.chain === "xlayer")!;
 
-const RWA_AMOUNTS = { ethereum: 150_000_000, base: 145_000_000, monad: 100_000_000, arbitrum: 75_000_000, pharos: 3_000_000, xlayer: 4_000_000, robinhood: 5_000_000 };
+const OUSD_AMOUNTS = { tempo: 250_000_000, ethereum: 150_000_000, base: 78_000_000, solana: 4_000_000 };
 
 const XLAYER_SCALE = 10n ** BigInt(xlayerContract.decimals!);
 
@@ -101,13 +101,13 @@ describe("chain dropout guard", () => {
   });
 
   it.each(["small", "low-chart", "large", "list-share", "ambiguous", "chart"])("keeps only permitted native remainder after a fill-default read failure (%s)", async (mode) => {
-    const amounts = { ...RWA_AMOUNTS, robinhood: mode === "large" ? 50_000_000 : RWA_AMOUNTS.robinhood };
-    const asset: PeggedAsset = { ...usdg(), id: "rwausdi-multipli", priceListFillDefault: { value: 0.000055, upstreamSource: null },
+    const amounts = { xlayer: 477_000_000, ink: mode === "large" ? 50_000_000 : 5_000_000 };
+    const asset: PeggedAsset = { ...usdg(), id: "usdg-paxos", priceListFillDefault: { value: 0.000055, upstreamSource: null },
       circulating: { peggedUSD: Object.values(amounts).reduce((a, b) => a + b) / 1e6 + (mode === "list-share" ? 45 : 0) },
-      chainCirculating: Object.fromEntries(Object.entries(amounts).map(([chain, amount]) => [CHAIN_META[chain].name, { current: mode === "list-share" && chain === "robinhood" ? 50 : amount / 1e6 }])) };
+      chainCirculating: Object.fromEntries(Object.entries(amounts).map(([chain, amount]) => [CHAIN_META[chain].name, { current: mode === "list-share" && chain === "ink" ? 50 : amount / 1e6 }])) };
     const state = savedState(asset.id, ...Object.entries(amounts).map(([chainId, baselineUsd]) => ({ ...baseline(chainId, baselineUsd, NOW - 8 * DAY, NOW - 8 * DAY),
       ...(mode === "ambiguous" ? { ambiguousSince: NOW - DAY, heldTotalUsd: null } : {}) })));
-    mocks.onchain.mockImplementation(async ({ chain }: { chain: keyof typeof amounts }) => chain === "robinhood" ? null : BigInt(amounts[chain]) * 10n ** 6n);
+    mocks.onchain.mockImplementation(async ({ chain }: { chain: keyof typeof amounts }) => chain === "ink" ? null : BigInt(amounts[chain]) * 10n ** 6n);
     if (mode === "chart") mocks.chart.mockResolvedValue(chartPoint(5_000_000, NOW));
     if (mode === "low-chart") mocks.chart.mockResolvedValue(chartPoint(100, NOW));
     const result = await runGuard(asset, { state });
@@ -116,7 +116,7 @@ describe("chain dropout guard", () => {
     expect(result.unavailableAssetIds).toEqual(partial ? [] : [asset.id]);
     if (partial) expect(asset).toMatchObject({ supplyObservedAt: NOW,
       supplyChainGuard: { status: "chains-unavailable", partialCoverage: true, quarantinedSince: NOW - 8 * DAY },
-      chainCirculating: { "Robinhood Chain": { current: null }, Ethereum: { current: 150_000_000 } } });
+      chainCirculating: { Ink: { current: null }, "X Layer": { current: 477_000_000 } } });
   });
 
   it.each([
@@ -214,12 +214,12 @@ describe("chain dropout guard", () => {
       .toEqual(incumbentUrls);
   });
 
-  it.each([false, true])("requires rwaUSDi's healthy small legs in its full native repair (missing: %s)", async (missing) => {
-    const amounts = RWA_AMOUNTS;
-    const asset: PeggedAsset = { ...usdg(), id: "rwausdi-multipli", circulating: { peggedUSD: 700 },
+  it.each([false, true])("requires Open USD's healthy small legs in its full native repair (missing: %s)", async (missing) => {
+    const amounts = OUSD_AMOUNTS;
+    const asset: PeggedAsset = { ...usdg(), id: "ousd-open-standard", circulating: { peggedUSD: 400 },
       chainCirculating: Object.fromEntries(Object.keys(amounts).map((chain) => [CHAIN_META[chain].name, leg(100, 200_000)])) };
     const state = savedState(asset.id, { ...baseline("ethereum", 150_000_000, NOW - DAY, NOW - DAY), ambiguousSince: NOW - DAY, heldTotalUsd: 479_000_000 });
-    const chainCirculating = Object.fromEntries(Object.entries(amounts).filter(([chain]) => !missing || chain !== "robinhood")
+    const chainCirculating = Object.fromEntries(Object.entries(amounts).filter(([chain]) => !missing || chain !== "solana")
       .map(([chainId, current]) => [CHAIN_META[chainId].name, { chainId, current }]));
     mocks.nativeAggregate.mockResolvedValue({ mcap: Object.values(chainCirculating).reduce((sum, row) => sum + row.current, 0),
       supplySource: "onchain-total-supply", observedAt: NOW, chainCirculating });
@@ -227,7 +227,7 @@ describe("chain dropout guard", () => {
     expect(asset.supplyRestored).toBe(missing ? true : undefined);
     expect(getCirculatingRawOrNull(asset)).toBe(missing ? 479_000_000 : 482_000_000);
     expect(result.state.pairs[JSON.stringify([asset.id, "ethereum"])].ambiguousSince).toBe(missing ? NOW - DAY : undefined);
-    if (!missing) expect(asset.chainCirculating![CHAIN_META.xlayer.name].current).toBe(4_000_000);
+    if (!missing) expect(asset.chainCirculating![CHAIN_META.solana.name].current).toBe(4_000_000);
   });
 
   it("repairs today's USDG current chains from fresh daily charts, preserving historical buckets and wire provenance", async () => {
@@ -1247,30 +1247,13 @@ describe("chain dropout guard", () => {
     expect(mocks.chart).not.toHaveBeenCalled();
   });
 
-  it("reads every rwaUSDi roster leg without widening Pharos's registry admission", async () => {
+  it("keeps every dropout repair roster pair backed by a registry RPC and unique contract", () => {
     const rpcs = buildChainRpcs("test-placeholder");
     for (const pair of CHAIN_DROPOUT_ONCHAIN_ROSTER) {
       expect(CHAIN_META[pair.chainId]).toBeDefined();
-      expect(hasRegistryRpc(rpcs.get(pair.chainId))).toBe(pair.chainId !== "pharos");
+      expect(hasRegistryRpc(rpcs.get(pair.chainId))).toBe(true);
       expect(ACTIVE_META_BY_ID.get(pair.assetId)?.contracts?.filter((entry) => entry.chain === pair.chainId)).toHaveLength(1);
     }
     expect(ChainDropoutStateSchema.parse({ version: 1, pairs: {} })).toEqual({ version: 1, pairs: {} } satisfies ChainDropoutState);
-    const rows = Object.fromEntries(CHAIN_DROPOUT_ONCHAIN_ROSTER.filter((pair) => pair.assetId === "rwausdi-multipli")
-      .map(({ chainId }) => [chainId, leg(1, 24_000_000)]));
-    const incoming: PeggedAsset = { ...usdg(), id: "rwausdi-multipli", circulating: { peggedUSD: 7 }, chainCirculating: rows,
-      priceListFillDefault: { value: 0.000055, upstreamSource: null } };
-    const asset = structuredClone(incoming);
-    mocks.onchain.mockResolvedValue(12_000_000n * 10n ** 6n);
-    const result = await runGuard(asset, { chainRpcs: rpcs });
-    expect(result).toMatchObject({ repaired: 7, quarantinedAssetIds: [], unavailableAssetIds: [], historyFetches: 0 });
-    expect(asset).toMatchObject({ circulating: { peggedUSD: 84_000_000 }, supplySource: "defillama-chain-repair" });
-    expect(asset.supplyRestored).toBeUndefined();
-    expect(mocks.onchain.mock.calls.find(([config]) => config.chain === "pharos")?.slice(4)).toEqual(["https://rpc.pharos.xyz", "https://api.zan.top/public/pharos-mainnet"]);
-    expect(mocks.onchain.mock.calls.find(([config]) => config.chain === "robinhood")?.slice(4)).toEqual(["https://rpc.mainnet.chain.robinhood.com", "https://robinhood-rpc.publicnode.com"]);
-    rpcs.get("pharos")!.endpoints = rpcs.get("pharos")!.endpoints.map((endpoint) => ({ ...endpoint, routingDisabled: true }));
-    const failed = await runGuard(incoming, { chainRpcs: rpcs });
-    expect(failed.repaired).toBe(6);
-    expect(incoming.supplyChainGuard?.status).toBe("quarantined");
-    expect(incoming.supplyChainGuard?.chains.find((chain) => chain.chainId === "pharos")).toMatchObject({ resolution: "carried-baseline" });
   });
 });

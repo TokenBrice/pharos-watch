@@ -72,7 +72,6 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/lib/redemption-backstop-configs/offchain-issuer/remediation-and-late-audit.ts",
   "shared/lib/redemption-backstop-configs/offchain-issuer/shared.ts",
   "shared/lib/redemption-backstop-configs/psm-and-basket.ts",
-  "shared/lib/redemption-backstop-configs/queue-redeem-nest-nav.ts",
   "shared/lib/redemption-backstop-configs/queue-redeem.ts",
   "shared/lib/redemption-backstop-configs/review-dates.ts",
   "shared/lib/redemption-backstop-configs/settlement-order.ts",

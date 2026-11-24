@@ -318,7 +318,7 @@ describe("reviewed deployment supply attribution contract", () => {
 const CENTRIFUGE_AGGREGATE_SUPPLY_USD = 51_033_069.79770032;
 
 function centrifugeObservations(
-  assetId = "acrdx-anemoy-apollo",
+  assetId = "jtrsy-anemoy",
 ): ReviewedDeploymentSupplyObservation[] {
   const inventory = buildReviewedDeploymentRouteInventory(assetId);
   if (!inventory) throw new Error(`Missing ${assetId} route inventory`);
@@ -362,7 +362,7 @@ function deriveCentrifuge(
   rows = centrifugeObservations(),
 ): ReturnType<typeof deriveReviewedDeploymentUnitPartition> {
   return deriveReviewedDeploymentUnitPartition({
-    assetId: "acrdx-anemoy-apollo",
+    assetId: "jtrsy-anemoy",
     aggregateSupplyUsd: CENTRIFUGE_AGGREGATE_SUPPLY_USD,
     registryFingerprint: REGISTRY_FINGERPRINT,
     scoringClockSec: CLOCK_SEC,
@@ -382,9 +382,6 @@ describe("Centrifuge burn/mint deployment supply attribution contract", () => {
     expect(
       buildReviewedDeploymentRouteInventory("jtrsy-anemoy")!.routes,
     ).toHaveLength(currentJtrsyCoin.contracts.length);
-    expect(
-      buildReviewedDeploymentRouteInventory("acrdx-anemoy-apollo")!.routes,
-    ).toHaveLength(6);
 
     const attribution = deriveCentrifuge();
     expect(attribution).not.toBeNull();
