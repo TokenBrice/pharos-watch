@@ -138,6 +138,14 @@ const TOKEN_CONFIG: Record<string, TokenConfig> = {
     coinId: "susds-sky",
     stableLike: true,
   },
+  sfrxUSD: {
+    key: "sfrxUSD",
+    name: "sfrxUSD (Staked Frax USD, Celo OFT)",
+    risk: "medium",
+    coinId: "sfrxusd-frax",
+    stableLike: true,
+    intermediary: { kind: "bridge", label: "sfrxUSD (LayerZero OFT)", chain: "celo", contract: "0x00000000fD8C4B8A413A06821456801295921a71", verified: true, sourceUrl: "https://github.com/mento-protocol/mento-analytics-api/blob/main/src/api/reserve/config/assets.config.ts" },
+  },
   EURC: {
     key: "EURC",
     name: "EURC (Circle euro stablecoin)",

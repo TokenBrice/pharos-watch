@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { computeCollateralQualityFromReserves } from "@shared/lib/report-card-policy";
+import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { describe, it, expect } from "vitest";
 
 import {
@@ -12,7 +13,13 @@ import {
   type FraxBalanceSheetResponse,
   type FraxFpiCollateralResponse,
 } from "../frax";
-import { installAdapterNetwork, runAdapter } from "./reserve-adapter.test-support";
+import { encodeBalanceOfCallData } from "../../../lib/evm-selectors";
+import {
+  evaluateAdapterSnapshotAdmission,
+  installAdapterNetwork,
+  runAdapter,
+  runAdapterWithFakeTimers,
+} from "./reserve-adapter.test-support";
 import { BALANCE_SHEET_ENDPOINT, BALANCE_SHEET_SAMPLE, FERRY_ROWS } from "./frax.test-support";
 
 
@@ -740,6 +747,385 @@ describe("frax balance-sheet fetch boundary", () => {
     });
     expect(result.metadata?.totalCollateralUsd).toBe(100);
     expect(result.metadata?.redemption?.capacityUsd).toBeUndefined();
+  });
+
+  describe("on-chain recovery of issuer-errored reviewed Ferry and Optimism LP rows", () => {
+    const ETH_FRAX = "0x853d955acef822db058eb8505911ed77f175b99e";
+    const ETH_ZKEVM_FERRY = "0x86e71075e55f0aad27d700017e0783458310c98a";
+    const ZKEVM_FRAX = "0xff8544fed5379d9ffa8d47a74ce6b91e632ac44d";
+    const ZKEVM_FERRY = "0xeabd7625056bbd2c260f90d0b08759c69d971a5b";
+    const OP_HOLDER = "0x0df840dcbf1229262a4125c1fc559bd338ec9491";
+    const OP_FRAX = "0x2e3d870790dc77a83dd1d18184acc7439a53f475";
+    const OP_FXS = "0x67ccea5bb16181e7b4109c9c2143c24a1c2205be";
+    const OP_WETH = "0x4200000000000000000000000000000000000006";
+    const OP_FRAX_FXS_PAIR = "0x9456c020d3a05b159dab4557535083fba836c49a";
+    const OP_FRAX_WETH_PAIR = "0xcc4dd8bc7967d46060ba3faaa8e525a35625f8b4";
+    const ETH_FERRY_BAL = 7_085_774_780_020_000_000_000n;
+    const ZKEVM_FERRY_BAL = 5_603_415_999_960_000_000_000n;
+    const encodeReserves = (r0: bigint, r1: bigint, ts = 1_795_475_155n) =>
+      `0x${[r0, r1, ts].map((v) => v.toString(16).padStart(64, "0")).join("")}`;
+
+    const erroredZkevmPairPayload = (
+      totalAssets: number,
+      tokenPriceUsd: FraxBalanceSheetResponse["tokenPriceUsd"] | null = { FRAX: 0.993963 },
+      asOfBlock?: Record<string, number>,
+      extraAssets: NonNullable<FraxBalanceSheetResponse["assets"]> = [],
+    ): FraxBalanceSheetResponse => ({
+      ...(asOfBlock ? { asOfBlock } : {}),
+      asOfTimestamp: BALANCE_SHEET_SAMPLE.asOfTimestamp,
+      ...(tokenPriceUsd ? { tokenPriceUsd } : {}),
+      totalAssets,
+      assets: [
+        ...FERRY_ROWS.map((row) => {
+          if (row.chain === "ethereum" && row.address === ETH_ZKEVM_FERRY) {
+            return { ...row, tokenQuantity: -0.0001, tokenQuantityE18: "0", totalValueUsd: 0,
+              description: "ERROR: FraxFerry - FRAX ethereum->polygon_zkevm" };
+          }
+          if (row.chain === "polygon_zkevm" && row.address === ZKEVM_FERRY) {
+            return { ...row, tokenQuantity: -0.0001, tokenQuantityE18: "0", totalValueUsd: 0,
+              description: "ERROR: FraxFerry - FRAX polygon_zkevm->ethereum" };
+          }
+          return row;
+        }),
+        { tokenSymbol: "USDC", totalValueUsd: totalAssets - extraAssets.reduce((s, a) => s + a.totalValueUsd, 0), category: "asset:owned:usd" },
+        ...extraAssets,
+      ],
+    });
+
+    // Redacted copy of the five-error 2026-11-23T23:23:47Z issuer payload:
+    // zkEVM Ferry pair plus the three Optimism Fraxswap V2 LP ERROR rows.
+    const fiveErrorPayload = (asOfBlock: Record<string, number> | undefined = {
+      ethereum: 26_481_100, optimism: 159_938_725, polygon_zkevm: 33_391_890,
+    }, totalAssets = 260_030_857.4893): FraxBalanceSheetResponse =>
+      erroredZkevmPairPayload(totalAssets, { FRAX: 0.993963, WETH: 1711.8647 }, asOfBlock, [
+        { category: "asset:owned:unknown", chain: "optimism", address: OP_HOLDER, contractAddress: OP_FRAX_FXS_PAIR,
+          tokenAddress: OP_FRAX, tokenSymbol: "FRAX", totalValueUsd: -0.000993963, tokenQuantity: -0.001,
+          tokenQuantityE18: "-1000000000000000", description: "ERROR: optimism_fraxswap_v2_frax_fxs" },
+        { category: "asset:owned:unknown", chain: "optimism", address: OP_HOLDER, contractAddress: OP_FRAX_WETH_PAIR,
+          tokenAddress: OP_FRAX, tokenSymbol: "FRAX", totalValueUsd: -0.000993963, tokenQuantity: -0.001,
+          tokenQuantityE18: "-1000000000000000", description: "ERROR: optimism_fraxswap_v2_frax_weth" },
+        { category: "asset:owned:unknown", chain: "optimism", address: OP_HOLDER, contractAddress: OP_FRAX_WETH_PAIR,
+          tokenAddress: OP_WETH, tokenSymbol: "WETH", totalValueUsd: -1.7118647, tokenQuantity: -0.001,
+          tokenQuantityE18: "-1000000000000000", description: "ERROR: optimism_fraxswap_v2_frax_weth" },
+      ]);
+
+    const healthyOptimismLpRpc = (overrides: Record<string, bigint | number | string | null> = {}) => ({
+      [`optimism:${OP_FRAX_FXS_PAIR}:balanceOf(address)`]: 0n,
+      [`optimism:${OP_FRAX_FXS_PAIR}:totalSupply()`]: 9_352_623_463_494_157_525n,
+      [`optimism:${OP_FRAX_FXS_PAIR}:token0()`]: OP_FRAX,
+      [`optimism:${OP_FRAX_FXS_PAIR}:token1()`]: OP_FXS,
+      [`optimism:${OP_FRAX_FXS_PAIR}:getReserves()`]: encodeReserves(4_669_580_429_664_564_281n, 24_878_895_694_754_483_141n),
+      [`optimism:${OP_FRAX_WETH_PAIR}:balanceOf(address)`]: 829_689_952_887_420_716_591n,
+      [`optimism:${OP_FRAX_WETH_PAIR}:totalSupply()`]: 833_739_173_262_077_674_253n,
+      [`optimism:${OP_FRAX_WETH_PAIR}:token0()`]: OP_FRAX,
+      [`optimism:${OP_FRAX_WETH_PAIR}:token1()`]: OP_WETH,
+      [`optimism:${OP_FRAX_WETH_PAIR}:getReserves()`]: encodeReserves(38_955_459_056_234_753_889_787n, 22_438_909_116_365_214_403n),
+      [`optimism:${OP_FRAX}:decimals()`]: 18,
+      [`optimism:${OP_FXS}:decimals()`]: 18,
+      [`optimism:${OP_WETH}:decimals()`]: 18,
+      ...overrides,
+    });
+
+    it("recovers the zkEVM Ferry pair on-chain with verified holder calldata and admits observed zeros", async () => {
+      const totalAssets = 260_104_249.9764;
+      const fraxPrice = 0.993963;
+      const expectedRecoveredUsd = (7_085.77478002 + 5_603.41599996) * fraxPrice;
+      const run = await runAdapter("frax-balance-sheet", "frax-frax", {
+        network: {
+          chains: { "polygon-zkevm": "https://zkevm-rpc.com" },
+          json: { [BALANCE_SHEET_ENDPOINT]: erroredZkevmPairPayload(totalAssets, { FRAX: fraxPrice }, { polygon_zkevm: 33_391_890 }) },
+          rpc: {
+            [`ethereum:${ETH_FRAX}:balanceOf(address)`]: ETH_FERRY_BAL,
+            [`ethereum:${ETH_FRAX}:decimals()`]: 18,
+            [`polygon-zkevm:${ZKEVM_FRAX}:balanceOf(address)`]: ZKEVM_FERRY_BAL,
+            [`polygon-zkevm:${ZKEVM_FRAX}:decimals()`]: 18,
+          },
+        },
+        nowSec: 1_775_307_827 + 600,
+        validate: false,
+      });
+
+      expect(run.report.valid).toBe(true);
+      expect(evaluateAdapterSnapshotAdmission(run, 1_775_307_827 + 600)).toMatchObject({ eligible: true });
+      expect([...(run.result.warnings ?? []), ...run.report.warnings].filter((w) => w.effect !== "info")).toEqual([]);
+      expect(run.result.warnings).toContainEqual(expect.objectContaining({ code: "ferry-balance-onchain-recovery", effect: "info" }));
+      expect(run.network.rpcCalls.map((c) => [c.chain, c.contract, c.data])).toEqual([
+        ["ethereum", ETH_FRAX, encodeBalanceOfCallData(ETH_ZKEVM_FERRY)],
+        ["ethereum", ETH_FRAX, "0x313ce567"],
+        ["polygon-zkevm", ZKEVM_FRAX, encodeBalanceOfCallData(ZKEVM_FERRY)],
+        ["polygon-zkevm", ZKEVM_FRAX, "0x313ce567"],
+      ]);
+      expect(run.result.metadata).toMatchObject({
+        totalCollateralUsd: expect.closeTo(totalAssets + expectedRecoveredUsd, 4),
+        recoveredFerryRowCount: 2,
+        recoveredFerryCollateralUsd: expect.closeTo(expectedRecoveredUsd, 4),
+        redemption: { capacityUsd: totalAssets },
+      });
+
+      // Observed zero balances without FRAX price (when asOfBlock is absent).
+      const zeroRun = await runAdapter("frax-balance-sheet", "frax-frax", {
+        network: {
+          chains: { "polygon-zkevm": "https://zkevm-rpc.com" },
+          json: { [BALANCE_SHEET_ENDPOINT]: erroredZkevmPairPayload(1_000_000, null) },
+          rpc: {
+            [`ethereum:${ETH_FRAX}:balanceOf(address)`]: 0n,
+            [`ethereum:${ETH_FRAX}:decimals()`]: 18,
+            [`polygon-zkevm:${ZKEVM_FRAX}:balanceOf(address)`]: 0n,
+            [`polygon-zkevm:${ZKEVM_FRAX}:decimals()`]: 18,
+          },
+        },
+        nowSec: 1_775_307_827 + 600,
+        validate: false,
+      });
+      expect(zeroRun.report.valid).toBe(true);
+      expect(zeroRun.result.metadata).toMatchObject({ totalCollateralUsd: 1_000_000, recoveredFerryRowCount: 2, recoveredFerryCollateralUsd: 0 });
+    });
+
+    it("falls back to the terminal block 33391890 pin when zkEVM RPCs fail or hang under attemptDeadlineMs", async () => {
+      const totalAssets = 260_104_249.9764;
+      const fraxPrice = 0.993963;
+      const zkevmUrls: string[] = [];
+      const run = await runAdapterWithFakeTimers(async () => {
+        const start = Date.now();
+        const timeout = createTimeoutSignal({ timeoutMs: 20_000, timeoutReason: "adapter-timeout" });
+        const network = installAdapterNetwork({
+          chains: { "polygon-zkevm": "https://zkevm-rpc.com" },
+          json: { [BALANCE_SHEET_ENDPOINT]: erroredZkevmPairPayload(totalAssets, { FRAX: fraxPrice }, { polygon_zkevm: 33_391_890 }) },
+          rpc: {
+            [`ethereum:${ETH_FRAX}:balanceOf(address)`]: ETH_FERRY_BAL,
+            [`ethereum:${ETH_FRAX}:decimals()`]: 18,
+          },
+        });
+        const baseImpl = network.fetchSpy.getMockImplementation()!;
+        network.fetchSpy.mockImplementation((input, init) => {
+          const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+          if (url.includes("zkevm")) {
+            zkevmUrls.push(url);
+            const sig = init?.signal ?? (input instanceof Request ? input.signal : undefined);
+            return new Promise((_resolve, reject) => {
+              if (sig?.aborted) { reject(sig.reason); return; }
+              sig?.addEventListener("abort", () => reject(sig.reason), { once: true });
+            });
+          }
+          return baseImpl(input, init);
+        });
+        try {
+          const res = await runAdapter("frax-balance-sheet", "frax-frax", {
+            network,
+            signal: timeout.signal,
+            ctx: { attemptDeadlineMs: start + 20_000 },
+            nowSec: 1_775_307_827 + 600,
+            validate: false,
+          });
+          expect(Date.now() - start).toBeLessThan(10_000);
+          return res;
+        } finally {
+          network.fetchSpy.mockImplementation(baseImpl);
+          timeout.dispose();
+        }
+      }, 20_001);
+
+      expect(run.report.valid).toBe(true);
+      expect(evaluateAdapterSnapshotAdmission(run, 1_775_307_827 + 600)).toMatchObject({ eligible: true });
+      expect([...(run.result.warnings ?? []), ...run.report.warnings].filter((w) => w.effect !== "info")).toEqual([]);
+      expect(run.result.warnings).toContainEqual(expect.objectContaining({
+        code: "ferry-balance-onchain-recovery-failed",
+        effect: "info",
+        message: expect.stringMatching(/polygon-zkevm.*rpc-unavailable/),
+      }));
+      expect(run.result.metadata).toMatchObject({
+        recoveredFerryRowCount: 2,
+        pinnedHaltedChainFerryPositions: [`polygon-zkevm:${ZKEVM_FERRY}@33391890`],
+        pinnedHaltedChainFerryVerifiedAt: "2026-11-23",
+      });
+      // Halted-chain leg uses maxRetries: 0: one attempt on each configured zkEVM URL.
+      expect(zkevmUrls).toEqual(["https://zkevm-rpc.com", "https://polygon-zkevm.drpc.org"]);
+    });
+
+    it("fails closed when a live zkEVM read contradicts the pinned terminal block 33391890 balance", async () => {
+      const { result } = await runAdapter("frax-balance-sheet", "frax-frax", {
+        network: {
+          chains: { "polygon-zkevm": "https://zkevm-rpc.com" },
+          json: { [BALANCE_SHEET_ENDPOINT]: erroredZkevmPairPayload(260_104_249.9764, { FRAX: 0.993963 }, { polygon_zkevm: 33_391_890 }) },
+          rpc: {
+            [`ethereum:${ETH_FRAX}:balanceOf(address)`]: ETH_FERRY_BAL,
+            [`ethereum:${ETH_FRAX}:decimals()`]: 18,
+            [`polygon-zkevm:${ZKEVM_FRAX}:balanceOf(address)`]: 0n,
+            [`polygon-zkevm:${ZKEVM_FRAX}:decimals()`]: 18,
+          },
+        },
+        nowSec: 1_775_307_827 + 600,
+        validate: false,
+      });
+
+      expect(result.warnings).toContainEqual(expect.objectContaining({ code: "asset-coverage-incomplete", effect: "fatal" }));
+      expect(result.warnings).toContainEqual(expect.objectContaining({
+        code: "ferry-balance-onchain-recovery-failed",
+        effect: "info",
+        message: expect.stringMatching(/polygon-zkevm.*terminal-pin-mismatch/),
+      }));
+      expect(result.metadata).not.toHaveProperty("pinnedHaltedChainFerryPositions");
+    });
+
+    it("skips on-chain recovery with zero RPC calls when attemptDeadlineMs is too close", async () => {
+      const { result, network } = await runAdapter("frax-balance-sheet", "frax-frax", {
+        network: {
+          chains: { "polygon-zkevm": "https://zkevm-rpc.com" },
+          json: { [BALANCE_SHEET_ENDPOINT]: erroredZkevmPairPayload(260_104_249.9764, { FRAX: 0.993963 }, { polygon_zkevm: 33_391_890 }) },
+        },
+        ctx: { attemptDeadlineMs: Date.now() + 500 },
+        nowSec: 1_775_307_827 + 600,
+        validate: false,
+      });
+
+      expect(network.requests.map((r) => r.url)).toEqual([BALANCE_SHEET_ENDPOINT]);
+      expect(result.warnings).toContainEqual(expect.objectContaining({ code: "asset-coverage-incomplete", effect: "fatal" }));
+      expect(result.warnings).toContainEqual(expect.objectContaining({
+        code: "ferry-balance-onchain-recovery-failed",
+        effect: "info",
+        message: expect.stringMatching(/deadline-exceeded/),
+      }));
+      expect(result.metadata).not.toHaveProperty("pinnedHaltedChainFerryPositions");
+    });
+
+    it.each([
+      ["missing polygon_zkevm block", 260_104_249.9764, { FRAX: 0.993963 }, undefined, {
+        [`ethereum:${ETH_FRAX}:balanceOf(address)`]: ETH_FERRY_BAL, [`ethereum:${ETH_FRAX}:decimals()`]: 18,
+        [`polygon-zkevm:${ZKEVM_FRAX}:balanceOf(address)`]: null,
+      }, /polygon-zkevm.*rpc-unavailable/],
+      ["advanced polygon_zkevm block", 260_104_249.9764, { FRAX: 0.993963 }, { polygon_zkevm: 33_391_891 }, {
+        [`ethereum:${ETH_FRAX}:balanceOf(address)`]: ETH_FERRY_BAL, [`ethereum:${ETH_FRAX}:decimals()`]: 18,
+        [`polygon-zkevm:${ZKEVM_FRAX}:balanceOf(address)`]: null,
+      }, /polygon-zkevm.*rpc-unavailable/],
+      ["ethereum RPC failure", 260_104_249.9764, { FRAX: 0.993963 }, { polygon_zkevm: 33_391_890 }, {
+        [`ethereum:${ETH_FRAX}:balanceOf(address)`]: null,
+        [`polygon-zkevm:${ZKEVM_FRAX}:balanceOf(address)`]: ZKEVM_FERRY_BAL, [`polygon-zkevm:${ZKEVM_FRAX}:decimals()`]: 18,
+      }, /ethereum.*rpc-unavailable/],
+      ["above 1% immateriality ceiling", 1_000_000, { FRAX: 1 }, undefined, {
+        [`ethereum:${ETH_FRAX}:balanceOf(address)`]: 20_000n * 10n ** 18n, [`ethereum:${ETH_FRAX}:decimals()`]: 18,
+        [`polygon-zkevm:${ZKEVM_FRAX}:balanceOf(address)`]: 5_000n * 10n ** 18n, [`polygon-zkevm:${ZKEVM_FRAX}:decimals()`]: 18,
+      }, null],
+      ["missing FRAX price", 260_104_249.9764, null, undefined, {
+        [`ethereum:${ETH_FRAX}:balanceOf(address)`]: ETH_FERRY_BAL, [`ethereum:${ETH_FRAX}:decimals()`]: 18,
+        [`polygon-zkevm:${ZKEVM_FRAX}:balanceOf(address)`]: ZKEVM_FERRY_BAL, [`polygon-zkevm:${ZKEVM_FRAX}:decimals()`]: 18,
+      }, null],
+    ] as const)("fails closed on %s", async (label, totalAssets, prices, asOfBlock, rpc, expectedWarnPattern) => {
+      const { result } = await runAdapter("frax-balance-sheet", "frax-frax", {
+        network: {
+          chains: { "polygon-zkevm": "https://zkevm-rpc.com" },
+          json: { [BALANCE_SHEET_ENDPOINT]: erroredZkevmPairPayload(totalAssets, prices, asOfBlock) },
+          rpc,
+        },
+        nowSec: 1_775_307_827 + 600,
+        validate: false,
+      });
+
+      expect(result.warnings, label).toContainEqual(expect.objectContaining({ code: "asset-coverage-incomplete", effect: "fatal" }));
+      if (expectedWarnPattern) {
+        expect(result.warnings, label).toContainEqual(expect.objectContaining({
+          code: "ferry-balance-onchain-recovery-failed",
+          effect: "info",
+          message: expect.stringMatching(expectedWarnPattern),
+        }));
+      } else {
+        expect(result.warnings?.some((w) => w.code === "ferry-balance-onchain-recovery"), label).toBe(false);
+      }
+    });
+
+    it("skips recovery with zero RPC calls when an unreviewed issuer error row is present", async () => {
+      const { result, network } = await runAdapter("frax-balance-sheet", "frax-frax", {
+        network: {
+          json: {
+            [BALANCE_SHEET_ENDPOINT]: erroredZkevmPairPayload(1_000_000, { FRAX: 1 }, { polygon_zkevm: 33_391_890 }, [{
+              chain: "ethereum", address: "0xb1748c79709f4ba2dd82834b8c82d4a505003f27",
+              tokenAddress: ETH_FRAX, tokenSymbol: "FRAX", category: "asset:owned:frax",
+              tokenQuantity: -0.0001, tokenQuantityE18: "0", totalValueUsd: 0, description: "ERROR: non-Ferry read failed",
+            }]),
+          },
+        },
+        nowSec: 1_775_307_827 + 600,
+        validate: false,
+      });
+
+      expect(network.requests.map((r) => r.url)).toEqual([BALANCE_SHEET_ENDPOINT]);
+      expect(result.warnings).toContainEqual(expect.objectContaining({ code: "asset-coverage-incomplete", effect: "fatal" }));
+    });
+
+    it("recovers the redacted five-error payload (zkEVM Ferry + Optimism Fraxswap V2 LPs) at pinned block 159938725", async () => {
+      const payload = fiveErrorPayload();
+      const run = await runAdapter("frax-balance-sheet", "frax-frax", {
+        network: {
+          chains: { "polygon-zkevm": "https://zkevm-rpc.com" },
+          json: { [BALANCE_SHEET_ENDPOINT]: payload },
+          rpc: {
+            [`ethereum:${ETH_FRAX}:balanceOf(address)`]: ETH_FERRY_BAL,
+            [`ethereum:${ETH_FRAX}:decimals()`]: 18,
+            [`polygon-zkevm:${ZKEVM_FRAX}:balanceOf(address)`]: ZKEVM_FERRY_BAL,
+            [`polygon-zkevm:${ZKEVM_FRAX}:decimals()`]: 18,
+            ...healthyOptimismLpRpc(),
+          },
+        },
+        nowSec: 1_775_307_827 + 600,
+        validate: false,
+      });
+
+      expect(run.report.valid).toBe(true);
+      expect(evaluateAdapterSnapshotAdmission(run, 1_775_307_827 + 600)).toMatchObject({ eligible: true });
+      expect([...(run.result.warnings ?? []), ...run.report.warnings].filter((w) => w.effect !== "info")).toEqual([]);
+      expect(run.result.warnings).toEqual(expect.arrayContaining([
+        expect.objectContaining({ code: "ferry-balance-onchain-recovery", effect: "info" }),
+        expect.objectContaining({ code: "fraxswap-lp-onchain-recovery", effect: "info" }),
+      ]));
+      const opCalls = run.network.rpcCalls.filter((c) => c.chain === "optimism");
+      expect(opCalls.every((c) => c.block === `0x${(159_938_725).toString(16)}`)).toBe(true);
+      expect(run.result.metadata).toMatchObject({
+        sourceTotalAssetsUsd: 260_030_857.4893,
+        recoveredFerryRowCount: 2,
+        recoveredLpRowCount: 3,
+      });
+      expect(run.result.slices).toEqual(expect.arrayContaining([
+        expect.objectContaining({ sourceKey: `frax-balance-sheet:optimism:${OP_FRAX}`, selfReferential: true, risk: "very-high" }),
+        expect.objectContaining({ sourceKey: "frax-balance-sheet:weth", risk: "very-low" }),
+      ]));
+    });
+
+    it.each([
+      ["missing asOfBlock.optimism", { polygon_zkevm: 33_391_890 }, 260_030_857.4893, {}, /missing-as-of-block/],
+      ["Optimism RPC failure", { optimism: 159_938_725, polygon_zkevm: 33_391_890 }, 260_030_857.4893,
+        { [`optimism:${OP_FRAX_WETH_PAIR}:getReserves()`]: null }, /rpc-unavailable/],
+      ["pair token mismatch", { optimism: 159_938_725, polygon_zkevm: 33_391_890 }, 260_030_857.4893,
+        { [`optimism:${OP_FRAX_WETH_PAIR}:token1()`]: "0x1111111111111111111111111111111111111111" }, /pair-token-mismatch/],
+      ["positive frax_fxs LP missing partner FXS leg", { optimism: 159_938_725, polygon_zkevm: 33_391_890 }, 260_030_857.4893,
+        { [`optimism:${OP_FRAX_FXS_PAIR}:balanceOf(address)`]: 1_000_000_000_000_000_000n }, /missing-partner-leg/],
+      ["combined Ferry + LP exceeds 1% ceiling", { optimism: 159_938_725, polygon_zkevm: 33_391_890 }, 5_000_000, {}, null],
+    ] as const)("fails closed on five-error payload when %s", async (label, asOfBlock, totalAssets, lpOverrides, expectedWarnPattern) => {
+      const { result } = await runAdapter("frax-balance-sheet", "frax-frax", {
+        network: {
+          chains: { "polygon-zkevm": "https://zkevm-rpc.com" },
+          json: { [BALANCE_SHEET_ENDPOINT]: fiveErrorPayload(asOfBlock, totalAssets) },
+          rpc: {
+            [`ethereum:${ETH_FRAX}:balanceOf(address)`]: ETH_FERRY_BAL,
+            [`ethereum:${ETH_FRAX}:decimals()`]: 18,
+            [`polygon-zkevm:${ZKEVM_FRAX}:balanceOf(address)`]: ZKEVM_FERRY_BAL,
+            [`polygon-zkevm:${ZKEVM_FRAX}:decimals()`]: 18,
+            ...healthyOptimismLpRpc(lpOverrides),
+          },
+        },
+        nowSec: 1_775_307_827 + 600,
+        validate: false,
+      });
+
+      expect(result.warnings, label).toContainEqual(expect.objectContaining({ code: "asset-coverage-incomplete", effect: "fatal" }));
+      if (expectedWarnPattern) {
+        expect(result.warnings, label).toContainEqual(expect.objectContaining({
+          code: "fraxswap-lp-onchain-recovery-failed",
+          effect: "info",
+          message: expect.stringMatching(expectedWarnPattern),
+        }));
+      } else {
+        expect(result.warnings?.some((w) => w.code === "fraxswap-lp-onchain-recovery"), label).toBe(false);
+      }
+    });
   });
 
   it.each([null, undefined, "broken", -1])(

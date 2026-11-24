@@ -2,18 +2,22 @@ import type { ReserveSlice } from "@shared/types/reserves";
 import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { CHAIN_META, resolveChainId } from "@shared/types/chain-identity";
+import { SUPPLY_RPC_DEFAULTS } from "@shared/lib/chain-rpc-registry";
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { getLiveReserveAdapterMaxUnknownExposurePct, parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { sha256Hex } from "@shared/lib/sha256";
-import { rethrowIfAborted } from "../../lib/abort";
-import { DECIMALS_SELECTOR, encodeBalanceOfCallData } from "../../lib/evm-selectors";
+import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
+import { DECIMALS_SELECTOR, encodeBalanceOfCallData, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
+import { fetchEvmMulticall3Aggregate3AtBlock, fetchEvmUint256AtBlock, parseUint256Hex } from "../../lib/evm-rpc";
 import type { AdapterContext, AdapterResult } from "./types";
+import { runAdapterIo } from "./concurrency";
 import { observeFpiControllerRedemptionRoute } from "./fpi-controller-redemption";
 import {
   buildRedemptionSnapshotMetadata,
   buildUnknownExposureWarning,
+  catchAndWarn,
   computeUnknownExposurePct,
   decimalNumberFromBigInt,
   fetchDefiLlamaPrices,
@@ -25,6 +29,7 @@ import {
   reconcileRowsWithSourceTotal,
   reserveDegradedWarning,
   reserveFatalWarning,
+  reserveInfoWarning,
   SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT,
   sourceKeySlug,
 } from "./helpers";
@@ -38,12 +43,14 @@ interface BalanceSheetAsset {
   category?: string;
   chain?: string;
   address?: string;
+  contractAddress?: string;
   tokenAddress?: string;
 }
 
 export interface FraxBalanceSheetResponse {
+  asOfBlock?: Record<string, number>;
   asOfTimestamp?: string;
-  tokenPriceUsd?: Partial<Record<"FRAX" | "sFRAX" | "LFRAX", number>>;
+  tokenPriceUsd?: Partial<Record<string, number>>;
   totalAssets?: number;
   assets?: BalanceSheetAsset[];
 }
@@ -204,6 +211,510 @@ const REVIEWED_FRAX_FERRY_TOKENS = new Set(
   REVIEWED_FRAX_FERRY_POSITIONS.map(([chain, , token]) => `${chain}:${token}`),
 );
 
+// Supplemental RPC endpoints for reviewed Ferry chains absent from PUBLIC_RPC_URLS.
+// Polygon zkEVM halted at block 33391890 on 2026-07-03; Frax's balance-sheet
+// indexer frequently errors on that Ferry pair when its zkEVM node fails.
+const REVIEWED_FRAX_FERRY_FALLBACK_RPCS: Readonly<Record<string, { rpcUrl: string; fallbackRpcUrl?: string }>> = {
+  "polygon-zkevm": { rpcUrl: "https://zkevm-rpc.com", fallbackRpcUrl: "https://polygon-zkevm.drpc.org" },
+  zksync: SUPPLY_RPC_DEFAULTS.zksync,
+  boba: { rpcUrl: "https://mainnet.boba.network" },
+};
+
+// Polygon zkEVM Mainnet Beta permanently halted at block 33391890 on
+// 2026-07-03T15:55:44Z (hash 0x070c57f81880e78cc8a1bee37c927dd44487e6c42d0c6a475bddc76818224b97).
+// Its Ferry bridged-FRAX balance at that terminal block is immutable on-chain
+// state (5,603.41599996 FRAX, verified on-chain 2026-11-20 and 2026-11-23),
+// an own-liability row earning zero Backing credit. Reviewed ADR-29 exception:
+// used only if live zkEVM RPCs are unavailable AND the issuer payload confirms
+// asOfBlock.polygon_zkevm === 33391890. A live read that contradicts this
+// terminal balance fails closed.
+const HALTED_POLYGON_ZKEVM_FERRY_PIN = {
+  chain: "polygon-zkevm",
+  holder: "0xeabd7625056bbd2c260f90d0b08759c69d971a5b",
+  token: "0xff8544fed5379d9ffa8d47a74ce6b91e632ac44d",
+  terminalBlock: 33_391_890,
+  decimals: 18,
+  rawBalance: 5_603_415_999_960_000_000_000n,
+  quantity: 5_603.41599996,
+  verifiedAt: "2026-11-23",
+} as const;
+
+interface ReviewedFraxLpPosition {
+  readonly chain: "optimism";
+  readonly holder: string;
+  readonly pair: string;
+  readonly token0: string;
+  readonly token1: string;
+  readonly symbol0: string;
+  readonly symbol1: string;
+}
+
+// Reviewed Optimism Fraxswap V2 LP positions verified against Frax's healthy
+// 2026-11-23T23:03:47Z balance sheet (block 159938125) and pinned on-chain
+// pair state at block 159938725.
+const REVIEWED_FRAX_LP_POSITIONS: readonly ReviewedFraxLpPosition[] = [
+  {
+    chain: "optimism",
+    holder: "0x0df840dcbf1229262a4125c1fc559bd338ec9491",
+    pair: "0x9456c020d3a05b159dab4557535083fba836c49a",
+    token0: "0x2e3d870790dc77a83dd1d18184acc7439a53f475",
+    token1: "0x67ccea5bb16181e7b4109c9c2143c24a1c2205be",
+    symbol0: "FRAX",
+    symbol1: "FXS",
+  },
+  {
+    chain: "optimism",
+    holder: "0x0df840dcbf1229262a4125c1fc559bd338ec9491",
+    pair: "0xcc4dd8bc7967d46060ba3faaa8e525a35625f8b4",
+    token0: "0x2e3d870790dc77a83dd1d18184acc7439a53f475",
+    token1: "0x4200000000000000000000000000000000000006",
+    symbol0: "FRAX",
+    symbol1: "WETH",
+  },
+] as const;
+
+const TOKEN0_SELECTOR = "0x0dfe1681";
+const TOKEN1_SELECTOR = "0xd21220a7";
+const GET_RESERVES_SELECTOR = "0x0902f1ac";
+
+// Bounded combined immateriality ceiling for Pharos on-chain recovery (% of
+// reconciled total assets). Any material balance-sheet failure still fails closed.
+const MAX_RECOVERED_EXPOSURE_PCT = 1;
+const RECOVERY_DEADLINE_MARGIN_MS = 1_500;
+const RECOVERY_MIN_CALL_TIMEOUT_MS = 500;
+const RECOVERY_LIVE_CHAIN_TIMEOUT_MS = 4_000;
+const RECOVERY_HALTED_CHAIN_TIMEOUT_MS = 2_500;
+const RECOVERY_HALTED_CHAIN_BUDGET_MS = 5_500;
+
+export interface RecoveredFraxBalance {
+  kind: "ferry" | "lp";
+  chain: string;
+  holder: string;
+  token: string;
+  symbol: string;
+  pair?: string;
+  quantity: number;
+  source: "onchain-rpc" | "halted-chain-pin";
+  blockNumber?: number;
+  pinnedBlock?: number;
+  verifiedAt?: string;
+}
+
+class FraxRecoveryError extends Error {
+  constructor(readonly failureClass: string, detail: string) {
+    super(`${failureClass}: ${detail}`);
+  }
+}
+
+function isIssuerAssetReadError(asset: BalanceSheetAsset): boolean {
+  return (typeof asset.description === "string" && /^ERROR:/i.test(asset.description.trimStart())) ||
+    (asset.tokenQuantity === -0.0001 && asset.totalValueUsd === 0) ||
+    (asset.tokenQuantity === -0.001 && asset.category !== "asset:contra" && asset.totalValueUsd <= 0);
+}
+
+function decodeAbiAddressWord(hex: string): string | null {
+  if (!/^0x[0-9a-f]{64}$/i.test(hex)) return null;
+  return canonicalEvmAddress(`0x${hex.slice(26)}`, { allowZero: false });
+}
+
+function decodePairReserves(hex: string): { reserve0: bigint; reserve1: bigint } | null {
+  if (!/^0x[0-9a-f]{192}$/i.test(hex)) return null;
+  return {
+    reserve0: BigInt(`0x${hex.slice(2, 66)}`),
+    reserve1: BigInt(`0x${hex.slice(66, 130)}`),
+  };
+}
+
+function findRecoverableReviewedFerryRows(
+  assets: readonly BalanceSheetAsset[],
+): Array<{ row: BalanceSheetAsset; chain: string; holder: string; token: string }> {
+  const recoverable: Array<{ row: BalanceSheetAsset; chain: string; holder: string; token: string }> = [];
+  for (const [chain, holder, token] of REVIEWED_FRAX_FERRY_POSITIONS) {
+    const rows = assets.filter((asset) =>
+      asset.category?.startsWith("asset:") &&
+      asset.chain?.replaceAll("_", "-") === chain &&
+      canonicalEvmAddress(asset.address) === holder &&
+      canonicalEvmAddress(asset.tokenAddress) === token,
+    );
+    if (rows.length !== 1) continue;
+    const row = rows[0]!;
+    if (
+      row.category !== "asset:contra" &&
+      row.tokenSymbol === "FRAX" &&
+      row.totalValueUsd === 0 &&
+      isIssuerAssetReadError(row)
+    ) {
+      recoverable.push({ row, chain, holder, token });
+    }
+  }
+  return recoverable;
+}
+
+interface RecoverableReviewedLpGroup {
+  position: ReviewedFraxLpPosition;
+  row0?: BalanceSheetAsset;
+  row1?: BalanceSheetAsset;
+  rows: BalanceSheetAsset[];
+}
+
+function findRecoverableReviewedLpGroups(assets: readonly BalanceSheetAsset[]): RecoverableReviewedLpGroup[] {
+  const groups: RecoverableReviewedLpGroup[] = [];
+  for (const position of REVIEWED_FRAX_LP_POSITIONS) {
+    const matched = assets.filter((asset) =>
+      asset.category?.startsWith("asset:") &&
+      asset.chain?.replaceAll("_", "-") === position.chain &&
+      canonicalEvmAddress(asset.address) === position.holder &&
+      canonicalEvmAddress(asset.contractAddress) === position.pair,
+    );
+    if (matched.length === 0) continue;
+
+    let row0: BalanceSheetAsset | undefined;
+    let row1: BalanceSheetAsset | undefined;
+    let valid = true;
+    for (const row of matched) {
+      const token = canonicalEvmAddress(row.tokenAddress, { allowZero: false });
+      if (
+        row.category === "asset:contra" ||
+        typeof row.totalValueUsd !== "number" ||
+        !Number.isFinite(row.totalValueUsd) ||
+        row.totalValueUsd > 0 ||
+        !isIssuerAssetReadError(row)
+      ) {
+        valid = false;
+        break;
+      }
+      if (token === position.token0 && row.tokenSymbol === position.symbol0 && !row0) {
+        row0 = row;
+      } else if (token === position.token1 && row.tokenSymbol === position.symbol1 && !row1) {
+        row1 = row;
+      } else {
+        valid = false;
+        break;
+      }
+    }
+    if (valid && (row0 || row1)) {
+      groups.push({ position, row0, row1, rows: matched });
+    }
+  }
+  return groups;
+}
+
+function computeRecoveryCallBudget(
+  recoveryDeadlineMs: number | undefined,
+  maxCallTimeoutMs: number,
+  legBudgetMs?: number,
+): { timeoutMs: number; deadlineMs: number | undefined } {
+  const remaining = recoveryDeadlineMs == null ? Infinity : Math.floor(recoveryDeadlineMs - Date.now());
+  if (remaining < RECOVERY_MIN_CALL_TIMEOUT_MS) {
+    throw new FraxRecoveryError("deadline-exceeded", `remaining budget ${Math.max(0, remaining)}ms below ${RECOVERY_MIN_CALL_TIMEOUT_MS}ms`);
+  }
+  const legDeadlineMs = legBudgetMs == null ? Infinity : Date.now() + legBudgetMs;
+  const boundedDeadlineMs = Math.min(recoveryDeadlineMs ?? Infinity, legDeadlineMs);
+  return {
+    timeoutMs: Math.min(maxCallTimeoutMs, remaining),
+    deadlineMs: Number.isFinite(boundedDeadlineMs) ? boundedDeadlineMs : undefined,
+  };
+}
+
+/**
+ * Bounded sequential on-chain recovery for issuer-errored reviewed Legacy FRAX
+ * rows (reviewed Ferry rows and reviewed Optimism Fraxswap V2 LP pairs).
+ * Runs one RPC call at a time and respects ctx.attemptDeadlineMs. Skips all
+ * RPC work if any unrecoverable issuer error row makes the attempt fatal.
+ */
+async function recoverErroredReviewedRows(
+  payload: FraxBalanceSheetResponse,
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+): Promise<{ recovered: Map<BalanceSheetAsset, RecoveredFraxBalance>; warnings: LiveReserveWarning[] }> {
+  const assets = payload.assets;
+  const recovered = new Map<BalanceSheetAsset, RecoveredFraxBalance>();
+  const warnings: LiveReserveWarning[] = [];
+  if (!assets?.length) return { recovered, warnings };
+
+  const ferryCandidates = findRecoverableReviewedFerryRows(assets);
+  const lpGroups = findRecoverableReviewedLpGroups(assets);
+  if (ferryCandidates.length === 0 && lpGroups.length === 0) return { recovered, warnings };
+
+  const recoverableRows = new Set<BalanceSheetAsset>([
+    ...ferryCandidates.map((entry) => entry.row),
+    ...lpGroups.flatMap((group) => group.rows),
+  ]);
+  const hasUnrecoverableError = assets.some((asset) =>
+    asset.category?.startsWith("asset:") && isIssuerAssetReadError(asset) && !recoverableRows.has(asset),
+  );
+  if (hasUnrecoverableError) return { recovered, warnings };
+
+  const recoveryDeadlineMs = ctx?.attemptDeadlineMs != null
+    ? ctx.attemptDeadlineMs - RECOVERY_DEADLINE_MARGIN_MS
+    : undefined;
+
+  for (const { row, chain, holder, token } of ferryCandidates) {
+    const isHaltedZkevmPinRow =
+      chain === HALTED_POLYGON_ZKEVM_FERRY_PIN.chain &&
+      holder === HALTED_POLYGON_ZKEVM_FERRY_PIN.holder &&
+      token === HALTED_POLYGON_ZKEVM_FERRY_PIN.token;
+    const confirmsTerminalBlock =
+      isHaltedZkevmPinRow &&
+      payload.asOfBlock?.polygon_zkevm === HALTED_POLYGON_ZKEVM_FERRY_PIN.terminalBlock;
+
+    let failureClass: string | null = null;
+    const live = await catchAndWarn(
+      (async () => {
+        const rpc = REVIEWED_FRAX_FERRY_FALLBACK_RPCS[chain];
+        const extraRpcUrls = [rpc?.rpcUrl, rpc?.fallbackRpcUrl].filter(
+          (url): url is string => typeof url === "string" && url.length > 0,
+        );
+        const maxCallTimeoutMs = confirmsTerminalBlock
+          ? RECOVERY_HALTED_CHAIN_TIMEOUT_MS
+          : RECOVERY_LIVE_CHAIN_TIMEOUT_MS;
+        const maxRetries = confirmsTerminalBlock ? 0 : 1;
+        const legBudgetMs = confirmsTerminalBlock ? RECOVERY_HALTED_CHAIN_BUDGET_MS : undefined;
+
+        const balBudget = computeRecoveryCallBudget(recoveryDeadlineMs, maxCallTimeoutMs, legBudgetMs);
+        const balanceRaw = await runAdapterIo(
+          ctx,
+          `frax-ferry-balance:${chain}:${token}`,
+          () => fetchEvmUint256AtBlock(chain, token, encodeBalanceOfCallData(holder), "latest", {
+            extraRpcUrls,
+            signal,
+            chainRpcs: ctx?.chainRpcs,
+            timeoutMs: balBudget.timeoutMs,
+            deadlineMs: balBudget.deadlineMs,
+            maxRetries,
+          }),
+          { signal },
+        );
+        if (balanceRaw == null) {
+          throw new FraxRecoveryError("rpc-unavailable", `balanceOf(${holder}) unavailable`);
+        }
+
+        const decBudget = computeRecoveryCallBudget(recoveryDeadlineMs, maxCallTimeoutMs, legBudgetMs);
+        const decimals = await runAdapterIo(
+          ctx,
+          `frax-ferry-decimals:${chain}:${token}`,
+          () => fetchEvmUint256AtBlock(chain, token, DECIMALS_SELECTOR, "latest", {
+            extraRpcUrls,
+            signal,
+            chainRpcs: ctx?.chainRpcs,
+            timeoutMs: decBudget.timeoutMs,
+            deadlineMs: decBudget.deadlineMs,
+            maxRetries,
+          }),
+          { signal },
+        );
+        if (decimals == null) {
+          throw new FraxRecoveryError("rpc-unavailable", "decimals() unavailable");
+        }
+        if (decimals > 36n) {
+          throw new FraxRecoveryError("invalid-decimals", `decimals ${decimals.toString()} exceeds 36`);
+        }
+        const quantity = decimalNumberFromBigInt(balanceRaw, Number(decimals));
+        if (!Number.isFinite(quantity) || quantity < 0) {
+          throw new FraxRecoveryError("invalid-quantity", "computed quantity is invalid");
+        }
+        if (
+          confirmsTerminalBlock &&
+          (balanceRaw !== HALTED_POLYGON_ZKEVM_FERRY_PIN.rawBalance ||
+            Number(decimals) !== HALTED_POLYGON_ZKEVM_FERRY_PIN.decimals)
+        ) {
+          throw new FraxRecoveryError(
+            "terminal-pin-mismatch",
+            `live balance ${quantity} contradicts pinned terminal block ${HALTED_POLYGON_ZKEVM_FERRY_PIN.terminalBlock} balance ${HALTED_POLYGON_ZKEVM_FERRY_PIN.quantity}`,
+          );
+        }
+        return quantity;
+      })().catch((error) => {
+        if (error instanceof FraxRecoveryError) failureClass = error.failureClass;
+        throw error;
+      }),
+      "ferry-balance-onchain-recovery-failed",
+      `Frax Ferry on-chain recovery failed on ${chain} (${holder})`,
+      warnings,
+    );
+    throwIfAborted(signal);
+
+    if (live != null) {
+      recovered.set(row, {
+        kind: "ferry",
+        chain,
+        holder,
+        token,
+        symbol: "FRAX",
+        quantity: live,
+        source: "onchain-rpc",
+      });
+    } else if (
+      confirmsTerminalBlock &&
+      failureClass !== "terminal-pin-mismatch" &&
+      failureClass !== "deadline-exceeded" &&
+      failureClass !== "invalid-decimals" &&
+      failureClass !== "invalid-quantity" &&
+      (recoveryDeadlineMs == null || Date.now() < recoveryDeadlineMs)
+    ) {
+      recovered.set(row, {
+        kind: "ferry",
+        chain,
+        holder,
+        token,
+        symbol: "FRAX",
+        quantity: HALTED_POLYGON_ZKEVM_FERRY_PIN.quantity,
+        source: "halted-chain-pin",
+        pinnedBlock: HALTED_POLYGON_ZKEVM_FERRY_PIN.terminalBlock,
+        verifiedAt: HALTED_POLYGON_ZKEVM_FERRY_PIN.verifiedAt,
+      });
+    }
+  }
+
+  for (const { position, row0, row1 } of lpGroups) {
+    const recoveredLegs = await catchAndWarn(
+      (async () => {
+        const blockNumber = payload.asOfBlock?.optimism;
+        if (typeof blockNumber !== "number" || !Number.isSafeInteger(blockNumber) || blockNumber <= 0) {
+          throw new FraxRecoveryError("missing-as-of-block", "asOfBlock.optimism is missing or invalid");
+        }
+        const budget = computeRecoveryCallBudget(recoveryDeadlineMs, RECOVERY_LIVE_CHAIN_TIMEOUT_MS);
+        const results = await runAdapterIo(
+          ctx,
+          `frax-lp-multicall:${position.chain}:${position.pair}`,
+          () => fetchEvmMulticall3Aggregate3AtBlock(
+            position.chain,
+            [
+              { label: "balanceOf", target: position.pair, callData: encodeBalanceOfCallData(position.holder), allowFailure: false },
+              { label: "totalSupply", target: position.pair, callData: TOTAL_SUPPLY_SELECTOR, allowFailure: false },
+              { label: "token0", target: position.pair, callData: TOKEN0_SELECTOR, allowFailure: false },
+              { label: "token1", target: position.pair, callData: TOKEN1_SELECTOR, allowFailure: false },
+              { label: "getReserves", target: position.pair, callData: GET_RESERVES_SELECTOR, allowFailure: false },
+              { label: "decimals0", target: position.token0, callData: DECIMALS_SELECTOR, allowFailure: false },
+              { label: "decimals1", target: position.token1, callData: DECIMALS_SELECTOR, allowFailure: false },
+            ],
+            blockNumber,
+            {
+              signal,
+              chainRpcs: ctx?.chainRpcs,
+              timeoutMs: budget.timeoutMs,
+              deadlineMs: budget.deadlineMs,
+              maxRetries: 0,
+            },
+          ),
+          { signal },
+        );
+        if (!results || results.length !== 7 || results.some((entry) => !entry.success)) {
+          throw new FraxRecoveryError("rpc-unavailable", `Multicall3 pair read failed at block ${blockNumber}`);
+        }
+        const observedToken0 = decodeAbiAddressWord(results[2]!.returnData);
+        const observedToken1 = decodeAbiAddressWord(results[3]!.returnData);
+        if (observedToken0 !== position.token0 || observedToken1 !== position.token1) {
+          throw new FraxRecoveryError("pair-token-mismatch", `pair tokens do not match reviewed ${position.symbol0}/${position.symbol1} contracts`);
+        }
+        const balanceRaw = parseUint256Hex(results[0]!.returnData);
+        const totalSupplyRaw = parseUint256Hex(results[1]!.returnData);
+        const reserves = decodePairReserves(results[4]!.returnData);
+        const decimals0 = parseUint256Hex(results[5]!.returnData);
+        const decimals1 = parseUint256Hex(results[6]!.returnData);
+        if (balanceRaw == null || totalSupplyRaw == null || reserves == null) {
+          throw new FraxRecoveryError("invalid-reserves", "pair balance, supply, or reserves decode failed");
+        }
+        if (decimals0 == null || decimals1 == null || decimals0 > 36n || decimals1 > 36n) {
+          throw new FraxRecoveryError("invalid-decimals", "pair token decimals invalid");
+        }
+
+        const out: Array<{ row: BalanceSheetAsset; entry: RecoveredFraxBalance }> = [];
+        if (balanceRaw === 0n) {
+          if (row0) {
+            out.push({
+              row: row0,
+              entry: {
+                kind: "lp",
+                chain: position.chain,
+                holder: position.holder,
+                pair: position.pair,
+                token: position.token0,
+                symbol: position.symbol0,
+                quantity: 0,
+                source: "onchain-rpc",
+                blockNumber,
+              },
+            });
+          }
+          if (row1) {
+            out.push({
+              row: row1,
+              entry: {
+                kind: "lp",
+                chain: position.chain,
+                holder: position.holder,
+                pair: position.pair,
+                token: position.token1,
+                symbol: position.symbol1,
+                quantity: 0,
+                source: "onchain-rpc",
+                blockNumber,
+              },
+            });
+          }
+          return out;
+        }
+
+        if (totalSupplyRaw <= 0n || balanceRaw > totalSupplyRaw) {
+          throw new FraxRecoveryError("invalid-reserves", "LP balance exceeds totalSupply or supply is zero");
+        }
+        if (!row0 || !row1) {
+          throw new FraxRecoveryError("missing-partner-leg", "positive LP balance requires both pair token rows in payload");
+        }
+        const quantity0 = decimalNumberFromBigInt((balanceRaw * reserves.reserve0) / totalSupplyRaw, Number(decimals0));
+        const quantity1 = decimalNumberFromBigInt((balanceRaw * reserves.reserve1) / totalSupplyRaw, Number(decimals1));
+        if (!Number.isFinite(quantity0) || quantity0 < 0 || !Number.isFinite(quantity1) || quantity1 < 0) {
+          throw new FraxRecoveryError("invalid-reserves", "computed LP token quantities are invalid");
+        }
+        out.push(
+          {
+            row: row0,
+            entry: {
+              kind: "lp",
+              chain: position.chain,
+              holder: position.holder,
+              pair: position.pair,
+              token: position.token0,
+              symbol: position.symbol0,
+              quantity: quantity0,
+              source: "onchain-rpc",
+              blockNumber,
+            },
+          },
+          {
+            row: row1,
+            entry: {
+              kind: "lp",
+              chain: position.chain,
+              holder: position.holder,
+              pair: position.pair,
+              token: position.token1,
+              symbol: position.symbol1,
+              quantity: quantity1,
+              source: "onchain-rpc",
+              blockNumber,
+            },
+          },
+        );
+        return out;
+      })(),
+      "fraxswap-lp-onchain-recovery-failed",
+      `Fraxswap V2 LP on-chain recovery failed on ${position.chain} (${position.pair})`,
+      warnings,
+    );
+    throwIfAborted(signal);
+
+    if (recoveredLegs) {
+      for (const { row, entry } of recoveredLegs) {
+        recovered.set(row, entry);
+      }
+    }
+  }
+
+  return { recovered, warnings };
+}
+
 const FRAX_SIBLING_ASSET_IDS = {
   frxUSD: "frxusd-frax",
   sfrxUSD: "sfrxusd-frax",
@@ -252,10 +763,108 @@ export function adaptFraxBalanceSheet(
   subjectId?: string,
   deployments?: ReserveAdapterCoin["contracts"],
   siblingDeployments: FraxSiblingDeployments = getDefaultFraxSiblingDeployments(),
+  recoveredBalances: ReadonlyMap<BalanceSheetAsset, RecoveredFraxBalance> = new Map(),
 ): AdapterResult {
   const assets = payload.assets;
   if (!assets?.length || !payload.totalAssets || payload.totalAssets <= 0) {
     throw new Error("Frax balance-sheet response missing or empty assets array");
+  }
+  const sourceTotal = Number(payload.totalAssets);
+  if (!Number.isFinite(sourceTotal) || sourceTotal <= 0) {
+    throw new Error("Frax balance-sheet totalAssets is invalid or zero");
+  }
+
+  const admittedRecoveredRows = new Map<BalanceSheetAsset, RecoveredFraxBalance & { usd: number }>();
+  let admittedRecoveredUsd = 0;
+  let admittedRecoveredSentinelOffsetUsd = 0;
+  if (subjectId === "frax-frax" && recoveredBalances.size > 0) {
+    const fraxPrice = nonnegativeFinite(payload.tokenPriceUsd?.FRAX);
+    const recoverableFerryByRow = new Map(findRecoverableReviewedFerryRows(assets).map((entry) => [entry.row, entry]));
+    const candidateRecovered = new Map<BalanceSheetAsset, RecoveredFraxBalance & { usd: number }>();
+    let candidateRecoveredUsd = 0;
+    let candidateSentinelOffsetUsd = 0;
+
+    for (const [row, balance] of recoveredBalances) {
+      if (balance.kind !== "ferry") continue;
+      const expected = recoverableFerryByRow.get(row);
+      if (!expected || balance.chain !== expected.chain || balance.holder !== expected.holder || balance.token !== expected.token) {
+        continue;
+      }
+      const quantity = nonnegativeFinite(balance.quantity);
+      if (quantity == null) continue;
+      if (quantity === 0) {
+        candidateRecovered.set(row, { ...balance, quantity: 0, usd: 0 });
+        candidateSentinelOffsetUsd += row.totalValueUsd;
+        continue;
+      }
+      if (fraxPrice == null || fraxPrice <= 0) continue;
+      const usd = quantity * fraxPrice;
+      if (!Number.isFinite(usd) || usd < 0) continue;
+      candidateRecovered.set(row, { ...balance, quantity, usd });
+      candidateRecoveredUsd += usd;
+      candidateSentinelOffsetUsd += row.totalValueUsd;
+    }
+
+    for (const group of findRecoverableReviewedLpGroups(assets)) {
+      const staged: Array<{ row: BalanceSheetAsset; entry: RecoveredFraxBalance & { usd: number } }> = [];
+      let groupValid = true;
+      for (const row of group.rows) {
+        const balance = recoveredBalances.get(row);
+        const expectedToken = row === group.row0 ? group.position.token0 : group.position.token1;
+        const expectedSymbol = row === group.row0 ? group.position.symbol0 : group.position.symbol1;
+        if (
+          !balance ||
+          balance.kind !== "lp" ||
+          balance.chain !== group.position.chain ||
+          balance.holder !== group.position.holder ||
+          balance.pair !== group.position.pair ||
+          balance.token !== expectedToken ||
+          balance.symbol !== expectedSymbol
+        ) {
+          groupValid = false;
+          break;
+        }
+        const quantity = nonnegativeFinite(balance.quantity);
+        if (quantity == null) {
+          groupValid = false;
+          break;
+        }
+        if (quantity === 0) {
+          staged.push({ row, entry: { ...balance, quantity: 0, usd: 0 } });
+          continue;
+        }
+        const price = nonnegativeFinite(payload.tokenPriceUsd?.[expectedSymbol]);
+        if (price == null || price <= 0) {
+          groupValid = false;
+          break;
+        }
+        const usd = quantity * price;
+        if (!Number.isFinite(usd) || usd < 0) {
+          groupValid = false;
+          break;
+        }
+        staged.push({ row, entry: { ...balance, quantity, usd } });
+      }
+      if (groupValid && staged.length === group.rows.length) {
+        for (const { row, entry } of staged) {
+          candidateRecovered.set(row, entry);
+          candidateRecoveredUsd += entry.usd;
+          candidateSentinelOffsetUsd += row.totalValueUsd;
+        }
+      }
+    }
+
+    const candidateReconciledTotal = sourceTotal + candidateRecoveredUsd - candidateSentinelOffsetUsd;
+    const candidatePct = computeUnknownExposurePct(candidateRecoveredUsd, candidateReconciledTotal);
+    if (
+      candidateRecovered.size > 0 &&
+      candidateReconciledTotal > 0 &&
+      candidatePct <= MAX_RECOVERED_EXPOSURE_PCT
+    ) {
+      for (const [row, entry] of candidateRecovered) admittedRecoveredRows.set(row, entry);
+      admittedRecoveredUsd = candidateRecoveredUsd;
+      admittedRecoveredSentinelOffsetUsd = candidateSentinelOffsetUsd;
+    }
   }
 
   const warnings: LiveReserveWarning[] = [];
@@ -277,6 +886,7 @@ export function adaptFraxBalanceSheet(
       }
     }
     for (const row of ferryRows) {
+      if (admittedRecoveredRows.has(row)) continue;
       if (!hasReconciledFraxQuantity(row, payload.tokenPriceUsd?.FRAX)) {
         warnings.push(reserveFatalWarning("asset-coverage-incomplete",
           `Frax balance-sheet Ferry quantity and USD value are unavailable or inconsistent on ${row.chain ?? "unknown chain"}`));
@@ -288,13 +898,13 @@ export function adaptFraxBalanceSheet(
   const byAsset = new Map<string, number>();
   for (const asset of assets) {
     if (!asset.category?.startsWith("asset:")) continue;
-    const usd = asset.totalValueUsd;
-    if ((typeof asset.description === "string" && /^ERROR:/i.test(asset.description.trimStart())) ||
-      (asset.tokenQuantity === -0.0001 && usd === 0)) {
+    const recoveredRow = admittedRecoveredRows.get(asset);
+    if (!recoveredRow && isIssuerAssetReadError(asset)) {
       warnings.push(reserveFatalWarning("asset-coverage-incomplete",
         `Frax balance-sheet asset read failed on ${asset.chain ?? "unknown chain"}`));
       continue;
     }
+    const usd = recoveredRow ? recoveredRow.usd : asset.totalValueUsd;
     if (typeof usd !== "number" || !Number.isFinite(usd) || !asset.tokenSymbol?.trim()) {
       throw new Error("Frax balance-sheet asset amount or identity is unavailable");
     }
@@ -325,7 +935,7 @@ export function adaptFraxBalanceSheet(
         symbol = "frxUSD";
       } else if (token && ownClaim) {
         const priceSymbol = ownClaim === "sFRAX" || ownClaim === "LFRAX" ? ownClaim : "FRAX";
-        if (!ferryRows.has(asset) && !hasReconciledFraxQuantity(asset, payload.tokenPriceUsd?.[priceSymbol])) {
+        if (!ferryRows.has(asset) && !recoveredRow && !hasReconciledFraxQuantity(asset, payload.tokenPriceUsd?.[priceSymbol])) {
           warnings.push(reserveFatalWarning("asset-coverage-incomplete",
             `Frax balance-sheet own-liability quantity and USD value are unavailable or inconsistent on ${asset.chain} (${token})`));
         }
@@ -362,14 +972,10 @@ export function adaptFraxBalanceSheet(
 
   const categorizedAssetTotal = [...byAsset.values()].reduce((a, b) => a + b, 0);
   if (categorizedAssetTotal <= 0) throw new Error("Frax balance-sheet total asset value is zero");
-  const sourceTotal = Number(payload.totalAssets);
-  if (!Number.isFinite(sourceTotal) || sourceTotal <= 0) {
-    throw new Error("Frax balance-sheet totalAssets is invalid or zero");
-  }
-  const total = sourceTotal;
+  const total = sourceTotal + admittedRecoveredUsd - admittedRecoveredSentinelOffsetUsd;
   const reconciliation = reconcileRowsWithSourceTotal({
     rowTotalUsd: categorizedAssetTotal,
-    sourceTotalUsd: sourceTotal,
+    sourceTotalUsd: total,
     exceedsMessage: "Frax balance-sheet asset rows exceed totalAssets",
   });
   if (reconciliation.rowsExceedTotalWarning) warnings.push(reconciliation.rowsExceedTotalWarning);
@@ -446,6 +1052,44 @@ export function adaptFraxBalanceSheet(
     );
   }
 
+  const admittedFerries = [...admittedRecoveredRows.values()].filter((entry) => entry.kind === "ferry");
+  const recoveredFerryPositions = admittedFerries
+    .map((entry) => `${entry.chain}:${entry.holder}`)
+    .sort();
+  const admittedRecoveredFerryUsd = admittedFerries.reduce((sum, entry) => sum + entry.usd, 0);
+  const admittedRecoveredFerryPct = computeUnknownExposurePct(admittedRecoveredFerryUsd, total);
+  const pinnedHaltedChainFerryEntries = admittedFerries.filter((entry) => entry.source === "halted-chain-pin");
+  const pinnedHaltedChainFerryPositions = pinnedHaltedChainFerryEntries
+    .map((entry) => `${entry.chain}:${entry.holder}@${entry.pinnedBlock ?? "terminal"}`)
+    .sort();
+  const pinnedHaltedChainFerryVerifiedAt = pinnedHaltedChainFerryEntries[0]?.verifiedAt;
+  if (recoveredFerryPositions.length > 0) {
+    const pinDetail = pinnedHaltedChainFerryPositions.length > 0
+      ? `; halted-chain terminal pin: ${pinnedHaltedChainFerryPositions.join(", ")}`
+      : "";
+    warnings.push(
+      reserveInfoWarning(
+        "ferry-balance-onchain-recovery",
+        `Recovered ${recoveredFerryPositions.length} issuer-errored reviewed Ferry row(s) (${recoveredFerryPositions.join(", ")}; ${admittedRecoveredFerryPct.toFixed(4)}% of total assets${pinDetail})`,
+      ),
+    );
+  }
+
+  const admittedLps = [...admittedRecoveredRows.values()].filter((entry) => entry.kind === "lp");
+  const recoveredLpPositions = admittedLps
+    .map((entry) => `${entry.chain}:${entry.pair}@${entry.blockNumber ?? "pinned"}:${entry.symbol}`)
+    .sort();
+  const admittedRecoveredLpUsd = admittedLps.reduce((sum, entry) => sum + entry.usd, 0);
+  const admittedRecoveredLpPct = computeUnknownExposurePct(admittedRecoveredLpUsd, total);
+  if (recoveredLpPositions.length > 0) {
+    warnings.push(
+      reserveInfoWarning(
+        "fraxswap-lp-onchain-recovery",
+        `Recovered ${recoveredLpPositions.length} issuer-errored reviewed Fraxswap V2 LP row(s) (${recoveredLpPositions.join(", ")}; ${admittedRecoveredLpPct.toFixed(4)}% of total assets)`,
+      ),
+    );
+  }
+
   return {
     slices: normalizeSlices(slices, null),
     ...(warnings.length > 0 ? { warnings } : {}),
@@ -454,6 +1098,26 @@ export function adaptFraxBalanceSheet(
       categorizedAssetTotalUsd: categorizedAssetTotal,
       sourceTotalAssetsUsd: sourceTotal,
       ...(reconciliation.gapPct > 0 ? { sourceTotalGapPct: reconciliation.gapPct } : {}),
+      ...(recoveredFerryPositions.length > 0
+        ? {
+            recoveredFerryRowCount: recoveredFerryPositions.length,
+            recoveredFerryCollateralUsd: admittedRecoveredFerryUsd,
+            recoveredFerryPositions,
+            ...(pinnedHaltedChainFerryPositions.length > 0
+              ? {
+                  pinnedHaltedChainFerryPositions,
+                  ...(pinnedHaltedChainFerryVerifiedAt ? { pinnedHaltedChainFerryVerifiedAt } : {}),
+                }
+              : {}),
+          }
+        : {}),
+      ...(recoveredLpPositions.length > 0
+        ? {
+            recoveredLpRowCount: recoveredLpPositions.length,
+            recoveredLpCollateralUsd: admittedRecoveredLpUsd,
+            recoveredLpPositions,
+          }
+        : {}),
       assetCount: byAsset.size,
       ...freshnessMetadataFromTimestamp(
         sourceTimestamp,
@@ -795,7 +1459,15 @@ export async function fetchFraxBalanceSheetReserves(
   if (!isBalanceSheetResponse(payload)) {
     throw new Error("frax-balance-sheet adapter requires a v2 balance-sheet API response");
   }
-  return adaptFraxBalanceSheet(payload, coin.id, coin.contracts);
+  const recovery = coin.id === "frax-frax"
+    ? await recoverErroredReviewedRows(payload, signal, ctx)
+    : undefined;
+  const result = adaptFraxBalanceSheet(payload, coin.id, coin.contracts, undefined, recovery?.recovered);
+  if (!recovery || recovery.warnings.length === 0) return result;
+  return {
+    ...result,
+    warnings: [...(result.warnings ?? []), ...recovery.warnings],
+  };
 }
 
 /**

@@ -123,11 +123,35 @@ describe("adaptUsddLatestCollateral", () => {
     ]);
     expect(result.metadata).toMatchObject({
       vaultCount: 7,
-      trackedVaultCount: 5,
+      trackedVaultCount: 6,
       freshnessMode: "unverified",
       stableVaultUsd: expect.closeTo(82_982_829.02, 2),
     });
     expect(result.metadata?.redemption).toBeUndefined();
+    expectValidAdapterOutput("usdd-data-platform", result);
+  });
+
+  it("maps PSM-USDC-A vaults to canonical USDC without triggering unknown exposure", () => {
+    const result = adaptUsddLatestCollateral(collateralResponse([
+      { vaultType: "PSM-USDT-A", lockedValue: 35_505_369.7 },
+      { vaultType: "PSM-USDC-A", lockedValue: 0.06 },
+      { vaultType: "SA001-A", lockedValue: 285_509_896 },
+    ]));
+
+    expect(result.slices).toEqual([
+      { sourceKey: "usdd-data-platform:smart-allocator", name: "Smart Allocator (stablecoin DeFi via Aave/JustLend)", pct: expect.closeTo((285_509_896 / 321_015_265.76) * 100, 8), risk: "medium" },
+      { sourceKey: "usdd-data-platform:psm-usdt", name: "USDT (PSM vaults)", pct: expect.closeTo((35_505_369.7 / 321_015_265.76) * 100, 8), risk: "low", coinId: "usdt-tether", depType: "collateral" },
+      { sourceKey: "usdd-data-platform:psm-usdc", name: "USDC (PSM vaults)", pct: expect.closeTo((0.06 / 321_015_265.76) * 100, 12), risk: "low", coinId: "usdc-circle", depType: "collateral" },
+    ]);
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata).toMatchObject({
+      vaultCount: 3,
+      trackedVaultCount: 6,
+      stableVaultUsd: expect.closeTo(35_505_369.76, 2),
+      itemizedCollateralReconciled: true,
+    });
+    expect(result.metadata).not.toHaveProperty("unknownVaultCount");
+    expect(result.metadata).not.toHaveProperty("unknownVaultTypes");
     expectValidAdapterOutput("usdd-data-platform", result);
   });
 
@@ -150,7 +174,7 @@ describe("adaptUsddLatestCollateral", () => {
     expectWarningEffect(result, "unknown-vault-type", "degraded");
     expect(result.metadata).toMatchObject({
       vaultCount: 2,
-      trackedVaultCount: 5,
+      trackedVaultCount: 6,
       unknownVaultCount: 1,
       unknownVaultTypes: ["RWA-A"],
       unknownExposurePct: 25,
