@@ -397,6 +397,8 @@ e9ffbf3f450f9f461080c069472f7144b29a843e:worker/src/lib/__tests__/scheduler-live
 # bytecode keccak256 hash beside its address constant; generic-api-key reads the
 # [M_TOKEN, "0x…"] pair as a credential assignment. Not a credential.
 a7cd1a631d5b002b9ad8a1178c9b23aa06fbb0a9:worker/src/lib/authoritative-price-sources/m0-extension.ts:generic-api-key:29
-# Pricing v6.94: the pricing-source registry entry's `key: "uniswap-v2-exact"` is a source
-# identifier, which generic-api-key reads as a credential assignment. Not a credential.
+# Pricing v6.94: the uniswap-v2-exact pricing-source registry identifier is assigned to the
+# entry's key field, which generic-api-key reads as a credential assignment. Not a credential.
+# The first version of this comment quoted that assignment and matched the rule itself.
+982a2040dfc4d73959d56c7ed6248735905c6b91:.gitleaksignore:generic-api-key:400
 6b8850f843e087c83260577de518d2ea2816bf91:shared/lib/pricing-source-registry-dex-search.ts:generic-api-key:112
