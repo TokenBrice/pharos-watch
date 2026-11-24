@@ -776,7 +776,7 @@ export async function guardChainDropouts(input: {
   // A reviewed provider perimeter change is not a supply move: the provider's day/week/month values
   // from before the review count another quantity. Withhold each until it can no longer predate it (R1).
   for (const entry of SUPPLY_PERIMETER_CHANGES) {
-    if (entry.changedAt > now) continue;
+    if (entry.stablecoinId == null || entry.changedAt > now) continue;
     const asset = input.assets.find((candidate) => String(candidate.id) === entry.stablecoinId);
     if (!asset) continue;
     const ageDays = (now - entry.changedAt) / 86_400;

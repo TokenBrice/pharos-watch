@@ -32,6 +32,11 @@ import {
   CORE_AGGREGATE_V1_NON_ACTIVE_MEMBER_LIST,
 } from "../aggregate-universe-v1";
 import { getListingClass, isTokenizedFundId } from "../listing-governance";
+import {
+  getLatestSupplyPerimeterChange,
+  MARKET_PERIMETER_MARKERS,
+  SUPPLY_PERIMETER_CHANGES,
+} from "../../supply-perimeter-changes";
 
 describe("core stablecoin aggregate universe", () => {
   it("includes only reviewed core stablecoins", () => {
@@ -132,5 +137,22 @@ describe("core stablecoin aggregate universe", () => {
     expect(CORE_AGGREGATE_V1_MEMBER_IDS.has("eutbl-spiko")).toBe(true);
     expect(CORE_AGGREGATE_V1_MEMBER_IDS.has("apxusd-apyx")).toBe(false);
     expect(CORE_AGGREGATE_V1_MEMBER_IDS.has("susds-sky")).toBe(false);
+  });
+
+  it("registers the listing-policy v2 market-wide perimeter entry and chart marker from the cutover constant", () => {
+    const v2Entry = SUPPLY_PERIMETER_CHANGES.find(
+      (entry) => entry.marketWide && entry.changedAt === CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC,
+    );
+    expect(v2Entry).toBeDefined();
+    expect(v2Entry?.stablecoinId).toBeNull();
+    expect(getLatestSupplyPerimeterChange(
+      CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC - 1,
+      CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC,
+    )).toBe(CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC);
+    expect(MARKET_PERIMETER_MARKERS).toContainEqual(expect.objectContaining({
+      id: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
+      date: CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE,
+      tsMs: CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC * 1000,
+    }));
   });
 });

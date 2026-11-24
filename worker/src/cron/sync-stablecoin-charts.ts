@@ -1,4 +1,10 @@
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import {
+  CORE_STABLECOIN_AGGREGATE_UNIVERSE_V1,
+  CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE,
+  getCoreAggregateUniverseForTimestamp,
+  type CoreStablecoinAggregateUniverse,
+} from "@shared/lib/stablecoins/aggregate-universe";
 import { getCache, setCacheIfNewer } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
@@ -14,12 +20,15 @@ import {
   sampleHistoricalDatePoints,
 } from "../lib/stablecoin-charts-payload";
 import {
-  assessStablecoinChartContinuity,
+  assessStablecoinChartContinuityWithCutover,
+  parseStablecoinChartsPerimeterRecord,
   STABLECOIN_CHART_CONTINUITY_THRESHOLDS,
+  STABLECOIN_CHARTS_PERIMETER_CACHE_KEY,
+  type StablecoinChartsPerimeterRecord,
 } from "../lib/stablecoin-charts-continuity";
 import {
   mergeStructuralSupplementalHistoryIntoCharts,
-  STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS,
+  STRUCTURAL_SUPPLEMENTAL_CHART_OVERLAYS,
   type SupplyHistoryChartRow,
 } from "../lib/stablecoin-charts-reconciliation";
 import { throwIfAborted } from "../lib/abort";
@@ -240,8 +249,8 @@ async function runStablecoinChartsPublication(
   throwIfAborted(signal);
   let supplementalHistoryChunks = 0;
   let supplementalHistoryMaxBindCount = 0;
-  if (STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.length > 0) {
-    const supplementalIds = STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.map((config) => config.id);
+  if (STRUCTURAL_SUPPLEMENTAL_CHART_OVERLAYS.length > 0) {
+    const supplementalIds = STRUCTURAL_SUPPLEMENTAL_CHART_OVERLAYS.map((config) => config.id);
     const overlayRows: SupplyHistoryChartRow[] = [];
     for (const idChunk of chunkArray(supplementalIds, SUPPLEMENTAL_HISTORY_IN_CHUNK_SIZE)) {
       throwIfAborted(signal);
@@ -262,7 +271,7 @@ async function runStablecoinChartsPublication(
     normalizedRaw = mergeStructuralSupplementalHistoryIntoCharts(normalizedRaw.map((point) => ({
       date: point.date,
       totalCirculatingUSD: point.totalCirculatingUSD ?? {},
-    })), overlayRows).map((point) => ({
+    })), overlayRows, STRUCTURAL_SUPPLEMENTAL_CHART_OVERLAYS).map((point) => ({
       date: point.date,
       totalCirculatingUSD: point.totalCirculatingUSD,
     }));
@@ -314,14 +323,61 @@ async function runStablecoinChartsPublication(
       metadata: { reason: "chart-history-baseline-read-failed" },
     });
   }
+  let previousPerimeterCache: Awaited<ReturnType<typeof getCache>>;
+  try {
+    previousPerimeterCache = await getCache(db, STABLECOIN_CHARTS_PERIMETER_CACHE_KEY);
+  } catch (error) {
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoin-charts",
+      level: "error",
+      event: "chart-perimeter-baseline-read-failed",
+      message: "Could not read the previous chart perimeter identity; preserving the cache",
+      error,
+    });
+    return createCronResult({
+      status: "degraded",
+      itemCount: 0,
+      metadata: { reason: "chart-perimeter-baseline-read-failed" },
+    });
+  }
+  const parsedPreviousPerimeter = previousPerimeterCache
+    ? parseStablecoinChartsPerimeterRecord(previousPerimeterCache.value)
+    : null;
+  if (previousPerimeterCache && parsedPreviousPerimeter == null) {
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoin-charts",
+      level: "error",
+      event: "chart-perimeter-baseline-invalid",
+      message: "Previous chart perimeter metadata is malformed; preserving the cache",
+    });
+    return createCronResult({
+      status: "degraded",
+      itemCount: 0,
+      metadata: { reason: "chart-perimeter-baseline-invalid" },
+    });
+  }
   const parsedPrevious = previousCache ? parseJson(previousCache.value) : null;
   const previousPayload = parsedPrevious?.ok
     ? normalizeStablecoinChartPoints(parsedPrevious.value)
     : null;
   const continuityBaseline = !previousCache ? "missing" : previousPayload == null ? "invalid" : "present";
-  const continuityFindings = previousPayload == null
-    ? []
-    : assessStablecoinChartContinuity(previousPayload, payload);
+  const latestCandidateDate = payload.reduce((max, point) => Math.max(max, point.date), 0);
+  const candidateUniverse: CoreStablecoinAggregateUniverse =
+    getCoreAggregateUniverseForTimestamp(latestCandidateDate);
+  // A cached chart written before perimeter tracking existed was produced under
+  // core-stablecoins-v1, so the first post-cutover run transitions v1 -> v2 once.
+  const previousUniverse: CoreStablecoinAggregateUniverse | null = previousPayload == null
+    ? null
+    : parsedPreviousPerimeter?.universe ?? CORE_STABLECOIN_AGGREGATE_UNIVERSE_V1;
+  const continuityAssessment = previousPayload == null
+    ? { blockingFindings: [], acceptedCutoverFindings: [] }
+    : assessStablecoinChartContinuityWithCutover(previousPayload, payload, {
+      previousUniverse,
+      nextUniverse: candidateUniverse,
+    });
+  const continuityFindings = continuityAssessment.blockingFindings;
   if (continuityFindings.length > 0) {
     logWorkerEvent({
       scope: "lib",
@@ -333,6 +389,8 @@ async function runStablecoinChartsPublication(
         findings: continuityFindings.slice(0, 10),
         previousPoints: previousPayload?.length ?? 0,
         nextPoints: payload.length,
+        previousPerimeterUniverse: previousUniverse,
+        perimeterUniverse: candidateUniverse,
       },
     });
     return createCronResult({
@@ -349,8 +407,28 @@ async function runStablecoinChartsPublication(
         previousOldestDate: previousPayload?.[0]?.date ?? null,
         nextOldestDate: payload[0]?.date ?? null,
         minPointShare: STABLECOIN_CHART_CONTINUITY_THRESHOLDS.minPointShare,
+        previousPerimeterUniverse: previousUniverse,
+        perimeterUniverse: candidateUniverse,
         continuityFindings: continuityFindings.slice(0, 20).map((finding) =>
           [finding.code, finding.previous, finding.next, finding.bucket ?? null] as const),
+      },
+    });
+  }
+
+  const isPerimeterCutover = previousUniverse != null && previousUniverse !== candidateUniverse;
+  const acceptedCutoverFindings = continuityAssessment.acceptedCutoverFindings;
+  if (isPerimeterCutover) {
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoin-charts",
+      level: "info",
+      event: "chart-perimeter-cutover-accepted",
+      message: "Accepted one-shot chart bucket transition across planned aggregate perimeter cutover",
+      metadata: {
+        previousUniverse,
+        nextUniverse: candidateUniverse,
+        cutoverDate: CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE,
+        acceptedFindings: acceptedCutoverFindings.slice(0, 20),
       },
     });
   }
@@ -366,13 +444,31 @@ async function runStablecoinChartsPublication(
   let canonicalReadbackUpdatedAt: number | null = null;
   if (cacheResult.written) {
     lastWriteAdvanced = true;
+    const perimeterRecord: StablecoinChartsPerimeterRecord = {
+      universe: candidateUniverse,
+      cutoverDate: CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE,
+      ...(isPerimeterCutover
+        ? { acceptedFromUniverse: previousUniverse, acceptedAt: syncStartSec }
+        : {}),
+    };
+    await setCacheIfNewer(
+      db,
+      STABLECOIN_CHARTS_PERIMETER_CACHE_KEY,
+      JSON.stringify(perimeterRecord),
+      syncStartSec,
+      signal,
+    );
     logWorkerEvent({
       scope: "lib",
       job: "sync-stablecoin-charts",
       level: "info",
       event: "chart-cache-published",
       message: "Cached chart points",
-      metadata: { downsampledPointCount: downsampled.length, rawPointCount: normalizedRaw.length },
+      metadata: {
+        downsampledPointCount: downsampled.length,
+        rawPointCount: normalizedRaw.length,
+        perimeterUniverse: candidateUniverse,
+      },
     });
   } else {
     const canonicalCache = await getCache(db, "stablecoin-charts");
@@ -408,6 +504,18 @@ async function runStablecoinChartsPublication(
       supplementalHistoryChunks,
       supplementalHistoryMaxBindCount,
       continuityBaseline,
+      perimeterUniverse: candidateUniverse,
+      previousPerimeterUniverse: previousUniverse,
+      perimeterCutover: isPerimeterCutover
+        ? {
+          accepted: true,
+          fromUniverse: previousUniverse,
+          toUniverse: candidateUniverse,
+          cutoverDate: CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE,
+          acceptedFindings: acceptedCutoverFindings.slice(0, 20).map((finding) =>
+            [finding.code, finding.previous, finding.next, finding.bucket ?? null] as const),
+        }
+        : null,
       cacheKey: "stablecoin-charts",
       syncStartSec,
       cacheWriteMode: cacheResult.written ? "published" : "skipped-newer",

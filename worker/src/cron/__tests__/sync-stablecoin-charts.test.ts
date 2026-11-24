@@ -6,7 +6,17 @@ import { mockFetchRetry } from "../../test-helpers/cron";
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
 
 import { syncStablecoinCharts } from "../sync-stablecoin-charts";
-import { STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS } from "../../lib/stablecoin-charts-reconciliation";
+import {
+  STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS,
+  STRUCTURAL_SUPPLEMENTAL_CHART_OVERLAYS,
+} from "../../lib/stablecoin-charts-reconciliation";
+import { STABLECOIN_CHARTS_PERIMETER_CACHE_KEY } from "../../lib/stablecoin-charts-continuity";
+import {
+  CORE_STABLECOIN_AGGREGATE_UNIVERSE,
+  CORE_STABLECOIN_AGGREGATE_UNIVERSE_V1,
+  CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE,
+  CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC,
+} from "@shared/lib/stablecoins/aggregate-universe";
 import { normalizeStablecoinChartPoints, sampleHistoricalDatePoints } from "../../lib/stablecoin-charts-payload";
 import { handleStablecoinCharts } from "../../api/cache-handlers";
 
@@ -266,7 +276,7 @@ describe("syncStablecoinCharts", () => {
     // Chunked at the 90-bind limit; the config size drives how many chunks the
     // supplemental supply-history query splits into.
     expect(metadata.supplementalHistoryChunks).toBe(
-      Math.ceil(STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.length / 90),
+      Math.ceil(STRUCTURAL_SUPPLEMENTAL_CHART_OVERLAYS.length / 90),
     );
     expect(metadata.supplementalHistoryMaxBindCount).toBeLessThanOrEqual(90);
 
@@ -565,5 +575,111 @@ describe("syncStablecoinCharts", () => {
     }>;
     const oldPoint = cached.find((point) => point.date === oldPointDate);
     expect(oldPoint?.totalCirculatingUSD.peggedEUR).toBe(500);
+  });
+
+  it("accepts planned v1 -> v2 bucket drift once on cutover and restores strict drift checks on the next run", async () => {
+    const cutoverNowSec = CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC + 3_600;
+    vi.setSystemTime(new Date(cutoverNowSec * 1000));
+
+    const rawPreviousPoints = Array.from({ length: 120 }, (_, i) => ({
+      date: cutoverNowSec - (120 - i) * 86_400,
+      totalCirculatingUSD: { peggedUSD: 250_000_000, peggedEUR: 1_000_000, peggedGBP: 500_000 },
+    }));
+    const previousPoints = sampleHistoricalDatePoints(rawPreviousPoints, cutoverNowSec - 3_600);
+    const nextRawPoints = [
+      ...rawPreviousPoints.slice(0, 119).map((point) => ({
+        date: point.date,
+        totalCirculating: point.totalCirculatingUSD,
+        totalCirculatingUSD: point.totalCirculatingUSD,
+      })),
+      {
+        date: CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC,
+        totalCirculating: { peggedUSD: 240_000_000, peggedEUR: 230_000, peggedGBP: 140_000 },
+        totalCirculatingUSD: { peggedUSD: 240_000_000, peggedEUR: 230_000, peggedGBP: 140_000 },
+      },
+    ];
+    mockFetch([{ match: "stablecoincharts/all", body: nextRawPoints }]);
+
+    // First post-cutover run: previous cache exists with no perimeter record (legacy v1 baseline).
+    const cutoverDb = mockD1([
+      fxPairRead(cutoverNowSec, { peggedUSD: 1, peggedEUR: 1, peggedGBP: 1 }),
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["stablecoin-charts"],
+        rows: [],
+        first: { value: JSON.stringify(previousPoints), updated_at: cutoverNowSec - 3_600 },
+      },
+    ]);
+    const cutoverResult = await syncStablecoinCharts(cutoverDb);
+    expect(cutoverResult.status).toBeUndefined();
+    expect(cutoverResult.itemCount).toBeGreaterThan(0);
+    const cutoverMeta = JSON.parse(cutoverResult.metadata ?? "{}") as {
+      perimeterUniverse: string;
+      previousPerimeterUniverse: string;
+      perimeterCutover: { accepted: boolean; fromUniverse: string; toUniverse: string; cutoverDate: string; acceptedFindings: unknown[] } | null;
+    };
+    expect(cutoverMeta.previousPerimeterUniverse).toBe(CORE_STABLECOIN_AGGREGATE_UNIVERSE_V1);
+    expect(cutoverMeta.perimeterUniverse).toBe(CORE_STABLECOIN_AGGREGATE_UNIVERSE);
+    expect(cutoverMeta.perimeterCutover).toMatchObject({
+      accepted: true,
+      fromUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE_V1,
+      toUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
+      cutoverDate: CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE,
+    });
+    expect(cutoverMeta.perimeterCutover?.acceptedFindings).toEqual(expect.arrayContaining([
+      ["bucket-value-drift", 1_000_000, 230_000, "peggedEUR"],
+      ["bucket-value-drift", 500_000, 140_000, "peggedGBP"],
+    ]));
+
+    const perimeterInsert = findD1HistoryEntry(cutoverDb, "INSERT INTO cache", [0, STABLECOIN_CHARTS_PERIMETER_CACHE_KEY]);
+    expect(perimeterInsert).toBeDefined();
+    expect(JSON.parse(String(perimeterInsert?.binds[1]))).toEqual({
+      universe: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
+      cutoverDate: CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE,
+      acceptedFromUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE_V1,
+      acceptedAt: cutoverNowSec,
+    });
+
+    // Second run with the same v2 perimeter recorded: ordinary bucket drift now trips.
+    const nextRunDb = mockD1([
+      fxPairRead(cutoverNowSec, { peggedUSD: 1, peggedEUR: 1, peggedGBP: 1 }),
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["stablecoin-charts"],
+        rows: [],
+        first: { value: JSON.stringify(previousPoints), updated_at: cutoverNowSec - 3_600 },
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [STABLECOIN_CHARTS_PERIMETER_CACHE_KEY],
+        rows: [],
+        first: { value: String(perimeterInsert?.binds[1]), updated_at: cutoverNowSec - 3_600 },
+      },
+    ]);
+    const nextRunResult = await syncStablecoinCharts(nextRunDb);
+    expect(nextRunResult.status).toBe("degraded");
+    expect(JSON.parse(nextRunResult.metadata ?? "{}")).toMatchObject({
+      reason: "chart-history-truncated",
+      quality: { codes: ["bucket-value-drift"] },
+    });
+    expect(getCacheInsert(nextRunDb)).toBeUndefined();
+  });
+
+  it("fails closed when the chart perimeter cache row is malformed", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    mockFetch([{ match: "stablecoincharts/all", body: makeRawChartPoints(120, nowSec) }]);
+    const db = mockD1([
+      fxPairRead(nowSec, { peggedUSD: 1 }),
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [STABLECOIN_CHARTS_PERIMETER_CACHE_KEY],
+        rows: [],
+        first: { value: "{corrupt-json", updated_at: nowSec - 3_600 },
+      },
+    ]);
+    const result = await syncStablecoinCharts(db);
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ reason: "chart-perimeter-baseline-invalid" });
+    expect(getCacheInsert(db)).toBeUndefined();
   });
 });
