@@ -1,5 +1,20 @@
 [
   {
+    "version": "10.54",
+    "title": "Physical-delivery routes without placeholder capacity gaps, CCIP LockBox escrows, and VNX exit-capacity rulings",
+    "date": "2026-11-24",
+    "effectiveAt": 1795543200,
+    "summary": "Completes the v10.53 physical-delivery ruling so a documented physical-commodity-delivery issuer route is itself not applicable for same-notional USD capacity and no longer carries a placeholder capacity gap, adds reviewed CCIP 2.0.0 ERC20LockBox and exact multi-account escrow backing to economic supply plans, and records the owner's 2026-11-24 ruling that VNX's non-binding cash floor is not a published capacity bound.",
+    "impact": [
+      "Physical-delivery route status: a scoped V9ExitRouteFactV2Schema exemption (redemption lane, physical-commodity-delivery output, sameNotionalEligible false, not score-eligible, diagnostic coverage, not-applicable route and capacity status under v9.exit.physical-delivery-capacity) lets the route status itself be not applicable, so neither compiler path emits the placeholder route-status capacity gap that v10.53 left on the 12 physical routes (U on gldt-gold-dao, kag-kinesis and kau-kinesis; C on the rest). Stale documented-terms evidence keeps the v10.53 shape with its producer-failed route-observation-stale gap, and that gap stays out of portfolio exitStatus. Sibling known factors on these routes carry v9.exit.route-factors instead of inheriting the not-applicable label. The nine cause-C rows that covered the removed placeholder gaps are retired; their observation records stay. The public exit breakdown names the reason (\"Physical delivery: USD capacity not applicable\").",
+      "CCIP LockBox and multi-account escrows: a reviewed CCIP escrow may bind an ERC20LockBox through its lane pool (pool.getLockBox(), getToken(), runtime code hashes and, for a staged box, empty getSupportedChains(), all authenticated at the same pinned block) and may back its receipts with the exact sum of reviewed accounts. Conservation stays exact BigInt equality, and multi-account backing is admitted only for authenticated CCIP escrows. No plan uses it yet: X Layer public endpoints cap eth_getLogs at 100 blocks (now declared as maxLogBlockSpan), which the observer cannot keep pace with, so the syrupusdt-maple and susdat-saturn plans stay unrenewed and their live supply attribution stays unavailable until a keyed X Layer log endpoint exists.",
+      "VNX exit capacity (owner ruling 2026-11-24): vchf-vnx and vgbp-vnx publish a >=10% same-day cash floor, but their binding terms allow discretionary delay and in-kind redemption and their pages give conflicting 48-hour figures, so the open exit-capacity item becomes a researched issuer non-disclosure (cause C).",
+      "Fixed-clock replays of production captures report-cards:10.53:1795526140 (clock 1795526305, 2026-11-24T13:18Z) and report-cards:10.53:1795533339 (clock 1795533474, 15:17Z), against the deployed v10.53 code at main: 0 grade or score movers and 0 evidence-level changes on both; open questions 432 -> 431 and 440 -> 439, obligations 4,215 -> 4,203 and 4,225 -> 4,213, own unresolved (U) items 1,804 -> 1,802 and 1,813 -> 1,811. The production-code baseline reproduces the published scores on 388/388 cards at 13:18Z. Provisional activation 2026-11-24 18:00 UTC (1795543200); first accepted production-cycle verification pending."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "10.53",
     "title": "Regulator-filing reserve budget, 10% census immateriality bound, reconciled mint deployment shares, unavailable-rail static terms, and physical-delivery exit applicability",
     "date": "2026-11-23",
