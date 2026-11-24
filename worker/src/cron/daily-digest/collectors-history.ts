@@ -246,7 +246,9 @@ export async function collectCrossDayTrends(
         if (comparableSupply && data.aggregateUniverse === CORE_STABLECOIN_AGGREGATE_UNIVERSE && data.supplyCoverage?.complete === true) {
           mcapTrajectory.push({ date, mcapUsd: data.totalMcapUsd });
         }
-        if (comparableSupply && data.supplyCoverage?.complete === true) completeCoverageMcapTrajectory.push({ date, mcapUsd: data.totalMcapUsd });
+        if (comparableSupply && data.aggregateUniverse == null && data.supplyCoverage?.complete === true) {
+          completeCoverageMcapTrajectory.push({ date, mcapUsd: data.totalMcapUsd });
+        }
         if (data.mintBurnFlows) {
           gaugeTrajectory.push({ date, gaugeScore: data.mintBurnFlows.gaugeScore });
         }

@@ -22,6 +22,7 @@ import { PSI_NATIVE_EVIDENCE_MAX_AGE_SEC as NATIVE_MAX } from "@shared/lib/depeg
 import { API_FRESHNESS_MAX_AGE_SEC as FRESH_MAX } from "@shared/lib/api-freshness";
 import { NATIVE_EVENT_QUOTE_CACHE_PREFIX as NATIVE_PFX } from "../../lib/native-peg-quote-cache";
 import { PSI_CONDITION_BAND_VALUES } from "@shared/types/stability-constants";
+import { CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC } from "@shared/lib/stablecoins/aggregate-universe";
 
 vi.mock("@shared/lib/stablecoins/registry", async () => (await import("./daily-digest.test-support")).mockDailyDigestRegistryModule());
 vi.mock("../../lib/stablecoins-cache", async () => (await import("./daily-digest.test-support")).mockDailyDigestStablecoinsCacheModule());
@@ -788,6 +789,16 @@ describe("history and DEWS collectors", () => {
     expect(full.value?.gaugeTrajectory).toEqual(expect.any(Array)); expect(full.value?.mcapTrajectory).toHaveLength(1);
     expect((await col(rows(4, 1))).value?.gaugeTrajectory).toBeNull();
     expect((await col(rows(2, 0, 1))).value).toBeUndefined();
+
+    // A same-day pre-deploy v1 digest (generated_at >= cutoverSec) must not leak into v2 mcapTrajectory via fallback.
+    const postCutover = CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC + 86400 + 8 * 3600;
+    vi.setSystemTime(postCutover * 1000);
+    const taggedV1Rows = [
+      { ...mkRow(postCutover, 1, 91, "BEDROCK", 299e9), generated_at: CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC + 8 * 3600 },
+      mkRow(postCutover, 2, 91, "BEDROCK", 298e9),
+      mkRow(postCutover, 3, 90, "BEDROCK", 297e9),
+    ].map((r) => ({ ...r, input_data: r.input_data.replace("{", '{"aggregateUniverse":"core-stablecoins-v1","supplyCoverage":{"complete":true},') }));
+    expect((await colTrends(ctxFor([{ match: "FROM daily_digest", rows: taggedV1Rows }]))).value?.mcapTrajectory).toEqual([]);
   });
 
   it("collects comparable historical PSI and supply records", async () => {

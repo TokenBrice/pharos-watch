@@ -5,6 +5,7 @@ import type { PegCurrency } from "@shared/types/core";
 import type { StablecoinData } from "@shared/types/supply";
 import type { NonUsdSharePoint } from "@shared/types/supply";
 import { PEG_TAXONOMY_PAGES } from "@/lib/peg-taxonomy";
+import { getLatestSupplyPerimeterChange } from "@shared/lib/supply-perimeter-changes";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 
 const OTHER_PEGS = new Set<PegCurrency>(["VAR", "OTHER"]);
@@ -47,6 +48,8 @@ export interface AltPegTrendStats {
   latestAltMarketCap: number;
   yearlyShareDeltaPctPoints: number | null;
   yearlyMarketCapChangePct: number | null;
+  /** Present when the 1-year comparison window spans a market-wide supply perimeter change. */
+  yearlyDeltaWithheldReason?: "perimeter-change";
   valueCoverageIncomplete: boolean;
 }
 
@@ -107,18 +110,22 @@ export function buildAltPegTrendStats(points?: readonly NonUsdSharePoint[]): Alt
   const latestAltMarketCap = sharePointMarketCap(latest);
   const cutoff = latest.date - 365 * 86400;
   const yearAgo = [...points].reverse().find((point) => point.date <= cutoff) ?? null;
+  const spansPerimeterChange =
+    yearAgo != null && getLatestSupplyPerimeterChange(yearAgo.date, latest.date) !== null;
+  const comparableYearAgo = spansPerimeterChange ? null : yearAgo;
 
   return {
     latestDate: latest.date,
     latestSharePct,
     latestCoverageIncomplete: isCoverageIncomplete(latest),
     latestAltMarketCap,
-    yearlyShareDeltaPctPoints: yearAgo ? latestSharePct - sharePointTotal(yearAgo) : null,
+    yearlyShareDeltaPctPoints: comparableYearAgo ? latestSharePct - sharePointTotal(comparableYearAgo) : null,
     yearlyMarketCapChangePct:
-      yearAgo && sharePointMarketCap(yearAgo) > 0
-        ? ((latestAltMarketCap - sharePointMarketCap(yearAgo)) / sharePointMarketCap(yearAgo)) * 100
+      comparableYearAgo && sharePointMarketCap(comparableYearAgo) > 0
+        ? ((latestAltMarketCap - sharePointMarketCap(comparableYearAgo)) / sharePointMarketCap(comparableYearAgo)) * 100
         : null,
-    valueCoverageIncomplete: [latest, yearAgo].some((point) => point != null && isCoverageIncomplete(point)),
+    ...(spansPerimeterChange ? { yearlyDeltaWithheldReason: "perimeter-change" as const } : {}),
+    valueCoverageIncomplete: [latest, comparableYearAgo].some((point) => point != null && isCoverageIncomplete(point)),
   };
 }
 
