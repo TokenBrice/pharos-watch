@@ -907,10 +907,8 @@ describe("reviewed CCIP vault-share plans", () => {
       observedAtSec: clockSec - 60, anchor: "100", anchorHash: `0x${"a".repeat(64)}`,
       responseSha256: "b".repeat(64),
     }));
-    observations.push({
-      ...observations.find(row => row.deploymentKey === canonical.deploymentKey)!,
-      id: escrow.id, amount: raw(escrow.receiptDeploymentKeys.length * 10 + 1, canonical.decimals!),
-    });
+    const canonicalObs = observations.find(row => row.deploymentKey === canonical.deploymentKey)!;
+    observations.push({ ...canonicalObs, id: escrow.id, amount: raw(escrow.receiptDeploymentKeys.length * 10 + 1, canonical.decimals!) });
     const amount = raw(1, canonical.decimals!);
     const proof: NonNullable<EconomicSupplyObservation["ccipPendingProof"]> = {
       sourceDigest: sha256Hex(stableJsonStringifyV1(source)),
@@ -940,7 +938,7 @@ describe("reviewed CCIP vault-share plans", () => {
       referencePrice: { sourceId: plan.sourceId, value: "1", sourceGeneration: "ccip-accounting-regression", observedAtSec: clockSec - 60, responseSha256: "b".repeat(64) },
       conversions: [], observations,
       inFlight: [{
-        ...observations.find(row => row.deploymentKey === canonical.deploymentKey)!,
+        ...canonicalObs,
         id: `in-flight:${escrow.id}`, amount, ccipPendingProof: proof,
         responseSha256: sha256Hex(stableJsonStringifyV1({ proof, amount })),
       }],
@@ -962,27 +960,49 @@ describe("reviewed CCIP vault-share plans", () => {
     },
   );
 
-  it("fails closed on susdat-saturn against the live catalog while its superseded D02 plan omits X Layer", () => {
+  it("keeps susdat/syrupusdt on D02 state and fails closed on susdat live catalog", () => {
     expect(buildReviewedEconomicDeploymentInventory("susdat-saturn")).toBeNull();
     expect(deriveReviewedEconomicDeploymentPartition(reviewedFixture("susdat-saturn"))).toBeNull();
+    for (const id of ["susdat-saturn", "syrupusdt-maple"]) {
+      const p = REVIEWED_ECONOMIC_SUPPLY_PLANS.get(id)!;
+      expect(p.reviewer).toContain("D02 evidence lane");
+      expect([p.reviewedAtSec, p.expiresAtSec]).toEqual([1793120053, 1795712053]);
+    }
   });
 
-  it("keeps the sUSDat plan on its peer-proven D02 timestamps until a renewal re-proves every lane peer binding", () => {
-    const plan = REVIEWED_ECONOMIC_SUPPLY_PLANS.get("susdat-saturn")!;
-    const source = plan.escrows[0]!.inFlightSource;
-    if (!source || !("kind" in source) || source.kind !== "evm-ccip-pending") return;
-    // Pending CCIP 2.0.0 separate-LockBox escrow support.
-    expect(plan.reviewer).toContain("D02 evidence lane");
-    expect([plan.reviewedAtSec, plan.expiresAtSec]).toEqual([1793120053, 1795712053]);
-  });
-
-  it("keeps the syrupUSDT plan on its D02 timestamps until X Layer is catalogued and lane-proven", () => {
-    const plan = REVIEWED_ECONOMIC_SUPPLY_PLANS.get("syrupusdt-maple")!;
-    const source = plan.escrows[0]!.inFlightSource;
-    if (!source || !("kind" in source) || source.kind !== "evm-ccip-pending") return;
-    // Pending CCIP 2.0.0 LockBox migration and 6-chain replacement for D02.
-    expect(plan.reviewer).toContain("D02 evidence lane");
-    expect([plan.reviewedAtSec, plan.expiresAtSec]).toEqual([1793120053, 1795712053]);
+  it("enforces multi-account escrow equality, lockbox proofs, and schema gates", () => {
+    const lb = `0x${"5".repeat(40)}`, sp = `0x${"6".repeat(40)}`, h = "a".repeat(64);
+    const b = reviewedFixture("syrupusdt-maple"), e = b.plan.escrows[0]!, src = e.inFlightSource!;
+    if (!("kind" in src) || src.kind !== "evm-ccip-pending") throw new Error("ccip");
+    e.additionalAccounts = [lb];
+    src.lockBoxes = [{ account: lb, lockBoxRuntimeCodeSha256: h, tokenPoolAddress: sp, tokenPoolRuntimeCodeSha256: h, staged: true }];
+    const pObs = b.observations.find(r => r.id === e.id)!;
+    pObs.amount = (BigInt(pObs.amount) - 1n).toString();
+    const xObs: EconomicSupplyObservation = { ...pObs, id: `${e.id}:${lb}`, amount: "1" };
+    b.observations.push(xObs);
+    const inf = b.inFlight[0]!, pf = inf.ccipPendingProof!;
+    pf.sourceDigest = sha256Hex(stableJsonStringifyV1(src)); pf.lockBoxes = [{ account: lb, tokenPoolAddress: sp }];
+    const sign = () => { inf.responseSha256 = sha256Hex(stableJsonStringifyV1({ proof: pf, amount: inf.amount })); };
+    sign(); expect(deriveReviewedEconomicDeploymentPartition(b)).not.toBeNull();
+    for (const fn of [
+      () => { xObs.amount = "2"; },
+      () => { xObs.amount = "1"; xObs.anchorHash = `0x${"1".repeat(64)}`; },
+      () => { xObs.anchorHash = pObs.anchorHash; b.observations.pop(); },
+      () => { b.observations.push(xObs); delete pf.lockBoxes; sign(); },
+    ]) { fn(); expect(deriveReviewedEconomicDeploymentPartition(b)).toBeNull(); }
+    const mut = (p: ReviewedEconomicSupplyPlan, fn: (x: ReviewedEconomicSupplyPlan) => void) => { const c = structuredClone(p); fn(c); return c; };
+    const at = fixture().plan;
+    at.accountingFamily = "native-wrapped"; at.inFlightTreatment = "atomic-native-wrapper";
+    at.deployments[0]!.holdingKind = "native-gas"; at.deployments[0]!.deploymentKey = `ethereum:native:${at.deployments[0]!.address}`;
+    at.escrows[0]!.canonicalDeploymentKey = at.deployments[0]!.deploymentKey; at.escrows[0]!.inFlightSource = null;
+    for (const bad of [
+      mut(at, p => { p.escrows[0]!.additionalAccounts = [lb]; }),
+      mut(fixture().plan, p => { p.escrows[0]!.additionalAccounts = [lb]; }),
+      mut(b.plan, p => { p.escrows[0]!.additionalAccounts = [`0x${"7".repeat(40)}`]; }),
+      mut(b.plan, p => { p.escrows[0]!.additionalAccounts = [src.lanes[0]!.destination.tokenPoolAddress]; }),
+      mut(b.plan, p => { p.escrows[0]!.account = lb; delete p.escrows[0]!.additionalAccounts; }),
+      mut(b.plan, p => { const s = p.escrows[0]!.inFlightSource; if (s && "lockBoxes" in s && s.lockBoxes) delete s.lockBoxes[0]!.staged; }),
+    ]) expect(ReviewedEconomicSupplyPlanSchema.safeParse(bad).success).toBe(false);
   });
 
   it.each(["missing", "digest", "review-clock", "initial-sequence"] as const)(

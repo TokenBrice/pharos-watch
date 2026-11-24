@@ -102,6 +102,7 @@ let sent: SendLog[], executed: SendLog[], states: Record<string, number>, expect
 let pinNumber: number, finalized: number, indexed: string[], receiptLogs: SendLog[] | undefined;
 let activeRead: CcipPendingRead;
 let peersRemoved: boolean;
+let lockBoxAddr: number, stagedChains: bigint[], tokOvr: Record<string, number>, codeOvr: Record<string, string>;
 let logRanges: Array<{ chain: string; from: number; to: number }>;
 function input(read = source(), checkpoint?: CcipPendingCheckpoint) {
   activeRead = read;
@@ -160,7 +161,7 @@ function witnessedSource(version: "1.6" | "2.0.0" = "1.6") {
 beforeEach(() => {
   vi.resetAllMocks(); sent = [send(1)]; executed = []; states = {}; expectedNext = 2;
   protocol = "1.6";
-  peersRemoved = false;
+  peersRemoved = false; lockBoxAddr = 12; stagedChains = []; tokOvr = {}; codeOvr = {};
   pinNumber = 105; finalized = 20000; indexed = []; receiptLogs = undefined; logRanges = [];
   vi.mocked(getCache).mockResolvedValue(null);
   vi.mocked(fetchEvmBlockHeader).mockImplementation(async (_chain, number) => {
@@ -177,7 +178,8 @@ beforeEach(() => {
     if (typeof chain !== "string") throw new Error("Unexpected missing fixture RPC chain");
     if (request.method === "eth_getCode") {
       const block = request.params[1];
-      return block && typeof block === "object" && "blockHash" in block && block.blockHash === word(99) ? "0x" : CODE;
+      if (block && typeof block === "object" && "blockHash" in block && block.blockHash === word(99)) return "0x";
+      return codeOvr[String(request.params[0])] ?? CODE;
     }
     if (request.method === "eth_getBlockByNumber") {
       const number = request.params[0];
@@ -211,7 +213,9 @@ beforeEach(() => {
       !("data" in body) || typeof body.data !== "string") throw new Error("Unexpected fixture eth_call");
     const { to, data } = body;
     const selector = data.slice(0, 10);
-    if (selector === toFunctionSelector("getToken()")) return word(chain === "ethereum" ? 10 : 20);
+    if (selector === toFunctionSelector("getToken()")) return word(tokOvr[to] ?? (chain === "ethereum" ? 10 : 20));
+    if (selector === toFunctionSelector("getLockBox()")) return word(lockBoxAddr);
+    if (selector === toFunctionSelector("getSupportedChains()")) return encodeAbiParameters(parseAbiParameters("uint64[]"), [stagedChains]);
     if (selector === toFunctionSelector("decimals()")) return word(6);
     const at = request.params[1];
     const oldPeerPin = at && typeof at === "object" && "blockHash" in at && at.blockHash === word(102);
@@ -1064,5 +1068,28 @@ describe("authenticated CCIP pending quantities", () => {
     expect(await observeCcipPending(input(read))).toMatchObject({ status: "accepted", amount: "10", proof: { lanes: [{ failedCount: 1 }] } });
     read.lanes[0]!.source.peerBindingPin.hash = word(103);
     expect(await observeCcipPending(input(read))).toEqual({ status: "rejected", reason: "peer-binding-pin-invalid" });
+  });
+  it("authenticates CCIP 2.0.0 lockboxes, rejects drift, and caps xlayer log spans", async () => {
+    const h = sha256Hex(CODE);
+    const mk = (pool: number, staged?: true) => {
+      const r = source();
+      r.lockBoxes = [{ account: addr(12), lockBoxRuntimeCodeSha256: h, tokenPoolAddress: addr(pool), tokenPoolRuntimeCodeSha256: h, ...(staged ? { staged } : {}) }];
+      return r;
+    };
+    const active = mk(11), staged = mk(13, true);
+    expect(await observeCcipPending(input(active))).toMatchObject({ status: "accepted", proof: { lockBoxes: [{ account: addr(12), tokenPoolAddress: addr(11) }] } });
+    expect(await observeCcipPending(input(staged))).toMatchObject({ status: "accepted" });
+    for (const [reason, fn, s] of [
+      ["lockbox-binding-mismatch", () => { lockBoxAddr = 99; }],
+      ["pool-token-mismatch", () => { tokOvr[addr(11)] = 99; }],
+      ["lockbox-token-mismatch", () => { tokOvr[addr(12)] = 99; }],
+      ["runtime-mismatch", () => { codeOvr[addr(12)] = "0x6001"; }],
+      ["runtime-mismatch", () => { codeOvr[addr(11)] = "0x6001"; }],
+      ["staged-pool-active", () => { stagedChains = [2n]; }, true],
+    ] as Array<[string, () => void, boolean?]>) {
+      lockBoxAddr = 12; stagedChains = []; tokOvr = {}; codeOvr = {}; fn();
+      expect(await observeCcipPending(input(s ? staged : active))).toEqual({ status: "rejected", reason });
+    }
+    expect(buildChainRpcs().get("xlayer")!.endpoints.every(ep => ep.maxLogBlockSpan === 100)).toBe(true);
   });
 });

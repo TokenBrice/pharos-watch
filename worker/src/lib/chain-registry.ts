@@ -198,11 +198,21 @@ const ALCHEMY_LOG_BLOCK_SPANS: Readonly<Record<string, number>> = {
   "monad-mainnet": 100_000,
 };
 
+/** Inclusive eth_getLogs block spans probed on public registry endpoints. */
+const PUBLIC_LOG_BLOCK_SPANS: Readonly<Record<string, number>> = {
+  // Verified 2026-11-23..24: both X Layer public endpoints cap eth_getLogs at 100 blocks.
+  "rpc.xlayer.tech": 100,
+  "xlayer.drpc.org": 100,
+};
+
 /** Registry membership is not proof of arbitrary state or log retention. */
 function registryEndpoint(url: string, operator: RegistryRpcOperator): RpcEndpoint {
+  const hostname = new URL(url).hostname;
   const maxLogBlockSpan = operator === "alchemy"
-    ? ALCHEMY_LOG_BLOCK_SPANS[new URL(url).hostname.split(".")[0]!]
-    : undefined;
+    ? ALCHEMY_LOG_BLOCK_SPANS[hostname.split(".")[0]!]
+    : operator === "public"
+      ? PUBLIC_LOG_BLOCK_SPANS[hostname]
+      : undefined;
   return {
     url,
     operator,

@@ -10,7 +10,7 @@ import reviewedEconomicSupplyPlans from "@shared/data/safety-score-v9/supply-att
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import type { BridgeRouteRiskProfile } from "@shared/types/stablecoin-meta-control-schemas";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
-import { ReviewedEconomicSupplyPlanEnvelopeSchema, ReviewedEconomicSupplyPlanSchema, ReviewedEconomicDeploymentPartitionSchema, ReviewedProviderChainPartitionSchema, type ReviewedProviderChainPartition, type ReviewedEconomicSupplyPlan, type ReviewedEconomicDeploymentPartition, type EconomicSupplyObservation, type EconomicSupplyReference } from "@shared/types/safety-score-v9-supply-attribution";
+import { escrowBackingAccounts, ReviewedEconomicSupplyPlanEnvelopeSchema, ReviewedEconomicSupplyPlanSchema, ReviewedEconomicDeploymentPartitionSchema, ReviewedProviderChainPartitionSchema, type ReviewedProviderChainPartition, type ReviewedEconomicSupplyPlan, type ReviewedEconomicDeploymentPartition, type EconomicSupplyObservation, type EconomicSupplyReference } from "@shared/types/safety-score-v9-supply-attribution";
 import type { ReviewedDeploymentSupplyObservation, ReviewedDeploymentSupplyRow, ReviewedDeploymentUnitPartitionV1 } from "@shared/types/safety-score-v9-supply-attribution";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { normalizeDeploymentId } from "@shared/types/deployment-id";
@@ -1054,7 +1054,11 @@ export function buildReviewedEconomicDeploymentInventory(
     deployments: [...plan.deployments].sort((a, b) => compareText(a.deploymentKey, b.deploymentKey)),
     excludedRegistryDeploymentKeys: [...plan.excludedRegistryDeploymentKeys].sort(compareText),
     exclusions: [...plan.exclusions].sort((a, b) => compareText(a.id, b.id)),
-    escrows: plan.escrows.map(row => ({ ...row, receiptDeploymentKeys: [...row.receiptDeploymentKeys].sort(compareText) })).sort((a, b) => compareText(a.id, b.id)),
+    escrows: plan.escrows.map(row => ({
+      ...row,
+      ...(row.additionalAccounts ? { additionalAccounts: [...row.additionalAccounts].sort(compareText) } : {}),
+      receiptDeploymentKeys: [...row.receiptDeploymentKeys].sort(compareText),
+    })).sort((a, b) => compareText(a.id, b.id)),
   };
   const planDigest = sha256Hex(stableJsonStringifyV1(canonicalPlan));
   return { plan, planDigest, digest: sha256Hex(stableJsonStringifyV1({
@@ -1266,15 +1270,22 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
     }
     let remainder: EconomicFraction = { n: 0n, d: 1n };
     for (const escrow of input.plan.escrows) {
-      const observation = observations.get(escrow.id);
-      const backing = observation && convert(escrow.canonicalDeploymentKey, observation);
+      const backingEntries = escrowBackingAccounts(escrow);
+      const backingObservations = backingEntries.map(entry => observations.get(entry.id));
+      let backing: EconomicFraction | null = null;
+      for (const obs of backingObservations) {
+        const part = obs && convert(escrow.canonicalDeploymentKey, obs);
+        if (!part) { backing = null; break; }
+        backing = backing === null ? part : addEconomicUnits(backing, part);
+      }
       const pendingObservation = observations.get(`in-flight:${escrow.id}`);
       if (escrow.inFlightSource !== null && "kind" in escrow.inFlightSource) {
         const canonical = observations.get(escrow.canonicalDeploymentKey);
-        if (!pendingObservation || !canonical || !observation) return rejected("escrow-observation-roster-present", { hasPending: !!pendingObservation, hasCanonical: !!canonical, hasEscrow: !!observation }, escrow.id);
+        if (!pendingObservation || !canonical || backingObservations.some(obs => !obs)) return rejected("escrow-observation-roster-present", { hasPending: !!pendingObservation, hasCanonical: !!canonical, hasEscrow: backingObservations.every(Boolean) }, escrow.id);
         if (!/^(0|[1-9][0-9]*)$/.test(pendingObservation.anchor) || !EVM_BLOCK_HASH_RE.test(pendingObservation.anchorHash)) return rejected("pending-anchor-shape", { anchor: pendingObservation.anchor, anchorHash: pendingObservation.anchorHash }, escrow.id);
         if (pendingObservation.anchor !== canonical.anchor || pendingObservation.anchorHash !== canonical.anchorHash || pendingObservation.observedAtSec !== canonical.observedAtSec) return rejected("pending-pin-equals-canonical-holding", { pendingAnchor: pendingObservation.anchor, canonicalAnchor: canonical.anchor, pendingHash: pendingObservation.anchorHash, canonicalHash: canonical.anchorHash, pendingObservedAtSec: pendingObservation.observedAtSec, canonicalObservedAtSec: canonical.observedAtSec }, escrow.id);
-        if (pendingObservation.anchor !== observation.anchor || pendingObservation.anchorHash !== observation.anchorHash || pendingObservation.observedAtSec !== observation.observedAtSec) return rejected("pending-pin-equals-escrow", { pendingAnchor: pendingObservation.anchor, escrowAnchor: observation.anchor, pendingHash: pendingObservation.anchorHash, escrowHash: observation.anchorHash, pendingObservedAtSec: pendingObservation.observedAtSec, escrowObservedAtSec: observation.observedAtSec }, escrow.id);
+        const mismatchedEscrow = backingObservations.find(obs => pendingObservation.anchor !== obs!.anchor || pendingObservation.anchorHash !== obs!.anchorHash || pendingObservation.observedAtSec !== obs!.observedAtSec);
+        if (mismatchedEscrow) return rejected("pending-pin-equals-escrow", { pendingAnchor: pendingObservation.anchor, escrowAnchor: mismatchedEscrow.anchor, pendingHash: pendingObservation.anchorHash, escrowHash: mismatchedEscrow.anchorHash, pendingObservedAtSec: pendingObservation.observedAtSec, escrowObservedAtSec: mismatchedEscrow.observedAtSec }, escrow.id);
         if (escrow.inFlightSource.kind === "evm-curve-lz-pending") {
           const source = escrow.inFlightSource, proof = pendingObservation.curvePendingProof;
           if (!proof || pendingObservation.l2MessengerPendingProof !== undefined || pendingObservation.layerZeroOftPendingProof !== undefined || pendingObservation.ccipPendingProof !== undefined ||
@@ -1353,7 +1364,7 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
       remainder = addEconomicUnits(remainder, pending);
     }
     if (input.inFlight.length !== input.plan.escrows.filter(escrow => escrow.inFlightSource !== null).length + (input.plan.liabilityInFlightSource === null ? 0 : 1)) return rejected("in-flight-roster-equals-review", { actualCount: input.inFlight.length });
-    const expectedIds = new Set([...input.plan.deployments.map(row => row.deploymentKey), ...input.plan.exclusions.map(row => row.id), ...input.plan.escrows.map(row => row.id), ...input.plan.escrows.filter(escrow => escrow.inFlightSource !== null).map(row => `in-flight:${row.id}`), ...input.plan.escrows.flatMap(escrow => escrow.receiptClaimSources.map(source => `receipt:${escrow.id}:${source.deploymentKey}`)), ...(input.plan.liabilityInFlightSource === null ? [] : ["in-flight:liability"])]);
+    const expectedIds = new Set([...input.plan.deployments.map(row => row.deploymentKey), ...input.plan.exclusions.map(row => row.id), ...input.plan.escrows.flatMap(escrow => escrowBackingAccounts(escrow).map(entry => entry.id)), ...input.plan.escrows.filter(escrow => escrow.inFlightSource !== null).map(row => `in-flight:${row.id}`), ...input.plan.escrows.flatMap(escrow => escrow.receiptClaimSources.map(source => `receipt:${escrow.id}:${source.deploymentKey}`)), ...(input.plan.liabilityInFlightSource === null ? [] : ["in-flight:liability"])]);
     if (all.length !== expectedIds.size || all.some(row => !expectedIds.has(row.id))) return rejected("complete-observation-roster-equals-review", { actualCount: all.length, expectedCount: expectedIds.size });
     const times = all.map(row => row.observedAtSec);
     const started = Math.min(...times), ended = Math.max(...times);
