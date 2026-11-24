@@ -1242,6 +1242,58 @@
         "conclusion": "not-applicable",
         "governingInstrument": "Swissgrams Gold Token Terms, September 24, 2026, sections 1, 2 and 5",
         "allInScope": true
+      },
+      {
+        "factKey": "zchf-frankencoin:reserve:bb11c473f5b906a4ce9c9d10:open-ended-maturity",
+        "kind": "maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "reserve:bb11c473f5b906a4ce9c9d10"
+        },
+        "asOfSec": 1790208000,
+        "publisher": "Herculis Tokens S.A.",
+        "sourceUrls": [
+          "https://api.frankencoin.com/ecosystem/collateral/positions/details",
+          "https://xauh.gold/xauh-terms-and-conditions.pdf"
+        ],
+        "assertion": "Herculis Gold Coin (XAUH) Terms and Conditions v1.1 (effective September 24, 2026), sections 2.1, 2.3, 2.5 and 22.2 state that XAUH evidences contractual gold-redemption rights against Herculis backed 1:1 by 1 gram of 999.9 fine gold, is not a debt security, and has no predetermined fixed maturity date (subject only to discretionary discontinuation under section 22.2). At finalized Ethereum block 26481043 (2026-11-23T23:12:23Z), wXAUH (0xC174B12B3195D9887e8dA7aA886EC11c13101060, collateral-positions-api:wxauh) underlyingERC20() returned XAUH (0xa9b17f572341219703bc951725bdb3ca756b1a65) holding 100.979401957607648632 XAUH matching wXAUH totalSupply() 1:1. Because section 2.3 defers proprietary/co-ownership title to unretrieved custody documents, the claim is recorded conservatively as open-ended (no finite contractual maturity maximum) rather than not-applicable. Borrower-position expiration and auction timing are not token maturity; no liquidity bound is asserted.",
+        "contentDigest": "3c93146d9f3e753e4aefeee80b08fdbb69f903b3b25ab30ac1c7de529969aa02",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-11-23",
+          "reviewer": "Night run 2026-11-23 (RESV resv-1)",
+          "confidence": "high"
+        },
+        "claimId": "ethereum:0xc174b12b3195d9887e8da7aa886ec11c13101060",
+        "conclusion": "open-ended",
+        "governingInstrument": "Herculis Gold Coin (XAUH) Terms and Conditions v1.1, effective September 24, 2026, sections 2.1, 2.3, 2.5 and 22.2; Wrapper.sol 1:1 over XAUH 0xa9b17f572341219703bc951725bdb3ca756b1a65",
+        "allInScope": true
+      },
+      {
+        "factKey": "zchf-frankencoin:reserve:f80a1f3e0ba8b5c11c664aed:open-ended-maturity",
+        "kind": "maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "reserve:f80a1f3e0ba8b5c11c664aed"
+        },
+        "asOfSec": 1785110400,
+        "publisher": "Backed Assets (JE) Limited",
+        "sourceUrls": [
+          "https://assets.backed.fi/products/spacex-xstock",
+          "https://cdn.prod.website-files.com/655f3efc4be468487052e35a/6a748b81c9b1aca19a11c102_Backed_Assets_Base%20Prospectus_20260727.pdf"
+        ],
+        "assertion": "Backed Assets (JE) Limited Base Prospectus dated July 27, 2026 (section 2.5.1.3 and Terms & Conditions clause V) states: \"The Products are perpetual (open-ended) and have no predetermined fixed maturity.\" The SpaceX xStock (SPCXx, ISIN CH1564487366) Key Information Document confirms Type: Open-ended Tracker Certificate tracking Class A common stock of Space Exploration Technologies Corporation (ISIN US84615Q1031) and Term: \"This product has no fixed maturity.\" At finalized Ethereum block 26481043 (2026-11-23T23:12:23Z), SPCXx (0x68fa48B1C2FE52b3D776E1953e0E782b5044Ce28, collateral-positions-api:spcxx) returned name SpaceX xStock, symbol SPCXx, and terms() https://www.backedassets.fi/legal-documentation, matching the Backed product page address. Exact whole-exposure claim is open-ended with no finite contractual maturity maximum; optional Investor Put / Issuer Call termination and borrower-position expiration are not fixed maturity. No liquidity bound is asserted.",
+        "contentDigest": "c8d2209021111565d097bffee00301e9e34f863cbb5c8e34ed0bd1174b2e85ee",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-11-23",
+          "reviewer": "Night run 2026-11-23 (RESV resv-1)",
+          "confidence": "high"
+        },
+        "claimId": "SpaceX xStock / ISIN CH1564487366 / Ethereum 0x68fa48b1c2fe52b3d776e1953e0e782b5044ce28",
+        "conclusion": "open-ended",
+        "governingInstrument": "Backed Assets (JE) Limited Base Prospectus July 27, 2026, section 2.5.1.3 and clause V; SpaceX xStock (CH1564487366) Key Information Document",
+        "allInScope": true
       }
     ],
     "cusd-cap": [
@@ -1502,6 +1554,33 @@
         "conclusion": "open-ended",
         "governingInstrument": "Backed Assets (JE) Limited May 8, 2026 Final Terms Product134, Contractual Terms Maturity Date and Terms V",
         "allInScope": true
+      },
+      {
+        "factKey": "usdh-hermetica:reserve:4ff56f62e56392a4dd42b92b:open-ended-maturity",
+        "kind": "maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "reserve:4ff56f62e56392a4dd42b92b"
+        },
+        "asOfSec": 1793491140,
+        "publisher": "MicroStrategy Incorporated (d/b/a Strategy), SEC Form 8-K Exhibit 3.1 (July 29, 2025) and Form 424B5 (July 25, 2025)",
+        "sourceUrls": [
+          "https://www.sec.gov/Archives/edgar/data/1050446/000119312525167987/d43815dex31.htm",
+          "https://www.sec.gov/Archives/edgar/data/1050446/000119312525165531/d852456d424b5.htm",
+          "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-october-2026"
+        ],
+        "assertion": "Strategy Inc. (MicroStrategy Incorporated) Certificate of Designations for Variable Rate Series A Perpetual Stretch Preferred Stock (STRC, ISIN US5949728530), filed as Exhibit 3.1 to Form 8-K on July 29, 2025 (Sections 3 and 7) and Prospectus Supplement Form 424B5 dated July 25, 2025, establishes STRC as perpetual preferred stock with no fixed or scheduled maturity date; Section 7 grants only optional Company redemption (Optional, Clean-Up, and Tax Redemption). Hermetica's October 31, 2026 attestation (published November 5, 2026) identifies the exact Clear Street holding as 5,000 STRC shares ($495,650.00 at $99.13/share). Therefore the complete Clear Street custodied STRC exposure has open-ended duration with no finite contractual maturity maximum. Optional issuer redemption is not a maturity maximum; no liquidity bound is asserted.",
+        "contentDigest": "06369c3dbd5c45bdb8f87c50f09790b3e77e1b6e369fcb8b6871925052fe28d3",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-11-23",
+          "reviewer": "Night run 2026-11-23 (RESV resv-3)",
+          "confidence": "high"
+        },
+        "claimId": "Strategy Inc. Variable Rate Series A Perpetual Stretch Preferred Stock (STRC, ISIN US5949728530), 5,000 shares held at Clear Street",
+        "conclusion": "open-ended",
+        "governingInstrument": "MicroStrategy Incorporated Certificate of Designations of Variable Rate Series A Perpetual Stretch Preferred Stock (July 29, 2025, SEC Form 8-K Exhibit 3.1, Sections 3 and 7); Form 424B5 Prospectus Supplement (July 25, 2025)",
+        "allInScope": true
       }
     ],
     "acrdx-anemoy-apollo": [
@@ -1720,6 +1799,156 @@
         "claimId": "Fidelity ILF United States Dollar Fund Class G Accumulating Shares, ISIN IE00BNKLND78",
         "conclusion": "open-ended",
         "governingInstrument": "Fidelity PRIIPs Key Information Document, publication date September 4, 2026, page 1, Product and Term",
+        "allInScope": true
+      }
+    ],
+    "usdy-ondo-finance": [
+      {
+        "factKey": "usdy-ondo-finance:2026-10-28:observed-treasury-bill-roster",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "reserve:e0694b7435c4086800274c40"
+        },
+        "asOfSec": 1793231999,
+        "publisher": "Ondo USDY LLC / Ankura Trust Company, LLC (Verification Agent)",
+        "sourceUrls": [
+          "https://ondo.finance/usdy",
+          "https://www.dropbox.com/scl/fo/375wdvar3rbc7o23nxsgp/AK-03xW6UBqCvZyI-Enizhk/2026/10%20October?rlkey=4icqn1z9bez725wywr30fx52a&dl=1",
+          "https://www.dropbox.com/scl/fo/fk5t99zyihshuak3u1u9v/AMYiYSUwvoL6osa2FX_G_M8?rlkey=0ttmb4ifhdg4ebvhbh8aa3juc&dl=1",
+          "https://www.dropbox.com/scl/fo/jzkrw308mrhsasauqrjqq/AJxJak0F90kcwkADSN3DCD4?rlkey=nik1v5slekrzx5fbi0zan5sk3"
+        ],
+        "assertion": "Ankura Trust Verification Agent daily report Ondo USDY LLC_ATCAttest_261028.pdf (end of day 2026-10-28, linked from ondo.finance/usdy daily archive; SHA-256 767159ff157ee98ce15e9301200d009cf00f144f991da9fa57a513e66d70b8d6) itemizes 15 U.S. Treasury Bill lots across 12 CUSIPs at StoneX/BNY Mellon ($92,507,774.73) and Marex ($2,002,816,230.72), summing to USD 2,095,324,005.45 (WAM 197.64 days); instrumentId suffixes ':marex' and ':stonex-bny' distinguish the two custody venues when the same CUSIP is held across both. This reconciles to the nearest dollar with the complete US Treasuries category ($2,095,324,005) in the same-date 2026-10-28 USDY Portfolio Overview (observedAtSec 1793231999); the same-date Ondo Global Markets (BVI) Limited daily report ('Daily Report - Ondo Stocks - 2026-10-28_20_00_ET - Ankura Attestation.pdf', 8pm ET, from the issuer-linked BVI daily archive) reports no direct U.S. Treasury securities, confirming the scored US Treasuries slice covers only the LLC Treasury bill book. Longest observed 2026-10-28 maturity is CUSIP 912797WJ2 maturing 2027-09-30 (337 days; two lots: $13,025,916.12 at StoneX/BNY Mellon and $90,136,573.80 at Marex). For context, the subsequent 2026-10-31 monthly report (202610 Ondo USDY LLC_ATC Attest.pdf) lists 912797WT0 maturing 2027-10-28 (362 days) after 912797SK4 matured on 2026-10-29 and notes Marex holdings include securities used for structured financing / Opt-Out Lender Underlyings. This observed portfolio snapshot is neither a contractual maturity maximum, a liquidity/realization guarantee nor an unencumbered-collateral assertion. contentDigest is the SHA-256 of Ondo USDY LLC_ATCAttest_261028.pdf.",
+        "contentDigest": "767159ff157ee98ce15e9301200d009cf00f144f991da9fa57a513e66d70b8d6",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-11-23",
+          "reviewer": "Pharos 2026-11-23 unknowns assessment (usdy-ondo-finance)",
+          "confidence": "high"
+        },
+        "kind": "observed-portfolio-maturity",
+        "coveredGrossValue": 2095324005.45,
+        "totalGrossValue": 2095324005.45,
+        "coverageAsOfSec": 1793231999,
+        "denomination": "USD",
+        "observedMaximumDays": 337,
+        "instruments": [
+          {
+            "instrumentId": "912797SK4:marex",
+            "maturityAtSec": 1793232000,
+            "grossMarkedValue": 52094000,
+            "denomination": "USD"
+          },
+          {
+            "instrumentId": "912797TV9:marex",
+            "maturityAtSec": 1802908800,
+            "grossMarkedValue": 127632257.35,
+            "denomination": "USD"
+          },
+          {
+            "instrumentId": "912797TV9:stonex-bny",
+            "maturityAtSec": 1802908800,
+            "grossMarkedValue": 33400386.57,
+            "denomination": "USD"
+          },
+          {
+            "instrumentId": "912797UD7:marex",
+            "maturityAtSec": 1805328000,
+            "grossMarkedValue": 174937609.78,
+            "denomination": "USD"
+          },
+          {
+            "instrumentId": "912797UD7:stonex-bny",
+            "maturityAtSec": 1805328000,
+            "grossMarkedValue": 46081472.04,
+            "denomination": "USD"
+          },
+          {
+            "instrumentId": "912797UE5:marex",
+            "maturityAtSec": 1807747200,
+            "grossMarkedValue": 202704689.23,
+            "denomination": "USD"
+          },
+          {
+            "instrumentId": "912797UX3:marex",
+            "maturityAtSec": 1810166400,
+            "grossMarkedValue": 155334480.5,
+            "denomination": "USD"
+          },
+          {
+            "instrumentId": "912797UZ8:marex",
+            "maturityAtSec": 1795046400,
+            "grossMarkedValue": 112650063.93,
+            "denomination": "USD"
+          },
+          {
+            "instrumentId": "912797VF1:marex",
+            "maturityAtSec": 1812585600,
+            "grossMarkedValue": 245069309.7,
+            "denomination": "USD"
+          },
+          {
+            "instrumentId": "912797VQ7:marex",
+            "maturityAtSec": 1815004800,
+            "grossMarkedValue": 231811546.77,
+            "denomination": "USD"
+          },
+          {
+            "instrumentId": "912797VR5:marex",
+            "maturityAtSec": 1817424000,
+            "grossMarkedValue": 222351956.69,
+            "denomination": "USD"
+          },
+          {
+            "instrumentId": "912797WA1:marex",
+            "maturityAtSec": 1819843200,
+            "grossMarkedValue": 255891985.37,
+            "denomination": "USD"
+          },
+          {
+            "instrumentId": "912797WG8:marex",
+            "maturityAtSec": 1797897600,
+            "grossMarkedValue": 132201757.6,
+            "denomination": "USD"
+          },
+          {
+            "instrumentId": "912797WJ2:marex",
+            "maturityAtSec": 1822262400,
+            "grossMarkedValue": 90136573.8,
+            "denomination": "USD"
+          },
+          {
+            "instrumentId": "912797WJ2:stonex-bny",
+            "maturityAtSec": 1822262400,
+            "grossMarkedValue": 13025916.12,
+            "denomination": "USD"
+          }
+        ]
+      }
+    ],
+    "usd0-usual": [
+      {
+        "factKey": "usd0-usual:ustbl-fr001400odm9:open-ended-maturity",
+        "kind": "maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "reserve:366c4e0afb4b23b5477206d5"
+        },
+        "asOfSec": 1788220800,
+        "publisher": "Spiko SICAV",
+        "sourceUrls": [
+          "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+        ],
+        "assertion": "Spiko SICAV Prospectus and Articles of Association dated September 1, 2026, cover p.1: Open-Ended Investment Company with Sub-Funds, including Spiko US T-Bills Money Market Fund (USTBL). Fund section 3.2.1 identifies USD Share ISIN FR001400ODM9 and Ethereum share register address 0xe4880249745eAc5F1eD9d8F7DF844792D560e750, matching the entire captured USD0 Spiko USTBL collateral exposure (evm-branch-balances:ethereum:0xe4880249745eac5f1ed9d8f7df844792d560e750). Article 5 gives the SICAV a 99-year term subject to early dissolution or extension; Article 28 permits discretionary extension, dissolution or liquidation. These are company-life/termination provisions, not a scheduled fixed maturity of the open-ended USTBL shares. Underlying Treasury bill residual maturity ceilings (180 days in the KID) and redemption gating are not share maturity. This exact whole-share claim remains maturity required/open-ended with no finite maximum; no composition, liquidity or assurance claim is refreshed.",
+        "contentDigest": "7457e79f285397aa019170bc03bfe41167c7adf32714f0c5ea8315fb5ccffb35",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-11-23",
+          "reviewer": "Night run 2026-11-23 (RESV resv-1)",
+          "confidence": "high"
+        },
+        "claimId": "Spiko USTBL USD shares / ISIN FR001400ODM9 / Ethereum 0xe4880249745eac5f1ed9d8f7df844792d560e750",
+        "conclusion": "open-ended",
+        "governingInstrument": "Spiko SICAV Prospectus September 1, 2026, p.1 and section 3.2.1; Articles 1, 5 and 28",
         "allInScope": true
       }
     ]

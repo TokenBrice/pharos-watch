@@ -30,7 +30,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "Matrixdock retired Polygon, HashKey Chain and Tron on August 7, 2026. Six deployments are issuer-native; HyperEVM and Arc are UUPS MTokenSide representations whose messengers mint and burn against cross-chain messages. HyperEVM peers and a four-hour owner delay are reviewed; Arc messenger and owner unread.",
+    "summary": "Matrixdock retired Polygon, HashKey Chain and Tron on August 7, 2026. Six deployments are issuer-native; HyperEVM and Arc are UUPS MTokenSide representations. HyperEVM LayerZero messenger and four-hour owner delay are reviewed; pinned Arc block 32810997 confirms the same Matrixdock owner and operator/revoker EOAs with a four-hour delay, zero mintBudget, and zero messenger address.",
     "reviewedAt": "2026-09-21",
     "reviewer": "Claude curation campaign 2026-09-21 (Ctrl3)",
     "confidence": "verified",
@@ -270,25 +270,37 @@
         "id": "arc:0x178b01f61cbea1d2a5581fe1621be607835ec349",
         "destinationChain": "arc",
         "contractAddress": "0x178b01f61cbea1d2a5581fe1621be607835ec349",
-        "protocol": "Matrixdock MTokenSide via LayerZero messenger",
+        "protocol": "Matrixdock MTokenSide (messenger unset; operator/owner delayed controls)",
         "issuanceModel": "bridge-representation",
         "routeClass": "canonical",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Matrixdock's address registry lists this exact Arc token, and Arc Blockscout shows an EIP-1967 proxy over MTokenSide implementation 0x8fac22684c16fdb25514cafc17c8643355753dd1; the verified implementation exposes ccReceive/ccSend mint-budget and messenger/operator/revoker roles, the same Matrixdock side-chain model reviewed on HyperEVM. Arc supply is 1,060.884 XAUm at 18 decimals. The Arc messenger address, peers, owner delay and rate limits were not read.",
+        "reviewNote": "Matrixdock's address registry lists this exact Arc token, and pinned Arc block 32810997 (2026-11-23T23:18:56Z, hash 0x65390edce6eb68cae6efd8489155a1a42d3d10cf95090893f7deaf6e492dffe4) confirms EIP-1967 UUPS proxy implementation 0x8fac22684c16fdb25514cafc17c8643355753dd1 (cited MTokenSide/MToken source exposes ccReceive, mintTo, redeem, setMessenger, setOperator, setDelay, setRevoker, and upgradeToAndCall). Pinned reads returned totalSupply 1,414.512 XAUm (18 decimals), owner 0xb573c94260582f0715fc477928b04a2708dd36d7 (zero-code EOA), operator and revoker 0x89bb23e4a82e04a253d9f11767fedf321c127799 (zero-code EOA), delay 14,400 seconds, mintBudget 0, nftContract 0x0, disableCcSend false, and messenger 0x0000000000000000000000000000000000000000 (no external messenger currently configured; owner can bind one after the four-hour delay). Conservative external-validated-network tier is retained because MTokenSide exposes owner-configurable messenger minting.",
         "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "arc",
+        "controllerAddress": "0xb573c94260582f0715fc477928b04a2708dd36d7",
         "failureDomainKeys": [
           "protocol:matrixdock-mtoken-messaging",
-          "protocol:layerzero",
+          "controller:matrixdock:0xb573c94260582f0715fc477928b04a2708dd36d7",
+          "controller:matrixdock:0x89bb23e4a82e04a253d9f11767fedf321c127799",
           "contract:arc:0x178b01f61cbea1d2a5581fe1621be607835ec349"
         ],
-        "observedAt": "2026-10-30",
+        "observedAt": "2026-11-23",
+        "observedBlock": 32810997,
         "sources": [
           {
             "label": "Matrixdock XAUm contract addresses",
             "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/smart-contract/contract-address"
+          },
+          {
+            "label": "Arc mainnet pinned RPC reads at block 32810997 (2026-11-23)",
+            "url": "https://rpc.mainnet.arc.io"
+          },
+          {
+            "label": "Matrixdock MTokenSide and MToken source (commit a69a94b34d)",
+            "url": "https://github.com/Matrixdock-RWA/RWA-Contracts/blob/a69a94b34d/xaum-evm/contracts/MTokenSide.sol"
           },
           {
             "label": "XAUm Arc proxy and MTokenSide implementation",
@@ -297,10 +309,6 @@
           {
             "label": "Verified MTokenSide source on Arc",
             "url": "https://explorer.arc.io/api/v2/smart-contracts/0x8FAC22684C16FdB25514Cafc17c8643355753dd1"
-          },
-          {
-            "label": "XAUm Arc token metadata",
-            "url": "https://explorer.arc.io/api/v2/tokens/0x178b01f61cbea1d2a5581fe1621be607835ec349"
           }
         ]
       }
@@ -397,6 +405,93 @@
           }
         ],
         "evidence": "Current explorer reads on 2026-09-21 identify the same zero-code Matrixdock owner already reviewed on Ethereum as owner of HyperEVM MTokenSide. The token's live delay is 14,400 seconds, and verified source exposes owner-controlled delayed changes to messenger, operator, revoker, delay, and implementation."
+      },
+      {
+        "id": "xaum-arc-operator-minter",
+        "label": "Matrixdock Arc MTokenSide operator and revoker",
+        "routeRefs": [
+          "arc:0x178b01f61cbea1d2a5581fe1621be607835ec349"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin"
+        ],
+        "controllerChain": "arc",
+        "controllerAddress": "0x89bb23e4a82e04a253d9f11767fedf321c127799",
+        "authorityType": "eoa",
+        "timelockDelaySec": 14400,
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "controller:matrixdock:0x89bb23e4a82e04a253d9f11767fedf321c127799",
+          "protocol:matrixdock-mtoken-messaging"
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "Pinned Arc block 32810997 returned messenger()=0x0000000000000000000000000000000000000000 and nftContract()=0x0; no external bridge messenger is currently bound.",
+          "caps": "Pinned Arc block 32810997 returned mintBudget=0, delay=14,400 seconds, and totalSupply=1,414.512 XAUm. In the cited MTokenSide/MToken source, operator mintTo spends existing mintBudget after the 14,400-second delay and redeem restores mintBudget; budget increases come from cross-chain/owner-configured paths rather than a standalone operator budget-raise function.",
+          "pausersAdminsUpgraders": "Zero-code EOA 0x89bb23e4a82e04a253d9f11767fedf321c127799 holds both operator() and revoker() on Arc MTokenSide."
+        },
+        "capDescription": "Arc MTokenSide operator mintTo is constrained by mintBudget (pinned mintBudget=0, messenger=0x0) and a 14,400-second delay; the operator EOA spends existing mintBudget via mintTo and restores it via redeem, and cannot unilaterally raise mintBudget.",
+        "canRaiseCap": false,
+        "bypassSurfaces": [
+          "The Matrixdock owner EOA can bind an external messenger or upgrade MTokenSide after the 14,400-second delay."
+        ],
+        "observedAt": "2026-11-23",
+        "observedBlock": 32810997,
+        "sources": [
+          {
+            "label": "Arc mainnet pinned RPC reads at block 32810997 (2026-11-23)",
+            "url": "https://rpc.mainnet.arc.io"
+          },
+          {
+            "label": "Matrixdock MTokenSide and MToken source (commit a69a94b34d)",
+            "url": "https://github.com/Matrixdock-RWA/RWA-Contracts/blob/a69a94b34d/xaum-evm/contracts/MTokenSide.sol"
+          }
+        ],
+        "evidence": "At pinned Arc block 32810997 (2026-11-23T23:18:56Z, hash 0x65390edce6eb68cae6efd8489155a1a42d3d10cf95090893f7deaf6e492dffe4), XAUm Arc proxy 0x178b01f61cbea1d2a5581fe1621be607835ec349 (impl 0x8fac22684c16fdb25514cafc17c8643355753dd1) returned operator()=revoker()=0x89bb23e4a82e04a253d9f11767fedf321c127799 (eth_getCode=0x), delay=14,400 s, mintBudget=0, messenger=0x0, nftContract=0x0, and totalSupply=1,414.512 XAUm. In the cited MTokenSide/MToken source, the operator role gates budget-spending mintTo and redeem rather than raising mintBudget."
+      },
+      {
+        "id": "xaum-arc-owner-admin",
+        "label": "Matrixdock Arc MTokenSide owner",
+        "routeRefs": [
+          "arc:0x178b01f61cbea1d2a5581fe1621be607835ec349"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "arc",
+        "controllerAddress": "0xb573c94260582f0715fc477928b04a2708dd36d7",
+        "authorityType": "eoa",
+        "timelockDelaySec": 14400,
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "controller:matrixdock:0xb573c94260582f0715fc477928b04a2708dd36d7",
+          "protocol:matrixdock-mtoken-messaging"
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "Pinned Arc block 32810997 returned messenger()=0x0; the owner EOA can bind or replace the messenger address via setMessenger after the 14,400-second delay.",
+          "pausersAdminsUpgraders": "Pinned Arc block 32810997 returned owner()=0xb573c94260582f0715fc477928b04a2708dd36d7 (eth_getCode=0x), EIP-1967 admin slot 0x0 (UUPS), and delay=14,400 seconds."
+        },
+        "capDescription": "The owner EOA can bind a messenger via setMessenger, replace UUPS MTokenSide implementation via upgradeToAndCall, or reconfigure operator/delay after the 14,400-second delay, so mint capacity is raiseable through the owner's delayed path.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The owner EOA can replace the UUPS MTokenSide implementation or bind an arbitrary messenger after the four-hour delay."
+        ],
+        "observedAt": "2026-11-23",
+        "observedBlock": 32810997,
+        "sources": [
+          {
+            "label": "Arc mainnet pinned RPC reads at block 32810997 (2026-11-23)",
+            "url": "https://rpc.mainnet.arc.io"
+          },
+          {
+            "label": "Matrixdock MTokenSide and MToken source (commit a69a94b34d)",
+            "url": "https://github.com/Matrixdock-RWA/RWA-Contracts/blob/a69a94b34d/xaum-evm/contracts/MTokenSide.sol"
+          }
+        ],
+        "evidence": "At pinned Arc block 32810997 (2026-11-23T23:18:56Z, hash 0x65390edce6eb68cae6efd8489155a1a42d3d10cf95090893f7deaf6e492dffe4), XAUm Arc proxy 0x178b01f61cbea1d2a5581fe1621be607835ec349 resolved EIP-1967 implementation 0x8fac22684c16fdb25514cafc17c8643355753dd1 with owner()=0xb573c94260582f0715fc477928b04a2708dd36d7 (eth_getCode=0x, same zero-code Matrixdock owner as Ethereum and HyperEVM) and delay=14,400 s. Implementation bytecode exposes owner-gated delayed setMessenger, setOperator, setRevoker, setDelay, and upgradeToAndCall."
       }
     ]
   }

@@ -881,14 +881,24 @@ describe("reviewed same-chain provider partition", () => {
 });
 
 describe("reviewed CCIP vault-share plans", () => {
-  function reviewedFixture(assetId: string): EconomicFixture {
+  function reviewedFixture(
+    assetId: string,
+    options: { planScopedMeta?: boolean } = {},
+  ): EconomicFixture {
     const plan = structuredClone(REVIEWED_ECONOMIC_SUPPLY_PLANS.get(assetId)!);
     const escrow = plan.escrows[0]!;
     const source = escrow.inFlightSource;
     if (!source || !("kind" in source) || source.kind !== "evm-ccip-pending") throw new Error("Expected a reviewed CCIP vault plan");
     const clockSec = Math.max(plan.reviewedAtSec, ...source.lanes.map(lane =>
       lane.sourceStartWitness?.kind === "reviewed-creation" ? lane.sourceStartWitness.reviewedAtSec : 0)) + 60;
-    const meta = ACTIVE_META_BY_ID.get(assetId)!;
+    const rawMeta = ACTIVE_META_BY_ID.get(assetId)!;
+    const planKeys = new Set(plan.deployments.map(row => row.deploymentKey));
+    const meta = options.planScopedMeta
+      ? {
+          ...rawMeta,
+          contracts: (rawMeta.contracts ?? []).filter(contract => planKeys.has(`${contract.chain}:${contract.address.toLowerCase()}`)),
+        }
+      : rawMeta;
     const canonical = plan.deployments.find(row => row.deploymentKey === escrow.canonicalDeploymentKey)!;
     const raw = (units: number, decimals: number) => (BigInt(units) * 10n ** BigInt(decimals)).toString();
     const observations: EconomicSupplyObservation[] = plan.deployments.map(row => ({
@@ -940,7 +950,7 @@ describe("reviewed CCIP vault-share plans", () => {
   it.each(["syrupusdt-maple", "sdola-inverse-finance", "susdat-saturn"])(
     "%s deducts the lockbox once and keeps failed in-flight claims visible",
     assetId => {
-      const input = reviewedFixture(assetId);
+      const input = reviewedFixture(assetId, { planScopedMeta: assetId === "susdat-saturn" });
       const packet = deriveReviewedEconomicDeploymentPartition(input)!;
       expect(packet).not.toBeNull();
       expect(packet.deployments.find(row => row.deploymentKey === input.plan.escrows[0]!.canonicalDeploymentKey)?.currentSupplyUsd)
@@ -952,14 +962,37 @@ describe("reviewed CCIP vault-share plans", () => {
     },
   );
 
+  it("fails closed on susdat-saturn against the live catalog while its superseded D02 plan omits X Layer", () => {
+    expect(buildReviewedEconomicDeploymentInventory("susdat-saturn")).toBeNull();
+    expect(deriveReviewedEconomicDeploymentPartition(reviewedFixture("susdat-saturn"))).toBeNull();
+  });
+
   it("keeps the sUSDat plan on its peer-proven D02 timestamps until a renewal re-proves every lane peer binding", () => {
     const plan = REVIEWED_ECONOMIC_SUPPLY_PLANS.get("susdat-saturn")!;
     const source = plan.escrows[0]!.inFlightSource;
     if (!source || !("kind" in source) || source.kind !== "evm-ccip-pending") return;
-    // The 2026-11-20 renewal found every current getRemotePools read empty, and
-    // the observer rejects a mere peerBindingPin whose pinned read is empty
-    // (pool-peer-mismatch), so these D02 dates move only in a change that
-    // re-proves the reciprocal peer bindings on every lane side.
+    // The 2026-11-20/23 reviews confirmed the v1.6.1 -> v2.0.0 migration: the
+    // active Ethereum LockReleaseTokenPool 2.0.0 holds 0 sUSDat while its
+    // dedicated ERC20LockBox 2.0.0 holds exact wei backing for BSC+Monad+X Layer.
+    // ReviewedEconomicSupplyPlanSchema currently requires escrow.account ===
+    // lane.*.tokenPoolAddress, so these D02 dates move only after CCIP 2.0.0
+    // separate-LockBox escrow support lands and re-proves every lane.
+    expect(plan.reviewer).toContain("D02 evidence lane");
+    expect([plan.reviewedAtSec, plan.expiresAtSec]).toEqual([1793120053, 1795712053]);
+  });
+
+  it("keeps the syrupUSDT plan on its D02 timestamps until X Layer is catalogued and lane-proven", () => {
+    const plan = REVIEWED_ECONOMIC_SUPPLY_PLANS.get("syrupusdt-maple")!;
+    const source = plan.escrows[0]!.inFlightSource;
+    if (!source || !("kind" in source) || source.kind !== "evm-ccip-pending") return;
+    // X Layer (0xd7f1eb70a6a471548a2fab5e0af5eb8cb289d547, 100 raw seed) was
+    // deferred out of coins/risk-review so the live 5-chain D02 plan stays
+    // active until 2026-11-26: on 2026-11-10 Chainlink RBACTimelock moved 1 raw
+    // unit out of LockReleaseTokenPool 1.5.1 into staged ERC20LockBox 2.0.0
+    // (0x55d5cd35...), so the 1.5.1 pool alone is 1 raw unit below sum(5 remotes)
+    // + failed Mantle->Eth message and cannot pass exact single-account escrow
+    // conservation; these D02 dates move only once multi-escrow / CCIP 2.0.0
+    // LockBox migration completes and a 6-chain plan replaces D02.
     expect(plan.reviewer).toContain("D02 evidence lane");
     expect([plan.reviewedAtSec, plan.expiresAtSec]).toEqual([1793120053, 1795712053]);
   });
@@ -967,7 +1000,8 @@ describe("reviewed CCIP vault-share plans", () => {
   it.each(["missing", "digest", "review-clock", "initial-sequence"] as const)(
     "rejects a %s origin certificate even with a self-consistent response digest",
     mismatch => {
-      const input = reviewedFixture("susdat-saturn");
+      const input = reviewedFixture("susdat-saturn", { planScopedMeta: true });
+      expect(deriveReviewedEconomicDeploymentPartition(input)).not.toBeNull();
       const observation = input.inFlight[0]!;
       const proof = observation.ccipPendingProof!;
       const lane = proof.lanes.find(row => row.historyOrigin)!;
@@ -983,7 +1017,8 @@ describe("reviewed CCIP vault-share plans", () => {
   it.each(["receipt", "pending", "historical lane", "holding pin"] as const)(
     "does not publish an sUSDat subtotal with missing or mismatched %s",
     failure => {
-      const input = reviewedFixture("susdat-saturn");
+      const input = reviewedFixture("susdat-saturn", { planScopedMeta: true });
+      expect(deriveReviewedEconomicDeploymentPartition(input)).not.toBeNull();
       if (failure === "receipt") input.observations.splice(1, 1);
       if (failure === "pending") input.inFlight = [];
       if (failure === "historical lane") input.inFlight[0]!.ccipPendingProof!.lanes.pop();

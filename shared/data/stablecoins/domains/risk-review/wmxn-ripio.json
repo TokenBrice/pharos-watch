@@ -82,7 +82,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "WMXN now has ten registered issuer-listed deployments. Eight are reviewed native local-mint/burn liabilities, including newly registered Arc and zero-supply HyperEVM. The existing Celo direct-burn/mint representation and its pinned token-to-minter-to-BridgeDeposit role linkage are preserved. Ripio BridgeDeposit burns source WMXN through burnFrom and destination mintTo creates tokens rather than releasing canonical escrow. The issuer-listed zero-supply Tempo TIP-20 token is registered but its exact issuer/bridge liability relationship remains unresolved, so exhaustive independent-liability transfer-census re-admission is withheld. No static shares are authored.",
+    "summary": "WMXN has ten registered issuer-listed deployments. Eight are reviewed native local-mint/burn liabilities, including Arc and zero-supply HyperEVM. Celo and Tempo are reviewed canonical direct-burn/mint representations: Ripio BridgeDeposit burns source WMXN through burnFrom and destination fulfillBridgeMint calls LimitedMinterBridge / Tip20LimitedMinterBridge to mint directly rather than releasing canonical escrow. On Tempo, exact-verified Tip20LimitedMinterBridge (0x854e4049...) and Tip20BridgeDeposit (0xba370290...) hold ISSUER_ROLE and fulfilled a verified Base-burn-to-Tempo-mint transfer of 4.73 wMXN. No static shares are authored.",
     "reviewedAt": "2026-10-09",
     "reviewer": "Sol curation campaign 2026-10-09 (W3ReadmitRipio)",
     "confidence": "manual-review",
@@ -437,36 +437,51 @@
         "id": "tempo:0x20c00000000000000000000032449be232fd987e",
         "destinationChain": "tempo",
         "contractAddress": "0x20c00000000000000000000032449be232fd987e",
-        "protocol": "Ripio issuer-listed Tempo TIP-20 deployment; liability route not established",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
+        "protocol": "Ripio wMXN Tempo direct-burn/mint representation (Tip20BridgeDeposit + Tip20LimitedMinterBridge)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
         "controllerChain": "tempo",
         "controllerAddress": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "At Tempo block 45094963 (0xbbac3f5f063c2311872b576bbc54447dfdd3193851c69570deac93d347a121d6, 2026-10-20T22:14:39Z), exact native ABI reads identify Peso Mexicano / wMXN, six decimals, currency MXN, zero supply, paused false and transferPolicyId 1. Ripio Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 holds DEFAULT_ADMIN_ROLE, although it and the issuer EOA do not hold ISSUER_ROLE or PAUSE_ROLE. The same-chain deployed Safe reports VERSION 1.4.1, threshold 4 and seven owners; DEFAULT_ADMIN_ROLE administers ISSUER_ROLE, PAUSE_ROLE and UNPAUSE_ROLE and may change the transfer policy and supply cap under the TIP-20 specification. This establishes the token administrator, not its complete execution scope, key custody, incident absence or cross-chain liability relationship. The issuer bridge directory still omits Tempo, so independent native liability versus conserved representation and canonical escrow/in-flight obligations remain unresolved. Zero supply does not remove the deployment or establish materiality. Observed 2026-10-20T22:18:34Z to 22:19:25Z.",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Tempo TIP-20 deployment (Peso Mexicano / wMXN, 6 decimals, currency MXN, supplyCap uint128.max, paused false, transferPolicyId 1) is verified as Ripio's canonical direct-burn/mint representation. On 2026-10-22, Ripio verified exact matching Solidity sources on contracts.tempo.xyz for Tip20LimitedMinterBridge (0x854e404902a24557d9a2aadc8e05b2c502c12fd8, matchId 29860) and Tip20BridgeDeposit (0xba370290e94af389284fca4afc5dc6fcdbf3a2fc, matchId 29861). Pinned Tempo block 50506258 (2026-11-24T00:01:28Z, hash 0x61b267f7ddc7a7362d795bf9abe1c1ddba95ad501cf051acdf61812406b52b63) confirms: Ripio 4-of-7 Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 holds DEFAULT_ADMIN_ROLE on wMXN and Tip20LimitedMinterBridge; both Tip20LimitedMinterBridge and Tip20BridgeDeposit hold ISSUER_ROLE on wMXN (neither Ripio Safe nor issuer EOA holds ISSUER_ROLE directly); Tip20LimitedMinterBridge grants MINTER_ROLE to Tip20BridgeDeposit and both contracts are unpaused; totalSupply is 4,730,000 raw units (4.73 wMXN). Cross-chain conservation is directly verified by pinned source/destination receipts: at Base block 58255845 (tx 0x5089a345a19e9aab1cd3f2eb6f8cf5c8c08fdfaaa7dbe68a811d12b058716c12), user 0xf7bfd32efdff771df62183d1e28c1fb251675d11 burned 4.73e18 wMXN via Base BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 (nonce 241, 0.27 wMXN fee to Ripio Safe), and at Tempo block 49323067 (2026-11-16T15:06:48Z, hash 0x00617cd60ca2d735dd787cc009a3b47c62cb72ac161daa06432e56aa6af7c07c, tx 0x22ddf4434e9c7212c91187d8b59eab133ed41c18beb124496d23b5c0120d56d1), 2-of-2 operator Safe 0xb7747743042d3b14d4344f17cbec9db0da771f8d called Tip20BridgeDeposit.fulfillBridgeMint (citing Base chainId 8453, tx 0x5089a345..., nonce 241), minting exactly 4,730,000 raw 6-decimal units (4.73 wMXN) to 0xf7bfd32e... via Tip20LimitedMinterBridge. Route-level controller identity is preserved; no static materialSupplyShare is authored.",
         "mappingVersion": "bridge-route-facts-v2",
-        "observedAt": "2026-10-20",
-        "observedBlock": 45094963,
+        "observedAt": "2026-11-16",
+        "observedBlock": 49323067,
         "sources": [
           {
             "label": "Ripio current issuer deployment roster",
             "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
           },
           {
-            "label": "Ripio bridge deployment directory; Tempo not in published bridge roster",
-            "url": "https://bridge.ripio.com/developers"
-          },
-          {
             "label": "Tempo TIP-20 native mint/burn and role specification",
             "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec"
           },
           {
-            "label": "Tempo pinned identity, role-admin and same-chain Safe reads at block 45094963 (2026-10-20T22:14:39Z)",
+            "label": "Tempo Tip20LimitedMinterBridge exact verified source (verified 2026-10-22)",
+            "url": "https://contracts.tempo.xyz/v2/contract/4217/0x854e404902a24557d9a2aadc8e05b2c502c12fd8?fields=compilation"
+          },
+          {
+            "label": "Tempo Tip20BridgeDeposit exact verified source (verified 2026-10-22)",
+            "url": "https://contracts.tempo.xyz/v2/contract/4217/0xba370290e94af389284fca4afc5dc6fcdbf3a2fc?fields=compilation"
+          },
+          {
+            "label": "Tempo pinned fulfillment receipt (block 49323067, 2026-11-16T15:06:48Z) and state reads (block 50506258, 2026-11-24T00:01:28Z)",
             "url": "https://api-tempo-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Base source burn receipt (block 58255845, tx 0x5089a345a19e9aab1cd3f2eb6f8cf5c8c08fdfaaa7dbe68a811d12b058716c12)",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
           }
+        ],
+        "failureDomainKeys": [
+          "protocol:ripio-limited-minter-bridge",
+          "contract:tempo:0x854e404902a24557d9a2aadc8e05b2c502c12fd8",
+          "contract:tempo:0xba370290e94af389284fca4afc5dc6fcdbf3a2fc",
+          "safe:tempo:0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+          "safe:tempo:0xb7747743042d3b14d4344f17cbec9db0da771f8d"
         ]
       }
     ],

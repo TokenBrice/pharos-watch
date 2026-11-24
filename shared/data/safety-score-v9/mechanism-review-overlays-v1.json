@@ -1246,6 +1246,18 @@
         {
           "label": "Aave v3.3 deficit-management design by BGD Labs",
           "url": "https://governance.aave.com/t/bgd-aave-v3-3-feat-umbrella/20129"
+        },
+        {
+          "label": "Ethereum finalized block 26481203 (hash 0xc614c103509b94501a8fbd891640ecd3ac037e727ca1adae1eb93fe1534b0e8c, 2026-11-23T23:44:23Z): GHO getFacilitatorsList/getFacilitator exact 699,000,000 GHO reconciliation across all 8 facilitators, Aave V3 Core/Lido/Horizon Pool getReservesList/getConfiguration parameters, and mainnet stataUSDC/stataUSDT GSM state",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
+        },
+        {
+          "label": "Aave Health Factor and Liquidation mechanics documentation (retrieved 2026-11-24)",
+          "url": "https://aave.com/help/borrowing/liquidations"
+        },
+        {
+          "label": "Aave V3 Pool smart contract reference (liquidationCall and collateral checks, retrieved 2026-11-24)",
+          "url": "https://aave.com/docs/aave-v3/smart-contracts/pool"
         }
       ],
       "notes": "Measured at finalized Ethereum block 25536894; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/gho-aave/2026-07-15-block-25536894.json. All six facilitator bucket levels sum exactly to 599,000,000 GHO total supply, proving issuance allocation rather than collateral adequacy. Shared multi-debt Aave accounts have no honest GHO-only system collateralization ratio, and external liquidators are not a GHO-dedicated committed pool, so both requested ratios are structurally N/A. Unused facilitator capacity is 0.447412 of supply but is governance mint authority, not backstop capital. The two directly inspected, unfrozen and unseized GSMs provide a non-exhaustive swappable-capacity lower bound of 0.099750. Governance-set per-facilitator bucket caps provide bounded issuance isolation, but they do not make GHO losses fully facility-remote. Aave v3.3 explicitly records zero-collateral residual GHO debt as a reserve deficit and provides a special direct-GHO deficit burn path. Umbrella then automates first-loss-offset and staker coverage for supported asset-network pairs, including GHO on Ethereum, but current coverage is not established across every measured facilitator. Branch isolation, backstop, and shutdown/bad-debt handling are therefore limited rather than adequate. Source-scope correction on 2026-10-20: the former not-applicable collateralizationParameters and liquidationMechanics claims are withdrawn. Aave explicitly documents collateral factors, health-factor thresholds and permissionless liquidation for GHO borrowing; heterogeneous shared accounts and absence of committed liquidation capital do not prove those mechanisms structurally absent. The omitted components retain compiler-bounded uncertainty pending a whole-facilitator quality review, without asserting issuer non-disclosure or assigning unmeasured stress capacity. The ratio applicability, all measured values, remaining quality claims and original 2026-07-15 review start are unchanged. Source-scoped correction.",
@@ -1270,6 +1282,68 @@
         "directSwappableGsmCapacityRatio": 0.09975
       },
       "components": {
+        "collateralizationParameters": {
+          "applicability": "measured",
+          "quality": "limited",
+          "review": {
+            "reviewedAt": "2026-11-23T23:44:23Z",
+            "reviewer": "Night RESV curation pass 2026-11-24 (resv-2)",
+            "rationale": "At finalized Ethereum block 26481203 (hash 0xc614c103509b94501a8fbd891640ecd3ac037e727ca1adae1eb93fe1534b0e8c, 2026-11-23T23:44:23Z), GHO totalSupply (699,000,000.00 GHO) reconciles with zero residual across all 8 registered facilitators: three Ethereum Aave V3 direct-minter pools totaling 239,000,000 GHO (34.19% of supply) whose complete on-chain reserve configurations were read via getReservesList/getConfiguration — CoreGhoDirectMinter Pool 0x87870bca3f3fd6335c3f4ce8392d69350b4fa4e2 (135M GHO, 68 reserves, 55 active collateral assets: 13 borrowable with LTV 0.05%-81% and 42 deposit-only at 0% LTV, full LTV range 0%-81%, LT 0.1%-85%), LidoGhoDirectMinter Pool 0x4e033931ad43597d96d6bcc25c280717730b58b1 (45M GHO, 9 reserves, 6 active collateral assets: 2 borrowable with LTV 82%-84% and 4 deposit-only at 0% LTV, full LTV range 0%-84%, LT 0.1%-85%), and HorizonGhoDirectMinter Pool 0xae05cd22df81871bc7cc2a04becfb516bfe332c8 (59M GHO, 13 reserves, 10 active collateral assets, LTV 0.05%-88%, LT 0.1%-90%) — plus GhoDirectFacilitator GSMs Mainnet (310M GHO, 44.35%, feeding fixed-ratio 1:1 GSM modules including unfrozen/unseized stataUSDC GSM 0x3a386889... getExposureCap() 175M and stataUSDT GSM 0x882285e6... getExposureCap() 50M), three remote chain facilitators at 50M GHO each (Plasma, Arbitrum, Monad; 21.46% combined), and FlashMinter (0 GHO). Graded limited because parameters are governance-adjustable across shared multi-debt pools spanning volatile, LST, RWA, and stablecoin collateral, cross-chain facilitators rely on remote configurations, and no GHO-only system collateralization ratio exists.",
+            "sources": [
+              {
+                "label": "Ethereum finalized block 26481203 (hash 0xc614c103509b94501a8fbd891640ecd3ac037e727ca1adae1eb93fe1534b0e8c, 2026-11-23T23:44:23Z): GHO getFacilitatorsList/getFacilitator exact 699,000,000 GHO reconciliation across all 8 facilitators, Aave V3 Core/Lido/Horizon Pool getReservesList/getConfiguration parameters, and mainnet stataUSDC/stataUSDT GSM state",
+                "url": "https://api-ethereum-mainnet.n.dwellir.com"
+              },
+              {
+                "label": "Aave GHO facilitator documentation",
+                "url": "https://aave.com/help/gho-stablecoin/facilitators"
+              },
+              {
+                "label": "Aave GHO borrower collateral and liquidation mechanics (applicability correction retrieved 2026-10-20; original evidence clock retained)",
+                "url": "https://aave.com/docs/ecosystem/gho"
+              },
+              {
+                "label": "Aave Health Factor and Liquidation mechanics documentation (retrieved 2026-11-24)",
+                "url": "https://aave.com/help/borrowing/liquidations"
+              },
+              {
+                "label": "Aave V3 Pool smart contract reference (liquidationCall and collateral checks, retrieved 2026-11-24)",
+                "url": "https://aave.com/docs/aave-v3/smart-contracts/pool"
+              }
+            ]
+          }
+        },
+        "liquidationMechanics": {
+          "applicability": "measured",
+          "quality": "limited",
+          "review": {
+            "reviewedAt": "2026-11-23T23:44:23Z",
+            "reviewer": "Night RESV curation pass 2026-11-24 (resv-2)",
+            "rationale": "Aave official GHO, Health Factor, and V3 Pool documentation establishes deterministic Health Factor < 1 liquidation triggers and permissionless external liquidationCall execution across Aave V3 lending markets, while GSM facilitators hold fixed-ratio swappable stablecoin backing with governance freeze/seize controls. Pinned finalized Ethereum block 26481203 (2026-11-23T23:44:23Z) confirms on-chain liquidation bonuses across all three Ethereum direct-minter lending pools (Core: 4.5%-10% across 55 active collateral reserves; Lido: 5%-7.5% across 6 active collateral reserves; Horizon: 3%-9% across 10 active collateral reserves) and confirms both mainnet tracked GSM modules (stataUSDC GSM 0x3a386889... and stataUSDT GSM 0x882285e6...) are active (isFrozen=false, isSeized=false). Graded limited because liquidations depend on external liquidators and secondary-market swap liquidity without a GHO-dedicated committed liquidation pool, and cross-chain facilitators (Plasma, Arbitrum, Monad; 21.46% of supply) rely on remote chain liquidation/GSM execution.",
+            "sources": [
+              {
+                "label": "Ethereum finalized block 26481203 (hash 0xc614c103509b94501a8fbd891640ecd3ac037e727ca1adae1eb93fe1534b0e8c, 2026-11-23T23:44:23Z): GHO getFacilitatorsList/getFacilitator exact 699,000,000 GHO reconciliation across all 8 facilitators, Aave V3 Core/Lido/Horizon Pool getReservesList/getConfiguration parameters, and mainnet stataUSDC/stataUSDT GSM state",
+                "url": "https://api-ethereum-mainnet.n.dwellir.com"
+              },
+              {
+                "label": "Aave GHO facilitator documentation",
+                "url": "https://aave.com/help/gho-stablecoin/facilitators"
+              },
+              {
+                "label": "Aave GHO borrower collateral and liquidation mechanics (applicability correction retrieved 2026-10-20; original evidence clock retained)",
+                "url": "https://aave.com/docs/ecosystem/gho"
+              },
+              {
+                "label": "Aave Health Factor and Liquidation mechanics documentation (retrieved 2026-11-24)",
+                "url": "https://aave.com/help/borrowing/liquidations"
+              },
+              {
+                "label": "Aave V3 Pool smart contract reference (liquidationCall and collateral checks, retrieved 2026-11-24)",
+                "url": "https://aave.com/docs/aave-v3/smart-contracts/pool"
+              }
+            ]
+          }
+        },
         "backstop": {
           "quality": "limited"
         },
@@ -1373,6 +1447,10 @@
         {
           "label": "Hydration Borrowing and liquidation documentation",
           "url": "https://docs.hydration.net/products/borrowing/overview/"
+        },
+        {
+          "label": "Hydration EVM RPC pinned block 17365246 (2026-11-23T23:28:30Z): HOLLAR facilitator buckets and Aave v3 Pool getReservesList/getConfiguration parameters across Hydration Market, GIGAHDX, and BIL pools",
+          "url": "https://rpc.hydradx.cloud"
         }
       ],
       "notes": "At Hydration EVM block 13156814 (hash 0x156a1de37fb9ee787c8e8bfcffc8562f96597b0bb9d2afbabfd5282a006c7871, 2026-07-15T20:03:39Z), HOLLAR totalSupply was 11,704,581.364990795218703870 and exactly reconciled to four facilitator bucket levels: Hydration Market 11,209,520.464263113492339716 (95.7703664%), HOLLAR Stability Module 364,154.509863438876798927 (3.1112134%), GIGAHDX 130,906.390864242849565227 (1.1184201%), and FlashMinter zero. Unused facilitator capacity was 1.590628 of supply, but this is mint authority rather than collateral or committed loss capital. Hydration documents a shared Aave v3 lending market and protocol liquidations that flash-mint repayment assets, sell seized collateral, and burn the flash amount. Because issuance spans heterogeneous facilitator modules and the primary market is a shared multi-debt account system, there is no honest HOLLAR-only system collateralization ratio. Because liquidation uses transient flash issuance rather than a HOLLAR-dedicated pool contractually committed to debt offset, liquidation-capacity ratio is structurally not applicable. HSM sell-back support is explicitly conditional rather than unlimited, facilitator caps provide only partial branch isolation, and the reviewed docs do not establish an unconditional residual-bad-debt recapitalization facility; those components remain limited.",
@@ -1399,6 +1477,52 @@
         "gigahdxIssuedShareRatio": 0.011184
       },
       "components": {
+        "collateralizationParameters": {
+          "applicability": "measured",
+          "quality": "limited",
+          "review": {
+            "reviewedAt": "2026-11-23T23:28:30Z",
+            "reviewer": "Night RESV curation pass 2026-11-23 (resv-0)",
+            "rationale": "At pinned Hydration EVM block 17365246 (hash 0x1129c5760fcea45da8f7cb82f7f70055c34d3297beff0d5b3920687f63ce7622, 2026-11-23T23:28:30Z), HOLLAR totalSupply (11,418,556.02) reconciles to six facilitators with 99.99996% minted across three on-chain Aave v3-fork pools: Hydration Market 0x1b02E051683b5cfaC5929C25E84adb26ECf87B38 (9,573,164.07 HOLLAR, 34 reserves with explicit on-chain LTV 0%-85% and LT 70%-98%, e.g. DOT/tBTC 80%/85%, ETH 75%/85%, USDC/USDT 80%/90%, PRIME/SIGIL/apyUSD 85%/88%), GIGAHDX 0x2Ce2CfFF743CdB6637F4B5D351937A541B8c8923 (999,624.01 HOLLAR, stHDX 40% LTV / 70% LT), and BIL 0x69310FdA58c819aD82df7d2Cb61841C853337a53 (845,763.08 HOLLAR, uBIL 50% LTV / 85% LT). Graded limited because parameters are governance-adjustable across a shared multi-debt market including volatile/LP/endogenous collateral and no HOLLAR-only system collateralization ratio exists.",
+            "sources": [
+              {
+                "label": "Hydration EVM RPC pinned block 17365246 (2026-11-23T23:28:30Z): HOLLAR facilitator buckets and Aave v3 Pool getReservesList/getConfiguration parameters across Hydration Market, GIGAHDX, and BIL pools",
+                "url": "https://rpc.hydradx.cloud"
+              },
+              {
+                "label": "Hydration HOLLAR protocol documentation",
+                "url": "https://docs.hydration.net/products/hollar/"
+              },
+              {
+                "label": "Hydration Borrowing and liquidation documentation",
+                "url": "https://docs.hydration.net/products/borrowing/overview/"
+              }
+            ]
+          }
+        },
+        "liquidationMechanics": {
+          "applicability": "measured",
+          "quality": "limited",
+          "review": {
+            "reviewedAt": "2026-11-23T23:28:30Z",
+            "reviewer": "Night RESV curation pass 2026-11-23 (resv-0)",
+            "rationale": "Hydration official HOLLAR and Borrowing documentation establishes per-block automated partial liquidations executed at block start using enshrined per-block oracles, protocol custom flash loans that swap seized collateral through the Hydration Omnipool and burn repaid debt, plus permissionless Aave v3 liquidation bots. Pinned Hydration EVM block 17365246 (2026-11-23T23:28:30Z) confirms on-chain liquidation bonuses across all three active borrow pools (3%-8% across active non-jsHOLLAR collateral reserves: 3% USDC/USDT/EURC, 5% tBTC/PAXG, 7% DOT/ETH/SOL/uBIL, 8% vDOT/stHDX; 1% jsHOLLAR). Graded limited because liquidation execution depends on Hydration Omnipool swap depth with no dedicated HOLLAR liquidation pool and undocumented residual bad-debt allocation.",
+            "sources": [
+              {
+                "label": "Hydration EVM RPC pinned block 17365246 (2026-11-23T23:28:30Z): HOLLAR facilitator buckets and Aave v3 Pool getReservesList/getConfiguration parameters across Hydration Market, GIGAHDX, and BIL pools",
+                "url": "https://rpc.hydradx.cloud"
+              },
+              {
+                "label": "Hydration HOLLAR protocol documentation",
+                "url": "https://docs.hydration.net/products/hollar/"
+              },
+              {
+                "label": "Hydration Borrowing and liquidation documentation",
+                "url": "https://docs.hydration.net/products/borrowing/overview/"
+              }
+            ]
+          }
+        },
         "backstop": {
           "quality": "limited"
         },

@@ -23,9 +23,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "Brale issuer-native SBC liabilities also use LayerZero native burn/mint through Stargate. Ethereum block 26115235 binds OFT adapter proxy 0xb9d852a3f9b3a82e243faab0272604102a111e1a to SBC 0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16, StableCoinAdapter implementation 0x36e55de93cf279df1a02093c50f5bab77b4319de and EndpointV2 0x1a44076050125825900e736c501f859c50fe728c. The native token is not a wrapped representation. Full per-chain DVN, peer and administrator closure remains separate from the known external-validation rail.",
-    "reviewedAt": "2026-10-04",
-    "reviewer": "Unknown-wave W2R20 October pinned Ethereum OFT review",
+    "summary": "Brale issuer-native SBC liabilities also use LayerZero native burn/mint through Stargate. Ethereum block 26115235 binds OFT adapter proxy 0xb9d852a3f9b3a82e243faab0272604102a111e1a to SBC 0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16, StableCoinAdapter implementation 0x36e55de93cf279df1a02093c50f5bab77b4319de and EndpointV2 0x1a44076050125825900e736c501f859c50fe728c. At Ethereum finalized block 26481235 (2026-11-23T23:50:47Z), an exhaustive 188-EID LayerZero V2 scan confirms 7 active peers (Avalanche, Polygon, Arbitrum, Optimism, Celo, Solana, Base), all using custom SendLib 0xbb2e... / RecvLib 0xc02a..., a 2-of-2 required DVN quorum (LayerZero Labs + Google Cloud, 0 optional DVNs), and a 1e30 raw (1 trillion SBC) / 86,400 s outbound rate limit mutable by the EOA owner/delegate. The native token is not a wrapped representation.",
+    "reviewedAt": "2026-11-23",
+    "reviewer": "Unknown-wave W2R20 October pinned Ethereum OFT review; CTRL-2 pinned LayerZero DVN & peer census (2026-11-23)",
     "confidence": "verified",
     "nativeExternalTransferReviews": [
       {
@@ -115,16 +115,30 @@
       },
       {
         "id": "sbc-ethereum-oft-verification-unresolved",
-        "label": "Ethereum SBC OFT configured verification quorum (unresolved)",
+        "label": "Ethereum SBC OFT LayerZero V2 DVN validation quorum",
         "routeRefs": ["ethereum:0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16"],
         "capabilities": ["validator"],
-        "authorityType": "unknown",
-        "canRaiseCap": "unknown",
-        "observedAt": "2026-10-20",
-        "observedBlock": 26236780,
-        "evidence": "The exact native SBC OFT implementation accepts receive traffic through the configured LayerZero endpoint and owner-set peers. The pinned Ethereum endpoint linkage and effective delegate are established, but the complete bidirectional peer inventory, configured send/receive libraries, required/optional DVNs, thresholds and all remote administrators are not. Preserve this unresolved validation contributor rather than treating the newly reviewed local owner/upgrader as an exhaustive external-channel certificate. Retrieved 2026-10-20.",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x1a44076050125825900e736c501f859c50fe728c",
+        "authorityType": "validator-quorum",
+        "threshold": 2,
+        "signerCount": 2,
+        "canRaiseCap": true,
+        "capDescription": "All 7 active LayerZero lanes use a 1e30 raw (1 trillion SBC) / 86,400 s outbound rate limit mutable without delay by EOA owner/delegate 0x5c3cd52996a93e19badd02af73987874a8a5553c, who can also reconfigure DVNs and peers.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": ["protocol:layerzero-v2", "contract:ethereum:0x1a44076050125825900e736c501f859c50fe728c"],
+        "observedAt": "2026-11-23",
+        "observedBlock": 26481235,
+        "routeChecks": {
+          "trustedPeerOrRemote": "Exhaustive 188-EID LayerZero V2 scan on Ethereum OFT proxy 0xb9d852a3f9b3a82e243faab0272604102a111e1a at finalized block 26481235 identified exactly 7 active peers: Avalanche (30106 -> 0x1bf472c38b00f6070abb61628d76870561890bba), Polygon (30109 -> 0xb9d852a3f9b3a82e243faab0272604102a111e1a), Arbitrum (30110 -> 0xb9d8...), Optimism (30111 -> 0xb9d8...), Celo (30125 -> 0xb9d8...), Solana (30168 -> 0x0cc81c2451ac5052a64e0daf343caa9a53e538d174b6fd4f92116645458747225), and Base (30184 -> 0xb9d8...).",
+          "signingModel": "Every one of the 7 lanes uses custom (non-default) SendLib 0xbb2ea70c9e858123480642cf96acbcce1372dce1 (15 conf) and RecvLib 0xc02ab410f0734efa3f14628780e6e695156024c2 (confirmations: Avalanche 12, Polygon 512, Arbitrum 20, Optimism 20, Celo 5, Solana 32, Base 10), requiring 2-of-2 required DVNs — LayerZero Labs (0x589dedbd617e0cbcb916a9223f4d1300c294236b) and Google (0xd56e4eab23cb81f43168f9f45211eb027b9ac7cc) — with 0 optional DVNs; executor 0x173272739bd7aa6e4e214714048a9fe699453059 (maxMessageSize 10000).",
+          "rateLimits": "All 7 lanes configure rateLimits(eid) = 1,000,000,000,000 SBC (1e30 raw wei) per 86,400 s window, mutable by EOA owner 0x5c3cd52996a93e19badd02af73987874a8a5553c."
+        },
+        "evidence": "Pinned Ethereum finalized block 26481235 (hash 0x107058a882666babc1fb4314edc9160ff5d2a4c14011612b3e3c5f3e89cbe7b2, 2026-11-23T23:50:47Z; before/after header hash verified): an exhaustive 188-EID scan of OFT proxy 0xb9d852a3f9b3a82e243faab0272604102a111e1a against EndpointV2 0x1a44076050125825900e736c501f859c50fe728c identified 7 active peers (Avalanche 30106, Polygon 30109, Arbitrum 30110, Optimism 30111, Celo 30125, Solana 30168, Base 30184). All 7 lanes configure custom SendLib 0xbb2e... / RecvLib 0xc02a... with a 2-of-2 required DVN quorum (LayerZero Labs 0x589d... + Google 0xd56e..., 0 optional DVNs), executor 0x1732..., and outbound rateLimits of 1e30 raw wei per 86,400 s. EOA 0x5c3c... remains both OFT owner() and EndpointV2 delegate(). This resolves the Ethereum-side DVN validation authority and cap semantics; remote-chain admin custody and incident absence remain separate.",
         "sources": [
           {"label": "Exact SBC OFT source and inherited endpoint/peer receive gates", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x36e55de93cf279df1a02093c50f5bab77b4319de"},
+          {"label": "Ethereum pinned finalized RPC reads at block 26481235 (2026-11-23T23:50:47Z)", "url": "https://ethereum-rpc.publicnode.com"},
+          {"label": "LayerZero V2 official DVN and endpoint metadata", "url": "https://metadata.layerzero-api.com/v1/metadata"},
           {"label": "Brale native SBC LayerZero integration", "url": "https://brale.xyz/blog/sbc-integrates-layerzero-for-cross-chain-transfers"}
         ]
       }

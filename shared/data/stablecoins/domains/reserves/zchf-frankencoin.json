@@ -271,6 +271,41 @@
         "legal"
       ],
       "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "collateral-positions-api:wxauh",
+      "name": "wXAUH (Wrapped Herculis Gold Coin)",
+      "pct": 0,
+      "risk": "high",
+      "assetClass": "tokenized-security",
+      "issuerOrObligor": "Herculis Tokens S.A.",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "collateral-positions-api:spcxx",
+      "name": "SPCXx (SpaceX xStock)",
+      "pct": 0,
+      "risk": "high",
+      "assetClass": "tokenized-security",
+      "issuerOrObligor": "Backed Assets (JE) Limited",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
@@ -329,9 +364,29 @@
       {
         "label": "Canonical reserve asset risk map (CRV very-high), accessed 2026-10-30",
         "url": "https://github.com/pharos-watch/pharos-watch/blob/main/shared/lib/reserve-asset-risk.ts"
+      },
+      {
+        "label": "Frankencoin collateral positions API: wXAUH and SPCXx positions, observed 2026-11-23T23:19:40Z",
+        "url": "https://api.frankencoin.com/ecosystem/collateral/positions/details"
+      },
+      {
+        "label": "Ethereum Dwellir RPC: pinned reads at block 26481043 (2026-11-23T23:12:23Z) for wXAUH (0xC174B12B3195D9887e8dA7aA886EC11c13101060), underlying XAUH (0xa9b17f572341219703bc951725bdb3ca756b1a65), and SPCXx (0x68fa48B1C2FE52b3D776E1953e0E782b5044Ce28)",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Herculis Gold Coin (XAUH) Terms and Conditions v1.1 (effective 2026-09-24), retrieved 2026-11-23",
+        "url": "https://xauh.gold/xauh-terms-and-conditions.pdf"
+      },
+      {
+        "label": "Backed Assets SpaceX xStock (SPCXx, ISIN CH1564487366) product page, retrieved 2026-11-23",
+        "url": "https://assets.backed.fi/products/spacex-xstock"
+      },
+      {
+        "label": "Backed Assets (JE) Limited Base Prospectus dated 2026-07-27, retrieved 2026-11-23",
+        "url": "https://cdn.prod.website-files.com/655f3efc4be468487052e35a/6a748b81c9b1aca19a11c102_Backed_Assets_Base%20Prospectus_20260727.pdf"
       }
     ],
-    "rationale": "Historical weights retain the 2026-09-04 active collateral capture valued through Frankencoin's CHF price mapping. At Ethereum block 26089449, ysyBOLD asset() returned the tracked yBOLD contract 0x9f4330700a36b29952869fac9b33f45eedd8a3d8, corroborating Yearn's current vault record. The held ysyBOLD vault-share intermediary is explicit while the canonical ybold-yearn collateral dependency and 0.1% historical share are retained. PAXG and XAUt remain exact tracked upstreams; other rows remain classified exogenous collateral. Supplemental LENDS duration research by Sol curation campaign 2026-10-09 (Lane48Initia), observed 2026-10-09T10:31:48Z, found no contractual maximum redemption tenor: section 1.4 of the issuer-linked shareholder agreement imposes no issuer repurchase duty, and section 10's 31 December 2033 agreement term can renew or end with replacement shares rather than repayment. The document retains an unfilled SHA contract reference and an older source-contract address, so no current whole-exposure maturity-applicability proof is asserted. This supplemental research changes neither the 2026-09-30 composition review nor the 2026-09-04 weights. Supplemental RS2-040 research by sprint agent RS2-040, observed 2026-10-30T12:01:00Z, added live collateral rows for CRV (Curve DAO Token) and SGG (SWISSGRAMS GOLD). Both are single Frankencoin v2 collateral positions in the same collateral-positions API (CRV position 0xC862bDC0417eC73980ee79AAE0eEFDEA68f88615, challengePeriod 43,200 s; SGG position 0x6a7FB6975f2F4DEfA6Df02b4ca4A768Bd02e7937, challengePeriod 172,800 s). CRV is the canonical Curve DAO governance token (canonical reserve risk tier very-high); SGG is the Swissgrams AG gold token whose token terms (last updated 2026-09-24) describe proportional co-ownership of vaulted coins. Neither row asserts a realized liquidity horizon: the auction terms publish no whole-position realization maximum, so liquidityHorizon stays unknown. This supplemental research changes neither the 2026-09-30 composition review nor the 2026-09-04 weights.",
+    "rationale": "Historical weights retain the 2026-09-04 active collateral capture valued through Frankencoin's CHF price mapping. At Ethereum block 26089449, ysyBOLD asset() returned the tracked yBOLD contract 0x9f4330700a36b29952869fac9b33f45eedd8a3d8, corroborating Yearn's current vault record. The held ysyBOLD vault-share intermediary is explicit while the canonical ybold-yearn collateral dependency and 0.1% historical share are retained. PAXG and XAUt remain exact tracked upstreams; other rows remain classified exogenous collateral. Supplemental LENDS duration research by Sol curation campaign 2026-10-09 (Lane48Initia), observed 2026-10-09T10:31:48Z, found no contractual maximum redemption tenor: section 1.4 of the issuer-linked shareholder agreement imposes no issuer repurchase duty, and section 10's 31 December 2033 agreement term can renew or end with replacement shares rather than repayment. The document retains an unfilled SHA contract reference and an older source-contract address, so no current whole-exposure maturity-applicability proof is asserted. This supplemental research changes neither the 2026-09-30 composition review nor the 2026-09-04 weights. Supplemental RS2-040 research by sprint agent RS2-040, observed 2026-10-30T12:01:00Z, added live collateral rows for CRV (Curve DAO Token) and SGG (SWISSGRAMS GOLD). Both are single Frankencoin v2 collateral positions in the same collateral-positions API (CRV position 0xC862bDC0417eC73980ee79AAE0eEFDEA68f88615, challengePeriod 43,200 s; SGG position 0x6a7FB6975f2F4DEfA6Df02b4ca4A768Bd02e7937, challengePeriod 172,800 s). CRV is the canonical Curve DAO governance token (canonical reserve risk tier very-high); SGG is the Swissgrams AG gold token whose token terms (last updated 2026-09-24) describe proportional co-ownership of vaulted coins. Neither row asserts a realized liquidity horizon: the auction terms publish no whole-position realization maximum, so liquidityHorizon stays unknown. This supplemental research changes neither the 2026-09-30 composition review nor the 2026-09-04 weights. Supplemental RESV classification review on 2026-11-23 added keyed zero-percent classification rows for live Frankencoin collateral tokens wXAUH (0xC174B12B3195D9887e8dA7aA886EC11c13101060, position 0x557995b06c83b4C303b5FAc45f074283AE50b818, challengePeriod 172,800 s) and SPCXx (0x68fa48B1C2FE52b3D776E1953e0E782b5044Ce28, position 0xfc538fD2cFFa6Acd0923172dbd79B3b7512c29BD, challengePeriod 86,400 s). At finalized Ethereum block 26481043 (hash 0xaa81f50c1b0a67f5253a66f9320f9d14ac15673a361cb1f07c906f33d02f0120, 2026-11-23T23:12:23Z), wXAUH underlyingERC20() returned Herculis Gold Coin XAUH (0xa9b17f572341219703bc951725bdb3ca756b1a65) holding 100.979401957607648632 XAUH matching wXAUH totalSupply() 1:1; XAUH Terms v1.1 (effective 2026-09-24) identify Herculis Tokens S.A. as issuer of a contractual gold-backed token (not a debt security). At the same block, SPCXx returned name SpaceX xStock and terms() https://www.backedassets.fi/legal-documentation; Backed Assets (JE) Limited's product disclosure and KID (ISIN CH1564487366) identify an open-ended tracker certificate on SpaceX Class A common stock. Zero authored weights carry classification metadata only without altering the 2026-09-04 historical book or 2026-09-30 review date; Frankencoin challenge auctions publish no whole-position realization maximum, so liquidityHorizon remains unknown for both rows.",
     "compositionBasis": "Retained 2026-09-04 Frankencoin collateral balances and prices; ysyBOLD-to-yBOLD identity refreshed by fixed-block asset() read on 2026-09-30",
     "compositionAsOf": "2026-09-04",
     "scope": "full-composition",

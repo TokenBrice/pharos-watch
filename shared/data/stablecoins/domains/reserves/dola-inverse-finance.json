@@ -218,6 +218,16 @@
       "issuerOrObligor": "Inverse Finance FiRM LP-secured lending markets",
       "riskFactors": ["market", "liquidity", "smart-contract", "counterparty", "concentration"],
       "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "dola-inverse:lp:dola-swanusd",
+      "name": "DOLA-SwanUSD LP-secured debt (undecomposed)",
+      "pct": 0,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Inverse Finance FiRM LP-secured lending markets",
+      "riskFactors": ["market", "liquidity", "smart-contract", "counterparty", "concentration"],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
@@ -252,9 +262,13 @@
       {
         "label": "FiRM Fed supplies(market) completeness witness equals globalSupply; Ethereum block 26214950, observed 2026-10-17T21:32:25Z",
         "url": "https://etherscan.io/address/0x2b34548b865ad66a2b046cb82e59ee43f75b90fd#readContract"
+      },
+      {
+        "label": "Ethereum finalized block 26481203 (2026-11-23T23:44:23Z): FiRM swanUSD-DOLA Market 0xCCfD76343a09F9B12347eFBCeAB8Df8b4191524E collateral() = 0x123b0134930bd5cf8f26b3e3c621acbc791a294b (DOLA/SwanUSD Curve LP) and totalDebt = 107,739.58 DOLA; keyed 0% classification metadata only",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       }
     ],
-    "rationale": "D-1/D-4/D-5: Ethereum block 26214950 (2026-10-17T21:25:35Z), independently observed 2026-10-17T21:32:25Z, gives 113,058,118.240939048310629383 minted DOLA, 71,292,840.879323003036446379 FiRM debt and 38,462,480.393859181931889876 idle DOLA across all 49 markets. Fed per-market supplies sum exactly to globalSupply 109,754,203.482632377452169839; debt plus idle exceeds that issuance by 1,117.790549807516166416. Under existing symmetric-netting policy, exclude the same idle own-token amount from claims and the denominator, leaving 74,595,637.847079866378739507 face-value net claims. Idle DOLA receives no external reserve credit. The separate issuer Frontier bad-debt checkpoint contributes 2,765,404.930738723 DOLA; the remaining 537,392.03701814 is unresolved, not non-FiRM or measured bad debt. The checkpoint clocks differ and the shares describe a reviewed debt-weighted claim map, not independent collateral TVL or a complete net-solvency attestation. Invalid-feed yv-USR debt 88.012207824144463745 and its idle inventory are included from direct contract reads. Both old/new PSM reserve observations are zero, so no USDS backing is inferred (D-6). LP collateral and circular DOLA/sDOLA constituents remain undecomposed.",
+    "rationale": "D-1/D-4/D-5: Ethereum block 26214950 (2026-10-17T21:25:35Z), independently observed 2026-10-17T21:32:25Z, gives 113,058,118.240939048310629383 minted DOLA, 71,292,840.879323003036446379 FiRM debt and 38,462,480.393859181931889876 idle DOLA across all 49 markets. Fed per-market supplies sum exactly to globalSupply 109,754,203.482632377452169839; debt plus idle exceeds that issuance by 1,117.790549807516166416. Under existing symmetric-netting policy, exclude the same idle own-token amount from claims and the denominator, leaving 74,595,637.847079866378739507 face-value net claims. Idle DOLA receives no external reserve credit. The separate issuer Frontier bad-debt checkpoint contributes 2,765,404.930738723 DOLA; the remaining 537,392.03701814 is unresolved, not non-FiRM or measured bad debt. The checkpoint clocks differ and the shares describe a reviewed debt-weighted claim map, not independent collateral TVL or a complete net-solvency attestation. Invalid-feed yv-USR debt 88.012207824144463745 and its idle inventory are included from direct contract reads. Both old/new PSM reserve observations are zero, so no USDS backing is inferred (D-6). LP collateral and circular DOLA/sDOLA constituents remain undecomposed. On 2026-11-23 (finalized Ethereum block 26481203, hash 0xc614c103509b94501a8fbd891640ecd3ac037e727ca1adae1eb93fe1534b0e8c), FiRM Market 0xCCfD76343a09F9B12347eFBCeAB8Df8b4191524E was verified as DOLA-SwanUSD LP-secured debt (collateral 0x123b0134930bd5cf8f26b3e3c621acbc791a294b, DOLA/SwanUSD Curve LP; totalDebt 107,739.58 DOLA); a keyed 0% protocol-position classification row (dola-inverse:lp:dola-swanusd) is added without altering historical weights or review clocks.",
     "compositionBasis": "Ethereum block 26214950 canonical minted DOLA less the complete 49-market idle DOLA census; debt-weighted face claims, separate issuer Frontier checkpoint block 26214507; public provider circulation unchanged",
     "compositionAsOf": "2026-10-17",
     "scope": "full-composition",

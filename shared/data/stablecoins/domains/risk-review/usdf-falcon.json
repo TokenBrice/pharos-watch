@@ -65,7 +65,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "Ethereum is the only proven native USDf issuance route and remains in Mint Authority. Chainlink CCIP uses an Ethereum Lock/Release escrow pool plus BSC, Base, and XDC Burn/Mint representations; their local mint/burn roles, pool administration, peer configuration, rate limits, and shared 4-of-6 Safe are Bridge Risk, with normal supply movement dependent on external CCIP validation and conserved lock/burn accounting.",
+    "summary": "Ethereum is the only proven native USDf issuance route and remains in Mint Authority. Chainlink CCIP uses an Ethereum Lock/Release escrow pool plus BSC, Base, XDC, and Solana Burn/Mint representations; their local mint/burn roles, pool administration, peer configuration, rate limits, shared EVM 4-of-6 Safe, separate Solana 4-of-6 Squads v4 vault owner, and Solana pool program MCMS upgrade timelock are Bridge Risk, with normal supply movement dependent on external CCIP validation and conserved lock/burn accounting.",
     "reviewedAt": "2026-08-29",
     "reviewer": "Codex Safety Score V9 bridge review; Safe-state re-review 2026-08-29",
     "confidence": "verified",
@@ -296,6 +296,7 @@
       },
       {
         "id": "solana:9ksrtYx1vnRxr4X5YqmGxqRMRBhgsc6FfQwWjB1KZq2x",
+        "sourceChain": "ethereum",
         "destinationChain": "solana",
         "canonicalChain": "ethereum",
         "contractAddress": "9ksrtYx1vnRxr4X5YqmGxqRMRBhgsc6FfQwWjB1KZq2x",
@@ -305,24 +306,46 @@
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
         "scope": "peripheral",
+        "controllerChain": "solana",
+        "controllerAddress": "AHHhyt1DZTnSG5kC2Tru4otCDThVLYNihQuFsyCFjFZo",
         "failureDomainKeys": [
-          "protocol:chainlink-ccip"
+          "protocol:chainlink-ccip",
+          "program:solana:41FGToCmdaWa1dgZLKFAjvmx6e6AjVTX7SVRibvsMGVB",
+          "contract:solana:AHHhyt1DZTnSG5kC2Tru4otCDThVLYNihQuFsyCFjFZo",
+          "multisig:solana:9nDFtfpS4q2ZbHVMUszvyvtoxD6g5vxnvFkJRNpKHujK"
         ],
         "reviewDisposition": "reviewed",
-        "reviewNote": "Identity and transfer semantics reviewed 2026-10-20. Falcon's official deployment directory identifies this Solana USDf mint; Chainlink's mainnet directory identifies the same 9-decimal Falcon USD token and BurnMint pool AHHhyt1DZTnSG5kC2Tru4otCDThVLYNihQuFsyCFjFZo, version 1.6.2. Solscan independently identifies Falcon USD (USDf), nine decimals and the SPL Token program. This is a CCIP representation, not an additional proven native issuance path. Pool-program authority, mint-authority reach, signing custody, incident state, peers, in-flight obligations and conserved current supply attribution remain unestablished by this directory review. No EVM Safe topology, rate-limit state, incident absence or zero supply is inherited.",
+        "reviewNote": "Pinned finalized Solana Account Archive reads at slot 473103429 (2026-11-23T22:04:46Z, blockhash 54bpdwyk7ntxFFC9jriamBif2GYJHwJWqFdb2aCyQ49p) confirm SPL Token mint 9ksrtYx1vnRxr4X5YqmGxqRMRBhgsc6FfQwWjB1KZq2x has 9 decimals, 0 raw supply, sole mintAuthority 3mLZYnTvGCqEHg5vfLRgweSjN46gpLrDwJdkPbK2RNKx, and freezeAuthority 6aFBcUtZoRtaMKhvfvDKy5qrqBBHnVYfDQWpefQeNpUH. mintAuthority is the off-curve pool_signer PDA (seeds [\"ccip_tokenpool_signer\", mint], bump 255) of Chainlink's CCIP BurnMintTokenPool program 41FGToCmdaWa1dgZLKFAjvmx6e6AjVTX7SVRibvsMGVB; State PDA AHHhyt1DZTnSG5kC2Tru4otCDThVLYNihQuFsyCFjFZo (seeds [\"ccip_tokenpool_config\", mint], bump 254, version 1) decodes to router Ccip842gzYHhvdDkSyi2YVCoAWPbYJoApMFzSxQroE9C, rmn_remote RmnXLft1mSEwDgMKu2okYuHkiazxntFFcZFrrcXxYg7, owner and rate_limit_admin 6aFBcUtZoRtaMKhvfvDKy5qrqBBHnVYfDQWpefQeNpUH, proposed_owner none, and list_enabled false. The Ethereum ChainConfig PDA 4z2BbcRmUANLYQok79etVqXy7tHg2DYsLRCe9zjAxemn maps remote pool 0xecf61d6faa3b9fae7195af3bc9891450c1733f78 and canonical Ethereum USDf 0xfa2b947eec368f42195f24f36d2af29f7c24cec2 with inbound and outbound rate limits disabled (capacity 0, rate 0). freezeAuthority / pool owner / rate_limit_admin 6aFBcUtZoRtaMKhvfvDKy5qrqBBHnVYfDQWpefQeNpUH is the index-0, bump-254 Squads v4 vault PDA of autonomous 4-of-6 multisig 9nDFtfpS4q2ZbHVMUszvyvtoxD6g5vxnvFkJRNpKHujK (time_lock 0, config_authority none, all 6 members Initiate|Vote|Execute). ProgramData 4sVSCJqG9ZKEvnpN38qTzb7Kc8QdHakBgB87HN3FYRaz names Chainlink MCMS timelock_signer PDA GoFoFfEDgALWRTw5dSY3VZQSwbFpvBEhDv1sFAWzYpbf (under DoajfR5tK24xVw51fWcawUZWhAXD8yrBJVacc13neVQA) as upgrade authority. Signer custody/independence, complete Squads spending-limit and non-Ethereum remote-chain enumeration, incident state, and in-flight obligations remain unestablished.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-20",
+        "observedAt": "2026-11-23",
+        "observedBlock": 473103429,
         "sources": [
           {
-            "label": "Falcon official Solana USDf deployment, retrieved 2026-10-20",
-            "url": "https://docs.falcon.finance/resources/smart-contracts.md"
+            "label": "Falcon official Solana USDf deployment, retrieved 2026-11-23",
+            "url": "https://docs.falcon.finance/resources/smart-contracts"
           },
           {
-            "label": "Chainlink USDf mainnet directory: Solana BurnMint pool and nine decimals, retrieved 2026-10-20",
+            "label": "Chainlink USDf mainnet directory: Solana BurnMintTokenPool AHHhyt1DZTnSG5kC2Tru4otCDThVLYNihQuFsyCFjFZo (displayed v2.1.0) and 9 decimals, retrieved 2026-11-23",
             "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDf"
           },
           {
-            "label": "Solscan exact Falcon USD mint identity and nine decimals, retrieved 2026-10-20",
+            "label": "Chainlink Solana mainnet CCIP directory: BurnMintTokenPool 41FGToCmdaWa1dgZLKFAjvmx6e6AjVTX7SVRibvsMGVB, router and RMN, retrieved 2026-11-23",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/chain/solana-mainnet"
+          },
+          {
+            "label": "Alchemy Solana Account Archive pinned reads at finalized slot 473103429 (2026-11-23T22:04:46Z, hash 54bpdwyk7ntxFFC9jriamBif2GYJHwJWqFdb2aCyQ49p)",
+            "url": "https://solana-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Chainlink CCIP Solana base-token-pool BaseConfig and ChainConfig schema at 1c1b0e10",
+            "url": "https://github.com/smartcontractkit/chainlink-ccip/blob/1c1b0e107765b915bb960f8b3e5fe3052ad22b06/chains/solana/contracts/programs/base-token-pool/src/common.rs"
+          },
+          {
+            "label": "Squads v4 Multisig account layout at af94153",
+            "url": "https://github.com/Squads-Protocol/v4/blob/af94153ff77a28b6effe46b9c94baaa93742b48c/programs/squads_multisig_program/src/state/multisig.rs"
+          },
+          {
+            "label": "Solscan Falcon USD mint identity",
             "url": "https://solscan.io/token/9ksrtYx1vnRxr4X5YqmGxqRMRBhgsc6FfQwWjB1KZq2x"
           }
         ]
@@ -372,7 +395,7 @@
         "modulesOrGuardsStatus": "none-detected",
         "routeChecks": {
           "lockboxOrEscrow": "At Ethereum block 25770829 on 2026-08-16, LockReleaseTokenPool 0xecf61d6faa3b9fae7195af3bc9891450c1733f78 had typeAndVersion() = LockReleaseTokenPool 1.5.1, getToken() = the native USDf proxy, and owner() = the reviewed 4-of-6 Safe. It escrows canonical USDf for CCIP and is not a native USDf minter.",
-          "trustedPeerOrRemote": "The Ethereum pool's reviewed remote-pool mapping covers BSC 0x4b66431f9e5f5cd026ae48e617902207b43048d4, Base/XDC 0x33570299e0d73f07c82d005de75de54cf4582fcc, and the separately untracked Solana pool from the current Chainlink directory. The authored EVM routes are restricted to the reviewed EVM mappings.",
+          "trustedPeerOrRemote": "The Ethereum pool's reviewed remote-pool mapping covers BSC 0x4b66431f9e5f5cd026ae48e617902207b43048d4, Base/XDC 0x33570299e0d73f07c82d005de75de54cf4582fcc, and the Solana BurnMintTokenPool (separately authored below) from the current Chainlink directory. The authored EVM routes are restricted to the reviewed EVM mappings.",
           "rateLimits": "At the current EVM pool reads, EVM-to-EVM inbound and outbound USDf rate-limit buckets were disabled with zero capacity and rate; getRateLimitAdmin() returned zero on the Ethereum pool. The pool owner remains the route administrator for supported CCIP lane configuration.",
           "pausersAdminsUpgraders": "The Safe owns the Ethereum LockRelease pool and its bridge administration, including router, remote-pool, and route configuration. Native USDf mint authority and the Ethereum token ProxyAdmin remain separately recorded in Mint Authority."
         },
@@ -629,6 +652,182 @@
           }
         ],
         "evidence": "At current EVM heads on 2026-08-29 (Ethereum 25862840, BSC 118819235, Base 50620210, and XDC 106610399), the same Safe address 0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7 still returned the six recorded owners and threshold 4 on every route. getModulesPaginated(0x1,100) returned an empty module list and the guard and module-guard storage slots were zero on all four deployments. The Safe held DEFAULT_ADMIN_ROLE on each destination BurnMintERC20 and owned the local CCIP BurnMintTokenPools, giving it representation-role, pool-owner, remote-mapping, router, and rate-limit administration. These powers remain Bridge Risk controls; the Ethereum Safe's native issuance powers stay separately recorded in Mint Authority, while Chainlink CCIP DON/RMN validation remains an external failure domain."
+      },
+      {
+        "id": "usdf-falcon-solana-burn-mint-pool",
+        "label": "USDf Solana CCIP BurnMintTokenPool",
+        "routeRefs": [
+          "solana:9ksrtYx1vnRxr4X5YqmGxqRMRBhgsc6FfQwWjB1KZq2x"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "AHHhyt1DZTnSG5kC2Tru4otCDThVLYNihQuFsyCFjFZo",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "program:solana:41FGToCmdaWa1dgZLKFAjvmx6e6AjVTX7SVRibvsMGVB",
+          "contract:solana:AHHhyt1DZTnSG5kC2Tru4otCDThVLYNihQuFsyCFjFZo",
+          "multisig:solana:9nDFtfpS4q2ZbHVMUszvyvtoxD6g5vxnvFkJRNpKHujK"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At finalized Solana slot 473103429 (2026-11-23T22:04:46Z), State PDA AHHhyt1DZTnSG5kC2Tru4otCDThVLYNihQuFsyCFjFZo recorded router Ccip842gzYHhvdDkSyi2YVCoAWPbYJoApMFzSxQroE9C and rmn_remote RmnXLft1mSEwDgMKu2okYuHkiazxntFFcZFrrcXxYg7. The Ethereum ChainConfig PDA 4z2BbcRmUANLYQok79etVqXy7tHg2DYsLRCe9zjAxemn (selector 5009297550715157269) decoded to remote pool 0xecf61d6faa3b9fae7195af3bc9891450c1733f78 and canonical Ethereum USDf 0xfa2b947eec368f42195f24f36d2af29f7c24cec2 (18 decimals); BSC and Base ChainConfig PDAs were empty. Non-Ethereum remote selectors beyond BSC and Base were not exhaustively enumerated.",
+          "rateLimits": "At finalized Solana slot 473103429, the Ethereum ChainConfig PDA decoded to inbound_rate_limit and outbound_rate_limit disabled (enabled false, capacity 0, rate 0). State.config.rate_limit_admin is Squads v4 vault PDA 6aFBcUtZoRtaMKhvfvDKy5qrqBBHnVYfDQWpefQeNpUH.",
+          "caps": "SPL Token mint 9ksrtYx1vnRxr4X5YqmGxqRMRBhgsc6FfQwWjB1KZq2x has 9 decimals, 0 raw supply at slot 473103429, and no token-level supply cap; with Ethereum rate limits disabled, no on-chain cap bounds pool minting.",
+          "pausersAdminsUpgraders": "Sole mintAuthority is off-curve pool_signer PDA 3mLZYnTvGCqEHg5vfLRgweSjN46gpLrDwJdkPbK2RNKx of program 41FGToCmdaWa1dgZLKFAjvmx6e6AjVTX7SVRibvsMGVB. Pool owner and rate_limit_admin are Squads v4 vault PDA 6aFBcUtZoRtaMKhvfvDKy5qrqBBHnVYfDQWpefQeNpUH (4-of-6 multisig 9nDFtfpS4q2ZbHVMUszvyvtoxD6g5vxnvFkJRNpKHujK), which is also the SPL mint freezeAuthority. Program upgrade authority is Chainlink MCMS timelock_signer PDA GoFoFfEDgALWRTw5dSY3VZQSwbFpvBEhDv1sFAWzYpbf."
+        },
+        "capDescription": "Solana USDf is an SPL Token bridge representation with no token-level supply cap and sole mintAuthority held by CCIP BurnMintTokenPool pool_signer PDA 3mLZYnTvGCqEHg5vfLRgweSjN46gpLrDwJdkPbK2RNKx; at slot 473103429 Ethereum lane rate limits were disabled (capacity 0, rate 0), leaving normal minting dependent on validated CCIP ingress.",
+        "canRaiseCap": true,
+        "observedAt": "2026-11-23",
+        "observedBlock": 473103429,
+        "sources": [
+          {
+            "label": "Chainlink USDf mainnet directory, retrieved 2026-11-23",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDf"
+          },
+          {
+            "label": "Chainlink Solana mainnet CCIP directory, retrieved 2026-11-23",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/chain/solana-mainnet"
+          },
+          {
+            "label": "Alchemy Solana Account Archive pinned reads at finalized slot 473103429 (2026-11-23T22:04:46Z, hash 54bpdwyk7ntxFFC9jriamBif2GYJHwJWqFdb2aCyQ49p)",
+            "url": "https://solana-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Chainlink CCIP Solana base-token-pool BaseConfig and ChainConfig schema at 1c1b0e10",
+            "url": "https://github.com/smartcontractkit/chainlink-ccip/blob/1c1b0e107765b915bb960f8b3e5fe3052ad22b06/chains/solana/contracts/programs/base-token-pool/src/common.rs"
+          },
+          {
+            "label": "Solscan Falcon USD mint",
+            "url": "https://solscan.io/token/9ksrtYx1vnRxr4X5YqmGxqRMRBhgsc6FfQwWjB1KZq2x"
+          }
+        ],
+        "evidence": "At finalized Solana slot 473103429 (2026-11-23T22:04:46Z, hash 54bpdwyk7ntxFFC9jriamBif2GYJHwJWqFdb2aCyQ49p), SPL Token mint 9ksrtYx1vnRxr4X5YqmGxqRMRBhgsc6FfQwWjB1KZq2x decoded to 9 decimals, 0 raw supply, and sole mintAuthority 3mLZYnTvGCqEHg5vfLRgweSjN46gpLrDwJdkPbK2RNKx. Cryptographic PDA derivation confirms 3mLZYnTvGCqEHg5vfLRgweSjN46gpLrDwJdkPbK2RNKx is the off-curve pool_signer PDA (seeds [\"ccip_tokenpool_signer\", mint], bump 255) and AHHhyt1DZTnSG5kC2Tru4otCDThVLYNihQuFsyCFjFZo is the State PDA (seeds [\"ccip_tokenpool_config\", mint], bump 254) of Chainlink BurnMintTokenPool program 41FGToCmdaWa1dgZLKFAjvmx6e6AjVTX7SVRibvsMGVB. The 368-byte State account (Anchor discriminator d8926b5e684bb6b1, version 1) decoded to token_program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA, pool_token_account FdyPD3et24VLj6rhViDkGaGrErNkTz2VfeoqKAjX3uhQ, router Ccip842gzYHhvdDkSyi2YVCoAWPbYJoApMFzSxQroE9C, rmn_remote RmnXLft1mSEwDgMKu2okYuHkiazxntFFcZFrrcXxYg7, owner and rate_limit_admin 6aFBcUtZoRtaMKhvfvDKy5qrqBBHnVYfDQWpefQeNpUH, proposed_owner none, and list_enabled false. The Ethereum ChainConfig PDA 4z2BbcRmUANLYQok79etVqXy7tHg2DYsLRCe9zjAxemn pointed to Ethereum LockRelease pool 0xecf61d6faa3b9fae7195af3bc9891450c1733f78 and canonical USDf with inbound/outbound rate limits disabled."
+      },
+      {
+        "id": "usdf-falcon-solana-pool-owner-squads",
+        "label": "USDf Solana CCIP pool owner and freeze-authority Squads v4 multisig",
+        "routeRefs": [
+          "solana:9ksrtYx1vnRxr4X5YqmGxqRMRBhgsc6FfQwWjB1KZq2x"
+        ],
+        "capabilities": [
+          "admin",
+          "rate-limit",
+          "peer-config",
+          "pause"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "9nDFtfpS4q2ZbHVMUszvyvtoxD6g5vxnvFkJRNpKHujK",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:solana:AHHhyt1DZTnSG5kC2Tru4otCDThVLYNihQuFsyCFjFZo",
+          "authority:solana:6aFBcUtZoRtaMKhvfvDKy5qrqBBHnVYfDQWpefQeNpUH",
+          "multisig:solana:9nDFtfpS4q2ZbHVMUszvyvtoxD6g5vxnvFkJRNpKHujK"
+        ],
+        "authorityType": "multisig",
+        "threshold": 4,
+        "signerCount": 6,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "As BurnMintTokenPool State owner, Squads v4 vault PDA 6aFBcUtZoRtaMKhvfvDKy5qrqBBHnVYfDQWpefQeNpUH can initialize, edit, append, or delete remote ChainConfig peer mappings and configure the lock/burn allow list.",
+          "rateLimits": "The same Squads v4 vault PDA is recorded as both owner and rate_limit_admin in State PDA AHHhyt1DZTnSG5kC2Tru4otCDThVLYNihQuFsyCFjFZo and can set or disable per-chain inbound and outbound rate-limit buckets.",
+          "pausersAdminsUpgraders": "Vault PDA 6aFBcUtZoRtaMKhvfvDKy5qrqBBHnVYfDQWpefQeNpUH holds SPL mint freezeAuthority (direct holder-account freeze capability), BurnMintTokenPool owner/rate_limit_admin, and CCIP router TokenAdminRegistry (22EmkLy4M3RgBNS2MReQewyo286fELfqgfimkRadHcwU) administrator (pending_administrator unset), so no separate router-registry controller exists. Under the pinned BurnMintTokenPool source, transferring SPL mint authority or upgrading the pool program requires the program upgrade authority rather than the pool owner."
+        },
+        "observedAt": "2026-11-23",
+        "observedBlock": 473103429,
+        "sources": [
+          {
+            "label": "Alchemy Solana Account Archive pinned reads at finalized slot 473103429 (2026-11-23T22:04:46Z, hash 54bpdwyk7ntxFFC9jriamBif2GYJHwJWqFdb2aCyQ49p)",
+            "url": "https://solana-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Solana public JSON-RPC (keyless PublicNode) finalized slot 473123818 (2026-11-23T23:17:46Z, hash HDFwPa2AodxLhpxkGHEvx4k3imsYybNBYSwgFDgVQKxW): router TokenAdminRegistry 22EmkLy4M3RgBNS2MReQewyo286fELfqgfimkRadHcwU administrator check",
+            "url": "https://solana-rpc.publicnode.com"
+          },
+          {
+            "label": "Squads v4 Multisig account layout at af94153",
+            "url": "https://github.com/Squads-Protocol/v4/blob/af94153ff77a28b6effe46b9c94baaa93742b48c/programs/squads_multisig_program/src/state/multisig.rs"
+          },
+          {
+            "label": "Squads v4 vault PDA derivation at af94153",
+            "url": "https://github.com/Squads-Protocol/v4/blob/af94153ff77a28b6effe46b9c94baaa93742b48c/sdk/multisig/src/pda.ts"
+          },
+          {
+            "label": "Chainlink CCIP Solana base-token-pool BaseConfig schema at 1c1b0e10",
+            "url": "https://github.com/smartcontractkit/chainlink-ccip/blob/1c1b0e107765b915bb960f8b3e5fe3052ad22b06/chains/solana/contracts/programs/base-token-pool/src/common.rs"
+          },
+          {
+            "label": "Chainlink USDf mainnet directory, retrieved 2026-11-23",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDf"
+          }
+        ],
+        "evidence": "At finalized Solana slot 473103429 (2026-11-23T22:04:46Z, hash 54bpdwyk7ntxFFC9jriamBif2GYJHwJWqFdb2aCyQ49p), SPL mint freezeAuthority, BurnMintTokenPool State.config.owner, and State.config.rate_limit_admin all resolved to off-curve address 6aFBcUtZoRtaMKhvfvDKy5qrqBBHnVYfDQWpefQeNpUH. At finalized slot 473123818 (2026-11-23T23:17:46Z, hash HDFwPa2AodxLhpxkGHEvx4k3imsYybNBYSwgFDgVQKxW), the router TokenAdminRegistry PDA 22EmkLy4M3RgBNS2MReQewyo286fELfqgfimkRadHcwU (bump 254 under Ccip842gzYHhvdDkSyi2YVCoAWPbYJoApMFzSxQroE9C, version 2) also named 6aFBcUtZoRtaMKhvfvDKy5qrqBBHnVYfDQWpefQeNpUH as administrator with pending_administrator unset. Cryptographic PDA derivation confirms 6aFBcUtZoRtaMKhvfvDKy5qrqBBHnVYfDQWpefQeNpUH is index-0 vault PDA (bump 254) of Squads v4 multisig 9nDFtfpS4q2ZbHVMUszvyvtoxD6g5vxnvFkJRNpKHujK (owned by SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf, create_key FTRxepE9yutkAh381xnuUF9eu5wwmLKr2SsYzzsB2Zd9, bump 255). Decoding the 330-byte Multisig account under the pinned af94153 layout confirms threshold 4, 6 members all carrying full mask 7 (Initiate|Vote|Execute: 6PrUn3U7fDUKG2t8F7Vc5yN1u9NLvUvAws3EnToGJitp, 6XDFVzBpMQ3CLRRuJdGBBm1en6bXGDVufeYAnAaowXhr, 9tnNHytjAPPYASBfRbigs2RH3QwBGd3bBtowM8z2WyQp, Am6UYBo17qV8n29EEj42GGjTmVosNfUQeqvB8xZHiEaz, CX7EKciJGtrtdX66K9y7WHFxExgGku7KJwVfWBhdgfRf, DnMcPhprXAM9ZuuuqhXf1EAQ4eiDsAm3GmUYXaLsx4Uk), time_lock 0, config_authority none (11111111111111111111111111111111), transaction_index 2, stale_transaction_index 0, and rent_collector None. This establishes signing topology, not signer key custody, human independence, or an exhaustive Squads spending-limit census."
+      },
+      {
+        "id": "usdf-falcon-solana-pool-program-upgrade-timelock",
+        "label": "USDf Solana CCIP BurnMintTokenPool program upgrade MCMS timelock",
+        "routeRefs": [
+          "solana:9ksrtYx1vnRxr4X5YqmGxqRMRBhgsc6FfQwWjB1KZq2x"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "GoFoFfEDgALWRTw5dSY3VZQSwbFpvBEhDv1sFAWzYpbf",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "program:solana:41FGToCmdaWa1dgZLKFAjvmx6e6AjVTX7SVRibvsMGVB",
+          "program:solana:DoajfR5tK24xVw51fWcawUZWhAXD8yrBJVacc13neVQA",
+          "upgrade-authority:solana:GoFoFfEDgALWRTw5dSY3VZQSwbFpvBEhDv1sFAWzYpbf"
+        ],
+        "authorityType": "timelock",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At finalized Solana slot 473103429, BurnMintTokenPool program 41FGToCmdaWa1dgZLKFAjvmx6e6AjVTX7SVRibvsMGVB ProgramData 4sVSCJqG9ZKEvnpN38qTzb7Kc8QdHakBgB87HN3FYRaz (lastDeployedSlot 470617388) named GoFoFfEDgALWRTw5dSY3VZQSwbFpvBEhDv1sFAWzYpbf as upgrade_authority_address. Under pinned BurnMintTokenPool source (context.rs at 1c1b0e10), the program upgrade authority can replace program bytecode, update global config, and call transfer_mint_authority_to_multisig; set_router and set_rmn use AdminUpdateTokenPool (allowed_admin_modify_token_pool), which additionally requires pool state.config.owner == upgrade_authority_address and therefore does not hold here because the pool is owned by Squads v4 vault PDA 6aFBcUtZoRtaMKhvfvDKy5qrqBBHnVYfDQWpefQeNpUH."
+        },
+        "bypassSurfaces": [
+          "Chainlink MCMS timelock program DoajfR5tK24xVw51fWcawUZWhAXD8yrBJVacc13neVQA configures min_delay = 10,800 seconds for scheduled ExecuteBatch operations, but exposes zero-delay bypasser_execute_batch (skipping readiness and predecessor checks) via bypasser_role_access_controller Gy7sHb3kewuJHGrgeaAEjJXgPtZpDhZYfBBw5CTV5dbo, whose AccessController list holds one live member (4znqm4V2iQYBqjSJvwwJN3TXSLGRxyf6W5pkyDCF3JWC, verified at finalized slot 473123818); timelockDelaySec records 0 as the fastest enforced path.",
+          "Underlying signer quorum/custody behind bypasser member 4znqm4V2iQYBqjSJvwwJN3TXSLGRxyf6W5pkyDCF3JWC, MCMS proposer/executor quorums, and Chainlink CCIP DON/RMN validator configuration were not enumerated in this review."
+        ],
+        "observedAt": "2026-11-23",
+        "observedBlock": 473103429,
+        "sources": [
+          {
+            "label": "Alchemy Solana Account Archive pinned reads at finalized slot 473103429 (2026-11-23T22:04:46Z) and upgrade tx at slot 470617388 (2026-11-17T17:28:04Z)",
+            "url": "https://solana-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Solana public JSON-RPC (keyless PublicNode) finalized slot 473123818 (2026-11-23T23:17:46Z, hash HDFwPa2AodxLhpxkGHEvx4k3imsYybNBYSwgFDgVQKxW): bypasser AccessController Gy7sHb3kewuJHGrgeaAEjJXgPtZpDhZYfBBw5CTV5dbo decode",
+            "url": "https://solana-rpc.publicnode.com"
+          },
+          {
+            "label": "Chainlink CCIP Solana BurnMintTokenPool TransferMintAuthority and AdminUpdateTokenPool constraints at 1c1b0e10",
+            "url": "https://github.com/smartcontractkit/chainlink-ccip/blob/1c1b0e107765b915bb960f8b3e5fe3052ad22b06/chains/solana/contracts/programs/burnmint-token-pool/src/context.rs"
+          },
+          {
+            "label": "Chainlink CCIP Solana MCMS timelock Config layout at 1c1b0e10",
+            "url": "https://github.com/smartcontractkit/chainlink-ccip/blob/1c1b0e107765b915bb960f8b3e5fe3052ad22b06/chains/solana/contracts/programs/timelock/src/state/config.rs"
+          },
+          {
+            "label": "Chainlink CCIP Solana MCMS timelock bypasser_execute_batch zero-delay execution at 1c1b0e10",
+            "url": "https://github.com/smartcontractkit/chainlink-ccip/blob/1c1b0e107765b915bb960f8b3e5fe3052ad22b06/chains/solana/contracts/programs/timelock/src/instructions/execute.rs"
+          },
+          {
+            "label": "Chainlink CCIP Solana MCMS access-controller AccessController layout at 1c1b0e10",
+            "url": "https://github.com/smartcontractkit/chainlink-ccip/blob/1c1b0e107765b915bb960f8b3e5fe3052ad22b06/chains/solana/contracts/programs/access-controller/src/lib.rs"
+          },
+          {
+            "label": "Chainlink Solana mainnet CCIP directory, retrieved 2026-11-23",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/chain/solana-mainnet"
+          }
+        ],
+        "evidence": "At finalized Solana slot 473103429 (2026-11-23T22:04:46Z, hash 54bpdwyk7ntxFFC9jriamBif2GYJHwJWqFdb2aCyQ49p), BPFLoaderUpgradeable program 41FGToCmdaWa1dgZLKFAjvmx6e6AjVTX7SVRibvsMGVB pointed to ProgramData 4sVSCJqG9ZKEvnpN38qTzb7Kc8QdHakBgB87HN3FYRaz with lastDeployedSlot 470617388 and upgrade_authority_address GoFoFfEDgALWRTw5dSY3VZQSwbFpvBEhDv1sFAWzYpbf. Pinned transaction 2pEB6wp4Y8U7N1AdPHPCNQcFr6GG57jaeqsEC9A8dfjh9WddtSMmkQAQjbQHvxkQTvZ61FLCv9y2hJqYhvvyJyRt at slot 470617388 (2026-11-17T17:28:04Z) shows Chainlink MCMS timelock program DoajfR5tK24xVw51fWcawUZWhAXD8yrBJVacc13neVQA executing ExecuteBatch to upgrade 41FGToCmdaWa1dgZLKFAjvmx6e6AjVTX7SVRibvsMGVB using Config PDA 9PAyynENMcbo5hhKhsC4CMMAN7HizZa9ndJx78VvfLW5 and signer PDA GoFoFfEDgALWRTw5dSY3VZQSwbFpvBEhDv1sFAWzYpbf. At slot 473103429, the 1272-byte Config account decoded to timelock_id BG7wilBWT4mc6p9yFnmfcu3yX7r9dazl (cryptographically deriving timelock_signer PDA GoFoFfEDgALWRTw5dSY3VZQSwbFpvBEhDv1sFAWzYpbf, bump 255), owner = timelock_signer PDA GoFoFfEDgALWRTw5dSY3VZQSwbFpvBEhDv1sFAWzYpbf (self-administered), min_delay 10800 seconds, blockedSelectorsLen 0, and non-zero bypasser_role_access_controller Gy7sHb3kewuJHGrgeaAEjJXgPtZpDhZYfBBw5CTV5dbo. At finalized slot 473123818 (2026-11-23T23:17:46Z, hash HDFwPa2AodxLhpxkGHEvx4k3imsYybNBYSwgFDgVQKxW), AccessController Gy7sHb3kewuJHGrgeaAEjJXgPtZpDhZYfBBw5CTV5dbo (owned by 6KsN58MTnRQ8FfPaXHiFPPFGDRioikj9CdPvPxZJdCjb, owner = GoFoFfEDgALWRTw5dSY3VZQSwbFpvBEhDv1sFAWzYpbf) decoded to access_list.len = 1 with sole member 4znqm4V2iQYBqjSJvwwJN3TXSLGRxyf6W5pkyDCF3JWC. Although standard scheduled operations enforce min_delay 10800 seconds, the pinned timelock/src/instructions/execute.rs exposes zero-delay bypasser_execute_batch with a live bypasser member whose underlying signer quorum/custody was not enumerated, so timelockDelaySec is recorded as 0 seconds (fastest enforced path)."
       }
     ]
   }

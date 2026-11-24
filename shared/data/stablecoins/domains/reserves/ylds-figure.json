@@ -2,8 +2,22 @@
   "id": "ylds-figure",
   "reserves": [
     {
+      "name": "U.S. Treasury bills",
+      "pct": 88.1872,
+      "risk": "very-low",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": [
+        "duration",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "seven-days",
+      "maturityDaysMax": 85
+    },
+    {
       "name": "Overnight Treasury repo agreements (UMB Bank)",
-      "pct": 73.7244,
+      "pct": 11.5683,
       "risk": "very-low",
       "assetClass": "repo",
       "issuerOrObligor": "UMB Bank N.A.",
@@ -14,38 +28,11 @@
         "custody"
       ],
       "liquidityHorizon": "one-day",
-      "maturityDaysMax": 2
-    },
-    {
-      "name": "U.S. Treasury bills",
-      "pct": 25.6875,
-      "risk": "very-low",
-      "assetClass": "treasury-bill",
-      "issuerOrObligor": "United States Treasury",
-      "riskFactors": [
-        "duration",
-        "liquidity",
-        "custody"
-      ],
-      "liquidityHorizon": "seven-days",
-      "maturityDaysMax": 55
-    },
-    {
-      "name": "Cash at UMB Bank N.A.",
-      "pct": 0.3587,
-      "risk": "very-low",
-      "assetClass": "bank-deposit",
-      "issuerOrObligor": "UMB Bank N.A.",
-      "riskFactors": [
-        "counterparty",
-        "custody",
-        "concentration"
-      ],
-      "liquidityHorizon": "immediate"
+      "maturityDaysMax": 1
     },
     {
       "name": "Cash at Flagstar Bank N.A.",
-      "pct": 0.2124,
+      "pct": 0.1365,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Flagstar Bank N.A.",
@@ -58,7 +45,7 @@
     },
     {
       "name": "Cash at Lead Bank (held via Figure Payments Corporation)",
-      "pct": 0.017,
+      "pct": 0.108,
       "risk": "low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Lead Bank (account held by affiliate Figure Payments Corporation)",
@@ -71,28 +58,40 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Pharos V9 Phase 3 curation lane cur-12 (SEC EDGAR primary filings)",
+    "reviewedAt": "2026-11-23",
+    "reviewer": "Pharos V9 curation pass 2026-11-23 (SEC EDGAR primary filings)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Figure Certificate Company FY2025 Form 10-K (KPMG audit opinion covers the schedules of investments as of December 31, 2025)",
+        "label": "Figure Certificate Company Q3 2026 Form 10-Q (unaudited, management-certified Schedules I and V as of September 30, 2026; filed November 16, 2026)",
+        "url": "https://www.sec.gov/Archives/edgar/data/1974395/000162828026073949/fcc-20260930.htm"
+      },
+      {
+        "label": "SEC EDGAR filing index, accession 0001628280-26-073949 (Q3 2026 Form 10-Q, filed 2026-11-16; accepted 2026-11-13 17:57 ET)",
+        "url": "https://www.sec.gov/Archives/edgar/data/1974395/000162828026073949/"
+      },
+      {
+        "label": "Figure Certificate Company FY2025 Form 10-K (KPMG LLP audit opinion dated 2026-03-19 remains the latest independent assurance, as of December 31, 2025)",
         "url": "https://www.sec.gov/Archives/edgar/data/1974395/000197439526000006/fcc-20251231.htm"
       },
       {
-        "label": "SEC EDGAR filing index, accession 0001974395-26-000006 (filed 2026-03-20)",
+        "label": "SEC EDGAR filing index, accession 0001974395-26-000006 (FY2025 Form 10-K, filed 2026-03-20)",
         "url": "https://www.sec.gov/Archives/edgar/data/1974395/000197439526000006/"
-      },
-      {
-        "label": "FCC June 30, 2026 Form 10-Q, filed August 14; supplemental historical observation by Sol curation campaign 2026-10-09 (W2L19Figure) at 2026-10-09T11:39:28Z, not the audited composition source",
-        "url": "https://www.sec.gov/Archives/edgar/data/1974395/000197439526000011/fcc-20260630.htm"
       }
     ],
-    "rationale": "Restated onto the audited period end so the composition and the independent attestor's report cover the same date. FCC's FY2025 Form 10-K Schedule I (Reg S-X Rule 12-21, investments of unaffiliated issuers as of December 31, 2025) reports $242.941 million of UMB Bank repurchase agreements collateralized by U.S. Treasury securities maturing 1/2/2026 and nine U.S. Treasury bills totalling $84.647 million maturing between 1/6/2026 and 2/24/2026, for $327.588 million of investments. Schedule V (Rule 12-27, qualified assets on deposit) adds $1.182 million of cash at UMB Bank, $0.700 million at Flagstar Bank and $0.056 million at Lead Bank (held via affiliate Figure Payments Corporation), for $329.526 million of qualified assets. Normalized weights are 73.7244%, 25.6875%, 0.3587%, 0.2124% and 0.0170%. The KPMG LLP report of independent registered public accounting firm dated 2026-03-19 states it audited the balance sheets 'including the schedules of investments' as of December 31, 2025, so these slices sit inside the audit opinion. The later 10-Q for the quarter ended 2026-03-31 (accession 0001974395-26-000008) shows a comparable but larger mix ($389.556 million repo, $208.906 million T-bills, $2.362 million Goldman Sachs Financial Square money market fund, $0.700 million Flagstar cash on $601.524 million of qualified assets); that filing carries no accountant's review report and its interim statements are labelled unaudited, so it is not used as the attested composition.",
-    "compositionBasis": "Figure Certificate Company FY2025 Form 10-K Schedules I and V (audited qualified assets and investment schedules as of December 31, 2025)",
-    "compositionAsOf": "2025-12-31",
+    "rationale": "Authored from Figure Certificate Company's Q3 2026 Form 10-Q (accession 0001628280-26-073949, period end September 30, 2026, filed November 16, 2026 after EDGAR acceptance on November 13, 2026 at 17:57 ET). Schedule I (Reg S-X Rule 12-21, investment in securities of unaffiliated issuers as of September 30, 2026) reports nine U.S. Treasury bills totalling $452.170 million ($24.946m due 10/22/2026, $24.914m due 11/3/2026, $99.574m due 11/10/2026, $24.891m due 11/12/2026, $24.874m due 11/19/2026, $19.869m due 12/3/2026, $99.268m due 12/10/2026, $84.293m due 12/17/2026 and $49.541m due 12/24/2026; longest maturity 85 days) and $59.315 million of UMB Bank N.A. repurchase agreements collateralized by U.S. Treasury securities maturing 10/1/2026 (1 day), for $511.485 million of investments. Schedule V (Reg S-X Rule 12-27, qualified assets on deposit as of September 30, 2026) reports $0 cash and $511.491 million of investments in securities at UMB Bank N.A. (Schedule I's $511.485 million plus $6 thousand of accrued interest receivable per Footnote 1), $0.700 million of cash at Flagstar Bank, N.A., and $0.554 million of FCC-attributable cash at Lead Bank (held in an account of affiliate Figure Payments Corporation), for $1.254 million of cash, $512.739 million of cash and cash equivalents, and $512.745 million of total qualified assets against $505.013 million of certificate reserve liability ($505.3 million Section 28 Reserve Requirement including $250 thousand minimum capital stock). Normalized over the $512.739 million cash and cash equivalents denominator (Schedule I investments plus Schedule V cash, matching the FY2025 10-K treatment), weights are 88.1872%, 11.5683%, 0.1365% and 0.1080%. These Q3 2026 interim financial statements and schedules are unaudited and management-certified by FCC's CEO and CFO under SOX Sections 302 and 906 (Exhibits 31.1, 31.2, 32.1 and 32.2); they carry no independent auditor's opinion or review report. KPMG LLP's FY2025 Form 10-K audit opinion dated 2026-03-19 (covering the December 31, 2025 balance sheets and schedules of investments) remains the latest independent assurance.",
+    "compositionBasis": "Figure Certificate Company Q3 2026 Form 10-Q Schedules I and V (unaudited, management-certified qualified assets and investment schedules as of September 30, 2026; KPMG LLP's FY2025 Form 10-K audit as of December 31, 2025 remains the latest independent assurance)",
+    "compositionAsOf": "2026-09-30",
+    "compositionFiling": {
+      "regulator": "sec",
+      "form": "10-Q",
+      "accession": "0001628280-26-073949",
+      "periodEnd": "2026-09-30",
+      "filedAt": "2026-11-16",
+      "url": "https://www.sec.gov/Archives/edgar/data/1974395/000162828026073949/fcc-20260930.htm"
+    },
     "scope": "full-composition",
-    "knownUnknownExposure": "The audited December 31, 2025 schedules identify the historical asset classes and depositaries, not current November holdings. Supplemental research on 2026-10-09T11:39:28Z recovered the newer June 30, 2026 Form 10-Q filed August 14. Its unaudited Schedule I reports Treasury bills of $273.078m, UMB repo of $82.361m and Hidden Road Partners CIV US LLC repo of $200m; Schedule V totals $561.910m including interest receivable, with UMB $555.722m, Flagstar $0.700m and Lead Bank $5.488m. Schedule VI reconciles $557.494m of certificate reserve liability. A later supplemental observation on 2026-11-20 recovered the September 30, 2026 Form 10-Q (accession 0001628280-26-073949); it is recorded in the Safety Score Review Evidence Log rather than this audited source list, whose entries compile into evidence dated to the audited period. These historical values are not current holdings, current token supply, independent financial assurance, or issuer redemption capacity. Neither the June nor the September unaudited schedules can renew the KPMG December audit or its composition clock; the audited reserve weights and custody shares remain tied to December 31.",
+    "knownUnknownExposure": "The Q3 2026 Form 10-Q schedules are unaudited and management-certified under SOX 302/906 as of September 30, 2026; they are not independent financial assurance, current November holdings, current token supply, or issuer redemption capacity. KPMG LLP's FY2025 Form 10-K audit opinion (dated 2026-03-19, as of December 31, 2025) remains the latest independent assurance on file, and this filing does not renew that audit. Schedule V includes $6 thousand (0.0012% of $512.745 million total qualified assets) of accrued interest receivable directly attributable to UMB-custodied securities without splitting it across individual Schedule I instruments; row weights normalize over the $512.739 million of Schedule I securities plus Schedule V cash.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
@@ -100,38 +99,42 @@
       {
         "name": "UMB Bank N.A.",
         "role": "custodian",
-        "sharePct": 99.7706,
+        "sharePct": 99.7555,
         "jurisdiction": "United States"
       },
       {
         "name": "Flagstar Bank N.A.",
         "role": "bank",
-        "sharePct": 0.2124,
+        "sharePct": 0.1365,
         "jurisdiction": "United States"
       },
       {
         "name": "Lead Bank (account held by affiliate Figure Payments Corporation)",
         "role": "bank",
-        "sharePct": 0.017,
+        "sharePct": 0.108,
         "jurisdiction": "United States"
       }
     ],
     "segregation": "segregated",
     "bankruptcyRemoteness": "contractual-only",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Pharos V9 Phase 3 curation lane cur-12 (SEC EDGAR primary filings)",
+    "reviewedAt": "2026-11-23",
+    "reviewer": "Pharos V9 curation pass 2026-11-23 (SEC EDGAR primary filings)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Figure Certificate Company FY2025 Form 10-K (KPMG audit opinion covers the schedules of investments as of December 31, 2025)",
-        "url": "https://www.sec.gov/Archives/edgar/data/1974395/000197439526000006/fcc-20251231.htm"
+        "label": "Figure Certificate Company Q3 2026 Form 10-Q (unaudited, management-certified Schedule V as of September 30, 2026; filed November 16, 2026)",
+        "url": "https://www.sec.gov/Archives/edgar/data/1974395/000162828026073949/fcc-20260930.htm"
       },
       {
-        "label": "SEC EDGAR filing index, accession 0001974395-26-000006 (filed 2026-03-20)",
-        "url": "https://www.sec.gov/Archives/edgar/data/1974395/000197439526000006/"
+        "label": "SEC EDGAR filing index, accession 0001628280-26-073949 (Q3 2026 Form 10-Q, filed 2026-11-16)",
+        "url": "https://www.sec.gov/Archives/edgar/data/1974395/000162828026073949/"
+      },
+      {
+        "label": "Figure Certificate Company FY2025 Form 10-K (KPMG LLP audit opinion dated 2026-03-19 remains the latest independent assurance, as of December 31, 2025)",
+        "url": "https://www.sec.gov/Archives/edgar/data/1974395/000197439526000006/fcc-20251231.htm"
       }
     ],
-    "uncertainty": "Schedule V of the audited FY2025 10-K names the depositaries holding qualified assets: UMB Bank N.A. ($328.770 million of the $329.526 million total, custodying all investments plus cash), Flagstar Bank N.A. ($0.700 million cash) and Lead Bank ($0.056 million, the FCC-attributable portion of an account held by affiliate Figure Payments Corporation). The certificates remain unsecured obligations of FCC and the filing does not establish statutory bankruptcy remoteness, so remoteness stays contractual-only. The filing does not state a general prohibition on reuse of the deposited collateral, so rehypothecation stays unknown."
+    "uncertainty": "Schedule V of the unaudited, management-certified Q3 2026 Form 10-Q names the depositaries holding qualified assets as of September 30, 2026: UMB Bank N.A. ($511.491 million including $6 thousand accrued interest receivable, or $511.485 million of Schedule I securities with $0 cash), Flagstar Bank, N.A. ($0.700 million cash) and Lead Bank ($0.554 million, the FCC-attributable portion of an account held by affiliate Figure Payments Corporation), totalling $512.745 million ($512.739 million excluding accrued interest). KPMG LLP's FY2025 Form 10-K audit as of December 31, 2025 remains the latest independent assurance. The certificates remain unsecured obligations of FCC and the filing does not establish statutory bankruptcy remoteness, so remoteness stays contractual-only. The filing does not state a general prohibition on reuse of the deposited collateral, so rehypothecation stays unknown."
   }
 }

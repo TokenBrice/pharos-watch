@@ -1913,12 +1913,39 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     accessModel: "whitelisted-onchain",
     outputAssets: ["usdc-circle"],
     capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "heuristic", basis: "strategy-buffer" },
-    costModel: undisclosedReviewedFee(
-      "The public SDK exposes a collateral defaultFee field, but reviewed primary sources do not publish the active numeric redemption fee",
-    ),
+    costModel: {
+      ...documentedVariableFee(
+        "On-chain CollateralConfig.default_fee for USDC is currently 10 bps (0.10%) and all 12 benefactors have no overrides at Sui checkpoint 348506669; deployed Move package constants::max_fee_bps() enforces a hard 100 bps (1.00%) ceiling across both default and per-benefactor fees.",
+        "documented-variable",
+      ),
+      feeBpsMin: 0,
+      feeBpsMax: 100,
+    },
+    v9RouteCostTerms: {
+      feeBpsMin: 0,
+      feeBpsMax: 100,
+      publishedFeeSchedule: {
+        reviewedAt: "2026-11-23",
+        reviewer: "Pharos 2026-11-23 night run (EXIT lane, exit-0)",
+        docs: [
+          sourceRef(
+            "suiUSDe Sui mainnet package 0xb81bd7d3d18ed48c31286ac66c2dc7f301a8b57227130de0dbddd5f7aa3a0ccc (constants::max_fee_bps and collateral_fee::validate) and Treasury/CollateralConfig at checkpoint 348506669",
+            "https://graphql.mainnet.sui.io/graphql",
+            ["route", "fees", "capacity"],
+          ),
+          sourceRef(
+            "suiUSDe SDK CollateralFee and BenefactorManager types",
+            "https://raw.githubusercontent.com/ethena-labs/suiusde-sdk/main/src/generated/suiusde/collateral_fee.ts",
+            ["fees"],
+          ),
+        ],
+        rationale:
+          "Deployed Sui Move package 0xb81bd7d3d18ed48c31286ac66c2dc7f301a8b57227130de0dbddd5f7aa3a0ccc hard-caps both mint and redeem fees via constants::max_fee_bps() = 100 bps (1.00%), enforced by collateral_fee::validate on both set_collateral_default_fees and set_benefactor_redeem_fee. At pinned Sui checkpoint 348506669 (2026-11-23T23:20:02Z), sole collateral USDC has default_fee.redeem = 10 bps and all 12 benefactors have empty per-benefactor collateral_fees overrides. The conservative 100 bps protocol ceiling bounds all-benefactor redemption fees under the deployed package; package UpgradeCap governance and Sui gas remain separate.",
+      },
+    },
     holderEligibility: "whitelisted-primary",
     routeExitCorrelation: "wrapper-to-parent-dependency",
-    reviewedAt: "2026-08-13",
+    reviewedAt: "2026-11-23",
     docs: [
       sourceRef("Sui/Ethena suiUSDe announcement", "https://www.sui.io/blog/suig-ethena-suiusde-stablecoin", [
         "route",

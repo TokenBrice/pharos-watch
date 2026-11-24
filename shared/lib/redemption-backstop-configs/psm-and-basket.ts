@@ -84,7 +84,8 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
   "cusd-cap": {
     ...basketRedeemBase,
     ...reviewedBasketRedemptionSupplyFull,
-    outputAssets: ["usdc-circle", "wtgxx-wisdomtree"],
+    outputAssets: ["usdc-circle"],
+    reviewedAt: "2026-11-23",
     capacityModel: { kind: "reserve-sync-metadata" },
     costModel: documentedVariableFee(
       "The cUSD vault's inherited Minter sets a flat on-chain redeem fee, queryable via getRedeemFee() (currently 0 ray / 0 bps; whitelisted users pay 0%); dynamic mint/burn fees do not apply to proportional redemption beyond this flat fee",
@@ -100,7 +101,7 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
     ],
     notes: [
       "Cap docs describe cUSD as always redeemable against the underlying reserve basket, with dynamic interest rates preventing full utilization so withdrawals remain atomic",
-      "At Ethereum block 25530449, the cUSD vault assets() list contained only USDC and wWTGXX; the live reserve config maps those contracts to usdc-circle and wtgxx-wisdomtree",
+      "At Ethereum block 26481069 (2026-11-23T23:17:35Z; hash 0x3b55da302cb4986b9fc9d5915a9033434709f06086a050f4c5ebddb66abd2386), the cUSD vault assets() list contained only USDC (0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48); WTGXX (0x434558cb1ebe9950e8a66f1ef8a15a473dce7d8c) is no longer in assets() and reads totalSupplies=0, availableBalance=0. USDC reads totalSupplies=54,106,129.038321, totalBorrows=46,862,287.729207, availableBalance=7,243,841.309114, paused()=false, getRedeemFee()=0.",
     ],
   },
   "honey-berachain": {

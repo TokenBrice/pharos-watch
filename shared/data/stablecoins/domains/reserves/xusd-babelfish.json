@@ -50,6 +50,21 @@
       ],
       "liquidityHorizon": "unknown",
       "sourceKey": "evm-branch-balances:rootstock:0xe700691da7b9851f2f35f8b8182c69c53ccad9db"
+    },
+    {
+      "name": "Legacy RIF Dollar RDOC",
+      "pct": 0,
+      "risk": "high",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Money on Chain (RIF Dollar on Chain)",
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "liquidity",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown",
+      "sourceKey": "evm-branch-balances:rootstock:0x2d919f19d4892381d58edebeca66d5642cef1a1f"
     }
   ],
   "reserveReview": {
@@ -62,8 +77,12 @@
         "url": "https://babelfish.gitbook.io/the-babelfish-gitbook/tutorials-and-guides/xusd-statistics"
       },
       {
-        "label": "Rootstock RPC",
+        "label": "Rootstock RPC (including pinned RDOC metadata and balance reads at block 9437737, 2026-11-23T23:19:47Z)",
         "url": "https://public-node.rsk.co"
+      },
+      {
+        "label": "Money on Chain RIF Dollar on Chain (RDOC) official smart-contract repository",
+        "url": "https://github.com/money-on-chain/RDOC-Contract"
       },
       {
         "label": "BabelFish reserve contract",
@@ -86,7 +105,7 @@
         "url": "https://rootstock.blockscout.com/tx/0xf34c76dd9c4e113ea46ce0514f6a88ad2e8c996a1bd6fb14afbc3902ff89292c"
       }
     ],
-    "rationale": "The independent BabelFish adapter read the configured Rootstock reserve-contract balances at the exact capture. Normalizing the three positive dollar-pegged balances produced 89.4% DLLR, 9.7% bridged USDT, and 0.9% DOC; configured USDC and DAI balances were zero. Incident annotation reviewed 2026-11-12: the Sovryn XUSD/WRBTC pair was delisted on November 2 following the November 1 attack. Separately, the November 4 BabelFish ownership stop removed the conversion manager's XUSD mint/burn authority, stopping minting and redemption. Current pinned owner reads retain the containment multisig. The November 8 attack disclosure records 69,381.254896 XUSD debited from reward inventory, with examined DOC/DLLR principal returned; it expressly does not establish an equal backing shortfall for remaining XUSD holders or certify liquidity. The November 9 recovery manifest retains the stop and gives no restart date. Editorial choice: keep active monitoring with a conversion-halt notice and review hold because permanent failure or discontinuation is not established. This annotation does not renew the July composition/review dates, percentages, bridge valuation or whole-book coverage.",
+    "rationale": "The independent BabelFish adapter read the configured Rootstock reserve-contract balances at the exact capture. Normalizing the three positive dollar-pegged balances produced 89.4% DLLR, 9.7% bridged USDT, and 0.9% DOC; configured USDC and DAI balances were zero. Incident annotation reviewed 2026-11-12: the Sovryn XUSD/WRBTC pair was delisted on November 2 following the November 1 attack. Separately, the November 4 BabelFish ownership stop removed the conversion manager's XUSD mint/burn authority, stopping minting and redemption. Current pinned owner reads retain the containment multisig. The November 8 attack disclosure records 69,381.254896 XUSD debited from reward inventory, with examined DOC/DLLR principal returned; it expressly does not establish an equal backing shortfall for remaining XUSD holders or certify liquidity. The November 9 recovery manifest retains the stop and gives no restart date. Editorial choice: keep active monitoring with a conversion-halt notice and review hold because permanent failure or discontinuation is not established. This annotation does not renew the July composition/review dates, percentages, bridge valuation or whole-book coverage. Scoped metadata classification 2026-11-23: adds a pct 0 metadata-only row keyed to evm-branch-balances:rootstock:0x2d919f19d4892381d58edebeca66d5642cef1a1f for Legacy RIF Dollar RDOC, preserving the July 15 composition/review dates and weights. At pinned Rootstock block 9437737 (hash 0x333d41547680b2a8e5327a96d5cb35036a69f9dce3355d80844868a2606d27cf, 2026-11-23T23:19:47Z), contract 0x2d919f19d4892381d58edebeca66d5642cef1a1f returns name() RIF Dollar on Chain and symbol() RDOC, with balanceOf(BabelFish 0x1440d19436bEEaf8517896bffB957A88ec95a00F) = 0.9620017253309172 RDOC against XUSD totalSupply 761,359.4966534296. Money on Chain's official RDOC-Contract repository confirms RDOC is a RIF-collateralized USD stablecoin (untracked in Pharos), with unknown liquidityHorizon.",
     "compositionBasis": "Exact live Rootstock reserve-contract balances captured on 2026-07-15",
     "compositionAsOf": "2026-07-15",
     "scope": "full-composition",

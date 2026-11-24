@@ -16,6 +16,61 @@
     "reviewer": "Sol curation pass 2026-10-01 (CurA31YLDS)",
     "reviewedAt": "2026-10-01"
   },
+  "oracleRisk": {
+    "tier": "oracleless",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "YLDS (Figure Transferable Certificates) are SEC-registered unsecured face-amount debt securities issued and surrendered by Figure Certificate Company at a fixed face amount of $0.01 per certificate (100 certificates = $1.00 at issuance, on-chain transfer, and surrender), with no surrender charges. Simple interest accrues daily at the overnight Secured Overnight Financing Rate (SOFR, administered and published by the Federal Reserve Bank of New York) less 35 basis points (minimum 0.00%) and is paid monthly in U.S. dollars automatically reinvested in additional certificates (unless an investor opts out), leaving each certificate's face amount fixed at $0.01 rather than priced by a market or NAV oracle. Neither the April 24, 2026 SEC Form 497 prospectus, the Q3 2026 Form 10-Q (ended September 30, 2026, signed November 13, 2026), nor the official YLDS site references any price feed or pricing contract. At pinned Provenance block height 34866850 (2026-11-23T22:39:12Z, hash eTSirBQQof/BV1NIJbbvPXww6Fk4IlFhASGhhtKzQZk=), the uylds.fcc MarkerAccount (pb1y65reayayr4285ajlsltc8c8csvjcp5jlmys2f) has no oracle or pricing-contract field, and the Stellar issuer account (GAC7MOPTQLQUM3KC24AW4GHS3RLF72LPEZO54AH7EZ6TSMGRB5SOAVH3) is a standard native asset issuer account with no pricing contract.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-11-23",
+      "reviewer": "Pharos 2026-11-23 unknowns assessment (ylds-figure oracle review)",
+      "rationale": "YLDS is governed by a top-level issuer face-amount mint and redemption authority with no borrower collateral or liquidation branches. Figure Certificate Company issues and surrenders certificates at the fixed $0.01 face amount (100 certificates = $1.00) with monthly SOFR-minus-35bps interest paid in additional certificates rather than via a fluctuating on-chain NAV oracle, and neither Provenance nor Stellar carries a price feed or pricing contract.",
+      "sources": [
+        {
+          "label": "Figure Certificate Company SEC Form 497 Prospectus dated 2026-04-24: $0.01 face amount, overnight SOFR less 35 bps (min 0.00%), monthly reinvestment in additional Certificates, no oracle",
+          "url": "https://www.sec.gov/Archives/edgar/data/1974395/000149315226018903/form497.htm"
+        },
+        {
+          "label": "Figure Certificate Company Q3 2026 Form 10-Q (ended 2026-09-30, signed 2026-11-13): stated-amount debt security paying overnight SOFR less 35 bps (min 0.00%), no oracle",
+          "url": "https://www.sec.gov/Archives/edgar/data/1974395/000162828026073949/fcc-20260930.htm"
+        },
+        {
+          "label": "YLDS official website (retrieved 2026-11-23): fixed $0.01 face amount (100 YLDS = $1.00), NY Fed SOFR less 35 bps",
+          "url": "https://www.ylds.com/"
+        },
+        {
+          "label": "Provenance uylds.fcc MarkerAccount pinned at height 34866850 (2026-11-23T22:39:12Z): no oracle field",
+          "url": "https://api.provenance.io/provenance/marker/v1/detail/uylds.fcc"
+        }
+      ]
+    },
+    "reviewedAt": "2026-11-23",
+    "reviewer": "Pharos 2026-11-23 unknowns assessment (ylds-figure oracle review)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Figure Certificate Company SEC Form 497 Prospectus dated 2026-04-24: $0.01/certificate fixed face amount, overnight SOFR less 35 bps (min 0.00%), monthly reinvestment, no oracle or price feed",
+        "url": "https://www.sec.gov/Archives/edgar/data/1974395/000149315226018903/form497.htm"
+      },
+      {
+        "label": "Figure Certificate Company Q3 2026 Form 10-Q (period ended 2026-09-30, signed 2026-11-13): Transferable Certificates terms and SOFR less 35 bps interest, no oracle",
+        "url": "https://www.sec.gov/Archives/edgar/data/1974395/000162828026073949/fcc-20260930.htm"
+      },
+      {
+        "label": "YLDS official website (retrieved 2026-11-23): fixed $0.01 face amount, Federal Reserve Bank of New York SOFR source",
+        "url": "https://www.ylds.com/"
+      },
+      {
+        "label": "Provenance uylds.fcc MarkerAccount pinned at height 34866850 (2026-11-23T22:39:12Z, hash eTSirBQQof/BV1NIJbbvPXww6Fk4IlFhASGhhtKzQZk=): restricted marker with no oracle field",
+        "url": "https://api.provenance.io/provenance/marker/v1/detail/uylds.fcc"
+      },
+      {
+        "label": "Stellar Horizon YLDS issuer account GAC7MOPTQLQUM3KC24AW4GHS3RLF72LPEZO54AH7EZ6TSMGRB5SOAVH3 (last_modified_ledger 65530799): standard native asset issuer, no pricing contract",
+        "url": "https://horizon.stellar.org/accounts/GAC7MOPTQLQUM3KC24AW4GHS3RLF72LPEZO54AH7EZ6TSMGRB5SOAVH3"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Figure's current developer inventory explicitly lists exactly two live YLDS chains: Provenance and Stellar, both permissioned FCC certificates. The June 30, 2026 prospectus supplement permits other chains on request; approval is not a live deployment. The two exact native identities below cover the published live inventory. FCC's transfer agent conserves the official certificate ownership record across issuer-controlled burn-or-vault/mint moves; this is not an independently validated third-party bridge. Hastra wYLDS remains a distinct instrument.",

@@ -208,6 +208,31 @@
         "verified": true,
         "sourceUrl": "https://github.com/mento-protocol/mento-analytics-api/blob/main/src/api/reserve/config/assets.config.ts"
       }
+    },
+    {
+      "name": "sfrxUSD (Staked Frax USD, Celo OFT)",
+      "pct": 0,
+      "risk": "medium",
+      "coinId": "sfrxusd-frax",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Frax Finance and LayerZero OFT bridge",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "unknown",
+      "sourceKey": "mento:reserve:sfrxusd",
+      "intermediary": {
+        "kind": "bridge",
+        "label": "sfrxUSD (LayerZero OFT)",
+        "chain": "celo",
+        "contract": "0x00000000fD8C4B8A413A06821456801295921a71",
+        "verified": true,
+        "sourceUrl": "https://github.com/mento-protocol/mento-analytics-api/blob/main/src/api/reserve/config/assets.config.ts"
+      }
     }
   ],
   "reserveReview": {
@@ -258,9 +283,13 @@
       {
         "label": "Agora Instant Settlement whitelist and inventory restrictions, retrieved 2026-10-20",
         "url": "https://docs.agora.finance/instant-settlement"
+      },
+      {
+        "label": "Celo Dwellir RPC: pinned sfrxUSD OFT reads at block 83575585 (2026-11-23T23:25:43Z) for 0x00000000fD8C4B8A413A06821456801295921a71",
+        "url": "https://api-celo-mainnet-archive.n.dwellir.com"
       }
     ],
-    "rationale": "audm-mento retains the shared Mento Reserve backing model. All positive holdings are refreshed from one issuer API capture on 2026-10-27 (collateral total $16.81M; CELO fell from 24.9% to 8.9%, AUSD and USDT rose with Monad AUSD and Celo USDT included in their native parents). Native parents keep their canonical collateral link; Celo axlUSDC and axlEUROC and Monad USDT0 carry explicit bridge annotations with registry contracts and fixed-block symbols confirmed at Celo 78860375 and Monad 109288367. Bridge representation contracts are unchanged in the issuer asset registry re-read 2026-10-27; verification establishes representation identity and documented issuer lineage, not independent escrow solvency. GBPm, JPYm and CHFm remain separate USDm-collateral CDPs; no underlying basket is duplicated on those coins.",
+    "rationale": "audm-mento retains the shared Mento Reserve backing model. All positive holdings are refreshed from one issuer API capture on 2026-10-27 (collateral total $16.81M; CELO fell from 24.9% to 8.9%, AUSD and USDT rose with Monad AUSD and Celo USDT included in their native parents). Native parents keep their canonical collateral link; Celo axlUSDC and axlEUROC and Monad USDT0 carry explicit bridge annotations with registry contracts and fixed-block symbols confirmed at Celo 78860375 and Monad 109288367. Bridge representation contracts are unchanged in the issuer asset registry re-read 2026-10-27; verification establishes representation identity and documented issuer lineage, not independent escrow solvency. GBPm, JPYm and CHFm remain separate USDm-collateral CDPs; no underlying basket is duplicated on those coins. Supplemental 2026-11-23 pinned reads at Celo block 83575585 (hash 0x0f6b981cd723cbaaed3fbaf6ccab12df8a0ed33e1826233cf313cad5d228a62a, 2026-11-23T23:25:43Z) verified Mento Reserve Safe's Celo sfrxUSD holding (0x00000000fD8C4B8A413A06821456801295921a71: name Staked Frax USD, symbol sfrxUSD, decimals 18, balance 816,321.359743, LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c, Fraxtal EID 30255 peer 0x88aa7854d3b2daa5e37e7ce73a1f39669623a361 matching Frax's canonical sfrxUSD lockbox), added as a keyed zero-percent classification row without altering the historical book or review date. Unlike mento:reserve:susds (immediate direct ERC-4626 savings redemption), sfrxUSD is classified as protocol-position with medium risk and unknown liquidityHorizon (matching the usdaf-asymmetry and usdp-parallel precedent) because sfrxusd-frax allocates across Frax's mixed Benchmark Yield Strategy with withheld parent-backing inheritance, disables direct canonical ERC-4626 withdrawals, settles queued cross-chain via Fraxtal MintRedeemer/RemoteHop, and is held here as a Celo LayerZero OFT bridge representation.",
     "compositionBasis": "Issuer reserve API collateral.assets captured 2026-10-27; measured percentages grouped by native economic parent (Ethereum and Monad AUSD; Ethereum and Celo USDT; Celo, Monad, Polygon and Ethereum USDC; ETH with Celo WETH) with axlUSDC, axlEUROC and USDT0 retained separately. Capture date is an observation date; the API supplies no independently verified source update clock.",
     "compositionAsOf": "2026-10-27",
     "scope": "full-composition",

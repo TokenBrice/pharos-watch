@@ -110,7 +110,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "All five deployments are issuer-native liabilities with separate LayerZero interoperability. October 15 pins retain all four peers, send/receive libraries, four required DVNs and one-signature worker rosters on Ethereum, Base, Arc and Tempo. Solana's freeze-authority wallet also holds the OFT program upgrade authority and can replace Store mint-signing logic. Solana validation and exact Tempo executable authorization remain unresolved; current configuration is not immutable conservation or independent-key proof.",
+    "summary": "All five deployments are issuer-native liabilities with separate LayerZero interoperability. October 15 pins retain all four peers, send/receive libraries, four required DVNs and one-signature worker rosters on Ethereum, Base, Arc and Tempo; November 24 finalized Solana slot 473137077 additionally pins all four Solana Store peers, ULN302 libraries, OAppRegistry delegate BRi183SZJLrCVAqFQ69Zi95UdrumSpazdeuM4nLKQz2X, and four required DVNs (Luganodes, Canary, Nansen, Deutsche Telekom). Solana's freeze-authority wallet also holds the OFT program upgrade authority and OAppRegistry delegate and can replace Store mint-signing logic. Solana ELF verification and exact Tempo executable source remain unresolved; current configuration is not immutable conservation or independent-key proof.",
     "reviewedAt": "2026-10-15",
     "reviewer": "Batch-64 review (Rev_GbpaAgant)",
     "confidence": "manual-review",
@@ -489,7 +489,7 @@
       },
       {
         "id": "gbpa-solana-tempo-message-validation",
-        "label": "GBPA Solana and Tempo unresolved validation closure",
+        "label": "GBPA Solana and Tempo LayerZero message validation",
         "routeRefs": [
           "tempo:0x20c0000000000000000000000a6da882d075a4c3",
           "solana:DYoCmA91VE8REbWNw3kM736PN7vv97qc2jr5wmUbuNtZ"
@@ -499,7 +499,7 @@
           "bridge-burn",
           "validator"
         ],
-        "authorityType": "unknown",
+        "authorityType": "validator-quorum",
         "canRaiseCap": "unknown",
         "failureDomainKeys": [
           "protocol:layerzero"
@@ -521,9 +521,22 @@
           {
             "label": "Exact Solana OFT program executable verification status",
             "url": "https://verify.osec.io/status/Cxb1kfkcNVWEBhxC6R76He8orpfYyCE2j1pps3t6FVuM"
+          },
+          {
+            "label": "Solana LayerZero V2 Endpoint/ULN302 PDA pin at finalized slot 473137077 (2026-11-24T00:05:18Z, blockhash HHetbhgT6RJqhtzqmuE8G2mqoFXQW1W27Le8FwdNYTzn)",
+            "url": "https://solana-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "LayerZero V2 Solana DVN metadata registry",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/dvns"
           }
         ],
-        "evidence": "Tempo block 44247678 independently refreshes all four peers, send/receive libraries and four required DVNs, each quorum one with one signer. Exact proxy implementation/admin/owner/runtime are unchanged, but source remains unavailable, so executable authorization and replacement closure remain open. Solana exact Account Archive slot 457210287 binds mint, multisig, Store, program, programData and upgrade wallet at one finalized state. The deployed programData ELF remains 636736 bytes with SHA-256 838d4306aa77c07906c0190e0b319426bb6bd3e161bf4f55394fa5f1c40e34e6. OSEC still reports is_verified=false with no repository or commit. Solana Store-specific receive-library/DVN configuration and executable correspondence remain unresolved. Successful account archival access closes the previous helper-availability claim, not the validation/executable gap."
+        "routeChecks": {
+          "onchainAmountBounds": "OFT debit/credit implements cross-chain transfer accounting without establishing a native fiat issuance bound or verified source correspondence for the Solana ELF and Tempo adapter implementation.",
+          "attestorQuorum": "Tempo block 44247678 pins four required DVNs (each quorum one, one signer) on all four lanes. Solana finalized slot 473137077 (2026-11-24T00:05:18Z) pins ULN302 (7a4WjyR8VZ7yZz5XJAKm39BUGn5iT9CKcv2pmG9tdXVH) SendConfig and ReceiveConfig PDAs across all four remote lanes (Ethereum 30101: 32 conf, Base 30184: 15 conf, Tempo 30410: 20 conf, Arc 30417: 6 conf; send 32 conf): each lane requires 4-of-4 DVNs (Luganodes 41QAdzUraTcvk1P2B6fcs5nQ4EeEKEGnQy5EPpCQ5AdX, Canary 7jMeX5mzXnSSKYd8DxBDP4xMnkNFZZZm5W28FWUTbwU3, Nansen Fn8yyjaLbqw9FZyyLaTkb8o8RWp3vztxNChtPxcV1cLV, Deutsche Telekom FxFxe8j7e2xgpP9bw8LUehmz7DoQXaNFadJMEUKwBcRs) with zero optional DVNs.",
+          "trustedPeerOrRemote": "Solana finalized slot 473137077 pins OAppRegistry (BF5TDbDgVS3CE5mXw4ku4FebAWLqn4V4jc68ULgcc8Fb) delegate BRi183SZJLrCVAqFQ69Zi95UdrumSpazdeuM4nLKQz2X and all four OFT Peer PDAs matching Ethereum/Base/Arc 0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b and Tempo adapter 0x5575151bf6076129d0729c0f40d967d41df34a63; Tempo block 44247678 pins all four reciprocal peers."
+        },
+        "evidence": "Tempo block 44247678 independently refreshes all four peers, send/receive libraries and four required DVNs, each quorum one with one signer. Exact Tempo proxy implementation/admin/owner/runtime are unchanged, while contracts.tempo.xyz and Sourcify still return 404 for 0x57d51739b3c73bc38819556835a9a6e14474e782 on 2026-11-24, leaving executable authorization closure open. Solana Account Archive slot 457210287 binds mint, multisig, Store, program, programData and upgrade wallet (ELF 636736 bytes, SHA-256 838d4306aa77c07906c0190e0b319426bb6bd3e161bf4f55394fa5f1c40e34e6). Supplementary finalized Solana read at slot 473137077 (2026-11-24T00:05:18Z, blockhash HHetbhgT6RJqhtzqmuE8G2mqoFXQW1W27Le8FwdNYTzn; original observedAt preserved) decodes OAppRegistry delegate BRi183SZJLrCVAqFQ69Zi95UdrumSpazdeuM4nLKQz2X, all four Peer PDAs (Ethereum 30101, Base 30184, Tempo 30410, Arc 30417), ReceiveLibraryConfig/SendLibraryConfig pointing to ULN302 2XgGZG4oP29U3w5h4nTk1V2LFHL23zKDPJjs3psGzLKQ, and custom ReceiveConfig/SendConfig requiring 4-of-4 DVNs (Luganodes, Canary, Nansen, Deutsche Telekom; zero optional DVNs), establishing validator-quorum message validation across both lanes. OSEC still reports is_verified=false on 2026-11-24, so deployed-executable source correspondence on Solana and Tempo remains open under scopedQuestions."
       },
       {
         "id": "gbpa-solana-oft-program-upgrade",
@@ -564,7 +577,7 @@
     "scopedQuestions": [
       {
         "controlRef": "gbpa-solana-tempo-message-validation",
-        "question": "What are the Solana Store-specific receive-library/DVN and peer configurations with deployed-executable correspondence, and complete Tempo adapter replacement/authorization and route-limit closure? October 15 Tempo block 44247678 refreshes proxy slots, adapter/admin owners, exact runtime and all four peer/library/DVN lanes, but exact metadata remains inaccessible. Solana Account Archive slot 457210287 successfully refreshes the six-account controller census and unchanged deployed ELF; OSEC still reports unverified without repository/commit. Account-state availability is now resolved; executable and validation closure is not.",
+        "question": "What establishes deployed-executable correspondence for the Solana OFT program ELF (Cxb1kfkcNVWEBhxC6R76He8orpfYyCE2j1pps3t6FVuM) and complete Tempo adapter implementation source/authorization closure (0x57d51739b3c73bc38819556835a9a6e14474e782)? Finalized Solana slot 473137077 (2026-11-24) now pins all four Store peers, ULN302 libraries, OAppRegistry delegate and 4-of-4 required DVNs (Luganodes, Canary, Nansen, Deutsche Telekom), and Tempo block 44247678 pins all four Tempo peers/libraries/DVNs; however, OSEC still reports is_verified=false and contracts.tempo.xyz/Sourcify return 404 on 2026-11-24, leaving executable source correspondence open.",
         "subject": "execution-scope",
         "reviewedAt": "2026-10-29",
         "reviewer": "R-SCOPE-1 renewal 2026-10-29 (pinned primary-source re-read)",

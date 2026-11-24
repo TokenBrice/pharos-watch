@@ -210,6 +210,31 @@
         "verified": true,
         "sourceUrl": "https://github.com/mento-protocol/mento-analytics-api/blob/main/src/api/reserve/config/assets.config.ts"
       }
+    },
+    {
+      "name": "sfrxUSD (Staked Frax USD, Celo OFT)",
+      "pct": 0,
+      "risk": "medium",
+      "coinId": "sfrxusd-frax",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Frax Finance and LayerZero OFT bridge",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "unknown",
+      "sourceKey": "mento:reserve:sfrxusd",
+      "intermediary": {
+        "kind": "bridge",
+        "label": "sfrxUSD (LayerZero OFT)",
+        "chain": "celo",
+        "contract": "0x00000000fD8C4B8A413A06821456801295921a71",
+        "verified": true,
+        "sourceUrl": "https://github.com/mento-protocol/mento-analytics-api/blob/main/src/api/reserve/config/assets.config.ts"
+      }
     }
   ],
   "reserveReview": {
@@ -240,9 +265,13 @@
       {
         "label": "Fixed-block representation symbols: Celo 78860375 and Monad 109288367 (2026-09-30)",
         "url": "https://forno.celo.org"
+      },
+      {
+        "label": "Celo Dwellir RPC: pinned sfrxUSD OFT reads at block 83575585 (2026-11-23T23:25:43Z) for 0x00000000fD8C4B8A413A06821456801295921a71",
+        "url": "https://api-celo-mainnet-archive.n.dwellir.com"
       }
     ],
-    "rationale": "Fresh capture from the issuer-run reserve API on 2026-09-04 reported $19,855,565.93014987 of collateral; companion overview timestamp 2026-09-04T17:48:54.371Z. Grouping the 17 chain-level positions by stablecoin family yields AUSD 25.2901331784%, sUSDS 23.6406111204%, CELO 19.8880648425%, USDT/USDT0 11.1910668211%, EUROP 5.8495797572%, EURC/axlEUROC 5.7192251470%, USDC/axlUSDC 4.2423024173%, stETH 3.1196575688%, and ETH/WETH 1.0593591473%, normalized to 100%; WBTC is a zero-weight dust row and is omitted. Each tracked stablecoin exposure has an exact collateral edge; CELO, stETH, and ETH remain explicit exogenous collateral. The September 4 curated parent-family shares remain on the proof-of-reserves period-end basis. September 30 verified representation identities are keyed zero-percent classification rows for new live slices; their zero authored weights do not assert historical absence or a September 4 native/bridge split. New live observations supply independently measured representation weights and remain subject to normal evidence admission.",
+    "rationale": "Fresh capture from the issuer-run reserve API on 2026-09-04 reported $19,855,565.93014987 of collateral; companion overview timestamp 2026-09-04T17:48:54.371Z. Grouping the 17 chain-level positions by stablecoin family yields AUSD 25.2901331784%, sUSDS 23.6406111204%, CELO 19.8880648425%, USDT/USDT0 11.1910668211%, EUROP 5.8495797572%, EURC/axlEUROC 5.7192251470%, USDC/axlUSDC 4.2423024173%, stETH 3.1196575688%, and ETH/WETH 1.0593591473%, normalized to 100%; WBTC is a zero-weight dust row and is omitted. Each tracked stablecoin exposure has an exact collateral edge; CELO, stETH, and ETH remain explicit exogenous collateral. The September 4 curated parent-family shares remain on the proof-of-reserves period-end basis. September 30 verified representation identities are keyed zero-percent classification rows for new live slices; their zero authored weights do not assert historical absence or a September 4 native/bridge split. Supplemental 2026-11-23 pinned reads at Celo block 83575585 (hash 0x0f6b981cd723cbaaed3fbaf6ccab12df8a0ed33e1826233cf313cad5d228a62a, 2026-11-23T23:25:43Z) verified Mento Reserve Safe's Celo sfrxUSD holding (0x00000000fD8C4B8A413A06821456801295921a71: name Staked Frax USD, symbol sfrxUSD, decimals 18, balance 816,321.359743, LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c, Fraxtal EID 30255 peer 0x88aa7854d3b2daa5e37e7ce73a1f39669623a361 matching Frax's canonical sfrxUSD lockbox), added as a keyed zero-percent classification row without altering the 2026-09-04 historical book or 2026-09-30 review date. Unlike mento:reserve:susds (immediate direct ERC-4626 savings redemption), sfrxUSD is classified as protocol-position with medium risk and unknown liquidityHorizon (matching the usdaf-asymmetry and usdp-parallel precedent) because sfrxusd-frax allocates across Frax's mixed Benchmark Yield Strategy with withheld parent-backing inheritance, disables direct canonical ERC-4626 withdrawals, settles queued cross-chain via Fraxtal MintRedeemer/RemoteHop, and is held here as a Celo LayerZero OFT bridge representation. New live observations supply independently measured representation weights and remain subject to normal evidence admission.",
     "compositionBasis": "Issuer-run Mento Reserve API capture dated 2026-09-04, grouped by stablecoin family; USDm is reserve-backed under Mento's documented model",
     "compositionAsOf": "2026-09-04",
     "scope": "full-composition",

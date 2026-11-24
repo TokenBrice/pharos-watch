@@ -665,13 +665,15 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
     // that cap inconsistent with measured supply. Prefer the native stock.
     preferMcap: true,
   },
-  // Reviewed 2026-10-25: Ethereum LockRelease / BSC+Monad BurnMint pools.
+  // Reviewed 2026-10-25 (updated 2026-11-23 cur-chains): Ethereum LockRelease /
+  // BSC+Monad+X Layer BurnMint pools (X Layer 0.0004 sUSDat seed allows zero).
   // https://docs.chain.link/ccip/directory/mainnet/token/sUSDat
   "susdat-saturn": {
     aggregateContracts: [
       { chain: "ethereum" },
       { chain: "bsc" },
       supplyProbeChain("monad"),
+      supplyProbeChain("xlayer", { allowZeroSupply: true }),
     ],
     canonicalSupplyChain: "ethereum",
   },
@@ -759,10 +761,15 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
       supplyProbeChain("tac"),
     ],
   },
-  // Reviewed 2026-10-25: sUSN locks shares in its Ethereum token contract;
-  // conserve canonical totalSupply and isolate self-escrow beyond read satellites.
-  // Retain deprecated Sophon/TAC stock until burned; they are not additive claims.
+  // Reviewed 2026-10-25 (updated 2026-11-23 cur-chains): sUSN locks shares in its
+  // Ethereum token contract; conserve canonical totalSupply and isolate self-escrow
+  // beyond read satellites. Retain deprecated Sophon/TAC stock until burned; BSC
+  // reads zero at pin (allowZeroSupply), and Sui LayerZero OFT stays in
+  // unreadableDeployments / escrowResidual until a reviewed Sui supply reader lands.
   "susn-noon": {
+    unreadableDeployments: [
+      { chain: "sui", address: "0x0a672389b7b73df60d40666ac9545433d59d3128086b9e3a425a66bbffdf4dc5::susn::SUSN" },
+    ],
     aggregateContracts: [
       { chain: "ethereum" },
       supplyProbeChain("zksync"),
@@ -773,6 +780,8 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
       { chain: "citrea", rpcUrl: "https://rpc.mainnet.citrea.xyz" },
       supplyProbeChain("berachain"),
       supplyProbeChain("tac"),
+      { chain: "solana" },
+      { chain: "bsc", allowZeroSupply: true },
     ],
     canonicalSupplyChain: "ethereum",
     escrowResidual: {

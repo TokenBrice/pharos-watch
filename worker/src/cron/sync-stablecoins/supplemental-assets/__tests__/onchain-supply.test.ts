@@ -920,7 +920,7 @@ describe("curation-expanded complete supply rosters", () => {
     {
       id: "susn-noon",
       canonical: "ethereum",
-      supplies: { ethereum: 100, zksync: 5, sophon: 5, starknet: 5, hyperevm: 5, base: 5, citrea: 5, berachain: 5, tac: 5 },
+      supplies: { ethereum: 100, zksync: 5, sophon: 5, starknet: 5, hyperevm: 5, base: 5, citrea: 5, berachain: 5, tac: 5, solana: 5, bsc: 0 },
     },
     {
       id: "apyusd-apyx",

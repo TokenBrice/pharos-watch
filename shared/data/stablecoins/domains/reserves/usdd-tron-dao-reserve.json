@@ -82,6 +82,23 @@
         "concentration"
       ],
       "liquidityHorizon": "seven-days"
+    },
+    {
+      "sourceKey": "usdd-data-platform:psm-usdc",
+      "name": "USDC (PSM vaults)",
+      "pct": 0,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "legal"
+      ],
+      "liquidityHorizon": "one-day"
     }
   ],
   "reserveReview": {
@@ -100,9 +117,21 @@
       {
         "label": "USDD global allocator assets and chain-specific debt (accessed 2026-09-30)",
         "url": "https://openapi.usdd.io/api/v1/smart-allocator/detail-overview"
+      },
+      {
+        "label": "USDD Data Platform latest Ethereum collateral (accessed 2026-11-23)",
+        "url": "https://app-api.usdd.io/data-platform/latest-collateral?chain=eth"
+      },
+      {
+        "label": "USDD deployment addresses: Ethereum JOIN_PSM_USDC_A and MCD_PSM_USDC_A (accessed 2026-11-23)",
+        "url": "https://docs.usdd.io/developers/deployment-addresses.md"
+      },
+      {
+        "label": "Ethereum public JSON-RPC (keyless BlastAPI): pinned block 26480780 (2026-11-23T22:19:47Z) JOIN_PSM_USDC_A, MCD_PSM_USDC_A, and USDC balanceOf reads",
+        "url": "https://eth-mainnet.public.blastapi.io"
       }
     ],
-    "rationale": "The authored composition remains the dated 2026-09-04 Tron lockedValue scaffold, not a refreshed liability allocation. Research accessed 2026-09-30 confirms the current Tron SA001-A lockedValue and allocator Tron debt both equal $774,431,711, while global allocator debt is $989,941,607 including $215,509,896 Ethereum debt. Positive USDS, USDT, USDT0 and dust USDC positions are disclosed globally across destination chains and operator addresses. The API provides no position-to-origin-debt attribution, constituent token contracts, or shared checkpoint with latest-collateral. Matching the Tron debt alone cannot attribute the cross-chain assets to that envelope. No global fraction is multiplied by the Tron category.",
+    "rationale": "The authored composition remains the dated 2026-09-04 Tron lockedValue scaffold, not a refreshed liability allocation. Research accessed 2026-09-30 confirms the current Tron SA001-A lockedValue and allocator Tron debt both equal $774,431,711, while global allocator debt is $989,941,607 including $215,509,896 Ethereum debt. Positive USDS, USDT, USDT0 and dust USDC positions are disclosed globally across destination chains and operator addresses. The API provides no position-to-origin-debt attribution, constituent token contracts, or shared checkpoint with latest-collateral. Matching the Tron debt alone cannot attribute the cross-chain assets to that envelope. No global fraction is multiplied by the Tron category. The keyed usdd-data-platform:psm-usdc entry is a zero-weight classification (metadata-only) row for the live adapter's Ethereum PSM-USDC-A dust vault ($0.06 lockedValue), verified on 2026-11-23 at Ethereum block 26480780 (hash 0xeb2864c5a2ff50ed9640856fcc8f0ef98c2180b97b44178419636b4912f7f32e, 2026-11-23T22:19:47Z): JOIN_PSM_USDC_A 0x9a7e1b324060db7342aea08c0dc56f55ced6f519 has gem() = canonical USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, ilk 'PSM-USDC-A', live=1, USDC balance 64288 (0.064288 USDC), and MCD_PSM_USDC_A 0x12d0351f68035a41d13fc8324562e2d51b7a3b93 has tin=20 bps, tout=0 bps, buyEnabled=1; the dated 2026-09-04 Tron scaffold and 2026-09-30 review date are not renewed.",
     "compositionBasis": "Normalized gross lockedValue rows from the configured USDD Data Platform Tron latest-collateral feed captured on 2026-09-04",
     "compositionAsOf": "2026-09-04",
     "scope": "full-composition",
