@@ -68,7 +68,7 @@ export const content: ArchetypeContent = {
     {
       id: "cdp-psm-hybrids",
       title: "CDP-plus-PSM hybrids",
-      body: "USDD 2.0 is structurally a CDP with a Peg Stability Module; Pharos classifies it under the CDP archetype rather than algorithmic. FPI's documented design targets a 100% collateral ratio and includes FPIS sales as a backstop; the target does not establish its observed reserve composition.",
+      body: "USDD 2.0 is structurally a CDP with a Peg Stability Module; Pharos classifies it under the CDP archetype rather than algorithmic. Before its 2026-06-28 freeze, FPI's documented design targeted a 100% collateral ratio and included FPIS sales as a backstop; the target did not establish its observed reserve composition.",
     },
   ],
   whatToWatch: [

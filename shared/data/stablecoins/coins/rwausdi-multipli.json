@@ -148,8 +148,8 @@
     "changedAt": "2026-11-24",
     "reason": "Share in Multipli's KYB-gated private-credit class valued by a NAV oracle with no par redemption commitment (scheduled exits), not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
     "source": {
-      "label": "Multipli documentation",
-      "url": "https://docs.multipli.fi/"
+      "label": "Multipli rwaUSDi institutional-credit documentation",
+      "url": "https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design/rwausdi-the-institutional-credit-layer-for-tokenized-private-markets"
     }
   }
 }

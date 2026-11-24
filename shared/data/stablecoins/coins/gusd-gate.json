@@ -73,7 +73,7 @@
   "status": "delisted",
   "listingStatusReview": {
     "changedAt": "2026-11-24",
-    "reason": "Exchange account-linked yield product redeemable only inside Gate accounts with undisclosed reserves, not an open fixed-par stablecoin; no active stablecoin links it (listing policy 2.0).",
+    "reason": "Exchange account-linked yield product redeemable only inside Gate accounts with undisclosed reserves, not an open fixed-par stablecoin (listing policy 2.0).",
     "source": {
       "label": "Gate GUSD product page",
       "url": "https://www.gate.com/staking/USDT?isDebtType=1&pid=33"
