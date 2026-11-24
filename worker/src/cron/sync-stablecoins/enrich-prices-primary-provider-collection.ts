@@ -5,7 +5,12 @@ import { CURVE_ORACLE_MAX_STALENESS_SEC } from "../../lib/curve-onchain";
 import { fetchCoingeckoSimplePrices, type CoingeckoSimplePriceEntry } from "../../lib/coingecko-simple-price";
 import { fetchHiveNativeHbdPrice } from "../../lib/hive-market-price";
 import type { HiveNativePriceQuote } from "@shared/types/hive-market-price";
-import { createPricingAssetAttempt, endpointLabel, type PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
+import {
+  createPricingAssetAttempt,
+  endpointLabel,
+  type PricingProviderAttemptDiagnostic,
+  type PricingProviderRejectionReason,
+} from "../../lib/pricing-provider-diagnostics";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { shouldAttemptFetch, recordOutcomeSafe, recoverBreakerOnNoCandidateSafe } from "../../lib/circuit-breaker";
 import { mapWithConcurrency } from "../../lib/concurrency";
@@ -30,7 +35,7 @@ import {
   type LoadedDexPrices,
 } from "../../lib/depeg-helpers";
 import { fetchCurveOnchainPrices, fetchCurveOracleEma } from "../../lib/curve-onchain";
-import { CURVE_POOL_CONFIGS } from "@shared/lib/curve-pool-configs";
+import { CURVE_POOL_CONFIGS, type CurveSellGuardRejectionReason } from "@shared/lib/curve-pool-configs";
 import { CEX_PROVIDER_AUDIT_CONFIG, COINBASE_PRODUCTS } from "@shared/lib/pricing-provider-config";
 import { CEX_UPSTREAM_MAX_FUTURE_SKEW_SEC } from "@shared/lib/pricing-source-policy";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
@@ -529,7 +534,52 @@ export async function collectPrimaryProviderQuotes(params: {
               quoteMaps.curveObservedAtByCoinId.set(id, observedAt);
             }
             quoteMaps.curvePricePoolKeysByCoinId = outcome.value.pricePoolKeysByCoinId;
-            return isSuccessfulOutcome(outcome);
+            const sellGuardRejections = outcome.value.sellGuardRejections ?? [];
+            const rejectionReasonCounts: Partial<Record<PricingProviderRejectionReason, number>> = {};
+            const sellGuardRejectionCounts: Partial<Record<CurveSellGuardRejectionReason, number>> = {};
+            for (const rejection of sellGuardRejections) {
+              sellGuardRejectionCounts[rejection.reason] = (sellGuardRejectionCounts[rejection.reason] ?? 0) + 1;
+              const providerReason: PricingProviderRejectionReason =
+                rejection.reason === "rpc"
+                  ? "upstream-error"
+                  : rejection.reason === "impact"
+                    ? "price-rejected"
+                    : "missing-liquidity";
+              rejectionReasonCounts[providerReason] = (rejectionReasonCounts[providerReason] ?? 0) + 1;
+            }
+            if (outcome.kind === "upstream-error") {
+              rejectionReasonCounts["upstream-error"] = (rejectionReasonCounts["upstream-error"] ?? 0) + 1;
+            }
+            const assetAttempts = sellGuardRejections.map((rejection) =>
+              createPricingAssetAttempt({
+                assetId: rejection.stablecoinId,
+                adapter: "curve-onchain",
+                source: "curve-onchain",
+                chain: rejection.chain,
+                target: rejection.poolAddress.toLowerCase(),
+                state: "attempted",
+                result: rejection.reason === "rpc" ? "failed" : "rejected",
+                rejectionClass: rejection.reason,
+                candidateAt: nowSec,
+                observedAt: null,
+              }),
+            );
+            const success = isSuccessfulOutcome(outcome);
+            providerDiagnostics.push({
+              source: "curve-onchain",
+              stage: "primary",
+              endpoint: "curve-onchain",
+              status: null,
+              ok: outcome.kind !== "upstream-error",
+              success,
+              candidateCount: new Set(CURVE_POOL_CONFIGS.map((config) => config.stablecoinId)).size,
+              resolvedCount: outcome.value.prices.size,
+              ...(Object.keys(rejectionReasonCounts).length > 0 ? { rejectionReasonCounts } : {}),
+              ...(Object.keys(sellGuardRejectionCounts).length > 0 ? { sellGuardRejectionCounts } : {}),
+              ...(outcome.kind === "upstream-error" && outcome.reason ? { errorMessage: outcome.reason } : {}),
+              ...(assetAttempts.length > 0 ? { assetAttempts } : {}),
+            });
+            return success;
           });
         }
       }

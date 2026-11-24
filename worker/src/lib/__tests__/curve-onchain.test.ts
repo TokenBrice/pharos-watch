@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { CURVE_POOL_CONFIGS, type CurvePoolConfig } from "@shared/lib/curve-pool-configs";
 import { fetchCurveOnchainPrices } from "../curve-onchain";
+import { configuredPrimaryUpstreamKeys } from "../../cron/dex-liquidity/price-lineage";
 import curveExpandedPostA19 from "@shared/lib/__tests__/fixtures/curve-expanded-post-a19.json";
 
 vi.mock("../evm-rpc", () => ({
@@ -20,24 +21,17 @@ const NOW = 1_800_000_000_000;
 const FRESH_BLOCK_TIMESTAMP = 1_799_999_970;
 const PAR_MARK = { price: 1, observedAt: NOW / 1000 };
 const THREE_POOL_ADDRESS = "0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7";
+const U18 = 10n ** 18n;
+const addr = (n: number) => `0x${String(n).padStart(40, "0")}`;
 
-function hexWord(value: bigint | number | string): `0x${string}` {
-  return `0x${BigInt(value).toString(16).padStart(64, "0")}` as `0x${string}`;
-}
+const hexWord = (value: bigint | number | string): `0x${string}` =>
+  `0x${BigInt(value).toString(16).padStart(64, "0")}` as `0x${string}`;
 
-function makeCurveConfig(overrides: Partial<CurvePoolConfig> = {}): CurvePoolConfig {
-  return {
-    stablecoinId: "usdt-tether",
-    poolAddress: THREE_POOL_ADDRESS,
-    inputIndex: 1,
-    outputIndex: 2,
-    inputDecimals: 6,
-    outputDecimals: 6,
-    chain: "ethereum",
-    terminalQuoteAsset: "USDC",
-    ...overrides,
-  };
-}
+const makeCurveConfig = (overrides: Partial<CurvePoolConfig> = {}): CurvePoolConfig => ({
+  stablecoinId: "usdt-tether", poolAddress: THREE_POOL_ADDRESS,
+  inputIndex: 1, outputIndex: 2, inputDecimals: 6, outputDecimals: 6,
+  chain: "ethereum", terminalQuoteAsset: "USDC", ...overrides,
+});
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
@@ -54,49 +48,103 @@ describe("fetchCurveOnchainPrices", () => {
   it("preserves all post-A19 RPC calldata, pinned blocks and route clocks", async () => {
     const baselineRoutes: CurvePoolConfig[] = (curveExpandedPostA19.routes as Omit<CurvePoolConfig, "terminalQuoteAsset">[])
       .map((route) => ({ ...route, terminalQuoteAsset: "USDC" }));
+    const baselineByPool = new Map(baselineRoutes.map((r) => [`${r.poolAddress}:${r.outputIndex}`, r]));
     mockEvmCall.mockImplementation(async (_chain, address, calldata) => {
-      const outputIndex = Number(BigInt(`0x${calldata.slice(74, 138)}`));
-      const route = baselineRoutes.find((config) =>
-        config.poolAddress === address && config.outputIndex === outputIndex)!;
+      const outIdx = Number(BigInt(`0x${calldata.slice(74, 138)}`));
+      const route = baselineByPool.get(`${address}:${outIdx}`) ?? CURVE_POOL_CONFIGS.find((c) => c.poolAddress === address)!;
       return hexWord((route.outputDecimals === 2 ? 100n : 1n) * 10n ** BigInt(route.outputDecimals));
     });
     const baseline = await fetchCurveOnchainPrices(baselineRoutes, PAR_MARK);
     const baselineCalls = [...mockEvmCall.mock.calls];
     mockEvmCall.mockClear();
-    mockRpcBatch.mockResolvedValue([
-      hexWord(10n ** 24n), hexWord(10n ** 24n), hexWord(10n ** 21n), hexWord(10n ** 23n),
-    ]);
-    const candidate = await fetchCurveOnchainPrices(CURVE_POOL_CONFIGS, PAR_MARK);
+    mockRpcBatch.mockResolvedValue([hexWord(10n ** 24n), hexWord(10n ** 24n), hexWord(10n ** 21n), hexWord(10n ** 22n)]);
+    const matching = await fetchCurveOnchainPrices(
+      CURVE_POOL_CONFIGS.filter((c) => baselineByPool.has(`${c.poolAddress}:${c.outputIndex}`)), PAR_MARK,
+    );
     expect(baseline.kind).toBe("ok");
     expect(baseline.value.prices.size).toBe(baselineRoutes.length);
     expect(mockEvmCall.mock.calls).toStrictEqual(baselineCalls);
-    expect(candidate).toStrictEqual(baseline);
-    expect([...candidate.value.observedAtByCoinId.values()]).toEqual(Array(baselineRoutes.length).fill(1_799_999_970));
+    expect(matching).toStrictEqual(baseline);
+    const full = await fetchCurveOnchainPrices(CURVE_POOL_CONFIGS, PAR_MARK);
+    expect(full.kind).toBe("ok");
+    expect(full.value.prices.size).toBe(baselineRoutes.length);
+    expect(full.value.sellGuardRejections).toEqual([]);
+    expect([...full.value.observedAtByCoinId.values()]).toEqual(Array(baselineRoutes.length).fill(FRESH_BLOCK_TIMESTAMP));
   });
 
-  it("keeps audited Curve route configs explicit and uniquely keyed", () => {
-    const ids = CURVE_POOL_CONFIGS.map((config) => config.stablecoinId);
-    expect(new Set(ids).size).toBe(ids.length);
+  it("keeps audited Curve route configs explicit and uniquely keyed per route", () => {
+    const keys = CURVE_POOL_CONFIGS.map((c) => `${c.stablecoinId}:${c.chain}:${c.poolAddress.toLowerCase()}:${c.inputIndex}:${c.outputIndex}`);
+    expect(new Set(keys).size).toBe(keys.length);
+    const pmusdRoutes = CURVE_POOL_CONFIGS.filter((c) => c.stablecoinId === "pmusd-precious-metals");
+    expect(pmusdRoutes.map((c) => c.hop?.viaStablecoinId)).toEqual(["crvusd-curve", "frxusd-frax"]);
+    expect(pmusdRoutes.every((c) => c.sellGuard?.minSellDepthQuoteTokens === 25_000 && c.sellGuard.impactQuoteTokens === 10_000)).toBe(true);
+    const upstream = configuredPrimaryUpstreamKeys("pmusd-precious-metals");
+    for (const k of [
+      "ethereum:0xecb0f0d68c19bdaadaebe24f6752a4db34e2c2cb", "ethereum:0xbf5047039f2980c21eb5692c790bad8a9533b900",
+      "ethereum:0x13e12bb0e6a2f1a3d6901a59a9d585e89a6243e1", "ethereum:0x4dece678ceceb27446b35c672dc7d61f30bad69e", "venue:bitstamp",
+    ]) expect(upstream.has(k)).toBe(true);
   });
 
   it.each([
-    [99_225, 57_000, false],
-    [200_000, 45_000, false],
-    [200_000, 57_000, true],
-  ])("requires pmUSD exit inventory %s and executable second-size proceeds %s", async (inventory, proceeds, accepted) => {
-    const pmusd = CURVE_POOL_CONFIGS.find(({ stablecoinId }) => stablecoinId === "pmusd-precious-metals")!;
+    [70_123, 3_501_403, 407, 3_948, true, null],
+    [10_000, 3_501_403, 407, 3_948, false, "insufficient-sell-depth"],
+    [70_123, 50_000, 407, 3_948, false, "input-balance"],
+    [70_123, 3_501_403, 407, 3_700, false, "impact"],
+    [null, 0, 0, 0, false, "rpc"],
+  ] as const)("pmUSD sellGuard (%s/%s/%s/%s -> %s, %s)", async (quoteDepth, inputBal, smallOut, impactOut, accepted, reason) => {
+    const pmusd = CURVE_POOL_CONFIGS.find(({ poolAddress }) => poolAddress === "0xEcb0F0d68C19BdAaDAEbE24f6752A4Db34e2c2cb")!;
     const crvusd = CURVE_POOL_CONFIGS.find(({ stablecoinId }) => stablecoinId === "crvusd-curve")!;
-    mockEvmCall.mockImplementation(async (_chain, address) =>
-      hexWord(address === pmusd.poolAddress ? 1_754_385_964_912_280_702n : 10n ** 18n));
-    const units = 10n ** 18n;
-    mockRpcBatch.mockResolvedValue([
-      hexWord(BigInt(inventory) * units), hexWord(3_488_300n * units), hexWord(570n * units),
-      hexWord(BigInt(proceeds) * units),
-    ]);
+    mockEvmCall.mockImplementation(async (_c, a) => hexWord(a === pmusd.poolAddress ? 2_444_903_644_452_049_000n : U18));
+    mockRpcBatch.mockResolvedValue(quoteDepth === null ? [hexWord(70_123n * U18), "0x", hexWord(407n * U18), hexWord(3_948n * U18)]
+      : [quoteDepth, inputBal, smallOut, impactOut].map((v) => hexWord(BigInt(v) * U18)));
     const outcome = await fetchCurveOnchainPrices([pmusd, crvusd], PAR_MARK);
     expect(outcome.value.prices.has(pmusd.stablecoinId)).toBe(accepted);
     expect(outcome.value.prices.get(crvusd.stablecoinId)).toBe(1);
     expect(mockRpcBatch.mock.calls[0]?.[1].map(({ params }) => params[1])).toEqual(Array(4).fill("0x121eac0"));
+    expect(outcome.value.sellGuardRejections).toEqual(reason
+      ? [expect.objectContaining({ stablecoinId: pmusd.stablecoinId, poolAddress: pmusd.poolAddress, reason })] : []);
+  });
+
+  it("combines passing pmUSD routes via exit-depth weighted median, oldest clock, and unioned pool lineage", async () => {
+    const pmusdRoutes = CURVE_POOL_CONFIGS.filter(({ stablecoinId }) => stablecoinId === "pmusd-precious-metals");
+    const crvusd = CURVE_POOL_CONFIGS.find(({ stablecoinId }) => stablecoinId === "crvusd-curve")!;
+    const frxusd = { ...CURVE_POOL_CONFIGS.find(({ stablecoinId }) => stablecoinId === "frxusd-frax")!, chain: "arbitrum" };
+    mockBlockNumber.mockImplementation(async (c) => (c === "ethereum" ? 100 : 200));
+    mockBlockTimestamp.mockImplementation(async (c) => (c === "ethereum" ? 1_799_999_980 : 1_799_999_850));
+    mockEvmCall.mockImplementation(async (_c, a) => hexWord(
+      a === pmusdRoutes[0]!.poolAddress ? 2_444_987_775_061_124_694n
+        : a === pmusdRoutes[1]!.poolAddress ? 2_450_980_392_156_862_745n : U18));
+    const batch = (q: number, inp: number, sm: number, imp: number) => [q, inp, sm, imp].map((v) => hexWord(BigInt(v) * U18));
+    mockRpcBatch
+      .mockResolvedValueOnce(batch(70_123, 3_501_403, 407, 3_948))
+      .mockResolvedValueOnce(batch(65_177, 3_262_285, 406, 3_928));
+    const both = await fetchCurveOnchainPrices([...pmusdRoutes, crvusd, frxusd], PAR_MARK);
+    expect(both.value.prices.get("pmusd-precious-metals")).toBeCloseTo(0.409, 3);
+    expect(both.value.observedAtByCoinId.get("pmusd-precious-metals")).toBe(1_799_999_850);
+    expect(both.value.routeTypeByCoinId.get("pmusd-precious-metals")).toBe("chained-hop");
+    expect(both.value.hopDepthByCoinId.get("pmusd-precious-metals")).toBe(2);
+    expect(both.value.pricePoolKeysByCoinId.get("pmusd-precious-metals")).toEqual([
+      `ethereum:${pmusdRoutes[0]!.poolAddress.toLowerCase()}`, `ethereum:${crvusd.poolAddress.toLowerCase()}`,
+      `ethereum:${pmusdRoutes[1]!.poolAddress.toLowerCase()}`, `arbitrum:${frxusd.poolAddress.toLowerCase()}`,
+    ]);
+    mockRpcBatch
+      .mockResolvedValueOnce(batch(10_000, 3_501_403, 407, 3_948))
+      .mockResolvedValueOnce(batch(65_177, 3_262_285, 406, 3_928));
+    const oneLeft = await fetchCurveOnchainPrices([...pmusdRoutes, crvusd, frxusd], PAR_MARK);
+    expect(oneLeft.value.prices.get("pmusd-precious-metals")).toBeCloseTo(0.408, 3);
+    expect(oneLeft.value.sellGuardRejections).toEqual([expect.objectContaining({
+      poolAddress: pmusdRoutes[0]!.poolAddress, reason: "insufficient-sell-depth",
+    })]);
+  });
+
+  it("uses depth-weighted median across 3 routes and falls back to median when depth is unavailable", async () => {
+    const routes = [1, 2, 3].map((n) => makeCurveConfig({ stablecoinId: "multi", poolAddress: addr(n) }));
+    mockEvmCall.mockResolvedValueOnce(hexWord(1_000_000)).mockResolvedValueOnce(hexWord(998_004)).mockResolvedValueOnce(hexWord(800_000));
+    mockRpcBatch.mockResolvedValueOnce([hexWord(70_000_000_000n)]).mockResolvedValueOnce([hexWord(65_000_000_000n)]).mockResolvedValueOnce([hexWord(40_000_000_000n)]);
+    expect((await fetchCurveOnchainPrices(routes, PAR_MARK)).value.prices.get("multi")).toBeCloseTo(1.002, 3);
+    mockEvmCall.mockResolvedValueOnce(hexWord(1_000_000)).mockResolvedValueOnce(hexWord(800_000));
+    mockRpcBatch.mockResolvedValue(null);
+    expect((await fetchCurveOnchainPrices(routes.slice(0, 2), PAR_MARK)).value.prices.get("multi")).toBeCloseTo(1.125, 3);
   });
 
   it.each([null, { price: 0.87, observedAt: NOW / 1000 - 301 }])("withholds Curve prices without a fresh USDC/USD mark", async (mark) => {
@@ -107,11 +155,7 @@ describe("fetchCurveOnchainPrices", () => {
   });
 
   it("parses get_dy response into implied price", async () => {
-    // get_dy(1, 2, 1e6) returns 999000 for USDT (6 decimals out)
-    // Implied price = inputFloat/outputFloat = 1.0/0.999 ≈ 1.001
-    const mockHexResponse = hexWord(999000);
-    mockEvmCall.mockResolvedValue(mockHexResponse);
-
+    mockEvmCall.mockResolvedValue(hexWord(999000));
     const config = makeCurveConfig();
     const outcome = await fetchCurveOnchainPrices([config], PAR_MARK);
     expect(outcome.kind).toBe("ok");
@@ -120,132 +164,65 @@ describe("fetchCurveOnchainPrices", () => {
     expect(outcome.value.observedAtByCoinId.get("usdt-tether")).toBe(FRESH_BLOCK_TIMESTAMP);
     expect(outcome.value.routeTypeByCoinId.get("usdt-tether")).toBe("direct");
     expect(outcome.value.hopDepthByCoinId.get("usdt-tether")).toBe(0);
-    expect(mockEvmCall).toHaveBeenCalledWith(
-      "ethereum",
-      config.poolAddress,
-      expect.any(String),
-      FRESH_BLOCK_NUMBER,
-      expect.any(Object),
-    );
+    expect(mockEvmCall).toHaveBeenCalledWith("ethereum", config.poolAddress, expect.any(String), FRESH_BLOCK_NUMBER, expect.any(Object));
   });
 
   it("computes correct implied price with different decimals (DAI 18 decimals)", async () => {
-    // 1 USDC (1e6) → 1.001e18 DAI → price = 1.0/1.001 ≈ 0.999
-    const daiOutput = BigInt("1001000000000000000");
-    const mockHex = hexWord(daiOutput);
-    mockEvmCall.mockResolvedValue(mockHex);
-
-    const config = makeCurveConfig({
-      stablecoinId: "dai-makerdao",
-      inputIndex: 1,
-      outputIndex: 0,
-      inputDecimals: 6,
-      outputDecimals: 18,
-    });
-    const outcome = await fetchCurveOnchainPrices([config], PAR_MARK);
+    mockEvmCall.mockResolvedValue(hexWord("1001000000000000000"));
+    const outcome = await fetchCurveOnchainPrices([makeCurveConfig({ stablecoinId: "dai-makerdao", outputIndex: 0, outputDecimals: 18 })], PAR_MARK);
     expect(outcome.value.prices.get("dai-makerdao")).toBeCloseTo(0.999, 3);
   });
 
   it("sizes get_dy quotes up for low-decimal outputs (GUSD 2-decimal artifact)", async () => {
-    // Reproduces the production bug: get_dy_underlying(2, 0, 1 USDC) on the
-    // GUSD/3Crv metapool floors 0.9996 GUSD to 0.99 (raw 99), reporting an
-    // implied price of exactly 1/0.99 = 1.0101010101. At a 100-unit quote the
-    // same pool returns 9997 raw (99.97 GUSD), implying the true ~1.0003 price
-    // (values observed on-chain at block 26064625).
     mockEvmCall.mockResolvedValue(hexWord(9997));
-
     const config = makeCurveConfig({
-      stablecoinId: "gusd-gemini",
-      poolAddress: "0x4f062658EaAF2C1ccf8C8e36D6824CDf41167956",
-      inputIndex: 2, // USDC (underlying)
-      outputIndex: 0, // GUSD (underlying)
-      inputDecimals: 6,
-      outputDecimals: 2,
-      useUnderlying: true,
+      stablecoinId: "gusd-gemini", poolAddress: "0x4f062658EaAF2C1ccf8C8e36D6824CDf41167956",
+      inputIndex: 2, outputIndex: 0, outputDecimals: 2, useUnderlying: true,
     });
     const outcome = await fetchCurveOnchainPrices([config], PAR_MARK);
-
-    const calldata = mockEvmCall.mock.calls[0][2] as string;
-    const dx = BigInt(`0x${calldata.slice(-64)}`);
-    expect(dx).toBe(BigInt(100) * BigInt(10) ** BigInt(6)); // 100 USDC, not 1
+    expect(BigInt(`0x${(mockEvmCall.mock.calls[0][2] as string).slice(-64)}`)).toBe(100n * 10n ** 6n);
     expect(outcome.value.prices.get("gusd-gemini")).toBeCloseTo(100 / 99.97, 8);
     expect(outcome.value.prices.get("gusd-gemini")).not.toBeCloseTo(1 / 0.99, 8);
   });
 
   it("keeps 1-unit quotes for outputs with >= 6 decimals", async () => {
     mockEvmCall.mockResolvedValue(hexWord(999000));
-
-    const config = makeCurveConfig(); // USDT out, 6 decimals
-    await fetchCurveOnchainPrices([config], PAR_MARK);
-
-    const calldata = mockEvmCall.mock.calls[0][2] as string;
-    expect(BigInt(`0x${calldata.slice(-64)}`)).toBe(BigInt(10) ** BigInt(6));
+    await fetchCurveOnchainPrices([makeCurveConfig()], PAR_MARK);
+    expect(BigInt(`0x${(mockEvmCall.mock.calls[0][2] as string).slice(-64)}`)).toBe(10n ** 6n);
   });
 
   it("returns no-data outcome when RPC returns null for every pool", async () => {
     mockEvmCall.mockResolvedValue(null);
-    const config = makeCurveConfig();
-    const outcome = await fetchCurveOnchainPrices([config], PAR_MARK);
+    const outcome = await fetchCurveOnchainPrices([makeCurveConfig()], PAR_MARK);
     expect(outcome.kind).toBe("no-data");
     expect(outcome.value.prices.size).toBe(0);
   });
 
   it("uses get_dy_underlying selector when useUnderlying is true", async () => {
-    const lusdOutput = BigInt("999000000000000000"); // 0.999e18
-    const mockHex = hexWord(lusdOutput);
-    mockEvmCall.mockResolvedValue(mockHex);
-
+    mockEvmCall.mockResolvedValue(hexWord("999000000000000000"));
     const config = makeCurveConfig({
-      stablecoinId: "lusd-liquity",
-      poolAddress: "0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA",
-      inputIndex: 2, // USDC (underlying)
-      outputIndex: 0, // LUSD (underlying)
-      inputDecimals: 6,
-      outputDecimals: 18,
-      useUnderlying: true,
+      stablecoinId: "lusd-liquity", poolAddress: "0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA",
+      inputIndex: 2, outputIndex: 0, outputDecimals: 18, useUnderlying: true,
     });
     const outcome = await fetchCurveOnchainPrices([config], PAR_MARK);
     expect(outcome.value.prices.get("lusd-liquity")).toBeCloseTo(1.001, 3);
+    expect((mockEvmCall.mock.calls[0][2] as string).startsWith("0x07211ef7")).toBe(true);
+  });
 
-    // Verify the underlying selector was used, not get_dy
-    const calldata = mockEvmCall.mock.calls[0][2] as string;
-    expect(calldata.startsWith("0x07211ef7")).toBe(true);
+  const crvusdHopBase = makeCurveConfig({
+    stablecoinId: "crvusd-curve", poolAddress: "0x4DEcE678ceceb27446b35C672dC7d61F30bAD69E",
+    inputIndex: 0, outputIndex: 1, inputDecimals: 6, outputDecimals: 18,
+  });
+  const ghoHop = makeCurveConfig({
+    stablecoinId: "gho-aave", poolAddress: "0x0001000100010001000100010001000100010001",
+    inputIndex: 0, outputIndex: 1, inputDecimals: 18, outputDecimals: 18, hop: { viaStablecoinId: "crvusd-curve" },
   });
 
   it("resolves hop prices by multiplying with via-token price", async () => {
-    const crvusdOutput = BigInt("999000000000000000"); // 0.999e18 crvUSD per 1 USDC
-    const ghoOutput = BigInt("998000000000000000"); // 0.998e18 GHO per 1e18 crvUSD
-
-    mockEvmCall.mockResolvedValueOnce(hexWord(crvusdOutput)).mockResolvedValueOnce(hexWord(ghoOutput));
-
-    const configs: CurvePoolConfig[] = [
-      {
-        stablecoinId: "crvusd-curve",
-        poolAddress: "0x4DEcE678ceceb27446b35C672dC7d61F30bAD69E",
-        inputIndex: 0,
-        outputIndex: 1,
-        inputDecimals: 6,
-        outputDecimals: 18,
-        chain: "ethereum",
-        terminalQuoteAsset: "USDC",
-      },
-      {
-        stablecoinId: "gho-aave",
-        poolAddress: "0x0001000100010001000100010001000100010001",
-        inputIndex: 0,
-        outputIndex: 1,
-        inputDecimals: 18,
-        outputDecimals: 18,
-        chain: "ethereum",
-        terminalQuoteAsset: "USDC",
-        hop: { viaStablecoinId: "crvusd-curve" },
-      },
-    ];
-
-    const outcome = await fetchCurveOnchainPrices(configs, PAR_MARK);
+    mockEvmCall.mockResolvedValueOnce(hexWord("999000000000000000")).mockResolvedValueOnce(hexWord("998000000000000000"));
+    const outcome = await fetchCurveOnchainPrices([crvusdHopBase, ghoHop], PAR_MARK);
     expect(outcome.value.prices.get("crvusd-curve")).toBeCloseTo(1.001, 3);
-    const expectedGho = (1.0 / 0.998) * (1.0 / 0.999);
-    expect(outcome.value.prices.get("gho-aave")).toBeCloseTo(expectedGho, 3);
+    expect(outcome.value.prices.get("gho-aave")).toBeCloseTo((1 / 0.998) * (1 / 0.999), 3);
     expect(outcome.value.routeTypeByCoinId.get("gho-aave")).toBe("one-hop");
     expect(outcome.value.hopDepthByCoinId.get("gho-aave")).toBe(1);
   });
@@ -303,311 +280,99 @@ describe("fetchCurveOnchainPrices", () => {
   });
 
   it("resolves one-hop prices even when via config appears later", async () => {
-    const ghoOutput = BigInt("998000000000000000"); // 0.998e18 GHO per 1e18 crvUSD
-    const crvusdOutput = BigInt("999000000000000000"); // 0.999e18 crvUSD per 1 USDC
-
-    mockEvmCall.mockResolvedValueOnce(hexWord(ghoOutput)).mockResolvedValueOnce(hexWord(crvusdOutput));
-
-    const configs: CurvePoolConfig[] = [
-      {
-        stablecoinId: "gho-aave",
-        poolAddress: "0x0001000100010001000100010001000100010001",
-        inputIndex: 0,
-        outputIndex: 1,
-        inputDecimals: 18,
-        outputDecimals: 18,
-        chain: "ethereum",
-        terminalQuoteAsset: "USDC",
-        hop: { viaStablecoinId: "crvusd-curve" },
-      },
-      {
-        stablecoinId: "crvusd-curve",
-        poolAddress: "0x4DEcE678ceceb27446b35C672dC7d61F30bAD69E",
-        inputIndex: 0,
-        outputIndex: 1,
-        inputDecimals: 6,
-        outputDecimals: 18,
-        chain: "ethereum",
-        terminalQuoteAsset: "USDC",
-      },
-    ];
-
-    const outcome = await fetchCurveOnchainPrices(configs, PAR_MARK);
-    const expectedGho = (1.0 / 0.998) * (1.0 / 0.999);
-    expect(outcome.value.prices.get("gho-aave")).toBeCloseTo(expectedGho, 3);
+    mockEvmCall.mockResolvedValueOnce(hexWord("998000000000000000")).mockResolvedValueOnce(hexWord("999000000000000000"));
+    const outcome = await fetchCurveOnchainPrices([ghoHop, crvusdHopBase], PAR_MARK);
+    expect(outcome.value.prices.get("gho-aave")).toBeCloseTo((1 / 0.998) * (1 / 0.999), 3);
   });
 
   it("excludes hop coin when via-token RPC fails", async () => {
-    mockEvmCall
-      .mockResolvedValueOnce(null) // crvUSD fails
-      .mockResolvedValueOnce(hexWord("998000000000000000"));
-
-    const configs: CurvePoolConfig[] = [
-      {
-        stablecoinId: "crvusd-curve",
-        poolAddress: "0x4DEcE678ceceb27446b35C672dC7d61F30bAD69E",
-        inputIndex: 0,
-        outputIndex: 1,
-        inputDecimals: 6,
-        outputDecimals: 18,
-        chain: "ethereum",
-        terminalQuoteAsset: "USDC",
-      },
-      {
-        stablecoinId: "gho-aave",
-        poolAddress: "0x0001000100010001000100010001000100010001",
-        inputIndex: 0,
-        outputIndex: 1,
-        inputDecimals: 18,
-        outputDecimals: 18,
-        chain: "ethereum",
-        terminalQuoteAsset: "USDC",
-        hop: { viaStablecoinId: "crvusd-curve" },
-      },
-    ];
-
-    const outcome = await fetchCurveOnchainPrices(configs, PAR_MARK);
+    mockEvmCall.mockResolvedValueOnce(null).mockResolvedValueOnce(hexWord("998000000000000000"));
+    const outcome = await fetchCurveOnchainPrices([crvusdHopBase, ghoHop], PAR_MARK);
     expect(outcome.value.prices.has("crvusd-curve")).toBe(false);
     expect(outcome.value.prices.has("gho-aave")).toBe(false);
   });
 
   it("truncates oversized Vyper return data to first uint256 word", async () => {
-    // Vyper metapools return thousands of bytes; only the first 32-byte word
-    // is the actual get_dy_underlying result (~0.984 LUSD for 1 USDC)
-    const actualValue = BigInt("984321781412057132"); // ~0.984e18 LUSD
-    const word0 = hexWord(actualValue).slice(2);
-    // Simulate Vyper response: word0 + extra trailing data
-    const trailing = "00000002" + "0".repeat(56) + "0".repeat(64) + "000f4240" + "0".repeat(56);
-    const vyperHex = ("0x" + word0 + trailing) as `0x${string}`;
+    const vyperHex = (`0x${hexWord("984321781412057132").slice(2)}00000002${"0".repeat(120)}000f4240${"0".repeat(56)}`) as `0x${string}`;
     expect(vyperHex.length).toBeGreaterThan(66);
-
     mockEvmCall.mockResolvedValue(vyperHex);
-
-    const config = makeCurveConfig({
-      stablecoinId: "lusd-liquity",
-      poolAddress: "0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA",
-      inputIndex: 2,
-      outputIndex: 0,
-      inputDecimals: 6,
-      outputDecimals: 18,
-      useUnderlying: true,
-    });
-    const outcome = await fetchCurveOnchainPrices([config], PAR_MARK);
+    const outcome = await fetchCurveOnchainPrices([makeCurveConfig({
+      stablecoinId: "lusd-liquity", poolAddress: "0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA",
+      inputIndex: 2, outputIndex: 0, outputDecimals: 18, useUnderlying: true,
+    })], PAR_MARK);
     expect(outcome.value.prices.get("lusd-liquity")).toBeCloseTo(1.016, 2);
   });
 
   it("returns upstream-error outcome when every RPC call throws", async () => {
     mockEvmCall.mockRejectedValue(new Error("network down"));
-    const config = makeCurveConfig();
-    const outcome = await fetchCurveOnchainPrices([config], PAR_MARK);
+    const outcome = await fetchCurveOnchainPrices([makeCurveConfig()], PAR_MARK);
     expect(outcome.kind).toBe("upstream-error");
     expect(outcome.value.prices.size).toBe(0);
   });
 
   it("returns ok with partial=true when some pools throw but others succeed", async () => {
     mockEvmCall.mockResolvedValueOnce(hexWord(999000)).mockRejectedValueOnce(new Error("rpc broke"));
-
-    const configs: CurvePoolConfig[] = [
-      {
-        ...makeCurveConfig(),
-      },
-      {
-        ...makeCurveConfig({ stablecoinId: "usdc-usd-coin", inputIndex: 0, outputIndex: 1 }),
-      },
-    ];
-    const outcome = await fetchCurveOnchainPrices(configs, PAR_MARK);
+    const outcome = await fetchCurveOnchainPrices([makeCurveConfig(), makeCurveConfig({ stablecoinId: "usdc-usd-coin", inputIndex: 0, outputIndex: 1 })], PAR_MARK);
     expect(outcome.kind).toBe("ok");
     expect(outcome.value.prices.size).toBe(1);
     expect(outcome.value.prices.get("usdt-tether")).toBeCloseTo(1.001, 3);
   });
 
+  const hopToken = (id: string, n: number, extra: Partial<CurvePoolConfig> = {}) => makeCurveConfig({
+    stablecoinId: id, poolAddress: addr(n), inputIndex: 0, outputIndex: 1, inputDecimals: 18, outputDecimals: 18, ...extra,
+  });
+
   it("excludes chained hops unless the dependent config explicitly opts in", async () => {
-    const configs: CurvePoolConfig[] = [
-      {
-        stablecoinId: "token-c",
-        poolAddress: "0x0000000000000000000000000000000000000003",
-        inputIndex: 0,
-        outputIndex: 1,
-        inputDecimals: 18,
-        outputDecimals: 18,
-        chain: "ethereum",
-        terminalQuoteAsset: "USDC",
-      },
-      {
-        stablecoinId: "token-b",
-        poolAddress: "0x0000000000000000000000000000000000000002",
-        inputIndex: 0,
-        outputIndex: 1,
-        inputDecimals: 18,
-        outputDecimals: 18,
-        chain: "ethereum",
-        terminalQuoteAsset: "USDC",
-        hop: { viaStablecoinId: "token-c" },
-      },
-      {
-        stablecoinId: "token-a",
-        poolAddress: "0x0000000000000000000000000000000000000001",
-        inputIndex: 0,
-        outputIndex: 1,
-        inputDecimals: 18,
-        outputDecimals: 18,
-        chain: "ethereum",
-        terminalQuoteAsset: "USDC",
-        hop: { viaStablecoinId: "token-b" },
-      },
-    ];
-
-    mockEvmCall.mockResolvedValue(hexWord("1000000000000000000"));
-
-    const outcome = await fetchCurveOnchainPrices(configs, PAR_MARK);
+    mockEvmCall.mockResolvedValue(hexWord(U18));
+    const outcome = await fetchCurveOnchainPrices([
+      hopToken("token-c", 3), hopToken("token-b", 2, { hop: { viaStablecoinId: "token-c" } }), hopToken("token-a", 1, { hop: { viaStablecoinId: "token-b" } }),
+    ], PAR_MARK);
     expect(outcome.value.prices.has("token-b")).toBe(true);
     expect(outcome.value.prices.has("token-a")).toBe(false);
   });
 
   it("resolves chained hops when maxHopDepth explicitly allows them", async () => {
-    const tokenAOutput = BigInt("997000000000000000");
-    const tokenBOutput = BigInt("998000000000000000");
-    const tokenCOutput = BigInt("999000000000000000");
-
-    mockEvmCall
-      .mockResolvedValueOnce(hexWord(tokenAOutput))
-      .mockResolvedValueOnce(hexWord(tokenBOutput))
-      .mockResolvedValueOnce(hexWord(tokenCOutput));
-
-    const configs: CurvePoolConfig[] = [
-      {
-        stablecoinId: "token-a",
-        poolAddress: "0x0000000000000000000000000000000000000001",
-        inputIndex: 0,
-        outputIndex: 1,
-        inputDecimals: 18,
-        outputDecimals: 18,
-        chain: "ethereum",
-        terminalQuoteAsset: "USDC",
-        hop: { viaStablecoinId: "token-b" },
-        routeType: "chained-hop",
-        maxHopDepth: 2,
-      },
-      {
-        stablecoinId: "token-b",
-        poolAddress: "0x0000000000000000000000000000000000000002",
-        inputIndex: 0,
-        outputIndex: 1,
-        inputDecimals: 18,
-        outputDecimals: 18,
-        chain: "ethereum",
-        terminalQuoteAsset: "USDC",
-        hop: { viaStablecoinId: "token-c" },
-      },
-      {
-        stablecoinId: "token-c",
-        poolAddress: "0x0000000000000000000000000000000000000003",
-        inputIndex: 0,
-        outputIndex: 1,
-        inputDecimals: 18,
-        outputDecimals: 18,
-        chain: "ethereum",
-        terminalQuoteAsset: "USDC",
-      },
-    ];
-
-    const outcome = await fetchCurveOnchainPrices(configs, PAR_MARK);
-    const expectedTokenA = (1.0 / 0.997) * (1.0 / 0.998) * (1.0 / 0.999);
-    expect(outcome.value.prices.get("token-a")).toBeCloseTo(expectedTokenA, 3);
+    mockEvmCall.mockResolvedValueOnce(hexWord("997000000000000000")).mockResolvedValueOnce(hexWord("998000000000000000")).mockResolvedValueOnce(hexWord("999000000000000000"));
+    const outcome = await fetchCurveOnchainPrices([
+      hopToken("token-a", 1, { hop: { viaStablecoinId: "token-b" }, routeType: "chained-hop", maxHopDepth: 2 }),
+      hopToken("token-b", 2, { hop: { viaStablecoinId: "token-c" } }), hopToken("token-c", 3),
+    ], PAR_MARK);
+    expect(outcome.value.prices.get("token-a")).toBeCloseTo((1 / 0.997) * (1 / 0.998) * (1 / 0.999), 3);
     expect(outcome.value.routeTypeByCoinId.get("token-a")).toBe("chained-hop");
     expect(outcome.value.hopDepthByCoinId.get("token-a")).toBe(2);
   });
 
   it("fails closed when hop configs form a cycle", async () => {
-    mockEvmCall.mockResolvedValue(hexWord("1000000000000000000"));
-
-    const configs: CurvePoolConfig[] = [
-      {
-        stablecoinId: "token-a",
-        poolAddress: "0x0000000000000000000000000000000000000001",
-        inputIndex: 0,
-        outputIndex: 1,
-        inputDecimals: 18,
-        outputDecimals: 18,
-        chain: "ethereum",
-        terminalQuoteAsset: "USDC",
-        hop: { viaStablecoinId: "token-b" },
-        routeType: "chained-hop",
-        maxHopDepth: 2,
-      },
-      {
-        stablecoinId: "token-b",
-        poolAddress: "0x0000000000000000000000000000000000000002",
-        inputIndex: 0,
-        outputIndex: 1,
-        inputDecimals: 18,
-        outputDecimals: 18,
-        chain: "ethereum",
-        terminalQuoteAsset: "USDC",
-        hop: { viaStablecoinId: "token-a" },
-        routeType: "chained-hop",
-        maxHopDepth: 2,
-      },
-    ];
-
-    const outcome = await fetchCurveOnchainPrices(configs, PAR_MARK);
+    mockEvmCall.mockResolvedValue(hexWord(U18));
+    const outcome = await fetchCurveOnchainPrices([
+      hopToken("token-a", 1, { hop: { viaStablecoinId: "token-b" }, routeType: "chained-hop", maxHopDepth: 2 }),
+      hopToken("token-b", 2, { hop: { viaStablecoinId: "token-a" }, routeType: "chained-hop", maxHopDepth: 2 }),
+    ], PAR_MARK);
     expect(outcome.kind).toBe("no-data");
     expect(outcome.value.prices.size).toBe(0);
   });
 
   it("fails closed when a hop references a missing via config", async () => {
-    mockEvmCall.mockResolvedValue(hexWord("1000000000000000000"));
-
-    const config: CurvePoolConfig = {
-      stablecoinId: "token-a",
-      poolAddress: "0x0000000000000000000000000000000000000001",
-      inputIndex: 0,
-      outputIndex: 1,
-      inputDecimals: 18,
-      outputDecimals: 18,
-      chain: "ethereum",
-      terminalQuoteAsset: "USDC",
-      hop: { viaStablecoinId: "token-b" },
-    };
-
-    const outcome = await fetchCurveOnchainPrices([config], PAR_MARK);
+    mockEvmCall.mockResolvedValue(hexWord(U18));
+    const outcome = await fetchCurveOnchainPrices([hopToken("token-a", 1, { hop: { viaStablecoinId: "token-b" } })], PAR_MARK);
     expect(outcome.kind).toBe("no-data");
     expect(outcome.value.prices.has("token-a")).toBe(false);
   });
 
   it("emits route metadata for explicit trusted-wrapper routes", async () => {
-    const mockHexResponse = hexWord("1000000000000000000");
-    mockEvmCall.mockResolvedValue(mockHexResponse);
-
-    const config = makeCurveConfig({
-      stablecoinId: "wrapper-token",
-      poolAddress: "0x0000000000000000000000000000000000000001",
-      inputIndex: 0,
-      outputIndex: 1,
-      inputDecimals: 18,
-      outputDecimals: 18,
-      routeType: "trusted-wrapper",
-    });
-
-    const outcome = await fetchCurveOnchainPrices([config], PAR_MARK);
+    mockEvmCall.mockResolvedValue(hexWord(U18));
+    const outcome = await fetchCurveOnchainPrices([hopToken("wrapper-token", 1, { routeType: "trusted-wrapper" })], PAR_MARK);
     expect(outcome.value.prices.get("wrapper-token")).toBe(1);
     expect(outcome.value.routeTypeByCoinId.get("wrapper-token")).toBe("trusted-wrapper");
     expect(outcome.value.hopDepthByCoinId.get("wrapper-token")).toBe(0);
   });
 
   it("stamps each priced coin with the block timestamp as observedAt", async () => {
-    const mockHexResponse = hexWord(999000);
-    mockEvmCall.mockResolvedValue(mockHexResponse);
-
-    const configs: CurvePoolConfig[] = [
-      makeCurveConfig(),
-      makeCurveConfig({ stablecoinId: "usdc-usd-coin", inputIndex: 0, outputIndex: 1 }),
-    ];
-    const outcome = await fetchCurveOnchainPrices(configs, PAR_MARK);
+    mockEvmCall.mockResolvedValue(hexWord(999000));
+    const outcome = await fetchCurveOnchainPrices([makeCurveConfig(), makeCurveConfig({ stablecoinId: "usdc-usd-coin", inputIndex: 0, outputIndex: 1 })], PAR_MARK);
     expect(outcome.kind).toBe("ok");
     expect(outcome.value.observedAtByCoinId.get("usdt-tether")).toBe(FRESH_BLOCK_TIMESTAMP);
     expect(outcome.value.observedAtByCoinId.get("usdc-usd-coin")).toBe(FRESH_BLOCK_TIMESTAMP);
-    // Block-number + block-timestamp each called exactly once for the whole run
     expect(mockBlockNumber).toHaveBeenCalledTimes(1);
     expect(mockBlockTimestamp).toHaveBeenCalledTimes(1);
   });
@@ -625,8 +390,7 @@ describe("fetchCurveOnchainPrices", () => {
 
   it("returns upstream-error when block number RPC fails", async () => {
     mockBlockNumber.mockResolvedValue(null);
-    const config = makeCurveConfig();
-    const outcome = await fetchCurveOnchainPrices([config], PAR_MARK);
+    const outcome = await fetchCurveOnchainPrices([makeCurveConfig()], PAR_MARK);
     expect(outcome.kind).toBe("upstream-error");
     expect(outcome.value.prices.size).toBe(0);
     expect(mockEvmCall).not.toHaveBeenCalled();

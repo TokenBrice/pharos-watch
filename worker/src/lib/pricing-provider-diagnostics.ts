@@ -1,4 +1,5 @@
 import { toErrorMessage } from "@shared/lib/error-utils";
+import type { CurveSellGuardRejectionReason } from "@shared/lib/curve-pool-configs";
 import type { HiveMarketDiagnostic } from "@shared/types/hive-market-price";
 import { isReplaySafePriceSource } from "@shared/lib/pricing-source-policy";
 import { readResponseSnippetWithTimeout } from "./response-body";
@@ -93,6 +94,7 @@ export interface PricingProviderAttemptDiagnostic {
   matchedCount?: number;
   resolvedCount?: number;
   rejectionReasonCounts?: Partial<Record<PricingProviderRejectionReason, number>>;
+  sellGuardRejectionCounts?: Partial<Record<CurveSellGuardRejectionReason, number>>;
   errorClass?: string;
   errorMessage?: string;
   snippet?: string;

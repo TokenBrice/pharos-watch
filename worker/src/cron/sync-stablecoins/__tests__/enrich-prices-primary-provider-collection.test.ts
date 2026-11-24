@@ -539,14 +539,21 @@ describe("critical publication provider collection", () => {
         pricePoolKeysByCoinId: new Map(),
         routeTypeByCoinId: new Map(),
         hopDepthByCoinId: new Map(),
+        sellGuardRejections: [{
+          stablecoinId: "pmusd-precious-metals", chain: "ethereum",
+          poolAddress: "0xEcb0F0d68C19BdAaDAEbE24f6752A4Db34e2c2cb", reason: "insufficient-sell-depth",
+        }],
       },
     });
-
     const result = await collectPrimaryProviderQuotes({ db, plan });
-
     expect(fetchCurveOnchainPrices).toHaveBeenCalledWith(CURVE_POOL_CONFIGS, { price: 0.87, observedAt: anchorAt }, undefined, undefined);
     expect(result.quoteMaps.curvePrices.get(coinId)).toBe(0.9995);
     expect(result.quoteMaps.curveObservedAtByCoinId.get(coinId)).toBe(1_700_000_000);
+    expect(result.providerDiagnostics).toContainEqual(expect.objectContaining({
+      source: "curve-onchain", success: true, resolvedCount: 1,
+      rejectionReasonCounts: { "missing-liquidity": 1 }, sellGuardRejectionCounts: { "insufficient-sell-depth": 1 },
+      assetAttempts: [expect.objectContaining({ assetId: "pmusd-precious-metals", rejectionClass: "insufficient-sell-depth", result: "rejected" })],
+    }));
   });
 
   it("admits a fresh crvUSD oracle EMA as a primary quote", async () => {
