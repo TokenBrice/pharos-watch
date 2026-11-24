@@ -259,28 +259,33 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
   }),
   "usdr-rise": defineStablecoinRedeemConfig({
-    reviewedAt: "2026-10-05",
+    reviewedAt: "2026-11-23",
     outputAssets: ["wm-m0"],
     capacityModel: { kind: "reserve-sync-metadata", requiredOutputAssetKeys: ["wm-m0"] },
-    costModel: documentedVariableFee("SwapFacility extension-to-extension unwrap/wrap contains no additional protocol deduction; exact wM rounding and gas require same-notional observation", "formula"),
+    costModel: fixedFee(
+      0,
+      "Verified RISE SwapFacility _swapExtensions (0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e) and JMIExtension/MExtension _unwrap (0xF9733d0BF530b02929AB81cf78E7d0beFD3a2d7b) apply no protocol fee deduction (0 bps); M0 Swap Facility docs confirm direct extension-to-extension conversions carry no slippage or trading fees. Gas and M earning-index wei rounding still require same-notional observation.",
+    ),
     v9RouteReviewTerms: {
       settlementModel: "atomic",
       settlementDelaySec: 0,
       scoringDisposition: "bounded-terms-gap",
-      missingScoringFields: ["capacity", "cost"],
+      missingScoringFields: ["capacity"],
       rationale:
-        "The reviewed SwapFacility _swapExtensions branch transfers USDR, unwraps it to M and wraps the observed M balance difference into wM in one transaction, without a separate protocol-fee deduction. Extension approval, permissioning, pause and lock checks can prevent execution. No current executable wM capacity, rounding receipt or complete all-in cost is supplied by native-M reserve telemetry.",
-      reviewedAt: "2026-10-09",
+        "Verified RISE SwapFacility _swapExtensions transfers USDR, calls MExtension._unwrap (burning amount and transferring nominal M with 0 bps protocol fee), and wraps the observed M balance difference into wM atomically in one transaction. Extension approval, permissioning, pause and lock checks can prevent execution. No current executable wM capacity or gas/rounding execution certificate is supplied by native-M reserve telemetry.",
+      reviewedAt: "2026-11-23",
       docs: [
         sourceRef("RISE SwapFacility implementation, _swap and _swapExtensions", "https://explorer.risechain.com/api/v2/smart-contracts/0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e", ["route", "access", "fees", "settlement"]),
-        sourceRef("M0 Swap Facility documented conditions", "https://docs.m0.org/build/accessing-liquidity", ["route", "access", "settlement"]),
+        sourceRef("RISE USDR JMIExtension/MExtension implementation, _unwrap", "https://explorer.risechain.com/api/v2/smart-contracts/0xF9733d0BF530b02929AB81cf78E7d0beFD3a2d7b", ["route", "fees"]),
+        sourceRef("M0 Swap Facility documented conditions", "https://docs.m0.org/build/accessing-liquidity", ["route", "access", "fees", "settlement"]),
       ],
     },
     docs: [
       sourceRef("RISE SwapFacility implementation", "https://explorer.risechain.com/api/v2/smart-contracts/0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e", ["route", "access", "fees", "settlement"]),
-      sourceRef("M0 liquidity routes", "https://docs.m0.org/build/accessing-liquidity", ["route", "access", "settlement"]),
+      sourceRef("RISE USDR JMIExtension/MExtension implementation, _unwrap", "https://explorer.risechain.com/api/v2/smart-contracts/0xF9733d0BF530b02929AB81cf78E7d0beFD3a2d7b", ["route", "fees"]),
+      sourceRef("M0 liquidity routes", "https://docs.m0.org/build/accessing-liquidity", ["route", "access", "fees", "settlement"]),
     ],
-    notes: ["The holder path swaps USDR to wM via RISE SwapFacility 0xb6807116b3b1b321a390594e31ecd6e0076f6278. Extension approval, pauses and permissioning apply. Native-M approved-swapper telemetry is not wM output capacity and must not be inherited. Downstream wM-to-USDC liquidity is separate."],
+    notes: ["The holder path swaps USDR to wM via RISE SwapFacility 0xb6807116b3b1b321a390594e31ecd6e0076f6278 with 0 bps protocol fee (matching wm-m0). Extension approval, pauses and permissioning apply. Native-M approved-swapper telemetry is not wM output capacity and must not be inherited. Downstream wM-to-USDC liquidity is separate."],
   }),
   ...defineConfigFamily(
     [
@@ -1913,12 +1918,39 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     accessModel: "whitelisted-onchain",
     outputAssets: ["usdc-circle"],
     capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "heuristic", basis: "strategy-buffer" },
-    costModel: undisclosedReviewedFee(
-      "The public SDK exposes a collateral defaultFee field, but reviewed primary sources do not publish the active numeric redemption fee",
-    ),
+    costModel: {
+      ...documentedVariableFee(
+        "On-chain CollateralConfig.default_fee for USDC is currently 10 bps (0.10%) and all 12 benefactors have no overrides at Sui checkpoint 348506669; deployed Move package constants::max_fee_bps() enforces a hard 100 bps (1.00%) ceiling across both default and per-benefactor fees.",
+        "documented-variable",
+      ),
+      feeBpsMin: 0,
+      feeBpsMax: 100,
+    },
+    v9RouteCostTerms: {
+      feeBpsMin: 0,
+      feeBpsMax: 100,
+      publishedFeeSchedule: {
+        reviewedAt: "2026-11-23",
+        reviewer: "Pharos 2026-11-23 night run (EXIT lane, exit-0)",
+        docs: [
+          sourceRef(
+            "suiUSDe Sui mainnet package 0xb81bd7d3d18ed48c31286ac66c2dc7f301a8b57227130de0dbddd5f7aa3a0ccc (constants::max_fee_bps and collateral_fee::validate) and Treasury/CollateralConfig at checkpoint 348506669",
+            "https://graphql.mainnet.sui.io/graphql",
+            ["route", "fees", "capacity"],
+          ),
+          sourceRef(
+            "suiUSDe SDK CollateralFee and BenefactorManager types",
+            "https://raw.githubusercontent.com/ethena-labs/suiusde-sdk/main/src/generated/suiusde/collateral_fee.ts",
+            ["fees"],
+          ),
+        ],
+        rationale:
+          "Deployed Sui Move package 0xb81bd7d3d18ed48c31286ac66c2dc7f301a8b57227130de0dbddd5f7aa3a0ccc hard-caps both mint and redeem fees via constants::max_fee_bps() = 100 bps (1.00%), enforced by collateral_fee::validate on both set_collateral_default_fees and set_benefactor_redeem_fee. At pinned Sui checkpoint 348506669 (2026-11-23T23:20:02Z), sole collateral USDC has default_fee.redeem = 10 bps and all 12 benefactors have empty per-benefactor collateral_fees overrides. The conservative 100 bps protocol ceiling bounds all-benefactor redemption fees under the deployed package; package UpgradeCap governance and Sui gas remain separate.",
+      },
+    },
     holderEligibility: "whitelisted-primary",
     routeExitCorrelation: "wrapper-to-parent-dependency",
-    reviewedAt: "2026-08-13",
+    reviewedAt: "2026-11-23",
     docs: [
       sourceRef("Sui/Ethena suiUSDe announcement", "https://www.sui.io/blog/suig-ethena-suiusde-stablecoin", [
         "route",

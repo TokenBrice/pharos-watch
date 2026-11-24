@@ -278,7 +278,7 @@ describe("Safety Score v9 authored bridge-control identity", () => {
       reviewState: "unmatched",
       evidenceKind: "upper-bound",
     }))).toThrow(/is not a selected-reviewed row/);
-    // At the documentation bar a bound is no proof of immateriality: the share
+    // At the materiality bar a bound is no proof of immateriality: the share
     // datum stays required, so the asset is rejected rather than admitted below bar.
     expect(() => adapt(metadata, supplyReview({
       deploymentRouteKey: representationRoute.id,
@@ -286,7 +286,7 @@ describe("Safety Score v9 authored bridge-control identity", () => {
       supplyShare: DEPLOYMENT_SUPPLY_CENSUS_BOUND_SHARE,
       reviewState: "selected-reviewed",
       evidenceKind: "upper-bound",
-    }))).toThrow(/not below the 0\.01 documentation bar/);
+    }))).toThrow(/not below the 0\.1 documentation bar/);
     // Strictly below the bar the reviewed bound is admitted as a bound: the route
     // control keeps a missing exact share instead of a spot value.
     const admitted = adapt(metadata, supplyReview({

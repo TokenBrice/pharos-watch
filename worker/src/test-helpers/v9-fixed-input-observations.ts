@@ -219,7 +219,7 @@ export function corruptWmDeploymentObservation(
  */
 const V9_TEST_CLOCK_FLOOR_SEC = 1_786_320_000;
 
-const REVIEW_DATE_KEYS = new Set(["reviewedAt", "compositionAsOf"]);
+const REVIEW_DATE_KEYS = new Set(["reviewedAt", "compositionAsOf", "observedAt"]);
 
 function collectReviewDateSecs(value: unknown, into: number[]): void {
   if (Array.isArray(value)) {

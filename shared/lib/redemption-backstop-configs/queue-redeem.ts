@@ -1246,6 +1246,34 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     costModel: undisclosedReviewedFee(
       "Usual docs describe permissionless bUSD0 redemption into USD0: early par exit requires the matching rt-bUSD0 token, while bUSD0 alone redeems at maturity; public docs reviewed do not publish a separate redemption fee",
     ),
+    v9RouteReviewTerms: {
+      settlementModel: "queued",
+      // On-chain Usd0PP.getEndTime() is fixed at 1844335800 (2028-06-11T11:30:00Z,
+      // pinned at Ethereum block 26480750 on 2026-11-23T22:13:35Z, proxy
+      // 0x35D8949372D46B7a3D5A56006AE77B215fc69bC0 -> impl 0x9F2BD21bF8012fce0D5845537c1DefF3a89BC85B).
+      // Because settlementDelaySec holds a fixed duration in seconds rather than a
+      // maturity timestamp, encode the conservative wait from 2026-11-23T00:00Z
+      // (1795392000) to maturity (48,943,800s = 566.48d; >= the 565.55d wait
+      // remaining at block 26480750 and strictly non-understating for any clock >=
+      // reviewAdmissionClockSec(reviewedAt) = 2026-11-24T00:00Z). Any duration >
+      // 604,800s (7d) lands in the worst settlementDelayBands tier (0.6 multiplier)
+      // with settlementModel "queued" (score 20). The reviewed term expires at
+      // reviewedAt + 365d = 2027-11-23T00:00Z. Capacity and cost gaps remain untouched.
+      settlementDelaySec: 48_943_800,
+      reviewedAt: "2026-11-23",
+      docs: [
+        sourceRef(
+          "Usual bUSD0 fact sheet (June 11, 2028 maturity par redemption into USD0)",
+          "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/busd0",
+          ["route", "settlement"],
+        ),
+        sourceRef(
+          "Verified Usd0PP implementation on Sourcify (getEndTime = 1844335800, unwrap at maturity, Ethereum block 26480750)",
+          "https://sourcify.dev/server/v2/contract/1/0x9F2BD21bF8012fce0D5845537c1DefF3a89BC85B?fields=all",
+          ["route", "settlement"],
+        ),
+      ],
+    },
     docs: [
       sourceRefFull("Usual bUSD0 docs", "https://docs.usual.money/usual-products/yield-products/usd-products/bond-usd0"),
       sourceRefFull(
@@ -1254,8 +1282,8 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       ),
     ],
     notes: [
-      "Before June 11, 2028, par redemption requires recombining bUSD0 with rt-bUSD0; bUSD0-only redemption is modeled as documented-bound eventual capacity because the standalone bond leg does not redeem at par until maturity",
-      "Secondary-market exits and optional governance floor redemption are excluded from the modeled route",
+      "Before June 11, 2028 (Usd0PP.getEndTime() = 1844335800, 2028-06-11T11:30:00Z), par redemption requires recombining bUSD0 with rt-bUSD0; bUSD0-only redemption is modeled as documented-bound eventual capacity settling at maturity (48,943,800s from 2026-11-23T00:00Z)",
+      "Secondary-market exits and optional governance floor redemption (0.92 floor) are excluded from the modeled route",
     ],
   }),
   "usdm-monetrix": defineQueueRedeemConfig({

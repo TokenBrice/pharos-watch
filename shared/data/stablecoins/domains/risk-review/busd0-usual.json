@@ -16,6 +16,65 @@
     "reviewer": "SONG Safety Score V9 access review",
     "reviewedAt": "2026-07-14"
   },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "Canonical Ethereum bUSD0 (proxy 0x35d8949372d46b7a3d5a56006ae77b215fc69bc0, Blockscout-verified (partial bytecode match) Usd0PP implementation 0x9f2bd21bf8012fce0d5845537c1deff3a89bc85b whose runtime bytecode matches on-chain code at block 26480750) reads no external price feed. Minting (_deconstruct), early recombination with rt-bUSD0 (reconstruct), and post-maturity unwrapping (_unwrap, after getEndTime() = 1844335800 / 2028-06-11T11:30:00Z) all use fixed 1:1 USD0 accounting. The only parameter that sets a USD0-per-bUSD0 rate is floorPrice, consumed by unlockUsd0ppFloorPrice() for early exit (Usd0PP also holds two separate role-set early-exit USUAL-burn fee parameters, durationCostFactor = 730 under USD0PP_DURATION_COST_FACTOR_ROLE and usualDistributionPerUsd0pp = 2941095890410959 under USD0PP_USUAL_DISTRIBUTION_ROLE, feeding calculateRequiredUsual() for unlockUSD0ppWithUsual(), which form a fee schedule rather than a USD0 price oracle). At Ethereum block 26480750 (2026-11-23T22:13:35Z, hash 0x6404a0db1b8fd051ed64d619b1592e7ca4e916b5af51daa83e77418d0fb99282), getFloorPrice() returned 920000000000000000 (0.92 USD0 per bUSD0), writable only by FLOOR_PRICE_UPDATER_ROLE via updateFloorPrice() and capped at 1e18 without an external oracle check; RegistryAccess 0x0d374775e962c3608b8f0a4b8b10567df739bb56 confirms FLOOR_PRICE_UPDATER_ROLE is held by 3-of-6 Gnosis Safe 0x5b66dcf0a4e6c6265c39f76a91f77939fa7a5e5b (described as DAO governance-set in the 2026-02-16 Usual bUSD0 fact sheet). The Chainlink bUSD0 EACAggregatorProxy 0xFC9e30Cf89f8A00dba3D34edf8b65BCDAdeCC1cB listed in Usual tech docs is unused by Usd0PP and inactive at the same block (aggregator() = 0x0, proposedAggregator() = 0x0, latestRoundData() reverts). Underlying USD0 collateral pricing (ClassicalOracle) and third-party lending venues remain separate scopes.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-11-23",
+      "reviewer": "Pharos 2026-11-23 unknowns assessment (busd0-usual oracle review)",
+      "rationale": "bUSD0 is a fixed-notional USD0 bond wrapper with no borrower CDP markets or liquidation engine inside Usd0PP. Par minting, recombination, and post-maturity unwrapping use fixed 1:1 USD0 accounting, while the role-set floorPrice parameter (held by 3-of-6 Safe 0x5b66dcf0a4e6c6265c39f76a91f77939fa7a5e5b; described as DAO governance-set in the fact sheet) is a single top-level early-exit USD0-per-bUSD0 pricing authority; no collateral-specific liquidation branches exist.",
+      "sources": [
+        {
+          "label": "Blockscout-verified (partial bytecode match, verified 2025-12-10) Ethereum Usd0PP implementation (no external oracle consumer; FLOOR_PRICE_UPDATER_ROLE-gated updateFloorPrice capped at 1e18)",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9f2bd21bf8012fce0d5845537c1deff3a89bc85b"
+        },
+        {
+          "label": "Ethereum pinned Usd0PP implementation, floorPrice, getEndTime, and Chainlink proxy reads at block 26480750 (2026-11-23T22:13:35Z)",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
+        },
+        {
+          "label": "Usual bUSD0 fact sheet, last updated 2026-02-16: fixed 1:1 USD0 maturity notional and DAO governance-set 0.92 USD0 floor price",
+          "url": "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/busd0"
+        }
+      ]
+    },
+    "reviewedAt": "2026-11-23",
+    "reviewer": "Pharos 2026-11-23 unknowns assessment (busd0-usual oracle review)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Blockscout-verified (partial bytecode match, verified 2025-12-10) Ethereum Usd0PP implementation (fixed 1:1 par legs, role-set floorPrice, no external price feed)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9f2bd21bf8012fce0d5845537c1deff3a89bc85b"
+      },
+      {
+        "label": "Ethereum pinned reads at block 26480750 (2026-11-23T22:13:35Z; hash 0x6404a0db1b8fd051ed64d619b1592e7ca4e916b5af51daa83e77418d0fb99282): EIP-1967 impl, getFloorPrice, getEndTime, runtime bytecode, and inactive Chainlink proxy",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Ethereum public JSON-RPC (keyless MEV Blocker) reproduction at block 26480750 (2026-11-23T22:13:35Z): impl, registryAccess, hasRole(FLOOR_PRICE_UPDATER_ROLE, 3-of-6 Safe 0x5b66dcf0a4e6c6265c39f76a91f77939fa7a5e5b), floorPrice, durationCostFactor, usualDistributionPerUsd0pp, and inactive Chainlink proxy",
+        "url": "https://rpc.mevblocker.io"
+      },
+      {
+        "label": "Verified Chainlink EACAggregatorProxy 0xFC9e30Cf89f8A00dba3D34edf8b65BCDAdeCC1cB on Blockscout (inactive; aggregator() = 0x0 at block 26480750)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xFC9e30Cf89f8A00dba3D34edf8b65BCDAdeCC1cB"
+      },
+      {
+        "label": "Usual Chainlink oracles technical documentation (lists unused bUSD0 EACAggregatorProxy 0xFC9e30Cf89f8A00dba3D34edf8b65BCDAdeCC1cB; accessed 2026-11-23)",
+        "url": "https://tech.usual.money/smart-contracts/utility-contracts/usd0/chainlink-oracles"
+      },
+      {
+        "label": "Usual bUSD0 fact sheet, last updated 2026-02-16: 1:1 USD0 bond notional, June 11 2028 maturity, and DAO governance-set 0.92 USD0 floor price",
+        "url": "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/busd0"
+      },
+      {
+        "label": "Usual bUSD0 product documentation (accessed 2026-11-23): primary recombination, maturity redemption, and DAO floor redemption",
+        "url": "https://docs.usual.money/usual-products/yield-products/usd-products/bond-usd0"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "bUSD0 has a reviewed Ethereum native bond-wrapper route and a distinct Ethereum-to-Arbitrum LayerZero V2 burn/mint representation route. The Ethereum L1OFTAdapter locks/releases canonical bUSD0, while the Arbitrum OFTMintAndBurnAdapter is the authenticated local token minter/burner. Adapter owners, endpoint peers, representation-token upgrades, and the LayerZero validation boundary are scored here; inherited USD0 routes are not substituted for bUSD0 evidence.",

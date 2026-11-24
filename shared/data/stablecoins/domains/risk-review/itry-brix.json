@@ -30,10 +30,10 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "Canonical iTRY is issued on Ethereum. The Ethereum LayerZero OFT adapter locks native tokens and the MegaETH OFT mints representations on accepted messages. Both adapter and OFT are controlled by Brix\u2019s same-address Safe. Current owner, token, endpoint and amount-decimal identities are pinned; complete DVN/library, validator signing, rate-limit and route-census closure remains unverified. Satellite balances are representations of locked canonical liabilities, not an additional reserve asset.",
-    "reviewedAt": "2026-11-15",
-    "reviewer": "Pharos Brix control review",
-    "confidence": "probable",
+    "summary": "Canonical iTRY is issued on Ethereum. The Ethereum LayerZero OFT adapter locks native tokens and the MegaETH OFT mints representations on accepted messages. Both adapter and OFT are controlled by Brix\u2019s same-address 3-of-5 Safe v1.4.1 (zero guard, empty modules, canonical CompatibilityFallbackHandler on both chains). At Ethereum block 26481235 and MegaETH block 32681089 (2026-11-23 UTC), an exhaustive 188-EID LayerZero V2 scan confirms sole reciprocal Ethereum (30101) \u2194 MegaETH (30398) peers using custom SendLib/RecvLib, 0 required + 3-of-5 optional DVNs (LayerZero Labs, P2P, Horizen, Twinstake, USDT0), and a mutable built-in 250,000,000 iTRY / 3,600 s rate limit on each side. Satellite balances are representations of locked canonical liabilities, not an additional reserve asset.",
+    "reviewedAt": "2026-11-23",
+    "reviewer": "Pharos Brix control review; CTRL-2 pinned LayerZero & MegaETH Safe review (2026-11-23)",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "docs",
@@ -108,10 +108,10 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At MegaETH block 31986187, hash 0x450f89457bda2750bb9a7e13538500ee6226b0ecdde1ec1c111a59ad048bf7ee, time 2026-11-15T22:53:18Z, symbol=iTRY, decimals=18, sharedDecimals=6, token=self, endpoint=minter=0x6f475642a6e85809b1c36fa62763669b1b48dd5b and owner=Safe 0xbdb430adf64ff1c8201c10221ddb846fa62613b6. Local getThreshold=3/getOwners=5 and empty modules were read, but its guard and fallback were not read. The source\u2019s minter variable gates transfer exceptions; actual OFT representation minting follows the endpoint/accepted-peer message path. Exact validator configuration and limits are not established by these identity/owner reads. Reciprocal peers are pinned: Ethereum adapter peers(30398) is the MegaETH OFT, and MegaETH OFT peers(30101) is the Ethereum adapter; these two reads do not prove an exhaustive destination census or the current DVN/library configuration.",
+        "reviewNote": "At MegaETH block 32681089 (hash 0x7af18d4a8956868524821287c53d5d229153ae72cfdbfcd3b95210161644e070, 2026-11-23T23:55:00Z) and Ethereum finalized block 26481235 (hash 0x107058a882666babc1fb4314edc9160ff5d2a4c14011612b3e3c5f3e89cbe7b2, 2026-11-23T23:50:47Z), symbol=iTRY, decimals=18, sharedDecimals=6, token=self, endpoint=minter=0x6f475642a6e85809b1c36fa62763669b1b48dd5b, totalSupply=843.370621 iTRY, and owner=delegate=Safe 0xbdb430adf64ff1c8201c10221ddb846fa62613b6. Safe v1.4.1 reads on MegaETH confirm masterCopy 0x29fcb43b46531bca003ddc8fcb67ffe91900c762, threshold 3/5, empty modules, zero guard, and canonical CompatibilityFallbackHandler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Exhaustive 188-EID LayerZero V2 peer scans on both chains confirm sole reciprocal Ethereum (30101) \u2194 MegaETH (30398) peers, custom SendLib/RecvLib, 0 required + 3-of-5 optional DVNs (LayerZero Labs, P2P, Horizen, Twinstake, USDT0), 15 ETH / 300 MegaETH confirmations, and a built-in mutable 250,000,000 iTRY / 3,600 s rate limit on each side.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-11-15",
-        "observedBlock": 31986187,
+        "observedAt": "2026-11-23",
+        "observedBlock": 32681089,
         "controllerChain": "megaeth",
         "controllerAddress": "0xbdb430adf64ff1c8201c10221ddb846fa62613b6",
         "failureDomainKeys": [
@@ -126,6 +126,18 @@
           {
             "label": "MegaETH pinned block 31986187",
             "url": "https://mega.etherscan.io/block/31986187"
+          },
+          {
+            "label": "MegaETH pinned RPC reads at block 32681089 (2026-11-23T23:55:00Z)",
+            "url": "https://mainnet.megaeth.com/rpc"
+          },
+          {
+            "label": "Ethereum finalized RPC reads at block 26481235 (2026-11-23T23:50:47Z)",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "LayerZero V2 official DVN and endpoint metadata",
+            "url": "https://metadata.layerzero-api.com/v1/metadata"
           },
           {
             "label": "Brix deployments and hub/spoke identities",
@@ -170,8 +182,8 @@
           "source": "onchain"
         },
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-11-15",
-        "observedBlock": 26423424,
+        "observedAt": "2026-11-23",
+        "observedBlock": 26481235,
         "sources": [
           {
             "label": "Verified iTRY Ethereum OFT adapter, owner peer configuration and rate limiter",
@@ -180,16 +192,24 @@
           {
             "label": "Ethereum block 26423424",
             "url": "https://etherscan.io/block/26423424"
+          },
+          {
+            "label": "Ethereum finalized RPC reads at block 26481235 (2026-11-23T23:50:47Z)",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "LayerZero V2 official DVN and endpoint metadata",
+            "url": "https://metadata.layerzero-api.com/v1/metadata"
           }
         ],
         "routeChecks": {
           "lockboxOrEscrow": "Ethereum adapter 0xa21819cb613c9525e31178812b665933471e5e88 locks canonical iTRY; token() returned the native deployment. Verified rescueToken rejects the underlying iTRY token.",
-          "trustedPeerOrRemote": "peers(30398) returned 0x996ce957408804fec19237d866799d9c7076e48c encoded as bytes32.",
-          "pausersAdminsUpgraders": "Pinned owner() is this Safe; verified OFT owner powers include peer configuration, delegate/configuration and rate-limiter changes.",
-          "rateLimits": "Mutable owner/rate-limiter controls are source-verified; configured numerical limits and the independent rateLimiter address were not read.",
-          "signingModel": "Current LayerZero send/receive libraries and DVN selection remain unverified."
+          "trustedPeerOrRemote": "At Ethereum finalized block 26481235, an exhaustive 188-EID LayerZero V2 scan confirmed MegaETH (EID 30398) -> 0x996ce957408804fec19237d866799d9c7076e48c is the sole configured peer.",
+          "pausersAdminsUpgraders": "Pinned owner() and EndpointV2 delegate() both return this 3-of-5 Safe; verified OFT owner powers include peer configuration, endpoint/DVN configuration and rate-limiter changes without timelock.",
+          "rateLimits": "At Ethereum block 26481235, external rateLimiter() is 0x0 and built-in rateLimits(30398) enforces 250,000,000 iTRY (250e24 wei) per 3,600 s window (mutable by owner Safe).",
+          "signingModel": "Custom (non-default) SendLib 0xbb2ea70c9e858123480642cf96acbcce1372dce1 (15 conf) and RecvLib 0xc02ab410f0734efa3f14628780e6e695156024c2 (300 conf) require 0 required + 3-of-5 optional DVNs: P2P (0x0655...), Horizen (0x3802...), USDT0 (0x3b05...), LayerZero Labs (0x589d...), Twinstake (0xa59b...); executor 0x173272739bd7aa6e4e214714048a9fe699453059 (maxMessageSize 10000)."
         },
-        "evidence": "At Ethereum block 26423424, owner() returned the three-of-five native issuer Safe. Verified iTRYTokenOFTAdapter/RateLimitedOFTAdapter and inherited OApp source permit owner changes to trusted peers, endpoint configuration/delegate and rate-limiter assignment; these are bridge/escrow capabilities distinct from native minter administration. The token and reciprocal MegaETH peer were read at the same numeric pin. Safe owner/module/guard observations are pinned separately in the same evidence packet; complete messaging authority and numerical amount-bound closure are not claimed."
+        "evidence": "At Ethereum block 26423424 and re-verified at finalized block 26481235 (hash 0x107058a882666babc1fb4314edc9160ff5d2a4c14011612b3e3c5f3e89cbe7b2, 2026-11-23T23:50:47Z), owner() and EndpointV2 delegates(adapter) returned the 3-of-5 Brix Safe 0xbdb430adf64ff1c8201c10221ddb846fa62613b6. Verified iTRYTokenOFTAdapter/RateLimitedOFTAdapter and inherited OApp source permit owner changes to trusted peers, endpoint/DVN configuration and built-in rate limits (250,000,000 iTRY / 3,600 s; external rateLimiter=0x0). Exhaustive 188-EID scan confirmed MegaETH (30398) is the sole peer, configured with custom SendLib/RecvLib and 3-of-5 optional DVNs (P2P, Horizen, USDT0, LayerZero Labs, Twinstake). These are bridge/escrow capabilities distinct from native minter administration."
       },
       {
         "id": "megaeth-oft-owner-safe",
@@ -208,6 +228,7 @@
         "threshold": 3,
         "signerCount": 5,
         "safe": {
+          "version": "1.4.1",
           "owners": [
             "0x38cfe4a510ea46a24c45c4783e4fb66580e489fd",
             "0x53cb02e296d374bc20805c3076ae53b6681f8ec8",
@@ -217,13 +238,18 @@
           ],
           "threshold": 3,
           "enabledModules": [],
-          "observedAt": "2026-11-15",
-          "observedBlock": 31986187,
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "observedAt": "2026-11-23",
+          "observedBlock": 32681089,
           "source": "onchain"
         },
-        "modulesOrGuardsStatus": "unknown",
-        "observedAt": "2026-11-15",
-        "observedBlock": 31986187,
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "capDescription": "The owner Safe can immediately change peers, LayerZero DVN/library configuration, and the built-in 250,000,000 iTRY / 3,600 s rate limit with no timelock.",
+        "observedAt": "2026-11-23",
+        "observedBlock": 32681089,
         "sources": [
           {
             "label": "Verified iTRY MegaETH OFT and OAppReceiver source",
@@ -232,15 +258,18 @@
           {
             "label": "MegaETH block 31986187",
             "url": "https://mega.etherscan.io/block/31986187"
+          },
+          {
+            "label": "MegaETH pinned Safe and OFT RPC reads at block 32681089 (2026-11-23T23:55:00Z)",
+            "url": "https://mainnet.megaeth.com/rpc"
           }
         ],
         "routeChecks": {
-          "trustedPeerOrRemote": "peers(30101) returned the canonical Ethereum adapter 0xa21819cb613c9525e31178812b665933471e5e88 encoded as bytes32.",
-          "pausersAdminsUpgraders": "Pinned owner() is this Safe. The owner can change the accepted peer, endpoint delegate/configuration and rate limiter.",
-          "rateLimits": "Source establishes mutable owner/rate-limiter controls; numerical limits and the independent limiter address remain unqueried.",
-          "unsupportedReason": "Safe getThreshold/getOwners/getModulesPaginated were read locally on MegaETH; guard/fallback state and exhaustive execution bypasses were not read."
+          "trustedPeerOrRemote": "At MegaETH block 32681089, an exhaustive 188-EID LayerZero V2 scan confirmed Ethereum (EID 30101) -> 0xa21819cb613c9525e31178812b665933471e5e88 is the sole configured peer.",
+          "pausersAdminsUpgraders": "Pinned owner() and EndpointV2 delegate() both return Safe 0xbdb430adf64ff1c8201c10221ddb846fa62613b6 (SafeL2 v1.4.1 masterCopy 0x29fc..., 3-of-5, empty modules, zero guard slot, canonical CompatibilityFallbackHandler 0xfd07...).",
+          "rateLimits": "External rateLimiter() is 0x0; built-in rateLimits(30101) enforces 250,000,000 iTRY (250e24 wei) per 3,600 s window, mutable by the owner Safe."
         },
-        "evidence": "At MegaETH block 31986187, owner() returned this address, local getThreshold()=3 and getOwners() returned the five listed addresses. Module pagination returned an empty array and terminal sentinel. Verified OFT/OApp/RateLimitedOFT source gives owner control over peer and endpoint configuration and rate-limiter settings. These observations identify the administrator; they do not certify guard/fallback reach, beneficial signer independence or complete LayerZero security configuration."
+        "evidence": "At MegaETH block 32681089 (hash 0x7af18d4a8956868524821287c53d5d229153ae72cfdbfcd3b95210161644e070, 2026-11-23T23:55:00Z; header hash verified before and after reads), owner() and EndpointV2 delegates(oft) returned Safe 0xbdb430adf64ff1c8201c10221ddb846fa62613b6. On-chain Safe reads confirmed VERSION()='1.4.1', slot 0 masterCopy=0x29fcb43b46531bca003ddc8fcb67ffe91900c762 (canonical SafeL2 v1.4.1), getThreshold()=3, getOwners()=5 addresses matching Ethereum, getModulesPaginated(0x1,10)=([], 0x1), guard slot (0x4a20...)=0x0, and fallbackHandler slot (0x6c9a...)=0xfd0732dc9e303f09fcef3a7388ad10a83459ec99 (canonical CompatibilityFallbackHandler). Verified OFT/OApp/RateLimitedOFT source gives owner control over peers, endpoint/DVN config and built-in rate limits (250,000,000 iTRY / 3,600 s). Beneficial human signer independence and key custody remain uncertified."
       },
       {
         "id": "megaeth-layerzero-endpoint-mint",
@@ -254,9 +283,11 @@
         "authorityType": "contract",
         "controllerChain": "megaeth",
         "controllerAddress": "0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
+        "canRaiseCap": true,
+        "capDescription": "Built-in OFT rate limit is 250,000,000 iTRY per 3,600 s window (2.37x current canonical supply) and is mutable without delay by the 3-of-5 owner Safe; LayerZero DVN quorum (3-of-5 optional DVNs) and peers are likewise mutable by the Safe delegate.",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-11-15",
-        "observedBlock": 31986187,
+        "observedAt": "2026-11-23",
+        "observedBlock": 32681089,
         "sources": [
           {
             "label": "Verified iTRY MegaETH OFT and OAppReceiver source",
@@ -265,57 +296,26 @@
           {
             "label": "MegaETH block 31986187",
             "url": "https://mega.etherscan.io/block/31986187"
+          },
+          {
+            "label": "MegaETH pinned LayerZero endpoint, ULN and rate-limit reads at block 32681089 (2026-11-23T23:55:00Z)",
+            "url": "https://mainnet.megaeth.com/rpc"
+          },
+          {
+            "label": "Ethereum finalized LayerZero endpoint, ULN and rate-limit reads at block 26481235 (2026-11-23T23:50:47Z)",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "LayerZero V2 official DVN and endpoint metadata",
+            "url": "https://metadata.layerzero-api.com/v1/metadata"
           }
         ],
         "routeChecks": {
-          "trustedPeerOrRemote": "MegaETH peers(30101) matches the Ethereum adapter; Ethereum peers(30398) matches the MegaETH OFT.",
-          "signingModel": "Current endpoint libraries, DVNs, quorum and message verification configuration remain unverified; an endpoint address is not a validator-signing proof.",
-          "onchainAmountBounds": "OFT uses 18 local and 6 shared decimals. Exact runtime rate limits, validator-authorized mint bounds and loss scope remain unresolved.",
-          "unsupportedReason": "This row records the fixed caller and accepted-peer entry conditions from the deployed token/OAppReceiver source, not exhaustive endpoint or DVN authority closure."
+          "trustedPeerOrRemote": "Exhaustive 188-EID scans at Ethereum block 26481235 and MegaETH block 32681089 confirm sole reciprocal peers: MegaETH peers(30101)=Ethereum adapter 0xa21819cb613c9525e31178812b665933471e5e88 and Ethereum peers(30398)=MegaETH OFT 0x996ce957408804fec19237d866799d9c7076e48c.",
+          "signingModel": "MegaETH EndpointV2 0x6f475642a6e85809b1c36fa62763669b1b48dd5b uses custom SendLib 0xc39161c743d0307eb9bcc9fef03eeb9dc4802de7 (300 conf) and RecvLib 0xe1844c5d63a9543023008d332bd3d2e6f1fe1043 (15 conf) with 0 required + 3-of-5 optional DVNs: LayerZero Labs (0x282b...), P2P (0x43b4...), Horizen (0x8ede...), Twinstake (0xeede...), USDT0 (0xefa6...); executor 0x4208d6e27538189bb48e603d6123a94b8abe0a0b (maxMessageSize 10000). Ethereum mirrors 0 required + 3-of-5 optional DVNs on the same five operators.",
+          "onchainAmountBounds": "OFT uses 18 local / 6 shared decimals. External rateLimiter() is 0x0 on both chains; built-in rateLimits enforces 250,000,000 iTRY (250e24 wei) per 3,600 s window on both Ethereum->MegaETH and MegaETH->Ethereum, mutable without delay by the 3-of-5 Safe."
         },
-        "evidence": "At MegaETH block 31986187, endpoint() and minter() both returned this address. Verified OFT inherits OAppReceiver.lzReceive, which requires msg.sender=endpoint and an accepted peer before dispatching _lzReceive and _credit; OFT _credit mints representation units. The minter storage field is used by transfer exception predicates and does not itself expose an arbitrary public mint function. The accepted Ethereum adapter peer is pinned. The complete current external message-validation configuration is unknown."
-      }
-    ],
-    "scopedQuestions": [
-      {
-        "controlRef": "megaeth-oft-owner-safe",
-        "question": "What are the current MegaETH Safe guard, fallback handler and other executable bypass paths, beyond the observed owners and empty module list?",
-        "reviewedAt": "2026-11-15",
-        "reviewer": "Pharos Brix control review",
-        "sources": [
-          {
-            "label": "Verified iTRY MegaETH OFT and OAppReceiver source",
-            "url": "https://mega.etherscan.io/address/0x996ce957408804fec19237d866799d9c7076e48c#code"
-          },
-          {
-            "label": "MegaETH block 31986187",
-            "url": "https://mega.etherscan.io/block/31986187"
-          }
-        ]
-      },
-      {
-        "controlRef": "megaeth-layerzero-endpoint-mint",
-        "question": "Which current send/receive libraries, DVNs and verification quorum authorize this exact OFT route, and what numerical mint/transfer loss bounds are enforced?",
-        "reviewedAt": "2026-11-15",
-        "reviewer": "Pharos Brix control review",
-        "sources": [
-          {
-            "label": "Verified iTRY MegaETH OFT and OAppReceiver source",
-            "url": "https://mega.etherscan.io/address/0x996ce957408804fec19237d866799d9c7076e48c#code"
-          },
-          {
-            "label": "MegaETH block 31986187",
-            "url": "https://mega.etherscan.io/block/31986187"
-          },
-          {
-            "label": "Verified iTRY Ethereum OFT adapter, owner peer configuration and rate limiter",
-            "url": "https://etherscan.io/address/0xa21819cb613c9525e31178812b665933471e5e88#code"
-          },
-          {
-            "label": "Ethereum block 26423424",
-            "url": "https://etherscan.io/block/26423424"
-          }
-        ]
+        "evidence": "At MegaETH block 32681089 (hash 0x7af18d4a8956868524821287c53d5d229153ae72cfdbfcd3b95210161644e070, 2026-11-23T23:55:00Z) and Ethereum finalized block 26481235 (2026-11-23T23:50:47Z), endpoint() and minter() returned 0x6f475642a6e85809b1c36fa62763669b1b48dd5b; verified OAppReceiver.lzReceive requires msg.sender=endpoint and accepted peer before _credit mints MegaETH representation units. Exhaustive 188-EID scans confirmed sole reciprocal Ethereum/MegaETH peers. Both sides use custom SendLib/RecvLib with 0 required + 3-of-5 optional DVNs (LayerZero Labs, P2P, Horizen, Twinstake, USDT0), 15 ETH / 300 MegaETH confirmations, external rateLimiter=0x0, and built-in rateLimits of 250,000,000 iTRY per 3,600 s window (mutable without delay by Safe 0xbdb4...)."
       }
     ]
   },

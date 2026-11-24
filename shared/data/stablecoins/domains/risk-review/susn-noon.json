@@ -81,9 +81,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "Noon documents Ethereum sUSN as the canonical ERC-4626 wrapper and lock chain: sUSN inventory is locked on Ethereum, destination Hyperlane representations mint on accepted messages, and return transfers burn the representation before Ethereum unlocks the original. The zkSync, Sophon, and Starknet deployments are bridge representations, while Ethereum bridge configuration, pause/correction, upgrade, mailbox/ISM, and destination owner controls are scored here separately from native deposit-gated issuance. Sol curation campaign 2026-10-11 (C08USN), issuer sources observed 2026-10-11T00:50:58Z: deprecated TAC sUSN 0x5ced7f73b76a555ccb372cc0f0137bec5665f81e is now included with an unresolved route disposition alongside the eight previously catalogued routes. Deprecated Sophon and TAC are not extinguished liabilities: TAC block 26795569 (2026-10-11T00:51:29Z), observed 2026-10-11T00:51:51.117Z at https://rpc.tac.build, returns 18 decimals and nonzero totalSupply 536396304678010128210 atomic sUSN. The documented Ethereum lock address is 0xe24a3dc889621612422a64e6388927901608b91d; independently authenticated historical message/pending accounting and the complete historical receipt/escrow perimeter remain prerequisites to an exhaustive economic partition. A lock-mint representation must not be enrolled as an independent liability or assigned a static supply share. This note does not renew existing observations; the 2026-10-29 rate-limit controls and fail-open detach paths are recorded below.",
+    "summary": "Noon documents Ethereum sUSN as the canonical ERC-4626 wrapper and lock chain: sUSN inventory is locked on Ethereum, destination Hyperlane and Sui LayerZero representations mint on accepted messages, and return transfers burn the representation before Ethereum unlocks the original. The zkSync, Sophon, Starknet, HyperEVM, Base, Citrea, Berachain, TAC, BSC, Sui, and Solana deployments are bridge representations (12-route perimeter including Ethereum), while Ethereum bridge configuration, pause/correction, upgrade, mailbox/ISM, and destination owner controls are scored here separately from native deposit-gated issuance. Sol curation campaign 2026-10-11 (C08USN), issuer sources observed 2026-10-11T00:50:58Z: deprecated TAC sUSN 0x5ced7f73b76a555ccb372cc0f0137bec5665f81e is now included with an unresolved route disposition alongside the eight previously catalogued routes. Deprecated Sophon and TAC are not extinguished liabilities: TAC block 26795569 (2026-10-11T00:51:29Z), observed 2026-10-11T00:51:51.117Z at https://rpc.tac.build, returns 18 decimals and nonzero totalSupply 536396304678010128210 atomic sUSN. On 2026-11-23 (cur-chains), pinned reads added the reviewed BSC Hyperlane (0xda67b428...), Sui LayerZero V2 OFT (0x0a672389...::susn::SUSN), and Solana Hyperlane (6SSMUrBr...) representation routes and controls without modifying earlier route observations. The documented Ethereum lock address is 0xe24a3dc889621612422a64e6388927901608b91d; independently authenticated historical message/pending accounting and the complete historical receipt/escrow perimeter remain prerequisites to an exhaustive economic partition. A lock-mint representation must not be enrolled as an independent liability or assigned a static supply share. This note does not renew existing observations; the 2026-10-29 rate-limit controls and fail-open detach paths are recorded below.",
     "reviewedAt": "2026-08-16",
-    "reviewer": "Codex mint-bridge-boundary migration; Claude Noon feedback re-review 2026-10-29 (DeepSeek lane B), rate-limit controls only",
+    "reviewer": "Codex mint-bridge-boundary migration; Claude Noon feedback re-review 2026-10-29 (DeepSeek lane B), rate-limit controls only; cur-chains 2026-11-23 BSC/Sui/Solana route addition",
     "confidence": "manual-review",
     "protocols": [
       {
@@ -116,6 +116,18 @@
       {
         "label": "Noon specific sUSN lock-mint, burn-unlock and cross-satellite burn-mint architecture, observed 2026-10-11T00:50:58Z by Sol curation campaign 2026-10-11 (C08USN), accounting scope only",
         "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/cross-chain-interoperability.md"
+      },
+      {
+        "label": "Pinned BSC RPC (Alchemy) block 135362946 (2026-11-23T23:58:24Z) — sUSN BSC Hyperlane deployment, Safe, and rate-limiter",
+        "url": "https://bnb-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Pinned Sui GraphQL checkpoint 348516119 (2026-11-23T23:58:27Z) — sUSN Sui LayerZero V2 OFT CoinMetadata, TreasuryCap, peer, and AdminCap",
+        "url": "https://graphql.mainnet.sui.io/graphql"
+      },
+      {
+        "label": "Pinned Solana mainnet RPC finalized slot 473135188 (2026-11-23) — sUSN Token-2022 mint and Hyperlane warp-route program",
+        "url": "https://api.mainnet-beta.solana.com"
       }
     ],
     "routes": [
@@ -447,6 +459,127 @@
             "label": "Current TAC implementation verified source and ABI, retrieved 2026-10-21",
             "url": "https://explorer.tac.build/api/v2/smart-contracts/0x6d1019bdbe1da163134aba821bbfc1ccaeb988a8"
           }
+        ]
+      },
+      {
+        "id": "bsc:0xda67b4284609d2d48e5d10cfac411572727dc1ed",
+        "sourceChain": "ethereum",
+        "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xda67b4284609d2d48e5d10cfac411572727dc1ed",
+        "protocol": "Noon Hyperlane sUSN representation",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "bsc",
+        "controllerAddress": "0xea4f6bd89def2d7a1f1fab3f6f92f7888bdc21f2",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "cur-chains 2026-11-23: issuer deployment registry plus pinned BSC block 135362946 (hash 0x020b2f1b8ee019c76c079b27e19e22a901e556974af0d92d37daa57eae63d3f3, 2026-11-23T23:58:24Z) establishes Staked USN/sUSN, 18 decimals, totalSupply 0, paused()=false, and hyperlaneEnabled()=true. EIP-1967 implementation is 0x0ada1cb43ac67fffa2773b169920bfab4c6391b7 (8,901 bytes, decoded-bytes SHA-256 0da33d6f10de42d3f96af6a4020425a54843df7edc170e44004bf042827a40b6), matching Base's exact-match Sourcify StakedUSNHyperlane runtime byte-for-byte. Reciprocal Hyperlane binding verified: BSC remoteTokens(1)=0xe24a3dc889621612422a64e6388927901608b91d and Ethereum remoteTokens(56)=0xda67b4284609d2d48e5d10cfac411572727dc1ed at Ethereum block 26481203. mailbox()=0x2971b9aec44be4eb673df1b88cdb57b96eefe8a4, token ISM()=0 (delegates to defaultIsm 0xcba43dca07bd146776da39caaa9343d0cba33027). owner()=0x51a30e647d33a044967fa3dbb04d6ed6f45455f6 (SelectiveTimelock) owned by 3-of-5 Safe 0xea4f6bd89def2d7a1f1fab3f6f92f7888bdc21f2, which also directly holds DEFAULT_ADMIN_ROLE on BSC sUSN. Zero supply is only observed stock at this pin, not proof of immateriality; default ISM validator quorum and incident closure remain unreviewed.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-23",
+        "observedBlock": 135362946,
+        "sources": [
+          {
+            "label": "Noon issuer deployment registry",
+            "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
+          },
+          {
+            "label": "Exact-match Base StakedUSNHyperlane implementation; byte-for-byte pinned runtime match",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xa02ca8c6130b75b320faa785034e95d4374a8942?fields=all"
+          },
+          {
+            "label": "Pinned BSC RPC block 135362946",
+            "url": "https://bnb-mainnet.g.alchemy.com/v2/"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:hyperlane-warp-route",
+          "contract:bsc:0xda67b4284609d2d48e5d10cfac411572727dc1ed",
+          "contract:bsc:0x51a30e647d33a044967fa3dbb04d6ed6f45455f6",
+          "safe:bsc:0xea4f6bd89def2d7a1f1fab3f6f92f7888bdc21f2",
+          "contract:bsc:0x2971b9aec44be4eb673df1b88cdb57b96eefe8a4"
+        ]
+      },
+      {
+        "id": "sui:0x0a672389b7b73df60d40666ac9545433d59d3128086b9e3a425a66bbffdf4dc5::susn::SUSN",
+        "sourceChain": "ethereum",
+        "destinationChain": "sui",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x0a672389b7b73df60d40666ac9545433d59d3128086b9e3a425a66bbffdf4dc5::susn::SUSN",
+        "protocol": "Noon LayerZero V2 OFT sUSN representation",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "sui",
+        "controllerAddress": "0x67cddd47a21038c0bf126096615a06d4dc33bb2de1ea991fff8461875321906d",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "cur-chains 2026-11-23: pinned Sui GraphQL checkpoint 348516119 (digest H2AM5zjHAdNjf91ZCsRkSmzZ8jphowLUnxbZgUBtriVL, 2026-11-23T23:58:27.065Z) establishes CoinMetadata 0xb42c0d766514229edd75c7ffb1df5aad12ac5249a052cba99a3e180eb4380fb6 ('Staked USN' / 'sUSN', 6 decimals, 'Sui LayerZero OFT representation of Noon's staked USN (sUSN).') and shared OFT object 0xab496ed0068cba592901b15cf0192ad366c2634fae3a75eb9632cfa5bdaf567e (package 0xa356ca2010fcdf44d6cecfcecf18b73c32188d361e39dff3a96ac8de0dec7b1b::oft::OFT) holding TreasuryCap 0xbfcc5e889196907f9c5f69542e5f02df4805c6a81a4844fbb3519fd2a778f968 with total_supply 1707322934674 (1,707,322.934674 sUSN), paused=false, shared_decimals=6. Reciprocal LayerZero V2 peer verified: Ethereum peers(30378)=0xa356ca2010fcdf44d6cecfcecf18b73c32188d361e39dff3a96ac8de0dec7b1b at Ethereum block 26481203 and Sui OApp 0xe8a26b0ba4f665eb7f1bc1996ed9b93892bc9ed67013321b5b71de1f89b7029f EID 30101 peer=0xe24a3dc889621612422a64e6388927901608b91d. AdminCap 0x429cd02c7835a791701a612924b6d6788235a05e5a83de3032ac2dddba8cd662 is owned by Noon Contract Operations address 0x67cddd47a21038c0bf126096615a06d4dc33bb2de1ea991fff8461875321906d; inbound/outbound EID 30101 rate limits are 4,000,000 sUSN per 28,800s. Recursive LayerZero DVN/delegate scope and incident closure remain unreviewed.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-23",
+        "observedBlock": 348516119,
+        "sources": [
+          {
+            "label": "Noon issuer deployment registry",
+            "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
+          },
+          {
+            "label": "Pinned Sui GraphQL checkpoint 348516119",
+            "url": "https://graphql.mainnet.sui.io/graphql"
+          },
+          {
+            "label": "Pinned Ethereum RPC block 26481203 (reciprocal LayerZero EID 30378 peer)",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:layerzero-endpoint-v2",
+          "package:sui:0xa356ca2010fcdf44d6cecfcecf18b73c32188d361e39dff3a96ac8de0dec7b1b",
+          "contract:sui:0xab496ed0068cba592901b15cf0192ad366c2634fae3a75eb9632cfa5bdaf567e",
+          "eoa:sui:0x67cddd47a21038c0bf126096615a06d4dc33bb2de1ea991fff8461875321906d"
+        ]
+      },
+      {
+        "id": "solana:6SSMUrBr9GEBsvQeHGKmC8eNXj4e6BAHBfBrycWi5AzL",
+        "sourceChain": "ethereum",
+        "destinationChain": "solana",
+        "canonicalChain": "ethereum",
+        "contractAddress": "6SSMUrBr9GEBsvQeHGKmC8eNXj4e6BAHBfBrycWi5AzL",
+        "protocol": "Noon Hyperlane Sealevel warp route (sUSN lock-mint)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "solana",
+        "controllerAddress": "38DDCh9KB6qYswEyU5r7XztXnBv9xg7ewP24j9tgKA3D",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "cur-chains 2026-11-23: pinned Solana mainnet RPC finalized slot 473135188 establishes Token-2022 (TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb) mint 6SSMUrBr9GEBsvQeHGKmC8eNXj4e6BAHBfBrycWi5AzL ('Staked USN' / 'sUSN', 9 decimals, supply 40549416643652 = 40,549.416643652 sUSN, freezeAuthority=null, mintAuthority=6SSMUrBr9GEBsvQeHGKmC8eNXj4e6BAHBfBrycWi5AzL, metadataPointer/updateAuthority=38DDCh9KB6qYswEyU5r7XztXnBv9xg7ewP24j9tgKA3D, uri=https://back.noon.capital/api/v1/metadata.json). At Ethereum block 26481203, sUSN remoteTokens(1399811149) returns 0x080b1a4215bf4666fceff9f8ba38654d03c4c7fb04a729233713203613cd7ee3 = Solana executable BPF Upgradeable warp-route program YQ5gehKaeUGrqbDKgWMvJRxeMpjTXGhDUhJoHwUAwii (programData 9DHNmFug5jMMbAHdeShwt35R2fPvLVAodCdBuhbwSdU5, upgrade authority 38DDCh9KB6qYswEyU5r7XztXnBv9xg7ewP24j9tgKA3D). Solana warp-route PDA/ISM validator quorum, program build verification, authority custody (System Program account with 0 data; unverified whether EOA or Squads vault PDA), and incident closure remain unreviewed.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-23",
+        "observedBlock": 473135188,
+        "sources": [
+          {
+            "label": "Noon issuer deployment registry",
+            "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
+          },
+          {
+            "label": "Pinned Solana mainnet RPC finalized slot 473135188",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Pinned Ethereum RPC block 26481203 (Hyperlane domain 1399811149 remote token)",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:hyperlane-warp-route",
+          "contract:solana:6SSMUrBr9GEBsvQeHGKmC8eNXj4e6BAHBfBrycWi5AzL",
+          "contract:solana:YQ5gehKaeUGrqbDKgWMvJRxeMpjTXGhDUhJoHwUAwii",
+          "contract:solana:38DDCh9KB6qYswEyU5r7XztXnBv9xg7ewP24j9tgKA3D"
         ]
       }
     ],
@@ -952,6 +1085,115 @@
           {"label": "Berachain public RPC block 28140397", "url": "https://rpc.berachain.com"}
         ],
         "evidence": "Block27768653/hash0x58789e0f97adc8f22c5277fb853ded03b6e867da2c3fd89741b17c5757ba1378: owner3-of-5Safe, empty modules, zero guard, zero-code signer accounts, singleton0x29fcb43b46531bca003ddc8fcb67ffe91900c762. Current implementation0x657284c8337ab91b1a7d4eb66be97596f4878117 exactly equals the source-verified Base runtime. Token unpaused, canonical Ethereum remote configured. DefaultISM0x5ca7cc2f5a2301434fdfcd2e8a77efe7e0c9ff0b requires2-of-2routing/pausable modules. Limiter0x51a30e647d33a044967fa3dbb04d6ed6f45455f6 and ProxyAdmin timelock0xea84ac70f00f47ad6fbe51233aae25799b9f0a02 are independent mutable control domains. No human independence, custody, full recursive execution, incident or materiality proof is inferred. Re-read 2026-10-29 at block 28140397: owner() is still this Safe, rateLimiter() returns the limiter above, setRateLimiter(0) from the owner simulates successfully and reverts for an unprivileged caller, and the limiter owner is the 4-hour timelock 0x033fa037...."
+      },
+      {
+        "id": "susn-bsc-hyperlane-representation-owner",
+        "label": "sUSN BSC bridge-configuration 3-of-5 Safe",
+        "routeRefs": ["bsc:0xda67b4284609d2d48e5d10cfac411572727dc1ed"],
+        "capabilities": ["bridge-mint", "bridge-burn", "upgrade", "admin", "pause", "peer-config", "rate-limit"],
+        "controllerChain": "bsc",
+        "controllerAddress": "0xea4f6bd89def2d7a1f1fab3f6f92f7888bdc21f2",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0x09ce2d1c37772f7ff666b6447a66a5ebd2833799",
+            "0x5ef8aa9cb6b2dedcd02509058cf99d3d44d023c3",
+            "0x04a9e31ee75cfd33d6689e509c09dac5f2d0c507",
+            "0x8b3641db7737ffab752718fcc772161ec09fad01",
+            "0x0057f25088b450170229d78b5700ed735c7cc722"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 135362946,
+          "observedAt": "2026-11-23",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "capDescription": "The 3-of-5 Safe owns the SelectiveTimelock token owner (0x51a30e64..., which gates onlyOwner setRateLimiter(address(0)) detachment; SelectiveTimelock delay unread/unverified), the 24-hour ProxyAdmin upgrade timelock (0xf6f40baa...), and the 4-hour rate-limiter timelock (0xf98af70f...), and directly holds DEFAULT_ADMIN_ROLE on BSC sUSN (gating pause/unpause and role admin). Observed Ethereum rate bucket is 4,000,000 sUSN per 28,800s, not an immutable issuance cap.",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At BSC block 135362946, remoteTokens(1)=0xe24a3dc889621612422a64e6388927901608b91d matches canonical Ethereum sUSN, and Ethereum remoteTokens(56)=0xda67b4284609d2d48e5d10cfac411572727dc1ed at block 26481203. mailbox()=0x2971b9aec44be4eb673df1b88cdb57b96eefe8a4, token ISM()=0 delegating to defaultIsm 0xcba43dca07bd146776da39caaa9343d0cba33027 (validator quorum not decoded).",
+          "pausersAdminsUpgraders": "At BSC block 135362946, owner()=0x51a30e647d33a044967fa3dbb04d6ed6f45455f6 (SelectiveTimelock, owned by 3-of-5 Safe 0xea4f6bd89def2d7a1f1fab3f6f92f7888bdc21f2 with empty modules and zero guard). The 3-of-5 Safe also directly holds DEFAULT_ADMIN_ROLE on BSC sUSN. ProxyAdmin 0x55f39512cb43111a13e8440ee3e3602e72628239 is owned by 86,400s Timelock 0xf6f40baafbcbb29855f4d9a29576b812e0b33fac (owned by the same 3-of-5 Safe).",
+          "rateLimits": "At BSC block 135362946, rateLimiter()=0xea84ac70f00f47ad6fbe51233aae25799b9f0a02 (owned by 14,400s GenericTimelock 0xf98af70f2a5a9526248076df6706ac96bd1f8a41, owned by this Safe). getRateLimit(sUSN, TRANSPORT_HYPERLANE=1, domain=1, in/out) returns 4,000,000e18 per 28,800s window."
+        },
+        "bypassSurfaces": [
+          "Fail-open detach: StakedUSNHyperlane gates setRateLimiter(address(0)) on onlyOwner (SelectiveTimelock 0x51a30e64..., owned by the 3-of-5 Safe; SelectiveTimelock delay unread/unverified), allowing rate-limiter detachment independently of the 4-hour limiter timelock; DEFAULT_ADMIN_ROLE on the Safe separately gates pause/unpause and role administration."
+        ],
+        "observedAt": "2026-11-23",
+        "observedBlock": 135362946,
+        "sources": [
+          {
+            "label": "Exact-match Base StakedUSNHyperlane source; byte-for-byte pinned BSC runtime equality",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xa02ca8c6130b75b320faa785034e95d4374a8942?fields=all"
+          },
+          {
+            "label": "Pinned BSC Alchemy RPC block 135362946",
+            "url": "https://bnb-mainnet.g.alchemy.com/v2/"
+          }
+        ],
+        "evidence": "cur-chains 2026-11-23, BSC block 135362946 (hash 0x020b2f1b8ee019c76c079b27e19e22a901e556974af0d92d37daa57eae63d3f3, 2026-11-23T23:58:24Z): implementation 0x0ada1cb43ac67fffa2773b169920bfab4c6391b7 matches Base StakedUSNHyperlane byte-for-byte; 3-of-5 Safe 0xea4f6bd8... (empty modules, zero guard) holds DEFAULT_ADMIN_ROLE directly and owns SelectiveTimelock 0x51a30e64..., 24h ProxyAdmin timelock 0xf6f40baa..., and 4h rate-limiter timelock 0xf98af70f.... Default ISM validator set, signer custody independence, and historical incident closure remain unreviewed."
+      },
+      {
+        "id": "susn-sui-layerzero-oft-admin",
+        "label": "sUSN Sui LayerZero V2 OFT AdminCap holder",
+        "routeRefs": ["sui:0x0a672389b7b73df60d40666ac9545433d59d3128086b9e3a425a66bbffdf4dc5::susn::SUSN"],
+        "capabilities": ["bridge-mint", "bridge-burn", "admin", "pause", "peer-config", "rate-limit"],
+        "controllerChain": "sui",
+        "controllerAddress": "0x67cddd47a21038c0bf126096615a06d4dc33bb2de1ea991fff8461875321906d",
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": true,
+        "capDescription": "AdminCap 0x429cd02c7835a791701a612924b6d6788235a05e5a83de3032ac2dddba8cd662 controls peer configuration, pause, and rate limits on the shared Sui LayerZero V2 OFT object holding the sUSN TreasuryCap. Observed EID 30101 inbound/outbound buckets are 4,000,000 sUSN per 28,800s, not an immutable cap.",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Sui checkpoint 348516119, OApp 0xe8a26b0ba4f665eb7f1bc1996ed9b93892bc9ed67013321b5b71de1f89b7029f peer table EID 30101 maps to Ethereum sUSN 0xe24a3dc889621612422a64e6388927901608b91d; Ethereum peers(30378) at block 26481203 maps to Sui OFT package 0xa356ca2010fcdf44d6cecfcecf18b73c32188d361e39dff3a96ac8de0dec7b1b.",
+          "pausersAdminsUpgraders": "Shared OFT object 0xab496ed0068cba592901b15cf0192ad366c2634fae3a75eb9632cfa5bdaf567e holds TreasuryCap 0xbfcc5e889196907f9c5f69542e5f02df4805c6a81a4844fbb3519fd2a778f968 (paused=false). AdminCap 0x429cd02c7835a791701a612924b6d6788235a05e5a83de3032ac2dddba8cd662 is owned by Sui address 0x67cddd47a21038c0bf126096615a06d4dc33bb2de1ea991fff8461875321906d (Noon Contract Operations). Underlying key/multisig policy off-chain is unverified.",
+          "rateLimits": "At Sui checkpoint 348516119, inbound and outbound EID 30101 rate limits are each 4,000,000,000,000 (4,000,000 sUSN at 6 decimals) per 28,800s window."
+        },
+        "observedAt": "2026-11-23",
+        "observedBlock": 348516119,
+        "sources": [
+          {
+            "label": "Noon issuer deployment registry",
+            "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
+          },
+          {
+            "label": "Pinned Sui GraphQL checkpoint 348516119",
+            "url": "https://graphql.mainnet.sui.io/graphql"
+          }
+        ],
+        "evidence": "cur-chains 2026-11-23, Sui checkpoint 348516119 (digest H2AM5zjHAdNjf91ZCsRkSmzZ8jphowLUnxbZgUBtriVL, 2026-11-23T23:58:27.065Z): shared OFT object wraps sUSN TreasuryCap (total_supply 1,707,322.934674 sUSN), reciprocal EID 30101/30378 peers verified, AdminCap owned by 0x67cddd47...; LayerZero DVN/delegate set and historical incident closure remain unreviewed."
+      },
+      {
+        "id": "susn-solana-hyperlane-upgrade-authority",
+        "label": "sUSN Solana Hyperlane warp-route upgrade and metadata authority",
+        "routeRefs": ["solana:6SSMUrBr9GEBsvQeHGKmC8eNXj4e6BAHBfBrycWi5AzL"],
+        "capabilities": ["bridge-mint", "bridge-burn", "upgrade", "admin"],
+        "controllerChain": "solana",
+        "controllerAddress": "38DDCh9KB6qYswEyU5r7XztXnBv9xg7ewP24j9tgKA3D",
+        "authorityType": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": true,
+        "capDescription": "38DDCh9KB6qYswEyU5r7XztXnBv9xg7ewP24j9tgKA3D is the BPF Upgradeable program upgrade authority of the Hyperlane warp-route program YQ5gehKaeUGrqbDKgWMvJRxeMpjTXGhDUhJoHwUAwii (and Token-2022 metadata authority), able to replace warp-route mint logic without a verified on-chain timelock.",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Ethereum block 26481203, remoteTokens(1399811149) returns 0x080b1a4215bf4666fceff9f8ba38654d03c4c7fb04a729233713203613cd7ee3 = Solana program YQ5gehKaeUGrqbDKgWMvJRxeMpjTXGhDUhJoHwUAwii. Solana-side remote router PDA and ISM validator set were not decoded.",
+          "pausersAdminsUpgraders": "At Solana finalized slot 473135188, Token-2022 mint 6SSMUrBr9GEBsvQeHGKmC8eNXj4e6BAHBfBrycWi5AzL has freezeAuthority=null, mintAuthority=6SSMUrBr9GEBsvQeHGKmC8eNXj4e6BAHBfBrycWi5AzL, and metadata updateAuthority=38DDCh9KB6qYswEyU5r7XztXnBv9xg7ewP24j9tgKA3D. Warp-route program YQ5gehKaeUGrqbDKgWMvJRxeMpjTXGhDUhJoHwUAwii programData 9DHNmFug5jMMbAHdeShwt35R2fPvLVAodCdBuhbwSdU5 has upgrade authority 38DDCh9KB6qYswEyU5r7XztXnBv9xg7ewP24j9tgKA3D (System Program account with 0 data; unverified whether single-key EOA or Squads vault PDA)."
+        },
+        "observedAt": "2026-11-23",
+        "observedBlock": 473135188,
+        "sources": [
+          {
+            "label": "Noon issuer deployment registry",
+            "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
+          },
+          {
+            "label": "Pinned Solana mainnet RPC finalized slot 473135188",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "cur-chains 2026-11-23, Solana finalized slot 473135188: Token-2022 mint supply 40,549.416643652 sUSN (9 decimals, freezeAuthority=null), Ethereum domain 1399811149 remote binds to BPF Upgradeable program YQ5gehKaeUGrqbDKgWMvJRxeMpjTXGhDUhJoHwUAwii whose upgrade authority is 38DDCh9KB6qYswEyU5r7XztXnBv9xg7ewP24j9tgKA3D. Program source build, authority custody (EOA vs Squads PDA), Solana ISM/router state, and incident closure remain unreviewed."
       }
     ]
   }

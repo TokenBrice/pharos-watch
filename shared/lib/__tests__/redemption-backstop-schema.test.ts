@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { RedemptionBackstopConfigSchema } from "@shared/lib/redemption-backstop-configs/schema";
+import { MAX_REDEMPTION_OUTPUT_ASSETS, RedemptionBackstopConfigSchema } from "@shared/lib/redemption-backstop-configs/schema";
 import { resolveReviewedRedemptionSettlement } from "@shared/lib/redemption-backstop-configs/settlement";
 import type { RedemptionSettlementModel } from "@shared/types/redemption";
 import {
@@ -345,6 +345,25 @@ describe("redemption backstop schema", () => {
       expect(result.success).toBe(false);
       if (result.success) throw new Error("Expected incompatible route to fail validation");
       expect(result.error.issues.map((issue) => issue.path)).toContainEqual(path);
+    }
+  });
+
+  it("enforces MAX_REDEMPTION_OUTPUT_ASSETS on collateral outputAssets and unresolvedOutputAssetKeys", () => {
+    const base = {
+      ...(settlementReviewConfig("atomic", undefined) as Record<string, unknown>),
+      routeFamily: "collateral-redeem", accessModel: "permissionless-onchain",
+      executionModel: "deterministic-onchain", outputAssetType: "mixed-collateral",
+    };
+    const atCap = Array.from({ length: MAX_REDEMPTION_OUTPUT_ASSETS }, (_, i) => `asset:tok${i}`);
+    const overCap = [...atCap, `asset:tok${MAX_REDEMPTION_OUTPUT_ASSETS}`];
+    expect(MAX_REDEMPTION_OUTPUT_ASSETS).toBe(32);
+    for (const field of ["outputAssets", "unresolvedOutputAssetKeys"] as const) {
+      expect(RedemptionBackstopConfigSchema.safeParse({ ...base, [field]: atCap }).success).toBe(true);
+      const over = RedemptionBackstopConfigSchema.safeParse({ ...base, [field]: overCap });
+      expect(over.success).toBe(false);
+      if (!over.success) {
+        expect(over.error.issues).toContainEqual(expect.objectContaining({ code: "too_big", path: [field], maximum: MAX_REDEMPTION_OUTPUT_ASSETS }));
+      }
     }
   });
 });

@@ -788,6 +788,98 @@
         "observedBlock": 453528868,
         "sources": [{"label": "Joint finalized Solana mint and multisig observation", "url": "https://solana-rpc.publicnode.com"}],
         "evidence": "R20 finalized slot 453528868 jointly binds the exact SPL mint to initialized Tokenkeg multisig 9FJsE8HkoJgxbbydk2R1Gc3hUruNJWwXR6AKYZWWY7Sy: numRequiredSigners=1, numValidSigners=2, signers XWxJJE6Dq8EgdnhMWYU587f7St4HJuWbBHPstV2GtKR and 51XXg9grz3dofW32uGC67wTuFsvMYRg62A4SVthG7JjT. Rechecked unchanged jointly at finalized slot 453543085. One signature suffices; custody, independence and recursive authority/upgrade reach remain unreviewed."
+      },
+      {
+        "id": "xaut0-ton-admin",
+        "label": "XAUt0 TON Jetton master admin multisig",
+        "routeRefs": ["ton:EQA1R_LuQCLHlMgOo1S4G7Y7W1cd0FrAkbA10Zq7rddKxi9k"],
+        "capabilities": ["bridge-mint", "admin"],
+        "controllerChain": "ton",
+        "controllerAddress": "0:024e04d3582c1609a4d20c9498de29c92f448a27f97f9b88f618d50f5728c7bd",
+        "authorityType": "multisig",
+        "threshold": 3,
+        "signerCount": 5,
+        "observedAt": "2026-11-23",
+        "observedBlock": 107381404,
+        "failureDomainKeys": [
+          "protocol:xaut0-omnichain",
+          "contract:ton:0:024e04d3582c1609a4d20c9498de29c92f448a27f97f9b88f618d50f5728c7bd"
+        ],
+        "sources": [
+          {"label": "Toncenter v3 masterchain head and XAUt0 jetton master", "url": "https://toncenter.com/api/v3/jetton/masters?address=EQA1R_LuQCLHlMgOo1S4G7Y7W1cd0FrAkbA10Zq7rddKxi9k"},
+          {"label": "TONAPI multisig_v2 state for XAUt0 admin", "url": "https://tonapi.io/v2/multisig/0:024e04d3582c1609a4d20c9498de29c92f448a27f97f9b88f618d50f5728c7bd"}
+        ],
+        "evidence": "Observed on 2026-11-23 at TON masterchain seqno 107381404 (gen_utime 1795476035) via Toncenter v3 and TONAPI: jetton master EQA1R_LuQCLHlMgOo1S4G7Y7W1cd0FrAkbA10Zq7rddKxi9k (mintable=true, total_supply=4,768.031421 XAUt0) has admin_address 0:024e04d3582c1609a4d20c9498de29c92f448a27f97f9b88f618d50f5728c7bd (EQACTgTTWCwWCaTSDJSY3inJL0SKJ_l_m4j2GNUPVyjHvaLU), interface multisig_v2. get_multisig_data returned exit_code=0 with seqno=-1, threshold=3, five signers (0:5e4f80..., 0:b05466..., 0:e4064a..., 0:372790..., 0:38f92c...), and empty proposers. Proves cryptographic topology only; key custody, signer independence, and recursive upgrade reach remain unreviewed."
+      },
+      {
+        "id": "xaut0-ton-oft",
+        "label": "XAUt0 TON LayerZero OFT minter contract",
+        "routeRefs": ["ton:EQA1R_LuQCLHlMgOo1S4G7Y7W1cd0FrAkbA10Zq7rddKxi9k"],
+        "capabilities": ["bridge-mint", "bridge-burn"],
+        "controllerChain": "ton",
+        "controllerAddress": "0:90d9ff1c7814705fcc74f8b7598476d65f3b9536fc132729b0606f0be82e617f",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-23",
+        "observedBlock": 107381404,
+        "failureDomainKeys": [
+          "protocol:xaut0-omnichain",
+          "protocol:layerzero",
+          "contract:ton:0:90d9ff1c7814705fcc74f8b7598476d65f3b9536fc132729b0606f0be82e617f"
+        ],
+        "sources": [
+          {"label": "Official XAUt0 deployment registry (TON OFT, lzEid 30343)", "url": "https://docs.usdt0.to/api/deployments"},
+          {"label": "TONAPI XAUt0 jetton master transaction history", "url": "https://tonapi.io/v2/blockchain/accounts/EQA1R_LuQCLHlMgOo1S4G7Y7W1cd0FrAkbA10Zq7rddKxi9k/transactions?limit=5"},
+          {"label": "TONAPI XAUt0 TON OFT contract account", "url": "https://tonapi.io/v2/blockchain/accounts/EQCQ2f8ceBRwX8x0-LdZhHbWXzuVNvwTJymwYG8L6C5hf_5V"}
+        ],
+        "evidence": "Official XAUt0 registry lists TON OFT EQCQ2f8ceBRwX8x0-LdZhHbWXzuVNvwTJymwYG8L6C5hf_5V (0:90d9ff1c7814705fcc74f8b7598476d65f3b9536fc132729b0606f0be82e617f, lzEid 30343). TONAPI transaction history on 2026-11-23 confirms active jetton_mint calls on EQA1R_LuQCLHlMgOo1S4G7Y7W1cd0FrAkbA10Zq7rddKxi9k sourced directly from this OFT contract (e.g., lt 118505993000020 and 118497523000040), and admin multisig 0:024e04d3... has executed management calls to it (lt 64190024000006)."
+      },
+      {
+        "id": "xaut0-hypercore-system-transport",
+        "label": "Hyperliquid L1 HyperCore/HyperEVM XAUt0 system transport",
+        "routeRefs": ["hyperliquid:0xfd61ec89811ba3cf2ae12d0ed8ef1afd"],
+        "capabilities": ["escrow"],
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0x2000000000000000000000000000000000000129",
+        "authorityType": "validator-quorum",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-23",
+        "observedBlock": 52072732,
+        "failureDomainKeys": [
+          "protocol:xaut0-omnichain",
+          "protocol:hypercore-evm-link",
+          "consensus:hyperliquid",
+          "contract:hyperevm:0xf4d9235269a96aadafc9adae454a0618ebe37949"
+        ],
+        "sources": [
+          {"label": "Hyperliquid info API spotMeta and tokenDetails", "url": "https://api.hyperliquid.xyz/info"},
+          {"label": "HyperCore to HyperEVM transfer specification", "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm/hypercore-less-than-greater-than-hyperevm-transfers"},
+          {"label": "Pinned HyperEVM block 52072732 system-address and balance reads", "url": "https://api-hyperliquid-mainnet-evm.n.dwellir.com"}
+        ],
+        "evidence": "Hyperliquid /info spotMeta and tokenDetails on 2026-11-23 bind XAUT0 token index 297 (0xfd61ec89811ba3cf2ae12d0ed8ef1afd, 8 wei decimals) to HyperEVM 0xf4d9235269a96aadafc9adae454a0618ebe37949 (evm_extra_wei_decimals -2), with 100% of genesis maxSupply (184,467,440,737.0955200195) allocated to system address 0x2000000000000000000000000000000000000129, futureEmissions=0.0, and empty blacklistUsers. At pinned HyperEVM block 52072732 (2026-11-23T23:21:36Z, hash 0xa4343e37a57345d8a182dcfb7c31ec43c20e3c00043ebc25a21733b36eb2bf02), eth_getCode(0x2000...0129)=0x and balanceOf(0x2000...0129)=3,810.411118 of 4,064.912559 HyperEVM XAUt0. HyperBFT L1 consensus executes system-address transfers between HyperEVM and HyperCore."
+      },
+      {
+        "id": "xaut0-hypercore-linked-evm-owner",
+        "label": "XAUt0 HyperCore linked HyperEVM owner multisig",
+        "routeRefs": ["hyperliquid:0xfd61ec89811ba3cf2ae12d0ed8ef1afd"],
+        "capabilities": ["bridge-mint"],
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0xb64a89ad247a2d691a728bb6822a85eedd7fc541",
+        "authorityType": "multisig",
+        "threshold": 3,
+        "signerCount": 5,
+        "observedAt": "2026-11-23",
+        "observedBlock": 52072732,
+        "failureDomainKeys": [
+          "protocol:xaut0-omnichain",
+          "protocol:hypercore-evm-link",
+          "contract:hyperevm:0xb64a89ad247a2d691a728bb6822a85eedd7fc541"
+        ],
+        "sources": [
+          {"label": "Hyperliquid info API spotMeta and tokenDetails", "url": "https://api.hyperliquid.xyz/info"},
+          {"label": "Pinned HyperEVM block 52072732 owner and Safe roster reads", "url": "https://api-hyperliquid-mainnet-evm.n.dwellir.com"}
+        ],
+        "evidence": "At pinned HyperEVM block 52072732 (2026-11-23T23:21:36Z, hash 0xa4343e37a57345d8a182dcfb7c31ec43c20e3c00043ebc25a21733b36eb2bf02), linked HyperEVM XAUt0 (0xf4d9235269a96aadafc9adae454a0618ebe37949) returned owner()=0xb64a89ad247a2d691a728bb6822a85eedd7fc541 with getThreshold()=3 and getOwners()=5. Because HyperCore spot XAUT0 balances are released 1:1 against HyperEVM XAUt0 deposited to system address 0x2000...0129, this owner Safe gates upstream supply entering HyperCore. Proves cryptographic topology only; modules, custody, signer independence and exhaustive upgrade reach remain unreviewed."
       }
     ]
   }

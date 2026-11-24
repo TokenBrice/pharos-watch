@@ -344,7 +344,7 @@ describe("adaptInfiniFi", () => {
     ]);
   });
 
-  it("preserves unknown farms and recognizes reviewed unlinked credit farms", () => {
+  it("preserves unknown farms and recognizes reviewed credit farms", () => {
     const names = ["dust-farm", "fasanara-mfone", "jet-stream"];
     const result = adaptInfiniFi(farmResponse(names.map((name) => ({
       name, label: name, assetsNormalized: 1, type: "ILLIQUID",
@@ -353,7 +353,7 @@ describe("adaptInfiniFi", () => {
     expect(result.unknownExposurePct).toBeCloseTo(100 / 3);
     expect(result.slices).toEqual(names.map((name, i) => ({
       sourceKey: `infinifi:${name}`, name, pct: 1 / 3 * 100, risk: i ? "high" : "medium",
-      ...(i === 1 ? { blacklistable: true } : {}),
+      ...(i === 1 ? { blacklistable: true, coinId: "mf-one-midas", depType: "collateral" } : {}),
     })));
   });
 
@@ -361,12 +361,13 @@ describe("adaptInfiniFi", () => {
     const response = farmResponse([
       { name: "morpho-steakUSDCinfinifi", label: "Morpho steakUSDC", assetsNormalized: 25, type: "ILLIQUID", underlyingAssetSymbol: "USDC" },
       { name: "base-morpho-steakhouse-prime", label: "Steakhouse Prime", assetsNormalized: 5, type: "ILLIQUID", underlyingAssetSymbol: "USDC" },
+      { name: "morpho-v2-rockawayx-usdc", label: "RockawayX USDC Yield", assetsNormalized: 10, type: "LIQUID", underlyingAssetSymbol: "roxUSDCy" },
       { name: "sGHO", label: "Staked GHO", assetsNormalized: 20, type: "LIQUID", underlyingAssetSymbol: "GHO" },
       { name: "maple-farm-syrup", label: "Maple Syrup USDC", assetsNormalized: 15, type: "ILLIQUID", underlyingAssetSymbol: "USDC" },
-    ], 65);
+    ], 75);
 
     const { slices } = adaptInfiniFi(response);
-    for (const name of ["Morpho steakUSDC", "Steakhouse Prime", "Maple Syrup USDC"]) {
+    for (const name of ["Morpho steakUSDC", "Steakhouse Prime", "RockawayX USDC Yield", "Maple Syrup USDC"]) {
       expect(slices.find((s) => s.name === name)).toMatchObject({ coinId: "usdc-circle", depType: "collateral" });
     }
     expect(slices.find((s) => s.name === "Staked GHO")).toMatchObject({ coinId: "sgho-aave", depType: "collateral" });

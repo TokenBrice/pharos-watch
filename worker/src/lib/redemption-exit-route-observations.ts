@@ -180,7 +180,7 @@ function capturedFiatOutputValuation(
   };
 }
 
-function resolveOutput(
+export function resolveOutput(
   stablecoinId: string,
   config: Pick<
     RedemptionBackstopConfig,

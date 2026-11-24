@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 export const EXIT_ROUTE_OUTPUT_VALUATION_TIMESTAMP_TOLERANCE_SEC = 60;
+/** Shared upper bound for enumerated redemption/exit output asset sets across config and wire schemas. */
+export const MAX_REDEMPTION_OUTPUT_ASSETS = 32;
 
 export const DexExitEvidenceKindSchema = z.enum([
   "measured-executable-depth",
@@ -84,7 +86,7 @@ export const ExitRouteOutputSchema = z.object({
   sameNotionalEligible: z.literal(false).optional(),
   unboundedDeliveryCap: z.number().finite().min(0).max(100).optional(),
   trackedAssetIds: z.array(z.string().min(1)).optional(),
-  assetKeys: z.array(z.string().min(1)).min(1).max(16).optional(),
+  assetKeys: z.array(z.string().min(1)).min(1).max(MAX_REDEMPTION_OUTPUT_ASSETS).optional(),
   basketWeights: z
     .array(
       z.object({
@@ -226,7 +228,7 @@ const ExitExecutionIdentitySchema = z.object({
   assetId: z.string().min(1),
   deployment: z.string().min(1),
   endpoint: z.string().min(1),
-  outputAssetKeys: z.array(z.string().min(1)).min(1).max(16),
+  outputAssetKeys: z.array(z.string().min(1)).min(1).max(MAX_REDEMPTION_OUTPUT_ASSETS),
   implementationIdentity: z.string().min(1),
 }).strict();
 const ExitExecutionGateSchema = z.object({
@@ -295,7 +297,7 @@ export const ExitExecutionRequestPointSchema = z.object({
   executionCostBps: z.number().finite().nonnegative(),
   allInCostBps: z.number().finite().nonnegative(),
   fees: z.array(z.object({ kind: z.string().min(1), rawUnits: ExitRawUnitsSchema, assetKey: z.string().min(1) }).strict()).max(16),
-  outputs: z.array(ExitExecutionOutputLegSchema).max(16),
+  outputs: z.array(ExitExecutionOutputLegSchema).max(MAX_REDEMPTION_OUTPUT_ASSETS),
   certification: z.enum(["exact-complete", "exact-lower-bound", "diagnostic"]),
   reason: z.string().min(1).nullable(),
   canonicalAttempt: ExitExecutionCanonicalAttemptSchema.optional(),

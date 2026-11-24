@@ -983,4 +983,40 @@ describe("captured local-fiat output and cost references", () => {
       expect(buildRedObs({ stablecoinId: USDC, config, capacityProfile: row.capacityProfile, scoringCapacityUsd: 1e6, supplyUsd: 1e6, routeStatus: "open", resolutionState: "resolved", sourceMode: "static", capacityConfidence: "documented-bound", resolvedFeeBps: 0, now: NOW })).toMatchObject({ feeEvidence: "disclosed-unquantified", scoreEligible: false });
     });
   });
+
+  it("admits bUSD0 wait-to-maturity queued settlement without altering capacity or cost gaps", () => {
+    const clk = utc(2026, 11, 24, 2, 17, 58);
+    const id = "busd0-usual";
+    const routeId = `redemption:${id}:queue-redeem`;
+    const row = mkFull({
+      stablecoinId: id, routeFamily: "queue-redeem", settlementModel: "queued", settlementDelaySec: undefined,
+      capacitySemantics: "eventual-only", capacityConfidence: "documented-bound", feeConfidence: "undisclosed-reviewed", updatedAt: clk,
+    });
+    setObs(row, [{
+      ...obs0(row), routeId, routeFamily: "eventual-redemption", output: trk("usd0-usual"),
+      settlementHorizonSec: 30 * DAY, scoreEligible: false, observedAt: clk, freshnessSeconds: 0,
+    }]);
+    const f = stub(row, clk);
+    setRawPeg(f, { "usd0-usual": { currentDeviationBps: 0, priceObservedAt: clk } });
+    expect(rev0(f, id)).toMatchObject({
+      lane: "redemption", routeId, settlementModel: "queued", settlementSlaSec: 48_943_800,
+      settlementBoundUnproven: false, settlementHorizonSec: 48_943_800, coverageClass: "diagnostic",
+    });
+
+    const fixed = mkFixed({ assetId: id, clockSec: clk });
+    Object.assign(fixed, { redemptionBackstopMap: { [id]: row }, redemptionGenerationId: "redemption:busd0-maturity-test", redemptionStale: false });
+    fixed.inputFreshness.redemptionBackstops = { updatedAt: clk, ageSeconds: 0, stale: false };
+    fixed.pegDataById["usd0-usual"] = { ...fixed.pegDataById[id]!, id: "usd0-usual", symbol: "USD0", currentDeviationBps: 0, priceObservedAt: clk, priceUpdatedAt: clk };
+    const rebuilt = rebuildFixed(fixed);
+    const reviewed = mkExt({ assetId: id, clockSec: clk, registryFingerprint: rebuilt.registryFingerprint });
+    reviewed.assets[0]!.routeReviews = routeRevs(rebuilt, id);
+    reviewed.assets[0]!.retainedRoutes = retRed(rebuilt, id);
+    const compiled = compileFacts(rebuilt, reviewed).assets[0]!;
+    expect(compiled.exitRoutes.find((r) => r.routeId === routeId)).toMatchObject({
+      settlementModel: "queued", settlementSlaSec: 48_943_800,
+      factorStatuses: { settlement: { observationState: "known", gapIds: [] }, capacity: { observationState: "missing" } },
+    });
+    expect(compiled.gaps.some((g) => g.gapId.endsWith(":settlement"))).toBe(false);
+    expect(compiled.gaps.some((g) => g.gapId.endsWith(":capacity"))).toBe(true);
+  });
 });

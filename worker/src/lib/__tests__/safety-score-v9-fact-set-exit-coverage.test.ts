@@ -52,6 +52,7 @@ import {
   v9Status,
 } from "../../test-helpers/v9-fixed-input";
 import { buildRoutes } from "../safety-score-v9/fact-set-exit";
+import { captureRedemptionReserveQuarantine } from "../safety-score-v9/redemption-reserve-quarantine";
 import { buildSupply } from "../safety-score-v9/fact-set-peg-supply";
 import { buildSafetyScoreV9Candidate } from "../safety-score-v9/candidate";
 import { buildSafetyScoreV9AcceptedPublicationBaseline } from "../safety-score-v9/publication-assessment";
@@ -257,6 +258,161 @@ describe("configured redemption channel census", () => {
       expect(context.evidence.has("alpha:redemption-configured-channel")).toBe(false);
     } finally {
       getConfig.mockRestore();
+    }
+  });
+
+  const baseSourced: RedemptionBackstopConfig = {
+    routeFamily: "stablecoin-redeem", accessModel: "permissionless-onchain", holderEligibility: "any-holder",
+    executionModel: "deterministic-onchain", settlementModel: "atomic", outputAssetType: "stable-single",
+    outputAssets: ["usdc-circle"], capacityModel: { kind: "unquantified" }, costModel: fixedFee(25), reviewedAt: "2026-10-03",
+    docs: [{ label: "Terms", url: "https://example.com/terms", supports: ["route", "access", "settlement", "fees"] }],
+  };
+
+  function compileUnavailableChannel(
+    overrideConfig: RedemptionBackstopConfig,
+    opts?: { assetId?: string; atClockSec?: number; withOutputPeg?: boolean; staleOutputPeg?: boolean; liveDirectMissingCapacity?: boolean },
+  ) {
+    const assetId = opts?.assetId ?? "alpha";
+    const atClockSec = opts?.atClockSec ?? clockSec;
+    const draft = exactFixedInput({ assetId, clockSec: atClockSec });
+    draft.dexLiqMap[assetId]!.exitRouteObservations = [];
+    draft.dexLiqMap[assetId]!.exitRouteObservationCoverage = {
+      status: "populated", capabilityMatrixVersion: DEX_ROUTE_CAPABILITY_MATRIX_VERSION,
+      retainedPoolCount: 0, observationCount: 0, scoreEligibleObservationCount: 0,
+      scoreEligiblePoolCount: 0, unsupportedPoolCount: 0, evidenceCounts: {}, unsupportedReasons: {},
+    };
+    if (opts?.withOutputPeg !== false) {
+      const obs = opts?.staleOutputPeg ? atClockSec - 400 * 86_400 : atClockSec - 60;
+      draft.pegDataById["usdc-circle"] = {
+        ...draft.pegDataById[assetId]!, id: "usdc-circle", symbol: "USDC", pegCurrency: "USD",
+        currentDeviationBps: 0, priceObservedAt: obs, priceUpdatedAt: obs,
+      };
+    }
+    if (opts?.liveDirectMissingCapacity) {
+      draft.redemptionBackstopMap[assetId] = {
+        ...makeSupplyFullRedemption({ stablecoinId: assetId, resolutionState: "missing-capacity", capacityProfile: undefined, updatedAt: atClockSec }),
+        provider: "reserve-sync-metadata", capacityBasis: "live-direct-telemetry", routeStatus: "open",
+      };
+      draft.redemptionGenerationId = "redemption:live-direct-missing";
+      draft.redemptionStale = false;
+      draft.inputFreshness.redemptionBackstops = { updatedAt: atClockSec, ageSeconds: 0, stale: false };
+    }
+    const fixed = rebuildFixed(draft);
+    const reviewed = structuredClone(extension({ assetId, clockSec: atClockSec, registryFingerprint: fixed.registryFingerprint }));
+    reviewed.assets[0]!.routeReviews = [];
+    const getConfig = vi.spyOn(redemptionBackstops, "getRedemptionBackstopConfig").mockReturnValue(overrideConfig);
+    try {
+      const factSet = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed);
+      const asset = factSet.assets[0]!;
+      return {
+        asset,
+        route: asset.exitRoutes.find((c) => c.lane === "redemption")!,
+        evaluated: evaluateV9FactSet(factSet, V9_CANDIDATE_POLICY_V1).assets[0]!,
+      };
+    } finally {
+      getConfig.mockRestore();
+    }
+  }
+
+  const expectStates = (route: ReturnType<typeof compileUnavailableChannel>["route"], states: Record<string, string>) => {
+    for (const [k, v] of Object.entries(states)) {
+      expect(route.factorStatuses[k as keyof typeof route.factorStatuses]?.observationState, k).toBe(v);
+    }
+  };
+
+  it("projects reviewed, sourced, current non-capacity terms onto an unavailable rail while keeping capacity and measurement confidence unknown", () => {
+    const docs: NonNullable<RedemptionBackstopConfig["docs"]> = [{ label: "Verified contract and terms", url: "https://example.com/terms", supports: ["route", "access", "settlement", "fees"] }];
+    const { route, evaluated } = compileUnavailableChannel({
+      ...baseSourced, costModel: fixedFee(4900, "Fixed 4,900 bps discount"), docs,
+      v9RouteReviewTerms: {
+        scoringDisposition: "bounded-terms-gap", missingScoringFields: ["capacity"], reviewedAt: "2026-10-03",
+        rationale: "Payout, access, atomic settlement, and fixed rate are verified; raw capacity is unquantified.",
+        docs,
+      },
+    });
+    expect(route).toMatchObject({
+      holderAccess: "permissionless", executionModel: "deterministic", executionCertainty: "unknown",
+      modelConfidence: "unknown", observationConfidence: "unknown", capacityEvidenceTier: "unknown",
+      settlementModel: "atomic", settlementSlaSec: 0, scoreEligible: false, coverageClass: "diagnostic",
+      request: null, capacityCurve: [],
+      output: { status: { observationState: "known" }, kind: "tracked-stablecoin", assetKeys: ["usdc-circle"] },
+    });
+    expect(route.output.valuation).not.toBeNull();
+    expectStates(route, {
+      access: "known", holderEligibility: "known", settlement: "known", cost: "known", output: "known",
+      capacity: "missing", capacityEvidenceTier: "missing", observationConfidence: "missing", executionConfidence: "missing",
+    });
+    expect(evaluated.exit).toMatchObject({ score: 50, primaryRouteKey: null });
+    expect(evaluated.exit.reasons).not.toContain("unresolved-exit-output");
+    expect(evaluated.exit.reasons).toContain("missing-runtime-route-evidence");
+  });
+
+  it("projects reviewed settlementDelaySec, publishedFeeSchedule, and non-rejected terms evidence on live-direct missing-capacity rails", () => {
+    const { asset, route, evaluated } = compileUnavailableChannel({
+      routeFamily: "queue-redeem", accessModel: "whitelisted-onchain", holderEligibility: "whitelisted-primary",
+      executionModel: "rules-based-nav", settlementModel: "queued", outputAssetType: "stable-single",
+      outputAssets: ["usdc-circle"], capacityModel: { kind: "reserve-sync-metadata", requiredOutputAssetKeys: ["usdc-circle"] },
+      costModel: { kind: "dynamic-or-unclear", confidence: "formula", feeModelKind: "documented-variable", feeBpsMin: 0, feeBpsMax: 100 },
+      v9RouteCostTerms: {
+        feeBpsMin: 0, feeBpsMax: 100,
+        publishedFeeSchedule: {
+          reviewedAt: "2026-10-03", reviewer: "test-review", rationale: "On-chain cap bounds redemption fee at 100 bps.",
+          docs: [{ label: "Fee cap", url: "https://example.com/fees", supports: ["fees"] }],
+        },
+      },
+      v9RouteReviewTerms: {
+        settlementDelaySec: 259_200, minRedeemUsd: 10_000, reviewedAt: "2026-10-03",
+        docs: [{ label: "Queue SLA", url: "https://example.com/sla", supports: ["settlement"] }],
+      },
+      reviewedAt: "2026-10-03", docs: [{ label: "Protocol docs", url: "https://example.com/docs", supports: ["route", "access"] }],
+    }, { liveDirectMissingCapacity: true });
+    expect(route).toMatchObject({
+      holderAccess: "allowlisted", executionModel: "queued", settlementModel: "queued",
+      settlementSlaSec: 259_200, minRedeemUsd: 10_000, scoreEligible: false, coverageClass: "diagnostic",
+    });
+    expectStates(route, { access: "known", holderEligibility: "known", settlement: "known", cost: "known", output: "known", capacity: "missing" });
+    for (const key of ["access", "holderEligibility", "settlement", "cost"] as const) {
+      const refs = route.factorStatuses[key]!.evidenceRefIds;
+      expect(refs).toEqual(["alpha:redemption-configured-channel"]);
+      expect(asset.evidence.find((e) => e.evidenceId === refs[0])?.disposition).toBe("observed");
+    }
+    expect(evaluated.exit.primaryRouteKey).toBeNull();
+  });
+
+  it("fails closed when terms are stale, unsourced, unpriced, explicitly missing, unknown-eligibility, collateral, or non-atomic without SLA", () => {
+    const cases: Array<{
+      cfg?: Partial<RedemptionBackstopConfig>;
+      opts?: Parameters<typeof compileUnavailableChannel>[1];
+      route?: Record<string, unknown>;
+      states?: Record<string, string>;
+      missingOut?: boolean;
+    }> = [
+      { opts: { atClockSec: Date.parse("2027-10-05T00:00:00Z") / 1_000 }, route: { holderAccess: "unknown", settlementSlaSec: null },
+        states: { access: "missing", cost: "bounded-unknown", settlement: "missing" }, missingOut: true },
+      { cfg: { docs: [{ label: "Route only", url: "https://example.com/route", supports: ["route"] }] },
+        route: { holderAccess: "unknown", settlementSlaSec: null },
+        states: { access: "missing", holderEligibility: "missing", settlement: "missing", cost: "bounded-unknown" } },
+      { cfg: { holderEligibility: "unknown" }, route: { holderAccess: "unknown" }, states: { access: "missing", holderEligibility: "missing" } },
+      { cfg: { v9RouteReviewTerms: {
+        scoringDisposition: "bounded-terms-gap", missingScoringFields: ["capacity", "cost", "settlement"],
+        rationale: "Legacy fixed fee and atomic settlement are not established for the current rail.",
+        reviewedAt: "2026-10-03", docs: [{ label: "Review", url: "https://example.com/review", supports: ["route"] }],
+      } }, route: { settlementSlaSec: null }, states: { settlement: "missing", cost: "bounded-unknown", access: "known" } },
+      { cfg: { routeFamily: "offchain-issuer", accessModel: "issuer-api", holderEligibility: "verified-customer",
+        executionModel: "rules-based-nav", settlementModel: "same-day" },
+        route: { settlementSlaSec: null }, states: { settlement: "missing" } },
+      { opts: { withOutputPeg: false }, missingOut: true },
+      { opts: { staleOutputPeg: true }, missingOut: true },
+      { cfg: { routeFamily: "collateral-redeem", outputAssetType: "mixed-collateral", outputAssets: undefined }, missingOut: true },
+    ];
+    for (const c of cases) {
+      const { route } = compileUnavailableChannel({ ...baseSourced, ...c.cfg }, c.opts);
+      if (c.route) expect(route).toMatchObject(c.route);
+      if (c.states) expectStates(route, c.states);
+      if (c.missingOut) {
+        expect(route.output.status.observationState).toBe("missing");
+        if (!c.opts?.atClockSec) expect(route.output.valuation).toBeNull();
+      }
     }
   });
 });
@@ -1527,5 +1683,164 @@ describe("direct exit fact builder", () => {
       { priorVerifiedEmptyExitByAssetId: acceptedBaseline.verifiedEmptyExitByAssetId },
     );
     expect(recoveredBaseline.verifiedEmptyExitByAssetId).toBeUndefined();
+  });
+
+  it("marks physical-commodity-delivery USD capacity not-applicable without affecting non-physical routes", () => {
+    const fixed = exactFixedInput({ includeDexObservations: false, includeDexCoverage: false });
+    const clockSec = fixed.clockSec;
+    const mkVal = (basis: "commodity-delivery" | "reviewed-par", refKey: string, unit: number, src: string) => ({
+      basis, referenceAssetKey: refKey, unitValueUsd: unit, expectedUnitValueUsd: unit,
+      sourceId: src, sourceGenerationId: `${src}:gen`, observedAtSec: clockSec,
+      confidence: "high" as const, maxAgeSec: 86_400, url: null, contentSha256: null,
+    });
+    fixed.redemptionBackstopMap.alpha = {
+      ...makeSupplyFullRedemption({ stablecoinId: "alpha", updatedAt: clockSec, outputAssetType: "physical-commodity-delivery" }),
+      capacityProfile: {
+        immediateUsd: null, scoringUsd: 10_000_000, scoringHorizon: "eventual",
+        capacityProfileConfidence: "documented-bound", modeledExitSizeUsd: 1_000_000,
+        exitRouteObservations: [{
+          routeId: "redemption:alpha:offchain-issuer", routeFamily: "eventual-redemption",
+          scope: { kind: "issuer", issuerId: "alpha" }, requestedNotionalUsd: 1_000_000, maxCostBps: 200,
+          executableUsd: 1_000_000, completionRatio: 1, settlementHorizonSec: 14 * 86_400,
+          output: { kind: "physical-commodity-delivery", assetKeys: ["commodity:xau"], sameNotionalEligible: false },
+          evidenceKind: "documented-terms", confidence: "low", scoreEligible: false,
+          observedAt: clockSec, freshnessSeconds: 0, commonModeKeys: ["issuer:alpha"],
+        }],
+      },
+    };
+    fixed.redemptionGenerationId = "redemption:physical-delivery-na-test";
+    fixed.redemptionStale = false;
+    fixed.inputFreshness.redemptionBackstops = { updatedAt: clockSec, ageSeconds: 0, stale: false };
+    const baseReviewed = structuredClone(extension({ clockSec, registryFingerprint: fixed.registryFingerprint }));
+    baseReviewed.assets[0]!.routeReviews = [{
+      lane: "redemption", routeId: "redemption:alpha:offchain-issuer", holderAccess: "institutional-eligible",
+      executionModel: "discretionary", executionCertainty: "conditional", modelConfidence: "low",
+      coverageClass: "diagnostic", capacityScoringHorizon: "eventual", settlementModel: "bounded-delay",
+      settlementSlaSec: null, settlementHorizonSec: 14 * 86_400, queueDepthUsd: null, dailyLimitUsd: null, minRedeemUsd: null,
+      executionCosts: [{ requestedNotionalUsd: 1_000_000, maxCostBps: 200, executionCostBps: 200 }],
+      physicalResourceKeys: ["issuer:alpha"], failureDomains: [],
+      output: {
+        kind: "physical-commodity-delivery", sameNotionalEligible: false, assetKeys: ["commodity:xau"], basketWeights: [],
+        valuation: mkVal("commodity-delivery", "commodity:xau", 2_500, "commodity-ref"),
+      },
+    }];
+    const runVariant = (mutateFixed?: (d: typeof fixed) => void, mutateRev?: (r: typeof baseReviewed) => void) => {
+      const f = structuredClone(fixed);
+      mutateFixed?.(f);
+      const rebuilt = rebuildFixed(f);
+      const rev = structuredClone(baseReviewed);
+      rev.registryFingerprint = rebuilt.registryFingerprint;
+      mutateRev?.(rev);
+      const ctx = factBuilderContext(rebuilt, rev);
+      expect(ctx.asset.admissionQuarantine).toBeUndefined();
+      return buildRoutes(ctx, buildSupply(ctx));
+    };
+
+    const phys = runVariant();
+    expect(phys.exitRoutes).toHaveLength(1);
+    expect(phys.exitRoutes[0]).toMatchObject({
+      scoreEligible: false, capacityCurve: [], request: null,
+      factorStatuses: { capacity: {
+        observationState: "known", gapIds: [],
+        applicability: { state: "not-applicable", policyRuleId: "v9.exit.physical-delivery-capacity", gapId: null },
+      } },
+    });
+    expect(phys.exitStatus.gapIds.some((id) => id.endsWith(":capacity"))).toBe(false);
+
+    for (const [outputAssetType, obsOut, revOut] of [
+      ["stable-single", { kind: "fiat", currency: "USD", assetKeys: ["fiat:USD"] },
+        { kind: "fiat", assetKeys: ["fiat:USD"], basketWeights: [], valuation: mkVal("reviewed-par", "fiat:USD", 1, "fiat-ref") }],
+      ["mixed-collateral", { kind: "unresolved-basket", assetKeys: ["usdc-circle", "usdt-tether"] },
+        { kind: "basket", assetKeys: ["usdc-circle", "usdt-tether"], basketWeights: [{ assetKey: "usdc-circle", weight: 0.5 }, { assetKey: "usdt-tether", weight: 0.5 }], valuation: null }],
+    ] as const) {
+      const res = runVariant(
+        (d) => {
+          d.redemptionBackstopMap.alpha!.outputAssetType = outputAssetType;
+          d.redemptionBackstopMap.alpha!.capacityProfile!.exitRouteObservations![0]!.output = obsOut as never;
+        },
+        (r) => { r.assets[0]!.routeReviews[0]!.output = revOut as never; },
+      );
+      expect(res.exitRoutes[0]!.factorStatuses?.capacity).toMatchObject({ observationState: "missing", applicability: { state: "required" } });
+      expect(res.exitStatus.gapIds.some((id) => id.endsWith(":capacity"))).toBe(true);
+    }
+
+    const usable = runVariant((d) => {
+      d.redemptionBackstopMap.alpha = {
+        ...d.redemptionBackstopMap.alpha!, capacitySemantics: "immediate-bounded", capacityConfidence: "live-direct",
+        capacityBasis: "live-direct-telemetry", immediateCapacityUsd: 1_000_000,
+        capacityProfile: { ...d.redemptionBackstopMap.alpha!.capacityProfile!, immediateUsd: 1_000_000, scoringHorizon: "immediate", capacityProfileConfidence: "live-direct" },
+      };
+    });
+    expect(usable.exitRoutes[0]!.factorStatuses?.capacity?.applicability.state).not.toBe("not-applicable");
+    expect(usable.exitRoutes[0]!.capacityCurve.length).toBeGreaterThan(0);
+  });
+
+  it("applies physical-delivery capacity N/A only on documented-channel unavailable rails, preserving producer-failed quarantine and live-telemetry causes", () => {
+    const clockSec = Date.parse("2026-10-20T00:00:00Z") / 1_000;
+    const physicalConfig: RedemptionBackstopConfig = {
+      routeFamily: "offchain-issuer", accessModel: "issuer-api", settlementModel: "days", executionModel: "rules-based-nav",
+      outputAssetType: "physical-commodity-delivery", capacityModel: { kind: "unquantified" }, costModel: fixedFee(0), reviewedAt: "2026-10-03",
+      physicalCommodityDelivery: {
+        commodity: "XAU", deliverableOuncesPerToken: 1, minimumDeliveryTokens: 1, deliveryTermsUnbounded: true,
+        feeModel: { bps: 0, flatUsd: 0, deliveryUsd: 0 }, sameNotionalEligible: false,
+      },
+      docs: [{ label: "Physical gold terms", url: "https://issuer.example/gold-terms", supports: ["route", "access"] }],
+    };
+    const makeCtx = (mode: "documented" | "live-telemetry-missing" | "reserve-quarantine") => {
+      const draft = exactFixedInput({ clockSec, includeDexObservations: false, includeDexCoverage: false });
+      draft.pegDataById.alpha = {
+        ...draft.pegDataById.alpha!, pegCurrency: "GOLD",
+        pegReference: { source: "fx", contributorCount: 1, asOf: clockSec - 60, valueUsd: 2_500, usdPerTroyOunce: 2_500 },
+      };
+      if (mode === "live-telemetry-missing") {
+        draft.redemptionGenerationId = "redemption:phys-unavailable-live";
+        draft.redemptionBackstopMap.alpha = {
+          ...makeSupplyFullRedemption({ stablecoinId: "alpha", resolutionState: "missing-capacity", capacityProfile: undefined, updatedAt: clockSec, outputAssetType: "physical-commodity-delivery" }),
+          provider: "reserve-sync-metadata", capacityBasis: "live-direct-telemetry", routeStatus: "open",
+        };
+        draft.redemptionStale = false;
+        draft.inputFreshness.redemptionBackstops = { updatedAt: clockSec, ageSeconds: 0, stale: false };
+      } else {
+        delete draft.redemptionBackstopMap.alpha;
+        if (mode === "reserve-quarantine") {
+          draft.pipelineGapByAssetId = { alpha: [captureRedemptionReserveQuarantine({
+            assetId: "alpha", redemptionGenerationId: draft.redemptionGenerationId,
+            routeFamily: physicalConfig.routeFamily, reason: "stale", clockSec,
+          })] };
+        }
+      }
+      const rebuilt = rebuildFixed(draft);
+      const reviewed = structuredClone(extension({ clockSec, registryFingerprint: rebuilt.registryFingerprint }));
+      reviewed.assets[0]!.routeReviews = [];
+      return factBuilderContext(rebuilt, reviewed);
+    };
+
+    const getConfig = vi.spyOn(redemptionBackstops, "getRedemptionBackstopConfig").mockReturnValue(physicalConfig);
+    try {
+      const checkRes = (mode: "documented" | "live-telemetry-missing" | "reserve-quarantine") => {
+        const ctx = makeCtx(mode);
+        const res = buildRoutes(ctx, buildSupply(ctx));
+        expect(res.exitRoutes).toHaveLength(1);
+        expect(res.exitRoutes[0]!.output.kind).toBe("physical-commodity-delivery");
+        return { ctx, res };
+      };
+      const { res: docRes } = checkRes("documented");
+      expect(docRes.exitRoutes[0]!.factorStatuses?.capacity).toMatchObject({
+        observationState: "known", gapIds: [], applicability: { state: "not-applicable", policyRuleId: "v9.exit.physical-delivery-capacity" },
+      });
+      expect(docRes.exitStatus.gapIds.some((id) => id.endsWith(":capacity"))).toBe(false);
+
+      for (const [mode, rejectionCode] of [
+        ["live-telemetry-missing", "live-direct-capacity-unavailable"],
+        ["reserve-quarantine", "redemption-reserve-input-stale"],
+      ] as const) {
+        const { ctx, res } = checkRes(mode);
+        expect(res.exitRoutes[0]!.factorStatuses?.capacity).toMatchObject({ observationState: "missing", applicability: { state: "required" } });
+        expect(res.exitStatus.gapIds.some((id) => id.endsWith(":capacity"))).toBe(true);
+        expect(ctx.gaps.get(res.exitRoutes[0]!.status.gapIds[0]!)!).toMatchObject({ responsibility: "producer-failed", causeProof: { cause: "A", rejectionCode } });
+      }
+    } finally {
+      getConfig.mockRestore();
+    }
   });
 });

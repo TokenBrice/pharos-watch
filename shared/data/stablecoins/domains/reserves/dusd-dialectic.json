@@ -59,6 +59,22 @@
         "market"
       ],
       "liquidityHorizon": "over-seven-days"
+    },
+    {
+      "sourceKey": "makina:protocol:makina",
+      "name": "Makina Machine exposure",
+      "pct": 0,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Dialectic / Makina Machine vaults (DCM and loopCUSHY) reached through Makina Caliber instructions",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "market",
+        "leverage"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
@@ -113,9 +129,21 @@
       {
         "label": "Ethereum Dwellir RPC: DUSD totalSupply pinned at block 26284037 (2026-10-27T12:26:35Z)",
         "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Ethereum Dwellir RPC: pinned DCM share balance of DUSD Hub Caliber and Machine AUM at block 26481203 (2026-11-23T23:44:23Z)",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Base Dwellir RPC: pinned loopCUSHY share balance of DUSD Base Caliber and Machine AUM at block 61433290 (2026-11-23T23:37:13Z)",
+        "url": "https://api-base-mainnet-archive.n.dwellir.com"
+      },
+      {
+        "label": "Makina Machine redemptions documentation (AsyncRedeemer queue)",
+        "url": "https://docs.makina.finance/concepts/architecture/machine/redemptions"
       }
     ],
-    "rationale": "Makina indexes DUSD's total AUM, share price, share supply, and current allocations by protocol, chain, base-token balance, and position. The live allocation output re-read on 2026-10-27 (generated 16:16:17Z; positions updated at Ethereum block 26284037, hash 0x52d15d67a2140c6723d10a105ec5c7cb1940b184d3728f3e72a6ce516873b7d8, 12:26:35Z) reports net accounting-token exposure of $1,844,387.74 (Ethereum $1,844,316.92 and Base $70.82), against 1,800,414.09 DUSD shares outstanding at that block, grouped as Morpho 61.21%, Aave V4 21.73%, Aave V3 12.86%, and Royco 4.19%; unlabelled base-token balances total about $77 (0.004%). The Pareto/FalconX, Makina Machine, and Pendle exposures present on 2026-09-21 no longer appear. The book is levered: gross positive positions are about $4.31 million against $2.46 million of debt ($1.47 million Morpho PYUSD borrowing and $0.996 million Aave V3 Horizon RLUSD borrowing), and the weights are net of that debt. The Aave V3 group is a named Horizon market (JAAA supply against RLUSD borrow) and carries Aave pool smart-contract, borrower/counterparty, liquidity, and leverage exposure; the Aave V4 group is USDG and frxUSD supply. Borrowing is structurally permitted through the Risk-Manager-curated instruction set and current live debt is visible in the allocation feed, but no binding Machine-wide numeric leverage ceiling was published or created by the reviewed legal terms.",
+    "rationale": "Makina indexes DUSD's total AUM, share price, share supply, and current allocations by protocol, chain, base-token balance, and position. The live allocation output re-read on 2026-10-27 (generated 16:16:17Z; positions updated at Ethereum block 26284037, hash 0x52d15d67a2140c6723d10a105ec5c7cb1940b184d3728f3e72a6ce516873b7d8, 12:26:35Z) reports net accounting-token exposure of $1,844,387.74 (Ethereum $1,844,316.92 and Base $70.82), against 1,800,414.09 DUSD shares outstanding at that block, grouped as Morpho 61.21%, Aave V4 21.73%, Aave V3 12.86%, and Royco 4.19%; unlabelled base-token balances total about $77 (0.004%). The Pareto/FalconX, Makina Machine, and Pendle exposures present on 2026-09-21 no longer appear. The book is levered: gross positive positions are about $4.31 million against $2.46 million of debt ($1.47 million Morpho PYUSD borrowing and $0.996 million Aave V3 Horizon RLUSD borrowing), and the weights are net of that debt. The Aave V3 group is a named Horizon market (JAAA supply against RLUSD borrow) and carries Aave pool smart-contract, borrower/counterparty, liquidity, and leverage exposure; the Aave V4 group is USDG and frxUSD supply. Borrowing is structurally permitted through the Risk-Manager-curated instruction set and current live debt is visible in the allocation feed, but no binding Machine-wide numeric leverage ceiling was published or created by the reviewed legal terms. Supplemental 2026-11-23/24 pinned reads add a keyed zero-percent classification row for makina:protocol:makina without altering the 2026-10-27 historical book or review date: Ethereum finalized block 26481203 (hash 0xc614c103509b94501a8fbd891640ecd3ac037e727ca1adae1eb93fe1534b0e8c, 2026-11-23T23:44:23Z) verifies DUSD Hub Caliber 0xD1A1C248B253f1fc60eACd90777B9A63F8c8c1BC holds 1,257,648.212904 Dialectic Carry Machine (DCM, 0xBEf11279fA6dB9fA284cbE7f0fA9799E06B2dcd7) shares and Base finalized block 61433290 (hash 0x58d9983f4b67651b3229c404f0bf328d887bc4af6d1802b7691c7f6772ba6af0, 2026-11-23T23:37:13Z) verifies DUSD Base Caliber holds 198,573.0 Dialectic Looped CUSHY (loopCUSHY, 0xE4c4AFf51Ad4FfbE8B09A1D3F7430Efd9Ee602FE) shares, matching live Makina allocations (generated 2026-11-24T01:45:39Z). Makina Machine exposure is classified as protocol-position with unknown liquidityHorizon because Makina Machines settle exits asynchronously via an operator-finalized AsyncRedeemer queue with only a minimum finalization delay and no guaranteed maximum realization deadline.",
     "compositionBasis": "Publicly verifiable Makina Machine and Caliber accounting, indexed and human-labelled by the Makina strategy and allocation APIs",
     "compositionAsOf": "2026-10-27",
     "scope": "full-composition",

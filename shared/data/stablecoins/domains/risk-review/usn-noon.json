@@ -333,6 +333,8 @@
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
         "scope": "peripheral",
+        "controllerChain": "tac",
+        "controllerAddress": "0x51a30e647d33a044967fa3dbb04d6ed6f45455f6",
         "reviewDisposition": "reviewed",
         "reviewNote": "At pinned TAC block 27826000 (hash 0x32dc3bd6de52eac70148949f619704dab9b692799312f9153019623a78bdf2df, timestamp 2026-10-29T18:33:51Z) helper reads return name/symbol USN, 18 decimals, totalSupply 3882.062016887419165253 USN, owner 0x868dd9bce1d60362f2169e7b91e6aa2f71f64750, hyperlaneEnabled true, mailbox 0x3a464f746d23ab22155710f44db16dca53e0775e, default ISM zero, and remoteTokens(1) equal to Ethereum USN 0xda67b4284609d2d48e5d10cfac411572727dc1ed. The TAC explorer-verified implementation 0x01a660f4b4f87b8b42ba6f02c63c38c87af610c2 (USNHyperlane, compiler 0.8.28) burns the sender balance in sendTokensViaHyperlane and mints only inside handle() gated to the registered mailbox and registered remote token, with a separate privileged MINTER_ROLE mint. This establishes the Ethereum-to-TAC burn-mint representation for this exact deployment; it does not certify Hyperlane validator or ISM quorum configuration, key custody, incident history, historical transport lanes or in-flight accounting, and the issuer registry still lists this TAC address as deprecated. No supply share is authored here.",
         "mappingVersion": "bridge-route-facts-v1",
@@ -1335,6 +1337,158 @@
           }
         ],
         "evidence": "starknet_call at blocks 13501913 to 13502090: Mailbox.owner matches the authored controller. That account returns get_name=ArgentMultisig, threshold 4, seven signer public keys, class 0x6e150953.... Default ISM aggregation children, Pausable unpaused, and Ethereum-origin 6-of-9 validators were read from the live contracts. This is not a Gnosis Safe; signer values are Stark public keys, so no Safe API/threshold object is asserted."
+      },
+      {
+        "id": "tac-usn-owner-safe",
+        "label": "TAC USN representation owner Safe",
+        "routeRefs": [
+          "tac:0x51a30e647d33a044967fa3dbb04d6ed6f45455f6"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "tac",
+        "controllerAddress": "0x868dd9bce1d60362f2169e7b91e6aa2f71f64750",
+        "failureDomainKeys": [
+          "safe:tac:0x868dd9bce1d60362f2169e7b91e6aa2f71f64750",
+          "safe:shared:noon-four-owner-overlap",
+          "protocol:hyperlane-warp-route"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x7b1187106a3ac9d2602f41224a06e247fc12be37",
+            "0x0649f6fc279b0eb94d5b15de013b87b0e50d2d88",
+            "0xe45bb0d3cc77702e1310bb621c59c778304a42d0",
+            "0x09ce2d1c37772f7ff666b6447a66a5ebd2833799",
+            "0xe8241facb568e4c880490e8ab4e015f2572e6976",
+            "0x8b3641db7737ffab752718fcc772161ec09fad01"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "observedBlock": 29203000,
+          "observedAt": "2026-11-23",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "capDescription": "This 3-of-6 Safe owns the deprecated TAC USN burn-mint representation without a timelock; verified USNHyperlane exposes privileged MINTER_ROLE minting and owner-controlled Hyperlane configuration with no on-chain mint ceiling.",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At TAC block 29203000 (hash 0x91a4c8345e2012a7421144da98696076cb3e557e25705680a412989ead0fabeb, 2026-11-23T20:52:58Z), USN 0x51a30e647d33a044967fa3dbb04d6ed6f45455f6 retains totalSupply 3,882.062016887419165253 USN, owner 0x868dd9bce1d60362f2169e7b91e6aa2f71f64750, EIP-1967 implementation 0x01a660f4b4f87b8b42ba6f02c63c38c87af610c2, and admin 0xf4059d5f0b70f828ed2f087b43e91351203b2bbe.",
+          "caps": "Verified USNHyperlane implementation 0x01a660f4b4f87b8b42ba6f02c63c38c87af610c2 has no numeric supply cap or BridgeRateLimiter hook; owner can grant MINTER_ROLE and configure Hyperlane remote tokens.",
+          "pausersAdminsUpgraders": "USN.owner() is this 3-of-6 SafeL2 v1.4.1 (masterCopy 0x29fcb43b46531bca003ddc8fcb67ffe91900c762, empty modules, zero guard); token ProxyAdmin 0xf4059d5f0b70f828ed2f087b43e91351203b2bbe is separately owned by an EOA recorded in tac-usn-token-proxy-admin."
+        },
+        "observedAt": "2026-11-23",
+        "observedBlock": 29203000,
+        "sources": [
+          {
+            "label": "TAC USN verified USNHyperlane implementation source",
+            "url": "https://explorer.tac.build/api/v2/smart-contracts/0x01a660f4b4f87b8b42BA6f02c63c38C87Af610c2"
+          },
+          {
+            "label": "TAC USN proxy on TAC explorer",
+            "url": "https://explorer.tac.build/address/0x51A30E647D33A044967FA3DBb04d6ED6F45455F6"
+          },
+          {
+            "label": "Pinned TAC RPC reads at block 29203000 (hash 0x91a4c8345e2012a7421144da98696076cb3e557e25705680a412989ead0fabeb, 2026-11-23T20:52:58Z)",
+            "url": "https://rpc.tac.build"
+          }
+        ],
+        "evidence": "At TAC block 29203000 (2026-11-23T20:52:58Z), USN.owner() returned 0x868dd9bce1d60362f2169e7b91e6aa2f71f64750. On-chain Safe calls returned VERSION 1.4.1, threshold 3, six owners (overlapping the four Noon zkSync/Sophon signers plus 0xe8241fac... and 0x8b3641db...), empty getModulesPaginated, zero guard slot, fallbackHandler 0xfd0732dc..., and masterCopy 0x29fcb43b...."
+      },
+      {
+        "id": "tac-usn-token-proxy-admin",
+        "label": "TAC USN representation ProxyAdmin owner (EOA)",
+        "routeRefs": [
+          "tac:0x51a30e647d33a044967fa3dbb04d6ed6f45455f6"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "tac",
+        "controllerAddress": "0x173806021b18c4e60170e412dc88f991eb00d699",
+        "failureDomainKeys": [
+          "proxy-admin:tac:0xf4059d5f0b70f828ed2f087b43e91351203b2bbe",
+          "eoa:tac:0x173806021b18c4e60170e412dc88f991eb00d699",
+          "contract:tac:0x51a30e647d33a044967fa3dbb04d6ed6f45455f6"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": true,
+        "capDescription": "Zero-code EOA owner of TAC USN ProxyAdmin 0xf4059d5f0b70f828ed2f087b43e91351203b2bbe can call upgradeAndCall on the TAC USN proxy immediately with no timelock or multisig.",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At TAC block 29203000 (2026-11-23T20:52:58Z), USN EIP-1967 admin slot resolves to verified OpenZeppelin ProxyAdmin 0xf4059d5f0b70f828ed2f087b43e91351203b2bbe, whose owner() is 0x173806021b18c4e60170e412dc88f991eb00d699 with eth_getCode returning 0x (zero-code EOA; no timelock)."
+        },
+        "observedAt": "2026-11-23",
+        "observedBlock": 29203000,
+        "sources": [
+          {
+            "label": "Verified TAC USN ProxyAdmin source",
+            "url": "https://explorer.tac.build/api/v2/smart-contracts/0xf4059d5f0b70f828ed2f087b43e91351203b2bbe"
+          },
+          {
+            "label": "Pinned TAC RPC reads at block 29203000 (hash 0x91a4c8345e2012a7421144da98696076cb3e557e25705680a412989ead0fabeb, 2026-11-23T20:52:58Z)",
+            "url": "https://rpc.tac.build"
+          }
+        ],
+        "evidence": "At TAC block 29203000, EIP-1967 admin slot on 0x51a30e647d33a044967fa3dbb04d6ed6f45455f6 returned verified ProxyAdmin 0xf4059d5f0b70f828ed2f087b43e91351203b2bbe. ProxyAdmin.owner() returned 0x173806021b18c4e60170e412dc88f991eb00d699 and eth_getCode at the same block returned 0x, confirming an immediate EOA upgrade authority separate from the token's 3-of-6 owner Safe."
+      },
+      {
+        "id": "tac-hyperlane-mailbox-owner",
+        "label": "Hyperlane TAC mailbox and ProxyAdmin ICA owner and default ISM",
+        "routeRefs": [
+          "tac:0x51a30e647d33a044967fa3dbb04d6ed6f45455f6"
+        ],
+        "capabilities": [
+          "admin",
+          "validator",
+          "upgrade"
+        ],
+        "controllerChain": "tac",
+        "controllerAddress": "0xb801c2712f92e2d29e1120862e0f9c93d80cbbca",
+        "failureDomainKeys": [
+          "mailbox:tac:0x3a464f746d23ab22155710f44db16dca53e0775e",
+          "proxy-admin:tac:0x2f2afae1139ce54fefc03593fee8ab2adf4a85a7",
+          "contract:tac:0xb801c2712f92e2d29e1120862e0f9c93d80cbbca",
+          "protocol:hyperlane-ism",
+          "eoa:tac:0xa7eccdb9be08178f896c26b7bbd8c3d4e844d9ba"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": false,
+        "capDescription": "This Hyperlane interchain account (OwnableMulticall) cannot mint USN directly. It owns TAC Mailbox 0x3a464f746d23ab22155710f44db16dca53e0775e, Mailbox ProxyAdmin 0x2f2afae1139ce54fefc03593fee8ab2adf4a85a7, and the DomainRoutingISM under the mailbox default ISM.",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At TAC block 29203000 (2026-11-23T20:52:58Z), Mailbox 0x3a464f746d23ab22155710f44db16dca53e0775e (localDomain 239) and Mailbox ProxyAdmin 0x2f2afae1139ce54fefc03593fee8ab2adf4a85a7 both have owner()=0xb801c2712f92e2d29e1120862e0f9c93d80cbbca, an OwnableMulticall ICA controlled by Hyperlane InterchainAccountRouter 0x829acbc15a66f6b32a189cfb6451b2ee583706ba (routers(1)=0xc00b94c115742f711a6f9ea90373c33e9b72a4a9).",
+          "attestorQuorum": "Mailbox defaultIsm()=0xad3bce653f56d4e03d0789d01d055b06cf6ac48f is a StaticAggregationISM requiring 2-of-2: (1) DomainRoutingISM 0x310eedec242ba712ae7797b23d81f8f71c783db1 (moduleType=1, owner=0xb801c271...), whose module(1/Ethereum)=0x177f7361db2627d6f1421289ef7112b15e62ce25 (StaticAggregationISM 1-of-2 of MerkleRootMultisig 0x60d8068bd74abf988f5ac9a6826d587c88589733 [type 4] and MessageIdMultisig 0xf3ad60d9b9a8251fc6f92bd9c8dbefca71e26b0e [type 5], each 6-of-10 Ethereum-origin validators including the nine zkSync/Sophon validators plus 0xef2e5bb2bc45dd092ff7f9d4d4485f022185aeae); and (2) PausableISM/NULL 0xc760a72a536fdb936855612b13faaae2c123f772 (moduleType=6), unpaused, owned by Abacus Works EOA 0xa7eccdb9be08178f896c26b7bbd8c3d4e844d9ba.",
+          "pausersAdminsUpgraders": "Mailbox ProxyAdmin 0x2f2afae1139ce54fefc03593fee8ab2adf4a85a7 matches the Hyperlane TAC registry and is owned by the same ICA OwnableMulticall 0xb801c2712f92e2d29e1120862e0f9c93d80cbbca; no local TAC timelock was observed."
+        },
+        "observedAt": "2026-11-23",
+        "observedBlock": 29203000,
+        "sources": [
+          {
+            "label": "Hyperlane TAC registry addresses",
+            "url": "https://github.com/hyperlane-xyz/hyperlane-registry/blob/main/chains/tac/addresses.yaml"
+          },
+          {
+            "label": "Verified OwnableMulticall implementation on TAC explorer",
+            "url": "https://explorer.tac.build/api/v2/smart-contracts/0xf0B5366c6C461507e127d953A774FF242eDE4CBa"
+          },
+          {
+            "label": "Pinned TAC RPC reads at block 29203000 (hash 0x91a4c8345e2012a7421144da98696076cb3e557e25705680a412989ead0fabeb, 2026-11-23T20:52:58Z)",
+            "url": "https://rpc.tac.build"
+          }
+        ],
+        "evidence": "At TAC block 29203000, Mailbox 0x3a464f74... and Mailbox ProxyAdmin 0x2f2afae1... both returned owner 0xb801c2712f92e2d29e1120862e0f9c93d80cbbca (Hyperlane OwnableMulticall ICA owned by ICA router 0x829acbc1...). Default ISM 0xad3bce65... decoded to 2-of-2 StaticAggregationISM combining DomainRoutingISM 0x310eedec... (Ethereum origin 1-of-2 aggregation of 6-of-10 MerkleRootMultisig and MessageIdMultisig) and unpaused PausableISM 0xc760a72a... (owner EOA 0xa7eccdb9...)."
       }
     ]
   }

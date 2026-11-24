@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { MAX_REDEMPTION_OUTPUT_ASSETS } from "../exit-route";
 import {
   decodeLiveReserveRedemptionTelemetry,
   LiveReserveDiagnosticsSchema,
@@ -33,6 +34,11 @@ describe("live-reserve redemption telemetry numeric policy", () => {
       feeBps: 10_000,
     };
     expect(LiveReserveRedemptionTelemetrySchema.safeParse(boundary).success).toBe(true);
+    const atCap = Array.from({ length: MAX_REDEMPTION_OUTPUT_ASSETS }, (_, i) => `asset:tok${i}`);
+    expect(LiveReserveRedemptionTelemetrySchema.safeParse({ outputAssetKeys: atCap }).success).toBe(true);
+    expect(
+      LiveReserveRedemptionTelemetrySchema.safeParse({ outputAssetKeys: [...atCap, `asset:tok${MAX_REDEMPTION_OUTPUT_ASSETS}`] }).success,
+    ).toBe(false);
   });
 
   it.each([

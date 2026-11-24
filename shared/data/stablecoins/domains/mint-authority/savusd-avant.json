@@ -131,7 +131,7 @@
       ]
     },
     "reconciliation": "not-applicable",
-    "supervision": "unknown",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -149,10 +149,18 @@
         {
           "label": "savUSD Ethereum contract",
           "url": "https://etherscan.io/address/0xb8d89678e75a973e74698c976716308abb8a46a4"
+        },
+        {
+          "label": "Avant Protocol Terms of Use (Avant Protocol Foundation, BVI governing law, no prudential license disclosed, accessed 2026-11-24)",
+          "url": "https://docs.avantprotocol.com/legal-and-risk/terms-of-use.md"
+        },
+        {
+          "label": "Avant Protocol Contract and OPSEC Audits (smart-contract code audits and Trail of Bits OPSEC only; no financial reserve attestation opinion covering savUSD, accessed 2026-11-24)",
+          "url": "https://docs.avantprotocol.com/security/contract-and-opsec-audits.md"
         }
       ],
-      "evidence": "Reviewed 2026-08-16: the official Avant registry identifies Avalanche 0x06d47f3fb376649c3a9dafe069b3d6e35572219e as the native Staked avUSD deployment and the other authored EVM deployments as bridged. At Avalanche block 92981175, the native wrapper returned avUSD as its asset, remained non-proxy and immutable, and its deposit-only share issuance was bounded by avUSD deposited. The separately reviewed avUSD parent establishes the sole cap-limited AvantMintingV2 base-asset path. Avalanche CCIP LockRelease and LayerZero adapter machinery, plus all destination representation minters, remain exclusively under bridgeRouteRisk and are not canonical Mint Authority. D14/D29 sweep 2026-10-03: At Avalanche block 96542832 (hash 0x99824710bcbf0c38c3a53e6fd5cb91c359b8d95d66c015d73c8386613f4345cc), canonical asset() is avUSD. Routescan verified StakedAvUSDV2 and StakedAvUSD source routes ordinary deposit/mint through ERC-4626 _deposit and safeTransferFrom before share minting. The sole privileged _mint in redistributeLockedAmount is preceded by burning the exact same number of existing restricted shares, so it moves a backed claim and cannot increase net supply. Reward distribution transfers avUSD into the vault without minting shares; cooldown, blacklist, rescue and role-administration powers do not introduce a free share minter. Inherited issuer controls describe parent issuance carried by the serial-claim dependency edge, not wrapper-local share minting; parent D14 risk is not charged twice.",
-      "reviewer": "Sol v10.02 D14/D29 sweep (U10BoundedWrappersA)",
+      "evidence": "Reviewed 2026-08-16: the official Avant registry identifies Avalanche 0x06d47f3fb376649c3a9dafe069b3d6e35572219e as the native Staked avUSD deployment and the other authored EVM deployments as bridged. At Avalanche block 92981175, the native wrapper returned avUSD as its asset, remained non-proxy and immutable, and its deposit-only share issuance was bounded by avUSD deposited. The separately reviewed avUSD parent establishes the sole cap-limited AvantMintingV2 base-asset path. Avalanche CCIP LockRelease and LayerZero adapter machinery, plus all destination representation minters, remain exclusively under bridgeRouteRisk and are not canonical Mint Authority. D14/D29 sweep 2026-10-03: At Avalanche block 96542832 (hash 0x99824710bcbf0c38c3a53e6fd5cb91c359b8d95d66c015d73c8386613f4345cc), canonical asset() is avUSD. Routescan verified StakedAvUSDV2 and StakedAvUSD source routes ordinary deposit/mint through ERC-4626 _deposit and safeTransferFrom before share minting. The sole privileged _mint in redistributeLockedAmount is preceded by burning the exact same number of existing restricted shares, so it moves a backed claim and cannot increase net supply. Reward distribution transfers avUSD into the vault without minting shares; cooldown, blacklist, rescue and role-administration powers do not introduce a free share minter. Inherited issuer controls describe parent issuance carried by the serial-claim dependency edge, not wrapper-local share minting; parent D14 risk is not charged twice. Supervision review 2026-11-24 (no clock renewal): Avant Protocol Terms of Use identify Avant Protocol Foundation (BVI governing law, disclaiming fiduciary duties) operating a decentralized protocol without prudential banking, trust, EMI, or regulated-fund licensing, and Contract and OPSEC Audits list smart-contract code audits and Trail of Bits OPSEC engagements only, with no independent financial reserve examination or attestation opinion covering savUSD wrapper liabilities (supervision: none; 0 assurance uplift).",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U10BoundedWrappersA); Pharos CTRL-5 supervision review 2026-11-24 (no renewal)",
       "reviewedAt": "2026-10-03",
       "disposition": "scoreable"
     }

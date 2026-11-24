@@ -32,6 +32,53 @@
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
   },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "apxUSD has no on-chain external price-feed quorum or borrower-liquidation engine, and primary redemptions settle at an issuer-set Redemption Value or off-chain RFQ quotes. At pinned Ethereum finalized block 26481778 (hash 0x06d88f294bbf91ddb2c3713946dec8335282fce343b93aa6ddc956405075824b, 2026-11-24T01:39:35Z), apxUSD proxy 0x98a878b1cd98131b271883b390f68d2c90674665 resolves to verified ApxUSD implementation 0xdd71fd677fde2ed2579a3c45204f41a11016ccb4 (totalSupply 258,571,925.314780 apxUSD, supplyCap 750,000,000, authority 0xe167330e2eac88666de253e9607c6d9ae0ca2824), and verified MinterV0 0x2c36e1adfaa80ee0324b04cc814f5207bb7ba76e binds the same apxUSD and AccessManager (maxMintAmount 50,000,000, raised from constructor initial 10,000,000; paused false). Neither verified contract reads any on-chain oracle or price feed: MinterV0 executes EIP-712 order signatures (beneficiary is an Order field; requestMint/executeMint). Per Apyx's Capitalization Framework and How Apyx Works documentation (accessed 2026-11-24), primary apxUSD issuance is priced at $1 for whitelisted counterparties while primary redemptions settle at Apyx's transparency-dashboard Redemption Value (reflecting the off-chain preferred-share and cash reserve basket less liquidity/slippage spreads) or via off-chain RFQ redemption. Primary redemption valuation therefore depends on issuer-set internal pricing rather than an independent on-chain market oracle.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-11-24",
+      "reviewer": "Pharos R1 primary-source oracle review 2026-11-24 (owner ruling 1)",
+      "rationale": "apxUSD primary issuance and redemption settle at $1 signed-order issuance and issuer-published Redemption Value / off-chain RFQ quotes against preferred-equity and cash reserves, with no borrower-owned collateral markets or on-chain liquidation branches.",
+      "sources": [
+        {
+          "label": "Apyx Capitalization Framework: $1 issuance, Redemption Value, and RFQ redemption (accessed 2026-11-24)",
+          "url": "https://docs.apyx.fi/solution-overview/capitalization-framework.md"
+        },
+        {
+          "label": "Verified Ethereum MinterV0 source (EIP-712 Order-based minting, no on-chain oracle, accessed 2026-11-24)",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2c36e1adfaa80ee0324b04cc814f5207bb7ba76e"
+        }
+      ]
+    },
+    "reviewedAt": "2026-11-24",
+    "reviewer": "Pharos R1 primary-source oracle review 2026-11-24 (owner ruling 1)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Apyx Capitalization Framework (accessed 2026-11-24)",
+        "url": "https://docs.apyx.fi/solution-overview/capitalization-framework.md"
+      },
+      {
+        "label": "Apyx How Apyx Works: off-chain treasury allocation and whitelisted minting/redemption (accessed 2026-11-24)",
+        "url": "https://docs.apyx.fi/apyx-overview/how-apyx-works.md"
+      },
+      {
+        "label": "Verified Ethereum MinterV0 source (accessed 2026-11-24)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2c36e1adfaa80ee0324b04cc814f5207bb7ba76e"
+      },
+      {
+        "label": "Verified Ethereum ApxUSD implementation source (accessed 2026-11-24)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xDd71Fd677fDe2eD2579A3C45204f41a11016ccB4"
+      },
+      {
+        "label": "Pinned Ethereum finalized block 26481778 (hash 0x06d88f294bbf91ddb2c3713946dec8335282fce343b93aa6ddc956405075824b, 2026-11-24T01:39:35Z) ApxUSD and MinterV0 state reads",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "apxUSD uses Chainlink CCIP with Ethereum as the only native issuance deployment and Lock/Release pool 0x0e9cA42Bc60bE25F9A67f52173067Cc0Bb405BB5 as the canonical escrow. The October 9 directory review confirms this escrow-backed end-to-end route: Base, BNB Chain, and Solana locally burn/mint representations of locked Ethereum apxUSD, not independent liabilities eligible for a raw transfer census. EVM pool-gated mint/burn and administration are Bridge Risk, not native Mint Authority. The previously reviewed Base/BNB pool owner is the Apyx 3-of-6 Safe 0xf9862efc1704ac05e687f66e5cd8c130e5663ce2. Solana uses a distinct 1-of-2 SPL mint multisig; no EVM Safe threshold is attributed to it. Current numeric CCIP rate limits and live remote-peer/RMN validator settings remain an evidence gap; this directory review does not refresh authority observations.",

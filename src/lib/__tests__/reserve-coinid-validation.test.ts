@@ -57,6 +57,10 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "WS1.B7: the DOLA leg is subject self exposure within undecomposed LP-secured debt, not an upstream token reserve.",
   ],
   [
+    "dola-inverse-finance::DOLA-SwanUSD LP-secured debt (undecomposed)::DOLA",
+    "2026-11-23 keyed 0% classification row (FiRM market 0xCCfD7634…): the DOLA leg is subject self exposure within undecomposed LP-secured debt, not an upstream token reserve.",
+  ],
+  [
     "dola-inverse-finance::DOLA-USR LP-secured debt (undecomposed)::DOLA",
     "D-4 (2026-10-17): the DOLA leg is subject self exposure within undecomposed LP-secured debt surfaced by the invalid-feed debt repair, not an upstream token reserve.",
   ],

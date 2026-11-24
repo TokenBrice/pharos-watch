@@ -135,8 +135,10 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Cap's address registry lists this exact MegaETH vault, and MegaETH Blockscout shows an EIP-1967 proxy over L2TokenUpgradeable 0x3b2bf0834130878e0568b8047061a77e234ef37b; that implementation is a LayerZero OFT V2 whose constructor binds endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, so this is a bridged share representation, not a second native ERC-4626 vault (6,672,059.46 shares at review). The OFT owner, peer, DVN configuration and rate limits were not read.",
+        "reviewNote": "Cap's address registry lists this exact MegaETH vault, and MegaETH Blockscout shows an EIP-1967 proxy over L2TokenUpgradeable 0x3b2bf0834130878e0568b8047061a77e234ef37b; that implementation is a LayerZero OFT V2 whose constructor binds endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, so this is a bridged share representation, not a second native ERC-4626 vault (6,672,059.46 shares at review). Supplementary 2026-11-24 pinned MegaETH block 32688165 (hash 0x6acf6769e870879cec13ff574ca84ad64375cead77b02937c9042087c22416d9, 2026-11-24T01:52:56Z) confirms EIP-1967 implementation 0x3b2bf0834130878e0568b8047061a77e234ef37b, endpoint() 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, owner() 0x0000000035a7744f94e6949431ce20ea77312a55, token() self (0x88887be419578051ff9f4eb6c858a951921d8888), totalSupply() 1,254,154.214550 stcUSD, and Ethereum peer peers(30101)=0x983aeaaa0d0426839158435c43725ea7f45d4137, establishing the OFT proxy contract as the route-level bridge mint/burn controller. The owner topology, DVN configuration and rate limits remain unread.",
         "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "megaeth",
+        "controllerAddress": "0x88887be419578051ff9f4eb6c858a951921d8888",
         "failureDomainKeys": [
           "protocol:layerzero-oft-v2",
           "contract:megaeth:0x88887be419578051ff9f4eb6c858a951921d8888"
@@ -154,6 +156,10 @@
           {
             "label": "Verified L2TokenUpgradeable OFT implementation",
             "url": "https://megaeth.blockscout.com/api/v2/smart-contracts/0x3b2bf0834130878e0568b8047061a77e234ef37b"
+          },
+          {
+            "label": "Pinned MegaETH block 32688165 (hash 0x6acf6769e870879cec13ff574ca84ad64375cead77b02937c9042087c22416d9, 2026-11-24T01:52:56Z) OFT controller, endpoint, and Ethereum peer read",
+            "url": "https://mainnet.megaeth.com/rpc"
           }
         ]
       }

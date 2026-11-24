@@ -57,7 +57,8 @@
   "contracts": [
     { "chain": "ethereum", "address": "0xd166337499e176bbc38a1fbd113ab144e5bd2df7", "decimals": 18 },
     { "chain": "bsc", "address": "0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25", "decimals": 18 },
-    { "chain": "monad", "address": "0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25", "decimals": 18 }
+    { "chain": "monad", "address": "0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25", "decimals": 18 },
+    { "chain": "xlayer", "address": "0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25", "decimals": 18 }
   ],
   "collateralQuality": "rwa",
   "custodyModel": "unknown",

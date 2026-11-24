@@ -577,27 +577,39 @@
       },
       {
         "id": "sei:0x0a790e1f85594e27d8eb26907fe280f0e0f166de",
+        "sourceChain": "ethereum",
         "destinationChain": "sei",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x0a790e1f85594e27d8eb26907fe280f0e0f166de",
-        "protocol": "Re Protocol Sei deployment; route review pending",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
+        "protocol": "Chainlink CCIP (reUSD BurnWithFromMintTokenPool)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-25",
-        "reviewNote": "Deployment verified 2026-10-25 against the issuer smart-contract inventory. At Sei block 239680247 (2026-10-25T22:05:57Z), this token returned Re Protocol reUSD/reUSD, 18 decimals and 1,089,965.996017705122696460 shares. The explorer identifies ShareToken implementation 0xe08853433fdbc504240455e295b644e0f44c3b29; deployment identity and positive omitted stock are established. Complete native-versus-transfer issuer paths, controller closure, peer mappings, caps and incident state remain unresolved; this addition grants no control assurance.",
-        "observedBlock": 239680247,
+        "controllerChain": "sei",
+        "controllerAddress": "0xd2e52e2480f26869c032520769cc2aee6a0f5e75",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:sei:0xd2e52e2480f26869c032520769cc2aee6a0f5e75"
+        ],
+        "observedAt": "2026-11-23",
+        "reviewNote": "At pinned Sei block 244985000 (hash 0xd4370a237092ae7b06d2bc22e445b6b95d5e60516b8d2399ba0e98614c44de5c, 2026-11-23T20:16:22Z), Sei reUSD 0x0a790e1f85594e27d8eb26907fe280f0e0f166de (EIP-1967 implementation 0xe08853433fdbc504240455e295b644e0f44c3b29, totalSupply 7.824912921141748176 reUSD) grants MINTER_ROLE to Chainlink CCIP pool 0xd2e52e2480f26869c032520769cc2aee6a0f5e75 (getToken()=0x0a790e1f..., typeAndVersion()='BurnWithFromMintTokenPool 2.0.0', getRmnProxy()=0x32c67585da17839245c75d80d36c8cbd7d35e1a5, router 0xaba60da7e88f7e8f5868c2b6de06cb759d693af0, rateLimitAdmin Re Safe 0x8eec10616802ef639ca55c98ac856553fadefbad). Reciprocal CCIP wiring is confirmed: Sei pool getRemoteToken(5009297550715157269)=0x5086bf358635b81d8c47c66d1c8b9e567db70c72 and getRemotePools(5009297550715157269)=[0xf00b3b06690bc7e2bc6a9ccae55d17b7cd818465], while at Ethereum block 26480400 (2026-11-23T21:03:23Z) Ethereum CCIP pool 0xf00b3b06... maps selector 9027416829622342829 to Sei token 0x0a790e1f... and pool 0xd2e52e24... (correcting the earlier Oct 1 Ethereum control note that mislabeled selector 9027416829622342829 as MegaETH). Pool owner() and token DEFAULT_ADMIN_ROLE are held by 2-day TimelockController 0xd25f563e12ff616262f8c947fec108db934f8059 (getMinDelay()=172800s; Re 3-of-5 Safe 0x8eec1061... is PROPOSER and EXECUTOR, and hasRole(DEFAULT_ADMIN_ROLE, Safe) on the token is false). Issuer docs list no local deposit ICL on Sei, establishing this deployment as a Chainlink CCIP burn-mint representation.",
+        "observedBlock": 244985000,
         "sources": [
           {
             "label": "Re Protocol exact reUSD deployment inventory",
             "url": "https://docs.re.xyz/products/smart-contracts.md"
           },
           {
-            "label": "sei pinned identity and stock reads (2026-10-25)",
+            "label": "Pinned Sei block 244985000 (hash 0xd4370a237092ae7b06d2bc22e445b6b95d5e60516b8d2399ba0e98614c44de5c, 2026-11-23T20:16:22Z) CCIP pool, token MINTER_ROLE, and Timelock reads",
             "url": "https://evm-rpc.sei-apis.com"
+          },
+          {
+            "label": "Pinned Ethereum block 26480400 (2026-11-23T21:03:23Z) CCIP pool selector 9027416829622342829 remoteToken/remotePools reads",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
           },
           {
             "label": "Exact sei reUSD deployment",

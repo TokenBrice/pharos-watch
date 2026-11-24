@@ -1230,13 +1230,18 @@
     },
     {
       "assetId": "sdola-inverse-finance",
-      "reviewer": "Claude (D02 evidence lane; original review P2CcipPlans)",
-      "reviewedAtSec": 1793120053,
-      "expiresAtSec": 1795712053,
+      "reviewer": "Pharos supply-plan renewal 2026-11-23 (original review P2CcipPlans; prior D02 renewal 2026-10-27). Re-verified at pinned finalized blocks: ethereum@26480819 (2026-11-23T22:27:35.000Z), base@61412196 (2026-11-23T22:26:54.000Z), optimism@159936710 (2026-11-23T22:16:37.000Z), arbitrum@526938480 (2026-11-23T22:26:47.000Z), berachain@29229472 (2026-11-23T22:41:00.000Z); all 5 pool and 52 ramp runtime hashes, TokenAdminRegistry pool binding, empty getSupportedChains across all 5 retired pools, all 5 canonical peerBindingPin headers, 5-router onRamp/offRamp inventories (vs 2026-10-24..27), and exact 0-wei lock-mint conservation (escrow 21234567891234939 raw = Base+OP+Arb+Bera) unchanged.",
+      "reviewedAtSec": 1795473660,
+      "expiresAtSec": 1798065660,
       "evidenceUrls": [
         "https://etherscan.io/address/0x05eee76f456c51be0459ec1c0a78bf177b2c877c",
         "https://github.com/smartcontractkit/chainlink-ccip/blob/d0e9ff9e116e3fb60b61d00d41aae7e98886ffe6/chains/evm/contracts/Router.sol",
-        "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
+        "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola",
+        "https://eth-mainnet.g.alchemy.com/v2/",
+        "https://base-mainnet.g.alchemy.com/v2/",
+        "https://opt-mainnet.g.alchemy.com/v2/",
+        "https://arb-mainnet.g.alchemy.com/v2/",
+        "https://rpc.berachain.com"
       ],
       "economicScope": "All outstanding holder vault-share claims across the complete registered token census. Ethereum LockRelease pool custody is deducted once, every remote receipt is retained, and every historically configured directed CCIP ramp must reconcile authenticated send and execution state. No treasury or unreleased balance exclusions are asserted; held shares remain holder liabilities. Failed and undelivered sends remain owed. Retired lanes use reviewed historical peer identity, never a zero-liability assumption.",
       "sourceId": "coingecko",
@@ -2939,19 +2944,21 @@
     },
     {
       "assetId": "srusd-reservoir",
-      "reviewer": "Claude (D02 evidence lane; original review P4OftCohortPlans reviewed runtime and complete peer census)",
-      "reviewedAtSec": 1793120053,
-      "expiresAtSec": 1795712053,
+      "reviewer": "Pharos supply-plan renewal 2026-11-23 (original review P4OftCohortPlans; prior D02 renewal 2026-10-27). Re-verified at pinned finalized blocks: ethereum@26480819 (2026-11-23T22:27:35.000Z), berachain@29229472 (2026-11-23T22:41:00.000Z); adapter (c2c704a4...), OFT (6d5f03dd...) and endpoint runtime hashes (no delegated opcodes), token/endpoint/eid/decimals/sharedDecimals/conversionRate, both reciprocal peer bindings, nonces (686/686, 770/770), 0 Ethereum PeerSet logs (26280000..26480819), unchanged Berachain owner EOA nonce 4 (27900000..29229472), and exact 0-wei lock-mint conservation (6446.493124 srUSD) unchanged.",
+      "reviewedAtSec": 1795473660,
+      "expiresAtSec": 1798065660,
       "evidenceUrls": [
         "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=srUSD",
         "https://docs.reservoir.xyz",
+        "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses.md",
         "https://api.routescan.io/v2/network/mainnet/evm/1/etherscan/api?module=contract&action=getsourcecode&address=0x316cd39632cac4f4cdfc21757c4500fe12f64514",
         "https://rpc.berachain.com",
         "https://sourcify.dev/server/v2/contract/1/0x738d1115b90efa71ae468f1287fc864775e23a31?fields=all",
         "https://sourcify.dev/server/v2/contract/8453/0x62344be8ca1c339b46274a4017dd87af436900b1?fields=all",
         "https://docs.berachain.com/nodes/architecture/beaconkit-consensus",
         "https://ethereum.org/en/developers/docs/consensus-mechanisms/pos/gasper/",
-        "https://ethereum-rpc.publicnode.com"
+        "https://ethereum-rpc.publicnode.com",
+        "https://eth-mainnet.g.alchemy.com/v2/"
       ],
       "economicScope": "All non-rebasing Savingcoin srUSD token-share claims on Ethereum and Berachain. The exact verified Ethereum Savingcoin source is plain ERC20Burnable plus role-gated minting, not rebasing rUSD, wsrUSD, NAV or a gold/par denominator. Standard Ethereum OFTAdapter locks the canonical shares; bytecode/source-correspondent Berachain OFT issues equal 18-decimal share receipts (shared decimals 6). Measure both supplies, adapter-held backing and both authenticated message directions at their exact finalized holding pins; remove backing from Ethereum once, retain all remote receipts, and reconcile backing exactly to receipts plus authenticated pending. All minted shares held in savings, wrappers, treasury or redemption contracts remain claims until burned; underlying rUSD and separately catalogued wsrUSD are not additional srUSD liabilities. Creation-to-finalized PeerSet censuses contain solely this reciprocal two-side path, Berachain EID30362, with authenticated zero outbound nonces before each creation. Independently timestamped CoinGecko srUSD price binds the unchanged upstream aggregate; no static shares or escrow-minus-receipts pending.",
       "sourceId": "coingecko",

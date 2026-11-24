@@ -25,6 +25,7 @@ import {
   mergedBridgeCapSemantics,
   type StructuredBridgeOverlayEntry,
 } from "../safety-score-v9/extension-bridge";
+import { adaptMintReview } from "../safety-score-v9/extension-mint";
 import { normalizeFixedInput } from "../report-cards-fixed-input";
 import {
   type V9ExtensionRegistryMeta,
@@ -751,6 +752,79 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       economicLossScope: "deployment",
       materialSupplyShare: 0.0581,
     });
+  });
+
+  it("admits exact selected-reviewed deployment shares for local non-mint controls despite unrelated unresolved rows", () => {
+    const flat = (n: number) => ({ current: n, circulatingPrevDay: n, circulatingPrevWeek: n, circulatingPrevMonth: n });
+    const proxyAdmin = (label: string, deploymentRefs: string[], extra: Partial<MintAuthorityControl> = {}) =>
+      mintControl({ label, role: "proxy-admin", directMintAbility: "upgrade-only", authorityType: "eoa", deploymentRefs, ...extra });
+    const metadata = meta("fixture-partial-partition-mint-scope", {
+      mintAuthority: mintProfile({
+        controls: [
+          proxyAdmin("Arbitrum native upgrade admin", [ARBITRUM_ROUTE]),
+          proxyAdmin("Base ambiguous-chain upgrade admin", [BASE_ROUTE], { chain: "base", address: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" }),
+          proxyAdmin("Cross-deployment partial upgrade admin", [ARBITRUM_ROUTE, BASE_ROUTE], { address: "0xcccccccccccccccccccccccccccccccccccccccc" }),
+          mintControl({ label: "Arbitrum durable native minter", address: "0xdddddddddddddddddddddddddddddddddddddddd", role: "direct-minter", directMintAbility: "direct", deploymentRefs: [ARBITRUM_ROUTE] }),
+        ],
+      }),
+      bridgeRouteRisk: bridgeProfile([
+        route(ETHEREUM_ROUTE), route(ARBITRUM_ROUTE), route(BASE_ROUTE),
+        representationRoute("base:0x4444444444444444444444444444444444444444"),
+        representationRoute("polygon:0x5555555555555555555555555555555555555555", { reviewDisposition: "unresolved" }),
+      ]),
+    });
+    const { compiled } = compileFixture(metadata, {
+      chainSupplyByChain: { ethereum: flat(70_000_000), arbitrum: flat(5_000_000), base: flat(5_000_000), polygon: flat(5_000_000), optimism: flat(15_000_000) },
+    });
+    const asset = compiled.assets[0]!;
+    const byAuthority = (key: string) => asset.controls.find((c) => c.controlKey.startsWith("mint-meta:") && c.authority?.authorityKey === key)!;
+    expect(byAuthority("arbitrum:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")).toMatchObject({
+      deploymentKey: ARBITRUM_ROUTE, scope: "deployment", economicLossScope: "deployment", materialSupplyShare: 0.05,
+    });
+    for (const key of ["base:0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "arbitrum:0xcccccccccccccccccccccccccccccccccccccccc", "arbitrum:0xdddddddddddddddddddddddddddddddddddddddd"]) {
+      expect(byAuthority(key)).toMatchObject({ deploymentKey: `asset:${metadata.id}`, scope: "global", economicLossScope: "global-claim", materialSupplyShare: null });
+    }
+    const evaluated = evaluateV9EconomicControl({ facts: asset, ...asset.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
+    expect(evaluated.reasons.map((r) => r.code)).toContain("runtime-bridge-materiality-unavailable");
+    expect(asset.supply.unknownRouteSupplyShare).toBeCloseTo(0.2, 6);
+    expect(asset.supply.unreviewedRouteSupplyShare).toBeCloseTo(0.05, 6);
+  });
+
+  it.each([
+    ["upper-bound", 95, 1, 0, 0],
+    ["selected-unresolved", 95, 0.95, 0, 0.05],
+    ["unmatched", 95, 0.95, 0.05, 0],
+    ["same-chain-ambiguous", 85, 0.9, 0.1, 0],
+    ["unreconciled-total", 80, 0.85, 0, 0],
+    ["unreconciled-bucket", 95, 0.9, 0.1, 0],
+    ["duplicate-deployment", 90, 1, 0, 0],
+    ["unrecognized-chain", 95, 1, 0, 0],
+    ["root-issuance-untyped-kind", 95, 1, 0, 0],
+  ] as const)("keeps deployment-local control global and null-share on %s supply row", (fault, ethPct, selectedShare, unknownShare, unreviewedShare) => {
+    const assetId = `fixture-mint-scope-fail-${fault}`;
+    const targetRef = fault === "unrecognized-chain" ? "unknownchain:0x2222222222222222222222222222222222222222" : ARBITRUM_ROUTE;
+    const isRoot = fault === "root-issuance-untyped-kind";
+    const metadata = meta(assetId, {
+      mintAuthority: mintProfile({ controls: [mintControl({
+        role: isRoot ? "direct-minter" : "proxy-admin", directMintAbility: isRoot ? "direct" : "upgrade-only", deploymentRefs: [targetRef],
+      })] }),
+    });
+    const ethRow = { deploymentRouteKey: ETHEREUM_ROUTE, supplyUsd: ethPct * 1_000_000, supplyShare: ethPct / 100, reviewState: "selected-reviewed" as const, reviewedRouteKind: "native" as const };
+    const baseRow = { deploymentRouteKey: targetRef, supplyUsd: 5_000_000, supplyShare: 0.05, reviewState: "selected-reviewed" as const, ...(isRoot ? {} : { reviewedRouteKind: "native" as const }) };
+    const extraRows: NonNullable<Parameters<typeof adaptMintReview>[3]>["selectedBridgeRoutes"] =
+      fault === "upper-bound" ? [{ ...baseRow, evidenceKind: "upper-bound" }]
+      : fault === "selected-unresolved" || fault === "unmatched" ? [{ deploymentRouteKey: targetRef, supplyUsd: 5_000_000, supplyShare: 0.05, reviewState: fault }]
+      : fault === "same-chain-ambiguous" ? [baseRow, { deploymentRouteKey: `ambiguous-chain:${assetId}:arbitrum`, supplyUsd: 10_000_000, supplyShare: 0.1, reviewState: "unmatched" }]
+      : fault === "duplicate-deployment" ? [baseRow, baseRow]
+      : [baseRow];
+    const adapted = adaptMintReview(
+      metadata, new Map([[assetId, metadata]]),
+      { source: "none", baseSource: "none", dependencyFromLive: false, mappedLiveReserveWeight: null, fallbackReason: null, edges: [], diagnostics: { graphState: "valid", issueCodes: [], sccMemberAssetIds: [] } },
+      { selectedBridgeRoutes: [ethRow, ...extraRows], selectedRouteSupplyShare: selectedShare, unknownRouteSupplyShare: unknownShare, unreviewedRouteSupplyShare: unreviewedShare, failureDomains: [] },
+      new ReviewEvidenceBuilder(assetId, 10_000), 10_000,
+    );
+    expect(adapted.controls).toHaveLength(1);
+    expect(adapted.controls[0]).toMatchObject({ deploymentKey: `asset:${assetId}`, scope: "global", economicLossScope: "global-claim", materialSupplyShare: null });
   });
 
   it("fails closed on disagreement between structured bridge cap bounds while matching bounds stay bounded", () => {

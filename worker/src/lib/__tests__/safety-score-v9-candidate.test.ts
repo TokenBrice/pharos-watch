@@ -486,7 +486,6 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     ["axcnh-anchorx", "unverified"],
     ["mxne-real-mxn", "report-confidence-unverified", Date.parse("2026-11-19T12:00:00Z") / 1000],
     ["mxnb-juno", "report-assurance-method-unsupported", Date.parse("2026-11-19T12:00:00Z") / 1000],
-    ["gbpa-agant", "report-publication-date-missing"],
     ["cngn-compliant-naira", "report-publication-date-missing"],
   ])("publishes the concrete reserve admission gate for %s", (assetId, reason, clockSec = AS_OF_SEC) => {
     const fixedInput = makeV9FixedInput({ assetId, clockSec, reserves: [] });

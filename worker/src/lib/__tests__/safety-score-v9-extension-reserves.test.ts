@@ -44,6 +44,8 @@ import mxneCoin from "@shared/data/stablecoins/coins/mxne-real-mxn.json";
 import mxneReserveEnvelope from "@shared/data/stablecoins/domains/reserves/mxne-real-mxn.json";
 import usdoCoin from "@shared/data/stablecoins/coins/usdo-openeden.json";
 import usdoReserveEnvelope from "@shared/data/stablecoins/domains/reserves/usdo-openeden.json";
+import yldsCoin from "@shared/data/stablecoins/coins/ylds-figure.json";
+import yldsReserveEnvelope from "@shared/data/stablecoins/domains/reserves/ylds-figure.json";
 
 const CLOCK_SEC = Date.UTC(2026, 6, 14) / 1_000;
 const DEPENDENCY_CLOCK_SEC = Date.UTC(2026, 7, 20) / 1_000;
@@ -494,7 +496,7 @@ describe("reviewed live unknown residuals", () => {
       { tokenSymbol, chain, tokenAddress, totalValueUsd: 40, category: "asset:owned:frax" },
     ] }, meta.id, meta.contracts);
     expect(slices[0]?.sourceKey).toBe(`frax-balance-sheet:${chain}:${tokenAddress}`);
-    const clockSec = Date.UTC(2026, 10, 20) / 1_000;
+    const clockSec = Date.UTC(2026, 10, 25) / 1_000; // after frax-frax oracleRisk review (2026-11-24)
     const reviewed = { ...meta, id: "alpha" };
     expect(buildReviewedReserveClassifications([historical], meta, clockSec)[0]?.trackedAssetDisposition).toBeUndefined();
     const { alpha, result } = compile([{ ...slices[0]!, pct: 40 }, historical], reviewed, clockSec);
@@ -1818,5 +1820,137 @@ describe("named AUP historical composition, not assurance", () => {
     expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(incomplete, zarscClock)).toBeNull();
     expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(zarscMeta, zarscReportExpiry + 1)).toBeNull();
     expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(zarscMeta, Date.parse("2026-10-20T00:00:00Z") / 1000)).toBeNull();
+  });
+});
+
+describe("v10.53 regulator periodic-filing composition budget", () => {
+  const day = 86_400;
+  const expiry = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry;
+  const filingBudgetSec = expiry.regulatorPeriodicFilingCompositionMaxAgeSec;
+  const defaultBudgetSec = expiry.reviewedReserveCompositionMaxAgeSec + expiry.reviewedReserveCompositionGraceSec;
+  const yldsMeta = { ...yldsCoin, ...yldsReserveEnvelope } as unknown as V9ExtensionRegistryMeta;
+  const periodEndSec = Date.parse("2026-09-30T00:00:00Z") / 1_000;
+  const cloneYlds = (mutate?: (m: V9ExtensionRegistryMeta) => void) => {
+    const m = structuredClone(yldsMeta);
+    mutate?.(m);
+    return m;
+  };
+  const admit = (meta: V9ExtensionRegistryMeta, clockSec: number) => {
+    let rejection: unknown;
+    const admission = resolveReviewedReserveAdmission({ meta, clockSec, liveReserveRows: [], onRejected: (d) => { rejection = d; } });
+    return { admission, rejection };
+  };
+  const standalone = (meta: V9ExtensionRegistryMeta, clockSec: number) => {
+    let rejection: unknown;
+    const result = buildSafetyScoreV9ReviewedStandaloneReserveRows(meta, clockSec, undefined, null, (d) => { rejection = d; });
+    return { result, rejection };
+  };
+  const evidenceOf = (id: string, clockSec: number, admission: ReturnType<typeof resolveReviewedReserveAdmission>) => {
+    const ev = new ReviewEvidenceBuilder(id, clockSec);
+    addReviewedStaticReserveEvidence(admission, ev);
+    return ev.finish().researchEvidence;
+  };
+  const ageErr = (compositionAsOfSec: number, maxAgeSec: number) => ({ reasons: ["beyond-age-budget"], age: { compositionAsOfSec, maxAgeSec } });
+  const expectMismatch = (r: { result: unknown; rejection: unknown }) => {
+    expect(r.result).toBeNull();
+    expect(r.rejection).toEqual({ reasons: ["report-date-mismatch"] });
+  };
+  const CURATED_STATIC = { evidenceClass: "static-validated", provenance: "curated" };
+
+  it("admits YLDS Q3 2026 10-Q through period end + 134 d as static-validated and expires at + 136 d with the 135 d budget", () => {
+    expect(filingBudgetSec).toBe(135 * day);
+    const freshClock = periodEndSec + 134 * day;
+    const { admission: fresh } = admit(yldsMeta, freshClock);
+    expect(fresh.kind).toBe("reviewed-composition");
+    expect(fresh.projected).toMatchObject(CURATED_STATIC);
+    expect(fresh.projected!.rows.reduce((sum, row) => sum + row.pct, 0)).toBeCloseTo(100, 9);
+    expect(evidenceOf(yldsMeta.id, freshClock, fresh)).toContainEqual(expect.objectContaining({
+      sourceId: "stablecoin-meta.reviewed-standalone-reserves", observedAtSec: periodEndSec, maxAgeSec: filingBudgetSec,
+    }));
+    expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(yldsMeta, freshClock)).toBeNull();
+    expect(admit(yldsMeta, periodEndSec + 135 * day).admission.kind).toBe("reviewed-composition");
+    for (const clock of [periodEndSec + 135 * day + 1, periodEndSec + 136 * day]) {
+      const expired = admit(yldsMeta, clock);
+      expect(expired.admission).toEqual({ kind: "none", projected: null });
+      expect(expired.rejection).toEqual(ageErr(periodEndSec, filingBudgetSec));
+    }
+  });
+
+  it("enforces UTC day-end admission for date-only filedAt and fails closed on invalid filings", () => {
+    const filingDayEnd = Date.parse("2026-11-17T00:00:00Z") / 1_000;
+    const sameDayMeta = cloneYlds((m) => { m.reserveReview!.reviewedAt = "2026-11-16"; });
+    expectMismatch(standalone(sameDayMeta, filingDayEnd - 1));
+    expect(standalone(sameDayMeta, filingDayEnd).result).toMatchObject(CURATED_STATIC);
+
+    const clock60d = periodEndSec + 60 * day;
+    for (const [label, mutate] of [
+      ["mismatched periodEnd", (m) => { m.reserveReview!.compositionFiling!.periodEnd = "2026-06-30"; }],
+      ["URL not in sources", (m) => { m.reserveReview!.sources = [{ label: "Other", url: "https://www.sec.gov/Archives/edgar/data/1974395/000162828026073949/" }]; }],
+      ["future filedAt", (m) => { m.reserveReview!.compositionFiling!.filedAt = "2026-12-01"; }],
+      ["review predates filing", (m) => { m.reserveReview!.reviewedAt = "2026-10-15"; }],
+      ["bad accession", (m) => { m.reserveReview!.compositionFiling!.accession = "bad-accession"; }],
+    ] as Array<[string, (m: V9ExtensionRegistryMeta) => void]>) {
+      const { result, rejection } = standalone(cloneYlds((m) => { m.proofOfReserves = undefined; mutate(m); }), clock60d);
+      expect(result, label).toBeNull();
+      expect(rejection, label).toEqual(ageErr(periodEndSec, defaultBudgetSec));
+    }
+    expectMismatch(standalone(cloneYlds((m) => { m.reserveReview!.reviewedAt = "2026-10-15"; }), clock60d));
+  });
+
+  it("keeps the 38 d budget without a filing and bypasses report-date-mismatch only against an older valid report", () => {
+    const noFiling = cloneYlds((m) => { m.proofOfReserves = undefined; m.reserveReview!.compositionFiling = undefined; m.reserveReview!.reviewedAt = "2026-10-15"; });
+    expect(standalone(noFiling, periodEndSec + 38 * day).result).toMatchObject(CURATED_STATIC);
+    const expired = standalone(noFiling, periodEndSec + 38 * day + 1);
+    expect(expired.result).toBeNull();
+    expect(expired.rejection).toEqual(ageErr(periodEndSec, defaultBudgetSec));
+
+    const nov24 = Date.parse("2026-11-24T00:00:00Z") / 1_000;
+    for (const [clock, mutate] of [
+      [periodEndSec + 20 * day, (m) => { m.reserveReview!.compositionFiling = undefined; m.reserveReview!.reviewedAt = "2026-10-15"; }],
+      [periodEndSec + 20 * day, (m) => { m.reserveReview!.reviewedAt = "2026-10-15"; m.reserveReview!.compositionFiling!.accession = "invalid"; }],
+      [nov24, (m) => { m.proofOfReserves!.latestReport!.periodEnd = "2026-10-31"; m.proofOfReserves!.latestReport!.publishedAt = "2026-11-10"; }],
+      [nov24, (m) => { m.proofOfReserves!.latestReport!.publishedAt = "2026-12-15"; }],
+    ] as Array<[number, (m: V9ExtensionRegistryMeta) => void]>) {
+      expectMismatch(standalone(cloneYlds(mutate), clock));
+    }
+  });
+
+  it("extends the named-report path to max(120 d, 135 d) only for an admissible matching Form 10-K filing", () => {
+    const namedFirmBudgetSec = expiry.namedFirmReserveReportMaxAgeSec;
+    const annualPeriodEndSec = Date.parse("2025-12-31T00:00:00Z") / 1_000;
+    const tenKMeta = cloneYlds((m) => {
+      Object.assign(m.reserveReview!, {
+        reviewedAt: "2026-03-25", compositionAsOf: "2025-12-31",
+        compositionFiling: { regulator: "sec", form: "10-K", accession: "0001974395-26-000006", periodEnd: "2025-12-31", filedAt: "2026-03-20", url: "https://www.sec.gov/Archives/edgar/data/1974395/000197439526000006/fcc-20251231.htm" },
+      });
+    });
+
+    const clock125d = annualPeriodEndSec + 125 * day;
+    const { admission: admitted125d } = admit(tenKMeta, clock125d);
+    expect(admitted125d.kind).toBe("named-report");
+    expect(admitted125d.projected).toMatchObject(CURATED_STATIC);
+    expect(evidenceOf(tenKMeta.id, clock125d, admitted125d)).toContainEqual(expect.objectContaining({
+      sourceId: "stablecoin-meta.reviewed-audited-fallback-reserves", observedAtSec: annualPeriodEndSec, maxAgeSec: filingBudgetSec,
+    }));
+    expect(admit(tenKMeta, annualPeriodEndSec + 135 * day).admission.kind).toBe("named-report");
+
+    const expiredClock = annualPeriodEndSec + 135 * day + 1;
+    const expired = admit(tenKMeta, expiredClock);
+    expect(expired.admission.kind).toBe("history");
+    expect(expired.rejection).toEqual(ageErr(annualPeriodEndSec, filingBudgetSec));
+    expect(evidenceOf(tenKMeta.id, expiredClock, expired.admission)).toContainEqual(expect.objectContaining({
+      sourceId: "stablecoin-meta.expired-reviewed-static-reserves", observedAtSec: annualPeriodEndSec, maxAgeSec: filingBudgetSec,
+    }));
+
+    for (const mutate of [
+      (m: V9ExtensionRegistryMeta) => { m.reserveReview!.compositionFiling = undefined; },
+      (m: V9ExtensionRegistryMeta) => { m.reserveReview!.compositionFiling!.form = "10-Q"; },
+    ]) {
+      const m = structuredClone(tenKMeta);
+      mutate(m);
+      const r = admit(m, annualPeriodEndSec + 121 * day);
+      expect(r.admission.kind).toBe("history");
+      expect(r.rejection).toEqual(ageErr(annualPeriodEndSec, namedFirmBudgetSec));
+    }
   });
 });

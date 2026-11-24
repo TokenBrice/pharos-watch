@@ -232,6 +232,44 @@ describe("mento adapter", () => {
     expect(result.warnings?.some((warning) => warning.code === "unverified-mento-representation")).toBe(true);
   });
 
+  it("maps verified Celo sfrxUSD OFT collateral and withholds linkage on unverified chains", () => {
+    const celoPayload = {
+      collateral: {
+        assets: [
+          { symbol: "AUSD", chain: "ethereum", percentage: 70 },
+          { symbol: "sfrxUSD", chain: "celo", percentage: 20 },
+          { symbol: "CELO", chain: "celo", percentage: 10 },
+        ],
+      },
+    };
+    const celoResult = adaptMentoReserveComposition(celoPayload);
+    expect(celoResult.warnings).toBeUndefined();
+    expect(celoResult.slices.find((slice) => slice.sourceKey === "mento:reserve:sfrxusd")).toMatchObject({
+      pct: 20,
+      risk: "medium",
+      coinId: "sfrxusd-frax",
+      depType: "collateral",
+      intermediary: {
+        kind: "bridge",
+        chain: "celo",
+        contract: "0x00000000fD8C4B8A413A06821456801295921a71",
+        verified: true,
+      },
+    });
+
+    const otherChainResult = adaptMentoReserveComposition({
+      collateral: {
+        assets: [
+          { symbol: "AUSD", chain: "ethereum", percentage: 70 },
+          { symbol: "sfrxUSD", chain: "ethereum", percentage: 20 },
+          { symbol: "CELO", chain: "celo", percentage: 10 },
+        ],
+      },
+    });
+    expect(otherChainResult.slices.find((slice) => slice.name === "sfrxUSD")?.coinId).toBeUndefined();
+    expect(otherChainResult.warnings?.some((warning) => warning.code === "unverified-mento-representation")).toBe(true);
+  });
+
 
   it("extracts the historical dashboard reserve payload timestamp", () => {
     expect(extractMentoDashboardTimestamp(MENTO_DASHBOARD_HTML_FIXTURE)).toBe(DASHBOARD_FRAGMENT_TS_SEC);

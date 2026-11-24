@@ -145,11 +145,10 @@ describe("curated on-chain supply paths", () => {
     { id: "strusd-tori", chains: ["ethereum", "monad", "pharos"], zero: [], canonical: "ethereum" },
     { id: "uty-xsy", chains: ["base", "avalanche", "katana"], zero: ["avalanche", "katana"], canonical: "base" },
     { id: "mxne-real-mxn", chains: ["base", "solana", "stellar"], zero: ["base", "solana", "stellar"] },
-    { id: "susdat-saturn", chains: ["ethereum", "bsc", "monad"], zero: [], canonical: "ethereum" },
+    { id: "susdat-saturn", chains: ["ethereum", "bsc", "monad", "xlayer"], zero: ["xlayer"], canonical: "ethereum" },
     { id: "wsrusd-reservoir", chains: ["ethereum", "base", "berachain", "sonic", "arbitrum", "bsc", "avalanche", "unichain", "plume", "sei", "worldchain", "katana", "hyperevm", "linea", "monad", "pharos", "solana", "plasma", "megaeth", "tempo", "xdc"], zero: ["megaeth"], canonical: "ethereum" },
     { id: "brlv-crown", chains: ["base", "ethereum", "tempo"], zero: ["ethereum", "tempo"] },
     { id: "chfau-allunity", chains: ["ethereum", "polygon", "base", "tempo", "solana", "arc"], zero: ["ethereum", "polygon", "base", "tempo", "solana", "arc"] },
-    { id: "susn-noon", chains: ["ethereum", "zksync", "sophon", "starknet", "hyperevm", "base", "citrea", "berachain", "tac"], zero: [], canonical: "ethereum" },
     { id: "apyusd-apyx", chains: ["ethereum", "base", "bsc", "monad", "solana"], zero: [], canonical: "ethereum" },
     { id: "susdai-usd-ai", chains: ["arbitrum", "ethereum", "base", "plasma", "solana", "arc"], zero: [] },
     { id: "reusd-re-protocol", chains: ["ethereum", "avalanche", "arbitrum", "base", "bsc", "ink", "plasma", "katana", "tempo", "solana", "berachain", "monad", "sei", "megaeth", "tempo"], zero: ["berachain", "megaeth"] },
@@ -633,9 +632,15 @@ describe("curated on-chain supply paths", () => {
     // The Starknet reader carries its own endpoints, so the leg pins none.
     expect(mre7?.find((entry) => entry.config.chain === "starknet")?.config.rpcUrl).toBeUndefined();
 
-    const susn = selectCuratedAggregateOnchainSupplyProbeContracts(TRACKED_META_BY_ID.get("susn-noon")!);
+    const susnMeta = TRACKED_META_BY_ID.get("susn-noon")!;
+    const susn = selectCuratedAggregateOnchainSupplyProbeContracts(susnMeta);
 
-    expect(susn?.map((entry) => entry.config.chain)).toEqual(["ethereum", "zksync", "sophon", "starknet", "hyperevm", "base", "citrea", "berachain", "tac"]);
+    expect(susn?.map((entry) => entry.config.chain)).toEqual(["ethereum", "zksync", "sophon", "starknet", "hyperevm", "base", "citrea", "berachain", "tac", "solana", "bsc"]);
+    expect(susn?.filter(({ config }) => config.allowZeroSupply).map(({ config }) => config.chain)).toEqual(["bsc"]);
+    expect(REVIEWED_ONCHAIN_SUPPLY_PLANS["susn-noon"]?.unreadableDeployments).toEqual([
+      { chain: "sui", address: "0x0a672389b7b73df60d40666ac9545433d59d3128086b9e3a425a66bbffdf4dc5::susn::SUSN" },
+    ]);
+    expect((susn?.length ?? 0) + (REVIEWED_ONCHAIN_SUPPLY_PLANS["susn-noon"]?.unreadableDeployments?.length ?? 0)).toBe(susnMeta.contracts!.length);
     expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["susn-noon"]).toBe("ethereum");
     expect(susn?.find((entry) => entry.config.chain === "sophon")?.config.rpcUrl).toBe("https://rpc.sophon.xyz");
   });

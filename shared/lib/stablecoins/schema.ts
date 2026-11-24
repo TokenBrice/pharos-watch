@@ -13,6 +13,7 @@ import { validateMintBridgeOwnership } from "./mint-bridge-ownership";
 import { hasIndependentLiveCompositionDates, hasIndependentReserveObservationDates } from "../report-card-policy";
 import { normalizeDeploymentId } from "../../types/deployment-id";
 import { resolveV10ReserveObservationDeploymentRefs } from "../safety-score-v9/reserve-scope";
+import { isValidReserveCompositionFiling } from "../safety-score-v9/reserve-admission";
 import { findSummaryBudgetViolations } from "../summary-budget";
 import { parseCemeteryDeathDate } from "../cemetery";
 import { CustodyProfileSchema, ReserveReviewSchema } from "../../types/stablecoin-meta-primitives";
@@ -406,12 +407,13 @@ export const StablecoinMetaAssetSchema = StablecoinMetaAssetRawSchema.superRefin
       compositionAsOf != null &&
       latestReportPeriodEnd !== compositionAsOf &&
       !hasIndependentLiveCompositionDates(meta) &&
-      !hasIndependentReserveObservationDates(meta)
+      !hasIndependentReserveObservationDates(meta) &&
+      !(latestReportPeriodEnd < compositionAsOf && meta.reserveReview?.confidence === "verified" && isValidReserveCompositionFiling(meta.reserveReview))
     ) {
       issue(ctx, ["reserveReview", "compositionAsOf"], `PoR lockstep: reserveReview.compositionAsOf (${compositionAsOf}) must equal ` +
       `proofOfReserves.latestReport.periodEnd (${latestReportPeriodEnd}) unless compositionSource is ` +
       `"live-adapter", liveReservesConfig is present, and both dates have separate verified composition ` +
-      `and known report evidence. Curated-only compositions must describe the report's period.`);
+      `and known report evidence, or the review carries a verified regulator compositionFiling. Curated-only compositions must describe the report's period.`);
     }
     const reviewedReserveIndices = new Set<number>();
     let unresolvedDispositionPct = 0;

@@ -234,9 +234,9 @@ describe("buildRedemptionBackstopEntry", () => {
   it.each([
     [undefined, false], [null, false], ["wm-m0", false], [[], false], [["m-m0"], false], [["wm-m0", "m-m0"], false], [["wm-m0", "wm-m0"], false], [["wm-m0"], true],
   ])("admits only exact USDR holder-output capacity, fee and favorable terms (%j)", async (keys, ok) => {
-    const s = snapNA(USDR, { capacityUsd: 2e6, capacityRatioOfSupply: 0.2, capacityKind: "live-direct", freshnessKind: "same-run-onchain", blockNumber: 26_143_056, sourceTimestamp: now, feeBps: 0, outputAssetKeys: keys, routeStatus: "open", routeStatusSource: "onchain", holderEligibility: "any-holder", settlementDelaySec: 60 });
+    const s = snapNA(USDR, { capacityUsd: 2e6, capacityRatioOfSupply: 0.2, capacityKind: "live-direct", freshnessKind: "same-run-onchain", blockNumber: 26_143_056, sourceTimestamp: now, feeBps: 25, outputAssetKeys: keys, routeStatus: "open", routeStatusSource: "onchain", holderEligibility: "any-holder", settlementDelaySec: 60 });
     const e = await runCfg(USDR, 1e7, { reserveSnapshotMetadata: s, redemptionLiveMetadata: readLive(USDR, s, now) });
-    expect(e).toMatchObject({ immediateCapacityUsd: null, immediateCapacityRatio: null, feeBps: ok ? 0 : null, costScore: ok ? 100 : 60, resolutionState: ok ? "resolved" : "missing-capacity" });
+    expect(e).toMatchObject({ immediateCapacityUsd: null, immediateCapacityRatio: null, feeBps: ok ? 25 : 0, costScore: ok ? 80 : 100, resolutionState: ok ? "resolved" : "missing-capacity" });
     if (ok) expect(e).toMatchObject({ capacityProfile: { scoringHorizon: "eventual", eventualUsd: 2e6 }, routeStatus: "open", routeStatusSource: "onchain", liveHolderEligibility: "any-holder", settlementDelaySec: 60 });
     else {
       expect(e).toMatchObject({ routeStatus: "unknown", routeStatusSource: "static-config" });
@@ -247,7 +247,7 @@ describe("buildRedemptionBackstopEntry", () => {
 
   it("withholds USDR favorable status-only telemetry without the configured wM payout", async () => {
     const e = await runCfg(USDR, 1e6, { reserveSnapshotMetadata: snapNA(USDR, { routeStatus: "open", routeStatusSource: "onchain", holderEligibility: "whitelisted-primary" }) });
-    expect(e).toMatchObject({ routeStatus: "unknown", routeStatusSource: "static-config", feeBps: null, immediateCapacityUsd: null, capacityRejectionReason: "route-output-identity-unobserved" });
+    expect(e).toMatchObject({ routeStatus: "unknown", routeStatusSource: "static-config", feeBps: 0, immediateCapacityUsd: null, capacityRejectionReason: "route-output-identity-unobserved" });
     expect(e.liveHolderEligibility).toBeUndefined();
   });
 
@@ -272,8 +272,8 @@ describe("buildRedemptionBackstopEntry", () => {
   });
 
   it("retains independently source-owned adverse USDR status while rejecting payout terms", async () => {
-    const e = await runCfg(USDR, 1e6, { reserveSnapshotMetadata: snapNA(USDR, { outputAssetKeys: ["m-m0"], feeBps: 0, routeStatus: "paused", routeStatusSource: "onchain", routeStatusReason: "Same wrapper's redemption pause observed onchain" }) });
-    expect(e).toMatchObject({ routeStatus: "paused", routeStatusSource: "onchain", resolutionState: "impaired", score: null, feeBps: null, immediateCapacityUsd: null, routeStatusReason: "Same wrapper's redemption pause observed onchain" });
+    const e = await runCfg(USDR, 1e6, { reserveSnapshotMetadata: snapNA(USDR, { outputAssetKeys: ["m-m0"], feeBps: 25, routeStatus: "paused", routeStatusSource: "onchain", routeStatusReason: "Same wrapper's redemption pause observed onchain" }) });
+    expect(e).toMatchObject({ routeStatus: "paused", routeStatusSource: "onchain", resolutionState: "impaired", score: null, feeBps: 0, immediateCapacityUsd: null, routeStatusReason: "Same wrapper's redemption pause observed onchain" });
     expect(e.capsApplied).toContain("live-route-status-impairment");
   });
 

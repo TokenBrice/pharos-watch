@@ -17,6 +17,21 @@
         "counterparty"
       ],
       "liquidityHorizon": "immediate"
+    },
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0x6440f144b7e50d6a8439336510312d2f54beb01d",
+      "name": "Yearn BOLD idle underlying",
+      "pct": 0,
+      "risk": "medium",
+      "coinId": "bold-liquity",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Liquity V2 BOLD held idle in Yearn yBOLD vault",
+      "riskFactors": [
+        "smart-contract",
+        "counterparty"
+      ],
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
@@ -31,9 +46,13 @@
       {
         "label": "Yearn yBOLD vault",
         "url": "https://yearn.fi/v3/1/0x9f4330700a36b29952869fac9b33f45eedd8a3d8"
+      },
+      {
+        "label": "Ethereum finalized block 26481203 (2026-11-23T23:44:23Z): yBOLD asset() = BOLD 0x6440f144b7e50d6a8439336510312d2f54beb01d, totalAssets = totalSupply = 6,916,297.251893 BOLD, isShutdown = false, idle BOLD balance = 120 raw wei; keyed idle-slice classification metadata only",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       }
     ],
-    "rationale": "Yearn documents each yBOLD as one BOLD deployed across Liquity V2 Stability Pools and redeemable for BOLD without a waiting period. On 2026-10-27 a finalized-block Ethereum read (block 26282851, hash 0x2ce46d7e90bdb5c5e490e60debcad33e3dafdddd38d4a54fabd1ea16dec4eb22, timestamp 2026-10-27T08:29:11Z, matching before/after headers) returned vault asset() equal to BOLD 0x6440f144b7e50d6a8439336510312d2f54beb01d, totalAssets equal to totalSupply at 7,707,687.04 BOLD and an idle BOLD balance of 120 raw wei at the vault, so the book remains deployed. The live deployed-strategy row therefore retains the tracked BOLD wrapper dependency while carrying the Stability Pool's protocol, market, and counterparty risks.",
+    "rationale": "Yearn documents each yBOLD as one BOLD deployed across Liquity V2 Stability Pools and redeemable for BOLD without a waiting period. On 2026-10-27 a finalized-block Ethereum read (block 26282851, hash 0x2ce46d7e90bdb5c5e490e60debcad33e3dafdddd38d4a54fabd1ea16dec4eb22, timestamp 2026-10-27T08:29:11Z, matching before/after headers) returned vault asset() equal to BOLD 0x6440f144b7e50d6a8439336510312d2f54beb01d, totalAssets equal to totalSupply at 7,707,687.04 BOLD and an idle BOLD balance of 120 raw wei at the vault, so the book remains deployed. The live deployed-strategy row therefore retains the tracked BOLD wrapper dependency while carrying the Stability Pool's protocol, market, and counterparty risks. On 2026-11-23 (finalized Ethereum block 26481203, hash 0xc614c103509b94501a8fbd891640ecd3ac037e727ca1adae1eb93fe1534b0e8c, timestamp 2026-11-23T23:44:23Z), yBOLD remained unshut with totalAssets() equal to totalSupply() at 6,916,297.251893 BOLD and 120 raw wei idle BOLD held directly in the vault; a keyed 0% classification row is added for the live adapter's idle-underlying slice (immediately withdrawable ERC-4626 underlying BOLD with zero waiting period) without changing historical weights or review clocks.",
     "compositionBasis": "Exact live ERC-4626 deployed row and current Yearn yBOLD documentation, re-read at Ethereum block 26282851 (2026-10-27T08:29:11Z)",
     "compositionAsOf": "2026-10-27",
     "scope": "full-composition",

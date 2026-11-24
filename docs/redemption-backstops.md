@@ -8,7 +8,7 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-redemption-backstop -->`v4.54`<!-- GENERATED-END: methodology-version-redemption-backstop -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-redemption-backstop -->`v4.55`<!-- GENERATED-END: methodology-version-redemption-backstop -->
 - **Public methodology anchor:** `/methodology/#redemption-backstop-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/exit-route-scoring.ts`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/methodology-versions/registry.ts`
 - **Structured changelog:** `shared/data/methodology-changelogs/redemption-backstop/`
@@ -200,7 +200,7 @@ Output identity is kind-specific and must remain stable from the configured rout
 
 The registry validator enforces configured identities, while the V9 review boundary rejects unknown identities and preserves a captured identity mismatch for diagnostics rather than rewriting the producer's observation. USD0 (`usd0-usual`) therefore keeps its reviewed mixed-collateral outputs `asset:usyc`, `asset:m`, and `asset:ustbl`; renaming them to tracked IDs or moving them to an unresolved namespace would silently break exact output matching and valuation.
 
-The complete payout set is mandatory: untracked members cannot be dropped to create a priced basket, and holder-selected alternatives are not proportional baskets. Preserve exact untracked receipt identities rather than aliasing them to tracked siblings. Cash payout is distinct from NAV input pricing; identity alone proves neither valuation, openness, funded capacity, complete costs nor completed receipt. Physical delivery, a conditional issuer-change payout and a secondary sale remain separate paths.
+The complete payout set is mandatory: untracked members cannot be dropped to create a priced basket, and holder-selected alternatives are not proportional baskets. Configured payout sets may hold up to 32 members (`MAX_REDEMPTION_OUTPUT_ASSETS` in `shared/types/exit-route.ts`, the single bound shared across `ExitRouteOutput.assetKeys`, execution identities, live-reserve payout keys and the config schema). Preserve exact untracked receipt identities rather than aliasing them to tracked siblings. Cash payout is distinct from NAV input pricing; identity alone proves neither valuation, openness, funded capacity, complete costs nor completed receipt. Physical delivery, a conditional issuer-change payout and a secondary sale remain separate paths.
 
 ### Capacity Models
 

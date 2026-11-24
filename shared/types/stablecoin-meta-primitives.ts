@@ -299,6 +299,46 @@ export const DependencyWeightSchema = /* @__PURE__ */ (() => z
   })
   .strict())();
 
+export const RESERVE_COMPOSITION_FILING_REGULATOR_VALUES = ["sec"] as const;
+export const RESERVE_COMPOSITION_FILING_FORM_VALUES = ["10-Q", "10-K"] as const;
+export const SEC_ACCESSION_PATTERN = /^\d{10}-\d{2}-\d{6}$/;
+export const SEC_EDGAR_DATA_URL_PREFIX = "https://www.sec.gov/Archives/edgar/data/";
+
+export function isSecEdgarDataUrl(value: string): boolean {
+  if (!value.startsWith(SEC_EDGAR_DATA_URL_PREFIX) || value.length <= SEC_EDGAR_DATA_URL_PREFIX.length) {
+    return false;
+  }
+  try {
+    const parsed = new URL(value);
+    return (
+      parsed.origin === "https://www.sec.gov" &&
+      parsed.pathname.startsWith("/Archives/edgar/data/") &&
+      parsed.pathname.length > "/Archives/edgar/data/".length
+    );
+  } catch {
+    return false;
+  }
+}
+
+export const ReserveCompositionFilingSchema = /* @__PURE__ */ (() => z
+  .object({
+    regulator: z.enum(RESERVE_COMPOSITION_FILING_REGULATOR_VALUES),
+    form: z.enum(RESERVE_COMPOSITION_FILING_FORM_VALUES),
+    accession: z.string().regex(SEC_ACCESSION_PATTERN, "Expected SEC accession number NNNNNNNNNN-NN-NNNNNN"),
+    periodEnd: StrictIsoDateSchema,
+    filedAt: StrictIsoDateSchema,
+    url: HttpUrlSchema.refine(
+      isSecEdgarDataUrl,
+      "Expected an https://www.sec.gov/Archives/edgar/data/... URL",
+    ),
+  })
+  .strict()
+  .superRefine((filing, ctx) => {
+    if (filing.filedAt < filing.periodEnd) {
+      issue(ctx, ["filedAt"], "compositionFiling.filedAt cannot predate compositionFiling.periodEnd");
+    }
+  }))();
+
 export const ReserveReviewSchema = /* @__PURE__ */ (() => z
   .object({
     reviewedAt: ReviewDateSchema,
@@ -308,6 +348,7 @@ export const ReserveReviewSchema = /* @__PURE__ */ (() => z
     rationale: z.string().min(1),
     compositionBasis: z.string().min(1),
     compositionAsOf: StrictIsoDateSchema.optional(),
+    compositionFiling: ReserveCompositionFilingSchema.optional(),
     /** Explicit adapter ownership; omission retains the curated/report date contract. */
     compositionSource: z.literal("live-adapter").optional(),
     scope: z.enum(RESERVE_REVIEW_SCOPE_VALUES),
@@ -338,8 +379,24 @@ export const ReserveReviewSchema = /* @__PURE__ */ (() => z
       .optional(),
   })
   .strict()
-  .refine((review) => !review.scopedWeights || review.scope === "selected-slices", {
-    path: ["scopedWeights"], message: "scopedWeights requires selected-slices scope",
+  .superRefine((review, ctx) => {
+    if (review.scopedWeights && review.scope !== "selected-slices") {
+      issue(ctx, ["scopedWeights"], "scopedWeights requires selected-slices scope");
+    }
+    const filing = review.compositionFiling;
+    if (!filing) return;
+    if (review.scope !== "full-composition") {
+      issue(ctx, ["compositionFiling"], "compositionFiling requires full-composition scope");
+    }
+    if (review.compositionAsOf == null || filing.periodEnd !== review.compositionAsOf) {
+      issue(ctx, ["compositionFiling", "periodEnd"], "compositionFiling.periodEnd must match reserveReview.compositionAsOf");
+    }
+    if (filing.filedAt > review.reviewedAt) {
+      issue(ctx, ["compositionFiling", "filedAt"], "compositionFiling.filedAt cannot postdate reserveReview.reviewedAt");
+    }
+    if (!review.sources.some((source) => source.url === filing.url)) {
+      issue(ctx, ["compositionFiling", "url"], "compositionFiling.url must appear in reserveReview.sources");
+    }
   }))();
 
 export const CustodyProfileSchema = /* @__PURE__ */ (() => z
@@ -456,6 +513,7 @@ export const FeaturedContentSchema = /* @__PURE__ */ (() => z
   .strict())();
 export type ContractDeployment = z.output<typeof ContractDeploymentSchema>;
 export type DependencyWeight = z.output<typeof DependencyWeightSchema>;
+export type ReserveCompositionFiling = z.output<typeof ReserveCompositionFilingSchema>;
 export type ReserveReview = z.output<typeof ReserveReviewSchema>;
 export type ReserveNonLinkReview = NonNullable<ReserveReview["nonLinkDispositions"]>[number];
 export type CustodyProfile = z.output<typeof CustodyProfileSchema>;
