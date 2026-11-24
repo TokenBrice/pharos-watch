@@ -72,14 +72,20 @@ paths = ['''(?:^|/)shared/data/safety-score-v9/incident-review-key-migration-v1\
 # containing "token" (susds-base-l1-token-bridge) followed by `","` and the next route
 # id reads to generic-api-key as `token` = <value>. Match only that adjacency of
 # kebab route ids, only in the generated descriptors, so any other high-entropy
-# value in that file (a UUID-shaped token included) still fails the scan.
+# value in that file (a UUID-shaped token included) still fails the scan. The
+# generated incident runtime and key migration carry the same compact route-id
+# arrays in their negative-review scopes (added 2026-11-24 with the sUSDS Base lanes).
 [[allowlists]]
-description = "Adjacent reviewed route ids in the generated lane emitter descriptors are not credentials"
+description = "Adjacent reviewed route ids in generated lane, incident-runtime and key-migration JSON are not credentials"
 targetRules = ["generic-api-key"]
 condition = "AND"
 regexTarget = "match"
 regexes = ['''^[a-z0-9-]*token[a-z0-9-]*","[a-z][a-z0-9]*(?:-[a-z][a-z0-9]*)+"$''']
-paths = ['''(?:^|/)shared/data/safety-score-v9/lane-emitter-descriptors-v1\.generated\.json$''']
+paths = [
+  '''(?:^|/)shared/data/safety-score-v9/lane-emitter-descriptors-v1\.generated\.json$''',
+  '''(?:^|/)shared/data/safety-score-v9/incident-runtime-v1\.generated\.json$''',
+  '''(?:^|/)shared/data/safety-score-v9/incident-review-key-migration-v1\.generated\.json$''',
+]
 
 # Repo-relative source paths are not credentials. CI gates that enumerate route roots
 # (`src/app/api`, `src/app/funding`, ...) otherwise trip the generic-api-key rule on
@@ -175,6 +181,35 @@ paths = [
   '''(?:^|/)shared/data/stablecoins/coins/mhyper-midas\.json$''',
   '''(?:^|/)shared/data/stablecoins/domains/compliance/mtbill-midas\.json$''',
   '''(?:^|/)shared/lib/redemption-backstop-configs/offchain-issuer/non-usd-and-tokenized\.ts$''',
+  '''(?:^|/)shared/data/safety-score-v9/evidence-gap-classifications-v1\.json$''',
+  '''(?:^|/)\.github/(?:workflows/)?artifacts/safety-score-missing-data-reviewed-ledger\.json$''',
+]
+
+# Reviewed 2026-11-24 against the exact href on
+# https://docs.midas.app/resources/legal-product-documentation/mtbill
+# ("Midas Software GmbH_Final Terms_mTBILL.pdf").
+[[allowlists]]
+description = "Midas publicly linked mTBILL 2026-07-14 final-terms download token"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^bf215cdc-f549-474d-8ca9-5a1810fabeb8$''']
+paths = [
+  '''(?:^|/)shared/data/safety-score-v9/evidence-gap-classifications-v1\.json$''',
+  '''(?:^|/)\.github/(?:workflows/)?artifacts/safety-score-missing-data-reviewed-ledger\.json$''',
+]
+
+# Reviewed 2026-11-24 against the exact href on https://app.ondo.finance/assets/usdy:
+# Ondo links its USDY daily Ankura attestation archive as a Dropbox shared folder
+# whose `rlkey` grants read access to that already-public folder.
+[[allowlists]]
+description = "Ondo publicly linked USDY daily attestation archive Dropbox link key"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^nik1v5slekrzx5fbi0zan5sk3$''']
+paths = [
+  '''(?:^|/)shared/data/safety-score-v9/reserve-bound-facts-v1\.json$''',
   '''(?:^|/)\.github/(?:workflows/)?artifacts/safety-score-missing-data-reviewed-ledger\.json$''',
 ]
 
