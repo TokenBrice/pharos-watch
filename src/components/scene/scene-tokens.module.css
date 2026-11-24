@@ -46,7 +46,9 @@
   --scene-col: url(#scene-g-col);
   --scene-dur-fast: 120ms;
   --scene-dur-glide: 260ms;
+  --scene-dur-beam: 460ms;
   --scene-dur-bloom: 520ms;
+  --scene-dur-pan: 600ms;
 }
 
 /* ------------------------------------------------------------------ tokens: lamplit night */
@@ -91,13 +93,17 @@
 :root[data-motion="reduced"] .tokens {
   --scene-dur-fast: 0ms;
   --scene-dur-glide: 0ms;
+  --scene-dur-beam: 0ms;
   --scene-dur-bloom: 0ms;
+  --scene-dur-pan: 0ms;
 }
 @media (prefers-reduced-motion: reduce) {
   :root:not([data-motion="full"]) .tokens {
     --scene-dur-fast: 0ms;
     --scene-dur-glide: 0ms;
+    --scene-dur-beam: 0ms;
     --scene-dur-bloom: 0ms;
+    --scene-dur-pan: 0ms;
   }
 }
 

@@ -14,6 +14,17 @@ import { boxMarks, cylinder, octPrismMarks } from "../solids";
 /** Lighthouse height to the finial (world units); the lantern centre sits at {@link LIGHTHOUSE_LANTERN_Z}. */
 export const LIGHTHOUSE_TOP_Z = 6.05;
 export const LIGHTHOUSE_LANTERN_Z = 5.3;
+const LIGHTHOUSE_DEFAULT_APOTHEM = 1.18;
+const LIGHTHOUSE_DEFAULT_ROCK_Z0 = -0.55;
+
+const DEG = Math.PI / 180;
+
+export interface LighthouseOptions {
+  /** Apothem of the octagonal rock bastion (world units); defaults to {@link LIGHTHOUSE_DEFAULT_APOTHEM}. */
+  apothem?: number;
+  /** Bottom z of the rock bastion (world units); defaults to {@link LIGHTHOUSE_DEFAULT_ROCK_Z0}. */
+  rockZ0?: number;
+}
 
 export interface LighthouseGeometry extends SceneObjectGeometry {
   /** Lantern centre: the beam origin (unrounded). */
@@ -22,10 +33,13 @@ export interface LighthouseGeometry extends SceneObjectGeometry {
   top: ScenePoint;
 }
 
-/** The lighthouse standing at world (i, j); its bastion reaches 1.2 world units out and 0.55 below ground. */
-export function lighthouseGeometry(p: SceneProjection, i: number, j: number): LighthouseGeometry {
+/** The lighthouse standing at world (i, j); by default its bastion reaches 1.18 world units out and 0.55 below ground. */
+export function lighthouseGeometry(p: SceneProjection, i: number, j: number, options?: LighthouseOptions): LighthouseGeometry {
+  const apothem = options?.apothem ?? LIGHTHOUSE_DEFAULT_APOTHEM;
+  const rockZ0 = options?.rockZ0 ?? LIGHTHOUSE_DEFAULT_ROCK_Z0;
+  const customRock = options?.apothem !== undefined || options?.rockZ0 !== undefined;
   const m: SceneMark[] = [];
-  m.push(...octPrismMarks(p, i, j, 1.18, -0.55, 0.16, ["rock", "rock", "rock-s"], "rock"));
+  m.push(...octPrismMarks(p, i, j, apothem, rockZ0, 0.16, ["rock", "rock", "rock-s"], "rock"));
   m.push(...boxMarks(p, i - 0.92, j - 0.92, 0.16, 1.84, 1.84, 0.28, "lh"));
   m.push(...boxMarks(p, i - 0.7, j - 0.7, 0.44, 1.4, 1.4, 2.35, "lh"));
   for (let row = 0; row < 3; row++) {
@@ -50,10 +64,23 @@ export function lighthouseGeometry(p: SceneProjection, i: number, j: number): Li
   });
   const fin = project(p, i, j, LIGHTHOUSE_TOP_Z);
   m.push({ kind: "line", cls: "e", x1: round1(dx), y1: round1(dy - drx * 0.95), x2: round1(fin[0]), y2: round1(fin[1]) });
+  let pts: ScenePoint[];
+  if (!customRock) {
+    pts = [project(p, i - 1.2, j, -0.55), project(p, i + 1.2, j, -0.55), project(p, i, j + 1.2, -0.55), project(p, i, j - 1.2, -0.55), fin];
+  } else {
+    const rv = apothem / Math.cos(22.5 * DEG);
+    pts = [fin];
+    for (let k = 0; k < 8; k++) {
+      const th = (22.5 + 45 * k) * DEG;
+      const vi = i + rv * Math.cos(th);
+      const vj = j + rv * Math.sin(th);
+      pts.push(project(p, vi, vj, rockZ0), project(p, vi, vj, 0.16));
+    }
+  }
   return {
     marks: m,
     lantern: project(p, i, j, LIGHTHOUSE_LANTERN_Z),
     top: fin,
-    pts: [project(p, i - 1.2, j, -0.55), project(p, i + 1.2, j, -0.55), project(p, i, j + 1.2, -0.55), project(p, i, j - 1.2, -0.55), fin],
+    pts,
   };
 }
