@@ -175,10 +175,16 @@ export function lotPadCell(cell: PlotCell): PlotCell {
   };
 }
 
-/** Half-extents of a lot-3 colossus podium; portrait scales cleanly inside its own column pad with oblique margin. */
+/**
+ * Half-extents of a lot-3 colossus podium. Desktop fills its 2 × 2 lot clear of the pad edge and of the 0.14 west
+ * shift; portrait scales cleanly inside its own column pad.
+ */
 function colossusHalfExtents(shape: PlotShape, cell: PlotCell, projectionName: PlotProjectionName): { ei: number; ej: number } {
   if (projectionName !== "portrait") {
-    return { ei: shape === "colossal-column" ? 1.24 : 1.28, ej: 1.24 };
+    return {
+      ei: round3((cell.i1 - cell.i0) / 2 - PLOT_PAD_INSET - 0.2),
+      ej: round3((cell.j1 - cell.j0) / 2 - PLOT_PAD_INSET - 0.04),
+    };
   }
   const maxJ = Math.max(0.36, (cell.j1 - cell.j0) / 2 - PLOT_PAD_INSET - 0.13);
   const maxI = Math.max(0.42, (cell.i1 - cell.i0) / 2 - PLOT_PAD_INSET - 0.12);
@@ -208,7 +214,7 @@ function graveHalfExtents(
   projectionName: PlotProjectionName = "dimetric",
 ): { hi: number; hj: number; fe: number } {
   if (lot === 3) {
-    if (cell && projectionName === "portrait") {
+    if (cell) {
       const { ei, ej } = colossusHalfExtents(shape, cell, projectionName);
       return { hi: ei, hj: ej, fe: 0 };
     }
@@ -237,7 +243,8 @@ export function graveAnchorOffsetI(
   steps: PlotPeakClass | null,
   projectionName: PlotProjectionName = "dimetric",
 ): number {
-  if (lot === 3) return projectionName === "portrait" ? 1.1 : 1.5;
+  // Desktop: the podium centre of a 2-row colossus lot (half its two 1.1-unit rows, less the 0.14 west shift).
+  if (lot === 3) return projectionName === "portrait" ? 1.1 : 0.96;
   const { hi, fe } = graveHalfExtents(shape, lot, steps);
   const sc = lot === 2 ? 1.55 : 1;
   const baseReach =
@@ -959,8 +966,11 @@ function colossusGeometry(siteP: PlotProjection, g: PlotGraveShapeInput): PlotGr
   const ic = colossusCenterI(g.shape, g.cell, siteP.name);
   const { proj: p, dx, dy } = portraitLocalCamera(siteP, ic, g.lot);
   const { ei, ej } = colossusHalfExtents(g.shape, g.cell, siteP.name);
-  const sx = isPortrait ? ej / 1.24 : 1;
-  const si = isPortrait ? ei / (g.shape === "colossal-column" ? 1.24 : 1.28) : 1;
+  // Portrait scales the whole colossus into its pad; on desktop the column keeps its full drum and pedestal on its 2 × 2
+  // podium while the mausoleum scales its plan (not its height) into the same lot.
+  const scaled = isPortrait || g.shape === "mausoleum";
+  const sx = scaled ? ej / 1.24 : 1;
+  const si = scaled ? ei / (g.shape === "colossal-column" ? 1.24 : 1.28) : 1;
   const plinth: PlotMark[] = [];
   const stone: PlotMark[] = [];
   const padMarks: PlotMark[] = [...lotPadMarks(siteP, g.cell, baseZ)];
@@ -969,8 +979,10 @@ function colossusGeometry(siteP: PlotProjection, g: PlotGraveShapeInput): PlotGr
   let H: number;
   let medal: { x: number; y: number; r: number };
   const stepH = isPortrait ? 0.065 : 0.13;
-  const treadI = isPortrait ? 0.09 * si : 0.09;
-  const treadJ = isPortrait ? 0.09 * sx : 0.09;
+  // Desktop podium steps narrow to 0.03 on any side shorter than the full 1.2 half-extent, keeping the top step wider
+  // than the pedestal or cella it carries.
+  const treadI = isPortrait ? 0.09 * si : ei < 1.2 ? 0.03 : 0.09;
+  const treadJ = isPortrait ? 0.09 * sx : ej < 1.2 ? 0.03 : 0.09;
   const podium = (pi: number, pj: number) => {
     for (let q = 0; q < 4; q++) {
       plinth.push(...boxMarks(p, ic - pi + treadI * q, jc - pj + treadJ * q, baseZ + q * stepH, 2 * (pi - treadI * q), 2 * (pj - treadJ * q), stepH, "pl", q === 0 ? " e" : " es"));
@@ -1046,7 +1058,8 @@ function colossusGeometry(siteP: PlotProjection, g: PlotGraveShapeInput): PlotGr
     let my = 0;
     const medD = isPortrait ? Math.min(0.46, 0.9 * sx) : 0.48;
     if (!isPortrait) {
-      [mx, my] = project(p, ci1 + 0.01, jc - 0.5, zp + 0.85);
+      // The narrow portico holds only the barred door: the medallion sits mid-way along the south wall of the cella.
+      [mx, my] = project(p, (ci0 + ci1) / 2, jc + cj + 0.01, zp + 0.85);
       stone.push(medallionMark(mx, my, medD));
     }
     const colI = ic + 0.96 * si;
