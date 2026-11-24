@@ -7,7 +7,7 @@
   "jsonUrl": "https://pharos.watch/datasets/stablecoin-cemetery.json",
   "csvUrl": "https://pharos.watch/datasets/stablecoin-cemetery.csv",
   "sourceDataPath": "shared/lib/cemetery-merged.ts",
-  "sourceChecksum": "sha256:851c314055d6087dd6074369dca83cccbc5af970c4773cd723b41b664d532589",
+  "sourceChecksum": "sha256:e7daa3400ab6330cc22465671736b0865d3232c62b889d7a7a5d1a3c722a3e9f",
   "sourceData": [
     {
       "path": "shared/data/dead-stablecoins.json",
@@ -16,7 +16,7 @@
     },
     {
       "path": "shared/lib/cemetery-merged.ts#frozenCemeteryProjection",
-      "checksum": "sha256:7ff6e54d654f95172d3e9a80aeeb9c746dd762c6bc3f66e665b9d619c6c0d49d",
+      "checksum": "sha256:79ddb9f11266c789a539276a6cd108d07b84bba158f79817cbe5c57c4f092a71",
       "role": "Canonical frozen tracked-stablecoin projection merged into cemetery rows."
     },
     {
@@ -26,8 +26,8 @@
     }
   ],
   "recordsOrderedBy": "deathDate descending by year, month, then day (a month-precision date sorts as the start of its month, after that month's day-precision rows; an unparseable date sorts last), then peakMcapUsd descending (rows without a peak after rows with one), then symbol ascending, then id ascending (symbol and id compared by UTF-16 code unit)",
-  "rowCount": 134,
-  "updatedAt": "2026-11-19",
+  "rowCount": 135,
+  "updatedAt": "2026-11-24",
   "limitations": [
     "Death dates are month-level unless a row explicitly uses a day-level date.",
     "Peak market capitalization is optional and may be absent when no reliable public figure was curated.",
@@ -794,6 +794,44 @@
       "pharosUrl": "https://pharos.watch/stablecoin/usdk-orki/",
       "mechanismArchetype": "cdp",
       "recordedAt": "2026-06-30"
+    },
+    {
+      "id": "fpi-frax",
+      "name": "Frax Price Index",
+      "symbol": "FPI",
+      "llamaId": "66",
+      "logoUrl": "https://pharos.watch/logos/66-fpi.png",
+      "pegCurrency": "VAR",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2026-06-28",
+      "deathDatePrecision": "day",
+      "peakMcapUsd": 114000255,
+      "epitaph": "Frax froze the CPI peg and wound down FPI",
+      "obituary": "Frax launched FPI in March 2022 as an inflation-indexed unit of account whose redemption price tracked the U.S. CPI-U index through the FPI Controller Pool and FPIS governance token. Supply peaked near $114.0M before declining to roughly $7.0M by 2026. On June 17, 2026 Frax governance proposed FIP-448 to wind down the FPI system, and the Snapshot vote closed unanimously on June 28, 2026 (26.59M For, 0 Against). FIP-448 permanently froze FPI's CPI reference price, disabled new minting and LayerZero bridging, folded FPI's remaining balance sheet into Legacy FRAX, and left Ethereum redemptions into FRAX open.",
+      "sourceUrl": "https://snapshot.box/#/s:frax.eth/proposal/0xfda865b089b84e4ddb70e49fe3023e9ba05a3d5c875f57d6e1a3ebe680dcea3d",
+      "sourceLabel": "Frax FIP-448 Snapshot vote (closed 2026-06-28)",
+      "archivedDataAvailable": true,
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x5ca135cb8527d76e932f34b5145575f9d8cbe08e",
+          "decimals": 18
+        },
+        {
+          "chain": "fraxtal",
+          "address": "0xfc00000000000000000000000000000000000003",
+          "decimals": 18
+        },
+        {
+          "chain": "zksync",
+          "address": "0xd405617db7473b0a3158356be7bc9ebec6d88b85",
+          "decimals": 18
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/stablecoin/fpi-frax/",
+      "mechanismArchetype": "algorithmic",
+      "recordedAt": "2026-11-24"
     },
     {
       "id": "msusd-main-street",

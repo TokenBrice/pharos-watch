@@ -674,7 +674,7 @@ Chain-level stablecoin aggregates with Chain Health Scores; pass `chain` for ful
 
 ```json
 {
-  "healthMethodologyVersion": "1.9"
+  "healthMethodologyVersion": "1.91"
 }
 ```
 
@@ -988,8 +988,8 @@ PSI and history. [Full endpoint contract](https://pharos.watch/openapi.json#/pat
 
 ```json
 {
-  "currentVersion": "3.70",
-  "methodologyVersion": "3.70"
+  "currentVersion": "3.71",
+  "methodologyVersion": "3.71"
 }
 ```
 

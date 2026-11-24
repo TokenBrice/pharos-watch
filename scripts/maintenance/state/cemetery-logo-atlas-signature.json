@@ -4,7 +4,7 @@
   "cellSize": 48,
   "gutter": 2,
   "webp": {
-    "quality": 62,
+    "quality": 60,
     "alphaQuality": 80,
     "effort": 6
   },
@@ -13,10 +13,10 @@
     0.7152,
     0.0722
   ],
-  "inputSha256": "25cd4ee31ab2ab3e36c5b9d1a43fb67ddb4d11aaca265a46c376e935058f0b55",
+  "inputSha256": "a314216db3f6d69af22d7686713916bcc9d6f0a754939f56797843f95083e8c4",
   "image": {
-    "sha256": "04aefc317a7ce7283f60b6afb0c8238b4e95bad5bc4cf831340f1010d537e35b",
-    "bytes": 149086,
+    "sha256": "42c6457539b7ba179cd47eb340341e9d52034c48a0cb12878eef2b2899341da3",
+    "bytes": 149376,
     "width": 798,
     "height": 798
   },
@@ -204,6 +204,11 @@
     {
       "logo": "/logos/cemetery/float.png",
       "sha256": "25f29d69f50e9f9570eebc24b73298c932072abea120db427d5e6bd683ff0ec5",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/66-fpi.png",
+      "sha256": "a9b6035f70a8699c20e0286a2346d552327825a773e7474b4dd7bdaacec16dfb",
       "kernel": "lanczos3"
     },
     {
@@ -798,6 +803,10 @@
     {
       "id": "float-float-protocol-2025-07",
       "logo": "/logos/cemetery/float.png"
+    },
+    {
+      "id": "fpi-frax",
+      "logo": "/logos/66-fpi.png"
     },
     {
       "id": "fusd-fantom-usd-2022-06",
