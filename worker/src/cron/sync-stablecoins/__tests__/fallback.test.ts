@@ -64,10 +64,7 @@ const subPhaseMocks = vi.hoisted(() => ({
     authoritativeOverrideCount: 0,
     rejectedCount: 0,
     cachedFallbackCount: 0,
-    nativePegCorrectionCount: 0,
-    nativePegFillCount: 0,
     priceCacheEntries: [],
-    providerDiagnostics: [],
   })),
   fillMissingSupplyHistory: vi.fn(async () => 0),
   validateAndWriteStablecoinsCache: vi.fn(async ({ syncStartSec }: { syncStartSec: number; assets: PeggedAsset[] }) => ({

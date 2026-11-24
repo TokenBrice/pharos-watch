@@ -8,8 +8,6 @@ const pricingStageMocks = vi.hoisted(() => ({
   fetchAuthoritativeLivePriceOverrides: vi.fn(),
   fetchPrimaryPrices: vi.fn(),
   enrichMissingPrices: vi.fn(),
-  fetchNativePegImpliedUsdQuotes: vi.fn(),
-  fetchNativePegQuotes: vi.fn(),
 }));
 
 vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) => {
@@ -71,16 +69,6 @@ vi.mock("../../lib/authoritative-price-sources", async () => ({
   fetchAuthoritativeLivePriceOverrides: pricingStageMocks.fetchAuthoritativeLivePriceOverrides,
 }));
 
-vi.mock("../../lib/native-peg-implied-prices", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../lib/native-peg-implied-prices")>()),
-  fetchCurrentNativePegImpliedUsdQuotes: pricingStageMocks.fetchNativePegImpliedUsdQuotes,
-}));
-
-vi.mock("../../lib/native-peg-quotes", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../lib/native-peg-quotes")>()),
-  fetchCurrentNativePegQuotes: pricingStageMocks.fetchNativePegQuotes,
-}));
-
 import {
   applyTrackedAssetOverrides,
   computePriceStalenessSummary,
@@ -90,7 +78,6 @@ import {
 } from "../sync-stablecoins/phase-helpers";
 import { runStablecoinsPricingStage } from "../sync-stablecoins/stages";
 import type { PeggedAsset, PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
-import { projectFxReferenceEvidence, type PriceValidationReferences } from "../../lib/price-validation";
 import { makePrimaryPriceResultFixture } from "../sync-stablecoins/__tests__/_fixtures";
 
 function makePricedAsset(): PeggedAsset {
@@ -113,24 +100,6 @@ function makePrimaryPriceResult(syncStartSec: number): PrimaryPriceResult {
   });
 }
 
-function makeEurAsset(id: string, price?: number): PeggedAsset {
-  return {
-    ...makePricedAsset(),
-    id,
-    name: id,
-    symbol: id.toUpperCase(),
-    pegType: "peggedEUR",
-    circulating: { peggedEUR: 1_000_000 },
-    ...(price == null ? {} : {
-      price,
-      priceSource: "coingecko",
-      priceConfidence: "single-source",
-      priceObservedAt: 1_800_000_000 - 30,
-      priceObservedAtMode: "upstream",
-    }),
-  };
-}
-
 describe("sync-stablecoins stage helpers", () => {
   const syncStartSec = 1_800_000_000;
   const priceDb = () => mockD1([{ match: "price_cache", rows: [] }]);
@@ -141,9 +110,6 @@ describe("sync-stablecoins stage helpers", () => {
     pricingStageMocks.fetchPrimaryPrices.mockReset();
     pricingStageMocks.enrichMissingPrices.mockReset();
     pricingStageMocks.fetchAuthoritativeLivePriceOverrides.mockReset();
-    pricingStageMocks.fetchNativePegImpliedUsdQuotes.mockReset();
-
-    pricingStageMocks.fetchNativePegImpliedUsdQuotes.mockResolvedValue(new Map());
 
     pricingStageMocks.fetchPrimaryPrices.mockResolvedValue({
       results: new Map(),
@@ -246,61 +212,6 @@ describe("sync-stablecoins stage helpers", () => {
     } finally {
       fetchSpy.mockRestore();
     }
-  });
-
-
-  it.each([
-    ["2026-11-20T21:55:00Z", "2026-11-20T21:50:00Z", "openExchangeRates", "intraday", "fill"],
-    ["2026-11-20T21:55:00Z", "2026-11-20T21:50:00Z", "openExchangeRates", "intraday", "correct"],
-    ["2026-11-20T21:55:00Z", "2026-11-20T21:50:00Z", "openExchangeRates", "intraday", "conversion"],
-    ["2026-11-21T10:00:00Z", "2026-11-20T14:00:00Z", "frankfurter", "business-daily", "hold"],
-  ] as const)("uses projected FX evidence at %s (%s, %s, %s, %s)", async (run, fx, source, cadence, action) => {
-    const now = Date.parse(run) / 1000;
-    const fxAt = Date.parse(fx) / 1000;
-    const rates = { peggedEUR: 1.1 };
-    const clocks = { peggedEUR: fxAt };
-    const references: PriceValidationReferences = {
-      rates, type: "fresh", updatedAt: fxAt, updatedAtByPeg: clocks,
-      fxReferenceEvidenceByPeg: projectFxReferenceEvidence({
-        rates, usableSyncAt: now - 10, usableAgeSec: 10, mode: "live", metadataIdentity: "verified",
-        sourceUpdatedAtByPeg: clocks, sourceCadenceByPeg: { peggedEUR: cadence },
-        sourceModeByPeg: { peggedEUR: "live" }, sourceDateByPeg: {}, sourceLastSuccessAtBySource: {},
-        consecutiveFallbackRuns: 0,
-        observations: { peggedEUR: { pegKey: "peggedEUR", usdPerUnit: 1.1, source, cadence, observedAtSec: fxAt } },
-        referenceSessionEvidenceByPeg: { peggedEUR: {
-          sessionOpenedAtSec: Date.parse("2026-11-15T22:00:00Z") / 1000,
-          preCloseUsdPerUnit: 1.09,
-          firstInSessionObservedAtSec: fxAt,
-        } },
-      }),
-    };
-    const asset = makeEurAsset("eurc-circle", action === "fill" ? undefined : 1.122);
-    if (action === "correct") {
-      asset.priceSource = "defillama";
-      asset.priceObservedAt = null;
-      asset.priceObservedAtMode = "unknown";
-    } else if (action !== "fill") {
-      asset.priceObservedAt = now - 30;
-    }
-    pricingStageMocks.fetchNativePegQuotes.mockResolvedValue(new Map([[asset.id, {
-      stablecoinId: asset.id, pegCurrency: "EUR", vsCurrency: "eur", price: 1, updatedAt: now - 30,
-      derivation: action === "conversion"
-        ? { kind: "conversion", lineage: {} }
-        : { kind: "traded-pair", lineage: { venue: "verified-venue", pair: "EURC/EUR" } },
-    }]]));
-    const actual = await vi.importActual<typeof import("../../lib/native-peg-implied-prices")>("../../lib/native-peg-implied-prices");
-    pricingStageMocks.fetchNativePegImpliedUsdQuotes.mockImplementation(actual.fetchCurrentNativePegImpliedUsdQuotes);
-    const wall = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
-    try {
-      const result = await runStablecoinsPricingStage({
-        db: priceDb(), assets: [asset], previousAssetsById: new Map(), syncStartSec: now, validationReferences: references,
-      });
-      expect("priceCacheEntries" in result ? result.metadata : null).toMatchObject({
-        nativePegFillCount: Number(action === "fill"), nativePegCorrectionCount: Number(action === "correct"),
-      });
-      if (action === "fill" || action === "correct") expect(asset).toMatchObject({ price: 1.1, priceSource: "coingecko-native-implied", priceObservedAt: fxAt });
-      else expect(asset.price).toBe(1.122);
-    } finally { wall.mockRestore(); }
   });
 
   it("quarantines malformed and supply-invalid rows per asset while keeping observed zero supply", () => {

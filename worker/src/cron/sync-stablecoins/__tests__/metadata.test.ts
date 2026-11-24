@@ -125,8 +125,6 @@ function allMissingSizeGuardFixture(): {
         missingPrices: assets.length,
         canonicalDeduplication: { duplicateRows: 0, affectedIds: [], affectedIdsTruncated: 0 },
         rejectedPrices: 0,
-        nativePegCorrections: 0,
-        nativePegFills: 0,
         priceObservationEffectiveness: observationEffectiveness,
         depegErrorCount: 0,
         stalenessCheckFailed: false,
@@ -188,7 +186,7 @@ describe("stablecoins pricing metadata", () => {
     }));
     const input = {
       ...syncInput(assets), providerDiagnostics: [], cacheKey: "stablecoins", syncStartSec: 1_777_000_000,
-      authoritativeOverrideCount: 0, cachedFallbackCount: 0, nativePegCorrectionCount: 0, nativePegFillCount: 0,
+      authoritativeOverrideCount: 0, cachedFallbackCount: 0,
       activePriceCoverage: evaluateStablecoinActivePriceCoverage(assets),
     };
     const build = (stalenessCheckFailed: boolean) => path === "main"
@@ -237,7 +235,7 @@ describe("stablecoins pricing metadata", () => {
     }));
     const input = {
       ...syncInput(assets), providerDiagnostics: [], cacheKey: "stablecoins", syncStartSec: 1_777_000_000,
-      authoritativeOverrideCount: 0, cachedFallbackCount: 0, nativePegCorrectionCount: 0, nativePegFillCount: 0,
+      authoritativeOverrideCount: 0, cachedFallbackCount: 0,
       activePriceCoverage: evaluateStablecoinActivePriceCoverage(assets),
     };
     const result = path === "main" ? buildStablecoinsSyncResult(input) : buildFallbackStablecoinsSyncResult(input);
@@ -255,7 +253,7 @@ describe("stablecoins pricing metadata", () => {
       depegHeldReason: "depeg-open-event-limit-reached" as const,
       cacheKey: "stablecoins",
       syncStartSec: 1_777_000_000,
-      authoritativeOverrideCount: 0, cachedFallbackCount: 0, nativePegCorrectionCount: 0, nativePegFillCount: 0,
+      authoritativeOverrideCount: 0, cachedFallbackCount: 0,
       activePriceCoverage: evaluateStablecoinActivePriceCoverage(assets),
     };
     const result = path === "main" ? buildStablecoinsSyncResult(input) : buildFallbackStablecoinsSyncResult(input);
@@ -369,7 +367,7 @@ describe("stablecoins pricing metadata", () => {
       const rows = assets();
       const input = {
         ...syncInput(rows), providerDiagnostics: [], cacheKey: "stablecoins", syncStartSec: 1_777_000_100,
-        authoritativeOverrideCount: 0, cachedFallbackCount: 0, nativePegCorrectionCount: 0, nativePegFillCount: 0,
+        authoritativeOverrideCount: 0, cachedFallbackCount: 0,
         activePriceCoverage: evaluateStablecoinActivePriceCoverage(rows),
         ...extra,
       };
@@ -463,7 +461,7 @@ describe("stablecoins pricing metadata", () => {
     const metadata = JSON.parse(main.metadata!);
     const fallback = buildFallbackStablecoinsSyncResult({
       ...syncInput([]), providerDiagnostics: [], authoritativeOverrideCount: 0,
-      cachedFallbackCount: 0, nativePegCorrectionCount: 0, nativePegFillCount: 0,
+      cachedFallbackCount: 0,
       cacheKey: "stablecoins", syncStartSec: 1_777_000_000,
       activePriceCoverage: metadata.activePriceCoverage,
       priceObservationEffectiveness: observationEffectiveness,
@@ -976,8 +974,6 @@ describe("priced-cohort collapse", () => {
       syncStartSec: 1_777_000_000,
       authoritativeOverrideCount: 0,
       cachedFallbackCount: 0,
-      nativePegCorrectionCount: 0,
-      nativePegFillCount: 0,
       activePriceCoverage: evaluateStablecoinActivePriceCoverage(assets),
       previousActivePriceCoverage: previousFullCohort,
     });

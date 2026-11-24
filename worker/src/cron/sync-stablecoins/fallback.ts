@@ -223,12 +223,12 @@ export async function syncViaCoingeckoFallback(
     undefined, previousMissingGenerationsById, undefined, chainRpcs,
   );
   const priceCompletion = await runSharedPriceCompletion({
-    chainRpcs, assets, db, syncStartSec, signal, coingeckoApiKey, fxFallbackRates,
+    chainRpcs, assets, db, syncStartSec, signal, fxFallbackRates,
     validationReferences, validationContexts, previousTrustedPrices, authoritativeOverrides,
     authoritativeOverrideStats, previousMissingGenerationsById, priceCache: replayPriceCache,
   }, "fallback-");
   if (isAbortResult(priceCompletion)) return priceCompletion;
-  const { priceCacheEntries, providerDiagnostics, ...pricingMetadata } = priceCompletion;
+  const { priceCacheEntries, ...pricingMetadata } = priceCompletion;
   await reportStablecoinsStage(reportProgress, "fallback-price-validation", "Validated CoinGecko fallback prices", {
     itemsDone: assets.length - assets.filter(hasMissingPrice).length,
     itemsTotal: assets.length,
@@ -236,8 +236,6 @@ export async function syncViaCoingeckoFallback(
       authoritativeOverrides: pricingMetadata.authoritativeOverrideCount,
       authoritativeOverrideStats,
       rejectedPrices: pricingMetadata.rejectedCount,
-      nativePegCorrections: pricingMetadata.nativePegCorrectionCount,
-      nativePegFills: pricingMetadata.nativePegFillCount,
       cachedFallbackPrices: pricingMetadata.cachedFallbackCount,
       priceObservationEffectiveness: pricingMetadata.priceObservationEffectiveness,
     },
@@ -257,7 +255,7 @@ export async function syncViaCoingeckoFallback(
     fxReferenceObservations,
     publishFxReferenceEvidence,
     coingeckoApiKey,
-    providerDiagnostics: [...(enrichStats.providerDiagnostics ?? []), ...providerDiagnostics],
+    providerDiagnostics: [...(enrichStats.providerDiagnostics ?? [])],
     metadata: {
       path: "fallback",
       input: {

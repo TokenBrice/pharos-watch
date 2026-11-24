@@ -1,7 +1,6 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { PriceCacheEntry } from "../../lib/price-cache";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import type { NativePegQuoteSession } from "../../lib/native-peg-quotes";
 import type { BinanceFetchSession } from "../../lib/cex-tickers";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { CronProgressReporter } from "../../lib/cron-logger";
@@ -50,7 +49,6 @@ interface StablecoinsPricingStageOptions {
   coingeckoApiKey?: string | null;
   chainRpcs?: Map<string, ChainRpcConfig>;
   binanceSession?: BinanceFetchSession;
-  nativePegSession?: NativePegQuoteSession;
 }
 
 export async function runStablecoinsPricingStage(
@@ -173,7 +171,6 @@ export async function runStablecoinsPricingStage(
     db: options.db,
     syncStartSec: options.syncStartSec,
     signal: options.signal,
-    coingeckoApiKey: options.coingeckoApiKey,
     fxFallbackRates: options.fxFallbackRates,
     validationReferences: options.validationReferences,
     validationContexts,
@@ -183,13 +180,12 @@ export async function runStablecoinsPricingStage(
     authoritativeOverrideStats,
     previousMissingGenerationsById: options.previousMissingGenerationsById,
     priceCache: replayPriceCache,
-    nativePegSession: options.nativePegSession,
   }, "");
   if (isAbortResult(priceCompletion)) return priceCompletion;
-  const { priceCacheEntries, providerDiagnostics: nativePegProviderDiagnostics, ...metadata } = priceCompletion;
+  const { priceCacheEntries, ...metadata } = priceCompletion;
   const {
     authoritativeOverrideCount, rejectedCount, cachedFallbackCount,
-    nativePegCorrectionCount, nativePegFillCount, priceObservationEffectiveness,
+    priceObservationEffectiveness,
   } = metadata;
 
   if (authoritativeOverrideCount > 0) {
@@ -199,12 +195,6 @@ export async function runStablecoinsPricingStage(
   }
   if (rejectedCount > 0) {
     logWorkerEventArgs("handler", "info", `[sync-stablecoins] Rejected ${rejectedCount} unreasonable prices`);
-  }
-  if (nativePegCorrectionCount > 0) {
-    logWorkerEventArgs("handler", "info", `[sync-stablecoins] Corrected ${nativePegCorrectionCount} weak non-USD fiat prices via native-implied translations`);
-  }
-  if (nativePegFillCount > 0) {
-    logWorkerEventArgs("handler", "info", `[sync-stablecoins] Filled ${nativePegFillCount} missing non-USD fiat prices via native-implied translations`);
   }
   if (cachedFallbackCount > 0) {
     logWorkerEventArgs("handler", "info", `[sync-stablecoins] Applied ${cachedFallbackCount} cached fallback prices`);
@@ -216,8 +206,6 @@ export async function runStablecoinsPricingStage(
       authoritativeOverrides: authoritativeOverrideCount,
       authoritativeOverrideStats,
       rejectedPrices: rejectedCount,
-      nativePegCorrections: nativePegCorrectionCount,
-      nativePegFills: nativePegFillCount,
       cachedFallbackPrices: cachedFallbackCount,
       priceObservationEffectiveness,
     },
@@ -231,9 +219,6 @@ export async function runStablecoinsPricingStage(
       gtProbe,
     },
     priceCacheEntries,
-    providerDiagnostics: [
-      ...primaryProviderDiagnostics,
-      ...nativePegProviderDiagnostics,
-    ],
+    providerDiagnostics: primaryProviderDiagnostics,
   };
 }

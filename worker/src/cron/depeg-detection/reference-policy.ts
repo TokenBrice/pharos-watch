@@ -17,7 +17,6 @@ import { asRawDeviationBps, type ReferenceAdmission, type ReferenceContributor }
 import type { PegAssetBase } from "@shared/types/price";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { getDepegRecoveryThresholdBps } from "../../lib/depeg-threshold-policy";
-import { COINGECKO_NATIVE_IMPLIED_SOURCE } from "../../lib/native-peg-implied-prices";
 import { hasVerifiedLegacyRate, loadFxRateState, type FxRateState, type LegacyFxRepricingByPeg } from "../../lib/fx-rate-state";
 import type { NativePegQuote } from "../../lib/native-peg-quotes";
 import { classifyNativeQuoteImplausibility } from "../../lib/native-quote-plausibility";
@@ -385,7 +384,7 @@ export function assessDetectionReference(input: {
   const primaryFamilies = asset ? primaryVenueKeys(asset) : null;
   const tradedSubject = primarySources.length > 0 && primarySources.every((source) => {
     const entry = getPricingSourceRegistryEntry(source);
-    return entry != null && source !== COINGECKO_NATIVE_IMPLIED_SOURCE && entry.trustTier !== "cached_replay" &&
+    return entry != null && source !== "coingecko-native-implied" && entry.trustTier !== "cached_replay" &&
       entry.trustTier !== "hard_oracle" && entry.trustTier !== "hard_protocol";
   });
   const boundary = legacyClosureStart ?? (session.open ? session.sessionOpenedAtSec : session.closureStartSec);

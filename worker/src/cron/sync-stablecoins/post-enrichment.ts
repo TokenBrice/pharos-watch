@@ -7,15 +7,12 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
  *
  * Extracted to eliminate code duplication (Q-002, Q-011, CC-001).
  */
-import { getPricingSourceRegistryEntry, isPricingSourceSoftGuardrailExempt } from "@shared/lib/pricing-source-registry";
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
 import { pricesAgreeWithinBps } from "../../lib/price-divergence";
 import { loadPriceCorroborationObservations, type PriceObservationEffectiveness } from "./price-corroboration-observations";
 import {
-  countDepegAuthoritativeSources,
   getPriceCacheMaxAgeSec,
   isReplaySafePriceSource,
-  isSingleSourceDepegAuthoritative,
 } from "@shared/lib/pricing-source-policy";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -45,12 +42,6 @@ import {
   validateFallbackPriceCandidate,
   validatePublishedAssetPrice,
 } from "../../lib/price-publish-policy";
-import {
-  COINGECKO_NATIVE_IMPLIED_SOURCE,
-  computePriceDivergenceBps,
-  fetchCurrentNativePegImpliedUsdQuotes,
-  NATIVE_PEG_PRICE_GUARD_MAX_DRIFT_BPS,
-} from "../../lib/native-peg-implied-prices";
 import type { NativePegQuoteSession } from "../../lib/native-peg-quotes";
 import {
   assetPriceObservationClock,
@@ -80,7 +71,6 @@ export interface PostEnrichmentInput {
   db: D1Database;
   syncStartSec: number;
   signal?: AbortSignal;
-  coingeckoApiKey?: string | null;
   fxFallbackRates?: Record<string, number>;
   validationReferences?: PriceValidationReferences;
   validationContexts: { get: (asset: PeggedAsset) => PriceValidationContext };
@@ -90,17 +80,13 @@ export interface PostEnrichmentInput {
   authoritativeOverrideStats: AuthoritativeLivePriceOverrideStats;
   /** The same replay snapshot used to establish trusted-price continuity. */
   priceCache: ReadonlyMap<string, PriceCacheEntry>;
-  nativePegSession?: NativePegQuoteSession;
 }
 
 export interface PriceValidationResult {
   priceObservationEffectiveness?: PriceObservationEffectiveness;
   rejectedCount: number;
   cachedFallbackCount: number;
-  nativePegCorrectionCount: number;
-  nativePegFillCount: number;
   priceCacheEntries: PriceCacheWriteEntry[];
-  providerDiagnostics: PricingProviderAttemptDiagnostic[];
 }
 
 export interface SharedPriceCompletionInput extends PostEnrichmentInput {
@@ -139,174 +125,29 @@ export async function runPostEnrichmentPricePipeline(
     assets,
     db,
     signal,
-    coingeckoApiKey,
     validationReferences,
     validationContexts,
     previousTrustedPrices,
-    nativePegSession,
   } = input;
-
-  const getCurrentSourceParts = (asset: PeggedAsset): string[] => (
-    asset.agreeSources && asset.agreeSources.length > 0
-      ? asset.agreeSources
-      : asset.priceSource
-        ? splitCompositePriceSource(asset.priceSource)
-        : []
-  );
-
-  const hasStrongNativePegBypassAuthority = (asset: PeggedAsset): boolean => {
-    if (isPricingSourceSoftGuardrailExempt(asset.priceSource)) {
-      return true;
-    }
-
-    const currentSourceParts = getCurrentSourceParts(asset);
-    if (asset.priceConfidence === "single-source") {
-      return currentSourceParts.length === 1 &&
-        isSingleSourceDepegAuthoritative(currentSourceParts[0], asset.priceObservedAtMode);
-    }
-
-    if (asset.priceConfidence === "high") {
-      return countDepegAuthoritativeSources(currentSourceParts) >= 2;
-    }
-
-    return false;
-  };
-
-  const nativePegHardeningCandidates = assets.filter((asset) => (
-    validationContexts.get(asset).pegClass === "fiat_fx"
-  ));
-
-  const providerDiagnostics: PricingProviderAttemptDiagnostic[] = [];
-  const nativePegImpliedUsdQuotes = await fetchCurrentNativePegImpliedUsdQuotes(
-    nativePegHardeningCandidates.map((asset) => {
-      const meta = ACTIVE_META_BY_ID.get(asset.id);
-      const validationContext = validationContexts.get(asset);
-      return {
-        stablecoinId: asset.id,
-        geckoId: meta?.geckoId ?? asset.geckoId ?? null,
-        pegCurrency: meta?.flags?.pegCurrency ?? null,
-        pegType: validationContext.pegType ?? null,
-      };
-    }),
-    validationReferences,
-    signal,
-    coingeckoApiKey,
-    { diagnostics: providerDiagnostics, stage: "fallback" },
-    nativePegSession,
-  );
 
   // --- Reject unreasonable prices BEFORE caching ---
   let rejectedCount = 0;
-  let nativePegCorrectionCount = 0;
-  let nativePegFillCount = 0;
-  const nativePegMaxTrustedAgeSec =
-    getPricingSourceRegistryEntry(COINGECKO_NATIVE_IMPLIED_SOURCE)?.maxTrustedAgeSec ?? null;
   for (const asset of assets) {
-    const nativePegImpliedUsd = nativePegImpliedUsdQuotes.get(asset.id);
-    const fiatPremiumEvidence = getFiatPremiumEvidenceForCurrentAsset(asset, input.primaryPriceResults);
-    const currentHasPrice = asset.price != null && typeof asset.price === "number";
-    const currentHasStrongBypassAuthority = currentHasPrice && hasStrongNativePegBypassAuthority(asset);
-    const nativePegDivergenceBps =
-      currentHasPrice && nativePegImpliedUsd != null
-        ? computePriceDivergenceBps(asset.price as number, nativePegImpliedUsd.priceUsd)
-        : null;
-
-    const validateCurrentPrice = () => {
-      const candidatePrices = getPostEnrichmentCandidatePricesForCurrentAsset(asset, input.primaryPriceResults);
-      return validatePublishedAssetPrice({
-        asset,
-        candidatePrices,
-        upstreamKeysBySource: candidatePrices && input.primaryPriceResults?.get(asset.id)?.upstreamKeysBySource,
-        fiatPremiumEvidence,
-        validationContext: validationContexts.get(asset),
-        validationReferences,
-        previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
-      });
-    };
-
-    const tryApplyNativePegImpliedPrice = (reason: "fill" | "correction"): boolean => {
-      if (nativePegImpliedUsd == null || nativePegImpliedUsd.updatedAt == null ||
-        nativePegImpliedUsd.referenceAdmission?.status !== "admitted") return false;
-      // The lane's own registry budget is the admission gate; the shared fetch
-      // uses the wider depeg budget for its different consumers.
-      const ageSec = nativePegImpliedUsd.referenceAdmission.decisionAtSec - nativePegImpliedUsd.updatedAt;
-      if (nativePegMaxTrustedAgeSec == null
-        || ageSec < 0 || ageSec > nativePegMaxTrustedAgeSec) {
-        logWorkerEventArgs("handler", "warn",
-          `[sync-stablecoins] Skipped native-peg ${reason} for ${asset.symbol} (id=${asset.id}): ` +
-          `quote is ${ageSec}s old, budget ${nativePegMaxTrustedAgeSec ?? "unknown"}s`,
-        );
-        return false;
-      }
-      const nativeDecision = validatePublishedAssetPrice({
-        asset: {
-          price: nativePegImpliedUsd.priceUsd,
-          priceSource: COINGECKO_NATIVE_IMPLIED_SOURCE,
-          priceConfidence: "single-source",
-          agreeSources: [COINGECKO_NATIVE_IMPLIED_SOURCE],
-        },
-        validationContext: validationContexts.get(asset),
-        validationReferences,
-        previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
-      });
-      if (!nativeDecision.accepted) {
-        const action = reason === "fill" ? "fill" : "correction";
-        logWorkerEventArgs("handler", "warn",
-          `[sync-stablecoins] Skipped native-peg ${action} for ${asset.symbol} (id=${asset.id}): ` +
-          `${nativeDecision.reason}`,
-        );
-        return false;
-      }
-
-      if (reason === "fill") {
-        logWorkerEventArgs("handler", "warn",
-          `[sync-stablecoins] Filled missing non-USD fiat price for ${asset.symbol} (id=${asset.id}): ` +
-          `$${nativePegImpliedUsd.priceUsd.toFixed(6)} via ${nativePegImpliedUsd.pegCurrency} conversion`,
-        );
-        nativePegFillCount++;
-      } else {
-        logWorkerEventArgs("handler", "warn",
-          `[sync-stablecoins] Corrected weak non-USD fiat price for ${asset.symbol} (id=${asset.id}): ` +
-          `$${asset.price} from ${asset.priceSource ?? "unknown"} -> $${nativePegImpliedUsd.priceUsd.toFixed(6)} ` +
-          `via ${nativePegImpliedUsd.pegCurrency} conversion (${nativePegDivergenceBps}bps divergence)`,
-        );
-        nativePegCorrectionCount++;
-      }
-
-      applyAcceptedPriceCandidate({
-        asset,
-        price: nativePegImpliedUsd.priceUsd,
-        source: COINGECKO_NATIVE_IMPLIED_SOURCE,
-        confidence: "single-source",
-        observedAt: nativePegImpliedUsd.updatedAt,
-        observedAtMode: "upstream",
-        consensusSources: [COINGECKO_NATIVE_IMPLIED_SOURCE],
-        agreeSources: [COINGECKO_NATIVE_IMPLIED_SOURCE],
-        syncedAt: input.syncStartSec,
-        selectedSource: COINGECKO_NATIVE_IMPLIED_SOURCE,
-      });
-      return true;
-    };
-
-    if (!currentHasPrice) {
-      tryApplyNativePegImpliedPrice("fill");
-    } else if (
-      !currentHasStrongBypassAuthority &&
-      nativePegImpliedUsd?.updatedAt != null &&
-      // Only a named market observation can outrank the native quote.
-      nativePegImpliedUsd.updatedAt >= (assetPriceObservationClock(asset) ?? 0) &&
-      nativePegDivergenceBps != null &&
-      nativePegDivergenceBps > NATIVE_PEG_PRICE_GUARD_MAX_DRIFT_BPS &&
-      (!fiatPremiumEvidence || validateCurrentPrice().reason !== "corroborated_fiat_premium")
-    ) {
-      tryApplyNativePegImpliedPrice("correction");
-    }
-
     if (asset.price == null || typeof asset.price !== "number") continue;
     // Nominal par was validated when applied and carries no observation clock to age.
     if (asset.priceObservedAtMode === "nominal_reference") continue;
 
-    const decision = validateCurrentPrice();
+    const fiatPremiumEvidence = getFiatPremiumEvidenceForCurrentAsset(asset, input.primaryPriceResults);
+    const candidatePrices = getPostEnrichmentCandidatePricesForCurrentAsset(asset, input.primaryPriceResults);
+    const decision = validatePublishedAssetPrice({
+      asset,
+      candidatePrices,
+      upstreamKeysBySource: candidatePrices && input.primaryPriceResults?.get(asset.id)?.upstreamKeysBySource,
+      fiatPremiumEvidence,
+      validationContext: validationContexts.get(asset),
+      validationReferences,
+      previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
+    });
     if (!decision.accepted) {
       const authoritativeOverride = input.authoritativeOverrides.get(asset.id);
       const currentPrice = asset.price;
@@ -470,10 +311,7 @@ export async function runPostEnrichmentPricePipeline(
     priceObservationEffectiveness,
     rejectedCount,
     cachedFallbackCount,
-    nativePegCorrectionCount,
-    nativePegFillCount,
     priceCacheEntries,
-    providerDiagnostics,
   };
 }
 

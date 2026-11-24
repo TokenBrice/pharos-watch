@@ -84,7 +84,7 @@ describe("DefiLlama outage publication with a complete previous publication", ()
     vi.spyOn(post, "runSharedPriceCompletion").mockResolvedValue({
       authoritativeOverrideStats: authoritative.createAuthoritativeLivePriceOverrideStats(),
       authoritativeOverrideCount: 0, rejectedCount: 0, cachedFallbackCount: 0,
-      nativePegCorrectionCount: 0, nativePegFillCount: 0, priceCacheEntries: [], providerDiagnostics: [],
+      priceCacheEntries: [],
     });
     vi.spyOn(post, "runDepegPipeline").mockResolvedValue({
       depegErrorCount: 0, depegErrors: [], providerDiagnostics: [], depegObservation: null,

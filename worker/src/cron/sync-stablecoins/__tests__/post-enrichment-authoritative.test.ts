@@ -20,14 +20,6 @@ vi.mock("../../../lib/authoritative-price-sources", async (importOriginal) => {
   };
 });
 
-vi.mock("../../../lib/native-peg-implied-prices", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../lib/native-peg-implied-prices")>();
-  return {
-    ...actual,
-    fetchCurrentNativePegImpliedUsdQuotes: vi.fn(async () => new Map()),
-  };
-});
-
 describe("runSharedPriceCompletion authoritative repair", () => {
   beforeEach(() => {
     authoritativeMocks.fetch.mockReset().mockResolvedValue(new Map());

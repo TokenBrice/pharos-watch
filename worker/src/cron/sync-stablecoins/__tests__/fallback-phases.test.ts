@@ -117,7 +117,7 @@ async function evaluateFallbackStalenessFixture(input: {
       priceCacheEntries: [], providerDiagnostics: [],
       metadata: { path: "fallback", input: {
         enrichStats: {}, authoritativeOverrideCount: 0, rejectedCount: 0,
-        cachedFallbackCount: 0, nativePegCorrectionCount: 0, nativePegFillCount: 0,
+        cachedFallbackCount: 0,
       } },
     });
   }
@@ -530,8 +530,6 @@ describe("CoinGecko fallback phases", () => {
           authoritativeOverrideCount: 0,
           rejectedCount: 0,
           cachedFallbackCount: 0,
-          nativePegCorrectionCount: 0,
-          nativePegFillCount: 0,
         },
       },
     });

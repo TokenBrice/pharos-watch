@@ -418,8 +418,6 @@ function sizeGuardMetadataForRung(
     missingPrices: guard.metadata.missingPrices,
     canonicalDeduplication: guard.metadata.canonicalDeduplication,
     rejectedPrices: guard.metadata.rejectedPrices,
-    nativePegCorrections: guard.metadata.nativePegCorrections,
-    nativePegFills: guard.metadata.nativePegFills,
     priceObservationEffectiveness: guard.metadata.priceObservationEffectiveness,
     depegErrorCount: guard.metadata.depegErrorCount,
     depegHeldReason: guard.metadata.depegHeldReason,
@@ -526,8 +524,6 @@ export function buildStablecoinsSyncResult(input: {
   authoritativeOverrideCount?: number;
   authoritativeOverrideStats?: AuthoritativeLivePriceOverrideStats;
   rejectedCount: number;
-  nativePegCorrectionCount?: number;
-  nativePegFillCount?: number;
   priceObservationEffectiveness?: PriceObservationEffectiveness;
   stalenessWarning: boolean;
   stalenessSummary?: { compared: number; identical: number; identicalRatio: number } | null;
@@ -636,8 +632,6 @@ export function buildStablecoinsSyncResult(input: {
     providerDiagnostics: compactDiagnosticValue(input.providerDiagnostics ?? []),
     nativeMarket: input.providerDiagnostics?.find((diagnostic) => diagnostic.nativeMarket)?.nativeMarket,
     rejectedPrices: input.rejectedCount,
-    nativePegCorrections: input.nativePegCorrectionCount ?? 0,
-    nativePegFills: input.nativePegFillCount ?? 0,
     priceObservationEffectiveness: input.priceObservationEffectiveness,
     missingPrices: finalMissing,
     priceSourceHealth,
@@ -765,8 +759,6 @@ export function buildFallbackStablecoinsSyncResult(input: {
   authoritativeOverrideStats?: AuthoritativeLivePriceOverrideStats;
   rejectedCount: number;
   cachedFallbackCount: number;
-  nativePegCorrectionCount: number;
-  nativePegFillCount: number;
   priceObservationEffectiveness?: PriceObservationEffectiveness;
   stalenessWarning: boolean;
   stalenessSummary?: { compared: number; identical: number; identicalRatio: number } | null;
@@ -830,8 +822,6 @@ export function buildFallbackStablecoinsSyncResult(input: {
       providerDiagnostics: input.providerDiagnostics,
       nativeMarket: input.providerDiagnostics.find((diagnostic) => diagnostic.nativeMarket)?.nativeMarket,
       rejectedPrices: input.rejectedCount,
-      nativePegCorrections: input.nativePegCorrectionCount,
-      nativePegFills: input.nativePegFillCount,
       priceObservationEffectiveness: input.priceObservationEffectiveness,
       cachedFallbackPrices: input.cachedFallbackCount,
       authoritativeOverrides: input.authoritativeOverrideCount,

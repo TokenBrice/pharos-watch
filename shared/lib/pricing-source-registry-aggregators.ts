@@ -44,6 +44,7 @@ export const PRICING_SOURCE_REGISTRY_AGGREGATORS = [
     maxTrustedAgeSec: 15 * 60,
     defaultWeight: 1,
     isReplaySafe: false,
+    isRetired: true,
   }),
   definePricingSource(PRICING_SOURCE_PRESETS.softAggregator, {
     key: "defillama",
