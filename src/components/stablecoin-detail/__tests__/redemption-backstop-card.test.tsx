@@ -24,55 +24,36 @@ function RedemptionBackstopCard({ entry }: { entry: RedemptionBackstopEntry }) {
 }
 
 const BASE_ENTRY: RedemptionBackstopEntry = {
-  stablecoinId: "eurc-circle",
-  score: 65,
-  dexLiquidityScore: 44,
-  accessScore: 40,
-  settlementScore: 65,
-  executionCertaintyScore: 60,
-  capacityScore: 100,
-  outputAssetQualityScore: 100,
-  costScore: 40,
-  routeFamily: "offchain-issuer",
-  accessModel: "issuer-api",
-  settlementModel: "same-day",
-  executionModel: "rules-based-nav",
-  outputAssetType: "stable-single",
-  provider: "supply-full-model",
-  sourceMode: "estimated",
-  resolutionState: "resolved",
-  routeStatus: "open",
-  routeStatusSource: "static-config",
-  holderEligibility: "verified-customer",
-  capacityConfidence: "heuristic",
-  capacitySemantics: "eventual-only",
-  feeConfidence: "undisclosed-reviewed",
-  feeModelKind: "undisclosed-reviewed",
-  modelConfidence: "low",
-  immediateCapacityUsd: null,
-  immediateCapacityRatio: null,
-  feeBps: null,
-  feeDescription: undefined,
-  queueEnabled: false,
-  methodologyVersion: "1.1",
-  updatedAt: 1_700_000_000,
-  capsApplied: [],
+  stablecoinId: "eurc-circle", score: 65, dexLiquidityScore: 44, accessScore: 40, settlementScore: 65,
+  executionCertaintyScore: 60, capacityScore: 100, outputAssetQualityScore: 100, costScore: 40,
+  routeFamily: "offchain-issuer", accessModel: "issuer-api", settlementModel: "same-day",
+  executionModel: "rules-based-nav", outputAssetType: "stable-single", provider: "supply-full-model",
+  sourceMode: "estimated", resolutionState: "resolved", routeStatus: "open", routeStatusSource: "static-config",
+  holderEligibility: "verified-customer", capacityConfidence: "heuristic", capacitySemantics: "eventual-only",
+  feeConfidence: "undisclosed-reviewed", feeModelKind: "undisclosed-reviewed", modelConfidence: "low",
+  immediateCapacityUsd: null, immediateCapacityRatio: null, feeBps: null, feeDescription: undefined,
+  queueEnabled: false, methodologyVersion: "1.1", updatedAt: 1_700_000_000, capsApplied: [],
 };
 
 const DOCS: NonNullable<RedemptionBackstopEntry["docs"]> = {
-  label: "Reserve feed",
-  url: "https://example.com/reserves",
-  reviewedAt: "2026-03-30",
-  provenance: "proof-of-reserves",
+  label: "Reserve feed", url: "https://example.com/reserves", reviewedAt: "2026-03-30", provenance: "proof-of-reserves",
   sources: [{ label: "Reserve feed", url: "https://example.com/reserves", supports: ["capacity"] }],
 };
 
 const NO_HOLDER_REASON_CODES: readonly string[] = [
-  "pegkeeper-only",
-  "no-holder-route",
-  "borrower-repay-only",
-  "secondary-market-only",
+  "pegkeeper-only", "no-holder-route", "borrower-repay-only", "secondary-market-only",
 ];
+
+const ownRouteId = (e: RedemptionBackstopEntry = BASE_ENTRY) => `redemption:${e.stablecoinId}:${e.routeFamily}`;
+const ownRouteKey = (e: RedemptionBackstopEntry = BASE_ENTRY) => `redemption:gen-1:${ownRouteId(e)}`;
+
+type ExitAlt = NonNullable<SafetyScoreV9CurrentCard["breakdowns"]>["exit"]["alternatives"][number];
+const makeAlt = (overrides: Partial<ExitAlt> = {}, entry: RedemptionBackstopEntry = BASE_ENTRY): ExitAlt => ({
+  key: ownRouteKey(entry), routeId: ownRouteId(entry), lane: "redemption", label: "Issuer redemption",
+  routeFamily: "issuer-redemption", score: null, included: false, exclusionReason: null,
+  confidenceDimensions: null, capacityEvidenceTier: "unknown", rawSameNotionalCostBps: null, capacity: null,
+  ...overrides,
+});
 
 function moduleRoot(): HTMLElement {
   const root = document.getElementById("redemption");
@@ -80,7 +61,6 @@ function moduleRoot(): HTMLElement {
   return root;
 }
 
-/** "How Exit uses this route" as cells keyed by role; throws when the card has no Exit breakdown. */
 function usageCells(
   card: SafetyScoreV9CurrentCard,
   entry: RedemptionBackstopEntry | null,
@@ -90,21 +70,18 @@ function usageCells(
   return Object.fromEntries(rows.map((row) => [row.key, row]));
 }
 
-/** Each cell's why stays within eight words. */
 function expectShortNotes(cells: ReturnType<typeof usageCells>) {
   for (const row of Object.values(cells)) {
     if (row?.note) expect(row.note.trim().split(/\s+/).length).toBeLessThanOrEqual(8);
   }
 }
 
-/** The one match on the summary layer; the folds may restate the same text. */
 function onSummaryLayer(matches: readonly HTMLElement[]): HTMLElement {
   const visible = matches.filter((element) => element.closest("details") === null);
   expect(visible).toHaveLength(1);
   return visible[0]!;
 }
 
-// Keep footer ages from colliding with score digits in summary matchers.
 const frames: FrameRequestCallback[] = [];
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
@@ -193,10 +170,9 @@ describe("RedemptionBackstopCard", () => {
       capacity: 100, outputAssetQuality: 100, cost: 100,
     }, REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS);
     card.breakdowns!.exit.primaryRoute = {
-      ...primary, routeId: `redemption:${entry.stablecoinId}:${entry.routeFamily}`, lane: "redemption",
+      ...primary, routeId: ownRouteId(entry), lane: "redemption",
       score: total, supportedComponentCeiling: total, confidenceFactor: 1,
-      components: primary.components.map((component) => ({ ...component, score: 100 })),
-      capsApplied: [],
+      components: primary.components.map((component) => ({ ...component, score: 100 })), capsApplied: [],
     };
     const cells = usageCells(card, entry);
     expect(cells.counted?.figure).toBe(Math.round(total));
@@ -208,10 +184,7 @@ describe("RedemptionBackstopCard", () => {
   it.each(["new"])("reconciles exact route identity across opaque generation %s", (generation) => {
     const card = makeV9Card();
     card.breakdowns!.exit.primaryRoute = {
-      ...card.breakdowns!.exit.primaryRoute!,
-      key: `opaque:${generation}`,
-      routeId: `redemption:${BASE_ENTRY.stablecoinId}:${BASE_ENTRY.routeFamily}`,
-      lane: "redemption", score: BASE_ENTRY.score,
+      ...card.breakdowns!.exit.primaryRoute!, key: `opaque:${generation}`, routeId: ownRouteId(), lane: "redemption", score: BASE_ENTRY.score,
     };
     const cells = usageCells(card, BASE_ENTRY);
     expect(cells.counted).toMatchObject({ figure: BASE_ENTRY.score, note: "Same as the route score" });
@@ -220,21 +193,16 @@ describe("RedemptionBackstopCard", () => {
 
   it.each([
     { name: "suffix collision", routeId: `redemption:other:${BASE_ENTRY.stablecoinId}:${BASE_ENTRY.routeFamily}`, lane: "redemption" },
-    { name: "different lane", routeId: `redemption:${BASE_ENTRY.stablecoinId}:${BASE_ENTRY.routeFamily}`, lane: "dex" },
+    { name: "different lane", routeId: ownRouteId(), lane: "dex" },
     { name: "missing identity", routeId: undefined, lane: undefined },
   ] as const)("never guesses this route from an opaque key with $name", ({ routeId, lane }) => {
-    const card = makeV9Card();
-    const exit = card.breakdowns!.exit;
-    // Deliberately model an old/unadmitted response for the defensive consumer boundary.
+    const card = makeV9Card(), exit = card.breakdowns!.exit;
     exit.primaryRoute = {
-      ...exit.primaryRoute!, key: `redemption:gen:redemption:${BASE_ENTRY.stablecoinId}:${BASE_ENTRY.routeFamily}`,
-      routeId, lane, score: BASE_ENTRY.score,
+      ...exit.primaryRoute!, key: `redemption:gen:${ownRouteId()}`, routeId, lane, score: BASE_ENTRY.score,
     } as unknown as NonNullable<typeof exit.primaryRoute>;
-    exit.alternatives = [{
-      key: exit.primaryRoute.key, routeId, lane, label: "Unrelated route", routeFamily: "issuer-redemption",
-      score: 37, included: true, exclusionReason: null, confidenceDimensions: null,
-      capacityEvidenceTier: "documented", rawSameNotionalCostBps: null, capacity: null,
-    }] as unknown as typeof exit.alternatives;
+    exit.alternatives = [makeAlt({
+      key: exit.primaryRoute.key, routeId, lane, label: "Unrelated route", score: 37, included: true, capacityEvidenceTier: "documented",
+    } as unknown as Partial<ExitAlt>)];
     const selected = usageCells(card, BASE_ENTRY);
     expect(selected.counted).toMatchObject({ figure: null, value: "Not counted", note: "Not in the Exit evaluation" });
     expect(selected.best?.figure).toBe(BASE_ENTRY.score);
@@ -249,9 +217,7 @@ describe("RedemptionBackstopCard", () => {
     render(<RedemptionBackstopCard entry={BASE_ENTRY} />);
     const root = moduleRoot();
     const pills = Array.from(root.querySelectorAll<HTMLElement>("[data-slot='badge'][title^=\"This route's own score\"]"));
-
     expect(within(root).getByRole("heading", { name: /Issuer redemption route/ })).toBeTruthy();
-    // The pill names what it scores: words in the sans, the figure in mono.
     expect(pills.length).toBeGreaterThan(0);
     expect(pills[0]!.textContent).toBe("Route score 65");
     expect(pills[0]!.querySelector(".pharos-numeric")?.textContent).toBe("65");
@@ -259,52 +225,32 @@ describe("RedemptionBackstopCard", () => {
   });
 
   it("states the route score only in the pill and on its track, and no verdict restating the rail", () => {
-    const card = makeV9Card();
-    render(<RedemptionRouteSection entry={BASE_ENTRY} reportCard={card} coinId={BASE_ENTRY.stablecoinId} />);
+    render(<RedemptionRouteSection entry={BASE_ENTRY} reportCard={makeV9Card()} coinId={BASE_ENTRY.stablecoinId} />);
     const root = moduleRoot();
     const summary = Array.from(root.querySelectorAll<HTMLElement>("p, [role='group']"))
       .filter((node) => node.closest("details") === null && node.closest("[data-slot='badge']") === null)
-      .map((node) => node.textContent ?? "")
-      .join(" ");
+      .map((node) => node.textContent ?? "").join(" ");
     expect(summary).not.toContain("Route score");
     expect(Array.from(root.querySelectorAll("p.text-pretty")).filter((node) => node.closest("details") === null)).toHaveLength(0);
-    // The track runs the full width of the module when it stacks over the rail.
-    const track = root.querySelector('[aria-label^="Route score"]')!.parentElement!;
-    expect(track.className).not.toContain("max-w-");
+    expect(root.querySelector('[aria-label^="Route score"]')!.parentElement!.className).not.toContain("max-w-");
   });
 
   it("reconciles a different Exit score for the same route in place, naming the published cause", () => {
-    // Exit re-scores the same six components; only its confidence factor differs.
     const standalone: Record<string, number | null> = {
-      access: BASE_ENTRY.accessScore,
-      settlement: BASE_ENTRY.settlementScore,
-      executionCertainty: BASE_ENTRY.executionCertaintyScore,
-      capacity: BASE_ENTRY.capacityScore,
-      outputAssetQuality: BASE_ENTRY.outputAssetQualityScore,
-      cost: BASE_ENTRY.costScore,
+      access: BASE_ENTRY.accessScore, settlement: BASE_ENTRY.settlementScore,
+      executionCertainty: BASE_ENTRY.executionCertaintyScore, capacity: BASE_ENTRY.capacityScore,
+      outputAssetQuality: BASE_ENTRY.outputAssetQualityScore, cost: BASE_ENTRY.costScore,
     };
-    const card = makeV9Card();
-    const exit = card.breakdowns?.exit;
+    const card = makeV9Card(), exit = card.breakdowns?.exit;
     if (!exit?.primaryRoute) throw new Error("fixture lacks an Exit primary route");
     exit.primaryRoute = {
-      ...exit.primaryRoute,
-      key: `redemption:gen-1:redemption:${BASE_ENTRY.stablecoinId}:${BASE_ENTRY.routeFamily}`,
-      routeId: `redemption:${BASE_ENTRY.stablecoinId}:${BASE_ENTRY.routeFamily}`,
-      lane: "redemption",
-      score: 58,
-      supportedComponentCeiling: 64,
-      confidenceFactor: 0.9,
-      capsApplied: [],
-      components: exit.primaryRoute.components.map((component) => ({
-        ...component,
-        score: standalone[component.key] ?? component.score,
-      })),
+      ...exit.primaryRoute, key: ownRouteKey(), routeId: ownRouteId(), lane: "redemption",
+      score: 58, supportedComponentCeiling: 64, confidenceFactor: 0.9, capsApplied: [],
+      components: exit.primaryRoute.components.map((c) => ({ ...c, score: standalone[c.key] ?? c.score })),
     };
     const cells = usageCells(card, BASE_ENTRY);
     expect(cells.counted).toMatchObject({ figure: 58, note: "0.9 evidence-confidence factor" });
     expectShortNotes(cells);
-
-    // The two cells sit on the summary layer as one labelled group.
     render(<RedemptionRouteSection entry={BASE_ENTRY} reportCard={card} coinId={BASE_ENTRY.stablecoinId} />);
     const group = within(moduleRoot()).getByRole("group", { name: "How Exit uses this route" });
     expect(group.closest("details")).toBeNull();
@@ -312,26 +258,12 @@ describe("RedemptionBackstopCard", () => {
   });
 
   it("explains why no route qualifies when the Exit pillar credits none, with the pillar score", () => {
-    const card = makeV9Card();
-    const exit = card.breakdowns?.exit;
+    const card = makeV9Card(), exit = card.breakdowns?.exit;
     if (!exit) throw new Error("fixture lacks an Exit breakdown");
     const pillarScore = card.pillars.exit.score;
     if (pillarScore === null) throw new Error("fixture lacks an Exit pillar score");
     exit.primaryRoute = null;
-    exit.alternatives = [{
-      key: `redemption:gen-1:redemption:${BASE_ENTRY.stablecoinId}:${BASE_ENTRY.routeFamily}`,
-      routeId: `redemption:${BASE_ENTRY.stablecoinId}:${BASE_ENTRY.routeFamily}`,
-      lane: "redemption",
-      label: "Issuer redemption",
-      routeFamily: "issuer-redemption",
-      score: null,
-      included: false,
-      exclusionReason: "unsupported-same-notional-route",
-      confidenceDimensions: null,
-      capacityEvidenceTier: "unknown",
-      rawSameNotionalCostBps: null,
-      capacity: null,
-    }];
+    exit.alternatives = [makeAlt({ exclusionReason: "unsupported-same-notional-route" })];
     const cells = usageCells(card, BASE_ENTRY);
     expect(cells.counted).toMatchObject({ figure: null, value: "Not counted" });
     expect(cells.counted?.note).toMatch(/^No supported quote /);
@@ -341,38 +273,19 @@ describe("RedemptionBackstopCard", () => {
   });
 
   describe("an unrated route the Exit pillar still scores", () => {
-    // Resolved with eventual capacity only: the producer publishes no standalone score.
     const unrated: RedemptionBackstopEntry = { ...BASE_ENTRY, score: null, capacityScore: null };
-    const ownKey = `redemption:gen-1:redemption:${BASE_ENTRY.stablecoinId}:${BASE_ENTRY.routeFamily}`;
     const EXIT_SCORE = 37;
     type Tier = "documented" | "live-direct";
-
-    function asAlternative(card: SafetyScoreV9CurrentCard, tier: Tier) {
-      card.breakdowns!.exit.alternatives = [{
-        key: ownKey,
-        routeId: `redemption:${BASE_ENTRY.stablecoinId}:${BASE_ENTRY.routeFamily}`,
-        lane: "redemption",
-        label: "Issuer redemption",
-        routeFamily: "issuer-redemption",
-        score: EXIT_SCORE,
-        included: true,
-        exclusionReason: null,
-        confidenceDimensions: null,
-        capacityEvidenceTier: tier,
-        rawSameNotionalCostBps: null,
-        capacity: null,
-      }];
-    }
-
-    function asPrimary(card: SafetyScoreV9CurrentCard, tier: Tier) {
+    const asAlternative = (card: SafetyScoreV9CurrentCard, tier: Tier) => {
+      card.breakdowns!.exit.alternatives = [makeAlt({ score: EXIT_SCORE, included: true, capacityEvidenceTier: tier })];
+    };
+    const asPrimary = (card: SafetyScoreV9CurrentCard, tier: Tier) => {
       const exit = card.breakdowns!.exit;
       exit.primaryRoute = {
-        ...exit.primaryRoute!, key: ownKey, score: EXIT_SCORE, capacityEvidenceTier: tier,
-        routeId: `redemption:${BASE_ENTRY.stablecoinId}:${BASE_ENTRY.routeFamily}`, lane: "redemption",
+        ...exit.primaryRoute!, key: ownRouteKey(), score: EXIT_SCORE, capacityEvidenceTier: tier,
+        routeId: ownRouteId(), lane: "redemption",
       };
-    }
-
-    /** The summary-layer verdict, the "Not rated" pills and Exit's cells for this route. */
+    };
     function renderSummary(place: typeof asAlternative, tier: Tier, entry = unrated) {
       const card = makeV9Card();
       if (!card.breakdowns?.exit.primaryRoute) throw new Error("fixture lacks an Exit primary route");
@@ -392,46 +305,30 @@ describe("RedemptionBackstopCard", () => {
     ])("keeps the Not rated pill and names Exit's own score with the evidence it read when %s", (_, place) => {
       const documented = renderSummary(place, "documented");
       const live = renderSummary(place, "live-direct");
-
       expect(documented.pills).toBeGreaterThan(0);
       expect(documented.verdict).toBe("Only eventual capacity is published, and the route score needs immediate capacity.");
       expect(documented.verdict).not.toContain(String(EXIT_SCORE));
       expect(documented.cells.counted?.figure).toBe(EXIT_SCORE);
-      // The Exit number is explained by its evidence, so the why follows the published tier.
       expect(documented.cells.counted?.note).not.toBe(live.cells.counted?.note);
       expectShortNotes(documented.cells);
     });
-
   });
 
   it("renders unquantified eventual-only capacity without implying current-supply coverage", () => {
     const html = renderToStaticMarkup(<RedemptionBackstopCard entry={BASE_ENTRY} />);
-
-    expect(html).toContain("Eventual Redeemability");
-    expect(html).toContain("Not separately quantified");
-    expect(html).toContain("Eventual route capacity is unquantified");
-    expect(html).toContain("no current-supply coverage or immediate cash buffer is asserted");
+    for (const s of [
+      "Eventual Redeemability", "Not separately quantified", "Eventual route capacity is unquantified",
+      "no current-supply coverage or immediate cash buffer is asserted",
+    ]) expect(html).toContain(s);
     expect(html).not.toContain("eventual redeemability of current supply");
   });
 
   it("renders supply-wide eventual redeemability only with an admitted bound", () => {
-    const html = renderToStaticMarkup(
-      <RedemptionBackstopCard entry={{
-        ...BASE_ENTRY,
-        capacityBasis: "issuer-term-redemption",
-        capacityConfidence: "documented-bound",
-        capacityProfile: {
-          eventualUsd: 30_000_000,
-          scoringUsd: 30_000_000,
-          scoringHorizon: "eventual",
-          capacityProfileConfidence: "documented-bound",
-        },
-      }} />,
-    );
-
-    expect(html).toContain("Eventual Redeemability");
-    expect(html).toContain("$30.0M");
-    expect(html).toContain("eventual redeemability of current supply under documented terms");
+    const html = renderToStaticMarkup(<RedemptionBackstopCard entry={{
+      ...BASE_ENTRY, capacityBasis: "issuer-term-redemption", capacityConfidence: "documented-bound",
+      capacityProfile: { eventualUsd: 30_000_000, scoringUsd: 30_000_000, scoringHorizon: "eventual", capacityProfileConfidence: "documented-bound" },
+    }} />);
+    for (const s of ["Eventual Redeemability", "$30.0M", "eventual redeemability of current supply under documented terms"]) expect(html).toContain(s);
     expect(html).not.toContain("Eventual route capacity is unquantified");
   });
 
@@ -468,14 +365,8 @@ describe("RedemptionBackstopCard", () => {
 
   it("collapses an unrated route Exit does not count into one line and promotes Exit's best route", () => {
     const unrated: RedemptionBackstopEntry = { ...BASE_ENTRY, score: null, capacityScore: null, resolutionState: "missing-capacity", routeStatus: "unknown" };
-    const card = makeV9Card();
-    const primary = card.breakdowns!.exit.primaryRoute!;
-    card.breakdowns!.exit.alternatives = [{
-      key: `redemption:gen-1:redemption:${unrated.stablecoinId}:${unrated.routeFamily}`,
-      routeId: `redemption:${unrated.stablecoinId}:${unrated.routeFamily}`, lane: "redemption", label: "Issuer redemption",
-      routeFamily: "issuer-redemption", score: null, included: false, exclusionReason: "unresolved-exit-output",
-      confidenceDimensions: null, capacityEvidenceTier: "unknown", rawSameNotionalCostBps: null, capacity: null,
-    }];
+    const card = makeV9Card(), primary = card.breakdowns!.exit.primaryRoute!;
+    card.breakdowns!.exit.alternatives = [makeAlt({ exclusionReason: "unresolved-exit-output" }, unrated)];
     render(<RedemptionRouteSection entry={unrated} reportCard={card} coinId={unrated.stablecoinId} />);
     const root = moduleRoot();
     expect(root.querySelector("p.text-sm")?.textContent).toBe("No executable redemption capacity could be measured; Exit does not count it either (output asset unresolved).");
@@ -488,11 +379,7 @@ describe("RedemptionBackstopCard", () => {
   it("explains physical-delivery not-applicable capacity on uncredited alternatives", () => {
     const physical: RedemptionBackstopEntry = { ...BASE_ENTRY, score: null, capacityScore: null, resolutionState: "missing-capacity", routeStatus: "unknown", outputAssetType: "physical-commodity-delivery" };
     const card = makeV9Card();
-    const alt = {
-      key: `redemption:gen-1:redemption:${physical.stablecoinId}:${physical.routeFamily}`, routeId: `redemption:${physical.stablecoinId}:${physical.routeFamily}`,
-      lane: "redemption" as const, label: "Issuer redemption", routeFamily: "eventual-redemption" as const, score: null, included: false,
-      exclusionReason: null, confidenceDimensions: null, capacityEvidenceTier: "documented" as const, rawSameNotionalCostBps: null, capacity: null,
-    };
+    const alt = makeAlt({ routeFamily: "eventual-redemption", capacityEvidenceTier: "documented" }, physical);
     card.breakdowns!.exit.alternatives = [alt];
     const cells = usageCells(card, physical);
     expect(cells.counted).toMatchObject({ figure: null, value: "Not counted", note: "Physical delivery: USD capacity not applicable" });
@@ -589,22 +476,15 @@ describe("RedemptionRouteSection without a scored route", () => {
 
     render(<RedemptionRouteSection entry={null} reportCard={card} coinId={disposition.id} />);
     const root = moduleRoot();
-
     expect(root.getAttribute("data-evidence-module")).toBe("strip");
     expect(root.querySelector("h3")).not.toBeNull();
-    // Exit's best route sits on the summary layer as one labelled cell.
     const group = within(root).getByRole("group", { name: "Where the Exit pillar looks instead" });
     expect(group.closest("details")).toBeNull();
     expect(group.textContent).toContain(`Exit's best route${Math.round(primary.score)}`);
     expect(usageCells(card, null)).toEqual({ best: expect.objectContaining({ figure: Math.round(primary.score) }) });
-
-    const notes = within(root).getByText(disposition.blocker);
-    expect(notes.closest("details")?.open).toBe(false);
-    const stamps = within(root).getAllByText((content) => content.includes(disposition.reviewedDate));
-    expect(stamps.some((stamp) => stamp.closest("details") === null)).toBe(true);
+    expect(within(root).getByText(disposition.blocker).closest("details")?.open).toBe(false);
+    expect(within(root).getAllByText((content) => content.includes(disposition.reviewedDate)).some((stamp) => stamp.closest("details") === null)).toBe(true);
     expect(root.querySelectorAll("summary")).toHaveLength(1);
-    // No served route means no live-data footer to age.
     expect(root.querySelector("time[data-state]")).toBeNull();
   });
-
 });
