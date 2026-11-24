@@ -1115,7 +1115,7 @@ describe("bounded settlement subfactors", () => {
       gapIds: [],
     };
     const missingStatus = gap("U", "physical-placeholder");
-    const settlementGap = gap("C", "physical-settlement", "missing-same-notional-route");
+    const settlementGap = gap("C", "physical-settlement");
     const projectedPhysical = projectV9ExitEvaluationRoute({
       routeKey: "redemption:gen:redemption:gold:offchain-issuer",
       routeId: "redemption:gold:offchain-issuer",
