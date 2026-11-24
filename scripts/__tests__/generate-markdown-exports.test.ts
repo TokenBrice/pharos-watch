@@ -11,6 +11,7 @@ import {
   renderStablecoinDetail,
 } from "../lib/markdown-renderers";
 import { writeMarkdownRoute } from "../maintenance/generate-markdown-exports";
+import { renderLlmsTxt } from "../maintenance/generate-llms-txt";
 import { MARKDOWN_FIXTURE_RELEASE } from "../lib/markdown-fixture-release";
 import { buildStablecoinFaqItems } from "../../src/components/stablecoin-detail/static-seo-content";
 import { ContractDeployments } from "../../src/components/stablecoin-detail/contract-deployments";
@@ -25,7 +26,8 @@ import { METHODOLOGY_CHANGELOG_REGISTRY } from "@shared/lib/methodology-versions
 import { METHODOLOGY_HISTORY_ARCHIVES } from "@shared/lib/methodology-versions/archives";
 
 import { CHAIN_META } from "@shared/types/chain-identity";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { isTokenizedFundId } from "@shared/lib/stablecoins/listing-governance";
 import type { StablecoinAiSummary } from "@shared/types/editorial";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { makeCoverageCoin as coin } from "./helpers/coverage-coin";
@@ -375,6 +377,25 @@ describe("public llms index", () => {
     expect(llms).toContain(
       "- [Depeg history dataset (JSON)](https://pharos.watch/datasets/depeg-history/latest.json): Retrospective depeg-event snapshot with source dates and historical coverage; current depegs are shown on the Depeg Tracker.",
     );
+  });
+
+  it("separates active stablecoins from tokenized funds in renderLlmsTxt headline and indexes", () => {
+    const rendered = renderLlmsTxt();
+    const activeStablecoins = ACTIVE_STABLECOINS.filter((c) => !isTokenizedFundId(c.id));
+    const activeFunds = ACTIVE_STABLECOINS.filter((c) => isTokenizedFundId(c.id));
+    expect(rendered).toContain(
+      `> Pharos tracks ${activeStablecoins.length} active stablecoins and ${activeFunds.length} tokenized funds`,
+    );
+    const stablecoinsIndex = markdownSection(rendered, "## Stablecoins Index");
+    const fundsIndex = markdownSection(rendered, "## Tokenized Funds Index");
+    expect(stablecoinsIndex).toContain("https://pharos.watch/stablecoin/usdc-circle/");
+    expect(stablecoinsIndex).not.toContain("https://pharos.watch/stablecoin/buidl-blackrock/");
+    expect(fundsIndex).toContain("https://pharos.watch/stablecoin/buidl-blackrock/");
+    const buidlLine = fundsIndex.split("\n").find((line) => line.includes("/stablecoin/buidl-blackrock/"));
+    const buidlDescription = buidlLine?.split("): ")[1] ?? "";
+    expect(buidlDescription).toContain("tokenized fund");
+    expect(buidlDescription).toContain("Not graded on Safety Score.");
+    expect(buidlDescription).not.toMatch(/\bstablecoin\b/i);
   });
 });
 

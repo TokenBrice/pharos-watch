@@ -11,8 +11,12 @@ import {
 } from "@shared/lib/ops-limits";
 import { ApiOfferCards } from "./api-offer-cards";
 import { ApiPreviewTabs } from "./api-preview-tabs";
+import { getApiCoverageFacts } from "./api-landing-data";
 import { SupporterClaimSteps } from "./supporter-claim-steps";
 import ApiTermsPage from "./terms/page";
+import { HEADLINE_STABLECOIN_COUNT } from "@/lib/universe-vocabulary";
+import { ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { isTokenizedFundId } from "@shared/lib/stablecoins/listing-governance";
 
 // The claim transaction and wallet lookup are independent of this static grade copy.
 vi.mock("@/components/api-access/donor-key-claim", () => ({ DonorKeyClaim: () => null }));
@@ -101,5 +105,27 @@ describe("Published tier quotas", () => {
     render(<ApiPreviewTabs examples={{ asOfDate: "d", riskGateResponse: '"A+"', complianceResponse: "", badge: null }} />);
     expect(screen.getByRole("tab", { name: "Risk-Gate", selected: true })).toBeTruthy();
     expect(document.body.textContent).toContain('"A+"');
+  });
+
+  it("counts active non-fund stablecoins and their contracts and chains for API landing coverage", () => {
+    const facts = getApiCoverageFacts();
+    const activeNonFunds = ACTIVE_STABLECOINS.filter((coin) => !isTokenizedFundId(coin.id));
+    const expectedChains = new Set<string>();
+    let expectedDeployments = 0;
+    for (const coin of activeNonFunds) {
+      for (const contract of [...(coin.contracts ?? []), ...(coin.tradedContracts ?? [])]) {
+        expectedDeployments += 1;
+        expectedChains.add(contract.chain);
+      }
+    }
+    const allTrackedDeployments = TRACKED_STABLECOINS.reduce(
+      (sum, coin) => sum + (coin.contracts?.length ?? 0) + (coin.tradedContracts?.length ?? 0),
+      0,
+    );
+    expect(facts.stablecoins).toBe(HEADLINE_STABLECOIN_COUNT);
+    expect(facts.stablecoins).toBe(activeNonFunds.length);
+    expect(facts.deployments).toBe(expectedDeployments);
+    expect(facts.deployments).toBeLessThan(allTrackedDeployments);
+    expect(facts.chains).toBe(expectedChains.size);
   });
 });
