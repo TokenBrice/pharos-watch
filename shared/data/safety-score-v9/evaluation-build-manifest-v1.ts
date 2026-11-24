@@ -82,11 +82,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/stablecoins/coins.generated.json",
-      "sha256": "3e5e9bd8b4039d317b0dc8a1a5596566d83061ee82d5ed367892086c8d6d88d6"
+      "sha256": "abcf51761d9e8c311743b32104b3b843916802b46523d01fbd88973c93897735"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-full.generated.json",
-      "sha256": "81a68cdcb8dd800c759314a7ccf55543b30ba70a87bc503ad3642b366c3b2660"
+      "sha256": "e0bd199042de147c64fe568f099fbafd2f4820c2510ae58ad5157f831401604f"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-runtime.generated.json",
@@ -638,7 +638,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/public.ts",
-      "sha256": "35e28e71a70f198413e09b4840b6762047d50ca46b2d8932840cad4ec26f5c01"
+      "sha256": "80f39266be8c64bc14de302e91227c853aae6e7834999684002bc6413702dcf5"
     },
     {
       "path": "shared/lib/safety-score-v9/reasons.ts",
@@ -722,7 +722,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/stablecoins/listing-governance.ts",
-      "sha256": "9d597df957b2ab012b3612c4d5081500ac40f6e67bee472f1d5e7fc07a412e84"
+      "sha256": "479debfabcb9fa3898e314b03d772d4eab3390e4f5215a328ad5be851545c83a"
     },
     {
       "path": "shared/lib/stablecoins/mint-bridge-ownership.ts",
@@ -910,7 +910,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/report-cards-v9.ts",
-      "sha256": "fe19fd8dac13f99e06d5e0b6d6020ba913c976843c1d509f512917ec6f2bb503"
+      "sha256": "1ffe83f6d91d87927518a3c43c1fa5c0b715b246a335a3ac782abbaf8dc3111f"
     },
     {
       "path": "shared/types/reserve-assurance.ts",
@@ -1014,7 +1014,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9-public-attribution.ts",
-      "sha256": "8a5be7772698988e13f1e006ab960f5ab3e379904dc3b52e12b4959da74c0445"
+      "sha256": "5303e0b714f3f693b9b1533a84f2bd3f45fb90ee76bea6e6457ca199283f528f"
     },
     {
       "path": "shared/types/safety-score-v9-public-breakdowns.ts",
@@ -1178,7 +1178,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/candidate.ts",
-      "sha256": "d11d65bec032dfefbc089b46f25d303102244ba299ed1ab558648ae4929fc25f"
+      "sha256": "a604c92d88ea70b2f3ca584e86b6b3ff5774e7436408e272ff11c6f47833019c"
     },
     {
       "path": "worker/src/lib/safety-score-v9/consumer-freshness.ts",
@@ -1310,7 +1310,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/publication-assessment.ts",
-      "sha256": "e57b340af0ca2ae57c765a4d8516f51506692accdec732950c03b3e00e7e1c6b"
+      "sha256": "d47b2fa86ac528f32e8906349d4ff5f046a7a72d2ac699676c75f45c7124723e"
     },
     {
       "path": "worker/src/lib/safety-score-v9/redemption-reserve-quarantine.ts",
@@ -1371,7 +1371,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-11-24-block-26485484-shock-coverage.json.gz"
     }
   ],
-  "digest": "c2181ef7d5cd835bea261a81d83ac3b84b25832a9716938206b922e75ea3346b"
+  "digest": "9debb30dbd9b025e13f9d79b0334e3a5a78e18c4ed958af000c1f1cfefec015b"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
