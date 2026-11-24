@@ -116,7 +116,7 @@ describe("reserve feed review policy", () => {
       failureCategory: null,
       warningCodes: [],
       errorPrefix: null,
-      sourceTimestamp: review.reviewedAt - 10 * 86_400,
+      sourceTimestamp: review.reviewedAt - 15 * 86_400,
     };
     const s = state(r, { lastStatus: "ok" });
     await check(s, r);

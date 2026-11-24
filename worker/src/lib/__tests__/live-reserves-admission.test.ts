@@ -39,7 +39,7 @@ describe("live reserve admission", () => {
   it.each([
     "qcad-stablecorp", "usx-solstice", "satusd-river", "usdv-solomon-v2",
     "dgld-gold-token-sa", "xagm-matrixdock", "onyc-onre", "avusd-avant",
-    "ftusd-flying-tulip", "frnt-wyoming", "usdy-ondo-finance",
+    "ftusd-flying-tulip", "frnt-wyoming", "thbill-theo",
   ])("keeps a healthy current %s observation non-independent", (id) => {
     const coin = TRACKED_META_BY_ID.get(id)!;
     const config = coin.liveReservesConfig!;
@@ -218,7 +218,7 @@ describe("live reserve admission", () => {
   });
 
   it.each([
-    { id: "fpi-frax", version: 3, legacyVersions: [1, 2] },
+    { id: "frax-frax", version: 4, legacyVersions: [1, 2, 3] },
     { id: "ftusd-flying-tulip", version: 2, legacyVersions: [1] },
     { id: "jupusd-jupiter", version: 2, legacyVersions: [1] },
     { id: "usdx-kava", version: 2, legacyVersions: [1] },
@@ -270,7 +270,7 @@ describe("live reserve admission", () => {
     expect((await loadFreshIndependentLiveReserveMap(db, 1_200)).has("hbd-hive")).toBe(false);
   });
 
-  it.each(["usdy-ondo-finance", "usdt-tether"])("never marks suspended or unconfigured %s eligible", async (id) => {
+  it.each(["usyc-hashnote", "usdt-tether"])("never marks suspended or unconfigured %s eligible", async (id) => {
     const meta = TRACKED_META_BY_ID.get(id)!;
     const runtimeMeta = WORKER_TRACKED_META_BY_ID.get(id)!;
     const originalRuntimeConfig = runtimeMeta.liveReservesConfig;
