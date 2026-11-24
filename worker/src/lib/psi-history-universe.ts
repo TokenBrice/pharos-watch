@@ -49,17 +49,14 @@ export function buildPsiHistoricalMembership(options: {
     const isHistoricalShadow = PSI_HISTORICAL_IDS.has(coin.id);
     const launchStart = coin.launchDate == null ? null : fuzzyDateRange(coin.launchDate)?.start;
     const launchFrom = launchStart == null ? -Infinity : Date.parse(launchStart) / 1000;
-    const rawFrozenSec = coin.frozenAt == null ? NaN : Date.parse(coin.frozenAt) / 1000;
-    const frozenSec = Number.isFinite(rawFrozenSec) ? rawFrozenSec : null;
 
     const windows: Array<{ from: number; until: number }> = [];
 
-    // Pre-cutover v1 window (< cutoverSec)
-    if (isHistoricalShadow) {
+    // Pre-cutover v1 window (< cutoverSec). Members active at the v1 snapshot commit
+    // stay in v1 history until the cutover regardless of any backdated later frozenAt
+    // so published history is never restated.
+    if (isHistoricalShadow || v1ActiveIds.has(coin.id)) {
       if (launchFrom < cutoverSec) windows.push({ from: launchFrom, until: cutoverSec });
-    } else if (v1ActiveIds.has(coin.id)) {
-      const v1Until = frozenSec != null && frozenSec < cutoverSec ? frozenSec : cutoverSec;
-      if (launchFrom < v1Until) windows.push({ from: launchFrom, until: v1Until });
     } else if (v1NonActiveIds.has(coin.id)) {
       const rawUntil = coin.frozenAt ?? coin.listingStatusReview?.changedAt;
       const parsedUntil = rawUntil == null ? NaN : Date.parse(rawUntil) / 1000;

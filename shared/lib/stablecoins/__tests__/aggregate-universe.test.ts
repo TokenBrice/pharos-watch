@@ -1,6 +1,7 @@
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { ACTIVE_STABLECOINS } from "../registry";
+import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "../registry";
 import {
   ACTIVE_REVIEW_HOLD_STABLECOINS,
   ACTIVE_TOKENIZED_FUNDS,
@@ -119,15 +120,15 @@ describe("core stablecoin aggregate universe", () => {
     expect(getCoreAggregateUniverseForTimestamp(CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC - 1)).toBe("core-stablecoins-v1");
     expect(getCoreAggregateUniverseForTimestamp(CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC)).toBe("core-stablecoins-v2");
 
-    // Frozen v1 membership at base commit 92c90ca72 must never mutate across v2 listing changes.
+    // Frozen v1 membership at base commit 1b79da4cb must never mutate across v2 listing changes.
     expect(CORE_AGGREGATE_V1_MEMBERS_SNAPSHOT.schemaVersion).toBe(1);
     expect(CORE_AGGREGATE_V1_MEMBERS_SNAPSHOT.universe).toBe("core-stablecoins-v1");
-    expect(CORE_AGGREGATE_V1_MEMBERS_SNAPSHOT.frozenFromCommit).toBe("92c90ca72");
-    expect(CORE_AGGREGATE_V1_MEMBER_LIST).toHaveLength(262);
-    expect(CORE_AGGREGATE_V1_MEMBER_IDS.size).toBe(262);
+    expect(CORE_AGGREGATE_V1_MEMBERS_SNAPSHOT.frozenFromCommit).toBe("1b79da4cb");
+    expect(CORE_AGGREGATE_V1_MEMBER_LIST).toHaveLength(260);
+    expect(CORE_AGGREGATE_V1_MEMBER_IDS.size).toBe(260);
     expect([...CORE_AGGREGATE_V1_MEMBER_LIST].sort()).toEqual([...CORE_AGGREGATE_V1_MEMBER_LIST]);
     expect(createHash("sha256").update(JSON.stringify(CORE_AGGREGATE_V1_MEMBER_LIST)).digest("hex"))
-      .toBe("0b06a93a1c7560bbba7e7c6658a67ca22a4f27bdaddd2d2cba6a7e8a42a50257");
+      .toBe("fe51dd11c6a87dfcc2c106ee758539b3baa65a9f60bda32cd9f946aef819b506");
     expect(CORE_AGGREGATE_V1_NON_ACTIVE_MEMBER_LIST).toHaveLength(48);
     expect(CORE_AGGREGATE_V1_NON_ACTIVE_MEMBER_IDS.size).toBe(48);
     expect([...CORE_AGGREGATE_V1_NON_ACTIVE_MEMBER_LIST].sort()).toEqual([...CORE_AGGREGATE_V1_NON_ACTIVE_MEMBER_LIST]);
@@ -137,6 +138,60 @@ describe("core stablecoin aggregate universe", () => {
     expect(CORE_AGGREGATE_V1_MEMBER_IDS.has("eutbl-spiko")).toBe(true);
     expect(CORE_AGGREGATE_V1_MEMBER_IDS.has("apxusd-apyx")).toBe(false);
     expect(CORE_AGGREGATE_V1_MEMBER_IDS.has("susds-sky")).toBe(false);
+  });
+
+  it("excludes every asset already delisted at the frozen v1 base commit 1b79da4cb", () => {
+    const preV2DelistedAtBase = [
+      "bd-basedollar",
+      "bfusd-binance",
+      "jusd-juicedollar",
+      "pc0000031-tradable",
+      "pc0000033-tradable",
+      "pc0000089-tradable",
+      "pc0000101-tradable",
+      "pht-pht",
+      "reur-royal-euro",
+      "roughrider-bnd",
+      "rusd-royal-dollar",
+      "usdb-bridge",
+      "vcred-vcred",
+      "wusd-worldwide",
+    ];
+    for (const id of preV2DelistedAtBase) {
+      expect(CORE_AGGREGATE_V1_MEMBER_IDS.has(id), `${id} was delisted at 1b79da4cb`).toBe(false);
+      expect(CORE_AGGREGATE_V1_NON_ACTIVE_MEMBER_IDS.has(id), `${id} was delisted at 1b79da4cb`).toBe(false);
+    }
+    for (const id of [...CORE_AGGREGATE_V1_MEMBER_LIST, ...CORE_AGGREGATE_V1_NON_ACTIVE_MEMBER_LIST]) {
+      expect(TRACKED_META_BY_ID.has(id), `${id} missing from tracked catalog`).toBe(true);
+    }
+    for (const id of CORE_AGGREGATE_V1_MEMBER_LIST) {
+      expect(CORE_AGGREGATE_V1_NON_ACTIVE_MEMBER_IDS.has(id)).toBe(false);
+    }
+
+    // When the frozen base commit is reachable in local git history, verify dynamically
+    // that no frozen v1 active member was delisted ("excluded") at 1b79da4cb.
+    let baseDecisionsRaw: string | null = null;
+    try {
+      baseDecisionsRaw = execFileSync(
+        "git",
+        ["show", `${CORE_AGGREGATE_V1_MEMBERS_SNAPSHOT.frozenFromCommit}:shared/data/stablecoins/listing-decisions.json`],
+        { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+      );
+    } catch {
+      baseDecisionsRaw = null;
+    }
+    if (baseDecisionsRaw != null) {
+      const baseDecisions = JSON.parse(baseDecisionsRaw) as { listingClassById: Record<string, string> };
+      for (const id of CORE_AGGREGATE_V1_MEMBER_LIST) {
+        const cls = baseDecisions.listingClassById[id];
+        expect(cls === "core-stablecoin" || cls === "cash-equivalent", `${id} had v1 class ${cls}`).toBe(true);
+      }
+      for (const [id, cls] of Object.entries(baseDecisions.listingClassById)) {
+        if (cls === "excluded") {
+          expect(CORE_AGGREGATE_V1_MEMBER_IDS.has(id), `${id} was excluded at 1b79da4cb`).toBe(false);
+        }
+      }
+    }
   });
 
   it("registers the listing-policy v2 market-wide perimeter entry and chart marker from the cutover constant", () => {

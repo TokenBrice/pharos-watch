@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "universe": "core-stablecoins-v1",
-  "frozenFromCommit": "92c90ca72",
+  "frozenFromCommit": "1b79da4cb",
   "memberIds": [
     "a7a5-old-vector",
     "aid-gaib",
@@ -15,7 +15,6 @@
     "avusd-avant",
     "axcnh-anchorx",
     "bc3m-backed",
-    "bd-basedollar",
     "bold-liquity",
     "brl1-brl1",
     "brla-brla-digital",
@@ -244,7 +243,6 @@
     "weusd-picwe",
     "wmxn-ripio",
     "wpen-ripio",
-    "wusd-worldwide",
     "xagm-matrixdock",
     "xaum-matrixdock",
     "xaut-tether",

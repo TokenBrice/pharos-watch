@@ -447,28 +447,33 @@ describe("buildStabilityInputForDay", () => {
       coins: [
         { id: "usdt-tether", launchDate: "2015-02-25" },
         { id: "buidl-blackrock", launchDate: "2024-03-20", status: "active" },
+        { id: "fpi-frax", launchDate: "2022-03-29", status: "frozen", frozenAt: "2026-06-28" },
         { id: "apxusd-apyx", launchDate: "2025-01-01", status: "active" },
         { id: "bib01-backed", launchDate: "2023-08-01", status: "frozen", frozenAt: "2026-03-25" },
       ],
-      v1ActiveIds: new Set(["usdt-tether", "buidl-blackrock"]),
+      v1ActiveIds: new Set(["usdt-tether", "buidl-blackrock", "fpi-frax"]),
       v1NonActiveIds: new Set(["bib01-backed"]),
-      currentCoreIds: new Set(["usdt-tether", "apxusd-apyx"]),
+      currentCoreIds: new Set(["usdt-tether", "apxusd-apyx", "fpi-frax"]),
       currentCorePsiEligibleIds: new Set(["usdt-tether", "apxusd-apyx"]),
       cutoverSec: cutover,
     });
     const supply = buildPsiHistoricalSupplySnapshotMap([
       { stablecoin_id: "usdt-tether", snapshot_date: cutover - DAY, circulating_usd: 100e9 },
       { stablecoin_id: "buidl-blackrock", snapshot_date: cutover - DAY, circulating_usd: 2e9 },
+      { stablecoin_id: "fpi-frax", snapshot_date: cutover - DAY, circulating_usd: 7e6 },
       { stablecoin_id: "apxusd-apyx", snapshot_date: cutover - DAY, circulating_usd: 0.5e9 },
       { stablecoin_id: "usdt-tether", snapshot_date: cutover, circulating_usd: 100e9 },
       { stablecoin_id: "buidl-blackrock", snapshot_date: cutover, circulating_usd: 2e9 },
+      { stablecoin_id: "fpi-frax", snapshot_date: cutover, circulating_usd: 7e6 },
       { stablecoin_id: "apxusd-apyx", snapshot_date: cutover, circulating_usd: 0.5e9 },
       { stablecoin_id: "bib01-backed", snapshot_date: Date.UTC(2026, 2, 1) / 1000, circulating_usd: 0.1e9 },
     ], membership);
 
+    // fpi-frax was active at the v1 snapshot commit, so its backdated frozenAt (2026-06-28)
+    // must not remove it from pre-cutover PSI history; it leaves at the cutover.
     const before = getPsiHistoricalUniverseForDay(supply, cutover - DAY, undefined, membership);
-    expect([...before.eligibleIds].sort()).toEqual(["buidl-blackrock", "usdt-tether"]);
-    expect(before.totalMcapUsd).toBe(102e9);
+    expect([...before.eligibleIds].sort()).toEqual(["buidl-blackrock", "fpi-frax", "usdt-tether"]);
+    expect(before.totalMcapUsd).toBe(102.007e9);
 
     const atCutover = getPsiHistoricalUniverseForDay(supply, cutover, undefined, membership);
     expect([...atCutover.eligibleIds].sort()).toEqual(["apxusd-apyx", "usdt-tether"]);
