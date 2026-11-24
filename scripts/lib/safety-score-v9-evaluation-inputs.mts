@@ -163,6 +163,7 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/lib/solidly-v2-math.ts",
   "shared/lib/stable-json.ts",
   "shared/lib/stablecoins/full-catalog.ts",
+  "shared/lib/stablecoins/listing-class.ts",
   "shared/lib/stablecoins/listing-governance.ts",
   "shared/lib/stablecoins/mint-bridge-ownership.ts",
   "shared/lib/stablecoins/registry-indexes.ts",
