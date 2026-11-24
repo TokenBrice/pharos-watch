@@ -283,8 +283,6 @@ const addrWord = (hex: string) => uWord(BigInt(hex));
 export const WAVE2_NOW = 1_800_000_000;
 export const WAVE2_HASH = `0x${"ab".repeat(32)}`;
 export const wave2Head = (ts = WAVE2_NOW - 10, hash = WAVE2_HASH) => [{ number: "0x100", hash, timestamp: `0x${ts.toString(16)}` }];
-export const wave2Round = (r: bigint, ans: bigint, ts: bigint, air = r) =>
-  encodeAbiParameters(parseAbiParameters("uint80,int256,uint256,uint256,uint80"), [r, ans, ts, ts, air]);
 
 export function mockWave2Batch(state: unknown[], h = wave2Head(), close = [{ hash: WAVE2_HASH }]) {
   fetchEvmRpcBatchMock.mockReset().mockResolvedValueOnce(h).mockResolvedValueOnce(state).mockResolvedValueOnce(close);
@@ -306,23 +304,6 @@ export const WAVE2_M0_BAD: readonly (readonly [number, string, string])[] = [
   [0, "0x6000", "runtime-code"], [5, addrWord("0x0000000000000000000000000000000000000001"), "identity"],
   [8, uWord(1n), "swap-disabled"], [11, uWord(0n), "swap-disabled"], [17, uWord(500_000_000_000n), "backing-insufficient"],
   [18, uWord(8_999_999_999_999n), "backing-insufficient"],
-];
-
-export const WAVE2_RWA_GOOD = [
-  "0xbd6f524cdc4268b6bd1bb6f77a8821faeea9c52ee9e0afa0b6d948ce82c966c2",
-  "0x6c356f0b498f2e868c80c5ca1158faa7df8402400ca0d7af4e7399aa471e046e",
-  addrWord("0x45309f5786d09241ee4649e0753062415cfe16cc"), uWord(18n),
-  encodeAbiParameters(parseAbiParameters("string"), ["rwaUSDi NAV"]),
-  wave2Round(10n, 1_002_500_000_000_000_000n, BigInt(WAVE2_NOW - 3600)),
-];
-
-export const WAVE2_RWA_BAD: readonly (readonly [number, string, string])[] = [
-  [0, "0x6000", "runtime-code"], [3, uWord(8n), "identity"],
-  [4, encodeAbiParameters(parseAbiParameters("string"), ["OTHER"]), "identity"],
-  [5, wave2Round(10n, 0n, BigInt(WAVE2_NOW - 60)), "round-invalid"],
-  [5, wave2Round(10n, 10n ** 18n, BigInt(WAVE2_NOW - 60), 9n), "round-invalid"],
-  [5, wave2Round(10n, 10n ** 18n, BigInt(WAVE2_NOW - 48 * 3600 - 1)), "oracle-stale"],
-  [5, wave2Round(10n, 10n ** 18n, BigInt(WAVE2_NOW + 601)), "oracle-future"],
 ];
 
 export const WAVE2_NUSD_GOOD = [

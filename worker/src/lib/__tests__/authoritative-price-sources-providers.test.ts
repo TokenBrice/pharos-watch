@@ -3,8 +3,6 @@ import {
   asset,
   fetchEvmCallHexAtBlockMock as evmCall,
   fetchEvmRpcBatchMock as evmBatch,
-  fetchEvmBlockTimestampMock,
-  fetchEvmBlockNumberMock,
   freshParent,
   fetchLiveOverrides,
   makeHistoricalPriceSeries as historicalPrices,
@@ -18,21 +16,12 @@ import {
   WAVE2_NOW,
   WAVE2_NUSD_BAD,
   WAVE2_NUSD_GOOD,
-  WAVE2_RWA_BAD,
-  WAVE2_RWA_GOOD,
   WAVE2_USDU_BAD,
   WAVE2_USDU_POOL,
   wave2Head,
 } from "./authoritative-price-sources.test-support";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { capCusdProvider } from "../authoritative-price-sources/cap-cusd";
-import { usd3CurvePoolProvider } from "../authoritative-price-sources/usd3-curve-pool";
-import type { LivePriceReferenceContext } from "../authoritative-price-sources/helpers";
-import { createAuthoritativeLivePriceOverrideStats as overrideStats } from "../authoritative-price-sources";
-import { buildPriceValidationContext } from "../price-validation";
-import { validatePublishedAssetPrice } from "../price-publish-policy";
-import { getPriceCache } from "../price-cache";
-import { mockD1 } from "@shared/test-utils/mock-d1";
 import type { LivePriceContext } from "../authoritative-price-sources/helpers";
 import { CACHED_VAULT_RATE_MAX_AGE_SEC } from "../authoritative-price-sources/helpers";
 import { idleCdoTrancheProvider } from "../authoritative-price-sources/idle-cdo-tranche";
@@ -42,7 +31,6 @@ import { createProtocolRedeemProvider } from "../authoritative-price-sources/pro
 import { encodeUint256 } from "../evm-selectors";
 import * as extraction from "../historical-depeg-extraction";
 import { m0ExtensionProvider } from "../authoritative-price-sources/m0-extension";
-import { rwausdiChainlinkNavProvider } from "../authoritative-price-sources/rwausdi-chainlink-nav";
 import { nusdSynapsePoolProvider } from "../authoritative-price-sources/nusd-synapse-pool";
 import { usduFinanceCurvePoolProvider } from "../authoritative-price-sources/usdu-finance-curve-pool";
 import { moveusdOrcaProvider } from "../authoritative-price-sources/moveusd-orca";
@@ -152,128 +140,6 @@ const historicalParent = vi.hoisted(() => vi.fn());
 vi.mock("../historical-market-prices", () => ({
   fetchMarketBackfillPriceSeries: historicalParent,
 }));
-
-describe("USD3 exact Curve fallback", () => {
-  const id = "usd3-reserve-protocol";
-  const uint = (n: bigint) => `0x${encodeUint256(n)}`;
-  // Ethereum block 26343848: exact USD3/scrvUSD inventory and 1/10-token sell proceeds.
-  const pool = [uint(BigInt("0x0d86883faf4ffd7aeb116390af37746f45b6f378")), uint(BigInt("0x0655977feb2f289a4ab78af67bab0d17aab84367")),
-    uint(156101562328671154958659n), uint(196897201958399343897365n), uint(1011115724994965921n), uint(10111154486828596482n)];
-  let parent: PeggedAsset;
-  let previous: PeggedAsset;
-  let context: LivePriceReferenceContext;
-  const livePrice = (target = unpricedChild(id), ctx = context) => usd3CurvePoolProvider.fetchLivePrice!(target, ctx);
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(1793827200 * 1000);
-    resetMocks();
-    evmBatch.mockReset().mockResolvedValue(pool);
-    parent = freshParent("scrvusd-curve", 1.11, "curve-onchain", { priceObservedAtMode: "local_fetch" });
-    previous = freshParent(id, 1.12, "curve-onchain", { priceSyncedAt: Math.floor(Date.now() / 1000) });
-    context = { assetsById: new Map([[parent.id, parent]]), previousAssetsById: new Map([[id, previous]]) };
-  });
-  afterEach(() => vi.useRealTimers());
-  it("recovers missing USD3 with pinned pool gates, trusted NAV bounds and the older parent clock", async () => {
-    const result = await fetchLiveOverrides([unpricedChild(id), parent], context);
-    const quote = result.get(id)!;
-    expect(quote).toMatchObject({ price: 1.0111157249949658 * 1.11, source: "curve-thin-onchain", confidence: "fallback", observedAt: parent.priceObservedAt, observedAtMode: "local_fetch" });
-    const validationContext = buildPriceValidationContext({ stablecoinId: id });
-    expect(validationContext.navToken).toBe(true);
-    expect(validatePublishedAssetPrice({ asset: { price: quote.price, priceSource: quote.source, priceConfidence: quote.confidence }, validationContext }).accepted).toBe(true);
-    expect(evmBatch.mock.calls[0][1]).toHaveLength(6);
-    expect(evmBatch.mock.calls[0][1].every((call: { params: unknown[] }) => call.params[1] === "0x1fca055")).toBe(true);
-    for (const [index, value] of [[0, pool[1]], [1, pool[0]], [2, uint(999n * 10n ** 18n)], [3, uint(0n)], [4, uint(0n)], [5, uint(8n * 10n ** 18n)], [4, "0xzz"], [4, null], [4, `${pool[4]}00`]] as const) {
-      const invalid = [...pool] as unknown[];
-      invalid[index] = value;
-      evmBatch.mockResolvedValue(invalid);
-      await expect(livePrice()).resolves.toBeNull();
-    }
-    evmBatch.mockResolvedValue(pool);
-    fetchEvmBlockTimestampMock.mockResolvedValue(Math.floor(Date.now() / 1000) - 301);
-    await expect(livePrice()).resolves.toBeNull();
-    resetMocks();
-    parent.priceObservedAt! -= 301;
-    await expect(livePrice()).resolves.toBeNull();
-    await expect(livePrice(unpricedChild(id), { ...context, assetsById: new Map() })).resolves.toBeNull();
-    expect(usd3CurvePoolProvider.matches("usd3-3jane")).toBe(false);
-  });
-  it.each([100000000000000000n, 950000000000000000n, 1050000000000000000n])("rejects a deep but skewed pool (%s) with real USD3 NAV publication policy", async (small) => {
-    evmBatch.mockResolvedValue([...pool.slice(0, 4), uint(small), uint(small * 10n)]);
-    const validationContext = buildPriceValidationContext({ stablecoinId: id });
-    expect(validationContext.navToken).toBe(true);
-    expect(validatePublishedAssetPrice({ asset: { price: 0.111, priceSource: "curve-thin-onchain", priceConfidence: "fallback" }, validationContext,
-      previousTrustedPrice: { price: 1.12, source: "curve-onchain", confidence: "high", observedAt: previous.priceObservedAt!, agreeSources: ["curve-onchain"] } }).accepted).toBe(true);
-    const stats = overrideStats();
-    expect(await fetchLiveOverrides([unpricedChild(id), parent], { ...context, stats })).toEqual(new Map());
-    expect(stats.assetAttempts).toContainEqual(expect.objectContaining({ assetId: id, rejectionClass: "usd3-nav-deviation" }));
-  });
-  it("refuses absent, stale, malformed or untrusted references before any RPC", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    for (const [reference, reason] of [[undefined, "usd3-reference-missing"],
-      [{ ...previous, priceObservedAt: now - 86401 }, "usd3-reference-stale"],
-      [{ ...previous, priceObservedAt: now + 1 }, "usd3-reference-clock-invalid"],
-      [{ ...previous, priceSyncedAt: null }, "usd3-reference-clock-invalid"],
-      [{ ...previous, priceObservedAt: now - 3600 }, "usd3-reference-untrusted"],
-      [{ ...previous, priceSource: "curve-thin-onchain", agreeSources: ["curve-onchain"] }, "usd3-reference-untrusted"],
-      [{ ...previous, priceSource: "curve-thin-onchain", priceConfidence: "fallback" }, "usd3-reference-untrusted"]] as const) {
-      context.previousAssetsById = reference ? new Map([[id, reference]]) : new Map();
-      await expect(livePrice()).resolves.toBeNull();
-      expect(context.lastRejectionReason).toBe(reason);
-    }
-    expect(fetchEvmBlockNumberMock).not.toHaveBeenCalled();
-    expect(evmBatch).not.toHaveBeenCalled();
-  });
-  it.each([970000000000000000n, 1030000000000000000n])("admits the inclusive 3% NAV boundary (%s)", async (small) => {
-    previous.price = 1.11;
-    evmBatch.mockResolvedValue([...pool.slice(0, 4), uint(small), uint(small * 10n)]);
-    await expect(livePrice()).resolves.toMatchObject({ source: "curve-thin-onchain" });
-  });
-  it("retains the trusted cached baseline's original age across pool fallback publications", async () => {
-    const observedAt = Math.floor(Date.now() / 1000) - 86400;
-    context.previousAssetsById = new Map([[id, freshParent(id, 1.15, "curve-thin-onchain", { priceConfidence: "fallback" })]]);
-    const cached = { price: 1.12, source: "curve-onchain", confidence: "high" as const, observedAt, observedAtMode: "upstream" as const, syncedAt: observedAt + 60, updatedAt: observedAt, hasExplicitClocks: true };
-    context.priceCache = new Map([[id, cached]]);
-    await expect(livePrice()).resolves.toMatchObject({ source: "curve-thin-onchain" });
-    cached.observedAt -= 1;
-    await expect(livePrice()).resolves.toBeNull();
-    expect(context.lastRejectionReason).toBe("usd3-reference-stale");
-  });
-  it.each([[false, false], [false, true], [true, false], [true, true]])("requires original cache clocks through the real loader (%s/%s)", async (hasObservation, hasPublication) => {
-    const now = Math.floor(Date.now() / 1000);
-    const db = mockD1([{ match: "FROM price_cache", rows: [{ asset_id: id, price: 1.12, source: "curve-onchain", confidence: "high",
-      updated_at: now - 3600, observed_at: hasObservation ? now - 3600 : null, synced_at: hasPublication ? now - 3540 : null,
-      observed_at_mode: "upstream", agree_sources_json: "[]", consensus_sources_json: "[]" }] }]);
-    context.previousAssetsById = new Map();
-    context.priceCache = await getPriceCache(db);
-    const result = await livePrice();
-    if (hasObservation && hasPublication) expect(result).toMatchObject({ source: "curve-thin-onchain" });
-    else {
-      expect(result).toBeNull();
-      expect(context.lastRejectionReason).toBe("usd3-reference-clock-invalid");
-      expect(evmBatch).not.toHaveBeenCalled();
-    }
-  });
-  it("withholds when the trusted reference expires during pool reads", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    previous.priceObservedAt = now - 86400;
-    previous.priceSyncedAt = previous.priceObservedAt + 60;
-    evmBatch.mockImplementationOnce(async () => {
-      vi.setSystemTime((now + 1) * 1000);
-      return pool;
-    });
-    await expect(livePrice()).resolves.toBeNull();
-    expect(context.lastRejectionReason).toBe("usd3-reference-stale");
-  });
-  it("skips a complete incumbent with a healthy parent/pool both directly and in scheduler filtering", async () => {
-    const incumbent = freshParent(id, 1.12, "coingecko", { priceConfidence: "single-source", priceSyncedAt: Math.floor(Date.now() / 1000) });
-    await expect(livePrice(incumbent)).resolves.toBeNull();
-    const stats = overrideStats();
-    expect(await fetchLiveOverrides([incumbent, parent], { ...context, stats })).toEqual(new Map());
-    expect(stats).toMatchObject({ candidateCount: 0, attemptedCount: 0 });
-    expect(fetchEvmBlockNumberMock).not.toHaveBeenCalled();
-    expect(evmBatch).not.toHaveBeenCalled();
-  });
-});
 
 describe("capCusdProvider", () => {
   const quote = (raw: bigint) => `0x${encodeUint256(raw)}` as const;
@@ -684,16 +550,6 @@ describe("Wave 2 authoritative adapters", () => {
     evmBatch.mockReset().mockResolvedValueOnce(wave2Head(WAVE2_NOW - 301));
     const c = ctxOf(musd); expect(await run(unpricedChild("m-m0"), c)).toBeNull();
     expect(c.lastRejectionReason).toBe("m0-extension:head-stale-or-invalid");
-  });
-
-  it("rwausdiChainlinkNavProvider verifies Monad Chainlink NAV and freshness", async () => {
-    const run = (a: PeggedAsset) => rwausdiChainlinkNavProvider.fetchLivePrice!(a, ctxOf(null));
-    mockWave2Batch(WAVE2_RWA_GOOD);
-    expect(await run(unpricedChild("rwausdi-multipli"))).toEqual({
-      price: 1.0025, source: "chainlink-nav", confidence: "single-source", observedAt: WAVE2_NOW - 3600, observedAtMode: "upstream",
-    });
-    expect(await run(freshParent("rwausdi-multipli", 1, "coingecko"))).toBeNull();
-    await checkGuards(rwausdiChainlinkNavProvider, "rwausdi-multipli", "rwausdi-chainlink-nav", null, WAVE2_RWA_GOOD, WAVE2_RWA_BAD);
   });
 
   it("nusdSynapsePoolProvider quotes pinned NexusPool USDC exit and fails closed", async () => {

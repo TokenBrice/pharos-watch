@@ -37,7 +37,7 @@ export const CIRCUIT_SOURCE_REGISTRY = {
   AZND_CURVE_POOL: { key: "aznd-curve-pool", scope: "asset-scoped" },
   SWANUSD_CURVE_POOL: { key: "swanusd-curve-pool", scope: "asset-scoped" },
   STBT_CURVE_POOL: { key: "stbt-curve-pool", scope: "asset-scoped" },
-  USD3_CURVE_POOL: { key: "usd3-curve-pool", scope: "asset-scoped" },
+  USD3_CURVE_POOL: { key: "usd3-curve-pool", scope: "retired" },
   MENTO_FPMM: { key: "mento-fpmm", scope: "asset-scoped" },
   MENTO_BROKER: { key: "mento-broker", scope: "asset-scoped" },
   BD_AERODROME: { key: "bd-aerodrome", scope: "asset-scoped" },
@@ -46,7 +46,7 @@ export const CIRCUIT_SOURCE_REGISTRY = {
   USDAF_UNISWAP_V4: { key: "usdaf-uniswap-v4", scope: "asset-scoped" },
   USDU_UNISWAP_V3: { key: "usdu-uniswap-v3", scope: "asset-scoped" },
   M0_EXTENSION: { key: "m0-extension", scope: "asset-scoped" },
-  RWAUSDI_CHAINLINK_NAV: { key: "rwausdi-chainlink-nav", scope: "asset-scoped" },
+  RWAUSDI_CHAINLINK_NAV: { key: "rwausdi-chainlink-nav", scope: "retired" },
   NUSD_SYNAPSE_POOL: { key: "nusd-synapse-pool", scope: "asset-scoped" },
   USDU_FINANCE_CURVE_POOL: { key: "usdu-finance-curve-pool", scope: "asset-scoped" },
   // Single-asset members share this breaker with multi-asset redemption providers.
