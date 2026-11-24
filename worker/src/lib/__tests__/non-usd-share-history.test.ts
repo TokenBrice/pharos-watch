@@ -2,7 +2,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { CORE_AGGREGATE_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/aggregate-registry";
 import { mockD1 as baseMockD1 } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE, CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC } from "@shared/lib/stablecoins/aggregate-universe";
+import {
+  CORE_STABLECOIN_AGGREGATE_UNIVERSE,
+  CORE_STABLECOIN_AGGREGATE_UNIVERSE_V1,
+  CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE,
+  CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC,
+} from "@shared/lib/stablecoins/aggregate-universe";
+import {
+  CORE_AGGREGATE_V1_MEMBER_LIST,
+  CORE_AGGREGATE_V1_NON_ACTIVE_MEMBER_LIST,
+} from "@shared/lib/stablecoins/aggregate-universe-v1";
 import {
   buildNonUsdShareCoreMembers,
   computeNonUsdShareHistory, sampleNonUsdShareHistory, publishNonUsdShareHistory,
@@ -377,30 +386,62 @@ describe("non-USD share producer aggregation", () => {
     expect(await readNonUsdShareHistory(db)).toMatchObject({ updatedAt: now, points: [{ total: 300 }] });
   });
 
+  it("reports cohort-mismatch for a valid matching-marker row from a prior cohort and rebuilds on publish", async () => {
+    const { db, sqlite } = fixtures.open();
+    const now = Math.floor(Date.now() / 1000);
+    const date = Math.floor(now / 86400) * 86400;
+    sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd) VALUES ('usdt-tether', ?, 100)").run(date);
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('snapshot-supply:last-write', ?, ?)").run(
+      JSON.stringify({ snapshotDate: date, generationId: "cohort-rollout" }), now,
+    );
+    await publishNonUsdShareHistory(db, now);
+    const row = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(NON_USD_SHARE_HISTORY_KEY) as { value: string };
+    const payload = JSON.parse(row.value) as Record<string, unknown>;
+    payload.cohortIdentity = "prior-deploy-cohort";
+    sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(JSON.stringify(payload), NON_USD_SHARE_HISTORY_KEY);
+
+    expect(await readNonUsdShareHistory(db)).toEqual({ status: "cohort-mismatch", points: null, updatedAt: null });
+    await publishNonUsdShareHistory(db, now + 60);
+    expect(await readNonUsdShareHistory(db)).toMatchObject({ status: "ok", updatedAt: now, points: [{ total: 100 }] });
+  });
+
   it("fences pre-cutover dates to frozen v1 membership and post-cutover dates to current membership", async () => {
     const { db, sqlite } = fixtures.open();
     const cutover = CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC;
     const day = 86_400;
     const members = buildNonUsdShareCoreMembers({
       coins: [
-        { id: "usdt-tether", flags: { pegCurrency: "USD" } as never },
-        { id: "eutbl-spiko", flags: { pegCurrency: "EUR" } as never },
-        { id: "eurc-circle", flags: { pegCurrency: "EUR" } as never },
-        { id: "gldy-example", flags: { pegCurrency: "GOLD" } as never },
+        { id: "usdt-tether", status: "active", flags: { pegCurrency: "USD" } as never },
+        { id: "eutbl-spiko", status: "active", flags: { pegCurrency: "EUR" } as never },
+        { id: "eursafo-spiko", status: "delisted", flags: { pegCurrency: "EUR" } as never },
+        { id: "fpi-frax", status: "frozen", frozenAt: "2026-06-28", flags: { pegCurrency: "VAR" } as never },
+        { id: "eurc-circle", status: "active", flags: { pegCurrency: "EUR" } as never },
+        { id: "gldy-example", status: "active", flags: { pegCurrency: "GOLD" } as never },
       ],
-      v1ActiveIds: new Set(["usdt-tether", "eutbl-spiko", "eurc-circle"]),
+      v1ActiveIds: new Set(["usdt-tether", "eutbl-spiko", "eursafo-spiko", "fpi-frax", "eurc-circle"]),
       v1NonActiveIds: new Set(),
-      currentCoreIds: new Set(["usdt-tether", "eurc-circle", "gldy-example"]),
+      currentCoreIds: new Set(["usdt-tether", "eurc-circle", "gldy-example", "fpi-frax"]),
       cutoverSec: cutover,
     });
+    // Backdated frozenAt on a v1 active member (fpi-frax) must not restate pre-cutover history.
+    expect(members.get("fpi-frax")).toEqual({ bucket: "fiat-non-usd", inactiveFrom: cutover });
+    expect(members.get("eutbl-spiko")).toEqual({ bucket: "fiat-non-usd", inactiveFrom: cutover });
+    expect(members.get("eursafo-spiko")).toEqual({ bucket: "fiat-non-usd", inactiveFrom: cutover });
+    expect(members.get("gldy-example")).toEqual({ bucket: "commodity", activeFrom: cutover, inactiveFrom: null });
+
     const insert = sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd) VALUES (?, ?, ?)");
     for (const date of [cutover - day, cutover, cutover + day]) {
       insert.run("usdt-tether", date, 900);
       insert.run("eurc-circle", date, 25);
       // Pre-cutover rows for a coin entering in v2 must stay out of pre-cutover totals.
       insert.run("gldy-example", date, 50);
-      // Fund leaving at cutover only exists before cutover (or even if present later, is excluded).
-      if (date < cutover) insert.run("eutbl-spiko", date, 75);
+      // Kept tokenized fund still receives post-cutover supply_history rows, which the fence must exclude.
+      insert.run("eutbl-spiko", date, 45);
+      // Delisted fund and backdated-frozen v1 active member stop producing rows at cutover without creating gaps.
+      if (date < cutover) {
+        insert.run("eursafo-spiko", date, 20);
+        insert.run("fpi-frax", date, 10);
+      }
     }
 
     const { points } = await computeNonUsdShareHistory(db, cutover + 2 * day, cutover - 2 * day, members);
@@ -410,17 +451,20 @@ describe("non-USD share producer aggregation", () => {
       { date: cutover + day, total: 975, fiatNonUsd: 25, commodity: 50, coverage: COMPLETE_COVERAGE },
     ]);
 
-    const identity = JSON.parse(NON_USD_SHARE_COHORT_IDENTITY) as {
-      universe: string;
-      cutoverDate: string;
-      v1Universe: string;
-      v1MemberIds: string[];
-      members: Record<string, unknown>;
-    };
-    expect(identity.universe).toBe("core-stablecoins-v2");
-    expect(identity.v1Universe).toBe("core-stablecoins-v1");
-    expect(identity.cutoverDate).toBe(CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE);
-    expect(identity.v1MemberIds).toContain("eutbl-spiko");
-    expect(Object.keys(identity.members).length).toBeGreaterThanOrEqual(identity.v1MemberIds.length);
+    const actualMembers = buildNonUsdShareCoreMembers();
+    expect(actualMembers.get("fpi-frax")).toEqual({ bucket: "fiat-non-usd", inactiveFrom: cutover });
+    expect(actualMembers.get("eutbl-spiko")).toEqual({ bucket: "fiat-non-usd", inactiveFrom: cutover });
+    expect(actualMembers.get("aeur-anchored-coins")).toEqual({
+      bucket: "fiat-non-usd",
+      inactiveFrom: unix("2026-07-11T00:00:00Z"),
+    });
+    expect(NON_USD_SHARE_COHORT_IDENTITY).toBe(JSON.stringify({
+      universe: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
+      cutoverDate: CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE,
+      v1Universe: CORE_STABLECOIN_AGGREGATE_UNIVERSE_V1,
+      v1MemberIds: CORE_AGGREGATE_V1_MEMBER_LIST,
+      v1NonActiveMemberIds: CORE_AGGREGATE_V1_NON_ACTIVE_MEMBER_LIST,
+      members: Object.fromEntries(actualMembers),
+    }));
   });
 });

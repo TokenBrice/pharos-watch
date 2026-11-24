@@ -70,8 +70,10 @@ export function buildNonUsdShareCoreMembers(options: {
     const inV1Active = v1ActiveIds.has(coin.id);
     const inV1Frozen = !inV1Active && v1NonActiveIds.has(coin.id) && frozenFrom != null;
     const inV1 = inV1Active || inV1Frozen;
+    // Members active at the v1 snapshot commit stay in v1 history until the cutover
+    // regardless of any backdated post-snapshot frozenAt (no restatement of published history).
     const v1InactiveFrom = inV1Active
-      ? (frozenFrom != null && frozenFrom < cutoverSec ? frozenFrom : cutoverSec)
+      ? cutoverSec
       : inV1Frozen
         ? Math.min(frozenFrom!, cutoverSec)
         : null;
@@ -396,6 +398,7 @@ export async function publishNonUsdShareHistory(db: D1Database, nowSec: number, 
 export async function readNonUsdShareHistory(db: D1Database): Promise<
   | { status: "ok"; points: NonUsdSharePoint[]; updatedAt: number }
   | { status: "missing"; points: null; updatedAt: null }
+  | { status: "cohort-mismatch"; points: null; updatedAt: null }
   | { status: "invalid"; points: null; updatedAt: null }
 > {
   const caches = await getCaches(db, [NON_USD_SHARE_HISTORY_KEY, SNAPSHOT_SUPPLY_LAST_WRITE_KEY]);
@@ -405,9 +408,13 @@ export async function readNonUsdShareHistory(db: D1Database): Promise<
   if (!marker || cached.updatedAt !== marker.updatedAt) return { status: "invalid", points: null, updatedAt: null };
   const parsed = parseJson(cached.value);
   if (!parsed.ok || !isRecord(parsed.value) || parsed.value.sourceMarker !== marker.value
-    || parsed.value.cohortIdentity !== COHORT_IDENTITY) return { status: "invalid", points: null, updatedAt: null };
+    || typeof parsed.value.cohortIdentity !== "string") {
+    return { status: "invalid", points: null, updatedAt: null };
+  }
   const points = NonUsdShareResponseSchema.safeParse(parsed.value.points);
-  return points.success
-    ? { status: "ok", points: points.data, updatedAt: cached.updatedAt }
-    : { status: "invalid", points: null, updatedAt: null };
+  if (!points.success) return { status: "invalid", points: null, updatedAt: null };
+  if (parsed.value.cohortIdentity !== COHORT_IDENTITY) {
+    return { status: "cohort-mismatch", points: null, updatedAt: null };
+  }
+  return { status: "ok", points: points.data, updatedAt: cached.updatedAt };
 }

@@ -28,9 +28,10 @@ export const handleNonUsdShare = async (db: D1Database, url: URL): Promise<Respo
   const cutoff = nowSec - params.days * DAY_SECONDS;
   let points: NonUsdSharePoint[];
   let updatedAt: number | null;
-  if (publication.status === "missing") {
-    // Preserve availability during rollout only. A present rejected generation
-    // must never be hidden by an on-demand recomputation.
+  if (publication.status === "missing" || publication.status === "cohort-mismatch") {
+    // Preserve availability during rollout (absent basis or registry cohort
+    // identity change waiting for the next snapshot-supply rebuild). Present
+    // malformed or source-generation-mismatched rows still fail closed above.
     let computed: ComputedNonUsdShareHistory;
     try {
       computed = await computeNonUsdShareHistory(db, nowSec, cutoff);
