@@ -166,172 +166,38 @@ describe("authoritative-price-sources", () => {
 
   it("prices audited ERC-4626 NAV vaults from their configured parent assets", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const cases = [
-      {
-        id: "susdt-spark",
-        parentId: "usdt-tether",
-        parentSymbol: "USDT",
-        vault: "0xe2e7a17dff93280dec073c995595155283e3c372",
-        chain: "ethereum",
-        vaultDecimals: 6,
-        outputRaw: 1_020_856n,
-        expectedRatio: 1.020856,
-      },
-      {
-        id: "susdc-spark",
-        parentId: "usdc-circle",
-        parentSymbol: "USDC",
-        vault: "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d",
-        chain: "ethereum",
-        vaultDecimals: 6,
-        outputRaw: 1_022_324n,
-        expectedRatio: 1.022324,
-      },
-      {
-        id: "gtusdcp-gauntlet",
-        parentId: "usdc-circle",
-        parentSymbol: "USDC",
-        vault: "0x8c106eedad96553e64287a5a6839c3cc78afa3d0",
-        chain: "ethereum",
-        vaultDecimals: 18,
-        outputRaw: 1_021_717n,
-        expectedRatio: 1.021717,
-      },
-      {
-        id: "steakusdt-steakhouse",
-        parentId: "usdt-tether",
-        parentSymbol: "USDT",
-        vault: "0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9",
-        chain: "ethereum",
-        vaultDecimals: 18,
-        outputRaw: 1_013_670n,
-        expectedRatio: 1.01367,
-      },
-      {
-        id: "steakusdc-steakhouse",
-        parentId: "usdc-circle",
-        parentSymbol: "USDC",
-        vault: "0xbeef088055857739c12cd3765f20b7679def0f51",
-        chain: "ethereum",
-        vaultDecimals: 18,
-        outputRaw: 1_029_307n,
-        expectedRatio: 1.029307,
-      },
-      {
-        id: "bbqusdc-steakhouse",
-        parentId: "usdc-circle",
-        parentSymbol: "USDC",
-        vault: "0xbeefff209270748ddd194831b3fa287a5386f5bc",
-        chain: "ethereum",
-        vaultDecimals: 18,
-        outputRaw: 1_114_859n,
-        expectedRatio: 1.114859,
-      },
-      {
-        id: "susds-sky",
-        parentId: "usds-sky",
-        parentSymbol: "USDS",
-        vault: "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
-        chain: "ethereum",
-        vaultDecimals: 18,
-        outputRaw: 1_107_520_438_997_439_491n,
-        expectedRatio: 1.10752043,
-      },
-      {
-        id: "susde-ethena",
-        parentId: "usde-ethena",
-        parentSymbol: "USDe",
-        vault: "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
-        chain: "ethereum",
-        vaultDecimals: 18,
-        outputRaw: 1_245_114_135_085_881_836n,
-        expectedRatio: 1.24511413,
-      },
-      {
-        id: "srusde-strata",
-        parentId: "usde-ethena",
-        parentSymbol: "USDe",
-        vault: "0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003",
-        chain: "ethereum",
-        vaultDecimals: 18,
-        outputRaw: 1_020_871_205_300_000_000n,
-        expectedRatio: 1.0208712,
-      },
-      {
-        id: "autousd-auto-finance",
-        parentId: "usdc-circle",
-        parentSymbol: "USDC",
-        vault: "0xa7569a44f348d3d70d8ad5889e50f78e33d80d35",
-        chain: "ethereum",
-        vaultDecimals: 18,
-        outputRaw: 1_089_794n,
-        expectedRatio: 1.089794,
-      },
-      {
-        id: "eearn-ember",
-        parentId: "usdc-circle",
-        parentSymbol: "USDC",
-        vault: "0x9be9294722f8aad37b11a9792be2c782182cafa2",
-        chain: "ethereum",
-        vaultDecimals: 6,
-        outputRaw: 1_026_816n,
-        expectedRatio: 1.026816,
-      },
-      {
-        id: "syusd-aegis",
-        parentId: "yusd-aegis",
-        parentSymbol: "YUSD",
-        vault: "0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64",
-        chain: "ethereum",
-        vaultDecimals: 18,
-        outputRaw: 1_041_919_601_032_091_731n,
-        expectedRatio: 1.0419196,
-      },
-      {
-        id: "sbold-k3-capital",
-        parentId: "bold-liquity",
-        parentSymbol: "BOLD",
-        vault: "0x50bd66d59911f5e086ec87ae43c811e0d059dd11",
-        chain: "ethereum",
-        vaultDecimals: 18,
-        outputRaw: 1_041_000_000_000_000_000n,
-        expectedRatio: 1.041,
-      },
-      {
-        id: "ybold-yearn",
-        parentId: "bold-liquity",
-        parentSymbol: "BOLD",
-        vault: "0x9f4330700a36b29952869fac9b33f45eedd8a3d8",
-        chain: "ethereum",
-        vaultDecimals: 18,
-        outputRaw: 1_000_000_000_000_000_000n,
-        expectedRatio: 1,
-      },
+    const cases: ReadonlyArray<readonly [string, string, string, number, bigint, number]> = [
+      ["susdt-spark", "usdt-tether", "0xe2e7a17dff93280dec073c995595155283e3c372", 6, 1_020_856n, 1.020856],
+      ["susdc-spark", "usdc-circle", "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d", 6, 1_022_324n, 1.022324],
+      ["gtusdcp-gauntlet", "usdc-circle", "0x8c106eedad96553e64287a5a6839c3cc78afa3d0", 18, 1_021_717n, 1.021717],
+      ["steakusdt-steakhouse", "usdt-tether", "0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9", 18, 1_013_670n, 1.01367],
+      ["steakusdc-steakhouse", "usdc-circle", "0xbeef088055857739c12cd3765f20b7679def0f51", 18, 1_029_307n, 1.029307],
+      ["bbqusdc-steakhouse", "usdc-circle", "0xbeefff209270748ddd194831b3fa287a5386f5bc", 18, 1_114_859n, 1.114859],
+      ["susds-sky", "usds-sky", "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd", 18, 1_107_520_438_997_439_491n, 1.10752043],
+      ["susde-ethena", "usde-ethena", "0x9d39a5de30e57443bff2a8307a4256c8797a3497", 18, 1_245_114_135_085_881_836n, 1.24511413],
+      ["srusde-strata", "usde-ethena", "0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003", 18, 1_020_871_205_300_000_000n, 1.0208712],
+      ["autousd-auto-finance", "usdc-circle", "0xa7569a44f348d3d70d8ad5889e50f78e33d80d35", 18, 1_089_794n, 1.089794],
+      ["eearn-ember", "usdc-circle", "0x9be9294722f8aad37b11a9792be2c782182cafa2", 6, 1_026_816n, 1.026816],
+      ["syusd-aegis", "yusd-aegis", "0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64", 18, 1_041_919_601_032_091_731n, 1.0419196],
+      ["sbold-k3-capital", "bold-liquity", "0x50bd66d59911f5e086ec87ae43c811e0d059dd11", 18, 1_041_000_000_000_000_000n, 1.041],
+      ["ybold-yearn", "bold-liquity", "0x9f4330700a36b29952869fac9b33f45eedd8a3d8", 18, 1_000_000_000_000_000_000n, 1],
     ];
 
-    for (const testCase of cases) {
-      fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${testCase.outputRaw.toString(16).padStart(64, "0")}`);
-
+    for (const [id, parentId, vault, vaultDecimals, outputRaw, expectedRatio] of cases) {
+      fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${outputRaw.toString(16).padStart(64, "0")}`);
       const overrides = await fetchLiveOverrides([
-        asset(testCase.id, { circulating: { peggedUSD: 1_000_000 } }),
-        freshParent(testCase.parentId, 1, "coingecko+pyth", { nowSec }),
+        asset(id, { circulating: { peggedUSD: 1_000_000 } }),
+        freshParent(parentId, 1, "coingecko+pyth", { nowSec }),
       ]);
-
       expect(fetchEvmCallHexAtBlockMock).toHaveBeenLastCalledWith(
-        testCase.chain,
-        testCase.vault,
-        `0x07a2d13a${(10n ** BigInt(testCase.vaultDecimals)).toString(16).padStart(64, "0")}`,
-        "latest",
-        expect.any(Object),
+        "ethereum", vault,
+        `0x07a2d13a${(10n ** BigInt(vaultDecimals)).toString(16).padStart(64, "0")}`,
+        "latest", expect.any(Object),
       );
-      expect(overrides.get(testCase.id)).toMatchObject({
-        source: "protocol-redeem",
-        confidence: "high",
-        metadata: {
-          inheritedFrom: testCase.parentId,
-        },
+      expect(overrides.get(id)).toMatchObject({
+        source: "protocol-redeem", confidence: "high", metadata: { inheritedFrom: parentId },
       });
-      expect(overrides.get(testCase.id)?.price).toBeCloseTo(testCase.expectedRatio, 6);
+      expect(overrides.get(id)?.price).toBeCloseTo(expectedRatio, 6);
     }
   });
 
@@ -1025,19 +891,24 @@ describe("authoritative-price-sources", () => {
     expect(override?.price).toBeCloseTo(1.081076 * 0.9999, 4);
   });
 
-  it("rejects ERC-4626 NAV override when convertToAssets ratio is outside trusted bounds", async () => {
-    // convertToAssets returns 100x the share amount — should be rejected
-    const insaneRaw = 100_000_000n.toString(16).padStart(64, "0");
-    fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${insaneRaw}`);
+  it.each([
+    ["zero", ZERO_WORD_HEX],
+    ["out-of-bounds", `0x${(100_000_000n).toString(16).padStart(64, "0")}`],
+  ])("rejects ERC-4626 NAV override when convertToAssets ratio is %s", async (_label, raw) => {
+    fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(raw);
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const nowSec = Math.floor(Date.now() / 1000);
+    const stats = createAuthoritativeLivePriceOverrideStats();
 
     const overrides = await fetchLiveOverrides([
       asset("gtusdc-gauntlet", { circulating: { peggedUSD: 128_000_000 } }),
       freshParent("usdc-circle", 0.9999, "coingecko+pyth", { nowSec }),
-    ]);
+    ], { stats });
 
     expect(overrides.has("gtusdc-gauntlet")).toBe(false);
+    expect(stats.assetAttempts).toEqual([
+      expect.objectContaining({ assetId: "gtusdc-gauntlet", result: "empty", rejectionClass: "vault-rate-rejected" }),
+    ]);
     warnSpy.mockRestore();
   });
 });

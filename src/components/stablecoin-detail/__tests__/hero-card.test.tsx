@@ -213,10 +213,13 @@ describe("HeroCard", () => {
 
     for (const price of [null, 0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
       const html = renderPriceMetric(variant, { coinData: { price, priceConfidence: null }, price: { deviationBps: 1 } });
-      expect(html).toMatch(/Observed price unavailable/i);
+      expect(html).toContain("Observed price unavailable now");
       expect(html).not.toMatch(/\+1 BPS/i);
       expect(html).toContain("N/A");
     }
+    const frozenMissing = renderPriceMetric(variant, { coin: { ...coin, status: "frozen", frozenAt: "2026-06-30" }, coinData: { price: null, priceConfidence: null } });
+    expect(frozenMissing).toContain("Observed price unavailable");
+    expect(frozenMissing).not.toContain("Observed price unavailable now");
 
     const inheritedAtPeg = renderPriceMetric(variant, { price: { deviationBps: -6, caveat: "Price inherited from AUSD" } });
     expect(inheritedAtPeg).toContain("Price inherited from AUSD");

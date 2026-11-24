@@ -52,6 +52,7 @@ function healthyPool(overrides: {
   coin1?: string;
   stbtBalance?: bigint;
   crv3Balance?: bigint;
+  smallOutput?: bigint;
   impactOutput?: bigint;
 } = {}) {
   return [
@@ -59,7 +60,7 @@ function healthyPool(overrides: {
     addressWord(overrides.coin1 ?? CRV3),
     uintResult(overrides.stbtBalance ?? PINNED_STBT_BALANCE),
     uintResult(overrides.crv3Balance ?? PINNED_CRV3_BALANCE),
-    uintResult(PINNED_SMALL_QUOTE),
+    uintResult(overrides.smallOutput ?? PINNED_SMALL_QUOTE),
     uintResult(overrides.impactOutput ?? PINNED_IMPACT_QUOTE),
   ];
 }
@@ -67,6 +68,10 @@ function healthyPool(overrides: {
 function mockHealthyPool(overrides?: Parameters<typeof healthyPool>[0]): void {
   fetchEvmRpcBatchMock.mockResolvedValue(healthyPool(overrides));
 }
+
+const ctx = (observedAgoSec = 0, price = 1): LivePriceContext => ({
+  assetsById: new Map([["usdc-circle", trustedUsdc(observedAgoSec, price)]]),
+});
 
 describe("STBT exact Curve metapool price", () => {
   beforeEach(() => {
@@ -77,30 +82,22 @@ describe("STBT exact Curve metapool price", () => {
 
   it("accepts a fresh identity-bound metapool quote as fallback display evidence", async () => {
     mockHealthyPool();
-
-    await expect(fetchStbtCurvePoolPrice({
-      assetsById: new Map([["usdc-circle", trustedUsdc()]]),
-    })).resolves.toMatchObject({
-      price: 0.99439,
-      source: "curve-thin-onchain",
-      confidence: "fallback",
-      observedAtMode: "upstream",
+    await expect(fetchStbtCurvePoolPrice(ctx())).resolves.toMatchObject({
+      price: 0.99439, source: "curve-thin-onchain", confidence: "fallback", observedAtMode: "upstream",
     });
   });
 
   it("batches six direct reads at one pinned block, quoting underlying STBT into USDC", async () => {
     mockHealthyPool();
     const signal = new AbortController().signal;
-    await fetchStbtCurvePoolPrice({ assetsById: new Map([["usdc-circle", trustedUsdc()]]) }, signal);
+    await fetchStbtCurvePoolPrice(ctx(), signal);
     expect(fetchEvmRpcBatchMock).toHaveBeenCalledTimes(1);
     const [chain, calls, options] = fetchEvmRpcBatchMock.mock.calls[0];
     expect(chain).toBe("ethereum");
     expect(options.signal).toBe(signal);
     expect(calls).toEqual([
-      `0xc6610657${word(0n)}`,
-      `0xc6610657${word(1n)}`,
-      `0x4903b0d1${word(0n)}`,
-      `0x4903b0d1${word(1n)}`,
+      `0xc6610657${word(0n)}`, `0xc6610657${word(1n)}`,
+      `0x4903b0d1${word(0n)}`, `0x4903b0d1${word(1n)}`,
       `0x07211ef7${word(0n)}${word(2n)}${word(10n ** 18n)}`,
       `0x07211ef7${word(0n)}${word(2n)}${word(10n * 10n ** 18n)}`,
     ].map((data) => ({
@@ -111,23 +108,47 @@ describe("STBT exact Curve metapool price", () => {
 
   it.each([null, [], [null, null, null, null, null, null]])("rejects an unavailable or incomplete batch (%j)", async (result) => {
     fetchEvmRpcBatchMock.mockResolvedValue(result);
-    await expect(fetchStbtCurvePoolPrice({
-      assetsById: new Map([["usdc-circle", trustedUsdc()]]),
-    })).resolves.toBeNull();
+    const context = ctx();
+    await expect(fetchStbtCurvePoolPrice(context)).resolves.toBeNull();
+    expect(context.lastRejectionReason).toBe("curve-thin-onchain:state-unavailable");
   });
 
   it.each([
-    ["the metapool token order reversed", { coin0: CRV3 }],
-    ["a base LP token other than the reviewed 3Crv", { coin1: USDC }],
-    ["a STBT side below the reviewed quote-reserve floor", { stbtBalance: 999n * 10n ** 18n }],
-    ["a 3Crv side below the reviewed quote-reserve floor", { crv3Balance: 999n * 10n ** 18n }],
-    ["excessive executable quote impact", { impactOutput: 8_500_000n }],
-  ])("rejects %s", async (_name, overrides) => {
+    ["reversed token order", { coin0: CRV3 }, "identity"],
+    ["non-3Crv base LP", { coin1: USDC }, "identity"],
+    ["STBT below floor", { stbtBalance: 999n * 10n ** 18n }, "inventory"],
+    ["3Crv below floor", { crv3Balance: 999n * 10n ** 18n }, "inventory"],
+    ["zero sell quote", { smallOutput: 0n }, "quote-invalid"],
+    ["excessive impact", { impactOutput: 8_500_000n }, "quote-depth"],
+  ])("rejects %s", async (_name, overrides, reason) => {
     mockHealthyPool(overrides);
+    const context = ctx();
+    await expect(fetchStbtCurvePoolPrice(context)).resolves.toBeNull();
+    expect(context.lastRejectionReason).toBe(`curve-thin-onchain:${reason}`);
+  });
 
-    await expect(fetchStbtCurvePoolPrice({
-      assetsById: new Map([["usdc-circle", trustedUsdc()]]),
-    })).resolves.toBeNull();
+  it.each([
+    ["block-unavailable", () => fetchEvmBlockNumberMock.mockResolvedValue(null)],
+    ["block-age-unavailable", () => fetchEvmBlockTimestampMock.mockResolvedValue(null)],
+    ["block-age-future", () => fetchEvmBlockTimestampMock.mockResolvedValue(Math.floor(Date.now() / 1000) + 61)],
+    ["block-age-stale", () => fetchEvmBlockTimestampMock.mockResolvedValue(Math.floor(Date.now() / 1000) - 301)],
+    ["state-malformed", () => fetchEvmRpcBatchMock.mockResolvedValue(["0x1234", ...healthyPool().slice(1)])],
+    ["dependency-age", () => {
+      const base = Date.now();
+      const spy = vi.spyOn(Date, "now").mockReturnValue(base);
+      fetchEvmBlockTimestampMock.mockResolvedValue(Math.floor(base / 1000) - 299);
+      fetchEvmRpcBatchMock.mockImplementation(async () => { spy.mockReturnValue(base + 5_000); return healthyPool(); });
+    }],
+  ])("records curve-thin-onchain:%s on guard rejection", async (reason, setup) => {
+    try {
+      setup();
+      const context = ctx();
+      await expect(fetchStbtCurvePoolPrice(context)).resolves.toBeNull();
+      expect(context.lastRejectionReason).toBe(`curve-thin-onchain:${reason}`);
+      if (reason.startsWith("block-")) expect(fetchEvmRpcBatchMock).not.toHaveBeenCalled();
+    } finally {
+      vi.restoreAllMocks();
+    }
   });
 
   it("routes every read through the Worker's configured chain RPCs before the public tail", async () => {
@@ -176,15 +197,6 @@ describe("STBT exact Curve metapool price", () => {
     }
   });
 
-  it("rejects a stale block before pool calls", async () => {
-    fetchEvmBlockTimestampMock.mockResolvedValue(Math.floor(Date.now() / 1000) - 301);
-
-    await expect(fetchStbtCurvePoolPrice({
-      assetsById: new Map([["usdc-circle", trustedUsdc()]]),
-    })).resolves.toBeNull();
-    expect(fetchEvmRpcBatchMock).not.toHaveBeenCalled();
-  });
-
   it("reports the older USDC parent clock instead of renewing it with a fresh block", async () => {
     mockHealthyPool();
     const blockTimestamp = Math.floor(Date.now() / 1000) - 12;
@@ -212,6 +224,7 @@ describe("STBT exact Curve metapool price", () => {
 
     await expect(fetchStbtCurvePoolPrice(context)).resolves.toBeNull();
     expect(context.lastUntrustedParent ?? null).toBeNull();
+    expect(context.lastRejectionReason).toBe("curve-thin-onchain:parent-age");
     expect(fetchEvmBlockNumberMock).not.toHaveBeenCalled();
   });
 
@@ -249,7 +262,9 @@ describe("STBT exact Curve metapool price", () => {
   });
 
   it("rejects an unavailable USDC parent before spending block or pool reads", async () => {
-    await expect(fetchStbtCurvePoolPrice({ assetsById: new Map() })).resolves.toBeNull();
+    const context: LivePriceContext = { assetsById: new Map() };
+    await expect(fetchStbtCurvePoolPrice(context)).resolves.toBeNull();
+    expect(context.lastRejectionReason).toBe("curve-thin-onchain:parent-unavailable");
     expect(fetchEvmBlockNumberMock).not.toHaveBeenCalled();
   });
 

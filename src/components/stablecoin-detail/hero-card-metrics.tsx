@@ -161,7 +161,9 @@ export function HeroPriceMetric({
   // A frozen archive's price is its last observation, not a live peg reading.
   const frozenAt = coin.status === "frozen" ? coin.frozenAt ?? null : null;
   const referenceLine = !observed
-    ? "Observed price unavailable"
+    ? coin.status === "frozen"
+      ? "Observed price unavailable"
+      : "Observed price unavailable now"
     : frozenAt
       ? `Last observed · ${frozenAt}`
       : caveat

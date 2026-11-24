@@ -390,10 +390,11 @@ describe("StablecoinDepegResolverRows", () => {
     expect(screen.queryByText("USDC")).toBeNull();
 
     const source = makeSourceRow({ peakDeviationBps: -129, currentDeviationBps: -742 });
-    rerender(<StablecoinDepegResolverRows stablecoinId="lusd-liquity" data={response({ rows: [makePredictionRow(source, { peakDeviationBps: -129, currentDeviationBps: -742 })] })} />);
+    const observedAt = Date.parse("2026-11-24T13:15:00Z") / 1000;
+    rerender(<StablecoinDepegResolverRows stablecoinId="lusd-liquity" data={response({ rows: [makePredictionRow(source, { peakDeviationBps: -129, currentDeviationBps: -742, currentDeviationObservedAtSec: observedAt })] })} />);
     const liveFacts = screen.getByText("Live incident").parentElement;
     expect(liveFacts?.textContent).toContain("Peak -742 bps");
-    expect(liveFacts?.textContent).toContain("Now -742 bps");
+    expect(liveFacts?.textContent).toContain("Now -742 bps (as of 2026-11-24 13:15 UTC)");
 
     rerender(<StablecoinDepegResolverRows stablecoinId="lusd-liquity" data={response({ _meta: { ...meta, degraded: true, degradedReason: "missing-cache" }, rows: [row] })} />);
     expect(screen.queryByLabelText(/Depeg Duration Resolver/)).toBeNull();
