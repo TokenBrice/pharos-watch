@@ -23,7 +23,7 @@ export interface ShortLivedRefreshSummary {
   timedOut: boolean;
 }
 
-export function isShortLivedLaneActiveForAsset(
+function isShortLivedLaneActiveForAsset(
   asset: Pick<
     PeggedAsset,
     "price" | "priceSource" | "priceConfidence" | "priceObservedAt" | "priceUpdatedAt" | "priceSyncedAt" | "agreeSources" | "consensusSources"
