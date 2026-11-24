@@ -3,7 +3,10 @@ import { computeStabilityIndex, DEWS_STRESS_BREADTH_SCALE, type StabilityInput, 
 import type { SupplySnapshotMap, PsiUniverseCache } from "./psi-history-universe";
 import { getPsiHistoricalUniverseForDay } from "./psi-history-universe";
 import { buildStabilityInputForDay, includePsiEventDeviation, type PsiDepegEventRow } from "./psi-recompute";
-import { CORE_STABLECOIN_AGGREGATE_UNIVERSE } from "@shared/lib/stablecoins/aggregate-universe";
+import {
+  getCoreAggregateUniverseForTimestamp,
+  type CoreStablecoinAggregateUniverse,
+} from "@shared/lib/stablecoins/aggregate-universe";
 import { canonicalizePsiStablecoinId } from "@shared/lib/stablecoin-id-registry";
 import { getConditionBand } from "@shared/lib/psi-policy";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
@@ -78,6 +81,7 @@ export interface HistoricalPsiReplayResult {
   unavailableReason: "trend-inputs-unavailable" | "dews-archive-unavailable" | "insufficient-market-cap" |
     "open-depeg-inputs-unavailable" | null;
   input: Omit<StabilityInput, "mcap7dChangePct"> & {
+    aggregateUniverse: CoreStablecoinAggregateUniverse;
     mcap7dChangePct: number | null;
     trendUnavailableIds: string[];
     nativeQuantityMomentum?: Record<string, number>;
@@ -183,6 +187,7 @@ export function replayHistoricalPsiForDay(
     result,
     ...(result != null && slots.length > 0 ? { sampleScores } : {}),
     input: {
+      aggregateUniverse: getCoreAggregateUniverseForTimestamp(input.day),
       ...stabilityInput,
       ...(stressMean != null ? { dewsStressBreadth: stressMean } : {}),
       overlapBasis,
@@ -208,7 +213,6 @@ export function replayHistoricalPsiForDay(
 export function historicalPsiInputSnapshot(replay: HistoricalPsiReplayResult, methodologyVersion: string) {
   const { depegs: _depegs, ...input } = replay.input;
   return {
-    aggregateUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
     ...input,
     degradedComponents: input.openDepegsWithoutPrice > 0 ? ["open-depeg-no-price"] : [],
     stressBreadthIncluded: usesHistoricalStressBreadth(methodologyVersion),

@@ -1,24 +1,100 @@
 import { CORE_PSI_ELIGIBLE_IDS } from "@shared/lib/psi-eligible";
 import { PSI_HISTORICAL_ASSETS, PSI_HISTORICAL_IDS } from "@shared/lib/psi-historical-assets";
-import { filterCoreAggregateStablecoins } from "@shared/lib/stablecoins/aggregate-universe";
+import {
+  CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC,
+  filterCoreAggregateStablecoins,
+} from "@shared/lib/stablecoins/aggregate-universe";
+import {
+  CORE_AGGREGATE_V1_MEMBER_IDS,
+  CORE_AGGREGATE_V1_NON_ACTIVE_MEMBER_IDS,
+} from "@shared/lib/stablecoins/aggregate-universe-v1";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { findAsOfSnapshot, MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC } from "@shared/lib/rate-series";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { fuzzyDateRange } from "@shared/lib/classification/resolve-implementation-launch-date";
 import { classifySupplyCoverage, parseSupplyObservationProvenance, type SupplyCoverage } from "@shared/lib/supply-provenance";
 import { isComparableNativeSupplySource } from "./dews/native-quantity";
 
-const historicalMembership = new Map([...filterCoreAggregateStablecoins(TRACKED_STABLECOINS), ...PSI_HISTORICAL_ASSETS]
-  .flatMap((coin) => {
-    if (coin.status === "pre-launch") return [];
-    const until = coin.frozenAt ?? (CORE_PSI_ELIGIBLE_IDS.has(coin.id) ? undefined : coin.listingStatusReview?.changedAt);
-    if (!CORE_PSI_ELIGIBLE_IDS.has(coin.id) && until == null) return [];
-    const launch = coin.launchDate == null ? null : fuzzyDateRange(coin.launchDate)?.start;
-    return [[coin.id, {
-      from: launch == null ? -Infinity : Date.parse(launch) / 1000,
-      until: until == null ? Infinity : Date.parse(until) / 1000,
-    }] as const];
-  }));
+export interface PsiHistoricalMembershipEntry {
+  launchFrom: number;
+  windows: readonly { from: number; until: number }[];
+}
+
+/**
+ * Date-fenced historical PSI membership:
+ * - Days strictly before `cutoverSec` use the frozen listing-policy v1 core membership
+ *   plus off-catalog PSI historical assets.
+ * - Days from `cutoverSec` onward use the current listing-policy v2 core membership
+ *   plus off-catalog PSI historical assets.
+ */
+export function buildPsiHistoricalMembership(options: {
+  coins?: readonly Pick<StablecoinMeta, "id" | "status" | "frozenAt" | "launchDate" | "listingStatusReview">[];
+  v1ActiveIds?: ReadonlySet<string>;
+  v1NonActiveIds?: ReadonlySet<string>;
+  currentCoreIds?: ReadonlySet<string>;
+  currentCorePsiEligibleIds?: ReadonlySet<string>;
+  cutoverSec?: number;
+} = {}): Map<string, PsiHistoricalMembershipEntry> {
+  const coins = options.coins ?? [...TRACKED_STABLECOINS, ...PSI_HISTORICAL_ASSETS];
+  const v1ActiveIds = options.v1ActiveIds ?? CORE_AGGREGATE_V1_MEMBER_IDS;
+  const v1NonActiveIds = options.v1NonActiveIds ?? CORE_AGGREGATE_V1_NON_ACTIVE_MEMBER_IDS;
+  const currentCoreIds = options.currentCoreIds
+    ?? new Set(filterCoreAggregateStablecoins(TRACKED_STABLECOINS).map((coin) => coin.id));
+  const currentCorePsiEligibleIds = options.currentCorePsiEligibleIds ?? CORE_PSI_ELIGIBLE_IDS;
+  const cutoverSec = options.cutoverSec ?? CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC;
+
+  const membership = new Map<string, PsiHistoricalMembershipEntry>();
+  for (const coin of coins) {
+    const isHistoricalShadow = PSI_HISTORICAL_IDS.has(coin.id);
+    const launchStart = coin.launchDate == null ? null : fuzzyDateRange(coin.launchDate)?.start;
+    const launchFrom = launchStart == null ? -Infinity : Date.parse(launchStart) / 1000;
+    const rawFrozenSec = coin.frozenAt == null ? NaN : Date.parse(coin.frozenAt) / 1000;
+    const frozenSec = Number.isFinite(rawFrozenSec) ? rawFrozenSec : null;
+
+    const windows: Array<{ from: number; until: number }> = [];
+
+    // Pre-cutover v1 window (< cutoverSec)
+    if (isHistoricalShadow) {
+      if (launchFrom < cutoverSec) windows.push({ from: launchFrom, until: cutoverSec });
+    } else if (v1ActiveIds.has(coin.id)) {
+      const v1Until = frozenSec != null && frozenSec < cutoverSec ? frozenSec : cutoverSec;
+      if (launchFrom < v1Until) windows.push({ from: launchFrom, until: v1Until });
+    } else if (v1NonActiveIds.has(coin.id)) {
+      const rawUntil = coin.frozenAt ?? coin.listingStatusReview?.changedAt;
+      const parsedUntil = rawUntil == null ? NaN : Date.parse(rawUntil) / 1000;
+      if (Number.isFinite(parsedUntil)) {
+        const v1Until = Math.min(parsedUntil, cutoverSec);
+        if (launchFrom < v1Until) windows.push({ from: launchFrom, until: v1Until });
+      }
+    }
+
+    // Post-cutover v2 window (>= cutoverSec)
+    if (coin.status !== "pre-launch" && (isHistoricalShadow || currentCoreIds.has(coin.id))) {
+      const isLiveEligible = isHistoricalShadow || currentCorePsiEligibleIds.has(coin.id);
+      const rawUntil = coin.frozenAt ?? (isLiveEligible ? undefined : coin.listingStatusReview?.changedAt);
+      if (isLiveEligible || rawUntil != null) {
+        const parsedUntil = rawUntil == null ? Infinity : Date.parse(rawUntil) / 1000;
+        const v2From = Math.max(launchFrom, cutoverSec);
+        if (Number.isFinite(v2From) && v2From < parsedUntil) {
+          const prev = windows[windows.length - 1];
+          if (prev && prev.until === v2From) {
+            prev.until = parsedUntil;
+          } else {
+            windows.push({ from: v2From, until: parsedUntil });
+          }
+        }
+      }
+    }
+
+    if (windows.length > 0) {
+      membership.set(coin.id, { launchFrom, windows });
+    }
+  }
+  return membership;
+}
+
+const historicalMembership = buildPsiHistoricalMembership();
 
 /** Covers an extended reference closure and pending repricing with daily retained marks. */
 export const PSI_HISTORICAL_REFERENCE_CARRY_MAX_AGE_SEC = 7 * DAY_SECONDS;
@@ -78,11 +154,12 @@ export function findNearestSupplySnapshot(
 
 export function buildPsiHistoricalSupplySnapshotMap(
   rows: PsiSupplyRow[],
+  membership: ReadonlyMap<string, PsiHistoricalMembershipEntry> = historicalMembership,
 ): SupplySnapshotMap {
   const supplyByCoin: SupplySnapshotMap = new Map();
 
   for (const row of rows) {
-    if (!historicalMembership.has(row.stablecoin_id)) continue;
+    if (!membership.has(row.stablecoin_id)) continue;
     if (!Number.isFinite(row.circulating_usd) || row.circulating_usd < 0) continue;
     const native = row.circulating_native;
     const { provenance } = parseSupplyObservationProvenance(row.supply_provenance);
@@ -117,18 +194,22 @@ export function buildPsiHistoricalSupplySnapshotMap(
   return supplyByCoin;
 }
 
-function buildPsiHistoricalUniverseForDay(supplyByCoin: SupplySnapshotMap, day: number): PsiHistoricalUniverse {
+function buildPsiHistoricalUniverseForDay(
+  supplyByCoin: SupplySnapshotMap,
+  day: number,
+  membership: ReadonlyMap<string, PsiHistoricalMembershipEntry> = historicalMembership,
+): PsiHistoricalUniverse {
   const mcapById = new Map<string, number>();
   const eligibleIds = new Set<string>();
   let totalMcapUsd = 0;
   let coveredUniverseCount = 0;
   let historicalAssetCoverageCount = 0;
 
-  for (const [coinId, { from, until }] of historicalMembership) {
-    if (day < from || day >= until) continue;
+  for (const [coinId, { launchFrom, windows }] of membership) {
+    if (!windows.some(({ from, until }) => day >= from && day < until)) continue;
     eligibleIds.add(coinId);
     const nearest = findNearestSupplySnapshot(supplyByCoin.get(coinId), day);
-    if (!nearest || nearest.date < from) continue;
+    if (!nearest || nearest.date < launchFrom) continue;
 
     coveredUniverseCount++;
     if (PSI_HISTORICAL_IDS.has(coinId)) {
@@ -160,11 +241,12 @@ export function getPsiHistoricalUniverseForDay(
   supplyByCoin: SupplySnapshotMap,
   day: number,
   cache?: PsiUniverseCache,
+  membership: ReadonlyMap<string, PsiHistoricalMembershipEntry> = historicalMembership,
 ): PsiHistoricalUniverse {
-  if (!cache) return buildPsiHistoricalUniverseForDay(supplyByCoin, day);
+  if (!cache) return buildPsiHistoricalUniverseForDay(supplyByCoin, day, membership);
   const cached = cache.get(day);
   if (cached) return cached;
-  const computed = buildPsiHistoricalUniverseForDay(supplyByCoin, day);
+  const computed = buildPsiHistoricalUniverseForDay(supplyByCoin, day, membership);
   cache.set(day, computed);
   return computed;
 }

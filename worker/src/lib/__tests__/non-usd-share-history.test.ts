@@ -2,9 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { CORE_AGGREGATE_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/aggregate-registry";
 import { mockD1 as baseMockD1 } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE, CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC } from "@shared/lib/stablecoins/aggregate-universe";
 import {
+  buildNonUsdShareCoreMembers,
   computeNonUsdShareHistory, sampleNonUsdShareHistory, publishNonUsdShareHistory,
-  readNonUsdShareHistory, NON_USD_SHARE_HISTORY_KEY,
+  readNonUsdShareHistory, NON_USD_SHARE_COHORT_IDENTITY, NON_USD_SHARE_HISTORY_KEY,
 } from "../non-usd-share-history";
 import { D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
 import { SUPPLY_HISTORY_UPSERT_SQL, writeSupplyHistoryBatch } from "../supply-history-db";
@@ -373,5 +375,52 @@ describe("non-USD share producer aggregation", () => {
       .toEqual({ updated_at: now });
     await publishNonUsdShareHistory(db, now + 900);
     expect(await readNonUsdShareHistory(db)).toMatchObject({ updatedAt: now, points: [{ total: 300 }] });
+  });
+
+  it("fences pre-cutover dates to frozen v1 membership and post-cutover dates to current membership", async () => {
+    const { db, sqlite } = fixtures.open();
+    const cutover = CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC;
+    const day = 86_400;
+    const members = buildNonUsdShareCoreMembers({
+      coins: [
+        { id: "usdt-tether", flags: { pegCurrency: "USD" } as never },
+        { id: "eutbl-spiko", flags: { pegCurrency: "EUR" } as never },
+        { id: "eurc-circle", flags: { pegCurrency: "EUR" } as never },
+        { id: "gldy-example", flags: { pegCurrency: "GOLD" } as never },
+      ],
+      v1ActiveIds: new Set(["usdt-tether", "eutbl-spiko", "eurc-circle"]),
+      v1NonActiveIds: new Set(),
+      currentCoreIds: new Set(["usdt-tether", "eurc-circle", "gldy-example"]),
+      cutoverSec: cutover,
+    });
+    const insert = sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd) VALUES (?, ?, ?)");
+    for (const date of [cutover - day, cutover, cutover + day]) {
+      insert.run("usdt-tether", date, 900);
+      insert.run("eurc-circle", date, 25);
+      // Pre-cutover rows for a coin entering in v2 must stay out of pre-cutover totals.
+      insert.run("gldy-example", date, 50);
+      // Fund leaving at cutover only exists before cutover (or even if present later, is excluded).
+      if (date < cutover) insert.run("eutbl-spiko", date, 75);
+    }
+
+    const { points } = await computeNonUsdShareHistory(db, cutover + 2 * day, cutover - 2 * day, members);
+    expect(points.map(({ date, total, fiatNonUsd, commodity, coverage }) => ({ date, total, fiatNonUsd, commodity, coverage }))).toEqual([
+      { date: cutover - day, total: 1000, fiatNonUsd: 100, commodity: 0, coverage: COMPLETE_COVERAGE },
+      { date: cutover, total: 975, fiatNonUsd: 25, commodity: 50, coverage: COMPLETE_COVERAGE },
+      { date: cutover + day, total: 975, fiatNonUsd: 25, commodity: 50, coverage: COMPLETE_COVERAGE },
+    ]);
+
+    const identity = JSON.parse(NON_USD_SHARE_COHORT_IDENTITY) as {
+      universe: string;
+      cutoverDate: string;
+      v1Universe: string;
+      v1MemberIds: string[];
+      members: Record<string, unknown>;
+    };
+    expect(identity.universe).toBe("core-stablecoins-v2");
+    expect(identity.v1Universe).toBe("core-stablecoins-v1");
+    expect(identity.cutoverDate).toBe(CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE);
+    expect(identity.v1MemberIds).toContain("eutbl-spiko");
+    expect(Object.keys(identity.members).length).toBeGreaterThanOrEqual(identity.v1MemberIds.length);
   });
 });

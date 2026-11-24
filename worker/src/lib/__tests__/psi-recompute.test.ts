@@ -6,8 +6,12 @@ import {
   type PsiSupplyRow,
   type PsiDepegEventRow,
 } from "../psi-recompute";
+import { CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC } from "@shared/lib/stablecoins/aggregate-universe";
 import {
+  buildPsiHistoricalMembership,
+  buildPsiHistoricalSupplySnapshotMap,
   findNearestSupplySnapshot,
+  getPsiHistoricalUniverseForDay,
   type PsiUniverseCache,
 } from "../psi-history-universe";
 import { buildPsiDayInput, buildPsiStabilityInput, psiDepegRow, psiSupplyPair, DAY } from "./psi.test-support";
@@ -435,5 +439,43 @@ describe("buildStabilityInputForDay", () => {
     buildStabilityInputForDay(day + 7 * DAY, now, [], supplyByCoin, cache);
     // day+7d and (day+7d)-7d===day; day already cached, so only +1 new entry.
     expect(cache.size).toBe(sizeAfterFirst + 1);
+  });
+
+  it("fences PSI replay universe across the v2 cutover without rewriting pre-cutover membership", () => {
+    const cutover = CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC;
+    const membership = buildPsiHistoricalMembership({
+      coins: [
+        { id: "usdt-tether", launchDate: "2015-02-25" },
+        { id: "buidl-blackrock", launchDate: "2024-03-20", status: "active" },
+        { id: "apxusd-apyx", launchDate: "2025-01-01", status: "active" },
+        { id: "bib01-backed", launchDate: "2023-08-01", status: "frozen", frozenAt: "2026-03-25" },
+      ],
+      v1ActiveIds: new Set(["usdt-tether", "buidl-blackrock"]),
+      v1NonActiveIds: new Set(["bib01-backed"]),
+      currentCoreIds: new Set(["usdt-tether", "apxusd-apyx"]),
+      currentCorePsiEligibleIds: new Set(["usdt-tether", "apxusd-apyx"]),
+      cutoverSec: cutover,
+    });
+    const supply = buildPsiHistoricalSupplySnapshotMap([
+      { stablecoin_id: "usdt-tether", snapshot_date: cutover - DAY, circulating_usd: 100e9 },
+      { stablecoin_id: "buidl-blackrock", snapshot_date: cutover - DAY, circulating_usd: 2e9 },
+      { stablecoin_id: "apxusd-apyx", snapshot_date: cutover - DAY, circulating_usd: 0.5e9 },
+      { stablecoin_id: "usdt-tether", snapshot_date: cutover, circulating_usd: 100e9 },
+      { stablecoin_id: "buidl-blackrock", snapshot_date: cutover, circulating_usd: 2e9 },
+      { stablecoin_id: "apxusd-apyx", snapshot_date: cutover, circulating_usd: 0.5e9 },
+      { stablecoin_id: "bib01-backed", snapshot_date: Date.UTC(2026, 2, 1) / 1000, circulating_usd: 0.1e9 },
+    ], membership);
+
+    const before = getPsiHistoricalUniverseForDay(supply, cutover - DAY, undefined, membership);
+    expect([...before.eligibleIds].sort()).toEqual(["buidl-blackrock", "usdt-tether"]);
+    expect(before.totalMcapUsd).toBe(102e9);
+
+    const atCutover = getPsiHistoricalUniverseForDay(supply, cutover, undefined, membership);
+    expect([...atCutover.eligibleIds].sort()).toEqual(["apxusd-apyx", "usdt-tether"]);
+    expect(atCutover.totalMcapUsd).toBe(100.5e9);
+
+    const beforeFrozen = getPsiHistoricalUniverseForDay(supply, Date.UTC(2026, 2, 1) / 1000, undefined, membership);
+    expect(beforeFrozen.eligibleIds.has("bib01-backed")).toBe(true);
+    expect(beforeFrozen.mcapById.get("bib01-backed")).toBe(0.1e9);
   });
 });

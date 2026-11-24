@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
+import { CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC } from "@shared/lib/stablecoins/aggregate-universe";
 import {
   buildHistoricalDewsMap,
   computeHistoricalDewsStressBreadth,
+  historicalPsiInputSnapshot,
   replayHistoricalPsiForDay,
 } from "../psi-replay";
 import { buildSupplySnapshotMap } from "../psi-recompute";
@@ -174,5 +176,17 @@ describe("psi-replay", () => {
     ]);
     expect(replay.result?.band).toBe("MELTDOWN");
     expect(replay.result?.score).toBeLessThan(20);
+  });
+
+  it("stamps pre-cutover replays as core-stablecoins-v1 and post-cutover replays as core-stablecoins-v2", () => {
+    const cutover = CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC;
+    const pre = replayPsiDay(cutover - DAY, "2.1", psiSupplyPair({
+      stablecoinId: "usdt-tether", day: cutover - DAY, currentMcap: 100e9, priorMcap: 100e9,
+    }));
+    const post = replayPsiDay(cutover, "2.1", psiSupplyPair({
+      stablecoinId: "usdt-tether", day: cutover, currentMcap: 100e9, priorMcap: 100e9,
+    }));
+    expect(historicalPsiInputSnapshot(pre, "3.70").aggregateUniverse).toBe("core-stablecoins-v1");
+    expect(historicalPsiInputSnapshot(post, "3.71").aggregateUniverse).toBe("core-stablecoins-v2");
   });
 });
