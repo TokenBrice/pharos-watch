@@ -6,7 +6,7 @@ import { spawnSync } from "node:child_process";
 import { DatabaseSync } from "node:sqlite";
 import { createHash } from "node:crypto";
 import { makeReportCardsV9Response } from "../../src/test-helpers/report-cards-v9";
-import { DEPENDENCY_SCENARIOS_CACHE_PREFIX } from "@shared/types/dependency-scenarios";
+import { DEPENDENCY_SCENARIOS_CACHE_PREFIX, DependencyScenarioArtifactSchema } from "@shared/types/dependency-scenarios";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { buildSafetyScoreV9ReplayArtifact } from "../replay-safety-score-v9";
 import { createReplayFixedInput } from "./safety-score-v9-replay.test-support";
@@ -430,6 +430,75 @@ describe("dependency scenario accepted-publication verification stamp", () => {
       expect(db.prepare("SELECT value FROM cache WHERE key = ?").get(key as string)?.value).toBe(publishedBytes);
     } finally { db.close(); }
   }, 30_000);
+
+  it("projects tokenized-fund scenario rows as schema-valid ungraded NR both with and without --publication (NS-01)", async () => {
+    const fixture = setup();
+    const clockSec = 1_800_000_000;
+    const original = localRegistrySnapshot();
+    const ids = ["buidl-blackrock", "usdtb-ethena"] as const;
+    const rows = {
+      activeStablecoins: ids.map((id) => original.activeStablecoins.find((coin) => coin.id === id)!),
+      frozenStablecoins: [],
+      deadStablecoins: [],
+    };
+    const registrySnapshot = { ...original, ...rows, fingerprint: registrySnapshotFingerprint(rows) };
+    const { baseInputGenerationId: _base, ...draft } = createReplayFixedInput(clockSec, { activeAssetIds: [...ids] });
+    const buidlMeta = rows.activeStablecoins[0]!;
+    const usdtbMeta = rows.activeStablecoins[1]!;
+    const fixedInput = normalizeFixedInput({
+      ...draft,
+      registryFingerprint: registrySnapshot.fingerprint,
+      liveReserveMap: {
+        "buidl-blackrock": buidlMeta.reserves!,
+        "usdtb-ethena": usdtbMeta.reserves!,
+      },
+      liveReserveProvenanceMap: {
+        "buidl-blackrock": { source: "fixture", fetchedAt: clockSec - 60 },
+        "usdtb-ethena": { source: "fixture", fetchedAt: clockSec - 60 },
+      },
+    });
+    const replay = buildSafetyScoreV9ReplayArtifact({ fixedInput, registrySnapshot, publishedAtSec: clockSec });
+    const candidate = replay.pipeline.candidate;
+    expect(candidate.cards.find((c) => c.id === "buidl-blackrock")).toMatchObject({ ratingStatus: "not-rated", grade: "NR", score: null });
+    expect(candidate.cards.find((c) => c.id === "usdtb-ethena")).toMatchObject({ ratingStatus: "rated" });
+    const source = projectSafetyScoreV9PublicationToPublicSnapshot(candidate, {
+      schemaVersion: 2, status: "current", acceptedPublicationGenerationId: candidate.publicationGenerationId,
+      acceptedAtSec: clockSec, attemptedAtSec: clockSec, heldSinceSec: null, reasons: [],
+    });
+    const capturePath = resolve(fixture.directory, "capture.json");
+    const publicationPath = resolve(fixture.directory, "publication.json");
+    writeFileSync(capturePath, JSON.stringify({ fixedInput, registrySnapshot }));
+    writeFileSync(publicationPath, JSON.stringify(source));
+
+    for (const withPublication of [true, false]) {
+      const args = ["--mode", "compute", "--input", capturePath, "--out-dir", fixture.directory,
+        ...(withPublication ? ["--publication", publicationPath] : [])];
+      const run = await fixture.run(args);
+      expect(run.status, run.stderr).toBe(0);
+      expect(JSON.parse(run.stdout).acceptedPublicationVerified).toBe(withPublication);
+      const artifact = DependencyScenarioArtifactSchema.parse(JSON.parse(readFileSync(resolve(fixture.directory, "artifact.json"), "utf8")));
+      expect(artifact.cohort.rootIds).toContain("buidl-blackrock");
+      const buidlScenarios = artifact.scenarios.filter((s) => s.rootId === "buidl-blackrock");
+      expect(buidlScenarios.length).toBeGreaterThan(0);
+      for (const scenario of buidlScenarios) {
+        const fundRow = scenario.results.find((r) => r.assetId === "buidl-blackrock")!;
+        expect(fundRow).toMatchObject({
+          publishedScore: null, publishedGrade: "NR", publishedRatingStatus: "not-rated",
+          modeledScore: null, modeledGrade: "NR", modeledRatingStatus: "not-rated",
+          deltaScore: null,
+        });
+        for (const pillars of [fundRow.publishedPillars, fundRow.modeledPillars]) {
+          expect(pillars).toBeDefined();
+          expect([pillars!.backing.score, pillars!.exit.score, pillars!.control.score]).toEqual([null, null, null]);
+          expect([pillars!.backing.pricedUnknown, pillars!.exit.pricedUnknown, pillars!.control.pricedUnknown]).toEqual([undefined, undefined, undefined]);
+        }
+      }
+      const impactedDep = buidlScenarios.flatMap((s) => s.results).find((r) => r.assetId === "usdtb-ethena" && r.deltaScore !== null && r.deltaScore < 0);
+      expect(impactedDep).toBeDefined();
+      expect(impactedDep!.publishedRatingStatus).toBe("rated");
+      expect(impactedDep!.modeledRatingStatus).toBe("rated");
+    }
+  }, 60_000);
 });
 
 const admissionOf = (baseline: SafetyScoreV9AcceptedPublicationBaseline) => ({ sha256: sha256Hex(stableJsonStringifyV1(baseline)), baseline });

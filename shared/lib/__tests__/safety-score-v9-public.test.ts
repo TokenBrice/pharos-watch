@@ -15,6 +15,8 @@ import { buildSafetyScoreV9Response as buildResp, createSafetyScoreV9ResponsePro
 import type { V9ProductionScoreTrace as Trace } from "../safety-score-v9/score";
 import { SafetyScoreV9AccessPostureSchema as AccessSchema, SafetyScoreV9CurrentCardSchema as CardSchema, SafetyScoreV9EvidenceSummarySchema as EvSchema, SafetyScoreV9HistoricalTypedCardSchema as HistCardSchema, SafetyScoreV9PillarSchema as PillarSchema, type V9OpenEvidence } from "../../types/safety-score-v9-public";
 import { SafetyScoreV9CurrentResponseSchema as RespSchema } from "../../types/safety-score-v9-publication-response";
+import { findSafetyScoreV9ParentAttributionIssues } from "../../types/safety-score-v9-public-attribution";
+import { projectSafetyGrades } from "../../types/report-cards-v9";
 import { makeDeploymentControl as mkCtrl, makeCompiledVotingControl as mkVote, makeOperationalIssuanceProcess as mkProc, FRAX_PROVIDER_ROW_EXCLUSION_FIXTURE as FRAX_EXCL } from "./safety-score-v9-fixtures.test-support";
 import { reviewedScope, weightedQuorum } from "./safety-score-v9-control-scope.test-support";
 import { ReviewedProviderRowExclusionSchema as ExclSchema } from "../../types/safety-score-v9-supply-attribution";
@@ -954,27 +956,62 @@ describe("Safety Score v9 public NR cap suppression", () => {
   });
 
   it("publishes tokenized funds as not-rated with tokenized-fund-not-graded while keeping dependents intact", () => {
-    const fundIn = fx("buidl-blackrock", { score: 67, grade: "B-", qualityScore: 67, pillars: { backing: 88, exit: 55, control: 60 } });
+    // Include an alphabetically earlier NR reason to prove tokenized-fund-not-graded sorts and reports first (NS-05).
+    const fundIn = fx("buidl-blackrock", {
+      score: 67, grade: "B-", qualityScore: 67, pillars: { backing: 88, exit: 55, control: 60 },
+      nrReasons: [{ code: "critical-unresolved", field: "backing", message: "Earlier-sorting NR code." }],
+    });
     const depIn = fx("usdtb-ethena", {
       score: 64, grade: "C+",
       caps: [cap("parent", 64, "parent", "Collateral parent limit.", true)],
       dependency: { assetId: "usdtb-ethena", serial: [], cycleBlocked: false, basket: [{ upstreamAssetId: "buidl-blackrock", weight: 1, score: 88, boundedUnknown: false }] },
     });
     depIn.trace.wrapperParentLimit = { schemaVersion: 1, parentKind: "concentrated-collateral", parentAssetId: "buidl-blackrock", parentScore: 67, form: "pure", appliedDiscount: 3, limit: 64 };
-    const resp = rt(publish([fundIn, depIn]));
+    // Serial wrapper dependent of an ungraded tokenized fund must pass parent-attribution reconciliation (NS-09).
+    const serialChildIn = fx("serial-fund-wrapper", {
+      score: 64, grade: "C+",
+      caps: [cap("parent", 64, "parent", "Wrapper parent limit.", true)],
+      dependency: {
+        assetId: "serial-fund-wrapper",
+        serial: [{ upstreamAssetId: "buidl-blackrock", score: 67, ratingStatus: "rated", blocked: false, limitedEvidenceCauses: [], causeGapIds: [], dependencyType: "wrapper", wrapperForm: "pure" }],
+        basket: [], cycleBlocked: false,
+      },
+    });
+    serialChildIn.trace.wrapperParentLimit = { schemaVersion: 1, parentKind: "serial", parentScore: 67, form: "pure", appliedDiscount: 3, limit: 64 };
+    const resp = rt(publish([fundIn, depIn, serialChildIn]));
     const fund = resp.cards.find((c) => c.id === "buidl-blackrock")!;
     const dep = resp.cards.find((c) => c.id === "usdtb-ethena")!;
+    const serialChild = resp.cards.find((c) => c.id === "serial-fund-wrapper")!;
     expect(fund).toMatchObject({
       ratingStatus: "not-rated", grade: "NR", score: null, qualityScore: null, pegAdjustedScore: null,
       weakestPillar: null, breakdowns: null, bindingCap: null, caps: [],
     });
     expect([fund.pillars.backing.score, fund.pillars.exit.score, fund.pillars.control.score]).toEqual([null, null, null]);
-    expect(fund.nrReasons).toEqual([expect.objectContaining({ code: "tokenized-fund-not-graded" })]);
+    expect(fund.nrReasons[0]).toMatchObject({ code: "tokenized-fund-not-graded" });
     expect(fund.reasonCodes).toContain("tokenized-fund-not-graded");
     expect(tableCard(fund)).toMatchObject({ ratingStatus: "not-rated", grade: "NR", score: null });
     expect(detailCard(fund)).toMatchObject({ ratingStatus: "not-rated", grade: "NR" });
     expect(dep).toMatchObject({ ratingStatus: "rated", grade: "C+", score: 64 });
     expect(dep.dependencies.basket[0]).toMatchObject({ upstreamAssetId: "buidl-blackrock", score: 88, collateralParentScore: 67 });
+    expect(serialChild).toMatchObject({ ratingStatus: "rated", grade: "C+", score: 64 });
+    expect(findSafetyScoreV9ParentAttributionIssues(resp)).toEqual([]);
+    // Bogus pipeline-gap status on a serial edge to an ungraded tokenized fund is still rejected.
+    const badSerialResp = sc(resp);
+    badSerialResp.cards.find((c) => c.id === "serial-fund-wrapper")!.dependencies.serial[0]!.ratingStatus = "pipeline-gap";
+    expect(findSafetyScoreV9ParentAttributionIssues(badSerialResp)).toEqual([
+      expect.objectContaining({ cardId: "serial-fund-wrapper" }),
+    ]);
+    // projectSafetyGrades reports tokenized-fund-not-graded even if nrReasons are unsorted/alphabetical (NS-05).
+    const unsortedFund = { ...fund, nrReasons: [...fund.nrReasons].reverse() };
+    expect(unsortedFund.nrReasons[0]!.code).toBe("critical-unresolved");
+    const grades = projectSafetyGrades({
+      asOfSec: resp.asOfSec,
+      updatedAt: resp.publishedAtSec,
+      cards: [unsortedFund],
+      methodology: { version: resp.policyVersion },
+      publicationHealth: { status: "current" },
+    } as Parameters<typeof projectSafetyGrades>[0]);
+    expect(grades.grades).toEqual([expect.objectContaining({ id: "buidl-blackrock", grade: "NR", score: null, notRatedReason: "tokenized-fund-not-graded" })]);
     // Pipeline-gap funds stay pipeline-gap (grade null), never masked as tokenized-fund-not-graded.
     const gapFund = pc(fx("buidl-blackrock", { score: null, grade: null, pillars: { backing: null, exit: null, control: 80 } }));
     expect(gapFund).toMatchObject({ ratingStatus: "pipeline-gap", grade: null, score: null });

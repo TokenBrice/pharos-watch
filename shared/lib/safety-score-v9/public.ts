@@ -805,6 +805,8 @@ function canonicalNrReasons(
     ).values(),
   ].sort(
     (left, right) =>
+      Number(right.code === TOKENIZED_FUND_NOT_GRADED_REASON_CODE) -
+        Number(left.code === TOKENIZED_FUND_NOT_GRADED_REASON_CODE) ||
       compareText(left.origin, right.origin) ||
       compareText(left.code, right.code) ||
       compareText(left.field ?? "", right.field ?? "") ||

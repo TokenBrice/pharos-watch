@@ -10,6 +10,8 @@ import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
 import { parseContractTuple } from "@shared/lib/deployment-resolver";
 import { applyDurationStaleness, validateDdrPublicCacheContract } from "@shared/lib/depeg-resolver/public-contract";
 import { parseDexVolumeAvailabilityRecord, readStoredDexVolumeWindow } from "@shared/lib/dex-volume-availability";
+import { TOKENIZED_FUND_NOT_GRADED_REASON_CODE } from "@shared/lib/safety-score-v9/public";
+import { isTokenizedFundId } from "@shared/lib/stablecoins/listing-governance";
 import {
   WORKER_TRACKED_META_BY_ID,
   type WorkerRuntimeStablecoinMeta,
@@ -631,7 +633,13 @@ export async function handleRiskCheck(db: D1Database, url: URL): Promise<Respons
     const compRecord = complianceIndex.byId.get(id);
 
     // Safety slice
-    const safetyPillars = safetyCard?.ratingStatus === "rated" && rawPillars
+    const isUngradedFund = safetyCard !== undefined
+      && safetyCard.ratingStatus !== "pipeline-gap"
+      && (isTokenizedFundId(id) || safetyCard.notRatedReason === TOKENIZED_FUND_NOT_GRADED_REASON_CODE);
+    const effectiveSafetyRatingStatus = isUngradedFund ? "not-rated" : (safetyCard?.ratingStatus ?? null);
+    const effectiveSafetyScore = isUngradedFund ? null : (safetyCard?.score ?? null);
+    const effectiveSafetyGrade = isUngradedFund ? "NR" : (safetyCard?.grade ?? null);
+    const safetyPillars = !isUngradedFund && safetyCard?.ratingStatus === "rated" && rawPillars
       ? {
           backing: rawPillars.backing?.score ?? null,
           exit: rawPillars.exit?.score ?? null,
@@ -649,8 +657,10 @@ export async function handleRiskCheck(db: D1Database, url: URL): Promise<Respons
       safetyUnavailableReason = SAFETY_SCORE_PUBLICATION_AGE_REASON;
     } else if (safetyCard.ratingStatus === "pipeline-gap") {
       safetyUnavailableReason = "pipeline-gap";
+    } else if (isUngradedFund) {
+      safetyUnavailableReason = TOKENIZED_FUND_NOT_GRADED_REASON_CODE;
     } else if (safetyCard.ratingStatus === "not-rated") {
-      safetyUnavailableReason = "not-rated";
+      safetyUnavailableReason = safetyCard.notRatedReason ?? "not-rated";
     } else if (
       !safetyPillars
       || safetyPillars.backing == null
@@ -882,9 +892,9 @@ export async function handleRiskCheck(db: D1Database, url: URL): Promise<Respons
         yieldBearing: meta.flags.yieldBearing === true,
       },
       safety: {
-        ratingStatus: safetyCard?.ratingStatus ?? null,
-        score: safetyCard?.score ?? null,
-        grade: safetyCard?.grade ?? null,
+        ratingStatus: effectiveSafetyRatingStatus,
+        score: effectiveSafetyScore,
+        grade: effectiveSafetyGrade,
         pillars: safetyPillars,
         publicationStatus: safetyPublicationStatus,
         heldSinceSec: safetyPublicationStatus === "held" ? (safetySnapshot?.publicationHealth.heldSinceSec ?? null) : null,

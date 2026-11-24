@@ -1,3 +1,4 @@
+import type { V9ReasonCode } from "./safety-score-v9";
 import type { SafetyScoreV9CardValidationInput } from "./safety-score-v9-public";
 import { attributedScoredParent } from "./safety-score-v9-public-internal";
 import { resolveCauseGapId, readV9PublicCausePathReference, type V9PublicCauseGapContext } from "./safety-score-v9-public-cause-gaps";
@@ -16,6 +17,16 @@ export function isUngradedTokenizedFundCard(
 ): boolean {
   return card.ratingStatus === "not-rated"
     && card.nrReasons.some((reason) => reason.code === "tokenized-fund-not-graded");
+}
+
+/**
+ * Report `tokenized-fund-not-graded` as the primary NR reason whenever present,
+ * even when another asset-level NR code sorts earlier alphabetically.
+ */
+export function primaryV9NotRatedReason(
+  nrReasons: readonly { code: V9ReasonCode }[],
+): V9ReasonCode | undefined {
+  return nrReasons.find((reason) => reason.code === "tokenized-fund-not-graded")?.code ?? nrReasons[0]?.code;
 }
 
 export interface SafetyScoreV9ParentAttributionIssue {
@@ -51,10 +62,15 @@ export function findSafetyScoreV9ParentAttributionIssues(
     }
     for (const dependency of card.dependencies.serial) {
       const upstream = cardsById.get(dependency.upstreamAssetId);
-      if (upstream && (dependency.ratingStatus !== upstream.ratingStatus ||
+      if (!upstream) continue;
+      const upstreamUngradedFund = isUngradedTokenizedFundCard(upstream);
+      const statusMismatch = upstreamUngradedFund
+        ? dependency.ratingStatus === "pipeline-gap"
+        : dependency.ratingStatus !== upstream.ratingStatus;
+      if (statusMismatch ||
           JSON.stringify(dependency.partialEvidence) !== JSON.stringify(upstream.partialEvidence === null ? null : {
             reasonCode: upstream.partialEvidence.reasonCode, excludedPillars: upstream.partialEvidence.excludedPillars, causes: upstream.partialEvidence.causes,
-          }))) {
+          })) {
         issues.push({ cardId: card.id, message: `Parent availability does not reconcile to ${dependency.upstreamAssetId}` });
       }
     }

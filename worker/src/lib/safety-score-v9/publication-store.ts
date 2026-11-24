@@ -4,6 +4,7 @@ import {
   type V9PublicationHealth,
 } from "@shared/types/report-cards-v9";
 import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
+import { primaryV9NotRatedReason } from "@shared/types/safety-score-v9-public-attribution";
 import { throwIfAborted } from "../abort";
 import { executeAtomicBatch } from "../db";
 import { logWorkerEvent } from "../structured-log";
@@ -367,13 +368,16 @@ export async function persistSafetyScoreV9Publication(
       asOfSec: publication.asOfSec,
       publishedAtSec: publication.publishedAtSec,
       expectedCount: publication.completeness.expectedCount,
-      scores: Object.fromEntries(publication.cards.map(card => [
-        card.id, {
-          score: card.score, grade: card.grade, ratingStatus: card.ratingStatus,
-          partialEvidence: projectV9CompactPartialEvidence(card.partialEvidence),
-          ...(card.ratingStatus === "not-rated" && card.nrReasons[0] ? { notRatedReason: card.nrReasons[0].code } : {}),
-        },
-      ])),
+      scores: Object.fromEntries(publication.cards.map(card => {
+        const notRatedReason = card.ratingStatus === "not-rated" ? primaryV9NotRatedReason(card.nrReasons) : undefined;
+        return [
+          card.id, {
+            score: card.score, grade: card.grade, ratingStatus: card.ratingStatus,
+            partialEvidence: projectV9CompactPartialEvidence(card.partialEvidence),
+            ...(notRatedReason ? { notRatedReason } : {}),
+          },
+        ];
+      })),
     }));
     scorecardPillarsValue = stableJsonStringifyV1({
       publicationGenerationId: publication.publicationGenerationId,

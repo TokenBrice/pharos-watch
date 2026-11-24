@@ -34,7 +34,7 @@ const USDC_ETH = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const USDC_ETH_CHECKSUM = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
 const USDT_ETH = "0xdac17f958d2ee523a2206206994597c13d831ec7";
 
-function makeSafetyScoreCacheRows(nowSec: number, overrides?: { held?: boolean }) {
+function makeSafetyScoreCacheRows(nowSec: number, overrides?: { held?: boolean; buidlMode?: "post-cutover" | "pre-cutover-rated" }) {
   const base = makeReportCardsV9Response();
   const publishedAtSec = nowSec - 60;
   const asOfSec = publishedAtSec - 10;
@@ -60,7 +60,7 @@ function makeSafetyScoreCacheRows(nowSec: number, overrides?: { held?: boolean }
     publicationResultDigest: resultDigest,
     asOfSec,
     publishedAtSec,
-    expectedCount: 3,
+    expectedCount: overrides?.buidlMode ? 4 : 3,
     scores: {
       "usdc-circle": { score: 88, grade: "A-", ratingStatus: "rated", partialEvidence: null },
       "usdt-tether": {
@@ -74,6 +74,19 @@ function makeSafetyScoreCacheRows(nowSec: number, overrides?: { held?: boolean }
         },
       },
       "dai-makerdao": { score: null, grade: "NR", ratingStatus: "not-rated", partialEvidence: null },
+      ...(overrides?.buidlMode === "post-cutover"
+        ? {
+            "buidl-blackrock": {
+              score: null,
+              grade: "NR",
+              ratingStatus: "not-rated",
+              partialEvidence: null,
+              notRatedReason: "tokenized-fund-not-graded",
+            },
+          }
+        : overrides?.buidlMode === "pre-cutover-rated"
+          ? { "buidl-blackrock": { score: 67, grade: "B-", ratingStatus: "rated", partialEvidence: null } }
+          : {}),
     },
   };
   const health = overrides?.held
@@ -104,6 +117,15 @@ function makeSafetyScoreCacheRows(nowSec: number, overrides?: { held?: boolean }
         exit: { score: 94, grade: "A" },
         control: { score: 78, grade: "B+" },
       },
+      ...(overrides?.buidlMode === "pre-cutover-rated"
+        ? {
+            "buidl-blackrock": {
+              backing: { score: 88, grade: "A+" },
+              exit: { score: 55, grade: "C" },
+              control: { score: 60, grade: "C+" },
+            },
+          }
+        : {}),
     },
   };
   return {
@@ -161,6 +183,7 @@ function makeValidRedemptionRow(stablecoinId: string, updatedAt: number) {
 
 function buildRiskCheckMockDb(nowSec: number, options?: {
   heldSafety?: boolean;
+  buidlMode?: "post-cutover" | "pre-cutover-rated";
   missingPegAnalytics?: boolean;
   malformedRedemptionCoinId?: string;
   eventualOnlyRedemptionCoinId?: string;
@@ -174,7 +197,7 @@ function buildRiskCheckMockDb(nowSec: number, options?: {
   activeDepegRows?: Record<string, unknown>[];
   dexRowOverrides?: Record<string, Record<string, unknown>>;
 }) {
-  const safetyRow = makeSafetyScoreCacheRows(nowSec, { held: options?.heldSafety });
+  const safetyRow = makeSafetyScoreCacheRows(nowSec, { held: options?.heldSafety, buidlMode: options?.buidlMode });
   const freshAt = nowSec - 60;
   const stablecoinsAt = nowSec - (options?.stablecoinsAgeSec ?? 60);
   const redemptionAt = nowSec - (options?.redemptionAgeSec ?? 60);
@@ -942,6 +965,57 @@ describe("Wave 2 endpoints: compliance, resolve, risk-check", () => {
     expect(executedSqls.some((sql) => sql.includes("SELECT *\n         FROM depeg_resolver_prediction_errata"))).toBe(false);
     expect(executedSqls.some((sql) => sql.includes(SAFETY_SCORE_V9_CACHE_KEYS.publication))).toBe(false);
   });
+
+  it.each(["post-cutover", "pre-cutover-rated"] as const)(
+    "reports tokenized-fund-not-graded on /api/risk-check and MCP get_risk_check (%s snapshot)",
+    async (buidlMode) => {
+      const nowSec = 1_795_300_000;
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(nowSec * 1000);
+      const { db } = buildRiskCheckMockDb(nowSec, { buidlMode });
+      const res = await handleRiskCheck(db, new URL("https://api.pharos.watch/api/risk-check?ids=buidl-blackrock,dai-makerdao"));
+      expect(res.status).toBe(200);
+      const body = RiskCheckResponseSchema.parse(await res.json());
+      expect(body.assets["buidl-blackrock"].safety).toMatchObject({
+        ratingStatus: "not-rated",
+        score: null,
+        grade: "NR",
+        pillars: null,
+        publicationStatus: "current",
+        unavailableReason: "tokenized-fund-not-graded",
+      });
+      expect(body.assets["dai-makerdao"].safety).toMatchObject({
+        ratingStatus: "not-rated",
+        score: null,
+        grade: "NR",
+        pillars: null,
+        unavailableReason: "not-rated",
+      });
+      // MCP get_risk_check passes tokenized-fund-not-graded through verbatim.
+      const mcpRes = await handleMcp(
+        db,
+        new Request("https://api.pharos.watch/api/mcp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "MCP-Protocol-Version": "2025-11-25" },
+          body: JSON.stringify({
+            jsonrpc: "2.0", id: 99, method: "tools/call",
+            params: { name: "get_risk_check", arguments: { ids: ["buidl-blackrock"] } },
+          }),
+        }),
+      );
+      expect(mcpRes.status).toBe(200);
+      const mcpBody = (await mcpRes.json()) as {
+        result: { isError: boolean; structuredContent: { assets: Record<string, { safety: { unavailableReason: string | null; grade: string | null; score: number | null; pillars: unknown } }> } };
+      };
+      expect(mcpBody.result.isError).toBe(false);
+      expect(mcpBody.result.structuredContent.assets["buidl-blackrock"].safety).toMatchObject({
+        grade: "NR",
+        score: null,
+        pillars: null,
+        unavailableReason: "tokenized-fund-not-graded",
+      });
+    },
+  );
 
   it("enforces R1-R8 on /api/risk-check: held safety, missing peg-analytics cache, redemption run fallback, and DDR errata", async () => {
     const nowSec = 1_795_300_000;

@@ -26,6 +26,7 @@ import {
 } from "./safety-score-v9-causes";
 import { refineV9PublicGapContext } from "./safety-score-v9-public-causes";
 import { SafetyScoreV9PillarFreshnessSchema, refineSafetyScoreV9PillarFreshness } from "./safety-score-v9-public-facts";
+import { primaryV9NotRatedReason } from "./safety-score-v9-public-attribution";
 
 export const REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION = 9;
 /** Archive-only report8 wire version: emitters stop at the report9 cutover. */
@@ -648,10 +649,13 @@ export function projectSafetyGrades(snapshot: ReportCardsV9CurrentResponse): Saf
     asOfSec: snapshot.asOfSec,
     updatedAt: snapshot.updatedAt,
     publicationStatus: snapshot.publicationHealth.status,
-    grades: snapshot.cards.map((card) => ({
-      id: card.id, score: card.score, grade: card.grade, ratingStatus: card.ratingStatus,
-      partialEvidence: projectV9CompactPartialEvidence(card.partialEvidence),
-      ...(card.ratingStatus === "not-rated" && card.nrReasons[0] ? { notRatedReason: card.nrReasons[0].code } : {}),
-    })),
+    grades: snapshot.cards.map((card) => {
+      const notRatedReason = card.ratingStatus === "not-rated" ? primaryV9NotRatedReason(card.nrReasons) : undefined;
+      return {
+        id: card.id, score: card.score, grade: card.grade, ratingStatus: card.ratingStatus,
+        partialEvidence: projectV9CompactPartialEvidence(card.partialEvidence),
+        ...(notRatedReason ? { notRatedReason } : {}),
+      };
+    }),
   };
 }

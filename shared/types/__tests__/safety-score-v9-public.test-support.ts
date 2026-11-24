@@ -572,7 +572,12 @@ function assertPreviousReaderSource() {
   // Delist-code adapter prune (b793b64c9): live-reserve-core.ts removes 9 retired adapter keys
   // from ADAPTER_KEYS (unused by reserve-input.ts or any public card, breakdown, or trace schema);
   // substituting c4726bf73's live-reserve-core.ts restores the prior ac9397e4… digest.
-  if (hash.digest("hex") !== "143576d9f838ca4e9933a4daf8eabd6015bc215e29ce2f9699e8e37824c1ee10") throw new Error("Pre-dust reader source/refinement inputs changed");
+  // v10.55 fx-safety refresh: safety-score-v9-public-attribution.ts exports primaryV9NotRatedReason
+  // (prioritizing tokenized-fund-not-graded) and extends isUngradedTokenizedFundCard exemption to
+  // serial dependency attribution; report-cards-v9.ts uses primaryV9NotRatedReason in
+  // projectSafetyGrades. Both changes are strictly scoped to tokenized-fund-not-graded (absent
+  // from PRE_DUST_REASON_CODES), so every pre-dust input parses identically.
+  if (hash.digest("hex") !== "b35c7f4b8d0b84ce35e7e26a7b66ffe40c83aaea908d875b2bd18a4fbf85a9c1") throw new Error("Pre-dust reader source/refinement inputs changed");
 }
 
 export async function previousReader() {
