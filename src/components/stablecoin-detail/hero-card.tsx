@@ -42,7 +42,7 @@ import { useWatchlist } from "@/hooks/use-watchlist";
 import { formatRelativeAgeSeconds } from "@shared/lib/relative-time";
 import { formatCurrency, formatShortDate } from "@shared/lib/format";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
-import { isTokenizedFundId } from "@shared/lib/stablecoins/listing-governance";
+import { isClientTokenizedFundId } from "@shared/lib/stablecoins/aggregate-client-registry";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { hasStaticYieldWorkbench } from "@shared/lib/yield-auto-lending";
 import { buildSafetyVerdictLine } from "@/lib/stablecoin-detail-hero-metrics";
@@ -441,7 +441,7 @@ export function HeroIdentityHeader({
   const watchlist = useWatchlist();
   const watched = hydrated && watchlist.has(coin.id);
   const activeCoin = isActiveStablecoinMeta(coin);
-  const isTokenizedFund = isTokenizedFundId(coin.id);
+  const isTokenizedFund = activeCoin && isClientTokenizedFundId(coin.id);
   const showYieldWorkbench = hasStaticYieldWorkbench(coin);
   const verdictId = model.state || isHeroVerdictShown(verdict) ? `hero-verdict-${coin.id}` : null;
   const verdictLine = isTokenizedFund ? null : buildSafetyVerdictLine(reportCard);

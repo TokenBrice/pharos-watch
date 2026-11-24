@@ -38,7 +38,8 @@ import { DIRECTION_TONE_CLASSES, getPegScoreTier, isDewsAlertBand, REPORT_CARD_G
 import type { CoinState } from "@shared/lib/coin-state";
 import type { StablecoinVerdict } from "@shared/lib/stablecoin-verdict";
 import { CLIENT_TRACKED_META_BY_ID, type StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
-import { isTokenizedFundId } from "@shared/lib/stablecoins/listing-governance";
+import { isClientTokenizedFundId } from "@shared/lib/stablecoins/aggregate-client-registry";
+import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { getVariantDisplay } from "@shared/lib/variant-display";
 import { roundForDisplay } from "@shared/lib/format";
 import type {
@@ -417,7 +418,7 @@ export function buildStablecoinDetailHeroViewModel({
     ? HERO_PENDING_DISPLAY
     : buildExcessYieldDisplay(yieldRanking);
   const performanceVsUsdDisplay = buildPerformanceVsUsdDisplay(performanceVsUsd1y);
-  const isTokenizedFund = isTokenizedFundId(coin.id);
+  const isTokenizedFund = isActiveStablecoinMeta(coin) && isClientTokenizedFundId(coin.id);
   const savedGrade = !isTokenizedFund && pendingReads.reportCard === true && !reportCard && savedAssessment?.grade
     ? savedAssessment
     : null;

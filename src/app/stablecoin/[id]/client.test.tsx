@@ -16,6 +16,8 @@ import { buildStablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { DISABLED_DETAIL_QUERY_CONTROLS } from "@/hooks/__tests__/use-stablecoin-detail-view-model.test-support";
 import failureScenarios from "@data/failure-scenarios.json";
+import aiSummaries from "@data/ai-summaries.json";
+import type { StablecoinAiSummary } from "@shared/types/editorial";
 import type { FailureScenariosById } from "@shared/types/failure-scenarios";
 
 const { lazyViewportValues, nearViewportValues, longformScrollspyNavMock, useNearViewportMock, useViewModelMock } = vi.hoisted(() => ({
@@ -55,7 +57,16 @@ vi.mock("@/hooks/use-blacklist-events", () => ({
   useBlacklistSummary: () => ({ data: undefined, dataUpdatedAt: 0 }),
   useBlacklistEventsPage: () => ({ data: { events: [], total: 0 }, isLoading: false, isError: false }),
 }));
-vi.mock("@/components/ai-summary/ai-summary", () => ({ AiSummary: () => <div data-testid="ai-summary" /> }));
+vi.mock("@/components/ai-summary/ai-summary", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/components/ai-summary/ai-summary")>();
+  const { hasAvailableAiSummaryClaims } = await import("@shared/lib/ai-summary-claims");
+  return {
+    AiSummary: (props: ComponentProps<typeof actual.AiSummary>) =>
+      hasAvailableAiSummaryClaims(props.text, props.claimTokens, props.claimValues)
+        ? <div data-testid="ai-summary"><actual.AiSummary {...props} /></div>
+        : null,
+  };
+});
 vi.mock("@/components/coin-notice", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/components/coin-notice")>()),
   NoticeStack: ({ notices }: { notices: readonly { title: string }[] }) => notices.length > 0 ? <div data-testid="notice-stack">{notices.map((n) => n.title).join(" | ")}</div> : null,
@@ -657,5 +668,39 @@ describe("StablecoinDetailClient (frozen)", () => {
     mockReady();
     renderDetail();
     expect(queryClients.at(-1)!.prefetchQuery).toHaveBeenCalledTimes(1);
+  });
+
+  it("omits active TokenizedFundPanel and tokenized-fund rail copy for a frozen tokenized-fund archive", () => {
+    const archive = coinOf("msy-main-street");
+    const frozen = makeFrozenViewModel(archive);
+    useViewModelMock.mockReturnValue({
+      ...frozen,
+      hero: {
+        ...(frozen.hero as Record<string, unknown>),
+        signalRailItems: [{ key: "safety", label: "Safety", primary: "—", secondary: null, href: "#report-card", colorClass: "text-muted-foreground" }],
+      },
+    });
+    const { container } = renderDetail(archive);
+    expect(container.querySelector("[data-tokenized-fund-panel]")).toBeNull();
+    expect(container.querySelector('[data-safety-state="tokenized-fund"]')).toBeNull();
+    expect(container.querySelector('[data-safety-state="frozen"]')).not.toBeNull();
+  });
+
+  it("withholds a grade-claiming AI summary for a tokenized fund instead of rendering an NR overall grade", () => {
+    const eutbl = coinOf("eutbl-spiko");
+    const realSummary = (aiSummaries as Record<string, StablecoinAiSummary>)["eutbl-spiko"];
+    expect(realSummary?.claimTokens?.some((token) => token.source === "report-card.grade")).toBe(true);
+    const nrCard = makeV9Card({ id: eutbl.id, grade: "NR", score: null, ratingStatus: "not-rated" });
+    mockReady({
+      id: eutbl.id,
+      coin: eutbl,
+      summary: realSummary,
+      reportCard: nrCard,
+      reportCardsResponse: makeReportCardsV9Response({ cards: [nrCard] }),
+    });
+    const { container } = renderDetail(eutbl, { summary: realSummary });
+    expect(screen.queryByTestId("ai-summary")).toBeNull();
+    expect(container.textContent).not.toContain("the NR overall grade");
+    expect(container.textContent).not.toContain("held down by exit");
   });
 });

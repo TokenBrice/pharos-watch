@@ -8,7 +8,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { DetailQuote } from "@/lib/stablecoin-detail-view-model-types";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import { isTokenizedFundListingClass } from "@shared/lib/stablecoins/listing-class";
+import { isClientTokenizedFundId } from "@shared/lib/stablecoins/aggregate-client-registry";
+import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { formatShortDate } from "@shared/lib/format";
 import type { CoinState } from "@shared/lib/coin-state";
 import type { StablecoinVerdict, StablecoinVerdictArchetype } from "@shared/lib/stablecoin-verdict";
@@ -76,13 +77,17 @@ function TokenizedFundHeroBadge() {
           type="button"
           data-tokenized-fund-badge
           title={TOKENIZED_FUND_BADGE.notice}
-          className={cn(
-            "pharos-focus-ring inline-flex h-5 items-center gap-1 rounded-full border px-2.5 text-xs font-semibold leading-none transition-colors hover:brightness-105",
-            TOKENIZED_FUND_BADGE.cls,
-          )}
+          className="pharos-focus-ring group -my-3 inline-flex min-h-11 items-center rounded-full sm:-my-1 sm:min-h-7"
         >
-          <Info aria-hidden="true" className="h-3 w-3 shrink-0" />
-          <span>{TOKENIZED_FUND_BADGE.label}</span>
+          <span
+            className={cn(
+              "inline-flex h-5 items-center gap-1 rounded-full border px-2.5 text-xs font-semibold leading-none transition-colors group-hover:brightness-105",
+              TOKENIZED_FUND_BADGE.cls,
+            )}
+          >
+            <Info aria-hidden="true" className="h-3 w-3 shrink-0" />
+            <span>{TOKENIZED_FUND_BADGE.label}</span>
+          </span>
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-80 space-y-2 p-3 text-xs leading-relaxed">
@@ -108,7 +113,7 @@ function TokenizedFundHeroBadge() {
 export function HeroChipRail({ coin, verdict, state = null }: { coin: StablecoinMeta; verdict: StablecoinVerdict; state?: CoinState | null }) {
   const showVerdict = isHeroVerdictShown(verdict);
   const VerdictIcon = VERDICT_ICONS[verdict.archetype];
-  const isTokenizedFund = isTokenizedFundListingClass(CLIENT_TRACKED_META_BY_ID.get(coin.id)?.listingClass);
+  const isTokenizedFund = isActiveStablecoinMeta(coin) && isClientTokenizedFundId(coin.id);
   const launchDate = formatChipLaunchDate(coin.launchDate);
   const pegLabel = coin.flags.navToken
     ? getHeroPegLabel(

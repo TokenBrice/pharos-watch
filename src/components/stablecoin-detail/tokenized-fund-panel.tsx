@@ -2,11 +2,16 @@
 
 import Link from "next/link";
 import { ArrowDownRight } from "lucide-react";
-import { REDEMPTION_ACCESS_LABELS } from "@shared/lib/classification";
+import {
+  REDEMPTION_ACCESS_LABELS,
+  REDEMPTION_HOLDER_ELIGIBILITY_LABELS,
+  REDEMPTION_SETTLEMENT_LABELS,
+} from "@shared/lib/classification";
 import { formatPercent } from "@shared/lib/format";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
+import { getPricingSourceLabel } from "@shared/lib/pricing-sources";
 import type { ReserveResult } from "@shared/lib/reserve-templates";
-import type { RedemptionBackstopEntry, RedemptionHolderEligibility, RedemptionSettlementModel } from "@shared/types/redemption";
+import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { formatHeroNativePrice } from "@/components/stablecoin-detail/hero-card-metrics";
@@ -31,23 +36,6 @@ export interface TokenizedFundPanelProps {
   hasRedemptionSection?: boolean;
 }
 
-const HOLDER_ELIGIBILITY_LABELS: Record<RedemptionHolderEligibility, string> = {
-  "any-holder": "Any holder",
-  "verified-customer": "Verified customers (KYC / onboarding required)",
-  "whitelisted-primary": "Whitelisted primary-market participants",
-  "pre-incident-holder": "Pre-incident holders",
-  "issuer-discretionary": "Issuer-discretionary eligibility",
-  unknown: "Not documented in structured review",
-};
-
-const SETTLEMENT_LABELS: Record<RedemptionSettlementModel, string> = {
-  atomic: "Atomic on-chain settlement",
-  immediate: "Immediate settlement",
-  "same-day": "Same-day settlement",
-  days: "Multi-day settlement",
-  queued: "Queued redemption processing",
-};
-
 const ELIGIBILITY_NOTICE_PATTERN = /eligib|qualif|kyc|whitelist|accredited|institutional|us person|restrict|permission|investor|reg\s*d/i;
 const REDEMPTION_NOTICE_PATTERN = /redeem|redemption|cutoff|cut-off|settlement|queue|nav|suspend|minimum|subscribe|subscription|t\+\d/i;
 
@@ -61,42 +49,64 @@ function summarizeSentenceText(raw: string, maxLength = 220): string {
   return `${(lastSpace > 40 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
 }
 
-function humanizePriceSource(source: string | null | undefined): string | null {
-  if (!source) return null;
-  const cleaned = source.trim();
-  if (!cleaned) return null;
-  const known: Record<string, string> = {
-    coingecko: "CoinGecko",
-    defillama: "DefiLlama",
-    "defillama-list": "DefiLlama",
-    "defillama-contract": "DefiLlama contract quote",
-    "chainlink-nav": "Chainlink NAV oracle",
-    "chronicle-nav": "Chronicle NAV oracle",
-    "protocol-redeem": "Protocol redemption / NAV mark",
-    "protocol-par": "Protocol par reference",
-    redstone: "RedStone oracle",
-    pyth: "Pyth oracle",
-  };
-  return known[cleaned] ?? cleaned.replace(/[-_]+/g, " ");
+function formatPriceSource(source: string | null | undefined): string | null {
+  const cleaned = source?.trim();
+  return cleaned ? getPricingSourceLabel(cleaned) : null;
+}
+
+function resolveReserveSourceDetail(
+  coin: StablecoinDetailCoinMeta,
+  reserves: ReserveResult | null,
+  usedResultSlices: boolean,
+  usedCuratedSlices: boolean,
+): string | null {
+  const liveLabel = coin.liveReservesConfig?.display?.label ?? null;
+  const providerLabel = coin.proofOfReserves?.provider && coin.proofOfReserves.provider.length <= 72
+    ? coin.proofOfReserves.provider
+    : null;
+
+  if (usedResultSlices && reserves) {
+    if (reserves.mode === "live") {
+      return liveLabel ? `Live reserve feed · ${liveLabel}` : "Live reserve feed";
+    }
+    if (reserves.mode === "live-stale") {
+      return liveLabel ? `Live reserve feed (stale) · ${liveLabel}` : "Live reserve feed (stale)";
+    }
+    if (reserves.mode === "template-fallback" || reserves.estimated) {
+      return "Estimated from category template";
+    }
+    if (reserves.mode === "curated-fallback") {
+      return providerLabel
+        ? `Reviewed composition fallback · ${providerLabel}`
+        : "Reviewed composition fallback";
+    }
+  }
+
+  if (usedCuratedSlices) {
+    return providerLabel
+      ? `Reviewed composition · ${providerLabel}`
+      : "Reviewed composition";
+  }
+
+  return providerLabel;
 }
 
 function buildHoldingsSummary(
   coin: StablecoinDetailCoinMeta,
   reserves: ReserveResult | null,
 ): { primary: string; detail: string | null } {
-  const liveSlices = reserves?.reserves?.filter((slice) => slice.pct > 0) ?? [];
+  const resultSlices = reserves?.reserves?.filter((slice) => slice.pct > 0) ?? [];
   const reviewedSlices = coin.reserveQualitySummary?.slices?.filter((slice) => slice.pct > 0) ?? [];
   const curatedSlices = coin.reserves?.filter((slice) => slice.pct > 0) ?? [];
-  const slices = liveSlices.length > 0
-    ? [...liveSlices].sort((left, right) => right.pct - left.pct)
+  const usedResultSlices = resultSlices.length > 0;
+  const usedCuratedSlices = !usedResultSlices && (reviewedSlices.length > 0 || curatedSlices.length > 0);
+  const slices = usedResultSlices
+    ? [...resultSlices].sort((left, right) => right.pct - left.pct)
     : reviewedSlices.length > 0
       ? [...reviewedSlices].sort((left, right) => right.pct - left.pct)
       : [...curatedSlices].sort((left, right) => right.pct - left.pct);
 
-  const sourceDetail = coin.liveReservesConfig?.display?.label
-    ?? (coin.proofOfReserves?.provider && coin.proofOfReserves.provider.length <= 72
-      ? coin.proofOfReserves.provider
-      : null);
+  const sourceDetail = resolveReserveSourceDetail(coin, reserves, usedResultSlices, usedCuratedSlices);
 
   if (slices.length > 0) {
     const top = slices.slice(0, 3).map((slice) => `${formatPercent(slice.pct, slice.pct >= 10 ? 0 : 1)} ${slice.name}`);
@@ -121,22 +131,23 @@ function buildNavPricingSummary(
   const priceLabel = observed
     ? formatHeroNativePrice(coinData.price, coin.flags.pegCurrency ?? "USD", pegRef, 4)
     : null;
-  const basisLabel = coin.flags.navToken ? "NAV-accreting share token" : "Par-targeted fund share";
-  const sourceLabel = humanizePriceSource(coinData.priceSource)
-    ?? (coinData.nominalPriceReference ? humanizePriceSource(coinData.nominalPriceReference.source) : null)
-    ?? coin.liveReservesConfig?.display?.label
-    ?? null;
+  const pricingBasis = coin.flags.navToken ? "NAV-accreting price" : null;
+  const sourceLabel = formatPriceSource(coinData.priceSource)
+    ?? (coinData.nominalPriceReference ? formatPriceSource(coinData.nominalPriceReference.source) : null);
 
   if (priceLabel && sourceLabel) {
-    return { primary: `${priceLabel} via ${sourceLabel}`, detail: basisLabel };
+    return { primary: `${priceLabel} via ${sourceLabel}`, detail: pricingBasis };
   }
   if (priceLabel) {
-    return { primary: priceLabel, detail: basisLabel };
+    return { primary: priceLabel, detail: pricingBasis };
   }
   if (sourceLabel) {
-    return { primary: `Price feed: ${sourceLabel}`, detail: `${basisLabel} · live quote unavailable` };
+    return {
+      primary: `Price feed: ${sourceLabel}`,
+      detail: pricingBasis ? `${pricingBasis} · live quote unavailable` : "Live quote unavailable",
+    };
   }
-  return { primary: basisLabel, detail: "Live price source unavailable" };
+  return { primary: "Live price quote unavailable", detail: pricingBasis };
 }
 
 function buildRedemptionSummary(
@@ -146,7 +157,7 @@ function buildRedemptionSummary(
   const structuredParts: string[] = [];
   if (redemptionBackstop) {
     structuredParts.push(REDEMPTION_ACCESS_LABELS[redemptionBackstop.accessModel]);
-    structuredParts.push(SETTLEMENT_LABELS[redemptionBackstop.settlementModel]);
+    structuredParts.push(REDEMPTION_SETTLEMENT_LABELS[redemptionBackstop.settlementModel]);
     if (redemptionBackstop.routeStatus === "suspended") {
       structuredParts.push("Route currently suspended");
     } else if (redemptionBackstop.feeDescription) {
@@ -189,7 +200,7 @@ function buildEligibilitySummary(
   const jurisdictionText = jurisdictionParts.length > 0 ? jurisdictionParts.join(" · ") : null;
 
   const eligibilityLabel = redemptionBackstop?.holderEligibility && redemptionBackstop.holderEligibility !== "unknown"
-    ? HOLDER_ELIGIBILITY_LABELS[redemptionBackstop.holderEligibility]
+    ? REDEMPTION_HOLDER_ELIGIBILITY_LABELS[redemptionBackstop.holderEligibility]
     : null;
 
   const eligibilityNotice = (coin.notices ?? []).find((notice) =>
@@ -247,8 +258,8 @@ export function TokenizedFundPanel({
 
           <dl className="divide-y divide-border/40 border-y border-border/40">
             <div className="py-3">
-              <div className="flex items-baseline justify-between gap-2">
-                <dt className="pharos-label">Holdings &amp; reserves</dt>
+              <dt className="flex items-baseline justify-between gap-2">
+                <span className="pharos-label">Holdings &amp; reserves</span>
                 {hasReservesSection ? (
                   <Link
                     href="#reserves"
@@ -259,7 +270,7 @@ export function TokenizedFundPanel({
                     <ArrowDownRight className="h-3 w-3" aria-hidden="true" />
                   </Link>
                 ) : null}
-              </div>
+              </dt>
               <dd className="mt-1 text-sm font-medium leading-snug text-foreground">{holdings.primary}</dd>
               {holdings.detail ? (
                 <dd className="mt-0.5 text-xs text-muted-foreground">{holdings.detail}</dd>
@@ -275,8 +286,8 @@ export function TokenizedFundPanel({
             </div>
 
             <div className="py-3">
-              <div className="flex items-baseline justify-between gap-2">
-                <dt className="pharos-label">Redemption terms</dt>
+              <dt className="flex items-baseline justify-between gap-2">
+                <span className="pharos-label">Redemption terms</span>
                 {hasRedemptionSection ? (
                   <Link
                     href="#redemption"
@@ -287,7 +298,7 @@ export function TokenizedFundPanel({
                     <ArrowDownRight className="h-3 w-3" aria-hidden="true" />
                   </Link>
                 ) : null}
-              </div>
+              </dt>
               <dd className="mt-1 text-sm font-medium leading-snug text-foreground">{redemption.primary}</dd>
               {redemption.detail ? (
                 <dd className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{redemption.detail}</dd>

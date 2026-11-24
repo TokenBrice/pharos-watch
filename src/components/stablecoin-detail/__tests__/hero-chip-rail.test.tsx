@@ -2,6 +2,7 @@
 
 import { render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
 import { HeroChipRail } from "../hero-card-sections";
 
@@ -60,13 +61,25 @@ describe("detail verdict lane", () => {
     expect(container.querySelector("[data-tokenized-fund-notice]")).toBeNull();
   });
 
-  it("shows the tokenized fund badge and notice on active tokenized fund detail pages", () => {
+  it("shows the tokenized fund badge with a mobile-accessible target and notice on active tokenized fund detail pages", () => {
     const fund = makeStablecoinMeta({ id: "buidl-blackrock", name: "BlackRock USD Institutional Digital Liquidity Fund", symbol: "BUIDL" });
     const { container } = render(<HeroChipRail coin={fund} verdict={{ archetype: "uncategorized", label: "Uncategorized" }} />);
-    const badge = container.querySelector("[data-tokenized-fund-badge]");
+    const badge = container.querySelector<HTMLButtonElement>("button[data-tokenized-fund-badge]");
     const notice = container.querySelector("[data-tokenized-fund-notice]");
     expect(badge?.textContent).toContain("Tokenized fund — not a stablecoin");
     expect(badge?.getAttribute("title")).toContain("backs stablecoins Pharos follows");
+    expect(badge?.className).toContain("min-h-11");
     expect(notice?.textContent).toContain("Not counted in stablecoin totals and not Safety-graded");
   });
+
+  it.each(["msy-main-street", "bib01-backed"] as const)(
+    "omits the active tokenized-fund badge and notice for frozen archive %s",
+    (id) => {
+      const archive = TRACKED_META_BY_ID.get(id)!;
+      const { container } = render(<HeroChipRail coin={archive} verdict={{ archetype: "frozen-archive", label: "Frozen Archive" }} />);
+      expect(container.querySelector("[data-tokenized-fund-badge]")).toBeNull();
+      expect(container.querySelector("[data-tokenized-fund-notice]")).toBeNull();
+      expect(container.textContent).not.toContain("Tracked because it backs stablecoins");
+    },
+  );
 });

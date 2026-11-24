@@ -37,7 +37,8 @@ import type { TransferReviewView } from "@/lib/transfer-review";
 import { cn } from "@/lib/utils";
 import type { DetailSharedModules } from "./detail-shared-modules";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import { isTokenizedFundId } from "@shared/lib/stablecoins/listing-governance";
+import { isClientTokenizedFundId } from "@shared/lib/stablecoins/aggregate-client-registry";
+import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { resolveMechanismArchetype } from "@shared/lib/classification";
 import {
   DEWSDetail,
@@ -467,7 +468,7 @@ export function DetailRiskContextSections({
   const documentationOnlyLimited = reportCardsResponse && "projection" in reportCardsResponse
     ? reportCardsResponse.documentationOnlyLimited
     : undefined;
-  const isTokenizedFund = isTokenizedFundId(viewModel.coin.id);
+  const isTokenizedFund = isActiveStablecoinMeta(viewModel.coin) && isClientTokenizedFundId(viewModel.coin.id);
   const showScoreCard = !isTokenizedFund && reportCard != null && reportCardsResponse != null;
   // Reserve the paired score column from first paint only when the build
   // snapshot's saved letter grade says a rated card will render: `savedGrade`

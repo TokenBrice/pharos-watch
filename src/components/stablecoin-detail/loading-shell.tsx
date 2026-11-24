@@ -7,8 +7,7 @@ import { STABLECOIN_DETAIL_IDENTITY_LOGO_SIZE } from "@/components/stablecoin-de
 import { BackToSource } from "@/components/back-to-source";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT, TOKENIZED_FUND_BADGE } from "@shared/lib/classification";
-import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import { isTokenizedFundListingClass } from "@shared/lib/stablecoins/listing-class";
+import { CLIENT_ACTIVE_TOKENIZED_FUND_IDS } from "@shared/lib/stablecoins/aggregate-client-registry";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 
 interface StablecoinDetailLoadingShellProps {
@@ -43,7 +42,7 @@ export function StablecoinDetailLoadingShell({
   heading,
 }: StablecoinDetailLoadingShellProps) {
   const Title = titleAs;
-  const isTokenizedFund = isTokenizedFundListingClass(CLIENT_TRACKED_META_BY_ID.get(coin.id)?.listingClass);
+  const isTokenizedFund = CLIENT_ACTIVE_TOKENIZED_FUND_IDS.has(coin.id);
   return (
     <div>
       <BackToSource className="mb-2" />
