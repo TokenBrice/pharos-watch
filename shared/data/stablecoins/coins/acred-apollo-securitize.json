@@ -98,7 +98,7 @@
   "status": "delisted",
   "listingStatusReview": {
     "changedAt": "2026-11-24",
-    "reason": "Qualified-purchaser NAV-accreting tokenized private-credit feeder share into Apollo Diversified Credit Fund, not a fixed-par stablecoin; no active stablecoin links it (listing policy 2.0).",
+    "reason": "NAV-accreting tokenized private-credit feeder fund share into Apollo Diversified Credit Fund, not a fixed-par stablecoin; no active stablecoin links it (listing policy 2.0).",
     "source": {
       "label": "Securitize Apollo Diversified Credit Fund page",
       "url": "https://securitize.io/primary-market/apollo-diversified-credit-securitize-fund"

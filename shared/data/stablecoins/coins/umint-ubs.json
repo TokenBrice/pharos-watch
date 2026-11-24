@@ -106,7 +106,7 @@
   "status": "delisted",
   "listingStatusReview": {
     "changedAt": "2026-11-24",
-    "reason": "Transfer-restricted accumulating Singapore VCC prime USD money-market fund share (UBS uMINT), not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
+    "reason": "Accumulating Singapore VCC prime USD money-market fund share (UBS uMINT), not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
     "source": {
       "label": "UBS uMINT launch announcement",
       "url": "https://www.ubs.com/global/en/media/display-page-ndp/en-20241101-first-tokenized-investment-fund.html"

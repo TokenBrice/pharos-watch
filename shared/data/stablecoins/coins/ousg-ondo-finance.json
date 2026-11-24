@@ -98,7 +98,7 @@
   "status": "delisted",
   "listingStatusReview": {
     "changedAt": "2026-11-24",
-    "reason": "Qualified-purchaser NAV-accreting Treasury fund-of-funds share, not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
+    "reason": "NAV-accreting Treasury fund-of-funds share, not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
     "source": {
       "label": "Ondo OUSG documentation",
       "url": "https://docs.ondo.finance/qualified-access-products/ousg"

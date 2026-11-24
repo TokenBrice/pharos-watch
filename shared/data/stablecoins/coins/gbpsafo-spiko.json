@@ -157,7 +157,7 @@
   "status": "delisted",
   "listingStatusReview": {
     "changedAt": "2026-11-24",
-    "reason": "Allowlisted AMF-authorized UCITS GBP accumulating fund share using overnight total-return swaps, not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
+    "reason": "AMF-authorized UCITS GBP accumulating fund share using overnight total-return swaps, not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
     "source": {
       "label": "Spiko Smart Cash legal documentation",
       "url": "https://docs.spiko.io/documentation/product_overview/smart_cash/legal_documentation/"

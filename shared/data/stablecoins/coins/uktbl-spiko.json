@@ -112,7 +112,7 @@
   "status": "delisted",
   "listingStatusReview": {
     "changedAt": "2026-11-24",
-    "reason": "Allowlisted AMF-authorized UCITS GBP Treasury-bill money-market fund share, not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
+    "reason": "AMF-authorized UCITS GBP Treasury-bill money-market fund share, not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
     "source": {
       "label": "Spiko UK T-Bills product page",
       "url": "https://www.spiko.io/spiko-treasury-bills-pound"

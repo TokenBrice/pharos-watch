@@ -160,7 +160,7 @@
   "status": "delisted",
   "listingStatusReview": {
     "changedAt": "2026-11-24",
-    "reason": "Allowlisted AMF-authorized UCITS USD accumulating fund share using overnight total-return swaps, not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
+    "reason": "AMF-authorized UCITS USD accumulating fund share using overnight total-return swaps, not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
     "source": {
       "label": "Spiko Dollar product page",
       "url": "https://www.spiko.io/spiko-dollar"

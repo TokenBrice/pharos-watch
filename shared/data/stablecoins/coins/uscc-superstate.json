@@ -27,7 +27,7 @@
   "status": "delisted",
   "listingStatusReview": {
     "changedAt": "2026-11-24",
-    "reason": "Qualified-purchaser allowlisted crypto carry and staking fund share (Bitwise/Superstate USCC), not a fixed-par stablecoin; no active stablecoin links it as a tracked dependency (listing policy 2.0).",
+    "reason": "NAV-accreting crypto carry and staking fund share (Bitwise/Superstate USCC), not a fixed-par stablecoin; no active stablecoin links it as a tracked dependency (listing policy 2.0).",
     "source": {
       "label": "Superstate USCC investor terms",
       "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc"

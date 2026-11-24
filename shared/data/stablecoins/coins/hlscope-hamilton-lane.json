@@ -105,7 +105,7 @@
   "status": "delisted",
   "listingStatusReview": {
     "changedAt": "2026-11-24",
-    "reason": "Qualified-purchaser NAV-accreting tokenized senior secured private-credit feeder share (Hamilton Lane SCOPE), not a fixed-par stablecoin; no active stablecoin links it (listing policy 2.0).",
+    "reason": "NAV-accreting tokenized senior secured private-credit feeder fund share (Hamilton Lane SCOPE), not a fixed-par stablecoin; no active stablecoin links it (listing policy 2.0).",
     "source": {
       "label": "Securitize Hamilton Lane SCOPE page",
       "url": "https://securitize.io/primary-market/hl-scope"

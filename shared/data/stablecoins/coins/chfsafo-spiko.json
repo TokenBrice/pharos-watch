@@ -180,7 +180,7 @@
   "status": "delisted",
   "listingStatusReview": {
     "changedAt": "2026-11-24",
-    "reason": "Allowlisted AMF-authorized UCITS CHF accumulating fund share using overnight total-return swaps, not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
+    "reason": "AMF-authorized UCITS CHF accumulating fund share using overnight total-return swaps, not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
     "source": {
       "label": "Spiko CHFSAFO key information document",
       "url": "https://cdn.spiko.finance/legal_docs/EN/KID_chfSAFO_EN.pdf"

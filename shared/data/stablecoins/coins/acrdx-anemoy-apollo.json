@@ -139,7 +139,7 @@
   "status": "delisted",
   "listingStatusReview": {
     "changedAt": "2026-11-24",
-    "reason": "Permissioned NAV-accreting private-credit feeder fund share (Anemoy/Centrifuge Apollo credit fund), not a fixed-par stablecoin; no active stablecoin links it (listing policy 2.0).",
+    "reason": "NAV-accreting private-credit feeder fund share (Anemoy/Centrifuge Apollo credit fund), not a fixed-par stablecoin; no active stablecoin links it (listing policy 2.0).",
     "source": {
       "label": "Anemoy ACRDX announcement",
       "url": "https://www.anemoy.io/news/acrdx-launched"

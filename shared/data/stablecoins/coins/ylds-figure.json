@@ -95,8 +95,8 @@
   "custodyModel": "institutional-top",
   "governanceQuality": "regulated-entity",
   "yieldConfig": {
-    "yieldSource": "Figure yield fund",
-    "yieldType": "nav-appreciation"
+    "yieldSource": "Figure face-amount certificate interest (SOFR minus 35bps)",
+    "yieldType": "rebase"
   },
   "launchDate": "2025-02-20"
 }

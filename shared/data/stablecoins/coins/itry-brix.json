@@ -16,7 +16,7 @@
     "disposition": "resolved",
     "reviewedAt": "2026-11-15",
     "reviewer": "Pharos discovery iTRY review",
-    "rationale": "Issuer backing documentation identifies DLF shares in a regulated basket of Turkish money-market funds as iTRY's full backing. This matches the supported short-duration fund-backed tbill archetype. Plain iTRY maintains a fixed TRY claim and does not accrue NAV; only the separately tracked wiTRY savings wrapper accrues fund yield. The cash-equivalent listing class follows the tbill rule without setting navToken on the parent.",
+    "rationale": "Issuer backing documentation identifies DLF shares in a regulated basket of Turkish money-market funds as iTRY's full backing. This matches the supported short-duration fund-backed tbill archetype. Plain iTRY maintains a fixed TRY claim and does not accrue NAV; only the separately tracked wiTRY savings wrapper accrues fund yield. The core-stablecoin listing class reflects the fixed-par TRY claim without setting navToken on the parent.",
     "sources": [
       {
         "label": "Brix iTRY backing",

@@ -101,7 +101,7 @@
   "status": "delisted",
   "listingStatusReview": {
     "changedAt": "2026-11-24",
-    "reason": "Rule 506(c) NAV-accreting tokenized AAA CLO private-fund share, not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
+    "reason": "NAV-accreting tokenized AAA CLO private-fund share (Rule 506(c) offering), not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
     "source": {
       "label": "Securitize BNY CLO Fund page",
       "url": "https://securitize.io/primary-market/Securitize-BNY-CLO-Fund"

@@ -146,7 +146,7 @@
   "status": "delisted",
   "listingStatusReview": {
     "changedAt": "2026-11-24",
-    "reason": "KYB-gated institutional private-credit pool share with periodic pricing and scheduled exits, not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
+    "reason": "Share in Multipli's KYB-gated private-credit class valued by a NAV oracle with no par redemption commitment (scheduled exits), not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
     "source": {
       "label": "Multipli documentation",
       "url": "https://docs.multipli.fi/"
