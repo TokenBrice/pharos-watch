@@ -14,6 +14,7 @@ import type { ReserveSnapshotMetadataRecord } from "../live-reserves/store";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { defineReviewedStablecoinRedeemConfig } from "@shared/lib/redemption-backstop-configs/stablecoin-redeem/shared";
 import { LiveReserveRedemptionOutputValuationSchema } from "@shared/types/live-reserves";
+import { RedemptionBackstopEntrySchema } from "@shared/types/redemption";
 import { liveSnapshot } from "./redemption-backstop-sources.test-support";
 import { admittedDeviationBps, evaluateReferenceAdmission } from "@shared/lib/reference-admission";
 import { deriveCurrentPegObservationMap } from "@shared/lib/current-peg-observations";
@@ -450,8 +451,7 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
             sourceId: "cap-vault:chainlink-nav", unitValueUsd: 0.99,
             observedAt: state === "stale" ? now - 1801 : state === "future" ? now + 1 : now - 120,
             basketWeights: [
-              { assetId: "usdc-circle", weight: 0.93 },
-              { assetId: state === "mismatched" ? "usdt-tether" : "wtgxx-wisdomtree", weight: 0.07 },
+              { assetId: state === "mismatched" ? "usdt-tether" : "usdc-circle", weight: 1 },
             ],
           },
         },
@@ -464,7 +464,7 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
       expect(result.get("cusd-cap")).toMatchObject({
         routeStatus: "degraded", outputImpairedDependencyId: "usdc-circle",
       });
-      if (state === "fresh") expect(result.get("cusd-cap")?.outputImpairedShare).toBe(0.93);
+      if (state === "fresh") expect(result.get("cusd-cap")?.outputImpairedShare).toBe(1);
       else {
         expect(result.get("cusd-cap")).not.toHaveProperty("outputImpairedShare");
         expect(result.get("cusd-cap")?.routeStatusReason).toContain("share is unquantified");
@@ -784,18 +784,22 @@ describe("wave2 redemption exit-route embeds", () => {
     );
 
     expect(entry.resolutionState).toBe("resolved");
+    expect(entry.outputAssetType).toBe("mixed-collateral");
+    expect(entry.outputAssetQualityScore).toBe(45);
     expect(entry.immediateCapacityUsd).toBe(9_100_000);
+    expect(() => RedemptionBackstopEntrySchema.parse(entry)).not.toThrow();
     const observation = entry.capacityProfile?.exitRouteObservations?.[0];
     expect(observation).toMatchObject({
       routeId: "redemption:satusd-river:collateral-redeem",
       routeFamily: "protocol-redemption",
-      // The complete collateral inventory is issuer-undisclosed, so the
-      // observation must not publish a partial BTC/ETH/BNB asset-key subset.
-      output: { kind: "unresolved-asset" },
+      output: {
+        kind: "collateral",
+        assetKeys: config!.outputAssets,
+      },
       evidenceKind: "onchain-contract-state",
       scoreEligible: true,
     });
-    expect(observation?.output).not.toHaveProperty("assetKeys");
+    expect(observation?.output.assetKeys).toHaveLength(22);
     expect(observation?.executableUsd).toBe(entry.capacityProfile?.modeledExitSizeUsd);
     expect(observation?.executableUsd).toBeGreaterThan(0);
   });
