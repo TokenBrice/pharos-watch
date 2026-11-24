@@ -625,12 +625,18 @@ export const SafetyGradesResponseSchema = z
           grade: V9GradeSchema.nullable(),
           ratingStatus: V9RatingStatusSchema,
           partialEvidence: V9CompactPartialEvidenceSchema.nullable(),
+          notRatedReason: V9ReasonCodeSchema.optional(),
         })
         .strict(),
     ),
   })
   .strict().superRefine((response, ctx) => {
-    for (const row of response.grades) refineV9RatingStatusFields(row, ctx);
+    for (const row of response.grades) {
+      refineV9RatingStatusFields(row, ctx);
+      if (row.notRatedReason !== undefined && row.ratingStatus !== "not-rated") {
+        ctx.addIssue({ code: "custom", message: "notRatedReason is only allowed on not-rated rows" });
+      }
+    }
   });
 export type SafetyGradesResponse = z.infer<typeof SafetyGradesResponseSchema>;
 
@@ -645,6 +651,7 @@ export function projectSafetyGrades(snapshot: ReportCardsV9CurrentResponse): Saf
     grades: snapshot.cards.map((card) => ({
       id: card.id, score: card.score, grade: card.grade, ratingStatus: card.ratingStatus,
       partialEvidence: projectV9CompactPartialEvidence(card.partialEvidence),
+      ...(card.ratingStatus === "not-rated" && card.nrReasons[0] ? { notRatedReason: card.nrReasons[0].code } : {}),
     })),
   };
 }

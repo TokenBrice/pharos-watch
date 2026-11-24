@@ -952,6 +952,34 @@ describe("Safety Score v9 public NR cap suppression", () => {
     expect(ok({ ...c, bindingCap: { ...c.caps[0]!, binding: true } })).toBe(false);
     expect(ok({ ...c, caps: c.caps.map((e) => ({ ...e, binding: true })) })).toBe(false);
   });
+
+  it("publishes tokenized funds as not-rated with tokenized-fund-not-graded while keeping dependents intact", () => {
+    const fundIn = fx("buidl-blackrock", { score: 67, grade: "B-", qualityScore: 67, pillars: { backing: 88, exit: 55, control: 60 } });
+    const depIn = fx("usdtb-ethena", {
+      score: 64, grade: "C+",
+      caps: [cap("parent", 64, "parent", "Collateral parent limit.", true)],
+      dependency: { assetId: "usdtb-ethena", serial: [], cycleBlocked: false, basket: [{ upstreamAssetId: "buidl-blackrock", weight: 1, score: 88, boundedUnknown: false }] },
+    });
+    depIn.trace.wrapperParentLimit = { schemaVersion: 1, parentKind: "concentrated-collateral", parentAssetId: "buidl-blackrock", parentScore: 67, form: "pure", appliedDiscount: 3, limit: 64 };
+    const resp = rt(publish([fundIn, depIn]));
+    const fund = resp.cards.find((c) => c.id === "buidl-blackrock")!;
+    const dep = resp.cards.find((c) => c.id === "usdtb-ethena")!;
+    expect(fund).toMatchObject({
+      ratingStatus: "not-rated", grade: "NR", score: null, qualityScore: null, pegAdjustedScore: null,
+      weakestPillar: null, breakdowns: null, bindingCap: null, caps: [],
+    });
+    expect([fund.pillars.backing.score, fund.pillars.exit.score, fund.pillars.control.score]).toEqual([null, null, null]);
+    expect(fund.nrReasons).toEqual([expect.objectContaining({ code: "tokenized-fund-not-graded" })]);
+    expect(fund.reasonCodes).toContain("tokenized-fund-not-graded");
+    expect(tableCard(fund)).toMatchObject({ ratingStatus: "not-rated", grade: "NR", score: null });
+    expect(detailCard(fund)).toMatchObject({ ratingStatus: "not-rated", grade: "NR" });
+    expect(dep).toMatchObject({ ratingStatus: "rated", grade: "C+", score: 64 });
+    expect(dep.dependencies.basket[0]).toMatchObject({ upstreamAssetId: "buidl-blackrock", score: 88, collateralParentScore: 67 });
+    // Pipeline-gap funds stay pipeline-gap (grade null), never masked as tokenized-fund-not-graded.
+    const gapFund = pc(fx("buidl-blackrock", { score: null, grade: null, pillars: { backing: null, exit: null, control: 80 } }));
+    expect(gapFund).toMatchObject({ ratingStatus: "pipeline-gap", grade: null, score: null });
+    expect(gapFund.reasonCodes).not.toContain("tokenized-fund-not-graded");
+  });
 });
 
 describe("v10.05 published mint process evidence", () => {

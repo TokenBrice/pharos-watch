@@ -563,12 +563,13 @@ function assertPreviousReaderSource() {
   // No public card, breakdown, or trace schema changed; every pre-dust input still parses
   // identically (verified by substituting fd0259e97's two files, which restores the prior
   // 45c54905… digest).
-  // Listing policy 2.0 refresh: stablecoin-taxonomy.ts retires the cash-equivalent and
-  // stable-value-investment listing classes for tokenized-fund and review-hold and exports
-  // LISTING_CLASS_VALUES. ListingClass is not part of any card, breakdown or trace schema, so
-  // every pre-dust input still parses identically (verified by substituting 92c90ca72's
-  // stablecoin-taxonomy.ts, which restores the prior 28090be6… digest).
-  if (hash.digest("hex") !== "2cc5ddfdd505f9da681fd944255ba6a54e670a6dd51b62c37a20c452a8496c4a") throw new Error("Pre-dust reader source/refinement inputs changed");
+  // v10.55 + listing-policy v2 refresh: stablecoin-taxonomy.ts (48315a494) replaces retired
+  // listing classes with tokenized-fund/review-hold; safety-score-v9.ts appends
+  // tokenized-fund-not-graded to V9_REASON_CODES; safety-score-v9-public-attribution.ts adds
+  // isUngradedTokenizedFundCard (only matching tokenized-fund-not-graded NR cards); and
+  // report-cards-v9.ts adds optional notRatedReason on SafetyGradesResponseSchema. Every
+  // pre-dust input still parses identically (verified against base commit 3660bd95c).
+  if (hash.digest("hex") !== "ac9397e4f2690855d99d8f3aeb4edfdbdcac57f6fbf085333ce7240503623cf3") throw new Error("Pre-dust reader source/refinement inputs changed");
 }
 
 export async function previousReader() {
@@ -583,7 +584,7 @@ export async function previousReader() {
     return { default: { ...policy.default,
       reasonRegistry: policy.default.reasonRegistry.map((reason) => PRE_DUST_REASON_CODES.includes(reason.code)
         ? reason
-        : { ...reason, permittedTreatments: ["diagnostic"], defaultTreatment: "diagnostic" }) } };
+        : { ...reason, defaultFactClass: "optional-unsupported", permittedTreatments: ["diagnostic"], defaultTreatment: "diagnostic" }) } };
   });
   vi.doMock("../safety-score-v9", async (original) => ({
     ...await original<typeof import("../safety-score-v9")>(),

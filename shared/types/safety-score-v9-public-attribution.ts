@@ -5,6 +5,19 @@ import { resolveV9PublicWitnessTexts } from "./safety-score-v9-public-witness-te
 
 type AttributionCard = Omit<SafetyScoreV9CardValidationInput, "breakdowns">;
 
+/**
+ * Tokenized funds stay evaluated internally so dependents keep their exact
+ * dependency inputs and parent limits, while the fund's own public card
+ * withholds its score, pillar scores, and score-attribution lists with the
+ * dedicated `tokenized-fund-not-graded` NR reason.
+ */
+export function isUngradedTokenizedFundCard(
+  card: Pick<AttributionCard, "ratingStatus" | "nrReasons">,
+): boolean {
+  return card.ratingStatus === "not-rated"
+    && card.nrReasons.some((reason) => reason.code === "tokenized-fund-not-graded");
+}
+
 export interface SafetyScoreV9ParentAttributionIssue {
   cardId: string;
   message: string;
@@ -48,17 +61,24 @@ export function findSafetyScoreV9ParentAttributionIssues(
     for (const dependency of card.dependencies.basket) {
       const upstream = cardsById.get(dependency.upstreamAssetId);
       if (!upstream) continue;
-      if (dependency.collateralParentScore !== undefined) {
+      const upstreamUngradedFund = isUngradedTokenizedFundCard(upstream);
+      if (dependency.collateralParentScore !== undefined && !upstreamUngradedFund) {
         const ordinaryScore = upstream.scoreTrace.scoreAdjustments[0]?.publishedScoreBefore ?? upstream.score;
         if (ordinaryScore === null || Math.abs(dependency.collateralParentScore - ordinaryScore) > 1e-9) {
           issues.push({ cardId: card.id, message: `Collateral whole-card score does not reconcile to ${dependency.upstreamAssetId}` });
         }
       }
       const backing = upstream.pillars.backing;
-      const status = (backing.aggregationDisposition ?? "included") !== "included" ? "pipeline-gap"
-        : backing.score !== null ? "rated" : "not-rated";
-      if (dependency.ratingStatus !== status) {
-        issues.push({ cardId: card.id, message: `Parent Backing availability does not reconcile to ${dependency.upstreamAssetId}` });
+      if (upstreamUngradedFund) {
+        if ((backing.aggregationDisposition ?? "included") !== "included" && dependency.ratingStatus !== "pipeline-gap") {
+          issues.push({ cardId: card.id, message: `Parent Backing availability does not reconcile to ${dependency.upstreamAssetId}` });
+        }
+      } else {
+        const status = (backing.aggregationDisposition ?? "included") !== "included" ? "pipeline-gap"
+          : backing.score !== null ? "rated" : "not-rated";
+        if (dependency.ratingStatus !== status) {
+          issues.push({ cardId: card.id, message: `Parent Backing availability does not reconcile to ${dependency.upstreamAssetId}` });
+        }
       }
     }
     // Roles carry their selected raw dimension, not unrelated whole-card status.
@@ -69,6 +89,7 @@ export function findSafetyScoreV9ParentAttributionIssues(
       const pathPrefix = `parent:${parent.upstreamAssetId}:`;
       const messagePrefix = `Required parent ${parent.upstreamAssetId}: `;
       const upstream = resolvedParent(parent.upstreamAssetId);
+      if (upstream && isUngradedTokenizedFundCard(upstream)) continue;
       const matches = upstream?.scoreTrace.adverseAttribution.items.some(
         (candidate) =>
           sameCausePath(response, upstream, candidate.path, card, item.path.slice(pathPrefix.length)) &&
@@ -88,6 +109,7 @@ export function findSafetyScoreV9ParentAttributionIssues(
       const pathPrefix = `parent:${parent.upstreamAssetId}:`;
       const messagePrefix = `Required parent ${parent.upstreamAssetId}: `;
       const upstream = resolvedParent(parent.upstreamAssetId);
+      if (upstream && isUngradedTokenizedFundCard(upstream)) continue;
       const matches = upstream?.scoreTrace.boundedUncertaintyAttribution.items.some(
         (candidate) =>
           candidate.code === item.code &&

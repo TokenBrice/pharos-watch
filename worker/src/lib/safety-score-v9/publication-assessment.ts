@@ -27,8 +27,11 @@ interface MeasuredExitPublicationInput {
 }
 
 
+import { isUngradedTokenizedFundCard } from "@shared/types/safety-score-v9-public-attribution";
+
 /** Preserve the stale measured-route guard across rating and availability transitions. */
 function cardDeteriorated(candidate: SafetyScoreV9CurrentResponse["cards"][number], accepted: SafetyScoreV9AcceptedCardBaseline): boolean {
+  if (isUngradedTokenizedFundCard(candidate)) return false;
   if (accepted.grade !== null && accepted.grade !== "NR" && candidate.ratingStatus !== "rated") return true;
   if (candidate.score !== null && accepted.score !== null && candidate.score < accepted.score) return true;
   return candidate.grade !== null && accepted.grade !== null &&

@@ -371,6 +371,7 @@ export async function persistSafetyScoreV9Publication(
         card.id, {
           score: card.score, grade: card.grade, ratingStatus: card.ratingStatus,
           partialEvidence: projectV9CompactPartialEvidence(card.partialEvidence),
+          ...(card.ratingStatus === "not-rated" && card.nrReasons[0] ? { notRatedReason: card.nrReasons[0].code } : {}),
         },
       ])),
     }));

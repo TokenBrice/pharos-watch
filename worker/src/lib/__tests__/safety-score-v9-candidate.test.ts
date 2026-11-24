@@ -11,6 +11,7 @@ import {
 } from "@shared/lib/safety-score-v9/evaluate-set";
 import * as evaluateSetModule from "@shared/lib/safety-score-v9/evaluate-set";
 import * as publicModule from "@shared/lib/safety-score-v9/public";
+import * as listingGovernance from "@shared/lib/stablecoins/listing-governance";
 import * as causesModule from "@shared/types/safety-score-v9-causes";
 import {
   loadV9CandidateMethodologyPolicy,
@@ -1281,5 +1282,105 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
       expect(result.candidate.pillarFreshness?.dexMaxAgeSec).toBe(5_000);
       expect(spy).toHaveBeenCalledOnce();
     } finally { spy.mockRestore(); }
+  });
+
+  it("publishes tokenized funds as not-rated while leaving dependent stablecoins bit-for-bit unchanged", () => {
+    const buildFixture = () => {
+      const fundA = "buidl-blackrock", fundB = "eutbl-spiko";
+      const deps = ["usdtb-ethena", "eur0-usual", "usdf-falcon", "usd0-usual"] as const;
+      const ids = [fundA, fundB, ...deps];
+      const inputs = ids.map((id) => exactFixedInput(id));
+      const fixedInput = inputs[0]!;
+      fixedInput.activeAssetIds = [...ids];
+      for (const other of inputs.slice(1)) {
+        for (const key of ["dexLiqMap", "pegDataById", "liveReserveMap", "liveReserveProvenanceMap",
+          "chainCirculatingById", "aggregateCirculatingById", "resolvedBlacklistStatuses"] as const) {
+          Object.assign(fixedInput[key], other[key]);
+        }
+      }
+      // Give fundA a lower reserve class so its internal score sits below dependents' own score,
+      // forcing the concentrated-collateral parent limit (parent - 3) to bind on usdtb-ethena.
+      fixedInput.liveReserveMap[fundA] = [{ ...FIXTURE_RESERVES[0]!, name: "Credit note", assetClass: "public-credit" }];
+      const fundSlice = (name: string, coinId: string, pct: number) => ({
+        ...FIXTURE_RESERVES[0]!, name, pct, assetClass: "fund-share" as const, coinId, depType: "collateral" as const,
+      });
+      fixedInput.liveReserveMap["usdtb-ethena"] = [fundSlice("BUIDL share", fundA, 100)];
+      fixedInput.liveReserveMap["eur0-usual"] = [fundSlice("EUTBL share", fundB, 100)];
+      fixedInput.liveReserveMap["usdf-falcon"] = [
+        fundSlice("BUIDL share", fundA, 50),
+        { ...FIXTURE_RESERVES[0]!, name: "Cash", pct: 50 },
+      ];
+      fixedInput.liveReserveMap["usd0-usual"] = [
+        fundSlice("BUIDL share", fundA, 60),
+        fundSlice("EUTBL share", fundB, 40),
+      ];
+      fixedInput.dexPayloadFingerprint = computeDexLiquidityPayloadFingerprint(fixedInput.dexLiqMap, fixedInput.dexGenerationId);
+      fixedInput.baseInputGenerationId = deriveReportCardsBaseInputGenerationId(fixedInput);
+      const extension = reviewedExtension(fixedInput);
+      const reviewedById = new Map(inputs.map((input) => {
+        const asset = reviewedExtension(input).assets[0]!;
+        return [asset.assetId, asset] as const;
+      }));
+      extension.assets = extension.assets.map((asset) => ({
+        ...reviewedById.get(asset.assetId)!, reserveClassifications: asset.reserveClassifications,
+      }));
+      const addBasketEdges = (assetId: string, edges: Array<{ upstreamAssetId: string; weight: number }>) => {
+        const asset = extension.assets.find((a) => a.assetId === assetId)!;
+        asset.dependencies = {
+          source: "manual", baseSource: "manual", dependencyFromLive: false,
+          mappedLiveReserveWeight: null, fallbackReason: null,
+          edges: edges.map((e) => ({
+            upstreamAssetId: e.upstreamAssetId, dependencyType: "collateral", economicRole: "basket-exposure",
+            weight: e.weight, failureDomains: [],
+          })),
+          diagnostics: { graphState: "valid", issueCodes: [], sccMemberAssetIds: [] },
+        };
+      };
+      addBasketEdges("usdtb-ethena", [{ upstreamAssetId: fundA, weight: 1 }]);
+      addBasketEdges("eur0-usual", [{ upstreamAssetId: fundB, weight: 1 }]);
+      addBasketEdges("usdf-falcon", [{ upstreamAssetId: fundA, weight: 0.5 }]);
+      addBasketEdges("usd0-usual", [{ upstreamAssetId: fundA, weight: 0.6 }, { upstreamAssetId: fundB, weight: 0.4 }]);
+      return { fixedInput, extension, publishedAtSec: PUBLISHED_AT_SEC };
+    };
+
+    // Before (pre-v10.55): tokenized funds publish their rated grades.
+    const spy = vi.spyOn(listingGovernance, "isTokenizedFundId").mockReturnValue(false);
+    let before!: ReturnType<typeof buildSafetyScoreV9Candidate>;
+    try {
+      before = buildSafetyScoreV9Candidate(buildFixture());
+    } finally {
+      spy.mockRestore();
+    }
+    // After (v10.55): tokenized funds stay internally evaluated, public cards publish as not-rated.
+    const after = buildSafetyScoreV9Candidate(buildFixture());
+    expect(SafetyScoreV9ResponseSchema.safeParse(after.candidate).success).toBe(true);
+
+    for (const fundId of ["buidl-blackrock", "eutbl-spiko"] as const) {
+      const beforeTrace = before.evaluatedSet.assets.find((a) => a.assetId === fundId)!.trace;
+      const afterTrace = after.evaluatedSet.assets.find((a) => a.assetId === fundId)!.trace;
+      expect(beforeTrace.ratingStatus).toBe("rated");
+      expect(afterTrace).toEqual(beforeTrace);
+      expect(before.candidate.cards.find((c) => c.id === fundId)!.ratingStatus).toBe("rated");
+      const pubCard = after.candidate.cards.find((c) => c.id === fundId)!;
+      expect(pubCard).toMatchObject({
+        ratingStatus: "not-rated", grade: "NR", score: null, breakdowns: null, bindingCap: null,
+      });
+      expect([pubCard.pillars.backing.score, pubCard.pillars.exit.score, pubCard.pillars.control.score]).toEqual([null, null, null]);
+      expect(pubCard.nrReasons).toEqual([expect.objectContaining({ code: "tokenized-fund-not-graded" })]);
+    }
+
+    // Every dependent keeps byte-identical public cards and internal traces before vs after.
+    for (const depId of ["usdtb-ethena", "eur0-usual", "usdf-falcon", "usd0-usual"] as const) {
+      const depBefore = before.candidate.cards.find((c) => c.id === depId)!;
+      const depAfter = after.candidate.cards.find((c) => c.id === depId)!;
+      expect(depAfter.ratingStatus).toBe("rated");
+      expect(depAfter).toEqual(depBefore);
+      expect(after.evaluatedSet.assets.find((a) => a.assetId === depId)!.trace).toEqual(
+        before.evaluatedSet.assets.find((a) => a.assetId === depId)!.trace,
+      );
+    }
+    // Sanity check: concentrated-collateral limit actually engaged on usdtb-ethena & eur0-usual.
+    expect(after.candidate.cards.find((c) => c.id === "usdtb-ethena")!.scoreTrace.wrapperParentLimit?.parentKind).toBe("concentrated-collateral");
+    expect(after.candidate.cards.find((c) => c.id === "eur0-usual")!.scoreTrace.wrapperParentLimit?.parentKind).toBe("concentrated-collateral");
   });
 });
