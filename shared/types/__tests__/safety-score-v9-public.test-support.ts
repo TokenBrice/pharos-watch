@@ -543,7 +543,13 @@ function assertPreviousReaderSource() {
   // The cap only bounds the materialization manifest `bytes` field (a looser max); no card,
   // breakdown or trace schema changed, so every pre-dust input still parses identically
   // (verified by substituting origin/main's file, which restores the prior e4db44ef… digest).
-  if (hash.digest("hex") !== "29c92c0f55e9c6ad11e7371b3c5347784bef0c52d27ae2f316f6fe486163e300") throw new Error("Pre-dust reader source/refinement inputs changed");
+  // v10.53 periodic-filing budget refresh: additive-only changes in safety-score-v9.ts +
+  // policy.semantic.evidence.evidenceExpiry (regulatorPeriodicFilingCompositionMaxAgeSec = 11664000)
+  // and stablecoin-meta-primitives.ts (optional ReserveReview.compositionFiling). No public card,
+  // breakdown, or trace schema changed; strict public objects and refinements remain byte-identical
+  // for all pre-dust inputs (verified by substituting 76689b225's three files, which restores the
+  // prior 29c92c0f… digest).
+  if (hash.digest("hex") !== "d4029dccefb5b213c4fe5bd04dd0eb8542927a9361c159e3c6201fe008f34c40") throw new Error("Pre-dust reader source/refinement inputs changed");
 }
 
 export async function previousReader() {

@@ -31,6 +31,7 @@ import {
   withV9WmReviewedDeploymentAttribution as withWmReviewedDeploymentAttribution,
 } from "../../test-helpers/v9-fixed-input";
 import {
+  XAUT_FACT_SET_CLOCK_SEC,
   alphaMeta,
   metaMap,
   rebuildFixed,
@@ -39,10 +40,6 @@ import {
   xautFactSetFixedInput,
   xautFactSetMeta,
 } from "./safety-score-v9-fact-set.test-support";
-
-// The fixture consumes October destination reviews directly from the sidecar,
-// independently of the generated registry's older review clock.
-const XAUT_FACT_SET_CLOCK_SEC = Date.parse("2026-11-07T12:00:00Z") / 1_000;
 
 // v10.38 per-source ceilings are authored in policy; the fact set must age the
 // chain-supply evidence against them, not against a worker interval literal.
@@ -312,7 +309,7 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     });
     expect(bridgeControls).toHaveLength(1);
     expect(bridgeControls[0]).toMatchObject({
-      // Unresolved authority stays bounded-unknown; the sub-threshold share is priced proportionally.
+      // Every XAUt0 route has a curated signing model, so the pooled control retains the weakest member quorum (1-of-2) while unreviewed custody/incidents keep it bounded-unknown.
       status: {
         applicability: { state: "required" },
         observationState: "bounded-unknown",
@@ -324,8 +321,9 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
       economicLossScope: "deployment",
       materialSupplyShare: expect.closeTo(0.04849813227, 9),
       authority: {
-        authorityKey: "bridge-route:representation-group:xaut-tether:xaut0-omnichain",
-        model: "unknown",
+        authorityKey: "solana:9fjse8hkojgxbbydk2r1gc3hurunjwwxr6akyzwwy7sy",
+        model: "multisig",
+        threshold: { required: 1, total: 2 },
       },
       failureDomains: expect.arrayContaining([
         { kind: "bridge-route", key: "contract:ethereum:0xb9c2321bb7d0db468f570d10a424d1cc8efd696c" },

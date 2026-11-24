@@ -611,7 +611,9 @@ function summarizeBridgeDomainExposure(
       isV9RepresentationGroupRoute(control.deploymentKey) &&
       control.status.applicability.state === "required" &&
       control.status.observationState === "bounded-unknown" &&
-      control.authority?.model === "unknown" &&
+      // Pooled groups stay bounded-unknown on unreviewed custody/incidents even
+      // after every member signing model is researched; accept any non-null authority.
+      control.authority !== null &&
       control.capSemantics.kind !== "unknown" &&
       control.claimImpairment !== "unknown" &&
       control.economicLossScope === "deployment" &&

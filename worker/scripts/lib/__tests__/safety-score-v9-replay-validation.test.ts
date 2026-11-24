@@ -154,7 +154,7 @@ describe("permanent replay integrity", () => {
   }, 120_000);
 
   it("reproduces the activated reserve admission diagnostic from a retained extension", () => {
-    const fixedInput = makeV9FixedInput({ assetId: "gbpa-agant", clockSec: v9TestClockSec(), reserves: [] });
+    const fixedInput = makeV9FixedInput({ assetId: "cngn-compliant-naira", clockSec: v9TestClockSec(), reserves: [] });
     const registrySnapshot = localSnapshot();
     const buildCandidate = candidate.buildSafetyScoreV9Candidate;
     const activated = vi.spyOn(candidate, "buildSafetyScoreV9Candidate").mockImplementation((input) =>

@@ -5,11 +5,13 @@
 // scope, the tracked-asset book and the compile-exception fallback.
 import { describe, expect, it } from "vitest";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { v9TestClockSec } from "../../test-helpers/v9-fixed-input";
 import { compileCeilingCard as compile, reviewDatedOn } from "./safety-score-v9-reserve-admission.test-support";
 
 describe("v10.48 expired-review ceiling over the registry", () => {
   it("caps every real age-only expired review at its own admission", () => {
-    const sec = 1_795_169_853, day = "2026-11-18"; // capture clock
+    const sec = v9TestClockSec();
+    const day = new Date((sec - 2 * 86_400) * 1_000).toISOString().slice(0, 10);
     let capped = 0;
     for (const meta of ACTIVE_META_BY_ID.values()) {
       const review = meta.reserveReview;
