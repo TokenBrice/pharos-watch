@@ -1,5 +1,6 @@
 import { V9RatingStatusSchema, V9CompactPartialEvidenceSchema, V9EvidencePillarSchema } from "./safety-score-v9-causes";
 import { z } from "zod";
+import { CoreStablecoinAggregateUniverseSchema, type CoreStablecoinAggregateUniverse } from "./aggregate-universe";
 import { DigestSafetyMapUtcDateSchema, type DigestSafetyMapCapture } from "./digest-safety-map-contract";
 import type { DepegDirection, DepegEvent } from "./peg";
 import { DepegEventProjectionEvidenceSchema } from "./depeg-event-projection";
@@ -312,7 +313,7 @@ export const DigestMcap7dDeltaCoverageSchema = z.object({
 
 export interface DigestInputData {
   digestVersion?: number;
-  aggregateUniverse?: "core-stablecoins-v1";
+  aggregateUniverse?: CoreStablecoinAggregateUniverse;
   totalMcapUsd: number;
   /** totalMcapUsd is a known subtotal, not a complete market total unless coverage is complete. */
   supplyCoverage?: z.infer<typeof DigestSupplyCoverageSchema>;
@@ -835,7 +836,7 @@ const DigestV9SafetyScoresSnapshotSchema = z
 // may omit them); the goal is type-safety, not presence enforcement.
 const DigestSnapshotInputDataSchema = z
   .object({
-    aggregateUniverse: z.literal("core-stablecoins-v1").optional(),
+    aggregateUniverse: CoreStablecoinAggregateUniverseSchema.optional(),
     totalMcapUsd: z.number().optional(),
     supplyCoverage: DigestSupplyCoverageSchema.optional(),
     mcap7dDelta: z.number().nullable().optional(),

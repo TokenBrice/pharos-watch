@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS } from "../registry";
 import {
@@ -14,10 +15,22 @@ import {
   CLIENT_CORE_AGGREGATE_ACTIVE_IDS,
 } from "../aggregate-client-registry";
 import {
+  CORE_STABLECOIN_AGGREGATE_UNIVERSE,
+  CORE_STABLECOIN_AGGREGATE_UNIVERSE_V1,
+  CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE,
+  CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC,
   filterCoreAggregateStablecoins,
   filterTokenizedFunds,
+  getCoreAggregateUniverseForTimestamp,
   isCoreAggregateStablecoinId,
 } from "../aggregate-universe";
+import {
+  CORE_AGGREGATE_V1_MEMBERS_SNAPSHOT,
+  CORE_AGGREGATE_V1_MEMBER_IDS,
+  CORE_AGGREGATE_V1_MEMBER_LIST,
+  CORE_AGGREGATE_V1_NON_ACTIVE_MEMBER_IDS,
+  CORE_AGGREGATE_V1_NON_ACTIVE_MEMBER_LIST,
+} from "../aggregate-universe-v1";
 import { getListingClass, isTokenizedFundId } from "../listing-governance";
 
 describe("core stablecoin aggregate universe", () => {
@@ -89,5 +102,35 @@ describe("core stablecoin aggregate universe", () => {
         expect(partitions[i].filter((id) => other.includes(id))).toEqual([]);
       }
     }
+  });
+
+  it("exposes the v2 universe, single cutover date authority, and immutable frozen v1 membership", () => {
+    expect(CORE_STABLECOIN_AGGREGATE_UNIVERSE_V1).toBe("core-stablecoins-v1");
+    expect(CORE_STABLECOIN_AGGREGATE_UNIVERSE).toBe("core-stablecoins-v2");
+    expect(CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC).toBe(
+      Date.parse(`${CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE}T00:00:00Z`) / 1000,
+    );
+    expect(getCoreAggregateUniverseForTimestamp(CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC - 1)).toBe("core-stablecoins-v1");
+    expect(getCoreAggregateUniverseForTimestamp(CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC)).toBe("core-stablecoins-v2");
+
+    // Frozen v1 membership at base commit 92c90ca72 must never mutate across v2 listing changes.
+    expect(CORE_AGGREGATE_V1_MEMBERS_SNAPSHOT.schemaVersion).toBe(1);
+    expect(CORE_AGGREGATE_V1_MEMBERS_SNAPSHOT.universe).toBe("core-stablecoins-v1");
+    expect(CORE_AGGREGATE_V1_MEMBERS_SNAPSHOT.frozenFromCommit).toBe("92c90ca72");
+    expect(CORE_AGGREGATE_V1_MEMBER_LIST).toHaveLength(262);
+    expect(CORE_AGGREGATE_V1_MEMBER_IDS.size).toBe(262);
+    expect([...CORE_AGGREGATE_V1_MEMBER_LIST].sort()).toEqual([...CORE_AGGREGATE_V1_MEMBER_LIST]);
+    expect(createHash("sha256").update(JSON.stringify(CORE_AGGREGATE_V1_MEMBER_LIST)).digest("hex"))
+      .toBe("0b06a93a1c7560bbba7e7c6658a67ca22a4f27bdaddd2d2cba6a7e8a42a50257");
+    expect(CORE_AGGREGATE_V1_NON_ACTIVE_MEMBER_LIST).toHaveLength(48);
+    expect(CORE_AGGREGATE_V1_NON_ACTIVE_MEMBER_IDS.size).toBe(48);
+    expect([...CORE_AGGREGATE_V1_NON_ACTIVE_MEMBER_LIST].sort()).toEqual([...CORE_AGGREGATE_V1_NON_ACTIVE_MEMBER_LIST]);
+    expect(createHash("sha256").update(JSON.stringify(CORE_AGGREGATE_V1_NON_ACTIVE_MEMBER_LIST)).digest("hex"))
+      .toBe("412d63c841e807dc777d387021644b6262883b4f151d1adaaf7614f61ee7aa0f");
+    expect(CORE_AGGREGATE_V1_MEMBER_IDS.has("buidl-blackrock")).toBe(true);
+    expect(CORE_AGGREGATE_V1_MEMBER_IDS.has("eutbl-spiko")).toBe(true);
+    expect(CORE_AGGREGATE_V1_MEMBER_IDS.has("apxusd-apyx")).toBe(false);
+    expect(CORE_AGGREGATE_V1_MEMBER_IDS.has("susds-sky")).toBe(false);
   });
 });

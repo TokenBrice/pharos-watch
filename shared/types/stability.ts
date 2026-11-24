@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CoreStablecoinAggregateUniverseSchema } from "./aggregate-universe";
 import { MethodologyEnvelopeSchema } from "./methodology-envelope";
 
 import { PSI_CONDITION_BAND_VALUES } from "./stability-constants";
@@ -60,7 +61,7 @@ export const StabilityIndexCurrentSchema = z.object({
   components: StabilityIndexComponentsSchema,
   contributors: z.array(StabilityContributorSchema).optional(),
   inputDegradation: StabilityIndexInputDegradationSchema.optional(),
-  aggregateUniverse: z.literal("core-stablecoins-v1").optional(),
+  aggregateUniverse: CoreStablecoinAggregateUniverseSchema.optional(),
   totalMcapUsd: z.number().optional(),
   computedAt: z.number(),
   methodologyVersion: z.string(),

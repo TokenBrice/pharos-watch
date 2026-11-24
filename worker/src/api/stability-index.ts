@@ -19,7 +19,7 @@ import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base
 import { buildPsiChartData, getDisplayedPsi, getPsiBandStreak, upsertPsiHistoryPoint } from "@shared/lib/psi-view-model";
 import { getPsiEventScores } from "@shared/lib/psi-events";
 import { round1 } from "@shared/lib/math";
-import { CORE_STABLECOIN_AGGREGATE_UNIVERSE } from "@shared/lib/stablecoins/aggregate-universe";
+import { CoreStablecoinAggregateUniverseSchema } from "@shared/lib/stablecoins/aggregate-universe";
 import { loadPsiSampleAverage } from "../lib/psi-sample-projection";
 
 import { isRecord } from "@shared/lib/type-guards";
@@ -322,6 +322,8 @@ export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Re
   } : undefined;
 
 
+  const parsedAggregateUniverse = CoreStablecoinAggregateUniverseSchema.safeParse(snapshot.value.aggregateUniverse);
+
   return jsonResponse({
     current: {
       score: currentSource.score,
@@ -332,8 +334,8 @@ export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Re
       ...componentAvailability(currentComponents.value, dailyProvenance?.componentSampleCounts),
       contributors,
       ...(inputDegradation ? { inputDegradation } : {}),
-      ...(snapshot.value.aggregateUniverse === CORE_STABLECOIN_AGGREGATE_UNIVERSE
-        ? { aggregateUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE }
+      ...(parsedAggregateUniverse.success
+        ? { aggregateUniverse: parsedAggregateUniverse.data }
         : {}),
       ...(typeof snapshot.value.totalMcapUsd === "number" && Number.isFinite(snapshot.value.totalMcapUsd)
         ? { totalMcapUsd: snapshot.value.totalMcapUsd }

@@ -793,7 +793,7 @@ describe("history and DEWS collectors", () => {
   it("collects comparable historical PSI and supply records", async () => {
     const today = 1795392000, day = 86400, { db, sqlite } = nqFx.open();
     for (let i = 0; i < 31; i++) sqlite.prepare("INSERT INTO stability_index (computed_at, score, band, components, input_snapshot) VALUES (?, 91.2, ?, '{}', '{}')").run(today - i * day, i < 3 ? "BEDROCK" : "STEADY");
-    for (const [d, c] of [[today - 30 * day, 2699e6], [today - day, 2269e6]]) sqlite.prepare("INSERT INTO daily_digest (generated_at, digest_text, input_data) VALUES (?, '', ?)").run(d, js({ aggregateUniverse: "core-stablecoins-v1", supplyCoverage: { complete: true }, totalMcapUsd: c, ...(c > 2500e6 ? { stabilityIndex: { score: 89, band: "STEADY" } } : {}) }));
+    for (const [d, c] of [[today - 30 * day, 2699e6], [today - day, 2269e6]]) sqlite.prepare("INSERT INTO daily_digest (generated_at, digest_text, input_data) VALUES (?, '', ?)").run(d, js({ aggregateUniverse: "core-stablecoins-v2", supplyCoverage: { complete: true }, totalMcapUsd: c, ...(c > 2500e6 ? { stabilityIndex: { score: 89, band: "STEADY" } } : {}) }));
     for (const [d, c] of [[1794009600, 697750000], [1794528000, 268e6], [1794614400, 268217409], [1794700800, 268217409], [today - day, 269217409]]) sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd) VALUES ('gho-aave', ?, ?)").run(d, c);
     const ctx = { ...mkCtx(db), todayTs: today, nowSec: today + 8 * 3600 };
     expect((await colHist(ctx, 91.2, "BEDROCK", today, { id: "gho-aave", symbol: "GHO", name: "GHO", changeUsd: 1e6, currentMcap: 269217409 })).value).toMatchObject({ psiBandStreak: 3, psiPrecedent: { lastSeenDaysAgo: 30 }, supplyMoverContext: { allTimeHighMcap: 269217409, largestWeeklyChange: 1e6 } });
@@ -949,7 +949,7 @@ describe("daily digest PSI source admission", () => {
 });
 
 describe("daily digest generation", () => {
-  const fp = createHash("sha256").update('["core-stablecoins-v1",["usdc-circle","usdt-tether"]]').digest("hex");
+  const fp = createHash("sha256").update('["core-stablecoins-v2",["usdc-circle","usdt-tether"]]').digest("hex");
   const CREDS = { apiKey: "x", apiSecret: "y", accessToken: "z", accessTokenSecret: "w" };
   const TG = { botToken: "tg-token", chatId: "tg-chat" };
   const SOFT_TXT = js({ title: "Drift", extended: OK_EXT, text: "USDT's fixture depeg led the queue while PSI stayed at 91.2 BEDROCK.", meta: { leadSignalId: "depeg:usdt-tether:active", lead: "depeg", tone: "dry", coins: ["USDT", "USDC"], usedCandidateIds: ["depeg:usdt-tether:active"] } });
@@ -980,7 +980,7 @@ describe("daily digest generation", () => {
       vm(resMap).mockResolvedValueOnce(validMap());
       const res = await invoke(), inp = bindJson(scen.db, 3), meta = bindJson(scen.db, 5), body = reqBody();
       expect(res).toMatchObject({ itemCount: 1 }); expect(res.metadata).toContain("tweet: ok"); expect(res.metadata).toContain("telegram: ok");
-      expect(inp).toMatchObject({ aggregateUniverse: "core-stablecoins-v1", totalMcapUsd: 160_000_000, activeDepegCount: 1, resolvedDepegCount: 0, safetyMap: { manifest: { date: "2026-03-06" } }, editorialAudit: { leadCandidateId: "depeg:usdt-tether:active", usedCandidateIds: ["depeg:usdt-tether:active"] } });
+      expect(inp).toMatchObject({ aggregateUniverse: "core-stablecoins-v2", totalMcapUsd: 160_000_000, activeDepegCount: 1, resolvedDepegCount: 0, safetyMap: { manifest: { date: "2026-03-06" } }, editorialAudit: { leadCandidateId: "depeg:usdt-tether:active", usedCandidateIds: ["depeg:usdt-tether:active"] } });
       expect(inp.depegSignalKeys).toEqual({ active: [`usdt-tether:${nowS() - 3600}:active`], resolved: [] });
       expect(meta).toMatchObject({ styleGateMode: "shadow", editorialStyleGate: { mode: "shadow", firstPassWouldBlock: false }, llm: { model: DIGEST_MODEL, maxTokens: 16000, attempts: [{ attemptNumber: 1, inputTokens: 1000, outputTokens: 500, httpStatus: 200 }] } });
       expect(body.messages[0].content).toContain("Safety Map census (current; depicts 2026-03-06 UTC)");
