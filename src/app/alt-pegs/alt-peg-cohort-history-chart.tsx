@@ -18,6 +18,7 @@ import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { MARKET_PERIMETER_MARKERS } from "@shared/lib/supply-perimeter-changes";
 import { admitSupplyBuckets } from "@shared/lib/supply";
 
 const OTHER_KEY = "peggedOther";
@@ -301,6 +302,7 @@ export function AltPegCohortHistoryChart({
       cardClassName="pharos-card-shell animate-in fade-in duration-200 motion-reduce:animate-none"
       contentClassName="space-y-4"
       framed={false}
+      perimeterMarkers={MARKET_PERIMETER_MARKERS}
       legendClassName="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground"
     />
     </>

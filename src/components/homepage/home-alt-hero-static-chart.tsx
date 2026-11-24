@@ -1,12 +1,14 @@
 import type { HomepageHistory } from "@shared/types/homepage";
 import { formatLongDate } from "@shared/lib/format";
+import { MARKET_PERIMETER_MARKERS } from "@shared/lib/supply-perimeter-changes";
 import { HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS } from "@/lib/homepage-hero-snapshot";
 import { HomeAltHeroChartFallback } from "@/components/homepage/home-alt-hero-chart-fallback";
-import { CHART_BLUE } from "@/lib/chart-colors";
+import { CHART_BLUE, CHART_SLATE } from "@/lib/chart-colors";
 import {
   CHART_AXIS_TICK,
   CHART_GRID_DASH,
   CHART_GRID_STROKE,
+  CHART_REFERENCE_DASH,
   CHART_STROKE_WIDTH,
   CHART_TICK_FONT_SIZE,
 } from "@/lib/chart-theme";
@@ -55,6 +57,7 @@ export function HomeAltHeroStaticChart({
 
   const strokePath = buildStaticStrokePath(rows, xScale, yScale);
   const fillPath = buildStaticAreaPath(rows, xScale, yScale, PLOT_Y1);
+  const visibleMarkers = MARKET_PERIMETER_MARKERS.filter((marker) => marker.tsMs > start && marker.tsMs <= end);
 
   return (
     <figure className="flex h-[268px] flex-col justify-between gap-2 p-4 sm:h-[296px] sm:p-5 lg:h-full">
@@ -112,9 +115,41 @@ export function HomeAltHeroStaticChart({
           strokeLinejoin="round"
         />
         {fillPath ? <path d={fillPath} fill="url(#home-alt-static-total-fill)" /> : null}
+        {visibleMarkers.map((marker) => {
+          const markerX = xScale(marker.tsMs);
+          const anchorEnd = markerX > PLOT_X0 + (PLOT_X1 - PLOT_X0) * 0.72;
+          return (
+            <g key={marker.id} data-perimeter-marker={marker.id}>
+              <line
+                x1={markerX}
+                x2={markerX}
+                y1={PLOT_Y0}
+                y2={PLOT_Y1}
+                stroke={CHART_SLATE}
+                strokeDasharray={CHART_REFERENCE_DASH}
+                strokeWidth={CHART_STROKE_WIDTH.guide}
+              >
+                <title>{marker.note}</title>
+              </line>
+              <text
+                x={anchorEnd ? markerX - 6 : markerX + 6}
+                y={PLOT_Y0 + CHART_TICK_FONT_SIZE + 2}
+                textAnchor={anchorEnd ? "end" : "start"}
+                {...CHART_AXIS_TICK}
+              >
+                {marker.shortLabel}
+              </text>
+            </g>
+          );
+        })}
       </svg>
       <figcaption className="pharos-meta">
-        Total market cap history · as of {formatLongDate(new Date(updatedAt * 1000), { utc: true })}
+        <span>Total market cap history · as of {formatLongDate(new Date(updatedAt * 1000), { utc: true })}</span>
+        {visibleMarkers.map((marker) => (
+          <span key={marker.id} data-perimeter-note={marker.id} className="block">
+            {marker.note}
+          </span>
+        ))}
       </figcaption>
     </figure>
   );

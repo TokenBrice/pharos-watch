@@ -2,18 +2,20 @@
 
 import { useMemo, type ReactElement, type ReactNode } from "react";
 import { Maximize2, Minimize2 } from "lucide-react";
-import { Area, AreaChart } from "recharts";
+import { Area, AreaChart, ReferenceLine } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { cn } from "@/lib/utils";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useChartShell } from "@/hooks/use-chart-shell";
 import { type TimeRangeOption, useTimeRangeFilter } from "@/hooks/use-time-range-filter";
-import { CHART_HEIGHT } from "@/lib/chart-colors";
+import { CHART_HEIGHT, CHART_SLATE } from "@/lib/chart-colors";
+import { CHART_REFERENCE_DASH, CHART_TICK_FILL, CHART_TICK_FONT_SIZE } from "@/lib/chart-theme";
 import { buildAdaptiveMonthlyTicks } from "@/lib/chart-utils";
 import { formatRangeTickDate } from "@/lib/chart-time-range";
 import { ChartAreaGradient, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis, useNiceValueAxis } from "@/components/chart-primitives/axes";
 import { ScreenReaderDataTable, type ChartDataTableColumn } from "@/components/chart-primitives/data-table";
+import type { MarketPerimeterMarker } from "@shared/lib/supply-perimeter-changes";
 
 export interface StackedAreaSeries {
   dataKey: string;
@@ -62,6 +64,8 @@ interface FocusedStackedAreaCardProps<T extends Record<K, number>, K extends key
    * ignored. Defaults to the framed card.
    */
   framed?: boolean;
+  /** Optional dated market-wide perimeter steps to mark with a reference line and short note. */
+  perimeterMarkers?: readonly MarketPerimeterMarker[];
 }
 
 /** The unframed band: a top hairline and no surface, so the chart stage is the only frame. */
@@ -97,6 +101,7 @@ export function FocusedStackedAreaCard<T extends Record<K, number>, K extends ke
   cardClassName,
   contentClassName,
   framed = true,
+  perimeterMarkers,
   legendClassName,
 }: FocusedStackedAreaCardProps<T, K>) {
   const { animProps, handleAnimationEnd, chartContainerRef, isChartReady, width, height } =
@@ -151,6 +156,12 @@ export function FocusedStackedAreaCard<T extends Record<K, number>, K extends ke
     const last = filteredData[filteredData.length - 1][tsKey];
     return buildAdaptiveMonthlyTicks(first, last).filter((tick) => tick >= first);
   }, [filteredData, range, tsKey]);
+  const visiblePerimeterMarkers = useMemo(() => {
+    if (!perimeterMarkers?.length || filteredData.length < 2) return [];
+    const first = filteredData[0][tsKey];
+    const last = filteredData[filteredData.length - 1][tsKey];
+    return perimeterMarkers.filter((marker) => marker.tsMs > first && marker.tsMs <= last);
+  }, [filteredData, perimeterMarkers, tsKey]);
   const autoAxis = useNiceValueAxis(stackHeights);
   // Stacked areas fill from zero and Recharts widens a raised floor back to 0
   // with no ticks below it, so the floor is pinned at 0 and the baseline labelled.
@@ -255,6 +266,26 @@ export function FocusedStackedAreaCard<T extends Record<K, number>, K extends ke
                         {...animProps}
                       />
                     ))}
+                    {visiblePerimeterMarkers.map((marker) => {
+                      const first = filteredData[0][tsKey];
+                      const last = filteredData[filteredData.length - 1][tsKey];
+                      const nearRight = last > first && (marker.tsMs - first) / (last - first) > 0.72;
+                      return (
+                        <ReferenceLine
+                          key={marker.id}
+                          x={marker.tsMs}
+                          stroke={CHART_SLATE}
+                          strokeDasharray={CHART_REFERENCE_DASH}
+                          strokeWidth={1}
+                          label={{
+                            value: marker.shortLabel,
+                            position: nearRight ? "insideTopLeft" : "insideTopRight",
+                            fontSize: CHART_TICK_FONT_SIZE,
+                            fill: CHART_TICK_FILL,
+                          }}
+                        />
+                      );
+                    })}
                   </AreaChart>
                 ) : (
                   <ChartSkeleton variant="area" className="h-full w-full" aria-hidden />
@@ -272,6 +303,15 @@ export function FocusedStackedAreaCard<T extends Record<K, number>, K extends ke
                 </span>
               ))}
             </div>
+            {visiblePerimeterMarkers.length > 0 ? (
+              <div className="mt-2 space-y-0.5 text-xs text-muted-foreground">
+                {visiblePerimeterMarkers.map((marker) => (
+                  <p key={marker.id} data-perimeter-note={marker.id}>
+                    {marker.note}
+                  </p>
+                ))}
+              </div>
+            ) : null}
           </>
         ) : (
           <div className={`flex ${chartHeightClass} items-center justify-center text-muted-foreground`}>

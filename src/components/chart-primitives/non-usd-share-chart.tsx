@@ -15,6 +15,7 @@ import type { ChartDataTableColumn } from "@/components/chart-primitives/data-ta
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { computeChartYDomain } from "@/lib/chart-utils";
 import { formatPercentTick } from "@/lib/chart-ticks";
+import { MARKET_PERIMETER_MARKERS } from "@shared/lib/supply-perimeter-changes";
 import type { NonUsdSharePoint } from "@shared/types/supply";
 
 // Commodities are dominated by gold: draw them in the gold peg hue the hero, ranking and atlas use.
@@ -200,6 +201,7 @@ export function NonUsdShareChart({
       }
       cardClassName="pharos-card-shell animate-in fade-in duration-300"
       framed={false}
+      perimeterMarkers={MARKET_PERIMETER_MARKERS}
       legendClassName="flex flex-wrap gap-x-4 gap-y-1.5 mt-3 text-xs text-muted-foreground"
     />
   );

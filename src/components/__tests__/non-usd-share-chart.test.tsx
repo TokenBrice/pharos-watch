@@ -4,6 +4,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NonUsdShareChart } from "@/components/chart-primitives/non-usd-share-chart";
 import { formatChartDate } from "@shared/lib/format";
+import { MARKET_PERIMETER_MARKERS } from "@shared/lib/supply-perimeter-changes";
 
 const { useNonUsdShareMock, handleAnimationEndMock } = vi.hoisted(() => ({
   useNonUsdShareMock: vi.fn(),
@@ -145,6 +146,22 @@ describe("NonUsdShareChart", () => {
     render(<NonUsdShareChart />);
     expect(screen.getByRole("table").textContent).toContain("Value coverage unavailable");
     expect(screen.getByRole("figure").getAttribute("aria-label")).toContain("Value coverage unavailable");
+  });
+
+  it("shows the listing-policy v2 perimeter note when the visible range spans the cutover", () => {
+    const marker = MARKET_PERIMETER_MARKERS[0]!;
+    const cutoverSec = marker.tsMs / 1000;
+    useNonUsdShareMock.mockReturnValue({
+      data: [
+        { date: cutoverSec - 10 * 86_400, commodityShare: 2, fiatNonUsdShare: 1.5, commodity: 20, fiatNonUsd: 15, total: 1_000 },
+        { date: cutoverSec + 2 * 86_400, commodityShare: 2, fiatNonUsdShare: 0.4, commodity: 20, fiatNonUsd: 4, total: 980 },
+      ],
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+    const { container } = render(<NonUsdShareChart initialRange="all" />);
+    expect(container.querySelector(`[data-perimeter-note="${marker.id}"]`)?.textContent).toBe(marker.note);
   });
 
 });

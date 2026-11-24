@@ -8,6 +8,7 @@ import { HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS } from "@/lib/homepage-hero-snapshot"
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
+import { CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC } from "@shared/lib/stablecoins/aggregate-universe";
 import type { ApiMeta } from "@/lib/api";
 
 const { useStablecoinsMock } = vi.hoisted(() => ({ useStablecoinsMock: vi.fn() }));
@@ -168,5 +169,41 @@ describe("HomeAltHero producer freshness", () => {
     expect(screen.getByRole("link", { name: /USDC/ }).getAttribute("href")).toMatch(/^\/stablecoin\/usdc-circle\/?$/);
     expect(screen.getByRole("link", { name: /USDS \+ DAI/ }).getAttribute("href")).toMatch(/^\/compare\/usds-sky-vs-dai-makerdao\/?$/);
     expect(screen.getByRole("link", { name: /Non-USD share/ }).getAttribute("href")).toMatch(/^\/alt-pegs\/?$/);
+  });
+
+  it("withholds 7d and 30d hero supply deltas across the listing-policy v2 market-wide cutover", () => {
+    const cutoverMs = CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC * 1000;
+    const postCutoverMs = cutoverMs + 2 * 86_400_000;
+    vi.setSystemTime(postCutoverMs);
+    const historyMeta = {
+      source: "stablecoin-charts",
+      updatedAt: postCutoverMs / 1000,
+      ageSeconds: 0,
+      assessedAt: postCutoverMs / 1000,
+      freshBudgetSec: 3600,
+      degradedBudgetSec: 7200,
+      status: "fresh" as const,
+      reason: null,
+      warning: null,
+    };
+    const postFallback = {
+      ...buildLiveHomepageHeroSnapshot(data, postCutoverMs / 1000),
+      history: {
+        sources: { total: historyMeta, usdt: historyMeta, usdc: historyMeta, usds: historyMeta, dai: historyMeta },
+        rows: [
+          { ts: postCutoverMs - 30 * 86_400_000, total: 260, usdt: 150, usdc: 60, sky: 10, others: 40, nonUsd: 4 },
+          { ts: postCutoverMs - 7 * 86_400_000, total: 260, usdt: 150, usdc: 60, sky: 10, others: 40, nonUsd: 4 },
+          { ts: postCutoverMs, total: 248, usdt: 150, usdc: 60, sky: 10, others: 28, nonUsd: 2 },
+        ],
+      },
+    };
+    useStablecoinsMock.mockReturnValue({
+      data, dataUpdatedAt: postCutoverMs, error: null, refetch: vi.fn(),
+      meta: { updatedAt: postCutoverMs / 1000, ageSeconds: 0, status: "fresh" },
+    });
+    render(<HomeAltHero snapshot={postFallback} fallbackSelectedAtMs={postCutoverMs} />);
+    expect(screen.queryByText(/-\d+\.\d+%/)).toBeNull();
+    expect(screen.queryByText("7d")).toBeNull();
+    expect(screen.queryByText("30d")).toBeNull();
   });
 });

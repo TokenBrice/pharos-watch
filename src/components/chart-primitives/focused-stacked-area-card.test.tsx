@@ -220,4 +220,49 @@ describe("FocusedStackedAreaCard stack admission", () => {
 
     expect(chartState.data?.[1]).toEqual({ ts: 2, a: 7, b: null, c: null, x: 5, y: 2 });
   });
+
+  it("renders a perimeter reference line and note only when a marker falls inside the visible window", () => {
+    const marker = {
+      id: "core-stablecoins-v2",
+      date: "2026-11-26",
+      tsMs: Date.UTC(2026, 10, 26),
+      shortLabel: "Listing policy v2",
+      note: "Listing policy v2 (Nov 26, 2026): tokenized fund shares leave core totals; prior history is unchanged.",
+    };
+    const { container } = render(
+      <FocusedStackedAreaCard
+        data={[
+          { ts: marker.tsMs - 10 * 86_400_000, a: 6, b: 2 },
+          { ts: marker.tsMs + 5 * 86_400_000, a: 5, b: 1 },
+        ]}
+        tsKey="ts"
+        isLoading={false}
+        title="Stack"
+        loadingTitle="Stack"
+        initialRange="all"
+        rangeOptions={["all"]}
+        isFocused={false}
+        openFocusLabel="Open"
+        closeFocusLabel="Close"
+        focusedHeightClassName="h-96"
+        ariaLabel="Stack chart"
+        emptyMessage="Empty"
+        series={[
+          { dataKey: "a", color: "red", gradientId: "a", stackId: "1" },
+          { dataKey: "b", color: "blue", gradientId: "b", stackId: "1" },
+        ]}
+        tooltip={<span />}
+        yDomain={() => [0, 10]}
+        yTickFormatter={String}
+        tableColumns={[]}
+        tableCaption={() => "Stack"}
+        cardClassName=""
+        legendClassName=""
+        perimeterMarkers={[marker]}
+      />,
+    );
+
+    expect(container.querySelector(".recharts-reference-line")).not.toBeNull();
+    expect(container.querySelector(`[data-perimeter-note="${marker.id}"]`)?.textContent).toBe(marker.note);
+  });
 });

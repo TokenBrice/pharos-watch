@@ -9,6 +9,7 @@ import type * as ChartAxes from "@/components/chart-primitives/axes";
 import { PEG_LABELS_SHORT } from "@shared/lib/classification";
 import type { StablecoinChartPoint } from "@shared/types/supply";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { MARKET_PERIMETER_MARKERS } from "@shared/lib/supply-perimeter-changes";
 
 const { useStablecoinChartsMock, handleAnimationEndMock, chartState } = vi.hoisted(() => ({
   useStablecoinChartsMock: vi.fn(),
@@ -172,5 +173,19 @@ describe("AltPegCohortHistoryChart", () => {
     rerender(<AltPegCohortHistoryChart />);
     expect(screen.getByText("No cohort-growth data available")).toBeTruthy();
     expect(screen.queryByRole("figure")).toBeNull();
+  });
+
+  it("shows the listing-policy v2 perimeter note when the visible range spans the cutover", () => {
+    const marker = MARKET_PERIMETER_MARKERS[0]!;
+    const cutoverSec = marker.tsMs / 1000;
+    useStablecoinChartsMock.mockReturnValue({
+      isLoading: false,
+      data: [
+        sample(cutoverSec - 10 * 86_400, { peggedEUR: 100_000_000, peggedGBP: 50_000_000 }),
+        sample(cutoverSec + 2 * 86_400, { peggedEUR: 23_000_000, peggedGBP: 14_000_000 }),
+      ],
+    });
+    const { container } = render(<AltPegCohortHistoryChart initialRange="all" />);
+    expect(container.querySelector(`[data-perimeter-note="${marker.id}"]`)?.textContent).toBe(marker.note);
   });
 });
