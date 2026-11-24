@@ -18,7 +18,7 @@ import {
 } from "@/components/stablecoin-detail/section-title-class";
 import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-client-coin";
 import type { DetailQuote } from "@/lib/stablecoin-detail-view-model-types";
-import { normalizeWhitespace } from "@/lib/page-metadata";
+import { normalizeWhitespace } from "@shared/lib/metadata-copy";
 import { stripTermMarkup } from "@/lib/term-markup";
 
 export interface TokenizedFundPanelProps {
