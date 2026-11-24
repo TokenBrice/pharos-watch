@@ -2,7 +2,7 @@
 
 > **Agent navigation** — Start with [Methodology Identity](#methodology-identity), [V10 Model](#v10-model), [API](#api) and [Consumers](#consumers). Maintainer detail is routed through `docs/mint-authority-scoring.md#mint-authority-entry` and the [technical appendix](https://github.com/TokenBrice/pharos-watch/blob/main/docs/process/report-cards-appendix.md); use their selected sections, not whole-file reads.
 
-Safety Score V10 is the sole active stablecoin safety model. It publishes evidence-backed grades from A+ through F. NR denotes genuine rating unavailability, never a low-score or missing-subfactor penalty; technical Pipeline gaps have no score or grade.
+Safety Score V10 is the sole active stablecoin safety model. It publishes evidence-backed grades from A+ through F. NR denotes genuine rating unavailability (or, since v10.55, a tracked tokenized fund published with reason `tokenized-fund-not-graded`), never a low-score or missing-subfactor penalty; technical Pipeline gaps have no score or grade.
 
 The public grade-distribution total is labeled **assets**, since its A/B/C/D/F/NR segments include not-rated assets. Rated-only supply and coverage figures keep their narrower denominator, including the hero's supply-weighted grade row and its A/B supply headline.
 
@@ -10,7 +10,7 @@ The public grade-distribution total is labeled **assets**, since its A/B/C/D/F/N
 ## Methodology Identity
 
 - Active model: <!-- GENERATED-START: report-cards-active-model -->`v10`<!-- GENERATED-END: report-cards-active-model -->
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v10.54`<!-- GENERATED-END: methodology-version-safety-score -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v10.55`<!-- GENERATED-END: methodology-version-safety-score -->
 - Public breakdown/publication schema v8, API wrapper v9 and score trace v4; retained older publications require explicit historical dispatch or refusal, never fabricated causes or route identity
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, parsed and digested by `shared/lib/safety-score-v9/policy.ts`
 - **Evaluation build:** `SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST` in `shared/data/safety-score-v9/evaluation-build-manifest-v1.ts` binds the offline candidate runtime import graph: captured fixed-input normalization, extension construction, fact-set compilation, evaluation and projection, including executable admission schemas, reviewed score-input data and full-catalog bytes/decoder. Edits anywhere in that evaluation-time closure rotate replay/publication identity; domain `safety-score-v9.evaluation-build.v2` hashes reviewed JSON data by its stable parsed value, so formatting/key-order-only edits do not, while executable sources stay byte-hashed. Capture-only network observers/producers and build-time generators are outside it; exact-input/fact digests bind their admitted output. Capture binding and runtime identity consumers are unchanged.
@@ -75,7 +75,7 @@ Require ≥2 usable pillars; price a missing third via `unknownQuality` (unclass
 
 Raw grade bands use the rounded own score: **A+ 87–100; A 83–86; A− 80–82; B+ 75–79; B 70–74; B− 65–69; C+ 60–64; C 55–59; C− 50–54; D 40–49; F 0–39**. The policy's `formula.gradeThresholds` owns these cutoffs. Two-consecutive-publication hysteresis can hold a prior letter; `gradeHold` identifies the current raw band without holding the numeric score. NR and pipeline gaps have no numeric band.
 
-Questions/low scores/incidents never cause NR; <2 usable pillars is pipeline-gap. Required-parent technical failures propagate pipeline-gap/null score/grade. Other parent unavailability/quarantine/accepted holds remain. Uncertainty witnesses survive above C−; attribution never gates letters ([history](https://pharos.watch/methodology/scoring-changelog/#scoring-v10-29)).
+Questions/low scores/incidents never cause NR; <2 usable pillars is pipeline-gap. Required-parent technical failures propagate pipeline-gap/null score/grade. Other parent unavailability/quarantine/accepted holds remain. Uncertainty witnesses survive above C−; attribution never gates letters ([history](https://pharos.watch/methodology/scoring-changelog/#scoring-v10-29)). Since v10.55, assets whose listing class is `tokenized-fund` remain active in the internal V9 compile and evaluation so dependent stablecoins keep identical dependency edges, reserve inheritance, `collateralParentScore` limits, and contagion paths, while the public projection withholds letter grades and numeric scores (`ratingStatus: "not-rated"`, `grade: "NR"`, `score: null`, `nrReasons` containing `tokenized-fund-not-graded`) across public APIs, badges, datasets, `/safety-scores/`, grade history, digests, and alerts.
 
 Five caps: open **below-peg** peak depeg≥10%→49/≥25%→25/≥50%→10 (premiums never cap; a blind open discount still caps; audit-excluded open events do not); known age<24m→84; parent/wrapper; realized loss; speculative-credit→59. Unknown age is uncapped. [Scope gates](process/report-cards-appendix.md#cap-limits-and-scope-gates) own eligibility and quantization; no other structural/evidence ceiling remains.
 

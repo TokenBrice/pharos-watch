@@ -102,7 +102,7 @@ export function SafetyScoresOverview() {
           { label: "Required sources", value: "Backing, exit, control, peg, dependency, and evidence-provenance inputs" },
           {
             label: "Failure behavior",
-            value: "Technical gaps have no score/grade; NR requires genuine unavailability, never a low score; global failures hold accepted state",
+            value: "Technical gaps have no score/grade; NR requires genuine unavailability (or tokenized-fund non-grading), never a low score; global failures hold accepted state",
           },
         ]}
       />

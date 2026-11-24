@@ -1,5 +1,19 @@
 [
   {
+    "version": "10.55",
+    "title": "Tokenized funds tracked without public Safety Score grades; dependent stablecoins unchanged",
+    "date": "2026-11-24",
+    "effectiveAt": 1795546800,
+    "summary": "Assets classified as tokenized funds (`tokenized-fund` listing class) no longer publish a stablecoin Safety Score letter grade or numeric score. At the V9 public projection boundary, each tokenized-fund card publishes as `ratingStatus: \"not-rated\"`, `grade: \"NR\"`, `score: null`, pillar scores `null`, and `breakdowns: null` with machine-readable NR reason `tokenized-fund-not-graded`, while remaining active in the internal V9 compile and evaluation so dependent stablecoins keep their exact dependency edges, reserve inheritance, concentrated-collateral parent limits, and contagion paths unchanged.",
+    "impact": [
+      "Public projection contract: `projectSafetyScoreV9Card` publishes tokenized funds (when not in `pipeline-gap`) as `ratingStatus: \"not-rated\"`, `grade: \"NR\"`, `score: null`, null pillar scores, `breakdowns: null`, and `nrReasons` containing `tokenized-fund-not-graded` (registered in `V9_REASON_CODES` and `methodology-policy-candidate-v1.json`). Public surfaces — `/api/safety-grades` (`notRatedReason: \"tokenized-fund-not-graded\"`), `/api/badge/:id.svg` (\"Not graded\" / \"Tokenized fund\" with `X-Badge-Reason: tokenized-fund-not-graded`), `/api/report-cards/v9`, `scores-latest` dataset snapshots, `/safety-scores/` rankings and tables (funds excluded), grade history snapshots, daily digest grade-transition lanes, Telegram safety alerts and `/status`, compare grade cells, OG scorecards, and static SEO copy — honor the ungraded fund status and emit no grade-change alerts for funds.",
+      "Dependent stability: tokenized funds stay in the internal V9 fact-set compile and asset-set evaluation before public projection, so every stablecoin backed by a tokenized fund (including concentrated-collateral children such as `usdtb-ethena` and `eur0-usual`, and basket dependents such as `usdf-falcon` and `usd0-usual`) retains identical scores, grades, pillar inputs, `collateralParentScore`, and parent attribution.",
+      "Detail page: tokenized-fund dossiers replace the Safety Score card with a compact Tokenized fund panel presenting holdings/reserves, NAV/price source, redemption terms, investor eligibility, and an explicit note that Pharos does not grade fund shares on the stablecoin Safety Score scale."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "10.54",
     "title": "Physical-delivery routes without placeholder capacity gaps, CCIP LockBox escrows, and VNX exit-capacity rulings",
     "date": "2026-11-24",
