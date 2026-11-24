@@ -1461,6 +1461,9 @@ describe("enrichMissingPrices", () => {
       ] : jupiterRoutes(currentSlot, quote));
       const result = await runJupiterPass([asset], undefined, undefined);
       expect(result.resolved).toBe(accepted ? 1 : 0);
+      expect(result.diagnostics?.[0]?.rejectionReasonCounts?.["missing-liquidity"]).toBe(
+        _label === "insufficient" || _label === "negative" ? 1 : undefined,
+      );
       if (primary) {
         expect(asset.price).toBe(1.0001);
         expect(asset.consensusSources?.includes("jupiter") ?? false).toBe(accepted);
