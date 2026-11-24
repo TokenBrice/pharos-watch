@@ -119,8 +119,14 @@ describe("MOVEUSD reviewed Orca mark", () => {
       expect(await price()).toBeNull();
     });
   it.each([-900, 1, NaN])("rejects stale, future or malformed bank time (%s)", async (age) => {
-    await price(); bank.observedBlock.timestamp = Math.floor(Date.now() / 1000) + age;
-    expect(await price()).toBeNull();
+    // Freeze the clock: a +1s "future" block must not age into the present on a slow runner.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      await price(); bank.observedBlock.timestamp = Math.floor(Date.now() / 1000) + age;
+      expect(await price()).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
   it("rejects a vault identity change between the two Orca reads", async () => {
     await price();
