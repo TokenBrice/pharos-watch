@@ -7320,7 +7320,7 @@
         "totalAssetsEur": 6810306.2,
         "totalShares": 6832189.70071,
         "navPerShareEur": 0.996797,
-        "navBufferPct": 4.3e-08
+        "navBufferPct": 4.3e-8
       },
       "components": {
         "venueAndCustody": {
@@ -9270,7 +9270,7 @@
         },
         {
           "venueKey": "hyperliquid",
-          "share": 1.9e-05,
+          "share": 0.000019,
           "failureDomains": [
             {
               "kind": "dex-protocol",
@@ -9684,7 +9684,7 @@
         "totalAssetsUsdc": 10696286.730934,
         "totalSupplyShares": 10712859.371583354,
         "navPerShareUsdc": 0.998453,
-        "navBufferPct": 1.43e-06
+        "navBufferPct": 0.00000143
       },
       "components": {
         "venueAndCustody": {
@@ -10171,7 +10171,7 @@
       "notes": "BIMA (bima-v1-core, Liquity-style multi-collateral CDP): per-collateral TroveManagers registered behind BorrowerOperations 0x87FED36c032EE7289a1d2f3C48798e4C7fCDfAEc; StabilityPool 0x5F2283c7C8967c5Fb3a959E63ea89865B882d627; DebtToken (USBD) 0x6bedE1c6009a78c222D9BDb7974bb67847fdB68c (same address on every chain); addresses from the official mainnet.md. Reads via cast eth_call at pinned blocks. Hemi block 4888613 (https://rpc.hemi.network/rpc): getTCR() = 1.159446855465023757; fetchBalances() shows 6 registered collaterals, two funded - idx3 0.01726035 and idx5 100.00421028 wrapped-BTC units, all priced $64,087.91 -> $6.41M collateral vs 5,528,642 USBD system debt. Ethereum block 25572229 (https://ethereum-rpc.publicnode.com): getTCR() = 1.731981202183397313; 0.01818855 wrapped WBTC x $63,774.35 = $1,160 vs 669.73 USBD debt. Sonic (block 76222612), Plume (82209576), BSC (111045598), Nibiru (43391769): zero vault debt (BSC getTCR returns uint256 max from zero-debt division; Plume oracle call reverts). Aggregate collateralizationRatio = (6,410,167 + 1,160) / (5,528,642 + 670) = 1.1595, Hemi-dominated. liquidationCapacityRatio = global StabilityPool deposits / global system debt = 11.84 USBD (Ethereum pool only; Hemi/Sonic/Plume/BSC/Nibiru pools = 0) / 5,529,312 USBD = 0.0000021 - the pool is effectively empty, so liquidations rely on external liquidators (0.5% + 200 USBD bounty) with defaulted-debt redistribution as fallback. Measured Hemi TCR 115.9% is BELOW the documented 160% CCR, i.e. the system sits inside its own recovery-mode band. Parameters (configuration-details): MCR 150%, CCR 160%, per-TroveManager debt ceilings, redemption fee coreRate + 0.75%, PSM 1:1 stablecoin swaps. NOT established: (1) Ethereum DebtToken totalSupply is 4.002B USBD but 4 wallets hold exactly 1B each (99.96%, Ethplorer) - pre-minted/non-circulating, while vault debt there is only 670 USBD and DefiLlama counts ~$7.5M circulating globally; issuer has not documented this pre-mint. (2) PSM stablecoin reserves: no PSM address appears in the official address list, so any PSM-minted USBD and its 1:1 stable collateral are EXCLUDED from the aggregate CR (conservative). (3) Which specific BTC LSTs back the funded Hemi branches. (4) Actual liquidation throughput with an empty stability pool.",
       "metrics": {
         "collateralizationRatio": 1.1595,
-        "liquidationCapacityRatio": 2.1e-06
+        "liquidationCapacityRatio": 0.0000021
       },
       "components": {
         "collateralizationParameters": {
@@ -15426,7 +15426,7 @@
         },
         {
           "venueKey": "bnb-chain-balance",
-          "share": 2.05e-07,
+          "share": 2.05e-7,
           "failureDomains": [
             {
               "kind": "chain",
@@ -15436,7 +15436,7 @@
         },
         {
           "venueKey": "ethereum-chain-balance",
-          "share": 1.79e-07,
+          "share": 1.79e-7,
           "failureDomains": [
             {
               "kind": "chain",
@@ -21700,6 +21700,42 @@
         {
           "label": "LedgerLens disclosed primary custodian and subcustodian",
           "url": "https://dashboard.ledgerlens.io/assets/ReserveCompositionSection-CFa4kc-i.js"
+        },
+        {
+          "label": "LedgerLens FRNT public loader snapshot 6b0195fb48d6fff8fb584065 (2026-11-21T13:00:44.731Z): itemized FBO Trust CUSIPs gross $1,011,542.66 less $43,490.81 administration payable = $968,051.85 net reserves reconciling to 968,051.849913 8-chain FRNT liabilities; zero liquidity fund",
+          "url": "https://dashboard.ledgerlens.io/_serverFn/48773d105fce9df473395d17bdd97f0cc8215fa6b7fa5355237e98db44e0ab8f"
+        },
+        {
+          "label": "Ethereum Dwellir RPC pinned block 26481203 (2026-11-23T23:44:23Z): FRNT totalSupply 95,052.248641",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
+        },
+        {
+          "label": "Base Dwellir RPC pinned block 61433290 (2026-11-23T23:37:13Z): FRNT totalSupply 94,912.000000",
+          "url": "https://api-base-mainnet-archive.n.dwellir.com"
+        },
+        {
+          "label": "Arbitrum Dwellir RPC pinned block 526978595 (2026-11-24T01:38:23Z): FRNT totalSupply 97,047.000000",
+          "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+        },
+        {
+          "label": "Optimism Dwellir RPC pinned block 159942768 (2026-11-24T01:38:33Z): FRNT totalSupply 95,005.000000",
+          "url": "https://api-optimism-mainnet-archive.n.dwellir.com"
+        },
+        {
+          "label": "Polygon Dwellir RPC pinned block 97853204 (2026-11-24T01:54:35Z): FRNT totalSupply 95,009.000000",
+          "url": "https://api-polygon-mainnet-archive.n.dwellir.com"
+        },
+        {
+          "label": "Avalanche Dwellir RPC pinned block 101216417 (2026-11-24T01:54:37Z): FRNT totalSupply 98,777.650055",
+          "url": "https://api-avalanche-mainnet-archive.n.dwellir.com"
+        },
+        {
+          "label": "Solana mainnet finalized RPC slot 473167602: FRNT mint supply 392,145.021217",
+          "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "Hedera Hashio JSON-RPC block 102705132 (2026-11-24T01:54:36Z): FRNT totalSupply 103.930000",
+          "url": "https://mainnet.hashio.io/api"
         }
       ],
       "notes": "Current September 23, 2026 rules, directly retrieved October 15, establish holder-benefit FBO trust accounts, separation from administration/liquidity accounts and a special redemption obligation limited to trust assets. They expressly create no Commission fiduciary duty or state full-faith-and-credit/deposit-insurance guarantee. These enforceable rules support adequate claimAndSegregation without certifying account agreements or legal bankruptcy outcomes. Commission disclosure names Franklin Advisers and Fiduciary Trust International; LedgerLens additionally names BNY Mellon as subcustodian, without allocated shares or actual custody agreements. October 14 snapshot 6acf6eec0ff131db2a33fe2c reports gross FBO assets USD 1007516.78 less administration payable USD 39464.93, leaving net reserves USD 968051.85 against raw eight-chain liabilities 968051.849913; fresh pinned native supplies independently corroborate that liability amount but never replace canonical supply. The dashboard reports zero separate liquidity-fund balance, while law/rules provide a 2% buffer funded after operating costs; current funding and dashboard scope remain to be reconciled, not a proven noncompliance verdict. Supplemental inventory is expressly non-assured and no current signed report opinion was retrieved. Complete subcustody, reuse and replacement safeguards remain unresolved, so custodyContinuity stays limited. Existing component qualities and empty quantitative metrics remain unchanged; no generic financial-assurance or measured 102% coverage credit is claimed.",
@@ -21710,6 +21746,61 @@
         },
         "custodyContinuity": {
           "quality": "limited"
+        },
+        "assuranceAndReconciliation": {
+          "applicability": "measured",
+          "quality": "limited",
+          "review": {
+            "reviewedAt": "2026-11-24T01:55:00Z",
+            "reviewer": "Night run 2026-11-24 (RESV resv-4)",
+            "rationale": "LedgerLens public loader snapshot 6b0195fb48d6fff8fb584065 (2026-11-21T13:00:44.731Z) publishes itemized CUSIP-level FBO Trust holdings totaling $1,011,542.66 gross ($50,417.98 cash, $361,124.68 across 9 U.S. Treasury bill CUSIPs, $600,000.00 across 2 active Treasury repos) less $43,490.81 administrative payable = $968,051.85 net FBO reserves against 968,051.849913 FRNT total liabilities across all 8 native chains. Fresh pinned on-chain totalSupply() reads independently corroborate all 8 chains to the exact 6th decimal place (Ethereum block 26481203: 95,052.248641; Base block 61433290: 94,912.000000; Arbitrum block 526978595: 97,047.000000; Optimism block 159942768: 95,005.000000; Polygon block 97853204: 95,009.000000; Avalanche block 101216417: 98,777.650055; Hedera block 102705132: 103.930000; Solana finalized slot 473167602: 392,145.021217; sum = 968,051.849913 FRNT). Under the mechanism-overlay evidence standard, itemized structured dashboard reconciliation corroborated by external on-chain supply anchors and Wyoming statutory reserve rules supports limited assuranceAndReconciliation, matching the ousd-open-standard precedent. Adequate and strong remain withheld because LedgerLens expressly states dashboard metrics are supplemental non-assured information, the separately issued AT-C 205 Examination Reports by The Network Firm LLP are behind LedgerLens's Turnstile gate (/api/wystc/reports) and were not retrieved, and the separate 2% statutory liquidity-fund account reports $0.",
+            "sources": [
+              {
+                "label": "FRNT supplemental LedgerLens inventory and assurance disclaimer",
+                "url": "https://dashboard.ledgerlens.io/c/wystc"
+              },
+              {
+                "label": "Wyoming current reserve and redemption rules",
+                "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
+              },
+              {
+                "label": "LedgerLens FRNT public loader snapshot 6b0195fb48d6fff8fb584065 (2026-11-21T13:00:44.731Z): itemized FBO Trust CUSIPs gross $1,011,542.66 less $43,490.81 administration payable = $968,051.85 net reserves reconciling to 968,051.849913 8-chain FRNT liabilities; zero liquidity fund",
+                "url": "https://dashboard.ledgerlens.io/_serverFn/48773d105fce9df473395d17bdd97f0cc8215fa6b7fa5355237e98db44e0ab8f"
+              },
+              {
+                "label": "Ethereum Dwellir RPC pinned block 26481203 (2026-11-23T23:44:23Z): FRNT totalSupply 95,052.248641",
+                "url": "https://api-ethereum-mainnet.n.dwellir.com"
+              },
+              {
+                "label": "Base Dwellir RPC pinned block 61433290 (2026-11-23T23:37:13Z): FRNT totalSupply 94,912.000000",
+                "url": "https://api-base-mainnet-archive.n.dwellir.com"
+              },
+              {
+                "label": "Arbitrum Dwellir RPC pinned block 526978595 (2026-11-24T01:38:23Z): FRNT totalSupply 97,047.000000",
+                "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+              },
+              {
+                "label": "Optimism Dwellir RPC pinned block 159942768 (2026-11-24T01:38:33Z): FRNT totalSupply 95,005.000000",
+                "url": "https://api-optimism-mainnet-archive.n.dwellir.com"
+              },
+              {
+                "label": "Polygon Dwellir RPC pinned block 97853204 (2026-11-24T01:54:35Z): FRNT totalSupply 95,009.000000",
+                "url": "https://api-polygon-mainnet-archive.n.dwellir.com"
+              },
+              {
+                "label": "Avalanche Dwellir RPC pinned block 101216417 (2026-11-24T01:54:37Z): FRNT totalSupply 98,777.650055",
+                "url": "https://api-avalanche-mainnet-archive.n.dwellir.com"
+              },
+              {
+                "label": "Solana mainnet finalized RPC slot 473167602: FRNT mint supply 392,145.021217",
+                "url": "https://api.mainnet-beta.solana.com"
+              },
+              {
+                "label": "Hedera Hashio JSON-RPC block 102705132 (2026-11-24T01:54:36Z): FRNT totalSupply 103.930000",
+                "url": "https://mainnet.hashio.io/api"
+              }
+            ]
+          }
         }
       }
     },

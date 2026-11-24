@@ -259,28 +259,33 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
   }),
   "usdr-rise": defineStablecoinRedeemConfig({
-    reviewedAt: "2026-10-05",
+    reviewedAt: "2026-11-23",
     outputAssets: ["wm-m0"],
     capacityModel: { kind: "reserve-sync-metadata", requiredOutputAssetKeys: ["wm-m0"] },
-    costModel: documentedVariableFee("SwapFacility extension-to-extension unwrap/wrap contains no additional protocol deduction; exact wM rounding and gas require same-notional observation", "formula"),
+    costModel: fixedFee(
+      0,
+      "Verified RISE SwapFacility _swapExtensions (0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e) and JMIExtension/MExtension _unwrap (0xF9733d0BF530b02929AB81cf78E7d0beFD3a2d7b) apply no protocol fee deduction (0 bps); M0 Swap Facility docs confirm direct extension-to-extension conversions carry no slippage or trading fees. Gas and M earning-index wei rounding still require same-notional observation.",
+    ),
     v9RouteReviewTerms: {
       settlementModel: "atomic",
       settlementDelaySec: 0,
       scoringDisposition: "bounded-terms-gap",
-      missingScoringFields: ["capacity", "cost"],
+      missingScoringFields: ["capacity"],
       rationale:
-        "The reviewed SwapFacility _swapExtensions branch transfers USDR, unwraps it to M and wraps the observed M balance difference into wM in one transaction, without a separate protocol-fee deduction. Extension approval, permissioning, pause and lock checks can prevent execution. No current executable wM capacity, rounding receipt or complete all-in cost is supplied by native-M reserve telemetry.",
-      reviewedAt: "2026-10-09",
+        "Verified RISE SwapFacility _swapExtensions transfers USDR, calls MExtension._unwrap (burning amount and transferring nominal M with 0 bps protocol fee), and wraps the observed M balance difference into wM atomically in one transaction. Extension approval, permissioning, pause and lock checks can prevent execution. No current executable wM capacity or gas/rounding execution certificate is supplied by native-M reserve telemetry.",
+      reviewedAt: "2026-11-23",
       docs: [
         sourceRef("RISE SwapFacility implementation, _swap and _swapExtensions", "https://explorer.risechain.com/api/v2/smart-contracts/0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e", ["route", "access", "fees", "settlement"]),
-        sourceRef("M0 Swap Facility documented conditions", "https://docs.m0.org/build/accessing-liquidity", ["route", "access", "settlement"]),
+        sourceRef("RISE USDR JMIExtension/MExtension implementation, _unwrap", "https://explorer.risechain.com/api/v2/smart-contracts/0xF9733d0BF530b02929AB81cf78E7d0beFD3a2d7b", ["route", "fees"]),
+        sourceRef("M0 Swap Facility documented conditions", "https://docs.m0.org/build/accessing-liquidity", ["route", "access", "fees", "settlement"]),
       ],
     },
     docs: [
       sourceRef("RISE SwapFacility implementation", "https://explorer.risechain.com/api/v2/smart-contracts/0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e", ["route", "access", "fees", "settlement"]),
-      sourceRef("M0 liquidity routes", "https://docs.m0.org/build/accessing-liquidity", ["route", "access", "settlement"]),
+      sourceRef("RISE USDR JMIExtension/MExtension implementation, _unwrap", "https://explorer.risechain.com/api/v2/smart-contracts/0xF9733d0BF530b02929AB81cf78E7d0beFD3a2d7b", ["route", "fees"]),
+      sourceRef("M0 liquidity routes", "https://docs.m0.org/build/accessing-liquidity", ["route", "access", "fees", "settlement"]),
     ],
-    notes: ["The holder path swaps USDR to wM via RISE SwapFacility 0xb6807116b3b1b321a390594e31ecd6e0076f6278. Extension approval, pauses and permissioning apply. Native-M approved-swapper telemetry is not wM output capacity and must not be inherited. Downstream wM-to-USDC liquidity is separate."],
+    notes: ["The holder path swaps USDR to wM via RISE SwapFacility 0xb6807116b3b1b321a390594e31ecd6e0076f6278 with 0 bps protocol fee (matching wm-m0). Extension approval, pauses and permissioning apply. Native-M approved-swapper telemetry is not wM output capacity and must not be inherited. Downstream wM-to-USDC liquidity is separate."],
   }),
   ...defineConfigFamily(
     [

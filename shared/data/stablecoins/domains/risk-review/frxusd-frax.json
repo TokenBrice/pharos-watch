@@ -1205,8 +1205,10 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Frax's cross-chain address registry lists this exact frxUSD OFT on Somnia as part of the deterministic Robinhood/Somnia/Tempo set, and the Somnia explorer returns Frax USD/frxUSD at 18 decimals with 3,261,031.96 supply; the verified proxy source is Frax's LayerZero v2 TransparentUpgradeableProxy, so the OFT itself is the representation's mint/burn authority. The Somnia 3-of-6 multisig, peers, DVN configuration and rate limits were not read.",
+        "reviewNote": "Frax's cross-chain address registry lists this exact frxUSD OFT on Somnia as part of the deterministic Robinhood/Somnia/Tempo set, and the Somnia explorer returns Frax USD/frxUSD at 18 decimals with 3,261,031.96 supply; the verified proxy source is Frax's LayerZero v2 TransparentUpgradeableProxy, so the OFT itself is the representation's mint/burn authority. Supplementary 2026-11-24 pinned Somnia block 473303818 (hash 0xd2b42157bab0c061bdfe4eee2cdf2b9cfbc3e221b7929e1c54f527dde5cec587, 2026-11-24T01:52:57Z) confirms EIP-1967 implementation 0x2f029ff7e543b13389bf8b4d7f9997098b2a8326, admin 0x000000dbfaa1fb91ca46867ce6d41ab6da4f7428, endpoint() 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, owner() 0x9527e19f55d1afce9f1e9edcea79552bf41983f9, token() self (0x00000000d61733e7a393a10a5b48c311abe8f1e5), and totalSupply() 2,927,249.328852 frxUSD, establishing the OFT proxy contract as the route-level bridge mint/burn controller. The Somnia owner multisig roster, DVN configuration and rate limits remain unread.",
         "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "somnia",
+        "controllerAddress": "0x00000000d61733e7a393a10a5b48c311abe8f1e5",
         "failureDomainKeys": [
           "protocol:layerzero-v2",
           "contract:somnia:0x00000000d61733e7a393a10a5b48c311abe8f1e5"
@@ -1228,6 +1230,10 @@
           {
             "label": "Frax frxUSD balance sheet",
             "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
+          },
+          {
+            "label": "Pinned Somnia block 473303818 (hash 0xd2b42157bab0c061bdfe4eee2cdf2b9cfbc3e221b7929e1c54f527dde5cec587, 2026-11-24T01:52:57Z) OFT controller and endpoint read",
+            "url": "https://api.infra.mainnet.somnia.network"
           }
         ]
       }

@@ -43492,34 +43492,6 @@
       "rationale": "There is still no current aggregate assurance-and-reconciliation input. The newest published reasonable-assurance attestation (August 2026 book, two report dates, signed 2026-10-14) covers the QCAD Digital Trust only: circulation and reserve fair value both CAD 1,653,040.54 with a 100% Canadian-currency breakdown, and its Appendix A approved blockchains are Ethereum, Solana, Algorand and Stellar. It does not reconcile the pre-prospectus legacy reserve book, and it excludes the Base and Arc deployments that the issuer's own balances API reports. The live API reported totalSupply 2,475,652.73 CAD at 2026-10-29T19:10Z, i.e. 822,612.19 CAD (about 49.8%) above the newest attested liability, so the attested book no longer spans the tracked liability population. The issuer's own transparency index still lists July 2026 as its newest attestation. Replaces campaign-l12usdm-qcad-assurance-scope-20261010 with newer, better dated evidence."
     },
     {
-      "id": "campaign-C01WARS-tempo-control-incident-state",
-      "assetId": "wars-argentine-peso",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "control:bridge-meta:wars-argentine-peso:0fc7f269cd009af28bc2",
-        "factorKey": "incidentState",
-        "routeKey": null,
-        "exposureId": "tempo:0x20c0000000000000000000009ebea3d43a08bad1",
-        "requiredDatum": "incidentState"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-11T00:52:51Z",
-      "reviewer": "Sol curation campaign 2026-10-11 (C01WARS)",
-      "sourcesRefs": [
-        "source:3c00164ede0cd9144550170f",
-        "source:4e06c7c4308c14db4019ebdd",
-        "source:0354c0dc263c022634c946f0"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:d956f40c5e19ac2a670d9300",
-        "surface:37235028bea4e6331013550c",
-        "surface:3267bb86d1d5b6453dd34de4",
-        "surface:9952b649cd5cd8744f71389e"
-      ],
-      "rationale": "The successfully retrieved issuer product/release, bridge developer and issuer repository documentation does not disclose an incident census or remediation state for Tempo wARS 0x20c0000000000000000000009ebea3d43a08bad1 and its contract issuer 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d. The prior pinned paused=false observation proves only a momentary pause value, not incident-free history. This exact incidentState datum is researched nondisclosure; capAuthority, claimImpairment, authority closure, economic liability classification and materialSupplyShare remain separately unresolved. Unhydrated explorer content, failed browser access and partial status-feed rendering are not evidence for this classification."
-    },
-    {
       "id": "g01mfone-mf-one-midas-exit-capacity-20261011",
       "assetId": "mf-one-midas",
       "scope": {
@@ -47995,38 +47967,6 @@
       "rationale": "The required liquidityHorizon is the maximum cash-realization interval of the 25.5% pathUSD Cash bucket (reserve:ad8f3089c8d58cf408e0be9a). The issuer reports the cash bucket only as an aggregate amount and describes cash reserve allocation as available for 'rapid redemptions' without a duration or cut-off, while its reserve-management table separates off-chain USD (instantly redeemable during US banking hours) from on-chain stablecoins (instantly redeemable 24/7) and never discloses which of the two the pathUSD cash balance holds. A conditional banking-hours statement therefore cannot be bound to this bucket, and the binding terms guarantee no realization interval at all. The conditional banking-hours discount is recorded here as a candidate only; no horizon value is authored."
     },
     {
-      "id": "rs2-001-usdso-arbitrum-incidentstate-20261030",
-      "assetId": "usdso-somnia",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "control:bridge-meta:usdso-somnia:69fb4357c3e4fef51ba3",
-        "factorKey": "incidentState",
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "incidentState"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-30T11:03:34Z",
-      "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
-      "sourcesRefs": [
-        "source:e05c0585fddba79901f29247",
-        "source:02e5f6f352e4400d32466aae",
-        "source:db27ed32ad706c72be79e3e1"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:d1deab5e5c82e994611a0268",
-        "surface:5fbf13bc7b2e91b9b39f6f2e",
-        "surface:c83a831aba185aff2943f186",
-        "surface:faa9687e57f228640cba27d2",
-        "surface:e66f3d14fb566967e451e073",
-        "surface:7d4dccadc8e07f22081a41ea",
-        "surface:fa3d0ed06dc074210b6cc698",
-        "surface:dfd011f5188d071a3fcf332c"
-      ],
-      "rationale": "No primary surface establishes the incident state of the arbitrum USDso CrossChainRouter administrator usdso-arbitrum-router-administrator (compiled control bridge-meta:usdso-somnia:69fb4357c3e4fef51ba3; controller 0x3da490b19f300e7cb2280426c8ad536db2df445c, 3-of-6 Safe). Frax documents the router's RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the custodian 1:1 PSM without an incident register, chain-specific disposition or remediation attestation; the issuer's 2026-10-29 status statement addresses the market-wide Binance incident only, says Frax assets and contracts were unaffected, and records a precautionary LayerZero operational pause on the messaging layer this route depends on without a dated per-route resolution; the USDso website terms impose no incident-disclosure obligation on the issuer and the issuer security page is an audit index; the independent DeFiLlama incident dataset (1,330 records retrieved 2026-10-30) contains no Frax, frxUSD, USDso or Somnia entry. The exact incidentState datum for this control is therefore researched non-disclosure - not established incident-free, active or resolved - and the 2026-10-29 reviewer-scoped execution-scope question on the same control remains open."
-    },
-    {
       "id": "rs2-001-usdso-arbitrum-executionscope-20261030",
       "assetId": "usdso-somnia",
       "scope": {
@@ -48056,38 +47996,6 @@
         "surface:dfd011f5188d071a3fcf332c"
       ],
       "rationale": "Frax publishes the arbitrum USDso CrossChainRouter architecture (redeem to local frxUSD, LayerZero RemoteHopV2 transport, destination re-mint), the RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the 3-of-6 Safe 0x3da490b19f300e7cb2280426c8ad536db2df445c that holds them, but no complete execution-scope inventory for usdso-arbitrum-router-administrator (compiled control bridge-meta:usdso-somnia:69fb4357c3e4fef51ba3): no current peer/OApp mapping, validator-or-DVN set and quorum, rate limit per lane, role grant history, in-flight-liability census or loss-scope allocation is published by the issuer, the Somnia operator or the reviewed Frax documentation. The reviewer-scoped execution-scope question renewed 2026-10-29 records exactly that missing inventory, and the issuer's 2026-10-29 status statement discloses only an aggregate unaffected posture plus a partner LayerZero pause. With no published inventory to read, the scoped question is researched non-disclosure of this control's execution scope - not evidence that the control is absent, inactive or bounded."
-    },
-    {
-      "id": "rs2-001-usdso-avalanche-incidentstate-20261030",
-      "assetId": "usdso-somnia",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "control:bridge-meta:usdso-somnia:55b8414b1f6264f048ac",
-        "factorKey": "incidentState",
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "incidentState"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-30T11:03:34Z",
-      "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
-      "sourcesRefs": [
-        "source:e05c0585fddba79901f29247",
-        "source:02e5f6f352e4400d32466aae",
-        "source:db27ed32ad706c72be79e3e1"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:d1deab5e5c82e994611a0268",
-        "surface:5fbf13bc7b2e91b9b39f6f2e",
-        "surface:c83a831aba185aff2943f186",
-        "surface:faa9687e57f228640cba27d2",
-        "surface:e66f3d14fb566967e451e073",
-        "surface:7d4dccadc8e07f22081a41ea",
-        "surface:fa3d0ed06dc074210b6cc698",
-        "surface:dfd011f5188d071a3fcf332c"
-      ],
-      "rationale": "No primary surface establishes the incident state of the avalanche USDso CrossChainRouter administrator usdso-avalanche-router-administrator (compiled control bridge-meta:usdso-somnia:55b8414b1f6264f048ac; controller 0xbf1ff4d8b05f0871ca3f49e49ff1ca8aeebd3b4b, 3-of-6 Safe). Frax documents the router's RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the custodian 1:1 PSM without an incident register, chain-specific disposition or remediation attestation; the issuer's 2026-10-29 status statement addresses the market-wide Binance incident only, says Frax assets and contracts were unaffected, and records a precautionary LayerZero operational pause on the messaging layer this route depends on without a dated per-route resolution; the USDso website terms impose no incident-disclosure obligation on the issuer and the issuer security page is an audit index; the independent DeFiLlama incident dataset (1,330 records retrieved 2026-10-30) contains no Frax, frxUSD, USDso or Somnia entry. The exact incidentState datum for this control is therefore researched non-disclosure - not established incident-free, active or resolved - and the 2026-10-29 reviewer-scoped execution-scope question on the same control remains open."
     },
     {
       "id": "rs2-001-usdso-avalanche-executionscope-20261030",
@@ -48121,38 +48029,6 @@
       "rationale": "Frax publishes the avalanche USDso CrossChainRouter architecture (redeem to local frxUSD, LayerZero RemoteHopV2 transport, destination re-mint), the RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the 3-of-6 Safe 0xbf1ff4d8b05f0871ca3f49e49ff1ca8aeebd3b4b that holds them, but no complete execution-scope inventory for usdso-avalanche-router-administrator (compiled control bridge-meta:usdso-somnia:55b8414b1f6264f048ac): no current peer/OApp mapping, validator-or-DVN set and quorum, rate limit per lane, role grant history, in-flight-liability census or loss-scope allocation is published by the issuer, the Somnia operator or the reviewed Frax documentation. The reviewer-scoped execution-scope question renewed 2026-10-29 records exactly that missing inventory, and the issuer's 2026-10-29 status statement discloses only an aggregate unaffected posture plus a partner LayerZero pause. With no published inventory to read, the scoped question is researched non-disclosure of this control's execution scope - not evidence that the control is absent, inactive or bounded."
     },
     {
-      "id": "rs2-001-usdso-base-incidentstate-20261030",
-      "assetId": "usdso-somnia",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "control:bridge-meta:usdso-somnia:8068a43c343664e0defb",
-        "factorKey": "incidentState",
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "incidentState"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-30T11:03:34Z",
-      "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
-      "sourcesRefs": [
-        "source:e05c0585fddba79901f29247",
-        "source:02e5f6f352e4400d32466aae",
-        "source:db27ed32ad706c72be79e3e1"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:d1deab5e5c82e994611a0268",
-        "surface:5fbf13bc7b2e91b9b39f6f2e",
-        "surface:c83a831aba185aff2943f186",
-        "surface:faa9687e57f228640cba27d2",
-        "surface:e66f3d14fb566967e451e073",
-        "surface:7d4dccadc8e07f22081a41ea",
-        "surface:fa3d0ed06dc074210b6cc698",
-        "surface:dfd011f5188d071a3fcf332c"
-      ],
-      "rationale": "No primary surface establishes the incident state of the base USDso CrossChainRouter administrator usdso-base-router-administrator (compiled control bridge-meta:usdso-somnia:8068a43c343664e0defb; controller 0xcbfd4ef00a8cf91fd1e1fe97dc05910772c15e53, 3-of-6 Safe). Frax documents the router's RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the custodian 1:1 PSM without an incident register, chain-specific disposition or remediation attestation; the issuer's 2026-10-29 status statement addresses the market-wide Binance incident only, says Frax assets and contracts were unaffected, and records a precautionary LayerZero operational pause on the messaging layer this route depends on without a dated per-route resolution; the USDso website terms impose no incident-disclosure obligation on the issuer and the issuer security page is an audit index; the independent DeFiLlama incident dataset (1,330 records retrieved 2026-10-30) contains no Frax, frxUSD, USDso or Somnia entry. The exact incidentState datum for this control is therefore researched non-disclosure - not established incident-free, active or resolved - and the 2026-10-29 reviewer-scoped execution-scope question on the same control remains open."
-    },
-    {
       "id": "rs2-001-usdso-base-executionscope-20261030",
       "assetId": "usdso-somnia",
       "scope": {
@@ -48182,38 +48058,6 @@
         "surface:dfd011f5188d071a3fcf332c"
       ],
       "rationale": "Frax publishes the base USDso CrossChainRouter architecture (redeem to local frxUSD, LayerZero RemoteHopV2 transport, destination re-mint), the RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the 3-of-6 Safe 0xcbfd4ef00a8cf91fd1e1fe97dc05910772c15e53 that holds them, but no complete execution-scope inventory for usdso-base-router-administrator (compiled control bridge-meta:usdso-somnia:8068a43c343664e0defb): no current peer/OApp mapping, validator-or-DVN set and quorum, rate limit per lane, role grant history, in-flight-liability census or loss-scope allocation is published by the issuer, the Somnia operator or the reviewed Frax documentation. The reviewer-scoped execution-scope question renewed 2026-10-29 records exactly that missing inventory, and the issuer's 2026-10-29 status statement discloses only an aggregate unaffected posture plus a partner LayerZero pause. With no published inventory to read, the scoped question is researched non-disclosure of this control's execution scope - not evidence that the control is absent, inactive or bounded."
-    },
-    {
-      "id": "rs2-001-usdso-bsc-incidentstate-20261030",
-      "assetId": "usdso-somnia",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "control:bridge-meta:usdso-somnia:42fd9b84c23eebde3f60",
-        "factorKey": "incidentState",
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "incidentState"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-30T11:03:34Z",
-      "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
-      "sourcesRefs": [
-        "source:e05c0585fddba79901f29247",
-        "source:02e5f6f352e4400d32466aae",
-        "source:db27ed32ad706c72be79e3e1"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:d1deab5e5c82e994611a0268",
-        "surface:5fbf13bc7b2e91b9b39f6f2e",
-        "surface:c83a831aba185aff2943f186",
-        "surface:faa9687e57f228640cba27d2",
-        "surface:e66f3d14fb566967e451e073",
-        "surface:7d4dccadc8e07f22081a41ea",
-        "surface:fa3d0ed06dc074210b6cc698",
-        "surface:dfd011f5188d071a3fcf332c"
-      ],
-      "rationale": "No primary surface establishes the incident state of the bsc USDso CrossChainRouter administrator usdso-bsc-router-administrator (compiled control bridge-meta:usdso-somnia:42fd9b84c23eebde3f60; controller 0xb1eff95b323d60cc04b1a44ca1dbcbc935ae2c84, 3-of-6 Safe). Frax documents the router's RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the custodian 1:1 PSM without an incident register, chain-specific disposition or remediation attestation; the issuer's 2026-10-29 status statement addresses the market-wide Binance incident only, says Frax assets and contracts were unaffected, and records a precautionary LayerZero operational pause on the messaging layer this route depends on without a dated per-route resolution; the USDso website terms impose no incident-disclosure obligation on the issuer and the issuer security page is an audit index; the independent DeFiLlama incident dataset (1,330 records retrieved 2026-10-30) contains no Frax, frxUSD, USDso or Somnia entry. The exact incidentState datum for this control is therefore researched non-disclosure - not established incident-free, active or resolved - and the 2026-10-29 reviewer-scoped execution-scope question on the same control remains open."
     },
     {
       "id": "rs2-001-usdso-bsc-executionscope-20261030",
@@ -48247,38 +48091,6 @@
       "rationale": "Frax publishes the bsc USDso CrossChainRouter architecture (redeem to local frxUSD, LayerZero RemoteHopV2 transport, destination re-mint), the RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the 3-of-6 Safe 0xb1eff95b323d60cc04b1a44ca1dbcbc935ae2c84 that holds them, but no complete execution-scope inventory for usdso-bsc-router-administrator (compiled control bridge-meta:usdso-somnia:42fd9b84c23eebde3f60): no current peer/OApp mapping, validator-or-DVN set and quorum, rate limit per lane, role grant history, in-flight-liability census or loss-scope allocation is published by the issuer, the Somnia operator or the reviewed Frax documentation. The reviewer-scoped execution-scope question renewed 2026-10-29 records exactly that missing inventory, and the issuer's 2026-10-29 status statement discloses only an aggregate unaffected posture plus a partner LayerZero pause. With no published inventory to read, the scoped question is researched non-disclosure of this control's execution scope - not evidence that the control is absent, inactive or bounded."
     },
     {
-      "id": "rs2-001-usdso-ethereum-incidentstate-20261030",
-      "assetId": "usdso-somnia",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "control:bridge-meta:usdso-somnia:42fef50c4c870cd52b82",
-        "factorKey": "incidentState",
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "incidentState"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-30T11:03:34Z",
-      "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
-      "sourcesRefs": [
-        "source:e05c0585fddba79901f29247",
-        "source:02e5f6f352e4400d32466aae",
-        "source:db27ed32ad706c72be79e3e1"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:d1deab5e5c82e994611a0268",
-        "surface:5fbf13bc7b2e91b9b39f6f2e",
-        "surface:c83a831aba185aff2943f186",
-        "surface:faa9687e57f228640cba27d2",
-        "surface:e66f3d14fb566967e451e073",
-        "surface:7d4dccadc8e07f22081a41ea",
-        "surface:fa3d0ed06dc074210b6cc698",
-        "surface:dfd011f5188d071a3fcf332c"
-      ],
-      "rationale": "No primary surface establishes the incident state of the ethereum USDso CrossChainRouter administrator usdso-ethereum-router-administrator (compiled control bridge-meta:usdso-somnia:42fef50c4c870cd52b82; controller 0xb1748c79709f4ba2dd82834b8c82d4a505003f27, 3-of-5 Safe). Frax documents the router's RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the custodian 1:1 PSM without an incident register, chain-specific disposition or remediation attestation; the issuer's 2026-10-29 status statement addresses the market-wide Binance incident only, says Frax assets and contracts were unaffected, and records a precautionary LayerZero operational pause on the messaging layer this route depends on without a dated per-route resolution; the USDso website terms impose no incident-disclosure obligation on the issuer and the issuer security page is an audit index; the independent DeFiLlama incident dataset (1,330 records retrieved 2026-10-30) contains no Frax, frxUSD, USDso or Somnia entry. The exact incidentState datum for this control is therefore researched non-disclosure - not established incident-free, active or resolved - and the 2026-10-29 reviewer-scoped execution-scope question on the same control remains open."
-    },
-    {
       "id": "rs2-001-usdso-ethereum-executionscope-20261030",
       "assetId": "usdso-somnia",
       "scope": {
@@ -48310,38 +48122,6 @@
       "rationale": "Frax publishes the ethereum USDso CrossChainRouter architecture (redeem to local frxUSD, LayerZero RemoteHopV2 transport, destination re-mint), the RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the 3-of-5 Safe 0xb1748c79709f4ba2dd82834b8c82d4a505003f27 that holds them, but no complete execution-scope inventory for usdso-ethereum-router-administrator (compiled control bridge-meta:usdso-somnia:42fef50c4c870cd52b82): no current peer/OApp mapping, validator-or-DVN set and quorum, rate limit per lane, role grant history, in-flight-liability census or loss-scope allocation is published by the issuer, the Somnia operator or the reviewed Frax documentation. The reviewer-scoped execution-scope question renewed 2026-10-29 records exactly that missing inventory, and the issuer's 2026-10-29 status statement discloses only an aggregate unaffected posture plus a partner LayerZero pause. With no published inventory to read, the scoped question is researched non-disclosure of this control's execution scope - not evidence that the control is absent, inactive or bounded."
     },
     {
-      "id": "rs2-001-usdso-fraxtal-incidentstate-20261030",
-      "assetId": "usdso-somnia",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "control:bridge-meta:usdso-somnia:d886dfb70dd2956c0d9e",
-        "factorKey": "incidentState",
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "incidentState"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-30T11:03:34Z",
-      "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
-      "sourcesRefs": [
-        "source:e05c0585fddba79901f29247",
-        "source:02e5f6f352e4400d32466aae",
-        "source:db27ed32ad706c72be79e3e1"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:d1deab5e5c82e994611a0268",
-        "surface:5fbf13bc7b2e91b9b39f6f2e",
-        "surface:c83a831aba185aff2943f186",
-        "surface:faa9687e57f228640cba27d2",
-        "surface:e66f3d14fb566967e451e073",
-        "surface:7d4dccadc8e07f22081a41ea",
-        "surface:fa3d0ed06dc074210b6cc698",
-        "surface:dfd011f5188d071a3fcf332c"
-      ],
-      "rationale": "No primary surface establishes the incident state of the fraxtal USDso CrossChainRouter administrator usdso-fraxtal-router-administrator (compiled control bridge-meta:usdso-somnia:d886dfb70dd2956c0d9e; controller 0x5f25218ed9474b721d6a38c115107428e832fa2e, 3-of-6 Safe). Frax documents the router's RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the custodian 1:1 PSM without an incident register, chain-specific disposition or remediation attestation; the issuer's 2026-10-29 status statement addresses the market-wide Binance incident only, says Frax assets and contracts were unaffected, and records a precautionary LayerZero operational pause on the messaging layer this route depends on without a dated per-route resolution; the USDso website terms impose no incident-disclosure obligation on the issuer and the issuer security page is an audit index; the independent DeFiLlama incident dataset (1,330 records retrieved 2026-10-30) contains no Frax, frxUSD, USDso or Somnia entry. The exact incidentState datum for this control is therefore researched non-disclosure - not established incident-free, active or resolved - and the 2026-10-29 reviewer-scoped execution-scope question on the same control remains open."
-    },
-    {
       "id": "rs2-001-usdso-fraxtal-executionscope-20261030",
       "assetId": "usdso-somnia",
       "scope": {
@@ -48371,38 +48151,6 @@
         "surface:dfd011f5188d071a3fcf332c"
       ],
       "rationale": "Frax publishes the fraxtal USDso CrossChainRouter architecture (redeem to local frxUSD, LayerZero RemoteHopV2 transport, destination re-mint), the RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the 3-of-6 Safe 0x5f25218ed9474b721d6a38c115107428e832fa2e that holds them, but no complete execution-scope inventory for usdso-fraxtal-router-administrator (compiled control bridge-meta:usdso-somnia:d886dfb70dd2956c0d9e): no current peer/OApp mapping, validator-or-DVN set and quorum, rate limit per lane, role grant history, in-flight-liability census or loss-scope allocation is published by the issuer, the Somnia operator or the reviewed Frax documentation. The reviewer-scoped execution-scope question renewed 2026-10-29 records exactly that missing inventory, and the issuer's 2026-10-29 status statement discloses only an aggregate unaffected posture plus a partner LayerZero pause. With no published inventory to read, the scoped question is researched non-disclosure of this control's execution scope - not evidence that the control is absent, inactive or bounded."
-    },
-    {
-      "id": "rs2-001-usdso-ink-incidentstate-20261030",
-      "assetId": "usdso-somnia",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "control:bridge-meta:usdso-somnia:9a3c67a5d8dcfa7114ab",
-        "factorKey": "incidentState",
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "incidentState"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-30T11:03:34Z",
-      "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
-      "sourcesRefs": [
-        "source:e05c0585fddba79901f29247",
-        "source:02e5f6f352e4400d32466aae",
-        "source:db27ed32ad706c72be79e3e1"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:d1deab5e5c82e994611a0268",
-        "surface:5fbf13bc7b2e91b9b39f6f2e",
-        "surface:c83a831aba185aff2943f186",
-        "surface:faa9687e57f228640cba27d2",
-        "surface:e66f3d14fb566967e451e073",
-        "surface:7d4dccadc8e07f22081a41ea",
-        "surface:fa3d0ed06dc074210b6cc698",
-        "surface:dfd011f5188d071a3fcf332c"
-      ],
-      "rationale": "No primary surface establishes the incident state of the ink USDso CrossChainRouter administrator usdso-ink-router-administrator (compiled control bridge-meta:usdso-somnia:9a3c67a5d8dcfa7114ab; controller 0x91ebc17cd330dd694225133455583fbca54b8ec8, 3-of-6 Safe). Frax documents the router's RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the custodian 1:1 PSM without an incident register, chain-specific disposition or remediation attestation; the issuer's 2026-10-29 status statement addresses the market-wide Binance incident only, says Frax assets and contracts were unaffected, and records a precautionary LayerZero operational pause on the messaging layer this route depends on without a dated per-route resolution; the USDso website terms impose no incident-disclosure obligation on the issuer and the issuer security page is an audit index; the independent DeFiLlama incident dataset (1,330 records retrieved 2026-10-30) contains no Frax, frxUSD, USDso or Somnia entry. The exact incidentState datum for this control is therefore researched non-disclosure - not established incident-free, active or resolved - and the 2026-10-29 reviewer-scoped execution-scope question on the same control remains open."
     },
     {
       "id": "rs2-001-usdso-ink-executionscope-20261030",
@@ -48497,38 +48245,6 @@
         "surface:dfd011f5188d071a3fcf332c"
       ],
       "rationale": "Frax publishes the katana USDso CrossChainRouter architecture (redeem to local frxUSD, LayerZero RemoteHopV2 transport, destination re-mint), the RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the 3-of-6 Safe 0x19a90b0476cdc8ec1239266663ca820175b9b527 that holds them, but no complete execution-scope inventory for usdso-katana-router-administrator (compiled control bridge-meta:usdso-somnia:cbeb3fa5244b92408ec2): no current peer/OApp mapping, validator-or-DVN set and quorum, rate limit per lane, role grant history, in-flight-liability census or loss-scope allocation is published by the issuer, the Somnia operator or the reviewed Frax documentation. The reviewer-scoped execution-scope question renewed 2026-10-29 records exactly that missing inventory, and the issuer's 2026-10-29 status statement discloses only an aggregate unaffected posture plus a partner LayerZero pause. With no published inventory to read, the scoped question is researched non-disclosure of this control's execution scope - not evidence that the control is absent, inactive or bounded."
-    },
-    {
-      "id": "rs2-001-usdso-linea-incidentstate-20261030",
-      "assetId": "usdso-somnia",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "control:bridge-meta:usdso-somnia:188d7123dcaf70d71f38",
-        "factorKey": "incidentState",
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "incidentState"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-30T11:03:34Z",
-      "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
-      "sourcesRefs": [
-        "source:e05c0585fddba79901f29247",
-        "source:02e5f6f352e4400d32466aae",
-        "source:db27ed32ad706c72be79e3e1"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:d1deab5e5c82e994611a0268",
-        "surface:5fbf13bc7b2e91b9b39f6f2e",
-        "surface:c83a831aba185aff2943f186",
-        "surface:faa9687e57f228640cba27d2",
-        "surface:e66f3d14fb566967e451e073",
-        "surface:7d4dccadc8e07f22081a41ea",
-        "surface:fa3d0ed06dc074210b6cc698",
-        "surface:dfd011f5188d071a3fcf332c"
-      ],
-      "rationale": "No primary surface establishes the incident state of the linea USDso CrossChainRouter administrator usdso-linea-router-administrator (compiled control bridge-meta:usdso-somnia:188d7123dcaf70d71f38; controller 0x0e5a5284820e350ffce7fe7ba3364fac1c53eafd, 3-of-6 Safe). Frax documents the router's RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the custodian 1:1 PSM without an incident register, chain-specific disposition or remediation attestation; the issuer's 2026-10-29 status statement addresses the market-wide Binance incident only, says Frax assets and contracts were unaffected, and records a precautionary LayerZero operational pause on the messaging layer this route depends on without a dated per-route resolution; the USDso website terms impose no incident-disclosure obligation on the issuer and the issuer security page is an audit index; the independent DeFiLlama incident dataset (1,330 records retrieved 2026-10-30) contains no Frax, frxUSD, USDso or Somnia entry. The exact incidentState datum for this control is therefore researched non-disclosure - not established incident-free, active or resolved - and the 2026-10-29 reviewer-scoped execution-scope question on the same control remains open."
     },
     {
       "id": "rs2-001-usdso-linea-executionscope-20261030",
@@ -48688,38 +48404,6 @@
       "rationale": "Frax publishes the monad USDso CrossChainRouter architecture (redeem to local frxUSD, LayerZero RemoteHopV2 transport, destination re-mint), the RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the 3-of-6 Safe 0x47ff5bbab981ff022743aa4281d4d6dd7fb1a4d0 that holds them, but no complete execution-scope inventory for usdso-monad-router-administrator (compiled control bridge-meta:usdso-somnia:55344a563ef030efafdb): no current peer/OApp mapping, validator-or-DVN set and quorum, rate limit per lane, role grant history, in-flight-liability census or loss-scope allocation is published by the issuer, the Somnia operator or the reviewed Frax documentation. The reviewer-scoped execution-scope question renewed 2026-10-29 records exactly that missing inventory, and the issuer's 2026-10-29 status statement discloses only an aggregate unaffected posture plus a partner LayerZero pause. With no published inventory to read, the scoped question is researched non-disclosure of this control's execution scope - not evidence that the control is absent, inactive or bounded."
     },
     {
-      "id": "rs2-001-usdso-optimism-incidentstate-20261030",
-      "assetId": "usdso-somnia",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "control:bridge-meta:usdso-somnia:6e1b5a645b64c6f27d13",
-        "factorKey": "incidentState",
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "incidentState"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-30T11:03:34Z",
-      "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
-      "sourcesRefs": [
-        "source:e05c0585fddba79901f29247",
-        "source:02e5f6f352e4400d32466aae",
-        "source:db27ed32ad706c72be79e3e1"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:d1deab5e5c82e994611a0268",
-        "surface:5fbf13bc7b2e91b9b39f6f2e",
-        "surface:c83a831aba185aff2943f186",
-        "surface:faa9687e57f228640cba27d2",
-        "surface:e66f3d14fb566967e451e073",
-        "surface:7d4dccadc8e07f22081a41ea",
-        "surface:fa3d0ed06dc074210b6cc698",
-        "surface:dfd011f5188d071a3fcf332c"
-      ],
-      "rationale": "No primary surface establishes the incident state of the optimism USDso CrossChainRouter administrator usdso-optimism-router-administrator (compiled control bridge-meta:usdso-somnia:6e1b5a645b64c6f27d13; controller 0x419e672d625f998dd07a7ecf2e06b896f8717cb2, 3-of-6 Safe). Frax documents the router's RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the custodian 1:1 PSM without an incident register, chain-specific disposition or remediation attestation; the issuer's 2026-10-29 status statement addresses the market-wide Binance incident only, says Frax assets and contracts were unaffected, and records a precautionary LayerZero operational pause on the messaging layer this route depends on without a dated per-route resolution; the USDso website terms impose no incident-disclosure obligation on the issuer and the issuer security page is an audit index; the independent DeFiLlama incident dataset (1,330 records retrieved 2026-10-30) contains no Frax, frxUSD, USDso or Somnia entry. The exact incidentState datum for this control is therefore researched non-disclosure - not established incident-free, active or resolved - and the 2026-10-29 reviewer-scoped execution-scope question on the same control remains open."
-    },
-    {
       "id": "rs2-001-usdso-optimism-executionscope-20261030",
       "assetId": "usdso-somnia",
       "scope": {
@@ -48751,38 +48435,6 @@
       "rationale": "Frax publishes the optimism USDso CrossChainRouter architecture (redeem to local frxUSD, LayerZero RemoteHopV2 transport, destination re-mint), the RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the 3-of-6 Safe 0x419e672d625f998dd07a7ecf2e06b896f8717cb2 that holds them, but no complete execution-scope inventory for usdso-optimism-router-administrator (compiled control bridge-meta:usdso-somnia:6e1b5a645b64c6f27d13): no current peer/OApp mapping, validator-or-DVN set and quorum, rate limit per lane, role grant history, in-flight-liability census or loss-scope allocation is published by the issuer, the Somnia operator or the reviewed Frax documentation. The reviewer-scoped execution-scope question renewed 2026-10-29 records exactly that missing inventory, and the issuer's 2026-10-29 status statement discloses only an aggregate unaffected posture plus a partner LayerZero pause. With no published inventory to read, the scoped question is researched non-disclosure of this control's execution scope - not evidence that the control is absent, inactive or bounded."
     },
     {
-      "id": "rs2-001-usdso-plume-incidentstate-20261030",
-      "assetId": "usdso-somnia",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "control:bridge-meta:usdso-somnia:bb9ace8f28b2475871ce",
-        "factorKey": "incidentState",
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "incidentState"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-30T11:03:34Z",
-      "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
-      "sourcesRefs": [
-        "source:e05c0585fddba79901f29247",
-        "source:02e5f6f352e4400d32466aae",
-        "source:db27ed32ad706c72be79e3e1"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:d1deab5e5c82e994611a0268",
-        "surface:5fbf13bc7b2e91b9b39f6f2e",
-        "surface:c83a831aba185aff2943f186",
-        "surface:faa9687e57f228640cba27d2",
-        "surface:e66f3d14fb566967e451e073",
-        "surface:7d4dccadc8e07f22081a41ea",
-        "surface:fa3d0ed06dc074210b6cc698",
-        "surface:dfd011f5188d071a3fcf332c"
-      ],
-      "rationale": "No primary surface establishes the incident state of the plume USDso CrossChainRouter administrator usdso-plume-router-administrator (compiled control bridge-meta:usdso-somnia:bb9ace8f28b2475871ce; controller 0x77ddd3ec570eeaf2c513de3c833c5e82a721978b, 3-of-6 Safe). Frax documents the router's RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the custodian 1:1 PSM without an incident register, chain-specific disposition or remediation attestation; the issuer's 2026-10-29 status statement addresses the market-wide Binance incident only, says Frax assets and contracts were unaffected, and records a precautionary LayerZero operational pause on the messaging layer this route depends on without a dated per-route resolution; the USDso website terms impose no incident-disclosure obligation on the issuer and the issuer security page is an audit index; the independent DeFiLlama incident dataset (1,330 records retrieved 2026-10-30) contains no Frax, frxUSD, USDso or Somnia entry. The exact incidentState datum for this control is therefore researched non-disclosure - not established incident-free, active or resolved - and the 2026-10-29 reviewer-scoped execution-scope question on the same control remains open."
-    },
-    {
       "id": "rs2-001-usdso-plume-executionscope-20261030",
       "assetId": "usdso-somnia",
       "scope": {
@@ -48812,38 +48464,6 @@
         "surface:dfd011f5188d071a3fcf332c"
       ],
       "rationale": "Frax publishes the plume USDso CrossChainRouter architecture (redeem to local frxUSD, LayerZero RemoteHopV2 transport, destination re-mint), the RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the 3-of-6 Safe 0x77ddd3ec570eeaf2c513de3c833c5e82a721978b that holds them, but no complete execution-scope inventory for usdso-plume-router-administrator (compiled control bridge-meta:usdso-somnia:bb9ace8f28b2475871ce): no current peer/OApp mapping, validator-or-DVN set and quorum, rate limit per lane, role grant history, in-flight-liability census or loss-scope allocation is published by the issuer, the Somnia operator or the reviewed Frax documentation. The reviewer-scoped execution-scope question renewed 2026-10-29 records exactly that missing inventory, and the issuer's 2026-10-29 status statement discloses only an aggregate unaffected posture plus a partner LayerZero pause. With no published inventory to read, the scoped question is researched non-disclosure of this control's execution scope - not evidence that the control is absent, inactive or bounded."
-    },
-    {
-      "id": "rs2-001-usdso-polygon-incidentstate-20261030",
-      "assetId": "usdso-somnia",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "control:bridge-meta:usdso-somnia:711784f41d860f18ddf1",
-        "factorKey": "incidentState",
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "incidentState"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-30T11:03:34Z",
-      "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
-      "sourcesRefs": [
-        "source:e05c0585fddba79901f29247",
-        "source:02e5f6f352e4400d32466aae",
-        "source:db27ed32ad706c72be79e3e1"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:d1deab5e5c82e994611a0268",
-        "surface:5fbf13bc7b2e91b9b39f6f2e",
-        "surface:c83a831aba185aff2943f186",
-        "surface:faa9687e57f228640cba27d2",
-        "surface:e66f3d14fb566967e451e073",
-        "surface:7d4dccadc8e07f22081a41ea",
-        "surface:fa3d0ed06dc074210b6cc698",
-        "surface:dfd011f5188d071a3fcf332c"
-      ],
-      "rationale": "No primary surface establishes the incident state of the polygon USDso CrossChainRouter administrator usdso-polygon-router-administrator (compiled control bridge-meta:usdso-somnia:711784f41d860f18ddf1; controller 0xdbf59eda454679bb157b3b048ba54c4d762b559e, 3-of-6 Safe). Frax documents the router's RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the custodian 1:1 PSM without an incident register, chain-specific disposition or remediation attestation; the issuer's 2026-10-29 status statement addresses the market-wide Binance incident only, says Frax assets and contracts were unaffected, and records a precautionary LayerZero operational pause on the messaging layer this route depends on without a dated per-route resolution; the USDso website terms impose no incident-disclosure obligation on the issuer and the issuer security page is an audit index; the independent DeFiLlama incident dataset (1,330 records retrieved 2026-10-30) contains no Frax, frxUSD, USDso or Somnia entry. The exact incidentState datum for this control is therefore researched non-disclosure - not established incident-free, active or resolved - and the 2026-10-29 reviewer-scoped execution-scope question on the same control remains open."
     },
     {
       "id": "rs2-001-usdso-polygon-executionscope-20261030",
@@ -49003,38 +48623,6 @@
       "rationale": "Frax publishes the sei USDso CrossChainRouter architecture (redeem to local frxUSD, LayerZero RemoteHopV2 transport, destination re-mint), the RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the 3-of-6 Safe 0x0357d02fc95320b990322d3ff69204c3d251171b that holds them, but no complete execution-scope inventory for usdso-sei-router-administrator (compiled control bridge-meta:usdso-somnia:f4eb79771903c5eda1f3): no current peer/OApp mapping, validator-or-DVN set and quorum, rate limit per lane, role grant history, in-flight-liability census or loss-scope allocation is published by the issuer, the Somnia operator or the reviewed Frax documentation. The reviewer-scoped execution-scope question renewed 2026-10-29 records exactly that missing inventory, and the issuer's 2026-10-29 status statement discloses only an aggregate unaffected posture plus a partner LayerZero pause. With no published inventory to read, the scoped question is researched non-disclosure of this control's execution scope - not evidence that the control is absent, inactive or bounded."
     },
     {
-      "id": "rs2-001-usdso-somnia-incidentstate-20261030",
-      "assetId": "usdso-somnia",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "control:bridge-meta:usdso-somnia:d25e999bc71fb940280b",
-        "factorKey": "incidentState",
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "incidentState"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-30T11:03:34Z",
-      "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
-      "sourcesRefs": [
-        "source:e05c0585fddba79901f29247",
-        "source:02e5f6f352e4400d32466aae",
-        "source:db27ed32ad706c72be79e3e1"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:d1deab5e5c82e994611a0268",
-        "surface:5fbf13bc7b2e91b9b39f6f2e",
-        "surface:c83a831aba185aff2943f186",
-        "surface:faa9687e57f228640cba27d2",
-        "surface:e66f3d14fb566967e451e073",
-        "surface:7d4dccadc8e07f22081a41ea",
-        "surface:fa3d0ed06dc074210b6cc698",
-        "surface:dfd011f5188d071a3fcf332c"
-      ],
-      "rationale": "No primary surface establishes the incident state of the somnia USDso CrossChainRouter administrator usdso-somnia-router-administrator (compiled control bridge-meta:usdso-somnia:d25e999bc71fb940280b; controller 0x9527e19f55d1afce9f1e9edcea79552bf41983f9, 3-of-6 Safe). Frax documents the router's RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the custodian 1:1 PSM without an incident register, chain-specific disposition or remediation attestation; the issuer's 2026-10-29 status statement addresses the market-wide Binance incident only, says Frax assets and contracts were unaffected, and records a precautionary LayerZero operational pause on the messaging layer this route depends on without a dated per-route resolution; the USDso website terms impose no incident-disclosure obligation on the issuer and the issuer security page is an audit index; the independent DeFiLlama incident dataset (1,330 records retrieved 2026-10-30) contains no Frax, frxUSD, USDso or Somnia entry. The exact incidentState datum for this control is therefore researched non-disclosure - not established incident-free, active or resolved - and the 2026-10-29 reviewer-scoped execution-scope question on the same control remains open."
-    },
-    {
       "id": "rs2-001-usdso-somnia-executionscope-20261030",
       "assetId": "usdso-somnia",
       "scope": {
@@ -49064,38 +48652,6 @@
         "surface:dfd011f5188d071a3fcf332c"
       ],
       "rationale": "Frax publishes the somnia USDso CrossChainRouter architecture (redeem to local frxUSD, LayerZero RemoteHopV2 transport, destination re-mint), the RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the 3-of-6 Safe 0x9527e19f55d1afce9f1e9edcea79552bf41983f9 that holds them, but no complete execution-scope inventory for usdso-somnia-router-administrator (compiled control bridge-meta:usdso-somnia:d25e999bc71fb940280b): no current peer/OApp mapping, validator-or-DVN set and quorum, rate limit per lane, role grant history, in-flight-liability census or loss-scope allocation is published by the issuer, the Somnia operator or the reviewed Frax documentation. The reviewer-scoped execution-scope question renewed 2026-10-29 records exactly that missing inventory, and the issuer's 2026-10-29 status statement discloses only an aggregate unaffected posture plus a partner LayerZero pause. With no published inventory to read, the scoped question is researched non-disclosure of this control's execution scope - not evidence that the control is absent, inactive or bounded."
-    },
-    {
-      "id": "rs2-001-usdso-sonic-incidentstate-20261030",
-      "assetId": "usdso-somnia",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "control:bridge-meta:usdso-somnia:1f7beccb77caca323d6c",
-        "factorKey": "incidentState",
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "incidentState"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-30T11:03:34Z",
-      "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
-      "sourcesRefs": [
-        "source:e05c0585fddba79901f29247",
-        "source:02e5f6f352e4400d32466aae",
-        "source:db27ed32ad706c72be79e3e1"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:d1deab5e5c82e994611a0268",
-        "surface:5fbf13bc7b2e91b9b39f6f2e",
-        "surface:c83a831aba185aff2943f186",
-        "surface:faa9687e57f228640cba27d2",
-        "surface:e66f3d14fb566967e451e073",
-        "surface:7d4dccadc8e07f22081a41ea",
-        "surface:fa3d0ed06dc074210b6cc698",
-        "surface:dfd011f5188d071a3fcf332c"
-      ],
-      "rationale": "No primary surface establishes the incident state of the sonic USDso CrossChainRouter administrator usdso-sonic-router-administrator (compiled control bridge-meta:usdso-somnia:1f7beccb77caca323d6c; controller 0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac, 3-of-6 Safe). Frax documents the router's RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the custodian 1:1 PSM without an incident register, chain-specific disposition or remediation attestation; the issuer's 2026-10-29 status statement addresses the market-wide Binance incident only, says Frax assets and contracts were unaffected, and records a precautionary LayerZero operational pause on the messaging layer this route depends on without a dated per-route resolution; the USDso website terms impose no incident-disclosure obligation on the issuer and the issuer security page is an audit index; the independent DeFiLlama incident dataset (1,330 records retrieved 2026-10-30) contains no Frax, frxUSD, USDso or Somnia entry. The exact incidentState datum for this control is therefore researched non-disclosure - not established incident-free, active or resolved - and the 2026-10-29 reviewer-scoped execution-scope question on the same control remains open."
     },
     {
       "id": "rs2-001-usdso-sonic-executionscope-20261030",
@@ -49129,38 +48685,6 @@
       "rationale": "Frax publishes the sonic USDso CrossChainRouter architecture (redeem to local frxUSD, LayerZero RemoteHopV2 transport, destination re-mint), the RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the 3-of-6 Safe 0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac that holds them, but no complete execution-scope inventory for usdso-sonic-router-administrator (compiled control bridge-meta:usdso-somnia:1f7beccb77caca323d6c): no current peer/OApp mapping, validator-or-DVN set and quorum, rate limit per lane, role grant history, in-flight-liability census or loss-scope allocation is published by the issuer, the Somnia operator or the reviewed Frax documentation. The reviewer-scoped execution-scope question renewed 2026-10-29 records exactly that missing inventory, and the issuer's 2026-10-29 status statement discloses only an aggregate unaffected posture plus a partner LayerZero pause. With no published inventory to read, the scoped question is researched non-disclosure of this control's execution scope - not evidence that the control is absent, inactive or bounded."
     },
     {
-      "id": "rs2-001-usdso-stable-incidentstate-20261030",
-      "assetId": "usdso-somnia",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "control:bridge-meta:usdso-somnia:9abb3b6ef5565bd18940",
-        "factorKey": "incidentState",
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "incidentState"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-30T11:03:34Z",
-      "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
-      "sourcesRefs": [
-        "source:e05c0585fddba79901f29247",
-        "source:02e5f6f352e4400d32466aae",
-        "source:db27ed32ad706c72be79e3e1"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:d1deab5e5c82e994611a0268",
-        "surface:5fbf13bc7b2e91b9b39f6f2e",
-        "surface:c83a831aba185aff2943f186",
-        "surface:faa9687e57f228640cba27d2",
-        "surface:e66f3d14fb566967e451e073",
-        "surface:7d4dccadc8e07f22081a41ea",
-        "surface:fa3d0ed06dc074210b6cc698",
-        "surface:dfd011f5188d071a3fcf332c"
-      ],
-      "rationale": "No primary surface establishes the incident state of the stable USDso CrossChainRouter administrator usdso-stable-router-administrator (compiled control bridge-meta:usdso-somnia:9abb3b6ef5565bd18940; controller 0x0c46f54bf9ef8fd58e2d294b8cea488204ecb3d8, 3-of-6 Safe). Frax documents the router's RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the custodian 1:1 PSM without an incident register, chain-specific disposition or remediation attestation; the issuer's 2026-10-29 status statement addresses the market-wide Binance incident only, says Frax assets and contracts were unaffected, and records a precautionary LayerZero operational pause on the messaging layer this route depends on without a dated per-route resolution; the USDso website terms impose no incident-disclosure obligation on the issuer and the issuer security page is an audit index; the independent DeFiLlama incident dataset (1,330 records retrieved 2026-10-30) contains no Frax, frxUSD, USDso or Somnia entry. The exact incidentState datum for this control is therefore researched non-disclosure - not established incident-free, active or resolved - and the 2026-10-29 reviewer-scoped execution-scope question on the same control remains open."
-    },
-    {
       "id": "rs2-001-usdso-stable-executionscope-20261030",
       "assetId": "usdso-somnia",
       "scope": {
@@ -49192,38 +48716,6 @@
       "rationale": "Frax publishes the stable USDso CrossChainRouter architecture (redeem to local frxUSD, LayerZero RemoteHopV2 transport, destination re-mint), the RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the 3-of-6 Safe 0x0c46f54bf9ef8fd58e2d294b8cea488204ecb3d8 that holds them, but no complete execution-scope inventory for usdso-stable-router-administrator (compiled control bridge-meta:usdso-somnia:9abb3b6ef5565bd18940): no current peer/OApp mapping, validator-or-DVN set and quorum, rate limit per lane, role grant history, in-flight-liability census or loss-scope allocation is published by the issuer, the Somnia operator or the reviewed Frax documentation. The reviewer-scoped execution-scope question renewed 2026-10-29 records exactly that missing inventory, and the issuer's 2026-10-29 status statement discloses only an aggregate unaffected posture plus a partner LayerZero pause. With no published inventory to read, the scoped question is researched non-disclosure of this control's execution scope - not evidence that the control is absent, inactive or bounded."
     },
     {
-      "id": "rs2-001-usdso-unichain-incidentstate-20261030",
-      "assetId": "usdso-somnia",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "control:bridge-meta:usdso-somnia:e23456a7fdf8b226e930",
-        "factorKey": "incidentState",
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "incidentState"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-30T11:03:34Z",
-      "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
-      "sourcesRefs": [
-        "source:e05c0585fddba79901f29247",
-        "source:02e5f6f352e4400d32466aae",
-        "source:db27ed32ad706c72be79e3e1"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:d1deab5e5c82e994611a0268",
-        "surface:5fbf13bc7b2e91b9b39f6f2e",
-        "surface:c83a831aba185aff2943f186",
-        "surface:faa9687e57f228640cba27d2",
-        "surface:e66f3d14fb566967e451e073",
-        "surface:7d4dccadc8e07f22081a41ea",
-        "surface:fa3d0ed06dc074210b6cc698",
-        "surface:dfd011f5188d071a3fcf332c"
-      ],
-      "rationale": "No primary surface establishes the incident state of the unichain USDso CrossChainRouter administrator usdso-unichain-router-administrator (compiled control bridge-meta:usdso-somnia:e23456a7fdf8b226e930; controller 0x6f8fddfd4f6a1456ba5632c919bef74b64dd032d, 3-of-6 Safe). Frax documents the router's RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the custodian 1:1 PSM without an incident register, chain-specific disposition or remediation attestation; the issuer's 2026-10-29 status statement addresses the market-wide Binance incident only, says Frax assets and contracts were unaffected, and records a precautionary LayerZero operational pause on the messaging layer this route depends on without a dated per-route resolution; the USDso website terms impose no incident-disclosure obligation on the issuer and the issuer security page is an audit index; the independent DeFiLlama incident dataset (1,330 records retrieved 2026-10-30) contains no Frax, frxUSD, USDso or Somnia entry. The exact incidentState datum for this control is therefore researched non-disclosure - not established incident-free, active or resolved - and the 2026-10-29 reviewer-scoped execution-scope question on the same control remains open."
-    },
-    {
       "id": "rs2-001-usdso-unichain-executionscope-20261030",
       "assetId": "usdso-somnia",
       "scope": {
@@ -49253,38 +48745,6 @@
         "surface:dfd011f5188d071a3fcf332c"
       ],
       "rationale": "Frax publishes the unichain USDso CrossChainRouter architecture (redeem to local frxUSD, LayerZero RemoteHopV2 transport, destination re-mint), the RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the 3-of-6 Safe 0x6f8fddfd4f6a1456ba5632c919bef74b64dd032d that holds them, but no complete execution-scope inventory for usdso-unichain-router-administrator (compiled control bridge-meta:usdso-somnia:e23456a7fdf8b226e930): no current peer/OApp mapping, validator-or-DVN set and quorum, rate limit per lane, role grant history, in-flight-liability census or loss-scope allocation is published by the issuer, the Somnia operator or the reviewed Frax documentation. The reviewer-scoped execution-scope question renewed 2026-10-29 records exactly that missing inventory, and the issuer's 2026-10-29 status statement discloses only an aggregate unaffected posture plus a partner LayerZero pause. With no published inventory to read, the scoped question is researched non-disclosure of this control's execution scope - not evidence that the control is absent, inactive or bounded."
-    },
-    {
-      "id": "rs2-001-usdso-worldchain-incidentstate-20261030",
-      "assetId": "usdso-somnia",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "control:bridge-meta:usdso-somnia:7b35bd9cae5c3abe99f5",
-        "factorKey": "incidentState",
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "incidentState"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-30T11:03:34Z",
-      "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
-      "sourcesRefs": [
-        "source:e05c0585fddba79901f29247",
-        "source:02e5f6f352e4400d32466aae",
-        "source:db27ed32ad706c72be79e3e1"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:d1deab5e5c82e994611a0268",
-        "surface:5fbf13bc7b2e91b9b39f6f2e",
-        "surface:c83a831aba185aff2943f186",
-        "surface:faa9687e57f228640cba27d2",
-        "surface:e66f3d14fb566967e451e073",
-        "surface:7d4dccadc8e07f22081a41ea",
-        "surface:fa3d0ed06dc074210b6cc698",
-        "surface:dfd011f5188d071a3fcf332c"
-      ],
-      "rationale": "No primary surface establishes the incident state of the worldchain USDso CrossChainRouter administrator usdso-worldchain-router-administrator (compiled control bridge-meta:usdso-somnia:7b35bd9cae5c3abe99f5; controller 0xf57d47c3ea11c12253dbc0beaf097d5c206e8773, 3-of-6 Safe). Frax documents the router's RELAYER_ROLE and DEFAULT_ADMIN_ROLE entrypoints and the custodian 1:1 PSM without an incident register, chain-specific disposition or remediation attestation; the issuer's 2026-10-29 status statement addresses the market-wide Binance incident only, says Frax assets and contracts were unaffected, and records a precautionary LayerZero operational pause on the messaging layer this route depends on without a dated per-route resolution; the USDso website terms impose no incident-disclosure obligation on the issuer and the issuer security page is an audit index; the independent DeFiLlama incident dataset (1,330 records retrieved 2026-10-30) contains no Frax, frxUSD, USDso or Somnia entry. The exact incidentState datum for this control is therefore researched non-disclosure - not established incident-free, active or resolved - and the 2026-10-29 reviewer-scoped execution-scope question on the same control remains open."
     },
     {
       "id": "rs2-001-usdso-worldchain-executionscope-20261030",
@@ -52449,33 +51909,6 @@
       "rationale": "The the current Solana token and its deprecated predecessor deployment solana:idrxZcP8xiKkYk6XGD4uz1dxEYCWSgKDHqgjsBbwDur is identified in Pharos, but its control economics remain unresolved: the route authority is a Solana EOA (solana:bpqui7hhcjfhoxwbkk4dw1gbb86rt1dhejqu8mr7g8tn) holding bridge-mint and burn, the control is modelled at global-claim scope with unbounded claim impairment and no reviewed delay. IDRX publishes the deployment address table, the burn -> bridge-request -> mint flow and a 24-hour credit commitment; its indexed documentation carries no controller identity, key custody, role inventory, per-lane limit, pause authority or conservation rule for this deployment. This records issuer non-disclosure of the deployment control semantics only: it asserts no incident-free finding, no safe-authority conclusion and no economic-loss bound, and leaves the compiled control gap open."
     },
     {
-      "id": "rs2008-idrx-solana-incident-state-20261030",
-      "assetId": "idrx-idrx",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "control:bridge-meta:idrx-idrx:342acbdee322d5081e4c",
-        "factorKey": "incidentState",
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "incidentState"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-30T11:02:57Z",
-      "reviewer": "RS2-008 research sprint 2026-10-30 (IDRX, GUSD, USDP, AutoUSD control identity)",
-      "sourcesRefs": [
-        "source:3563e7c80bd0aa0d80d10314",
-        "source:ffab0ecee3e1ef9a9ffb4306",
-        "source:843f2b1512f272aefccd193c"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:75d4b05fcc1ce921db06c55b",
-        "surface:41e3343016fe34012706eeff",
-        "surface:2b3ca93d65544d3f62af623f"
-      ],
-      "rationale": "The deployment-scoped incident state of the the current Solana token and its deprecated predecessor control control:bridge-meta:idrx-idrx:342acbdee322d5081e4c is not published. The existing negative-incident review in this registry covers the reviewed route controls, not this deployment, and IDRX publishes no incident register, pause/compromise notice or post-mortem page for any deployment (its documentation index has no security or incident section). Absence of a disclosed incident is recorded as non-disclosure of the datum, never as incident absence; the datum stays bounded and unresolved."
-    },
-    {
       "id": "rs2008-idrx-klaytn-route-control-20261030",
       "assetId": "idrx-idrx",
       "scope": {
@@ -52501,33 +51934,6 @@
         "surface:2b3ca93d65544d3f62af623f"
       ],
       "rationale": "The Kaia deployment klaytn:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22 is identified in Pharos, but its control economics remain unresolved: the route authority is the issuer's off-chain bridge API processor (offchain:idrx-bridge-api-processor) behind bridge-mint and burn, the control is modelled at global-claim scope with unbounded claim impairment and no reviewed delay. IDRX publishes the deployment address table, the burn -> bridge-request -> mint flow and a 24-hour credit commitment; its indexed documentation carries no controller identity, key custody, role inventory, per-lane limit, pause authority or conservation rule for this deployment. This records issuer non-disclosure of the deployment control semantics only: it asserts no incident-free finding, no safe-authority conclusion and no economic-loss bound, and leaves the compiled control gap open."
-    },
-    {
-      "id": "rs2008-idrx-klaytn-incident-state-20261030",
-      "assetId": "idrx-idrx",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "control:bridge-meta:idrx-idrx:6fbb7f3cc26497a08ac0",
-        "factorKey": "incidentState",
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "incidentState"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-30T11:02:57Z",
-      "reviewer": "RS2-008 research sprint 2026-10-30 (IDRX, GUSD, USDP, AutoUSD control identity)",
-      "sourcesRefs": [
-        "source:3563e7c80bd0aa0d80d10314",
-        "source:ffab0ecee3e1ef9a9ffb4306",
-        "source:843f2b1512f272aefccd193c"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:75d4b05fcc1ce921db06c55b",
-        "surface:41e3343016fe34012706eeff",
-        "surface:2b3ca93d65544d3f62af623f"
-      ],
-      "rationale": "The deployment-scoped incident state of the Kaia control control:bridge-meta:idrx-idrx:6fbb7f3cc26497a08ac0 is not published. The existing negative-incident review in this registry covers the reviewed route controls, not this deployment, and IDRX publishes no incident register, pause/compromise notice or post-mortem page for any deployment (its documentation index has no security or incident section). Absence of a disclosed incident is recorded as non-disclosure of the datum, never as incident absence; the datum stays bounded and unresolved."
     },
     {
       "id": "rs2008-idrx-etherlink-route-control-20261030",
@@ -54091,32 +53497,6 @@
       "rationale": "Control bridge-meta:fusd-finchain:8ecd81d85544e42fc320 (Ethereum) has a known authority contract 0x425da70e6fde7d5e7f9bd11898fc6c65bfda96c5, raiseable cap semantics, bounded claim impairment, global-claim economic-loss scope and a ~50.0% supply share; only the incident state is unresolved. The issuer publishes no incident, outage, CCIP pool suspension, pauser change or bridge-authority change history: the version log is an empty placeholder and the deployments page lists token addresses only. Retained configuration facts (the configured CCIP pool without mint authority while a legacy authorized pool keeps no supported lanes) are observed setup states, not incident disclosures, and are neither softened nor re-litigated here."
     },
     {
-      "id": "rs2-012-fusd-finchain-eth-bridge-incident-20261030",
-      "assetId": "fusd-finchain",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "control:bridge-meta:fusd-finchain:8ecd81d85544e42fc320",
-        "factorKey": "incidentState",
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "incidentState"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-30T11:36:00Z",
-      "reviewer": "RS2-012 research sprint 2026-10-30 (Safety Score open-evidence batch 2)",
-      "sourcesRefs": [
-        "source:c646d4769c226a697491acb5",
-        "source:a88ba0f24dac33d78ca47b90"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:9c324800a170df6f70df963a",
-        "surface:2867551b1c910b917ff1dbf1",
-        "surface:efcd61b7771f0d9d4aae7183"
-      ],
-      "rationale": "At this exact control scope only the incident state is missing. The issuer's published change and incident surface is an empty version-log page, the deployment table names only token addresses, and no issuer statement addresses a pause, exploit, misconfiguration or outage of the Ethereum bridge or CCIP pools. Absence of a report is treated as non-disclosure, not as a negative finding, and the datum is explicitly not incident-free, active or resolved."
-    },
-    {
       "id": "rs2-012-fusd-finchain-exsat-bridge-control-20261030",
       "assetId": "fusd-finchain",
       "scope": {
@@ -54171,35 +53551,6 @@
       "rationale": "The Fluent bridge control that carries 96.46% of supply (deployment-scoped on fluent:0xd48e565561416de59da1050ed70b8d75e8ef28f9) has a known authority (EOA 0x50c0d2a50a9d4143c856d9323228f2c7fa63906f together with M0 Portal, ProxyAdmin and Hyperlane machinery), unbounded cap semantics and claim impairment, and deployment economic-loss scope; only the incident state is unresolved. The issuer's documentation asserts that 'USDnr is native on Fluent mainnet and Ethereum mainnet; there is no bridging or multi-chain fragmentation between the two', which reconciles neither the reviewed spoke representation nor the bridge control inventory, and M0 documentation describes extension, SwapFacility and portal machinery generically without naming USDnr-specific controllers, admins or an incident history. The exact incident state is therefore researched non-disclosure at this control scope."
     },
     {
-      "id": "rs2-012-usdnr-nerona-fluent-bridge-incident-20261030",
-      "assetId": "usdnr-nerona",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "control:bridge-meta:usdnr-nerona:9767bdcee69e2739813f",
-        "factorKey": "incidentState",
-        "routeKey": null,
-        "exposureId": "fluent:0xd48e565561416de59da1050ed70b8d75e8ef28f9",
-        "requiredDatum": "incidentState"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-30T11:36:00Z",
-      "reviewer": "RS2-012 research sprint 2026-10-30 (Safety Score open-evidence batch 2)",
-      "sourcesRefs": [
-        "source:1be964bfaad7bfe559addf09",
-        "source:ae5c428d60fd68d8f0a2a2dc",
-        "source:3c6f1c0c0aa26221b5107c44"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:b2a27aa341b92990b3d0c837",
-        "surface:789352f43718ec274b317559",
-        "surface:d34187850852513127ee43ec",
-        "surface:8d6ea28b7fd22613ee8c9f0a",
-        "surface:d3e1f8acc186496961e8df28"
-      ],
-      "rationale": "Beyond the topology silence, the issuer disclosed a dated interruption of this surface: on 2026-06-29 its official account announced that 'USDnr Mint & Bridge services are under maintenance' with transactions possibly queued or delayed, and on 2026-07-01 it posted 'We are back to normal folks' in reply. Those posts establish an interruption and a restoration claim but publish no root cause, no affected control, no scope, no impact assessment and no confirmation that no security event occurred; no incident report exists on the docs surfaces. The exact incident state for this control is therefore not reconcilable and is recorded as researched non-disclosure: explicitly not incident-free, not active and not resolved."
-    },
-    {
       "id": "rs2-012-usdnr-nerona-eth-bridge-control-20261030",
       "assetId": "usdnr-nerona",
       "scope": {
@@ -54226,35 +53577,6 @@
         "surface:d3e1f8acc186496961e8df28"
       ],
       "rationale": "Ethereum bridge control bridge-meta:usdnr-nerona:92bd90eea0e146e308b1 (global scope, ~3.54% supply share) has a known authority Safe 0x48670b46380fe1645f0e3e821a25162db2589d19 at 3-of-5, unbounded cap semantics and claim impairment, and Hyperlane/M0 Portal failure domains; only the incident state is unresolved. The issuer publishes no bridge controller, ISM/verifier set, admin binding or route-level incident history, and its documentation denies any bridging between Fluent and Ethereum, so the exact incident state is researched non-disclosure at this control scope."
-    },
-    {
-      "id": "rs2-012-usdnr-nerona-eth-bridge-incident-20261030",
-      "assetId": "usdnr-nerona",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "control:bridge-meta:usdnr-nerona:92bd90eea0e146e308b1",
-        "factorKey": "incidentState",
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "incidentState"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-30T11:36:00Z",
-      "reviewer": "RS2-012 research sprint 2026-10-30 (Safety Score open-evidence batch 2)",
-      "sourcesRefs": [
-        "source:1be964bfaad7bfe559addf09",
-        "source:ae5c428d60fd68d8f0a2a2dc",
-        "source:3c6f1c0c0aa26221b5107c44"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:b2a27aa341b92990b3d0c837",
-        "surface:789352f43718ec274b317559",
-        "surface:d34187850852513127ee43ec",
-        "surface:8d6ea28b7fd22613ee8c9f0a",
-        "surface:d3e1f8acc186496961e8df28"
-      ],
-      "rationale": "At this exact control scope only the incident state is missing. The issuer's June 29 2026 mint/bridge maintenance notice and July 1 restoration post establish that the mint and bridge services were interrupted and later declared back to normal, but they identify neither the affected deployment (Ethereum authority versus Fluent spoke) nor a cause, scope, impact or whether a security event occurred, and no incident report exists on the documentation surfaces. The datum is therefore recorded as researched non-disclosure and explicitly not incident-free, active or resolved."
     },
     {
       "id": "rs2-012-usdnr-nerona-deployment-controls-20261030",
@@ -57589,33 +56911,6 @@
       "rationale": "Reviewed XO metadata identifies three controls and prices the deployment-scoped bridge control at full supply share, but the aggregate inventory stays bounded by the unpublished incident state of the shared Solana upgrade keypair and of the Portal and Wormhole NTT route, together with unreviewed reconciliation, cap and economic-loss semantics for the extension representation. M0's Portal V2, deployment and address documentation and Exodus's launch release publish roles, addresses and design properties, not deployed incident state, controller approval policy or cap semantics. The aggregate is issuer-undisclosed on these surfaces, and the keypair's documented ability to replace both programs is retained."
     },
     {
-      "id": "rs2-025-xo-solana-upgrade-key-incident-20261030",
-      "assetId": "xo-exodus",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "control:bridge-meta:xo-exodus:78cbd7fdcb33b5547b08",
-        "factorKey": "incidentState",
-        "routeKey": null,
-        "exposureId": "solana:xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y",
-        "requiredDatum": "incidentState"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-30T11:12:00Z",
-      "reviewer": "SprintRS025 research sprint 2026-10-30 (RS2-025)",
-      "sourcesRefs": [
-        "source:0a35c97cf7e3b5332d4ab70d",
-        "source:ba0f766e546ce3b88bf56868",
-        "source:d665968c9924806198c466ac"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:a8816ee113ccbadacf4dea98",
-        "surface:53e8f0399ee91be4b9975b5a",
-        "surface:0c09fa29a0898bf3cdf96924"
-      ],
-      "rationale": "Control identity is established: the shared Solana keypair 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW administers the M0 XO extension and Portal programs at a full deployment supply share with no timelock, and the route is an Ethereum-lock Wormhole NTT lock-mint rail. The open datum is this control's incident state. M0 documents Portal V2 roles, adapter peers, replay and pause protections and publishes deployment addresses with source links, and Exodus's launch release describes the product and SDK; neither publishes a deployed incident-state determination for this route or key, and no incident register covers it. This C assertion is limited to incident-state disclosure: it grants no incident-free finding, does not convert missing archive or indexer history into issuer silence, and does not certify historical ingress or receipt census."
-    },
-    {
       "id": "rs226-usdat-saturn-monad-control",
       "assetId": "usdat-saturn",
       "scope": {
@@ -58245,37 +57540,6 @@
         "surface:c0803a48721c62dd6ae39fdd"
       ],
       "rationale": "The Berachain deployment berachain:0x09d4214c03d01f49544c0448dbe3a27f768f2b34 is the material rUSD bridge route (66.3% of attributed deployment supply). Reservoir's contract-address page identifies it only as an 'rUSD' OFT address on Berachain, beside a separate Ethereum RusdOftAdapter; the issuer publishes no OFT owner or administrator, no peer mapping, no DVN/executor configuration, no per-lane rate limit, no pause or upgrade authority and no execution scope for this route. The deployment-scoped control identity required by this datum is therefore not disclosed, and no route control row can be authored from the issuer's own publications."
-    },
-    {
-      "id": "rs2-028-rusd-berachain-incident-20261030",
-      "assetId": "rusd-reservoir",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "control:bridge-meta:rusd-reservoir:f38fa9ce22a25d5d80b5",
-        "factorKey": "incidentState",
-        "routeKey": null,
-        "exposureId": "berachain:0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
-        "requiredDatum": "incidentState"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-30T11:01:25Z",
-      "reviewer": "SprintRS028 research sprint 2026-10-30 (RS2-028)",
-      "sourcesRefs": [
-        "source:6a2b67fd9636cce2f39eb1ea",
-        "source:15629b4518cbc45b8e7294ee",
-        "source:8435af6eb93e3e39ba02a9ee"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:ab18245fdc63f91a64dc16ed",
-        "surface:1e5554947cc2924cf463bd28",
-        "surface:f005cfdbf24bfc81cece042c",
-        "surface:45683950c0721f3689d722d9",
-        "surface:239bb3b18203b69da37a7422",
-        "surface:589ec79aa104307d13265fe6",
-        "surface:c0803a48721c62dd6ae39fdd"
-      ],
-      "rationale": "No deployment-scoped incident disposition is published for the Berachain rUSD route. Reservoir's documentation set (index, PSM, Credit Enforcer, asset adapters, risk management, proof of reserves, contract addresses, FAQ) contains no incident register, no status page and no disclosure obligation covering a bridge or deployment incident; the contract-address page carries identity data only. The incident-state datum therefore remains undisclosed rather than reviewed-clean, and no negative incident review can be established from issuer surfaces."
     },
     {
       "id": "rs2-028-rusd-deployment-controls-20261030",
@@ -67329,6 +66593,1118 @@
         "surface:be4011daba3205dfaaa186c3"
       ],
       "rationale": "No whole-position realization-time maximum is disclosed for the live Frankencoin SPCXx collateral position (v2 position 0xfc538fD2cFFa6Acd0923172dbd79B3b7512c29BD, challengePeriod 86,400 s, 100 SPCXx). Frankencoin challenge auctions have no hard deadline for completing full-position liquidation and permit partial bids and postponed returns, while Backed Assets tracker-certificate primary redemption runs through Authorized Participants against underlying SpaceX equity sales without a protocol-level maximum realization bound. liquidityHorizon therefore stays issuer-undisclosed."
+    },
+    {
+      "id": "gldon-ondo-offchain-issuer-exit-cost-20261124",
+      "assetId": "gldon-ondo",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "cost",
+        "routeKey": "redemption:redemption:5e3a4a54-e796-4177-8d29-6b34f58bce58:redemption:gldon-ondo:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "cost"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:56:00Z",
+      "reviewer": "Pharos 2026-11-24 night run (EXIT lane, exit-2)",
+      "sourcesRefs": [
+        "source:5bc1288841229f1789b1a4e3",
+        "source:7330f0a15205c5a9a0ddba41",
+        "source:ac9484bbf20b46de9e1c65bc"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:ef70e8b44085618d5f52ccf0",
+        "surface:f220dd179f3ad381025c02bc",
+        "surface:95d008ed72fcf7cb3101fedb",
+        "surface:2f01c67a38eb1f4afd535168",
+        "surface:451b9a1cdf9ea63d612c91d7",
+        "surface:971a32e464039e58aaab5fe2",
+        "surface:6faa52ec5c7d317d39e18652",
+        "surface:2ab20c6b3c6a5ec9fdddf98a"
+      ],
+      "rationale": "No complete all-in same-notional redemption cost ceiling is published for Ondo Global Markets GLDon. While docs.ondo.finance/ondo-stocks/fees-and-taxes.md states a 0.05% (5 bps) explicit redemption fee, it also states Ondo Stocks retains the difference between the investor quote price and underlying execution price plus holder-borne gas, and token-and-quote-pricing.md states the quote spread is set by quote size, target profit, and proprietary considerations (widening during Off-Hours) with no published formula or upper bound. GLDon Final Terms cap Purchaser Fees at 0.1% for the separate Investor Put alongside unspecified Redemption Fees and do not cap the retained instant-quote spread."
+    },
+    {
+      "id": "gldon-ondo-offchain-issuer-exit-settlement-20261124",
+      "assetId": "gldon-ondo",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "settlement",
+        "routeKey": "redemption:redemption:5e3a4a54-e796-4177-8d29-6b34f58bce58:redemption:gldon-ondo:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "settlement"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:56:00Z",
+      "reviewer": "Pharos 2026-11-24 night run (EXIT lane, exit-2)",
+      "sourcesRefs": [
+        "source:9a0c234201c82b64b9ccedfa",
+        "source:4c0f4925f4280fc1e9e696d7",
+        "source:8fce5215c8b4897c7d3df73f"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:ef70e8b44085618d5f52ccf0",
+        "surface:f220dd179f3ad381025c02bc",
+        "surface:95d008ed72fcf7cb3101fedb",
+        "surface:2f01c67a38eb1f4afd535168",
+        "surface:451b9a1cdf9ea63d612c91d7",
+        "surface:971a32e464039e58aaab5fe2",
+        "surface:6faa52ec5c7d317d39e18652",
+        "surface:2ab20c6b3c6a5ec9fdddf98a"
+      ],
+      "rationale": "No unconditional same-notional completion deadline or maximum settlement SLA is published for Ondo Global Markets GLDon. Although investing-and-redeeming.md describes instant redemption to USDon (and swapper-liquidity-conditioned conversion to USDC), get-trading-limits.md and quickstart.md show execution requires an authenticated signed attestation gated by real-time MARKET_CLOSED, MARKET_PAUSED, ASSET_PAUSED, ASSET_CLOSED_FOR_SESSION, ASSET_LIMITED, MAX_LIMIT_REACHED, MAX_ATTESTATIONS, and OFFHOURS_EXPOSURE_LIMIT_REACHED controls, and GLDon Final Terms disclaim external settlement delays, with no published maximum elapsed-time completion SLA across restricted states."
+    },
+    {
+      "id": "iauon-ondo-offchain-issuer-exit-cost-20261124",
+      "assetId": "iauon-ondo",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "cost",
+        "routeKey": "redemption:redemption:5e3a4a54-e796-4177-8d29-6b34f58bce58:redemption:iauon-ondo:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "cost"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:56:00Z",
+      "reviewer": "Pharos 2026-11-24 night run (EXIT lane, exit-2)",
+      "sourcesRefs": [
+        "source:5bc1288841229f1789b1a4e3",
+        "source:7330f0a15205c5a9a0ddba41"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:ef70e8b44085618d5f52ccf0",
+        "surface:f220dd179f3ad381025c02bc",
+        "surface:95d008ed72fcf7cb3101fedb",
+        "surface:2f01c67a38eb1f4afd535168",
+        "surface:451b9a1cdf9ea63d612c91d7",
+        "surface:971a32e464039e58aaab5fe2",
+        "surface:6faa52ec5c7d317d39e18652"
+      ],
+      "rationale": "No complete all-in same-notional redemption cost ceiling is published for Ondo Global Markets IAUon. While docs.ondo.finance/ondo-stocks/fees-and-taxes.md states a 0.05% (5 bps) explicit redemption fee, it also states Ondo Stocks retains the difference between the investor quote price and underlying execution price plus holder-borne gas, and token-and-quote-pricing.md explicitly states the quote spread is determined by quote size, target profit, and proprietary considerations (and may widen during Off-Hours) with no published formula or upper bound."
+    },
+    {
+      "id": "iauon-ondo-offchain-issuer-exit-settlement-20261124",
+      "assetId": "iauon-ondo",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "settlement",
+        "routeKey": "redemption:redemption:5e3a4a54-e796-4177-8d29-6b34f58bce58:redemption:iauon-ondo:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "settlement"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:56:00Z",
+      "reviewer": "Pharos 2026-11-24 night run (EXIT lane, exit-2)",
+      "sourcesRefs": [
+        "source:9a0c234201c82b64b9ccedfa",
+        "source:4c0f4925f4280fc1e9e696d7"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:ef70e8b44085618d5f52ccf0",
+        "surface:f220dd179f3ad381025c02bc",
+        "surface:95d008ed72fcf7cb3101fedb",
+        "surface:2f01c67a38eb1f4afd535168",
+        "surface:451b9a1cdf9ea63d612c91d7",
+        "surface:971a32e464039e58aaab5fe2",
+        "surface:6faa52ec5c7d317d39e18652"
+      ],
+      "rationale": "No unconditional same-notional completion deadline or maximum settlement SLA is published for Ondo Global Markets IAUon. Although investing-and-redeeming.md describes instant redemption to USDon (and swapper-liquidity-conditioned conversion to USDC), get-trading-limits.md and quickstart.md show execution requires an authenticated signed attestation gated by real-time MARKET_CLOSED, MARKET_PAUSED, ASSET_PAUSED, ASSET_CLOSED_FOR_SESSION, ASSET_LIMITED, MAX_LIMIT_REACHED, MAX_ATTESTATIONS, and OFFHOURS_EXPOSURE_LIMIT_REACHED controls, with no published maximum elapsed-time completion SLA across closures, pauses, or attestation limits."
+    },
+    {
+      "id": "dusd-standx-offchain-issuer-exit-settlement-20261124",
+      "assetId": "dusd-standx",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "settlement",
+        "routeKey": "redemption:redemption:5e3a4a54-e796-4177-8d29-6b34f58bce58:redemption:dusd-standx:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "settlement"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:56:00Z",
+      "reviewer": "Pharos 2026-11-24 night run (EXIT lane, exit-2)",
+      "sourcesRefs": [
+        "source:8da54ebc94bd65a1dc017f70",
+        "source:240dc5b189091033fb1e44c9"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:b216fde84c76ea5bce311834",
+        "surface:2f75c80e37a1bdae6f71afa9",
+        "surface:b84031549b451b483c39cbd3"
+      ],
+      "rationale": "No unconditional rolling end-to-end settlement completion SLA is published for StandX DUSD offchain-issuer redemption. While redeeming-dusd and product-faq describe a 'standard 7-day processing period' / 7-day lock to unwind hedging positions, the governing StandX User Terms and Conditions specify no binding maximum completion deadline, subject every withdrawal request to withdrawal limits 'adjusted dynamically depending on the type of identification documentation required, as well as market conditions' (permitting the Issuer to decline requests and require resubmission), and provide redemption functionality 'as is' without any warranty."
+    },
+    {
+      "id": "dusd-standx-offchain-issuer-exit-capacity-20261124",
+      "assetId": "dusd-standx",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:5e3a4a54-e796-4177-8d29-6b34f58bce58:redemption:dusd-standx:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:56:00Z",
+      "reviewer": "Pharos 2026-11-24 night run (EXIT lane, exit-2)",
+      "sourcesRefs": [
+        "source:9f12d648ab15815540288cb2",
+        "source:4d5001312d204133330dd737"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:2f75c80e37a1bdae6f71afa9",
+        "surface:b216fde84c76ea5bce311834",
+        "surface:b84031549b451b483c39cbd3"
+      ],
+      "rationale": "No funded or executable same-notional redemption capacity bound is publicly disclosed for the StandX DUSD offchain-issuer route. Governing User Terms subject every withdrawal request to unpublished dynamic withdrawal limits adjusted by identification documentation and market conditions (allowing the Issuer to decline requests exceeding the current limit), and neither redeeming-dusd nor product-faq publishes a numeric reserve-buffer percentage, daily redemption cap, or immediately executable liquidity facility."
+    },
+    {
+      "id": "cgo-comtech-offchain-issuer-exit-cost-20261124",
+      "assetId": "cgo-comtech",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "cost",
+        "routeKey": "redemption:redemption:5e3a4a54-e796-4177-8d29-6b34f58bce58:redemption:cgo-comtech:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "cost"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:56:00Z",
+      "reviewer": "Pharos 2026-11-24 night run (EXIT lane, exit-2)",
+      "sourcesRefs": [
+        "source:ae77d7550684f4484db99f0f",
+        "source:058714aa7c40ed559164972a"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:e725d9d0bb0c5bbd48255ac7",
+        "surface:b978cbb33c47e68a6b7f16d9",
+        "surface:fc4dcfa3f2978d53b5854de3",
+        "surface:dc121f9d0d9f10c263da1e95"
+      ],
+      "rationale": "No complete numeric all-in redemption cost ceiling is publicly disclosed for the ComTech Gold (CGO) offchain-issuer redemption route. Governing Terms and Conditions (Clauses 8.2, 11.1, 11.4) charge creation/redemption, transfer, delivery, storage/vault/insurance, and facilitation fees referencing https://www.comtechgold.com/fee-structure.html (which serves only an empty 1,832-byte SPA shell with no fee table) and reserve unilateral fee increases at any time. ComTech_Gold_FAQ_Final.pdf likewise confirms unpriced making and delivery charges varying by weight/design, unpriced post-24-month storage fees, and an unquantified 'nominal commission' embedded in live app sell quotes."
+    },
+    {
+      "id": "cgo-comtech-offchain-issuer-exit-output-20261124",
+      "assetId": "cgo-comtech",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "output",
+        "routeKey": "redemption:redemption:5e3a4a54-e796-4177-8d29-6b34f58bce58:redemption:cgo-comtech:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "output"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:56:00Z",
+      "reviewer": "Pharos 2026-11-24 night run (EXIT lane, exit-2)",
+      "sourcesRefs": [
+        "source:75346430a5547ce4342eeab5",
+        "source:bb1645677070938af5de99e9"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:e725d9d0bb0c5bbd48255ac7",
+        "surface:b978cbb33c47e68a6b7f16d9",
+        "surface:fc4dcfa3f2978d53b5854de3"
+      ],
+      "rationale": "No public executable same-notional USD output valuation is disclosed for the ComTech Gold (CGO) offchain-issuer redemption route. Governing Terms (Clauses 7.8, 8.1-8.2) and ComTech_Gold_FAQ_Final.pdf deliver physical gold (1 kg bars in-vault or 10 g+ coins net of unpriced making/delivery charges) or credit Trading Platform account proceeds from a live in-app sell quote net of an undisclosed nominal commission, without establishing a public executable net-spendable-USD payout amount at the requested notional. Mirrors the already-admitted sibling physical-to-usd output cause-C row (campaign-lane20last-cgo-comtech-physical-to-usd-output)."
+    },
+    {
+      "id": "itry-brix-offchain-issuer-exit-cost-20261124",
+      "assetId": "itry-brix",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "cost",
+        "routeKey": "redemption:redemption:5e3a4a54-e796-4177-8d29-6b34f58bce58:redemption:itry-brix:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "cost"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:56:00Z",
+      "reviewer": "Pharos 2026-11-24 night run (EXIT lane, exit-2)",
+      "sourcesRefs": [
+        "source:f33f347cffc5a8a9b5fe4b30"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:6f9f4723ca76c84ab10e5329",
+        "surface:947acaaeab25cbfca4a21480",
+        "surface:f49964a37868640a478c236f",
+        "surface:355eb0ae7df1af7349a02f02",
+        "surface:fc38560e7c81f7827d77232d"
+      ],
+      "rationale": "No numeric redemption fee schedule or all-in cost ceiling is publicly disclosed for Brix iTRY. Section 15 of iTRY Token Terms (Last Updated 2026-03-25) provides that iTRY Limited may charge fees shown at transaction entry or separately agreed, may change fee rates at any time with or without notice, and disclaims user-borne network/transaction fees; none of mint-and-redemption.md, overview.md, eligibility.md, or collateral-management.md publishes a fee rate or upper bound."
+    },
+    {
+      "id": "itry-brix-offchain-issuer-exit-settlement-20261124",
+      "assetId": "itry-brix",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "settlement",
+        "routeKey": "redemption:redemption:5e3a4a54-e796-4177-8d29-6b34f58bce58:redemption:itry-brix:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "settlement"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:56:00Z",
+      "reviewer": "Pharos 2026-11-24 night run (EXIT lane, exit-2)",
+      "sourcesRefs": [
+        "source:d736cf90f7b8dc45e67bac75",
+        "source:a502c67a6d3f2e93840be088"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:6f9f4723ca76c84ab10e5329",
+        "surface:947acaaeab25cbfca4a21480",
+        "surface:fc38560e7c81f7827d77232d",
+        "surface:f49964a37868640a478c236f"
+      ],
+      "rationale": "No maximum redemption settlement duration or unconditional completion SLA is publicly disclosed for Brix iTRY. Section 5 of iTRY Token Terms (Last Updated 2026-03-25) explicitly states 'the Company makes no representations or warranties regarding the amount of time needed to complete processing' and allows suspension or discontinuation of Token Services at any time for a fixed or indefinite period; mint-and-redemption.md notes only that larger redemptions may incur a 'short operational delay' without any numeric bound."
+    },
+    {
+      "id": "itry-brix-offchain-issuer-exit-output-20261124",
+      "assetId": "itry-brix",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "output",
+        "routeKey": "redemption:redemption:5e3a4a54-e796-4177-8d29-6b34f58bce58:redemption:itry-brix:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "output"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:56:00Z",
+      "reviewer": "Pharos 2026-11-24 night run (EXIT lane, exit-2)",
+      "sourcesRefs": [
+        "source:e51e2e88c053cd81074e3193"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:6f9f4723ca76c84ab10e5329",
+        "surface:947acaaeab25cbfca4a21480",
+        "surface:f49964a37868640a478c236f",
+        "surface:355eb0ae7df1af7349a02f02",
+        "surface:fc38560e7c81f7827d77232d"
+      ],
+      "rationale": "No complete contractual payout asset set or fixed output composition is publicly disclosed for Brix iTRY redemption. Sections 5 and 7 of iTRY Token Terms (Last Updated 2026-03-25) commit only to redeem 1 iTRY for '1 TRY of notional value in supported digital assets' (not a guaranteed TRY bank payment), while reserving the right to change supported tokens at any time for any reason; neither mint-and-redemption.md nor overview.md enumerates a complete, binding redemption payout asset set."
+    },
+    {
+      "id": "itry-brix-offchain-issuer-exit-capacity-20261124",
+      "assetId": "itry-brix",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:5e3a4a54-e796-4177-8d29-6b34f58bce58:redemption:itry-brix:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:56:00Z",
+      "reviewer": "Pharos 2026-11-24 night run (EXIT lane, exit-2)",
+      "sourcesRefs": [
+        "source:9cf05d85f256b3ebb9b9742f",
+        "source:10332126de465eda7763313a"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:6f9f4723ca76c84ab10e5329",
+        "surface:fc38560e7c81f7827d77232d",
+        "surface:947acaaeab25cbfca4a21480",
+        "surface:f49964a37868640a478c236f"
+      ],
+      "rationale": "No funded or immediately executable redemption capacity bound is publicly disclosed for the Brix iTRY offchain-issuer route. Sections 5 and 6 of iTRY Token Terms (Last Updated 2026-03-25) permit iTRY Limited to refuse any redemption request in its sole discretion (including a sole-discretion solvency determination) and to set or change amount, volume, and time limits at any time; neither collateral-management.md nor mint-and-redemption.md publishes a committed redemption liquidity buffer or daily capacity ceiling."
+    },
+    {
+      "id": "copm-minteo-offchain-issuer-exit-cost-20261124",
+      "assetId": "copm-minteo",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "cost",
+        "routeKey": "redemption:redemption:5e3a4a54-e796-4177-8d29-6b34f58bce58:redemption:copm-minteo:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "cost"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:56:00Z",
+      "reviewer": "Pharos 2026-11-24 night run (EXIT lane, exit-2)",
+      "sourcesRefs": [
+        "source:61ffe2b555f3f5bb825c915e",
+        "source:25886bb947d8e84149021a2c"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:010c4cad916395cf2bd91dfe",
+        "surface:c9f960f12ee345ce6ba10954",
+        "surface:6cbf7901ee6b8426c3bad5b4",
+        "surface:85d7cd69842ec0bc66633d32",
+        "surface:36f9d7986cd37d2558182e28",
+        "surface:84e1ac01e59af28d6f1f60e7",
+        "surface:9ee43e5f3f9d307eeee93fe4",
+        "surface:c31b4d8b2c11e15a4b191ce0"
+      ],
+      "rationale": "No complete numeric all-in redemption cost schedule or ceiling is publicly disclosed for COPM by Minteo. transparency.minteo.com/tokenizationAndRedemtion states that customer-specific local tax withholdings depend on business nature and location and are broken down only prior to each order, while customers also bear outgoing wallet gas and outgoing bank transaction fees; docs.minteo.com/orders/object.md confirms per-order income tax, industry-and-commerce tax, and financial-movement-levy deductions without any published fee tariff or maximum bps bound."
+    },
+    {
+      "id": "copm-minteo-offchain-issuer-exit-settlement-20261124",
+      "assetId": "copm-minteo",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "settlement",
+        "routeKey": "redemption:redemption:5e3a4a54-e796-4177-8d29-6b34f58bce58:redemption:copm-minteo:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "settlement"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:56:00Z",
+      "reviewer": "Pharos 2026-11-24 night run (EXIT lane, exit-2)",
+      "sourcesRefs": [
+        "source:010492b585b9b74b5f50aef4",
+        "source:2eb6cfab3533ecf66000b642"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:6cbf7901ee6b8426c3bad5b4",
+        "surface:c9f960f12ee345ce6ba10954",
+        "surface:010c4cad916395cf2bd91dfe",
+        "surface:85d7cd69842ec0bc66633d32",
+        "surface:294cbbfcd88849e9a7c48fe4",
+        "surface:9ee43e5f3f9d307eeee93fe4",
+        "surface:c31b4d8b2c11e15a4b191ce0"
+      ],
+      "rationale": "No redemption settlement timeline, banking cutoff, or maximum completed bank-credit SLA is publicly disclosed for COPM by Minteo. Neither docs.minteo.com/orders/create-order.md, docs.minteo.com/orders/object.md (which defines only lifecycle states PENDING/SUCCEEDED/SETTLED/BROADCAST/FAILED), transparency.minteo.com/tokenizationAndRedemtion, nor minteo.com publishes a promised or capped time from REDEEM order initiation to fiat settlement in the customer's bank account."
+    },
+    {
+      "id": "copm-minteo-offchain-issuer-exit-capacity-20261124",
+      "assetId": "copm-minteo",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:5e3a4a54-e796-4177-8d29-6b34f58bce58:redemption:copm-minteo:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:56:00Z",
+      "reviewer": "Pharos 2026-11-24 night run (EXIT lane, exit-2)",
+      "sourcesRefs": [
+        "source:08452963f8e7b49247059e82",
+        "source:d2cc7ad63c632b2c7db13ddf"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:6cbf7901ee6b8426c3bad5b4",
+        "surface:84e1ac01e59af28d6f1f60e7",
+        "surface:36f9d7986cd37d2558182e28",
+        "surface:010c4cad916395cf2bd91dfe",
+        "surface:294cbbfcd88849e9a7c48fe4"
+      ],
+      "rationale": "No funded or immediately executable same-notional redemption capacity bound is publicly disclosed for the COPM by Minteo offchain-issuer route. docs.minteo.com/orders/create-order.md publishes only the 10,000 COP minimum order size with no maximum or daily redemption cap, and transparency.minteo.com/reserves and /transparency publish only monthly historical BDO reserve attestations rather than committed immediately executable payout capacity."
+    },
+    {
+      "id": "wbrl-ripio-offchain-issuer-exit-cost-20261124",
+      "assetId": "wbrl-ripio",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "cost",
+        "routeKey": "redemption:redemption:5e3a4a54-e796-4177-8d29-6b34f58bce58:redemption:wbrl-ripio:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "cost"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:56:00Z",
+      "reviewer": "Pharos 2026-11-24 night run (EXIT lane, exit-2)",
+      "sourcesRefs": [
+        "source:c1c50d3330a5b6010ad75ecf",
+        "source:d7b753b3548e26fce6008786"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:3cc9829183470996319d6870",
+        "surface:6d62a1860df77844b7a49696",
+        "surface:74abeba53bd6f0bfc8005151",
+        "surface:cc70e8e982fb27e0201c2c83",
+        "surface:d956f40c5e19ac2a670d9300"
+      ],
+      "rationale": "No numeric redemption fee schedule or all-in cost ceiling is publicly disclosed for Ripio wBRL. The official wFIAT Whitepaper v1.0 (October 2025, p. 3) expressly states that 'a token holder cannot claim any funds or any obligations from the issuer (a token holder could only sell the token in the market –there is no \"redemption\" right)'; generic marketing on ripio.com/en/wfiat ('no hidden fees') and ripio.com/en/cryptocurrencies/wbrl publishes no fee tariff, and Ripio Brasil wallet terms (terms.ripio.com/br/wallet) specify only platform-displayed commissions changeable at Ripio's sole discretion at any time."
+    },
+    {
+      "id": "wbrl-ripio-offchain-issuer-exit-settlement-20261124",
+      "assetId": "wbrl-ripio",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "settlement",
+        "routeKey": "redemption:redemption:5e3a4a54-e796-4177-8d29-6b34f58bce58:redemption:wbrl-ripio:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "settlement"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:56:00Z",
+      "reviewer": "Pharos 2026-11-24 night run (EXIT lane, exit-2)",
+      "sourcesRefs": [
+        "source:670ef62cb2ac62adca8ef31b",
+        "source:80fa593d30c09d4d2382779f"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:3cc9829183470996319d6870",
+        "surface:74abeba53bd6f0bfc8005151",
+        "surface:cc70e8e982fb27e0201c2c83",
+        "surface:6d62a1860df77844b7a49696",
+        "surface:d956f40c5e19ac2a670d9300"
+      ],
+      "rationale": "No contractual settlement timeline or maximum completed bank-credit SLA is publicly disclosed for Ripio wBRL. While ripio.com/en/wfiat contains marketing prose ('No delays'), the official wFIAT Whitepaper v1.0 (October 2025, pp. 2-3) explicitly disclaims any holder redemption right ('there is no \"redemption\" right') and states tokens are burned only 'when deemed necessary by the issuer'; neither ripio.com/en/cryptocurrencies/wbrl nor Ripio Brasil wallet terms (terms.ripio.com/br/wallet) publishes any wBRL-to-BRL redemption completion deadline."
+    },
+    {
+      "id": "wbrl-ripio-offchain-issuer-exit-output-20261124",
+      "assetId": "wbrl-ripio",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "output",
+        "routeKey": "redemption:redemption:5e3a4a54-e796-4177-8d29-6b34f58bce58:redemption:wbrl-ripio:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "output"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:56:00Z",
+      "reviewer": "Pharos 2026-11-24 night run (EXIT lane, exit-2)",
+      "sourcesRefs": [
+        "source:a0a3ea3ba64b363d32bf8323",
+        "source:48337ed74a6acf952626db0e"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:3cc9829183470996319d6870",
+        "surface:cc70e8e982fb27e0201c2c83",
+        "surface:74abeba53bd6f0bfc8005151",
+        "surface:6d62a1860df77844b7a49696",
+        "surface:d956f40c5e19ac2a670d9300"
+      ],
+      "rationale": "No contractual holder redemption payout asset, rail, or same-notional valuation obligation is publicly established for Ripio wBRL. Although marketing pages describe 1:1 BRL pegging and generic wFIAT burn-to-bank flows, the official wFIAT Whitepaper v1.0 (October 2025, p. 3) expressly states that wFIAT tokens 'are not e-money in any jurisdiction, and a token holder cannot claim any funds or any obligations from the issuer (a token holder could only sell the token in the market –there is no \"redemption\" right)', and Ripio Brasil wallet terms (terms.ripio.com/br/wallet) contain no wBRL-specific redemption output commitment."
+    },
+    {
+      "id": "wbrl-ripio-offchain-issuer-exit-capacity-20261124",
+      "assetId": "wbrl-ripio",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:5e3a4a54-e796-4177-8d29-6b34f58bce58:redemption:wbrl-ripio:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:56:00Z",
+      "reviewer": "Pharos 2026-11-24 night run (EXIT lane, exit-2)",
+      "sourcesRefs": [
+        "source:3b1574a19418a7186b0f5af2"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:3cc9829183470996319d6870",
+        "surface:74abeba53bd6f0bfc8005151",
+        "surface:cc70e8e982fb27e0201c2c83",
+        "surface:6d62a1860df77844b7a49696",
+        "surface:d956f40c5e19ac2a670d9300"
+      ],
+      "rationale": "No committed or executable redemption capacity bound is publicly disclosed for Ripio wBRL. The official wFIAT Whitepaper v1.0 (October 2025, pp. 2-3) states that tokens are burned only 'when deemed necessary by the issuer' and explicitly disclaims any holder redemption right against the issuer; neither ripio.com/en/wfiat, ripio.com/en/cryptocurrencies/wbrl, nor terms.ripio.com/br/wallet publishes an executable wBRL redemption liquidity pool or daily redemption capacity ceiling."
+    },
+    {
+      "id": "srusde-strata-queue-redeem-exit-settlement-20261124",
+      "assetId": "srusde-strata",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "settlement",
+        "routeKey": "redemption:redemption:5e3a4a54-e796-4177-8d29-6b34f58bce58:redemption:srusde-strata:queue-redeem",
+        "exposureId": null,
+        "requiredDatum": "settlement"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:56:00Z",
+      "reviewer": "Pharos 2026-11-24 night run (EXIT lane, exit-2)",
+      "sourcesRefs": [
+        "source:1857f319fcf70eac4ca66ec0",
+        "source:5865f9ace0ef5158ce8957b4",
+        "source:12ef710c3439f9956e690a16"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:433dac9b3a58040563f0ab65",
+        "surface:ce7fb090c277b8d2db585e4c",
+        "surface:d367ead060782bdad2b20979",
+        "surface:377ce3b87cf787333350ba3d",
+        "surface:48615575fff6c0ac5110e123",
+        "surface:06bd65a3b474dafe0e539c1f",
+        "surface:5c26e81a7ba30991dd756fca",
+        "surface:0b217fa671c272dbe804fee3",
+        "surface:382c2205a9c7c86663036749"
+      ],
+      "rationale": "No single unconditional request-to-final-claim settlement maximum is publicly established for the Strata srUSDe queue-redeem route. While FAQs describe current-stage instant sUSDe redemptions and a 7-day USDe cooldown, Protocol Overview states that Coverage-Aware Redemption Flow can apply SharesLock/AssetsLock delays as coverage falls, and verified Ethereum sUSDeStrategy (0x2B9796606c8480312a572742C00F606ef4ADB107, behind TransparentUpgradeableProxy 0xdbf4FB6C310C1C85D0b41B5DbCA06096F2E7099F) confirms UPDATER_STRAT_CONFIG_ROLE can adjust sUSDeCooldownSrt up to 7 days while USDe redemptions delegate via UnstakeCooldown (0xd2843c620D188796B031d805Fd869B597f6f3451) to Ethena's mutable sUSDe unstaking cooldown and require a separate finalize() claim transaction."
+    },
+    {
+      "id": "xgld-unitas-collateral-redeem-exit-settlement-20261124",
+      "assetId": "xgld-unitas",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "settlement",
+        "routeKey": "redemption:redemption:5e3a4a54-e796-4177-8d29-6b34f58bce58:redemption:xgld-unitas:collateral-redeem",
+        "exposureId": null,
+        "requiredDatum": "settlement"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:56:00Z",
+      "reviewer": "Pharos 2026-11-24 night run (EXIT lane, exit-2)",
+      "sourcesRefs": [
+        "source:3dd58b8c66e297a8405b0714",
+        "source:543282142f6e8da067a875d5",
+        "source:ea0af387e814f71c3407a6c4"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:00f8f6efcd743fe321e1a808",
+        "surface:c437effa4642e242b84f1bc4",
+        "surface:24b85e3ded8237ef1c6f57d2",
+        "surface:ac356d61605eb9b1369cff54",
+        "surface:5984aafb6c6032c80f624cdd",
+        "surface:999bea95a439e17acae2ae84",
+        "surface:62be4f000c86670846a1c434",
+        "surface:2b21e91058a7b0ebac3a3307"
+      ],
+      "rationale": "No unconditional end-to-end redemption completion SLA is publicly disclosed for Unitas XGLD. Although docs.unitas.so/overview/xgld.md describes a 7-day cooldown before claiming XAUt, fulfillment requires off-chain unwinding of OES / Bybit Stake & Borrow positions and release of XAUt into an unpublished Redemption Contract (neither overview/xgld.md nor mainnet-program-and-address-index.md publishes the Redemption Contract address). off-exchange-settlement.md explicitly notes OES provider degradation 'may temporarily slow hedging or settlement workflows', and Terms of Service (2026-08-27) subject redemptions to unspecified 'protocol rules and throttles' and provide services 'AS IS' without warranty."
+    },
+    {
+      "id": "night-20261124-dusd-dialectic-makina-machine-liquidity",
+      "assetId": "dusd-dialectic",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:f359afe35f0b5aa479d0b7b9",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:58:00Z",
+      "reviewer": "Night run 2026-11-24 (RESV resv-4)",
+      "sourcesRefs": [
+        "source:d46e7f36457dbfe31571edde",
+        "source:0f5b0dffac49e4e2943aec93"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:e2c5ca17d14d6d7ea7cbed2a",
+        "surface:05a13bd728c5cb094a0c4c9e",
+        "surface:f1b623a437a402d6dcf88b7e",
+        "surface:a21336c6dfa15d70306dce62",
+        "surface:f47c27e84b8b64e10dba53fb",
+        "surface:9301520dbe1026d1c0ff88c7",
+        "surface:90e1c5c5feea95ef6ffc8199"
+      ],
+      "rationale": "The required datum is a published maximum realization horizon (liquidityHorizon) for DUSD's Makina Machine exposure slice (makina:protocol:makina, 61.15% of gross assets as of 2026-11-24T01:45:39Z: $1,276,495.52 in Dialectic Carry Machine DCM on Ethereum pinned at block 26481203 as 1,257,648.212904 DCM and $198,573.00 in Dialectic Looped CUSHY on Base pinned at block 61433290 as 198,573.0 loopCUSHY). Makina's official Machine Redemptions documentation expressly states that strategies cannot promise instant, atomic withdrawals and that AsyncRedeemer queues depend on the Operator unwinding positions and finalizing requests after only a minimum finalization delay, with no guaranteed maximum realization deadline."
+    },
+    {
+      "id": "night-20261124-usg-tangent-eusd-liquidity",
+      "assetId": "usg-tangent",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:2550b1dcc3f7bf4842efec4a",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:58:00Z",
+      "reviewer": "Night run 2026-11-24 (RESV resv-4)",
+      "sourcesRefs": [
+        "source:c60c867c7cc6a00ce5d46d9d",
+        "source:0e541de96fa55a3775a0fa06",
+        "source:2106295d27e3f87a0cc51d44"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:ce5de2fbd12f6d1c9beed044",
+        "surface:0ed1fe0374d66008d03cdc8b",
+        "surface:da2e0bbdcd388b762ff48a0d",
+        "surface:4be4e20a9a82a4f2903c17ce",
+        "surface:2d800da9736d47e9cf2c8062",
+        "surface:01343f2f2969ed3c41bf8471",
+        "surface:7acc4018f3c6bfb300aef622"
+      ],
+      "rationale": "The required datum is a published maximum realization horizon (liquidityHorizon) for the eUSD exposure through productive Curve LP collateral slice added in the 2026-11-22 21-market collateral census. Consistent with the 18 existing rs2-007-usg-tangent-*-liquidity-20261030 and campaign-lane40-usg-tangent-frxusd-liquidity classifications, Tangent's official HEC/LEC market, LTV, health/liquidation, and peg-stability documentation describes borrower Curve LP collateral and health-factor liquidation mechanics but publishes no guaranteed whole-position realization deadline for any constituent collateral slice."
+    },
+    {
+      "id": "night-20261124-usg-tangent-crv-liquidity",
+      "assetId": "usg-tangent",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:266f673c1c453a761804f0cb",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:58:00Z",
+      "reviewer": "Night run 2026-11-24 (RESV resv-4)",
+      "sourcesRefs": [
+        "source:c60c867c7cc6a00ce5d46d9d",
+        "source:0e541de96fa55a3775a0fa06",
+        "source:2106295d27e3f87a0cc51d44"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:ce5de2fbd12f6d1c9beed044",
+        "surface:0ed1fe0374d66008d03cdc8b",
+        "surface:da2e0bbdcd388b762ff48a0d",
+        "surface:4be4e20a9a82a4f2903c17ce",
+        "surface:2d800da9736d47e9cf2c8062",
+        "surface:01343f2f2969ed3c41bf8471",
+        "surface:7acc4018f3c6bfb300aef622"
+      ],
+      "rationale": "The required datum is a published maximum realization horizon (liquidityHorizon) for the CRV exposure through productive Curve LP collateral slice added in the 2026-11-22 21-market collateral census. Consistent with the 18 existing rs2-007-usg-tangent-*-liquidity-20261030 and campaign-lane40-usg-tangent-frxusd-liquidity classifications, Tangent's official HEC/LEC market, LTV, health/liquidation, and peg-stability documentation describes borrower Curve LP collateral and health-factor liquidation mechanics but publishes no guaranteed whole-position realization deadline for any constituent collateral slice."
+    },
+    {
+      "id": "night-20261124-usg-tangent-oeth-liquidity",
+      "assetId": "usg-tangent",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:9420a71be7fdfca363a49131",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:58:00Z",
+      "reviewer": "Night run 2026-11-24 (RESV resv-4)",
+      "sourcesRefs": [
+        "source:c60c867c7cc6a00ce5d46d9d",
+        "source:0e541de96fa55a3775a0fa06",
+        "source:2106295d27e3f87a0cc51d44"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:ce5de2fbd12f6d1c9beed044",
+        "surface:0ed1fe0374d66008d03cdc8b",
+        "surface:da2e0bbdcd388b762ff48a0d",
+        "surface:4be4e20a9a82a4f2903c17ce",
+        "surface:2d800da9736d47e9cf2c8062",
+        "surface:01343f2f2969ed3c41bf8471",
+        "surface:7acc4018f3c6bfb300aef622"
+      ],
+      "rationale": "The required datum is a published maximum realization horizon (liquidityHorizon) for the OETH exposure through productive Curve LP collateral slice added in the 2026-11-22 21-market collateral census. Consistent with the 18 existing rs2-007-usg-tangent-*-liquidity-20261030 and campaign-lane40-usg-tangent-frxusd-liquidity classifications, Tangent's official HEC/LEC market, LTV, health/liquidation, and peg-stability documentation describes borrower Curve LP collateral and health-factor liquidation mechanics but publishes no guaranteed whole-position realization deadline for any constituent collateral slice."
+    },
+    {
+      "id": "night-20261124-usg-tangent-dusd-liquidity",
+      "assetId": "usg-tangent",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:eaa526ba0276fa17f3df3180",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:58:00Z",
+      "reviewer": "Night run 2026-11-24 (RESV resv-4)",
+      "sourcesRefs": [
+        "source:c60c867c7cc6a00ce5d46d9d",
+        "source:0e541de96fa55a3775a0fa06",
+        "source:2106295d27e3f87a0cc51d44"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:ce5de2fbd12f6d1c9beed044",
+        "surface:0ed1fe0374d66008d03cdc8b",
+        "surface:da2e0bbdcd388b762ff48a0d",
+        "surface:4be4e20a9a82a4f2903c17ce",
+        "surface:2d800da9736d47e9cf2c8062",
+        "surface:01343f2f2969ed3c41bf8471",
+        "surface:7acc4018f3c6bfb300aef622"
+      ],
+      "rationale": "The required datum is a published maximum realization horizon (liquidityHorizon) for the DUSD exposure through productive Curve LP collateral slice added in the 2026-11-22 21-market collateral census. Consistent with the 18 existing rs2-007-usg-tangent-*-liquidity-20261030 and campaign-lane40-usg-tangent-frxusd-liquidity classifications, Tangent's official HEC/LEC market, LTV, health/liquidation, and peg-stability documentation describes borrower Curve LP collateral and health-factor liquidation mechanics but publishes no guaranteed whole-position realization deadline for any constituent collateral slice."
+    },
+    {
+      "id": "night-20261124-usdh-hubble-kamino-usdc-liquidity",
+      "assetId": "usdh-hubble",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:68448837294521e556d06205",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:58:00Z",
+      "reviewer": "Night run 2026-11-24 (RESV resv-4)",
+      "sourcesRefs": [
+        "source:fb57c4f3a339c815481a165a",
+        "source:2d6cd6f1a3c489a426d254f1"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:105c0ccd465c80e67a1da792",
+        "surface:ad01be008d649e94140da355",
+        "surface:1e193be48382928c2b8f8af1",
+        "surface:e4fa9f0e8e0140ccbdf749b2",
+        "surface:b24d82fc911099dd7c3286cc"
+      ],
+      "rationale": "The required datum is a published maximum realization horizon (liquidityHorizon) for USDH's USDC in Kamino kUSDH-USDC vault (market2) slice (0.1130%). At finalized Solana slot 473168518, Hubble GlobalConfig (8HuhMF7ppoYdPD9fAdn9d9ZU1rL4ipty6CJEcZ5F17o1) keeps direct CDP redemption disabled (blockRedeem=true), docs.hubbleprotocol.io fails DNS resolution (NXDOMAIN), hubbleprotocol.io publishes no collateral liquidation SLA, and the underlying Kamino kUSDH-USDC WhirlpoolStrategy (Cfuy5T6osdazUeLego5LFycBQebm9PP3H7VNdCndXXEN) is deprecated (status=2, zero Orca liquidity). Neither Hubble nor Kamino publishes a guaranteed whole-position realization deadline for this wrapped deprecated vault collateral."
+    },
+    {
+      "id": "night-20261124-usdh-hubble-other-cdp-liquidity",
+      "assetId": "usdh-hubble",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:94abff205cd1910483dc6ce6",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:58:00Z",
+      "reviewer": "Night run 2026-11-24 (RESV resv-4)",
+      "sourcesRefs": [
+        "source:fb57c4f3a339c815481a165a",
+        "source:2d6cd6f1a3c489a426d254f1"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:105c0ccd465c80e67a1da792",
+        "surface:ad01be008d649e94140da355",
+        "surface:1e193be48382928c2b8f8af1",
+        "surface:e4fa9f0e8e0140ccbdf749b2",
+        "surface:b24d82fc911099dd7c3286cc"
+      ],
+      "rationale": "The required datum is a published maximum realization horizon (liquidityHorizon) for USDH's Other CDP collateral slice (0.0841%: stSOL, Wormhole Portal WETH, RAY, Solend cSOL, and impaired/Scope-unpriced post-FTX Sollet soBTC, LDO, soFTT, SRM dust across market0 and market1). At finalized Solana slot 473168518, Hubble GlobalConfig keeps direct CDP redemption disabled (blockRedeem=true), docs.hubbleprotocol.io fails DNS resolution (NXDOMAIN), and neither Hubble nor any collateral venue publishes a guaranteed whole-position realization deadline across this heterogeneous and partially impaired residual basket."
+    },
+    {
+      "id": "night-20261124-cusd-celo-sfrxusd-liquidity",
+      "assetId": "cusd-celo",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:349890d64f20848d4a69f1a3",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:58:00Z",
+      "reviewer": "Night run 2026-11-24 (RESV resv-4)",
+      "sourcesRefs": [
+        "source:ae53b4f004a2f1eca16c1e8d",
+        "source:79e2a8aa1d2eed488179fb28",
+        "source:2eaa0873646744e98be78a7d"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:858e383c41a117b37765fded",
+        "surface:91a0819aa39a8817543f668a",
+        "surface:09a17200a9a500e7a82546cd",
+        "surface:5b47af57426be31e8b602cad",
+        "surface:aee2c05930ca81a2cc819f96",
+        "surface:0df441fafd03057a82046399"
+      ],
+      "rationale": "The required datum is a published maximum realization horizon (liquidityHorizon) for the shared Mento Reserve's Celo LayerZero OFT sfrxUSD slice (mento:reserve:sfrxusd, 6.3047% in live API; 816,321.359743 sfrxUSD at Celo block 83575585). Because assetClass is protocol-position (in maturityNotApplicableClasses), no maturityDaysMax gap opens — only liquidityHorizon is open. Consistent with uw-sfrxusd-frax-a9becd93de387e60 and uw-usdaf-asymmetry-e476196236f5ce5e, Frax allocates sfrxUSD across its mixed Benchmark Yield Strategy (carry-trade, DeFi AMO, Treasury venues), disables direct canonical Ethereum ERC-4626 withdrawals in favor of Fraxtal MintRedeemer/RemoteHop, and neither Frax nor Mento publishes a guaranteed whole-position realization deadline for Celo OFT sfrxUSD."
+    },
+    {
+      "id": "night-20261124-audm-mento-sfrxusd-liquidity",
+      "assetId": "audm-mento",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:349890d64f20848d4a69f1a3",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:58:00Z",
+      "reviewer": "Night run 2026-11-24 (RESV resv-4)",
+      "sourcesRefs": [
+        "source:ae53b4f004a2f1eca16c1e8d",
+        "source:79e2a8aa1d2eed488179fb28",
+        "source:2eaa0873646744e98be78a7d"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:858e383c41a117b37765fded",
+        "surface:91a0819aa39a8817543f668a",
+        "surface:09a17200a9a500e7a82546cd",
+        "surface:5b47af57426be31e8b602cad",
+        "surface:aee2c05930ca81a2cc819f96",
+        "surface:0df441fafd03057a82046399"
+      ],
+      "rationale": "The required datum is a published maximum realization horizon (liquidityHorizon) for the shared Mento Reserve's Celo LayerZero OFT sfrxUSD slice (mento:reserve:sfrxusd, 6.3047% in live API; 816,321.359743 sfrxUSD at Celo block 83575585). Because assetClass is protocol-position (in maturityNotApplicableClasses), no maturityDaysMax gap opens — only liquidityHorizon is open. Consistent with uw-sfrxusd-frax-a9becd93de387e60 and uw-usdaf-asymmetry-e476196236f5ce5e, Frax allocates sfrxUSD across its mixed Benchmark Yield Strategy (carry-trade, DeFi AMO, Treasury venues), disables direct canonical Ethereum ERC-4626 withdrawals in favor of Fraxtal MintRedeemer/RemoteHop, and neither Frax nor Mento publishes a guaranteed whole-position realization deadline for Celo OFT sfrxUSD."
+    },
+    {
+      "id": "night-20261124-brlm-mento-sfrxusd-liquidity",
+      "assetId": "brlm-mento",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:349890d64f20848d4a69f1a3",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:58:00Z",
+      "reviewer": "Night run 2026-11-24 (RESV resv-4)",
+      "sourcesRefs": [
+        "source:ae53b4f004a2f1eca16c1e8d",
+        "source:79e2a8aa1d2eed488179fb28",
+        "source:2eaa0873646744e98be78a7d"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:858e383c41a117b37765fded",
+        "surface:91a0819aa39a8817543f668a",
+        "surface:09a17200a9a500e7a82546cd",
+        "surface:5b47af57426be31e8b602cad",
+        "surface:aee2c05930ca81a2cc819f96",
+        "surface:0df441fafd03057a82046399"
+      ],
+      "rationale": "The required datum is a published maximum realization horizon (liquidityHorizon) for the shared Mento Reserve's Celo LayerZero OFT sfrxUSD slice (mento:reserve:sfrxusd, 6.3047% in live API; 816,321.359743 sfrxUSD at Celo block 83575585). Because assetClass is protocol-position (in maturityNotApplicableClasses), no maturityDaysMax gap opens — only liquidityHorizon is open. Consistent with uw-sfrxusd-frax-a9becd93de387e60 and uw-usdaf-asymmetry-e476196236f5ce5e, Frax allocates sfrxUSD across its mixed Benchmark Yield Strategy (carry-trade, DeFi AMO, Treasury venues), disables direct canonical Ethereum ERC-4626 withdrawals in favor of Fraxtal MintRedeemer/RemoteHop, and neither Frax nor Mento publishes a guaranteed whole-position realization deadline for Celo OFT sfrxUSD."
+    },
+    {
+      "id": "night-20261124-cadm-mento-sfrxusd-liquidity",
+      "assetId": "cadm-mento",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:349890d64f20848d4a69f1a3",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:58:00Z",
+      "reviewer": "Night run 2026-11-24 (RESV resv-4)",
+      "sourcesRefs": [
+        "source:ae53b4f004a2f1eca16c1e8d",
+        "source:79e2a8aa1d2eed488179fb28",
+        "source:2eaa0873646744e98be78a7d"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:858e383c41a117b37765fded",
+        "surface:91a0819aa39a8817543f668a",
+        "surface:09a17200a9a500e7a82546cd",
+        "surface:5b47af57426be31e8b602cad",
+        "surface:aee2c05930ca81a2cc819f96",
+        "surface:0df441fafd03057a82046399"
+      ],
+      "rationale": "The required datum is a published maximum realization horizon (liquidityHorizon) for the shared Mento Reserve's Celo LayerZero OFT sfrxUSD slice (mento:reserve:sfrxusd, 6.3047% in live API; 816,321.359743 sfrxUSD at Celo block 83575585). Because assetClass is protocol-position (in maturityNotApplicableClasses), no maturityDaysMax gap opens — only liquidityHorizon is open. Consistent with uw-sfrxusd-frax-a9becd93de387e60 and uw-usdaf-asymmetry-e476196236f5ce5e, Frax allocates sfrxUSD across its mixed Benchmark Yield Strategy (carry-trade, DeFi AMO, Treasury venues), disables direct canonical Ethereum ERC-4626 withdrawals in favor of Fraxtal MintRedeemer/RemoteHop, and neither Frax nor Mento publishes a guaranteed whole-position realization deadline for Celo OFT sfrxUSD."
+    },
+    {
+      "id": "night-20261124-ceur-celo-sfrxusd-liquidity",
+      "assetId": "ceur-celo",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:349890d64f20848d4a69f1a3",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:58:00Z",
+      "reviewer": "Night run 2026-11-24 (RESV resv-4)",
+      "sourcesRefs": [
+        "source:ae53b4f004a2f1eca16c1e8d",
+        "source:79e2a8aa1d2eed488179fb28",
+        "source:2eaa0873646744e98be78a7d"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:858e383c41a117b37765fded",
+        "surface:91a0819aa39a8817543f668a",
+        "surface:09a17200a9a500e7a82546cd",
+        "surface:5b47af57426be31e8b602cad",
+        "surface:aee2c05930ca81a2cc819f96",
+        "surface:0df441fafd03057a82046399"
+      ],
+      "rationale": "The required datum is a published maximum realization horizon (liquidityHorizon) for the shared Mento Reserve's Celo LayerZero OFT sfrxUSD slice (mento:reserve:sfrxusd, 6.3047% in live API; 816,321.359743 sfrxUSD at Celo block 83575585). Because assetClass is protocol-position (in maturityNotApplicableClasses), no maturityDaysMax gap opens — only liquidityHorizon is open. Consistent with uw-sfrxusd-frax-a9becd93de387e60 and uw-usdaf-asymmetry-e476196236f5ce5e, Frax allocates sfrxUSD across its mixed Benchmark Yield Strategy (carry-trade, DeFi AMO, Treasury venues), disables direct canonical Ethereum ERC-4626 withdrawals in favor of Fraxtal MintRedeemer/RemoteHop, and neither Frax nor Mento publishes a guaranteed whole-position realization deadline for Celo OFT sfrxUSD."
+    },
+    {
+      "id": "night-20261124-copm-mento-sfrxusd-liquidity",
+      "assetId": "copm-mento",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:349890d64f20848d4a69f1a3",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:58:00Z",
+      "reviewer": "Night run 2026-11-24 (RESV resv-4)",
+      "sourcesRefs": [
+        "source:ae53b4f004a2f1eca16c1e8d",
+        "source:79e2a8aa1d2eed488179fb28",
+        "source:2eaa0873646744e98be78a7d"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:858e383c41a117b37765fded",
+        "surface:91a0819aa39a8817543f668a",
+        "surface:09a17200a9a500e7a82546cd",
+        "surface:5b47af57426be31e8b602cad",
+        "surface:aee2c05930ca81a2cc819f96",
+        "surface:0df441fafd03057a82046399"
+      ],
+      "rationale": "The required datum is a published maximum realization horizon (liquidityHorizon) for the shared Mento Reserve's Celo LayerZero OFT sfrxUSD slice (mento:reserve:sfrxusd, 6.3047% in live API; 816,321.359743 sfrxUSD at Celo block 83575585). Because assetClass is protocol-position (in maturityNotApplicableClasses), no maturityDaysMax gap opens — only liquidityHorizon is open. Consistent with uw-sfrxusd-frax-a9becd93de387e60 and uw-usdaf-asymmetry-e476196236f5ce5e, Frax allocates sfrxUSD across its mixed Benchmark Yield Strategy (carry-trade, DeFi AMO, Treasury venues), disables direct canonical Ethereum ERC-4626 withdrawals in favor of Fraxtal MintRedeemer/RemoteHop, and neither Frax nor Mento publishes a guaranteed whole-position realization deadline for Celo OFT sfrxUSD."
+    },
+    {
+      "id": "night-20261124-ghsm-mento-sfrxusd-liquidity",
+      "assetId": "ghsm-mento",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:349890d64f20848d4a69f1a3",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:58:00Z",
+      "reviewer": "Night run 2026-11-24 (RESV resv-4)",
+      "sourcesRefs": [
+        "source:ae53b4f004a2f1eca16c1e8d",
+        "source:79e2a8aa1d2eed488179fb28",
+        "source:2eaa0873646744e98be78a7d"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:858e383c41a117b37765fded",
+        "surface:91a0819aa39a8817543f668a",
+        "surface:09a17200a9a500e7a82546cd",
+        "surface:5b47af57426be31e8b602cad",
+        "surface:aee2c05930ca81a2cc819f96",
+        "surface:0df441fafd03057a82046399"
+      ],
+      "rationale": "The required datum is a published maximum realization horizon (liquidityHorizon) for the shared Mento Reserve's Celo LayerZero OFT sfrxUSD slice (mento:reserve:sfrxusd, 6.3047% in live API; 816,321.359743 sfrxUSD at Celo block 83575585). Because assetClass is protocol-position (in maturityNotApplicableClasses), no maturityDaysMax gap opens — only liquidityHorizon is open. Consistent with uw-sfrxusd-frax-a9becd93de387e60 and uw-usdaf-asymmetry-e476196236f5ce5e, Frax allocates sfrxUSD across its mixed Benchmark Yield Strategy (carry-trade, DeFi AMO, Treasury venues), disables direct canonical Ethereum ERC-4626 withdrawals in favor of Fraxtal MintRedeemer/RemoteHop, and neither Frax nor Mento publishes a guaranteed whole-position realization deadline for Celo OFT sfrxUSD."
+    },
+    {
+      "id": "night-20261124-kesm-mento-sfrxusd-liquidity",
+      "assetId": "kesm-mento",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:349890d64f20848d4a69f1a3",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:58:00Z",
+      "reviewer": "Night run 2026-11-24 (RESV resv-4)",
+      "sourcesRefs": [
+        "source:ae53b4f004a2f1eca16c1e8d",
+        "source:79e2a8aa1d2eed488179fb28",
+        "source:2eaa0873646744e98be78a7d"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:858e383c41a117b37765fded",
+        "surface:91a0819aa39a8817543f668a",
+        "surface:09a17200a9a500e7a82546cd",
+        "surface:5b47af57426be31e8b602cad",
+        "surface:aee2c05930ca81a2cc819f96",
+        "surface:0df441fafd03057a82046399"
+      ],
+      "rationale": "The required datum is a published maximum realization horizon (liquidityHorizon) for the shared Mento Reserve's Celo LayerZero OFT sfrxUSD slice (mento:reserve:sfrxusd, 6.3047% in live API; 816,321.359743 sfrxUSD at Celo block 83575585). Because assetClass is protocol-position (in maturityNotApplicableClasses), no maturityDaysMax gap opens — only liquidityHorizon is open. Consistent with uw-sfrxusd-frax-a9becd93de387e60 and uw-usdaf-asymmetry-e476196236f5ce5e, Frax allocates sfrxUSD across its mixed Benchmark Yield Strategy (carry-trade, DeFi AMO, Treasury venues), disables direct canonical Ethereum ERC-4626 withdrawals in favor of Fraxtal MintRedeemer/RemoteHop, and neither Frax nor Mento publishes a guaranteed whole-position realization deadline for Celo OFT sfrxUSD."
+    },
+    {
+      "id": "night-20261124-xofm-mento-sfrxusd-liquidity",
+      "assetId": "xofm-mento",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:349890d64f20848d4a69f1a3",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:58:00Z",
+      "reviewer": "Night run 2026-11-24 (RESV resv-4)",
+      "sourcesRefs": [
+        "source:ae53b4f004a2f1eca16c1e8d",
+        "source:79e2a8aa1d2eed488179fb28",
+        "source:2eaa0873646744e98be78a7d"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:858e383c41a117b37765fded",
+        "surface:91a0819aa39a8817543f668a",
+        "surface:09a17200a9a500e7a82546cd",
+        "surface:5b47af57426be31e8b602cad",
+        "surface:aee2c05930ca81a2cc819f96",
+        "surface:0df441fafd03057a82046399"
+      ],
+      "rationale": "The required datum is a published maximum realization horizon (liquidityHorizon) for the shared Mento Reserve's Celo LayerZero OFT sfrxUSD slice (mento:reserve:sfrxusd, 6.3047% in live API; 816,321.359743 sfrxUSD at Celo block 83575585). Because assetClass is protocol-position (in maturityNotApplicableClasses), no maturityDaysMax gap opens — only liquidityHorizon is open. Consistent with uw-sfrxusd-frax-a9becd93de387e60 and uw-usdaf-asymmetry-e476196236f5ce5e, Frax allocates sfrxUSD across its mixed Benchmark Yield Strategy (carry-trade, DeFi AMO, Treasury venues), disables direct canonical Ethereum ERC-4626 withdrawals in favor of Fraxtal MintRedeemer/RemoteHop, and neither Frax nor Mento publishes a guaranteed whole-position realization deadline for Celo OFT sfrxUSD."
+    },
+    {
+      "id": "night-20261124-zarm-mento-sfrxusd-liquidity",
+      "assetId": "zarm-mento",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:349890d64f20848d4a69f1a3",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-24T01:58:00Z",
+      "reviewer": "Night run 2026-11-24 (RESV resv-4)",
+      "sourcesRefs": [
+        "source:ae53b4f004a2f1eca16c1e8d",
+        "source:79e2a8aa1d2eed488179fb28",
+        "source:2eaa0873646744e98be78a7d"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:858e383c41a117b37765fded",
+        "surface:91a0819aa39a8817543f668a",
+        "surface:09a17200a9a500e7a82546cd",
+        "surface:5b47af57426be31e8b602cad",
+        "surface:aee2c05930ca81a2cc819f96",
+        "surface:0df441fafd03057a82046399"
+      ],
+      "rationale": "The required datum is a published maximum realization horizon (liquidityHorizon) for the shared Mento Reserve's Celo LayerZero OFT sfrxUSD slice (mento:reserve:sfrxusd, 6.3047% in live API; 816,321.359743 sfrxUSD at Celo block 83575585). Because assetClass is protocol-position (in maturityNotApplicableClasses), no maturityDaysMax gap opens — only liquidityHorizon is open. Consistent with uw-sfrxusd-frax-a9becd93de387e60 and uw-usdaf-asymmetry-e476196236f5ce5e, Frax allocates sfrxUSD across its mixed Benchmark Yield Strategy (carry-trade, DeFi AMO, Treasury venues), disables direct canonical Ethereum ERC-4626 withdrawals in favor of Fraxtal MintRedeemer/RemoteHop, and neither Frax nor Mento publishes a guaranteed whole-position realization deadline for Celo OFT sfrxUSD."
     }
   ],
   "sourceObservations": [
@@ -101651,6 +102027,545 @@
         "excerpt": "Investor Put Option redemption operates through Authorized Participants and depends on underlying equity sale execution, with no guaranteed whole-position realization maximum for a Frankencoin auction.",
         "assertion": "Backed Base Prospectus does not establish a bounded whole-position liquidation horizon for SPCXx pledged in Frankencoin."
       }
+    },
+    {
+      "id": "source:5bc1288841229f1789b1a4e3",
+      "value": {
+        "url": "https://docs.ondo.finance/ondo-stocks/fees-and-taxes.md",
+        "observedAt": "2026-11-24T01:48:00Z",
+        "datumAsOf": null,
+        "location": "Fees & Taxes — 'What fees does Ondo Stocks charge?'",
+        "excerpt": "There is no fee to mint and a 0.05% (5bps) fee for each redemption. Additionally, when a quote is generated the price displayed may be slightly more or less than the price at which Ondo Stocks buys or sells the underlying stocks, with any difference being retained by Ondo Stocks. Investors are responsible for their own gas costs.",
+        "assertion": "Ondo Stocks publishes a 5 bps explicit redemption fee but also retains an undisclosed difference between investor quote price and underlying execution price, plus holder-borne gas."
+      }
+    },
+    {
+      "id": "source:7330f0a15205c5a9a0ddba41",
+      "value": {
+        "url": "https://docs.ondo.finance/ondo-stocks/token-and-quote-pricing.md",
+        "observedAt": "2026-11-24T01:48:00Z",
+        "datumAsOf": null,
+        "location": "Token & Quote Pricing — 'How do you determine the spread to apply on a quote?' and 'Off-Hours session'",
+        "excerpt": "This is based upon a number of factors, including quote size, target profit, and several other proprietary considerations. ... Because liquidity may be lower while traditional markets are closed, bid-ask spreads have the potential to be wider than during an active session",
+        "assertion": "Ondo explicitly states its retained quote spread is determined by proprietary considerations including quote size and target profit, with no published formula or maximum bps ceiling."
+      }
+    },
+    {
+      "id": "source:ac9484bbf20b46de9e1c65bc",
+      "value": {
+        "url": "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf",
+        "observedAt": "2026-11-24T01:48:00Z",
+        "datumAsOf": "2025-11-11",
+        "location": "GLDon Final Terms — Purchaser Fees & Redemption Amount (way of calculation)",
+        "excerpt": "The maximum fee applicable to the Investor in connection with the redemption of the Tokens shall be up to 0.1% of the market price of the Underlying, at the sole discretion of the Issuer. ... (if applicable) Purchaser Fees of up to 0.1% of the market price of such unit of Underlying and Redemption Fees.",
+        "assertion": "GLDon Final Terms govern the separate Investor Put with up to 0.1% Purchaser Fees plus unspecified Redemption Fees and adjustments, and do not cap the retained quote spread on the Ondo Stocks instant USDon route."
+      }
+    },
+    {
+      "id": "source:9a0c234201c82b64b9ccedfa",
+      "value": {
+        "url": "https://docs.ondo.finance/ondo-stocks/investing-and-redeeming.md",
+        "observedAt": "2026-11-24T01:48:00Z",
+        "datumAsOf": null,
+        "location": "Investing & Redeeming — 'What about redemptions?'",
+        "excerpt": "The redemption to USDon will always be instant; redemptions to USDC will be instant provided there is enough liquidity in the stablecoin swapper. The minimum redemption amount to USDon or USDC is $1.00. Redemptions to USD via bank wire are not currently supported.",
+        "assertion": "Docs describe instant USDon redemption and liquidity-conditioned USDC swapper conversion, with no bank-wire fallback or maximum completion SLA when market/session or liquidity limits bind."
+      }
+    },
+    {
+      "id": "source:4c0f4925f4280fc1e9e696d7",
+      "value": {
+        "url": "https://docs.ondo.finance/api-reference/limits/get-trading-limits.md",
+        "observedAt": "2026-11-24T01:48:00Z",
+        "datumAsOf": null,
+        "location": "Get Trading Limits — Trading Limits Reason Codes",
+        "excerpt": "When trading is not allowed, the response will include a reason field which may include one of the following common codes: MARKET_CLOSED, MARKET_PAUSED, ASSET_PAUSED, ASSET_CLOSED_FOR_SESSION, ASSET_LIMITED, MAX_LIMIT_REACHED, MAX_ATTESTATIONS, OFFHOURS_EXPOSURE_LIMIT_REACHED.",
+        "assertion": "Redemption execution requires an authenticated signed attestation subject to real-time market/session closures, asset pauses, and exposure/attestation caps, with no published maximum completion deadline across restricted states."
+      }
+    },
+    {
+      "id": "source:8fce5215c8b4897c7d3df73f",
+      "value": {
+        "url": "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf",
+        "observedAt": "2026-11-24T01:48:00Z",
+        "datumAsOf": "2025-11-11",
+        "location": "GLDon Final Terms — Clearing and Settlement of the Security Tokens",
+        "excerpt": "Any delay in the trade or settlement of the Security Tokens by external factors of such Persons is outside the Issuer's control ... These possible delays may result in a longer settlement time between the Redemption Amount fixing date and the termination of the Security Token",
+        "assertion": "GLDon Final Terms disclose external blockchain clearing/settlement delays outside the Issuer's control and establish no unconditional maximum completion deadline for the instant USDon redemption route."
+      }
+    },
+    {
+      "id": "source:8da54ebc94bd65a1dc017f70",
+      "value": {
+        "url": "https://docs.standx.com/docs/dusd-solutions/redeeming-dusd",
+        "observedAt": "2026-11-24T01:48:00Z",
+        "datumAsOf": null,
+        "location": "Redeeming DUSD — 2. Lock time & 7-Day Lock Period",
+        "excerpt": "There is 7 days lock time for redemption ... After initiating a redemption request, your base assets will be released to your wallet after a standard 7-day processing period. This allows the protocol to unwind hedging positions and manage collateral effectively.",
+        "assertion": "Product docs describe a standard 7-day lock and processing period to unwind hedging positions, not an unconditional legal completion ceiling."
+      }
+    },
+    {
+      "id": "source:240dc5b189091033fb1e44c9",
+      "value": {
+        "url": "https://docs.standx.com/docs/resources/user-terms-conditions",
+        "observedAt": "2026-11-24T01:48:00Z",
+        "datumAsOf": null,
+        "location": "StandX User Terms and Conditions — Redemption & Limitation of Liability",
+        "excerpt": "Every withdrawal request is subject to withdrawal limits. These limits are adjusted dynamically depending on the type of identification documentation required, as well as market conditions. If a withdrawal request exceeds the current limit, the Issuer may decline the request ... The Website and the ability to buy and redeem Tokens (\"Functionality\") are provided \"as is\" and without any representation or warranty, whether express, implied or statutory.",
+        "assertion": "Governing User Terms publish no binding maximum completion SLA, allow the Issuer to decline requests exceeding dynamically adjusted market-condition limits and require resubmission, and provide redemption functionality 'as is' without warranty."
+      }
+    },
+    {
+      "id": "source:9f12d648ab15815540288cb2",
+      "value": {
+        "url": "https://docs.standx.com/docs/resources/user-terms-conditions",
+        "observedAt": "2026-11-24T01:48:00Z",
+        "datumAsOf": null,
+        "location": "StandX User Terms and Conditions — Redemption",
+        "excerpt": "Every withdrawal request is subject to withdrawal limits. These limits are adjusted dynamically depending on the type of identification documentation required, as well as market conditions. If a withdrawal request exceeds the current limit, the Issuer may decline the request and instead require the Tokenholder to submit documents verifying its identity and address prior to allowing a withdrawal of funds or to otherwise cooperate with the Issuer to verify its identity or to submit a new request in line with market conditions, if applicable.",
+        "assertion": "Governing User Terms subject every withdrawal to unpublished dynamic limits adjusted by market conditions and KYC documentation, with no published numeric redemption capacity bound."
+      }
+    },
+    {
+      "id": "source:4d5001312d204133330dd737",
+      "value": {
+        "url": "https://docs.standx.com/docs/dusd-overview/product-faq",
+        "observedAt": "2026-11-24T01:48:00Z",
+        "datumAsOf": null,
+        "location": "Product FAQ — 'How does the reserve fund work?'",
+        "excerpt": "The reserve fund is designed to maintain the stability of DUSD's value. ... The reserve ratio may fluctuate based on market conditions.",
+        "assertion": "Product FAQ states the reserve fund ratio fluctuates based on market conditions and publishes no committed executable redemption buffer or numeric capacity figure."
+      }
+    },
+    {
+      "id": "source:ae77d7550684f4484db99f0f",
+      "value": {
+        "url": "https://comtechgold.com/assets/pdf/Terms_and_Conditions.pdf",
+        "observedAt": "2026-11-24T01:48:00Z",
+        "datumAsOf": null,
+        "location": "Terms and Conditions — Clauses 8.2, 11.1, and 11.4 (pages 7-8)",
+        "excerpt": "release of the underlying Gold Reserves of the Redeemed Digital Gold Units (\"Redeemed Gold Bars\"), less applicable fees, and to procure Your collection of the Redeemed Gold Bars in person in the Vault or request delivery of the Commodity to You at Your own cost and expense ... 11.1 The Digitization Entity will be entitled to (\"Charge Fees\") as set out in [● https://www.comtechgold.com/fee-structure.html . These fees: 11.1.1 Fees on Creation or Redemption ... 11.1.5 Delivery fees for Redeemed Gold Bars; 11.1.6 Storage fees ... 11.4 The Digitization Entity reserves the right to change or modify its fee structure or increase any of the fees at any time and from time to time.",
+        "assertion": "Governing Terms impose creation/redemption, delivery, storage, and facilitation fees via an unpopulated fee-structure.html reference (which serves only a 1,832-byte SPA shell) and reserve unilateral fee increases at any time without a published numeric ceiling."
+      }
+    },
+    {
+      "id": "source:058714aa7c40ed559164972a",
+      "value": {
+        "url": "https://comtechgold.com/assets/pdf/ComTech_Gold_FAQ_Final.pdf",
+        "observedAt": "2026-11-24T01:48:00Z",
+        "datumAsOf": null,
+        "location": "ComTech Gold FAQ — 'At what price is gold sold/ bought from customers?', storage duration, and 'How can I withdraw my gold?' (pages 2-3)",
+        "excerpt": "ComTech Gold will publish a live buy-sell quote for you which will be derived from the same plus a nominal commission to cover operating costs. ... The custody shall be without charge for the first 24 months, and thereafter, will continue to be stored by ComTech Gold for a nominal fee to cover storage costs. ... Each physical delivery option will have different making charges, based on the weight and design of the coin. You must confirm the transaction by paying the additional making and delivery charge.",
+        "assertion": "FAQ confirms unpriced making charges, delivery charges, post-24-month nominal storage fees, and a live sell-quote nominal commission without publishing a numeric schedule or maximum bps ceiling."
+      }
+    },
+    {
+      "id": "source:75346430a5547ce4342eeab5",
+      "value": {
+        "url": "https://comtechgold.com/assets/pdf/Terms_and_Conditions.pdf",
+        "observedAt": "2026-11-24T01:48:00Z",
+        "datumAsOf": null,
+        "location": "Terms and Conditions — Clauses 7.8, 8.1, and 8.2 (pages 6-7)",
+        "excerpt": "7.8 The seller of the Digital Gold by way of placing a sale order on the Trading platform serves as an offer notice the Digitalization entity to sell its physical gold in the form of Digital Gold units and such sale shall be completed upon the execution of the trade and receipt of funds into its account with the Trading Platform. ... 8.1 You may instruct the Digitization Entity to convert Digital Gold to physical gold from the Gold Reserves of a minimum quantity of one kilogram and in further denominations of one kilogram each ... 8.2 procure Your collection of the Redeemed Gold Bars in person in the Vault or request delivery of the Commodity to You at Your own cost and expense",
+        "assertion": "Governing Terms provide physical 1 kg gold bar vault release/delivery (net of unpriced fees) or Trading Platform account proceeds on a sell order, with no published same-notional executable spendable-USD payout valuation."
+      }
+    },
+    {
+      "id": "source:bb1645677070938af5de99e9",
+      "value": {
+        "url": "https://comtechgold.com/assets/pdf/ComTech_Gold_FAQ_Final.pdf",
+        "observedAt": "2026-11-24T01:48:00Z",
+        "datumAsOf": null,
+        "location": "ComTech Gold FAQ — 'How do I sell my gold?' and 'How can I withdraw my gold?' (pages 2-3)",
+        "excerpt": "ComTech Gold provides a sell price quote on their ComTech Gold app during international market hours ... The ComTech Digital Gold price is pegged to International Gold Price and ComTech Gold will publish a live buy-sell quote for you which will be derived from the same plus a nominal commission to cover operating costs. ... You can request delivery for all or part of your gold holding, starting from 10 gm",
+        "assertion": "FAQ describes live in-app sell quotes (with an undisclosed nominal commission and no published bank-withdrawal USD conversion terms) and physical gold coin delivery, publishing no executable same-notional USD output valuation."
+      }
+    },
+    {
+      "id": "source:f33f347cffc5a8a9b5fe4b30",
+      "value": {
+        "url": "https://docs.brix.money/resources/terms-and-policies/itry-token-terms.md",
+        "observedAt": "2026-11-24T01:48:00Z",
+        "datumAsOf": "2026-03-25",
+        "location": "iTRY Token Terms — Section 15 (Fees)",
+        "excerpt": "The Company may charge fees in connection with the Token Services. You agree to pay the fees shown to you, if any, or as separately agreed between you and the Company, when you enter into a transaction (including minting or redemption transaction). The Company may change the rate of any of the fees that it charges at any time, with or without notice ... The Company is not responsible for and shall bear no liability in respect of any network fees or transaction charges you incur in sending any Tokens to any person.",
+        "assertion": "Section 15 permits per-transaction or bilaterally agreed redemption fees changeable at any time with or without notice, plus user-borne network fees, with no published numeric fee schedule or ceiling."
+      }
+    },
+    {
+      "id": "source:d736cf90f7b8dc45e67bac75",
+      "value": {
+        "url": "https://docs.brix.money/resources/terms-and-policies/itry-token-terms.md",
+        "observedAt": "2026-11-24T01:48:00Z",
+        "datumAsOf": "2026-03-25",
+        "location": "iTRY Token Terms — Section 5 (Minting and Redeeming the Tokens) and Section 6 (Restrictions)",
+        "excerpt": "While the Company will make reasonable efforts to ensure that requests for Company transactions are processed in a timely manner, the Company makes no representations or warranties regarding the amount of time needed to complete processing. ... Any of the Token Services can be suspended or discontinued at any time, in the Company's sole and absolute discretion and for a fixed or indefinite period of time.",
+        "assertion": "Section 5 explicitly disclaims any representation or warranty regarding processing completion time and allows indefinite suspension in the Company's sole discretion."
+      }
+    },
+    {
+      "id": "source:a502c67a6d3f2e93840be088",
+      "value": {
+        "url": "https://docs.brix.money/itry/mint-and-redemption.md",
+        "observedAt": "2026-11-24T01:48:00Z",
+        "datumAsOf": null,
+        "location": "Mint & Redemption — Redeem info hint",
+        "excerpt": "Larger redemptions may incur a short operational delay. For additional details, see Collateral Management",
+        "assertion": "Redemption guide notes larger redemptions may incur an operational delay without stating any numeric maximum processing time or SLA."
+      }
+    },
+    {
+      "id": "source:e51e2e88c053cd81074e3193",
+      "value": {
+        "url": "https://docs.brix.money/resources/terms-and-policies/itry-token-terms.md",
+        "observedAt": "2026-11-24T01:48:00Z",
+        "datumAsOf": "2026-03-25",
+        "location": "iTRY Token Terms — Section 5 and Section 7 (Scope of the Token and Key Terms)",
+        "excerpt": "(i) mint and issue Tokens in exchange for tokens accepted from you by the Company (and the Company reserves the right to determine which tokens it will accept at any time and may change which tokens it deems to be acceptable at any time and for any reason); and (ii) redeem the Tokens for supported assets from the Company. ... The Company (or an affiliate designated by the Company) commits to redeem 1 Token for 1 TRY of notional value in supported digital assets, subject to these Token Terms, applicable law, and any fees where applicable.",
+        "assertion": "Token Terms define redemption output only as 'supported digital assets' at 1 TRY notional value changeable at the Company's discretion, without publishing a fixed contractual payout asset set or composition."
+      }
+    },
+    {
+      "id": "source:9cf05d85f256b3ebb9b9742f",
+      "value": {
+        "url": "https://docs.brix.money/resources/terms-and-policies/itry-token-terms.md",
+        "observedAt": "2026-11-24T01:48:00Z",
+        "datumAsOf": "2026-03-25",
+        "location": "iTRY Token Terms — Section 5 and Section 6",
+        "excerpt": "Company may refuse any minting or redemption request in its sole discretion, including for compliance, operational or risk management reasons. For the avoidance of doubt, a redemption request will be subject to the Company determining, in its sole and absolute discretion, that it will remain solvent following the satisfaction of any such request. ... The Company may set and subsequently change, in its sole discretion, limits or restrictions (in any terms such as, and without limitation to amount, volume, time etc) on the ability of a Mint/Redeem User to use the Token Services.",
+        "assertion": "Token Terms allow the Company to refuse any redemption in its sole discretion and impose mutable amount/volume/time limits without publishing any committed executable capacity bound."
+      }
+    },
+    {
+      "id": "source:10332126de465eda7763313a",
+      "value": {
+        "url": "https://docs.brix.money/technical/collateral-management.md",
+        "observedAt": "2026-11-24T01:48:00Z",
+        "datumAsOf": null,
+        "location": "Collateral Management",
+        "excerpt": "iTRY uses Zodia Custody, a regulated custodian, to safeguard collateral.",
+        "assertion": "Collateral Management names only Zodia Custody and discloses no immediate or daily committed redemption liquidity buffer or capacity figure."
+      }
+    },
+    {
+      "id": "source:61ffe2b555f3f5bb825c915e",
+      "value": {
+        "url": "https://transparency.minteo.com/tokenizationAndRedemtion",
+        "observedAt": "2026-11-24T01:48:00Z",
+        "datumAsOf": null,
+        "location": "Tokenization and Redemption — Fees section",
+        "excerpt": "For both tokenization and redemption, local tax withholdings may apply; this depends on the business nature and location of the customer. A clear breakdown of these fees is provided prior to every tokenization/redemption. Customers are responsible for covering the gas fees for all outgoing transactions from their wallets, as well as any fees for their own outgoing bank transactions.",
+        "assertion": "Minteo discloses customer-specific local tax withholdings only prior to each transaction and assigns outgoing wallet gas and bank fees to the customer, publishing no numeric fee schedule or all-in cost ceiling."
+      }
+    },
+    {
+      "id": "source:25886bb947d8e84149021a2c",
+      "value": {
+        "url": "https://docs.minteo.com/orders/object.md",
+        "observedAt": "2026-11-24T01:50:00Z",
+        "datumAsOf": null,
+        "location": "Order Object — public_data.financial_items",
+        "excerpt": "income_tax_withholding_amount ... industry_and_commerce_tax_withholding_amount ... financial_movement_levy_benefit_amount ... financial_movement_levy_amount ... effective_amount: The real amount that will be transferred.",
+        "assertion": "Order API schema confirms order-level deductions for income tax withholding, industry-and-commerce tax withholding, and financial movement levy without publishing fixed rates or a maximum all-in bps ceiling."
+      }
+    },
+    {
+      "id": "source:010492b585b9b74b5f50aef4",
+      "value": {
+        "url": "https://docs.minteo.com/orders/create-order.md",
+        "observedAt": "2026-11-24T01:48:00Z",
+        "datumAsOf": null,
+        "location": "Create an Order — REDEEM order request specification",
+        "excerpt": "REDEEM orders convert stablecoin tokens back to fiat funds. ... Minimum amount for COPM: 10,000 COP (applies to both TOKENIZE and REDEEM orders). ... destination_source_id: ID of the destination bank account where funds will be sent.",
+        "assertion": "Create an Order API documentation specifies REDEEM order inputs and the 10,000 COP minimum but publishes no settlement timeline, banking cutoff, or maximum completed bank-credit SLA."
+      }
+    },
+    {
+      "id": "source:2eb6cfab3533ecf66000b642",
+      "value": {
+        "url": "https://docs.minteo.com/orders/object.md",
+        "observedAt": "2026-11-24T01:50:00Z",
+        "datumAsOf": null,
+        "location": "Order Object — status attribute",
+        "excerpt": "Status of the order: PENDING, SUCCEEDED, SETTLED, BROADCAST, or FAILED.",
+        "assertion": "Order Object documents lifecycle status transitions without publishing any maximum elapsed time from order submission to SETTLED bank receipt."
+      }
+    },
+    {
+      "id": "source:08452963f8e7b49247059e82",
+      "value": {
+        "url": "https://docs.minteo.com/orders/create-order.md",
+        "observedAt": "2026-11-24T01:48:00Z",
+        "datumAsOf": null,
+        "location": "Create an Order — amount field",
+        "excerpt": "Minimum amount for COPM: 10,000 COP (applies to both TOKENIZE and REDEEM orders).",
+        "assertion": "Order API publishes only the 10,000 COP minimum order size and discloses no maximum order limit, daily redemption capacity, or immediately executable liquidity bound."
+      }
+    },
+    {
+      "id": "source:d2cc7ad63c632b2c7db13ddf",
+      "value": {
+        "url": "https://transparency.minteo.com/reserves",
+        "observedAt": "2026-11-24T01:51:00Z",
+        "datumAsOf": null,
+        "location": "Reserve Management — 1:1 Backing & Reserve Verification",
+        "excerpt": "for every unit of COPM in circulation, we maintain an equivalent or greater amount of reserve assets in COP (Colombian Peso) or COP equivalents. ... These audits are performed by the independent and reputable third-party auditor BDO.",
+        "assertion": "Reserve Management describes 1:1 COP/COP-equivalent backing verified via monthly historical BDO attestations, not an immediately executable redemption capacity facility or liquidity bound."
+      }
+    },
+    {
+      "id": "source:c1c50d3330a5b6010ad75ecf",
+      "value": {
+        "url": "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
+        "observedAt": "2026-11-24T01:48:00Z",
+        "datumAsOf": "2025-10-01",
+        "location": "wFIAT Whitepaper v1.0 (October 2025) — Technical architecture (page 3)",
+        "excerpt": "No e-money or deposits: As pure ERC20 stablecoins, wFIAT stablecoins do not represent user deposits, they are not e-money in any jurisdiction, and a token holder cannot claim any funds or any obligations from the issuer (a token holder could only sell the token in the market –there is no \"redemption\" right).",
+        "assertion": "Official wFIAT Whitepaper disclaims any holder redemption right against the issuer and publishes no redemption fee schedule."
+      }
+    },
+    {
+      "id": "source:d7b753b3548e26fce6008786",
+      "value": {
+        "url": "https://terms.ripio.com/br/wallet",
+        "observedAt": "2026-11-24T01:48:00Z",
+        "datumAsOf": null,
+        "location": "Ripio Brasil Wallet Terms and Conditions — Comissões (Swap / OTC / Pagamentos)",
+        "excerpt": "O Usuário compromete-se a pagar à Ripio as comissões informadas na Plataforma. As Comissões poderão, a critério da Ripio, ser atualizadas a qualquer momento ... A Ripio perceberá uma comissão pela execução de cada Ordem OTC, a qual será informada ao Usuário previamente a cada execução.",
+        "assertion": "Ripio Brazil wallet terms publish no fixed wBRL redemption fee schedule and reserve unilateral updates to platform-displayed commissions at any time."
+      }
+    },
+    {
+      "id": "source:670ef62cb2ac62adca8ef31b",
+      "value": {
+        "url": "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
+        "observedAt": "2026-11-24T01:48:00Z",
+        "datumAsOf": "2025-10-01",
+        "location": "wFIAT Whitepaper v1.0 (October 2025) — Economic model & Technical architecture (pages 2-3)",
+        "excerpt": "Conversely, tokens are burned when deemed necessary by the issuer, such as in cases when market liquidity is withdrawn. ... a token holder cannot claim any funds or any obligations from the issuer (a token holder could only sell the token in the market –there is no \"redemption\" right).",
+        "assertion": "Official wFIAT Whitepaper states tokens are burned only when deemed necessary by the issuer and holders have no redemption right, publishing no settlement deadline or bank-credit SLA."
+      }
+    },
+    {
+      "id": "source:80fa593d30c09d4d2382779f",
+      "value": {
+        "url": "https://www.ripio.com/en/wfiat",
+        "observedAt": "2026-11-24T01:48:00Z",
+        "datumAsOf": null,
+        "location": "Ripio wFIAT — 'How it works' step 4",
+        "excerpt": "4 Redeem whenever you want: Burn the token and receive local currency in your bank account. No delays, no hidden fees.",
+        "assertion": "Marketing copy claims 'No delays' for platform B2B/API flows without publishing any contractual maximum settlement duration, banking cutoff, or legally binding SLA."
+      }
+    },
+    {
+      "id": "source:a0a3ea3ba64b363d32bf8323",
+      "value": {
+        "url": "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
+        "observedAt": "2026-11-24T01:48:00Z",
+        "datumAsOf": "2025-10-01",
+        "location": "wFIAT Whitepaper v1.0 (October 2025) — Technical architecture (page 3)",
+        "excerpt": "No e-money or deposits: As pure ERC20 stablecoins, wFIAT stablecoins do not represent user deposits, they are not e-money in any jurisdiction, and a token holder cannot claim any funds or any obligations from the issuer (a token holder could only sell the token in the market –there is no \"redemption\" right).",
+        "assertion": "Official wFIAT Whitepaper explicitly states token holders have no claim to funds or redemption output from the issuer and can only sell wBRL in the market."
+      }
+    },
+    {
+      "id": "source:48337ed74a6acf952626db0e",
+      "value": {
+        "url": "https://www.ripio.com/en/cryptocurrencies/wbrl",
+        "observedAt": "2026-11-24T01:48:00Z",
+        "datumAsOf": null,
+        "location": "Ripio wBRL product page — 'How to buy wBRL'",
+        "excerpt": "03 Buy WBRL: Save, hold, make them surrender, send crypto or withdraw your funds whenever you want.",
+        "assertion": "wBRL product page describes generic Ripio Wallet trading/conversion without specifying a contractual issuer-bound BRL payout obligation or same-notional output valuation."
+      }
+    },
+    {
+      "id": "source:3b1574a19418a7186b0f5af2",
+      "value": {
+        "url": "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
+        "observedAt": "2026-11-24T01:48:00Z",
+        "datumAsOf": "2025-10-01",
+        "location": "wFIAT Whitepaper v1.0 (October 2025) — Economic model & collateralization (pages 2-3)",
+        "excerpt": "New tokens are minted by the issuer only upon sufficient collateralization. Conversely, tokens are burned when deemed necessary by the issuer, such as in cases when market liquidity is withdrawn. ... a token holder cannot claim any funds or any obligations from the issuer (a token holder could only sell the token in the market –there is no \"redemption\" right).",
+        "assertion": "Official wFIAT Whitepaper states burning is discretionary to the issuer and holders hold no redemption claim, publishing no committed executable redemption capacity or liquidity facility."
+      }
+    },
+    {
+      "id": "source:1857f319fcf70eac4ca66ec0",
+      "value": {
+        "url": "https://docs.strata.markets/resources/faqs.md",
+        "observedAt": "2026-11-24T01:48:00Z",
+        "datumAsOf": null,
+        "location": "FAQs — 'How does srUSDe and jrUSDe redemptions work?' and 'Where can I claim my assets after cooldown?'",
+        "excerpt": "At the current stage of protocol implementation: srUSDe can be redeemed for USDe and sUSDe through the Strata UI. ... sUSDe redemptions are processed instantly, while USDe redemptions follow a 7 day cooldown period, consistent with Ethena's sUSDe unbonding period. USDe can be claimed after 7 days in the portfolio section. ... You must manually claim USDe/sUSDe",
+        "assertion": "FAQ describes current-stage instant sUSDe and 7-day Ethena-linked USDe cooldown requiring manual claim, without establishing an unconditional request-to-final-claim maximum across coverage regimes or Ethena cooldown changes."
+      }
+    },
+    {
+      "id": "source:5865f9ace0ef5158ce8957b4",
+      "value": {
+        "url": "https://docs.strata.markets/technical-documentation/protocol-overview.md",
+        "observedAt": "2026-11-24T01:50:00Z",
+        "datumAsOf": null,
+        "location": "Protocol Overview — Strategy & Coverage-Aware Redemption Flow",
+        "excerpt": "Unstaking Cooldown: Protocol-specific cooldown period for base assets. e.g. for USDe, the Strategy requests withdrawal from Ethena's sUSDe, which itself has a cooldown period. ... The protocol can split Senior Coverage into up to three ranges. For each range, the protocol can apply any combination of: 1. SharesLock 2. AssetsLock 3. Fee. ... When coverage is low, exits become slower or more expensive",
+        "assertion": "Protocol Overview documents coverage-dependent SharesLock/AssetsLock cooldowns and delegates USDe unstaking duration to Ethena's sUSDe cooldown contract, with no published all-regime maximum completion SLA."
+      }
+    },
+    {
+      "id": "source:12ef710c3439f9956e690a16",
+      "value": {
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2B9796606c8480312a572742C00F606ef4ADB107",
+        "observedAt": "2026-11-24T01:53:00Z",
+        "datumAsOf": null,
+        "location": "Ethereum verified sUSDeStrategy implementation (behind TransparentUpgradeableProxy 0xdbf4FB6C310C1C85D0b41B5DbCA06096F2E7099F) — withdraw() and setCooldowns()",
+        "excerpt": "function setCooldowns (uint256 sUSDeCooldownJrt_, uint256 sUSDeCooldownSrt_) external onlyRole(UPDATER_STRAT_CONFIG_ROLE) { if (sUSDeCooldownJrt_ > WEEK || sUSDeCooldownSrt_ > WEEK) revert InvalidConfigCooldown(); ... } // USDe cooldown is already defined by Ethena's unstaking period ... unstakeCooldown.transfer(sUSDe, sender, receiver, shares);",
+        "assertion": "Verified sUSDeStrategy code confirms sUSDe cooldown is mutable up to 7 days by UPDATER_STRAT_CONFIG_ROLE (behind a TransparentUpgradeableProxy), while USDe withdrawal duration is inherited from Ethena's mutable sUSDe unstaking cooldown and requires separate finalize() claim."
+      }
+    },
+    {
+      "id": "source:3dd58b8c66e297a8405b0714",
+      "value": {
+        "url": "https://docs.unitas.so/overview/xgld.md",
+        "observedAt": "2026-11-24T01:48:00Z",
+        "datumAsOf": null,
+        "location": "XGLD — Redemption Flow & Yield Distribution",
+        "excerpt": "1. User initiates redemption 2. Redemption enters a 7-day cooldown 3. Strategy exposure is reduced as needed 4. XAUt is released through the Redemption Contract 5. User claims XAUt after the cooldown.",
+        "assertion": "XGLD docs describe a 7-day cooldown paired with off-chain strategy unwinding and XAUt release through an unpublished Redemption Contract, without publishing an unconditional maximum end-to-end claim deadline."
+      }
+    },
+    {
+      "id": "source:543282142f6e8da067a875d5",
+      "value": {
+        "url": "https://docs.unitas.so/resources/terms-of-service.md",
+        "observedAt": "2026-11-24T01:50:00Z",
+        "datumAsOf": "2026-08-27",
+        "location": "Terms of Service — Sections 2.4, 5, and 7 (Disclaimers)",
+        "excerpt": "Redeem: Burn USDu to withdraw the pro-rata share of underlying collateral, subject to protocol rules and throttles. ... We may suspend or terminate your access to all or part of the Services — including our websites, dashboards, APIs, and any interfaces we operate — without prior notice ... THE SERVICES ARE PROVIDED \"AS IS\" AND \"AS AVAILABLE,\" WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED.",
+        "assertion": "Terms of Service subject redemptions to unspecified protocol rules and throttles, permit suspension without notice, and disclaim all warranties, establishing no binding maximum settlement SLA."
+      }
+    },
+    {
+      "id": "source:ea0af387e814f71c3407a6c4",
+      "value": {
+        "url": "https://docs.unitas.so/off-exchange-settlement.md",
+        "observedAt": "2026-11-24T01:50:00Z",
+        "datumAsOf": null,
+        "location": "Off Exchange Settlement — Risk Management (1. Accessibility and Availability)",
+        "excerpt": "Unitas depends on OES providers for timely deposit, withdrawal, and delegation of collateral to/from exchanges. Any degradation in this process may temporarily slow hedging or settlement workflows.",
+        "assertion": "Unitas explicitly discloses that OES custodian degradation can slow redemption settlement workflows, with no published maximum completion ceiling."
+      }
+    },
+    {
+      "id": "source:d46e7f36457dbfe31571edde",
+      "value": {
+        "url": "https://docs.makina.finance/concepts/architecture/machine/redemptions",
+        "observedAt": "2026-11-24T01:47:48Z",
+        "datumAsOf": null,
+        "location": "Why redemptions are asynchronous / Async Redeemer",
+        "excerpt": "A strategy therefore cannot promise instant, atomic withdrawals. Redeemers are instead queues : the Operator must free up liquidity (closing positions and bridging funds back to the Hub) before redemption requests can be settled.",
+        "assertion": "Makina documents operator-finalized asynchronous redemption queues with only a minimum finalization delay and no guaranteed maximum realization horizon for Makina Machine share positions."
+      }
+    },
+    {
+      "id": "source:0f5b0dffac49e4e2943aec93",
+      "value": {
+        "url": "https://api.makina.finance/v1/strategies/0x6b006870C83b1Cd49E766Ac9209f8d68763Df721/allocations",
+        "observedAt": "2026-11-24T01:45:39Z",
+        "datumAsOf": "2026-11-24T01:45:39Z",
+        "location": "data.positions (protocol=makina: Makina DCM & Makina loopCUSHY Machine)",
+        "excerpt": "\"protocol\":\"makina\",\"strategy\":\"Makina loopCUSHY Machine\",\"liquidity_profile\":null",
+        "assertion": "Live Makina DUSD allocations report liquidity_profile: null for Makina Machine positions (Makina DCM $1,276,495.52 and Makina loopCUSHY Machine $198,573.00) and publish no maximum realization bound."
+      }
+    },
+    {
+      "id": "source:c60c867c7cc6a00ce5d46d9d",
+      "value": {
+        "url": "https://docs.tangent.finance/docs/usg/Markets/hec_markets",
+        "observedAt": "2026-11-24T01:47:52Z",
+        "datumAsOf": null,
+        "location": "General concepts",
+        "excerpt": "borrowers can mint `USG` against productive collateral that produces *liquid rewards*, such as [Curve Finance](https://www.curve.finance/dex/ethereum/pools/) LP tokens.",
+        "assertion": "HEC market documentation describes Curve LP collateral and reward-deduction mechanics but publishes no collateral exit terms, withdrawal limits, or maximum whole-position realization horizon."
+      }
+    },
+    {
+      "id": "source:0e541de96fa55a3775a0fa06",
+      "value": {
+        "url": "https://docs.tangent.finance/docs/usg/Markets/lec_markets",
+        "observedAt": "2026-11-24T01:47:52Z",
+        "datumAsOf": null,
+        "location": "General concepts",
+        "excerpt": "borrowers can mint `USG` against productive collateral that produces low or zero *liquid rewards*, such as [Curve Finance](https://www.curve.finance/dex/ethereum/pools/) LP tokens or [Pendle](https://www.pendle.finance/) PTs.",
+        "assertion": "LEC market documentation describes Curve LP collateral and interest mechanics but publishes no maximum realization horizon for any constituent LP slice."
+      }
+    },
+    {
+      "id": "source:2106295d27e3f87a0cc51d44",
+      "value": {
+        "url": "https://docs.tangent.finance/docs/usg/health",
+        "observedAt": "2026-11-24T01:47:52Z",
+        "datumAsOf": null,
+        "location": "Health factor",
+        "excerpt": "Whenever the *health factor* of a loan drops below 1, the loan can be liquidated. While the *health factor* stays above 1, the position can't be liquidated.",
+        "assertion": "Tangent's liquidation documentation establishes health-factor triggers without publishing a whole-position realization time bound for Curve LP collateral slices."
+      }
+    },
+    {
+      "id": "source:fb57c4f3a339c815481a165a",
+      "value": {
+        "url": "https://api.mainnet-beta.solana.com",
+        "observedAt": "2026-11-24T01:58:00Z",
+        "datumAsOf": "2026-11-24T01:58:00Z",
+        "location": "Solana finalized slot 473168518: Hubble GlobalConfig 8HuhMF7ppoYdPD9fAdn9d9ZU1rL4ipty6CJEcZ5F17o1 decoded via @hubbleprotocol/hubble-sdk@8.0.5 IDL",
+        "excerpt": "\"blockRedeem\": true, \"blockPsmBurn\": false, \"blockWithdrawCollateral\": false",
+        "assertion": "On-chain Hubble GlobalConfig keeps direct USDH-for-CDP-collateral redemption disabled (blockRedeem=true), establishing no protocol-level realization timeline for CDP collateral slices."
+      }
+    },
+    {
+      "id": "source:2d6cd6f1a3c489a426d254f1",
+      "value": {
+        "url": "https://unpkg.com/@hubbleprotocol/hubble-sdk@8.0.5/dist/borrowing.json",
+        "observedAt": "2026-11-24T01:57:36Z",
+        "datumAsOf": null,
+        "location": "accounts[GlobalConfig].type.fields",
+        "excerpt": "\"name\":\"blockRedeem\",\"type\":\"bool\"",
+        "assertion": "Official published Hubble borrowing Anchor IDL defines GlobalConfig.blockRedeem and publishes no collateral realization horizon."
+      }
+    },
+    {
+      "id": "source:ae53b4f004a2f1eca16c1e8d",
+      "value": {
+        "url": "https://docs.frax.com/protocol/assets/frxusd/sfrxusd",
+        "observedAt": "2026-11-24T01:46:45Z",
+        "datumAsOf": null,
+        "location": "Overview / Benchmark Yield Strategy (BYS)",
+        "excerpt": "The BYS is the system which allocates all frxUSD staked in the sfrxUSD yield vault to the top yield venue in the current market condition.",
+        "assertion": "Frax allocates sfrxUSD backing dynamically across carry-trade, DeFi AMO, and Treasury venues and routes unstaking through FraxtalERC4626MintRedeemer without publishing a guaranteed whole-position realization deadline for Celo OFT sfrxUSD."
+      }
+    },
+    {
+      "id": "source:79e2a8aa1d2eed488179fb28",
+      "value": {
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve.md",
+        "observedAt": "2026-11-24T01:53:35Z",
+        "datumAsOf": null,
+        "location": "Two backing models in V3 / The Reserve",
+        "excerpt": "The Reserve holds high-quality fiat-backed collateral (e.g. USDC, USDT, USDS for USDm; EUROC for EURm).",
+        "assertion": "Mento's official Reserve documentation publishes no per-asset maximum realization horizon or unwind SLA for the Mento Reserve's Celo LayerZero OFT sfrxUSD holding."
+      }
+    },
+    {
+      "id": "source:2eaa0873646744e98be78a7d",
+      "value": {
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve",
+        "observedAt": "2026-11-24T01:46:45Z",
+        "datumAsOf": "2026-11-24T01:46:45Z",
+        "location": "collateral.assets (sfrxUSD on celo)",
+        "excerpt": "\"symbol\":\"sfrxUSD\",\"chain\":\"celo\"",
+        "assertion": "Live Mento Reserve API reports the Celo sfrxUSD position (6.3047% of collateral; 816,321.359743 sfrxUSD at Celo block 83575585) without disclosing a whole-position liquidity horizon or realization SLA."
+      }
     }
   ],
   "searchedSurfaceObservations": [
@@ -116665,6 +117580,150 @@
     {
       "id": "surface:be4011daba3205dfaaa186c3",
       "value": "https://www.backedassets.fi/legal-documentation"
+    },
+    {
+      "id": "surface:dc121f9d0d9f10c263da1e95",
+      "value": "https://www.comtechgold.com/fee-structure.html"
+    },
+    {
+      "id": "surface:f49964a37868640a478c236f",
+      "value": "https://docs.brix.money/itry/overview.md"
+    },
+    {
+      "id": "surface:355eb0ae7df1af7349a02f02",
+      "value": "https://docs.brix.money/itry/eligibility.md"
+    },
+    {
+      "id": "surface:010c4cad916395cf2bd91dfe",
+      "value": "https://transparency.minteo.com/tokenizationAndRedemtion"
+    },
+    {
+      "id": "surface:c9f960f12ee345ce6ba10954",
+      "value": "https://docs.minteo.com/orders/object.md"
+    },
+    {
+      "id": "surface:6cbf7901ee6b8426c3bad5b4",
+      "value": "https://docs.minteo.com/orders/create-order.md"
+    },
+    {
+      "id": "surface:85d7cd69842ec0bc66633d32",
+      "value": "https://docs.minteo.com/core/getting-started.md"
+    },
+    {
+      "id": "surface:9ee43e5f3f9d307eeee93fe4",
+      "value": "https://transparency.minteo.com/compliance"
+    },
+    {
+      "id": "surface:c31b4d8b2c11e15a4b191ce0",
+      "value": "https://minteo.com/"
+    },
+    {
+      "id": "surface:294cbbfcd88849e9a7c48fe4",
+      "value": "https://docs.minteo.com/home/intro.md"
+    },
+    {
+      "id": "surface:cc70e8e982fb27e0201c2c83",
+      "value": "https://www.ripio.com/en/cryptocurrencies/wbrl"
+    },
+    {
+      "id": "surface:433dac9b3a58040563f0ab65",
+      "value": "https://docs.strata.markets/markets/ethena-usde/srusde.md"
+    },
+    {
+      "id": "surface:ce7fb090c277b8d2db585e4c",
+      "value": "https://docs.strata.markets/markets/ethena-usde.md"
+    },
+    {
+      "id": "surface:d367ead060782bdad2b20979",
+      "value": "https://docs.strata.markets/resources/faqs.md"
+    },
+    {
+      "id": "surface:377ce3b87cf787333350ba3d",
+      "value": "https://docs.strata.markets/technical-documentation/protocol-overview.md"
+    },
+    {
+      "id": "surface:48615575fff6c0ac5110e123",
+      "value": "https://docs.strata.markets/technical-documentation/contracts-details.md"
+    },
+    {
+      "id": "surface:06bd65a3b474dafe0e539c1f",
+      "value": "https://docs.strata.markets/protocol-mechanism/risks-and-mitigations.md"
+    },
+    {
+      "id": "surface:5c26e81a7ba30991dd756fca",
+      "value": "https://docs.strata.markets/resources/terms-of-service.md"
+    },
+    {
+      "id": "surface:0b217fa671c272dbe804fee3",
+      "value": "https://eth.blockscout.com/api/v2/smart-contracts/0x2B9796606c8480312a572742C00F606ef4ADB107"
+    },
+    {
+      "id": "surface:382c2205a9c7c86663036749",
+      "value": "https://eth.blockscout.com/api/v2/smart-contracts/0xd2843c620D188796B031d805Fd869B597f6f3451"
+    },
+    {
+      "id": "surface:c437effa4642e242b84f1bc4",
+      "value": "https://docs.unitas.so/guides/how-to-buy-xgld.md"
+    },
+    {
+      "id": "surface:24b85e3ded8237ef1c6f57d2",
+      "value": "https://docs.unitas.so/guides/how-to-bridge-xgld.md"
+    },
+    {
+      "id": "surface:05a13bd728c5cb094a0c4c9e",
+      "value": "https://docs.makina.finance/concepts/architecture/machine/overview"
+    },
+    {
+      "id": "surface:f1b623a437a402d6dcf88b7e",
+      "value": "https://docs.makina.finance/concepts/architecture/caliber/positions"
+    },
+    {
+      "id": "surface:a21336c6dfa15d70306dce62",
+      "value": "https://api.makina.finance/v1/strategies/0x6b006870C83b1Cd49E766Ac9209f8d68763Df721"
+    },
+    {
+      "id": "surface:f47c27e84b8b64e10dba53fb",
+      "value": "https://api.makina.finance/v1/strategies/0x6b006870C83b1Cd49E766Ac9209f8d68763Df721/allocations"
+    },
+    {
+      "id": "surface:9301520dbe1026d1c0ff88c7",
+      "value": "https://api.makina.finance/v1/strategies/dcm"
+    },
+    {
+      "id": "surface:90e1c5c5feea95ef6ffc8199",
+      "value": "https://api.makina.finance/v1/strategies/loopcushy"
+    },
+    {
+      "id": "surface:0ed1fe0374d66008d03cdc8b",
+      "value": "https://docs.tangent.finance/docs/usg/overview_usg.md"
+    },
+    {
+      "id": "surface:4be4e20a9a82a4f2903c17ce",
+      "value": "https://docs.tangent.finance/docs/usg/Markets/lec_markets.md"
+    },
+    {
+      "id": "surface:2d800da9736d47e9cf2c8062",
+      "value": "https://docs.tangent.finance/docs/usg/loan-to-value&liquidation.md"
+    },
+    {
+      "id": "surface:7acc4018f3c6bfb300aef622",
+      "value": "https://docs.tangent.finance/docs/usg/peg-stability.md"
+    },
+    {
+      "id": "surface:105c0ccd465c80e67a1da792",
+      "value": "https://docs.hubbleprotocol.io"
+    },
+    {
+      "id": "surface:ad01be008d649e94140da355",
+      "value": "https://hubbleprotocol.io/"
+    },
+    {
+      "id": "surface:1e193be48382928c2b8f8af1",
+      "value": "https://unpkg.com/@hubbleprotocol/hubble-sdk@8.0.5/dist/borrowing.json"
+    },
+    {
+      "id": "surface:e4fa9f0e8e0140ccbdf749b2",
+      "value": "https://api.github.com/orgs/hubbleprotocol/repos?per_page=30"
     }
   ]
 }

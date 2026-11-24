@@ -218,17 +218,18 @@
       {
         "id": "pharos:0xad48f183e586e92a591a610397ebf534609df797",
         "destinationChain": "pharos",
+        "canonicalChain": "pharos",
         "contractAddress": "0xad48f183e586e92a591a610397ebf534609df797",
-        "protocol": "Centrifuge V3 deployment; route review pending",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Deployment verified 2026-10-25 against the official Centrifuge registry. At pharos block 21254518 the exact token returned JAAA/6 decimals and 0 shares. All nine EVM source registers sum to 548,473,703.864156 shares, exactly the issuer total-issuance API; Centrifuge documents native EVM burn/mint transfers. Zero is only the observed stock at this pin. Controller closure, adapter quorum, caps, incident state and route risk remain unreviewed; no Safety certification is implied.",
+        "protocol": "Centrifuge V3 issuer-native fund shares",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native JAAA issuance on pharos: at pinned Pharos block 23865000 (hash 0x7296aca1b3a1e5b1b5294a61d548e4eb9d19d6be1089a46cda3c17bb5b70ce68, 2026-11-23T20:31:46Z), totalSupply is 0 and wards() on 0xad48f183e586e92a591a610397ebf534609df797 returns 1 for Centrifuge V3 BalanceSheet (0x12a110cE5f0FC871cC72Bc7ECaF35cf39DD0f43e) and Spoke (0xEC3582fcDc34078a4B7a8c75a5a3AE46f48525aB) and 0 for Root (0x7Ed48C31f2fdC40d37407cBaBf0870B2b688368f) — matching the reviewed Monad Centrifuge V3 ward pattern. Cross-chain EVM share transfers remain covered under jaaa-centrifuge-evm-share-transfer-rail; adapter quorum, controller independence, and incident history remain uncertified.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-25",
+        "observedAt": "2026-11-23",
         "sources": [
           {
             "label": "Centrifuge exact JAAA deployment registry",
@@ -243,11 +244,11 @@
             "url": "https://api.centrifuge.io/tokens/0x5a0f93d040de44e78f251b03c43be9cf317dcf64/total-issuance"
           },
           {
-            "label": "Pinned pharos supply endpoint",
+            "label": "Pinned Pharos RPC wards() and totalSupply reads at block 23865000 (hash 0x7296aca1b3a1e5b1b5294a61d548e4eb9d19d6be1089a46cda3c17bb5b70ce68, 2026-11-23T20:31:46Z)",
             "url": "https://api.zan.top/public/pharos-mainnet"
           }
         ],
-        "observedBlock": 21254518
+        "observedBlock": 23865000
       },
       {
         "id": "xlayer:0xad48f183e586e92a591a610397ebf534609df797",
@@ -355,7 +356,8 @@
           "base:0x5a0f93d040de44e78f251b03c43be9cf317dcf64",
           "bsc:0x58f93d6b1ef2f44ec379cb975657c132cbed3b6b",
           "avalanche:0x58f93d6b1ef2f44ec379cb975657c132cbed3b6b",
-          "monad:0xad48f183e586e92a591a610397ebf534609df797"
+          "monad:0xad48f183e586e92a591a610397ebf534609df797",
+          "pharos:0xad48f183e586e92a591a610397ebf534609df797"
         ],
         "tier": "external-validated-network",
         "reviewedAt": "2026-10-20",
