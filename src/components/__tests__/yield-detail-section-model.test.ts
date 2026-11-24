@@ -134,6 +134,19 @@ describe("buildYieldDetailModel", () => {
     expect(model.ranking.warningSignals).toEqual(signals);
   });
 
+  it("strips safety-unrated warning and marks tokenized funds", () => {
+    const ranking = makeRanking({ id: "buidl-blackrock", symbol: "BUIDL", warningSignals: ["safety-unrated", "yield-spike"] });
+    const model = buildYieldDetailModel(
+      makeResponse([ranking]),
+      { ...registryStatus("active", "embedded", true), stablecoinId: "buidl-blackrock" },
+      [],
+    );
+    if (model.status !== "ready") throw new Error("expected ready");
+    expect(model.isTokenizedFund).toBe(true);
+    expect(model.warningSignals).toEqual(["yield-spike"]);
+    expect(model.singleWarning).toBe("yield-spike");
+  });
+
   it.each([
     { requested: [], expected: [] },
     { requested: ["alt-source"], expected: ["alt-source"] },

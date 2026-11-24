@@ -12,8 +12,9 @@ import { YIELD_HISTORY_MAX_DAYS, YIELD_HISTORY_RAW_DAYS } from "@shared/lib/yiel
 import { deriveDataHealth } from "@/lib/data-health";
 import { DATA_SURFACE_DESCRIPTORS } from "@shared/lib/data-surface-descriptors";
 import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
+import { isClientTokenizedFundId } from "@shared/lib/stablecoins/aggregate-client-registry";
 import type { YieldHistoryPoint } from "@shared/types/yield-evidence-schemas";
-import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
+import { selectRowInvestmentWarningSignals } from "@/lib/yield-view-model-filter-axes";
 
 export const BRAND_ACCENT = "oklch(0.72 0.14 248)";
 export const DEFAULT_DAYS = 90;
@@ -214,8 +215,8 @@ export interface YieldWarningRun {
   end: number;
 }
 
-function warningKind(point: YieldHistoryChartPoint): YieldWarningRun["kind"] | null {
-  if (selectInvestmentWarningSignals(point.warningSignals).length > 0) return "warning";
+function warningKind(point: YieldHistoryChartPoint, isTokenizedFund = false): YieldWarningRun["kind"] | null {
+  if (selectRowInvestmentWarningSignals(point.warningSignals, isTokenizedFund).length > 0) return "warning";
   return point.warningSignalsStatus === "unreadable" ? "unreadable" : null;
 }
 
@@ -224,11 +225,14 @@ function warningKind(point: YieldHistoryChartPoint): YieldWarningRun["kind"] | n
  * warnings) collapse into one run, drawn as a single band: a marker on every
  * hourly point smeared into a thick line. Operational advisories never start a run.
  */
-export function deriveWarningRuns(points: readonly YieldHistoryChartPoint[]): YieldWarningRun[] {
+export function deriveWarningRuns(
+  points: readonly YieldHistoryChartPoint[],
+  isTokenizedFund = false,
+): YieldWarningRun[] {
   const runs: YieldWarningRun[] = [];
   let open: YieldWarningRun | null = null;
   for (const point of points) {
-    const kind = warningKind(point);
+    const kind = warningKind(point, isTokenizedFund);
     if (open && kind !== open.kind) {
       open.end = point.date;
       runs.push(open);
@@ -551,7 +555,8 @@ export function useYieldHistoryChartModel({
   const spikeAnnotations = useMemo(() => computeSpikeAnnotations(chartData), [chartData]);
   const spikeDates = useMemo(() => new Set(spikeAnnotations.map((spike) => spike.date)), [spikeAnnotations]);
 
-  const warningRuns = useMemo(() => deriveWarningRuns(chartData), [chartData]);
+  const isTokenizedFund = isClientTokenizedFundId(stablecoinId);
+  const warningRuns = useMemo(() => deriveWarningRuns(chartData, isTokenizedFund), [chartData, isTokenizedFund]);
 
   const sourceSegments = useMemo(() => {
     return deriveYieldSourceSegments(

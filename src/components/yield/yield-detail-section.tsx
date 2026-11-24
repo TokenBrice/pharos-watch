@@ -162,7 +162,9 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
   const workbenchLink = getYieldWorkbenchLink(stablecoinId);
   const hasWorkbench = workbenchLink.isWorkbench;
   const qualification = resolveYieldScoreQualification(ranking);
-  const qualificationLabel = YIELD_SCORE_QUALIFICATION_LABELS[qualification as keyof typeof YIELD_SCORE_QUALIFICATION_LABELS];
+  const qualificationLabel = view.isTokenizedFund && qualification === "NR"
+    ? "Not graded"
+    : YIELD_SCORE_QUALIFICATION_LABELS[qualification as keyof typeof YIELD_SCORE_QUALIFICATION_LABELS];
   const isExternal = ranking.sourceRole === "external-opportunity";
   const issuerVenue = isExternal && isIssuerOwnYieldVenue(ranking);
   const rolePrefix = ranking.sourceRole === "canonical-holder"
@@ -353,10 +355,13 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
               sustainabilityMult={view.pysBreakdown.sustainabilityMult}
               grade={view.ranking.safetyGrade}
               safetyScore={view.ranking.safetyScore}
+              tokenizedFund={view.isTokenizedFund}
               sourceRiskDrivers={view.sourceRiskDrivers}
               scalingFactor={view.pysBreakdown.scalingFactor}
             />
-            {view.ranking.provenance?.usedDefaultSafety ? (
+            {view.isTokenizedFund ? (
+              <p className="w-full text-2xs text-muted-foreground">Not graded · tokenized fund</p>
+            ) : view.ranking.provenance?.usedDefaultSafety ? (
               <p className="w-full text-2xs text-state-warn-bright">Default safety inputs</p>
             ) : null}
           </dd>

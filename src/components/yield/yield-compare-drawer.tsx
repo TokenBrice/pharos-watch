@@ -30,7 +30,7 @@ import { downloadCsvWithPreamble } from "@/lib/exports/csv";
 import { getLogoSrc, type LogoMap } from "@/lib/logos";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 import { PYS_NULL_REASON_TEXT, YIELD_COMPARE_CSV_COLUMNS } from "@/lib/yield-presentation";
-import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
+import { selectRowInvestmentWarningSignals } from "@/lib/yield-view-model-filter-axes";
 
 interface YieldCompareDrawerProps {
   open: boolean;
@@ -128,9 +128,10 @@ const COMPARE_ROW_DESCRIPTORS: readonly CompareRowDescriptor[] = [
       <YieldSafetyBadge
         grade={row.safetyGrade}
         safetyScore={row.safetyScore}
-        safetySrLabel={formatYieldSafetySrLabel(row.safetyGrade, row.safetyScore)}
+        safetySrLabel={formatYieldSafetySrLabel(row.safetyGrade, row.safetyScore, Boolean(row.isTokenizedFund))}
         opportunityDerived={isOpportunityDerivedSafety(row.provenance?.safetyProvenance)}
         usedDefaultSafety={row.provenance?.usedDefaultSafety === true}
+        tokenizedFund={row.isTokenizedFund}
         compact
       />
     ),
@@ -188,10 +189,12 @@ const COMPARE_ROW_DESCRIPTORS: readonly CompareRowDescriptor[] = [
     key: "warnings",
     label: "Investment warnings",
     align: "left",
-    render: (row) =>
-      selectInvestmentWarningSignals(row.warningSignals).length === 0
+    render: (row) => {
+      const warnings = selectRowInvestmentWarningSignals(row.warningSignals, Boolean(row.isTokenizedFund));
+      return warnings.length === 0
         ? "None"
-        : selectInvestmentWarningSignals(row.warningSignals).map((signal) => formatYieldWarningSignal(signal)).join(", "),
+        : warnings.map((signal) => formatYieldWarningSignal(signal)).join(", ");
+    },
   },
   {
     key: "benchmark",

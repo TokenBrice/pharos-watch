@@ -38,8 +38,10 @@ import {
 } from "@/lib/yield-presentation";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
+import { isClientTokenizedFundId } from "@shared/lib/stablecoins/aggregate-client-registry";
 import type { YieldBenchmarkRegistry, YieldRanking } from "@shared/types/yield";
 import { resolveYieldRowBenchmark } from "@/lib/yield-benchmark";
+import { selectRowInvestmentWarningSignals } from "@/lib/yield-view-model-filter-axes";
 
 interface YieldSourceSheetProps {
   ranking: YieldRanking | null;
@@ -90,6 +92,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
   const evidenceClass = ranking.provenance?.evidenceClass ?? null;
   const evidenceCompleteness = ranking.provenance?.evidenceCompleteness ?? null;
   const scoreQualification = ranking.provenance?.scoreQualification ?? null;
+  const isTokenizedFund = isClientTokenizedFundId(ranking.id);
   const opportunityRisk = ranking.sourceRisk?.opportunityRisk ?? null;
   const freshness = selectedSource.freshness;
   const selectedDepthDisplay = getYieldSourceDepthDisplay({
@@ -147,7 +150,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
                   onClick={() => trackEvent("yield_row_action", {
                     action: "provider_opened",
                     coin_id: ranking.id,
-                    warning_count: ranking.warningSignals.length,
+                    warning_count: selectRowInvestmentWarningSignals(ranking.warningSignals, isTokenizedFund).length,
                   })}
                 />
                 <Badge variant="outline" className={cn("text-xs", YIELD_TYPE_STYLES[ranking.yieldType]?.badge ?? "")}>
@@ -179,11 +182,15 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
                     scoreQualification === "rated" && SEVERITY_TONE_CLASS.ok.pill,
                     scoreQualification === "estimated" && SEVERITY_TONE_CLASS.caution.pill,
                     scoreQualification === "partial" && SEVERITY_TONE_CLASS.sky.pill,
-                    scoreQualification === "NR" && SEVERITY_TONE_CLASS.danger.pill,
+                    scoreQualification === "NR" && (isTokenizedFund ? SEVERITY_TONE_CLASS.neutral.pill : SEVERITY_TONE_CLASS.danger.pill),
                   )}
-                  title="Whether the displayed score has complete, estimated, partial, or insufficient critical evidence"
+                  title={isTokenizedFund && scoreQualification === "NR"
+                    ? "Tokenized fund — not graded on Safety Score"
+                    : "Whether the displayed score has complete, estimated, partial, or insufficient critical evidence"}
                 >
-                  {YIELD_SCORE_QUALIFICATION_LABELS[scoreQualification]}
+                  {isTokenizedFund && scoreQualification === "NR"
+                    ? "Not graded"
+                    : YIELD_SCORE_QUALIFICATION_LABELS[scoreQualification]}
                 </span>
                 <span title="The evidence origin used to establish this yield observation">
                   {YIELD_EVIDENCE_CLASS_LABELS[evidenceClass]}

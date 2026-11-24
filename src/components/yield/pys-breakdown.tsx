@@ -45,6 +45,7 @@ export interface PysBreakdownProps {
   sustainabilityMult: number | null;
   grade: string | null;
   safetyScore: number | null;
+  tokenizedFund?: boolean;
   sourceRiskDrivers: readonly YieldSourceRiskDriver[];
   pysNullReason?: YieldPysNullReason | null;
   // WHY: neutralize-and-rescore deltas must use the same scale as the published PYS.
@@ -98,12 +99,18 @@ function NullPysScore({
   mode,
   toneClass,
   pysNullReason,
+  tokenizedFund = false,
 }: {
   mode: PysBreakdownMode;
   toneClass: string;
   pysNullReason?: YieldPysNullReason | null;
+  tokenizedFund?: boolean;
 }) {
-  const reasonText = pysNullReason ? PYS_NULL_REASON_TEXT[pysNullReason] : null;
+  const reasonText = tokenizedFund && pysNullReason === "safety-unrated"
+    ? "Tokenized fund — not graded on Safety Score."
+    : pysNullReason
+      ? PYS_NULL_REASON_TEXT[pysNullReason]
+      : null;
   const dashClass = cn("font-mono tabular-nums", toneClass);
 
   if (!reasonText) {
@@ -186,17 +193,20 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
     sustainabilityMult,
     grade,
     safetyScore,
+    tokenizedFund = false,
     sourceRiskDrivers,
     score,
     toneClass,
     scalingFactor,
     sourceRiskScore,
   } = props;
-  const safetyLabel = grade && grade !== "NR"
-    ? `${grade}${safetyScore !== null ? ` (${Math.round(safetyScore)}/100)` : ""}`
-    : safetyScore !== null
-    ? `${Math.round(safetyScore)}/100 safety`
-    : "Safety unavailable";
+  const safetyLabel = tokenizedFund
+    ? "Not graded (tokenized fund)"
+    : grade && grade !== "NR"
+      ? `${grade}${safetyScore !== null ? ` (${Math.round(safetyScore)}/100)` : ""}`
+      : safetyScore !== null
+        ? `${Math.round(safetyScore)}/100 safety`
+        : "Safety unavailable";
   const consistencyPct = sustainabilityMult == null ? null : Math.round(sustainabilityMult * 100);
 
   const neutralizeComponents = buildPysNeutralizeInput({
@@ -468,6 +478,7 @@ export function PysBreakdown(props: PysBreakdownProps) {
         mode={props.mode}
         toneClass={props.toneClass}
         pysNullReason={props.pysNullReason}
+        tokenizedFund={props.tokenizedFund}
       />
     );
     return props.mode === "inline"

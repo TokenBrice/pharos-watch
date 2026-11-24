@@ -170,6 +170,7 @@ export function YieldPysValue({
               sustainabilityMult={breakdown.sustainabilityMult}
               grade={grade}
               safetyScore={safetyScore}
+              tokenizedFund={row.isTokenizedFund}
               sourceRiskDrivers={sourceRiskDrivers}
               scalingFactor={breakdown.scalingFactor}
             />

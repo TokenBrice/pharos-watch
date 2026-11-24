@@ -190,4 +190,12 @@ describe("YieldSourceSheet", () => {
     expect(screen.getByRole("link", { name: /View yield opportunities/i }).getAttribute("href")).toBe("/yield?workbenchFallback=usdc-circle");
     expect(screen.queryByRole("link", { name: /Deep dive yield/i })).toBeNull();
   });
+
+  it("renders Not graded instead of Not rated for tokenized funds with NR qualification", () => {
+    const r = mkRank("buidl-blackrock", "selected", "alternate");
+    r.provenance = mkProv({ scoreQualification: "NR", calculationMode: "direct-read", evidenceClass: "direct-onchain" });
+    renderSheet(r);
+    expect(screen.getByText("Not graded")).toBeTruthy();
+    expect(screen.queryByText("Not rated")).toBeNull();
+  });
 });
