@@ -1,26 +1,17 @@
 /*
- * Stablecoin Cemetery plot map, phone layer (≤ 760 px): the portrait slot's reserved box and the bottom sheet.
- * The plan's own art (column heads, year margin, hit boxes) lives in `plot-map.module.css` (`.portrait*`).
+ * Stablecoin Cemetery plot map, phone and touch-tablet layer (`PLOT_PORTRAIT_QUERY`): the portrait slot wrapper and
+ * the bottom sheet. The walk's own art (sticky cause heads, sticky year bands, hit boxes, selection ring) lives in
+ * `plot-map.module.css` (`.portrait*`).
  */
 
 /* ------------------------------------------------------------------ portrait slot */
-/* Hidden above 760 px (the desktop plan shows there). At ≤ 760 px the slot holds the portrait's exact height before
-   the client mounts it: 4 px top margin + the header row + the plan at its viewBox aspect beside the 36 px year
-   margin — the same box `.portrait` fills once mounted, so the swap does not shift the page. */
+/* Hidden on desktop (where the desktop plan shows). Under the shared portrait query (≤ 760 px, or ≤ 1024 px with a
+   coarse pointer) the slot displays the lightweight SSR skeleton then upgrades to the interactive walk with 0 CLS. */
 .slot {
   display: none;
 }
-.reserve {
-  padding-top: calc(4px + var(--portrait-head));
-}
-.reserve::after {
-  content: "";
-  display: block;
-  margin-left: 36px;
-  aspect-ratio: var(--portrait-ar);
-}
 
-@media (max-width: 760px) {
+@media (max-width: 760px), (max-width: 1024px) and (pointer: coarse) {
   /* nothing below needs extra room for the fixed bottom nav: the root layout already ends every page with a
      `--mobile-bottom-nav-safe-height` spacer, and the plan is followed by the legend and the register */
   .slot {
@@ -28,27 +19,185 @@
   }
 }
 
+/* ------------------------------------------------------------------ walk art direction & framing (portrait-only) */
+/* Scoped strictly to `.walk` so desktop `plot-map.module.css` and the OG image remain byte-identical. Quiet tinted
+   lawn beds (not pastel paint), muted organic fresh soil and a slim cast-bronze strip at the stone's foot, plus
+   grounded contact shadows. */
+.walk[data-plot-portrait] {
+  --lawn: oklch(0.938 0.022 124);
+  --gravel: oklch(0.968 0.011 84);
+  --gravel-strip: oklch(0.942 0.012 85);
+  --bed: oklch(0.946 0.016 122);
+  --bed-tint: 7%;
+  --curb-tint: 44%;
+  --mound: oklch(0.92 0.02 122);
+  --soil: oklch(0.79 0.026 78);
+  --bronze: oklch(0.45 0.088 46);
+  --contact: oklch(0.22 0.015 85 / 0.34);
+  --shadow: oklch(0.32 0.02 90 / 0.09);
+  --tree-bed: oklch(0.926 0.014 114);
+}
+:global(.dark) .walk[data-plot-portrait] {
+  --lawn: oklch(0.18 0.019 228);
+  --gravel: oklch(0.275 0.014 235);
+  --gravel-strip: oklch(0.21 0.014 235);
+  --bed: oklch(0.204 0.018 228);
+  --bed-tint: 9%;
+  --curb-tint: 50%;
+  --mound: oklch(0.226 0.018 222);
+  --soil: oklch(0.28 0.024 72);
+  --bronze: oklch(0.74 0.095 62);
+  --contact: oklch(0.03 0.01 245 / 0.78);
+  --shadow: oklch(0.04 0.01 245 / 0.36);
+  --tree-bed: oklch(0.222 0.016 230);
+}
+/* Opaque sticky cause heads and frosted-near-solid year bands so outgoing year text never bleeds through `.portraitHeads`
+   during push-out handoff, and `2019–20 · none recorded` stays crisp over the gravel strip. */
+.walk[data-plot-portrait] [data-plot-portrait-heads] {
+  background: var(--background);
+}
+.walk[data-plot-portrait] [data-plot-portrait-heads] > span > * {
+  min-width: 44px;
+}
+.walk[data-plot-portrait] [data-plot-year-band]:not([data-empty="true"]) > div {
+  background: color-mix(in oklab, var(--background) 96%, transparent);
+}
+.walk[data-plot-portrait] [data-plot-year-band][data-empty="true"] > div {
+  background: color-mix(in oklab, var(--gravel-strip) 95%, var(--background));
+}
+.walkTrees {
+  pointer-events: none;
+}
+/* Keep rightmost 44×44 touch targets from creating 2 px horizontal overflow on 320 px phones without affecting sticky bands. */
+.walkPlan [data-plot-hits] {
+  overflow: clip;
+}
+/* Dim cypresses quietly when a cause highlight or legend lens spotlights specific stones. */
+[data-plot-portrait-svg][data-dim] .walkTrees {
+  opacity: 0.42;
+}
+
+/* Portrait-scoped hero & legend ergonomics (lives here so desktop `plot-map.module.css` & OG signature stay byte-identical). */
+.heroScope {
+  display: block;
+}
+.beamRestLeadDot,
+.beamRestCoin {
+  display: inline;
+}
+@media (max-width: 760px) {
+  .beamRestLeadDot {
+    display: none;
+  }
+  .beamRestCoin {
+    display: block;
+  }
+}
+@media (max-width: 760px), (max-width: 1024px) and (pointer: coarse) {
+  .heroLinks {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 6px;
+    margin-top: 0;
+  }
+  .heroLinks a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding-inline: 2px;
+  }
+}
+/* 1024 px touch tablets (1024×1366 & 1024×768): match the 2-column legend grid so collapsed `legendMore` spans full width. */
+@media (min-width: 761px) and (max-width: 1024px) and (pointer: coarse) {
+  .heroScope [data-plot-legend] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .heroScope [data-plot-legend-more] {
+    grid-column: 1 / -1;
+  }
+  .heroScope [data-plot-legend-more] ul {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 36px;
+  }
+}
+
+/* Tablet touch walk (600–1024 px touch and 600–760 px): generous, designed courtyard framing aligned flush with the
+   hero head above. At 768 px the walk fills the 736 px content column (~30 px faces); at 840–1024 px portrait/tall
+   tablets it rests inside a full-column coastal terrace mat capped at 800 px (~32 px faces, never stretched). Never
+   sets `overflow: hidden` so sticky cause heads and sticky year bands glide unobstructed. */
+@media (min-width: 600px) and (max-width: 760px), (min-width: 600px) and (max-width: 1024px) and (pointer: coarse) {
+  .walk[data-plot-portrait] {
+    max-width: 760px;
+    margin-inline: auto;
+  }
+  .walkPlan {
+    border-inline: 1px solid var(--plate-border);
+    border-bottom: 1px solid var(--plate-border);
+    border-radius: 0 0 10px 10px;
+    box-shadow: 0 6px 24px oklch(0 0 0 / 0.06);
+  }
+  :global(.dark) .walkPlan {
+    box-shadow: 0 8px 28px oklch(0 0 0 / 0.34);
+  }
+}
+@media (min-width: 840px) and (max-width: 1024px) and (min-height: 501px) and (pointer: coarse) {
+  .slot {
+    margin-top: 8px;
+    padding: 14px 24px 20px;
+    border: 1px solid var(--plate-border);
+    border-radius: 12px;
+    background: linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--sky-1) 70%, var(--background)) 0%,
+      color-mix(in oklab, var(--lawn) 36%, var(--background)) 100%
+    );
+  }
+  .walk[data-plot-portrait] {
+    max-width: 800px;
+  }
+  .walk[data-plot-portrait] [data-plot-portrait-heads] {
+    margin-top: 0;
+    border-top: 1px solid var(--plate-border);
+    border-inline: 1px solid var(--plate-border);
+    border-radius: 8px 8px 0 0;
+    background: var(--card);
+  }
+}
+/* Landscape phones (≤ 500 px tall): keep the walk compact so multiple rows land on the first screen. */
+@media (min-width: 560px) and (max-height: 500px) and (max-width: 760px),
+  (min-width: 560px) and (max-height: 500px) and (max-width: 1024px) and (pointer: coarse) {
+  .slot {
+    margin-top: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+  }
+  .walk[data-plot-portrait] {
+    max-width: 560px;
+  }
+}
+
 /* ------------------------------------------------------------------ bottom sheet */
 /* Non-modal dialog on top of the bottom nav: z 56 is above `MobileBottomNav` (55) and the utility dock (50), and its
    bottom edge sits on the nav's top border (the nav is its safe height plus a 1 px border) so neither covers the
-   other and the nav's hairline stays as the seam. */
+   other and the nav's hairline stays as the seam. Shown only under the shared portrait query. */
 .sheet {
+  display: none;
   --sheet-bottom: calc(var(--mobile-bottom-nav-safe-height) + 1px);
   position: fixed;
   left: 0;
   right: 0;
   bottom: var(--sheet-bottom);
   z-index: var(--z-index-chrome-header);
-  max-height: 52vh;
-  max-height: 52dvh;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  max-height: min(56dvh, calc(100dvh - var(--table-header-top, 59px) - var(--sheet-bottom) - 12px));
+  flex-direction: column;
+  overflow: hidden;
   background: var(--card);
   color: var(--foreground);
   border-top: 1px solid var(--border-strong);
   border-radius: 14px 14px 0 0;
-  padding: 12px max(16px, env(safe-area-inset-right)) 14px max(16px, env(safe-area-inset-left));
-  box-shadow: 0 -8px 24px oklch(0 0 0 / 0.12);
+  box-shadow: 0 -8px 24px oklch(0 0 0 / 0.14);
   transform: translateY(calc(100% + var(--sheet-bottom)));
   visibility: hidden;
   /* the kit's glide token: 0 ms under reduced motion */
@@ -60,6 +209,39 @@
   transform: none;
   visibility: visible;
   transition: transform var(--scene-dur-glide) cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.sheetBody {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* extra bottom clearance keeps the last control ("Leave a flower") comfortably clear of MobileBottomNav */
+  padding: 12px max(16px, env(safe-area-inset-right)) 24px max(16px, env(safe-area-inset-left));
+}
+.sheetFadeTop,
+.sheetFadeBottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--scene-dur-fast) ease;
+  z-index: 2;
+}
+.sheetFadeTop {
+  top: 0;
+  height: 18px;
+  border-radius: 14px 14px 0 0;
+  background: linear-gradient(180deg, var(--card) 15%, transparent);
+}
+.sheetFadeBottom {
+  bottom: 0;
+  height: 36px;
+  background: linear-gradient(0deg, var(--card) 24%, color-mix(in oklab, var(--card) 72%, transparent) 62%, transparent);
+}
+.sheet[data-overflow-top="true"] .sheetFadeTop,
+.sheet[data-overflow-bottom="true"] .sheetFadeBottom {
+  opacity: 1;
 }
 /* the sheet is the card's surface: no second frame inside it (it cost 34 px of every line on a 320 px phone) */
 .sheet [data-plot-card] {
@@ -77,19 +259,25 @@
   gap: 6px 14px;
 }
 /* touch targets: the close button is 44 × 44 around its glyph (negative margins keep the kicker line where it was);
-   the record links and "Leave a flower" get at least 28 / 44 px of height */
+   record links and "Leave a flower" are all at least 44 px tall */
 .sheet [data-plot-card-close] {
   min-width: 44px;
   min-height: 44px;
   margin: -14px -14px -14px 0;
   font-size: 15px;
 }
+.sheet [data-plot-card] ul {
+  gap: 0 14px;
+  margin-top: 6px;
+}
 .sheet [data-plot-card] li > a {
-  display: inline-block;
-  padding: 5px 0;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 6px 2px;
 }
 .sheet [data-plot-card] li {
-  line-height: 1.45;
+  line-height: 1.3;
 }
 .sheet [data-plot-card] button:not([data-plot-card-close]) {
   min-height: 44px;
@@ -102,8 +290,23 @@
   outline: 2px solid color-mix(in oklab, var(--foreground) 55%, transparent);
   outline-offset: -3px;
 }
-@media (min-width: 761px) {
+@media (max-width: 760px), (max-width: 1024px) and (pointer: coarse) {
   .sheet {
-    display: none;
+    display: flex;
+  }
+}
+/* Wide portrait walk (tablet touch 600–1024 px & landscape phones): centre the sheet as a crisp card tray. */
+@media (min-width: 600px) and (max-width: 1024px) {
+  .sheet {
+    max-width: 620px;
+    margin-inline: auto;
+    border-inline: 1px solid var(--border-strong);
+    box-shadow: 0 -10px 32px oklch(0 0 0 / 0.18);
+  }
+}
+/* Landscape phones: let the sheet use the available band below the sticky top bar without colliding with it. */
+@media (max-height: 500px) {
+  .sheet {
+    max-height: min(64dvh, calc(100dvh - var(--table-header-top, 59px) - var(--sheet-bottom) - 8px));
   }
 }

@@ -36,7 +36,7 @@ import {
 } from "@shared/lib/scene/projection";
 import { seededStream } from "@shared/lib/scene/seed";
 import { screenPolygon, worldPolygon, type SceneMark, type SceneObjectGeometry } from "@shared/lib/scene/marks";
-import { boxMarks, boxPoints, cylinder as sceneCylinder, faceMatrixE, faceMatrixG, shadowMark, type SceneCylinder } from "@shared/lib/scene/solids";
+import { boxMarks, boxPoints, contactShadowMark, cylinder as sceneCylinder, faceMatrixE, faceMatrixG, shadowMark, type SceneCylinder } from "@shared/lib/scene/solids";
 import { lighthouseGeometry } from "@shared/lib/scene/objects/lighthouse";
 import type { CauseOfDeath } from "@shared/lib/cause-of-death";
 import type { DesktopPlotMap, PlotGrave, PortraitPlotMap } from "@/lib/cemetery-plot-map";
@@ -61,9 +61,11 @@ export interface PlotProjection extends SceneProjection {
 }
 
 const S = PLOT_UNIT;
+/** Lawn + coastal sea-wall band above the newest year block on the portrait plan (world units), clearing the top sticky year band, sea wall and stones. */
+export const PORTRAIT_TOP_MARGIN = 2.45;
 export const PLOT_PROJECTIONS: Readonly<Record<PlotProjectionName, PlotProjection>> = {
   dimetric: { ...SCENE_DIMETRIC, name: "dimetric" },
-  portrait: { name: "portrait", A: [S * 0.07, S * 0.9], B: [-S, 0], C: [0, -S * 1.0], shadow: [-0.45, 0.4] },
+  portrait: { name: "portrait", A: [0, S * 0.9], B: [-S, 0], C: [0, -S * 0.8], shadow: [-0.32, 0.24] },
 };
 
 export interface PlotMedallionMark {
@@ -139,6 +141,14 @@ export function plotShapeOf(archetype: PlotArchetype, lot: PlotLot): PlotShape {
 
 /** One plinth step per order of magnitude of peak market cap (world units). */
 export const PLOT_STEP_HEIGHT = 0.1;
+/** Raised turf bed top height per projection (world units). */
+const PLOT_BED_HEIGHT: Readonly<Record<PlotProjectionName, number>> = { dimetric: 0.045, portrait: 0.14 };
+/** Raised lot pad top height for lot > 1 graves per projection (world units). */
+const PLOT_PAD_HEIGHT: Readonly<Record<PlotProjectionName, number>> = { dimetric: 0.05, portrait: 0.16 };
+/** Inset of a lot > 1 raised pad inside its lot footprint (world units). */
+const PLOT_PAD_INSET = 0.05;
+/** Margin of the solid neutral plinth for an unrecorded peak (world units). */
+const PLOT_UNRECORDED_PLINTH_EXTENT = 0.08;
 /** Medallion diameter on a 1×1 stone (world units). */
 const PLOT_MEDALLION = 0.44;
 /** Base stone heights before the log-peak height factor (world units). */
@@ -150,11 +160,228 @@ const PLOT_BASE_HEIGHT: Readonly<Record<PlotArchetype, number>> = {
   urn: 1.08,
 };
 
+/** Top z of the bed (lot 1) or raised lot pad (lot > 1) a grave stands on. */
+function graveSupportZ(projectionName: PlotProjectionName, lot: PlotLot): number {
+  return lot > 1 ? PLOT_PAD_HEIGHT[projectionName] : PLOT_BED_HEIGHT[projectionName];
+}
+
+/** Footprint of the raised lot pad for a lot > 1 grave, inset inside its lot cell. */
+export function lotPadCell(cell: PlotCell): PlotCell {
+  return {
+    i0: cell.i0 + PLOT_PAD_INSET,
+    i1: cell.i1 - PLOT_PAD_INSET,
+    j0: cell.j0 + PLOT_PAD_INSET,
+    j1: cell.j1 - PLOT_PAD_INSET,
+  };
+}
+
+/** Half-extents of a lot-3 colossus podium; portrait scales cleanly inside its own column pad with oblique margin. */
+function colossusHalfExtents(shape: PlotShape, cell: PlotCell, projectionName: PlotProjectionName): { ei: number; ej: number } {
+  if (projectionName !== "portrait") {
+    return { ei: shape === "colossal-column" ? 1.24 : 1.28, ej: 1.24 };
+  }
+  const maxJ = Math.max(0.36, (cell.j1 - cell.j0) / 2 - PLOT_PAD_INSET - 0.13);
+  const maxI = Math.max(0.42, (cell.i1 - cell.i0) / 2 - PLOT_PAD_INSET - 0.12);
+  const ej = Math.min(1.24, maxJ);
+  const ei = Math.min(shape === "colossal-column" ? 1.24 : 1.28, ej * 1.04, maxI);
+  return { ei, ej };
+}
+
+/**
+ * Colossus centre along i inside its lot: slightly west on desktop to widen east stair clearance, and seated low in
+ * its portrait pad so upward shaft/roof relief stays strictly inside its own lot without colliding with older/newer rows.
+ */
+function colossusCenterI(shape: PlotShape, cell: PlotCell, projectionName: PlotProjectionName): number {
+  if (projectionName !== "portrait") return (cell.i0 + cell.i1) / 2 - 0.14;
+  const { ei } = colossusHalfExtents(shape, cell, projectionName);
+  const lo = cell.i0 + PLOT_PAD_INSET + ei + 0.04;
+  const hi = cell.i1 - PLOT_PAD_INSET - ei - 0.78;
+  return hi >= lo ? hi : (cell.i0 + cell.i1) / 2;
+}
+
+/** Single authority for a grave's stone half-widths (hi, hj) and plinth flange (fe) in world units. */
+function graveHalfExtents(
+  shape: PlotShape,
+  lot: PlotLot,
+  steps: PlotPeakClass | null,
+  cell?: PlotCell,
+  projectionName: PlotProjectionName = "dimetric",
+): { hi: number; hj: number; fe: number } {
+  if (lot === 3) {
+    if (cell && projectionName === "portrait") {
+      const { ei, ej } = colossusHalfExtents(shape, cell, projectionName);
+      return { hi: ei, hj: ej, fe: 0 };
+    }
+    return { hi: shape === "colossal-column" ? 1.24 : 1.28, hj: 1.24, fe: 0 };
+  }
+  const open = steps === null;
+  const n = steps ?? 0;
+  const fe = open ? PLOT_UNRECORDED_PLINTH_EXTENT : n ? 0.05 + 0.06 * (n - 1) : 0;
+  const sc = lot === 2 ? 1.55 : 1;
+  if (shape === "chest-tomb") return { hi: 0.6, hj: 0.45, fe };
+  const archetype = baseArchetypeOf(shape);
+  if (archetype === "pillow") return { hi: 0.13 * sc, hj: 0.34 * sc, fe };
+  if (archetype === "split-arch") return { hi: 0.1 * sc, hj: 0.3 * sc, fe };
+  if (archetype === "sealed-tablet") return { hi: 0.09 * sc, hj: 0.32 * sc, fe };
+  return { hi: 0.29 * sc, hj: 0.29 * sc, fe };
+}
+
+/**
+ * Per-archetype anchor offset east of `cell.i0` (world units), keeping every plinth, cornice and lid inside its lot
+ * (and inside its lot pad for lot > 1) instead of overhanging the cell's west edge. In the vertical portrait walk,
+ * 1×1 stones seat deeper in their row so upward shafts clear plinths in the row above.
+ */
+export function graveAnchorOffsetI(
+  shape: PlotShape,
+  lot: PlotLot,
+  steps: PlotPeakClass | null,
+  projectionName: PlotProjectionName = "dimetric",
+): number {
+  if (lot === 3) return projectionName === "portrait" ? 1.1 : 1.5;
+  const { hi, fe } = graveHalfExtents(shape, lot, steps);
+  const sc = lot === 2 ? 1.55 : 1;
+  const baseReach =
+    shape === "chest-tomb"
+      ? Math.max(hi + fe, hi + 0.07)
+      : shape === "urn"
+        ? Math.max(hi + fe, hi + 0.03 * sc)
+        : shape === "sealed-tablet"
+          ? Math.max(hi + fe, hi + 0.02 * sc)
+          : hi + fe;
+  const floorOffset =
+    lot === 2
+      ? projectionName === "portrait"
+        ? shape === "chest-tomb"
+          ? 1.78
+          : shape === "broken-column"
+            ? 1.56
+            : 1.32
+        : 0.78
+      : projectionName === "portrait"
+        ? 0.56
+        : 0.3;
+  const minOffset = lot === 2 ? Math.max(floorOffset, baseReach + PLOT_PAD_INSET + 0.02) : Math.max(floorOffset, baseReach + 0.02);
+  return Math.ceil(minOffset * 100) / 100;
+}
+
+/** World footprint of a grave's bottom plinth (or colossus podium), shared by geometry and the curb-overhang check. */
+export function gravePlinthFootprint(
+  g: Pick<PlotGraveShapeInput, "shape" | "lot" | "steps" | "cell" | "anchor">,
+  projectionName: PlotProjectionName = "dimetric",
+): PlotCell {
+  const { hi, hj, fe } = graveHalfExtents(g.shape, g.lot, g.steps, g.cell, projectionName);
+  const ic = g.lot === 3 ? colossusCenterI(g.shape, g.cell, projectionName) : g.anchor.i;
+  const jc = g.anchor.j;
+  return { i0: ic - hi - fe, i1: ic + hi + fe, j0: jc - hj - fe, j1: jc + hj + fe };
+}
+
+export interface PlotGroundMarkLayout {
+  mound: PlotCell | null;
+  bronze: PlotCell | null;
+  footstone: PlotCell | null;
+}
+
+/**
+ * Single authority for a grave's ground-mark footprints (mound/fresh soil, bronze archive plaque, non-USD footstone),
+ * clipped strictly to the grave's bed cell (lot 1) or raised lot pad (lot > 1). When both plaque and footstone exist,
+ * they sit side by side along `j` without overlap.
+ */
+export function graveGroundMarksLayout(
+  g: Pick<PlotGraveShapeInput, "shape" | "lot" | "steps" | "archived" | "footstone" | "cell" | "anchor">,
+  projectionName: PlotProjectionName = "dimetric",
+): PlotGroundMarkLayout {
+  const jc = g.anchor.j;
+  const pad = g.lot > 1 ? lotPadCell(g.cell) : g.cell;
+  const inset = g.lot > 1 ? 0.03 : 0.04;
+  const sup: PlotCell = { i0: pad.i0 + inset, i1: pad.i1 - inset, j0: pad.j0 + inset, j1: pad.j1 - inset };
+  const plinth = gravePlinthFootprint(g, projectionName);
+  if (projectionName === "portrait") {
+    if (g.lot === 3) {
+      if (!g.archived) return { mound: null, bronze: null, footstone: null };
+      const bi0 = Math.min(plinth.i1 + 0.06, sup.i1 - 0.16);
+      const bi1 = Math.min(sup.i1, bi0 + 0.16);
+      if (bi1 - bi0 < 0.09) return { mound: null, bronze: null, footstone: null };
+      return {
+        mound: null,
+        bronze: { i0: bi0, i1: bi1, j0: Math.max(sup.j0, jc - 0.24), j1: Math.min(sup.j1, jc + 0.24) },
+        footstone: null,
+      };
+    }
+    const mi0 = plinth.i1 + 0.03;
+    const both = g.archived && g.footstone !== null;
+    const maxMoundLen = g.lot === 2 ? 0.38 : both ? 0.34 : 0.3;
+    const mi1 = Math.min(sup.i1, mi0 + maxMoundLen);
+    if (mi1 - mi0 < 0.14) return { mound: null, bronze: null, footstone: null };
+    const targetMhj = g.lot === 1 ? (both ? 0.34 : 0.24) : 0.36;
+    const maxMhj = Math.max(0, Math.min(jc - sup.j0, sup.j1 - jc));
+    const mhj = Math.min(targetMhj, maxMhj);
+    const mound: PlotCell = { i0: mi0, i1: mi1, j0: jc - mhj, j1: jc + mhj };
+    let bronze: PlotCell | null = null;
+    let footstone: PlotCell | null = null;
+    if (both) {
+      const pi0 = mi0 + 0.03;
+      const pi1 = Math.min(mi1 - 0.02, pi0 + 0.15);
+      const fi0 = mi0 + 0.02;
+      const fi1 = Math.min(mi1, fi0 + 0.22);
+      bronze = { i0: pi0, i1: pi1, j0: Math.max(sup.j0, jc - 0.31), j1: jc - 0.05 };
+      footstone = { i0: fi0, i1: fi1, j0: jc + 0.04, j1: Math.min(sup.j1, jc + 0.31) };
+    } else if (g.archived) {
+      const pi0 = mi0 + 0.03;
+      const pi1 = Math.min(mi1 - 0.02, pi0 + 0.15);
+      bronze = { i0: pi0, i1: pi1, j0: Math.max(sup.j0, jc - 0.17), j1: Math.min(sup.j1, jc + 0.17) };
+    } else if (g.footstone !== null) {
+      const fi0 = mi0 + 0.02;
+      const fi1 = Math.min(mi1, fi0 + 0.22);
+      footstone = { i0: fi0, i1: fi1, j0: Math.max(sup.j0, jc - 0.14), j1: Math.min(sup.j1, jc + 0.14) };
+    }
+    return { mound, bronze, footstone };
+  }
+  if (g.lot === 3) {
+    if (!g.archived) return { mound: null, bronze: null, footstone: null };
+    const bi0 = Math.max(plinth.i1 + 0.04, sup.i1 - 0.24);
+    const bi1 = sup.i1;
+    if (bi1 - bi0 < 0.14) return { mound: null, bronze: null, footstone: null };
+    return {
+      mound: null,
+      bronze: { i0: bi0, i1: bi1, j0: Math.max(sup.j0, jc - 0.14), j1: Math.min(sup.j1, jc + 0.14) },
+      footstone: null,
+    };
+  }
+  const mi0 = g.shape === "chest-tomb" ? Math.max(plinth.i1 + 0.05, sup.i1 - 0.3) : plinth.i1 + 0.05;
+  const both = g.archived && g.footstone !== null;
+  const maxMoundLen = g.lot === 2 ? 0.55 : both ? 0.42 : 0.46;
+  const mi1 = Math.min(sup.i1, mi0 + maxMoundLen);
+  if (mi1 - mi0 < 0.18) return { mound: null, bronze: null, footstone: null };
+  const targetMhj = g.lot === 1 ? (both ? 0.34 : 0.24) : 0.34;
+  const maxMhj = Math.max(0, Math.min(jc - sup.j0, sup.j1 - jc));
+  const mhj = Math.min(targetMhj, maxMhj);
+  const mound: PlotCell = { i0: mi0, i1: mi1, j0: jc - mhj, j1: jc + mhj };
+  let bronze: PlotCell | null = null;
+  let footstone: PlotCell | null = null;
+  if (both) {
+    const pi1 = Math.min(mi1 - 0.01, mi0 + 0.21);
+    const pi0 = Math.max(mi0, pi1 - 0.19);
+    const fi0 = Math.max(mi0, Math.min(mi0 + 0.02, mi1 - 0.2));
+    const fi1 = Math.min(mi1, fi0 + 0.2);
+    bronze = { i0: pi0, i1: pi1, j0: Math.max(sup.j0, jc - 0.29), j1: jc - 0.05 };
+    footstone = { i0: fi0, i1: fi1, j0: jc + 0.03, j1: Math.min(sup.j1, jc + 0.31) };
+  } else if (g.archived) {
+    const pi1 = Math.min(mi1 - 0.01, Math.max(mi0 + 0.18, mi1 - 0.03));
+    const pi0 = Math.max(mi0, pi1 - 0.2);
+    bronze = { i0: pi0, i1: pi1, j0: Math.max(sup.j0, jc - 0.13), j1: Math.min(sup.j1, jc + 0.13) };
+  } else if (g.footstone !== null) {
+    const fi0 = Math.max(mi0, Math.min(mi0 + 0.04, mi1 - 0.2));
+    const fi1 = Math.min(mi1, fi0 + 0.2);
+    footstone = { i0: fi0, i1: fi1, j0: Math.max(sup.j0, jc - 0.15), j1: Math.min(sup.j1, jc + 0.15) };
+  }
+  return { mound, bronze, footstone };
+}
+
 /** The grave fields the shape geometry reads (a `PlotGrave` satisfies it; the legend builds its own). */
 export interface PlotGraveShapeInput {
   readonly shape: PlotShape;
   readonly lot: PlotLot;
-  /** Plinth steps; null = peak not recorded (one outlined plinth, hatched face). */
+  /** Plinth steps; null = peak not recorded (one solid neutral hatched plinth, hatched face). */
   readonly steps: PlotPeakClass | null;
   readonly heightFactor: number;
   readonly weather: PlotWeather;
@@ -171,10 +398,16 @@ export interface PlotGraveShapeInput {
 }
 
 export interface PlotGraveGeometry {
-  /** Plinth + stone + medallion, in paint order; the whole group rotates by `lean` when set. */
+  /** Level plinth (or colossus podium), never rotated by `lean`. */
+  plinth: PlotMark[];
+  /** Stone, weathering and medallion, in paint order; rotated by `lean` when set. */
+  stone: PlotMark[];
+  /** Deterministic ground contact-shadow band along the base's south and west edges (rendered before `plinth`). */
+  contact: PlotMark[];
+  /** Convenience union `[...plinth, ...stone]` in paint order for read-only consumers (glyphs, colossus hulls). */
   body: PlotMark[];
   lean: { deg: number; x: number; y: number } | null;
-  /** Flat ground marks: shadow, mound or fresh soil, bronze plaque, footstone. */
+  /** Flat ground marks: raised lot pad (lot > 1), shadow, mound or fresh soil, bronze plaque, footstone. */
   ground: PlotMark[];
   /** Extent points (unrounded) for depth sorting, hit hulls and cameras. */
   pts: PlotPoint[];
@@ -203,16 +436,26 @@ function medallionMark(x: number, y: number, d: number): PlotMedallionMark {
   };
 }
 
-/** Plinth ladder: one box per step; an unrecorded peak gets one outlined (open) plinth instead. */
-function plinthMarks(p: PlotProjection, ic: number, jc: number, hi: number, hj: number, n: number, open: boolean): PlotMark[] {
+/** Plinth ladder: one box per step; an unrecorded peak gets one cool neutral plinth hatched on front and top faces. */
+function plinthMarks(p: PlotProjection, ic: number, jc: number, hi: number, hj: number, n: number, open: boolean, baseZ: number): PlotMark[] {
   if (open) {
-    const e = 0.08;
-    return boxMarks(p, ic - hi - e, jc - hj - e, 0, 2 * (hi + e), 2 * (hj + e), PLOT_STEP_HEIGHT, { t: "pl-open", e: "pl-open", s: "pl-open" }, " eo");
+    const e = PLOT_UNRECORDED_PLINTH_EXTENT;
+    const i0 = ic - hi - e;
+    const j0 = jc - hj - e;
+    const di = 2 * (hi + e);
+    const dj = 2 * (hj + e);
+    const z1 = baseZ + PLOT_STEP_HEIGHT;
+    return [
+      ...boxMarks(p, i0, j0, baseZ, di, dj, PLOT_STEP_HEIGHT, { t: "pl-nr-t", e: "pl-nr-e", s: "pl-nr-s" }, " e"),
+      worldPolygon(p, "hatch-plinth", [[i0, j0 + dj, baseZ], [i0 + di, j0 + dj, baseZ], [i0 + di, j0 + dj, z1], [i0, j0 + dj, z1]]),
+      worldPolygon(p, "hatch-plinth", [[i0 + di, j0, baseZ], [i0 + di, j0 + dj, baseZ], [i0 + di, j0 + dj, z1], [i0 + di, j0, z1]]),
+      worldPolygon(p, "hatch-plinth", [[i0, j0, z1], [i0 + di, j0, z1], [i0 + di, j0 + dj, z1], [i0, j0 + dj, z1]]),
+    ];
   }
   const out: PlotMark[] = [];
   for (let s = 0; s < n; s++) {
     const e = 0.05 + 0.06 * (n - 1 - s);
-    out.push(...boxMarks(p, ic - hi - e, jc - hj - e, s * PLOT_STEP_HEIGHT, 2 * (hi + e), 2 * (hj + e), PLOT_STEP_HEIGHT, "pl"));
+    out.push(...boxMarks(p, ic - hi - e, jc - hj - e, baseZ + s * PLOT_STEP_HEIGHT, 2 * (hi + e), 2 * (hj + e), PLOT_STEP_HEIGHT, "pl"));
   }
   return out;
 }
@@ -252,22 +495,203 @@ function weatheringMarks(
   return out;
 }
 
-/** Mound east of the stone, bronze archive plaque, non-USD footstone; fresh soil within 90 days of `asOf`. */
-function moundMarks(p: PlotProjection, g: PlotGraveShapeInput, mi0: number, mhj: number): PlotMark[] {
-  const jc = g.anchor.j;
-  const mi1 = g.cell.i1 - 0.1;
-  if (mi1 - mi0 < 0.2) return [];
-  const out = [
-    worldPolygon(p, `${g.fresh ? "soil" : "mound"} es`, [[mi0, jc - mhj, 0.04], [mi1, jc - mhj, 0.04], [mi1, jc + mhj, 0.04], [mi0, jc + mhj, 0.04]]),
-  ];
-  if (g.archived) {
-    const a = mi1 - 0.28;
-    out.push(worldPolygon(p, "bronze e", [[a, jc - 0.13, 0.043], [a + 0.2, jc - 0.13, 0.043], [a + 0.2, jc + 0.13, 0.043], [a, jc + 0.13, 0.043]]));
+/**
+ * Local front-oblique camera for portrait graves (`A = [+aX, aY]`, `B = [-S, 0]`, `C = [0, -cY]`): keeps columns
+ * plumb and every stone's front face level with the horizontal bed curbs and sticky year bands, while revealing
+ * shaded left side faces (`st-s`, `pl-s`) on every monument, pedestal, chest tomb and colossus.
+ */
+function portraitLocalCamera(
+  p: PlotProjection,
+  iRef: number,
+  lot: PlotLot,
+): { proj: PlotProjection; dx: number; dy: number } {
+  if (p.name !== "portrait") return { proj: p, dx: 0, dy: 0 };
+  const aX = lot === 3 ? S * 0.18 : S * 0.28;
+  const proj: PlotProjection = { ...p, A: [aX, p.A[1]] };
+  return { proj, dx: -iRef * aX, dy: 0 };
+}
+
+function shiftPt(pt: PlotPoint, dx: number, dy: number): PlotPoint {
+  return dx === 0 && dy === 0 ? pt : [pt[0] + dx, pt[1] + dy];
+}
+
+function shiftPathCoords(d: string, dx: number, dy: number): string {
+  if (dx === 0 && dy === 0) return d;
+  let out = "";
+  let pos = 0;
+  while (pos < d.length) {
+    const cmd = d[pos];
+    if (cmd !== "M" && cmd !== "L") {
+      out += cmd;
+      pos++;
+      continue;
+    }
+    const comma = d.indexOf(",", pos + 1);
+    if (comma < 0) return out + d.slice(pos);
+    let end = comma + 1;
+    while (end < d.length && d[end] !== "M" && d[end] !== "L") end++;
+    const x = Number(d.slice(pos + 1, comma));
+    const y = Number(d.slice(comma + 1, end));
+    out += `${cmd}${round1(x + dx)},${round1(y + dy)}`;
+    pos = end;
   }
-  if (g.footstone !== null) {
-    const fi = mi0 + 0.06;
-    out.push(...boxMarks(p, fi, jc - 0.15, 0.04, 0.2, 0.3, 0.08, "fs"));
-    out.push({ kind: "glyph", cls: "glyph", text: g.footstone, transform: faceMatrixG(p, fi + 0.03, jc + 0.12, 0.122), scale: 0.26 });
+  return out;
+}
+
+function shiftMark(m: PlotMark, dx: number, dy: number): PlotMark {
+  if (dx === 0 && dy === 0) return m;
+  switch (m.kind) {
+    case "polygon":
+    case "polyline":
+      return { ...m, points: m.points.map(([x, y]) => [round1(x + dx), round1(y + dy)]) };
+    case "ellipse":
+      return { ...m, cx: round1(m.cx + dx), cy: round1(m.cy + dy) };
+    case "line":
+      return { ...m, x1: round1(m.x1 + dx), y1: round1(m.y1 + dy), x2: round1(m.x2 + dx), y2: round1(m.y2 + dy) };
+    case "medallion":
+      return {
+        ...m,
+        cx: round1(m.cx + dx),
+        cy: round1(m.cy + dy),
+        logo: { ...m.logo, x: round1(m.logo.x + dx), y: round1(m.logo.y + dy) },
+        initial: { ...m.initial, x: round1(m.initial.x + dx), y: round1(m.initial.y + dy) },
+      };
+    case "path":
+      return m.transform
+        ? { ...m, transform: [m.transform[0], m.transform[1], m.transform[2], m.transform[3], round1(m.transform[4] + dx), round1(m.transform[5] + dy)] }
+        : { ...m, d: shiftPathCoords(m.d, dx, dy) };
+    case "circle":
+      return m.transform
+        ? { ...m, transform: [m.transform[0], m.transform[1], m.transform[2], m.transform[3], round1(m.transform[4] + dx), round1(m.transform[5] + dy)] }
+        : { ...m, cx: round1(m.cx + dx), cy: round1(m.cy + dy) };
+    case "glyph":
+      return { ...m, transform: [m.transform[0], m.transform[1], m.transform[2], m.transform[3], round1(m.transform[4] + dx), round1(m.transform[5] + dy)] };
+  }
+}
+
+/**
+ * Raised stone-curbed box for portrait beds and lot pads: plumb vertical alignment with the gravel paths, a visible
+ * front curb face (`i = i1`), a subtly battered shaded left curb face (`j = j1`), and a grounded base contact shadow.
+ */
+function portraitCurbedBoxMarks(
+  p: PlotProjection,
+  i0: number,
+  i1: number,
+  j0: number,
+  j1: number,
+  height: number,
+  mat: { t: string; curb: string },
+  edge = " e",
+  batter = 0.055,
+  shadowBand = 0.055,
+): PlotMark[] {
+  const topJ1 = Math.max(j0 + 0.08, j1 - batter);
+  return [
+    ...(shadowBand > 0
+      ? [
+          worldPolygon(p, "contact", [
+            [i0, j1, 0.002],
+            [i1, j1, 0.002],
+            [i1, j0, 0.002],
+            [i1 + shadowBand * 1.15, j0, 0.002],
+            [i1 + shadowBand * 1.15, j1 + shadowBand, 0.002],
+            [i0, j1 + shadowBand, 0.002],
+          ]),
+        ]
+      : []),
+    // Shaded left (south) battered curb face
+    worldPolygon(p, mat.curb + edge, [[i0, j1, 0], [i1, j1, 0], [i1, topJ1, height], [i0, topJ1, height]]),
+    // Shaded front (east) curb face
+    worldPolygon(p, mat.curb + edge, [[i1, j0, 0], [i1, j1, 0], [i1, topJ1, height], [i1, j0, height]]),
+    // Top lawn / pad surface
+    worldPolygon(p, mat.t + edge, [[i0, j0, height], [i1, j0, height], [i1, topJ1, height], [i0, topJ1, height]]),
+  ];
+}
+
+/** Portrait base contact shadow: grounds the stone along its left (south) edge AND directly beneath its front (east) lip. */
+function portraitContactShadowMark(p: PlotProjection, foot: readonly [number, number, number, number], z: number, band: number): PlotMark {
+  const [i0, i1, j0, j1] = foot;
+  const front = band * 1.15;
+  return worldPolygon(p, "contact", [
+    [i0 - band * 0.6, j0, z],
+    [i0, j0, z],
+    [i0, j1, z],
+    [i1, j1, z],
+    [i1, j0, z],
+    [i1 + front, j0, z],
+    [i1 + front, j1 + band, z],
+    [i0 - band * 0.6, j1 + band, z],
+  ]);
+}
+
+/** Raised lot pad for lot > 1 graves, painted in bed material + cause tint before ground marks and shadows. */
+function lotPadMarks(p: PlotProjection, cell: PlotCell, height: number): PlotMark[] {
+  const pad = lotPadCell(cell);
+  if (p.name === "portrait") {
+    return portraitCurbedBoxMarks(p, pad.i0, pad.i1, pad.j0, pad.j1, height, { t: "pad", curb: "pad-curb" }, " e", 0.05, 0.05);
+  }
+  return boxMarks(p, pad.i0, pad.j0, 0, pad.i1 - pad.i0, pad.j1 - pad.j0, height, { t: "pad", e: "pad-curb", s: "pad-curb" }, " e");
+}
+
+/** Mound east of the stone, bronze archive plaque, non-USD footstone; fresh soil within 90 days of `asOf`. */
+function moundMarks(p: PlotProjection, g: PlotGraveShapeInput, baseZ: number): PlotMark[] {
+  const layout = graveGroundMarksLayout(g, p.name);
+  const out: PlotMark[] = [];
+  const mz = baseZ + 0.004;
+  const isPortrait = p.name === "portrait";
+  if (layout.mound) {
+    const m = layout.mound;
+    if (isPortrait) {
+      // Soft chamfered organic turf/soil apron in the walk (no heavy rectangular outline under every grave).
+      const c = Math.min(0.05, (m.i1 - m.i0) * 0.28, (m.j1 - m.j0) * 0.16);
+      out.push(
+        worldPolygon(p, g.fresh ? "soil es" : "mound", [
+          [m.i0, m.j0 + c, mz],
+          [m.i0, m.j1 - c, mz],
+          [m.i0 + c, m.j1, mz],
+          [m.i1 - c, m.j1, mz],
+          [m.i1, m.j1 - c, mz],
+          [m.i1, m.j0 + c, mz],
+          [m.i1 - c, m.j0, mz],
+          [m.i0 + c, m.j0, mz],
+        ]),
+      );
+    } else {
+      out.push(worldPolygon(p, `${g.fresh ? "soil" : "mound"} es`, [[m.i0, m.j0, mz], [m.i1, m.j0, mz], [m.i1, m.j1, mz], [m.i0, m.j1, mz]]));
+    }
+  }
+  if (layout.bronze) {
+    const b = layout.bronze;
+    const bz = mz + 0.003;
+    out.push(worldPolygon(p, "bronze e", [[b.i0, b.j0, bz], [b.i1, b.j0, bz], [b.i1, b.j1, bz], [b.i0, b.j1, bz]]));
+  }
+  if (layout.footstone && g.footstone !== null) {
+    const f = layout.footstone;
+    const fh = 0.08;
+    out.push(
+      isPortrait
+        ? portraitContactShadowMark(p, [f.i0, f.i1, f.j0, f.j1], mz, 0.022)
+        : contactShadowMark(p, [f.i0, f.i1, f.j0, f.j1], mz, 0.025),
+    );
+    out.push(...boxMarks(p, f.i0, f.j0, mz, f.i1 - f.i0, f.j1 - f.j0, fh, "fs", " e"));
+    if (isPortrait) {
+      const [gx, gy] = project(p, (f.i0 + f.i1) / 2, (f.j0 + f.j1) / 2, mz + fh + 0.002);
+      out.push({
+        kind: "glyph",
+        cls: "glyph",
+        text: g.footstone,
+        transform: [S, 0, 0, S, round1(gx - S * 0.075), round1(gy + S * 0.085)],
+        scale: 0.24,
+      });
+    } else {
+      out.push({
+        kind: "glyph",
+        cls: "glyph",
+        text: g.footstone,
+        transform: faceMatrixG(p, f.i0 + 0.03, f.j1 - 0.03, mz + fh + 0.002),
+        scale: 0.24,
+      });
+    }
   }
   return out;
 }
@@ -336,15 +760,18 @@ function baseArchetypeOf(shape: PlotShape): PlotArchetype {
 }
 
 /** Geometry of one grave (any lot size; class-4 colossi go through the monument builders). */
-export function graveGeometry(p: PlotProjection, g: PlotGraveShapeInput): PlotGraveGeometry {
-  if (g.lot === 3) return colossusGeometry(p, g);
+export function graveGeometry(siteP: PlotProjection, g: PlotGraveShapeInput): PlotGraveGeometry {
+  if (g.lot === 3) return colossusGeometry(siteP, g);
   const rnd = seededStream(g.seed);
   const sc = g.lot === 2 ? 1.55 : 1;
   const ic = g.anchor.i;
   const jc = g.anchor.j;
+  const { proj: p, dx, dy } = portraitLocalCamera(siteP, ic, g.lot);
+  const isPortrait = siteP.name === "portrait";
   const open = g.steps === null;
   const n = g.steps ?? 0;
-  const z0 = open ? PLOT_STEP_HEIGHT : n * PLOT_STEP_HEIGHT;
+  const baseZ = graveSupportZ(siteP.name, g.lot);
+  const z0 = baseZ + (open ? PLOT_STEP_HEIGHT : n * PLOT_STEP_HEIGHT);
   const archetype = baseArchetypeOf(g.shape);
   const h = PLOT_BASE_HEIGHT[archetype] * g.heightFactor * (g.lot === 2 ? 1.2 : 1);
   const stone: PlotMark[] = [];
@@ -373,7 +800,7 @@ export function graveGeometry(p: PlotProjection, g: PlotGraveShapeInput): PlotGr
     topZ = z0 + bh + 0.09;
     faceW = bj;
     faceH = bh;
-    pts = boxPoints(p, ic - hi - 0.07, jc - hj - 0.07, 0, bi + 0.14, bj + 0.14, topZ);
+    pts = boxPoints(p, ic - hi - 0.07, jc - hj - 0.07, baseZ, bi + 0.14, bj + 0.14, topZ - baseZ);
   } else if (archetype === "pillow" || archetype === "split-arch" || archetype === "sealed-tablet") {
     const w = (archetype === "pillow" ? 0.68 : archetype === "split-arch" ? 0.6 : 0.64) * sc;
     const t = (archetype === "pillow" ? 0.26 : archetype === "split-arch" ? 0.2 : 0.18) * sc;
@@ -410,18 +837,21 @@ export function graveGeometry(p: PlotProjection, g: PlotGraveShapeInput): PlotGr
     hi = bw / 2;
     hj = bw / 2;
     stone.push(...boxMarks(p, ic - hi, jc - hj, z0, bw, bw, bh, "st"));
-    // one clean planar break toward the light; the seeded jitter (±0.25 rad) keeps the columns from reading as stamped
-    const topFn = columnFractureTop({ phase: PLOT_FRACTURE_PHASE + (rnd() - 0.5) * 0.5, amp: 0.3 * sc });
+    // one clean planar break toward the light; the seeded jitter (±0.25 rad) keeps the columns from reading as stamped.
+    // On the steep portrait walk, cap column shaft relief slightly so stacked algorithmic columns clear the plinth above.
+    const colH = isPortrait ? h * 0.8 : h;
+    const topFn = columnFractureTop({ phase: PLOT_FRACTURE_PHASE + (rnd() - 0.5) * 0.5, amp: (isPortrait ? 0.24 : 0.3) * sc });
     stone.push(...cylinder(p, ic, jc, r * 1.22, z0 + bh, z0 + bh + 0.05, "col", null, "st-t").marks);
-    const cyl = cylinder(p, ic, jc, r, z0 + bh + 0.05, z0 + h + 0.06, "col", topFn, "brk");
+    const cyl = cylinder(p, ic, jc, r, z0 + bh + 0.05, z0 + colH + 0.06, "col", topFn, "brk");
     stone.push(...cyl.marks);
+    if (isPortrait) topZ = z0 + colH + 0.06;
     if (open) stone.push(worldPolygon(p, "hatch", [[ic + hi, jc - hj, z0], [ic + hi, jc + hj, z0], [ic + hi, jc + hj, z0 + bh], [ic + hi, jc - hj, z0 + bh]]));
     faceI = ic + hi;
     faceW = bw;
     faceH = bh;
     medZ = z0 + bh * 0.5;
     medD = Math.min(PLOT_MEDALLION, bh * 1.2);
-    pts = cyl.pts.concat(boxPoints(p, ic - hi, jc - hj, 0, bw, bw, z0 + bh));
+    pts = cyl.pts.concat(boxPoints(p, ic - hi, jc - hj, baseZ, bw, bw, z0 + bh - baseZ));
     stone.push(...weatheringMarks(p, g.weather, faceI, jc, z0, bw * 0.85, bh, rnd));
   } else {
     // liquidity drain: the emptied urn on a pedestal (R9)
@@ -455,32 +885,48 @@ export function graveGeometry(p: PlotProjection, g: PlotGraveShapeInput): PlotGr
     medD = Math.min(PLOT_MEDALLION, ph * 1.25, pw * 0.8) * (g.lot === 2 ? 1.25 : 1);
     faceW = pw;
     faceH = ph;
-    pts = bodyPts.concat(boxPoints(p, ic - hi - 0.035, jc - hj - 0.035, 0, pw + 0.07, pw + 0.07, zb));
+    pts = bodyPts.concat(boxPoints(p, ic - hi - 0.035, jc - hj - 0.035, baseZ, pw + 0.07, pw + 0.07, zb - baseZ));
     stone.push(...weatheringMarks(p, g.weather, faceI, jc, z0, pw, ph, rnd));
   }
 
   const [mx, my] = project(p, faceI + 0.01, jc, medZ);
   stone.push(medallionMark(mx, my, medD));
 
-  const plinth = plinthMarks(p, ic, jc, hi, hj, open ? 1 : n, open);
-  const fe = open ? 0.08 : n ? 0.05 + 0.06 * (n - 1) : 0;
-  if (n || open) pts = pts.concat(boxPoints(p, ic - hi - fe, jc - hj - fe, 0, 2 * (hi + fe), 2 * (hj + fe), 0.001));
+  const plinth = plinthMarks(p, ic, jc, hi, hj, open ? 1 : n, open, baseZ);
+  const fe = open ? PLOT_UNRECORDED_PLINTH_EXTENT : n ? 0.05 + 0.06 * (n - 1) : 0;
+  if (n || open) pts = pts.concat(boxPoints(p, ic - hi - fe, jc - hj - fe, baseZ, 2 * (hi + fe), 2 * (hj + fe), 0.001));
+  const foot: [number, number, number, number] = [ic - hi - fe, ic + hi + fe, jc - hj - fe, jc + hj + fe];
+  const contact = [
+    isPortrait
+      ? portraitContactShadowMark(p, foot, baseZ, g.lot === 2 ? 0.06 : 0.048)
+      : contactShadowMark(p, foot, baseZ, g.lot === 2 ? 0.055 : 0.04),
+  ];
 
   let lean: PlotGraveGeometry["lean"] = null;
   if (g.lean) {
-    const [bx, by] = project(p, ic, jc, z0);
+    const [bx, by] = shiftPt(project(p, ic, jc, z0), dx, dy);
     lean = { deg: round1(g.lean), x: round1(bx), y: round1(by) };
   }
-  const moundI0 = g.shape === "chest-tomb" ? g.cell.i1 - 0.35 : ic + hi + fe + 0.12;
-  const ground = [shadowMark(p, [ic - hi - fe, ic + hi + fe, jc - hj - fe, jc + hj + fe], topZ), ...moundMarks(p, g, moundI0, g.lot === 1 ? 0.24 : 0.4)];
-  const [tx, ty] = project(p, ic, jc, topZ);
+  const shiftedPlinth = dx === 0 && dy === 0 ? plinth : plinth.map((m) => shiftMark(m, dx, dy));
+  const shiftedStone = dx === 0 && dy === 0 ? stone : stone.map((m) => shiftMark(m, dx, dy));
+  const shiftedContact = dx === 0 && dy === 0 ? contact : contact.map((m) => shiftMark(m, dx, dy));
+  const localGround: PlotMark[] = [shadowMark(p, foot, topZ), ...moundMarks(p, g, baseZ)];
+  const ground: PlotMark[] = [
+    ...(g.lot > 1 ? lotPadMarks(siteP, g.cell, baseZ) : []),
+    ...(dx === 0 && dy === 0 ? localGround : localGround.map((m) => shiftMark(m, dx, dy))),
+  ];
+  const shiftedPts = dx === 0 && dy === 0 ? pts : pts.map((pt) => shiftPt(pt, dx, dy));
+  const [tx, ty] = shiftPt(project(p, ic, jc, topZ), dx, dy);
   return {
-    body: [...plinth, ...stone],
+    plinth: shiftedPlinth,
+    stone: shiftedStone,
+    contact: shiftedContact,
+    body: [...shiftedPlinth, ...shiftedStone],
     lean,
     ground,
-    pts,
+    pts: shiftedPts,
     topZ,
-    medal: { x: round1(mx), y: round1(my), r: round1((medD * S) / 2) },
+    medal: { x: round1(mx + dx), y: round1(my + dy), r: round1((medD * S) / 2) },
     top: [round1(tx), round1(ty)],
     faceW,
     faceH,
@@ -505,103 +951,167 @@ function transformedRoundRect(x: number, y: number, w: number, h: number, rx: nu
 }
 
 /** Class 4 (≥ $10B): architecture carries the class, not continuous height (R8). UST is the tallest element. */
-function colossusGeometry(p: PlotProjection, g: PlotGraveShapeInput): PlotGraveGeometry {
+function colossusGeometry(siteP: PlotProjection, g: PlotGraveShapeInput): PlotGraveGeometry {
   const rnd = seededStream(g.seed);
+  const isPortrait = siteP.name === "portrait";
+  const baseZ = graveSupportZ(siteP.name, g.lot);
   const jc = g.anchor.j;
-  const ic = (g.cell.i0 + g.cell.i1) / 2 - 0.12;
-  const s: PlotMark[] = [];
+  const ic = colossusCenterI(g.shape, g.cell, siteP.name);
+  const { proj: p, dx, dy } = portraitLocalCamera(siteP, ic, g.lot);
+  const { ei, ej } = colossusHalfExtents(g.shape, g.cell, siteP.name);
+  const sx = isPortrait ? ej / 1.24 : 1;
+  const si = isPortrait ? ei / (g.shape === "colossal-column" ? 1.24 : 1.28) : 1;
+  const plinth: PlotMark[] = [];
+  const stone: PlotMark[] = [];
+  const padMarks: PlotMark[] = [...lotPadMarks(siteP, g.cell, baseZ)];
   const ground: PlotMark[] = [];
   let pts: PlotPoint[];
   let H: number;
   let medal: { x: number; y: number; r: number };
-  const podium = (ei: number, ej: number) => {
-    for (let q = 0; q < 4; q++) s.push(...boxMarks(p, ic - ei + 0.11 * q, jc - ej + 0.11 * q, q * 0.13, 2 * (ei - 0.11 * q), 2 * (ej - 0.11 * q), 0.13, "pl"));
+  const stepH = isPortrait ? 0.065 : 0.13;
+  const treadI = isPortrait ? 0.09 * si : 0.09;
+  const treadJ = isPortrait ? 0.09 * sx : 0.09;
+  const podium = (pi: number, pj: number) => {
+    for (let q = 0; q < 4; q++) {
+      plinth.push(...boxMarks(p, ic - pi + treadI * q, jc - pj + treadJ * q, baseZ + q * stepH, 2 * (pi - treadI * q), 2 * (pj - treadJ * q), stepH, "pl", q === 0 ? " e" : " es"));
+    }
   };
+  const foot: [number, number, number, number] = [ic - ei, ic + ei, jc - ej, jc + ej];
   if (g.shape === "colossal-column") {
-    // UST: a snapped colossal fluted column; its fallen drum lies in the lot.
-    podium(1.3, 1.3);
-    const zp = 0.52;
-    s.push(...boxMarks(p, ic - 0.74, jc - 0.74, zp, 1.48, 1.48, 0.12, "st"));
-    s.push(...boxMarks(p, ic - 0.64, jc - 0.64, zp + 0.12, 1.28, 1.28, 1.18, "st"));
-    s.push(...boxMarks(p, ic - 0.76, jc - 0.76, zp + 1.3, 1.52, 1.52, 0.12, "st"));
-    const fi = ic + 0.64 + 0.004;
-    s.push(...weatheringMarks(p, g.weather, ic + 0.64, jc, zp + 0.12, 1.1, 1.1, rnd));
-    const z1 = zp + 1.42;
-    const top = 6.9;
-    const topFn = columnFractureTop({ phase: PLOT_FRACTURE_PHASE, drop: 0.25, amp: 0.85 });
-    const cyl = cylinder(p, ic, jc, 0.48, z1, top, "col", topFn, "brk");
-    s.push(...cyl.marks);
+    // UST: a snapped colossal fluted column (the broken top already tells the collapse; no fallen drum).
+    podium(ei, ej);
+    const zp = baseZ + 4 * stepH;
+    const pedBaseH = isPortrait ? 0.06 : 0.12;
+    const pedBodyH = isPortrait ? 0.62 : 1.18;
+    const pedCapH = isPortrait ? 0.06 : 0.12;
+    const pbI = 0.74 * si;
+    const pbJ = 0.74 * sx;
+    const pI = 0.64 * si;
+    const pJ = 0.64 * sx;
+    const pcI = 0.76 * si;
+    const pcJ = 0.76 * sx;
+    stone.push(...boxMarks(p, ic - pbI, jc - pbJ, zp, 2 * pbI, 2 * pbJ, pedBaseH, "st"));
+    stone.push(...boxMarks(p, ic - pI, jc - pJ, zp + pedBaseH, 2 * pI, 2 * pJ, pedBodyH, "st"));
+    stone.push(...boxMarks(p, ic - pcI, jc - pcJ, zp + pedBaseH + pedBodyH, 2 * pcI, 2 * pcJ, pedCapH, "st"));
+    const fi = ic + pI + 0.004;
+    stone.push(...weatheringMarks(p, g.weather, ic + pI, jc, zp + pedBaseH, 1.1 * sx, pedBodyH * 0.92, rnd));
+    const z1 = zp + pedBaseH + pedBodyH + pedCapH;
+    const top = isPortrait ? 2.15 : 6.9;
+    const colR = 0.48 * Math.min(si, sx);
+    const topFn = columnFractureTop({ phase: PLOT_FRACTURE_PHASE, drop: isPortrait ? 0.09 : 0.25, amp: isPortrait ? 0.3 : 0.85 });
+    const cyl = cylinder(p, ic, jc, colR, z1, top, "col", topFn, "brk");
+    stone.push(...cyl.marks);
     let fl = "";
     for (let q = 0; q < 8; q++) {
       const th = (-36 + q * 22) * DEG;
-      const a = project(p, ic + 0.48 * Math.cos(th), jc + 0.48 * Math.sin(th), z1 + 0.05);
-      const b = project(p, ic + 0.48 * Math.cos(th), jc + 0.48 * Math.sin(th), top + topFn(th) - 0.06);
+      const a = project(p, ic + colR * Math.cos(th), jc + colR * Math.sin(th), z1 + 0.04);
+      const b = project(p, ic + colR * Math.cos(th), jc + colR * Math.sin(th), top + topFn(th) - 0.04);
       fl += `M${round1(a[0])},${round1(a[1])}L${round1(b[0])},${round1(b[1])}`;
     }
-    s.push({ kind: "path", cls: "flute", d: fl, transform: null });
-    const [mx, my] = project(p, fi + 0.01, jc, zp + 0.92);
-    s.push(medallionMark(mx, my, 0.62));
-    medal = { x: round1(mx), y: round1(my), r: round1(0.31 * S) };
+    stone.push({ kind: "path", cls: "flute", d: fl, transform: null });
+    const medD = isPortrait ? Math.min(0.54, 1.5 * pJ) : 0.62;
+    const [mx, my] = project(p, fi + 0.01, jc, zp + pedBaseH + pedBodyH * 0.68);
+    stone.push(medallionMark(mx, my, medD));
+    medal = { x: round1(mx), y: round1(my), r: round1((medD * S) / 2) };
     H = top;
-    pts = cyl.pts.concat(boxPoints(p, ic - 1.3, jc - 1.3, 0, 2.6, 2.6, zp + 1.42));
-    // fallen drum: lying cylinder along j, south-east in the lot, broken face turned to the viewer
-    const di = ic + 1.12;
-    const dr = 0.36;
-    const capA: PlotPoint[] = [];
-    const capB: PlotPoint[] = [];
-    for (let q = 0; q < 22; q++) {
-      const th = (q / 22) * 2 * Math.PI;
-      capA.push(project(p, di + dr * Math.cos(th), jc - 0.1, 0.52 + dr + dr * Math.sin(th)));
-      capB.push(project(p, di + dr * Math.cos(th), jc + 0.95, 0.52 + dr + dr * Math.sin(th)));
-    }
-    s.push(screenPolygon("st-t e", hull(capA.concat(capB))), screenPolygon("brk e", capB));
-    pts = pts.concat(capA, capB);
-    ground.push(shadowMark(p, [ic - 1.3, ic + 1.3, jc - 1.3, jc + 1.3], 0.52), shadowMark(p, [ic - 0.5, ic + 0.5, jc - 0.5, jc + 0.5], H * 0.92));
+    pts = cyl.pts.concat(boxPoints(p, ic - ei, jc - ej, baseZ, 2 * ei, 2 * ej, z1 - baseZ));
+    ground.push(shadowMark(p, foot, zp), shadowMark(p, [ic - 0.5 * si, ic + 0.5 * si, jc - 0.5 * sx, jc + 0.5 * sx], H * 0.92));
   } else {
     // BUSD: a sealed, intact mausoleum; barred door with a closed-by-order seal, gavel carved flat in the tympanum.
-    podium(1.4, 1.3);
-    const zp = 0.52;
-    const ze = 2.3;
-    const ci0 = ic - 1.05;
-    const ci1 = ic + 0.45;
-    s.push(...boxMarks(p, ci0, jc - 0.92, zp, ci1 - ci0, 1.84, ze - zp, "st"));
+    podium(ei, ej);
+    const zp = baseZ + 4 * stepH;
+    const ze = isPortrait ? baseZ + 1.04 : baseZ + 2.3;
+    const ci0 = ic - 1.02 * si;
+    const ci1 = ic + 0.45 * si;
+    const cj = 0.92 * sx;
+    stone.push(...boxMarks(p, ci0, jc - cj, zp, ci1 - ci0, 2 * cj, ze - zp, "st"));
     const di = ci1 + 0.004;
-    s.push(worldPolygon(p, "door e", [[di, jc - 0.3, zp], [di, jc + 0.3, zp], [di, jc + 0.3, zp + 1.12], [di, jc - 0.3, zp + 1.12]]));
+    const doorH = isPortrait ? Math.min(0.58, (ze - zp) * 0.78) : 1.12;
+    const dw = 0.3 * sx;
+    stone.push(worldPolygon(p, "door e", [[di, jc - dw, zp], [di, jc + dw, zp], [di, jc + dw, zp + doorH], [di, jc - dw, zp + doorH]]));
     const doorFrame = faceMatrixE(p, di + 0.002, jc, zp);
-    s.push({ kind: "path", cls: "bars", d: "M-.3,-.3 L.3,-.3 M-.3,-.62 L.3,-.62 M-.3,-.94 L.3,-.94 M-.15,0 L-.15,-1.12 M.15,0 L.15,-1.12", transform: doorFrame });
-    s.push({ kind: "circle", cls: "seal-disc", cx: 0, cy: -0.62, r: 0.1, transform: doorFrame });
-    const colI = ic + 1.02;
-    for (const dj of [-0.84, -0.28, 0.28, 0.84]) s.push(...cylinder(p, colI, jc + dj, 0.11, zp, ze, "col", null, "st-t").marks);
-    const ei0 = ic - 1.15;
-    const ei1 = ic + 1.2;
-    const ej = 1.04;
-    s.push(...boxMarks(p, ei0, jc - ej, ze, ei1 - ei0, 2 * ej, 0.26, "st"));
-    const zr = ze + 0.26;
-    const zRidge = zr + 0.7;
-    s.push(worldPolygon(p, "st-t e", [[ei0, jc - ej, zr], [ei1, jc - ej, zr], [ei1, jc, zRidge], [ei0, jc, zRidge]]));
-    s.push(worldPolygon(p, "st-s e", [[ei0, jc + ej, zr], [ei1, jc + ej, zr], [ei1, jc, zRidge], [ei0, jc, zRidge]]));
-    s.push(worldPolygon(p, "st-e e", [[ei1, jc - ej, zr], [ei1, jc + ej, zr], [ei1, jc, zRidge]]));
-    // gavel carved flat into the tympanum: a relief outline, nothing lodged, no crack
-    const carve = { tx: -0.02, ty: -0.24, deg: -24, k: 0.9 };
-    s.push({
+    const barY = (f: number) => round3(-doorH * f);
+    const dwr = round3(dw);
+    const dwh = round3(dw / 2);
+    stone.push({
       kind: "path",
-      cls: "relief",
-      d: transformedRoundRect(-0.05, -0.02, 0.42, 0.05, 0.02, carve) + transformedRoundRect(-0.19, -0.1, 0.14, 0.21, 0.02, carve),
-      transform: faceMatrixE(p, ei1 + 0.005, jc, zr),
+      cls: "bars",
+      d: `M${-dwr},${barY(0.27)} L${dwr},${barY(0.27)} M${-dwr},${barY(0.55)} L${dwr},${barY(0.55)} M${-dwr},${barY(0.84)} L${dwr},${barY(0.84)} M${-dwh},0 L${-dwh},${round3(-doorH)} M${dwh},0 L${dwh},${round3(-doorH)}`,
+      transform: doorFrame,
     });
-    const [mx, my] = project(p, ci1 + 0.01, jc - 0.62, zp + 0.8);
-    s.push(medallionMark(mx, my, 0.5));
-    medal = { x: round1(mx), y: round1(my), r: round1(0.25 * S) };
-    s.push(...weatheringMarks(p, g.weather, ci1, jc - 0.62, zp, 0.5, 1.4, rnd));
+    stone.push({ kind: "circle", cls: "seal-disc", cx: 0, cy: round3(-doorH * 0.55), r: isPortrait ? round3(0.08 * sx) : 0.1, transform: doorFrame });
+    // Cella weathering (and desktop medallion, framed cleanly in the central intercolumniation) paint BEFORE the columns.
+    stone.push(...weatheringMarks(p, g.weather, ci1, jc - 0.62 * sx, zp, 0.5 * sx, (ze - zp) * 0.78, rnd));
+    let mx = 0;
+    let my = 0;
+    const medD = isPortrait ? Math.min(0.46, 0.9 * sx) : 0.48;
+    if (!isPortrait) {
+      [mx, my] = project(p, ci1 + 0.01, jc - 0.5, zp + 0.85);
+      stone.push(medallionMark(mx, my, medD));
+    }
+    const colI = ic + 0.96 * si;
+    const colR = 0.095 * Math.min(si, sx);
+    for (const dj of [-0.88, -0.38, 0.38, 0.88]) stone.push(...cylinder(p, colI, jc + dj * sx, colR, zp, ze, "col", null, "st-t").marks);
+    const ei0 = ic - 1.12 * si;
+    const ei1 = ic + 1.14 * si;
+    const ejRoof = 1.02 * sx;
+    const entabH = isPortrait ? 0.18 : 0.26;
+    stone.push(...boxMarks(p, ei0, jc - ejRoof, ze, ei1 - ei0, 2 * ejRoof, entabH, "st"));
+    const zr = ze + entabH;
+    const zRidge = zr + (isPortrait ? 0.34 : 0.7);
+    stone.push(worldPolygon(p, "st-t e", [[ei0, jc - ejRoof, zr], [ei1, jc - ejRoof, zr], [ei1, jc, zRidge], [ei0, jc, zRidge]]));
+    stone.push(worldPolygon(p, "st-s e", [[ei0, jc + ejRoof, zr], [ei1, jc + ejRoof, zr], [ei1, jc, zRidge], [ei0, jc, zRidge]]));
+    stone.push(worldPolygon(p, "st-e e", [[ei1, jc - ejRoof, zr], [ei1, jc + ejRoof, zr], [ei1, jc, zRidge]]));
+    // gavel carved flat into the tympanum: a relief outline, nothing lodged, no crack
+    if (!isPortrait) {
+      const carve = { tx: -0.02, ty: -0.24, deg: -24, k: 0.9 };
+      stone.push({
+        kind: "path",
+        cls: "relief",
+        d: transformedRoundRect(-0.05, -0.02, 0.42, 0.05, 0.02, carve) + transformedRoundRect(-0.19, -0.1, 0.14, 0.21, 0.02, carve),
+        transform: faceMatrixE(p, ei1 + 0.005, jc, zr),
+      });
+    } else {
+      // Portrait steep overhead view puts the cella behind the roof; mount the medallion cleanly on the front frieze/pediment.
+      [mx, my] = project(p, ei1 + 0.01, jc, ze + entabH * 0.55);
+      stone.push(medallionMark(mx, my, medD));
+    }
+    medal = { x: round1(mx), y: round1(my), r: round1((medD * S) / 2) };
     H = zRidge;
-    pts = boxPoints(p, ic - 1.4, jc - 1.3, 0, 2.8, 2.6, zp).concat(boxPoints(p, ei0, jc - ej, zp, ei1 - ei0, 2 * ej, zRidge - zp));
-    ground.push(shadowMark(p, [ic - 1.4, ic + 1.4, jc - 1.3, jc + 1.3], 0.52), shadowMark(p, [ei0, ei1, jc - ej, jc + ej], zRidge * 0.85));
+    pts = boxPoints(p, ic - ei, jc - ej, baseZ, 2 * ei, 2 * ej, zp - baseZ).concat(boxPoints(p, ei0, jc - ejRoof, zp, ei1 - ei0, 2 * ejRoof, zRidge - zp));
+    ground.push(shadowMark(p, foot, zp), shadowMark(p, [ei0, ei1, jc - ejRoof, jc + ejRoof], zRidge * 0.85));
   }
-  if (g.archived) {
-    ground.push(worldPolygon(p, "bronze e", [[g.cell.i1 - 0.35, jc - 0.14, 0.01], [g.cell.i1 - 0.12, jc - 0.14, 0.01], [g.cell.i1 - 0.12, jc + 0.14, 0.01], [g.cell.i1 - 0.35, jc + 0.14, 0.01]]));
+  const contact = [
+    isPortrait
+      ? portraitContactShadowMark(p, foot, baseZ, 0.055)
+      : contactShadowMark(p, foot, baseZ, 0.065),
+  ];
+  const gLayout = graveGroundMarksLayout(g, siteP.name);
+  if (gLayout.bronze) {
+    const b = gLayout.bronze;
+    const bz = baseZ + 0.004;
+    ground.push(worldPolygon(p, "bronze e", [[b.i0, b.j0, bz], [b.i1, b.j0, bz], [b.i1, b.j1, bz], [b.i0, b.j1, bz]]));
   }
-  const [tx, ty] = project(p, ic, jc, H);
-  return { body: s, lean: null, ground, pts, topZ: H, medal, top: [round1(tx), round1(ty)], faceW: 1.28, faceH: 1.18 };
+  const shiftedPlinth = dx === 0 && dy === 0 ? plinth : plinth.map((m) => shiftMark(m, dx, dy));
+  const shiftedStone = dx === 0 && dy === 0 ? stone : stone.map((m) => shiftMark(m, dx, dy));
+  const shiftedContact = dx === 0 && dy === 0 ? contact : contact.map((m) => shiftMark(m, dx, dy));
+  const shiftedGround = [...padMarks, ...(dx === 0 && dy === 0 ? ground : ground.map((m) => shiftMark(m, dx, dy)))];
+  const shiftedPts = dx === 0 && dy === 0 ? pts : pts.map((pt) => shiftPt(pt, dx, dy));
+  const [tx, ty] = shiftPt(project(p, ic, jc, H), dx, dy);
+  return {
+    plinth: shiftedPlinth,
+    stone: shiftedStone,
+    contact: shiftedContact,
+    body: [...shiftedPlinth, ...shiftedStone],
+    lean: null,
+    ground: shiftedGround,
+    pts: shiftedPts,
+    topZ: H,
+    medal: { x: round1(medal.x + dx), y: round1(medal.y + dy), r: medal.r },
+    top: [round1(tx), round1(ty)],
+    faceW: 1.28,
+    faceH: 1.18,
+  };
 }
 
 /** Hit area of a grave: hull of its extents and its (inset) lot. Unrounded. */
@@ -642,7 +1152,10 @@ export function cypressGeometry(p: PlotProjection, i: number, j: number, h: numb
 
 /** Year lamp (post + lantern); its warm pool is a ground mark shown in the dark theme only. */
 export function lampGeometry(p: PlotProjection, i: number, j: number): PlotObjectGeometry {
-  const marks = boxMarks(p, i - 0.022, j - 0.022, 0, 0.044, 0.044, 0.66, { t: "lamp-post", e: "lamp-post", s: "lamp-post" }, "");
+  const marks: SceneMark[] = [
+    contactShadowMark(p, [i - 0.022, i + 0.022, j - 0.022, j + 0.022], 0, 0.025),
+    ...boxMarks(p, i - 0.022, j - 0.022, 0, 0.044, 0.044, 0.66, { t: "lamp-post", e: "lamp-post", s: "lamp-post" }, ""),
+  ];
   marks.push(...boxMarks(p, i - 0.06, j - 0.06, 0.66, 0.12, 0.12, 0.13, { t: "lamp-post", e: "lamp-glass", s: "lamp-glass" }, " e"));
   const a = project(p, i - 0.075, j - 0.075, 0.79);
   const b = project(p, i + 0.075, j - 0.075, 0.79);
@@ -659,18 +1172,37 @@ function lampPoolMark(p: PlotProjection, i: number, j: number): PlotMark {
   return { kind: "ellipse", cls: "pool", cx: round1(x), cy: round1(y), rx: round1(S * 1.7), ry: round1(S * 0.85) };
 }
 
-/** Gate on the south curb at the avenue: two low piers and a hairline arch. */
+/** Gate on the south curb at the avenue: two capped masonry piers spanned by a solid stone lintel. */
 export function gateGeometry(p: PlotProjection, i0: number, i1: number, j: number): PlotObjectGeometry {
-  const marks = [...boxMarks(p, i0, j, 0, 0.24, 0.24, 0.8, "w"), ...boxMarks(p, i1 - 0.24, j, 0, 0.24, 0.24, 0.8, "w")];
-  const mid = (i0 + i1) / 2;
-  const half = (i1 - i0) / 2 - 0.12;
-  const arch: PlotPoint[] = [];
-  for (let q = 0; q <= 12; q++) {
-    const ph = (q / 12) * Math.PI;
-    arch.push(project(p, mid - half * Math.cos(ph), j + 0.12, 0.8 + 0.3 * Math.sin(ph)));
-  }
-  marks.push({ kind: "path", cls: "rail", d: formatPath(arch), transform: null });
-  return { marks, pts: [project(p, i0, j, 0), project(p, i1, j + 0.24, 0), project(p, mid, j, 1.15), project(p, i0, j, 0.8), project(p, i1, j, 0.8)] };
+  const pw = 0.28;
+  const pd = 0.3;
+  const ph = 0.84;
+  const capOver = 0.03;
+  const capH = 0.06;
+  const lintelZ = ph + capH;
+  const lintelH = 0.14;
+  const copingH = 0.05;
+  const topZ = lintelZ + lintelH + copingH;
+  const marks: SceneMark[] = [
+    contactShadowMark(p, [i0, i0 + pw, j, j + pd], 0, 0.045),
+    contactShadowMark(p, [i1 - pw, i1, j, j + pd], 0, 0.045),
+    // West pier, then east pier, then caps, solid lintel and coping in back-to-front paint order.
+    ...boxMarks(p, i0, j, 0, pw, pd, ph, "w"),
+    ...boxMarks(p, i1 - pw, j, 0, pw, pd, ph, "w"),
+    ...boxMarks(p, i0 - capOver, j - capOver, ph, pw + 2 * capOver, pd + 2 * capOver, capH, "w"),
+    ...boxMarks(p, i1 - pw - capOver, j - capOver, ph, pw + 2 * capOver, pd + 2 * capOver, capH, "w"),
+    ...boxMarks(p, i0, j + 0.03, lintelZ, i1 - i0, pd - 0.06, lintelH, "w"),
+    ...boxMarks(p, i0 - capOver, j, lintelZ + lintelH, i1 - i0 + 2 * capOver, pd, copingH, "w"),
+  ];
+  return {
+    marks,
+    pts: [
+      project(p, i0 - capOver, j, 0),
+      project(p, i1 + capOver, j + pd, 0),
+      project(p, i0 - capOver, j, topZ),
+      project(p, i1 + capOver, j + pd, topZ),
+    ],
+  };
 }
 
 /** Signpost post height (world units). */
@@ -679,7 +1211,10 @@ export const PLOT_POST_HEIGHT = 0.95;
 /** Signpost post (the plate is an HTML overlay hung from its top). */
 export function postGeometry(p: PlotProjection, i: number, j: number): PlotObjectGeometry {
   return {
-    marks: boxMarks(p, i - 0.03, j - 0.03, 0, 0.06, 0.06, PLOT_POST_HEIGHT, { t: "post", e: "post", s: "post" }, ""),
+    marks: [
+      contactShadowMark(p, [i - 0.03, i + 0.03, j - 0.03, j + 0.03], 0, 0.025),
+      ...boxMarks(p, i - 0.03, j - 0.03, 0, 0.06, 0.06, PLOT_POST_HEIGHT, { t: "post", e: "post", s: "post" }, ""),
+    ],
     pts: [project(p, i, j, 0), project(p, i, j, PLOT_POST_HEIGHT)],
   };
 }
@@ -708,9 +1243,89 @@ export function plotDrawnObjects(map: DesktopPlotMap): PlotDrawnObject[] {
     const post = posts.get(key);
     if (post) return { key, kind: "post", cause: post.cause, geometry: postGeometry(p, post.i, post.j) };
     if (key === "gate") return { key, kind: "gate", geometry: gateGeometry(p, map.gate.i0, map.gate.i1, map.gate.j) };
-    if (key === "lighthouse") return { key, kind: "lighthouse", geometry: lighthouseGeometry(p, map.lighthouse.i, map.lighthouse.j) };
+    if (key === "lighthouse") {
+      return {
+        key,
+        kind: "lighthouse",
+        geometry: lighthouseGeometry(p, map.lighthouse.i, map.lighthouse.j, { apothem: map.lighthouse.apothem, rockZ0: map.lighthouse.rockZ0 }),
+      };
+    }
     throw new Error(`plotDrawnObjects: unknown draw key ${key}`);
   });
+}
+
+export interface PlotPerimeterWall {
+  kind: "wall" | "curb";
+  key: string;
+  layer: "back" | "front";
+  cell: PlotCell;
+  height: number;
+}
+
+export interface PlotPerimeterRail {
+  kind: "rail";
+  key: string;
+  layer: "front";
+  alongI: boolean;
+  start: number;
+  end: number;
+  fixed: number;
+  /** Skip the final post when this run terminates on a shared corner post drawn by a meeting rail. */
+  skipEndPost?: boolean;
+  cell: PlotCell;
+}
+
+export type PlotPerimeterSegment = PlotPerimeterWall | PlotPerimeterRail;
+
+/**
+ * Single authority for the desktop plan's perimeter runs (north/west walls, south/east curbs and railings), split
+ * around the gate and the NE lighthouse headland. Consumed by both {@link desktopSiteMarks} and the capacity linter.
+ */
+export function desktopPerimeterSegments(map: DesktopPlotMap): PlotPerimeterSegment[] {
+  const { iA, iB, jN } = map.frame;
+  const { iWest: W, iAvenue, iEast: I, jSouth: J } = map.site;
+  const rim = iB - I;
+  const lhI0 = map.lighthouse.i - map.lighthouse.apothem;
+  const lhJ1 = map.lighthouse.j + map.lighthouse.apothem;
+  const northWallEnd = Math.min(iB, lhI0);
+  const eastCurbStart = Math.max(jN, lhJ1);
+  const cornerI = I + 0.15;
+  const cornerJ = J + 0.15;
+  const eastRailStart = eastCurbStart + 0.05;
+  const segments: PlotPerimeterSegment[] = [
+    { kind: "wall", key: "wall:north", layer: "back", cell: { i0: iA, i1: northWallEnd, j0: jN, j1: 0 }, height: 0.5 },
+    // West wall runs cleanly to the SW corner and abuts the west gate pier (no protruding SW curb stub).
+    { kind: "wall", key: "wall:west", layer: "back", cell: { i0: iA, i1: W, j0: 0, j1: J + rim }, height: 0.5 },
+    { kind: "curb", key: "curb:south", layer: "front", cell: { i0: iAvenue, i1: iB, j0: J, j1: J + rim }, height: 0.2 },
+  ];
+  if (eastCurbStart < J) {
+    segments.push({ kind: "curb", key: "curb:east", layer: "front", cell: { i0: I, i1: iB, j0: eastCurbStart, j1: J }, height: 0.2 });
+  }
+  const railHalf = 0.01;
+  segments.push({
+    kind: "rail",
+    key: "rail:south",
+    layer: "front",
+    alongI: true,
+    start: iAvenue,
+    end: cornerI,
+    fixed: cornerJ,
+    cell: { i0: iAvenue, i1: cornerI, j0: cornerJ - railHalf, j1: cornerJ + railHalf },
+  });
+  if (eastRailStart < cornerJ) {
+    segments.push({
+      kind: "rail",
+      key: "rail:east",
+      layer: "front",
+      alongI: false,
+      start: eastRailStart,
+      end: cornerJ,
+      fixed: cornerI,
+      skipEndPost: true,
+      cell: { i0: cornerI - railHalf, i1: cornerI + railHalf, j0: eastRailStart, j1: cornerJ },
+    });
+  }
+  return segments;
 }
 
 export interface PlotSiteMarks {
@@ -740,30 +1355,47 @@ export function desktopSiteMarks(map: DesktopPlotMap): PlotSiteMarks {
   const P = (i: number, j: number, z = 0) => project(p, i, j, z);
   const { iA, iB, jN, jB, slab } = map.frame;
   const { iWest: W, iAvenue, iOldest, iEast: I, jSouth: J, jFront, northTerrace: NT } = map.site;
+  const rim = iB - I;
+  const lhI0 = map.lighthouse.i - map.lighthouse.apothem;
+  const lhI1 = map.lighthouse.i + map.lighthouse.apothem;
+  const lhJ1 = Math.max(jN, map.lighthouse.j + map.lighthouse.apothem);
+  const perimeter = desktopPerimeterSegments(map);
+
+  const seaEast = Math.max(iB + 6, lhI1 + 6);
   const back: PlotMark[] = [
-    worldPolygon(p, "sea far", [[iA - 6, jN - 2.6, -0.32], [iB + 6, jN - 2.6, -0.32], [iB + 6, jN - 1.5, -0.32], [iA - 6, jN - 1.5, -0.32]]),
-    worldPolygon(p, "sea", [[iA - 6, jN - 1.5, -0.32], [iB + 6, jN - 1.5, -0.32], [iB + 6, jN, -0.32], [iA - 6, jN, -0.32]]),
+    worldPolygon(p, "sea far", [[iA - 6, jN - 2.6, -0.32], [seaEast, jN - 2.6, -0.32], [seaEast, jN - 1.5, -0.32], [iA - 6, jN - 1.5, -0.32]]),
+    worldPolygon(p, "sea", [[iA - 6, jN - 1.5, -0.32], [seaEast, jN - 1.5, -0.32], [seaEast, jN, -0.32], [iA - 6, jN, -0.32]]),
   ];
   let swell = "";
+  const swellEast = Math.max(iB + 1.5, lhI1 + 1.5);
   for (let q = 0; q < 3; q++) {
     const j = jN - 0.35 - q * 0.42;
     const a = P(iA + 1.2 + (q % 3) * 2.3, j, -0.32);
-    const b = P(iB + 1.5, j, -0.32);
+    const b = P(swellEast, j, -0.32);
     swell += `M${round1(a[0])},${round1(a[1])}L${round1(b[0])},${round1(b[1])}`;
   }
   back.push(
     { kind: "path", cls: "swell", d: swell, transform: null },
-    worldPolygon(p, "earth-e e", [[iB, jN, 0], [iB, jB, 0], [iB, jB, -slab], [iB, jN, -slab]]),
+    worldPolygon(p, "earth-e e", [[iB, lhJ1, 0], [iB, jB, 0], [iB, jB, -slab], [iB, lhJ1, -slab]]),
     worldPolygon(p, "earth-s e", [[iA, jB, 0], [iB, jB, 0], [iB, jB, -slab], [iA, jB, -slab]]),
-    { kind: "path", cls: "strata", d: [-0.24, -0.5, -0.7].map((z) => formatPath([P(iA, jB, z), P(iB, jB, z), P(iB, jN, z)])).join(""), transform: null },
-    ...boxMarks(p, iA, jN, 0, iB - iA, 0.3, 0.5, "w"),
-    ...boxMarks(p, iA, 0, 0, 0.3, J, 0.5, "w"),
+    { kind: "path", cls: "strata", d: [-0.24, -0.5, -0.7].map((z) => formatPath([P(iA, jB, z), P(iB, jB, z), P(iB, lhJ1, z)])).join(""), transform: null },
   );
+  for (const seg of perimeter) {
+    if (seg.layer === "back") {
+      back.push(...boxMarks(p, seg.cell.i0, seg.cell.j0, 0, seg.cell.i1 - seg.cell.i0, seg.cell.j1 - seg.cell.j0, seg.height, "w"));
+    }
+  }
 
   const northToSouth = [...map.lanes].reverse();
-  const ground: PlotMark[] = [flat(p, "lawn", W, I, 0, J, 0.001), flat(p, "gravel strip", iA, iB, J + 0.3, jB, 0.001)];
+  const ground: PlotMark[] = [
+    flat(p, "lawn", W, I, 0, J, 0.001),
+    // Corner apron tucked between the east lawn edge, the headland rock's SW bevel and the north end of the east curb.
+    worldPolygon(p, "lawn", [[I, Math.max(0, lhJ1 - rim), 0.001], [iB, lhJ1, 0.001], [I, lhJ1, 0.001]]),
+    flat(p, "gravel strip", iA, iB, J + 0.3, jB, 0.001),
+  ];
   ground.push(flat(p, "gravel", W + 0.18, iAvenue - 0.18, 0.18, J - 0.12, 0.003)); // gate avenue
-  ground.push(flat(p, "gravel", iAvenue - 0.18, I - 0.2, 0.14, NT - 0.12, 0.003)); // sea-wall walk
+  const walkEast = Math.min(I - 0.1, lhI0 - 0.04);
+  if (walkEast > iAvenue - 0.18) ground.push(flat(p, "gravel", iAvenue - 0.18, walkEast, 0.14, NT - 0.12, 0.003)); // sea-wall walk
   for (let q = 0; q + 1 < northToSouth.length; q++) {
     ground.push(flat(p, "gravel", iAvenue - 0.18, iOldest + 0.2, northToSouth[q].j1 + 0.07, northToSouth[q + 1].j0 - 0.07, 0.003));
   }
@@ -780,28 +1412,47 @@ export function desktopSiteMarks(map: DesktopPlotMap): PlotSiteMarks {
 
   const beds = northToSouth.map((L) => ({
     cause: L.cause,
-    marks: L.cells.flatMap((c) => boxMarks(p, c.i0 - 0.05, L.j0 - 0.05, 0, c.i1 - c.i0 + 0.1, L.j1 - L.j0 + 0.1, 0.045, { t: "bed", e: "curb", s: "curb" }, " e")),
+    marks: L.cells.flatMap((c) => boxMarks(p, c.i0 - 0.05, c.j0 - 0.05, 0, c.i1 - c.i0 + 0.1, c.j1 - c.j0 + 0.1, PLOT_BED_HEIGHT.dimetric, { t: "bed", e: "curb", s: "curb" }, " e")),
   }));
   const pools = map.lamps.map((l) => lampPoolMark(p, l.i, l.j));
 
-  const front: PlotMark[] = [
-    ...boxMarks(p, W - 0.3, J, 0, 0.42, 0.3, 0.2, "w"),
-    ...boxMarks(p, iAvenue - 0.12, J, 0, I - iAvenue + 0.42, 0.3, 0.2, "w"),
-    ...boxMarks(p, I, -0.3, 0, 0.3, J + 0.3, 0.2, "w"),
-  ];
+  const front: PlotMark[] = [];
+  const southCurb = perimeter.find((seg): seg is PlotPerimeterWall => seg.key === "curb:south");
+  const eastCurb = perimeter.find((seg): seg is PlotPerimeterWall => seg.key === "curb:east");
+  const joinedSeCurb = Boolean(
+    southCurb && eastCurb && Math.abs(southCurb.cell.i1 - eastCurb.cell.i1) < 1e-6 && Math.abs(southCurb.cell.j0 - eastCurb.cell.j1) < 1e-6,
+  );
+  if (joinedSeCurb && southCurb && eastCurb) {
+    const ch = southCurb.height;
+    const sc = southCurb.cell;
+    const ec = eastCurb.cell;
+    // One continuous L-shaped curb around the SE corner so no vertical or top seam cuts across (I..iB, J).
+    front.push(
+      worldPolygon(p, "w-s e", [[sc.i0, sc.j1, 0], [sc.i1, sc.j1, 0], [sc.i1, sc.j1, ch], [sc.i0, sc.j1, ch]]),
+      worldPolygon(p, "w-e e", [[ec.i1, ec.j0, 0], [ec.i1, sc.j1, 0], [ec.i1, sc.j1, ch], [ec.i1, ec.j0, ch]]),
+      worldPolygon(p, "w-t e", [[sc.i0, sc.j0, ch], [ec.i0, sc.j0, ch], [ec.i0, ec.j0, ch], [ec.i1, ec.j0, ch], [sc.i1, sc.j1, ch], [sc.i0, sc.j1, ch]]),
+    );
+  }
+  for (const seg of perimeter) {
+    if (seg.layer !== "front" || seg.kind === "rail") continue;
+    if (joinedSeCurb && (seg.key === "curb:south" || seg.key === "curb:east")) continue;
+    front.push(...boxMarks(p, seg.cell.i0, seg.cell.j0, 0, seg.cell.i1 - seg.cell.i0, seg.cell.j1 - seg.cell.j0, seg.height, "w"));
+  }
   let rail = "";
-  const railRun = (a: number, b: number, fixed: number, alongI: boolean) => {
+  const railRun = (a: number, b: number, fixed: number, alongI: boolean, skipEndPost = false) => {
     const at = (u: number, z: number) => (alongI ? P(u, fixed, z) : P(fixed, u, z));
     const len = b - a;
     const nPosts = Math.max(1, Math.round(len / 1.1));
-    for (let q = 0; q <= nPosts; q++) {
+    const lastPost = skipEndPost ? nPosts - 1 : nPosts;
+    for (let q = 0; q <= lastPost; q++) {
       const u = a + (len * q) / nPosts;
       rail += formatPath([at(u, 0.2), at(u, 0.56)]);
     }
     rail += formatPath([at(a, 0.52), at(b, 0.52)]);
   };
-  railRun(iAvenue, I, J + 0.15, true);
-  railRun(-0.25, J + 0.2, I + 0.15, false);
+  for (const seg of perimeter) {
+    if (seg.kind === "rail") railRun(seg.start, seg.end, seg.fixed, seg.alongI, seg.skipEndPost);
+  }
   front.push({ kind: "path", cls: "rail", d: rail, transform: null });
 
   const trees = [...map.cypress]
@@ -810,25 +1461,135 @@ export function desktopSiteMarks(map: DesktopPlotMap): PlotSiteMarks {
   return { back, ground, beds, pools, front, trees };
 }
 
-/** Structure of the portrait plan: sea-wall strip, lawn, headland faces, cross-paths, empty strips, bed cells. */
-export function portraitSiteMarks(map: PortraitPlotMap): Pick<PlotSiteMarks, "ground" | "beds"> {
+/** Slender Italian cypress for the portrait walk's open lawn bays (seated softly on grass, never in a mid-path square pit). */
+function portraitCypressMarks(p: PlotProjection, i: number, j: number, h: number): PlotMark[] {
+  if (!h) return [];
+  const rw = 0.15 + 0.045 * h;
+  const [bx, by] = project(p, i, j, 0.1);
+  const [, ty] = project(p, i, j, h);
+  const W = rw * roundHalfWidth(p);
+  const hh = by - ty;
+  const marks: PlotMark[] = [
+    { kind: "ellipse", cls: "shadow", cx: round1(bx - 1.1), cy: round1(by + 1.1), rx: round1(W * 0.92), ry: round1(W * 0.36) },
+  ];
+  marks.push(...boxMarks(p, i - 0.03, j - 0.03, 0.01, 0.06, 0.06, 0.13, { t: "trunk", e: "trunk", s: "trunk" }, ""));
+  const outline = `M${round1(bx)},${round1(ty)} C${round1(bx + W * 0.62)},${round1(ty + hh * 0.22)} ${round1(bx + W * 1.02)},${round1(ty + hh * 0.68)} ${round1(bx + W * 0.5)},${round1(by)} L${round1(bx - W * 0.5)},${round1(by)} C${round1(bx - W * 1.02)},${round1(ty + hh * 0.68)} ${round1(bx - W * 0.62)},${round1(ty + hh * 0.22)} ${round1(bx)},${round1(ty)} Z`;
+  const lit = `M${round1(bx)},${round1(ty)} C${round1(bx + W * 0.62)},${round1(ty + hh * 0.22)} ${round1(bx + W * 1.02)},${round1(ty + hh * 0.68)} ${round1(bx + W * 0.5)},${round1(by)} L${round1(bx + W * 0.06)},${round1(by)} C${round1(bx + W * 0.2)},${round1(ty + hh * 0.6)} ${round1(bx + W * 0.1)},${round1(ty + hh * 0.3)} ${round1(bx)},${round1(ty)} Z`;
+  let hatch = "";
+  for (let q = 1; q < 5; q++) {
+    const y = ty + (hh * q) / 5;
+    const half = W * (0.35 + 0.42 * Math.sin((q / 5) * Math.PI));
+    hatch += `M${round1(bx - half * 0.88)},${round1(y)}L${round1(bx - half * 0.2)},${round1(y + 0.7)}`;
+  }
+  marks.push(
+    { kind: "path", cls: "tree-d e", d: outline, transform: null },
+    { kind: "path", cls: "tree-l", d: lit, transform: null },
+    { kind: "path", cls: "tree-h", d: hatch, transform: null },
+  );
+  return marks;
+}
+
+/** Options for `portraitSiteMarks`: the SSR skeleton omits contact/cypress detail to stay well inside the HTML size budget (0 CLS). */
+export interface PortraitSiteMarkOptions {
+  /** Emit cypresses and bed contact shadows (default `true`; `false` for the lightweight SSR skeleton). */
+  detail?: boolean;
+}
+
+/** Structure of the portrait walk: coastal sea strip + low stone sea wall, lawn, lane & year gravel paths, raised curbed beds, cypresses, headland strata. */
+export function portraitSiteMarks(
+  map: PortraitPlotMap,
+  options: PortraitSiteMarkOptions = {},
+): Pick<PlotSiteMarks, "ground" | "beds" | "trees"> {
+  const detail = options.detail ?? true;
   const p = PLOT_PROJECTIONS[map.projection];
-  const top = map.site.iAvenue - 0.3;
+  const P = (i: number, j: number, z = 0) => project(p, i, j, z);
+  const top = map.site.iAvenue - PORTRAIT_TOP_MARGIN;
   const I = map.site.iOldest;
   const J = map.site.jSouth;
+  const side = 0.32;
+  const slab = 0.62;
+  // Sea strip starts under the top `2026` sticky band and opens onto a low coastal stone sea wall clear of top-row stones.
+  const wallI0 = map.site.iAvenue - 1.15;
+  const wallI1 = map.site.iAvenue - 0.99;
   const ground: PlotMark[] = [
-    worldPolygon(p, "sea", [[top - 0.55, -0.35, 0], [top - 0.55, J + 0.35, 0], [top, J + 0.35, 0], [top, -0.35, 0]]),
-    flat(p, "lawn", top, I + 0.35, -0.35, J + 0.35, 0.001),
-    worldPolygon(p, "earth-e e", [[I + 0.35, -0.35, 0], [I + 0.35, J + 0.35, 0], [I + 0.35, J + 0.35, -0.6], [I + 0.35, -0.35, -0.6]]),
-    worldPolygon(p, "earth-s e", [[top + 0.3, J + 0.35, 0], [I + 0.35, J + 0.35, 0], [I + 0.35, J + 0.35, -0.6], [top + 0.3, J + 0.35, -0.6]]),
+    worldPolygon(p, "sea", [[top, -side, 0], [top, J + side, 0], [wallI0, J + side, 0], [wallI0, -side, 0]]),
+    {
+      kind: "path",
+      cls: "swell",
+      d: formatPath([P(wallI0 - 0.24, J - 0.8, 0), P(wallI0 - 0.24, 0.8, 0)]),
+      transform: null,
+    },
+    flat(p, "lawn", wallI1, I + 0.42, -side, J + side, 0.001),
+    // Low stone sea wall crowning the north edge of the cemetery grounds.
+    ...portraitCurbedBoxMarks(p, wallI0, wallI1, -side, J + side, 0.16, { t: "w-t", curb: "w-s" }, " e", 0.035, detail ? 0.055 : 0),
+    // Subtle stone perimeter edge curbs framing the left and right lawn verges.
+    ...portraitCurbedBoxMarks(p, wallI1, I + 0.42, J + side - 0.08, J + side, 0.09, { t: "w-t", curb: "w-s" }, " es", 0.02, 0),
+    ...portraitCurbedBoxMarks(p, wallI1, I + 0.42, -side, -side + 0.08, 0.09, { t: "w-t", curb: "w-s" }, " es", 0.02, 0),
+    // Headland cut face + geological strata lines at the oldest end of the walk.
+    worldPolygon(p, "earth-e e", [[I + 0.42, -side, 0], [I + 0.42, J + side, 0], [I + 0.42, J + side, -slab], [I + 0.42, -side, -slab]]),
+    {
+      kind: "path",
+      cls: "strata",
+      d: [-0.18, -0.36, -0.52].map((z) => formatPath([P(I + 0.42, J + side, z), P(I + 0.42, -side, z)])).join(""),
+      transform: null,
+    },
   ];
-  for (let q = 0; q + 1 < map.blocks.length; q++) {
-    ground.push(flat(p, "gravel", map.blocks[q].i1 + 0.05, map.blocks[q + 1].i0 - 0.05, -0.2, J + 0.2, 0.003));
+  // Vertical gravel lane paths running cleanly between the 5 cause columns through the entire walk.
+  const northToSouth = [...map.lanes].reverse();
+  for (let q = 0; q + 1 < northToSouth.length; q++) {
+    const pj0 = northToSouth[q].j1 + 0.05;
+    const pj1 = northToSouth[q + 1].j0 - 0.05;
+    if (pj1 > pj0 + 0.02) {
+      ground.push(flat(p, "gravel", wallI1 + 0.06, I + 0.24, pj0, pj1, 0.003));
+    }
   }
-  for (const b of map.blocks) if (b.empty) ground.push(flat(p, "gravel strip", b.i0, b.i1, -0.2, J + 0.2, 0.003));
-  const beds = [...map.lanes].reverse().map((L) => ({
+  // Refined horizontal gravel cross-paths seated under each inter-year threshold (leaving green lawn above the next block's stone tops).
+  for (let q = 0; q + 1 < map.blocks.length; q++) {
+    const gap0 = map.blocks[q].i1;
+    const gap1 = map.blocks[q + 1].i0;
+    const pathI0 = gap0 + 0.26;
+    const pathI1 = Math.min(gap1 - 0.26, pathI0 + 0.68);
+    if (pathI1 > pathI0 + 0.05) {
+      ground.push(flat(p, "gravel", pathI0, pathI1, -side + 0.1, J + side - 0.1, 0.003));
+    }
+  }
+  for (const b of map.blocks) if (b.empty) ground.push(flat(p, "gravel strip", b.i0, b.i1, -side + 0.1, J + side - 0.1, 0.003));
+
+  const beds = northToSouth.map((L) => ({
     cause: L.cause,
-    marks: L.cells.flatMap((c) => boxMarks(p, c.i0 - 0.04, L.j0 - 0.04, 0, c.i1 - c.i0 + 0.08, L.j1 - L.j0 + 0.08, 0.04, { t: "bed", e: "curb", s: "curb" }, " e")),
+    marks: L.cells.flatMap((c) => {
+      const inCell = map.graves.filter(
+        (g) => g.cause === L.cause && g.cell.i0 >= c.i0 - 1e-6 && g.cell.i1 <= c.i1 + 1e-6,
+      );
+      let fitI1 = c.i1;
+      if (inCell.length > 0) {
+        let maxBottom = -Infinity;
+        for (const g of inCell) {
+          const plinth = gravePlinthFootprint(g, map.projection);
+          const gm = graveGroundMarksLayout(g, map.projection);
+          const markBot = Math.max(
+            plinth.i1 + 0.18,
+            gm.mound ? gm.mound.i1 + 0.06 : -Infinity,
+            gm.bronze ? gm.bronze.i1 + 0.08 : -Infinity,
+            gm.footstone ? gm.footstone.i1 + 0.08 : -Infinity,
+          );
+          if (markBot > maxBottom) maxBottom = markBot;
+        }
+        if (Number.isFinite(maxBottom)) fitI1 = Math.min(c.i1, maxBottom + 0.08);
+      }
+      const ci0 = c.i0 - 0.04;
+      const ci1 = fitI1 + 0.04;
+      const cj0 = c.j0 - 0.04;
+      const cj1 = c.j1 + 0.07;
+      return portraitCurbedBoxMarks(p, ci0, ci1, cj0, cj1, PLOT_BED_HEIGHT.portrait, { t: "bed", curb: "curb" }, " e", 0.055, detail ? 0.055 : 0);
+    }),
   }));
-  return { ground, beds };
+
+  const trees = detail
+    ? map.cypress.map((c) => ({
+        year: c.year,
+        marks: portraitCypressMarks(p, c.i, c.j, c.height),
+      }))
+    : [];
+  return { ground, beds, trees };
 }

@@ -7,11 +7,11 @@ import { formatAddress } from "@shared/lib/format";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
-import { causeColorVars } from "@/lib/cemetery-cause-style";
 import type { CemeteryRegisterRow } from "@/lib/cemetery-register";
 import { cemeteryCauseAnchor } from "@/lib/cemetery-selection";
 import { formatCemeteryPeak } from "@/lib/cemetery-stats";
 import { digestDisplay } from "@/lib/fonts/digest";
+import { CemeteryCauseGlyph } from "./cemetery-cause-glyph";
 import { formatCemeteryPeg, formatRegisterDeathDate } from "./cemetery-register-model";
 import styles from "./cemetery-register.module.css";
 
@@ -49,9 +49,8 @@ export function CemeteryRegisterAutopsy({ row, expanded, onShowOnField }: Cemete
         <p className={styles.obituary}>{row.obituary}</p>
         <ul className={styles.actions}>
           <li>
-            <a href={row.sourceUrl} target="_blank" rel="noopener noreferrer" className={ACTION_CLASS}>
+            <a href={row.sourceUrl} target="_blank" rel="noopener noreferrer" className={`${ACTION_CLASS} ${styles.externalLink}`}>
               {`Source: ${row.sourceLabel}`}
-              <span aria-hidden="true">&nbsp;↗</span>
               <span className="sr-only"> (opens in a new tab)</span>
             </a>
           </li>
@@ -98,7 +97,7 @@ export function CemeteryRegisterAutopsy({ row, expanded, onShowOnField }: Cemete
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] content-start gap-x-4 gap-y-2 text-sm">
           <dt className="text-muted-foreground">Cause</dt>
           <dd className="flex min-w-0 flex-wrap items-center gap-x-1.5">
-            <span aria-hidden="true" className={styles.dot} style={causeColorVars(row.cause)} />
+            <CemeteryCauseGlyph cause={row.cause} size="sm" />
             <span>{causeLabel}</span>
             <a
               href={`#${cemeteryCauseAnchor(row.cause)}`}

@@ -11,6 +11,15 @@
  * One light from the east-north-east; one hairline weight (0.6 px, non-scaling); no filters; no idle animation.
  */
 
+/* The kit's `.scene .e` hairline under the short `ce` alias `plotClass` emits (route-HTML budget). First rule of the
+   sheet, so every cemetery rule below still wins a tie against it exactly as it did against the kit's `.e`. */
+.map :global(.ce) {
+  stroke: var(--edge);
+  stroke-width: 0.6px;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: round;
+}
+
 /* ------------------------------------------------------------------ tokens: surveyor's daylight */
 .tokens {
   composes: tokens from "../scene/scene-tokens.module.css";
@@ -21,9 +30,13 @@
   --c-lq: var(--c-lq-l);
   --c-al: var(--c-al-l);
   --c-rg: var(--c-rg-l);
-  --sky-0: oklch(0.985 0 0);
-  --sky-1: oklch(0.972 0.006 85);
-  --bed: oklch(0.925 0.026 126);
+  --sky-0: var(--background);
+  --sky-1: oklch(0.98 0.006 85);
+  /* cemetery sea gradient stops (flat kit daylight sea in light, moonlit sea shimmer in dark) */
+  --sea-0: oklch(0.885 0.012 165);
+  --sea-1: oklch(0.885 0.012 165);
+  --sea-2: oklch(0.885 0.012 165);
+  --bed: oklch(0.932 0.02 124);
   --wall-e: oklch(0.975 0.006 85);
   --wall-t: oklch(0.935 0.01 85);
   --wall-s: oklch(0.86 0.014 80);
@@ -35,11 +48,25 @@
   --plinth-e: oklch(0.955 0.008 88);
   --plinth-t: oklch(0.925 0.01 88);
   --plinth-s: oklch(0.8 0.014 80);
+  /* unrecorded peak plinth: cool slate-neutral stone + bold diagonal hatch readable at 15 px rest (F5) */
+  --plinth-nr-e: oklch(0.84 0.014 245);
+  --plinth-nr-t: oklch(0.79 0.016 245);
+  --plinth-nr-s: oklch(0.66 0.018 248);
+  --hatch-strong: oklch(0.24 0.016 248 / 0.56);
+  /* cemetery-scoped natural coastal granite for the NE headland promontory (Harbor & PSI keep kit --rock) */
+  --rock-e: oklch(0.89 0.012 82);
+  --rock-m: oklch(0.83 0.014 80);
+  --rock-s: oklch(0.74 0.016 78);
+  --rock-t: oklch(0.91 0.01 84);
+  --rock-strata: oklch(0.42 0.018 76 / 0.28);
+  --contact: oklch(0.26 0.015 85 / 0.28);
+  --shadow-dim: oklch(0.35 0.02 90 / 0.04);
   --grime: oklch(0.52 0.02 75);
-  --mound: oklch(0.905 0.03 124);
-  --soil: oklch(0.7 0.05 60);
-  --bronze: oklch(0.66 0.09 70);
-  --seal: oklch(0.62 0.07 65);
+  --mound: oklch(0.905 0.026 122);
+  --soil: oklch(0.62 0.04 62);
+  /* darker, lower-chroma patinated cast bronze — visually distinct from Counterparty Failure ochre */
+  --bronze: oklch(0.5 0.052 54);
+  --seal: oklch(0.6 0.062 62);
   --lichen: oklch(0.72 0.07 110 / 0.55);
   --moss: oklch(0.6 0.08 128);
   --mouth: oklch(0.3 0.01 80);
@@ -54,13 +81,14 @@
   --door: oklch(0.36 0.01 80);
   --inscr: oklch(0.36 0.012 75 / 0.85);
   --tint: 12%;
-  --bed-tint: 12%;
-  --curb-tint: 42%;
+  --bed-tint: 11%;
+  --curb-tint: 44%;
   --med-rest: 62%;
-  --beam-0: color-mix(in oklab, var(--frost-blue) 40%, transparent);
-  --beam-1: color-mix(in oklab, var(--frost-blue) 14%, transparent);
-  --beam-2: color-mix(in oklab, var(--frost-blue) 5%, transparent);
-  --beam-end: color-mix(in oklab, var(--frost-blue) 16%, transparent);
+  --med-ink: oklch(0.34 0.014 75);
+  --beam-0: color-mix(in oklab, var(--frost-blue) 42%, transparent);
+  --beam-1: color-mix(in oklab, var(--frost-blue) 22%, transparent);
+  --beam-2: color-mix(in oklab, var(--frost-blue) 12%, transparent);
+  --beam-end: color-mix(in oklab, var(--frost-blue) 20%, transparent);
   --beam-blend: multiply;
   --logo-rest: 1;
   --flower-stem: oklch(0.55 0.07 135);
@@ -69,64 +97,133 @@
   --flower-2: oklch(0.74 0.13 75);
   --flower-3: oklch(0.57 0.12 305);
   --plot-mono: var(--font-geist-mono), ui-monospace, monospace;
+  /* E3 + C6 solid-dimmed material mixes (35% stone toward --lawn at full opacity; re-evaluates in dark automatically) */
+  --dim-stone-e: color-mix(in oklab, var(--stone-e) 35%, var(--lawn));
+  --dim-stone-t: color-mix(in oklab, var(--stone-t) 35%, var(--lawn));
+  --dim-stone-s: color-mix(in oklab, var(--stone-s) 35%, var(--lawn));
+  --dim-plinth-e: color-mix(in oklab, var(--plinth-e) 35%, var(--lawn));
+  --dim-plinth-t: color-mix(in oklab, var(--plinth-t) 35%, var(--lawn));
+  --dim-plinth-s: color-mix(in oklab, var(--plinth-s) 35%, var(--lawn));
+  --dim-plinth-nr-e: color-mix(in oklab, var(--plinth-nr-e) 35%, var(--lawn));
+  --dim-plinth-nr-t: color-mix(in oklab, var(--plinth-nr-t) 35%, var(--lawn));
+  --dim-plinth-nr-s: color-mix(in oklab, var(--plinth-nr-s) 35%, var(--lawn));
+  --dim-brk: color-mix(in oklab, var(--brk) 35%, var(--lawn));
+  --dim-wall-e: color-mix(in oklab, var(--wall-e) 35%, var(--lawn));
+  --dim-wall-t: color-mix(in oklab, var(--wall-t) 35%, var(--lawn));
+  --dim-wall-s: color-mix(in oklab, var(--wall-s) 35%, var(--lawn));
+  --dim-lh-e: color-mix(in oklab, var(--lh-e) 35%, var(--lawn));
+  --dim-lh-m: color-mix(in oklab, var(--lh-m) 35%, var(--lawn));
+  --dim-lh-s: color-mix(in oklab, var(--lh-s) 35%, var(--lawn));
+  --dim-lh-t: color-mix(in oklab, var(--lh-t) 35%, var(--lawn));
+  --dim-rock-e: color-mix(in oklab, var(--rock-e) 35%, var(--lawn));
+  --dim-rock-m: color-mix(in oklab, var(--rock-m) 35%, var(--lawn));
+  --dim-rock-s: color-mix(in oklab, var(--rock-s) 35%, var(--lawn));
+  --dim-rock-t: color-mix(in oklab, var(--rock-t) 35%, var(--lawn));
+  --dim-edge: color-mix(in oklab, var(--edge) 32%, transparent);
+  --dim-edge-soft: color-mix(in oklab, var(--edge-soft) 32%, transparent);
 }
 
-/* ------------------------------------------------------------------ tokens: lamplit night */
+/* ------------------------------------------------------------------ tokens: moonlit night (cemetery-scoped; kit stays byte-identical for Harbor & PSI) */
 :global(.dark) .tokens {
   --c-ab: var(--c-ab-d);
   --c-cp: var(--c-cp-d);
   --c-lq: var(--c-lq-d);
   --c-al: var(--c-al-d);
   --c-rg: var(--c-rg-d);
-  --sky-0: oklch(0.085 0 0);
-  --sky-1: oklch(0.13 0.008 250);
-  --bed: oklch(0.235 0.028 145);
-  --wall-e: oklch(0.52 0.008 250);
-  --wall-t: oklch(0.42 0.008 250);
-  --wall-s: oklch(0.26 0.006 250);
-  --stone-e: oklch(0.72 0.01 240);
-  --stone-t: oklch(0.56 0.01 240);
-  --stone-s: oklch(0.3 0.008 240);
-  --brk: oklch(0.77 0.024 78);
-  --plinth-e: oklch(0.6 0.01 240);
-  --plinth-t: oklch(0.47 0.01 240);
-  --plinth-s: oklch(0.25 0.008 240);
-  --grime: oklch(0.12 0.01 90);
-  --mound: oklch(0.25 0.03 145);
-  --soil: oklch(0.36 0.04 55);
-  --bronze: oklch(0.52 0.06 70);
-  --seal: oklch(0.48 0.05 65);
-  --lichen: oklch(0.55 0.05 110 / 0.5);
-  --moss: oklch(0.38 0.06 135);
-  --mouth: oklch(0.1 0 0);
-  --tree-d: oklch(0.24 0.035 150);
-  --tree-l: oklch(0.34 0.045 150);
-  --tree-h: oklch(0 0 0 / 0.35);
-  --tree-bed: oklch(0.24 0.02 90);
-  --trunk: oklch(0.25 0.02 60);
-  --lamp-post: oklch(0.34 0.01 80);
-  --lamp-glass: oklch(0.86 0.12 80);
-  --pool-0: oklch(0.8 0.13 75 / 0.26);
-  --door: oklch(0.14 0.005 250);
-  --inscr: oklch(0.15 0.01 250 / 0.8);
+  --sky-0: var(--background);
+  --sky-1: color-mix(in oklab, var(--background) 68%, oklch(0.26 0.02 242));
+  --sea: oklch(0.185 0.024 242);
+  --sea-0: oklch(0.155 0.022 248);
+  --sea-1: oklch(0.26 0.034 232);
+  --sea-2: oklch(0.215 0.026 238);
+  --swell: oklch(0.78 0.028 226 / 0.26);
+  --earth-e: oklch(0.245 0.016 238);
+  --earth-s: oklch(0.19 0.014 242);
+  --strata: oklch(0.76 0.02 230 / 0.2);
+  --lawn: oklch(0.182 0.018 228);
+  --gravel: oklch(0.285 0.014 235);
+  --gravel-strip: oklch(0.21 0.014 235);
+  --bed: oklch(0.215 0.018 228);
+  --wall-e: oklch(0.58 0.012 240);
+  --wall-t: oklch(0.46 0.012 240);
+  --wall-s: oklch(0.3 0.01 242);
+  --stone-e: oklch(0.77 0.012 240);
+  --stone-t: oklch(0.6 0.012 240);
+  --stone-s: oklch(0.34 0.01 242);
+  --brk: oklch(0.8 0.024 78);
+  --plinth-e: oklch(0.64 0.012 240);
+  --plinth-t: oklch(0.5 0.012 240);
+  --plinth-s: oklch(0.29 0.01 242);
+  --plinth-nr-e: oklch(0.45 0.024 252);
+  --plinth-nr-t: oklch(0.36 0.022 252);
+  --plinth-nr-s: oklch(0.22 0.018 252);
+  --hatch-strong: oklch(0.92 0.012 235 / 0.72);
+  --lh-e: oklch(0.68 0.012 242);
+  --lh-m: oklch(0.54 0.012 242);
+  --lh-s: oklch(0.35 0.01 244);
+  --lh-t: oklch(0.58 0.012 242);
+  --lh-win: oklch(0.82 0.14 75);
+  --lh-glass: oklch(0.94 0.07 88);
+  --rock-e: oklch(0.52 0.014 235);
+  --rock-m: oklch(0.4 0.012 238);
+  --rock-s: oklch(0.28 0.01 242);
+  --rock-t: oklch(0.47 0.014 236);
+  --rock-strata: oklch(0.84 0.016 232 / 0.26);
+  --edge: oklch(0.88 0.012 235 / 0.34);
+  --edge-soft: oklch(0.88 0.012 235 / 0.19);
+  --hatch: oklch(0.92 0.01 235 / 0.46);
+  --shadow: oklch(0.04 0.01 245 / 0.48);
+  --shadow-dim: oklch(0.04 0.01 245 / 0.14);
+  --ring: oklch(0.94 0.02 225 / 0.86);
+  --ring-fill: oklch(0.88 0.03 225 / 0.14);
+  --contact: oklch(0.04 0.01 245 / 0.72);
+  --grime: oklch(0.14 0.012 240);
+  --mound: oklch(0.265 0.022 212);
+  --soil: oklch(0.38 0.042 56);
+  --bronze: oklch(0.64 0.062 56);
+  --seal: oklch(0.58 0.056 60);
+  --lichen: oklch(0.62 0.055 128 / 0.52);
+  --moss: oklch(0.46 0.065 145);
+  --mouth: oklch(0.1 0.006 245);
+  --tree-d: oklch(0.35 0.042 162);
+  --tree-l: oklch(0.48 0.048 158);
+  --tree-h: oklch(0.86 0.02 220 / 0.24);
+  --tree-bed: oklch(0.27 0.018 232);
+  --trunk: oklch(0.32 0.022 65);
+  --lamp-post: oklch(0.36 0.012 240);
+  --lamp-glass: oklch(0.88 0.13 78);
+  --pool-0: oklch(0.82 0.14 74 / 0.34);
+  --door: oklch(0.14 0.008 245);
+  --inscr: oklch(0.86 0.014 232 / 0.85);
   --tint: 16%;
-  --bed-tint: 16%;
-  --curb-tint: 55%;
-  --beam-0: color-mix(in oklab, var(--frost-blue) 55%, transparent);
-  --beam-1: color-mix(in oklab, var(--frost-blue) 20%, transparent);
-  --beam-2: color-mix(in oklab, var(--frost-blue) 4%, transparent);
-  --beam-end: color-mix(in oklab, var(--frost-blue) 22%, transparent);
+  --bed-tint: 14%;
+  --curb-tint: 54%;
+  --med-ink: oklch(0.19 0.016 242);
+  --beam-0: color-mix(in oklab, var(--frost-blue) 56%, transparent);
+  --beam-1: color-mix(in oklab, var(--frost-blue) 28%, transparent);
+  --beam-2: color-mix(in oklab, var(--frost-blue) 14%, transparent);
+  --beam-end: color-mix(in oklab, var(--frost-blue) 26%, transparent);
+  --beam-rest-end: color-mix(in oklab, var(--frost-blue) 22%, transparent);
   --beam-blend: screen;
-  --logo-rest: 0.92;
+  --logo-rest: 0.94;
 }
 
 
 /* ------------------------------------------------------------------ hero layout */
 .hero {
+  --stage-w: 100%;
   position: relative;
   isolation: isolate;
+  scroll-margin-top: 64px;
 }
-/* one sky gradient behind header and plan, full-bleed through the page padding */
+/* Continuous floor-clamped height-fit: keep plain stones >= 15 px (`--floor-w`) on every viewport whose column is
+   wide enough; only shrink taller desktop screens (`heightFit > floorWidth`) so the full plate fits screen 1. */
+@media (min-width: 761px) {
+  .hero {
+    --stage-w: min(100%, max(var(--floor-w, 1286px), calc((100dvh - var(--fit-chrome, 205px)) * var(--plot-ar, 1.8217))));
+  }
+}
+/* one sky gradient behind header and plan, full-bleed through the page padding, fading into the page background */
 .hero::before {
   content: "";
   position: absolute;
@@ -135,22 +232,38 @@
   right: calc(-1 * var(--page-pad));
   top: -28px;
   bottom: 0;
-  background: linear-gradient(180deg, var(--sky-0) 0%, var(--sky-1) 58%, var(--sky-0) 100%);
+  background: linear-gradient(180deg, transparent 0%, var(--sky-1) 48%, transparent 100%);
 }
-/* past the 120 rem main column (> 1920 px) the page margins show beside the sky: fade its sides through the page
-   padding instead of ending on a hard edge */
+/* past the 120 rem main column (> 1920 px) the page margins show beside the sky: fade its sides generously */
 @media (min-width: 1921px) {
   .hero::before {
-    mask-image: linear-gradient(90deg, transparent, #000 var(--page-pad), #000 calc(100% - var(--page-pad)), transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 clamp(48px, 8vw, 140px), #000 calc(100% - clamp(48px, 8vw, 140px)), transparent);
   }
+}
+/* Centred stage column: height-fitted via `--stage-w` on desktop while `.head` remains full page-column width above it. */
+.stageWrap {
+  position: relative;
+  width: var(--stage-w, 100%);
+  margin-inline: auto;
+  container-type: inline-size;
 }
 .head {
   position: relative;
   z-index: 3;
+  width: 100%;
+  min-height: 124px;
+  pointer-events: none;
+  container-type: inline-size;
+}
+.head :is(a, button, h1, p) {
+  pointer-events: auto;
 }
 .routeHead {
   position: relative;
   max-width: min(360px, 36%);
+}
+.routeHead :is(h1, p) {
+  width: fit-content;
 }
 .title {
   margin: 0;
@@ -168,6 +281,7 @@
   font-size: 0.9375rem;
   line-height: 1.38;
   color: var(--muted-foreground);
+  text-wrap: balance;
 }
 .whisper {
   margin: 4px 0 0;
@@ -209,35 +323,56 @@
   opacity: 1;
 }
 
-/* One Beam figure: DEFAULT_BEAM_VALUE_CLASS recipe; right edge 22 px left of the lantern, the beam rests on it.
-   Phones restyle the same block into one row under the route head (the `113` exists once on the page). */
+/* One Beam figure: two-column lockup on desktop so the three caption lines sit cleanly left of `134` and the
+   frost beam travels through open sky straight onto the numerals without crossing any text. Phones restyle the
+   same block into one row under the route head (the `134` exists once on the page). */
 .figure {
   position: absolute;
   top: 0;
-  right: calc(var(--lantern-right) + 22px);
+  right: calc((100% - var(--stage-w, 100%)) / 2 + var(--stage-w, 100%) * var(--lantern-right-ratio, 0.0384) + 22px);
   z-index: 3;
+  display: grid;
+  grid-template-columns: auto auto;
+  column-gap: 16px;
+  align-items: end;
   text-align: right;
   pointer-events: none;
 }
 .beamLabel {
+  grid-column: 2;
+  grid-row: 1;
   margin: 0 0 2px;
   font-size: 0.875rem;
   line-height: 1.38;
   font-weight: 500;
   color: var(--muted-foreground);
+  white-space: nowrap;
 }
 .figureValue {
+  grid-column: 2;
+  grid-row: 2;
   margin: 0;
 }
+.figureDigits {
+  display: inline-block;
+}
+.figure > div {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  align-self: end;
+  padding-right: 14px;
+  border-right: 1px solid var(--border);
+}
 .beamSub {
-  margin: 4px 0 0;
+  margin: 0;
   font-size: 0.75rem;
   line-height: 1.3;
   color: var(--muted-foreground);
   white-space: nowrap;
+  text-wrap: balance;
 }
 .beamPlaque {
-  margin: 5px 0 0;
+  margin: 3px 0 0;
   font-weight: 600;
   font-size: 10.5px;
   line-height: 1.25;
@@ -257,18 +392,114 @@
   color: var(--foreground);
   font-weight: 600;
 }
+.beamRestDate {
+  white-space: nowrap;
+}
 .beamRest .mono {
   font-size: 11.5px;
+  white-space: nowrap;
+}
+@container (max-width: 979px) {
+  .title {
+    font-size: 1.85rem;
+  }
+  .lead {
+    font-size: 0.875rem;
+  }
+  .figure {
+    column-gap: 10px;
+  }
+  .figure > div {
+    padding-right: 10px;
+  }
+  .beamLabel {
+    font-size: 0.75rem;
+  }
+  .beamSub {
+    font-size: 0.6875rem;
+    white-space: normal;
+    max-width: 240px;
+  }
+  .beamPlaque {
+    font-size: 9.5px;
+    letter-spacing: 0.09em;
+  }
+  .beamRest {
+    font-size: 10.5px;
+  }
+  .beamRest .mono {
+    font-size: 10px;
+  }
+}
+@container (max-width: 859px) {
+  .title {
+    font-size: 1.55rem;
+  }
+  .lead {
+    font-size: 0.8125rem;
+  }
+  .figure {
+    column-gap: 8px;
+  }
+  .figure > div {
+    padding-right: 8px;
+  }
+  .beamSub {
+    max-width: 196px;
+    line-height: 1.25;
+  }
+  .beamPlaque {
+    font-size: 9px;
+    letter-spacing: 0.07em;
+  }
+  .beamRest {
+    font-size: 10px;
+  }
+  .beamRest .mono {
+    font-size: 9.5px;
+  }
+}
+@media (min-width: 1920px) {
+  .head {
+    min-height: 136px;
+  }
+  .routeHead {
+    max-width: min(440px, 36%);
+  }
+  .title {
+    font-size: 2.5rem;
+  }
+  .lead {
+    font-size: 1rem;
+  }
+  .links {
+    font-size: 0.875rem;
+  }
+  .beamLabel {
+    font-size: 0.9375rem;
+  }
+  .beamSub,
+  .beamRest {
+    font-size: 0.8125rem;
+  }
+}
+@media (min-width: 2400px) {
+  .title {
+    font-size: 2.75rem;
+  }
+  .lead {
+    font-size: 1.0625rem;
+  }
 }
 
 /* the plan pulls up under the header only as far as the drawn skyline, the signpost plates and the monuments under
-   the figure allow: `--sky*` (per viewport band) and `--ov-terms` are solved by the scene's layout; % = frame width */
+   the figure allow: `--sky*` (per frame-width band) and `--ov-terms` are solved by the scene's layout; % = stageWrap width */
 .stage {
   --sky: var(--sky0);
   position: relative;
   margin-top: calc(0px - clamp(0px, min(var(--sky), var(--ov-terms)), var(--head-keep)));
 }
-/* a size container: signpost plates clamp themselves inside the frame with `cqw` */
+/* a size container: signpost plates, stamps, chips and beam bands follow the rendered frame width */
 .frame {
   position: relative;
   width: 100%;
@@ -278,7 +509,7 @@
   display: block;
   width: 100%;
   height: 100%;
-  overflow: hidden;
+  overflow: visible;
 }
 .overlay {
   position: absolute;
@@ -327,24 +558,40 @@
   letter-spacing: 0;
 }
 /* narrow frames bring the posts within one plate height of each other: flatter plates stay apart */
-@media (max-width: 1279px) {
+@container (max-width: 1199px) {
   .signpost {
     padding: 2px 10px 3px;
+    font-size: 11.5px;
   }
   .signpost .n {
-    font-size: 14px;
+    font-size: 13.5px;
   }
 }
-/* 761–1023 px: the Algorithmic and Regulatory posts stand ~18 px apart, so plates drop to a 17 px line (10.5 px
-   label, 12.5 px count) */
-@media (max-width: 1023px) {
+@container (max-width: 979px) {
   .signpost {
     gap: 5px;
     padding: 1px 7px 2px;
     font-size: 10.5px;
+    line-height: 1.1;
   }
   .signpost .n {
-    font-size: 12.5px;
+    font-size: 12px;
+  }
+}
+/* 712–859 px frame (761–899 px desktop or 1280×720 height-fit): Algorithmic and Regulatory stand ~20.5 px apart */
+@container (max-width: 859px) {
+  .signpost {
+    gap: 4px;
+    padding: 1px 6px;
+    font-size: 9.5px;
+    line-height: 1.05;
+  }
+  .signpost .n {
+    font-size: 11px;
+  }
+  .signpost .sw {
+    width: 6px;
+    height: 6px;
   }
 }
 .sw {
@@ -358,16 +605,21 @@
 /* year stamps: on the page background under the headland's cut face */
 .yearStamp {
   position: absolute;
-  /* set along the slab's front edge (--stamp-angle), 14px out along its normal so it never touches the face */
-  transform: translate(-50%, -50%) rotate(var(--stamp-angle, 0deg)) translateY(14px);
+  --sx: var(--sx0, 0px);
+  --sy: 7px;
+  /* pivot on top-centre so 1-, 2- and 3-line stacked stamps all sit parallel to and clear of the slab cut line */
+  transform-origin: 50% 0%;
+  transform: translate(-50%, 0) rotate(var(--stamp-angle, 0deg)) translate(var(--sx), var(--sy));
   font-size: 11.5px;
   line-height: 1.2;
   color: var(--muted-foreground);
+  text-align: center;
   white-space: nowrap;
   pointer-events: none;
 }
-/* a year stamp lights its year across the plan on hover (like its cypress) */
-.yearStamp[data-plot-year] {
+/* a year stamp lights its year (or merged span) across the plan on hover (like its cypress) */
+.yearStamp[data-plot-year],
+.yearStamp[data-plot-years] {
   pointer-events: auto;
 }
 .yearStamp[data-lit="true"] {
@@ -376,14 +628,62 @@
 .yearStamp small {
   font-size: 10.5px;
 }
-/* the empty strip's stamp hangs left of its anchor, clear of the thin oldest block's stamp beside it; below 1024 px
-   the two anchors stand ~20 px apart, so it hangs 12 px off (clear with a classic scrollbar at 761 px too) */
-.yearStamp[data-empty="true"] {
-  transform: translate(calc(-100% - 4px), -50%) rotate(var(--stamp-angle, 0deg)) translateY(14px);
+.stampMain {
+  display: inline-block;
 }
-@media (max-width: 1023px) {
-  .yearStamp[data-empty="true"] {
-    transform: translate(calc(-100% - 12px), -50%) rotate(var(--stamp-angle, 0deg)) translateY(14px);
+/* a merged early-years block stacks its empty-years disclosure underneath the span count with a hairline rail tick */
+.yearStamp[data-merged="true"]::before,
+.yearStamp[data-empty="true"]::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -7px;
+  width: 1px;
+  height: 6px;
+  background: var(--edge);
+  pointer-events: none;
+}
+.yearStamp[data-merged="true"] .stampSub {
+  display: block;
+  margin-top: 1px;
+  font-size: 9.5px;
+  line-height: 1.15;
+}
+/* an empty strip's stamp hangs left of its anchor along the rotated rail (translate AFTER rotate so it never drops off) */
+.yearStamp[data-empty="true"] {
+  transform: translate(-50%, 0) rotate(var(--stamp-angle, 0deg)) translate(calc(-50% - 4px + var(--sx)), var(--sy));
+}
+.yearStamp[data-empty="true"]::before {
+  left: calc(100% + 4px);
+}
+@container (max-width: 1199px) {
+  .yearStamp {
+    font-size: 10.5px;
+  }
+}
+/* below 1100 px frame (~1140 px viewport): stack year over count so narrow blocks (2025/2024) never collide */
+@container (max-width: 1099px) {
+  .yearStamp {
+    --sy: 6px;
+    font-size: 10px;
+    line-height: 1.1;
+  }
+  .stampSep {
+    display: none;
+  }
+  .stampCount {
+    display: block;
+    font-size: 9px;
+    line-height: 1.05;
+    opacity: 0.82;
+  }
+  .yearStamp[data-merged="true"] .stampSub {
+    display: none;
+  }
+}
+@container (max-width: 859px) {
+  .yearStamp {
+    --sy: 5px;
   }
 }
 /* figures inside sans text (stamps, chips, at-rest line, margin labels) */
@@ -392,11 +692,12 @@
   font-variant-numeric: tabular-nums slashed-zero;
 }
 
-/* colossus chips: signpost style + hairline leader; offsets from the monument top per viewport band (no JS) */
+/* colossus chips: signpost style + hairline leader; offsets and edge-anchor per frame-width band (no JS) */
 .chip,
 .leader {
   --dx: var(--dx0);
   --dy: var(--dy0);
+  --tx: var(--tx0, 0%);
   --lx: var(--lx0);
   --ly: var(--ly0);
   --ll: var(--ll0);
@@ -406,6 +707,7 @@
   position: absolute;
   left: calc(var(--ax) + var(--dx));
   top: calc(var(--ay) + var(--dy));
+  transform: translateX(var(--tx));
   z-index: 3;
   display: inline-flex;
   align-items: center;
@@ -421,20 +723,34 @@
   white-space: nowrap;
   pointer-events: none;
 }
-/* below 1280 px the colossi stand close together: a flatter 11 px chip (the scene's layout assumes the same) */
-@media (max-width: 1279px) {
+.chipMicro {
+  display: none;
+}
+/* 980–1199 px frame: flatter 11 px full chip */
+@container (max-width: 1199px) {
   .chip {
     gap: 5px;
     padding: 2px 10px 3px;
     font-size: 11px;
   }
 }
-/* below 1024 px no placement keeps both colossus chips apart (the layout's bands 0–1 report conflicts): the chips
-   go; the names stay in each grave's accessible name, its hover tag and its record card */
-@media (max-width: 1023px) {
-  .chip,
-  .leader {
+/* below 980 px frame (761–1023 px desktop or 1280×720 height-fit): ticker micro-chip (`BUSD · $23.5B`) */
+@container (max-width: 979px) {
+  .chip {
+    gap: 4px;
+    padding: 1px 7px 2px;
+    font-size: 10.5px;
+    line-height: 1.2;
+  }
+  .chip .sw {
+    width: 6px;
+    height: 6px;
+  }
+  .chipFull {
     display: none;
+  }
+  .chipMicro {
+    display: inline;
   }
 }
 .leader {
@@ -450,50 +766,58 @@
   pointer-events: none;
 }
 
-/* hover tag slot for the island */
+/* hover/focus compact tag: name in sans, peak & date in mono */
 .tag {
   position: absolute;
   z-index: 5;
-  padding: 3px 7px;
+  padding: 4px 8px;
   border-radius: 4px;
   background: var(--card);
-  border: 1px solid var(--border);
-  font-family: var(--plot-mono);
-  font-variant-numeric: tabular-nums slashed-zero;
-  font-size: 11px;
+  border: 1px solid var(--border-strong);
+  font-size: 11.5px;
   line-height: 1.3;
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;
   color: var(--foreground);
+  box-shadow: 0 4px 12px -6px oklch(0 0 0 / 0.2);
   transition: opacity var(--scene-dur-fast);
+}
+.tagName {
+  font-weight: 600;
+}
+.tag .mono {
+  font-size: 11px;
+  color: var(--muted-foreground);
 }
 .tag[data-on="true"] {
   opacity: 1;
 }
-/* no candidate spot clear of the labels, the figure, the toolbar or the card: the tag stays out */
+/* no candidate spot clear of the labels, colossi, figure, toolbar or card: the tag stays out */
 .tag[data-blocked] {
   opacity: 0;
 }
-/* a hovered or focused colossus: its chip (shown from 1024 px, not while zoomed or under the card) lifts and already
-   says what the tag would, so the tag stays out */
+/* a hovered or focused colossus: its full chip (from 980 px frame width) already says what the tag would */
 .chip[data-hot="true"] {
   border-color: color-mix(in oklab, var(--foreground) 45%, transparent);
 }
-@media (min-width: 1024px) {
+@container (min-width: 980px) {
   .hero:not([data-zooming="true"]) .overlay:has(> .chip[data-hot="true"]:not([data-covered])) > .tag {
     opacity: 0;
   }
 }
-/* a label the docked card covers hides whole (with its leader) instead of showing cut in half */
-.overlay > [data-covered] {
+/* a label the docked card covers hides whole (with its leader) instead of showing cut in half; a pinned colossus
+   hides its own permanent chip/leader while its record card is open (C-15) */
+.overlay > [data-covered],
+.overlay > :is(.chip, .leader)[data-pinned="true"] {
   visibility: hidden;
 }
 
-/* zoom (fix E): while a section is zoomed the header block, figure, signposts, stamps and chips hide (visibility, so
-   they also leave the tab order) and the toolbar row takes the frame top; the beam fades out */
+/* zoom: while a section is zoomed the header block, figure, signposts, bare posts, stamps and chips hide
+   (visibility removes overlays from the tab order); the toolbar takes the frame top and the beam fades out */
 .hero[data-zooming="true"] .head,
-.hero[data-zooming="true"] :is(.signpost, .yearStamp, .chip, .leader) {
+.hero[data-zooming="true"] :is(.signpost, .yearStamp, .chip, .leader),
+.frame[data-zoomed="true"] [data-plot-object^="post:"] {
   visibility: hidden;
 }
 .frame[data-zoomed="true"] .beamG {
@@ -548,6 +872,69 @@
   font-family: var(--plot-mono);
   font-variant-numeric: tabular-nums slashed-zero;
 }
+.zoomLensClear {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border: 1px solid color-mix(in oklab, var(--foreground) 32%, var(--border-strong));
+  border-radius: 999px;
+  background: var(--card);
+  font-weight: 500;
+  font-size: 12px;
+  line-height: 1.2;
+  color: var(--foreground);
+  cursor: pointer;
+}
+.zoomLensClear .n {
+  font-family: var(--plot-mono);
+  font-variant-numeric: tabular-nums slashed-zero;
+  color: var(--muted-foreground);
+}
+.zoomLensClear:hover {
+  border-color: color-mix(in oklab, var(--foreground) 55%, transparent);
+}
+.zoomLensClear:focus-visible,
+.zoomStep:focus-visible,
+.lensBarClear:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--foreground) 60%, transparent);
+  outline-offset: 2px;
+}
+.zoomNav {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.zoomStep {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--card);
+  font-weight: 500;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--foreground);
+  cursor: pointer;
+}
+.zoomStep:hover:not(:disabled) {
+  border-color: color-mix(in oklab, var(--foreground) 45%, transparent);
+}
+.zoomStep:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+@media (pointer: coarse) {
+  .zoomOut,
+  .zoomStep,
+  .zoomLensClear {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
 .part {
   font-weight: 400;
   color: var(--muted-foreground);
@@ -568,9 +955,9 @@
 .inspector[data-preview="true"] {
   pointer-events: none;
 }
-/* landscape phones (desktop layer, < 1024 px wide, ≤ 500 px tall): the in-flow card fits the band between the 60 px
-   sticky header and the bottom nav and scrolls as a whole (its obituary no longer scrolls on its own inside it) */
-@media (max-width: 1023px) and (max-height: 500px) {
+/* landscape phones (desktop layer, ≤ 1024 px wide, ≤ 500 px tall): the in-flow card fits the band between the 60 px
+   sticky header and the bottom nav and scrolls as a whole */
+@media (max-width: 1024px) and (max-height: 500px) {
   .inspector {
     max-height: calc(100dvh - 68px - var(--mobile-bottom-nav-safe-height, 4rem) - 8px);
     overflow-y: auto;
@@ -579,20 +966,37 @@
     scroll-margin-top: 68px;
     scroll-margin-bottom: calc(var(--mobile-bottom-nav-safe-height, 4rem) + 8px);
   }
-  .inspector .cardObituaryFull {
-    max-height: none;
-    overflow: visible;
-  }
 }
+/* Docked, the card never scrolls as a whole: it is a column capped by `placeInspectorCard`'s max-height in which only
+   the obituary gives way (down to ~3 lines) and scrolls; the outer scroller is a last resort for a band shorter than
+   the card's fixed parts, and nothing scrolls sideways. */
 @media (min-width: 1280px) {
   .inspector {
     position: absolute;
+    display: flex;
+    flex-direction: column;
     width: 344px;
     margin: 0;
     border-radius: 10px;
-    overflow-y: auto;
+    overflow: hidden auto;
     overscroll-behavior: contain;
+    scrollbar-width: thin;
     box-shadow: 0 8px 24px -12px oklch(0 0 0 / 0.25);
+  }
+  .inspector > .card {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .inspector > .card > * {
+    flex-shrink: 0;
+  }
+  .inspector .cardChip {
+    align-self: flex-start;
+  }
+  .inspector .cardObituaryFull {
+    flex: 0 1 auto;
+    min-height: calc(3lh + 4px);
   }
 }
 .cardLeader {
@@ -694,11 +1098,35 @@
   margin: 9px 0 0;
   color: color-mix(in oklab, var(--foreground) 86%, transparent);
 }
+/* the pinned obituary runs in full wherever the card has room; docked and short of room, it alone scrolls */
 .cardObituaryFull {
-  max-height: min(30vh, 220px);
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
   padding-right: 6px;
+}
+/* Cut short, its last line fades out until the reader scrolls to the end. The fade follows the obituary's own scroll
+   (an inactive timeline, when nothing overflows, leaves it at 0 px); without scroll timelines it is simply absent. */
+@property --plot-obit-fade {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@keyframes plotObitFade {
+  from {
+    --plot-obit-fade: 28px;
+  }
+  to {
+    --plot-obit-fade: 0px;
+  }
+}
+@supports (animation-timeline: scroll()) {
+  .cardObituaryFull {
+    mask-image: linear-gradient(to bottom, #000 calc(100% - var(--plot-obit-fade)), transparent);
+    animation: plotObitFade linear both;
+    animation-timeline: scroll(self);
+  }
 }
 .cardGrid {
   display: grid;
@@ -720,6 +1148,11 @@
   font-size: 11.5px;
   white-space: nowrap;
 }
+/* a long peg or record name ("Vietnamese Dong", "Tracked archive") wraps at its space instead of pushing the grid wider
+   than the card; dates and amounts never break */
+.cardGrid .cardGridWords {
+  white-space: normal;
+}
 .cardLinks {
   display: flex;
   flex-wrap: wrap;
@@ -737,6 +1170,24 @@
 }
 .cardLinks a:hover {
   text-decoration-color: currentColor;
+}
+/* External-link icon matching the register & dataset links without emoji `↗`. */
+.cardExternalLink::after {
+  content: "";
+  display: inline-block;
+  width: 0.72rem;
+  height: 0.72rem;
+  margin-left: 0.25rem;
+  vertical-align: -0.1em;
+  background-color: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+}
+@media (forced-colors: active) {
+  .cardExternalLink::after {
+    forced-color-adjust: none;
+    background-color: CanvasText;
+  }
 }
 .cardRegister {
   font-weight: 600;
@@ -775,14 +1226,62 @@
 }
 
 /* ------------------------------------------------------------------ scene faces (kit faces: scene-tokens.module.css) */
+/* Never re-declare kit face classes (.e, .es, .shadow, .sea, .lh-*) here — `plotClass` resolves `styles[t] ?? kit[t]`,
+   so overriding the kit's CSS custom properties instead keeps every kit face rule intact without collision. */
 .map {
   composes: scene from "../scene/scene-tokens.module.css";
+  --sea: url(#cem-g-sea);
 }
-.map .bed {
+.map .rock-e {
+  fill: var(--rock-e);
+}
+.map .rock-m {
+  fill: var(--rock-m);
+}
+.map .rock-s {
+  fill: var(--rock-s);
+}
+.map .rock-t {
+  fill: var(--rock-t);
+}
+.map .rock-strata {
+  stroke: var(--rock-strata);
+  stroke-width: 0.55px;
+  stroke-dasharray: 3 2.5;
+  vector-effect: non-scaling-stroke;
+  fill: none;
+}
+.map .lawn-frame {
+  fill: none;
+  stroke: var(--edge-soft);
+  stroke-width: 0.5px;
+  stroke-dasharray: 2.5 3;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.52;
+}
+.map .lawnNote {
+  fill: var(--inscr);
+  font-family: var(--plot-mono);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  opacity: 0.36;
+  pointer-events: none;
+  user-select: none;
+}
+:global(.dark) .map :is(.st-e, .pl-e, .pl-nr-e, .w-e, .rock-e) {
+  --edge: oklch(0.94 0.012 232 / 0.46);
+}
+.map .bed,
+.map .pad {
   fill: color-mix(in oklab, var(--bed), var(--cause) var(--bed-tint));
 }
-.map .curb {
+.map .curb,
+.map .pad-curb {
   fill: color-mix(in oklab, var(--wall-s), var(--cause) var(--curb-tint));
+}
+.map .contact {
+  fill: var(--contact);
+  pointer-events: none;
 }
 .map .w-e {
   fill: var(--wall-e);
@@ -920,12 +1419,27 @@
 .grave .pl-s {
   fill: color-mix(in oklab, var(--plinth-s), var(--grime) var(--wg));
 }
-.grave .pl-open {
-  fill: color-mix(in oklab, var(--lawn) 70%, transparent);
+.grave .pl-nr-e {
+  fill: color-mix(in oklab, var(--plinth-nr-e), var(--grime) var(--wg));
+}
+.grave .pl-nr-t {
+  fill: color-mix(in oklab, var(--plinth-nr-t), var(--grime) var(--wg));
+}
+.grave .pl-nr-s {
+  fill: color-mix(in oklab, var(--plinth-nr-s), var(--grime) var(--wg));
 }
 .grave .hatch {
   fill: url(#cem-hatch);
   pointer-events: none;
+}
+.grave .hatch-plinth {
+  fill: url(#cem-hatch-coarse);
+  pointer-events: none;
+}
+.hatchPlinthLine {
+  stroke: var(--hatch-strong);
+  stroke-width: 0.9px;
+  vector-effect: non-scaling-stroke;
 }
 .grave .crack {
   stroke: var(--mouth);
@@ -994,28 +1508,51 @@
   font-family: var(--plot-mono);
   font-weight: 700;
   text-anchor: middle;
-  fill: var(--muted-foreground);
+  fill: var(--med-ink);
 }
+.objectsLayer,
+.focusLayer {
+  pointer-events: none;
+}
+.graveHit {
+  cursor: pointer;
+  outline: none;
+}
+.map:is([data-dim="lane"], [data-dim="lens"]) .graveHit:not([data-lit="true"]) {
+  cursor: default;
+}
+.graveHit .hit,
 .grave .hit {
   fill: transparent;
 }
-/* hot (island hover/focus) and pinned (`aria-pressed`): full cause ring, colour logo cell, stone lifts 1.5 px */
-.grave:is([data-hot="true"], :focus-visible, [aria-pressed="true"]) .med {
+/* No-JS keyboard focus fallback on the hit silhouette (JS draws the top focus ring + spotlight copy). */
+.graveHit:focus-visible .hit {
+  stroke: var(--ring);
+  stroke-width: 1.4px;
+  stroke-dasharray: 3 2;
+  vector-effect: non-scaling-stroke;
+}
+/* hot (island hover/focus) and pinned: full cause ring, colour logo cell, stone lifts 1.5 px */
+.grave:is([data-hot="true"], [data-pinned="true"], :focus-visible, [aria-pressed="true"]) .med {
   stroke: var(--cause);
 }
-.grave:is([data-hot="true"], :focus-visible, [aria-pressed="true"]) .lg {
+.grave:is([data-hot="true"], [data-pinned="true"], :focus-visible, [aria-pressed="true"]) .lg {
   opacity: 1;
 }
-.grave:is([data-hot="true"], :focus-visible, [aria-pressed="true"]) .lgImg {
+.grave:is([data-hot="true"], [data-pinned="true"], :focus-visible, [aria-pressed="true"]) .lgImg {
   transform: translateX(var(--atlas-shift));
 }
-.grave:is([data-hot="true"], [aria-pressed="true"]) .stone {
+.grave:is([data-hot="true"], [data-pinned="true"], [aria-pressed="true"]) .stone {
   translate: 0 -1.5px;
+}
+.focusLayer .grave[data-focus="true"] :is(.st-e, .st-t, .st-s, .col, .brk) {
+  stroke: var(--ring);
+  stroke-width: 0.95px;
 }
 .map .ring {
   fill: var(--ring-fill);
   stroke: var(--ring);
-  stroke-width: 1px;
+  stroke-width: 1.25px;
   vector-effect: non-scaling-stroke;
   opacity: 0;
   pointer-events: none;
@@ -1024,8 +1561,8 @@
   opacity: 1;
 }
 .map .ring[data-focus="true"] {
-  stroke-dasharray: 3 2;
-  stroke-width: 1.4px;
+  stroke-dasharray: 3.5 2;
+  stroke-width: 1.6px;
 }
 /* session flowers at the grave base (hidden easter egg); the newest blooms once, not under reduced motion */
 .flowerStem {
@@ -1061,12 +1598,155 @@
   }
 }
 
-/* section focus / zoom / year highlight: the island sets `data-dim` on the svg and `data-lit` on members */
-.map[data-dim] :is(.grave, .gm):not([data-lit="true"]) {
-  opacity: 0.22;
+/* E3 + C6 solid dimming: mix non-member faces 65% toward --lawn at FULL OPACITY (no transparent "x-ray" monuments) */
+.map[data-dim] .grave:not([data-lit="true"]) {
+  --edge: var(--dim-edge);
+  --edge-soft: var(--dim-edge-soft);
+}
+.map[data-dim] .grave:not([data-lit="true"]) :is(.st-e, .pl-e, .pl-nr-e) {
+  --edge: var(--dim-edge);
+}
+.map[data-dim] .grave:not([data-lit="true"]) .st-e {
+  fill: color-mix(in oklab, var(--dim-stone-e), var(--cause) 4%);
+}
+.map[data-dim] .grave:not([data-lit="true"]) .st-t {
+  fill: color-mix(in oklab, var(--dim-stone-t), var(--cause) 4%);
+}
+.map[data-dim] .grave:not([data-lit="true"]) .st-s {
+  fill: color-mix(in oklab, var(--dim-stone-s), var(--cause) 4%);
+}
+.map[data-dim] .grave:not([data-lit="true"]) .brk {
+  fill: var(--dim-brk);
+}
+.map[data-dim] .grave:not([data-lit="true"]) .col {
+  fill: url(#cem-g-col-dim);
+}
+.map[data-dim] .grave:not([data-lit="true"]) .pl-e {
+  fill: var(--dim-plinth-e);
+}
+.map[data-dim] .grave:not([data-lit="true"]) .pl-t {
+  fill: var(--dim-plinth-t);
+}
+.map[data-dim] .grave:not([data-lit="true"]) .pl-s {
+  fill: var(--dim-plinth-s);
+}
+.map[data-dim] .grave:not([data-lit="true"]) .pl-nr-e {
+  fill: var(--dim-plinth-nr-e);
+}
+.map[data-dim] .grave:not([data-lit="true"]) .pl-nr-t {
+  fill: var(--dim-plinth-nr-t);
+}
+.map[data-dim] .grave:not([data-lit="true"]) .pl-nr-s {
+  fill: var(--dim-plinth-nr-s);
+}
+.map[data-dim] .grave:not([data-lit="true"]) :is(.flute, .crack, .bars, .relief) {
+  stroke: var(--dim-edge-soft);
+}
+.map[data-dim] .grave:not([data-lit="true"]) .mouth {
+  fill: color-mix(in oklab, var(--mouth) 32%, var(--lawn));
+}
+.map[data-dim] .grave:not([data-lit="true"]) .door {
+  fill: color-mix(in oklab, var(--door) 32%, var(--lawn));
+}
+.map[data-dim] .grave:not([data-lit="true"]) :is(.seal, .seal-disc) {
+  fill: color-mix(in oklab, var(--seal) 32%, var(--lawn));
+  stroke: var(--dim-edge);
+}
+.map[data-dim] .grave:not([data-lit="true"]) .moss {
+  fill: color-mix(in oklab, var(--moss) 30%, var(--lawn));
+}
+.map[data-dim] .grave:not([data-lit="true"]) .lichen {
+  fill: color-mix(in oklab, var(--lichen) 30%, var(--lawn));
+}
+.map[data-dim] .grave:not([data-lit="true"]) :is(.hatch, .hatch-plinth) {
+  opacity: 0.3;
+}
+.map[data-dim] .grave:not([data-lit="true"]) .med {
+  fill: var(--dim-stone-e);
+  stroke: color-mix(in oklab, var(--cause) 20%, var(--dim-stone-s));
+}
+.map[data-dim] .grave:not([data-lit="true"]) .lg {
+  opacity: 0.24;
+}
+.map[data-dim] .grave:not([data-lit="true"]) .lgInit {
+  fill: color-mix(in oklab, var(--med-ink) 38%, var(--dim-stone-e));
+}
+.map[data-dim] .grave:not([data-lit="true"]) .contact {
+  opacity: 0.28;
+}
+.map[data-dim] .gm:not([data-lit="true"]) {
+  --edge: var(--dim-edge);
+  --edge-soft: var(--dim-edge-soft);
+  --shadow: var(--shadow-dim);
+}
+.map[data-dim] .gm:not([data-lit="true"]) .pad {
+  fill: color-mix(in oklab, var(--bed) 70%, var(--lawn));
+}
+.map[data-dim] .gm:not([data-lit="true"]) .pad-curb {
+  fill: var(--dim-wall-s);
+}
+.map[data-dim] .gm:not([data-lit="true"]) .mound {
+  fill: color-mix(in oklab, var(--mound) 35%, var(--lawn));
+}
+.map[data-dim] .gm:not([data-lit="true"]) .soil {
+  fill: color-mix(in oklab, var(--soil) 32%, var(--lawn));
+}
+.map[data-dim] .gm:not([data-lit="true"]) .bronze {
+  fill: color-mix(in oklab, var(--bronze) 32%, var(--lawn));
+}
+.map[data-dim] .gm:not([data-lit="true"]) .fs-e {
+  fill: var(--dim-stone-e);
+}
+.map[data-dim] .gm:not([data-lit="true"]) .fs-t {
+  fill: var(--dim-stone-t);
+}
+.map[data-dim] .gm:not([data-lit="true"]) .fs-s {
+  fill: var(--dim-stone-s);
+}
+.map[data-dim] .gm:not([data-lit="true"]) .glyph {
+  opacity: 0.28;
 }
 .map[data-dim="lane"] .bedG:not([data-lit="true"]) {
-  opacity: 0.45;
+  --edge: var(--dim-edge);
+}
+.map[data-dim="lane"] .bedG:not([data-lit="true"]) .bed {
+  fill: color-mix(in oklab, var(--bed) 45%, var(--lawn));
+}
+.map[data-dim="lane"] .bedG:not([data-lit="true"]) .curb {
+  fill: var(--dim-wall-s);
+}
+/* In section zoom (C5), solid-dim the lighthouse, gate and lamps via tokens so they never x-ray or collide with kit classes. */
+.frame[data-zoomed="true"] .map [data-plot-object="lighthouse"] {
+  --lh-e: var(--dim-lh-e);
+  --lh-m: var(--dim-lh-m);
+  --lh-s: var(--dim-lh-s);
+  --lh-t: var(--dim-lh-t);
+  --scene-col: url(#cem-g-col-dim);
+  --lh-win: var(--dim-lh-t);
+  --lh-glass: var(--dim-lh-t);
+  --rock-e: var(--dim-rock-e);
+  --rock-m: var(--dim-rock-m);
+  --rock-s: var(--dim-rock-s);
+  --rock-t: var(--dim-rock-t);
+  --edge: var(--dim-edge);
+}
+.frame[data-zoomed="true"] .map [data-plot-object="lighthouse"] .rock-e {
+  --edge: var(--dim-edge);
+}
+.frame[data-zoomed="true"] .map [data-plot-object="lighthouse"] .rock-strata {
+  opacity: 0.25;
+}
+.frame[data-zoomed="true"] .map [data-plot-object="gate"] {
+  --wall-e: var(--dim-wall-e);
+  --wall-t: var(--dim-wall-t);
+  --wall-s: var(--dim-wall-s);
+  --edge: var(--dim-edge);
+}
+.frame[data-zoomed="true"] .map [data-plot-object="gate"] .w-e {
+  --edge: var(--dim-edge);
+}
+.frame[data-zoomed="true"] .map .lamp {
+  opacity: 0.28;
 }
 .map[data-dim="year"] .tree:not([data-lit="true"]) {
   opacity: 0.35;
@@ -1078,24 +1758,31 @@
   transform-origin: 0 0;
 }
 
-/* beam: frost wedge; rests on the 113 figure, moves only on interaction (island sets --ba/--bs on .beamRot) */
+/* beam: frost wedge; rests on the 134 figure, moves only on interaction (island sets --ba/--bs on .beamRot) */
 .beamG {
   mix-blend-mode: var(--beam-blend);
   pointer-events: none;
   --ba: var(--ba0);
   --bs: var(--bs0);
 }
+.beamG[data-beam="rest"] {
+  --bw: 0.28;
+}
 
-/* viewport bands (`PLOT_VIEWPORT_BANDS` in plot-map-scene.tsx): the scene solves the header sky, the colossus chips
-   and the beam's rest angle per band and hands them over as numbered custom properties */
-@media (min-width: 900px) {
+/* frame-width bands (`PLOT_VIEWPORT_BANDS` in plot-map-scene.tsx): keyed on the rendered frame/stageWrap container
+   width so height-fitted stages (1280×720, 1440×900, 1920×1080) pick the band solved for their exact width. */
+@container (min-width: 860px) {
   .stage {
     --sky: var(--sky1);
+  }
+  .yearStamp {
+    --sx: var(--sx1, 0px);
   }
   .chip,
   .leader {
     --dx: var(--dx1);
     --dy: var(--dy1);
+    --tx: var(--tx1, 0%);
     --lx: var(--lx1);
     --ly: var(--ly1);
     --ll: var(--ll1);
@@ -1106,14 +1793,18 @@
     --bs: var(--bs1);
   }
 }
-@media (min-width: 1024px) {
+@container (min-width: 980px) {
   .stage {
     --sky: var(--sky2);
+  }
+  .yearStamp {
+    --sx: var(--sx2, 0px);
   }
   .chip,
   .leader {
     --dx: var(--dx2);
     --dy: var(--dy2);
+    --tx: var(--tx2, 0%);
     --lx: var(--lx2);
     --ly: var(--ly2);
     --ll: var(--ll2);
@@ -1124,14 +1815,18 @@
     --bs: var(--bs2);
   }
 }
-@media (min-width: 1152px) {
+@container (min-width: 1100px) {
   .stage {
     --sky: var(--sky3);
+  }
+  .yearStamp {
+    --sx: var(--sx3, 0px);
   }
   .chip,
   .leader {
     --dx: var(--dx3);
     --dy: var(--dy3);
+    --tx: var(--tx3, 0%);
     --lx: var(--lx3);
     --ly: var(--ly3);
     --ll: var(--ll3);
@@ -1142,14 +1837,18 @@
     --bs: var(--bs3);
   }
 }
-@media (min-width: 1280px) {
+@container (min-width: 1200px) {
   .stage {
     --sky: var(--sky4);
+  }
+  .yearStamp {
+    --sx: var(--sx4, 0px);
   }
   .chip,
   .leader {
     --dx: var(--dx4);
     --dy: var(--dy4);
+    --tx: var(--tx4, 0%);
     --lx: var(--lx4);
     --ly: var(--ly4);
     --ll: var(--ll4);
@@ -1160,14 +1859,18 @@
     --bs: var(--bs4);
   }
 }
-@media (min-width: 1440px) {
+@container (min-width: 1360px) {
   .stage {
     --sky: var(--sky5);
+  }
+  .yearStamp {
+    --sx: var(--sx5, 0px);
   }
   .chip,
   .leader {
     --dx: var(--dx5);
     --dy: var(--dy5);
+    --tx: var(--tx5, 0%);
     --lx: var(--lx5);
     --ly: var(--ly5);
     --ll: var(--ll5);
@@ -1178,14 +1881,18 @@
     --bs: var(--bs5);
   }
 }
-@media (min-width: 1680px) {
+@container (min-width: 1600px) {
   .stage {
     --sky: var(--sky6);
+  }
+  .yearStamp {
+    --sx: var(--sx6, 0px);
   }
   .chip,
   .leader {
     --dx: var(--dx6);
     --dy: var(--dy6);
+    --tx: var(--tx6, 0%);
     --lx: var(--lx6);
     --ly: var(--ly6);
     --ll: var(--ll6);
@@ -1207,8 +1914,9 @@
 .beamEnd {
   fill: url(#cem-g-spot);
 }
+/* At rest the 4-stop beam cone fades softly into the `134` digits; keep the target pool for aimed graves only. */
 .beamG[data-beam="rest"] .beamEnd {
-  display: none;
+  opacity: 0;
 }
 .gsShade {
   stop-color: var(--stone-s);
@@ -1219,6 +1927,24 @@
 .gsLit {
   stop-color: var(--stone-e);
 }
+.gsDimShade {
+  stop-color: var(--dim-stone-s);
+}
+.gsDimMid {
+  stop-color: var(--dim-stone-t);
+}
+.gsDimLit {
+  stop-color: var(--dim-stone-e);
+}
+.gsea0 {
+  stop-color: var(--sea-0);
+}
+.gsea1 {
+  stop-color: var(--sea-1);
+}
+.gsea2 {
+  stop-color: var(--sea-2);
+}
 .gb0 {
   stop-color: var(--beam-0);
 }
@@ -1227,6 +1953,9 @@
 }
 .gb2 {
   stop-color: var(--beam-2);
+}
+.gb3 {
+  stop-color: transparent;
 }
 .gp0 {
   stop-color: var(--pool-0);
@@ -1295,6 +2024,83 @@
   font-size: 12.5px;
   line-height: 1.35;
 }
+.legend li:has(> .lensBtn) {
+  display: block;
+}
+.lensBtn {
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 74px 1fr;
+  gap: 10px;
+  align-items: center;
+  margin: -3px -6px;
+  padding: 3px 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background-color var(--scene-dur-fast) ease,
+    border-color var(--scene-dur-fast) ease,
+    opacity var(--scene-dur-fast) ease;
+}
+.lensBtn:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--foreground) 5%, transparent);
+  border-color: var(--border);
+}
+.lensBtn:disabled,
+.lensStepBtn:disabled {
+  cursor: default;
+  opacity: 1;
+  background: transparent;
+  border-color: transparent;
+}
+.lensBtn[aria-pressed="true"] {
+  background: color-mix(in oklab, var(--cause, var(--foreground)) 11%, var(--card));
+  border-color: color-mix(in oklab, var(--cause, var(--foreground)) 48%, var(--border-strong));
+}
+.lensBtn:focus-visible,
+.lensStepBtn:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--foreground) 60%, transparent);
+  outline-offset: 1px;
+}
+.lensStepBtn {
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  margin: -3px -4px;
+  padding: 3px 4px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background-color var(--scene-dur-fast) ease,
+    border-color var(--scene-dur-fast) ease,
+    opacity var(--scene-dur-fast) ease;
+}
+.lensStepBtn:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--foreground) 5%, transparent);
+  border-color: var(--border);
+}
+.lensStepBtn[aria-pressed="true"] {
+  background: color-mix(in oklab, var(--foreground) 9%, var(--card));
+  border-color: color-mix(in oklab, var(--foreground) 45%, var(--border-strong));
+}
+.lensStepBtn[aria-pressed="true"] figcaption {
+  color: var(--foreground);
+  font-weight: 600;
+}
+.legend[data-has-lens="true"] :is(.lensBtn, .lensStepBtn)[aria-pressed="false"] {
+  opacity: 0.58;
+}
+.legend[data-has-lens="true"] :is(.lensBtn, .lensStepBtn)[aria-pressed="false"]:hover {
+  opacity: 0.92;
+}
 .legend li b {
   font-weight: 600;
 }
@@ -1319,9 +2125,51 @@
   line-height: 1.45;
   color: var(--muted-foreground);
 }
+/* Active-lens status bar seated directly above the legend (F15). */
+.lensBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin: 12px 0 0;
+  padding: 7px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--card);
+  font-size: 12.5px;
+  line-height: 1.3;
+  color: var(--foreground);
+}
+.lensBarLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.lensBarLabel b {
+  font-weight: 600;
+}
+.lensBarClear {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: transparent;
+  font-weight: 500;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--foreground);
+  cursor: pointer;
+}
+.lensBarClear:hover {
+  border-color: color-mix(in oklab, var(--foreground) 50%, transparent);
+}
 .steps {
   display: flex;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 6px 8px;
   align-items: flex-end;
 }
 .steps figure {
@@ -1331,6 +2179,9 @@
   gap: 2px;
   font: 10.5px/1 var(--plot-mono);
   color: var(--muted-foreground);
+}
+.steps figcaption {
+  white-space: nowrap;
 }
 .steps .icon {
   width: 40px;
@@ -1367,13 +2218,13 @@
     column-gap: 36px;
   }
 }
-/* the legend describes the plan the reader sees: the desktop geography (gate, lighthouse, cypresses, hover) above
-   760 px, the portrait's columns, rows and taps below; phones also have no signposts to select (the portrait column
-   heads do not zoom). `display: none` keeps the other wording out of the accessibility tree too. */
+/* the legend and whisper describe the plan the reader sees: desktop geography on desktop, portrait walk under the
+   shared portrait query (≤ 760 px, or ≤ 1024 px with a coarse pointer). `display: none` keeps the other wording out
+   of the accessibility tree too. */
 .onPhone {
   display: none;
 }
-@media (max-width: 760px) {
+@media (max-width: 760px), (max-width: 1024px) and (pointer: coarse) {
   .zoomHint,
   .onWide {
     display: none;
@@ -1381,54 +2232,149 @@
   .onPhone {
     display: inline;
   }
+  .lensBtn {
+    min-height: 44px;
+    padding: 6px;
+  }
+  .lensStepBtn {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 4px;
+  }
+  .lensBarClear {
+    min-height: 44px;
+    padding-inline: 14px;
+  }
+  .steps {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
 }
 
-/* ------------------------------------------------------------------ portrait plan (≤ 760 px) */
+/* ------------------------------------------------------------------ hero-end soil-strata divider (E6) */
+.strataDivider {
+  margin: 20px calc(-1 * var(--page-pad)) 0;
+  height: 18px;
+  overflow: hidden;
+  pointer-events: none;
+}
+@media (min-width: 1921px) {
+  .strataDivider {
+    mask-image: linear-gradient(90deg, transparent, #000 clamp(48px, 8vw, 140px), #000 calc(100% - clamp(48px, 8vw, 140px)), transparent);
+  }
+}
+.strataSvg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.strataTop {
+  stop-color: var(--earth-e);
+  stop-opacity: 0.78;
+}
+.strataMid {
+  stop-color: var(--earth-s);
+  stop-opacity: 0.5;
+}
+.strataBottom {
+  stop-color: var(--earth-s);
+  stop-opacity: 0;
+}
+.strataRim {
+  stroke: var(--edge);
+  stroke-width: 0.75px;
+  vector-effect: non-scaling-stroke;
+}
+.strataLine {
+  stroke: var(--strata);
+  stroke-width: 0.6px;
+  stroke-dasharray: 3 3;
+  vector-effect: non-scaling-stroke;
+}
+
+/* ------------------------------------------------------------------ portrait walk (`PLOT_PORTRAIT_QUERY`) */
 .portrait {
   display: none;
 }
+/* Full-bleed on phones (< 600 px) so plain stones stay ≥ 15 px at 390 px; capped and centred on wider touch viewports
+   (tablet portrait 768 px and landscape phones) so stones never stretch oversized. */
 .portraitHeads {
-  position: relative;
-  margin: 4px 0 0 36px;
+  position: sticky;
+  top: var(--table-header-top, 59px);
+  z-index: 10;
+  margin-top: 6px;
+  background: color-mix(in oklab, var(--background) 90%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--plate-border);
 }
-/* each slot is exactly its column; the plate inside spans it, and a plate whose label is wider than its column
-   (one-slot Regulatory: 16–20 px on phones; "Counter-" at 320 px) grows to the label's min-content (soft hyphens
-   still break) centred on the column, the last column rightwards into the plan's free top-right corner */
+/* Each slot matches its vertical cause column; every button fills the 44 px bar height (B9). A plate whose label is
+   wider than a narrow 1-slot column (Regulatory on 320–390 px phones) expands cleanly into the right lawn margin. */
 .colSlot {
   position: absolute;
+  top: 0;
   bottom: 0;
   display: flex;
   justify-content: center;
+  align-items: stretch;
+  padding: 0 1px;
+}
+.colSlot:first-child {
+  padding-left: 2px;
 }
 .colSlot:last-child {
-  justify-content: flex-start;
+  justify-content: center;
+  padding-right: 2px;
 }
 .colHead {
+  appearance: none;
+  font-family: inherit;
   flex: none;
   width: 100%;
+  height: 100%;
+  min-height: 44px;
   min-width: min-content;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
-  gap: 1px;
-  padding: 2px 1px 3px;
-  border-radius: 3px 3px 0 0;
+  justify-content: center;
+  gap: 2px;
+  padding: 3px 3px 3px;
+  border-radius: 4px 4px 0 0;
   border: 1px solid var(--plate-border);
+  border-top: 2px solid color-mix(in oklab, var(--cause) 70%, var(--plate-border));
   border-bottom: 0;
   background: var(--plate);
   font-weight: 600;
   font-size: 10.5px;
-  line-height: 1.1;
+  line-height: 1.05;
   font-variant-caps: all-small-caps;
   letter-spacing: 0.02em;
   text-align: center;
   color: var(--foreground);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color var(--scene-dur-fast) ease,
+    border-color var(--scene-dur-fast) ease,
+    opacity var(--scene-dur-fast) ease;
+}
+.colHead[aria-pressed="true"] {
+  background: color-mix(in oklab, var(--plate), var(--cause) 20%);
+  border-color: color-mix(in oklab, var(--cause) 75%, var(--plate-border));
+  border-top-width: 3px;
+  box-shadow: 0 2px 6px color-mix(in oklab, var(--cause) 22%, transparent);
+}
+.portraitHeads[data-has-active="true"] .colHead[aria-pressed="false"] {
+  opacity: 0.56;
+}
+.colHead:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--foreground) 65%, transparent);
+  outline-offset: -2px;
 }
 .colHead .top {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
 }
 .colHead .sw {
   width: 6px;
@@ -1438,24 +2384,51 @@
   font-family: var(--plot-mono);
   font-variant-caps: normal;
   font-variant-numeric: tabular-nums slashed-zero;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
 }
-/* two-line labels ("Counter-party") set solid so the tallest plate fits the 40 px header row */
+/* two-line labels ("Counter-party") stay compact inside the equal-height 44 px bar */
 .colHead .lb {
   font-size: 9.5px;
   line-height: 1;
   hyphens: manual;
 }
-/* below 360 px the columns are ~13 % narrower: untracked labels keep the widened plates apart */
+.lbFull {
+  display: none;
+}
+/* below 360 px the columns are ~18 % narrower: tighten label tracking/padding so plates stay clear */
 @media (max-width: 359px) {
+  .colHead {
+    padding: 2px 2px;
+  }
   .colHead .lb {
+    font-size: 9px;
     letter-spacing: 0;
+  }
+  .colHead .n {
+    font-size: 11px;
+  }
+}
+@media (min-width: 600px) and (min-height: 501px) {
+  .lbShort {
+    display: none;
+  }
+  .lbFull {
+    display: inline;
+  }
+  .colSlot:last-child {
+    justify-content: center;
+  }
+  .colHead .lb {
+    font-size: 9.5px;
+    letter-spacing: 0.01em;
+  }
+  .colHead .n {
+    font-size: 12.5px;
   }
 }
 .portraitPlan {
   position: relative;
-  margin-left: 36px;
 }
 .portraitPlan > svg {
   display: block;
@@ -1463,41 +2436,83 @@
   height: auto;
   overflow: visible;
 }
-.yr {
+/* Sticky year bands: slim full-width ruled header bar flush beneath `.portraitHeads` so stones scroll cleanly under
+   the header chrome instead of sitting under a floating pill; empty-year rows share the exact same left-aligned rule. */
+.yearTracks {
   position: absolute;
-  left: -36px;
-  width: 32px;
-  transform: translateY(-50%);
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+}
+.yearTrack {
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+.yearTrack[data-empty="true"] {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 1px;
+  align-items: center;
+}
+.yearBand {
+  position: sticky;
+  top: calc(var(--table-header-top, 59px) + var(--portrait-head));
+  height: 21px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  background: color-mix(in oklab, var(--background) 92%, transparent);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--plate-border);
+}
+.yearLabel {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
   font-weight: 600;
   font-size: 11px;
-  line-height: 1.15;
+  line-height: 1;
   color: var(--foreground);
-  text-align: right;
-  pointer-events: none;
+  white-space: nowrap;
 }
-.yr small {
+.yearRule {
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--plate-border);
+}
+.yearSep {
+  opacity: 0.45;
+}
+.yearLabel small {
   font-weight: 500;
   font-size: 10.5px;
   color: var(--muted-foreground);
 }
-/* the empty strip's label is the longest ("2019–20" over "none recorded"): it takes 12 px of the page padding so
-   the range stays on one line and every word fits its box */
-.yr[data-empty="true"] {
-  left: -48px;
-  width: 44px;
+.yearSub {
+  margin-left: 3px;
+  font-style: italic;
   font-size: 10px;
 }
-.yr[data-empty="true"] small {
-  font-size: 9px;
-  line-height: 1.15;
+.yearEmpty {
+  width: 100%;
+  height: 21px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  background: color-mix(in oklab, var(--gravel-strip) 72%, transparent);
+  border-top: 1px solid var(--plate-border);
+  border-bottom: 1px solid var(--plate-border);
+}
+.yearEmpty .yearLabel {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--muted-foreground);
 }
 .hits {
   position: absolute;
   inset: 0;
+  z-index: 2;
 }
 .hit44 {
   position: absolute;
@@ -1515,66 +2530,30 @@
   outline: 2px solid color-mix(in oklab, var(--foreground) 60%, transparent);
   outline-offset: -8px;
 }
-.portrait .grave[data-hot="true"] :is(.st-e, .st-t) {
-  stroke: var(--foreground);
-  stroke-width: 1.2px;
+/* Selected grave in the walk: full-grave halo ring (no heavy polygon strokes that zebra-stripe stepped plinths, C-10). */
+.portrait .portraitRing {
+  fill: var(--ring-fill);
+  stroke: color-mix(in oklab, var(--foreground) 72%, var(--cause));
+  stroke-width: 1.6px;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
 }
 
-@media (max-width: 760px) {
+/* Shared portrait handoff: phones (≤ 760 px) and touch tablets (≤ 1024 px coarse pointer, incl. iPad Pro portrait). */
+@media (max-width: 760px), (max-width: 1024px) and (pointer: coarse) {
+  .hero {
+    --stage-w: 100%;
+  }
+  .head {
+    min-height: 0;
+  }
   .stage {
     display: none;
   }
   .portrait {
     display: block;
     position: relative;
-  }
-  .routeHead {
-    max-width: none;
-  }
-  .title {
-    font-size: 1.625rem;
-  }
-  .lead {
-    margin-top: 4px;
-    font-size: 0.8125rem;
-    line-height: 1.4;
-  }
-  .links {
-    margin-top: 4px;
-  }
-  .figure {
-    position: static;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-top: 6px;
-    text-align: left;
-  }
-  .beamLabel,
-  .beamPlaque {
-    display: none;
-  }
-  .beamSub {
-    margin: 0;
-    font-size: 11px;
-    line-height: 1.3;
-    white-space: normal;
-  }
-  .beamRest {
-    margin: 2px 0 0;
-    font-size: 11.5px;
-    line-height: 1.3;
-    white-space: normal;
-  }
-  .legend {
-    margin-top: 10px;
-    padding-top: 10px;
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-  .legend > div:first-of-type ul {
-    grid-template-columns: 1fr 1fr;
-    gap: 2px 10px;
+    margin-inline: calc(-1 * var(--page-pad));
   }
   /* a disclosure that looks like one: foreground label and a chevron (the native marker goes with display: flex) */
   .legendMore > summary {
@@ -1608,7 +2587,113 @@
     outline-offset: 2px;
     border-radius: 4px;
   }
-  .legend li {
+}
+/* Wider portrait walk (600–760 px and 600–1024 px touch tablets): frame the walk cleanly instead of stretching stones. */
+@media (min-width: 600px) and (max-width: 760px), (min-width: 600px) and (max-width: 1024px) and (pointer: coarse) {
+  .portrait {
+    margin-inline: auto;
+    max-width: 620px;
+  }
+  .portraitPlan {
+    border-inline: 1px solid var(--plate-border);
+    border-bottom: 1px solid var(--plate-border);
+    border-radius: 0 0 8px 8px;
+  }
+}
+@media (min-width: 560px) and (max-height: 500px) and (max-width: 760px), (min-width: 560px) and (max-height: 500px) and (max-width: 1024px) and (pointer: coarse) {
+  .portrait {
+    max-width: 540px;
+  }
+}
+/* Touch tablets (761–1024 px coarse pointer): sit the route head and One Beam figure side by side above the walk. */
+@media (min-width: 761px) and (max-width: 1024px) and (pointer: coarse) {
+  .head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 20px;
+    margin-bottom: 6px;
+  }
+  .routeHead {
+    max-width: 58%;
+  }
+  .title {
+    font-size: 2rem;
+  }
+  .lead {
+    font-size: 0.9375rem;
+  }
+  .figure {
+    position: static;
+    display: block;
+    flex: none;
+  }
+  .figure > div {
+    padding-right: 0;
+    border-right: 0;
+  }
+  .beamSub {
+    margin-top: 4px;
+    max-width: none;
+    white-space: nowrap;
+  }
+}
+@media (max-width: 760px) {
+  .routeHead {
+    max-width: none;
+  }
+  .title {
+    font-size: 1.625rem;
+  }
+  .lead {
+    margin-top: 4px;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+  }
+  .links {
+    margin-top: 4px;
+  }
+  .figure {
+    position: static;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 6px;
+    text-align: left;
+  }
+  .figure > div {
+    padding-right: 0;
+    border-right: 0;
+  }
+  .beamLabel,
+  .beamPlaque {
+    display: none;
+  }
+  .beamSub {
+    margin: 0;
+    max-width: none;
+    font-size: 11px;
+    line-height: 1.3;
+    white-space: normal;
+  }
+  .beamRest {
+    margin: 2px 0 0;
+    font-size: 11.5px;
+    line-height: 1.3;
+    white-space: normal;
+  }
+  .legend {
+    margin-top: 10px;
+    padding-top: 10px;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .legend > div:first-of-type ul {
+    grid-template-columns: 1fr 1fr;
+    gap: 2px 10px;
+  }
+  .legend li,
+  .lensBtn {
     grid-template-columns: 44px 1fr;
     font-size: 12px;
   }
@@ -1618,5 +2703,69 @@
   }
   .legend li .icons .icon {
     width: 14px;
+  }
+}
+
+/* Landscape phones (≤ 500 px tall under the portrait walk query): compact one-line head so the walk lands on screen 1
+   without disturbing desktop / short-mouse SSR beam alignment onto `134` (C-08). */
+@media (max-height: 500px) and (max-width: 760px), (max-height: 500px) and (max-width: 1024px) and (pointer: coarse) {
+  .hero {
+    --stage-w: 100%;
+  }
+  .head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 0;
+    margin-bottom: 4px;
+  }
+  .routeHead {
+    max-width: none;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 10px;
+  }
+  .title {
+    font-size: 1.25rem;
+    height: auto;
+  }
+  .lead,
+  .whisper,
+  .beamPlaque,
+  .beamSub,
+  .beamRest {
+    display: none;
+  }
+  .links {
+    margin: 0;
+    font-size: 0.75rem;
+  }
+  .figure {
+    position: static;
+    flex: none;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin: 0;
+    text-align: right;
+  }
+  .figure > div {
+    padding-right: 0;
+    border-right: 0;
+  }
+  .beamLabel {
+    display: inline;
+    margin: 0;
+    font-size: 0.75rem;
+    order: 2;
+  }
+  .figure .figureValue {
+    font-size: 1.35rem;
+    line-height: 1;
+  }
+  .stage {
+    margin-top: 4px;
   }
 }

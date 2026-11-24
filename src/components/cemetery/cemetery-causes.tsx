@@ -5,6 +5,7 @@ import { CAUSE_BG_CLASS, causeColorVars } from "@/lib/cemetery-cause-style";
 import { buildRegisterHref, cemeteryCauseAnchor } from "@/lib/cemetery-selection";
 import { formatCemeteryPeak, type CemeteryCauseStats, type CemeteryStats } from "@/lib/cemetery-stats";
 import styles from "./cemetery-below-fold.module.css";
+import { CemeteryCauseGlyph, CemeteryCauseGlyphDefs } from "./cemetery-cause-glyph";
 import { CemeterySectionHeader } from "./cemetery-section-header";
 
 export interface CemeteryCausesProps {
@@ -168,7 +169,10 @@ function CauseColumn({ causeStats }: { causeStats: CemeteryCauseStats }) {
       style={causeColorVars(cause)}
     >
       <div aria-hidden="true" className={`absolute inset-x-0 top-0 h-[3px] ${CAUSE_BG_CLASS}`} />
-      <h3 className="text-sm font-semibold text-foreground">{meta.label}</h3>
+      <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+        <CemeteryCauseGlyph cause={cause} size="md" />
+        <span>{meta.label}</span>
+      </h3>
       <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
         <span className="pharos-numeric text-xl font-semibold leading-none text-foreground">{count}</span>
         <span className="sr-only"> {count === 1 ? "record" : "records"}, </span>
@@ -178,7 +182,9 @@ function CauseColumn({ causeStats }: { causeStats: CemeteryCauseStats }) {
       </p>
       <p className="mt-2 hidden text-[13px] leading-relaxed text-foreground/80 md:block">{meta.definition}</p>
       <details className="group mt-2 md:hidden">
-        <summary className="pharos-focus-ring -my-1.5 w-fit cursor-pointer rounded-sm py-1.5 text-xs text-muted-foreground hover:text-foreground">
+        <summary
+          className={`${styles.disclosureSummary} pharos-focus-ring -my-2.5 inline-flex min-h-11 w-fit cursor-pointer items-center rounded-sm py-2.5 text-xs text-muted-foreground hover:text-foreground`}
+        >
           Definition
         </summary>
         <p className="mt-1.5 text-[13px] leading-relaxed text-foreground/80">{meta.definition}</p>
@@ -209,11 +215,13 @@ export function CemeteryCauses({ stats }: CemeteryCausesProps) {
   const pattern = stats.patterns.find((p) => p.key === "abandoned-most-common");
   return (
     <section id="causes" aria-labelledby="causes-heading" className="scroll-mt-24 space-y-3">
+      {/* the page's one cause-marker sheet: the band, register and charts below all `<use>` it */}
+      <CemeteryCauseGlyphDefs />
       <CemeterySectionHeader
         id="causes-heading"
         kicker="Causes of death"
         title="How stablecoins die"
-        meta="Each record carries one primary cause. Most deaths are small; most of the recorded peak market cap sits in a few large failures."
+        meta="Each record carries one primary cause. Most deaths are small; most of the recorded peak market cap sits in a few large coins."
       />
       <div className="pharos-card-shell overflow-hidden">
         {pattern ? (

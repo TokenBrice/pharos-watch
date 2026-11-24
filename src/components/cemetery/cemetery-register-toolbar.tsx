@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { CAUSE_META, type CauseOfDeath } from "@shared/lib/cause-of-death";
 import { FilterSearchInput } from "@/components/filter-search-input";
-import { causeColorVars } from "@/lib/cemetery-cause-style";
 import type { RegisterFacetKey, RegisterFilterOptions } from "@/lib/cemetery-register";
 import type { CemeteryRegisterFilters } from "@/lib/cemetery-selection";
 import { cn } from "@/lib/utils";
-import styles from "./cemetery-register.module.css";
+import { CemeteryCauseGlyph } from "./cemetery-cause-glyph";
 
 const FACETS: readonly { key: RegisterFacetKey; label: string; allLabel: string }[] = [
   { key: "year", label: "Year", allLabel: "All years" },
@@ -84,7 +83,7 @@ export function CemeteryRegisterToolbar({
             onClick={() => onCauseChange(cause)}
             className={cn(PILL_CLASS, filters.cause === cause && "pharos-control-pill-active")}
           >
-            <span aria-hidden="true" className={styles.dot} style={causeColorVars(cause)} />
+            <CemeteryCauseGlyph cause={cause} size="xs" />
             {CAUSE_META[cause].label} <span className="pharos-numeric text-[11px] opacity-75">{count}</span>
           </button>
         ))}

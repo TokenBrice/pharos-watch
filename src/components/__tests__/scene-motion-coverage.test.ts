@@ -76,4 +76,42 @@ describe("scene motion coverage", () => {
     expect([...zeroed.attribute].sort()).toEqual([...declared].sort());
     expect([...zeroed.media].sort()).toEqual([...declared].sort());
   });
+
+  it("binds globals.css plot-map transitions to --scene-dur-* tokens and zeroes them under both reduced-motion switches", () => {
+    const globalsCss = readFileSync(join(ROOT, "src/app/globals.css"), "utf8");
+    const plotMotionRules: string[] = [];
+    const offenders: string[] = [];
+    let zeroedAttr = false;
+    let zeroedMedia = false;
+
+    postcss.parse(globalsCss).walkRules((rule) => {
+      if (!/\[data-plot-(?:world|beam|svg|portrait-svg)/.test(rule.selector)) return;
+      if (inReducedMotionBlock(rule)) {
+        rule.walkDecls("transition", (decl) => {
+          if (decl.value.startsWith("none")) {
+            if (rule.selector.includes('data-motion="reduced"')) zeroedAttr = true;
+            else zeroedMedia = true;
+          }
+        });
+        return;
+      }
+      rule.walkDecls((decl) => {
+        if (!MOTION_PROPS.has(decl.prop)) return;
+        plotMotionRules.push(rule.selector);
+        if (!decl.value.includes("var(--scene-dur-")) {
+          offenders.push(`${rule.selector} { ${decl.prop}: ${decl.value} }`);
+        }
+        for (const [, n, unit] of decl.value.matchAll(TIME)) {
+          if (Number(n) !== 0) offenders.push(`${rule.selector} { ${decl.prop}: ${decl.value} } (${n}${unit})`);
+        }
+      });
+    });
+
+    expect(offenders).toEqual([]);
+    expect(plotMotionRules.some((s) => s.includes("[data-plot-world]"))).toBe(true);
+    expect(plotMotionRules.some((s) => s.includes("[data-plot-beam]"))).toBe(true);
+    expect(plotMotionRules.some((s) => s.includes("[data-plot-svg]"))).toBe(true);
+    expect(zeroedAttr).toBe(true);
+    expect(zeroedMedia).toBe(true);
+  });
 });

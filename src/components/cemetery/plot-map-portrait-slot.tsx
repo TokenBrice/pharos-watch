@@ -1,12 +1,15 @@
 "use client";
 
 /**
- * Stablecoin Cemetery plot map: the phone layer (≤ 760 px). Server HTML carries only a reserved box sized by CSS to
- * the portrait plan (`aspectRatio` from `getPortraitAspectRatio`, plus the header row), so the plan mounts after
- * hydration without layout shift. On phones the slot builds the portrait model from the same register rows the
- * register receives, renders `PlotMapPortrait`, and owns its interaction: one roving tab stop, nearest-centre tap
- * resolution, the bottom sheet (`PlotMapSheet`), and the hero's `pinGrave` handler while the portrait is active.
- * Without JavaScript a `<noscript>` rule hides the empty slot and shows the desktop plan instead.
+ * Stablecoin Cemetery plot map: the phone and touch-tablet walk layer (`PLOT_PORTRAIT_QUERY`).
+ *
+ * Keeps SSR HTML within budget (Item 2): during SSR and the initial hydration pass (`layout === null`) this slot
+ * renders the lightweight `PlotMapPortraitSkeleton` (exact column heads, ground/bed SVG at the final viewBox aspect,
+ * and sticky year bands — ~6 KB raw, 0 CLS). Without JS, `<noscript>` hides this slot and reveals the server-rendered
+ * desktop plan with native `#<id>` anchors. Once hydrated under `PLOT_PORTRAIT_QUERY` (`layout === "portrait"`), the
+ * full interactive `PortraitLayer` mounts and owns the hero's `pinGrave` handler, roving tab stop, nearest-centre tap
+ * resolution, sticky cause-head highlight toggles, Escape order and bottom sheet; on desktop (`layout === "desktop"`),
+ * the slot unmounts to zero DOM nodes.
  */
 import {
   useCallback,
@@ -20,12 +23,14 @@ import {
   type MouseEvent,
   type ReactElement,
 } from "react";
+import { CAUSE_META, type CauseOfDeath } from "@shared/lib/cause-of-death";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { buildCemeteryPlotMap, type PortraitPlotMap } from "@/lib/cemetery-plot-map";
 import { toPlotMapInput, type PlotLogoAtlas } from "@/lib/cemetery-plot-map-input";
 import type { CemeteryRegisterRow } from "@/lib/cemetery-register";
 import { useCemeterySelection, type CemeterySelectionSource } from "./cemetery-selection-context";
-import { PORTRAIT_HEAD_PX, PlotMapPortrait, type PlotMapPortraitHandle } from "./plot-map-portrait";
+import { PORTRAIT_HEAD_PX, PlotMapPortrait, PlotMapPortraitSkeleton, type PlotMapPortraitHandle } from "./plot-map-portrait";
+import { describePlotLens, matchesPlotLens, type PlotLens } from "./plot-map-shapes";
 import { PlotMapSheet } from "./plot-map-sheet";
 import { usePlotLayout } from "./use-plot-layout";
 import plotStyles from "./plot-map.module.css";
@@ -40,32 +45,91 @@ export interface PlotMapPortraitSlotProps {
   /** Session flowers by grave id (count hidden until ≥ 1). */
   flowers: Readonly<Record<string, number>>;
   onLeaveFlower: (id: string) => void;
+  /** Optional interactive legend lens owned by `PlotMapHero` (E9). */
+  activeLens?: PlotLens | null;
+  onClearLens?: () => void;
+  /** Optional controlled cause highlight synced with the hero's legend. */
+  controlledCause?: CauseOfDeath | null;
+  onCauseChange?: (cause: CauseOfDeath | null) => void;
 }
 
-/** No JS: the portrait never mounts, so phones get the desktop plan (scaled to the column) instead of an empty box. */
-const NOSCRIPT_CSS = `<style>@media (max-width: 760px){[data-plot-portrait-slot]{display:none!important}.${plotStyles.stage}{display:block!important}}</style>`;
+/**
+ * No JS: hide the portrait skeleton and reveal the server-rendered desktop plan (whose `<a href="#<id>">` graves work
+ * natively without script) on phones and touch tablets; drop desktop-only overlays on narrow phones so the stones read.
+ */
+const NOSCRIPT_CSS =
+  `<style>` +
+  `[data-plot-lens]{cursor:default!important}` +
+  `@media (max-width:760px),(max-width:1024px) and (pointer:coarse){` +
+  `[data-plot-portrait-slot]{display:none!important}` +
+  `.${plotStyles.stage}{display:block!important;margin-top:8px!important}` +
+  `}` +
+  `@media (min-width:761px) and (max-width:1024px) and (pointer:coarse){` +
+  `.${plotStyles.head}{display:block!important;min-height:124px!important;margin-bottom:0!important}` +
+  `.${plotStyles.routeHead}{display:block!important;max-width:min(360px,36%)!important}` +
+  `.${plotStyles.title}{font-size:1.85rem!important;height:1.05em!important}` +
+  `.${plotStyles.lead},.${plotStyles.whisper},.${plotStyles.beamPlaque},.${plotStyles.beamSub},.${plotStyles.beamRest}{display:block!important}` +
+  `.${plotStyles.links}{display:block!important;margin-top:5px!important}` +
+  `.${plotStyles.links} a{display:inline!important;min-height:0!important;padding-inline:0!important}` +
+  `.${plotStyles.onWide}{display:inline!important}` +
+  `.${plotStyles.onPhone}{display:none!important}` +
+  `.${plotStyles.figure}{position:absolute!important;top:0!important;right:calc((100% - var(--stage-w, 100%)) / 2 + var(--stage-w, 100%) * var(--lantern-right-ratio, 0.0384) + 22px)!important;display:grid!important;grid-template-columns:auto auto!important;column-gap:10px!important;align-items:end!important;text-align:right!important}` +
+  `.${plotStyles.figure}>div{padding-right:10px!important;border-right:1px solid var(--border)!important}` +
+  `.${plotStyles.beamLabel}{display:block!important;order:0!important;margin:0 0 2px!important;font-size:0.75rem!important}` +
+  `.${plotStyles.figure} .${plotStyles.figureValue}{font-size:2.45rem!important;line-height:1!important}` +
+  `.${plotStyles.stage}{margin-top:var(--sky)!important}` +
+  `}` +
+  `@media (max-width:760px){` +
+  `.${plotStyles.signpost},.${plotStyles.yearStamp},.${plotStyles.chip},.${plotStyles.leader}{display:none!important}` +
+  `}` +
+  `</style>`;
 
-export function PlotMapPortraitSlot({ rows, asOf, atlas, aspectRatio, flowers, onLeaveFlower }: PlotMapPortraitSlotProps): ReactElement {
+export function PlotMapPortraitSlot({
+  rows,
+  asOf,
+  atlas,
+  aspectRatio,
+  flowers,
+  onLeaveFlower,
+  activeLens = null,
+  onClearLens,
+  controlledCause,
+  onCauseChange,
+}: PlotMapPortraitSlotProps): ReactElement {
   const layout = usePlotLayout();
   useLegendFold(layout);
+  const portraitMap = useMemo(
+    () => (layout === "desktop" ? null : buildCemeteryPlotMap(toPlotMapInput(rows), { asOf, preset: "portrait" })),
+    [layout, rows, asOf],
+  );
   const style = { "--portrait-ar": aspectRatio, "--portrait-head": `${PORTRAIT_HEAD_PX}px` } as CSSProperties;
   return (
     <div className={styles.slot} style={style} data-plot-portrait-slot>
       <noscript dangerouslySetInnerHTML={{ __html: NOSCRIPT_CSS }} />
-      {layout === "portrait" ? (
-        <PortraitLayer rows={rows} asOf={asOf} atlas={atlas} flowers={flowers} onLeaveFlower={onLeaveFlower} />
-      ) : (
-        <div className={styles.reserve} aria-hidden="true" />
-      )}
+      {layout === "portrait" && portraitMap ? (
+        <PortraitLayer
+          map={portraitMap}
+          rows={rows}
+          atlas={atlas}
+          flowers={flowers}
+          onLeaveFlower={onLeaveFlower}
+          activeLens={activeLens}
+          onClearLens={onClearLens}
+          controlledCause={controlledCause}
+          onCauseChange={onCauseChange}
+        />
+      ) : layout === null && portraitMap ? (
+        <PlotMapPortraitSkeleton map={portraitMap} />
+      ) : null}
     </div>
   );
 }
 
 /**
- * The legend's disclosure folds once on phones (hero budget) and is always open on the desktop. Folding shrinks the
- * page below the legend by several hundred px, so it never happens under the reader: not when the page opened on a
- * fragment (the browser's fragment scroll would land at the pre-fold offset) and not once the legend's top has
- * scrolled above the viewport.
+ * The legend's disclosure folds once on phones/touch tablets (hero budget) and is always open on desktop. Folding
+ * shrinks the page below the legend by several hundred px, so it never happens under the reader: not when the page
+ * opened on a fragment (the browser's fragment scroll would land at the pre-fold offset) and not once the legend's
+ * top has scrolled above the viewport.
  */
 function useLegendFold(layout: "desktop" | "portrait" | null): void {
   const folded = useRef(false);
@@ -83,7 +147,7 @@ function useLegendFold(layout: "desktop" | "portrait" | null): void {
 }
 
 // ---------------------------------------------------------------------------
-// Portrait layer (client only, ≤ 760 px)
+// Portrait layer (SSR + live under PLOT_PORTRAIT_QUERY)
 // ---------------------------------------------------------------------------
 
 /** Ordinal for "nearest date" across columns (`YYYY-MM` or `YYYY-MM-DD`). */
@@ -140,55 +204,36 @@ function cssPx(name: string, fallback: number): number {
   return Number.isFinite(v) ? v : fallback;
 }
 
-/** Space kept between neighbouring margin year labels (px). */
-const YEAR_LABEL_GAP = 3;
-
 /**
- * Vertical shift (px, + down / − up) per margin year label (DOM order = `map.blocks` order) so no two labels overlap
- * and the last stays inside the plan. Each label is centred on its block (`top` in %); thin blocks (a one-row year,
- * the empty strip) sit closer than two labels are tall, so labels first push down, then the stack is pulled back up
- * from the plan's bottom edge. Measured, so it holds at every plan width and label height.
- */
-function measureYearPushes(plan: HTMLElement, labels: readonly HTMLElement[]): number[] {
-  const height = plan.clientHeight;
-  const heights = labels.map((label) => label.offsetHeight);
-  const natural = labels.map((label, k) => (parseFloat(label.style.top) / 100) * height - heights[k] / 2);
-  const tops = [...natural];
-  for (let k = 1; k < tops.length; k++) tops[k] = Math.max(tops[k], tops[k - 1] + heights[k - 1] + YEAR_LABEL_GAP);
-  let limit = height;
-  for (let k = tops.length - 1; k >= 0; k--) {
-    tops[k] = Math.min(tops[k], limit - heights[k]);
-    limit = tops[k] - YEAR_LABEL_GAP;
-  }
-  return tops.map((top, k) => Math.round(top - natural[k]));
-}
-
-/**
- * Scrolls the page so the grave's hit box sits in the band between the sticky chrome and the open sheet (upper
- * third where possible). The sheet's resting top is computed from its size, not its rect: it may still be sliding.
+ * Scrolls the page so the grave's hit box sits in the band between the sticky chrome (top bar + sticky cause heads +
+ * sticky year band) and the open sheet. The sheet's resting top is computed from its size, not its rect: it may still
+ * be sliding.
  */
 function scrollGraveAboveSheet(grave: HTMLElement, sheet: HTMLElement, reducedMotion: boolean): void {
   const r = grave.getBoundingClientRect();
-  const chromeBottom = cssPx("--table-header-top", 56) + 8;
+  const chromeBottom = cssPx("--table-header-top", 59) + PORTRAIT_HEAD_PX + 28;
   const sheetTop = window.innerHeight - (parseFloat(getComputedStyle(sheet).bottom) || 0) - sheet.offsetHeight;
   const lowest = sheetTop - r.height - 12;
   if (r.top >= chromeBottom && r.top <= lowest) return;
-  const target = Math.max(chromeBottom, Math.min(window.innerHeight * 0.3, lowest));
+  const target = Math.max(chromeBottom, Math.min(window.innerHeight * 0.34, lowest));
   window.scrollBy({ top: r.top - target, behavior: reducedMotion ? "instant" : "smooth" });
 }
 
 type SheetClose = "dismiss" | "register" | "silent";
 
 function PortraitLayer({
+  map,
   rows,
-  asOf,
   atlas,
   flowers,
   onLeaveFlower,
-}: Omit<PlotMapPortraitSlotProps, "aspectRatio">): ReactElement {
+  activeLens = null,
+  onClearLens,
+  controlledCause,
+  onCauseChange,
+}: Omit<PlotMapPortraitSlotProps, "aspectRatio" | "asOf"> & { map: PortraitPlotMap }): ReactElement {
   const { heroPin, setHeroPin, revealRecord, registerPinGrave, setRecordHash } = useCemeterySelection();
   const reducedMotion = usePrefersReducedMotion();
-  const map = useMemo(() => buildCemeteryPlotMap(toPlotMapInput(rows), { asOf, preset: "portrait" }), [rows, asOf]);
   const rowById = useMemo(() => new Map(rows.map((r) => [r.id, r])), [rows]);
   const dates = useMemo(() => new Map(map.graves.map((g) => [g.id, dateOrdinal(g.deathDate)])), [map]);
 
@@ -196,36 +241,28 @@ function PortraitLayer({
   const [openId, setOpenId] = useState<string | null>(heroPin && heroPin.source !== "hash" ? heroPin.id : null);
   /** Last opened record: stays in the sheet while it slides out. */
   const [shownId, setShownId] = useState<string | null>(openId);
+  /** Highlighted cause column toggled via the sticky cause-head buttons (synced with hero legend when controlled). */
+  const [uncontrolledCause, setUncontrolledCause] = useState<CauseOfDeath | null>(null);
+  const activeCause = controlledCause !== undefined ? controlledCause : uncontrolledCause;
+  const setActiveCause = useCallback(
+    (next: CauseOfDeath | null) => {
+      if (onCauseChange) onCauseChange(next);
+      else setUncontrolledCause(next);
+    },
+    [onCauseChange],
+  );
+  const [status, setStatus] = useState("");
   /** Bumped on every open so re-opening the same grave re-runs the scroll/focus effect. */
   const [openSeq, setOpenSeq] = useState(0);
   const sheetRef = useRef<HTMLDivElement>(null);
   const planRef = useRef<HTMLDivElement>(null);
   const portraitRef = useRef<PlotMapPortraitHandle>(null);
-  const [yearPushes, setYearPushes] = useState<readonly number[]>([]);
-
-  // Margin year labels: measured before the first paint and again whenever the plan (hence every block) resizes.
-  useLayoutEffect(() => {
-    const plan = planRef.current;
-    if (!plan) return;
-    let live = true;
-    const update = () => {
-      if (!live) return;
-      const next = measureYearPushes(plan, portraitRef.current?.yearLabels() ?? []);
-      setYearPushes((prev) => (prev.length === next.length && prev.every((v, i) => v === next[i]) ? prev : next));
-    };
-    update();
-    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
-    observer?.observe(plan);
-    void document.fonts?.ready.then(update);
-    return () => {
-      live = false;
-      observer?.disconnect();
-    };
-  }, [map]);
 
   const openSheet = useCallback(
     (id: string) => {
-      if (!rowById.has(id)) return;
+      const row = rowById.get(id);
+      if (!row) return;
+      if (activeCause && activeCause !== row.cause) setActiveCause(null);
       setTabStopId(id);
       setOpenId(id);
       setHeroPin(id);
@@ -233,7 +270,7 @@ function PortraitLayer({
       setOpenSeq((n) => n + 1);
       setRecordHash(id);
     },
-    [rowById, setHeroPin, setRecordHash],
+    [rowById, activeCause, setActiveCause, setHeroPin, setRecordHash],
   );
 
   const closeSheet = useCallback(
@@ -252,6 +289,48 @@ function PortraitLayer({
     [openId, setHeroPin, revealRecord, setRecordHash],
   );
 
+  const effectiveCause = activeLens?.kind === "cause" ? activeLens.cause : activeCause;
+
+  const toggleCause = useCallback(
+    (cause: CauseOfDeath) => {
+      if (activeLens?.kind === "cause") {
+        onClearLens?.();
+        if (activeLens.cause === cause) {
+          setActiveCause(null);
+          setStatus("Showing all causes");
+          return;
+        }
+      }
+      const next = effectiveCause === cause ? null : cause;
+      setActiveCause(next);
+      if (next) {
+        const count =
+          activeLens && activeLens.kind !== "cause"
+            ? map.graves.filter((g) => g.cause === next && matchesPlotLens(g, activeLens)).length
+            : (map.columns.find((c) => c.cause === next)?.count ?? 0);
+        const lensSuffix = activeLens && activeLens.kind !== "cause" ? ` · ${describePlotLens(activeLens)}` : "";
+        setStatus(`Highlighting ${CAUSE_META[next].label}${lensSuffix}: ${count} ${count === 1 ? "grave" : "graves"}`);
+      } else {
+        setStatus(activeLens && activeLens.kind !== "cause" ? `Highlighting ${describePlotLens(activeLens)}` : "Showing all causes");
+      }
+    },
+    [activeLens, effectiveCause, onClearLens, setActiveCause, map.columns, map.graves],
+  );
+
+  // Announce legend lens changes while the portrait walk is the active layer (React render-time state sync).
+  const [lastLens, setLastLens] = useState<PlotLens | null>(activeLens);
+  if (lastLens !== activeLens) {
+    setLastLens(activeLens);
+    if (!activeLens) {
+      setStatus(activeCause ? `Highlighting ${CAUSE_META[activeCause].label}` : "Showing all graves");
+    } else {
+      const scopedCause = activeLens.kind === "cause" ? null : activeCause;
+      const count = map.graves.filter((g) => (scopedCause ? g.cause === scopedCause : true) && matchesPlotLens(g, activeLens)).length;
+      const scope = scopedCause ? ` in ${CAUSE_META[scopedCause].label}` : "";
+      setStatus(`Highlighting ${describePlotLens(activeLens)}${scope}: ${count} of ${map.counts.total} graves`);
+    }
+  }
+
   // After an open (openSeq: also a re-open of the same grave): bring the grave above the sheet, focus the sheet.
   useLayoutEffect(() => {
     const sheet = sheetRef.current;
@@ -262,18 +341,33 @@ function PortraitLayer({
   }, [openId, openSeq, reducedMotion]);
 
   useEffect(() => {
-    if (!openId) return;
+    if (!openId && !activeCause && !activeLens) return;
     const onKey = (ev: globalThis.KeyboardEvent) => {
       if (ev.key !== "Escape" || ev.defaultPrevented) return;
       ev.preventDefault();
-      closeSheet("dismiss");
+      if (openId) {
+        closeSheet("dismiss");
+        return;
+      }
+      if (activeLens) {
+        onClearLens?.();
+        return;
+      }
+      if (activeCause) {
+        const prevCause = activeCause;
+        setActiveCause(null);
+        setStatus("Showing all causes");
+        if (planRef.current?.contains(document.activeElement)) {
+          portraitRef.current?.causeHead(prevCause)?.focus();
+        }
+      }
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [openId, closeSheet]);
+  }, [openId, activeCause, activeLens, closeSheet, onClearLens, setActiveCause]);
 
-  // The hero's pin handler while the portrait is the active layout (this layer only mounts then). A deep link only
-  // moves the tab stop: the register reveal owns scrolling, and a sheet would cover the revealed row.
+  // The hero's pin handler while the portrait is the active layout. A deep link only moves the tab stop:
+  // the register reveal owns scrolling, and a sheet would cover the revealed row.
   const pinRef = useRef<(id: string, source: CemeterySelectionSource) => void>(() => {});
   useEffect(() => {
     pinRef.current = (id, source) => {
@@ -293,6 +387,10 @@ function PortraitLayer({
       const hit = portraitRef.current?.graveOf(ev.target);
       if (!hit) {
         if (openId) closeSheet("silent");
+        else if (activeCause) {
+          setActiveCause(null);
+          setStatus("Showing all causes");
+        }
         return;
       }
       ev.preventDefault();
@@ -311,7 +409,7 @@ function PortraitLayer({
       }
       toggle(id);
     },
-    [openId, closeSheet, toggle],
+    [openId, activeCause, setActiveCause, closeSheet, toggle],
   );
 
   const onHitsKeyDown = useCallback(
@@ -346,12 +444,17 @@ function PortraitLayer({
         atlas={atlas}
         tabStopId={tabStopId}
         pinnedId={openId}
+        activeCause={activeCause}
+        activeLens={activeLens}
         flowers={flowers}
+        onToggleCause={toggleCause}
         onHitsClick={onHitsClick}
         onHitsKeyDown={onHitsKeyDown}
-        yearPushes={yearPushes}
         planRef={planRef}
       />
+      <p className="sr-only" role="status" aria-live="polite" data-plot-portrait-status>
+        {status}
+      </p>
       <PlotMapSheet
         row={shownRow}
         open={openId !== null}

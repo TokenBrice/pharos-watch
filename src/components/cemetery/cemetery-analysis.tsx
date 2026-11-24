@@ -2,10 +2,10 @@ import { Fragment, type ReactNode } from "react";
 import { CAUSE_META, CAUSE_ORDER } from "@shared/lib/cause-of-death";
 import { formatDeathDate } from "@shared/lib/format";
 import { ChartLegendChip } from "@/components/chart-primitives/legend";
-import { CAUSE_BG_CLASS, causeColorVars } from "@/lib/cemetery-cause-style";
 import { CEMETERY_PEAK_BUCKET_LABELS, type CemeteryPeakBucket } from "@/lib/cemetery-selection";
 import { formatCemeteryPeak, type CemeteryPatternKey, type CemeteryStats } from "@/lib/cemetery-stats";
-import { cn } from "@/lib/utils";
+import styles from "./cemetery-below-fold.module.css";
+import { CemeteryCauseGlyph } from "./cemetery-cause-glyph";
 import { CemeterySectionHeader } from "./cemetery-section-header";
 import { DeathsByYearChart, type DeathsByYearDatum } from "./deaths-by-year-chart";
 import { PeakByCauseChart, type PeakLaneDatum } from "./peak-by-cause-chart";
@@ -19,8 +19,6 @@ const PEAK_HEADLINE_KEYS: readonly CemeteryPatternKey[] = ["largest-not-collapse
 /** Footnote order: smallest bucket first. */
 const FOOTNOTE_BUCKETS: readonly CemeteryPeakBucket[] = ["under-10m", "10m-100m", "100m-1b", "1b-plus"];
 const YEAR_LIST = new Intl.ListFormat("en", { type: "conjunction" });
-
-const LEGEND_MARKER = "inline-block h-2.5 w-2.5 rounded-sm";
 
 function ChartCardHeader({
   titleId,
@@ -40,7 +38,7 @@ function ChartCardHeader({
   return (
     <div className="space-y-2">
       <p className="pharos-label">{kicker}</p>
-      <h3 id={titleId} className="pharos-section-title">
+      <h3 id={titleId} className={styles.cardTitle}>
         {title}
       </h3>
       {headlines.length > 0 ? (
@@ -60,9 +58,10 @@ function ChartCardHeader({
 
 function CauseLegendChips() {
   return CAUSE_ORDER.map((cause) => (
-    <ChartLegendChip key={cause} markerClassName={cn(LEGEND_MARKER, CAUSE_BG_CLASS)} markerStyle={causeColorVars(cause)}>
+    <div key={cause} className="pharos-chart-legend-chip">
+      <CemeteryCauseGlyph cause={cause} size="sm" />
       {CAUSE_META[cause].label}
-    </ChartLegendChip>
+    </div>
   ));
 }
 
