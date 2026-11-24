@@ -181,12 +181,12 @@ describe("v10.01 named reserve reports", () => {
   const asOfSec = Date.parse("2026-09-30T00:00:00Z") / 1000;
   const usdt = { ...usdtCoin, ...usdtReserveEnvelope } as unknown as V9ExtensionRegistryMeta;
 
-  it.each(["fresh", "stale", "absent"])("keeps USDY's reviewed Safety inputs identical with a %s display probe", (state) => {
-    const meta = TRACKED_META_BY_ID.get("usdy-ondo-finance")!;
-    // Noon on the day after USDY's current reserve review, so routine renewals keep the reviewed rows admissible.
+  it.each(["fresh", "stale", "absent"])("keeps USDU's reviewed Safety inputs identical with a %s display probe", (state) => {
+    const meta = TRACKED_META_BY_ID.get("usdu-universal")!;
+    // Noon on the day after USDU's current reserve review, so routine renewals keep the reviewed rows admissible.
     const clockSec = Date.parse(`${meta.reserveReview!.reviewedAt}T12:00:00Z`) / 1000 + 86400;
-    const record = state === "absent" ? null : reserveCompositionInput("usdy-display", {
-      stablecoinId: meta.id, source: "ondo-usdy", adapterEvidenceClass: "weak-live-probe",
+    const record = state === "absent" ? null : reserveCompositionInput("usdu-display", {
+      stablecoinId: meta.id, source: "attestation-pdf-index", adapterEvidenceClass: "weak-live-probe",
       fetchedAt: clockSec - (state === "stale" ? 3 * 86400 : 60),
       slices: [{ name: "Display-only changed portfolio", pct: 100, risk: "very-high" }],
       metadata: { freshnessMode: "verified", sourceTimestamp: clockSec - 60 },
@@ -199,7 +199,7 @@ describe("v10.01 named reserve reports", () => {
     if (state === "stale") expect(live.reasons).toContain("stale");
     const admission = resolveReviewedReserveAdmission({ meta, clockSec, liveReserveRows: live.eligible ? record!.slices : [] });
     const baseline = resolveReviewedReserveAdmission({ meta: { ...meta, liveReservesConfig: undefined }, clockSec, liveReserveRows: [] });
-    expect(admission.projected).toMatchObject({ provenance: "curated", evidenceClass: "static-validated" });
+    expect(admission.projected).toMatchObject({ provenance: "curated", evidenceClass: "independent" });
     expect(admission).toEqual(baseline);
     const evidence = new ReviewEvidenceBuilder(meta.id, clockSec);
     const baselineEvidence = new ReviewEvidenceBuilder(meta.id, clockSec);

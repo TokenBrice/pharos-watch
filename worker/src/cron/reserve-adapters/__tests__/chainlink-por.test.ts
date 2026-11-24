@@ -1,7 +1,6 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import bc3mSource from "@shared/data/stablecoins/coins/bc3m-backed.json";
 
 import {
   adaptBackedCirculationResponse,
@@ -1065,15 +1064,14 @@ describe("reviewed Backed inventory circulation", () => {
     { skewSec: 86_399, publishes: true },
     { skewSec: 86_400, publishes: true },
     { skewSec: 86_401, publishes: false },
-  ])("applies BC3M's authored temporal policy at $skewSec seconds", async ({ skewSec, publishes }) => {
+  ])("applies a reviewed 24-hour temporal policy at $skewSec seconds", async ({ skewSec, publishes }) => {
     const fixture = backedFixture();
-    fixture.coin.liveReservesConfig!.params = structuredClone(bc3mSource.liveReservesConfig.params);
-    const probe = bc3mSource.liveReservesConfig.params.issuerCirculationProbe;
-    expect(probe.maxReserveSupplySkewSec).toBe(86_400);
-    expect(probe.temporalReview).toEqual({
+    const probe = (fixture.coin.liveReservesConfig!.params as ChainlinkPorParams).issuerCirculationProbe!;
+    probe.maxReserveSupplySkewSec = 86_400;
+    probe.temporalReview = {
       reviewedAt: "2026-10-08",
       evidenceRef: "https://reference-data-directory.vercel.app/feeds-matic-mainnet.json",
-    });
+    };
     const reserveObservedAt = fixture.network.block!.timestamp! - skewSec;
     fixture.network.rpc![`${BACKED_FEED}:0xfeaf968c`] = encodeLatestRoundData(
       700000000000000000n,

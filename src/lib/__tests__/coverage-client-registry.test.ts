@@ -47,7 +47,7 @@ describe("coverage reserve resolution from the client registry", () => {
     }
   });
 
-  it.each(["inalpha-nest", "tgbp-tokenised", "usdxl-last"])(
+  it.each(["tgbp-tokenised", "usdxl-last"])(
     "resolves %s through the fallback rather than its suspended reader",
     (id) => {
       const coin = CLIENT_ACTIVE_STABLECOINS.find((entry) => entry.id === id);

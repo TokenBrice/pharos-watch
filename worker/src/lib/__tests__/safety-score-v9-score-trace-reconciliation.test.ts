@@ -8,6 +8,7 @@ import { computeV9FactSetDigest } from "@shared/lib/safety-score-v9/facts";
 import { createV9FactGapV3 } from "@shared/lib/safety-score-v9/reasons";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { buildSafetyScoreV9Candidate } from "../safety-score-v9/candidate";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { v9TestClockSec } from "../../test-helpers/v9-fixed-input";
 
 const CURRENT_CLOCK_SEC = v9TestClockSec();
@@ -145,6 +146,7 @@ describe("Safety Score V9 score-trace reconciliation", { timeout: 30_000 }, () =
     const pipeline = buildSafetyScoreV9Candidate({
       fixedInput: createUsdcFixedInput(CURRENT_CLOCK_SEC, assetIds),
       publishedAtSec: CURRENT_CLOCK_SEC + 10,
+      registry: { metaById: TRACKED_META_BY_ID },
     });
     for (const assetId of assetIds) {
       const asset = pipeline.compiledFacts.assets.find((entry) => entry.assetId === assetId)!;
@@ -171,6 +173,7 @@ describe("Safety Score V9 score-trace reconciliation", { timeout: 30_000 }, () =
     const pipeline = buildSafetyScoreV9Candidate({
       fixedInput: createUsdcFixedInput(CURRENT_CLOCK_SEC, [assetId]),
       publishedAtSec: CURRENT_CLOCK_SEC + 10,
+      registry: { metaById: TRACKED_META_BY_ID },
     });
     const asset = pipeline.compiledFacts.assets.find((entry) => entry.assetId === assetId)!;
     const oracle = asset.economicControlReview.oracle;
@@ -211,6 +214,7 @@ describe("Safety Score V9 score-trace reconciliation", { timeout: 30_000 }, () =
     const pipeline = buildSafetyScoreV9Candidate({
       fixedInput: createUsdcFixedInput(CURRENT_CLOCK_SEC, [assetId]),
       publishedAtSec: CURRENT_CLOCK_SEC + 10,
+      registry: { metaById: TRACKED_META_BY_ID },
     });
     const compiled = structuredClone(pipeline.compiledFacts);
     const asset = compiled.assets[0]!;

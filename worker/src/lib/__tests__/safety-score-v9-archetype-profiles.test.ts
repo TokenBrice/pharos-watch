@@ -6,7 +6,7 @@ import susdaiAsset from "@shared/data/stablecoins/coins/susdai-usd-ai.json";
 import wmAsset from "@shared/data/stablecoins/coins/wm-m0.json";
 import { resolveV9WrapperStrategyTier } from "@shared/lib/safety-score-v9/evaluate-set";
 import { resolveWrapperForm } from "../safety-score-v9/fact-set-wrapper";
-import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_META_BY_ID, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { describe, expect, it } from "vitest";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
@@ -42,7 +42,7 @@ describe("Safety Score v9 production-shaped archetype fixtures", () => {
     );
     const stac = buildSafetyScoreV9MechanismReview(
       PROFILE_FIXED_INPUT,
-      ACTIVE_META_BY_ID.get("stac-securitize")!,
+      TRACKED_META_BY_ID.get("stac-securitize")!,
       "rwa-credit-fund",
     );
 

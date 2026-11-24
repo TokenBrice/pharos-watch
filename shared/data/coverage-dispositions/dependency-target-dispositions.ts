@@ -41,18 +41,7 @@ function adapterReview(
  * contribute their own report-card score. Keep this registry limited to
  * targets observed as unavailable by the dependency coverage audit.
  */
-export const DEPENDENCY_TARGET_DISPOSITIONS: readonly DependencyTargetDisposition[] = [
-  {
-    targetId: "benji-franklin-templeton",
-    expectedLifecycle: "quarantined",
-    action: "retain-reviewed-link",
-    reviewer: "Codex reserve recovery review",
-    reviewedAt: "2026-09-14",
-    sources: [{ label: "Ondo OUSG dated portfolio", url: "https://ondo.finance/ousg" }],
-    rationale:
-      "OUSG's September 11 portfolio explicitly holds Franklin OnChain U.S. Government Money Fund (BENJI). Retain that measured collateral dependency while the tracked fund is quarantined; the link does not make BENJI scoreable or remove unavailable-upstream treatment.",
-  },
-];
+export const DEPENDENCY_TARGET_DISPOSITIONS: readonly DependencyTargetDisposition[] = [];
 
 /** Reviewed active mappings and explicitly suspended-reader provenance. */
 export const DEPENDENCY_ADAPTER_MAPPING_REVIEWS: readonly DependencyAdapterMappingReview[] = [
@@ -78,7 +67,6 @@ export const DEPENDENCY_ADAPTER_MAPPING_REVIEWS: readonly DependencyAdapterMappi
     rationale: "Maps positive balances only from the four exact Solana mint/symbol/reserve-account tuples for replacement USDv mint USDvUSpnhCr9yBgj3UyVrD239HRUv4RsHwH2FxsWuMk and Chancery reserve authority 8anxfyoftY9hPwxdvReet2beFS2HXjcXraPEamo4nGyB: USDC to usdc-circle, USDG to usdg-paxos, PYUSD to pyusd-paypal and USDT to usdt-tether, all with collateral depType and chancery:reserve:<lowercase-symbol> source keys. Zero balances, including PYUSD and USDT in the captured response, emit no slices or links. Inventory, duplicate, mint, vault, symbol, timestamp, positive-balance decimals, raw-unit or nominal-par valuation mismatches and an unreconciled total fail closed; no unknown constituent is resolved by symbol alone. Weights use the reconciled selected-account total at nominal USD 1, never USDv supply. Off-account assets, liabilities, encumbrances and legacy USDv remain outside the mapping; the selected-reserve-scope warning and financialAssurance=false are retained without whole-book coverage or redemption claims.",
   },
   adapterReview("theo-thusd-redemption", "worker/src/cron/reserve-adapters/theo-thusd-redemption.ts", "Republishes thusd-theo's full reviewed curated reserves array unchanged: thBILL maps to thbill-theo, USDC redemption liquidity to usdc-circle and USDT redemption liquidity to usdt-tether, all with collateral depType and no authored sourceKey. The aggregate delta-neutral gold carry row remains unlinked exogenous strategy exposure under its reviewed non-link disposition. The adapter resolves no label, address or symbol into reserve links and introduces no source keys; its pinned same-block Cash Wallet balance/allowance probe emits nested redemption telemetry only, never replacement reserve weights or new dependency claims. Missing or invalid full curated composition fails closed.", "2026-09-30"),
-  adapterReview("ondo-ousg", "worker/src/cron/reserve-adapters/ondo-ousg.ts", "Maps only the exact reviewed Sanity IDs and matching names/symbols for BUIDL, BENJI and USDC. Other fund, bank and residual rows stay unlinked; quarantined BENJI remains unavailable for upstream scoring.", "2026-09-14"),
   adapterReview("hylo-solana", "worker/src/cron/reserve-adapters/hylo-solana.ts", "Maps the pinned SPL USDC vault/mint to usdc-circle and the exact reviewed hylo-solana:onyc-pool source key to onyc-onre, both with collateral depType. ONYC pair, vault, mint and oracle/feed identities match the pinned SDK and prior PDA verification; finalized slot 468852221, observed 2026-11-13T08:02:03.380453Z, measures positive ONYC holdings. Source-key sidecar curation supplies the ONYC link without reciprocal backing or redemption claims. The registry-enumerated LST pool and pinned cbBTC/HYPE/ZEC pools remain untracked cryptoasset exposures. Unknown LSTs or activation of an unreviewed exogenous pair fail closed.", "2026-11-13"),
   adapterReview("3jane-usd3", "worker/src/cron/reserve-adapters/3jane-usd3.ts", "Maps the liquid waUSDC/USDC reserve bucket to the canonical Circle USDC dependency while leaving the private-credit receivables unlinked.", "2026-07-13"),
   adapterReview("accountable", "worker/src/cron/reserve-adapters/accountable.ts", "Maps only explicitly configured canonical asset rows. The 2026-10-03 Axis USDx and Unitas XGLD primary arrays at https://axis.accountable.capital:8443/dashboard and https://api-accountable.unitas.so/v1/dashboard?type=xgld reuse existing reserves_split handling. Empty risk/coin maps intentionally retain the whole location-only basket as unknown100 with degradation and no tracked link: custody venues are not collateral assets, net financing/hedges or redemption capacity. Both dashboard configs tighten the existing ceiling to three days; gross source ratios are contextual and do not promote unknown composition.", "2026-10-03"),
@@ -136,7 +124,6 @@ export const DEPENDENCY_ADAPTER_MAPPING_REVIEWS: readonly DependencyAdapterMappi
   adapterReview("falcon", "worker/src/cron/reserve-adapters/falcon.ts", "Maps exact transparency asset labels through fixed reviewed tracked-stablecoin and tracked-RWA tables while leaving residual bucket exposure unlinked.", "2026-09-01"),
   adapterReview("flying-tulip-ftusd", "worker/src/cron/reserve-adapters/flying-tulip-ftusd.ts", "Maps only the reviewed Ethereum and Sonic USDC, USDT, and USSD collateral addresses to canonical upstream IDs.", "2026-08-09"),
   adapterReview("frax-balance-sheet", "worker/src/cron/reserve-adapters/frax.ts", "Uses the subject-aware reviewed Frax reserve mapping and suppresses self-links."),
-  adapterReview("frax-fpi-collateral", "worker/src/cron/reserve-adapters/frax.ts", "Maps the reviewed FPI collateral roster to canonical upstream IDs."),
   adapterReview("gho", "worker/src/cron/reserve-adapters/gho.ts", "Maps only reviewed measured GSM reserve assets, retaining twelve-decimal percentages so positive USDC receipt claims are not rounded away. Issuance-only facilitator labels and the unresolved parent-facilitator collateral envelope remain unlinked; measured GSM holdings do not establish look-through weights for that residual.", "2026-09-30"),
   {
     ...adapterReview("sodax-sonic", "worker/src/cron/reserve-adapters/sodax-sonic.ts",
@@ -170,7 +157,6 @@ export const DEPENDENCY_ADAPTER_MAPPING_REVIEWS: readonly DependencyAdapterMappi
     "2026-10-29",
     "Lane F monolith-lender adapter mapping review",
   ),
-  adapterReview("nest-vault-positions", "worker/src/cron/reserve-adapters/nest-vault-positions.ts", "Maps only exact reviewed Nest vault positions to canonical upstream IDs."),
   adapterReview("origin-vault-balances", "worker/src/cron/reserve-adapters/origin-vault-balances.ts", "Maps Origin vault balances through the reviewed asset-address roster."),
   adapterReview("parallelizer-balances", "worker/src/cron/reserve-adapters/parallelizer-balances.ts", "Maps dynamically enumerated Parallelizer balances through the reviewed token roster and leaves unconfigured residual collateral unlinked.", "2026-08-20"),
   adapterReview("re-metrics", "worker/src/cron/reserve-adapters/re-metrics.ts", "Maps Re Protocol reserve telemetry using reviewed canonical asset symbols."),
@@ -244,13 +230,6 @@ export const DEPENDENCY_ADAPTER_MAPPING_REVIEWS: readonly DependencyAdapterMappi
     rationale: "Preserves only the configured canonical collateral ID from the reviewed single-collateral slice; current LUSD ETH collateral remains unlinked.",
   },
   {
-    adapter: "spiko-api",
-    reviewer: "pharos-live-reserve-upgrade",
-    reviewedAt: "2026-10-03",
-    sourceFiles: ["worker/src/cron/reserve-adapters/spiko-api.ts"],
-    rationale: "Preserves only an explicitly reviewed configured parent ID for the measured share-class bucket, never resolving a display label to an upstream. Existing CHFSAFO configuration was re-exercised on 2026-10-03 against https://public-api.spiko.io/share-classes/chfSAFO/totals: exact symbol chfSAFO, CHF currency and October 2 NAV day produce the unlinked SAFO-share bucket; this does not assert physical-portfolio or TRS composition.",
-  },
-  {
     adapter: "united-por",
     reviewer: "pharos-live-reserve-upgrade",
     reviewedAt: "2026-09-30",
@@ -289,6 +268,5 @@ export const DEPENDENCY_ADAPTER_MAPPING_REVIEWS: readonly DependencyAdapterMappi
   adapterReview("chainlink-nav", "worker/src/cron/reserve-adapters/chainlink-nav-core.ts", "USCC binds official Superstate Ethereum token 0x14d60e7fdc0d71d8611742720e4c50e7a974020c to Chainlink oracle 0xaffd8f5578e8590665de561bde9e7badb99300d9 from https://docs.superstate.com/investors/smart-contracts; 2026-10-03 live NAV was 11.772765. It does not reuse USTB-only RedemptionIdle liquidity. FIUSD binds zkSync token 0x2ab105a3ead22731082b790ca9a00d9a3a7627f9 to getPriceFeedOracle() 0xc406104c42211abd1a2cd411ddd071511515bddd; live NAV was 12048.93. Primary Sygnum claim https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779 describes a fiduciary fund-unit receipt, so portfolio scope remains composition-unverified. Neither exact-token NAV creates constituent dependency edges or redemption capacity.", "2026-10-03"),
   adapterReview("liquity-native-active-pool", "worker/src/cron/reserve-adapters/liquity-native-active-pool.ts", "USDFC pins the official Filecoin ActivePool, TroveManager and PriceFeed from https://docs.secured.finance/usdfc-stablecoin/deployed-contracts.md. Verified getFIL()/getDebt() read native FIL and active-trove debt; fetchPrice() and getTCR(price)/MCR() gate the documented holder FIL redemption in https://docs.secured.finance/usdfc-stablecoin/core-mechanics/redemption.md. Live 2026-10-03 active debt was 190455.538809 USD and collateral ratio 2.661268 versus MCR 1.1; DefaultPool debt is outside this active-pool capacity. FIL remains unlinked, and no Ethereum ETH price or collateral identity from liquity-v1 is reused.", "2026-10-03"),
   adapterReview("frnt-ledgerlens", "worker/src/cron/reserve-adapters/frnt-ledgerlens.ts", "2026-10-03 official https://dashboard.ledgerlens.io/c/wystc loader and complete unauthenticated Seroval JSON reviewed. Exact FRNT contracts and eight-chain liabilities reconcile; FBO-only cash, Treasury bills and repurchase agreements reconcile at category/item/account levels. All rows remain unlinked; no tracked token is held. Gross inventory excludes no assets, but net backing attribution stays withheld because the administrative payable is unallocated. Supplemental metrics are non-assured and the declaration remains weak-live-probe.", "2026-10-03"),
-  adapterReview("blackrock-brsrv-holdings", "worker/src/cron/reserve-adapters/blackrock-brsrv-holdings.ts", "Reviewed 2026-10-03 official RSVXX OnChain Shares CSV at https://www.blackrock.com/cash/en-us/products/351891/fund/1464253357814.ajax?fileType=csv&fileName=RSVXX_holdings&dataType=fund. October 1 securities market values reconcile to 49,853,218.07, split Treasury debt and Treasury repo; all rows remain unlinked. Securities-only denominator excludes undisclosed cash/other assets/liabilities and supplies no circulating supply, whole-book backing, coverage or capacity claim.", "2026-10-03"),
   adapterReview("coinbase-oned-por", "worker/src/cron/reserve-adapters/coinbase-oned-por.ts", "Ordinary public Coinbase GraphQL GET at https://www.coinbase.com/graphql/query with ProofOfReservesPageQuery, exact ONED/USDC/USD variables and required x-apollo-operation-name header returned200 on 2026-10-03. Reviewed persisted-query SHA256 f26fac8fa11e1fcab64476e3dc605758082acc19b13353841bd78fb57a0ba34a binds complete Base ONED stock to its exact native contract and reconciles the published USDC wallet census; only usdc-circle with wrapper depType is emitted. UTC lastUpdatedAt dates issuer telemetry, not independent financial assurance. Query hash retirement, schema drift, GraphQL partial/errors, non-success HTTP, stale/future dates and incomplete wallet/deployment scope fail closed with coinbase-oned-por:<reason> machine tokens; there is no HTML, stale or partial fallback. The HTML landing page returns403 but is display-only. Exclusive allocation/encumbrance and actionable redemption capacity remain unverified; no capacity is emitted.", "2026-10-03"),
 ];

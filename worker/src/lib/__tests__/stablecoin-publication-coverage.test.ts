@@ -814,6 +814,11 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     expect(priceCoverage([{ id, price: null }], [], { nowSec: 1794096000 }))
       .toMatchObject({ complete: true, missingPriceCount: 0, acknowledgedGapIds: [] });
     expect(coin.contracts).toHaveLength(3);
+    const spusd = TRACKED_META_BY_ID.get("spusd-soulpeg")!;
+    expect(ACTIVE_IDS.has("spusd-soulpeg")).toBe(false);
+    expect(spusd).toMatchObject({ status: "delisted", exitMechanism: "discretionary" });
+    expect(spusd.listingStatusReview?.changedAt).toBe("2026-11-24");
+    expect(GAP_REVIEWS.find((entry) => entry.stablecoinId === "spusd-soulpeg")).toBeUndefined();
   });
 
   it("fails closed on malformed review ownership, evidence, identity, and dates", () => {
@@ -901,7 +906,6 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
   });
 
   it.each([
-    ["spusd-soulpeg", "2026-11-21T01:25:49Z"],
     ["usdplus-streamflow", "2026-11-19T09:05:24Z"],
     ["sbold-k3-capital", "#2106"],
   ] as const)("acknowledges %s inside its 14-day review window and re-arms at expiry", (id, marker) => {

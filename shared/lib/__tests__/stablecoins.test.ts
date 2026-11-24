@@ -790,7 +790,7 @@ describe("tracked stablecoin metadata", () => {
 
   it("gives business-day NAV oracles enough freshness headroom for weekends", () => {
     const maxAgeSec = 4 * 24 * 60 * 60;
-    const businessDayNavIds = ["ousg-ondo-finance"];
+    const businessDayNavIds = ["buidl-blackrock", "usyc-hashnote", "ustbl-spiko", "vbill-vaneck"];
 
     const underConfigured = businessDayNavIds.flatMap((id) => {
       const params = TRACKED_META_BY_ID.get(id)?.liveReservesConfig?.params;
