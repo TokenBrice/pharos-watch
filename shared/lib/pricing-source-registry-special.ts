@@ -7,9 +7,18 @@ export const PRICING_SOURCE_REGISTRY_SPECIAL = [
     label: "DefiLlama (contract)",
     shortLabel: "Contract",
     depegSourceFamily: "defillama",
-    maxTrustedAgeSec: 15 * 60,
+    // coins.llama.fi refreshes thinner contract quotes every 45m-3h; bound the
+    // fallback lifetime to 3h measured strictly from DefiLlama's upstream clock.
+    maxTrustedAgeSec: 3 * 60 * 60,
     defaultWeight: 1,
     isListAggregator: true,
+    freshnessKind: "upstream",
+    supportsUpstreamObservedAt: true,
+    requiresObservedAt: true,
+    defaultObservedAtMode: "upstream",
+    capabilities: {
+      hasUpstreamTimestamp: true,
+    },
   }),
   definePricingSource(PRICING_SOURCE_PRESETS.hardProtocol, {
     key: "protocol-redeem",

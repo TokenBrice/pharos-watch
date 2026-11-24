@@ -11,7 +11,6 @@ import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   maturePairCreatedAt,
-  staleObservedAtSec,
   dlQuote,
   cmcUsdQuote,
   cmcCategory,
@@ -85,118 +84,18 @@ describe("enrichMissingPrices", () => {
     infoSpy.mockRestore();
   });
 
-  it("enriches via Pass 1 (contract address → DL coins API)", async () => {
-    const assets: PeggedAsset[] = [
-      makePeggedAsset({
-        price: 0,
-        address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
-      }),
-    ];
-
-    mockFetch([
-      {
-        match: "coins.llama.fi/prices",
-        body: {
-          coins: {
-            "ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7": dlQuote(1.0, "USDT"),
-          },
-        },
-      },
-    ]);
-
-    const stats = await enrichMissingPrices(assets);
-
-    expect(stats.totalMissing).toBe(1);
-    expect(stats.pass1).toBe(1);
-    expect(assets[0].price).toBe(1.0);
-    expect(stats.finalMissing).toBe(0);
-  });
-
-  it("normalizes EVM contract casing for DefiLlama contract fallback", async () => {
-    const assets: PeggedAsset[] = [
-      makePeggedAsset({
-        id: "usg-tangent",
-        name: "Tangent USD",
-        symbol: "USG",
-        price: 0,
-      }),
-    ];
-
-    mockFetch([
-      {
-        match: "coins.llama.fi/prices/current/ethereum:0xb1c2db5d6ca03fce73dbd304d320bf76c55ae1b1",
-        body: {
-          coins: {
-            "ethereum:0xb1c2db5d6ca03fce73dbd304d320bf76c55ae1b1": dlQuote(0.9994, "USG", { confidence: 0.95 }),
-          },
-        },
-      },
-    ]);
-
-    const stats = await enrichMissingPrices(assets);
-
-    expect(stats.pass1).toBe(1);
-    expect(assets[0].price).toBe(0.9994);
-    expect(assets[0].priceSource).toBe("defillama-contract");
-    expect(stats.finalMissing).toBe(0);
-  });
-
-  it("preserves case-sensitive Sui Move identifiers from tracked metadata", async () => {
-    const suiAusdCoinId = "sui:0x2053d08c1e2bd02791056171aab0fd12bd7cd7efad2ab8f6b9c8902f14df2ff2::ausd::AUSD";
-    const assets: PeggedAsset[] = [
-      makePeggedAsset({
-        id: "ausd-agora",
-        name: "Agora Dollar",
-        symbol: "AUSD",
-        price: 0,
-      }),
-    ];
-
-    mockFetch([
-      {
-        match: suiAusdCoinId,
-        body: {
-          coins: {
-            [suiAusdCoinId]: dlQuote(1.0002, "AUSD", { confidence: 0.95 }),
-          },
-        },
-      },
-    ]);
-
-    const result = await runDlContractPasses(assets, undefined);
-
+  it.each([
+    ["EVM bare address", makePeggedAsset({ price: 0, address: "0xdac17f958d2ee523a2206206994597c13d831ec7" }), "coins.llama.fi/prices", "ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7", 1.0, "USDT", true],
+    ["EVM tracked casing", makePeggedAsset({ id: "usg-tangent", name: "Tangent USD", symbol: "USG", price: 0 }), "coins.llama.fi/prices/current/ethereum:0xb1c2db5d6ca03fce73dbd304d320bf76c55ae1b1", "ethereum:0xb1c2db5d6ca03fce73dbd304d320bf76c55ae1b1", 0.9994, "USG", true],
+    ["Sui Move metadata", makePeggedAsset({ id: "ausd-agora", name: "Agora Dollar", symbol: "AUSD", price: 0 }), "sui:0x2053d08c1e2bd02791056171aab0fd12bd7cd7efad2ab8f6b9c8902f14df2ff2::ausd::AUSD", "sui:0x2053d08c1e2bd02791056171aab0fd12bd7cd7efad2ab8f6b9c8902f14df2ff2::ausd::AUSD", 1.0002, "AUSD", false],
+    ["Sui explicit Move ID", makePeggedAsset({ id: "sui-usdt-test", name: "Sui USDT", price: 0, address: "sui:0x375f70cf2ae4c00bf37117d0c85a2c71545e6ee05c4a5c7d282cd66a4504b068::usdt::USDT" }), "sui:0x375f70cf2ae4c00bf37117d0c85a2c71545e6ee05c4a5c7d282cd66a4504b068::usdt::USDT", "sui:0x375f70cf2ae4c00bf37117d0c85a2c71545e6ee05c4a5c7d282cd66a4504b068::usdt::USDT", 0.9998, "USDT", false],
+  ])("enriches DefiLlama contract pass 1 for %s", async (_label, fixture, match, coinId, price, symbol, viaEnrich) => {
+    const assets = [{ ...fixture }];
+    mockFetch([{ match, body: { coins: { [coinId]: dlQuote(price, symbol, { confidence: 0.95 }) } } }]);
+    const result = viaEnrich ? await enrichMissingPrices(assets) : await runDlContractPasses(assets, undefined);
     expect(result.pass1).toBe(1);
-    expect(assets[0].price).toBe(1.0002);
-    expect(assets[0].priceSource).toBe("defillama-contract");
-  });
-
-  it("preserves colon-rich Move identifiers in explicit chain-qualified addresses", async () => {
-    const suiUsdtCoinId = "sui:0x375f70cf2ae4c00bf37117d0c85a2c71545e6ee05c4a5c7d282cd66a4504b068::usdt::USDT";
-    const assets: PeggedAsset[] = [
-      makePeggedAsset({
-        id: "sui-usdt-test",
-        name: "Sui USDT",
-        price: 0,
-        address: suiUsdtCoinId,
-      }),
-    ];
-
-    mockFetch([
-      {
-        match: suiUsdtCoinId,
-        body: {
-          coins: {
-            [suiUsdtCoinId]: dlQuote(0.9998, "USDT", { confidence: 0.95 }),
-          },
-        },
-      },
-    ]);
-
-    const result = await runDlContractPasses(assets, undefined);
-
-    expect(result.pass1).toBe(1);
-    expect(assets[0].price).toBe(0.9998);
-    expect(assets[0].priceSource).toBe("defillama-contract");
+    expect(assets[0]).toMatchObject({ price, priceSource: "defillama-contract" });
+    if ("finalMissing" in result) expect(result.finalMissing).toBe(0);
   });
 
   it("escapes slash-bearing DefiLlama IDs without breaking the rest of the batch", async () => {
@@ -355,93 +254,24 @@ describe("enrichMissingPrices", () => {
     expect(stats.passDex).toBe(0);
   });
 
-  it("fills selected DL-listed missing prices from the low-volume CoinGecko fallback lane", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const observedAt = nowSec - 3600;
-    const assets: PeggedAsset[] = [
-      makePeggedAsset({
-        id: "dllr-sovryn",
-        name: "DLLR",
-        symbol: "DLLR",
-        price: null,
-        priceSource: "defillama",
-        geckoId: "sovryn-dollar",
-        circulating: { peggedUSD: 2_000_000 },
-      }),
-    ];
-
-    installFetch(async (url: string) => {
-        if (url.includes("coins.llama.fi")) {
-          return new Response(JSON.stringify({ coins: {} }), { status: 200 });
-        }
-        if (url.includes("dexscreener.com")) {
-          return new Response(JSON.stringify([]), { status: 200 });
-        }
-        if (url.includes("coingecko.com")) {
-          return new Response(
-            JSON.stringify({
-            "sovryn-dollar": { usd: 0.998, last_updated_at: observedAt },
-            }),
-            { status: 200 },
-          );
-        }
-        return new Response("Not found", { status: 404 });
-      });
-
-    const stats = await enrichMissingPrices(assets);
-
-    expect(stats.totalMissing).toBe(1);
-    expect(stats.passCgLowVolume).toBe(1);
-    expect(stats.finalMissing).toBe(0);
-    expect(assets[0]).toMatchObject({
-      price: 0.998,
-      priceSource: "coingecko-low-volume",
-      priceSelectedSource: "coingecko-low-volume",
-      priceConfidence: "fallback",
-      priceObservedAt: observedAt,
-      priceObservedAtMode: "upstream",
-      consensusSources: ["coingecko-low-volume"],
-    });
-  });
-
-  it("does not apply low-volume CoinGecko fallback to unallowlisted stale rows", async () => {
+  it.each([
+    ["allowlisted", "dllr-sovryn", "DLLR", "sovryn-dollar", 0.998, true],
+    ["unallowlisted", "usx-dforce", "USX", "token-dforce-usd", 0.414, false],
+  ])("handles %s low-volume CoinGecko fallback", async (_label, id, symbol, geckoId, usd, allowed) => {
     const observedAt = Math.floor(Date.now() / 1000) - 3600;
-    const assets: PeggedAsset[] = [
-      makePeggedAsset({
-        id: "usx-dforce",
-        name: "dForce USD",
-        symbol: "USX",
-        price: null,
-        priceSource: "defillama",
-        geckoId: "token-dforce-usd",
-        circulating: { peggedUSD: 2_000_000 },
-      }),
-    ];
-
-    installFetch(async (url: string) => {
-        if (url.includes("coins.llama.fi")) {
-          return new Response(JSON.stringify({ coins: {} }), { status: 200 });
-        }
-        if (url.includes("dexscreener.com")) {
-          return new Response(JSON.stringify([]), { status: 200 });
-        }
-        if (url.includes("coingecko.com")) {
-          return new Response(
-            JSON.stringify({
-              "token-dforce-usd": { usd: 0.414, last_updated_at: observedAt },
-            }),
-            { status: 200 },
-          );
-        }
-        return new Response("Not found", { status: 404 });
-      });
-
+    const assets = [makePeggedAsset({ id, name: symbol, symbol, price: null, priceSource: "defillama", geckoId, circulating: { peggedUSD: 2_000_000 } })];
+    installFetch(async (url: string) =>
+      url.includes("coins.llama.fi") ? Response.json({ coins: {} })
+        : url.includes("dexscreener.com") ? Response.json([])
+          : url.includes("coingecko.com") ? Response.json({ [geckoId]: { usd, last_updated_at: observedAt } })
+            : new Response("Not found", { status: 404 }));
     const stats = await enrichMissingPrices(assets);
-
-    expect(stats.passCgLowVolume).toBe(0);
-    expect(stats.finalMissing).toBe(1);
-    expect(assets[0].price).toBeNull();
-    expect(assets[0].priceSource).toBe("defillama");
+    expect(stats.passCgLowVolume).toBe(allowed ? 1 : 0);
+    expect(stats.finalMissing).toBe(allowed ? 0 : 1);
+    expect(assets[0]).toMatchObject(allowed ? {
+      price: usd, priceSource: "coingecko-low-volume", priceSelectedSource: "coingecko-low-volume",
+      priceConfidence: "fallback", priceObservedAt: observedAt, priceObservedAtMode: "upstream", consensusSources: ["coingecko-low-volume"],
+    } : { price: null, priceSource: "defillama" });
   });
 
   it("still uses stale FX cache for DexScreener fallback in enrichment (characterization)", async () => {
@@ -504,137 +334,29 @@ describe("enrichMissingPrices", () => {
     expect(assets[0].price).toBe(0.0005);
   });
 
-  it("enriches via an exact DexScreener token-address lookup", async () => {
-    const assets: PeggedAsset[] = [
-      makePeggedAsset({
-        id: "mystery-usd",
-        name: "Mystery USD",
-        symbol: "MUSD",
-        price: 0,
-        address: "0xabc",
-        chains: ["Base"],
-      }),
-    ];
-
-    const fetchSpy = installFetch(async (url: string) => {
-      if (url.includes("coins.llama.fi")) {
-        return new Response(JSON.stringify({ coins: {} }), { status: 200 });
-      }
-      if (url.includes("api.dexscreener.com/tokens/v1/base/0xabc")) {
-        return new Response(
-          JSON.stringify([
-            {
-              chainId: "base",
-              dexId: "aerodrome",
-              pairAddress: "0xpair",
-              baseToken: { address: "0xabc", name: "Mystery USD", symbol: "MUSD" },
-              quoteToken: { address: "0xdef", name: "USD Coin", symbol: "USDC" },
-              priceUsd: "1.0004",
-              priceNative: "1.0004",
-              liquidity: { usd: 250_000, base: 125_000, quote: 125_000 },
-              volume: { h24: 1_000, h6: 500, h1: 100, m5: 10 },
-              pairCreatedAt: Date.now(),
-            },
-          ]),
-          { status: 200 },
-        );
-      }
-      return new Response("Not found", { status: 404 });
-    });
-
-    const stats = await enrichMissingPrices(assets);
-
-    expect(stats.passDex).toBe(1);
-    expect(assets[0].price).toBe(1.0004);
-    expect(assets[0].priceSource).toBe("dexscreener-exact");
-    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes("api.dexscreener.com/tokens/v1/base/0xabc"))).toBe(true);
-  });
-
-  it("uses tracked contract metadata for addressless DexScreener exact fallback targets", async () => {
-    const assets: PeggedAsset[] = [
-      makePeggedAsset({
-        id: "gusd-gate",
-        name: "GUSD",
-        symbol: "GUSD",
-        price: 0,
-      }),
-    ];
-
-    const fetchSpy = installFetch(async (url: string) => {
-      if (url.includes("api.dexscreener.com/tokens/v1/ethereum/0xaf6186b3521b60e27396b5d23b48abc34bf585c5")) {
-        return new Response(
-          JSON.stringify([
-            {
-              chainId: "ethereum",
-              dexId: "curve",
-              pairAddress: "0xpair",
-              baseToken: { address: "0xaf6186b3521b60e27396b5d23b48abc34bf585c5", name: "GUSD", symbol: "GUSD" },
-              quoteToken: { address: "0xdef", name: "USD Coin", symbol: "USDC" },
-              priceUsd: "0.999",
-              priceNative: "0.999",
-              liquidity: { usd: 250_000, base: 125_000, quote: 125_000 },
-              volume: { h24: 1_000, h6: 500, h1: 100, m5: 10 },
-              pairCreatedAt: Date.now(),
-            },
-          ]),
-          { status: 200 },
-        );
-      }
-      return new Response("Not found", { status: 404 });
-    });
-
-    const result = await runDexScreenerPass(assets, undefined, undefined);
-
-    expect(result.resolved).toBe(1);
-    expect(assets[0].price).toBe(0.999);
-    expect(assets[0].priceSource).toBe("dexscreener-exact");
-    expect(fetchSpy).toHaveBeenCalledWith(
-      expect.stringContaining("api.dexscreener.com/tokens/v1/ethereum/0xaf6186b3521b60e27396b5d23b48abc34bf585c5"),
-      expect.anything(),
-    );
-  });
-
-  it("rejects metadata-derived DexScreener exact prices when the tracked token symbol differs", async () => {
-    const assets: PeggedAsset[] = [
-      makePeggedAsset({
-        id: "usdo-openeden",
-        name: "OpenDollar USDO",
-        symbol: "USDO",
-        price: 0,
-      }),
-    ];
-
-    installFetch(async (url: string) => {
-        if (url.includes("api.dexscreener.com/tokens/v1/ethereum/0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe")) {
-          return new Response(
-            JSON.stringify([
-              {
-                chainId: "ethereum",
-                dexId: "curve",
-                pairAddress: "0xpair",
-                baseToken: {
-                  address: "0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe",
-                  name: "OpenEden cUSDO",
-                  symbol: "cUSDO",
-                },
-                quoteToken: { address: "0xdef", name: "USD Coin", symbol: "USDC" },
-                priceUsd: "1.047",
-                priceNative: "1.047",
-                liquidity: { usd: 356_000, base: 178_000, quote: 178_000 },
-                volume: { h24: 267, h6: 100, h1: 10, m5: 1 },
-                pairCreatedAt: Date.now(),
-              },
-            ]),
-            { status: 200 },
-          );
-        }
-        return new Response(JSON.stringify([]), { status: 200 });
-      });
-
-    const result = await runDexScreenerPass(assets, undefined, undefined);
-
-    expect(result.resolved).toBe(0);
-    expect(assets[0].price).toBe(0);
+  it.each([
+    ["explicit address", makePeggedAsset({ id: "mystery-usd", name: "Mystery USD", symbol: "MUSD", price: 0, address: "0xabc", chains: ["Base"] }), "base", "0xabc", "MUSD", "1.0004", true, true],
+    ["tracked metadata", makePeggedAsset({ id: "gusd-gate", name: "GUSD", symbol: "GUSD", price: 0 }), "ethereum", "0xaf6186b3521b60e27396b5d23b48abc34bf585c5", "GUSD", "0.999", false, true],
+    ["symbol mismatch", makePeggedAsset({ id: "usdo-openeden", name: "OpenDollar USDO", symbol: "USDO", price: 0 }), "ethereum", "0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe", "cUSDO", "1.047", false, false],
+  ])("handles exact DexScreener token lookup (%s)", async (_label, fixture, chain, address, pairSymbol, priceUsd, viaEnrich, resolves) => {
+    const assets = [{ ...fixture }];
+    const expectedPath = `api.dexscreener.com/tokens/v1/${chain}/${address}`;
+    const fetchSpy = installFetch(async (url: string) =>
+      url.includes("coins.llama.fi") ? Response.json({ coins: {} })
+        : url.includes(expectedPath) ? Response.json([{
+            chainId: chain, dexId: "curve", pairAddress: "0xpair",
+            baseToken: { address, name: pairSymbol, symbol: pairSymbol },
+            quoteToken: { address: "0xdef", name: "USD Coin", symbol: "USDC" },
+            priceUsd, priceNative: priceUsd, liquidity: { usd: 250_000, base: 125_000, quote: 125_000 },
+            volume: { h24: 1_000, h6: 500, h1: 100, m5: 10 }, pairCreatedAt: Date.now(),
+          }]) : Response.json([]));
+    if (viaEnrich) expect((await enrichMissingPrices(assets)).passDex).toBe(1);
+    else expect((await runDexScreenerPass(assets, undefined, undefined)).resolved).toBe(resolves ? 1 : 0);
+    expect(assets[0].price).toBe(resolves ? Number(priceUsd) : 0);
+    if (resolves) {
+      expect(assets[0].priceSource).toBe("dexscreener-exact");
+      expect(fetchSpy.mock.calls.some(([url]) => String(url).includes(expectedPath))).toBe(true);
+    }
   });
 
 });
@@ -646,8 +368,12 @@ describe("bounded DefiLlama contract batches", () => {
     id: `batch-${index}`, symbol: "USD", price: null,
     address: `ethereum:0x${index.toString(16).padStart(40, "0")}`,
   }));
+  const priceForId = (id: string) => 1 + (Number.parseInt(id.slice(-4), 16) || 0) * 1e-6;
   const quoteResponse = (url: string) => Response.json({ coins: Object.fromEntries(
-    url.split("/prices/current/")[1].split(",").map((id) => [decodeURIComponent(id), dlQuote(1, "USD")]),
+    url.split("/prices/current/")[1].split(",").map((rawId) => {
+      const id = decodeURIComponent(rawId);
+      return [id, dlQuote(priceForId(id), "USD")];
+    }),
   ) });
 
   it("bounds encoded URLs, deduplicates identities and merges every successful chunk", async () => {
@@ -685,15 +411,15 @@ describe("bounded DefiLlama contract batches", () => {
       if (calls > 1) return quoteResponse(url);
       const ids = url.split("/prices/current/")[1].split(",").map(decodeURIComponent);
       return Response.json({ coins: Object.fromEntries(ids.map((id, index) => [id,
-        index === 0 ? { price: null, symbol: "USD" } : dlQuote(1, "USD")])) });
+        index === 0 ? { price: null, symbol: "USD" } : dlQuote(priceForId(id), "USD")])) });
     });
     const result = await runDlContractPasses(assets, undefined);
     expect(calls).toBeGreaterThan(1);
     expect(result.failures).toEqual([]);
     expect(result.resolved).toBe(assets.length - 1);
     expect(assets[0].price).toBeNull();
-    expect(assets[1].price).toBe(1);
-    expect(assets[assets.length - 1].price).toBe(1);
+    expect(assets[1].price).toBe(priceForId(assets[1].address!));
+    expect(assets[assets.length - 1].price).toBe(priceForId(assets[assets.length - 1].address!));
     expect(result.diagnostics).toEqual([expect.objectContaining({
       source: "defillama-contract", success: true, rejectionReasonCounts: { "invalid-shape": 1 },
     })]);
@@ -714,7 +440,7 @@ describe("bounded DefiLlama contract batches", () => {
       const result = await runDlContractPasses(assets, undefined, undefined, makeEnrichPricesDb([]));
       expect(result.failures).toEqual(["dl-contracts"]);
       expect(assets[0].price).toBeNull();
-      expect(assets[assets.length - 1].price).toBe(1);
+      expect(assets[assets.length - 1].price).toBe(priceForId(assets[assets.length - 1].address!));
       expect(result.diagnostics?.[0]).toMatchObject({ success: false, errorClass: "invalid-shape" });
       expect(outcome).toHaveBeenCalledTimes(1);
       expect(outcome.mock.calls[0][2]).toBe(true);
@@ -930,7 +656,7 @@ describe("enrichMissingPrices", () => {
   });
 
   it.each([
-    ["stale timestamp", dlQuote(1.0, "USDT", { timestamp: staleObservedAtSec() })],
+    ["stale timestamp (>3h)", dlQuote(1.0, "USDT", { timestamp: Math.floor(Date.now() / 1000) - (3 * 3600 + 60) })],
     ["low confidence", dlQuote(1.0, "USDT", { confidence: 0.2 })],
     ["wrong symbol", dlQuote(1.0, "USDC")],
   ])("skips DefiLlama contract quotes with %s", async (_caseName, quote) => {
@@ -956,6 +682,38 @@ describe("enrichMissingPrices", () => {
 
     expect(result.resolved).toBe(0);
     expect(assets[0].price).toBe(0);
+  });
+
+  it("admits 2h-old contract quotes and withholds identical placeholder prices across unrelated assets only", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const placeholder = 0.99987355779;
+    const assets: PeggedAsset[] = [
+      makePeggedAsset({ id: "a7a5-old-vector", symbol: "A7A5", price: null, pegType: "peggedRUB", address: "ethereum:0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9" }),
+      makePeggedAsset({ id: "nusd-nexus", symbol: "NUSD", price: null, address: "ethereum:0x1111111111111111111111111111111111111111" }),
+      makePeggedAsset({ id: "usdu-usdu-finance", symbol: "USDU", price: null, address: "ethereum:0x2222222222222222222222222222222222222222" }),
+      makePeggedAsset({ id: "ausd-agora", symbol: "AUSD", price: null, address: "ethereum:0x3333333333333333333333333333333333333333" }),
+      makePeggedAsset({ id: "iusd-initia", symbol: "iUSD", price: null, address: "ethereum:0x4444444444444444444444444444444444444444" }),
+    ];
+    mockFetch([{
+      match: "coins.llama.fi/prices",
+      body: { coins: {
+        "ethereum:0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9": dlQuote(0.0124, "A7A5", { timestamp: now - 2 * 3600 }),
+        "ethereum:0x1111111111111111111111111111111111111111": dlQuote(placeholder, "NUSD", { timestamp: now - 60 }),
+        "ethereum:0x2222222222222222222222222222222222222222": dlQuote(placeholder, "USDU", { timestamp: now - 60 }),
+        "ethereum:0x3333333333333333333333333333333333333333": dlQuote(0.999746, "AUSD", { timestamp: now - 60 }),
+        "ethereum:0x4444444444444444444444444444444444444444": dlQuote(0.999746, "iUSD", { timestamp: now - 60 }),
+      } },
+    }]);
+    const result = await runDlContractPasses(assets, { peggedRUB: 0.0125 });
+    expect(result.resolved).toBe(3);
+    expect(assets[0]).toMatchObject({ price: 0.0124, priceObservedAt: now - 2 * 3600, priceObservedAtMode: "upstream" });
+    expect(assets[1].price).toBeNull();
+    expect(assets[2].price).toBeNull();
+    expect(assets[3].price).toBe(0.999746);
+    expect(assets[4].price).toBe(0.999746);
+    expect(result.diagnostics).toContainEqual(expect.objectContaining({
+      source: "defillama-contract", rejectionReasonCounts: { "contract-fill-default": 2 },
+    }));
   });
 
   it("records a defillama-coins breaker failure when DL /coins OK response is malformed", async () => {

@@ -139,7 +139,7 @@ describe("runSharedPriceCompletion authoritative repair", () => {
       await writePriceCorroborationObservations(db, [
         { id: "pmusd-raac", source: "defillama-contract", price: 0.408, observedAt: now - 60, observedAtMode: "upstream" },
         { id: "deadzone-usd", source: "dexscreener-exact", chain: "ethereum", target: "0xpool", price: 0.75, recentActivity: { evidence: "positive-volume-m5", collectedAt: now - 60 }, observedAt: null, observedAtMode: "unknown" },
-        { id: "pending-only", source: "defillama-contract", price: 0.408, observedAt: now - 60, observedAtMode: "upstream" },
+        { id: "pending-only", source: "defillama-contract", price: 0.4081, observedAt: now - 60, observedAtMode: "upstream" },
       ], now - 60);
 
       const openDepegs = await loadOpenConfirmedDepegs(db);

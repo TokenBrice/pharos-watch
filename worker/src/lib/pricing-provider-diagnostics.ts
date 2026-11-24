@@ -34,6 +34,7 @@ export type PricingProviderDiagnosticSource =
 
 export type PricingProviderRejectionReason =
   | "blocked"
+  | "contract-fill-default"
   | "empty-response"
   | "invalid-shape"
   | "malformed-json"

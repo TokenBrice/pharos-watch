@@ -1,4 +1,5 @@
 import { isSolomonPriceIdentityAllowed } from "./solomon-usdv-identity";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   getPricingSourceRegistryEntry,
   isPricingSourceSoftGuardrailExempt,
@@ -8,8 +9,10 @@ import {
   OPEN_DEPEG_CONTINUITY_MAX_SPREAD_BPS,
   WEAK_FALLBACK_FIXED_PEG_DEPEG_BPS,
   hasDepegAuthoritativeSource,
+  isUncorroboratedDefiLlamaContractFillQuote,
   isUncorroboratedDefiLlamaListFillQuote,
   isUncorroboratedDefiLlamaReferenceQuote,
+  type DefiLlamaContractFillDefaultQuote,
   type DefiLlamaListFillDefaultQuote,
 } from "@shared/lib/pricing-source-policy";
 import { classifyDirectionalSignal, deriveDepegSignal, type DepegDirection } from "@shared/lib/depeg-signals";
@@ -17,6 +20,8 @@ import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
 import { getDepegThresholdBps } from "./depeg-threshold-policy";
 import type { OpenConfirmedDepegReference } from "./open-confirmed-depegs";
+import { erc4626NavProvider, previewRedeemProvider } from "./authoritative-price-sources/erc4626-nav";
+import { inheritedTrackedPriceProvider } from "./authoritative-price-sources/inherited-tracked";
 import { pricesAgreeWithinBps } from "./price-divergence";
 import { haveDisjointPriceInputs, type UpstreamKeysBySource } from "./price-consensus";
 import {
@@ -32,6 +37,74 @@ import {
 import type { PriceConfidence, PriceObservedAtMode, PricePublicationReason } from "@shared/types/price";
 
 const WEAK_FIXED_PEG_JUMP_WITHHOLD_BPS = 2_000;
+
+let contractFillLineageById: Map<string, string> | null = null;
+
+function buildContractFillLineageById(): Map<string, string> {
+  const neighbors = new Map<string, Set<string>>();
+  const link = (a: string | undefined, b: string | undefined) => {
+    const left = a?.trim();
+    const right = b?.trim();
+    if (!left || !right || left === right) return;
+    let leftSet = neighbors.get(left);
+    if (!leftSet) { leftSet = new Set(); neighbors.set(left, leftSet); }
+    leftSet.add(right);
+    let rightSet = neighbors.get(right);
+    if (!rightSet) { rightSet = new Set(); neighbors.set(right, rightSet); }
+    rightSet.add(left);
+  };
+
+  for (const meta of TRACKED_META_BY_ID.values()) {
+    link(meta.id, meta.variantOf);
+    link(meta.id, meta.pegReferenceId);
+  }
+  for (const parentMap of [
+    inheritedTrackedPriceProvider.liveParentByAssetId,
+    erc4626NavProvider.liveParentByAssetId,
+    previewRedeemProvider.liveParentByAssetId,
+  ]) {
+    if (!parentMap) continue;
+    for (const [childId, parentId] of Object.entries(parentMap)) {
+      link(childId, parentId);
+    }
+  }
+
+  const lineageById = new Map<string, string>();
+  for (const startId of neighbors.keys()) {
+    if (lineageById.has(startId)) continue;
+    const component: string[] = [];
+    const queue = [startId];
+    const seen = new Set<string>([startId]);
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      component.push(current);
+      for (const next of neighbors.get(current) ?? []) {
+        if (!seen.has(next)) {
+          seen.add(next);
+          queue.push(next);
+        }
+      }
+    }
+    component.sort();
+    const canonicalRoot = component[0]!;
+    for (const member of component) {
+      lineageById.set(member, canonicalRoot);
+    }
+  }
+  return lineageById;
+}
+
+/**
+ * Canonical equivalence group for variants and wrappers of the same underlying
+ * asset (transitive `variantOf`, `pegReferenceId`, inherited-tracked wrappers,
+ * and ERC-4626 / previewRedeem vaults). Unrelated assets resolve to themselves.
+ */
+export function resolveContractFillLineageGroup(assetId: string): string {
+  const normalized = assetId.trim();
+  if (!normalized) return normalized;
+  contractFillLineageById ??= buildContractFillLineageById();
+  return contractFillLineageById.get(normalized) ?? normalized;
+}
 
 export interface TrustedPriceReference {
   price: number;
@@ -75,6 +148,8 @@ export interface PublishablePriceInput {
   listFillDefault?: DefiLlamaListFillDefaultQuote | null;
   /** Open confirmed `depeg_events` direction when available; null/undefined disables continuity. */
   openConfirmedDepeg?: OpenConfirmedDepegReference | null;
+  /** Per-batch DefiLlama contract placeholder marker repeated across unrelated assets. */
+  contractFillDefault?: DefiLlamaContractFillDefaultQuote | null;
 }
 
 /** Dated USD candidates with all verified upstream price-formation identities. */
@@ -429,6 +504,16 @@ function evaluatePriceForPublication(input: PublishablePriceInput): PricePublica
     return { ...base, accepted: false, reason: "list_fill_default_requires_corroboration", gates: ["price-validation", "list-fill-default-corroboration"] };
   }
 
+  if (isUncorroboratedDefiLlamaContractFillQuote({
+    price: input.price,
+    fillDefault: input.contractFillDefault,
+    sources: input.agreeSources && input.agreeSources.length > 0
+      ? input.agreeSources
+      : sourceParts(input.source),
+  })) {
+    return { ...base, accepted: false, reason: "contract_fill_default_requires_corroboration", gates: ["price-validation", "contract-fill-default-corroboration"] };
+  }
+
   const severeDownsideAllowed = allowsSevereDownsidePublication(input);
   const weakFallbackAllowed = allowsWeakFallbackFixedPegDepegPublication(input);
   const temporalJumpWithheld = !corroboratedFiatPremium && shouldWithholdTemporalJump(input);
@@ -503,10 +588,12 @@ export function validatePublishedAssetPrice(input: {
     priceConfidence?: PriceConfidence | null;
     agreeSources?: string[];
     priceListFillDefault?: DefiLlamaListFillDefaultQuote | null;
+    priceContractFillDefault?: DefiLlamaContractFillDefaultQuote | null;
   };
   candidatePrices?: Record<string, number>;
   upstreamKeysBySource?: UpstreamKeysBySource;
   fiatPremiumEvidence?: FiatPremiumEvidence;
+  contractFillDefault?: DefiLlamaContractFillDefaultQuote | null;
   validationContext: PriceValidationContext;
   validationReferences?: PriceValidationReferences;
   previousTrustedPrice?: TrustedPriceReference | null;
@@ -526,5 +613,6 @@ export function validatePublishedAssetPrice(input: {
     previousTrustedPrice: input.previousTrustedPrice,
     listFillDefault: input.asset.priceListFillDefault ?? null,
     openConfirmedDepeg: input.openConfirmedDepeg,
+    contractFillDefault: input.contractFillDefault ?? input.asset.priceContractFillDefault ?? null,
   });
 }

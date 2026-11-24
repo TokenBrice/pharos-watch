@@ -1,6 +1,7 @@
 import type { PriceCacheEntry } from "../../../lib/price-cache";
 import { logWorkerEvent, logWorkerEventArgs } from "../../../lib/structured-log";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { detectDefiLlamaContractFillDefaultPrices } from "@shared/lib/pricing-source-policy";
 import { REVIEWED_ONCHAIN_SUPPLY_PLANS, getOnchainSupplyHoldReason, isOnchainSupplyPartitionExcluded, prefersReviewedNativeFiatSupply, selectCuratedAggregateOnchainSupplyProbeContracts, selectSupplementalOnchainSupplyProbeContract } from "@shared/lib/onchain-supply-probe";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
@@ -14,7 +15,7 @@ import { buildZephyrProtocolPeggedAsset, fetchZephyrProtocolStats } from "../zep
 import { fetchHiveHbdProtocolSupply } from "../../reserve-adapters/hive-hbd-protocol";
 import { getFreshSingleSourceNavParentId, resolveVaultNavSupplyPrice } from "../../../lib/authoritative-price-sources";
 import { buildPriceReasonablenessOptions, buildPriceValidationContext, isReasonablePrice } from "../../../lib/price-validation";
-import { validatePublishedAssetPrice } from "../../../lib/price-publish-policy";
+import { resolveContractFillLineageGroup, validatePublishedAssetPrice } from "../../../lib/price-publish-policy";
 import { buildPreviousTrustedPriceLookup } from "../pricing";
 import { validatePricingSourceFreshness } from "../../../lib/pricing-source-freshness";
 import { loadReserveNavSupplyPrice, reserveNavSupplyScopeReason } from "../../../lib/reserve-nav-price";
@@ -25,6 +26,7 @@ import {
   fetchSupplementalPriceData,
   buildSupplementalAsset,
   getCoinGeckoCapQuantity,
+  getSupplementalDefiLlamaContractPriceKey,
   pegTypeKey,
   resolveLowVolumeCoinGeckoPrice,
   resolveSupplementalContractPrice,
@@ -139,6 +141,20 @@ export async function fetchFiatCoinGeckoTokens(
       fetchSupplementalPriceData(FIAT_CG_METAS, "fiat-cg", signal, db),
       hasZephyrScannerAsset ? fetchZephyrProtocolStats(signal) : Promise.resolve(null),
     ]);
+    const supplementalContractFillDefaults = detectDefiLlamaContractFillDefaultPrices(
+      FIAT_CG_METAS.flatMap((meta) => {
+        const priceKey = getSupplementalDefiLlamaContractPriceKey(meta);
+        const dlPrice = priceKey ? toPositiveFiniteNumber(priceData.coins[priceKey]?.price) : null;
+        return priceKey && dlPrice != null
+          ? [{
+              id: meta.id,
+              price: dlPrice,
+              lineageGroup: resolveContractFillLineageGroup(meta.id),
+              tokenKey: priceKey,
+            }]
+          : [];
+      }),
+    );
 
     const mcapMap: Record<string, number> = {};
     for (const token of FIAT_CG_METAS) {
@@ -190,7 +206,12 @@ export async function fetchFiatCoinGeckoTokens(
         // with llamaId=null + low volume → upstream last_updated_at exceeds 15min.
         let priceResolution = resolveSupplementalPrice(priceData, cgData, meta.geckoId);
         if (!priceResolution) {
-          priceResolution = resolveSupplementalContractPrice(priceData, meta, fxFallbackRates);
+          priceResolution = resolveSupplementalContractPrice(
+            priceData,
+            meta,
+            fxFallbackRates,
+            supplementalContractFillDefaults,
+          );
         }
         if (!priceResolution) {
           priceResolution = resolveLowVolumeCoinGeckoPrice(cgData, meta.geckoId);

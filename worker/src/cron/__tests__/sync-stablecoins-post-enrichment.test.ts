@@ -126,6 +126,8 @@ describe("runPostEnrichmentPricePipeline", () => {
     ["usdt-tether", "peggedUSD", 1, "coinmarketcap", 7292, 900, true],
     ["usdt-tether", "peggedUSD", 1, "coinmarketcap", 8401, 900, false],
     ["usdt-tether", "peggedUSD", 1, "coingecko-onchain-address", 901, 900, false],
+    ["usdt-tether", "peggedUSD", 0.998, "defillama-contract", 2 * 3600, 900, true],
+    ["usdt-tether", "peggedUSD", 0.998, "defillama-contract", 3 * 3600 + 60, 900, false],
     ["gbpm-mento", "peggedGBP", 1.32, "coingecko-low-volume", 41 * 3600, 3601, true],
     ["usdt-tether", "peggedUSD", 1, "coingecko-low-volume", 40 * 3600, 4501, false],
     ["usdt-tether", "peggedUSD", 1, "cached", 60, 30, false],
@@ -215,6 +217,28 @@ describe("runPostEnrichmentPricePipeline", () => {
         alreadyPriced: 1, assetAbsent: 2, policyRejected: 0, selected: 0, notNeededAfterSelection: 0,
       });
       expect(second.cachedFallbackCount).toBe(0);
+      // Repeated staged defillama-contract placeholders across unrelated assets are rejected via policyRejected.
+      const nusd = makeAsset({ id: "nusd-nexus", pegType: "peggedUSD", price: null, priceSource: undefined, priceConfidence: null });
+      const usdu = makeAsset({ id: "usdu-usdu-finance", pegType: "peggedUSD", price: null, priceSource: undefined, priceConfidence: null });
+      const ausd = makeAsset({ id: "ausd-agora", pegType: "peggedUSD", price: null, priceSource: undefined, priceConfidence: null });
+      const iusd = makeAsset({ id: "iusd-initia", pegType: "peggedUSD", price: null, priceSource: undefined, priceConfidence: null });
+      await writePriceCorroborationObservations(db, [
+        { id: nusd.id, source: "defillama-contract", price: 0.99987355779, observedAt: now - 120, observedAtMode: "upstream" },
+        { id: usdu.id, source: "defillama-contract", price: 0.99987355779, observedAt: now - 120, observedAtMode: "upstream" },
+        { id: ausd.id, source: "defillama-contract", price: 0.999746, observedAt: now - 120, observedAtMode: "upstream" },
+        { id: iusd.id, source: "defillama-contract", price: 0.999746, observedAt: now - 120, observedAtMode: "upstream" },
+      ], now - 10);
+      const fillResult = await runPostEnrichmentPricePipeline({
+        ...pipelineInput(nusd, db), assets: [nusd, usdu, ausd, iusd], priceCache: new Map(),
+      }, "");
+      if (isAbortResult(fillResult)) throw new Error("unexpected abort");
+      expect(nusd.price).toBeNull();
+      expect(usdu.price).toBeNull();
+      expect(ausd.price).toBe(0.999746);
+      expect(iusd.price).toBe(0.999746);
+      expect(fillResult.priceObservationEffectiveness?.publication).toEqual({
+        alreadyPriced: 0, assetAbsent: 0, policyRejected: 2, selected: 2, notNeededAfterSelection: 0,
+      });
     } finally {
       clock.mockRestore();
       sqlite.close();

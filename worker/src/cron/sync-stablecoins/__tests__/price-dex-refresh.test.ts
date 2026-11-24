@@ -320,9 +320,13 @@ describe("DEX refresh continuity", () => {
     expect(staged.byId.get("xo-exodus")?.[0].observedAt).toBe(now);
   });
 
-  it.each([PRICE_CORROBORATION_OBSERVATIONS_KEY, DEX_REFRESH_CACHE_KEY])(
-    "requires a block-timed Jupiter observation from %s", async (key) => {
-      const observation = { id: "xo-exodus", source: "jupiter", price: 0.999, observedAt: now - 30 };
+  it.each([
+    [PRICE_CORROBORATION_OBSERVATIONS_KEY, "jupiter", "xo-exodus", 30],
+    [DEX_REFRESH_CACHE_KEY, "jupiter", "xo-exodus", 30],
+    [DEX_REFRESH_CACHE_KEY, "defillama-contract", "a7a5-old-vector", 2 * 3600],
+  ] as const)(
+    "requires an upstream observation clock for %s %s", async (key, source, assetId, ageSec) => {
+      const observation = { id: assetId, source, price: 0.999, observedAt: now - ageSec };
       for (const observedAtMode of ["local_fetch", "upstream"] as const) {
         const row = { ...observation, observedAtMode };
         const payload = key === DEX_REFRESH_CACHE_KEY ? { observations: [row] } : [row];
@@ -545,6 +549,8 @@ describe("exact-address coverage refresh", () => {
   }];
 
   function prepareAddressRefresh(...published: PeggedAsset[]) {
+    if (vi.isFakeTimers()) vi.setSystemTime(now * 1000);
+    else vi.useFakeTimers({ now: now * 1000, toFake: ["Date"] });
     const fetch = prepareRefresh();
     setPublished(...published);
     fetch.mockResolvedValue({ resolved: 0, failures: [] });
@@ -629,6 +635,7 @@ describe("exact-address coverage refresh", () => {
     expect((await readRefreshState()).addressTargets).toEqual([]);
     cg.mockClear();
     mockFetch(onchainRoutes());
+    vi.setSystemTime((now + 900) * 1000);
     const recovered = await runRefresh({ syncStartSec: now + 900, addressProvider });
     expect(recovered.addressRefresh.targetCount).toBeGreaterThan(1);
     expect(recovered.addressRefresh.resolved).toBe(1);
@@ -703,8 +710,8 @@ describe("exact-address coverage refresh", () => {
       respond: (req) => coingeckoResponse(new URL(req.url).pathname.split("/tokens/multi/")[1]!.split(",")[0]!, "0.408", "120000") },
     { match: (req) => onchainRequest(req.url), status: 404, body: { error: "not found" } }]);
     const runSlot = async (slotSec: number, published: PeggedAsset) => {
-      vi.setSystemTime(slotSec * 1_000);
       prepareAddressRefresh(published);
+      vi.setSystemTime(slotSec * 1_000);
       expect(await runRefresh({ syncStartSec: slotSec, addressProvider }))
         .toMatchObject({ addressRefresh: { resolved: 1 }, contractRefresh: { resolved: 1 } });
       vi.setSystemTime((slotSec + 360) * 1_000);

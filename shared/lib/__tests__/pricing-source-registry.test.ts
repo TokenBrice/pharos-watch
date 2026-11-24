@@ -68,10 +68,24 @@ describe("pricing source registry", () => {
     // still never replay.
     expect(getPriceCacheMaxAgeSec("coingecko+coingecko-onchain-address+pyth", 6 * 3600)).toBe(5 * 60);
     expect(getPriceCacheMaxAgeSec("coingecko-onchain-address", 6 * 3600)).toBe(0);
+    expect(getPriceCacheMaxAgeSec("defillama-contract", 6 * 3600)).toBe(3 * 3600);
     expect(getPriceCacheMaxAgeSec("coingecko+cached", 6 * 3600)).toBe(0);
     expect(hasDepegAuthoritativeSource(["coingecko+geckoterminal"])).toBe(false);
     expect(countDepegAuthoritativeSources(["coingecko+pyth"])).toBe(1);
     expect(isPoolChallengeEligibleConsensus(["coingecko+geckoterminal"])).toBe(true);
+    expect(getPricingSourceRegistryEntry("defillama-contract")).toMatchObject({
+      maxTrustedAgeSec: 3 * 3600, freshnessKind: "upstream", supportsUpstreamObservedAt: true,
+      requiresObservedAt: true, defaultObservedAtMode: "upstream", isReplaySafe: true, canBeDepegAuthoritative: false,
+    });
+    expect(getPricingSourceRegistryEntry("jupiter")).toMatchObject({
+      maxTrustedAgeSec: 30 * 60, freshnessKind: "upstream", supportsUpstreamObservedAt: true,
+      requiresObservedAt: true, defaultObservedAtMode: "upstream", isReplaySafe: false, canBeDepegAuthoritative: false,
+    });
+    for (const localFetchKey of ["dexscreener-exact", "coingecko-onchain-address"] as const) {
+      expect(getPricingSourceRegistryEntry(localFetchKey)).toMatchObject({
+        maxTrustedAgeSec: 15 * 60, freshnessKind: "local_fetch",
+      });
+    }
   });
 
   it("treats only a two-source list-aggregator pair as non-independent agreement", () => {

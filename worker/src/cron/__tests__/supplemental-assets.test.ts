@@ -199,6 +199,12 @@ describe("resolveSupplementalPrice", () => {
       { coins: { [key]: { price: 1.01, timestamp: nowSec - 60, symbol: "TEST", confidence: 0.79 } } },
       meta,
     )).toBeNull();
+    expect(resolveSupplementalContractPrice(
+      { coins: { [key]: { price: 0.99987355779, timestamp: nowSec - 60, symbol: "TEST", confidence: 0.99 } } },
+      meta,
+      undefined,
+      new Set([0.99987355779]),
+    )).toBeNull();
   });
 
   it("rejects unreasonable DefiLlama exact-contract quotes", () => {

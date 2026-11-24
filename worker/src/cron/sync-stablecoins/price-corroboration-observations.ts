@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { PriceObservedAtModeSchema } from "@shared/types/price";
@@ -10,6 +11,10 @@ export const PRICE_CORROBORATION_OBSERVATIONS_KEY = "price:corroboration-observa
 export const DEX_REFRESH_CACHE_KEY = "price:dex-refresh:v1";
 // Bound the handoff across hourly replacement; source TTLs remain independent.
 const STAGING_MAX_AGE_SEC = (60 + 15) * 60;
+/** Lead time from the :09/:24/:39/:54 staging slot to the next :15/:30/:45/:00 publication. */
+const STAGING_TO_NEXT_PUBLICATION_SEC =
+  CRON_SCHEDULE_CADENCES.quarterHourly.intervalSec -
+  (CRON_SCHEDULE_CADENCES.statusSelfCheckOffset.offsetSec % CRON_SCHEDULE_CADENCES.quarterHourly.intervalSec);
 const ObservationsSchema = z.array(z.object({
   id: z.string().min(1),
   source: z.string().min(1),
@@ -42,6 +47,49 @@ export function toV1PriceObservation(row: PriceCorroborationObservation): PriceC
     return { ...row, observedAt: row.recentActivity.collectedAt, observedAtMode: "local_fetch" };
   }
   return row;
+}
+
+function resolveEligibleStagingSourceMaxAgeSec(observation: PriceCorroborationObservation): number | null {
+  const source = getPricingSourceRegistryEntry(observation.source);
+  const maxAge = source?.maxTrustedAgeSec;
+  if (
+    !isObservedPrice({ priceSource: observation.source, priceObservedAtMode: observation.observedAtMode }) ||
+    !source ||
+    source.isRetired ||
+    source.trustTier === "cached_replay" ||
+    (source.freshnessKind === "upstream" && source.requiresObservedAt && observation.observedAtMode !== "upstream") ||
+    typeof maxAge !== "number" ||
+    !Number.isFinite(maxAge) ||
+    maxAge <= 0
+  ) {
+    return null;
+  }
+  return maxAge;
+}
+
+/**
+ * Whether an observation fetched in a :09/:24/:39/:54 staging slot can still be
+ * fresh when the next quarter-hour publication runs. Excludes sources whose
+ * whole lifetime is at or below the staging-to-publication lead time (e.g.
+ * 5-minute exact-pool/Mento routes) and quotes whose original clock will
+ * already have expired by the next publication slot.
+ */
+function canObservationReachNextPublication(
+  observation: PriceCorroborationObservation,
+  slotStartedAt: number,
+): boolean {
+  const maxAge = resolveEligibleStagingSourceMaxAgeSec(observation);
+  if (maxAge == null || maxAge <= STAGING_TO_NEXT_PUBLICATION_SEC) return false;
+  const clock = stagingClock(observation);
+  if (clock == null) return false;
+  return clock + maxAge > slotStartedAt + STAGING_TO_NEXT_PUBLICATION_SEC;
+}
+
+export function filterStageablePriceObservations(
+  observations: readonly PriceCorroborationObservation[],
+  slotStartedAt: number,
+): PriceCorroborationObservation[] {
+  return observations.filter((observation) => canObservationReachNextPublication(observation, slotStartedAt));
 }
 
 export interface PriceObservationEffectiveness {
@@ -105,11 +153,8 @@ async function loadObservationCache(
     summary.stagingStatus = "ok";
     summary.loadedObservationCount = parsed.data.length;
     for (const observation of parsed.data) {
-      const source = getPricingSourceRegistryEntry(observation.source);
-      const maxAge = source?.maxTrustedAgeSec;
-      if (!isObservedPrice({ priceSource: observation.source, priceObservedAtMode: observation.observedAtMode }) ||
-        (observation.source === "jupiter" && observation.observedAtMode !== "upstream") ||
-        !source || source.isRetired || source.trustTier === "cached_replay" || !maxAge || maxAge <= 0) {
+      const maxAge = resolveEligibleStagingSourceMaxAgeSec(observation);
+      if (maxAge == null) {
         summary.discarded.sourceIneligible++;
         continue;
       }

@@ -12,6 +12,7 @@ import { pricesAgreeWithinBps } from "../../lib/price-divergence";
 import { loadPriceCorroborationObservations, type PriceObservationEffectiveness } from "./price-corroboration-observations";
 import {
   COINGECKO_MICRO_VOLUME_OUTLIER_REASON,
+  detectDefiLlamaContractFillDefaultPrices,
   getPriceCacheMaxAgeSec,
   isCoingeckoAggregatorSource,
   isReplaySafePriceSource,
@@ -42,6 +43,7 @@ import {
   type PriceValidationReferences,
 } from "../../lib/price-validation";
 import {
+  resolveContractFillLineageGroup,
   type TrustedPriceReference,
   validateFallbackPriceCandidate,
   validatePublishedAssetPrice,
@@ -140,6 +142,21 @@ export async function runPostEnrichmentPricePipeline(
 
   // --- Reject unreasonable prices BEFORE caching ---
   let rejectedCount = 0;
+  const publishedContractFillDefaults = detectDefiLlamaContractFillDefaultPrices(
+    assets.flatMap((asset) =>
+      typeof asset.price === "number" &&
+      Number.isFinite(asset.price) &&
+      asset.price > 0 &&
+      splitCompositePriceSource(asset.priceSource ?? "").includes("defillama-contract")
+        ? [{
+            id: asset.id,
+            price: asset.price,
+            lineageGroup: resolveContractFillLineageGroup(asset.id),
+            tokenKey: asset.address?.trim() || undefined,
+          }]
+        : [],
+    ),
+  );
   for (const asset of assets) {
     if (asset.price == null || typeof asset.price !== "number") continue;
     // Nominal par was validated when applied and carries no observation clock to age.
@@ -152,6 +169,11 @@ export async function runPostEnrichmentPricePipeline(
       candidatePrices,
       upstreamKeysBySource: candidatePrices && input.primaryPriceResults?.get(asset.id)?.upstreamKeysBySource,
       fiatPremiumEvidence,
+      contractFillDefault:
+        splitCompositePriceSource(asset.priceSource ?? "").includes("defillama-contract") &&
+        publishedContractFillDefaults.has(asset.price)
+          ? { value: asset.price }
+          : null,
       validationContext: validationContexts.get(asset),
       validationReferences,
       previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
@@ -247,6 +269,46 @@ export async function runPostEnrichmentPricePipeline(
       return false;
     };
     const priceCache = input.priceCache;
+    const contractQuoteRows: { id: string; price: number; lineageGroup: string; tokenKey?: string }[] = [];
+    for (const [id, observations] of staged) {
+      for (const observation of observations) {
+        if (observation.source !== "defillama-contract") continue;
+        contractQuoteRows.push({
+          id,
+          price: observation.price,
+          lineageGroup: resolveContractFillLineageGroup(id),
+          tokenKey: observation.chain && observation.target ? `${observation.chain}:${observation.target}` : undefined,
+        });
+      }
+    }
+    for (const asset of assets) {
+      if (
+        typeof asset.price === "number" &&
+        Number.isFinite(asset.price) &&
+        asset.price > 0 &&
+        splitCompositePriceSource(asset.priceSource ?? "").includes("defillama-contract")
+      ) {
+        contractQuoteRows.push({
+          id: asset.id,
+          price: asset.price,
+          lineageGroup: resolveContractFillLineageGroup(asset.id),
+          tokenKey: asset.address?.trim() || undefined,
+        });
+      }
+    }
+    for (const asset of stillMissing) {
+      const cached = priceCache.get(asset.id);
+      if (cached?.source === "defillama-contract" && typeof cached.price === "number" && cached.price > 0) {
+        contractQuoteRows.push({
+          id: asset.id,
+          price: cached.price,
+          lineageGroup: resolveContractFillLineageGroup(asset.id),
+          tokenKey: asset.address?.trim() || undefined,
+        });
+      }
+    }
+    const stagedContractFillDefaults = detectDefiLlamaContractFillDefaultPrices(contractQuoteRows);
+
     for (const asset of stillMissing) {
       const primaryPriceResult = input.primaryPriceResults?.get(asset.id);
       const openConfirmedDepeg = input.openConfirmedDepegs?.get(asset.id) ?? null;
@@ -279,6 +341,10 @@ export async function runPostEnrichmentPricePipeline(
           previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
           listFillDefault: asset.priceListFillDefault ?? null,
           openConfirmedDepeg,
+          contractFillDefault:
+            candidate.source === "defillama-contract" && stagedContractFillDefaults.has(candidate.price)
+              ? { value: candidate.price }
+              : null,
         });
         if (!decision.accepted) {
           priceObservationEffectiveness.publication.policyRejected++;
@@ -308,7 +374,7 @@ export async function runPostEnrichmentPricePipeline(
       if (!cached) continue;
       if (isWithheldByPrimaryQualityGate(asset, cached.source, cached.price)) continue;
       const observedAt = priceCacheObservationClock(cached);
-      if ((cached.source === "defillama" || cached.source === "defillama-list") &&
+      if ((cached.source === "defillama" || cached.source === "defillama-list" || cached.source === "defillama-contract") &&
         (cached.observedAtMode !== "upstream" || cached.hasExplicitClocks === false || observedAt == null)) continue;
       // The cached USD value of a foreign NAV also contains the FX rate from that run.
       const navAge = cached.source === "chainlink-nav" && ACTIVE_META_BY_ID.get(asset.id)?.flags.pegCurrency === "USD"
@@ -319,7 +385,8 @@ export async function runPostEnrichmentPricePipeline(
         }).accepted) continue;
       } else {
         const maxAgeSec = getPriceCacheMaxAgeSec(cached.source, PRICE_CACHE_TTL);
-        if (cached.updatedAt > now || now - cached.updatedAt >= maxAgeSec) continue;
+        const replayClock = cached.source === "defillama-contract" ? observedAt! : cached.updatedAt;
+        if (replayClock > now || now - replayClock >= maxAgeSec) continue;
       }
       const cachedAgreeSources =
         cached.agreeSources && cached.agreeSources.length > 0
@@ -338,6 +405,10 @@ export async function runPostEnrichmentPricePipeline(
         validationReferences,
         previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
         listFillDefault: asset.priceListFillDefault ?? null,
+        contractFillDefault:
+          cached.source === "defillama-contract" && stagedContractFillDefaults.has(cached.price)
+            ? { value: cached.price }
+            : null,
       });
       if (!decision.accepted) continue;
 
