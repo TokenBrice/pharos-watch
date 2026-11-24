@@ -393,3 +393,7 @@ e9ffbf3f450f9f461080c069472f7144b29a843e:worker/src/lib/__tests__/scheduler-live
 # with its expected policyRuleId string "v9.exit.route-factors"; generic-api-key reads
 # the pair as a credential assignment. Not a credential.
 5b506949f389d9ad22c35836b7812c2074559ea7:worker/src/lib/__tests__/safety-score-v9-fact-set-exit-coverage.test.ts:generic-api-key:1753
+# Pricing v6.93 (#2330): m0-extension.ts pins MToken's public Ethereum runtime
+# bytecode keccak256 hash beside its address constant; generic-api-key reads the
+# [M_TOKEN, "0x…"] pair as a credential assignment. Not a credential.
+a7cd1a631d5b002b9ad8a1178c9b23aa06fbb0a9:worker/src/lib/authoritative-price-sources/m0-extension.ts:generic-api-key:29
