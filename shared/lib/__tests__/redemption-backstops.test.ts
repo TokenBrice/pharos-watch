@@ -102,6 +102,23 @@ describe("getRedemptionBackstopConfig", () => {
     expect(getRedemptionBackstopConfig(id)).toBeNull();
   });
 
+  it("declares River satUSD's complete 11-chain on-chain collateral output set", () => {
+    const config = getRedemptionBackstopConfig("satusd-river")!;
+    expect(config.outputAssetType).toBe("mixed-collateral");
+    expect(config.unresolvedOutputDisposition).toBeUndefined();
+    expect(config.outputAssets).toHaveLength(22);
+    expect(new Set(config.outputAssets).size).toBe(22);
+    expect(config.outputAssets).toEqual(
+      expect.arrayContaining([
+        "asset:weth", "asset:eth", "asset:wbtc", "asset:weeth", "asset:unibtc",
+        "asset:lbtc", "asset:enzobtc", "asset:clbtc", "asset:cbbtc", "asset:btcb",
+        "asset:wbnb", "asset:solvbtc", "asset:bfbtc", "asset:tbtc", "asset:xsolvbtc",
+        "asset:fbtc", "asset:stbtc", "asset:ubtc", "asset:hemibtc", "asset:ibtc",
+        "asset:wstbtc", "asset:xbtc",
+      ]),
+    );
+  });
+
   it("keeps Lido earnUSD queue terms without invented capacity, settlement or fee bounds", () => {
     const config = getRedemptionBackstopConfig("earnusd-lido");
     expect(config?.outputAssets).toEqual(["usdc-circle"]);

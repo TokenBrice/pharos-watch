@@ -1,7 +1,7 @@
 import { RESEARCH_REVIEW_CONFIDENCE_LABELS } from "@shared/lib/classification";
 import {
   projectReserveCompositionReviewFacts,
-  REVIEWED_RESERVE_COMPOSITION_ADMISSION_MAX_AGE_SEC,
+  resolveReviewedReserveCompositionBudget,
 } from "@shared/lib/safety-score-v9/reserve-admission";
 import type { ReserveCompositionReviewBlocker } from "@shared/types/safety-score-v9-public";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
@@ -25,7 +25,7 @@ export interface ReserveAdmissionClientSummary {
   compositionAsOf: string | null;
   /** The composition date as the evaluator reads it (UTC start of day); null without one. */
   compositionAtSec: number | null;
-  /** The policy's curated-composition age budget, grace included. */
+  /** The policy's curated-composition age budget for this review. */
   maxAgeSec: number;
 }
 
@@ -36,6 +36,6 @@ export function projectReserveAdmissionClientSummary(coin: StablecoinMeta): Rese
     ...projectReserveCompositionReviewFacts(review),
     confidenceLabel: review.confidence !== "verified" ? RESEARCH_REVIEW_CONFIDENCE_LABELS[review.confidence] : null,
     compositionAsOf: review.compositionAsOf ?? null,
-    maxAgeSec: REVIEWED_RESERVE_COMPOSITION_ADMISSION_MAX_AGE_SEC,
+    maxAgeSec: resolveReviewedReserveCompositionBudget(review, null).maxAgeSec,
   };
 }

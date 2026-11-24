@@ -305398,6 +305398,222 @@
       ],
       "nextReviewTrigger": "Reopen on publication/provision of the controlling PPM or a dated, gross-reconciled complete fund asset/maturity schedule including cash and other_anl classification; otherwise next review 2026-12-20.",
       "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:usdy-ondo-finance",
+      "taskIds": [],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "promote",
+      "reviewedAt": "2026-11-23T23:20:00Z",
+      "reviewer": "Pharos 2026-11-23 unknowns assessment (usdy-ondo-finance)",
+      "evidence": [
+        "https://ondo.finance/usdy | 2026-10-28 USDY Portfolio Overview (observedAtSec 1793231999): US Treasuries $2,095,324,005",
+        "https://www.dropbox.com/scl/fo/375wdvar3rbc7o23nxsgp/AK-03xW6UBqCvZyI-Enizhk/2026/10%20October?rlkey=4icqn1z9bez725wywr30fx52a&dl=1 | Ondo USDY LLC_ATCAttest_261028.pdf (SHA-256 767159ff157ee98ce15e9301200d009cf00f144f991da9fa57a513e66d70b8d6): 15 U.S. Treasury Bill lots across 12 CUSIPs summing to USD 2,095,324,005.45 (StoneX/BNY Mellon $92,507,774.73, Marex $2,002,816,230.72), WAM 197.64 days, longest observed maturity CUSIP 912797WJ2 maturing 2027-09-30 (337 days)",
+        "https://www.dropbox.com/scl/fo/jzkrw308mrhsasauqrjqq/AJxJak0F90kcwkADSN3DCD4?rlkey=nik1v5slekrzx5fbi0zan5sk3 | Daily Report - Ondo Stocks - 2026-10-28_20_00_ET - Ankura Attestation.pdf (SHA-256 5d9b9106c9e5a650a11f2a5b1c7fc35512e8a30311cadb50a990164cb200f786): zero direct U.S. Treasury securities in the BVI book"
+      ],
+      "rationale": "Promoted observed-portfolio-maturity bound for USDY US Treasuries exposure reserve:e0694b7435c4086800274c40 from the same-date 2026-10-28 Ankura Trust LLC daily attestation (15 T-bill lots, $2,095,324,005.45, observedMaximumDays 337) and removed the superseded maturity C row while retaining the sibling liquidity C row. Date-only review admits at clock >= 2026-11-24T00:00:00Z; factsClosed remains 0 pending replay sentinel confirmation.",
+      "changeRefs": [
+        "shared/data/safety-score-v9/reserve-bound-facts-v1.json",
+        "shared/data/safety-score-v9/evidence-gap-classifications-v1.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "usdy-ondo-finance:gap:reserve:reserve:e0694b7435c4086800274c40:maturity",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Verify sentinel absence on a replay with clock >= 2026-11-24T00:00:00Z; renew the roster fact in lockstep before 2026-12-06T00:00:00Z composition/snapshot expiry.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_RUNTIME_ROUTE:usdy-ondo-finance",
+      "taskIds": [],
+      "workType": "EXIT_RUNTIME_ROUTE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-11-23T23:20:00Z",
+      "reviewer": "Pharos 2026-11-23 unknowns assessment (usdy-ondo-finance)",
+      "evidence": [
+        "https://eth.drpc.org | Ethereum block 26480780 (2026-11-23T22:19:47Z, hash 0xeb2864c5a2ff50ed9640856fcc8f0ef98c2180b97b44178419636b4912f7f32e): USDY_InstantManager 0xa42613c243b67bf6194ac327795b926b4b491f15 delegates to OndoFees 0xe1cb24077d77d2fe763fcac63e5653d97dc8d20c; defaultFee(USDY)=(true,0,0), defaultFeeOverride(USDY,USDC)=(false,0,0), FEE_PRECISION=10000, sole FEE_MANAGER_ROLE member 0x5AE21c99FC5f1584D8Cb09a298CFFd92B5d178eF",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe1cb24077d77d2fe763fcac63e5653d97dc8d20c | Verified OndoFees.sol applies non-enumerable per-user overrides ahead of defaultFee with bpsFee up to 10,000 bps and unbounded flatFee; redeem() reverts UserNotRegistered for non-whitelisted callers",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/49482dccf9f491b39f367098ce26de37b61fcdd9.pdf | 2026-11-11 Base Prospectus (21. Glossary, Purchaser Fees p. 150) governs Ondo Stocks only; 11 searched Ondo surfaces publish no all-holder USDY redemption fee bound"
+      ],
+      "rationale": "Reclassified the USDY InstantManager offchain-issuer USDC redemption cost gap from U (superseded B row campaign-lane29-usdy-instantmanager-cost-20261009, ignored by v9.exit.reviewed-terms) to cause C (researched-nondisclosure, row usdy-ondo-finance-instantmanager-exit-cost-20261123). Verified OndoFees allows opaque per-user overrides up to 100% plus unbounded flatFee ahead of the 0/0 default, and no Ondo USDY document publishes an all-holder fee ceiling. Price stays 50 (C = U); capacity gap remains open. factsClosed remains 0 pending replay with clock >= 2026-11-23T22:28:00Z.",
+      "changeRefs": [
+        "shared/data/safety-score-v9/evidence-gap-classifications-v1.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "usdy-ondo-finance:gap:exit-route:redemption:redemption:5e3a4a54-e796-4177-8d29-6b34f58bce58:redemption:usdy-ondo-finance:offchain-issuer:cost",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Reopen if Ondo publishes an all-holder USDY InstantManager redemption fee schedule/cap or modifies OndoFees override bounds; otherwise recheck before 2027-11-23.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_RUNTIME_ROUTE:busd0-usual",
+      "taskIds": [],
+      "workType": "EXIT_RUNTIME_ROUTE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-11-23T23:20:00Z",
+      "reviewer": "Pharos 2026-11-23 unknowns assessment (busd0-usual)",
+      "evidence": [
+        "https://rpc.mevblocker.io | Ethereum block 26480750 (2026-11-23T22:13:35Z, hash 0x6404a0db1b8fd051ed64d619b1592e7ca4e916b5af51daa83e77418d0fb99282): Usd0PP 0x9f2bd21bf8012fce0d5845537c1deff3a89bc85b getEndTime()=1844335800 (2028-06-11T11:30:00Z), getFloorPrice()=0.92e18; standalone _unwrap() reverts BondNotFinished() before maturity",
+        "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/busd0.md | Last updated 2026-02-16: 'The cost of early exit is determined by the secondary market price of rt-bUSD0.'",
+        "https://docs.usual.money/usual-products/yield-products/usd-products/bond-usd0.md | Accessed 2026-11-23: pre-maturity par exit requires burning equal rt-bUSD0 alongside bUSD0, with no published all-holder early-exit cost ceiling"
+      ],
+      "rationale": "Reclassified the modeled bUSD0 queue-redeem exit cost gap from U to cause C (researched-nondisclosure, row busd0-usual-queue-redeem-exit-cost-20261123). Standalone par _unwrap() reverts until June 11, 2028 maturity, pre-maturity par reconstruct() requires secondary-market rt-bUSD0 with no issuer-published fee ceiling, and the separate floor leg is outside the modeled route. Price stays 50 (C = U); factsClosed remains 0 pending replay with clock >= 2026-11-23T22:42:00Z.",
+      "changeRefs": [
+        "shared/data/safety-score-v9/evidence-gap-classifications-v1.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "busd0-usual:gap:exit-route:redemption:redemption:5e3a4a54-e796-4177-8d29-6b34f58bce58:redemption:busd0-usual:queue-redeem:cost",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Reopen if Usual publishes an all-holder pre-maturity par exit cost schedule/cap or reaches June 11, 2028 bond maturity; otherwise recheck before 2027-11-23.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ORACLE_PROFILE:busd0-usual",
+      "taskIds": [
+        "V9G-1721f282a5714f71"
+      ],
+      "workType": "ORACLE_PROFILE",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-11-23T23:20:00Z",
+      "reviewer": "Pharos 2026-11-23 unknowns assessment (busd0-usual oracle review)",
+      "evidence": [
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9f2bd21bf8012fce0d5845537c1deff3a89bc85b | Blockscout-verified (partial bytecode match, runtime bytecode equal to chain at block 26480750) Usd0PP implementation: no external oracle consumer; fixed 1:1 _deconstruct/reconstruct/_unwrap; FLOOR_PRICE_UPDATER_ROLE-gated updateFloorPrice capped at 1e18",
+        "https://rpc.mevblocker.io | Ethereum block 26480750 (2026-11-23T22:13:35Z, hash 0x6404a0db1b8fd051ed64d619b1592e7ca4e916b5af51daa83e77418d0fb99282): impl 0x9f2bd21bf8012fce0d5845537c1deff3a89bc85b, getFloorPrice()=0.92e18, getEndTime()=1844335800, getDurationCostFactor()=730, getUsualDistributionPerUsd0pp()=2941095890410959, RegistryAccess.hasRole(FLOOR_PRICE_UPDATER_ROLE, 3-of-6 Safe 0x5b66dcf0a4e6c6265c39f76a91f77939fa7a5e5b)=true, Chainlink proxy 0xFC9e30Cf89f8A00dba3D34edf8b65BCDAdeCC1cB aggregator()=0x0 and latestRoundData() reverts",
+        "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/busd0 | Last updated 2026-02-16: fixed 1:1 USD0 maturity notional and DAO governance-set 0.92 USD0 floor price"
+      ],
+      "rationale": "Authored oracleRisk profile for busd0-usual (tier privileged-internal-pricing, branchModel single-path, branchApplicability top-level-only). Usd0PP reads no external oracle; floorPrice is the sole USD0-per-bUSD0 rate parameter and is writable by 3-of-6 Safe 0x5b66dcf0a4e6c6265c39f76a91f77939fa7a5e5b without an external feed check, while the listed Chainlink bUSD0 proxy is unused and inactive. Closes both oracle U gaps; factsClosed remains 0 pending replay sentinel confirmation.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/busd0-usual.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "busd0-usual:gap:economic-control:oracle",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "busd0-usual:gap:economic-control:oracle::tier",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Verify both oracle sentinels absent on replay; reopen on Usd0PP upgrade, floorPrice governance change, or external oracle integration, or before 2027-11-23 expiry.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ORACLE_PROFILE:ylds-figure",
+      "taskIds": [
+        "V9G-1aa4e1ff80d2d142",
+        "V9G-86f4c5b08895e173"
+      ],
+      "workType": "ORACLE_PROFILE",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-11-23T23:20:00Z",
+      "reviewer": "Pharos 2026-11-23 unknowns assessment (ylds-figure oracle review)",
+      "evidence": [
+        "https://www.sec.gov/Archives/edgar/data/1974395/000149315226018903/form497.htm | Figure Certificate Company SEC Form 497 Prospectus dated 2026-04-24: fixed $0.01 face amount, overnight NY Fed SOFR less 35 bps paid monthly in additional Certificates, no price feed or pricing contract",
+        "https://www.sec.gov/Archives/edgar/data/1974395/000162828026073949/fcc-20260930.htm | Q3 2026 Form 10-Q (ended 2026-09-30, signed 2026-11-13): confirms fixed-face-amount terms and no oracle",
+        "https://api.provenance.io/provenance/marker/v1/detail/uylds.fcc | Provenance height 34866850 (2026-11-23T22:39:12Z, hash eTSirBQQof/BV1NIJbbvPXww6Fk4IlFhASGhhtKzQZk=): restricted MarkerAccount with no oracle field; Stellar issuer GAC7MOPTQLQUM3KC24AW4GHS3RLF72LPEZO54AH7EZ6TSMGRB5SOAVH3 (last_modified_ledger 65530799) has no pricing contract"
+      ],
+      "rationale": "Authored oracleRisk profile for ylds-figure (tier oracleless, branchModel single-path, branchApplicability not-applicable) and retired obsolete gap classification row rs-051-ylds-figure-oracle. YLDS certificates carry a fixed $0.01 face amount with no on-chain NAV or market price feed on Provenance or Stellar. Closes both oracle gaps; factsClosed remains 0 pending replay sentinel confirmation.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/ylds-figure.json",
+        "shared/data/safety-score-v9/evidence-gap-classifications-v1.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "ylds-figure:gap:economic-control:oracle",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "ylds-figure:gap:economic-control:oracle::tier",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Verify both oracle sentinels absent on replay; reopen if Figure introduces an on-chain pricing/NAV contract or changes Certificate valuation mechanics, or before 2027-11-23 expiry.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:usdf-falcon",
+      "taskIds": [],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-11-23T23:20:00Z",
+      "reviewer": "Pharos 2026-11-23 unknowns assessment (usdf-falcon)",
+      "evidence": [
+        "https://solana-mainnet.g.alchemy.com/v2/ | Finalized Solana slot 473103429 (2026-11-23T22:04:46Z, hash 54bpdwyk7ntxFFC9jriamBif2GYJHwJWqFdb2aCyQ49p) and upgrade tx 2pEB6wp4Y8U7N1AdPHPCNQcFr6GG57jaeqsEC9A8dfjh9WddtSMmkQAQjbQHvxkQTvZ61FLCv9y2hJqYhvvyJyRt at slot 470617388: mint 9ksrtYx1vnRxr4X5YqmGxqRMRBhgsc6FfQwWjB1KZq2x mintAuthority = pool_signer PDA 3mLZYnTvGCqEHg5vfLRgweSjN46gpLrDwJdkPbK2RNKx, freezeAuthority & State owner/rate_limit_admin = Squads v4 index-0 vault PDA 6aFBcUtZoRtaMKhvfvDKy5qrqBBHnVYfDQWpefQeNpUH (4-of-6 multisig 9nDFtfpS4q2ZbHVMUszvyvtoxD6g5vxnvFkJRNpKHujK), ProgramData upgrade authority = MCMS timelock_signer PDA GoFoFfEDgALWRTw5dSY3VZQSwbFpvBEhDv1sFAWzYpbf (Config 9PAyynENMcbo5hhKhsC4CMMAN7HizZa9ndJx78VvfLW5, min_delay 10800s)",
+        "https://solana-rpc.publicnode.com | Finalized slot 473123818 (2026-11-23T23:17:46Z, hash HDFwPa2AodxLhpxkGHEvx4k3imsYybNBYSwgFDgVQKxW): AccessController Gy7sHb3kewuJHGrgeaAEjJXgPtZpDhZYfBBw5CTV5dbo lists 1 live bypasser 4znqm4V2iQYBqjSJvwwJN3TXSLGRxyf6W5pkyDCF3JWC; router TokenAdminRegistry 22EmkLy4M3RgBNS2MReQewyo286fELfqgfimkRadHcwU names administrator 6aFBcUtZoRtaMKhvfvDKy5qrqBBHnVYfDQWpefQeNpUH",
+        "https://github.com/smartcontractkit/chainlink-ccip/blob/1c1b0e107765b915bb960f8b3e5fe3052ad22b06/chains/solana/contracts/programs/timelock/src/instructions/execute.rs | Confirms zero-delay bypasser_execute_batch; burnmint-token-pool/src/context.rs confirms TransferMintAuthority and AdminUpdateTokenPool constraints"
+      ],
+      "rationale": "Partial promotion closing the Solana USDf CCIP deployment authority gap (bridge-meta:usdf-falcon:63725b58cc2dc1f7831a:authority -> re-keyed bridge-meta:usdf-falcon:f77fa0a6d398c8b2e898). Authored the three Solana controls: BurnMintTokenPool contract minter, 4-of-6 Squads v4 vault PDA owner/freezeAuthority, and Chainlink MCMS upgrade timelock (observed min_delay 10,800s, timelockDelaySec 0 fastest enforced path given live bypasser_execute_batch). Incident state, materialSupplyShare, and EVM controls remain open/unchanged; factsClosed remains 0 pending replay sentinel confirmation.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/usdf-falcon.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "usdf-falcon:gap:control:bridge-meta:usdf-falcon:63725b58cc2dc1f7831a:authority",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Verify Solana authority sentinel absent on replay; keep Solana incidentState and Base/XDC/Solana materialSupplyShare open for separate incident and supply-attribution passes.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:usdd-tron-dao-reserve",
+      "taskIds": [],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "mixed-curation-and-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-11-23T23:20:00Z",
+      "reviewer": "Pharos 2026-11-23 unknowns assessment (usdd-tron-dao-reserve)",
+      "evidence": [
+        "https://docs.usdd.io/developers/deployment-addresses.md | Accessed 2026-11-23: names Ethereum JOIN_PSM_USDC_A 0x9a7e1b324060db7342aea08c0dc56f55ced6f519 and MCD_PSM_USDC_A 0x12d0351f68035a41d13fc8324562e2d51b7a3b93",
+        "https://eth-mainnet.public.blastapi.io | Keyless Ethereum block 26480780 (2026-11-23T22:19:47Z, hash 0xeb2864c5a2ff50ed9640856fcc8f0ef98c2180b97b44178419636b4912f7f32e): JOIN.gem()=canonical USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, ilk='PSM-USDC-A', live=1, dec=6, USDC.balanceOf(JOIN)=64288 (0.064288 USDC); PSM.gemJoin()=JOIN, tin=20 bps, tout=0 bps, buyEnabled=1, sellEnabled=1",
+        "https://app-api.usdd.io/data-platform/latest-collateral?chain=eth | Accessed 2026-11-23: PSM-USDC-A ($0.06 lockedValue) is the sole non-zero unmapped vault across eth/tron/bsc feeds"
+      ],
+      "rationale": "Mapped Ethereum PSM-USDC-A in usdd-data-platform to sourceKey usdd-data-platform:psm-usdc (coinId usdc-circle, depType collateral) and added the matching zero-weight classification (metadata-only) sidecar row mirroring usdd-data-platform:psm-usdt, plus refreshed the adapter mapping review. Closes the five U gaps on unknown dust slice reserve:49049d8f6fac35a2361b1b68 once deployed and observed in a live-reserves run; Smart Allocator liquidity/unlinked disposition and the dated 2026-09-04 static composition remain unchanged. factsClosed remains 0 pending post-deploy live-reserves and replay confirmation.",
+      "changeRefs": [
+        "worker/src/cron/reserve-adapters/usdd-data-platform.ts",
+        "worker/src/cron/reserve-adapters/__tests__/usdd-data-platform.test.ts",
+        "shared/data/stablecoins/domains/reserves/usdd-tron-dao-reserve.json",
+        "shared/data/coverage-dispositions/dependency-target-dispositions.ts"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "usdd-tron-dao-reserve:gap:reserve:reserve:49049d8f6fac35a2361b1b68",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "usdd-tron-dao-reserve:gap:reserve:reserve:49049d8f6fac35a2361b1b68:assetClass",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "usdd-tron-dao-reserve:gap:reserve:reserve:49049d8f6fac35a2361b1b68:liquidity",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "usdd-tron-dao-reserve:gap:reserve:reserve:49049d8f6fac35a2361b1b68:maturity",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "usdd-tron-dao-reserve:gap:reserve:reserve:49049d8f6fac35a2361b1b68:obligorConcentration",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Observe the first post-deploy usdd-data-platform live-reserves run and subsequent Safety Score publication/replay to confirm psm-usdc emits with no unknown-vault-type warning and all five sentinels clear.",
+      "factsClosed": 0
     }
   ]
 }

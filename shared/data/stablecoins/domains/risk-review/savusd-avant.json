@@ -567,26 +567,48 @@
         "destinationChain": "stellar",
         "canonicalChain": "avalanche",
         "contractAddress": "savUSD-GBCSESJONU4FJGIRC4UTDHQFE43IL4U4I4HP5JKPKAJVNMQO76672MJJ",
-        "protocol": "Avant dedicated LayerZero Stellar OFT lane (control review unresolved)",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Identity researched 2026-10-20: Avant's deployment registry and stellar.toml identify this classic Stellar asset and SAC CBW5332J2RUTSOIUESSNBNLESPEIEUG6G4LOQOAM6IP3ANORCMN5CPQB. Horizon independently returns the exact asset code/issuer, matching SAC and seven-decimal amounts. The issuer describes a dedicated LayerZero lane backed by savUSD locked in Avalanche adapter 0x465EB8613Fd6aab041Ad92EEF2ABE72b2ae7E167. Exact deployed adapter/OFT/SACManager authority, message validation, escrow conservation, emergency state and whole-liability supply attribution are not established by these identity sources; no bridge tier, control or supply share is inferred.",
+        "protocol": "LayerZero V2 OFT (Avant dedicated Stellar OFT Adapter lockbox)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Avant's deployment registry and stellar.toml identify Stellar classic asset savUSD:GBCSESJONU4FJGIRC4UTDHQFE43IL4U4I4HP5JKPKAJVNMQO76672MJJ, SAC CBW5332J2RUTSOIUESSNBNLESPEIEUG6G4LOQOAM6IP3ANORCMN5CPQB, Stellar LayerZero OFT CAFF3MOUW3AGMNIZNKYWESUWGVFUPZJTD54IT4RNOK5R7NG46LMVOWZV, SACManager CDZH2IMBK2S32IXTRT2C6GXX45VUFWOMKZ42LKCV3XSEVWIA3OLKE7FE, and Avalanche savUSD Stellar OFT Adapter 0x465EB8613Fd6aab041Ad92EEF2ABE72b2ae7E167 (Routescan-verified non-proxy AvantOFTAdapter). Pinned Avalanche finalized block 101216298 (hash 0xc0a3666c4d1547a60f72ae9722cc9357bce2eede47d62c3f917c61e9196090f6, 2026-11-24T01:52:49Z) confirms token()=0x06d47f3fb376649c3a9dafe069b3d6e35572219e (canonical Avalanche savUSD), endpoint()=0x1a44076050125825900e736c501f859c50fe728c, owner()=0xd4d23209aae8630bf386b7393763a5b7865e57cb (Avant 3-of-4 MPC EOA), peers(30600)=0x0a5db1d4b6c06635196ab1624a96354b47e5331f7889f22d72bb1fb4dcf2d957 (exact StrKey match to Stellar OFT CAFF3MOUW3AGMNIZNKYWESUWGVFUPZJTD54IT4RNOK5R7NG46LMVOWZV), and savUSD.balanceOf(0x465EB861...)=4,900,000,000,000,000,000 (4.9000000 savUSD). Stellar Horizon (accessed 2026-11-24) confirms exact conservation with balances.authorized=4.9000000 savUSD across 5 accounts, home_domain=avantprotocol.com, and locked issuer master key (weight 0, thresholds 0/0/0, auth_revocable=true, auth_clawback_enabled=true, last_modified_ledger 64014222). Stellar Soroban OFT/SACManager bytecode, DVN roster, and whole-liability supply share remain unreviewed.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-24",
+        "observedBlock": 101216298,
+        "controllerChain": "avalanche",
+        "controllerAddress": "0x465eb8613fd6aab041ad92eef2abe72b2ae7e167",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:avalanche:0x465eb8613fd6aab041ad92eef2abe72b2ae7e167",
+          "contract:stellar:CAFF3MOUW3AGMNIZNKYWESUWGVFUPZJTD54IT4RNOK5R7NG46LMVOWZV"
+        ],
         "sources": [
           {
-            "label": "Avant deployment registry, Stellar savUSD and dedicated Avalanche adapter (retrieved 2026-10-20)",
+            "label": "Avant deployment registry, Stellar savUSD and dedicated Avalanche adapter (re-verified 2026-11-24)",
             "url": "https://docs.avantprotocol.com/security/contract-addresses.md"
           },
           {
-            "label": "Avant public-network Stellar asset descriptor (retrieved 2026-10-20)",
+            "label": "Avant public-network Stellar asset descriptor (re-verified 2026-11-24)",
             "url": "https://avantprotocol.com/.well-known/stellar.toml"
           },
           {
-            "label": "Stellar Horizon exact savUSD asset identity and SAC (retrieved 2026-10-20)",
+            "label": "Stellar Horizon exact savUSD asset identity, SAC, and 4.9000000 authorized balance (re-verified 2026-11-24)",
             "url": "https://horizon.stellar.org/assets?asset_code=savUSD&asset_issuer=GBCSESJONU4FJGIRC4UTDHQFE43IL4U4I4HP5JKPKAJVNMQO76672MJJ"
+          },
+          {
+            "label": "Stellar Horizon issuer account flags and locked master signer (accessed 2026-11-24)",
+            "url": "https://horizon.stellar.org/accounts/GBCSESJONU4FJGIRC4UTDHQFE43IL4U4I4HP5JKPKAJVNMQO76672MJJ"
+          },
+          {
+            "label": "Routescan verified Avalanche AvantOFTAdapter source (accessed 2026-11-24)",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x465EB8613Fd6aab041Ad92EEF2ABE72b2ae7E167"
+          },
+          {
+            "label": "Pinned Avalanche finalized block 101216298 (hash 0xc0a3666c4d1547a60f72ae9722cc9357bce2eede47d62c3f917c61e9196090f6, 2026-11-24T01:52:49Z) adapter peer and 4.9000000 savUSD escrow conservation read",
+            "url": "https://avalanche-c-chain-rpc.publicnode.com"
           }
         ]
       }

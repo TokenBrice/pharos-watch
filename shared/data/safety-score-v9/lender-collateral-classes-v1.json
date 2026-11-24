@@ -794,6 +794,35 @@
     },
     {
       "chain": "ethereum",
+      "address": "0xb8d692e46d624b3c650282ed3011bf6d7b1db5e8",
+      "class": "structured-credit",
+      "reviewedAt": "2026-11-23",
+      "sources": [
+        {
+          "label": "Verified Ethereum Wrapped mGLO (wmGLO) 3F WrappedAsset ERC-7760 proxy (impl 0x271eE4bF2b3d527267957ac753A7b76291d123b7); pinned Ethereum finalized block 26481203 (2026-11-23T23:44:23Z) via Dwellir confirms name='Wrapped mGLO', symbol='wmGLO', underlying()=0x1dd91a111606382b77a917633ed90feaf25e0f76 (Midas Fasanara Global Open / mGLO), totalSupply=mGLO.balanceOf(wmGLO)=154460437093964913470377",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb8d692e46d624b3c650282ed3011bf6d7b1db5e8"
+        },
+        {
+          "label": "Ethereum finalized block 26481203 (2026-11-23T23:44:23Z): 0xb8d692e46d624b3c650282ed3011bf6d7b1db5e8 returns name Wrapped mGLO, symbol wmGLO, decimals 18, totalSupply 154,460.437094, and underlying() = 0x1dd91a111606382b77a917633ed90feaf25e0f76 (Midas Fasanara Global Open / mGLO, holding exact 1:1 154,460.437094 mGLO)",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
+        },
+        {
+          "label": "Verified Ethereum Midas Fasanara Global Open (mGLO) underlying token contract identity",
+          "url": "https://eth.blockscout.com/api/v2/tokens/0x1dd91a111606382b77a917633ed90feaf25e0f76"
+        },
+        {
+          "label": "Midas mGLO tracks Fasanara Global Diversified Alternative Debt (SME asset-backed credit); structured-credit proxy only, not direct cash reserves",
+          "url": "https://blog.midas.app/midas-in-june-2026-recap/"
+        },
+        {
+          "label": "Morpho GraphQL confirms Ethereum USDC/wmGLO market 0x74078d0416c5876d8c5a7a7425fc322377b4c7f80dc4d66e492dd7012b1d60b7 (LLTV 91.5%) uses 0xb8d692e46d624b3c650282ed3011bf6d7b1db5e8 as collateral",
+          "url": "https://api.morpho.org/graphql"
+        }
+      ],
+      "reviewer": "Night RESV curation pass 2026-11-23 (resv-2/resv-3 merged)"
+    },
+    {
+      "chain": "ethereum",
       "address": "0xb8d89678e75a973e74698c976716308abb8a46a4",
       "class": "yield-bearing-stable",
       "reviewedAt": "2026-10-14",
@@ -1380,6 +1409,27 @@
         }
       ],
       "reviewer": "INFRA-LENDER bottom-up refinement 2026-10-21"
+    },
+    {
+      "chain": "robinhood",
+      "address": "0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec",
+      "class": "structured-credit",
+      "reviewedAt": "2026-11-23",
+      "sources": [
+        {
+          "label": "Robinhood official asset registry binds NVDA NVIDIA Robinhood Token (ISIN US67066G1040) to this exact chain 4663 deployment",
+          "url": "https://api.robinhood.com/rhj/assets"
+        },
+        {
+          "label": "Current transferable Robinhood Chain Stock Tokens are RHJ-issued tokenised debt securities, not direct underlying equity ownership; structured-credit fallback only",
+          "url": "https://docs.robinhood.com/chain/stock-tokens/"
+        },
+        {
+          "label": "Morpho API confirms chain 4663 USDG/NVDA market 0x95312f02c1dae8407b2c80468a5657a9bd19c45ac277f1a61aa52c11444c5314 uses 0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec as collateral",
+          "url": "https://api.morpho.org/graphql"
+        }
+      ],
+      "reviewer": "Night RESV curation pass 2026-11-23 (resv-0)"
     },
     {
       "chain": "robinhood",

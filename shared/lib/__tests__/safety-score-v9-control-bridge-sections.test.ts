@@ -187,4 +187,44 @@ describe("Safety Score v9 control bridge sections", () => {
       expect.objectContaining({ code: "runtime-bridge-materiality-unavailable", path: materialityPath }),
     );
   });
+
+  it("proves a null-share bridge deployment immaterial from a <10% census upper bound without publishing it as a share", () => {
+    const deploymentKey = "base:0x1111111111111111111111111111111111111111";
+    const control = bridgeControl("bridge:census-immaterial", {
+      deploymentKey, materialSupplyShare: null, failureDomains: [{ kind: "bridge-route", key: deploymentKey }],
+    });
+    const makeFacts = (boundShare: number, supplyStatus = requiredKnown("supply")) => ({
+      ...baseFacts([control]),
+      supply: makeSupplyPartition({
+        status: supplyStatus,
+        routes: [
+          { deploymentRouteKey: "ethereum:0xnative", supplyShare: 1 - boundShare - 0.01, reviewState: "selected-reviewed", reviewedRouteKind: "native" },
+          { deploymentRouteKey: deploymentKey, supplyShare: boundShare, reviewState: "selected-reviewed", reviewedRouteKind: "controlled", evidenceKind: "upper-bound" },
+          { deploymentRouteKey: "ambiguous-chain:fixture-asset:base", supplyShare: 0.01, reviewState: "unmatched" },
+        ],
+      }),
+    });
+    const evalCtrl = (facts: ReturnType<typeof makeFacts>, status = requiredKnown("bridge")) =>
+      evaluateV9EconomicControl(args({ facts, bridge: { status, routes: [{ controlKey: control.controlKey, tier: "external-lock-mint" }] } }));
+
+    const subFacts = makeFacts(0.05);
+    expect(provenNullShareDeploymentBound(subFacts, control)).toBeCloseTo(0.05, 12);
+    const sub = evalCtrl(subFacts, boundedUnknown("bridge"));
+    expect(sub.reasons.map((r) => r.code)).not.toContain("runtime-bridge-materiality-unavailable");
+    expect(sub.components.find((c) => c.controlKeys.includes(control.controlKey))?.binding).toBe(false);
+    expect(sub.failureDomains.some((d) => d.key === deploymentKey)).toBe(false);
+    expect(sub.structuralFailures).toContainEqual(expect.objectContaining({ kind: "peripheral-bridge", binding: false, materialSharePct: null }));
+    expect(sub.controlFacts?.find((c) => c.controlKey === control.controlKey)?.materialSupplyShare).toBeNull();
+
+    const at = evalCtrl(makeFacts(MATERIAL_SHARE_THRESHOLD));
+    expect(at.reasons.map((r) => r.code)).toContain("runtime-bridge-materiality-unavailable");
+    expect(at.components.find((c) => c.controlKeys.includes(control.controlKey))?.binding).toBe(true);
+    expect(at.structuralFailures).toContainEqual(expect.objectContaining({ kind: "material-bridge", binding: true, materialSharePct: null }));
+
+    const staleFacts = makeFacts(0.05, boundedUnknown("supply"));
+    expect(provenNullShareDeploymentBound(staleFacts, control)).toBeNull();
+    const stale = evalCtrl(staleFacts);
+    expect(stale.reasons.map((r) => r.code)).toContain("runtime-bridge-materiality-unavailable");
+    expect(stale.components.find((c) => c.controlKeys.includes(control.controlKey))?.binding).toBe(true);
+  });
 });

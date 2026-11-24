@@ -79,7 +79,7 @@ describe("incident review key migration", () => {
     const authoredRetirements = retired.filter((review) => typeof review.scope.controlKey !== "string");
     const legacyDigests = reviews.negativeReviews.filter((review) =>
       typeof review.scope.controlKey === "string");
-    expect(authored).toHaveLength(645);
+    expect(authored).toHaveLength(739);
     expect(authored).toHaveLength(generated.counts.authoredApplied + generated.counts.legacyBlocked);
     expect(authored.every((review) => typeof review.scope.routeId === "string" || review.scope.controlId !== undefined)).toBe(true);
     expect(retired).toHaveLength(generated.counts.retired);

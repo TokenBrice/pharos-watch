@@ -690,17 +690,19 @@ function admittedProviderRowExclusions(
 }
 
 /**
- * A row the deployment supply census proved below the documentation bar may be
- * admitted as an upper bound (`PLAN §4.6`). At or above the bar the bound is not
- * proof of immateriality, so the share datum stays required: the consumer emits
- * the PLAN outcome code instead of a rejection.
+ * A row the deployment supply census proved below the deployment materiality
+ * bar may be admitted as an upper bound (`semantic.materiality.deploymentMaterialSharePct`).
+ * At or above the bar the bound is not proof of immateriality, so the share
+ * datum stays required: the consumer emits the PLAN outcome code instead of a
+ * rejection. The 1% documentation bar (`documentationImmaterialSharePct`)
+ * remains independently enforced by the documentation classifier.
  */
 export const V9_DEPLOYMENT_SUPPLY_SHARE_REQUIRES_REVIEWED_ESCROW =
   "deployment-supply-share-requires-reviewed-escrow" as const;
 
-/** Strict bar (share units) for admitting a census row as a documentation bound. */
+/** Strict bar (share units) for admitting a census row as an immateriality bound. */
 export const DEPLOYMENT_SUPPLY_CENSUS_BOUND_SHARE =
-  (V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.documentation?.documentationImmaterialSharePct ?? 0) / 100;
+  V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.deploymentMaterialSharePct / 100;
 
 interface AdmittedDeploymentCensusRow {
   readonly routeId: string;
@@ -723,9 +725,9 @@ const EMPTY_DEPLOYMENT_CENSUS_ADMISSION: DeploymentSupplyCensusAdmission = {
  * Admits the fixed-input census packet (`safetyScoreV9DeploymentSupplyCensusById`)
  * as a reconciled per-deployment partition. Every bound must be current, carry
  * the consumer's own aggregate denominator, and prove the deployment below the
- * documentation bar; the rest of the chain keeps an ambiguous residual so no
- * unmeasured sibling is narrowed to a false zero. Rejections are named, never a
- * partial packet: an expired or missing bound leaves every datum required.
+ * deployment materiality bar; the rest of the chain keeps an ambiguous residual
+ * so no unmeasured sibling is narrowed to a false zero. Rejections are named,
+ * never a partial packet: an expired or missing bound leaves every datum required.
  */
 function admitDeploymentSupplyCensus(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
@@ -795,12 +797,22 @@ function admitDeploymentSupplyCensus(
     return rejected();
   }
   // The producer bounded each share against its own aggregate. Shares are only
-  // comparable to this review's rows when both name the same denominator.
+  // comparable to this review's rows when both name the same denominator, and
+  // any provider chain rows must conserve to that aggregate before census
+  // bounds can partition them without producing a non-conserving review.
   const toleranceUsd = packet.conservation.absoluteToleranceUsd +
     packet.conservation.relativeTolerance * Math.max(packet.conservation.aggregateSupplyUsd, aggregateUsd);
   if (Math.abs(packet.conservation.aggregateSupplyUsd - aggregateUsd) > toleranceUsd) {
     reject("conservation-breach");
     return rejected();
+  }
+  const chainRowValues = Object.values(safetyScoreV9ChainRows(fixedInput, assetId));
+  if (chainRowValues.length > 0) {
+    const chainSubtotalUsd = chainRowValues.reduce((sum, row) => sum + row.current, 0);
+    if (Math.abs(chainSubtotalUsd - aggregateUsd) > toleranceUsd) {
+      reject("conservation-breach");
+      return rejected();
+    }
   }
   const reviewedRoutes = new Map(
     (profile?.routes ?? [])
@@ -1015,8 +1027,16 @@ function buildSupplyReview(
       uncanonicalizedUsd += supplyUsd;
       continue;
     }
+    const chainRoutes = routesByChain.get(chain) ?? [];
     const chainCensus = census.byChain.get(chain);
-    if (chainCensus !== undefined) {
+    const singleReviewedRouteNotTightened =
+      chainCensus !== undefined &&
+      chainRoutes.length === 1 &&
+      chainRoutes[0]!.reviewDisposition === "reviewed" &&
+      chainCensus.length === 1 &&
+      chainCensus[0]!.routeId === chainRoutes[0]!.id &&
+      chainCensus[0]!.supplyShare >= supplyUsd / totalUsd - 0.000001;
+    if (chainCensus !== undefined && !singleReviewedRouteNotTightened) {
       // Census-admitted deployments are exact-keyed upper bounds; everything
       // this packet did not measure on the chain stays in one ambiguous
       // residual row. The residual is subtracted from the chain total exactly
@@ -1055,7 +1075,6 @@ function buildSupplyReview(
       }
       continue;
     }
-    const chainRoutes = routesByChain.get(chain) ?? [];
     if (chainRoutes.length !== 1) {
       const chainReview = chainPartitionReviews.find(review => review.chainId === chain);
       const partition = chainReview && chainCensusBound && meta ? deriveReviewedProviderChainPartition({

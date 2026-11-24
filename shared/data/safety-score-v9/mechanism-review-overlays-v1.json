@@ -1246,6 +1246,18 @@
         {
           "label": "Aave v3.3 deficit-management design by BGD Labs",
           "url": "https://governance.aave.com/t/bgd-aave-v3-3-feat-umbrella/20129"
+        },
+        {
+          "label": "Ethereum finalized block 26481203 (hash 0xc614c103509b94501a8fbd891640ecd3ac037e727ca1adae1eb93fe1534b0e8c, 2026-11-23T23:44:23Z): GHO getFacilitatorsList/getFacilitator exact 699,000,000 GHO reconciliation across all 8 facilitators, Aave V3 Core/Lido/Horizon Pool getReservesList/getConfiguration parameters, and mainnet stataUSDC/stataUSDT GSM state",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
+        },
+        {
+          "label": "Aave Health Factor and Liquidation mechanics documentation (retrieved 2026-11-24)",
+          "url": "https://aave.com/help/borrowing/liquidations"
+        },
+        {
+          "label": "Aave V3 Pool smart contract reference (liquidationCall and collateral checks, retrieved 2026-11-24)",
+          "url": "https://aave.com/docs/aave-v3/smart-contracts/pool"
         }
       ],
       "notes": "Measured at finalized Ethereum block 25536894; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/gho-aave/2026-07-15-block-25536894.json. All six facilitator bucket levels sum exactly to 599,000,000 GHO total supply, proving issuance allocation rather than collateral adequacy. Shared multi-debt Aave accounts have no honest GHO-only system collateralization ratio, and external liquidators are not a GHO-dedicated committed pool, so both requested ratios are structurally N/A. Unused facilitator capacity is 0.447412 of supply but is governance mint authority, not backstop capital. The two directly inspected, unfrozen and unseized GSMs provide a non-exhaustive swappable-capacity lower bound of 0.099750. Governance-set per-facilitator bucket caps provide bounded issuance isolation, but they do not make GHO losses fully facility-remote. Aave v3.3 explicitly records zero-collateral residual GHO debt as a reserve deficit and provides a special direct-GHO deficit burn path. Umbrella then automates first-loss-offset and staker coverage for supported asset-network pairs, including GHO on Ethereum, but current coverage is not established across every measured facilitator. Branch isolation, backstop, and shutdown/bad-debt handling are therefore limited rather than adequate. Source-scope correction on 2026-10-20: the former not-applicable collateralizationParameters and liquidationMechanics claims are withdrawn. Aave explicitly documents collateral factors, health-factor thresholds and permissionless liquidation for GHO borrowing; heterogeneous shared accounts and absence of committed liquidation capital do not prove those mechanisms structurally absent. The omitted components retain compiler-bounded uncertainty pending a whole-facilitator quality review, without asserting issuer non-disclosure or assigning unmeasured stress capacity. The ratio applicability, all measured values, remaining quality claims and original 2026-07-15 review start are unchanged. Source-scoped correction.",
@@ -1270,6 +1282,68 @@
         "directSwappableGsmCapacityRatio": 0.09975
       },
       "components": {
+        "collateralizationParameters": {
+          "applicability": "measured",
+          "quality": "limited",
+          "review": {
+            "reviewedAt": "2026-11-23T23:44:23Z",
+            "reviewer": "Night RESV curation pass 2026-11-24 (resv-2)",
+            "rationale": "At finalized Ethereum block 26481203 (hash 0xc614c103509b94501a8fbd891640ecd3ac037e727ca1adae1eb93fe1534b0e8c, 2026-11-23T23:44:23Z), GHO totalSupply (699,000,000.00 GHO) reconciles with zero residual across all 8 registered facilitators: three Ethereum Aave V3 direct-minter pools totaling 239,000,000 GHO (34.19% of supply) whose complete on-chain reserve configurations were read via getReservesList/getConfiguration — CoreGhoDirectMinter Pool 0x87870bca3f3fd6335c3f4ce8392d69350b4fa4e2 (135M GHO, 68 reserves, 55 active collateral assets: 13 borrowable with LTV 0.05%-81% and 42 deposit-only at 0% LTV, full LTV range 0%-81%, LT 0.1%-85%), LidoGhoDirectMinter Pool 0x4e033931ad43597d96d6bcc25c280717730b58b1 (45M GHO, 9 reserves, 6 active collateral assets: 2 borrowable with LTV 82%-84% and 4 deposit-only at 0% LTV, full LTV range 0%-84%, LT 0.1%-85%), and HorizonGhoDirectMinter Pool 0xae05cd22df81871bc7cc2a04becfb516bfe332c8 (59M GHO, 13 reserves, 10 active collateral assets, LTV 0.05%-88%, LT 0.1%-90%) — plus GhoDirectFacilitator GSMs Mainnet (310M GHO, 44.35%, feeding fixed-ratio 1:1 GSM modules including unfrozen/unseized stataUSDC GSM 0x3a386889... getExposureCap() 175M and stataUSDT GSM 0x882285e6... getExposureCap() 50M), three remote chain facilitators at 50M GHO each (Plasma, Arbitrum, Monad; 21.46% combined), and FlashMinter (0 GHO). Graded limited because parameters are governance-adjustable across shared multi-debt pools spanning volatile, LST, RWA, and stablecoin collateral, cross-chain facilitators rely on remote configurations, and no GHO-only system collateralization ratio exists.",
+            "sources": [
+              {
+                "label": "Ethereum finalized block 26481203 (hash 0xc614c103509b94501a8fbd891640ecd3ac037e727ca1adae1eb93fe1534b0e8c, 2026-11-23T23:44:23Z): GHO getFacilitatorsList/getFacilitator exact 699,000,000 GHO reconciliation across all 8 facilitators, Aave V3 Core/Lido/Horizon Pool getReservesList/getConfiguration parameters, and mainnet stataUSDC/stataUSDT GSM state",
+                "url": "https://api-ethereum-mainnet.n.dwellir.com"
+              },
+              {
+                "label": "Aave GHO facilitator documentation",
+                "url": "https://aave.com/help/gho-stablecoin/facilitators"
+              },
+              {
+                "label": "Aave GHO borrower collateral and liquidation mechanics (applicability correction retrieved 2026-10-20; original evidence clock retained)",
+                "url": "https://aave.com/docs/ecosystem/gho"
+              },
+              {
+                "label": "Aave Health Factor and Liquidation mechanics documentation (retrieved 2026-11-24)",
+                "url": "https://aave.com/help/borrowing/liquidations"
+              },
+              {
+                "label": "Aave V3 Pool smart contract reference (liquidationCall and collateral checks, retrieved 2026-11-24)",
+                "url": "https://aave.com/docs/aave-v3/smart-contracts/pool"
+              }
+            ]
+          }
+        },
+        "liquidationMechanics": {
+          "applicability": "measured",
+          "quality": "limited",
+          "review": {
+            "reviewedAt": "2026-11-23T23:44:23Z",
+            "reviewer": "Night RESV curation pass 2026-11-24 (resv-2)",
+            "rationale": "Aave official GHO, Health Factor, and V3 Pool documentation establishes deterministic Health Factor < 1 liquidation triggers and permissionless external liquidationCall execution across Aave V3 lending markets, while GSM facilitators hold fixed-ratio swappable stablecoin backing with governance freeze/seize controls. Pinned finalized Ethereum block 26481203 (2026-11-23T23:44:23Z) confirms on-chain liquidation bonuses across all three Ethereum direct-minter lending pools (Core: 4.5%-10% across 55 active collateral reserves; Lido: 5%-7.5% across 6 active collateral reserves; Horizon: 3%-9% across 10 active collateral reserves) and confirms both mainnet tracked GSM modules (stataUSDC GSM 0x3a386889... and stataUSDT GSM 0x882285e6...) are active (isFrozen=false, isSeized=false). Graded limited because liquidations depend on external liquidators and secondary-market swap liquidity without a GHO-dedicated committed liquidation pool, and cross-chain facilitators (Plasma, Arbitrum, Monad; 21.46% of supply) rely on remote chain liquidation/GSM execution.",
+            "sources": [
+              {
+                "label": "Ethereum finalized block 26481203 (hash 0xc614c103509b94501a8fbd891640ecd3ac037e727ca1adae1eb93fe1534b0e8c, 2026-11-23T23:44:23Z): GHO getFacilitatorsList/getFacilitator exact 699,000,000 GHO reconciliation across all 8 facilitators, Aave V3 Core/Lido/Horizon Pool getReservesList/getConfiguration parameters, and mainnet stataUSDC/stataUSDT GSM state",
+                "url": "https://api-ethereum-mainnet.n.dwellir.com"
+              },
+              {
+                "label": "Aave GHO facilitator documentation",
+                "url": "https://aave.com/help/gho-stablecoin/facilitators"
+              },
+              {
+                "label": "Aave GHO borrower collateral and liquidation mechanics (applicability correction retrieved 2026-10-20; original evidence clock retained)",
+                "url": "https://aave.com/docs/ecosystem/gho"
+              },
+              {
+                "label": "Aave Health Factor and Liquidation mechanics documentation (retrieved 2026-11-24)",
+                "url": "https://aave.com/help/borrowing/liquidations"
+              },
+              {
+                "label": "Aave V3 Pool smart contract reference (liquidationCall and collateral checks, retrieved 2026-11-24)",
+                "url": "https://aave.com/docs/aave-v3/smart-contracts/pool"
+              }
+            ]
+          }
+        },
         "backstop": {
           "quality": "limited"
         },
@@ -1373,6 +1447,10 @@
         {
           "label": "Hydration Borrowing and liquidation documentation",
           "url": "https://docs.hydration.net/products/borrowing/overview/"
+        },
+        {
+          "label": "Hydration EVM RPC pinned block 17365246 (2026-11-23T23:28:30Z): HOLLAR facilitator buckets and Aave v3 Pool getReservesList/getConfiguration parameters across Hydration Market, GIGAHDX, and BIL pools",
+          "url": "https://rpc.hydradx.cloud"
         }
       ],
       "notes": "At Hydration EVM block 13156814 (hash 0x156a1de37fb9ee787c8e8bfcffc8562f96597b0bb9d2afbabfd5282a006c7871, 2026-07-15T20:03:39Z), HOLLAR totalSupply was 11,704,581.364990795218703870 and exactly reconciled to four facilitator bucket levels: Hydration Market 11,209,520.464263113492339716 (95.7703664%), HOLLAR Stability Module 364,154.509863438876798927 (3.1112134%), GIGAHDX 130,906.390864242849565227 (1.1184201%), and FlashMinter zero. Unused facilitator capacity was 1.590628 of supply, but this is mint authority rather than collateral or committed loss capital. Hydration documents a shared Aave v3 lending market and protocol liquidations that flash-mint repayment assets, sell seized collateral, and burn the flash amount. Because issuance spans heterogeneous facilitator modules and the primary market is a shared multi-debt account system, there is no honest HOLLAR-only system collateralization ratio. Because liquidation uses transient flash issuance rather than a HOLLAR-dedicated pool contractually committed to debt offset, liquidation-capacity ratio is structurally not applicable. HSM sell-back support is explicitly conditional rather than unlimited, facilitator caps provide only partial branch isolation, and the reviewed docs do not establish an unconditional residual-bad-debt recapitalization facility; those components remain limited.",
@@ -1399,6 +1477,52 @@
         "gigahdxIssuedShareRatio": 0.011184
       },
       "components": {
+        "collateralizationParameters": {
+          "applicability": "measured",
+          "quality": "limited",
+          "review": {
+            "reviewedAt": "2026-11-23T23:28:30Z",
+            "reviewer": "Night RESV curation pass 2026-11-23 (resv-0)",
+            "rationale": "At pinned Hydration EVM block 17365246 (hash 0x1129c5760fcea45da8f7cb82f7f70055c34d3297beff0d5b3920687f63ce7622, 2026-11-23T23:28:30Z), HOLLAR totalSupply (11,418,556.02) reconciles to six facilitators with 99.99996% minted across three on-chain Aave v3-fork pools: Hydration Market 0x1b02E051683b5cfaC5929C25E84adb26ECf87B38 (9,573,164.07 HOLLAR, 34 reserves with explicit on-chain LTV 0%-85% and LT 70%-98%, e.g. DOT/tBTC 80%/85%, ETH 75%/85%, USDC/USDT 80%/90%, PRIME/SIGIL/apyUSD 85%/88%), GIGAHDX 0x2Ce2CfFF743CdB6637F4B5D351937A541B8c8923 (999,624.01 HOLLAR, stHDX 40% LTV / 70% LT), and BIL 0x69310FdA58c819aD82df7d2Cb61841C853337a53 (845,763.08 HOLLAR, uBIL 50% LTV / 85% LT). Graded limited because parameters are governance-adjustable across a shared multi-debt market including volatile/LP/endogenous collateral and no HOLLAR-only system collateralization ratio exists.",
+            "sources": [
+              {
+                "label": "Hydration EVM RPC pinned block 17365246 (2026-11-23T23:28:30Z): HOLLAR facilitator buckets and Aave v3 Pool getReservesList/getConfiguration parameters across Hydration Market, GIGAHDX, and BIL pools",
+                "url": "https://rpc.hydradx.cloud"
+              },
+              {
+                "label": "Hydration HOLLAR protocol documentation",
+                "url": "https://docs.hydration.net/products/hollar/"
+              },
+              {
+                "label": "Hydration Borrowing and liquidation documentation",
+                "url": "https://docs.hydration.net/products/borrowing/overview/"
+              }
+            ]
+          }
+        },
+        "liquidationMechanics": {
+          "applicability": "measured",
+          "quality": "limited",
+          "review": {
+            "reviewedAt": "2026-11-23T23:28:30Z",
+            "reviewer": "Night RESV curation pass 2026-11-23 (resv-0)",
+            "rationale": "Hydration official HOLLAR and Borrowing documentation establishes per-block automated partial liquidations executed at block start using enshrined per-block oracles, protocol custom flash loans that swap seized collateral through the Hydration Omnipool and burn repaid debt, plus permissionless Aave v3 liquidation bots. Pinned Hydration EVM block 17365246 (2026-11-23T23:28:30Z) confirms on-chain liquidation bonuses across all three active borrow pools (3%-8% across active non-jsHOLLAR collateral reserves: 3% USDC/USDT/EURC, 5% tBTC/PAXG, 7% DOT/ETH/SOL/uBIL, 8% vDOT/stHDX; 1% jsHOLLAR). Graded limited because liquidation execution depends on Hydration Omnipool swap depth with no dedicated HOLLAR liquidation pool and undocumented residual bad-debt allocation.",
+            "sources": [
+              {
+                "label": "Hydration EVM RPC pinned block 17365246 (2026-11-23T23:28:30Z): HOLLAR facilitator buckets and Aave v3 Pool getReservesList/getConfiguration parameters across Hydration Market, GIGAHDX, and BIL pools",
+                "url": "https://rpc.hydradx.cloud"
+              },
+              {
+                "label": "Hydration HOLLAR protocol documentation",
+                "url": "https://docs.hydration.net/products/hollar/"
+              },
+              {
+                "label": "Hydration Borrowing and liquidation documentation",
+                "url": "https://docs.hydration.net/products/borrowing/overview/"
+              }
+            ]
+          }
+        },
         "backstop": {
           "quality": "limited"
         },
@@ -7086,7 +7210,7 @@
           "url": "https://wiki.sovryn.com/en/sovryn-dapp/sovryn-dollar"
         },
         {
-          "label": "Rootstock public RPC used for the journaled eth_call reads at block 9071724",
+          "label": "Rootstock public RPC used for pinned eth_call and eth_getStorageAt reads (block 9071724 historical; blocks 9392591 and 9438812 halt verification)",
           "url": "https://public-node.rsk.co"
         },
         {
@@ -7096,14 +7220,39 @@
         {
           "label": "Rootstock Blockscout: DLLR token 0xc1411567d2670e24d9c4daaa7cda95686e1250aa",
           "url": "https://rootstock.blockscout.com/token/0xc1411567d2670e24d9c4daaa7cda95686e1250aa"
+        },
+        {
+          "label": "Sovryn mitigation and recovery manifest (November 9; published November 10)",
+          "url": "https://forum.sovryn.com/t/sovryn-mitigation-and-recovery-manifest/3611"
+        },
+        {
+          "label": "Rootstock Blockscout: SIP-0097 ZUSD ImplementationChanged transaction (block 9392592, 2026-11-07T20:05:28Z)",
+          "url": "https://rootstock.blockscout.com/tx/0x7a1c49ba842cc0c5ee7aac75a8adf60fbdd4958b6b16322b6826fc5e2d2119a1"
+        },
+        {
+          "label": "Rootstock Blockscout: verified ZeroEmergencyHalt implementation 0xe0E757E8fcf336658036202834aEE10ce03debDA",
+          "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0xe0E757E8fcf336658036202834aEE10ce03debDA"
+        },
+        {
+          "label": "Rootstock Blockscout: ZUSD proxy 0xdb107fa69e33f05180a4c2ce9c2e7cb481645c2d",
+          "url": "https://rootstock.blockscout.com/address/0xdb107fa69e33f05180a4c2ce9c2e7cb481645c2d"
+        },
+        {
+          "label": "Rootstock Blockscout: pinned verification block 9438812 (2026-11-24T08:30:27Z)",
+          "url": "https://rootstock.blockscout.com/block/9438812"
         }
       ],
-      "notes": "Measured on-chain 2026-07-20 at Rootstock block 9071724 via cast eth_call against https://public-node.rsk.co (evidence: agents/tmp/mech3-parts/evidence/dllr-sovryn.json). DLLR totalSupply() = 1,817,239.921692042 and the Mynt MassetManager 0x5f7772...7582 held exactly 1,817,239.921692042 ZUSD and 0 DOC at the same block, so the aggregator's at-par internal backing is exactly 1:1 to the wei; this is the reported collateralizationRatio, an oracleless internal-accounting figure (Mynt values bAssets at par by design), not a market-value ratio. DLLR's Mynt layer is a 1:1 bAsset aggregator: the builder-portal documentation and verified mint-authority review establish that it mints and redeems DLLR only against deposited accepted bAssets (currently ZUSD and DOC), creates no borrower vaults, and runs no liquidation engine, so collateralizationParameters, liquidationMechanics, backstop, and branchIsolation are structurally not applicable at this layer; collateral and liquidation risk live in the upstream Sovryn Zero and Money On Chain protocols. Holders can redeem DLLR 1:1 for basket bAssets through the MassetManager, and the measured reserve equals supply exactly, supporting adequate structuralRedemption. shutdownAndBadDebt is limited: no wind-down, settlement, or recapitalization facility exists at the Mynt layer, so an upstream bAsset failure transmits to DLLR holders at par; Sovryn GovernorAlpha behind a 48-hour Timelock administers the accepted-bAsset basket. Not established: the upstream ZUSD/DOC collateral quality and mechanism state (reviewed under their own assets), the market value of the ZUSD backing relative to par, and any redemption-fee or suspension conditions beyond the documented 1:1 convert path.",
+      "notes": "Original 2026-07-20 structural review (block 9071724) preserved for the four not-applicable Mynt aggregator components (collateralizationParameters, liquidationMechanics, backstop, branchIsolation) and liquidationCapacityRatio. Component-level adverse update at pinned Rootstock block 9438812 (2026-11-24T08:30:27Z; hash 0x65673856d020dc3ca24024d3c1dd22826dfd03b5c2be07041040cdea31a753f4; evidence: agents/2026-11-23-unknowns-assessment/day/evidence/F4/dllr-sovryn/ via research:dwellir-rpc --provider alchemy and day/evidence/R5/dllr-sovryn/rootstock-pinned-9438812.json): on 2026-11-07T20:05:28Z (block 9392592, tx 0x7a1c49ba842cc0c5ee7aac75a8adf60fbdd4958b6b16322b6826fc5e2d2119a1), SIP-0097 upgraded the ZUSD proxy (0xdb107fa69e33f05180a4c2ce9c2e7cb481645c2d) to ZeroEmergencyHalt (0xe0e757e8fcf336658036202834aee10ce03debda), which reverts every delegated call with \"Zero: emergency shutdown\". At block 9438812, ZUSD.getImplementation() still returns ZeroEmergencyHalt, ZUSD.balanceOf(Mynt) reverts with \"Zero: emergency shutdown\", and both Mynt redeem(DOC, 1e18) and redeem(ZUSD, 1e18) calls revert with \"Zero: emergency shutdown\". Direct storage read of ZUSD _balances[Mynt] (slot 57) returns 513,076.565385379406493309 ZUSD — matching pre-halt block 9392591 ZUSD.balanceOf(Mynt) byte-for-byte — while DOC.balanceOf(Mynt) is 120,624.718465306245685181 DOC and DLLR.totalSupply() is 633,701.283850685652178490 DLLR (0 wei difference; nominal basket 80.965051% ZUSD, 19.034949% DOC). Because 80.97% of the nominal basket is contract-halted with no recoverable valuation or reopening date, collateralizationRatio is unavailable (superseding July's 1.0 internal-accounting ratio), shutdownAndBadDebt is failed (upstream bAsset halt propagated across the unisolated Mynt basket with no quarantine or settlement facility), and structuralRedemption is failed (all Mynt DOC and ZUSD conversion paths revert). No realized holder loss percentage is asserted.",
       "metrics": {
-        "collateralizationRatio": 1,
+        "collateralizationRatio": null,
         "liquidationCapacityRatio": null
       },
       "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "unavailable",
+          "rationale": "ZUSD (80.965% of nominal Mynt basket at Rootstock block 9438812 via proxy storage slot 57) is halted in ZeroEmergencyHalt and ZUSD.balanceOf(Mynt) reverts with Zero: emergency shutdown, so recoverable collateralization cannot be measured at par.",
+          "sourceUrl": "https://forum.sovryn.com/t/sovryn-mitigation-and-recovery-manifest/3611"
+        },
         "liquidationCapacityRatio": {
           "state": "not-applicable",
           "rationale": "The Mynt aggregator creates no borrower debt positions and runs no liquidation engine; minting and redemption are 1:1 conversions against accepted bAssets, so there is no debt-offset liquidation capacity to measure.",
@@ -7111,8 +7260,8 @@
         }
       },
       "analogousMetrics": {
-        "zusdShareOfBacking": 1,
-        "docShareOfBacking": 0
+        "zusdShareOfBacking": 0.809651,
+        "docShareOfBacking": 0.190349
       },
       "components": {
         "collateralizationParameters": {
@@ -7136,10 +7285,62 @@
           "sourceUrl": "https://build.sovryn.com/builder-portal/smart-contracts/mynt"
         },
         "shutdownAndBadDebt": {
-          "quality": "limited"
+          "applicability": "measured",
+          "quality": "failed",
+          "review": {
+            "reviewedAt": "2026-11-24T08:30:27Z",
+            "reviewer": "Day R5 Safety Score review 2026-11-24 (owner ruling 6)",
+            "rationale": "At pinned Rootstock block 9438812 (2026-11-24T08:30:27Z; hash 0x65673856d020dc3ca24024d3c1dd22826dfd03b5c2be07041040cdea31a753f4), ZUSD remains upgraded to ZeroEmergencyHalt (0xe0e757e8fcf336658036202834aee10ce03debda) from SIP-0097 (block 9392592, 2026-11-07T20:05:28Z). ZUSD accounts for 513,076.565385 of 633,701.283851 nominal Mynt basket units (80.965% via proxy storage slot 57, matching pre-halt block 9392591 byte-for-byte). Because Mynt lacks bAsset isolation, quarantine, or orderly wind-down/settlement mechanics, the upstream ZUSD emergency halt disables the entire Mynt aggregator — including the 120,624.718465 DOC leg — with no reopening date in Sovryn's recovery manifest. Graded failed, matching CDP shutdown precedents usdq-quill and msusd-metronome.",
+            "sources": [
+              {
+                "label": "Rootstock public RPC used for pinned eth_call and eth_getStorageAt reads (block 9071724 historical; blocks 9392591 and 9438812 halt verification)",
+                "url": "https://public-node.rsk.co"
+              },
+              {
+                "label": "Sovryn mitigation and recovery manifest (November 9; published November 10)",
+                "url": "https://forum.sovryn.com/t/sovryn-mitigation-and-recovery-manifest/3611"
+              },
+              {
+                "label": "Rootstock Blockscout: SIP-0097 ZUSD ImplementationChanged transaction (block 9392592, 2026-11-07T20:05:28Z)",
+                "url": "https://rootstock.blockscout.com/tx/0x7a1c49ba842cc0c5ee7aac75a8adf60fbdd4958b6b16322b6826fc5e2d2119a1"
+              },
+              {
+                "label": "Rootstock Blockscout: verified ZeroEmergencyHalt implementation 0xe0E757E8fcf336658036202834aEE10ce03debDA",
+                "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0xe0E757E8fcf336658036202834aEE10ce03debDA"
+              },
+              {
+                "label": "Rootstock Blockscout: pinned verification block 9438812 (2026-11-24T08:30:27Z)",
+                "url": "https://rootstock.blockscout.com/block/9438812"
+              }
+            ]
+          }
         },
         "structuralRedemption": {
-          "quality": "adequate"
+          "applicability": "measured",
+          "quality": "failed",
+          "review": {
+            "reviewedAt": "2026-11-24T08:30:27Z",
+            "reviewer": "Day R5 Safety Score review 2026-11-24 (owner ruling 6)",
+            "rationale": "At pinned Rootstock block 9438812 (2026-11-24T08:30:27Z; hash 0x65673856d020dc3ca24024d3c1dd22826dfd03b5c2be07041040cdea31a753f4), both Mynt MassetManager redemption paths — redeem(DOC, 1e18) and redeem(ZUSD, 1e18), called from DLLR holder BabelFish 0x1440d19436bEEaf8517896bffB957A88ec95a00F — revert with \"Zero: emergency shutdown\" because shared basket checks invoke halted ZUSD.balanceOf(Mynt). Sovryn's recovery manifest confirms minting and redemption against both DOC and ZUSD are stopped with no reopening date. Graded failed, matching CDP precedent msusd-metronome.",
+            "sources": [
+              {
+                "label": "Rootstock public RPC used for pinned eth_call and eth_getStorageAt reads (block 9071724 historical; blocks 9392591 and 9438812 halt verification)",
+                "url": "https://public-node.rsk.co"
+              },
+              {
+                "label": "Sovryn mitigation and recovery manifest (November 9; published November 10)",
+                "url": "https://forum.sovryn.com/t/sovryn-mitigation-and-recovery-manifest/3611"
+              },
+              {
+                "label": "Rootstock Blockscout: verified ZeroEmergencyHalt implementation 0xe0E757E8fcf336658036202834aEE10ce03debDA",
+                "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0xe0E757E8fcf336658036202834aEE10ce03debDA"
+              },
+              {
+                "label": "Rootstock Blockscout: pinned verification block 9438812 (2026-11-24T08:30:27Z)",
+                "url": "https://rootstock.blockscout.com/block/9438812"
+              }
+            ]
+          }
         }
       }
     },
@@ -7196,7 +7397,7 @@
         "totalAssetsEur": 6810306.2,
         "totalShares": 6832189.70071,
         "navPerShareEur": 0.996797,
-        "navBufferPct": 4.3e-08
+        "navBufferPct": 4.3e-8
       },
       "components": {
         "venueAndCustody": {
@@ -9146,7 +9347,7 @@
         },
         {
           "venueKey": "hyperliquid",
-          "share": 1.9e-05,
+          "share": 0.000019,
           "failureDomains": [
             {
               "kind": "dex-protocol",
@@ -9560,7 +9761,7 @@
         "totalAssetsUsdc": 10696286.730934,
         "totalSupplyShares": 10712859.371583354,
         "navPerShareUsdc": 0.998453,
-        "navBufferPct": 1.43e-06
+        "navBufferPct": 0.00000143
       },
       "components": {
         "venueAndCustody": {
@@ -10047,7 +10248,7 @@
       "notes": "BIMA (bima-v1-core, Liquity-style multi-collateral CDP): per-collateral TroveManagers registered behind BorrowerOperations 0x87FED36c032EE7289a1d2f3C48798e4C7fCDfAEc; StabilityPool 0x5F2283c7C8967c5Fb3a959E63ea89865B882d627; DebtToken (USBD) 0x6bedE1c6009a78c222D9BDb7974bb67847fdB68c (same address on every chain); addresses from the official mainnet.md. Reads via cast eth_call at pinned blocks. Hemi block 4888613 (https://rpc.hemi.network/rpc): getTCR() = 1.159446855465023757; fetchBalances() shows 6 registered collaterals, two funded - idx3 0.01726035 and idx5 100.00421028 wrapped-BTC units, all priced $64,087.91 -> $6.41M collateral vs 5,528,642 USBD system debt. Ethereum block 25572229 (https://ethereum-rpc.publicnode.com): getTCR() = 1.731981202183397313; 0.01818855 wrapped WBTC x $63,774.35 = $1,160 vs 669.73 USBD debt. Sonic (block 76222612), Plume (82209576), BSC (111045598), Nibiru (43391769): zero vault debt (BSC getTCR returns uint256 max from zero-debt division; Plume oracle call reverts). Aggregate collateralizationRatio = (6,410,167 + 1,160) / (5,528,642 + 670) = 1.1595, Hemi-dominated. liquidationCapacityRatio = global StabilityPool deposits / global system debt = 11.84 USBD (Ethereum pool only; Hemi/Sonic/Plume/BSC/Nibiru pools = 0) / 5,529,312 USBD = 0.0000021 - the pool is effectively empty, so liquidations rely on external liquidators (0.5% + 200 USBD bounty) with defaulted-debt redistribution as fallback. Measured Hemi TCR 115.9% is BELOW the documented 160% CCR, i.e. the system sits inside its own recovery-mode band. Parameters (configuration-details): MCR 150%, CCR 160%, per-TroveManager debt ceilings, redemption fee coreRate + 0.75%, PSM 1:1 stablecoin swaps. NOT established: (1) Ethereum DebtToken totalSupply is 4.002B USBD but 4 wallets hold exactly 1B each (99.96%, Ethplorer) - pre-minted/non-circulating, while vault debt there is only 670 USBD and DefiLlama counts ~$7.5M circulating globally; issuer has not documented this pre-mint. (2) PSM stablecoin reserves: no PSM address appears in the official address list, so any PSM-minted USBD and its 1:1 stable collateral are EXCLUDED from the aggregate CR (conservative). (3) Which specific BTC LSTs back the funded Hemi branches. (4) Actual liquidation throughput with an empty stability pool.",
       "metrics": {
         "collateralizationRatio": 1.1595,
-        "liquidationCapacityRatio": 2.1e-06
+        "liquidationCapacityRatio": 0.0000021
       },
       "components": {
         "collateralizationParameters": {
@@ -15302,7 +15503,7 @@
         },
         {
           "venueKey": "bnb-chain-balance",
-          "share": 2.05e-07,
+          "share": 2.05e-7,
           "failureDomains": [
             {
               "kind": "chain",
@@ -15312,7 +15513,7 @@
         },
         {
           "venueKey": "ethereum-chain-balance",
-          "share": 1.79e-07,
+          "share": 1.79e-7,
           "failureDomains": [
             {
               "kind": "chain",
@@ -21576,6 +21777,42 @@
         {
           "label": "LedgerLens disclosed primary custodian and subcustodian",
           "url": "https://dashboard.ledgerlens.io/assets/ReserveCompositionSection-CFa4kc-i.js"
+        },
+        {
+          "label": "LedgerLens FRNT public loader snapshot 6b0195fb48d6fff8fb584065 (2026-11-21T13:00:44.731Z): itemized FBO Trust CUSIPs gross $1,011,542.66 less $43,490.81 administration payable = $968,051.85 net reserves reconciling to 968,051.849913 8-chain FRNT liabilities; zero liquidity fund",
+          "url": "https://dashboard.ledgerlens.io/_serverFn/48773d105fce9df473395d17bdd97f0cc8215fa6b7fa5355237e98db44e0ab8f"
+        },
+        {
+          "label": "Ethereum Dwellir RPC pinned block 26481203 (2026-11-23T23:44:23Z): FRNT totalSupply 95,052.248641",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
+        },
+        {
+          "label": "Base Dwellir RPC pinned block 61433290 (2026-11-23T23:37:13Z): FRNT totalSupply 94,912.000000",
+          "url": "https://api-base-mainnet-archive.n.dwellir.com"
+        },
+        {
+          "label": "Arbitrum Dwellir RPC pinned block 526978595 (2026-11-24T01:38:23Z): FRNT totalSupply 97,047.000000",
+          "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+        },
+        {
+          "label": "Optimism Dwellir RPC pinned block 159942768 (2026-11-24T01:38:33Z): FRNT totalSupply 95,005.000000",
+          "url": "https://api-optimism-mainnet-archive.n.dwellir.com"
+        },
+        {
+          "label": "Polygon Dwellir RPC pinned block 97853204 (2026-11-24T01:54:35Z): FRNT totalSupply 95,009.000000",
+          "url": "https://api-polygon-mainnet-archive.n.dwellir.com"
+        },
+        {
+          "label": "Avalanche Dwellir RPC pinned block 101216417 (2026-11-24T01:54:37Z): FRNT totalSupply 98,777.650055",
+          "url": "https://api-avalanche-mainnet-archive.n.dwellir.com"
+        },
+        {
+          "label": "Solana mainnet finalized RPC slot 473167602: FRNT mint supply 392,145.021217",
+          "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "Hedera Hashio JSON-RPC block 102705132 (2026-11-24T01:54:36Z): FRNT totalSupply 103.930000",
+          "url": "https://mainnet.hashio.io/api"
         }
       ],
       "notes": "Current September 23, 2026 rules, directly retrieved October 15, establish holder-benefit FBO trust accounts, separation from administration/liquidity accounts and a special redemption obligation limited to trust assets. They expressly create no Commission fiduciary duty or state full-faith-and-credit/deposit-insurance guarantee. These enforceable rules support adequate claimAndSegregation without certifying account agreements or legal bankruptcy outcomes. Commission disclosure names Franklin Advisers and Fiduciary Trust International; LedgerLens additionally names BNY Mellon as subcustodian, without allocated shares or actual custody agreements. October 14 snapshot 6acf6eec0ff131db2a33fe2c reports gross FBO assets USD 1007516.78 less administration payable USD 39464.93, leaving net reserves USD 968051.85 against raw eight-chain liabilities 968051.849913; fresh pinned native supplies independently corroborate that liability amount but never replace canonical supply. The dashboard reports zero separate liquidity-fund balance, while law/rules provide a 2% buffer funded after operating costs; current funding and dashboard scope remain to be reconciled, not a proven noncompliance verdict. Supplemental inventory is expressly non-assured and no current signed report opinion was retrieved. Complete subcustody, reuse and replacement safeguards remain unresolved, so custodyContinuity stays limited. Existing component qualities and empty quantitative metrics remain unchanged; no generic financial-assurance or measured 102% coverage credit is claimed.",
@@ -21586,6 +21823,61 @@
         },
         "custodyContinuity": {
           "quality": "limited"
+        },
+        "assuranceAndReconciliation": {
+          "applicability": "measured",
+          "quality": "limited",
+          "review": {
+            "reviewedAt": "2026-11-24T01:55:00Z",
+            "reviewer": "Night run 2026-11-24 (RESV resv-4)",
+            "rationale": "LedgerLens public loader snapshot 6b0195fb48d6fff8fb584065 (2026-11-21T13:00:44.731Z) publishes itemized CUSIP-level FBO Trust holdings totaling $1,011,542.66 gross ($50,417.98 cash, $361,124.68 across 9 U.S. Treasury bill CUSIPs, $600,000.00 across 2 active Treasury repos) less $43,490.81 administrative payable = $968,051.85 net FBO reserves against 968,051.849913 FRNT total liabilities across all 8 native chains. Fresh pinned on-chain totalSupply() reads independently corroborate all 8 chains to the exact 6th decimal place (Ethereum block 26481203: 95,052.248641; Base block 61433290: 94,912.000000; Arbitrum block 526978595: 97,047.000000; Optimism block 159942768: 95,005.000000; Polygon block 97853204: 95,009.000000; Avalanche block 101216417: 98,777.650055; Hedera block 102705132: 103.930000; Solana finalized slot 473167602: 392,145.021217; sum = 968,051.849913 FRNT). Under the mechanism-overlay evidence standard, itemized structured dashboard reconciliation corroborated by external on-chain supply anchors and Wyoming statutory reserve rules supports limited assuranceAndReconciliation, matching the ousd-open-standard precedent. Adequate and strong remain withheld because LedgerLens expressly states dashboard metrics are supplemental non-assured information, the separately issued AT-C 205 Examination Reports by The Network Firm LLP are behind LedgerLens's Turnstile gate (/api/wystc/reports) and were not retrieved, and the separate 2% statutory liquidity-fund account reports $0.",
+            "sources": [
+              {
+                "label": "FRNT supplemental LedgerLens inventory and assurance disclaimer",
+                "url": "https://dashboard.ledgerlens.io/c/wystc"
+              },
+              {
+                "label": "Wyoming current reserve and redemption rules",
+                "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
+              },
+              {
+                "label": "LedgerLens FRNT public loader snapshot 6b0195fb48d6fff8fb584065 (2026-11-21T13:00:44.731Z): itemized FBO Trust CUSIPs gross $1,011,542.66 less $43,490.81 administration payable = $968,051.85 net reserves reconciling to 968,051.849913 8-chain FRNT liabilities; zero liquidity fund",
+                "url": "https://dashboard.ledgerlens.io/_serverFn/48773d105fce9df473395d17bdd97f0cc8215fa6b7fa5355237e98db44e0ab8f"
+              },
+              {
+                "label": "Ethereum Dwellir RPC pinned block 26481203 (2026-11-23T23:44:23Z): FRNT totalSupply 95,052.248641",
+                "url": "https://api-ethereum-mainnet.n.dwellir.com"
+              },
+              {
+                "label": "Base Dwellir RPC pinned block 61433290 (2026-11-23T23:37:13Z): FRNT totalSupply 94,912.000000",
+                "url": "https://api-base-mainnet-archive.n.dwellir.com"
+              },
+              {
+                "label": "Arbitrum Dwellir RPC pinned block 526978595 (2026-11-24T01:38:23Z): FRNT totalSupply 97,047.000000",
+                "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+              },
+              {
+                "label": "Optimism Dwellir RPC pinned block 159942768 (2026-11-24T01:38:33Z): FRNT totalSupply 95,005.000000",
+                "url": "https://api-optimism-mainnet-archive.n.dwellir.com"
+              },
+              {
+                "label": "Polygon Dwellir RPC pinned block 97853204 (2026-11-24T01:54:35Z): FRNT totalSupply 95,009.000000",
+                "url": "https://api-polygon-mainnet-archive.n.dwellir.com"
+              },
+              {
+                "label": "Avalanche Dwellir RPC pinned block 101216417 (2026-11-24T01:54:37Z): FRNT totalSupply 98,777.650055",
+                "url": "https://api-avalanche-mainnet-archive.n.dwellir.com"
+              },
+              {
+                "label": "Solana mainnet finalized RPC slot 473167602: FRNT mint supply 392,145.021217",
+                "url": "https://api.mainnet-beta.solana.com"
+              },
+              {
+                "label": "Hedera Hashio JSON-RPC block 102705132 (2026-11-24T01:54:36Z): FRNT totalSupply 103.930000",
+                "url": "https://mainnet.hashio.io/api"
+              }
+            ]
+          }
         }
       }
     },

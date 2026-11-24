@@ -523,18 +523,19 @@ export interface V9MechanismExitFactProjection {
  * The `physical-redemption` mechanism-exit fact for a commodity claim, derived
  * from the SAME curated `physicalRedemption` component the backing pillar
  * grades. v9.14 promotes physical redemption to a first-class backing
- * component; the Exit pillar keeps consuming it only to explain a missing
- * runtime route (`no-viable-exit-path` becomes the bounded
- * `missing-runtime-route-evidence`), exactly as it did while the fact lived in
- * the `allocated-commodity-claim` profile's `exitFacts`. Deriving rather than
- * re-declaring is the anti-double-count rule: one curated statement, two
- * readers, no way for a curator to assert a strong backing redemption and a
- * different exit disposition.
+ * component while retaining this projection as a reviewed non-dollar redemption
+ * witness (`hasExitSubject`). Per the 2026-11-24 physical-delivery ruling,
+ * dollar exit capacity is not applicable to physical metal delivery, so Exit no
+ * longer converts a missing same-notional USD runtime route into an open
+ * `exit:mechanism-profile:physical-redemption` (cause U) question. Deriving
+ * rather than re-declaring is the anti-double-count rule: one curated
+ * statement, two readers, no way for a curator to assert a strong backing
+ * redemption and a different exit disposition.
  *
  * A `not-applicable` component projects nothing: a structurally absent
- * redemption right is not evidence that an exit route exists, so it must not
- * buy the bounded reason substitution. An uncurated component projects nothing
- * either — the compiler fallback has no redemption evidence to state.
+ * redemption right is not evidence that a redemption channel exists. An
+ * uncurated component projects nothing either — the compiler fallback has no
+ * redemption evidence to state.
  */
 export function deriveCommodityClaimMechanismExitFacts(
   overlay: MechanismReviewOverlay,

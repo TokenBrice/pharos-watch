@@ -4,7 +4,12 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { hasIndependentLiveCompositionDates, hasIndependentReserveObservationDates } from "@shared/lib/report-card-policy";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapter-descriptors";
-import { projectReserveCompositionReviewFacts, REVIEWED_RESERVE_COMPOSITION_ADMISSION_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/reserve-admission";
+import {
+  projectReserveCompositionReviewFacts,
+  resolveNamedFirmReserveReportMaxAgeSec,
+  resolveReviewedReserveCompositionBudget,
+  REVIEWED_RESERVE_COMPOSITION_ADMISSION_MAX_AGE_SEC,
+} from "@shared/lib/safety-score-v9/reserve-admission";
 import { admitV10ReserveReportScope, admitV10ReserveObservation, shouldApplyV10ReserveReportScope, resolveV10ReserveObservationDeploymentRefs } from "@shared/lib/safety-score-v9/reserve-scope";
 import { normalizeDeploymentId } from "@shared/types/deployment-id";
 import type { V9ReserveCompositionAdmission } from "@shared/types/safety-score-v9-public";
@@ -343,8 +348,6 @@ const CORROBORATING_ASSURANCE_METHODS = new Set([
   "attestation",
 ]);
 const DIRECT_RESERVE_ASSURANCE_METHODS = new Set(["audit", "examination"]);
-const NAMED_FIRM_RESERVE_REPORT_MAX_AGE_SEC =
-  V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.namedFirmReserveReportMaxAgeSec;
 const UNRESOLVED_CURATED_RESERVE_DISPOSITIONS = new Set(["basket-needs-split", "insufficient-evidence"]);
 
 function normalizeReviewedStaticReserveRows(rows: readonly ReserveSlice[]): ReserveSlice[] {
@@ -444,6 +447,7 @@ interface IndependentlyAttestedCompositionAdmission {
   proof: NonNullable<V9ExtensionRegistryMeta["proofOfReserves"]>;
   report: NonNullable<NonNullable<V9ExtensionRegistryMeta["proofOfReserves"]>["latestReport"]>;
   compositionAsOfSec: number;
+  maxAgeSec: number;
   freshness: "fresh" | "expired";
 }
 
@@ -497,6 +501,7 @@ function independentlyAttestedComposition(
     return null;
   }
   const compositionAsOfSec = Date.parse(`${report.periodEnd}T00:00:00Z`) / 1_000;
+  const maxAgeSec = resolveNamedFirmReserveReportMaxAgeSec(review, report.periodEnd, clockSec);
   return {
     normalizedRows: normalizeReviewedStaticReserveRows(compositionRows),
     sourceRows: rows,
@@ -504,8 +509,9 @@ function independentlyAttestedComposition(
     proof,
     report,
     compositionAsOfSec,
+    maxAgeSec,
     freshness:
-      clockSec - compositionAsOfSec > NAMED_FIRM_RESERVE_REPORT_MAX_AGE_SEC
+      clockSec - compositionAsOfSec > maxAgeSec
         ? "expired"
         : "fresh",
   };
@@ -639,11 +645,12 @@ function buildSafetyScoreV9ReviewedCuratedReserveRows(
   }
   if (namedAdmission?.freshness === "expired") {
     onRejected?.({ reasons: ["beyond-age-budget"],
-      age: { compositionAsOfSec: namedAdmission.compositionAsOfSec, maxAgeSec: NAMED_FIRM_RESERVE_REPORT_MAX_AGE_SEC } });
+      age: { compositionAsOfSec: namedAdmission.compositionAsOfSec, maxAgeSec: namedAdmission.maxAgeSec } });
     return null;
   }
+  const filingBudget = resolveReviewedReserveCompositionBudget(review, clockSec);
   const compositionMaxAgeSec = namedAdmission !== null
-    ? NAMED_FIRM_RESERVE_REPORT_MAX_AGE_SEC : REVIEWED_RESERVE_COMPOSITION_ADMISSION_MAX_AGE_SEC;
+    ? namedAdmission.maxAgeSec : filingBudget.maxAgeSec;
   // A named report's age cannot be bypassed through the generic curated lane.
   const report = meta.proofOfReserves?.latestReport;
   if (hasNamedReportFirm(meta) && report?.periodEnd === review?.compositionAsOf &&
@@ -706,8 +713,13 @@ function buildSafetyScoreV9ReviewedCuratedReserveRows(
   if (review.sources.length === 0) return reject("review-sources-missing");
   if (curatedRows === null) return reject("invalid-composition");
   if (reviewedAtSec === null || reviewedAtSec < compositionAtSec) return reject("invalid-review-chronology");
+  const filingSupersedesOlderReport =
+    filingBudget.filingAdmissible &&
+    reportPeriodEnd != null &&
+    review.compositionAsOf != null &&
+    reportPeriodEnd < review.compositionAsOf;
   if (hasDateMismatch && (
-    !(hasIndependentLiveCompositionDates(meta) || hasIndependentReserveObservationDates(meta)) ||
+    !(hasIndependentLiveCompositionDates(meta) || hasIndependentReserveObservationDates(meta) || filingSupersedesOlderReport) ||
     conservativeDateEndSec(reportPeriodEnd, clockSec) === null ||
     conservativeDateEndSec(meta.proofOfReserves?.latestReport?.publishedAt, clockSec) === null
   )) return reject("report-date-mismatch");
@@ -762,8 +774,8 @@ export function buildSafetyScoreV9ReviewedStandaloneReserveRows(
 export type ReviewedReserveAdmission =
   | { kind: "none"; projected: null }
   | { kind: "history"; projected: null; source: IndependentlyAttestedCompositionAdmission }
-  | { kind: "named-report"; projected: ReviewedStaticReserveRows; source: Pick<IndependentlyAttestedCompositionAdmission, "review" | "proof" | "report">; named: boolean }
-  | { kind: "reviewed-composition"; projected: ReviewedStaticReserveRows; review: NonNullable<V9ExtensionRegistryMeta["reserveReview"]> }
+  | { kind: "named-report"; projected: ReviewedStaticReserveRows; source: Pick<IndependentlyAttestedCompositionAdmission, "review" | "proof" | "report">; named: boolean; maxAgeSec: number }
+  | { kind: "reviewed-composition"; projected: ReviewedStaticReserveRows; review: NonNullable<V9ExtensionRegistryMeta["reserveReview"]>; maxAgeSec: number }
   | { kind: "scoped-observation"; projected: ReviewedStaticReserveRows; observation: ReserveObservationEnvelope };
 
 /** Ephemeral: consume evidence locally; never retain in the prepared cohort. */
@@ -805,13 +817,24 @@ export function resolveReviewedReserveAdmission(input: {
     if (!observation) throw new Error("Independent reserve admission has no source envelope");
     return { kind: "scoped-observation", projected, observation };
   }
-  if (source) return { kind: "named-report", projected, source, named: true };
+  if (source) return { kind: "named-report", projected, source, named: true, maxAgeSec: source.maxAgeSec };
   const review = meta.reserveReview!;
   const proof = meta.proofOfReserves;
   if (projected.evidenceClass !== "static-validated" && proof?.latestReport) {
-    return { kind: "named-report", projected, source: { review, proof, report: proof.latestReport }, named: false };
+    return {
+      kind: "named-report",
+      projected,
+      source: { review, proof, report: proof.latestReport },
+      named: false,
+      maxAgeSec: resolveNamedFirmReserveReportMaxAgeSec(review, proof.latestReport.periodEnd, clockSec),
+    };
   }
-  return { kind: "reviewed-composition", projected, review };
+  return {
+    kind: "reviewed-composition",
+    projected,
+    review,
+    maxAgeSec: resolveReviewedReserveCompositionBudget(review, clockSec).maxAgeSec,
+  };
 }
 
 export function addReviewedStaticReserveEvidence(
@@ -856,7 +879,7 @@ export function addReviewedStaticReserveEvidence(
         reserves: sourceRows,
         proofOfReserves: proof,
       },
-      maxAgeSec: NAMED_FIRM_RESERVE_REPORT_MAX_AGE_SEC,
+      maxAgeSec: admission.source.maxAgeSec,
     });
     return;
   }
@@ -884,11 +907,11 @@ export function addReviewedStaticReserveEvidence(
         provenance: admission.projected.provenance,
         proofOfReserves: proof,
       },
-      maxAgeSec: NAMED_FIRM_RESERVE_REPORT_MAX_AGE_SEC,
+      maxAgeSec: admission.maxAgeSec,
     });
     return;
   }
-  const { review, projected } = admission;
+  const { review, projected, maxAgeSec } = admission;
   if (projected.evidenceClass === "static-validated") {
     evidence.add({
       componentKeys: [
@@ -909,7 +932,7 @@ export function addReviewedStaticReserveEvidence(
         evidenceClass: projected.evidenceClass,
         provenance: projected.provenance,
       },
-      maxAgeSec: REVIEWED_RESERVE_COMPOSITION_ADMISSION_MAX_AGE_SEC,
+      maxAgeSec,
     });
     return;
   }

@@ -90,7 +90,7 @@ interface FarmRiskConfig {
 }
 
 const FARM_RISK_MAP: Record<string, FarmRiskConfig> = {
-  "fasanara-mfone":          { risk: "high", ...cefiPositionMeta() },
+  "fasanara-mfone":          { risk: "high", ...cefiPositionMeta(), coinId: "mf-one-midas", depType: "collateral" },
   "jet-stream":              { risk: "high" },
   "fasanara-rwa-farm":       { risk: "high", ...cefiPositionMeta() },
   "fasanara-gdaf":           { risk: "high", ...cefiPositionMeta(), coinId: "mglobal-midas-fasanara", depType: "collateral" },
@@ -108,6 +108,7 @@ const FARM_RISK_MAP: Record<string, FarmRiskConfig> = {
   "euler-sentora-usdc":      { risk: "low", ...wrapperAssetMeta("usdc") },
   "morpho-steakUSDCinfinifi": { risk: "medium", ...wrapperAssetMeta("usdc") },
   "morpho-v2-august-usdc":    { risk: "medium", ...wrapperAssetMeta("usdc") },
+  "morpho-v2-rockawayx-usdc": { risk: "medium", ...wrapperAssetMeta("usdc") },
   "base-morpho-steakhouse-prime": { risk: "medium", ...wrapperAssetMeta("usdc") },
   "capfarm":                 { risk: "medium", coinId: "stcusd-cap", depType: "collateral" },
   SwapFarm:                  { risk: "low" },

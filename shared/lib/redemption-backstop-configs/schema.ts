@@ -17,13 +17,13 @@ import {
   type RedemptionDocSource,
 } from "../../types/redemption";
 import { HttpUrlSchema, NonNegativeNumberSchema, PositiveNumberSchema } from "../../types/validators";
-import { PhysicalCommoditySchema } from "../../types/exit-route";
+import { MAX_REDEMPTION_OUTPUT_ASSETS, PhysicalCommoditySchema } from "../../types/exit-route";
 import { isValidIsoDateOnly } from "../../types/date-primitives";
 import { formatUtcDateOnly } from "../format";
 import { isRedemptionSettlementFaster } from "./settlement-order";
 import { LiveReserveRedemptionTelemetrySchema } from "../../types/live-reserves";
 
-const MAX_REDEMPTION_OUTPUT_ASSETS = 16;
+export { MAX_REDEMPTION_OUTPUT_ASSETS };
 const RatioSchema = z.number().finite().gt(0).lte(1);
 const StaticCapacityConfidenceSchema = RedemptionCapacityConfidenceSchema.exclude(["live-direct", "live-proxy"]);
 const ReviewedAtSchema = z

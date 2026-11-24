@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_REDEMPTION_OUTPUT_ASSETS } from "./exit-route";
 import { ReserveObservationEnvelopeSchema, ReserveBoundedFactsGenerationSchema } from "./safety-score-v9-reserve-scope";
 import { LenderBookObservationSchema, LenderBookFailedAttemptSchema } from "./safety-score-v9-lender-book";
 import { LIVE_RESERVE_ADAPTER_KEYS, type LiveReserveAdapterKey } from "./live-reserve-core";
@@ -76,7 +77,7 @@ export const LiveReserveRedemptionOutputValuationSchema = /* @__PURE__ */ (() =>
           .strict(),
       )
       .min(1)
-      .max(16)
+      .max(MAX_REDEMPTION_OUTPUT_ASSETS)
       .superRefine((weights, ctx) => {
         const assetIds = new Set(weights.map((weight) => weight.assetId));
         if (assetIds.size !== weights.length) {
@@ -300,7 +301,7 @@ export const LiveReserveRedemptionTelemetrySchema = /* @__PURE__ */ (() => z
     feeBps: BoundedFeeBpsSchema.optional(),
     sourceUrls: z.array(HttpUrlSchema).optional(),
     // Exact payout identities for this capacity observation, not reserve assets.
-    outputAssetKeys: z.array(z.string().trim().min(1)).min(1).max(16).refine(
+    outputAssetKeys: z.array(z.string().trim().min(1)).min(1).max(MAX_REDEMPTION_OUTPUT_ASSETS).refine(
       (keys) => new Set(keys).size === keys.length,
       "Output asset identities must be unique",
     ).optional(),

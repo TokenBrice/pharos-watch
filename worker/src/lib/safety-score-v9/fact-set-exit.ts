@@ -2,7 +2,16 @@ import { redemptionRouteId } from "@shared/lib/redemption-route-identity";
 import { normalizeFailureDomains } from "@shared/lib/safety-score-v9/primitives";
 import { z } from "zod";
 import { resolvedExitRouteOutputAssetKeys } from "@shared/lib/exit-route-output";
-import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
+import {
+  getRedemptionBackstopConfig,
+  resolveV9RedemptionRouteCostBpsAtNotional,
+  type RedemptionBackstopConfig,
+} from "@shared/lib/redemption-backstops";
+import { resolveDefaultHolderEligibility } from "@shared/lib/redemption-backstop-configs/shared";
+import {
+  resolveReviewedRedemptionSettlement,
+  resolveReviewedRedemptionSettlementDelay,
+} from "@shared/lib/redemption-backstop-configs/settlement";
 import { resolveReviewedRouteSuspension } from "@shared/lib/redemption-route-suspension";
 import type { RedemptionBackstopEntry, RedemptionRouteSuspension } from "@shared/types/redemption";
 import { allocationReviewClockSec as reviewAdmissionClockSec } from "@shared/types/safety-score-v9-allocation";
@@ -12,6 +21,7 @@ import { canonicalV9RouteKey } from "@shared/lib/safety-score-v9/facts";
 import {
   createV9EvidenceReference,
   createV9FactStatus,
+  notApplicableV9Fact,
   requiredV9Applicability,
 } from "@shared/lib/safety-score-v9/evidence";
 import {
@@ -36,8 +46,14 @@ import {
   findRedemptionReserveQuarantine, redemptionReserveQuarantineScope, resolveRedemptionReserveQuarantineCause,
 } from "./redemption-reserve-quarantine";
 import { reserveBackedRedemptionRouteMaxAgeSec } from "./redemption-route-freshness";
-import { usesPrimaryRedemptionReviewTerms } from "../redemption-exit-route-observations";
-import { hasUsableRedemptionCapacityObservation } from "./extension-routes";
+import { resolveOutput, usesPrimaryRedemptionReviewTerms } from "../redemption-exit-route-observations";
+import {
+  buildOutputReview,
+  hasUsableRedemptionCapacityObservation,
+  redemptionExecutionModel,
+  redemptionHolderAccess,
+  redemptionSettlement,
+} from "./extension-routes";
 import type {
   V9AssetFactsV3,
   V9EvidenceResponsibility,
@@ -66,6 +82,7 @@ import {
   assertKnownComponentEvidenceCurrent,
   createRuntimeGapVerdict,
   evidenceGapClassificationsFor,
+  PHYSICAL_DELIVERY_CAPACITY_POLICY_RULE_ID,
   type AssetBuildContext,
 } from "./fact-set-context";
 
@@ -328,6 +345,20 @@ function capacityEvidenceTierForObservation(
   }
 }
 
+
+const PHYSICAL_DELIVERY_CAPACITY_NOT_APPLICABLE_RATIONALE =
+  "Physical-commodity delivery redeems for metal rather than dollars; same-notional USD exit capacity is not applicable.";
+
+function physicalDeliveryCapacityNotApplicableStatus(evidenceRefIds: readonly string[]): V9FactStatusV2 {
+  return createV9FactStatus({
+    applicability: notApplicableV9Fact(
+      PHYSICAL_DELIVERY_CAPACITY_POLICY_RULE_ID,
+      PHYSICAL_DELIVERY_CAPACITY_NOT_APPLICABLE_RATIONALE,
+    ),
+    observationState: "known",
+    evidenceRefIds,
+  });
+}
 
 function buildRoute(
   context: AssetBuildContext,
@@ -651,6 +682,18 @@ function buildRoute(
       });
     }
   }
+  // Physical-commodity delivery redeems for metal rather than dollars, so
+  // same-notional USD capacity is not applicable (2026-11-24 owner ruling 5).
+  // `route.status` remains missing while V9ExitRouteFactV2Schema requires
+  // non-empty capacityCurve for known route status; `factorStatuses.capacity`
+  // carries the explicit machine-readable not-applicable disposition and Exit
+  // projects route applicability from it without granting dollar credit.
+  const physicalDeliveryCapacityNotApplicable =
+    args.disposition !== "rejected" &&
+    executionAdmission?.state !== "unavailable" &&
+    output.kind === "physical-commodity-delivery" &&
+    output.sameNotionalEligible === false &&
+    !usableCapacity;
   return {
     routeKey,
     routeId: args.observation.routeId,
@@ -684,7 +727,11 @@ function buildRoute(
     physicalResourceKeys: args.review.physicalResourceKeys,
     status: routeStatus,
     factorStatuses: {
-      ...(routeState !== "known" ? { capacity: routeStatus } : {}),
+      ...(physicalDeliveryCapacityNotApplicable
+        ? { capacity: physicalDeliveryCapacityNotApplicableStatus([evidenceId]) }
+        : routeState !== "known"
+          ? { capacity: routeStatus }
+          : {}),
       ...(output.status.observationState !== "known" ? { output: output.status } : {}),
       ...rejectedFactorStatuses,
     },
@@ -768,6 +815,255 @@ function classifyUnsupportedDexSurface(
   return null;
 }
 
+function projectUnavailableRailStaticTerms(
+  context: AssetBuildContext,
+  args: {
+    routeId: string;
+    routeKey: string;
+    routeFamily: V9ExitRouteFactV2["routeFamily"];
+    config: RedemptionBackstopConfig | null;
+    supply: V9AssetFactsV3["supply"];
+    existingChannelEvidenceId?: string;
+    defaultOutputStatus: V9FactStatusV2;
+  },
+): {
+  holderAccess: V9ExitRouteFactV2["holderAccess"];
+  executionModel: V9ExitRouteFactV2["executionModel"];
+  settlementModel: V9ExitRouteFactV2["settlementModel"];
+  settlementSlaSec: V9ExitRouteFactV2["settlementSlaSec"];
+  settlementEvidenceRefIds: string[];
+  minRedeemUsd: V9ExitRouteFactV2["minRedeemUsd"];
+  output: V9ExitRouteFactV2["output"];
+  factorStatuses: V9ExitRouteFactV2["factorStatuses"];
+  costKnown: boolean;
+} {
+  const fallback = {
+    holderAccess: "unknown" as const,
+    executionModel: "unknown" as const,
+    settlementModel: "unknown" as const,
+    settlementSlaSec: null,
+    settlementEvidenceRefIds: [] as string[],
+    minRedeemUsd: null,
+    output: {
+      status: args.defaultOutputStatus,
+      kind: "unknown" as const,
+      assetKeys: [] as string[],
+      basketWeights: [] as V9ExitRouteFactV2["output"]["basketWeights"],
+      valuation: null,
+    },
+    factorStatuses: {} as V9ExitRouteFactV2["factorStatuses"],
+    costKnown: false,
+  };
+  const { config } = args;
+  const clockSec = context.fixedInput.clockSec;
+  const maxAgeSec = context.extension.routeFreshness.documentedTermsMaxAgeSec;
+  const reviewedAtSec = config?.reviewedAt ? Date.parse(config.reviewedAt) / 1_000 : Number.NaN;
+  const admissionSec = config?.reviewedAt ? reviewAdmissionClockSec(config.reviewedAt) : Number.NaN;
+  // Project static non-capacity terms only from a dated, cited, admitted, current review.
+  // Capacity, capacityEvidenceTier, observationConfidence, and executionConfidence stay
+  // unknown because they depend on an admitted executable measurement.
+  if (
+    !config ||
+    !config.reviewedAt ||
+    !(config.docs?.length) ||
+    !Number.isFinite(reviewedAtSec) ||
+    reviewedAtSec > clockSec ||
+    admissionSec > clockSec ||
+    clockSec - reviewedAtSec > maxAgeSec
+  ) {
+    return fallback;
+  }
+
+  let termsEvidenceId = args.existingChannelEvidenceId;
+  const ensureTermsEvidenceId = (): string => {
+    if (termsEvidenceId) return termsEvidenceId;
+    termsEvidenceId = addEvidence(context, createV9EvidenceReference({
+      evidenceId: `${context.asset.assetId}:redemption-configured-channel`,
+      sourceId: "safety-score-v9-redemption-configured-channel",
+      sourceGenerationId: context.extension.sources.researchOverlays.generationId,
+      disposition: "observed",
+      observedAtSec: reviewedAtSec,
+      url: config.docs![0]!.url,
+      contentSha256: domainDigest("safety-score-v9.redemption-configured-channel.v1", config),
+      maxAgeSec,
+    }, clockSec));
+    return termsEvidenceId;
+  };
+  let knownTermsStatus: V9FactStatusV2 | undefined;
+  const getKnownTermsStatus = (): V9FactStatusV2 =>
+    (knownTermsStatus ??= createV9FactStatus({
+      applicability: requiredV9Applicability("v9.exit.route-factors"),
+      observationState: "known",
+      evidenceRefIds: [ensureTermsEvidenceId()],
+    }));
+
+  const reviewTerms = config.v9RouteReviewTerms;
+  const reviewTermsAdmissionSec = reviewTerms?.reviewedAt ? reviewAdmissionClockSec(reviewTerms.reviewedAt) : Number.NaN;
+  const reviewTermsObservedSec = reviewTerms?.reviewedAt ? Date.parse(reviewTerms.reviewedAt) / 1_000 : Number.NaN;
+  const reviewTermsAdmitted = reviewTerms !== undefined &&
+    Number.isFinite(reviewTermsAdmissionSec) && reviewTermsAdmissionSec <= clockSec;
+  const reviewTermsCurrent = reviewTermsAdmitted &&
+    Number.isFinite(reviewTermsObservedSec) &&
+    reviewTermsObservedSec <= clockSec &&
+    clockSec - reviewTermsObservedSec <= maxAgeSec;
+  const explicitMissing = reviewTermsAdmitted && reviewTerms?.scoringDisposition === "bounded-terms-gap"
+    ? reviewTerms.missingScoringFields
+    : undefined;
+  const hasDocSupport = (support: "access" | "fees" | "settlement"): boolean =>
+    config.docs!.some((doc) => doc.supports?.includes(support)) ||
+    (reviewTermsCurrent && (reviewTerms?.docs?.some((doc) => doc.supports?.includes(support)) ?? false));
+
+  const factorStatuses: V9ExitRouteFactV2["factorStatuses"] = {};
+  const executionModel = redemptionExecutionModel({
+    queueEnabled: config.routeFamily === "queue-redeem" || config.settlementModel === "queued",
+    executionModel: config.executionModel,
+  });
+  const minRedeemUsd = reviewTermsCurrent && reviewTerms?.minRedeemUsd !== undefined
+    ? reviewTerms.minRedeemUsd : null;
+
+  const effectiveEligibility = config.holderEligibility ?? resolveDefaultHolderEligibility(config);
+  const holderAccess = hasDocSupport("access") && effectiveEligibility !== "unknown"
+    ? redemptionHolderAccess({ accessModel: config.accessModel, holderEligibility: effectiveEligibility })
+    : "unknown";
+  if (holderAccess !== "unknown") {
+    const knownAccess = getKnownTermsStatus();
+    factorStatuses.access = knownAccess;
+    factorStatuses.holderEligibility = knownAccess;
+  }
+
+  const settlementExplicitlyMissing = explicitMissing?.includes("settlement") === true;
+  const reviewedDelaySec = settlementExplicitlyMissing
+    ? undefined
+    : resolveReviewedRedemptionSettlementDelay(reviewTerms, clockSec);
+  const effectiveSettlementModel = resolveReviewedRedemptionSettlement(config, clockSec);
+  const deterministicAtomic = !settlementExplicitlyMissing &&
+    reviewedDelaySec === undefined &&
+    effectiveSettlementModel === "atomic" &&
+    (config.executionModel === "deterministic-onchain" || config.executionModel === "deterministic-basket") &&
+    config.routeStatus !== "unknown" &&
+    hasDocSupport("settlement");
+  let settlementModel: V9ExitRouteFactV2["settlementModel"] = "unknown";
+  let settlementSlaSec: V9ExitRouteFactV2["settlementSlaSec"] = null;
+  if (reviewedDelaySec !== undefined) {
+    const projected = redemptionSettlement(effectiveSettlementModel, reviewedDelaySec);
+    settlementModel = projected.settlementModel;
+    settlementSlaSec = projected.settlementSlaSec;
+  } else if (deterministicAtomic) {
+    settlementModel = "atomic";
+    settlementSlaSec = 0;
+  }
+  const settlementEvidenceRefIds = settlementSlaSec !== null ? [ensureTermsEvidenceId()] : [];
+  if (settlementSlaSec !== null) {
+    factorStatuses.settlement = getKnownTermsStatus();
+  }
+
+  const policy = executionPolicyForInput(context);
+  const stressRequest = selectV9ExitStressRequest(selectV9ExitCirculatingUsd(args.supply), policy);
+  const costExplicitlyMissing = explicitMissing?.includes("cost") === true;
+  const hasFeeSource = Boolean(config.v9RouteCostTerms?.publishedFeeSchedule) || hasDocSupport("fees");
+  const resolvedCostBps = !costExplicitlyMissing && hasFeeSource
+    ? resolveV9RedemptionRouteCostBpsAtNotional(config, stressRequest.requestedNotionalUsd, null, {
+        clockSec,
+        pegDataById: context.fixedInput.pegDataById,
+      })
+    : null;
+  const costKnown = resolvedCostBps !== null;
+  if (costKnown) {
+    factorStatuses.cost = getKnownTermsStatus();
+  }
+
+  let output: V9ExitRouteFactV2["output"] = fallback.output;
+  const rawOutput = resolveOutput(context.asset.assetId, config);
+  // Collateral outputs only receive a USD-normalized valuation from an observed
+  // executable quote, and unconfirmed offchain-issuer configs without explicit
+  // outputAssets or a tracked peg currency cannot infer a USD fiat payout.
+  const implicitOffchainFiat = rawOutput.kind === "fiat" && !config.outputAssets?.length;
+  const outputAllowed =
+    rawOutput.kind !== "collateral" &&
+    (!implicitOffchainFiat || (rawOutput.currency !== undefined && config.routeStatus !== "unknown"));
+  if (outputAllowed) {
+    const syntheticObservation: ExitRouteObservation = {
+      routeId: args.routeId,
+      routeFamily: args.routeFamily,
+      scope: config.routeFamily === "offchain-issuer"
+        ? { kind: "issuer", issuerId: context.asset.assetId }
+        : { kind: "protocol", protocol: context.asset.assetId },
+      requestedNotionalUsd: stressRequest.requestedNotionalUsd,
+      maxCostBps: stressRequest.maxCostBps,
+      executableUsd: 0,
+      completionRatio: 0,
+      settlementHorizonSec: 1,
+      output: rawOutput,
+      evidenceKind: "documented-terms",
+      confidence: "unknown",
+      scoreEligible: false,
+      observedAt: reviewedAtSec,
+      freshnessSeconds: Math.max(0, clockSec - reviewedAtSec),
+      commonModeKeys: [],
+    };
+    const outputReview = buildOutputReview(
+      context.fixedInput,
+      syntheticObservation,
+      context.extension.sources.researchOverlays.generationId,
+      context.asset.assetId,
+    );
+    const valuationInput = outputReview?.valuation ?? null;
+    if (
+      outputReview &&
+      valuationInput &&
+      valuationInput.observedAtSec <= clockSec &&
+      (valuationInput.maxAgeSec === null || clockSec - valuationInput.observedAtSec <= valuationInput.maxAgeSec)
+    ) {
+      const valuationEvidenceId = outputValuationEvidence(context, args.routeKey, valuationInput);
+      const valuationEvidence = context.evidence.get(valuationEvidenceId)!;
+      if (valuationEvidence.freshness.state === "current") {
+        const outputStatus = createV9FactStatus({
+          applicability: requiredV9Applicability("v9.exit.output-valuation"),
+          observationState: "known",
+          evidenceRefIds: [valuationEvidenceId],
+          gapIds: [],
+        });
+        output = {
+          status: outputStatus,
+          kind: outputReview.kind,
+          ...(outputReview.sameNotionalEligible === false ? { sameNotionalEligible: false as const } : {}),
+          ...(outputReview.unboundedDeliveryCap !== undefined
+            ? { unboundedDeliveryCap: outputReview.unboundedDeliveryCap } : {}),
+          assetKeys: outputReview.assetKeys,
+          basketWeights: outputReview.basketWeights,
+          valuation: {
+            basis: valuationInput.basis,
+            referenceAssetKey: valuationInput.referenceAssetKey,
+            unitValueUsd: valuationInput.unitValueUsd,
+            expectedUnitValueUsd: valuationInput.expectedUnitValueUsd,
+            valueRetentionRatio: valuationInput.unitValueUsd / valuationInput.expectedUnitValueUsd,
+            sourceId: valuationInput.sourceId,
+            sourceGenerationId: valuationInput.sourceGenerationId,
+            observedAtSec: valuationInput.observedAtSec,
+            asOfSec: clockSec,
+            confidence: valuationInput.confidence,
+            freshness: valuationEvidence.freshness,
+            evidenceRefIds: [valuationEvidenceId],
+          },
+        };
+        factorStatuses.output = outputStatus;
+      }
+    }
+  }
+
+  return {
+    holderAccess,
+    executionModel,
+    settlementModel,
+    settlementSlaSec,
+    settlementEvidenceRefIds,
+    minRedeemUsd,
+    output,
+    factorStatuses,
+    costKnown,
+  };
+}
+
 export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["supply"]): {
   exitStatus: V9FactStatusV2;
   exitCoverage?: V9AssetFactsV3["exitCoverage"];
@@ -848,6 +1144,8 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
   let unavailableRail: {
     routeId: string; routeFamily: V9ExitRouteFactV2["routeFamily"];
     evidenceIds: readonly string[]; capacityGapId: string;
+    channelEvidenceId?: string;
+    capacityNonApplicabilityAdmitted: boolean;
   } | null = null;
   if (
     redemption?.provider === "reserve-sync-metadata" &&
@@ -870,8 +1168,12 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
         reason: "Captured redemption resolutionState is missing-capacity for an open live-direct telemetry rail." },
     }, context.fixedInput.clockSec));
     const message = "The configured live-only redemption route has unavailable capacity telemetry.";
-    unavailableRail = { routeId, routeFamily: "protocol-redemption", evidenceIds: [evidenceId], capacityGapId: routeGap(context, routeKey, "capacity", "missing",
-      "missing-runtime-route-evidence", "producer-failed", message, [evidenceId]) };
+    unavailableRail = {
+      routeId, routeFamily: "protocol-redemption", evidenceIds: [evidenceId],
+      capacityGapId: routeGap(context, routeKey, "capacity", "missing",
+        "missing-runtime-route-evidence", "producer-failed", message, [evidenceId]),
+      capacityNonApplicabilityAdmitted: false,
+    };
   } else if (quarantine && quarantineScope && !routes.some((route) => route.lane === "redemption")) {
     const routeKey = quarantineScope.routeKey!;
     // Authored nondisclosure may carry the rail to the issuer cause; every other
@@ -893,6 +1195,7 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
         path: optionalExitV9Path(routeKey), message: cause.message,
         evidenceRefIds: evidenceIds, causeScope: quarantineScope, causeProof: cause.causeProof,
       })),
+      capacityNonApplicabilityAdmitted: false,
     };
   } else if (
     config?.reviewedAt && config.docs?.length &&
@@ -918,14 +1221,18 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
       routeId,
       routeFamily: config.routeFamily === "offchain-issuer" ? "issuer-redemption" : "protocol-redemption",
       evidenceIds: [evidenceId],
+      channelEvidenceId: evidenceId,
       capacityGapId: routeGap(context, routeKey, "capacity", "missing",
         "missing-runtime-route-evidence", "unresearched",
         "The reviewed redemption channel has no admitted same-notional capacity observation; an empty DEX census does not establish its exhaustion.",
         [evidenceId]),
+      capacityNonApplicabilityAdmitted: true,
     };
   }
   if (unavailableRail) {
-    const { routeId, routeFamily, evidenceIds, capacityGapId } = unavailableRail;
+    const {
+      routeId, routeFamily, evidenceIds, capacityGapId, channelEvidenceId, capacityNonApplicabilityAdmitted,
+    } = unavailableRail;
     const routeKey = canonicalV9RouteKey("redemption", generationId, routeId);
     const status = createV9FactStatus({
       applicability: requiredV9Applicability("v9.exit.same-notional-route"),
@@ -933,22 +1240,56 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
       evidenceRefIds: evidenceIds,
       gapIds: [capacityGapId],
     });
-    const costGapId = routeGap(context, routeKey, "cost", "bounded-unknown", "missing-same-notional-route",
-      "unresearched", "No current same-notional cost datum is established for the unavailable rail.", []);
-    const costStatus = createV9FactStatus({ applicability: requiredV9Applicability("v9.exit.route-factors"),
-      observationState: "bounded-unknown", gapIds: [costGapId], evidenceRefIds: evidenceIds });
+    const projectedTerms = projectUnavailableRailStaticTerms(context, {
+      routeId,
+      routeKey,
+      routeFamily,
+      config,
+      supply,
+      existingChannelEvidenceId: channelEvidenceId,
+      defaultOutputStatus: status,
+    });
+    // Only the documented-reviewed-channel branch admits capacity N/A for
+    // physical-commodity delivery; live-telemetry-missing and reserve-quarantine
+    // branches represent producer failures/quarantines and must keep their causes.
+    const physicalDeliveryCapacityNotApplicable =
+      capacityNonApplicabilityAdmitted &&
+      channelEvidenceId !== undefined &&
+      projectedTerms.output.kind === "physical-commodity-delivery" &&
+      projectedTerms.output.sameNotionalEligible === false;
+    const factorStatuses: V9ExitRouteFactV2["factorStatuses"] = {
+      capacity: physicalDeliveryCapacityNotApplicable
+        ? physicalDeliveryCapacityNotApplicableStatus(evidenceIds)
+        : status,
+      ...projectedTerms.factorStatuses,
+    };
+    if (!projectedTerms.costKnown) {
+      const costGapId = routeGap(context, routeKey, "cost", "bounded-unknown", "missing-same-notional-route",
+        "unresearched", "No current same-notional cost datum is established for the unavailable rail.", []);
+      factorStatuses.cost = createV9FactStatus({
+        applicability: requiredV9Applicability("v9.exit.route-factors"),
+        observationState: "bounded-unknown",
+        gapIds: [costGapId],
+        evidenceRefIds: evidenceIds,
+      });
+    }
     routes.push({
       routeKey, routeId, lane: "redemption", sourceGenerationId: generationId,
       routeFamily,
-      holderAccess: "unknown", executionModel: "unknown", executionCertainty: "unknown",
+      holderAccess: projectedTerms.holderAccess,
+      executionModel: projectedTerms.executionModel,
+      executionCertainty: "unknown",
       modelConfidence: "unknown", observationConfidence: "unknown", observationHistory: null,
       evidenceKind: "documented-terms", coverageClass: "diagnostic",
-      capacityScoringHorizon: "unknown", settlementModel: "unknown", settlementSlaSec: null,
-      queueDepthUsd: null, dailyLimitUsd: null, minRedeemUsd: null,
-      settlementEvidenceRefIds: [], physicalResourceKeys: [], status, scoreEligible: false,
+      capacityScoringHorizon: "unknown",
+      settlementModel: projectedTerms.settlementModel,
+      settlementSlaSec: projectedTerms.settlementSlaSec,
+      queueDepthUsd: null, dailyLimitUsd: null, minRedeemUsd: projectedTerms.minRedeemUsd,
+      settlementEvidenceRefIds: projectedTerms.settlementEvidenceRefIds,
+      physicalResourceKeys: [], status, scoreEligible: false,
       request: null, capacityCurve: [],
-      factorStatuses: { capacity: status, cost: costStatus },
-      output: { status, kind: "unknown", assetKeys: [], basketWeights: [], valuation: null },
+      factorStatuses,
+      output: projectedTerms.output,
       failureDomains: [{ kind: "redemption-rail", key: context.asset.assetId }],
     });
   }
@@ -1208,7 +1549,13 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
     };
   }
   // A withdrawn channel does not make the observation of independent channels incomplete.
-  const statuses = routes.filter((route) => !route.routeSuspension).flatMap((route) => [route.status, route.output.status]);
+  // Likewise, a physical-delivery route whose USD capacity is explicitly
+  // not-applicable does not add a missing-capacity gap to portfolio exitStatus.
+  const statuses = routes.filter((route) => !route.routeSuspension).flatMap((route) =>
+    route.factorStatuses?.capacity?.applicability.state === "not-applicable"
+      ? [route.output.status]
+      : [route.status, route.output.status],
+  );
   const gapIds = [...new Set(statuses.flatMap((status) => status.gapIds))];
   const evidenceRefIds = [...new Set(routes.flatMap((route) => [route.status, route.output.status]).flatMap((status) => status.evidenceRefIds))];
   // "known" asserts the whole exit surface is observed (it upgrades evidence

@@ -69,7 +69,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "USYC has issuer-operated Teller paths on native Ethereum and Solana. BSC USYC is a canonical-chain-sourced Cross Chain Teller bridge representation from Ethereum with burn/mint semantics; its direct minter, shared allowance, Entitlements/admin, and token upgrade controls are assessed here rather than in Mint Authority. The route remains issuer-native-burn-mint, with no permissionless validator network evidenced. Arc's local USDC subscription/redemption Teller supports native additive stock accounting; its complete route and controller review remains unresolved.",
+    "summary": "USYC has issuer-operated native Teller paths on Ethereum, Solana, and Arc (local USDC subscription/redemption with zero bridged escrow and zero CCTP TokenMinterV2 allowance). BSC USYC is a canonical-chain-sourced Cross Chain Teller bridge representation from Ethereum with burn/mint semantics; its direct minter, shared allowance, Entitlements/admin, and token upgrade controls are assessed here rather than in Mint Authority. The route remains issuer-native-burn-mint, with no permissionless validator network evidenced.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex bridge route review / mint-bridge boundary migration",
     "confidence": "manual-review",
@@ -195,27 +195,36 @@
         "id": "arc:0x8a5d989bbb96929f689b0200f435f53da42bf490",
         "destinationChain": "arc",
         "contractAddress": "0x8a5d989bbb96929f689b0200f435f53da42bf490",
-        "protocol": "USYC Arc Teller (route unresolved)",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Official USYC Mainnet documentation identifies this Arc token and Teller 0x51a8ce47dc08ba5cd19c7aa84ea6fd6664f60f9b. At Arc block 27853807 (2026-10-25), the token returned US Yield Coin, USYC, six decimals and zero totalSupply; Teller asset() was local USDC 0x3600000000000000000000000000000000000000, share() was this USYC token, and its token minterAllowance was uint256.max. The Teller proxy resolved implementation 0x7ff36d935f598c23c75c3db6536133654beab1e6. Its complete 23148-byte runtime, including metadata, matched verified Ethereum Teller 0xb69ecb156dc0028198028c501340d5367845ca72 at block 26272214 except 12 PUSH32 address substitutions for pinned authority(), dst() and UUPS immutable self. The matched source transfers local USDC to treasury before share.mint on subscription and share.burn before local USDC redemption; these operations do not escrow another chain's USYC and support additive native stock accounting. This limited accounting proof does not close issuer authorization, alternate minters, peers, entitlement administration or upgrade controls, so the overall typed route disposition remains unresolved and no control assurance is upgraded.",
+        "protocol": "USYC Arc Teller",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Official USYC Mainnet smart-contract docs list Arc USYC (0x8a5d...f490), Arc Teller (USDC, 0x51a8...0f9b), Arc Oracle (0x4bc8...537a), and Arc Entitlements (0xb69e...ca72), with no Cross Chain Teller (only BSC uses the Cross Chain Teller from Ethereum). At pinned Arc block 32810997 (2026-11-23T23:18:56Z, hash 0x65390edce6eb68cae6efd8489155a1a42d3d10cf95090893f7deaf6e492dffe4), YieldCoin proxy 0x8a5d...f490 resolved to Sourcify-verified implementation 0x7eb324c2b505fc778fa3480a587ebda70aa5f948 with totalSupply=0, owner=0x6a010e562eb99f2aea4a98e8d3d33556d4475c4b (zero-code EOA), and authority=0xb69ecb156dc0028198028c501340d5367845ca72 (proxy impl 0x6b765d649968358cb38ade91816b575207c38324, owner=0x46a3b46d806c632e4c7b3e7fe4d677dabac9bc17 zero-code EOA). Arc Teller 0x51a8...0f9b (impl 0x7ff36d935f598c23c75c3db6536133654beab1e6, matching verified Ethereum Teller bytecode; owner=0x0fc8d5671fd0778494600871c7f3dd8b74c55485 zero-code EOA) targets local Arc USDC (0x3600...0000) and this USYC share token with uint256.max minterAllowance. Shared EOAs 0x85fbfb...d011 and FundAdmin 0xdbe01f...800d (zero-code on Arc; FundAdmin holds role 255+20 with setMinterAllowance/setRoleCapability/setUserRole permissions) also hold uint256.max minterAllowance, whereas CCTP TokenMinterV2 (0xfd78ee...d002) has zero minterAllowance. This establishes native issuer issuance on Arc rather than a bridge representation; full historical MinterConfigured log scanning is bounded by Arc RPC's 1,000-block getLogs cap, and Arc native controllers are flagged for mint-authority sidecar inclusion.",
         "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "arc",
+        "controllerAddress": "0x51a8ce47dc08ba5cd19c7aa84ea6fd6664f60f9b",
+        "failureDomainKeys": [
+          "protocol:usyc-teller",
+          "contract:arc:0x51a8ce47dc08ba5cd19c7aa84ea6fd6664f60f9b",
+          "contract:arc:0xb69ecb156dc0028198028c501340d5367845ca72"
+        ],
+        "observedAt": "2026-11-23",
+        "observedBlock": 32810997,
         "sources": [
           {
-            "label": "Official USYC Mainnet deployments (Arc token and Teller)",
+            "label": "Official USYC Mainnet deployments (Arc token, Teller, Oracle, Entitlements)",
             "url": "https://usyc.docs.hashnote.com/overview/smart-contracts"
           },
           {
-            "label": "Arc mainnet public RPC identity and supply at block 27853807 (2026-10-25)",
+            "label": "Arc mainnet pinned RPC reads at block 32810997 (2026-11-23)",
             "url": "https://rpc.mainnet.arc.io"
           },
           {
-            "label": "Verified Arc YieldCoin implementation (native fund-share mint and burn)",
-            "url": "https://arc.etherscan.io/address/0x7eb324c2b505fc778fa3480a587ebda70aa5f948#code"
+            "label": "Sourcify verified Arc YieldCoin implementation (chain 5042)",
+            "url": "https://sourcify.dev/server/v2/contract/5042/0x7eb324c2b505fc778fa3480a587ebda70aa5f948?fields=abi,compilation"
           },
           {
             "label": "Verified Ethereum Teller source matched to pinned Arc runtime, with only chain-specific immutable address differences",

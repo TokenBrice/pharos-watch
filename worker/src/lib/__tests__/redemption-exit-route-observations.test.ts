@@ -519,8 +519,7 @@ describe("redemption same-notional route observations", () => {
         observedAt: outputObservedAt,
         unitValueUsd: 0.999983,
         basketWeights: [
-          { assetId: "usdc-circle", weight: 0.93 },
-          { assetId: "wtgxx-wisdomtree", weight: 0.07 },
+          { assetId: "usdc-circle", weight: 1 },
         ],
       },
       now: observedAt + 60,
@@ -529,10 +528,9 @@ describe("redemption same-notional route observations", () => {
     expect(observation).toMatchObject({
       output: {
         kind: "tracked-stablecoin",
-        trackedAssetIds: ["usdc-circle", "wtgxx-wisdomtree"],
+        trackedAssetIds: ["usdc-circle"],
         basketWeights: [
-          { assetId: "usdc-circle", weight: 0.93 },
-          { assetId: "wtgxx-wisdomtree", weight: 0.07 },
+          { assetId: "usdc-circle", weight: 1 },
         ],
       },
       executionCostBps: 0,

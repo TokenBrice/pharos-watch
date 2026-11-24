@@ -149,12 +149,17 @@ describe("stablecoin source-data regressions", () => {
     expect(disposition?.pct).toBe(bitcoin?.pct);
   });
 
-  it("keeps YLDS's unaudited September 2026 10-Q out of the audited reserve source list", () => {
-    // Compiled Backing evidence is stamped with the audited period/publication dates,
-    // so an unaudited supplemental filing must live in the evidence log, not here.
-    const urls = yldsReserves.reserveReview.sources.map((source) => source.url);
-    expect(urls).not.toContain("https://www.sec.gov/Archives/edgar/data/1974395/000162828026073949/fcc-20260930.htm");
-    expect(yldsReserves.reserveReview.compositionAsOf).toBe("2025-12-31");
+  it("binds YLDS's unaudited September 2026 10-Q composition to its SEC filing record", () => {
+    // v10.53: an unaudited 10-Q composition is admissible only through
+    // reserveReview.compositionFiling, whose URL must also be a cited source.
+    const review = yldsReserves.reserveReview;
+    const tenQ = "https://www.sec.gov/Archives/edgar/data/1974395/000162828026073949/fcc-20260930.htm";
+    expect(review.compositionAsOf).toBe("2026-09-30");
+    expect(review.compositionFiling).toEqual({
+      regulator: "sec", form: "10-Q", accession: "0001628280-26-073949",
+      periodEnd: "2026-09-30", filedAt: "2026-11-16", url: tenQ,
+    });
+    expect(review.sources.map((source) => source.url)).toContain(tenQ);
   });
 
   it("pins every dated comparison in STAC's reserve rationale to the same Chronicle source entry", () => {

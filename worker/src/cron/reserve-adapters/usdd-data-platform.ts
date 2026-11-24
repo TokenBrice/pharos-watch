@@ -178,6 +178,7 @@ export function adaptUsddLatestCollateral(
   const bucketValues = {
     smartAllocatorUsd: 0,
     psmUsdtUsd: 0,
+    psmUsdcUsd: 0,
     trxUsd: 0,
     directUsdtUsd: 0,
     stakedTrxUsd: 0,
@@ -200,6 +201,9 @@ export function adaptUsddLatestCollateral(
         break;
       case "PSM-USDT-A":
         bucketValues.psmUsdtUsd += lockedValue;
+        break;
+      case "PSM-USDC-A":
+        bucketValues.psmUsdcUsd += lockedValue;
         break;
       case "TRX-A":
       case "TRX-B":
@@ -237,6 +241,14 @@ export function adaptUsddLatestCollateral(
       risk: "low",
       sourceKey: "usdd-data-platform:psm-usdt",
       coinId: "usdt-tether",
+      depType: "collateral",
+    },
+    {
+      name: "USDC (PSM vaults)",
+      value: bucketValues.psmUsdcUsd,
+      risk: "low",
+      sourceKey: "usdd-data-platform:psm-usdc",
+      coinId: "usdc-circle",
       depType: "collateral",
     },
     {
@@ -279,14 +291,14 @@ export function adaptUsddLatestCollateral(
       `USDD itemized vault collateral $${reconciliation.itemizedUsd.toFixed(2)} does not reconcile with the headline totalCollateralValue $${reconciliation.headlineUsd.toFixed(2)}`,
     ));
   }
-  const stableRedeemableUsd = bucketValues.psmUsdtUsd + bucketValues.directUsdtUsd;
+  const stableRedeemableUsd = bucketValues.psmUsdtUsd + bucketValues.psmUsdcUsd + bucketValues.directUsdtUsd;
 
   return {
     slices: slicesFromValues(bucketSlices.sort((left, right) => right.value - left.value)),
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       vaultCount: items.length,
-      trackedVaultCount: 5,
+      trackedVaultCount: 6,
       ...(unknownVaultCount > 0 ? { unknownVaultCount } : {}),
       ...(unknownVaultTypes.size > 0 ? { unknownVaultTypes: Array.from(unknownVaultTypes).sort() } : {}),
       ...(unknownExposurePct > 0 ? { unknownExposurePct } : {}),

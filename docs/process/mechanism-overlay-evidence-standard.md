@@ -22,11 +22,15 @@ are now admissible only under the rules below.
   overlay claim overrides that conservatism — or that restated report quality — and is
   therefore held to the strictest sourcing bar in the scoring system.
 - For `commodity-claim`, the curated `physicalRedemption` component is also the single source
-  of the asset's `physical-redemption` mechanism-exit fact: the Exit pillar reads a projection
-  of the same statement rather than a second declaration. A `measured` component projects a
+  of the asset's `physical-redemption` mechanism-exit fact: a `measured` component projects a
   `supported` exit fact at the same quality, an `unavailable` component projects an
   `issuer-undisclosed` exit fact, and a `not-applicable` component projects nothing — a
-  structurally absent redemption right is not evidence that an exit route exists.
+  structurally absent redemption right is not evidence that an exit route exists. As of v10.53
+  (2026-11-24 physical-delivery ruling), Exit retains `physical-redemption` as a reviewed
+  non-dollar redemption witness (`hasExitSubject`), marks same-notional USD capacity on
+  physical-commodity delivery routes `not-applicable` (`v9.exit.physical-delivery-capacity`) with
+  zero dollar credit, and no longer uses `physical-redemption` facts to explain a missing
+  same-notional USD runtime route or raise `exit:mechanism-profile:physical-redemption` (`U`).
 - Component and metric applicability on cdp, synthetic-delta-neutral and rwa-credit-fund
   overlays supports `measured`, `not-applicable` and `unavailable`; wave-7 decision D2
   ratified sdn/rwa, and V10 extends sourced unavailable metrics to cdp.

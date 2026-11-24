@@ -68,11 +68,11 @@
     ]
   },
   "bridgeRouteRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Canonical Ethereum and nine documented satellites remain inventoried. The 2026-10-05 asset-specific incident review closes Optimism, Base, Fraxtal, Fantom, BSC, Sonic, Avalanche and XDC using complete pinned issuance histories and direct canonical counterpart evidence, alongside issuer disclosures, audits and incident reporting. Base retains one directly confirmed unfinalized withdrawal; Avalanche and XDC retain authenticated delayed claims whose exact retry calls succeed in read-only pinned simulations, not actual redemptions. Existing adverse upgrade-mediated and owner-grantable uncapped representation mint powers remain. Etherlink remains unresolved; no complete execution-scope, signer independence, aggregate pending-liability conservation, materiality exclusion or circulating-supply partition is certified.",
+    "tier": "external-lock-mint",
+    "summary": "Canonical Ethereum and nine documented satellites are reviewed across canonical OP Stack lock-mint bridges (Optimism, Base, Fraxtal) and third-party LayerZero lock-mint routes with MinterProxy issuance (Fantom, BSC, Avalanche, XDC, Sonic, Etherlink). The 2026-10-05 asset-specific incident review closes Optimism, Base, Fraxtal, Fantom, BSC, Sonic, Avalanche and XDC using complete pinned issuance histories and direct canonical counterpart evidence, alongside issuer disclosures, audits and incident reporting; Base retains one directly confirmed unfinalized withdrawal, and Avalanche and XDC retain authenticated delayed claims whose exact retry calls succeed in read-only pinned simulations, not actual redemptions. Etherlink route identity was promoted to reviewed external-lock-mint on 2026-10-09 using hash-pinned RPC and verified source reads, while its independent creation-to-pin RPC incident census remains incomplete. Existing adverse upgrade-mediated and owner-grantable uncapped representation mint powers remain; no complete execution-scope, signer independence, aggregate pending-liability conservation, materiality exclusion or circulating-supply partition is certified.",
     "reviewedAt": "2026-10-05",
-    "reviewer": "Wave 4 R03 asset-specific bridge control and incident review",
-    "confidence": "unknown",
+    "reviewer": "Wave 4 R03 asset-specific bridge control and incident review (top-level tier reconciled with 2026-10-09 Etherlink route review)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Curve scrvUSD deployment inventory",

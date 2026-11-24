@@ -28,6 +28,53 @@
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
   },
+  "oracleRisk": {
+    "tier": "oracleless",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "USDtb has fixed 1:1 USD par issuance and redemption (net of any applicable fees) with no on-chain or off-chain price oracle input and no borrower-liquidation engine. At pinned Ethereum finalized block 26481778 (hash 0x06d88f294bbf91ddb2c3713946dec8335282fce343b93aa6ddc956405075824b, 2026-11-24T01:39:35Z), proxy 0xc139190f447e929f090edeb554d95abb8b18ac1c resolves to verified AnchorageTokenUSDtb implementation 0x9d6d77a21702b9afcf924983fbfb84aaaae79589 (totalSupply 313,652,142.426183 USDtb), an access-controlled ERC-20 with MINTER_BURNER_ROLE and no oracle, price-feed, or NAV-setter hooks. Under Anchorage Digital Bank N.A.'s Covered Stablecoin Terms, eligible Clients mint and redeem off-chain at a fixed USD $1.00 Par Value, net of any applicable fees disclosed in the Covered Stablecoin Fee Schedule. Deloitte & Touche LLP's August 31, 2026 reserve examination (signed September 28, 2026, published on Anchorage's USDtb reserve attestations index https://www.anchorage.com/platform/usdtb-reserve-attestations) confirms USDtb is strictly pegged 1:1 to USD and backed by $525,205,527 BlackRock BUIDL (99.017% of $530,419,653 total reserves) and $5,214,126 cash; underlying BUIDL fund NAV valuation is a reserve-layer fact separate from USDtb's fixed 1:1 par conversion.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-11-24",
+      "reviewer": "Pharos R1/F1 primary-source oracle review 2026-11-24 (owner ruling 1)",
+      "rationale": "USDtb is an issuer-redeemed stablecoin with top-level fixed $1.00 par issuance and redemption (net of any applicable fees), no oracle or pricing hooks in verified AnchorageTokenUSDtb, and no borrower-owned collateral markets or liquidation branches; underlying BUIDL reserve NAV valuation remains a separate reserve-layer scope.",
+      "sources": [
+        {
+          "label": "Anchorage Digital Bank N.A. Covered Stablecoin Terms (Par Value USD $1.00 and client issuance/redemption, accessed 2026-11-24)",
+          "url": "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms"
+        },
+        {
+          "label": "Anchorage Digital Bank USDtb Reserve Attestations Index (Deloitte & Touche LLP monthly reports including 2026-08-31 signed 2026-09-28, accessed 2026-11-24)",
+          "url": "https://www.anchorage.com/platform/usdtb-reserve-attestations"
+        }
+      ]
+    },
+    "reviewedAt": "2026-11-24",
+    "reviewer": "Pharos R1/F1 primary-source oracle review 2026-11-24 (owner ruling 1)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Verified Ethereum AnchorageTokenUSDtb implementation source (no oracle or price-feed hooks, accessed 2026-11-24)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9D6d77a21702b9AFcF924983fbFB84AAAAe79589"
+      },
+      {
+        "label": "Pinned Ethereum finalized block 26481778 (hash 0x06d88f294bbf91ddb2c3713946dec8335282fce343b93aa6ddc956405075824b, 2026-11-24T01:39:35Z) proxy implementation and supply read",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Anchorage Digital Bank N.A. Covered Stablecoin Terms (accessed 2026-11-24)",
+        "url": "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms"
+      },
+      {
+        "label": "Anchorage Digital Bank USDtb Reserve Attestations Index (durable index hosting Deloitte & Touche LLP monthly reports, accessed 2026-11-24)",
+        "url": "https://www.anchorage.com/platform/usdtb-reserve-attestations"
+      },
+      {
+        "label": "Deloitte & Touche LLP USDtb Reserve Report as of 2026-08-31 (signed 2026-09-28; HTTP 200 re-verified 2026-11-24)",
+        "url": "https://learn.anchorage.com/08.31.26_USDtb_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "USDtb has native issuance on Ethereum through Anchorage USDtb and on Solana through the Token-2022 mint 8yXrtJ54jZtE84xEBzTESKuegjcAkAuDrdAhRd8i8n3T. Ethereum uses a LayerZero OFT adapter over the native token; Arbitrum and Base host OFT representations. Pinned 2026-10-01 reads confirm owner Safe 0xe897d8620d5eba2c8ecaaf0ada191a23230ab8ec on all three EVM routes: Ethereum is 5-of-11, while Arbitrum and Base remain 5-of-10. The catalog retains the native Solana mint; the separate Solana LayerZero OFT mint is not a catalog deployment.",

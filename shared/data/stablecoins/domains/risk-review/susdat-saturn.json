@@ -204,10 +204,10 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "Ethereum is the native sUSDat ERC-4626 liability with a CCIP LockRelease pool. BNB and Monad are CCIP BurnWithFromMint representations, not independent vault supply. Fresh pinned reads verify all three current pool/token pairs, complete current peers and rate limits, and destination token role censuses. Representation default administration retains a two-day timelock. Full upstream validator, owner-execution and pending-message closure remain unresolved; destination token supplies are not summed as additional native liabilities.",
-    "reviewedAt": "2026-10-15",
-    "reviewer": "Rev_SusdatSaturn batch64 primary-source review",
-    "confidence": "manual-review",
+    "summary": "Ethereum is the native sUSDat ERC-4626 liability with a Chainlink CCIP v2.0.0 LockReleaseTokenPool and dedicated LockBox escrow; BNB, Monad, and X Layer are CCIP v2.0.0 BurnWithFromMintTokenPool representations, not independent vault supply. Pinned 2026-11-23 reads verify the completed v1.6.1-to-v2.0.0 pool migration across Ethereum (block 26481011), BNB (block 135357827), Monad (block 124847711), and X Layer (block 76707885), complete current peer/rate-limit inventories across all four chains, exact wei conservation across LockBox and all three satellite supplies, complete destination token getRoleMembers() censuses, complete RBACTimelock owner role/bypasser censuses, SaturnTimelock role censuses (representation admin 172800s on BNB/Monad and 3600s on X Layer; rate-limit admins 86400s), and CCIP OffRamp 2.0.0 / CommitteeVerifier 2.0.0 9-of-15 (9-of-16 for X Layer source lanes) signer configurations. Mutable per-lane buckets, RBACTimelock bypassers, X Layer's 1-hour representation admin timelock, unverified human signer independence, and asset-specific historical incident closure remain outside favorable bounds; destination token supplies are not summed as additional native liabilities.",
+    "reviewedAt": "2026-11-23",
+    "reviewer": "CTRL night run 2026-11-23 (ctrl-1 pinned on-chain census); cur-chains 2026-11-23 X Layer route/control addition",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Chainlink exact sUSDat directory",
@@ -220,6 +220,18 @@
       {
         "label": "Saturn representation role-gated mint/burn and recovery source",
         "url": "https://raw.githubusercontent.com/saturn-organization/evm-contracts-monorepo/main/contracts/evm/SaturnOFT.sol"
+      },
+      {
+        "label": "Verified active Ethereum LockReleaseTokenPool 2.0.0 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdaf52417b70e4fc202e7a5d1bfd54325cc5d5a7b"
+      },
+      {
+        "label": "Verified Ethereum OffRamp 2.0.0 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x408428bca0e24a25ac8baac1b70f64af257717c3"
+      },
+      {
+        "label": "Verified Ethereum CommitteeVerifier 2.0.0 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7bce1a3297604cafa601f05799b6ed98e8c01b7f"
       }
     ],
     "routes": [
@@ -228,7 +240,7 @@
         "destinationChain": "ethereum",
         "canonicalChain": "ethereum",
         "contractAddress": "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
-        "protocol": "Saturn native ERC-4626 vault / CCIP LockRelease home",
+        "protocol": "Saturn native ERC-4626 vault / CCIP LockReleaseTokenPool 2.0.0 home",
         "providerKeys": [
           "chainlink-ccip"
         ],
@@ -238,17 +250,21 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "observedAt": "2026-10-15",
-        "observedBlock": 26197300,
-        "reviewNote": "At block 26197300 (2026-10-15T10:25:11Z), asset() remained USDat and decimals() 18. Exact CCIP pool 0xf3fc7fde5081192177f38895e57a1489e4bd56f2 remains LockReleaseTokenPool 1.6.1 with owner 0x44835bbba9d40deda9b64858095ecfb2693c9449. Current selectors, peers and mutable buckets are re-observed; escrow is a bridge custody rail, not another native issuer.",
+        "observedAt": "2026-11-23",
+        "observedBlock": 26481011,
+        "reviewNote": "At Ethereum block 26481011 (hash 0x882b7c2e54758fe1213956d59510099232e3fa29c2b198bb8462980219ec2b08, 2026-11-23T23:05:59Z), the legacy v1.6.1 pool 0xf3fc7fde5081192177f38895e57a1489e4bd56f2 held 0 sUSDat with 0 remote pools. Active pool 0xdaf52417b70e4fc202e7a5d1bfd54325cc5d5a7b returns LockReleaseTokenPool 2.0.0, getToken() = native sUSDat, getLockBox() = 0x5f0bc816e4e03c727781cf899b4c9bd069134fb0 holding 4094390423089728744748489 wei (4,094,390.423089728744748489 sUSDat), and owner() = RBACTimelock 0x44835bbba9d40deda9b64858095ecfb2693c9449. Supported selectors are BNB (11344663589394136015), Monad (8481857512324358265), and newly observed X Layer (3016212468291539606); LockBox balance equals the exact wei sum of BNB, Monad, and X Layer representation supplies. Escrow is a bridge custody rail, not another native issuer.",
         "sources": [
           {
             "label": "Official sUSDat CCIP home pool",
             "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat"
           },
           {
-            "label": "Ethereum observation block",
-            "url": "https://etherscan.io/block/26108096"
+            "label": "Verified active Ethereum LockReleaseTokenPool 2.0.0 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdaf52417b70e4fc202e7a5d1bfd54325cc5d5a7b"
+          },
+          {
+            "label": "Pinned Ethereum RPC at block 26481011",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
           }
         ]
       },
@@ -258,7 +274,10 @@
         "destinationChain": "bsc",
         "canonicalChain": "ethereum",
         "contractAddress": "0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25",
-        "protocol": "Chainlink CCIP BurnWithFromMintTokenPool 1.6.1",
+        "protocol": "Chainlink CCIP BurnWithFromMintTokenPool 2.0.0",
+        "providerKeys": [
+          "chainlink-ccip"
+        ],
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
@@ -266,10 +285,10 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "controllerChain": "bsc",
-        "controllerAddress": "0xe2f5aeff1c065fac95e7f48ba854470d41b66b7c",
-        "observedAt": "2026-10-15",
-        "observedBlock": 127775019,
-        "reviewNote": "At BNB block 127775019 (2026-10-15T11:01:26Z), getToken() and 18-decimal sUSDat identity match this deployment. Complete getRoleMembers confirms the exact pool as sole MINTER_ROLE/BURNER_ROLE; pool type is BurnWithFromMintTokenPool 1.6.1. Token name is Staked Saturn USD, symbol sUSDat, and allowlistMode is 1. Peer and rate-limit inventory is independently refreshed at the same pin; these are represented vault shares, not additional native issuance.",
+        "controllerAddress": "0x39fe5d1950ed19d07fb8ece88eb1de4c8f816853",
+        "observedAt": "2026-11-23",
+        "observedBlock": 135357827,
+        "reviewNote": "At BNB block 135357827 (hash 0x1da95e2ce0e8d6581b4bf86bc9d5ef485bebc005a7376496a70ba3ad71a69a14, 2026-11-23T23:20:00Z), representation totalSupply() was 106388599127584832135935 wei (106,388.599127584832135935 sUSDat), implementation 0x5885f15e70bd20bf2fba9382b03aedb2608b3ad2, isPaused() false, allowlistMode() 1, and pendingDefaultAdmin() zero. Complete getRoleMembers() confirms migrated BurnWithFromMintTokenPool 2.0.0 0x39fe5d1950ed19d07fb8ece88eb1de4c8f816853 as sole MINTER_ROLE and BURNER_ROLE (legacy v1.6.1 pool 0xe2f5aeff1c065fac95e7f48ba854470d41b66b7c revoked). Complete peer, rate-limit, RBACTimelock, SaturnTimelock, OffRamp 2.0.0, and CommitteeVerifier 2.0.0 censuses are pinned at this block; these are represented vault shares, not additional native issuance.",
         "sources": [
           {
             "label": "Official exact sUSDat BNB pool",
@@ -278,6 +297,10 @@
           {
             "label": "BNB sUSDat representation",
             "url": "https://bscscan.com/address/0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25"
+          },
+          {
+            "label": "Pinned BNB RPC at block 135357827",
+            "url": "https://bnb-mainnet.g.alchemy.com/v2/"
           }
         ]
       },
@@ -287,7 +310,7 @@
         "destinationChain": "monad",
         "canonicalChain": "ethereum",
         "contractAddress": "0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25",
-        "protocol": "Chainlink CCIP BurnWithFromMintTokenPool 1.6.1",
+        "protocol": "Chainlink CCIP BurnWithFromMintTokenPool 2.0.0",
         "providerKeys": [
           "chainlink-ccip"
         ],
@@ -298,10 +321,10 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "controllerChain": "monad",
-        "controllerAddress": "0x2768f0d350ac6876e5d056317ccf394ecd5d7c5e",
-        "observedAt": "2026-10-15",
-        "observedBlock": 113595955,
-        "reviewNote": "At Monad block 113595955 (2026-10-15T11:01:43Z), getToken() and 18-decimal sUSDat identity match this deployment. Complete getRoleMembers confirms the exact pool as sole MINTER_ROLE/BURNER_ROLE; pool type is BurnWithFromMintTokenPool 1.6.1. Token name is Staked Saturn USD, symbol sUSDat, and allowlistMode is 1. Current peers and rate limits are refreshed at the same pin; upstream owner signing and validator closure remain unresolved.",
+        "controllerAddress": "0x7e5eef063187afdad6954a90baec9451db4fd947",
+        "observedAt": "2026-11-23",
+        "observedBlock": 124847711,
+        "reviewNote": "At Monad block 124847711 (hash 0x503099107821e0d56579e3cea66a4ee71e6d95812cc8748b455aaf11f9bca2f9, 2026-11-23T23:20:00Z), representation totalSupply() was 3988001823562143912612554 wei (3,988,001.823562143912612554 sUSDat), implementation 0x6a79bfb5849fd54bcbda3613fc8c064a9c1ee27c, isPaused() false, allowlistMode() 1, and pendingDefaultAdmin() zero. Complete getRoleMembers() confirms migrated BurnWithFromMintTokenPool 2.0.0 0x7e5eef063187afdad6954a90baec9451db4fd947 as sole MINTER_ROLE and BURNER_ROLE (legacy v1.6.1 pool 0x2768f0d350ac6876e5d056317ccf394ecd5d7c5e revoked). Complete peer, rate-limit, RBACTimelock, SaturnTimelock, OffRamp 2.0.0, and CommitteeVerifier 2.0.0 censuses are pinned at this block; these are represented vault shares, not additional native issuance.",
         "sources": [
           {
             "label": "Official exact sUSDat Monad pool",
@@ -310,6 +333,46 @@
           {
             "label": "Monad sUSDat representation",
             "url": "https://monadscan.com/address/0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25"
+          },
+          {
+            "label": "Pinned Monad RPC at block 124847711",
+            "url": "https://monad-mainnet.g.alchemy.com/v2/"
+          }
+        ]
+      },
+      {
+        "id": "xlayer:0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25",
+        "sourceChain": "ethereum",
+        "destinationChain": "xlayer",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25",
+        "protocol": "Chainlink CCIP BurnWithFromMintTokenPool 2.0.0",
+        "providerKeys": [
+          "chainlink-ccip"
+        ],
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "xlayer",
+        "controllerAddress": "0xa60c3e10bd91b7825d73c49ce21978c562d5f178",
+        "observedAt": "2026-11-23",
+        "observedBlock": 76707885,
+        "reviewNote": "cur-chains 2026-11-23: at X Layer block 76707885 (hash 0x3fafa6077dc3f8c8a202c8c75271017841bfc4f9fe530e2a04124c35e326da70, 2026-11-23T23:35:21Z), representation reports name 'Staked Saturn USD', symbol 'sUSDat', decimals 18, totalSupply() 400000000000000 wei (0.0004 sUSDat), implementation 0xffc951d1e93b83e71184836cad37442cb712fc9e, isPaused() false, allowlistMode() 1, and pendingDefaultAdmin() zero. Complete getRoleMembers() confirms BurnWithFromMintTokenPool 2.0.0 0xa60c3e10bd91b7825d73c49ce21978c562d5f178 as sole MINTER_ROLE and BURNER_ROLE. Complete peer, rate-limit, RBACTimelock, OffRamp 2.0.0, and CommitteeVerifier 2.0.0 censuses plus representation-admin timelock (3600s minDelay) and rate-limit-admin timelock (86400s minDelay) creation-block role checks are pinned at this block; these are represented vault shares backed by Ethereum LockBox 0x5f0bc816e4e03c727781cf899b4c9bd069134fb0, not additional native issuance.",
+        "sources": [
+          {
+            "label": "Official exact sUSDat X Layer pool",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat"
+          },
+          {
+            "label": "X Layer sUSDat representation",
+            "url": "https://www.oklink.com/xlayer/address/0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25"
+          },
+          {
+            "label": "Pinned X Layer RPC at block 76707885",
+            "url": "https://rpc.xlayer.tech"
           }
         ]
       }
@@ -328,32 +391,50 @@
           "admin"
         ],
         "controllerChain": "ethereum",
-        "controllerAddress": "0xf3fc7fde5081192177f38895e57a1489e4bd56f2",
+        "controllerAddress": "0xdaf52417b70e4fc202e7a5d1bfd54325cc5d5a7b",
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
         "routeChecks": {
-          "trustedPeerOrRemote": "At Ethereum block 26155000, getSupportedChains() returned exactly BNB selector 11344663589394136015 and Monad selector 8481857512324358265. getRemoteToken/getRemotePools returned sUSDat representation 0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25 and sole pool 0xe2f5aeff1c065fac95e7f48ba854470d41b66b7c on BNB, and the same representation address with sole pool 0x2768f0d350ac6876e5d056317ccf394ecd5d7c5e on Monad. This is the current peer census, not an exhaustive historical lane or pending-message census.",
-          "rateLimits": "At block 26155000 both peers had enabled outbound buckets with raw capacity 999999999999999983222784 and rate 277000000000000000000 per second, and enabled inbound buckets with raw capacity 1100000000000000008388608 and rate 304700000000000000000 per second, in 18-decimal vault-share units. Values are retained exactly, not rounded to nominal million-share limits.",
-          "pausersAdminsUpgraders": "Pool owner() returned 0x44835bbba9d40deda9b64858095ecfb2693c9449; getRateLimitAdmin() returned 0x6a79bfb5849fd54bcbda3613fc8c064a9c1ee27c. Verified TokenPool source permits either owner or rate-limit admin to change lane bucket configurations. getRouter() returned 0x80226fc0ee2b096224eeac085bb9a8cba1146f7d and getRmnProxy() returned 0x411de17f12d1a34ecc7f45f49844626267c75e81. Complete upstream signing, bypass and active validator closure remain unresolved."
+          "lockboxOrEscrow": "At Ethereum block 26481011, active pool 0xdaf52417b70e4fc202e7a5d1bfd54325cc5d5a7b returned LockReleaseTokenPool 2.0.0, getToken() = native sUSDat, and getLockBox() = 0x5f0bc816e4e03c727781cf899b4c9bd069134fb0 (owner() = RBACTimelock 0x44835bbba9d40deda9b64858095ecfb2693c9449) holding 4094390423089728744748489 wei. That balance exactly equals BNB (106388599127584832135935) + Monad (3988001823562143912612554) + X Layer (400000000000000 wei at X Layer block 76707613) representation supplies. Legacy v1.6.1 pool 0xf3fc7fde5081192177f38895e57a1489e4bd56f2 held 0 sUSDat and 0 remote pools.",
+          "trustedPeerOrRemote": "At Ethereum block 26481011, getSupportedChains() returned exactly Monad selector 8481857512324358265, BNB selector 11344663589394136015, and X Layer selector 3016212468291539606. Remote token on all three selectors is 0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25, with sole remote pools 0x39fe5d1950ed19d07fb8ece88eb1de4c8f816853 (BNB), 0x7e5eef063187afdad6954a90baec9451db4fd947 (Monad), and 0xa60c3e10bd91b7825d73c49ce21978c562d5f178 (X Layer, BurnWithFromMintTokenPool 2.0.0).",
+          "rateLimits": "At Ethereum block 26481011, getCurrentRateLimiterState(selector, false) for all three peers returned enabled standard outbound buckets with raw capacity 999999999999999983222784 and rate 277000000000000000000/s and enabled standard inbound buckets with raw capacity 1100000000000000008388608 and rate 304700000000000000000/s (18-decimal share units); fastFinality buckets are disabled (0/0). getDynamicConfig() returned rateLimitAdmin = SaturnTimelock 0x6a79bfb5849fd54bcbda3613fc8c064a9c1ee27c (minDelay 86400s; complete genesis-to-pin replay from creation block 25074778 confirms self-only DEFAULT_ADMIN_ROLE, sole proposer/canceller codeless EOA 0x0b10a9942f03b6f85a14d21c9fab5fd312ff6c64, open executor 0x0). Either owner or rateLimitAdmin can raise or disable lane rate limits.",
+          "pausersAdminsUpgraders": "Pool and LockBox owner() = RBACTimelock 0x44835bbba9d40deda9b64858095ecfb2693c9449 (getMinDelay() = 10800s). Complete AccessControlEnumerable role census at block 26481011: ADMIN = self; PROPOSER = 0xe53289f32c8e690b7173aa33affe9b6b0cb0012f, 0xd6597750bf74dcaec57e0f9ad2ec998d837005bf, 0xd9757aa52907798d1af2fda7a6c0cc733e5acf7e; EXECUTOR = 0xf3e54a1fda3d4351c8bd5065678c0f5ddd0d7bcb; CANCELLER = those three proposers plus 0xad97c0270a243270136e40278155c12ce7c7f87b and 0x117ec8ad107976e1dbcc21717ff78407bc36aadc; BYPASSER = 0x117ec8ad107976e1dbcc21717ff78407bc36aadc (can skip the 10800s delay). getDynamicConfig() router = 0x80226fc0ee2b096224eeac085bb9a8cba1146f7d, feeAdmin = 0x0; getAdvancedPoolHooks() = 0x0; getRmnProxy() = 0x411de17f12d1a34ecc7f45f49844626267c75e81 (owner = 0x44835..., getARM() = 0x0b047953451a207743fb62541b21199b95190602, isCursed() = false).",
+          "signingModel": "At Ethereum block 26481011, pool getRequiredCCVs() returns [] (no custom pool CCVs beyond router/OffRamp defaults). Router OffRamp 2.0.0 0x408428bca0e24a25ac8baac1b70f64af257717c3 (owner 0x44835...) enables BNB, Monad, and X Layer lanes with defaultCCVs = [VersionedVerifierResolver 0x2caafd3b4cf606220580c885bd2b448fb93dc03b] and laneMandatedCCVs = []. CommitteeVerifier 2.0.0 0x7bce1a3297604cafa601f05799b6ed98e8c01b7f (owner 0x44835...) requires threshold 9 of 15 signers for BNB and Monad lanes and 9 of 16 signers for X Layer. Router also retains legacy 1.6/1.5 offramps for BNB and Monad. Cryptographic signer counts do not certify independent human custody or historical incident absence."
         },
         "canRaiseCap": true,
-        "observedAt": "2026-10-11",
-        "observedBlock": 26155000,
+        "observedAt": "2026-11-23",
+        "observedBlock": 26481011,
         "sources": [
           {
             "label": "Exact sUSDat CCIP directory",
             "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat"
           },
           {
-            "label": "Verified exact LockRelease pool and TokenPool authority source",
-            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf3fc7fde5081192177f38895e57a1489e4bd56f2"
+            "label": "Verified active LockReleaseTokenPool 2.0.0 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdaf52417b70e4fc202e7a5d1bfd54325cc5d5a7b"
           },
           {
-            "label": "Pinned Ethereum RPC",
-            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+            "label": "Verified Ethereum OffRamp 2.0.0 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x408428bca0e24a25ac8baac1b70f64af257717c3"
+          },
+          {
+            "label": "Verified Ethereum CommitteeVerifier 2.0.0 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7bce1a3297604cafa601f05799b6ed98e8c01b7f"
+          },
+          {
+            "label": "Pinned Ethereum Dwellir RPC (RBACTimelock role census at block 26481011)",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Pinned Ethereum Alchemy RPC (pool, verifier, and SaturnTimelock replay at block 26481011)",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "X Layer public RPC (totalSupply wei reconciliation at block 76707613)",
+            "url": "https://rpc.xlayer.tech"
           }
         ],
-        "evidence": "Sol curation campaign 2026-10-11 (C13USDat), observed 2026-10-11T00:52:03.715Z and peer/bucket batch on the same hash pin: Ethereum block 26155000, hash 0x66b0949c52520c504b6f19d8d7924c3f0ad9eafa82828f22ba34cb759192e5aa, timestamp 2026-10-09T12:57:47Z. getToken() returned native sUSDat and typeAndVersion() returned LockReleaseTokenPool 1.6.1. Current peer and mutable bucket facts are known; the complete owner/validator execution census and historical pending accounting are not claimed."
+        "evidence": "CTRL night run 2026-11-23 (ctrl-1), header-checked Ethereum block 26481011 (hash 0x882b7c2e54758fe1213956d59510099232e3fa29c2b198bb8462980219ec2b08, 2026-11-23T23:05:59Z). Verifies v2.0.0 LockReleaseTokenPool 0xdaf52417b70e4fc202e7a5d1bfd54325cc5d5a7b and LockBox 0x5f0bc816e4e03c727781cf899b4c9bd069134fb0, exact wei balance reconciliation across all three satellite chains, complete RBACTimelock owner role/bypasser census, genesis-to-pin SaturnTimelock rate-limit admin role replay, and OffRamp 2.0.0 / CommitteeVerifier 2.0.0 signer sets. Mutable rate limits, RBACTimelock bypasser authority, and unproved human signer independence remain adverse; historical incident review is tracked separately."
       },
       {
         "id": "susdat-bsc-ccip-pool",
@@ -369,27 +450,29 @@
           "admin"
         ],
         "controllerChain": "bsc",
-        "controllerAddress": "0xe2f5aeff1c065fac95e7f48ba854470d41b66b7c",
+        "controllerAddress": "0x39fe5d1950ed19d07fb8ece88eb1de4c8f816853",
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
         "routeChecks": {
-          "trustedPeerOrRemote": "At BNB block 126925693, the complete supported selector list was Ethereum 5009297550715157269 and Monad 8481857512324358265. Remote token/pool pairs were native sUSDat 0xd166337499e176bbc38a1fbd113ab144e5bd2df7 with sole Ethereum pool 0xf3fc7fde5081192177f38895e57a1489e4bd56f2, and Monad representation 0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25 with sole pool 0x2768f0d350ac6876e5d056317ccf394ecd5d7c5e.",
-          "rateLimits": "Both configured peers had enabled outbound capacity 999999999999999983222784 / rate 277000000000000000000 per second and enabled inbound capacity 1100000000000000008388608 / rate 304700000000000000000 per second, raw 18-decimal share units. These are mutable observed buckets, not permanent supply or loss bounds.",
-          "pausersAdminsUpgraders": "owner() = 0x950350b073956bd1d22bb1c18c4d45263b5aa3a5; getRateLimitAdmin() = 0x6a79bfb5849fd54bcbda3613fc8c064a9c1ee27c; getRouter() = 0x34b03cb9086d7d758ac55af71584f81a598759fe; getRmnProxy() = 0x9e09697842194f77d315e0907f1bda77922e8f84. Current representation getRoleMembers() returned this pool as the sole MINTER_ROLE and BURNER_ROLE member. Pool upstream authority and validator closure are not inferred from that sole-role fact."
+          "trustedPeerOrRemote": "At BNB block 135357827, getSupportedChains() returned exactly Ethereum selector 5009297550715157269, Monad selector 8481857512324358265, and X Layer selector 3016212468291539606. Remote token/pool pairs were native sUSDat 0xd166337499e176bbc38a1fbd113ab144e5bd2df7 with sole Ethereum pool 0xdaf52417b70e4fc202e7a5d1bfd54325cc5d5a7b, Monad representation 0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25 with sole pool 0x7e5eef063187afdad6954a90baec9451db4fd947, and X Layer representation 0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25 with sole pool 0xa60c3e10bd91b7825d73c49ce21978c562d5f178.",
+          "rateLimits": "At BNB block 135357827, all three configured peers had enabled standard outbound buckets with raw capacity 999999999999999983222784 and rate 277000000000000000000/s and enabled standard inbound buckets with raw capacity 1100000000000000008388608 and rate 304700000000000000000/s (fastFinality disabled, 0/0). getDynamicConfig() returned rateLimitAdmin = SaturnTimelock 0x6a79bfb5849fd54bcbda3613fc8c064a9c1ee27c (minDelay 86400s; complete genesis-to-pin replay from creation block 97750740 confirms self-only DEFAULT_ADMIN_ROLE, sole proposer/canceller codeless EOA 0x0b10a9942f03b6f85a14d21c9fab5fd312ff6c64, open executor 0x0). These are mutable observed buckets, not permanent supply or loss bounds.",
+          "pausersAdminsUpgraders": "Pool owner() = RBACTimelock 0x950350b073956bd1d22bb1c18c4d45263b5aa3a5 (getMinDelay() = 10800s). Complete AccessControlEnumerable role census at BNB block 135357827: ADMIN = self; PROPOSER = 0x966a1c3dbe1ed31d976e00ab6edd4ccdea246999, 0x0fb10a4a6529615ab07dad645d8cbeac2ada200d, 0xd9757aa52907798d1af2fda7a6c0cc733e5acf7e; EXECUTOR = 0x36b484f0a13832642849a1c468344bcecef87492; CANCELLER = those three proposers plus 0x6f7e1fdfdf74b8b3fd425580fc2eb71954e29e6c and 0x07712e9618f20843ecda8e61a6ee64f6cef76ab4; BYPASSER = 0x07712e9618f20843ecda8e61a6ee64f6cef76ab4 (can skip the 10800s delay). getDynamicConfig() router = 0x34b03cb9086d7d758ac55af71584f81a598759fe, feeAdmin = 0x0; getAdvancedPoolHooks() = 0x0; getRmnProxy() = 0x9e09697842194f77d315e0907f1bda77922e8f84. Complete representation getRoleMembers() confirms this v2.0.0 pool as sole MINTER_ROLE and BURNER_ROLE (legacy v1.6.1 pool 0xe2f5... revoked).",
+          "signingModel": "At BNB block 135357827, pool getRequiredCCVs() returns [] (relying on router/OffRamp defaults). Router OffRamp 2.0.0 0x4914044f8d787bd5dc7528f00775d850dc54477e (owner 0x95035...) enables Ethereum, Monad, and X Layer lanes with defaultCCVs = [0x2caafd3b4cf606220580c885bd2b448fb93dc03b] and laneMandatedCCVs = []. CommitteeVerifier 2.0.0 0xae458c0cc4183482d5a32c945781fe053f2592ea (owner 0x95035...) requires threshold 9 of 15 signers for Ethereum and Monad lanes and 9 of 16 for X Layer. Router also retains legacy offramps. Cryptographic signer counts do not certify independent human custody or historical incident absence."
         },
-        "observedAt": "2026-10-11",
-        "observedBlock": 126925693,
+        "canRaiseCap": true,
+        "observedAt": "2026-11-23",
+        "observedBlock": 135357827,
         "sources": [
           {
             "label": "Exact sUSDat CCIP directory",
             "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat"
           },
           {
-            "label": "Pinned BNB RPC",
+            "label": "Pinned BNB Alchemy RPC (v2.0.0 pool, RBACTimelock, SaturnTimelock replay, and CommitteeVerifier at block 135357827)",
             "url": "https://bnb-mainnet.g.alchemy.com/v2/"
           }
         ],
-        "evidence": "Sol curation campaign 2026-10-11 (C13USDat): successful separate token, pool and peer batches at BNB block 126925693, hash 0xfc5168b34cf05860069c0aedcb5bb85b35fc806c1f9a49874464f2a4610c201c, timestamp 2026-10-11T00:43:01Z. Token census observed 2026-10-11T00:50:57.284Z; pool batch observed 2026-10-11T00:52:06.621Z. getToken() returned the exact representation and typeAndVersion() was BurnWithFromMintTokenPool 1.6.1. Local sole-mint/burn role and complete current peer/bucket inventories are known; no whole controller, incident-history or pending-message closure is claimed."
+        "evidence": "CTRL night run 2026-11-23 (ctrl-1), header-checked BNB block 135357827 (hash 0x1da95e2ce0e8d6581b4bf86bc9d5ef485bebc005a7376496a70ba3ad71a69a14, 2026-11-23T23:20:00Z). Verifies migrated BurnWithFromMintTokenPool 2.0.0 0x39fe5d1950ed19d07fb8ece88eb1de4c8f816853 as sole MINTER_ROLE/BURNER_ROLE on BNB sUSDat, complete peer/rate-limit inventories across Ethereum/Monad/X Layer, complete RBACTimelock owner role/bypasser census, genesis-to-pin SaturnTimelock rate-limit admin replay, and OffRamp 2.0.0 / CommitteeVerifier 2.0.0 signer sets. Mutable rate limits, bypasser authority, and unproved human signer independence remain adverse; historical incident review is tracked separately."
       },
       {
         "id": "susdat-monad-ccip-pool",
@@ -405,16 +488,18 @@
           "admin"
         ],
         "controllerChain": "monad",
-        "controllerAddress": "0x2768f0d350ac6876e5d056317ccf394ecd5d7c5e",
+        "controllerAddress": "0x7e5eef063187afdad6954a90baec9451db4fd947",
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
         "routeChecks": {
-          "trustedPeerOrRemote": "At Monad block 112328913, the complete supported selector list was BNB 11344663589394136015 and Ethereum 5009297550715157269. Remote token/pool pairs were native sUSDat 0xd166337499e176bbc38a1fbd113ab144e5bd2df7 with sole Ethereum pool 0xf3fc7fde5081192177f38895e57a1489e4bd56f2, and BNB representation 0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25 with sole pool 0xe2f5aeff1c065fac95e7f48ba854470d41b66b7c.",
-          "rateLimits": "Both configured peers had enabled outbound capacity 999999999999999983222784 / rate 277000000000000000000 per second and enabled inbound capacity 1100000000000000008388608 / rate 304700000000000000000 per second, raw 18-decimal share units. These are mutable observed buckets, not permanent supply or loss bounds.",
-          "pausersAdminsUpgraders": "owner() = 0x0c43bb1a15a1ff1cbddff2b8f9518c1b0d3b17e2; getRateLimitAdmin() = 0xd691b6da5b61b4106b3355295b94a4a4b66cbc8d; getRouter() = 0x33566fe5976aaa420f3d5c64996641fc3858cadb; getRmnProxy() = 0x99dfca5d88f4d9c023531f4403966b8d61562acd. Current representation getRoleMembers() returned this pool as the sole MINTER_ROLE and BURNER_ROLE member. Pool upstream authority and validator closure remain unresolved."
+          "trustedPeerOrRemote": "At Monad block 124847711, getSupportedChains() returned exactly BNB selector 11344663589394136015, Ethereum selector 5009297550715157269, and X Layer selector 3016212468291539606. Remote token/pool pairs were native sUSDat 0xd166337499e176bbc38a1fbd113ab144e5bd2df7 with sole Ethereum pool 0xdaf52417b70e4fc202e7a5d1bfd54325cc5d5a7b, BNB representation 0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25 with sole pool 0x39fe5d1950ed19d07fb8ece88eb1de4c8f816853, and X Layer representation 0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25 with sole pool 0xa60c3e10bd91b7825d73c49ce21978c562d5f178.",
+          "rateLimits": "At Monad block 124847711, all three configured peers had enabled standard outbound buckets with raw capacity 999999999999999983222784 and rate 277000000000000000000/s and enabled standard inbound buckets with raw capacity 1100000000000000008388608 and rate 304700000000000000000/s (fastFinality disabled, 0/0). getDynamicConfig() returned rateLimitAdmin = SaturnTimelock 0xd691b6da5b61b4106b3355295b94a4a4b66cbc8d (minDelay 86400s; complete genesis-to-pin replay from creation block 86244109 confirms self-only DEFAULT_ADMIN_ROLE, sole proposer/canceller codeless EOA 0x0b10a9942f03b6f85a14d21c9fab5fd312ff6c64, open executor 0x0). These are mutable observed buckets, not permanent supply or loss bounds.",
+          "pausersAdminsUpgraders": "Pool owner() = RBACTimelock 0x0c43bb1a15a1ff1cbddff2b8f9518c1b0d3b17e2 (getMinDelay() = 10800s). Complete AccessControlEnumerable role census at Monad block 124847711: ADMIN = self; PROPOSER = 0x4620b49bcb60a9a9719b43ac1782f125e2c0754c, 0x1f128f883bb9f8facfeee04674a35fa96fa3af52; EXECUTOR = 0xffc1f98fdbaa26a647da6fc4cc110fa3e0bd9300; CANCELLER = those two proposers plus 0xfa546248c54939aa6c48279cdc1eaf9a1125c411, 0xfb8c97bd8a6bc3646a478ba9b8dba5c923a0f225, 0xe4a0145208b0a64e3fa056da896fbbfa43b19d49, 0x1912c3cfafe8a76a32a92861d815ac2837f237ca; BYPASSER = 0xfb8c97bd8a6bc3646a478ba9b8dba5c923a0f225 and 0xfa546248c54939aa6c48279cdc1eaf9a1125c411 (can skip the 10800s delay). getDynamicConfig() router = 0x33566fe5976aaa420f3d5c64996641fc3858cadb, feeAdmin = 0x0; getAdvancedPoolHooks() = 0x0; getRmnProxy() = 0x99dfca5d88f4d9c023531f4403966b8d61562acd. Complete representation getRoleMembers() confirms this v2.0.0 pool as sole MINTER_ROLE and BURNER_ROLE (legacy v1.6.1 pool 0x2768... revoked).",
+          "signingModel": "At Monad block 124847711, pool getRequiredCCVs() returns [] (relying on router/OffRamp defaults). Router OffRamp 2.0.0 0xa315658c5e11b0ca99de255f07f10e6c584e4e01 (owner 0x0c43b...) enables Ethereum, BNB, and X Layer lanes with defaultCCVs = [0x2caafd3b4cf606220580c885bd2b448fb93dc03b] and laneMandatedCCVs = []. CommitteeVerifier 2.0.0 0xabd7fa8f6a4a1fee853b5ae94bc404b4eb3f672e (owner 0x0c43b...) requires threshold 9 of 15 signers for Ethereum and BNB lanes and 9 of 16 for X Layer. Router also retains legacy offramps. Cryptographic signer counts do not certify independent human custody or historical incident absence."
         },
-        "observedAt": "2026-10-11",
-        "observedBlock": 112328913,
+        "canRaiseCap": true,
+        "observedAt": "2026-11-23",
+        "observedBlock": 124847711,
         "sources": [
           {
             "label": "Exact sUSDat CCIP directory",
@@ -425,11 +510,15 @@
             "url": "https://sourcify.dev/server/v2/contract/143/0x6a79bfb5849fd54bcbda3613fc8c064a9c1ee27c?fields=abi,sources"
           },
           {
-            "label": "Pinned Monad RPC",
+            "label": "Pinned Monad Dwellir RPC (RBACTimelock role census at block 124847711)",
             "url": "https://api-monad-mainnet-full.n.dwellir.com"
+          },
+          {
+            "label": "Pinned Monad Alchemy RPC (v2.0.0 pool, SaturnTimelock replay, and CommitteeVerifier at block 124847711)",
+            "url": "https://monad-mainnet.g.alchemy.com/v2/"
           }
         ],
-        "evidence": "Sol curation campaign 2026-10-11 (C13USDat): successful separate token, pool and peer batches at Monad block 112328913, hash 0x316684406b5ca79b106600a5f39c58a75141dbe8495d71eafdbe0043fd9c339b, timestamp 2026-10-11T00:45:29Z. Token census observed 2026-10-11T00:51:00.751Z. getToken() returned the exact representation and typeAndVersion() was BurnWithFromMintTokenPool 1.6.1. Current sole-mint/burn and complete peer/bucket facts do not establish full upstream signing, bypass, validator or pending-history closure."
+        "evidence": "CTRL night run 2026-11-23 (ctrl-1), header-checked Monad block 124847711 (hash 0x503099107821e0d56579e3cea66a4ee71e6d95812cc8748b455aaf11f9bca2f9, 2026-11-23T23:20:00Z). Verifies migrated BurnWithFromMintTokenPool 2.0.0 0x7e5eef063187afdad6954a90baec9451db4fd947 as sole MINTER_ROLE/BURNER_ROLE on Monad sUSDat, complete peer/rate-limit inventories across Ethereum/BNB/X Layer, complete RBACTimelock owner role/bypasser census, genesis-to-pin SaturnTimelock rate-limit admin replay, and OffRamp 2.0.0 / CommitteeVerifier 2.0.0 signer sets. Mutable rate limits, bypasser authority, and unproved human signer independence remain adverse; historical incident review is tracked separately."
       },
       {
         "id": "susdat-bsc-representation-admin",
@@ -446,8 +535,8 @@
         "authorityType": "timelock",
         "timelockDelaySec": 172800,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-11",
-        "observedBlock": 126925693,
+        "observedAt": "2026-11-23",
+        "observedBlock": 135357827,
         "sources": [
           {
             "label": "Saturn representation source",
@@ -458,15 +547,15 @@
             "url": "https://bscscan.com/address/0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25"
           },
           {
-            "label": "Pinned BNB role and ProxyAdmin owner census",
+            "label": "Pinned BNB role, ProxyAdmin owner, and genesis-to-pin SaturnTimelock log replay at block 135357827",
             "url": "https://bnb-mainnet.g.alchemy.com/v2/"
           },
           {
-            "label": "Verified non-enumerable SaturnTimelock source",
+            "label": "Verified SaturnTimelock (OpenZeppelin TimelockController v5.6.0, no bypasser role)",
             "url": "https://sourcify.dev/server/v2/contract/143/0xf0237a1cb794ea830129966049ef99243082ff0c?fields=abi,sources"
           }
         ],
-        "evidence": "Sol curation campaign 2026-10-11 (C13USDat), BNB block 126925693 (2026-10-11T00:43:01Z), token census observed 2026-10-11T00:50:57.284Z. The EIP-1967 admin is ProxyAdmin 0x158828e0476f6e52bdcb35f7c141b19ce9455f8e; owner() is this timelock and getMinDelay() is 172800. Complete token getRoleMembers() returned sole DEFAULT_ADMIN_ROLE and UNPAUSER_ROLE = timelock; sole MINTER_ROLE/BURNER_ROLE = CCIP pool 0xe2f5aeff1c065fac95e7f48ba854470d41b66b7c; sole PAUSER_ROLE = 0x5f6a8e6a616a1b7da3fd178357a0517033a81edd; sole BLACKLISTER_ROLE/WHITELISTER_ROLE = 0x39b340a2f4794241d08a0e9dd4d8a4c331599548. pendingDefaultAdmin() was zero, isPaused() false and allowlistMode() 1 (blacklist). The two direct pause/list accounts each had code 0x and nonce 0; their signing custody or counterfactual status is not inferred. SaturnTimelock inherits non-enumerable AccessControl, so full current proposer/executor/canceller membership still requires authenticated complete grant/revoke history; the reverted getRoleMembers batch is not evidence of absent roles."
+        "evidence": "CTRL night run 2026-11-23 (ctrl-1), header-checked BNB block 135357827 (hash 0x1da95e2ce0e8d6581b4bf86bc9d5ef485bebc005a7376496a70ba3ad71a69a14, 2026-11-23T23:20:00Z). EIP-1967 admin is ProxyAdmin 0x158828e0476f6e52bdcb35f7c141b19ce9455f8e with owner() = SaturnTimelock 0xf0237a1cb794ea830129966049ef99243082ff0c and getMinDelay() = 172800s; implementation is 0x5885f15e70bd20bf2fba9382b03aedb2608b3ad2. Complete token getRoleMembers() returned sole DEFAULT_ADMIN_ROLE and UNPAUSER_ROLE = timelock; sole MINTER_ROLE/BURNER_ROLE = v2.0.0 CCIP pool 0x39fe5d1950ed19d07fb8ece88eb1de4c8f816853 (legacy v1.6.1 pool 0xe2f5... revoked); sole PAUSER_ROLE = 0x5f6a8e6a616a1b7da3fd178357a0517033a81edd; sole BLACKLISTER_ROLE/WHITELISTER_ROLE = 0x39b340a2f4794241d08a0e9dd4d8a4c331599548; pendingDefaultAdmin() = 0x0, isPaused() = false, allowlistMode() = 1. Verified SaturnTimelock inherits standard OpenZeppelin TimelockController v5.6.0 with no bypasser role. Complete genesis-to-pin RoleGranted/RoleRevoked/MinDelayChange log replay (creation block 97749235 through 135357827, 5 total logs) confirmed by pinned hasRole() calls establishes the exact current timelock membership: self-only DEFAULT_ADMIN_ROLE, sole PROPOSER_ROLE and CANCELLER_ROLE = codeless EOA 0x53aaffb49cccc0fcf43485dca956517773a8124d, and open EXECUTOR_ROLE = 0x0000000000000000000000000000000000000000. Single-proposer EOA signing custody and direct pause/blacklist roles remain unverified off-chain."
       },
       {
         "id": "susdat-monad-representation-admin",
@@ -483,8 +572,8 @@
         "authorityType": "timelock",
         "timelockDelaySec": 172800,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-11",
-        "observedBlock": 112328913,
+        "observedAt": "2026-11-23",
+        "observedBlock": 124847711,
         "sources": [
           {
             "label": "Saturn representation source",
@@ -499,76 +588,86 @@
             "url": "https://sourcify.dev/server/v2/contract/143/0x6a79bfb5849fd54bcbda3613fc8c064a9c1ee27c?fields=abi,sources"
           },
           {
-            "label": "Verified non-enumerable SaturnTimelock source",
+            "label": "Verified SaturnTimelock (OpenZeppelin TimelockController v5.6.0, no bypasser role)",
             "url": "https://sourcify.dev/server/v2/contract/143/0xf0237a1cb794ea830129966049ef99243082ff0c?fields=abi,sources"
           },
           {
-            "label": "Pinned Monad role and ProxyAdmin owner census",
-            "url": "https://api-monad-mainnet-full.n.dwellir.com"
+            "label": "Pinned Monad role, ProxyAdmin owner, and genesis-to-pin SaturnTimelock log replay at block 124847711",
+            "url": "https://monad-mainnet.g.alchemy.com/v2/"
           }
         ],
-        "evidence": "Sol curation campaign 2026-10-11 (C13USDat), Monad block 112328913 (2026-10-11T00:45:29Z), token census observed 2026-10-11T00:51:00.751Z. The EIP-1967 admin is ProxyAdmin 0x158828e0476f6e52bdcb35f7c141b19ce9455f8e; owner() is this timelock and getMinDelay() is 172800. Complete token getRoleMembers() returned sole DEFAULT_ADMIN_ROLE and UNPAUSER_ROLE = timelock; sole MINTER_ROLE/BURNER_ROLE = pool 0x2768f0d350ac6876e5d056317ccf394ecd5d7c5e; sole PAUSER_ROLE = 0x5f6a8e6a616a1b7da3fd178357a0517033a81edd; sole BLACKLISTER_ROLE/WHITELISTER_ROLE = 0x39b340a2f4794241d08a0e9dd4d8a4c331599548. pendingDefaultAdmin() was zero, isPaused() false and allowlistMode() 1 (blacklist). The two direct pause/list accounts each had code 0x and nonce 0, which does not prove EOA signing custody or the absence of counterfactual contracts. Non-enumerable timelock proposer/executor/canceller history and full bypass closure remain unresolved."
-      }
-    ],
-    "scopedQuestions": [
-      {
-        "controlRef": "susdat-ethereum-ccip-lockbox",
-        "question": "What complete upstream owner-execution and validator inventory constrains the canonical sUSDat escrow and both representation pools? Exact current peers, rate limits and token mint/burn roles are now enumerated; those inventories do not close upstream signing or bypass scope.",
-        "subject": "execution-scope",
-        "reviewedAt": "2026-10-29",
-        "reviewer": "R-SCOPE-1 renewal 2026-10-29 (pinned primary-source re-read)",
-        "sources": [
-          {
-            "label": "ethereum block 26300237, 2026-10-29T18:37:11Z: LockRelease pool owner()=0x44835bbba9d40deda9b64858095ecfb2693c9449 (unchanged); re-read 2026-10-29",
-            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
-          },
-          {
-            "label": "Chainlink CCIP sUSDat directory accessed 2026-10-29: three networks and pools unchanged (Ethereum LockRelease 0xf3fc..56f2, BNB BurnMint 0xe2f5..6B7c, Monad BurnMint 0x2768..7C5E); no owner/validator/signer census published",
-            "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat"
-          }
-        ]
+        "evidence": "CTRL night run 2026-11-23 (ctrl-1), header-checked Monad block 124847711 (hash 0x503099107821e0d56579e3cea66a4ee71e6d95812cc8748b455aaf11f9bca2f9, 2026-11-23T23:20:00Z). EIP-1967 admin is ProxyAdmin 0x158828e0476f6e52bdcb35f7c141b19ce9455f8e with owner() = SaturnTimelock 0xf0237a1cb794ea830129966049ef99243082ff0c and getMinDelay() = 172800s; implementation is 0x6a79bfb5849fd54bcbda3613fc8c064a9c1ee27c. Complete token getRoleMembers() returned sole DEFAULT_ADMIN_ROLE and UNPAUSER_ROLE = timelock; sole MINTER_ROLE/BURNER_ROLE = v2.0.0 CCIP pool 0x7e5eef063187afdad6954a90baec9451db4fd947 (legacy v1.6.1 pool 0x2768... revoked); sole PAUSER_ROLE = 0x5f6a8e6a616a1b7da3fd178357a0517033a81edd; sole BLACKLISTER_ROLE/WHITELISTER_ROLE = 0x39b340a2f4794241d08a0e9dd4d8a4c331599548; pendingDefaultAdmin() = 0x0, isPaused() = false, allowlistMode() = 1. Verified SaturnTimelock inherits standard OpenZeppelin TimelockController v5.6.0 with no bypasser role. Complete genesis-to-pin RoleGranted/RoleRevoked/MinDelayChange log replay (creation block 86242550 through 124847711, 5 total logs) confirmed by pinned hasRole() calls establishes the exact current timelock membership: self-only DEFAULT_ADMIN_ROLE, sole PROPOSER_ROLE and CANCELLER_ROLE = codeless EOA 0x53aaffb49cccc0fcf43485dca956517773a8124d, and open EXECUTOR_ROLE = 0x0000000000000000000000000000000000000000. Single-proposer EOA signing custody and direct pause/blacklist roles remain unverified off-chain."
       },
       {
-        "controlRef": "susdat-bsc-representation-admin",
-        "question": "What is the complete current destination admin/proposer/executor census, including alternate representation mint authorities and emergency bypasses?",
-        "subject": "execution-scope",
-        "reviewedAt": "2026-10-29",
-        "reviewer": "R-SCOPE-1 renewal 2026-10-29 (pinned primary-source re-read)",
+        "id": "susdat-xlayer-ccip-pool",
+        "label": "sUSDat X Layer CCIP representation mint/burn pool",
+        "routeRefs": [
+          "xlayer:0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "peer-config",
+          "rate-limit",
+          "admin"
+        ],
+        "controllerChain": "xlayer",
+        "controllerAddress": "0xa60c3e10bd91b7825d73c49ce21978c562d5f178",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At X Layer block 76707885, getSupportedChains() returned exactly Ethereum selector 5009297550715157269, BNB selector 11344663589394136015, and Monad selector 8481857512324358265. Remote token/pool pairs were native sUSDat 0xd166337499e176bbc38a1fbd113ab144e5bd2df7 with sole Ethereum pool 0xdaf52417b70e4fc202e7a5d1bfd54325cc5d5a7b, BNB representation 0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25 with sole pool 0x39fe5d1950ed19d07fb8ece88eb1de4c8f816853, and Monad representation 0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25 with sole pool 0x7e5eef063187afdad6954a90baec9451db4fd947.",
+          "rateLimits": "At X Layer block 76707885, all three configured peers had enabled standard outbound buckets with raw capacity 999999999999999983222784 and rate 277000000000000000000/s and enabled standard inbound buckets with raw capacity 1100000000000000008388608 and rate 304700000000000000000/s (fastFinality disabled, 0/0). getDynamicConfig() returned rateLimitAdmin = SaturnTimelock 0xd691b6da5b61b4106b3355295b94a4a4b66cbc8d (getMinDelay() = 86400s). Creation-block 75826703 logs plus pinned hasRole() at 76707885 confirm self DEFAULT_ADMIN_ROLE, PROPOSER_ROLE/CANCELLER_ROLE = codeless EOA 0x5cd87c0a42405804b8ad1fcedc32cda8f521f22f, EXECUTOR_ROLE = codeless EOA 0x59ebb7143dddd7b045de7b0bd0f99446143f1624 (open executor 0x0 = false); full intermediate block-range log replay was bounded by X Layer public RPCs' 100-block eth_getLogs cap. Either owner or rateLimitAdmin can raise or disable lane rate limits.",
+          "pausersAdminsUpgraders": "Pool owner() = RBACTimelock 0x17826aeeadda9e5f15917fdfe7f05dcba931ae61 (getMinDelay() = 10800s). Complete AccessControlEnumerable role census at X Layer block 76707885: ADMIN = self; PROPOSER = 0xcff725ef6f1d8cc391f0a94a1aac7656142a65cd, 0x26d3681dfc9e4c8c79cfbf461adec8a21d5d73c5; EXECUTOR = 0xf40496285392aba02c14979a43cd426e87338d0e; CANCELLER = those two proposers plus 0x3237c0d7b58bec8dc17f00103b784bd6678f789e, 0x587d19ddf735d6b536aadb1a2a92938eb23b8d5c, 0xd6a6ba37faac229b9665e86739ca501401f5a940, 0x06fc836cf9839b1cd891c440a0a45242da6ae1c9; BYPASSER = 0x587d19ddf735d6b536aadb1a2a92938eb23b8d5c and 0x3237c0d7b58bec8dc17f00103b784bd6678f789e (can skip the 10800s delay). getDynamicConfig() router = 0xf2b6cb7867eb5502c3249dd37d7bc1cc148e5232, feeAdmin = 0x0; getAdvancedPoolHooks() = 0x0; getRmnProxy() = 0x326b01f673681dad72cd386cce12fff717be32cd. Complete representation getRoleMembers() confirms this v2.0.0 pool as sole MINTER_ROLE and BURNER_ROLE.",
+          "signingModel": "At X Layer block 76707885, pool getRequiredCCVs() returns [] (relying on router/OffRamp defaults). Router OffRamp 2.0.0 0x28d9fdfc7a5c17183db1599bd80399f4746d9c57 (owner 0x17826...) enables Ethereum, BNB, and Monad lanes with defaultCCVs = [VersionedVerifierResolver 0x2caafd3b4cf606220580c885bd2b448fb93dc03b] and laneMandatedCCVs = []. Resolver inbound implementation CommitteeVerifier 2.0.0 0xc305a03f29b9a7676159abb8dcfcc899eb9acc57 (owner 0x17826...) requires threshold 9 of 15 signers for Ethereum, BNB, and Monad lanes. Cryptographic signer counts do not certify independent human custody or historical incident absence."
+        },
+        "canRaiseCap": true,
+        "observedAt": "2026-11-23",
+        "observedBlock": 76707885,
         "sources": [
           {
-            "label": "bsc block 130521910, 2026-10-29T18:34:11Z: representation ProxyAdmin owner()=0xf0237a1cb794ea830129966049ef99243082ff0c and pool owner()=0x950350b073956bd1d22bb1c18c4d45263b5aa3a5 (unchanged); re-read 2026-10-29",
-            "url": "https://bsc-dataseed.binance.org"
-          },
-          {
-            "label": "Chainlink CCIP sUSDat directory accessed 2026-10-29: three networks and pools unchanged (Ethereum LockRelease 0xf3fc..56f2, BNB BurnMint 0xe2f5..6B7c, Monad BurnMint 0x2768..7C5E); no owner/validator/signer census published",
+            "label": "Exact sUSDat CCIP directory",
             "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat"
           },
           {
-            "label": "Representation source and admin roles",
-            "url": "https://raw.githubusercontent.com/saturn-organization/evm-contracts-monorepo/main/contracts/evm/SaturnOFT.sol"
+            "label": "Pinned X Layer RPC (v2.0.0 pool, RBACTimelock, OffRamp 2.0.0, and CommitteeVerifier 2.0.0 at block 76707885)",
+            "url": "https://rpc.xlayer.tech"
           }
-        ]
+        ],
+        "evidence": "cur-chains 2026-11-23, header-checked X Layer block 76707885 (hash 0x3fafa6077dc3f8c8a202c8c75271017841bfc4f9fe530e2a04124c35e326da70, 2026-11-23T23:35:21Z). Verifies BurnWithFromMintTokenPool 2.0.0 0xa60c3e10bd91b7825d73c49ce21978c562d5f178 as sole MINTER_ROLE/BURNER_ROLE on X Layer sUSDat, complete peer/rate-limit inventories across Ethereum/BNB/Monad, complete RBACTimelock owner role/bypasser census, OffRamp 2.0.0 / CommitteeVerifier 2.0.0 9-of-15 signer sets, and rate-limit SaturnTimelock creation-block + pinned hasRole checks. Mutable rate limits, bypasser authority, bounded timelock log history on 100-block-cap public RPCs, and unproved human signer independence remain adverse; historical incident review is tracked separately."
       },
       {
-        "controlRef": "susdat-monad-representation-admin",
-        "question": "What is the complete current Monad admin/proposer/executor census, including alternate representation mint authorities and emergency bypasses?",
-        "subject": "execution-scope",
-        "reviewedAt": "2026-10-29",
-        "reviewer": "R-SCOPE-1 renewal 2026-10-29 (pinned primary-source re-read)",
+        "id": "susdat-xlayer-representation-admin",
+        "label": "sUSDat X Layer one-hour representation admin timelock",
+        "routeRefs": [
+          "xlayer:0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "xlayer",
+        "controllerAddress": "0xf0237a1cb794ea830129966049ef99243082ff0c",
+        "authorityType": "timelock",
+        "timelockDelaySec": 3600,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-23",
+        "observedBlock": 76707885,
         "sources": [
           {
-            "label": "monad block 117670523, 2026-10-29T17:21:53Z: representation ProxyAdmin owner()=0xf0237a1cb794ea830129966049ef99243082ff0c and pool owner()=0x0c43bb1a15a1ff1cbddff2b8f9518c1b0d3b17e2 (unchanged); re-read 2026-10-29",
-            "url": "https://rpc.monad.xyz"
-          },
-          {
-            "label": "Chainlink CCIP sUSDat directory accessed 2026-10-29: three networks and pools unchanged (Ethereum LockRelease 0xf3fc..56f2, BNB BurnMint 0xe2f5..6B7c, Monad BurnMint 0x2768..7C5E); no owner/validator/signer census published",
-            "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat"
-          },
-          {
-            "label": "Representation source and admin roles",
+            "label": "Saturn representation source",
             "url": "https://raw.githubusercontent.com/saturn-organization/evm-contracts-monorepo/main/contracts/evm/SaturnOFT.sol"
+          },
+          {
+            "label": "X Layer representation proxy",
+            "url": "https://www.oklink.com/xlayer/address/0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25"
+          },
+          {
+            "label": "Pinned X Layer role, ProxyAdmin owner, and SaturnTimelock creation-block + hasRole checks at block 76707885",
+            "url": "https://rpc.xlayer.tech"
           }
-        ]
+        ],
+        "evidence": "cur-chains 2026-11-23, header-checked X Layer block 76707885 (hash 0x3fafa6077dc3f8c8a202c8c75271017841bfc4f9fe530e2a04124c35e326da70, 2026-11-23T23:35:21Z). EIP-1967 admin is ProxyAdmin 0x158828e0476f6e52bdcb35f7c141b19ce9455f8e with owner() = SaturnTimelock 0xf0237a1cb794ea830129966049ef99243082ff0c and getMinDelay() = 3600s (1 hour, shorter than the 172800s delay on BNB and Monad); implementation is 0xffc951d1e93b83e71184836cad37442cb712fc9e. Complete token getRoleMembers() returned sole DEFAULT_ADMIN_ROLE and UNPAUSER_ROLE = timelock; sole MINTER_ROLE/BURNER_ROLE = v2.0.0 CCIP pool 0xa60c3e10bd91b7825d73c49ce21978c562d5f178; sole PAUSER_ROLE = codeless EOA 0xd72ffdb6db8373e26650673d116a443a94d8c072; sole BLACKLISTER_ROLE/WHITELISTER_ROLE = codeless EOA 0x03b01dc1be2cb1f3836d4d7b5a25c32b5035f394; pendingDefaultAdmin() = 0x0, isPaused() = false, allowlistMode() = 1. Creation-block 75822390 RoleGranted/MinDelayChange logs plus pinned hasRole() at 76707885 confirm self DEFAULT_ADMIN_ROLE, PROPOSER_ROLE and CANCELLER_ROLE = codeless EOA 0x7ad1b17a468689be83a4c690fa9bf4ebe12ad78e, and EXECUTOR_ROLE = codeless EOA 0x59ebb7143dddd7b045de7b0bd0f99446143f1624 (open executor 0x0 = false); full creation-to-pin intermediate log replay was bounded by X Layer public RPCs' 100-block eth_getLogs cap. Single-proposer EOA signing custody, direct pause/blacklist EOAs, and unenumerated intermediate role mutations remain unverified."
       }
     ]
   }
