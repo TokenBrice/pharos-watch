@@ -42,6 +42,7 @@ import { useWatchlist } from "@/hooks/use-watchlist";
 import { formatRelativeAgeSeconds } from "@shared/lib/relative-time";
 import { formatCurrency, formatShortDate } from "@shared/lib/format";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
+import { isTokenizedFundId } from "@shared/lib/stablecoins/listing-governance";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { hasStaticYieldWorkbench } from "@shared/lib/yield-auto-lending";
 import { buildSafetyVerdictLine } from "@/lib/stablecoin-detail-hero-metrics";
@@ -282,14 +283,20 @@ function HeroPortfolioAction({
 function HeroAlertsAction({
   coinId,
   coinSymbol,
+  tokenizedFund = false,
+  navToken = false,
   triggerClassName,
 }: {
   coinId: string;
   coinSymbol: string;
+  tokenizedFund?: boolean;
+  navToken?: boolean;
   triggerClassName: string;
 }) {
   const [copied, setCopied] = useState(false);
-  const subscribeCommand = `/subscribe dews, depeg, safety ${coinId}`;
+  const subscribeCommand = tokenizedFund
+    ? (navToken ? `/subscribe dews ${coinId}` : `/subscribe dews, depeg ${coinId}`)
+    : `/subscribe dews, depeg, safety ${coinId}`;
   const deepLink = `https://t.me/PharosWatchBot?startapp=coin_${coinId}`;
 
   useEffect(() => {
@@ -319,7 +326,9 @@ function HeroAlertsAction({
         <div className="space-y-1">
           <p className="text-sm font-semibold text-foreground">Telegram alerts for {coinSymbol}</p>
           <p className="text-xs leading-relaxed text-muted-foreground">
-            Get DEWS stress, depeg, and safety grade changes directly in @PharosWatchBot.
+            {tokenizedFund
+              ? "Get DEWS stress and market alerts directly in @PharosWatchBot."
+              : "Get DEWS stress, depeg, and safety grade changes directly in @PharosWatchBot."}
           </p>
         </div>
         <div className="flex items-center gap-1.5 rounded-md border border-border/60 bg-muted/40 p-2">
@@ -432,9 +441,10 @@ export function HeroIdentityHeader({
   const watchlist = useWatchlist();
   const watched = hydrated && watchlist.has(coin.id);
   const activeCoin = isActiveStablecoinMeta(coin);
+  const isTokenizedFund = isTokenizedFundId(coin.id);
   const showYieldWorkbench = hasStaticYieldWorkbench(coin);
   const verdictId = model.state || isHeroVerdictShown(verdict) ? `hero-verdict-${coin.id}` : null;
-  const verdictLine = buildSafetyVerdictLine(reportCard);
+  const verdictLine = isTokenizedFund ? null : buildSafetyVerdictLine(reportCard);
   const comparePrefillHref = buildComparePrefillUrl([coin.id]);
   // Holder action pills share one border, surface and height across the bar.
   const labelledActionClass =
@@ -482,7 +492,7 @@ export function HeroIdentityHeader({
           ) : null}
           {/* Below xl the summary rail is absent, so the grade sits beside the name. */}
           <div className="ml-auto shrink-0 self-stretch xl:hidden">
-            <SafetyGradeHero reportCard={reportCard} savedGrade={model.savedGrade} read={gradeRead} mobile />
+            <SafetyGradeHero reportCard={reportCard} savedGrade={model.savedGrade} read={gradeRead} mobile tokenizedFund={isTokenizedFund} />
           </div>
         </div>
         {variantParent && variantChipClass ? (
@@ -530,7 +540,13 @@ export function HeroIdentityHeader({
             <HeroPortfolioAction coinId={coin.id} coinSymbol={coin.symbol} triggerClassName={labelledActionClass} />
           ) : null}
           {activeCoin ? (
-            <HeroAlertsAction coinId={coin.id} coinSymbol={coin.symbol} triggerClassName={labelledActionClass} />
+            <HeroAlertsAction
+              coinId={coin.id}
+              coinSymbol={coin.symbol}
+              tokenizedFund={isTokenizedFund}
+              navToken={coin.flags.navToken === true}
+              triggerClassName={labelledActionClass}
+            />
           ) : null}
           <div className="inline-flex min-w-0 shrink items-center">
             <IntentLink
@@ -577,7 +593,7 @@ export function HeroIdentityHeader({
               <ArrowUpRight className="size-3.5 shrink-0" aria-hidden="true" />
             </IntentLink>
           ) : null}
-          <ShareButton stablecoinId={header.coinId} label="Share" datedScorecard={reportCard?.ratingStatus === "rated"} />
+          <ShareButton stablecoinId={header.coinId} label="Share" datedScorecard={!isTokenizedFund && reportCard?.ratingStatus === "rated"} />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button

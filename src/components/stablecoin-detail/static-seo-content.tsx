@@ -11,6 +11,7 @@ import {
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { getInfrastructureLabel } from "@shared/lib/infrastructure";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { isTokenizedFundId } from "@shared/lib/stablecoins/listing-governance";
 import { getReserves } from "@shared/lib/reserve-templates";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { formatProseList, formatUtcDayLabel } from "@shared/lib/format";
@@ -237,8 +238,13 @@ function buildSafetyAnswer(coin: StablecoinMeta, release?: SnapshotReleasePin): 
     return `${coin.name} is not in Pharos's active universe. ${coin.listingStatusReview?.reason ?? "Its listing is retained only as a static catalog record."}`;
   }
 
-  const asOf = formatIsoDayLabel(release?.snapshotDate ?? PUBLIC_DATASET_CURRENT_DATE);
   const coinFact = buildCoinSpecificRiskSentence(coin);
+
+  if (isTokenizedFundId(coin.id)) {
+    return `Pharos tracks ${coin.name} (${coin.symbol}) as a tokenized fund for reserve and dependency transparency and does not assign fund shares a stablecoin Safety Score letter grade. ${coinFact} See the Tokenized fund panel on this page for holdings, NAV pricing, redemption terms, and investor eligibility.`;
+  }
+
+  const asOf = formatIsoDayLabel(release?.snapshotDate ?? PUBLIC_DATASET_CURRENT_DATE);
   const liveRead =
     "The grade moves as reserve, redemption, peg and control evidence changes; the live Safety Score on this page shows the current reading.";
 
@@ -472,6 +478,9 @@ function buildBackingAnswer(coin: StablecoinMeta): string {
 }
 
 function buildAlertCommand(coin: StablecoinMeta): string {
+  if (isTokenizedFundId(coin.id)) {
+    return coin.flags.navToken ? `/subscribe dews ${coin.id}` : `/subscribe dews,depeg ${coin.id}`;
+  }
   return `/subscribe dews,depeg,safety ${coin.id}`;
 }
 

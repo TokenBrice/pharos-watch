@@ -55,6 +55,7 @@ import { alignAnchorAfterHydration, revealAnchorId, revealDeferredSectionsThroug
 import { cn } from "@/lib/utils";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { scoreToGrade } from "@shared/lib/report-card-core";
+import { isTokenizedFundId } from "@shared/lib/stablecoins/listing-governance";
 import type { AiSummaryClaimValues } from "@shared/types/editorial";
 import {
   buildDetailSharedModules,
@@ -544,6 +545,7 @@ function DetailSummaryRail({
           items={heroModel.signalRailItems}
           navToken={viewModel.isNavToken}
           frozen={viewModel.coin.status === "frozen"}
+          tokenizedFund={isTokenizedFundId(viewModel.coin.id)}
           gradeRead={viewModel.gradeRead}
           liveAsOf={liveSafetyAsOf}
           card={viewModel.reportCard ?? null}

@@ -13,6 +13,7 @@ import {
 import { API_ORIGIN, SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { ACTIVE_IDS, TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { isTokenizedFundId } from "@shared/lib/stablecoins/listing-governance";
 import { PUBLIC_DOC_BY_SLUG } from "@shared/lib/public-docs";
 import { getGeneratedMarkdownAssetPath } from "@shared/lib/markdown-route-policy";
 import { METHODOLOGY_CHANGELOG_SITEMAP_PATHS } from "@shared/lib/methodology-versions/registry";
@@ -326,6 +327,16 @@ function buildStablecoinStatusTitle(coin: StablecoinMeta): string {
     ]);
   }
 
+  if (isTokenizedFundId(coin.id)) {
+    const qualifier = getTitleBrand(coin);
+    return buildStablecoinTitle([
+      qualifier ? `${coin.symbol} (${qualifier}): Tokenized Fund & Reserves` : null,
+      qualifier ? `${coin.symbol} (${qualifier}): Tokenized Fund Profile` : null,
+      `${coin.symbol}: Tokenized Fund, Backing & Risk`,
+      `${coin.symbol} Tokenized Fund Profile`,
+    ]);
+  }
+
   return isStablecoinTitleTreatment(coin.id) ? buildActiveTreatmentTitle(coin) : buildActiveControlTitle(coin);
 }
 
@@ -494,7 +505,7 @@ export function buildPageMetadata({
   };
   const dossierId = /^\/stablecoin\/([^/]+)\/?$/.exec(pathname ?? "")?.[1];
   const coin = dossierId && ACTIVE_IDS.has(dossierId) ? TRACKED_META_BY_ID.get(dossierId) : undefined;
-  if (coin) {
+  if (coin && !isTokenizedFundId(coin.id)) {
     const hash = /^\/og\/v2\/image-([a-f0-9]{64})\.png$/.exec(preview.url)?.[1];
     if (!hash) throw new Error(`Invalid evergreen preview for active dossier: ${canonical}`);
     resolvedImage.url = `${API_ORIGIN}${API_PATHS.ogDossier(coin.id, hash)}`;

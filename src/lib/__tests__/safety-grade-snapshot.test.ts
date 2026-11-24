@@ -36,6 +36,8 @@ describe("getSnapshotSafetyAssessment", () => {
     expect(usdt).not.toBeNull();
     expect(["safe", "neutral", "risky"]).toContain(usdt!.bucket);
     expect(getSnapshotSafetyAssessment("not-a-coin")).toBeNull();
+    expect(getSnapshotSafetyAssessment("buidl-blackrock")).toBeNull();
+    expect(formatSnapshotSafetyScoreLabel("buidl-blackrock")).toBeNull();
   });
 });
 

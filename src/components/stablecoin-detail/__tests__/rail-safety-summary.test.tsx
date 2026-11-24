@@ -3,8 +3,11 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { RailSafetySummary } from "../rail-safety-summary";
+import { TokenizedFundPanel } from "../tokenized-fund-panel";
 import type { HeroSignalRailItem } from "../hero-card-metrics";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
+import { buildStablecoinDetailClientCoin } from "@/lib/stablecoin-detail-client-coin";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 
 // Vitest hoists the factory above static imports, so the helper loads dynamically.
 vi.mock("next/link", async () => {
@@ -137,5 +140,30 @@ describe("RailSafetySummary", () => {
     const pendingBars = container.querySelector("[data-pillar-bars-pending]");
     expect(pendingBars).not.toBeNull();
     expect(pendingBars?.querySelectorAll("li")).toHaveLength(3);
+  });
+
+  it("renders tokenized-fund status in the rail and the compact TokenizedFundPanel on the dossier", () => {
+    const rail = render(<RailSafetySummary items={signals({ grade: "NR", dews: "—" })} tokenizedFund />);
+    expect(rail.container.querySelector('[data-safety-state="tokenized-fund"]')?.textContent).toContain("Not graded");
+    expect(rail.container.textContent).toContain("Tokenized fund");
+    rail.unmount();
+
+    const buidl = buildStablecoinDetailClientCoin(TRACKED_META_BY_ID.get("buidl-blackrock")!);
+    const panel = render(
+      <TokenizedFundPanel
+        coin={buidl}
+        coinData={{ price: 1, priceSource: "protocol-redeem", priceObservedAtMode: "upstream" }}
+        pegRef={1}
+        reserves={null}
+        redemptionBackstop={null}
+        hasReservesSection
+      />,
+    );
+    expect(panel.container.querySelector("[data-tokenized-fund-panel]")).not.toBeNull();
+    expect(panel.container.textContent).toContain("Pharos does not grade fund shares on the stablecoin Safety Score scale.");
+    expect(panel.container.textContent).toContain("Holdings & reserves");
+    expect(panel.container.textContent).toContain("NAV & price source");
+    expect(panel.container.textContent).toContain("Redemption terms");
+    expect(panel.container.textContent).toContain("Investor eligibility");
   });
 });

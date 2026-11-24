@@ -26,8 +26,12 @@ describe("handleSafetyGrades", () => {
       { id: "gap", score: null, grade: null, ratingStatus: "pipeline-gap" as const,
         partialEvidence: { ...partial, excludedPillars: ["backing" as const, "exit" as const] } },
       { id: "nr", score: null, grade: "NR" as const, ratingStatus: "not-rated" as const, partialEvidence: null },
+      { id: "buidl-blackrock", score: null, grade: "NR" as const, ratingStatus: "not-rated" as const, notRatedReason: "tokenized-fund-not-graded" as const, partialEvidence: null },
     ];
-    mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot: { ...base, cards: grades } });
+    mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot: {
+      ...base,
+      cards: [...grades.slice(0, 3), { id: "buidl-blackrock", score: 75, grade: "B+" as const, ratingStatus: "rated" as const, partialEvidence: null }],
+    } });
     const response = await handleSafetyGrades(mockD1([]));
     const body = SafetyGradesResponseSchema.parse(await response.json());
     expect(body.schemaVersion).toBe(1);

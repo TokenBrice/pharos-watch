@@ -38,6 +38,7 @@ import { DIRECTION_TONE_CLASSES, getPegScoreTier, isDewsAlertBand, REPORT_CARD_G
 import type { CoinState } from "@shared/lib/coin-state";
 import type { StablecoinVerdict } from "@shared/lib/stablecoin-verdict";
 import { CLIENT_TRACKED_META_BY_ID, type StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
+import { isTokenizedFundId } from "@shared/lib/stablecoins/listing-governance";
 import { getVariantDisplay } from "@shared/lib/variant-display";
 import { roundForDisplay } from "@shared/lib/format";
 import type {
@@ -416,7 +417,10 @@ export function buildStablecoinDetailHeroViewModel({
     ? HERO_PENDING_DISPLAY
     : buildExcessYieldDisplay(yieldRanking);
   const performanceVsUsdDisplay = buildPerformanceVsUsdDisplay(performanceVsUsd1y);
-  const savedGrade = pendingReads.reportCard === true && !reportCard && savedAssessment?.grade ? savedAssessment : null;
+  const isTokenizedFund = isTokenizedFundId(coin.id);
+  const savedGrade = !isTokenizedFund && pendingReads.reportCard === true && !reportCard && savedAssessment?.grade
+    ? savedAssessment
+    : null;
   const tertiaryMetrics = buildTertiaryMetrics(
     dewsDisplay,
     pegScoreDisplay,
@@ -475,7 +479,7 @@ export function buildStablecoinDetailHeroViewModel({
     peg: { activeDepeg: pegScoreResult?.activeDepeg === true },
     tertiaryMetrics,
     desktopTertiaryMetrics: tertiaryMetrics.filter((metric) => !MOBILE_ONLY_TERTIARY_KEYS.has(metric.key)),
-    signalRailItems: buildSignalRailItems(reportCard, isNavToken, pegScoreDisplay, liquidityData, dewsDisplay, {
+    signalRailItems: buildSignalRailItems(isTokenizedFund ? null : reportCard, isNavToken, pegScoreDisplay, liquidityData, dewsDisplay, {
       savedGrade,
       pegCaveat: priceCaveat,
       dewsHref: liveDepeg ? "#depeg-resolver" : "#report-card",

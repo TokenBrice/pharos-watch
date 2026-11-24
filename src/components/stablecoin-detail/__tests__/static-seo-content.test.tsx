@@ -383,4 +383,14 @@ describe("same-ticker disambiguation and variant relationships", () => {
     expect(screen.getByRole("link", { name: /USDT/i }).getAttribute("href")).toBe("/stablecoin/usdt-tether/");
     expect(screen.getByRole("link", { name: /Browse active peers/i }).getAttribute("href")).toBe("/stablecoins/usd/");
   });
+
+  it("describes tokenized funds as ungraded on the stablecoin Safety Score scale and omits safety alerts", () => {
+    const buidl = TRACKED_META_BY_ID.get("buidl-blackrock")!;
+    const items = buildStablecoinFaqItems(buidl);
+    expect(items[1].answer).toContain("tokenized fund");
+    expect(items[1].answer).toContain("does not assign fund shares a stablecoin Safety Score letter grade");
+    const { container } = render(<StablecoinDetailSeoContent coin={buidl} />);
+    expect(container.textContent).toContain("/subscribe dews,depeg buidl-blackrock");
+    expect(container.textContent).not.toContain("/subscribe dews,depeg,safety buidl-blackrock");
+  });
 });

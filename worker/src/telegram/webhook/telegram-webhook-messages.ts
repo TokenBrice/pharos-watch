@@ -2,6 +2,7 @@ import { formatCoinPayload } from "@shared/lib/telegram-mini-app-payloads";
 import { formatUsdPriceAdaptive } from "@shared/lib/format";
 import { formatRelativeAgeSeconds, formatRelativeDurationSeconds } from "@shared/lib/relative-time";
 import { isPausedSentinel } from "@shared/lib/telegram-delivery-policy";
+import { isTokenizedFundId } from "@shared/lib/stablecoins/listing-governance";
 import {
   TELEGRAM_ALERT_FAMILY_SHORT_LABELS,
   TELEGRAM_ALERT_PERSISTENCE,
@@ -491,11 +492,14 @@ export function buildStatusMessage(symbol: string, s: StatusForCoin, nowSec = Ma
     : price
       ? `${name} at ${price}, no active depeg`
       : `${name}: no recent price, no active depeg`;
-  const safety = s.safety
-    ? `Safety grade ${formatTelegramSafety(s.safety)}`
-    : s.safetyUnavailableReason
-      ? "Safety grade not available right now"
-      : "Not rated for safety";
+  const isTokenizedFund = isTokenizedFundId(s.stablecoinId);
+  const safety = isTokenizedFund && s.safety?.ratingStatus !== "pipeline-gap"
+    ? "Tokenized fund (not graded)"
+    : s.safety
+      ? `Safety grade ${formatTelegramSafety(s.safety)}`
+      : s.safetyUnavailableReason
+        ? "Safety grade not available right now"
+        : "Not rated for safety";
   const dews = s.dews
     ? `early-warning stress ${s.dews.band} (${s.dews.score}/100)`
     : "early-warning stress not available right now";
@@ -513,7 +517,7 @@ export function buildStatusMessage(symbol: string, s: StatusForCoin, nowSec = Ma
       : null;
   const clocks = [
     s.priceUpdatedAt != null ? `price ${formatUpdated(s.priceUpdatedAt, nowSec)}` : null,
-    s.safety ? `Safety ${formatUpdated(s.safety.publishedAt, nowSec)}` : null,
+    s.safety && !isTokenizedFund ? `Safety ${formatUpdated(s.safety.publishedAt, nowSec)}` : null,
     s.dews ? `stress ${formatUpdated(s.dews.computedAt, nowSec)}` : null,
   ].filter((part): part is string => part != null);
   const lines = [

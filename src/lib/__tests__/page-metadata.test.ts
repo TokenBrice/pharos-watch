@@ -294,5 +294,9 @@ describe("buildPageMetadata", () => {
     ] as const) {
       expect(metadata.openGraph).toMatchObject({ images: [{ url: getPageSocialPreview(path).url }] });
     }
+    const buidl = buildStablecoinDetailMetadata(TRACKED_META_BY_ID.get("buidl-blackrock")!);
+    expect(buidl.title).toContain("Tokenized Fund");
+    expect(buidl.title).not.toContain("Safety Score");
+    expect(buidl.openGraph).toMatchObject({ images: [{ url: getPageSocialPreview("/stablecoin/buidl-blackrock/").url }] });
   });
 });

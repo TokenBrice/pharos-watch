@@ -1,4 +1,5 @@
 import { getReportCardGradeRank } from "@shared/lib/report-card-core";
+import { isTokenizedFundId } from "@shared/lib/stablecoins/listing-governance";
 import { TELEGRAM_ALERT_POLICY } from "@shared/lib/telegram-delivery-policy";
 import {
   isDewsAlertable,
@@ -228,6 +229,10 @@ export function buildSafetyChanges(
   if (currentSafetySnapshot == null) return summary;
 
   for (const [stablecoinId, row] of Object.entries(currentSafetySnapshot)) {
+    if (isTokenizedFundId(stablecoinId)) {
+      decisions.set(stablecoinId, { kind: "advance" });
+      continue;
+    }
     const previous = safeSafetySnapshot[stablecoinId];
     // A gap or quarantine tick mid-dwell keeps the last alerted row and its
     // pending clock; the move is judged again once the coin is rated.

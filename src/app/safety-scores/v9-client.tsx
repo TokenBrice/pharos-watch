@@ -46,6 +46,7 @@ import {
   buildV9HeadlineStats,
   buildV9PillarAverages,
   buildV9SupplyMix,
+  excludeTokenizedFundCards,
   filterAndSortV9Cards,
   formatSafetyCardTopDriverExport,
   groupV9CardsByGrade,
@@ -392,7 +393,7 @@ export function ReportCardsV9Client({
   const previewActive = initialPreview !== null && nowSec < initialPreview.expiresAtSec;
 
   const cards = useMemo(
-    () => reportCardsQuery.data?.cards ?? [],
+    () => excludeTokenizedFundCards(reportCardsQuery.data?.cards),
     [reportCardsQuery.data?.cards],
   );
   const mcapMap = useMemo(

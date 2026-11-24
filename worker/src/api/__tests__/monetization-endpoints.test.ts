@@ -1341,6 +1341,17 @@ describe("Wave 3 endpoints: MCP server & SVG safety badge", () => {
     expect(staleRes.headers.get("X-Safety-Score-Status")).toBe("stale");
     expect(await staleRes.text()).toContain("Unavailable");
 
+    // Tokenized fund -> 200 Not graded SVG with X-Badge-Reason: tokenized-fund-not-graded
+    const fundFlat = await handleSafetyBadge(db, "buidl-blackrock", new URL("https://api.pharos.watch/api/badge/buidl-blackrock.svg"));
+    expect(fundFlat.status).toBe(200);
+    expect(fundFlat.headers.get("X-Badge-Reason")).toBe("tokenized-fund-not-graded");
+    const fundFlatSvg = await fundFlat.text();
+    expect(fundFlatSvg).toContain("Not graded");
+    expect(fundFlatSvg).not.toContain("/100");
+    const fundCardSvg = renderSafetyBadgeSvg({ kind: "tokenized-fund", symbol: "BUIDL", name: "BlackRock USD" }, { style: "card", theme: "light" });
+    expect(fundCardSvg).toContain("Tokenized fund");
+    expect(fundCardSvg).toContain("Not graded");
+
     // Unknown coin -> 404
     const missing = await handleSafetyBadge(db, "nonexistent-coin", new URL("https://api.pharos.watch/api/badge/nonexistent-coin.svg"));
     expect(missing.status).toBe(404);

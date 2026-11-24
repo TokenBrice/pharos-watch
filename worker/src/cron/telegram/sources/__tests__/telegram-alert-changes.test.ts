@@ -241,6 +241,13 @@ describe("telegram alert change builders", () => {
       expect(buildSafetyChanges(current, previous, () => "ALPHA", T0).changes).toEqual([]);
       expect(buildSafetyChanges(previous, current, () => "ALPHA", T0).changes).toEqual([]);
     });
+
+    it("never emits safety alerts or dwell tracking for tokenized funds", () => {
+      const previous: SafetySnapshot = { "buidl-blackrock": ratedRow("B", 72, { pendingKind: "severe-downgrade", pendingSinceSec: T0 - DWELL }) };
+      const current: SafetySnapshot = { "buidl-blackrock": { grade: "NR", score: null, ratingStatus: "not-rated", partialEvidence: null, methodologyVersion: "10.55" } };
+      expect(buildSafetyChanges(current, previous, () => "BUIDL", T0)).toMatchObject({ changes: [], ...noSuppression });
+      expect(buildSafetyChanges({ "buidl-blackrock": ratedRow("D", 42) }, previous, () => "BUIDL", T0)).toMatchObject({ changes: [], ...noSuppression });
+    });
   });
 
   describe("holdSuppressedSafetyBaselines", () => {

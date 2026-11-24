@@ -64,7 +64,10 @@ describe("snapshotSafetyGradeHistory", () => {
   it("preserves the last grade across an asset pipeline gap without seeding NR or F", async () => {
     const current = makeReportCardsV9Response({
       updatedAt: Math.floor(Date.now() / 1000),
-      cards: [makeWorkerV9Card({ id: "usdc-circle", grade: "A", score: 90 })],
+      cards: [
+        makeWorkerV9Card({ id: "usdc-circle", grade: "A", score: 90 }),
+        makeWorkerV9Card({ id: "buidl-blackrock", grade: "NR", score: null, ratingStatus: "not-rated" }),
+      ],
     });
     const { db, sqlite } = fixtures.open();
     mockLoadActiveSafetyScoreIndex.mockResolvedValue({ kind: "v9", snapshot: current });
@@ -435,11 +438,15 @@ describe("digest grade availability", () => {
       cards: [
         makeReportCardsV9PipelineGapCard("control", "A", { id: "gap" }),
         makeReportCardsV9PartialCard("exit", "B", { id: "partial" }),
+        makeWorkerV9Card({ id: "buidl-blackrock", grade: "NR", score: null, ratingStatus: "not-rated" }),
       ],
     });
     mockLoadActiveSafetyScoreIndex.mockResolvedValue({ kind: "v9", snapshot });
-    const assets = [makeAsset({ id: "gap", symbol: "GAP", circulating: { peggedUSD: 20_000_000 } }),
-      makeAsset({ id: "partial", symbol: "PARTIAL", circulating: { peggedUSD: 20_000_000 } })];
+    const assets = [
+      makeAsset({ id: "gap", symbol: "GAP", circulating: { peggedUSD: 20_000_000 } }),
+      makeAsset({ id: "partial", symbol: "PARTIAL", circulating: { peggedUSD: 20_000_000 } }),
+      makeAsset({ id: "buidl-blackrock", symbol: "BUIDL", circulating: { peggedUSD: 20_000_000 } }),
+    ];
     const identity = snapshot.safetyScoreIdentity;
     const { db, sqlite } = fixtures.open();
     sqlite.prepare(`INSERT INTO safety_score_history_v2 (

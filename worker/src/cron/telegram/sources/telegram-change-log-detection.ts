@@ -1,3 +1,4 @@
+import { isTokenizedFundId } from "@shared/lib/stablecoins/listing-governance";
 import { getCache, prepareCacheUpsert } from "../../../lib/db-cache";
 import { parseJsonObject } from "../../../lib/json-parse";
 import type { DewsChange, ReserveAlert } from "../../../telegram/common/alerts-formatting";
@@ -37,6 +38,7 @@ export function diffObservedSafetyGrades(
   const entries: TelegramChangeLogEntry[] = [];
   const next: ObservedSafety = {};
   for (const [id, row] of Object.entries(current)) {
+    if (isTokenizedFundId(id)) continue;
     const prior = previous?.[id];
     if (row.grade === null || row.ratingStatus === "pipeline-gap" || row.operationallyAffected === true) {
       if (prior) next[id] = prior;
