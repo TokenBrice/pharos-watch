@@ -122,13 +122,27 @@ describe("StablecoinDepegResolverCard", () => {
     expect(screen.getByRole("region", { name: "Depeg Duration Resolver for LUSD" })).toBeTruthy();
   });
 
-  it("outlook leads with verdict, deviation", () => {
-    const row = makeFrozenDdrV2Row();
-    row.live.currentDeviationBps = -4569;
-    queryMock.mockReturnValue({ data: { _meta: DDR_TEST_META, rows: [row] }, error: null });
-    render(<ActiveDepegOutlook stablecoinId={row.stablecoinId} symbol="LUSD" deviationBps={-4569} />);
+  it("outlook leads with verdict and dates snapshot deviation on its own clock", () => {
+    const [obs, upd] = [Date.parse("2026-11-24T13:15:00Z") / 1000, Date.parse("2026-11-24T13:28:00Z") / 1000];
+    const renderOutlook = (live: Record<string, unknown>) => {
+      const row = makeFrozenDdrV2Row();
+      row.live = { ...row.live, ...live };
+      queryMock.mockReturnValue({ data: { _meta: DDR_TEST_META, rows: [row] }, error: null });
+      return { row, view: render(<ActiveDepegOutlook stablecoinId={row.stablecoinId} symbol="LUSD" deviationBps={null} />) };
+    };
+    const { row, view: a } = renderOutlook({ currentDeviationBps: -4569, currentDeviationObservedAtSec: obs, updatedAt: upd });
     expect(screen.getByRole("heading").textContent).toMatch(/LUSD is trading 45\.7%/);
+    expect(a.container.textContent).toContain("Resolver snapshot as of 2026-11-24 13:15 UTC");
     screen.getByText(getTierMeta(getResolution(row).tier, getTierVocabulary(row)).label);
     expect(screen.getByRole("link").getAttribute("href")).toBe("#depeg-resolver");
+    a.unmount();
+
+    const { view: b } = renderOutlook({ currentDeviationBps: -4569, updatedAt: upd });
+    expect(b.container.textContent).toContain("Resolver snapshot as of 2026-11-24 13:28 UTC");
+    b.unmount();
+
+    const { view: c } = renderOutlook({ currentDeviationBps: null, updatedAt: upd });
+    expect(screen.getByRole("heading").textContent).toBe("LUSD is off its peg");
+    expect(c.container.textContent).not.toContain("Resolver snapshot as of");
   });
 });

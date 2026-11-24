@@ -467,7 +467,7 @@ export function PriceTransparencyCard({
   const priceLabel = !hasNoPrice && coinData.price != null ? formatPriceIn(coinData.price, unit) : "N/A";
   const usdPriceLabel = nativeUnit && !hasNoPrice && coinData.price != null ? formatPriceIn(coinData.price, USD_UNIT) : null;
   const confidenceLabel = hasNoPrice
-    ? "No consensus"
+    ? "Observed price unavailable now"
     : coinData.priceConfidence
       ? CONFIDENCE_PHRASES[coinData.priceConfidence] ?? coinData.priceConfidence
       : null;

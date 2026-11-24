@@ -247,6 +247,20 @@ export function getLiveCurrentDeviationBps(row: DdrV2ResponseRow): number | null
   return isLiveCurrentDeviationHeld(row) ? null : row.live.currentDeviationBps;
 }
 
+/**
+ * Observation clock (Unix seconds) for `getLiveCurrentDeviationBps(row)`:
+ * prefers the quote's own `currentDeviationObservedAtSec`, falling back to the
+ * DDR snapshot's overlay clock (`live.updatedAt`) when absent. Null when no
+ * live deviation is displayed or no positive clock exists.
+ */
+export function getLiveCurrentDeviationObservedAtSec(row: DdrV2ResponseRow): number | null {
+  if (getLiveCurrentDeviationBps(row) == null) return null;
+  const observed = row.live.currentDeviationObservedAtSec;
+  if (typeof observed === "number" && Number.isFinite(observed) && observed > 0) return observed;
+  const updated = row.live.updatedAt;
+  return typeof updated === "number" && Number.isFinite(updated) && updated > 0 ? updated : null;
+}
+
 /** Clocked overlays already carry the resolver's admitted reading. Older Workers used the publication clock. */
 export function isLiveCurrentDeviationHeld(row: DdrV2ResponseRow): boolean {
   return row.live.currentDeviationObservedAtSec === undefined
