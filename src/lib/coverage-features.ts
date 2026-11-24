@@ -1,5 +1,6 @@
 import { COVERAGE_FEATURE_MODULES as modules } from "@/lib/coverage-feature-modules";
 import { countsTowardPriceDepth } from "@/lib/coverage/price";
+import { countsTowardSafetyCoverage } from "@/lib/coverage/safety";
 import type { CoverageFeatureDefinition } from "@/lib/coverage-types";
 
 export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
@@ -21,7 +22,10 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     key: "safety",
     label: "Safety Score",
     shortLabel: "Safety",
-    description: "Overall report-card grade on the Safety Scores surface.",
+    description:
+      "Overall report-card grade on the Safety Scores surface. Intentionally ungraded tokenized funds are excluded from Safety coverage denominators.",
+    headlineCoverageLabel: (coveragePct) => `${coveragePct.toFixed(0)}% of gradable coins`,
+    denominatorFilter: countsTowardSafetyCoverage,
     href: "/safety-scores/",
     statusKinds: modules.safety.statusKinds,
     legendItems: modules.safety.legendItems,

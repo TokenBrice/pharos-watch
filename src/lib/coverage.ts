@@ -28,6 +28,8 @@ import type {
 import type {
   StablecoinMeta,
 } from "@shared/types/stablecoin-meta-schemas";
+import type { ListingClass } from "@shared/types/stablecoin-taxonomy";
+import { isTokenizedFundListingClass } from "@shared/lib/stablecoins/listing-class";
 import type { GeniusClientProfile, MintAuthorityCoverageSummary } from "@shared/types/stablecoin-client-meta";
 import type { DependencyCoverageFact } from "@/lib/dependency-coverage-facts";
 import type { PublishedMintComponent } from "@/lib/mint-authority-display";
@@ -55,6 +57,7 @@ export type CoverageCoinMeta = Pick<
   StablecoinMeta,
   "id" | "name" | "symbol" | "flags" | "reserves" | "collateralQuality" | "mica"
 > & {
+  listingClass?: ListingClass;
   genius?: GeniusClientProfile;
   liveReservesConfig?: StablecoinMeta["liveReservesConfig"];
   liveReserveAdapter?: NonNullable<StablecoinMeta["liveReservesConfig"]>["adapter"];
@@ -222,7 +225,13 @@ export function buildCoverageRow({
   const hasData = (key: CoverageFeatureKey) => dataAvailability?.[key] !== false;
   const statuses = {
     price: modules.price.resolve(coin, hasPegCoverage, consensusSources, priceConfidence, currentPriceUnavailable, hasData("price")),
-    safety: modules.safety.resolve(safetyScore, safetyRatingStatus, hasData("safety"), safetyReasonCodes),
+    safety: modules.safety.resolve(
+      safetyScore,
+      safetyRatingStatus,
+      hasData("safety"),
+      safetyReasonCodes,
+      isTokenizedFundListingClass(coin.listingClass),
+    ),
     dex: modules.dex.resolve(dexCoverageClass, hasData("dex")),
     reserves: modules.reserves.resolve(coin, liveReserveFresh, hasData("reserves")),
     redemption: modules.redemption.resolve(redemptionEntry, hasData("redemption")),

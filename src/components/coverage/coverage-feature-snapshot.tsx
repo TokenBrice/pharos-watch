@@ -42,6 +42,7 @@ const BAR_LABELS: Partial<Record<string, string>> = {
   "price-only": "price",
   "data-unavailable": "n/a",
   rated: "rated",
+  "not-graded": "ungraded",
   nr: "NR",
   primary: "primary",
   mixed: "mixed",
@@ -96,6 +97,14 @@ function getStackedBarItems(summary: CoverageFeatureSummary): CoverageBreakdownI
 
   if (summary.feature.key === "mintAuthority") {
     return nonZeroItems.filter((item) => !item.key.startsWith("score-"));
+  }
+
+  if (summary.feature.key === "safety") {
+    // Intentionally ungraded tokenized funds sit outside the Safety denominator,
+    // so only gradable rows plus any technical data-unavailable segment stack.
+    const gradableItems = summary.denominatorBreakdown.filter((item) => item.count > 0);
+    const unavailableItem = summary.breakdown.find((item) => item.key === "data-unavailable" && item.count > 0);
+    return unavailableItem ? [...gradableItems, unavailableItem] : gradableItems;
   }
 
   if (summary.feature.key !== "price") {

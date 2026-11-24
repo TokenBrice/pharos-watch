@@ -64,7 +64,7 @@ describe("coverage helpers", () => {
     ["genius", ["ppsi-approved", "state-qualified", "official-application-pending", "issuer-announced-intent", "no-public-authorization-found", "not-applicable", "unknown", "unassessed"]],
     ["mica", ["authorized", "pending", "transitional", "non-compliant", "out-of-scope", "unassessed"]],
     ["blacklist", ["live", "yes", "upstream", "possible", "no"]],
-    ["safety", ["rated", "data-unavailable"]],
+    ["safety", ["rated", "not-graded", "data-unavailable"]],
     ["yield", ["ranked"]],
   ] as const)("preserves the %s legend order and non-empty terms/descriptions", (key, expectedKinds) => {
     const items = coverageFeature(key).legendItems;
@@ -92,6 +92,25 @@ describe("coverage helpers", () => {
     expect(summary.breakdown).toEqual([
       { key: "rated", label: "rated", count: 1 }, { key: "nr", label: "NR", count: 1 }, { key: "data-unavailable", label: "data n/a", count: 1 },
     ]);
+
+    // Intentionally ungraded tokenized funds resolve to not-graded and stay out of denominators and gap filters.
+    const fund = makeCoverageRow(["buidl-blackrock", "BUIDL"], {
+      coin: { ...makeCoin(), listingClass: "tokenized-fund" },
+      safetyScore: null, safetyRatingStatus: "not-rated", safetyReasonCodes: ["tokenized-fund-not-graded"], marketCapUsd: 500,
+    });
+    expect(fund.statuses.safety).toMatchObject({ kind: "not-graded", label: "Not graded", available: false });
+    expect(matchesCoverageFilter(fund, "missing-safety")).toBe(false);
+    expect(safetyCoverageFeature.resolve(null, "not-rated", true, ["tokenized-fund-not-graded"]).kind).toBe("not-graded");
+    expect(safetyCoverageFeature.resolve(67, "rated", true, [], true).kind).toBe("not-graded");
+    const withFund = buildCoverageFeatureSummary(coverageFeature("safety"), [rated, nr, gap, fund]);
+    expect(withFund).toMatchObject({ availableCount: 1, totalCount: 2, coveragePct: 50, mcapSharePct: 200 / 300 * 100, marketCapComplete: false });
+    expect(withFund.breakdown).toEqual([
+      { key: "rated", label: "rated", count: 1 }, { key: "nr", label: "NR", count: 1 },
+      { key: "not-graded", label: "not graded", count: 1 }, { key: "data-unavailable", label: "data n/a", count: 1 },
+    ]);
+    expect(buildCoverageFeatureSummary(coverageFeature("safety"), [fund])).toMatchObject({
+      availableCount: 0, totalCount: 0, coveragePct: null, coverageUnavailable: false, coverageLabel: "n/a",
+    });
   });
 
   it("keeps market-cap reach unavailable when only uncovered rows have observed cap", () => {

@@ -101,6 +101,29 @@ describe("buildCoverageMatrixModel", () => {
         { key: "data-unavailable", label: "data n/a", count: ids.length },
       ]),
     });
+
+    // Tokenized funds resolve to not-graded and are excluded from Safety count and market-cap denominators.
+    const fundModel = buildCoverageMatrixModel(makeMatrixInput({
+      activeStablecoins: [trackedMeta("usdc-circle"), trackedMeta("buidl-blackrock")],
+      stablecoins: {
+        peggedAssets: [
+          { id: "usdc-circle", circulating: { peggedUSD: 100 } },
+          { id: "buidl-blackrock", circulating: { peggedUSD: 900 } },
+        ],
+      },
+      reportCards: makeReportCardsV9Response({
+        cards: [
+          makeV9Card({ id: "usdc-circle", score: 85, ratingStatus: "rated" }),
+          makeV9Card({ id: "buidl-blackrock", score: null, ratingStatus: "not-rated", reasonCodes: ["tokenized-fund-not-graded"] }),
+        ],
+      }),
+    }));
+    expect(fundModel.rows.map((row) => row.statuses.safety.kind)).toEqual(["rated", "not-graded"]);
+    expect(fundModel.featureSummaries.find((summary) => summary.feature.key === "safety")).toMatchObject({
+      availableCount: 1, totalCount: 1, coveragePct: 100, mcapSharePct: 100, marketCapComplete: false,
+      coverageLabel: "100% of gradable coins",
+      breakdown: expect.arrayContaining([{ key: "not-graded", label: "not graded", count: 1 }]),
+    });
   });
 
   it("joins compliance profiles onto compact registry rows and aggregates assessed coverage", () => {

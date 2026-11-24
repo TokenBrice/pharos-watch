@@ -25,6 +25,25 @@ describe("CoverageFeatureSnapshotRow", () => {
     expect(container.textContent).not.toMatch(/NR|Not rated|not covered/);
   });
 
+  it("excludes intentionally ungraded tokenized funds from the Safety denominator and stacked bar", () => {
+    const rated = buildCoverageRow({
+      coin: makeStablecoinMeta({ id: "usdc-circle" }), marketCapUsd: 200, hasPegCoverage: true,
+      safetyScore: 85, safetyRatingStatus: "rated", dexCoverageClass: null, hasYieldCoverage: false, flowCoverageStatus: null,
+    });
+    const fund = buildCoverageRow({
+      coin: { ...makeStablecoinMeta({ id: "buidl-blackrock" }), listingClass: "tokenized-fund" },
+      marketCapUsd: 800, hasPegCoverage: true, safetyScore: null, safetyRatingStatus: "not-rated",
+      safetyReasonCodes: ["tokenized-fund-not-graded"], dexCoverageClass: null, hasYieldCoverage: false, flowCoverageStatus: null,
+    });
+    const feature = COVERAGE_FEATURES.find((entry) => entry.key === "safety")!;
+    const summary = buildCoverageFeatureSummary(feature, [rated, fund]);
+    const { container } = render(<CoverageFeatureSnapshotRow summary={summary} />);
+    expect(summary).toMatchObject({ availableCount: 1, totalCount: 1, coveragePct: 100 });
+    expect(screen.getByRole("img").getAttribute("aria-label")).toBe("Safety Score coverage: rated 1");
+    expect(container.textContent).toContain("1/1");
+    expect(container.textContent).not.toContain("not covered");
+  });
+
   it("uses only mint-authority route buckets for stacked-bar semantics", () => {
     const summary: CoverageFeatureSummary = {
       feature: COVERAGE_FEATURES.find((feature) => feature.key === "mintAuthority")!,
