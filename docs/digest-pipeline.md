@@ -296,7 +296,7 @@ If any of the four are absent or blank, Twitter posting returns `skipped: no-cre
 - Format (the `Pharos Daily Digest #N` kicker is prepended whenever an edition number is present, which is the normal case):
   ```
   <b>Today’s map</b>
-  Graded supply: ${total} across {gradedCount} coins (incl. tracked variants)
+  Graded supply: ${total} across {gradedCount} coins (incl. variants; tokenized funds are not graded)
   A tier: {count} coins · {share}%
   C/D/F tiers: {count} coins · {share}%
 

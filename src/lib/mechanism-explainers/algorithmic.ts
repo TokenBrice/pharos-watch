@@ -6,7 +6,7 @@ export const content: ArchetypeContent = {
   subtitle:
     "Protocol-level supply rules and arbitrage defend the peg; current designs can hold real collateral, unlike historical pure mint/burn systems.",
   lead: [
-    "This mechanism family uses programmatic issuance, redemption, or market operations to defend a target value. Collateral is design-specific: FPI's documented design uses legacy-FRAX-linked balances and AMO positions, and HBD converts against HIVE under a debt-ratio haircut. An algorithmic mechanism does not itself mean an unbacked token. The current collateralized variants are described below.",
+    "This mechanism family uses programmatic issuance, redemption, or market operations to defend a target value. Collateral is design-specific: FPI's documented design used legacy-FRAX-linked balances and AMO positions before its 2026-06-28 freeze, and HBD converts against HIVE under a debt-ratio haircut. An algorithmic mechanism does not itself mean an unbacked token. The current collateralized variants are described below.",
     "Pharos taxonomy no longer treats algorithmic as a tracked backing bucket; that historical backing label remains for off-catalog PSI assets. The walkthrough below covers the historical pure mint/burn variant, exemplified by UST/LUNA, not the reserve mechanics of FPI. Pure uncollateralized algorithmic stablecoins are not a live design pattern at scale in 2026.",
   ],
   howItWorks: [
@@ -47,7 +47,7 @@ export const content: ArchetypeContent = {
   representativeCoins: [
     {
       coinId: "fpi-frax",
-      note: "Frax's CPI-referenced unit of account. Its documented design targets a 100% collateral ratio using legacy-FRAX-linked balances and AMO positions, with FPIS sales as a shortfall backstop. The target does not establish a 100% liquid FRAX reserve composition. Pharos tracks FPI as a variable-peg NAV token. FIP-448 proposes freezing the CPI reference price and disabling new minting; the proposal alone does not establish completed execution.",
+      note: "Frax's CPI-referenced unit of account, frozen on 2026-06-28 after the FIP-448 Snapshot vote froze the CPI reference price and disabled new minting. Its documented design targeted a 100% collateral ratio using legacy-FRAX-linked balances and AMO positions, with FPIS sales as a shortfall backstop, which did not establish a 100% liquid FRAX reserve composition. Pharos preserves FPI's historical record as an archived variable-peg NAV token.",
     },
     {
       coinId: "hbd-hive",
@@ -77,7 +77,7 @@ export const content: ArchetypeContent = {
     "Mint Authority review. Most coins under this archetype retain privileged mint authority; sudden mint bursts and admin-key activity are supply-control risk rather than holder-freeze events.",
     "PegScore and the 7-day deviation chart on each coin page. The composite peg score caps lower for chronic deviators, and the chart shows whether a depeg actually closed or just went stale at a discount.",
     "PSI Top Contributors table. Chronic depegs decay through the PSI factor floor (0.25 after roughly 120 days), so a long-running algorithmic depeg is downweighted in the system-wide stability index rather than amplified.",
-    "Live Reserve view where available. FPI's composition should be read from the dated reserve evidence, separately from its collateral-ratio target. Quarterly snapshots are too coarse for this design family.",
+    "Live Reserve view where available. Collateralized algorithmic designs should be read from dated reserve evidence, separately from any collateral-ratio target. Quarterly snapshots are too coarse for this design family.",
   ],
   crossLinks: [
     {

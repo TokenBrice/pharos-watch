@@ -131,10 +131,11 @@ export function MintBurnFlowMethodologySection() {
                 scopes and a count increase alone does not establish an activity change.
               </p>
               <p>
-                Reviewed issuance coverage includes Ethereum BRSRV, CHFSAFO and GLDon. Exact start blocks and
-                token thresholds remain explicit in the contract registry; GLDon&apos;s reviewed OFT adapter
-                preserves bridge-transfer classification. Other native deployments are not implicitly covered,
-                and configured history does not establish a completed backfill or a mature flow baseline.
+                Exact start blocks, token thresholds, and reviewed OFT/bridge adapter bindings remain
+                explicit in the contract registry (earlier extended-lane legs for BRSRV, CHFSAFO, and
+                GLDon were retired when those assets were delisted under listing policy 2.0). Other
+                native deployments are not implicitly covered, and configured history does not establish
+                a completed backfill or a mature flow baseline.
               </p>
               <p>
                 An N-hour flow window covers N closed UTC hours ending at the common fully scanned hour

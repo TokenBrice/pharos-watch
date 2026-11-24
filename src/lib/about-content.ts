@@ -76,7 +76,7 @@ export const DATA_SOURCE_GROUPS = [
     label: "Reserve transparency",
     summary: "Issuer and protocol reserve APIs, third-party attestations, proof-of-reserve feeds, and direct on-chain vault reads.",
     sources:
-      "Issuer and protocol reserve APIs, dashboards, proof-of-reserve feeds, independent accounting examinations, and direct on-chain vault reads including Circle, Tether, Paxos/KPMG, Ripple/Deloitte, First Digital Labs, SG-FORGE, Sky/MakerDAO, Ethena, Frax, Aave GHO, Ondo, Midas, OpenEden, Origin, Reserve Protocol, Backed, Chainlink PoR/NAV oracles, Chronicle Proof of Asset, Morpho vaults, Spark, Curve, Pendle, Accountable, Axis, MegaUSD, BlackRock BRSRV, Coinbase ONED, Wyoming FRNT, and direct bridge/custodian balance reads.",
+      "Issuer and protocol reserve APIs, dashboards, proof-of-reserve feeds, independent accounting examinations, and direct on-chain vault reads including Circle, Tether, Paxos/KPMG, Ripple/Deloitte, First Digital Labs, SG-FORGE, Sky/MakerDAO, Ethena, Frax, Aave GHO, OpenEden, Origin, Reserve Protocol, Chainlink PoR/NAV oracles, Chronicle Proof of Asset, Morpho vaults, Spark, Curve, Pendle, Accountable, Axis, MegaUSD, Coinbase ONED, Wyoming FRNT, and direct bridge/custodian balance reads.",
   },
   {
     label: "On-chain reads & events",
@@ -100,7 +100,7 @@ export const DATA_SOURCE_GROUPS = [
     label: "DEX data",
     summary: "Yield and liquidity APIs, subgraphs, and direct pool reads across DEXs and lending markets.",
     sources:
-      "DeFiLlama Yields & Protocols, protocol-native yield APIs and on-chain readers (Morpho, Aave V3, Compound V3, Yearn Kong, Beefy, Pendle, Curve, Hashnote, Ondo, Midas, Re Protocol, Royco Dawn), The Graph, Curve Finance API, Fluid, Balancer, Raydium, Orca, Jupiter, Meteora, Bluefin, Stellar Horizon, Aquarius, TzKT, Balanced, Kava, SundaeSwap, PancakeSwap, SUN.io, Uniswap V3/V4, Aerodrome, Velodrome, Aero, Shadow Exchange, GeckoTerminal, and DexScreener.",
+      "DeFiLlama Yields & Protocols, protocol-native yield APIs and on-chain readers (Morpho, Aave V3, Compound V3, Yearn Kong, Beefy, Pendle, Curve, Hashnote, Re Protocol, Royco Dawn), The Graph, Curve Finance API, Fluid, Balancer, Raydium, Orca, Jupiter, Meteora, Bluefin, Stellar Horizon, Aquarius, TzKT, Balanced, Kava, SundaeSwap, PancakeSwap, SUN.io, Uniswap V3/V4, Aerodrome, Velodrome, Aero, Shadow Exchange, GeckoTerminal, and DexScreener.",
   },
   {
     label: "AI generation",
