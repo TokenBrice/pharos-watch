@@ -5,9 +5,11 @@ import { isCoreAggregateListingClass, isTokenizedFundListingClass } from "./list
 export type { ListingClass };
 export { isCoreAggregateListingClass, isTokenizedFundListingClass };
 
+export const LISTING_POLICY_VERSION = "2.0" as const;
+
 export interface ListingDecisionRegistry {
   schemaVersion: 1;
-  policyVersion: string;
+  policyVersion: typeof LISTING_POLICY_VERSION;
   listingClassById: Record<string, ListingClass>;
 }
 

@@ -17,6 +17,8 @@ import {
   getReserveDependencyTypeLinkIssues,
   getLiveReserveDependencyTypeLinkIssues,
   getListingGovernanceIssues,
+  getUnlinkedActiveTokenizedFundWarnings,
+  REVIEWED_LIVE_ADAPTER_ONLY_TOKENIZED_FUND_LINKS,
   getTerminalLiveReserveConfigIssue,
   getExpiredReserveSupplyAdmissionBootstrapIssue,
   getOverdueListingStatusReviewIssue,
@@ -441,10 +443,114 @@ describe("listing class precedence and unresolved mechanism review", () => {
       'listing-decisions.json class for "fixture-usd" is review-hold; delisted assets must be excluded',
     ]);
     expect(getListingGovernanceIssues([{
+      ...coin, status: "delisted", variantOf: "usdc-circle",
+    }], { ...decisions, listingClassById: { "fixture-usd": "excluded" } })).toEqual([]);
+    expect(getListingGovernanceIssues([{
+      ...coin, status: "delisted", variantOf: "usdc-circle",
+    }], { ...decisions, listingClassById: { "fixture-usd": "stablecoin-variant" } })).toEqual([
+      'listing-decisions.json class for "fixture-usd" is stablecoin-variant; delisted assets must be excluded',
+    ]);
+    expect(getListingGovernanceIssues([{
       ...coin, mechanismArchetypeReview: review,
     }], { ...decisions, listingClassById: { "fixture-usd": "excluded" } })).toContain(
       'listing-decisions.json marks non-delisted "fixture-usd" as excluded',
     );
+  });
+
+  it("enforces policyVersion 2.0, retired classes, variant/archetype edges, priceBasis/exitMechanism, and ledger coverage", () => {
+    expect(getListingGovernanceIssues([coin], {
+      ...decisions, policyVersion: "1.0", listingClassById: { [coin.id]: "core-stablecoin" },
+    })).toEqual([expect.stringContaining("listing-decisions.json[policyVersion]")]);
+    for (const retired of ["cash-equivalent", "stable-value-investment"]) {
+      expect(getListingGovernanceIssues([coin], {
+        ...decisions, listingClassById: { [coin.id]: retired },
+      })).toEqual([expect.stringContaining("listing-decisions.json[listingClassById.fixture-usd]")]);
+    }
+    expect(getListingGovernanceIssues([{ ...coin, variantOf: "usdc-circle", mechanismArchetypeReview: review }], {
+      ...decisions, listingClassById: { [coin.id]: "stablecoin-variant" },
+    })).toEqual([]);
+    expect(getListingGovernanceIssues([{ ...coin, variantOf: "usdc-circle", mechanismArchetypeReview: review }], decisions)).toEqual([
+      'listing-decisions.json class for "fixture-usd" is review-hold; expected stablecoin-variant (variantOf "usdc-circle")',
+    ]);
+    expect(getListingGovernanceIssues([{ ...coin, mechanismArchetype: "tbill", mechanismArchetypeReview: review }], decisions)).toEqual([
+      'listing-decisions.json class for "fixture-usd" is review-hold (no valid unresolved mechanism review with null mechanismArchetype); expected core-stablecoin or tokenized-fund',
+    ]);
+    expect(getListingGovernanceIssues([{
+      ...coin, priceBasis: "contractual-par", exitMechanism: "discretionary",
+    }], { ...decisions, listingClassById: { [coin.id]: "core-stablecoin" } })).toEqual([
+      'priceBasis is reserved for sourced delisting records; remove it from "fixture-usd"',
+      'exitMechanism is reserved for sourced delisting records; remove it from "fixture-usd"',
+    ]);
+    expect(getListingGovernanceIssues([{
+      ...coin, status: "delisted", priceBasis: "contractual-par", exitMechanism: "discretionary",
+    }], { ...decisions, listingClassById: { [coin.id]: "excluded" } })).toEqual([]);
+    expect(getListingGovernanceIssues([coin], {
+      ...decisions, listingClassById: { "unknown-id": "core-stablecoin", "xai-silo-finance": "core-stablecoin" },
+    })).toEqual([
+      'listing-decisions.json references unknown catalog ID "unknown-id"',
+      'listing-decisions.json must classify cemetery ID "xai-silo-finance" as excluded',
+      'listing-decisions.json is missing catalog ID "fixture-usd"',
+    ]);
+  });
+
+  it("warns when an active tokenized-fund lacks an active non-fund static linker or reviewed adapter allowance", () => {
+    const fund: StablecoinMeta = { ...coin, id: "fund-a", symbol: "FA" };
+    const peerFund: StablecoinMeta = { ...coin, id: "fund-b", symbol: "FB", dependencies: [{ id: "fund-a", weight: 1, type: "collateral" }] };
+    const delistedLinker: StablecoinMeta = { ...coin, id: "dead-a", symbol: "DA", status: "delisted", dependencies: [{ id: "fund-a", weight: 1, type: "collateral" }] };
+    const nonLinkCore: StablecoinMeta = {
+      ...coin,
+      id: "core-a",
+      symbol: "CA",
+      reserveReview: {
+        reviewedAt: "2026-11-24",
+        reviewer: "Fixture",
+        confidence: "verified",
+        sources: [{ label: "Fixture", url: "https://example.com/reserves" }],
+        rationale: "Fixture review",
+        compositionBasis: "Fixture basis",
+        scope: "full-composition",
+        knownUnknownExposure: "None",
+        knownUnknownExposurePct: 0,
+        nonLinkDispositions: [{ reserveIndex: 0, reserveName: "Fund A", pct: 20, disposition: "basket-needs-split", candidateCoinIds: ["fund-a"], rationale: "unlinked" }],
+      },
+    };
+    const baseDecisions = {
+      schemaVersion: 1,
+      policyVersion: "2.0",
+      listingClassById: { "fund-a": "tokenized-fund", "fund-b": "tokenized-fund", "dead-a": "excluded", "core-a": "core-stablecoin" },
+    };
+
+    expect(getUnlinkedActiveTokenizedFundWarnings([fund, peerFund, delistedLinker, nonLinkCore], baseDecisions, {})).toEqual([
+      expect.stringContaining('active tokenized-fund "fund-a"'),
+      expect.stringContaining('active tokenized-fund "fund-b"'),
+    ]);
+    expect(getUnlinkedActiveTokenizedFundWarnings([
+      fund,
+      { ...nonLinkCore, dependencies: [{ id: "fund-a", weight: 0.2, type: "collateral" }] },
+    ], baseDecisions, {})).toEqual([]);
+    expect(getUnlinkedActiveTokenizedFundWarnings([
+      fund,
+      { ...nonLinkCore, reserves: [{ name: "Fund A", pct: 50, risk: "low", coinId: "fund-a", depType: "collateral" }] },
+    ], baseDecisions, {})).toEqual([]);
+    expect(getUnlinkedActiveTokenizedFundWarnings([
+      fund,
+      {
+        ...nonLinkCore,
+        dependencyReview: {
+          reviewedAt: "2026-11-24", reviewer: "Fixture", confidence: "verified",
+          sources: [{ label: "Docs", url: "https://example.com" }], rationale: "Linked.",
+          relationships: [{ id: "fund-a", weight: 0.2, type: "collateral", reason: "Reserve." }],
+        },
+      },
+    ], baseDecisions, {})).toEqual([]);
+    expect(getUnlinkedActiveTokenizedFundWarnings([{ ...fund, status: "quarantined" }], baseDecisions, {})).toEqual([]);
+    expect(getUnlinkedActiveTokenizedFundWarnings([
+      { ...coin, id: "jaaa-janus-henderson-anemoy", symbol: "JAAA" },
+      { ...coin, id: "jtrsy-anemoy", symbol: "JTRSY" },
+    ], {
+      ...baseDecisions,
+      listingClassById: { "jaaa-janus-henderson-anemoy": "tokenized-fund", "jtrsy-anemoy": "tokenized-fund" },
+    }, REVIEWED_LIVE_ADAPTER_ONLY_TOKENIZED_FUND_LINKS)).toEqual([]);
   });
 });
 

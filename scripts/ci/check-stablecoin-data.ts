@@ -7,7 +7,7 @@ import { normalizeDeploymentAddress } from "@shared/lib/deployment-resolver";
 import { COMMODITY_PEG_CURRENCIES, isCommodityPeg } from "@shared/lib/filter-tags";
 import { DEDICATED_SINGLE_TOKEN_GOLD_PROTOCOL_SLUGS, isDedicatedSingleTokenGoldProtocolSlug } from "@shared/lib/commodity-protocols";
 import { CanonicalOrderAssetSchema } from "@shared/lib/stablecoins/schema";
-import { type ListingDecisionRegistry } from "@shared/lib/stablecoins/listing-governance";
+import { LISTING_POLICY_VERSION, type ListingDecisionRegistry } from "@shared/lib/stablecoins/listing-governance";
 import { isActiveStablecoinMeta, isReadableStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { validateMintBridgeOwnership } from "@shared/lib/stablecoins/mint-bridge-ownership";
 import { validateVariantRelationships } from "@shared/lib/stablecoins/validate-variants";
@@ -72,7 +72,7 @@ const ACTIVE_DEAD_LLAMA_ID_OVERLAP_ALLOWLIST = new Set([
 const ListingDecisionRegistrySchema: z.ZodType<ListingDecisionRegistry> = z
   .object({
     schemaVersion: z.literal(1),
-    policyVersion: z.string().trim().min(1),
+    policyVersion: z.literal(LISTING_POLICY_VERSION),
     listingClassById: z.record(z.string().trim().min(1), z.enum(LISTING_CLASS_VALUES)),
   })
   .strict();
@@ -659,6 +659,64 @@ export function getListingGovernanceIssues(
   return issues;
 }
 
+/**
+ * Reviewed active `tokenized-fund` listings whose sole active non-fund linker
+ * lives in a live reserve adapter's `coinId` map rather than static coin or
+ * reserve sidecar data. Remove an entry when the adapter link retires.
+ */
+export const REVIEWED_LIVE_ADAPTER_ONLY_TOKENIZED_FUND_LINKS: Readonly<Record<string, string>> = {
+  "jaaa-janus-henderson-anemoy": "usdf-falcon via worker/src/cron/reserve-adapters/falcon.ts",
+  "jtrsy-anemoy": "usdf-falcon via worker/src/cron/reserve-adapters/falcon.ts",
+};
+
+/**
+ * Advisory policy 2.0 retention check: every active `tokenized-fund` must be
+ * linked by at least one active non-fund asset in static dependencies, reserve
+ * sidecar `coinId` slices, or `dependencyReview.relationships` (or appear in
+ * `REVIEWED_LIVE_ADAPTER_ONLY_TOKENIZED_FUND_LINKS`). `nonLinkDispositions` do
+ * not qualify.
+ */
+export function getUnlinkedActiveTokenizedFundWarnings(
+  coins: readonly StablecoinMeta[],
+  listingDecisions: unknown = listingDecisionsAsset,
+  liveAdapterOnlyLinks: Readonly<Record<string, string>> = REVIEWED_LIVE_ADAPTER_ONLY_TOKENIZED_FUND_LINKS,
+): string[] {
+  const decisionsResult = ListingDecisionRegistrySchema.safeParse(listingDecisions);
+  if (!decisionsResult.success) return [];
+
+  const { listingClassById } = decisionsResult.data;
+  const linkedByActiveNonFund = new Set<string>();
+  for (const coin of coins) {
+    if (!isActiveStablecoinMeta(coin)) continue;
+    const coinClass = listingClassById[coin.id];
+    if (coinClass === "tokenized-fund" || coinClass === "excluded") continue;
+
+    for (const dependency of coin.dependencies ?? []) {
+      linkedByActiveNonFund.add(dependency.id);
+    }
+    for (const reserve of coin.reserves ?? []) {
+      if (reserve.coinId) {
+        linkedByActiveNonFund.add(reserve.coinId);
+      }
+    }
+    for (const relationship of coin.dependencyReview?.relationships ?? []) {
+      linkedByActiveNonFund.add(relationship.id);
+    }
+  }
+
+  const warnings: string[] = [];
+  for (const coin of coins) {
+    if (!isActiveStablecoinMeta(coin)) continue;
+    if (listingClassById[coin.id] !== "tokenized-fund") continue;
+    if (linkedByActiveNonFund.has(coin.id)) continue;
+    if (Object.prototype.hasOwnProperty.call(liveAdapterOnlyLinks, coin.id)) continue;
+    warnings.push(
+      `active tokenized-fund "${coin.id}" has no active non-fund linker in static dependencies, reserves, or dependencyReview (delist at next review or record a reviewed live-adapter link)`,
+    );
+  }
+  return warnings;
+}
+
 function getDeadStablecoinRegistryIssues(deadCoins: readonly DeadStablecoin[]): string[] {
   const issues: string[] = [];
   const seenIds = new Map<string, string>();
@@ -907,6 +965,10 @@ function runStablecoinDataCheck(): void {
 
     for (const issue of getListingGovernanceIssues(allEntries.map((entry) => entry.coin))) {
       reportError(`${STABLECOIN_DATA_DIR}: ${issue}`);
+    }
+
+    for (const warning of getUnlinkedActiveTokenizedFundWarnings(allEntries.map((entry) => entry.coin))) {
+      reportWarning(`${STABLECOIN_DATA_DIR}: ${warning}`);
     }
 
     const canonicalIssues = findCanonicalOrderIssues(canonicalOrder, allEntries);
