@@ -12,6 +12,7 @@ import {
 } from "./authoritative-price-sources.test-support";
 
 import { getProtocolParPriceOverride } from "../authoritative-price-sources/protocol-par";
+import { m0ExtensionProvider } from "../authoritative-price-sources/m0-extension";
 
 const fetchMarketBackfillPriceSeriesMock = vi.fn();
 
@@ -40,41 +41,19 @@ describe("authoritative-price-sources", () => {
     fetchMarketBackfillPriceSeriesMock.mockResolvedValue(makeHistoricalPriceSeries([
       { timestamp: 1_710_000_000, price: 1 }, { timestamp: 1_710_086_400, price: 1 },
     ]));
-
     const result = await fetchAuthoritativeHistoricalPriceSeries(
-      makeHistoricalMeta("cusd-cap", "Cap cUSD", "CUSD", {
-        flags: {
-          governance: "centralized-dependent",
-        },
-      }),
-      {
-        candidateTimestamps: [1_710_000_000, 1_710_086_400],
-        supplySnapshots: [
-          { ts: 1_710_000_000, supply: 100_000_000 },
-          { ts: 1_710_086_400, supply: 105_000_000 },
-        ],
-      },
+      makeHistoricalMeta("cusd-cap", "Cap cUSD", "CUSD", { flags: { governance: "centralized-dependent" } }),
+      { candidateTimestamps: [1_710_000_000, 1_710_086_400], supplySnapshots: [{ ts: 1_710_000_000, supply: 100_000_000 }, { ts: 1_710_086_400, supply: 105_000_000 }] },
     );
-
     expect(result).toEqual({
-      matched: true,
-      source: "protocol-redeem",
-      prices: [
-        { timestamp: 1_710_000_000, price: 0.99999266 },
-        { timestamp: 1_710_086_400, price: 0.99999266 },
-      ],
+      matched: true, source: "protocol-redeem",
+      prices: [{ timestamp: 1_710_000_000, price: 0.99999266 }, { timestamp: 1_710_086_400, price: 0.99999266 }],
     });
     expect(resolveClosestBlockAtOrBeforeTimestampMock).toHaveBeenCalledTimes(2);
     expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledTimes(2);
     expect(fetchEvmCallHexAtBlockMock).toHaveBeenNthCalledWith(
-      1,
-      "ethereum",
-      "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
-      expect.stringMatching(/^0xb7c4a6bf/),
-      22_874_100,
-      expect.objectContaining({
-        extraRpcUrls: ["https://ethereum-rpc.publicnode.com", "https://eth.llamarpc.com"],
-      }),
+      1, "ethereum", "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc", expect.stringMatching(/^0xb7c4a6bf/), 22_874_100,
+      expect.objectContaining({ extraRpcUrls: ["https://ethereum-rpc.publicnode.com", "https://eth.llamarpc.com"] }),
     );
   });
 
@@ -82,137 +61,58 @@ describe("authoritative-price-sources", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     resolveClosestBlockAtOrBeforeTimestampMock.mockRejectedValue(new Error("rpc index down"));
     fetchMarketBackfillPriceSeriesMock.mockResolvedValue(makeHistoricalPriceSeries([{ timestamp: 1_710_000_000, price: 1 }]));
-
     const result = await fetchAuthoritativeHistoricalPriceSeries(
-      makeHistoricalMeta("cusd-cap", "Cap cUSD", "CUSD", {
-        flags: {
-          governance: "centralized-dependent",
-        },
-      }),
-      {
-        candidateTimestamps: [1_710_000_000],
-        supplySnapshots: [{ ts: 1_710_000_000, supply: 100_000_000 }],
-      },
+      makeHistoricalMeta("cusd-cap", "Cap cUSD", "CUSD", { flags: { governance: "centralized-dependent" } }),
+      { candidateTimestamps: [1_710_000_000], supplySnapshots: [{ ts: 1_710_000_000, supply: 100_000_000 }] },
     );
-
-    expect(result).toEqual({
-      matched: true,
-      source: "protocol-redeem",
-      prices: null,
-    });
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("[authoritative-price-sources] cusd-cap historical source failed:"),
-    );
+    expect(result).toEqual({ matched: true, source: "protocol-redeem", prices: null });
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("[authoritative-price-sources] cusd-cap historical source failed:"));
     warnSpy.mockRestore();
   });
 
   it("returns a live iUSD override from the infiniFi redeem quote", async () => {
     fetchEvmCallHexAtBlockMock.mockResolvedValue(IUSD_QUOTE_HEX);
-
     const overrides = await fetchLiveOverrides([
       asset("iusd-infinifi", { circulating: { peggedUSD: 180_000_000 } }),
       freshParent("usdc-circle", 1, "coingecko+pyth"),
     ]);
-
     expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledTimes(1);
     expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledWith(
-      "ethereum",
-      "0xCb1747E89a43DEdcF4A2b831a0D94859EFeC7601",
-      expect.stringMatching(/^0xf308cf65/),
-      "latest",
-      expect.objectContaining({
-        extraRpcUrls: ["https://ethereum-rpc.publicnode.com", "https://eth.llamarpc.com"],
-      }),
+      "ethereum", "0xCb1747E89a43DEdcF4A2b831a0D94859EFeC7601", expect.stringMatching(/^0xf308cf65/), "latest",
+      expect.objectContaining({ extraRpcUrls: ["https://ethereum-rpc.publicnode.com", "https://eth.llamarpc.com"] }),
     );
-
-    expect(overrides.get("iusd-infinifi")).toMatchObject({
-      price: 1,
-      source: "protocol-redeem",
-      confidence: "high",
-    });
+    expect(overrides.get("iusd-infinifi")).toMatchObject({ price: 1, source: "protocol-redeem", confidence: "high" });
   });
 
   it("returns a live USDAI override from tracked PYUSD pricing", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const overrides = await fetchLiveOverrides([
       asset("usdai-usd-ai", { circulating: { peggedUSD: 27_000_000 } }),
-      freshParent("pyusd-paypal", 1.00006543, "coingecko+defillama-list+pyth", {
-        nowSec,
-        circulating: { peggedUSD: 880_000_000 },
-      }),
+      freshParent("pyusd-paypal", 1.00006543, "coingecko+defillama-list+pyth", { nowSec, circulating: { peggedUSD: 880_000_000 } }),
     ]);
-
     expect(overrides.get("usdai-usd-ai")).toEqual({
-      price: 1.00006543,
-      source: "protocol-redeem",
-      confidence: "high",
-      observedAt: nowSec - 60,
-      observedAtMode: "upstream",
+      price: 1.00006543, source: "protocol-redeem", confidence: "high", observedAt: nowSec - 60, observedAtMode: "upstream",
       metadata: {
-        inheritedFrom: "pyusd-paypal",
-        parentSource: "coingecko+defillama-list+pyth",
-        parentConfidence: "high",
-        parentObservedAt: nowSec - 60,
-        parentObservedAtMode: "upstream",
-        parentReplaySafe: true,
+        inheritedFrom: "pyusd-paypal", parentSource: "coingecko+defillama-list+pyth",
+        parentConfidence: "high", parentObservedAt: nowSec - 60, parentObservedAtMode: "upstream", parentReplaySafe: true,
       },
     });
     expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
   });
 
-  it("returns live inherited overrides for M0 extension assets from tracked wM pricing", async () => {
+  it("returns live inherited overrides for M0 extension assets from tracked M pricing", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
+    const ids = ["wm-m0", "usdk-kast", "xo-exodus", "usdnr-nerona"] as const;
     const overrides = await fetchLiveOverrides([
-      asset("m-m0", { circulating: { peggedUSD: 299_000_000 } }),
-      asset("usdk-kast", { circulating: { peggedUSD: 24_000_000 } }),
-      asset("xo-exodus", { circulating: { peggedUSD: 1_600_000 } }),
-      asset("usdnr-nerona", { circulating: { peggedUSD: 50_000_000 } }),
-      freshParent("wm-m0", 0.99981234, "coingecko+raydium-dex", {
-        nowSec,
-        circulating: { peggedUSD: 93_000_000 },
-      }),
+      ...ids.map((id) => asset(id, { circulating: { peggedUSD: 24_000_000 } })),
+      freshParent("m-m0", 0.99981234, "coingecko+raydium-dex", { nowSec, circulating: { peggedUSD: 283_000_000 } }),
     ]);
-
-    expect(overrides.get("m-m0")).toMatchObject({
-      price: 0.99981234,
-      source: "protocol-redeem",
-      confidence: "high",
-      observedAt: nowSec - 60,
-      metadata: {
-        inheritedFrom: "wm-m0",
-        parentReplaySafe: true,
-      },
-    });
-    expect(overrides.get("usdk-kast")).toMatchObject({
-      price: 0.99981234,
-      source: "protocol-redeem",
-      confidence: "high",
-      observedAt: nowSec - 60,
-      metadata: {
-        inheritedFrom: "wm-m0",
-        parentReplaySafe: true,
-      },
-    });
-    expect(overrides.get("xo-exodus")).toMatchObject({
-      price: 0.99981234,
-      source: "protocol-redeem",
-      confidence: "high",
-      observedAt: nowSec - 60,
-      metadata: {
-        inheritedFrom: "wm-m0",
-        parentReplaySafe: true,
-      },
-    });
-    expect(overrides.get("usdnr-nerona")).toMatchObject({
-      price: 0.99981234,
-      source: "protocol-redeem",
-      confidence: "high",
-      observedAt: nowSec - 60,
-      metadata: {
-        inheritedFrom: "wm-m0",
-        parentReplaySafe: true,
-      },
-    });
+    for (const id of ids) {
+      expect(overrides.get(id)).toMatchObject({
+        price: 0.99981234, source: "protocol-redeem", confidence: "high", observedAt: nowSec - 60,
+        metadata: { inheritedFrom: "m-m0", parentReplaySafe: true },
+      });
+    }
   });
 
   it("returns live inherited overrides for AUSD and USDC extension assets", async () => {
@@ -221,62 +121,25 @@ describe("authoritative-price-sources", () => {
       asset("iusd-initia", { circulating: { peggedUSD: 54_000_000 } }),
       asset("usdcx-movement", { circulating: { peggedUSD: 6_000_000 } }),
       asset("weusd-picwe", { circulating: { peggedUSD: 500_000 } }),
-      freshParent("ausd-agora", 1.000012, "coingecko+pyth", {
-        nowSec,
-        circulating: { peggedUSD: 120_000_000 },
-      }),
-      freshParent("usdc-circle", 0.99998, "coingecko+pyth", {
-        nowSec,
-        circulating: { peggedUSD: 61_000_000_000 },
-      }),
+      freshParent("ausd-agora", 1.000012, "coingecko+pyth", { nowSec, circulating: { peggedUSD: 120_000_000 } }),
+      freshParent("usdc-circle", 0.99998, "coingecko+pyth", { nowSec, circulating: { peggedUSD: 61_000_000_000 } }),
     ]);
-
-    expect(overrides.get("iusd-initia")).toMatchObject({
-      price: 1.000012,
-      source: "protocol-redeem",
-      confidence: "high",
-      metadata: {
-        inheritedFrom: "ausd-agora",
-        parentReplaySafe: true,
-      },
-    });
-    expect(overrides.get("usdcx-movement")).toMatchObject({
-      price: 0.99998,
-      source: "protocol-redeem",
-      confidence: "high",
-      metadata: {
-        inheritedFrom: "usdc-circle",
-        parentReplaySafe: true,
-      },
-    });
-    expect(overrides.get("weusd-picwe")).toMatchObject({
-      price: 0.9899802,
-      source: "protocol-redeem",
-      confidence: "high",
-      metadata: {
-        inheritedFrom: "usdc-circle",
-        parentReplaySafe: true,
-      },
-    });
+    for (const [id, price, parent] of [["iusd-initia", 1.000012, "ausd-agora"], ["usdcx-movement", 0.99998, "usdc-circle"], ["weusd-picwe", 0.9899802, "usdc-circle"]] as const) {
+      expect(overrides.get(id)).toMatchObject({ price, source: "protocol-redeem", confidence: "high", metadata: { inheritedFrom: parent, parentReplaySafe: true } });
+    }
   });
 
-  it.each([
-    ["protocol-derived", "protocol-redeem"],
-    ["cached replay", "cached"],
-    ["unregistered", "not-a-registered-source"],
-  ])("treats a fresh %s incumbent as a non-market WEUSD price", async (_kind, incumbentSource) => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const overrides = await fetchLiveOverrides([
-      freshParent("weusd-picwe", 0.99, incumbentSource, { nowSec }),
-      freshParent("usdc-circle", 0.99998, "coingecko+pyth", { nowSec }),
-    ]);
-
-    expect(overrides.get("weusd-picwe")).toMatchObject({
-      price: 0.9899802,
-      source: "protocol-redeem",
-      metadata: { inheritedFrom: "usdc-circle" },
-    });
-  });
+  it.each([["protocol-derived", "protocol-redeem"], ["cached replay", "cached"], ["unregistered", "not-a-registered-source"]])(
+    "treats a fresh %s incumbent as a non-market WEUSD price",
+    async (_kind, incumbentSource) => {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const overrides = await fetchLiveOverrides([
+        freshParent("weusd-picwe", 0.99, incumbentSource, { nowSec }),
+        freshParent("usdc-circle", 0.99998, "coingecko+pyth", { nowSec }),
+      ]);
+      expect(overrides.get("weusd-picwe")).toMatchObject({ price: 0.9899802, source: "protocol-redeem", metadata: { inheritedFrom: "usdc-circle" } });
+    },
+  );
 
   it("builds nominal fallbacks independently of observed-route dispatch", () => {
     const overrides = new Map(["sofid-sofi", "usbd-bima", "usdq-quill", "zarm-mento", "xofm-mento"].map((id) =>
@@ -322,421 +185,145 @@ describe("authoritative-price-sources", () => {
     fetchMarketBackfillPriceSeriesMock.mockResolvedValue(makeHistoricalPriceSeries([
       { timestamp: 1_767_196_936, price: 0.9 }, { timestamp: 1_768_107_667, price: 1.02 },
     ]));
-
     const result = await fetchAuthoritativeHistoricalPriceSeries(
-      makeHistoricalMeta("iusd-infinifi", "infiniFi USD", "IUSD", {
-        flags: {
-          backing: "crypto-backed",
-          governance: "centralized-dependent",
-          yieldBearing: true,
-        },
-      }),
-      {
-        candidateTimestamps: [1_767_196_936, 1_768_107_667],
-      },
+      makeHistoricalMeta("iusd-infinifi", "infiniFi USD", "IUSD", { flags: { backing: "crypto-backed", governance: "centralized-dependent", yieldBearing: true } }),
+      { candidateTimestamps: [1_767_196_936, 1_768_107_667] },
     );
-
     expect(result).toEqual({
-      matched: true,
-      source: "protocol-redeem",
-      prices: [
-        { timestamp: 1_767_196_936, price: 0.9 },
-        { timestamp: 1_768_107_667, price: 1.02 },
-      ],
+      matched: true, source: "protocol-redeem",
+      prices: [{ timestamp: 1_767_196_936, price: 0.9 }, { timestamp: 1_768_107_667, price: 1.02 }],
     });
     expect(resolveClosestBlockAtOrBeforeTimestampMock).toHaveBeenCalledTimes(2);
     expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledTimes(2);
     expect(fetchEvmCallHexAtBlockMock).toHaveBeenNthCalledWith(
-      1,
-      "ethereum",
-      "0xCb1747E89a43DEdcF4A2b831a0D94859EFeC7601",
-      expect.stringMatching(/^0xf308cf65/),
-      24_133_673,
-      expect.objectContaining({
-        extraRpcUrls: ["https://ethereum-rpc.publicnode.com", "https://eth.llamarpc.com"],
-      }),
+      1, "ethereum", "0xCb1747E89a43DEdcF4A2b831a0D94859EFeC7601", expect.stringMatching(/^0xf308cf65/), 24_133_673,
+      expect.objectContaining({ extraRpcUrls: ["https://ethereum-rpc.publicnode.com", "https://eth.llamarpc.com"] }),
     );
   });
 
-  it("replays historical USDAI prices from the tracked PYUSD market series", async () => {
-    fetchMarketBackfillPriceSeriesMock.mockResolvedValue(
-      makeHistoricalPriceSeries([
-        { timestamp: 1_759_363_200, price: 0.99994 },
-        { timestamp: 1_759_366_800, price: 1.00011 },
-      ]),
-    );
-
-    const result = await fetchAuthoritativeHistoricalPriceSeries(
-      makeHistoricalMeta("usdai-usd-ai", "USDai", "USDai", {
-        flags: {
-          governance: "centralized-dependent",
-        },
-      }),
-      {
-        candidateTimestamps: [1_759_363_200, 1_759_366_800],
-      },
-    );
-
-    expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenCalledTimes(1);
+  it("replays historical USDAI prices from the tracked PYUSD market series and forwards API key", async () => {
+    fetchMarketBackfillPriceSeriesMock.mockResolvedValue(makeHistoricalPriceSeries([
+      { timestamp: 1_759_363_200, price: 0.99994 }, { timestamp: 1_759_366_800, price: 1.00011 },
+    ]));
+    const meta = makeHistoricalMeta("usdai-usd-ai", "USDai", "USDai", { flags: { governance: "centralized-dependent" } });
+    const result = await fetchAuthoritativeHistoricalPriceSeries(meta, { candidateTimestamps: [1_759_363_200, 1_759_366_800] });
     expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: "pyusd-paypal",
-        geckoId: "paypal-usd",
-      }),
-      "paypal-usd",
-      {
-        granularity: "hourly",
-        coingeckoApiKey: null,
-      },
+      expect.objectContaining({ id: "pyusd-paypal", geckoId: "paypal-usd" }), "paypal-usd", { granularity: "hourly", coingeckoApiKey: null },
     );
     expect(result).toEqual({
-      matched: true,
-      source: "protocol-redeem",
-      prices: [
-        { timestamp: 1_759_363_200, price: 0.99994 },
-        { timestamp: 1_759_366_800, price: 1.00011 },
-      ],
+      matched: true, source: "protocol-redeem",
+      prices: [{ timestamp: 1_759_363_200, price: 0.99994 }, { timestamp: 1_759_366_800, price: 1.00011 }],
     });
+    await fetchAuthoritativeHistoricalPriceSeries(meta, { candidateTimestamps: [1_759_363_200], coingeckoApiKey: "cg-pro-key" });
+    expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ id: "pyusd-paypal", geckoId: "paypal-usd" }), "paypal-usd", { granularity: "hourly", coingeckoApiKey: "cg-pro-key" },
+    );
   });
 
   it.each([
-    ["usdk-kast", "KAST Dollar", "USDK"],
-    ["xo-exodus", "XO Cash", "XO"],
-    ["usdnr-nerona", "Nerona USD", "USDnr"],
-    ["m-m0", "M by M0", "M"],
-  ])("replays historical %s prices from the tracked wM market series", async (id, name, symbol) => {
-    fetchMarketBackfillPriceSeriesMock.mockResolvedValue(
-      makeHistoricalPriceSeries([
-        { timestamp: 1_776_000_000, price: 0.99971 },
-        { timestamp: 1_776_003_600, price: 1.00006 },
-      ]),
-    );
-
+    ["usdk-kast", true, "protocol-redeem"], ["xo-exodus", true, "protocol-redeem"], ["usdnr-nerona", true, "protocol-redeem"],
+    ["wm-m0", false, null], ["m-m0", false, null], ["weusd-picwe", false, null], ["oned-gennius", false, null], ["pyusdx-moonpay", false, null],
+  ] as const)("preserves backfill / own market history for %s without synthesizing parent series", async (id, matched, source) => {
     const result = await fetchAuthoritativeHistoricalPriceSeries(
-      makeHistoricalMeta(id, name, symbol, {
-        flags: {
-          governance: "centralized",
-          rwa: true,
-        },
-      }),
-      {
-        candidateTimestamps: [1_776_000_000, 1_776_003_600],
-      },
+      makeHistoricalMeta(id, id, id.toUpperCase(), { flags: { governance: "centralized", rwa: true } }),
+      { candidateTimestamps: [1_776_000_000, 1_776_003_600] },
     );
-    expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenCalledTimes(1);
-    expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: "wm-m0",
-        geckoId: "wrappedm-by-m0",
-      }),
-      "wrappedm-by-m0",
-      {
-        granularity: "hourly",
-        coingeckoApiKey: null,
-      },
-    );
-    expect(result).toEqual({
-      matched: true,
-      source: "protocol-redeem",
-      prices: [
-        { timestamp: 1_776_000_000, price: 0.99971 },
-        { timestamp: 1_776_003_600, price: 1.00006 },
-      ],
-    });
-  });
-
-  it.each([
-    ["weusd-picwe", "Wrapped eUSD", "WEUSD"],
-    ["oned-gennius", "ONED USD", "ONED"],
-    ["pyusdx-moonpay", "PYUSDx", "PYUSDx"],
-  ])("leaves %s historical replay to its own market-price sources", async (id, name, symbol) => {
-    const result = await fetchAuthoritativeHistoricalPriceSeries(
-      makeHistoricalMeta(id, name, symbol),
-      {
-        candidateTimestamps: [1_776_000_000, 1_776_003_600],
-      },
-    );
-
-    expect(result).toEqual({
-      matched: false,
-      source: null,
-      prices: null,
-    });
+    expect(result).toEqual({ matched, source, prices: null });
     expect(fetchMarketBackfillPriceSeriesMock).not.toHaveBeenCalled();
   });
 
-  it("passes the CoinGecko API key through authoritative market-history replays", async () => {
-    fetchMarketBackfillPriceSeriesMock.mockResolvedValue(
-      makeHistoricalPriceSeries([{ timestamp: 1_759_363_200, price: 1 }]),
-    );
-
-    await fetchAuthoritativeHistoricalPriceSeries(
-      makeHistoricalMeta("usdai-usd-ai", "USDai", "USDai", {
-        flags: {
-          governance: "centralized-dependent",
-        },
-      }),
-      {
-        candidateTimestamps: [1_759_363_200],
-        coingeckoApiKey: "cg-pro-key",
-      },
-    );
-
-    expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: "pyusd-paypal",
-        geckoId: "paypal-usd",
-      }),
-      "paypal-usd",
-      {
-        granularity: "hourly",
-        coingeckoApiKey: "cg-pro-key",
-      },
-    );
-  });
-
-  it("skips inherited tracked-price overrides when the parent price is low confidence, cached, stale, or missing provenance", async () => {
+  it("skips untrusted M parents and falls back to nominal par for USDK/USDN", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const child = asset("usdk-kast", { circulating: { peggedUSD: 24_000_000 } });
-
+    const par = { price: 1, source: "protocol-par", confidence: null, observedAt: null, observedAtMode: "nominal_reference" };
     for (const parent of [
-      freshParent("wm-m0", 0.9998, "coingecko+pyth", { nowSec, priceConfidence: "low" }),
-      freshParent("wm-m0", 0.9998, "cached", { nowSec }),
-      freshParent("wm-m0", 0.9998, "coingecko+pyth", { nowSec, observedAt: nowSec - 1_000 }),
-      asset("wm-m0", {
-        price: 0.9998,
-        priceConfidence: "high",
-        priceObservedAt: nowSec - 60,
-        priceObservedAtMode: "upstream",
-      }),
+      freshParent("m-m0", 0.9998, "coingecko+pyth", { nowSec, priceConfidence: "low" }),
+      freshParent("m-m0", 0.9998, "cached", { nowSec }),
+      freshParent("m-m0", 0.9998, "coingecko+pyth", { nowSec, observedAt: nowSec - 1_000 }),
+      asset("m-m0", { price: 0.9998, priceConfidence: "high", priceObservedAt: nowSec - 60, priceObservedAtMode: "upstream" }),
     ]) {
-      const overrides = await fetchLiveOverrides([child, parent]);
-      // The unusable parent is never inherited; the reviewed M0 redemption par
-      // takes its place as an explicit nominal reference.
-      expect(overrides.get("usdk-kast")).toEqual({
-        price: 1,
-        source: "protocol-par",
-        confidence: null,
-        observedAt: null,
-        observedAtMode: "nominal_reference",
-      });
+      const overrides = await fetchLiveOverrides([asset("usdk-kast"), asset("wm-m0"), parent]);
+      expect(overrides.has("wm-m0")).toBe(false);
+      expect(overrides.get("usdk-kast")).toEqual(par);
     }
-
+    for (const id of ["usdk-kast", "usdn-noble"]) {
+      expect((await fetchLiveOverrides([asset(id)])).get(id)).toEqual(par);
+    }
     warnSpy.mockRestore();
   });
 
-  it.each(["usdk-kast", "usdn-noble"])(
-    "publishes reviewed M0 redemption par for %s while its tracked parent has no usable quote",
-    async (id) => {
-      const overrides = await fetchLiveOverrides([asset(id, { circulating: { peggedUSD: 4_000_000 } })]);
+  it("applies M0 parent trust rules for protocol-authoritative, address-composite, single-source, and same-run chains", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const proto = await fetchLiveOverrides([
+      asset("usdk-kast"),
+      freshParent("m-m0", 0.9998, "protocol-redeem", { nowSec, priceConfidence: "single-source", priceObservedAtMode: "local_fetch" }),
+    ]);
+    expect(proto.get("usdk-kast")).toMatchObject({
+      price: 0.9998, source: "protocol-redeem", confidence: "high",
+      metadata: { inheritedFrom: "m-m0", parentSource: "protocol-redeem", parentConfidence: "single-source", parentReplaySafe: true },
+    });
 
-      expect(overrides.get(id)).toEqual({
-        price: 1,
-        source: "protocol-par",
-        confidence: null,
-        observedAt: null,
-        observedAtMode: "nominal_reference",
+    const addr = await fetchLiveOverrides([
+      asset("usdk-kast"), asset("xo-exodus"), asset("wm-m0"),
+      freshParent("m-m0", 0.9998, "alchemy-address+coingecko+coingecko-onchain-address+moralis-address", { nowSec, priceObservedAtMode: "local_fetch" }),
+    ]);
+    for (const id of ["usdk-kast", "xo-exodus"]) {
+      expect(addr.get(id)).toMatchObject({ price: 0.9998, source: "protocol-redeem", confidence: "high", metadata: { inheritedFrom: "m-m0", parentReplaySafe: false } });
+    }
+    expect(addr.has("wm-m0")).toBe(false);
+
+    const singleIds = ["wm-m0", "usdk-kast", "xo-exodus", "usdnr-nerona"] as const;
+    const single = await fetchLiveOverrides([
+      ...singleIds.map((id) => asset(id)),
+      freshParent("m-m0", 0.999674, "coingecko", { nowSec, priceConfidence: "single-source" }),
+    ]);
+    for (const id of singleIds) {
+      expect(single.get(id)).toMatchObject({
+        price: 0.999674, source: "coingecko", confidence: "single-source",
+        metadata: { inheritedFrom: "m-m0", parentSource: "coingecko", parentConfidence: "single-source", parentReplaySafe: true },
       });
-    },
-  );
+    }
 
-  it("allows inherited tracked-price overrides from a fresh protocol-authoritative parent", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const overrides = await fetchLiveOverrides([
-      asset("usdk-kast", { circulating: { peggedUSD: 24_000_000 } }),
-      freshParent("wm-m0", 0.9998, "protocol-redeem", {
-        nowSec,
-        priceConfidence: "single-source",
-        priceObservedAtMode: "local_fetch",
-      }),
+    const usdn = await fetchLiveOverrides([
+      asset("usdn-noble"),
+      freshParent("m-m0", 0.999766, "defillama-contract", { nowSec, priceConfidence: "single-source" }),
     ]);
-
-    expect(overrides.get("usdk-kast")).toMatchObject({
-      price: 0.9998,
-      source: "protocol-redeem",
-      confidence: "high",
-      metadata: {
-        inheritedFrom: "wm-m0",
-        parentSource: "protocol-redeem",
-        parentConfidence: "single-source",
-        parentReplaySafe: true,
-      },
+    expect(usdn.get("usdn-noble")).toMatchObject({
+      price: 0.999766, source: "defillama-contract", confidence: "single-source",
+      metadata: { inheritedFrom: "m-m0", parentSource: "defillama-contract", parentConfidence: "single-source", parentReplaySafe: true },
     });
+
+    const m0Spy = vi.spyOn(m0ExtensionProvider, "fetchLivePrice").mockResolvedValue({
+      price: 0.999812, source: "coingecko", confidence: "single-source", observedAt: nowSec - 60, observedAtMode: "upstream",
+      metadata: { inheritedFrom: "musd-metamask", parentReplaySafe: true },
+    });
+    try {
+      const chain = await fetchLiveOverrides([
+        unpricedChild("m-m0"), unpricedChild("wm-m0"), unpricedChild("usdn-noble"),
+        freshParent("musd-metamask", 0.999812, "coingecko", { nowSec, priceConfidence: "single-source" }),
+      ]);
+      expect(chain.get("m-m0")).toMatchObject({ price: 0.999812, source: "coingecko", confidence: "single-source", metadata: { inheritedFrom: "musd-metamask", parentReplaySafe: true } });
+      for (const id of ["wm-m0", "usdn-noble"]) {
+        expect(chain.get(id)).toMatchObject({ price: 0.999812, source: "coingecko", confidence: "single-source", metadata: { inheritedFrom: "m-m0", parentReplaySafe: true } });
+      }
+    } finally {
+      m0Spy.mockRestore();
+    }
   });
 
-  it("allows scoped M0 wrappers to inherit a fresh high-confidence address-composite parent", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const overrides = await fetchLiveOverrides([
-      asset("usdk-kast", { circulating: { peggedUSD: 24_000_000 } }),
-      asset("xo-exodus", { circulating: { peggedUSD: 2_400_000 } }),
-      asset("m-m0", { circulating: { peggedUSD: 300_000_000 } }),
-      freshParent("wm-m0", 0.9998, "alchemy-address+coingecko+coingecko-onchain-address+moralis-address", {
-        nowSec,
-        priceObservedAtMode: "local_fetch",
-      }),
-    ]);
-
-    expect(overrides.get("usdk-kast")).toMatchObject({
-      price: 0.9998,
-      source: "protocol-redeem",
-      confidence: "high",
-      metadata: {
-        inheritedFrom: "wm-m0",
-        parentReplaySafe: false,
-      },
-    });
-    expect(overrides.get("xo-exodus")).toMatchObject({
-      price: 0.9998,
-      source: "protocol-redeem",
-      confidence: "high",
-      metadata: {
-        inheritedFrom: "wm-m0",
-        parentReplaySafe: false,
-      },
-    });
-    expect(overrides.has("m-m0")).toBe(false);
-  });
-
-  it("keeps scoped M0 wrapper overrides single-source when inheriting a fresh replay-safe single-source parent", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const overrides = await fetchLiveOverrides([
-      asset("m-m0", { circulating: { peggedUSD: 300_000_000 } }),
-      asset("usdk-kast", { circulating: { peggedUSD: 24_000_000 } }),
-      asset("xo-exodus", { circulating: { peggedUSD: 2_400_000 } }),
-      freshParent("wm-m0", 0.999674, "coingecko", {
-        nowSec,
-        priceConfidence: "single-source",
-      }),
-    ]);
-
-    expect(overrides.get("m-m0")).toMatchObject({
-      price: 0.999674,
-      source: "coingecko",
-      confidence: "single-source",
-      metadata: {
-        inheritedFrom: "wm-m0",
-        parentSource: "coingecko",
-        parentConfidence: "single-source",
-        parentReplaySafe: true,
-      },
-    });
-    expect(overrides.get("usdk-kast")).toMatchObject({
-      price: 0.999674,
-      source: "coingecko",
-      confidence: "single-source",
-      metadata: {
-        inheritedFrom: "wm-m0",
-        parentSource: "coingecko",
-        parentConfidence: "single-source",
-        parentReplaySafe: true,
-      },
-    });
-    expect(overrides.get("xo-exodus")).toMatchObject({
-      price: 0.999674,
-      source: "coingecko",
-      confidence: "single-source",
-      metadata: {
-        inheritedFrom: "wm-m0",
-        parentSource: "coingecko",
-        parentConfidence: "single-source",
-        parentReplaySafe: true,
-      },
-    });
-  });
-
-  it("allows Noble USDN to inherit a fresh replay-safe M parent", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const overrides = await fetchLiveOverrides([
-      asset("usdn-noble", { circulating: { peggedUSD: 4_000_000 } }),
-      freshParent("m-m0", 0.999766, "defillama-contract", {
-        nowSec,
-        priceConfidence: "single-source",
-      }),
-    ]);
-
-    expect(overrides.get("usdn-noble")).toMatchObject({
-      price: 0.999766,
-      source: "defillama-contract",
-      confidence: "single-source",
-      metadata: {
-        inheritedFrom: "m-m0",
-        parentSource: "defillama-contract",
-        parentConfidence: "single-source",
-        parentReplaySafe: true,
-      },
-    });
-  });
-
-  it("resolves a same-run wM -> M -> Noble USDN dependency chain", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const overrides = await fetchLiveOverrides([
-      unpricedChild("m-m0"),
-      unpricedChild("usdn-noble"),
-      freshParent("wm-m0", 0.999812, "coingecko", {
-        nowSec,
-        priceConfidence: "single-source",
-      }),
-    ]);
-
-    expect(overrides.get("m-m0")).toMatchObject({
-      price: 0.999812,
-      source: "coingecko",
-      confidence: "single-source",
-      metadata: {
-        inheritedFrom: "wm-m0",
-        parentReplaySafe: true,
-      },
-    });
-    expect(overrides.get("usdn-noble")).toMatchObject({
-      price: 0.999812,
-      source: "coingecko",
-      confidence: "single-source",
-      metadata: {
-        inheritedFrom: "m-m0",
-        parentReplaySafe: true,
-      },
-    });
-  });
-
-  it("does not return a crvUSD override (demoted to regular consensus source)", async () => {
-    const overrides = await fetchLiveOverrides([
-      asset("crvusd-curve", { circulating: { peggedUSD: 400_000_000 } }),
-    ]);
-
+  it("does not return a crvUSD override and preserves backfill rows when coverage is too low", async () => {
+    const overrides = await fetchLiveOverrides([asset("crvusd-curve", { circulating: { peggedUSD: 400_000_000 } })]);
     expect(overrides.has("crvusd-curve")).toBe(false);
     expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
-  });
-  it("preserves existing backfill rows when authoritative history coverage is too low", async () => {
+
     resolveClosestBlockAtOrBeforeTimestampMock.mockResolvedValueOnce(22_874_100);
     fetchEvmCallHexAtBlockMock.mockResolvedValue(QUOTE_HEX);
     fetchMarketBackfillPriceSeriesMock.mockResolvedValue(makeHistoricalPriceSeries([
       { timestamp: 1_710_000_000, price: 1 }, { timestamp: 1_710_086_400, price: 1 },
     ]));
-
-    const result = await fetchAuthoritativeHistoricalPriceSeries(
-      {
-        id: "cusd-cap",
-        name: "Cap cUSD",
-        symbol: "CUSD",
-        flags: {
-          pegCurrency: "USD",
-          backing: "rwa-backed",
-          governance: "centralized-dependent",
-          yieldBearing: false,
-          rwa: false,
-          navToken: false,
-        },
-      },
-      {
-        candidateTimestamps: [1_710_000_000, 1_710_086_400],
-      },
-    );
-
-    expect(result).toEqual({
-      matched: true,
-      source: "protocol-redeem",
-      prices: null,
-    });
+    expect(await fetchAuthoritativeHistoricalPriceSeries(
+      makeHistoricalMeta("cusd-cap", "Cap cUSD", "CUSD", { flags: { governance: "centralized-dependent" } }),
+      { candidateTimestamps: [1_710_000_000, 1_710_086_400] },
+    )).toEqual({ matched: true, source: "protocol-redeem", prices: null });
   });
 });

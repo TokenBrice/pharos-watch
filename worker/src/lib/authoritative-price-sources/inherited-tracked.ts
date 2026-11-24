@@ -46,21 +46,25 @@ const INHERITED_TRACKED_PRICE_CONFIGS = {
   "pyusdx-moonpay": { parentId: PYUSD_PAYPAL_ID, marketPriceWins: true },
   "iusd-initia": { parentId: AUSD_AGORA_ID },
   "usdcx-movement": { parentId: USDC_CIRCLE_ID },
-  [M_M0_ID]: {
-    parentId: WM_M0_ID,
+  // wM (`wm-m0`) is a pure 1:1 wrapper of M (`m-m0`). Inherit M's quote only
+  // while M carries a trusted, fresh, replay-safe observation per
+  // `resolveTrustedInheritedParent`, while preserving any fresh own wM market.
+  [WM_M0_ID]: {
+    parentId: M_M0_ID,
     allowFreshReplaySafeSingleSourceParent: true,
     requireReportedSingleSourceConfidence: true,
+    marketPriceWins: true,
   },
   // USDK and USDN also carry a reviewed M0 redemption par in `protocol-par.ts`.
-  // The tracked parent quote wins while it is trusted; par only fills the gap
-  // that an unusable wM/M quote would otherwise leave as missing.
+  // The tracked M parent quote wins while it is trusted; par only fills the gap
+  // that an unusable M quote would otherwise leave as missing.
   [USDK_KAST_ID]: {
-    parentId: WM_M0_ID,
+    parentId: M_M0_ID,
     allowFreshNonReplaySafeParent: true,
     allowFreshReplaySafeSingleSourceParent: true,
   },
   [XO_EXODUS_ID]: {
-    parentId: WM_M0_ID,
+    parentId: M_M0_ID,
     allowFreshNonReplaySafeParent: true,
     allowFreshReplaySafeSingleSourceParent: true,
   },
@@ -68,7 +72,10 @@ const INHERITED_TRACKED_PRICE_CONFIGS = {
     parentId: M_M0_ID,
     allowFreshReplaySafeSingleSourceParent: true,
   },
-  [USDNR_NERONA_ID]: { parentId: WM_M0_ID },
+  [USDNR_NERONA_ID]: {
+    parentId: M_M0_ID,
+    allowFreshReplaySafeSingleSourceParent: true,
+  },
   // WEUSD's 0.99 redemption floor is only a missing-price fallback. A usable
   // secondary-market quote must remain visible so depeg detection sees discounts.
   [WEUSD_PICWE_ID]: {
