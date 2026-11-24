@@ -34,6 +34,8 @@ export async function fetchPrimaryPrices(
   results: Map<string, PrimaryPriceResult>;
   stats: PriceValidationStats;
   providerDiagnostics?: PricingProviderAttemptDiagnostic[];
+  rejectedCgReasons?: Map<string, string>;
+  hiveVetoPrice?: number | null;
 }> {
   throwIfAborted(signal);
 
@@ -41,7 +43,17 @@ export async function fetchPrimaryPrices(
 
   const contexts = validationContexts ?? createValidationContextResolver();
   const results = new Map<string, PrimaryPriceResult>();
-  const stats: PriceValidationStats = { attempted: 0, high: 0, singleSource: 0, cgOnly: 0, low: 0 };
+  const stats: PriceValidationStats = {
+    attempted: 0,
+    high: 0,
+    singleSource: 0,
+    cgOnly: 0,
+    low: 0,
+    cgMicroVolumeRejected: 0,
+    cgVolumeUnavailable: 0,
+    hiveDivergenceVetoed: 0,
+    hiveVetoUnavailable: 0,
+  };
   const plan = await buildPrimaryPricePlan(assets, db, dlListPrices);
 
   if (plan.candidates.length === 0) {
@@ -59,6 +71,7 @@ export async function fetchPrimaryPrices(
     binanceSession: options?.binanceSession,
   });
   const nowSec = Math.floor(Date.now() / 1000);
+  const rejectedCgReasons = new Map<string, string>();
 
   buildPrimaryConsensusResults({
     candidates: plan.candidates,
@@ -72,6 +85,8 @@ export async function fetchPrimaryPrices(
     results,
     stats,
     validationContexts: contexts,
+    providerDiagnostics,
+    rejectedCgReasons,
   });
 
   await applyPrimaryPostConsensusHardening({
@@ -100,5 +115,7 @@ export async function fetchPrimaryPrices(
     results,
     stats,
     providerDiagnostics,
+    rejectedCgReasons,
+    hiveVetoPrice: quoteMaps.hiveVetoMid?.price ?? quoteMaps.hiveNativeQuote?.price ?? null,
   };
 }

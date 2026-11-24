@@ -11,9 +11,13 @@ import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants
 import { pricesAgreeWithinBps } from "../../lib/price-divergence";
 import { loadPriceCorroborationObservations, type PriceObservationEffectiveness } from "./price-corroboration-observations";
 import {
+  COINGECKO_MICRO_VOLUME_OUTLIER_REASON,
   getPriceCacheMaxAgeSec,
+  isCoingeckoAggregatorSource,
   isReplaySafePriceSource,
 } from "@shared/lib/pricing-source-policy";
+import { evaluateCoingeckoMicroVolumeOutlier } from "../../lib/coingecko-simple-price";
+import { HIVE_MARKET_POLICY } from "../../lib/hive-market-price";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
@@ -80,6 +84,8 @@ export interface PostEnrichmentInput {
   authoritativeOverrideStats: AuthoritativeLivePriceOverrideStats;
   /** The same replay snapshot used to establish trusted-price continuity. */
   priceCache: ReadonlyMap<string, PriceCacheEntry>;
+  rejectedCgReasons?: ReadonlyMap<string, string>;
+  hiveVetoPrice?: number | null;
 }
 
 export interface PriceValidationResult {
@@ -215,12 +221,35 @@ export async function runPostEnrichmentPricePipeline(
     else if (!hasMissingPrice(asset)) priceObservationEffectiveness.publication.alreadyPriced += observations.length;
   }
   if (stillMissing.length > 0) {
+    const isWithheldByPrimaryQualityGate = (
+      asset: PeggedAsset,
+      source: string | null | undefined,
+      price: number,
+    ): boolean => {
+      if (!isCoingeckoAggregatorSource(source)) return false;
+      if (asset.id === "hbd-hive" && input.hiveVetoPrice != null) {
+        return !pricesAgreeWithinBps(price, input.hiveVetoPrice, HIVE_MARKET_POLICY.cgDivergenceVetoMaxBps);
+      }
+      if (input.rejectedCgReasons?.get(asset.id) === COINGECKO_MICRO_VOLUME_OUTLIER_REASON) {
+        return evaluateCoingeckoMicroVolumeOutlier({
+          price,
+          volume24hUsd: 0,
+          context: validationContexts.get(asset),
+          references: validationReferences,
+        }).status === "rejected";
+      }
+      return false;
+    };
     const priceCache = input.priceCache;
     for (const asset of stillMissing) {
       const candidates = staged.get(asset.id) ?? [];
       const datedCandidates = candidates.filter((candidate) => !candidate.recentActivity);
       const candidatePrices = Object.fromEntries(datedCandidates.map((candidate) => [candidate.source, candidate.price]));
       for (const [candidateIndex, candidate] of candidates.entries()) {
+        if (isWithheldByPrimaryQualityGate(asset, candidate.source, candidate.price)) {
+          priceObservationEffectiveness.publication.policyRejected++;
+          continue;
+        }
         const agreeSources = [...new Set([candidate.source, ...datedCandidates
           .filter((other) => pricesAgreeWithinBps(candidate.price, other.price, DIVERGENCE_THRESHOLD_BPS))
           .map((other) => other.source)])];
@@ -258,6 +287,7 @@ export async function runPostEnrichmentPricePipeline(
       if (!hasMissingPrice(asset)) continue;
       const cached = priceCache.get(asset.id);
       if (!cached) continue;
+      if (isWithheldByPrimaryQualityGate(asset, cached.source, cached.price)) continue;
       const observedAt = priceCacheObservationClock(cached);
       if ((cached.source === "defillama" || cached.source === "defillama-list") &&
         (cached.observedAtMode !== "upstream" || cached.hasExplicitClocks === false || observedAt == null)) continue;

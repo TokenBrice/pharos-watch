@@ -6,6 +6,22 @@ import { normalizePricingSourceKeys } from "./pricing-sources";
 export const FIXED_PEG_SEVERE_DOWNSIDE_RATIO = 0.5;
 
 /**
+ * Minimum CoinGecko 24h USD trading volume below which a quote diverging
+ * materially from its fixed peg/FX reference is quarantined as a junk print.
+ */
+export const COINGECKO_MICRO_VOLUME_MIN_USD = 1_000;
+
+/**
+ * Maximum allowed deviation (in basis points) from a fixed peg/FX reference
+ * for a CoinGecko quote whose observed 24h USD volume is below
+ * `COINGECKO_MICRO_VOLUME_MIN_USD`.
+ */
+export const COINGECKO_MICRO_VOLUME_OUTLIER_MAX_DEVIATION_BPS = 500;
+
+export const COINGECKO_MICRO_VOLUME_OUTLIER_REASON = "coingecko_micro_volume_outlier";
+export const HIVE_MARKET_DIVERGENCE_VETO_REASON = "hive_market_divergence_veto";
+
+/**
  * Maximum relative bid/ask spread (basis points of the midpoint) for a CEX
  * two-sided book to contribute a quote. A wider book is not a price, and its
  * last trade is no better evidence.
@@ -157,6 +173,22 @@ function isDefiLlamaFamilyListOnlyQuote(
     families.add(entry.depegSourceFamily);
   }
   return families.size === 1 && families.has("defillama");
+}
+
+/**
+ * Whether every part of `sources` is a CoinGecko list-aggregator feed
+ * (`coingecko`, `coingecko-low-volume`, `coingecko-mirror`), excluding the
+ * native Hive cross-rate (`hive-native-cg`, which is not a list aggregator).
+ */
+export function isCoingeckoAggregatorSource(
+  sources: readonly (string | null | undefined)[] | string | null | undefined,
+): boolean {
+  const parts = normalizePricingSourceKeys(sources);
+  if (parts.length === 0) return false;
+  return parts.every((part) => {
+    const entry = getPricingSourceRegistryEntry(part);
+    return entry?.depegSourceFamily === "coingecko" && entry.isListAggregator === true;
+  });
 }
 
 /**

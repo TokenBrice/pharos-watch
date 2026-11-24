@@ -1,11 +1,23 @@
 import { logWorkerEventArgs } from "./structured-log";
 import type { PriceObservedAtMode } from "@shared/types/price";
+import { relativeBps } from "@shared/lib/depeg-signals";
+import {
+  COINGECKO_MICRO_VOLUME_MIN_USD,
+  COINGECKO_MICRO_VOLUME_OUTLIER_MAX_DEVIATION_BPS,
+  COINGECKO_MICRO_VOLUME_OUTLIER_REASON,
+} from "@shared/lib/pricing-source-policy";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import type { FetcherOutcome } from "./fetcher-result";
 import { cgHeaders, cgSimplePricePath, cgUrl } from "./coingecko";
 import { USER_AGENT } from "./constants";
 import { fetchJsonWithRetry } from "./fetch-retry";
 import { throwIfAborted } from "./abort";
+import {
+  getReferencePriceForContext,
+  isFixedPegContext,
+  type PriceValidationContext,
+  type PriceValidationReferences,
+} from "./price-validation";
 import { CoinGeckoSimplePriceEntrySchema, CoinGeckoSimplePriceSchema } from "./upstream-schemas";
 import { toErrorMessage } from "@shared/lib/error-utils";
 
@@ -15,6 +27,63 @@ export interface CoingeckoSimplePriceEntry {
   price: number;
   observedAt: number | null;
   observedAtMode: PriceObservedAtMode | null;
+  volume24hUsd?: number | null;
+}
+
+export type CoingeckoMicroVolumeCheckResult =
+  | { status: "ok" }
+  | { status: "volume_unavailable" }
+  | {
+      status: "rejected";
+      reason: typeof COINGECKO_MICRO_VOLUME_OUTLIER_REASON;
+      volume24hUsd: number;
+      referencePrice: number;
+      deviationBps: number;
+    };
+
+/**
+ * Evaluates a CoinGecko quote against the micro-volume outlier quarantine:
+ * rejects only when observed 24h volume is strictly below `$1,000` AND the
+ * quote deviates strictly more than 500 bps from its fixed peg/FX reference.
+ *
+ * - R1: absent/unknown volume is never treated as zero; callers record
+ *   `volume_unavailable` in diagnostics and do not reject.
+ * - NAV tokens and variable/unknown pegs without a fixed reference are exempt.
+ */
+export function evaluateCoingeckoMicroVolumeOutlier(input: {
+  price: number;
+  volume24hUsd: number | null | undefined;
+  context: PriceValidationContext;
+  references?: PriceValidationReferences;
+}): CoingeckoMicroVolumeCheckResult {
+  if (
+    typeof input.volume24hUsd !== "number" ||
+    !Number.isFinite(input.volume24hUsd) ||
+    input.volume24hUsd < 0
+  ) {
+    return { status: "volume_unavailable" };
+  }
+  if (input.volume24hUsd >= COINGECKO_MICRO_VOLUME_MIN_USD) {
+    return { status: "ok" };
+  }
+  if (!isFixedPegContext(input.context)) {
+    return { status: "ok" };
+  }
+  const referencePrice = getReferencePriceForContext(input.context, input.references);
+  if (referencePrice == null || !Number.isFinite(referencePrice) || referencePrice <= 0) {
+    return { status: "ok" };
+  }
+  const deviation = relativeBps(input.price, referencePrice);
+  if (deviation != null && deviation.absRawBps > COINGECKO_MICRO_VOLUME_OUTLIER_MAX_DEVIATION_BPS) {
+    return {
+      status: "rejected",
+      reason: COINGECKO_MICRO_VOLUME_OUTLIER_REASON,
+      volume24hUsd: input.volume24hUsd,
+      referencePrice,
+      deviationBps: deviation.absRawBps,
+    };
+  }
+  return { status: "ok" };
 }
 
 export async function fetchCoingeckoSimplePrices(
@@ -36,7 +105,7 @@ export async function fetchCoingeckoSimplePrices(
       const batch = geckoIds.slice(i, i + PRIMARY_CG_BATCH_SIZE);
       const ids = batch.join(",");
       const result = await fetchJsonWithRetry<unknown>(
-        cgUrl(cgSimplePricePath(`ids=${ids}&vs_currencies=usd&include_last_updated_at=true`), coingeckoApiKey),
+        cgUrl(cgSimplePricePath(`ids=${ids}&vs_currencies=usd&include_24hr_vol=true&include_last_updated_at=true`), coingeckoApiKey),
         {
           headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey),
           signal,
@@ -82,10 +151,17 @@ export async function fetchCoingeckoSimplePrices(
           staleCount++;
           continue;
         }
+        const volume24hUsd =
+          typeof val.usd_24h_vol === "number" &&
+          Number.isFinite(val.usd_24h_vol) &&
+          val.usd_24h_vol >= 0
+            ? val.usd_24h_vol
+            : null;
         prices.set(gId, {
           price: val.usd,
           observedAt: upstreamObservedAt,
           observedAtMode: upstreamObservedAt != null ? "upstream" : null,
+          volume24hUsd,
         });
       }
       if (invalidEntries > 0) {

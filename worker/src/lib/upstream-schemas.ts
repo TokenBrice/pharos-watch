@@ -16,6 +16,7 @@ import { z } from "zod";
 /** One CoinGecko `/simple/price` quote; callers validate each entry separately. */
 export const CoinGeckoSimplePriceEntrySchema = z.object({
   usd: z.number(),
+  usd_24h_vol: z.number().nullable().optional(),
   last_updated_at: z.number().optional(),
 });
 

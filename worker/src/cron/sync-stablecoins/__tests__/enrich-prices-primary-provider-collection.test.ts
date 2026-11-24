@@ -25,7 +25,10 @@ vi.mock("../../../lib/circuit-breaker", async (importOriginal) => {
     recoverBreakerOnNoCandidateSafe: vi.fn(async () => {}),
   };
 });
-vi.mock("../../../lib/coingecko-simple-price", () => ({ fetchCoingeckoSimplePrices: vi.fn() }));
+vi.mock("../../../lib/coingecko-simple-price", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../lib/coingecko-simple-price")>()),
+  fetchCoingeckoSimplePrices: vi.fn(),
+}));
 vi.mock("../../../lib/cex-tickers", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../lib/cex-tickers")>()),
   fetchBitstampPrices: vi.fn(),
@@ -145,76 +148,34 @@ describe("critical publication provider collection", () => {
     return db;
   }
 
-  it("retains successful provider quotes when circuit bookkeeping fails without recording a false outcome", async () => {
-    const db = failingBookkeepingDb();
-    const plan = await admittedCgPlan(db);
-    const quote = { price: 1.002, observedAt: plan.nowSec, observedAtMode: "upstream" as const };
-    vi.mocked(fetchCoingeckoSimplePrices).mockResolvedValue({ kind: "ok", value: new Map([["test-usd", quote]]) });
-    const outcomes = vi.spyOn(circuit, "recordOutcomeSafe");
-    const warnings = vi.spyOn(console, "warn").mockImplementation(() => {});
-
+  it.each([
+    ["ok", { kind: "ok" as const, value: new Map([["test-usd", { price: 1.002, observedAt: 1, observedAtMode: "upstream" as const }]]) }, true, false],
+    ["throw", new Error("provider unavailable"), false, true],
+    ["upstream-error", { kind: "upstream-error" as const, value: new Map(), reason: "upstream-unavailable" }, false, false],
+  ] as const)("handles CG %s outcome cleanly when circuit bookkeeping fails", async (_mode, response, ok, warnsFetchFail) => {
+    const db = failingBookkeepingDb(), plan = await admittedCgPlan(db);
+    if (response instanceof Error) vi.mocked(fetchCoingeckoSimplePrices).mockRejectedValue(response);
+    else vi.mocked(fetchCoingeckoSimplePrices).mockResolvedValue(response);
+    const outcomes = vi.spyOn(circuit, "recordOutcomeSafe"), warnings = vi.spyOn(console, "warn").mockImplementation(() => {});
     const result = await collectPrimaryProviderQuotes({ db, plan });
-
-    expect(result.quoteMaps.cgQuotes.get("test-usd")).toEqual(quote);
-    expect(result.providerDiagnostics).toEqual([]);
-    expect(outcomes.mock.calls.map(([, source, success]) => [source, success])).toEqual([[CIRCUIT_SOURCE.CG_PRICES, true]]);
+    expect(result.quoteMaps.cgQuotes.size).toBe(ok ? 1 : 0);
+    if (ok) expect(result.providerDiagnostics).toEqual([]);
+    expect(outcomes.mock.calls.map(([, s, v]) => [s, v])).toEqual([[CIRCUIT_SOURCE.CG_PRICES, ok]]);
     expect(fetchCoingeckoSimplePrices).toHaveBeenCalledOnce();
     const messages = warnings.mock.calls.flat().join(" ");
     expect(messages).toContain("circuit_outcome_write_failed");
-    expect(messages).not.toContain("[primary-prices] CG price API failed:");
-  });
-
-  it("records a thrown provider fetch as one failed observation even if bookkeeping also fails", async () => {
-    const db = failingBookkeepingDb();
-    const plan = await admittedCgPlan(db);
-    vi.mocked(fetchCoingeckoSimplePrices).mockRejectedValue(new Error("provider unavailable"));
-    const outcomes = vi.spyOn(circuit, "recordOutcomeSafe");
-    const warnings = vi.spyOn(console, "warn").mockImplementation(() => {});
-
-    const result = await collectPrimaryProviderQuotes({ db, plan });
-
-    expect(result.quoteMaps.cgQuotes.size).toBe(0);
-    expect(outcomes.mock.calls.map(([, source, success]) => [source, success])).toEqual([[CIRCUIT_SOURCE.CG_PRICES, false]]);
-    expect(fetchCoingeckoSimplePrices).toHaveBeenCalledOnce();
-    const messages = warnings.mock.calls.flat().join(" ");
-    expect(messages).toContain("[primary-prices] CG price API failed:");
-    expect(messages).toContain("circuit_outcome_write_failed");
-  });
-
-  it("records a returned upstream-error outcome as one failed observation", async () => {
-    const db = failingBookkeepingDb();
-    const plan = await admittedCgPlan(db);
-    vi.mocked(fetchCoingeckoSimplePrices).mockResolvedValue({ kind: "upstream-error", value: new Map(), reason: "upstream-unavailable" });
-    const outcomes = vi.spyOn(circuit, "recordOutcomeSafe");
-    const warnings = vi.spyOn(console, "warn").mockImplementation(() => {});
-
-    const result = await collectPrimaryProviderQuotes({ db, plan });
-
-    expect(result.quoteMaps.cgQuotes.size).toBe(0);
-    expect(outcomes.mock.calls.map(([, source, success]) => [source, success])).toEqual([[CIRCUIT_SOURCE.CG_PRICES, false]]);
-    expect(warnings.mock.calls.flat().join(" ")).not.toContain("[primary-prices] CG price API failed:");
+    expect(messages.includes("[primary-prices] CG price API failed:")).toBe(warnsFetchFail);
   });
 
   it("carries Kraken Depth upstream clocks without stamping local-fetch time on Depth-only batches", async () => {
     const db = mockD1([]);
     vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, key) => key === CIRCUIT_SOURCE.KRAKEN_PRICES);
-    const plan = await buildPrimaryPricePlan([{ ...TEST_ASSET, id: "eurc-circle", symbol: "EURC" }], db);
-    const observedAt = plan.nowSec - 12;
-    vi.mocked(fetchKrakenPrices).mockResolvedValue({
-      kind: "ok",
-      value: {
-        prices: new Map([["EURC", 1.1]]),
-        observedAtBySymbol: new Map([["EURC", observedAt]]),
-        quoteBasisBySymbol: new Map([["EURC", "bid-ask-midpoint"]]),
-        diagnostics: [],
-      },
-    });
+    const plan = await buildPrimaryPricePlan([{ ...TEST_ASSET, id: "eurc-circle", symbol: "EURC" }], db), observedAt = plan.nowSec - 12;
+    vi.mocked(fetchKrakenPrices).mockResolvedValue({ kind: "ok", value: { prices: new Map([["EURC", 1.1]]), observedAtBySymbol: new Map([["EURC", observedAt]]), quoteBasisBySymbol: new Map([["EURC", "bid-ask-midpoint"]]), diagnostics: [] } });
     const outcomes = vi.spyOn(circuit, "recordOutcomeSafe");
     const { quoteMaps } = await collectPrimaryProviderQuotes({ db, plan });
-    expect(quoteMaps.krakenPrices.get("EURC")).toBe(1.1);
-    expect(quoteMaps.krakenObservedAtBySymbol.get("EURC")).toBe(observedAt);
-    expect(quoteMaps.krakenObservedAt).toBeNull();
-    expect(outcomes.mock.calls.map(([, key, ok]) => [key, ok])).toEqual([[CIRCUIT_SOURCE.KRAKEN_PRICES, true]]);
+    expect([quoteMaps.krakenPrices.get("EURC"), quoteMaps.krakenObservedAtBySymbol.get("EURC"), quoteMaps.krakenObservedAt]).toEqual([1.1, observedAt, null]);
+    expect(outcomes.mock.calls.map(([, k, ok]) => [k, ok])).toEqual([[CIRCUIT_SOURCE.KRAKEN_PRICES, true]]);
   });
 
   it("keeps a collected quote when no-candidate breaker recovery cannot persist its circuit record", async () => {
@@ -281,111 +242,38 @@ describe("critical publication provider collection", () => {
   });
 
   it("returns an inert plan when no asset qualifies for any primary source", async () => {
-    const plan = await buildPrimaryPricePlan([
-      { id: "unlisted-test", name: "Unlisted", symbol: "ZZZZ" },
-    ], mockD1([]));
-
-    expect(plan.candidates).toEqual([]);
-    expect(plan.geckoIds).toEqual([]);
-    expect(plan.coinbaseSymbols).toEqual([]);
-    expect(plan.krakenSymbols).toEqual([]);
-    expect(plan.shouldFetchBitstamp).toBe(false);
-    expect(plan.navPriceIds).toEqual([]);
+    const plan = await buildPrimaryPricePlan([{ id: "unlisted-test", name: "Unlisted", symbol: "ZZZZ" }], mockD1([]));
+    expect(plan).toMatchObject({ candidates: [], geckoIds: [], coinbaseSymbols: [], krakenSymbols: [], shouldFetchBitstamp: false, navPriceIds: [] });
     expect(Object.values(plan.sourceAllowed)).toEqual(Array(8).fill(false));
     expect(shouldAttemptFetch).not.toHaveBeenCalled();
   });
 
   it("values a non-USD reserve NAV quote at its admitted FX reference rate", async () => {
-    const meta = TRACKED_META_BY_ID.get("eutbl-spiko")!;
-    const config = meta.liveReservesConfig!;
-    const fetchedAt = Math.floor(Date.now() / 1000) - 60;
-    const fingerprint = computeLiveReserveConfigFingerprint(config);
-    const db = mockD1([{
-      match: "FROM reserve_composition",
-      rows: [{
-        stablecoin_id: "eutbl-spiko", fetched_at: fetchedAt, source: config.adapter,
-        metadata: JSON.stringify({ navPerToken: 1.25, sourceTimestamp: fetchedAt }),
-        config_fingerprint: fingerprint, attempt_id: "attempt-1",
-        last_success_at: fetchedAt, last_success_attempt_id: "attempt-1",
-        state_config_fingerprint: fingerprint, last_attempt_id: "attempt-1", pending_attempt_id: null,
-      }],
-    }]);
-    const plan = await buildPrimaryPricePlan([
-      { id: "eutbl-spiko", name: "EUTBL", symbol: "EUTBL", pegType: "peggedEUR" },
-    ], db);
+    const meta = TRACKED_META_BY_ID.get("eutbl-spiko")!, config = meta.liveReservesConfig!, fetchedAt = Math.floor(Date.now() / 1000) - 60;
+    const fp = computeLiveReserveConfigFingerprint(config);
+    const db = mockD1([{ match: "FROM reserve_composition", rows: [{ stablecoin_id: "eutbl-spiko", fetched_at: fetchedAt, source: config.adapter, metadata: JSON.stringify({ navPerToken: 1.25, sourceTimestamp: fetchedAt }), config_fingerprint: fp, attempt_id: "a1", last_success_at: fetchedAt, last_success_attempt_id: "a1", state_config_fingerprint: fp, last_attempt_id: "a1", pending_attempt_id: null }] }]);
+    const plan = await buildPrimaryPricePlan([{ id: "eutbl-spiko", name: "EUTBL", symbol: "EUTBL", pegType: "peggedEUR" }], db);
     expect(plan.navPriceIds).toEqual(["eutbl-spiko"]);
-
-    const result = await collectPrimaryProviderQuotes({
-      db,
-      plan,
-      references: {
-        rates: { peggedEUR: 1.08 },
-        type: "fresh",
-        updatedAt: fetchedAt,
-        typeByPeg: { peggedEUR: "fresh" },
-      },
-    });
-
-    expect(result.quoteMaps.navPrices.get("eutbl-spiko")).toMatchObject({
-      source: config.adapter,
-      price: 1.25 * 1.08,
-      metadata: { reserveFetchedAt: fetchedAt, navPerToken: 1.25, navUsdRate: 1.08 },
-    });
+    const result = await collectPrimaryProviderQuotes({ db, plan, references: { rates: { peggedEUR: 1.08 }, type: "fresh", updatedAt: fetchedAt, typeByPeg: { peggedEUR: "fresh" } } });
+    expect(result.quoteMaps.navPrices.get("eutbl-spiko")).toMatchObject({ source: config.adapter, price: 1.25 * 1.08, metadata: { reserveFetchedAt: fetchedAt, navPerToken: 1.25, navUsdRate: 1.08 } });
   });
 
   it("keeps provider quotes when the reserve NAV telemetry query fails", async () => {
-    const db = mockD1([{
-      match: "FROM reserve_composition",
-      rows: [],
-      throwError: new Error("reserve database unavailable"),
-    }]);
-    const plan = await buildPrimaryPricePlan([
-      { id: "eutbl-spiko", name: "EUTBL", symbol: "EUTBL", pegType: "peggedEUR" },
-    ], db);
+    const db = mockD1([{ match: "FROM reserve_composition", rows: [], throwError: new Error("reserve database unavailable") }]);
+    const plan = await buildPrimaryPricePlan([{ id: "eutbl-spiko", name: "EUTBL", symbol: "EUTBL", pegType: "peggedEUR" }], db);
     const warnings = vi.spyOn(console, "warn").mockImplementation(() => {});
-
-    const result = await collectPrimaryProviderQuotes({ db, plan });
-
-    expect(result.quoteMaps.navPrices.size).toBe(0);
-    expect(warnings.mock.calls.flat().join(" ")).toContain(
-      "[primary-prices] Failed to load reserve NAV telemetry: reserve database unavailable",
-    );
+    expect((await collectPrimaryProviderQuotes({ db, plan })).quoteMaps.navPrices.size).toBe(0);
+    expect(warnings.mock.calls.flat().join(" ")).toContain("[primary-prices] Failed to load reserve NAV telemetry: reserve database unavailable");
   });
 
   it("collects Coinbase quotes with their per-symbol observation clocks", async () => {
     vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) => source === CIRCUIT_SOURCE.COINBASE_PRICES);
-    const db = mockD1([]);
-    const plan = await buildPrimaryPricePlan([
-      { id: "test-usdt", name: "Test USDT", symbol: "USDT" },
-    ], db);
+    const db = mockD1([]), plan = await buildPrimaryPricePlan([{ id: "test-usdt", name: "Test USDT", symbol: "USDT" }], db);
     expect(plan.coinbaseSymbols).toEqual(["USDT"]);
-    vi.mocked(fetchCoinbasePrices).mockResolvedValue({
-      kind: "ok",
-      value: {
-        prices: new Map([["USDT", 1.0004]]),
-        quoteAssetBySymbol: new Map([["USDT", "USD"]]),
-        clockBySymbol: new Map([["USDT", "trade"]]),
-        observedAtBySymbol: new Map([["USDT", 1_700_000_000]]),
-        diagnostics: [{
-          source: "coinbase",
-          stage: "primary",
-          endpoint: "api.exchange.coinbase.com/products",
-          status: null,
-          ok: true,
-          success: true,
-          rejectionReasonCounts: { "wide-spread": 1 },
-        }],
-      },
-    });
-
+    vi.mocked(fetchCoinbasePrices).mockResolvedValue({ kind: "ok", value: { prices: new Map([["USDT", 1.0004]]), quoteAssetBySymbol: new Map([["USDT", "USD"]]), clockBySymbol: new Map([["USDT", "trade"]]), observedAtBySymbol: new Map([["USDT", 1_700_000_000]]), diagnostics: [{ source: "coinbase", stage: "primary", endpoint: "api.exchange.coinbase.com/products", status: null, ok: true, success: true, rejectionReasonCounts: { "wide-spread": 1 } }] } });
     const result = await collectPrimaryProviderQuotes({ db, plan });
-
-    expect(result.quoteMaps.coinbasePrices.get("USDT")).toBe(1.0004);
-    expect(result.quoteMaps.coinbaseObservedAtBySymbol.get("USDT")).toBe(1_700_000_000);
-    expect(result.providerDiagnostics).toContainEqual(expect.objectContaining({
-      source: "coinbase",
-      rejectionReasonCounts: { "wide-spread": 1 },
-    }));
+    expect([result.quoteMaps.coinbasePrices.get("USDT"), result.quoteMaps.coinbaseObservedAtBySymbol.get("USDT")]).toEqual([1.0004, 1_700_000_000]);
+    expect(result.providerDiagnostics).toContainEqual(expect.objectContaining({ source: "coinbase", rejectionReasonCounts: { "wide-spread": 1 } }));
   });
 
   it.each([[60, true], [-1, true], [-6, false], [601, false], [null, false]] as const)(
@@ -420,62 +308,20 @@ describe("critical publication provider collection", () => {
     const now = 1_800_000_000;
     vi.spyOn(Date, "now").mockReturnValue(now * 1000);
     vi.spyOn(circuit, "recordOutcomeSafe").mockResolvedValue(null);
-    vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) =>
-      source === CIRCUIT_SOURCE.COINBASE_PRICES || source === CIRCUIT_SOURCE.BITSTAMP_PRICES);
-    const db = mockD1([]);
-    const assets: PeggedAsset[] = [
-      { id: "eurc-circle", name: "EURC", symbol: "EURC", pegType: "peggedEUR" },
-      { id: "tgbp-tokenised", name: "Tokenised GBP", symbol: "tGBP", pegType: "peggedGBP" },
-    ];
+    vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) => source === CIRCUIT_SOURCE.COINBASE_PRICES || source === CIRCUIT_SOURCE.BITSTAMP_PRICES);
+    const db = mockD1([]), assets: PeggedAsset[] = [{ id: "eurc-circle", name: "EURC", symbol: "EURC", pegType: "peggedEUR" }, { id: "tgbp-tokenised", name: "Tokenised GBP", symbol: "tGBP", pegType: "peggedGBP" }];
     const plan = await buildPrimaryPricePlan(assets, db);
-    expect(plan.coinbaseSymbols).toEqual(["EURC", "TGBP"]);
-    expect(plan.shouldFetchBitstamp).toBe(true);
-
-    vi.mocked(fetchBitstampPrices).mockResolvedValue({
-      kind: "ok",
-      value: {
-        prices: new Map([["USDC", 0.9998]]),
-        observedAtBySymbol: new Map([["USDC", now - 30]]),
-        diagnostics: [],
-      },
-    });
-    vi.mocked(fetchCoinbasePrices).mockResolvedValue({
-      kind: "ok",
-      value: {
-        prices: new Map([["EURC", 1.0943], ["TGBP", 1.30815]]),
-        observedAtBySymbol: new Map([["EURC", now - 10], ["TGBP", now - 45]]),
-        quoteAssetBySymbol: new Map([["EURC", "USDC"], ["TGBP", "USDC"]]),
-        clockBySymbol: new Map([["EURC", "book"], ["TGBP", "book"]]),
-        diagnostics: [],
-      },
-    });
-
+    expect([plan.coinbaseSymbols, plan.shouldFetchBitstamp]).toEqual([["EURC", "TGBP"], true]);
+    vi.mocked(fetchBitstampPrices).mockResolvedValue({ kind: "ok", value: { prices: new Map([["USDC", 0.9998]]), observedAtBySymbol: new Map([["USDC", now - 30]]), diagnostics: [] } });
+    vi.mocked(fetchCoinbasePrices).mockResolvedValue({ kind: "ok", value: { prices: new Map([["EURC", 1.0943], ["TGBP", 1.30815]]), observedAtBySymbol: new Map([["EURC", now - 10], ["TGBP", now - 45]]), quoteAssetBySymbol: new Map([["EURC", "USDC"], ["TGBP", "USDC"]]), clockBySymbol: new Map([["EURC", "book"], ["TGBP", "book"]]), diagnostics: [] } });
     const { results, providerDiagnostics } = await fetchPrimaryPrices(assets, db);
-    expect(results.get("eurc-circle")).toMatchObject({
-      source: "coinbase",
-      observedAt: now - 30,
-      observedAtMode: "upstream",
-    });
+    expect(results.get("eurc-circle")).toMatchObject({ source: "coinbase", observedAt: now - 30, observedAtMode: "upstream" });
     expect(results.get("eurc-circle")?.price).toBeCloseTo(1.0943 * 0.9998, 8);
-    expect(results.get("tgbp-tokenised")).toMatchObject({
-      source: "coinbase",
-      observedAt: now - 45,
-      observedAtMode: "upstream",
-    });
+    expect(results.get("tgbp-tokenised")).toMatchObject({ source: "coinbase", observedAt: now - 45, observedAtMode: "upstream" });
     expect(results.get("tgbp-tokenised")?.price).toBeCloseTo(1.30815 * 0.9998, 8);
     expect(providerDiagnostics).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        endpoint: "api.exchange.coinbase.com/products/EURC-USDC/book",
-        quoteClock: "book",
-        quoteObservedAt: now - 10,
-        resolvedCount: 1,
-      }),
-      expect.objectContaining({
-        endpoint: "api.exchange.coinbase.com/products/TGBP-USDC/book",
-        quoteClock: "book",
-        quoteObservedAt: now - 45,
-        resolvedCount: 1,
-      }),
+      expect.objectContaining({ endpoint: "api.exchange.coinbase.com/products/EURC-USDC/book", quoteClock: "book", quoteObservedAt: now - 10, resolvedCount: 1 }),
+      expect.objectContaining({ endpoint: "api.exchange.coinbase.com/products/TGBP-USDC/book", quoteClock: "book", quoteObservedAt: now - 45, resolvedCount: 1 }),
     ]));
   });
 
@@ -557,22 +403,12 @@ describe("critical publication provider collection", () => {
   });
 
   it("admits a fresh crvUSD oracle EMA as a primary quote", async () => {
-    vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) => source === CIRCUIT_SOURCE.CURVE_ORACLE);
-    const db = mockD1([]);
-    const plan = await buildPrimaryPricePlan([
-      { id: "crvusd-curve", name: "crvUSD", symbol: "CRVUSD" },
-    ], db);
+    vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, s) => s === CIRCUIT_SOURCE.CURVE_ORACLE);
+    const db = mockD1([]), plan = await buildPrimaryPricePlan([{ id: "crvusd-curve", name: "crvUSD", symbol: "CRVUSD" }], db);
     const blockTimestamp = Math.floor(Date.now() / 1000) - 15;
-    vi.mocked(fetchCurveOracleEma).mockResolvedValue({
-      price: 0.9987,
-      blockNumber: 123,
-      blockTimestamp,
-    });
-
+    vi.mocked(fetchCurveOracleEma).mockResolvedValue({ price: 0.9987, blockNumber: 123, blockTimestamp });
     const result = await collectPrimaryProviderQuotes({ db, plan });
-
-    expect(result.quoteMaps.curveOraclePrice).toBe(0.9987);
-    expect(result.quoteMaps.curveOracleObservedAt).toBe(blockTimestamp);
+    expect([result.quoteMaps.curveOraclePrice, result.quoteMaps.curveOracleObservedAt]).toEqual([0.9987, blockTimestamp]);
   });
 
   it("does not fetch when required circuit admission rejects", async () => {

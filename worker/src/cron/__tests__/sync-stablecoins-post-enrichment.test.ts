@@ -270,27 +270,20 @@ describe("runPostEnrichmentPricePipeline", () => {
 
   it.each([true, false])("publishes BRZ pool-backed premiums when upstreams are independent (%s)", async (independent) => {
     const asset = makeAsset({ id: "brz-transfero", symbol: "BRZ", pegType: "peggedREAL", price: null });
-    const premium = 0.2 * 1.23;
-    const syncStartSec = Math.floor(Date.now() / 1000);
-    const sources = ["curve-dex", "uniswap-v3-dex"];
-    const observedAt = syncStartSec - 60;
-    const consensus = computePriceConsensus(sources.map((source) => ({
-      source, price: premium, observedAt, observedAtMode: "upstream", weight: 1,
-    })), 0.2, 50)!;
+    const premium = 0.2 * 1.23, syncStartSec = Math.floor(Date.now() / 1000), sources = ["curve-dex", "uniswap-v3-dex"], observedAt = syncStartSec - 60;
+    const consensus = computePriceConsensus(sources.map((source) => ({ source, price: premium, observedAt, observedAtMode: "upstream", weight: 1 })), 0.2, 50)!;
     const input = {
       ...pipelineInput(asset),
       syncStartSec,
       validationReferences: { rates: { peggedREAL: 0.2 }, type: "fresh" as const, updatedAt: observedAt },
       primaryPriceResults: new Map<string, PrimaryPriceWithFiatPremiumEvidence>([[asset.id, {
-        ...consensus,
-        dlPrice: null, cgPrice: null, candidateSources: sources,
+        ...consensus, dlPrice: null, cgPrice: null, candidateSources: sources,
         fiatPremiumEvidence: {
           "curve-dex": { priceUsd: premium, observedAtSec: observedAt, upstreamKeys: ["ethereum:pool-a"] },
           "uniswap-v3-dex": { priceUsd: premium, observedAtSec: observedAt, upstreamKeys: [independent ? "ethereum:pool-b" : "ethereum:pool-a"] },
         },
       }]]),
     };
-
     applyConsensusResults({ ...input, reason: "primary" });
     expect(asset.price).toBe(independent ? premium : null);
     prevalidatePrices({ ...input, logLabel: "premium test" });
@@ -406,6 +399,37 @@ describe("runPostEnrichmentPricePipeline", () => {
       if (isAbortResult(result)) throw new Error("unexpected abort");
       expect(asset.price ?? null).toBe(expected);
       if (expected != null) expect(asset).toMatchObject({ priceSource: "cached", priceConfidence: "fallback" });
+    } finally {
+      clock.mockRestore();
+      sqlite.close();
+    }
+  });
+
+  it.each([
+    [1.13, null],
+    [0.96, 0.96],
+  ] as const)("applies HBD Hive veto to cached/staged CoinGecko fallbacks ($%s -> %s)", async (cgPrice, expected) => {
+    const now = 1_800_000_000;
+    const clock = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const sqlite = new DatabaseSync(":memory:");
+    sqlite.exec("CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL)");
+    const db = createSqliteD1(sqlite);
+    await writePriceCorroborationObservations(db, [{
+      id: "hbd-hive", source: "coingecko-low-volume", price: cgPrice, observedAt: now - 60, observedAtMode: "upstream",
+    }], now);
+    const asset = makeAsset({ id: "hbd-hive", symbol: "HBD", geckoId: "hive_dollar", pegType: "peggedUSD",
+      circulating: { peggedUSD: 9_800_000 }, price: null, priceSource: undefined, priceConfidence: null, priceObservedAt: null, priceObservedAtMode: null });
+    try {
+      const result = await runPostEnrichmentPricePipeline({
+        assets: [asset], db, syncStartSec: now, hiveVetoPrice: 0.93,
+        priceCache: new Map([["hbd-hive", { price: cgPrice, updatedAt: now - 60, source: "coingecko", confidence: "single-source",
+          observedAt: now - 60, observedAtMode: "upstream", syncedAt: now - 60, agreeSources: ["coingecko"], consensusSources: ["coingecko"] }]]),
+        validationContexts: { get: makeValidationContext }, previousTrustedPrices: new Map(),
+        authoritativeOverrides: new Map(), authoritativeOverrideStats: createAuthoritativeLivePriceOverrideStats(),
+      }, "");
+      if (isAbortResult(result)) throw new Error("unexpected abort");
+      expect(asset.price ?? null).toBe(expected);
+      if (expected == null) expect(result.priceObservationEffectiveness?.publication.policyRejected).toBe(1);
     } finally {
       clock.mockRestore();
       sqlite.close();

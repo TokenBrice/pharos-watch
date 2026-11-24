@@ -13,7 +13,7 @@ import { classifyPrimaryDepegTrust } from "../../lib/depeg-trust-policy";
 import { getPricingSourceRegistryEntry, isPricingSourceProtocolOverride } from "@shared/lib/pricing-source-registry";
 import { mentoBrokerProvider } from "../../lib/authoritative-price-sources/mento-broker";
 import { getProtocolParPriceOverride, protocolParProvider } from "../../lib/authoritative-price-sources/protocol-par";
-import { isObservedPrice } from "@shared/lib/pricing-source-policy";
+import { isCoingeckoAggregatorSource, isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import type { NominalPriceReference } from "@shared/types/price";
 import { priceCacheObservationClock, type PriceCacheEntry } from "../../lib/price-cache";
@@ -429,6 +429,7 @@ export function applyConsensusResults(input: {
   validationReferences?: PriceValidationReferences;
   syncStartSec: number;
   reason: "primary";
+  rejectedCgReasons?: ReadonlyMap<string, string>;
 }): void {
   const {
     assets,
@@ -437,14 +438,23 @@ export function applyConsensusResults(input: {
     validationContexts,
     validationReferences,
     syncStartSec,
+    rejectedCgReasons,
   } = input;
 
   for (const asset of assets) {
     const primaryPriceResult = primaryPriceResults.get(asset.id);
 
     if (!primaryPriceResult) {
+      const rejectedCgReason = rejectedCgReasons?.get(asset.id);
       if (hasCurrentAssetPrice(asset)) {
-        stampExistingSingleSource(asset, syncStartSec);
+        if (rejectedCgReason && isCoingeckoAggregatorSource(asset.priceSource)) {
+          logWorkerEventArgs("handler", "warn",
+            `[sync-stablecoins] Cleared intake ${asset.priceSource} price for ${asset.symbol} (id=${asset.id}): ${rejectedCgReason}`,
+          );
+          clearPriceMetadata(asset);
+        } else {
+          stampExistingSingleSource(asset, syncStartSec);
+        }
       }
     } else {
       const rejectionReason = applyPrimaryCandidate({

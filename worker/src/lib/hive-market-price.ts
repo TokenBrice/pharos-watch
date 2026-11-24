@@ -1,5 +1,7 @@
 import type { HiveMarketDiagnostic, HiveMarketRejection, HiveNativePriceQuote } from "@shared/types/hive-market-price";
+import { HIVE_MARKET_DIVERGENCE_VETO_REASON } from "@shared/lib/pricing-source-policy";
 import { fetchJsonWithRetry } from "./fetch-retry";
+import { midDivergenceBps, pricesAgreeWithinBps } from "./price-divergence";
 import { isResponseBodyTooLargeError } from "./response-body";
 
 export const HIVE_MARKET_POLICY = Object.freeze({
@@ -9,14 +11,64 @@ export const HIVE_MARKET_POLICY = Object.freeze({
   tradeDivergenceMax: 0.02, parentMaxAgeSec: 300, parentFutureSkewSec: 60,
   sourceMaxAgeSec: 900, rpcTimeoutMs: 3_000, observerTimeoutMs: 20_000,
   maxResponseBytes: 1024 * 1024, bookLimit: 500, tradeLimit: 1000,
+  cgDivergenceVetoMaxBps: 500,
 });
 const NODES = ["https://api.hive.blog", "https://api.deathwing.me"] as const;
 const METHODS = ["get_dynamic_global_properties", "get_order_book", "get_ticker", "get_recent_trades", "get_dynamic_global_properties"];
 const FAILOVER_REASONS: Partial<Record<HiveMarketRejection, true>> = {
   rpc_timeout: true, rpc_error: true, rate_limited: true, invalid_response: true, head_stale: true,
 };
+/**
+ * Gate rejections that occur only AFTER a fresh head, a valid uncrossed
+ * narrow-spread book, and a fresh HIVE/USD parent have been established.
+ * Their implied USD mid can act as a veto-only signal against a divergent
+ * CoinGecko quote, while never publishing a Hive quote on its own.
+ */
+const VETO_ONLY_ELIGIBLE_REJECTIONS: Partial<Record<HiveMarketRejection, true>> = {
+  insufficient_depth: true,
+  depth_unproven: true,
+  trade_stale: true,
+  insufficient_volume: true,
+  volume_unproven: true,
+};
 export interface HiveUsdParent { id: string; price: number; observedAt: number | null; observedAtMode: string | null }
-export interface HiveMarketResult { quote: HiveNativePriceQuote | null; diagnostic: HiveMarketDiagnostic; transportHealthy: boolean }
+export interface HiveVetoSignal {
+  price: number;
+  observedAt: number;
+  observedAtMode: "local_fetch";
+  admittedForPublication: boolean;
+  rejectionReason: HiveMarketRejection | null;
+}
+export interface HiveMarketResult {
+  quote: HiveNativePriceQuote | null;
+  vetoMid: HiveVetoSignal | null;
+  diagnostic: HiveMarketDiagnostic;
+  transportHealthy: boolean;
+}
+export type HiveCgVetoDecision =
+  | { status: "agreed"; divergenceBps: number; hiveMidPrice: number }
+  | { status: "vetoed"; reason: typeof HIVE_MARKET_DIVERGENCE_VETO_REASON; divergenceBps: number; hiveMidPrice: number }
+  | { status: "unavailable"; reason: string };
+
+export function evaluateHiveCgDivergenceVeto(input: {
+  cgPrice: number;
+  hiveVetoMid: number | null;
+  unavailableReason?: string | null;
+}): HiveCgVetoDecision {
+  if (input.hiveVetoMid == null || !Number.isFinite(input.hiveVetoMid) || input.hiveVetoMid <= 0) {
+    return { status: "unavailable", reason: input.unavailableReason ?? "hive_market_unavailable" };
+  }
+  const divergenceBps = midDivergenceBps(input.cgPrice, input.hiveVetoMid);
+  if (!pricesAgreeWithinBps(input.cgPrice, input.hiveVetoMid, HIVE_MARKET_POLICY.cgDivergenceVetoMaxBps)) {
+    return {
+      status: "vetoed",
+      reason: HIVE_MARKET_DIVERGENCE_VETO_REASON,
+      divergenceBps,
+      hiveMidPrice: input.hiveVetoMid,
+    };
+  }
+  return { status: "agreed", divergenceBps, hiveMidPrice: input.hiveVetoMid };
+}
 class Rejected extends Error {
   constructor(readonly reason: HiveMarketRejection) { super(reason); }
 }
@@ -145,6 +197,41 @@ function emptyPacket(generation: number): HiveMarketDiagnostic {
     parent: { id: "hive", source: "coingecko", price: null, observedAt: null, ageSec: null },
     formula: "HIVE_USD / ((bid_HBD_per_HIVE + ask_HBD_per_HIVE) / 2)",
     price: null, usdBid: null, usdAsk: null, observedAt: null, observedAtMode: "local_fetch", rejectionReason: null,
+    vetoMidPrice: null, vetoStatus: null, vetoReason: null, vetoDivergenceBps: null,
+  };
+}
+function deriveVetoMidSignal(
+  parent: HiveUsdParent | undefined,
+  packet: HiveMarketDiagnostic,
+  reason: HiveMarketRejection,
+  nowSec: number,
+): HiveVetoSignal | null {
+  if (!VETO_ONLY_ELIGIBLE_REJECTIONS[reason]) return null;
+  if (
+    packet.mid == null || !Number.isFinite(packet.mid) || packet.mid <= 0 ||
+    packet.bookRetrievedAt == null ||
+    (packet.bidDepthHbd ?? 0) <= 0 || (packet.askDepthHbd ?? 0) <= 0
+  ) {
+    return null;
+  }
+  if (
+    !parent || parent.id !== "hive" || !Number.isFinite(parent.price) || parent.price <= 0 ||
+    parent.observedAtMode !== "upstream" || parent.observedAt == null || !Number.isFinite(parent.observedAt) || parent.observedAt <= 0
+  ) {
+    return null;
+  }
+  const parentAgeSec = nowSec - parent.observedAt;
+  if (parentAgeSec > HIVE_MARKET_POLICY.parentMaxAgeSec || parentAgeSec < -HIVE_MARKET_POLICY.parentFutureSkewSec) {
+    return null;
+  }
+  const price = parent.price / packet.mid;
+  if (!Number.isFinite(price) || price <= 0) return null;
+  return {
+    price,
+    observedAt: Math.min(packet.bookRetrievedAt, parent.observedAt),
+    observedAtMode: "local_fetch",
+    admittedForPublication: false,
+    rejectionReason: reason,
   };
 }
 export async function fetchHiveNativeHbdPrice(parent: HiveUsdParent | undefined, options: { signal?: AbortSignal; deadlineMs?: number; generation?: number } = {}): Promise<HiveMarketResult> {
@@ -214,17 +301,22 @@ export async function fetchHiveNativeHbdPrice(parent: HiveUsdParent | undefined,
       const price = parent.price / packet.mid!;
       if (!Number.isFinite(price) || price <= 0) reject("invalid_response");
       packet.price = price;
+      packet.vetoMidPrice = price;
       packet.usdBid = parent.price / packet.ask!;
       packet.usdAsk = parent.price / packet.bid!;
       packet.observedAt = Math.min(packet.bookRetrievedAt, parent.observedAt);
-      return { quote: { price, observedAt: packet.observedAt, observedAtMode: "local_fetch" }, diagnostic: packet, transportHealthy: true };
+      const quote: HiveNativePriceQuote = { price, observedAt: packet.observedAt, observedAtMode: "local_fetch" };
+      const vetoMid: HiveVetoSignal = { ...quote, admittedForPublication: true, rejectionReason: null };
+      return { quote, vetoMid, diagnostic: packet, transportHealthy: true };
     } catch (error) {
       const reason = error instanceof Rejected ? error.reason : "invalid_response";
       packet.rejectionReason = reason;
       packet.rpcCount = rpcCount;
       packet.sampleDurationMs = Date.now() - sampleStarted;
-      if (!FAILOVER_REASONS[reason] || node === NODES[1]) return { quote: null, diagnostic: packet, transportHealthy: !FAILOVER_REASONS[reason] && reason !== "aborted" && reason !== "deadline_exceeded" };
+      const vetoMid = deriveVetoMidSignal(parent, packet, reason, Date.now() / 1000);
+      packet.vetoMidPrice = vetoMid?.price ?? null;
+      if (!FAILOVER_REASONS[reason] || node === NODES[1]) return { quote: null, vetoMid, diagnostic: packet, transportHealthy: !FAILOVER_REASONS[reason] && reason !== "aborted" && reason !== "deadline_exceeded" };
     }
   }
-  return { quote: null, diagnostic: packet, transportHealthy: false };
+  return { quote: null, vetoMid: null, diagnostic: packet, transportHealthy: false };
 }

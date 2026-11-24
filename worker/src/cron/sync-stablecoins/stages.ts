@@ -84,6 +84,8 @@ export async function runStablecoinsPricingStage(
     results: primaryPriceResults,
     stats: priceValidationStats,
     providerDiagnostics: primaryProviderDiagnostics = [],
+    rejectedCgReasons,
+    hiveVetoPrice,
   } = await fetchPrimaryPrices(
     options.assets,
     options.db,
@@ -121,6 +123,7 @@ export async function runStablecoinsPricingStage(
     validationReferences: options.validationReferences,
     syncStartSec: options.syncStartSec,
     reason: "primary",
+    rejectedCgReasons,
   });
   prevalidatePrices({
     assets: options.assets,
@@ -180,6 +183,8 @@ export async function runStablecoinsPricingStage(
     authoritativeOverrideStats,
     previousMissingGenerationsById: options.previousMissingGenerationsById,
     priceCache: replayPriceCache,
+    rejectedCgReasons,
+    hiveVetoPrice,
   }, "");
   if (isAbortResult(priceCompletion)) return priceCompletion;
   const { priceCacheEntries, ...metadata } = priceCompletion;

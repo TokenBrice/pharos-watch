@@ -15,6 +15,10 @@ export interface PriceValidationStats {
   singleSource: number;
   cgOnly: number;
   low: number;
+  cgMicroVolumeRejected?: number;
+  cgVolumeUnavailable?: number;
+  hiveDivergenceVetoed?: number;
+  hiveVetoUnavailable?: number;
 }
 
 export interface PrimaryPriceResult extends Pick<StablecoinData, "priceQuoteBasis" | "upstreamKeys" | "pricePoolKeys"> {
