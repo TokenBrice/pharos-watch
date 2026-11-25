@@ -75,6 +75,7 @@ describe("public API response schemas", () => {
         symbol: "USDT",
         pegType: "peggedUSD",
         pegMechanism: "fiat-backed",
+        listingClass: "core-stablecoin",
         priceUsd: 1.0001,
         priceSource: "coingecko+defillama-list",
         priceConfidence: "high",
@@ -155,7 +156,7 @@ describe("public API response schemas", () => {
   });
   it("accepts unavailable current summary supply only with its reason field present", () => {
     const base = {
-      id: "usdt-tether", name: "Tether", symbol: "USDT", pegType: "peggedUSD", pegMechanism: "fiat-backed",
+      id: "usdt-tether", name: "Tether", symbol: "USDT", pegType: "peggedUSD", pegMechanism: "fiat-backed", listingClass: null,
       priceUsd: 1, priceSource: null, priceConfidence: null,
       priceObservedAt: null, priceSyncedAt: null, priceUpdatedAt: null,
       supplySource: null, supplyObservedAt: null,
@@ -166,6 +167,7 @@ describe("public API response schemas", () => {
       prevDay: 90, prevWeek: null, prevMonth: null, change1d: null, change7d: null, change30d: null,
     };
     expect(StablecoinSummaryResponseSchema.safeParse({ ...base, supplyUsd: unavailable }).success).toBe(true);
+    expect(StablecoinSummaryResponseSchema.safeParse({ ...base, listingClass: "bogus", supplyUsd: unavailable }).success).toBe(false);
     const { currentUnavailableReason: _omitted, ...withoutReason } = unavailable;
     expect(StablecoinSummaryResponseSchema.safeParse({ ...base, supplyUsd: withoutReason }).success).toBe(false);
   });

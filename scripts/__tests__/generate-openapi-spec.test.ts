@@ -4,6 +4,7 @@ import { z } from "zod";
 import { PUBLIC_API_CONTRACT_VERSION } from "@shared/lib/public-api-contract";
 import { getEndpointDefinitionByKey } from "@shared/lib/api-endpoints/definitions";
 import { StablecoinDataSchema, StablecoinDataOutputSchema } from "@shared/types/supply";
+import { LISTING_CLASS_VALUES } from "@shared/types/stablecoin-taxonomy";
 import { ReserveBoundedFactKindSchema, ReserveBoundedFactSchema } from "@shared/types/reserve-bounded-facts";
 import {
   YIELD_ADAPTER_LIFECYCLE_VALUES,
@@ -272,8 +273,12 @@ describe("OpenAPI runtime response contracts", () => {
     expect(Object.keys(properties)).toEqual(Object.keys(StablecoinDataOutputSchema.shape));
     expect(properties).not.toHaveProperty("gecko_id");
     expect(items.required).toEqual(expect.arrayContaining([
-      "geckoId", "priceConfidence", "priceObservedAt", "circulatingPrevDay", "consensusSources",
+      "geckoId", "listingClass", "priceConfidence", "priceObservedAt", "circulatingPrevDay", "consensusSources",
     ]));
+    expect((schemas.ListingClass as { enum: unknown }).enum).toEqual(LISTING_CLASS_VALUES);
+    for (const k of ["StablecoinList", "StablecoinSummary", "PegSummary", "YieldRankings", "YieldRankingsSummary", "DependencyGraph", "SafetyGrades"]) {
+      expect(collectPropertySchemas(resolveSchemaTree(schemas[`${k}Response`], schemas), "listingClass")[0]?.anyOf, k).toContainEqual({ type: "null" });
+    }
     const output = StablecoinDataSchema.parse({
       id: "usdc-circle", name: "USD Coin", symbol: "USDC", gecko_id: "usd-coin",
       pegType: "peggedUSD", pegMechanism: "fiat-backed", price: null, priceSource: null,

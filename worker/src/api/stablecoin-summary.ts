@@ -1,6 +1,7 @@
 import type { StablecoinData } from "@shared/types/supply";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
+import { getListingClass } from "@shared/lib/stablecoins/listing-governance";
 import { addFreshnessHeaders } from "../lib/api-freshness";
 import { errorResponse, jsonResponse } from "../lib/api-response";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
@@ -49,6 +50,7 @@ export const handleStablecoinSummary = async (
     symbol: coin.symbol,
     pegType: coin.pegType,
     pegMechanism: coin.pegMechanism,
+    listingClass: getListingClass(coin.id),
     priceUsd: isObservedPrice(coin) ? coin.price ?? null : null,
     priceSource: coin.priceSource,
     priceConfidence: isObservedPrice(coin) ? coin.priceConfidence ?? null : null,

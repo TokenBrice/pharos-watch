@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { StrictIsoDateSchema } from "./safety-schema-primitives";
 import { SafetyScorePublicationIdentitySchema } from "./safety-score-publication";
+import { ListingClassSchema } from "./stablecoin-taxonomy";
 
 export const PUBLIC_SNAPSHOT_ENVELOPE_VERSION = 2 as const;
 
@@ -13,6 +14,7 @@ const PublicSnapshotStablecoinSchema = z
     symbol: z.string(),
     pegType: z.string(),
     pegMechanism: z.string(),
+    listingClass: ListingClassSchema.nullable().optional(),
     price: z.number().finite().nullable(),
     circulating: z.record(z.string(), z.number().finite()),
     chains: z.array(z.string()),

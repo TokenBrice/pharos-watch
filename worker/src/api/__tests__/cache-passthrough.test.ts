@@ -119,7 +119,8 @@ describe("cache-passthrough: handleStablecoins", () => {
         basis: "onchain-share", observedAt: nowSec - 100, onchainUsd: 153, ratio: 1.02, admission: "carried",
       },
     };
-    const payload = { peggedAssets: [row] };
+    const payload = { peggedAssets: [row, { ...row, id: "buidl-blackrock" }, { ...row, id: "214" }] };
+    const stamped = { peggedAssets: payload.peggedAssets.map((a, i) => ({ ...a, listingClass: (["core-stablecoin", "tokenized-fund", null] as const)[i] })) };
     const legacyPayload = { peggedAssets: [{ ...row, chainCirculating: { Tron: { current: 0 } } }] };
     const db = path === "canonical" ? makeCacheDb("stablecoins", payload, nowSec) : mockD1([{
       match: "cache",
@@ -128,8 +129,8 @@ describe("cache-passthrough: handleStablecoins", () => {
         {
           key: getResponseReadyCacheKey("stablecoins"),
           value: encodeResponseReadyCacheValue(
-            JSON.stringify(path === "legacy-companion" ? legacyPayload : payload),
-            path === "legacy-companion" ? "stablecoins:StablecoinListResponseSchema:v1" : RESPONSE_READY_CACHE_SCHEMA_IDS.stablecoins,
+            JSON.stringify(path === "legacy-companion" ? legacyPayload : stamped),
+            path === "legacy-companion" ? "stablecoins:StablecoinListResponseSchema:v2" : RESPONSE_READY_CACHE_SCHEMA_IDS.stablecoins,
           ),
           updated_at: nowSec,
         },
@@ -137,13 +138,14 @@ describe("cache-passthrough: handleStablecoins", () => {
     }]);
     const res = await handleStablecoins(db);
 
-    const body = (await readJsonResponse(res, 200)) as { peggedAssets: Array<{ chainCirculating: unknown; chainPartition: unknown }> };
+    const body = (await readJsonResponse(res, 200)) as { peggedAssets: Array<{ chainCirculating: unknown; chainPartition: unknown; listingClass: string | null }> };
     expect(body.peggedAssets[0]?.chainPartition).toEqual(row.chainPartition);
     expect(body.peggedAssets[0]?.chainCirculating).toEqual({
       Ethereum: { current: 150, circulatingPrevDay: null, circulatingPrevWeek: 140, circulatingPrevMonth: null },
       Tron: { current: null, circulatingPrevDay: 0 },
       Base: { current: 0 },
     });
+    expect(body.peggedAssets.map((a) => a.listingClass)).toEqual(["core-stablecoin", "tokenized-fund", null]);
   });
 
   it("ignores untrusted response-ready stablecoins rows and validates the canonical cache", async () => {

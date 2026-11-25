@@ -1,5 +1,5 @@
 import type { SafetyGradesResponse } from "@shared/types/report-cards-v9";
-import { isTokenizedFundId } from "@shared/lib/stablecoins/listing-governance";
+import { getListingClass, isTokenizedFundListingClass } from "@shared/lib/stablecoins/listing-governance";
 import { TOKENIZED_FUND_NOT_GRADED_REASON_CODE } from "@shared/lib/safety-score-v9/public";
 import { jsonResponse } from "../lib/api-response";
 import { jsonSafetyScoreSnapshotResponse } from "../lib/safety-score-v9/http-response";
@@ -16,8 +16,9 @@ export const handleSafetyGrades = async (db: D1Database): Promise<Response> => {
     return jsonResponse({ error: active.detail, reason: active.reason }, { status: 503, noStore: true });
   }
   const snapshot = active.snapshot;
-  const grades: SafetyGradesResponse["grades"] = snapshot.cards.map((card) =>
-    card.ratingStatus !== "pipeline-gap" && isTokenizedFundId(card.id)
+  const grades: SafetyGradesResponse["grades"] = snapshot.cards.map((card) => {
+    const listingClass = getListingClass(card.id);
+    return card.ratingStatus !== "pipeline-gap" && isTokenizedFundListingClass(listingClass)
       ? {
           id: card.id,
           score: null,
@@ -25,9 +26,13 @@ export const handleSafetyGrades = async (db: D1Database): Promise<Response> => {
           ratingStatus: "not-rated",
           partialEvidence: card.partialEvidence,
           notRatedReason: TOKENIZED_FUND_NOT_GRADED_REASON_CODE,
+          listingClass,
         }
-      : card,
-  );
+      : {
+          ...card,
+          listingClass,
+        };
+  });
   const body: SafetyGradesResponse = {
     schemaVersion: 1,
     model: "v9",
@@ -37,5 +42,5 @@ export const handleSafetyGrades = async (db: D1Database): Promise<Response> => {
     publicationStatus: snapshot.publicationHealth.status,
     grades,
   };
-  return jsonSafetyScoreSnapshotResponse(snapshot, body, `safety-grades-v${body.schemaVersion}`);
+  return jsonSafetyScoreSnapshotResponse(snapshot, body, `safety-grades-v${body.schemaVersion}:listing-class-v1`);
 };

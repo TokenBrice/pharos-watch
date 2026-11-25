@@ -1,5 +1,6 @@
 import { DEPEG_EVENT_MIN_SUPPLY_USD } from "@shared/lib/depeg-config";
 import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { getListingClass } from "@shared/lib/stablecoins/listing-governance";
 import {
   computePegScore,
   computeRecentPegStats,
@@ -268,6 +269,7 @@ export async function derivePegAnalyticsSnapshot(
       pegType: asset?.pegType ?? "",
       pegCurrency: meta.flags.pegCurrency,
       governance: meta.flags.governance,
+      listingClass: getListingClass(meta.id),
       ...(asset ? {
         priceSource: asset?.priceSource ?? undefined,
         priceObservedAtMode: asset?.priceObservedAtMode,
