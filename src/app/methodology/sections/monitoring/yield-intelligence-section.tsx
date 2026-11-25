@@ -4,8 +4,10 @@ import {
   YIELD_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/methodology-versions/constants";
 import {
+  METHODOLOGY_LINK_CLASS,
   MethodologyDetails,
   MethodologyFacts,
+  MethodologyFormula,
   MethodologyPreconditions,
   MethodologySectionShell,
   ResponsiveMethodologyPipeline,
@@ -30,26 +32,26 @@ const YIELD_OVERVIEW_PARAGRAPH =
 
 const YIELD_PIPELINE = {
   desktop: {
-    wrapperClassName: "hidden md:flex items-stretch gap-4",
-    arrow: { className: "flex items-center text-xl font-bold text-muted-foreground", symbol: "→", ariaHidden: true },
+    wrapperClassName: "hidden md:flex items-stretch gap-3",
+    arrow: { className: "flex items-center text-muted-foreground", symbol: "→", ariaHidden: true },
     stages: [
       { wrapperClassName: "flex flex-col gap-2 flex-1", cards: [
           { className: "flex-1", title: "Tier 1", subtitle: "Direct on-chain reads" },
           { className: "flex-1", title: "Tier 2", subtitle: "Curated pools + protocol APIs" },
           { className: "flex-1", title: "Tier 3 / 4", subtitle: "Price- or rate-derived fallback" },
         ] },
-      { cards: [{ className: "w-32 flex flex-shrink-0 flex-col justify-center", title: "Effective Yield", subtitle: EFFECTIVE_YIELD_LABEL }] },
+      { cards: [{ className: "w-32 flex shrink-0 flex-col justify-center", title: "Effective Yield", subtitle: EFFECTIVE_YIELD_LABEL }] },
       { wrapperClassName: "flex flex-col gap-2 flex-1", cards: [
           { className: "flex-1", title: "Row utility", subtitle: "Effective yield ÷ source risk" },
           { className: "flex-1", title: "Yield efficiency", subtitle: "Row utility ÷ curved safety penalty" },
           { className: "flex-1", title: "Sustainability", subtitle: "penalizes high variance" },
         ] },
-      { cards: [{ className: "w-32 flex flex-shrink-0 flex-col justify-center", title: "PYS Score", subtitle: "0–100" }] },
+      { cards: [{ className: "w-32 flex shrink-0 flex-col justify-center", emphasis: "output", title: "PYS Score", subtitle: "0–100" }] },
     ],
   },
   mobile: {
     wrapperClassName: "flex flex-col items-center gap-3 md:hidden",
-    arrow: { className: "text-xl font-bold text-muted-foreground", symbol: "↓", ariaHidden: true },
+    arrow: { className: "text-muted-foreground", symbol: "↓", ariaHidden: true },
     stages: [
       { wrapperClassName: "grid grid-cols-3 gap-2 w-full", cards: [
           { title: "Tier 1", titleClassName: "text-xs text-foreground font-medium", subtitle: "On-chain reads", subtitleClassName: "text-xs text-muted-foreground" },
@@ -62,7 +64,7 @@ const YIELD_PIPELINE = {
           { title: "Efficiency", titleClassName: "text-xs text-foreground font-medium", subtitle: "utility ÷ safety", subtitleClassName: "text-xs text-muted-foreground" },
           { title: "Sustainability", titleClassName: "text-xs text-foreground font-medium", subtitle: "penalizes variance", subtitleClassName: "text-xs text-muted-foreground" },
         ] },
-      { cards: [{ className: "w-full", title: "PYS Score", subtitle: "0–100" }] },
+      { cards: [{ className: "w-full", emphasis: "output", title: "PYS Score", subtitle: "0–100" }] },
     ],
   },
 } satisfies ResponsiveMethodologyPipelineProps;
@@ -74,6 +76,9 @@ export function YieldIntelligenceMethodologySection() {
             title={YIELD_SECTION_CONTENT.title}
             versionBadge={{ label: YIELD_METHODOLOGY_VERSION_LABEL }}
             changelogPath={YIELD_METHODOLOGY_CHANGELOG_PATH}
+            liveHref="/yield/"
+            liveLabel="Yield Intelligence"
+            docsPath="/docs/yield-intelligence/"
             versionNote="Version increments when APY source resolution, source arbitration, history semantics, PYS scoring logic, or eligibility rules for discovered yield sources change."
             changelogClassName={METHODOLOGY_SECTION_ACCENT_CLASSES.yieldIntelligence.changelogHover}
           >
@@ -134,13 +139,13 @@ export function YieldIntelligenceMethodologySection() {
                   asset Pharos tracks. It enumerates the deterministic on-chain readers, curated DeFiLlama
                   pools, protocol-API venues, rate-derived benchmark fallbacks, price-derived NAV
                   fallbacks, auto-discovery lending overrides, and intentional coverage gaps that feed the
-                  ranking pipeline, along with each entry&apos;s lifecycle (`active`, `quarantined`,
-                  `intentional-gap`, `experimental`). The manifest is published at{" "}
+                  ranking pipeline, along with each entry&apos;s lifecycle (<code>active</code>, <code>quarantined</code>,{" "}
+                  <code>intentional-gap</code>, <code>experimental</code>). The manifest is published at{" "}
                   <Link
                     href="/api/reference/#get-api-yield-adapter-manifest"
-                    className="text-foreground underline underline-offset-2 hover:text-foreground/80 transition-colors"
+                    className={METHODOLOGY_LINK_CLASS}
                   >
-                    <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">/api/yield-adapter-manifest</code>
+                    <code>/api/yield-adapter-manifest</code>
                   </Link>
                   {" "}with a 5-minute cache, stamped with the current methodology version on every entry.
                 </p>
@@ -191,8 +196,8 @@ export function YieldIntelligenceMethodologySection() {
                       protocol-owned APIs and protocol-specific on-chain venue readers when the canonical savings path is
                       not representable as a reliable DeFiLlama pool; these rows stay in the curated tier rather than
                       inheriting Tier 1 deterministic precedence reserved for native wrapper readers. Royco Dawn senior
-                      and junior tranches publish here as <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">structured-tranche</code>{" "}
-                      rows keyed by <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">royco-dawn:&lt;chainId&gt;:&lt;marketId&gt;:&lt;side&gt;</code>{" "}
+                      and junior tranches publish here as <code>structured-tranche</code>{" "}
+                      rows keyed by <code>royco-dawn:&lt;chainId&gt;:&lt;marketId&gt;:&lt;side&gt;</code>{" "}
                       (the former Midas mMEV NAV-oracle row retired when mMEV was delisted under listing policy 2.0)
                     </li>
                     <li>
@@ -265,7 +270,7 @@ export function YieldIntelligenceMethodologySection() {
                     used by PYS for the opportunity row only.
                   </p>
                   <p>
-                    Deterministic rows keep their own source identity (`onchain:&lt;stablecoinId&gt;`) rather than sharing
+                    Deterministic rows keep their own source identity (<code>onchain:&lt;stablecoinId&gt;</code>) rather than sharing
                     a pool UUID with curated sources, so source-aware history and previous-rate lookups stay isolated when
                     both paths coexist. Linked variants and protocol-specific on-chain rows also preserve their exact modern
                     keys; only pre-source-key history and the named LUSD legacy alias normalize to a parent deterministic key.
@@ -279,12 +284,12 @@ export function YieldIntelligenceMethodologySection() {
                   </p>
                   <p>{YIELD_REVIEWED_HOLD_DESCRIPTION}</p>
                   <p>
-                    Read-time <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">data-stale</code> warnings are also
-                    cadence-aware: core families attach only after three missed <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">sync-yield-data</code>{" "}
-                    intervals (about {3 * YIELD_PUBLISH_HOURS} hours at the current publisher), while <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">price-derived</code>{" "}
-                    rows wait 30 hours because they are backed by daily <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">supply_history</code>{" "}
-                    snapshots and <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">rate-derived</code> rows wait 36 hours
-                    for the daily benchmark producer. Each source class also emits a midpoint <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">aging</code>{" "}
+                    Read-time <code>data-stale</code> warnings are also
+                    cadence-aware: core families attach only after three missed <code>sync-yield-data</code>{" "}
+                    intervals (about {3 * YIELD_PUBLISH_HOURS} hours at the current publisher), while <code>price-derived</code>{" "}
+                    rows wait 30 hours because they are backed by daily <code>supply_history</code>{" "}
+                    snapshots and <code>rate-derived</code> rows wait 36 hours
+                    for the daily benchmark producer. Each source class also emits a midpoint <code>aging</code>{" "}
                     warning (27h price-derived, 30h rate-derived) once an observation misses its refresh slot but has not
                     reached the stale bound. Ordinary exchange-rate anchors expire after 14 days; price-derived and
                     slow NAV anchors remain valid through their configured 45-day comparison window.
@@ -306,7 +311,7 @@ export function YieldIntelligenceMethodologySection() {
                 {/* PYS formula */}
                 <div className="space-y-2">
                   <h3 className="text-foreground font-medium">Pharos Yield Score (PYS)</h3>
-                  <p className="pharos-numeric text-xs border border-border/60 bg-muted/50 rounded-lg px-4 py-3">
+                  <MethodologyFormula>
                     benchmarkSpread = apy30d &minus; benchmarkRate
                     <br />
                     hurdleRebase = usdBenchmarkRate &minus; benchmarkRate (0 for USD-currency rows or missing rates)
@@ -324,7 +329,7 @@ export function YieldIntelligenceMethodologySection() {
                     sustainability = max({PYS_SUSTAINABILITY_FLOOR}, 1.0 &minus; apyVarianceScore)
                     <br />
                     PYS = clamp(round(yieldEfficiency &times; sustainability &times; scalingFactor), 0, 100)
-                  </p>
+                  </MethodologyFormula>
                   <p>
                     APY above the {PYS_APY_SANITY_MAX}% scoring envelope or non-finite effective yield is unavailable, not a zero score.
                     Every withheld score carries an NR reason; a valid score that rounds to zero remains a measured 0.

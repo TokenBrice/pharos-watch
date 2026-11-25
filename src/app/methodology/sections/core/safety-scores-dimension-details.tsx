@@ -14,8 +14,11 @@ export function SafetyScoresDimensionDetails() {
           descriptively but does not affect the Resilience score.
         </p>
         <ContentTable
+          chrome="embedded"
           tableId="methodology-safety-resilience-scoring"
           testId="methodology-safety-resilience-scoring-table"
+          tableClassName="min-w-[540px]"
+          viewportProps={{ mobileScrollHint: "Swipe sideways for more columns" }}
           columns={[
             { id: "factor", header: "Sub-factor", cellClassName: "text-foreground" },
             { id: "measure", header: "What it measures", cellClassName: "whitespace-normal" },
@@ -78,7 +81,7 @@ export function SafetyScoresDimensionDetails() {
         </p>
         <p className="font-medium text-foreground mt-2">CDP oracle setup blend (v8.11):</p>
         <p>
-          Crypto-backed CDP stablecoins can carry reviewed <code className="text-xs">oracleRisk</code> metadata. When
+          Crypto-backed CDP stablecoins can carry reviewed <code>oracleRisk</code> metadata. When
           present, the score applies{" "}
           <span className="pharos-numeric">min(score, round(score &times; 0.75 + oracle &times; 0.25))</span> after
           governance and chain infrastructure. Robust setups never lift a score; weak, single-source, laggy, or opaque
@@ -93,7 +96,7 @@ export function SafetyScoresDimensionDetails() {
         </p>
         <p className="font-medium text-foreground mt-2">Bridge route blend (v8.12):</p>
         <p>
-          Reviewed <code className="text-xs">bridgeRouteRisk</code> metadata can capture issuer-native, canonical,
+          Reviewed <code>bridgeRouteRisk</code> metadata can capture issuer-native, canonical,
           external bridge, lockbox, liquidity, or intent routes. When present, the score applies{" "}
           <span className="pharos-numeric">min(score, round(score &times; 0.80 + bridge &times; 0.20))</span> after
           oracle scoring and before Mint Authority. Strong issuer-native or canonical routes never lift a score; missing
@@ -169,7 +172,7 @@ export function SafetyScoresDimensionDetails() {
         <p className="mt-2">
           <span className="text-foreground font-medium">Dependency type ceilings:</span> each dependency is
           classified as <em>wrapper</em>, <em>mechanism</em>, or <em>collateral</em> (default). Legacy wrappers (e.g.,
-          syrupUSDC &rarr; USDC) are capped at <code className="text-xs">upstream &minus; 3</code>. Tracked
+          syrupUSDC &rarr; USDC) are capped at <code>upstream &minus; 3</code>. Tracked
           parent-linked variants keep the same wrapper edge but use family-specific ceilings: savings &minus;3,
           strategy-vault &minus;5, risk-absorption &minus;5, bond-maturity &minus;8. Mechanism dependencies (e.g., DAI
           &rarr; USDC via{" "}
@@ -189,12 +192,13 @@ export function SafetyScoresDimensionDetails() {
       <div className="space-y-2">
         <h3 className="text-foreground font-medium">Grade thresholds</h3>
         <ContentTable
+          chrome="embedded"
           tableId="methodology-safety-grade-thresholds"
           testId="methodology-safety-grade-thresholds-table"
           tableClassName="w-auto"
           columns={[
-            { id: "grade", header: "Grade", headerClassName: "pr-8", cellClassName: "py-1.5 pr-8 text-foreground" },
-            { id: "range", header: "Score range", cellClassName: "py-1.5" },
+            { id: "grade", header: "Grade", headerClassName: "pr-8", cellClassName: "py-1.5 pr-8 font-medium text-foreground" },
+            { id: "range", header: "Score range", cellClassName: "py-1.5 pharos-numeric" },
           ]}
           rows={[
             ["A+", "87–100"], ["A", "83–86"], ["A−", "80–82"],
@@ -223,7 +227,7 @@ export function SafetyScoresDimensionDetails() {
             Blacklist capability is reported descriptively only and does not affect the Resilience score. Explicit
             mutable-contract controls surface as &ldquo;Possible&rdquo;. Parent and qualifying issuer/custodian
             reserve exposure instead use &ldquo;Upstream&rdquo; under the{" "}
-            <a href="#blacklist-tracker-methodology" className="text-foreground underline">FreezeWatch decision procedure</a>.
+            <a href="#blacklist-tracker-methodology" className={METHODOLOGY_LINK_CLASS}>FreezeWatch decision procedure</a>.
           </li>
         </ul>
       </div>

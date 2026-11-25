@@ -3,6 +3,11 @@ import PUBLIC_DOC_SOURCE_FILES from "./public-doc-manifest.json";
 export const DOC_GROUPS = ["methodology"] as const;
 export type DocGroup = (typeof DOC_GROUPS)[number];
 
+export interface PublicDocRelatedRoute {
+  href: string;
+  label: string;
+}
+
 export interface PublicDoc {
   /** Filename within /docs. Keep this to a single checked-in Markdown filename. */
   source: string;
@@ -16,6 +21,8 @@ export interface PublicDoc {
   summary: string;
   /** Group for index-page grouping and llms.txt ordering. */
   group: DocGroup;
+  /** Optional live Pharos product surface governed by this specification. */
+  relatedRoute?: PublicDocRelatedRoute;
 }
 
 const PUBLIC_DOC_METADATA: Readonly<Record<string, Omit<PublicDoc, "source">>> = {
@@ -25,6 +32,7 @@ const PUBLIC_DOC_METADATA: Readonly<Record<string, Omit<PublicDoc, "source">>> =
     summary:
       "Stablecoin classification methodology for peg currencies, backing models, governance labels, commodity pegs, lifecycle status, and taxonomy pages.",
     group: "methodology",
+    relatedRoute: { href: "/coverage/", label: "Coverage" },
   },
   "listing-policy.md": {
     slug: "listing-policy",
@@ -32,6 +40,7 @@ const PUBLIC_DOC_METADATA: Readonly<Record<string, Omit<PublicDoc, "source">>> =
     summary:
       "How Pharos admits, classifies, quarantines, delists, and preserves stablecoin records while separating catalog policy from runtime pricing failures.",
     group: "methodology",
+    relatedRoute: { href: "/coverage/", label: "Coverage" },
   },
   "pricing-pipeline.md": {
     slug: "pricing-pipeline",
@@ -46,6 +55,7 @@ const PUBLIC_DOC_METADATA: Readonly<Record<string, Omit<PublicDoc, "source">>> =
     summary:
       "Depeg detection methodology covering two-stage confirmation, peg-score inputs, severity bands, event lifecycle, and recovery handling.",
     group: "methodology",
+    relatedRoute: { href: "/depeg/", label: "Depeg & Recovery" },
   },
   "dews.md": {
     slug: "dews",
@@ -53,6 +63,7 @@ const PUBLIC_DOC_METADATA: Readonly<Record<string, Omit<PublicDoc, "source">>> =
     summary:
       "Depeg Early Warning System methodology: DEWS formula, stress sub-signals, bands, downgrade gates, and API response contract.",
     group: "methodology",
+    relatedRoute: { href: "/depeg/", label: "Depeg & Recovery" },
   },
   "blacklist-tracker.md": {
     slug: "blacklist-tracker",
@@ -60,6 +71,7 @@ const PUBLIC_DOC_METADATA: Readonly<Record<string, Omit<PublicDoc, "source">>> =
     summary:
       "Blacklist Tracker methodology for stablecoin freezes, releases, wipes, event coverage, frozen-balance valuation, and direct versus upstream exposure.",
     group: "methodology",
+    relatedRoute: { href: "/freezewatch/", label: "FreezeWatch" },
   },
   "dex-liquidity.md": {
     slug: "dex-liquidity",
@@ -68,6 +80,7 @@ const PUBLIC_DOC_METADATA: Readonly<Record<string, Omit<PublicDoc, "source">>> =
     summary:
       "DEX Liquidity Score methodology for stablecoins: pool discovery, depth scoring, durability, pair diversity, cross-validation, and risk bands.",
     group: "methodology",
+    relatedRoute: { href: "/liquidity/", label: "Liquidity" },
   },
   "stability-index.md": {
     slug: "stability-index",
@@ -76,6 +89,7 @@ const PUBLIC_DOC_METADATA: Readonly<Record<string, Omit<PublicDoc, "source">>> =
     summary:
       "Pharos Stability Index methodology explaining the PSI formula, active universe, stress bands, storage model, API surface, and replay rules.",
     group: "methodology",
+    relatedRoute: { href: "/stability-index/", label: "Stability Index" },
   },
   "report-cards.md": {
     slug: "report-cards",
@@ -83,6 +97,7 @@ const PUBLIC_DOC_METADATA: Readonly<Record<string, Omit<PublicDoc, "source">>> =
     summary:
       "Stablecoin Safety Score and report-card methodology for Backing, Exit, Economic Control, peg behavior, dependency exposure, evidence constraints, and portfolios.",
     group: "methodology",
+    relatedRoute: { href: "/safety-scores/", label: "Safety Scores" },
   },
   "redemption-backstops.md": {
     slug: "redemption-backstops",
@@ -90,6 +105,7 @@ const PUBLIC_DOC_METADATA: Readonly<Record<string, Omit<PublicDoc, "source">>> =
     summary:
       "Redemption Backstops methodology for standalone route scoring, redemption terms, Exit pillar evidence, operational disclosures, and stored review evidence.",
     group: "methodology",
+    relatedRoute: { href: "/safety-scores/", label: "Safety Scores" },
   },
   "chain-health.md": {
     slug: "chain-health",
@@ -97,6 +113,7 @@ const PUBLIC_DOC_METADATA: Readonly<Record<string, Omit<PublicDoc, "source">>> =
     summary:
       "Chain Health Score methodology for stablecoin networks: supply concentration, venue health, deployment coverage, risk factors, and score bands.",
     group: "methodology",
+    relatedRoute: { href: "/chains/", label: "Chains" },
   },
   "mint-burn-flows.md": {
     slug: "mint-burn-flows",
@@ -104,6 +121,7 @@ const PUBLIC_DOC_METADATA: Readonly<Record<string, Omit<PublicDoc, "source">>> =
     summary:
       "Mint and burn flow methodology covering issuance-chain ingestion, pressure scoring, Bank Run Gauge inputs, reconciliation, and backfills.",
     group: "methodology",
+    relatedRoute: { href: "/flows/", label: "Mint & Burn Flows" },
   },
   "yield-intelligence.md": {
     slug: "yield-intelligence",
@@ -112,6 +130,7 @@ const PUBLIC_DOC_METADATA: Readonly<Record<string, Omit<PublicDoc, "source">>> =
     summary:
       "Yield Intelligence methodology for stablecoin APY resolution, Pharos Yield Score, source confidence, reward warnings, and risk-adjusted ranking.",
     group: "methodology",
+    relatedRoute: { href: "/yield/", label: "Yield Intelligence" },
   },
   "shadow-stablecoins.md": {
     slug: "shadow-stablecoins",
@@ -119,6 +138,7 @@ const PUBLIC_DOC_METADATA: Readonly<Record<string, Omit<PublicDoc, "source">>> =
     summary:
       "Off-catalog PSI historical assets: authoritative continuity, monitoring eligibility, public listing exclusions and unavailable source history.",
     group: "methodology",
+    relatedRoute: { href: "/stability-index/", label: "Stability Index" },
   },
 } as const;
 

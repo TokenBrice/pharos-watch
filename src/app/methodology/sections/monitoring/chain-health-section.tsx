@@ -12,6 +12,7 @@ import {
   METHODOLOGY_LINK_CLASS,
   MethodologyDetails,
   MethodologyFacts,
+  MethodologyFormula,
   MethodologySectionShell,
   WorkedExample,
 } from "../../methodology-shared";
@@ -73,31 +74,25 @@ const HEALTH_BAND_ROWS: ContentTableRow[] = [
   { id: "concentrated", cells: { band: "Concentrated", range: "0–19", interpretation: "Minimal diversity or critically weak infrastructure" }, cellClassNames: { band: CHAIN_HEALTH_TEXT_CLASSES.concentrated } },
 ];
 const FACTOR_COLUMNS: ContentTableColumn[] = [
-  { id: "factor", header: "Factor", cellClassName: "font-medium" },
-  { id: "weight", header: "Weight" },
-  { id: "meaning", header: "What it measures" },
+  { id: "factor", header: "Factor", cellClassName: "font-medium text-foreground whitespace-nowrap" },
+  { id: "weight", header: "Weight", cellClassName: "pharos-numeric whitespace-nowrap" },
+  { id: "meaning", header: "What it measures", cellClassName: "whitespace-normal" },
 ];
 const L2BEAT_COLUMNS: ContentTableColumn[] = [
-  { id: "component", header: "Component", cellClassName: "font-medium" },
-  { id: "mapping", header: "Mapping" },
+  { id: "component", header: "Component", cellClassName: "font-medium text-foreground whitespace-nowrap" },
+  { id: "mapping", header: "Mapping", cellClassName: "whitespace-normal" },
 ];
 const TIER_COLUMNS: ContentTableColumn[] = [
-  { id: "tier", header: "Tier", cellClassName: "font-medium" },
-  { id: "score", header: "Score", cellClassName: "pharos-numeric" },
-  { id: "criteria", header: "Criteria" },
-  { id: "examples", header: "Examples" },
+  { id: "tier", header: "Tier", cellClassName: "font-medium text-foreground whitespace-nowrap" },
+  { id: "score", header: "Score", cellClassName: "pharos-numeric whitespace-nowrap" },
+  { id: "criteria", header: "Criteria", cellClassName: "whitespace-normal" },
+  { id: "examples", header: "Examples", cellClassName: "whitespace-normal" },
 ];
 const HEALTH_BAND_COLUMNS: ContentTableColumn[] = [
-  { id: "band", header: "Band", cellClassName: "font-medium" },
-  { id: "range", header: "Score Range", cellClassName: "pharos-numeric" },
-  { id: "interpretation", header: "Interpretation" },
+  { id: "band", header: "Band", cellClassName: "font-medium whitespace-nowrap" },
+  { id: "range", header: "Score Range", cellClassName: "pharos-numeric whitespace-nowrap" },
+  { id: "interpretation", header: "Interpretation", cellClassName: "whitespace-normal" },
 ];
-for (const columns of [FACTOR_COLUMNS, L2BEAT_COLUMNS, TIER_COLUMNS, HEALTH_BAND_COLUMNS]) {
-  for (const column of columns) {
-    column.headerClassName = "h-auto whitespace-normal px-4 py-2 text-xs text-muted-foreground";
-    column.cellClassName = `whitespace-normal px-4 py-2 text-foreground ${column.cellClassName ?? ""}`;
-  }
-}
 
 export function ChainHealthMethodologySection() {
   return (
@@ -106,6 +101,9 @@ export function ChainHealthMethodologySection() {
       title={CHAIN_HEALTH_SECTION_CONTENT.title}
       versionBadge={{ label: CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL }}
       changelogPath={CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH}
+      liveHref="/chains/"
+      liveLabel="Chains"
+      docsPath="/docs/chain-health/"
       versionNote="Version increments when factor weights, tier assignments, or sub-factor formulas change."
       changelogClassName={METHODOLOGY_SECTION_ACCENT_CLASSES.chainHealth.changelogHover}
     >
@@ -116,7 +114,7 @@ export function ChainHealthMethodologySection() {
       </p>
 
       <p>
-        Under listing policy v2 (v1.91, <code className="text-xs">core-stablecoins-v2</code>), tokenized fund shares
+        Under listing policy v2 (v1.91, <code>core-stablecoins-v2</code>), tokenized fund shares
         leave the core stablecoin aggregate on a dated cutover without restating prior history, so Chain Health
         denominators cover active core stablecoins from the cutover onward.
       </p>
@@ -141,7 +139,12 @@ export function ChainHealthMethodologySection() {
           },
           {
             label: "Refresh cadence",
-            value: `${CRON_SCHEDULE_CADENCES.quarterHourly.intervalSec / 60}-minute stablecoins cache cadence; \`/api/chains\` freshness budget is 1800 seconds`,
+            value: (
+              <>
+                {CRON_SCHEDULE_CADENCES.quarterHourly.intervalSec / 60}-minute stablecoins cache cadence;{" "}
+                <code>/api/chains</code> freshness budget is 1800 seconds
+              </>
+            ),
           },
           {
             label: "Dependencies",
@@ -151,15 +154,15 @@ export function ChainHealthMethodologySection() {
       />
 
       <MethodologyDetails summary="Formula & Weights" primary>
-        <p className="text-foreground font-medium">Composite formula</p>
-        <pre className="overflow-x-auto rounded-lg bg-muted/50 px-4 py-3 text-xs pharos-numeric">
-          {CHAIN_HEALTH_FORMULA}
-        </pre>
+        <h3 className="text-foreground font-medium">Composite formula</h3>
+        <MethodologyFormula preformatted>{CHAIN_HEALTH_FORMULA}</MethodologyFormula>
 
         <ContentTable
+          chrome="embedded"
           tableId="chain-health-factor-weights"
           testId="chain-health-factor-weights-table"
           tableClassName="min-w-[640px]"
+          viewportProps={{ mobileScrollHint: "Swipe sideways for more columns" }}
           tableProps={{ "aria-label": "Chain Health factor weights" }}
           columns={FACTOR_COLUMNS}
           rows={FACTOR_ROWS}
@@ -178,18 +181,22 @@ export function ChainHealthMethodologySection() {
           L2BEAT fields. L2BEAT is not fetched live during request handling.
         </p>
         <ContentTable
+          chrome="embedded"
           tableId="chain-health-l2beat-risk-fields"
           testId="chain-health-l2beat-risk-fields-table"
           tableClassName="min-w-[640px]"
+          viewportProps={{ mobileScrollHint: "Swipe sideways for more columns" }}
           tableProps={{ "aria-label": "L2BEAT chain environment inputs" }}
           columns={L2BEAT_COLUMNS}
           rows={L2BEAT_ROWS}
         />
         <p>Chains without a matched L2BEAT snapshot continue to use the fallback tiers below.</p>
         <ContentTable
+          chrome="embedded"
           tableId="chain-health-resilience-tiers"
           testId="chain-health-resilience-tiers-table"
           tableClassName="min-w-[640px]"
+          viewportProps={{ mobileScrollHint: "Swipe sideways for more columns" }}
           tableProps={{ "aria-label": "Chain resilience tiers" }}
           columns={TIER_COLUMNS}
           rows={TIER_ROWS}
@@ -198,9 +205,11 @@ export function ChainHealthMethodologySection() {
 
       <MethodologyDetails summary="Health bands">
         <ContentTable
+          chrome="embedded"
           tableId="chain-health-bands"
           testId="chain-health-bands-table"
           tableClassName="min-w-[520px]"
+          viewportProps={{ mobileScrollHint: "Swipe sideways for more columns" }}
           tableProps={{ "aria-label": "Chain Health bands" }}
           columns={HEALTH_BAND_COLUMNS}
           rows={HEALTH_BAND_ROWS}
@@ -209,7 +218,7 @@ export function ChainHealthMethodologySection() {
 
       <WorkedExample summary="Worked example: Ethereum vs PulseChain">
         <p className="text-foreground font-medium">Ethereum (Tier 1)</p>
-        <pre className="overflow-x-auto rounded-lg bg-muted/50 px-4 py-3 text-xs pharos-numeric">
+        <MethodologyFormula preformatted>
           {`quality      = 72  (supply-weighted safety scores across ~190 coins)
     environment  = 100 (tier 1 — gold standard for decentralization)
     concentration= 66  (USDT ~48%, USDC ~33% → HHI ≈ 0.34)
@@ -218,9 +227,9 @@ export function ChainHealthMethodologySection() {
 
     health = 0.30×72 + 0.20×100 + 0.20×66 + 0.20×98 + 0.10×35
            = 21.6 + 20 + 13.2 + 19.6 + 3.5 = 77.9 → 78 (healthy)`}
-        </pre>
+        </MethodologyFormula>
         <p className="text-foreground font-medium mt-4">PulseChain (Tier 3)</p>
-        <pre className="overflow-x-auto rounded-lg bg-muted/50 px-4 py-3 text-xs pharos-numeric">
+        <MethodologyFormula preformatted>
           {`quality      = 72  (rated supply only — not-rated coins excluded)
     environment  = 20  (tier 3 — unproven, centralized)
     concentration= 67  (DAI ~39%, rest ~12% each)
@@ -231,7 +240,7 @@ export function ChainHealthMethodologySection() {
            = 21.6 + 4 + 13.4 + 19.6 + 6.1 = 64.7 → 65 (healthy)
 
     → Chain environment alone creates a 16-point gap vs Ethereum.`}
-        </pre>
+        </MethodologyFormula>
       </WorkedExample>
     </MethodologySectionShell>
   );

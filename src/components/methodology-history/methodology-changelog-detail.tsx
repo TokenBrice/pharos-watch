@@ -5,6 +5,7 @@ import {
 } from "@shared/lib/methodology-versions/base";
 import type { MethodologyChangelogDetailBlock, MethodologyChangelogEntry, MethodologyChangelogRichText } from "@shared/types/editorial-content";
 import { slugifyId } from "@shared/lib/format";
+import { DisclosurePanel } from "@/components/disclosure-panel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ContentTable } from "@/components/table";
 
@@ -14,7 +15,7 @@ export function scoringAnchorId(version: string) {
 
 function Pill({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-block rounded-full bg-muted px-2 py-0.5 text-xs pharos-numeric font-medium text-foreground">
+    <span className="inline-block rounded-full border border-border/60 bg-muted/55 px-2.5 py-0.5 text-xs pharos-numeric font-medium text-foreground">
       {children}
     </span>
   );
@@ -36,7 +37,7 @@ function ChangelogRichText({ text }: { text: MethodologyChangelogRichText }) {
         if (typeof segment === "string") return segment;
         if ("code" in segment) {
           return (
-            <code key={index} className="text-xs bg-muted px-1 py-0.5 rounded-sm">
+            <code key={index} className="rounded-sm bg-muted/70 px-1 py-0.5 font-mono text-xs text-foreground">
               {segment.code}
             </code>
           );
@@ -81,7 +82,10 @@ function ChangelogDetailBlocks({ blocks }: { blocks: readonly MethodologyChangel
             );
           case "formula":
             return (
-              <div key={index} className="rounded-lg border p-3 pharos-numeric text-xs bg-muted">
+              <div
+                key={index}
+                className="overflow-x-auto rounded-lg border border-border/60 bg-muted/40 px-4 py-3 text-xs leading-relaxed text-foreground pharos-numeric"
+              >
                 {block.text}
               </div>
             );
@@ -92,6 +96,7 @@ function ChangelogDetailBlocks({ blocks }: { blocks: readonly MethodologyChangel
               <ContentTable
                 key={index}
                 id={block.tableId}
+                chrome="embedded"
                 tableProps={block.ariaLabel ? { "aria-label": block.ariaLabel } : undefined}
                 tableId={block.tableId}
                 testId={block.testId}
@@ -99,7 +104,9 @@ function ChangelogDetailBlocks({ blocks }: { blocks: readonly MethodologyChangel
                   ...column,
                   header: label,
                   headerClassName: headClassName ?? changelogTableClassNames.head,
-                  cellClassName: cellClassName ?? (column.rowHeader ? changelogTableClassNames.rowHeader : changelogTableClassNames.cell),
+                  cellClassName:
+                    cellClassName ??
+                    (column.rowHeader ? changelogTableClassNames.rowHeader : changelogTableClassNames.cell),
                 }))}
                 rows={block.rows}
               />
@@ -124,18 +131,21 @@ function ChangelogDetailBlocks({ blocks }: { blocks: readonly MethodologyChangel
  * `impact` otherwise.
  */
 export function StructuredChangelogDetail({ entry }: { entry: MethodologyChangelogEntry }) {
-  if (entry.detail) {
-    return <ChangelogDetailBlocks blocks={entry.detail} />;
-  }
   return (
-    <>
-      <p>{entry.summary}</p>
-      <ul className="list-disc list-inside space-y-1">
-        {entry.impact.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ul>
-    </>
+    <div className="space-y-4 [&_p]:max-w-[72ch] [&_ul]:max-w-[72ch] [&_ol]:max-w-[72ch] [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:tracking-tight [&_h3]:text-foreground">
+      {entry.detail ? (
+        <ChangelogDetailBlocks blocks={entry.detail} />
+      ) : (
+        <>
+          <p>{entry.summary}</p>
+          <ul className="list-disc list-inside space-y-1">
+            {entry.impact.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -149,26 +159,50 @@ export function VersionCard({
   versionLabel?: string;
 }) {
   const anchorId = scoringAnchorId(versionLabel);
+  const dateLabel = formatMethodologyDisplayDate(entry.date);
 
   return (
-    <Card id={anchorId} className="scroll-mt-28 rounded-xl">
-      <CardHeader>
-        <CardTitle as="h2">
-          <span className="flex flex-wrap items-center gap-2">
-            <Pill>{versionLabel}</Pill>
-            {entry.title}
-            <span className="text-sm font-normal text-muted-foreground">
-              {formatMethodologyDisplayDate(entry.date)}
-            </span>
-          </span>
+    <Card id={anchorId} variant="shell" className="scroll-mt-36">
+      <CardHeader className="space-y-2.5 border-b border-border/50 pb-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <Pill>{versionLabel}</Pill>
+          <Pill>{dateLabel}</Pill>
+          {entry.reconstructed && <Pill>Reconstructed</Pill>}
+        </div>
+        <CardTitle as="h2" className="pharos-section-title">
+          {entry.title}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4 text-sm text-muted-foreground leading-relaxed">
+      <CardContent className="space-y-4 text-sm leading-relaxed text-muted-foreground">
         {children}
-        <p className="text-xs">{entry.reconstructed ? "Reconstructed from git commit history." : "Contemporaneous release record."}</p>
-        <p className="break-words text-xs">
-          {entry.commits.length > 0 ? <>Commits: <span className="pharos-numeric">{entry.commits.join(", ")}</span></> : "Commit provenance not recorded"}
-        </p>
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1.5 border-t border-border/50 pt-3 text-xs text-muted-foreground">
+          <span>
+            {entry.reconstructed
+              ? "Reconstructed from git commit history."
+              : "Contemporaneous release record."}
+          </span>
+          {entry.commits.length === 0 ? (
+            <span>Commit provenance not recorded</span>
+          ) : entry.commits.length <= 4 ? (
+            <span className="break-words">
+              Commits: <span className="pharos-numeric text-foreground/85">{entry.commits.join(", ")}</span>
+            </span>
+          ) : (
+            <DisclosurePanel
+              variant="plain"
+              chevronPosition="end"
+              summary={
+                <span className="pharos-numeric">
+                  {entry.commits.length} commits
+                </span>
+              }
+            >
+              <p className="break-words pharos-numeric text-xs text-foreground/85">
+                {entry.commits.join(", ")}
+              </p>
+            </DisclosurePanel>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
@@ -178,6 +212,7 @@ function WeightRow({ values }: { values: readonly [string, string, string, strin
   const headers = ["Peg", "Liquidity", "Safety", "Resilience", "Decentralization", "Dep Risk"];
   return (
     <ContentTable
+      chrome="embedded"
       columns={headers.map((header) => ({
         id: header,
         header,

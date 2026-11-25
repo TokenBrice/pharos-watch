@@ -17,6 +17,9 @@ export function LiquidityMethodologySection() {
       title={LIQUIDITY_SECTION_CONTENT.title}
       versionBadge={{ label: LIQUIDITY_METHODOLOGY_VERSION_LABEL }}
       changelogPath={LIQUIDITY_METHODOLOGY_CHANGELOG_PATH}
+      liveHref="/liquidity/"
+      liveLabel="Liquidity"
+      docsPath="/docs/dex-liquidity/"
       versionNote="Version increments when liquidity formula weights, source inclusion rules, or TVL normalization logic changes."
       changelogClassName={METHODOLOGY_SECTION_ACCENT_CLASSES.liquidity.changelogHover}
     >

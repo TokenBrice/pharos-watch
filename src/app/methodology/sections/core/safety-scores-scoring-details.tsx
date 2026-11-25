@@ -1,7 +1,5 @@
-import { cn } from "@/lib/utils";
 import { ContentTable } from "@/components/table";
-import { MethodologyDiagramFlow } from "../../methodology-shared";
-import { METHODOLOGY_TABLE_ACCENT_CLASSES } from "@shared/lib/classification";
+import { MethodologyDiagramFlow, MethodologyFormula } from "../../methodology-shared";
 
 export function SafetyScoresScoringDetails() {
   return (
@@ -28,20 +26,23 @@ export function SafetyScoresScoringDetails() {
           {
             title: <>&times; No-Liquidity Penalty</>,
             subtitle: <>0.9&times; if no DEX or redemption signal</>,
-            className: cn("md:w-64", METHODOLOGY_TABLE_ACCENT_CLASSES.safetyScoring),
+            className: "md:w-64",
           },
-          { title: "Final grade", subtitle: "A+ through F", className: "md:w-64" },
+          { title: "Final grade", subtitle: "A+ through F", emphasis: "output", className: "md:w-64" },
         ]}
       />
 
       <div className="space-y-2">
         <h3 className="text-foreground font-medium">Base Dimensions (weighted average)</h3>
         <ContentTable
+          chrome="embedded"
           tableId="methodology-safety-base-dimensions"
           testId="methodology-safety-base-dimensions-table"
+          tableClassName="min-w-[600px]"
+          viewportProps={{ mobileScrollHint: "Swipe sideways for more columns" }}
           columns={[
             { id: "dimension", header: "Dimension", cellClassName: "text-foreground" },
-            { id: "weight", header: "Weight" },
+            { id: "weight", header: "Weight", cellClassName: "pharos-numeric whitespace-nowrap" },
             { id: "source", header: "Source", cellClassName: "whitespace-normal" },
             { id: "description", header: "Description", cellClassName: "whitespace-normal" },
           ]}
@@ -73,15 +74,15 @@ export function SafetyScoresScoringDetails() {
           deployment coverage at 45. Older snapshots without these evidence fields and rows explicitly marked legacy
           remain neutral. The public standalone Liquidity Score is not rewritten by this Safety Score policy.
         </p>
-        <p className="pharos-numeric">modeledExitUsd = min(max(supplyUsd &times; 0.05, 100000), 25000000)</p>
-        <p className="pharos-numeric">
+        <MethodologyFormula>
+          modeledExitUsd = min(max(supplyUsd &times; 0.05, 100000), 25000000)
+          <br />
           adjustedRedemption = redemption &times; capacityFactor &times; confidenceFactor
-        </p>
-        <p className="pharos-numeric">
+          <br />
           effectiveExit = round(min(100, max(dex, adjustedRedemption) + independentBonus))
-        </p>
+        </MethodologyFormula>
         <p>
-          <code className="text-xs">capacityFactor</code> is capped at 1.0 from current executable capacity divided by
+          <code>capacityFactor</code> is capped at 1.0 from current executable capacity divided by
           the modeled exit size. Confidence factors are 1.0 for high-confidence routes, 0.75 for medium-confidence
           routes, and 0.35 for low-confidence routes. The 10% secondary-path bonus is only applied when the redemption
           rail is independent from the DEX liquidity path, such as an issuer primary-market rail.
@@ -111,8 +112,8 @@ export function SafetyScoresScoringDetails() {
           primary-market bonus only when DEX liquidity already exists; they do not replace missing DEX liquidity. Severe
           active depegs also disable static or non-live-direct redemption uplift unless current live-open redemption
           evidence exists. Last-known DEX inputs still feed effective-exit scoring when the liquidity cron is stale,
-          with staleness surfaced through <code className="text-xs">liquidityStale</code> /{" "}
-          <code className="text-xs">inputFreshness.dexLiquidity.stale</code>. Materially stale or missing redemption
+          with staleness surfaced through <code>liquidityStale</code> /{" "}
+          <code>inputFreshness.dexLiquidity.stale</code>. Materially stale or missing redemption
           snapshots are suppressed from Safety Score liquidity; normal 4-hourly redemption-sync lag remains inside the
           scoring freshness runway. Unknown route status remains low confidence for proxy-only or weaker evidence, but
           reviewed documented-bound routes can retain medium confidence when the rest of the evidence gates pass.

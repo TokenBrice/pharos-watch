@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
+import DocsIndexPage from "../page";
 import DocPage, { generateMetadata, generateStaticParams } from "./page";
 import { PUBLIC_DOCS } from "@shared/lib/public-docs";
 
@@ -106,5 +107,41 @@ describe("DocPage", () => {
         );
       }
     }
+  });
+
+  it("renders reader chrome, heading anchors without permanent underlines, dark code surfaces, and wide-table swipe hints", async () => {
+    const html = renderToStaticMarkup(await DocPage({ params: Promise.resolve({ slug: "depeg-detection" }) }));
+    expect(html).toContain("All docs");
+    expect(html).toMatch(/~\d+ min read/);
+    expect(html).toContain("Copy Markdown");
+    expect(html).toContain('href="/depeg/"');
+    expect(html).toContain('href="https://github.com/TokenBrice/pharos-watch/blob/main/docs/depeg-detection.md"');
+    expect(html).toContain('aria-label="Adjacent documentation"');
+    expect(html).toContain("docs-heading-anchor");
+    expect(html).toContain("no-underline");
+    expect(html).toContain("var(--code-surface-bg)");
+    expect(html).toContain('aria-label="Copy to clipboard"');
+    expect(html).toContain("Swipe sideways for more columns");
+  });
+
+  it("renders all public docs across 4 domain clusters and emits CollectionPage/ItemList JSON-LD on /docs/", () => {
+    const html = renderToStaticMarkup(<DocsIndexPage />);
+    expect(html).toContain("Methodology Manual");
+    expect(html).toContain("Technical Specs");
+    expect(html).toContain("API Reference");
+    for (const cluster of [
+      "Core Pipeline &amp; Policy",
+      "Risk &amp; Peg Monitoring",
+      "Scoring &amp; Safety",
+      "Liquidity, Flows &amp; Yield",
+    ]) {
+      expect(html).toContain(cluster);
+    }
+    for (const doc of PUBLIC_DOCS) {
+      expect(html).toContain(`href="/docs/${doc.slug}/"`);
+      expect(html).toContain(`href="/docs/${doc.slug}/index.md"`);
+    }
+    expect(html).toContain('"@type":"CollectionPage"');
+    expect(html).toContain('"@type":"ItemList"');
   });
 });

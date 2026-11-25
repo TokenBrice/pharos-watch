@@ -6,6 +6,7 @@ import { EXIT_ROUTE_SCORING_TABLES } from "@shared/lib/exit-route-scoring";
 import {
   MethodologyDetails,
   MethodologyFacts,
+  MethodologyFormula,
   MethodologySectionShell,
 } from "../../methodology-shared";
 import { REDEMPTION_BACKSTOP_SECTION_CONTENT } from "@/lib/methodology-content";
@@ -21,6 +22,9 @@ export function RedemptionBackstopMethodologySection() {
       title={REDEMPTION_BACKSTOP_SECTION_CONTENT.title}
       versionBadge={{ label: REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL }}
       changelogPath={REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH}
+      liveHref="/safety-scores/"
+      liveLabel="Safety Scores"
+      docsPath="/docs/redemption-backstops/"
       versionNote="The standalone route score and Safety Score Exit pillar share scoring primitives but ask different capacity requests."
       changelogClassName={METHODOLOGY_SECTION_ACCENT_CLASSES.redemptionBackstop.changelogHover}
     >
@@ -30,34 +34,6 @@ export function RedemptionBackstopMethodologySection() {
         execution, capacity, output, and cost primitives; Safety Score re-evaluates exact same-notional evidence under its own
         stress request, evidence ceilings, danger interlocks, and redundancy policy.
       </p>
-      <p>
-        Methodology v4.49 keeps fractional observed fees unrounded through the existing 10, 50 and 100 basis-point
-        cost thresholds. Rejected payout identities cannot grant favorable live fees, openness, holder access
-        or settlement. sBOLD needs readable collateral-health evidence for open status; Mento capacity needs
-        same-block execution predicates and a successful bounded quote; during the reviewed FX market-hours
-        closure a Mento route keeps its live measured bound and settles at the scheduled reopen. dEURO basket valuations retain the oldest
-        complete member-price/FX clock, and physical commodity outputs require source-timed USD valuation distinct
-        from fiat proceeds. These corrections can move route scores; weights and ladders are unchanged.
-      </p>
-      <p>
-        Redemption output risk follows what the selected route pays. A single reviewed stablecoin payout is
-        100% of output regardless of backing allocations; basket percentages require complete admitted payout
-        weights, otherwise the affected output stays identified with an unknown share. FUSD pays USDT
-        and KAST USDK unwraps to M, not an inferred partner fiat rail (former Noble USDN and Gate GUSD
-        routes retired when those assets froze or delisted).
-        Output identity proves neither current price, funded liquidity, fees, holder access nor settlement.
-        A separately fresh nested observation cannot rehabilitate a fatally invalid reserve snapshot.
-        Independent DEX alternatives retain their own clock, hash and FX gates; their absence is not redemption failure.
-      </p>
-      <p>
-        Methodology v4.5 withdraws unsupported capacity, completion and eligibility assumptions on reviewed
-        existing routes. Avalon, Youves, hyUSD and wARS retain unquantified capacity; Solayer&apos;s USDC
-        holder path is queued QLP fulfillment, not atomic redemption. pathUSD&apos;s processing target is
-        not a completed-payout maximum. The existing-route bound review grants no new config-only upgrade.
-        Exact smaller-probe receipts under the Safety Score prove only executed input, not full-request completion
-        or exhaustion. Weights and ladders are unchanged; fresh observations and final fixed-clock comparison
-        remain required. Activation: October 14, 2026 12:40 UTC (release cut; 1791981600).
-      </p>
       <MethodologyFacts
         facts={[
           { label: "Version", value: REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL },
@@ -65,12 +41,42 @@ export function RedemptionBackstopMethodologySection() {
           { label: "Safety Score relationship", value: "Shared primitives, independent Exit pillar evaluation" },
         ]}
       />
+      <MethodologyDetails summary="Current route admission, output, and capacity constraints">
+        <p>
+          Methodology v4.49 keeps fractional observed fees unrounded through the existing 10, 50 and 100 basis-point
+          cost thresholds. Rejected payout identities cannot grant favorable live fees, openness, holder access
+          or settlement. sBOLD needs readable collateral-health evidence for open status; Mento capacity needs
+          same-block execution predicates and a successful bounded quote; during the reviewed FX market-hours
+          closure a Mento route keeps its live measured bound and settles at the scheduled reopen. dEURO basket valuations retain the oldest
+          complete member-price/FX clock, and physical commodity outputs require source-timed USD valuation distinct
+          from fiat proceeds. These corrections can move route scores; weights and ladders are unchanged.
+        </p>
+        <p>
+          Redemption output risk follows what the selected route pays. A single reviewed stablecoin payout is
+          100% of output regardless of backing allocations; basket percentages require complete admitted payout
+          weights, otherwise the affected output stays identified with an unknown share. FUSD pays USDT
+          and KAST USDK unwraps to M, not an inferred partner fiat rail (former Noble USDN and Gate GUSD
+          routes retired when those assets froze or delisted).
+          Output identity proves neither current price, funded liquidity, fees, holder access nor settlement.
+          A separately fresh nested observation cannot rehabilitate a fatally invalid reserve snapshot.
+          Independent DEX alternatives retain their own clock, hash and FX gates; their absence is not redemption failure.
+        </p>
+        <p>
+          Methodology v4.5 withdraws unsupported capacity, completion and eligibility assumptions on reviewed
+          existing routes. Avalon, Youves, hyUSD and wARS retain unquantified capacity; Solayer&apos;s USDC
+          holder path is queued QLP fulfillment, not atomic redemption. pathUSD&apos;s processing target is
+          not a completed-payout maximum. The existing-route bound review grants no new config-only upgrade.
+          Exact smaller-probe receipts under the Safety Score prove only executed input, not full-request completion
+          or exhaustion. Weights and ladders are unchanged; fresh observations and final fixed-clock comparison
+          remain required. Activation: October 14, 2026 12:40 UTC (release cut; 1791981600).
+        </p>
+      </MethodologyDetails>
       <MethodologyDetails summary="Current route-score formula" primary>
-        <p className="pharos-numeric">
+        <MethodologyFormula>
           route = access × {weights.access} + settlement × {weights.settlement} + execution ×{" "}
           {weights.executionCertainty} + capacity × {weights.capacity} + output × {weights.outputAssetQuality} + cost
           × {weights.cost}
-        </p>
+        </MethodologyFormula>
         <p>
           The capacity component blends percent-of-supply coverage with absolute executable dollars. The standalone
           modeled request is {request.supplyRatio * 100}% of supply, floored at ${request.floorUsd.toLocaleString()}

@@ -13,7 +13,9 @@ const WEIGHT_EVOLUTION_COLUMNS = [
 ].map((column) => ({
   ...column,
   headerClassName: changelogTableClassNames.head,
-  cellClassName: column.rowHeader ? changelogTableClassNames.rowHeader : changelogTableClassNames.cell,
+  cellClassName: column.rowHeader
+    ? `${changelogTableClassNames.rowHeader} pharos-numeric`
+    : `${changelogTableClassNames.cell} pharos-numeric`,
 }));
 
 const WEIGHT_EVOLUTION_ROWS = [
@@ -34,11 +36,15 @@ const GRADE_EVOLUTION_COLUMNS = [
   { id: "grade", header: "Grade", rowHeader: true },
   { id: "v1", header: "v1.0" },
   { id: "v4", header: <>v4.0 (&minus;5)</> },
-  { id: "v5", header: <>v5.1 (&minus;5)</>, cellClassName: changelogTableClassNames.rowHeader },
+  { id: "v5", header: <>v5.1 (&minus;5)</>, cellClassName: `${changelogTableClassNames.rowHeader} pharos-numeric` },
 ].map((column) => ({
   ...column,
   headerClassName: changelogTableClassNames.head,
-  cellClassName: column.cellClassName ?? (column.rowHeader ? changelogTableClassNames.rowHeader : changelogTableClassNames.cell),
+  cellClassName:
+    column.cellClassName ??
+    (column.rowHeader
+      ? `${changelogTableClassNames.rowHeader} pharos-numeric`
+      : `${changelogTableClassNames.cell} pharos-numeric`),
 }));
 const GRADE_EVOLUTION_ROWS = [
   ["A+", "97", "92", "87"], ["A", "93", "88", "83"], ["A−", "90", "85", "80"],
@@ -49,37 +55,40 @@ const GRADE_EVOLUTION_ROWS = [
 
 export function ScoringChangelogSummaryTables() {
   return (
-    <>
-      {/* ──────────── Summary tables ──────────── */}
-      <Card className="rounded-xl">
-        <CardHeader>
-          <CardTitle as="h2">Quick reference</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
-          <div className="space-y-2">
-            <h3 className="text-foreground font-medium">Weight evolution (V8 and earlier)</h3>
-            <p>V9 replaced these dimensions with Backing 40%, Exit 35%, and Economic Control 25%.</p>
-            <ContentTable
-              tableProps={{ "aria-label": "Safety Score weight evolution" }}
-              tableId="scoring-weight-evolution"
-              testId="scoring-weight-evolution-table"
-              columns={WEIGHT_EVOLUTION_COLUMNS}
-              rows={WEIGHT_EVOLUTION_ROWS}
-            />
-          </div>
+    <Card variant="shell">
+      <CardHeader className="border-b border-border/50 pb-4">
+        <CardTitle as="h2" className="pharos-section-title">
+          Quick reference
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6 text-sm leading-relaxed text-muted-foreground [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:tracking-tight [&_h3]:text-foreground [&_p]:max-w-[72ch]">
+        <div className="space-y-2">
+          <h3>Weight evolution (V8 and earlier)</h3>
+          <p>V9 replaced these dimensions with Backing 40%, Exit 35%, and Economic Control 25%.</p>
+          <ContentTable
+            chrome="embedded"
+            tableClassName="min-w-[560px]"
+            viewportProps={{ mobileScrollHint: "Swipe sideways for more columns" }}
+            tableProps={{ "aria-label": "Safety Score weight evolution" }}
+            tableId="scoring-weight-evolution"
+            testId="scoring-weight-evolution-table"
+            columns={WEIGHT_EVOLUTION_COLUMNS}
+            rows={WEIGHT_EVOLUTION_ROWS}
+          />
+        </div>
 
-          <div className="space-y-2">
-            <h3 className="text-foreground font-medium">Grade threshold evolution</h3>
-            <ContentTable
-              tableProps={{ "aria-label": "Safety Score grade threshold evolution" }}
-              tableId="scoring-grade-threshold-evolution"
-              testId="scoring-grade-threshold-evolution-table"
-              columns={GRADE_EVOLUTION_COLUMNS}
-              rows={GRADE_EVOLUTION_ROWS}
-            />
-          </div>
-        </CardContent>
-      </Card>
-    </>
+        <div className="space-y-2">
+          <h3>Grade threshold evolution</h3>
+          <ContentTable
+            chrome="embedded"
+            tableProps={{ "aria-label": "Safety Score grade threshold evolution" }}
+            tableId="scoring-grade-threshold-evolution"
+            testId="scoring-grade-threshold-evolution-table"
+            columns={GRADE_EVOLUTION_COLUMNS}
+            rows={GRADE_EVOLUTION_ROWS}
+          />
+        </div>
+      </CardContent>
+    </Card>
   );
 }
