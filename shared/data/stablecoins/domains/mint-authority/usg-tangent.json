@@ -4,7 +4,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "USG has three mint routes. At Ethereum block 26096134, the complete authorized market census is 16 markets: the prior 13 plus msETH/OETH, cbBTC/WBTC and reUSD/sDOLA. Thirteen have positive debt shares; authorized markets can remain paused or empty. mintDebt requires isMinter, mintIR requires the sole IRCalculator role and mints to the ControlTower fee treasury, and mintPegKeeper lets the owner mint uncapped USG into either registered peg keeper. USG, ControlTower and MarketCreator share a 3-of-5 Safe (v1.4.1, empty modules, zero guard) with a custom FeeTreasuryFallbackHandler. The owner can authorize arbitrary minters and change role assignments, so the economic authority remains unbounded.",
+    "summary": "USG has three mint routes. At finalized Ethereum block 26491610 (2026-11-25T10:30:47Z), the complete authorized market census is 21 markets (matching the 2026-11-22 reserve census at block 26471538, with zero markets added and zero USG or ControlTower role events since): the original 13, plus msETH/OETH, cbBTC/WBTC, reUSD/sDOLA, CVX/ETH, frxUSD/DUSD, frxUSD/crvUSD, crvUSD/ETH/CRV and PYUSD/crvUSD. Fourteen have positive debt shares; authorized markets can remain paused or empty. mintDebt requires isMinter, mintIR requires the sole IRCalculator role and mints to the ControlTower fee treasury, and mintPegKeeper lets the owner mint uncapped USG into either registered peg keeper (each holding 1,500,000 prefunded USG with zero debt after 18,500,000 USG burns per peg keeper at block 26256086). USG, ControlTower, MarketCreator, IRCalculator and all 21 markets share a 3-of-5 Safe (v1.4.1, empty modules, zero guard and moduleGuard) with a custom FeeTreasuryFallbackHandler. The owner can authorize arbitrary minters and change role assignments, so the economic authority remains unbounded.",
     "upgradeability": {
       "model": "custom",
       "canChangeMintLogic": true,
@@ -74,7 +74,7 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0x055e53a75598e570ad7970af4cd34e3877817dcf",
           "source": "onchain",
-          "observedBlock": 26096134,
+          "observedBlock": 26491610,
           "owners": [
             "0xf62ff09931e123b07b64a194e213f7fa8a101a6a",
             "0xd7ef914ecd9adb3dfb27a165bb66e75b4d45cc10",
@@ -84,8 +84,8 @@
           ],
           "moduleGuard": "0x0000000000000000000000000000000000000000"
         },
-        "observedAt": "2026-10-01",
-        "observedBlock": 26096134,
+        "observedAt": "2026-11-25",
+        "observedBlock": 26491610,
         "sources": [
           {
             "label": "Safe Transaction Service",
@@ -102,14 +102,18 @@
           {
             "label": "FeeTreasuryFallbackHandler verified source",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x055e53a75598e570ad7970af4cd34e3877817dcf"
+          },
+          {
+            "label": "Pinned finalized Ethereum block 26491610 (hash 0xac00e39ddaa80e32e1d8de3823f08d04cc45bcd36166c9b8d89fc9ecc7c070fc, 2026-11-25T10:30:47Z) Safe and ownership verification",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
           }
         ],
-        "evidence": "Ethereum block 26096134: threshold 3, five owners, VERSION 1.4.1, no enabled modules, zero guard/moduleGuard. Fallback handler 0x055e53a75598e570ad7970af4cd34e3877817dcf inherits CompatibilityFallbackHandler and forwards feeTreasury() to ControlTower; the Safe and ControlTower returned the same current treasury. Owner getters on USG, ControlTower, MarketCreator and all 16 markets return this Safe. isMinter(Safe) remains false; owner role configuration and uncapped mintPegKeeper remain available."
+        "evidence": "Re-verified at finalized Ethereum block 26491610 (hash 0xac00e39ddaa80e32e1d8de3823f08d04cc45bcd36166c9b8d89fc9ecc7c070fc, 2026-11-25T10:30:47Z): threshold 3, five owners unchanged, VERSION 1.4.1, no enabled modules, zero guard and moduleGuard. Fallback handler 0x055e53a75598e570ad7970af4cd34e3877817dcf inherits CompatibilityFallbackHandler and forwards feeTreasury() to ControlTower; both the Safe and ControlTower return 0x536d4e9c0944de2ac6657d610aa99fa5e97ce493. Owner getters on USG, ControlTower, MarketCreator, IRCalculator and all 21 markets return this Safe. isMinter(Safe) and isBurner(Safe) remain false; owner role configuration and uncapped mintPegKeeper remain available."
       },
       {
         "chain": "ethereum",
         "address": "0x7b1b38cad63B0715A0adFeEB75E46431b48E73B6",
-        "label": "Tangent markets with isMinter (16)",
+        "label": "Tangent markets with isMinter (21)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
@@ -132,10 +136,15 @@
           "ethereum:tangent-market:0x4742a56668fbacbc11087f516c4b01ebc48f716f",
           "ethereum:tangent-market:0x2b2962931433fe137fd17cf62df4b9ec84a7de00",
           "ethereum:tangent-market:0x4903f0d3698ddc5ca66040b235de0a2126a41437",
-          "ethereum:tangent-market:0x244c24c94d5bbdba43c408b702ded98e436df721"
+          "ethereum:tangent-market:0x244c24c94d5bbdba43c408b702ded98e436df721",
+          "ethereum:tangent-market:0xe4622622bfb74dce6019d5d41150d8824b83bf9a",
+          "ethereum:tangent-market:0x420d2d75c69331df6ce4a1a74067d68e82670e13",
+          "ethereum:tangent-market:0xe1065be419cacaf05477ea77a32cb33e8bcbc7da",
+          "ethereum:tangent-market:0xb4edf0dd81b2ad31703b61da098401d0c83607bf",
+          "ethereum:tangent-market:0xf9fbb128d4569bfc6f97124e13ae32cd6fb6a48b"
         ],
-        "observedAt": "2026-10-01",
-        "observedBlock": 26096134,
+        "observedAt": "2026-11-25",
+        "observedBlock": 26491610,
         "sources": [
           {
             "label": "Blockscout Tangent MarketCreator (market factory)",
@@ -144,9 +153,13 @@
           {
             "label": "Ethereum PublicNode RPC",
             "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Pinned finalized Ethereum block 26491610 (hash 0xac00e39ddaa80e32e1d8de3823f08d04cc45bcd36166c9b8d89fc9ecc7c070fc, 2026-11-25T10:30:47Z) complete 21-market census",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
           }
         ],
-        "evidence": "At block 26096134 all 16 enumerated markets have isMinter and isBurner true. The historical full census of 13 at block 25531083 is extended by three factory events at blocks 25580590, 25646014 and 25731115. Complete delta scans through 26096134 returned no SetIsMinter/SetIsBurner/SetIsIRProducer/SetIsPegKeeper or SetIsMarketCreator changes. The sole current factory remains authorized. Existing mint and borrower-collateral bounds are not relaxed by this census."
+        "evidence": "At finalized Ethereum block 26491610 (hash 0xac00e39ddaa80e32e1d8de3823f08d04cc45bcd36166c9b8d89fc9ecc7c070fc, 2026-11-25T10:30:47Z) all 21 enumerated markets return isMinter = true, isBurner = true, owner() = the 3/5 Safe, and badDebt() = 0; 14 have positive debt shares. Complete MarketCreator log scan from block 24570211 through 26491610 extends the 16-market census (through block 25731115) by five StakeDao Vault markets: CVX/ETH (0xe4622622bfb74dce6019d5d41150d8824b83bf9a, block 26154455), frxUSD/DUSD (0x420d2d75c69331df6ce4a1a74067d68e82670e13, block 26205517), frxUSD/crvUSD (0xe1065be419cacaf05477ea77a32cb33e8bcbc7da, block 26284662), crvUSD/ETH/CRV (0xb4edf0dd81b2ad31703b61da098401d0c83607bf, block 26393392) and PYUSD/crvUSD (0xf9fbb128d4569bfc6f97124e13ae32cd6fb6a48b, block 26442041), matching the 2026-11-22 block 26471538 reserve census with zero subsequent market creations. Full-history USG, ControlTower and former-MarketCreator scans through 26491610 return zero SetIsMinter/SetIsBurner/SetIsIRProducer/SetIsPegKeeper/OwnershipTransferred events after block 24570211 and zero SetIsMarketCreator events after block 24748515. Existing mint and borrower-collateral bounds are unchanged."
       },
       {
         "chain": "ethereum",
@@ -158,8 +171,8 @@
         "canRaiseCap": false,
         "capDescription": "USG.initializeMarket sets isMinter[market] = true for any address a market creator passes, with no event and no cap.",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-01",
-        "observedBlock": 26096134,
+        "observedAt": "2026-11-25",
+        "observedBlock": 26491610,
         "sources": [
           {
             "label": "Blockscout Tangent MarketCreator (market factory)",
@@ -172,9 +185,13 @@
           {
             "label": "Ethereum PublicNode RPC",
             "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Pinned finalized Ethereum block 26491610 (hash 0xac00e39ddaa80e32e1d8de3823f08d04cc45bcd36166c9b8d89fc9ecc7c070fc, 2026-11-25T10:30:47Z) MarketCreator verification",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
           }
         ],
-        "evidence": "Ethereum block 25531083: ControlTower.isMarketCreator(0x214c8a10...) = true; the previous MarketCreator 0x51c88d50... was revoked at block 24748515 and had created zero markets. Complete SetIsMarketCreator log history on the ControlTower contains exactly three entries (grant 0x51c88d50 at 24570211, revoke 0x51c88d50 and grant 0x214c8a10 at 24748515). MarketCreator owner() = the 3/5 Tangent Safe at block 26096134."
+        "evidence": "Re-verified at finalized Ethereum block 26491610 (2026-11-25T10:30:47Z): ControlTower.isMarketCreator(0x214c8a10...) = true and isMarketCreator(0x51c88d50...) = false; the previous MarketCreator 0x51c88d50... was revoked at block 24748515 and emitted zero market-creation events through block 26491610. Complete SetIsMarketCreator log history on ControlTower through block 26491610 contains only the three historical entries (grant 0x51c88d50 at 24570211, revoke 0x51c88d50 and grant 0x214c8a10 at 24748515). MarketCreator owner() remains the 3/5 Tangent Safe."
       },
       {
         "chain": "ethereum",
@@ -214,8 +231,8 @@
           "ethereum:tangent-pegkeeper:0xf89615f75c8161dc185c03020240905f6b66bad9",
           "ethereum:tangent-pegkeeper:0x8a7f16508d1e8b48bdf36023f378cc04d9506d4e"
         ],
-        "observedAt": "2026-07-14",
-        "observedBlock": 25531083,
+        "observedAt": "2026-11-25",
+        "observedBlock": 26491610,
         "sources": [
           {
             "label": "Blockscout USG verified source",
@@ -224,9 +241,17 @@
           {
             "label": "Ethereum PublicNode RPC",
             "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "PegKeeper 18.5M USG burn tx at Ethereum block 26256086 (2026-10-23T15:00:59Z)",
+            "url": "https://etherscan.io/tx/0xddea9cb96b8f435c5d103c2385b0aa43c4a049a0a1f6c74cbded22396eeb43bc"
+          },
+          {
+            "label": "Pinned finalized Ethereum block 26491610 (hash 0xac00e39ddaa80e32e1d8de3823f08d04cc45bcd36166c9b8d89fc9ecc7c070fc, 2026-11-25T10:30:47Z) PegKeeper state read",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
           }
         ],
-        "evidence": "Ethereum block 25531083: isPegKeeper(x) = true for 0xf89615f75c8161dc185c03020240905f6b66bad9 (verified contract PegKeeperV2) and 0x8a7f16508d1e8b48bdf36023f378cc04d9506d4e (verified contract Peg_Keeper_V2); the complete SetIsPegKeeper log history is those two grants at block 24570211 and no revocations. isMinter and isIRProducer are false for both. Supply follow-up at Ethereum block 26227605 (2026-10-19T15:45:47Z): balanceOf returned exactly 20,000,000 USG for each peg keeper against totalSupply 43,824,789.45, so 40,000,000 USG (about 91.3% of totalSupply) sits preminted in the two peg-keeper contracts and about 3.82M USG is outside them. Read via Ethereum PublicNode RPC eth_call on the USG token 0xb1c2db5d6ca03fce73dbd304d320bf76c55ae1b1."
+        "evidence": "Re-verified at finalized Ethereum block 26491610 (hash 0xac00e39ddaa80e32e1d8de3823f08d04cc45bcd36166c9b8d89fc9ecc7c070fc, 2026-11-25T10:30:47Z): isPegKeeper(x) = true for 0xf89615f75c8161dc185c03020240905f6b66bad9 (verified contract PegKeeperV2) and 0x8a7f16508d1e8b48bdf36023f378cc04d9506d4e (verified contract Peg_Keeper_V2); the complete SetIsPegKeeper log history through block 26491610 remains those two grants at block 24570211 with zero revocations. isMinter, isBurner and isIRProducer are false for both. Following the 18,500,000 USG burn per peg keeper at block 26256086 (2026-10-23T15:00:59Z, tx 0xddea9cb96b8f435c5d103c2385b0aa43c4a049a0a1f6c74cbded22396eeb43bc), balanceOf returns exactly 1,500,000 USG for each peg keeper (3,000,000 USG combined, down from 20,000,000 each at block 26236645) with debt() = 0 on both, against USG totalSupply 5,706,677.020180795270704171 USG (2,706,677.020180795270704171 USG outside the prefunded peg keepers)."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -234,9 +259,9 @@
     "supervision": "none",
     "review": {
       "disposition": "scoreable",
-      "reviewedAt": "2026-10-20",
-      "reviewer": "FD11 bottom-up refinement 2026-10-21; reconciliation-only admission",
-      "evidence": "Original authority review start 2026-10-01 and every historical authority/Safe/role pin above are preserved. New reconciliation-only observation on 2026-10-20: at Ethereum block 26236645 (2026-10-20T22:00:11Z; hash 0xf38b2bd0053476d221004fafbc18da6ac77c23947336529b54eb1974d489280e), the complete factory census contains 18 authorized markets. Full factory, role and creator delta scans extend the previously reviewed census without an undisclosed creator or other role change. Every market's borrower collateral, exact underlying LP constituents, debt shares, stored interest index and bad debt are readable on-chain, so the complete backing-versus-liabilities book is mechanically derivable continuously, not merely asserted by a dashboard. USG totalSupply is 43,888,591.265957855; the two registered prefunded PegKeepers each hold exactly 20,000,000 unused USG with debt() zero. Outstanding supply outside those separately disclosed unused premints is 3,888,591.26595785 USG. Across all 18 markets, sum floor(totalDebtShares * IRCalculator.debtIndexes / RAY), where verified source defines RAY = 1e27, is the same 3,888,591.26595785 USG to displayed precision (2344 base-unit difference explicitly retained); badDebt() is zero on all 18, and IRCalculator.mintableInterests() is zero. The complete oracle-marked borrower-collateral book is $5,036,355.30149916 and its 21 underlying asset identities are enumerated in the reserve review. This establishes only the continuous whole-book accounting process. It does not establish an immutable mint cap, independent supervision, stress realizability, future solvency or a holder redemption right. Arbitrary minter grants and uncapped owner PegKeeper minting remain unbounded adverse authority facts; no authority pin or supervision credit is renewed.",
+      "reviewedAt": "2026-11-25",
+      "reviewer": "Pharos #2275 usg-tangent sidecar alignment 2026-11-25 (prior FD11 2026-10-21)",
+      "evidence": "Historical authority review start 2026-07-14/2026-10-01 and prior block 26236645 reconciliation observations are preserved; unchanged USG token and IRCalculator source/role observations retain their 2026-07-14 pins. Refreshed 2026-11-25 at finalized Ethereum block 26491610 (2026-11-25T10:30:47Z; hash 0xac00e39ddaa80e32e1d8de3823f08d04cc45bcd36166c9b8d89fc9ecc7c070fc, keyless endpoint https://eth-mainnet.g.alchemy.com/v2/): the complete MarketCreator census contains 21 authorized markets (matching the 2026-11-22 reserve review at block 26471538, with zero markets added and zero USG or ControlTower role events between blocks 26471538 and 26491610). All 21 markets return isMinter = true, isBurner = true, owner() = the 3-of-5 Safe 0x461b62cb3a7e9df8f800ae058ae92f855f2c27ca, and badDebt() = 0; 14 carry positive debt shares. Every market's borrower collateral, exact underlying LP constituents, debt shares, stored interest index and bad debt remain readable on-chain, preserving continuous whole-book accounting. USG totalSupply is 5,706,677.020180795270704171 USG; the two registered prefunded PegKeepers each hold exactly 1,500,000 unused USG (3,000,000 USG combined, reduced from 20,000,000 each on 2026-10-23 at block 26256086) with debt() = 0, leaving 2,706,677.020180795270704171 USG outside prefunded PegKeepers. Across all 21 markets, sum floor(totalDebtShares * IRCalculator.debtIndexes / 1e27) is 2,707,026.058433415979500613 USG and IRCalculator.mintableInterests() is 349.038252620708792688 USG; net minted debt (2,706,677.020180795270707925 USG) matches outside-PegKeeper supply within a 3,754 wei truncation difference. Protocol-oracle-marked borrower collateral across all 21 markets is $3,358,366.86 at block 26491610 ($3,274,560.92 across 22 explicit constituents in the 2026-11-22 block 26471538 reserve review). This establishes only the continuous whole-book accounting process and current role census. It does not establish an immutable mint cap, independent supervision, stress realizability, future solvency or a holder redemption right. Arbitrary minter grants and uncapped owner PegKeeper minting remain unbounded adverse authority facts.",
       "sources": [
         {
           "label": "Tangent USG docs",
@@ -281,6 +306,10 @@
         {
           "label": "Pinned whole reserve and liability book at Ethereum block 26236645",
           "url": "https://api-ethereum-mainnet.n.dwellir.com/"
+        },
+        {
+          "label": "Pinned finalized Ethereum block 26491610 (hash 0xac00e39ddaa80e32e1d8de3823f08d04cc45bcd36166c9b8d89fc9ecc7c070fc, 2026-11-25T10:30:47Z) 21-market census, role sets, Safe state and whole-book reconciliation",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
         }
       ],
       "unresolvedQuestions": []
