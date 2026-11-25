@@ -28,6 +28,15 @@ export function SyntheticDeltaNeutralDiagram({ symbol }: SyntheticDeltaNeutralDi
       description={COPY.description(symbol)}
       desktopHeight={120}
       steps={steps}
+      returnLoop={
+        COPY.loop
+          ? {
+              label: COPY.loop.label,
+              tone: COPY.loop.danger ? "danger" : "default",
+              dashed: COPY.loop.dashed,
+            }
+          : undefined
+      }
       stressFootnote={COPY.stressFootnote}
     >
       <DiagramStep

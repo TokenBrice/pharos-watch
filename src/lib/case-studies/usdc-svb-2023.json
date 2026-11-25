@@ -114,7 +114,7 @@
     {
       "kind": "peg-deviation",
       "coinId": "usdc-circle",
-      "caption": "USDC's daily peg history on Pharos. The marker pins the March 2023 SVB weekend. Daily snapshots show the deviation but understate the intraday low near $0.87."
+      "caption": "USDC's daily peg history on Pharos across the March 2023 SVB weekend. Daily UTC snapshots capture the break but understate the intraday low near $0.87."
     }
   ],
   "watchpoints": [

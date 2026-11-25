@@ -109,7 +109,7 @@
     {
       "kind": "peg-deviation",
       "coinId": "mai-qidao",
-      "caption": "MAI's daily peg history on Pharos. The curated marker pins the mid-2023 Multichain fallout that opened the sustained sub-peg. The drift bottomed near $0.72 in October 2023 before a slow, partial recovery."
+      "caption": "MAI's daily peg history on Pharos from the July 2023 Multichain fallout through its sustained sub-peg. The drift bottomed near $0.72 in October 2023 before a slow, partial recovery."
     }
   ],
   "watchpoints": [

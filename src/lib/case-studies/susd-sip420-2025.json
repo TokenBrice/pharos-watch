@@ -122,7 +122,7 @@
     {
       "kind": "peg-deviation",
       "coinId": "susd-synthetix",
-      "caption": "sUSD's peg-deviation history on Pharos: the curated markers pin the April 2025 SIP-420 change and the August 2025 all-time low near $0.21, then a grind that never reclaimed par before SIP-423 froze the token in June 2026."
+      "caption": "sUSD's daily peg history on Pharos from the April 2025 SIP-420 change through the August 2025 low near $0.21, followed by a year-long grind below par until SIP-423 froze the token in June 2026."
     }
   ],
   "watchpoints": [

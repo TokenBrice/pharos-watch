@@ -166,7 +166,7 @@ const THREE_STEP_ARCHETYPE_CONFIG: Record<ThreeStepArchetype, ThreeStepConfig> =
     },
   },
   "ucits-trs-fund": {
-    accentColor: "var(--mechanism-tbill)",
+    accentColor: "var(--mechanism-ucits-trs-fund)",
     stressFootnote: "stress: incomplete hedge / counterparty collateral loss / fund gate",
     ariaLabel: (symbol) =>
       `${symbol} mechanism: investors hold proportional fund shares backed by physical securities and total-return swaps, redeemable at NAV under fund terms.`,
@@ -179,7 +179,7 @@ const THREE_STEP_ARCHETYPE_CONFIG: Record<ThreeStepArchetype, ThreeStepConfig> =
     ],
   },
   "shared-reserve": {
-    accentColor: "var(--mechanism-cdp)",
+    accentColor: "var(--mechanism-shared-reserve)",
     stressFootnote: "stress: shared liability deficit / encumbrance / exchange liquidity gate",
     ariaLabel: (symbol) =>
       `${symbol} mechanism: a live protocol exchange issues a currency liability backed alongside other currencies by one shared reserve.`,
@@ -192,7 +192,7 @@ const THREE_STEP_ARCHETYPE_CONFIG: Record<ThreeStepArchetype, ThreeStepConfig> =
     ],
   },
   "protocol-position": {
-    accentColor: "var(--mechanism-cdp)",
+    accentColor: "var(--mechanism-protocol-position)",
     stressFootnote: "stress: position / withdrawal failure / unreconciled residual liabilities",
     ariaLabel: (symbol) =>
       `${symbol} mechanism: bridge or module issuance creates an operational claim on managed protocol positions, with local withdrawal and recovery risk.`,

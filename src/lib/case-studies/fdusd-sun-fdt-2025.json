@@ -115,7 +115,7 @@
     {
       "kind": "peg-deviation",
       "coinId": "fdusd-first-digital",
-      "caption": "FDUSD's daily peg history on Pharos. The marker pins the April 2025 insolvency-tweet depeg. Daily snapshots show the deviation but understate the intraday low near $0.87 and the deeper FDUSD/USDC dislocation on Binance."
+      "caption": "FDUSD's daily peg history on Pharos across the April 2025 insolvency-tweet run. Daily UTC snapshots capture the break but understate the intraday low near $0.87 and the deeper FDUSD/USDC dislocation on Binance."
     }
   ],
   "watchpoints": [

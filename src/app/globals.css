@@ -1541,12 +1541,30 @@
   [data-revealed="true"] .pharos-timeline-line {
     transform: scaleX(1);
   }
+  :root[data-motion="reduced"] .pharos-timeline-card,
+  :root[data-motion="reduced"] .pharos-timeline-line {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
   @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .pharos-timeline-card,
+    :root:not([data-motion="full"]) .pharos-timeline-line {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+  }
+  @media print {
     .pharos-timeline-card,
     .pharos-timeline-line {
       opacity: 1;
       transform: none;
       transition: none;
+    }
+    .pharos-timeline-wide {
+      width: auto;
+      margin-inline: 0;
     }
   }
 
@@ -1559,7 +1577,7 @@
      scrolls as before. */
   @media (min-width: 90rem) {
     .pharos-timeline-wide {
-      --pharos-timeline-width: max(100%, min(var(--tl-track, 115rem), 100vw - 4rem));
+      --pharos-timeline-width: max(100%, min(var(--tl-track, 115rem), 100dvw - 4rem));
       width: var(--pharos-timeline-width);
       margin-inline: calc((100% - var(--pharos-timeline-width)) / 2);
     }

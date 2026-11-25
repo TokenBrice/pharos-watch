@@ -52,10 +52,11 @@ function renderArchetypeExplainer(slug: MechanismArchetype) {
         { name: "Mechanisms", url: "/learn/mechanisms/" },
         { name: label, url: explainerPath },
       ]}
+      backLink={{ href: "/learn/mechanisms/", label: "All mechanisms" }}
+      eyebrow="Mechanism explainer"
       title={content.headline}
       subtitle={stripEngineVersionPrefixes(content.subtitle)}
       leadParagraphs={content.lead.map(stripEngineVersionPrefixes)}
-      titleClassName="max-w-[22ch]"
     >
       <ArchetypeArticleJsonLd archetype={slug} />
       <ArchetypeExplainerBody content={content} />

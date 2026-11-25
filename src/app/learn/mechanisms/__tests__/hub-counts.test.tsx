@@ -32,5 +32,8 @@ describe("mechanism explainers hub counts", () => {
     expect(html.includes(`${active}</span> of ${ACTIVE_STABLECOINS.length} active`)).toBe(active !== ACTIVE_STABLECOINS.length);
     expect(html.includes(`${unresolved}</span> pending mechanism classification`)).toBe(unresolved > 0);
     expect(html).not.toContain("in no design");
+    expect(html).toContain('id="mechanism-directory-heading"');
+    expect(html).toContain("Mechanism explainers");
+    expect(html).toContain('aria-hidden="true" class="flex items-center justify-center"');
   });
 });
