@@ -5,6 +5,7 @@ import { ReportCardGradeSchema } from "./report-card-grade";
 import { SafetyScorePublicationIdentitySchema } from "./safety-score-publication";
 import { FreshnessAssessmentSchema, FreshnessStatusSchema } from "@pharos/contracts/api-meta";
 import { CoinProjectionMetadataSchema } from "./coin-projection";
+import { ListingClassSchema } from "./stablecoin-taxonomy";
 import {
   YIELD_ADAPTER_LIFECYCLE_VALUES,
   YIELD_BENCHMARK_KEY_VALUES,
@@ -207,6 +208,7 @@ const YieldRankingSchema = z.object({
   id: z.string(),
   symbol: z.string(),
   name: z.string(),
+  listingClass: ListingClassSchema.nullable().optional(),
   currentApy: z.number(),
   apy7d: z.number(),
   apy30d: z.number(),

@@ -1,7 +1,7 @@
 import { makeReportCardsV9PipelineGapCard, makeReportCardsV9PartialCard } from "@shared/test-utils/report-cards-v9";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getPublicApiAccess } from "@shared/lib/api-endpoints";
-import { DependencyGraphResponseSchema, projectDependencyGraph } from "@shared/types/dependency-graph";
+import { DependencyGraphNodeSchema, DependencyGraphResponseSchema, projectDependencyGraph } from "@shared/types/dependency-graph";
 import { makeReportCardsV9Response, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 
@@ -138,6 +138,15 @@ describe("dependency graph projection", () => {
     expect(body.publicationHealth).toEqual(snapshot.publicationHealth);
     expect(body.publicationGenerationId).toBe(current.safetyScoreIdentity.publicationGenerationId);
     expect(body.edges).toEqual(current.dependencyGraph.edges);
+  });
+
+  it("accepts optional nullable listingClass in strict graph nodes without emitting it by default", () => {
+    const snapshot = fixturePublication();
+    expect(projectDependencyGraph(snapshot).nodes[0]).not.toHaveProperty("listingClass");
+    const withClass = DependencyGraphResponseSchema.parse(projectDependencyGraph(snapshot, (id) => (id === "child" ? "tokenized-fund" : null)));
+    expect(withClass.nodes.map((n) => n.listingClass)).toEqual(["tokenized-fund", null]);
+    expect(DependencyGraphNodeSchema.safeParse({ ...withClass.nodes[0], listingClass: "bogus" }).success).toBe(false);
+    expect(DependencyGraphNodeSchema.safeParse({ ...withClass.nodes[0], extra: 1 }).success).toBe(false);
   });
 
   it("fails closed without an accepted publication", async () => {

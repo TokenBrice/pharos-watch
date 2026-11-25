@@ -42,6 +42,7 @@ export const LISTING_CLASS_VALUES = [
   "excluded",
 ] as const;
 export type ListingClass = (typeof LISTING_CLASS_VALUES)[number];
+export const ListingClassSchema = z.enum(LISTING_CLASS_VALUES);
 
 export const MECHANISM_ARCHETYPE_REVIEW_DISPOSITION_VALUES = ["resolved", "unresolved"] as const;
 
