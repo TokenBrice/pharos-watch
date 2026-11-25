@@ -17,16 +17,16 @@ const THEME_CONTROL_VARIANTS = {
   desktop: {
     container: "flex items-center gap-1 p-0.5",
     activeButton:
-      "pharos-focus-ring inline-flex min-w-14 flex-col items-center gap-1 rounded-md px-2 py-1.5 text-xs transition-colors bg-muted text-foreground",
+      "pharos-focus-ring inline-flex min-w-14 cursor-pointer flex-col items-center gap-1 rounded-md bg-muted px-2 py-1.5 text-xs font-medium text-foreground ring-1 ring-border/60 transition-colors dark:bg-card dark:ring-border/80",
     inactiveButton:
-      "pharos-focus-ring inline-flex min-w-14 flex-col items-center gap-1 rounded-md px-2 py-1.5 text-xs transition-colors text-muted-foreground hover:bg-muted/40 hover:text-foreground",
+      "pharos-focus-ring inline-flex min-w-14 cursor-pointer flex-col items-center gap-1 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground",
   },
   mobile: {
     container: "flex items-center gap-1",
     activeButton:
-      "pharos-focus-ring inline-flex min-h-11 min-w-14 flex-col items-center justify-center gap-0.5 rounded-md px-2 text-xs leading-none transition-colors bg-muted text-foreground",
+      "pharos-focus-ring inline-flex min-h-11 min-w-14 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md bg-muted px-2 text-xs font-medium leading-none text-foreground ring-1 ring-border/60 transition-colors dark:bg-card dark:ring-border/80",
     inactiveButton:
-      "pharos-focus-ring inline-flex min-h-11 min-w-14 flex-col items-center justify-center gap-0.5 rounded-md px-2 text-xs leading-none transition-colors text-muted-foreground hover:bg-muted/40 hover:text-foreground",
+      "pharos-focus-ring inline-flex min-h-11 min-w-14 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md px-2 text-xs leading-none text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground",
   },
 } as const;
 

@@ -1,9 +1,15 @@
+// @vitest-environment jsdom
+
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildBandStripCells, RegimeBar, RegimeBarToggle } from "@/components/psi-beacon/regime-bar";
+import { CHROME_DISMISS_EVENT, dismissChromeOverlays } from "@/lib/chrome-popover";
 import { PSI_HEX_COLORS, PSI_UNKNOWN_BAND_HEX } from "@shared/lib/classification";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
+
+afterEach(cleanup);
 
 const useStabilityIndexMock = vi.hoisted(() => vi.fn());
 vi.mock("@/hooks/api-hooks", () => ({ useStabilityIndex: useStabilityIndexMock }));
@@ -89,7 +95,11 @@ describe("RegimeBar freshness", () => {
       expect(html.match(/<button/g)).toHaveLength(1);
       expect(html).toContain('aria-label="Close market regime details"');
       expect(html).toContain("size-11");
-      expect(html).toContain("sm:size-9");
+      expect(html).toContain("lg:size-9");
+      expect(html).toContain("lg:min-h-0");
+      expect(html).toContain("invisible");
+      expect(html).toContain("visibility_0ms_linear_200ms");
+      expect(html).toContain("motion-reduce:transition-none");
       expect(html).toContain("top-[var(--sticky-header-bottom,3.75rem)]");
       expect(html).toMatch(/href="\/stability-index\/?"/);
       expect(html).toContain("Open Stability Index");
@@ -153,4 +163,65 @@ describe("RegimeBarToggle", () => {
     usePathnameMock.mockReturnValue("/depeg/");
   });
 
+  it("coordinates with chrome-dismiss events, outside clicks, and Escape without overriding handled Escape", () => {
+    usePathnameMock.mockReturnValue("/depeg/");
+    fresh();
+    const dismissSpy = vi.fn();
+    window.addEventListener(CHROME_DISMISS_EVENT, dismissSpy);
+    try {
+      render(
+        createElement(
+          "div",
+          null,
+          createElement(RegimeBar),
+          createElement(RegimeBarToggle),
+          createElement("button", { type: "button" }, "Outside control"),
+        ),
+      );
+
+      const toggle = screen.getByRole("button", { name: /Market regime details/ });
+      const panel = document.getElementById("regime-bar-panel")!;
+      expect(toggle.getAttribute("aria-expanded")).toBe("false");
+      expect(panel.className).toContain("invisible");
+
+      // Expanding broadcasts chrome-dismiss("regime-bar").
+      fireEvent.click(toggle);
+      expect(toggle.getAttribute("aria-expanded")).toBe("true");
+      expect(panel.className).toContain("visible");
+      expect(dismissSpy).toHaveBeenCalledTimes(1);
+      expect((dismissSpy.mock.calls[0]![0] as CustomEvent<{ source: string }>).detail.source).toBe("regime-bar");
+
+      // Clicking inside the panel keeps it open; clicking outside collapses it.
+      fireEvent.pointerDown(panel);
+      expect(toggle.getAttribute("aria-expanded")).toBe("true");
+      fireEvent.pointerDown(screen.getByRole("button", { name: "Outside control" }));
+      expect(toggle.getAttribute("aria-expanded")).toBe("false");
+
+      // Dismiss broadcast from another overlay collapses the panel.
+      fireEvent.click(toggle);
+      expect(toggle.getAttribute("aria-expanded")).toBe("true");
+      act(() => {
+        dismissChromeOverlays("top-nav");
+      });
+      expect(toggle.getAttribute("aria-expanded")).toBe("false");
+
+      // Escape with defaultPrevented=true is ignored; fresh Escape closes the panel.
+      fireEvent.click(toggle);
+      expect(toggle.getAttribute("aria-expanded")).toBe("true");
+      const handledEscape = new KeyboardEvent("keydown", { key: "Escape", cancelable: true, bubbles: true });
+      handledEscape.preventDefault();
+      act(() => {
+        document.dispatchEvent(handledEscape);
+      });
+      expect(toggle.getAttribute("aria-expanded")).toBe("true");
+
+      const freshEscape = new KeyboardEvent("keydown", { key: "Escape", cancelable: true, bubbles: true });
+      act(() => {
+        document.dispatchEvent(freshEscape);
+      });
+      expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    } finally {
+      window.removeEventListener(CHROME_DISMISS_EVENT, dismissSpy);
+    }
+  });
 });

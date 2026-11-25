@@ -9,6 +9,7 @@ import {
 } from "@/components/providers";
 import { setSingleKeyShortcutDisabled } from "@/lib/keyboard-shortcut-settings";
 import { openCommandPalette } from "@/lib/command-palette";
+import { CHROME_DISMISS_EVENT, openKeyboardShortcuts } from "@/lib/chrome-popover";
 import NotFound from "@/app/not-found";
 import { SiteSession } from "@/components/site-session";
 import * as session from "@/lib/site-session-client";
@@ -176,7 +177,7 @@ describe("Providers single-key shortcuts (WCAG 2.1.4 disable flag)", () => {
     );
 
     expect(screen.getByTestId("static-child")).toBeTruthy();
-    // Global chrome (TopNav health menu, RegimeBar PSI) queries on every route.
+    // Global chrome (TopNav incident badge, RegimeBar PSI) queries on every route.
     expect(screen.getByTestId("query-client-provider")).toBeTruthy();
     // Give the lazy interactive layer a tick so an incorrect mount would surface.
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
@@ -281,6 +282,68 @@ describe("Providers single-key shortcuts (WCAG 2.1.4 disable flag)", () => {
 
     expect(await screen.findByTestId("keyboard-shortcuts-dialog")).toBeTruthy();
     expect(event.defaultPrevented).toBe(true);
+  });
+
+  it.each(["/about/", "/docs/dews/"])(
+    "opens keyboard shortcuts via ? and openKeyboardShortcuts() on editorial route %s without mounting interactive providers",
+    async (editorialPath) => {
+      pathname = editorialPath;
+      const dismissSources: string[] = [];
+      const onDismiss = (event: Event) => {
+        dismissSources.push((event as CustomEvent<{ source: string }>).detail.source);
+      };
+      window.addEventListener(CHROME_DISMISS_EVENT, onDismiss);
+      try {
+        const { unmount } = render(<Providers><div data-testid="editorial-page" /></Providers>);
+        expect(screen.queryByTestId("route-progress-bar")).toBeNull();
+        expect(screen.queryByTestId("keyboard-shortcuts-dialog")).toBeNull();
+
+        expect(pressKey("?").defaultPrevented).toBe(true);
+        expect(await screen.findByTestId("keyboard-shortcuts-dialog")).toBeTruthy();
+        expect(screen.queryByTestId("route-progress-bar")).toBeNull();
+        expect(dismissSources).toContain("keyboard-shortcuts");
+
+        unmount();
+        dismissSources.length = 0;
+
+        render(<Providers><div data-testid="editorial-page" /></Providers>);
+        act(() => {
+          openKeyboardShortcuts();
+        });
+        expect(await screen.findByTestId("keyboard-shortcuts-dialog")).toBeTruthy();
+        expect(screen.queryByTestId("route-progress-bar")).toBeNull();
+
+        act(() => {
+          openCommandPalette();
+        });
+        expect(await screen.findByTestId("command-palette")).toBeTruthy();
+        expect(screen.queryByTestId("keyboard-shortcuts-dialog")).toBeNull();
+        expect(dismissSources).toContain("command-palette");
+      } finally {
+        window.removeEventListener(CHROME_DISMISS_EVENT, onDismiss);
+      }
+    },
+  );
+
+  it("renders KeyboardShortcuts with sr-only DialogDescription, OS-aware modifier, 1–9 pill, and updated arrow copy", async () => {
+    const { KeyboardShortcuts: ActualKeyboardShortcuts } = await vi.importActual<
+      typeof import("@/components/keyboard-shortcuts")
+    >("@/components/keyboard-shortcuts");
+    const originalUserAgent = navigator.userAgent;
+    Object.defineProperty(navigator, "userAgent", {
+      value: "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0)",
+      configurable: true,
+    });
+    try {
+      render(<ActualKeyboardShortcuts open onOpenChange={() => {}} />);
+      expect(screen.getByText("Available keyboard shortcuts and single-key shortcut preference.")).toBeTruthy();
+      expect(screen.getByText("Navigate menus and tabs")).toBeTruthy();
+      expect(screen.getByText("1–9")).toBeTruthy();
+      expect(screen.getByText("Ctrl")).toBeTruthy();
+      expect(await screen.findByText("⌘")).toBeTruthy();
+    } finally {
+      Object.defineProperty(navigator, "userAgent", { value: originalUserAgent, configurable: true });
+    }
   });
 
 });

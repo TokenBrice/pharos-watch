@@ -2,24 +2,23 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { ArrowUpRight, ChevronDown, Search, SunMoon } from "lucide-react";
 import { PharosLogo } from "@/components/pharos-logo";
 import { useHomepageSnapshot } from "@/hooks/api-hooks";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { RegimeBarToggle } from "@/components/psi-beacon/regime-bar";
 import { ThemeControls } from "@/components/theme-controls";
+import { OPEN_COMMAND_PALETTE_EVENT, openCommandPalette } from "@/lib/command-palette";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { openCommandPalette } from "@/lib/command-palette";
+  dismissChromeOverlays,
+  openKeyboardShortcuts,
+  subscribeChromeDismiss,
+} from "@/lib/chrome-popover";
 import { trackEvent } from "@/lib/analytics";
-import { getRouteCapabilities } from "@/lib/route-capabilities";
 import {
+  DESKTOP_QUICK_NAV_ITEMS,
   NAV_GROUPS,
-  QUICK_NAV_ITEMS,
   isNavItemActive,
   stickyChromeTopOffsetClass,
   type NavGroup,
@@ -28,82 +27,80 @@ import {
 import { cn } from "@/lib/utils";
 
 const TOP_MENUS: readonly NavGroup[] = NAV_GROUPS;
-const APPEARANCE_MENU_KEY = "appearance";
+const APPEARANCE_PANEL_ID = "top-nav-appearance-panel";
+const HOVER_OPEN_DELAY_MS = 350;
+const HOVER_SWITCH_DELAY_MS = 150;
 const HOVER_CLOSE_DELAY_MS = 450;
 
-function openKeyboardShortcuts(): void {
-  if (typeof window === "undefined") return;
-  window.dispatchEvent(new KeyboardEvent("keydown", { key: "?", bubbles: true, cancelable: true }));
-}
-
 /**
- * Single menu row. `row` renders the authored `description` on a second line
- * beside an icon tile: the copy is what turns DDR, DEWS, and FreezeWatch from
- * jargon into a decision, and every description is written to fit that line
- * at this panel width, so a row is a fixed two-line block and the panel scans
- * as an even column. `compact` is the plain-link tier for destinations people
- * already know by name; its description moves to the tooltip.
+ * Single described menu row. Every destination carries an authored one-line
+ * description beside its icon tile so keyboard, touch, and screen-reader users
+ * get the same guidance as pointer users.
  */
 function NavMenuItem({
   item,
   group,
   isActive,
-  variant,
+  tinted = false,
   onNavigate,
 }: {
   item: NavItem;
   group: string;
   isActive: boolean;
-  variant: "row" | "compact";
+  tinted?: boolean;
   onNavigate: () => void;
 }) {
   const Icon = item.icon;
   const descriptionId = useId();
-  const isRow = variant === "row";
-  const hasDescription = Boolean(isRow && item.description);
+  const hasDescription = Boolean(item.description);
 
   return (
     <li>
       <Link
         href={item.href}
         prefetch={false}
+        aria-label={item.external ? `${item.label} (opens in new tab)` : undefined}
         aria-current={isActive ? "page" : undefined}
         aria-describedby={hasDescription ? descriptionId : undefined}
-        title={isRow ? undefined : item.description}
         onClick={() => {
-          trackEvent("nav_click", { surface: "menu", group, href: item.href });
+          // External hrefs fall outside the nav_click contract's internal-path
+          // namespace (src/lib/analytics.ts), so only in-app rows report.
+          if (!item.external) {
+            trackEvent("nav_click", { surface: "menu", group, href: item.href });
+          }
           onNavigate();
         }}
         className={cn(
-          "group/nav-item relative flex cursor-default items-center rounded-lg text-sm outline-hidden select-none transition-colors hover:bg-muted/60 focus:bg-muted/60 focus:text-accent-foreground",
-          isRow ? "gap-3 px-2 py-1.5" : "h-8 gap-2 px-2",
-          isActive && "bg-muted/60 ring-1 ring-border/60 dark:bg-card dark:ring-border/80",
+          "pharos-focus-ring group/nav-item relative flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 text-sm select-none transition-colors focus:text-accent-foreground",
+          tinted
+            ? "hover:bg-card/80 focus:bg-card/80 dark:hover:bg-card/70 dark:focus:bg-card/70"
+            : "hover:bg-muted/60 focus:bg-muted/60",
+          isActive &&
+            (tinted
+              ? "bg-card ring-1 ring-border/70 dark:bg-card dark:ring-border/80"
+              : "bg-muted/60 ring-1 ring-border/60 dark:bg-card dark:ring-border/80"),
         )}
-        {...(item.external ? { target: "_blank", rel: "noreferrer" } : {})}
+        {...(item.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
       >
-        {isRow ? (
-          <span
-            className={cn(
-              "grid size-8 shrink-0 place-items-center rounded-md border transition-colors group-hover/nav-item:border-border group-hover/nav-item:text-foreground",
-              isActive
-                ? "border-border bg-background text-foreground"
-                : "border-border/50 bg-muted/40 text-muted-foreground",
-            )}
-          >
-            <Icon className="size-4" aria-hidden />
-          </span>
-        ) : (
-          <Icon className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
-        )}
+        <span
+          className={cn(
+            "grid size-8 shrink-0 place-items-center rounded-md border transition-colors group-hover/nav-item:border-border group-hover/nav-item:text-foreground",
+            isActive
+              ? "border-border bg-background text-foreground"
+              : "border-border/50 bg-muted/40 text-muted-foreground",
+          )}
+        >
+          <Icon className="size-4" aria-hidden="true" />
+        </span>
         <span className="min-w-0 flex-1">
-          <span
-            className={cn(
-              "flex items-center gap-1 text-sm text-foreground",
-              isRow ? "font-medium" : "text-foreground/85 group-hover/nav-item:text-foreground",
-            )}
-          >
+          <span className="flex items-center gap-1 text-sm font-medium text-foreground">
             {item.label}
-            {item.external ? <ArrowUpRight className="size-3 text-muted-foreground/70" aria-hidden /> : null}
+            {item.external ? (
+              <>
+                <ArrowUpRight className="size-3 text-muted-foreground/70" aria-hidden="true" />
+                <span className="sr-only"> (opens in new tab)</span>
+              </>
+            ) : null}
           </span>
           {hasDescription ? (
             <span
@@ -121,15 +118,15 @@ function NavMenuItem({
 }
 
 /**
- * Desktop masthead nav (≥lg). A quick rail carries the six highest-traffic
- * routes as direct links; four section menus (Markets, Risk, Tools, Learn)
- * share one panel grammar of described rows, and Learn closes on a compact
- * About Pharos tier. Mobile keeps <Header />.
+ * Desktop masthead nav (≥lg). A five-item quick rail anchors left of the fold
+ * and five section menus (Markets, Risk, Tools, Learn, Pharos) anchor right
+ * beside the utility controls (PSI regime toggle, Appearance + shortcuts
+ * disclosure, and Search) inside one balanced masthead. Mobile keeps <Header />.
  */
 export function TopNav() {
   const pathname = usePathname();
+  const isHome = pathname === "/";
   const topOffsetClass = stickyChromeTopOffsetClass(pathname);
-  const isEditorialRoute = getRouteCapabilities(pathname).editorial;
   const hydrated = useHydrated();
   const isApplePlatform =
     hydrated && typeof navigator !== "undefined" && /Mac|iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -138,43 +135,122 @@ export function TopNav() {
   // snapshot's incidents lane (the /depeg/ census), absent while unavailable.
   const activeDepegCount = useHomepageSnapshot().data?.incidents.data?.activeDepegCount ?? null;
 
-  // Desktop-only hover-to-open for the section disclosures, gated to
-  // hover-capable + fine pointers so touch laptops keep tap-to-open. A separate
-  // transient flag keeps hover panels dismissible without making click- or
-  // keyboard-opened panels non-sticky.
+  // Desktop hover-to-open for the section disclosures is gated per-event on
+  // `pointerType === "mouse"`, so hybrid touch laptops keep tap-to-open without
+  // a mount-time matchMedia probe. A transient hover flag keeps hover panels
+  // dismissible while protecting click- or keyboard-pinned menus.
   const [openMenu, setOpenMenu] = useState<string | null>(null);
-  const [hoverCapable, setHoverCapable] = useState(false);
-  const sectionNavRef = useRef<HTMLElement>(null);
+  const [appearanceOpen, setAppearanceOpen] = useState(false);
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  if (prevPathname !== pathname) {
+    setPrevPathname(pathname);
+    setOpenMenu(null);
+    setAppearanceOpen(false);
+  }
+
+  const primaryNavRef = useRef<HTMLElement>(null);
+  const appearanceRegionRef = useRef<HTMLDivElement>(null);
+  const appearanceTriggerRef = useRef<HTMLButtonElement>(null);
   const openTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pointerClearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const openMenuRef = useRef<string | null>(null);
+  const appearanceOpenRef = useRef(false);
   const hoverOpenRef = useRef(false);
+  const wasHoverOpenOnPointerDownRef = useRef<string | null>(null);
+  const pointerInsideMenuRef = useRef<string | null>(null);
   // Set when ArrowDown opens a closed trigger: the panel's rows are inert
   // until the open state commits, so the first-row focus lands in an effect.
   const pendingKeyboardOpen = useRef<string | null>(null);
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setHoverCapable(window.matchMedia("(hover: hover) and (pointer: fine)").matches);
-    return () => {
-      clearTimeout(openTimer.current ?? undefined);
-      clearTimeout(closeTimer.current ?? undefined);
-    };
+  const cancelOpen = useCallback(() => {
+    if (openTimer.current) {
+      clearTimeout(openTimer.current);
+      openTimer.current = null;
+    }
   }, []);
 
-  const sectionMenuOpen = TOP_MENUS.some((menu) => menu.key === openMenu);
+  const cancelClose = useCallback(() => {
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  }, []);
+
+  const commitOpenMenu = useCallback((next: string | null) => {
+    openMenuRef.current = next;
+    setOpenMenu(next);
+  }, []);
+
+  const commitAppearanceOpen = useCallback((next: boolean) => {
+    appearanceOpenRef.current = next;
+    setAppearanceOpen(next);
+  }, []);
+
+  const closeMenu = useCallback(() => {
+    cancelOpen();
+    cancelClose();
+    hoverOpenRef.current = false;
+    wasHoverOpenOnPointerDownRef.current = null;
+    commitOpenMenu(null);
+  }, [cancelClose, cancelOpen, commitOpenMenu]);
+
   useEffect(() => {
-    if (!sectionMenuOpen) return;
+    cancelOpen();
+    cancelClose();
+    hoverOpenRef.current = false;
+    wasHoverOpenOnPointerDownRef.current = null;
+    openMenuRef.current = null;
+    appearanceOpenRef.current = false;
+  }, [pathname, cancelClose, cancelOpen]);
+
+  useEffect(() => () => {
+    cancelOpen();
+    cancelClose();
+    if (pointerClearTimer.current) {
+      clearTimeout(pointerClearTimer.current);
+      pointerClearTimer.current = null;
+    }
+  }, [cancelClose, cancelOpen]);
+
+  useEffect(() => {
+    const stopTopNav = subscribeChromeDismiss("top-nav", closeMenu);
+    const stopAppearance = subscribeChromeDismiss("appearance", () => commitAppearanceOpen(false));
+    const onOpenPalette = () => {
+      closeMenu();
+      commitAppearanceOpen(false);
+    };
+    window.addEventListener(OPEN_COMMAND_PALETTE_EVENT, onOpenPalette);
+    return () => {
+      stopTopNav();
+      stopAppearance();
+      window.removeEventListener(OPEN_COMMAND_PALETTE_EVENT, onOpenPalette);
+    };
+  }, [closeMenu, commitAppearanceOpen]);
+
+  const sectionMenuOpen = TOP_MENUS.some((menu) => menu.key === openMenu);
+  const anyChromePanelOpen = sectionMenuOpen || appearanceOpen;
+  useEffect(() => {
+    if (!anyChromePanelOpen) return;
 
     const closeOnOutsidePointerDown = (event: PointerEvent) => {
-      const activeRegion = sectionNavRef.current?.querySelector<HTMLElement>(`[data-section-menu="${openMenu}"]`);
-      if (event.target instanceof Node && activeRegion?.contains(event.target)) return;
-      hoverOpenRef.current = false;
-      setOpenMenu(null);
+      const target = event.target;
+      if (target instanceof Node) {
+        if (openMenuRef.current) {
+          const activeRegion = primaryNavRef.current?.querySelector<HTMLElement>(
+            `[data-section-menu="${openMenuRef.current}"]`,
+          );
+          if (activeRegion?.contains(target)) return;
+        }
+        if (appearanceRegionRef.current?.contains(target)) return;
+      }
+      if (openMenuRef.current) closeMenu();
+      if (appearanceOpenRef.current) commitAppearanceOpen(false);
     };
 
     document.addEventListener("pointerdown", closeOnOutsidePointerDown);
     return () => document.removeEventListener("pointerdown", closeOnOutsidePointerDown);
-  }, [openMenu, sectionMenuOpen]);
+  }, [anyChromePanelOpen, closeMenu, commitAppearanceOpen]);
 
   // ArrowDown can open a panel whose rows are still inert; land focus on the
   // first row once that menu's open state has actually committed.
@@ -183,117 +259,177 @@ export function TopNav() {
     if (!key) return;
     pendingKeyboardOpen.current = null;
     if (openMenu !== key) return;
-    sectionNavRef.current?.querySelector<HTMLElement>(`[data-section-menu="${key}"] a[href]`)?.focus();
+    primaryNavRef.current?.querySelector<HTMLElement>(`[data-section-menu="${key}"] a[href]`)?.focus();
   }, [openMenu]);
 
-  const cancelOpen = () => {
-    if (openTimer.current) {
-      clearTimeout(openTimer.current);
-      openTimer.current = null;
-    }
-  };
+  // A hover-opened panel (or open Appearance disclosure) must be dismissible
+  // via Escape even when focus sits elsewhere on the page (WCAG 1.4.13).
+  useEffect(() => {
+    if (!anyChromePanelOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      if (openMenuRef.current) {
+        const region = primaryNavRef.current?.querySelector<HTMLElement>(
+          `[data-section-menu="${openMenuRef.current}"]`,
+        );
+        if (region?.contains(document.activeElement)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        closeMenu();
+        return;
+      }
+      if (appearanceOpenRef.current) {
+        if (appearanceRegionRef.current?.contains(document.activeElement)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        commitAppearanceOpen(false);
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [anyChromePanelOpen, closeMenu, commitAppearanceOpen]);
 
-  const cancelClose = () => {
-    if (closeTimer.current) {
-      clearTimeout(closeTimer.current);
-      closeTimer.current = null;
-    }
-  };
   const openOnHover = (key: string) => {
+    // Never hijack a click- or keyboard-pinned section menu, a keyboard-focused
+    // hover panel, or an open Appearance disclosure.
+    if (appearanceOpenRef.current) return;
+    if (openMenuRef.current !== null) {
+      if (!hoverOpenRef.current) return;
+      const activeRegion = primaryNavRef.current?.querySelector<HTMLElement>(
+        `[data-section-menu="${openMenuRef.current}"]`,
+      );
+      if (activeRegion?.contains(document.activeElement)) return;
+    }
+
     cancelClose();
     cancelOpen();
-    if (openMenu === key) return;
+    if (openMenuRef.current === key) return;
 
     // Opening from closed waits longer than switching: a stray sweep across
     // the bar should not flash panels (NN/g hover-intent guidance).
     openTimer.current = setTimeout(
       () => {
+        openTimer.current = null;
+        if (appearanceOpenRef.current) return;
+        if (openMenuRef.current !== null) {
+          if (!hoverOpenRef.current) return;
+          const activeRegion = primaryNavRef.current?.querySelector<HTMLElement>(
+            `[data-section-menu="${openMenuRef.current}"]`,
+          );
+          if (activeRegion?.contains(document.activeElement)) return;
+        }
         hoverOpenRef.current = true;
-        setOpenMenu(key);
+        dismissChromeOverlays("top-nav");
+        commitOpenMenu(key);
       },
-      openMenu === null ? 350 : 100,
+      openMenuRef.current === null ? HOVER_OPEN_DELAY_MS : HOVER_SWITCH_DELAY_MS,
     );
   };
-  const closeOnHover = (key: string) => {
+
+  const closeOnHover = () => {
     cancelOpen();
     cancelClose();
-    if (!hoverOpenRef.current || openMenu !== key) return;
+    const activeKey = openMenuRef.current;
+    if (!hoverOpenRef.current || activeKey === null) return;
 
     closeTimer.current = setTimeout(() => {
-      const activeRegion = sectionNavRef.current?.querySelector<HTMLElement>(`[data-section-menu="${key}"]`);
-      if (activeRegion?.contains(document.activeElement)) return;
+      closeTimer.current = null;
+      const activeRegion = primaryNavRef.current?.querySelector<HTMLElement>(
+        `[data-section-menu="${activeKey}"]`,
+      );
+      if (activeRegion?.contains(document.activeElement)) {
+        hoverOpenRef.current = false;
+        return;
+      }
       hoverOpenRef.current = false;
-      setOpenMenu(null);
+      commitOpenMenu(null);
     }, HOVER_CLOSE_DELAY_MS);
   };
+
   const activateMenu = (key: string) => {
     cancelOpen();
     cancelClose();
+    const wasHoverOpen =
+      wasHoverOpenOnPointerDownRef.current === key ||
+      (hoverOpenRef.current && openMenuRef.current === key);
+    wasHoverOpenOnPointerDownRef.current = null;
     hoverOpenRef.current = false;
-    setOpenMenu((current) => (current === key ? null : key));
+    if (wasHoverOpen && openMenuRef.current === key) {
+      // Pin the hover-opened panel open instead of toggling it closed.
+      return;
+    }
+    const next = openMenuRef.current === key ? null : key;
+    if (next !== null) dismissChromeOverlays("top-nav");
+    commitOpenMenu(next);
   };
+
   // Keyboard opens are pinned like clicks and never toggle: ArrowDown on a
   // closed trigger means "open", and the same key then roves the rows.
   const openPinned = (key: string) => {
     cancelOpen();
     cancelClose();
     hoverOpenRef.current = false;
-    setOpenMenu(key);
+    wasHoverOpenOnPointerDownRef.current = null;
+    dismissChromeOverlays("top-nav");
+    commitOpenMenu(key);
   };
-  const closeMenu = () => {
+
+  const handleAppearanceOpenChange = (next: boolean) => {
     cancelOpen();
     cancelClose();
     hoverOpenRef.current = false;
-    setOpenMenu(null);
+    wasHoverOpenOnPointerDownRef.current = null;
+    if (next) {
+      if (openMenuRef.current) commitOpenMenu(null);
+      dismissChromeOverlays("appearance");
+    }
+    commitAppearanceOpen(next);
   };
 
-  // A hover-opened panel must be dismissible without moving the pointer
-  // (WCAG 1.4.13). The wrapper's onKeyDown only hears Esc while focus is
-  // inside the menu, so listen on the document when focus is elsewhere.
-  useEffect(() => {
-    if (!openMenu || openMenu === APPEARANCE_MENU_KEY) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      const region = sectionNavRef.current?.querySelector<HTMLElement>(`[data-section-menu="${openMenu}"]`);
-      if (region?.contains(document.activeElement)) return;
-      if (closeTimer.current) clearTimeout(closeTimer.current);
-      if (openTimer.current) clearTimeout(openTimer.current);
-      hoverOpenRef.current = false;
-      setOpenMenu(null);
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [openMenu]);
-
-  // z-chrome-header, like the mobile Header: page-level sticky bars (the
-  // profile section tabs, the methodology scrollspy) sit on z-chrome and
-  // scroll beneath the nav, so an open nav panel is never covered.
+  // Elevate header from z-chrome-header to z-modal while a nav panel or
+  // Appearance disclosure is open so no sticky sibling or regime band can overlap it.
   return (
     <header
-      aria-label="Primary"
       className={cn(
-        "sticky z-chrome-header hidden h-14 w-full items-center gap-1.5 border-b border-border/70 bg-background/85 px-3 backdrop-blur-md lg:flex xl:gap-2 xl:px-4 2xl:px-6",
+        "sticky hidden h-14 w-full items-center gap-1.5 border-b border-border/70 bg-background/85 px-3 backdrop-blur-md lg:flex xl:gap-2 xl:px-4 2xl:px-6",
+        anyChromePanelOpen ? "z-modal" : "z-chrome-header",
         topOffsetClass,
       )}
     >
       <Link
         href="/"
         prefetch={false}
-        className="pharos-focus-ring flex shrink-0 items-center gap-2 rounded-lg pr-0.5 xl:pr-1 2xl:gap-2.5 2xl:pr-2"
         aria-label="Pharos home"
+        aria-current={isHome ? "page" : undefined}
+        className="group/brand pharos-focus-ring flex shrink-0 cursor-pointer items-center gap-2 rounded-lg pr-0.5 transition-colors xl:pr-1 2xl:gap-2.5 2xl:pr-2"
       >
-        <PharosLogo size={28} className="rounded-full shadow-sm" priority />
+        <PharosLogo
+          size={28}
+          className={cn(
+            "rounded-full shadow-sm transition-shadow",
+            isHome && "ring-1 ring-border/80 ring-offset-1 ring-offset-background",
+          )}
+          priority
+        />
         {/* Wordmark waits for xl: at lg the mark alone carries the brand so the
-            rail, section menus, PSI toggle and search fit 1024px (measured
-            2026-10-22 with a classic scrollbar). */}
-        <span className="pharos-display hidden text-sm font-bold tracking-tight text-foreground xl:inline">Pharos</span>
+            five-item rail, five section menus, PSI toggle and search fit 1024px. */}
+        <span
+          className={cn(
+            "pharos-display hidden text-base font-bold tracking-tight transition-colors xl:inline",
+            isHome ? "text-foreground" : "text-foreground/90 group-hover/brand:text-foreground",
+          )}
+        >
+          Pharos
+        </span>
       </Link>
 
-      {/* Destinations sit left of the fold; browsing sits on the right, next to
-          search: one direction for "go", one for "explore". */}
-      <nav aria-label="Quick links" className="flex shrink-0 items-center gap-0.5">
-        <span className="flex items-center gap-0 rounded-lg bg-muted/35 p-0.5 2xl:gap-0.5">
-          {QUICK_NAV_ITEMS.map((item) => {
+      <nav
+        ref={primaryNavRef}
+        aria-label="Primary"
+        className="flex min-w-0 flex-1 items-center gap-1.5 xl:gap-2"
+      >
+        <div className="flex shrink-0 items-center gap-0 rounded-lg border border-border/50 bg-muted/35 p-0.5 2xl:gap-0.5">
+          {DESKTOP_QUICK_NAV_ITEMS.map((item) => {
             const isActive = isNavItemActive(pathname, item);
             const Icon = item.icon;
             const badge = item.href === "/depeg/" && activeDepegCount ? activeDepegCount : null;
@@ -306,22 +442,27 @@ export function TopNav() {
                 title={item.description}
                 onClick={() => trackEvent("nav_click", { surface: "rail", group: "rail", href: item.href })}
                 className={cn(
-                  "pharos-focus-ring inline-flex h-8 items-center gap-1 rounded-md px-1.5 text-sm font-semibold whitespace-nowrap transition-colors 2xl:gap-1.5 2xl:px-2.5",
+                  "group pharos-focus-ring inline-flex h-8 cursor-pointer items-center gap-1 rounded-md px-1.5 text-sm font-semibold whitespace-nowrap transition-colors min-[90rem]:px-2 2xl:gap-1.5 2xl:px-2.5",
                   isActive
-                    ? "bg-background text-foreground ring-1 ring-border/70 dark:bg-card dark:ring-1 dark:ring-border/80"
+                    ? "bg-card text-foreground ring-1 ring-border/70 dark:bg-card dark:ring-border/80"
                     : "text-muted-foreground hover:bg-background/70 hover:text-foreground",
                 )}
               >
                 {/* The icon is the affordance that separates a direct link from
                     a menu trigger; triggers carry a chevron and no glyph. */}
-                <Icon className="size-4 shrink-0 opacity-70" aria-hidden />
-                {/* Three label tiers keep six items inside the masthead next to
-                    the menus and search: compact below 1280px (xl:), short
-                    ("Stability", "FreezeWatch") from 1280px to 1679px,
-                    canonical from 1680px (105rem — rem unit matches xl's 80rem
-                    so Tailwind v4 media-query ordering stays deterministic). */}
-                <span className="xl:hidden">{item.compactLabel ?? item.shortLabel ?? item.label}</span>
-                <span className="hidden xl:inline min-[105rem]:hidden">{item.shortLabel ?? item.label}</span>
+                <Icon
+                  className={cn(
+                    "size-4 shrink-0 transition-opacity",
+                    isActive ? "opacity-100" : "opacity-70 group-hover:opacity-100",
+                  )}
+                  aria-hidden="true"
+                />
+                {/* Three label tiers step up with masthead slack: compact below
+                    1440px (90rem — keeps Freeze compact through 1280px so
+                    wordmark + 10rem Search + Depeg badge fit comfortably),
+                    short from 1440px to 1679px, canonical from 1680px (105rem). */}
+                <span className="min-[90rem]:hidden">{item.compactLabel ?? item.shortLabel ?? item.label}</span>
+                <span className="hidden min-[90rem]:inline min-[105rem]:hidden">{item.shortLabel ?? item.label}</span>
                 <span className="hidden min-[105rem]:inline">{item.label}</span>
                 {/* A 16px glyph is too small to carry a count; it reads as a neutral pill after the label. */}
                 {badge ? (
@@ -332,40 +473,86 @@ export function TopNav() {
                     {badge}
                   </span>
                 ) : null}
-                {badge ? <span className="sr-only">{`, ${badge} active ${badge === 1 ? "depeg" : "depegs"}`}</span> : null}
+                {badge ? (
+                  <span className="sr-only">{`, ${badge} active ${badge === 1 ? "depeg" : "depegs"}`}</span>
+                ) : null}
               </Link>
             );
           })}
-        </span>
-      </nav>
+        </div>
 
-      {/* Right cluster reads menus -> divider -> PSI -> shortcuts -> appearance -> search. */}
-      <div className="ml-auto flex min-w-0 shrink-0 items-center gap-1 2xl:gap-2">
-        <nav ref={sectionNavRef} aria-label="Sections" className="flex shrink-0 items-center gap-0.5">
-          {TOP_MENUS.map((menu) => {
+        <div className="ml-auto flex shrink-0 items-center gap-0.5">
+          {TOP_MENUS.map((menu, menuIndex) => {
             const isActive = menu.items.some((item) => isNavItemActive(pathname, item));
             const isOpen = openMenu === menu.key;
             const panelId = `top-nav-${menu.key}-panel`;
+            const sections = menu.sections ?? [{ key: menu.key, label: null, items: menu.items }];
+            const quickBarLabelId = `${panelId}-quick-bar-label`;
+
             return (
               <div
                 key={menu.key}
                 data-section-menu={menu.key}
                 className="relative"
-                onMouseEnter={hoverCapable ? () => openOnHover(menu.key) : undefined}
-                onMouseLeave={hoverCapable ? () => closeOnHover(menu.key) : undefined}
+                onPointerEnter={(event) => {
+                  if (event.pointerType === "mouse") openOnHover(menu.key);
+                }}
+                onPointerLeave={(event) => {
+                  if (event.pointerType === "mouse") closeOnHover();
+                }}
+                onPointerDown={() => {
+                  pointerInsideMenuRef.current = menu.key;
+                  if (pointerClearTimer.current) clearTimeout(pointerClearTimer.current);
+                  pointerClearTimer.current = setTimeout(() => {
+                    pointerClearTimer.current = null;
+                    if (pointerInsideMenuRef.current === menu.key) {
+                      pointerInsideMenuRef.current = null;
+                    }
+                  }, 0);
+                }}
+                onFocus={() => {
+                  if (openMenuRef.current === menu.key) {
+                    hoverOpenRef.current = false;
+                  }
+                }}
                 onBlur={(event) => {
-                  if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return;
-                  if (isOpen) closeMenu();
+                  if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) {
+                    return;
+                  }
+                  if (pointerInsideMenuRef.current === menu.key) return;
+                  if (openMenuRef.current !== menu.key) return;
+                  closeMenu();
                 }}
                 onKeyDown={(event) => {
                   if (event.key === "Escape") {
                     if (!isOpen) return;
                     event.preventDefault();
+                    event.stopPropagation();
                     closeMenu();
                     event.currentTarget.querySelector<HTMLButtonElement>("[data-section-trigger]")?.focus();
                     return;
                   }
-                  if (event.key !== "ArrowDown" && event.key !== "ArrowUp" && event.key !== "Home" && event.key !== "End") {
+                  if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+                    event.preventDefault();
+                    const nextIndex =
+                      event.key === "ArrowRight"
+                        ? (menuIndex + 1) % TOP_MENUS.length
+                        : (menuIndex - 1 + TOP_MENUS.length) % TOP_MENUS.length;
+                    const nextMenu = TOP_MENUS[nextIndex]!;
+                    if (isOpen) openPinned(nextMenu.key);
+                    primaryNavRef.current
+                      ?.querySelector<HTMLButtonElement>(
+                        `[data-section-menu="${nextMenu.key}"] [data-section-trigger]`,
+                      )
+                      ?.focus();
+                    return;
+                  }
+                  if (
+                    event.key !== "ArrowDown" &&
+                    event.key !== "ArrowUp" &&
+                    event.key !== "Home" &&
+                    event.key !== "End"
+                  ) {
                     return;
                   }
                   // Roving lives inside the disclosure panel (still no
@@ -408,145 +595,239 @@ export function TopNav() {
                   aria-current={isActive ? "true" : undefined}
                   aria-expanded={isOpen}
                   aria-controls={panelId}
-                onPointerDown={() => {
-                  cancelOpen();
-                  hoverOpenRef.current = false;
-                }}
+                  onPointerDown={() => {
+                    cancelOpen();
+                    cancelClose();
+                    wasHoverOpenOnPointerDownRef.current =
+                      hoverOpenRef.current && openMenuRef.current === menu.key ? menu.key : null;
+                    hoverOpenRef.current = false;
+                  }}
                   onClick={() => activateMenu(menu.key)}
                   className={cn(
-                    "pharos-focus-ring inline-flex h-8 items-center gap-1 rounded-md px-1.5 text-sm font-medium whitespace-nowrap transition-colors 2xl:px-3",
+                    "pharos-focus-ring inline-flex h-8 cursor-pointer items-center gap-1 rounded-md px-1.5 text-sm font-medium whitespace-nowrap transition-colors min-[90rem]:px-2 2xl:px-2.5",
                     isActive
-                      ? "bg-muted/60 text-foreground ring-1 ring-border/70 dark:bg-card dark:ring-1 dark:ring-border/80"
+                      ? "bg-muted/60 text-foreground ring-1 ring-border/70 dark:bg-card dark:ring-border/80"
                       : isOpen
                         ? "bg-muted/40 text-foreground"
                         : "text-muted-foreground hover:bg-muted/40 hover:text-foreground",
                   )}
                 >
                   {menu.label}
-                  <ChevronDown className="size-3 opacity-50" aria-hidden />
+                  <ChevronDown
+                    className={cn(
+                      "size-3 opacity-50 transition-transform duration-150",
+                      isOpen && "rotate-180",
+                    )}
+                    aria-hidden="true"
+                  />
                 </button>
                 {/* Panels stay mounted so every destination is in the static
                     HTML (crawl links); closed panels are hidden + inert, so
                     they are neither visible nor focusable. */}
-                <div id={panelId} hidden={!isOpen} inert={!isOpen} className="absolute right-0 top-full z-modal pt-2">
-                    <div className="bg-popover text-popover-foreground animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 w-[20rem] origin-top-right overflow-x-hidden overflow-y-auto rounded-md border p-1.5 shadow-md">
-                      {(menu.sections ?? [{ key: menu.key, label: null, items: menu.items }]).map((section) =>
-                        section.compact ? (
-                          // The compact tier closes the panel: a muted strip
-                          // under a hairline, bled to the panel edges.
+                <div
+                  id={panelId}
+                  hidden={!isOpen}
+                  inert={!isOpen}
+                  className="absolute right-0 top-full z-modal pt-2"
+                >
+                  <div
+                    tabIndex={-1}
+                    className="bg-popover text-popover-foreground animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 w-[20rem] max-h-[calc(100dvh-5rem)] origin-top-right overflow-x-hidden overflow-y-auto rounded-xl border p-1.5 shadow-[shadow:var(--elevation-raised)] outline-none"
+                  >
+                    {sections.map((section) => {
+                      const sectionLabelId = section.label ? `${panelId}-${section.key}-label` : undefined;
+                      if (section.companion) {
+                        return (
                           <div
                             key={section.key}
-                            className="-mx-1.5 -mb-1.5 mt-1.5 border-t border-border/60 bg-muted/30 px-1.5 pt-2.5 pb-1.5"
+                            className="-mx-1.5 -mb-1.5 mt-1.5 border-t border-border/60 bg-muted/35 p-1.5"
                           >
                             {section.label ? (
-                              <p className="pharos-label mb-1 px-2 text-muted-foreground">{section.label}</p>
+                              <p id={sectionLabelId} className="pharos-label mb-1 px-2 text-muted-foreground">
+                                {section.label}
+                              </p>
                             ) : null}
-                            {/* Column-first in rows of four; nav-config orders the
-                                tier so each column reads as one group. */}
-                            <ul className="grid grid-flow-col grid-rows-4 gap-x-1">
+                            <ul aria-labelledby={sectionLabelId}>
                               {section.items.map((item) => (
                                 <NavMenuItem
                                   key={item.href}
                                   item={item}
                                   group={menu.key}
                                   isActive={isNavItemActive(pathname, item)}
-                                  variant="compact"
+                                  tinted
                                   onNavigate={closeMenu}
                                 />
                               ))}
                             </ul>
                           </div>
-                        ) : (
-                          <ul key={section.key}>
-                            {section.items.map((item) => (
-                              <NavMenuItem
-                                key={item.href}
-                                item={item}
-                                group={menu.key}
-                                isActive={isNavItemActive(pathname, item)}
-                                variant="row"
-                                onNavigate={closeMenu}
-                              />
-                            ))}
-                          </ul>
-                        ),
-                      )}
-                    </div>
+                        );
+                      }
+
+                      if (section.label) {
+                        return (
+                          <div key={section.key} className="mt-1.5 border-t border-border/60 pt-2">
+                            <p id={sectionLabelId} className="pharos-label mb-1 px-2 text-muted-foreground">
+                              {section.label}
+                            </p>
+                            <ul aria-labelledby={sectionLabelId}>
+                              {section.items.map((item) => (
+                                <NavMenuItem
+                                  key={item.href}
+                                  item={item}
+                                  group={menu.key}
+                                  isActive={isNavItemActive(pathname, item)}
+                                  onNavigate={closeMenu}
+                                />
+                              ))}
+                            </ul>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <ul key={section.key}>
+                          {section.items.map((item) => (
+                            <NavMenuItem
+                              key={item.href}
+                              item={item}
+                              group={menu.key}
+                              isActive={isNavItemActive(pathname, item)}
+                              onNavigate={closeMenu}
+                            />
+                          ))}
+                        </ul>
+                      );
+                    })}
+
+                    {menu.quickBarLinks?.length ? (
+                      <div className="-mx-1.5 -mb-1.5 mt-1.5 border-t border-border/60 bg-muted/25 px-3 py-2">
+                        <p id={quickBarLabelId} className="pharos-label text-muted-foreground">
+                          On the quick bar
+                        </p>
+                        <ul
+                          aria-labelledby={quickBarLabelId}
+                          className="mt-1 flex flex-wrap gap-x-3 gap-y-1"
+                        >
+                          {menu.quickBarLinks.map((item) => {
+                            const isQuickLinkActive = isNavItemActive(pathname, item);
+                            return (
+                              <li key={item.href}>
+                                <Link
+                                  href={item.href}
+                                  prefetch={false}
+                                  aria-current={isQuickLinkActive ? "page" : undefined}
+                                  onClick={() => {
+                                    if (!item.external) {
+                                      trackEvent("nav_click", {
+                                        surface: "menu",
+                                        group: menu.key,
+                                        href: item.href,
+                                      });
+                                    }
+                                    closeMenu();
+                                  }}
+                                  className={cn(
+                                    "pharos-focus-ring inline-flex cursor-pointer items-center rounded-sm text-xs transition-colors",
+                                    isQuickLinkActive
+                                      ? "bg-card px-1.5 py-0.5 font-medium text-foreground ring-1 ring-border/70 dark:bg-card dark:ring-border/80"
+                                      : "text-muted-foreground hover:text-foreground",
+                                  )}
+                                >
+                                  {item.shortLabel ?? item.label}
+                                </Link>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
               </div>
             );
           })}
-        </nav>
-        <span aria-hidden="true" className="h-4 w-px shrink-0 bg-border/60" />
-        <RegimeBarToggle />
-        {!isEditorialRoute ? (
-          <button
-            type="button"
-            onClick={openKeyboardShortcuts}
-            aria-label="Keyboard shortcuts"
-            title="Keyboard shortcuts (?)"
-            className="pharos-focus-ring inline-flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-muted/20 font-mono text-xs font-medium text-muted-foreground transition-colors hover:border-border hover:bg-muted/40 hover:text-foreground"
-          >
-            <span aria-hidden="true">?</span>
-          </button>
-        ) : null}
-        <DropdownMenu
-          modal={false}
-          open={openMenu === APPEARANCE_MENU_KEY}
-          onOpenChange={(next) => {
-            cancelClose();
-            setOpenMenu(next ? APPEARANCE_MENU_KEY : null);
+        </div>
+      </nav>
+
+      {/* Right utility cluster: divider -> PSI regime toggle -> Appearance + shortcuts disclosure -> Search. */}
+      <span aria-hidden="true" className="h-4 w-px shrink-0 bg-border/60" />
+      <div className="flex shrink-0 items-center gap-1 xl:gap-1.5 2xl:gap-2">
+        <RegimeBarToggle className="h-8" />
+
+        <div
+          ref={appearanceRegionRef}
+          className="relative"
+          onKeyDown={(event) => {
+            if (event.key !== "Escape" || !appearanceOpen) return;
+            event.preventDefault();
+            event.stopPropagation();
+            commitAppearanceOpen(false);
+            appearanceTriggerRef.current?.focus();
           }}
         >
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              aria-label="Appearance"
-              onPointerDown={() => {
-                cancelOpen();
-                cancelClose();
-                hoverOpenRef.current = false;
-              }}
-              onKeyDown={() => {
-                cancelOpen();
-                cancelClose();
-                hoverOpenRef.current = false;
-              }}
-              className="pharos-focus-ring inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground 2xl:size-9"
-            >
-              <SunMoon className="size-4" aria-hidden />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="end"
-            sideOffset={8}
-            className="w-auto p-1.5"
-            onCloseAutoFocus={(event) => {
-              if (hoverOpenRef.current) event.preventDefault();
-            }}
+          <button
+            ref={appearanceTriggerRef}
+            type="button"
+            aria-label="Appearance"
+            aria-expanded={appearanceOpen}
+            aria-controls={APPEARANCE_PANEL_ID}
+            onClick={() => handleAppearanceOpenChange(!appearanceOpen)}
+            className={cn(
+              "pharos-focus-ring inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors",
+              appearanceOpen
+                ? "bg-muted/50 text-foreground"
+                : "text-muted-foreground hover:bg-muted/40 hover:text-foreground",
+            )}
           >
-            <ThemeControls density="desktop" />
-          </DropdownMenuContent>
-        </DropdownMenu>
+            <SunMoon className="size-4" aria-hidden="true" />
+          </button>
+          {appearanceOpen ? (
+            <div
+              id={APPEARANCE_PANEL_ID}
+              data-top-nav-appearance
+              className="absolute right-0 top-full z-modal pt-2"
+            >
+              <div className="bg-popover text-popover-foreground animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 w-auto origin-top-right rounded-xl border p-1.5 shadow-[shadow:var(--elevation-raised)]">
+                <ThemeControls density="desktop" />
+                <div className="mt-1.5 border-t border-border/60 pt-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      commitAppearanceOpen(false);
+                      openKeyboardShortcuts();
+                    }}
+                    className="pharos-focus-ring flex h-8 w-full cursor-pointer items-center justify-between gap-4 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+                  >
+                    <span>Keyboard shortcuts</span>
+                    <kbd className="rounded-sm border border-border/70 bg-muted/50 px-1.5 py-0.5 font-mono text-3xs text-muted-foreground">
+                      ?
+                    </kbd>
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
 
         <button
           type="button"
-          onClick={openCommandPalette}
-          aria-label="Search"
-          // Icon-only below xl: at 1024px the six-item rail and menus fill the
-          // masthead; xl (1280-1535px) fits "Search" + shortcut; 2xl (1536px+)
-          // expands to the fuller "Coin or page" prompt. Both xl and 2xl are
-          // named breakpoints so only one label is ever displayed.
-          className="pharos-focus-ring inline-flex h-9 w-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-border/70 bg-muted/20 text-sm text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground xl:w-[10rem] xl:justify-start xl:px-2.5 2xl:w-60 2xl:gap-2 2xl:px-3"
+          onClick={() => {
+            dismissChromeOverlays("command-palette");
+            openCommandPalette();
+          }}
+          aria-label="Search coin or page"
+          // Icon-only below xl: xl (1280-1439px) preserves the CSS build canary
+          // `xl:w-[10rem]` with "Search"; 90rem (1440px+) steps up to "Coin or
+          // page". Both visible labels are contained in `aria-label` (WCAG 2.5.3).
+          className="pharos-focus-ring inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-border/70 bg-muted/20 text-sm text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground xl:w-[10rem] xl:justify-start xl:px-2.5 min-[90rem]:w-48 2xl:w-52 2xl:gap-2 2xl:px-3 min-[112.5rem]:w-60"
         >
-          <Search className="size-4 shrink-0" aria-hidden />
-          <span className="hidden xl:inline 2xl:hidden">Search</span>
-          <span className="hidden 2xl:inline">Coin or page</span>
+          <Search className="size-4 shrink-0" aria-hidden="true" />
+          <span className="hidden whitespace-nowrap xl:inline min-[90rem]:hidden">Search</span>
+          <span className="hidden whitespace-nowrap min-[90rem]:inline">Coin or page</span>
           <kbd className="ml-auto hidden shrink-0 rounded-sm border border-border/70 bg-background px-1.5 font-mono text-3xs whitespace-nowrap text-muted-foreground xl:inline">
             {searchShortcutLabel}
           </kbd>
         </button>
-
       </div>
     </header>
   );

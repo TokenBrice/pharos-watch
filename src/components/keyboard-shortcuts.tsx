@@ -1,7 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { isSingleKeyShortcutDisabled, setSingleKeyShortcutDisabled } from "@/lib/keyboard-shortcut-settings";
 
 type KeyJoin = "+" | "then" | "or";
@@ -13,22 +20,24 @@ interface Shortcut {
   join?: KeyJoin; // default "+"
 }
 
-const SHORTCUTS: Shortcut[] = [
-  { keys: ["?"], description: "Show keyboard shortcuts", category: "Global" },
-  { keys: ["Ctrl", "K"], description: "Open command palette", category: "Global" },
-  { keys: ["/"], description: "Focus search", category: "Global" },
-  { keys: ["Esc"], description: "Close modals/panels", category: "Global" },
-  { keys: ["↑", "↓"], description: "Navigate items", category: "Navigation", join: "or" },
-  { keys: ["←", "→"], description: "Navigate tabs", category: "Navigation", join: "or" },
-  { keys: ["Enter"], description: "Select/open item", category: "Navigation" },
-  { keys: ["T"], description: "Toggle theme", category: "Actions" },
-  { keys: ["J", "↓"], description: "Next row", category: "Tables", join: "or" },
-  { keys: ["K", "↑"], description: "Previous row", category: "Tables", join: "or" },
-  { keys: ["O", "Enter"], description: "Open detail", category: "Tables", join: "or" },
-  { keys: ["S"], description: "Toggle star (watchlist)", category: "Tables" },
-  { keys: ["C"], description: "Add to compare", category: "Tables" },
-  { keys: ["1", "9"], description: "Sort by column N (1-9)", category: "Tables", join: "or" },
-];
+function buildShortcuts(commandModifier: string): Shortcut[] {
+  return [
+    { keys: ["?"], description: "Show keyboard shortcuts", category: "Global" },
+    { keys: [commandModifier, "K"], description: "Open command palette", category: "Global" },
+    { keys: ["/"], description: "Focus search", category: "Global" },
+    { keys: ["Esc"], description: "Close modals/panels", category: "Global" },
+    { keys: ["↑", "↓"], description: "Navigate items", category: "Navigation", join: "or" },
+    { keys: ["←", "→"], description: "Navigate menus and tabs", category: "Navigation", join: "or" },
+    { keys: ["Enter"], description: "Select/open item", category: "Navigation" },
+    { keys: ["T"], description: "Toggle theme", category: "Actions" },
+    { keys: ["J", "↓"], description: "Next row", category: "Tables", join: "or" },
+    { keys: ["K", "↑"], description: "Previous row", category: "Tables", join: "or" },
+    { keys: ["O", "Enter"], description: "Open detail", category: "Tables", join: "or" },
+    { keys: ["S"], description: "Toggle star (watchlist)", category: "Tables" },
+    { keys: ["C"], description: "Add to compare", category: "Tables" },
+    { keys: ["1–9"], description: "Sort by column N (1-9)", category: "Tables" },
+  ];
+}
 
 function KeyCombo({ keys, join = "+" }: { keys: string[]; join?: KeyJoin }) {
   const separator = join === "+" ? "+" : join;
@@ -53,7 +62,11 @@ export function KeyboardShortcuts({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const categories = [...new Set(SHORTCUTS.map((s) => s.category))];
+  const hydrated = useHydrated();
+  const isApplePlatform =
+    hydrated && typeof navigator !== "undefined" && /Mac|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const shortcuts = buildShortcuts(isApplePlatform ? "⌘" : "Ctrl");
+  const categories = [...new Set(shortcuts.map((s) => s.category))];
   // This dialog is the only writer of the flag, so a lazy read stays accurate.
   const [singleKeyShortcutsEnabled, setSingleKeyShortcutsEnabled] = useState(() => !isSingleKeyShortcutDisabled());
 
@@ -67,6 +80,9 @@ export function KeyboardShortcuts({
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold">Keyboard Shortcuts</DialogTitle>
+          <DialogDescription className="sr-only">
+            Available keyboard shortcuts and single-key shortcut preference.
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           {categories.map((category) => (
@@ -75,7 +91,7 @@ export function KeyboardShortcuts({
                 {category}
               </h3>
               <div className="space-y-1.5">
-                {SHORTCUTS.filter((s) => s.category === category).map((shortcut, i) => (
+                {shortcuts.filter((s) => s.category === category).map((shortcut, i) => (
                   <div
                     key={i}
                     className="flex items-center justify-between rounded-md px-2 py-1.5 hover:bg-muted/50"
@@ -88,7 +104,7 @@ export function KeyboardShortcuts({
             </div>
           ))}
         </div>
-        <label className="flex items-center justify-between gap-3 border-t border-border/60 px-2 pt-3 text-sm">
+        <label className="flex cursor-pointer items-center justify-between gap-3 border-t border-border/60 px-2 pt-3 text-sm">
           <span>
             Enable single-key shortcuts (
             <kbd className="rounded-sm border border-border/70 bg-muted/50 px-1 py-0.5 font-mono tabular-nums">1-9</kbd>,{" "}
@@ -99,7 +115,7 @@ export function KeyboardShortcuts({
             type="checkbox"
             checked={singleKeyShortcutsEnabled}
             onChange={(e) => toggleSingleKeyShortcuts(e.target.checked)}
-            className="h-4 w-4 shrink-0 accent-primary"
+            className="h-4 w-4 shrink-0 cursor-pointer accent-primary"
           />
         </label>
         <p className="border-t border-border/60 pt-3 text-xs text-muted-foreground">

@@ -9,6 +9,7 @@ import { PSI_HEX_COLORS, PSI_UNKNOWN_BAND_HEX, isConditionBand } from "@shared/l
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { getDisplayedPsi, getDisplayedPsiBasis, getPsiBandStreak } from "@shared/lib/psi-view-model";
 import { cn } from "@/lib/utils";
+import { dismissChromeOverlays, subscribeChromeDismiss } from "@/lib/chrome-popover";
 import { getRouteCapabilities } from "@/lib/route-capabilities";
 import { formatDataHealthTimestamp } from "@/lib/data-health";
 import { usePsiBeaconState } from "@/hooks/use-psi-beacon-state";
@@ -51,6 +52,7 @@ function subscribeRegime(listener: () => void) {
 }
 function setRegimeExpanded(next: boolean) {
   if (regimeExpanded === next) return;
+  if (next) dismissChromeOverlays("regime-bar");
   regimeExpanded = next;
   regimeListeners.forEach((listener) => listener());
 }
@@ -143,20 +145,36 @@ export function RegimeBar() {
 
   const closeRef = useRef<HTMLButtonElement>(null);
 
-  // Close the regime panel on navigation, Escape, or its own close button.
+  // Close the regime panel on navigation, cross-overlay dismissal, outside click, Escape, or its close button.
   useEffect(() => {
     setRegimeExpanded(false);
   }, [pathname]);
+
+  useEffect(() => subscribeChromeDismiss("regime-bar", () => setRegimeExpanded(false)), []);
 
   useEffect(() => {
     if (!expanded) return;
     // Opened from the keyboard: move focus into the panel so Escape and Tab work predictably.
     if (document.activeElement?.getAttribute("aria-controls") === REGIME_PANEL_ID) closeRef.current?.focus();
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") closeRegimePanel();
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      event.preventDefault();
+      event.stopPropagation();
+      closeRegimePanel();
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest(`#${REGIME_PANEL_ID}`)) return;
+      if (target.closest(`[aria-controls="${REGIME_PANEL_ID}"]`)) return;
+      setRegimeExpanded(false);
     };
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onPointerDown);
+    };
   }, [expanded]);
 
   if (!model) {
@@ -207,7 +225,12 @@ export function RegimeBar() {
           role="region"
           aria-label={regimeLabel(model)}
           inert={!expanded}
-          className="grid transition-[grid-template-rows] duration-200 ease-out"
+          className={cn(
+            "grid motion-reduce:transition-none",
+            expanded
+              ? "visible [transition:grid-template-rows_200ms_ease-out,visibility_0ms_linear_0ms]"
+              : "invisible [transition:grid-template-rows_200ms_ease-out,visibility_0ms_linear_200ms]",
+          )}
           style={{ gridTemplateRows: expanded ? "1fr" : "0fr" }}
         >
           <div className="min-h-0 overflow-hidden">
@@ -236,7 +259,7 @@ export function RegimeBar() {
                 prefetch={false}
                 onClick={() => setRegimeExpanded(false)}
                 className={cn(
-                  "pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-md px-2 font-medium whitespace-nowrap underline-offset-2 hover:underline sm:min-h-0 sm:px-1.5 sm:py-0.5",
+                  "pharos-focus-ring inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-md px-2 font-medium whitespace-nowrap underline-offset-2 hover:underline lg:min-h-0 lg:px-1.5 lg:py-0.5",
                   useDarkText ? "text-black hover:bg-black/10" : "text-white hover:bg-white/15",
                 )}
               >
@@ -248,7 +271,7 @@ export function RegimeBar() {
                 onClick={closeRegimePanel}
                 aria-label="Close market regime details"
                 className={cn(
-                  "pharos-focus-ring inline-flex size-11 shrink-0 items-center justify-center rounded-md transition-colors sm:size-9",
+                  "pharos-focus-ring inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors lg:size-9",
                   useDarkText ? "hover:bg-black/10" : "hover:bg-white/15",
                 )}
               >
@@ -334,7 +357,7 @@ export function RegimeBarToggle({ className }: { className?: string }) {
       aria-label={`${regimeLabel(model)}. Market regime details`}
       title="Market regime: Pharos Stability Index"
       className={cn(
-        "pharos-focus-ring inline-flex h-9 min-w-[6rem] shrink-0 items-center justify-center gap-1 rounded-full border border-border/70 bg-muted/20 px-2 text-xs text-muted-foreground transition-colors hover:border-border hover:bg-muted/40 hover:text-foreground",
+        "pharos-focus-ring inline-flex h-9 min-w-[6rem] shrink-0 cursor-pointer items-center justify-center gap-1 rounded-full border border-border/70 bg-muted/20 px-2 text-xs text-muted-foreground transition-colors hover:border-border hover:bg-muted/40 hover:text-foreground",
         expanded && "border-border bg-muted/50 text-foreground",
         className,
       )}
