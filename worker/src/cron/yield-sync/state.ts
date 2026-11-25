@@ -29,9 +29,10 @@ import {
   DETERMINISTIC_ONCHAIN_COOLDOWN_SEC,
   getYieldSupplementalRunOutcomeCacheKey,
   parseYieldSupplementalRunOutcomeDetailed,
-  getYieldSupplementalPendleBackoffCacheKey,
-  parseYieldSupplementalPendleBackoff,
-  PENDLE_RATE_LIMIT_BACKOFF_REASON,
+  RATE_LIMITED_SUPPLEMENTAL_FAMILY_KEYS,
+  SUPPLEMENTAL_FAMILY_RATE_LIMIT_BACKOFF_REASONS,
+  getYieldSupplementalFamilyBackoffCacheKey,
+  parseYieldSupplementalFamilyBackoff,
   supplementalFamilySnapshotHash,
 } from "./cache";
 import {
@@ -346,7 +347,7 @@ async function loadYieldSupplementalCandidates(
     [
       ...SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((family) => getYieldSupplementalFamilyCacheKey(family)),
       runOutcomeCacheKey,
-      getYieldSupplementalPendleBackoffCacheKey(),
+      ...RATE_LIMITED_SUPPLEMENTAL_FAMILY_KEYS.map((family) => getYieldSupplementalFamilyBackoffCacheKey(family)),
     ],
   );
   const runOutcomeRow = familyCacheRows.get(runOutcomeCacheKey) ?? null;
@@ -393,13 +394,16 @@ async function loadYieldSupplementalCandidates(
   }
   // Backoff can outlive a clean producer run. Re-evaluate it hourly as the
   // retained row crosses its budget, without waiting for another fetch slot.
-  const pendleBackoff = parseYieldSupplementalPendleBackoff(
-    familyCacheRows.get(getYieldSupplementalPendleBackoffCacheKey())?.value,
-    startSec,
-  );
-  if (pendleBackoff && !validFamilyKeys.has("pendle")) {
-    if (!degradedFamilies.includes("pendle")) degradedFamilies.push("pendle");
-    degradedFamilyReasons.pendle = PENDLE_RATE_LIMIT_BACKOFF_REASON;
+  for (const family of RATE_LIMITED_SUPPLEMENTAL_FAMILY_KEYS) {
+    const backoff = parseYieldSupplementalFamilyBackoff(
+      family,
+      familyCacheRows.get(getYieldSupplementalFamilyBackoffCacheKey(family))?.value,
+      startSec,
+    );
+    if (backoff && !validFamilyKeys.has(family)) {
+      if (!degradedFamilies.includes(family)) degradedFamilies.push(family);
+      degradedFamilyReasons[family] = SUPPLEMENTAL_FAMILY_RATE_LIMIT_BACKOFF_REASONS[family];
+    }
   }
 
   if (validFamilyKeys.size > 0) {
