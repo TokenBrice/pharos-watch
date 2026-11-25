@@ -67,15 +67,14 @@ describe("evaluateStablecoinPublicationCoverage", () => {
   });
 
   it("registers only dated, expiring owner-approved publication waivers", () => {
-    expect(PUBLICATION_WAIVERS.map((waiver) => waiver.stablecoinId)).toEqual(["wm-m0"]);
-    const wm = PUBLICATION_WAIVERS[0]!;
-    expect(wm).toMatchObject({ owner: "ops", expiresAt: Date.UTC(2026, 11, 7, 12, 54) / 1000 });
-    expect(publicationCoverage(activeIds.filter((id) => id !== "wm-m0"), wm.expiresAt - 1)).toMatchObject({
-      complete: true, waivedActiveIds: ["wm-m0"], missingActiveIds: [],
-    });
-    expect(publicationCoverage(activeIds.filter((id) => id !== "wm-m0"), wm.expiresAt)).toMatchObject({
-      complete: false, waivedActiveIds: [], missingActiveIds: ["wm-m0"], expiredWaiverIds: ["wm-m0"],
-    });
+    for (const waiver of PUBLICATION_WAIVERS) {
+      expect(ACTIVE_IDS.has(waiver.stablecoinId)).toBe(true);
+      expect(waiver.owner.trim().length).toBeGreaterThan(0);
+      expect(waiver.reason.trim().length).toBeGreaterThan(0);
+      expect(Number.isSafeInteger(waiver.expiresAt)).toBe(true);
+    }
+    expect(PUBLICATION_WAIVERS.some((w) => w.stablecoinId === "wm-m0")).toBe(false);
+    expect(GAP_REVIEWS.some((r) => r.stablecoinId === "wm-m0")).toBe(false);
   });
 
   it("accepts only owned, reasoned, unexpired waivers", () => {

@@ -16,6 +16,7 @@ import reusd from "@shared/data/stablecoins/coins/reusd-re-protocol.json";
 import dusd from "@shared/data/stablecoins/coins/dusd-dialectic.json";
 import hbd from "@shared/data/stablecoins/coins/hbd-hive.json";
 import eutbl from "@shared/data/stablecoins/coins/eutbl-spiko.json";
+import wm from "@shared/data/stablecoins/coins/wm-m0.json";
 
 const fetchWithRetryMock = vi.fn();
 const probeTrackedTokenSupplyMock = vi.fn();
@@ -364,6 +365,15 @@ describe("fetchFiatCoinGeckoTokens", () => {
     } finally {
       FIAT_CG_METAS.pop();
     }
+  });
+
+  it("withholds wm-m0 rather than publishing CoinGecko fallback", async () => {
+    FIAT_CG_METAS.push({ ...wm, flags: { ...wm.flags, pegCurrency: "USD", yieldBearing: false, navToken: false } } as (typeof FIAT_CG_METAS)[number]);
+    try {
+      fetchWithRetryMock.mockImplementationOnce(emptyPrices);
+      const res = await fetchFiatCoinGeckoTokens({ "wrappedm-by-m0": { usd: 1, usd_market_cap: 7e7, last_updated_at: nowSec } });
+      expect(res.find((r) => r.id === "wm-m0")).toMatchObject({ circulating: {}, supplySource: "onchain-supply-withheld" });
+    } finally { FIAT_CG_METAS.pop(); }
   });
 
   it("keeps fresh CoinGecko market cap when its on-chain partition cannot be read", async () => {

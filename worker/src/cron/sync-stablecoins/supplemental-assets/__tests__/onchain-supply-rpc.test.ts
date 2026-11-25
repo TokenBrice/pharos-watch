@@ -192,6 +192,27 @@ describe("supplemental on-chain supply RPC routing", () => {
         chainCirculating: { HyperEVM: { current: 375, chainId: "hyperevm" } },
       });
   });
+
+  it("routes wm-m0 HyperEVM/Linea via EIP-1898 RPCs and keeps soneium/citrea out of PUBLIC_RPC_URLS", async () => {
+    expect([PUBLIC_RPC_URLS.soneium, PUBLIC_RPC_URLS.citrea, SUPPLY_RPC_DEFAULTS.fluent.rpcUrl])
+      .toEqual([undefined, undefined, PUBLIC_RPC_URLS.fluent]);
+    const urls = new Set<string>();
+    const obs = Math.floor(Date.now() / 1000) - 20;
+    const hash = `0x${"2".repeat(64)}`;
+    vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+      urls.add(url);
+      const { method } = JSON.parse(String(init?.body));
+      const result = method === "getTokenSupply" ? { context: { slot: 1 }, value: { amount: "1000000", decimals: 6 } }
+        : method === "getBlockTime" ? obs : method === "eth_blockNumber" ? "0x10"
+          : method === "eth_getBlockByNumber" ? { number: "0x10", hash, timestamp: `0x${obs.toString(16)}` }
+            : `0x${(1_000_000n).toString(16).padStart(64, "0")}`;
+      return Response.json({ jsonrpc: "2.0", id: 1, result });
+    }));
+    const res = await fetchCuratedAggregateOnChainMcap(TRACKED_META_BY_ID.get("wm-m0")!, 1, buildChainRpcs());
+    expect(res?.supplySource).toBe("onchain-total-supply");
+    expect([urls.has("https://hyperliquid.drpc.org"), urls.has("https://rpc.linea.build")]).toEqual([true, true]);
+    expect([urls.has("https://rpc.hyperliquid.xyz/evm"), urls.has("https://rpc.hypurrscan.io")]).toEqual([false, false]);
+  });
 });
 
 describe("XRPL issued-currency supply", () => {

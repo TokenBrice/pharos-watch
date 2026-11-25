@@ -35,6 +35,9 @@ export interface WeeklyCurationDigestModule {
     nowMs?: number,
     lookaheadDays?: number,
   ) => DatedReviewExpiryReport;
+  buildDatedReviewRegistries: (
+    horizonMs: number,
+  ) => readonly { registry: string; entries: readonly { id: string; expiresAt: string | number | null | undefined }[] }[];
   collectDatedReviewExpiries: (nowMs?: number, lookaheadDays?: number) => DatedReviewExpiryReport;
   renderDatedReviewExpiries: (report: DatedReviewExpiryReport) => string;
 }

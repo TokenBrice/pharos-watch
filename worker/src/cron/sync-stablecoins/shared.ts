@@ -3,6 +3,7 @@ import { ChainPartitionProvenanceSchema, decodePublishedPegType, StablecoinListR
 import { PriceDerivationSchema, PricePublicationReasonSchema } from "@shared/types/price";
 import type { PriceSourceHealth } from "@shared/types/status";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { getListingClass } from "@shared/lib/stablecoins/listing-governance";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { REFERENCE_INTRADAY_BUDGET_SEC } from "@shared/lib/reference-admission";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
@@ -213,6 +214,7 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload, runStar
     peggedAssets: payload.peggedAssets.map((asset) => {
       const {
         gecko_id: _ignoredSnakeCase,
+        listingClass: _ignoredListingClass,
         supplyObservedAt: _ignoredSupplyObservedAt,
         supplyRestored: _ignoredSupplyRestored,
         supplyRestoreMode: _ignoredSupplyRestoreMode,
@@ -261,6 +263,7 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload, runStar
       return {
         ...rest,
         geckoId: resolveGeckoId(asset),
+        listingClass: getListingClass(String(asset.id)),
         price: hasUsablePrice ? asset.price : null,
         priceSource: hasUsablePrice ? (asset.priceSource ?? MISSING_PRICE_SOURCE) : MISSING_PRICE_SOURCE,
         priceConfidence: hasUsablePrice ? normalizedConfidence : null,
@@ -542,6 +545,7 @@ function isWithinRestoreCeiling(previous: PeggedAsset, nowSec: number): boolean 
   if (kinesis && isKinesisWrapperSupplyCutoverActive(previous.id, nowSec) !== (previous.supplySource === "onchain-total-supply")) {
     return false;
   }
+  if (previous.id === "xaut-tether" && previous.supplySource !== "onchain-circulating-supply") return false;
   if (previous.supplySource === "coingecko-fallback" && prefersOnChainSupplyMcap(previous) && !kinesis) return false;
   // Cached on-chain packets must still satisfy today's deployment roster. A
   // removed or expanded aggregate, an ambiguous multi-contract footprint or a

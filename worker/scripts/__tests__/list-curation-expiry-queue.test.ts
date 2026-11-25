@@ -157,18 +157,14 @@ const HORIZON_SEC = CLOCK_SEC + 10 * DAY;
 const isoSec = (sec: number) => new Date(sec * 1_000).toISOString();
 const isoDate = (sec: number) => isoSec(sec).slice(0, 10);
 
-function emptySources(overrides: Partial<CurationExpirySources> = {}): CurationExpirySources {
-  return {
-    metaById: new Map(),
-    executionReviews: [],
-    supplyAttribution: {},
-    economicPlanQuarantines: new Map(),
-    transferReviews: [],
-    reserveBoundFacts: {},
-    wrapperReviews: {},
-    operationalResilienceOverlays: null,
-    ...overrides,
-  };
+function emptySources(o: Partial<CurationExpirySources> = {}): CurationExpirySources {
+  const metaById = new Map<string, StablecoinMeta>();
+  const s: CurationExpirySources = { metaById, executionReviews: [], supplyAttribution: {}, economicPlanQuarantines: new Map(), transferReviews: [], reserveBoundFacts: {}, wrapperReviews: {}, operationalResilienceOverlays: null, ...o };
+  if (!o.metaById) {
+    const r = [...s.executionReviews, ...Object.values(s.supplyAttribution).flat(), ...s.transferReviews] as { assetId?: string; identity?: { assetId?: string } }[];
+    for (const id of [...Object.keys(s.reserveBoundFacts), ...r.map((x) => x.assetId ?? x.identity?.assetId)]) if (id) metaById.set(id, {} as never);
+  }
+  return s;
 }
 
 function familyReplay(options: {
@@ -463,6 +459,20 @@ describe("buildCurationExpiryReport evidence families", () => {
     const absent = buildCurationExpiryReport(familyReplay(), 10, emptySources()).inactiveHistory[2]!;
     expect(absent.records).toBeNull();
   });
+
+  it("omits non-active assets", () => {
+    const t = 1795651200, rep = familyReplay(), src = defaultCurationExpirySources(); rep.pipeline.fixedInput.clockSec = t;
+    const u = src.reserveBoundFacts["usdy-ondo-finance"]!, r = buildCurationExpiryReport(rep, 45, emptySources({
+      metaById: new Map([["ok", {} as never]]), reserveBoundFacts: { ok: u, off: u },
+      executionReviews: [executionReview("off", isoSec(t - DAY), isoSec(t - 1))],
+      supplyAttribution: { reviews: [{ assetId: "off", reviewedAtSec: t - DAY, expiresAtSec: t + DAY }] },
+      transferReviews: [transferReview("off", "2026-11-25", { reviewedAt: "2026-11-25", expiresAt: "2026-11-27" })],
+    }));
+    const l = buildCurationExpiryReport(rep, 45, src);
+    expect([rowKeys(r.upcoming), r.lapsed, r.census.filter((c) => c.inactive === 1).map((c) => c.family), [...l.upcoming, ...l.lapsed].every((x) => ACTIVE_META_BY_ID.has(x.assetId))]).toEqual([
+      [["reserve-bound-fact", "ok", "unknown"]], [], ["execution-review", "supply-plan", "transfer-review", "transfer-scope", "reserve-bound-fact"], true,
+    ]);
+  });
 });
 
 describe("evidence family boundary parity with production resolvers (canonical registries)", () => {
@@ -643,6 +653,7 @@ describe("renewal calendar and absolute horizon", () => {
       const markdown = readFileSync(outputPath, "utf8");
       expect(markdown.startsWith("# Safety Score evidence pre-expiry queue (horizon 2027-01-19, exclusive UTC start)")).toBe(true);
       expect(markdown).toContain("## Renewal calendar by UTC week (Monday start)");
+      expect(markdown).not.toContain("usdy-ondo-finance");
 
       const conflicting = run("--days", "10", "--horizon", "2027-01-19");
       expect(conflicting.status).toBe(2);

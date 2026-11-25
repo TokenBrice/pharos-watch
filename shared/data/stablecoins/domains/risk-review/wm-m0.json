@@ -85,7 +85,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-lock-mint",
-    "summary": "wM route evidence combines historical Ethereum, Arbitrum, Base, Plume and Solana observations with seven unresolved Portal V2 deployments. Current M0 documentation describes Ethereum hub lock/release, spoke M mint/burn, SwapFacility extension conversion and modular Wormhole, Hyperlane and LayerZero adapters. The existing pinned controls and seven unresolved route classifications are retained: current documentation does not complete their historical ingress, remote-governance execution, incident or runtime supply-attribution evidence. Documentation observed 2026-10-09T10:31:18Z by Sol curation campaign 2026-10-09 (Lane03M0); this does not refresh the original on-chain checkpoints or aggregate review date.",
+    "summary": "wM route evidence combines historical Ethereum, Arbitrum, Base, Plume and Solana observations with twelve unresolved Portal deployments (seven Portal V2 spokes added in October plus Optimism, Rise, 0G, Sei and Fluent added for the 17-chain native supply perimeter on 2026-11-25). Current M0 documentation describes Ethereum hub lock/release, spoke M mint/burn, SwapFacility extension conversion and modular Wormhole, Hyperlane and LayerZero adapters. The existing pinned controls and unresolved route classifications are retained: current documentation does not complete their historical ingress, remote-governance execution, incident or runtime supply-attribution evidence. Documentation observed 2026-10-09T10:31:18Z by Sol curation campaign 2026-10-09 (Lane03M0); this does not refresh the original on-chain checkpoints or aggregate review date.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex mint-bridge-boundary migration",
     "confidence": "verified",
@@ -574,6 +574,156 @@
           }
         ],
         "observedBlock": 110701588
+      },
+      {
+        "id": "optimism:0x437cc33344a0b27a429f795ff6b469c72698b291",
+        "sourceChain": "ethereum",
+        "destinationChain": "optimism",
+        "canonicalChain": "ethereum",
+        "controllerChain": "optimism",
+        "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+        "contractAddress": "0x437cc33344a0b27a429f795ff6b469c72698b291",
+        "protocol": "M0 Portal (route semantics unresolved)",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Added 2026-11-25 under #2306 Option A2 for the 17-chain wM native supply perimeter. Pinned EIP-1898 read at Optimism block 160005706 verified decimals()=6, mToken()=0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b, M.portal()=0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd, implementation 0x813b926b1d096e117721bd1eb017fba122302da0, and M.balanceOf(wM) >= wM.totalSupply() (4.200149 wM). Bridge adapter governance, remote execution, and incident history remain unreviewed; no complete execution certificate or incident-free claim is made.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-25",
+        "observedBlock": 160005706,
+        "sources": [
+          {
+            "label": "Current M0 platform deployment directory",
+            "url": "https://docs.m0.org/raw/resources/addresses/m0-platform.md"
+          },
+          {
+            "label": "Pinned Optimism mainnet JSON-RPC",
+            "url": "https://mainnet.optimism.io"
+          }
+        ]
+      },
+      {
+        "id": "rise:0x437cc33344a0b27a429f795ff6b469c72698b291",
+        "sourceChain": "ethereum",
+        "destinationChain": "rise",
+        "canonicalChain": "ethereum",
+        "controllerChain": "rise",
+        "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+        "contractAddress": "0x437cc33344a0b27a429f795ff6b469c72698b291",
+        "protocol": "M0 Portal V2 (route semantics unresolved)",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Added 2026-11-25 under #2306 Option A2 for the 17-chain wM native supply perimeter. Pinned EIP-1898 read at Rise block 28004439 verified decimals()=6, mToken()=0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b, M.portal()=0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd, implementation 0x813b926b1d096e117721bd1eb017fba122302da0, and M.balanceOf(wM) >= wM.totalSupply() (1.100000 wM). Bridge adapter governance, remote execution, and incident history remain unreviewed; no complete execution certificate or incident-free claim is made.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-25",
+        "observedBlock": 28004439,
+        "sources": [
+          {
+            "label": "Current M0 platform deployment directory",
+            "url": "https://docs.m0.org/raw/resources/addresses/m0-platform.md"
+          },
+          {
+            "label": "Pinned Rise mainnet JSON-RPC",
+            "url": "https://rpc.risechain.com"
+          }
+        ]
+      },
+      {
+        "id": "0g:0x437cc33344a0b27a429f795ff6b469c72698b291",
+        "sourceChain": "ethereum",
+        "destinationChain": "0g",
+        "canonicalChain": "ethereum",
+        "controllerChain": "0g",
+        "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+        "contractAddress": "0x437cc33344a0b27a429f795ff6b469c72698b291",
+        "protocol": "M0 Portal V2 (route semantics unresolved)",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Added 2026-11-25 under #2306 Option A2 for the 17-chain wM native supply perimeter. Pinned EIP-1898 read at 0G block 51347950 verified decimals()=6, mToken()=0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b, M.portal()=0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd, implementation 0x813b926b1d096e117721bd1eb017fba122302da0, and M.balanceOf(wM) >= wM.totalSupply() (1.099998 wM). Bridge adapter governance, remote execution, and incident history remain unreviewed; no complete execution certificate or incident-free claim is made.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-25",
+        "observedBlock": 51347950,
+        "sources": [
+          {
+            "label": "Current M0 platform deployment directory",
+            "url": "https://docs.m0.org/raw/resources/addresses/m0-platform.md"
+          },
+          {
+            "label": "Pinned 0G mainnet JSON-RPC",
+            "url": "https://evmrpc.0g.ai"
+          }
+        ]
+      },
+      {
+        "id": "sei:0x437cc33344a0b27a429f795ff6b469c72698b291",
+        "sourceChain": "ethereum",
+        "destinationChain": "sei",
+        "canonicalChain": "ethereum",
+        "controllerChain": "sei",
+        "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+        "contractAddress": "0x437cc33344a0b27a429f795ff6b469c72698b291",
+        "protocol": "M0 Portal (route semantics unresolved)",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Added 2026-11-25 under #2306 Option A2 for the 17-chain wM native supply perimeter. Pinned EIP-1898 read at Sei block 245288229 verified decimals()=6, mToken()=0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b, M.portal()=0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd, implementation 0x813b926b1d096e117721bd1eb017fba122302da0, and M.balanceOf(wM) >= wM.totalSupply() (0.999999 wM). Bridge adapter governance, remote execution, and incident history remain unreviewed; no complete execution certificate or incident-free claim is made.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-25",
+        "observedBlock": 245288229,
+        "sources": [
+          {
+            "label": "Current M0 platform deployment directory",
+            "url": "https://docs.m0.org/raw/resources/addresses/m0-platform.md"
+          },
+          {
+            "label": "Pinned Sei EVM JSON-RPC",
+            "url": "https://evm-rpc.sei-apis.com"
+          }
+        ]
+      },
+      {
+        "id": "fluent:0x437cc33344a0b27a429f795ff6b469c72698b291",
+        "sourceChain": "ethereum",
+        "destinationChain": "fluent",
+        "canonicalChain": "ethereum",
+        "controllerChain": "fluent",
+        "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+        "contractAddress": "0x437cc33344a0b27a429f795ff6b469c72698b291",
+        "protocol": "M0 Portal V2 (route semantics unresolved)",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Added 2026-11-25 under #2306 Option A2 for the 17-chain wM native supply perimeter. Pinned EIP-1898 read at Fluent block 21840370 verified decimals()=6, mToken()=0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b, M.portal()=0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd, implementation 0x813b926b1d096e117721bd1eb017fba122302da0, and observed zero wM totalSupply() (0.000000 wM). Bridge adapter governance, remote execution, and incident history remain unreviewed; no complete execution certificate or incident-free claim is made.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-25",
+        "observedBlock": 21840370,
+        "sources": [
+          {
+            "label": "Current M0 platform deployment directory",
+            "url": "https://docs.m0.org/raw/resources/addresses/m0-platform.md"
+          },
+          {
+            "label": "Pinned Fluent mainnet JSON-RPC",
+            "url": "https://rpc.fluent.xyz"
+          }
+        ]
       }
     ],
     "controls": [

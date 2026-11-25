@@ -452,7 +452,7 @@ async function fetchOnChainSupplyForContract(input: {
     const stateClockRequired = input.meta.id === "buidl-blackrock" || isKinesisWrapperSupplyId(input.meta.id)
       || input.meta.id === "susds-sky" || input.meta.id === "paxg-paxos"
       || input.meta.id === "eurc-circle" || input.meta.id === "eurcv-societe-generale-forge"
-      || input.meta.id === "brla-brla-digital";
+      || input.meta.id === "brla-brla-digital" || input.meta.id === "wm-m0";
     const needsJoinedBlock = family === "evm" && (
       stateClockRequired || !!CURATED_ONCHAIN_SUPPLY_EXCLUSIONS[input.meta.id] ||
       (!!CURATED_AGGREGATE_ESCROW_RESIDUALS[input.meta.id] &&

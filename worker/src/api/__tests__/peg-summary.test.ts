@@ -1651,6 +1651,8 @@ describe("active-depeg census scope", () => {
       // One generation, one census: the retained row outside the active
       // registry is history, not a second active detection.
       expect(body.coins.some((coin) => coin.id === "usr-resolv")).toBe(false);
+      expect(body.coins.find((coin) => coin.id === "usdt-tether")?.listingClass).toBe("core-stablecoin");
+      expect(body.coins.every((coin) => coin.listingClass != null && coin.listingClass !== "excluded")).toBe(true);
       const census = selectActiveDepegCoins(body.coins, WORKER_ACTIVE_IDS).length;
       expect(census).toBe(1);
       const { summary } = body;

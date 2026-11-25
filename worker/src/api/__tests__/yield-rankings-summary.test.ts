@@ -123,6 +123,7 @@ describe("handleYieldRankings summary projection", () => {
       rankings: [
         {
           id: "usdc-circle",
+          listingClass: "core-stablecoin",
           alternateSourceCount: 1,
           decisionReasonCode: "curated-over-discovered",
           provenance: {
@@ -233,6 +234,10 @@ describe("handleYieldRankings summary projection", () => {
     expect(body.rankings[0].altSources).toHaveLength(1);
     expect(body.rankings[0].decisionLedger?.alternatives).toHaveLength(1);
     expect(body.rankings[0].sourceRisk?.venueProtocol).toBe("Detail-only protocol");
+    const db = makeCacheDb({ ...makePayload(), rankings: [...makePayload().rankings, makeYieldRanking({ id: "buidl-blackrock" })] });
+    for (const [s, u] of [[YieldRankingsResponseSchema], [YieldRankingsSummaryResponseSchema, new URL("https://x/y?projection=summary")]] as const) {
+      expect(s.parse(await (await handleYieldRankings(db, u)).json()).rankings.map((r) => r.listingClass)).toEqual(["core-stablecoin", "tokenized-fund"]);
+    }
   });
 
   it("rejects unknown, blank, and repeated projection values without reading cache", async () => {

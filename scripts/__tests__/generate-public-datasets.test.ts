@@ -202,11 +202,12 @@ describe("generate-public-datasets", () => {
       "chainCount", "chains", "supplyUnavailableReason", "supplyProvenance",
       "frozen", "frozenAt", "archiveCapturedAt", "archivalCirculatingUsd", "chainUnavailableReason",
       "priceSource", "priceObservedAt", "priceObservedAtMode", "nominalReferenceUsd", "nominalReferenceSource",
+      "listingClass",
     ]);
     for (const [id, supply, reason] of [["unknown", "", "absent"], ["zero", "0", ""]]) {
       expect(csv.find((line) => line.startsWith(`${id},`))?.split(",")).toEqual([
         id, "USDC", "USD Coin", "peggedUSD", "fiat-backed", "1", supply, "1", "ethereum", reason, "",
-        "false", "", "", "", "", "", "", "", "", "",
+        "false", "", "", "", "", "", "", "", "", "", "",
       ]);
     }
   });
@@ -324,7 +325,7 @@ describe("generate-public-datasets", () => {
     },
     {
       topic: "scores-latest",
-      header: "stablecoinId,symbol,pegScore,safetyScore,safetyGrade,dewsScore,dewsBand,liquidityScore,coverageClass,ratingStatus,safetyDisplay,dewsComputedAt,liquidityUpdatedAt,liquidityUnavailableReason,liquidityMethodologyVersion",
+      header: "stablecoinId,symbol,pegScore,safetyScore,safetyGrade,dewsScore,dewsBand,liquidityScore,coverageClass,ratingStatus,safetyDisplay,dewsComputedAt,liquidityUpdatedAt,liquidityUnavailableReason,liquidityMethodologyVersion,listingClass",
     },
     {
       topic: "peg-mechanism-distribution",
@@ -438,7 +439,7 @@ describe("generate-public-datasets", () => {
     const empty = {
       symbol: "USDC", pegScore: null, safetyScore: null, safetyGrade: null, dewsScore: null, dewsBand: null,
       liquidityScore: null, coverageClass: null, ratingStatus: null, safetyDisplay: null, dewsComputedAt: null,
-      liquidityUpdatedAt: null, liquidityUnavailableReason: null, liquidityMethodologyVersion: null,
+      liquidityUpdatedAt: null, liquidityUnavailableReason: null, liquidityMethodologyVersion: null, listingClass: null,
     };
     expect(rows).toEqual([
       { ...empty, stablecoinId: "high", safetyScore: 88, safetyGrade: "B", dewsScore: 4, dewsBand: "normal" },
@@ -823,6 +824,20 @@ describe("generate-public-datasets", () => {
     expect(() => validateTopicRowFloor("top-stablecoins", [])).toThrow("expected at least 493");
     const dirs = await topicWorkspace(topic, count, []);
     for (const mode of [false, true]) expect(checkAllTopics(dirs, mode)).toEqual({ ok: false, reason: expect.stringContaining(reason) });
+  });
+
+  it("projects listingClass without restating history", () => {
+    vi.useFakeTimers(); vi.setSystemTime(new Date("2026-11-26T12:00:00Z"));
+    const U = "usdc-circle", B = "buidl-blackrock", C = "core-stablecoin", T = "tokenized-fund", b0 = makeEnvelope().stablecoins[0]!;
+    const f = (d: string, sc: Record<string, unknown>[], add?: true) => {
+      const b = makeCurrentEnvelope(d), rc = add ? makeReportCardsV9Response({ cards: [makeV9Card({ id: B }), ...b.reportCards.cards] }) : b.reportCards;
+      const e = { ...b, stablecoins: sc.map((x) => ({ ...b0, ...x })), reportCards: rc, safetyScoreIdentity: rc.safetyScoreIdentity };
+      return (["top-stablecoins", "scores-latest"] as const).map((t) => (specFor(t, e).rows as { listingClass: unknown }[]).map((r) => r.listingClass));
+    };
+    expect([
+      f("2026-11-24", [{ id: U, listingClass: C }]), f("2026-11-25", [{ id: U, listingClass: null }, { id: B, listingClass: T }]),
+      f("2026-11-25", [{ id: U }]), f("2026-11-26", [{ id: U }, { id: "214" }], true),
+    ]).toEqual([[[null], [null]], [[null, T], [null, T]], [[null], [null]], [[C, null], [C, T, null]]]);
   });
 });
 

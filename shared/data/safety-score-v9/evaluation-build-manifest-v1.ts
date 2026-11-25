@@ -38,7 +38,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/lane-emitter-descriptors-v1.generated.json",
-      "sha256": "d2bb606a41aeeb8ffa0ac55b56cb8400c8604fc14536f5477e8ffe6c8322807d"
+      "sha256": "ec08283589ffd5fceced99543fcd5c872b5967599a5e37f0bd37c42578cbb128"
     },
     {
       "path": "shared/data/safety-score-v9/lane-screening-emitter-inventory-v1.json",
@@ -106,7 +106,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/chain-rpc-registry.ts",
-      "sha256": "2d50950472bac2327dd0167d0554ebc20de586f594c078198225b2172e786c3f"
+      "sha256": "94e1e0a706c70fc2d94838c004a5b00e9552806307248221fcebd5ecf5cda82d"
     },
     {
       "path": "shared/lib/classification/pegs.ts",
@@ -1334,7 +1334,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/supply-attribution-contract.ts",
-      "sha256": "1e8fed0e074a94a0fd70743253a4bf2b26975a9569d358a7cbda63c1e664ea48"
+      "sha256": "8c22886add14229788b92a014d6df73c2c349c510da6d92011a797a51caac14a"
     },
     {
       "path": "worker/src/lib/safety-score-v9/supply-attribution-diagnostics.ts",
@@ -1350,7 +1350,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/xaut-supply-attribution-contract.ts",
-      "sha256": "ca03a080604c057ce04d5ad74f4db2253f4c1c19b5531bbd42fbe9f58333bf5e"
+      "sha256": "43762b120f8e25b84a6eaa10c6f354d518172ae8ea7360f5c8cd171388073d04"
     },
     {
       "path": "worker/src/lib/sensitive-metadata.ts",
@@ -1375,7 +1375,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-11-25-block-26492408-shock-coverage.json.gz"
     }
   ],
-  "digest": "ec075b860a08011aa7184ee30e96658a8e6a631757fb995d1e655719249785cb"
+  "digest": "2f09d997d1d6acc4147905ca8989717a234c6ee8cab56d8260c7897563d3922b"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

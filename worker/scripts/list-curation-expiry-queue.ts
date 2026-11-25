@@ -15,6 +15,9 @@
 //   pipeline; a missing join is `unknown`, never healthy.
 // Wrapper-allocation and operational-resilience overlay dates are an
 // inactive/history census only: never renewals, never grade impact.
+// Retained records for non-active assets (absent from `sources.metaById`, i.e.
+// `ACTIVE_META_BY_ID`) stay intact on disk and are counted under `Inactive` in
+// the family census, never queued as upcoming or lapsed renewals.
 //
 // Usage:
 //   npm run safety-score-v9:expiry-queue -- \
@@ -696,6 +699,7 @@ function enumerateProjections(
   // assurance admission independent.
   const assuranceSourceId = "stablecoin.proof-of-reserves.latest-report";
   for (const { assetId, mechanismRiskReview: review, componentEvidence, researchEvidence } of joins.extension?.values() ?? []) {
+    if (!sources.metaById.has(assetId)) continue;
     if (!review) continue;
     const { archetype } = review;
     const scope = archetype === "tbill" ? "lossRecoveryDesign" : "assuranceAndReconciliation";
@@ -954,7 +958,11 @@ function enumerateProjections(
   }
   producerRefreshed.push({ family: "reserve-bound-fact", records: liveBounds,
     note: "captured live boundedFacts are producer observations; selection/freshness is owned by the compiled result" });
-  return projections;
+  return projections.map((projection) =>
+    projection.inactiveReason || sources.metaById.has(projection.assetId)
+      ? projection
+      : { ...projection, inactiveReason: "asset-not-active" },
+  );
 }
 
 /** Boundary projection only, with compiler-selected evidence for replay-owned records. */
@@ -1243,7 +1251,7 @@ export function renderCurationExpiryReport(
     "",
     `Report status: **${report.status}**${report.status === "partial" ? ` (${report.diagnostics.length} census diagnostic(s); this is not a complete assessment)` : ""}.`,
     `Capture clock ${isoSec(report.capture.clockSec)} (${report.capture.clockSec}); base input generation ${report.capture.baseInputGenerationId ?? "unavailable"}; source generation ${report.capture.sourceGeneration ?? "unavailable"}; extracted ${isoSec(report.extractedAtSec)}.`,
-    "Family boundaries derive from original authored clocks plus canonical policy budgets; the frozen input is not re-aged. Dispositions are admission states, not grade forecasts; `unknown` means the production join was not available or not reproduced.",
+    "Family boundaries derive from original authored clocks plus canonical policy budgets; the frozen input is not re-aged. Dispositions are admission states, not grade forecasts; `unknown` means the production join was not available or not reproduced. Retained records for non-active assets are counted under `Inactive` in the family census and never queued as renewals.",
     `Queue supply (distinct assets across reserve and upcoming family rows): ${supply.known} known, ${supply.unavailable} unavailable; known-supply subtotal USD ${supply.knownSubtotalUsd.toLocaleString("en-US")} (not a full-cohort total).`,
     "",
   ];

@@ -16,6 +16,8 @@ Top Stablecoins projects malformed or unsupported price observation modes as `un
 
 An explicit market-price refusal in the snapshot clears the exported price and observation clock. A reference-only refusal preserves the observed market quote.
 
+`top-stablecoins` and `scores-latest` append `listingClass` as their trailing CSV column (`ListingClass | null` in JSON/NDJSON; empty CSV cell for `null`) under Listing Policy 2.0. Untracked DefiLlama rows emit `null` (never fabricated), and pre-`2026-11-25` or unrecorded historical snapshots emit `null` without restating past exports; post-`2026-11-25` snapshots preserve their recorded `listingClass`.
+
 The runtime now uses three HTTP lanes:
 
 - `https://api.pharos.watch` is the external integration API. Protected public routes require `X-API-Key`.
@@ -627,6 +629,7 @@ Current stablecoin list with supply, price, same-observation current peg deviati
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | `geckoId` | `string \| null` | CoinGecko ID (normalized output key; upstream DefiLlama uses `gecko_id`) |
+| `listingClass` | `ListingClass \| null` | Listing Policy 2.0 classification (`core-stablecoin`, `stablecoin-variant`, `tokenized-fund`, `review-hold`, or `excluded`); `null` for untracked DefiLlama rows. Stamped at `sync-stablecoins` write time (`<= 15 min` propagation after a reclassification deploy), with read-time backfill during cache rollover |
 | `currentPeg` | `object` (optional) | Same-row `currentDeviationBps`, `pegReference`, `pegReferenceUnavailable`, `currentPriceUnavailable`, `primaryTrust` and nullable `dexPriceCheck` with optional exclusive Unix-second `dexPriceCheckExpiresAt`; expired/unclocked DEX checks are unavailable while price/deviation remain; agreement/provenance/observation identity use the row's existing price source, confidence, clocks, `consensusSources` and `agreeSources`, without joining peg-summary |
 | `currentPeg.currentDeviationBps` | `number \| null` | Null for unavailable admitted price/reference, NAV tokens or nominal par; null never means zero or fallback. An absent `currentPeg` on legacy/cached rows falls back to existing peg-summary behavior, allowing Worker/Pages deployment in either order |
 

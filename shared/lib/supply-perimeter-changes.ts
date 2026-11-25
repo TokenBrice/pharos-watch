@@ -174,6 +174,21 @@ export const SUPPLY_PERIMETER_CHANGES = [
     evidenceUrl: "https://github.com/TokenBrice/pharos-watch/issues/2169",
     marketWide: false,
   },
+  // === #2306: wM (wm-m0) 17-chain reviewed native on-chain supply plan (Pricing v6.96) ===
+  // Switched wM from withheld CoinGecko fallback to reviewed 17-chain clocked native on-chain
+  // supply (preferMcap: true; Option A2) after proving M0 Portal V2 / Portal Lite / Solana
+  // Portal zero-escrow burn-and-mint semantics and Ethereum HubPortal L1 Nexus bound.
+  // Aligned to Pricing v6.96 activation (2026-11-25T13:30:00Z, Unix 1795613400).
+  {
+    stablecoinId: "wm-m0",
+    changedAt: Date.parse("2026-11-25T13:30:00Z") / 1000,
+    chainIds: [
+      "ethereum", "solana", "arbitrum", "base", "plume", "linea", "bsc", "hyperevm", "soneium",
+      "plasma", "citrea", "monad", "optimism", "rise", "0g", "sei", "fluent",
+    ],
+    evidenceUrl: "https://github.com/TokenBrice/pharos-watch/issues/2306",
+    marketWide: false,
+  },
   // Listing policy v2 (core-stablecoins-v2): Pharos stablecoin totals and non-USD cohorts exclude
   // tokenized fund shares from the cutover without restating pre-cutover core-stablecoins-v1
   // history; provider-sourced /api/stablecoin-charts may still include llamaId fund shares while

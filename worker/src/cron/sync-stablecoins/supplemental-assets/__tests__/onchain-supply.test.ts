@@ -1303,4 +1303,26 @@ describe("discovery native supply aggregates", () => {
       "polygon", meta.contracts![0].address, TOTAL_SUPPLY_SELECTOR, 122, expect.objectContaining({ stateBlockHash: parentHash }),
     );
   });
+
+  it("reads wm-m0 with EIP-1898 + Solana clocks, zero spokes, and fail-closed withholding", async () => {
+    const meta = TRACKED_META_BY_ID.get("wm-m0")!;
+    const now = Math.floor(Date.now() / 1000);
+    const evmObs = now - 35;
+    vi.mocked(evmRpc.fetchEvmBlockHeader).mockResolvedValue({ number: 123, hash: BLOCK_HASH, timestamp: evmObs });
+    const zero = new Set(["linea", "hyperevm", "fluent"]);
+    vi.mocked(evmRpc.fetchEvmUint256AtBlock).mockImplementation(async (c) => c === "ethereum" ? 67_000_000_000_000n : zero.has(c!) ? 0n : 1_000_000n);
+    const sol = vi.spyOn(nativeSupply, "observeSolanaTokenSupply").mockResolvedValue({ rawSupply: 2_500_000_000_000n, slot: 473_722_202, observedAt: now - 20 });
+    const res = await fetchCuratedAggregateOnChainMcap(meta, 1, buildChainRpcs());
+    const evmN = meta.contracts!.length - 1;
+    expect(res).toMatchObject({ supplySource: "onchain-total-supply", observedAt: evmObs });
+    expect(res?.nativeSupply).toBeCloseTo(69_500_000 + evmN - 1 - zero.size, 6);
+    expect([res?.chainCirculating?.Linea?.current, res?.chainCirculating?.Fluent?.current]).toEqual([0, 0]);
+    const held = { id: meta.id, name: meta.name, symbol: meta.symbol, circulating: {}, supplySource: "onchain-supply-withheld" };
+    expect(restorePreferredNativeSupply(held, { ...held, circulating: { peggedUSD: 7e7 }, supplySource: "coingecko-fallback", supplyObservedAt: now - 60 }, now))
+      .toMatchObject({ circulating: {}, supplySource: "onchain-supply-withheld" });
+    sol.mockResolvedValueOnce(null);
+    await expect(fetchCuratedAggregateOnChainMcap(meta, 1, buildChainRpcs())).resolves.toBeNull();
+    vi.mocked(evmRpc.fetchEvmUint256AtBlock).mockImplementationOnce(async () => null);
+    await expect(fetchCuratedAggregateOnChainMcap(meta, 1, buildChainRpcs())).resolves.toBeNull();
+  });
 });

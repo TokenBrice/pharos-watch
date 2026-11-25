@@ -388,7 +388,7 @@ function venueRiskExpiries(entries, horizonMs) {
   });
 }
 
-function buildDatedReviewRegistries(horizonMs) {
+export function buildDatedReviewRegistries(horizonMs) {
   return [
     {
       registry: "Chain-maturity reviews (CHAIN_MATURITY_REVIEWS_V1)",

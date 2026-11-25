@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildDepegHistoryDescription,
+  buildTopStablecoinsDescription,
   buildPublicDatasetCitation,
   buildPublicDatasetMirrorJsonLd,
   PHAROS_DATA_LICENSE_URL,
@@ -92,6 +93,7 @@ describe("flagship Dataset JSON-LD", () => {
     expect(last).toBeDefined();
     expect(descriptor.description).toContain(`and ${last} is the final CSV column`);
     expect(descriptor.description).not.toMatch(/final CSV column, supplyUnavailableReason/);
+    expect(buildTopStablecoinsDescription(["id", "listingClass"])).toMatch(/and listingClass is the final CSV column\..*Listing Policy 2\.0/);
   });
 });
 

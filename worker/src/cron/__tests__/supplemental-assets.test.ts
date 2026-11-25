@@ -16,6 +16,7 @@ import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { buildChainRpcs } from "../../lib/chain-registry";
 import * as evmRpc from "../../lib/evm-rpc";
+import * as structuredLog from "../../lib/structured-log";
 import * as supplyPerimeter from "@shared/lib/supply-perimeter-changes";
 import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
 
@@ -421,40 +422,54 @@ describe("fetchSupplementalPriceData", () => {
 
 describe("fetchGoldTokens", () => {
   it.each([
-    { reconciles: true, price: 4_020, scoped: true },
-    { reconciles: false, price: 4_020, scoped: false },
-    { reconciles: true, price: 9_999, scoped: false },
-    { reconciles: true, price: 100_000, scoped: false },
-  ])("admits clocked XAUT liability only with scope and price evidence ($reconciles, $price)", async ({ reconciles, price, scoped }) => {
+    { reconciles: true, price: 4_020, ageSec: 900, scoped: true },
+    { reconciles: true, price: 4_020, ageSec: 60 * 3_600, scoped: true },
+    { reconciles: false, price: 4_020, ageSec: 900, scoped: false },
+    { reconciles: true, price: 4_020, ageSec: 7 * 86_400 + 1, scoped: false },
+    { reconciles: true, price: 9_999, ageSec: 900, scoped: false },
+    { reconciles: true, price: 100_000, ageSec: 900, scoped: false },
+  ])("admits clocked XAUT liability only with reconciled scope, age<=7d and price ($reconciles, $price, $ageSec)", async ({ reconciles, price, ageSec, scoped }) => {
     const now = Math.floor(Date.now() / 1000);
     const hash = `0x${"1".repeat(64)}` as const;
     const header = vi.spyOn(evmRpc, "fetchEvmBlockHeader").mockResolvedValue({ number: 50, hash, timestamp: now - 300 });
     const supply = vi.spyOn(evmRpc, "fetchEvmUint256AtBlock").mockImplementation(async (_chain, _address, call) =>
-      call === DECIMALS_SELECTOR ? 6n : (call === TOTAL_SUPPLY_SELECTOR ? 110n : reconciles ? 10n : 11n) * 1_000_000n);
+      call === DECIMALS_SELECTOR ? 6n : call === TOTAL_SUPPLY_SELECTOR ? 110_000_000n : reconciles ? 10_000_000n : 10_000_001n);
+    const log = vi.spyOn(structuredLog, "logWorkerEvent");
     const fetchMock = mockFetch([
       { match: "/prices/current/", body: { coins: { "coingecko:tether-gold": { price, timestamp: now - 60 } } } },
       { match: "/protocol/", body: {} },
-      { match: "app.tether.to/transparency.json", body: { data_formatted: [{ iso: "xaut", id: now - 900,
+      { match: "app.tether.to/transparency.json", body: { data_formatted: [{ iso: "xaut", id: now - ageSec,
         blockChains: [{ name: "Ethereum", totalAuthorized: "110", notIssued: "10", quarantined: "0" }] }] } },
     ], { requireMatch: true });
     try {
-      const capClock = now - 90;
-      const asset = (await fetchGoldTokens({ "tether-gold": { usd_market_cap: 500_000, last_updated_at: capClock } },
+      const asset = (await fetchGoldTokens({ "tether-gold": { usd_market_cap: 500_000, last_updated_at: now - 90 } },
         undefined, undefined, buildChainRpcs(), undefined,
         { validationReferences: { rates: { peggedGOLD: 4_020 }, type: "fresh", updatedAt: now - 60 } },
       )).find(({ id }) => id === "xaut-tether");
-      expect(asset).toMatchObject(scoped ? { circulating: { peggedGOLD: 402_000 }, circulatingNative: 100,
-        valuationPriceUsd: 4_020, valuationObservedAtSec: now - 60, supplyObservedAt: now - 300 }
-        : { circulating: { peggedGOLD: 500_000 }, supplyObservedAt: capClock, circulatingNative: null });
-      if (price === 4_020) expect(header.mock.calls.map(([, block]) => block)).toContain("finalized");
+      expect(asset).toMatchObject(scoped ? { supplySource: "onchain-circulating-supply",
+        circulating: { peggedGOLD: 402_000 }, circulatingNative: 100, valuationPriceUsd: 4_020,
+        valuationObservedAtSec: now - 60, supplyObservedAt: now - 300 }
+        : { supplySource: "onchain-supply-withheld", circulating: {}, supplyObservedAt: null,
+          circulatingNative: null, valuationPriceUsd: null, valuationObservedAtSec: null });
+      const rpcExpected = price === 4_020 && ageSec <= 7 * 86_400;
+      if (rpcExpected) expect(header.mock.calls.map(([, block]) => block)).toContain("finalized");
+      expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/protocol/tether-gold"))).toBe(false);
       // Workers rejects redirect: "error" before sending.
       expect(fetchMock.mock.calls.filter(([url]) => String(url).includes("tether.to")).map(([, init]) => init?.redirect))
         .toEqual(price === 4_020 ? ["manual"] : []);
       expect(supply.mock.calls.filter(([chain, _address, _call, block, opts]) =>
-        chain === "ethereum" && block === 50 && opts?.stateBlockHash === hash)).toHaveLength(price === 4_020 ? 3 : 0);
+        chain === "ethereum" && block === 50 && opts?.stateBlockHash === hash)).toHaveLength(rpcExpected ? 3 : 0);
+      const extendedLogs = log.mock.calls.filter(([event]) => event.event === "xaut-disclosure-extended-age-admitted");
+      if (scoped && ageSec > 2 * 86_400) {
+        expect(extendedLogs).toHaveLength(1);
+        expect(extendedLogs[0]?.[0]?.metadata).toMatchObject({ sourceTimestampSec: now - ageSec, disclosureAgeSec: ageSec });
+      } else {
+        expect(extendedLogs).toHaveLength(0);
+      }
     } finally {
       header.mockRestore();
       supply.mockRestore();
+      log.mockRestore();
     }
   });
 
@@ -497,54 +512,30 @@ describe("fetchGoldTokens", () => {
     }
   });
 
-  it("keeps XAUT comparisons unavailable when the protocol cap has no paired quantity or clock", async () => {
+  it("withholds XAUT supply without fetching /protocol/tether-gold when RPC is absent", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const mcap = 2_460_797_595;
-    const protocolTvl = 2_890_974_295;
     const utcMidnight = (daysAgo: number) => {
       const date = new Date();
       date.setUTCDate(date.getUTCDate() - daysAgo);
       date.setUTCHours(0, 0, 0, 0);
       return Math.floor(date.getTime() / 1000);
     };
-    mockFetch([
-      {
-        match: "/prices/current/",
-        body: {
-          coins: {
-            "coingecko:tether-gold": {
-              price: 4_020,
-              timestamp: nowSec,
-            },
-          },
-        },
-      },
-      {
-        match: "/protocol/tether-gold",
-        body: {
-          mcap,
-          tvl: [
-            { date: nowSec - 30 * 86_400, totalLiquidityUSD: protocolTvl },
-            { date: nowSec - 7 * 86_400, totalLiquidityUSD: protocolTvl },
-            { date: nowSec - 86_400, totalLiquidityUSD: protocolTvl },
-          ],
-        },
-      },
-      { match: "/protocol/", body: {} },
+    const fetchMock = mockFetch([
+      { match: "/prices/current/", body: { coins: { "coingecko:tether-gold": { price: 4_020, timestamp: nowSec } } } },
+      { match: "/protocol/paxos-gold", body: {} },
     ], { requireMatch: true });
 
     const assets = await fetchGoldTokens({
-      "tether-gold": {
-        usd: 4_020,
-        usd_market_cap: mcap,
-        last_updated_at: nowSec,
-      },
+      "tether-gold": { usd: 4_020, usd_market_cap: 2_460_797_595, last_updated_at: nowSec },
     });
     const xaut = assets.find((asset) => asset.id === "xaut-tether");
 
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/protocol/tether-gold"))).toBe(false);
     expect(xaut).toMatchObject({
-      supplySource: "defillama",
-      circulating: { peggedGOLD: mcap },
+      supplySource: "onchain-supply-withheld",
+      circulating: {},
+      price: 4_020,
+      circulatingNative: null,
       circulatingPrevDay: null,
       circulatingPrevWeek: null,
       circulatingPrevMonth: null,
@@ -559,11 +550,12 @@ describe("fetchGoldTokens", () => {
 
     await expect(fillMissingSupplyHistory(db, assets)).resolves.toBe(0);
     expect(xaut).toMatchObject({
-      circulatingNative: null,
+      circulating: {},
       circulatingPrevDay: null,
       circulatingPrevWeek: null,
       circulatingPrevMonth: null,
     });
+    expect(xaut?.circulatingNative).toBeUndefined();
   });
 
   it("skips DefiLlama protocol fanout while the DL protocols circuit is open", async () => {
@@ -579,7 +571,9 @@ describe("fetchGoldTokens", () => {
     ]);
     const fetchMock = mockFetch([{ match: "/prices/current/", body: { coins: {} } }], { requireMatch: true });
 
-    await expect(fetchGoldTokens({}, undefined, db)).resolves.toEqual([]);
+    await expect(fetchGoldTokens({}, undefined, db)).resolves.toEqual([
+      expect.objectContaining({ id: "xaut-tether", circulating: {}, supplySource: "onchain-supply-withheld" }),
+    ]);
 
     expect(fetchMock).toHaveBeenCalled();
     expect(fetchMock.mock.calls.every(([url]) => !String(url).includes("/protocol/"))).toBe(true);

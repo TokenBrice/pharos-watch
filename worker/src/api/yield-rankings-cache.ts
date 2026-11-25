@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
+import { getListingClass } from "@shared/lib/stablecoins/listing-governance";
 import { logWorkerEvent, logWorkerEventArgs } from "../lib/structured-log";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import { safetyScorePublicationIdentitiesAreComparable, safetyScorePublicationIdentitiesShareScoringContract } from "@shared/lib/safety-score-publication";
@@ -875,6 +876,7 @@ function applyReviewedYieldHolds<T extends YieldRankingsResponse>(payload: T): T
       || held(alternateSummary?.bestRiskAdjustedAlternate?.sourceKey);
     return [{
       ...row,
+      listingClass: getListingClass(row.id),
       altSources,
       ...(hideSummary ? { alternateSummary: null } : {}),
       ...(decisionLedger ? { decisionLedger: {
@@ -1037,7 +1039,7 @@ export async function handleYieldRankingsCoin(db: D1Database, url: URL): Promise
       return yieldCoinUnavailable("yield-rankings-malformed");
     }
     const signature = createHash("sha256").update(JSON.stringify([
-      "yield-coin-cohort-v2", selected.publication, cached.updatedAt, YIELD_METHODOLOGY_VERSION,
+      "yield-coin-cohort-v3", selected.publication, cached.updatedAt, YIELD_METHODOLOGY_VERSION,
       YIELD_HOLD_SIGNATURE,
       active.kind, active.kind === "error" ? active.reason : [active.snapshot.safetyScoreIdentity, active.snapshot.updatedAt, active.snapshot.publicationHealth],
       active.kind === "held" ? active.reason : null,
