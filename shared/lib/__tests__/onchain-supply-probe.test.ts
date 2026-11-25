@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { SUPPLY_RPC_DEFAULTS } from "@shared/lib/chain-rpc-registry";
+import { HYPEREVM_HISTORY_RPC_URL } from "@shared/lib/evm-rpc-capabilities";
 import { resolveChainId } from "../../types/chain-identity";
 import {
   CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS,
@@ -724,3 +725,17 @@ it.each(["vnxau-vnx", "bib01-backed", "sdusd-dtrinity"])(
     expect(selectCuratedAggregateOnchainSupplyProbeContracts(TRACKED_META_BY_ID.get(id)!)).toBeNull();
   },
 );
+
+it("configures wm-m0 preferred native supply with L1-bounded Nexus", () => {
+  const wm = TRACKED_META_BY_ID.get("wm-m0")!;
+  const sel = selectCuratedAggregateOnchainSupplyProbeContracts(wm)!;
+  expect([prefersOnChainSupplyMcap(wm), prefersReviewedNativeFiatSupply(wm), sel.length]).toEqual([true, true, wm.contracts!.length]);
+  expect(REVIEWED_ONCHAIN_SUPPLY_PLANS["wm-m0"]?.unreadableDeployments?.some((d) => d.chain === "nexus")).toBe(true);
+  for (const { config, contract } of sel) {
+    expect(config.allowZeroSupply).toBe(contract.chain === "ethereum" || contract.chain === "solana" ? undefined : true);
+  }
+  const byChain = Object.fromEntries(sel.map(({ config, contract }) => [contract.chain, config]));
+  expect([byChain.hyperevm.rpcUrl, byChain.hyperevm.fallbackRpcUrl, byChain.linea.fallbackRpcUrl])
+    .toEqual([undefined, HYPEREVM_HISTORY_RPC_URL, SUPPLY_RPC_DEFAULTS.linea.rpcUrl]);
+  for (const c of ["soneium", "citrea", "fluent"] as const) expect(byChain[c].rpcUrl).toBe(SUPPLY_RPC_DEFAULTS[c].rpcUrl);
+});

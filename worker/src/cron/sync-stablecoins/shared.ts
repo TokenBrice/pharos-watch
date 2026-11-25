@@ -545,6 +545,7 @@ function isWithinRestoreCeiling(previous: PeggedAsset, nowSec: number): boolean 
   if (kinesis && isKinesisWrapperSupplyCutoverActive(previous.id, nowSec) !== (previous.supplySource === "onchain-total-supply")) {
     return false;
   }
+  if (previous.id === "xaut-tether" && previous.supplySource !== "onchain-circulating-supply") return false;
   if (previous.supplySource === "coingecko-fallback" && prefersOnChainSupplyMcap(previous) && !kinesis) return false;
   // Cached on-chain packets must still satisfy today's deployment roster. A
   // removed or expanded aggregate, an ambiguous multi-contract footprint or a

@@ -18,6 +18,12 @@ export const XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC = 3_600;
 /** 10.26 carried-forward packets get one further 30-minute consumer cycle. */
 export const XAUT_SUPPLY_ATTRIBUTION_CARRY_FORWARD_MAX_AGE_SEC = XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC + 30 * 60;
 export const XAUT_DISCLOSURE_MAX_AGE_SEC = 2 * 86_400;
+/**
+ * Supply-lane disclosure ceiling (7d), intentionally separate from V9's 48h
+ * attribution ceiling and from `SUPPLEMENTAL_RESTORE_MAX_AGE_SEC`. Admitted
+ * only on an exact finalized Ethereum match with zero quarantined supply.
+ */
+export const XAUT_SUPPLY_DISCLOSURE_MAX_AGE_SEC = 7 * 86_400;
 export const XAUT_ASSET_ID = "xaut-tether";
 export const XAUT_REPRESENTATION_ID = "xaut0-omnichain";
 export const XAUT_CANONICAL_CHAIN_ID = "ethereum";

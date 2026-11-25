@@ -80,8 +80,8 @@ export function buildFallbackAssetsFromCoinGecko(
   const assets: PeggedAsset[] = [];
 
   for (const meta of stablecoins) {
-    // Parent-only price quotes and native Hive supply cannot admit CoinGecko supply.
-    if (!meta.geckoId || NAV_PARENT_ONLY_GECKO_IDS.has(meta.geckoId) || meta.id === "hbd-hive") continue;
+    // Parent-only price quotes, native Hive supply, and issuer-reconciled XAUT supply cannot admit CoinGecko supply.
+    if (!meta.geckoId || NAV_PARENT_ONLY_GECKO_IDS.has(meta.geckoId) || meta.id === "hbd-hive" || meta.id === "xaut-tether") continue;
     const entry = resolveFreshCoinGeckoFallbackEntry(input.cgData[meta.geckoId], input.syncStartSec);
     if (!entry) continue;
 

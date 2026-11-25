@@ -401,6 +401,22 @@ describe("missing detail price enrichment", () => {
       expect(await canonical.json()).toMatchObject({ currentSupplySource: "onchain-circulating-supply" });
     });
 
+    it("keeps withheld XAUT supply unavailable in detail and live summary despite provider history", async () => {
+      const xautTokens = [{ date: NOW - 3600, totalCirculating: { peggedGOLD: 811_000 }, totalCirculatingUSD: { peggedGOLD: 2_823_700_000 } }];
+      const result = await overlayCanonicalDetail(
+        makeDb({ id: "xaut-tether", pegType: "peggedGOLD", circulating: {}, supplySource: "onchain-supply-withheld", price: 3_500 }),
+        "xaut-tether",
+        makeResponse(JSON.stringify({ tokens: xautTokens })),
+      );
+      const body = await result.json() as Record<string, unknown>;
+      expect(body.currentCirculatingUSD).toEqual({});
+      expect(body.currentCirculatingNative).toBeNull();
+      const summary = projectStablecoinLiveSummary(StablecoinDetailResponseSchema.parse(body), "xaut-tether");
+      expect(summary.circulating).toEqual({});
+      expect(summary.supplyObservedAt).toBeNull();
+      expect(summary.nativeSupply.current).toBeNull();
+    });
+
     it("ignores a provider-supplied unavailability marker when canonical supply is observed", async () => {
       const result = await overlayCanonicalDetail(makeDb({ circulating: { peggedUSD: 100 } }), "usdt-tether",
         makeResponse(JSON.stringify({ tokens, currentSupplyUnavailableReason: "supply-chain-dropout" })));
