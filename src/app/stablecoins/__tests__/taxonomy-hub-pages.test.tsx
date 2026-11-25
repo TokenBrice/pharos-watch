@@ -1,3 +1,4 @@
+import type { AnchorHTMLAttributes } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
@@ -13,6 +14,11 @@ import {
 } from "@/lib/stablecoin-taxonomy";
 
 vi.mock("@/components/stablecoin-directory/stablecoin-filtered-table", () => ({ StablecoinFilteredTable: () => <div /> }));
+vi.mock("next/link", () => ({
+  default: ({ prefetch, ...props }: AnchorHTMLAttributes<HTMLAnchorElement> & { prefetch?: boolean | null }) => (
+    <a {...props} data-prefetch={prefetch === false ? "disabled" : "auto"} />
+  ),
+}));
 
 describe("stablecoin taxonomy hub pages", () => {
   it.each([
@@ -46,6 +52,8 @@ describe("stablecoin taxonomy hub pages", () => {
     expect(html.indexOf(">By peg currency</h2>")).toBeLessThan(
       html.indexOf('id="stablecoin-profile-directory-heading"'),
     );
+    expect(html).toContain('data-prefetch="disabled"');
+    expect(html).not.toContain('data-prefetch="auto"');
   });
 
   it("orders relatedPages with same-axis siblings first and omits internal metadata prose", async () => {

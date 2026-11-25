@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FeaturePageShell } from "@/components/feature-page-shell";
+import { IntentLink } from "@/components/intent-link";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
@@ -72,12 +73,12 @@ export default function StablecoinsHubPage() {
       leadParagraphs={[
         <>
           {`Browse every stablecoin profile Pharos tracks, or narrow the ${TOTAL} active stablecoins by peg currency, backing type, governance model, and shared infrastructure. For the design-family view (how each coin keeps its peg), see the `}
-          <Link
+          <IntentLink
             href="/learn/mechanisms/"
             className="pharos-prose-link"
           >
             mechanism explainer
-          </Link>
+          </IntentLink>
           {"."}
         </>,
       ]}
@@ -103,9 +104,9 @@ export default function StablecoinsHubPage() {
           <section key={axis.label} aria-label={axis.label} className="space-y-3">
             <h2 className="text-lg font-semibold tracking-tight text-foreground">
               {axis.href ? (
-                <Link href={axis.href} className="pharos-focus-ring rounded-sm underline-offset-4 hover:underline">
+                <IntentLink href={axis.href} className="pharos-focus-ring rounded-sm underline-offset-4 hover:underline">
                   {axis.label}
-                </Link>
+                </IntentLink>
               ) : (
                 axis.label
               )}
@@ -113,7 +114,7 @@ export default function StablecoinsHubPage() {
             <ul className="grid gap-x-10 sm:grid-cols-2 lg:grid-cols-3">
               {axis.children.map((page) => (
                 <li key={page.href}>
-                  <Link
+                  <IntentLink
                     href={page.href}
                     className="pharos-focus-ring flex items-baseline justify-between gap-4 border-t border-border/40 py-3 text-sm transition-colors hover:bg-muted/30"
                   >
@@ -121,7 +122,7 @@ export default function StablecoinsHubPage() {
                     <span className="shrink-0 text-xs text-muted-foreground">
                       <span className="pharos-numeric">{page.coins.length}</span> active
                     </span>
-                  </Link>
+                  </IntentLink>
                 </li>
               ))}
             </ul>
@@ -149,6 +150,7 @@ export default function StablecoinsHubPage() {
                     <li key={coin.id}>
                       <Link
                         href={buildStablecoinUrl(coin.id)}
+                        prefetch={false}
                         className="pharos-focus-ring flex items-baseline justify-between gap-3 rounded-sm py-1.5 text-sm underline-offset-4 hover:underline"
                       >
                         <span className="font-medium text-foreground">{coin.name}</span>
