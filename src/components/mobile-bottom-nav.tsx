@@ -10,7 +10,7 @@ import { openNavDrawer, useNavDrawerOpen } from "@/lib/nav-drawer";
 import { getRouteCapabilities } from "@/lib/route-capabilities";
 
 // Four route slots plus Menu fill the five-column bar; the remaining rail
-// items (Stability, FreezeWatch) stay one tap away in the drawer's quick rail.
+// items (Stability, FreezeWatch) stay one tap away in the drawer's pinned monitors.
 const MOBILE_ROUTE_ITEMS = QUICK_NAV_ITEMS.filter((item) => getRouteCapabilities(item.href).mobileBottomNav);
 
 export function MobileBottomNav() {
@@ -18,13 +18,15 @@ export function MobileBottomNav() {
   // Same neutral open-incident count as the desktop rail; absent while unavailable.
   const activeDepegCount = useHomepageSnapshot().data?.incidents.data?.activeDepegCount ?? null;
   const drawerOpen = useNavDrawerOpen();
+  const isBottomRouteActive = MOBILE_ROUTE_ITEMS.some((item) => isNavItemActive(pathname, item));
+  const menuActive = drawerOpen || !isBottomRouteActive;
 
   return (
     <nav
       aria-label="Mobile navigation"
       className="fixed inset-x-0 bottom-0 z-chrome-dock border-t border-border/70 bg-background/85 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden"
     >
-      <div className="grid h-[var(--mobile-bottom-nav-height)] grid-cols-5">
+      <div className="mx-auto grid h-[var(--mobile-bottom-nav-height)] max-w-xl grid-cols-5">
         {MOBILE_ROUTE_ITEMS.map((item) => {
           const Icon = item.icon;
           const active = isNavItemActive(pathname, item);
@@ -41,10 +43,16 @@ export function MobileBottomNav() {
               aria-current={active ? "page" : undefined}
               className={
                 active
-                  ? "pharos-focus-ring flex min-h-11 flex-col items-center justify-center gap-1 text-brand-accent-text transition-colors duration-[220ms] ease-[var(--motion-ease-standard)] motion-reduce:transition-none"
-                  : "pharos-focus-ring flex min-h-11 flex-col items-center justify-center gap-1 text-muted-foreground transition-colors duration-[220ms] ease-[var(--motion-ease-standard)] hover:text-foreground motion-reduce:transition-none"
+                  ? "pharos-focus-ring relative flex min-h-11 flex-col items-center justify-center gap-1 text-brand-accent-text transition-colors duration-[220ms] ease-[var(--motion-ease-standard)] motion-reduce:transition-none"
+                  : "pharos-focus-ring relative flex min-h-11 flex-col items-center justify-center gap-1 text-muted-foreground transition-colors duration-[220ms] ease-[var(--motion-ease-standard)] hover:text-foreground motion-reduce:transition-none"
               }
             >
+              {active ? (
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-x-3 top-0 h-0.5 rounded-b-full bg-brand-accent-text"
+                />
+              ) : null}
               <span className="relative">
                 <Icon className="h-5 w-5" aria-hidden="true" />
                 {badge ? (
@@ -56,7 +64,9 @@ export function MobileBottomNav() {
                   </span>
                 ) : null}
               </span>
-              <span className="text-2xs font-medium leading-none">{item.shortLabel ?? item.label}</span>
+              <span className={active ? "text-2xs font-semibold leading-none" : "text-2xs font-medium leading-none"}>
+                {item.shortLabel ?? item.label}
+              </span>
               {badge ? <span className="sr-only">{`, ${badge} active ${badge === 1 ? "depeg" : "depegs"}`}</span> : null}
             </Link>
           );
@@ -66,11 +76,23 @@ export function MobileBottomNav() {
           onClick={openNavDrawer}
           aria-haspopup="dialog"
           aria-expanded={drawerOpen}
-          className="pharos-focus-ring flex min-h-11 flex-col items-center justify-center gap-1 text-muted-foreground transition-colors duration-[220ms] ease-[var(--motion-ease-standard)] hover:text-foreground motion-reduce:transition-none"
+          className={
+            menuActive
+              ? "pharos-focus-ring relative flex min-h-11 cursor-pointer flex-col items-center justify-center gap-1 text-brand-accent-text transition-colors duration-[220ms] ease-[var(--motion-ease-standard)] motion-reduce:transition-none"
+              : "pharos-focus-ring relative flex min-h-11 cursor-pointer flex-col items-center justify-center gap-1 text-muted-foreground transition-colors duration-[220ms] ease-[var(--motion-ease-standard)] hover:text-foreground motion-reduce:transition-none"
+          }
           aria-label="Menu"
         >
+          {menuActive ? (
+            <span
+              aria-hidden="true"
+              className="absolute inset-x-3 top-0 h-0.5 rounded-b-full bg-brand-accent-text"
+            />
+          ) : null}
           <Menu className="h-5 w-5" aria-hidden="true" />
-          <span className="text-2xs font-medium leading-none">Menu</span>
+          <span className={menuActive ? "text-2xs font-semibold leading-none" : "text-2xs font-medium leading-none"}>
+            Menu
+          </span>
         </button>
       </div>
     </nav>
