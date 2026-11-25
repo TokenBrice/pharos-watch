@@ -449,7 +449,7 @@ export async function snapshotSupply(
         metadata: {
           reason: "same_day_price_repair_failed",
           error: String(err).slice(0, 200),
-          ...(rowsToInsert.length === 0 ? { lastWriteAdvanced: true } : {}),
+          lastWriteAdvanced: true,
         },
       });
     }
