@@ -853,6 +853,10 @@ describe("SafetyScoreV9ResponseSchema", () => {
     expect(SafetyGradesResponseSchema.parse(response).grades[0]!.grade).toBeNull();
     expect(SafetyGradesResponseSchema.safeParse({ ...response, grades: [{ ...response.grades[0], grade: "NR" }] }).success).toBe(false);
     expect(SafetyGradesResponseSchema.safeParse({ ...response, grades: [{ ...response.grades[0], score: 0 }] }).success).toBe(false);
+    expect(SafetyGradesResponseSchema.parse({ ...response, grades: [{ ...response.grades[0], listingClass: "tokenized-fund" }] }).grades[0]!.listingClass).toBe("tokenized-fund");
+    expect(SafetyGradesResponseSchema.parse({ ...response, grades: [{ ...response.grades[0], listingClass: null }] }).grades[0]!.listingClass).toBeNull();
+    expect(SafetyGradesResponseSchema.safeParse({ ...response, grades: [{ ...response.grades[0], listingClass: "bogus" }] }).success).toBe(false);
+    expect(SafetyGradesResponseSchema.safeParse({ ...response, grades: [{ ...response.grades[0], extra: 1 }] }).success).toBe(false);
   });
 
   it("requires binding-cap and access-unknown summaries to be exact", () => {

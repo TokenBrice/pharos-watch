@@ -36,7 +36,7 @@ describe("incident review key migration", () => {
     expect(generated.counts.skipped).toBe(registry.negativeReviews.length - subjects.length);
     expect(generated.counts.total + generated.counts.skipped).toBe(registry.negativeReviews.length);
     expect(generated.counts.orphans).toBe(23);
-    expect(generated.counts.authoredRetired).toBe(2);
+    expect(generated.counts.authoredRetired).toBe(3);
     expect(generated.counts.orphans + generated.counts.authoredRetired).toBe(generated.counts.retired);
     expect(generated.counts.mapped + generated.counts.retired).toBe(generated.counts.total);
   });
@@ -59,7 +59,7 @@ describe("incident review key migration", () => {
       new Set(Object.keys(INCIDENT_REVIEW_ORPHAN_ADJUDICATIONS)),
     );
     expect(adjudicated).toHaveLength(23);
-    expect(retired).toHaveLength(25);
+    expect(retired).toHaveLength(26);
     expect(retired.filter((row) => row.collidesWithCurrentCandidate)).toHaveLength(11);
     expect(retired.every((row) => row.authored === null && row.reason.length > 0 && row.applied === "retired")).toBe(true);
     expect(retired.find((row) => row.reviewId === "i203-cngn-compliant-naira-3ed94b7a7d58976299ac-20261011"))
@@ -79,7 +79,7 @@ describe("incident review key migration", () => {
     const authoredRetirements = retired.filter((review) => typeof review.scope.controlKey !== "string");
     const legacyDigests = reviews.negativeReviews.filter((review) =>
       typeof review.scope.controlKey === "string");
-    expect(authored).toHaveLength(739);
+    expect(authored).toHaveLength(738);
     expect(authored).toHaveLength(generated.counts.authoredApplied + generated.counts.legacyBlocked);
     expect(authored.every((review) => typeof review.scope.routeId === "string" || review.scope.controlId !== undefined)).toBe(true);
     expect(retired).toHaveLength(generated.counts.retired);
@@ -89,6 +89,7 @@ describe("incident review key migration", () => {
     expect(authoredRetirements.map((r) => r.reviewId)).toEqual([
       "j14susde-susde-ethena-4757f6af08b19cd8b007-20261011",
       "i203-cngn-compliant-naira-3ed94b7a7d58976299ac-20261011",
+      "ir-iss-m-fusd-finchain-solana-mint-authority-20261030",
     ]);
     // Only the adjudicated orphan rows keep the digest scope they were retired under.
     expect(legacyDigests).toHaveLength(adjudicatedRetirements.length);

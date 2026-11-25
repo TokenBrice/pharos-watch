@@ -27,6 +27,7 @@ import {
 import { refineV9PublicGapContext } from "./safety-score-v9-public-causes";
 import { SafetyScoreV9PillarFreshnessSchema, refineSafetyScoreV9PillarFreshness } from "./safety-score-v9-public-facts";
 import { primaryV9NotRatedReason } from "./safety-score-v9-public-attribution";
+import { ListingClassSchema } from "./stablecoin-taxonomy";
 
 export const REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION = 9;
 /** Archive-only report8 wire version: emitters stop at the report9 cutover. */
@@ -627,6 +628,7 @@ export const SafetyGradesResponseSchema = z
           ratingStatus: V9RatingStatusSchema,
           partialEvidence: V9CompactPartialEvidenceSchema.nullable(),
           notRatedReason: V9ReasonCodeSchema.optional(),
+          listingClass: ListingClassSchema.nullable().optional(),
         })
         .strict(),
     ),
