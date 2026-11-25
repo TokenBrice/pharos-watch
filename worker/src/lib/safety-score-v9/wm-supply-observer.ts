@@ -1,4 +1,5 @@
 import { sha256HexFromBytes } from "@shared/lib/sha256";
+import { SUPPLY_RPC_DEFAULTS } from "@shared/lib/chain-rpc-registry";
 import { HYPEREVM_HISTORY_RPC_URL } from "@shared/lib/evm-rpc-capabilities";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import type { ReviewedDeploymentSupplyObservation } from "@shared/types/safety-score-v9-supply-attribution";
@@ -39,8 +40,12 @@ const WM_EVM_EXTRA_RPC_URLS_BY_CHAIN: Readonly<Record<string, readonly string[]>
   plume: [PLUME_RPC_URL],
   linea: ["https://rpc.linea.build"],
   hyperevm: [HYPEREVM_HISTORY_RPC_URL],
-  soneium: ["https://rpc.soneium.org"],
-  citrea: ["https://rpc.mainnet.citrea.xyz"],
+  soneium: [SUPPLY_RPC_DEFAULTS.soneium.rpcUrl, SUPPLY_RPC_DEFAULTS.soneium.fallbackRpcUrl],
+  citrea: [SUPPLY_RPC_DEFAULTS.citrea.rpcUrl],
+  rise: [SUPPLY_RPC_DEFAULTS.rise.rpcUrl],
+  "0g": [SUPPLY_RPC_DEFAULTS["0g"].rpcUrl],
+  sei: [SUPPLY_RPC_DEFAULTS.sei.rpcUrl, SUPPLY_RPC_DEFAULTS.sei.fallbackRpcUrl],
+  fluent: [SUPPLY_RPC_DEFAULTS.fluent.rpcUrl],
 };
 
 export const WM_EVM_SAFE_BLOCK_LAG_BY_CHAIN: Readonly<Record<string, number>> = {
@@ -54,6 +59,11 @@ export const WM_EVM_SAFE_BLOCK_LAG_BY_CHAIN: Readonly<Record<string, number>> = 
   plasma: 12,
   citrea: 12,
   monad: 10,
+  optimism: 12,
+  rise: 12,
+  "0g": 15,
+  sei: 24,
+  fluent: 12,
 };
 
 // Only one maturity wait; the scheduler's absolute window must still retain its

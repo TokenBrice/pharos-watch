@@ -154,7 +154,7 @@ async function applyCanonicalDetailOverlay(
     // A canonical producer refusal must not be resurrected from provider history.
     const supplyUnavailableReason = coin?.supplyUnavailableReason
       ?? (coin?.supplyChainGuard?.status === "unavailable" ? coin.supplyChainGuard.reason : undefined);
-    const preferredSupplyUnavailable = coin != null && prefersOnChainSupplyMcap(coin) &&
+    const preferredSupplyUnavailable = coin != null && (prefersOnChainSupplyMcap(coin) || coin.id === "xaut-tether") &&
       coin.supplySource === "onchain-supply-withheld" && admitSupplyBuckets(coin.circulating).status !== "observed";
     const supplyUnavailable = coin != null && !coin.frozen && stablecoinId !== LEGACY_SOLOMON_USDV_ID &&
       !hasCurrentSupply && (supplyUnavailableReason != null || preferredSupplyUnavailable || wrapperSupplyUnverified);

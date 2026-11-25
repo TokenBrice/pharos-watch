@@ -149,6 +149,31 @@
       "chain": "monad",
       "address": "0x437cc33344a0b27a429f795ff6b469c72698b291",
       "decimals": 6
+    },
+    {
+      "chain": "optimism",
+      "address": "0x437cc33344a0b27a429f795ff6b469c72698b291",
+      "decimals": 6
+    },
+    {
+      "chain": "rise",
+      "address": "0x437cc33344a0b27a429f795ff6b469c72698b291",
+      "decimals": 6
+    },
+    {
+      "chain": "0g",
+      "address": "0x437cc33344a0b27a429f795ff6b469c72698b291",
+      "decimals": 6
+    },
+    {
+      "chain": "sei",
+      "address": "0x437cc33344a0b27a429f795ff6b469c72698b291",
+      "decimals": 6
+    },
+    {
+      "chain": "fluent",
+      "address": "0x437cc33344a0b27a429f795ff6b469c72698b291",
+      "decimals": 6
     }
   ],
   "collateralQuality": "rwa",

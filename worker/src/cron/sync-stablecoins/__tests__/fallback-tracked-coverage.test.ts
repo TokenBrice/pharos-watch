@@ -30,7 +30,7 @@ const MAIN_CLOCK = MAIN_SEC - 60;
 const fixtures = createLatestSchemaFixtureTracker();
 
 /** The outage feed covers commodity and CoinGecko-detail coins only, like `fetchCoinGeckoMarketData`. */
-const COINGECKO_FEED = ACTIVE_STABLECOINS.filter((meta) => meta.geckoId && meta.id !== "hbd-hive"
+const COINGECKO_FEED = ACTIVE_STABLECOINS.filter((meta) => meta.geckoId && meta.id !== "hbd-hive" && meta.id !== "xaut-tether"
   && (meta.detailProvider === "coingecko" || meta.flags.pegCurrency === "GOLD" || meta.flags.pegCurrency === "SILVER"));
 const OMITTED = ACTIVE_STABLECOINS.filter((meta) => !COINGECKO_FEED.includes(meta));
 const isPreferredOrHeld = (id: string) => prefersOnChainSupplyMcap({ id }) || getOnchainSupplyHoldReason(id) != null;
@@ -51,7 +51,7 @@ function previousMainRow(meta: (typeof ACTIVE_STABLECOINS)[number], restored = f
     priceObservedAt: MAIN_CLOCK, priceUpdatedAt: MAIN_CLOCK, priceObservedAtMode: "upstream",
     circulating: { [pegType]: 10_000_000 }, circulatingPrevDay: { [pegType]: 9_000_000 },
     chainCirculating: { Ethereum: { current: 10_000_000 } }, chains: ["Ethereum"],
-    supplySource: "defillama", supplyObservedAt, ...(restored ? { supplyRestored: true } : {}),
+    supplySource: meta.id === "xaut-tether" ? "onchain-circulating-supply" : "defillama", supplyObservedAt, ...(restored ? { supplyRestored: true } : {}),
   };
 }
 
@@ -130,7 +130,7 @@ describe("DefiLlama outage publication with a complete previous publication", ()
       expect(row, meta.id).toMatchObject({
         supplyRestored: true,
         supplyObservedAt: MAIN_CLOCK,
-        supplySource: "defillama",
+        supplySource: previous.supplySource,
         circulating: previous.circulating,
         circulatingPrevDay: previous.circulatingPrevDay,
       });

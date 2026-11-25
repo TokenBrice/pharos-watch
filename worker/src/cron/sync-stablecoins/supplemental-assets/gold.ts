@@ -1,4 +1,4 @@
-import { logWorkerEventArgs } from "../../../lib/structured-log";
+import { logWorkerEvent, logWorkerEventArgs } from "../../../lib/structured-log";
 import { isKinesisWrapperSupplyId } from "@shared/lib/onchain-supply-probe";
 import { isKinesisWrapperSupplyCutoverActive } from "@shared/lib/supply-perimeter-changes";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
@@ -13,7 +13,8 @@ import { DECIMALS_SELECTOR, encodeBalanceOfCallData, TOTAL_SUPPLY_SELECTOR } fro
 import { parseXautTransparencyDisclosure } from "../../../lib/safety-score-v9/xaut-supply-observer";
 import {
   buildXautTransparencySource, xautCirculatingLiabilityReconciles, XAUT_ASSET_ID, XAUT_CANONICAL_CHAIN_ID,
-  XAUT_CANONICAL_TOKEN_ADDRESS, XAUT_DISCLOSURE_MAX_AGE_SEC, XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC, XAUT_TREASURY_ADDRESS,
+  XAUT_CANONICAL_TOKEN_ADDRESS, XAUT_DISCLOSURE_MAX_AGE_SEC, XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC,
+  XAUT_SUPPLY_DISCLOSURE_MAX_AGE_SEC, XAUT_TREASURY_ADDRESS,
 } from "../../../lib/safety-score-v9/xaut-supply-attribution-contract";
 import type { DwellirNativeCapability } from "../../../lib/dwellir-native";
 import type { PeggedAsset } from "../enrich-prices";
@@ -33,9 +34,20 @@ import {
 
 const GOLD_METAS = ACTIVE_STABLECOINS.filter((stablecoin) => stablecoin.flags.pegCurrency === "GOLD");
 
+function logXautWithheld(reason: string, metadata: Record<string, unknown> = {}): null {
+  logWorkerEvent({
+    scope: "handler", level: "warn", job: "sync-stablecoins", event: "xaut-supply-withheld",
+    message: `[gold] Withholding XAUT supply (${reason})`,
+    metadata: { stablecoinId: XAUT_ASSET_ID, reason, ...metadata },
+  });
+  return null;
+}
+
 async function readXautSupply(price: SupplementalPriceResolution | null, chainRpcs?: Map<string, ChainRpcConfig>, signal?: AbortSignal) {
   const source = buildXautTransparencySource();
-  if (price?.observedAt == null || !source || !hasRegistryRpc(chainRpcs?.get(XAUT_CANONICAL_CHAIN_ID))) return null;
+  if (price?.observedAt == null || !source || !hasRegistryRpc(chainRpcs?.get(XAUT_CANONICAL_CHAIN_ID))) {
+    return logXautWithheld("missing-price-or-rpc", { hasPriceClock: price?.observedAt != null, hasSource: Boolean(source) });
+  }
   const options = { chainRpcs, signal: signal ?? AbortSignal.timeout(10_000), timeoutMs: 10_000 };
   try {
     // Workers rejects redirect: "error" before sending; manual keeps
@@ -45,32 +57,59 @@ async function readXautSupply(price: SupplementalPriceResolution | null, chainRp
     });
     const disclosure = result?.response.ok ? parseXautTransparencyDisclosure(result.body) : null;
     const now = Math.floor(Date.now() / 1000);
-    if (!disclosure || disclosure.sourceTimestampSec > now || now - disclosure.sourceTimestampSec > XAUT_DISCLOSURE_MAX_AGE_SEC ||
-        BigInt(disclosure.quarantinedRaw) !== 0n || price.observedAt > now) return null;
+    const disclosureAgeSec = disclosure ? now - disclosure.sourceTimestampSec : null;
+    if (!disclosure || disclosureAgeSec == null) return logXautWithheld("disclosure-unavailable", { status: result?.response.status ?? null });
+    if (disclosureAgeSec < 0 || disclosureAgeSec > XAUT_SUPPLY_DISCLOSURE_MAX_AGE_SEC) {
+      return logXautWithheld(disclosureAgeSec < 0 ? "disclosure-future-dated" : "disclosure-stale", {
+        sourceTimestampSec: disclosure.sourceTimestampSec, disclosureAgeSec, maxDisclosureAgeSec: XAUT_SUPPLY_DISCLOSURE_MAX_AGE_SEC,
+      });
+    }
+    if (BigInt(disclosure.quarantinedRaw) !== 0n) return logXautWithheld("quarantined-supply-nonzero", { quarantinedRaw: disclosure.quarantinedRaw });
+    if (price.observedAt > now) return logXautWithheld("price-future-dated", { priceObservedAt: price.observedAt, now });
     const block = await fetchEvmBlockHeader(XAUT_CANONICAL_CHAIN_ID, "finalized", options);
     if (!block || block.timestamp > now || now - block.timestamp > XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC ||
-        Math.abs(block.timestamp - price.observedAt) > XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC) return null;
+        Math.abs(block.timestamp - price.observedAt) > XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC) {
+      return logXautWithheld("block-unavailable-or-stale", { blockTimestampSec: block?.timestamp ?? null, priceObservedAt: price.observedAt });
+    }
     const pinned = { ...options, stateBlockHash: block.hash };
     const decimals = await fetchEvmUint256AtBlock(XAUT_CANONICAL_CHAIN_ID, XAUT_CANONICAL_TOKEN_ADDRESS, DECIMALS_SELECTOR, block.number, pinned);
-    if (decimals !== 6n) return null;
+    if (decimals !== 6n) return logXautWithheld("decimals-mismatch", { decimals: decimals?.toString() ?? null });
     const total = await fetchEvmUint256AtBlock(XAUT_CANONICAL_CHAIN_ID, XAUT_CANONICAL_TOKEN_ADDRESS, TOTAL_SUPPLY_SELECTOR, block.number, pinned);
     const treasury = await fetchEvmUint256AtBlock(XAUT_CANONICAL_CHAIN_ID, XAUT_CANONICAL_TOKEN_ADDRESS,
       encodeBalanceOfCallData(XAUT_TREASURY_ADDRESS), block.number, pinned);
     const confirmed = await fetchEvmBlockHeader(XAUT_CANONICAL_CHAIN_ID, block.number, options);
     if (confirmed?.number !== block.number || confirmed.hash !== block.hash || confirmed.timestamp !== block.timestamp || total == null || treasury == null ||
         !xautCirculatingLiabilityReconciles({ canonicalTotalSupplyRaw: total, treasuryBalanceRaw: treasury,
-          disclosedTotalAuthorizedRaw: BigInt(disclosure.totalAuthorizedRaw), disclosedNotIssuedRaw: BigInt(disclosure.notIssuedRaw) })) return null;
+          disclosedTotalAuthorizedRaw: BigInt(disclosure.totalAuthorizedRaw), disclosedNotIssuedRaw: BigInt(disclosure.notIssuedRaw) })) {
+      return logXautWithheld("reconciliation-failed-or-reorg", { blockNumber: block.number, hasTotal: total != null, hasTreasury: treasury != null });
+    }
     // The canonical amount includes bridged stock once, through its L1 lockbox.
     const circulatingNative = Number(total - treasury) / 1_000_000;
     const mcap = circulatingNative * price.price;
-    return Number.isFinite(mcap) && mcap >= 0 ? {
+    if (!Number.isFinite(mcap) || mcap < 0) return logXautWithheld("invalid-mcap");
+    if (disclosureAgeSec > XAUT_DISCLOSURE_MAX_AGE_SEC) {
+      logWorkerEvent({
+        scope: "handler",
+        level: "warn",
+        job: "sync-stablecoins",
+        event: "xaut-disclosure-extended-age-admitted",
+        message: "[gold] Admitted XAUT supply with disclosure older than 48h on exact finalized Ethereum match",
+        metadata: {
+          stablecoinId: XAUT_ASSET_ID,
+          sourceTimestampSec: disclosure.sourceTimestampSec,
+          disclosureAgeSec,
+          maxDisclosureAgeSec: XAUT_SUPPLY_DISCLOSURE_MAX_AGE_SEC,
+          blockTimestampSec: block.timestamp,
+        },
+      });
+    }
+    return {
       mcap, circulatingNative, supplySource: "onchain-circulating-supply", supplyObservedAt: block.timestamp,
       valuationPriceUsd: price.price, valuationObservedAtSec: price.observedAt,
-    } : null;
+    };
   } catch (error) {
     throwIfAborted(signal);
-    logWorkerEventArgs("handler", "warn", "[gold] XAUT scoped supply read failed:", error);
-    return null;
+    return logXautWithheld("read-exception", { error: error instanceof Error ? error.message : String(error) });
   }
 }
 // Only these DefiLlama protocol slugs represent one gold token; issuer or
@@ -93,7 +132,7 @@ export async function fetchGoldTokens(
     const observedAtById: Record<string, number | undefined> = {};
     const mcapSourceById: Record<string, "defillama" | "coingecko-fallback"> = {};
     const tokensWithProtocol = GOLD_METAS.filter((token) =>
-      token.protocolSlug && isDedicatedSingleTokenGoldProtocolSlug(token.protocolSlug),
+      token.id !== XAUT_ASSET_ID && token.protocolSlug && isDedicatedSingleTokenGoldProtocolSlug(token.protocolSlug),
     );
     const PROTOCOL_BATCH = 3;
     const protocolsAllowed = tokensWithProtocol.length > 0 && db
@@ -145,7 +184,7 @@ export async function fetchGoldTokens(
     }
 
     for (const token of GOLD_METAS) {
-      if (isKinesisWrapperSupplyCutoverActive(token.id, nowSec)) continue;
+      if (token.id === XAUT_ASSET_ID || isKinesisWrapperSupplyCutoverActive(token.id, nowSec)) continue;
       if (mcapMap[token.id] != null && mcapMap[token.id] > 0) continue;
       const mcap = resolveSupplementalCoinGeckoMcap(cgData, token.geckoId);
       if (mcap != null) {
@@ -165,8 +204,13 @@ export async function fetchGoldTokens(
           const quote = admitCommodityValuation(meta, resolveSupplementalPrice(priceData, cgData, meta.geckoId), evidence);
           const scoped = await readXautSupply(quote, chainRpcs, signal);
           if (scoped) return scoped;
-          return { mcap: mcapMap[meta.id] ?? null, supplySource: mcapSourceById[meta.id] ?? "coingecko-fallback",
-            supplyObservedAt: observedAtById[meta.id], circulatingNative: null };
+          return {
+            mcap: null,
+            supplySource: "onchain-supply-withheld",
+            circulatingNative: null,
+            valuationPriceUsd: null,
+            valuationObservedAtSec: null,
+          };
         }
         const aggregate = await resolveCuratedAggregateSupplementalSupply(meta, priceData, cgData, chainRpcs, signal, dwellirNative, evidence);
         if (aggregate) return aggregate;

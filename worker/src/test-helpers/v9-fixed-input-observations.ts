@@ -155,6 +155,11 @@ const DEFAULT_WM_RAW_SUPPLY_BY_ROUTE: Readonly<Record<string, string>> = {
   "plasma:0x437cc33344a0b27a429f795ff6b469c72698b291": "0",
   "citrea:0x437cc33344a0b27a429f795ff6b469c72698b291": "0",
   "monad:0x437cc33344a0b27a429f795ff6b469c72698b291": "0",
+  "optimism:0x437cc33344a0b27a429f795ff6b469c72698b291": "0",
+  "rise:0x437cc33344a0b27a429f795ff6b469c72698b291": "0",
+  "0g:0x437cc33344a0b27a429f795ff6b469c72698b291": "0",
+  "sei:0x437cc33344a0b27a429f795ff6b469c72698b291": "0",
+  "fluent:0x437cc33344a0b27a429f795ff6b469c72698b291": "0",
 };
 
 const DEFAULT_WM_BLOCK_OFFSET_BY_CHAIN: Readonly<Record<string, number>> = {
@@ -170,6 +175,11 @@ const DEFAULT_WM_BLOCK_OFFSET_BY_CHAIN: Readonly<Record<string, number>> = {
   plasma: -19,
   citrea: -20,
   monad: -22,
+  optimism: -11,
+  rise: -10,
+  "0g": -9,
+  sei: -8,
+  fluent: -7,
 };
 
 export function makeWmDeploymentObservations(

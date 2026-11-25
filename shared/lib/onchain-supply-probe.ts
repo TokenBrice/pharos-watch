@@ -3,6 +3,7 @@ import { CHAIN_META } from "../types/chain-identity";
 import type { StablecoinMeta } from "../types/stablecoin-meta-schemas";
 import type { SupplyUnavailableReason } from "../types/supply";
 import { PUBLIC_RPC_URLS, SUPPLY_RPC_DEFAULTS } from "./chain-rpc-registry";
+import { HYPEREVM_HISTORY_RPC_URL } from "./evm-rpc-capabilities";
 import { isFixedDecimalDeployment } from "./deployment-amounts";
 import { XrplIssuedCurrencyAmountSchema } from "../types/deployment-amounts";
 
@@ -1366,6 +1367,41 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
       { chain: "tempo", address: "0x20c0000000000000000000001621e21f71cf12fb", canonicalChain: "ethereum" },
       { chain: "cardano", address: "25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff93545555243", canonicalChain: "ethereum" },
       { chain: "optimism", address: "0xdcb612005417dc906ff72c87df732e5a90d49e11", canonicalChain: "ethereum" },
+    ],
+  },
+  // === #2306: wM (wm-m0) 17-chain reviewed native on-chain supply plan (Option A2, owner decision A5 2026-11-25) ===
+  // M0 Portal V2, Portal Lite (Plume), Portal V1, and Solana Portal V2 atomically unwrap (burn)
+  // wM into $M on send and wrap (mint) $M into wM on delivery; only $M is locked in Ethereum
+  // HubPortal, so every chain's wM.totalSupply() is distinct 1:1 $M-backed supply (zero wM
+  // escrow deduction). Pinned EIP-1898 + finalized-Solana reads (2026-11-25): 17 CHAIN_META
+  // deployments total 70,143,205.87 wM (~99.896% of global wM). Ethereum HubPortal (block
+  // 26491774) proves Nexus (chainId 3946) is an isolated spoke (bridgedPrincipal == 1.380000,
+  // bounding Nexus wM to <= 1.520478 wM while RPC stays down); Nexus is recorded in
+  // unreadableDeployments. Mantra EVM (72,948.06 wM) and Moca (2.31 wM) stay outside this
+  // perimeter under an explicit dated owner exception until CHAIN_META identity is settled.
+  "wm-m0": {
+    preferMcap: true,
+    unreadableDeployments: [
+      { chain: "nexus", address: "0x437cc33344a0b27a429f795ff6b469c72698b291" },
+    ],
+    aggregateContracts: [
+      { chain: "ethereum" },
+      { chain: "solana" },
+      { chain: "arbitrum", allowZeroSupply: true },
+      { chain: "base", allowZeroSupply: true },
+      { chain: "plume", allowZeroSupply: true, fallbackRpcUrl: SUPPLY_RPC_DEFAULTS.plume.fallbackRpcUrl },
+      { chain: "linea", allowZeroSupply: true, fallbackRpcUrl: SUPPLY_RPC_DEFAULTS.linea.rpcUrl },
+      { chain: "bsc", allowZeroSupply: true },
+      { chain: "hyperevm", allowZeroSupply: true, fallbackRpcUrl: HYPEREVM_HISTORY_RPC_URL },
+      supplyProbeChain("soneium", { allowZeroSupply: true }),
+      { chain: "plasma", allowZeroSupply: true },
+      supplyProbeChain("citrea", { allowZeroSupply: true }),
+      { chain: "monad", allowZeroSupply: true },
+      { chain: "optimism", allowZeroSupply: true },
+      supplyProbeChain("rise", { allowZeroSupply: true }),
+      supplyProbeChain("0g", { allowZeroSupply: true }),
+      supplyProbeChain("sei", { allowZeroSupply: true }),
+      supplyProbeChain("fluent", { allowZeroSupply: true }),
     ],
   },
 };

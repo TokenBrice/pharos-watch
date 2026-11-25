@@ -169,7 +169,7 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
     }
     const expectedMissingIds = ACTIVE_STABLECOINS
       .filter((coin) => !coin.geckoId || !cgData[coin.geckoId]
-        || NAV_PARENT_ONLY_GECKO_IDS.has(coin.geckoId) || coin.id === "hbd-hive")
+        || NAV_PARENT_ONLY_GECKO_IDS.has(coin.geckoId) || coin.id === "hbd-hive" || coin.id === "xaut-tether")
       .map((coin) => coin.id).sort();
     const db = mockD1([]);
 

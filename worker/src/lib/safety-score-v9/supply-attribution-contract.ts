@@ -216,6 +216,52 @@ const WM_DEPLOYMENT_IDENTITIES: Readonly<Record<string, WmDeploymentIdentity>> =
     controllerAddress: M0_PORTAL,
     controllerRead: "portal",
   },
+  // Reviewed 2026-11-25 (#2306 Option A2): EIP-1898 pinned code/storage/controller reads.
+  "optimism:0x437cc33344a0b27a429f795ff6b469c72698b291": {
+    runtime: "evm",
+    runtimeCodeSha256: "5c1fe46e765b84b11e490af16edddffaa6a162eac8bf26e7a0449cfaa42bceae",
+    implementationAddress: WM_V1_IMPLEMENTATION,
+    implementationCodeSha256: "cc45ae34a42a88b732b05ea8659223110e1cc965c551c8a61f6d4920e657bd22",
+    underlyingTokenAddress: WM_UNDERLYING_M,
+    controllerAddress: M0_PORTAL,
+    controllerRead: "portal",
+  },
+  "rise:0x437cc33344a0b27a429f795ff6b469c72698b291": {
+    runtime: "evm",
+    runtimeCodeSha256: "d51c343a2e9650f7477923f1a3e293f431072789f5e8e710af9f09b2bf29b9ce",
+    implementationAddress: WM_V1_IMPLEMENTATION,
+    implementationCodeSha256: "df902313c994d5377edbe5424d56827d7dcd0989badfc965ef35fe451362fed8",
+    underlyingTokenAddress: WM_UNDERLYING_M,
+    controllerAddress: M0_PORTAL,
+    controllerRead: "portal",
+  },
+  "0g:0x437cc33344a0b27a429f795ff6b469c72698b291": {
+    runtime: "evm",
+    runtimeCodeSha256: "d32711185f0adf2f806435954fae672294674fa6fb9e3b6bd81c5e76581a2b32",
+    implementationAddress: WM_V1_IMPLEMENTATION,
+    implementationCodeSha256: "fe6a6a1174c99682e4b4c3f57b32490e52f29095c1f1583902b2d716b2230d56",
+    underlyingTokenAddress: WM_UNDERLYING_M,
+    controllerAddress: M0_PORTAL,
+    controllerRead: "portal",
+  },
+  "sei:0x437cc33344a0b27a429f795ff6b469c72698b291": {
+    runtime: "evm",
+    runtimeCodeSha256: "fef81eae5681a804e4fc9fdd96b2b4811bd299ceb840e74d3b699e13df70b132",
+    implementationAddress: WM_V1_IMPLEMENTATION,
+    implementationCodeSha256: "e25437763a8b6d9b04e0373d5dda723031740833043baba9fa2c37171b5eb711",
+    underlyingTokenAddress: WM_UNDERLYING_M,
+    controllerAddress: M0_PORTAL,
+    controllerRead: "portal",
+  },
+  "fluent:0x437cc33344a0b27a429f795ff6b469c72698b291": {
+    runtime: "evm",
+    runtimeCodeSha256: "d51c343a2e9650f7477923f1a3e293f431072789f5e8e710af9f09b2bf29b9ce",
+    implementationAddress: WM_V1_IMPLEMENTATION,
+    implementationCodeSha256: "c79c1a22f65244a5b807922b564792c4f49a85e3f336fc9ca9ead08f7aa31219",
+    underlyingTokenAddress: WM_UNDERLYING_M,
+    controllerAddress: M0_PORTAL,
+    controllerRead: "portal",
+  },
 };
 
 const CENTRIFUGE_V3_SPOKE_ADDRESS =

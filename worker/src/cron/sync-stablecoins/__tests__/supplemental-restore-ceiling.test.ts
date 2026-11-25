@@ -57,7 +57,7 @@ function restores(previous: PeggedAsset) {
 }
 
 function xaut(input: Partial<PeggedAsset>) {
-  return asset({ id: "xaut-tether", symbol: "XAUT", ...input });
+  return asset({ id: "xaut-tether", symbol: "XAUT", supplySource: "onchain-circulating-supply", ...input });
 }
 
 function chainRow(current: number): Record<string, unknown> {
@@ -459,8 +459,8 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
   });
 
   it("restores last-known-good supply observed inside the ceiling", () => {
-    const current = xaut({ circulating: {} });
-    const previous = xaut({ circulating: { peggedUSD: 500_000_000 },
+    const current = xaut({ circulating: {}, supplySource: "onchain-supply-withheld", price: 3_500, priceSource: "coingecko" });
+    const previous = xaut({ circulating: { peggedUSD: 500_000_000 }, circulatingNative: 749_423.56,
       supplyObservedAt: NOW_SEC - 86_400,
     });
 
@@ -470,9 +470,13 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
     expect(result.expiredRestoreIds).toEqual([]);
     expect(result.assets[0]).toMatchObject({
       circulating: { peggedUSD: 500_000_000 },
+      circulatingNative: 749_423.56,
+      price: 3_500,
+      supplySource: "onchain-circulating-supply",
       supplyRestored: true,
       supplyObservedAt: NOW_SEC - 86_400,
     });
+    expect(track(previous).restoredIds).toContain("xaut-tether");
   });
 
   it("refuses to restore supply older than the 7-day ceiling", () => {
@@ -488,6 +492,21 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
     expect(result.assets[0]).toMatchObject({ id: "xaut-tether", circulating: {} });
     expect(result.assets[0].supplyRestored).toBeUndefined();
   });
+
+  it.each(["defillama", "coingecko-fallback", undefined] as const)(
+    "refuses XAUT carry-forward from %s across merge and missing-tracked restore",
+    (supplySource) => {
+      const current = xaut({ circulating: {}, supplySource: "onchain-supply-withheld", price: 3_500, priceSource: "coingecko" });
+      const previous = xaut({ circulating: { peggedGOLD: 2_800_000_000 }, supplySource, supplyObservedAt: NOW_SEC - 60 });
+      const merged = merge(current, previous);
+      expect(merged.restoredCount).toBe(0);
+      expect(merged.expiredRestoreIds).toEqual(["xaut-tether"]);
+      expect(merged.assets[0]).toBe(current);
+      const tracked = track(previous);
+      expect(tracked.restoredIds).not.toContain("xaut-tether");
+      expect(tracked.droppedIds).toContain("xaut-tether");
+    },
+  );
 
   it.each([-1, NOW_SEC - 0.5])("refuses invalid supply observation timestamp %s", (supplyObservedAt) => {
     const current = xaut({ circulating: {} });

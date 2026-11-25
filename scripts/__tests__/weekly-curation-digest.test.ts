@@ -109,7 +109,7 @@ describe("weekly curation coverage", () => {
   });
 
   it("reads exported dated registries without re-declaring dates and surfaces expiring entries in the CLI digest", async () => {
-    const { collectDatedReviewExpiries, EXPIRY_LOOKAHEAD_DAYS } = await loadDigestModule();
+    const { buildDatedReviewRegistries, collectDatedReviewExpiries, EXPIRY_LOOKAHEAD_DAYS } = await loadDigestModule();
     const sampleChain = CHAIN_MATURITY_REVIEWS_V1[0]!;
     const chainExpiryMs = Date.parse(`${sampleChain.nextReviewAt}T00:00:00Z`);
     const atBoundary = collectDatedReviewExpiries(chainExpiryMs - EXPIRY_LOOKAHEAD_DAYS * DAY_MS);
@@ -126,8 +126,10 @@ describe("weekly curation coverage", () => {
     const venueGroup = venueAtBoundary.groups.find((group) => group.registry.includes("YIELD_RISK_CONFIG"));
     expect(venueGroup?.items.some((item) => item.id === sampleVenueId)).toBe(true);
 
-    const farFutureReport = collectDatedReviewExpiries(Date.parse("2099-01-01T00:00:00Z"));
-    const coveredRegistries = farFutureReport.groups.map((group) => group.registry);
+    const farFutureMs = Date.parse("2099-01-01T00:00:00Z");
+    const wiredRegistries = buildDatedReviewRegistries(farFutureMs);
+    const farFutureReport = collectDatedReviewExpiries(farFutureMs);
+    const coveredRegistries = new Set(farFutureReport.groups.map((group) => group.registry));
     for (const marker of [
       "CHAIN_MATURITY_REVIEWS_V1",
       "STABLECOIN_PUBLICATION_WAIVERS",
@@ -141,7 +143,9 @@ describe("weekly curation coverage", () => {
       "REVIEWED_POOL_REJECTION_ANCHOR_CORRECTION",
       "YIELD_OPPORTUNITY_EXCLUSIONS",
     ]) {
-      expect(coveredRegistries.some((name) => name.includes(marker)), `missing registry ${marker}`).toBe(true);
+      const reg = wiredRegistries.find((r) => r.registry.includes(marker));
+      expect(reg, `missing registry ${marker}`).toBeDefined();
+      if (reg!.entries.length > 0) expect(coveredRegistries.has(reg!.registry), `uncovered ${marker}`).toBe(true);
     }
 
     const cliReport = renderDigest({ nowIso: new Date(chainExpiryMs - EXPIRY_LOOKAHEAD_DAYS * DAY_MS).toISOString() });
