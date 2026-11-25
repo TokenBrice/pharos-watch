@@ -412,10 +412,13 @@ describe("snapshotSupply", () => {
       snapshotEligibleIds: DEFAULT_REQUIRED_IDS,
     });
 
-    expect(result.itemCount).toBe(2);
+    expect(result.itemCount).toBe(1);
     const deletes = db.getHistory().filter((entry) => entry.sql.includes("DELETE FROM supply_history"));
     expect(deletes.some((entry) => entry.binds.includes("eurt-test"))).toBe(true);
+    expect(deletes.flatMap((entry) => entry.binds)).not.toContain("usdt-tether");
     const inserts = db.getHistory().filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"));
+    expect(inserts.flatMap((entry) => entry.binds)).toContain("usdc-circle");
+    expect(inserts.flatMap((entry) => entry.binds)).not.toContain("usdt-tether");
     expect(inserts.flatMap((entry) => entry.binds)).not.toContain("eurt-test");
   });
 
@@ -446,13 +449,16 @@ describe("snapshotSupply", () => {
       snapshotEligibleIds: requiredIds,
     });
 
-    expect(result.itemCount).toBe(3);
+    expect(result.itemCount).toBe(1);
+    const markerWrite = db.getHistory().find((entry) =>
+      entry.sql.includes("INSERT INTO cache") && entry.binds[0] === "snapshot-supply:last-write");
+    expect(JSON.parse(String(markerWrite?.binds[1])).ownedRowIds).toEqual(["eurt-test", "usdc-circle", "usdt-tether"]);
   });
 
-  it("replaces owned rows exactly while preserving an outside admin row in SQLite", async () => {
+  it("removes delisted owned rows while preserving surviving and outside admin rows in SQLite", async () => {
     const sqlite = createLatestSchemaSqlite().sqlite;
     try {
-            const nowSec = Math.floor(Date.now() / 1000);
+      const nowSec = Math.floor(Date.now() / 1000);
       const snapshotDate = Date.UTC(2025, 5, 15) / 1000;
       const previousIds = [...DEFAULT_REQUIRED_IDS, "eurt-test"];
       sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
@@ -486,14 +492,14 @@ describe("snapshotSupply", () => {
         snapshotEligibleIds: DEFAULT_REQUIRED_IDS,
       });
 
-      expect(result.itemCount).toBe(2);
-      const ids = sqlite.prepare(
-        "SELECT stablecoin_id FROM supply_history WHERE snapshot_date = ? ORDER BY stablecoin_id",
-      ).all(snapshotDate) as Array<{ stablecoin_id: string }>;
-      expect(ids.map((row) => row.stablecoin_id)).toEqual([
-        "admin-backfill-only",
-        "usdc-circle",
-        "usdt-tether",
+      expect(result.itemCount).toBe(0);
+      expect(JSON.parse(String(result.metadata))).toMatchObject({ deletedRows: 1, preservedRows: 2, lastWriteAdvanced: true });
+      expect(sqlite.prepare(
+        "SELECT stablecoin_id, circulating_usd FROM supply_history WHERE snapshot_date = ? ORDER BY stablecoin_id",
+      ).all(snapshotDate)).toEqual([
+        { stablecoin_id: "admin-backfill-only", circulating_usd: 10 },
+        { stablecoin_id: "usdc-circle", circulating_usd: 45 },
+        { stablecoin_id: "usdt-tether", circulating_usd: 90 },
       ]);
     } finally {
       sqlite.close();
@@ -552,7 +558,7 @@ describe("snapshotSupply", () => {
     }
   });
 
-  it("atomically replaces circulating values and prices when a required restored ID recovers", async () => {
+  it("preserves already-written rows and inserts newly recovered required IDs", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     try {
       const nowSec = Math.floor(Date.now() / 1000);
@@ -572,12 +578,12 @@ describe("snapshotSupply", () => {
       Object.assign(payload.peggedAssets[1]!, { supplyRestored: false, circulating: { peggedUSD: 60 } });
       putCache.run("stablecoins", JSON.stringify(payload), nowSec + 60);
       const recovered = await snapshotSupply(db, undefined, { ...options, nowSec: nowSec + 60 });
-      expect(recovered.itemCount).toBe(2);
+      expect(recovered.itemCount).toBe(1);
       expect(sqlite.prepare(
         "SELECT stablecoin_id, circulating_usd, price FROM supply_history ORDER BY stablecoin_id",
       ).all()).toEqual([
         { stablecoin_id: "usdc-circle", circulating_usd: 60, price: 1 },
-        { stablecoin_id: "usdt-tether", circulating_usd: 120, price: 0.99 },
+        { stablecoin_id: "usdt-tether", circulating_usd: 100, price: 1 },
       ]);
       const marker = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?").get("snapshot-supply:last-write")!;
       expect(marker.updated_at).toBe(nowSec + 60);
@@ -729,7 +735,8 @@ describe("snapshotSupply", () => {
         ...requiredIds.slice(2).map((id) => makeSnapshotAsset({ id, circulating: { peggedUSD: 2 } })),
       ] }), nowSec + 60);
       const rewritten = await snapshotSupply(db, undefined, { ...options, nowSec: nowSec + 60 });
-      expect(rewritten.itemCount).toBe(11);
+      expect(rewritten.itemCount).toBe(10);
+      expect(dayRows()).toContainEqual({ stablecoin_id: "coin-0", circulating_usd: 100 });
       expect(dayRows()).toContainEqual({ stablecoin_id: "coin-1", circulating_usd: 50 });
       expect(marker().ownedRowIds).toContain("coin-1");
       expect(marker().unavailableActiveIds).toEqual(["coin-1"]);
@@ -973,7 +980,10 @@ describe("snapshotSupply", () => {
         requiredActiveIds: DEFAULT_REQUIRED_IDS,
       });
 
-      expect(result.itemCount).toBe(1);
+      expect(result.itemCount).toBe(0);
+      expect(JSON.parse(String(result.metadata))).toMatchObject({ preservedRows: 1, lastWriteAdvanced: true });
+      expect(db.getHistory().some((entry) =>
+        entry.sql.includes("INSERT INTO cache") && entry.binds[0] === "snapshot-supply:last-write")).toBe(true);
     }
   });
 
@@ -1183,12 +1193,13 @@ describe("snapshotSupply", () => {
       expect(JSON.parse(premature.metadata!)).toMatchObject({ reason: "stablecoins_cache_before_slot" });
       expect(readMarker()).toEqual(marker);
       const recovered = await snapshotSupply(db, undefined, { ...options, nowSec: nowSec + 120 });
-      expect(recovered.itemCount).toBe(expectedCount - missingCount + 1);
+      expect(recovered.itemCount).toBe(1);
       expect(sqlite.prepare("SELECT circulating_usd FROM supply_history WHERE stablecoin_id = 'coin-0'").get())
-        .toEqual({ circulating_usd: 120 });
+        .toEqual({ circulating_usd: 100 });
       expect(sqlite.prepare("SELECT circulating_usd FROM supply_history WHERE stablecoin_id = ?").get(missingIds[0]))
         .toEqual({ circulating_usd: 50 });
       expect(readMarker().updated_at).toBe(nowSec + 120);
+      expect(JSON.parse(String(readMarker().value)).ownedRowIds).toHaveLength(expectedCount - missingCount + 1);
     } finally {
       sqlite.close();
     }
@@ -1285,5 +1296,51 @@ describe("snapshotSupply", () => {
     } finally {
       sqlite.close();
     }
+  });
+
+  it("preserves early-UTC native supplyObservedAt across mid-day recoveries and cohort changes while repairing prices", async () => {
+    const { sqlite, db } = fixtures.open();
+    const day = Date.UTC(2026, 10, 24) / 1000;
+    const put = sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES ('stablecoins', ?, ?)");
+    const runAt = (at: number, ids: string[], assets: Record<string, unknown>[]) => {
+      vi.setSystemTime(at * 1000);
+      put.run(JSON.stringify({ peggedAssets: assets.map((a) => makeSnapshotAsset(a)) }), at);
+      return snapshotSupply(db, undefined, { nowSec: at, requiredActiveIds: ids, snapshotEligibleIds: ids });
+    };
+    const eurcAt = (obs: number, native: number, price: number | null) => ({
+      id: "eurc-circle", symbol: "EURC", pegType: "peggedEUR", circulating: { peggedEUR: native * 1.08 },
+      circulatingNative: native, supplySource: "onchain-circulating-supply", supplyObservedAt: obs, price,
+      priceSource: price == null ? "protocol-par" : "binance", priceObservedAt: price == null ? null : obs,
+      priceObservedAtMode: price == null ? "nominal_reference" : "upstream",
+    });
+    const native = (id: string, obs: number, qty: number, extra: Record<string, unknown> = {}) => ({
+      id, circulating: { peggedUSD: qty }, circulatingNative: qty, supplySource: "onchain-total-supply", supplyObservedAt: obs, ...extra,
+    });
+
+    // 00:30Z writes EURC (null market price) & WUSD; BRLA is restored. 14:00Z recovers BRLA & repairs EURC price.
+    expect((await runAt(day + 1800, ["eurc-circle", "wusd-delisted", "brla-brla-digital"], [
+      eurcAt(day + 1740, 460_000_000, null), { id: "wusd-delisted", circulating: { peggedUSD: 10 } },
+      native("brla-brla-digital", day + 1740, 290_000_000, { supplyRestored: true }),
+    ])).itemCount).toBe(2);
+    const recovered = await runAt(day + 50_400, ["eurc-circle", "wusd-delisted", "brla-brla-digital"], [
+      eurcAt(day + 50_340, 461_000_000, 1.08), { id: "wusd-delisted", circulating: { peggedUSD: 11 } },
+      native("brla-brla-digital", day + 50_340, 292_000_000),
+    ]);
+    expect(recovered.itemCount).toBe(2);
+    expect(JSON.parse(String(recovered.metadata))).toMatchObject({ writtenRows: 1, preservedRows: 2, repairedPriceRows: 1 });
+
+    // 17:45Z delists WUSD & adds ZCHF; EURC keeps 00:29Z (24h-ready next 00:30Z) and BRLA keeps 13:59Z.
+    const changed = await runAt(day + 63_900, ["eurc-circle", "brla-brla-digital", "zchf-frankencoin"], [
+      eurcAt(day + 63_840, 463_000_000, 1.09), native("brla-brla-digital", day + 63_840, 295_000_000),
+      native("zchf-frankencoin", day + 63_840, 15_000_000),
+    ]);
+    expect(changed.itemCount).toBe(1);
+    expect(JSON.parse(String(changed.metadata))).toMatchObject({ writtenRows: 1, preservedRows: 2, deletedRows: 1 });
+    expect(sqlite.prepare("SELECT stablecoin_id FROM supply_history ORDER BY stablecoin_id").all())
+      .toEqual([{ stablecoin_id: "brla-brla-digital" }, { stablecoin_id: "eurc-circle" }, { stablecoin_id: "zchf-frankencoin" }]);
+    const rowOf = (id: string) => sqlite.prepare("SELECT * FROM supply_history WHERE stablecoin_id = ?").get(id) as unknown as NativeSupplyHistoryRow;
+    expect(readNativeSupplyCheckpoint(rowOf("eurc-circle"), day + 1800)).toEqual({ quantity: 460_000_000, observedAt: day + 1740 });
+    expect(parseSupplyObservationProvenance(rowOf("eurc-circle").supply_provenance).provenance?.marketQuote).toEqual({ price: 1.08, observedAt: day + 50_340 });
+    expect(readNativeSupplyCheckpoint(rowOf("brla-brla-digital"), day + 50_400)).toEqual({ quantity: 292_000_000, observedAt: day + 50_340 });
   });
 });
