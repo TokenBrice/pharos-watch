@@ -165,6 +165,7 @@ describe("registered QuoterV2 exact identity", () => {
       symbolToChainScopedIds: new Map(),
       measuredTargetCapturedAt: 1_790_835_011,
       curvePoolCandidatesByFingerprint: new Map(),
+      curveBelowFloorTwinFingerprints: new Set(),
       uniswapV4ExecutionCandidates: new Map(),
       uniV3ExecutionCandidates: new Map([
         [buildUniV3ExecutionCandidateKey("ethereum", [USDC, USDT], 100)!, [first]],
