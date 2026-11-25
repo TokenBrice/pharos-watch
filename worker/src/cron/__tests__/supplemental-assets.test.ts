@@ -16,6 +16,7 @@ import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { buildChainRpcs } from "../../lib/chain-registry";
 import * as evmRpc from "../../lib/evm-rpc";
+import * as circuitBreaker from "../../lib/circuit-breaker";
 import * as structuredLog from "../../lib/structured-log";
 import * as supplyPerimeter from "@shared/lib/supply-perimeter-changes";
 import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
@@ -577,6 +578,22 @@ describe("fetchGoldTokens", () => {
 
     expect(fetchMock).toHaveBeenCalled();
     expect(fetchMock.mock.calls.every(([url]) => !String(url).includes("/protocol/"))).toBe(true);
+  });
+
+  it.each([
+    { label: "200 JSON with null mcap", status: 200, body: { mcap: null }, expectedOutcome: true },
+    { label: "200 non-object JSON", status: 200, body: [], expectedOutcome: false },
+    { label: "500 upstream error", status: 500, body: { error: "down" }, expectedOutcome: false },
+  ])("records DL_PROTOCOLS outcome=$expectedOutcome for $label without poisoning breaker on null mcap", async ({ status, body, expectedOutcome }) => {
+    const db = mockD1([{ match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [makeCircuitRow(CIRCUIT_SOURCE.DL_COINS, "closed"), makeCircuitRow(CIRCUIT_SOURCE.DL_PROTOCOLS, "closed")] }]);
+    const spy = vi.spyOn(circuitBreaker, "recordOutcomeSafe").mockResolvedValue(null);
+    mockFetch([{ match: "/prices/current/", body: { coins: {} } }, { match: "/protocol/paxos-gold", status, body }], { requireMatch: true });
+    try {
+      await fetchGoldTokens({}, undefined, db);
+      expect(spy.mock.calls.filter(([, source]) => source === CIRCUIT_SOURCE.DL_PROTOCOLS).map(([, , ok]) => ok)).toEqual([expectedOutcome]);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it("fills empty historical buckets from exact daily observations without replacing observed zero", async () => {

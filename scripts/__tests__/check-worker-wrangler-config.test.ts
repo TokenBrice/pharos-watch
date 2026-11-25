@@ -132,7 +132,7 @@ describe("check-worker-wrangler-config", () => {
     ).failed).toBe(true);
     const heavy = readFileSync("worker/wrangler.heavy.toml", "utf8");
     expect(evaluateWorkerWranglerConfig(
-      heavy.replace('WORKER_V9_QUEUE_MODE = "on"', 'WORKER_V9_QUEUE_MODE = "off"'),
+      heavy.replace('WORKER_V9_QUEUE_MODE = "off"', 'WORKER_V9_QUEUE_MODE = "on"'),
       { workerRole: "heavy" },
     ).failed).toBe(false);
     for (const [before, after] of [
@@ -141,7 +141,7 @@ describe("check-worker-wrangler-config", () => {
       ["max_concurrency = 1", "max_concurrency = 2"],
       ["max_retries = 3", "max_retries = 100"],
       ["retry_delay = 60", "retry_delay = 0"],
-      ['WORKER_V9_QUEUE_MODE = "on"', 'WORKER_V9_QUEUE_MODE = "maybe"'],
+      ['WORKER_V9_QUEUE_MODE = "off"', 'WORKER_V9_QUEUE_MODE = "maybe"'],
       ['binding = "V9_CONTINUATION_QUEUE"', 'binding = "OTHER"'],
       ['dead_letter_queue = "pharos-v9-continuation-dlq"', 'dead_letter_queue = "other"'],
     ]) expect(evaluateWorkerWranglerConfig(heavy.replace(before, after), { workerRole: "heavy" }).failed).toBe(true);
