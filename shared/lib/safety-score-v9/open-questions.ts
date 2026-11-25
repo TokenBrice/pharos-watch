@@ -624,7 +624,7 @@ export function projectV9CardOpenEvidence(
         hasIssuerCause: false,
       };
       cohortQuestion.obligations++;
-      const cardQuestion = cardQuestions.get(questionKey) ?? {
+      const cardQuestion: ProjectedCardQuestionAccumulator = cardQuestions.get(questionKey) ?? {
         obligations: 0,
         documentationObligations: 0,
         issuerReviewedAtSec: null,

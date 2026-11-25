@@ -487,8 +487,8 @@ function validateKrakenDepthBook(
   const book = matchingKey ? result[matchingKey] : undefined;
   if (!isRecord(book)) return { ok: false, reason: "missing-quote" };
 
-  const topBid = Array.isArray(book.bids) ? book.bids[0] : undefined;
-  const topAsk = Array.isArray(book.asks) ? book.asks[0] : undefined;
+  const topBid: unknown = Array.isArray(book.bids) ? book.bids[0] : undefined;
+  const topAsk: unknown = Array.isArray(book.asks) ? book.asks[0] : undefined;
   if (!Array.isArray(topBid) || !Array.isArray(topAsk)) return { ok: false, reason: "missing-quote" };
 
   const quote = midpointFromBidAsk(topBid[0], topAsk[0]);
