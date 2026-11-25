@@ -531,9 +531,11 @@ describe("CI workflow scope", () => {
       "env -u CLOUDFLARE_API_TOKEN -u CLOUDFLARE_ACCOUNT_ID npm run check:worker-package",
       "wrangler queues info pharos-reserve-continuation --config worker/wrangler.toml",
       "wrangler queues info pharos-reserve-continuation-dlq --config worker/wrangler.toml",
+      "wrangler queues info pharos-v9-continuation --config worker/wrangler.heavy.toml",
+      "wrangler queues info pharos-v9-continuation-dlq --config worker/wrangler.heavy.toml",
       "npm run check:remote-d1-baseline-ledger",
     ]) expect(steps[packageStep].run).toContain(cmd);
-    for (const pid of ["migrations", "package", "queue_main", "queue_dlq", "baseline"]) expect(steps[packageStep].run).toContain(`:\${${pid}_pid}:`);
+    for (const pid of ["migrations", "package", "queue_main", "queue_dlq", "v9_queue_main", "v9_queue_dlq", "baseline"]) expect(steps[packageStep].run).toContain(`:\${${pid}_pid}:`);
     expect(steps[packageStep].run!.split("\n").map((line) => line.trim())).toEqual(expect.arrayContaining(['wait "${pid}" || status=$?', "failed=1"]));
     expect(migrations).toHaveLength(1);
     expect(migrations[0]).toBeGreaterThan(packageStep);

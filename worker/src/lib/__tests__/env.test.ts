@@ -2,6 +2,7 @@ import { describe, expect, expectTypeOf, it, vi } from "vitest";
 import type { Env, HeavyEnv, ScheduledEnv, WorkerEnvIssue, WorkerVersionMetadata } from "../env";
 import type { ReserveContinuationMessage } from "@shared/types/reserve-continuation";
 import type { SlotCatchUpMessage } from "@shared/types/slot-catch-up";
+import type { V9ContinuationMessage } from "@shared/types/v9-continuation";
 import {
   parseDwellirRoutingDisabledChains,
   resolveDdrRepairTaskRunnerConfig,
@@ -34,6 +35,7 @@ it("preserves manifest-derived HTTP, scheduled and heavy ingress types", () => {
   expectTypeOf<Env["SAFETY_CAPTURE_ARCHIVE"]>().toEqualTypeOf<R2Bucket | undefined>();
   expectTypeOf<Env["HEAVY_EXECUTOR"]>().toEqualTypeOf<Fetcher | undefined>();
   expectTypeOf<Env["RESERVE_CONTINUATION_QUEUE"]>().toEqualTypeOf<Queue<ReserveContinuationMessage | SlotCatchUpMessage> | undefined>();
+  expectTypeOf<Env["V9_CONTINUATION_QUEUE"]>().toEqualTypeOf<Queue<V9ContinuationMessage> | undefined>();
   expectTypeOf<RequiredKeys<ScheduledEnv>>().toEqualTypeOf<"DB" | "CF_VERSION_METADATA">();
   expectTypeOf<Extract<keyof ScheduledEnv, "CORS_ORIGIN" | "SAFETY_GRADES_RATE_LIMIT" | "OG_IMAGE_RATE_LIMIT" | "FEEDBACK_PREAUTH_RATE_LIMIT" | "API_KEY_LOOKUP_RATE_LIMIT" | "SITE_SESSION_RATE_LIMIT" | "SITE_SOURCE_RATE_LIMIT">>().toEqualTypeOf<never>();
   expectTypeOf<RequiredKeys<HeavyEnv>>().toEqualTypeOf<"DB" | "CF_VERSION_METADATA" | "SAFETY_CAPTURE_ARCHIVE">();

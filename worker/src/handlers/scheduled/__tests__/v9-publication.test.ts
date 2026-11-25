@@ -170,6 +170,37 @@ describe("V9 publication scheduling", () => {
     expect(mocks.computeSafetyScoreV9.mock.calls[0]![3]).toMatchObject({ deferPublicMaterialization: expected });
   });
 
+  it("forwards literal WORKER_V9_QUEUE_MODE=on and returns any seeded continuation on the slot summary", async () => {
+    const { scheduledRuntime } = compilingRuntime();
+    (scheduledRuntime.env as { WORKER_V9_QUEUE_MODE?: string }).WORKER_V9_QUEUE_MODE = "on";
+    const hint = {
+      version: 1 as const,
+      runId: "v9-eval:1800:base-9:abcd1234",
+      scheduleKey: "v9PublicationOffset" as const,
+      slotStartedAt: 1_800,
+      stage: "eval" as const,
+      chunkIndex: 0,
+      quarantineEpoch: 0,
+      attemptNo: 1,
+      executionGeneration: 1,
+      sourceInvocationId: "inv-1",
+      evaluationBuildDigest: "a".repeat(64),
+      registryFingerprint: "reg-1",
+      policyDigest: "b".repeat(64),
+    };
+    mocks.computeSafetyScoreV9.mockImplementationOnce(async (_db, _sig, _prog, opts) => {
+      opts.onContinuation?.(hint);
+      return { status: "ok", metadata: JSON.stringify({ mode: "queue-seed" }) };
+    });
+    const summary = await runV9PublicationSlot(scheduledRuntime);
+    expect(mocks.computeSafetyScoreV9.mock.calls[0]![3]).toMatchObject({
+      queueMode: "on",
+      isSecondChance: false,
+      slotStartedAt: scheduledRuntime.slotStartedAt,
+    });
+    expect(summary).toMatchObject({ ...published, v9Continuation: hint });
+  });
+
   it("runs only the canonical compiler with the original slot identity", async () => {
     const { scheduledRuntime } = compilingRuntime();
     expect(await runV9PublicationSlot(scheduledRuntime)).toBe(published);

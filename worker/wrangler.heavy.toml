@@ -65,9 +65,9 @@ crons = [
 # public fragments; flip only after every public reader tolerates unselected
 # staged rows (shipped with the reader in the same release as this flag).
 SAFETY_V9_DEFERRED_MATERIALIZATION = "on"
-# Safety Score V9 Queue continuation switch (ADR-26 Release 1: inert, off).
-# Release 2 adds the heavy pharos-v9-continuation Queue producer/consumer bindings
-# after account-level queue provisioning.
+# Safety Score V9 Queue continuation switch (ADR-26 Release 2).
+# Keep "off" on initial Release 2 deploy so heavy/public activation and Queue
+# bindings verify before flipping to "on" in the follow-up activation PR.
 WORKER_V9_QUEUE_MODE = "off"
 
 [[d1_databases]]
@@ -78,3 +78,16 @@ database_id = "8f3f54ca-e035-4cdf-9ec5-a4fbbe48b27a"
 [[r2_buckets]]
 binding = "SAFETY_CAPTURE_ARCHIVE"
 bucket_name = "pharos-measurements"
+
+[[queues.producers]]
+binding = "V9_CONTINUATION_QUEUE"
+queue = "pharos-v9-continuation"
+
+[[queues.consumers]]
+queue = "pharos-v9-continuation"
+max_batch_size = 1
+max_batch_timeout = 0
+max_concurrency = 1
+max_retries = 3
+retry_delay = 60
+dead_letter_queue = "pharos-v9-continuation-dlq"
