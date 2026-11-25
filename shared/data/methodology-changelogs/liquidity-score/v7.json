@@ -1,5 +1,20 @@
 [
   {
+    "version": "7.56",
+    "title": "General Curve exact-address identity, below-floor twin guards, and SundaeSwap ADA-paired valuation",
+    "date": "2026-11-25",
+    "effectiveAt": 1795616160,
+    "summary": "DeFiLlama Curve pools now resolve canonical physical pool addresses generally via yields.llama.fi/poolsPro?project=curve-dex with fail-closed below-floor twin guards and a <2h outage hold, and two-asset SundaeSwap constant-product ADA pools now admit TVL and 24-hour volume valued through a fresh clocked CoinGecko ADA/USD reference with priceUsd withheld.",
+    "impact": [
+      "General Curve exact-address identity (#2260): source loading runs one bounded serial fetch to yields.llama.fi/poolsPro?project=curve-dex (10s, 0 retries, 4 MiB, 2,000 rows) after yields.llama.fi/pools compaction and dl-stablecoin-pools caching, attaching pool_old addresses only when UUID, project, canonical chain suffix (gnosis -> xdai), optional poolTokenAddress, 2..8 sorted distinct EVM underlyingTokens, and physical-address injectivity all validate while keeping yields.llama.fi/pools as measurement authority and retaining the v7.51 #2142 reviewed Ethereum fallback during a 7-day soak.",
+      "Fail-closed Curve twin disambiguation and outage policy: buildCurveLookups tracks arrival-order-independent curveBelowFloorTwinFingerprints and gates symbol-key indexing on >= $10K and uniqueness. Exact-attached pools never fall back to fingerprint or symbol lookups and claim their physical address against unmatched UUID siblings; when poolsPro is unavailable, multi-row below-floor twin fingerprints suppress fingerprint/symbol binding while preserving active CryptoSwap TVL target recovery, and lone UUID rows on a twin fingerprint require <= 2.0x TVL ratio. Scoring-stage payload bumps v10 -> v11, partial/unavailable reads emit defillama-curve-identities quality signals, and transient poolsPro outages hold the latest clean same-epoch v7.56+ generation neutrally for <2h (curve-identity-unavailable) before falling back to Layer-2 publication.",
+      "Live 2026-11-25 Curve replay impact and TVL-basis break: recovers CRVUSD-WBTC CryptoSwap (+$11.80M effectiveTvl across $0-dust clones) and FRAX-FPI CryptoSwap classification, reclassifies legacy Tricrypto v1 (ethereum:0x80466c648ee8c1aa07012c03d123989f53d60b05, registryId main) to curve-stableswap-high-a (+$75.7K effectiveTvl on usdt-tether), and shifts global Curve TVL by -$694.4K (-0.083%). Appends 7.56 to LIQUIDITY_TVL_BASIS_BREAK_VERSIONS so 30-day stability series never mix pre- and post-cutover retained-TVL bases.",
+      "SundaeSwap ADA-paired valuation and 24h volume (#2264): two-asset constant-product ADA pools (V1, V3, V4 constant_product) now compute TVL (2 x adaAmount x adaUsd) and 24h volume from hourly ticks using a run-local lazily memoized clocked CoinGecko ADA/USD quote (read-only CG_PRICES circuit check, 900s freshness / 300s future-skew bounds, 6 lovelace decimals when AssetA is 0x and tracked peg reference when AssetA is stable, keeping V4 /2 leg halving and v7.55 empty-window null). ADA pairs stage priceUsd: null so CoinGecko-derived quotes never enter independent DEX price cross-validation, normalize missing 0x tickers to ADA for the existing 0.3x volatile pair quality (0.09x combined retention), evaluate as unvalued when implied price fails isPlausibleDexObservationPrice (including during a severe stablecoin depeg), and drop out until the next successful discovery crawl (~18h refresh cadence) when ADA/USD is unavailable rather than laundering stale values. On 2026-11-25 live data, admits ADA / USDCx (+$587K TVL, $39.4K/d on usdc-circle) and ADA / USDM (+$24.5K TVL, $259/d on usdm-moneta) while sub-floor ADA pools (<$10K) stop staging null-TVL rows."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "7.55",
     "title": "Empty SundaeSwap volume windows stay unmeasured; superseded empty census rows stay unverified",
     "date": "2026-11-22",

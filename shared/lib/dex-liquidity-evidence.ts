@@ -35,13 +35,17 @@ export function hasSameLiquidityMethodologyBasis(
  * separate DefiLlama/DexScreener rows of one pool now dedupe) and adds direct
  * Aero factory sources.
  * Version 7.1 counts the base-pool LP leg of Curve metapools in retained TVL.
+ * Version 7.51 adds exact physical identities for two reviewed Ethereum Curve
+ * USDC/sUSDat pools, and version 7.56 generalizes exact Curve pool-address
+ * resolution across DeFiLlama Curve pools with fail-closed below-floor twin
+ * disambiguation (also reclassifying legacy Tricrypto v1 and CryptoSwap rows).
  * Versions that only reweight pools, change volume admission, or tighten discovery
  * admission (whose TVL effect ages in over the 14-day registry horizon) are not breaks. Ascending and
  * append-only: any future liquidity version that changes how retained TVL is
  * measured must be appended here in the same change that bumps
  * LIQUIDITY_METHODOLOGY_VERSION, or the 30-day stability series will mix bases.
  */
-const LIQUIDITY_TVL_BASIS_BREAK_VERSIONS: readonly string[] = ["6.91", "6.92", "6.93", "6.96", "6.97", "6.98", "7.1", "7.51"];
+const LIQUIDITY_TVL_BASIS_BREAK_VERSIONS: readonly string[] = ["6.91", "6.92", "6.93", "6.96", "6.97", "6.98", "7.1", "7.51", "7.56"];
 
 /**
  * TVL-measurement epoch of a persisted liquidity methodology version: the number
