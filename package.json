@@ -118,7 +118,7 @@
     "check:homepage-health-copy": "node --import tsx scripts/ci/check-homepage-health-copy.ts",
     "check:script-entrypoints": "node --import tsx scripts/ci/check-script-entrypoints.ts",
     "check:cli-args-policy": "node --import tsx scripts/ci/check-cli-args-policy.ts",
-    "check:agent-skills": "node scripts/maintenance/sync-agent-skills.mjs --check",
+    "check:agent-skills": "node scripts/maintenance/sync-agent-skills.mjs --check && node --import tsx scripts/ci/check-verified-doc-links.ts --skills-only",
     "check:architecture-boundaries": "node --import tsx scripts/ci/check-architecture-boundaries.ts",
     "check:structural": "node --import tsx scripts/maintenance/run-pr-static-checks.ts --structural",
     "check:site-csp-sync": "tsx scripts/ci/check-site-csp-sync.ts",

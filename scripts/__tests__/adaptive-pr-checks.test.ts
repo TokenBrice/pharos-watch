@@ -410,6 +410,8 @@ describe("adaptive PR checks", () => {
     ]) {
       expect(staticNames([path])).toContain("check:structural");
     }
+    expect(staticNames([".codex/skills/worker-cron-change/SKILL.md"])).toContain("check:agent-skills");
+    expect(staticNames([".claude/skills/example/SKILL.md", "src/lib/feature-flags.ts"])).not.toContain("check:agent-skills");
   });
 
   it("retains cron topology validation without duplicating its cron-sync evaluator", () => {

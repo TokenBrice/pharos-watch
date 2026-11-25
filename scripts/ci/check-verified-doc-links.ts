@@ -3,11 +3,18 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
-import { getVerifiedDocFiles, iterInlineCodeSpans, splitLines } from "../lib/doc-files.mts";
+import { collectMarkdownFiles, getVerifiedDocFiles, iterInlineCodeSpans, splitLines } from "../lib/doc-files.mts";
+import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
 import { reportViolations } from "../lib/report-violations.mts";
-import { runDirectCli } from "../lib/cli-args.mjs";
+import { parseStrictCliArgs, runDirectCli, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import { collectMarkdownReferences, requiresDocNavigation } from "../lib/doc-markdown.mts";
 import { PUBLIC_DOC_BY_SLUG, preparePublicDocMarkdown } from "../../shared/lib/public-docs.ts";
+
+const USAGE = `Usage: node --import tsx scripts/ci/check-verified-doc-links.ts [--skills-only]
+
+Options:
+  --skills-only   Check only the agent skill tree (links, source paths, scripts, artifact ids, symbol homes)
+  -h, --help      Show this help`;
 
 const NAVIGATION_SCAN_LINES = 20;
 const ROOT_PATH_PREFIXES = [
@@ -316,23 +323,80 @@ export function collectSourcePathViolations(filePaths: readonly string[], repoRo
   return errors;
 }
 
+export interface SkillReferenceCatalog {
+  npmScripts: ReadonlySet<string>;
+  artifactIds: ReadonlySet<string>;
+}
 
-export function main(repoRoot = process.cwd()): number {
-  const verifiedDocFiles = getVerifiedDocFiles(repoRoot);
+function loadSkillReferenceCatalog(repoRoot: string): SkillReferenceCatalog {
+  const npmScripts = new Set<string>();
+  for (const packagePath of ["package.json", "worker/package.json"]) {
+    const manifest = JSON.parse(readFileSync(resolve(repoRoot, packagePath), "utf8")) as { scripts?: Record<string, string> };
+    for (const name of Object.keys(manifest.scripts ?? {})) npmScripts.add(name);
+  }
+  return { npmScripts, artifactIds: new Set(GENERATED_ARTIFACT_REGISTRY.map((artifact) => artifact.id)) };
+}
+
+/**
+ * Skill bodies are procedures agents execute, so a renamed script, artifact id
+ * or moved symbol sends a run down a dead path. Cite a symbol as
+ * `` `SYMBOL` in `repo/path.ts` `` to have its home checked.
+ */
+export function collectSkillReferenceViolations(
+  filePaths: readonly string[],
+  repoRoot: string,
+  catalog: SkillReferenceCatalog = loadSkillReferenceCatalog(repoRoot),
+): string[] {
+  const errors: string[] = [];
+  for (const filePath of filePaths) {
+    const label = relative(repoRoot, filePath);
+    for (const [index, line] of splitLines(readFileSync(filePath, "utf8")).entries()) {
+      const where = `${label}:${index + 1}`;
+      for (const [, rawName = ""] of line.matchAll(/\bnpm run ([A-Za-z0-9][\w:.-]*)/g)) {
+        const name = rawName.replace(/[.:]+$/, "");
+        if (!catalog.npmScripts.has(name)) errors.push(`${where}: npm run ${name} is not a package script`);
+      }
+      if (line.includes("generated")) {
+        for (const [, ids = ""] of line.matchAll(/--only=([a-z0-9,-]+)/g)) {
+          for (const id of ids.split(",").filter(Boolean)) {
+            if (!catalog.artifactIds.has(id)) errors.push(`${where}: --only=${id} is not a generated artifact id`);
+          }
+        }
+      }
+      for (const [, symbol = "", rawPath = ""] of line.matchAll(/`([A-Za-z_$][\w$]*)` (?:in|from) `([^`\s]+)`/g)) {
+        const candidate = normalizeCandidate(rawPath);
+        if (!candidate || !/\.(?:ts|tsx|mts|mjs|json)$/.test(candidate)) continue;
+        const sourcePath = resolve(repoRoot, candidate);
+        if (!existsSync(sourcePath) || !statSync(sourcePath).isFile()) continue;
+        if (!readFileSync(sourcePath, "utf8").split(/[^\w$]+/).includes(symbol)) {
+          errors.push(`${where}: ${symbol} is not in ${candidate}`);
+        }
+      }
+    }
+  }
+  return errors;
+}
+
+export function main(repoRoot = process.cwd(), { skillsOnly = false }: { skillsOnly?: boolean } = {}): number {
+  const verifiedDocFiles = skillsOnly ? [] : getVerifiedDocFiles(repoRoot);
+  const skillFiles = collectMarkdownFiles(resolve(repoRoot, ".codex/skills"));
   const errors = [
-    ...collectLinkViolations(verifiedDocFiles, repoRoot),
+    ...collectLinkViolations([...verifiedDocFiles, ...skillFiles], repoRoot),
     ...collectNavigationBlockViolations(verifiedDocFiles, repoRoot),
-    ...collectSourcePathViolations(verifiedDocFiles, repoRoot),
+    ...collectSourcePathViolations([...verifiedDocFiles, ...skillFiles], repoRoot),
+    ...collectSkillReferenceViolations(skillFiles, repoRoot),
   ];
 
   return reportViolations({
-    label: "Verified documentation links",
-    heading: "Verified documentation link check failed",
+    label: skillsOnly ? "Agent skill references" : "Verified documentation links",
+    heading: skillsOnly ? "Agent skill reference check failed" : "Verified documentation link check failed",
     violations: errors,
-    scannedCount: verifiedDocFiles.length,
+    scannedCount: verifiedDocFiles.length + skillFiles.length,
   });
 }
 
 runDirectCli(import.meta.url, () => {
-  process.exitCode = main();
-});
+  const { values } = parseStrictCliArgs(process.argv.slice(2), { options: { "skills-only": { type: "boolean" } } });
+  if (writeCliHelpIfRequested({ help: values.help === true }, USAGE)) return;
+  process.exitCode = main(process.cwd(), { skillsOnly: values["skills-only"] === true });
+}, { label: "check-verified-doc-links", usage: USAGE });

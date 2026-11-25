@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { execFileSync } from "node:child_process";
 
-import { collectAdrNavigationViolations, collectLinkViolations, collectNavigationBlockViolations, collectSourcePathViolations } from "../ci/check-verified-doc-links.ts";
+import { collectAdrNavigationViolations, collectLinkViolations, collectNavigationBlockViolations, collectSkillReferenceViolations, collectSourcePathViolations } from "../ci/check-verified-doc-links.ts";
 import { createTempRepoTracker } from "./helpers/test-state";
 
 const { cleanup, makeRoot, writeText } = createTempRepoTracker("pharos-doc-navigation");
@@ -144,6 +144,22 @@ describe("documentation source paths", () => {
     writeText(root, "docs/source.md", `\`git:${revision}:src/historical.ts\` \`git:${revision}:src/absent.ts\``);
     expect(collectSourcePathViolations([`${root}/docs/source.md`], root)).toEqual([
       `docs/source.md:1: ${revision}:src/absent.ts does not exist`,
+    ]);
+  });
+
+  it("checks the scripts, artifact ids and symbol homes a skill cites", () => {
+    const root = makeRoot();
+    writeText(root, "shared/types/custody.ts", "export const CUSTODY_MODEL_VALUES = [];");
+    writeText(root, ".codex/skills/example/SKILL.md", [
+      "Run `npm run check:known` and `npm run check:renamed`.",
+      "`npm run check:generated-artifacts -- --only=known-artifact,gone-artifact`",
+      "`CUSTODY_MODEL_VALUES` in `shared/types/custody.ts`, `LAUNCH_PHASE_VALUES` in `shared/types/custody.ts`.",
+    ].join("\n"));
+    const catalog = { npmScripts: new Set(["check:known", "check:generated-artifacts"]), artifactIds: new Set(["known-artifact"]) };
+    expect(collectSkillReferenceViolations([`${root}/.codex/skills/example/SKILL.md`], root, catalog)).toEqual([
+      ".codex/skills/example/SKILL.md:1: npm run check:renamed is not a package script",
+      ".codex/skills/example/SKILL.md:2: --only=gone-artifact is not a generated artifact id",
+      ".codex/skills/example/SKILL.md:3: LAUNCH_PHASE_VALUES is not in shared/types/custody.ts",
     ]);
   });
 });

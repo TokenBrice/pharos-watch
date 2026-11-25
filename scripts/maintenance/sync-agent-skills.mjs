@@ -20,8 +20,6 @@ import { isDirectRun } from "../lib/smoke-runtime.mjs";
 const CANONICAL_SKILLS_PATH = ".codex/skills";
 const CLAUDE_SKILLS_PATH = ".claude/skills";
 const OMP_SKILLS_PATH = ".agents/skills";
-// Claude does not consume this Codex-only display metadata; all other companions mirror.
-const ALLOWLISTED_COMPANION_PATH = "agents/openai.yaml";
 
 const USAGE = `Usage: node scripts/maintenance/sync-agent-skills.mjs [--check|--write]
 
@@ -191,54 +189,11 @@ function checkFrontmatter(frontmatterPath, skillName, violations) {
 }
 
 /**
- * @param {string} skillPath
- * @returns {string[]}
- */
-function collectPhysicalFiles(skillPath) {
-  const stats = readStats(skillPath);
-  if (!stats?.isDirectory()) return [];
-
-  const files = [];
-  for (const entry of readdirSync(skillPath)) {
-    const entryPath = join(skillPath, entry);
-    const entryStats = readStats(entryPath);
-    if (!entryStats || entryStats.isSymbolicLink()) continue;
-    if (entryStats.isDirectory()) {
-      files.push(...collectPhysicalFiles(entryPath));
-    } else if (entryStats.isFile()) {
-      files.push(entryPath);
-    }
-  }
-  return files;
-}
-
-/** @param {string} skillName @param {string} skillPath @param {string} entryPath */
-function isAllowlistedCompanion(skillName, skillPath, entryPath) {
-  if (skillName.length === 0) return false;
-  const relativeEntryPath = relative(skillPath, entryPath).split(sep).join("/");
-  if (relativeEntryPath === ALLOWLISTED_COMPANION_PATH) return true;
-  if (relativeEntryPath !== dirname(ALLOWLISTED_COMPANION_PATH).split(sep).join("/")) return false;
-
-  const files = collectPhysicalFiles(entryPath);
-  return files.length > 0 && files.every((filePath) => (
-    relative(skillPath, filePath).split(sep).join("/") === ALLOWLISTED_COMPANION_PATH
-  ));
-}
-
-/** @param {string} rootDir @param {string} agentsPath */
-function listAllowlistedEntries(rootDir, agentsPath) {
-  const entries = collectPhysicalFiles(agentsPath);
-  if (entries.length === 0) return [displayPath(rootDir, agentsPath)];
-  return entries.map((entryPath) => displayPath(rootDir, entryPath));
-}
-
-/**
  * @param {string} rootDir
  * @param {string} skillName
  * @param {{ path: string, name: string, isDirectory: boolean, isSymlink: boolean }[]} canonicalEntries
  * @param {{ path: string, name: string, isDirectory: boolean, isSymlink: boolean }[]} facadeEntries
  * @param {string[]} violations
- * @param {string[]} allowlisted
  */
 function checkFacadeSkill(
   rootDir,
@@ -246,18 +201,12 @@ function checkFacadeSkill(
   canonicalEntries,
   facadeEntries,
   violations,
-  allowlisted,
 ) {
   const canonicalSkillPath = join(rootDir, CANONICAL_SKILLS_PATH, skillName);
   const facadeSkillPath = join(rootDir, CLAUDE_SKILLS_PATH, skillName);
   const canonicalByName = new Map(canonicalEntries.map((entry) => [entry.name, entry]));
 
   for (const canonicalEntry of canonicalEntries) {
-    if (isAllowlistedCompanion(skillName, canonicalSkillPath, canonicalEntry.path)) {
-      allowlisted.push(...listAllowlistedEntries(rootDir, canonicalEntry.path));
-      continue;
-    }
-
     if (!facadeEntries.some((entry) => entry.name === canonicalEntry.name)) {
       violations.push(
         `missing facade symlink ${displayPath(rootDir, join(facadeSkillPath, canonicalEntry.name))}`,
@@ -331,14 +280,13 @@ function checkFacadeSkill(
  * Inspect the repository-local skill layout without changing it.
  *
  * @param {string} [rootDir]
- * @returns {{ violations: string[], allowlisted: string[], canonicalSkills: string[], facadeSkills: string[] }}
+ * @returns {{ violations: string[], canonicalSkills: string[], facadeSkills: string[] }}
  */
 export function inspectAgentSkills(rootDir = process.cwd()) {
   const resolvedRoot = resolve(rootDir);
   const canonicalRoot = join(resolvedRoot, CANONICAL_SKILLS_PATH);
   const facadeRoot = join(resolvedRoot, CLAUDE_SKILLS_PATH);
   const violations = [];
-  const allowlisted = [];
 
   const canonicalRootEntries = readDirectoryEntries(canonicalRoot);
   if (!canonicalRootEntries) {
@@ -403,13 +351,11 @@ export function inspectAgentSkills(rootDir = process.cwd()) {
       canonicalEntries,
       facadeEntries,
       violations,
-      allowlisted,
     );
   }
 
   return {
     violations: [...new Set(violations)],
-    allowlisted: [...new Set(allowlisted)].sort(),
     canonicalSkills: [...canonicalSkillEntries.keys()].sort(),
     facadeSkills: [...facadeSkillEntries.keys()].sort(),
   };
@@ -466,10 +412,8 @@ function repairFacade(rootDir) {
     const canonicalEntries = readDirectoryEntries(canonicalSkillPath) ?? [];
     for (const canonicalEntry of canonicalEntries) {
       const facadeEntryPath = join(facadeSkillPath, canonicalEntry.name);
-      const shouldCreateMissing = !isAllowlistedCompanion(skillName, canonicalSkillPath, canonicalEntry.path);
       const facadeEntryStats = readStats(facadeEntryPath);
       if (!facadeEntryStats) {
-        if (!shouldCreateMissing) continue;
         const target = expectedSymlinkTarget(facadeEntryPath, canonicalEntry.path);
         symlinkSync(target, facadeEntryPath);
         changes.push(`created symlink ${displayPath(resolvedRoot, facadeEntryPath)} -> ${target}`);
@@ -501,7 +445,7 @@ function repairFacade(rootDir) {
  * Check the skill facade, optionally repairing only its directories and symlinks.
  *
  * @param {{ rootDir?: string, write?: boolean }} [options]
- * @returns {{ status: number, changes: string[], violations: string[], allowlisted: string[], canonicalSkills: string[], facadeSkills: string[] }}
+ * @returns {{ status: number, changes: string[], violations: string[], canonicalSkills: string[], facadeSkills: string[] }}
  */
 export function syncAgentSkills({ rootDir = process.cwd(), write = false } = {}) {
   const changes = write ? repairFacade(rootDir) : [];
@@ -542,9 +486,7 @@ export function runAgentSkillsCli(argv = process.argv.slice(2), rootDir = proces
   if (result.changes.length === 0 && options.write) {
     console.log("[sync-agent-skills] --write: no changes needed");
   }
-  console.log(
-    `[sync-agent-skills] OK (${result.canonicalSkills.length} skills; ${result.allowlisted.length} allowlisted companion entr${result.allowlisted.length === 1 ? "y" : "ies"})`,
-  );
+  console.log(`[sync-agent-skills] OK (${result.canonicalSkills.length} skills)`);
   return 0;
 }
 
