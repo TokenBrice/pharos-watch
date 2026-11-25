@@ -947,7 +947,7 @@ describe("identifyCoverageGaps", () => {
     );
   });
 
-  it("escapes provider slugs in suggested lending allowlist snippets", () => {
+  it("targets yield-config-lending-venues.ts and escapes provider slugs in suggested lending allowlist snippets", () => {
     const maliciousProject = 'evil"\n  __pwned__: (() => { throw new Error("injected"); })(),\n  "tail';
     const dlPools: DlPool[] = [
       lendingPool({ pool: "evil-usdc", project: maliciousProject, symbol: "USDC", tvlUsd: 12_000_000 }),
@@ -964,6 +964,9 @@ describe("identifyCoverageGaps", () => {
       expect.objectContaining({
         project: maliciousProject,
         suggestedConfig: expect.objectContaining({
+          targetFile: "worker/src/lib/yield-config/yield-config-lending-venues.ts",
+          exportName: "LENDING_PROTOCOLS",
+          anchor: "YIELD_ALLOWLIST_AUDIT_QUEUE_ANCHOR",
           snippet: `  ${JSON.stringify(maliciousProject)}: { label: ${JSON.stringify(
             inferExpectedProtocolLabel(maliciousProject),
           )} },`,
