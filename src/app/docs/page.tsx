@@ -8,6 +8,7 @@ import {
 } from "@/components/docs/docs-directory";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { JsonLdScript } from "@/components/json-ld-script";
+import { SeeAlsoFooter } from "@/components/see-also-footer";
 import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
@@ -266,6 +267,7 @@ export default function DocsIndexPage() {
           <DocsDirectory clusters={clusters} totalCount={PUBLIC_DOCS.length} />
         </section>
       </div>
+      <SeeAlsoFooter route="/docs/" />
     </FeaturePageShell>
   );
 }

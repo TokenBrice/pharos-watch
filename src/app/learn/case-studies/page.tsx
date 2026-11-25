@@ -28,6 +28,7 @@ import {
 } from "./case-study-list";
 import { estimateCaseStudyReadingMinutes } from "./case-study-reading-time";
 import { LearnPageShell } from "../_shared/learn-page-shell";
+import { SeeAlsoFooter } from "@/components/see-also-footer";
 
 // Reference the priority content modules directly so a renamed/removed module is
 // a compile-time import error rather than a runtime throw via slug lookup.
@@ -279,6 +280,7 @@ export default function CaseStudiesHub() {
         archetypeLabels={MECHANISM_ARCHETYPE_LABELS}
         priorityStudies={priorityStudiesMeta}
       />
+      <SeeAlsoFooter route="/learn/case-studies/" />
     </LearnPageShell>
   );
 }

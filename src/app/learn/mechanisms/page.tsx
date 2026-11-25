@@ -24,6 +24,7 @@ import { isQuarantinedStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { isLaunchedAwaitingData } from "@/lib/pre-launch";
 import { buildPublicDatasetMirrorJsonLd } from "@/lib/analytics-dataset-json-ld";
 import { JsonLdScript } from "@/components/json-ld-script";
+import { SeeAlsoFooter } from "@/components/see-also-footer";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { safeJsonLd } from "@/lib/json-ld";
 import { MechanismJsonLd } from "@/lib/mechanism-json-ld";
@@ -380,6 +381,7 @@ export default function MechanismExplainersHub() {
           })}
         </ol>
       </section>
+      <SeeAlsoFooter route="/learn/mechanisms/" />
     </LearnPageShell>
   );
 }

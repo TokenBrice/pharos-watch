@@ -9,6 +9,7 @@ import { ShowYourWorkToggle } from "@/components/show-your-work-toggle";
 import { cn } from "@/lib/utils";
 import { buildArticleJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { FaqSection } from "@/components/faq-section";
+import { SeeAlsoFooter } from "@/components/see-also-footer";
 import type { FaqItem } from "@/lib/faq";
 import { buildPageMetadata, getPageSocialPreview } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
@@ -289,6 +290,8 @@ export default function MethodologyPage() {
       <MethodologySections />
 
       <FaqSection items={METHODOLOGY_FAQ_ITEMS} title="Methodology FAQ" includeJsonLd />
+
+      <SeeAlsoFooter route="/methodology/" />
     </div>
   );
 }

@@ -2,10 +2,8 @@ import Link from "next/link";
 import { FaqSection } from "@/components/faq-section";
 import { ShareButton } from "@/components/share-button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SeeAlsoFooter } from "@/components/see-also-footer";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
-import { SEE_ALSO_GRAPH } from "@/lib/see-also-graph";
 import { COVERAGE_FAQ_ITEMS } from "./coverage-faq";
 import { RemovedStablecoinsSection } from "./removed-stablecoins-section";
 import { buildCoverageDatasetJsonLd } from "@/lib/analytics-dataset-json-ld";
@@ -72,7 +70,6 @@ const route = createClientFeaturePage({
     <>
       <RemovedStablecoinsSection />
       <FaqSection items={COVERAGE_FAQ_ITEMS} title="Coverage FAQ" includeJsonLd />
-      <SeeAlsoFooter links={SEE_ALSO_GRAPH["/coverage/"]} />
     </>
   ),
 });

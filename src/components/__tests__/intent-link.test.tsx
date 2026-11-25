@@ -6,7 +6,8 @@ import type { AnchorHTMLAttributes } from "react";
 import { IntentLink } from "../intent-link";
 import { BackToSource, SourceNavigationProvider, TRACKER_LABELS, getSourceSegment } from "../back-to-source";
 import { Footer } from "../footer";
-import { RouteSeeAlsoFooter, SeeAlsoFooter } from "../see-also-footer";
+import { RouteSeeAlsoFooter } from "../route-see-also-footer";
+import { SeeAlsoFooter } from "../see-also-footer";
 import { SEE_ALSO_GRAPH } from "@/lib/see-also-graph";
 import { ShortcutsSection } from "@/components/homepage/shortcuts-section";
 import { DEFAULT_SHORTCUT_HREFS } from "@/hooks/use-shortcuts";
@@ -135,6 +136,14 @@ describe("SeeAlsoFooter cross-hub discovery", () => {
     expect(within(aside).getByRole("link", { name: /Dependency Map/i }).getAttribute("href")).toBe("/dependency-map/");
 
     pathnameMock.current = "/coverage/";
+    rerender(<RouteSeeAlsoFooter />);
+    expect(screen.queryByRole("complementary", { name: "See also" })).toBeNull();
+
+    pathnameMock.current = "/depeg/";
+    rerender(<RouteSeeAlsoFooter />);
+    expect(screen.queryByRole("complementary", { name: "See also" })).toBeNull();
+
+    pathnameMock.current = "/learn/mechanisms/";
     rerender(<RouteSeeAlsoFooter />);
     expect(screen.queryByRole("complementary", { name: "See also" })).toBeNull();
 

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Rss } from "lucide-react";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { JsonLdScript } from "@/components/json-ld-script";
+import { SeeAlsoFooter } from "@/components/see-also-footer";
 import { digestDisplay } from "@/lib/fonts/digest";
 import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
@@ -178,6 +179,7 @@ export default function BlogHubPage() {
           </ol>
         </section>
       ) : null}
+      <SeeAlsoFooter route="/blog/" />
     </FeaturePageShell>
   );
 }

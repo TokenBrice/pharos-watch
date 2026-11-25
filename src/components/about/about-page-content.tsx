@@ -9,6 +9,7 @@ import { FeatureHeroSplit } from "@/components/feature-hero-split";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { FaqSection } from "@/components/faq-section";
 import { JsonLdScript } from "@/components/json-ld-script";
+import { SeeAlsoFooter } from "@/components/see-also-footer";
 import { formatLongDate } from "@shared/lib/format";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { API_REFERENCE_URL } from "@shared/lib/public-api-contract";
@@ -1040,6 +1041,7 @@ export function AboutPageContent() {
           </Card>
         </section>
       </div>
+      <SeeAlsoFooter route="/about/" />
     </FeaturePageShell>
   );
 }

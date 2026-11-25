@@ -5,6 +5,7 @@ import { ChangelogTimeline } from "@/components/methodology-history/changelog-ti
 import { EditorialColophon } from "@/components/digest/editorial-colophon";
 import { EditorialMasthead } from "@/components/digest/editorial-masthead";
 import { JsonLdScript } from "@/components/json-ld-script";
+import { SeeAlsoFooter } from "@/components/see-also-footer";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { changelogs } from "@/data/changelogs";
@@ -353,6 +354,7 @@ export default function ChangelogPage() {
           canonicalUrl: `${SITE_URL}/changelog/`,
         }}
       />
+      <SeeAlsoFooter route="/changelog/" />
     </FeaturePageShell>
   );
 }
