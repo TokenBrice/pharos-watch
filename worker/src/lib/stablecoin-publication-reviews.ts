@@ -31,15 +31,7 @@ export interface StablecoinPriceGapReview {
  * asset stays listed as missing and re-alerts the moment the review expires;
  * acknowledgement never waives the row itself and never applies to a depeg or
  * to an asset that has a price. */
-export const STABLECOIN_PUBLICATION_WAIVERS: readonly StablecoinPublicationWaiver[] = [
-  {
-    stablecoinId: "wm-m0",
-    owner: "ops",
-    reason:
-      "Renewed once 2026-11-23 12:54 UTC (owner decision D8 on issue #2259, origin #2145 Option A): CoinGecko wrappedm-by-m0 remains frozen at 2026-11-15T05:39:11Z ($70,354,848, 0 tickers), coins.llama.fi returns {}, and the 7-day carry-forward expired 2026-11-22T05:39:11Z; fresh 12-chain pinned totalSupply/getTokenSupply reads 70,643,641.75 wM (+0.41% vs stalled CG). Keep wM honestly withheld from /api/stablecoins until CoinGecko resumes or the reviewed 12-chain native supply plan (with M0 Portal zero-escrow proof) ships. Re-check by 2026-12-07 12:54 UTC.",
-    expiresAt: Date.UTC(2026, 11, 7, 12, 54) / 1000,
-  },
-];
+export const STABLECOIN_PUBLICATION_WAIVERS: readonly StablecoinPublicationWaiver[] = [];
 
 /** Census-only reviews for off-catalog PSI historical members; never active-price coverage. */
 export const PSI_HISTORICAL_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] = [
@@ -160,24 +152,6 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     ],
     reviewedAt: Date.UTC(2026, 10, 22, 12, 38) / 1000,
     expiresAt: Date.UTC(2026, 11, 6, 12, 38) / 1000,
-  },
-  {
-    stablecoinId: "wm-m0",
-    owner: "ops",
-    reason:
-      "Re-reviewed 2026-11-23 12:54 UTC (owner decision D8 on issue #2259, origin #2145 Option A): CoinGecko wrappedm-by-m0 remains frozen at 2026-11-15T05:39:11Z ($0.999766, $70,354,848 cap, $13.69 24h vol) with 0 tickers, and coins.llama.fi returns {} for both coingecko:wrappedm-by-m0 and Ethereum 0x437cc33344a0b27a429f795ff6b469c72698b291. Ethereum DexScreener returns 0 pairs and GeckoTerminal's largest Ethereum pools hold $566.22 (wM/DYAD) and $419.92 (wM/USDC) with $0 24h volume, far below the $50K floor, so wM has no admitted live market price and its 7-day supply carry expired 2026-11-22T05:39:11Z. Fresh 12-chain pinned totalSupply/getTokenSupply reads 70,643,641.75 wM (+0.41% vs stalled CG), proving the token remains alive on-chain. Renewed once while the reviewed 12-chain native supply plan (with M0 Portal zero-escrow proof) is built; keep price missing and supply withheld under dated waiver; all admission gates preserved. Re-check by 2026-12-07 12:54 UTC.",
-    sources: [
-      "https://api.coingecko.com/api/v3/simple/price?ids=wrappedm-by-m0&vs_currencies=usd&include_market_cap=true&include_24hr_vol=true&include_last_updated_at=true",
-      "https://api.coingecko.com/api/v3/coins/wrappedm-by-m0/tickers",
-      "https://coins.llama.fi/prices/current/coingecko:wrappedm-by-m0,ethereum:0x437cc33344a0b27a429f795ff6b469c72698b291",
-      "https://api.dexscreener.com/token-pairs/v1/ethereum/0x437cc33344a0b27a429f795ff6b469c72698b291",
-      "https://api.geckoterminal.com/api/v2/networks/eth/tokens/0x437cc33344a0b27a429f795ff6b469c72698b291/pools",
-      "https://docs.m0.org/",
-      "https://github.com/TokenBrice/pharos-watch/issues/2145",
-      "https://github.com/TokenBrice/pharos-watch/issues/2259",
-    ],
-    reviewedAt: Date.UTC(2026, 10, 23, 12, 54) / 1000,
-    expiresAt: Date.UTC(2026, 11, 7, 12, 54) / 1000,
   },
   {
     stablecoinId: "usdcx-movement",

@@ -148,6 +148,11 @@ export const SUPPLY_RPC_DEFAULTS = {
   "moonbeam": { rpcUrl: "https://moonbeam.api.onfinality.io/public", fallbackRpcUrl: "https://moonbeam.api.pocket.network" },
   // Keyless Cronos mainnet endpoints, eth_chainId (0x19) and EURC totalSupply() verified 2026-11-23.
   "cronos": { rpcUrl: "https://evm.cronos.org", fallbackRpcUrl: "https://cronos-evm-rpc.publicnode.com" },
+  // Supply-only keyless endpoints; EIP-1898 hash-pinned wM totalSupply() verified 2026-11-25.
+  // Keep soneium and citrea out of PUBLIC_RPC_URLS (no archive/log capability inferred).
+  "soneium": { rpcUrl: "https://soneium-rpc.publicnode.com", fallbackRpcUrl: "https://rpc.soneium.org" },
+  "citrea": { rpcUrl: "https://rpc.mainnet.citrea.xyz" },
+  "fluent": { rpcUrl: PUBLIC_RPC_URLS["fluent"] },
 } as const;
 
 // V9 reviewed Centrifuge reads use rpc1, not the supply profile's monadinfra.
