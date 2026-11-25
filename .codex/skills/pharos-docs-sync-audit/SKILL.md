@@ -1,18 +1,17 @@
 ---
 name: pharos-docs-sync-audit
-description: Audit and repair Pharos documentation against the codebase. Use for documentation update passes, verified-doc drift, source-path/doc-sync failures, methodology/doc routing updates, or requests to verify docs without trusting existing prose.
-user_invocable: true
+description: Audit and repair Pharos docs against source code. Use for doc-sync or link failures, code-change doc passes, methodology or routing updates, and corpus audits. Not for changelogs or copy polish.
 ---
 
 # Pharos Docs Sync Audit
 
 ## Trigger And Exclusions
 
-Use for source-backed docs verification/repair and agent guidance/skill routing, not prose polish without evidence. Code and checked runtime data are truth; existing docs are hypotheses. Semantic auditors do not repeat CI-owned mechanical checks.
+Use for source-backed docs verification/repair and agent guidance/skill routing. Not for prose polish without evidence, weekly changelog entries, or coin summaries. Code and checked runtime data are truth; existing docs are hypotheses. Semantic auditors do not repeat CI-owned mechanical checks.
 
 ## Classify The Operation
 
-Select targeted failing doc check, code-change documentation update, broad semantic audit, methodology/version/timeline work, or agent/skill maintenance. Route likely source paths through `docs/doc-ownership.json`; inspect the matched source/local imports. Use `node scripts/ci/pharos-change-contract.ts` (`--staged` for staged changes) when assessing a change contract.
+Select targeted failing doc check, code-change documentation update, broad semantic audit, methodology/version/timeline work, or agent/skill maintenance. Route likely source paths through `docs/doc-ownership.json`; inspect the matched source/local imports. Use `npm run agent:route -- --file <path>` (or `-- --staged`) when assessing a change contract.
 
 ## Mandatory Core
 
@@ -27,16 +26,17 @@ Select targeted failing doc check, code-change documentation update, broad seman
 
 - **Targeted check failure:** read the failing command in [Testing commands](../../../docs/testing.md#commands), [script validation index](../../../docs/scripts.md#validation-command-index), its implementation and affected owner sections. For generated failures, read [failure playbook](../../../docs/testing.md#generated-artifact-failure-playbook) and registry entries.
 - **Code-change docs:** read routed owner anchors and sources for each claim: routes/pages (`src/app/**`, `src/components/**`, `src/lib/page-metadata.ts`); API (`shared/lib/api-endpoints/**`, `worker/src/routes/**`, `worker/src/api/**`); cron (`shared/lib/cron-jobs.ts`, `shared/lib/scheduled-runner-registry.ts`, `worker/src/cron/**`); stablecoins (`shared/data/stablecoins/coins/*.json`, `shared/lib/stablecoins/schema.ts`); scripts/CI (`package.json`, `scripts/**`, `.github/workflows/**`); scoring (`shared/lib/**`, methodology changelogs and route sections). Use existing feature/process owners; update architecture only for structural changes and top-level guidance only when its contract changes.
-- **Methodology/version:** read [ADR-3](../../../docs/architecture.md#adr-3) and its four owning targets: the runtime version source (`shared/lib/methodology-versions/constants.ts`; Safety Score reads `shared/lib/methodology-versions/current-version.json`), the structured changelog under `shared/data/methodology-changelogs/`, the owning methodology document, and the relevant `/methodology` section when public explanation changes. Actual behavior changes update every target; prose correction of unchanged behavior needs no bump/changelog. Numeric versions have at most two decimal digits: `v5.9` → `v5.91` or `v6.0`, never `v5.10` or `v5.911`.
-- **Agent/skill maintenance:** read [Agent Skills](../../../docs/process/agent-artifacts.md#agent-skills); edit only canonical bodies and preserve symlink facades. Author root guidance directly in `AGENTS.md`; `CLAUDE.md` is the `@AGENTS.md` import. Durable process guidance belongs in linked `docs/process/*`.
-- **Broad audit/delegated review:** read [reviewer and scalable-corpus contracts](references/subagents.md) and [Harness Configuration](../../../docs/process/agent-artifacts.md#harness-configuration). Enumerate `getVerifiedDocFiles(repoRoot)` in `scripts/lib/doc-files.mts`, attach registry hints via reference `path`, and keep unmapped docs in scope. Reject missing selected paths and short expected inventories; no second filename roster or committed manifest. Partition disjoint coverage; record every skipped row/reason. Independent skeptics reopen non-empty findings and default to `REJECTED`; confirmed/revised source-backed findings alone enter synthesis. Without delegation, perform bounded discovery/skeptical reopening sequentially and disclose non-independent review. Remediation needs authorization (existing cohort approval remains valid), narrow writer scope and reopened evidence; parent owns de-duplication, final edits and validation.
+- **Methodology/version:** read [ADR-3](../../../docs/architecture.md#adr-3) and its four owning targets: the runtime version source (`shared/lib/methodology-versions/constants.ts`; Safety Score reads `shared/lib/methodology-versions/current-version.json`), the structured changelog under `shared/data/methodology-changelogs/`, the owning methodology document, and the relevant `/methodology` section when public explanation changes. Actual behavior changes update every target; prose correction of unchanged behavior needs no bump/changelog. Numeric versions have at most two decimal digits: `v5.9` → `v5.91` or `v6.0`, never `v5.10` or `v5.911`. After a bump, regenerate what ADR-3 names: changelog exports, route-parity fixtures, generated doc contract blocks, and the evaluation-build manifest (`npm run generate:safety-score-v9-evaluation-build`) when manifest-pinned scoring inputs changed.
+- **Agent/skill maintenance:** read [Agent Skills](../../../docs/process/agent-artifacts.md#agent-skills); edit only canonical bodies and preserve symlink facades; after adding or removing a skill or companion, `node scripts/maintenance/sync-agent-skills.mjs --write` repairs them. `npm run check:verified-doc-links` scans only `README.md` and `docs/`, so open every link, anchor, path and command you add to a skill. Author root guidance directly in `AGENTS.md`; `CLAUDE.md` is the `@AGENTS.md` import. Durable process guidance belongs in linked `docs/process/*`.
+- **Broad audit/delegated review:** read the [scalable-corpus contract](references/scalable-corpus.md) for inventory, partition, verifier schema, skeptic adjudication and remediation; delegation follows the bounded no-write reviewer rules in [Harness Configuration](../../../docs/process/agent-artifacts.md#harness-configuration). Without delegation, run discovery and skeptical reopening sequentially and disclose non-independent review. Parent owns de-duplication, final edits and validation.
 
 ## Checks Owned By The Verifier
 
 The assigned verifier runs relevant gates after writers finish; semantic reviewers return source evidence, not mechanical CI findings.
 
 - Docs and root guidance: `npm run check:verified-doc-links`, `npm run check:doc-sync`; skills: `npm run check:agent-skills`.
-- Generated API: `npm run check:generated-artifacts -- --only=api-reference,openapi,postman`; broader generated work uses the registry-owned checks.
+- Ownership, routing or guidance changes: `npx vitest run scripts/__tests__/doc-ownership-registry.test.ts scripts/__tests__/pharos-change-contract.test.ts --maxWorkers=3 --reporter=default` (the default reporter shows advisory route-budget warnings). The docs PR lane runs all three gates.
+- Generated API: `npm run check:generated-artifacts -- --only=api-reference,openapi,postman`; generated doc blocks and views: `npm run check:generated-artifacts -- --only=doc-contracts,runbook-index,cron-doc-view,lane-freshness-matrix`. Broader generated work uses the registry-owned checks.
 - Start with the failing gate. If PR readiness is requested, follow [Pre-push readiness](../../../docs/testing.md#pre-push-readiness), never a focused check/base override as readiness proof.
 
 ## Completion Evidence

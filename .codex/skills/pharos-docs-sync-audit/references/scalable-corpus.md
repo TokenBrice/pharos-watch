@@ -1,47 +1,8 @@
-# Pharos Documentation Audit Reviewers
+# Scalable corpus audit
 
-Use these prompts with bounded reviewer/writer capabilities when the user authorizes delegation. If delegation is unavailable, run discovery and skeptical source reopening sequentially and label the result as a single-agent review. Existing explicit remediation authorization persists for its stated scope. Harness mappings live in `docs/process/agent-artifacts.md#harness-configuration`.
+Use for a broad semantic audit of the verified corpus, with or without delegation. Reviewers are bounded and read-only; a writer edits only its assigned documents after remediation is authorized, and an existing explicit authorization persists for its stated scope. Without delegation, run the same stages sequentially and label the result a single-agent review.
 
-## Documentation Truth Auditor
-
-Capability: spawn a read-only reviewer.
-
-```text
-Audit <DOC_OR_DOC_FAMILY> against source. Do not edit files.
-
-Read docs/process/agent-start-here.md#2-route-a-task, docs/doc-ownership.json, docs/process/agent-artifacts.md#source-of-truth, the assigned doc sections, and routed source/local imports; load other process anchors only for the selected branch.
-
-Return source-backed semantic corrections and missing required updates, not CI-owned mechanical path/link findings. Produce edit-ready findings, not rewritten prose; return applicable doc checks to the assigned verifier.
-```
-
-## Methodology Consistency Reviewer
-
-Capability: spawn a read-only reviewer.
-
-```text
-Verify methodology docs and structured changelog entries against the runtime scoring/source change. Do not edit files.
-
-Read the router/ownership registry, docs/methodology-page.md, the owning methodology doc/changelog directory, and relevant runtime sources.
-
-Check versions, thresholds/weights/formulas, page copy, and changelog presence. Return blocking drift first with exact source-backed corrections.
-```
-
-## Documentation Fix Writer
-
-Capability: spawn a narrowly scoped docs writer.
-
-```text
-Apply only the assigned documentation fixes. Preserve unrelated work.
-
-Assigned write scope: <DOC PATHS ONLY>
-Findings: <FINDINGS>
-
-Verify claims against source, edit only assigned docs, avoid product/generated files, and return changed paths, remaining issues and required checks. The assigned verifier runs gates after writers finish; do not run them mid-flight.
-```
-
-## Scalable corpus mode
-
-### Inventory and partition
+## Inventory And Partition
 
 Enumerate the whole corpus with `getVerifiedDocFiles(repoRoot)` from `scripts/lib/doc-files.mts`. Attach ownership hints from `docs/doc-ownership.json` afterward: resolve object references through `path` and carry mapping labels, source globs, rules, and `alsoRead` context as metadata. Keep unmapped documents in scope; report every skipped document and reason. A targeted request still selects only its requested subset. Verify every selected path exists. Keep only the requested corpus (normally `docs/` and `README.md`); treat agent-guidance paths as a separate assigned family when they are explicitly in scope. Partition the rows into N disjoint sets so no document has two writers. Each row should include `path`, `category`, line count, source hints, and depth.
 
@@ -49,9 +10,9 @@ If an expected row count is supplied, fail when the loaded inventory is shorter.
 
 Depth is `light` for timeline archives (check only current/latest behavior and current claims), `targeted` for `docs/api-reference.md` (use its navigation block and offsets; skip generated markers), and `deep` for ordinary docs. A reviewer may receive one set or one document at a time, but must return findings for its assigned paths only.
 
-### Verifier contract
+## Verifier Contract
 
-The read-only verifier checks semantic claims against opened source. CI already owns file paths and internal links (`npm run check:verified-doc-links`), methodology version strings (`npm run check:doc-sync`), and generated API artifacts (`npm run check:generated-artifacts -- --only=api-reference,openapi,postman`); do not report those. In scope are formulas/thresholds/bands/defaults, mutable enumerations, environment names, D1 schema, cron cadence/budgets, hand-written API fields/status/cache behavior, conditionals, and function/module behavior. Ignore rationale, roadmap/history, and style. Treat docs as hypotheses; no source evidence means no finding.
+The read-only verifier checks semantic claims against opened source. CI already owns file paths and internal links (`npm run check:verified-doc-links`); managed `<!-- GENERATED-START: ... -->` contract blocks, the lane-freshness matrix, isolate-local state docs and methodology versions (`npm run check:doc-sync`); and generated API artifacts (`npm run check:generated-artifacts -- --only=api-reference,openapi,postman`). Do not report those. In scope are formulas/thresholds/bands/defaults, mutable enumerations, environment names, D1 schema, cron cadence/budgets, hand-written API fields/status/cache behavior, conditionals, and function/module behavior. Ignore rationale, roadmap/history, and style. Treat docs as hypotheses; no source evidence means no finding.
 
 Return structured data in this shape:
 
@@ -66,7 +27,7 @@ Return structured data in this shape:
 
 Use these `claimType` values: `formula-threshold-constant`, `enumeration-list`, `env-var`, `d1-table-column`, `cron-schedule`, `api-field-shape`, `behavior-conditional`, `file-symbol-behavior`, `count-non-headline`, or `other`. Severity is `high`, `medium`, or `low`; confidence is a number from 0 through 1.
 
-### Adjudication, synthesis, and remediation
+## Adjudication, Synthesis And Remediation
 
 For each document with candidates, an independent skeptic rereads the document and cited source. Default to `REJECTED`; use `CONFIRMED` only for a clear contradiction and `REVISED` for a real discrepancy whose description or fix needs correction. Return `doc`, `adjudicated[]`, and for each item the line, quote when useful, verdict, reject reason when rejected, final classification, code behavior/evidence, severity, confidence, and final doc fix. A code-wrong result is a flag, never a code edit.
 
