@@ -112,7 +112,6 @@
   "workflowBinding": "SAFETY_SCORE_V9_WORKFLOW",
   "workflowAbsent": true,
   "v9QueueName": "pharos-v9-continuation",
-  "v9QueueDeadLetterName": "pharos-v9-continuation-dlq",
   "v9QueueBinding": "V9_CONTINUATION_QUEUE"
  },
  "rateLimitRules": [

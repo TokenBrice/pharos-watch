@@ -163,6 +163,16 @@ describe("V9 publication scheduling", () => {
     expect(mocks.computeSafetyScoreV9).not.toHaveBeenCalled();
   });
 
+  it("tolerates malformed recovery metadata when WORKER_V9_QUEUE_MODE is on", async () => {
+    const scheduledRuntime = runtime();
+    scheduledRuntime.cron = "52 * * * *";
+    (scheduledRuntime.env as { WORKER_V9_QUEUE_MODE?: string }).WORKER_V9_QUEUE_MODE = "on";
+    mocks.runV9AfterCoreWithinWindow.mockImplementation(async (options) =>
+      options.onV9PublicationAlreadyAccepted(new AbortController().signal, { deadlineMs: 1_980_000 }));
+    mocks.recoverSafetyScoreV9PublicMaterialization.mockResolvedValue({ status: "ok", itemCount: 1, metadata: "{bad-json" });
+    await expect(runV9PublicationSlot(scheduledRuntime)).resolves.toEqual(published);
+  });
+
   it.each([["on", true], ["off", false], ["ON", false]] as const)("defers public materialization only for literal %s", async (mode, expected) => {
     const { scheduledRuntime } = compilingRuntime();
     (scheduledRuntime.env as { SAFETY_V9_DEFERRED_MATERIALIZATION?: string }).SAFETY_V9_DEFERRED_MATERIALIZATION = mode;

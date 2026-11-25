@@ -14,6 +14,7 @@ import { loadReportCardEvidenceJournalByIdV1 } from "../lib/report-card-evidence
 import {
   NATIVE_V9_INPUT_CACHE_KEY,
   parseNativeV9InputCacheArtifact,
+  withNormalizedV9JournalProjections,
   type NativeV9InputCacheArtifact,
   type SafetyScoreV9CompilerInput,
 } from "../lib/safety-score-v9/native-input";
@@ -231,6 +232,7 @@ export async function computeSafetyScoreV9(
       options: {
         captureArchiveBucket: options.captureArchiveBucket,
         captureArchiveContext: options.captureArchiveContext,
+        workerVersion: v9WorkerProvenance(options.workerMetadata).workerVersion,
         deadlineMs: options.executionWindow?.deadlineMs ?? Date.now() + 180_000,
         signal,
         onBeforeEvaluateAsset: options.onBeforeEvaluateAsset,
@@ -244,8 +246,9 @@ export async function computeSafetyScoreV9(
       const isPublished =
         res.status === "published-pending-materialize" || res.status === "published-materialized";
       const isHeld = res.status === "held";
+      const isAborted = res.status === "aborted";
       return {
-        status: isHeld ? "degraded" : "ok",
+        status: isHeld || isAborted ? "degraded" : "ok",
         itemCount: isPublished ? res.activeAssets : 0,
         metadata: JSON.stringify({
           mode: "queue-resume",
@@ -253,6 +256,7 @@ export async function computeSafetyScoreV9(
           stage: res.stage,
           outcome: res.status,
           ...(isHeld ? { reason: "v9-publication-held" } : {}),
+          ...(isAborted ? { reason: res.reason } : {}),
           ...(res.nextMessage ? { nextStage: res.nextMessage.stage, nextChunkIndex: res.nextMessage.chunkIndex } : {}),
           ...(isPublished ? { publicationGenerationId: res.publicationGenerationId } : {}),
           ...(isHeld ? { attemptedPublicationGenerationId: res.attemptedPublicationGenerationId, holdReasonCodes: summarizeHoldReasons(res.reasons) } : {}),
@@ -265,14 +269,16 @@ export async function computeSafetyScoreV9(
               : "v9-publication-published"
             : isHeld
               ? "v9-publication-held"
-              : `v9-chunked-resume-${res.stage}`,
+              : isAborted
+                ? res.reason
+                : `v9-chunked-resume-${res.stage}`,
           ...(isPublished
             ? {
                 publications: [
                   {
                     surface: "safety-score-v9" as const,
                     generationId: res.publicationGenerationId,
-                    publishedAt: Math.floor(Date.now() / 1_000),
+                    publishedAt: res.publishedAtSec,
                     candidateRows: res.activeAssets,
                     publishedRows: res.activeAssets,
                     expectedRows: res.activeAssets,
@@ -679,7 +685,16 @@ export async function computeSafetyScoreV9(
 
   if (options.queueMode === "on") {
     const seedSignal = signal ?? new AbortController().signal;
-    const enrichedInput = await enrichCapturedInput(fixedInputOwner.value!, seedSignal);
+    const seedBaseInput = fixedInputOwner.value!;
+    const enrichedInput = withNormalizedV9JournalProjections(
+      await enrichCapturedInput(seedBaseInput, seedSignal),
+    );
+    if (
+      enrichedInput.baseInputGenerationId !== seedBaseInput.baseInputGenerationId ||
+      enrichedInput.sourceGeneration !== seedBaseInput.sourceGeneration
+    ) {
+      throw new Error("Safety Score v9 preparation changed the authoritative fixed input");
+    }
     fixedInputOwner.value = null;
     const { seedChunkedV9Evaluation } = await import("../lib/safety-score-v9/chunked-eval-pipeline");
     const slotStartedAt = options.slotStartedAt ?? options.executionWindow?.slotStartedAtSec ?? Math.floor(Date.now() / 1_000);
@@ -742,6 +757,22 @@ export async function computeSafetyScoreV9(
     transferMaterialityGeneration,
     signal,
   });
+  if (
+    !signal?.aborted &&
+    (publication.status === "published" || publication.status === "held") &&
+    typeof (db as { prepare?: unknown }).prepare === "function"
+  ) {
+    const { cleanupAbandonedV9EvalRunsOnOffMode } = await import(
+      "../lib/safety-score-v9/chunked-eval-store"
+    );
+    const cleanupNowMs = Date.now();
+    await cleanupAbandonedV9EvalRunsOnOffMode(
+      db,
+      Math.floor(cleanupNowMs / 1_000),
+      cleanupNowMs,
+      signal,
+    ).catch(() => undefined);
+  }
   // Preserve the runner's terminal phase/abort evidence, including an identity-
   // confirmed commit. Do not replace it with an unstructured caller exception.
   if (!signal?.aborted) await reportProgress?.({

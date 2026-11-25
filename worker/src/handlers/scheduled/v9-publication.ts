@@ -34,9 +34,18 @@ export function buildV9PublicationSlotGroups(
                 executionWindow.deadlineMs,
               );
               if (queueMode === "on" && (recovered.status === "ok" || recovered.status === "skipped_neutral")) {
-                const parsedMeta = recovered.metadata ? (JSON.parse(recovered.metadata) as {
+                let parsedMeta: {
                   publicMaterialization?: { publicationGenerationId?: string | null } | null;
-                }) : null;
+                } | null = null;
+                if (recovered.metadata) {
+                  try {
+                    parsedMeta = JSON.parse(recovered.metadata) as {
+                      publicMaterialization?: { publicationGenerationId?: string | null } | null;
+                    };
+                  } catch {
+                    parsedMeta = null;
+                  }
+                }
                 const genId = parsedMeta?.publicMaterialization?.publicationGenerationId ?? null;
                 if (genId) {
                   const { completeActiveV9EvalRunsForAcceptedGeneration } = await import(
