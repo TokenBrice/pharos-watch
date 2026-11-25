@@ -85,7 +85,7 @@ import {
 } from "./publication-assessment";
 
 // Rollout UTC epoch seconds (2026-11-20T08:00:00Z); earlier fixed scoring clocks omit the diagnostic.
-const RESERVE_COMPOSITION_ADMISSION_ACTIVATION_SEC: number | null = 1795161600;
+export const RESERVE_COMPOSITION_ADMISSION_ACTIVATION_SEC: number | null = 1795161600;
 
 export interface BuildSafetyScoreV9CandidateInput {
   fixedInput: unknown;
@@ -188,7 +188,7 @@ export interface SafetyScoreV9MeasuredExitExpiryResult {
   witnessesByAssetId: Readonly<Record<string, SafetyScoreV9DexExpiryWitness[]>>;
 }
 
-function measuredExitExpiryMessage(witnesses: readonly SafetyScoreV9DexExpiryWitness[], clockSec: number): string {
+export function measuredExitExpiryMessage(witnesses: readonly SafetyScoreV9DexExpiryWitness[], clockSec: number): string {
   return `dex-stale: exitRouteObservations.observationHistory.observationWindowEndedAt expired; ${witnesses.map((witness) =>
     `route ${witness.routeId} generation ${witness.dexGenerationId} window ended ${witness.observationWindowEndedAt}, ` +
       `clock ${clockSec}, budget ${witness.freshnessMaxSec}s`).join("; ")}`;
@@ -202,7 +202,7 @@ function sortedUnique(values: Iterable<string>): string[] {
   return [...new Set(values)].sort(compareText);
 }
 
-function quarantineAffectedAssetIds(
+export function quarantineAffectedAssetIds(
   factSet: CompiledV9FactSetV3,
   quarantines: readonly V9AssetQuarantine[],
 ): string[] {
@@ -248,7 +248,7 @@ function publicExitHolderEligibility(
   }
 }
 
-function publicDisplayMetadata(
+export function publicDisplayMetadata(
   asset: CompiledV9FactSetV3["assets"][number],
 ): {
   labels: Record<string, string>;
@@ -360,7 +360,7 @@ function publicDisplayMetadata(
   };
 }
 
-function compilerFactSchemaIdentity(
+export function compilerFactSchemaIdentity(
   fixedInput: SafetyScoreV9CompilerInput,
   extension: SafetyScoreV9FactSetExtensionV2,
   compiledFacts: CompiledV9FactSetV3,
@@ -387,7 +387,7 @@ function compilerFactSchemaIdentity(
   });
 }
 
-function producerCapabilityIdentity(
+export function producerCapabilityIdentity(
   fixedInput: SafetyScoreV9CompilerInput,
   extension: SafetyScoreV9FactSetExtensionV2,
 ): SafetyScoreV9ProducerCapabilityIdentityV1 {
@@ -437,7 +437,7 @@ function producerCapabilityIdentity(
   });
 }
 
-function v9PolicyVersion(policy: V9ValidatedPolicyEnvelope): string {
+export function v9PolicyVersion(policy: V9ValidatedPolicyEnvelope): string {
   if (policy.policy.lifecycle !== "active" || policy.policy.releaseVersion === null) {
     throw new Error("Safety Score v9 publication requires an active release policy");
   }
@@ -453,13 +453,73 @@ function v9PolicyVersion(policy: V9ValidatedPolicyEnvelope): string {
  * (`routeFreshness.dexMaxAgeSec`). Presentation only: it annotates the card and
  * never enters a score, a cap, or a candidate/publication identity digest.
  */
-function exitPillarFreshnessFromDexInput(
+export function exitPillarFreshnessFromDexInput(
   clockSec: number,
-  updatedAt: number | undefined,
+  updatedAt: number | null | undefined,
   dexMaxAgeSec: number,
 ): SafetyScoreV9EvidenceFreshness {
-  if (updatedAt === undefined || updatedAt > clockSec) return "unknown";
+  if (updatedAt == null || updatedAt > clockSec) return "unknown";
   return clockSec - updatedAt <= dexMaxAgeSec ? "current" : "stale";
+}
+
+interface V9InternalTokenizedFundState {
+  lenderBackingScore: number | null;
+  verifiedEmptyExitState: "verified-empty" | "positive-route" | null;
+  exitRoutes: SafetyScoreV9InternalExitRouteSummary;
+}
+
+/** Authoritative extraction of internal tokenized-fund state for baseline & lender projections. */
+export function extractV9InternalTokenizedFundState(
+  asset: V9EvaluatedAsset,
+): V9InternalTokenizedFundState | null {
+  if (asset.trace.ratingStatus === "pipeline-gap" || !isTokenizedFundId(asset.assetId)) return null;
+  const backing = asset.scoreInput.pillars.backing;
+  const lenderBackingScore =
+    asset.trace.ratingStatus === "rated" &&
+    backing.aggregationDisposition !== "excluded-a-b" &&
+    backing.score !== null &&
+    Number.isFinite(backing.score) &&
+    backing.score >= 0 &&
+    backing.score <= 100
+      ? backing.score
+      : null;
+  const exitPillar = asset.scoreInput.pillars.exit;
+  const exitDisposition = exitPillar.aggregationDisposition ?? "included";
+  const isVerifiedEmpty =
+    asset.trace.ratingStatus === "rated" &&
+    exitPillar.score === 0 &&
+    exitDisposition === "included" &&
+    asset.exit.primaryRouteKey === null &&
+    exitPillar.reasons.some((reason) => reason.code === "no-viable-exit-path" && reason.cause === "D");
+  let verifiedEmptyExitState: "verified-empty" | "positive-route" | null = null;
+  if (isVerifiedEmpty) {
+    verifiedEmptyExitState = "verified-empty";
+  } else {
+    const hasPositiveExitRoute =
+      asset.exit.primaryRouteKey !== null ||
+      asset.exit.routes.some(
+        (route) => route.included || (route.capacityPoint !== null && route.capacityPoint.executableUsd > 0),
+      ) ||
+      (exitPillar.score !== null &&
+        exitPillar.score > 0 &&
+        !exitPillar.reasons.some(
+          (reason) =>
+            reason.code === "missing-same-notional-route" ||
+            reason.code === "missing-runtime-route-evidence",
+        ));
+    if (hasPositiveExitRoute) {
+      verifiedEmptyExitState = "positive-route";
+    }
+  }
+  return {
+    lenderBackingScore,
+    verifiedEmptyExitState,
+    exitRoutes: {
+      primaryRouteKey: asset.exit.primaryRouteKey,
+      diversificationRouteKey: asset.exit.diversificationRouteKey,
+      diversificationBonus: asset.exit.diversificationBonus,
+    },
+  };
 }
 
 const SHARED_BOOK_ID_BY_SCOPE: Readonly<Record<string, string>> = {
@@ -810,50 +870,15 @@ function buildSafetyScoreV9CandidatePipeline(
   const internalVerifiedEmptyExitState = new Map<string, "verified-empty" | "positive-route">();
   const internalExitRoutes = new Map<string, SafetyScoreV9InternalExitRouteSummary>();
   const recordInternalTokenizedFundState = (asset: V9EvaluatedAsset): void => {
-    if (asset.trace.ratingStatus === "pipeline-gap" || !isTokenizedFundId(asset.assetId)) return;
-    const backing = asset.scoreInput.pillars.backing;
-    if (
-      asset.trace.ratingStatus === "rated" &&
-      backing.aggregationDisposition !== "excluded-a-b" &&
-      backing.score !== null &&
-      Number.isFinite(backing.score) &&
-      backing.score >= 0 &&
-      backing.score <= 100
-    ) {
-      internalLenderBackingScores.set(asset.assetId, backing.score);
+    const state = extractV9InternalTokenizedFundState(asset);
+    if (state === null) return;
+    if (state.lenderBackingScore !== null) {
+      internalLenderBackingScores.set(asset.assetId, state.lenderBackingScore);
     }
-    const exitPillar = asset.scoreInput.pillars.exit;
-    const exitDisposition = exitPillar.aggregationDisposition ?? "included";
-    const isVerifiedEmpty =
-      asset.trace.ratingStatus === "rated" &&
-      exitPillar.score === 0 &&
-      exitDisposition === "included" &&
-      asset.exit.primaryRouteKey === null &&
-      exitPillar.reasons.some((reason) => reason.code === "no-viable-exit-path" && reason.cause === "D");
-    if (isVerifiedEmpty) {
-      internalVerifiedEmptyExitState.set(asset.assetId, "verified-empty");
-    } else {
-      const hasPositiveExitRoute =
-        asset.exit.primaryRouteKey !== null ||
-        asset.exit.routes.some(
-          (route) => route.included || (route.capacityPoint !== null && route.capacityPoint.executableUsd > 0),
-        ) ||
-        (exitPillar.score !== null &&
-          exitPillar.score > 0 &&
-          !exitPillar.reasons.some(
-            (reason) =>
-              reason.code === "missing-same-notional-route" ||
-              reason.code === "missing-runtime-route-evidence",
-          ));
-      if (hasPositiveExitRoute) {
-        internalVerifiedEmptyExitState.set(asset.assetId, "positive-route");
-      }
+    if (state.verifiedEmptyExitState !== null) {
+      internalVerifiedEmptyExitState.set(asset.assetId, state.verifiedEmptyExitState);
     }
-    internalExitRoutes.set(asset.assetId, {
-      primaryRouteKey: asset.exit.primaryRouteKey,
-      diversificationRouteKey: asset.exit.diversificationRouteKey,
-      diversificationBonus: asset.exit.diversificationBonus,
-    });
+    internalExitRoutes.set(asset.assetId, state.exitRoutes);
   };
   const recompile = () => {
     internalLenderBackingScores.clear();

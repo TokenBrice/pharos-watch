@@ -12,7 +12,15 @@ describe("check-cron-connection-budget", () => {
     // Queue recovery stays declared as its own serial surface, not folded into
     // the cron peaks or sent concurrently with the settlement send.
     expect(reviewedReport.nonCronReports.length).toBeGreaterThan(0);
-    expect(reviewedReport.nonCronReports.map((surface) => surface.surface)).toContain("reserve-continuation");
+    expect(reviewedReport.nonCronReports.map((surface) => surface.surface)).toEqual(
+      expect.arrayContaining(["reserve-continuation", "v9-continuation"]),
+    );
+    expect(reviewedReport.nonCronReports.find((surface) => surface.surface === "v9-continuation")).toEqual({
+      surface: "v9-continuation",
+      worker: "heavy",
+      totalConnections: 1,
+      postSettlementSendConnections: 1,
+    });
     for (const surface of reviewedReport.nonCronReports) {
       expect(surface.totalConnections, surface.surface).toBeLessThanOrEqual(reviewedReport.budget.maxPerTrigger);
       expect(surface.postSettlementSendConnections, surface.surface).toBeLessThanOrEqual(1);
@@ -21,17 +29,18 @@ describe("check-cron-connection-budget", () => {
 
   it.each([
     // Aave follows stablecoins before the same-day PSI and public-dataset catch-ups; the serial peak stays four.
-    ["quarterHourly", ["sync-fx-rates", "sync-stablecoins", "sync-yield-supplemental", "snapshot-supply", "snapshot-chain-supply", "snapshot-psi", "snapshot-public-dataset"], 4],
-    ["v9SupplyAttributionOffset", ["sync-v9-supply-attribution"], 3],
-    ["depegResolverOffset", ["compute-depeg-resolver"], 0],
-    ["v9PublicationOffset", ["compute-safety-score-v9"], 0],
+    ["quarterHourly", ["sync-fx-rates", "sync-stablecoins", "sync-yield-supplemental", "snapshot-supply", "snapshot-chain-supply", "snapshot-psi", "snapshot-public-dataset"], 4, 4],
+    ["v9SupplyAttributionOffset", ["sync-v9-supply-attribution"], 3, 3],
+    ["depegResolverOffset", ["compute-depeg-resolver"], 0, 0],
+    // Zero external fetches during compute; 1/6 serialized post-lease Queue send on heavy.
+    ["v9PublicationOffset", ["compute-safety-score-v9"], 0, 1],
     // The D1-only consumer's bounded inline stage-recovery re-run reuses the
     // stage job's Curve/subgraph peak, so the serial chain peaks at 4.
-    ["halfHourlyChartsOffset", ["sync-dex-liquidity", "cron-sentinel", "prepare-safety-score-v9-input", "sync-stablecoin-charts"], 4],
-  ] as const)("preserves reviewed %s serial topology", (scheduleKey, jobs, peak) => {
+    ["halfHourlyChartsOffset", ["sync-dex-liquidity", "cron-sentinel", "prepare-safety-score-v9-input", "sync-stablecoin-charts"], 4, 4],
+  ] as const)("preserves reviewed %s serial topology", (scheduleKey, jobs, peak, expectedTotal) => {
     const trigger = reviewedReport.triggerReports.find((entry) => entry.scheduleKey === scheduleKey);
     expect(trigger?.chains).toEqual([{ chainKey: "chain-1", jobs, peak }]);
-    expect(trigger?.totalConnections).toBe(peak);
+    expect(trigger?.totalConnections).toBe(expectedTotal);
   });
 
   it("sums independent parallel chains even when they share a connection group", () => {

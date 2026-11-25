@@ -260,4 +260,63 @@ describe.skipIf(process.env.PHAROS_V9_RESOURCE_LANE !== "1")("Safety Score V9 co
     // Shared-runner scheduling/GC time is included; leave 40s of kill headroom.
     expect(output.wallMs, `nine-scenario matrix wallMs=${output.wallMs}`).toBeLessThan(CONTAGION_WALL_BUDGET_MS);
   });
+
+  it("matches monolithic full-registry publication under ADR-26 Queue mode with bounded chunks and per-stage heap logging", async () => {
+    const [
+      { createLatestSchemaFixtureTracker }, { SAFETY_SCORE_V9_CACHE_KEYS }, { V9_PUBLIC_MATERIALIZATION_CACHE_KEY },
+      { computeSafetyScoreV9 }, { createNativeSafetyScoreV9FullRegistryInput },
+      { loadV9EvalRun, V9_EVAL_CHUNK_MAX_ROW_BYTES }, { loadSafetyScoreV9Publication },
+      { deliverV9Continuation, makePublishableV9Input, prepareV9SeedPayload, seedPreparedV9Db, V9_QUEUE_TEST_WORKER_META },
+    ] = await Promise.all([
+      import("@shared/test-utils/latest-schema-sqlite"), import("@shared/types/safety-score-cache-keys"), import("@shared/types/report-cards-v9-materialization"),
+      import("../../cron/compute-safety-score-v9"), import("./fixtures/safety-score-v9-full-registry-input"),
+      import("../safety-score-v9/chunked-eval-store"), import("../safety-score-v9/publication-store"),
+      import("../../test-helpers/v9-queue-harness"),
+    ]);
+    const input = makePublishableV9Input(createNativeSafetyScoreV9FullRegistryInput());
+    const payload = await prepareV9SeedPayload(input);
+    const tracker = createLatestSchemaFixtureTracker();
+    try {
+      const [mono, chunk] = [tracker.open(), tracker.open()];
+      await Promise.all([seedPreparedV9Db(mono.db, payload), seedPreparedV9Db(chunk.db, payload)]);
+      const monoRes = await computeSafetyScoreV9(mono.db, undefined, undefined, { queueMode: "off", deferPublicMaterialization: true, workerMetadata: V9_QUEUE_TEST_WORKER_META });
+      expect((JSON.parse(monoRes.metadata!) as { publication: { status: string } }).publication.status).toBe("published");
+      let first: import("@shared/types/v9-continuation").V9ContinuationMessage | undefined;
+      await computeSafetyScoreV9(chunk.db, undefined, undefined, {
+        queueMode: "on", deferPublicMaterialization: true, maxChunkAssets: 140, slotStartedAt: input.clockSec,
+        sourceInvocationId: "v9-resource:seed", workerMetadata: V9_QUEUE_TEST_WORKER_META, onContinuation: (m) => { first = m; },
+      });
+      const heap = () => Number((process.memoryUsage().heapUsed / 1_048_576).toFixed(2));
+      const stageHeapMiB: Record<string, number> = { seed: heap() };
+      let maxChunkBytes = 0;
+      const queue = [first!];
+      for (let i = 1; queue.length > 0; i += 1) {
+        const msg = queue.shift()!;
+        const r = await chunk.db.prepare("SELECT COALESCE(MAX(LENGTH(CAST(payload AS BLOB))), 0) AS m FROM v9_eval_chunks").first<{ m: number }>();
+        maxChunkBytes = Math.max(maxChunkBytes, r?.m ?? 0);
+        const out = await deliverV9Continuation(chunk.db, msg, { deliveryId: `res-${i}-${msg.stage}-${msg.chunkIndex ?? "x"}` });
+        expect(out.acked).toBe(true);
+        stageHeapMiB[`${msg.stage}:${msg.chunkIndex ?? "x"}`] = heap();
+        queue.push(...out.sent);
+      }
+      console.info({ probe: "v9-queue-full-registry-parity", activeAssets: input.activeAssetIds.length, maxChunkBytes, stageHeapMiB });
+      expect(maxChunkBytes).toBeGreaterThan(0);
+      expect(maxChunkBytes).toBeLessThanOrEqual(V9_EVAL_CHUNK_MAX_ROW_BYTES);
+      const [monoPub, chunkPub, monoRow, chunkMat, mRow, runRow, left, cronRow] = await Promise.all([
+        loadSafetyScoreV9Publication(mono.db), loadSafetyScoreV9Publication(chunk.db),
+        mono.db.prepare("SELECT value FROM cache WHERE key = ?").bind(SAFETY_SCORE_V9_CACHE_KEYS.publication).first<{ value: string }>(),
+        chunk.db.prepare("SELECT value FROM cache WHERE key = ?").bind(V9_PUBLIC_MATERIALIZATION_CACHE_KEY).first<{ value: string }>(),
+        chunk.db.prepare("SELECT manifest FROM safety_score_public_manifests LIMIT 1").first<{ manifest: string }>(),
+        loadV9EvalRun(chunk.db, first!.runId),
+        chunk.db.prepare("SELECT COUNT(*) AS c FROM v9_eval_chunks WHERE run_id = ?").bind(first!.runId).first<{ c: number }>(),
+        chunk.db.prepare("SELECT status, productive, item_count FROM cron_runs WHERE idempotency_key = ?").bind(`v9-queue-commit:${first!.runId}`).first(),
+      ]);
+      expect(chunkPub).toEqual(monoPub);
+      expect(JSON.parse(chunkMat!.value)).toMatchObject({ publicationGenerationId: monoPub!.publicationGenerationId, payloadSha256: (JSON.parse(monoRow!.value) as { payloadSha256: string }).payloadSha256 });
+      expect((JSON.parse(mRow!.manifest) as { bytes: number }).bytes).toBeLessThan(24 * 1024 * 1024);
+      expect(runRow?.state).toBe("completed");
+      expect(left?.c).toBe(0);
+      expect(cronRow).toEqual({ status: "ok", productive: 1, item_count: input.activeAssetIds.length });
+    } finally { tracker.closeAll(); }
+  });
 });

@@ -56,6 +56,8 @@ interface FixtureLiveState {
     workflowBinding: boolean;
     publicWorkflowBinding: boolean;
     workflowAbsent: boolean;
+    v9QueueBinding: boolean;
+    publicV9QueueBinding: boolean;
     workersDev: boolean;
     previewUrls: boolean;
     routes: string[];
@@ -67,7 +69,8 @@ function readFixture(name: string): FixtureLiveState {
     ...JSON.parse(readFileSync(resolve(process.cwd(), "scripts/__tests__/fixtures/cloudflare-account-state", name), "utf8")),
     heavyWorker: {
       exists: true, sharedDatabase: true, workflowBinding: false, publicWorkflowBinding: false,
-      workflowAbsent: true, workersDev: false, previewUrls: false, routes: [],
+      workflowAbsent: true, v9QueueBinding: true, publicV9QueueBinding: false,
+      workersDev: false, previewUrls: false, routes: [],
     },
   } as FixtureLiveState;
 }
@@ -93,10 +96,12 @@ function createFixtureFetch(
       [`${account}/workers/scripts/stablecoin-api/settings`]: { bindings: [
         { type: "d1", name: "DB", id: databaseId },
         ...(heavy.publicWorkflowBinding ? [{ type: "workflow", name: "SAFETY_SCORE_V9_WORKFLOW", workflow_name: "safety-score-v9-publication" }] : []),
+        ...(heavy.publicV9QueueBinding ? [{ type: "queue", name: "V9_CONTINUATION_QUEUE", queue_name: "pharos-v9-continuation" }] : []),
       ] },
       [`${account}/workers/scripts/stablecoin-heavy/settings`]: { bindings: [
         { type: "d1", name: "DB", id: heavy.sharedDatabase ? databaseId : "wrong-database" },
         ...(heavy.workflowBinding ? [{ type: "workflow", name: "SAFETY_SCORE_V9_WORKFLOW", workflow_name: "safety-score-v9-publication" }] : []),
+        ...(heavy.v9QueueBinding ? [{ type: "queue", name: "V9_CONTINUATION_QUEUE", queue_name: "pharos-v9-continuation" }] : []),
         { type: "secret_text", name: "COINGECKO_API_KEY", text: "heavy-secret-sentinel" },
       ] },
       [`${account}/workers/scripts/stablecoin-heavy/subdomain`]: { enabled: heavy.workersDev, previews_enabled: heavy.previewUrls },
@@ -246,6 +251,7 @@ describe("Cloudflare account-state drift comparison", () => {
   it.each([
     ["exists", false], ["sharedDatabase", false], ["workflowBinding", true],
     ["publicWorkflowBinding", true], ["workflowAbsent", false],
+    ["v9QueueBinding", false], ["publicV9QueueBinding", true],
     ["workersDev", true], ["previewUrls", true], ["routes", ["pharos.watch/heavy/*"]],
   ] as const)("detects heavy %s drift from real GET response shapes", async (field, value) => {
     const fixture = readFixture("healthy-live-state.json");

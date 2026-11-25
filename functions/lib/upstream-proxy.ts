@@ -3,7 +3,10 @@ import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { jsonError, summarizeFetchError } from "./proxy-utils";
 
 export const DEFAULT_PROXY_TIMEOUT_MS = 10_000;
-export const MAX_PROXY_RESPONSE_BODY_BYTES = 16 * 1024 * 1024;
+// Matches V9_PUBLIC_REPRESENTATION_MAX_BYTES (24 MiB, ADR-26 Release 1) so the
+// Pages same-origin site-data proxy stays above expanded /api/report-cards/v9
+// responses as the active cohort scales from 343 toward 560 assets.
+export const MAX_PROXY_RESPONSE_BODY_BYTES = 24 * 1024 * 1024;
 
 /** Fetch-only capability shared by Pages service bindings and transport tests. */
 export interface ProxyServiceBinding {

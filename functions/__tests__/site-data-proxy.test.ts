@@ -571,7 +571,7 @@ describe("site-data proxy", () => {
   it("rejects an oversized upstream body with a noindexed 502", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     siteApi.response("/api/stablecoins", new Response("{}", {
-      headers: { "Content-Length": String(16 * 1024 * 1024 + 1) },
+      headers: { "Content-Length": String(24 * 1024 * 1024 + 1) },
     }));
 
     const response = await onRequest(

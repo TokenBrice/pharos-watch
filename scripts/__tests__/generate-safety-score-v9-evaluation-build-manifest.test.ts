@@ -23,6 +23,7 @@ const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const EVALUATOR_ENTRY = "shared/lib/safety-score-v9/evaluate-set.ts";
 const POLICY_ENTRY = "shared/lib/safety-score-v9/policy.ts";
 const CANDIDATE_ENTRY = "worker/src/lib/safety-score-v9/candidate.ts";
+const CHUNKED_EVAL_PLAN_ENTRY = "worker/src/lib/safety-score-v9/chunked-eval-plan.ts";
 const LANE_CATALOG_ENTRY = "worker/src/lib/safety-score-v9/lane-emitter-catalog.ts";
 // The evaluator embeds this generated digest; hashing it would be recursive.
 const MANIFEST_PATH = "shared/data/safety-score-v9/evaluation-build-manifest-v1.ts";
@@ -93,7 +94,7 @@ function runtimeImports(path: string): string[] {
 
 function collectRuntimeImportClosure(): Set<string> {
   const closure = new Set<string>();
-  const pending = [CANDIDATE_ENTRY, EVALUATOR_ENTRY, POLICY_ENTRY, LANE_CATALOG_ENTRY];
+  const pending = [CANDIDATE_ENTRY, CHUNKED_EVAL_PLAN_ENTRY, EVALUATOR_ENTRY, POLICY_ENTRY, LANE_CATALOG_ENTRY];
   while (pending.length > 0) {
     const current = pending.pop();
     if (!current || closure.has(current) || current === MANIFEST_PATH) continue;

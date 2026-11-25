@@ -143,9 +143,15 @@ const ENV_BINDING_DEFINITIONS = [
     runtimes: { worker: { status: "optional" } },
   },
   {
+    key: "V9_CONTINUATION_QUEUE",
+    valueType: "Queue<V9ContinuationMessage>",
+    description: "Heavy-only bounded Safety Score V9 chunked-evaluation continuation Queue (`pharos-v9-continuation`); D1 `v9_eval_runs`, `v9_eval_queue_executions`, and the shared memory-lane lease remain execution authority.",
+    runtimes: { worker: { status: "optional" } },
+  },
+  {
     key: "WORKER_V9_QUEUE_MODE",
     valueType: "string",
-    description: "Heavy-only Safety Score V9 Queue continuation switch: off or missing (inert in Release 1) runs monolithic :22/:52; literal on enables chunked Queue continuations after Release 2 provisions and binds pharos-v9-continuation.",
+    description: "Heavy-only Safety Score V9 Queue continuation switch: off or missing runs monolithic :22/:52 and consumes Queue hints neutrally; literal on enables ADR-26 chunked Queue continuations over pharos-v9-continuation.",
     runtimes: { worker: { status: "optional" } },
   },
   {

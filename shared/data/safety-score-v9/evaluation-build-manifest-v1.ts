@@ -542,7 +542,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/evaluate-set.ts",
-      "sha256": "e21055c6caad53af715fb03a30ca0e7e206e20b90fb48c478f908b37f16ec9e7"
+      "sha256": "5dbfad085d8ad49a89620bc32e0275446d479e5f433ee5c64b7483b1505babef"
     },
     {
       "path": "shared/lib/safety-score-v9/evidence.ts",
@@ -1178,7 +1178,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/candidate.ts",
-      "sha256": "a604c92d88ea70b2f3ca584e86b6b3ff5774e7436408e272ff11c6f47833019c"
+      "sha256": "ec10bb703b8c8a48a79f49f1e0023a4dcaa560bf19ae97868f9ab504053a3ea8"
+    },
+    {
+      "path": "worker/src/lib/safety-score-v9/chunked-eval-plan.ts",
+      "sha256": "8fba778b7aeb0982ced48996acc568f34a9fe39e5437f3a36693c15f03091f65"
     },
     {
       "path": "worker/src/lib/safety-score-v9/consumer-freshness.ts",
@@ -1371,7 +1375,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-11-25-block-26492408-shock-coverage.json.gz"
     }
   ],
-  "digest": "dbe0aa368d24c149e5756344a7f7028e1420d75c81636948c3ba6f4a85dc3dba"
+  "digest": "489caab5db42fe38f636820acb56b2efbdd82590384a0a96dcb39c2b6d7c7ad8"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

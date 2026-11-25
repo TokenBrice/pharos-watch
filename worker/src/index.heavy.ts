@@ -16,6 +16,11 @@ const worker = {
     ]);
     return handleScheduledEvent(event, env, ctx, "heavy", HEAVY_SLOT_RUNNER_LOADERS, eventEntryMs);
   },
+  async queue(batch: MessageBatch<unknown>, env: HeavyEnv, ctx: ExecutionContext): Promise<void> {
+    const eventEntryMs = Date.now();
+    const { handleV9ContinuationBatch } = await import("./handlers/v9-continuation");
+    return handleV9ContinuationBatch(batch, env, ctx, eventEntryMs);
+  },
 };
 
 export default worker;

@@ -1,4 +1,5 @@
 import type { ReserveContinuationMessage } from "@shared/types/reserve-continuation";
+import type { V9ContinuationMessage } from "@shared/types/v9-continuation";
 import type { CronTerminalAccountingStage, SchedulerSummaryOutcome } from "@shared/types/status/cron";
 import { CronTerminalAccountingError, resolveCronDegradedReason, type CronProgressReporter, type CronResult } from "../../lib/cron-logger";
 import { describeError } from "@shared/lib/error-utils";
@@ -26,6 +27,7 @@ export type ScheduledSlotJobSummary = {
 
 export type ScheduledSlotSummary = {
   reserveContinuation?: ReserveContinuationMessage;
+  v9Continuation?: V9ContinuationMessage;
   reserveTailSettled?: true;
   resultStatus: Exclude<SchedulerSummaryOutcome, "skipped">;
   jobsAttempted: number;

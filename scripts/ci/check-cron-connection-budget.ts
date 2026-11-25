@@ -7,6 +7,7 @@ import {
   CRON_SCHEDULES,
   RESERVE_CONTINUATION_CONNECTION_BUDGET,
 } from "@shared/lib/cron-jobs";
+import { V9_CONTINUATION_CONNECTION_BUDGET } from "@shared/lib/v9-continuation-budget";
 import { SCHEDULED_SLOT_PLANS, type ScheduledWorkerRole } from "@shared/lib/scheduled-runner-registry";
 import { SLOT_CATCH_UP_SCHEDULE_KEYS } from "@shared/lib/scheduled-slot-catch-up-policy";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
@@ -158,8 +159,12 @@ export function evaluateCronConnectionBudget(input: {
     const chains = chainResults.map((result) => result.chain);
     const budgetOnlyChain = budgetOnlyResult?.chain ?? null;
     const parallelConnections = chains.reduce((sum, chain) => sum + chain.peak, 0);
-    const sendConnections = RESERVE_CONTINUATION_CONNECTION_BUDGET.producerScheduleKeys.some((key) => key === scheduleKey)
-      ? RESERVE_CONTINUATION_CONNECTION_BUDGET.postSettlementSendConnections : 0;
+    const sendConnections = Math.max(
+      RESERVE_CONTINUATION_CONNECTION_BUDGET.producerScheduleKeys.some((key) => key === scheduleKey)
+        ? RESERVE_CONTINUATION_CONNECTION_BUDGET.postSettlementSendConnections : 0,
+      V9_CONTINUATION_CONNECTION_BUDGET.producerScheduleKeys.some((key) => key === scheduleKey)
+        ? V9_CONTINUATION_CONNECTION_BUDGET.postSettlementSendConnections : 0,
+    );
     const totalConnections = Math.max(parallelConnections, budgetOnlyChain?.peak ?? 0, sendConnections);
     const triggerReport = {
       budgetOnlyChain,
@@ -187,21 +192,24 @@ export function evaluateCronConnectionBudget(input: {
     fetchCapableEntryCount > growthPolicy.maxFetchCapableEntriesBeforeRebalance;
   const headroomFullTriggerLimitExceeded =
     headroomFullTriggers.length > growthPolicy.maxHeadroomFullTriggersBeforeRebalance;
-  const queueBudget = RESERVE_CONTINUATION_CONNECTION_BUDGET;
-  const nonCronReports = [{
-    surface: queueBudget.surface, worker: queueBudget.worker,
-    totalConnections: Math.max(queueBudget.maxConnections, queueBudget.postSettlementSendConnections),
-    postSettlementSendConnections: queueBudget.postSettlementSendConnections,
-  },
-  // A slot catch-up runs the lane's own runner as its own single-message
-  // Queue invocation, so it inherits exactly that lane's declared peak.
-  ...SLOT_CATCH_UP_SCHEDULE_KEYS.flatMap((scheduleKey) => {
-    const lane = triggerReports.find((report) => report.scheduleKey === scheduleKey);
-    return lane ? [{
-      surface: `slot-catch-up:${scheduleKey}`, worker: lane.worker,
-      totalConnections: lane.totalConnections, postSettlementSendConnections: 0,
-    }] : [];
-  })];
+  const queueBudgets = [RESERVE_CONTINUATION_CONNECTION_BUDGET, V9_CONTINUATION_CONNECTION_BUDGET] as const;
+  const nonCronReports = [
+    ...queueBudgets.map((queueBudget) => ({
+      surface: queueBudget.surface,
+      worker: queueBudget.worker,
+      totalConnections: Math.max(queueBudget.maxConnections, queueBudget.postSettlementSendConnections),
+      postSettlementSendConnections: queueBudget.postSettlementSendConnections,
+    })),
+    // A slot catch-up runs the lane's own runner as its own single-message
+    // Queue invocation, so it inherits exactly that lane's declared peak.
+    ...SLOT_CATCH_UP_SCHEDULE_KEYS.flatMap((scheduleKey) => {
+      const lane = triggerReports.find((report) => report.scheduleKey === scheduleKey);
+      return lane ? [{
+        surface: `slot-catch-up:${scheduleKey}`, worker: lane.worker,
+        totalConnections: lane.totalConnections, postSettlementSendConnections: 0,
+      }] : [];
+    }),
+  ];
   failed ||= nonCronReports.some((surface) => surface.totalConnections >= budget.failAt);
 
   return {

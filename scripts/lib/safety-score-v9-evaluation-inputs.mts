@@ -278,6 +278,7 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "worker/src/lib/safe-error-message.ts",
   "worker/src/lib/safety-score-v9/candidate-identity.ts",
   "worker/src/lib/safety-score-v9/candidate.ts",
+  "worker/src/lib/safety-score-v9/chunked-eval-plan.ts",
   "worker/src/lib/safety-score-v9/consumer-freshness.ts",
   "worker/src/lib/safety-score-v9/curated-single-route-supply.ts",
   "worker/src/lib/safety-score-v9/extension-access-lookthrough.ts",
