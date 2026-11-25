@@ -150,6 +150,8 @@ export interface V9ScoreCoverage {
   parentStatus?: V9RatingStatus;
   /** v10.50: bounded ceiling for an unavailable/excluded Exit priced via pricedUnknownPillars. */
   exitPricedUnknownCeiling?: number;
+  /** v10.57: additive downward-only deployment ceilings for lapsed/retired bridge reviews (never adverseAttribution). */
+  lapsedBridgeDeploymentCeilings?: readonly V9ScopedRiskSignal[];
 }
 
 export interface V9ScoreTrace {
@@ -793,8 +795,13 @@ export function scoreV9Input(
     const scoped = scopedRiskSignal(signal, policy);
     return scoped === null ? [] : [scoped];
   });
+  const lapsedBridgeDeploymentCeilings = coverage?.lapsedBridgeDeploymentCeilings ?? [];
   const scopedRisk = baseAssetScoreRaw === null ? null : resolveV9LocalAuthorityRisk(
-    baseAssetScoreRaw, compositeScopedSignals, deploymentAuthorities,
+    baseAssetScoreRaw,
+    lapsedBridgeDeploymentCeilings.length === 0
+      ? compositeScopedSignals
+      : [...compositeScopedSignals, ...lapsedBridgeDeploymentCeilings],
+    deploymentAuthorities,
     (quality) => scoreV9WithControlReplaced(
       aggregationPillars, quality, pegMultiplierRaw!, policy, includedPillars, aggregationStrategy,
     ),

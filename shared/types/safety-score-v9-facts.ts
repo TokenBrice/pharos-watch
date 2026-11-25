@@ -1228,6 +1228,8 @@ const V9BridgeRouteControlReviewV2Schema = z
     controlKey: CanonicalTextSchema,
     tier: z.enum(BRIDGE_ROUTE_RISK_TIER_VALUES),
     factorStatuses: V9ControlFactorStatusesSchema.optional(),
+    // v10.57: true only when this route was explicitly retired; absent when current or never reviewed.
+    lapsedReview: z.boolean().optional(),
   })
   .strict();
 
@@ -1326,6 +1328,8 @@ const V9BridgeControlReviewV2Schema = z
   .object({
     status: V9FactStatusV2Schema,
     factorStatuses: V9ControlFactorStatusesSchema.optional(),
+    // v10.57: true only when an authored bridge review expired or was explicitly retired.
+    lapsedReview: z.boolean().optional(),
     routes: canonicalArrayBy(V9BridgeRouteControlReviewV2Schema, (route) => route.controlKey),
     // Optional so retained V2 facts remain parseable. Current bridge review
     // producers emit this when a profile-backed applicability decision runs.

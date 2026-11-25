@@ -17,6 +17,8 @@ import type {
   V9FailureDomainRef,
 } from "@shared/types/safety-score-v9-facts";
 import type { BridgeRouteControl, BridgeRouteDeployment, BridgeRouteRiskProfile } from "@shared/types/stablecoin-meta-control-schemas";
+import type { V9ControlIncident, V9ReviewedIncident } from "@shared/types/safety-score-v9-incidents";
+import { controlIncidentMatchesScope } from "./extension-incidents";
 import {
   COMMON_MODE_MATERIAL_SHARE_THRESHOLD,
   DEPLOYMENT_MATERIAL_SHARE_THRESHOLD,
@@ -165,6 +167,7 @@ function bridgeFailureDomains(
 }
 
 function isBridgeRepresentationRoute(route: BridgeRouteDeployment, profile?: Pick<BridgeRouteRiskProfile, "controls">, assetId?: string): boolean {
+  if (route.reviewDisposition === "retired") return true;
   return assetId && REVIEWED_ECONOMIC_SUPPLY_PLANS.has(assetId)
     ? reviewedSupplyRouteKind(route, profile) === "controlled"
     : route.routeClass !== "native" && route.issuanceModel !== "native-issuance";
@@ -945,6 +948,72 @@ function buildBridgeJoinDiagnostics(
   };
 }
 
+function collectActiveIncidentBridgeControls(
+  assetId: string,
+  profile: BridgeRouteRiskProfile,
+  profileRoutes: readonly BridgeRouteDeployment[],
+  routesById: ReadonlyMap<string, BridgeRouteDeployment>,
+  supplyReview: ExtensionAsset["supplyReview"],
+  clockSec: number,
+  activeBridgeControlIncidents: readonly V9ControlIncident[],
+): ControlOverlay[] {
+  const structuredEntries = (profile.controls ?? []).flatMap((control) => {
+    const routeIds = [...new Set(control.routeRefs.map(normalizedBridgeDeploymentId))];
+    return routeIds.flatMap((routeId) => {
+      const route = routesById.get(routeId);
+      if (!route) return [];
+      return [{
+        sourceControl: control,
+        overlay: structuredBridgeControl(
+          assetId,
+          route,
+          control,
+          safetyScoreV9RouteSupplyShare(supplyReview ?? null, routeId),
+          clockSec,
+          false,
+        ),
+      } satisfies StructuredBridgeOverlayEntry];
+    });
+  });
+  const structuredRouteIds = new Set(structuredEntries.map((entry) => entry.overlay.deploymentKey));
+  const structuredByDeployment = new Map<string, StructuredBridgeOverlayEntry[]>();
+  for (const entry of structuredEntries) {
+    structuredByDeployment.set(entry.overlay.deploymentKey, [
+      ...(structuredByDeployment.get(entry.overlay.deploymentKey) ?? []),
+      entry,
+    ]);
+  }
+  const structuredRouteControls: ControlOverlay[] = [];
+  for (const [routeId, entries] of structuredByDeployment) {
+    const route = routesById.get(routeId);
+    if (!route) continue;
+    structuredRouteControls.push(
+      structuredBridgeRouteControl(
+        assetId,
+        route,
+        entries,
+        safetyScoreV9RouteSupplyShare(supplyReview ?? null, routeId),
+      ),
+    );
+  }
+  const routeControls = profileRoutes
+    .filter((route) => !structuredRouteIds.has(normalizedBridgeDeploymentId(route.id)))
+    .map((route) =>
+      bridgeControl(
+        assetId,
+        route,
+        safetyScoreV9RouteSupplyShare(supplyReview ?? null, normalizedBridgeDeploymentId(route.id)),
+        true,
+      ),
+    )
+    .filter((control): control is ControlOverlay => control !== null);
+  return [...structuredRouteControls, ...routeControls]
+    .filter((control) =>
+      activeBridgeControlIncidents.some((incident) => controlIncidentMatchesScope(incident, control)),
+    )
+    .sort((left, right) => compareText(left.controlKey, right.controlKey));
+}
+
 export function adaptBridgeReview(
   meta: V9ExtensionRegistryMeta,
   supplyReview: ExtensionAsset["supplyReview"],
@@ -958,6 +1027,7 @@ export function adaptBridgeReview(
    * they travel beside it and are never retained module-side.
    */
   censusDiagnostics: readonly V9DeploymentSupplyCensusDiagnosticV1[] = [],
+  reviewedIncidents: readonly V9ReviewedIncident[] = [],
 ): {
   review: NonNullable<ExtensionAsset["economicControlReview"]>["bridge"];
   controls: ControlOverlay[];
@@ -987,42 +1057,74 @@ export function adaptBridgeReview(
     };
   }
   const confidence = confidenceForResearch(profile.confidence);
+  const profileRetired = profile.retired !== undefined;
   const reviewStale = researchReviewObservationState(profile.reviewedAt, clockSec) === "stale";
-  const reviewComplete = !reviewStale && reviewedObservationState(confidence) === "known";
-  const evidenceKeys = evidence.add({
-    // A stale review still evidences the bridge fact itself, but it cannot
-    // carry known claims in the umbrella deployment-control inventory.
-    componentKeys: reviewStale ? ["economic-control:bridge"] : ["economic-control:bridge", "control"],
-    sourceId: "stablecoin-meta.bridge-route-risk",
-    reviewedAt: profile.reviewedAt,
-    publishedBy: "unknown",
-    confidence,
-    sources: profile.sources,
-    payload: profile,
-    maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC,
-  });
+  const reviewLapsed = profileRetired || reviewStale;
+  const reviewComplete = !reviewLapsed && reviewedObservationState(confidence) === "known";
+  const evidenceKeys = profileRetired
+    ? []
+    : evidence.add({
+        // A stale review still evidences the bridge fact itself, but it cannot
+        // carry known claims in the umbrella deployment-control inventory.
+        componentKeys: reviewStale ? ["economic-control:bridge"] : ["economic-control:bridge", "control"],
+        sourceId: "stablecoin-meta.bridge-route-risk",
+        reviewedAt: profile.reviewedAt,
+        publishedBy: "unknown",
+        confidence,
+        sources: profile.sources,
+        payload: profile,
+        maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC,
+      });
   const profileRoutes = profile.routes ?? [];
-  if (reviewStale && (profile.controls?.length ?? 0) === 0) {
+  const routesById = new Map(
+    profileRoutes.map((route) => [normalizedBridgeDeploymentId(route.id), route]),
+  );
+  if (reviewLapsed) {
+    // Active bridge compromise incidents remain independently evidenced adverse facts
+    // (exposedScore = 25 < 45) even when the authored bridge review expires or is retired.
+    // All non-incident stale/retired bridge controls are dropped uniformly regardless of
+    // profile.controls.length so the asset routes cleanly to the v10.57 lapsed ceiling.
+    const activeBridgeControlIncidents = reviewedIncidents.filter(
+      (incident): incident is V9ControlIncident =>
+        incident.domain === "control" &&
+        incident.posture.incidentState === "active" &&
+        incident.posture.controlKinds.includes("bridge"),
+    );
+    const retainedIncidentControls =
+      activeBridgeControlIncidents.length === 0
+        ? []
+        : collectActiveIncidentBridgeControls(
+            meta.id,
+            profile,
+            profileRoutes,
+            routesById,
+            supplyReview,
+            clockSec,
+            activeBridgeControlIncidents,
+          );
     return {
       review: {
-        status: requiredStatus("v9.control.bridge-review", "stale", `bridge:${meta.id}`, evidenceKeys),
+        status: requiredStatus(
+          "v9.control.bridge-review",
+          profileRetired ? "missing" : "stale",
+          `bridge:${meta.id}`,
+          evidenceKeys,
+        ),
+        lapsedReview: true,
         routes: [],
         diagnostics: buildBridgeJoinDiagnostics(
           profileRoutes,
           chainRows,
           supplyReview,
-          [],
+          retainedIncidentControls,
           "applicable",
           [],
           censusDiagnostics,
         ),
       },
-      controls: [],
+      controls: retainedIncidentControls,
     };
   }
-  const routesById = new Map(
-    profileRoutes.map((route) => [normalizedBridgeDeploymentId(route.id), route]),
-  );
   // Only a closure-proven certificate can replace the legacy inventory policy.
   // Partial research adds diagnostics, not new admission obligations for siblings.
   const hasCompleteScope = profile.controls?.some((control) =>
@@ -1112,6 +1214,7 @@ export function adaptBridgeReview(
   // collapsed from control scope to deployment scope.
   const structuredOverlays = [...structuredRouteControlsByDeployment.values()];
   const reviewedRoutes = profileRoutes.filter((route) => route.reviewDisposition === "reviewed");
+  const retiredRoutes = profileRoutes.filter((route) => route.reviewDisposition === "retired");
   const representationGroups = (
     supplyReview?.selectedBridgeRoutes ?? []
   ).flatMap((row) => {
@@ -1285,6 +1388,16 @@ export function adaptBridgeReview(
           structuredRouteControlsByDeployment.get(routeId) ?? profileControlsByDeployment.get(routeId);
         return control ? [{ controlKey: control.controlKey, tier: route.riskTier }] : [];
       }),
+    ...retiredRoutes
+      .filter((route) => !groupedRouteIds.has(normalizedBridgeDeploymentId(route.id)))
+      .flatMap((route) => {
+        const routeId = normalizedBridgeDeploymentId(route.id);
+        const control =
+          structuredRouteControlsByDeployment.get(routeId) ?? profileControlsByDeployment.get(routeId);
+        return control
+          ? [{ controlKey: control.controlKey, tier: "opaque-or-unknown" as const, lapsedReview: true }]
+          : [];
+      }),
     ...representationGroups.map((group) => ({
       controlKey: group.control.controlKey,
       tier: group.tier,
@@ -1327,6 +1440,7 @@ export function adaptBridgeReview(
   // make the asset bridge-exposed or require a synthetic bridge route row.
   if (
     !reviewStale &&
+    retiredRoutes.length === 0 &&
     (profile.nativeExternalTransferReviews?.length ?? 0) === 0 &&
     ((bridgeClaimControls.length === 0 &&
       !hasReviewedRepresentationRoute &&

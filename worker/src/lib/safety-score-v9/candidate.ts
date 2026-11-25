@@ -268,7 +268,10 @@ function publicDisplayMetadata(
     "mint:savings-rate": "Savings-rate authority",
     oracle: "Oracle design",
     "bridge:native": "Native deployment",
-    "bridge:unverified": "Unverified bridge controls",
+    "bridge:unverified": asset.economicControlReview.bridge.lapsedReview === true ||
+        asset.economicControlReview.bridge.routes.some((route) => route.lapsedReview === true)
+      ? "Bridge review lapsed (capped at 45)"
+      : "Unverified bridge controls",
     "reserve:concentration": "Reserve concentration",
     "reserve:unclassified-residual": "Unclassified reserve exposure",
   };

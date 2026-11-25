@@ -13,6 +13,7 @@ import {
   assertV9ReasonCodesRegistered,
   assertV9UnresolvedFactsMatchPolicy,
   assertV9ValidatedPolicyEnvelope,
+  lapsedBridgeReviewFloor,
   loadV9MethodologyPolicy,
   resolveV9ReasonTreatment,
   unknownQuality,
@@ -227,6 +228,10 @@ describe("Safety Score v9 methodology policy", () => {
       invalid.semantic.unknownQuality[pillar].U = Number.NaN;
       expect(() => loadV9MethodologyPolicy(invalid)).toThrow();
     }
+    expect(lapsedBridgeReviewFloor()).toBe(45);
+    const b = candidateClone();
+    b.semantic.control.bridgeTierQuality["external-lock-mint"] = 55;
+    expect(() => loadV9MethodologyPolicy(b)).toThrow(/monotonicity/);
   });
 
   it.each(["backing", "exit", "control"] as const)(

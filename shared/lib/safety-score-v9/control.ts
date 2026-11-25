@@ -1,5 +1,7 @@
 import type { V9DeploymentControlFactV2, V9FactStatusV2, V1005ProcessDiagnostic } from "../../types/safety-score-v9-facts";
+import type { V9EvidenceCause } from "../../types/safety-score-v9-causes";
 import type {
+  V9MethodologySemantic,
   V9ReasonCode,
   V9ValidatedPolicyEnvelope,
 } from "../../types/safety-score-v9";
@@ -7,6 +9,7 @@ import { V9_NEUTRAL_CONTROL_SCORE } from "../../types/safety-score-v9-public-fac
 import {
   assertV9ReasonCodesRegistered,
   assertV9ValidatedPolicyEnvelope,
+  lapsedBridgeReviewFloor,
   resolveV9ReasonTreatment,
   unknownQuality,
 } from "./policy";
@@ -90,7 +93,8 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
   const controlBinding = (control: V9DeploymentControlFactV2, bound: number | null = null) =>
     bindingByMateriality(
       control,
-      unresolvedCohort.share !== null && unresolvedCohort.share < unresolvedFullCeilingShareThreshold &&
+      !(control.controlKind === "bridge" && args.bridge.lapsedReview === true) &&
+        unresolvedCohort.share !== null && unresolvedCohort.share < unresolvedFullCeilingShareThreshold &&
         unresolvedCohort.controlKeys.has(control.controlKey) &&
         facts.supply.selectedBridgeRoutes.some(
           (row) => row.deploymentRouteKey === control.deploymentKey && row.reviewState !== "unmatched",
@@ -276,6 +280,30 @@ function evaluateControlInventory(context: ControlEvaluationContext): void {
     const path = `control:${control.controlKey}`;
     if (control.status.applicability.state === "unresolved" || control.status.observationState !== "known") {
       if (binding) addReason(mappedControlStatusReason(control), pathKind, path, control.controlKey);
+      const bridgeReview = context.args.bridge;
+      const isLapsedBridgeControl =
+        control.controlKind === "bridge" &&
+        (bridgeReview.lapsedReview === true ||
+          bridgeReview.routes.some((route) => route.controlKey === control.controlKey && route.lapsedReview === true));
+      if (control.incidentState === "active" && isLapsedBridgeControl) {
+        // Independently evidenced active compromise survives lapsed/retired bridge review.
+        addStructuralFailure({
+          kind: "active-control-incident",
+          severity: "critical",
+          binding,
+          reason: "A reviewed economic control has an active compromise incident.",
+          materialSharePct:
+            control.materialSupplyShare === null
+              ? null
+              : v9StructuralSignalSharePct(
+                  facts.assetId,
+                  "structuralSignals[*].materialSharePct",
+                  control.materialSupplyShare,
+                ),
+          controlKeys: [control.controlKey],
+          failureDomains: control.failureDomains,
+        });
+      }
       continue;
     }
     if (binding && (control.authority === null || control.authority.model === "unknown")) {
@@ -553,6 +581,15 @@ function evaluateOraclePhase(context: ControlEvaluationContext): void {
   }
 }
 
+function bridgeUnknownQuality(
+  cause: V9EvidenceCause | null | undefined,
+  lapsed: boolean,
+  policy: V9MethodologySemantic,
+): number {
+  const base = unknownQuality("control", cause, policy);
+  return lapsed ? Math.min(base, lapsedBridgeReviewFloor(policy)) : base;
+}
+
 function evaluateBridgePhase(context: ControlEvaluationContext): void {
   const { args, policy, facts, controlsByKey, components, materialShareThreshold,
     unresolvedFullCeilingShareThreshold, controlBinding, addReason, addStructuralFailure } = context;
@@ -594,6 +631,8 @@ function evaluateBridgePhase(context: ControlEvaluationContext): void {
     addReason("runtime-bridge-materiality-unavailable", "deployment-control", "bridge");
   } else if (bridge.status.observationState === "missing" && !resolveV9StatusCauses([bridge.status], facts.gaps).excluded) {
     addReason("missing-bridge-routes", "deployment-control", "bridge");
+  } else if (bridge.lapsedReview === true && !resolveV9StatusCauses([bridge.status], facts.gaps).excluded) {
+    addReason("runtime-bridge-materiality-unavailable", "deployment-control", "bridge");
   } else if (bridge.status.observationState !== "known" && !boundedBridgeGapIsImmaterial && !resolveV9StatusCauses([bridge.status], facts.gaps).excluded) {
     // Ownership is shape-specific: missing/invalid profiles and ambiguous joins
     // are integration-missing; stale chain input and rejected runtime capture
@@ -642,8 +681,8 @@ function evaluateBridgePhase(context: ControlEvaluationContext): void {
       const nullShareBound = provenNullShareDeploymentBound(facts, control);
       const provenImmaterial = nullShareBound !== null && nullShareBound < materialShareThreshold;
       const binding = controlBinding(control, nullShareBound);
-      if (!isKnownRequired(control.status)) {
-        if (binding) {
+      if (!isKnownRequired(control.status) || route.lapsedReview === true) {
+        if (binding || route.lapsedReview === true) {
           addReason("selected-bridge-route-unresolved", "deployment-control", "bridge:route", route.controlKey);
         }
       }
@@ -675,7 +714,11 @@ function evaluateBridgePhase(context: ControlEvaluationContext): void {
         kind: "bridge",
         posture: route.tier,
         score: route.tier === "opaque-or-unknown"
-          ? unknownQuality("control", resolveV9StatusCauses([route.factorStatuses?.tier, bridge.status, control.status], facts.gaps).cause, policy)
+          ? bridgeUnknownQuality(
+              resolveV9StatusCauses([route.factorStatuses?.tier, bridge.status, control.status], facts.gaps).cause,
+              bridge.lapsedReview === true || route.lapsedReview === true,
+              policy,
+            )
           : policy.control.bridgeTierQuality[route.tier],
         binding,
         controlKeys: [control.controlKey],
@@ -750,9 +793,15 @@ function appendControlFallbacks(context: ControlEvaluationContext): void {
       }
     }
     if (!hasBindingGap) continue;
+    const cause = resolveV9StatusCauses(causeStatuses, facts.gaps).cause;
+    const anyBridgeLapsed =
+      args.bridge.lapsedReview === true ||
+      args.bridge.routes.some((route) => route.lapsedReview === true);
     components.push({
       componentKey: fallback.componentKey, kind: fallback.kind, posture: fallback.posture,
-      score: unknownQuality("control", resolveV9StatusCauses(causeStatuses, facts.gaps).cause, policy),
+      score: fallback.kind === "bridge"
+        ? bridgeUnknownQuality(cause, anyBridgeLapsed, policy)
+        : unknownQuality("control", cause, policy),
       binding: true, controlKeys: [], failureDomains: [], causeStatuses,
     });
   }
@@ -830,12 +879,21 @@ function normalizeControlComponents(
         control.claimImpairment !== "unknown" || control.capSemantics.kind !== "unknown"));
     const excludedUnknown = unknown && causal.excluded && !usableAuthority;
     const effectiveCause = causal.excluded && !excludedUnknown ? null : causal.cause;
+    const bridgeLapsed = component.kind === "bridge" && (
+      args.bridge.lapsedReview === true ||
+      (component.controlKeys.length === 0
+        ? args.bridge.routes.some((route) => route.lapsedReview === true)
+        : args.bridge.routes.some((route) => route.lapsedReview === true && component.controlKeys.includes(route.controlKey)))
+    );
     const metadata = {
       cause: effectiveCause, causeGapIds: causal.causeGapIds,
       scoringDisposition: v9ScoringDisposition(effectiveCause),
       effectiveScoringWeight: excludedUnknown ? 0 : 1,
       score: excludedUnknown ? null : unknown && (component.kind !== "mint" || linkedControls.length === 0)
-        ? unknownQuality("control", causal.cause, context.policy) : component.score,
+        ? (component.kind === "bridge"
+            ? bridgeUnknownQuality(causal.cause, bridgeLapsed, context.policy)
+            : unknownQuality("control", causal.cause, context.policy))
+        : component.score,
       binding: excludedUnknown ? false : component.binding,
     };
     const { causeStatuses: _causeStatuses, ...componentFacts } = component;

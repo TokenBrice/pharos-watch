@@ -335,6 +335,11 @@ function buildReviewedDeploymentSupplyReview(
       return null;
     }
 
+    // R6 boundary (v10.57): supply-partition route reviewState follows per-route
+    // reviewDisposition only; whole-profile expiry/retirement is enforced at
+    // bridge evaluation and via the additive lapsedBridgeDeploymentCeilings
+    // downward ceiling (using the last-reviewed s_native = 1 - s_bridged split
+    // only to prevent a score rise on lapse, never as positive quality evidence).
     const reviewed = route.reviewDisposition === "reviewed";
     if (reviewed) reviewedSelectedUsd += deployment.currentSupplyUsd;
     else unreviewedUsd += deployment.currentSupplyUsd;
@@ -1135,6 +1140,11 @@ function buildSupplyReview(
       continue;
     }
     const route = chainRoutes[0]!;
+    // R6 boundary (v10.57): supply-partition route reviewState follows per-route
+    // reviewDisposition only; whole-profile expiry/retirement is enforced at
+    // bridge evaluation and via the additive lapsedBridgeDeploymentCeilings
+    // downward ceiling (using the last-reviewed s_native = 1 - s_bridged split
+    // only to prevent a score rise on lapse, never as positive quality evidence).
     const reviewed = route.reviewDisposition === "reviewed";
     if (!reviewed) unreviewedUsd += supplyUsd;
     selectedBridgeRoutes.push(

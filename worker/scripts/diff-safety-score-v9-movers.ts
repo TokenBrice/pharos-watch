@@ -15,7 +15,16 @@
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
-import { categorizeReplayChanges, diffReplayArtifacts, type ReplayChangeCategory, type ReplayDiffEntry } from "./diff-safety-score-v9-replays";
+import {
+  categorizeReplayChanges,
+  detectMonotonicityViolations,
+  diffReplayArtifacts,
+  MonotonicityWitnessCodeSchema,
+  type MonotonicityViolation,
+  type MonotonicityWitnessCode,
+  type ReplayChangeCategory,
+  type ReplayDiffEntry,
+} from "./diff-safety-score-v9-replays";
 import { validateReplayCardProjection } from "./lib/safety-score-v9-replay-validation";
 import { z } from "zod";
 import { V9GradeSchema } from "@shared/types/safety-score-v9";
@@ -28,10 +37,11 @@ const USAGE = `Usage: npm run safety-score-v9:movers -- --before <path> --after 
 Options:
   --before <path>       Baseline replay artifact (required)
   --after <path>        Candidate replay artifact (required)
-  --manifest <path>     Expected-movers manifest JSON
+  --manifest <path>     Expected-movers manifest JSON (may include strict monotonicityWaivers)
   --json <path>         Write the machine-readable mover report here
   --markdown            Emit a Markdown table instead of text
-  --assert-declared     Fail on an undeclared grade or availability-status change
+  --assert-declared     Fail on an undeclared grade/status change (implies --assert-monotone)
+  --assert-monotone     Fail on any unwaived score/preCap/status rise caused by evidence weakening
   -h, --help            Show this help`;
 
 interface ReplayCard {
@@ -54,8 +64,35 @@ interface ManifestEntry {
   reason: string;
   workstream: string;
 }
+export interface MonotonicityWaiver {
+  id: string;
+  workstream: string;
+  reason: string;
+  ownerApprovalRef: string;
+  witnessCodes: readonly MonotonicityWitnessCode[];
+  expiresOn: string;
+}
+
+export const MonotonicityWaiverSchema = z
+  .object({
+    id: z
+      .string()
+      .trim()
+      .min(1)
+      .refine((id) => !id.includes("*"), {
+        message: "monotonicityWaivers[].id cannot contain wildcards",
+      }),
+    workstream: z.string().trim().min(1),
+    reason: z.string().trim().min(20),
+    ownerApprovalRef: z.string().trim().min(1),
+    witnessCodes: z.array(MonotonicityWitnessCodeSchema).min(1),
+    expiresOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "expiresOn must be YYYY-MM-DD"),
+  })
+  .strict();
+
 interface Manifest {
   movers: readonly ManifestEntry[];
+  monotonicityWaivers?: readonly MonotonicityWaiver[];
 }
 
 export interface Mover {
@@ -82,15 +119,18 @@ function readCards(parsed: unknown, _path: string): Map<string, ReplayCard> {
 }
 
 export function parseMoverManifest(value: unknown): Manifest {
-  const manifest = z.object({ movers: z.array(z.object({
-    id: z.string().trim().min(1),
-    from: V9GradeSchema.nullable(),
-    to: V9GradeSchema.nullable(),
-    ratingStatusFrom: V9RatingStatusSchema.optional(),
-    ratingStatusTo: V9RatingStatusSchema.optional(),
-    reason: z.string().trim().min(1),
-    workstream: z.string().trim().min(1),
-  }).strict()) }).strict().parse(value);
+  const manifest = z.object({
+    movers: z.array(z.object({
+      id: z.string().trim().min(1),
+      from: V9GradeSchema.nullable(),
+      to: V9GradeSchema.nullable(),
+      ratingStatusFrom: V9RatingStatusSchema.optional(),
+      ratingStatusTo: V9RatingStatusSchema.optional(),
+      reason: z.string().trim().min(1),
+      workstream: z.string().trim().min(1),
+    }).strict()),
+    monotonicityWaivers: z.array(MonotonicityWaiverSchema).optional(),
+  }).strict().parse(value);
   const seen = new Set<string>();
   for (const entry of manifest.movers) {
     if (seen.has(entry.id)) throw new Error(`Duplicate mover declaration: ${entry.id}`);
@@ -102,7 +142,70 @@ export function parseMoverManifest(value: unknown): Manifest {
       throw new Error(`Invalid mover transition: ${entry.id}`);
     }
   }
+  const seenWaivers = new Set<string>();
+  for (const waiver of manifest.monotonicityWaivers ?? []) {
+    if (seenWaivers.has(waiver.id)) throw new Error(`Duplicate monotonicity waiver: ${waiver.id}`);
+    seenWaivers.add(waiver.id);
+  }
   return manifest;
+}
+
+export interface MonotonicityGateOutcome {
+  clockDate: string;
+  violations: readonly MonotonicityViolation[];
+  waivedViolations: MonotonicityViolation[];
+  unwaivedViolations: MonotonicityViolation[];
+  usedWaiverIds: string[];
+  unusedWaiverIds: string[];
+  expiredWaiverIds: string[];
+}
+
+export function evaluateMonotonicityGate(
+  violations: readonly MonotonicityViolation[],
+  manifest: Manifest | null,
+  clockSec: number,
+): MonotonicityGateOutcome {
+  const clockDate = new Date(clockSec * 1_000).toISOString().slice(0, 10);
+  const waivers = manifest?.monotonicityWaivers ?? [];
+  const activeWaiversById = new Map<string, MonotonicityWaiver>();
+  const expiredWaiverIds: string[] = [];
+  for (const waiver of waivers) {
+    if (waiver.expiresOn < clockDate) {
+      expiredWaiverIds.push(waiver.id);
+    } else {
+      activeWaiversById.set(waiver.id, waiver);
+    }
+  }
+  const usedWaiverIds = new Set<string>();
+  const waivedViolations: MonotonicityViolation[] = [];
+  const unwaivedViolations: MonotonicityViolation[] = [];
+  for (const violation of violations) {
+    const waiver = activeWaiversById.get(violation.assetId);
+    const witnessCodes = new Set(violation.witnesses.map((w) => w.code));
+    const coversAll =
+      waiver !== undefined &&
+      witnessCodes.size > 0 &&
+      [...witnessCodes].every((code) => waiver.witnessCodes.includes(code));
+    if (coversAll) {
+      usedWaiverIds.add(waiver.id);
+      waivedViolations.push(violation);
+    } else {
+      unwaivedViolations.push(violation);
+    }
+  }
+  const unusedWaiverIds = waivers
+    .filter((waiver) => !expiredWaiverIds.includes(waiver.id) && !usedWaiverIds.has(waiver.id))
+    .map((waiver) => waiver.id)
+    .sort();
+  return {
+    clockDate,
+    violations,
+    waivedViolations,
+    unwaivedViolations,
+    usedWaiverIds: [...usedWaiverIds].sort(),
+    unusedWaiverIds,
+    expiredWaiverIds: expiredWaiverIds.sort(),
+  };
 }
 
 const PILLARS = ["backing", "exit", "control"] as const;
@@ -181,6 +284,7 @@ async function main(): Promise<void> {
       json: { type: "string" },
       markdown: { type: "boolean" },
       "assert-declared": { type: "boolean" },
+      "assert-monotone": { type: "boolean" },
     },
   });
   if (writeCliHelpIfRequested(values, USAGE)) return;
@@ -194,6 +298,16 @@ async function main(): Promise<void> {
 
   const beforeArtifact: unknown = JSON.parse(readFileSync(values.before, "utf8"));
   const afterArtifact: unknown = JSON.parse(readFileSync(values.after, "utf8"));
+  const assertMonotone = values["assert-monotone"] === true || values["assert-declared"] === true;
+  const monotonicityGate = assertMonotone
+    ? (() => {
+        const result = detectMonotonicityViolations(beforeArtifact, afterArtifact);
+        return {
+          checkedAssetCount: result.checkedAssetCount,
+          ...evaluateMonotonicityGate(result.violations, manifest, result.clockSec),
+        };
+      })()
+    : null;
   const artifactCategories = categorizeReplayChanges(beforeArtifact, afterArtifact);
   const { movers, appeared, disappeared } = collectMovers(
     readCards(beforeArtifact, values.before),
@@ -239,6 +353,22 @@ async function main(): Promise<void> {
   }
   const categoryCounts = Object.entries(artifactCategories).map(([category, rows]) => `${category}: ${rows.length}`).join(", ");
   console.log(`\nObserved diagnostic categories (not independent point effects): ${categoryCounts}`);
+  if (monotonicityGate !== null) {
+    console.log(
+      `\nMonotonicity guard: checked=${monotonicityGate.checkedAssetCount} violations=${monotonicityGate.violations.length} waived=${monotonicityGate.waivedViolations.length} unwaived=${monotonicityGate.unwaivedViolations.length} expiredWaivers=${monotonicityGate.expiredWaiverIds.length} unusedWaivers=${monotonicityGate.unusedWaiverIds.length}`,
+    );
+    for (const v of monotonicityGate.unwaivedViolations) {
+      console.log(
+        `  MONOTONICITY VIOLATION ${v.assetId}: score ${v.scoreBefore}->${v.scoreAfter} preCap ${v.preCapBefore}->${v.preCapAfter} channels=[${v.riseChannels.join(",")}] witnesses=[${v.witnesses.map((w) => `${w.scope}:${w.code}`).join(",")}]`,
+      );
+    }
+    if (monotonicityGate.expiredWaiverIds.length > 0) {
+      console.log(`  expired monotonicity waivers (clock ${monotonicityGate.clockDate}): ${monotonicityGate.expiredWaiverIds.join(", ")}`);
+    }
+    if (monotonicityGate.unusedWaiverIds.length > 0) {
+      console.log(`  unused monotonicity waivers: ${monotonicityGate.unusedWaiverIds.join(", ")}`);
+    }
+  }
   if (appeared.length > 0) console.log(`\nassets only in --after: ${appeared.join(", ")}`);
   if (disappeared.length > 0) console.log(`assets only in --before: ${disappeared.join(", ")}`);
   if (declaredButAbsent.length > 0) {
@@ -253,14 +383,37 @@ async function main(): Promise<void> {
   if (typeof values.json === "string") {
     writeFileSync(
       values.json,
-      `${JSON.stringify({ attributionSemantics: "observed-diagnostic-changes-not-independent-point-effects", artifactCategories, movers, appeared, disappeared, flips: flips.length, undeclaredFlips: undeclaredFlips.length }, null, 2)}\n`,
+      `${JSON.stringify({
+        attributionSemantics: "observed-diagnostic-changes-not-independent-point-effects",
+        artifactCategories,
+        movers,
+        appeared,
+        disappeared,
+        flips: flips.length,
+        undeclaredFlips: undeclaredFlips.length,
+        ...(monotonicityGate === null ? {} : { monotonicity: monotonicityGate }),
+      }, null, 2)}\n`,
     );
   }
 
+  const gateErrors: string[] = [];
   if (values["assert-declared"] === true && (undeclaredFlips.length > 0 || wrongDirection.length > 0)) {
-    throw new Error(
+    gateErrors.push(
       `expected-movers gate failed: ${undeclaredFlips.length} undeclared grade/status change(s), ${wrongDirection.length} mis-declared`,
     );
+  }
+  if (
+    monotonicityGate !== null &&
+    (monotonicityGate.unwaivedViolations.length > 0 ||
+      monotonicityGate.expiredWaiverIds.length > 0 ||
+      monotonicityGate.unusedWaiverIds.length > 0)
+  ) {
+    gateErrors.push(
+      `monotonicity gate failed: ${monotonicityGate.unwaivedViolations.length} unwaived violation(s), ${monotonicityGate.expiredWaiverIds.length} expired waiver(s), ${monotonicityGate.unusedWaiverIds.length} unused waiver(s)`,
+    );
+  }
+  if (gateErrors.length > 0) {
+    throw new Error(gateErrors.join("; "));
   }
 }
 

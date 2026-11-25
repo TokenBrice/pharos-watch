@@ -5,13 +5,9 @@ import { resolve } from "node:path";
 import { URL } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  diffReplayArtifacts,
-  extractCardGrades,
-  runSafetyScoreV9DiffCli,
-  categorizeReplayChanges,
-} from "../diff-safety-score-v9-replays";
-import { collectMovers, parseMoverManifest } from "../diff-safety-score-v9-movers";
+import { assertMatchingFixedInput, categorizeReplayChanges, detectMonotonicityViolations, diffReplayArtifacts, extractCardGrades, runSafetyScoreV9DiffCli } from "../diff-safety-score-v9-replays";
+import { collectMovers, evaluateMonotonicityGate, parseMoverManifest } from "../diff-safety-score-v9-movers";
+import { CliUsageError } from "../../../scripts/lib/cli-args.mjs";
 
 // Minimal artifact shape. The card array lives at `pipeline.candidate.cards`
 // (`SafetyScoreV9CandidatePipelineResult.candidate` is the
@@ -243,5 +239,18 @@ describe("runSafetyScoreV9DiffCli", () => {
       runCli(["--baseline", baseline!, "--candidate", candidate!, "--assert-empty", "--assert-grade-stable"]),
     ).rejects.toThrow(/cannot be used together/);
     await expect(runCli(["--candidate", candidate!, "--assert-empty"])).rejects.toThrow(/--baseline is required/);
+  });
+
+  it("enforces --assert-monotone", () => {
+    const t = 1795601872, l = { evidenceLevel: "limited", limitedEvidenceCauses: ["U"] };
+    const mk = (rs: Array<[string, number, Record<string, unknown>?]>, fi?: object, ne = false) => ({
+      pipeline: { fixedInput: { baseInputGenerationId: "g", clockSec: t, ...fi }, candidate: { cards: rs.map(([id, score]) => ({ id, grade: "C", score })) }, ...(ne ? {} : { evaluatedSet: { assets: rs.map(([assetId, s, o = {}]) => ({ assetId, scoreInput: { pillars: { backing: { score: 80 }, exit: { score: 40 }, control: { score: 70 }, ...(o.p as object) } }, exit: { routes: o.er ?? [{}] }, control: { structuralFailures: o.sf ?? [] }, dependencyInputs: { serial: o.ser ?? [] }, trace: { finalScore: s, preCapScore: s, deploymentAdjustments: o.adj ?? [] } })) } }) },
+    });
+    const ev = (x: unknown, y: unknown) => detectMonotonicityViolations(x, y).violations, pm = (w: unknown[]) => parseMoverManifest({ movers: [], monotonicityWaivers: w }), gt = (v: typeof v1, w: unknown[]) => evaluateMonotonicityGate(v, pm(w), t);
+    const a: Array<[string, number]> = [["a", 50]], b = mk(a), v1 = ev(b, mk([["a", 55, { p: { exit: { score: 50, ...l } }, er: [] }]])), ser = [{ upstreamAssetId: "p" }], v2 = ev(mk([["p", 70, { adj: [{ adjustmentPoints: 4 }], sf: [{}] }], ["c", 65, { ser }]]), mk([["p", 74, { p: { control: { score: 70, ...l } } }], ["c", 69, { ser }]]));
+    const w = { id: "a", workstream: "w", reason: "Owner-approved waiver", ownerApprovalRef: "1", witnessCodes: [...new Set(v1[0]!.witnesses.map((x) => x.code))], expiresOn: "2026-12-31" };
+    for (const x of [mk(a, { clockSec: t + 1 }), mk(a, undefined, true)]) expect(() => assertMatchingFixedInput(b, x)).toThrow(CliUsageError);
+    expect(() => pm([{ ...w, id: "*" }])).toThrow();
+    expect([v1[0]?.riseChannels, ev(b, mk([["a", 53, { p: { backing: { score: 90 }, control: { score: 65, ...l } } }]])), v2.map((v) => [v.assetId, v.riseChannels]), gt(v1, [w]).unwaivedViolations.length, gt([], [w]).unusedWaiverIds, gt(v1, [{ ...w, expiresOn: "2020-01-01" }]).expiredWaiverIds]).toEqual([["pillar-rise"], [], [["c", ["parent-propagated"]], ["p", ["deployment-adjustment-drop"]]], 0, ["a"], ["a"]]);
   });
 });

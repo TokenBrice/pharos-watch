@@ -1,4 +1,4 @@
-import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { lapsedBridgeReviewFloor, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { DEPEG_SEVERITY_BPS } from "@shared/lib/depeg-config";
 import { V9_PROVISIONAL_UNKNOWN_WEIGHT_THRESHOLD } from "@shared/types/safety-score-v9-public";
 import { MethodologyDetails, MethodologyFacts } from "../../methodology-shared";
@@ -44,10 +44,10 @@ export function SafetyScoresTechnicalDetails() {
           and accepted-state holds remain separate from rating availability.
         </p>
         <p>
-          {`Verified worse facts score lower than unresolved ones: proving an opaque controller is a single key lowers its authority base from ${authorityLadder.opaqueController} to ${authorityLadder.singleSigner}. Unknown is priced as uncertainty, not as safety. Research can lower a score. The overall Economic Control pillar is clamped at ${authorityLadder.maxComponentQuality}, including non-authority paths; supervision is not required above 80.`}
+          {`Verified worse facts score lower than unresolved ones: proving an opaque controller is a single key lowers its authority base from ${authorityLadder.opaqueController} to ${authorityLadder.singleSigner}. Unknown is priced as uncertainty, not as safety. Research can lower a score. When a previously reviewed bridge profile expires or is explicitly retired, unknown bridge pricing is capped at ${lapsedBridgeReviewFloor(semantic)} (the external-lock-mint floor) alongside an additive downward-only deployment-share ceiling so lapsed evidence cannot lift a score, while never-reviewed assets keep ordinary unknown pricing and active bridge compromise incidents remain retained. The overall Economic Control pillar is clamped at ${authorityLadder.maxComponentQuality}, including non-authority paths; supervision is not required above 80.`}
         </p>
         <p>
-          {`Provisional labels identify rated cards with more than ${V9_PROVISIONAL_UNKNOWN_WEIGHT_THRESHOLD * 100}% of original scoring weight priced at unknown constants. They disclose uncertainty without changing the score, grade or availability. Older archives without the fields remain unlabeled. Exit sizes a continuous ${stressRequest.supplyRatio * 100}% of usable supply within $${stressRequest.floorUsd / 1_000_000}m–$${stressRequest.capUsd / 1_000_000}m; smaller execution receipts remain lower bounds, not proof of full-request completion.`}
+          {`Provisional labels identify rated cards with more than ${V9_PROVISIONAL_UNKNOWN_WEIGHT_THRESHOLD * 100}% of original scoring weight priced at unknown constants. They disclose uncertainty without changing the score, grade or availability. Older archives without the fields remain unlabeled. Exit sizes a continuous ${stressRequest.supplyRatio * 100}% of usable supply within $${stressRequest.floorUsd / 1_000_000}m–$${stressRequest.capUsd / 1_000_000}m; smaller execution receipts remain lower bounds, not proof of full-request completion. Gated-NAV shares where peg tracking is not applicable sit outside the peg multiplier and active-depeg cap; secondary-market discounts on those tokens are a documented model limitation.`}
         </p>
         <p className="pharos-numeric">
           candidate = weakestPriced + {formula.compensabilityHeadroom} × tanh((weightedQuality − weakestPriced) /{" "}
@@ -67,6 +67,7 @@ export function SafetyScoresTechnicalDetails() {
             { label: "Publication", value: "Global failures hold; proven local technical gaps preserve pipeline-gap status" },
             { label: "Unknown Backing / Exit / Control (C)", value: `${semantic.unknownQuality.backing.C} / ${semantic.unknownQuality.exit.C} / ${semantic.unknownQuality.control.C}` },
             { label: "Unknown Backing / Exit / Control (U or unclassified)", value: `${semantic.unknownQuality.backing.U} / ${semantic.unknownQuality.exit.U} / ${semantic.unknownQuality.control.U}` },
+            { label: "Lapsed bridge review ceiling", value: `Expired or retired bridge reviews cap unknown bridge pricing at ${lapsedBridgeReviewFloor(semantic)} with an additive downward-only deployment-share ceiling; never-reviewed assets unchanged` },
             { label: "Exit unknown cause labels", value: `Presentation-only C/U labels; both price uncertainty at ${semantic.unknownQuality.exit.C}, never overwrite measured Exit` },
             { label: "Wrapper form deductions", value: `Pure ${formula.wrapperStrategyCap.pure} · native-staked ${formula.wrapperStrategyCap.staked} · strategy-vault and risk-absorption ${formula.wrapperStrategyCap.vault}; applied to the premium-free parent limit` },
             { label: "Realized holder loss", value: `≥${DEPEG_SEVERITY_BPS.severe / 100}% → ${formula.realizedHolderLoss.initialLimits.severe}; ≥${DEPEG_SEVERITY_BPS.offPeg / 100}% → ${formula.realizedHolderLoss.initialLimits.offPeg}; hold ${formula.realizedHolderLoss.holdDays} days, then linear recovery to 100 over ${formula.realizedHolderLoss.recoveryDays} days` },

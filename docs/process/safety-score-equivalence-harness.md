@@ -416,6 +416,22 @@ Manifest IDs must be unique/nonempty, grade/status transitions supported/coheren
 
 Use this mode only after the expected set is derived from reviewed behavior and before looking at the candidate output. Do not turn an unexpected flip into a declaration merely to make the gate green. Multi-grade releases keep the same capture identity, fixed-clock replay, two-capture sampling, and artifact-hygiene rules as the equivalence harness; replace the empty-diff assertion with the declared-movers gate for each capture.
 
+### Monotonicity guard (`--assert-monotone`) and standing nightly sweep
+
+`safety-score-v9:movers` enforces an anti-monotonicity-inversion gate via `--assert-monotone`, which is also implied automatically by `--assert-declared` with no opt-out flag:
+
+```sh
+npm run safety-score-v9:movers -- \
+  --before agents/v9-captures/replay-<baseline-commit>-<stamp>.json \
+  --after agents/v9-captures/replay-<candidate-commit>-<stamp>.json \
+  --assert-monotone
+```
+
+- **Fail-closed preconditions (exit `2`):** Both replay artifacts must share an identical `pipeline.fixedInput` (`baseInputGenerationId`, `clockSec`, and payload/source fingerprints) and include `pipeline.evaluatedSet.assets`. Missing evaluation traces or mismatched captures fail immediately with exit code `2`.
+- **Scoped violation detection (exit `1`):** Any asset whose published `score` rises, `preCapScore` rises, or `ratingStatus` elevates (`pipeline-gap`/`not-rated` → `rated`) is checked across five scoped channels — rising pillar (evaluated strictly against that pillar's own witnesses so unrelated-pillar weakening does not false-fail a legitimate rise), dropped deployment adjustment alongside weakening, removed/loosened binding cap alongside weakening, rating-status elevation on weakening, and parent-propagated rises across the dependency DAG — using six witness codes (`observation-state-regressed`, `unknown-priced-weight-increased`, `evidence-inventory-shrunk`, `deployment-adjustment-dropped-on-weakening`, `cap-removed-on-weakening`, `unknown-credit-raised`).
+- **Strict waivers:** Rare, owner-approved exceptions must be declared in `monotonicityWaivers` inside `--manifest` with an exact non-wildcard asset `id`, `workstream`, `reason` (≥ 20 chars), `ownerApprovalRef`, non-empty `witnessCodes` covering every emitted witness code on that asset, and `expiresOn` (`YYYY-MM-DD`, validated against the capture clock). Expired or unused waivers fail the gate.
+- **Standing nightly sweep:** `npm run safety-score-v9:check-monotonicity` runs in Nightly Validation (`v9-monotonicity` job, wired into `nightly-red`) offline over the full active registry with synthetic multi-chain bridge shares, verifying zero score rises, zero `preCapScore` rises, zero new quarantines, and zero monotonicity violations under whole-profile bridge expiry (`reviewedAt = "2020-01-01"`), whole-profile bridge retirement tombstones, and per-route `external-lock-mint` retirement, plus a negative self-test proving `--assert-monotone` catches counterfactual removed-evidence rises and exit-2 preconditions. Pass `--capture <path>` to run the same sweep against a real production capture.
+
 ### Full local-registry mover comparison
 
 Use this for an intentional code-plus-curation release such as the v10.43

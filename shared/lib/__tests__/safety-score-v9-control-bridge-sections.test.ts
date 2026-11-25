@@ -227,4 +227,10 @@ describe("Safety Score v9 control bridge sections", () => {
     expect(stale.reasons.map((r) => r.code)).toContain("runtime-bridge-materiality-unavailable");
     expect(stale.components.find((c) => c.controlKeys.includes(control.controlKey))?.binding).toBe(true);
   });
+
+  it("caps lapsed bridge at 45", () => {
+    const c = bridgeControl("b:r", { deploymentKey: "base:0x1", materialSupplyShare: 0.05 }), f = (bridge: ReturnType<typeof args>["bridge"], facts = baseFacts()) => evaluateV9EconomicControl(args({ facts, bridge }));
+    const u = (l?: true) => f({ status: missing("bridge"), ...(l ? { lapsedReview: l } : {}), routes: [] }).components.find((k) => k.componentKey === "bridge:unverified")?.score, r = f({ status: requiredKnown("bridge"), routes: [{ controlKey: c.controlKey, tier: "opaque-or-unknown", lapsedReview: true }] }, baseFacts([c]));
+    expect([u(), u(true), r.components.find((x) => x.controlKeys[0] === c.controlKey)?.score, r.reasons.some((x) => x.code === "selected-bridge-route-unresolved")]).toEqual([60, 45, 45, true]);
+  });
 });

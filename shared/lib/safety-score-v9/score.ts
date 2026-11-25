@@ -29,7 +29,7 @@ import type { V9WrapperParentLimit } from "./wrapper-risk";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonTreatment } from "./policy";
 import { canonicalUniqueBy, compareText, parentAttributionFields, propagateParentAttribution } from "./primitives";
 import { V9_EMPTY_ARRAY } from "../../types/safety-score-v9-immutable";
-import { isV9SharedControllerSignalAlreadyPriced } from "./scoped-risk";
+import { isV9SharedControllerSignalAlreadyPriced, type V9ScopedRiskSignal } from "./scoped-risk";
 import {
   canonicalizeV9PublicReasons,
   type V9PublicReason,
@@ -61,6 +61,8 @@ export interface V9PillarEvaluation {
   adverseAttribution?: readonly V9PillarAdverseAttribution[];
   /** v10.50: bounded ceiling on priced-unknown substitution when Exit is unavailable/excluded. */
   pricedUnknownScoreCeiling?: number;
+  /** v10.57: additive downward-only deployment ceilings for lapsed/retired bridge reviews. */
+  lapsedBridgeDeploymentCeilings?: readonly V9ScopedRiskSignal[];
 }
 
 export interface V9ProductionScoreIdentity {
@@ -548,6 +550,9 @@ export function scoreV9EvaluatedAsset(
       ...(input.pillars.exit.pricedUnknownScoreCeiling === undefined
         ? {}
         : { exitPricedUnknownCeiling: input.pillars.exit.pricedUnknownScoreCeiling }),
+      ...(input.pillars.control.lapsedBridgeDeploymentCeilings?.length
+        ? { lapsedBridgeDeploymentCeilings: input.pillars.control.lapsedBridgeDeploymentCeilings }
+        : {}),
     },
   );
   const premium = resolveV9AssetPremium(input, ordinaryTrace, envelope);

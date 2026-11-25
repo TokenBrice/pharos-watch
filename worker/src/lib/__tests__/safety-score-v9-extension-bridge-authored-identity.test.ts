@@ -418,4 +418,11 @@ describe("reviewed bridge representation allocation identity", () => {
     });
     expect(input.wrapper.allocationScopeIdentityReview).toBeUndefined();
   });
+
+  it("lapses/retires bridge schemas", () => {
+    const u = "unknown" as const, rr = route(BASE_ROUTE, { issuanceModel: u, routeClass: u, riskTier: "opaque-or-unknown", semantics: u, scope: u, reviewDisposition: "retired", retiredReason: "Retired route", sources: undefined, observedAt: undefined }), bp = bridgeProfile;
+    const wp = bp([rr], { retired: { reviewedAt: "2026-10-07", reviewer: "r", reason: "Retired profile" } }), ad = (br: typeof wp) => adapt(meta({ bridgeRouteRisk: br })), st = ad(bp([route(BASE_ROUTE)], { reviewedAt: "2020-01-01", controls: [bridgeControl()] }));
+    expect([wp, { ...wp, retired: { ...wp.retired!, reviewedAt: "2025-01-01" } }, bp([{ ...rr, retiredReason: undefined }])].map((x) => BridgeRouteRiskProfileSchema.safeParse(x).success)).toEqual([true, false, false]);
+    expect([st.controls.length, st.review.lapsedReview, st.review.status.observationState, ad(wp).review.status.observationState, ad(bp([rr])).review.routes[0]?.lapsedReview]).toEqual([0, true, "stale", "missing", true]);
+  });
 });

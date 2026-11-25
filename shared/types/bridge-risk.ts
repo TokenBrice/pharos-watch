@@ -18,7 +18,7 @@ export type BridgeRouteRiskConfidence = (typeof BRIDGE_ROUTE_RISK_CONFIDENCE_VAL
 export const BRIDGE_ROUTE_RISK_SOURCE_VALUES = ["l2beat", "issuer", "docs", "explorer", "manual"] as const;
 
 export const BRIDGE_ROUTE_CLASS_VALUES = ["native", "canonical", "third-party", "unknown"] as const;
-export const BRIDGE_ROUTE_REVIEW_DISPOSITION_VALUES = ["reviewed", "unresolved"] as const;
+export const BRIDGE_ROUTE_REVIEW_DISPOSITION_VALUES = ["reviewed", "unresolved", "retired"] as const;
 export const BRIDGE_ROUTE_ISSUANCE_MODEL_VALUES = [
   "native-issuance",
   "bridge-representation",
