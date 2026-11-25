@@ -113,7 +113,7 @@ export function validateSundaeSwapAdaUsdQuote(
 
 /**
  * Run-local lazy memoized ADA/USD reference loader for SundaeSwap discovery.
- * Performs a read-only `CG_PRICES` circuit check (never mutating that breaker),
+ * Checks `CG_PRICES` via `shouldAttemptFetch` without calling `recordOutcome`,
  * fetches once per discovery run only when an eligible ADA constant-product
  * pool is encountered, and records operator diagnostics only once attempted.
  */
