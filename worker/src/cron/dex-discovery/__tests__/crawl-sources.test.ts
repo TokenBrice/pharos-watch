@@ -1335,114 +1335,67 @@ describe("crawlCoin DexScreener hardening", () => {
     expect(vi.mocked(fetchCgTokenPoolsWithStatus)).not.toHaveBeenCalled();
   });
 
-  it("values SundaeSwap pools only through a tracked stable counter", async () => {
-    const [usdm, usdcx, iusd] = ["usdm-moneta", "usdc-circle", "iusd-indigo-protocol"].map((id) =>
-      WORKER_ACTIVE_META_BY_ID.get(id)!.contracts!.find(({ chain }) => chain === "cardano")!.address);
-    const dot = (id = "") => (id === "0x" ? "ada.lovelace" : `${id.slice(0, 56)}.${id.slice(56)}`);
-    const pool = (id: string, version: string, ids: unknown[], quantities: string[], identifier?: string) =>
-      ({ id, version, quantities, assets: ids.map((asset) => ({ id: dot(asset as string) })), modules: [{ kind: "invariant", identifier }] });
-    vi.mocked(fetchJsonWithRetry).mockResolvedValue({ response: new Response(null, { status: 200 }), body: {
-      errors: [{}], data: { pools: { byAsset: [
-        pool("a1", "Stableswaps", [usdcx, usdm], ["50000000000", "80000000000"]),
-        pool("b2", "V4", [usdm, iusd], ["20000000000", "20000000000"], "constant_product"),
-        pool("c3", "V3", ["0x", usdm], ["9", "9"]),
-        pool("d4", "V3", [usdm, iusd], ["1000000", "1000000"]), // $2: sub-floor
-        pool("e5", "V1", [usdm, iusd], ["2000000000", "20000000000"]), // $10: implausible
-        pool("f6", "V4", [usdcx, usdm], ["20000000000", "20000000000"], "concentrated_liquidity"),
-      ] } } } });
-    const input = { db: createMockDb(), coinTargets: [{ chain: "cardano", address: usdm!, decimals: 6 }], context: discoveryContext("usdm-moneta").value };
-    const { providerChecks } = await crawlSundaeSwapPoolsStage(input);
-
-    expect(JSON.parse(String(vi.mocked(fetchJsonWithRetry).mock.lastCall![1]!.body)).variables.asset).toBe(dot(usdm));
-    expect(input.context.pools.map((p) => [p.poolId, p.tvlUsd, p.priceUsd, p.baseToken])).toEqual([
-      ["cardano:a1", 100_000, null, usdcx], ["cardano:b2", 40_000, 1, usdm], ["cardano:c3", null, null, "0x"],
-      ["cardano:e5", null, null, usdm], ["cardano:f6", null, null, usdcx],
-    ]);
-    expect(providerChecks).toMatchObject([{ status: "degraded", error: "sundaeswap-graphql-errors", observedPoolCount: 5 }]);
-    expect(recordOutcomeSafe).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.SUNDAESWAP_DISCOVERY, true);
-    // A hung read resolves as a retryable miss that counts against the breaker.
-    vi.mocked(fetchJsonWithRetry).mockRejectedValueOnce(new DOMException("hung", "TimeoutError"));
-    expect((await crawlSundaeSwapPoolsStage(input)).providerChecks).toMatchObject([{ status: "failure", retryable: true }]);
-    expect(recordOutcomeSafe).toHaveBeenLastCalledWith(expect.anything(), CIRCUIT_SOURCE.SUNDAESWAP_DISCOVERY, false);
-  });
-
-  it("computes SundaeSwap 24h volume from hourly ticks with V4 leg halving and fail-closed guards", async () => {
-    const [usdm, usdcx, usdrf] = ["usdm-moneta", "usdc-circle", "usdrf-realfi"].map((id) =>
+  it("values SundaeSwap stable and ADA pools with V4 halving and fail-closed guards", async () => {
+    const [usdm, usdcx, iusd, usdrf] = ["usdm-moneta", "usdc-circle", "iusd-indigo-protocol", "usdrf-realfi"].map((id) =>
       WORKER_ACTIVE_META_BY_ID.get(id)!.contracts!.find(({ chain }) => chain === "cardano")!.address!);
-    const dot = (id: string) => `${id.slice(0, 56)}.${id.slice(56)}`;
-    const nowSec = 1_795_347_000; // 2026-11-22 11:30:00Z -> floorHour = 1_795_345_200 (11:00:00Z)
-    const floorHour = 1_795_345_200;
-    const tick = (startSec: number, assetId: string, quantity: string, decimals = 6) => ({
-      start: { unixMilli: String(startSec * 1_000) },
-      end: { unixMilli: String((startSec + 3600) * 1_000) },
-      volume: { quantity, asset: { id: dot(assetId), decimals } },
+    const dot = (id = "") => (id === "0x" ? "ada.lovelace" : `${id.slice(0, 56)}.${id.slice(56)}`);
+    const nowSec = 1795347000, floorHour = 1795345200, h1 = floorHour - 3600, ok = nowSec - 60, cp = "constant_product", sw = "Stableswaps";
+    const env = JSON.stringify({ sundaeswapVolumeWindowEndSec: floorHour });
+    const tk = (s: number, a: string, q: string, d = 6) => ({ start: { unixMilli: String(s * 1e3) }, end: { unixMilli: String((s + 3600) * 1e3) }, volume: { quantity: q, asset: { id: dot(a), decimals: d } } });
+    const mk = (id: string, version: string, ids: string[], quantities: string[], rich: unknown[] = [], mod?: string, asOf = ok, tks?: (string | undefined)[]) => ({
+      id, version, quantities, assets: ids.map((a, i) => ({ id: dot(a), ...(tks?.[i] ? { ticker: tks[i] } : {}) })),
+      modules: mod ? [{ kind: "invariant", identifier: mod }] : [], current: { asOf: { unixMilli: String(asOf * 1e3) } }, ticks: { rich },
     });
-    const makeSundaePool = (
-      id: string, version: string, ids: [string, string], quantities: [string, string],
-      asOfSec: number, rich: unknown[], identifier?: string,
-    ) => ({
-      id, version, quantities, assets: ids.map((a) => ({ id: dot(a) })),
-      modules: identifier ? [{ kind: "invariant", identifier }] : [],
-      current: { asOf: { unixMilli: String(asOfSec * 1_000) } },
-      ticks: { rich },
-    });
+    const run = async (byAsset: unknown[], opts?: { target?: string; coin?: string; errors?: unknown[]; load?: Parameters<typeof crawlSundaeSwapPoolsStage>[0]["loadAdaUsdReference"] }) => {
+      vi.mocked(fetchJsonWithRetry).mockResolvedValueOnce({ response: new Response(null, { status: 200 }), body: { ...(opts?.errors ? { errors: opts.errors } : {}), data: { pools: { byAsset } } } });
+      const ctx = createCrawlStageContext({ stablecoinId: opts?.coin ?? "usdc-circle", knownPoolIds: new Set(), nowSec, pools: [] });
+      const res = await crawlSundaeSwapPoolsStage({ db: createMockDb(), coinTargets: [{ chain: "cardano", address: opts?.target ?? usdcx, decimals: 6 }], context: ctx, loadAdaUsdReference: opts?.load });
+      return { pools: ctx.pools, g: (id: string) => ctx.pools.find((p) => p.poolId === `cardano:${id}`), check: res.providerChecks[0] };
+    };
+    const q5 = "50000000000", q2 = "20000000000", q10 = "100000000000", q50 = [q5, q5], qA = [q10, q2], qR = [q2, q10];
+    const gErr = await run([
+      mk("a1", sw, [usdcx, usdm], [q5, "80000000000"]), mk("b2", "V4", [usdm, iusd], [q2, q2], [], cp), mk("c3", "V3", ["0x", usdm], ["9", "9"]),
+      mk("d4", "V3", [usdm, iusd], ["1000000", "1000000"]), mk("e5", "V1", [usdm, iusd], ["2000000000", q2]), mk("f6", "V4", [usdcx, usdm], [q2, q2], [], "concentrated_liquidity"),
+    ], { target: usdm, coin: "usdm-moneta", errors: [{}] });
+    expect([gErr.pools.map((p) => [p.poolId, p.tvlUsd, p.priceUsd, p.baseToken]), gErr.check]).toEqual([
+      [["cardano:a1", 1e5, null, usdcx], ["cardano:b2", 4e4, 1, usdm], ["cardano:c3", null, null, "0x"], ["cardano:e5", null, null, usdm], ["cardano:f6", null, null, usdcx]],
+      expect.objectContaining({ status: "degraded", error: "sundaeswap-graphql-errors", observedPoolCount: 5 }),
+    ]);
+    expect(recordOutcomeSafe).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.SUNDAESWAP_DISCOVERY, true);
+    vi.mocked(fetchJsonWithRetry).mockRejectedValueOnce(new DOMException("hung", "TimeoutError"));
+    expect((await crawlSundaeSwapPoolsStage({ db: createMockDb(), coinTargets: [{ chain: "cardano", address: usdm, decimals: 6 }], context: discoveryContext("usdm-moneta").value })).providerChecks).toMatchObject([{ status: "failure", retryable: true }]);
+    expect(recordOutcomeSafe).toHaveBeenLastCalledWith(expect.anything(), CIRCUIT_SOURCE.SUNDAESWAP_DISCOVERY, false);
 
-    vi.mocked(fetchJsonWithRetry).mockResolvedValueOnce({
-      response: new Response(null, { status: 200 }),
-      body: {
-        data: {
-          pools: {
-            byAsset: [
-              // V4 constant-sum USDCx/USDRF: 13_114.8135 total raw => ÷2 = 6_557.40675; includes out-of-window 25th hour
-              makeSundaePool("062ed6", "V4", [usdcx, usdrf], ["400000000000", "400000000000"], nowSec - 60, [
-                tick(floorHour - 3600, usdcx, "157500000"),
-                tick(floorHour - 7200, usdcx, "12957313500"),
-                tick(floorHour - 25 * 3600, usdcx, "999999999"), // outside 24h window -> ignored
-              ], "constant_sum"),
-              // Stableswaps USDCx/USDM: 1x leg
-              makeSundaePool("d7c7a7", "Stableswaps", [usdcx, usdm], ["145500000000", "145500000000"], nowSec - 60, [
-                tick(floorHour - 3600, usdcx, "9708160000"),
-              ]),
-              // V3 constant-product: 1x leg
-              makeSundaePool("a30001", "V3", [usdcx, usdm], ["50000000000", "50000000000"], nowSec - 60, [
-                tick(floorHour - 3600, usdcx, "4200000000"),
-              ]),
-              // SundaeSwap omits idle hours and asOf is always current: empty rich is unproven => null
-              makeSundaePool("000000", "Stableswaps", [usdcx, usdm], ["50000000000", "50000000000"], nowSec - 60, []),
-              // Stale asOf (>2h behind) => fail closed null
-              makeSundaePool("dead01", "Stableswaps", [usdcx, usdm], ["50000000000", "50000000000"], floorHour - 2 * 3600 - 1, [
-                tick(floorHour - 3600, usdcx, "1000000000"),
-              ]),
-              // Unknown future version V5 => fail closed null
-              makeSundaePool("f50001", "V5", [usdcx, usdm], ["50000000000", "50000000000"], nowSec - 60, [
-                tick(floorHour - 3600, usdcx, "1000000000"),
-              ], "constant_product"),
-              // Excessive turnover (>50x TVL $100k -> $6M) => preflight rejects => null
-              makeSundaePool("beef01", "Stableswaps", [usdcx, usdm], ["50000000000", "50000000000"], nowSec - 60, [
-                tick(floorHour - 3600, usdcx, "6000000000000"),
-              ]),
-            ],
-          },
-        },
-      },
-    });
-    const ctx = createCrawlStageContext({ stablecoinId: "usdc-circle", knownPoolIds: new Set(), nowSec, pools: [] });
-    await crawlSundaeSwapPoolsStage({
-      db: createMockDb(), coinTargets: [{ chain: "cardano", address: usdcx, decimals: 6 }], context: ctx,
-    });
-    const reqBody = JSON.parse(String(vi.mocked(fetchJsonWithRetry).mock.lastCall![1]!.body));
-    expect(reqBody.variables).toEqual({
-      asset: dot(usdcx),
-      start: "2026-11-21 10:00:00",
-      end: "2026-11-22 11:00:00",
-    });
-    const byId = new Map(ctx.pools.map((p) => [p.poolId, p]));
-    expect(byId.get("cardano:062ed6")?.volume24h).toBeCloseTo(6_557.40675, 4);
-    expect(byId.get("cardano:062ed6")?.rawJson).toBe(JSON.stringify({ sundaeswapVolumeWindowEndSec: floorHour }));
-    expect(byId.get("cardano:d7c7a7")?.volume24h).toBeCloseTo(9_708.16, 4);
-    expect(byId.get("cardano:a30001")?.volume24h).toBeCloseTo(4_200, 4);
-    for (const badId of ["cardano:000000", "cardano:dead01", "cardano:f50001", "cardano:beef01"]) {
-      expect(byId.get(badId)).toMatchObject({ volume24h: null, rawJson: null });
+    const tA = [tk(h1, "0x", "5000000000")], tU = [tk(h1, usdcx, "5000000000")], lazy = vi.fn();
+    const s = await run([
+      mk("062ed6", "V4", [usdcx, usdrf], ["400000000000", "400000000000"], [tk(h1, usdcx, "157500000"), tk(h1 - 3600, usdcx, "12957313500"), tk(floorHour - 9e4, usdcx, "999999999")], "constant_sum"),
+      mk("d7c7a7", sw, [usdcx, usdm], ["145500000000", "145500000000"], [tk(h1, usdcx, "9708160000")]),
+      mk("a30001", "V3", [usdcx, usdm], q50, [tk(h1, usdcx, "4200000000")]), mk("000000", sw, [usdcx, usdm], q50),
+      mk("dead01", sw, [usdcx, usdm], q50, [tk(h1, usdcx, "1000000000")], undefined, floorHour - 7201),
+      mk("f50001", "V5", [usdcx, usdm], q50, [tk(h1, usdcx, "1000000000")], cp), mk("beef01", sw, [usdcx, usdm], q50, [tk(h1, usdcx, "6000000000000")]),
+    ], { load: lazy });
+    expect([lazy.mock.calls.length, JSON.parse(String(vi.mocked(fetchJsonWithRetry).mock.lastCall![1]!.body)).variables]).toEqual([0, { asset: dot(usdcx), start: "2026-11-21 10:00:00", end: "2026-11-22 11:00:00" }]);
+    expect([s.g("062ed6")?.rawJson, s.g("062ed6")?.volume24h, s.g("d7c7a7")?.volume24h, s.g("a30001")?.volume24h]).toEqual([env, expect.closeTo(6557.40675, 4), expect.closeTo(9708.16, 4), expect.closeTo(4200, 4)]);
+    for (const id of ["000000", "dead01", "f50001", "beef01"]) expect(s.g(id)).toMatchObject({ volume24h: null, rawJson: null });
+
+    const rf = (observedAtSec: number, priceUsd = 0.2) => async () => ({ priceUsd, observedAtSec, source: "coingecko" as const });
+    const a = await run([
+      mk("aa01", "V3", ["0x", usdcx], qA, tA, undefined, ok, [undefined, "USDCx"]), mk("aa02", "V3", [usdcx, "0x"], qR, tU),
+      mk("aa03", "V4", ["0x", usdcx], qA, tA, cp), mk("aa04", "V4", [usdcx, "0x"], qR, tU, cp),
+      mk("aa05", "V3", ["0x", usdcx], [q2, "4000000000"], tA), mk("aa06", "V3", ["0x", usdcx], [q10, "2000000000"], tA),
+      ...["stableswap", "constant_sum", "concentrated_liquidity"].map((m, i) => mk(`aa0${i + 7}`, "V4", ["0x", usdcx], qA, tA, m)),
+      mk("aa10", "V4", [usdcx, "0x", usdm], [q5, q10, q5], tU, cp),
+      mk("aa11", "V3", ["0x", usdcx], qA, [tk(h1, "0x", "5000000000", 8)]), mk("aa12", "V3", ["0x", usdcx], qA), mk("aa13", "V3", ["0x", usdcx], qA, [tk(h1, "0x", "15000000000000")]),
+    ], { load: rf(ok) });
+    expect([a.g("aa01")?.symbol, a.g("aa05")]).toEqual(["ADA / USDCx", undefined]);
+    expect(["aa01", "aa02", "aa03", "aa04"].map((id) => { const p = a.g(id); return [p?.tvlUsd, p?.priceUsd, p?.volume24h, p?.rawJson]; })).toEqual([[4e4, null, 1e3, env], [4e4, null, 5e3, env], [4e4, null, 500, env], [4e4, null, 2500, env]]);
+    for (const id of ["aa06", "aa07", "aa08", "aa09", "aa10"]) expect(a.g(id)).toMatchObject({ tvlUsd: null, priceUsd: null, volume24h: null });
+    for (const id of ["aa11", "aa12", "aa13"]) expect(a.g(id)).toMatchObject({ tvlUsd: 4e4, priceUsd: null, volume24h: null });
+    for (const [load, reason] of [[async () => null, "ada-usd-fetch-failed"], [async () => ({ reference: null, status: "circuit-open" as const, observedAtSec: null, ageSec: null }), "ada-usd-circuit-open"], [rf(nowSec - 901), "ada-usd-stale"], [rf(nowSec + 301), "ada-usd-invalid"], [rf(0, Number.NaN), "ada-usd-invalid"]] as const) {
+      const r = await run([mk("bb01", "V3", ["0x", usdcx], qA, tA), mk("bb02", sw, [usdcx, usdm], q50, [tk(h1, usdcx, "1000000000")])], { load });
+      expect([r.g("bb01")?.tvlUsd, r.g("bb01")?.volume24h, r.g("bb02")?.tvlUsd, r.g("bb02")?.volume24h]).toEqual([null, null, 1e5, 1e3]);
+      expect(r.check).toMatchObject({ status: "success", adaValuationReason: reason, adaValuationSkippedCount: 1 });
+      expect(recordOutcomeSafe).toHaveBeenLastCalledWith(expect.anything(), CIRCUIT_SOURCE.SUNDAESWAP_DISCOVERY, true);
     }
   });
 });
