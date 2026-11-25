@@ -164,12 +164,19 @@ export async function fetchGoldTokens(
             }
 
             const data = JSON.parse(result.body) as { mcap?: unknown };
-            const protocolMcap = toPositiveFiniteNumber(data.mcap);
-            if (protocolMcap == null) {
-              logWorkerEventArgs("handler", "warn", `[sync-stablecoins] Protocol mcap was malformed for ${token.protocolSlug}`);
+            if (!data || typeof data !== "object" || Array.isArray(data)) {
+              logWorkerEventArgs("handler", "warn", `[sync-stablecoins] Protocol payload was malformed for ${token.protocolSlug}`);
               return;
             }
+            // A valid 200 JSON object proves DefiLlama's protocol API is reachable even when
+            // a slug (e.g. paxos-gold dummy.js) reports mcap: null; do not trip the source-wide
+            // DL_PROTOCOLS breaker shared with sync-dex-liquidity-stage.
             protocolFetchSuccesses += 1;
+            const protocolMcap = toPositiveFiniteNumber(data.mcap);
+            if (protocolMcap == null) {
+              logWorkerEventArgs("handler", "warn", `[sync-stablecoins] Protocol mcap was unavailable for ${token.protocolSlug}`);
+              return;
+            }
             mcapMap[token.id] = protocolMcap;
             mcapSourceById[token.id] = "defillama";
           } catch (err) {
