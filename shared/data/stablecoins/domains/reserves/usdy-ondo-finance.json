@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "US Treasuries (issuer portfolio category)",
-      "pct": 86.773198466940016,
+      "pct": 82.83824737191743,
       "risk": "very-low",
       "sourceKey": "usdy-issuer-portfolio:us-treasuries",
       "assetClass": "government-security",
@@ -13,7 +13,7 @@
     },
     {
       "name": "SHVon, Ondo tokenized iShares 0-1 Year Treasury Bond ETF",
-      "pct": 13.201537996054318,
+      "pct": 17.13106632411953,
       "risk": "high",
       "sourceKey": "usdy-issuer-portfolio:shvon",
       "assetClass": "tokenized-security",
@@ -22,31 +22,43 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "name": "Silicon Valley Bank bank deposits (issuer portfolio category)",
-      "pct": 0.024815409280131,
+      "name": "First Citizens Bank bank deposits (issuer portfolio category)",
+      "pct": 0.03039698105035521,
       "risk": "low",
       "sourceKey": "usdy-issuer-portfolio:svb-bank-deposits",
       "assetClass": "bank-deposit",
-      "issuerOrObligor": "First Citizens Bank (Silicon Valley Bank division)",
+      "issuerOrObligor": "First Citizens Bank",
       "riskFactors": ["credit", "liquidity", "custody"],
       "liquidityHorizon": "unknown"
     },
     {
       "name": "Other Cash and Cash Equivalents (instrument allocation undisclosed)",
-      "pct": 0.000448127725531,
+      "pct": 0.0002893229126606023,
       "risk": "high",
       "sourceKey": "usdy-issuer-portfolio:other-cash-and-equivalents",
       "publishedResidualCategory": true
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-29",
-    "reviewer": "W0 R-COMP-5 renewal 2026-10-29",
+    "reviewedAt": "2026-11-25",
+    "reviewer": "Pharos L2f renewal 2026-11-25 (#2321)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Ondo USDY complete issuer portfolio as of October 28, 2026 19:59:59 EDT; retrieved October 29, 2026; HTML SHA-256 7ffe778e215d4df5fe6836955caabe6d9503ce77ec3513624f3936cbfb44ff5e",
+        "label": "Ondo USDY complete issuer portfolio as of November 18, 2026 6:59:59pm EST (2026-11-18T23:59:59Z); Wayback capture 2026-11-20T06:03:39Z retrieved November 25, 2026; HTML SHA-256 3eb07d548eba28cd1d2a7cd65580ee746cd3cc2ecda42862b07136428d0a85d3",
+        "url": "https://web.archive.org/web/20261120060339id_/https://ondo.finance/usdy"
+      },
+      {
+        "label": "Ondo USDY live issuer page linking Ankura daily and monthly archives (checked November 25, 2026; newer November 20 overview lacks a published Ankura daily PDF)",
         "url": "https://ondo.finance/usdy"
+      },
+      {
+        "label": "Ondo USDY LLC daily attestation archive containing Ondo USDY LLC_ATCAttest_261118.pdf (end of day November 18, 2026; SHA-256 dd671d6cacbab34256d44cd1e76c62541b8e2ca129326b71b454113de195c312; LLC-only corroboration, not all-USDY assurance)",
+        "url": "https://www.dropbox.com/scl/fo/375wdvar3rbc7o23nxsgp/AOFY8jhpENaNx9WAw-WPnbY?rlkey=4icqn1z9bez725wywr30fx52a&dl=1"
+      },
+      {
+        "label": "Ondo Global Markets (BVI) Limited daily attestation archive containing Daily Report - Ondo Stocks - 2026-11-18_20_00_ET - Ankura Attestation.pdf (SHA-256 6ff8ce94829f5fdd583a698d5007076f6763ac230f97b646b28b149dfc333ad6)",
+        "url": "https://www.dropbox.com/scl/fo/jzkrw308mrhsasauqrjqq/AJxJak0F90kcwkADSN3DCD4?rlkey=nik1v5slekrzx5fbi0zan5sk3&dl=1"
       },
       {
         "label": "USDY Basics: issuance-dependent Treasuries, iShares Short Treasury Bond ETF shares and bank demand deposits",
@@ -55,82 +67,78 @@
       {
         "label": "Ondo Stocks terms: tokenized ETFs are issuer obligations rather than direct ETF shares",
         "url": "https://docs.ondo.finance/ondo-stocks/important-notes.md"
-      },
-      {
-        "label": "Ondo USDY LLC October 15, 2026 attestation; LLC-only corroboration, not assurance for this October 28 portfolio",
-        "url": "https://www.dropbox.com/scl/fo/375wdvar3rbc7o23nxsgp/AK-03xW6UBqCvZyI-Enizhk/2026/10%20October?rlkey=4icqn1z9bez725wywr30fx52a&dl=1"
       }
     ],
-    "rationale": "The issuer's dated complete USDY Portfolio Overview, as of October 28, 2026 19:59:59 EDT (2026-10-28T23:59:59Z), reports four positions: US Treasuries $2,095,324,005; SHVon $318,779,300; Silicon Valley Bank bank deposits $599,221; other cash and equivalents $10,821. Their exact sum equals the same-page current-value total of $2,414,713,347; weights use only this common denominator. The page also reports WAM 171.59 days, YTM 4.10%, value of USDY outstanding $2.06B, value of underlying assets $2.41B and a 152.95% collateralization ratio; the outstanding value and collateralization ratio are issuer supplemental metrics and are not reconciled to circulating liabilities here. This independently dated issuer portfolio supersedes the September 25 LLC composition and the October 19 observation. It does not reconcile current global USDY liabilities, establish all-USDY financial assurance, or assign OGM platform-wide collateral to USDY. The Treasury category WAM and the one-day WAM of SHVon, deposits and cash are not contractual maturity maxima or guaranteed liquidation times; no maturityDaysMax or immediate liquidity is inferred. SHVon retains the issuer tokenized-security layer, conservative high risk and unknown liquidity, rather than direct Treasury or direct ETF-share credit. The small other-cash/equivalents category remains explicitly unclassified. No current individual CUSIP weights are inferred from the older LLC report.",
-    "compositionBasis": "Complete issuer USDY portfolio-category current values divided by the exact same October 28, 2026 portfolio total of $2,414,713,347; independent portfolio observation, not a financial report",
-    "compositionAsOf": "2026-10-28",
+    "rationale": "The issuer's dated complete USDY Portfolio Overview as of November 18, 2026 6:59:59pm EST (2026-11-18T23:59:59Z, archived verbatim at Wayback 2026-11-20T06:03:39Z) reports four positions: US Treasuries $1,998,496,978.13; SHVon $413,291,992.13; First Citizens Bank bank deposits $733,336.07; and Other Cash and Cash Equivalents $6,980.00. Their exact sum equals the same-page portfolio total of $2,412,529,286.33; weights use only this common denominator. The same-date Ankura Trust daily report Ondo USDY LLC_ATCAttest_261118.pdf (newest LLC daily attestation published as of November 25, 2026) reconciles to the exact cent on US Treasury Bills ($1,998,496,978.13 across 12 CUSIPs at Marex, WAM 188.50 days), First Citizens Select MMA deposits ($733,336.07), and StoneX cash ($6,980.00), totaling $1,999,237,294.20 in Permitted Assets against $1,965,264,239.90 LLC Token Principal Outstanding (ratio 1.017287); the same-date Ondo Global Markets (BVI) Limited Ankura daily report shows $416,001,922.98 in BVI USDY outstanding and zero direct US Treasuries. Although the live page on November 25 shows a newer November 20 overview ($2,406,667,555.31, US Treasuries $1,999,991,788.64, WAM 202.58 days) after CUSIP 912797UZ8 matured on November 19, no Ankura LLC daily report after November 18 is published yet, so composition and the T-bill roster bound are renewed together at November 18. The Portfolio Overview also reports WAM 156.26 days, YTM 4.16%, value of USDY outstanding $1,965,264,239.90, and a 156.9% collateralization ratio; outstanding value and collateralization ratio are issuer supplemental metrics and are not reconciled to combined circulating liabilities here. This independently dated issuer portfolio supersedes the October 28 observation. It does not reconcile current global USDY liabilities, establish all-USDY financial assurance, or assign OGM platform-wide collateral to USDY. The Treasury category WAM and the one-day WAM of SHVon, deposits and cash are not contractual maturity maxima or guaranteed liquidation times; no maturityDaysMax or immediate liquidity is inferred. SHVon retains the issuer tokenized-security layer, conservative high risk and unknown liquidity, rather than direct Treasury or direct ETF-share credit. The small other-cash/equivalents category remains explicitly unclassified in the combined portfolio view.",
+    "compositionBasis": "Complete issuer USDY portfolio-category current values divided by the exact same November 18, 2026 portfolio total of $2,412,529,286.33; independent portfolio observation, not a financial report",
+    "compositionAsOf": "2026-11-18",
     "scope": "full-composition",
     "observations": [
       {
-        "scopeId": "ondo-usdy-issuer-portfolio-2026-10-28",
+        "scopeId": "ondo-usdy-issuer-portfolio-2026-11-18",
         "liabilityBookKey": "ondo-usdy-combined-issuer-portfolio-categories",
         "deploymentRefs": [],
-        "reviewer": "W0 R-COMP-5 renewal 2026-10-29",
+        "reviewer": "Pharos L2f renewal 2026-11-25 (#2321)",
         "confidence": "verified",
         "sources": [
           {
-            "url": "https://ondo.finance/usdy",
-            "accessedAtSec": 1793299043,
-            "sha256": "7ffe778e215d4df5fe6836955caabe6d9503ce77ec3513624f3936cbfb44ff5e"
+            "url": "https://web.archive.org/web/20261120060339id_/https://ondo.finance/usdy",
+            "accessedAtSec": 1795604022,
+            "sha256": "3eb07d548eba28cd1d2a7cd65580ee746cd3cc2ecda42862b07136428d0a85d3"
           }
         ],
-        "reviewedAtSec": 1793299301,
-        "expiresAtSec": 1796515199,
-        "sourceGeneration": "ondo-usdy-issuer-portfolio:2026-10-28:7ffe778e215d4df5fe6836955caabe6d9503ce77ec3513624f3936cbfb44ff5e",
-        "sourceSha256": "7ffe778e215d4df5fe6836955caabe6d9503ce77ec3513624f3936cbfb44ff5e",
+        "reviewedAtSec": 1795604022,
+        "expiresAtSec": 1798329599,
+        "sourceGeneration": "ondo-usdy-issuer-portfolio:2026-11-18:3eb07d548eba28cd1d2a7cd65580ee746cd3cc2ecda42862b07136428d0a85d3",
+        "sourceSha256": "3eb07d548eba28cd1d2a7cd65580ee746cd3cc2ecda42862b07136428d0a85d3",
         "completeness": "complete",
         "obligations": [
           {
             "key": "whole-issuer-portfolio-category-allocation",
             "disposition": "included",
-            "reason": "The complete issuer USDY Portfolio Overview has four positions summing exactly to its same-close $2,414,713,347 current-value total. This establishes the published portfolio category allocation only. It does not establish current liability partition, token-to-book reconciliation, encumbrance absence, financial assurance, constituent maturity maxima or realizable Exit capacity. No token deployment is represented as independently financially reconciled."
+            "reason": "The complete issuer USDY Portfolio Overview as of November 18, 2026 has four positions summing exactly to its same-close $2,412,529,286.33 current-value total. This establishes the published portfolio category allocation only. It does not establish current liability partition, token-to-book reconciliation, encumbrance absence, financial assurance, constituent maturity maxima or realizable Exit capacity. No token deployment is represented as independently financially reconciled."
           }
         ],
         "kind": "portfolio-observation",
-        "observedAtSec": 1793231999,
+        "observedAtSec": 1795046399,
         "wholeAssetDenominator": {
-          "amount": "2414713347",
-          "asOfSec": 1793231999,
+          "amount": "2412529286.33",
+          "asOfSec": 1795046399,
           "unitBasis": "USD current value of the complete issuer-published USDY portfolio categories",
-          "sourceSha256": "7ffe778e215d4df5fe6836955caabe6d9503ce77ec3513624f3936cbfb44ff5e"
+          "sourceSha256": "3eb07d548eba28cd1d2a7cd65580ee746cd3cc2ecda42862b07136428d0a85d3"
         }
       }
     ],
     "knownUnknownExposure": "The issuer's other cash and cash-equivalents category is fully weighted but does not identify its constituent instruments or obligors. SHVon is classified as an Ondo tokenized-security claim, not direct Treasury/ETF ownership; its underlying custody/account assignment and realizability remain bounded. No all-USDY liability reconciliation or financial-assurance coverage is inferred from this independent portfolio observation.",
-    "knownUnknownExposurePct": 0.000448127725531,
+    "knownUnknownExposurePct": 0.0002893229126606023,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "US Treasuries (issuer portfolio category)",
-        "pct": 86.773198466940016,
+        "pct": 82.83824737191743,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "Issuer-reported sovereign securities category; no individual CUSIP weights or maturity maximum is inferred."
+        "rationale": "Issuer-reported sovereign securities category reconciled to the same-date Ankura LLC T-bill schedule; no contractual maturity maximum is inferred."
       },
       {
         "reserveIndex": 1,
         "reserveName": "SHVon, Ondo tokenized iShares 0-1 Year Treasury Bond ETF",
-        "pct": 13.201537996054318,
+        "pct": 17.13106632411953,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Named Ondo tokenized-security claim is not a tracked stablecoin or a direct ETF share. The issuer layer and unknown realizability remain explicit."
       },
       {
         "reserveIndex": 2,
-        "reserveName": "Silicon Valley Bank bank deposits (issuer portfolio category)",
-        "pct": 0.024815409280131,
+        "reserveName": "First Citizens Bank bank deposits (issuer portfolio category)",
+        "pct": 0.03039698105035521,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Named bank-deposit category, not a tracked stablecoin. No exact-account maturity or immediate liquidity is inferred."
       },
       {
         "reserveIndex": 3,
         "reserveName": "Other Cash and Cash Equivalents (instrument allocation undisclosed)",
-        "pct": 0.000448127725531,
+        "pct": 0.0002893229126606023,
         "disposition": "insufficient-evidence",
-        "rationale": "The category weight is measured in the complete issuer portfolio, but instrument identities, obligors and cash-versus-equivalent allocation are undisclosed."
+        "rationale": "The category weight is measured in the complete issuer portfolio, but instrument identities, obligors and cash-versus-equivalent allocation are undisclosed in the combined portfolio view."
       }
     ]
   },
