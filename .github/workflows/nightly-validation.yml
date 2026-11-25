@@ -60,6 +60,12 @@ jobs:
       - run: npm run check:sensitive-page-copy
         id: sensitive-page-copy
         if: ${{ !cancelled() && steps.workspace.outcome == 'success' }}
+      - run: npm run check:cron-connections
+        id: cron-connections
+        if: ${{ !cancelled() && steps.workspace.outcome == 'success' }}
+      - run: npm run check:sql-safety
+        id: sql-safety
+        if: ${{ !cancelled() && steps.workspace.outcome == 'success' }}
       - name: Check test corpus budget (H2)
         # The PR gate runs H2/H3 against a frozen base; a schedule has none, so
         # the nightly runs the metrics half only. This is the backstop that
@@ -78,6 +84,8 @@ jobs:
           STRUCTURAL_OUTCOME: ${{ steps.structural.outcome }}
           UNUSED_CODE_OUTCOME: ${{ steps.unused-code.outcome }}
           SENSITIVE_COPY_OUTCOME: ${{ steps.sensitive-page-copy.outcome }}
+          CRON_CONNECTIONS_OUTCOME: ${{ steps.cron-connections.outcome }}
+          SQL_SAFETY_OUTCOME: ${{ steps.sql-safety.outcome }}
           TEST_CORPUS_BUDGET_OUTCOME: ${{ steps.test-corpus-budget.outcome }}
         run: |
           failed=()
@@ -90,6 +98,8 @@ jobs:
             "check:structural:$STRUCTURAL_OUTCOME" \
             "check:unused-code:$UNUSED_CODE_OUTCOME" \
             "check:sensitive-page-copy:$SENSITIVE_COPY_OUTCOME" \
+            "check:cron-connections:$CRON_CONNECTIONS_OUTCOME" \
+            "check:sql-safety:$SQL_SAFETY_OUTCOME" \
             "check:test-corpus-budget -- --metrics-only:$TEST_CORPUS_BUDGET_OUTCOME"; do
             outcome="${leaf##*:}"
             command="${leaf%:*}"

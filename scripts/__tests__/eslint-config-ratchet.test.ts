@@ -209,6 +209,16 @@ describe("ESLint config ratchets", () => {
       rule: "pharos/no-local-helper-copies", name, count, filePath: filePath ?? "src/lib/__helper-copy-fixture.ts",
       source: source ?? `function isRecord() {} let parseJson = () => null; var tryParseJson = function () {}; const record = p => ${guard};`,
     })),
+    ...([
+      ["G1-a/b/c/e", 'export const a = tryParseJson(x) ?? {}, b = parseJsonObject(x) || [], c = parseJsonStringArray(x), r = fetch(u, { redirect: "error" as const }), g = (p: Promise<number>) => p.catch(() => 0); export function f() { try { return 1; } catch { return []; } }', 6],
+      ["G1-b ok", "export const c = parseJsonStringArray(x);", 0, "worker/src/lib/json-parse.ts"],
+      ["G1-c ok", "function hasInvalid() { try { return 0; } catch { return true; } } export const x = xs.some(() => { try { return 0; } catch { return true; } });", 0],
+      ["G1-d ui", 'export const s = formatCurrency(v ?? 0), g = r ?? "NR";', 2, "src/lib/__f.ts"],
+      ["G1-d prose", 'export const s = x ?? "None", g = y ?? "NR";', 0, "worker/src/cron/daily-digest/__f.ts"],
+      ["G1 allow", "// pharos-allow-fail-open: bounded default\nexport const a = tryParseJson(x) ?? {};\n// pharos-allow-fail-open: bad\nexport const b = parseJsonObject(x) ?? {};", 1],
+    ] satisfies Array<[string, string, number, string?]>).map(([name, source, count, filePath]) => ({
+      rule: "pharos/no-fail-open-reads", name, source, count, filePath: filePath ?? "worker/src/lib/__f.ts",
+    })),
   ];
 
   it.each(styleProbes)("$rule rejects $name", async ({ rule, source, count, filePath }) => {

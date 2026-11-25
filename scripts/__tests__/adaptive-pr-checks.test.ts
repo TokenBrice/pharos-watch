@@ -520,6 +520,14 @@ describe("adaptive PR checks", () => {
     expect(names).not.toContain("lint:changed");
   });
 
+  it("selects sql-safety, cron-connections, and lint for script/baseline triggers", () => {
+    const g = { group: "guards" } as const, s = "check:sql-safety", c = "check:cron-connections";
+    expect(staticNames(["scripts/maintenance/worker-incident-bundle.mjs"], g)).toEqual(expect.arrayContaining([s, c]));
+    expect(staticNames([".ci/static-guard-baselines.json"])).toEqual(expect.arrayContaining(["lint", s, c]));
+    expect(staticNames(["src/lib/depeg-event-snapshot.ts"], g)).toEqual(expect.arrayContaining([s, c]));
+    expect(staticNames(["worker/src/cron/sync-stablecoins.ts", "scripts/maintenance/build-safety-score-map.ts"], g).filter((n) => n === s || n === c)).toHaveLength(2);
+  });
+
   it("does not select structural checks for test-only changes", () => {
     const changedFiles = [
       "worker/src/cron/__tests__/sync-stablecoins.test.ts",

@@ -146,6 +146,7 @@ describe("CI workflow scope", () => {
       "npm run lint", "npm run typecheck", "npm run typecheck:worker",
       "npm run lint:typed", "npm run typecheck:tests", "npm run check:structural",
       "npm run check:unused-code", "npm run check:sensitive-page-copy",
+      "npm run check:cron-connections", "npm run check:sql-safety",
       "npm run check:test-corpus-budget -- --metrics-only",
     ]);
     // Every mandatory command runs independently once the workspace is ready,
@@ -159,7 +160,7 @@ describe("CI workflow scope", () => {
     for (const command of ["lint", "typecheck", "typecheck:worker"]) {
       expect(staticSteps.findIndex((step) => step.run === `npm run ${command}`)).toBeLessThan(save);
     }
-    for (const command of ["lint:typed", "typecheck:tests", "check:structural", "check:unused-code", "check:sensitive-page-copy"]) {
+    for (const command of ["lint:typed", "typecheck:tests", "check:structural", "check:unused-code", "check:sensitive-page-copy", "check:cron-connections", "check:sql-safety"]) {
       expect(staticSteps.findIndex((step) => step.run === `npm run ${command}`)).toBeGreaterThan(save);
     }
     // The cache publishes only fully validated lint and compiler state.
@@ -178,7 +179,7 @@ describe("CI workflow scope", () => {
     expect(staticSteps.indexOf(aggregate!)).toBeGreaterThan(
       staticSteps.findIndex((step) => step.run === "npm run check:structural"));
     const outcomeEnv = Object.entries(aggregate!.env ?? {});
-    expect(outcomeEnv).toHaveLength(9);
+    expect(outcomeEnv).toHaveLength(11);
     for (const failedExpression of [undefined, ...outcomeEnv.map(([, expression]) => expression)]) {
       const env: NodeJS.ProcessEnv = { NODE_ENV: "test", PATH: process.env.PATH ?? "" };
       for (const [key, expression] of outcomeEnv) {

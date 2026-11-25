@@ -1,0 +1,366 @@
+{
+  "schemaVersion": 1,
+  "guards": {
+    "g1-fail-open-reads": {
+      "shared/lib/selector/recommendation.ts": {
+        "placeholderFallback": 1
+      },
+      "shared/lib/yield-opportunity-risk.ts": {
+        "placeholderFallback": 1
+      },
+      "src/components/contagion-graph/contagion-graph-insights.tsx": {
+        "formatterZeroFallback": 1
+      },
+      "src/components/yield/yield-instrument-board.tsx": {
+        "placeholderFallback": 1
+      },
+      "src/components/yield/yield-leaderboard.tsx": {
+        "placeholderFallback": 1
+      },
+      "src/lib/depeg-event-snapshot.ts": {
+        "catchFailOpenReturn": 2
+      },
+      "src/lib/detail-evidence-persistence.ts": {
+        "catchFailOpenReturn": 1
+      },
+      "src/lib/yield-presentation.ts": {
+        "placeholderFallback": 2
+      },
+      "worker/src/api/stablecoin-detail/shared.ts": {
+        "catchFailOpenReturn": 2
+      },
+      "worker/src/cron/cron-duration-watchdog.ts": {
+        "catchFailOpenReturn": 1
+      },
+      "worker/src/cron/cron-staleness-watchdog.ts": {
+        "catchFailOpenReturn": 1
+      },
+      "worker/src/cron/dex-liquidity/fetch-slipstream.ts": {
+        "catchFailOpenReturn": 2
+      },
+      "worker/src/cron/reserve-adapters/reserve-checkpoint.ts": {
+        "jsonEmptyFallback": 1
+      },
+      "worker/src/cron/sync-live-reserves-finalize.ts": {
+        "catchFailOpenReturn": 1
+      },
+      "worker/src/cron/sync-stablecoins/cache-publication.ts": {
+        "catchFailOpenReturn": 1
+      },
+      "worker/src/cron/sync-stablecoins/enrich-prices-cmc-pass.ts": {
+        "catchFailOpenReturn": 1
+      },
+      "worker/src/cron/sync-stablecoins/supplemental-assets.ts": {
+        "catchFailOpenReturn": 1
+      },
+      "worker/src/cron/sync-stablecoins/supplemental-assets/fiat-cg.ts": {
+        "catchFailOpenReturn": 1
+      },
+      "worker/src/cron/sync-stablecoins/supplemental-assets/gold.ts": {
+        "catchFailOpenReturn": 1
+      },
+      "worker/src/cron/sync-stablecoins/supplemental-assets/silver.ts": {
+        "catchFailOpenReturn": 1
+      },
+      "worker/src/cron/sync-stablecoins/supply-gap-reconciliation.ts": {
+        "catchFailOpenReturn": 3
+      },
+      "worker/src/cron/telegram/sources/telegram-alert-snapshots.ts": {
+        "catchFailOpenReturn": 1
+      },
+      "worker/src/handlers/scheduled/v9-supply-attribution.ts": {
+        "jsonEmptyFallback": 1
+      },
+      "worker/src/lib/backfill-fx.ts": {
+        "catchFailOpenReturn": 1
+      },
+      "worker/src/lib/blacklist-summary-service.ts": {
+        "jsonEmptyFallback": 1
+      },
+      "worker/src/lib/cadence-bucket.ts": {
+        "jsonEmptyFallback": 1
+      },
+      "worker/src/lib/canary-checks-depeg.ts": {
+        "catchFailOpenReturn": 1
+      },
+      "worker/src/lib/cron-logger.ts": {
+        "jsonEmptyFallback": 1
+      },
+      "worker/src/lib/historical-market-prices.ts": {
+        "catchFailOpenReturn": 2
+      },
+      "worker/src/lib/live-reserves/store-history-read.ts": {
+        "catchFailOpenReturn": 1,
+        "jsonEmptyFallback": 1
+      },
+      "worker/src/lib/price-cache.ts": {
+        "jsonStringArrayFallback": 2
+      },
+      "worker/src/lib/scheduled-child-terminal.ts": {
+        "jsonEmptyFallback": 1
+      },
+      "worker/src/lib/status-state-store.ts": {
+        "catchFailOpenReturn": 1
+      },
+      "worker/src/lib/supply-integrity.ts": {
+        "catchFailOpenReturn": 1
+      },
+      "worker/src/lib/tape-projectors/depeg.ts": {
+        "catchFailOpenReturn": 1
+      },
+      "worker/src/telegram/delivery/jobs.ts": {
+        "jsonEmptyFallback": 1
+      },
+      "worker/src/telegram/webhook/telegram-pulse.ts": {
+        "catchFailOpenReturn": 1
+      }
+    },
+    "g2-freshness-clock-hygiene": {
+      "worker/src/api/risk-check.ts": {
+        "adhoc-age-clamp": 3
+      },
+      "worker/src/api/stablecoin-detail/shared.ts": {
+        "adhoc-age-clamp": 1
+      },
+      "worker/src/api/stress-signals.ts": {
+        "adhoc-age-clamp": 1
+      },
+      "worker/src/api/yield-rankings-cache.ts": {
+        "adhoc-age-clamp": 2
+      },
+      "worker/src/cron/cron-staleness-watchdog.ts": {
+        "adhoc-age-clamp": 1
+      },
+      "worker/src/cron/daily-digest/collectors-market.ts": {
+        "advisory-budget-as-admission": 1
+      },
+      "worker/src/cron/daily-digest/digest-evidence.ts": {
+        "advisory-budget-as-admission": 1
+      },
+      "worker/src/cron/daily-digest/input.ts": {
+        "adhoc-age-clamp": 1,
+        "advisory-budget-as-admission": 1
+      },
+      "worker/src/cron/dex-liquidity/uniswap-v4-candidate-snapshot.ts": {
+        "adhoc-age-clamp": 1
+      },
+      "worker/src/cron/dex-liquidity/univ3-candidate-snapshot.ts": {
+        "adhoc-age-clamp": 1
+      },
+      "worker/src/cron/sync-stablecoins/shared.ts": {
+        "adhoc-age-clamp": 1
+      },
+      "worker/src/cron/sync-stablecoins/supply-gap-reconciliation.ts": {
+        "adhoc-age-clamp": 1
+      },
+      "worker/src/cron/tbill-sources/metadata.ts": {
+        "adhoc-age-clamp": 1
+      },
+      "worker/src/cron/tbill-sources/resolve.ts": {
+        "adhoc-age-clamp": 1
+      },
+      "worker/src/cron/yield-sync/cache.ts": {
+        "adhoc-age-clamp": 1
+      },
+      "worker/src/lib/blacklist-gaps.ts": {
+        "adhoc-age-clamp": 1
+      },
+      "worker/src/lib/blacklist-summary-service.ts": {
+        "adhoc-age-clamp": 3
+      },
+      "worker/src/lib/bluechip-cache.ts": {
+        "advisory-budget-as-admission": 1
+      },
+      "worker/src/lib/dews/source-state/hydration.ts": {
+        "adhoc-age-clamp": 3
+      },
+      "worker/src/lib/fx-rate-state.ts": {
+        "adhoc-age-clamp": 2
+      },
+      "worker/src/lib/live-reserves/store-overview.ts": {
+        "adhoc-age-clamp": 1
+      },
+      "worker/src/lib/repair-tasks.ts": {
+        "adhoc-age-clamp": 1
+      },
+      "worker/src/lib/scheduled-slot-reconciliation.ts": {
+        "adhoc-age-clamp": 1
+      },
+      "worker/src/lib/status/cache-freshness.ts": {
+        "adhoc-age-clamp": 1
+      },
+      "worker/src/lib/status/cron-health.ts": {
+        "adhoc-age-clamp": 1
+      },
+      "worker/src/lib/status/operator-alert-health.ts": {
+        "adhoc-age-clamp": 1
+      },
+      "worker/src/lib/supply-integrity.ts": {
+        "adhoc-age-clamp": 1
+      },
+      "worker/src/telegram/common/context-freshness.ts": {
+        "advisory-budget-as-admission": 1
+      },
+      "worker/src/telegram/outbox/pending-capacity.ts": {
+        "adhoc-age-clamp": 2
+      }
+    },
+    "g3-sql-d1-safety": {
+      "worker/scripts/backfills/audit-depeg-history/stability-recompute.ts": {
+        "d1-heavy-table-scan": 1
+      },
+      "worker/scripts/backfills/backfill-depegs-window.ts": {
+        "d1-heavy-table-scan": 1
+      },
+      "worker/scripts/backfills/backfill-stability-index.ts": {
+        "d1-heavy-table-scan": 2
+      },
+      "worker/scripts/backfills/repair-reference-market-artifacts.ts": {
+        "d1-heavy-table-scan": 1
+      },
+      "worker/scripts/reconcile-ddr-finalized-chronology.ts": {
+        "d1-heavy-table-scan": 2
+      },
+      "worker/scripts/replay-blacklist-config-history.ts": {
+        "d1-heavy-table-scan": 2
+      },
+      "worker/scripts/yield-history-cleanup.ts": {
+        "d1-heavy-table-scan": 2
+      },
+      "worker/src/api/backfill-dews.ts": {
+        "d1-heavy-table-scan": 2
+      },
+      "worker/src/api/og-depeg.ts": {
+        "d1-heavy-table-scan": 1
+      },
+      "worker/src/cron/blacklist/coverage.ts": {
+        "d1-overload-unguarded": 3
+      },
+      "worker/src/cron/blacklist/post-fetch.ts": {
+        "d1-heavy-table-scan": 1
+      },
+      "worker/src/cron/cron-staleness-watchdog.ts": {
+        "d1-heavy-table-scan": 2
+      },
+      "worker/src/cron/depeg-detection/persistence.ts": {
+        "d1-heavy-table-scan": 1
+      },
+      "worker/src/cron/dex-liquidity/persistence.ts": {
+        "d1-heavy-table-scan": 1
+      },
+      "worker/src/cron/mint-burn/repair-coverage.ts": {
+        "d1-overload-unguarded": 1
+      },
+      "worker/src/cron/mint-burn/repair-supply-proofs.ts": {
+        "d1-overload-unguarded": 1
+      },
+      "worker/src/cron/mint-burn/retention.ts": {
+        "d1-heavy-table-scan": 1
+      },
+      "worker/src/cron/mint-burn/run-state.ts": {
+        "d1-overload-unguarded": 4
+      },
+      "worker/src/cron/mint-burn/valuation-rebuild.ts": {
+        "d1-overload-unguarded": 1
+      },
+      "worker/src/cron/prune-detail-cache.ts": {
+        "d1-heavy-table-scan": 1
+      },
+      "worker/src/cron/snapshot-chain-supply.ts": {
+        "d1-heavy-table-scan": 1
+      },
+      "worker/src/cron/snapshot-psi.ts": {
+        "d1-heavy-table-scan": 1
+      },
+      "worker/src/cron/snapshot-supply.ts": {
+        "d1-heavy-table-scan": 1
+      },
+      "worker/src/cron/stability-index.ts": {
+        "d1-heavy-table-scan": 1
+      },
+      "worker/src/cron/telegram/jobs/run-jobs.ts": {
+        "d1-unbatched-loop-write": 2
+      },
+      "worker/src/cron/telegram/maintenance/telegram-retention-cleanup.ts": {
+        "d1-heavy-table-scan": 2
+      },
+      "worker/src/cron/telegram/rollup/change-log.ts": {
+        "d1-heavy-table-scan": 1
+      },
+      "worker/src/cron/yield-sync/history-repair.ts": {
+        "d1-heavy-table-scan": 1,
+        "d1-overload-unguarded": 3,
+        "d1-unbatched-loop-write": 1
+      },
+      "worker/src/cron/yield-sync/history.ts": {
+        "d1-overload-unguarded": 9,
+        "d1-unbatched-loop-write": 2
+      },
+      "worker/src/cron/yield-sync/publication-generation.ts": {
+        "d1-overload-unguarded": 2
+      },
+      "worker/src/cron/yield-sync/state.ts": {
+        "d1-overload-unguarded": 1
+      },
+      "worker/src/handlers/scheduled/digest-trigger-poll.ts": {
+        "d1-heavy-table-scan": 1
+      },
+      "worker/src/lib/blacklist/current-balance-debt.ts": {
+        "d1-heavy-table-scan": 1,
+        "d1-unbatched-loop-write": 2
+      },
+      "worker/src/lib/blacklist/identity-reconciliation.ts": {
+        "d1-unbatched-loop-write": 1
+      },
+      "worker/src/lib/blacklist/tron-order-recovery.ts": {
+        "d1-unbatched-loop-write": 1
+      },
+      "worker/src/lib/depeg-resolver-errata-store.ts": {
+        "d1-heavy-table-scan": 1
+      },
+      "worker/src/lib/depeg-resolver-publication-store.ts": {
+        "d1-heavy-table-scan": 1
+      },
+      "worker/src/lib/dews/persistence.ts": {
+        "d1-heavy-table-scan": 4
+      },
+      "worker/src/lib/live-reserves/store-write.ts": {
+        "d1-heavy-table-scan": 1
+      },
+      "worker/src/lib/mint-burn-pipeline/materialization-debt.ts": {
+        "d1-heavy-table-scan": 1
+      },
+      "worker/src/lib/mint-burn-pipeline/persistence.ts": {
+        "d1-heavy-table-scan": 1
+      },
+      "worker/src/lib/mint-burn-pipeline/scan-coverage.ts": {
+        "d1-heavy-table-scan": 1
+      },
+      "worker/src/lib/mint-burn-pipeline/sync-state.ts": {
+        "d1-overload-unguarded": 1
+      },
+      "worker/src/lib/mint-burn-supply-proofs.ts": {
+        "d1-unbatched-loop-write": 1
+      },
+      "worker/src/lib/reserve-continuation-reconciliation.ts": {
+        "d1-heavy-table-scan": 1,
+        "d1-unbatched-loop-write": 1
+      },
+      "worker/src/lib/rpc-provider-budget.ts": {
+        "d1-unbatched-loop-write": 1
+      },
+      "worker/src/lib/scheduled-slot-reconciliation.ts": {
+        "d1-heavy-table-scan": 1
+      },
+      "worker/src/lib/status/d1-capacity-store.ts": {
+        "d1-heavy-table-scan": 1
+      },
+      "worker/src/lib/status/yield-health.ts": {
+        "d1-heavy-table-scan": 1
+      },
+      "worker/src/telegram/store/subscriber-lifecycle.ts": {
+        "d1-heavy-table-scan": 1
+      }
+    }
+  }
+}
