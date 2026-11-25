@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ImgHTMLAttributes } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { CommandPalette } from "@/components/command-palette/command-palette-root";
+import type { CommandPaletteHistoryItem } from "@/components/command-palette/command-palette-model";
+import { CHROME_DISMISS_EVENT, OPEN_KEYBOARD_SHORTCUTS_EVENT } from "@/lib/chrome-popover";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { FX_REOPEN_QUOTE_AT, makeFxCurrentPeg } from "@shared/test-utils/boundary-contract-vectors.test-support";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
@@ -14,6 +16,7 @@ import type { StablecoinListResponse } from "@shared/types/supply";
 const {
   pushMock,
   pathnameMock,
+  historyMock,
   addToHistoryMock,
   clearHistoryMock,
   toggleThemeMock,
@@ -26,6 +29,7 @@ const {
   useCoinStatesMock: vi.fn(),
   pushMock: vi.fn(),
   pathnameMock: { current: "/" as string },
+  historyMock: { current: [] as CommandPaletteHistoryItem[] },
   addToHistoryMock: vi.fn(),
   clearHistoryMock: vi.fn(),
   toggleThemeMock: vi.fn(),
@@ -50,7 +54,7 @@ vi.mock("@/lib/logos", () => ({
 
 vi.mock("@/hooks/use-command-palette-history", () => ({
   useCommandPaletteHistory: () => ({
-    history: [],
+    history: historyMock.current,
     addToHistory: addToHistoryMock,
     clearHistory: clearHistoryMock,
   }),
@@ -107,6 +111,7 @@ describe("CommandPalette", () => {
 
   beforeEach(() => {
     pathnameMock.current = "/";
+    historyMock.current = [];
     watchlistIdsMock.current = [];
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
       callback(0);
@@ -359,5 +364,83 @@ describe("CommandPalette", () => {
 
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(useCoinStatesMock).toHaveBeenCalledWith({ enabled: false });
+  });
+
+  it("lets Enter activate focused non-option buttons, keeps listbox ARIA clean, and shows tablet close", () => {
+    historyMock.current = [
+      { id: "usdc-circle", type: "stablecoin", label: "USD Coin", sublabel: "USDC", href: "/stablecoin/usdc-circle/" },
+    ];
+    renderPalette();
+
+    const listbox = screen.getByRole("listbox", { name: "Search results" });
+    const clearButton = screen.getByRole("button", { name: "Clear" });
+    const closeButton = screen.getByRole("button", { name: "Close command palette" });
+    const compareChip = screen.getByRole("button", { name: "compare" });
+
+    // Recent Clear button stays outside role="listbox" while groups sit cleanly inside.
+    expect(listbox.contains(clearButton)).toBe(false);
+    expect(listbox.querySelectorAll('[role="group"]').length).toBeGreaterThan(0);
+
+    // Top-right close button remains available on touch tablets (<lg), not hidden at sm.
+    expect(closeButton.className).toContain("lg:hidden");
+    expect(closeButton.className).not.toContain("sm:hidden");
+
+    // Option buttons stay out of Tab order (tabIndex=-1) per WAI-ARIA Combobox APG.
+    const options = screen.getAllByRole("option");
+    expect(options.length).toBeGreaterThan(0);
+    for (const option of options) {
+      expect(option.getAttribute("tabindex")).toBe("-1");
+    }
+
+    // Enter on focused verb chip, Clear, and Close buttons is never hijacked to selectResult().
+    for (const btn of [compareChip, clearButton, closeButton]) {
+      btn.focus();
+      const notPrevented = fireEvent.keyDown(btn, { key: "Enter" });
+      expect(notPrevented).toBe(true);
+    }
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it("dismisses chrome overlays on open, opens keyboard shortcuts from footer, and avoids focus steal on navigation close", () => {
+    const dismissSources: string[] = [];
+    const onDismiss = (event: Event) => {
+      dismissSources.push((event as CustomEvent<{ source: string }>).detail.source);
+    };
+    let shortcutsOpened = 0;
+    const onOpenShortcuts = () => {
+      shortcutsOpened += 1;
+    };
+    window.addEventListener(CHROME_DISMISS_EVENT, onDismiss);
+    window.addEventListener(OPEN_KEYBOARD_SHORTCUTS_EVENT, onOpenShortcuts);
+
+    const trigger = document.createElement("button");
+    document.body.appendChild(trigger);
+    trigger.focus();
+
+    const onOpenChange = vi.fn();
+    const { rerender } = render(
+      <QueryClientProvider client={queryClient}>
+        <CommandPalette open={true} onOpenChange={onOpenChange} />
+      </QueryClientProvider>,
+    );
+
+    expect(dismissSources).toContain("command-palette");
+
+    // Keyboard shortcuts footer button closes palette and opens the shortcuts dialog without restoring focus to trigger.
+    const shortcutsBtn = screen.getByRole("button", { name: /Keyboard shortcuts/i });
+    fireEvent.click(shortcutsBtn);
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(shortcutsOpened).toBe(1);
+
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <CommandPalette open={false} onOpenChange={onOpenChange} />
+      </QueryClientProvider>,
+    );
+    expect(document.activeElement).not.toBe(trigger);
+
+    trigger.remove();
+    window.removeEventListener(CHROME_DISMISS_EVENT, onDismiss);
+    window.removeEventListener(OPEN_KEYBOARD_SHORTCUTS_EVENT, onOpenShortcuts);
   });
 });

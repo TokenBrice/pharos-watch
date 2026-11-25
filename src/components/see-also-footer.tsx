@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowUpRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { getSeeAlsoLinks } from "@/lib/see-also-graph";
 import { cn } from "@/lib/utils";
 
@@ -59,7 +59,7 @@ export function SeeAlsoFooter({ links, route, className }: SeeAlsoFooterProps) {
                   </span>
                 ) : null}
               </span>
-              <ArrowUpRight
+              <ChevronRight
                 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/70 transition-colors group-hover:text-foreground"
                 aria-hidden="true"
               />

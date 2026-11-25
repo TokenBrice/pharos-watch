@@ -14,12 +14,12 @@ export const SEE_ALSO_GRAPH: Readonly<Record<string, ReadonlyArray<SeeAlsoLink>>
     },
     {
       href: "/api/",
-      label: "API access",
+      label: "API",
       description: "Pull coverage programmatically.",
     },
     {
       href: "/upcoming/",
-      label: "Upcoming launches",
+      label: "Upcoming",
       description: "Pre-launch assets excluded from coverage.",
     },
     {
@@ -334,6 +334,94 @@ export const SEE_ALSO_GRAPH: Readonly<Record<string, ReadonlyArray<SeeAlsoLink>>
       href: "/yield/",
       label: "Yield Intelligence",
       description: "Rank risk-adjusted stablecoin yields by PYS.",
+    },
+  ],
+  "/cemetery/": [
+    {
+      href: "/learn/case-studies/",
+      label: "Case Studies",
+      description: "Deep post-mortems of major stablecoin collapses.",
+    },
+    {
+      href: "/depeg/",
+      label: "Depeg & Recovery",
+      description: "Live peg stress and active incident tracking.",
+    },
+    {
+      href: "/timeline/",
+      label: "Timeline",
+      description: "Chronological wire of depegs, freezes, and grade changes.",
+    },
+    {
+      href: "/learn/mechanisms/",
+      label: "Mechanisms",
+      description: "How each peg architecture holds up or breaks under stress.",
+    },
+  ],
+  "/timeline/": [
+    {
+      href: "/depeg/",
+      label: "Depeg & Recovery",
+      description: "Active peg incidents, DEWS stress, and recovery windows.",
+    },
+    {
+      href: "/freezewatch/",
+      label: "FreezeWatch",
+      description: "Issuer freeze powers and enforcement history.",
+    },
+    {
+      href: "/safety-scores/",
+      label: "Safety Scores",
+      description: "Backing, Exit, and Control grades across tracked coins.",
+    },
+    {
+      href: "/digest/",
+      label: "Daily Digest",
+      description: "Daily editorial recap of notable market events.",
+    },
+  ],
+  "/upcoming/": [
+    {
+      href: "/coverage/",
+      label: "Coverage",
+      description: "See what Pharos tracks once a stablecoin goes live.",
+    },
+    {
+      href: "/stablecoins/",
+      label: "Stablecoins",
+      description: "Browse every active tracked stablecoin by peg and backing.",
+    },
+    {
+      href: "/compliance/",
+      label: "Compliance",
+      description: "Review MiCA and GENIUS authorization posture by issuer.",
+    },
+    {
+      href: "/safety-scores/",
+      label: "Safety Scores",
+      description: "Inspect how launched coins are rated across three pillars.",
+    },
+  ],
+  "/pharoswatchbot/": [
+    {
+      href: "/depeg/",
+      label: "Depeg & Recovery",
+      description: "Monitor live peg incidents and DEWS stress signals.",
+    },
+    {
+      href: "/freezewatch/",
+      label: "FreezeWatch",
+      description: "Track issuer blacklist controls and freeze actions.",
+    },
+    {
+      href: "/portfolio/",
+      label: "Portfolio",
+      description: "Build a custom book and monitor its combined risk.",
+    },
+    {
+      href: "/coverage/",
+      label: "Coverage",
+      description: "Check which alerts and signals are tracked coin by coin.",
     },
   ],
 };

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState, type JSX } from "react";
-import { Check, ChevronLeft, ChevronRight, Pencil, Plus, RotateCcw, X } from "lucide-react";
+import { ArrowUpRight, Check, ChevronLeft, ChevronRight, Pencil, Plus, RotateCcw, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { NAV_ITEMS, type NavItem } from "@/lib/nav-config";
@@ -10,17 +10,6 @@ import { DEFAULT_SHORTCUT_HREFS, useShortcuts } from "@/hooks/use-shortcuts";
 import { cn } from "@/lib/utils";
 
 const NAV_BY_HREF = new Map<string, NavItem>(NAV_ITEMS.map((item) => [item.href, item]));
-
-// Curated 6 primary tools shown in the default uncustomized view (Q6).
-// User-customized shortcut lists stay untouched in view & edit mode.
-const CURATED_PRIMARY_SHORTCUT_HREFS: readonly string[] = [
-  "/screener/",
-  "/compare/",
-  "/liquidity/",
-  "/chains/",
-  "/portfolio/",
-  "/dependency-map/",
-];
 
 function externalLinkProps(item: NavItem): { target?: string; rel?: string } {
   return item.external ? { target: "_blank", rel: "noopener noreferrer" } : {};
@@ -40,6 +29,7 @@ function ShortcutLink({ item, className }: { item: NavItem; className?: string }
   return (
     <Link
       href={item.href}
+      prefetch={false}
       {...externalLinkProps(item)}
       className={cn(
         "pharos-focus-ring group flex items-center gap-2.5 border-b border-r border-border/60 px-3.5 py-2.5 transition-colors hover:bg-muted/30",
@@ -48,6 +38,15 @@ function ShortcutLink({ item, className }: { item: NavItem; className?: string }
     >
       <ShortcutIcon item={item} />
       <span className="min-w-0 truncate text-sm text-muted-foreground group-hover:text-foreground">{item.label}</span>
+      {item.external ? (
+        <>
+          <ArrowUpRight
+            className="ml-auto size-3.5 shrink-0 text-muted-foreground/70"
+            aria-hidden="true"
+          />
+          <span className="sr-only"> (opens in new tab)</span>
+        </>
+      ) : null}
     </Link>
   );
 }
@@ -122,21 +121,16 @@ export function ShortcutsSection(): JSX.Element {
     [hrefs],
   );
 
-  const visibleViewItems = useMemo(() => {
-    if (isDefault) {
-      return CURATED_PRIMARY_SHORTCUT_HREFS.flatMap((href) => NAV_BY_HREF.get(href) ?? []);
-    }
-    return items;
-  }, [isDefault, items]);
+  const visibleViewItems = items;
 
   const desktopFillItems = useMemo(() => {
-    if (isDefault || visibleViewItems.length >= CURATED_PRIMARY_SHORTCUT_HREFS.length) return [];
+    if (isDefault || visibleViewItems.length >= DEFAULT_SHORTCUT_HREFS.length) return [];
     const selected = new Set(visibleViewItems.map((item) => item.href));
-    return CURATED_PRIMARY_SHORTCUT_HREFS.flatMap((href) => {
+    return DEFAULT_SHORTCUT_HREFS.flatMap((href) => {
       if (selected.has(href)) return [];
       const item = NAV_BY_HREF.get(href);
       return item ? [item] : [];
-    }).slice(0, CURATED_PRIMARY_SHORTCUT_HREFS.length - visibleViewItems.length);
+    }).slice(0, DEFAULT_SHORTCUT_HREFS.length - visibleViewItems.length);
   }, [isDefault, visibleViewItems]);
 
   // Destinations the user can still add (everything not already pinned).
