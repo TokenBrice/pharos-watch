@@ -1,164 +1,55 @@
 ---
 name: yield-coverage-audit-drain
-description: Drain the Pharos Yield Intelligence coverage-audit queue into reviewed source coverage, documented intentional gaps, or watchlisted deferrals. Use monthly after `yield-coverage-audit` runs, after yield coverage drops, or when promoting queue candidates such as `native-exact-pool`, `lending-allowlist`, `source-family-adapter`, or `stale-auto-lending-override`.
+description: Drain the Yield Intelligence coverage-audit queue into reviewed source mappings, intentional gaps, or deferrals. Use monthly after the audit or a coverage drop. Not for hunting outside the queue.
 ---
 
-Read `docs/editorial-style.md` before writing. Its universal rules and the named `technical-evidence` register govern all Pharos-owned prose; this skill adds only factual, sourcing, schema, and format requirements.
+Read `docs/editorial-style.md` before writing; its `technical-evidence` register governs prose.
 
 # Yield Coverage Audit Drain
 
-Turn the `yield-coverage-audit` queue into reviewed Yield Intelligence changes.
-The queue is a lead: verify live source data,
-local identity, safety/publication gates, and current methodology docs.
+## Trigger And Exclusions
 
-## Required Context
+Run after the monthly `yield-coverage-audit`, on a Yield Health coverage alert, or when the weekly curation digest (`scripts/maintenance/weekly-curation-digest.mjs`) lists overdue yield reviews. Every queue item is a lead: verify live source data, local identity, safety and publication gates, and current methodology before changing config. The queue is display-only; classifications live in the scratch note and accepted items become config changes. Never write dispositions or mutate D1 to drain it.
 
-Read routed yield docs and scoped instructions.
-Inspect `worker/src/cron/yield-coverage-audit.ts`, the relevant
-resolver/config source under `worker/src/cron/yield-sync/` or
-`worker/src/lib/yield-config/`, and `shared/types/status.ts` when the payload
-changes. Verified docs own durable policy; `/agents/` is scratch only.
+## Mandatory Core
 
-## Queue Snapshot
+1. Read routed yield docs and scoped instructions, then [Coverage Audit Queue](../../../docs/yield-intelligence-operations.md#coverage-audit-queue) for accounting, suppression, display caps and the accept/dismiss/intentional-gap/watch vocabulary.
+2. Take a read-only snapshot. Prefer the `yieldHealth.coverageAudit` projection from the status request in [Yield Health first checks](../../../docs/runbooks/yield-health.md#first-checks), or read the cache row from `worker/` with an already authenticated session:
 
-Prefer a read-only production/cache snapshot. The cache key is
-`yield-coverage-audit`; status also exposes a bounded view through
-`yieldHealth.coverageAudit`.
+   ```bash
+   npx wrangler d1 execute stablecoin-db --remote --command "select key, value, updated_at from cache where key = 'yield-coverage-audit';"
+   ```
 
-Use an already authenticated read-only path. Run this example from `worker/`, where the Wrangler configuration lives:
+   Keep production D1 inspection SELECT-only. If remote D1 is unavailable, use the latest fixture or prior run output and label it.
+3. Record the date, `reportedAt`, the full pre-cap `queueTotals` and their basis (never the bounded samples), `reviewDueAdapters` with its full count, and whether evidence is production, local or fixture-derived.
+4. If the queue and the due-review list are empty, report source, date and zero counts, then stop.
 
-```bash
-npx wrangler d1 execute stablecoin-db --remote --command "select key, value, updated_at from cache where key = 'yield-coverage-audit';"
-```
+Hard stops:
 
-If remote D1 is unavailable, use the latest fixture or prior run output. The
-audit runs from `worker/src/handlers/scheduled/monthly-yield-audit.ts` and the
-authenticated `POST /api/trigger-yield-coverage-audit` route, implemented in
-`worker/src/handlers/scheduled/yield-coverage-audit-manual.ts`. After deploying
-reviewed coverage changes, use the manual replay procedure in
-`docs/runbooks/yield-health.md`; it uses the normal audit lease. Keep production
-D1 inspection SELECT-only; do not manually mutate production D1 or dispositions.
+- Do not lower global lending APY, TVL or safety gates to win coverage.
+- Do not add protocol allowlist entries beyond queue and category-gated evidence.
+- Do not scrape product pages without a confirmed durable machine-readable source.
+- Do not force coverage around a publication, safety or benchmark guard without written rationale.
+- Do not bump a `reviewedAt` or `nextReviewAt` without a new review.
 
-Record date, `reportedAt`, counts, and whether evidence is production, local,
-or fixture-derived.
+## Branch Reads And Actions
 
-For queue accounting, suppression, display caps, and operator-note decisions, read [Coverage Audit Queue](../../../docs/yield-intelligence-operations.md#coverage-audit-queue); for budget interpretation and unavailable supply, use [Yield Health first checks](../../../docs/runbooks/yield-health.md#first-checks) and [remediation](../../../docs/runbooks/yield-health.md#remediation). Record the full pre-cap totals and their basis, not bounded samples. The queue is display-only; never write dispositions or mutate D1 to drain it.
-
-## Decision Workflow
-
-### 1. Triage queue items
-
-Handle queue items by `kind`:
-
-- `stale-auto-lending-override`: verify the mapped DeFiLlama pool still exists,
-  is single-exposure, is stablecoin-marked, remains in an allowlisted project,
-  clears the APY and TVL floor, and is not collision-blocked. Remove stale pins
-  or repoint to a verified replacement.
-- `native-exact-pool`: verify tracked stablecoin identity by chain/address or a
-  documented wrapper variant. Promote only exact native holder-yield rows.
-- `lending-allowlist`: verify DeFiLlama protocol category is Lending, CDP, RWA
-  Lending, or Uncollateralized Lending. Add allowlist slugs only from the queue
-  or a clearly equivalent candidate, not broad protocol hunting.
-- `source-family-adapter`: require a reusable protocol-native API/on-chain
-  adapter shape. Do not add one-off scrapers for pages without stable machine
-  payloads.
-- Historical `quarantine-ready-to-restore`: follow [retired-reader boundaries](../../../docs/yield-intelligence.md#tier-1-on-chain-reads) and [coverage-audit remediation](../../../docs/runbooks/yield-health.md#remediation) before interpreting retained items.
-- `unmatched-high-tvl-pool` / `missing-protocol`: a high-TVL stablecoin pool or
-  protocol has no local coverage mapping. Decide venue map, allowlist, or
-  adapter candidacy. Record a documented intentional gap; do not leave the
-  row unaddressed just because it is watch-severity.
-- `venue-risk-config-missing`: an active source's venue protocol has no
-  reviewed entry in `YIELD_RISK_CONFIG`
-  (`shared/lib/yield-source-risk-registry.ts`). Author a reviewed risk entry
-  from source evidence; do not guess sub-scores.
-- `stale-venue-risk-score`: a `YIELD_RISK_CONFIG` entry's `reviewedAt` has
-  exceeded the review cadence. Re-review the venue and refresh the entry
-  (sub-scores and `reviewedAt`); do not bump the date without a re-review.
-- `manifest-missing` / `ranking-missing`: check whether this is a source gap,
-  publication gate, safety gate, stale benchmark, or intentional gap. Do not
-  force coverage around a guard without written rationale.
-
-For retired BIMA, CETES, or vaults.fyi candidates, read the [protocol-native source owner](../../../docs/yield-intelligence.md#tier-25-protocol-native-yield-apis). Prove stale-item clearance through [recompute after a coverage drain](../../../docs/runbooks/yield-health.md#recompute-after-a-coverage-drain), not an hourly publication.
-
-The kind list above mirrors `YieldCoverageAuditQueueItemKind` in
-`shared/types/status/yield-liquidity.ts`. The source file wins; triage any
-kind not listed here from its emitting code in
-`worker/src/cron/yield-coverage-audit/detectors.ts`.
-
-### 2. Verify source identity
-
-For each candidate:
-
-1. Pull live DeFiLlama Yields data from `https://yields.llama.fi/pools` or the
-   candidate chart endpoint.
-2. Match the candidate to local stablecoin metadata by contract address,
-   wrapper mapping, chain alias, and symbol. Symbol-only matches are acceptable
-   only when address data is unavailable and no same-symbol collision exists.
-3. For CoinGecko-derived or contract-derived identity, use existing Pharos
-   chain IDs from `shared/types/chain-identity.ts`; do not invent unsupported chain
-   identifiers.
-4. Add same-symbol false-positive guards to
-   `AUTO_LENDING_COLLISION_BLOCKLIST` when a live pool is valid but belongs to a
-   different tracked asset.
-5. For safety-bypass candidates, add a code comment explaining why the bypass is
-   limited and why the exact pool is acceptable. Use bypasses sparingly.
-
-### 3. Promote, reject, or defer
-
-Promote only when the candidate passes identity, source, APY/TVL, and
-publication gates:
-
-- Exact stablecoin yield-bearing pools usually belong in `YIELD_POOL_MAP` or an
-  explicit source-family config.
-- Non-yield-bearing venue opportunities belong in `AUTO_LENDING_POOL_MAP` only
-  when the pinned DeFiLlama UUID is safer than generic discovery.
-- Reusable lending protocols belong in the authored `LENDING_PROTOCOLS` map in
-  `worker/src/lib/yield-config/yield-config-lending-protocols.ts`; its slugs and labels derive `LENDING_PROTOCOL_ALLOWLIST` and `LENDING_PROTOCOL_LABELS`. Do not edit the derived exports.
-- Benchmark-derived assets require a benchmark fetcher, cache schema, yield
-  benchmark type update, rate-derived config, tests, and docs/source roster
-  updates.
-
-Reject or defer when:
-
-- The pool is multi-exposure, below floor, reward-only/no base yield, or
-  same-symbol but wrong asset.
-- The product page shows APY but no stable public machine-readable endpoint.
-- The source is gated by login/session headers, legal accreditation, or
-  undisclosed off-chain reporting.
-- A native module exists but lacks a verified adapter path. Document the
-  candidate and next review date instead of adding speculative code.
-
-## Documentation and Versioning
-
-Update routed owners for source/config, queue, or publication changes. Follow [Methodology Versioning](../../../docs/yield-intelligence.md#methodology-versioning) and [ADR-3](../../../docs/architecture.md#adr-3) only when methodology changes; new providers also update `docs/about-page.md`.
+- Non-empty queue or due reviews: [queue-triage.md](references/queue-triage.md) owns per-kind triage, identity checks, the authored config targets and the reject/defer gate.
+- Kind semantics: `YieldCoverageAuditQueueItemKind` in `shared/types/status/yield-liquidity.ts` and its emitters in `worker/src/cron/yield-coverage-audit/detectors.ts`; the source files win over any list here.
+- Budget interpretation, unavailable supply and incident handling: [Yield Health remediation](../../../docs/runbooks/yield-health.md#remediation).
+- Source or config, queue, or publication change: update the routed owner. Follow [Methodology Versioning](../../../docs/yield-intelligence.md#methodology-versioning) and [ADR-3](../../../docs/architecture.md#adr-3) only when methodology changes; a new provider also updates `docs/about-page.md`.
 
 ## Validation
-
-Run focused tests for changed surfaces first, then the broader gates:
 
 ```bash
 npx vitest run worker/src/cron/__tests__/yield-config-registry.test.ts worker/src/cron/__tests__/yield-coverage-audit.test.ts worker/src/cron/__tests__/yield-helpers.test.ts worker/src/lib/status/__tests__/yield-health.test.ts
 npm run check:stablecoin-data
 ```
 
-If the reviewed changes will be published, use `pharos-release-runner` after
-the focused checks. GitHub's required `PR gate` is authoritative; the heavy
-local merge gate is optional rehearsal work.
+Add `shared/lib/__tests__/yield-source-risk-registry.test.ts` for any venue-risk edit, `worker/src/cron/__tests__/fetch-tbill-rate.test.ts` when benchmarks change, and the frontend status or methodology tests when public status or copy changes.
 
-Add `worker/src/cron/__tests__/fetch-tbill-rate.test.ts` when benchmarks change,
-and frontend status/methodology tests when public status or UI copy changes.
+Publish through `pharos-release-runner` when requested. After the deploy, prove the drained items cleared with [Recompute after a coverage drain](../../../docs/runbooks/yield-health.md#recompute-after-a-coverage-drain); an hourly publication does not clear a monthly cached item.
 
-## Output
+## Completion Evidence
 
-If the queue is empty, report source/date and zero counts, then stop; do not
-hunt outside the queue. Otherwise report promotions by config, rejections and
-deferrals with next trigger, checks, and remaining queue-health risk.
-
-## Hard Stops
-
-- Do not add manual/on-chain/CMC/DEX supply overrides.
-- Do not multiply DefiLlama list-endpoint circulating values by price.
-- Do not lower global lending APY/TVL/safety gates to win coverage.
-- Do not add broad protocol allowlists outside queue/category-gated evidence.
-- Do not scrape unstable product pages when a durable API/source contract is not
-  confirmed.
+Report the snapshot source and date, pre-cap totals, promotions by config file, rejections and deferrals each with its next trigger, lifecycle and exclusion reviews updated, checks run, and remaining queue-health risk.

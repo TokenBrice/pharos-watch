@@ -64,7 +64,7 @@ describe("pulse editorial rich text", () => {
     try {
       writeFileSync(path.join(dir, "content.json"), JSON.stringify(content));
       let failure: unknown;
-      try { execFileSync(process.execPath, [".codex/skills/stablecoin-pulse-report/scripts/build-pulse-pdf.mjs", "--dir", dir], { stdio: "pipe" }); }
+      try { execFileSync(process.execPath, [".codex/skills/stablecoin-pulse-report/scripts/build-pulse-pdf.mjs", "--dir", dir, "--partner", "Partner"], { stdio: "pipe" }); }
       catch (error) { failure = error; }
       expect((failure as { status?: number } | undefined)?.status).toBeGreaterThan(0);
       expect(String((failure as { stderr: Buffer })?.stderr)).toContain("unsupported rich-text markup");

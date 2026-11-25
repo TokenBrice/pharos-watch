@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { parseStrictCliArgs, requireCliString, runDirectCli } from '../../../../scripts/lib/cli-args.mjs';
 import { sumPegBucketsOrNull, getCirculatingRawOrNull, getPrevMonthRawOrNull } from '../../../../shared/lib/supply.ts';
+import { getListingClass } from '../../../../shared/lib/stablecoins/listing-governance.ts';
+import { MARKET_PERIMETER_MARKERS } from '../../../../shared/lib/supply-perimeter-changes.ts';
 
 const DAY = 86400;
 const launched = Date.now();
@@ -114,8 +116,7 @@ async function main() {
   for (const [name, path] of [
     ['stablecoins', '/api/stablecoins'], ['chains', '/api/chains'], ['digest-archive', '/api/digest-archive'],
     ['psi', '/api/stability-index?detail=true'], ['peg-summary', '/api/peg-summary'],
-    ['mint-burn-flows', '/api/mint-burn-flows?hours=720'], ['blacklist-summary', '/api/blacklist-summary'],
-    ['non-usd-share', '/api/non-usd-share?days=60'], ['charts', '/api/stablecoin-charts'],
+    ['blacklist-summary', '/api/blacklist-summary'], ['non-usd-share', '/api/non-usd-share?days=60'],
   ]) {
     raw[name] = await request(path);
     await save(`${name}.json`, raw[name]);
@@ -148,17 +149,18 @@ async function main() {
   required(Array.isArray(raw.psi.history) && raw.psi.history.length, 'psi.history');
   required(Array.isArray(raw['peg-summary'].coins) && finite(raw['peg-summary'].summary?.coinsAtPeg) && finite(raw['peg-summary'].summary?.totalTracked), 'peg-summary');
   required(Array.isArray(raw['non-usd-share']) && raw['non-usd-share'].length, 'non-usd-share');
-  required(Array.isArray(raw.charts) && raw.charts.length, 'stablecoin-charts');
-  required(Array.isArray(raw['mint-burn-flows'].coins) && raw['mint-burn-flows'].coins.length, 'mint-burn-flows.coins');
   required(raw['blacklist-summary'].stats && Object.keys(raw['blacklist-summary'].stats).length, 'blacklist-summary.stats');
   const coinMap = new Map(coins.map((coin) => [coin.id, coin]));
+  // Listing policy: tokenized funds are tracked but are not stablecoins, so they stay out of rankings and aggregates.
+  const isFund = (coin) => getListingClass(coin.id) === 'tokenized-fund';
+  const stablecoins = coins.filter((coin) => !isFund(coin));
   const movers = [];
   const excluded = [];
   for (const coin of coins) {
     const now = getCirculatingRawOrNull(coin);
     const before = getPrevMonthRawOrNull(coin);
     const row = { id: coin.id, symbol: coin.symbol, pegType: coin.pegType, mechanism: coin.pegMechanism, supplyUsd_now: now, supplyUsd_30dAgo: before, deltaUsd: now != null && before != null ? now - before : null, deltaPct: pct(now, before) };
-    const reasons = [numericId(coin.id) && 'numeric-id', now == null && 'absent-current', before == null && 'absent-baseline', before === 0 && 'zero-baseline'].filter(Boolean);
+    const reasons = [numericId(coin.id) && 'numeric-id', isFund(coin) && 'tokenized-fund', now == null && 'absent-current', before == null && 'absent-baseline', before === 0 && 'zero-baseline'].filter(Boolean);
     if (reasons.length) excluded.push({ ...row, reason: reasons.join(';') }); else movers.push(row);
   }
   movers.sort(absDelta);
@@ -193,8 +195,15 @@ async function main() {
   const baselineFor = (day) => series.filter((row) => row.date <= day).at(-1) ?? null;
   const baseline30d = baselineFor(date(start));
   const baselineMtd = baselineFor(`${date(end).slice(0, 7)}-01`);
-  const change = (baseline) => ({ baseline, deltaUsd: baseline ? current.totalMcapUsd - baseline.totalMcapUsd : null, deltaPct: baseline ? pct(current.totalMcapUsd, baseline.totalMcapUsd) : null });
-  const peak = series.reduce((best, row) => row.totalMcapUsd > best.totalMcapUsd ? row : best);
+  // A total on one side of a market perimeter change cannot be compared with a total on the other.
+  const crossed = (row) => row ? MARKET_PERIMETER_MARKERS.find((marker) => row.generatedAt * 1000 < marker.tsMs && marker.tsMs <= current.generatedAt * 1000) ?? null : null;
+  const change = (baseline) => {
+    const marker = crossed(baseline);
+    const comparable = baseline && !marker;
+    return { baseline, deltaUsd: comparable ? current.totalMcapUsd - baseline.totalMcapUsd : null, deltaPct: comparable ? pct(current.totalMcapUsd, baseline.totalMcapUsd) : null, withheld: marker ? `crosses ${marker.shortLabel} (${marker.date})` : null };
+  };
+  // The peak is taken from the current perimeter only, so its drawdown stays comparable.
+  const peak = series.filter((row) => !crossed(row)).reduce((best, row) => row.totalMcapUsd > best.totalMcapUsd ? row : best);
   const psiHistory = raw.psi.history.filter((row) => row.date >= startDay && row.date <= end && finite(row.score)).sort((a, b) => a.date - b.date);
   required(psiHistory.length, 'PSI scores inside window');
   const nonUsd = [...raw['non-usd-share']].sort((a, b) => a.date - b.date);
@@ -204,7 +213,7 @@ async function main() {
     dailySeries: series, current, change30d: change(baseline30d), monthToDate: change(baselineMtd),
     peak: { ...peak, drawdownPct: pct(current.totalMcapUsd, peak.totalMcapUsd) },
     shares: Object.fromEntries(['usdt-tether', 'usdc-circle'].map((id) => { const value = getCirculatingRawOrNull(coinMap.get(id)); return [id, { supplyUsd: value, sharePct: value == null ? null : value / current.totalMcapUsd * 100 }]; })),
-    byPegType: aggregatePulseSupply(coins, 'pegType'), byPegMechanism: aggregatePulseSupply(coins, 'pegMechanism'),
+    byPegType: aggregatePulseSupply(stablecoins, 'pegType'), byPegMechanism: aggregatePulseSupply(stablecoins, 'pegMechanism'),
     nonUsdShare: { start: atDay(nonUsd, startDay), end: atDay(nonUsd, end) },
     psi: { daily: psiHistory, start: psiHistory[0], end: psiHistory.at(-1), min: Math.min(...psiHistory.map((row) => row.score)), max: Math.max(...psiHistory.map((row) => row.score)), bandsSeen: [...new Set(psiHistory.map((row) => row.band))] },
     pegSummary: { coinsAtPeg: raw['peg-summary'].summary.coinsAtPeg, totalTracked: raw['peg-summary'].summary.totalTracked },
@@ -256,7 +265,8 @@ async function main() {
     'All supply figures are USD market cap unless noted. Δ30d uses circulatingPrevMonth. Percentages below are percentage points, not ratios.', '',
     '## Market-wide [market.json]',
     `- Headline: ${usd(current.totalMcapUsd)} (${current.date}); Δ30d ${usd(market.change30d.deltaUsd)} / ${percent(market.change30d.deltaPct)} from ${baseline30d?.date ?? 'unavailable'}. MTD ${usd(market.monthToDate.deltaUsd)} / ${percent(market.monthToDate.deltaPct)}.`,
-    `- Full daily-series peak: ${usd(peak.totalMcapUsd)} on ${peak.date}; drawdown ${percent(market.peak.drawdownPct)}.`,
+    ...[['Δ30d', market.change30d], ['MTD', market.monthToDate]].filter(([, entry]) => entry.withheld).map(([label, entry]) => `- ${label} withheld: the comparison ${entry.withheld}; do not quote a headline change across it.`),
+    `- Current-perimeter daily-series peak: ${usd(peak.totalMcapUsd)} on ${peak.date}; drawdown ${percent(market.peak.drawdownPct)}.`,
     ...Object.entries(market.shares).map(([id, value]) => `- ${id}: ${usd(value.supplyUsd)}, ${percent(value.sharePct)} of headline.`),
     ...Object.entries(market.byPegMechanism).map(([key, value]) => `- ${key}: ${usd(value.currentUsd)} now; current coverage ${value.currentCoins}/${value.totalCoins} (${value.currentCoverage}); baseline coverage ${value.previousCoins}/${value.totalCoins} (${value.previousCoverage}); comparable Δ30d ${usd(value.deltaUsd)} (${percent(value.deltaPct)}); comparable coverage ${value.comparableCoins}/${value.totalCoins} (${value.comparableCoverage}).`),
     `- PSI: ${market.psi.start.score} (${date(market.psi.start.date)}) → ${market.psi.end.score} (${date(market.psi.end.date)}); min/max ${market.psi.min}/${market.psi.max}; bands ${market.psi.bandsSeen.join(', ')}.`,
@@ -289,6 +299,7 @@ async function main() {
   lines.push('', '## Data caveats',
     '- Headline, 30d/MTD changes, peak and drawdown use only the daily digest totalMcapUsd series, not chart totals or summed registry supply. Baselines use the last available UTC daily observation on/before the target day; dates are explicit in market.json.',
     '- Daily PSI, non-USD share and supply histories include the start UTC day. Event and digest-text filters use the exact rolling timestamps. Unit decomposition uses historical daily observations, not live circulatingPrevMonth; missing prices remain unavailable.',
+    '- Tokenized funds (listing class tokenized-fund) are not stablecoins: they are left out of mechanism/peg aggregates and ranked movers and listed in movers-excluded.csv.',
     '- Mechanism/peg aggregates use non-numeric registry ids and canonical admitted supply; no observations means unavailable, not zero. Partial totals retain observed-member counts and coverage. Deltas compare only coins with both observations. Explicit zero baselines remain observed in aggregates but are excluded from ranked movers.',
     `- Excluded mover rows: ${excluded.length}; ids/reasons: ${excluded.map((row) => `${row.id} (${row.reason})`).join(', ')}. Full detail: movers-excluded.csv.`,
     `- Chain rows without a comparable baseline: ${chainRows.filter((row) => row.baseline === 'none').map((row) => row.chain).join(', ') || 'none'}. Never treat these as +100% growth. Per-coin unavailable chains are separate in chain-attribution.json.`,

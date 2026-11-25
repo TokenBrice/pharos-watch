@@ -1,6 +1,6 @@
 # Pulse Research Briefs
 
-Research explains the Pharos numbers; it never replaces them. With delegation, dispatch all research in one parallel batch, then one independent fact-checker after the copy exists. Otherwise perform sequential research and skeptical review, disclosing that review was not independent. Discover available capabilities via `docs/process/agent-artifacts.md#harness-configuration`; the session's capabilities win.
+Research explains the Pharos numbers; it never replaces them. With delegation, dispatch all research in one parallel batch, then one independent fact-checker after the copy exists. Otherwise perform sequential research and skeptical review, disclosing that review was not independent. Use the web search, page reading, X search and delegation the session actually provides; nothing here assumes a particular harness.
 
 ## Roles
 
@@ -17,7 +17,7 @@ Research explains the Pharos numbers; it never replaces them. With delegation, d
 
 1. Run a control query against a busy account over the last 7 days (for example `@circle`). Zero posts means the tool is not working; zero posts on a real query is only meaningful after a passing control.
 2. If live X search is not callable, check the current session's available capabilities. Do not load personal tool bridges or change global credentials/configuration as part of this report workflow; use web-only research when the capability is unavailable.
-3. Budget: X search bills per post fetched. Ask each scout for 12–18 focused calls with handle and date filters. Record the spend in the handoff.
+3. Budget: X search bills per post fetched. Ask each scout for 12–18 focused calls with handle and date filters, confirm the total with the user before dispatch, and record the spend in the handoff.
 
 If X still fails, continue web-only and state it.
 
@@ -45,7 +45,7 @@ Assign each candidate story to exactly one cluster; give both agents of a cluste
 
 1. **Growth movers:** crypto-native and fintech dollars gaining supply (yield loops, lending markets, exchange earn products, incentive campaigns, new chain listings).
 2. **Dominant issuers and venues:** USDT and USDC daily swings, chain rotation, new chains and L1 launches, exchange and treasury flows, issuer corporate news.
-3. **Tokenized cash, RWAs, commodities, rates:** tokenized funds, savings rates, gold and FX tokens, unit-versus-price splits, the month's central-bank decisions and bill yields.
+3. **Tokenized cash, RWAs, commodities, rates:** tokenized funds as labelled context (not stablecoin movers), savings rates, gold and FX tokens, unit-versus-price splits, the month's central-bank decisions and bill yields.
 4. **Depegs, incidents, enforcement:** every material depeg in `depegs.json` (cause, status, recovery), exploits and bridge incidents, oracle misprints, freezes, sanctions.
 5. **Launches, institutions, policy, market-wide:** new stablecoins and bank or payment-network rails, major issuer developments, regulation milestones (US, EU, UK, Asia), and other trackers' market-wide stats for corroboration.
 
