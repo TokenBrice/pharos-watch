@@ -97,10 +97,13 @@ export const DEPEG_NO_PARITY_QUOTE_REVIEWS: readonly StablecoinPriceGapReview[] 
   {
     stablecoinId: "susd-solayer",
     owner: "ops",
-    reason: "Re-reviewed 2026-11-22 12:38 UTC: Solayer sUSD publishes an upstream-clocked protocol-redeem valuation of accrued USD per raw token ($1.1814, priceObservedAt 2026-11-22T12:31:34Z, high confidence) and depeg-detection-census records observedNonParityProtocolRedeem: true. The selected mark supplies no accrued-token market parity quote.",
-    sources: ["https://api.pharos.watch/api/stablecoins"],
-    reviewedAt: Date.UTC(2026, 10, 22, 12, 38) / 1000,
-    expiresAt: Date.UTC(2026, 10, 29, 12, 38) / 1000,
+    reason: "Re-reviewed 2026-11-25 10:33 UTC: Solayer sUSD publishes an upstream-clocked protocol-redeem valuation of accrued USD per raw token ($1.1814, priceObservedAt 2026-11-25T10:32:20Z, high confidence) and depeg-detection-census (evaluated 2026-11-25T10:17:33Z) acknowledges susd-solayer under noParityQuoteByDesign (observedNonParityProtocolRedeem: true). The selected mark supplies no accrued-token market parity quote. Solayer announced sUSD wind-down on 2026-07-22 with self-serve withdrawal ending 2026-12-31; owner ops tracks the separate lifecycle/sunset decision, unchanged by this 7-day source review.",
+    sources: [
+      "https://api.pharos.watch/api/stablecoins",
+      "https://x.com/solayer_labs/status/2080010441087222114",
+    ],
+    reviewedAt: Date.UTC(2026, 10, 25, 10, 33) / 1000,
+    expiresAt: Date.UTC(2026, 11, 2, 10, 33) / 1000,
   },
 ];
 
@@ -491,18 +494,6 @@ export const DEPEG_BLIND_EVENT_REVIEWS: readonly z.infer<typeof DepegBlindEventR
     reason: "Re-reviewed 2026-11-22 12:38 UTC from the 12:38:30 UTC public API capture: event 90738 remains open and blind (blindAge 298,365s); CoinGecko-only single-source primary ($0.0006925, observed 12:30:51 UTC) displays -626 bps and remains confirm_required. DEX priced contributors are $73,276 from one pool in one cg_onchain family (Aerodrome, Base), observed 45,094 seconds before the capture and far outside the unchanged 2,100-second family freshness budget; $445,115 retained TVL is below the $1M floor. No authoritative primary or admitted $1M/two-family aggregate appears in the capture. Review only structural blind coverage, never recovery or price trust.",
     sources: ["https://api.pharos.watch/api/stablecoins", "https://api.pharos.watch/api/dex-liquidity", "https://api.pharos.watch/api/depeg-events?active=true"],
     reviewedAt: Date.UTC(2026, 10, 22, 12, 38) / 1000, expiresAt: Date.UTC(2026, 11, 6, 12, 38) / 1000,
-  },
-  {
-    eventId: 91052, stablecoinId: "audd-novatti", owner: "ops",
-    reason: "Re-reviewed 2026-11-22 12:38 UTC from the 12:38:30 UTC public API capture: event 91052 remains open (peak -960 bps) and intermittently blind; the 12:30:51 UTC primary reverted to CoinGecko-only single-source ($0.656927, -145 bps, confirm_required) because Coinbase AUDD-USDC /ticker prints sporadically (last trade #53176 at 12:12:20 UTC, outside 15m) while /book?level=1 (0.658/0.6589 at 12:36:33 UTC) is not yet continuously admitted. DEX priced contributors are $374,015 from two pools in one cg_onchain family ($288,121 Curve XDC and $85,894 Uniswap V4 Ethereum, observed 1,894 seconds before the capture), below the $1M/two-family floor; all $578,502 of retained TVL is below $1M. Short 7-day renewal pending continuous Coinbase AUDD-USDC book admission. Review only structural blind coverage, never recovery or price trust.",
-    sources: ["https://api.pharos.watch/api/stablecoins", "https://api.pharos.watch/api/dex-liquidity", "https://api.pharos.watch/api/depeg-events?active=true", "https://api.exchange.coinbase.com/products/AUDD-USDC/ticker", "https://api.exchange.coinbase.com/products/AUDD-USDC/book?level=1"],
-    reviewedAt: Date.UTC(2026, 10, 22, 12, 38) / 1000, expiresAt: Date.UTC(2026, 10, 29, 12, 38) / 1000,
-  },
-  {
-    eventId: 90605, stablecoinId: "usdx-kava", owner: "ops",
-    reason: "Re-reviewed 2026-11-22 12:38 UTC: event 90605 remains open and blind. Both Kava pricefeed endpoints (https://rpc.kava.io/header and https://api.kava.io/kava/pricefeed/v1beta1/markets) continue to return HTTP 502 Bad Gateway. Pharos publishes no primary (priceSource missing) or DEX price ($0 retained TVL, missing-price), so current deviation and DEX priced-contributor TVL, pool count and family count are unavailable. Reassess within 7 days when Kava recovers or another trusted quote is admitted.",
-    sources: ["https://api.pharos.watch/api/depeg-events?active=true&stablecoin=usdx-kava", "https://api.pharos.watch/api/stablecoins", "https://api.pharos.watch/api/dex-liquidity", "https://rpc.kava.io/header", "https://api.kava.io/kava/pricefeed/v1beta1/markets"],
-    reviewedAt: Date.UTC(2026, 10, 22, 12, 38) / 1000, expiresAt: Date.UTC(2026, 10, 29, 12, 38) / 1000,
   },
 ];
 

@@ -598,18 +598,18 @@ describe("exact-address coverage refresh", () => {
   });
 
   it("refreshes a published address quote despite its gap review while excluding acknowledged missing rows", async () => {
-    // Co-dated synthetic USDC and authored AID reviews: the spy returns the
+    // Co-dated synthetic USDC and authored USDN reviews: the spy returns the
     // real resolver's result for exactly these fixtures.
-    const aidReview = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "aid-gaib")!;
-    const usdcReview = { ...aidReview, stablecoinId: "usdc-circle" };
+    const usdnReview = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "usdn-smardex")!;
+    const usdcReview = { ...usdnReview, stablecoinId: "usdc-circle" };
     const resolveReviews = coverage.resolveStablecoinPriceGapReviews;
     vi.spyOn(coverage, "resolveStablecoinPriceGapReviews").mockImplementation((ids, nowSec) =>
-      resolveReviews(ids, nowSec, [usdcReview, aidReview]));
-    const slot = aidReview.reviewedAt + 60;
-    expect([...resolveReviews([...ACTIVE_META_BY_ID.keys()], slot, [usdcReview, aidReview]).activeById.keys()].sort())
-      .toEqual(["aid-gaib", "usdc-circle"]);
+      resolveReviews(ids, nowSec, [usdcReview, usdnReview]));
+    const slot = usdnReview.reviewedAt + 60;
+    expect([...resolveReviews([...ACTIVE_META_BY_ID.keys()], slot, [usdcReview, usdnReview]).activeById.keys()].sort())
+      .toEqual(["usdc-circle", "usdn-smardex"]);
     prepareAddressRefresh({ ...usdc(), priceObservedAt: slot - 600 },
-      makePeggedAsset({ id: "aid-gaib", symbol: "AID", price: null }));
+      makePeggedAsset({ id: "usdn-smardex", symbol: "USDN", price: null }));
     const cg = mockFetch(onchainRoutes());
 
     const summary = await runRefresh({ syncStartSec: slot, addressProvider });
@@ -619,7 +619,7 @@ describe("exact-address coverage refresh", () => {
     expect(state.observations.filter((row: { source: string }) => row.source === "coingecko-onchain-address"))
       .toEqual([expect.objectContaining({ id: "usdc-circle", chain: "arbitrum", price: 0.9822 })]);
     expect(cg.getHistory().filter((entry) => onchainRequest(entry.url)).every((entry) =>
-      !entry.url.includes("0x18f52b3fb465118731d9e0d276d4eb3599d57596"))).toBe(true);
+      !entry.url.includes("0xde17a000ba631c5d7c2bd9fb692efea52d90dee2"))).toBe(true);
   });
 
   it.each(["404", "missing", "thin"])("evicts a definitively unresolved %s address hint and broadens the next slot", async (kind) => {
@@ -675,8 +675,8 @@ describe("exact-address coverage refresh", () => {
     const cg = mockFetch(onchainRoutes());
     expect((await runRefresh()).addressRefresh).toMatchObject({ enabled: false, targetCount: 0, resolved: 0 });
     expect(cg.getHistory().filter((entry) => onchainRequest(entry.url))).toEqual([]);
-    const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "aid-gaib")!;
-    setPublished(makePeggedAsset({ id: "aid-gaib", symbol: "AID", price: null }));
+    const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "usdn-smardex")!;
+    setPublished(makePeggedAsset({ id: "usdn-smardex", symbol: "USDN", price: null }));
     cg.mockClear();
     expect((await runRefresh({ syncStartSec: review.reviewedAt + 60, addressProvider })).addressRefresh)
       .toMatchObject({ enabled: true, cohortSize: 0, targetCount: 0, resolved: 0 });

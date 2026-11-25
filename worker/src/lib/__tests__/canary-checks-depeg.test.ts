@@ -214,6 +214,7 @@ describe("depeg canary checks", () => {
   });
 
   it("limits the authored sUSD review to seven days", () => {
+    expect(susdReview.reviewedAt).toBe(Date.UTC(2026, 10, 25, 10, 33) / 1000);
     expect(susdReview.expiresAt - susdReview.reviewedAt).toBeLessThanOrEqual(7 * 86_400);
   });
 
@@ -422,14 +423,9 @@ describe("depeg canary checks", () => {
   it("validates the blind review registry and rejects duplicates", () => {
     const at = Date.UTC(2026, 10, 22, 12, 38) / 1000;
     for (const entry of DEPEG_BLIND_EVENT_REVIEWS) {
-      const durationSec = entry.eventId === 90605 || entry.eventId === 91052 ? 7 * 86400 : 14 * 86400;
-      expect([DepegBlindEventReviewSchema.safeParse(entry).success, entry.reviewedAt, entry.expiresAt]).toEqual([true, at, at + durationSec]);
-      if (entry.eventId === 90605 || entry.eventId === 91052) {
-        expect(resolveDepegBlindEventReviews(entry.expiresAt - 1).get(entry.eventId)).toEqual(entry);
-        expect(resolveDepegBlindEventReviews(entry.expiresAt).has(entry.eventId)).toBe(false);
-      }
+      expect([DepegBlindEventReviewSchema.safeParse(entry).success, entry.reviewedAt, entry.expiresAt]).toEqual([true, at, at + 14 * 86400]);
     }
-    expect([...resolveDepegBlindEventReviews(at).keys()]).toEqual([91042, 90793, 90748, 84563, 90804, 91037, 90807, 89787, 90773, 90738, 91052, 90605]);
+    expect([...resolveDepegBlindEventReviews(at).keys()]).toEqual([91042, 90793, 90748, 84563, 90804, 91037, 90807, 89787, 90773, 90738]);
     expect(resolveDepegBlindEventReviews(review.reviewedAt, [review, review]).size).toBe(0);
     expect(resolveDepegBlindEventReviews(review.reviewedAt, [review, { ...review, reason: "" }]).size).toBe(0);
   });

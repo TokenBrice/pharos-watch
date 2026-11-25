@@ -184,9 +184,18 @@ async function evaluateEursBridgeLane(
   };
 }
 
+function formatUntrustedParent(
+  lane: string,
+  untrusted: NonNullable<LivePriceContext["lastUntrustedParent"]>,
+): string {
+  return `${lane}:untrusted-parent:${untrusted.parentId}:${untrusted.reason}`;
+}
+
 export async function fetchDeuroEurcBridgePrice(context: LivePriceContext, signal?: AbortSignal) {
+  let laneRejection: string | null = null;
   const reject = (lane: string, reason: string): null => {
-    context.lastRejectionReason = `${lane}:${reason}`;
+    laneRejection = `${lane}:${reason}`;
+    context.lastRejectionReason = laneRejection;
     return null;
   };
   const eurcParent = resolveTrustedOverrideParent(context, "eurc-circle", () =>
@@ -201,11 +210,15 @@ export async function fetchDeuroEurcBridgePrice(context: LivePriceContext, signa
     allowFreshReplaySafeSingleSourceParent: true,
   });
   const eursUntrustedParent = context.lastUntrustedParent ?? null;
+  context.lastUntrustedParent = null;
   if (!eurcParent && !eursParent) {
-    context.lastUntrustedParent = eurcUntrustedParent ?? eursUntrustedParent;
+    const reasons = [
+      eurcUntrustedParent ? formatUntrustedParent("deuro-eurc-bridge", eurcUntrustedParent) : null,
+      eursUntrustedParent ? formatUntrustedParent("deuro-eurs-bridge", eursUntrustedParent) : null,
+    ].filter((reason): reason is string => reason !== null);
+    context.lastRejectionReason = reasons.length > 0 ? reasons.join("+") : null;
     return null;
   }
-  context.lastUntrustedParent = null;
 
   const headLane = eurcParent ? "deuro-eurc-bridge" : "deuro-eurs-bridge";
   const options = { signal, extraRpcUrls: getPublicFallbackRpcUrls("ethereum"), chainRpcs: context.chainRpcs, maxRetries: 0 };
@@ -225,15 +238,32 @@ export async function fetchDeuroEurcBridgePrice(context: LivePriceContext, signa
   }
   const pinnedHead: PinnedHead = { number: head.number!, hash: head.hash!, observedAt };
 
+  // Preserve both lane refusals in lastRejectionReason (with lastUntrustedParent cleared)
+  // so the attempt ledger never drops either EURC bridge failure or EURS parent refusal (R4).
+  const rejections: string[] = [];
   if (eurcParent) {
+    laneRejection = null;
     const eurcResult = await evaluateEurcBridgeLane(eurcParent, pinnedHead, options, reject);
-    if (eurcResult) return eurcResult;
+    if (eurcResult) {
+      context.lastRejectionReason = null;
+      return eurcResult;
+    }
+    if (laneRejection) rejections.push(laneRejection);
+  } else if (eurcUntrustedParent) {
+    rejections.push(formatUntrustedParent("deuro-eurc-bridge", eurcUntrustedParent));
   }
   if (eursParent) {
+    laneRejection = null;
     const eursResult = await evaluateEursBridgeLane(eursParent, pinnedHead, options, reject);
-    if (eursResult) context.lastRejectionReason = null;
-    return eursResult;
+    if (eursResult) {
+      context.lastRejectionReason = null;
+      return eursResult;
+    }
+    if (laneRejection) rejections.push(laneRejection);
+  } else if (eursUntrustedParent) {
+    rejections.push(formatUntrustedParent("deuro-eurs-bridge", eursUntrustedParent));
   }
+  context.lastRejectionReason = rejections.length > 0 ? rejections.join("+") : null;
   return null;
 }
 

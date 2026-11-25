@@ -484,7 +484,7 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     expect(next.missingActiveAssets[0]).toMatchObject({ consecutiveMissingGenerations: null, alertEligible: true });
   });
 
-  it.each(["aid-gaib", "dllr-sovryn", "gbpe-monerium", "deuro-deuro", "fusd-finchain", "xusd-babelfish"])("keeps %s missing while acknowledged, re-alerts at expiry, and clears on a real price", (id) => {
+  it.each(["usdn-smardex", "dllr-sovryn", "gbpe-monerium", "deuro-deuro", "fusd-finchain", "xusd-babelfish"])("keeps %s missing while acknowledged, re-alerts at expiry, and clears on a real price", (id) => {
     const review = reviewFor(id);
     const ids = [review.stablecoinId, "usdt-tether"];
     const first = priceCoverage(
@@ -901,6 +901,7 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
   it.each([
     ["usdplus-streamflow", "2026-11-19T09:05:24Z"],
     ["sbold-k3-capital", "#2106"],
+    ["usdn-smardex", "#2261"],
   ] as const)("acknowledges %s inside its 14-day review window and re-arms at expiry", (id, marker) => {
     const review = reviewFor(id);
     expect(review).toMatchObject({ owner: "ops" });
@@ -917,7 +918,7 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
 
   it.each([
     ["usda-avalon", 0.9998, "defillama-contract"],
-    ["usdn-smardex", 0.991, "coinmarketcap"],
+    ["aid-gaib", 0.9988, "protocol-redeem"],
     ["stbt-matrixdock", 0.9945, "curve-thin-onchain"],
   ] as const)("retires the recovered %s review: the next gap is unacknowledged and an observed price stays priced", (id, price, priceSource) => {
     expect(GAP_REVIEWS.some((review) => review.stablecoinId === id)).toBe(false);
