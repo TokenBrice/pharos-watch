@@ -115,7 +115,7 @@ The current proxy now fails closed on its own trust boundary:
 - Mutating requests (`POST`, `PUT`, `PATCH`, `DELETE`) additionally require an `Origin` matching `OPS_UI_ORIGIN`; missing, foreign, malformed or non-HTTP(S) origins return `403`. Only `POST` reaches this check: method validation rejects `PUT`, `PATCH` and `DELETE` with `405` and the endpoint's actual `Allow` methods (typically `POST`).
 - The proxy forwards only `Accept`, `Content-Type`, `Idempotency-Key`, and `X-Pharos-Admin` from the browser request. After signature-verifying the UI Access JWT and normalizing its email claim, it injects that verified value as `Cf-Access-Authenticated-User-Email` for durable audit attribution; a browser-supplied actor header is ignored. It also adds `CF-Access-Client-Id` and `CF-Access-Client-Secret` from Pages env itself, so browser callers never supply server-to-server credentials.
 - The proxy reflects only `Allow`, `Cache-Control`, `Content-Type`, `Idempotency-Key`, `Retry-After`, `Warning`, `X-Data-Age`, `X-Execution-Certainty`, and `X-Idempotent-Replay` back to the browser. This preserves replay/certainty semantics without opening arbitrary upstream headers. A final policy decorator forces `private, no-store`, both CDN-specific no-store headers, `noindex`, and response security headers on every early or upstream return. Upstream `public` cache directives cannot survive the operator boundary.
-- Request bodies are capped incrementally at 128 KiB, including when `Content-Length` is absent or understated; oversized requests return `413`. Upstream responses are buffered under the shared 16 MiB proxy cap before returning to the browser; oversized or unreadable upstream responses return `502`.
+- Request bodies are capped incrementally at 128 KiB, including when `Content-Length` is absent or understated; oversized requests return `413`. Upstream responses are buffered under the shared 24 MiB proxy cap before returning to the browser; oversized or unreadable upstream responses return `502`.
 - Failure policy is explicit:
   - `404` for non-ops origins or non-allowlisted paths
   - `401` for missing or invalid UI JWT
@@ -124,7 +124,7 @@ The current proxy now fails closed on its own trust boundary:
   - `413` when the request body exceeds 128 KiB
   - `500` when the Pages-side service token pair or UI JWT verification bindings are not configured
   - `504` when the upstream fetch hits the proxy timeout budget
-  - `502` when the upstream fetch fails, its buffered response exceeds 16 MiB, or Cloudflare Access responds with an auth redirect from `ops-api`
+  - `502` when the upstream fetch fails, its buffered response exceeds 24 MiB, or Cloudflare Access responds with an auth redirect from `ops-api`
 
 ### Pages project bindings needed now
 
@@ -151,7 +151,7 @@ Pages runtime bindings are dashboard-managed; the repository has no Pages Wrangl
 
 Without `SITE_API`, `/_site-data/*` retains its existing URL-fetch transport. A configured binding does not relax host/origin/method/path/secret checks, and a binding failure is an upstream error, not permission to retry through public HTTP. Removing the binding and redeploying restores the URL transport. The ops proxy, selector recomputation, and telemetry mutation transports are unchanged.
 
-Both transports address the canonical `https://site-api.pharos.watch/api/...` URL, carry the same secret, and retain the shared 10-second deadline through body consumption, 16 MiB response cap, manual redirects and `pages-upstream-*` attribution. Forwarded `Age`, `Date` and CORS-exposed freshness/Safety Score fields retain the original assessment, budget and generation. No second cache, timestamp re-stamping, freshness reassessment or schema-admission change is introduced; unavailable and settled-stale evidence remains visible.
+Both transports address the canonical `https://site-api.pharos.watch/api/...` URL, carry the same secret, and retain the shared 10-second deadline through body consumption, 24 MiB response cap, manual redirects and `pages-upstream-*` attribution. Forwarded `Age`, `Date` and CORS-exposed freshness/Safety Score fields retain the original assessment, budget and generation. No second cache, timestamp re-stamping, freshness reassessment or schema-admission change is introduced; unavailable and settled-stale evidence remains visible.
 
 ## Cloudflare Account Setup And Recovery
 

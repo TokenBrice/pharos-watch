@@ -122,6 +122,12 @@ jobs:
           npx --no-install wrangler queues info pharos-reserve-continuation-dlq --config worker/wrangler.toml > "${preflight_dir}/queue-dlq.log" 2>&1 &
           queue_dlq_pid=$!
 
+          npx --no-install wrangler queues info pharos-v9-continuation --config worker/wrangler.heavy.toml > "${preflight_dir}/v9-queue-main.log" 2>&1 &
+          v9_queue_main_pid=$!
+
+          npx --no-install wrangler queues info pharos-v9-continuation-dlq --config worker/wrangler.heavy.toml > "${preflight_dir}/v9-queue-dlq.log" 2>&1 &
+          v9_queue_dlq_pid=$!
+
           npm run check:remote-d1-baseline-ledger > "${preflight_dir}/d1-baseline.log" 2>&1 &
           baseline_pid=$!
 
@@ -131,6 +137,8 @@ jobs:
             "package:${package_pid}:Package both Workers before D1 mutation" \
             "queue-main:${queue_main_pid}:Verify reserve Queue" \
             "queue-dlq:${queue_dlq_pid}:Verify reserve dead-letter Queue" \
+            "v9-queue-main:${v9_queue_main_pid}:Verify V9 continuation Queue" \
+            "v9-queue-dlq:${v9_queue_dlq_pid}:Verify V9 continuation dead-letter Queue" \
             "d1-baseline:${baseline_pid}:Preflight remote D1 baseline adoption"
           do
             IFS=: read -r slug pid label <<< "${entry}"

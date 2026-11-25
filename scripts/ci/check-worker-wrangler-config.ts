@@ -105,7 +105,23 @@ export function evaluateWorkerWranglerConfig(
     if (queueMode !== '"on"' && queueMode !== '"off"') issues.push('Public WORKER_RESERVE_QUEUE_MODE must be "on" or "off".');
     const catchUpMode = values.get(assignmentKey("vars", "WORKER_SLOT_CATCH_UP_MODE"));
     if (catchUpMode !== '"on"' && catchUpMode !== '"off"') issues.push('Public WORKER_SLOT_CATCH_UP_MODE must be "on" or "off".');
-  } else if (queueAssignments.length > 0) issues.push("Heavy must not declare Queue bindings or consumers.");
+    if (values.has(assignmentKey("vars", "WORKER_V9_QUEUE_MODE"))) {
+      issues.push("Public must not declare heavy WORKER_V9_QUEUE_MODE.");
+    }
+  } else {
+    expectValue("queues.producers", "binding", '"V9_CONTINUATION_QUEUE"');
+    expectValue("queues.producers", "queue", '"pharos-v9-continuation"');
+    expectValue("queues.consumers", "queue", '"pharos-v9-continuation"');
+    expectValue("queues.consumers", "max_batch_size", "1");
+    expectValue("queues.consumers", "max_batch_timeout", "0");
+    expectValue("queues.consumers", "max_concurrency", "1");
+    expectValue("queues.consumers", "max_retries", "3");
+    expectValue("queues.consumers", "retry_delay", "60");
+    expectValue("queues.consumers", "dead_letter_queue", '"pharos-v9-continuation-dlq"');
+    if (queueAssignments.length !== 9) issues.push("Heavy must declare exactly the bounded V9 Queue producer/consumer.");
+    const v9QueueMode = values.get(assignmentKey("vars", "WORKER_V9_QUEUE_MODE"));
+    if (v9QueueMode !== '"on"' && v9QueueMode !== '"off"') issues.push('Heavy WORKER_V9_QUEUE_MODE must be "on" or "off".');
+  }
   const services = assignments.filter(({ section }) => section === "services");
   const placement = assignments.filter(({ section }) => section === "placement");
   if (role === "public") {

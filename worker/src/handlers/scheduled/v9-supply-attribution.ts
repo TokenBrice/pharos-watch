@@ -98,10 +98,27 @@ async function maybeRecoverV9PublicMaterialization(
     }
     const metadata = parseJsonObject(result.metadata);
     const run = isRecord(metadata?.publicMaterialization) ? metadata.publicMaterialization : null;
+    const materializedGenerationId =
+      typeof run?.publicationGenerationId === "string" ? run.publicationGenerationId : null;
+    if (
+      runtime.env.WORKER_V9_QUEUE_MODE === "on" &&
+      result.status === "ok" &&
+      materializedGenerationId !== null
+    ) {
+      const { completeActiveV9EvalRunsForAcceptedGeneration } = await import(
+        "../../lib/safety-score-v9/chunked-eval-store"
+      );
+      await completeActiveV9EvalRunsForAcceptedGeneration(
+        runtime.db,
+        materializedGenerationId,
+        Math.floor(Date.now() / 1_000),
+        windowSignal,
+      ).catch(() => undefined);
+    }
     return outcome(
       result.status ?? "ok",
       typeof metadata?.reason === "string" ? metadata.reason : "v9-public-materialization-piggyback-reason-missing",
-      typeof run?.publicationGenerationId === "string" ? run.publicationGenerationId : null,
+      materializedGenerationId,
     );
   } catch (error) {
     logWorkerEvent({

@@ -147,12 +147,12 @@ export class V9AssetEvaluationError extends Error {
   }
 }
 
-type V9PlanningFacts = Pick<V9AssetFactsV3,
+export type V9PlanningFacts = Pick<V9AssetFactsV3,
   "assetId" | "assetIssuerKey" | "dependencies" | "reserveExposures" |
   "exitRoutes" | "exitStatus" | "controls" | "peg" | "supply" | "economicControlReview"
 >;
 
-function projectPlanningFacts(asset: V9AssetFactsV3): V9PlanningFacts {
+export function projectPlanningFacts(asset: V9AssetFactsV3): V9PlanningFacts {
   return {
     assetId: asset.assetId, assetIssuerKey: asset.assetIssuerKey,
     dependencies: asset.dependencies, reserveExposures: asset.reserveExposures,
@@ -162,7 +162,7 @@ function projectPlanningFacts(asset: V9AssetFactsV3): V9PlanningFacts {
   };
 }
 
-function marketRankByAsset(
+export function marketRankByAsset(
   assets: readonly V9PlanningFacts[],
   activeAssetIds: readonly string[],
 ): Map<string, number> {
@@ -196,7 +196,7 @@ function marketRankByAsset(
   return result;
 }
 
-function sourceGenerations(factSet: CompiledV9FactSetV3): Readonly<Record<string, string>> {
+export function sourceGenerations(factSet: CompiledV9FactSetV3): Readonly<Record<string, string>> {
   return Object.fromEntries(
     Object.entries(factSet.sourceFingerprints)
       .sort(([left], [right]) => compareText(left, right))
@@ -895,8 +895,8 @@ function commonModeReasonQualifier(
   return severity === "high" ? "shared critical control identity" : "diagnostic";
 }
 
-function commonModeSignalsByAsset(
-  plan: V9DependencyEvaluationPlan,
+export function commonModeSignalsByAsset(
+  plan: Readonly<V9DependencyEvaluationPlan>,
   envelope: V9ValidatedPolicyEnvelope,
   assetsById: ReadonlyMap<string, V9PlanningFacts>,
 ): Map<string, readonly V9StructuralSignal[]> {
@@ -1162,11 +1162,45 @@ function commonModeSignalsByAsset(
   );
 }
 
-interface V9AssetDigestPayload extends Pick<V9EvaluatedAsset, "compactTrace" | "dependencyInputs" | "access"> {
+export function buildV9UpstreamResult(evaluatedAsset: V9EvaluatedAsset): V9UpstreamResult {
+  const semanticNrCauses = evaluatedAsset.trace.nrReasons.flatMap((reason) =>
+    reason.cause === "C" || reason.cause === "U" || reason.cause === "D" ? [reason.cause] : []);
+  const finalCause = evaluatedAsset.trace.ratingStatus === "pipeline-gap"
+    ? evaluatedAsset.trace.partialEvidence?.causes[0] ?? "U"
+    : evaluatedAsset.trace.limitedEvidenceCauses[0] ?? semanticNrCauses[0]
+      ?? (evaluatedAsset.trace.adverseAttribution.length > 0 ? "D" : null);
+  const oracleNavProjection = upstreamOracleNavProjection(evaluatedAsset);
+  return {
+    assetId: evaluatedAsset.assetId,
+    score: projectV9DependencyScore(evaluatedAsset.trace),
+    ratingStatus: evaluatedAsset.trace.ratingStatus,
+    partialEvidence: evaluatedAsset.trace.partialEvidence,
+    causeGapIds: evaluatedAsset.trace.ratingStatus === "pipeline-gap" ? evaluatedAsset.trace.causeGapIds
+      : evaluatedAsset.trace.causeGapIds.filter((id) => !evaluatedAsset.trace.partialEvidence?.causeGapIds.includes(id)),
+    limitedEvidenceCauses: evaluatedAsset.trace.limitedEvidenceCauses.length > 0
+      ? evaluatedAsset.trace.limitedEvidenceCauses : [...new Set(semanticNrCauses)].sort(compareText),
+    cause: finalCause,
+    dimensionCauses: {
+      final: finalCause,
+      backing: upstreamPillarCause(evaluatedAsset, "backing"),
+      exit: upstreamPillarCause(evaluatedAsset, "exit"),
+      access: upstreamPillarCause(evaluatedAsset, "exit"),
+      control: upstreamPillarCause(evaluatedAsset, "control"),
+      "oracle-nav": oracleNavProjection.cause,
+    },
+    backingScore: projectV9EffectiveBackingPillarScore(evaluatedAsset),
+    exitScore: evaluatedAsset.scoreInput.pillars.exit.score,
+    accessScore: upstreamExitAccessScore(evaluatedAsset.exit),
+    controlScore: evaluatedAsset.scoreInput.pillars.control.score,
+    oracleNavScore: oracleNavProjection.score,
+  };
+}
+
+export interface V9AssetDigestPayload extends Pick<V9EvaluatedAsset, "compactTrace" | "dependencyInputs" | "access"> {
   wrapperParentLimit: V9EvaluatedAsset["trace"]["wrapperParentLimit"];
 }
 
-function evaluatedAssetDigestPayload(asset: V9EvaluatedAsset): V9AssetDigestPayload {
+export function evaluatedAssetDigestPayload(asset: V9EvaluatedAsset): V9AssetDigestPayload {
   return {
     compactTrace: asset.compactTrace,
     dependencyInputs: asset.dependencyInputs,
@@ -1194,6 +1228,18 @@ function evaluatedSetDigestPayload(
     scoreResultDigest: result.scoreResultDigest,
     assets,
   };
+}
+
+export function computeV9EvaluatedSetDigest(
+  result: Omit<V9EvaluatedSet, "assets" | "evaluatedSetDigest">,
+  assets: readonly V9AssetDigestPayload[],
+): string {
+  return sha256HexFromUtf8Chunks(
+    stableJsonStringifyChunksV1({
+      domain: V9_EVALUATED_SET_DIGEST_DOMAIN,
+      result: evaluatedSetDigestPayload(result, assets),
+    }),
+  );
 }
 
 /** Default-off boundary interventions for hypothetical evaluation only. */
@@ -1312,37 +1358,7 @@ function evaluateV9FactSetRead(
     if (downstreamEvaluatedById !== evaluatedById) {
       downstreamEvaluatedById.set(assetId, interventions!.projectEvaluatedUpstream!(evaluatedAsset));
     }
-    const semanticNrCauses = evaluatedAsset.trace.nrReasons.flatMap((reason) =>
-      reason.cause === "C" || reason.cause === "U" || reason.cause === "D" ? [reason.cause] : []);
-    const finalCause = evaluatedAsset.trace.ratingStatus === "pipeline-gap"
-      ? evaluatedAsset.trace.partialEvidence?.causes[0] ?? "U"
-      : evaluatedAsset.trace.limitedEvidenceCauses[0] ?? semanticNrCauses[0]
-        ?? (evaluatedAsset.trace.adverseAttribution.length > 0 ? "D" : null);
-    const oracleNavProjection = upstreamOracleNavProjection(evaluatedAsset);
-    const upstream: V9UpstreamResult = {
-      assetId: evaluatedAsset.assetId,
-      score: projectV9DependencyScore(evaluatedAsset.trace),
-      ratingStatus: evaluatedAsset.trace.ratingStatus,
-      partialEvidence: evaluatedAsset.trace.partialEvidence,
-      causeGapIds: evaluatedAsset.trace.ratingStatus === "pipeline-gap" ? evaluatedAsset.trace.causeGapIds
-        : evaluatedAsset.trace.causeGapIds.filter((id) => !evaluatedAsset.trace.partialEvidence?.causeGapIds.includes(id)),
-      limitedEvidenceCauses: evaluatedAsset.trace.limitedEvidenceCauses.length > 0
-        ? evaluatedAsset.trace.limitedEvidenceCauses : [...new Set(semanticNrCauses)].sort(compareText),
-      cause: finalCause,
-      dimensionCauses: {
-        final: finalCause,
-        backing: upstreamPillarCause(evaluatedAsset, "backing"),
-        exit: upstreamPillarCause(evaluatedAsset, "exit"),
-        access: upstreamPillarCause(evaluatedAsset, "exit"),
-        control: upstreamPillarCause(evaluatedAsset, "control"),
-        "oracle-nav": oracleNavProjection.cause,
-      },
-      backingScore: projectV9EffectiveBackingPillarScore(evaluatedAsset),
-      exitScore: evaluatedAsset.scoreInput.pillars.exit.score,
-      accessScore: upstreamExitAccessScore(evaluatedAsset.exit),
-      controlScore: evaluatedAsset.scoreInput.pillars.control.score,
-      oracleNavScore: oracleNavProjection.score,
-    };
+    const upstream = buildV9UpstreamResult(evaluatedAsset);
     upstreamResultsById.set(assetId, interventions?.projectUpstream?.(upstream) ?? upstream);
     unavailabilityRootsById.set(assetId, unavailabilityRoots);
     } catch (error) {
@@ -1414,9 +1430,7 @@ function evaluateV9FactSetRead(
     evaluationOrder: dependencyPlan.topologicalOrder,
     scoreResultDigest: computeV9CompactResultDigest(digestAssets.map((asset) => asset.compactTrace)),
   };
-  const evaluatedSetDigest = sha256HexFromUtf8Chunks(
-    stableJsonStringifyChunksV1({ domain: V9_EVALUATED_SET_DIGEST_DOMAIN, result: evaluatedSetDigestPayload(core, digestAssets) }),
-  );
+  const evaluatedSetDigest = computeV9EvaluatedSetDigest(core, digestAssets);
   return projection === null
     ? deepFreeze({ ...core, assets: assets!, evaluatedSetDigest }) as Readonly<V9EvaluatedSet>
     : deepFreeze({ ...core, evaluatedSetDigest });

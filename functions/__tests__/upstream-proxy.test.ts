@@ -21,6 +21,10 @@ describe("fetchUpstreamProxy", () => {
     vi.restoreAllMocks();
   });
 
+  it("matches the 24 MiB ADR-26 V9 public representation ceiling", () => {
+    expect(MAX_PROXY_RESPONSE_BODY_BYTES).toBe(24 * 1024 * 1024);
+  });
+
   it("buffers the response while preserving its status, status text, and headers", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("response-body", {
       status: 206,
