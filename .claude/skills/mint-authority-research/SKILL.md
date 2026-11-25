@@ -1,0 +1,1 @@
+../../../.codex/skills/mint-authority-research/SKILL.md

@@ -55,10 +55,8 @@ describe("Pulse canonical supply", () => {
       "/api/digest-archive": { digests: [now - 31 * 86400, now - 60].map((generatedAt) => ({ digestType: "daily", generatedAt, totalMcapUsd: 1e9 })) },
       "/api/stability-index?detail=true": { history: [{ date: now - 60, score: 90, band: "STABLE" }] },
       "/api/peg-summary": { coins: [], summary: { coinsAtPeg: 0, totalTracked: coins.length } },
-      "/api/mint-burn-flows?hours=720": { coins: [{ id: "zero" }] },
       "/api/blacklist-summary": { stats: { count7d: 0 } },
       "/api/non-usd-share?days=60": [{ date: now - 60, commodityShare: 0, fiatNonUsdShare: 0 }],
-      "/api/stablecoin-charts": [{ date: now - 60 }],
       "/api/depeg-events?limit=1000&includePending=true": { events: [] },
       "/api/depeg-events?limit=1000&includePending=true&active=true": { events: [] },
     };
@@ -94,8 +92,8 @@ globalThis.fetch = async (input) => {
       expect(brief).toContain("partial: $0.00M now; current coverage 2/3 (partial)");
       expect(brief).toContain("comparable coverage 1/3 (partial)");
       const excluded = readFileSync(path.join(dir, "data/movers-excluded.csv"), "utf8");
-      expect(excluded).toContain("negative,negative,peggedUSD,negative,,,,,absent-current;absent-baseline");
-      expect(excluded).toContain("zero,zero,peggedUSD,zero,0,0,0,,zero-baseline");
+      expect(excluded).toContain("negative,negative,peggedUSD,negative,,,,,,absent-current;absent-baseline");
+      expect(excluded).toContain("zero,zero,peggedUSD,zero,0,0,0,,,zero-baseline");
     } finally { rmSync(dir, { recursive: true, force: true }); }
   });
 });

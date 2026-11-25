@@ -5,12 +5,14 @@
 From the repository root:
 
 ```sh
-node .codex/skills/stablecoin-pulse-report/scripts/build-pulse-pdf.mjs --dir agents/<YYYY-MM-DD>-pulse-report
+node .codex/skills/stablecoin-pulse-report/scripts/build-pulse-pdf.mjs --dir agents/<YYYY-MM-DD>-pulse-report --partner "<recipient name>"
 ```
+
+`--partner` is required and has no default; it renders in the eyebrow of both pages as `PHAROS × <RECIPIENT>`. Supply it on the command line only.
 
 Requires Node.js and the repository's installed `playwright`. The builder resolves repository assets from its own location; `--dir` is relative to the current working directory. It first tries bundled Chromium (`npx playwright install chromium`), then installed Google Chrome, using `CHROME_PATH` if supplied. No network research occurs during rendering.
 
-Inputs are exclusively `<dir>/content.json`, `data/digest-archive.json`, `data/chains.json`, and `data/movers-30d.csv`, plus the repository's `public/pharos-mark-on-light.svg`. Outputs are `out/report.html`, `out/report.pdf`, `out/page-1.png`, `out/page-2.png`, `out/build-info.json`, and `Stablecoin-Pulse-<Month>-<YYYY>.pdf`. The filename uses a full English month/year in `period.label`, otherwise the UTC month/year of `period.end`.
+Inputs are exclusively `<dir>/content.json`, `<dir>/data/digest-archive.json`, `<dir>/data/chains.json`, and `<dir>/data/movers-30d.csv`, plus the repository's `public/pharos-mark-on-light.svg`. Outputs are `out/report.html`, `out/report.pdf`, `out/page-1.png`, `out/page-2.png`, `out/build-info.json`, and `Stablecoin-Pulse-<Month>-<YYYY>.pdf`. The filename uses a full English month/year in `period.label`, otherwise the UTC month/year of `period.end`.
 
 ## Editorial schema
 

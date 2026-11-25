@@ -53,7 +53,7 @@ When the weekly job fails:
 
 ## Monthly Drain and Reviewed Ledger
 
-Use the `dependency-coverage-drain` skill monthly and after coverage drops or weekly alerts. Use `skill://reserve-research` for source identity, backing, custody and provenance evidence. Drain adapter gaps, target dispositions, material unlinked slices, symbol leads, duplicate/split groups and unverifiable published edges in dependent market-cap order. Unknown market cap remains unavailable, never zero; report those items separately.
+Use the `dependency-coverage-drain` skill monthly and after coverage drops or weekly alerts. Use the `reserve-research` skill for source identity, backing, custody and provenance evidence. Drain adapter gaps, target dispositions, material unlinked slices, symbol leads, duplicate/split groups and unverifiable published edges in dependent market-cap order. Unknown market cap remains unavailable, never zero; report those items separately.
 
 The durable ledger is [`artifacts/dependency-coverage-reviewed-ledger.json`](./artifacts/dependency-coverage-reviewed-ledger.json). It mirrors the reviewed-history envelope used by `.github/artifacts/safety-score-missing-data-reviewed-ledger.json`: `schemaVersion`, decision-field inventory, allowed decisions and a `decisions` array. Dependency entries add status and explicit dependent/upstream identity. Audit regeneration must not overwrite or prune it.
 

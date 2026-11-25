@@ -36,6 +36,7 @@ type RegistryExclusion = { reason: string; sources: string[] };
 type OwnershipRegistry = {
   exclusions?: RegistryExclusion[];
   mappings?: RegistryMapping[];
+  skills?: Array<{ skill: string; sources: string[] }>;
   taskFamilies?: unknown;
 };
 
@@ -391,5 +392,15 @@ describe("doc-ownership registry integrity", () => {
       `Fallback-only files:\n${fallbackOnly.join("\n")}\n\nUncovered files:\n${uncovered.join("\n")}`,
     ).toBeGreaterThanOrEqual(SPECIFIC_COVERAGE_THRESHOLD);
     expect(fallbackInclusiveCoverage, `Uncovered files:\n${uncovered.join("\n")}`).toBeGreaterThanOrEqual(95);
+  });
+
+  it("hints only skills that exist, on sources that still match tracked files", () => {
+    const stale = (ownership.skills ?? []).flatMap((hint) => [
+      ...(existsSync(resolve(REPO_ROOT, ".codex/skills", hint.skill, "SKILL.md")) ? [] : [`${hint.skill}: no such skill`]),
+      ...hint.sources
+        .filter((source) => !trackedFiles.some((file) => matchesAny(file, [source])))
+        .map((source) => `${hint.skill}: ${source} matches no tracked file`),
+    ]);
+    expect(stale).toEqual([]);
   });
 });

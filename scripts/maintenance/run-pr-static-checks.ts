@@ -43,6 +43,7 @@ const REVIEWED_DEPENDENCY_AUDIT_PATHS: Record<string, true> = {
 const RESERVE_FIXTURE_PREFIX = "worker/src/cron/reserve-adapters/__tests__/fixtures/";
 const STRUCTURAL_CHECK_EXACT_PATHS = new Set(["package.json", "package-lock.json"]);
 const STRUCTURAL_CHECK_PREFIXES = [".github/", "functions/", "scripts/", "shared/", "src/", "worker/"];
+const AGENT_SKILL_PREFIXES = [".agents/", ".claude/", ".codex/"];
 const STRUCTURAL_TEST_PATH_PATTERNS = [
   /(^|\/)__tests__(?:\/|$)/,
   /\.test\.tsx?$/,
@@ -339,6 +340,10 @@ export function buildPrStaticCheckPlan(
 
   if (hasProductionStructuralImpact(changedFiles)) {
     commands.push({ name: "check:structural" }, { name: "check:unused-code" });
+  } else if (changedFiles.some((file) => AGENT_SKILL_PREFIXES.some((prefix) => file.startsWith(prefix)))) {
+    // The skill trees sit outside the structural prefixes; without this a
+    // skill-only change reaches main unchecked and fails the nightly instead.
+    commands.push({ name: "check:agent-skills" });
   }
 
 

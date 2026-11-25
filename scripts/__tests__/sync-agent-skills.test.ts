@@ -24,10 +24,8 @@ function skillSource(name: string) {
 function createSkill(name: string) {
   const skillPath = join(rootDir, ".codex/skills", name);
   mkdirSync(join(skillPath, "references"), { recursive: true });
-  mkdirSync(join(skillPath, "agents"));
   writeFileSync(join(skillPath, "SKILL.md"), skillSource(name));
   writeFileSync(join(skillPath, "references/context.md"), "Project context.\n");
-  writeFileSync(join(skillPath, "agents/openai.yaml"), "display_name: Test workflow\n");
   return skillPath;
 }
 
@@ -53,16 +51,19 @@ afterEach(() => {
 });
 
 describe("sync-agent-skills", () => {
-  it("accepts symlink-only facades and allowlists only Codex display metadata", () => {
+  it("accepts symlink-only facades and requires every companion to mirror", () => {
     createSkill("example");
     createFacade("example");
 
     expect(inspectAgentSkills(rootDir)).toEqual({
       violations: [],
-      allowlisted: [".codex/skills/example/agents/openai.yaml"],
       canonicalSkills: ["example"],
       facadeSkills: ["example"],
     });
+    mkdirSync(join(rootDir, ".codex/skills/example/agents"));
+    expect(inspectAgentSkills(rootDir).violations).toEqual([
+      "missing facade symlink .claude/skills/example/agents",
+    ]);
   });
 
   it("creates missing facades only in write mode and converges without further changes", () => {

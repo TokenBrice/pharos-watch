@@ -7,7 +7,8 @@ Static Next.js 16 export on Cloudflare Pages; API on a Cloudflare Worker + D1. L
 1. Locate a likely file, then route it: `npm run agent:route -- --file <path>` (repeatable). Searching to locate it? Never start with a repo-root search: pass the discovery roots below as the search path (see Tool routing), then do the impact pass.
 2. In every harness (omp, Claude Code, Codex), read the router's exact `Read first` anchors and every returned scoped `AGENTS.md`; none is assumed to auto-load nested guides. More-specific instructions take precedence. Inspect entrypoints/local imports; all returned rules, checks and warnings apply.
 3. Investigating a defect, anomaly, asset or pipeline? Search GitHub issues for it first (`gh issue list --state all --search "<terms>"`): they are the only memory that survives a session. Add evidence to the existing issue instead of opening a duplicate.
-4. For onboarding, scratch, handoff, or commit conventions, consult `docs/process/agent-start-here.md` when relevant.
+4. Recurring curation, research, drain, migration, cron, CI-triage, release or issue-clearance work has a repo skill: use the one your harness lists, or the router's `Relevant skills`, before improvising (`docs/process/agent-artifacts.md#agent-skills`).
+5. For onboarding, scratch, handoff, or commit conventions, consult `docs/process/agent-start-here.md` when relevant.
 
 ## Tool routing
 

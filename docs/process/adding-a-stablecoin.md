@@ -2,7 +2,7 @@
 
 Reference for adding a tracked asset to Pharos.
 
-Current source of truth is the per-coin JSON registry under `shared/data/stablecoins/coins/*.json` plus selective research sidecars under `shared/data/stablecoins/domains/<domain>/*.json`, loaded through the generated runtime aggregate `shared/data/stablecoins/coins.generated.json`, and validated by `shared/lib/stablecoins/schema.ts`. Pre-launch entries are ordinary per-coin files with `status: "pre-launch"`. Eligibility and lifecycle decisions follow [Stablecoin Listing Policy](../listing-policy.md). The older top-level stablecoin barrel, helper-constructor paths, and legacy category-shard edit paths are obsolete; the maintained agent skills (`stablecoin-addition-orchestrator`, `stablecoin-runtime-price-marketcap-gate`, `stablecoin-identity-contracts`, `reserve-research`, `compliance-research`, `write-ai-summaries`, `resilience-classify`, `pre-launch-update`) remain optional workflow aids. Sidecar ownership and migrations are documented in [Stablecoin Research Sidecars](./stablecoin-research-sidecars.md).
+Current source of truth is the per-coin JSON registry under `shared/data/stablecoins/coins/*.json` plus selective research sidecars under `shared/data/stablecoins/domains/<domain>/*.json`, loaded through the generated runtime aggregate `shared/data/stablecoins/coins.generated.json`, and validated by `shared/lib/stablecoins/schema.ts`. Pre-launch entries are ordinary per-coin files with `status: "pre-launch"`. Eligibility and lifecycle decisions follow [Stablecoin Listing Policy](../listing-policy.md). The older top-level stablecoin barrel, helper-constructor paths, and legacy category-shard edit paths are obsolete; the maintained agent skills (`stablecoin-addition-orchestrator`, `stablecoin-runtime-price-marketcap-gate`, `stablecoin-identity-contracts`, `reserve-research`, `compliance-research`, `mint-authority-research`, `write-ai-summaries`, `pre-launch-update`) remain optional workflow aids. Sidecar ownership and migrations are documented in [Stablecoin Research Sidecars](./stablecoin-research-sidecars.md).
 
 > Completion gate: evaluate every phase below. A new addition changes the per-coin source, `canonical-order.json`, and `listing-decisions.json`; add logos/summaries or record the allowed gaps. Materialize Phase 4a projections, update applicable Phase 4b snapshots, and commit changed Phase 4c artifacts. `coins.generated.json` is required but gitignored. Evaluate yield, live reserves, redemption, mint/burn, Mint Authority, Bluechip, Safety Score scoreability, and history backfill explicitly.
 
@@ -163,11 +163,10 @@ Do the research manually, or use the maintained skills when they match the task:
 - `stablecoin-addition-orchestrator`: gather generic scalar metadata, run the full phase checklist, and coordinate the supporting skills.
 - `stablecoin-runtime-price-marketcap-gate`: prove the hard active-asset price and market-cap path from Phase 1a.
 - `stablecoin-identity-contracts`: verify `geckoId`, populate known deployments, or discover missing chain coverage.
-- `reserve-research`: populate `reserves[]` composition for a single coin.
+- `reserve-research`: populate `reserves[]` composition for a single coin, and pick the `collateralQuality` and `custodyModel` overrides.
 - `compliance-research`: research `genius`, `mica`, or both into the compliance sidecar.
-- Mint Authority does not have a publication skill yet. Use the Phase 5f primary-source review rubric below and the existing `audit:mint-authority-review` / `audit:mint-bridge-ownership` QA commands.
+- `mint-authority-research`: author the Mint Authority profile and coupled Bridge Risk controls under the Phase 5f primary-source review rubric below, then run the `audit:mint-authority-review` / `audit:mint-bridge-ownership` QA commands.
 - `write-ai-summaries`: draft or refresh the `data/ai-summaries.json` entry.
-- `resilience-classify`: pick `collateralQuality` and `custodyModel` overrides.
 - `pre-launch-update`: refresh milestones, launch phase, and featured content for pre-launch entries.
 
 These skills do not replace review — they are research scaffolding. Always verify the output against official sources before editing the registry.

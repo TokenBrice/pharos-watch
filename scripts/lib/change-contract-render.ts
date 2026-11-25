@@ -53,6 +53,10 @@ export function formatContract(
     sections.push("", "Scoped context:", formatBullets(contract.scopedContext.map((path) => formatReading({ path })), { limit: mode === "stop" ? 6 : Number.POSITIVE_INFINITY }));
   }
 
+  if (contract.skills.length > 0) {
+    sections.push("", "Relevant skills:", formatBullets(contract.skills.map((skill) => `.codex/skills/${skill}/SKILL.md`), { limit: Number.POSITIVE_INFINITY }));
+  }
+
   if (contract.background.length > 0) {
     sections.push("", "Also relevant:", formatBullets(contract.background.map(formatDocReference), { limit: mode === "stop" ? 6 : Number.POSITIVE_INFINITY }));
   }

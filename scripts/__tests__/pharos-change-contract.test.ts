@@ -316,6 +316,12 @@ describe("route context accounting", () => {
       expect(text).toContain(`${reference.bytes} B, ${reference.lines} lines, ~${reference.approximateTokens} tokens`);
     }
     expect(text).toContain("Background references are not counted.");
+    expect(text).not.toContain("Relevant skills:");
+    const migration = classifyChangedFiles(["worker/migrations/0001_example.sql"]);
+    expect(migration.skills).toEqual(["d1-migration-rollout"]);
+    expect(classifyChangedFiles(["worker/src/handlers/scheduled/example.ts"]).skills).toEqual(["worker-cron-change"]);
+    expect(classifyChangedFiles(["worker/src/lib/reserve-feed-reviews.ts"]).skills).toEqual(["review-registry-renewal"]);
+    expect(formatContract(migration)).toContain("Relevant skills:\n- .codex/skills/d1-migration-rollout/SKILL.md");
     expect(text).toContain("Required ownership reference (not subject to the reading cap)");
   });
 });

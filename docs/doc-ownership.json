@@ -787,7 +787,7 @@
         { "path": "docs/runbooks/db-connectivity.md", "anchor": "capacity-signals" },
         { "path": "docs/runbooks/blocked-digest-edition.md", "runbook": { "label": "Blocked digest edition", "kind": "symptom" } }
       ],
-      "alsoRead": ["worker/AGENTS.md"],
+      "alsoRead": ["worker/AGENTS.md", "worker/src/cron/AGENTS.md"],
       "checks": ["npx vitest run worker/src/cron worker/src/handlers/scheduled", "npx vitest run worker/src/lib/__tests__/cron-leases.test.ts worker/src/lib/__tests__/cron-leases-scheduled-slot.test.ts worker/src/lib/__tests__/scheduled-slot-reconciliation-sqlite.test.ts worker/src/lib/__tests__/cron-timeouts.test.ts worker/src/lib/__tests__/v9-slot-window.test.ts"],
       "rules": [
         "Pick the trigger slot before adding fetch-heavy work.",
@@ -1679,7 +1679,7 @@
         "docs/doc-ownership.json"
       ],
       "docs": ["docs/process/agent-start-here.md", { "path": "docs/process/agent-artifacts.md", "anchor": "harness-configuration" }, { "path": "docs/process/agent-artifacts.md", "anchor": "agent-skills" }],
-      "checks": ["npx vitest run scripts/__tests__/pharos-change-contract.test.ts scripts/__tests__/doc-ownership-registry.test.ts"],
+      "checks": ["npm run check:agent-skills", "npx vitest run scripts/__tests__/pharos-change-contract.test.ts scripts/__tests__/doc-ownership-registry.test.ts scripts/__tests__/sync-agent-skills.test.ts"],
       "testOwnership": [
         {
           "sources": ["docs/**", "AGENTS.md", "**/AGENTS.md", "CLAUDE.md"],
@@ -1992,6 +1992,29 @@
       ],
       "rules": ["Treat docs/ and README.md as the verified documentation corpus."]
     }
+  ],
+  "skills": [
+    { "skill": "d1-migration-rollout", "sources": ["worker/migrations/**"] },
+    { "skill": "worker-cron-change", "sources": ["shared/lib/cron-jobs.ts", "shared/lib/scheduled-runner-registry.ts", "worker/wrangler.toml", "worker/wrangler.heavy.toml", "worker/src/handlers/scheduled.ts", "worker/src/lib/scheduled-slot-*.ts", "worker/src/lib/cron-lease-primitives.ts", "worker/src/handlers/scheduled/**", "worker/src/lib/cron-timeouts.ts"] },
+    { "skill": "safety-score-curation", "sources": ["shared/data/safety-score-v9/**"] },
+    { "skill": "stablecoin-addition-orchestrator", "sources": ["shared/data/stablecoins/canonical-order.json", "shared/data/stablecoins/listing-decisions.json"] },
+    { "skill": "stablecoin-identity-contracts", "sources": ["shared/data/stablecoins/coins/**"] },
+    { "skill": "pre-launch-update", "sources": ["shared/data/stablecoins/coins/**"] },
+    { "skill": "reserve-research", "sources": ["shared/data/stablecoins/domains/reserves/**"] },
+    { "skill": "compliance-research", "sources": ["shared/data/stablecoins/domains/compliance/**"] },
+    { "skill": "mint-authority-research", "sources": ["shared/data/stablecoins/domains/mint-authority/**"] },
+    { "skill": "supply-plan-authoring", "sources": ["shared/lib/onchain-supply-probe.ts", "shared/lib/supply-perimeter-changes.ts"] },
+    { "skill": "write-ai-summaries", "sources": ["data/ai-summaries.json"] },
+    { "skill": "scenario-verification", "sources": ["data/failure-scenarios.json", "shared/data/failure-scenario-documents.json", "shared/data/failure-scenarios/**"] },
+    { "skill": "annotations-refresh", "sources": ["shared/data/annotations/**"] },
+    { "skill": "funding-update", "sources": ["shared/data/funding/donations.json"] },
+    { "skill": "changelog-collect", "sources": ["src/data/changelogs/**"] },
+    { "skill": "yield-coverage-audit-drain", "sources": ["worker/src/lib/yield-config/**", "worker/src/cron/yield-coverage-audit/**", "shared/lib/yield-auto-lending.ts", "shared/lib/yield-source-risk-registry.ts", "shared/data/yield-source-risk-evidence.json"] },
+    { "skill": "dependency-coverage-drain", "sources": ["docs/runbooks/artifacts/dependency-coverage-reviewed-ledger.json", "shared/data/coverage-dispositions/dependency-target-dispositions.ts", "scripts/maintenance/generate-dependency-coverage-audit.ts"] },
+    { "skill": "review-registry-renewal", "sources": ["docs/runbooks/review-renewal.md", "scripts/maintenance/weekly-curation-digest.mjs", "worker/src/lib/reserve-feed-reviews.ts", "worker/src/lib/stablecoin-publication-reviews.ts", "worker/src/lib/supply-integrity.ts", "worker/src/lib/canary-checks-depeg.ts", "worker/src/cron/sync-stablecoins/chain-dropout-seed.ts", "worker/src/cron/dex-liquidity/orchestrator-drift.ts", "worker/src/cron/dex-liquidity/reviewed-anchor-correction.ts", "shared/lib/dex-deployment-coverage.ts"] },
+    { "skill": "pharos-ci-failure-triage", "sources": [".github/workflows/**"] },
+    { "skill": "ci-slim-pass", "sources": ["scripts/lib/pr-lanes.mts", ".ci/test-corpus-budget.json", "scripts/lib/nightly-test-tier.mts"] },
+    { "skill": "pharos-docs-sync-audit", "sources": ["docs/doc-ownership.json"] }
   ],
   "exclusions": [
     { "sources": ["shared/data/stablecoins/coins/.gitkeep"], "reason": "Directory sentinel only; read the stablecoin registry contract for real entries." },

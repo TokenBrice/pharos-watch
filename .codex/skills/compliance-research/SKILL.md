@@ -1,57 +1,51 @@
 ---
 name: compliance-research
-description: Research and populate tracked stablecoin compliance sidecars for the U.S. GENIUS Act, EU MiCA, or both. Use when adding or auditing authorization, applicability, pathway, or disclosure evidence.
+description: Research and populate stablecoin GENIUS Act and EU MiCA compliance sidecars. Use when adding or auditing regulatory status, disclosures or regime state. Not for legal advice or reserve/custody metadata.
 ---
 
 Read `docs/editorial-style.md` before writing; its `technical-evidence` register governs the prose.
 
 # Compliance Research
 
-Choose regime `genius`, `mica`, or `both`. Read the coin’s base entry and the matching sidecar under `shared/data/stablecoins/domains/compliance` if present. Compliance fields belong only in that sidecar; create it when absent, following `docs/process/stablecoin-research-sidecars.md` and `shared/lib/stablecoins/schema.ts`.
+## Trigger And Exclusions
 
-For `genius`, read `docs/genius-tracker.md` (including [source rules](../../../docs/genius-tracker.md#sourcing--source-kinds)) and `shared/lib/compliance-regime-state.ts`. For `mica`, read `docs/mica-tracker.md` (including [source rules](../../../docs/mica-tracker.md#data-sourcing--maintenance)). In `both` mode, research each regime independently; do not infer one status from the other.
+Use for per-coin GENIUS and MiCA rows and for the central GENIUS regime state. Active coins are in scope for both regimes; pre-launch coins are in scope when primary register or filing evidence exists. Research-only requests stop at a proposal.
 
-## Workflow
+Not legal advice. Not for reserve, custody or report facts ([reserve-research](../reserve-research/SKILL.md)): `proofOfReserves.latestReport` in the base coin is the single report-date authority, so never restate its dates in a compliance row.
 
-1. Treat existing jurisdiction, license, peg, and collateral as hypotheses. Decide whether the token is plausibly in scope before assigning a status.
-2. Use web search to locate candidates, fetch primary regulator/register and issuer sources, and use browser inspection only when a primary page blocks ordinary fetches. See `docs/process/agent-artifacts.md#harness-configuration` for harness adapters.
-3. Map token → legal issuer → exact authorization/public posture. Reject same-name affiliates and token-unspecific licenses.
-4. Apply the owning tracker’s schema and conservative classification. “Not assessed” is absence of a row; it is not an out-of-scope finding.
-5. Present the proposed object, source URLs/dates, access date, and confidence. Stop there for research-only requests. Before writes, establish approval for the proposed scope. Prior explicit cohort authorization persists across its 3–5 coin batches; ask only for changes outside that authorization.
-6. Patch only the compliance sidecar. For GENIUS set the required reviewer/review date; for MiCA include references where its schema requires them. In a coordinated addition, keep the primary-source and pre-edit schema validation duties below, but return evidence, changed source paths, observed validation, and unexercised integration checks in the [addition/evidence handoff packet](../../../docs/process/adding-a-stablecoin.md#additionevidence-handoff-packet). Generation/check ownership in coordinated additions and standalone approved edits follows that packet contract and its [Phase 7 pass](../../../docs/process/adding-a-stablecoin.md#phase-7---validate).
+## Classify The Operation
 
-## Guardrails
+Choose regime `genius`, `mica`, or `both`, then the operation: single-coin research or approved edit, bounded multi-coin batch, or regime-state transition. In `both` mode, research each regime independently; never infer one status from the other.
 
-- Never claim authorization without primary regulator evidence naming the relevant entity and supporting the exact status.
-- Prefer an omitted field or conservative status to a guess. Record conflicts and negative searches with their review date.
-- Compliance metadata is informational, sourced, and not legal advice. It is not a methodology score.
-- Broad audits may use a spawned read-only reviewer when authorized; the parent reconciles evidence and owns every edit.
+## Mandatory Core
 
-## Batch mode
+- Read the coin's base entry and its sidecar under `shared/data/stablecoins/domains/compliance` if present. Compliance fields belong only in that sidecar; create it when absent, following `docs/process/stablecoin-research-sidecars.md` and `shared/lib/stablecoins/schema.ts`. `shared/types/stablecoin-meta-compliance-schemas.ts` owns the row schemas.
+- `genius`: read `docs/genius-tracker.md` (including [source rules](../../../docs/genius-tracker.md#sourcing--source-kinds)) and `shared/lib/compliance-regime-state.ts`.
+- `mica`: read `docs/mica-tracker.md`, including [status criteria](../../../docs/mica-tracker.md#status-criteria), [boundary rules](../../../docs/mica-tracker.md#boundary-rules) and [source rules](../../../docs/mica-tracker.md#data-sourcing--maintenance).
+- Never claim authorization without primary regulator evidence naming the relevant entity and supporting the exact status. Prefer an omitted field or conservative status to a guess. Record conflicts and negative searches with their review date.
+- "Not assessed" is absence of a row; it is not an out-of-scope finding.
+- Statuses are informational and not a methodology score, with one exception: `genius.issuerEntity` seeds the Safety Score issuer key (`issuerEntity` in `worker/src/lib/safety-score-v9/extension-mint.ts`). Changing it is score-affecting.
 
-Use this mode for a bounded multi-coin review. It is read-only unless the caller already has explicit write authorization for the cohort or obtains it. Batch size does not expire that authorization. If delegation is unavailable, perform research and skeptical primary-source reopening sequentially and disclose that review was not independent.
+## Branch Reads And Actions
 
-### Select and fan out
+- **Single coin:**
+  1. Treat existing jurisdiction, license, peg and collateral as hypotheses. Decide whether the token is plausibly in scope before assigning a status.
+  2. Search for candidates, then fetch primary regulator/register and issuer sources. Use browser inspection when a primary page blocks ordinary fetches or hides its list behind scripted or collapsed content, as venue restriction pages often do.
+  3. Map token → legal issuer → exact authorization or public posture. Reject same-name affiliates and token-unspecific licenses. For MiCA, binding issuer EEA exclusion and the no-identifiable-issuer exemption take precedence over an EU venue restriction notice, and a wind-down announcement alone does not revoke `authorized` before the ESMA or national register records withdrawal.
+  4. Apply the owning tracker's schema and conservative classification. Present the proposed object, source URLs/dates, access date and confidence; stop there for research-only requests.
+  5. Before writes, establish approval for the proposed scope, then patch only the compliance sidecar. For GENIUS set the required reviewer and review date; for MiCA include references where its schema requires them. A verbatim external link title carries `quoted: true`.
+- **Batch:** follow [batch mode](references/batch-mode.md) and its [response envelopes](references/batch-schema.md). Prior explicit cohort authorization persists across its batches; ask only for changes outside it. The parent reconciles evidence and owns every edit.
+- **Regime state:** read [Regime state & effective date](../../../docs/genius-tracker.md#regime-state--effective-date). `GENIUS_REGIME_STATE` moves only by an explicitly reviewed update that records the qualifying issuance, source dates and statutory calculation; calendar time alone changes nothing, and per-coin statuses do not move with it.
+- **Coordinated addition:** keep the primary-source and pre-edit schema validation duties, and return evidence, changed source paths, observed validation and unexercised integration checks in the [addition/evidence handoff packet](../../../docs/process/adding-a-stablecoin.md#additionevidence-handoff-packet); generation and checks follow its [Phase 7 pass](../../../docs/process/adding-a-stablecoin.md#phase-7---validate).
 
-- Require an ISO review date and enumerate base JSON filenames in `shared/data/stablecoins/coins`. Select the caller’s tracked roster; each ID appears once and carries its base path, optional compliance sidecar under `shared/data/stablecoins/domains/compliance`, symbol/name, status, peg, and regimes. Read the base and sidecar; do not accept IDs or paths from scratch output.
-- Optional gap discovery may shortlist active coins missing a GENIUS or MiCA row. Every active coin is in scope for both regimes, including DeFi CDPs, wrappers, vaults, funds, and commodity tokens; they receive explicit sourced exclusion rows when the evidence reaches high confidence and otherwise stay unassessed. Optional read-only landscape probes may supply current GENIUS rulemaking, MiCA-register, and EU-venue context, but never replace token-specific evidence.
-- Split the coin set into N disjoint slices; run one read-only researcher per slice with the exact per-coin contract below, then run one independent read-only verifier per researched coin. A failed or empty slice does not authorize a write.
+## Checks Owned By The Verifier
 
-### Exact per-coin researcher contract
+Standalone approved edits:
 
-Prompt the researcher to read the base coin, the existing compliance sidecar, `shared/types/stablecoin-meta-compliance-schemas.ts`, `shared/lib/compliance-regime-state.ts`, `docs/genius-tracker.md`, and `docs/mica-tracker.md`. For every requested regime, it must:
+- `npm run bootstrap:generated`, `npm run check:stablecoin-data`, `npm run check:generated-artifacts`.
+- `genius.issuerEntity` changed: the replay and movers gates owned by [safety-score-curation](../safety-score-curation/SKILL.md).
+- Regime-state change: `npm run typecheck`, `npm run typecheck:worker` and `npx vitest run shared/lib/__tests__/compliance-regime-state.test.ts`, then confirm the compliance page and the Worker `/api/compliance` response after the release the tracker requires.
 
-1. Decide whether the regime applies; a sourced exclusion is an assessment (`assessed=true`). Use `assessed=false` when the evidence cannot support a row, not as a substitute for missing research.
-2. Classify the result as `no-change`, `correct`, `add-new-row`, `remove-row`, or `unable-to-verify`; preserve good fields and explain uncertainty.
-3. Follow the [GENIUS](../../../docs/genius-tracker.md#sourcing--source-kinds) or [MiCA](../../../docs/mica-tracker.md#data-sourcing--maintenance) primary-source order, map token → legal issuer → exact public posture, and record consulted URLs with what each showed.
-4. Return the `research` / `regimeProposal` envelopes in [batch-schema.md](references/batch-schema.md). Set `consequential=true` for a new/upgraded authorization claim, status escalation, removal, or downgrade of an existing strong claim. Supply full candidate JSON only for a correction or new row, otherwise `""`. A proposed GENIUS object includes reviewer `Pharos compliance research` and `reviewedAt` set to the review date; MiCA has no reviewer/date fields.
+## Completion Evidence
 
-Use the response envelopes in [batch-schema.md](references/batch-schema.md); before any edit, parse candidate JSON with the regime schema in `shared/types/stablecoin-meta-compliance-schemas.ts`, then validate the proposed sidecar with `StablecoinComplianceSidecarSchema` and the merged coin with `StablecoinMetaAssetSchema` from `shared/lib/stablecoins/schema.ts`. The repository check validates files on disk after the approved write and regeneration; it does not accept scratch candidates.
-
-### Adjudication contract
-
-The verifier independently reopens the base and sidecar, checks every proposed URL and highest-stakes authorization claim against primary sources, confirms the issuer is this token’s issuer, and checks current enums/cross-field rules. Default to rejection for unsupported upgrades. Return the `verify` / `regimeVerdict` envelopes in [batch-schema.md](references/batch-schema.md), with concrete issues.
-
-Set `safeToAutoApply=true` only for a non-empty candidate editing an existing row, with no removal or downgrade, and no stronger authorization escalation unless that claim was already present and equally or better sourced. Limit it to reference refinement, descriptive fields, a more-conservative enum correction, or a date refresh. New rows need explicit approval covering their addition; prior cohort authorization that explicitly includes new rows satisfies this requirement. `unable-to-verify` makes no change and needs more research. Treat the flag as advisory, never as permission.
-
-Return a deterministic manifest containing date, counts, safe changes, flagged changes, flags, gap proposals, regime-state notes, and per-coin verdict rows. The parent owns deduplication, approval, and merge; generation/check ownership follows the standalone versus coordinated-addition workflow above.
+Report regime and operation, per-coin proposed versus applied objects, source URLs with dates and access date, confidence, negative searches, approval scope, changed paths, and observed versus unexercised checks.

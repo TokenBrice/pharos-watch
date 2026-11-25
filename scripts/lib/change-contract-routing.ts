@@ -59,6 +59,8 @@ export interface ChangeContract {
   hardRules: string[];
   mappings: MatchedMapping[];
   scopedContext: string[];
+  /** Repo skills hinted for the changed paths; advisory and outside the context budget. */
+  skills: string[];
   source: ChangeSource;
   unmappedPaths: string[];
   warnings: string[];
@@ -387,7 +389,10 @@ export function classifyChangedFiles(files: readonly string[], context: "auto" |
 export function classifyChangedFilesWithSource(files: readonly string[], source: ChangeSource, context: "auto" | "contract" = "auto"): ChangeContract {
   const changedFiles = normalizeChangedFiles(files);
   const contextMode = selectContextMode(changedFiles, context);
-  const { PATH_FAMILIES } = getRoutingRegistry();
+  const { PATH_FAMILIES, SKILL_HINTS, createOwnershipGlobMatcher } = getRoutingRegistry();
+  const skills = SKILL_HINTS
+    .filter((hint) => changedFiles.some((file) => hint.sources.some((glob) => createOwnershipGlobMatcher(glob)(file))))
+    .map((hint) => hint.skill);
   const matchedFamilies = PATH_FAMILIES.map((family) => ({
     ...family,
     matchedFiles: changedFiles.filter((file) => fileMatchesRule(file, family)),
@@ -445,6 +450,7 @@ export function classifyChangedFilesWithSource(files: readonly string[], source:
       tier: family.tier,
     })),
     scopedContext,
+    skills: unique(skills),
     source,
     unmappedPaths,
     warnings,

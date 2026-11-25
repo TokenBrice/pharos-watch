@@ -69,8 +69,15 @@ interface RawMapping {
   testOwnership?: DeclaredTestOwnership[];
 }
 
+/** A repo skill worth reading before recurring work on the matched paths. */
+export interface SkillHint {
+  skill: string;
+  sources: string[];
+}
+
 export interface DocOwnershipRegistry {
   mappings?: RawMapping[];
+  skills?: SkillHint[];
 }
 
 export interface PathFamily {
@@ -185,5 +192,6 @@ export function matchesOwnershipGlob(file: string, pattern: string): boolean {
 const registry = readDocOwnership();
 
 export const PATH_FAMILIES: PathFamily[] = (registry.mappings ?? []).map(normalizeMapping);
+export const SKILL_HINTS: SkillHint[] = registry.skills ?? [];
 export const DECLARED_TEST_OWNERSHIP: DeclaredTestOwnership[] = (registry.mappings ?? [])
   .flatMap((mapping) => mapping.testOwnership ?? []);
