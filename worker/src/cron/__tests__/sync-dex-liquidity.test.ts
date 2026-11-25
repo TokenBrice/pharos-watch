@@ -143,7 +143,7 @@ const llamaPool = (o: Pick<LlamaPool, "pool" | "chain" | "project" | "symbol" | 
 });
 const mkCoin = (id: string, symbol: string, price: number): StablecoinData => {
   const n = nowS();
-  return { id, name: symbol, symbol, geckoId: null, pegType: "peggedUSD", pegMechanism: "fiat-backed", price, priceSource: "pyth", priceConfidence: "single-source", priceUpdatedAt: n, priceObservedAt: n, priceObservedAtMode: "upstream", priceSyncedAt: n, consensusSources: ["pyth"], agreeSources: ["pyth"], supplySource: "defillama", circulating: { peggedUSD: 1e6 }, circulatingPrevDay: {}, circulatingPrevWeek: {}, circulatingPrevMonth: {}, chainCirculating: {}, chains: [] };
+  return { id, name: symbol, symbol, geckoId: null, pegType: "peggedUSD", pegMechanism: "fiat-backed", listingClass: null, price, priceSource: "pyth", priceConfidence: "single-source", priceUpdatedAt: n, priceObservedAt: n, priceObservedAtMode: "upstream", priceSyncedAt: n, consensusSources: ["pyth"], agreeSources: ["pyth"], supplySource: "defillama", circulating: { peggedUSD: 1e6 }, circulatingPrevDay: {}, circulatingPrevWeek: {}, circulatingPrevMonth: {}, chainCirculating: {}, chains: [] };
 };
 
 describe("dex liquidity scoring stage cycle", () => {

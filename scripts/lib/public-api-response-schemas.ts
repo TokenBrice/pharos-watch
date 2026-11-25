@@ -91,6 +91,7 @@ import {
   SafetyScoreHistoryV2ResponseSchema,
 } from "@shared/types/safety-score-history";
 import { StabilityIndexResponseSchema, UsdsStatusResponseOutputSchema } from "@shared/types/stability";
+import { ListingClassSchema } from "@shared/types/stablecoin-taxonomy";
 import { HealthResponseSchema, PublicStatusHistoryResponseSchema } from "@shared/types/status";
 import { TelegramPulseOutputSchema } from "@shared/types/status/telegram";
 import { TapeEventsResponseSchema } from "@shared/types/tape-event";
@@ -109,6 +110,7 @@ export const StablecoinSummaryResponseSchema = z.object({
   symbol: z.string(),
   pegType: z.string(),
   pegMechanism: z.string(),
+  listingClass: ListingClassSchema.nullable(),
   priceUsd: z.number().nullable(),
   priceSource: z.string().nullable(),
   priceConfidence: PriceConfidenceSchema.nullable(),
@@ -228,6 +230,7 @@ export const PUBLIC_API_RESPONSE_COMPONENT_SCHEMAS = {
   DdrrRow: DdrrRowSchema,
   DdrrV2SummaryMetrics: DdrrV2SummaryMetricsSchema,
   DdrrV2SummarySegment: DdrrV2SummarySegmentSchema,
+  ListingClass: ListingClassSchema,
   ReportCardsV9DependencyGraph: ReportCardsV9DependencyGraphSchema,
   DependencyGraphNode: DependencyGraphNodeSchema,
   DependencyGraphPricedEffect: DependencyGraphPricedEffectSchema,

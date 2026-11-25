@@ -60,7 +60,7 @@ const coin: StablecoinMeta = {
 };
 const eurCoin: StablecoinMeta = { ...coin, flags: { ...coin.flags, pegCurrency: "EUR" } };
 const coinData: StablecoinData = {
-  id: "usdc-circle", name: "USD Coin", symbol: "USDC", geckoId: "usd-coin", pegType: "peggedUSD", pegMechanism: "fiat-backed",
+  id: "usdc-circle", name: "USD Coin", symbol: "USDC", geckoId: "usd-coin", pegType: "peggedUSD", pegMechanism: "fiat-backed", listingClass: "core-stablecoin",
   price: 0.9998, priceSource: "coingecko", priceConfidence: "high", consensusSources: ["coingecko"], agreeSources: ["coingecko"],
   priceUpdatedAt: 1_700_000_000, priceObservedAt: 1_700_000_000, priceObservedAtMode: "upstream", priceSyncedAt: 1_700_000_000,
   supplySource: "defillama", circulating: { peggedUSD: 1_000_000_000 }, circulatingPrevDay: { peggedUSD: 995_000_000 },

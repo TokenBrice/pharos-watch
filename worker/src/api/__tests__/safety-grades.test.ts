@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getPublicApiAccess } from "@shared/lib/api-endpoints";
+import { getListingClass } from "@shared/lib/stablecoins/listing-governance";
 import { SafetyGradesResponseSchema } from "@shared/types/report-cards-v9";
 import { makeReportCardsV9Response } from "../../test-helpers/report-cards-v9";
 import { mockD1 } from "@shared/test-utils/mock-d1";
@@ -21,21 +22,21 @@ describe("handleSafetyGrades", () => {
   it("keeps pipeline-gap null grades separate from NR and preserves partial rated evidence", async () => {
     const base = makeReportCardsV9Response();
     const partial = { reasonCode: "partial-evidence-pipeline-gap" as const, excludedPillars: ["exit" as const], causes: ["A" as const] };
-    const grades = [
+    const cards = [
       { id: "partial", score: 90, grade: "A" as const, ratingStatus: "rated" as const, partialEvidence: partial },
       { id: "gap", score: null, grade: null, ratingStatus: "pipeline-gap" as const,
         partialEvidence: { ...partial, excludedPillars: ["backing" as const, "exit" as const] } },
       { id: "nr", score: null, grade: "NR" as const, ratingStatus: "not-rated" as const, partialEvidence: null },
-      { id: "buidl-blackrock", score: null, grade: "NR" as const, ratingStatus: "not-rated" as const, notRatedReason: "tokenized-fund-not-graded" as const, partialEvidence: null },
     ];
     mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot: {
-      ...base,
-      cards: [...grades.slice(0, 3), { id: "buidl-blackrock", score: 75, grade: "B+" as const, ratingStatus: "rated" as const, partialEvidence: null }],
+      ...base, cards: [...cards, { id: "buidl-blackrock", score: 75, grade: "B+" as const, ratingStatus: "rated" as const, partialEvidence: null }],
     } });
-    const response = await handleSafetyGrades(mockD1([]));
-    const body = SafetyGradesResponseSchema.parse(await response.json());
+    const body = SafetyGradesResponseSchema.parse(await (await handleSafetyGrades(mockD1([]))).json());
     expect(body.schemaVersion).toBe(1);
-    expect(body.grades).toEqual(grades);
+    expect(body.grades).toEqual([
+      ...cards.map((c) => ({ ...c, listingClass: null })),
+      { id: "buidl-blackrock", score: null, grade: "NR", ratingStatus: "not-rated", notRatedReason: "tokenized-fund-not-graded", partialEvidence: null, listingClass: "tokenized-fund" },
+    ]);
   });
 
   it("serves a grade-only projection of the current V9 publication without a key", async () => {
@@ -53,7 +54,7 @@ describe("handleSafetyGrades", () => {
     const body = SafetyGradesResponseSchema.parse(await response.json());
     expect(body.methodologyVersion).toBe(snapshot.methodology.version);
     expect(body.grades).toEqual(
-      snapshot.cards.map(({ id, score, grade, ratingStatus, partialEvidence }) => ({ id, score, grade, ratingStatus, partialEvidence })),
+      snapshot.cards.map(({ id, score, grade, ratingStatus, partialEvidence }) => ({ id, score, grade, ratingStatus, partialEvidence, listingClass: getListingClass(id) })),
     );
     expect(getRouteMatch("/api/safety-grades")?.endpoint?.key).toBe("safety-grades");
     expect(getPublicApiAccess("/api/safety-grades")).toBe("exempt");

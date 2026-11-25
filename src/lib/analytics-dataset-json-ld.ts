@@ -39,12 +39,21 @@ export function buildDepegHistoryDescription(rowFields: readonly string[]): stri
   return `Public history of tracked depeg events with stablecoin IDs, direction, peak deviation, timing, duration, prices, peg reference, and source${auditVerdict}.`;
 }
 
+export function buildTopStablecoinsDescription(rowFields: readonly string[]): string {
+  const finalColumn = rowFields.at(-1) ?? "listingClass";
+  const listingClassNote = rowFields.includes("listingClass")
+    ? " listingClass classifies tracked rows under Listing Policy 2.0 (null for untracked rows and pre-2026-11-25 snapshots)."
+    : "";
+  return `Public snapshot of the stablecoin list, including rows outside the tracked catalog, with peg type, peg mechanism, price, circulating USD supply, chain count, and chain coverage. The supplyUnavailableReason column explains unavailable supply without shifting existing columns, and ${finalColumn} is the final CSV column.${listingClassNote}`;
+}
+
 export const PUBLIC_DATASET_JSON_LD_DESCRIPTORS: readonly PublicDatasetDescriptor[] = [
   {
     slug: "top-stablecoins",
     name: "Pharos Top Stablecoins Dataset",
-    description:
-      "Public snapshot of the stablecoin list, including rows outside the tracked catalog, with peg type, peg mechanism, price, circulating USD supply, chain count, and chain coverage. The supplyUnavailableReason column explains unavailable supply without shifting existing columns, and supplyProvenance is the final CSV column.",
+    description: buildTopStablecoinsDescription(
+      Object.keys(PUBLIC_DATASET_CURRENT_EXPORTS["top-stablecoins"].rows[0] ?? {}),
+    ),
     keywords: ["stablecoin market cap", "stablecoin supply", "stablecoin chains", "stablecoin dataset"],
     export: PUBLIC_DATASET_CURRENT_EXPORTS["top-stablecoins"] as PublicDatasetExport,
   },

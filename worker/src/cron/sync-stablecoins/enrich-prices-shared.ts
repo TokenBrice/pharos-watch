@@ -1,4 +1,5 @@
 import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
+import type { ListingClass } from "@shared/types/stablecoin-taxonomy";
 import type { NominalPriceReference, PriceConfidence, PriceObservedAtMode, PricePublicationReason, PriceSourceConfidenceProfile } from "@shared/types/price";
 import type { ChainPartitionProvenance, StablecoinData, SupplyChainGuardProvenance, SupplyGapFillProvenance, SupplyRestoreMode, SupplyUnavailableReason } from "@shared/types/supply";
 import type { SupplyChangeBaselines } from "@shared/lib/supply";
@@ -89,6 +90,7 @@ export interface PeggedAsset extends Pick<StablecoinData, "circulatingNative" | 
   chainPartition?: ChainPartitionProvenance;
   pegType?: string;
   pegMechanism?: string;
+  listingClass?: ListingClass | null;
   circulating?: Record<string, number>;
   circulatingPrevDay?: Record<string, number> | null;
   circulatingPrevWeek?: Record<string, number> | null;

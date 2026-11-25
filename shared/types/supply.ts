@@ -11,6 +11,7 @@ import { CurrentPegSchema } from "./current-peg";
 import { FxReferenceEvidenceMapSchema, SelectedPegReferencesSchema } from "./fx-reference";
 import { SfraxStockPerimeterObservationSchema } from "./sfrax-supply";
 import { ContractDeploymentSchema } from "./stablecoin-meta-primitives";
+import { ListingClassSchema } from "./stablecoin-taxonomy";
 import { NonNegativeFiniteSchema, StrictIsoDateSchema, UnixSecondsSchema } from "./safety-schema-primitives";
 import { PriceDerivationSchema } from "./price";
 
@@ -234,6 +235,7 @@ const StablecoinDataRawSchema = z.object({
   gecko_id: z.string().nullable().optional(),
   pegType: z.string(),
   pegMechanism: z.string(),
+  listingClass: ListingClassSchema.nullable().optional(),
   price: z.number().nullable(),
   priceSource: z.string().nullable(),
   priceConfidence: PriceConfidenceSchema.nullable().optional(),
@@ -278,6 +280,7 @@ const StablecoinDataRawSchema = z.object({
 /** JSON wire shape after legacy aliases and optional observations have been normalized. */
 export const StablecoinDataOutputSchema = StablecoinDataRawSchema.omit({ gecko_id: true }).extend({
   geckoId: z.string().nullable(),
+  listingClass: ListingClassSchema.nullable(),
   priceConfidence: PriceConfidenceSchema.nullable(),
   priceUpdatedAt: z.number().nullable(),
   priceObservedAt: z.number().nullable(),
@@ -299,6 +302,7 @@ export const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) =>
   geckoId: asset.geckoId ?? asset.gecko_id ?? null,
   pegType: asset.pegType,
   pegMechanism: asset.pegMechanism,
+  listingClass: asset.listingClass ?? null,
   price: asset.price,
   priceSource: asset.priceSource,
   priceConfidence: asset.priceConfidence ?? null,
