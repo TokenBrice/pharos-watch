@@ -1,7 +1,9 @@
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { getListingClass } from "@shared/lib/stablecoins/listing-governance";
 import { UsdsStatusResponseSchema } from "@shared/types/stability";
 import {
   STABLECOIN_CHART_LEGACY_AGGREGATE_UNIVERSE,
+  type StablecoinListResponse,
   StablecoinListResponseSchema,
 } from "@shared/types/supply";
 import { createCacheHandler } from "../lib/api-cache-read";
@@ -22,6 +24,18 @@ export const handleStablecoins = createCacheHandler(
     malformedMessage: "Cached stablecoins payload is malformed",
     responseReadyCache: "json-object",
     responseReadySchemaId: RESPONSE_READY_CACHE_SCHEMA_IDS.stablecoins,
+    // Backfill listingClass on canonical fallback reads during the <=15m deploy rollover
+    // before the first post-deploy sync-stablecoins writes the v3 response-ready companion.
+    transform: (payload) => {
+      const data = payload as StablecoinListResponse;
+      return {
+        ...data,
+        peggedAssets: data.peggedAssets.map((asset) => ({
+          ...asset,
+          listingClass: getListingClass(asset.id),
+        })),
+      };
+    },
   },
 );
 

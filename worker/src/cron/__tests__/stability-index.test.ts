@@ -76,7 +76,7 @@ function makeStabilityAsset(overrides: Partial<StablecoinData> = {}): Stablecoin
   const nowSec = Math.floor(Date.now() / 1000);
   return {
     id: "usdt-tether", name: "Tether USD", symbol: "USDT", geckoId: "tether",
-    pegType: "peggedUSD", pegMechanism: "fiat-backed", price: 1,
+    pegType: "peggedUSD", pegMechanism: "fiat-backed", listingClass: "core-stablecoin", price: 1,
     priceSource: "defillama", priceConfidence: "high", priceUpdatedAt: nowSec,
     priceObservedAt: nowSec, priceObservedAtMode: "upstream", priceSyncedAt: nowSec,
     consensusSources: [], agreeSources: [], supplySource: "defillama",

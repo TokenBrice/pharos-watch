@@ -9,6 +9,7 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { DEPEG_SEVERITY_BPS } from "@shared/lib/depeg-config";
 import { parseSupplyObservationProvenance } from "@shared/lib/supply-provenance";
 import { WORKER_ACTIVE_IDS, WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { getListingClass } from "@shared/lib/stablecoins/listing-governance";
 import type { StablecoinData } from "@shared/types/supply";
 import type { PegSummaryCoin } from "@shared/types/peg";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
@@ -358,6 +359,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       pegType: resolvePegType(asset, meta.flags.pegCurrency, pegData.pegType),
       pegCurrency: meta.flags.pegCurrency,
       governance: meta.flags.governance,
+      listingClass: getListingClass(meta.id),
       currentDeviationBps: currentBps,
       admittedDeviationBps: admissionEnabled ? admittedBps : undefined,
       referenceAdmission: observation?.referenceAdmission,

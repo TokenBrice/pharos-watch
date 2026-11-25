@@ -257,18 +257,17 @@ describe("handleStablecoinSummary", () => {
   it("serves a valid requested row when a producer-admitted sibling fails the strict reader", async () => {
     const now = Math.floor(Date.now() / 1000);
     const payload = JSON.parse(makeStablecoinsCacheValue());
-    payload.peggedAssets.push({
-      ...payload.peggedAssets[0],
-      id: "malformed-sibling",
-      name: "Malformed sibling",
-      symbol: "",
-    });
+    payload.peggedAssets.push(
+      { ...payload.peggedAssets[0], id: "malformed-sibling", name: "Malformed sibling", symbol: "" },
+      { ...payload.peggedAssets[0], id: "buidl-blackrock" },
+      { ...payload.peggedAssets[0], id: "214" },
+    );
     const db = mockD1([{ match: "cache", rows: [], first: {
       value: JSON.stringify(payload), updated_at: now,
     } }]);
 
-    const body = await readJsonResponse(await handleStablecoinSummary(db, "usdt-tether"), 200);
-
-    expect(body).toMatchObject({ id: "usdt-tether", symbol: "USDT", priceUsd: 1.0001 });
+    expect(await readJsonResponse(await handleStablecoinSummary(db, "usdt-tether"), 200)).toMatchObject({ id: "usdt-tether", symbol: "USDT", listingClass: "core-stablecoin", priceUsd: 1.0001 });
+    expect(await readJsonResponse(await handleStablecoinSummary(db, "buidl-blackrock"), 200)).toMatchObject({ listingClass: "tokenized-fund" });
+    expect(await readJsonResponse(await handleStablecoinSummary(db, "214"), 200)).toMatchObject({ listingClass: null });
   });
 });

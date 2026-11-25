@@ -29,6 +29,7 @@ import {
 import {
   TRACKED_META_BY_ID,
 } from "@shared/lib/stablecoins/registry";
+import { getListingClass } from "@shared/lib/stablecoins/listing-governance";
 import {
   EVIDENCE_FIELD_COUNT,
 } from "@shared/lib/yield-evidence";
@@ -139,6 +140,7 @@ function evaluatedSourceToRanking(
     id: source.id,
     symbol: source.symbol,
     name: meta?.name ?? source.symbol,
+    listingClass: getListingClass(source.id),
     currentApy: source.currentApy,
     apy7d: source.apy7d,
     apy30d: source.apy30d,

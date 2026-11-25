@@ -13,11 +13,13 @@ import { LIQUIDITY_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-ver
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import { FROZEN_SNAPSHOTS_BY_ID } from "@shared/lib/stablecoins/frozen-snapshots";
+import { getListingClass } from "@shared/lib/stablecoins/listing-governance";
 import { FROZEN_META_BY_ID, TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { admitSupplyBuckets, getCirculatingRawOrNull } from "@shared/lib/supply";
 import { projectEnvelopeSupplyProvenance } from "@shared/lib/supply-provenance";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
+import { CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE } from "@shared/types/aggregate-universe";
+import { ListingClassSchema, MECHANISM_ARCHETYPE_VALUES, type ListingClass } from "@shared/types/stablecoin-taxonomy";
 import type {
   PublicSnapshotEnvelope,
   PublicSnapshotEnvelopeV2,
@@ -89,6 +91,27 @@ export function isHistoricalSnapshotDate(snapshotDate: string): boolean {
   return snapshotDate !== formatUtcDateOnly(new Date());
 }
 
+function resolveDatasetListingClass(
+  stablecoinId: string,
+  snapshotDate: string,
+  recordedListingClass: unknown,
+): ListingClass | null {
+  if (snapshotDate < CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE) {
+    return null;
+  }
+  if (recordedListingClass !== undefined) {
+    const parsed = ListingClassSchema.nullable().safeParse(recordedListingClass);
+    if (parsed.success) return parsed.data;
+  }
+  // R6 non-restatement: fall back to current catalog only when generating today's
+  // live snapshot; unrecorded historical dates emit null rather than retroactively
+  // restating past dates after a future reclassification.
+  if (isHistoricalSnapshotDate(snapshotDate)) {
+    return null;
+  }
+  return getListingClass(stablecoinId);
+}
+
 export function isProjectionEnvelope(envelope: PublicSnapshotEnvelope): envelope is PublicSnapshotEnvelope & SnapshotEnvelope {
   return (
     typeof envelope.snapshotDate === "string"
@@ -138,6 +161,7 @@ interface TopStablecoinRow {
   priceObservedAtMode: PriceObservedAtMode | null;
   nominalReferenceUsd: number | null;
   nominalReferenceSource: string | null;
+  listingClass: ListingClass | null;
 }
 
 const TOP_STABLECOINS_COLUMNS: DatasetColumn<TopStablecoinRow>[] = [
@@ -162,6 +186,7 @@ const TOP_STABLECOINS_COLUMNS: DatasetColumn<TopStablecoinRow>[] = [
   { header: "priceObservedAtMode", accessor: (r) => r.priceObservedAtMode },
   { header: "nominalReferenceUsd", accessor: (r) => r.nominalReferenceUsd },
   { header: "nominalReferenceSource", accessor: (r) => r.nominalReferenceSource },
+  { header: "listingClass", accessor: (r) => r.listingClass },
 ];
 
 function nativeSupplyChain(coin: SnapshotEnvelope["stablecoins"][number]): string | null {
@@ -232,6 +257,7 @@ function projectTopStablecoins(envelope: SnapshotEnvelope | null): TopStablecoin
         priceObservedAtMode,
         nominalReferenceUsd: nominalReference?.price ?? (nominalFallback ? coin.price : null),
         nominalReferenceSource: nominalReference?.source ?? (nominalFallback ? priceSource : null),
+        listingClass: resolveDatasetListingClass(coin.id, envelope.snapshotDate, coin.listingClass),
       };
     })
     .sort((a, b) => Number(a.frozen) - Number(b.frozen)
@@ -367,6 +393,7 @@ interface ScoreLatestRow {
   liquidityUpdatedAt: number | null;
   liquidityUnavailableReason: string | null;
   liquidityMethodologyVersion: string | null;
+  listingClass: ListingClass | null;
 }
 
 const SCORES_LATEST_COLUMNS: DatasetColumn<ScoreLatestRow>[] = [
@@ -385,6 +412,7 @@ const SCORES_LATEST_COLUMNS: DatasetColumn<ScoreLatestRow>[] = [
   { header: "liquidityUpdatedAt", accessor: (r) => r.liquidityUpdatedAt },
   { header: "liquidityUnavailableReason", accessor: (r) => r.liquidityUnavailableReason },
   { header: "liquidityMethodologyVersion", accessor: (r) => r.liquidityMethodologyVersion },
+  { header: "listingClass", accessor: (r) => r.listingClass },
 ];
 
 type CurrentSafetyPublication = z.infer<typeof ReportCardsV9CurrentResponseSchema>;
@@ -602,6 +630,7 @@ function projectLegacyScoresLatest(envelope: SnapshotEnvelope): ScoreLatestRow[]
         liquidityUpdatedAt: null,
         liquidityUnavailableReason: null,
         liquidityMethodologyVersion: null,
+        listingClass: resolveDatasetListingClass(coin.id, envelope.snapshotDate, coin.listingClass),
       };
     })
     .sort((a, b) => (b.safetyScore ?? -1) - (a.safetyScore ?? -1));
@@ -668,6 +697,7 @@ function projectEnrichedScoresLatest(
         liquidityUpdatedAt: liquidity?.updatedAt ?? null,
         liquidityUnavailableReason: liquidityUnavailableReason(liquidity),
         liquidityMethodologyVersion: liquidity?.methodologyVersion ?? null,
+        listingClass: resolveDatasetListingClass(id, envelope.snapshotDate, coin?.listingClass),
       };
     })
     .sort((a, b) => (b.safetyScore ?? -1) - (a.safetyScore ?? -1));
