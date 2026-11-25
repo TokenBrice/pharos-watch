@@ -63,10 +63,11 @@ import { syncYieldSupplemental } from "../sync-yield-supplemental";
 import { loadSupplementalSourceFamilies, SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY } from "../yield-sync/sources-supplemental";
 import { type SupplementalSourceFamilyKey, SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "../yield-sync/family-registry";
 import {
-  parseYieldSupplementalSourcesCache, PENDLE_RATE_LIMIT_BACKOFF_REASON, buildYieldSupplementalCountDropState,
-  buildYieldSupplementalFamilyCache, buildYieldSupplementalPendleBackoff, buildYieldSupplementalRunOutcome,
-  getYieldSupplementalCountDropStateCacheKey, getYieldSupplementalFamilyCacheKey,
-  getYieldSupplementalPendleBackoffCacheKey, getYieldSupplementalRunOutcomeCacheKey, supplementalFamilySnapshotHash,
+  parseYieldSupplementalSourcesCache, MORPHO_RATE_LIMIT_BACKOFF_REASON, PENDLE_RATE_LIMIT_BACKOFF_REASON,
+  buildYieldSupplementalCountDropState, buildYieldSupplementalFamilyBackoff, buildYieldSupplementalFamilyCache,
+  buildYieldSupplementalRunOutcome, getYieldSupplementalCountDropStateCacheKey,
+  getYieldSupplementalFamilyBackoffCacheKey, getYieldSupplementalFamilyCacheKey,
+  getYieldSupplementalRunOutcomeCacheKey, supplementalFamilySnapshotHash,
 } from "../yield-sync/cache";
 
 const USDC_ADDR = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
@@ -241,10 +242,10 @@ describe("syncYieldSupplemental", () => {
   describe("pendle free-quota lane", () => {
     const START_SEC = Math.floor(Date.parse("2026-03-26T12:00:00.000Z") / 1000);
     const pendleKey = getYieldSupplementalFamilyCacheKey("pendle");
-    const backoffKey = getYieldSupplementalPendleBackoffCacheKey();
+    const backoffKey = getYieldSupplementalFamilyBackoffCacheKey("pendle");
     const activeBackoffUntilSec = START_SEC + 7200;
-    const backoffRow = (backoffUntilSec: number, source: "retry-after" | "x-ratelimit-weekly-reset", recordedAtSec: number) => ({
-      value: buildYieldSupplementalPendleBackoff({ backoffUntilSec, source, recordedAtSec }),
+    const backoffRow = (backoffUntilSec: number, source: "retry-after" | "x-ratelimit-weekly-reset", recordedAtSec: number, family: "pendle" | "morpho" = "pendle") => ({
+      value: buildYieldSupplementalFamilyBackoff(family, { backoffUntilSec, source, recordedAtSec }),
       updatedAt: recordedAtSec,
     });
 
@@ -294,17 +295,23 @@ describe("syncYieldSupplemental", () => {
       expect(result.status).toBeUndefined();
     });
 
-    it("does not call pendle again while the recorded backoff is active", async () => {
+    const fetcher = (f: "pendle" | "morpho") => (f === "pendle" ? fetchPendleMarketSources : fetchMorphoVaultSources);
+    it.each([
+      ["pendle", 30 * 3600, undefined],
+      ["morpho", 5 * 3600, undefined],
+      ["morpho", 5 * 3600, { families: ["morpho"] as const, catchUpMinMarkerAgeSec: 4 * 3600 }],
+    ] as const)("skips %s during active backoff (%is)", async (family, ageSec, opts) => {
       vi.mocked(getCaches).mockResolvedValue(new Map([
-        [pendleKey, familyRow(START_SEC - 30 * 3600)],
-        [backoffKey, backoffRow(activeBackoffUntilSec, "retry-after", START_SEC)],
+        [getYieldSupplementalFamilyCacheKey(family), familyRow(START_SEC - ageSec, [beefyCandidate()])],
+        [getYieldSupplementalFamilyBackoffCacheKey(family), backoffRow(activeBackoffUntilSec, "retry-after", START_SEC, family)],
       ]));
-      vi.mocked(fetchMorphoVaultSources).mockResolvedValue(healthyFamilyFetch([beefyCandidate()]));
-      const { result, meta } = await runSync();
-
-      expect(fetchPendleMarketSources).not.toHaveBeenCalled();
-      expect(meta.familyCacheResults?.pendle).toBe("skipped-backoff");
-      expect(meta.degradedFamilies).toEqual([]);
+      vi.mocked(fetchBeefySources).mockResolvedValue(healthyFamilyFetch([beefyCandidate()]));
+      const { result, meta } = await runSync(opts);
+      expect(fetcher(family)).not.toHaveBeenCalled();
+      expect(meta).toMatchObject({
+        [`${family}Backoff`]: { backoffUntilSec: activeBackoffUntilSec },
+        familyCacheResults: { [family]: "skipped-backoff" }, degradedFamilies: [],
+      });
       expect(result.status).toBeUndefined();
     });
 
@@ -319,25 +326,26 @@ describe("syncYieldSupplemental", () => {
       expect(meta).toMatchObject({ reason: "retained-family-state-unavailable" });
     });
 
-    it("degrades with the machine-readable reason while the stale retained row waits out an active backoff", async () => {
+    it.each([
+      ["pendle", 49 * 3600, "x-ratelimit-weekly-reset", PENDLE_RATE_LIMIT_BACKOFF_REASON],
+      ["morpho", 9 * 3600, "retry-after", MORPHO_RATE_LIMIT_BACKOFF_REASON],
+    ] as const)("degrades %s when stale row waits out backoff", async (family, ageSec, source, reason) => {
       vi.mocked(getCaches).mockResolvedValue(new Map([
-        [pendleKey, familyRow(START_SEC - 49 * 3600)],
-        [backoffKey, backoffRow(activeBackoffUntilSec, "x-ratelimit-weekly-reset", START_SEC)],
+        [getYieldSupplementalFamilyCacheKey(family), familyRow(START_SEC - ageSec)],
+        [getYieldSupplementalFamilyBackoffCacheKey(family), backoffRow(activeBackoffUntilSec, source, START_SEC, family)],
       ]));
-      vi.mocked(fetchMorphoVaultSources).mockResolvedValue(healthyFamilyFetch([beefyCandidate()]));
+      vi.mocked(fetchBeefySources).mockResolvedValue(healthyFamilyFetch([beefyCandidate()]));
       const { result, meta } = await runSync();
-
-      expect(fetchPendleMarketSources).not.toHaveBeenCalled();
+      expect(fetcher(family)).not.toHaveBeenCalled();
       expect(result.status).toBe("degraded");
       expect(meta).toMatchObject({
-        pendleBackoff: { source: "x-ratelimit-weekly-reset", recordedAtSec: START_SEC, backoffUntilSec: activeBackoffUntilSec },
-        familyCacheResults: { pendle: "retained-previous" },
-        degradedFamilies: ["pendle"],
-        degradedFamilyReasons: { pendle: PENDLE_RATE_LIMIT_BACKOFF_REASON },
+        [`${family}Backoff`]: { source, recordedAtSec: START_SEC, backoffUntilSec: activeBackoffUntilSec },
+        familyCacheResults: { [family]: "retained-previous" },
+        degradedFamilies: [family], degradedFamilyReasons: { [family]: reason },
       });
       expect(logCronEvent).not.toHaveBeenCalled();
       expect(JSON.parse(findSetCache(getYieldSupplementalRunOutcomeCacheKey())?.[2] ?? "{}")).toMatchObject({
-        degradedFamilies: ["pendle"], degradedFamilyReasons: { pendle: PENDLE_RATE_LIMIT_BACKOFF_REASON },
+        degradedFamilies: [family], degradedFamilyReasons: { [family]: reason },
       });
     });
 
@@ -859,7 +867,7 @@ describe("syncYieldSupplemental", () => {
 
     it("never retains past the family's own freshness budget", async () => {
       const now = Math.floor(Date.now() / 1000);
-      vi.mocked(getCaches).mockResolvedValue(new Map([[morphoKey, familyRow(now - 7 * 3_600, morphoCandidates(4))]]));
+      vi.mocked(getCaches).mockResolvedValue(new Map([[morphoKey, familyRow(now - 9 * 3_600, morphoCandidates(4))]]));
       vi.mocked(fetchMorphoVaultSources).mockResolvedValue(healthyFamilyFetch(morphoCandidates(1)));
       const { result, meta } = await runSync();
 

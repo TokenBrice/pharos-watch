@@ -1,5 +1,22 @@
 [
   {
+    "version": "8.62",
+    "title": "Morpho Supplemental Vault Discovery on REST v0",
+    "date": "2026-11-25",
+    "effectiveAt": 1795651200,
+    "summary": "Supplemental Morpho V1 vault discovery migrates off Morpho's retiring GraphQL endpoint to Morpho REST v0, publishing timestamped six-hour realized post-fee native APY with verified observation clocks and an eight-hour supplemental freshness budget.",
+    "impact": [
+      "`fetchMorphoVaultSources` now discovers listed V1 vaults via `/v0/vaults-v1`, matches tracked stablecoin deployments by exact `(chain, asset_address)` with registry decimals (recovering canonical USDT0 vaults previously missed by symbol filters), values live `/state` balances with deduplicated `/v0/tokens/{id}/price` reads to pre-filter vaults at or above $100k, and reads `/v0/vaults-v1/{sel}/apy/history?lookback=six_hours` at peak concurrency 3 within the 25-second family budget.",
+      "Because Morpho REST v0 reports realized post-fee native vault yield without external Merkl incentives, supplemental Morpho rows publish realized native APY as both `currentApy` and `apyBase` with `apyReward: null`, resolving `rewardShare` to 0.",
+      "Supplemental Morpho rows now carry verified hourly UTC `sourceObservedAt` clocks from `/apy/history` instead of null, upgrading eligible surviving rows (including eUSD and USDC/EURC Morpho alternatives) from `source-freshness-unknown` (NR) to PYS-scored. `protocol-api:morpho-vault:` uses an eight-hour stale bound and six-hour aging midpoint (`2x` the four-hourly supplemental cadence) so Base indexer lag (~2.2 h) does not flip fresh rows to `source-stale` before the next refresh.",
+      "HTTP 429 responses short-circuit without retries and persist `Retry-After` backoff windows in D1 across both four-hourly and hourly catch-up runs; missing token prices or incomplete reads degrade the family and retain the previous complete snapshot.",
+      "Direct `protocol-api:morpho-net:` vaults (gtUSDC/bbqUSDC, six-hour budget), source keys (`protocol-api:morpho-vault:<chain>:<vaultAddress>`), PYS weights, benchmarks, and sibling supplemental family budgets are unchanged.",
+      "Planned activation is provisionally 2026-11-26 00:00 UTC (1795651200), following the next-UTC-midnight convention; re-date effectiveAt at release."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "8.61",
     "title": "Morpho V1 Vault Net APY on REST v0",
     "date": "2026-11-22",

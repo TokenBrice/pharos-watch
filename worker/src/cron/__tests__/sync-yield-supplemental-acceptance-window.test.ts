@@ -12,7 +12,7 @@ import {
   supplementalFamilyCacheRow,
   type YieldCacheFixture,
 } from "./yield-cache.test-support";
-import { buildYieldSupplementalPendleBackoff, buildYieldSupplementalRunOutcome, getYieldSupplementalFamilyCacheKey, getYieldSupplementalPendleBackoffCacheKey, getYieldSupplementalRunOutcomeCacheKey, type SupplementalFamilyCacheResult, supplementalFamilySnapshotHash } from "../yield-sync/cache";
+import { buildYieldSupplementalFamilyBackoff, buildYieldSupplementalRunOutcome, getYieldSupplementalFamilyBackoffCacheKey, getYieldSupplementalFamilyCacheKey, getYieldSupplementalRunOutcomeCacheKey, type SupplementalFamilyCacheResult, supplementalFamilySnapshotHash } from "../yield-sync/cache";
 import { loadYieldSyncState } from "../yield-sync/state";
 import { getSupplementalFamilyStaleThresholdSec } from "../yield-sync/family-registry";
 import { SUPPLEMENTAL_SOURCE_FAMILY_KEYS, type SupplementalSourceFamilyKey } from "../yield-sync/family-registry";
@@ -83,9 +83,9 @@ describe("supplemental family cache acceptance window", () => {
   });
 
   it.each([
-    ["6h01m", 6 * HOUR_SEC + 60],
+    ["8h01m", 8 * HOUR_SEC + 60],
     ["12h01m", 12 * HOUR_SEC + 60],
-  ])("excludes a family snapshot observed %s ago and reports it as a partial cache", async (_label, familyAgeSec) => {
+  ])("excludes a morpho family snapshot observed %s ago and reports it as a partial cache", async (_label, familyAgeSec) => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
     const morphoKey = getYieldSupplementalFamilyCacheKey("morpho");
@@ -263,7 +263,7 @@ describe("supplemental family cache acceptance window", () => {
     expect(state.supplementalMeta.unknownOutcomeFamilies).not.toContain("morpho");
   });
 
-  it.each([0, 7 * HOUR_SEC])("does not attribute an obsolete outcome to a replacement family aged %s seconds", async (ageSec) => {
+  it.each([0, 9 * HOUR_SEC])("does not attribute an obsolete outcome to a replacement family aged %s seconds", async (ageSec) => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
     const oldRow = supplementalFamilyCacheRow([], nowSec - HOUR_SEC);
@@ -348,23 +348,21 @@ describe("supplemental family cache acceptance window", () => {
   });
 
   it.each([
-    ["inside the pendle budget", 30 * HOUR_SEC, null],
-    ["past the pendle budget", 49 * HOUR_SEC, "pendle-rate-limited-backoff"],
-  ])("re-evaluates an active pendle quota backoff %s on the publication clock", async (_label, ageSec, expectedReason) => {
+    ["pendle", "inside", 30 * HOUR_SEC, null],
+    ["pendle", "past", 49 * HOUR_SEC, "pendle-rate-limited-backoff"],
+    ["morpho", "inside", 7 * HOUR_SEC, null],
+    ["morpho", "past", 9 * HOUR_SEC, "morpho-rate-limited-backoff"],
+  ] as const)("re-evaluates an active %s quota backoff %s budget", async (family, _label, ageSec, expectedReason) => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
-
+    const cand = family === "pendle" ? pendleCandidate(nowSec - ageSec) : morphoCandidate(nowSec - ageSec);
     installYieldCacheReader(vi.mocked(getCache), {
       ...freshRequiredFamilyRows(nowSec),
-      [getYieldSupplementalFamilyCacheKey("pendle")]:
-        supplementalFamilyCacheRow([pendleCandidate(nowSec - ageSec)], nowSec - ageSec),
-      [getYieldSupplementalPendleBackoffCacheKey()]: cacheRow(
-        buildYieldSupplementalPendleBackoff({
-          backoffUntilSec: nowSec + 3600,
-          source: "x-ratelimit-weekly-reset",
-          recordedAtSec: nowSec,
-        }),
-        nowSec,
+      [getYieldSupplementalFamilyCacheKey(family)]: supplementalFamilyCacheRow([cand], nowSec - ageSec),
+      [getYieldSupplementalFamilyBackoffCacheKey(family)]: cacheRow(
+        buildYieldSupplementalFamilyBackoff(family, {
+          backoffUntilSec: nowSec + 3600, source: family === "pendle" ? "x-ratelimit-weekly-reset" : "retry-after", recordedAtSec: nowSec,
+        }), nowSec,
       ),
     });
 
@@ -374,7 +372,7 @@ describe("supplemental family cache acceptance window", () => {
       expect(state.supplementalMeta).toMatchObject({ fallbackMode: null, degradedFamilies: [] });
       return;
     }
-    expect(state.supplementalMeta.degradedFamilies).toEqual(["pendle"]);
-    expect(state.supplementalMeta.degradedFamilyReasons).toEqual({ pendle: expectedReason });
+    expect(state.supplementalMeta.degradedFamilies).toEqual([family]);
+    expect(state.supplementalMeta.degradedFamilyReasons).toEqual({ [family]: expectedReason });
   });
 });
