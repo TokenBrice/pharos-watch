@@ -1,1 +1,0 @@
-../../../.codex/skills/resilience-classify/SKILL.md
