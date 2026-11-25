@@ -3,7 +3,7 @@
     "version": "4.56",
     "title": "stUSDS unused-funds capacity instead of encumbered idle USDS",
     "date": "2026-11-25",
-    "effectiveAt": 1795600800,
+    "effectiveAt": 1795592640,
     "summary": "Sky stUSDS keeps its USDS in the vault while Lockstake borrowers mint fresh USDS, so its idle balance is encumbered first-loss capital rather than withdrawable cash. Its live capacity now reads the contract's unused-funds bound in one pinned Multicall3 wave instead of the idle balance, and a dust ERC-4626 receipt below the execution certificate's request resolution is recorded as a zero point instead of invalidating the certificate.",
     "impact": [
       "stusds-sky declares redemptionLiquidity source stusds-unused-funds with reviewed Vat, Jug, LockstakeClipper and LSEV2-SKY-A ilk identities. Capacity = totalAssets() minus Art x Jug-accrued rate minus clip.Due(), the bound StUsds.maxWithdraw and _burn enforce; the probe verifies the vault's vat()/jug()/clip()/ilk() wiring, is source-bound, and fails closed (no capacity, never the idle balance) on a mismatch, an unreadable read or an implausible Jug accrual age (rho zero, in the future or more than 365 days old). At Ethereum block 26488478 (2026-11-25T00:01:59Z) it returns 1 wei, within one wei of maxWithdraw and never above it (totalAssets() is floored), where the idle source reported $158.3M (99.99% of supply).",
