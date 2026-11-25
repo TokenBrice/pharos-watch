@@ -232,16 +232,26 @@ async function loadDueV9PublicationSlot(
   const row = await runWithOverloadRetry(() =>
     db
       .prepare(
-        `SELECT state
-           FROM cron_slot_executions
-          WHERE slot_key = 'v9PublicationOffset'
-            AND slot_started_at = ?`,
+        `SELECT cse.state AS state,
+                (SELECT r.stage
+                   FROM v9_eval_runs r
+                  WHERE r.schedule_key = cse.slot_key
+                    AND r.slot_started_at = cse.slot_started_at
+                    AND r.state = 'active'
+                  LIMIT 1) AS active_queue_stage
+           FROM cron_slot_executions cse
+          WHERE cse.slot_key = 'v9PublicationOffset'
+            AND cse.slot_started_at = ?`,
       )
       .bind(slotStartedAt)
-      .first<{ state: string }>(),
+      .first<{ state: string; active_queue_stage?: string | null }>(),
   );
-  if (row?.state === "finished") return null;
-  return { slotStartedAt, state: row?.state ?? null, deadlineMs };
+  if (row?.state === "finished" && !row.active_queue_stage) return null;
+  return {
+    slotStartedAt,
+    state: row?.active_queue_stage ? `queue:${row.active_queue_stage}` : (row?.state ?? null),
+    deadlineMs,
+  };
 }
 
 /**

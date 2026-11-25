@@ -66,9 +66,9 @@ crons = [
 # staged rows (shipped with the reader in the same release as this flag).
 SAFETY_V9_DEFERRED_MATERIALIZATION = "on"
 # Safety Score V9 Queue continuation switch (ADR-26 Release 2).
-# Keep "off" on initial Release 2 deploy so heavy/public activation and Queue
-# bindings verify before flipping to "on" in the follow-up activation PR.
-WORKER_V9_QUEUE_MODE = "off"
+# Activated "on" after verifying heavy/public Release 2 bindings on "off".
+# Set back to "off" for immediate monolithic :22/:52 rollback (no migration reversal).
+WORKER_V9_QUEUE_MODE = "on"
 
 [[d1_databases]]
 binding = "DB"
