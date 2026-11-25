@@ -3,7 +3,11 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { CoverageMatrixCard, CoverageSafetyScoreDataCard } from "@/components/coverage/coverage-page-sections";
+import {
+  CoverageMatrixCard,
+  CoveragePricingSourcesCard,
+  CoverageSafetyScoreDataCard,
+} from "@/components/coverage/coverage-page-sections";
 import { buildCoverageRow } from "@/lib/coverage";
 import { logosById } from "@/lib/logos";
 import { buildDataCoverageModel } from "@/lib/safety-score-data-coverage";
@@ -151,6 +155,80 @@ describe("CoverageMatrixCard", () => {
     }
   });
 
+  it("supports click-to-sort headers synced to sort state and marks body rows as scan-intent", () => {
+    const setSort = vi.fn();
+    const { container, rerender } = render(
+      <CoverageMatrixCard {...makeMatrixModel({ sort: "market-cap", setSort })} />,
+    );
+    const table = container.querySelector("table")!;
+    const stablecoinHeader = table.querySelector("thead th")!;
+    expect(stablecoinHeader.getAttribute("aria-sort")).toBe("descending");
+
+    fireEvent.click(within(stablecoinHeader as HTMLElement).getByRole("button"));
+    expect(setSort).toHaveBeenCalledWith("name");
+
+    const safetySortButton = within(table).getByRole("button", {
+      name: "Sort by Safety Score (weakest first)",
+    });
+    fireEvent.click(safetySortButton);
+    expect(setSort).toHaveBeenCalledWith("weakest-safety");
+
+    // Freezable has no weakest-* sort key and stays non-sortable.
+    const freezableHeader = [...table.querySelectorAll("thead th")].find((th) =>
+      th.textContent?.includes("Freezable"),
+    )!;
+    expect(freezableHeader.getAttribute("aria-sort")).toBeNull();
+    expect(within(freezableHeader as HTMLElement).queryByRole("button")).toBeNull();
+
+    rerender(<CoverageMatrixCard {...makeMatrixModel({ sort: "weakest-safety", setSort })} />);
+    const activeSafetyHeader = [...table.querySelectorAll("thead th")].find((th) =>
+      th.textContent?.includes("Safety"),
+    )!;
+    expect(activeSafetyHeader.getAttribute("aria-sort")).toBe("ascending");
+
+    const bodyRow = table.querySelector("tbody tr")!;
+    expect(bodyRow.getAttribute("data-row-intent")).toBe("scan");
+    const stickyBodyHead = bodyRow.querySelector('th[scope="row"]')!;
+    expect(stickyBodyHead.className).toContain("group-hover:bg-[var(--table-row-hover)]");
+    expect(stickyBodyHead.className).toContain("min-[1360px]:shadow-none");
+  });
+
+  it("exposes a 1-tap coin link outside summary in mobile cards and toggles status legend cleanly", () => {
+    const { container } = render(<CoverageMatrixCard {...makeMatrixModel()} />);
+    const view = within(container);
+
+    const mobileCard = container.querySelector("article.pharos-card-shell")!;
+    const coinLink = within(mobileCard as HTMLElement).getByRole("link");
+    expect(coinLink.getAttribute("href")).toBe("/stablecoin/coin-1/");
+    expect(coinLink.closest("summary")).toBeNull();
+
+    const legendToggle = view.getByRole("button", { name: "Status legend" });
+    expect(legendToggle.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(legendToggle);
+    expect(legendToggle.getAttribute("aria-expanded")).toBe("true");
+  });
+
+});
+
+describe("CoveragePricingSourcesCard", () => {
+  it("renders a compact horizontal meter strip with inline Protocol badges and no nested rounded-xl override card", () => {
+    const { container } = render(
+      <CoveragePricingSourcesCard
+        pricingSources={[
+          { name: "coingecko", count: 140 },
+          { name: "defillama", count: 120 },
+        ]}
+        authoritativeSources={[{ name: "protocol-redeem", count: 4 }]}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "Where Pharos gets its prices" })).toBeTruthy();
+    expect(container.textContent).toContain("140");
+    expect(container.textContent).toContain("Authoritative overrides");
+    expect(container.textContent).toContain("Protocol");
+    const cardContent = container.querySelector('[data-slot="card-content"]')!;
+    expect(cardContent.querySelectorAll(".rounded-xl").length).toBe(0);
+  });
 });
 
 describe("CoverageSafetyScoreDataCard", () => {

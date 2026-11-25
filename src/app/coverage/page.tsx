@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FaqSection } from "@/components/faq-section";
+import { ShareButton } from "@/components/share-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SeeAlsoFooter } from "@/components/see-also-footer";
 import { JsonLdScript } from "@/components/json-ld-script";
@@ -33,6 +34,7 @@ const route = createClientFeaturePage({
     leadDisclosureLabel: "How to read coverage",
     breadcrumbName: "Coverage",
     title: "Coverage Matrix",
+    headerActions: <ShareButton label="Share" />,
     leadParagraphs: [
       `What Pharos can show for each of the ${ACTIVE_STABLECOIN_COUNT} active stablecoins, and how much of the ${TRACKED_STABLECOIN_COUNT}-asset tracked market each feature reaches.`,
       "Coverage answers whether Pharos can show a feature for a specific asset today. A blank or unavailable state is a data boundary, not an implied risk grade.",

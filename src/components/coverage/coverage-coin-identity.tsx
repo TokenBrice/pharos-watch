@@ -25,7 +25,9 @@ function IdentityContent({
       <StablecoinLogo src={logoSrc} name={row.name} size={logoSize} />
       <div className="min-w-0">
         <div className={isMobile ? "flex flex-wrap items-center gap-x-2 gap-y-1" : "flex min-w-0 items-center gap-2"}>
-          <span className={`${isMobile ? "text-sm font-semibold" : "text-sm font-medium"} shrink-0 text-foreground`}>
+          <span
+            className={`${isMobile ? "text-sm font-semibold" : "text-sm font-medium"} pharos-numeric shrink-0 text-foreground`}
+          >
             {row.symbol}
           </span>
           <span className={`${isMobile ? "text-sm" : "text-xs xl:text-sm"} min-w-0 truncate text-muted-foreground`}>
@@ -56,7 +58,9 @@ export function CoverageCoinIdentity({
   variant = "table",
 }: CoverageCoinIdentityProps) {
   const className = variant === "mobile"
-    ? "flex min-w-0 items-start gap-3"
+    ? linked
+      ? "pharos-focus-ring flex min-h-11 min-w-0 items-start gap-3 rounded-md transition-colors hover:text-foreground"
+      : "flex min-w-0 items-start gap-3"
     : "pharos-focus-ring inline-flex w-full min-w-0 items-center gap-2 rounded-lg";
 
   if (linked) {

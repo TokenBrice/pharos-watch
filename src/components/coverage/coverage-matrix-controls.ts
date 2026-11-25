@@ -73,13 +73,95 @@ export const COVERAGE_MATRIX_SORT_OPTIONS: ReadonlyArray<{
     label: string;
   }>;
 }> = SORT_OPTIONS.map((group) =>
-  group.group === "Weakest Feature First"
+  group.group === "Weakest feature first"
     ? {
         ...group,
         options: [...group.options, ...EXTRA_WEAKEST_SORT_OPTIONS],
       }
     : group,
 );
+
+/** Sortable feature columns mapped to their canonical weakest-first URL sort keys (11 of 12; blacklist has no weakest sort). */
+export const COVERAGE_FEATURE_SORT_KEYS: Partial<Record<CoverageFeatureKey, CoverageMatrixSortKey>> = {
+  price: "weakest-price",
+  safety: "weakest-safety",
+  dex: "weakest-dex",
+  reserves: "weakest-reserves",
+  redemption: "weakest-redemption",
+  yield: "weakest-yield",
+  flows: "weakest-flows",
+  mica: "weakest-mica",
+  genius: "weakest-genius",
+  dependency: "weakest-dependency",
+  mintAuthority: "weakest-mint-authority",
+};
+
+/** Canonical matrix filter triggered from each Feature Snapshot row's inspect action. */
+export const COVERAGE_FEATURE_SNAPSHOT_FILTERS: Record<
+  CoverageFeatureKey,
+  { filter: CoverageMatrixFilterKey; label: string; ariaLabel: string }
+> = {
+  price: {
+    filter: "weak-price",
+    label: "Weak price",
+    ariaLabel: "Filter matrix to coins with weak price coverage",
+  },
+  safety: {
+    filter: "missing-safety",
+    label: "No Safety",
+    ariaLabel: "Filter matrix to coins missing a Safety Score",
+  },
+  dex: {
+    filter: "missing-dex",
+    label: "No DEX",
+    ariaLabel: "Filter matrix to coins missing DEX coverage",
+  },
+  reserves: {
+    filter: "live-reserves",
+    label: "Score-grade",
+    ariaLabel: "Filter matrix to coins with score-grade live reserves",
+  },
+  redemption: {
+    filter: "redemption",
+    label: "Filter",
+    ariaLabel: "Filter matrix to coins with redemption coverage",
+  },
+  yield: {
+    filter: "yield",
+    label: "Filter",
+    ariaLabel: "Filter matrix to coins with yield coverage",
+  },
+  flows: {
+    filter: "flows",
+    label: "Filter",
+    ariaLabel: "Filter matrix to coins with mint/burn flow coverage",
+  },
+  blacklist: {
+    filter: "blacklist",
+    label: "FreezeWatch",
+    ariaLabel: "Filter matrix to FreezeWatch-tracked coins",
+  },
+  mica: {
+    filter: "mica",
+    label: "Filter",
+    ariaLabel: "Filter matrix to MiCA-assessed coins",
+  },
+  genius: {
+    filter: "genius",
+    label: "Filter",
+    ariaLabel: "Filter matrix to GENIUS-assessed coins",
+  },
+  dependency: {
+    filter: "missing-dependency",
+    label: "No Dep.",
+    ariaLabel: "Filter matrix to coins missing dependency coverage",
+  },
+  mintAuthority: {
+    filter: "mint-authority",
+    label: "Filter",
+    ariaLabel: "Filter matrix to coins with reviewed mint authority",
+  },
+};
 
 export interface CoverageMatrixUrlState {
   filter: CoverageMatrixFilterKey;

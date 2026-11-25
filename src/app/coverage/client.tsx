@@ -28,6 +28,22 @@ export default function CoveragePageClient() {
     (next: CoverageMatrixFilterKey) => patchMatrixUrlState({ filter: next }),
     [patchMatrixUrlState],
   );
+  const handleSnapshotFilter = useCallback(
+    (next: CoverageMatrixFilterKey) => {
+      patchMatrixUrlState({ filter: next });
+      const matrixSection = document.getElementById("coverage-matrix");
+      if (!matrixSection) return;
+      const prefersReducedMotion =
+        typeof window !== "undefined" &&
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      matrixSection.scrollIntoView({
+        behavior: prefersReducedMotion ? "auto" : "smooth",
+        block: "start",
+      });
+    },
+    [patchMatrixUrlState],
+  );
   const setSort = useCallback(
     (next: CoverageMatrixSortKey) => patchMatrixUrlState({ sort: next }),
     [patchMatrixUrlState],
@@ -49,7 +65,7 @@ export default function CoveragePageClient() {
         <CoverageMatrixDataStateCard state={model.isStablecoinDataUnavailable ? "error" : "loading"} />
       ) : (
         <>
-          <CoverageFeatureSnapshotCard {...model} />
+          <CoverageFeatureSnapshotCard {...model} onFilterFeature={handleSnapshotFilter} />
           <CoverageSafetyScoreDataCard safetyScoreDataCoverage={model.safetyScoreDataCoverage} />
           <CoveragePricingSourcesCard
             pricingSources={model.pricingSources}

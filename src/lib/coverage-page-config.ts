@@ -6,6 +6,7 @@ import {
   Landmark,
   LifeBuoy,
   Network,
+  Scale,
   ScrollText,
   ShieldBan,
   ShieldCheck,
@@ -13,6 +14,7 @@ import {
 } from "lucide-react";
 import {
   COVERAGE_AUTHORITATIVE_ACCENT_CLASSES,
+  COVERAGE_BAR_TEXT_ON_LIGHT_CLASS,
   COVERAGE_BREAKDOWN_TONE_CLASSES,
   COVERAGE_FEATURE_ACCENT_CLASSES,
   COVERAGE_GAP_BAR_CLASS,
@@ -63,97 +65,21 @@ export const FEATURE_ICON: Record<CoverageFeatureKey, typeof Activity> = {
   yield: TrendingUp,
   flows: ArrowUpDown,
   blacklist: ShieldBan,
-  mica: Landmark,
+  mica: Scale,
   genius: ScrollText,
   dependency: Network,
   mintAuthority: KeyRound,
 };
 
-export { COVERAGE_GAP_BAR_CLASS };
+export { COVERAGE_BAR_TEXT_ON_LIGHT_CLASS, COVERAGE_GAP_BAR_CLASS };
 
 export const FEATURE_ACCENT_CLASSES: Record<
   CoverageFeatureKey,
   {
-    icon: string;
     countBar: string;
     chip: string;
-    tile: string;
-    title: string;
   }
-> = {
-  price: {
-    icon: "text-muted-foreground",
-    ...COVERAGE_FEATURE_ACCENT_CLASSES.price,
-    tile: "border-border/60 bg-muted/40",
-    title: "text-foreground",
-  },
-  safety: {
-    icon: "text-muted-foreground",
-    ...COVERAGE_FEATURE_ACCENT_CLASSES.safety,
-    tile: "border-border/60 bg-muted/40",
-    title: "text-foreground",
-  },
-  dex: {
-    icon: "text-muted-foreground",
-    ...COVERAGE_FEATURE_ACCENT_CLASSES.dex,
-    tile: "border-border/60 bg-muted/40",
-    title: "text-foreground",
-  },
-  reserves: {
-    icon: "text-muted-foreground",
-    ...COVERAGE_FEATURE_ACCENT_CLASSES.reserves,
-    tile: "border-border/60 bg-muted/40",
-    title: "text-foreground",
-  },
-  redemption: {
-    icon: "text-muted-foreground",
-    ...COVERAGE_FEATURE_ACCENT_CLASSES.redemption,
-    tile: "border-border/60 bg-muted/40",
-    title: "text-foreground",
-  },
-  yield: {
-    icon: "text-muted-foreground",
-    ...COVERAGE_FEATURE_ACCENT_CLASSES.yield,
-    tile: "border-border/60 bg-muted/40",
-    title: "text-foreground",
-  },
-  flows: {
-    icon: "text-muted-foreground",
-    ...COVERAGE_FEATURE_ACCENT_CLASSES.flows,
-    tile: "border-border/60 bg-muted/40",
-    title: "text-foreground",
-  },
-  blacklist: {
-    icon: "text-muted-foreground",
-    ...COVERAGE_FEATURE_ACCENT_CLASSES.blacklist,
-    tile: "border-border/60 bg-muted/40",
-    title: "text-foreground",
-  },
-  mica: {
-    icon: "text-muted-foreground",
-    ...COVERAGE_FEATURE_ACCENT_CLASSES.mica,
-    tile: "border-border/60 bg-muted/40",
-    title: "text-foreground",
-  },
-  genius: {
-    icon: "text-muted-foreground",
-    ...COVERAGE_FEATURE_ACCENT_CLASSES.genius,
-    tile: "border-border/60 bg-muted/40",
-    title: "text-foreground",
-  },
-  dependency: {
-    icon: "text-muted-foreground",
-    ...COVERAGE_FEATURE_ACCENT_CLASSES.dependency,
-    tile: "border-border/60 bg-muted/40",
-    title: "text-foreground",
-  },
-  mintAuthority: {
-    icon: "text-muted-foreground",
-    ...COVERAGE_FEATURE_ACCENT_CLASSES.mintAuthority,
-    tile: "border-border/60 bg-muted/40",
-    title: "text-foreground",
-  },
-};
+> = COVERAGE_FEATURE_ACCENT_CLASSES;
 
 interface CoverageBreakdownVisual {
   chip: string;
@@ -336,7 +262,7 @@ export const SORT_OPTIONS: ReadonlyArray<{
     ],
   },
   {
-    group: "Weakest Feature First",
+    group: "Weakest feature first",
     options: [
       { key: "weakest-price", label: "Price" },
       { key: "weakest-safety", label: "Safety" },

@@ -44,25 +44,20 @@ export function CoverageLensSummary({ rows, filteredRows, search, filter }: Cove
   }, [filter, filteredRows, rows, search]);
 
   return (
-    <div className="grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-      <div className="pharos-inset px-4 py-3">
-        <p className="pharos-label">Current lens</p>
-        <p className="mt-1 text-sm text-foreground">{lensSummary}</p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Use this matrix to separate broad market coverage from niche or still-bootstrapping surfaces before you click
-          into a single coin.
-        </p>
-      </div>
-      <div className="pharos-inset px-4 py-3">
-        <p className="pharos-label">Market share in view</p>
-        <p className="mt-1 text-sm text-foreground">
-          <span className="pharos-numeric">{filteredMcapShareLabel}</span>{" "}
-          of {totalCap.complete ? "active" : "known"} market cap
-        </p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {filteredCap.totalUsd == null ? "n/a" : formatCurrency(filteredCap.totalUsd)}{filteredCap.totalUsd != null && !filteredCap.complete ? " known market cap" : ""} in the current result set.
-        </p>
-      </div>
+    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted-foreground">
+      <span className="font-medium text-foreground">{lensSummary}</span>
+      <span aria-hidden="true" className="text-border">·</span>
+      <span>
+        <span className="pharos-numeric font-medium text-foreground">{filteredMcapShareLabel}</span>{" "}
+        of {totalCap.complete ? "active" : "known"} market cap
+      </span>
+      <span aria-hidden="true" className="text-border">·</span>
+      <span>
+        <span className="pharos-numeric font-medium text-foreground">
+          {filteredCap.totalUsd == null ? "n/a" : formatCurrency(filteredCap.totalUsd)}
+        </span>
+        {filteredCap.totalUsd != null && !filteredCap.complete ? " known market cap" : ""} in the current result set
+      </span>
     </div>
   );
 }
