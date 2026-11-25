@@ -342,8 +342,19 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
   // DefiLlama currently lists these active assets but intermittently reports a
   // zero supply row. Use only verified live deployments and fail closed if any
   // configured chain cannot be read, so this cannot silently undercount.
+  // Reviewed 2026-11-25: Tetra's supported-blockchains roster binds four
+  // independent issuer-native CADD deployments (no bridge lockbox): Ethereum
+  // 1,825,864.12 (block 26491782) + Base 6,356,928.80 (block 62071808) +
+  // Solana Token-2022 82,998.023043 (slot 473723301) + Tempo TIP-20 99.00
+  // (block 50740563) = 8,265,889.943043 CADD. ETH+Base matches DefiLlama 387
+  // exactly; ETH+Base+Solana matches CoinGecko; Tempo dust allows zero.
   "cadd-cad-digital": {
-    aggregateContracts: [{ chain: "ethereum" }, { chain: "base" }],
+    aggregateContracts: [
+      { chain: "ethereum" },
+      { chain: "base" },
+      { chain: "solana" },
+      supplyProbeChain("tempo", { allowZeroSupply: true }),
+    ],
   },
   // Bridge's OUSD reserve page binds these four issuer deployments. Reviewed
   // 2026-09-30: their combined totalSupply/getTokenSupply reconciles to the
@@ -570,8 +581,18 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
       unattributedChainLabel: "sUSN unattributed bridge escrow",
     },
   },
+  // Reviewed 2026-11-25: JPYm is natively issued on Celo and bridged to Monad
+  // via Wormhole NTT (0x7431419fe761e7da37587245c55a35e5a356c91b): Celo NTT
+  // Manager mode()=0 (LOCKING, getPeer(48)=self) escrows 4,255,984.92206028
+  // JPYm at block 83703975, matching Monad totalSupply() (mode()=1 BURNING,
+  // getPeer(14)=self, block 125272619) to the wei. Conserve Celo's 11,555,435.78
+  // canonical totalSupply and reallocate Monad out of it rather than summing.
   "jpym-mento": {
-    aggregateContracts: [{ chain: "celo" }],
+    aggregateContracts: [
+      { chain: "celo" },
+      supplyProbeChain("monad", { allowZeroSupply: true }),
+    ],
+    canonicalSupplyChain: "celo",
   },
   "zarm-mento": {
     aggregateContracts: [{ chain: "celo" }],
@@ -866,14 +887,17 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
     ],
     canonicalSupplyChain: "ethereum",
   },
-  // wiTRY's Ethereum escrow 0x698b7518711bDe4832fDc19F5262DF705c713006 holds
-  // 346,349,590.501584 wiTRY, bit-for-bit the MegaETH totalSupply(), so 94% of
-  // the Ethereum total is really MegaETH float and must be reallocated. The
-  // published aggregate is unchanged; only the per-chain split moves.
+  // Reviewed 2026-11-25: wiTRY's Ethereum LayerZero OFTAdapter lockbox
+  // 0x698b7518711bDe4832fDc19F5262DF705c713006 (approvalRequired()=true,
+  // token()=wiTRY, peers(30398 & 30416)=0x15b2...de5) holds 63,394,914.393496
+  // wiTRY at block 26491782, matching MegaETH 63,394,829.386790 (block 32807727)
+  // + Robinhood 85.006706 (block 122992827) to the wei. Ethereum totalSupply()
+  // 63,440,164.448328 matches CoinGecko and is conserved; Robinhood dust allows zero.
   "witry-brix": {
     aggregateContracts: [
       { chain: "ethereum" },
       supplyProbeChain("megaeth"),
+      supplyProbeChain("robinhood", { allowZeroSupply: true }),
     ],
     canonicalSupplyChain: "ethereum",
   },
@@ -974,27 +998,20 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
   "paxg-paxos": {
     aggregateContracts: [{ chain: "ethereum" }, { chain: "solana" }, { chain: "base" }],
   },
-  // DGLD is independently gold-backed on Ethereum and Base after the 2026-06-30
-  // bridge close. Verified 2026-08-18: Ethereum 1,603.687 (block 25784877) + Base
-  // 401.159 (block 50150845) = 2,004.846. Deprecated Base 0xd02f50…d6c9 reads 0.
-  // CoinGecko 2,411.955 is a +20.3% stale overcount (RWA.xyz matches on-chain).
+  // DGLD is independently gold-backed on Ethereum, Base and Solana after the
+  // 2026-06-30 bridge close. Re-verified 2026-11-25: Ethereum 1,603.687 (block
+  // 26491782) + Base 401.159 (block 62071814) + Solana Token-2022 812.343 (slot
+  // 473723308) = 2,817.189 DGLD, matching CoinGecko (2,817.189) and Gold Token
+  // SA's live bar registry (/v1/networks, gap 0) to the unit.
   "dgld-gold-token-sa": {
-    aggregateContracts: [{ chain: "ethereum" }, { chain: "base" }],
+    aggregateContracts: [{ chain: "ethereum" }, { chain: "base" }, { chain: "solana" }],
   },
-  // VNXAU is issuer-native on each chain. Verified 2026-08-18: Ethereum 543.10593
-  // (block 25784877) + Polygon 107.73577 (block 92257341) + Base 1,753.41189
-  // (block 50150845) + Etherlink 31,400.97041 (block 51291170) + Solana
-  // 10,279.21837712 (slot 440141599) = 44,084.442377, −0.035% vs CoinGecko 44,100.
-  // Horizon Stellar and TzKT Tezos both read zero, so they stay unconfigured.
-  "vnxau-vnx": {
-    aggregateContracts: [
-      { chain: "ethereum" },
-      { chain: "polygon" },
-      { chain: "base" },
-      supplyProbeChain("etherlink"),
-      { chain: "solana" },
-    ],
-  },
+  // VNXAU is independently issuer-native across seven deployments. Reviewed
+  // 2026-11-25: Ethereum + Polygon + Base + Etherlink + Solana sum to
+  // 43,984.43777116 (-0.0354% vs CoinGecko 44,000), classic Stellar reads 0
+  // (Horizon ledger 65663736), and Tezos FA2 KT1LSH97386CURN9FgRNqdQJoHaHY6e1vxUv
+  // reads 0 (TzKT level 15967010) but is live (paused: false) with no supply
+  // probe family. Withhold the whole roster and keep CoinGecko upstream.
   // Independent native Ethereum and Sui receipts. The Sui reader pins Ember's
   // vault and reads its embedded TreasuryCap (coinMetadata.supply is null).
   "eearn-ember": {
@@ -1030,23 +1047,6 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
       { chain: "solana" },
     ],
   },
-  // bIB01 is independently mintable on seven EVM chains; CCIP is a transfer
-  // rail, not a lockbox. Verified 2026-08-19: Ethereum 45,326.8030000012 +
-  // Base 10,000 + Polygon 4,442.0000000002 + Arbitrum 60,000 + Gnosis
-  // 14,896.7260716317 + Avalanche 21,000.295821 + BSC 0 = 155,665.824892633
-  // (−0.0001% vs published 155,665.99 shares). BSC is a reviewed live
-  // deployment at zero.
-  "bib01-backed": {
-    aggregateContracts: [
-      { chain: "ethereum" },
-      { chain: "base" },
-      { chain: "bsc", allowZeroSupply: true },
-      { chain: "polygon" },
-      { chain: "arbitrum" },
-      { chain: "gnosis" },
-      { chain: "avalanche" },
-    ],
-  },
   // spUSDC is a per-chain Spark ERC-4626 over local USDC. The reviewed
   // aggregate path replaces the former Ethereum-only fallback and publishes
   // a complete chainCirculating split. Verified
@@ -1073,15 +1073,6 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
       supplyProbeChain("xlayer"),
     ],
   },
-  // sdUSD is a chain-isolated ERC-4626 over local dUSD (no shared lockbox).
-  // Verified 2026-08-18: Ethereum 452,761.7318268991 + Fraxtal 63,189.932854
-  // = 515,951.6646808991, exact CoinGecko totalSupply; Fraxtal needs a public RPC.
-  "sdusd-dtrinity": {
-    aggregateContracts: [
-      { chain: "ethereum" },
-      supplyProbeChain("fraxtal"),
-    ],
-  },
   // sUSDD is an independent SavingsUsdd ERC-4626 on Ethereum and BSC over local USDD.
   // No Tron sUSDD token in issuer deployment/collateral pages or CoinGecko platforms.
   // Verified 2026-08-18: ETH 222,174,299.983810 + BSC 12,526,473.143741
@@ -1101,10 +1092,11 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
       { chain: "solana" },
     ],
   },
-  // MXNB is a FiatToken-fork minted natively on five EVMs. Verified 2026-08-19:
-  // Ethereum 1,530,469.139867 + Polygon 95,667.188094 + Arbitrum 25,635,717.221029
-  // + Avalanche 5,002,383.151635 + Base 4,376,239.087585 = 36,640,475.788210,
-  // exactly CoinGecko. No Noble/Solana mint was evidenced.
+  // MXNB is an independently issuer-native FiatTokenV2_2 proxy across six EVMs.
+  // Re-verified 2026-11-25: Ethereum 1,944,524.727714 + Polygon 36,547.877689 +
+  // Arbitrum 45,764,259.249495 + Avalanche 2,306,288.787538 + Base 31,381,203.788630
+  // + Arc 1,198,977.257144 (block 33065279) = 82,631,801.688210 MXNB, matching
+  // CoinGecko circulating (82,631,801.68821) to the displayed unit.
   "mxnb-juno": {
     aggregateContracts: [
       { chain: "ethereum" },
@@ -1112,6 +1104,7 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
       { chain: "arbitrum" },
       { chain: "avalanche" },
       { chain: "base" },
+      supplyProbeChain("arc"),
     ],
   },
   // GBPe is issuer-native on six EVMs (official Monerium /tokens list). Verified
