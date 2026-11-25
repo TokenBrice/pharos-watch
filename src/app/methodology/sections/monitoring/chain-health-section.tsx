@@ -153,7 +153,7 @@ export function ChainHealthMethodologySection() {
         ]}
       />
 
-      <MethodologyDetails summary="Formula & Weights" primary>
+      <MethodologyDetails summary="Formula & weights" primary>
         <h3 className="text-foreground font-medium">Composite formula</h3>
         <MethodologyFormula preformatted>{CHAIN_HEALTH_FORMULA}</MethodologyFormula>
 

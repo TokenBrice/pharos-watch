@@ -118,7 +118,7 @@ function ComponentRow({
       ) : null}
       <div className="mt-2">
         {historyState === "loading" ? (
-          <Skeleton variant="shimmer" className="h-5 w-full rounded-sm" aria-label={`Loading ${label} history`} role="status" />
+          <Skeleton variant="shimmer" className="h-5 w-full rounded-sm" aria-hidden="true" />
         ) : historyState === "ready" && cells ? (
           <UptimeBar cells={cells} label={label} />
         ) : null}
@@ -152,7 +152,7 @@ export function PublicServiceSummarySection({
               {operationalCount} of {components.length} operational
             </span>
           ) : null}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1" aria-label="Component history legend">
+          <div role="group" className="flex flex-wrap items-center gap-x-3 gap-y-1" aria-label="Component history legend">
             {UPTIME_LEGEND_ITEMS.map((item) => (
               <span key={item.label} className="pharos-chart-legend-chip">
                 <span aria-hidden="true" className={cn("h-2.5 w-2 rounded-xs", item.swatch)} />
@@ -169,7 +169,7 @@ export function PublicServiceSummarySection({
           <span>Today</span>
         </div>
       ) : null}
-      <ul>
+      <ul aria-busy={historyState === "loading" || undefined}>
         {components.map((component) => (
           <ComponentRow
             key={component.id}

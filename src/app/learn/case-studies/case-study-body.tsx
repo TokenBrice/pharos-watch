@@ -286,7 +286,7 @@ function EvidenceSnapshot({ study }: { study: CaseStudy }) {
     ...(study.primaryCoinId
       ? [{ href: buildStablecoinUrl(study.primaryCoinId), label: "Stablecoin profile" }]
       : []),
-    ...(study.cemeteryId ? [{ href: "/cemetery/", label: "Cemetery record" }] : []),
+    ...(study.cemeteryId ? [{ href: `/cemetery/#${study.cemeteryId}`, label: "Cemetery record" }] : []),
     ...(study.depegEventSlug ? [{ href: "/depeg/", label: "Depeg tracker" }] : []),
   ];
 

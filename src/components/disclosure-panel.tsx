@@ -7,15 +7,16 @@ export interface DisclosureChevronProps {
 }
 
 /**
- * Shared rotating chevron for native `<details>` disclosures. Requires an
- * ancestor `<details>` carrying `group/disclosure` (or `group`).
+ * Shared rotating chevron for native `<details>` disclosures. Scoped via
+ * `[details[open]>summary_&]` so nested disclosures never inherit rotation
+ * from an open ancestor `<details>`.
  */
 export function DisclosureChevron({ className }: DisclosureChevronProps) {
   return (
     <ChevronDown
       aria-hidden="true"
       className={cn(
-        "h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-open/disclosure:rotate-180 motion-reduce:transition-none",
+        "h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 [details[open]>summary_&]:rotate-180 motion-reduce:transition-none",
         className,
       )}
     />
@@ -49,9 +50,9 @@ const FRAME_VARIANT_CLASS: Record<NonNullable<DisclosurePanelProps["variant"]>, 
 
 const SUMMARY_VARIANT_CLASS: Record<NonNullable<DisclosurePanelProps["variant"]>, string> = {
   inset:
-    "flex min-h-11 items-center justify-between gap-3 px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/35 sm:min-h-10",
+    "flex min-h-11 items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/35 focus-visible:ring-inset focus-visible:ring-offset-0 sm:min-h-10",
   band:
-    "flex min-h-11 items-center justify-between gap-3 px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/40 sm:min-h-10",
+    "flex min-h-11 items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/40 focus-visible:ring-inset focus-visible:ring-offset-0 sm:min-h-10",
   plain:
     "inline-flex min-h-11 w-fit items-center gap-1.5 rounded-md text-xs font-medium text-muted-foreground transition-colors hover:text-foreground sm:min-h-8",
 };

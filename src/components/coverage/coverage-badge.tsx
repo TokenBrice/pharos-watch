@@ -49,7 +49,7 @@ export function CoverageBadge({ status, compact = false }: CoverageBadgeProps) {
       className={cn(
         "inline-flex items-center justify-center whitespace-nowrap text-2xs font-medium",
         isQuietCompactSlate
-          ? "min-w-[3.75rem] px-1.5 py-0.5 text-muted-foreground/75"
+          ? "min-w-[3.75rem] px-1.5 py-0.5 text-muted-foreground"
           : cn(
               "border",
               compact

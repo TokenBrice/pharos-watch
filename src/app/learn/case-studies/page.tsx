@@ -256,6 +256,11 @@ export default function CaseStudiesHub() {
                       </span>
                     </>
                   ) : null}
+                  {study.eventWindow.metricScope && (peak != null || low != null) ? (
+                    <span className="w-full text-2xs leading-snug text-muted-foreground">
+                      Scope: {study.eventWindow.metricScope}
+                    </span>
+                  ) : null}
                 </div>
                 <span className="mt-auto inline-flex items-center gap-1 pt-3 text-xs font-medium text-muted-foreground transition-colors group-hover:text-foreground">
                   Read the case study

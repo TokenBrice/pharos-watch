@@ -1555,19 +1555,6 @@
       transition: none;
     }
   }
-  @media print {
-    .pharos-timeline-card,
-    .pharos-timeline-line {
-      opacity: 1;
-      transform: none;
-      transition: none;
-    }
-    .pharos-timeline-wide {
-      width: auto;
-      margin-inline: 0;
-    }
-  }
-
   /* On wide viewports the horizontal timeline breaks out of the article column
      so the full event sequence fits without scrolling. Target width follows the
      actual track (--tl-track = event count x card width), never shrinks below
@@ -1580,6 +1567,18 @@
       --pharos-timeline-width: max(100%, min(var(--tl-track, 115rem), 100dvw - 4rem));
       width: var(--pharos-timeline-width);
       margin-inline: calc((100% - var(--pharos-timeline-width)) / 2);
+    }
+  }
+  @media print {
+    .pharos-timeline-card,
+    .pharos-timeline-line {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+    .pharos-timeline-wide {
+      width: auto;
+      margin-inline: 0;
     }
   }
 

@@ -35,7 +35,7 @@ describe("UptimeBar", () => {
     );
 
     fireEvent.focus(cell!);
-    expect(container.querySelector('[aria-live="polite"]')?.textContent).toBe(
+    expect(screen.getByTestId("uptime-bar-readout").textContent).toBe(
       "2026-10-22: Operational (briefly degraded, under 1 h)",
     );
 
@@ -43,7 +43,26 @@ describe("UptimeBar", () => {
     expect(cell?.getAttribute("aria-pressed")).toBe("true");
     fireEvent.click(cell!);
     expect(cell?.getAttribute("aria-pressed")).toBe("false");
-    expect(container.querySelector('[aria-live="polite"]')).toBeNull();
+    expect(screen.getByTestId("uptime-bar-readout").textContent).toBe("");
+  });
+
+  it("uses roving tabindex and arrow keys so each bar is one tab stop", () => {
+    const cells = [
+      { date: "2026-10-11", state: "operational" as const },
+      { date: "2026-10-12", state: "degraded" as const },
+      { date: "2026-10-13", state: "operational" as const },
+    ];
+    render(<UptimeBar cells={cells} label="Yield" />);
+    const buttons = screen.getAllByRole("button");
+    expect(buttons.map((b) => b.tabIndex)).toEqual([-1, -1, 0]);
+
+    buttons[2].focus();
+    fireEvent.keyDown(screen.getByRole("group"), { key: "ArrowLeft" });
+    expect(document.activeElement).toBe(buttons[1]);
+    expect(buttons.map((b) => b.tabIndex)).toEqual([-1, 0, -1]);
+
+    fireEvent.keyDown(screen.getByRole("group"), { key: "Home" });
+    expect(document.activeElement).toBe(buttons[0]);
   });
 
   it("never counts no-data days as operational", () => {

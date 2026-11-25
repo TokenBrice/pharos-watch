@@ -606,8 +606,11 @@ export function CoverageMatrixCard(model: CoverageMatrixCardProps) {
               Scroll sideways for all 12 features
             </span>
             {model.dataAsOfMs ? (
-              <span className="pharos-numeric" suppressHydrationWarning>
-                Updated {new Date(model.dataAsOfMs).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              <span>
+                Updated{" "}
+                <span className="pharos-numeric" suppressHydrationWarning>
+                  {new Date(model.dataAsOfMs).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </span>
               </span>
             ) : null}
           </div>

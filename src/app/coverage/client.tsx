@@ -17,10 +17,12 @@ import {
   type CoverageMatrixSortKey,
 } from "@/components/coverage/coverage-matrix-controls";
 import { useCoveragePageModel } from "@/hooks/use-coverage-page-model";
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { useUrlState } from "@/hooks/use-url-state";
 
 export default function CoveragePageClient() {
   const model = useCoveragePageModel();
+  const prefersReducedMotion = usePrefersReducedMotion();
   const { state: matrixUrlState, patchState: patchMatrixUrlState } = useUrlState(COVERAGE_MATRIX_URL_SCHEMA);
   const deferredSearch = useDeferredValue(model.search);
 
@@ -33,16 +35,12 @@ export default function CoveragePageClient() {
       patchMatrixUrlState({ filter: next });
       const matrixSection = document.getElementById("coverage-matrix");
       if (!matrixSection) return;
-      const prefersReducedMotion =
-        typeof window !== "undefined" &&
-        typeof window.matchMedia === "function" &&
-        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       matrixSection.scrollIntoView({
         behavior: prefersReducedMotion ? "auto" : "smooth",
         block: "start",
       });
     },
-    [patchMatrixUrlState],
+    [patchMatrixUrlState, prefersReducedMotion],
   );
   const setSort = useCallback(
     (next: CoverageMatrixSortKey) => patchMatrixUrlState({ sort: next }),

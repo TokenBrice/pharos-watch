@@ -66,7 +66,7 @@ export function FeaturePageShell({
   const backLinkNode = backLink ? (
     <Link
       href={backLink.href}
-      className="pharos-focus-ring inline-flex min-h-9 w-fit items-center gap-1.5 rounded-md text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+      className="pharos-focus-ring inline-flex min-h-11 w-fit items-center gap-1.5 rounded-md text-xs font-medium text-muted-foreground transition-colors hover:text-foreground sm:min-h-9"
     >
       <ArrowLeft aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
       <span>{backLink.label}</span>

@@ -276,7 +276,6 @@ export default function MethodologyPage() {
         sections={METHODOLOGY_SECTIONS}
         navAriaLabel="Methodology section controls"
         edgeFade
-        showRightSlotOnMobile
         rightSlot={
           // A hairline separates the mode controls from the scrolling pills so a
           // clipped last pill fades out instead of butting into "Show inputs".

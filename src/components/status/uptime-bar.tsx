@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { PUBLIC_COMPONENT_STATE_TONE } from "@shared/lib/classification";
 import { DAY_STATE_MIN_HELD_SEC, type ComponentDayCell, type ComponentDayState } from "@/lib/status/public-status-timeline";
 import { cn } from "@/lib/utils";
@@ -40,9 +40,19 @@ export function UptimeBar({ cells, label }: { cells: readonly ComponentDayCell[]
   const [hoveredDate, setHoveredDate] = useState<string | null>(null);
   const [focusedDate, setFocusedDate] = useState<string | null>(null);
   const [pinnedDate, setPinnedDate] = useState<string | null>(null);
+  const [rovingIndex, setRovingIndex] = useState<number>(() => Math.max(0, cells.length - 1));
+  const buttonRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
+  const clampedRovingIndex = Math.min(Math.max(0, rovingIndex), Math.max(0, cells.length - 1));
   const activeDate = hoveredDate ?? pinnedDate ?? focusedDate;
   const activeCell = activeDate ? cells.find((cell) => cell.date === activeDate) ?? null : null;
+
+  const focusIndex = (nextIndex: number) => {
+    if (cells.length === 0) return;
+    const bounded = Math.min(Math.max(0, nextIndex), cells.length - 1);
+    setRovingIndex(bounded);
+    buttonRefs.current[bounded]?.focus();
+  };
 
   return (
     <div>
@@ -52,18 +62,35 @@ export function UptimeBar({ cells, label }: { cells: readonly ComponentDayCell[]
         aria-label={`${label}, last ${cells.length} days: ${summarizeDayCells(cells)}`}
         onKeyDown={(event) => {
           if (event.key === "Escape") {
+            setHoveredDate(null);
             setPinnedDate(null);
             setFocusedDate(null);
+          } else if (event.key === "ArrowLeft") {
+            event.preventDefault();
+            focusIndex(clampedRovingIndex - 1);
+          } else if (event.key === "ArrowRight") {
+            event.preventDefault();
+            focusIndex(clampedRovingIndex + 1);
+          } else if (event.key === "Home") {
+            event.preventDefault();
+            focusIndex(0);
+          } else if (event.key === "End") {
+            event.preventDefault();
+            focusIndex(cells.length - 1);
           }
         }}
       >
-        {cells.map((cell) => {
+        {cells.map((cell, index) => {
           const description = describeDayCell(cell);
           const isSelected = activeDate === cell.date;
           return (
             <button
               key={cell.date}
+              ref={(el) => {
+                buttonRefs.current[index] = el;
+              }}
               type="button"
+              tabIndex={index === clampedRovingIndex ? 0 : -1}
               className={cn(
                 "pharos-focus-ring relative min-w-0 flex-1 cursor-pointer overflow-hidden rounded-xs transition-opacity hover:opacity-85 focus-visible:z-10",
                 cellTone(cell.state).bar,
@@ -74,9 +101,14 @@ export function UptimeBar({ cells, label }: { cells: readonly ComponentDayCell[]
               aria-pressed={pinnedDate === cell.date}
               onMouseEnter={() => setHoveredDate(cell.date)}
               onMouseLeave={() => setHoveredDate((current) => (current === cell.date ? null : current))}
-              onFocus={() => setFocusedDate(cell.date)}
+              onFocus={() => {
+                setRovingIndex(index);
+                setFocusedDate(cell.date);
+              }}
               onBlur={() => setFocusedDate((current) => (current === cell.date ? null : current))}
               onClick={() => {
+                setRovingIndex(index);
+                setHoveredDate(null);
                 if (pinnedDate === cell.date) {
                   setPinnedDate(null);
                   setFocusedDate(null);
@@ -95,18 +127,20 @@ export function UptimeBar({ cells, label }: { cells: readonly ComponentDayCell[]
           );
         })}
       </div>
-      {activeCell ? (
-        <p className="mt-1.5 flex items-center gap-1.5 text-2xs text-muted-foreground" aria-live="polite">
-          <span aria-hidden="true" className={cn("size-1.5 shrink-0 rounded-full", cellTone(activeCell.state).bar)} />
-          <span>
-            <span className="pharos-numeric text-foreground/85">{activeCell.date}</span>
-            {`: ${cellTone(activeCell.state).label}`}
-            {activeCell.brief
-              ? ` (briefly ${PUBLIC_COMPONENT_STATE_TONE[activeCell.brief].label.toLowerCase()}, under ${DAY_STATE_MIN_HELD_SEC / 3600} h)`
-              : ""}
-          </span>
-        </p>
-      ) : null}
+      <div className="mt-1.5 min-h-4 text-2xs text-muted-foreground" data-testid="uptime-bar-readout">
+        {activeCell ? (
+          <p className="flex items-center gap-1.5">
+            <span aria-hidden="true" className={cn("size-1.5 shrink-0 rounded-full", cellTone(activeCell.state).bar)} />
+            <span>
+              <span className="pharos-numeric text-foreground/85">{activeCell.date}</span>
+              {`: ${cellTone(activeCell.state).label}`}
+              {activeCell.brief
+                ? ` (briefly ${PUBLIC_COMPONENT_STATE_TONE[activeCell.brief].label.toLowerCase()}, under ${DAY_STATE_MIN_HELD_SEC / 3600} h)`
+                : ""}
+            </span>
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }

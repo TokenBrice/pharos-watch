@@ -64,10 +64,33 @@ function readStickySummaryHeight(): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+function readStickyHeaderBottomPx(): number {
+  if (typeof document === "undefined" || typeof window === "undefined") return 60;
+  const raw = window.getComputedStyle(document.documentElement).getPropertyValue("--sticky-header-bottom").trim();
+  if (!raw) return 60;
+  const pxMatch = /^([\d.]+)px$/.exec(raw);
+  if (pxMatch) return Number(pxMatch[1]);
+  const remMatch = /^([\d.]+)rem$/.exec(raw);
+  if (remMatch) {
+    const rootFontSize = parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+    return Number(remMatch[1]) * rootFontSize;
+  }
+  return 60;
+}
+
 function getRailOffset(railNode: HTMLDivElement | null, stickyOffsetPx?: number) {
   const railRect = railNode?.getBoundingClientRect();
   if (!railRect) return 16;
-  const stickyTop = stickyOffsetPx ?? Math.max(railRect.top, 0);
+  // Use the rail's stuck top (`stickyOffsetPx` or computed CSS `top`), never its
+  // pre-stick `railRect.top`, which inflates scrollMarginTop when the rail sits
+  // beneath a hero or FactStrip.
+  const computedTop =
+    railNode && typeof window !== "undefined" ? parseFloat(window.getComputedStyle(railNode).top) : NaN;
+  const stickyTop =
+    stickyOffsetPx ??
+    (Number.isFinite(computedTop) && computedTop >= 0
+      ? computedTop
+      : readStickyHeaderBottomPx());
   return Math.ceil(railRect.height + stickyTop + 16);
 }
 
@@ -327,7 +350,7 @@ export function LongformScrollspyNav({
         className={cn(
           "sticky top-[var(--sticky-header-bottom,3.75rem)] z-chrome md:mx-0",
           isPillTabs
-            ? "mx-0 bg-background/90 px-0 py-1.5 backdrop-blur-md"
+            ? "mx-0 bg-background px-0 py-1.5"
             : "-mx-4 rounded-xl border border-border/60 bg-background px-3 py-2 md:px-4 md:py-2.5",
           className,
         )}

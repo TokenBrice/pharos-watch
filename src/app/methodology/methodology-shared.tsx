@@ -170,7 +170,10 @@ export interface MethodologyFactItem {
 
 function isCompactNumericFact(value: ReactNode, explicit?: boolean): boolean {
   if (explicit !== undefined) return explicit;
-  return typeof value === "string" && value.length <= 24 && /^[\d$v+−-]/.test(value);
+  if (typeof value !== "string" || value.length > 24) return false;
+  return /^[v$~+−-]?\d[\d.,:%/×x+−–\- ]*(?:s|ms|m|h|d|hr|hrs|min|mins|day|days|wk|wks|mo|yr|bps|K|M|B|T|USD|ETH|BTC)?$/.test(
+    value.trim(),
+  );
 }
 
 function factsGridClass(count: number): string {

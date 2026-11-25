@@ -104,12 +104,14 @@ export function DocsDirectory({ clusters, totalCount }: DocsDirectoryProps) {
         </div>
       </div>
 
-      {hasActiveFilter ? (
-        <p role="status" aria-live="polite" className="text-xs text-muted-foreground">
-          Showing <span className="pharos-numeric font-medium text-foreground">{visibleCount}</span> of{" "}
-          <span className="pharos-numeric">{totalCount}</span> technical specifications.
-        </p>
-      ) : null}
+      <p
+        role="status"
+        aria-live="polite"
+        className={hasActiveFilter ? "text-xs text-muted-foreground" : "sr-only"}
+      >
+        Showing <span className="pharos-numeric font-medium text-foreground">{visibleCount}</span> of{" "}
+        <span className="pharos-numeric">{totalCount}</span> technical specifications.
+      </p>
 
       {visibleClusters.length === 0 ? (
         <div className="rounded-xl border border-border/60 bg-muted/20 px-5 py-8 text-center">

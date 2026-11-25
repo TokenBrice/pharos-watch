@@ -18,6 +18,7 @@ import { ComponentStatePill, defineStatusColumns } from "./page-primitives";
 
 interface CacheFreshnessTableProps {
   caches: Record<string, CacheStatus>;
+  tableChrome?: "content" | "embedded";
 }
 
 const CACHE_FRESHNESS_COLUMNS = defineStatusColumns([
@@ -26,7 +27,7 @@ const CACHE_FRESHNESS_COLUMNS = defineStatusColumns([
   ["note", "Note"],
 ]);
 
-export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
+export function CacheFreshnessTable({ caches, tableChrome = "content" }: CacheFreshnessTableProps) {
   const sorted = Object.entries(caches).sort(([, a], [, b]) => {
     const ratioA = getCacheFreshnessRatio(a) ?? Infinity;
     const ratioB = getCacheFreshnessRatio(b) ?? Infinity;
@@ -167,6 +168,7 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
           primaryTableId="cache-freshness-unhealthy"
           secondaryTableId="cache-freshness-healthy"
           headerRowClassName="border-b text-left text-muted-foreground"
+          chrome={tableChrome}
         />
       </div>
     </PublicSignalCard>

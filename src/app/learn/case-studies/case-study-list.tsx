@@ -222,7 +222,7 @@ export function CaseStudyList({
                   className={cn(
                     "pharos-focus-ring pharos-control-pill min-h-11 gap-1.5 sm:min-h-9",
                     active && "pharos-control-pill-active",
-                    !active && filter.count === 0 && "opacity-60",
+                    !active && filter.count === 0 && "text-muted-foreground",
                   )}
                 >
                   <span>{filter.label}</span>{" "}
@@ -236,11 +236,14 @@ export function CaseStudyList({
         </div>
       </div>
 
+      <p role="status" aria-live="polite" className="sr-only">
+        {visible.length === 0
+          ? "0 archive studies match the active filters."
+          : `${visible.length} archive ${visible.length === 1 ? "study" : "studies"} shown.`}
+      </p>
+
       {visible.length === 0 ? (
-        <div
-          className="pharos-empty-note flex flex-wrap items-center justify-between gap-3"
-          aria-live="polite"
-        >
+        <div className="pharos-empty-note flex flex-wrap items-center justify-between gap-3">
           <p>
             No archive case studies match these filters.
             {matchingPriorityCount > 0 ? (
@@ -265,22 +268,26 @@ export function CaseStudyList({
         </div>
       ) : (
         <>
-          <p className="pharos-meta flex flex-wrap items-center gap-x-2 gap-y-1" aria-live="polite">
+          <p className="pharos-meta flex flex-wrap items-center gap-x-2 gap-y-1">
             <span>
               <span className="pharos-numeric font-medium text-foreground">{visible.length}</span>{" "}
               archive {visible.length === 1 ? "study" : "studies"}
             </span>
             {!isFiltered && priorityStudies.length > 0 ? (
               <>
-                <span aria-hidden="true" className="text-muted-foreground/50">·</span>
+                {" "}
+                <span aria-hidden="true" className="text-muted-foreground/50">·</span>{" "}
                 <a href="#start-here" className="pharos-prose-link">
                   <span className="pharos-numeric">{priorityStudies.length}</span> reflexive-collapse primers above
                 </a>
               </>
             ) : isFiltered && matchingPriorityCount > 0 ? (
-              <a href="#start-here" className="pharos-prose-link">
-                (+<span className="pharos-numeric">{matchingPriorityCount}</span> in Start here)
-              </a>
+              <>
+                {" "}
+                <a href="#start-here" className="pharos-prose-link">
+                  (+<span className="pharos-numeric">{matchingPriorityCount}</span> in Start here)
+                </a>
+              </>
             ) : null}
           </p>
           <ol className="divide-y divide-border/60">
@@ -343,6 +350,11 @@ export function CaseStudyList({
                         ) : study.lowPrice != null ? (
                           <span className="pharos-numeric text-xs font-medium text-foreground">
                             low ${study.lowPrice.toFixed(3)}
+                          </span>
+                        ) : null}
+                        {study.metricScope && (study.peakDeviationBps != null || study.lowPrice != null) ? (
+                          <span className="w-full text-2xs leading-snug text-muted-foreground">
+                            Scope: {study.metricScope}
                           </span>
                         ) : null}
                       </span>

@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/table";
-import { SectionHeading, SectionKicker } from "../_shared/section-primitives";
+import { SectionHeading } from "../_shared/section-primitives";
 
 export function MechanismDependencyValue({ value }: { value: string }) {
   const dot = MECHANISM_DEPENDENCY_DOT[value];
@@ -39,14 +39,11 @@ export function MechanismComparisonMatrix() {
   return (
     <section aria-labelledby="mechanism-matrix-heading" className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="space-y-2">
-          <SectionKicker>Side-by-side</SectionKicker>
-          <SectionHeading id="mechanism-matrix-heading">
-            Types of stablecoins
-          </SectionHeading>
-        </div>
-        <span className="text-xs tabular-nums text-muted-foreground">
-          {MECHANISM_ARCHETYPE_VALUES.length} mechanisms
+        <SectionHeading id="mechanism-matrix-heading">
+          Types of stablecoins
+        </SectionHeading>
+        <span className="text-xs text-muted-foreground">
+          <span className="pharos-numeric">{MECHANISM_ARCHETYPE_VALUES.length}</span> mechanisms
         </span>
       </div>
       <TableFrame
@@ -54,7 +51,6 @@ export function MechanismComparisonMatrix() {
         testId="mechanism-comparison-matrix-table"
         chrome="default"
         density="compact"
-        striped
         tableClassName="w-full min-w-[54rem] table-fixed border-collapse text-left text-xs"
         tableProps={{ "aria-label": "Stablecoin mechanism comparison matrix" }}
         viewportProps={{
@@ -74,10 +70,10 @@ export function MechanismComparisonMatrix() {
           <col className="w-[10%]" />
         </colgroup>
         <TableHeader>
-          <TableRow className="border-b border-border/60 bg-muted/30">
+          <TableRow className="border-b border-border/60 bg-muted">
             <TableHead
               scope="col"
-              className="pharos-table-sticky-metric z-10 h-auto whitespace-normal border-r border-border/50 px-3 py-2.5 align-bottom font-semibold text-foreground"
+              className="sticky left-0 z-10 h-auto whitespace-normal border-r border-border/50 bg-muted px-3 py-2.5 align-bottom font-semibold text-foreground shadow-[var(--table-sticky-column-shadow)] min-[60rem]:shadow-none"
             >
               Mechanism
             </TableHead>
@@ -101,11 +97,11 @@ export function MechanismComparisonMatrix() {
               <TableRow
                 key={archetype}
                 rowIntent="scan"
-                className="border-b border-border/40 last:border-b-0"
+                className="group border-b border-border/40 last:border-b-0"
               >
                 <TableHead
                   scope="row"
-                  className="pharos-table-sticky-metric h-auto whitespace-normal border-r border-border/50 px-3 py-2.5 align-top text-left font-medium text-foreground"
+                  className="sticky left-0 z-1 h-auto whitespace-normal border-r border-border/50 bg-card px-3 py-2.5 align-top text-left font-medium text-foreground transition-colors group-hover:bg-[var(--table-row-hover)] shadow-[var(--table-sticky-column-shadow)] min-[60rem]:shadow-none"
                 >
                   <Link
                     href={getMechanismExplainerPath(archetype)}

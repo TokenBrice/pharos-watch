@@ -132,7 +132,7 @@ const mdxComponents = {
         <a
           href={href}
           className={cn(
-            "pharos-focus-ring inline rounded-sm no-underline transition-colors hover:text-foreground after:ml-1.5 after:font-normal after:text-muted-foreground/70 after:opacity-0 after:transition-opacity after:content-['#'] hover:after:opacity-100 focus-visible:after:opacity-100",
+            "pharos-focus-ring inline rounded-sm no-underline transition-colors hover:text-foreground after:ml-1.5 after:font-normal after:text-muted-foreground/70 after:opacity-0 after:transition-opacity after:[content:'#'_/_''] hover:after:opacity-100 focus-visible:after:opacity-100",
             className,
           )}
           {...props}
@@ -150,7 +150,7 @@ const mdxComponents = {
     return (
       <h2
         className={cn(
-          "pharos-display mt-10 scroll-mt-32 border-t border-border/50 pt-6 text-2xl font-bold tracking-tight text-foreground first:mt-0 first:border-t-0 first:pt-0 lg:scroll-mt-24",
+          "pharos-display mt-10 scroll-mt-20 border-t border-border/50 pt-6 text-2xl font-bold tracking-tight text-foreground first:mt-0 first:border-t-0 first:pt-0 lg:scroll-mt-6",
           className,
         )}
         {...props}
@@ -159,12 +159,12 @@ const mdxComponents = {
   },
   h3: ({ node: _node, className, ...props }: MarkdownComponentProps<"h3">) => (
     <h3
-      className={cn("mt-7 scroll-mt-32 text-lg font-semibold tracking-tight text-foreground lg:scroll-mt-24", className)}
+      className={cn("mt-7 scroll-mt-20 text-lg font-semibold tracking-tight text-foreground lg:scroll-mt-6", className)}
       {...props}
     />
   ),
   h4: ({ node: _node, className, ...props }: MarkdownComponentProps<"h4">) => (
-    <h4 className={cn("mt-5 scroll-mt-32 text-base font-semibold text-foreground lg:scroll-mt-24", className)} {...props} />
+    <h4 className={cn("mt-5 scroll-mt-20 text-base font-semibold text-foreground lg:scroll-mt-6", className)} {...props} />
   ),
   pre: ({ node, children, className, ...props }: MarkdownComponentProps<"pre">) => {
     const codeText = extractHastText(node as HastNode | undefined).replace(/\n$/, "");
@@ -382,7 +382,9 @@ function renderDoc(doc: (typeof PUBLIC_DOC_BY_SLUG extends ReadonlyMap<string, i
               </span>
             ) : null}
             {updatedDate ? <span aria-hidden="true">&middot;</span> : null}
-            <span className="pharos-numeric">~{readingMinutes} min read</span>
+            <span>
+              ~<span className="pharos-numeric">{readingMinutes}</span> min read
+            </span>
             <span aria-hidden="true">&middot;</span>
             <Link
               href="/methodology/"
@@ -395,7 +397,7 @@ function renderDoc(doc: (typeof PUBLIC_DOC_BY_SLUG extends ReadonlyMap<string, i
             {doc.relatedRoute ? (
               <Link
                 href={doc.relatedRoute.href}
-                className="pharos-focus-ring inline-flex items-center gap-1 rounded-md border border-border/60 bg-background/60 px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:border-foreground/20 hover:bg-muted/40"
+                className="pharos-control-pill pharos-focus-ring min-h-11 gap-1 text-foreground sm:min-h-9"
               >
                 <span>Open {doc.relatedRoute.label}</span>
                 <ArrowUpRight aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
@@ -404,7 +406,7 @@ function renderDoc(doc: (typeof PUBLIC_DOC_BY_SLUG extends ReadonlyMap<string, i
             <CopyMarkdownButton markdownHref={markdownHref} />
             <a
               href={markdownHref}
-              className="pharos-focus-ring inline-flex items-center rounded-md border border-border/60 bg-background/60 px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground/20 hover:bg-muted/40 hover:text-foreground"
+              className="pharos-control-pill pharos-focus-ring min-h-11 sm:min-h-9"
             >
               Plain Markdown
             </a>
@@ -412,7 +414,7 @@ function renderDoc(doc: (typeof PUBLIC_DOC_BY_SLUG extends ReadonlyMap<string, i
               href={githubHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="pharos-focus-ring inline-flex items-center gap-1 rounded-md border border-border/60 bg-background/60 px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground/20 hover:bg-muted/40 hover:text-foreground"
+              className="pharos-control-pill pharos-focus-ring min-h-11 gap-1 sm:min-h-9"
             >
               <span>GitHub</span>
               <ExternalLink aria-hidden="true" className="h-3 w-3 shrink-0" />

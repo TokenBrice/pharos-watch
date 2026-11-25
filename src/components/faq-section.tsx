@@ -33,7 +33,7 @@ export function FaqSection({
           className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
         />
       </summary>
-      <p className="px-4 pb-4 text-sm text-muted-foreground">
+      <p className="max-w-[72ch] px-4 pb-4 text-sm leading-relaxed text-muted-foreground">
         {renderAnswer ? renderAnswer(item.answer) : item.answer}
       </p>
     </details>

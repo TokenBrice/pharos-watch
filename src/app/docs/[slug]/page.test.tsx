@@ -112,7 +112,7 @@ describe("DocPage", () => {
   it("renders reader chrome, heading anchors without permanent underlines, dark code surfaces, and wide-table swipe hints", async () => {
     const html = renderToStaticMarkup(await DocPage({ params: Promise.resolve({ slug: "depeg-detection" }) }));
     expect(html).toContain("All docs");
-    expect(html).toMatch(/~\d+ min read/);
+    expect(html).toMatch(/~<span class="pharos-numeric">\d+<\/span> min read/);
     expect(html).toContain("Copy Markdown");
     expect(html).toContain('href="/depeg/"');
     expect(html).toContain('href="https://github.com/TokenBrice/pharos-watch/blob/main/docs/depeg-detection.md"');

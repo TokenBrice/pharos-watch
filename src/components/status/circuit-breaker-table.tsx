@@ -10,6 +10,7 @@ import { defineStatusColumns, Timestamp } from "./page-primitives";
 interface CircuitBreakerTableProps {
   circuits: Record<string, CircuitRecord> | null | undefined;
   unavailableReason?: string | null;
+  tableChrome?: "content" | "embedded";
 }
 
 const CIRCUIT_BREAKER_COLUMNS = defineStatusColumns([
@@ -20,7 +21,7 @@ const CIRCUIT_BREAKER_COLUMNS = defineStatusColumns([
   ["last-success", "Last success"],
 ]);
 
-export function CircuitBreakerTable({ circuits, unavailableReason }: CircuitBreakerTableProps) {
+export function CircuitBreakerTable({ circuits, unavailableReason, tableChrome = "content" }: CircuitBreakerTableProps) {
   if (!circuits || Object.keys(circuits).length === 0) {
     return (
       <PublicSignalCard title="Circuit breakers" contentClassName="mt-3">
@@ -81,6 +82,7 @@ export function CircuitBreakerTable({ circuits, unavailableReason }: CircuitBrea
           primaryTableId="circuit-breakers-tripped"
           secondaryTableId="circuit-breakers-healthy"
           headerRowClassName="border-b text-left text-muted-foreground"
+          chrome={tableChrome}
         />
       </div>
     </PublicSignalCard>

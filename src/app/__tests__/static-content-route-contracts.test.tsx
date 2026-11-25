@@ -99,7 +99,7 @@ describe("static content route adapters", () => {
     expect(html).toContain('id="mechanism-matrix-heading"');
     expect(html).toContain("Types of stablecoins");
     expect(html).not.toContain("At a glance");
-    expect(html).toContain(`${MECHANISM_ARCHETYPE_VALUES.length} mechanisms`);
+    expect(html.replace(/<[^>]+>/g, "")).toContain(`${MECHANISM_ARCHETYPE_VALUES.length} mechanisms`);
     expect(html).toContain("Stablecoin mechanism comparison matrix");
     for (const archetype of MECHANISM_ARCHETYPE_VALUES) {
       expect(html).toContain(`href="${getMechanismExplainerPath(archetype)}`);

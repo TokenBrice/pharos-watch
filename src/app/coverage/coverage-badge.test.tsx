@@ -93,7 +93,8 @@ describe("CoverageBadge", () => {
 
     const quiet = screen.getByLabelText("Not covered. No route configured.");
     expect(quiet.getAttribute("title")).toBe("No route configured.");
-    expect(quiet.className).toContain("text-muted-foreground/75");
+    expect(quiet.className).toContain("text-muted-foreground");
+    expect(quiet.className).not.toContain("text-muted-foreground/75");
     expect(quiet.className).not.toContain("border-dashed");
     expect(quiet.className).not.toContain("rounded-sm");
 

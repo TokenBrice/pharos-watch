@@ -18,6 +18,7 @@ interface PrioritySplitTableProps<T> {
   secondaryTableId?: string;
   headerClassName?: string;
   headerRowClassName?: string;
+  chrome?: "content" | "embedded";
 }
 
 export function PrioritySplitTable<T>({
@@ -34,12 +35,13 @@ export function PrioritySplitTable<T>({
   secondaryTableId,
   headerClassName = "",
   headerRowClassName,
+  chrome = "content",
 }: PrioritySplitTableProps<T>) {
   const renderTable = (tableId: string, ariaLabel: string, rows: readonly T[], containerClassName?: string) => (
     <DataTableShell
       tableId={tableId}
       columns={columns}
-      chrome="content"
+      chrome={chrome}
       density="compact"
       containerClassName={containerClassName}
       tableProps={{ "aria-label": ariaLabel }}

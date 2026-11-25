@@ -12,9 +12,14 @@ import {
 import { cn } from "@/lib/utils";
 import type { MethodologyChangelogEntry } from "@shared/types/editorial-content";
 
-function Pill({ children }: { children: React.ReactNode }) {
+function Pill({ children, numeric = true }: { children: React.ReactNode; numeric?: boolean }) {
   return (
-    <span className="inline-block rounded-full border border-border/60 bg-muted/55 px-2.5 py-0.5 text-xs pharos-numeric font-medium text-foreground">
+    <span
+      className={cn(
+        "inline-block rounded-full border border-border/60 bg-muted/55 px-2.5 py-0.5 text-xs font-medium text-foreground",
+        numeric && "pharos-numeric",
+      )}
+    >
       {children}
     </span>
   );
@@ -42,7 +47,7 @@ export function MethodologyVersionCard({
       <summary
         className={cn(
           DISCLOSURE_SUMMARY_RESET_CLASS,
-          "px-5 py-4 transition-colors hover:bg-muted/30 sm:px-6",
+          "rounded-xl px-5 py-4 transition-colors hover:bg-muted/30 focus-visible:ring-inset focus-visible:ring-offset-0 sm:px-6",
         )}
       >
         <div className="flex items-start justify-between gap-4">
@@ -50,7 +55,7 @@ export function MethodologyVersionCard({
             <div className="flex flex-wrap items-center gap-2">
               <Pill>{toMethodologyVersionLabel(entry.version)}</Pill>
               <Pill>{dateLabel}</Pill>
-              {entry.reconstructed && <Pill>Reconstructed</Pill>}
+              {entry.reconstructed && <Pill numeric={false}>Reconstructed</Pill>}
             </div>
             <div className="space-y-1.5">
               <h2 className="pharos-section-title">{entry.title}</h2>
@@ -99,8 +104,8 @@ export function MethodologyVersionCard({
               variant="plain"
               chevronPosition="end"
               summary={
-                <span className="pharos-numeric">
-                  {entry.commits.length} commits
+                <span>
+                  <span className="pharos-numeric">{entry.commits.length}</span> commits
                 </span>
               }
             >

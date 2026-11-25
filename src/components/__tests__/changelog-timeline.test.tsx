@@ -49,6 +49,7 @@ describe("ChangelogTimeline partitions", () => {
     fireEvent.click(designBtn);
     expect(designBtn.getAttribute("aria-pressed")).toBe("true");
     expect(allBtn.getAttribute("aria-pressed")).toBe("false");
+    expect(designBtn.closest("[data-active-tag]")?.getAttribute("data-active-tag")).toBe("design");
 
     for (const entry of RECENT_CHANGELOGS) {
       const week = document.getElementById(`week-${entry.dateRange.to}`);
@@ -62,6 +63,7 @@ describe("ChangelogTimeline partitions", () => {
     // Clicking the active tag again clears back to All.
     fireEvent.click(designBtn);
     expect(allBtn.getAttribute("aria-pressed")).toBe("true");
+    expect(designBtn.closest("[data-active-tag]")?.getAttribute("data-active-tag")).toBe("all");
   });
 
   it("renders ADR-34 commit bounds, GitHub range link, and Methodology chips", () => {
@@ -101,6 +103,6 @@ describe("ChangelogTimeline partitions", () => {
     expect(summary.totalCommits).toBe(
       RECENT_CHANGELOGS.reduce((sum, entry) => sum + entry.stats.totalCommits, 0),
     );
-    expect(summary.methodologyBumps).toBeGreaterThan(0);
+    expect(summary.methodologyLinks).toBeGreaterThan(0);
   });
 });

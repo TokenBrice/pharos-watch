@@ -568,11 +568,14 @@ function TrackedCoinList({
 
       {hiddenParents.length > 0 ? (
         <DisclosurePanel
-          variant="inset"
+          variant="plain"
+          summaryClassName="pharos-control-pill min-h-11 gap-2 px-3.5 text-foreground sm:min-h-9"
+          contentClassName="mt-2.5"
           summary={
             <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
               <span>
-                Show{" "}
+                <span className="group-open/disclosure:hidden">Show </span>
+                <span className="hidden group-open/disclosure:inline">Hide </span>
                 <span className="pharos-numeric font-semibold">{hiddenCoinCount}</span>{" "}
                 more tracked {hiddenCoinCount === 1 ? "stablecoin" : "stablecoins"}
               </span>

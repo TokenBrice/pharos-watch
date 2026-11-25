@@ -108,7 +108,6 @@ export default async function ChangelogArchivePage({
         utc: true,
       })
     : archive.label;
-  const archiveYear = archive.month.slice(0, 4);
   const scrollspySections = archive.entries.map((entry) => ({
     id: `week-${entry.dateRange.to}`,
     label: formatChangelogDateRange(entry.dateRange.from, entry.dateRange.to, {
@@ -158,7 +157,7 @@ export default async function ChangelogArchivePage({
         <>
           <JsonLdScript json={archiveJsonLd} />
           <EditorialMasthead
-            issueNumber={`Volume ${archiveYear} · ${archive.label}`}
+            issueNumber={`Monthly archive · ${archive.label}`}
             date={mastheadDate}
           />
         </>
@@ -193,18 +192,18 @@ export default async function ChangelogArchivePage({
             </span>{" "}
             {stats.totalUpdates === 1 ? "update" : "updates"}
           </span>
-          {stats.methodologyBumps > 0 && (
+          {stats.methodologyLinks > 0 && (
             <>
               <span aria-hidden="true" className="text-muted-foreground/40">
                 ·
               </span>
               <span>
                 <span className="pharos-numeric font-medium text-foreground">
-                  {stats.methodologyBumps}
+                  {stats.methodologyLinks}
                 </span>{" "}
-                {stats.methodologyBumps === 1
-                  ? "methodology bump"
-                  : "methodology bumps"}
+                {stats.methodologyLinks === 1
+                  ? "methodology link"
+                  : "methodology links"}
               </span>
             </>
           )}
@@ -240,6 +239,7 @@ export default async function ChangelogArchivePage({
       <LongformScrollspyNav
         sections={scrollspySections}
         navAriaLabel={`${archive.label} weekly releases`}
+        emphasis="pill-tabs"
       />
 
       <ChangelogTimeline entries={archive.entries} highlightLatest={false} />

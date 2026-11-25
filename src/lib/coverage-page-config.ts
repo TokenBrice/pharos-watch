@@ -97,7 +97,7 @@ const COVERAGE_BREAKDOWN_TONES: Partial<
     "sources-5-plus": "emeraldSoft",
     "sources-3-4": "skyFaint",
     "sources-1-2": "amber",
-    "data-unavailable": "gap",
+    "data-unavailable": "unavailable",
   },
   safety: {
     rated: "emerald",
@@ -110,7 +110,7 @@ const COVERAGE_BREAKDOWN_TONES: Partial<
     mixed: "cyan",
     fallback: "amber",
     legacy: "violet",
-    "data-unavailable": "gap",
+    "data-unavailable": "unavailable",
   },
   reserves: {
     live: "emerald",
@@ -120,7 +120,7 @@ const COVERAGE_BREAKDOWN_TONES: Partial<
     proof: "violetMuted",
     curated: "blueSoftMuted",
     estimated: "orangeMuted",
-    "data-unavailable": "gap",
+    "data-unavailable": "unavailable",
   },
   redemption: {
     "modeled-heuristic": "amberStrongMuted",
@@ -133,12 +133,12 @@ const COVERAGE_BREAKDOWN_TONES: Partial<
     "collateral-redeem": "blue",
     "stablecoin-redeem": "emerald",
     "basket-redeem": "teal",
-    "data-unavailable": "gap",
+    "data-unavailable": "unavailable",
   },
   yield: {
     covered: "teal",
     uncovered: "gap",
-    "data-unavailable": "gap",
+    "data-unavailable": "unavailable",
   },
   flows: {
     full: "indigo",
@@ -146,7 +146,7 @@ const COVERAGE_BREAKDOWN_TONES: Partial<
     tracked: "skyMuted",
     bootstrapping: "violetMuted",
     unknown: "amberDim",
-    "data-unavailable": "gap",
+    "data-unavailable": "unavailable",
   },
   blacklist: {
     live: "roseStrong",
@@ -154,7 +154,7 @@ const COVERAGE_BREAKDOWN_TONES: Partial<
     upstream: "orangeStrong",
     possible: "amberStrong",
     no: "emeraldStrong",
-    "data-unavailable": "gap",
+    "data-unavailable": "unavailable",
   },
   mica: {
     authorized: "emerald",
@@ -180,7 +180,7 @@ const COVERAGE_BREAKDOWN_TONES: Partial<
     upstream: "frostBlue",
     "resolved-none": "emeraldFaint",
     gaps: "gap",
-    "data-unavailable": "gap",
+    "data-unavailable": "unavailable",
   },
   mintAuthority: {
     "no-privileged-mint": "emeraldFaint",

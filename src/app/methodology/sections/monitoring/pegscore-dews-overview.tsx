@@ -31,7 +31,7 @@ export function PegScoreDewsOverview() {
         underpin Worst Depeg, while failed canonical projections withhold recomputation instead of replacing the
         accepted event universe.
       </p>
-      <MethodologyDetails summary="Depeg Confirmation & Trust Gates">
+      <MethodologyDetails summary="Depeg confirmation & trust gates">
         <div className="space-y-3">
           <p>
             A live event changes direction only on an authoritative primary input or fresh trusted aggregate DEX

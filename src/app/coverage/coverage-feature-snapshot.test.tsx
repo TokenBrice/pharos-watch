@@ -331,7 +331,7 @@ describe("CoverageFeatureSnapshotRow", () => {
     expect(container.textContent).toContain("data n/a");
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Filter matrix to coins with score-grade live reserves" }),
+      screen.getByRole("button", { name: "Score-grade: filter matrix to coins with score-grade live reserves" }),
     );
     expect(onFilterFeature).toHaveBeenCalledWith("live-reserves");
   });

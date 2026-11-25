@@ -33,7 +33,7 @@ export function markdownLinkComponent({ resolveHref, httpOnly = false }: Markdow
         </Link>
       );
     }
-    if (resolved.startsWith("#")) {
+    if (!httpOnly && resolved.startsWith("#")) {
       return (
         <a href={resolved} className={cn("pharos-prose-link", className)}>
           {children}

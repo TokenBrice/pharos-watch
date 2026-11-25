@@ -75,9 +75,13 @@ export function PublicStatusReliabilitySection({
               description="Requests sent from this browser to public API routes. A freshness Warning header counts as a data-health signal; other 2xx responses are reachability checks."
               footnote="Admin and manual action routes are not probed from this page."
             />
-            <CircuitBreakerTable circuits={publicImpactCircuits} unavailableReason={healthData.circuitsUnavailableReason} />
+            <CircuitBreakerTable
+              circuits={publicImpactCircuits}
+              unavailableReason={healthData.circuitsUnavailableReason}
+              tableChrome="embedded"
+            />
           </div>
-          <CacheFreshnessTable caches={healthData.caches} />
+          <CacheFreshnessTable caches={healthData.caches} tableChrome="embedded" />
           <SchedulerLivenessCard observation={healthData.schedulerLiveness} surface="panel" />
         </div>
       </LazyDetails>

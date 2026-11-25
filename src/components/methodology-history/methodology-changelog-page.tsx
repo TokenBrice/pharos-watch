@@ -195,8 +195,12 @@ export function MethodologyChangelogPage({
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <p className="pharos-label text-foreground">Latest version</p>
                 {history && entries.length > METHODOLOGY_RECENT_VERSIONS ? (
-                  <p className="pharos-meta pharos-numeric">
-                    Showing {Math.min(entries.length, METHODOLOGY_RECENT_VERSIONS)} of {entries.length} releases
+                  <p className="pharos-meta">
+                    Showing{" "}
+                    <span className="pharos-numeric text-foreground/85">
+                      {Math.min(entries.length, METHODOLOGY_RECENT_VERSIONS)}
+                    </span>{" "}
+                    of <span className="pharos-numeric text-foreground/85">{entries.length}</span> releases
                   </p>
                 ) : null}
               </div>

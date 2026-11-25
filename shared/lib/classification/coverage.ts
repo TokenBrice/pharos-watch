@@ -105,7 +105,10 @@ export const COVERAGE_FEATURE_ACCENT_CLASSES = {
 const COVERAGE_GAP_CHIP_CLASS = "border-border/70 bg-muted/60 text-muted-foreground";
 const COVERAGE_HATCHED_SURFACE_CLASS =
   "bg-muted text-foreground bg-[repeating-linear-gradient(135deg,transparent_0_5px,var(--border)_5px_6px)]";
-export const COVERAGE_GAP_BAR_CLASS = COVERAGE_HATCHED_SURFACE_CLASS;
+/** Routine uncovered gap bar fill (flat muted — never hatched, which is reserved for Data n/a). */
+export const COVERAGE_GAP_BAR_CLASS = "bg-muted text-foreground";
+/** Unavailable (Data n/a) bar fill — mirrors the hatched matrix badge grammar (R1). */
+const COVERAGE_UNAVAILABLE_BAR_CLASS = COVERAGE_HATCHED_SURFACE_CLASS;
 export const COVERAGE_UNAVAILABLE_BADGE_CLASS =
   "border-dashed border-border bg-muted text-foreground/80 bg-[repeating-linear-gradient(135deg,transparent_0_5px,var(--border)_5px_6px)]";
 
@@ -123,8 +126,10 @@ export interface CoverageBreakdownToneClasses {
  * (`/75`-`/90`) or bar text; collapsing them would be a visible change.
  */
 export const COVERAGE_BREAKDOWN_TONE_CLASSES = {
-  /** Uncovered / not-applicable buckets. */
+  /** Uncovered / not-applicable buckets (flat neutral). */
   gap: { chip: COVERAGE_GAP_CHIP_CLASS, bar: COVERAGE_GAP_BAR_CLASS },
+  /** Unavailable (Data n/a) buckets (hatched, matching matrix badges per R1). */
+  unavailable: { chip: COVERAGE_UNAVAILABLE_BADGE_CLASS, bar: COVERAGE_UNAVAILABLE_BAR_CLASS },
   emerald: {
     chip: "border-emerald-500/28 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200",
     bar: "bg-emerald-400/85",
@@ -249,6 +254,7 @@ export const COVERAGE_BREAKDOWN_TONE_CLASSES = {
   redStrong: {
     chip: "border-red-500/30 bg-red-500/12 text-red-800 dark:text-red-200",
     bar: "bg-red-500/90",
+    barText: COVERAGE_BAR_TEXT_ON_LIGHT_CLASS,
   },
   redStrongMuted: {
     chip: "border-red-500/30 bg-red-500/12 text-red-800 dark:text-red-200",

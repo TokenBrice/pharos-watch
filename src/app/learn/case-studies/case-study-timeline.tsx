@@ -26,7 +26,7 @@ const TIMELINE_VIEW_OPTIONS: ReadonlyArray<{ value: TimelineDesktopView; label: 
 
 const SEVERITY_DOT: Record<CaseStudySeverity, string> = {
   high: "bg-[var(--severity-severe)]",
-  med: "bg-[var(--severity-moderate)]",
+  med: "bg-state-warn-solid",
   low: "bg-muted-foreground/80",
 };
 
@@ -139,14 +139,14 @@ function HorizontalTimeline({
 }) {
   const { ref, near } = useNearViewport<HTMLDivElement>("240px");
   return (
-    <div ref={ref} data-revealed={near} className="hidden lg:block">
+    <div ref={ref} data-revealed={near} className="hidden lg:block print:hidden">
       <div
         ref={scrollerRef}
         tabIndex={0}
         role="region"
         aria-label="Event timeline"
         aria-describedby="case-study-timeline-help"
-        className="scroll-shadow pharos-focus-ring snap-x snap-mandatory overflow-x-auto px-5 py-4 sm:px-6 sm:py-5"
+        className="scroll-shadow pharos-focus-ring snap-x snap-mandatory overflow-x-auto px-5 py-4 focus-visible:ring-inset focus-visible:ring-offset-0 sm:px-6 sm:py-5"
       >
         <p id="case-study-timeline-help" className="sr-only">
           Use horizontal scrolling, the previous and next timeline controls, or arrow keys when focused to review events in chronological order.
@@ -233,7 +233,7 @@ function VerticalTimeline({
   mobileOnly?: boolean;
 }) {
   return (
-    <div className={cn("p-5 sm:p-6", mobileOnly && "lg:hidden")}>
+    <div className={cn("p-5 sm:p-6", mobileOnly && "lg:hidden print:block")}>
       <ol className="space-y-6 border-l border-border/50 pl-6 sm:pl-7">
         {entries.map((entry, i) => {
           const severity = entry.severity ?? "low";

@@ -137,13 +137,7 @@ function MechanismDistribution({ counts }: { counts: Record<MechanismArchetype, 
       </div>
       <ul className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
         {segments.map((segment) => (
-          <li
-            key={segment.archetype}
-            className={cn(
-              "pharos-chart-legend-chip",
-              segment.count === 0 && "opacity-55",
-            )}
-          >
+          <li key={segment.archetype} className="pharos-chart-legend-chip">
             <span
               aria-hidden="true"
               className="h-2 w-2 shrink-0 rounded-sm"
@@ -187,7 +181,13 @@ export default function MechanismExplainersHub() {
   const upcomingAll = PRE_LAUNCH_STABLECOINS.filter((coin) => !isLaunchedAwaitingData(coin)).length;
   const frozenAll = FROZEN_STABLECOINS.length;
   const unresolvedTotal = activeAll - mechanismTotal + upcomingAll - upcomingTotal + frozenAll - frozenTotal;
-  const ofTotal = (shown: number, total: number) => (shown === total ? "" : ` of ${total}`);
+  const renderOfTotal = (shown: number, total: number) =>
+    shown === total ? null : (
+      <>
+        {" of "}
+        <span className="pharos-numeric">{total}</span>
+      </>
+    );
 
   return (
     <LearnPageShell
@@ -204,26 +204,29 @@ export default function MechanismExplainersHub() {
         subKicker={`Across ${MECHANISM_ARCHETYPE_VALUES.length} designs`}
         sub={
           <div className="space-y-1 text-xs sm:text-right">
-            <p className="tabular-nums text-muted-foreground">
+            <p className="text-muted-foreground">
               <span className="pharos-numeric font-medium text-foreground">{MECHANISM_ARCHETYPE_VALUES.length}</span> mechanisms
             </p>
             {mechanismTotal !== activeAll ? (
-              <p className="tabular-nums text-muted-foreground">
-                <span className="pharos-numeric font-medium text-foreground">{mechanismTotal}</span> of {activeAll} active
+              <p className="text-muted-foreground">
+                <span className="pharos-numeric font-medium text-foreground">{mechanismTotal}</span> of{" "}
+                <span className="pharos-numeric">{activeAll}</span> active
               </p>
             ) : null}
             {upcomingTotal > 0 ? (
-              <p className="tabular-nums text-muted-foreground">
-                <span className="pharos-numeric font-medium text-foreground">+{upcomingTotal}</span>{ofTotal(upcomingTotal, upcomingAll)} upcoming
+              <p className="text-muted-foreground">
+                <span className="pharos-numeric font-medium text-foreground">+{upcomingTotal}</span>
+                {renderOfTotal(upcomingTotal, upcomingAll)} upcoming
               </p>
             ) : null}
             {frozenTotal > 0 ? (
-              <p className="tabular-nums text-muted-foreground">
-                <span className="pharos-numeric font-medium text-foreground">+{frozenTotal}</span>{ofTotal(frozenTotal, frozenAll)} frozen
+              <p className="text-muted-foreground">
+                <span className="pharos-numeric font-medium text-foreground">+{frozenTotal}</span>
+                {renderOfTotal(frozenTotal, frozenAll)} frozen
               </p>
             ) : null}
             {unresolvedTotal > 0 ? (
-              <p className="tabular-nums text-muted-foreground">
+              <p className="text-muted-foreground">
                 <span className="pharos-numeric font-medium text-foreground">{unresolvedTotal}</span> pending mechanism classification
               </p>
             ) : null}

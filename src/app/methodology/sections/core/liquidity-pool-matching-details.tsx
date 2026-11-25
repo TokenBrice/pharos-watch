@@ -5,7 +5,7 @@ const VOLUME_ADMISSION_HOURS = DEX_VOLUME_OBSERVATION_MAX_AGE_SEC / 3600;
 
 export function LiquidityPoolMatchingDetails() {
   return (
-    <MethodologyDetails summary="Pool Matching & Deduplication">
+    <MethodologyDetails summary="Pool matching & deduplication">
       <div className="space-y-3">
         <p>
           Dedicated protocol-native sources (Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap V3, Aerodrome

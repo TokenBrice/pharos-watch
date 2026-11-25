@@ -55,6 +55,7 @@ export function DocsToc({ headings, children }: DocsTocProps) {
   const [activeId, setActiveId] = useState(headings[0]?.id ?? "");
   const [mobileOpen, setMobileOpen] = useState(false);
   const mobileBarRef = useRef<HTMLDivElement | null>(null);
+  const mobileToggleRef = useRef<HTMLButtonElement | null>(null);
   const headingSignature = headings.map((heading) => heading.id).join("|");
   const effectiveActiveId = headings.some((heading) => heading.id === activeId)
     ? activeId
@@ -140,6 +141,7 @@ export function DocsToc({ headings, children }: DocsTocProps) {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setMobileOpen(false);
+        mobileToggleRef.current?.focus();
       }
     };
     const handlePointerDown = (event: PointerEvent) => {
@@ -162,9 +164,10 @@ export function DocsToc({ headings, children }: DocsTocProps) {
         className="sticky top-[var(--sticky-header-bottom,3.75rem)] z-chrome -mx-4 border-y border-border/60 bg-background/95 px-4 py-2 lg:hidden"
       >
         <button
+          ref={mobileToggleRef}
           type="button"
           aria-expanded={mobileOpen}
-          aria-controls="docs-mobile-toc-panel"
+          aria-controls={mobileOpen ? "docs-mobile-toc-panel" : undefined}
           onClick={() => setMobileOpen((open) => !open)}
           className="pharos-focus-ring flex min-h-10 w-full items-center justify-between gap-3 rounded-md text-left text-xs text-foreground"
         >
