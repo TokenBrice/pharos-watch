@@ -1,0 +1,1 @@
+../../../.codex/skills/supply-plan-authoring/SKILL.md
