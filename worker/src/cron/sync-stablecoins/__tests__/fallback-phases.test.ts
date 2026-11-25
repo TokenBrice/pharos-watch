@@ -235,7 +235,7 @@ describe("CoinGecko fallback phases", () => {
     });
   });
 
-  it.each(["bold-liquity", "yzusd-yuzu", "hbd-hive"])("does not admit %s's CoinGecko cap during a DefiLlama outage", (id) => {
+  it.each(["bold-liquity", "yzusd-yuzu", "hbd-hive", "xaut-tether"])("does not admit %s's CoinGecko cap during a DefiLlama outage", (id) => {
     const excluded = ACTIVE_STABLECOINS.find((meta) => meta.id === id)!;
     const assets = buildFallbackAssetsFromCoinGecko({
       syncStartSec: NOW_SEC,

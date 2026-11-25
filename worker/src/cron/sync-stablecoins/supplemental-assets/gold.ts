@@ -1,4 +1,4 @@
-import { logWorkerEventArgs } from "../../../lib/structured-log";
+import { logWorkerEvent, logWorkerEventArgs } from "../../../lib/structured-log";
 import { isKinesisWrapperSupplyId } from "@shared/lib/onchain-supply-probe";
 import { isKinesisWrapperSupplyCutoverActive } from "@shared/lib/supply-perimeter-changes";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
@@ -13,7 +13,8 @@ import { DECIMALS_SELECTOR, encodeBalanceOfCallData, TOTAL_SUPPLY_SELECTOR } fro
 import { parseXautTransparencyDisclosure } from "../../../lib/safety-score-v9/xaut-supply-observer";
 import {
   buildXautTransparencySource, xautCirculatingLiabilityReconciles, XAUT_ASSET_ID, XAUT_CANONICAL_CHAIN_ID,
-  XAUT_CANONICAL_TOKEN_ADDRESS, XAUT_DISCLOSURE_MAX_AGE_SEC, XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC, XAUT_TREASURY_ADDRESS,
+  XAUT_CANONICAL_TOKEN_ADDRESS, XAUT_DISCLOSURE_MAX_AGE_SEC, XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC,
+  XAUT_SUPPLY_DISCLOSURE_MAX_AGE_SEC, XAUT_TREASURY_ADDRESS,
 } from "../../../lib/safety-score-v9/xaut-supply-attribution-contract";
 import type { DwellirNativeCapability } from "../../../lib/dwellir-native";
 import type { PeggedAsset } from "../enrich-prices";
@@ -45,7 +46,8 @@ async function readXautSupply(price: SupplementalPriceResolution | null, chainRp
     });
     const disclosure = result?.response.ok ? parseXautTransparencyDisclosure(result.body) : null;
     const now = Math.floor(Date.now() / 1000);
-    if (!disclosure || disclosure.sourceTimestampSec > now || now - disclosure.sourceTimestampSec > XAUT_DISCLOSURE_MAX_AGE_SEC ||
+    const disclosureAgeSec = disclosure ? now - disclosure.sourceTimestampSec : null;
+    if (!disclosure || disclosureAgeSec == null || disclosureAgeSec < 0 || disclosureAgeSec > XAUT_SUPPLY_DISCLOSURE_MAX_AGE_SEC ||
         BigInt(disclosure.quarantinedRaw) !== 0n || price.observedAt > now) return null;
     const block = await fetchEvmBlockHeader(XAUT_CANONICAL_CHAIN_ID, "finalized", options);
     if (!block || block.timestamp > now || now - block.timestamp > XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC ||
@@ -63,10 +65,27 @@ async function readXautSupply(price: SupplementalPriceResolution | null, chainRp
     // The canonical amount includes bridged stock once, through its L1 lockbox.
     const circulatingNative = Number(total - treasury) / 1_000_000;
     const mcap = circulatingNative * price.price;
-    return Number.isFinite(mcap) && mcap >= 0 ? {
+    if (!Number.isFinite(mcap) || mcap < 0) return null;
+    if (disclosureAgeSec > XAUT_DISCLOSURE_MAX_AGE_SEC) {
+      logWorkerEvent({
+        scope: "handler",
+        level: "warn",
+        job: "sync-stablecoins",
+        event: "xaut-disclosure-extended-age-admitted",
+        message: "[gold] Admitted XAUT supply with disclosure older than 48h on exact finalized Ethereum match",
+        metadata: {
+          stablecoinId: XAUT_ASSET_ID,
+          sourceTimestampSec: disclosure.sourceTimestampSec,
+          disclosureAgeSec,
+          maxDisclosureAgeSec: XAUT_SUPPLY_DISCLOSURE_MAX_AGE_SEC,
+          blockTimestampSec: block.timestamp,
+        },
+      });
+    }
+    return {
       mcap, circulatingNative, supplySource: "onchain-circulating-supply", supplyObservedAt: block.timestamp,
       valuationPriceUsd: price.price, valuationObservedAtSec: price.observedAt,
-    } : null;
+    };
   } catch (error) {
     throwIfAborted(signal);
     logWorkerEventArgs("handler", "warn", "[gold] XAUT scoped supply read failed:", error);
@@ -93,7 +112,7 @@ export async function fetchGoldTokens(
     const observedAtById: Record<string, number | undefined> = {};
     const mcapSourceById: Record<string, "defillama" | "coingecko-fallback"> = {};
     const tokensWithProtocol = GOLD_METAS.filter((token) =>
-      token.protocolSlug && isDedicatedSingleTokenGoldProtocolSlug(token.protocolSlug),
+      token.id !== XAUT_ASSET_ID && token.protocolSlug && isDedicatedSingleTokenGoldProtocolSlug(token.protocolSlug),
     );
     const PROTOCOL_BATCH = 3;
     const protocolsAllowed = tokensWithProtocol.length > 0 && db
@@ -145,7 +164,7 @@ export async function fetchGoldTokens(
     }
 
     for (const token of GOLD_METAS) {
-      if (isKinesisWrapperSupplyCutoverActive(token.id, nowSec)) continue;
+      if (token.id === XAUT_ASSET_ID || isKinesisWrapperSupplyCutoverActive(token.id, nowSec)) continue;
       if (mcapMap[token.id] != null && mcapMap[token.id] > 0) continue;
       const mcap = resolveSupplementalCoinGeckoMcap(cgData, token.geckoId);
       if (mcap != null) {
@@ -165,8 +184,13 @@ export async function fetchGoldTokens(
           const quote = admitCommodityValuation(meta, resolveSupplementalPrice(priceData, cgData, meta.geckoId), evidence);
           const scoped = await readXautSupply(quote, chainRpcs, signal);
           if (scoped) return scoped;
-          return { mcap: mcapMap[meta.id] ?? null, supplySource: mcapSourceById[meta.id] ?? "coingecko-fallback",
-            supplyObservedAt: observedAtById[meta.id], circulatingNative: null };
+          return {
+            mcap: null,
+            supplySource: "onchain-supply-withheld",
+            circulatingNative: null,
+            valuationPriceUsd: null,
+            valuationObservedAtSec: null,
+          };
         }
         const aggregate = await resolveCuratedAggregateSupplementalSupply(meta, priceData, cgData, chainRpcs, signal, dwellirNative, evidence);
         if (aggregate) return aggregate;

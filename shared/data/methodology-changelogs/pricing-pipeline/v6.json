@@ -1,5 +1,20 @@
 [
   {
+    "version": "6.96",
+    "title": "Fail-closed XAUT circulating supply, 7-day reconciled disclosure ceiling, and outage-fallback perimeter guard",
+    "date": "2026-11-25",
+    "effectiveAt": 1795615200,
+    "summary": "XAUT supply now fails closed instead of falling back to treasury-inclusive DefiLlama protocol caps or CoinGecko market caps when Tether's transparency disclosure ages past 48 hours or fails on-chain reconciliation. The supply lane decouples its disclosure age ceiling to seven days strictly gated on an exact zero-unit finalized Ethereum match, restricts carry-forward to prior onchain-circulating-supply rows, and excludes XAUT from CoinGecko outage supply intake.",
+    "impact": [
+      "Fail-closed gold supply lane (`gold.ts`): `xaut-tether` no longer fetches DefiLlama `/protocol/tether-gold` or reads CoinGecko market caps. When `readXautSupply()` cannot admit an issuer-reconciled finalized Ethereum read, `resolveSupply` returns `{ mcap: null, supplySource: \"onchain-supply-withheld\" }` with null native/valuation fields so `mergeSupplementalLastKnownGood()` carries an eligible clocked `onchain-circulating-supply` row for up to seven days (`supplyRestored: true`, preserving its original block clock and fresh market price) or publishes unavailable supply instead of jumping to a treasury-inclusive cap.",
+      "Decoupled 7-day supply-lane disclosure ceiling (`XAUT_SUPPLY_DISCLOSURE_MAX_AGE_SEC = 7 * 86_400` in `xaut-supply-attribution-contract.ts`, separate from V9 attribution's unchanged 48-hour `XAUT_DISCLOSURE_MAX_AGE_SEC` and from `SUPPLEMENTAL_RESTORE_MAX_AGE_SEC`): disclosures aged >48h and <=7d are admitted at the fresh finalized Ethereum `block.timestamp` only when `totalSupply - treasury === totalAuthorized - notIssued` to 0 micro-XAUT and `quarantinedRaw === 0`, emitting a structured warning log (`xaut-disclosure-extended-age-admitted`) with `sourceTimestampSec` and disclosure age. Blind spot: post-disclosure events that move no on-chain balance (such as token quarantines/freezes or wallet liability reclassifications) cannot be observed on-chain for up to 7d (plus up to 7d further carry if reconciliation later fails).",
+      "Mixed-perimeter carry and outage guards: `isWithinRestoreCeiling()` refuses any `xaut-tether` predecessor whose `supplySource` is not `onchain-circulating-supply` (blocking `defillama` and `coingecko-fallback` carries on both supplemental merge and missing-tracked restore), and `buildFallbackAssetsFromCoinGecko()` excludes `xaut-tether` so DefiLlama outages cannot inject a treasury-inclusive `coingecko-fallback` row.",
+      "No new `SUPPLY_PERIMETER_CHANGES` entry is added: the 2026-11-19 XAUT entry already fences pre-cutover history, XAUT USD comparisons are same-producer only, and native comparisons require `onchain-circulating-supply`. Activation is provisional; re-date effectiveAt at release."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.95",
     "title": "Listing policy v2 market-wide supply perimeter cutover and date-fenced history continuity",
     "date": "2026-11-25",
