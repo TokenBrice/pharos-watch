@@ -144,7 +144,10 @@ scopes, scoped reserve observations and bounded reserve facts. Their boundaries 
 from original authored clocks plus canonical policy budgets (never a +N-day replay),
 with inclusive/exclusive semantics; admission joins exported resolvers or the replay,
 and a missing join is `unknown`. Wrapper-allocation and operational-resilience dates
-are an inactive/history census, never renewals. A census error writes a **partial**
+are an inactive/history census, never renewals. Retained registry records for non-active
+assets (delisted, frozen, quarantined, or pre-launch — absent from `ACTIVE_META_BY_ID`)
+stay intact on disk and are counted under `Inactive` in the family census rather than
+queued as upcoming or lapsed renewals. A census error writes a **partial**
 report, then exits nonzero.
 
 The queue consumes the `projected` rows from production's `resolveReviewedReserveAdmission()`
