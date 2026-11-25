@@ -11,22 +11,12 @@ vi.mock("../../lib/fetch-retry", async (importOriginal) => ({
     (await importOriginal<typeof import("../../lib/fetch-retry")>()).DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES,
 }));
 
+import { fetchWithRetry } from "../../lib/fetch-retry";
 import { RATE_DERIVED_CONFIGS } from "../../lib/yield-config/yield-config-rate-sources";
 import { fetchZephyrZysSource } from "../../lib/yield-source-adapters/zephyr";
 import { LIQUITY_V2_SP_CONFIG, fetchCurveScrvusdCurrentRateSource, fetchLiquityV2StabilityPoolSource, type LiquityV2SpSourceConfig } from "../yield-sync/sources-optional-onchain";
 import { fetchBeefySources, fetchMorphoVaultSources, fetchPendleMarketSources, fetchYearnKongSources, fetchYearnYboldSource } from "../yield-sync/sources-optional-vaults";
 import { fetchHashnoteUsycSource, fetchReProtocolReusdSource } from "../yield-sync/sources-optional-nav";
-
-const mockMorpho = (items: unknown[]) => mockYieldSourceRoutes([{ match: "api.morpho.org", body: { data: { vaults: { items } } } }]);
-
-const morphoVault = (overrides: Record<string, unknown> = {}) => ({
-  address: "0x9eF4cb75FeD5b3913219E881E0FF0b10a6761CF3",
-  name: "Gauntlet USDC Prime",
-  asset: { symbol: "USDC", address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" },
-  chain: { id: 1 },
-  state: { netApy: 0.03, totalAssetsUsd: 1_000_000, fee: 0 },
-  ...overrides,
-});
 
 const pendleMarket = (overrides: Record<string, unknown> = {}) => ({
   id: "1-0xabc",
@@ -484,113 +474,123 @@ describe("fetchLiquityV2StabilityPoolSource", () => {
 });
 
 describe("fetchMorphoVaultSources", () => {
-  afterEach(cleanupYieldSourceTest);
+  const NOW = 1_790_121_600, OBS = NOW - 3600;
+  const USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
+  const USDT = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
+  const VAULT = "0x9eF4cb75FeD5b3913219E881E0FF0b10a6761CF3";
+  const hex = (n: number) => `0x${n.toString(16).padStart(40, "0")}`;
+  const item = (o = {}) => ({ chain_id: 1, vault_address: VAULT, name: "Gauntlet USDC Prime", asset_address: USDC, ...o });
+  const state = (total_assets: string, address = VAULT) => ({ data: { chain_id: 1, address, total_assets } });
+  const hist = (data: unknown[]) => ({ params: { chain_id: "1", vault_address: VAULT }, data });
 
-  it("returns yield sources for stablecoin vaults", async () => {
-    vi.spyOn(Date, "now").mockReturnValue(1_790_121_600_000);
-    const fetchSpy = mockMorpho([
-      morphoVault({ state: { netApy: 0.02968, totalAssetsUsd: 142_917_322, fee: 0 } }),
-    ]);
+  type Reply = Record<string, unknown> | Response | ((req: Request) => Response | { body: unknown } | Promise<Response>);
+  type RO = { pages?: { data: unknown[]; cursor?: string | null }[]; price?: Reply; state?: Reply; hist?: Reply };
+  function mockRest(o: RO = {}) {
+    const pages = o.pages ?? [{ data: [item()], cursor: null }];
+    const pick = (v: Reply | undefined, fb: (c: string, a: string) => unknown) => (req: Request) =>
+      v !== undefined ? (typeof v === "function" ? v(req) : v instanceof Response ? v : { body: v })
+        : { body: fb(...(new URL(req.url).pathname.split("/")[3]!.split(":") as [string, string])) };
+    return mockYieldSourceRoutes([
+      { match: "/v0/vaults-v1?", respond: (req) => { const c = new URL(req.url).searchParams.get("cursor"); return { body: pages[c == null ? 0 : pages.findIndex((p) => p.cursor === c) + 1] ?? { data: [], cursor: null } }; } },
+      { match: "/v0/tokens/", respond: pick(o.price, (c, a) => ({ data: { chain_id: +c, address: a, price: 1, timestamp: OBS } })) },
+      { match: "/state", respond: pick(o.state, (c, a) => ({ data: { chain_id: +c, address: a, total_assets: "142917322000000" } })) },
+      { match: "/apy/history?lookback=six_hours", respond: pick(o.hist, (c, a) => ({ params: { chain_id: c, vault_address: a }, data: [{ timestamp: OBS, apy: 0.02968 }] })) },
+    ], { requireMatch: true });
+  }
 
-    const { candidates: results } = await fetchMorphoVaultSources();
-    expect(results.length).toBe(1);
-    const requests = fetchSpy.mock.calls.map((call) => JSON.parse(call[1]?.body as string) as { variables: { symbols: string[] } });
-    expect(requests.every((request) => request.variables.symbols.length <= 100)).toBe(true);
-    expect(requests.length).toBeGreaterThan(1);
-    const request = { variables: { symbols: requests.flatMap((entry) => entry.variables.symbols) } };
-    expect(request.variables.symbols).toContain("USDC");
-    expect(request.variables.symbols).not.toEqual([
-      "USDC",
-      "USDT",
-      "DAI",
-      "USDS",
-      "GHO",
-      "FRAX",
-      "PYUSD",
-      "FRXUSD",
-      "crvUSD",
-      "DOLA",
-      "LUSD",
-    ]);
-    expect(results[0]).toStrictEqual({
-      stablecoinId: "usdc-circle", symbol: "USDC", chain: "ethereum",
-      address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-      yield: {
-        currentApy: 2.968, apyBase: 2.968, apyReward: null,
-        sourcePool: "0x9eF4cb75FeD5b3913219E881E0FF0b10a6761CF3",
-        sourceTvlUsd: 142_917_322, dataSource: "protocol-api", exchangeRate: null,
-        sourceKey: "protocol-api:morpho-vault:ethereum:0x9ef4cb75fed5b3913219e881e0ff0b10a6761cf3",
-        yieldSource: "Morpho: Gauntlet USDC Prime", yieldType: "lending-opportunity",
-        sourceObservedAt: null, sourceFetchedAt: 1_790_121_600, comparisonAnchorObservedAt: null,
+  const withRealRetry = async (fn: () => Promise<void>) => {
+    const prev = vi.mocked(fetchWithRetry).getMockImplementation()!;
+    vi.mocked(fetchWithRetry).mockImplementation((await vi.importActual<typeof import("../../lib/fetch-retry")>("../../lib/fetch-retry")).fetchWithRetry);
+    try { await fn(); } finally { vi.mocked(fetchWithRetry).mockImplementation(prev); }
+  };
+
+  beforeEach(() => { vi.spyOn(Date, "now").mockReturnValue(NOW * 1000); });
+  afterEach(() => { vi.useRealTimers(); cleanupYieldSourceTest(); });
+
+  it("discovers V1 vaults, dedupes prices, pre-filters <$100k, and emits sourceObservedAt", async () => {
+    const spy = mockRest({
+      pages: [
+        { data: [item(), item({ vault_address: hex(1), name: "Tiny" }), item({ vault_address: undefined }), item({ asset_address: hex(9) })], cursor: "p2" },
+        { data: [item({ vault_address: hex(2), name: "USDT0", asset_address: USDT })], cursor: null },
+      ],
+      state: (req) => {
+        const a = new URL(req.url).pathname.split("/")[3]!.split(":")[1]!;
+        return { body: state(a === hex(1) ? "99999000000" : "142917322000000", a) };
       },
+    });
+    expect(await fetchMorphoVaultSources()).toEqual({
+      degraded: false,
+      candidates: [
+        {
+          stablecoinId: "usdc-circle", symbol: "USDC", chain: "ethereum", address: USDC,
+          yield: {
+            currentApy: 2.968, apyBase: 2.968, apyReward: null, sourcePool: VAULT, sourceTvlUsd: 142_917_322,
+            dataSource: "protocol-api", exchangeRate: null, sourceKey: `protocol-api:morpho-vault:ethereum:${VAULT.toLowerCase()}`,
+            yieldSource: "Morpho: Gauntlet USDC Prime", yieldType: "lending-opportunity",
+            sourceObservedAt: OBS, sourceFetchedAt: NOW, comparisonAnchorObservedAt: null,
+          },
+        },
+        expect.objectContaining({ stablecoinId: "usdt-tether", symbol: "USDT" }),
+      ],
+    });
+    const urls = spy.mock.calls.map(([u]) => String(u));
+    expect(urls.filter((u) => u.includes("/v0/tokens/"))).toHaveLength(2);
+    expect(urls.some((u) => u.includes(`${hex(1)}/apy/history`))).toBe(false);
+  });
+
+  const F = "morpho-fetch-failed", P = "morpho-token-price-unavailable";
+  const edgeCases: Array<[string, RO, string?]> = [
+    ["null state", { state: { data: null } }],
+    ["zero assets", { state: state("0") }],
+    ["empty history", { hist: hist([]) }],
+    ["zero apy", { hist: hist([{ timestamp: OBS, apy: 0 }]) }],
+    ["stale clock", { hist: hist([{ timestamp: NOW - 7 * 3600, apy: 0.03 }]) }],
+    ["future clock", { hist: hist([{ timestamp: NOW + 60, apy: 0.03 }]) }],
+    ["cursor cycle", { pages: [{ data: [], cursor: "c" }, { data: [], cursor: "c" }] }, F],
+    ["page cap", { pages: Array.from({ length: 11 }, (_, i) => ({ data: [], cursor: `c${i}` })) }, F],
+    ["price 404", { price: new Response("", { status: 404 }) }, P],
+    ["null price", { price: { data: { chain_id: 1, address: USDC, price: null, timestamp: OBS } } }, P],
+    ["state mismatch", { state: state("1000000000000", "0x1") }, F],
+    ["bad apy json", { hist: new Response("{") }, F],
+  ];
+  it.each(edgeCases)("handles %s", async (_l, overrides, degradedReason) => {
+    mockRest(overrides);
+    await expect(fetchMorphoVaultSources()).resolves.toEqual(
+      degradedReason ? { candidates: [], degraded: true, degradedReason } : { candidates: [], degraded: false },
+    );
+  });
+
+  it("retries single 5xx/timeout once and degrades on persistent 5xx", async () => {
+    vi.useFakeTimers().setSystemTime(NOW * 1000);
+    await withRealRetry(async () => {
+      for (const m of ["5xx", "timeout", "fail"] as const) {
+        let n = 0;
+        mockRest({
+          state: (req) => ++n === 1 && m === "timeout"
+            ? new Promise((_r, rej) => req.signal.addEventListener("abort", () => rej(req.signal.reason), { once: true }))
+            : m === "fail" || n === 1 ? new Response("", { status: 503 }) : { body: state("200000000000") },
+        });
+        const p = fetchMorphoVaultSources();
+        await vi.advanceTimersByTimeAsync(12_000);
+        const res = await p;
+        expect([n, res.degraded, res.candidates.length]).toEqual([2, m === "fail", m === "fail" ? 0 : 1]);
+      }
     });
   });
 
-  it("reports a degraded fetch on HTTP error", async () => {
-    mockYieldSourceRoutes([{ match: "api.morpho.org", body: { error: "internal server error" }, status: 500 }]);
-    await expect(fetchMorphoVaultSources()).resolves.toEqual({ candidates: [], degraded: true });
-  });
-
-  it.each([0, 0.03])("accepts the tracked vault only with positive APY (%s)", async (netApy) => {
-    mockMorpho([
-      morphoVault({ address: "0xabc", name: "Empty Vault", state: { netApy, totalAssetsUsd: 1_000_000, fee: 0 } }),
-    ]);
-
-    const { candidates: results } = await fetchMorphoVaultSources();
-    expect(results.map((result) => result.yield.sourceKey)).toEqual(
-      netApy === 0 ? [] : ["protocol-api:morpho-vault:ethereum:0xabc"],
-    );
-  });
-
-  it("skips a malformed item but keeps a valid one on the same page", async () => {
-    mockMorpho([
-      morphoVault({ name: "Missing address", address: undefined }),
-      morphoVault(),
-    ]);
-
-    const { candidates: results } = await fetchMorphoVaultSources();
-    expect(results).toHaveLength(1);
-    expect(results[0].symbol).toBe("USDC");
-  });
-
-  it("skips vaults whose asset address is missing or not tracked", async () => {
-    mockMorpho([
-      morphoVault({ address: "0xabc", name: "Missing Asset Address", asset: { symbol: "USDC" } }),
-      morphoVault({ address: "0xdef", name: "Spoofed Asset Address", asset: { symbol: "USDC", address: "0xdead000000000000000000000000000000000000", }, state: { netApy: 0.42, totalAssetsUsd: 1_000_000, fee: 0 } }),
-    ]);
-
-    const { candidates: results } = await fetchMorphoVaultSources();
-    expect(results).toEqual([]);
-  });
-
-  it("uses tracked chain/address identity before returned symbols", async () => {
-    mockMorpho([
-      morphoVault({ address: "0xabc", name: "Wrong USDC", asset: { symbol: "USDC", address: "0xdAC17F958D2ee523a2206206994597C13D831ec7", } }),
-    ]);
-
-    const { candidates: results } = await fetchMorphoVaultSources();
-    expect(results).toHaveLength(1);
-    expect(results[0]).toEqual(
-      expect.objectContaining({
-        stablecoinId: "usdt-tether",
-        symbol: "USDT",
-      }),
-    );
-  });
-
-  it.each(["http", "parse"] as const)("preserves %s failure's pagination retention policy", async (failure) => {
-    const vault = morphoVault({ address: "0xAbC", name: "USDC" });
-    let page = 0;
-    mockYieldSourceRoutes([{
-      match: "api.morpho.org", matchBody: '"USDC"',
-      respond: () => ++page === 1
-        ? { body: { data: { vaults: { items: Array.from({ length: 100 }, () => vault) } } } }
-        : failure === "http" ? { status: 500, body: {} } : new Response("{"),
-    }, { match: "api.morpho.org", body: { data: { vaults: { items: [] } } } }]);
-    const result = await fetchMorphoVaultSources();
-    expect(result.degraded).toBe(true);
-    expect(result.candidates).toHaveLength(failure === "http" ? 100 : 0);
-    expect(page).toBe(2);
+  it.each([
+    [{ "Retry-After": "600" }, 600, "retry-after"],
+    [{ "Retry-After": "604800" }, 604_800, "retry-after"],
+    [{}, 600, "default"],
+  ] as const)("short-circuits 429 (%j)", async (headers, backoffSec, source) => {
+    await withRealRetry(async () => {
+      const spy = mockRest({
+        pages: [{ data: Array.from({ length: 6 }, (_, i) => item({ vault_address: hex(i + 1) })), cursor: null }],
+        state: () => new Response("", { status: 429, headers }),
+      });
+      await expect(fetchMorphoVaultSources()).resolves.toEqual({ candidates: [], degraded: true, rateLimited: { backoffSec, source } });
+      expect(spy.mock.calls.filter(([u]) => String(u).includes("/state")).length).toBeLessThanOrEqual(3);
+    });
   });
 });
 
@@ -599,7 +599,7 @@ describe.each([
   ["Pendle", fetchPendleMarketSources],
   ["Kong", fetchYearnKongSources],
   ["Beefy", fetchBeefySources],
-] as const)("%s supplemental lifecycle", (_name, fetchSources) => {
+] as const)("%s supplemental lifecycle", (name, fetchSources) => {
   afterEach(() => { vi.useRealTimers(); cleanupYieldSourceTest(); });
 
   it.each(["parent", "family"] as const)("preserves %s cancellation and cleans up the budget", async (kind) => {
@@ -611,7 +611,9 @@ describe.each([
     const pending = fetchSources(parent.signal);
     const outcome = kind === "parent"
       ? expect(pending).rejects.toThrow("parent cancelled")
-      : expect(pending).resolves.toStrictEqual({ candidates: [], degraded: true });
+      : expect(pending).resolves.toStrictEqual({
+          candidates: [], degraded: true, ...(name === "Morpho" ? { degradedReason: "morpho-budget-exhausted" } : {}),
+        });
     if (kind === "parent") parent.abort(new Error("parent cancelled"));
     else await vi.advanceTimersByTimeAsync(25_000);
     await outcome;

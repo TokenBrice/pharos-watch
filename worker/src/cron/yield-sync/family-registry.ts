@@ -1,6 +1,7 @@
 import { OPTIONAL_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
 import { isMorphoNetYieldSourceKey } from "@shared/lib/yield-source-history";
 import {
+  MORPHO_SUPPLEMENTAL_STALE_THRESHOLD_MS,
   PENDLE_SUPPLEMENTAL_FETCH_CADENCE_SEC,
   PENDLE_SUPPLEMENTAL_STALE_THRESHOLD_MS,
   SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
@@ -26,7 +27,7 @@ export const SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY = {
   morpho: {
     required: true,
     fetchCadenceSec: null,
-    staleThresholdSec: SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS / 1000,
+    staleThresholdSec: MORPHO_SUPPLEMENTAL_STALE_THRESHOLD_MS / 1000,
     routes: [
       { prefix: "protocol-api:morpho-vault:", venueProtocol: "morpho-blue", chainSegmentIndex: 2 },
     ],

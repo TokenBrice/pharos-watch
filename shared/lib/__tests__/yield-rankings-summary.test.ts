@@ -367,4 +367,18 @@ describe("projectYieldRankingsSummary", () => {
     ).toBe(false);
   });
 
+  it("admits optional nullable listingClass in strict summary rows without emitting it when absent", () => {
+    const detailed = makeDetailedResponse(1);
+    const wireAbsent = JSON.parse(JSON.stringify(projectYieldRankingsSummary(detailed)));
+    expect(wireAbsent.rankings[0]).not.toHaveProperty("listingClass");
+    expect(YieldRankingsSummaryResponseSchema.safeParse(wireAbsent).success).toBe(true);
+    for (const listingClass of ["tokenized-fund", null] as const) {
+      detailed.rankings[0].listingClass = listingClass;
+      const wire = JSON.parse(JSON.stringify(projectYieldRankingsSummary(detailed)));
+      expect(YieldRankingsSummaryResponseSchema.parse(wire).rankings[0].listingClass).toBe(listingClass);
+    }
+    expect(YieldRankingSummarySchema.safeParse({ ...wireAbsent.rankings[0], listingClass: "bogus" }).success).toBe(false);
+    expect(YieldRankingSummarySchema.safeParse({ ...wireAbsent.rankings[0], extra: 1 }).success).toBe(false);
+  });
+
 });

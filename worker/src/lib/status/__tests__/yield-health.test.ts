@@ -716,7 +716,7 @@ describe("loadYieldHealthSummary", () => {
       status: "healthy",
       maxAgeSec: 48 * 3600,
     });
-    expect(summary.supplemental.families?.morpho?.maxAgeSec).toBe(6 * 3600);
+    expect(summary.supplemental.families?.morpho?.maxAgeSec).toBe(8 * 3600);
     expect(summary.supplemental.status).toBe("healthy");
   });
 

@@ -23,6 +23,9 @@ export const STALE_THRESHOLD_MS = CRON_INTERVALS["sync-yield-data"] * YIELD_STAL
 const SUPPLEMENTAL_STALE_THRESHOLD_CYCLES = 1.5;
 export const SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS =
   CRON_INTERVALS["sync-yield-supplemental"] * SUPPLEMENTAL_STALE_THRESHOLD_CYCLES * 1000;
+const MORPHO_SUPPLEMENTAL_STALE_THRESHOLD_CYCLES = 2;
+export const MORPHO_SUPPLEMENTAL_STALE_THRESHOLD_MS =
+  CRON_INTERVALS["sync-yield-supplemental"] * MORPHO_SUPPLEMENTAL_STALE_THRESHOLD_CYCLES * 1000;
 export const PENDLE_SUPPLEMENTAL_FETCH_CADENCE_SEC = PENDLE_SUPPLEMENTAL_FETCH_CADENCE_MS / 1000;
 export const PENDLE_SUPPLEMENTAL_STALE_THRESHOLD_MS = PENDLE_SUPPLEMENTAL_FETCH_CADENCE_MS * 2;
 export const SLOW_NAV_SOURCE_STALE_THRESHOLD_MS = 3 * DAY_MS;
@@ -48,13 +51,15 @@ export const SUPPLEMENTAL_FAMILY_COUNT_DROP_ACCEPT_RUNS = 6;
  * actually receives a new observation (B21; measured on the live payload
  * 2026-09-12, n=157):
  *
- * | class                          | cadence | aging | stale |
- * |--------------------------------|---------|-------|-------|
- * | core families (`sync-yield-data`) | 2h | 4h    | 6h    |
- * | supplemental families          | 4h      | 5h    | 6h    |
- * | price-derived daily snapshot   | 24h     | 27h   | 30h   |
- * | rate-derived daily benchmark   | 24h     | 30h   | 36h   |
- * | slow NAV oracles               | 24h     | 48h   | 72h   |
+ * | class                             | cadence | aging | stale |
+ * |-----------------------------------|---------|-------|-------|
+ * | core families (`sync-yield-data`) | 2h      | 4h    | 6h    |
+ * | supplemental families             | 4h      | 5h    | 6h    |
+ * | Morpho supplemental vaults        | 4h      | 6h    | 8h    |
+ * | Pendle daily lane                 | 24h     | 36h   | 48h   |
+ * | price-derived daily snapshot      | 24h     | 27h   | 30h   |
+ * | rate-derived daily benchmark      | 24h     | 30h   | 36h   |
+ * | slow NAV oracles                  | 24h     | 48h   | 72h   |
  *
  * `aging` is the midpoint between a class cadence and its stale bound
  * ("missed its refresh slot, not yet stale"), which is exactly 2x the producer
@@ -186,6 +191,9 @@ export function getRankingStaleThresholdMs(dataSource: string, sourceKey?: strin
   }
   if (dataSource === "protocol-api" && sourceKey?.startsWith("protocol-api:pendle:") === true) {
     return PENDLE_SUPPLEMENTAL_STALE_THRESHOLD_MS;
+  }
+  if (dataSource === "protocol-api" && sourceKey?.startsWith("protocol-api:morpho-vault:") === true) {
+    return MORPHO_SUPPLEMENTAL_STALE_THRESHOLD_MS;
   }
   if ((dataSource === "protocol-api" && !isMorphoNetYieldSourceKey(sourceKey))
     || (dataSource === "onchain" && isSupplementalOnchainSource(sourceKey))) {

@@ -51,13 +51,14 @@ import type {
   ResolvedYieldCandidate,
 } from "./types";
 import {
-  PENDLE_RATE_LIMIT_BACKOFF_REASON,
-  buildYieldSupplementalPendleBackoff,
+  SUPPLEMENTAL_FAMILY_RATE_LIMIT_BACKOFF_REASONS,
+  buildYieldSupplementalFamilyBackoff,
+  getYieldSupplementalFamilyBackoffCacheKey,
   getYieldSupplementalFamilyCacheKey,
-  getYieldSupplementalPendleBackoffCacheKey,
-  parseYieldSupplementalPendleBackoff,
+  parseYieldSupplementalFamilyBackoff,
   parseYieldSupplementalSourcesCache,
-  type YieldSupplementalPendleBackoff,
+  type RateLimitedSupplementalFamilyKey,
+  type YieldSupplementalFamilyBackoff,
 } from "./cache";
 
 const AAVE_SUPPORTED_CHAINS = new Set(["ethereum", "arbitrum", "base"]);
@@ -88,15 +89,15 @@ export interface SupplementalSourceFamilyResult {
    */
   degraded: boolean;
   /**
-   * PENDLE-RL: neutral skip — the family kept its retained snapshot without a
-   * fetch (per-family cadence not elapsed, or an active 429 backoff refused
-   * the call). The writer leaves the family cache row untouched and the run
-   * stays non-degraded while the retained row is inside its staleness budget.
+   * PENDLE-RL / MORPHO-RL: neutral skip - the family kept its retained snapshot
+   * without a fetch (per-family cadence not elapsed, or an active 429 backoff
+   * refused the call). The writer leaves the family cache row untouched and the
+   * run stays non-degraded while the retained row is inside its staleness budget.
    */
-  skipReason?: "pendle-cadence-not-due" | "pendle-rate-limited-backoff";
-  /** PENDLE-RL (R4): machine-readable cause carried into the run-outcome row when degraded. */
+  skipReason?: "pendle-cadence-not-due" | "pendle-rate-limited-backoff" | "morpho-rate-limited-backoff";
+  /** R4: machine-readable cause carried into the run-outcome row when degraded. */
   degradedReason?: string;
-  backoff?: YieldSupplementalPendleBackoff | null;
+  backoff?: YieldSupplementalFamilyBackoff | null;
   telemetry?: OptionalRpcFamilyTelemetry;
   provider?: unknown;
 }
@@ -405,20 +406,16 @@ function buildAaveSourceKey(stablecoinId: string, chain: string, assetAddress: s
 }
 
 interface SimpleSupplementalFamily {
-  key: "morpho" | "yearnKong" | "beefy" | "roycoDawn";
+  key: "yearnKong" | "beefy" | "roycoDawn";
   label: string;
   fetch: (signal?: AbortSignal) => Promise<{
     candidates: ResolvedYieldCandidate[];
     degraded: boolean;
+    degradedReason?: string;
   }>;
 }
 
 const SIMPLE_SUPPLEMENTAL_FAMILIES: Record<SimpleSupplementalFamily["key"], SimpleSupplementalFamily> = {
-  morpho: {
-    key: "morpho",
-    label: "Morpho supplemental family",
-    fetch: fetchMorphoVaultSources,
-  },
   yearnKong: {
     key: "yearnKong",
     label: "Yearn Kong supplemental family",
@@ -436,15 +433,19 @@ const SIMPLE_SUPPLEMENTAL_FAMILIES: Record<SimpleSupplementalFamily["key"], Simp
   },
 };
 
-/** Anonymous Pendle requests share an IP quota; skips never refresh observation timestamps. */
-async function runPendleFamily(
+/** Anonymous Pendle/Morpho requests share an IP quota; skips never refresh observation timestamps. */
+async function runRateLimitedSupplementalFamily(
   context: SupplementalSourceFamilyContext,
+  family: RateLimitedSupplementalFamilyKey,
+  label: string,
+  fetchFamily: (signal?: AbortSignal) => Promise<SupplementalFamilyFetchResult>,
 ): Promise<SupplementalSourceFamilyResult> {
   const { db, startSec, signal } = context;
-  const familyKey = getYieldSupplementalFamilyCacheKey("pendle");
-  const backoffKey = getYieldSupplementalPendleBackoffCacheKey();
+  const familyKey = getYieldSupplementalFamilyCacheKey(family);
+  const backoffKey = getYieldSupplementalFamilyBackoffCacheKey(family);
+  const backoffReason = SUPPLEMENTAL_FAMILY_RATE_LIMIT_BACKOFF_REASONS[family];
   // A failed state read must not kill the whole producer run: fall back to an
-  // ungated fetch, which costs at most the three page requests.
+  // ungated fetch, which costs at most one upstream sweep.
   let rows = new Map<string, { value: string; updatedAt: number }>();
   if (db) {
     try {
@@ -454,31 +455,33 @@ async function runPendleFamily(
         scope: "lib",
         job: "sync-yield-supplemental",
         level: "warn",
-        event: "pendle-lane-state-read-failed",
-        message: "Pendle lane state read failed; fetching without cadence/backoff gate",
+        event: `${family}-lane-state-read-failed`,
+        message: `${label} state read failed; fetching without cadence/backoff gate`,
         error,
       });
     }
   }
   const row = rows.get(familyKey);
   const retained = row ? parseYieldSupplementalSourcesCache(row.value, row.updatedAt, startSec) : null;
-  let backoff = parseYieldSupplementalPendleBackoff(rows.get(backoffKey)?.value, startSec);
-  const notDue = retained != null && retained.ageSeconds < SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY.pendle.fetchCadenceSec;
+  let backoff = parseYieldSupplementalFamilyBackoff(family, rows.get(backoffKey)?.value, startSec);
+  const fetchCadenceSec = SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY[family].fetchCadenceSec;
+  const notDue = fetchCadenceSec != null && retained != null && retained.ageSeconds < fetchCadenceSec;
 
   if (!backoff && !notDue) {
     const { value, status } = await runOptionalSupplementalFamily<SupplementalFamilyFetchResult>(
-      "Pendle supplemental family",
+      label,
       signal,
-      () => fetchPendleMarketSources(signal),
+      () => fetchFamily(signal),
       { candidates: [], degraded: false },
     );
     if (!value.rateLimited) {
       return {
-        key: "pendle",
+        key: family,
         candidates: value.candidates,
         sourceFamilyCount: value.candidates.length,
         status,
         degraded: status === "failed" || value.degraded,
+        ...(value.degradedReason ? { degradedReason: value.degradedReason } : {}),
       };
     }
     const recordedAtSec = Math.floor(Date.now() / 1000);
@@ -486,26 +489,26 @@ async function runPendleFamily(
       backoffUntilSec: recordedAtSec + value.rateLimited.backoffSec,
       source: value.rateLimited.source,
       recordedAtSec,
-      reason: PENDLE_RATE_LIMIT_BACKOFF_REASON,
+      reason: backoffReason,
     };
     // A failed write must not kill the run: the in-memory window still governs
     // this execution, and the next run re-derives it from a fresh 429.
     if (db) {
       try {
-        await setCache(db, backoffKey, buildYieldSupplementalPendleBackoff(backoff), signal);
+        await setCache(db, backoffKey, buildYieldSupplementalFamilyBackoff(family, backoff), signal);
         await logCronEvent(db, {
           job: "sync-yield-supplemental",
-          eventType: "pendle-rate-limited-backoff",
+          eventType: backoffReason,
           severity: "warning",
-          message: "Pendle returned HTTP 429; recorded its quota backoff window",
+          message: `${label} returned HTTP 429; recorded its quota backoff window`,
           metadata: { ...backoff },
         }).catch((error) => {
           logWorkerEvent({
             scope: "lib",
             job: "sync-yield-supplemental",
             level: "warn",
-            event: "pendle-backoff-event-failed",
-            message: "Pendle backoff was persisted but its cron event could not be recorded",
+            event: `${family}-backoff-event-failed`,
+            message: `${label} backoff was persisted but its cron event could not be recorded`,
             error,
           });
         });
@@ -514,26 +517,32 @@ async function runPendleFamily(
           scope: "lib",
           job: "sync-yield-supplemental",
           level: "warn",
-          event: "pendle-backoff-write-failed",
-          message: "Pendle rate-limit backoff row could not be persisted",
+          event: `${family}-backoff-write-failed`,
+          message: `${label} rate-limit backoff row could not be persisted`,
           error,
         });
       }
     }
   }
 
-  const fresh = retained != null && retained.ageSeconds <= getSupplementalFamilyStaleThresholdSec("pendle");
+  const fresh = retained != null && retained.ageSeconds <= getSupplementalFamilyStaleThresholdSec(family);
   const candidates = fresh ? retained.candidates : [];
   return {
-    key: "pendle",
+    key: family,
     candidates,
     sourceFamilyCount: candidates.length,
     status: "ok",
     degraded: !fresh,
     backoff: backoff ?? null,
     ...(fresh
-      ? { skipReason: backoff ? "pendle-rate-limited-backoff" : "pendle-cadence-not-due" }
-      : { degradedReason: PENDLE_RATE_LIMIT_BACKOFF_REASON }),
+      ? {
+          skipReason: backoff
+            ? family === "morpho"
+              ? "morpho-rate-limited-backoff"
+              : "pendle-rate-limited-backoff"
+            : "pendle-cadence-not-due",
+        }
+      : { degradedReason: backoffReason }),
   };
 }
 
@@ -553,6 +562,7 @@ async function runSimpleSupplementalFamily(
     sourceFamilyCount: value.candidates.length,
     status,
     degraded: status === "failed" || value.degraded,
+    ...(value.degradedReason ? { degradedReason: value.degradedReason } : {}),
   };
 }
 
@@ -670,8 +680,10 @@ const SUPPLEMENTAL_SOURCE_FAMILY_RUNNERS: Record<
   SupplementalSourceFamilyKey,
   (context: SupplementalSourceFamilyContext) => Promise<SupplementalSourceFamilyResult>
 > = {
-  morpho: (context) => runSimpleSupplementalFamily(context, SIMPLE_SUPPLEMENTAL_FAMILIES.morpho),
-  pendle: runPendleFamily,
+  morpho: (context) =>
+    runRateLimitedSupplementalFamily(context, "morpho", "Morpho supplemental family", fetchMorphoVaultSources),
+  pendle: (context) =>
+    runRateLimitedSupplementalFamily(context, "pendle", "Pendle supplemental family", fetchPendleMarketSources),
   yearnKong: (context) => runSimpleSupplementalFamily(context, SIMPLE_SUPPLEMENTAL_FAMILIES.yearnKong),
   beefy: (context) => runSimpleSupplementalFamily(context, SIMPLE_SUPPLEMENTAL_FAMILIES.beefy),
   compoundV3: runCompoundFamily,

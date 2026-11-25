@@ -23,7 +23,9 @@ describe("yield source-key routing table", () => {
     expect(REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS).toEqual(SUPPLEMENTAL_SOURCE_FAMILY_KEYS);
     for (const family of SUPPLEMENTAL_SOURCE_FAMILY_KEYS) {
       const entry = SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY[family];
-      expect(getSupplementalFamilyStaleThresholdSec(family)).toBe(family === "pendle" ? 48 * 3600 : 6 * 3600);
+      expect(getSupplementalFamilyStaleThresholdSec(family)).toBe(
+        family === "pendle" ? 48 * 3600 : family === "morpho" ? 8 * 3600 : 6 * 3600,
+      );
       expect(entry.fetchCadenceSec).toBe(family === "pendle" ? 24 * 3600 : null);
       for (const route of entry.routes) {
         expect(resolveYieldSourceKeyRoute(`${route.prefix}registry-fixture`)).toEqual({ ...route, family });
