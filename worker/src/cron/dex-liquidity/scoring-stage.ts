@@ -30,7 +30,9 @@ const DEX_LIQUIDITY_SCORING_STAGE_SCHEMA_VERSION = 1;
 // v7: source entries contain only identity and pools; aggregates are computed
 // by scoring, never staged as dormant placeholders. Older payloads fail closed.
 // v10 (7.51): require the reviewed Curve alias identity and valuation basis.
-const DEX_LIQUIDITY_SCORING_STAGE_PAYLOAD_VERSION = 10;
+// v11 (7.56): require general Curve `poolsPro` exact identity, fail-closed
+// below-floor twin and symbol-key guards, and `curveIdentityAttachment` state.
+const DEX_LIQUIDITY_SCORING_STAGE_PAYLOAD_VERSION = 11;
 export const DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES = 192 * 1024;
 export const DEX_LIQUIDITY_SCORING_STAGE_PROGRESS_CHUNK_INTERVAL = 24;
 const DEX_LIQUIDITY_SCORING_STAGE_READ_PAGE_SIZE = 4;
@@ -287,6 +289,7 @@ function* iterateScoringStageRecords(
     uniV3CandidateCarryForward: sourceState.uniV3CandidateCarryForward,
     uniswapV4CandidateCarryForward: sourceState.uniswapV4CandidateCarryForward,
     subgraphFailures: sourceState.subgraphFailures,
+    curveIdentityAttachment: sourceState.curveIdentityAttachment,
     criticalSourceFailures: sourceState.criticalSourceFailures,
     fallbackSignals: sourceState.fallbackSignals,
     directApiSourceSummary: sourceState.directApiSourceSummary,

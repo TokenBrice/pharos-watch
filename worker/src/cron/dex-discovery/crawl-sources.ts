@@ -19,7 +19,7 @@ import { crawlTezosPoolsStage } from "./crawl-tezos-pools";
 import { crawlIconBalancedPoolsStage } from "./crawl-icon-balanced-pools";
 import { crawlKavaSwapPoolsStage } from "./crawl-kava-swap-pools";
 import { crawlCosmosPoolsStage } from "./crawl-cosmos-pools";
-import { crawlSundaeSwapPoolsStage } from "./crawl-sundaeswap-pools";
+import { crawlSundaeSwapPoolsStage, type SundaeSwapAdaUsdLoader } from "./crawl-sundaeswap-pools";
 import { createCrawlStageContext } from "./staged-pool";
 import type { DexDeploymentProviderCheck, StagedPool } from "./types";
 import { classifyDexDeploymentOutcomes, type DexDeploymentOutcomeWrite } from "./deployment-outcomes";
@@ -86,6 +86,7 @@ export async function crawlCoin(
   sharedDexScreenerRunState?: DexScreenerDiscoveryRunState,
   onProviderStage?: (provider: DexDiscoveryCrawlerLeafId | "cg-tickers") => Promise<void>,
   loadMarketPrices?: () => Promise<DexValuationPrices | undefined>,
+  loadAdaUsdReference?: SundaeSwapAdaUsdLoader,
 ): Promise<CrawlResult> {
   const dexScreenerRunState = sharedDexScreenerRunState ?? createDexScreenerDiscoveryRunState();
   const finalizeOwnRun = async (result: CrawlResult): Promise<CrawlResult> => {
@@ -137,7 +138,7 @@ export async function crawlCoin(
     "icon-balanced": () => crawlIconBalancedPoolsStage({ coinTargets, context }),
     "kava-swap": () => crawlKavaSwapPoolsStage({ coinTargets, context }),
     cosmos: () => crawlCosmosPoolsStage({ coinTargets, context }),
-    sundaeswap: () => crawlSundaeSwapPoolsStage({ db, coinTargets, context }),
+    sundaeswap: () => crawlSundaeSwapPoolsStage({ db, coinTargets, context, loadAdaUsdReference }),
   };
   const executionLeaves = [...new Set(
     DEX_DISCOVERY_PROVIDER_REGISTRY
