@@ -510,7 +510,7 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     expect(result.warnings).toContain(`active-price-coverage-incomplete:${missingId}`);
   });
 
-  it.each(["dllr-sovryn", "aid-gaib"])("keeps %s's acknowledged critical-duration gap visible without warnings, then re-alerts at expiry", async (id) => {
+  it.each(["dllr-sovryn", "usdn-smardex"])("keeps %s's acknowledged critical-duration gap visible without warnings, then re-alerts at expiry", async (id) => {
     const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === id)!;
     for (const compact of [false, true]) {
       const nowSec = review.expiresAt - 1;

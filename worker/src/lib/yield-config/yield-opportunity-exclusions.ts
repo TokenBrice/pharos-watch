@@ -70,8 +70,8 @@ export const YIELD_OPPORTUNITY_EXCLUSIONS: readonly YieldOpportunityExclusion[] 
         "2ce146c4-4443-50eb-851b-fc7d37a3cd0a",
       ],
     },
-    since: "2026-11-18", reviewedAt: "2026-11-20", nextReviewAt: "2026-11-26", owner: "ops",
-    reason: "K3 paused sBOLD after the vault drain. Remove only after verified vault reopening, reconciled backing and a current exact-vault holder rate: https://x.com/i/article/2123376353923764224",
+    since: "2026-11-18", reviewedAt: "2026-11-25", nextReviewAt: "2026-12-09", owner: "ops",
+    reason: "K3 paused sBOLD after the vault drain; re-verified 2026-11-25 at Ethereum block 26491336 (paused, 4.5725 BOLD / 4.372e19 shares, convertToAssets(1e18)=0; owner lifecycle decision on #2106 has no fixed deadline). Remove only after verified vault reopening, reconciled backing and a current exact-vault holder rate: https://x.com/i/article/2123376353923764224",
   },
 ];
 

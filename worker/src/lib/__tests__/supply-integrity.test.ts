@@ -11,10 +11,10 @@ import {
   loadSupplyIntegrityReport,
   SUPPLY_INTEGRITY_CONFIRM_KEY,
   REVIEWED_SUPPLY_CARRIES,
+  REVIEWED_SUPPLY_VALUE_REBASELINES,
   type SupplyIntegrityReport,
 } from "../supply-integrity";
 import { assessSupplyIntegrityQuality } from "../status/supply-integrity-quality";
-import { STABLECOIN_PRICE_GAP_REVIEWS } from "../stablecoin-publication-coverage";
 import {
   buildSupplySnapshotCompletionMarker,
   buildSupplySnapshotCoverageExpectation,
@@ -191,7 +191,7 @@ describe("supply integrity", () => {
     expect(expiresAt - reviewedAt).toBeLessThanOrEqual(RESERVE_FEED_REVIEW_MAX_AGE_SEC);
     if (review.stablecoinId === "said-gaib") {
       expect(reviewedAt).toBe(Date.UTC(2026, 10, 22, 12, 38) / 1000);
-      expect(expiresAt).toBeLessThanOrEqual(STABLECOIN_PRICE_GAP_REVIEWS.find(r => r.stablecoinId === "aid-gaib")!.expiresAt);
+      expect(expiresAt).toBe(Date.UTC(2026, 11, 6, 12, 38) / 1000);
     }
     const carried = [{ id: stablecoinId, current: 0, previous: 100, supplyRestored: true, supplyObservedAt: reviewedAt - 3600,
       guard: review.reason === "defillama-list-fill-default-carry", currentSource: review.reason === "coingecko-cap-carry"
@@ -489,16 +489,13 @@ describe("supply integrity", () => {
       confirmState: { "value-drift": { signature: "x", runs: 2, held: { "ethenausdc-steakhouse": 44_945_335, "usdglo-glo": 2_900_000 } } },
     }, Date.parse("2026-11-23T12:54:00Z") / 1000);
     expect(r.value).toMatchObject({ driftFindings: [], heldDriftFindings: [{ stablecoinId: "usdglo-glo" }] });
+    expect(REVIEWED_SUPPLY_VALUE_REBASELINES.map((entry) => entry.stablecoinId)).toEqual([
+      "ethenausdc-steakhouse", "sparkusdc-spark",
+    ]);
     const epoch = Date.parse("2026-11-07T19:48:00Z") / 1000;
     for (const [id, current, previous, start = epoch] of [
       ["sparkusdtbc-spark", 850_692.45, 50_307_247.03],
       ["sparkusdc-spark", 3_574_943.02, 164_420_938.01, Date.parse("2026-11-23T12:54:00Z") / 1000],
-      ["frnt-wyoming", 397_773.24, 967_404.4, 1_794_512_040],
-      ["wmxn-ripio", 664_412.56, 176_542.38, 1_794_557_520],
-      ["wcop-ripio", 534_854.52, 191_358.13, 1_794_557_520],
-      ["tryb-bilira", 698_792.67, 2_219_652.08, Date.parse("2026-11-12T19:34:00Z") / 1000],
-      ["gbpa-agant", 1_191_268.85, 2_481_810, Date.parse("2026-11-12T19:34:00Z") / 1000],
-      ["witry-brix", 1_543_091.36, 3_365_372.58, Date.parse("2026-11-12T19:34:00Z") / 1000],
     ] as const) {
       for (const [now, value, accepted] of [
         [start - 1, current, false], [start, current, id !== "sparkusdtbc-spark"],

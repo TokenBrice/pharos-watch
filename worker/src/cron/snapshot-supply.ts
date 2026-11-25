@@ -132,7 +132,6 @@ export async function snapshotSupply(
       const requiredActiveIdSet = new Set(requiredActiveIds);
       const cachedIds = new Set(payload.peggedAssets.map((asset) => asset.id));
       const restoredSnapshotIds = new Set<string>();
-      const unavailableSnapshotIds = new Set<string>();
       const nonRestoredSnapshotIds = new Set<string>();
       const validSnapshotIds = new Set<string>();
       const snapshotRows: SupplySnapshotRow[] = [];
@@ -151,14 +150,13 @@ export async function snapshotSupply(
           ((asset.id === "buidl-blackrock" || wrapper) &&
             (supplyObservedAt == null || !Number.isSafeInteger(supplyObservedAt) || supplyObservedAt <= 0 ||
               supplyObservedAt > assessedAt || assessedAt - supplyObservedAt > SUPPLY_SNAPSHOT_MAX_AGE_SEC))) {
-          unavailableSnapshotIds.add(asset.id);
           continue;
         }
 
         const circ = asset.circulating;
-        if (!circ) { unavailableSnapshotIds.add(asset.id); continue; }
+        if (!circ) continue;
         const circulatingUsd = getCirculatingRawOrNull(asset);
-        if (circulatingUsd === null) { unavailableSnapshotIds.add(asset.id); continue; }
+        if (circulatingUsd === null) continue;
         validSnapshotIds.add(asset.id);
 
         // A nominal par reference (or other non-observed provenance) is not a
@@ -209,7 +207,6 @@ export async function snapshotSupply(
             .sort(),
           unavailableActiveIds,
           snapshotRows,
-          unavailableSnapshotIds,
           validSnapshotIds,
         },
       };
@@ -234,7 +231,7 @@ export async function snapshotSupply(
   const {
     cache: stablecoinsCache,
     cacheAgeSec: cacheAge,
-    context: { cachedIds, requiredActiveIdSet, restoredOnlyIds, snapshotRows, unavailableActiveIds, unavailableSnapshotIds, validSnapshotIds },
+    context: { cachedIds, requiredActiveIdSet, restoredOnlyIds, snapshotRows, unavailableActiveIds, validSnapshotIds },
     coverageExpectation,
     lastWrite,
     nowSec,
@@ -263,24 +260,24 @@ export async function snapshotSupply(
       },
     };
   };
+  const sameDayOwnedRowIds = lastWrite?.snapshotDate === snapshotDate
+    ? lastWrite.ownedRowIds ?? []
+    : [];
+  const sameDayOwnedRowIdSet = new Set(sameDayOwnedRowIds);
   const recoveredSinceLastWrite = lastWrite?.snapshotDate === snapshotDate
     ? [...validSnapshotIds].filter(
-      (id) => requiredActiveIdSet.has(id) && !(lastWrite.ownedRowIds ?? []).includes(id),
+      (id) => requiredActiveIdSet.has(id) && !sameDayOwnedRowIdSet.has(id),
     )
     : [];
-  // Restored rows are never written, so a replacement keeps the day's admitted row of an owned coin
-  // this generation can only restore instead of deleting it (a DefiLlama-outage generation restores
-  // most of the cohort); every other owned row is rewritten from the current observations.
-  const restoredOwnedIds = lastWrite?.snapshotDate === snapshotDate
-    ? restoredOnlyIds.filter((id) => (lastWrite.ownedRowIds ?? []).includes(id))
-    : [];
-  // A coin whose supply read is unavailable now also keeps the observation this day already wrote.
-  // The absence is not a redemption, and it is already named in the marker's unavailableActiveIds
-  // and publication coverage; the earlier observation is not evidence a replacement may delete (R1).
-  const unavailableOwnedIds = lastWrite?.snapshotDate === snapshotDate
-    ? (lastWrite.ownedRowIds ?? []).filter((id) => unavailableSnapshotIds.has(id))
-    : [];
-  const keptOwnedRowIds = [...new Set([...restoredOwnedIds, ...unavailableOwnedIds])];
+  // Each eligible coin keeps the first admitted observation written for this UTC
+  // day across same-day cohort refreshes and missing/restored recoveries:
+  // rewriting unaffected coins mid-day shifts supplyObservedAt into the
+  // afternoon and breaks next-day 24h native-supply anchors, while restored or
+  // unavailable reads must not erase earlier admitted rows (R1). Only removed
+  // IDs (outside snapshotEligibleIds) are deleted; newly added or recovered IDs
+  // (absent from sameDayOwnedRowIds) are inserted.
+  const preservedOwnedRowIds = sameDayOwnedRowIds.filter((id) => snapshotEligibleIds.has(id));
+  const preservedRowIdSet = new Set(preservedOwnedRowIds);
   const alreadyWritten = publicationGapBand !== "systemic"
     && lastWrite?.snapshotDate === snapshotDate
     && lastWrite.coverageIdentityVerified
@@ -316,8 +313,9 @@ export async function snapshotSupply(
     logWorkerEventArgs("handler", "warn", `[snapshot-supply] Cache is ${cacheAge}s old (>${CACHE_DEGRADED_AGE_SEC}s), proceeding with degraded freshness`);
   }
 
-  // Missing or restored required IDs recovering later trigger an atomic
-  // date replacement; an unchanged partial day retains its first observations.
+  // Missing/restored required IDs recovering later or mid-day cohort changes
+  // trigger an atomic same-day refresh that preserves already-written eligible
+  // rows; an unchanged partial day only repairs missing prices.
   if (alreadyWritten) {
     try {
       const repairedPriceRows = await repairSameDayMissingPrices(db, snapshotDate, snapshotRows, signal);
@@ -378,50 +376,16 @@ export async function snapshotSupply(
     });
   }
 
-  if (snapshotRows.length > 0) {
-    try {
-      throwIfAborted(signal);
-      const markerValue = JSON.stringify({
-        ...buildSupplySnapshotCompletionMarker({
-          snapshotDate,
-          coverage: coverageExpectation,
-          accountedActiveCount:
-            publicationCoverage.presentActiveCount + publicationCoverage.waivedActiveCount,
-          ownedRowIds: [...snapshotRows.map(([stablecoinId]) => stablecoinId), ...keptOwnedRowIds],
-          missingActiveIds: publicationCoverage.missingActiveIds,
-          unavailableActiveIds,
-        }),
-        generationId: crypto.randomUUID(),
-        writtenRows: snapshotRows.length,
-      });
-      const keptRowIds = new Set(keptOwnedRowIds);
-      const ownedStablecoinIds = [...new Set([
-        ...snapshotEligibleIds,
-        ...(lastWrite?.ownedRowIds ?? []),
-      ])].filter((stablecoinId) => !keptRowIds.has(stablecoinId)).sort();
-      const deleteStatements = chunkArray(
-        ownedStablecoinIds,
-        D1_MAX_BOUND_PARAMETERS - 1,
-      ).map((stablecoinIds) => db.prepare(
-        `DELETE FROM supply_history
-         WHERE snapshot_date = ?
-           AND stablecoin_id IN (${new Array(stablecoinIds.length).fill("?").join(", ")})`,
-      ).bind(snapshotDate, ...stablecoinIds));
-      const replacementStatements = [
-        ...deleteStatements,
-        ...prepareMultiRowInsertStatements(db, SUPPLY_QUANTITY_SNAPSHOT_UPSERT_PREFIX, snapshotRows),
-        prepareCacheUpsert(db, { key: SNAPSHOT_SUPPLY_LAST_WRITE_KEY, value: markerValue, updatedAt: nowSec }),
-      ];
-      await executeAtomicBatch(db, replacementStatements, { signal });
-      throwIfAborted(signal);
-    } catch (err) {
-      rethrowIfAborted(err, signal);
-      recordCronFailure("snapshot-supply", err, { metadata: { stage: "atomicDateReplacement" } });
-      return createCronResult({ status: "degraded", itemCount: 0, metadata: { reason: "db_write_failed", error: String(err).slice(0, 200) } });
-    }
-  }
+  const rowsToInsert = snapshotRows.filter(([stablecoinId]) => !preservedRowIdSet.has(stablecoinId));
+  const preservedSnapshotRows = preservedRowIdSet.size > 0
+    ? snapshotRows.filter(([stablecoinId]) => preservedRowIdSet.has(stablecoinId))
+    : [];
+  const nextOwnedRowIds = [
+    ...rowsToInsert.map(([stablecoinId]) => stablecoinId),
+    ...preservedOwnedRowIds,
+  ];
 
-  if (snapshotRows.length === 0) {
+  if (nextOwnedRowIds.length === 0) {
     return createCronResult({
       status: "degraded",
       itemCount: 0,
@@ -429,19 +393,90 @@ export async function snapshotSupply(
     });
   }
 
-  const shareFailure = await publishShareHistory(db, nowSec, snapshotRows.length, signal);
+  const removedOwnedRowIds = sameDayOwnedRowIds.filter((id) => !snapshotEligibleIds.has(id));
+  try {
+    throwIfAborted(signal);
+    const markerValue = JSON.stringify({
+      ...buildSupplySnapshotCompletionMarker({
+        snapshotDate,
+        coverage: coverageExpectation,
+        accountedActiveCount:
+          publicationCoverage.presentActiveCount + publicationCoverage.waivedActiveCount,
+        ownedRowIds: nextOwnedRowIds,
+        missingActiveIds: publicationCoverage.missingActiveIds,
+        unavailableActiveIds,
+      }),
+      generationId: crypto.randomUUID(),
+      writtenRows: nextOwnedRowIds.length,
+    });
+    const ownedIdsToDelete = [...new Set([
+      ...snapshotEligibleIds,
+      ...sameDayOwnedRowIds,
+    ])].filter((stablecoinId) => !preservedRowIdSet.has(stablecoinId)).sort();
+    const deleteStatements = chunkArray(
+      ownedIdsToDelete,
+      D1_MAX_BOUND_PARAMETERS - 1,
+    ).map((stablecoinIds) => db.prepare(
+      `DELETE FROM supply_history
+       WHERE snapshot_date = ?
+         AND stablecoin_id IN (${new Array(stablecoinIds.length).fill("?").join(", ")})`,
+    ).bind(snapshotDate, ...stablecoinIds));
+    const replacementStatements = [
+      ...deleteStatements,
+      ...prepareMultiRowInsertStatements(db, SUPPLY_QUANTITY_SNAPSHOT_UPSERT_PREFIX, rowsToInsert),
+      prepareCacheUpsert(db, { key: SNAPSHOT_SUPPLY_LAST_WRITE_KEY, value: markerValue, updatedAt: nowSec }),
+    ];
+    await executeAtomicBatch(db, replacementStatements, { signal });
+    throwIfAborted(signal);
+  } catch (err) {
+    rethrowIfAborted(err, signal);
+    recordCronFailure("snapshot-supply", err, { metadata: { stage: "atomicDateReplacement" } });
+    return createCronResult({ status: "degraded", itemCount: 0, metadata: { reason: "db_write_failed", error: String(err).slice(0, 200) } });
+  }
+
+  let repairedPriceRows = 0;
+  if (preservedSnapshotRows.length > 0) {
+    try {
+      repairedPriceRows = await repairSameDayMissingPrices(db, snapshotDate, preservedSnapshotRows, signal);
+    } catch (err) {
+      rethrowIfAborted(err, signal);
+      recordCronFailure("snapshot-supply", err, { metadata: { stage: "sameDayPriceRepair" } });
+      const shareFailure = await publishShareHistory(db, nowSec, rowsToInsert.length, signal);
+      if (shareFailure) return shareFailure;
+      return createCronResult({
+        status: "degraded",
+        itemCount: rowsToInsert.length,
+        metadata: {
+          reason: "same_day_price_repair_failed",
+          error: String(err).slice(0, 200),
+          lastWriteAdvanced: true,
+        },
+      });
+    }
+  }
+
+  const itemCount = rowsToInsert.length + repairedPriceRows;
+  const shareFailure = await publishShareHistory(db, nowSec, itemCount, signal);
   if (shareFailure) return shareFailure;
 
-  logWorkerEventArgs("handler", "info", `[snapshot-supply] Inserted ${snapshotRows.length} rows for date ${formatIsoDate(snapshotDate)}`);
-  if (restoredOnlyIds.length > 0 || publicationGapBand !== "none") {
+  logWorkerEventArgs("handler", "info", `[snapshot-supply] Inserted ${rowsToInsert.length} rows for date ${formatIsoDate(snapshotDate)}`);
+  if (
+    restoredOnlyIds.length > 0
+    || publicationGapBand !== "none"
+    || preservedOwnedRowIds.length > 0
+  ) {
     return createCronResult({
-      itemCount: snapshotRows.length,
+      itemCount,
       metadata: {
-        writtenRows: snapshotRows.length,
+        writtenRows: rowsToInsert.length,
+        ...(preservedOwnedRowIds.length > 0 ? { preservedRows: preservedOwnedRowIds.length } : {}),
+        ...(removedOwnedRowIds.length > 0 ? { deletedRows: removedOwnedRowIds.length } : {}),
+        ...(repairedPriceRows > 0 ? { repairedPriceRows } : {}),
+        ...(itemCount === 0 ? { lastWriteAdvanced: true } : {}),
         ...publicationGap,
         ...qualityFindings(restoredOnlyIds),
       },
     });
   }
-  return { itemCount: snapshotRows.length };
+  return { itemCount };
 }

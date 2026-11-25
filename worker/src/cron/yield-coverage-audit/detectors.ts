@@ -183,7 +183,7 @@ export interface ProtocolRecommendationSourceLink {
 }
 
 export interface ProtocolRecommendationSuggestedConfig {
-  targetFile: "worker/src/lib/yield-config/yield-config-lending-protocols.ts";
+  targetFile: "worker/src/lib/yield-config/yield-config-lending-venues.ts";
   exportName: "LENDING_PROTOCOLS";
   anchor: typeof ALLOWLIST_AUDIT_QUEUE_ANCHOR;
   snippet: string;
@@ -335,7 +335,7 @@ function inferProtocolLabel(project: string): string {
 
 function buildSuggestedLendingAllowlistConfig(project: string): ProtocolRecommendationSuggestedConfig {
   return {
-    targetFile: "worker/src/lib/yield-config/yield-config-lending-protocols.ts",
+    targetFile: "worker/src/lib/yield-config/yield-config-lending-venues.ts",
     exportName: "LENDING_PROTOCOLS",
     anchor: ALLOWLIST_AUDIT_QUEUE_ANCHOR,
     snippet: `  ${JSON.stringify(project)}: { label: ${JSON.stringify(inferProtocolLabel(project))} },`,

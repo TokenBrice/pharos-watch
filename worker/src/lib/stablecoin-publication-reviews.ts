@@ -99,21 +99,6 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     expiresAt: Date.UTC(2026, 11, 6, 12, 38) / 1000,
   },
   {
-    stablecoinId: "aid-gaib",
-    owner: "ops",
-    reason:
-      "Re-reviewed 2026-11-22 12:38 UTC with fresh GETs: CoinGecko gaib-aid reports $0.997702 with $1.00 of 24h volume last updated 2026-11-19T15:02:33Z (outside the 15-minute primary budget) and an empty tickers array (0 tickers). DefiLlama coins still returns exactly 1.0 (confidence 0.9, ts 2026-11-22T12:21:32Z) for both coingecko:gaib-aid and the Ethereum contract, a fill rather than an observed market. Ethereum DexScreener returns no pairs; the largest observed GeckoTerminal Ethereum pools hold $1,402.52 and $1,378.62 (AID/USDC) with zero 24h volume, far below the unchanged $50K floor. No admissible market was found. The whitelisted USDC redemption entitlement is not a market quote. Keep AID active and the price missing; all admission gates preserved. Owner ops must decide any low-volume CoinGecko admission separately or re-review by 2026-12-06T12:38:00Z.",
-    sources: [
-      "https://api.coingecko.com/api/v3/simple/price?ids=gaib-aid,gaib-said&vs_currencies=usd&include_24hr_vol=true&include_market_cap=true&include_last_updated_at=true",
-      "https://api.coingecko.com/api/v3/coins/gaib-aid/tickers",
-      "https://coins.llama.fi/prices/current/coingecko:gaib-aid,ethereum:0x18f52b3fb465118731d9e0d276d4eb3599d57596",
-      "https://api.dexscreener.com/token-pairs/v1/ethereum/0x18f52b3fb465118731d9e0d276d4eb3599d57596",
-      "https://api.geckoterminal.com/api/v2/networks/eth/tokens/0x18f52b3fb465118731d9e0d276d4eb3599d57596/pools",
-    ],
-    reviewedAt: Date.UTC(2026, 10, 22, 12, 38) / 1000,
-    expiresAt: Date.UTC(2026, 11, 6, 12, 38) / 1000,
-  },
-  {
     stablecoinId: "deuro-deuro",
     owner: "ops",
     reason:
@@ -243,6 +228,24 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     ],
     reviewedAt: Date.UTC(2026, 10, 24, 14, 37) / 1000,
     expiresAt: Date.UTC(2026, 11, 8, 14, 37) / 1000,
+  },
+  {
+    stablecoinId: "usdn-smardex",
+    owner: "ops",
+    reason:
+      "Reviewed 2026-11-25 10:33 UTC with fresh GETs (settled #2073 owner decision, tracked under #2261): CoinGecko smardex-usdn reports $0.999298 ($805,176.71 cap, $165,021.64 24h vol) frozen at 2026-10-13T14:37:27Z (43 days stale, exceeding both the 15-minute primary and 7-day low-volume budgets), and /coins/smardex-usdn/tickers returns HTTP 404 (coin not found). DefiLlama coins.llama.fi returns {} for coingecko:smardex-usdn and Ethereum 0xde17a000ba631c5d7c2bd9fb692efea52d90dee2, and DefiLlama detail 277 publishes price null (circulating $661,426.90). Exact-contract Ethereum DexScreener pools hold only $250.55 (Curve USDN/USDT, $0.8907, $11.63 24h vol) and $266.39 (Curve USDN/fxUSD, $0.9049, $35.87 24h vol); GeckoTerminal pools hold $255.47 (fxUSD/USDN) and $249.72 (USDN/USDT), far below the unchanged $50K floor. CoinMarketCap fallback moved to $1.12275 (+1,228 bps, observed 2026-11-25T09:09:02Z; last accepted $1.0415 at 2026-11-24T20:09:04Z), which the unchanged 500 bps WEAK_FALLBACK_FIXED_PEG_DEPEG_BPS cap rightly rejects. Keep USDN active and the price missing; all admission gates preserved. Owner ops resolves a permanent primary lane or lifecycle disposition by 2026-12-09 10:33 UTC.",
+    sources: [
+      "https://api.coingecko.com/api/v3/simple/price?ids=smardex-usdn&vs_currencies=usd&include_market_cap=true&include_24hr_vol=true&include_last_updated_at=true",
+      "https://api.coingecko.com/api/v3/coins/smardex-usdn/tickers",
+      "https://stablecoins.llama.fi/stablecoin/277",
+      "https://coins.llama.fi/prices/current/coingecko:smardex-usdn,ethereum:0xde17a000ba631c5d7c2bd9fb692efea52d90dee2",
+      "https://api.dexscreener.com/token-pairs/v1/ethereum/0xde17a000ba631c5d7c2bd9fb692efea52d90dee2",
+      "https://api.geckoterminal.com/api/v2/networks/eth/tokens/0xde17a000ba631c5d7c2bd9fb692efea52d90dee2/pools",
+      "https://github.com/TokenBrice/pharos-watch/issues/2073",
+      "https://github.com/TokenBrice/pharos-watch/issues/2261",
+    ],
+    reviewedAt: Date.UTC(2026, 10, 25, 10, 33) / 1000,
+    expiresAt: Date.UTC(2026, 11, 9, 10, 33) / 1000,
   },
 ];
 

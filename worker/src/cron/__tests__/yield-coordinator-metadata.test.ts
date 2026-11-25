@@ -291,7 +291,7 @@ describe("buildYieldSyncMetadata", () => {
     ["pendle", "2026-11-20T23:59:59Z"],
     ["aaveV3", "2026-11-20T23:59:59Z"],
     ["exclusion-due", "2026-11-21T00:00:00Z"],
-    ["exclusion-due", "2026-11-26T00:00:00Z"],
+    ["exclusion-due", "2026-12-09T00:00:00Z"],
   ] as const)("preserves %s quality diagnostics at %s separately from publication health and bounded telemetry", (family, startedAt) => {
     const comparisonAnchorFreshness = buildComparisonAnchorFreshnessMeta({
       startSec: START_SEC,
@@ -421,7 +421,7 @@ describe("buildYieldSyncMetadata", () => {
     expect(metadata.quality).toEqual({
       degraded: family !== "pendle",
       reasons: family === "exclusion-due"
-        ? YIELD_OPPORTUNITY_EXCLUSIONS.filter(({ projects }) => startedAt === "2026-11-26T00:00:00Z" || !projects.includes("k3"))
+        ? YIELD_OPPORTUNITY_EXCLUSIONS.filter(({ projects }) => startedAt === "2026-12-09T00:00:00Z" || !projects.includes("k3"))
           .map((entry) => `yield-opportunity-exclusion-review-due:${entry.projects[0]}`)
         : family === "pendle" ? [] : [reason],
       advisoryReasons: family === "pendle" ? ["safety-snapshot-held", reason] : ["safety-snapshot-held"],
