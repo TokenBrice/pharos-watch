@@ -577,7 +577,12 @@ function assertPreviousReaderSource() {
   // serial dependency attribution; report-cards-v9.ts uses primaryV9NotRatedReason in
   // projectSafetyGrades. Both changes are strictly scoped to tokenized-fund-not-graded (absent
   // from PRE_DUST_REASON_CODES), so every pre-dust input parses identically.
-  if (hash.digest("hex") !== "b35c7f4b8d0b84ce35e7e26a7b66ffe40c83aaea908d875b2bd18a4fbf85a9c1") throw new Error("Pre-dust reader source/refinement inputs changed");
+  // v10.56 risk-absorption wrapper form: vocabulary-additive only. safety-score-v9-wrapper.ts adds
+  // one V9WrapperFormSchema member (risk-absorption) and safety-score-v9-facts.ts admits it for
+  // risk-absorption variants beside the two earlier forms. Pre-dust cards carry only the earlier
+  // forms and parse identically (verified by substituting 4e9d09b7e's two files, which restores the
+  // prior b35c7f4b… digest).
+  if (hash.digest("hex") !== "a660a454d4e828e68621f36b764ac84e673db27bedf0b062e607a7ed616526e0") throw new Error("Pre-dust reader source/refinement inputs changed");
 }
 
 export async function previousReader() {

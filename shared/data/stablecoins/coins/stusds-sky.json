@@ -50,6 +50,14 @@
     "yieldSource": "Sky stUSDS Rate",
     "yieldType": "lending-vault"
   },
+  "notices": [
+    {
+      "type": "warning",
+      "title": "No contract exit at full utilization; first loss on a book that cannot liquidate",
+      "message": "Holders can withdraw only USDS that SKY-backed Lockstake borrowers have not drawn. The module has been fully lent since about November 10, 2026, so contract withdrawals are effectively zero and the stUSDS Rate sits at its 50% maximum. Exit depends on about $3M of DEX liquidity, where stUSDS traded roughly 10% below its redemption value on November 24. Holders also absorb that book's losses first, and its liquidation auctions have been switched off since stUSDS launched: on November 24, $30.5M (19%) of the debt sat below the protocol's own safety price. The collateral is SKY, Sky's own governance token, and the largest borrower carries 47% of the debt.",
+      "asOf": "2026-11-25"
+    }
+  ],
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",
     "version": 1,
@@ -73,6 +81,13 @@
         "coinId": "usds-sky",
         "depType": "collateral",
         "expectedAssetAddress": "0xdc035d45d973e3ec169d2276ddab16f1e407384f"
+      },
+      "redemptionLiquidity": {
+        "source": "stusds-unused-funds",
+        "vatAddress": "0x35d1b3f3d7966a1dfe207aa4514c12a259a0492b",
+        "jugAddress": "0x19c0976f590d67707e62397c87829d896dc0f1f1",
+        "clipperAddress": "0x836f56750517b1528b5078cba4ac4b94fbe4a399",
+        "ilk": "0x4c534556322d534b592d41000000000000000000000000000000000000000000"
       }
     }
   },

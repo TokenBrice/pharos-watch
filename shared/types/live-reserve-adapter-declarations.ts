@@ -1019,6 +1019,23 @@ const sboldSpWithdrawableRedemptionLiquiditySchema = z
   })
   .strict();
 
+// Reviewer-pinned Sky stUSDS path: stUSDS holds its USDS in the vault while
+// LSEV2-SKY-A borrowers mint fresh USDS from the Vat, so the vault balance is
+// encumbered first-loss capital, not withdrawable cash. StUsds._burn() and
+// maxWithdraw() permit only totalSupply*chi - (Art*rate + clip.Due()); the
+// adapter reads that bound in one pinned Multicall3 wave, verifies the vault's
+// immutable Vat/Jug/Clipper/ilk wiring against these reviewed values, and
+// never falls back to the idle balance.
+const stusdsUnusedFundsRedemptionLiquiditySchema = z
+  .object({
+    source: z.literal("stusds-unused-funds"),
+    vatAddress: EvmAddressSchema,
+    jugAddress: EvmAddressSchema,
+    clipperAddress: EvmAddressSchema,
+    ilk: EvmWordSchema,
+  })
+  .strict();
+
 // Reviewer-pinned sfrxUSD holder route. Ethereum sfrxUSD redemptions are
 // disabled locally; the active path sends shares through Frax's Ethereum hop,
 // redeems against the Fraxtal MintRedeemer inventory, then returns frxUSD.
@@ -1118,6 +1135,7 @@ const erc4626SingleAssetParamsSchema = z
         atomicFullBackingRedemptionLiquiditySchema,
         yearnV3WithdrawableRedemptionLiquiditySchema,
         sboldSpWithdrawableRedemptionLiquiditySchema,
+        stusdsUnusedFundsRedemptionLiquiditySchema,
         fraxtalHopWithdrawableRedemptionLiquiditySchema,
       ])
       .optional(),

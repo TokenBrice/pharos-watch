@@ -116,6 +116,15 @@ export function installErc4626Network({
         "0x70a08231",
         "0xad468d11",
         "0x7bfef9fa",
+        // stUSDS unused-funds probe: vat(), jug(), clip(), ilk(), ilks(bytes32),
+        // Due() and Multicall3 getCurrentBlockTimestamp().
+        "0x36569e77",
+        "0x84718d89",
+        "0x39b00e41",
+        "0xc5ce281e",
+        "0xd9638d36",
+        "0x08bf162f",
+        "0x0f28c97d",
       ]
         .map((selector) => [selector, async (call: AdapterRpcCall) => {
           const response = await invokeExtra(call, call.url, rpcHandlerBody(call));

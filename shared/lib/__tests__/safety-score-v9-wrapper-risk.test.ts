@@ -8,7 +8,7 @@ import { scoreV9EvaluatedAsset } from "../safety-score-v9/score";
 import { makeV9Pillar, makeV9ProductionScoreInput } from "./safety-score-v9-score.test-support";
 import { resolveV9WrapperParentLimit } from "../safety-score-v9/wrapper-risk";
 
-const DISCOUNTS = { pure: 3, "native-staked": 5, "strategy-vault": 10 } as const;
+const DISCOUNTS = { pure: 3, "native-staked": 5, "strategy-vault": 10, "risk-absorption": 10 } as const;
 
 function facts(form: V9WrapperForm) {
   return { form };
@@ -19,7 +19,7 @@ function limit(parentScore: number, localFacts: { form: V9WrapperForm }) {
 }
 
 describe("wrapper form parent limits", () => {
-  it.each(["pure", "native-staked", "strategy-vault"] as const)("deducts only the %s form cost", (form) => {
+  it.each(["pure", "native-staked", "strategy-vault", "risk-absorption"] as const)("deducts only the %s form cost", (form) => {
     expect(limit(84, facts(form))).toMatchObject({
       form, appliedDiscount: DISCOUNTS[form], limit: 84 - DISCOUNTS[form],
     });
@@ -27,7 +27,7 @@ describe("wrapper form parent limits", () => {
 
 
   it("floors fractional parent ceilings and never exceeds the parent", () => {
-    for (const form of ["pure", "native-staked", "strategy-vault"] as const) {
+    for (const form of ["pure", "native-staked", "strategy-vault", "risk-absorption"] as const) {
       for (const parent of [0, 2, 25, 40, 49.9, 84, 100]) {
         const result = limit(parent, facts(form));
         expect(result.limit).toBe(Math.max(0, Math.floor(parent - DISCOUNTS[form])));

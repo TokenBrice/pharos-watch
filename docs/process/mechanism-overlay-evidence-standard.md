@@ -174,6 +174,12 @@ remain separate; a descriptor grants no quality or applicability credit.
   or `YYYY-MM-DDTHH:MM:SSZ`, optionally with 1–3 fractional-second digits), descriptive
   source labels, and notes stating what was measured, at what timestamp/block, and why each
   grade was assigned.
+- A `risk-absorption` variant's loss exposure is the book it funds or insures, so its
+  collateralization and liquidation components review that book: collateral, safety
+  parameters, current liquidation callability, obligor concentration. `not-applicable` is
+  admissible only when no such book exists, never because the book's contracts sit outside
+  the wrapper (stUSDS look-through, 2026-11-25). Weak/failed grades still need pinned
+  evidence of the deficiency.
 - A changed component may carry its own `review` with `reviewedAt`, `reviewer`,
   `rationale` and primary `sources`. Its sources must also occur in the overlay
   source list (and its applicability source, if any, in its own review). That

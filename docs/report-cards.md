@@ -10,7 +10,7 @@ The public grade-distribution total is labeled **assets**, since its A/B/C/D/F/N
 ## Methodology Identity
 
 - Active model: <!-- GENERATED-START: report-cards-active-model -->`v10`<!-- GENERATED-END: report-cards-active-model -->
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v10.55`<!-- GENERATED-END: methodology-version-safety-score -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v10.56`<!-- GENERATED-END: methodology-version-safety-score -->
 - Public breakdown/publication schema v8, API wrapper v9 and score trace v4; retained older publications require explicit historical dispatch or refusal, never fabricated causes or route identity
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, parsed and digested by `shared/lib/safety-score-v9/policy.ts`
 - **Evaluation build:** `SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST` in `shared/data/safety-score-v9/evaluation-build-manifest-v1.ts` binds the offline candidate runtime import graph: captured fixed-input normalization, extension construction, fact-set compilation, evaluation and projection, including executable admission schemas, reviewed score-input data and full-catalog bytes/decoder. Edits anywhere in that evaluation-time closure rotate replay/publication identity; domain `safety-score-v9.evaluation-build.v2` hashes reviewed JSON data by its stable parsed value, so formatting/key-order-only edits do not, while executable sources stay byte-hashed. Capture-only network observers/producers and build-time generators are outside it; exact-input/fact digests bind their admitted output. Capture binding and runtime identity consumers are unchanged.
@@ -99,7 +99,7 @@ Headlines follow score-matching binding Control components/credited Exit routes.
 
 Suspension removes only its channel's credit/masked obligations, not alternatives, proving no global exhaustion/danger. Insufficient alternatives retain scoped U census proof under the admission details above.
 
-Wrapper limit=`max(0, floor(min(required parents' premium-free inheritable scores) − formDeduction))`: pure 3, native-staked 5, active strategy-allocation vault 10. Final=min(independently constrained own score, limit); unavailable parents stay unavailable. Local risks belong in pillars, not another fallback/factor-sum/floor. USDT returns to +12 after the artefact fixes, retaining max87 and eligibility; no inheritance.
+Wrapper limit=`max(0, floor(min(required parents' premium-free inheritable scores) − formDeduction))`: pure 3, native-staked 5, active strategy-allocation vault 10. Since v10.56 every `risk-absorption` (first-loss) wrapper publishes its own `risk-absorption` form and takes the 10-point vault deduction whoever operates it; native-staked is reserved for senior savings wrappers. Final=min(independently constrained own score, limit); unavailable parents stay unavailable. Local risks belong in pillars, not another fallback/factor-sum/floor. USDT returns to +12 after the artefact fixes, retaining max87 and eligibility; no inheritance.
 
 Collateral children receive premium-free parent−3 when **≥99% of admitted direct reserve rows are stablecoin/fund-share claims in that scored parent**. Sum same-parent rows; denomination/composite strategies do not qualify. Keep lower own scores/stricter serial limits; missing/unadmitted dependencies prove nothing. Trace `parentKind: "concentrated-collateral"`/`parentAssetId`; `collateralParentScore` differs from Backing inheritance.
 

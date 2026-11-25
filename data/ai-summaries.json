@@ -3788,17 +3788,17 @@
   },
   "stusds-sky": {
     "title": "Sky risk-capital USDS",
-    "text": "stUSDS is Sky's risk-capital module over USDS: depositors mint ERC-4626 shares, their USDS funds SKY-backed borrowing, and the module pays the stUSDS Rate in return. That return comes with losses passive USDS holders do not face, since borrower shortfall on staked-SKY loans or a governance slashing decision can cut redeemable value. Withdrawals return USDS only up to the module's unutilized liquidity, so a busy loan book can slow exits. Backing is the weakest of the three pillars because the module's loss backstop and reserve concentration score low, while economic control is the strongest. Exit routes share a failure domain with the rest of the Sky stack. The {{grade}} overall grade is held at the parent USDS rating, since a wrapper cannot rate above the asset it wraps. The durable constraint is that stUSDS holders, not the wider USDS base, absorb shortfalls on staked-SKY loans.",
-    "updatedAt": "2026-10-19",
+    "text": "stUSDS is Sky's risk-capital module over USDS: depositors mint ERC-4626 shares, their USDS funds SKY-backed Lockstake borrowing, and the module pays the stUSDS Rate in return. That return comes with losses passive USDS holders do not face, since borrower shortfall on staked-SKY loans or a governance slashing decision can cut redeemable value. Pharos therefore reviews that loan book as the backing. Its liquidation auctions have been switched off since launch, and part of the debt already sits below the protocol's own safety price. The collateral is SKY, Sky's own governance token, so collateral value and the parent's credit tend to fall together. Withdrawals return only USDS that borrowers have not drawn, and Pharos reads that bound from the contract rather than the vault balance. A fully lent module leaves holders with thin secondary markets that trade at a discount. The {{grade}} overall grade also carries a deeper wrapper deduction than senior sUSDS, because first-loss capital cannot share its senior's ceiling. The durable constraint is that stUSDS holders absorb shortfalls on the staked-SKY book, and only governance decides whether that book can be liquidated.",
+    "updatedAt": "2026-11-25",
     "authoredBy": "ai",
     "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19",
+    "factsAsOf": "2026-11-25",
     "claimTokens": [
       {
         "token": "grade",
         "placeholder": "{{grade}}",
         "source": "report-card.grade",
-        "factsAsOf": "2026-10-19"
+        "factsAsOf": "2026-11-25"
       }
     ]
   },

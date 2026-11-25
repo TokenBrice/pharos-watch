@@ -1382,11 +1382,13 @@ export type V9WrapperStrategyTier = "pure" | "staked" | "vault";
  * rate meaningfully below its required parent, tiered by the wrapper's form:
  *  - `pure-wrapper` (a direct 1:1 wrap/unwrap claim) -> "pure" (the smallest
  *    fallback haircut): it adds a contract layer without a yield strategy.
- *  - third-party strategy forms (such as Yearn/Gauntlet/Steakhouse vaults and
- *    third-party risk-absorption wrappers) → "vault" (the largest haircut): they layer third-party strategy,
- *    smart-contract and liquidity risk over an issuer it does not control.
- *  - native savings/staking forms operated by the parent protocol → "staked"
- *    (a smaller haircut): a thinner, same-protocol layer.
+ *  - third-party strategy forms (such as Yearn/Gauntlet/Steakhouse vaults) and
+ *    every risk-absorption wrapper → "vault" (the largest haircut): they layer
+ *    strategy, smart-contract and liquidity risk, or first-loss subordination,
+ *    over the parent. Since v10.56 a parent-protocol operator no longer earns the
+ *    savings haircut for first-loss capital.
+ *  - native savings forms operated by the parent protocol → "staked"
+ *    (a smaller haircut): a thinner, same-protocol senior layer.
  * Current V3 facts carry the reviewed wrapper form directly. Retained V2 facts
  * fall back to `variantKind`; an unmapped form or a bare serial-wrapper parent
  * takes the conservative "vault" haircut. A serial parent with no wrapper edge
@@ -1403,7 +1405,8 @@ export function resolveV9WrapperStrategyTier(
   }
   if (asset.variantKind === "pure-wrapper") return "pure";
   if (asset.variantKind === "strategy-vault") return "vault";
-  if (asset.variantKind === "savings-passthrough" || asset.variantKind === "risk-absorption") return "staked";
+  if (asset.variantKind === "risk-absorption") return "vault";
+  if (asset.variantKind === "savings-passthrough") return "staked";
   if (resolved.serial.length === 0) return undefined;
   const serialUpstreamIds = new Set(resolved.serial.map((dependency) => dependency.upstreamAssetId));
   const hasWrapperSerialEdge = asset.dependencies.edges.some(
@@ -1669,8 +1672,11 @@ function parentInput(
       wrapperParentLimit: null,
     };
   }
+  // The vault tier carries two forms; a reviewed form of the resolved tier is kept as published.
+  const factForm = asset.wrapperLocalFacts.applicability === "wrapper" ? asset.wrapperLocalFacts.form : null;
   const expectedForm: V9WrapperForm =
-    wrapperTier === "pure" ? "pure" : wrapperTier === "staked" ? "native-staked" : "strategy-vault";
+    wrapperTier === "pure" ? "pure" : wrapperTier === "staked" ? "native-staked"
+      : factForm === "risk-absorption" ? "risk-absorption" : "strategy-vault";
   if (!collateralClaim && asset.wrapperLocalFacts.applicability !== "wrapper") {
     throw new Error(`Safety Score v9 ${asset.assetId} wrapper parent lacks wrapper-local facts`);
   }
@@ -1688,6 +1694,7 @@ function parentInput(
       pure: fallback.pure,
       "native-staked": fallback.staked,
       "strategy-vault": fallback.vault,
+      "risk-absorption": fallback.vault,
     },
   });
   return {

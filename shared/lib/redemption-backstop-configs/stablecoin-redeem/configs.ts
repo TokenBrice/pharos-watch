@@ -1448,7 +1448,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     notes: [
       "stUSDS is an ERC-4626 risk-capital wrapper over USDS: holders can deposit USDS to receive stUSDS or withdraw USDS with their stUSDS balance.",
       "The wrapper leg exits into USDS; downstream USDS par-exit quality remains governed by Sky's PSM route, while stUSDS holder value can reflect module liquidity and slashing risk.",
-      "Fresh ERC-4626 reserve telemetry reads the vault's idle USDS balance as current direct wrapper capacity; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
+      "stUSDS keeps its USDS in the vault while Lockstake borrowers mint fresh USDS, so the vault balance is encumbered first-loss capital: fresh reserve telemetry scores only the contract's unused-funds bound (totalAssets minus LSEV2-SKY-A debt and USDS in auction, the amount StUsds.maxWithdraw permits) as current direct wrapper capacity, and never the idle balance; if that read is unavailable, the route is left unrated.",
     ],
   }),
   "stcusd-cap": erc4626InstantConfig({

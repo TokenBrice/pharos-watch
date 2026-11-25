@@ -10087,9 +10087,29 @@
         {
           "label": "Ethereum JSON-RPC endpoint used for the pinned ERC-4626 eth_call reads",
           "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Ethereum block 26487700 (2026-11-24T21:26:23Z) used for the look-through Lockstake book reads",
+          "url": "https://etherscan.io/block/26487700"
+        },
+        {
+          "label": "LockstakeClipper 0x836F56750517b1528B5078Cba4Ac4B94fBE4A399 (LSEV2-SKY-A; stopped() read)",
+          "url": "https://etherscan.io/address/0x836F56750517b1528B5078Cba4Ac4B94fBE4A399#readContract"
+        },
+        {
+          "label": "Sky Lockstake implementation (pinned LockstakeClipper stop levels)",
+          "url": "https://github.com/sky-ecosystem/lockstake/blob/e389dc18fa21b5ae460714522a9f484d0b1b9f30/src/LockstakeClipper.sol"
+        },
+        {
+          "label": "Sky active mainnet chainlog (STUSDS, LOCKSTAKE_ENGINE, LOCKSTAKE_CLIP, LOCKSTAKE_ORACLE, MCD_VAT; each address re-read on-chain at block 26487700)",
+          "url": "https://chainlog.skyeco.com/api/mainnet/active.json"
+        },
+        {
+          "label": "Pinned stUSDS implementation (cuttee loss path and withdrawable bound)",
+          "url": "https://github.com/sky-ecosystem/stusds/blob/486bfe342c01afab7387a920dfcd7eeaaf91f4b7/src/StUsds.sol"
         }
       ],
-      "notes": "Measured via eth_call on https://ethereum-rpc.publicnode.com at finalized Ethereum block 25572098 (hash 0xe8ce3b782f8ed4b2d25fa6f5cf9c89599c8b9dc1d3f99cda18c9e7f3fdc1d0d5, 2026-07-20T06:21:11Z) against the stUSDS module 0x99cd4Ec3f88A45940936F469E4bB72A2A701EEB9. asset() returned 0xdc035d45d973e3ec169d2276ddab16f1e407384f (USDS); totalSupply() was 179,099,553.60802603 shares; totalAssets() was 190,699,082.48740625 USDS; convertToAssets(totalSupply) returned exactly the same value (delta 0%), an underlying conversion ratio of 1.06476582 USDS per share. USDS balanceOf(stUSDS) at the same block was 190,698,904.79973412; the 177.69 USDS (0.00009%) difference is an accounting remainder and does not measure stake-engine borrowing or withdrawable liquidity. stUSDS is a segregated risk-capital module, not a per-token CDP: depositors fund staked-SKY-backed borrowing and, per the README, absorb stake-engine bad debt written off when auctions conclude plus governance cut() slashing - so wrapper collateralization and liquidation components and metrics are structurally N/A (auctions and write-offs live in the stake engine/Clipper, not in this contract). Backstop is weak: no capital stands above stUSDS depositors by design - they are the first-loss insurance, and governance is authed to call cut() directly. Branch isolation is limited: exposure is segregated to staked-SKY loans only, but the RateSetter and governance can move the debt ceiling and cap dynamically with no autoline pacing, and the README concedes all funds can be borrowed so withdrawals become impossible. Shutdown and bad debt are limited: a defined bad-debt path exists (cut() reduces redeemable value when auctions conclude underwater; shutdown orchestrated by Sky governance with no Maker-style emergency shutdown assumed), which is honest loss socialization onto holders but no recovery guarantee. Structural redemption is limited: the withdrawable amount is total value minus stake-engine debt and USDS in auction; the original wallet-balance observation alone does not establish this amount. Documented governance/operator paths can drive utilization to 100% and the README warns withdrawable funds will likely exit ahead of slashing. NOT established: any recapitalization backstop for depositors, any constraint on UUPS upgrade timing beyond the governance delay, and current auction inventory (not separately read). Source-scoped correction: source review on 2026-10-20 removes only the unsupported near-fully-liquid inference; original July pins, review start, metrics and component grades are preserved.",
+      "notes": "Measured via eth_call on https://ethereum-rpc.publicnode.com at finalized Ethereum block 25572098 (hash 0xe8ce3b782f8ed4b2d25fa6f5cf9c89599c8b9dc1d3f99cda18c9e7f3fdc1d0d5, 2026-07-20T06:21:11Z) against the stUSDS module 0x99cd4Ec3f88A45940936F469E4bB72A2A701EEB9. asset() returned 0xdc035d45d973e3ec169d2276ddab16f1e407384f (USDS); totalSupply() was 179,099,553.60802603 shares; totalAssets() was 190,699,082.48740625 USDS; convertToAssets(totalSupply) returned exactly the same value (delta 0%), an underlying conversion ratio of 1.06476582 USDS per share. USDS balanceOf(stUSDS) at the same block was 190,698,904.79973412; the 177.69 USDS (0.00009%) difference is an accounting remainder and does not measure stake-engine borrowing or withdrawable liquidity. stUSDS is a segregated risk-capital module, not a per-token CDP: depositors fund staked-SKY-backed borrowing and, per the README, absorb stake-engine bad debt written off when auctions conclude plus governance cut() slashing - so wrapper collateralization and liquidation components and metrics are structurally N/A (auctions and write-offs live in the stake engine/Clipper, not in this contract). Backstop is weak: no capital stands above stUSDS depositors by design - they are the first-loss insurance, and governance is authed to call cut() directly. Branch isolation is limited: exposure is segregated to staked-SKY loans only, but the RateSetter and governance can move the debt ceiling and cap dynamically with no autoline pacing, and the README concedes all funds can be borrowed so withdrawals become impossible. Shutdown and bad debt are limited: a defined bad-debt path exists (cut() reduces redeemable value when auctions conclude underwater; shutdown orchestrated by Sky governance with no Maker-style emergency shutdown assumed), which is honest loss socialization onto holders but no recovery guarantee. Structural redemption is limited: the withdrawable amount is total value minus stake-engine debt and USDS in auction; the original wallet-balance observation alone does not establish this amount. Documented governance/operator paths can drive utilization to 100% and the README warns withdrawable funds will likely exit ahead of slashing. NOT established: any recapitalization backstop for depositors, any constraint on UUPS upgrade timing beyond the governance delay, and current auction inventory (not separately read). Source-scoped correction: source review on 2026-10-20 removes only the unsupported near-fully-liquid inference; original July pins, review start, metrics and component grades are preserved. Look-through correction (component reviews pinned 2026-11-24T21:26:23Z, Ethereum block 26487700): the July statement that collateralization and liquidation are structurally N/A is withdrawn; stUSDS is the first-loss funder of the LSEV2-SKY-A book (Clipper cuttee), so collateralizationParameters (weak) and liquidationMechanics (failed) now review that book under their own dated reviews. The July metrics and other component grades are unchanged.",
       "metrics": {
         "collateralizationRatio": null,
         "liquidationCapacityRatio": null
@@ -10097,12 +10117,12 @@
       "metricApplicability": {
         "collateralizationRatio": {
           "state": "not-applicable",
-          "rationale": "stUSDS is an ERC-4626 risk-capital module over USDS funding SKY-backed borrowing; it has no local collateralization parameters of its own.",
+          "rationale": "stUSDS issues no debt token against collateral, so the whole-token collateralization ratio is not defined for it; the collateralization of the LSEV2-SKY-A book it funds as first-loss capital is reviewed in the dated collateralizationParameters component.",
           "sourceUrl": "https://developers.skyeco.com/protocol/tokens/stusds/"
         },
         "liquidationCapacityRatio": {
           "state": "not-applicable",
-          "rationale": "stUSDS operates no debt-offset liquidation pool for holders; stake-engine liquidations and bad-debt write-off via cut() sit in the upstream SKY-backed borrowing system.",
+          "rationale": "Lockstake liquidations are Dutch auctions settled by external keepers, not a pool contractually committed to debt offset (the same treatment as USDS), so no liquidation-capacity ratio applies; the funded book's liquidation path is reviewed in the dated liquidationMechanics component.",
           "sourceUrl": "https://github.com/sky-ecosystem/stusds"
         }
       },
@@ -10111,14 +10131,50 @@
       },
       "components": {
         "collateralizationParameters": {
-          "applicability": "not-applicable",
-          "rationale": "stUSDS is an ERC-4626 module over USDS and has no local collateralization parameters.",
-          "sourceUrl": "https://developers.skyeco.com/protocol/tokens/stusds/"
+          "applicability": "measured",
+          "quality": "weak",
+          "review": {
+            "reviewedAt": "2026-11-24T21:26:23Z",
+            "reviewer": "stUSDS look-through review 2026-11-25 (Claude Opus 5.5 night research run)",
+            "rationale": "Look-through component review: stUSDS is the sole, first-loss funder of the LSEV2-SKY-A Lockstake branch (LockstakeClipper cuttee = stUSDS; StUsds.cut() writes auction shortfall into chi), so the branch's collateralization is the holder's loss exposure, not an out-of-scope stake-engine detail. At Ethereum block 26487700 (2026-11-24T21:26:23Z): Vat ilk LSEV2-SKY-A Art 132,845,224.086 x rate 1.191866 = 158.334M USDS debt; spot 0.0208333 (governance $0.025 cap / mat 1.20) while the Chronicle SKY/USD scribe read $0.04057. A census of all 7,106 LockstakeEngine Open urns finds 32 borrowing urns (29 owners) holding 9.075B SKY (38.7% of SKY supply; market collateral ratio 2.33x). Demonstrated deficiencies: 9 urns carrying $30.52M (19.3% of branch debt) are already below the protocol's own safety price and remain open; the largest owner carries 47.0% of debt (top two 72.4%, Herfindahl 0.30); the collateral is the parent protocol's own governance token, so collateral value and the parent's credit deteriorate together. Ratios on paper are conservative, but measured unsafe debt, single-obligor concentration and wrong-way collateral grade weak. Re-review on a changed urn census, cap, mat or collateral asset.",
+            "sources": [
+              {
+                "label": "Ethereum block 26487700 (2026-11-24T21:26:23Z) used for the look-through Lockstake book reads",
+                "url": "https://etherscan.io/block/26487700"
+              },
+              {
+                "label": "Sky active mainnet chainlog (STUSDS, LOCKSTAKE_ENGINE, LOCKSTAKE_CLIP, LOCKSTAKE_ORACLE, MCD_VAT; each address re-read on-chain at block 26487700)",
+                "url": "https://chainlog.skyeco.com/api/mainnet/active.json"
+              },
+              {
+                "label": "Pinned stUSDS implementation (cuttee loss path and withdrawable bound)",
+                "url": "https://github.com/sky-ecosystem/stusds/blob/486bfe342c01afab7387a920dfcd7eeaaf91f4b7/src/StUsds.sol"
+              }
+            ]
+          }
         },
         "liquidationMechanics": {
-          "applicability": "not-applicable",
-          "rationale": "The module does not liquidate borrower collateral itself; auctions and bad-debt write-offs occur in the stake engine and Clipper.",
-          "sourceUrl": "https://github.com/sky-ecosystem/stusds"
+          "applicability": "measured",
+          "quality": "failed",
+          "review": {
+            "reviewedAt": "2026-11-24T21:26:23Z",
+            "reviewer": "stUSDS look-through review 2026-11-25 (Claude Opus 5.5 night research run)",
+            "rationale": "Look-through component review: liquidation of the LSEV2-SKY-A book is the only enforcement path protecting stUSDS holders (auction shortfall is cut from stUSDS). LockstakeClipper 0x836F56750517b1528B5078Cba4Ac4B94fBE4A399 returned stopped() = 3 at block 26487700 (2026-11-24T21:26:23Z), which disables kick, redo and take; daily archive reads from stUSDS launch (2025-10-17) through this block found stopped() = 3 at every sample, and Due() = 0 (no auction has run). The 9 urns already below the safety price ($30.52M, 19.3% of debt) therefore cannot be liquidated. Re-enabling requires a governance action, and even then a forced sale of the 9.075B SKY collateral (38.7% of SKY supply) has no demonstrated market depth. Liquidation is not merely untested but disabled with live unsafe debt: failed. Re-review when stopped() changes.",
+            "sources": [
+              {
+                "label": "Ethereum block 26487700 (2026-11-24T21:26:23Z) used for the look-through Lockstake book reads",
+                "url": "https://etherscan.io/block/26487700"
+              },
+              {
+                "label": "LockstakeClipper 0x836F56750517b1528B5078Cba4Ac4B94fBE4A399 (LSEV2-SKY-A; stopped() read)",
+                "url": "https://etherscan.io/address/0x836F56750517b1528B5078Cba4Ac4B94fBE4A399#readContract"
+              },
+              {
+                "label": "Sky Lockstake implementation (pinned LockstakeClipper stop levels)",
+                "url": "https://github.com/sky-ecosystem/lockstake/blob/e389dc18fa21b5ae460714522a9f484d0b1b9f30/src/LockstakeClipper.sol"
+              }
+            ]
+          }
         },
         "backstop": {
           "applicability": "measured",

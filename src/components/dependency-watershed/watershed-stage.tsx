@@ -12,6 +12,7 @@ export type WatershedRelationshipFilter = "all" | "collateral" | "wrapper";
 
 const WRAPPER_FORM_LABELS: Record<string, string> = {
   "strategy-vault": "Strategy vault",
+  "risk-absorption": "First-loss capital",
   "native-staked": "Native staked",
   pure: "Pure wrapper",
 };

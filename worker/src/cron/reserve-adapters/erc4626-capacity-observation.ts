@@ -17,6 +17,7 @@ export type Erc4626CapacitySource =
   | "morpho-vault-v2-liquidity"
   | "yearn-v3-withdrawable"
   | "sbold-sp-withdrawable"
+  | "stusds-unused-funds"
   | "fraxtal-hop-withdrawable";
 
 export interface RedemptionCapacityTelemetry extends Pick<LiveReserveRedemptionTelemetryKnownFields,
@@ -38,6 +39,7 @@ export interface RedemptionCapacityTelemetry extends Pick<LiveReserveRedemptionT
   observerDiagnostics?: Record<string, unknown>;
   yearnV3WithdrawableRaw?: string;
   sboldSpWithdrawableRaw?: string;
+  stusdsUnusedFundsRaw?: string;
   sfrxusdCrosschainWithdrawableRaw?: string;
   morphoVaultV1LiquidityRaw?: string;
   morphoVaultV1LiquidityUsd?: number;
@@ -56,7 +58,7 @@ type Erc4626CapacityRoute = Pick<
 
 export const SOURCE_TELEMETRY_KEYS = [
   "morphoVaultV1LiquidityRaw", "morphoVaultV1LiquidityUsd",
-  "yearnV3WithdrawableRaw", "sboldSpWithdrawableRaw", "sfrxusdCrosschainWithdrawableRaw",
+  "yearnV3WithdrawableRaw", "sboldSpWithdrawableRaw", "stusdsUnusedFundsRaw", "sfrxusdCrosschainWithdrawableRaw",
   "morphoVaultV2LiquidityRaw", "morphoVaultV2LiquidityUsd",
   "morphoVaultV2ForceDeallocatableLiquidityRaw", "morphoVaultV2ForceDeallocatableLiquidityUsd",
 ] as const satisfies readonly (keyof RedemptionCapacityTelemetry)[];
@@ -147,7 +149,10 @@ export function makeUnavailableObservation(
   diagnostics: Record<string, unknown> = {},
 ): Erc4626CapacityObservation {
   const unavailableDiagnostics = { ...diagnostics, routeOpennessUnproven: true };
-  if (source !== "morpho-vault-v1-liquidity" && idleCapacityRaw != null && underlyingDecimals != null) {
+  // Source-bound routes never substitute wallet cash: MetaMorpho V1 donations
+  // and stUSDS's encumbered first-loss USDS are not withdrawable liquidity.
+  if (source !== "morpho-vault-v1-liquidity" && source !== "stusds-unused-funds" &&
+    idleCapacityRaw != null && underlyingDecimals != null) {
     return makeObservation("erc4626-idle-underlying", idleCapacityRaw, underlyingDecimals, warnings,
       { ...route, freshnessKind: "same-run-onchain" }, unavailableDiagnostics, undefined, v9RouteAttempt);
   }

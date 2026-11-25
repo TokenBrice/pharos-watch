@@ -22,9 +22,10 @@ export function resolveWrapperForm(
 ): V9ApplicableWrapperLocalFacts["form"] | null {
   if (asset.variantKind === "pure-wrapper") return "pure";
   if (asset.variantKind === "savings-passthrough") return "native-staked";
-  if (asset.variantKind === "risk-absorption") {
-    return asset.wrapperOperator === "third-party" ? "strategy-vault" : "native-staked";
-  }
+  // First-loss capital is junior to the parent it protects whoever operates it
+  // (v10.56): it takes the strategy-vault deduction under its own form, never
+  // the senior savings haircut.
+  if (asset.variantKind === "risk-absorption") return "risk-absorption";
   if (
     asset.variantKind === "strategy-vault" ||
     dependencies?.edges.some(

@@ -283,6 +283,14 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
     state.paused = false; state.liquidity = 0n;
     expect((await observeErc4626InstantExit(args)).points[0]).toMatchObject({ executableUsd: 0, reason: "erc4626-withdrawal-disabled" });
   });
+  it("records a dust receipt below the request resolution as a valid zero point", async () => {
+    // 5 raw units against a $100,000 ask is below the 1e-9 executable resolution.
+    state.liquidity = 5n;
+    const point = (await observeErc4626InstantExit(args)).points[0]!;
+    expect(point).toMatchObject({ executableUsd: 0, executedRawInput: "0", outputs: [], fees: [],
+      certification: "exact-lower-bound", reason: "erc4626-liquidity-below-resolution" });
+    expect(ExitExecutionRequestPointSchema.safeParse(point).success).toBe(true);
+  });
   it.each(["unsupported", "ignored"])("rejects %s state override instead of relabelling a quote as a lower bound", async (mode) => {
     state.override = mode;
     await expect(observeErc4626InstantExit(args)).rejects.toThrow("erc4626-state-override-unsupported");
