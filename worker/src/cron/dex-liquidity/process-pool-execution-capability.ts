@@ -688,7 +688,13 @@ export function buildPoolExecutionCapability(
     !curveAddressMatch &&
     identity.fpCurveKey != null
       ? resolveCurveStableswapCandidateByTvl(
-          context.curvePoolCandidatesByFingerprint.get(identity.fpCurveKey) ?? [],
+          (context.curvePoolCandidatesByFingerprint.get(identity.fpCurveKey) ?? []).filter(
+            (candidate) =>
+              !candidate.poolAddress ||
+              !context.claimedExactCurveAddresses?.has(
+                canonicalExitRouteAssetKey(chainNorm, candidate.poolAddress),
+              ),
+          ),
           pool.tvlUsd,
         )
       : null;

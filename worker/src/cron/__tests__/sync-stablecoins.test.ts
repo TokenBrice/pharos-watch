@@ -482,7 +482,10 @@ describe("syncStablecoins", () => {
     await syncStablecoins(db, undefined, { reportProgress });
     const payload = publishedAssets(writes);
     expect(payload.find((asset) => asset.id === "ust-terra")).toMatchObject({ geckoId: "coin-three", priceConfidence: "single-source", circulatingPrevDay: {}, circulatingPrevWeek: {}, circulatingPrevMonth: {} });
-    expect(payload[12]).toMatchObject({ price: null, priceSource: "missing" });
+    expect(payload.find((a) => a.id === "usdt-tether")?.listingClass).toBe("core-stablecoin");
+    expect(payload.every((a) => a.listingClass !== "excluded")).toBe(true);
+    expect(writes.find((w) => w.key === "stablecoins:response-ready:v2")?.value).toContain(":v3");
+    expect(payload[12]).toMatchObject({ price: null, priceSource: "missing", listingClass: null });
     expect(progressUpdates.map((update) => update.stage)).toEqual(expect.arrayContaining(["intake", "price-enrichment", "price-validation", "cache-validation", "cache-write", "depeg-pipeline", "complete"]));
   });
 

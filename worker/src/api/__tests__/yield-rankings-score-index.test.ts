@@ -15,6 +15,7 @@ import * as scoreIndex from "../../lib/safety-score-index";
 import { handleYieldRankings, handleYieldRankingsCoin } from "../yield-rankings-cache";
 import * as structuredLog from "../../lib/structured-log";
 import { handleSafetyGrades } from "../safety-grades";
+import { getListingClass } from "@shared/lib/stablecoins/listing-governance";
 import { projectSafetyGrades } from "@shared/types/report-cards-v9";
 import * as opportunitySafety from "@shared/lib/yield-opportunity-risk";
 import { projectYieldRankingsSummary } from "@shared/lib/yield-rankings-summary";
@@ -465,7 +466,8 @@ describe("rankings score-index hydration", () => {
     const full = await loadActiveSafetyScoreSource(db);
     if (full.kind === "error") throw new Error(full.detail);
     const grades = await handleSafetyGrades(db);
-    expect(await grades.text()).toBe(JSON.stringify(projectSafetyGrades(full.snapshot)));
+    const projected = projectSafetyGrades(full.snapshot);
+    expect(await grades.text()).toBe(JSON.stringify({ ...projected, grades: projected.grades.map((g) => ({ ...g, listingClass: getListingClass(g.id) })) }));
     // Exercise the old full parse + public projection, not a copied fixture map.
     vi.spyOn(scoreIndex, "loadActiveSafetyScoreIndex").mockResolvedValue(full);
     const baseline = await handleYieldRankings(db);

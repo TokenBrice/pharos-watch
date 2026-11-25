@@ -1,10 +1,11 @@
 import { buildPrimaryPoolKey, samePrimaryPoolObservation } from "./pool-identity";
 import { logWorkerEventArgs } from "../../lib/structured-log";
-import { canonicalExitRouteChain } from "@shared/types/exit-route-identity";
+import { canonicalExitRouteAssetKey, canonicalExitRouteChain } from "@shared/types/exit-route-identity";
 import { resolveLlamaPoolStablecoinMatches } from "./pool-match-resolution";
 import { boundTelemetryEntries } from "./route-telemetry";
 import type { DexLiquidityCronMetadata } from "../../lib/schemas";
 import { DEX_LIQUIDITY_POOL_MIN_TVL_USD } from "./constants";
+import { buildPoolFingerprint } from "./pool-helpers";
 import type { SourcePoolGraph } from "./types";
 import { accumulatePoolMetrics } from "./process-pool-accumulation";
 import { admitAndResolvePoolIdentity } from "./process-pool-admission-identity";
@@ -182,6 +183,8 @@ function buildProcessingContext(
       input.measuredTargetCapturedAt ?? Math.floor(Date.now() / 1000),
     curvePoolCandidatesByFingerprint:
       input.curvePoolCandidatesByFingerprint ?? new Map(),
+    curveBelowFloorTwinFingerprints:
+      input.curveBelowFloorTwinFingerprints ?? new Set(),
     uniswapV4ExecutionCandidates:
       input.uniswapV4ExecutionCandidates ?? new Map(),
   };
@@ -265,6 +268,10 @@ export function processPoolMetrics(
     );
   }
 
+  const admittedIdentities: ResolvedPoolIdentity[] = [];
+  const claimedExactCurveAddresses = new Set<string>();
+  const distinctCurveIdsByFingerprint = new Map<string, Set<string>>();
+
   for (const pool of context.pools) {
     let identity;
     try {
@@ -279,7 +286,34 @@ export function processPoolMetrics(
       continue;
     }
     if (!identity) continue;
+    admittedIdentities.push(identity);
+    if (identity.protocol === "curve") {
+      if (identity.exactCurveAddress != null) {
+        claimedExactCurveAddresses.add(
+          canonicalExitRouteAssetKey(identity.chainNorm, identity.exactCurveAddress),
+        );
+      }
+      const curveFingerprint =
+        identity.fpCurveKey ??
+        buildPoolFingerprint(identity.chainNorm, "curve", pool.underlyingTokens ?? []);
+      if (curveFingerprint != null) {
+        const distinctId = identity.exactCurveAddress != null
+          ? canonicalExitRouteAssetKey(identity.chainNorm, identity.exactCurveAddress)
+          : `${identity.chainNorm}:${pool.pool.trim().toLowerCase()}`;
+        const ids = distinctCurveIdsByFingerprint.get(curveFingerprint) ?? new Set<string>();
+        ids.add(distinctId);
+        distinctCurveIdsByFingerprint.set(curveFingerprint, ids);
+      }
+    }
+  }
 
+  context.claimedExactCurveAddresses = claimedExactCurveAddresses;
+  context.dlCurvePoolCountByFingerprint = new Map(
+    [...distinctCurveIdsByFingerprint].map(([fp, ids]) => [fp, ids.size]),
+  );
+
+  for (const identity of admittedIdentities) {
+    const { pool } = identity;
     const enrichment = enrichPoolProtocol(context, identity);
     const key = buildPrimaryPoolKey(identity.chainNorm, pool.pool, pool.project,
       identity.reviewedCurveAddress ?? (enrichment.curveAddressMatch ? enrichment.curveData?.poolAddress : undefined));

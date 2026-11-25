@@ -21,10 +21,17 @@ export function boundDexLiquidityPriceRefreshMetadata(summary: DexLiquidityPoolS
 }
 
 export function getDexLiquiditySourceQualityReasons(sourceState: Pick<DexLiquidityScoringSourceState,
-  "failedSources" | "degradedSources" | "directApiSourceSummary">): string[] {
+  "failedSources" | "degradedSources" | "directApiSourceSummary" | "curveIdentityAttachment">): string[] {
+  const curveIdentityReason =
+    sourceState.curveIdentityAttachment?.status === "unavailable"
+      ? ["curve-identity-unavailable"]
+      : sourceState.curveIdentityAttachment?.status === "partial"
+        ? ["curve-identity-partial"]
+        : [];
   return [...new Set([
     ...sourceState.failedSources.map((source) => `source-failed:${source}`),
     ...(sourceState.degradedSources ?? []).map((source) => `source-partial:${source}`),
+    ...curveIdentityReason,
     ...(sourceState.directApiSourceSummary.sourceWarnings.length > 0 ? ["direct-api-source-warnings"] : []),
   ])];
 }
@@ -61,7 +68,7 @@ export function dexLiquidityDegradedReason(params: {
 export function buildDexLiquidityCronMetadata(params: {
   sourceState: Pick<DexLiquidityScoringSourceState,
     "primaryRawPoolCount" | "failedSources" | "degradedSources" |
-    "fallbackSignals" | "directApiSourceSummary" | "subgraphFailures">;
+    "fallbackSignals" | "directApiSourceSummary" | "subgraphFailures" | "curveIdentityAttachment">;
   poolState: Pick<DexLiquidityPoolState,
     "stagedMergedCount" | "stagedSkippedCount" | "stagedSkippedByExactIdentityCount" |
     "stagedSkippedByUniqueDerivedIdentityCount" | "stagedSkippedByOptionalWildcardIdentityCount" |
@@ -148,6 +155,7 @@ export function buildDexLiquidityCronMetadata(params: {
     failedSources: [...new Set(sourceState.failedSources)],
     subgraphFailures: sourceState.subgraphFailures ?? [],
     degradedSources: [...new Set(sourceState.degradedSources ?? [])],
+    ...(sourceState.curveIdentityAttachment ? { curveIdentityAttachment: sourceState.curveIdentityAttachment } : {}),
     dexPriceDiagnostics,
     fallbackMode: [...new Set(sourceState.fallbackSignals)],
     fallbackCounters: scoreState.diagnostics.fallbackCounters,

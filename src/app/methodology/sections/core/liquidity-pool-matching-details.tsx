@@ -34,15 +34,20 @@ export function LiquidityPoolMatchingDetails() {
         </p>
         <p>
           Since v7.4, Cardano discovery also reads SundaeSwap&apos;s pool index, keyed by SundaeSwap&apos;s own pool
-          id. A pool is valued only when its other asset is an active tracked Cardano stablecoin with a usable peg
-          reference: constant-product pools count twice that counter&apos;s value and must imply a plausible price,
-          while stable-curve pools with a 1:1 rate count twice their smaller side and stage no price. ADA pairs stay
-          unvalued, pools below $10K are not staged, and pools take the generic 0.3x tier. Since v7.54, valued
-          stable-counter pools also read 24-hour volume from the hourly ticks in AssetA inside the 24 complete hours
-          ending at the current window, with version-specific leg normalization (V4 divided by 2; V1, V3 and
-          Stableswaps at 1x), failing closed on errors, stale clocks, unknown versions or excessive turnover. Since
-          v7.55, a window with no hourly tick stays unmeasured rather than zero: SundaeSwap omits idle hours and its
-          response clock does not prove the tick feed is current. SundaeSwap is one
+          id. Two-asset pools with another active tracked Cardano stablecoin counter count twice that counter&apos;s
+          value for constant-product pools (whose implied price must be plausible) and twice their smaller side for
+          stable-curve pools with a 1:1 rate (which stage no price). Since v7.56, two-asset constant-product ADA pairs
+          (V1, V3 and V4 constant-product) also value TVL as twice the ADA side using a fresh clocked CoinGecko ADA/USD
+          reference under the generic 0.3x mechanism tier and 0.3x volatile pair quality while keeping priceUsd null so
+          CoinGecko-derived quotes never enter independent DEX price cross-validation. Because ADA valuation enforces
+          the shared implied-price plausibility gate, severe stablecoin depegs outside that band leave ADA pairs
+          unvalued, and unavailable or stale ADA/USD references fail closed to unvalued rather than carrying stale
+          liquidity. Non-constant-product ADA pools and other volatile pairs stay unvalued, and pools below $10K are not
+          staged. Since v7.54 (widened to valued ADA pairs in v7.56), valued pools also read 24-hour volume from hourly
+          ticks in AssetA inside the 24 complete hours ending at the current window, with version-specific leg
+          normalization (V4 divided by 2; V1, V3 and Stableswaps at 1x), failing closed on errors, stale clocks, unknown
+          versions or excessive turnover. Since v7.55, a window with no hourly tick stays unmeasured rather than zero:
+          SundaeSwap omits idle hours and its response clock does not prove the tick feed is current. SundaeSwap is one
           venue, so its empty answer never certifies that a coin has no Cardano pools, and without a clean SundaeSwap
           answer the token-pool indexes, which miss its pools, cannot certify it either.
         </p>

@@ -10,6 +10,7 @@ import { normalizeDexSymbol, trackedSideBalanceRatio } from "../../lib/dex-cron-
 import type {
   LlamaPool,
   CurveApiPayload,
+  CurveIdentityAttachment,
   CurvePoolEntry,
   DexPriceObs,
   DataSources,
@@ -49,6 +50,12 @@ import { resolveLlamaPoolStablecoinMatches } from "./pool-match-resolution";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { shouldRetainCurveCompositePoolIdentity } from "@shared/lib/curve-composite-policies";
 import { attachDefiLlamaV4PoolIdentities, DEFILLAMA_V4_IDENTITIES_URL } from "./defillama-v4-identity";
+import {
+  attachDefiLlamaCurvePoolIdentities,
+  DEFILLAMA_CURVE_IDENTITIES_MAX_RESPONSE_BYTES,
+  DEFILLAMA_CURVE_IDENTITIES_TIMEOUT_MS,
+  DEFILLAMA_CURVE_IDENTITIES_URL,
+} from "./defillama-curve-identity";
 import { recordPoolRejection } from "./process-pools";
 import { requirePoolIdentity } from "./process-pool-admission-identity";
 import { ExpectedPoolInputError, POOL_REJECTION_POOL_ID_LIMIT, type PoolProcessingRejection } from "./process-pool-types";
@@ -339,6 +346,46 @@ export async function fetchDataSources(
     });
   }
 
+  // Serial exact-address identity join for compacted Curve rows after both DL
+  // bodies have been consumed and before Curve's 4-wide chain fan-out (#2260).
+  const curvePoolCount = pools.filter((pool) => pool.project === "curve-dex").length;
+  let curveIdentityAttachment: CurveIdentityAttachment = {
+    curvePoolCount,
+    attachedPoolCount: 0,
+    unmatchedPoolCount: 0,
+    status: "ok",
+  };
+  if (curvePoolCount > 0) {
+    const curveIdentities = await fetchJsonWithRetry<unknown>(
+      DEFILLAMA_CURVE_IDENTITIES_URL,
+      { headers: { "User-Agent": USER_AGENT }, signal },
+      0,
+      {
+        timeoutMs: DEFILLAMA_CURVE_IDENTITIES_TIMEOUT_MS,
+        maxResponseBytes: DEFILLAMA_CURVE_IDENTITIES_MAX_RESPONSE_BYTES,
+      },
+    );
+    const attachedPoolCount = curveIdentities?.response.ok
+      ? attachDefiLlamaCurvePoolIdentities(pools, curveIdentities.body)
+      : 0;
+    const unmatchedPoolCount = curvePoolCount - attachedPoolCount;
+    const status: CurveIdentityAttachment["status"] =
+      !curveIdentities?.response.ok || attachedPoolCount === 0
+        ? "unavailable"
+        : attachedPoolCount < curvePoolCount
+          ? "partial"
+          : "ok";
+    curveIdentityAttachment = { curvePoolCount, attachedPoolCount, unmatchedPoolCount, status };
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-dex-liquidity",
+      level: attachedPoolCount === curvePoolCount ? "info" : "warn",
+      event: "defillama-curve-identities",
+      message: "Joined exact DeFiLlama Curve pool identities",
+      metadata: { attachedPoolCount, curvePoolCount, unmatchedPoolCount },
+    });
+  }
+
   // --- DL Protocols (consume body to release connection) ---
   const dexProjects = new Set<string>();
   const nonDexProjects = new Set<string>();
@@ -492,6 +539,7 @@ export async function fetchDataSources(
     protocolTvlCaps,
     curvePayloads,
     curveFailedChains,
+    curveIdentityAttachment,
     graphApiKey,
     dlYieldsAvailable,
     dlProtocolsAvailable,
@@ -514,6 +562,9 @@ export async function buildCurveLookups(
   // physical pools sharing an identical coin set are ambiguous and fail
   // closed to the weaker symbol path.
   const ambiguousFingerprints = new Set<string>();
+  const ambiguousSymbolKeys = new Set<string>();
+  const aboveFloorAddressesByFp = new Map<string, Set<string>>();
+  const belowFloorAddressesByFp = new Map<string, Set<string>>();
 
   for (let i = 0; i < CURVE_CHAINS.length; i++) {
     const json = curvePayloads[i];
@@ -696,7 +747,8 @@ export async function buildCurveLookups(
             ? { executionCoins: executionCoins as NonNullable<CurvePoolEntry["executionCoins"]> }
             : {}),
         };
-        curvePoolMap.set(`${chain}:${pool.address.toLowerCase()}`, entry);
+        const lowerAddress = pool.address.toLowerCase();
+        curvePoolMap.set(`${chain}:${lowerAddress}`, entry);
         const curveCoinAddresses = pool.coins.map((coin) => coin.address);
         const hasCompleteCurveCoinAddresses = curveCoinAddresses.every(
           (address): address is string => typeof address === "string" && address.trim().length > 0,
@@ -704,6 +756,14 @@ export async function buildCurveLookups(
         const fingerprintKey = hasCompleteCurveCoinAddresses
           ? buildPoolFingerprint(chain, "curve", curveCoinAddresses)
           : null;
+        if (fingerprintKey) {
+          const targetAddressesByFp = pool.usdTotal >= DEX_LIQUIDITY_POOL_MIN_TVL_USD
+            ? aboveFloorAddressesByFp
+            : belowFloorAddressesByFp;
+          const addresses = targetAddressesByFp.get(fingerprintKey) ?? new Set<string>();
+          addresses.add(lowerAddress);
+          targetAddressesByFp.set(fingerprintKey, addresses);
+        }
         if (
           fingerprintKey &&
           pool.usdTotal >= DEX_LIQUIDITY_POOL_MIN_TVL_USD &&
@@ -711,7 +771,7 @@ export async function buildCurveLookups(
         ) {
           const candidates = curvePoolCandidatesByFingerprint.get(fingerprintKey) ?? [];
           const existingPhysicalPoolIndex = candidates.findIndex(
-            (candidate) => candidate.poolAddress?.toLowerCase() === pool.address.toLowerCase(),
+            (candidate) => candidate.poolAddress?.toLowerCase() === lowerAddress,
           );
           if (existingPhysicalPoolIndex >= 0) {
             // Curve may expose one physical pool through more than one registry
@@ -733,13 +793,26 @@ export async function buildCurveLookups(
         } else if (fingerprintKey && pool.usdTotal >= DEX_LIQUIDITY_POOL_MIN_TVL_USD) {
           const candidates = curvePoolCandidatesByFingerprint.get(fingerprintKey) ?? [];
           const existingPhysicalPoolIndex = candidates.findIndex(
-            (candidate) => candidate.poolAddress?.toLowerCase() === pool.address.toLowerCase(),
+            (candidate) => candidate.poolAddress?.toLowerCase() === lowerAddress,
           );
           if (existingPhysicalPoolIndex >= 0) candidates[existingPhysicalPoolIndex] = entry;
           else candidates.push(entry);
           curvePoolCandidatesByFingerprint.set(fingerprintKey, candidates);
         }
-        curvePoolMap.set(`${chain}:${coinSymbols}`, entry);
+        // Only >=$10k pools may populate symbol fallback; distinct >=$10k pools
+        // sharing a symbol key fail closed so dust clones never overwrite live pools.
+        if (pool.usdTotal >= DEX_LIQUIDITY_POOL_MIN_TVL_USD) {
+          const symbolKey = `${chain}:${coinSymbols}`;
+          if (!ambiguousSymbolKeys.has(symbolKey)) {
+            const existingSymEntry = curvePoolMap.get(symbolKey);
+            if (!existingSymEntry || existingSymEntry.poolAddress?.toLowerCase() === lowerAddress) {
+              curvePoolMap.set(symbolKey, entry);
+            } else {
+              curvePoolMap.delete(symbolKey);
+              ambiguousSymbolKeys.add(symbolKey);
+            }
+          }
+        }
 
         // Extract per-token price observations for DEX cross-validation
         // Filter: pool TVL >= $50K, balance ratio >= 0.3, coin has valid usdPrice
@@ -786,6 +859,17 @@ export async function buildCurveLookups(
       });
     }
   }
+  const curveBelowFloorTwinFingerprints = new Set<string>();
+  for (const [fingerprintKey, belowAddresses] of belowFloorAddressesByFp) {
+    const aboveAddresses = aboveFloorAddressesByFp.get(fingerprintKey);
+    if (!aboveAddresses || aboveAddresses.size === 0) continue;
+    for (const belowAddress of belowAddresses) {
+      if (!aboveAddresses.has(belowAddress)) {
+        curveBelowFloorTwinFingerprints.add(fingerprintKey);
+        break;
+      }
+    }
+  }
   logWorkerEvent({
     scope: "lib",
     job: "sync-dex-liquidity",
@@ -795,7 +879,12 @@ export async function buildCurveLookups(
     metadata: { curvePoolCount: curvePoolMap.size, priceObservationCount: priceObservations.size },
   });
 
-  return { curvePoolMap, curvePoolCandidatesByFingerprint, priceObservations };
+  return {
+    curvePoolMap,
+    curvePoolCandidatesByFingerprint,
+    curveBelowFloorTwinFingerprints,
+    priceObservations,
+  };
 }
 
 /** Collect all pool addresses from existing sources for dedup against GT */

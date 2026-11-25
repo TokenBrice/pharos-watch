@@ -517,8 +517,11 @@ describe("validateAndWriteStablecoinsCache", () => {
     expect(payload.peggedAssets[0]).toMatchObject({
       price: null, priceSource: "missing", priceSelectedSource: null, priceConfidence: null,
       priceUpdatedAt: null, priceObservedAt: null, priceObservedAtMode: null, priceSyncedAt: null,
-      consensusSources: [], agreeSources: [], priceSourceConfidenceProfile: null,
+      consensusSources: [], agreeSources: [], priceSourceConfidenceProfile: null, listingClass: "core-stablecoin",
     });
+    expect(normalizeStablecoinsPayload({ peggedAssets: [
+      makePeggedAsset({ id: "usdc-circle", listingClass: "excluded" }), makePeggedAsset({ id: "buidl-blackrock" }), makePeggedAsset({ id: "214", listingClass: "core-stablecoin" }),
+    ] }).peggedAssets.map((a) => a.listingClass)).toEqual(["core-stablecoin", "tokenized-fund", null]);
   });
 
   it("keeps canonical stablecoins publication successful when response-ready cache write fails", async () => {

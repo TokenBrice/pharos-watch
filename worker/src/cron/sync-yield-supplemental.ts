@@ -354,7 +354,9 @@ export async function syncYieldSupplemental(
       // publication applies per family is what turns a long skip into a real
       // degradation; it is never masked here.
       familyCacheResults[family.key] =
-        family.skipReason === "pendle-rate-limited-backoff" ? "skipped-backoff" : "skipped-not-due";
+        family.skipReason === "pendle-rate-limited-backoff" || family.skipReason === "morpho-rate-limited-backoff"
+          ? "skipped-backoff"
+          : "skipped-not-due";
       continue;
     }
     if (family.status !== "ok" || family.degraded) {
@@ -513,8 +515,10 @@ export async function syncYieldSupplemental(
     (status) => status === "published" || status === "empty-published",
   );
   const pendleBackoff = familyResults.find((family) => family.key === "pendle")?.backoff;
+  const morphoBackoff = familyResults.find((family) => family.key === "morpho")?.backoff;
   const metadata = JSON.stringify({
     ...(pendleBackoff ? { pendleBackoff } : {}),
+    ...(morphoBackoff ? { morphoBackoff } : {}),
     ...(familyPublished ? { outputPublishedAt: startSec } : {}),
     rowsRead: rawCandidateCount,
     rowsWritten: supplementalCandidatesWritten,

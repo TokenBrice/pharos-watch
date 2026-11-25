@@ -1,7 +1,7 @@
 import { makeReportCardsV9PipelineGapCard, makeReportCardsV9PartialCard } from "@shared/test-utils/report-cards-v9";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getPublicApiAccess } from "@shared/lib/api-endpoints";
-import { DependencyGraphResponseSchema, projectDependencyGraph } from "@shared/types/dependency-graph";
+import { DependencyGraphNodeSchema, DependencyGraphResponseSchema, projectDependencyGraph } from "@shared/types/dependency-graph";
 import { makeReportCardsV9Response, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 
@@ -60,8 +60,8 @@ describe("dependency graph projection", () => {
     expect(body).toMatchObject({ publicationGenerationId: snapshot.safetyScoreIdentity.publicationGenerationId, methodologyVersion: snapshot.methodology.version, asOfSec: snapshot.asOfSec, updatedAt: snapshot.updatedAt });
     expect(body.commonModeGroups).toEqual(snapshot.commonModeGroups);
     expect(body.nodes.map(({ pillars: _pillars, ...node }) => node)).toEqual([
-      { id: "child", grade: snapshot.cards[0]!.grade, ratingStatus: "rated", partialEvidence: null, score: 80, circulatingUsdAtEvaluation: 0, supplyAsOfSec: 100, sharedBookId: "book-1", roles: [{ upstreamAssetId: "parent", economicRole: "exit-dependency", weight: 0.4 }], dependencyCoverageCount: 0 },
-      { id: "parent", grade: "NR", ratingStatus: "not-rated", partialEvidence: null, score: null, circulatingUsdAtEvaluation: null, supplyAsOfSec: null, sharedBookId: null, roles: [], dependencyCoverageCount: null },
+      { id: "child", grade: snapshot.cards[0]!.grade, ratingStatus: "rated", partialEvidence: null, score: 80, circulatingUsdAtEvaluation: 0, supplyAsOfSec: 100, sharedBookId: "book-1", roles: [{ upstreamAssetId: "parent", economicRole: "exit-dependency", weight: 0.4 }], dependencyCoverageCount: 0, listingClass: null },
+      { id: "parent", grade: "NR", ratingStatus: "not-rated", partialEvidence: null, score: null, circulatingUsdAtEvaluation: null, supplyAsOfSec: null, sharedBookId: null, roles: [], dependencyCoverageCount: null, listingClass: null },
     ]);
     expect(body.nodes[0]!.pillars).toMatchObject({
       backing: { score: snapshot.cards[0]!.pillars.backing.score },
@@ -138,6 +138,16 @@ describe("dependency graph projection", () => {
     expect(body.publicationHealth).toEqual(snapshot.publicationHealth);
     expect(body.publicationGenerationId).toBe(current.safetyScoreIdentity.publicationGenerationId);
     expect(body.edges).toEqual(current.dependencyGraph.edges);
+  });
+
+  it("emits listingClass on live nodes without excluded values", async () => {
+    const s = fixturePublication();
+    expect(projectDependencyGraph(s).nodes[0]).not.toHaveProperty("listingClass");
+    const g = DependencyGraphResponseSchema.parse(projectDependencyGraph(s, (id) => (id === "child" ? "tokenized-fund" : null)));
+    expect([g.nodes.map((n) => n.listingClass), DependencyGraphNodeSchema.safeParse({ ...g.nodes[0], listingClass: "bogus" }).success, DependencyGraphNodeSchema.safeParse({ ...g.nodes[0], extra: 1 }).success]).toEqual([["tokenized-fund", null], false, false]);
+    mockLoadActiveSafetyScoreCohort.mockResolvedValue({ kind: "v9", snapshot: makeReportCardsV9Response({ cards: ["buidl-blackrock", "usdc-circle", "x"].map((id) => makeWorkerV9Card({ id })) }) });
+    const { schemaVersion, nodes } = DependencyGraphResponseSchema.parse(await (await handleDependencyGraph(mockD1([]))).json());
+    expect([schemaVersion, nodes.map((n) => n.listingClass)]).toEqual([2, ["tokenized-fund", "core-stablecoin", null]]);
   });
 
   it("fails closed without an accepted publication", async () => {

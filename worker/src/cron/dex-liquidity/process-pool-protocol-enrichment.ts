@@ -3,6 +3,7 @@ import { getCurveCompositePolicy } from "@shared/lib/curve-composite-policies";
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { canonicalExitRouteAssetKey, canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import { QUALITY_MULTIPLIERS } from "../../lib/dex-cron-constants";
+import { CURVE_TWIN_FINGERPRINT_MAX_TVL_RATIO } from "./constants";
 import {
   classifyCurveStableSwapQuality,
   getQualityMultiplier,
@@ -10,7 +11,7 @@ import {
 } from "./pool-helpers";
 import { resolveActiveCurveCryptoSwapCandidateByTvl } from "./process-pool-execution-capability";
 import { getReviewedQuoterV2SourcePoolPolicy } from "./pool-identity";
-import type { CurvePool } from "./types";
+import type { CurvePool, CurvePoolEntry } from "./types";
 import type {
   PoolProcessingContext,
   PoolProtocolEnrichment,
@@ -49,33 +50,79 @@ export function resolveCurveBasePoolOverlap(
   return { basePoolKey: canonicalExitRouteScopedKey(chain, policy.metapool.basePoolAddress), lpLegTvlUsd };
 }
 
+function isClaimedExactCurveAddress(
+  context: PoolProcessingContext,
+  chainNorm: string,
+  entry: CurvePoolEntry | undefined,
+): boolean {
+  if (!entry?.poolAddress || !context.claimedExactCurveAddresses?.size) return false;
+  return context.claimedExactCurveAddresses.has(
+    canonicalExitRouteAssetKey(chainNorm, entry.poolAddress),
+  );
+}
+
 export function enrichPoolProtocol(
   context: PoolProcessingContext,
   identity: ResolvedPoolIdentity,
 ): PoolProtocolEnrichment {
   const { pool, protocol, chainNorm, poolSymbols, poolType } = identity;
   const reviewedQuoterPool = protocol === "uniswap-v3" ? getReviewedQuoterV2SourcePoolPolicy(pool) : undefined;
+  const addrCurveData = protocol === "curve" ? context.curvePoolMap.get(identity.addrCurveKey) : undefined;
+  const rawFpCurveData =
+    protocol === "curve" && addrCurveData == null && identity.fpCurveKey != null
+      ? context.curvePoolMap.get(identity.fpCurveKey)
+      : undefined;
+  const hasBelowFloorTwin =
+    identity.fpCurveKey != null && context.curveBelowFloorTwinFingerprints.has(identity.fpCurveKey);
+  const dlFpCount =
+    identity.fpCurveKey != null ? (context.dlCurvePoolCountByFingerprint?.get(identity.fpCurveKey) ?? 0) : 0;
+  // Guard 2C: a UUID-only Curve row may never bind to a physical address already
+  // claimed by an exact-attached row in the same run.
+  const fpBlockedByClaimed = isClaimedExactCurveAddress(context, chainNorm, rawFpCurveData);
+  // Guard 2A: multiple admitted Curve observations on a below-floor-twin fingerprint
+  // fail closed to their distinct keys instead of collapsing into a false conflict.
+  const fpBlockedByMultiRowTwin = hasBelowFloorTwin && dlFpCount >= 2;
+  // Guard 2B: a lone stale drained twin on a below-floor-twin fingerprint cannot
+  // bind to the surviving sibling when TVL diverges beyond the coherence bound.
+  const fpBlockedByTvlDivergence =
+    hasBelowFloorTwin &&
+    dlFpCount <= 1 &&
+    rawFpCurveData != null &&
+    !(
+      Number.isFinite(rawFpCurveData.tvl) &&
+      rawFpCurveData.tvl > 0 &&
+      Number.isFinite(pool.tvlUsd) &&
+      pool.tvlUsd > 0 &&
+      Math.max(rawFpCurveData.tvl / pool.tvlUsd, pool.tvlUsd / rawFpCurveData.tvl) <=
+        CURVE_TWIN_FINGERPRINT_MAX_TVL_RATIO
+    );
+  const fpSuppressed = fpBlockedByClaimed || fpBlockedByMultiRowTwin || fpBlockedByTvlDivergence;
+  const fpCurveData = fpSuppressed ? undefined : rawFpCurveData;
+  const rawSymCurveData =
+    protocol === "curve" &&
+    addrCurveData == null &&
+    fpCurveData == null &&
+    !fpSuppressed &&
+    identity.symCurveKey != null
+      ? context.curvePoolMap.get(identity.symCurveKey)
+      : undefined;
+  const symCurveData = isClaimedExactCurveAddress(context, chainNorm, rawSymCurveData)
+    ? undefined
+    : rawSymCurveData;
+  const curveData = addrCurveData ?? fpCurveData ?? symCurveData;
+  const curveAddressMatch = addrCurveData != null || fpCurveData != null;
   const activeCryptoSwapTvlMatch =
     protocol === "curve" &&
     identity.fpCurveKey != null &&
-    !context.curvePoolMap.has(identity.fpCurveKey)
+    !curveAddressMatch
       ? resolveActiveCurveCryptoSwapCandidateByTvl(
-          context.curvePoolCandidatesByFingerprint.get(identity.fpCurveKey) ?? [],
+          (context.curvePoolCandidatesByFingerprint.get(identity.fpCurveKey) ?? []).filter(
+            (candidate) => !isClaimedExactCurveAddress(context, chainNorm, candidate),
+          ),
           pool.tvlUsd,
           chainNorm,
         )
       : null;
-  const curveData =
-    protocol === "curve"
-      ? (context.curvePoolMap.get(identity.addrCurveKey) ??
-        (identity.fpCurveKey != null
-          ? context.curvePoolMap.get(identity.fpCurveKey)
-          : undefined) ??
-        (identity.symCurveKey != null ? context.curvePoolMap.get(identity.symCurveKey) : undefined))
-      : undefined;
-  const curveAddressMatch =
-    context.curvePoolMap.has(identity.addrCurveKey) ||
-    (identity.fpCurveKey != null && context.curvePoolMap.has(identity.fpCurveKey));
   const curveMeasuredRouteData =
     activeCryptoSwapTvlMatch ?? (curveAddressMatch ? curveData : undefined);
 

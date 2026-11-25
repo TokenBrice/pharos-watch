@@ -3,6 +3,8 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
 import type { SlotDeadline } from "../../lib/cron-timeouts";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { liquidityTvlBasisEpoch } from "@shared/lib/dex-liquidity-evidence";
+import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { getReferenceMarket } from "@shared/lib/reference-market-hours";
 import type { LiquidityFallbackCounters, LiquidityMetrics, LlamaPool } from "./types";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
@@ -41,7 +43,8 @@ import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { isPreferredDirectApiPool, type DexApiPool } from "../../lib/dex-api-common";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { buildFxReferenceClosureMarks, getClosedReferenceDexValuation } from "../../lib/dex-api-token-pricing";
-import { CURVE_CHAINS } from "./constants";
+import { CURVE_CHAINS, CURVE_IDENTITY_OUTAGE_HOLD_MAX_AGE_SEC } from "./constants";
+import { loadLatestPublishedDexGenerationSummary } from "./dex-scoring-stage-store";
 import { POOL_CHALLENGE_MIN_TVL } from "../../lib/price-depeg-voting-policy";
 import { buildDirectApiPoolIdentity } from "./direct-source-helpers";
 import {
@@ -281,6 +284,7 @@ export async function stageDexLiquidityScoring(
       rowsRead: scoringSourceState.primaryRawPoolCount,
       failedSources: scoringSourceState.failedSources,
       degradedSources: scoringSourceState.degradedSources ?? [],
+      ...(scoringSourceState.curveIdentityAttachment ? { curveIdentityAttachment: scoringSourceState.curveIdentityAttachment } : {}),
       uniV3CandidateCarryForward: scoringSourceState.uniV3CandidateCarryForward ?? [],
       uniswapV4CandidateCarryForward: scoringSourceState.uniswapV4CandidateCarryForward ?? [],
       subgraphFailures: scoringSourceState.subgraphFailures ?? [],
@@ -310,6 +314,49 @@ export async function consumeDexLiquidityScoringStage(
   return consumeDexLiquidityStage(DEX_STAGE_LIFECYCLE, db, signal, reportProgress, consumerSlotStartedAt, options);
 }
 
+/**
+ * Option F2 (#2260): while `poolsPro?project=curve-dex` is completely
+ * unavailable and the newest accepted same-epoch v11+ generation is strictly
+ * under two hours old (and was not itself a Layer-2 outage fallback), hold the
+ * existing publication neutrally instead of flapping CryptoSwap effective TVL.
+ */
+async function resolveCurveIdentityOutageHold(
+  db: D1Database,
+  staged: LoadedDexLiquidityScoringStage,
+  signal?: AbortSignal,
+): Promise<{ generationId: string; ageSec: number } | null> {
+  if (
+    staged.sourceState.curveIdentityAttachment?.status !== "unavailable" ||
+    staged.sourceState.criticalSourceFailures.length > 0
+  ) {
+    return null;
+  }
+  try {
+    const latest = await loadLatestPublishedDexGenerationSummary(db, signal);
+    if (!latest || latest.publishedAt == null || latest.methodologyVersion == null) return null;
+    if (latest.curveIdentityStatus === "unavailable") return null;
+    const latestVersionNum = Number(latest.methodologyVersion);
+    if (
+      !Number.isFinite(latestVersionNum) ||
+      latestVersionNum < 7.56 ||
+      liquidityTvlBasisEpoch(latest.methodologyVersion) !== liquidityTvlBasisEpoch(LIQUIDITY_METHODOLOGY_VERSION)
+    ) {
+      return null;
+    }
+    const ageSec = Math.floor(Date.now() / 1000) - latest.publishedAt;
+    if (ageSec < 0 || ageSec >= CURVE_IDENTITY_OUTAGE_HOLD_MAX_AGE_SEC) return null;
+    return { generationId: latest.generationId, ageSec };
+  } catch (error) {
+    rethrowIfAborted(error, signal);
+    logWorkerEventArgs("handler", "warn", JSON.stringify({
+      scope: "dex-liquidity",
+      message: "Failed to check latest published generation for Curve identity outage hold; falling through to Layer 2",
+      error: toErrorMessage(error),
+    }));
+    return null;
+  }
+}
+
 async function consumeLoadedDexLiquidityScoringStage(
   db: D1Database,
   staged: LoadedDexLiquidityScoringStage,
@@ -328,6 +375,31 @@ async function consumeLoadedDexLiquidityScoringStage(
         assessPoolRejectionCoverage(staged.poolState.poolRejections, null, new Map())),
       persistence: { generationId: null, skipped: true, skippedReason: reason },
     }) };
+  }
+  const curveIdentityHold = await resolveCurveIdentityOutageHold(db, staged, signal);
+  if (curveIdentityHold != null) {
+    const reason = "curve-identity-unavailable";
+    const qualityReasons = getDexLiquiditySourceQualityReasons(staged.sourceState);
+    return {
+      status: "skipped_neutral",
+      itemCount: 0,
+      metadata: JSON.stringify({
+        reason,
+        ...(qualityReasons.length > 0 ? { quality: { reasons: qualityReasons } } : {}),
+        sourceSlotStartedAt: staged.sourceSlotStartedAt,
+        sourceState: "ready",
+        acceptedGeneration: curveIdentityHold.generationId,
+        heldGenerationAgeSec: curveIdentityHold.ageSec,
+        curveIdentityHoldMaxAgeSec: CURVE_IDENTITY_OUTAGE_HOLD_MAX_AGE_SEC,
+        failedSources: staged.sourceState.failedSources,
+        degradedSources: staged.sourceState.degradedSources ?? [],
+        fallbackMode: [...new Set(staged.sourceState.fallbackSignals)],
+        curveIdentityAttachment: staged.sourceState.curveIdentityAttachment,
+        ...(recovery != null ? { stageRecovery: recovery } : {}),
+        persistence: { generationId: null, skipped: true, skippedReason: reason, publicationStarted: false },
+      }),
+      productivity: { productive: false, reason },
+    };
   }
   const ctx: DexLiquidityRunContext = {
     db,
@@ -427,6 +499,9 @@ interface DexLiquiditySourceState {
   curvePoolCandidatesByFingerprint: Awaited<
     ReturnType<typeof buildCurveLookups>
   >["curvePoolCandidatesByFingerprint"];
+  curveBelowFloorTwinFingerprints: Awaited<
+    ReturnType<typeof buildCurveLookups>
+  >["curveBelowFloorTwinFingerprints"];
   priceObservations: Awaited<ReturnType<typeof buildCurveLookups>>["priceObservations"];
   subgraphEnrichment: DexLiquiditySubgraphEnrichment;
   directApiPhase: DexLiquidityDirectApiPhase;
@@ -463,6 +538,9 @@ interface DexLiquidityPersistenceState {
 function buildDexLiquidityScoringSourceState(
   sourceState: DexLiquiditySourceState,
 ): DexLiquidityScoringSourceState {
+  const curveIdentityAttachment = sourceState.dataSources.curveIdentityAttachment;
+  const curveIdentityDegraded =
+    curveIdentityAttachment?.status === "unavailable" || curveIdentityAttachment?.status === "partial";
   return {
     validationReferences: sourceState.validationReferences,
     stablecoinPriceById: sourceState.stablecoinPriceById,
@@ -481,7 +559,9 @@ function buildDexLiquidityScoringSourceState(
       ...sourceState.dataSources.curveFailedChains.map(
         (chain) => `${CIRCUIT_SOURCE.CURVE_LIQUIDITY_API}:${chain}`,
       ),
+      ...(curveIdentityDegraded ? ["defillama-curve-identities"] : []),
     ],
+    ...(curveIdentityAttachment ? { curveIdentityAttachment } : {}),
     uniV3CandidateCarryForward: sourceState.subgraphEnrichment.uniV3CandidateCarryForward,
     uniswapV4CandidateCarryForward: sourceState.subgraphEnrichment.uniswapV4CandidateCarryForward,
     subgraphFailures: sourceState.subgraphEnrichment.subgraphFailures,
@@ -667,13 +747,23 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     criticalSourceFailures.push("defillama-protocols");
     fallbackSignals.push("dl-protocols-unavailable");
   }
+  if (dataSources.curveIdentityAttachment?.status === "unavailable") {
+    fallbackSignals.push("curve-identity-unavailable");
+  } else if (dataSources.curveIdentityAttachment?.status === "partial") {
+    fallbackSignals.push("curve-identity-partial");
+  }
 
   const primaryPoolCounts: DexLiquiditySourceState["primaryPoolCounts"] = {
     pools: dataSources.pools,
     rawPoolCount: dataSources.rawPoolCount,
     retainedPoolCount: dataSources.pools.length,
   };
-  const { curvePoolMap, curvePoolCandidatesByFingerprint, priceObservations } = await buildCurveLookups(
+  const {
+    curvePoolMap,
+    curvePoolCandidatesByFingerprint,
+    curveBelowFloorTwinFingerprints,
+    priceObservations,
+  } = await buildCurveLookups(
     dataSources.curvePayloads,
     lookups.symbolToIds,
     lookups.symbolToChainScopedIds,
@@ -761,6 +851,7 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     lookups,
     curvePoolMap,
     curvePoolCandidatesByFingerprint,
+    curveBelowFloorTwinFingerprints,
     priceObservations,
     subgraphEnrichment,
     directApiPhase,
@@ -834,6 +925,8 @@ async function buildDexLiquidityPoolState(
     validationReferences: sourceState.validationReferences,
     curvePoolCandidatesByFingerprint:
       sourceState.curvePoolCandidatesByFingerprint,
+    curveBelowFloorTwinFingerprints:
+      sourceState.curveBelowFloorTwinFingerprints,
     uniswapV4ExecutionCandidates:
       sourceState.subgraphEnrichment.uniswapV4ExecutionCandidates,
     fallbackCounters: ctx.fallbackCounters,
@@ -853,6 +946,7 @@ async function buildDexLiquidityPoolState(
   sourceState.dataSources.dexProjects = new Set();
   sourceState.curvePoolMap = new Map();
   sourceState.curvePoolCandidatesByFingerprint = new Map();
+  sourceState.curveBelowFloorTwinFingerprints = new Set();
   sourceState.subgraphEnrichment.uniV3PoolFees = new Map();
   sourceState.subgraphEnrichment.uniV3SymbolFees = new Map();
   sourceState.subgraphEnrichment.uniV3PriceObs = new Map();
@@ -1281,6 +1375,7 @@ async function persistDexLiquidityScoreState(
           scoreState.diagnostics.routeRemovalEvidence,
           scoreState.retainedPoolsByStablecoin,
           scoreState.analysis.sourceCoverage.poolRejectionCoverage.anchorReviewDecision,
+          sourceState.curveIdentityAttachment?.status,
         ),
       3,
       ctx.signal,

@@ -15,11 +15,13 @@ import {
   projectV9CompactPartialEvidence,
 } from "./safety-score-v9-causes";
 import { V9EvidencePillarsSchema, projectV9EvidencePillars } from "./safety-score-v9-causes";
+import { ListingClassSchema, type ListingClass } from "./stablecoin-taxonomy";
 
 export const DEPENDENCY_GRAPH_RESPONSE_SCHEMA_VERSION = 2;
 
 export const DependencyGraphNodeSchema = z.object({
   id: z.string().min(1),
+  listingClass: ListingClassSchema.nullable().optional(),
   grade: V9GradeSchema.nullable(),
   ratingStatus: V9RatingStatusSchema,
   partialEvidence: V9CompactPartialEvidenceSchema.nullable(),
@@ -133,11 +135,14 @@ export function resolveCommonModeEffects(snapshot: Pick<ReportCardsV9CurrentResp
 }
 
 /** Project only the accepted publication; no live supply or recomputed edges. */
-export function projectDependencyGraph(snapshot: Pick<ReportCardsV9CurrentResponse,
-  "safetyScoreIdentity" | "asOfSec" | "updatedAt" | "publicationHealth" | "dependencyGraph" | "commonModeGroups"> & {
-    methodology: Pick<ReportCardsV9CurrentResponse["methodology"], "version">;
-    cards: readonly DependencyGraphSourceCard[];
-  }): DependencyGraphResponse {
+export function projectDependencyGraph(
+  snapshot: Pick<ReportCardsV9CurrentResponse,
+    "safetyScoreIdentity" | "asOfSec" | "updatedAt" | "publicationHealth" | "dependencyGraph" | "commonModeGroups"> & {
+      methodology: Pick<ReportCardsV9CurrentResponse["methodology"], "version">;
+      cards: readonly DependencyGraphSourceCard[];
+    },
+  resolveListingClass?: (id: string) => ListingClass | null,
+): DependencyGraphResponse {
   const commonModeGroups = resolveCommonModeEffects(snapshot);
   return {
     model: "v9",
@@ -150,6 +155,7 @@ export function projectDependencyGraph(snapshot: Pick<ReportCardsV9CurrentRespon
     publicationHealth: snapshot.publicationHealth,
     nodes: snapshot.cards.map((card) => ({
       id: card.id,
+      ...(resolveListingClass ? { listingClass: resolveListingClass(card.id) } : {}),
       grade: card.grade,
       score: card.score,
       ratingStatus: card.ratingStatus,

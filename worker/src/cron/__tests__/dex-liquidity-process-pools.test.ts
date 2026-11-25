@@ -3,6 +3,7 @@ import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-capac
 import { DEX_ROUTE_CAPABILITY_MATRIX_VERSION } from "@shared/lib/p4-exit-route-capability-policy";
 import type { CurvePool, CurvePoolEntry, LlamaPool, PoolEntry } from "../dex-liquidity/types";
 import { mergeStagedPools } from "../dex-liquidity/staging-merge";
+import { buildStagedPoolWriteback } from "../dex-liquidity/staged-pool-writeback";
 import { createKnownPoolIdentityIndex } from "../dex-liquidity/pool-identity";
 import { makeStagedPoolRow } from "../dex-liquidity/__tests__/staging-merge.test-support";
 import { makeApiPool } from "../dex-liquidity/__tests__/fetch-primary.test-support";
@@ -885,7 +886,7 @@ describe("processPoolMetrics", () => {
     const permanentLiquidity = { lpShare: 0.5, chain: "ethereum", lpToken: "0x1", holder: "0x2", proof: "burn-address", verifiedAtBlock: 1 };
     const lockOn = (pool: string) => processPoolMetrics({
       pools: [{ ...uuidRow, pool }], dexProjects: new Set(["curve-dex"]), symbolToChainScopedIds, chainAddressToId,
-      curvePoolMap: new Map([[fingerprintKey!, { ...entry, poolAddress, permanentLiquidity }]]), ...noV3(),
+      curvePoolMap: new Map([[`ethereum:${poolAddress}`, { ...entry, poolAddress, permanentLiquidity }], [fingerprintKey!, { ...entry, poolAddress, permanentLiquidity }]]), ...noV3(),
     }).metrics.get("usdc-circle")?.pools[0]?.extra?.permanentLiquidity;
     expect([lockOn(uuidRow.pool), lockOn(poolAddress), lockOn(poolAddress.replace("a1", "a2"))]).toEqual([permanentLiquidity, permanentLiquidity, undefined]);
   });
@@ -939,76 +940,38 @@ describe("processPoolMetrics", () => {
     expect(metrics.get("usdc-circle")?.pools[0]?.extra?.ammExecutionModel).toBeUndefined();
   });
 
-  it("promotes a uniquely TVL-matched active Curve CryptoSwap row to an exact measured target", () => {
-    const CRVUSD = "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e";
-    const WBTC = "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599";
-    const ACTIVE_POOL = "0x313698667d7fdd6789a9bc70821309ff891e729a";
-    const ACTIVE_SIBLING = "0xd9ff8396554a0d18b2cfbec53e1979b7ecce8373";
-    const chainAddressToId = buildChainAddressToId(new Map([[CRVUSD, "crvusd-curve"]]), ["ethereum"]);
-    const symbolToIds = new Map<string, string[]>();
-    const symbolToChainScopedIds = buildSymbolToChainScopedIds(symbolToIds, ["ethereum"]);
-    const fingerprintKey = buildPoolFingerprint("ethereum", "curve", [CRVUSD, WBTC])!;
-    const candidate = makeCurveEntry({
-      poolAddress: ACTIVE_POOL,
-      apiIsBroken: false,
-      A: 50_000,
-      tvl: 46_403_371,
-      registryId: "factory-twocrypto",
-      executionCoins: [
-        { address: CRVUSD, symbol: "crvUSD", decimals: 18, balance: 23_000_000, usdPrice: 1 },
-        { address: WBTC, symbol: "WBTC", decimals: 8, balance: 360, usdPrice: 65_000 },
-      ],
-    });
-    const sibling = {
-      ...candidate,
-      poolAddress: ACTIVE_SIBLING,
-      tvl: 7_494_912,
-    };
-    const retainedPool = makePool({
-      pool: "128b253a-0903-476f-9a70-6007b336e395",
-      project: "curve-dex",
-      symbol: "CRVUSD-WBTC",
-      tvlUsd: 46_360_886,
-      underlyingTokens: [CRVUSD, WBTC],
-      count: 63,
-    });
-    const run = (candidateMap: Map<string, CurvePoolEntry[]>) =>
-      processPoolMetrics({
-        pools: [retainedPool],
-        dexProjects: new Set(["curve-dex"]),
-        symbolToChainScopedIds,
-        chainAddressToId,
-        curvePoolMap: new Map([[`ethereum:${ACTIVE_POOL}`, candidate], [`ethereum:${ACTIVE_SIBLING}`, sibling]]),
-        ...noV3(),
-        uniV3ExecutionCandidates: new Map(),
-        stablecoinPriceById: new Map([["crvusd-curve", 0.9998]]),
-        measuredTargetCapturedAt: 1_752_500_000,
-        validationReferences: undefined,
-        curvePoolCandidatesByFingerprint: candidateMap,
-      }).metrics.get("crvusd-curve")?.pools[0];
+  it("promotes a uniquely TVL-matched active Curve CryptoSwap row to an exact measured target", async () => {
+    const CRVUSD = "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e", WBTC = "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599";
+    const ACTIVE_POOL = "0x313698667d7fdd6789a9bc70821309ff891e729a", ACTIVE_SIBLING = "0xd9ff8396554a0d18b2cfbec53e1979b7ecce8373";
+    const E = "ethereum:", eA = E + ACTIVE_POOL, chainAddressToId = buildChainAddressToId(new Map([[CRVUSD, "crvusd-curve"]]), ["ethereum", "monad"]);
+    const symbolToChainScopedIds = buildSymbolToChainScopedIds(new Map(), ["ethereum"]), fp = buildPoolFingerprint("ethereum", "curve", [CRVUSD, WBTC])!;
+    const candidate = makeCurveEntry({ poolAddress: ACTIVE_POOL, apiIsBroken: false, A: 5e4, tvl: 46403371, registryId: "factory-twocrypto", executionCoins: [{ address: CRVUSD, symbol: "crvUSD", decimals: 18, balance: 23e6, usdPrice: 1 }, { address: WBTC, symbol: "WBTC", decimals: 8, balance: 360, usdPrice: 65e3 }] });
+    const retainedPool = makePool({ pool: "128b253a-0903-476f-9a70-6007b336e395", project: "curve-dex", symbol: "CRVUSD-WBTC", tvlUsd: 46360886, underlyingTokens: [CRVUSD, WBTC], count: 63 });
+    const runFull = (curvePoolCandidatesByFingerprint: Map<string, CurvePoolEntry[]>, ov: Partial<Parameters<typeof processPoolMetrics>[0]> = {}) =>
+      processPoolMetrics({ pools: [retainedPool], dexProjects: new Set(["curve-dex"]), symbolToChainScopedIds, chainAddressToId, curvePoolMap: new Map([[eA, candidate], [E + ACTIVE_SIBLING, { ...candidate, poolAddress: ACTIVE_SIBLING, tvl: 7494912 }]]), ...noV3(), uniV3ExecutionCandidates: new Map(), stablecoinPriceById: new Map([["crvusd-curve", 0.9998]]), measuredTargetCapturedAt: 17525e5, validationReferences: undefined, curvePoolCandidatesByFingerprint, ...ov });
+    const retained = runFull(new Map([[fp, [candidate, { ...candidate, poolAddress: ACTIVE_SIBLING, tvl: 7494912 }]]])).metrics.get("crvusd-curve")?.pools[0];
+    expect([retained?.tvlUsd, retained?.extra?.registryId, retained?.extra?.executionCapabilityGate]).toEqual([46360886, undefined, undefined]);
+    expect(retained?.extra?.measuredExecutionTarget).toMatchObject({ adapterProfileId: "curve-cryptoswap-get-dy-v1", stablecoinId: "crvusd-curve", poolId: eA, retainedTvlUsd: 46360886, retainedPoolPriceUsd: 0.9998 });
+    const proj = (p: typeof retained) => { const c = structuredClone(p); if (c?.extra) { delete c.extra.measuredExecutionTarget; delete c.extra.executionCapabilityGate; } return c; };
+    expect(proj(retained)).toEqual(proj(runFull(new Map()).metrics.get("crvusd-curve")?.pools[0]));
 
-    const retained = run(new Map([[fingerprintKey, [candidate, sibling]]]));
-    expect(retained?.tvlUsd).toBe(46_360_886);
-    expect(retained?.extra?.registryId).toBeUndefined();
-    expect(retained?.extra?.executionCapabilityGate).toBeUndefined();
-    expect(retained?.extra?.measuredExecutionTarget).toMatchObject({
-      adapterProfileId: "curve-cryptoswap-get-dy-v1",
-      stablecoinId: "crvusd-curve",
-      poolId: `ethereum:${ACTIVE_POOL}`,
-      retainedTvlUsd: 46_360_886,
-      retainedPoolPriceUsd: 0.9998,
-    });
-
-    const baseline = run(new Map());
-    const legacyProjection = (pool: typeof retained) => {
-      const projection = structuredClone(pool);
-      if (projection?.extra) {
-        delete projection.extra.measuredExecutionTarget;
-        delete projection.extra.executionCapabilityGate;
-      }
-      return projection;
-    };
-    expect(legacyProjection(retained)).toEqual(legacyProjection(baseline));
+    const b = `0x${"b".repeat(40)}`, c = `0x${"c".repeat(40)}`, mk = (pool: string, tvlUsd: number, chain = "Ethereum") => ({ ...retainedPool, pool, tvlUsd, chain });
+    const curvePoolMap = new Map([[eA, candidate], [E + b, makeCurveEntry({ poolAddress: b, tvl: 4500 })], [fp, candidate], [`${E}CRVUSD-WBTC`, candidate]]);
+    const pm = (pools: LlamaPool[], ex: Partial<Parameters<typeof processPoolMetrics>[0]> = {}) => runFull(new Map(), { pools, curvePoolMap, ...ex });
+    const ps = (r: ReturnType<typeof pm>) => r.metrics.get("crvusd-curve")?.pools ?? [];
+    const l1 = pm([mk(ACTIVE_POOL, 463e5), mk(b, 13400), mk(c, 13400), mk(ACTIVE_POOL, 5e4, "Monad")]);
+    expect([l1.rejections, ps(l1).map((p) => [p.poolId, p.tvlUsd])]).toEqual([[], [[eA, 46403371], [E + b, 4500], [E + c, 13400], [`monad:${ACTIVE_POOL}`, 5e4]]]);
+    expect(buildStagedPoolWriteback(l1.metrics, 17525e5).pools.map((p) => p.poolId)).toEqual(expect.arrayContaining([eA, `monad:${ACTIVE_POOL}`]));
+    const now = Math.floor(Date.now() / 1e3), db = makeNoopD1({ prepare: () => ({ bind: () => ({ all: async () => ({ results: [makeStagedPoolRow({ pool_id: eA, stablecoin_id: "crvusd-curve", protocol: "curve", dex_id: "curve", tvl_usd: 463e5, base_token: CRVUSD, quote_token: WBTC, discovered_at: now, refreshed_at: now })] }) }) }) });
+    expect((await mergeStagedPools(db, l1.metrics, createKnownPoolIdentityIndex(), now, chainAddressToId)).skippedByExactIdentityCount).toBe(1);
+    const g2c = pm([mk(ACTIVE_POOL, 463e5), mk("u-b", 13400)]);
+    expect([g2c.rejections.length, ps(g2c).map((p) => p.poolId)]).toEqual([0, [eA, `${E}defillama:u-b`]]);
+    const sml = mk("u-2", 13400), tw = { curveBelowFloorTwinFingerprints: new Set([fp]) };
+    for (const o of [[retainedPool, sml], [sml, retainedPool]]) {
+      const r = pm(o, { ...tw, curvePoolCandidatesByFingerprint: new Map([[fp, [candidate]]]) });
+      expect([r.rejections.length, ps(r).length, ps(r).find((p) => p.tvlUsd === 46360886)?.extra?.measuredExecutionTarget?.poolId]).toEqual([0, 2, eA]);
+    }
+    expect([sml, mk("u-3", 46e6)].map((p) => ps(pm([p], tw))[0]?.poolId)).toEqual([`${E}defillama:u-2`, eA]);
   });
 
   it("keeps unresolved Curve joins in the exact-capability denominator", () => {

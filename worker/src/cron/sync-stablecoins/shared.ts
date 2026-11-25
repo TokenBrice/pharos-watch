@@ -3,6 +3,7 @@ import { ChainPartitionProvenanceSchema, decodePublishedPegType, StablecoinListR
 import { PriceDerivationSchema, PricePublicationReasonSchema } from "@shared/types/price";
 import type { PriceSourceHealth } from "@shared/types/status";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { getListingClass } from "@shared/lib/stablecoins/listing-governance";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { REFERENCE_INTRADAY_BUDGET_SEC } from "@shared/lib/reference-admission";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
@@ -213,6 +214,7 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload, runStar
     peggedAssets: payload.peggedAssets.map((asset) => {
       const {
         gecko_id: _ignoredSnakeCase,
+        listingClass: _ignoredListingClass,
         supplyObservedAt: _ignoredSupplyObservedAt,
         supplyRestored: _ignoredSupplyRestored,
         supplyRestoreMode: _ignoredSupplyRestoreMode,
@@ -261,6 +263,7 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload, runStar
       return {
         ...rest,
         geckoId: resolveGeckoId(asset),
+        listingClass: getListingClass(String(asset.id)),
         price: hasUsablePrice ? asset.price : null,
         priceSource: hasUsablePrice ? (asset.priceSource ?? MISSING_PRICE_SOURCE) : MISSING_PRICE_SOURCE,
         priceConfidence: hasUsablePrice ? normalizedConfidence : null,
