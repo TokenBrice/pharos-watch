@@ -424,6 +424,182 @@ export const SEE_ALSO_GRAPH: Readonly<Record<string, ReadonlyArray<SeeAlsoLink>>
       description: "Check which alerts and signals are tracked coin by coin.",
     },
   ],
+  "/learn/mechanisms/": [
+    {
+      href: "/learn/case-studies/",
+      label: "Case Studies",
+      description: "Retrospectives of how these designs behaved under stress.",
+    },
+    {
+      href: "/methodology/",
+      label: "Methodology",
+      description: "How Pharos scores each mechanism's backing, exit, and control.",
+    },
+    {
+      href: "/screener/",
+      label: "Screener",
+      description: "Filter tracked stablecoins by mechanism archetype and grade.",
+    },
+    {
+      href: "/safety-scores/",
+      label: "Safety Scores",
+      description: "Live Backing, Exit, and Control grades across the market.",
+    },
+  ],
+  "/learn/case-studies/": [
+    {
+      href: "/cemetery/",
+      label: "Cemetery",
+      description: "Full register of defunct stablecoins and peak market caps.",
+    },
+    {
+      href: "/depeg/",
+      label: "Depeg & Recovery",
+      description: "Live peg dislocations, DEWS alerts, and recovery windows.",
+    },
+    {
+      href: "/learn/mechanisms/",
+      label: "Mechanisms",
+      description: "How each stablecoin architecture holds or loses its peg.",
+    },
+    {
+      href: "/timeline/",
+      label: "Timeline",
+      description: "Chronological wire of depegs, freezes, and grade changes.",
+    },
+  ],
+  "/methodology/": [
+    {
+      href: "/docs/",
+      label: "Documentation",
+      description: "Full technical methodology specs and plain Markdown twins.",
+    },
+    {
+      href: "/safety-scores/",
+      label: "Safety Scores",
+      description: "See the scoring formulas applied to every rated coin.",
+    },
+    {
+      href: "/learn/mechanisms/",
+      label: "Mechanisms",
+      description: "Architecture explainers behind the scoring archetypes.",
+    },
+    {
+      href: "/coverage/",
+      label: "Coverage",
+      description: "Check which signals and feeds are active coin by coin.",
+    },
+  ],
+  "/docs/": [
+    {
+      href: "/methodology/",
+      label: "Methodology",
+      description: "Guided manual with Reader/Analyst mode and worked examples.",
+    },
+    {
+      href: "/api/reference/",
+      label: "API Reference",
+      description: "HTTP endpoints, schemas, authentication, and OpenAPI spec.",
+    },
+    {
+      href: "/coverage/",
+      label: "Coverage",
+      description: "Coin-by-coin matrix of live data availability.",
+    },
+    {
+      href: "/status/",
+      label: "Status",
+      description: "Live health, freshness, and uptime of every Pharos pipeline.",
+    },
+  ],
+  "/about/": [
+    {
+      href: "/coverage/",
+      label: "Coverage",
+      description: "Inspect every tracked capability coin by coin.",
+    },
+    {
+      href: "/methodology/",
+      label: "Methodology",
+      description: "Formulas, thresholds, and evidence standards in full.",
+    },
+    {
+      href: "/funding/",
+      label: "Funding",
+      description: "Operating costs, public donations, and sustainability ledger.",
+    },
+    {
+      href: "/status/",
+      label: "Status",
+      description: "Live operational health and 30-day pipeline history.",
+    },
+  ],
+  "/blog/": [
+    {
+      href: "/changelog/",
+      label: "Changelog",
+      description: "Weekly release notes and methodology version bumps.",
+    },
+    {
+      href: "/digest/",
+      label: "Daily Digest",
+      description: "Daily editorial recaps of market stress and capital moves.",
+    },
+    {
+      href: "/about/",
+      label: "About",
+      description: "Project principles, sources, and editorial AI policy.",
+    },
+    {
+      href: "/methodology/",
+      label: "Methodology",
+      description: "Formulas and thresholds behind the product releases.",
+    },
+  ],
+  "/changelog/": [
+    {
+      href: "/methodology/",
+      label: "Methodology",
+      description: "Versioned scoring, pricing, and depeg methodology histories.",
+    },
+    {
+      href: "/blog/",
+      label: "Blog",
+      description: "Long-form product announcements and architectural deep dives.",
+    },
+    {
+      href: "/status/",
+      label: "Status",
+      description: "Current pipeline health and 30-day incident log.",
+    },
+    {
+      href: "/coverage/",
+      label: "Coverage",
+      description: "See newly tracked coins and feature availability live.",
+    },
+  ],
+  "/status/": [
+    {
+      href: "/coverage/",
+      label: "Coverage",
+      description: "See which datasets and features are active per coin.",
+    },
+    {
+      href: "/changelog/",
+      label: "Changelog",
+      description: "Weekly infrastructure and pipeline release notes.",
+    },
+    {
+      href: "/api/",
+      label: "API",
+      description: "Endpoint access, freshness headers, and integration guide.",
+    },
+    {
+      href: "/about/",
+      label: "About",
+      description: "Data pipeline architecture and upstream source disclosures.",
+    },
+  ],
 };
 
 function normalizeSeeAlsoPath(pathname: string | null | undefined): string | null {

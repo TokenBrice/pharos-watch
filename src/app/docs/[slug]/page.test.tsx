@@ -51,6 +51,13 @@ describe("DocPage", () => {
       expect(anchor.target).toBe("_blank");
       expect(anchor.rel?.split(/\s+/)).toEqual(expect.arrayContaining(["noopener", "noreferrer"]));
     }
+
+    const hashLinks = rendered.filter((anchor) => anchor.href.startsWith("#"));
+    expect(hashLinks.length).toBeGreaterThan(0);
+    for (const anchor of hashLinks) {
+      expect(anchor.target).toBeUndefined();
+      expect(anchor.rel).toBeUndefined();
+    }
   });
 
   it("uses search-phrased titles without repeating the Pharos brand", async () => {

@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";
 
 interface PublicSignalCardProps {
   title: ReactNode;
@@ -20,9 +19,9 @@ export function PublicSignalCard({
   contentClassName,
 }: PublicSignalCardProps) {
   return (
-    // Always the flat panel: every consumer renders inside a StatusSection card
-    // shell, and nesting a card inside a card is forbidden.
-    <article className={cn("rounded-xl p-4", STATUS_PANEL_SHELL_CLASS)}>
+    // Always the inset panel: every consumer renders inside a StatusSection card
+    // shell, and nesting a rounded-xl card inside a card is forbidden.
+    <article className="pharos-inset p-4">
       <div className={cn("flex flex-wrap justify-between gap-3", description ? "items-start" : "items-center")}>
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">

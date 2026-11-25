@@ -73,4 +73,21 @@ describe("FeaturePageShell instrument header", () => {
     expect(link.getAttribute("href")).toBe("/docs/example/");
     expect(link.closest("p")?.textContent).toContain("Version history");
   });
+
+  it.each(["instrument", "standard"] as const)("renders backLink above the H1 in the %s header", (header) => {
+    render(
+      <FeaturePageShell
+        breadcrumbName="Subpage"
+        path="/example/subpage/"
+        title="Subpage"
+        header={header}
+        backLink={{ href: "/example/", label: "All examples" }}
+      >
+        <div>body</div>
+      </FeaturePageShell>,
+    );
+
+    const link = screen.getByRole("link", { name: "All examples" });
+    expect(link.getAttribute("href")).toBe("/example/");
+  });
 });

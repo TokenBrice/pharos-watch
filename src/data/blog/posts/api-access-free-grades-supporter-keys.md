@@ -46,4 +46,4 @@ For a manually reviewed key, request a [partner key](/api/#partner-access). Elig
 
 *Updated November 21, 2026:* see [The Pharos API: Risk Gate, Compliance, and MCP](/blog/pharos-api-risk-gate-compliance-mcp/) for the updated tier ladder, 100,000/month supporter quota effective January 1, 2027, and new Compliance, Resolver, Risk-Gate, MCP, and SVG badge surfaces.
 
-	/- TokenBrice
+/- TokenBrice

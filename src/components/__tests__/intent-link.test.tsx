@@ -102,8 +102,21 @@ describe("SeeAlsoFooter cross-hub discovery", () => {
       expect(links.every((link) => link.href !== route)).toBe(true);
     }
 
-    // All four newly added hubs are present with standardized labels and inbound /coverage/ edges.
-    for (const route of ["/cemetery/", "/timeline/", "/upcoming/", "/pharoswatchbot/"]) {
+    // All newly added Learn & Pharos hubs are present with 4 non-self-linking destinations.
+    for (const route of [
+      "/cemetery/",
+      "/timeline/",
+      "/upcoming/",
+      "/pharoswatchbot/",
+      "/learn/mechanisms/",
+      "/learn/case-studies/",
+      "/methodology/",
+      "/docs/",
+      "/about/",
+      "/blog/",
+      "/changelog/",
+      "/status/",
+    ]) {
       expect(SEE_ALSO_GRAPH[route]).toHaveLength(4);
     }
     expect(SEE_ALSO_GRAPH["/coverage/"]?.map((link) => link.label)).toEqual([

@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 import type { PublicStatusTransition } from "@shared/types/status/public-health";
 import { PUBLIC_COMPONENT_LABEL, PUBLIC_COMPONENT_STATE_TONE } from "@shared/lib/classification";
 import { formatElapsedSeconds } from "@shared/lib/format";
-import { ComponentStatePill, Timestamp } from "@/components/status/page-primitives";
+import { ComponentStatePill, TechnicalDetail, Timestamp } from "@/components/status/page-primitives";
 import {
   foldLegacyIncidents,
   foldPublicIncidents,
@@ -14,17 +14,16 @@ import {
 
 const INITIAL_VISIBLE_INCIDENTS = 10;
 
-function TechnicalDetail({ reasons }: { reasons: readonly string[] }) {
+function IncidentTechnicalDetail({ reasons }: { reasons: readonly string[] }) {
   if (reasons.length === 0) return null;
   return (
-    <details className="mt-1 text-xs text-muted-foreground">
-      <summary className="pharos-focus-ring cursor-pointer rounded-sm hover:text-foreground">Technical detail</summary>
-      <ul className="mt-1 space-y-0.5 font-mono">
+    <TechnicalDetail className="mt-1">
+      <ul className="space-y-0.5">
         {reasons.map((reason) => (
-          <li key={reason} className="break-all">{reason}</li>
+          <li key={reason}>{reason}</li>
         ))}
       </ul>
-    </details>
+    </TechnicalDetail>
   );
 }
 
@@ -101,7 +100,7 @@ function PublicIncidentItem({
           Peaked at {PUBLIC_COMPONENT_STATE_TONE[incident.worstState].label.toLowerCase()} earlier in this incident.
         </p>
       ) : null}
-      <TechnicalDetail reasons={incident.reasons} />
+      <IncidentTechnicalDetail reasons={incident.reasons} />
     </li>
   );
 }
@@ -114,7 +113,7 @@ function LegacyIncidentItem({ incident, nowSec }: { incident: LegacyIncident; no
         <ComponentStatePill state={incident.worstStatus === "stale" ? "outage" : "degraded"} className="shrink-0" />
       </div>
       <IncidentTimes {...incident} nowSec={nowSec} />
-      <TechnicalDetail reasons={incident.reasons} />
+      <IncidentTechnicalDetail reasons={incident.reasons} />
     </li>
   );
 }
@@ -136,7 +135,7 @@ function BoundedList<T extends { id: number }>({
       {items.length > INITIAL_VISIBLE_INCIDENTS ? (
         <button
           type="button"
-          className="pharos-focus-ring mt-2 rounded-sm text-xs text-muted-foreground underline hover:text-foreground"
+          className="pharos-focus-ring mt-2 inline-flex min-h-11 items-center rounded-sm text-xs text-muted-foreground underline hover:text-foreground sm:min-h-8"
           onClick={() => setShowAll((value) => !value)}
         >
           {showAll ? `Show the latest ${INITIAL_VISIBLE_INCIDENTS} ${noun}` : `Show all ${items.length} ${noun}`}

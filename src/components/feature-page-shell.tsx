@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronDown } from "lucide-react";
+import { ArrowLeft, ChevronDown } from "lucide-react";
 import { BreadcrumbJsonLd, type BreadcrumbItem } from "@/components/breadcrumb-json-ld";
 import { cn } from "@/lib/utils";
 
@@ -7,6 +7,8 @@ export interface FeaturePageShellProps {
   breadcrumbName: string;
   path: string;
   breadcrumbItems?: BreadcrumbItem[];
+  /** Optional single parent return link rendered above the H1 on subpages (never a slash breadcrumb trail). */
+  backLink?: { href: string; label: string };
   title: string;
   variant?: "standard" | "longform" | "auth-gated";
   containerClassName?: string;
@@ -40,6 +42,7 @@ export function FeaturePageShell({
   breadcrumbName,
   path,
   breadcrumbItems,
+  backLink,
   title,
   variant = "standard",
   containerClassName,
@@ -60,6 +63,16 @@ export function FeaturePageShell({
         ? "mx-auto w-full max-w-5xl space-y-6"
         : "space-y-6";
 
+  const backLinkNode = backLink ? (
+    <Link
+      href={backLink.href}
+      className="pharos-focus-ring inline-flex min-h-9 w-fit items-center gap-1.5 rounded-md text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+    >
+      <ArrowLeft aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+      <span>{backLink.label}</span>
+    </Link>
+  ) : null;
+
   return (
     <div className={cn(variantClassName, containerClassName)}>
       <BreadcrumbJsonLd
@@ -73,6 +86,7 @@ export function FeaturePageShell({
       {preface}
       {header === "instrument" ? (
         <InstrumentHeader
+          backLink={backLinkNode}
           title={title}
           methodology={methodology}
           headerActions={headerActions}
@@ -82,6 +96,7 @@ export function FeaturePageShell({
         />
       ) : (
         <div className="space-y-2.5">
+          {backLinkNode}
           <div className="flex max-w-full flex-wrap items-start justify-between gap-x-3 gap-y-3">
             <div className="flex min-w-0 max-w-4xl flex-wrap items-center gap-x-3 gap-y-2">
               <h1 className="pharos-page-title">{title}</h1>
@@ -133,6 +148,7 @@ function MethodologyDocsLink({ href }: { href: string }) {
 }
 
 function InstrumentHeader({
+  backLink,
   title,
   methodology,
   headerActions,
@@ -140,6 +156,7 @@ function InstrumentHeader({
   leadDisclosureLabel,
   headerSupplement,
 }: Pick<FeaturePageShellProps, "title" | "methodology" | "headerActions" | "headerSupplement"> & {
+  backLink: React.ReactNode;
   leadParagraphs: readonly React.ReactNode[];
   leadDisclosureLabel: string;
 }) {
@@ -147,6 +164,7 @@ function InstrumentHeader({
   const inlineActionsWithTitle = !methodology && Boolean(headerActions);
   return (
     <header className="space-y-2">
+      {backLink}
       {inlineActionsWithTitle ? (
         <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
           <h1 className="pharos-page-title text-balance">{title}</h1>

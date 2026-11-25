@@ -73,8 +73,9 @@ describe("PublicServiceSummarySection", () => {
     expect(row.getByText("Yield rankings last updated 2h ago.")).toBeTruthy();
     expect(row.getByText("Delayed after 1h, degraded after 3h, outage after 6h without an update.")).toBeTruthy();
     expect(row.getByText("cache-stale:yield-data:delayed")).toBeTruthy();
+    expect(screen.getByText(`${PUBLIC_STATUS_COMPONENT_IDS.length - 1} of ${PUBLIC_STATUS_COMPONENT_IDS.length} operational`)).toBeTruthy();
     // A failed history read shows no bars rather than an empty (healthy-looking) runway.
-    expect(screen.queryAllByRole("img")).toHaveLength(0);
+    expect(screen.queryAllByRole("group", { name: /last \d+ days/ })).toHaveLength(0);
     expect(screen.getByText(/Component history could not be loaded/)).toBeTruthy();
   });
 
@@ -85,7 +86,7 @@ describe("PublicServiceSummarySection", () => {
     render(<PublicServiceSummarySection components={components()} dayCells={cells} historyState="ready"
       historyDays={30} nowSec={NOW} publicHistoryStartedAt={NOW - 3600} footnote="Two price gaps are under review." />);
 
-    expect(screen.getAllByRole("img")).toHaveLength(PUBLIC_STATUS_COMPONENT_IDS.length);
+    expect(screen.getAllByRole("group", { name: /last \d+ days/ })).toHaveLength(PUBLIC_STATUS_COMPONENT_IDS.length);
     expect(screen.getByText(/Component history began/)).toBeTruthy();
     expect(screen.getByText("Two price gaps are under review.")).toBeTruthy();
   });

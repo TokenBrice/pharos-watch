@@ -2,6 +2,7 @@ import type { SchedulerLiveness } from "@shared/types/status/public-health";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ComponentStatePill, Timestamp } from "@/components/status/page-primitives";
+import { PublicSignalCard } from "@/components/status/public-signal-card";
 import { getAgeBandState } from "@/lib/status/public-status";
 import { PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER } from "@shared/lib/public-health";
 import { getPublicComponentStateRank } from "@shared/lib/public-status-components";
@@ -56,12 +57,87 @@ function budgetText(ageSeconds: number | null | undefined, warningAfterSec: numb
   return `${age}Delayed after ${formatElapsedSeconds(warningAfterSec)}, degraded after ${formatElapsedSeconds(staleAfterSec)}, outage after ${formatElapsedSeconds(staleAfterSec * PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER)}.`;
 }
 
-export function SchedulerLivenessCard({ observation }: { observation: SchedulerLiveness | undefined }) {
+export function SchedulerLivenessCard({
+  observation,
+  surface = "card",
+}: {
+  observation: SchedulerLiveness | undefined;
+  /** `"card"` for top-level `/admin/` placement; `"panel"` when nested inside a `.pharos-card-shell` section. */
+  surface?: "card" | "panel";
+}) {
   const publicStatus = observation?.status ?? "unavailable";
   const heavyStatus = observation?.heavy.status ?? "unavailable";
   const publicBand = laneBand(observation);
   const heavyBand = laneBand(observation?.heavy);
   const status = worstBand(publicBand, heavyBand);
+  const body = (
+    <>
+      <p className="text-muted-foreground">When scheduled jobs last started, read at request time.</p>
+      <dl className="space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <dt className="text-muted-foreground">Short-cadence jobs</dt>
+          <dd className="flex items-center gap-2">
+            <Timestamp epochSec={observation?.lastFiveMinuteStartedAt} fallback="Unavailable" />
+            <StatusBadge band={publicBand} />
+          </dd>
+        </div>
+        <div>
+          <dt className="sr-only">Public delivery budget</dt>
+          <dd className="text-xs text-muted-foreground">
+            {observation ? budgetText(observation.ageSeconds, observation.warningAfterSec, observation.staleAfterSec) : "Unavailable"}
+          </dd>
+        </div>
+        {observation?.lanes.map((lane) => (
+          <div key={lane.scheduleKey} className="flex flex-wrap items-center justify-between gap-2">
+            <dt className="text-muted-foreground"><LaneLabel scheduleKey={lane.scheduleKey} /></dt>
+            <dd><Timestamp epochSec={lane.lastStartedAt} fallback="No start evidence" /></dd>
+          </div>
+        ))}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
+          <dt className="text-muted-foreground">
+            {observation?.heavy.scheduleKey ? <LaneLabel scheduleKey={observation.heavy.scheduleKey} /> : "Background computation lane"}
+          </dt>
+          <dd className="flex items-center gap-2">
+            <Timestamp epochSec={observation?.heavy.lastStartedAt} fallback="No start evidence" />
+            <StatusBadge band={heavyBand} />
+          </dd>
+        </div>
+        <div>
+          <dt className="sr-only">Background computation budget</dt>
+          <dd className="text-xs text-muted-foreground">
+            {observation
+              ? budgetText(observation.heavy.ageSeconds, observation.heavy.warningAfterSec, observation.heavy.staleAfterSec)
+              : "Unavailable"}
+          </dd>
+        </div>
+      </dl>
+      {publicStatus === "unavailable" ? (
+        <p>Public delivery evidence is unavailable ({observation?.unavailableReason ?? "Observation not supplied"}). This is not a healthy delivery claim.</p>
+      ) : null}
+      {heavyStatus === "unavailable" ? (
+        <p>Background computation evidence is unavailable ({observation?.heavy.unavailableReason ?? "Observation not supplied"}). This is not a healthy delivery claim.</p>
+      ) : null}
+      <p className="text-xs text-muted-foreground">
+        One active reserve, Telegram, or digest poll is enough for the public check; a quiet job is diagnostic. The
+        background computation lane is checked on its own budget. These are point-in-time readings, not a full
+        delivery history.
+      </p>
+      <a className="pharos-focus-ring rounded-sm text-sm underline" href="https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks/cron-delivery-stall.md" target="_blank" rel="noopener noreferrer">Delivery-stall runbook</a>
+    </>
+  );
+
+  if (surface === "panel") {
+    return (
+      <PublicSignalCard
+        title="Scheduled delivery"
+        badges={<StatusBadge band={status} />}
+        contentClassName="mt-3 space-y-3 text-sm"
+      >
+        {body}
+      </PublicSignalCard>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -71,57 +147,7 @@ export function SchedulerLivenessCard({ observation }: { observation: SchedulerL
         </div>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
-        <p className="text-muted-foreground">When scheduled jobs last started, read at request time.</p>
-        <dl className="space-y-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <dt className="text-muted-foreground">Short-cadence jobs</dt>
-            <dd className="flex items-center gap-2">
-              <Timestamp epochSec={observation?.lastFiveMinuteStartedAt} fallback="Unavailable" />
-              <StatusBadge band={publicBand} />
-            </dd>
-          </div>
-          <div>
-            <dt className="sr-only">Public delivery budget</dt>
-            <dd className="pharos-numeric text-xs text-muted-foreground">
-              {observation ? budgetText(observation.ageSeconds, observation.warningAfterSec, observation.staleAfterSec) : "Unavailable"}
-            </dd>
-          </div>
-          {observation?.lanes.map((lane) => (
-            <div key={lane.scheduleKey} className="flex flex-wrap items-center justify-between gap-2">
-              <dt className="text-muted-foreground"><LaneLabel scheduleKey={lane.scheduleKey} /></dt>
-              <dd><Timestamp epochSec={lane.lastStartedAt} fallback="No start evidence" /></dd>
-            </div>
-          ))}
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
-            <dt className="text-muted-foreground">
-              {observation?.heavy.scheduleKey ? <LaneLabel scheduleKey={observation.heavy.scheduleKey} /> : "Background computation lane"}
-            </dt>
-            <dd className="flex items-center gap-2">
-              <Timestamp epochSec={observation?.heavy.lastStartedAt} fallback="No start evidence" />
-              <StatusBadge band={heavyBand} />
-            </dd>
-          </div>
-          <div>
-            <dt className="sr-only">Background computation budget</dt>
-            <dd className="pharos-numeric text-xs text-muted-foreground">
-              {observation
-                ? budgetText(observation.heavy.ageSeconds, observation.heavy.warningAfterSec, observation.heavy.staleAfterSec)
-                : "Unavailable"}
-            </dd>
-          </div>
-        </dl>
-        {publicStatus === "unavailable" ? (
-          <p>Public delivery evidence is unavailable ({observation?.unavailableReason ?? "Observation not supplied"}). This is not a healthy delivery claim.</p>
-        ) : null}
-        {heavyStatus === "unavailable" ? (
-          <p>Background computation evidence is unavailable ({observation?.heavy.unavailableReason ?? "Observation not supplied"}). This is not a healthy delivery claim.</p>
-        ) : null}
-        <p className="text-xs text-muted-foreground">
-          One active reserve, Telegram, or digest poll is enough for the public check; a quiet job is diagnostic. The
-          background computation lane is checked on its own budget. These are point-in-time readings, not a full
-          delivery history.
-        </p>
-        <a className="pharos-focus-ring rounded-sm text-sm underline" href="https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks/cron-delivery-stall.md" target="_blank" rel="noopener noreferrer">Delivery-stall runbook</a>
+        {body}
       </CardContent>
     </Card>
   );

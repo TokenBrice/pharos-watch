@@ -41,10 +41,10 @@ function ProbeRows({ probes }: { probes: EndpointProbeResult[] }) {
                 {getProbeStatusLabel(probe)}
               </StatusPill>
             </TableCell>
-            <TableCell className="align-top font-mono text-xs tabular-nums">
+            <TableCell className="align-top pharos-numeric text-xs">
               {probe.status == null ? "No HTTP" : `HTTP ${probe.status}`}
             </TableCell>
-            <TableCell className="align-top font-mono text-xs tabular-nums">{probe.latencyMs}ms</TableCell>
+            <TableCell className="align-top pharos-numeric text-xs">{probe.latencyMs}ms</TableCell>
             <TableCell className="min-w-44 whitespace-normal align-top text-xs text-muted-foreground">
               {probe.error
                 ? "Transport error reported; raw error omitted from copied diagnostics."

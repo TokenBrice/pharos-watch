@@ -44,7 +44,7 @@ export function EditorialMasthead({
   return (
     <p
       className={cn(
-        "border-b border-border/50 pb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground/80",
+        "pharos-eyebrow border-b border-border/50 pb-2 text-muted-foreground/85",
         className,
       )}
     >

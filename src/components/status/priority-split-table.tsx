@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
+import { DISCLOSURE_SUMMARY_RESET_CLASS, DisclosureChevron } from "@/components/disclosure-panel";
+import { cn } from "@/lib/utils";
 import { LazyDetails } from "./lazy-details";
 
 interface PrioritySplitTableProps<T> {
@@ -55,11 +57,19 @@ export function PrioritySplitTable<T>({
         : (primaryEmpty ?? null)}
       {secondaryRows.length > 0 ? (
         <LazyDetails
-          className={primaryRows.length > 0 ? "mt-4" : undefined}
+          className={cn("group/disclosure", primaryRows.length > 0 && "mt-4")}
           summary={
-            <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-sm text-muted-foreground">
-              {secondaryRows.length} healthy {secondaryNoun}
-              {secondaryRows.length === 1 ? "" : "s"}
+            <summary
+              className={cn(
+                DISCLOSURE_SUMMARY_RESET_CLASS,
+                "flex min-h-11 items-center justify-between gap-2 rounded-md px-1 text-sm text-muted-foreground transition-colors hover:text-foreground",
+              )}
+            >
+              <span>
+                {secondaryRows.length} healthy {secondaryNoun}
+                {secondaryRows.length === 1 ? "" : "s"}
+              </span>
+              <DisclosureChevron />
             </summary>
           }
         >

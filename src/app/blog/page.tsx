@@ -48,9 +48,12 @@ export default function BlogHubPage() {
       <JsonLdScript json={blogJsonLd} />
       <ol className="space-y-8">
         {BLOG_POSTS.map((post) => (
-          <li key={post.slug} className="space-y-2.5">
-            {post.coverImage ? (
-              <Link href={`/blog/${post.slug}/`} className="block" aria-label={post.title}>
+          <li key={post.slug}>
+            <Link
+              href={`/blog/${post.slug}/`}
+              className="pharos-focus-ring group block space-y-2.5 rounded-xl"
+            >
+              {post.coverImage ? (
                 <img
                   src={post.coverImage}
                   alt={post.coverAlt ?? ""}
@@ -58,21 +61,19 @@ export default function BlogHubPage() {
                   height={630}
                   loading="lazy"
                   decoding="async"
-                  className="aspect-[1200/630] w-full rounded-xl border border-border/50 object-cover transition-opacity hover:opacity-90"
+                  className="aspect-[1200/630] w-full rounded-xl border border-border/50 object-cover transition-opacity group-hover:opacity-90"
                 />
-              </Link>
-            ) : null}
-            <div className="space-y-1.5">
-              <p className="pharos-meta">
-                <time dateTime={post.datePublished}>{formatPublishedDate(post.datePublished)}</time>
-              </p>
-              <h2 className="font-serif text-2xl font-semibold leading-tight tracking-tight">
-                <Link href={`/blog/${post.slug}/`} className="text-foreground hover:text-foreground/80">
+              ) : null}
+              <div className="space-y-1.5">
+                <p className="pharos-meta">
+                  <time dateTime={post.datePublished}>{formatPublishedDate(post.datePublished)}</time>
+                </p>
+                <h2 className="font-serif text-2xl font-semibold leading-tight tracking-tight text-foreground transition-colors group-hover:text-foreground/80">
                   {post.title}
-                </Link>
-              </h2>
-              <p className="text-sm leading-7 text-muted-foreground">{post.description}</p>
-            </div>
+                </h2>
+                <p className="text-sm leading-7 text-muted-foreground">{post.description}</p>
+              </div>
+            </Link>
           </li>
         ))}
       </ol>

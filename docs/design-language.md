@@ -182,6 +182,7 @@ Check the current declarations before depending on exact padding, radius, shadow
 - Interactive controls need a visible focus state, an accessible name, and a stable hit area. Touch targets should remain usable even when desktop controls are visually compact.
 - URL-backed filters must preserve unrelated query parameters and normalize deprecated aliases at the route boundary.
 - Sticky UI must account for global navigation and must not obscure anchored content.
+- Native `<details>` disclosures outside the stablecoin detail module fold bar compose `DisclosurePanel` (or `DisclosureChevron` + `DISCLOSURE_SUMMARY_RESET_CLASS`) from `src/components/disclosure-panel.tsx` so expanded copy stays in static HTML without raw browser disclosure triangles.
 
 ### Control Pills
 

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { PUBLIC_COMPONENT_STATE_TONE } from "@shared/lib/classification";
 import { UptimeBar, summarizeDayCells } from "../uptime-bar";
 
@@ -14,19 +14,36 @@ describe("UptimeBar", () => {
     ];
     const { container } = render(<UptimeBar cells={cells} label="Yield" />);
 
-    expect(container.querySelector('[title="2026-10-11: No data"]')?.className).toContain("bg-muted");
+    const noDataCell = container.querySelector('[title="2026-10-11: No data"]');
+    expect(noDataCell?.className).toContain("bg-muted/60");
+    expect(noDataCell?.className).toContain("ring-border/60");
     expect(container.querySelector('[title="2026-10-12: Degraded"]')?.className).toContain(PUBLIC_COMPONENT_STATE_TONE.degraded.bar);
-    expect(screen.getByRole("img").getAttribute("aria-label")).toBe(
+    expect(screen.getByRole("group").getAttribute("aria-label")).toBe(
       "Yield, last 3 days: 1d operational · 1d degraded · 1d no data",
     );
   });
 
-  it("keeps a sub-hour blip in the tooltip without colouring the day", () => {
+  it("surfaces a sub-hour blip via top indicator, summary count, and keyboard/tap inspection", () => {
     const { container } = render(
       <UptimeBar cells={[{ date: "2026-10-22", state: "operational", brief: "degraded" }]} label="Stablecoin data" />,
     );
-    expect(container.querySelector('[title="2026-10-22: Operational (briefly degraded, under 1 h)"]')?.className)
-      .toContain(PUBLIC_COMPONENT_STATE_TONE.operational.bar);
+    const cell = container.querySelector('[title="2026-10-22: Operational (briefly degraded, under 1 h)"]') as HTMLButtonElement | null;
+    expect(cell?.className).toContain(PUBLIC_COMPONENT_STATE_TONE.operational.bar);
+    expect(cell?.querySelector("span")?.className).toContain(PUBLIC_COMPONENT_STATE_TONE.degraded.bar);
+    expect(screen.getByRole("group").getAttribute("aria-label")).toBe(
+      "Stablecoin data, last 1 days: 1d operational · 1d with brief blip",
+    );
+
+    fireEvent.focus(cell!);
+    expect(container.querySelector('[aria-live="polite"]')?.textContent).toBe(
+      "2026-10-22: Operational (briefly degraded, under 1 h)",
+    );
+
+    fireEvent.click(cell!);
+    expect(cell?.getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(cell!);
+    expect(cell?.getAttribute("aria-pressed")).toBe("false");
+    expect(container.querySelector('[aria-live="polite"]')).toBeNull();
   });
 
   it("never counts no-data days as operational", () => {

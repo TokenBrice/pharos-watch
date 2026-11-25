@@ -5,6 +5,7 @@ import type { PublicStatusHistoryWindow } from "@shared/types/status/public-heal
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { FaqSection } from "@/components/faq-section";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   PublicServiceSummarySection,
   type PublicHistoryLoadState,
@@ -43,6 +44,7 @@ export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[
     data: healthData,
     error: healthError,
     isLoading: healthLoading,
+    isFetching: healthFetching,
     refetch: refetchHealth,
     dataUpdatedAt: healthUpdatedAt,
   } = useHealth();
@@ -88,18 +90,32 @@ export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[
   if (healthLoading && !healthData) {
     content = (
       <div className="space-y-6" aria-busy="true" aria-label="Loading status">
-        <div className="h-[114px] animate-pulse rounded-xl bg-muted/30 sm:h-[84px]" />
-        <div className="h-[1290px] animate-pulse rounded-xl bg-muted/30 sm:h-[1100px]" />
-        <div className="h-[240px] animate-pulse rounded-xl bg-muted/30 sm:h-[180px]" />
-        <div className="h-[100px] animate-pulse rounded-xl bg-muted/30 sm:h-[84px]" />
+        <div className="pharos-card-shell h-[114px] overflow-hidden p-4 sm:h-[84px] sm:px-5">
+          <Skeleton variant="shimmer" className="h-full w-full" />
+        </div>
+        <div className="pharos-card-shell h-[1290px] overflow-hidden p-4 sm:h-[1100px] sm:p-5 lg:px-6">
+          <Skeleton variant="shimmer" className="h-full w-full" />
+        </div>
+        <div className="pharos-card-shell h-[240px] overflow-hidden p-4 sm:h-[180px] sm:p-5 lg:px-6">
+          <Skeleton variant="shimmer" className="h-full w-full" />
+        </div>
+        <div className="pharos-card-shell h-[100px] overflow-hidden p-4 sm:h-[84px] sm:px-5">
+          <Skeleton variant="shimmer" className="h-full w-full" />
+        </div>
       </div>
     );
   } else if (!healthData || !projection) {
     content = (
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-state-danger bg-state-danger-subtle p-4 text-sm text-state-danger">
         <span title={healthError?.message}>The status check could not be reached.</span>
-        <Button variant="outline" size="sm" className="min-h-11" onClick={handleRefresh}>
-          Refresh
+        <Button
+          variant="outline"
+          size="sm"
+          className="min-h-11"
+          onClick={handleRefresh}
+          disabled={Boolean(healthFetching)}
+        >
+          {healthFetching ? "Refreshing…" : "Refresh"}
         </Button>
       </div>
     );
@@ -116,6 +132,7 @@ export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[
           checkedAt={healthData.assessedAt ?? healthData.timestamp}
           fetchError={healthError}
           fetchStale={fetchStale}
+          isRefreshing={Boolean(healthFetching)}
           onRefresh={handleRefresh}
         />
 
