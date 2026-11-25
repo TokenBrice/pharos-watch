@@ -1,5 +1,19 @@
 [
   {
+    "version": "10.56",
+    "title": "First-loss wrappers take the vault deduction whoever operates them",
+    "date": "2026-11-25",
+    "effectiveAt": 1795600800,
+    "summary": "Every risk-absorption (first-loss) wrapper now takes the 10-point strategy-vault form deduction from its parent instead of the 5-point native-staked deduction when the parent protocol operates it, so first-loss capital can never share a ceiling with the senior savings wrapper on the same parent. Released with the stUSDS look-through mechanism review and the Redemption Backstop v4.56 stUSDS unused-funds capacity source.",
+    "impact": [
+      "Wrapper form: resolveWrapperForm (worker) publishes a new risk-absorption wrapper form for every variantKind risk-absorption wrapper regardless of wrapperOperator (previously native-staked when parent-operated, strategy-vault when third-party), and the retained-facts fallback resolveV9WrapperStrategyTier (shared) prices it at the vault tier; native-staked remains for savings-passthrough wrappers. Policy tiers are unchanged (pure 3, native-staked 5, strategy-vault and risk-absorption 10). Retained facts carrying the earlier native-staked or strategy-vault form still validate. Third-party risk-absorption wrappers (sbold-k3-capital, srusde-strata) change only their published form label; their deduction stays 10. stusds-sky's parent limit moves from 69 to 64 and stkgho-umbrella-aave's from 63 to 58; neither binds today (own scores 63 and 57), so this change alone has 0 movers. Replay on the same capture with stUSDS liquidationMechanics hypothetically adequate gives stusds-sky 69 B- without the change (parity with susds-sky) and 64 C+ with it.",
+      "stUSDS look-through review (data, same release): the stusds-sky overlay now reviews collateralizationParameters (weak) and liquidationMechanics (failed) of the LSEV2-SKY-A book it funds as first-loss capital, pinned at Ethereum block 26487700 (2026-11-24T21:26:23Z): LockstakeClipper stopped() = 3 at every daily sample since stUSDS launch, 9 urns with $30.52M (19.3% of debt) below the capped-oracle safety price and unliquidatable, top owner 47.0% and top two 72.4% of debt, collateral the parent's own governance token. The evidence standard now states that risk-absorption overlays look through to the funded book.",
+      "Fixed-clock replay of production capture report-cards accepted base 1795562283 (2026-11-24T23:18:03Z) against this tree: 1 mover, stusds-sky 69 B- -> 63 C+ (Backing 56.25 -> 47.79); susds-sky stays 69 B-, stkgho-umbrella-aave 57 C. With the v4.56 unused-funds capacity (zero at the capture's 100% utilization) the scenario replay gives stusds-sky 52 C- (Exit 94.89 -> 50, unknown-priced missing route). Activation 2026-11-25 10:00 UTC (1795600800), the planned release window: the owner approved an early cutover instead of the next-UTC-midnight convention because the stUSDS separation is urgent; first accepted production-cycle verification pending."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "10.55",
     "title": "Tokenized funds tracked without public Safety Score grades; dependent stablecoins unchanged",
     "date": "2026-11-25",

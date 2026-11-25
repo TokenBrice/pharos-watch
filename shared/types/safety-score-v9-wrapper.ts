@@ -5,7 +5,8 @@ import {
 } from "./safety-score-v9-fact-primitives";
 import { issue } from "./safety-schema-primitives";
 
-export const V9WrapperFormSchema = z.enum(["pure", "native-staked", "strategy-vault"]);
+/** `risk-absorption` (v10.56): first-loss capital, priced with the strategy-vault deduction. */
+export const V9WrapperFormSchema = z.enum(["pure", "native-staked", "strategy-vault", "risk-absorption"]);
 export type V9WrapperForm = z.infer<typeof V9WrapperFormSchema>;
 
 export const V9WrapperFactDispositionSchema = z.enum([

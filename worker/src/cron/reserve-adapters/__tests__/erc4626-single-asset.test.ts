@@ -12,6 +12,7 @@ import { computeSafetyScoreV9ReserveExposureKey } from "../../../lib/safety-scor
 import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
 import type { AdapterResult } from "../types";
 import type { RedemptionCapacityTelemetry } from "../erc4626-capacity-observation";
+import { rpowRay } from "../erc4626-capacity-stusds";
 import {
   finalizeErc4626RedemptionCapacity, projectErc4626RedemptionMetadata, projectErc4626RedemptionTelemetry,
 } from "../erc4626-redemption-capacity";
@@ -76,9 +77,13 @@ function nonInfoWarnings(warnings: readonly LiveReserveWarning[] | undefined): r
 }
 
 function withRedemptionLiquidity(redemptionLiquidity: {
-  source: "morpho-vault-v1" | "morpho-vault-v2" | "atomic-full-backing" | "yearn-v3-withdrawable" | "sbold-sp-withdrawable";
+  source: "morpho-vault-v1" | "morpho-vault-v2" | "atomic-full-backing" | "yearn-v3-withdrawable" | "sbold-sp-withdrawable" | "stusds-unused-funds";
   chainId?: number;
   settlementDelaySec?: number;
+  vatAddress?: string;
+  jugAddress?: string;
+  clipperAddress?: string;
+  ilk?: string;
 }) {
   return (config: LiveReservesConfig): LiveReservesConfig => ({
     ...config, params: { ...config.params, redemptionLiquidity },
@@ -97,6 +102,43 @@ function calcFragmentsResult(
     uint256Result(0).slice(2), // collValue
     uint256Result(collInBoldRaw).slice(2), // collInBold (not-yet-swapped collateral)
   ].join("")}`;
+}
+
+// Sky stUSDS wiring for the unused-funds probe (reviewed Ethereum addresses).
+const STUSDS_WIRING = {
+  vatAddress: "0x35d1b3f3d7966a1dfe207aa4514c12a259a0492b",
+  jugAddress: "0x19c0976f590d67707e62397c87829d896dc0f1f1",
+  clipperAddress: "0x836f56750517b1528b5078cba4ac4b94fbe4a399",
+  ilk: "0x4c534556322d534b592d41000000000000000000000000000000000000000000",
+} as const;
+const RAY = 10n ** 27n;
+
+// totalAssets is 100,000,000 raw; Lockstake debt is Art x rate (Jug-accrued) plus
+// clip.Due(). The vault's idle balance stays at the full 100,000,000: it is
+// encumbered first-loss capital, never withdrawable cash.
+function stusdsHandlers(options: {
+  art: bigint; rate: bigint; dueRad?: bigint; duty?: bigint; rhoOffsetSec?: bigint; vat?: string;
+}) {
+  const now = 1_800_000_000n;
+  const vault = "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b";
+  const ilk = STUSDS_WIRING.ilk.slice(2);
+  return ({ call }: { call?: { to?: string; data: string } }) => {
+    if (!call) return undefined;
+    const to = call.to?.toLowerCase();
+    if (to === vault && call.data === "0x36569e77") return jsonResponse({ result: `0x${addressWord(options.vat ?? STUSDS_WIRING.vatAddress)}` });
+    if (to === vault && call.data === "0x84718d89") return jsonResponse({ result: `0x${addressWord(STUSDS_WIRING.jugAddress)}` });
+    if (to === vault && call.data === "0x39b00e41") return jsonResponse({ result: `0x${addressWord(STUSDS_WIRING.clipperAddress)}` });
+    if (to === vault && call.data === "0xc5ce281e") return jsonResponse({ result: STUSDS_WIRING.ilk });
+    if (to === STUSDS_WIRING.vatAddress && call.data === `0xd9638d36${ilk}`) {
+      return jsonResponse({ result: `0x${[options.art, options.rate, 0n, 0n, 0n].map((word) => word.toString(16).padStart(64, "0")).join("")}` });
+    }
+    if (to === STUSDS_WIRING.jugAddress && call.data === `0xd9638d36${ilk}`) {
+      return jsonResponse({ result: `0x${[options.duty ?? RAY, now - (options.rhoOffsetSec ?? 0n)].map((word) => word.toString(16).padStart(64, "0")).join("")}` });
+    }
+    if (to === STUSDS_WIRING.clipperAddress && call.data === "0x08bf162f") return jsonResponse({ result: uint256Result(options.dueRad ?? 0n) });
+    if (call.data === "0x0f28c97d") return jsonResponse({ result: uint256Result(now) });
+    return undefined;
+  };
 }
 
 const catalogCases = [
@@ -755,6 +797,105 @@ describe("fetchErc4626SingleAssetReserves", () => {
     expect(result.metadata).not.toHaveProperty("sboldSpWithdrawableRaw");
   });
 
+  it("scores stUSDS unused funds instead of the encumbered idle balance", async () => {
+    // Debt 50M x 1.2 = 60M plus 5M owed in auction leaves 35M withdrawable.
+    installErc4626Network({ idleBalance: 100_000_000n, extraHandlers: [
+      stusdsHandlers({ art: 50_000_000n, rate: 12n * RAY / 10n, dueRad: 5_000_000n * RAY }),
+    ] });
+    const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "stusds-unused-funds", ...STUSDS_WIRING }));
+    expect(nonInfoWarnings(result.warnings)).toEqual([]);
+    expect(result.metadata).toMatchObject({
+      idleUnderlyingBalanceRaw: "100000000",
+      redemptionCapacityRaw: "35000000",
+      redemptionCapacitySource: "stusds-unused-funds",
+      stusdsUnusedFundsRaw: "35000000",
+      redemption: { capacityUsd: 35, capacityRatioOfSupply: 0.35, capacityKind: "live-direct", freshnessKind: "same-run-onchain" },
+    });
+  });
+
+  it("accrues the Jug rate to the read block before netting stUSDS debt", async () => {
+    // A 1%-per-second duty one second stale lifts 50M x 1.0 to 50.5M of debt.
+    installErc4626Network({ idleBalance: 100_000_000n, extraHandlers: [
+      stusdsHandlers({ art: 50_000_000n, rate: RAY, duty: RAY + RAY / 100n, rhoOffsetSec: 1n }),
+    ] });
+    const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "stusds-unused-funds", ...STUSDS_WIRING }));
+    expect(result.metadata).toMatchObject({ redemptionCapacityRaw: "49500000", redemptionCapacitySource: "stusds-unused-funds" });
+  });
+
+  it("publishes zero stUSDS capacity at full utilization rather than the idle balance", async () => {
+    installErc4626Network({ idleBalance: 100_000_000n, extraHandlers: [
+      stusdsHandlers({ art: 100_000_000n, rate: RAY }),
+    ] });
+    const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "stusds-unused-funds", ...STUSDS_WIRING }));
+    expect(result.metadata).toMatchObject({
+      idleUnderlyingBalanceRaw: "100000000",
+      redemptionCapacityRaw: "0",
+      redemptionCapacitySource: "stusds-unused-funds",
+      stusdsUnusedFundsRaw: "0",
+      redemption: { capacityUsd: 0, capacityRatioOfSupply: 0 },
+    });
+  });
+
+  it("matches DSMath rpow rounding and refuses uint256 overflow", () => {
+    expect(rpowRay(0n, 0n)).toBe(RAY);
+    expect(rpowRay(0n, 5n)).toBe(0n);
+    expect(rpowRay(RAY + RAY / 100n, 1n)).toBe(RAY + RAY / 100n);
+    expect(rpowRay(RAY + RAY / 100n, 2n)).toBe(RAY * 10_201n / 10_000n);
+    expect(rpowRay(2n * RAY, 7n)).toBe(128n * RAY);
+    // Sky's 50% APY per-second rate compounds to ~1.5 RAY over one year.
+    const yearGrowth = rpowRay(1_000_000_012_857_214_317_438_491_659n, 31_536_000n)!;
+    expect(Number(yearGrowth * 1_000_000n / RAY) / 1_000_000).toBeCloseTo(1.5, 5);
+    expect(rpowRay(2n * RAY, 20_000n)).toBeNull();
+  });
+
+  it("compounds a multi-second Jug accrual before netting stUSDS debt", async () => {
+    // 1% per second for 3 seconds: 50M x 1.030301 = 51,515,050 of debt.
+    installErc4626Network({ idleBalance: 100_000_000n, extraHandlers: [
+      stusdsHandlers({ art: 50_000_000n, rate: RAY, duty: RAY + RAY / 100n, rhoOffsetSec: 3n }),
+    ] });
+    const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "stusds-unused-funds", ...STUSDS_WIRING }));
+    expect(result.metadata).toMatchObject({ redemptionCapacityRaw: "48484950", redemptionCapacitySource: "stusds-unused-funds" });
+  });
+
+  it.each([
+    ["a missing Clipper Due() word", { dropDue: true }],
+    ["a Jug rho in the future", { rhoOffsetSec: -10n }],
+  ] as const)("withholds stUSDS capacity on %s instead of publishing a measured zero", async (_label, fault) => {
+    installErc4626Network({ idleBalance: 100_000_000n, extraHandlers: [
+      ({ call }: { call?: { to?: string; data: string } }) =>
+        "dropDue" in fault && call?.data === "0x08bf162f" ? jsonResponse({ result: "0x" }) : undefined,
+      stusdsHandlers({ art: 10_000_000n, rate: RAY, ...("rhoOffsetSec" in fault ? { rhoOffsetSec: fault.rhoOffsetSec } : {}) }),
+    ] });
+    const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "stusds-unused-funds", ...STUSDS_WIRING }));
+    expect(nonInfoWarnings(result.warnings)).toEqual([
+      expect.objectContaining({ code: "stusds-unused-funds-unavailable", severity: "warning" }),
+    ]);
+    expect(result.metadata).not.toHaveProperty("redemptionCapacityRaw");
+  });
+
+  it("withholds stUSDS capacity on an implausible Jug accrual age instead of publishing zero", async () => {
+    installErc4626Network({ idleBalance: 100_000_000n, extraHandlers: [
+      stusdsHandlers({ art: 10_000_000n, rate: RAY, rhoOffsetSec: 400n * 86_400n }),
+    ] });
+    const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "stusds-unused-funds", ...STUSDS_WIRING }));
+    expect(nonInfoWarnings(result.warnings)).toEqual([
+      expect.objectContaining({ code: "stusds-unused-funds-unavailable", severity: "warning" }),
+    ]);
+    expect(result.metadata).not.toHaveProperty("redemptionCapacityRaw");
+  });
+
+  it("withholds stUSDS capacity on a wiring mismatch instead of falling back to idle USDS", async () => {
+    installErc4626Network({ idleBalance: 100_000_000n, extraHandlers: [
+      stusdsHandlers({ art: 10_000_000n, rate: RAY, vat: "0x1111111111111111111111111111111111111111" }),
+    ] });
+    const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "stusds-unused-funds", ...STUSDS_WIRING }));
+    expect(nonInfoWarnings(result.warnings)).toEqual([
+      expect.objectContaining({ code: "stusds-wiring-mismatch", severity: "warning" }),
+    ]);
+    expect(result.metadata).not.toHaveProperty("redemptionCapacityRaw");
+    expect(result.metadata).not.toHaveProperty("stusdsUnusedFundsRaw");
+  });
+
   it.each([
     {
       source: "morpho-vault-v1" as const,
@@ -1307,7 +1448,7 @@ describe("ERC-4626 capacity wire projections", () => {
       capacityRatioOfSupply: 0, settlementDelaySec: 0, blockNumber: 0, sourceTimestamp: 0,
       feeBps: 0, sourceUrls: [], holderEligibility: "any-holder",
       observerDiagnostics: { paused: false }, idleUnderlyingBalanceRaw: "0",
-      yearnV3WithdrawableRaw: "0", sboldSpWithdrawableRaw: "0", sfrxusdCrosschainWithdrawableRaw: "0",
+      yearnV3WithdrawableRaw: "0", sboldSpWithdrawableRaw: "0", stusdsUnusedFundsRaw: "0", sfrxusdCrosschainWithdrawableRaw: "0",
       morphoVaultV1LiquidityRaw: "0", morphoVaultV1LiquidityUsd: 0,
       morphoVaultV2LiquidityRaw: "0", morphoVaultV2LiquidityUsd: 0,
       morphoVaultV2ForceDeallocatableLiquidityRaw: "0", morphoVaultV2ForceDeallocatableLiquidityUsd: 0,
@@ -1322,7 +1463,7 @@ describe("ERC-4626 capacity wire projections", () => {
       redemptionCapacityRaw: "0", redemptionCapacitySource: "morpho-vault-v2-liquidity",
       idleUnderlyingBalanceRaw: "0", underlyingDecimals: 6,
       morphoVaultV1LiquidityRaw: "0", morphoVaultV1LiquidityUsd: 0,
-      yearnV3WithdrawableRaw: "0", sboldSpWithdrawableRaw: "0", sfrxusdCrosschainWithdrawableRaw: "0",
+      yearnV3WithdrawableRaw: "0", sboldSpWithdrawableRaw: "0", stusdsUnusedFundsRaw: "0", sfrxusdCrosschainWithdrawableRaw: "0",
       morphoVaultV2LiquidityRaw: "0", morphoVaultV2LiquidityUsd: 0,
       morphoVaultV2ForceDeallocatableLiquidityRaw: "0", morphoVaultV2ForceDeallocatableLiquidityUsd: 0,
     }));

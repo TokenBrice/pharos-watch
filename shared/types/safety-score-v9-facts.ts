@@ -1851,7 +1851,7 @@ function validateAssetFacts(asset: V9AssetFactsValidationInput, ctx: z.Refinemen
         : asset.variantKind === "savings-passthrough"
           ? ["native-staked"]
           : asset.variantKind === "risk-absorption"
-            ? ["native-staked", "strategy-vault"]
+            ? ["native-staked", "strategy-vault", "risk-absorption"]
             : ["strategy-vault"];
     if (!allowedForms.includes(asset.wrapperLocalFacts.form)) {
       issue(ctx, ["wrapperLocalFacts", "form"], `Wrapper form must be one of ${allowedForms.join(", ")} for the compiled variant/dependency facts`);

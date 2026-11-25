@@ -68,7 +68,7 @@ export function SafetyScoresTechnicalDetails() {
             { label: "Unknown Backing / Exit / Control (C)", value: `${semantic.unknownQuality.backing.C} / ${semantic.unknownQuality.exit.C} / ${semantic.unknownQuality.control.C}` },
             { label: "Unknown Backing / Exit / Control (U or unclassified)", value: `${semantic.unknownQuality.backing.U} / ${semantic.unknownQuality.exit.U} / ${semantic.unknownQuality.control.U}` },
             { label: "Exit unknown cause labels", value: `Presentation-only C/U labels; both price uncertainty at ${semantic.unknownQuality.exit.C}, never overwrite measured Exit` },
-            { label: "Wrapper form deductions", value: `Pure ${formula.wrapperStrategyCap.pure} · native-staked ${formula.wrapperStrategyCap.staked} · strategy-vault ${formula.wrapperStrategyCap.vault}; applied to the premium-free parent limit` },
+            { label: "Wrapper form deductions", value: `Pure ${formula.wrapperStrategyCap.pure} · native-staked ${formula.wrapperStrategyCap.staked} · strategy-vault and risk-absorption ${formula.wrapperStrategyCap.vault}; applied to the premium-free parent limit` },
             { label: "Realized holder loss", value: `≥${DEPEG_SEVERITY_BPS.severe / 100}% → ${formula.realizedHolderLoss.initialLimits.severe}; ≥${DEPEG_SEVERITY_BPS.offPeg / 100}% → ${formula.realizedHolderLoss.initialLimits.offPeg}; hold ${formula.realizedHolderLoss.holdDays} days, then linear recovery to 100 over ${formula.realizedHolderLoss.recoveryDays} days` },
             { label: "Speculative-credit residual", value: `High admitted reserve/global-claim measured-adverse credit signal → ${formula.speculativeCreditResidualLimit}; admitted legacy unscoped proof retained; no deployment/access-only cap` },
             {

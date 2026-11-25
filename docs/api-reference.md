@@ -1066,10 +1066,10 @@ Modeled issuer/protocol redemption routes and effective-exit scoring for configu
 {
   "coins": {},
   "methodology": {
-    "version": "4.55",
-    "versionLabel": "v4.55",
-    "currentVersion": "4.55",
-    "currentVersionLabel": "v4.55",
+    "version": "4.56",
+    "versionLabel": "v4.56",
+    "currentVersion": "4.56",
+    "currentVersionLabel": "v4.56",
     "changelogPath": "/methodology/redemption-backstop-changelog/",
     "asOf": 0,
     "isCurrent": true,
@@ -1128,7 +1128,7 @@ Yield-bearing stablecoin rankings with safety, benchmark-aware context, and opti
 ```json
 {
   "currentVersion": "8.61",
-  "methodologyVersion": "10.55"
+  "methodologyVersion": "10.56"
 }
 ```
 

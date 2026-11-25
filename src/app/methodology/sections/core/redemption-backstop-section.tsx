@@ -104,7 +104,9 @@ export function RedemptionBackstopMethodologySection() {
         </p>
         <p>
           MetaMorpho V1 wallet donations do not establish accounted idle cash or replace validated executable
-          capacity from its API. Liquity v1 gross ActivePool debt remains a backing diagnostic, not executable
+          capacity from its API. Sky stUSDS holds its USDS while Lockstake borrowers mint fresh USDS, so its vault
+          balance is encumbered first-loss capital: capacity is only the contract&apos;s unused-funds bound
+          (assets minus Lockstake debt and USDS in auction), and an unreadable bound leaves the route unrated. Liquity v1 gross ActivePool debt remains a backing diagnostic, not executable
           redemption capacity. A rejected payout identity also rejects its cohort restrictions; only a
           separately sourced facility or input-token pause survives that mismatch.
         </p>

@@ -4,6 +4,7 @@ import { observeFraxtalHopCapacity } from "./erc4626-capacity-fraxtal";
 import type { ExecutableRedemptionObservation } from "./executable-redemption-read-client";
 import { fetchYearnV3WithdrawableCapacity } from "./erc4626-capacity-yearn";
 import { fetchSboldSpWithdrawableCapacity } from "./erc4626-capacity-sbold";
+import { fetchStusdsUnusedFundsCapacity } from "./erc4626-capacity-stusds";
 import { fetchMorphoVaultV1Liquidity, fetchMorphoVaultV2Liquidity } from "./erc4626-capacity-morpho";
 import {
   SOURCE_TELEMETRY_KEYS, makeObservation, makeUnavailableObservation, routeForSource,
@@ -54,6 +55,8 @@ export async function observeConfiguredErc4626Capacity(
       ...input,
       settlementDelaySec: configured.settlementDelaySec,
     });
+  } else if (configured.source === "stusds-unused-funds") {
+    probe = await fetchStusdsUnusedFundsCapacity({ ...input, config: configured });
   } else {
     probe = await fetchSboldSpWithdrawableCapacity(input);
   }
@@ -189,8 +192,10 @@ export function finalizeErc4626RedemptionCapacity(input: {
   const idleRaw = idleCapacityRaw ?? 0n;
   // These source-bound routes cannot use wallet cash as an executable floor.
   // MetaMorpho V1/V1.1 ordinary withdrawals source market claims, not donations.
+  // stUSDS's vault balance is first-loss capital encumbered by Lockstake debt.
   const sourceBound = configured.source === "fraxtal-hop-withdrawable" ||
-    configured.source === "morpho-vault-v1-liquidity";
+    configured.source === "morpho-vault-v1-liquidity" ||
+    configured.source === "stusds-unused-funds";
   let capacitySource: Erc4626CapacitySource = sourceBound ? configured.source : "erc4626-idle-underlying";
   let uncappedCapacityRaw = sourceBound ? configured.capacityRaw : idleRaw;
   if (

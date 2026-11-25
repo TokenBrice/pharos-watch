@@ -472,6 +472,17 @@ export async function observeErc4626InstantExit(args: {
       canonicalAttempt.outcome = "completed";
       canonicalAttempt.reason = null;
     }
+    const executableUsd = Number(amount * 1_000_000_000n / requested) / 1_000_000_000 * request.requestedNotionalUsd;
+    // A dust receipt below the point's 1e-9 request resolution (for example a
+    // fully utilized stUSDS vault whose binding maxRedeem is a few wei) cannot be
+    // published as positive capacity, and a zero-valued positive execution is not
+    // a valid proof. Record it as a zero point like a disabled withdrawal, before
+    // gas and cost math (a sub-$1 dust input can value to zero and divide by it).
+    if (executableUsd === 0) {
+      const point = empty("erc4626-liquidity-below-resolution", config.maxFunctions === "binding" ? "exact-lower-bound" : "diagnostic");
+      point.canonicalAttempt = canonicalAttempt;
+      points.push(point); continue;
+    }
     let gasRaw = 0n;
     if (externalShares) {
       // Both the execution and fee-history quote refer to this exact block.
@@ -505,7 +516,7 @@ export async function observeErc4626InstantExit(args: {
       : allInCostBps;
     const aboveBudget = allInCostBps > request.maxCostBps || executionCostBps > request.maxCostBps;
     points.push({ requestedNotionalUsd: request.requestedNotionalUsd, maxCostBps: request.maxCostBps, requestedRawInput: requested.toString(), executedRawInput: amount.toString(),
-      executableUsd: Number(amount * 1_000_000_000n / requested) / 1_000_000_000 * request.requestedNotionalUsd,
+      executableUsd,
       executionCostBps, allInCostBps, fees: [
         { kind: "vault-withdrawal-haircut", rawUnits: (gross > received ? gross - received : 0n).toString(), assetKey: args.outputReference.assetKey },
         ...(nativeReference ? [{ kind: "gas", rawUnits: gasRaw.toString(), assetKey: nativeReference.assetKey }] : []),

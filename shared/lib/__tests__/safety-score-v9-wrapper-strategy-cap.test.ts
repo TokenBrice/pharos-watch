@@ -9,7 +9,7 @@ import { makeV9Pillar, makeV9ProductionScoreInput } from "./safety-score-v9-scor
 
 const POLICY = V9_CANDIDATE_POLICY_V1;
 
-function asset(variantKind: V9AssetFactsV2["variantKind"], form?: "pure" | "native-staked" | "strategy-vault"): V9AssetFactsV2 {
+function asset(variantKind: V9AssetFactsV2["variantKind"], form?: "pure" | "native-staked" | "strategy-vault" | "risk-absorption"): V9AssetFactsV2 {
   return {
     variantKind,
     dependencies: { edges: [{ pathKind: "serial-dependency", dependencyType: "wrapper", upstreamAssetId: "parent" }] },
@@ -29,12 +29,15 @@ function score(own: number, parent: number | null, required = true) {
 
 describe("economic wrapper forms", () => {
   it.each([
-    ["pure-wrapper", "pure"], ["savings-passthrough", "staked"], ["risk-absorption", "staked"], ["strategy-vault", "vault"],
+    ["pure-wrapper", "pure"], ["savings-passthrough", "staked"], ["risk-absorption", "vault"], ["strategy-vault", "vault"],
   ] as const)("classifies %s from economic function", (variant, tier) => {
     expect(resolveV9WrapperStrategyTier(asset(variant), resolved())).toBe(tier);
   });
   it("uses admitted active strategy allocation rather than a native-staking label", () => {
     expect(resolveV9WrapperStrategyTier(asset("risk-absorption", "strategy-vault"), resolved())).toBe("vault");
+  });
+  it("prices the reviewed risk-absorption form at the vault tier", () => {
+    expect(resolveV9WrapperStrategyTier(asset("risk-absorption", "risk-absorption"), resolved())).toBe("vault");
   });
   it("does not invent a wrapper form without a wrapper dependency or variant", () => {
     const claim = asset(null);

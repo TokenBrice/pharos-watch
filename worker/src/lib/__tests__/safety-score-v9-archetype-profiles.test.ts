@@ -220,7 +220,15 @@ describe("Safety Score v9 production-shaped archetype fixtures", () => {
         wrapperOperator: sboldAsset.wrapperOperator,
         dependencies: { edges: [] },
       } as never),
-    ).toBe("strategy-vault");
+    ).toBe("risk-absorption");
+    // First-loss capital keeps its own form, at the vault deduction, whoever operates it.
+    expect(
+      resolveWrapperForm({
+        variantKind: "risk-absorption",
+        wrapperOperator: "parent-protocol",
+        dependencies: { edges: [] },
+      } as never),
+    ).toBe("risk-absorption");
   });
 
 });

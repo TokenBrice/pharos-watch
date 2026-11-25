@@ -657,11 +657,13 @@ export function nativeWrapperLocalFactsForFixture(asset: V9AssetFactsV2) {
   const form =
     asset.variantKind === "pure-wrapper"
       ? "pure"
-      : asset.variantKind === "savings-passthrough" || asset.variantKind === "risk-absorption"
+      : asset.variantKind === "savings-passthrough"
         ? "native-staked"
-        : asset.variantKind === "strategy-vault" || wrapperEdge !== undefined
-          ? "strategy-vault"
-          : null;
+        : asset.variantKind === "risk-absorption"
+          ? "risk-absorption"
+          : asset.variantKind === "strategy-vault" || wrapperEdge !== undefined
+            ? "strategy-vault"
+            : null;
   const evidenceRefIds = [
     ...new Set([
       ...asset.implementation.status.evidenceRefIds,
