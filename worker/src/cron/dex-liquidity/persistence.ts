@@ -23,7 +23,7 @@ import { logWorkerEvent } from "../../lib/structured-log";
 import { tryParseJson } from "../../lib/json-parse";
 import { createDexGenerationStore } from "./generation-store";
 import { createDexRouteObservationPacking, publishedDexRouteCounts } from "./dex-route-observation-selection";
-import type { LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
+import type { CurveIdentityAttachment, LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
 import { summarizeRetainedPoolVolume } from "./scoring-helpers";
 import { normalizeProtocol } from "./pool-helpers";
 import { getReferenceMarket, getReferenceMarketClosureStart } from "@shared/lib/reference-market-hours";
@@ -683,6 +683,7 @@ async function stageDexLiquidityPublicationGeneration(
     activeScoredCount: number;
     inactiveMetricRowsSkipped: number;
     inactiveMetricIdsSkipped: string[];
+    curveIdentityStatus?: CurveIdentityAttachment["status"];
     signal?: AbortSignal;
   },
 ): Promise<void> {
@@ -741,6 +742,7 @@ async function stageDexLiquidityPublicationGeneration(
             activeScoredCount: params.activeScoredCount,
             inactiveMetricRowsSkipped: params.inactiveMetricRowsSkipped,
             inactiveMetricIdsSkipped: params.inactiveMetricIdsSkipped.slice(0, 25),
+            ...(params.curveIdentityStatus ? { curveIdentityStatus: params.curveIdentityStatus } : {}),
           }),
           params.nowSec,
         )
@@ -948,6 +950,7 @@ export async function persistScores(
   routeRemovalEvidence?: Map<string, DexRouteRemovalEvidence>,
   retainedPoolsByStablecoin?: ReadonlyMap<string, LiquidityMetrics["topPools"]>,
   anchorReviewDecision?: DexLiquidityAnchorReviewDecision,
+  curveIdentityStatus?: CurveIdentityAttachment["status"],
 ): Promise<PersistScoresResult> {
   let placeholderCount = 0;
   let orphanRowsDeleted = 0;
@@ -1056,6 +1059,7 @@ export async function persistScores(
     activeScoredCount,
     inactiveMetricRowsSkipped: inactiveMetricIdsSkipped.length,
     inactiveMetricIdsSkipped,
+    curveIdentityStatus,
     signal,
   });
 

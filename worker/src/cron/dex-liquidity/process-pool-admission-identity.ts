@@ -1,3 +1,4 @@
+import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import {
   canonicalExitRouteAssetKey,
   canonicalExitRouteChain,
@@ -89,13 +90,16 @@ export function admitAndResolvePoolIdentity(
   const reviewedCurveAddress = protocol === "curve" && chainNorm === "ethereum"
     ? REVIEWED_ETHEREUM_CURVE_YIELD_ADDRESSES.get(pool.pool.trim().toLowerCase())
     : undefined;
-  const addrCurveKey = canonicalExitRouteAssetKey(chainNorm, reviewedCurveAddress ?? pool.pool);
-  // A missing exact observation must never enrich a reviewed ID with its twin's state.
+  const exactCurveAddress = protocol === "curve"
+    ? (reviewedCurveAddress ?? canonicalEvmAddress(pool.pool) ?? undefined)
+    : undefined;
+  const addrCurveKey = canonicalExitRouteAssetKey(chainNorm, exactCurveAddress ?? pool.pool);
+  // A missing exact observation must never enrich an exact or reviewed ID with its twin's state.
   const fpCurveKey =
-    protocol === "curve" && !reviewedCurveAddress
+    protocol === "curve" && !exactCurveAddress
       ? buildPoolFingerprint(chainNorm, "curve", pool.underlyingTokens ?? [])
       : null;
-  const symCurveKey = reviewedCurveAddress ? null : `${chainNorm}:${poolSymbols
+  const symCurveKey = exactCurveAddress ? null : `${chainNorm}:${poolSymbols
     .map((symbol) => symbol.toUpperCase())
     .sort()
     .join("-")}`;
@@ -108,6 +112,7 @@ export function admitAndResolvePoolIdentity(
     protocol,
     chainNorm,
     reviewedCurveAddress,
+    exactCurveAddress,
     addrCurveKey,
     fpCurveKey,
     symCurveKey,

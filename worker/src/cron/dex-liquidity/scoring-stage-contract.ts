@@ -5,7 +5,7 @@ import type {
   DirectApiIntegrationResult,
 } from "./orchestrator-phases/direct-api";
 import type { DeadPoolUnindexedChainSkips, StagedPoolSkipDimension } from "./staging-merge";
-import type { DataSources, DexPriceObs, SourcePoolGraph } from "./types";
+import type { CurveIdentityAttachment, DataSources, DexPriceObs, SourcePoolGraph } from "./types";
 import type { PoolProcessingRejection } from "./process-pool-types";
 import type { TargetEnrichmentTelemetry } from "./route-telemetry";
 import type { UniV3CandidateCarryForwardTelemetry } from "./univ3-candidate-snapshot";
@@ -53,6 +53,8 @@ export interface DexLiquidityScoringSourceState {
   uniswapV4CandidateCarryForward?: UniswapV4CandidateCarryForwardTelemetry;
   /** Per-chain subgraph failure reason and timeout flag; optional for older stage headers. */
   subgraphFailures?: SubgraphFailureTelemetry;
+  /** Exact Curve identity attachment summary from `poolsPro?project=curve-dex`. */
+  curveIdentityAttachment?: CurveIdentityAttachment;
   directApiSourceSummary: DexLiquidityDirectApiSourceSummary;
 }
 

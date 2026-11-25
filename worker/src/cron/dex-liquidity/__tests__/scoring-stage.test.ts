@@ -795,7 +795,7 @@ describe("DEX liquidity scoring stage", () => {
     });
   });
 
-  it.each([7, 8, 9])("round-trips closure valuation provenance and rejects an otherwise-ready v%s producer", async (legacy) => {
+  it.each([7, 8, 9, 10])("round-trips closure valuation provenance and rejects an otherwise-ready v%s producer", async (legacy) => {
     const harness = openDatabase();
     const sourceSlotStartedAt = 20_000;
     const stored = await persistAt(harness.db, sourceSlotStartedAt);
