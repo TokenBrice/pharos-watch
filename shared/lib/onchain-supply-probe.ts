@@ -590,7 +590,7 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
   "jpym-mento": {
     aggregateContracts: [
       { chain: "celo" },
-      supplyProbeChain("monad", { allowZeroSupply: true }),
+      supplyProbeChain("monad"),
     ],
     canonicalSupplyChain: "celo",
   },

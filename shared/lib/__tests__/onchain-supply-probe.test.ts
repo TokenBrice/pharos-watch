@@ -153,7 +153,7 @@ describe("curated on-chain supply paths", () => {
     { id: "euri-banking-circle", chains: ["ethereum", "bsc"], zero: [] },
     { id: "cadd-cad-digital", chains: ["ethereum", "base", "solana", "tempo"], zero: ["tempo"] },
     { id: "dgld-gold-token-sa", chains: ["ethereum", "base", "solana"], zero: [] },
-    { id: "jpym-mento", chains: ["celo", "monad"], zero: ["monad"], canonical: "celo" },
+    { id: "jpym-mento", chains: ["celo", "monad"], zero: [], canonical: "celo" },
     { id: "mxnb-juno", chains: ["ethereum", "polygon", "arbitrum", "avalanche", "base", "arc"], zero: [] },
     { id: "witry-brix", chains: ["ethereum", "megaeth", "robinhood"], zero: ["robinhood"], canonical: "ethereum" },
   ])("requires the complete reviewed NAV roster and accounting policy for $id", ({ id, chains, zero, canonical }) => {
