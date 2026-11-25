@@ -109,8 +109,7 @@ async function readXautSupply(price: SupplementalPriceResolution | null, chainRp
     };
   } catch (error) {
     throwIfAborted(signal);
-    logWorkerEventArgs("handler", "warn", "[gold] XAUT scoped supply read failed:", error);
-    return null;
+    return logXautWithheld("read-exception", { error: error instanceof Error ? error.message : String(error) });
   }
 }
 // Only these DefiLlama protocol slugs represent one gold token; issuer or
