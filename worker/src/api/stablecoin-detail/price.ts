@@ -1,5 +1,4 @@
 import { LEGACY_SOLOMON_USDV_ID, isSolomonPriceIdentityAllowed } from "../../lib/solomon-usdv-identity";
-import { XAUT_ASSET_ID } from "../../lib/safety-score-v9/xaut-supply-attribution-contract";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { isKinesisWrapperSupplyCutoverActive } from "@shared/lib/supply-perimeter-changes";
@@ -155,7 +154,7 @@ async function applyCanonicalDetailOverlay(
     // A canonical producer refusal must not be resurrected from provider history.
     const supplyUnavailableReason = coin?.supplyUnavailableReason
       ?? (coin?.supplyChainGuard?.status === "unavailable" ? coin.supplyChainGuard.reason : undefined);
-    const preferredSupplyUnavailable = coin != null && (prefersOnChainSupplyMcap(coin) || coin.id === XAUT_ASSET_ID) &&
+    const preferredSupplyUnavailable = coin != null && (prefersOnChainSupplyMcap(coin) || coin.id === "xaut-tether") &&
       coin.supplySource === "onchain-supply-withheld" && admitSupplyBuckets(coin.circulating).status !== "observed";
     const supplyUnavailable = coin != null && !coin.frozen && stablecoinId !== LEGACY_SOLOMON_USDV_ID &&
       !hasCurrentSupply && (supplyUnavailableReason != null || preferredSupplyUnavailable || wrapperSupplyUnverified);
