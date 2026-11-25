@@ -6,6 +6,7 @@ import { z } from "zod";
 import { DepegPrimaryTrustSchema, NominalPriceReferenceSchema, PriceConfidenceSchema, PriceObservedAtModeSchema, PricePublicationReasonSchema } from "./price";
 import { issue } from "./safety-schema-primitives";
 import { AdmittedDeviationBpsSchema, ReferenceAdmissionSchema } from "./reference-admission";
+import { ListingClassSchema } from "./stablecoin-taxonomy";
 
 export const DepegTimestampSchema = z.number().int().nonnegative();
 
@@ -76,6 +77,7 @@ export const PegSummaryCoinSchema = z.object({
   pegType: z.string(),
   pegCurrency: z.string(),
   governance: z.string(),
+  listingClass: ListingClassSchema.nullable().optional(),
   currentDeviationBps: z.number().nullable(),
   referenceAdmission: ReferenceAdmissionSchema.optional(),
   admittedDeviationBps: AdmittedDeviationBpsSchema.optional(),
