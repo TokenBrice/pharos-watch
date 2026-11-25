@@ -8413,9 +8413,29 @@
         {
           "label": "Ethereum PublicNode RPC used for the eth_call reads at block 25627256",
           "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Ethereum finalized block 26491547 (hash 0xbaf20a210a9a7d3c0fda59f36bf500d34c2dbb9e9afb2a771a9a8535dc1a6c35, 2026-11-25T10:17:47Z): pinned sBOLD vault state, Liquity V2 3-branch AddressesRegistry/TroveManager/StabilityPool reads, complete 188-trove census, and lifetime Liquidation logs",
+          "url": "https://etherscan.io/block/26491547"
+        },
+        {
+          "label": "Pinned Liquity V2 TroveManager implementation (immutable MCR/CCR/SCR and permissionless liquidation/redistribution)",
+          "url": "https://github.com/liquity/bold/blob/c8a5a4ee2e9dc024905856b6698a77d849c68c7e/contracts/src/TroveManager.sol"
+        },
+        {
+          "label": "Pinned Liquity V2 StabilityPool implementation (debt offset and collateral gain accounting)",
+          "url": "https://github.com/liquity/bold/blob/c8a5a4ee2e9dc024905856b6698a77d849c68c7e/contracts/src/StabilityPool.sol"
+        },
+        {
+          "label": "Verified immutable sBOLD sBold.sol contract source on Blockscout (whenNotPaused gate on swap(), deposit(), withdraw(), redeem())",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x50bd66d59911f5e086ec87ae43c811e0d059dd11"
+        },
+        {
+          "label": "K3 Capital 2026-11-19 sBOLD exploit post-mortem and recovery plan (~3.43M BOLD drained via leftover 1inch approval in swap(); Liquity V2 unaffected; vault paused)",
+          "url": "https://x.com/k3_capital/status/2123395654214967426"
         }
       ],
-      "notes": "Reviewed 2026-07-27 (replaces the 2026-07-20 review; measurements refreshed and the backstop gap resolved). K3's technical documentation establishes sBOLD as a standard-conforming ERC-4626 vault whose underlying asset is BOLD, deployed across Liquity V2 Stability Pools at pre-configured basis-point weights; collateral gains from liquidations are quoted in real time and swapped to BOLD through a SwapAdapter with a documented minimum-quantity formula (max slippage, reward and swap fee each capped at 10%), and deposit/withdraw preview rounding always favors the vault. Measured on-chain at Ethereum block 25627256 (2026-07-27T22:52:23Z) via eth_call: totalAssets() = 7,719,437.630014434 BOLD, totalSupply() = 7,176,569.116245205 sBOLD, convertToAssets(1e18) = 1.075644574 BOLD per share, and asset() confirms the underlying is BOLD (0x6440F144b7e50D6a8439336510312d2F54BeB01D). The wrapper originates no borrower debt and operates no collateral-ratio liquidation branches, so both CDP metrics and the collateralization and liquidation components remain structurally not applicable; liquidation execution is inherited from the parent BOLD system (variantOf bold-liquity, reviewed separately). BACKSTOP (adequate; newly graded): the wrapper itself adds no backstop and none is disclosed — the complete K3 documentation index (design, introduction, technical details, interactions, price oracle, audit reports, brand assets) and the deployed contract's function inventory contain no insurance, reserve, or recapitalization module — but sBOLD's deposits ride inside Liquity V2's per-branch Stability Pools, the parent's two-stage backstop of Stability Pool debt burn followed by same-branch redistribution. Measured from Liquity's own protocol stats API at 2026-07-27T22:56:39Z: total Stability Pool deposits of 20,879,166.75853167 BOLD against total BOLD supply of 29,607,199.86821610 give an inherited liquidation coverage of 70.5%, above the 0.658 level graded adequate for bold-liquity; the vault's on-chain sps() reads at block 25627256 confirm allocation into the three canonical Liquity V2 Stability Pools, providing the external on-chain anchor for the API figures. BRANCH ISOLATION (adequate; upgraded from limited): the prior review held that the configured weights were not published; K3's introduction page in fact documents the initial 60% wstETH / 30% WETH / 10% rETH allocation under biweekly admin rebalancing, and on-chain sps() reads at block 25627256 verify the live weights remain 30% WETH (pool 0x5721cbbd64fc7ae3ef44a0a3f9a790a9264cf9bf), 60% wstETH (pool 0x9502b7c397e9aa22fe9db7ef7daf21cd2aebe56b), 10% rETH (pool 0xd442e41019b7f5c4dd78f50dc03726c446148695). Liquity V2 keeps liquidation and redistribution losses within each collateral branch, but unrecovered bad debt in any branch transmits to the shared BOLD claim and hence to sBOLD's NAV, which prevents a strong rating. SHUTDOWN AND BAD DEBT (limited): K3's exchange-rate documentation conditions the compounding-share behavior on 'no bad debt from unsuccessful liquidations', i.e. unsuccessful-liquidation losses pass through to the share rate with no wrapper-level cure, and the parent Liquity V2 design has no unconditional recapitalization facility. STRUCTURAL REDEMPTION (limited): redemption is a standard ERC-4626 redeem, but the redeemed value depends on oracle-quoted collateral conversion executed by K3's mutable solver/swap infrastructure under admin control, and the interactions documentation states deposit and withdraw operations are restricted whenever accumulated collateral exceeds the configured maximum-collateral boundary, so redemptions can be temporarily gated under heavy liquidation flow. NOT ESTABLISHED: withdrawal behavior under Stability Pool withdrawal stress, the full admin/pause control inventory (verified source shows onlyOwner configuration setters plus pause/unpause), and any wrapper-level backstop (none documented or deployed).",
+      "notes": "Reviewed 2026-07-27 (replaces the 2026-07-20 review; measurements refreshed and the backstop gap resolved). K3's technical documentation establishes sBOLD as a standard-conforming ERC-4626 vault whose underlying asset is BOLD, deployed across Liquity V2 Stability Pools at pre-configured basis-point weights; collateral gains from liquidations are quoted in real time and swapped to BOLD through a SwapAdapter with a documented minimum-quantity formula (max slippage, reward and swap fee each capped at 10%), and deposit/withdraw preview rounding always favors the vault. Measured on-chain at Ethereum block 25627256 (2026-07-27T22:52:23Z) via eth_call: totalAssets() = 7,719,437.630014434 BOLD, totalSupply() = 7,176,569.116245205 sBOLD, convertToAssets(1e18) = 1.075644574 BOLD per share, and asset() confirms the underlying is BOLD (0x6440F144b7e50D6a8439336510312d2F54BeB01D). The wrapper originates no borrower debt and operates no collateral-ratio liquidation branches, so both CDP metrics and the collateralization and liquidation components remain structurally not applicable; liquidation execution is inherited from the parent BOLD system (variantOf bold-liquity, reviewed separately). BACKSTOP (adequate; newly graded): the wrapper itself adds no backstop and none is disclosed — the complete K3 documentation index (design, introduction, technical details, interactions, price oracle, audit reports, brand assets) and the deployed contract's function inventory contain no insurance, reserve, or recapitalization module — but sBOLD's deposits ride inside Liquity V2's per-branch Stability Pools, the parent's two-stage backstop of Stability Pool debt burn followed by same-branch redistribution. Measured from Liquity's own protocol stats API at 2026-07-27T22:56:39Z: total Stability Pool deposits of 20,879,166.75853167 BOLD against total BOLD supply of 29,607,199.86821610 give an inherited liquidation coverage of 70.5%, above the 0.658 level graded adequate for bold-liquity; the vault's on-chain sps() reads at block 25627256 confirm allocation into the three canonical Liquity V2 Stability Pools, providing the external on-chain anchor for the API figures. BRANCH ISOLATION (adequate; upgraded from limited): the prior review held that the configured weights were not published; K3's introduction page in fact documents the initial 60% wstETH / 30% WETH / 10% rETH allocation under biweekly admin rebalancing, and on-chain sps() reads at block 25627256 verify the live weights remain 30% WETH (pool 0x5721cbbd64fc7ae3ef44a0a3f9a790a9264cf9bf), 60% wstETH (pool 0x9502b7c397e9aa22fe9db7ef7daf21cd2aebe56b), 10% rETH (pool 0xd442e41019b7f5c4dd78f50dc03726c446148695). Liquity V2 keeps liquidation and redistribution losses within each collateral branch, but unrecovered bad debt in any branch transmits to the shared BOLD claim and hence to sBOLD's NAV, which prevents a strong rating. SHUTDOWN AND BAD DEBT (limited): K3's exchange-rate documentation conditions the compounding-share behavior on 'no bad debt from unsuccessful liquidations', i.e. unsuccessful-liquidation losses pass through to the share rate with no wrapper-level cure, and the parent Liquity V2 design has no unconditional recapitalization facility. STRUCTURAL REDEMPTION (limited): redemption is a standard ERC-4626 redeem, but the redeemed value depends on oracle-quoted collateral conversion executed by K3's mutable solver/swap infrastructure under admin control, and the interactions documentation states deposit and withdraw operations are restricted whenever accumulated collateral exceeds the configured maximum-collateral boundary, so redemptions can be temporarily gated under heavy liquidation flow. NOT ESTABLISHED: withdrawal behavior under Stability Pool withdrawal stress, the full admin/pause control inventory (verified source shows onlyOwner configuration setters plus pause/unpause), and any wrapper-level backstop (none documented or deployed). Look-through correction (component reviews pinned 2026-11-25T10:17:47Z, Ethereum finalized block 26491547): the July statement that collateralizationParameters and liquidationMechanics are structurally not applicable is withdrawn; sBOLD's Stability Pool deposits absorb liquidations across Liquity V2's three collateral branches (30% WETH / 60% wstETH / 10% rETH), so collateralizationParameters (limited) and liquidationMechanics (weak) now review that Liquity V2 trove book and sBOLD's post-exploit paused collateral-conversion leg under their own dated reviews. The July global review date, metrics, and untouched sibling component grades are preserved.",
       "metrics": {
         "collateralizationRatio": null,
         "liquidationCapacityRatio": null
@@ -8423,12 +8443,12 @@
       "metricApplicability": {
         "collateralizationRatio": {
           "state": "not-applicable",
-          "rationale": "sBOLD is an ERC-4626 allocator over Liquity V2 Stability Pools; it originates no borrower debt and has no collateralized vault system of its own, so a system collateralization ratio is structurally undefined at the wrapper level.",
+          "rationale": "sBOLD is an ERC-4626 allocator over Liquity V2 Stability Pools and issues no debt token of its own, so a wrapper-level whole-token collateralization ratio is structurally undefined; the collateralization of the Liquity V2 trove book sBOLD absorbs is reviewed in the dated collateralizationParameters component.",
           "sourceUrl": "https://k3-capital.gitbook.io/sbold/technical-details"
         },
         "liquidationCapacityRatio": {
           "state": "not-applicable",
-          "rationale": "sBOLD has no debt of its own to offset; its deposits are themselves liquidation capital committed to the parent BOLD system, so a wrapper-level liquidation capacity ratio is structurally not applicable.",
+          "rationale": "sBOLD has no debt of its own to offset; its deposits are themselves liquidation capital committed to Liquity V2 Stability Pools, so a wrapper-level liquidation capacity ratio is not applicable; the absorbed book's liquidation path and sBOLD's collateral-conversion leg are reviewed in the dated liquidationMechanics component.",
           "sourceUrl": "https://k3-capital.gitbook.io/sbold/technical-details"
         }
       },
@@ -8439,14 +8459,58 @@
       },
       "components": {
         "collateralizationParameters": {
-          "applicability": "not-applicable",
-          "rationale": "The vault takes BOLD deposits and allocates them to Stability Pools; it has no borrower collateral positions or collateral-ratio thresholds.",
-          "sourceUrl": "https://k3-capital.gitbook.io/sbold/technical-details"
+          "applicability": "measured",
+          "quality": "limited",
+          "review": {
+            "reviewedAt": "2026-11-25T10:17:47Z",
+            "reviewer": "Risk-absorption look-through review 2026-11-25 (#2344)",
+            "rationale": "Look-through component review: sBOLD allocates BOLD into Liquity V2 Stability Pools (on-chain sps() weights unchanged at 30% WETH, 60% wstETH, 10% rETH; 3.5335 BOLD compounded deposits remain in the three pools alongside 0.0389 BOLD pending yield and 1.0000 BOLD contract balance = 4.5725 BOLD totalAssets() while paused after the 2026-11-18 exploit), so its economic loss-absorption exposure is the Liquity V2 trove book. At Ethereum finalized block 26491547 (hash 0xbaf20a210a9a7d3c0fda59f36bf500d34c2dbb9e9afb2a771a9a8535dc1a6c35, 2026-11-25T10:17:47Z), immutable AddressesRegistry/TroveManager reads and an exhaustive 188-trove census (176 unique owners) show: $57.95M exogenous ETH/LST collateral against 26.91M BOLD debt (system CR 215.35%, 0 troves below MCR, 0 DefaultPool debt, 0 branches shut down). Immutable parameters: WETH MCR 110%/CCR 150%/SCR 110% (TCR 143.87%, 94 troves, minICR 118.81%); wstETH MCR 120%/CCR 160%/SCR 120% (TCR 280.01%, 78 troves, minICR 132.08%); rETH MCR 120%/CCR 160%/SCR 120% (TCR 264.88%, 16 troves, minICR 137.92%). Graded limited (below parent BOLD's adequate) for first-loss SP capital because: (1) Branch 0 (WETH, 30% sBOLD weight, 45.8% of BOLD debt) is actively below CCR (143.87% < 150%), restricting borrowing and leaving narrow buffer above SCR; and (2) borrower concentration is high — top-1 owner holds 51.34% of WETH debt ($6.33M at 127.47% ICR, 17.5 pts above MCR; HHI 0.2871), 38.54% of wstETH debt ($4.07M at 313.57% ICR; HHI 0.1961), and 96.27% of rETH debt ($3.85M at 261.70% ICR; HHI 0.9272); system-wide top-1 29.46%, top-2 53.00%, top-5 69.29%, HHI 0.1556 (effective N 6.43). Not weak because zero troves are below MCR and 70% of configured SP weight (wstETH/rETH) sits at 264.9%-280.0% TCR. Re-review on unpause/recovery or branch CCR/concentration shift.",
+            "sources": [
+              {
+                "label": "Ethereum finalized block 26491547 (hash 0xbaf20a210a9a7d3c0fda59f36bf500d34c2dbb9e9afb2a771a9a8535dc1a6c35, 2026-11-25T10:17:47Z): pinned sBOLD vault state, Liquity V2 3-branch AddressesRegistry/TroveManager/StabilityPool reads, complete 188-trove census, and lifetime Liquidation logs",
+                "url": "https://etherscan.io/block/26491547"
+              },
+              {
+                "label": "Pinned Liquity V2 TroveManager implementation (immutable MCR/CCR/SCR and permissionless liquidation/redistribution)",
+                "url": "https://github.com/liquity/bold/blob/c8a5a4ee2e9dc024905856b6698a77d849c68c7e/contracts/src/TroveManager.sol"
+              },
+              {
+                "label": "K3 Capital sBOLD technical details (ERC-4626 allocator over Liquity V2 Stability Pools, weight-based allocation, oracle and SwapAdapter accounting, rounding and fee rules)",
+                "url": "https://k3-capital.gitbook.io/sbold/technical-details"
+              }
+            ]
+          }
         },
         "liquidationMechanics": {
-          "applicability": "not-applicable",
-          "rationale": "Liquidation execution is inherited from the parent Liquity V2 BOLD system; the wrapper only allocates deposits into Stability Pools and swaps accumulated collateral gains back to BOLD.",
-          "sourceUrl": "https://k3-capital.gitbook.io/sbold/technical-details"
+          "applicability": "measured",
+          "quality": "weak",
+          "review": {
+            "reviewedAt": "2026-11-25T10:17:47Z",
+            "reviewer": "Risk-absorption look-through review 2026-11-25 (#2344)",
+            "rationale": "Look-through component review covering both the underlying Liquity V2 liquidation path and sBOLD's collateral-gain conversion leg at Ethereum finalized block 26491547 (2026-11-25T10:17:47Z). Underlying book: Liquity V2 liquidations are immutable, live, and permissionless across all three branches (shutdownTime = 0, hasBeenShutDown = false; 5% SP liquidation penalty, 10% WETH / 20% wstETH and rETH redistribution penalty; 65 historical on-chain Liquidation events since deployment — 49 WETH, 12 wstETH, 4 rETH — offsetting $5.37M debt with 0 redistribution). Stability Pools hold $14.21M BOLD (52.82% of debt), covering 100% of wstETH/rETH and 52.98% of WETH liquidatable debt under a 50% instantaneous collateral shock (63.92% aggregate; $3.68M instant-shock underwater shortfall on WETH). Demonstrated deficiency on sBOLD's realization leg: Stability Pool liquidations settle in seized WETH/wstETH/rETH, which sBOLD must convert back to BOLD via sBold.swap() (swapAdapter = 1inch router 0x111111125421cA6dc452d289314280a0f8842A65). On 2026-11-18 that exact swap() function was exploited (leftover 1inch approval plus donation share-price inflation), draining ~3.43M BOLD (99.9999% of assets; 4.5725 BOLD left against 4.372e19 shares, convertToAssets(1e18) = 0). Verified immutable sBold.sol gates swap() with whenNotPaused, and paused() = true at block 26491547 (unchanged at finalized block 26491610), disabling permissionless collateral-to-BOLD realization while unpausing would re-expose the unpatched immutable bug. Graded weak rather than failed because the underlying Liquity V2 liquidation engine itself remains live and callable (and the vault drain is already priced by the realized-holder-loss cap). Re-review on K3 recovery/migration or contract wind-down.",
+            "sources": [
+              {
+                "label": "Ethereum finalized block 26491547 (hash 0xbaf20a210a9a7d3c0fda59f36bf500d34c2dbb9e9afb2a771a9a8535dc1a6c35, 2026-11-25T10:17:47Z): pinned sBOLD vault state, Liquity V2 3-branch AddressesRegistry/TroveManager/StabilityPool reads, complete 188-trove census, and lifetime Liquidation logs",
+                "url": "https://etherscan.io/block/26491547"
+              },
+              {
+                "label": "Pinned Liquity V2 TroveManager implementation (immutable MCR/CCR/SCR and permissionless liquidation/redistribution)",
+                "url": "https://github.com/liquity/bold/blob/c8a5a4ee2e9dc024905856b6698a77d849c68c7e/contracts/src/TroveManager.sol"
+              },
+              {
+                "label": "Pinned Liquity V2 StabilityPool implementation (debt offset and collateral gain accounting)",
+                "url": "https://github.com/liquity/bold/blob/c8a5a4ee2e9dc024905856b6698a77d849c68c7e/contracts/src/StabilityPool.sol"
+              },
+              {
+                "label": "Verified immutable sBOLD sBold.sol contract source on Blockscout (whenNotPaused gate on swap(), deposit(), withdraw(), redeem())",
+                "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x50bd66d59911f5e086ec87ae43c811e0d059dd11"
+              },
+              {
+                "label": "K3 Capital 2026-11-19 sBOLD exploit post-mortem and recovery plan (~3.43M BOLD drained via leftover 1inch approval in swap(); Liquity V2 unaffected; vault paused)",
+                "url": "https://x.com/k3_capital/status/2123395654214967426"
+              }
+            ]
+          }
         },
         "backstop": {
           "quality": "adequate"
@@ -13618,9 +13682,29 @@
         {
           "label": "stkGHO verified proxy and UmbrellaStakeToken implementation on Blockscout",
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f827a63755855cdf3e8f3bcd20265c833f15033"
+        },
+        {
+          "label": "Ethereum finalized block 26491547 (hash 0xbaf20a210a9a7d3c0fda59f36bf500d34c2dbb9e9afb2a771a9a8535dc1a6c35, 2026-11-25T10:17:47Z): pinned Umbrella/stkGHO/RewardsController state, Aave V3 Core Pool 68-reserve collateral and E-Mode census, and GHO-debt LiquidationCall logs",
+          "url": "https://etherscan.io/block/26491547"
+        },
+        {
+          "label": "Verified deployed Umbrella implementation on Sourcify (Umbrella.sol and UmbrellaConfiguration.sol: isReserveSlashable, slash, setDeficitOffset)",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x929e21d24d3f2a529621adc248d227012b72646d?fields=sources,abi"
+        },
+        {
+          "label": "Aave ARFC 25154 (2026-06-16): Umbrella Parameter Update sunsetting GHO Umbrella rewards/target liquidity and raising GHO deficit offset to 3,000,000 GHO",
+          "url": "https://governance.aave.com/t/arfc-umbrella-parameter-update-target-liquidity-and-emission-optimization/25154"
+        },
+        {
+          "label": "Aave Health Factor and Liquidation mechanics documentation",
+          "url": "https://aave.com/help/borrowing/liquidations"
+        },
+        {
+          "label": "Aave V3 Pool smart contract reference (liquidationCall and reserve collateral checks)",
+          "url": "https://aave.com/docs/aave-v3/smart-contracts/pool"
         }
       ],
-      "notes": "Measured at finalized Ethereum block 25571938 via public RPC https://ethereum-rpc.publicnode.com (eth_call). The Aave Umbrella documentation establishes that Umbrella is Aave's automated safety module: staked assets are burned/slashed to cover protocol deficits in the same asset-network pair without governance intervention, GHO staking is supported on Ethereum, a governance-configured per-asset deficit offset lets the DAO absorb a first tranche before stakers, and unstaking requires a 20-day cooldown plus a 2-day withdrawal window. The BGD design proposal establishes that stkGHO is the main coverage asset for GHO bad debt inside a GHO-specific Safety Pool, that slashing is automated and precise, that each stk asset defines its exchange rate as a function of slashing, and that multiple staked assets covering GHO would be slashed proportionally. The GHO facilitator documentation establishes that underlying GHO is minted by governance-approved facilitators (Aave V3, CCIP, GSM, flashmint) under governance-set bucket capacities rather than by an stkGHO-local vault system. On-chain at the pinned block: asset() on 0x4f827a63755855cdf3e8f3bcd20265c833f15033 returned GHO 0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f; totalSupply() returned 14,553,497.911194915956083757 stkGHO; convertToAssets(totalSupply) returned exactly the same integer, an underlying conversion ratio of 1.0. Blockscout's verified-contract read names the proxy a TransparentUpgradeableProxy with implementation 0x75e8aC0c063B6966E2A9954adEdf39BdE9370197 (UmbrellaStakeToken), consistent with the staking-receipt design. collateralizationParameters and liquidationMechanics are structurally not applicable: the wrapper originates no borrower debt and runs no collateral liquidation pool, so both CDP ratios are null with cited not-applicable rationales rather than measured numbers. Backstop is limited: the holder's own stake is the first-loss capital for GHO deficits, and the only deeper layer evidenced is the governance-configured deficit offset, which is a sized first-tranche buffer rather than an unconditional recapitalization commitment. Branch isolation is limited: Umbrella documents slashing isolation to the GHO-Ethereum pair, but the GHO deficits it absorbs arise from a shared multi-facilitator issuance system whose bucket caps provide only bounded isolation. Shutdown and bad-debt handling is limited: the documented path is automated slashing and burn of this very token plus emergency mechanisms, with no evidenced facility that recapitalizes stkGHO holders after a deficit. Structural redemption is limited: convertToAssets(totalSupply) is 1:1 and permissionless in design, but redemption is time-gated by the documented 20-day cooldown and 2-day window and remains slash-impaired during that period; this makes no claim about GHO's own exit quality. NOT established: the current deficit-offset size for the GHO pair, any max slashable percentage bound (getter calls reverted at the pinned block), the share of GHO facilitator debt actually covered by the stkGHO stake, and any commitment beyond the documented offset that would absorb deficits ahead of stakers.",
+      "notes": "Measured at finalized Ethereum block 25571938 via public RPC https://ethereum-rpc.publicnode.com (eth_call). The Aave Umbrella documentation establishes that Umbrella is Aave's automated safety module: staked assets are burned/slashed to cover protocol deficits in the same asset-network pair without governance intervention, GHO staking is supported on Ethereum, a governance-configured per-asset deficit offset lets the DAO absorb a first tranche before stakers, and unstaking requires a 20-day cooldown plus a 2-day withdrawal window. The BGD design proposal establishes that stkGHO is the main coverage asset for GHO bad debt inside a GHO-specific Safety Pool, that slashing is automated and precise, that each stk asset defines its exchange rate as a function of slashing, and that multiple staked assets covering GHO would be slashed proportionally. The GHO facilitator documentation establishes that underlying GHO is minted by governance-approved facilitators (Aave V3, CCIP, GSM, flashmint) under governance-set bucket capacities rather than by an stkGHO-local vault system. On-chain at the pinned block: asset() on 0x4f827a63755855cdf3e8f3bcd20265c833f15033 returned GHO 0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f; totalSupply() returned 14,553,497.911194915956083757 stkGHO; convertToAssets(totalSupply) returned exactly the same integer, an underlying conversion ratio of 1.0. Blockscout's verified-contract read names the proxy a TransparentUpgradeableProxy with implementation 0x75e8aC0c063B6966E2A9954adEdf39BdE9370197 (UmbrellaStakeToken), consistent with the staking-receipt design. collateralizationParameters and liquidationMechanics are structurally not applicable: the wrapper originates no borrower debt and runs no collateral liquidation pool, so both CDP ratios are null with cited not-applicable rationales rather than measured numbers. Backstop is limited: the holder's own stake is the first-loss capital for GHO deficits, and the only deeper layer evidenced is the governance-configured deficit offset, which is a sized first-tranche buffer rather than an unconditional recapitalization commitment. Branch isolation is limited: Umbrella documents slashing isolation to the GHO-Ethereum pair, but the GHO deficits it absorbs arise from a shared multi-facilitator issuance system whose bucket caps provide only bounded isolation. Shutdown and bad-debt handling is limited: the documented path is automated slashing and burn of this very token plus emergency mechanisms, with no evidenced facility that recapitalizes stkGHO holders after a deficit. Structural redemption is limited: convertToAssets(totalSupply) is 1:1 and permissionless in design, but redemption is time-gated by the documented 20-day cooldown and 2-day window and remains slash-impaired during that period; this makes no claim about GHO's own exit quality. NOT established: the current deficit-offset size for the GHO pair, any max slashable percentage bound (getter calls reverted at the pinned block), the share of GHO facilitator debt actually covered by the stkGHO stake, and any commitment beyond the documented offset that would absorb deficits ahead of stakers. Look-through correction (component reviews pinned 2026-11-25T10:17:47Z, Ethereum finalized block 26491547): the July statement that collateralizationParameters and liquidationMechanics are structurally not applicable is withdrawn; although Aave sunset GHO Umbrella rewards (ARFC 25154) and raised GHO deficitOffset to 3,000,000 GHO, Umbrella's slashing config for GHO remains active on Aave V3 Ethereum Core Pool (95.30M GHO variable debt), so collateralizationParameters (limited) and liquidationMechanics (limited) now review that insured book under their own dated reviews. The July global review date, metrics, and untouched sibling component grades are preserved.",
       "metrics": {
         "collateralizationRatio": null,
         "liquidationCapacityRatio": null
@@ -13628,12 +13712,12 @@
       "metricApplicability": {
         "collateralizationRatio": {
           "state": "not-applicable",
-          "rationale": "stkGHO is a staking receipt over GHO and originates no borrower collateral positions; the underlying GHO is minted by facilitators against heterogeneous shared lending markets, so no stkGHO collateralization ratio exists.",
+          "rationale": "stkGHO is a staking receipt over GHO and issues no borrower debt of its own, while underlying Aave V3 Core GHO debt shares multi-debt accounts with no GHO-only system collateralization ratio; the collateralization of the insured Aave V3 Core book is reviewed in the dated collateralizationParameters component.",
           "sourceUrl": "https://aave.com/help/gho-stablecoin/facilitators"
         },
         "liquidationCapacityRatio": {
           "state": "not-applicable",
-          "rationale": "stkGHO operates no collateral-liquidation pool; its slashing is deficit coverage of the underlying GHO system, not liquidation of borrower collateral.",
+          "rationale": "Aave V3 Core liquidations rely on external liquidators rather than a GHO-dedicated committed liquidation pool, and Umbrella slashing is deficit coverage rather than collateral liquidation; the insured book's liquidation and slashing path is reviewed in the dated liquidationMechanics component.",
           "sourceUrl": "https://aave.com/help/umbrella/umbrella"
         }
       },
@@ -13643,14 +13727,62 @@
       },
       "components": {
         "collateralizationParameters": {
-          "applicability": "not-applicable",
-          "rationale": "stkGHO is an ERC-4626-style staking receipt over GHO and has no local MCR/LTV or collateral-pricing parameters.",
-          "sourceUrl": "https://aave.com/help/gho-stablecoin/facilitators"
+          "applicability": "measured",
+          "quality": "limited",
+          "review": {
+            "reviewedAt": "2026-11-25T10:17:47Z",
+            "reviewer": "Risk-absorption look-through review 2026-11-25 (#2344)",
+            "rationale": "Look-through component review: at Ethereum finalized block 26491547 (hash 0xbaf20a210a9a7d3c0fda59f36bf500d34c2dbb9e9afb2a771a9a8535dc1a6c35, 2026-11-25T10:17:47Z), Umbrella 0xd400fc38ed4732893174325693a63c30ee3881a8 (POOL() = Aave V3 Ethereum Core Pool 0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2) retains an active single-asset slashing config for GHO targeting stkGHO (liquidationFee = 0, underlyingOracle = 0xD110cac5d8682A3b045D5524a9903E031d70FCCd; paused = false; totalSupply = totalAssets = 995,414.57 GHO; convertToAssets(1e18) = 1.0; maxSlashableAssets = 995,414.57 GHO). Although ARFC 25154 zeroed GHO Umbrella emissions (RewardsController maxEmissionPerSecond = 0, distributionEnd 2026-07-27T14:40:47Z, targetLiquidity = 1 GHO dust) and raised getDeficitOffset(GHO) to 3,000,000 GHO at block 25624804, removeSlashingConfigs was not executed: any Aave V3 Core GHO reserve deficit above 3,000,000 GHO remains permissionlessly slashable from stkGHO (current GHO deficit = 13.68 GHO, pendingDeficit = 0, 0 historical slashes). The insured book is the 95.30M GHO variable-debt balance in Aave V3 Core (variableDebtGHO 0x786dBff3...; non-Core facilitators are outside Umbrella.POOL()). Across all 68 Core Pool reserves (0 paused, 36 frozen; $21.60B active collateral vs $8.90B pool debt), 55 active collateral assets span LTV 0%-81% (13 borrowable at 0.05%-81%, 42 deposit-only at 0%) and LT 0.1%-85%, plus three GHO-borrowable E-Mode categories (ID 33 syrupUSDT Stablecoins at 90% LTV/92% LT, ID 41 EURC at 75%/78%, ID 43 XAUt at 70%/75%). Graded limited (parity with parent GHO): no GHO collateral shortfall exists today and predominant Core collateral is liquid blue-chip crypto/LST/stablecoin, but parameters are governance-adjustable across a shared multi-debt pool including synthetic/credit-bearing and frozen tail collateral (the same pool holds an isolated 52,964 WETH / $87.14M rsETH-driven deficit), no GHO-only borrower CR or obligor concentration is enumerable on-chain, and Umbrella's 3-of-5 DEFAULT_ADMIN_ROLE Safe can lower deficitOffset down to poolDeficit - pendingDeficit with zero timelock. Re-review if removeSlashingConfigs is executed or GHO deficit/offset changes materially.",
+            "sources": [
+              {
+                "label": "Ethereum finalized block 26491547 (hash 0xbaf20a210a9a7d3c0fda59f36bf500d34c2dbb9e9afb2a771a9a8535dc1a6c35, 2026-11-25T10:17:47Z): pinned Umbrella/stkGHO/RewardsController state, Aave V3 Core Pool 68-reserve collateral and E-Mode census, and GHO-debt LiquidationCall logs",
+                "url": "https://etherscan.io/block/26491547"
+              },
+              {
+                "label": "Verified deployed Umbrella implementation on Sourcify (Umbrella.sol and UmbrellaConfiguration.sol: isReserveSlashable, slash, setDeficitOffset)",
+                "url": "https://sourcify.dev/server/v2/contract/1/0x929e21d24d3f2a529621adc248d227012b72646d?fields=sources,abi"
+              },
+              {
+                "label": "Aave ARFC 25154 (2026-06-16): Umbrella Parameter Update sunsetting GHO Umbrella rewards/target liquidity and raising GHO deficit offset to 3,000,000 GHO",
+                "url": "https://governance.aave.com/t/arfc-umbrella-parameter-update-target-liquidity-and-emission-optimization/25154"
+              },
+              {
+                "label": "Aave V3 Pool smart contract reference (liquidationCall and reserve collateral checks)",
+                "url": "https://aave.com/docs/aave-v3/smart-contracts/pool"
+              }
+            ]
+          }
         },
         "liquidationMechanics": {
-          "applicability": "not-applicable",
-          "rationale": "The wrapper creates no borrower positions and liquidates no collateral; automated slashing for deficit coverage is not a collateral liquidation mechanism.",
-          "sourceUrl": "https://aave.com/help/umbrella/umbrella"
+          "applicability": "measured",
+          "quality": "limited",
+          "review": {
+            "reviewedAt": "2026-11-25T10:17:47Z",
+            "reviewer": "Risk-absorption look-through review 2026-11-25 (#2344)",
+            "rationale": "Look-through component review: stkGHO absorbs Aave V3 Ethereum Core Pool GHO reserve deficits above the 3,000,000 GHO deficit offset, so Aave V3 Core's liquidation engine is the primary enforcement defense preventing deficits from reaching stkGHO. At Ethereum finalized block 26491547 (2026-11-25T10:17:47Z), Aave V3 Core Pool (0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2) enforces deterministic Health Factor < 1 liquidation triggers and permissionless liquidationCall execution across all 68 reserves (0 paused; GHO reserve active, unfrozen, unpaused, borrowable; liquidation bonuses 4.5%-10% across 55 active collateral reserves, and 4%-6% across the three GHO-borrowable E-Mode categories). Live callability is confirmed on-chain: 22 permissionless LiquidationCall executions covering GHO debt occurred in the 50,000 blocks (~7 days) ending at block 26491547 (most recent at block 26482875), and Umbrella.slash(GHO) is permissionless whenever POOL.getReserveDeficit(GHO) exceeds deficitOffset + pendingDeficit (currently 13.68 <= 3,000,000 GHO, isReserveSlashable = false, 0 historical slashes; unchanged at finalized block 26491610). Graded limited (parity with parent GHO) because Aave V3 liquidations rely entirely on external keepers and secondary-market swap liquidity without a GHO-dedicated committed liquidation pool, so sudden collateral depegs or thin secondary liquidity can produce residual deficits that slash stkGHO once above the governance-adjustable offset. Re-review if GHO slashing is removed or Aave V3 Core liquidation/deficit state changes materially.",
+            "sources": [
+              {
+                "label": "Ethereum finalized block 26491547 (hash 0xbaf20a210a9a7d3c0fda59f36bf500d34c2dbb9e9afb2a771a9a8535dc1a6c35, 2026-11-25T10:17:47Z): pinned Umbrella/stkGHO/RewardsController state, Aave V3 Core Pool 68-reserve collateral and E-Mode census, and GHO-debt LiquidationCall logs",
+                "url": "https://etherscan.io/block/26491547"
+              },
+              {
+                "label": "Verified deployed Umbrella implementation on Sourcify (Umbrella.sol and UmbrellaConfiguration.sol: isReserveSlashable, slash, setDeficitOffset)",
+                "url": "https://sourcify.dev/server/v2/contract/1/0x929e21d24d3f2a529621adc248d227012b72646d?fields=sources,abi"
+              },
+              {
+                "label": "Aave Health Factor and Liquidation mechanics documentation",
+                "url": "https://aave.com/help/borrowing/liquidations"
+              },
+              {
+                "label": "Aave V3 Pool smart contract reference (liquidationCall and reserve collateral checks)",
+                "url": "https://aave.com/docs/aave-v3/smart-contracts/pool"
+              },
+              {
+                "label": "Aave Umbrella documentation",
+                "url": "https://aave.com/help/umbrella/umbrella"
+              }
+            ]
+          }
         },
         "backstop": {
           "applicability": "measured",
