@@ -4,7 +4,7 @@
     "mintPath": "amo-or-custodian-hybrid",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "Ethereum frxUSD (v3.0.1) can be minted and redeemed through governance-approved FrxUSDCustodian contracts with per-custodian caps; the token and custodians are owned by the current 4/7 frxUSD owner/custodian admin Safe, which can directly raise custodian caps and remove minters, while Ethereum proxy upgrades, addMinter, setTimelock, and direct timelock minting require the same Safe to pass through a 24-hour timelock. Fraxtal frxUSD3 also exposes a direct minter_mint path to an owner/timelock-controlled minter set with no source-level cap or max-supply check; the Fraxtal L2 bridge and canonical-side lockboxes are bridge machinery assessed separately under bridgeRouteRisk, and Tempo remains unresolved.",
+    "summary": "Ethereum frxUSD (v3.0.1) can be minted and redeemed through six governance-approved FrxUSDCustodian contracts (USDB, WTGXX, BUIDL, USDC, USTB, and AUSD) with per-custodian caps; the token and all six custodians are owned by the 4/7 frxUSD owner/custodian admin Safe, which can directly raise custodian caps and remove minters, while token/five-custodian proxy upgrades, addMinter, setTimelock, and direct timelock minting require the 4/7 Safe to pass through a 24-hour timelock, and AUSD custodian proxy upgrades require the 3/5 Frax Comptroller Safe to pass through a separate 48-hour timelock. Fraxtal frxUSD3 (v3.0.0) exposes a direct minter_mint path with no source-level cap or max-supply check to a 3/5 Gnosis Safe acting as owner, timelock_address, direct minter, and zero-delay ProxyAdmin owner across the token and its two FrxUSDDistributor yield-minting proxies, which also authorize a single EOA bot to mint up to 20,000 frxUSD per UTC day combined (15,000 and 5,000 dailyPayCap) to whitelisted recipients; the Fraxtal L2 bridge, canonical-side lockboxes, and cross-chain OFT/TIP-20 representations are bridge machinery assessed separately under bridgeRouteRisk.",
     "upgradeability": {
       "model": "transparent-proxy",
       "deploymentRefs": [
@@ -18,7 +18,10 @@
         "0xe827abf9f462ac4f147753d86bc5f91e186e4e9c",
         "0x4F95C5bA0C7c69FB2f9340E190cCeE890B3bd87c",
         "0x5fbAa3A3B489199338fbD85F7E3D444dc0504F33",
-        "0xfc00000000000000000000000000000000000001"
+        "0x537bed9200Fc5a14AB56E554016753676eFf12B0",
+        "0xfc00000000000000000000000000000000000001",
+        "0xFc0000000000000000000000000000000000000D",
+        "0x8C33cD6e5beD3bcB43B116410842BDd21630BFF4"
       ],
       "implementationAddresses": [
         "0x5c19d7c2838769ed3c5a1e506600940e62ff901f",
@@ -27,7 +30,9 @@
         "0xbccd08e2996a5c748e01fde3feca959dee24276b",
         "0x0a2d27a86a2ea07bcc34e457c65aeca7631c0f10",
         "0x7617e69d47c1c18e2e3bb0b470aa0fbbd45b57da",
-        "0x0000000083bdf23788585d499eab0d92a8befb1d"
+        "0xb418DDF761C53f31acA1a3Fa98CaD2BAC7Aa5da6",
+        "0x0000000083bdf23788585d499eab0d92a8befb1d",
+        "0x9AF1c2aEcCD2c9f03F445F3397c112C24963ce26"
       ],
       "adminAddresses": [
         "0x0b2c3df006b2bd43cbcc60075e7a0bf314474ed6",
@@ -36,12 +41,15 @@
         "0x69dc4f46bb49cba89a95715923937de8a8f2071f",
         "0x1a4563f238fa693ba9771cdba5ee8280a114ed7e",
         "0x3046a74ff708774efbabba685b5b93fa1d134aeb",
-        "0xfc0000000000000000000000000000000000000a"
+        "0xf655414bfcd6f2b984474fe5d71ac62d19c98899",
+        "0xfc0000000000000000000000000000000000000a",
+        "0xfC00000000000000000000000000000000000009",
+        "0xaD0D658F289E2Fa04a51f9FFd6015851811845c4"
       ],
       "canChangeMintLogic": true,
       "controlRef": "frxUSD upgrade timelock",
-      "observedAt": "2026-11-23",
-      "observedBlock": 26480118,
+      "observedAt": "2026-11-25",
+      "observedBlock": 26491610,
       "sources": [
         {
           "label": "FraxNet custodian addresses",
@@ -64,6 +72,18 @@
           "url": "https://eth.blockscout.com/address/0x0b2c3df006b2bd43cbcc60075e7a0bf314474ed6?tab=contract"
         },
         {
+          "label": "frxUSD-AUSD Custodian Proxy verified source (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0x537bed9200Fc5a14AB56E554016753676eFf12B0?tab=contract"
+        },
+        {
+          "label": "frxUSD-AUSD Custodian implementation verified source (Sourcify)",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xb418DDF761C53f31acA1a3Fa98CaD2BAC7Aa5da6"
+        },
+        {
+          "label": "frxUSD-AUSD Custodian ProxyAdmin verified source (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0xf655414bfcd6f2b984474fe5d71ac62d19c98899?tab=contract"
+        },
+        {
           "label": "frxUSD upgrade timelock verified source",
           "url": "https://eth.blockscout.com/address/0xb898Ad2976b4d8f2E21521C9db16b7497825E503?tab=contract"
         },
@@ -72,12 +92,24 @@
           "url": "https://sourcify.dev/server/v2/contract/1/0xb898Ad2976b4d8f2E21521C9db16b7497825E503"
         },
         {
+          "label": "Frax Comptroller Timelock verified source (Sourcify)",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x8412ebf45bAC1B340BbE8F318b928C466c4E39CA"
+        },
+        {
           "label": "Ethereum Alchemy RPC (pinned)",
           "url": "https://eth-mainnet.g.alchemy.com/v2/"
         },
         {
-          "label": "Frax frxUSD Fraxtal contract source",
-          "url": "https://github.com/FraxFinance/frax-tokens/blob/master/src/contracts/fraxtal/frxUSD/versioning/FrxUSD2.sol"
+          "label": "Fraxtal frxUSD v3.0.0 verified implementation (Fraxscan)",
+          "url": "https://fraxscan.com/address/0x0000000083bdf23788585d499eab0d92a8befb1d#code"
+        },
+        {
+          "label": "Fraxtal FrxUSDDistributor verified implementation (Sourcify)",
+          "url": "https://sourcify.dev/server/v2/contract/252/0x9AF1c2aEcCD2c9f03F445F3397c112C24963ce26"
+        },
+        {
+          "label": "Fraxtal ProxyAdmin 0xfc...000a verified proxy (Sourcify)",
+          "url": "https://sourcify.dev/server/v2/contract/252/0xfC0000000000000000000000000000000000000a"
         },
         {
           "label": "Fraxtal ProxyAdmin constants",
@@ -227,6 +259,45 @@
       },
       {
         "chain": "ethereum",
+        "address": "0x537bed9200Fc5a14AB56E554016753676eFf12B0",
+        "deploymentRefs": [
+          "ethereum:0xcacd6fd266af91b8aed52accc382b4e165586e29"
+        ],
+        "label": "frxUSD-AUSD Custodian Proxy",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-25",
+        "observedBlock": 26491610,
+        "capDescription": "FrxUSDCustodian v1.0.0 vault minting/redeeming frxUSD 1:1 at fixed decimal parity against Agora AUSD (0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a, 6 decimals), subject to an owner-adjustable mintCap (100,000 frxUSD at block 26491610; 99,878.73 frxUSD minted, 0% mint fee, 0.01% redeem fee). Unlike the five FraxNet-documented custodians, its ProxyAdmin is owned by the 48-hour Frax Comptroller Timelock rather than the 24-hour frxUSD upgrade timelock.",
+        "sources": [
+          {
+            "label": "frxUSD-AUSD Custodian Proxy verified source (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0x537bed9200Fc5a14AB56E554016753676eFf12B0?tab=contract"
+          },
+          {
+            "label": "frxUSD-AUSD Custodian implementation verified source (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0xb418DDF761C53f31acA1a3Fa98CaD2BAC7Aa5da6?tab=contract"
+          },
+          {
+            "label": "frxUSD-AUSD Custodian implementation verified source (Sourcify)",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xb418DDF761C53f31acA1a3Fa98CaD2BAC7Aa5da6"
+          },
+          {
+            "label": "frxUSD-AUSD Custodian ProxyAdmin verified source (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0xf655414bfcd6f2b984474fe5d71ac62d19c98899?tab=contract"
+          },
+          {
+            "label": "Ethereum Alchemy RPC (pinned)",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          }
+        ],
+        "evidence": "At finalized Ethereum block 26491610 (2026-11-25T10:30:47.000Z, hash 0xac00e39ddaa80e32e1d8de3823f08d04cc45bcd36166c9b8d89fc9ecc7c070fc, keyless Alchemy RPC), frxUSD.minters_array[9] and frxUSD.minters(0x537bed9200Fc5a14AB56E554016753676eFf12B0) returned true (added via MinterAdded at block 25832426, 2026-08-25T13:10:59.000Z, tx 0x73a7de1b9498f2b6c2b7df805d4806e04cc9de866367a092aa45f1730f40d2ed; minters_array length is 10 with no other unmodeled minters). EIP-1967 slots resolved verified FrxUSDCustodian v1.0.0 implementation 0xb418DDF761C53f31acA1a3Fa98CaD2BAC7Aa5da6 (runtime bytecode sha256 338bb4a5cb7b148b3c28f29cd3da00866f9936960601826e29a1a1bcadb71d01 matching Sourcify exact match and Blockscout) and ProxyAdmin 0xf655414bfcd6f2b984474fe5d71ac62d19c98899 (OZ v5.1.0, owner() = 0x8412ebf45bAC1B340BbE8F318b928C466c4E39CA). On-chain calls returned owner() = 0xfFFffF4F3baC444b2C0ecf2A1840d018bE783937 (4/7 Safe), pendingOwner() = zero, asset() = 0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a (AUSD, 6 decimals), frxUSD() = 0xCAcd6fd266aF91b8AeD52aCCc382b4e165586E29, pricePerShare() = 1000000, mintCap() = 100000e18, frxUSDMinted() = 99878.726332394569328606 frxUSD, totalAssets() = 99878.880456 AUSD, mintFee() = 0, and redeemFee() = 1e14 (0.01%)."
+      },
+      {
+        "chain": "ethereum",
         "address": "0xb898Ad2976b4d8f2E21521C9db16b7497825E503",
         "deploymentRefs": [
           "ethereum:0xcacd6fd266af91b8aed52accc382b4e165586e29"
@@ -238,8 +309,8 @@
         "timelockDelaySec": 86400,
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-11-23",
-        "observedBlock": 26480118,
+        "observedAt": "2026-11-25",
+        "observedBlock": 26491610,
         "failureDomainKeys": [
           "safe:ethereum:0xfffffF4F3baC444b2C0ecf2A1840d018bE783937"
         ],
@@ -265,7 +336,96 @@
             "url": "https://eth-mainnet.g.alchemy.com/v2/"
           }
         ],
-        "evidence": "At finalized Ethereum block 26480118 (2026-11-23T20:06:47.000Z, hash 0xeb60b8bc95b07ceb378ba52dd4b487bd1c49a17c7da4aa907be0a665fdd02f17, keyless Alchemy RPC), all six frxUSD token/custodian ProxyAdmins returned this verified Compound-style timelock as owner (runtime bytecode matches Blockscout and Sourcify exact match). Its admin() was the 4-of-7 frxUSD owner/custodian admin Safe, pendingAdmin() was zero, and delay() was 86400 seconds (MINIMUM_DELAY 7200s, MAXIMUM_DELAY 2592000s, GRACE_PERIOD 1209600s). Following the block 26379419 v3.0.1 upgrade (tx 0xfa94523813f0f71c70b0fd07e993906ea8e0cd2d2f64f57f77958562c8c31111, emitting Upgraded(0x5c19d7c2838769ed3c5a1e506600940e62ff901f) and TimelockChanged(0x0, 0xb898Ad2976b4d8f2E21521C9db16b7497825E503)), frxUSD.timelock() and raw storage slot 15 both returned this timelock; verified v3.0.1 FrxUSD2.sol gates addMinter(address) and subsequent setTimelock(address) calls behind msg.sender == timelock. At block 26480118, frxUSD.minters(0xb898Ad2976b4d8f2E21521C9db16b7497825E503) also returned true (minters_array[8]), so the Safe must queue and wait 86400 seconds before executing proxy upgrades, addMinter, setTimelock, or direct timelock minter_mint calls."
+        "evidence": "Re-verified at finalized Ethereum block 26491610 (2026-11-25T10:30:47.000Z, hash 0xac00e39ddaa80e32e1d8de3823f08d04cc45bcd36166c9b8d89fc9ecc7c070fc, keyless Alchemy RPC): the frxUSD token ProxyAdmin and the five FraxNet-documented custodian ProxyAdmins (USDB, WTGXX, BUIDL, USDC, USTB) all returned this verified Compound-style timelock as owner (whereas the AUSD custodian ProxyAdmin 0xf655414bfcd6f2b984474fe5d71ac62d19c98899 is owned by the 48-hour Frax Comptroller Timelock 0x8412ebf45bAC1B340BbE8F318b928C466c4E39CA). Its admin() was the 4-of-7 frxUSD owner/custodian admin Safe, pendingAdmin() was zero, and delay() was 86400 seconds (MINIMUM_DELAY 7200s, MAXIMUM_DELAY 2592000s, GRACE_PERIOD 1209600s). Following the block 26379419 v3.0.1 upgrade (tx 0xfa94523813f0f71c70b0fd07e993906ea8e0cd2d2f64f57f77958562c8c31111, emitting Upgraded(0x5c19d7c2838769ed3c5a1e506600940e62ff901f) and TimelockChanged(0x0, 0xb898Ad2976b4d8f2E21521C9db16b7497825E503)), frxUSD.timelock() and raw storage slot 15 both returned this timelock; verified v3.0.1 FrxUSD2.sol gates addMinter(address) and subsequent setTimelock(address) calls behind msg.sender == timelock. At block 26491610, frxUSD.minters(0xb898Ad2976b4d8f2E21521C9db16b7497825E503) also returned true (minters_array[8]), so the Safe must queue and wait 86400 seconds before executing proxy upgrades on the token or those five custodians, addMinter, setTimelock, or direct timelock minter_mint calls."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x8412ebf45bAC1B340BbE8F318b928C466c4E39CA",
+        "deploymentRefs": [
+          "ethereum:0xcacd6fd266af91b8aed52accc382b4e165586e29"
+        ],
+        "label": "Frax Comptroller upgrade timelock",
+        "role": "timelock",
+        "authorityType": "timelock",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 172800,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-25",
+        "observedBlock": 26491610,
+        "failureDomainKeys": [
+          "safe:ethereum:0xb1748c79709f4ba2dd82834b8c82d4a505003f27"
+        ],
+        "sources": [
+          {
+            "label": "Frax Comptroller Timelock verified source (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0x8412ebf45bAC1B340BbE8F318b928C466c4E39CA?tab=contract"
+          },
+          {
+            "label": "Frax Comptroller Timelock verified source (Sourcify)",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x8412ebf45bAC1B340BbE8F318b928C466c4E39CA"
+          },
+          {
+            "label": "frxUSD-AUSD Custodian ProxyAdmin verified source (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0xf655414bfcd6f2b984474fe5d71ac62d19c98899?tab=contract"
+          },
+          {
+            "label": "Ethereum Alchemy RPC (pinned)",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          }
+        ],
+        "evidence": "At finalized Ethereum block 26491610 (2026-11-25T10:30:47.000Z, hash 0xac00e39ddaa80e32e1d8de3823f08d04cc45bcd36166c9b8d89fc9ecc7c070fc, keyless Alchemy RPC), ProxyAdmin 0xf655414bfcd6f2b984474fe5d71ac62d19c98899 for the active AUSD custodian minter 0x537bed9200Fc5a14AB56E554016753676eFf12B0 returned this verified Compound-style Timelock as owner() (runtime bytecode sha256 465eb0c73b6a7fe43d3c50f800fcfbaabd3c685d36bcfe7fef97ed326d004600 matching Sourcify exact match and Blockscout). On-chain calls returned admin() = 0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27 (3-of-5 Frax Comptroller Safe), pendingAdmin() = zero, delay() = 172800 seconds (48 hours; MINIMUM_DELAY 172800s, MAXIMUM_DELAY 2592000s, GRACE_PERIOD 1209600s), and frxUSD.minters(0x8412ebf45bAC1B340BbE8F318b928C466c4E39CA) = false. Upgrading the active AUSD custodian proxy could replace its mint logic after the 48-hour queue unless the 4-of-7 frxUSD owner Safe first revokes it via removeMinter."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27",
+        "deploymentRefs": [
+          "ethereum:0xcacd6fd266af91b8aed52accc382b4e165586e29"
+        ],
+        "label": "Frax Comptroller Safe (AUSD custodian upgrade admin)",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "threshold": 3,
+        "signerCount": 5,
+        "timelockDelaySec": 172800,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-11-25",
+        "observedBlock": 26491610,
+        "failureDomainKeys": [
+          "safe:ethereum:0xb1748c79709f4ba2dd82834b8c82d4a505003f27"
+        ],
+        "safe": {
+          "version": "1.3.0",
+          "threshold": 3,
+          "owners": [
+            "0x6933BCC3e96f1C4d2cb73Cb391d854b18Ab7A4F2",
+            "0xcbc616D595D38483e6AdC45C7E426f44bF230928",
+            "0x17e06ce6914E3969f7BD37D8b2a563890cA1c96e",
+            "0xc8dE9f45601DA8C76158b8CAF3E56E8A037F2228",
+            "0x6e74053a3798e0fC9a9775F7995316b27f21c4D2"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "masterCopy": "0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552",
+          "observedBlock": 26491610,
+          "observedAt": "2026-11-25",
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "Frax Comptroller Timelock verified source (Sourcify)",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x8412ebf45bAC1B340BbE8F318b928C466c4E39CA"
+          },
+          {
+            "label": "Ethereum Alchemy RPC (pinned)",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          }
+        ],
+        "evidence": "At finalized Ethereum block 26491610 (2026-11-25T10:30:47.000Z, hash 0xac00e39ddaa80e32e1d8de3823f08d04cc45bcd36166c9b8d89fc9ecc7c070fc, keyless Alchemy RPC), Frax Comptroller Timelock 0x8412ebf45bAC1B340BbE8F318b928C466c4E39CA returned this Safe as admin(), while frxUSD.minters(0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27) returned false (removed at block 25238508). On-chain Safe reads returned version 1.3.0, threshold 3, five owners (all five are a subset of the seven owners on the 4-of-7 frxUSD owner Safe), no enabled modules, zero guard, zero moduleGuard, fallbackHandler 0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4, and singleton 0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552. This Safe can queue and execute upgrades to the active AUSD custodian proxy through the 172800-second timelock."
       },
       {
         "chain": "ethereum",
@@ -281,8 +441,8 @@
         "signerCount": 7,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-11-23",
-        "observedBlock": 26480118,
+        "observedAt": "2026-11-25",
+        "observedBlock": 26491610,
         "failureDomainKeys": [
           "safe:ethereum:0xfffffF4F3baC444b2C0ecf2A1840d018bE783937"
         ],
@@ -302,8 +462,8 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "moduleGuard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
-          "observedBlock": 26480118,
-          "observedAt": "2026-11-23",
+          "observedBlock": 26491610,
+          "observedAt": "2026-11-25",
           "source": "onchain"
         },
         "sources": [
@@ -320,24 +480,56 @@
             "url": "https://eth-mainnet.g.alchemy.com/v2/"
           }
         ],
-        "evidence": "At finalized Ethereum block 26480118 (2026-11-23T20:06:47.000Z, hash 0xeb60b8bc95b07ceb378ba52dd4b487bd1c49a17c7da4aa907be0a665fdd02f17, keyless Alchemy RPC), frxUSD token owner(), every listed custodian owner(), and upgrade timelock admin() returned this Safe (pendingOwner/pendingAdmin zero on all), while frxUSD.minters(Safe) returned false. Under verified FrxUSD v3.0.1 (0x5c19d7c2838769ed3c5a1e506600940e62ff901f), addMinter and subsequent setTimelock calls require msg.sender == timelock (0xb898Ad2976b4d8f2E21521C9db16b7497825E503), so the Safe can no longer directly authorize minters without queueing through the 86400-second timelock; it retains direct removeMinter and custodian setMintCap/fee authority (canRaiseCap true). On-chain Safe reads returned version 1.3.0, threshold 4, the seven listed owners, no enabled modules, zero guard, and zero moduleGuard."
+        "evidence": "Re-verified at finalized Ethereum block 26491610 (2026-11-25T10:30:47.000Z, hash 0xac00e39ddaa80e32e1d8de3823f08d04cc45bcd36166c9b8d89fc9ecc7c070fc, keyless Alchemy RPC): frxUSD token owner(), all six custodian proxies' owner() (including the newly enrolled AUSD custodian 0x537bed9200Fc5a14AB56E554016753676eFf12B0), and upgrade timelock admin() returned this Safe (pendingOwner/pendingAdmin zero on frxUSD, AUSD custodian, and timelock), while frxUSD.minters(Safe) returned false. Under verified FrxUSD v3.0.1 (0x5c19d7c2838769ed3c5a1e506600940e62ff901f), addMinter and subsequent setTimelock calls require msg.sender == timelock (0xb898Ad2976b4d8f2E21521C9db16b7497825E503), so the Safe cannot directly authorize minters without queueing through the 86400-second timelock; it retains direct removeMinter and custodian setMintCap/fee authority (canRaiseCap true). On-chain Safe reads returned version 1.3.0, threshold 4, the seven listed owners, no enabled modules, zero guard, and zero moduleGuard."
       },
       {
         "chain": "fraxtal",
-        "address": "0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6",
-        "label": "Fraxtal frxUSD owner/timelock contract",
+        "address": "0xC4EB45d80DC1F079045E75D5d55de8eD1c1090E6",
+        "label": "Fraxtal frxUSD owner/timelock Safe",
         "role": "direct-minter",
-        "authorityType": "contract",
+        "authorityType": "safe",
         "directMintAbility": "direct",
         "deploymentRefs": [
           "fraxtal:0xfc00000000000000000000000000000000000001"
         ],
+        "threshold": 3,
+        "signerCount": 5,
         "canRaiseCap": true,
-        "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "FrxUSD3 inherits ERC20PermitPermissionedOptiMintable: minter_mint() has no source-level cap or max-supply invariant; owner()/timelock_address() controls the minter set, and the separate Fraxtal ProxyAdmin is owner-controlled. Total supply at the fixed review block was 14408997.267859968047907063 frxUSD.",
-        "observedAt": "2026-08-16",
-        "observedBlock": 40053263,
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "safe:fraxtal:0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6"
+        ],
+        "safe": {
+          "version": "1.3.0",
+          "threshold": 3,
+          "owners": [
+            "0x8da4E997e051605878c9C0B793c496556EACC2C0",
+            "0x6e74053a3798e0fC9a9775F7995316b27f21c4D2",
+            "0x6933BCC3e96f1C4d2cb73Cb391d854b18Ab7A4F2",
+            "0x17e06ce6914E3969f7BD37D8b2a563890cA1c96e",
+            "0xcbc616D595D38483e6AdC45C7E426f44bF230928"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "masterCopy": "0xfb1bffC9d739B8D520DaF37dF666da4C687191EA",
+          "observedBlock": 44395528,
+          "observedAt": "2026-11-25",
+          "source": "onchain"
+        },
+        "capDescription": "Fraxtal FrxUSD3 (v3.0.0) inherits FrxUSD2 and ERC20PermitPermissionedOptiMintable: minter_mint() has no source-level cap or max-supply invariant, and this 3-of-5 Safe directly holds owner(), timelock_address(), active minter status, and zero-delay ownership of the Fraxtal token and distributor ProxyAdmins (no timelock contract sits on Fraxtal). Total supply at Fraxtal block 44395528 was 8,308,856.266651049255949978 frxUSD.",
+        "observedAt": "2026-11-25",
+        "observedBlock": 44395528,
         "sources": [
+          {
+            "label": "Fraxtal frxUSD owner Safe verified GnosisSafeProxy (Sourcify)",
+            "url": "https://sourcify.dev/server/v2/contract/252/0xC4EB45d80DC1F079045E75D5d55de8eD1c1090E6"
+          },
+          {
+            "label": "Fraxtal frxUSD v3.0.0 verified implementation (Fraxscan)",
+            "url": "https://fraxscan.com/address/0x0000000083bdf23788585d499eab0d92a8befb1d#code"
+          },
           {
             "label": "Frax frxUSD Fraxtal contract source",
             "url": "https://github.com/FraxFinance/frax-tokens/blob/master/src/contracts/fraxtal/frxUSD/versioning/FrxUSD2.sol"
@@ -355,61 +547,96 @@
             "url": "https://rpc.frax.com"
           }
         ],
-        "evidence": "At Fraxtal block 40053263, owner() and timelock_address() on 0xfc00000000000000000000000000000000000001 both returned 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6, and minters(0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6) returned true. The reviewed FrxUSD2 and ERC20PermitPermissionedOptiMintable source shows that an active minter can call minter_mint() directly, while the owner/timelock can manage minters; no cap or max-supply check appears on that path."
+        "evidence": "At finalized Fraxtal block 44395528 (2026-11-25T10:16:07.000Z, hash 0x718c8a618a2b80601fb128796766dace933ea754f7911c3b983727828ffb8d75, rpc.frax.com with Alchemy header parity), 0xfc00000000000000000000000000000000000001 returned version() = '3.0.0', implementation 0x0000000083BDf23788585D499EAb0D92A8bEfB1D, owner() = timelock_address() = 0xC4EB45d80DC1F079045E75D5d55de8eD1c1090E6, nominatedOwner() = zero, isPaused() = false, and minters(0xC4EB45d80DC1F079045E75D5d55de8eD1c1090E6) = true (minters_array[1]). Verified Sourcify GnosisSafeProxy and on-chain Safe reads identified 0xC4EB45d80DC1F079045E75D5d55de8eD1c1090E6 as a 3-of-5 Safe v1.3.0 (singleton 0xfb1bffC9d739B8D520DaF37dF666da4C687191EA, four of five owners overlapping the Ethereum 4/7 Safe, zero enabled modules, zero guard, zero moduleGuard, zero fallbackHandler). This Safe directly owns Fraxtal ProxyAdmin 0xfC0000000000000000000000000000000000000a (itself a proxy whose impl/admin is OZ v4 ProxyAdmin 0xfC00000000000000000000000000000000000009, also owned by this Safe), distributor ProxyAdmin 0xaD0D658F289E2Fa04a51f9FFd6015851811845c4, lockbox ProxyAdmin 0x223a681fc5c5522c85c96157c0efa18cd6c5405c, and L2StandardBridge ProxyAdmin 0x4200000000000000000000000000000000000018, with zero upgrade or minting timelock delay. It also controls pause/unpause, addFreezer/removeFreezer (zero active external freezers after 0x8d1ce21f532e2b8913cdcc944ef3ea10a099c49f was removed at block 37335926), freeze/thaw, owner-only burnFrxUsd/burnMany, addMinter/removeMinter, setTimelock, and setDailyPayCap/setBot/setWhitelistedAddress on both FrxUSDDistributor proxies."
       },
       {
         "chain": "fraxtal",
-        "address": "0xfc0000000000000000000000000000000000000d",
-        "label": "Fraxtal frxUSD active minter 0xfc...000d",
+        "address": "0xFc0000000000000000000000000000000000000D",
+        "label": "Fraxtal FrxUSDDistributor Proxy 0xfc...000d",
         "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "direct",
+        "directMintAbility": "cap-limited",
         "deploymentRefs": [
           "fraxtal:0xfc00000000000000000000000000000000000001"
         ],
-        "canRaiseCap": "unknown",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "The active minter_mint() path has no source-level cap or max-supply check. This address exposes proxy/system-like upgrade selectors, but its exact identity, owner, upgrade configuration, and ability to alter mint economics remain unresolved.",
-        "observedAt": "2026-08-16",
-        "observedBlock": 40053263,
+        "capDescription": "Verified FrxUSDDistributor yield-minting contract callable by owner (3/5 Safe) or bot (EOA 0x37E9A334290811b2416474B83Aa6Dc6133228772) via payYield(), minting unbacked frxUSD via minter_mint() up to dailyPayCap (15,000 frxUSD per UTC day at block 44395528; 182,948.748 frxUSD paid cumulatively) to whitelisted addresses (once per recipient per UTC day). Only the 3/5 Safe owner can raise dailyPayCap, change bot, or edit whitelistedAddresses.",
+        "observedAt": "2026-11-25",
+        "observedBlock": 44395528,
         "sources": [
           {
-            "label": "Frax frxUSD Fraxtal contract source",
-            "url": "https://github.com/FraxFinance/frax-tokens/blob/master/src/contracts/fraxtal/shared/ERC20PermitPermissionedOptiMintable.sol"
+            "label": "Fraxtal FrxUSDDistributor verified implementation (Sourcify)",
+            "url": "https://sourcify.dev/server/v2/contract/252/0x9AF1c2aEcCD2c9f03F445F3397c112C24963ce26"
+          },
+          {
+            "label": "Fraxtal FrxUSDDistributor proxy 0xfc...000d (Fraxscan)",
+            "url": "https://fraxscan.com/address/0xFc0000000000000000000000000000000000000D#code"
           },
           {
             "label": "Fraxtal RPC",
             "url": "https://rpc.frax.com"
           }
         ],
-        "evidence": "At Fraxtal block 40053263, minters(0xfc0000000000000000000000000000000000000d) returned true and an active MinterAdded event for this address was present in the token history. The address exposes proxy/system-like upgrade selectors, but its exact contract identity and admin were not resolved."
+        "evidence": "At finalized Fraxtal block 44395528 (2026-11-25T10:16:07.000Z, hash 0x718c8a618a2b80601fb128796766dace933ea754f7911c3b983727828ffb8d75), frxUSD.minters_array[0] and minters(0xFc0000000000000000000000000000000000000D) returned true (added at block 17894755). EIP-1967 slots resolved verified FrxUSDDistributor implementation 0x9AF1c2aEcCD2c9f03F445F3397c112C24963ce26 (runtime bytecode sha256 8d78ff07e7c378f551b85407ca0118bdb1e2c5d58fb5c11627ec4b8a10f13e53 matching Sourcify exact_match) and OZ v4 ProxyAdmin 0xfC00000000000000000000000000000000000009 (owner() = 3/5 Safe 0xC4EB45d80DC1F079045E75D5d55de8eD1c1090E6). Pinned calls returned owner() = 0xC4EB45d80DC1F079045E75D5d55de8eD1c1090E6, nominatedOwner() = zero, bot() = 0x37E9A334290811b2416474B83Aa6Dc6133228772 (EOA), frxUSD() = 0xfc00000000000000000000000000000000000001, dailyPayCap() = 15000e18, and ttlPaid() = 182948.748e18."
       },
       {
         "chain": "fraxtal",
-        "address": "0x8c33cd6e5bed3bcb43b116410842bdd21630bff4",
-        "label": "Fraxtal frxUSD active minter 0x8c...bff4",
+        "address": "0x8C33cD6e5beD3bcB43B116410842BDd21630BFF4",
+        "label": "Fraxtal FrxUSDDistributor Proxy 0x8c...bff4",
         "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "direct",
+        "directMintAbility": "cap-limited",
         "deploymentRefs": [
           "fraxtal:0xfc00000000000000000000000000000000000001"
         ],
-        "canRaiseCap": "unknown",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "The active minter_mint() path has no source-level cap or max-supply check. owner() returned the Fraxtal owner/timelock contract, but its exact contract identity, mint-specific configuration, and ability to alter mint economics remain unresolved.",
-        "observedAt": "2026-08-16",
-        "observedBlock": 40053263,
+        "capDescription": "Second verified FrxUSDDistributor yield-minting proxy sharing the same implementation and bot EOA (0x37E9A334290811b2416474B83Aa6Dc6133228772), minting unbacked frxUSD via payYield() up to dailyPayCap (5,000 frxUSD per UTC day at block 44395528; 174,683.7294 frxUSD paid cumulatively) to whitelisted recipient 0xc125ed067bd9fa354d4e81f1714e2611479b626f. Only the 3/5 Safe owner can raise dailyPayCap, change bot, or edit whitelistedAddresses.",
+        "observedAt": "2026-11-25",
+        "observedBlock": 44395528,
         "sources": [
           {
-            "label": "Frax frxUSD Fraxtal contract source",
-            "url": "https://github.com/FraxFinance/frax-tokens/blob/master/src/contracts/fraxtal/shared/ERC20PermitPermissionedOptiMintable.sol"
+            "label": "Fraxtal FrxUSDDistributor verified implementation (Sourcify)",
+            "url": "https://sourcify.dev/server/v2/contract/252/0x9AF1c2aEcCD2c9f03F445F3397c112C24963ce26"
+          },
+          {
+            "label": "Fraxtal FrxUSDDistributor proxy 0x8c...bff4 (Fraxscan)",
+            "url": "https://fraxscan.com/address/0x8C33cD6e5beD3bcB43B116410842BDd21630BFF4#code"
           },
           {
             "label": "Fraxtal RPC",
             "url": "https://rpc.frax.com"
           }
         ],
-        "evidence": "At Fraxtal block 40053263, minters(0x8c33cd6e5bed3bcb43b116410842bdd21630bff4) returned true, its owner() returned 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6, and an active MinterAdded event for this address was present in the token history."
+        "evidence": "At finalized Fraxtal block 44395528 (2026-11-25T10:16:07.000Z, hash 0x718c8a618a2b80601fb128796766dace933ea754f7911c3b983727828ffb8d75), frxUSD.minters_array[3] and minters(0x8C33cD6e5beD3bcB43B116410842BDd21630BFF4) returned true (added at block 36645289). EIP-1967 slots resolved the same verified FrxUSDDistributor implementation 0x9AF1c2aEcCD2c9f03F445F3397c112C24963ce26 (exact_match on Sourcify) and ProxyAdmin 0xaD0D658F289E2Fa04a51f9FFd6015851811845c4 (owner() = 3/5 Safe 0xC4EB45d80DC1F079045E75D5d55de8eD1c1090E6). Pinned calls returned owner() = 0xC4EB45d80DC1F079045E75D5d55de8eD1c1090E6, nominatedOwner() = zero, bot() = 0x37E9A334290811b2416474B83Aa6Dc6133228772 (EOA), frxUSD() = 0xfc00000000000000000000000000000000000001, dailyPayCap() = 5000e18, and ttlPaid() = 174683.7294e18."
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0x37E9A334290811b2416474B83Aa6Dc6133228772",
+        "label": "Fraxtal FrxUSDDistributor yield bot EOA",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "cap-limited",
+        "deploymentRefs": [
+          "fraxtal:0xfc00000000000000000000000000000000000001"
+        ],
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Single-key EOA authorized as bot() on both Fraxtal FrxUSDDistributor proxies (0xfc...000d and 0x8c...bff4); can unilaterally call payYield() without Safe signatures to mint up to 20,000 unbacked frxUSD per UTC day combined (15,000 and 5,000 dailyPayCap) to Safe-whitelisted recipients (once per recipient per UTC day). Cannot modify dailyPayCap, bot, or whitelistedAddresses.",
+        "observedAt": "2026-11-25",
+        "observedBlock": 44395528,
+        "sources": [
+          {
+            "label": "Fraxtal FrxUSDDistributor verified implementation (Sourcify)",
+            "url": "https://sourcify.dev/server/v2/contract/252/0x9AF1c2aEcCD2c9f03F445F3397c112C24963ce26"
+          },
+          {
+            "label": "Fraxtal RPC",
+            "url": "https://rpc.frax.com"
+          }
+        ],
+        "evidence": "At finalized Fraxtal block 44395528 (2026-11-25T10:16:07.000Z, hash 0x718c8a618a2b80601fb128796766dace933ea754f7911c3b983727828ffb8d75), both active FrxUSDDistributor proxies (0xFc0000000000000000000000000000000000000D and 0x8C33cD6e5beD3bcB43B116410842BDd21630BFF4) returned bot() = 0x37E9A334290811b2416474B83Aa6Dc6133228772. Pinned eth_getCode returned empty bytes (0x, zero code length, not an EIP-7702 delegation) and eth_getTransactionCount returned 1148 (0x47c), confirming an active single-key EOA. Verified FrxUSDDistributor.payYield(address,uint256) allows msg.sender == bot to invoke frxUSD.minter_mint(_to, _amount) directly without collateral deposit up to each contract's dailyPayCap for whitelisted recipients."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -446,6 +673,18 @@
           "url": "https://eth.blockscout.com/address/0x0b2c3df006b2bd43cbcc60075e7a0bf314474ed6?tab=contract"
         },
         {
+          "label": "frxUSD-AUSD Custodian Proxy verified source (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0x537bed9200Fc5a14AB56E554016753676eFf12B0?tab=contract"
+        },
+        {
+          "label": "frxUSD-AUSD Custodian implementation verified source (Sourcify)",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xb418DDF761C53f31acA1a3Fa98CaD2BAC7Aa5da6"
+        },
+        {
+          "label": "frxUSD-AUSD Custodian ProxyAdmin verified source (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0xf655414bfcd6f2b984474fe5d71ac62d19c98899?tab=contract"
+        },
+        {
           "label": "frxUSD upgrade timelock verified source",
           "url": "https://eth.blockscout.com/address/0xb898Ad2976b4d8f2E21521C9db16b7497825E503?tab=contract"
         },
@@ -454,8 +693,24 @@
           "url": "https://sourcify.dev/server/v2/contract/1/0xb898Ad2976b4d8f2E21521C9db16b7497825E503"
         },
         {
+          "label": "Frax Comptroller Timelock verified source (Sourcify)",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x8412ebf45bAC1B340BbE8F318b928C466c4E39CA"
+        },
+        {
           "label": "Ethereum Alchemy RPC (pinned)",
           "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        },
+        {
+          "label": "Fraxtal frxUSD owner Safe verified GnosisSafeProxy (Sourcify)",
+          "url": "https://sourcify.dev/server/v2/contract/252/0xC4EB45d80DC1F079045E75D5d55de8eD1c1090E6"
+        },
+        {
+          "label": "Fraxtal frxUSD v3.0.0 verified implementation (Fraxscan)",
+          "url": "https://fraxscan.com/address/0x0000000083bdf23788585d499eab0d92a8befb1d#code"
+        },
+        {
+          "label": "Fraxtal FrxUSDDistributor verified implementation (Sourcify)",
+          "url": "https://sourcify.dev/server/v2/contract/252/0x9AF1c2aEcCD2c9f03F445F3397c112C24963ce26"
         },
         {
           "label": "Frax frxUSD Fraxtal contract source",
@@ -474,8 +729,8 @@
           "url": "https://rpc.frax.com"
         }
       ],
-      "evidence": "Ethereum re-verified 2026-11-23 at finalized block 26480118 (2026-11-23T20:06:47.000Z, hash 0xeb60b8bc95b07ceb378ba52dd4b487bd1c49a17c7da4aa907be0a665fdd02f17, keyless Alchemy RPC): following the block 26379419 upgrade (tx 0xfa94523813f0f71c70b0fd07e993906ea8e0cd2d2f64f57f77958562c8c31111, emitting Upgraded and TimelockChanged), frxUSD proxy 0xcacd6fd266af91b8aed52accc382b4e165586e29 resolves EIP-1967 implementation 0x5c19d7c2838769ed3c5a1e506600940e62ff901f (FrxUSD v3.0.1, runtime bytecode matching Blockscout and Sourcify) and ProxyAdmin 0x0b2c3df006b2bd43cbcc60075e7a0bf314474ed6, while all five listed custodian proxies retain their prior implementations and ProxyAdmins. Every ProxyAdmin has owner() = 0xb898Ad2976b4d8f2E21521C9db16b7497825E503, a verified Compound-style timelock with admin() = 0xfFFffF4F3baC444b2C0ecf2A1840d018bE783937, pendingAdmin() zero, and delay() = 86400 seconds. In FrxUSD v3.0.1, timelock() and raw slot 15 both return 0xb898Ad2976b4d8f2E21521C9db16b7497825E503, restricting addMinter(address) and subsequent setTimelock(address) calls to msg.sender == timelock; minters(0xb898Ad2976b4d8f2E21521C9db16b7497825E503) is also true (minters_array[8]), whereas minters(Safe) is false. The 4-of-7 Safe still directly owns the token and every listed custodian (no enabled modules, zero guard, zero moduleGuard) and can directly call removeMinter and raise custodian mint caps outside the timelock, while proxy upgrades, addMinter, setTimelock, and direct timelock minting require the 24-hour timelock. At Fraxtal block 40053263 (2026-08-16), native frxUSD at 0xfc00000000000000000000000000000000000001 returned BRIDGE() = 0x4200000000000000000000000000000000000010, REMOTE_TOKEN() = 0xcacd6fd266af91b8aed52accc382b4e165586e29, owner() = timelock_address() = 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6, and active minters 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6, 0xfc0000000000000000000000000000000000000d, 0x96a394058e2b84a89bac9667b19661ed003cf5d4, and 0x8c33cd6e5bed3bcb43b116410842bdd21630bff4. The reviewed source has no cap or max-supply check on minter_mint(); the Fraxtal ProxyAdmin owner/delay is not independently resolved, so the Ethereum 86400-second delay is not applied to Fraxtal. Economic-posture fields reviewed 2026-08-16: the Ethereum Safe can raise custodian caps directly outside the upgrade timelock, Fraxtal owner-controlled minters can mint without a source-level economic bound, and the live full-composition Frax/Chaos reserve feed provides continuous third-party reconciliation without named prudential supervision.",
-      "reviewer": "Codex mint-bridge-boundary FIX2-07; 2026-11-23 Ethereum v3.0.1 update",
+      "evidence": "Ethereum re-verified 2026-11-25 at finalized block 26491610 (2026-11-25T10:30:47.000Z, hash 0xac00e39ddaa80e32e1d8de3823f08d04cc45bcd36166c9b8d89fc9ecc7c070fc, keyless Alchemy RPC): frxUSD proxy 0xcacd6fd266af91b8aed52accc382b4e165586e29 retains v3.0.1 implementation 0x5c19d7c2838769ed3c5a1e506600940e62ff901f, ProxyAdmin 0x0b2c3df006b2bd43cbcc60075e7a0bf314474ed6, owner() = 0xfFFffF4F3baC444b2C0ecf2A1840d018bE783937 (4-of-7 Safe v1.3.0, zero modules/guard/moduleGuard), timelock() = slot 15 = 0xb898Ad2976b4d8f2E21521C9db16b7497825E503 (24-hour Compound Timelock, admin() = 4/7 Safe), and isPaused() = false. Complete minters_array enumeration (length 10, slots 0-1 zeroed after removals) confirms eight active minters: the five prior custodians (USDB, WTGXX, BUIDL, USDC, USTB; retaining their 2026-07-16 per-custodian reviews, with EIP-1967 slots, Safe owner, and 24-hour timelock ProxyAdmin ownership confirmed unchanged at block 26491610), Ethereum canonical lockbox 0x566a6442A5A6e9895B9dCA97cC7879D632c6e4B0 (assessed under bridgeRouteRisk), upgrade timelock 0xb898Ad2976b4d8f2E21521C9db16b7497825E503 (minters_array[8]), and newly enrolled FrxUSDCustodian v1.0.0 AUSD custodian 0x537bed9200Fc5a14AB56E554016753676eFf12B0 (minters_array[9], added block 25832426; impl 0xb418DDF761C53f31acA1a3Fa98CaD2BAC7Aa5da6, asset AUSD 0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a, mintCap 100,000 frxUSD, owner 4/7 Safe, ProxyAdmin 0xf655414bfcd6f2b984474fe5d71ac62d19c98899 owned by the 48-hour Frax Comptroller Timelock 0x8412ebf45bAC1B340BbE8F318b928C466c4E39CA administered by 3-of-5 Frax Comptroller Safe 0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27). Fraxtal re-verified 2026-11-25 at finalized block 44395528 (2026-11-25T10:16:07.000Z, hash 0x718c8a618a2b80601fb128796766dace933ea754f7911c3b983727828ffb8d75, rpc.frax.com with Alchemy header parity): native frxUSD at 0xfc00000000000000000000000000000000000001 runs verified FrxUSD3 v3.0.0 implementation 0x0000000083BDf23788585D499EAb0D92A8bEfB1D with totalSupply 8,308,856.27 frxUSD, isPaused() = false, zero active external freezers, BRIDGE() = 0x4200000000000000000000000000000000000010 (L2StandardBridge, MESSENGER 0x4200...0007, OTHER_BRIDGE 0x34C0...BDE2, ProxyAdmin 0x4200...0018), REMOTE_TOKEN() = 0xCAcd6fd266aF91b8AeD52aCCc382b4e165586E29, and owner() = timelock_address() = 0xC4EB45d80DC1F079045E75D5d55de8eD1c1090E6 (verified 3-of-5 GnosisSafeL2 v1.3.0 with zero modules, zero guard, zero moduleGuard, zero fallbackHandler, and zero timelock delay; directly owns ProxyAdmins 0xfc...000a/0xfc...0009, 0xaD0D...45c4, 0x223a...405c, and 0x4200...0018). Complete Fraxtal minters_array enumeration (length 4) confirms active minters: 3-of-5 Safe 0xC4EB...90E6, Fraxtal canonical lockbox 0x96A394058E2b84A89bac9667B19661Ed003cF5D4 (bridge machinery in bridgeRouteRisk; owner 3-of-6 Safe 0x5f25...fA2E, endpoint 0x1a44...728c, Ethereum peer 0x566a...e4B0), and two verified FrxUSDDistributor proxies (0xFc00...000D, dailyPayCap 15,000 frxUSD; 0x8C33...BFF4, dailyPayCap 5,000 frxUSD; shared impl 0x9AF1c2aEcCD2c9f03F445F3397c112C24963ce26) both authorizing single-key EOA bot 0x37E9A334290811b2416474B83Aa6Dc6133228772 (zero bytecode, nonce 1148) to mint up to 20,000 unbacked frxUSD per UTC day combined to whitelisted recipients. Economic-posture fields (reconciliation continuous, supervision attestation-only) remain at their 2026-08-16 review date.",
+      "reviewer": "Codex mint-bridge-boundary FIX2-07; 2026-11-23 Ethereum v3.0.1 update; 2026-11-25 AUSD custodian & Fraxtal re-review",
       "reviewedAt": "2026-08-16"
     }
   }

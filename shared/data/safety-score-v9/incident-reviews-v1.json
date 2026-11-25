@@ -28216,7 +28216,12 @@
         "surface:6895ba6601fc7481d0388f9b",
         "surface:4697bbbc7d223c44e7ce3036",
         "surface:20d01dffa87d58b05ee2827d"
-      ]
+      ],
+      "retired": {
+        "reviewedAt": "2026-11-25",
+        "reviewer": "Pharos #2335 / Owner ruling D9 (2026-11-25)",
+        "reason": "Solana mint 51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q (on-chain Metaplex FinChain Dollar LP / FUSDLP and live DefiLlama FUSDLP LP NAV) and its SPL multisig control Ch1Z9TZK7hiX73HZnhGQygsZ3zr1Rjh8ifspDfAqVRgm were removed from fusd-finchain's catalog and Mint Authority controls on 2026-11-25 (#2335, owner ruling D9); retired to preserve provenance without live routing."
+      }
     },
     {
       "reviewId": "k-mib-eurot-avalanche-external-transfer-20261106",

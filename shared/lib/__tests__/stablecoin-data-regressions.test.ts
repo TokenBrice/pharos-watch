@@ -17,12 +17,13 @@ import usdtReserves from "../../data/stablecoins/domains/reserves/usdt-tether.js
 import yldsReserves from "../../data/stablecoins/domains/reserves/ylds-figure.json";
 import mechanismOverlays from "../../data/safety-score-v9/mechanism-review-overlays-v1.json";
 import cashMintAuthority from "../../data/stablecoins/domains/mint-authority/cash-phantom.json";
+import fusdMetadata from "../../data/stablecoins/coins/fusd-finchain.json";
 import fusdMintAuthority from "../../data/stablecoins/domains/mint-authority/fusd-finchain.json";
+import fusdRiskReview from "../../data/stablecoins/domains/risk-review/fusd-finchain.json";
 
 describe("stablecoin source-data regressions", () => {
   it.each([
     ["CASH", cashMintAuthority, "76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q", ["H79WsaPgtctdpmhykRQZ91r8HNr5uqxUWEBe6DZXuhMu", "parsed upgrade authority"]],
-    ["FUSD", fusdMintAuthority, "Ch1Z9TZK7hiX73HZnhGQygsZ3zr1Rjh8ifspDfAqVRgm", ["51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q", "numRequiredSigners=1"]],
   ] as const)("%s Solana renewal binds its authority reads to the execution-scope slot", (_name, data, controlAddress, rotationFacts) => {
     const control = (data.mintAuthority.controls as { address: string; observedBlock: number; evidence: string; sources: { label: string; url: string }[]; executionScope?: { pin: { position: string }; sources: { url: string }[] } }[]).find((row) => row.address === controlAddress && row.executionScope)!;
     const scope = control.executionScope!;
@@ -47,6 +48,23 @@ describe("stablecoin source-data regressions", () => {
     expect(control.evidence[slotReadAt + slotMarker.length], `${_name} cites the complete slot ${slot}`).not.toMatch(/^\d$/);
     const renewedRead = control.evidence.slice(slotReadAt);
     for (const fact of [...rotationFacts, controlAddress]) expect(renewedRead).toContain(fact);
+  });
+
+  it("keeps the misattributed FUSDLP Solana mint out of FUSD's contract, mint-authority, and bridge-route rosters", () => {
+    const removedMint = "51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q";
+    expect(fusdMetadata.contracts.some((row) => row.chain === "solana" || row.address === removedMint)).toBe(false);
+    expect(
+      fusdMintAuthority.mintAuthority.controls.some(
+        (control) =>
+          ("chain" in control && control.chain === "solana") ||
+          control.deploymentRefs.some((ref) => ref.includes(removedMint)),
+      ),
+    ).toBe(false);
+    expect(
+      fusdRiskReview.bridgeRouteRisk.routes.some(
+        (route) => route.destinationChain === "solana" || route.contractAddress === removedMint,
+      ),
+    ).toBe(false);
   });
 
   it("marks every Felix BorrowerOperations debt cap as admin-mutable", () => {

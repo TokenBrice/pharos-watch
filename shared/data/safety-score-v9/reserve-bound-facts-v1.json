@@ -1804,122 +1804,105 @@
     ],
     "usdy-ondo-finance": [
       {
-        "factKey": "usdy-ondo-finance:2026-10-28:observed-treasury-bill-roster",
+        "factKey": "usdy-ondo-finance:2026-11-18:observed-treasury-bill-roster",
         "scope": {
           "kind": "exposure",
           "exposureKey": "reserve:e0694b7435c4086800274c40"
         },
-        "asOfSec": 1793231999,
+        "asOfSec": 1795046399,
         "publisher": "Ondo USDY LLC / Ankura Trust Company, LLC (Verification Agent)",
         "sourceUrls": [
           "https://ondo.finance/usdy",
-          "https://www.dropbox.com/scl/fo/375wdvar3rbc7o23nxsgp/AK-03xW6UBqCvZyI-Enizhk/2026/10%20October?rlkey=4icqn1z9bez725wywr30fx52a&dl=1",
+          "https://web.archive.org/web/20261120060339id_/https://ondo.finance/usdy",
+          "https://www.dropbox.com/scl/fo/375wdvar3rbc7o23nxsgp/AOFY8jhpENaNx9WAw-WPnbY?rlkey=4icqn1z9bez725wywr30fx52a&dl=1",
           "https://www.dropbox.com/scl/fo/fk5t99zyihshuak3u1u9v/AMYiYSUwvoL6osa2FX_G_M8?rlkey=0ttmb4ifhdg4ebvhbh8aa3juc&dl=1",
-          "https://www.dropbox.com/scl/fo/jzkrw308mrhsasauqrjqq/AJxJak0F90kcwkADSN3DCD4?rlkey=nik1v5slekrzx5fbi0zan5sk3"
+          "https://www.dropbox.com/scl/fo/jzkrw308mrhsasauqrjqq/AJxJak0F90kcwkADSN3DCD4?rlkey=nik1v5slekrzx5fbi0zan5sk3&dl=1"
         ],
-        "assertion": "Ankura Trust Verification Agent daily report Ondo USDY LLC_ATCAttest_261028.pdf (end of day 2026-10-28, linked from ondo.finance/usdy daily archive; SHA-256 767159ff157ee98ce15e9301200d009cf00f144f991da9fa57a513e66d70b8d6) itemizes 15 U.S. Treasury Bill lots across 12 CUSIPs at StoneX/BNY Mellon ($92,507,774.73) and Marex ($2,002,816,230.72), summing to USD 2,095,324,005.45 (WAM 197.64 days); instrumentId suffixes ':marex' and ':stonex-bny' distinguish the two custody venues when the same CUSIP is held across both. This reconciles to the nearest dollar with the complete US Treasuries category ($2,095,324,005) in the same-date 2026-10-28 USDY Portfolio Overview (observedAtSec 1793231999); the same-date Ondo Global Markets (BVI) Limited daily report ('Daily Report - Ondo Stocks - 2026-10-28_20_00_ET - Ankura Attestation.pdf', 8pm ET, from the issuer-linked BVI daily archive) reports no direct U.S. Treasury securities, confirming the scored US Treasuries slice covers only the LLC Treasury bill book. Longest observed 2026-10-28 maturity is CUSIP 912797WJ2 maturing 2027-09-30 (337 days; two lots: $13,025,916.12 at StoneX/BNY Mellon and $90,136,573.80 at Marex). For context, the subsequent 2026-10-31 monthly report (202610 Ondo USDY LLC_ATC Attest.pdf) lists 912797WT0 maturing 2027-10-28 (362 days) after 912797SK4 matured on 2026-10-29 and notes Marex holdings include securities used for structured financing / Opt-Out Lender Underlyings. This observed portfolio snapshot is neither a contractual maturity maximum, a liquidity/realization guarantee nor an unencumbered-collateral assertion. contentDigest is the SHA-256 of Ondo USDY LLC_ATCAttest_261028.pdf.",
-        "contentDigest": "767159ff157ee98ce15e9301200d009cf00f144f991da9fa57a513e66d70b8d6",
+        "assertion": "Ankura Trust Verification Agent daily report Ondo USDY LLC_ATCAttest_261118.pdf (end of day 2026-11-18, newest LLC daily attestation published in the ondo.finance/usdy daily archive as of 2026-11-25; SHA-256 dd671d6cacbab34256d44cd1e76c62541b8e2ca129326b71b454113de195c312) itemizes 12 U.S. Treasury Bill lots across 12 distinct CUSIPs all held at Marex (StoneX holds $0 Treasuries and $6,980.00 cash), summing exactly to USD 1,998,496,978.13 (Treasury WAM 188.50 days; Permitted Assets USD 1,999,237,294.20 against USD 1,965,264,239.90 LLC Token Principal Outstanding, ratio 1.017287); instrumentId ':marex' suffixes retain the custody-venue naming convention. This reconciles to the exact cent with the complete US Treasuries category ($1,998,496,978.13) in the same-date 2026-11-18 USDY Portfolio Overview (observedAtSec 1795046399, archived verbatim at Wayback 2026-11-20T06:03:39Z, HTML SHA-256 3eb07d548eba28cd1d2a7cd65580ee746cd3cc2ecda42862b07136428d0a85d3); the same-date Ondo Global Markets (BVI) Limited daily report ('Daily Report - Ondo Stocks - 2026-11-18_20_00_ET - Ankura Attestation.pdf', 8pm ET, SHA-256 6ff8ce94829f5fdd583a698d5007076f6763ac230f97b646b28b149dfc333ad6) reports no direct U.S. Treasury securities, confirming the scored US Treasuries slice covers only the LLC Treasury bill book. Longest observed 2026-11-18 maturity is CUSIP 912797WT0 maturing 2027-10-28 (344 days; $51,335,075.05 at Marex), and shortest is 912797UZ8 maturing 2026-11-19 (1 day; $105,710,000.00). Although live ondo.finance/usdy on 2026-11-25 shows a newer 2026-11-20 overview ($1,999,991,788.64, WAM 202.58 days) after 912797UZ8 matured, no Ankura LLC daily attestation after 2026-11-18 is published yet, so both composition and this bound pin 2026-11-18. As noted in the 2026-10-31 monthly report (202610 Ondo USDY LLC_ATC Attest.pdf, Note 3), Marex holdings include securities used for structured financing / Opt-Out Lender Underlyings. This observed portfolio snapshot is neither a contractual maturity maximum, a liquidity/realization guarantee nor an unencumbered-collateral assertion. contentDigest is the SHA-256 of Ondo USDY LLC_ATCAttest_261118.pdf.",
+        "contentDigest": "dd671d6cacbab34256d44cd1e76c62541b8e2ca129326b71b454113de195c312",
         "provenance": {
           "kind": "reviewed-research",
-          "reviewedAt": "2026-11-23",
-          "reviewer": "Pharos 2026-11-23 unknowns assessment (usdy-ondo-finance)",
+          "reviewedAt": "2026-11-25",
+          "reviewer": "Pharos L2f renewal 2026-11-25 (#2321)",
           "confidence": "high"
         },
         "kind": "observed-portfolio-maturity",
-        "coveredGrossValue": 2095324005.45,
-        "totalGrossValue": 2095324005.45,
-        "coverageAsOfSec": 1793231999,
+        "coveredGrossValue": 1998496978.13,
+        "totalGrossValue": 1998496978.13,
+        "coverageAsOfSec": 1795046399,
         "denomination": "USD",
-        "observedMaximumDays": 337,
+        "observedMaximumDays": 344,
         "instruments": [
-          {
-            "instrumentId": "912797SK4:marex",
-            "maturityAtSec": 1793232000,
-            "grossMarkedValue": 52094000,
-            "denomination": "USD"
-          },
           {
             "instrumentId": "912797TV9:marex",
             "maturityAtSec": 1802908800,
-            "grossMarkedValue": 127632257.35,
-            "denomination": "USD"
-          },
-          {
-            "instrumentId": "912797TV9:stonex-bny",
-            "maturityAtSec": 1802908800,
-            "grossMarkedValue": 33400386.57,
+            "grossMarkedValue": 127906728,
             "denomination": "USD"
           },
           {
             "instrumentId": "912797UD7:marex",
             "maturityAtSec": 1805328000,
-            "grossMarkedValue": 174937609.78,
-            "denomination": "USD"
-          },
-          {
-            "instrumentId": "912797UD7:stonex-bny",
-            "maturityAtSec": 1805328000,
-            "grossMarkedValue": 46081472.04,
+            "grossMarkedValue": 175339442.3,
             "denomination": "USD"
           },
           {
             "instrumentId": "912797UE5:marex",
             "maturityAtSec": 1807747200,
-            "grossMarkedValue": 202704689.23,
+            "grossMarkedValue": 203140004.89,
             "denomination": "USD"
           },
           {
             "instrumentId": "912797UX3:marex",
             "maturityAtSec": 1810166400,
-            "grossMarkedValue": 155334480.5,
+            "grossMarkedValue": 155553036.99,
             "denomination": "USD"
           },
           {
             "instrumentId": "912797UZ8:marex",
             "maturityAtSec": 1795046400,
-            "grossMarkedValue": 112650063.93,
+            "grossMarkedValue": 105710000,
             "denomination": "USD"
           },
           {
             "instrumentId": "912797VF1:marex",
             "maturityAtSec": 1812585600,
-            "grossMarkedValue": 245069309.7,
+            "grossMarkedValue": 245492490.45,
             "denomination": "USD"
           },
           {
             "instrumentId": "912797VQ7:marex",
             "maturityAtSec": 1815004800,
-            "grossMarkedValue": 231811546.77,
+            "grossMarkedValue": 232213160.5,
             "denomination": "USD"
           },
           {
             "instrumentId": "912797VR5:marex",
             "maturityAtSec": 1817424000,
-            "grossMarkedValue": 222351956.69,
+            "grossMarkedValue": 222714455.07,
             "denomination": "USD"
           },
           {
             "instrumentId": "912797WA1:marex",
             "maturityAtSec": 1819843200,
-            "grossMarkedValue": 255891985.37,
+            "grossMarkedValue": 256313095.74,
             "denomination": "USD"
           },
           {
             "instrumentId": "912797WG8:marex",
             "maturityAtSec": 1797897600,
-            "grossMarkedValue": 132201757.6,
+            "grossMarkedValue": 132513388.54,
             "denomination": "USD"
           },
           {
             "instrumentId": "912797WJ2:marex",
             "maturityAtSec": 1822262400,
-            "grossMarkedValue": 90136573.8,
+            "grossMarkedValue": 90266100.6,
             "denomination": "USD"
           },
           {
-            "instrumentId": "912797WJ2:stonex-bny",
-            "maturityAtSec": 1822262400,
-            "grossMarkedValue": 13025916.12,
+            "instrumentId": "912797WT0:marex",
+            "maturityAtSec": 1824681600,
+            "grossMarkedValue": 51335075.05,
             "denomination": "USD"
           }
         ]

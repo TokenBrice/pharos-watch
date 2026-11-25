@@ -26,7 +26,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "FUSD's Ethereum, Avalanche, Sonic, Monad, and exSat deployments have issuer-native state and additional TokenBridgeSender transfer machinery; the four previously reviewed EVM chains also have CCIP BurnMintTokenPool controls. exSat has the same issuer EOA and immediate ProxyAdmin failure domains, but a different contract pauser whose signing topology is not established. The cataloged Solana mint has a verified 1-of-3 authority and freeze key, but its metadata names FinChain Dollar LP / FUSDLP while both issuer token pages list the same address. Its existing native route is retained pending liability-identity adjudication. External CCIP validation and shared FinChain EOA and ProxyAdmin failure domains remain reviewed at external-validated-network.",
+    "summary": "FUSD's Ethereum, Avalanche, Sonic, Monad, and exSat deployments have issuer-native state and additional TokenBridgeSender transfer machinery; the four previously reviewed EVM chains also have CCIP BurnMintTokenPool controls. exSat has the same issuer EOA and immediate ProxyAdmin failure domains, but a different contract pauser whose signing topology is not established. The previously cataloged Solana mint 51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q was removed on 2026-11-25 (#2335) because pinned Metaplex metadata (FinChain Dollar LP / FUSDLP) and live DefiLlama pricing identify it as the distinct FUSDLP LP token despite FinChain's FUSD and FUSDLP pages both listing that address. External CCIP validation and shared FinChain EOA and ProxyAdmin failure domains remain reviewed at external-validated-network.",
     "reviewedAt": "2026-09-21",
     "reviewer": "Claude curation campaign 2026-09-21 (Ctrl8)",
     "confidence": "verified",
@@ -202,47 +202,6 @@
           {
             "label": "Verified FUSDGateway source with exact exSat runtime correspondence",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3a4b7d8e5dc20788c52d3d5102d8ea3f2358c95f"
-          }
-        ]
-      },
-      {
-        "id": "solana:51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q",
-        "destinationChain": "solana",
-        "canonicalChain": "solana",
-        "contractAddress": "51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q",
-        "protocol": "FinChain native SPL issuance",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
-        "riskTier": "single-chain-or-native",
-        "semantics": "native-mint",
-        "scope": "canonical",
-        "reviewDisposition": "reviewed",
-        "reviewNote": "Finalized slot 452345452 on 2026-10-01 confirms the cataloged mint and its initialized 1-of-3 multisig. At finalized slot 452346924 its Metaplex metadata PDA G5gRiKMa56BuSNHr7WBgcVxdquMGGWioSrZrrMzTnZ6j names FinChain Dollar LP / FUSDLP. The issuer's FUSD Token and FUSDLP Token pages both list the same Solana mint. Native SPL issuance is observed, but whether this is a canonical FUSD liability or a separately issued FUSDLP fund token is unresolved. Retaining the route records existing exposure without resolving that identity conflict.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-01",
-        "observedBlock": 452345452,
-        "controllerChain": "solana",
-        "controllerAddress": "Ch1Z9TZK7hiX73HZnhGQygsZ3zr1Rjh8ifspDfAqVRgm",
-        "failureDomainKeys": [
-          "multisig:solana:Ch1Z9TZK7hiX73HZnhGQygsZ3zr1Rjh8ifspDfAqVRgm",
-          "freeze-authority:solana:E1wYYoH89zYz5vfXFoWBfuvPhzmHCMsJ4WceK4A1WP7C"
-        ],
-        "sources": [
-          {
-            "label": "FinChain FUSD token deployments",
-            "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token"
-          },
-          {
-            "label": "Solana mainnet finalized mint and authority account reads",
-            "url": "https://api.mainnet-beta.solana.com"
-          },
-          {
-            "label": "FUSD Solana mint explorer",
-            "url": "https://solscan.io/token/51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q"
-          },
-          {
-            "label": "FinChain FUSDLP token page listing the same Solana mint",
-            "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusdlp-token"
           }
         ]
       }
