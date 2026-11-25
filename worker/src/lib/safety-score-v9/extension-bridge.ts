@@ -987,14 +987,17 @@ function collectActiveIncidentBridgeControls(
   for (const [routeId, entries] of structuredByDeployment) {
     const route = routesById.get(routeId);
     if (!route) continue;
-    structuredRouteControls.push(
-      structuredBridgeRouteControl(
+    structuredRouteControls.push({
+      ...structuredBridgeRouteControl(
         assetId,
         route,
         entries,
         safetyScoreV9RouteSupplyShare(supplyReview ?? null, routeId),
       ),
-    );
+      // Stale/retired bridge reviews cannot carry known reviewed cap/claim semantics (R2/R3).
+      capSemantics: { kind: "unknown", bound: null },
+      claimImpairment: "unknown",
+    });
   }
   const routeControls = profileRoutes
     .filter((route) => !structuredRouteIds.has(normalizedBridgeDeploymentId(route.id)))
@@ -1003,7 +1006,7 @@ function collectActiveIncidentBridgeControls(
         assetId,
         route,
         safetyScoreV9RouteSupplyShare(supplyReview ?? null, normalizedBridgeDeploymentId(route.id)),
-        true,
+        false,
       ),
     )
     .filter((control): control is ControlOverlay => control !== null);

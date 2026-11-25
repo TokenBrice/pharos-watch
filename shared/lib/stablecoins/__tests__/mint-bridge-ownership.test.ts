@@ -539,7 +539,7 @@ describe("Mint Authority / Bridge Risk ownership boundary", () => {
 
   it("exempts retired bridge tombstone", () => {
     const rep = representationRoute(BASE_ROUTE), m = makeBridgeProfile, r = ARBITRUM_ROUTE;
-    const has = (bridgeRouteRisk?: BridgeRouteRiskProfile) => violationCodes(validateMintBridgeOwnership(makeStablecoinMeta({ contracts: contractsFor([r, BASE_ROUTE]), mintAuthority: makeMintProfile({ controls: [makeMintControl({ deploymentRefs: [r] })] }), bridgeRouteRisk }), { enforce: true })).includes("missing-native-deployment");
-    expect([has({ ...m([rep]), retired: { reviewedAt: "2026-11-25", reviewer: "a", reason: "r" } }), has(), has(m([{ ...makeRoute(r), reviewDisposition: "retired" }, rep]))]).toEqual([false, true, true]);
+    const h = (b?: BridgeRouteRiskProfile) => violationCodes(validateMintBridgeOwnership(makeStablecoinMeta({ contracts: contractsFor([r, BASE_ROUTE]), mintAuthority: makeMintProfile({ controls: [makeMintControl({ deploymentRefs: [r] })] }), bridgeRouteRisk: b }), { enforce: true })).includes("missing-native-deployment");
+    expect([h({ ...m([rep]), retired: { reviewedAt: "2026-11-25", reviewer: "a", reason: "Retired route" } }), h(), h(m([{ ...makeRoute(r), reviewDisposition: "retired" }, rep]))]).toEqual([false, true, true]);
   });
 });

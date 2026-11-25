@@ -78,6 +78,17 @@ interface ControlEvaluationContext {
   addStructuralFailure: (failure: V9ControlStructuralFailure) => void;
 }
 
+function isLapsedBridgeControl(
+  control: V9DeploymentControlFactV2,
+  bridge: EvaluateV9EconomicControlArgs["bridge"],
+): boolean {
+  return (
+    control.controlKind === "bridge" &&
+    (bridge.lapsedReview === true ||
+      bridge.routes.some((route) => route.controlKey === control.controlKey && route.lapsedReview === true))
+  );
+}
+
 export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): V9EconomicControlResult {
   assertV9ValidatedPolicyEnvelope(args.policy);
   const policy = args.policy.policy.semantic;
@@ -93,7 +104,11 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
   const controlBinding = (control: V9DeploymentControlFactV2, bound: number | null = null) =>
     bindingByMateriality(
       control,
-      !(control.controlKind === "bridge" && args.bridge.lapsedReview === true) &&
+      !(
+        control.controlKind === "bridge" &&
+        (args.bridge.lapsedReview === true ||
+          (control.incidentState === "active" && isLapsedBridgeControl(control, args.bridge)))
+      ) &&
         unresolvedCohort.share !== null && unresolvedCohort.share < unresolvedFullCeilingShareThreshold &&
         unresolvedCohort.controlKeys.has(control.controlKey) &&
         facts.supply.selectedBridgeRoutes.some(
@@ -280,12 +295,7 @@ function evaluateControlInventory(context: ControlEvaluationContext): void {
     const path = `control:${control.controlKey}`;
     if (control.status.applicability.state === "unresolved" || control.status.observationState !== "known") {
       if (binding) addReason(mappedControlStatusReason(control), pathKind, path, control.controlKey);
-      const bridgeReview = context.args.bridge;
-      const isLapsedBridgeControl =
-        control.controlKind === "bridge" &&
-        (bridgeReview.lapsedReview === true ||
-          bridgeReview.routes.some((route) => route.controlKey === control.controlKey && route.lapsedReview === true));
-      if (control.incidentState === "active" && isLapsedBridgeControl) {
+      if (control.incidentState === "active" && isLapsedBridgeControl(control, context.args.bridge)) {
         // Independently evidenced active compromise survives lapsed/retired bridge review.
         addStructuralFailure({
           kind: "active-control-incident",
@@ -821,7 +831,14 @@ function normalizeControlComponents(
       .flatMap((failure) =>
         failure.controlKeys.filter((controlKey) => {
           const control = controlsByKey.get(controlKey);
-          return control?.economicLossScope === "deployment" && control.materialSupplyShare !== null;
+          if (control?.economicLossScope !== "deployment" || control.materialSupplyShare === null) return false;
+          // A binding (>= 10% share) active bridge compromise under a lapsed/retired
+          // bridge review must remain binding in Control (25) rather than being demoted
+          // into proportional deployment risk while Control jumps to the 45 floor.
+          if (failure.kind === "active-control-incident" && isLapsedBridgeControl(control, args.bridge)) {
+            return false;
+          }
+          return true;
         }),
       ),
   );

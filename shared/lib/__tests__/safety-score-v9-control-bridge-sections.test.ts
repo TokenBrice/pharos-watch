@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { V9DeploymentControlFactV2 } from "../../types/safety-score-v9-facts";
 import { evaluateV9EconomicControl } from "../safety-score-v9/control";
+import { resolveV9ScopedRisk } from "../safety-score-v9/scoped-risk";
 import { provenNullShareDeploymentBound } from "../safety-score-v9/control-bridge-join";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import {
@@ -228,9 +229,11 @@ describe("Safety Score v9 control bridge sections", () => {
     expect(stale.components.find((c) => c.controlKeys.includes(control.controlKey))?.binding).toBe(true);
   });
 
-  it("caps lapsed bridge at 45", () => {
-    const c = bridgeControl("b:r", { deploymentKey: "base:0x1", materialSupplyShare: 0.05 }), f = (bridge: ReturnType<typeof args>["bridge"], facts = baseFacts()) => evaluateV9EconomicControl(args({ facts, bridge }));
-    const u = (l?: true) => f({ status: missing("bridge"), ...(l ? { lapsedReview: l } : {}), routes: [] }).components.find((k) => k.componentKey === "bridge:unverified")?.score, r = f({ status: requiredKnown("bridge"), routes: [{ controlKey: c.controlKey, tier: "opaque-or-unknown", lapsedReview: true }] }, baseFacts([c]));
-    expect([u(), u(true), r.components.find((x) => x.controlKeys[0] === c.controlKey)?.score, r.reasons.some((x) => x.code === "selected-bridge-route-unresolved")]).toEqual([60, 45, 45, true]);
+  it("caps lapsed bridge", () => {
+    const c = bridgeControl("b:r", { deploymentKey: "b:1", materialSupplyShare: 0.05 }), f = (b: ReturnType<typeof args>["bridge"], facts = baseFacts()) => evaluateV9EconomicControl(args({ facts, bridge: b }));
+    const u = (l?: true) => f({ status: missing("bridge"), ...(l ? { lapsedReview: l } : {}), routes: [] }).components.find((k) => k.kind === "bridge")?.score, r = f({ status: requiredKnown("bridge"), routes: [{ controlKey: "b:r", tier: "opaque-or-unknown", lapsedReview: true }] }, baseFacts([c]));
+    const inc = (s: number) => { const x = f({ status: boundedUnknown("bridge"), lapsedReview: true, routes: [] }, baseFacts([bridgeControl("b:i", { deploymentKey: "k:1", materialSupplyShare: s, incidentState: "active", status: boundedUnknown("control") })])); return [x.score, x.components.find((k) => k.controlKeys[0] === "b:i")?.binding]; };
+    const sl = (k: string, exposureShare: number) => ({ signalKey: k, exposureKey: k, riskEventKey: k, failureDomainKeys: [k], economicLossScope: "deployment" as const, exposureShare, exposedScore: 45, reason: k }), add = resolveV9ScopedRisk(60, [sl("b1", 0.2), sl("l:b2", 0.12)]);
+    expect([u(), u(true), r.components.find((x) => x.kind === "bridge")?.score, r.reasons.some((x) => x.code === "selected-bridge-route-unresolved"), ...inc(0.2), ...inc(0.05), add.adjustments.length, +add.finalScore.toFixed(2)]).toEqual([60, 45, 45, true, 25, true, 45, false, 2, 55.2]);
   });
 });

@@ -107,8 +107,8 @@ function compileFixture(metadata: V9ExtensionRegistryMeta) {
   return { extension, compiled };
 }
 
-function adapt(metadata: V9ExtensionRegistryMeta, supplyReview: NonNullable<Parameters<typeof adaptBridgeReview>[1]> | null = null) {
-  return adaptBridgeReview(metadata, supplyReview, 2, new ReviewEvidenceBuilder(metadata.id, CLOCK), CLOCK);
+function adapt(metadata: V9ExtensionRegistryMeta, supplyReview: NonNullable<Parameters<typeof adaptBridgeReview>[1]> | null = null, inc: Parameters<typeof adaptBridgeReview>[7] = []) {
+  return adaptBridgeReview(metadata, supplyReview, 2, new ReviewEvidenceBuilder(metadata.id, CLOCK), CLOCK, undefined, [], inc);
 }
 
 function laneControlKey(controlIds: string[]): string {
@@ -419,10 +419,12 @@ describe("reviewed bridge representation allocation identity", () => {
     expect(input.wrapper.allocationScopeIdentityReview).toBeUndefined();
   });
 
-  it("lapses/retires bridge schemas", () => {
-    const u = "unknown" as const, rr = route(BASE_ROUTE, { issuanceModel: u, routeClass: u, riskTier: "opaque-or-unknown", semantics: u, scope: u, reviewDisposition: "retired", retiredReason: "Retired route", sources: undefined, observedAt: undefined }), bp = bridgeProfile;
-    const wp = bp([rr], { retired: { reviewedAt: "2026-10-07", reviewer: "r", reason: "Retired profile" } }), ad = (br: typeof wp) => adapt(meta({ bridgeRouteRisk: br })), st = ad(bp([route(BASE_ROUTE)], { reviewedAt: "2020-01-01", controls: [bridgeControl()] }));
+  it("lapses/retires bridge profiles", () => {
+    const u = "unknown" as const, k = BASE_ROUTE, bp = bridgeProfile, ad = (br: typeof wp, i: Parameters<typeof adapt>[2] = []) => adapt(meta({ bridgeRouteRisk: br }), null, i);
+    const rr = route(k, { issuanceModel: u, routeClass: u, riskTier: "opaque-or-unknown", semantics: u, scope: u, reviewDisposition: "retired", retiredReason: "Retired route", sources: undefined, observedAt: undefined });
+    const wp = bp([rr], { retired: { reviewedAt: "2026-10-07", reviewer: "r", reason: "Retired profile" } }), st = ad(bp([route(k)], { reviewedAt: "2020-01-01", controls: [bridgeControl()] }));
+    const ic = ad(bp([route(k, { issuanceModel: "bridge-representation", routeClass: "third-party", riskTier: "external-lock-mint", semantics: "lock-mint", scope: "peripheral" })], { reviewedAt: "2020-01-01" }), [{ domain: "control", scope: { kind: "deployment", deploymentKey: k }, posture: { controlKinds: ["bridge"], incidentState: "active" } }] as unknown as Parameters<typeof adapt>[2]).controls[0];
     expect([wp, { ...wp, retired: { ...wp.retired!, reviewedAt: "2025-01-01" } }, bp([{ ...rr, retiredReason: undefined }])].map((x) => BridgeRouteRiskProfileSchema.safeParse(x).success)).toEqual([true, false, false]);
-    expect([st.controls.length, st.review.lapsedReview, st.review.status.observationState, ad(wp).review.status.observationState, ad(bp([rr])).review.routes[0]?.lapsedReview]).toEqual([0, true, "stale", "missing", true]);
+    expect([st.controls.length, st.review.lapsedReview, st.review.status.observationState, ad(wp).review.status.observationState, ad(bp([rr])).review.routes[0]?.lapsedReview, ic?.capSemantics.kind, ic?.claimImpairment]).toEqual([0, true, "stale", "missing", true, u, u]);
   });
 });

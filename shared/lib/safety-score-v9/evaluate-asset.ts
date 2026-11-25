@@ -375,9 +375,25 @@ function structuralSignalFromControl(
         : "low",
     // Only the linked component owns pillar pricing. Shared controller identity
     // cannot suppress a worse local path with different economic bounds.
+    // Under a lapsed/retired bridge review, retain deployment-scoped active
+    // bridge compromise signals in scopedRisk even while the compromised bridge
+    // component binds Control at 25: because Control=25 still carries +20
+    // compensability headroom (baseAssetScore up to 45), dropping the 25 scoped
+    // deduction can otherwise lift multi-incident assets above their pre-lapse
+    // score.
     ...(economicLossScope === "deployment" &&
     failure.materialSharePct !== null &&
-    !failure.controlKeys.some((controlKey) => bindingComponentControlKeys.has(controlKey))
+    (!failure.controlKeys.some((controlKey) => bindingComponentControlKeys.has(controlKey)) ||
+      (failure.kind === "active-control-incident" &&
+        controls.length > 0 &&
+        controls.every(
+          (control) =>
+            control.controlKind === "bridge" &&
+            (asset.economicControlReview.bridge.lapsedReview === true ||
+              asset.economicControlReview.bridge.routes.some(
+                (route) => route.controlKey === control.controlKey && route.lapsedReview === true,
+              )),
+        )))
       ? {}
       : { pricedInPillar: "control" as const }),
     failureDomainKeys,
@@ -1316,7 +1332,7 @@ function controlPillar(
         if (!control) continue;
         const nullShareBound = provenNullShareDeploymentBound(asset, control);
         const provenImmaterial = nullShareBound !== null && nullShareBound < materialShareThreshold;
-        const exposureShare = control.materialSupplyShare ?? (provenImmaterial ? 0 : 1);
+        const exposureShare = control.materialSupplyShare ?? (provenImmaterial ? nullShareBound : 1);
         if (exposureShare <= 0) continue;
         const failureDomainKeys = control.failureDomains.length > 0
           ? control.failureDomains.map(domainKey)
