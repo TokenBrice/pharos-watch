@@ -149,7 +149,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     title: "Mechanism archetype classification", stream: "ARCH",
     instructions: "Assign the mechanismArchetype that matches the live stabilization and claim structure, with a sourced mechanismArchetypeReview. Record an intentional parent divergence with archetypeOverride when applicable.",
     completionCriteria: "A fresh exact replay resolves the archetype and removes the missing-archetype gapId.",
-    recommendedSkill: "resilience-classify", likelyRepoAreas: ["shared/data/stablecoins/coins/"], cautions: ["Classification clears NR eligibility but does not assert that the mechanism is safe."],
+    recommendedSkill: "safety-score-curation", likelyRepoAreas: ["shared/data/stablecoins/coins/"], cautions: ["Classification clears NR eligibility but does not assert that the mechanism is safe."],
     ownerDomain: "methodology",
     defaultResolutionMode: "agent-curation",
     ...workReasons({
@@ -204,7 +204,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
   BRIDGE_ROUTE_REVIEW: {
     title: "Bridge route control review", stream: "BRDG",
     instructions: "Populate the material bridgeRouteRisk route rows with route identity, scope, issuance model, verification/control model, risk tier, sources, reviewer, and review date. Explicitly rule native-only deployments not applicable when supported.",
-    completionCriteria: "A fresh exact replay resolves the bridge economic-control review and removes the listed bridge gapId.", recommendedSkill: "stablecoin-addition-orchestrator",
+    completionCriteria: "A fresh exact replay resolves the bridge economic-control review and removes the listed bridge gapId.", recommendedSkill: "mint-authority-research",
     likelyRepoAreas: ["shared/data/stablecoins/domains/risk-review/", "shared/data/stablecoins/coins/"], cautions: ["Only reviewed, runtime-selected material routes should influence the score."],
     ownerDomain: "control",
     defaultResolutionMode: "agent-curation",
@@ -356,7 +356,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
   MECHANISM_REVIEW: {
     title: "Mechanism risk component review", stream: "MECH",
     instructions: "Curate source-backed facts for the exact mechanism component in the mechanism-review overlay. Fiat-cash, T-bill, and commodity-claim components must satisfy the ratified strict evidence standard; when disclosure is insufficient, record a sourced unavailable disposition that remains bounded and non-scoring. Advanced archetypes require the complete measured-metric overlay.",
-    completionCriteria: "A fresh exact replay either compiles the exact component as known and removes its bounded-mechanism-review gapId, or confirms that an independently reviewed unavailable disposition retains the bounded-unknown gap without changing score or grade.", recommendedSkill: "reserve-research",
+    completionCriteria: "A fresh exact replay either compiles the exact component as known and removes its bounded-mechanism-review gapId, or confirms that an independently reviewed unavailable disposition retains the bounded-unknown gap without changing score or grade.", recommendedSkill: "safety-score-curation",
     likelyRepoAreas: ["shared/data/safety-score-v9/mechanism-review-overlays-v1.json", "shared/data/stablecoins/domains/reserves/", "shared/data/stablecoins/coins/", "worker/src/lib/safety-score-v9/extension-mechanism.ts"], cautions: ["Do not fabricate measured ratios or convert governance limits into committed liquidation capacity.", "Record an evidence blocker when the issuer or chain does not expose the required metric.", "Curate the actual evidence pin, never the capture date: date-only reviews wait until the next UTC midnight and retain a method-unsupported admission gap during their day; exact UTC timestamps admit at their instant. Component-only reviews never renew sibling evidence or an expired whole overlay.", "Before curating fiat-cash assuranceAndReconciliation, commodity-claim assuranceAndReconciliation, or tbill lossRecoveryDesign as unavailable, check the asset's proofOfReserves.latestReport: when it is set, the compiler already grades that component known and a curated unavailable row silently overrides it to bounded-unknown. shared/types/__tests__/safety-score-v9-overlays.test.ts fails the build if this happens."],
     ownerDomain: "backing",
     defaultResolutionMode: "issuer-or-onchain-evidence",
@@ -367,7 +367,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
   MINT_AUTHORITY: {
     title: "Mint authority review", stream: "CTRL",
     instructions: "Populate the mintAuthority profile for every material issuance path: mint path, authority model and threshold, capabilities, reconciliation, cap semantics, upgradeability, controlRef, evidence, reviewer, and review date.",
-    completionCriteria: "The mint economic-control review is known and a fresh exact replay removes the missing-mint-authority gapId.", recommendedSkill: null, likelyRepoAreas: ["shared/data/stablecoins/domains/mint-authority/", "shared/data/stablecoins/coins/"], cautions: ["Explorer/RPC structural reads should be pinned to a reviewed block or slot where practical."],
+    completionCriteria: "The mint economic-control review is known and a fresh exact replay removes the missing-mint-authority gapId.", recommendedSkill: "mint-authority-research", likelyRepoAreas: ["shared/data/stablecoins/domains/mint-authority/", "shared/data/stablecoins/coins/"], cautions: ["Explorer/RPC structural reads should be pinned to a reviewed block or slot where practical."],
     ownerDomain: "control",
     defaultResolutionMode: "agent-curation",
     ...workReasons({ CTRL: [

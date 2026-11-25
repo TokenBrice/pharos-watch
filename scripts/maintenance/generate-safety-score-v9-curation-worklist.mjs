@@ -95,7 +95,7 @@ const STREAMS = [
     key: "ARCH",
     title: "Archetype — unresolved classification",
     ceiling: "classification and cause-aware rateability",
-    fix: "Assign a sourced mechanism archetype through resilience-classify. A classification gap does not prove a pipeline or public-curation cause; use the compiled exact gap scope and evidence proof.",
+    fix: "Assign a sourced mechanism archetype through safety-score-curation. A classification gap does not prove a pipeline or public-curation cause; use the compiled exact gap scope and evidence proof.",
   },
 ];
 
