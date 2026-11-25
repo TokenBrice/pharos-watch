@@ -1995,7 +1995,7 @@
   ],
   "skills": [
     { "skill": "d1-migration-rollout", "sources": ["worker/migrations/**"] },
-    { "skill": "worker-cron-change", "sources": ["shared/lib/cron-jobs.ts", "shared/lib/scheduled-runner-registry.ts", "worker/wrangler.toml", "worker/wrangler.heavy.toml", "worker/src/handlers/scheduled.ts", "worker/src/lib/scheduled-slot-*.ts", "worker/src/lib/cron-lease-primitives.ts"] },
+    { "skill": "worker-cron-change", "sources": ["shared/lib/cron-jobs.ts", "shared/lib/scheduled-runner-registry.ts", "worker/wrangler.toml", "worker/wrangler.heavy.toml", "worker/src/handlers/scheduled.ts", "worker/src/lib/scheduled-slot-*.ts", "worker/src/lib/cron-lease-primitives.ts", "worker/src/handlers/scheduled/**", "worker/src/lib/cron-timeouts.ts"] },
     { "skill": "safety-score-curation", "sources": ["shared/data/safety-score-v9/**"] },
     { "skill": "stablecoin-addition-orchestrator", "sources": ["shared/data/stablecoins/canonical-order.json", "shared/data/stablecoins/listing-decisions.json"] },
     { "skill": "stablecoin-identity-contracts", "sources": ["shared/data/stablecoins/coins/**"] },
@@ -2009,11 +2009,11 @@
     { "skill": "annotations-refresh", "sources": ["shared/data/annotations/**"] },
     { "skill": "funding-update", "sources": ["shared/data/funding/donations.json"] },
     { "skill": "changelog-collect", "sources": ["src/data/changelogs/**"] },
-    { "skill": "yield-coverage-audit-drain", "sources": ["worker/src/lib/yield-config/**"] },
-    { "skill": "dependency-coverage-drain", "sources": ["docs/runbooks/artifacts/dependency-coverage-reviewed-ledger.json"] },
-    { "skill": "review-registry-renewal", "sources": ["docs/runbooks/review-renewal.md", "scripts/maintenance/weekly-curation-digest.mjs"] },
+    { "skill": "yield-coverage-audit-drain", "sources": ["worker/src/lib/yield-config/**", "worker/src/cron/yield-coverage-audit/**", "shared/lib/yield-auto-lending.ts", "shared/lib/yield-source-risk-registry.ts", "shared/data/yield-source-risk-evidence.json"] },
+    { "skill": "dependency-coverage-drain", "sources": ["docs/runbooks/artifacts/dependency-coverage-reviewed-ledger.json", "shared/data/coverage-dispositions/dependency-target-dispositions.ts", "scripts/maintenance/generate-dependency-coverage-audit.ts"] },
+    { "skill": "review-registry-renewal", "sources": ["docs/runbooks/review-renewal.md", "scripts/maintenance/weekly-curation-digest.mjs", "worker/src/lib/reserve-feed-reviews.ts", "worker/src/lib/stablecoin-publication-reviews.ts", "worker/src/lib/supply-integrity.ts", "worker/src/lib/canary-checks-depeg.ts", "worker/src/cron/sync-stablecoins/chain-dropout-seed.ts", "worker/src/cron/dex-liquidity/orchestrator-drift.ts", "worker/src/cron/dex-liquidity/reviewed-anchor-correction.ts", "shared/lib/dex-deployment-coverage.ts"] },
     { "skill": "pharos-ci-failure-triage", "sources": [".github/workflows/**"] },
-    { "skill": "ci-slim-pass", "sources": ["scripts/lib/pr-lanes.mts"] },
+    { "skill": "ci-slim-pass", "sources": ["scripts/lib/pr-lanes.mts", ".ci/test-corpus-budget.json", "scripts/lib/nightly-test-tier.mts"] },
     { "skill": "pharos-docs-sync-audit", "sources": ["docs/doc-ownership.json"] }
   ],
   "exclusions": [

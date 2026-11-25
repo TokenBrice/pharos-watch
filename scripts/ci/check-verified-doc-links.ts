@@ -18,6 +18,10 @@ Options:
 
 const NAVIGATION_SCAN_LINES = 20;
 const ROOT_PATH_PREFIXES = [
+  ".agents/",
+  ".ci/",
+  ".claude/",
+  ".codex/",
   ".github/",
   "data/",
   "docs/",
@@ -43,6 +47,12 @@ const ROOT_FILE_NAMES = new Set([
   "vitest.config.ts",
 ]);
 
+// Cited by design while absent from a clean checkout: an ignored per-checkout
+// file and a policy file that only exists once it has been qualified.
+const OPTIONAL_PATHS = new Set([
+  ".ci/safety-score-v9-resource-budget.json",
+  ".codex/hooks.json",
+]);
 
 interface HistoricalCandidate {
   revision: string;
@@ -93,13 +103,13 @@ function shouldSkipCandidate(candidate: string): boolean {
 }
 
 function isRepoPathCandidate(candidate: string): boolean {
-  if (ROOT_FILE_NAMES.has(candidate)) return true;
+  if (ROOT_FILE_NAMES.has(candidate) || /^[\w.-]+\.config\.[cm]?[jt]s$/.test(candidate)) return true;
   return ROOT_PATH_PREFIXES.some((prefix) => candidate.startsWith(prefix));
 }
 
 function normalizeCandidate(token: string): string | null {
   const stripped = trimToken(token).split("#", 1)[0];
-  if (!isRepoPathCandidate(stripped) || shouldSkipCandidate(stripped)) {
+  if (!isRepoPathCandidate(stripped) || shouldSkipCandidate(stripped) || OPTIONAL_PATHS.has(stripped)) {
     return null;
   }
   return stripped;
@@ -325,16 +335,29 @@ export function collectSourcePathViolations(filePaths: readonly string[], repoRo
 
 export interface SkillReferenceCatalog {
   npmScripts: ReadonlySet<string>;
+  /** Accepted only on a line that names the `worker` workspace. */
+  workerScripts: ReadonlySet<string>;
   artifactIds: ReadonlySet<string>;
 }
 
 function loadSkillReferenceCatalog(repoRoot: string): SkillReferenceCatalog {
-  const npmScripts = new Set<string>();
-  for (const packagePath of ["package.json", "worker/package.json"]) {
-    const manifest = JSON.parse(readFileSync(resolve(repoRoot, packagePath), "utf8")) as { scripts?: Record<string, string> };
-    for (const name of Object.keys(manifest.scripts ?? {})) npmScripts.add(name);
-  }
-  return { npmScripts, artifactIds: new Set(GENERATED_ARTIFACT_REGISTRY.map((artifact) => artifact.id)) };
+  const scriptsOf = (packagePath: string) => new Set(Object.keys(
+    (JSON.parse(readFileSync(resolve(repoRoot, packagePath), "utf8")) as { scripts?: Record<string, string> }).scripts ?? {},
+  ));
+  return {
+    npmScripts: scriptsOf("package.json"),
+    workerScripts: scriptsOf("worker/package.json"),
+    artifactIds: new Set(GENERATED_ARTIFACT_REGISTRY.map((artifact) => artifact.id)),
+  };
+}
+
+/** A name that only reaches the file through an import or a comment is not its home. */
+function declaresSymbol(source: string, symbol: string): boolean {
+  return source
+    .replace(/\bimport\s[^;]*?\sfrom\s*["'][^"']+["'];?/gs, "")
+    .replace(/\/\/.*$/gm, "")
+    .split(/[^\w$]+/)
+    .includes(symbol);
 }
 
 /**
@@ -354,21 +377,23 @@ export function collectSkillReferenceViolations(
       const where = `${label}:${index + 1}`;
       for (const [, rawName = ""] of line.matchAll(/\bnpm run ([A-Za-z0-9][\w:.-]*)/g)) {
         const name = rawName.replace(/[.:]+$/, "");
-        if (!catalog.npmScripts.has(name)) errors.push(`${where}: npm run ${name} is not a package script`);
+        if (!catalog.npmScripts.has(name) && !(catalog.workerScripts.has(name) && /\bworker\b/.test(line))) {
+          errors.push(`${where}: npm run ${name} is not a package script`);
+        }
       }
       if (line.includes("generated")) {
-        for (const [, ids = ""] of line.matchAll(/--only=([a-z0-9,-]+)/g)) {
+        for (const [, ids = ""] of line.matchAll(/--only(?:=|\s+)([a-z0-9,-]+)/g)) {
           for (const id of ids.split(",").filter(Boolean)) {
             if (!catalog.artifactIds.has(id)) errors.push(`${where}: --only=${id} is not a generated artifact id`);
           }
         }
       }
-      for (const [, symbol = "", rawPath = ""] of line.matchAll(/`([A-Za-z_$][\w$]*)` (?:in|from) `([^`\s]+)`/g)) {
+      for (const [, symbol = "", rawPath = ""] of line.matchAll(/`([A-Za-z_$][\w$]*)(?:\(\))?` (?:in|from) `([^`\s]+)`/g)) {
         const candidate = normalizeCandidate(rawPath);
         if (!candidate || !/\.(?:ts|tsx|mts|mjs|json)$/.test(candidate)) continue;
         const sourcePath = resolve(repoRoot, candidate);
         if (!existsSync(sourcePath) || !statSync(sourcePath).isFile()) continue;
-        if (!readFileSync(sourcePath, "utf8").split(/[^\w$]+/).includes(symbol)) {
+        if (!declaresSymbol(readFileSync(sourcePath, "utf8"), symbol)) {
           errors.push(`${where}: ${symbol} is not in ${candidate}`);
         }
       }
@@ -379,7 +404,8 @@ export function collectSkillReferenceViolations(
 
 export function main(repoRoot = process.cwd(), { skillsOnly = false }: { skillsOnly?: boolean } = {}): number {
   const verifiedDocFiles = skillsOnly ? [] : getVerifiedDocFiles(repoRoot);
-  const skillFiles = collectMarkdownFiles(resolve(repoRoot, ".codex/skills"));
+  const skillsRoot = resolve(repoRoot, ".codex/skills");
+  const skillFiles = existsSync(skillsRoot) ? collectMarkdownFiles(skillsRoot) : [];
   const errors = [
     ...collectLinkViolations([...verifiedDocFiles, ...skillFiles], repoRoot),
     ...collectNavigationBlockViolations(verifiedDocFiles, repoRoot),
