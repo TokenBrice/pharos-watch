@@ -151,6 +151,11 @@ describe("curated on-chain supply paths", () => {
     { id: "eurcv-societe-generale-forge", chains: ["ethereum", "xrpl", "stellar", "solana"], zero: [] },
     { id: "zchf-frankencoin", chains: ["ethereum", "optimism", "gnosis", "base", "arbitrum", "polygon", "avalanche", "sonic"], zero: ["avalanche", "sonic"] },
     { id: "euri-banking-circle", chains: ["ethereum", "bsc"], zero: [] },
+    { id: "cadd-cad-digital", chains: ["ethereum", "base", "solana", "tempo"], zero: ["tempo"] },
+    { id: "dgld-gold-token-sa", chains: ["ethereum", "base", "solana"], zero: [] },
+    { id: "jpym-mento", chains: ["celo", "monad"], zero: [], canonical: "celo" },
+    { id: "mxnb-juno", chains: ["ethereum", "polygon", "arbitrum", "avalanche", "base", "arc"], zero: [] },
+    { id: "witry-brix", chains: ["ethereum", "megaeth", "robinhood"], zero: ["robinhood"], canonical: "ethereum" },
   ])("requires the complete reviewed NAV roster and accounting policy for $id", ({ id, chains, zero, canonical }) => {
     const meta = TRACKED_META_BY_ID.get(id)!;
     const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta);
@@ -411,7 +416,6 @@ describe("curated on-chain supply paths", () => {
       canonical: "ethereum", endpoints: { ink: "https://rpc-gel.inkonchain.com" } },
     { id: "syrupusdc-maple", chains: ["ethereum", "base", "arbitrum", "solana", "ink", "monad", "robinhood", "tempo", "arc"],
       canonical: "ethereum", mint: "AvZZF1YaZDziPY2RCK4oJrRVrbN3mTD9NL24hPeaZeUj", endpoints: { monad: "https://rpc.monad.xyz" } },
-    { id: "witry-brix", chains: ["ethereum", "megaeth"], canonical: "ethereum" },
     { id: "brlv-crown", chains: ["base", "ethereum", "tempo"], zero: ["ethereum", "tempo"],
       endpoints: { base: undefined, ethereum: undefined, tempo: "https://rpc.tempo.xyz" } },
     { id: "syzusd-yuzu", chains: ["plasma", "ethereum", "monad", "hyperevm", "sei", "pharos", "berachain", "aptos", "base"], canonical: "plasma",
@@ -661,16 +665,7 @@ it("fails a canonical roster closed on an unselected registered deployment unles
   })).not.toBeNull();
 });
 
-const WITHHELD_INCOMPLETE_ROSTER_IDS = new Set([
-  "bib01-backed", // registered fantom deployment not in aggregateContracts
-  "cadd-cad-digital", // registered solana and tempo deployments not in aggregateContracts
-  "dgld-gold-token-sa", // registered solana deployment not in aggregateContracts
-  "jpym-mento", // registered monad deployment not in aggregateContracts
-  "mxnb-juno", // registered arc deployment not in aggregateContracts
-  "sdusd-dtrinity", // registered sonic deployment not in aggregateContracts
-  "vnxau-vnx", // registered stellar and tezos (no probe family) deployments not in aggregateContracts
-  "witry-brix", // registered robinhood deployment not in aggregateContracts
-]);
+const WITHHELD_INCOMPLETE_ROSTER_IDS = new Set<string>();
 
 it("keeps every tracked curated roster either complete or explicitly excused across the whole registry", () => {
   const unresolved: string[] = [];
@@ -723,8 +718,9 @@ it("fails a summed aggregate closed when the registry adds a deployment before p
   })).toBeNull();
 });
 
-it.each(["vnxau-vnx", "dgld-gold-token-sa", "jpym-mento"])(
-  "withholds the incomplete summed roster for %s until every tracked deployment has reviewed accounting", (id) => {
+it.each(["vnxau-vnx", "bib01-backed", "sdusd-dtrinity"])(
+  "leaves %s without a curated aggregate roster (unsupported Tezos probe family or frozen status)", (id) => {
+    expect(REVIEWED_ONCHAIN_SUPPLY_PLANS[id]).toBeUndefined();
     expect(selectCuratedAggregateOnchainSupplyProbeContracts(TRACKED_META_BY_ID.get(id)!)).toBeNull();
   },
 );
