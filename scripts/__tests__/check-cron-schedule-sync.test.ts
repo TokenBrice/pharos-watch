@@ -3,10 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import {
-  evaluateCronScheduleSync,
-  parseWranglerCronTriggers,
-} from "../ci/check-cron-schedule-sync";
+import { evaluateCadenceFreshnessAuthority, evaluateCronScheduleSync, parseWranglerCronTriggers, scanFreshnessClockSource } from "../ci/check-cron-schedule-sync";
+import { compareBaselineRatchet } from "../lib/static-guard-baseline.mjs";
 
 import { replaceWranglerCronTriggers, syncWranglerCronTriggers } from "../maintenance/generate-wrangler-cron-triggers";
 
@@ -223,5 +221,16 @@ describe("check-cron-schedule-sync", () => {
     });
     expect(report.failed).toBe(true);
     expect(report.misownedWranglerSchedules).toEqual(["heavy:1 * * * *"]);
+  });
+
+  it("enforces G2 authority, hygiene, and ratchet", () => {
+    const ev = evaluateCadenceFreshnessAuthority, sub = "consumer-admission-below-cadence", k = "g2-freshness-clock-hygiene", r = "adhoc-age-clamp";
+    expect(ev().failed).toBe(false);
+    expect(ev({ extraConsumerBudgets: [{ consumer: "t", producerJob: "sync-stablecoins", maxAgeSec: 300 }] }).violations[0]?.rule).toBe(sub);
+    expect(ev({ sourceOverrides: { "worker/src/lib/safety-score-v9/supply-attribution-capture.ts": "export const x = 1;" } }).violations[0]?.rule).toBe(sub);
+    expect(scanFreshnessClockSource("worker/src/cron/s.ts", `const a=Math.max(0,nowSec-r.updatedAt),b=Math.max(0,observedAt-prevObservedAt),c=Math.max(0,Date.now()-startedAtMs);\n// pharos-allow-freshness-clamp: telemetry\nconst d=Math.max(0,nowSec-q.createdAt),e=API_FRESHNESS_MAX_AGE_SEC.stablecoins,h={"X-Data-Freshness":"stale"};`).map((v) => v.rule)).toEqual([r, "advisory-budget-as-admission", "hardcoded-stale-header"]);
+    const g = { "g1-fail-open-reads": {}, [k]: { a: { [r]: 1 } }, "g3-sql-d1-safety": {} };
+    expect(compareBaselineRatchet({ schemaVersion: 1, guards: g }, { schemaVersion: 1, guards: { ...g, [k]: { a: { [r]: 2 } } } })).toHaveLength(1);
+    expect(compareBaselineRatchet({ schemaVersion: 1, guards: g }, { schemaVersion: 1, guards: { ...g, [k]: {} } })).toEqual([]);
   });
 });

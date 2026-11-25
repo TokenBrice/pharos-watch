@@ -11,7 +11,15 @@ import { V9_CONTINUATION_CONNECTION_BUDGET } from "@shared/lib/v9-continuation-b
 import { SCHEDULED_SLOT_PLANS, type ScheduledWorkerRole } from "@shared/lib/scheduled-runner-registry";
 import { SLOT_CATCH_UP_SCHEDULE_KEYS } from "@shared/lib/scheduled-slot-catch-up-policy";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
-import { evaluateCronScheduleSync, parseWranglerCronTriggers, printCronScheduleSyncReport } from "./check-cron-schedule-sync";
+import {
+  DEFAULT_FRESHNESS_HYGIENE_ROOTS,
+  evaluateCadenceFreshnessAuthority,
+  evaluateCronScheduleSync,
+  parseWranglerCronTriggers,
+  printCadenceFreshnessReports,
+  printCronScheduleSyncReport,
+  scanFreshnessClockHygiene,
+} from "./check-cron-schedule-sync";
 import type {
   CronConnectionBudgetConfigForCheck,
   CronConnectionBudgetEntryForCheck,
@@ -345,7 +353,10 @@ if (isMainModule()) {
     },
   });
   printCronScheduleSyncReport(topology);
-  if (topology.failed) process.exit(1);
+  const authority = evaluateCadenceFreshnessAuthority();
+  const hygiene = scanFreshnessClockHygiene(DEFAULT_FRESHNESS_HYGIENE_ROOTS);
+  const freshnessExit = printCadenceFreshnessReports(authority, hygiene);
+  if (topology.failed || freshnessExit !== 0) process.exit(1);
   const report = evaluateCronConnectionBudget();
   printReport(report);
   if (report.failed) {

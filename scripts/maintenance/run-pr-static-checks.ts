@@ -27,6 +27,7 @@ import {
   type OutputWriter,
 } from "../lib/report-violations.mts";
 import { PATH_FAMILIES, enumerateDocReferences, matchesOwnershipGlob } from "../lib/doc-ownership-registry.mts";
+import { hasStaticGuardBaselineEntry } from "../lib/static-guard-baseline.mjs";
 import { runDirectCli } from "../lib/cli-args.mjs";
 import { PR_DOC_COMMANDS, type PrLaneCommandDefinition } from "../lib/pr-lanes.mts";
 import { SENSITIVE_COPY_ROOTS } from "../ci/check-sensitive-page-copy.ts";
@@ -301,7 +302,13 @@ export function buildPrStaticCheckPlan(
 ) {
   const { classification, commands: baselineChecks } = selectPrBaselineChecks(changedFiles);
   const commands: PrStaticCheckCommand[] = [
-    { name: changedFiles.some((file) => file === "eslint.config.mjs") ? "lint" : "lint:changed" },
+    {
+      name: changedFiles.some((file) =>
+        file === "eslint.config.mjs" || file === ".ci/static-guard-baselines.json"
+      )
+        ? "lint"
+        : "lint:changed",
+    },
   ];
   if (selectsRootTypecheck(changedFiles, cwd)) commands.push({ name: "typecheck" });
   commands.push(
@@ -334,6 +341,32 @@ export function buildPrStaticCheckPlan(
   }
   if (changedFiles.some(isHomepageCopyPath)) {
     commands.push({ name: "check:homepage-health-copy" });
+  }
+  const hasSqlSafetyScriptTrigger = changedFiles.some((file) =>
+    file === "scripts/ci/check-sql-interpolation-safety.ts"
+    || file === "scripts/lib/static-guard-baseline.mjs"
+    || file === "scripts/lib/static-guard-baseline.d.mts"
+    || file === ".ci/static-guard-baselines.json"
+    || hasStaticGuardBaselineEntry(file, cwd)
+    || (/^(?:scripts|worker\/scripts)\//.test(file)
+      && ROOT_TYPECHECK_SOURCE_EXTENSIONS.test(file)
+      && !STRUCTURAL_TEST_PATH_PATTERNS.some((pattern) => pattern.test(file))),
+  );
+  if (hasSqlSafetyScriptTrigger && !baselineChecks.some((command) => command.name === "check:sql-safety")) {
+    commands.push({ name: "check:sql-safety" });
+  }
+  const hasCronGuardScriptTrigger = changedFiles.some((file) =>
+    file === "scripts/ci/check-cron-schedule-sync.ts"
+    || file === "scripts/ci/check-cron-connection-budget.ts"
+    || file === "scripts/lib/static-guard-baseline.mjs"
+    || file === "scripts/lib/static-guard-baseline.d.mts"
+    || file === ".ci/static-guard-baselines.json"
+    || hasStaticGuardBaselineEntry(file, cwd)
+    || (file.startsWith("scripts/maintenance/")
+      && !STRUCTURAL_TEST_PATH_PATTERNS.some((pattern) => pattern.test(file))),
+  );
+  if (hasCronGuardScriptTrigger && !baselineChecks.some((command) => command.name === "check:cron-connections")) {
+    commands.push({ name: "check:cron-connections" });
   }
   commands.push(...baselineChecks);
 

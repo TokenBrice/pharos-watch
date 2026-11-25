@@ -6,6 +6,7 @@ import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 import security from "eslint-plugin-security";
 import { HOMEPAGE_COPY_GLOBS, HOMEPAGE_COPY_IGNORES } from "./scripts/lib/homepage-copy-policy.mjs";
+import { getFileBaselineRules, getStaticGuardBaselineDigest } from "./scripts/lib/static-guard-baseline.mjs";
 
 const layoutScriptRestrictedSyntax = [
   {
@@ -596,6 +597,297 @@ const pharosBoundaryPlugin = {
         };
       },
     },
+    "no-fail-open-reads": {
+      meta: {
+        type: "problem",
+        schema: [
+          {
+            type: "object",
+            properties: {
+              scope: { enum: ["worker-shared", "frontend"] },
+            },
+            additionalProperties: false,
+          },
+        ],
+        messages: {
+          jsonEmptyFallback: "ADR-28/29: do not coerce {{callee}}() failure to an empty collection; preserve unavailable state or annotate with // pharos-allow-fail-open: <reason>.",
+          jsonStringArrayFallback: "ADR-28/29: parseJsonStringArray() silently defaults corrupt/absent JSON to []; decode via parseJson/parseJsonObjectWithSchema or annotate with // pharos-allow-fail-open: <reason>.",
+          catchFailOpenReturn: "ADR-28/29: catch handler returns fail-open literal {{literal}}; propagate failure or return an explicit unavailable state, or annotate with // pharos-allow-fail-open: <reason>.",
+          formatterZeroFallback: "ADR-28: do not coalesce unavailable value to 0 inside {{callee}}(); render an unavailable state instead, or annotate with // pharos-allow-fail-open: <reason>.",
+          placeholderFallback: "ADR-28/29: do not coalesce unavailable value to semantic placeholder {{literal}}; preserve explicit unavailable state or annotate with // pharos-allow-fail-open: <reason>.",
+          workerRedirectError: "Cloudflare Workers throws TypeError on redirect: \"error\" before issuing the request; use redirect: \"manual\" with bounded non-2xx rejection.",
+          missingEscapeReason: "pharos-allow-fail-open annotation requires an explicit reason of at least 8 characters.",
+          staleBaseline: "Shrink-only baseline in .ci/static-guard-baselines.json allows {{allowed}} {{rule}} site(s) here, but only {{actual}} remain; lower or remove the entry.",
+        },
+      },
+      create(context) {
+        const scope = context.options[0]?.scope ?? "worker-shared";
+        const isWorkerShared = scope === "worker-shared";
+        const relPath = relative(repoRoot, context.filename).replaceAll("\\", "/");
+        const isWorkerSrc = relPath.startsWith("worker/src/");
+        const isProseSurface =
+          relPath.startsWith("worker/src/cron/daily-digest/")
+          || relPath.startsWith("worker/src/cron/telegram/")
+          || relPath.startsWith("worker/src/telegram/");
+        const sourceCode = context.sourceCode;
+
+        const JSON_PARSE_CALLEES = new Set(["tryParseJson", "parseJsonObject", "parseJsonObjectWithSchema"]);
+        const FAIL_OPEN_STRING_LITERALS = new Set(["ok", "healthy", "fresh"]);
+        const PLACEHOLDER_LITERALS = new Set(["None", "NR", "All clear"]);
+        const FORMATTER_NAME_PATTERN = /^(?:formatCurrency|formatPercent|formatUsd|formatCompactUsd|formatSignedCurrency|formatBps|formatDeviationBps|formatSignedPercent|formatCompactCurrency)/;
+        const NEGATIVE_PREDICATE_NAME_PATTERN = /^(?:hasUnreviewed|hasInvalid|hasError|hasFailed|isInvalid|isBroken|isCorrupt|isStale|isUnsafe|isFailed|shouldReject|shouldSkip)/i;
+        const ESCAPE_COMMENT_PATTERN = /^\s*pharos-allow-fail-open:(.*)$/;
+        const MIN_ESCAPE_REASON_LEN = 8;
+
+        const findingsByRule = new Map();
+
+        function unwrap(node) {
+          let cur = node;
+          while (cur && (
+            cur.type === "TSAsExpression"
+            || cur.type === "TSSatisfiesExpression"
+            || cur.type === "TSNonNullExpression"
+            || cur.type === "TSTypeAssertion"
+          )) {
+            cur = cur.expression;
+          }
+          return cur;
+        }
+
+        function describeFailOpenLiteral(raw) {
+          const node = unwrap(raw);
+          if (!node) return null;
+          if (node.type === "Literal") {
+            if (node.value === 0) return "0";
+            if (node.value === true) return "true";
+            if (typeof node.value === "string" && FAIL_OPEN_STRING_LITERALS.has(node.value)) {
+              return JSON.stringify(node.value);
+            }
+          }
+          if (node.type === "ArrayExpression" && node.elements.length === 0) return "[]";
+          if (node.type === "ObjectExpression" && node.properties.length === 0) return "{}";
+          return null;
+        }
+
+        function isFunctionNode(node) {
+          return node?.type === "FunctionDeclaration"
+            || node?.type === "FunctionExpression"
+            || node?.type === "ArrowFunctionExpression";
+        }
+
+        function isStatementNode(node) {
+          return Boolean(node && (
+            node.type.endsWith("Statement")
+            || node.type === "VariableDeclaration"
+            || node.type === "CatchClause"
+          ));
+        }
+
+        function checkEscapeComment(target) {
+          let cur = target;
+          while (cur && cur.type !== "BlockStatement" && cur.type !== "Program") {
+            const comments = sourceCode.getCommentsBefore(cur);
+            for (const comment of comments) {
+              if (comment.type !== "Line") continue;
+              const match = ESCAPE_COMMENT_PATTERN.exec(comment.value);
+              if (!match) continue;
+              if (match[1].trim().length >= MIN_ESCAPE_REASON_LEN) return "allowed";
+              return { invalidComment: comment };
+            }
+            if (cur.type === "ExportNamedDeclaration" || cur.type === "ExportDefaultDeclaration") break;
+            if (cur.type === "CatchClause" || cur.type === "Property" || isStatementNode(cur)) {
+              if (cur.parent?.type === "ExportNamedDeclaration" || cur.parent?.type === "ExportDefaultDeclaration") {
+                cur = cur.parent;
+                continue;
+              }
+              break;
+            }
+            if (cur.type === "CallExpression" && cur.callee?.type === "MemberExpression"
+              && !cur.callee.computed && cur.callee.property?.name === "catch") break;
+            if (isFunctionNode(cur)) break;
+            cur = cur.parent;
+          }
+          return "none";
+        }
+
+        function recordFinding(messageId, node, data, fallbackCommentNode = null) {
+          let escape = checkEscapeComment(node);
+          if (escape === "none" && fallbackCommentNode) {
+            escape = checkEscapeComment(fallbackCommentNode);
+          }
+          if (escape === "allowed") return;
+          if (typeof escape === "object" && escape.invalidComment) {
+            context.report({ loc: escape.invalidComment.loc, messageId: "missingEscapeReason" });
+            return;
+          }
+          let list = findingsByRule.get(messageId);
+          if (!list) {
+            list = [];
+            findingsByRule.set(messageId, list);
+          }
+          list.push({ node, data });
+        }
+
+        function isFailClosedTrueContext(catchOrFnNode) {
+          let cur = catchOrFnNode;
+          while (cur && !isFunctionNode(cur)) {
+            cur = cur.parent;
+          }
+          if (!cur) return false;
+          // Inside array.some(...) checking for mismatches/defects, returning true fails closed.
+          if (cur.parent?.type === "CallExpression"
+            && cur.parent.arguments[0] === cur
+            && cur.parent.callee?.type === "MemberExpression"
+            && !cur.parent.callee.computed
+            && cur.parent.callee.property?.name === "some") {
+            return true;
+          }
+          const fnName = cur.id?.name
+            ?? (cur.parent?.type === "VariableDeclarator" && cur.parent.id?.type === "Identifier" ? cur.parent.id.name : null)
+            ?? (cur.parent?.type === "MethodDefinition" && cur.parent.key?.type === "Identifier" ? cur.parent.key.name : null);
+          return Boolean(fnName && NEGATIVE_PREDICATE_NAME_PATTERN.test(fnName));
+        }
+
+        function walkBlockForFailOpenReturns(rootNode, contextNode) {
+          const stack = [rootNode];
+          while (stack.length > 0) {
+            const cur = stack.pop();
+            if (!cur || typeof cur !== "object") continue;
+            if (cur !== rootNode && isFunctionNode(cur)) continue;
+            if (cur.type === "ReturnStatement" && cur.argument) {
+              const literal = describeFailOpenLiteral(cur.argument);
+              if (literal !== null) {
+                if (literal === "true" && isFailClosedTrueContext(contextNode)) continue;
+                recordFinding("catchFailOpenReturn", cur, { literal }, contextNode);
+              }
+              continue;
+            }
+            const keys = sourceCode.visitorKeys[cur.type] ?? [];
+            for (const key of keys) {
+              const value = cur[key];
+              if (Array.isArray(value)) {
+                for (let i = value.length - 1; i >= 0; i--) {
+                  if (value[i] && typeof value[i].type === "string") stack.push(value[i]);
+                }
+              } else if (value && typeof value.type === "string") {
+                stack.push(value);
+              }
+            }
+          }
+        }
+
+        return {
+          LogicalExpression(node) {
+            if (node.operator !== "??" && node.operator !== "||") return;
+            const right = unwrap(node.right);
+            if (!right) return;
+
+            // G1-a: JSON parse empty collection fallback
+            if (isWorkerShared) {
+              const left = unwrap(node.left);
+              if (left?.type === "CallExpression" && left.callee?.type === "Identifier"
+                && JSON_PARSE_CALLEES.has(left.callee.name)) {
+                const isEmptyCollection =
+                  (right.type === "ObjectExpression" && right.properties.length === 0)
+                  || (right.type === "ArrayExpression" && right.elements.length === 0);
+                if (isEmptyCollection) {
+                  recordFinding("jsonEmptyFallback", node, { callee: left.callee.name });
+                }
+              }
+            }
+
+            // G1-d(2): Semantic placeholder fallback (O2(a): exempt digest/Telegram prose for "None"/"NR")
+            if (right.type === "Literal" && typeof right.value === "string" && PLACEHOLDER_LITERALS.has(right.value)) {
+              if (isProseSurface && (right.value === "None" || right.value === "NR")) return;
+              recordFinding("placeholderFallback", node, { literal: JSON.stringify(right.value) });
+            }
+          },
+          CallExpression(node) {
+            // G1-b: silent parseJsonStringArray default
+            if (isWorkerShared && relPath !== "worker/src/lib/json-parse.ts"
+              && node.callee?.type === "Identifier" && node.callee.name === "parseJsonStringArray") {
+              recordFinding("jsonStringArrayFallback", node);
+            }
+
+            // G1-c(2): .catch(() => failOpenLiteral)
+            if (node.callee?.type === "MemberExpression" && !node.callee.computed
+              && node.callee.property?.type === "Identifier" && node.callee.property.name === "catch"
+              && node.arguments.length >= 1) {
+              const handler = node.arguments[0];
+              if (handler?.type === "ArrowFunctionExpression" || handler?.type === "FunctionExpression") {
+                if (handler.body.type === "BlockStatement") {
+                  walkBlockForFailOpenReturns(handler.body, handler);
+                } else {
+                  const literal = describeFailOpenLiteral(handler.body);
+                  if (literal !== null && !(literal === "true" && isFailClosedTrueContext(handler))) {
+                    recordFinding("catchFailOpenReturn", node, { literal });
+                  }
+                }
+              }
+            }
+
+            // G1-d(1): formatter zero coercion
+            const calleeName = node.callee?.type === "Identifier"
+              ? node.callee.name
+              : node.callee?.type === "MemberExpression" && !node.callee.computed && node.callee.property?.type === "Identifier"
+                ? node.callee.property.name
+                : null;
+            if (calleeName && FORMATTER_NAME_PATTERN.test(calleeName)) {
+              for (const arg of node.arguments) {
+                const unwrappedArg = unwrap(arg);
+                if (unwrappedArg?.type === "LogicalExpression"
+                  && (unwrappedArg.operator === "??" || unwrappedArg.operator === "||")) {
+                  const right = unwrap(unwrappedArg.right);
+                  if (right?.type === "Literal" && right.value === 0) {
+                    recordFinding("formatterZeroFallback", unwrappedArg, { callee: calleeName });
+                  }
+                }
+              }
+            }
+          },
+          CatchClause(node) {
+            // G1-c(1): try/catch fail-open return
+            if (node.body) {
+              walkBlockForFailOpenReturns(node.body, node);
+            }
+          },
+          Property(node) {
+            // G1-e: Cloudflare Workers unsupported redirect: "error"
+            if (!isWorkerShared || !isWorkerSrc) return;
+            const isRedirectKey =
+              (!node.computed && node.key?.type === "Identifier" && node.key.name === "redirect")
+              || (node.key?.type === "Literal" && node.key.value === "redirect");
+            if (!isRedirectKey) return;
+            const value = unwrap(node.value);
+            if (value?.type === "Literal" && value.value === "error") {
+              recordFinding("workerRedirectError", node);
+            }
+          },
+          "Program:exit"(programNode) {
+            const baselineRules = getFileBaselineRules("g1-fail-open-reads", relPath, repoRoot);
+            for (const [messageId, list] of findingsByRule) {
+              const allowed = baselineRules[messageId] ?? 0;
+              if (list.length > allowed) {
+                for (const finding of list.slice(allowed)) {
+                  context.report({ node: finding.node, messageId, data: finding.data });
+                }
+              }
+            }
+            for (const [ruleId, allowed] of Object.entries(baselineRules)) {
+              const actual = findingsByRule.get(ruleId)?.length ?? 0;
+              if (actual < allowed) {
+                context.report({
+                  node: programNode,
+                  loc: { line: 1, column: 0 },
+                  messageId: "staleBaseline",
+                  data: { rule: ruleId, allowed: String(allowed), actual: String(actual) },
+                });
+              }
+            }
+          },
+        };
+      },
+    },
   },
 };
 
@@ -729,6 +1021,32 @@ const eslintConfig = defineConfig([
     ],
     plugins: { pharos: pharosBoundaryPlugin },
     rules: { "pharos/no-local-helper-copies": "error" },
+  },
+  {
+    // Fix-cause static guard G1 (#2305, ADR-28/29): reject new fail-open reads,
+    // silent JSON defaults, formatter zero-coercion, semantic placeholders, and
+    // Workers-unsupported redirect:"error". Pre-existing HEAD sites live in the
+    // shrink-only baseline ratchet (.ci/static-guard-baselines.json).
+    files: ["worker/src/**/*.{ts,tsx}", "shared/lib/**/*.{ts,tsx}"],
+    ignores: [
+      "**/__tests__/**", "**/*.{test,spec}.{ts,tsx}",
+      "**/test-helpers/**", "**/test-utils/**", "**/fixtures/**", "**/__mocks__/**",
+      "**/*test-support.*",
+    ],
+    plugins: { pharos: pharosBoundaryPlugin },
+    settings: { pharosStaticGuardBaselineDigest: getStaticGuardBaselineDigest(repoRoot) },
+    rules: { "pharos/no-fail-open-reads": ["error", { scope: "worker-shared" }] },
+  },
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: [
+      ...DESIGN_TEST_IGNORES,
+      "**/test-helpers/**", "**/test-utils/**", "**/fixtures/**", "**/__mocks__/**",
+      "**/*test-support.*", "src/generated/**", "src/test/**",
+    ],
+    plugins: { pharos: pharosBoundaryPlugin },
+    settings: { pharosStaticGuardBaselineDigest: getStaticGuardBaselineDigest(repoRoot) },
+    rules: { "pharos/no-fail-open-reads": ["error", { scope: "frontend" }] },
   },
   {
     // Worker tests additionally sign fixtures with throwaway private keys.
