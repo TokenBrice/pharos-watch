@@ -104,6 +104,7 @@ export async function handleScheduledEvent(
         if (!summary) return;
         if (summary.reserveTailSettled) runtime.reserveTailSettled = true;
         runtime.pendingReserveContinuation = summary.reserveContinuation ?? runtime.pendingReserveContinuation;
+        runtime.pendingV9Continuation = summary.v9Continuation ?? runtime.pendingV9Continuation;
         return {
           ...summary,
           fetchBudget: runtime.fetchBudget?.snapshot() ?? null,
@@ -138,6 +139,10 @@ export async function handleScheduledEvent(
   // settled. Sending from continueLiveReserveCheckpoint would race this fence.
   if (slotResult.resultStatus !== "error") {
     await sendReserveContinuation(env, runtime.pendingReserveContinuation, runtime.deadline);
+    if (runtime.pendingV9Continuation) {
+      const { sendV9Continuation } = await import("../lib/v9-continuation-send");
+      await sendV9Continuation(env, runtime.pendingV9Continuation, runtime.deadline);
+    }
   }
   if (runtime.reserveTailSettled) await refreshReserveReliabilityAfterTail(env, runtime.deadline);
   if (slotResult.resultStatus === "error") {

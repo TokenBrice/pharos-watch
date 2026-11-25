@@ -1,4 +1,5 @@
 import type { ReserveContinuationMessage } from "@shared/types/reserve-continuation";
+import type { V9ContinuationMessage } from "@shared/types/v9-continuation";
 import type { CronScheduleKey } from "@shared/lib/cron-jobs";
 import { getScheduledTaskDescriptor, SCHEDULED_SLOT_PLANS, type ScheduledWorkerRole } from "@shared/lib/scheduled-runner-registry";
 import {
@@ -112,6 +113,7 @@ export interface ScheduledRuntimeContext {
   fetchBudget?: ScheduledFetchBudget;
   recoveryCheckpoint?: ScheduledRecoveryCheckpoint;
   pendingReserveContinuation?: ReserveContinuationMessage;
+  pendingV9Continuation?: V9ContinuationMessage;
   reserveTailSettled?: boolean;
   reserveQueueMetadata?: Record<string, string | number>;
   /** Set only for a Queue-executed catch-up of this missed slot. */

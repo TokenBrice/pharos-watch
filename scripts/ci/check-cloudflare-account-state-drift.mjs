@@ -172,6 +172,8 @@ export function compareCloudflareAccountState(manifest, liveState) {
   addValueDrift(drift, "heavyWorker.workflowAbsent", manifest.heavyWorker.workflowAbsent, heavy.workflowAbsent);
   addValueDrift(drift, "heavyWorker.workflowBinding", false, heavy.workflowBinding);
   addValueDrift(drift, "heavyWorker.publicWorkflowBinding", false, heavy.publicWorkflowBinding);
+  addValueDrift(drift, "heavyWorker.v9QueueBinding", true, heavy.v9QueueBinding);
+  addValueDrift(drift, "heavyWorker.publicV9QueueBinding", false, heavy.publicV9QueueBinding);
   if (asArray(heavy.routes).length > 0) drift.push("heavyWorker.routes: expected none");
   if (workerDomains.some((domain) => domain?.service === manifest.heavyWorker.scriptName)) {
     drift.push("heavyWorker.customDomains: expected none");
@@ -480,6 +482,10 @@ export async function fetchCloudflareAccountState({ manifest, apiToken, zoneSett
         && (binding.name === heavyConfig.workflowBinding || binding.workflow_name === heavyConfig.workflowName)),
       publicWorkflowBinding: publicBindings.some((binding) => binding?.type === "workflow"
         && (binding.name === heavyConfig.workflowBinding || binding.workflow_name === heavyConfig.workflowName)),
+      v9QueueBinding: heavyBindings.some((binding) => binding?.type === "queue"
+        && binding.name === heavyConfig.v9QueueBinding && binding.queue_name === heavyConfig.v9QueueName),
+      publicV9QueueBinding: publicBindings.some((binding) => binding?.type === "queue"
+        && (binding.name === heavyConfig.v9QueueBinding || binding.queue_name === heavyConfig.v9QueueName)),
       workersDev: heavySubdomain?.enabled ?? null,
       previewUrls: heavySubdomain?.previews_enabled ?? null,
       routes: asArray(routes).filter((route) => route?.script === heavyConfig.scriptName)

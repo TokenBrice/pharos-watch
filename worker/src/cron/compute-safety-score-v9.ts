@@ -45,6 +45,7 @@ import {
   type SafetyScoreV9TransferMaterialityGeneration,
 } from "../lib/safety-score-v9/transfer-materiality";
 import type { V9PublicationHoldReason } from "@shared/types/report-cards-v9";
+import type { V9ContinuationMessage } from "@shared/types/v9-continuation";
 import type { V9PublicationCoverageFloor } from "../lib/safety-score-v9/publication-assessment";
 import { computeReportCardsRegistryFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
@@ -210,9 +211,85 @@ export async function computeSafetyScoreV9(
   options: {
     captureArchiveBucket?: R2Bucket; captureArchiveContext?: ExecutionContext; workerMetadata?: V9WorkerProvenance;
     executionWindow?: V9ExecutionWindow; deferPublicMaterialization?: boolean;
+    queueMode?: "on" | "off";
+    isSecondChance?: boolean;
+    slotStartedAt?: number;
+    sourceInvocationId?: string;
+    maxChunkAssets?: number;
+    onContinuation?: (message: V9ContinuationMessage) => void;
+    onBeforeEvaluateAsset?: (assetId: string, chunkIndex: number, quarantineEpoch: number) => void;
   } = {},
 ): Promise<CronResult> {
   throwIfAborted(signal);
+  if (options.queueMode === "on" && options.isSecondChance === true) {
+    const { resumeActiveChunkedV9Evaluation } = await import("../lib/safety-score-v9/chunked-eval-pipeline");
+    const sourceInvocationId =
+      options.sourceInvocationId ?? `scheduled:v9PublicationOffset:${options.slotStartedAt ?? Math.floor(Date.now() / 1_000)}`;
+    const resumed = await resumeActiveChunkedV9Evaluation({
+      db,
+      sourceInvocationId,
+      options: {
+        captureArchiveBucket: options.captureArchiveBucket,
+        captureArchiveContext: options.captureArchiveContext,
+        deadlineMs: options.executionWindow?.deadlineMs ?? Date.now() + 180_000,
+        signal,
+        onBeforeEvaluateAsset: options.onBeforeEvaluateAsset,
+      },
+    });
+    if (resumed !== null) {
+      if (resumed.result.nextMessage) {
+        options.onContinuation?.(resumed.result.nextMessage);
+      }
+      const res = resumed.result;
+      const isPublished =
+        res.status === "published-pending-materialize" || res.status === "published-materialized";
+      const isHeld = res.status === "held";
+      return {
+        status: isHeld ? "degraded" : "ok",
+        itemCount: isPublished ? res.activeAssets : 0,
+        metadata: JSON.stringify({
+          mode: "queue-resume",
+          runId: resumed.runId,
+          stage: res.stage,
+          outcome: res.status,
+          ...(isHeld ? { reason: "v9-publication-held" } : {}),
+          ...(res.nextMessage ? { nextStage: res.nextMessage.stage, nextChunkIndex: res.nextMessage.chunkIndex } : {}),
+          ...(isPublished ? { publicationGenerationId: res.publicationGenerationId } : {}),
+          ...(isHeld ? { attemptedPublicationGenerationId: res.attemptedPublicationGenerationId, holdReasonCodes: summarizeHoldReasons(res.reasons) } : {}),
+        }),
+        productivity: {
+          productive: isPublished || res.status === "completed",
+          reason: isPublished
+            ? res.outcome === "partial"
+              ? "v9-publication-published-partial"
+              : "v9-publication-published"
+            : isHeld
+              ? "v9-publication-held"
+              : `v9-chunked-resume-${res.stage}`,
+          ...(isPublished
+            ? {
+                publications: [
+                  {
+                    surface: "safety-score-v9" as const,
+                    generationId: res.publicationGenerationId,
+                    publishedAt: Math.floor(Date.now() / 1_000),
+                    candidateRows: res.activeAssets,
+                    publishedRows: res.activeAssets,
+                    expectedRows: res.activeAssets,
+                    artifactCacheKey: SAFETY_SCORE_V9_CACHE_KEYS.publication,
+                    validationSummary: {
+                      outcome: res.outcome,
+                      quarantinedAssetCount: res.quarantineCount,
+                      affectedAssetCount: res.affectedAssetCount,
+                    },
+                  },
+                ],
+              }
+            : {}),
+        },
+      };
+    }
+  }
   const catalogAdmission = assessSafetyScoreV9ResourceBudget({
     catalogAssets: TRACKED_SOURCE_COINS.length, activeAssets: 0, inputBytes: null,
   });
@@ -599,6 +676,61 @@ export async function computeSafetyScoreV9(
   baseArtifact = null;
   fixedInput = null;
   v9SeedInput = null;
+
+  if (options.queueMode === "on") {
+    const seedSignal = signal ?? new AbortController().signal;
+    const enrichedInput = await enrichCapturedInput(fixedInputOwner.value!, seedSignal);
+    fixedInputOwner.value = null;
+    const { seedChunkedV9Evaluation } = await import("../lib/safety-score-v9/chunked-eval-pipeline");
+    const slotStartedAt = options.slotStartedAt ?? options.executionWindow?.slotStartedAtSec ?? Math.floor(Date.now() / 1_000);
+    const sourceInvocationId = options.sourceInvocationId ?? `scheduled:v9PublicationOffset:${slotStartedAt}`;
+    const seeded = await seedChunkedV9Evaluation({
+      db,
+      fixedInput: enrichedInput,
+      fixedInputCacheValue,
+      transferMaterialityGeneration,
+      slotStartedAt,
+      sourceInvocationId,
+      workerVersion: worker.workerVersion,
+      deferPublicMaterialization: options.deferPublicMaterialization ?? true,
+      maxChunkAssets: options.maxChunkAssets,
+      signal: seedSignal,
+    });
+    options.onContinuation?.(seeded.nextMessage);
+    const supplyAttributionGenerationDegraded =
+      supplyAttributionGenerationState.status === "incompatible" ||
+      supplyAttributionGenerationState.status === "unavailable";
+    return {
+      status: supplyAttributionGenerationDegraded ? "degraded" : "ok",
+      itemCount: 0,
+      metadata: JSON.stringify({
+        ...(supplyAttributionGenerationDegraded
+          ? { reason: `supply-attribution-generation-${String(supplyAttributionGenerationState.status)}` }
+          : {}),
+        mode: "queue-seed",
+        runId: seeded.runId,
+        chunkCount: seeded.chunkCount,
+        factSetDigest: seeded.factSetDigest,
+        planDigest: seeded.planDigest,
+        policyDigest: seeded.policyDigest,
+        totalStagedBytes: seeded.totalStagedBytes,
+        sweptRunIds: seeded.sweptRunIds,
+        supersededRunIds: seeded.supersededRunIds,
+        sourceGenerationId: inputSummary.sourceGeneration,
+        baseInputGenerationId: inputSummary.baseInputGenerationId,
+        stablecoinsCapture,
+        dexCapture,
+        pegProvenance: { status: "applied", assetCount: inputSummary.pegProvenanceAssets },
+        supplyAttributionGeneration: supplyAttributionGenerationState,
+        resourcePressure: resourceAdmission.resourcePressure,
+      }),
+      productivity: {
+        productive: false,
+        reason: "v9-chunked-evaluation-seeded",
+      },
+    };
+  }
+
   const publication = await runSafetyScoreV9Publication({
     db,
     captureArchiveBucket: options.captureArchiveBucket,
