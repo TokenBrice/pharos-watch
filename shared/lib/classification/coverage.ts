@@ -103,10 +103,16 @@ export const COVERAGE_FEATURE_ACCENT_CLASSES = {
 } as const satisfies Record<CoverageFeatureKey, { countBar: string; chip: string }>;
 
 const COVERAGE_GAP_CHIP_CLASS = "border-border/70 bg-muted/60 text-muted-foreground";
-export const COVERAGE_GAP_BAR_CLASS =
-  "bg-muted-foreground/35 bg-[repeating-linear-gradient(135deg,transparent_0_5px,oklch(1_0_0_/0.08)_5px_10px)]";
+const COVERAGE_HATCHED_SURFACE_CLASS =
+  "bg-muted text-foreground bg-[repeating-linear-gradient(135deg,transparent_0_5px,var(--border)_5px_6px)]";
+/** Routine uncovered gap bar fill (flat muted — never hatched, which is reserved for Data n/a). */
+export const COVERAGE_GAP_BAR_CLASS = "bg-muted text-foreground";
+/** Unavailable (Data n/a) bar fill — mirrors the hatched matrix badge grammar (R1). */
+const COVERAGE_UNAVAILABLE_BAR_CLASS = COVERAGE_HATCHED_SURFACE_CLASS;
+export const COVERAGE_UNAVAILABLE_BADGE_CLASS =
+  "border-dashed border-border bg-muted text-foreground/80 bg-[repeating-linear-gradient(135deg,transparent_0_5px,var(--border)_5px_6px)]";
 
-const COVERAGE_BAR_TEXT_ON_LIGHT_CLASS = "text-slate-950";
+export const COVERAGE_BAR_TEXT_ON_LIGHT_CLASS = "text-slate-950";
 
 export interface CoverageBreakdownToneClasses {
   chip: string;
@@ -120,8 +126,10 @@ export interface CoverageBreakdownToneClasses {
  * (`/75`-`/90`) or bar text; collapsing them would be a visible change.
  */
 export const COVERAGE_BREAKDOWN_TONE_CLASSES = {
-  /** Uncovered / not-applicable buckets. */
+  /** Uncovered / not-applicable buckets (flat neutral). */
   gap: { chip: COVERAGE_GAP_CHIP_CLASS, bar: COVERAGE_GAP_BAR_CLASS },
+  /** Unavailable (Data n/a) buckets (hatched, matching matrix badges per R1). */
+  unavailable: { chip: COVERAGE_UNAVAILABLE_BADGE_CLASS, bar: COVERAGE_UNAVAILABLE_BAR_CLASS },
   emerald: {
     chip: "border-emerald-500/28 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200",
     bar: "bg-emerald-400/85",
@@ -190,6 +198,7 @@ export const COVERAGE_BREAKDOWN_TONE_CLASSES = {
   indigo: {
     chip: "border-indigo-500/28 bg-indigo-500/10 text-indigo-800 dark:text-indigo-200",
     bar: "bg-indigo-400/85",
+    barText: COVERAGE_BAR_TEXT_ON_LIGHT_CLASS,
   },
   amber: {
     chip: "border-amber-500/28 bg-amber-500/12 text-amber-800 dark:text-amber-200",
@@ -206,10 +215,11 @@ export const COVERAGE_BREAKDOWN_TONE_CLASSES = {
     bar: "bg-amber-400/75",
     barText: COVERAGE_BAR_TEXT_ON_LIGHT_CLASS,
   },
-  /** Amber-on-amber outage chip: no bar text, so it does not read as a coverage gap. */
+  /** Amber outage segment: dark ink preserves AA contrast on the light amber-400 bar fill. */
   amberOutage: {
     chip: "border-amber-500/28 bg-amber-500/12 text-amber-800 dark:text-amber-200",
     bar: "bg-amber-400/75",
+    barText: COVERAGE_BAR_TEXT_ON_LIGHT_CLASS,
   },
   amberStrong: {
     chip: "border-amber-500/30 bg-amber-500/12 text-amber-800 dark:text-amber-200",
@@ -244,6 +254,7 @@ export const COVERAGE_BREAKDOWN_TONE_CLASSES = {
   redStrong: {
     chip: "border-red-500/30 bg-red-500/12 text-red-800 dark:text-red-200",
     bar: "bg-red-500/90",
+    barText: COVERAGE_BAR_TEXT_ON_LIGHT_CLASS,
   },
   redStrongMuted: {
     chip: "border-red-500/30 bg-red-500/12 text-red-800 dark:text-red-200",
@@ -258,22 +269,27 @@ export const COVERAGE_BREAKDOWN_TONE_CLASSES = {
   rose: {
     chip: "border-rose-500/28 bg-rose-500/10 text-rose-800 dark:text-rose-200",
     bar: "bg-rose-400/85",
+    barText: COVERAGE_BAR_TEXT_ON_LIGHT_CLASS,
   },
   roseStrong: {
     chip: "border-rose-500/30 bg-rose-500/12 text-rose-800 dark:text-rose-200",
     bar: "bg-rose-400/90",
+    barText: COVERAGE_BAR_TEXT_ON_LIGHT_CLASS,
   },
   violet: {
     chip: "border-violet-500/28 bg-violet-500/10 text-violet-800 dark:text-violet-200",
     bar: "bg-violet-400/85",
+    barText: COVERAGE_BAR_TEXT_ON_LIGHT_CLASS,
   },
   violetMuted: {
     chip: "border-violet-500/28 bg-violet-500/10 text-violet-800 dark:text-violet-200",
     bar: "bg-violet-400/80",
+    barText: COVERAGE_BAR_TEXT_ON_LIGHT_CLASS,
   },
   violetStrongMuted: {
     chip: "border-violet-500/30 bg-violet-500/12 text-violet-800 dark:text-violet-200",
     bar: "bg-violet-400/80",
+    barText: COVERAGE_BAR_TEXT_ON_LIGHT_CLASS,
   },
   teal: {
     chip: "border-teal-500/28 bg-teal-500/10 text-teal-800 dark:text-teal-200",
@@ -295,13 +311,13 @@ export const COVERAGE_BADGE_TONE_CLASSES = {
   amber: "border-amber-500/30 bg-amber-500/12 text-amber-800 dark:text-amber-300",
   violet: "border-violet-500/28 bg-violet-500/10 text-violet-800 dark:text-violet-300",
   rose: "border-rose-500/35 bg-rose-500/12 text-rose-800 dark:text-rose-300",
-  slate:
-    "border-border/70 bg-muted/70 text-muted-foreground bg-[repeating-linear-gradient(135deg,transparent_0_5px,oklch(1_0_0_/0.04)_5px_10px)]",
+  slate: "border-border/70 bg-muted/50 text-muted-foreground",
 } as const satisfies Record<CoverageTone, string>;
 
 export const COVERAGE_AUTHORITATIVE_ACCENT_CLASSES = {
   container: "border-violet-500/25 bg-violet-500/[0.03]",
   badge: "border-violet-500/25 bg-violet-500/10 text-violet-700 dark:text-violet-300",
+  bar: "bg-violet-400/85",
   card: "border-violet-500/30 bg-violet-500/10",
   cardLabel: "text-violet-800 dark:text-violet-300",
 } as const;
@@ -338,13 +354,6 @@ export const METHODOLOGY_SECTION_ACCENT_CLASSES = {
   safetyScores: { changelogHover: FEATURE_IDENTITY_CLASSES.safety.changelogHover },
   liquidity: { changelogHover: FEATURE_IDENTITY_CLASSES.dex.changelogHover },
 } as const satisfies Record<MethodologySectionAccentKey, { changelogHover: string }>;
-
-export const METHODOLOGY_TABLE_ACCENT_CLASSES = {
-  pricingMarket: "border-orange-500/40",
-  pricingOverride: "border-blue-500/40",
-  psiConditionBand: "border-pink-500/40",
-  safetyScoring: "border-emerald-500/40",
-} as const;
 
 export const STATUS_RELIABILITY_ACCENT_CLASSES = {
   endpoints: "border-indigo-500 bg-indigo-500/[0.05]",

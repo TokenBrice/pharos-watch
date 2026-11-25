@@ -6,6 +6,7 @@ import {
   type DashboardSectionId,
 } from "@/lib/status-dashboard-model";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DISCLOSURE_SUMMARY_RESET_CLASS, DisclosureChevron } from "@/components/disclosure-panel";
 import type { DataTableColumn } from "@/components/data-table-shell";
 import { cn } from "@/lib/utils";
 import {
@@ -22,8 +23,14 @@ export function getCoinLabel(coinId: string): string {
   return `${meta.symbol} · ${meta.name}`;
 }
 
-export function defineStatusColumns(columns: readonly (readonly [string, string])[]): readonly DataTableColumn[] {
-  return columns.map(([id, label]) => ({ id, label, className: "pb-2 font-medium" }));
+export function defineStatusColumns(
+  columns: readonly (readonly [string, string, string?])[],
+): readonly DataTableColumn[] {
+  return columns.map(([id, label, extraClassName]) => ({
+    id,
+    label,
+    className: cn("pb-2 font-medium", extraClassName),
+  }));
 }
 
 /**
@@ -134,7 +141,14 @@ export function StatusSection({
       >
         <div className="space-y-1">
           {kicker && <p className="pharos-label">{kicker}</p>}
-          <Heading id={`${id}-title`} className="text-2xl font-bold leading-tight text-foreground">
+          <Heading
+            id={`${id}-title`}
+            className={
+              variant === "card" && headingLevel === "h2"
+                ? "pharos-section-title"
+                : "text-2xl font-bold leading-tight text-foreground"
+            }
+          >
             {title}
           </Heading>
           {description && <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">{description}</p>}
@@ -197,8 +211,16 @@ export function VerdictPill({ verdict, label, className }: { verdict: OperatorVe
  */
 export function TechnicalDetail({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <details className={cn("text-xs text-muted-foreground", className)}>
-      <summary className="pharos-focus-ring cursor-pointer rounded-sm hover:text-foreground">Technical detail</summary>
+    <details className={cn("group/disclosure text-xs text-muted-foreground", className)}>
+      <summary
+        className={cn(
+          DISCLOSURE_SUMMARY_RESET_CLASS,
+          "inline-flex min-h-9 w-fit items-center gap-1.5 rounded-sm transition-colors hover:text-foreground sm:min-h-8",
+        )}
+      >
+        <span>Technical detail</span>
+        <DisclosureChevron className="h-3.5 w-3.5" />
+      </summary>
       <div className="mt-1 break-all font-mono">{children}</div>
     </details>
   );

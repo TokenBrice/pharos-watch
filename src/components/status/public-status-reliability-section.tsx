@@ -2,11 +2,15 @@
 
 import { isPublicImpactCircuitKey } from "@shared/lib/public-health";
 import type { EndpointProbeResult, HealthResponse } from "@shared/types/status/public-health";
+import { DISCLOSURE_SUMMARY_RESET_CLASS, DisclosureChevron } from "@/components/disclosure-panel";
 import { CacheFreshnessTable } from "@/components/status/cache-freshness-table";
 import { CircuitBreakerTable } from "@/components/status/circuit-breaker-table";
 import { EndpointHealthGrid } from "@/components/status/endpoint-health-grid";
 import { LazyDetails } from "@/components/status/lazy-details";
 import { SchedulerLivenessCard } from "@/components/status/scheduler-liveness";
+import { cn } from "@/lib/utils";
+
+const INLINE_CODE_CLASS = "rounded-sm bg-muted px-1 py-0.5 font-mono text-xs text-foreground";
 
 interface PublicStatusReliabilitySectionProps {
   healthData: HealthResponse;
@@ -32,26 +36,35 @@ export function PublicStatusReliabilitySection({
   return (
     <section id="reliability" aria-labelledby="reliability-title" className="pharos-card-shell px-4 py-4 sm:px-5">
       <LazyDetails
+        className="group/disclosure"
         summary={
-          <summary className="pharos-focus-ring cursor-pointer rounded-sm">
-            <h2 id="reliability-title" className="inline text-2xl font-bold leading-tight text-foreground">For integrators</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Browser probes, upstream circuit breakers, cache ages, scheduled delivery and response headers.
-            </p>
+          <summary
+            className={cn(
+              DISCLOSURE_SUMMARY_RESET_CLASS,
+              "flex min-h-11 items-center justify-between gap-3 rounded-md",
+            )}
+          >
+            <div className="min-w-0">
+              <h2 id="reliability-title" className="pharos-section-title">For integrators</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Browser probes, upstream circuit breakers, cache ages, scheduled delivery and response headers.
+              </p>
+            </div>
+            <DisclosureChevron />
           </summary>
         }
       >
         <div className="mt-4 space-y-5">
           <div className="space-y-2 text-sm leading-relaxed text-muted-foreground">
             <p>
-              API responses carry their own freshness. <code>X-Data-Age</code> gives the seconds since the data was
-              produced, a <code>Warning</code> header marks data past its freshness window, and <code>Retry-After</code>
-              accompanies rate-limited responses. Where a response has a <code>_meta.status</code> field, that field is
+              API responses carry their own freshness. <code className={INLINE_CODE_CLASS}>X-Data-Age</code> gives the seconds since the data was
+              produced, a <code className={INLINE_CODE_CLASS}>Warning</code> header marks data past its freshness window, and <code className={INLINE_CODE_CLASS}>Retry-After</code>
+              {" "}accompanies rate-limited responses. Where a response has a <code className={INLINE_CODE_CLASS}>_meta.status</code> field, that field is
               authoritative. Each endpoint&apos;s cache profile is listed in the API reference.
             </p>
           </div>
           {divergenceDetail ? (
-            <p className="rounded-md border border-state-warn bg-state-warn-subtle px-3 py-2 text-sm text-state-warn">{divergenceDetail}</p>
+            <p className="rounded-lg border border-state-warn bg-state-warn-subtle px-3 py-2 text-sm text-state-warn">{divergenceDetail}</p>
           ) : null}
           <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
             <EndpointHealthGrid
@@ -62,10 +75,14 @@ export function PublicStatusReliabilitySection({
               description="Requests sent from this browser to public API routes. A freshness Warning header counts as a data-health signal; other 2xx responses are reachability checks."
               footnote="Admin and manual action routes are not probed from this page."
             />
-            <CircuitBreakerTable circuits={publicImpactCircuits} unavailableReason={healthData.circuitsUnavailableReason} />
+            <CircuitBreakerTable
+              circuits={publicImpactCircuits}
+              unavailableReason={healthData.circuitsUnavailableReason}
+              tableChrome="embedded"
+            />
           </div>
-          <CacheFreshnessTable caches={healthData.caches} />
-          <SchedulerLivenessCard observation={healthData.schedulerLiveness} />
+          <CacheFreshnessTable caches={healthData.caches} tableChrome="embedded" />
+          <SchedulerLivenessCard observation={healthData.schedulerLiveness} surface="panel" />
         </div>
       </LazyDetails>
     </section>

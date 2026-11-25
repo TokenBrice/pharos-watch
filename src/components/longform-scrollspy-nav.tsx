@@ -1,7 +1,7 @@
 "use client";
 
 import type { MutableRefObject, ReactNode } from "react";
-import type { LucideIcon } from "lucide-react";
+import { ChevronDown, type LucideIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { alignAnchorAfterHydration, revealAnchorId } from "@/lib/anchor-reveal";
@@ -46,9 +46,16 @@ interface LongformScrollspyNavProps {
    * label. Use when the row cannot fit on desktop.
    */
   edgeFade?: boolean;
+  /**
+   * Keep `rightSlot` mounted below `sm` for compact sticky controls (such as
+   * the methodology Reader/Analyst mode switcher). Defaults to `false` to
+   * preserve existing `hidden sm:block` behavior for other consumers.
+   */
+  showRightSlotOnMobile?: boolean;
 }
 
 const STICKY_SUMMARY_VAR = "--pharos-sticky-summary-h";
+const JUMP_MENU_MIN_SECTIONS = 10;
 
 function readStickySummaryHeight(): number {
   if (typeof document === "undefined") return 0;
@@ -57,10 +64,33 @@ function readStickySummaryHeight(): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+function readStickyHeaderBottomPx(): number {
+  if (typeof document === "undefined" || typeof window === "undefined") return 60;
+  const raw = window.getComputedStyle(document.documentElement).getPropertyValue("--sticky-header-bottom").trim();
+  if (!raw) return 60;
+  const pxMatch = /^([\d.]+)px$/.exec(raw);
+  if (pxMatch) return Number(pxMatch[1]);
+  const remMatch = /^([\d.]+)rem$/.exec(raw);
+  if (remMatch) {
+    const rootFontSize = parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+    return Number(remMatch[1]) * rootFontSize;
+  }
+  return 60;
+}
+
 function getRailOffset(railNode: HTMLDivElement | null, stickyOffsetPx?: number) {
   const railRect = railNode?.getBoundingClientRect();
   if (!railRect) return 16;
-  const stickyTop = stickyOffsetPx ?? Math.max(railRect.top, 0);
+  // Use the rail's stuck top (`stickyOffsetPx` or computed CSS `top`), never its
+  // pre-stick `railRect.top`, which inflates scrollMarginTop when the rail sits
+  // beneath a hero or FactStrip.
+  const computedTop =
+    railNode && typeof window !== "undefined" ? parseFloat(window.getComputedStyle(railNode).top) : NaN;
+  const stickyTop =
+    stickyOffsetPx ??
+    (Number.isFinite(computedTop) && computedTop >= 0
+      ? computedTop
+      : readStickyHeaderBottomPx());
   return Math.ceil(railRect.height + stickyTop + 16);
 }
 
@@ -139,8 +169,10 @@ export function LongformScrollspyNav({
   onBeforeAlign,
   emphasis,
   edgeFade = false,
+  showRightSlotOnMobile = false,
 }: LongformScrollspyNavProps) {
   const [activeId, setActiveId] = useState(sections[0]?.id ?? "");
+  const [scrolledLeft, setScrolledLeft] = useState(false);
   const railRef = useRef<HTMLDivElement | null>(null);
   const bannerScrollerRef = useRef<HTMLElement | null>(null);
   const activeAnchorRef = useRef<HTMLAnchorElement | null>(null);
@@ -158,6 +190,28 @@ export function LongformScrollspyNav({
     onActiveChange?.(effectiveActiveId);
   }, [effectiveActiveId, onActiveChange]);
 
+  // Track horizontal pill-row scroll so the left-edge fade only appears once
+  // pills have scrolled past the leading edge (`scrollLeft > 4`).
+  useEffect(() => {
+    const scroller = bannerScrollerRef.current;
+    if (!scroller) return;
+
+    const syncScrollEdge = () => {
+      const next = scroller.scrollLeft > 4;
+      setScrolledLeft((current) => (current === next ? current : next));
+    };
+
+    syncScrollEdge();
+    scroller.addEventListener("scroll", syncScrollEdge, { passive: true });
+    const observer = new ResizeObserver(syncScrollEdge);
+    observer.observe(scroller);
+
+    return () => {
+      scroller.removeEventListener("scroll", syncScrollEdge);
+      observer.disconnect();
+    };
+  }, [sectionSignature]);
+
   // Keep the lit pill visible inside the horizontally-scrolling banner row
   // (it can sit off the right edge on narrow viewports). Skip the first run so
   // hydration doesn't hijack the page's initial scroll position.
@@ -166,7 +220,12 @@ export function LongformScrollspyNav({
       activePillSyncedRef.current = true;
       return;
     }
-    centerActivePill(bannerScrollerRef.current, activeAnchorRef.current);
+    const scroller = bannerScrollerRef.current;
+    centerActivePill(scroller, activeAnchorRef.current);
+    if (scroller) {
+      const next = scroller.scrollLeft > 4;
+      setScrolledLeft((current) => (current === next ? current : next));
+    }
   }, [effectiveActiveId]);
 
   useEffect(() => {
@@ -282,6 +341,7 @@ export function LongformScrollspyNav({
   if (sections.length === 0) return null;
 
   const isPillTabs = emphasis === "pill-tabs";
+  const showJumpSelect = !isPillTabs && sections.length >= JUMP_MENU_MIN_SECTIONS;
 
   return (
     <>
@@ -290,14 +350,20 @@ export function LongformScrollspyNav({
         className={cn(
           "sticky top-[var(--sticky-header-bottom,3.75rem)] z-chrome md:mx-0",
           isPillTabs
-            ? "mx-0 bg-background/90 px-0 py-1.5 backdrop-blur-md"
+            ? "mx-0 bg-background px-0 py-1.5"
             : "-mx-4 rounded-xl border border-border/60 bg-background px-3 py-2 md:px-4 md:py-2.5",
           className,
         )}
         style={stickyOffsetPx == null ? undefined : { top: stickyOffsetPx }}
       >
-        <div className={cn("relative flex items-center", isPillTabs ? "justify-center gap-2" : "gap-3")}>
-          {/* Fade mask hints at off-screen pills on narrow viewports */}
+        <div className={cn("relative flex items-center", isPillTabs ? "justify-center gap-2" : "gap-2 sm:gap-3")}>
+          {/* Fade masks hint at off-screen pills on narrow viewports */}
+          {!isPillTabs && !edgeFade && scrolledLeft ? (
+            <div
+              className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-background to-transparent sm:hidden"
+              aria-hidden="true"
+            />
+          ) : null}
           {!isPillTabs && !edgeFade ? (
             <div
               className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-background to-transparent sm:hidden"
@@ -317,77 +383,95 @@ export function LongformScrollspyNav({
               isPillTabs && "max-w-full",
             )}
           >
-          <nav
-            ref={bannerScrollerRef}
-            aria-label={navAriaLabel}
-            className={cn(
-              "scrollbar-none overflow-x-auto",
-              isPillTabs ? "pharos-pill-tabs-group max-w-full px-0.5 py-px" : "min-w-0 flex-1 -mx-1 px-1 pb-0.5",
-            )}
-          >
-            <div
+            {(edgeFade || isPillTabs) && scrolledLeft ? (
+              <div
+                className={cn(
+                  "pointer-events-none absolute inset-y-0 left-0 z-10 bg-gradient-to-r from-background via-background/80 to-transparent",
+                  edgeFade ? "w-12" : "inset-y-px left-px w-10 rounded-l-lg lg:hidden",
+                )}
+                aria-hidden="true"
+              />
+            ) : null}
+            <nav
+              ref={bannerScrollerRef}
+              aria-label={navAriaLabel}
               className={cn(
-                "flex min-w-max snap-x snap-mandatory items-center",
-                isPillTabs ? "gap-0.5" : "gap-1.5",
-                edgeFade ? "pr-16" : isPillTabs && "pr-12 lg:pr-0",
+                "scrollbar-none overflow-x-auto",
+                isPillTabs ? "pharos-pill-tabs-group max-w-full px-0.5 py-px" : "min-w-0 flex-1 -mx-1 px-1 pb-0.5",
               )}
             >
-              {sections.map((section) => {
-                const Icon = section.icon;
-                const isActive = effectiveActiveId === section.id;
-                return (
-                  <a
-                    key={section.id}
-                    ref={isActive ? activeAnchorRef : undefined}
-                    href={`#${section.id}`}
-                    aria-current={isActive ? "true" : undefined}
-                    onClick={(event) => {
-                      event.preventDefault();
-                      scheduleSectionAlignment(section.id, railRef.current, pendingScrollSyncRef, true, stickyOffsetPx, onBeforeAlign);
-                      setActiveId(section.id);
-                    }}
-                    className={cn(
-                      "group pharos-focus-ring relative isolate inline-flex shrink-0 snap-start items-center overflow-hidden whitespace-nowrap font-medium transition-colors",
-                      isPillTabs
-                        ? "min-h-10 gap-1.5 rounded-md px-3 py-1 text-sm leading-none md:h-7 md:min-h-0 md:px-3.5"
-                        : "min-h-11 gap-1.5 rounded-full px-3 py-1.5 text-xs md:min-h-8 md:text-sm",
-                      isPillTabs ? "pharos-pill-tab" : "pharos-rail-tab",
-                      isPillTabs && isActive && "pharos-pill-tab-active",
-                      !isPillTabs && isActive && "pharos-rail-tab-active",
-                    )}
-                  >
-                    {!isPillTabs && isActive ? <span aria-hidden className="pharos-nav-beam" /> : null}
-                    {Icon ? (
-                      <Icon
-                        aria-hidden
-                        className={cn(
-                          "shrink-0",
-                          isPillTabs
-                            // Icons only where the bar has room; below lg the
-                            // labels alone keep every zone in view.
-                            ? "hidden h-4 w-4 text-current lg:block"
-                            : cn(
-                                "h-3.5 w-3.5",
-                                isActive ? "text-brand-accent-text" : "text-muted-foreground/80 group-hover:text-foreground",
-                              ),
-                        )}
-                      />
-                    ) : null}
-                    <span>{section.label}</span>
-                  </a>
-                );
-              })}
-            </div>
-          </nav>
-          {edgeFade || isPillTabs ? (
-            <div
-              className={cn(
-                "pointer-events-none absolute inset-y-0 right-0 z-10 bg-gradient-to-l from-background via-background/80 to-transparent",
-                edgeFade ? "w-16" : "inset-y-px right-px w-12 rounded-r-lg lg:hidden",
-              )}
-              aria-hidden="true"
-            />
-          ) : null}
+              <div
+                className={cn(
+                  "flex min-w-max snap-x snap-mandatory items-center",
+                  isPillTabs ? "gap-0.5" : "gap-1.5",
+                  edgeFade ? "pr-16" : isPillTabs && "pr-12 lg:pr-0",
+                )}
+              >
+                {sections.map((section) => {
+                  const Icon = section.icon;
+                  const isActive = effectiveActiveId === section.id;
+                  return (
+                    <a
+                      key={section.id}
+                      ref={isActive ? activeAnchorRef : undefined}
+                      href={`#${section.id}`}
+                      aria-current={isActive ? "true" : undefined}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        scheduleSectionAlignment(
+                          section.id,
+                          railRef.current,
+                          pendingScrollSyncRef,
+                          true,
+                          stickyOffsetPx,
+                          onBeforeAlign,
+                        );
+                        setActiveId(section.id);
+                      }}
+                      className={cn(
+                        "group pharos-focus-ring relative isolate inline-flex shrink-0 snap-start items-center overflow-hidden whitespace-nowrap font-medium transition-colors",
+                        isPillTabs
+                          ? "min-h-10 gap-1.5 rounded-md px-3 py-1 text-sm leading-none md:h-7 md:min-h-0 md:px-3.5"
+                          : "min-h-11 gap-1.5 rounded-full px-3 py-1.5 text-xs md:min-h-8 md:text-sm",
+                        isPillTabs ? "pharos-pill-tab" : "pharos-rail-tab",
+                        isPillTabs && isActive && "pharos-pill-tab-active",
+                        !isPillTabs && isActive && "pharos-rail-tab-active",
+                      )}
+                    >
+                      {!isPillTabs && isActive ? <span aria-hidden className="pharos-nav-beam" /> : null}
+                      {Icon ? (
+                        <Icon
+                          aria-hidden
+                          className={cn(
+                            "shrink-0",
+                            isPillTabs
+                              // Icons only where the bar has room; below lg the
+                              // labels alone keep every zone in view.
+                              ? "hidden h-4 w-4 text-current lg:block"
+                              : cn(
+                                  "h-3.5 w-3.5",
+                                  isActive
+                                    ? "text-brand-accent-text"
+                                    : "text-muted-foreground/80 group-hover:text-foreground",
+                                ),
+                          )}
+                        />
+                      ) : null}
+                      <span>{section.label}</span>
+                    </a>
+                  );
+                })}
+              </div>
+            </nav>
+            {edgeFade || isPillTabs ? (
+              <div
+                className={cn(
+                  "pointer-events-none absolute inset-y-0 right-0 z-10 bg-gradient-to-l from-background via-background/80 to-transparent",
+                  edgeFade ? "w-16" : "inset-y-px right-px w-12 rounded-r-lg lg:hidden",
+                )}
+                aria-hidden="true"
+              />
+            ) : null}
           </div>
           {isPillTabs ? (
             <span
@@ -395,7 +479,46 @@ export function LongformScrollspyNav({
               className="pharos-pill-tabs-rule pharos-pill-tabs-rule-right hidden h-px min-w-8 flex-1 lg:block"
             />
           ) : null}
-          {rightSlot && <div className="hidden shrink-0 sm:block">{rightSlot}</div>}
+          {showJumpSelect ? (
+            <div className="relative shrink-0 rounded-full focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background">
+              <span
+                aria-hidden="true"
+                className="pharos-control-pill pointer-events-none inline-flex min-h-10 items-center gap-1 px-2.5 py-1 text-xs text-foreground md:min-h-8"
+              >
+                <span>Jump</span>
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+              </span>
+              <select
+                aria-label={`Jump to section (${navAriaLabel})`}
+                value={effectiveActiveId}
+                onChange={(event) => {
+                  const nextId = event.target.value;
+                  if (!nextId) return;
+                  scheduleSectionAlignment(
+                    nextId,
+                    railRef.current,
+                    pendingScrollSyncRef,
+                    true,
+                    stickyOffsetPx,
+                    onBeforeAlign,
+                  );
+                  setActiveId(nextId);
+                }}
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              >
+                {sections.map((section) => (
+                  <option key={section.id} value={section.id}>
+                    {section.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+          {rightSlot && (
+            <div className={cn("shrink-0", !showRightSlotOnMobile && "hidden sm:block")}>
+              {rightSlot}
+            </div>
+          )}
         </div>
       </div>
     </>

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { PUBLIC_COMPONENT_STATE_TONE } from "@shared/lib/classification";
 import { UptimeBar, summarizeDayCells } from "../uptime-bar";
 
@@ -14,19 +14,55 @@ describe("UptimeBar", () => {
     ];
     const { container } = render(<UptimeBar cells={cells} label="Yield" />);
 
-    expect(container.querySelector('[title="2026-10-11: No data"]')?.className).toContain("bg-muted");
+    const noDataCell = container.querySelector('[title="2026-10-11: No data"]');
+    expect(noDataCell?.className).toContain("bg-muted/60");
+    expect(noDataCell?.className).toContain("ring-border/60");
     expect(container.querySelector('[title="2026-10-12: Degraded"]')?.className).toContain(PUBLIC_COMPONENT_STATE_TONE.degraded.bar);
-    expect(screen.getByRole("img").getAttribute("aria-label")).toBe(
+    expect(screen.getByRole("group").getAttribute("aria-label")).toBe(
       "Yield, last 3 days: 1d operational · 1d degraded · 1d no data",
     );
   });
 
-  it("keeps a sub-hour blip in the tooltip without colouring the day", () => {
+  it("surfaces a sub-hour blip via top indicator, summary count, and keyboard/tap inspection", () => {
     const { container } = render(
       <UptimeBar cells={[{ date: "2026-10-22", state: "operational", brief: "degraded" }]} label="Stablecoin data" />,
     );
-    expect(container.querySelector('[title="2026-10-22: Operational (briefly degraded, under 1 h)"]')?.className)
-      .toContain(PUBLIC_COMPONENT_STATE_TONE.operational.bar);
+    const cell = container.querySelector('[title="2026-10-22: Operational (briefly degraded, under 1 h)"]') as HTMLButtonElement | null;
+    expect(cell?.className).toContain(PUBLIC_COMPONENT_STATE_TONE.operational.bar);
+    expect(cell?.querySelector("span")?.className).toContain(PUBLIC_COMPONENT_STATE_TONE.degraded.bar);
+    expect(screen.getByRole("group").getAttribute("aria-label")).toBe(
+      "Stablecoin data, last 1 days: 1d operational · 1d with brief blip",
+    );
+
+    fireEvent.focus(cell!);
+    expect(screen.getByTestId("uptime-bar-readout").textContent).toBe(
+      "2026-10-22: Operational (briefly degraded, under 1 h)",
+    );
+
+    fireEvent.click(cell!);
+    expect(cell?.getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(cell!);
+    expect(cell?.getAttribute("aria-pressed")).toBe("false");
+    expect(screen.getByTestId("uptime-bar-readout").textContent).toBe("");
+  });
+
+  it("uses roving tabindex and arrow keys so each bar is one tab stop", () => {
+    const cells = [
+      { date: "2026-10-11", state: "operational" as const },
+      { date: "2026-10-12", state: "degraded" as const },
+      { date: "2026-10-13", state: "operational" as const },
+    ];
+    render(<UptimeBar cells={cells} label="Yield" />);
+    const buttons = screen.getAllByRole("button");
+    expect(buttons.map((b) => b.tabIndex)).toEqual([-1, -1, 0]);
+
+    buttons[2].focus();
+    fireEvent.keyDown(screen.getByRole("group"), { key: "ArrowLeft" });
+    expect(document.activeElement).toBe(buttons[1]);
+    expect(buttons.map((b) => b.tabIndex)).toEqual([-1, 0, -1]);
+
+    fireEvent.keyDown(screen.getByRole("group"), { key: "Home" });
+    expect(document.activeElement).toBe(buttons[0]);
   });
 
   it("never counts no-data days as operational", () => {

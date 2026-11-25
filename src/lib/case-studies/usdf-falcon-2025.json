@@ -129,7 +129,7 @@
     {
       "kind": "peg-deviation",
       "coinId": "usdf-falcon",
-      "caption": "USDf peg history on Pharos. The marker pins the July 2025 stress. The DEX low near $0.887 reflects an opacity-and-redemption discount on real backing, not a realized collateral loss; the asset recovered to par within days."
+      "caption": "USDf's daily peg history on Pharos across the July 2025 stress window. The DEX low near $0.887 reflects an opacity-and-redemption discount on real backing, not a realized collateral loss; the token recovered to par within days."
     }
   ],
   "watchpoints": [

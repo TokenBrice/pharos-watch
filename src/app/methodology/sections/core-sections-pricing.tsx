@@ -10,12 +10,13 @@ import {
   MethodologyDetails,
   MethodologyDiagramFlow,
   MethodologyFacts,
+  MethodologyFormula,
   MethodologyPreconditions,
   MethodologySectionShell,
   WorkedExample,
 } from "../methodology-shared";
 import { PRICING_PIPELINE_SECTION_CONTENT } from "@/lib/methodology-content";
-import { METHODOLOGY_SECTION_ACCENT_CLASSES, CONFIDENCE_LEVEL_COLORS, METHODOLOGY_TABLE_ACCENT_CLASSES } from "@shared/lib/classification";
+import { METHODOLOGY_SECTION_ACCENT_CLASSES, CONFIDENCE_LEVEL_COLORS } from "@shared/lib/classification";
 import { PRICING_SOURCE_REGISTRY, type PricingSourceKey } from "@shared/lib/pricing-source-registry";
 
 type AddressProviderAvailability = { key: PricingSourceKey; enabled: boolean };
@@ -49,6 +50,7 @@ export function PricingPipelineMethodologySection({
       title={PRICING_PIPELINE_SECTION_CONTENT.title}
       versionBadge={{ label: PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL }}
       changelogPath={PRICING_PIPELINE_METHODOLOGY_CHANGELOG_PATH}
+      docsPath="/docs/pricing-pipeline/"
       versionNote="Version increments when price sources, consensus, supply attribution, enrichment, or validation rules change."
       changelogClassName={METHODOLOGY_SECTION_ACCENT_CLASSES.pricing.changelogHover}
     >
@@ -151,7 +153,6 @@ export function PricingPipelineMethodologySection({
               { title: "N-Source Consensus", subtitle: "Pairwise clusters; publish cluster median, keep best member for provenance" },
               {
                 title: "Pool Challenge",
-                className: METHODOLOGY_TABLE_ACCENT_CLASSES.pricingMarket,
                 subtitle: (
                   <>
                     <span className="md:hidden">Soft-only → replace with protocol-aware weighted medians</span>
@@ -159,7 +160,7 @@ export function PricingPipelineMethodologySection({
                   </>
                 ),
               },
-              { title: "Authoritative Overrides", className: METHODOLOGY_TABLE_ACCENT_CLASSES.pricingOverride, subtitle: "Protocol redemption (cUSD, iUSD) after market probes" },
+              { title: "Authoritative Overrides", subtitle: "Protocol redemption (cUSD, iUSD) after market probes" },
               {
                 title: "Enrichment Pipeline",
                 subtitle: (
@@ -169,31 +170,34 @@ export function PricingPipelineMethodologySection({
                   </>
                 ),
               },
-              { title: "Price Validation + Confidence", subtitle: "high / single-source / low / fallback" },
+              { title: "Price Validation + Confidence", emphasis: "output", subtitle: "high / single-source / low / fallback" },
             ]}
           />
 
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">Source weights</h3>
             <ContentTable
+              chrome="embedded"
               tableId="methodology-pricing-source-weights"
               testId="methodology-pricing-source-weights-table"
+              tableClassName="min-w-[560px]"
+              viewportProps={{ mobileScrollHint: "Swipe sideways for more columns" }}
               columns={[
                 { id: "source", header: "Source", cellClassName: "text-foreground" },
-                { id: "weight", header: "Weight" },
+                { id: "weight", header: "Weight", cellClassName: "pharos-numeric whitespace-nowrap" },
                 { id: "type", header: "Type" },
                 { id: "notes", header: "Notes", cellClassName: "whitespace-normal" },
               ]}
               rows={[
-                ["CoinGecko", "2", "Aggregator", <>Primary market data via <code className="text-xs">/simple/price</code></>],
+                ["CoinGecko", "2", "Aggregator", <>Primary market data via <code>/simple/price</code></>],
                 ["CoinGecko ticker", "2", "Exchange ticker", "Curated ticker corroboration path for tracked exchange pairs"],
-                ["DefiLlama (list)", "1", "Aggregator", <>Independent stablecoins list price via <code className="text-xs">stablecoins.llama.fi</code></>],
+                ["DefiLlama (list)", "1", "Aggregator", <>Independent stablecoins list price via <code>stablecoins.llama.fi</code></>],
                 ["Binance", "2", "CEX", "Single batch call for all spot tickers"],
                 ["Kraken", "2", "CEX", "Explicit pair mapping with alias-safe response handling"],
                 ["Bitstamp", "1", "CEX", "Lower-weight corroboration via the all-tickers endpoint"],
                 ["Coinbase", "2", "CEX", "Per-symbol spot prices"],
-                ["Curve on-chain", "3", "On-chain", <>StableSwap implied prices via explicit direct, one-hop, and opt-in chained-hop <code className="text-xs">get_dy()</code> routes</>],
-                ["Curve oracle", "3", "On-chain", <>Additional primary-consensus voice for <code className="text-xs">crvusd-curve</code></>],
+                ["Curve on-chain", "3", "On-chain", <>StableSwap implied prices via explicit direct, one-hop, and opt-in chained-hop <code>get_dy()</code> routes</>],
+                ["Curve oracle", "3", "On-chain", <>Additional primary-consensus voice for <code>crvusd-curve</code></>],
                 ["DEX pools", "1", "On-chain", "Aggregate DEX median selects plausible contributors younger than the existing 75-minute depeg budget, then applies outlier filtering; count, TVL and protocol provenance cover the selected inputs, dated by their oldest original clock; with none in budget, the full blend keeps its old clock for conservative vetoes; retained independently in a clock-only envelope when no display lane qualifies; no protocol source is invented; withheld once an overlapping protocol DEX candidate passes registry, freshness, price and TVL checks, even if corroboration later fails; the reviewed VUSD route may enter primary publication at the existing $250K UI floor while remaining soft and non-depeg-authoritative"],
                 ["Protocol DEX APIs", "2-3", "On-chain / pool-state API", "Primary-consensus protocol promotion currently supports Fluid, Balancer, Curve, Uniswap V3, Uniswap V4, Raydium, Orca, Meteora, PancakeSwap, Aerodrome Slipstream, Velodrome (surviving CoinGecko Onchain/GeckoTerminal rows since v6.83), and Aero when the protocol lane survives registry, TVL, freshness, and corroboration gates."],
                 ["GeckoTerminal", "1", "On-chain", <>Pool-level cross-check for weak CG / DL-list soft-source outcomes (&ge;$10K TVL)</>],
@@ -215,43 +219,43 @@ export function PricingPipelineMethodologySection({
             <ol className="list-decimal list-inside space-y-1">
               <li>Collect all source prices with non-failed circuit breakers</li>
               <li>Collapse repeated quotes from one source to their median, then count each registered provider family as one independent voice by retaining its strongest representative</li>
-              <li>Find the largest fully pairwise cluster of sources that agree within <code className="text-xs">50 bps</code> (fixed pegs) or <code className="text-xs">500 bps</code> (NAV tokens)</li>
+              <li>Find the largest fully pairwise cluster of sources that agree within <code>50 bps</code> (fixed pegs) or <code>500 bps</code> (NAV tokens)</li>
               <li>Break equal-size clusters by total weight, then stronger trust tier, then tighter spread, then peg proximity when available</li>
               <li>If the winning cluster has 2+ members, publish its median price and separately keep the best cluster member for provenance</li>
               <li>Choose that internal selected source by weight, then trust tier, then peg proximity, then source key</li>
               <li>If no cluster of 2+ forms, fixed pegs stay on fixed-peg rules and fall back to the best trusted single source</li>
-              <li><span className="text-foreground font-medium">Pool challenge:</span> if all agreeing sources are challenge-eligible (CG, DL-list, DEX average, or promoted protocol DEX sources without a hard-source corroborator), check each large priced DEX pool (&ge;$100K TVL) from the published challenger snapshot built from the full retained pool set. If any protocol-level median diverges beyond the peg-type-aware threshold (500 bps for USD pegs, <code className="text-xs">min(2 &times; depeg threshold, 500)</code> for non-USD pegs), downgrade to <code className="text-xs">low</code>, and replace the price when at least two independent protocol-level medians corroborate that divergence unless severe-downside preservation applies. A high-TVL multi-protocol replacement can also use the peg depeg threshold when the published price is inside that threshold and at least two $5M+ protocol medians are depeg-sized in the same direction and mutually coherent inside the pool-challenge bps band. A one-protocol replacement remains allowed only when the protocol median has at least $5M TVL, the DEX median crosses the peg depeg threshold, and a hard primary candidate agrees within the normal consensus threshold</li>
+              <li><span className="text-foreground font-medium">Pool challenge:</span> if all agreeing sources are challenge-eligible (CG, DL-list, DEX average, or promoted protocol DEX sources without a hard-source corroborator), check each large priced DEX pool (&ge;$100K TVL) from the published challenger snapshot built from the full retained pool set. If any protocol-level median diverges beyond the peg-type-aware threshold (500 bps for USD pegs, <code>min(2 &times; depeg threshold, 500)</code> for non-USD pegs), downgrade to <code>low</code>, and replace the price when at least two independent protocol-level medians corroborate that divergence unless severe-downside preservation applies. A high-TVL multi-protocol replacement can also use the peg depeg threshold when the published price is inside that threshold and at least two $5M+ protocol medians are depeg-sized in the same direction and mutually coherent inside the pool-challenge bps band. A one-protocol replacement remains allowed only when the protocol median has at least $5M TVL, the DEX median crosses the peg depeg threshold, and a hard primary candidate agrees within the normal consensus threshold</li>
             </ol>
-            <code className="block rounded-lg border border-border/60 bg-muted/50 px-4 py-3 text-xs pharos-numeric">
+            <MethodologyFormula>
               agree(a,b) = |a.price &minus; b.price| / midpoint(a,b) &times; 10000 &le; thresholdBps
-            </code>
+            </MethodologyFormula>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">Authoritative price overrides</h3>
             <p>For wrapper-style assets whose executable value is set by direct protocol redemption, or by an instantly redeemable tracked base asset, rather than by secondary-market liquidity, the pipeline switches to an authoritative redemption-based mark:</p>
             <ul className="list-disc list-inside space-y-1">
-              <li><span className="text-foreground font-medium">cUSD (Cap):</span> <code className="text-xs">getBurnAmount()</code> &mdash; cUSD &rarr; USDC redemption rate</li>
-              <li><span className="text-foreground font-medium">iUSD (infiniFi):</span> <code className="text-xs">receiptToAsset()</code> &mdash; iUSD &rarr; USDC redemption rate</li>
-              <li><span className="text-foreground font-medium">USDai:</span> inherits tracked <code className="text-xs">PYUSD</code> pricing because base USDAI is treated as an instantly redeemable PYUSD wrapper</li>
-              <li><span className="text-foreground font-medium">iUSD (Initia) / USDCx:</span> inherit tracked <code className="text-xs">AUSD</code> or <code className="text-xs">USDC</code> pricing when the parent rail is fresh and replay-safe</li>
-              <li><span className="text-foreground font-medium">M / USDK / XO / USDnr:</span> inherit tracked <code className="text-xs">wM</code> pricing because Pharos treats them as base-unit or instantly redeemable M0 extension paths rather than free-floating market-priced assets; M requires wM itself to report fresh replay-safe single-source confidence</li>
+              <li><span className="text-foreground font-medium">cUSD (Cap):</span> <code>getBurnAmount()</code> &mdash; cUSD &rarr; USDC redemption rate</li>
+              <li><span className="text-foreground font-medium">iUSD (infiniFi):</span> <code>receiptToAsset()</code> &mdash; iUSD &rarr; USDC redemption rate</li>
+              <li><span className="text-foreground font-medium">USDai:</span> inherits tracked <code>PYUSD</code> pricing because base USDAI is treated as an instantly redeemable PYUSD wrapper</li>
+              <li><span className="text-foreground font-medium">iUSD (Initia) / USDCx:</span> inherit tracked <code>AUSD</code> or <code>USDC</code> pricing when the parent rail is fresh and replay-safe</li>
+              <li><span className="text-foreground font-medium">M / USDK / XO / USDnr:</span> inherit tracked <code>wM</code> pricing because Pharos treats them as base-unit or instantly redeemable M0 extension paths rather than free-floating market-priced assets; M requires wM itself to report fresh replay-safe single-source confidence</li>
               <li><span className="text-foreground font-medium">ONED / PYUSDx:</span> reviewed one-for-one issuer-conversion references use tracked USDC or PYUSD. Fresh admitted own market prices win, including discounts; own market history is retained rather than replaced with parent history. These routes do not establish direct-wrapper classifications or guaranteed liquid market pegs</li>
-              <li><span className="text-foreground font-medium">Nominal par references:</span> source-reviewed USD and FX redeemables with observable supply carry par as a separate <code className="text-xs">nominalPriceReference</code> (source <code className="text-xs">protocol-par</code>). Non-USD par is converted through a fresh or static FX reference, recorded on the reference as <code className="text-xs">fxReferenceType</code> and <code className="text-xs">fxObservedAt</code>. Par is never an observed price: a market quote wins only when the depeg detector would act on it without confirmation (fresh, not cached or fallback, and backed by depeg-authoritative exchange, oracle or on-chain sources). CoinGecko and DefiLlama agreement alone, thin, stale, cached or fallback marks never displace par. XOFm and ZARm also admit verified guarded Mento Broker sells with fresh native FX and original clocks younger than five minutes, retaining fallback confidence and depeg confirmation requirements. Failed, skipped, stale or rejected Broker quotes retain the nominal fallback. Otherwise the published price is par with <code className="text-xs">priceObservedAtMode = &quot;nominal_reference&quot;</code>, no observation time and no confidence, which cannot open depeg events, and replay preserves existing history instead of synthesizing par points. SoFiUSD has no nominal override and instead uses its contract-verified CoinGecko/Kraken market consensus; unavailable observed quotes remain missing, and the ordinary depeg-authority gates are unchanged</li>
-              <li><span className="text-foreground font-medium">ERC-4626 NAV wrappers:</span> reviewed vaults such as Sky sUSDS, Ethena sUSDe, Spark Savings, Gauntlet, Steakhouse, Sentora, Falcon, Resupply, Frax, Keyrock, Wintermute, Galaxy, Clearstar, Hyperithm, Yearn, Avant, Noon, Yuzu, and Aave Umbrella use canonical-chain <code className="text-xs">convertToAssets()</code> reads multiplied by a fresh trusted tracked parent price, including EURCV for euro-denominated shares; without that parent price, the wrapper remains unpriced. Legacy Spark USDC is a separate 18-decimal-share deployment from 6-decimal-share Spark V2</li>
-              <li><span className="text-foreground font-medium">sGHO / Idle tranches:</span> protocol-specific <code className="text-xs">previewRedeem()</code> or <code className="text-xs">virtualPrice()</code> reads price assets whose executable value is not represented by thin secondary markets</li>
+              <li><span className="text-foreground font-medium">Nominal par references:</span> source-reviewed USD and FX redeemables with observable supply carry par as a separate <code>nominalPriceReference</code> (source <code>protocol-par</code>). Non-USD par is converted through a fresh or static FX reference, recorded on the reference as <code>fxReferenceType</code> and <code>fxObservedAt</code>. Par is never an observed price: a market quote wins only when the depeg detector would act on it without confirmation (fresh, not cached or fallback, and backed by depeg-authoritative exchange, oracle or on-chain sources). CoinGecko and DefiLlama agreement alone, thin, stale, cached or fallback marks never displace par. XOFm and ZARm also admit verified guarded Mento Broker sells with fresh native FX and original clocks younger than five minutes, retaining fallback confidence and depeg confirmation requirements. Failed, skipped, stale or rejected Broker quotes retain the nominal fallback. Otherwise the published price is par with <code>priceObservedAtMode = &quot;nominal_reference&quot;</code>, no observation time and no confidence, which cannot open depeg events, and replay preserves existing history instead of synthesizing par points. SoFiUSD has no nominal override and instead uses its contract-verified CoinGecko/Kraken market consensus; unavailable observed quotes remain missing, and the ordinary depeg-authority gates are unchanged</li>
+              <li><span className="text-foreground font-medium">ERC-4626 NAV wrappers:</span> reviewed vaults such as Sky sUSDS, Ethena sUSDe, Spark Savings, Gauntlet, Steakhouse, Sentora, Falcon, Resupply, Frax, Keyrock, Wintermute, Galaxy, Clearstar, Hyperithm, Yearn, Avant, Noon, Yuzu, and Aave Umbrella use canonical-chain <code>convertToAssets()</code> reads multiplied by a fresh trusted tracked parent price, including EURCV for euro-denominated shares; without that parent price, the wrapper remains unpriced. Legacy Spark USDC is a separate 18-decimal-share deployment from 6-decimal-share Spark V2</li>
+              <li><span className="text-foreground font-medium">sGHO / Idle tranches:</span> protocol-specific <code>previewRedeem()</code> or <code>virtualPrice()</code> reads price assets whose executable value is not represented by thin secondary markets</li>
               <li><span className="text-foreground font-medium">AZND thin-pool recovery:</span> the exact Curve AZND/USDC route must pass identity, balance-floor, and quote-impact guards. Both its block and trusted USDC parent must remain within five minutes after awaited reads; the older clock and its observation mode date the result. A guarded no-quote remains an explicit coverage gap, while a thrown provider failure counts against the route circuit</li>
-              <li><span className="text-foreground font-medium">crvUSD (Curve):</span> <code className="text-xs">PriceAggregator.price()</code> enters primary consensus as a live market voice, not a protocol override</li>
+              <li><span className="text-foreground font-medium">crvUSD (Curve):</span> <code>PriceAggregator.price()</code> enters primary consensus as a live market voice, not a protocol override</li>
             </ul>
             <p>Sentora pathUSD&apos;s exact Tempo vault route can use a fresh replay-safe single-source pathUSD parent. The resulting NAV retains the parent&apos;s market source, single-source confidence and original observation time; it does not gain protocol-authoritative confidence. Stale, fallback, cached and non-replay-safe single-source parents remain unavailable.</p>
             <p>Pre-intake NAV supply valuation uses the same reviewed vault allowlist and the configured Worker RPC map as live enrichment, including Robinhood&apos;s existing keyed Dwellir route. For supply valuation only, a parent read from the previous published payload may be up to two stablecoins producer intervals old, measured from its original price observation. Same-run quotes and live price overrides keep their source freshness budgets. Confidence, replay safety and parent identity checks remain unchanged; an unavailable route or untrusted parent leaves valuation unavailable, with no nominal-par fallback.</p>
-            <p>DEX pool discovery uses DexScreener&apos;s complete single-token <code className="text-xs">token-pairs/v1</code> endpoint; the bounded multi-address pricing fallback remains on the separate <code className="text-xs">tokens/v1</code> endpoint.</p>
-            <p>Apart from nominal par references, these overrides set <code className="text-xs">priceSource = &quot;protocol-redeem&quot;</code> and <code className="text-xs">priceConfidence = &quot;high&quot;</code> when the quote validates against peg bounds, and they are applied after the GeckoTerminal probe so later market checks cannot overwrite them. Recovery scheduling treats a current price as usable only when it is positive and carries publishable source and observation-time provenance, and each live candidate has a bounded slice of the shared budget so one stalled wrapper cannot skip the remaining active gaps. Parent trust is judged on the composite&apos;s replay-safe core, so an agreeing non-replay-safe corroborator that joins a parent&apos;s consensus label can neither strip trust from a high-confidence parent nor upgrade one the gate would otherwise reject. Vault NAV routes persist their last-good on-chain rate, and a failed live read can publish that cached rate times the fresh trusted parent price as an explicit low-confidence <code className="text-xs">protocol-redeem-cached-rate</code> source — bounded to 24 hours, never replacing a live price, and never depeg-authoritative. A read that completes with a zero or out-of-bounds rate is rejected and invalidates the cached rate rather than being replaced by it. Audited wrapper exceptions can use a fresh high-confidence same-run parent consensus for live pricing while keeping historical replay on replay-safe sources.</p>
+            <p>DEX pool discovery uses DexScreener&apos;s complete single-token <code>token-pairs/v1</code> endpoint; the bounded multi-address pricing fallback remains on the separate <code>tokens/v1</code> endpoint.</p>
+            <p>Apart from nominal par references, these overrides set <code>priceSource = &quot;protocol-redeem&quot;</code> and <code>priceConfidence = &quot;high&quot;</code> when the quote validates against peg bounds, and they are applied after the GeckoTerminal probe so later market checks cannot overwrite them. Recovery scheduling treats a current price as usable only when it is positive and carries publishable source and observation-time provenance, and each live candidate has a bounded slice of the shared budget so one stalled wrapper cannot skip the remaining active gaps. Parent trust is judged on the composite&apos;s replay-safe core, so an agreeing non-replay-safe corroborator that joins a parent&apos;s consensus label can neither strip trust from a high-confidence parent nor upgrade one the gate would otherwise reject. Vault NAV routes persist their last-good on-chain rate, and a failed live read can publish that cached rate times the fresh trusted parent price as an explicit low-confidence <code>protocol-redeem-cached-rate</code> source — bounded to 24 hours, never replacing a live price, and never depeg-authoritative. A read that completes with a zero or out-of-bounds rate is rejected and invalidates the cached rate rather than being replaced by it. Audited wrapper exceptions can use a fresh high-confidence same-run parent consensus for live pricing while keeping historical replay on replay-safe sources.</p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">CoinGecko Supply Gap-Fill Limits</h3>
-            <p>DefiLlama list totals remain the canonical supply for DefiLlama-backed assets. When exactly one reviewed deployment is missing from DefiLlama&apos;s chain breakdown, a fresh CoinGecko market cap may raise the aggregate only while CoinGecko/DefiLlama stays inside a bounded band: a new fill needs a ratio above 1.05 and at most 1.45, an existing fill is kept above 1.02 (hysteresis), and no fill ever exceeds 1.50 at current or at any compared 1d/7d/30d point. Since v6.80, every fill, new or retained, also needs a reviewed asset/chain pair whose on-chain read shows stock on the missing chain of at least half the remainder; a reviewed refusal ends a fill from its dated clock. All admitted aggregate buckets come from one CoinGecko series, and the row exposes <code className="text-xs">supplyGapFill</code> provenance with the retained DefiLlama total. Since v6.47, each historical remainder is attributed to the missing chain only when every existing chain has an observed bucket and their sum matches the DefiLlama baseline within max($0.01, baseline &times; 1e-6). Otherwise that missing-chain bucket is null and <code className="text-xs">withheldHistoricalBuckets</code> names the unavailable window; observed chain values are never scaled and admitted aggregates are unchanged. Aggregate admission still fails closed for out-of-band, incomplete or ambiguous supplemental evidence.</p>
+            <p>DefiLlama list totals remain the canonical supply for DefiLlama-backed assets. When exactly one reviewed deployment is missing from DefiLlama&apos;s chain breakdown, a fresh CoinGecko market cap may raise the aggregate only while CoinGecko/DefiLlama stays inside a bounded band: a new fill needs a ratio above 1.05 and at most 1.45, an existing fill is kept above 1.02 (hysteresis), and no fill ever exceeds 1.50 at current or at any compared 1d/7d/30d point. Since v6.80, every fill, new or retained, also needs a reviewed asset/chain pair whose on-chain read shows stock on the missing chain of at least half the remainder; a reviewed refusal ends a fill from its dated clock. All admitted aggregate buckets come from one CoinGecko series, and the row exposes <code>supplyGapFill</code> provenance with the retained DefiLlama total. Since v6.47, each historical remainder is attributed to the missing chain only when every existing chain has an observed bucket and their sum matches the DefiLlama baseline within max($0.01, baseline &times; 1e-6). Otherwise that missing-chain bucket is null and <code>withheldHistoricalBuckets</code> names the unavailable window; observed chain values are never scaled and admitted aggregates are unchanged. Aggregate admission still fails closed for out-of-band, incomplete or ambiguous supplemental evidence.</p>
           </div>
 
           <div className="space-y-2">
@@ -279,8 +283,11 @@ export function PricingPipelineMethodologySection({
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">Confidence levels</h3>
             <ContentTable
+              chrome="embedded"
               tableId="methodology-pricing-confidence-levels"
               testId="methodology-pricing-confidence-levels-table"
+              tableClassName="min-w-[540px]"
+              viewportProps={{ mobileScrollHint: "Swipe sideways for more columns" }}
               columns={[
                 { id: "level", header: "Level" },
                 { id: "condition", header: "Condition", cellClassName: "whitespace-normal" },
@@ -316,7 +323,7 @@ export function PricingPipelineMethodologySection({
               <li><span className="text-foreground font-medium">DEX pool observation:</span> requires the existing $50K TVL floor; independent ticker prices require at least $1,000 observed USD flow with zero TVL attribution and unchanged publication/trust guards</li>
               <li><span className="text-foreground font-medium">Historical backfill:</span> validates against per-timestamp peg references</li>
             </ul>
-            <p>USD and fiat-FX pegs share the same upside tolerance ratio when a usable reference exists, while commodity tokens (gold, silver) keep the broader 2x reference band and scale references by <code className="text-xs">commodityOunces</code> for gram- and 1/1000-ounce assets. NAV tokens use broad positive-price checks. Replay-safe cache storage is limited to strong, replayable prices and now expires after 6 hours.</p>
+            <p>USD and fiat-FX pegs share the same upside tolerance ratio when a usable reference exists, while commodity tokens (gold, silver) keep the broader 2x reference band and scale references by <code>commodityOunces</code> for gram- and 1/1000-ounce assets. NAV tokens use broad positive-price checks. Replay-safe cache storage is limited to strong, replayable prices and now expires after 6 hours.</p>
           </div>
         </MethodologyDetails>
     </MethodologySectionShell>

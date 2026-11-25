@@ -1,4 +1,3 @@
-import { cn } from "@/lib/utils";
 import {
   PSI_METHODOLOGY_CHANGELOG_PATH,
   PSI_METHODOLOGY_VERSION_LABEL,
@@ -9,12 +8,13 @@ import {
   MethodologyDetails,
   MethodologyDiagramFlow,
   MethodologyFacts,
+  MethodologyFormula,
   MethodologyPreconditions,
   MethodologySectionShell,
   WorkedExample,
 } from "../../methodology-shared";
 import { PSI_REFERENCE_ADMISSION_DESCRIPTION, STABILITY_INDEX_SECTION_CONTENT } from "@/lib/methodology-content";
-import { PSI_BAND_CLASSES, METHODOLOGY_SECTION_ACCENT_CLASSES, METHODOLOGY_TABLE_ACCENT_CLASSES } from "@shared/lib/classification";
+import { PSI_BAND_CLASSES, METHODOLOGY_SECTION_ACCENT_CLASSES } from "@shared/lib/classification";
 import { PSI_COMPONENT_LIMITS, PSI_CONDITION_BANDS } from "@shared/lib/psi-policy";
 import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 
@@ -22,7 +22,7 @@ const PSI_REFRESH_MINUTES = CRON_SCHEDULE_CADENCES.dewsPsiOffset.intervalSec / 6
 
 const STABILITY_COMPONENT_COLUMNS = [
   { id: "component", header: "Component", cellClassName: "text-foreground" },
-  { id: "range", header: "Range" },
+  { id: "range", header: "Range", cellClassName: "pharos-numeric whitespace-nowrap" },
   { id: "formula", header: "Formula", cellClassName: "pharos-numeric text-xs whitespace-normal" },
   { id: "purpose", header: "Purpose", cellClassName: "whitespace-normal" },
 ];
@@ -67,7 +67,7 @@ const STABILITY_COMPONENT_ROWS = [
 ];
 
 const STABILITY_BAND_COLUMNS = [
-  { id: "range", header: "Range" },
+  { id: "range", header: "Range", cellClassName: "pharos-numeric whitespace-nowrap" },
   { id: "band", header: "Band", cellClassName: "font-medium" },
   { id: "meaning", header: "Meaning", cellClassName: "whitespace-normal" },
 ];
@@ -97,35 +97,18 @@ export function StabilityIndexMethodologySection() {
       title={STABILITY_INDEX_SECTION_CONTENT.title}
       versionBadge={{ label: PSI_METHODOLOGY_VERSION_LABEL }}
       changelogPath={PSI_METHODOLOGY_CHANGELOG_PATH}
+      liveHref="/stability-index/"
+      liveLabel="Stability Index"
+      docsPath="/docs/stability-index/"
       versionNote="Version increments when PSI formula, caps, bands, component definitions, or other score-affecting input semantics change."
       changelogClassName={METHODOLOGY_SECTION_ACCENT_CLASSES.stabilityIndex.changelogHover}
     >
       <p>
         The Pharos Stability Index (PSI) is a market-level 0&ndash;100 health score for the stablecoin ecosystem. It is
         recomputed every {PSI_REFRESH_MINUTES} minutes from live depeg conditions and stress signals, then aggregated into daily history
-        snapshots. Under listing policy v2 (v3.71, <code className="text-xs">core-stablecoins-v2</code>), tokenized fund shares leave the core
+        snapshots. Under listing policy v2 (v3.71, <code>core-stablecoins-v2</code>), tokenized fund shares leave the core
         aggregate on a dated cutover; published history is not restated and pre-cutover replays keep the frozen{" "}
-        <code className="text-xs">core-stablecoins-v1</code> membership. Tracked variants, tokenized funds, and review-hold listings remain browsable but do not count as independent supply.
-      </p>
-      <p>{PSI_REFERENCE_ADMISSION_DESCRIPTION}</p>
-      <p>
-        Methodology v3.69 applies the same closed-market rule to history: a gold, silver or FX depeg that began while
-        its market was shut and stayed under 25% no longer counts if it ended within six hours of the reopen, and
-        otherwise counts from the reopen. Past daily scores were corrected by removing only those events&apos; effect.
-      </p>
-      <p>
-        Methodology v3.68 scores open depegs on gold, silver and FX pegs against today&apos;s reference rather than
-        the reference on the day they opened, and holds FX, gold and silver contributions at their last pre-closure
-        value while their market is shut.
-      </p>
-      <p>
-        Methodology v3.67 can change repaired historical scores without changing formula weights or bands.
-        Audit repairs and bounded backfills share canonical daily-price, native-domain and DEWS archive inputs
-        with a twenty-one-day supply lookback. Historical trend compares paired admitted supply identities;
-        an unavailable prior denominator or required missing DEWS archive preserves the accepted day rather
-        than inventing flat growth or zero stress. Event exclusion and restoration rebuild the post-audit
-        eligible universe atomically with event provenance. Fixed-clock replay and owner review remain release
-        prerequisites, not completed historical repair claims.
+        <code>core-stablecoins-v1</code> membership. Tracked variants, tokenized funds, and review-hold listings remain browsable but do not count as independent supply.
       </p>
       <p className="text-xs text-muted-foreground">
         See also:{" "}
@@ -173,6 +156,28 @@ export function StabilityIndexMethodologySection() {
             },
         ]}
       />
+      <MethodologyDetails summary="Current reference-session and historical replay rules">
+        <p>{PSI_REFERENCE_ADMISSION_DESCRIPTION}</p>
+        <p>
+          Methodology v3.69 applies the same closed-market rule to history: a gold, silver or FX depeg that began while
+          its market was shut and stayed under 25% no longer counts if it ended within six hours of the reopen, and
+          otherwise counts from the reopen. Past daily scores were corrected by removing only those events&apos; effect.
+        </p>
+        <p>
+          Methodology v3.68 scores open depegs on gold, silver and FX pegs against today&apos;s reference rather than
+          the reference on the day they opened, and holds FX, gold and silver contributions at their last pre-closure
+          value while their market is shut.
+        </p>
+        <p>
+          Methodology v3.67 can change repaired historical scores without changing formula weights or bands.
+          Audit repairs and bounded backfills share canonical daily-price, native-domain and DEWS archive inputs
+          with a twenty-one-day supply lookback. Historical trend compares paired admitted supply identities;
+          an unavailable prior denominator or required missing DEWS archive preserves the accepted day rather
+          than inventing flat growth or zero stress. Event exclusion and restoration rebuild the post-audit
+          eligible universe atomically with event provenance. Fixed-clock replay and owner review remain release
+          prerequisites, not completed historical repair claims.
+        </p>
+      </MethodologyDetails>
       <WorkedExample summary="Worked example (verified against computeStabilityIndex)">
         <p className="pharos-numeric">
           Inputs: bps=-120, depegMcap=$2B, totalMcap=$200B, age=10d, trend=+1.2, stressBreadth=1.5
@@ -188,9 +193,9 @@ export function StabilityIndexMethodologySection() {
       >
         <div className="space-y-2">
           <h3 className="text-foreground font-medium">Scoring formula</h3>
-          <code className="block rounded-lg border border-border/60 bg-muted/50 px-4 py-3 text-xs pharos-numeric">
+          <MethodologyFormula>
             Score = 100 &minus; severity &minus; breadth &minus; stressBreadth + trend
-          </code>
+          </MethodologyFormula>
           <p className="text-xs">The final value is clamped to [0, 100] and rounded to one decimal.</p>
         </div>
         <MethodologyDiagramFlow
@@ -203,14 +208,17 @@ export function StabilityIndexMethodologySection() {
           ]}
           steps={[
             { title: "Compute PSI", subtitle: "100 − penalties + trend", className: "md:w-80" },
-            { title: "Condition band", subtitle: "BEDROCK through MELTDOWN", className: cn("md:w-80", METHODOLOGY_TABLE_ACCENT_CLASSES.psiConditionBand) },
+            { title: "Condition band", subtitle: "BEDROCK through MELTDOWN", emphasis: "output", className: "md:w-80" },
           ]}
         />
         <div className="space-y-2">
           <h3 className="text-foreground font-medium">Components</h3>
           <ContentTable
+            chrome="embedded"
             tableId="methodology-stability-index-components"
             testId="methodology-stability-index-components-table"
+            tableClassName="min-w-[600px]"
+            viewportProps={{ mobileScrollHint: "Swipe sideways for more columns" }}
             columns={STABILITY_COMPONENT_COLUMNS}
             rows={STABILITY_COMPONENT_ROWS}
           />
@@ -243,8 +251,8 @@ export function StabilityIndexMethodologySection() {
             <li>
               <span className="text-foreground font-medium">Historical rebuild parity:</span> completed-day backfills
               score any depeg overlapping the UTC day, canonicalize legacy depeg IDs into the current PSI universe,
-              replay USD-domain deviation from `supply_history.price` when possible, never exceed the event&apos;s
-              recorded `peak_deviation_bps`, and keep `peak_deviation_bps` as a start-day floor only when the event
+              replay USD-domain deviation from <code>supply_history.price</code> when possible, never exceed the event&apos;s
+              recorded <code>peak_deviation_bps</code>, and keep <code>peak_deviation_bps</code> as a start-day floor only when the event
               remained active through the UTC close and a daily snapshot misses the move. Unless that floor applies, a
               start day whose restored daily price is back inside the configured threshold drops out of the replay.
               Later days of an active event keep their daily-price deviation. Restore jobs also repair
@@ -257,13 +265,14 @@ export function StabilityIndexMethodologySection() {
               percentage and cost text.
             </li>
           </ul>
-          <code className="block rounded-lg border border-border/60 bg-muted/50 px-4 py-3 text-xs pharos-numeric">
+          <MethodologyFormula>
             factor = ageDays &le; 30 ? 1.0 : max(0.25, 1.0 &minus; (ageDays &minus; 30)/120)
-          </code>
+          </MethodologyFormula>
         </div>
         <div className="space-y-2">
           <h3 className="text-foreground font-medium">Condition bands</h3>
           <ContentTable
+            chrome="embedded"
             tableId="methodology-stability-index-condition-bands"
             testId="methodology-stability-index-condition-bands-table"
             columns={STABILITY_BAND_COLUMNS}

@@ -60,4 +60,4 @@ Reach us on [X](https://x.com/PharosWatch) or in the [Telegram group](https://t.
 
 Pharos still depends on donations for its team and for the services no one sponsors; the [funding page](/funding/) shows what those cost. See you at the lighthouse. 🗼
 
-	/- TokenBrice
+/- TokenBrice

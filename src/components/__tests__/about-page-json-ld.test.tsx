@@ -58,7 +58,7 @@ describe("About disclosure and reuse copy", () => {
 
   it("discloses the owner's Polaris work once inside the team section", () => {
     const html = renderToStaticMarkup(<AboutPageContent />);
-    const teamStart = html.indexOf("Who Is Building Pharos?");
+    const teamStart = html.indexOf("Who is building Pharos?");
     const mediaStart = html.indexOf("Pharos in the media");
     expect(teamStart).toBeGreaterThan(-1);
     expect(mediaStart).toBeGreaterThan(teamStart);

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { buildCoverageFeatureSummary, buildCoverageRow, COVERAGE_FEATURES } from "@/lib/coverage";
 import type { CoverageFeatureSummary } from "@/lib/coverage";
 import { CoverageFeatureSnapshotRow } from "@/components/coverage/coverage-feature-snapshot";
@@ -293,5 +293,46 @@ describe("CoverageFeatureSnapshotRow", () => {
     expect(gapSegment.className).not.toContain("text-white");
     // At ~12.4% width, full "not covered 23" would clip to "not cover..."; compact "gap 23" fits cleanly.
     expect(gapSegment.textContent).toBe("gap 23");
+  });
+
+  it("exposes an accessible legend disclosure when narrow slices hide inline labels and wires row filter actions", () => {
+    const onFilterFeature = vi.fn();
+    const summary: CoverageFeatureSummary = {
+      feature: COVERAGE_FEATURES.find((feature) => feature.key === "reserves")!,
+      availableCount: 150,
+      totalCount: 185,
+      coveragePct: 81,
+      coverageUnavailable: false,
+      coveredMcapUsd: 900,
+      marketCapObservedCount: 185,
+      marketCapComplete: true,
+      mcapSharePct: 92,
+      countLabel: "Score-grade live",
+      coverageLabel: "81% with score-grade live reserves",
+      shareLabel: "Score-grade live reserve market-cap reach",
+      breakdown: [
+        { key: "live", label: "score-grade", count: 150 },
+        { key: "checking", label: "checking", count: 2 },
+        { key: "data-unavailable", label: "data n/a", count: 3 },
+      ],
+      denominatorBreakdown: [
+        { key: "live", label: "score-grade", count: 150 },
+        { key: "checking", label: "checking", count: 2 },
+      ],
+    };
+
+    const { container } = render(
+      <CoverageFeatureSnapshotRow summary={summary} onFilterFeature={onFilterFeature} />,
+    );
+
+    expect(container.querySelectorAll(".pharos-chart-legend-chip").length).toBe(4);
+    expect(container.textContent).toContain("Breakdown");
+    expect(container.textContent).toContain("checking");
+    expect(container.textContent).toContain("data n/a");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Score-grade: filter matrix to coins with score-grade live reserves" }),
+    );
+    expect(onFilterFeature).toHaveBeenCalledWith("live-reserves");
   });
 });

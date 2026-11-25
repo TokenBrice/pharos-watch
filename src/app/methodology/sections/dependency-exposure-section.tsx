@@ -11,7 +11,12 @@ export function DependencyExposureMethodologySection() {
   const { id, title, markdownParagraphs } = DEPENDENCY_EXPOSURE_SECTION_CONTENT;
 
   return (
-    <MethodologySectionShell id={id} title={title}>
+    <MethodologySectionShell
+      id={id}
+      title={title}
+      liveHref="/dependency-map/?mode=exposure"
+      liveLabel="Dependency Map"
+    >
       <p>
         Exposure mode on the{" "}
         <Link href="/dependency-map/?mode=exposure" className={METHODOLOGY_LINK_CLASS}>

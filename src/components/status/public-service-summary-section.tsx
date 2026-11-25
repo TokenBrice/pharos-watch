@@ -1,12 +1,29 @@
 "use client";
 
-import type { PublicStatusComponent, PublicStatusComponentId } from "@shared/types/status/public-health";
-import { PUBLIC_COMPONENT_LABEL, PUBLIC_COMPONENT_SCOPE } from "@shared/lib/classification";
+import type { PublicComponentState, PublicStatusComponent, PublicStatusComponentId } from "@shared/types/status/public-health";
+import { PUBLIC_COMPONENT_LABEL, PUBLIC_COMPONENT_SCOPE, PUBLIC_COMPONENT_STATE_TONE } from "@shared/lib/classification";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { STATUS_SYSTEM_FRESHNESS_SEC } from "@shared/lib/public-health";
-import { ComponentStatePill, StatusSection, Timestamp } from "@/components/status/page-primitives";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ComponentStatePill, StatusSection, TechnicalDetail, Timestamp } from "@/components/status/page-primitives";
 import { UptimeBar } from "@/components/status/uptime-bar";
 import type { ComponentDayCell } from "@/lib/status/public-status-timeline";
+import { cn } from "@/lib/utils";
+
+const COMPONENT_ROW_ACCENT: Record<PublicComponentState, string> = {
+  operational: "",
+  delayed: "-mx-2 rounded-lg border-l-[3px] border-l-state-info-solid bg-state-info-subtle px-2",
+  degraded: "-mx-2 rounded-lg border-l-[3px] border-l-state-warn-solid bg-state-warn-subtle px-2",
+  outage: "-mx-2 rounded-lg border-l-[3px] border-l-state-danger-solid bg-state-danger-subtle px-2",
+};
+
+const UPTIME_LEGEND_ITEMS = [
+  { label: PUBLIC_COMPONENT_STATE_TONE.operational.label, swatch: PUBLIC_COMPONENT_STATE_TONE.operational.bar },
+  { label: PUBLIC_COMPONENT_STATE_TONE.delayed.label, swatch: PUBLIC_COMPONENT_STATE_TONE.delayed.bar },
+  { label: PUBLIC_COMPONENT_STATE_TONE.degraded.label, swatch: PUBLIC_COMPONENT_STATE_TONE.degraded.bar },
+  { label: PUBLIC_COMPONENT_STATE_TONE.outage.label, swatch: PUBLIC_COMPONENT_STATE_TONE.outage.bar },
+  { label: "No data", swatch: "bg-muted/60 ring-1 ring-inset ring-border/60" },
+] as const;
 
 export type PublicHistoryLoadState = "loading" | "error" | "ready";
 
@@ -61,7 +78,14 @@ function ComponentRow({
   const label = PUBLIC_COMPONENT_LABEL[component.id];
   const operational = component.state === "operational";
   return (
-    <li className="border-b border-border/60 py-3 last:border-0" data-testid={`public-component-${component.id}`}>
+    <li
+      className={cn(
+        "border-b border-border/60 py-3 last:border-0",
+        !operational && "my-1 border-b-0",
+        COMPONENT_ROW_ACCENT[component.state],
+      )}
+      data-testid={`public-component-${component.id}`}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-sm font-medium text-foreground">{label}</h3>
@@ -82,20 +106,19 @@ function ComponentRow({
             {component.budget ? <span>{formatBudget(component.budget)}</span> : null}
           </p>
           {component.reasons.length > 0 ? (
-            <details className="text-xs text-muted-foreground">
-              <summary className="pharos-focus-ring cursor-pointer rounded-sm hover:text-foreground">Technical detail</summary>
-              <ul className="mt-1 space-y-0.5 font-mono">
+            <TechnicalDetail>
+              <ul className="space-y-0.5">
                 {component.reasons.map((reason) => (
-                  <li key={reason} className="break-all">{reason}</li>
+                  <li key={reason}>{reason}</li>
                 ))}
               </ul>
-            </details>
+            </TechnicalDetail>
           ) : null}
         </div>
       ) : null}
       <div className="mt-2">
         {historyState === "loading" ? (
-          <div className="h-5 animate-pulse rounded-sm bg-muted/40" aria-label={`Loading ${label} history`} role="img" />
+          <Skeleton variant="shimmer" className="h-5 w-full rounded-sm" aria-hidden="true" />
         ) : historyState === "ready" && cells ? (
           <UptimeBar cells={cells} label={label} />
         ) : null}
@@ -115,9 +138,38 @@ export function PublicServiceSummarySection({
   clockSec = nowSec,
 }: PublicServiceSummarySectionProps) {
   const windowStart = nowSec - historyDays * 86_400;
+  const operationalCount = components.filter((component) => component.state === "operational").length;
+  const hasNonOperational = operationalCount < components.length;
+
   return (
-    <StatusSection id="overview" title="Components">
-      <ul>
+    <StatusSection
+      id="overview"
+      title="Components"
+      summary={
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 lg:justify-end">
+          {hasNonOperational ? (
+            <span className="pharos-numeric inline-flex items-center rounded-full border border-border/60 bg-background/80 px-2.5 py-0.5 text-xs font-medium text-foreground dark:bg-background/45">
+              {operationalCount} of {components.length} operational
+            </span>
+          ) : null}
+          <div role="group" className="flex flex-wrap items-center gap-x-3 gap-y-1" aria-label="Component history legend">
+            {UPTIME_LEGEND_ITEMS.map((item) => (
+              <span key={item.label} className="pharos-chart-legend-chip">
+                <span aria-hidden="true" className={cn("h-2.5 w-2 rounded-xs", item.swatch)} />
+                {item.label}
+              </span>
+            ))}
+          </div>
+        </div>
+      }
+    >
+      {historyState === "ready" ? (
+        <div className="flex justify-between text-2xs text-muted-foreground" aria-hidden="true">
+          <span>{historyDays} days ago</span>
+          <span>Today</span>
+        </div>
+      ) : null}
+      <ul aria-busy={historyState === "loading" || undefined}>
         {components.map((component) => (
           <ComponentRow
             key={component.id}

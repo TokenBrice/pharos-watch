@@ -9,7 +9,7 @@ what shipped, what's next, and why.
 
 [`BLOG_POSTS` and `BlogPost`](../../src/data/blog/index.ts) own metadata; bodies live in `src/data/blog/posts/<slug>.md`. The registry drives the hub, feed and post metadata; post pages share as Open Graph `article`s whose `article:published_time` is `datePublished` at 00:00 UTC. Sitemap dates for post pages derive from the body and the shared renderer only, so a registry-only edit (title, description, cover) does not restamp the sitemap (`scripts/maintenance/generate-sitemap-dates.ts`). Publication dates are authored metadata, not Git modification times or claims of human review.
 
-Post headers credit Pharos and link to `/about/#editorial-ai-policy`. Article bodies use the Georgia editorial register; page chrome stays sans and obeys the One Beam Rule in [DESIGN.md](../../DESIGN.md).
+Post headers credit Pharos and link to `/about/#editorial-ai-policy`. Display headings use Newsreader (`digestDisplay.className`); article bodies use the Georgia editorial register; page chrome stays sans and obeys the One Beam Rule in [DESIGN.md](../../DESIGN.md).
 
 The hub's native cover images declare 1200×630 intrinsic dimensions, lazy loading and async decoding. This reserves their layout without generating eager image hints when another route discovers or prefetches the hub; article/social cover URLs stay unchanged.
 

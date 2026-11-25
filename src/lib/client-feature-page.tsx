@@ -1,6 +1,7 @@
 import dynamic from "next/dynamic";
 import { FeaturePageShell, type FeaturePageShellProps } from "@/components/feature-page-shell";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
+import { SeeAlsoFooter } from "@/components/see-also-footer";
 import { buildPageMetadata } from "@/lib/page-metadata";
 
 interface ClientFeatureRouteDefinition<ClientProps extends object = Record<string, never>> {
@@ -40,6 +41,7 @@ export function createClientFeaturePage<ClientProps extends object = Record<stri
           <ClientComponent {...(clientProps as ClientProps)} />
         </SectionErrorBoundary>
         {afterClient}
+        <SeeAlsoFooter route={path} />
       </FeaturePageShell>
     );
   }

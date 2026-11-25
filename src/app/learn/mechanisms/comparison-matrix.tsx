@@ -1,7 +1,12 @@
 import Link from "next/link";
-import type { MechanismArchetype } from "@shared/types/stablecoin-taxonomy";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
 import { getMechanismArchetypeLabel, getMechanismExplainerPath } from "@shared/lib/classification";
+import {
+  MECHANISM_DEPENDENCY_COLUMNS,
+  MECHANISM_DEPENDENCY_DOT,
+  MECHANISM_MATRIX,
+  MECHANISM_MATRIX_COLUMNS,
+} from "@/lib/mechanism-matrix";
 import { cn } from "@/lib/utils";
 import {
   TableBody,
@@ -12,165 +17,41 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/table";
+import { SectionHeading } from "../_shared/section-primitives";
 
-type MatrixCol =
-  | "collateralLocation"
-  | "redemptionRight"
-  | "yieldSource"
-  | "primaryFailureMode"
-  | "governanceDep"
-  | "oracleDep"
-  | "jurisdictionDep";
-
-const COLUMNS: ReadonlyArray<{ key: MatrixCol; label: string; short: string }> = [
-  { key: "collateralLocation", label: "Collateral location", short: "Collateral" },
-  { key: "redemptionRight", label: "Redemption right", short: "Redemption" },
-  { key: "yieldSource", label: "Yield source", short: "Yield" },
-  { key: "primaryFailureMode", label: "Primary failure mode", short: "Fails by" },
-  { key: "governanceDep", label: "Governance dep.", short: "Governance" },
-  { key: "oracleDep", label: "Oracle dep.", short: "Oracle" },
-  { key: "jurisdictionDep", label: "Jurisdiction dep.", short: "Jurisdiction" },
-];
-
-const DEPENDENCY_COLUMNS: ReadonlySet<MatrixCol> = new Set([
-  "governanceDep",
-  "oracleDep",
-  "jurisdictionDep",
-]);
-
-const DEPENDENCY_DOT: Record<string, string> = {
-  Low: "bg-[var(--severity-healthy)]",
-  Medium: "bg-[var(--severity-moderate)]",
-  High: "bg-[var(--severity-severe)]",
-};
-
-function DependencyCell({ value }: { value: string }) {
-  const dot = DEPENDENCY_DOT[value];
+export function MechanismDependencyValue({ value }: { value: string }) {
+  const dot = MECHANISM_DEPENDENCY_DOT[value];
   if (!dot) {
-    return <span className="text-muted-foreground/70">{value}</span>;
+    return <span className="text-muted-foreground">{value}</span>;
   }
   return (
     <span className="inline-flex items-center gap-1.5">
       <span
         aria-hidden="true"
-        className={cn("h-1.5 w-1.5 rounded-full", dot)}
+        className={cn("h-1.5 w-1.5 shrink-0 rounded-full", dot)}
       />
-      <span className="text-foreground/80">{value}</span>
+      <span className="text-foreground/85">{value}</span>
     </span>
   );
 }
 
-const MATRIX: Record<MechanismArchetype, Record<MatrixCol, string>> = {
-  "fiat-cash": {
-    collateralLocation: "Off-chain",
-    redemptionRight: "1:1",
-    yieldSource: "—",
-    primaryFailureMode: "Banking-rail freeze",
-    governanceDep: "Low",
-    oracleDep: "—",
-    jurisdictionDep: "High",
-  },
-  tbill: {
-    collateralLocation: "Off-chain",
-    redemptionRight: "NAV or par",
-    yieldSource: "Treasury yield",
-    primaryFailureMode: "Redemption gate",
-    governanceDep: "Low",
-    oracleDep: "—",
-    jurisdictionDep: "High",
-  },
-  cdp: {
-    collateralLocation: "On-chain crypto",
-    redemptionRight: "Vault",
-    yieldSource: "Liquidations + fees",
-    primaryFailureMode: "Liquidation cascade",
-    governanceDep: "Medium",
-    oracleDep: "High",
-    jurisdictionDep: "Low",
-  },
-  "synthetic-delta-neutral": {
-    collateralLocation: "On-chain or custodied",
-    redemptionRight: "Strategy unwind",
-    yieldSource: "Hedge carry",
-    primaryFailureMode: "Carry / unwind stress",
-    governanceDep: "Medium",
-    oracleDep: "Varies",
-    jurisdictionDep: "Medium",
-  },
-  algorithmic: {
-    collateralLocation: "Design-specific: none to protocol collateral",
-    redemptionRight: "Burn",
-    yieldSource: "—",
-    primaryFailureMode: "Reflexive collapse",
-    governanceDep: "High",
-    oracleDep: "Medium",
-    jurisdictionDep: "Low",
-  },
-  "rwa-credit-fund": {
-    collateralLocation: "Off-chain",
-    redemptionRight: "Fund gate",
-    yieldSource: "Credit yield",
-    primaryFailureMode: "NAV markdown",
-    governanceDep: "Low",
-    oracleDep: "—",
-    jurisdictionDep: "High",
-  },
-  "commodity-claim": {
-    collateralLocation: "Vaulted metal",
-    redemptionRight: "Physical delivery",
-    yieldSource: "—",
-    primaryFailureMode: "Vault or title failure",
-    governanceDep: "Low",
-    oracleDep: "—",
-    jurisdictionDep: "High",
-  },
-  "ucits-trs-fund": {
-    collateralLocation: "Physical securities + TRS",
-    redemptionRight: "Fund share at NAV; gates",
-    yieldSource: "Portfolio / swap return",
-    primaryFailureMode: "Hedge / counterparty loss",
-    governanceDep: "Medium",
-    oracleDep: "Administrator NAV",
-    jurisdictionDep: "High",
-  },
-  "shared-reserve": {
-    collateralLocation: "Common reserve pool",
-    redemptionRight: "Protocol exchange; liquidity gates",
-    yieldSource: "Reserve income, if passed on",
-    primaryFailureMode: "Shared liability deficit",
-    governanceDep: "High",
-    oracleDep: "High",
-    jurisdictionDep: "Varies",
-  },
-  "protocol-position": {
-    collateralLocation: "Bridge / vault / module",
-    redemptionRight: "Operational position claim; gates",
-    yieldSource: "Underlying position, if passed on",
-    primaryFailureMode: "Position / withdrawal failure",
-    governanceDep: "High",
-    oracleDep: "Varies",
-    jurisdictionDep: "Varies",
-  },
-};
-
 export function MechanismComparisonMatrix() {
   return (
-    <section aria-labelledby="mechanism-matrix-heading" className="space-y-3">
-      <div className="flex items-baseline justify-between gap-4">
-        <h2 id="mechanism-matrix-heading" className="pharos-label">
+    <section aria-labelledby="mechanism-matrix-heading" className="space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <SectionHeading id="mechanism-matrix-heading">
           Types of stablecoins
-        </h2>
-        <span className="pharos-numeric text-2xs text-muted-foreground">
-          {MECHANISM_ARCHETYPE_VALUES.length} mechanisms
+        </SectionHeading>
+        <span className="text-xs text-muted-foreground">
+          <span className="pharos-numeric">{MECHANISM_ARCHETYPE_VALUES.length}</span> mechanisms
         </span>
       </div>
       <TableFrame
         tableId="mechanism-comparison-matrix"
         testId="mechanism-comparison-matrix-table"
-        chrome="content"
+        chrome="default"
         density="compact"
-        className="rounded-lg bg-card"
-        tableClassName="w-full min-w-[46rem] table-fixed border-collapse text-left text-xs"
+        tableClassName="w-full min-w-[54rem] table-fixed border-collapse text-left text-xs"
         tableProps={{ "aria-label": "Stablecoin mechanism comparison matrix" }}
         viewportProps={{
           compactBottomPadding: false,
@@ -179,24 +60,24 @@ export function MechanismComparisonMatrix() {
       >
         <TableCaption className="sr-only">Stablecoin mechanism comparison matrix</TableCaption>
         <colgroup>
-          <col className="w-[22%]" />
-          <col className="w-[12%]" />
+          <col className="w-[19%]" />
+          <col className="w-[13%]" />
           <col className="w-[11%]" />
-          <col className="w-[12%]" />
-          <col className="w-[15%]" />
+          <col className="w-[11%]" />
+          <col className="w-[14%]" />
           <col className="w-[10%]" />
-          <col className="w-[9%]" />
-          <col className="w-[9%]" />
+          <col className="w-[12%]" />
+          <col className="w-[10%]" />
         </colgroup>
         <TableHeader>
-          <TableRow className="border-b border-border/60 bg-muted/30 hover:bg-transparent">
+          <TableRow className="border-b border-border/60 bg-muted">
             <TableHead
               scope="col"
-              className="sticky left-0 z-10 h-auto whitespace-normal border-r border-border/50 bg-card px-3 py-2.5 align-bottom font-semibold text-foreground"
+              className="sticky left-0 z-10 h-auto whitespace-normal border-r border-border/50 bg-muted px-3 py-2.5 align-bottom font-semibold text-foreground shadow-[var(--table-sticky-column-shadow)] min-[60rem]:shadow-none"
             >
               Mechanism
             </TableHead>
-            {COLUMNS.map((col) => (
+            {MECHANISM_MATRIX_COLUMNS.map((col) => (
               <TableHead
                 key={col.key}
                 scope="col"
@@ -210,19 +91,17 @@ export function MechanismComparisonMatrix() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {MECHANISM_ARCHETYPE_VALUES.map((archetype, i) => {
-            const row = MATRIX[archetype];
+          {MECHANISM_ARCHETYPE_VALUES.map((archetype) => {
+            const row = MECHANISM_MATRIX[archetype];
             return (
               <TableRow
                 key={archetype}
-                className={cn(
-                  "border-b border-border/40 last:border-b-0 hover:bg-transparent",
-                  i % 2 === 1 ? "bg-muted/10" : null,
-                )}
+                rowIntent="scan"
+                className="group border-b border-border/40 last:border-b-0"
               >
                 <TableHead
                   scope="row"
-                  className="sticky left-0 z-1 h-auto whitespace-normal border-r border-border/50 bg-card px-3 py-2.5 align-top text-left font-medium text-foreground"
+                  className="sticky left-0 z-1 h-auto whitespace-normal border-r border-border/50 bg-card px-3 py-2.5 align-top text-left font-medium text-foreground transition-colors group-hover:bg-[var(--table-row-hover)] shadow-[var(--table-sticky-column-shadow)] min-[60rem]:shadow-none"
                 >
                   <Link
                     href={getMechanismExplainerPath(archetype)}
@@ -231,13 +110,13 @@ export function MechanismComparisonMatrix() {
                     {getMechanismArchetypeLabel(archetype)}
                   </Link>
                 </TableHead>
-                {COLUMNS.map((col) => (
+                {MECHANISM_MATRIX_COLUMNS.map((col) => (
                   <TableCell
                     key={col.key}
                     className="whitespace-normal px-3 py-2.5 align-top text-muted-foreground"
                   >
-                    {DEPENDENCY_COLUMNS.has(col.key) ? (
-                      <DependencyCell value={row[col.key]} />
+                    {MECHANISM_DEPENDENCY_COLUMNS.has(col.key) ? (
+                      <MechanismDependencyValue value={row[col.key]} />
                     ) : (
                       row[col.key]
                     )}

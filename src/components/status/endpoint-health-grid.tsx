@@ -1,8 +1,10 @@
 import { ENDPOINT_GROUPS } from "@/hooks/use-endpoint-probes";
 import type { EndpointProbeResult } from "@shared/types/status/public-health";
+import { DISCLOSURE_SUMMARY_RESET_CLASS, DisclosureChevron } from "@/components/disclosure-panel";
 import { Badge } from "@/components/ui/badge";
 import { getProbeDisplayStatus, isProbePassing } from "@/lib/status-dashboard-model";
 import { OPERATIONAL_PILL_CLASS } from "@/lib/status/dashboard-presentation";
+import { cn } from "@/lib/utils";
 import { PublicSignalCard } from "./public-signal-card";
 
 const GROUP_LABELS: Array<{ key: keyof typeof ENDPOINT_GROUPS; label: string }> = [
@@ -116,16 +118,16 @@ export function EndpointHealthGrid({
 
           return (
             <div key={key}>
-              <h3 className="mb-2 text-sm font-medium text-muted-foreground">{label}</h3>
+              {groups.length > 1 ? <h4 className="pharos-label mb-2">{label}</h4> : null}
               <div className="space-y-1">
                 {sampled.map((path) => {
                   const display = path.replace(/^\/api\//, "");
 
                   if (isInline) {
                     return (
-                      <div key={path} className="flex items-center justify-between py-1">
-                        <span className="font-mono text-xs">{display}</span>
-                        <span className="text-xs text-muted-foreground">Not probed</span>
+                      <div key={path} className="flex flex-wrap items-center justify-between gap-2 py-1">
+                        <span className="break-all font-mono text-xs">{display}</span>
+                        <span className="shrink-0 text-xs text-muted-foreground">Not probed</span>
                       </div>
                     );
                   }
@@ -135,16 +137,16 @@ export function EndpointHealthGrid({
                   const statusDetail = probe.error ?? probe.semanticDetail ?? null;
 
                   return (
-                    <div key={path} className="flex items-start justify-between gap-3 py-1">
+                    <div key={path} className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 py-1">
                       <div className="min-w-0">
-                        <div className="font-mono text-xs">{display}</div>
+                        <div className="break-all font-mono text-xs">{display}</div>
                         {statusDetail ? (
                           <div className="mt-1 text-xs leading-relaxed text-muted-foreground">
                             {statusDetail}
                           </div>
                         ) : null}
                       </div>
-                      <div className="flex shrink-0 items-center gap-2">
+                      <div className="flex shrink-0 flex-wrap items-center gap-2">
                         <Badge className={OPERATIONAL_PILL_CLASS[
                           displayStatus === "healthy" ? "ok" : displayStatus === "degraded" ? "warning" : "error"
                         ]}>
@@ -160,15 +162,23 @@ export function EndpointHealthGrid({
                 })}
               </div>
               {unsampled.length > 0 ? (
-                <details className="mt-2 text-xs text-muted-foreground">
-                  <summary className="pharos-focus-ring cursor-pointer rounded-sm py-1 hover:text-foreground">
-                    {unsampled.length} {unsampled.length === 1 ? "route" : "routes"} not sampled this session
+                <details className="group/disclosure mt-2 text-xs text-muted-foreground">
+                  <summary
+                    className={cn(
+                      DISCLOSURE_SUMMARY_RESET_CLASS,
+                      "inline-flex min-h-9 w-fit items-center gap-1.5 rounded-sm py-1 transition-colors hover:text-foreground sm:min-h-8",
+                    )}
+                  >
+                    <span>
+                      {unsampled.length} {unsampled.length === 1 ? "route" : "routes"} not sampled this session
+                    </span>
+                    <DisclosureChevron className="h-3.5 w-3.5" />
                   </summary>
                   <ul className="mt-1 space-y-1">
                     {unsampled.map((path) => (
-                      <li key={path} className="flex items-center justify-between gap-3">
-                        <span className="font-mono">{path.replace(/^\/api\//, "")}</span>
-                        <span>Not probed</span>
+                      <li key={path} className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="break-all font-mono">{path.replace(/^\/api\//, "")}</span>
+                        <span className="shrink-0">Not probed</span>
                       </li>
                     ))}
                   </ul>

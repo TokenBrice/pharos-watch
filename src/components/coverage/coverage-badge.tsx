@@ -1,3 +1,4 @@
+import { COVERAGE_UNAVAILABLE_BADGE_CLASS } from "@shared/lib/classification";
 import { type CoverageStatus, type CoverageTone, COVERAGE_BADGE_TONE_CLASS } from "@/lib/coverage";
 import { cn } from "@/lib/utils";
 import { getPricingSourceLabel } from "@shared/lib/pricing-sources";
@@ -18,7 +19,7 @@ const TONE_INDICATOR: Record<CoverageTone, string> = {
   sky: "\u25CB",
   amber: "\u25B3",
   violet: "\u25C7",
-  rose: "\u2212",
+  rose: "\u25C6",
   slate: "\u2013",
 };
 
@@ -26,9 +27,6 @@ export interface CoverageBadgeProps {
   status: CoverageStatus;
   compact?: boolean;
 }
-
-const SLATE_BADGE_SURFACE_CLASS =
-  "border-border bg-muted text-foreground/80 bg-[repeating-linear-gradient(135deg,transparent_0_5px,var(--border)_5px_6px)]";
 
 export function CoverageBadge({ status, compact = false }: CoverageBadgeProps) {
   const countSuffix =
@@ -39,15 +37,28 @@ export function CoverageBadge({ status, compact = false }: CoverageBadgeProps) {
       : "";
   const tooltip = buildSourceTooltip(status);
   const ariaLabel = `${status.spokenLabel}${countSuffix}. ${tooltip}`;
+  const isUnavailableOrChecking =
+    status.kind === "data-unavailable" || status.kind === "checking";
+  const isQuietCompactSlate =
+    compact && !isUnavailableOrChecking && status.tone === "slate";
 
   return (
     <span
       title={tooltip}
       aria-label={ariaLabel}
       className={cn(
-        "inline-flex items-center justify-center whitespace-nowrap rounded-full border py-1 text-2xs font-medium",
-        compact ? "min-w-[4.25rem] px-1.5" : "min-w-[5rem] px-2",
-        status.tone === "slate" ? SLATE_BADGE_SURFACE_CLASS : COVERAGE_BADGE_TONE_CLASS[status.tone],
+        "inline-flex items-center justify-center whitespace-nowrap text-2xs font-medium",
+        isQuietCompactSlate
+          ? "min-w-[3.75rem] px-1.5 py-0.5 text-muted-foreground"
+          : cn(
+              "border",
+              compact
+                ? "min-w-[3.75rem] rounded-sm px-1.5 py-0.5"
+                : "min-w-[5rem] rounded-full px-2 py-1",
+              isUnavailableOrChecking
+                ? COVERAGE_UNAVAILABLE_BADGE_CLASS
+                : COVERAGE_BADGE_TONE_CLASS[status.tone],
+            ),
       )}
     >
       <span aria-hidden="true">

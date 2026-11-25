@@ -184,6 +184,54 @@ const ARCHETYPE_CASES = [
     returnCaption: "physical delivery",
     stress: "stress: vault or title failure; whole-bar redemption minimums",
   },
+  {
+    archetype: "ucits-trs-fund",
+    symbol: "STBL",
+    ariaPhrase: "proportional fund shares backed by physical securities and total-return swaps",
+    descPhrase: "signed total-return swaps",
+    steps: [
+      "Fund subscription",
+      "exact share class (KYC)",
+      "Securities + TRS",
+      "signed derivative exposure",
+      "STBL fund-share",
+      "proportional NAV claim",
+    ],
+    returnCaption: null,
+    stress: "stress: incomplete hedge / counterparty collateral loss / fund gate",
+  },
+  {
+    archetype: "shared-reserve",
+    symbol: "STBL",
+    ariaPhrase: "one shared reserve",
+    descPhrase: "common reserve supports several currency liabilities",
+    steps: [
+      "Protocol exchange",
+      "exact live pool / provider",
+      "Shared reserve",
+      "several currency liabilities",
+      "STBL liability",
+      "operational exchange claim",
+    ],
+    returnCaption: null,
+    stress: "stress: shared liability deficit / encumbrance / exchange liquidity gate",
+  },
+  {
+    archetype: "protocol-position",
+    symbol: "STBL",
+    ariaPhrase: "operational claim on managed protocol positions",
+    descPhrase: "underlying vault or protocol positions",
+    steps: [
+      "Bridge / module",
+      "exact deployed issuance",
+      "Managed positions",
+      "receipts counted once",
+      "STBL liability",
+      "protocol withdrawal claim",
+    ],
+    returnCaption: null,
+    stress: "stress: position / withdrawal failure / unreconciled residual liabilities",
+  },
 ] as const satisfies ReadonlyArray<MechanismDiagramCase>;
 
 describe("mechanismDiagramFor", () => {
@@ -206,10 +254,16 @@ describe("mechanismDiagramFor", () => {
 
     if (testCase.returnCaption) {
       expect(desktopNodes).toContain(testCase.returnCaption);
+      expect(mobileNodes.some((text) => text.includes(testCase.returnCaption!))).toBe(true);
     } else {
       expect(desktopNodes.filter((text) => RETURN_CAPTIONS.includes(text as never))).toEqual([]);
+      expect(
+        mobileNodes.filter((text) => RETURN_CAPTIONS.some((caption) => text.includes(caption))),
+      ).toEqual([]);
     }
-    // The stress footnote is desktop chrome outside both SVGs.
-    expect(diagram.container.querySelector("p")?.textContent).toBe(testCase.stress);
+    // The stress footnote stays visible on both desktop and mobile as the first `<p>`.
+    const stressNode = diagram.container.querySelector("p");
+    expect(stressNode?.textContent).toBe(testCase.stress);
+    expect(stressNode?.className).not.toContain("hidden");
   });
 });

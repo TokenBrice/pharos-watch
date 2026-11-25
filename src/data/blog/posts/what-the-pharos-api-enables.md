@@ -55,4 +55,4 @@ If you build on Pharos data, tell us what you are building. With your agreement,
 
 See you at the lighthouse. 🗼
 
-	/- TokenBrice
+/- TokenBrice

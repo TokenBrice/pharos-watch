@@ -39,30 +39,36 @@ export function RelatedCoinsList({
             <li key={coin.coinId}>
               <Link
                 href={buildStablecoinUrl(coin.coinId)}
-                className="pharos-focus-ring group grid gap-3 py-5 first:pt-0 last:pb-0 sm:grid-cols-[minmax(0,16ch)_minmax(0,1fr)_auto] sm:items-baseline sm:gap-8"
+                className="pharos-focus-ring group -mx-3 grid gap-2.5 rounded-lg px-3 py-4 transition-colors hover:bg-muted/35 sm:grid-cols-[minmax(0,16ch)_minmax(0,1fr)_auto] sm:items-baseline sm:gap-8 sm:py-5"
               >
-                <div className="flex items-start gap-2.5">
-                  {logoSrc ? (
-                    <img
-                      src={logoSrc}
-                      alt=""
-                      aria-hidden="true"
-                      width={20}
-                      height={20}
-                      className="mt-0.5 h-5 w-5 shrink-0 rounded-full"
-                      loading="lazy"
-                    />
-                  ) : null}
-                  <div className="flex min-w-0 flex-col gap-0.5">
-                    <span className="font-mono text-sm font-semibold text-foreground transition-colors group-hover:text-brand-accent-text">
-                      {meta.symbol}
-                    </span>
-                    <span className="text-xs leading-snug text-muted-foreground">
-                      {meta.name}
-                    </span>
+                <div className="flex items-start justify-between gap-2.5">
+                  <div className="flex min-w-0 items-start gap-2.5">
+                    {logoSrc ? (
+                      <img
+                        src={logoSrc}
+                        alt=""
+                        aria-hidden="true"
+                        width={20}
+                        height={20}
+                        className="mt-0.5 h-5 w-5 shrink-0 rounded-full"
+                        loading="lazy"
+                      />
+                    ) : null}
+                    <div className="flex min-w-0 flex-col gap-0.5">
+                      <span className="pharos-numeric text-sm font-semibold text-foreground transition-colors group-hover:text-brand-accent-text">
+                        {meta.symbol}
+                      </span>
+                      <span className="text-xs leading-snug text-muted-foreground">
+                        {meta.name}
+                      </span>
+                    </div>
                   </div>
+                  <ArrowUpRight
+                    className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-brand-accent-text sm:hidden"
+                    aria-hidden="true"
+                  />
                 </div>
-                <p className="text-base leading-relaxed text-muted-foreground">
+                <p className="max-w-[68ch] text-base leading-relaxed text-muted-foreground">
                   {coin.note}
                 </p>
                 <ArrowUpRight

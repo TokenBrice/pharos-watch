@@ -23,7 +23,9 @@ export function PublicStatusHistorySection({
     <StatusSection id="history" title="Incidents" description={`Last ${historyDays} days, from the public component log.`}>
       {historyError ? (
         // A failed read is not an empty incident log, even with retained data (R2).
-        <p className="text-sm text-muted-foreground">Incident history could not be loaded: {historyError.message}</p>
+        <p role="status" className="rounded-lg border border-state-warn bg-state-warn-subtle px-3 py-2 text-sm text-state-warn">
+          Incident history could not be loaded: {historyError.message}
+        </p>
       ) : historyData ? (
         <PublicIncidentList
           transitions={historyData.transitions}
@@ -36,7 +38,9 @@ export function PublicStatusHistorySection({
       ) : historyLoading ? (
         <p className="text-sm text-muted-foreground">Loading incident history</p>
       ) : (
-        <p className="text-sm text-muted-foreground">Incident history could not be loaded.</p>
+        <p role="status" className="rounded-lg border border-state-warn bg-state-warn-subtle px-3 py-2 text-sm text-state-warn">
+          Incident history could not be loaded.
+        </p>
       )}
     </StatusSection>
   );

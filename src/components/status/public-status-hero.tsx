@@ -25,10 +25,20 @@ interface PublicStatusHeroProps {
   fetchError: Error | null;
   /** True when the last successful fetch is older than its polling budget. */
   fetchStale: boolean;
+  /** True while a health refetch is in flight. */
+  isRefreshing?: boolean;
   onRefresh: () => void;
 }
 
-export function PublicStatusHero({ headline, since, checkedAt, fetchError, fetchStale, onRefresh }: PublicStatusHeroProps) {
+export function PublicStatusHero({
+  headline,
+  since,
+  checkedAt,
+  fetchError,
+  fetchStale,
+  isRefreshing = false,
+  onRefresh,
+}: PublicStatusHeroProps) {
   const tone = PUBLIC_HEADLINE_TONE[headline.state];
   return (
     <section
@@ -36,7 +46,7 @@ export function PublicStatusHero({ headline, since, checkedAt, fetchError, fetch
       className={cn("pharos-card-shell flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-5", HEADLINE_ACCENT[headline.state])}
     >
       <div className="min-w-0 space-y-1">
-        <h2 id="status-verdict-title" className="flex items-center gap-2 text-2xl font-bold leading-tight text-foreground">
+        <h2 id="status-verdict-title" className="pharos-display flex items-center gap-2 text-2xl font-bold leading-tight text-foreground">
           <span aria-hidden="true" className={cn("size-2 shrink-0 rounded-full", tone.dot)} />
           {headline.title}
         </h2>
@@ -51,16 +61,16 @@ export function PublicStatusHero({ headline, since, checkedAt, fetchError, fetch
           </span>
         </p>
         {fetchError ? (
-          <p className="text-xs text-state-warn" title={fetchError.message}>
+          <p role="status" className="text-xs text-state-warn" title={fetchError.message}>
             The status check could not be reached. Showing the last good reading.
           </p>
         ) : fetchStale ? (
-          <p className="text-xs text-state-warn">This verdict is older than the expected refresh interval.</p>
+          <p role="status" className="text-xs text-state-warn">This verdict is older than the expected refresh interval.</p>
         ) : null}
       </div>
       {fetchError || fetchStale ? (
-        <Button variant="outline" size="sm" className="min-h-11" onClick={onRefresh}>
-          Refresh
+        <Button variant="outline" size="sm" className="min-h-11" onClick={onRefresh} disabled={isRefreshing}>
+          {isRefreshing ? "Refreshing…" : "Refresh"}
         </Button>
       ) : null}
     </section>

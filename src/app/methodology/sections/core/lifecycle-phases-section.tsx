@@ -11,6 +11,7 @@ export function LifecyclePhasesMethodologySection() {
     <MethodologySectionShell
       id={LIFECYCLE_PHASES_SECTION_CONTENT.id}
       title={LIFECYCLE_PHASES_SECTION_CONTENT.title}
+      docsPath="/docs/listing-policy/"
       versionNote="Lifecycle phase is a data-collection policy. No per-domain methodology version is bumped when a coin transitions between phases."
     >
       <p>
@@ -78,19 +79,19 @@ export function LifecyclePhasesMethodologySection() {
       <MethodologyFacts
         facts={[
           {
-            label: "TRACKED",
+            label: "Tracked",
             value: "The complete catalog across all five phases. Used for canonical identity, validation, and static detail routes.",
           },
           {
-            label: "ACTIVE",
+            label: "Active",
             value: "Active subset only. Write-side collection and live aggregates apply their domain coverage and listing-class eligibility within this subset.",
           },
           {
-            label: "READABLE",
+            label: "Readable",
             value: "Every post-launch record: active, quarantined, delisted, and frozen. Historical/read-only use only.",
           },
           {
-            label: "FROZEN",
+            label: "Frozen",
             value: "Frozen subset only. Drives the cemetery merge and the dataset export.",
           },
         ]}
@@ -109,7 +110,7 @@ export function LifecyclePhasesMethodologySection() {
           Listing policy
         </Link>
         {" · "}
-        <span className="text-foreground/70">Operator runbook: <code className="text-xs">docs/freezing-stablecoins.md</code></span>
+        <span className="text-foreground/70">Operator runbook: <code>docs/freezing-stablecoins.md</code></span>
       </p>
     </MethodologySectionShell>
   );

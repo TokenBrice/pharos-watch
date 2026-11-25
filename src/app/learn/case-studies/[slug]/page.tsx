@@ -4,6 +4,7 @@ import { CASE_STUDY_LIST } from "@/lib/case-studies";
 import type { CaseStudy } from "@shared/types/editorial-content";
 import { CaseStudyArticleJsonLd } from "../case-study-json-ld";
 import { CaseStudyBody } from "../case-study-body";
+import { CaseStudyArticleMeta } from "../case-study-meta";
 import { LearnPageShell } from "../../_shared/learn-page-shell";
 
 const CASE_STUDY_BY_SLUG = new Map<string, CaseStudy>(CASE_STUDY_LIST.map((study) => [study.slug, study]));
@@ -16,10 +17,12 @@ function renderCaseStudy(study: CaseStudy, slug: string) {
         { name: "Case Studies", url: "/learn/case-studies/" },
         { name: study.title, url: `/learn/case-studies/${slug}/` },
       ]}
+      backLink={{ href: "/learn/case-studies/", label: "All case studies" }}
+      eyebrow={study.eyebrow}
       title={study.title}
       subtitle={study.subtitle}
-      leadParagraphs={study.lead}
-      titleClassName="max-w-[24ch]"
+      headerMeta={<CaseStudyArticleMeta study={study} />}
+      titleClassName="max-w-[26ch]"
     >
       <CaseStudyArticleJsonLd study={study} />
       <CaseStudyBody study={study} />

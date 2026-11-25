@@ -41,7 +41,7 @@ describe("CacheFreshnessTable", () => {
 
     expect(screen.getByText(/By default, each lane is Delayed past/i)).toBeTruthy();
     expect(screen.getByText(/that lane's Delayed multiple of that basis/i)).toBeTruthy();
-    expect(screen.getByText("1 healthy cache").className).toContain("min-h-11");
+    expect(screen.getByText("1 healthy cache").closest("summary")?.className).toContain("min-h-11");
     // Collapsed healthy detail is not mounted until the operator opens it.
     expect(screen.queryByTestId("cache-freshness-healthy-table")).toBeNull();
     fireEvent.click(screen.getByText("1 healthy cache"));

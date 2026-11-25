@@ -18,6 +18,7 @@ import { ComponentStatePill, defineStatusColumns } from "./page-primitives";
 
 interface CacheFreshnessTableProps {
   caches: Record<string, CacheStatus>;
+  tableChrome?: "content" | "embedded";
 }
 
 const CACHE_FRESHNESS_COLUMNS = defineStatusColumns([
@@ -26,7 +27,7 @@ const CACHE_FRESHNESS_COLUMNS = defineStatusColumns([
   ["note", "Note"],
 ]);
 
-export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
+export function CacheFreshnessTable({ caches, tableChrome = "content" }: CacheFreshnessTableProps) {
   const sorted = Object.entries(caches).sort(([, a], [, b]) => {
     const ratioA = getCacheFreshnessRatio(a) ?? Infinity;
     const ratioB = getCacheFreshnessRatio(b) ?? Infinity;
@@ -91,7 +92,7 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
     return (
       <TableRow key={key} className="border-b last:border-0">
         <TableCell className="py-2 align-top">
-          <div className="font-mono tabular-nums text-xs">{key}</div>
+          <div className="pharos-numeric text-xs">{key}</div>
           <div className="mt-1 text-2xs text-muted-foreground">
             availability budget {formatElapsedSeconds(cache.availabilityMaxAge ?? cache.maxAge)}
           </div>
@@ -99,7 +100,7 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
         <TableCell className="py-2 align-top text-xs">{cache.upstreamProvider ?? "—"}</TableCell>
         <TableCell className="py-2 align-top text-xs">{describeProducer(cache)}</TableCell>
         <TableCell className="py-2 align-top">
-          <div>{cache.ageSeconds != null ? formatElapsedSeconds(cache.ageSeconds) : "—"}</div>
+          <div className="pharos-numeric">{cache.ageSeconds != null ? formatElapsedSeconds(cache.ageSeconds) : "—"}</div>
           <div className="mt-1 pharos-numeric text-xs text-muted-foreground">
             {band.ratio != null ? `${band.ratio.toFixed(2)}x` : "—"}
           </div>
@@ -167,6 +168,7 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
           primaryTableId="cache-freshness-unhealthy"
           secondaryTableId="cache-freshness-healthy"
           headerRowClassName="border-b text-left text-muted-foreground"
+          chrome={tableChrome}
         />
       </div>
     </PublicSignalCard>

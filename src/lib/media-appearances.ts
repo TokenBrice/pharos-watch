@@ -50,7 +50,7 @@ const LEVIATHAN_NEWS_WALKTHROUGH: MediaAppearance = {
   hostLogoSrc: "/media/leviathan-news.jpg",
   title: "How Stable Is Your Stablecoin?",
   description:
-    "TokenBrice walked through Pharos live — the motivation behind the project, the data pipeline, and how the main risk signals should be read in practice.",
+    "TokenBrice walked through Pharos live, covering the motivation behind the project, the data pipeline, and how the main risk signals should be read in practice.",
   href: "https://www.youtube.com/watch?v=n2qDkuZl3AA",
   date: "2026-03-03",
   durationMinutes: 88,

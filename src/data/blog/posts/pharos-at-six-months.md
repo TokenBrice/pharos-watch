@@ -62,4 +62,4 @@ In six months, Pharos went from a personal itch to a tool people reach for when 
 
 If you like and use Pharos, you know how to support us: spread the word, make sure everybody knows about Pharos, and if you feel like it and can afford it, [Pharos accepts donations](/funding/). See you at the lighthouse. 🗼
 
-	/- TokenBrice
+/- TokenBrice

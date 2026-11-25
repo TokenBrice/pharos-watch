@@ -1,7 +1,7 @@
 import { lapsedBridgeReviewFloor, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { DEPEG_SEVERITY_BPS } from "@shared/lib/depeg-config";
 import { V9_PROVISIONAL_UNKNOWN_WEIGHT_THRESHOLD } from "@shared/types/safety-score-v9-public";
-import { MethodologyDetails, MethodologyFacts } from "../../methodology-shared";
+import { MethodologyDetails, MethodologyFacts, MethodologyFormula } from "../../methodology-shared";
 import { SafetyScoresDimensionDetails } from "./safety-scores-dimension-details";
 import { SafetyScoresScoringDetails } from "./safety-scores-scoring-details";
 
@@ -49,11 +49,12 @@ export function SafetyScoresTechnicalDetails() {
         <p>
           {`Provisional labels identify rated cards with more than ${V9_PROVISIONAL_UNKNOWN_WEIGHT_THRESHOLD * 100}% of original scoring weight priced at unknown constants. They disclose uncertainty without changing the score, grade or availability. Older archives without the fields remain unlabeled. Exit sizes a continuous ${stressRequest.supplyRatio * 100}% of usable supply within $${stressRequest.floorUsd / 1_000_000}m–$${stressRequest.capUsd / 1_000_000}m; smaller execution receipts remain lower bounds, not proof of full-request completion. Gated-NAV shares where peg tracking is not applicable sit outside the peg multiplier and active-depeg cap; secondary-market discounts on those tokens are a documented model limitation.`}
         </p>
-        <p className="pharos-numeric">
+        <MethodologyFormula>
           candidate = weakestPriced + {formula.compensabilityHeadroom} × tanh((weightedQuality − weakestPriced) /{" "}
           {formula.compensabilityHeadroom})
-        </p>
+        </MethodologyFormula>
         <MethodologyFacts
+          layout="list"
           facts={[
             { label: "Pillar weights", value: `${formula.pillarWeights.backing * 100}/${formula.pillarWeights.exit * 100}/${formula.pillarWeights.control * 100} across all three priced pillars; no missing-pillar renormalization` },
             { label: "Peg adjustment", value: `(pegScore / 100)^${formula.pegExponent}` },
@@ -96,7 +97,7 @@ export function SafetyScoresTechnicalDetails() {
           <p>
             A published letter grade changes only after two consecutive publications compute the same new band. Until
             then the card keeps its previous grade beside the raw score and discloses the computed band
-            (<code className="text-xs">gradeHold</code>). Scores are never held or smoothed, and moves into or out of NR
+            (<code>gradeHold</code>). Scores are never held or smoothed, and moves into or out of NR
             or a pipeline gap publish immediately. When a run&apos;s deployment-supply attribution misses an asset, the
             last admitted attribution is reused for one further 30-minute cycle, keeping its original observation time;
             after that the existing unavailable-supply treatment applies. Likewise, when the stablecoin supply sync has not

@@ -11,6 +11,7 @@ import {
 } from "@shared/lib/methodology-versions/registry";
 import { methodologyArchivePath, methodologyHistoryAnchor } from "@shared/lib/methodology-versions/archives";
 import { ScoringChangelogSummaryTables } from "../changelog-content/scoring/content-summary";
+import { CHANGELOG_ROUTE_META, getSiblingArchives } from "./changelog-meta";
 
 interface ChangelogDisplayConfig {
   metadataTitle: string;
@@ -163,6 +164,7 @@ export default async function MethodologyChangelogRoute({ params }: MethodologyC
   if (!changelog) notFound();
 
   const display = DISPLAY_CONFIG[changelog.key];
+  const routeMeta = CHANGELOG_ROUTE_META[changelog.key];
   return (
     <MethodologyChangelogPage
       breadcrumbName={display.breadcrumbName}
@@ -170,6 +172,9 @@ export default async function MethodologyChangelogRoute({ params }: MethodologyC
       title={display.title}
       lead={display.lead(changelog)}
       entries={changelog.entries}
+      methodologyAnchor={routeMeta.methodologyAnchor}
+      docsPath={routeMeta.docsPath}
+      siblingArchives={getSiblingArchives(slug)}
       history={{
         archivePath: (version) => methodologyArchivePath(changelog, version),
         anchorId: (version) => methodologyHistoryAnchor(changelog, version),

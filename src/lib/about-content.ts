@@ -29,6 +29,7 @@ export interface AboutFeatureItem {
   href?: string;
   external?: boolean;
   linkLabel?: string;
+  metaLabel?: string;
 }
 
 interface AboutStablecoinCounts {
@@ -178,6 +179,7 @@ export const COMPUTED_FEATURES: readonly AboutFeatureItem[] = [
       "A per-coin stress score refreshed every 30 minutes from supply velocity, pool balance drift, liquidity erosion, price confidence, source divergence, blacklist activity, mint and burn flow, and yield anomalies.",
     icon: ShieldAlert,
     href: "/depeg/",
+    linkLabel: "Open DEWS",
   },
   {
     title: "Stablecoin comparison",
@@ -185,6 +187,7 @@ export const COMPUTED_FEATURES: readonly AboutFeatureItem[] = [
       "Side-by-side analysis of any tracked stablecoins across safety, liquidity, peg stability, and yield metrics.",
     icon: ArrowLeftRight,
     href: "/compare/",
+    linkLabel: "Open comparison",
   },
   {
     title: "Risk-adjusted yield",
@@ -192,6 +195,7 @@ export const COMPUTED_FEATURES: readonly AboutFeatureItem[] = [
       "Yield opportunities scored against stablecoin safety, benchmark context, source freshness, and APY consistency.",
     icon: TrendingUp,
     href: "/yield/",
+    linkLabel: "Open yield intelligence",
   },
 ];
 
@@ -218,6 +222,7 @@ export function getTrackedFeatures({
       description:
         "Core stablecoins across supported chains, with tracked variants and tokenized funds classified and browsable separately.",
       icon: BarChart3,
+      metaLabel: "Catalog",
     },
     {
       title: `${preLaunchStablecoins} upcoming stablecoins`,
@@ -239,6 +244,7 @@ export function getTrackedFeatures({
       description:
         "On selected coins, a curated narrative of one hypothetical way the coin could break: each step, the safeguard missing at it, who could stop it, and what would invalidate the story. Every scenario is approved by a maintainer and re-checked on a schedule. It is not a simulator and never changes a Safety Score.",
       icon: Unlink,
+      metaLabel: "In-dossier",
     },
     {
       title: "FreezeWatch",
@@ -294,6 +300,7 @@ export function getTrackedFeatures({
         "Analyze your stablecoin holdings against Pharos safety, liquidity, and peg data to spot concentration risk.",
       icon: Briefcase,
       href: "/portfolio/",
+      linkLabel: "Open portfolio",
     },
   ];
 }

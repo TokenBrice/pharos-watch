@@ -14,18 +14,12 @@ import {
   THREAT_BAND_STYLES,
   type ThreatBand,
 } from "@shared/lib/classification";
-import {
-  TableBody,
-  TableCell,
-  TableFrame,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/table";
+import { ContentTable } from "@/components/table";
 import {
   METHODOLOGY_LINK_CLASS,
   MethodologyDetails,
   MethodologyDiagramFlow,
+  MethodologyFormula,
   ResponsiveMethodologyPipeline,
   type ResponsiveMethodologyPipelineCard,
   type ResponsiveMethodologyPipelineProps,
@@ -49,7 +43,7 @@ function getThreatBandLowerBound(index: number): number {
   return index === 0 ? 0 : DEWS_THREAT_BANDS[index - 1].upper + 1;
 }
 
-const DEWS_CARD_CLASS_NAMES = ["rounded-lg border p-2 text-center", "text-foreground font-medium text-xs", "text-xs text-muted-foreground"] as const;
+const DEWS_CARD_CLASS_NAMES = ["pharos-inset p-2 text-center", "text-xs font-medium text-foreground", "text-xs text-muted-foreground"] as const;
 
 function dewsSignalCards(compact = false): ResponsiveMethodologyPipelineCard[] {
   return DEWS_SIGNAL_KEYS.map((key) => ({
@@ -68,30 +62,30 @@ function dewsThreatBandCards(compact = false): ResponsiveMethodologyPipelineCard
 
 const DEWS_PIPELINE = {
   desktop: {
-    wrapperClassName: "hidden md:flex items-stretch gap-4",
-    arrow: { className: "flex items-center text-muted-foreground text-xl font-bold", symbol: "→" },
+    wrapperClassName: "hidden md:flex items-stretch gap-3",
+    arrow: { className: "flex items-center text-muted-foreground", symbol: "→" },
     exactClassNames: DEWS_CARD_CLASS_NAMES,
     stages: [
       { wrapperClassName: "grid grid-cols-2 gap-2 flex-1", cards: dewsSignalCards() },
       { cards: [{
           title: "DEWS",
           subtitle: <>&Sigma;(W&sdot;S) / &Sigma;(W)</>,
-          footer: { className: "text-xs text-muted-foreground", content: "0–100" },
-          exactClassNames: ["rounded-lg border p-3 text-center w-36 flex flex-col justify-center flex-shrink-0", "text-foreground font-medium", "text-xs text-muted-foreground mt-0.5"],
+          footer: { className: "text-xs text-muted-foreground pharos-numeric", content: "0–100" },
+          exactClassNames: ["pharos-inset border-foreground/25 bg-muted/40 p-3 text-center w-36 flex flex-col justify-center shrink-0", "text-sm font-medium text-foreground", "mt-0.5 text-xs text-muted-foreground"],
         }] },
-      { wrapperClassName: "flex flex-col gap-1.5 w-36 justify-center flex-shrink-0", cards: dewsThreatBandCards() },
+      { wrapperClassName: "flex flex-col gap-1.5 w-36 justify-center shrink-0", cards: dewsThreatBandCards() },
     ],
   },
   mobile: {
     wrapperClassName: "flex flex-col items-center gap-3 md:hidden",
-    arrow: { className: "text-muted-foreground text-xl font-bold", symbol: "↓" },
+    arrow: { className: "text-muted-foreground", symbol: "↓" },
     exactClassNames: DEWS_CARD_CLASS_NAMES,
     stages: [
       { wrapperClassName: "grid grid-cols-2 gap-2 w-full", cards: dewsSignalCards(true) },
       { cards: [{
           title: "DEWS",
           subtitle: <>&Sigma;(W&sdot;S) / &Sigma;(W) &mdash; 0–100</>,
-          exactClassNames: ["w-full rounded-lg border p-3 text-center", "text-foreground font-medium", "text-xs text-muted-foreground mt-0.5"],
+          exactClassNames: ["pharos-inset border-foreground/25 bg-muted/40 w-full p-3 text-center", "text-sm font-medium text-foreground", "mt-0.5 text-xs text-muted-foreground"],
         }] },
       { wrapperClassName: "grid grid-cols-5 gap-1 w-full", cards: dewsThreatBandCards(true) },
     ],
@@ -125,10 +119,10 @@ function PegScoreTechnicalDetails() {
 
       <div className="space-y-2">
         <h3 className="text-foreground font-medium">PegScore Formula</h3>
-        <p className="pharos-numeric text-xs border border-border/60 bg-muted/50 rounded-lg px-4 py-3">
+        <MethodologyFormula>
           pegScore = 0.5 &times; pegPct + 0.5 &times; severityScore &minus; activeDepegPenalty &minus;
           spreadPenalty
-        </p>
+        </MethodologyFormula>
       </div>
 
       <MethodologyDiagramFlow
@@ -140,79 +134,88 @@ function PegScoreTechnicalDetails() {
         ]}
         steps={[
           { title: <>&minus; Penalties</>, subtitle: "active depeg + spread", className: "md:w-64" },
-          { title: "PegScore", subtitle: <>0&ndash;100</>, className: "md:w-64" },
+          { title: "PegScore", subtitle: <>0&ndash;100</>, emphasis: "output", className: "md:w-64" },
         ]}
       />
 
       <div className="space-y-2">
         <h3 className="text-foreground font-medium">PegScore Components</h3>
-        <TableFrame
-          chrome="content"
-          density="compact"
+        <ContentTable
+          chrome="embedded"
           tableId="pegscore-components"
           testId="pegscore-components-table"
           tableClassName="min-w-[720px]"
           tableProps={{ "aria-label": "PegScore components" }}
-          viewportProps={{ mobileScrollHint: false }}
-        >
-          <TableHeader>
-            <TableRow className="text-left">
-              <TableHead scope="col" className="h-auto whitespace-normal px-4 py-2 font-medium text-foreground">
-                Component
-              </TableHead>
-              <TableHead scope="col" className="h-auto whitespace-normal px-4 py-2 font-medium text-foreground">
-                Weight
-              </TableHead>
-              <TableHead scope="col" className="h-auto whitespace-normal px-4 py-2 font-medium text-foreground">
-                Range
-              </TableHead>
-              <TableHead scope="col" className="h-auto whitespace-normal px-4 py-2 font-medium text-foreground">
-                How it works
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <TableRow className="align-top">
-              <TableCell className="whitespace-normal px-4 py-2 text-foreground">Time-at-Peg (pegPct)</TableCell>
-              <TableCell className="whitespace-normal px-4 py-2">50%</TableCell>
-              <TableCell className="whitespace-normal px-4 py-2">0&ndash;100</TableCell>
-              <TableCell className="whitespace-normal px-4 py-2">
-                  Percentage of time spent at peg. Overlapping depeg intervals are merged to avoid double-counting
-              </TableCell>
-            </TableRow>
-            <TableRow className="align-top">
-              <TableCell className="whitespace-normal px-4 py-2 text-foreground">Event severity</TableCell>
-              <TableCell className="whitespace-normal px-4 py-2">50%</TableCell>
-              <TableCell className="whitespace-normal px-4 py-2">0&ndash;100</TableCell>
-              <TableCell className="whitespace-normal px-4 py-2">
-                  Penalizes magnitude, duration, and recency of each depeg event. Per-event penalty:
-                  max(durationPenalty, magnitudeFloor), where durationPenalty = (peakBps&nbsp;/&nbsp;100) &times;
-                  (durationDays&nbsp;/&nbsp;30) &times; recencyWeight, magnitudeFloor = (peakBps&nbsp;/&nbsp;2000)
-                  &times; recencyWeight. The floor ensures even brief depegs carry a minimum penalty proportional
-                  to their severity. Recency weight = 1&nbsp;/&nbsp;(1&nbsp;+&nbsp;yearsAgo) so recent events
-                  count more. Duration capped at 90 days
-              </TableCell>
-            </TableRow>
-            <TableRow className="align-top">
-              <TableCell className="whitespace-normal px-4 py-2 text-foreground">Active Depeg Penalty</TableCell>
-              <TableCell className="whitespace-normal px-4 py-2">subtracted</TableCell>
-              <TableCell className="whitespace-normal px-4 py-2">5&ndash;50</TableCell>
-              <TableCell className="whitespace-normal px-4 py-2">
-                  Applied only if an ongoing depeg exists (no end date). Scales with severity:
-                  clamp(absBps&nbsp;/&nbsp;50, 5, 50)
-              </TableCell>
-            </TableRow>
-            <TableRow className="align-top">
-              <TableCell className="whitespace-normal px-4 py-2 text-foreground">Spread Penalty</TableCell>
-              <TableCell className="whitespace-normal px-4 py-2">subtracted</TableCell>
-              <TableCell className="whitespace-normal px-4 py-2">0&ndash;15</TableCell>
-              <TableCell className="whitespace-normal px-4 py-2">
-                  Confidence-weighted standard deviation of below-peg peak deviations (mean and variance divide by the weight sum), scaled. Penalizes erratic, unpredictable
-                  depeg behavior. Only applies when &ge;2 below-peg events exist
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </TableFrame>
+          viewportProps={{ mobileScrollHint: "Swipe sideways for more columns" }}
+          columns={[
+            { id: "component", header: "Component", cellClassName: "font-medium text-foreground whitespace-normal" },
+            { id: "weight", header: "Weight", cellClassName: "pharos-numeric whitespace-nowrap" },
+            { id: "range", header: "Range", cellClassName: "pharos-numeric whitespace-nowrap" },
+            { id: "description", header: "How it works", cellClassName: "whitespace-normal" },
+          ]}
+          rows={[
+            {
+              id: "time-at-peg",
+              className: "align-top",
+              cells: {
+                component: "Time-at-Peg (pegPct)",
+                weight: "50%",
+                range: <>0&ndash;100</>,
+                description:
+                  "Percentage of time spent at peg. Overlapping depeg intervals are merged to avoid double-counting",
+              },
+            },
+            {
+              id: "event-severity",
+              className: "align-top",
+              cells: {
+                component: "Event severity",
+                weight: "50%",
+                range: <>0&ndash;100</>,
+                description: (
+                  <>
+                    Penalizes magnitude, duration, and recency of each depeg event. Per-event penalty:
+                    max(durationPenalty, magnitudeFloor), where durationPenalty = (peakBps&nbsp;/&nbsp;100) &times;
+                    (durationDays&nbsp;/&nbsp;30) &times; recencyWeight, magnitudeFloor = (peakBps&nbsp;/&nbsp;2000)
+                    &times; recencyWeight. The floor ensures even brief depegs carry a minimum penalty proportional
+                    to their severity. Recency weight = 1&nbsp;/&nbsp;(1&nbsp;+&nbsp;yearsAgo) so recent events
+                    count more. Duration capped at 90 days
+                  </>
+                ),
+              },
+            },
+            {
+              id: "active-depeg-penalty",
+              className: "align-top",
+              cells: {
+                component: "Active Depeg Penalty",
+                weight: "subtracted",
+                range: <>5&ndash;50</>,
+                description: (
+                  <>
+                    Applied only if an ongoing depeg exists (no end date). Scales with severity:
+                    clamp(absBps&nbsp;/&nbsp;50, 5, 50)
+                  </>
+                ),
+              },
+            },
+            {
+              id: "spread-penalty",
+              className: "align-top",
+              cells: {
+                component: "Spread Penalty",
+                weight: "subtracted",
+                range: <>0&ndash;15</>,
+                description: (
+                  <>
+                    Confidence-weighted standard deviation of below-peg peak deviations (mean and variance divide by the weight sum), scaled. Penalizes erratic, unpredictable
+                    depeg behavior. Only applies when &ge;2 below-peg events exist
+                  </>
+                ),
+              },
+            },
+          ]}
+        />
       </div>
     </>
   );
@@ -283,9 +286,9 @@ function DewsTechnicalDetails() {
 
       <div className="space-y-2">
         <h3 className="text-foreground font-medium">Score formula</h3>
-        <p className="pharos-numeric text-xs border border-border/60 bg-muted/50 rounded-lg px-4 py-3">
+        <MethodologyFormula>
           base = sum(W_i &times; S_i) / sum(W_i); psiAmp = PSI &lt; 75 ? 1 + ((75 - PSI) / 75) &times; 0.3 : 1; contagionAmp = same-peg first-pass bump, clamped to 1.2; preliminaryScore = round(clamp(0, 100, base &times; psiAmp &times; contagionAmp))
-        </p>
+        </MethodologyFormula>
         <p>
           At least 2 available signal sources (total weight &ge; 0.30) are required; otherwise DEWS returns null.
         </p>

@@ -24,13 +24,22 @@ function applyMethodologyMode(mode: MethodologyMode) {
   }
 }
 
-export function MethodologyModeToggle({ className }: { className?: string }) {
+export function MethodologyModeToggle({
+  className,
+  compact = false,
+}: {
+  className?: string;
+  compact?: boolean;
+}) {
   const mode = useSyncExternalStore(modeStorage.subscribe, modeStorage.read, () => "reader" as const);
 
   useEffect(() => {
     applyMethodologyMode(mode);
   }, [mode]);
 
+  const itemClassName = compact
+    ? "pharos-segmented-item pharos-focus-ring min-h-10 justify-center px-2.5 md:min-h-8 md:px-3"
+    : "pharos-segmented-item pharos-focus-ring min-h-11 justify-center md:min-h-8";
 
   return (
     <div
@@ -41,13 +50,13 @@ export function MethodologyModeToggle({ className }: { className?: string }) {
         className,
       )}
     >
-      <span className="pharos-label text-xs">View</span>
+      <span className={cn("pharos-label text-xs", compact && "hidden md:inline")}>View</span>
       <div className="pharos-segmented">
         <button
           type="button"
           aria-pressed={mode === "reader"}
           onClick={() => modeStorage.write("reader")}
-          className="pharos-segmented-item pharos-focus-ring min-h-11 justify-center md:min-h-8"
+          className={itemClassName}
         >
           Reader
         </button>
@@ -55,7 +64,7 @@ export function MethodologyModeToggle({ className }: { className?: string }) {
           type="button"
           aria-pressed={mode === "analyst"}
           onClick={() => modeStorage.write("analyst")}
-          className="pharos-segmented-item pharos-focus-ring min-h-11 justify-center md:min-h-8"
+          className={itemClassName}
         >
           Analyst
         </button>

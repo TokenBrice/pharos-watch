@@ -1,6 +1,8 @@
 import type { CircuitRecord } from "@shared/types/status/public-health";
 import { TableCell, TableRow } from "@/components/table";
 import { Badge } from "@/components/ui/badge";
+import { OPERATIONAL_PILL_CLASS } from "@/lib/status/dashboard-presentation";
+import { cn } from "@/lib/utils";
 import { PublicSignalCard } from "./public-signal-card";
 import { PrioritySplitTable } from "./priority-split-table";
 import { defineStatusColumns, Timestamp } from "./page-primitives";
@@ -8,14 +10,18 @@ import { defineStatusColumns, Timestamp } from "./page-primitives";
 interface CircuitBreakerTableProps {
   circuits: Record<string, CircuitRecord> | null | undefined;
   unavailableReason?: string | null;
+  tableChrome?: "content" | "embedded";
 }
 
 const CIRCUIT_BREAKER_COLUMNS = defineStatusColumns([
-  ["name", "Name"], ["state", "State"], ["failures", "Failures"],
-  ["last-failure", "Last failure"], ["last-success", "Last success"],
+  ["name", "Name"],
+  ["state", "State"],
+  ["failures", "Failures", "text-right"],
+  ["last-failure", "Last failure"],
+  ["last-success", "Last success"],
 ]);
 
-export function CircuitBreakerTable({ circuits, unavailableReason }: CircuitBreakerTableProps) {
+export function CircuitBreakerTable({ circuits, unavailableReason, tableChrome = "content" }: CircuitBreakerTableProps) {
   if (!circuits || Object.keys(circuits).length === 0) {
     return (
       <PublicSignalCard title="Circuit breakers" contentClassName="mt-3">
@@ -35,16 +41,16 @@ export function CircuitBreakerTable({ circuits, unavailableReason }: CircuitBrea
       <TableCell className="py-2 font-mono text-xs">{name}</TableCell>
       <TableCell className="py-2">
         {circuit.state === "closed" && (
-          <Badge className="bg-state-positive-solid/15 text-xs text-state-positive">Closed</Badge>
+          <Badge className={cn("text-xs", OPERATIONAL_PILL_CLASS.ok)}>Closed</Badge>
         )}
         {circuit.state === "half-open" && (
-          <Badge className="bg-state-warn-solid/15 text-xs text-state-warn">Half-open</Badge>
+          <Badge className={cn("text-xs", OPERATIONAL_PILL_CLASS.warning)}>Half-open</Badge>
         )}
         {circuit.state === "open" && (
-          <Badge className="bg-state-danger-solid/15 text-xs text-state-danger">Open</Badge>
+          <Badge className={cn("text-xs", OPERATIONAL_PILL_CLASS.error)}>Open</Badge>
         )}
       </TableCell>
-      <TableCell className="py-2 pharos-numeric">{circuit.consecutiveFailures}</TableCell>
+      <TableCell className="py-2 text-right pharos-numeric">{circuit.consecutiveFailures}</TableCell>
       <TableCell className="py-2 text-xs text-muted-foreground">
         <Timestamp epochSec={circuit.lastFailureAt} />
       </TableCell>
@@ -76,6 +82,7 @@ export function CircuitBreakerTable({ circuits, unavailableReason }: CircuitBrea
           primaryTableId="circuit-breakers-tripped"
           secondaryTableId="circuit-breakers-healthy"
           headerRowClassName="border-b text-left text-muted-foreground"
+          chrome={tableChrome}
         />
       </div>
     </PublicSignalCard>

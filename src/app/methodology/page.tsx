@@ -6,10 +6,10 @@ import { MethodologySections } from "./sections/methodology-sections";
 import { MethodologyModeToggle } from "@/components/methodology-mode-toggle";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 import { ShowYourWorkToggle } from "@/components/show-your-work-toggle";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { buildArticleJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { FaqSection } from "@/components/faq-section";
+import { SeeAlsoFooter } from "@/components/see-also-footer";
 import type { FaqItem } from "@/lib/faq";
 import { buildPageMetadata, getPageSocialPreview } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
@@ -87,26 +87,26 @@ export default function MethodologyPage() {
       />
       <JsonLdScript
         json={safeJsonLd(
-            buildArticleJsonLd({
-              additionalType: "https://schema.org/TechArticle",
-              headline: METHODOLOGY_TITLE,
-              description: METHODOLOGY_DESCRIPTION,
-              datePublished: `${SAFETY_SCORE_FIRST_ENTRY_DATE}T00:00:00Z`,
-              dateModified: `${SAFETY_SCORE_LATEST_ENTRY_DATE}T00:00:00Z`,
-              author: "person",
-              image: `${SITE_URL}${getPageSocialPreview("/methodology/").url}`,
-              mainEntityOfPage: `${SITE_URL}/methodology/`,
-              keywords: [
-                "stablecoin methodology",
-                "safety score",
-                "mint-control component",
-                "PegScore",
-                "DEWS",
-                "PSI",
-                "liquidity score",
-              ],
-            }),
-          )}
+          buildArticleJsonLd({
+            additionalType: "https://schema.org/TechArticle",
+            headline: METHODOLOGY_TITLE,
+            description: METHODOLOGY_DESCRIPTION,
+            datePublished: `${SAFETY_SCORE_FIRST_ENTRY_DATE}T00:00:00Z`,
+            dateModified: `${SAFETY_SCORE_LATEST_ENTRY_DATE}T00:00:00Z`,
+            author: "person",
+            image: `${SITE_URL}${getPageSocialPreview("/methodology/").url}`,
+            mainEntityOfPage: `${SITE_URL}/methodology/`,
+            keywords: [
+              "stablecoin methodology",
+              "safety score",
+              "mint-control component",
+              "PegScore",
+              "DEWS",
+              "PSI",
+              "liquidity score",
+            ],
+          }),
+        )}
       />
 
       {/* Heading */}
@@ -115,17 +115,18 @@ export default function MethodologyPage() {
           <div className="space-y-3">
             <div className="space-y-2">
               <h1 className="pharos-page-title">Methodology</h1>
-              <p className="pharos-page-lead max-w-3xl">
+              <p className="pharos-page-lead">
                 How Pharos grades stablecoins: transparent scoring across safety, peg stability, mint control,
                 liquidity, yield, and dependency risk.
               </p>
-              <p className="pharos-numeric text-xs text-muted-foreground">
-                Safety Score methodology {SAFETY_SCORE_METHODOLOGY_VERSION_LABEL} · updated{" "}
-                <time dateTime={SAFETY_SCORE_LATEST_ENTRY_DATE}>
+              <p className="text-xs text-muted-foreground">
+                Safety Score methodology{" "}
+                <span className="pharos-numeric text-foreground/85">{SAFETY_SCORE_METHODOLOGY_VERSION_LABEL}</span> · updated{" "}
+                <time dateTime={SAFETY_SCORE_LATEST_ENTRY_DATE} className="pharos-numeric text-foreground/85">
                   {formatUtcDayLabel(new Date(`${SAFETY_SCORE_LATEST_ENTRY_DATE}T00:00:00Z`))}
                 </time>
               </p>
-              <p className="pharos-lead max-w-3xl">
+              <p className="pharos-lead">
                 Treat this page like a reference manual, not a marketing explainer. All scoring methodologies operate
                 over the active subset of tracked stablecoins; pre-launch and frozen coins are excluded from new
                 computations and live aggregates.
@@ -143,96 +144,96 @@ export default function MethodologyPage() {
       </div>
 
       {/* Answer first: what a grade means and its bands, before the reader meta. */}
-      <section aria-labelledby="methodology-at-a-glance" className="pharos-card-shell space-y-4 px-4 py-4">
+      <section aria-labelledby="methodology-at-a-glance" className="pharos-card-shell space-y-4 px-4 py-4 sm:px-5">
         <div className="space-y-1">
           <p className="pharos-label">At a glance</p>
-          <h2 id="methodology-at-a-glance" className="text-lg font-semibold tracking-tight text-foreground">
+          <h2 id="methodology-at-a-glance" className="pharos-section-title">
             What a Safety Score grade means
           </h2>
         </div>
-        <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
+        <p className="text-sm leading-relaxed text-muted-foreground">
           A grade answers one question: if the coin started bleeding tomorrow, how much of the loss would the holder
-          eat before the system stopped it? Backing ({formatWeight(pillarWeights.backing)}), Exit
-          ({formatWeight(pillarWeights.exit)}) and Economic Control ({formatWeight(pillarWeights.control)}) form the
-          score; peg behavior, caps and dependencies can constrain it. NR means a rating is genuinely unavailable,
-          never a low score.{" "}
+          eat before the system stopped it? Backing (
+          <span className="pharos-numeric">{formatWeight(pillarWeights.backing)}</span>), Exit (
+          <span className="pharos-numeric">{formatWeight(pillarWeights.exit)}</span>) and Economic Control (
+          <span className="pharos-numeric">{formatWeight(pillarWeights.control)}</span>) form the score; peg behavior,
+          caps and dependencies can constrain it. NR means a rating is genuinely unavailable, never a low score.{" "}
           <a href="#safety-scores-methodology" className={METHODOLOGY_LINK_CLASS}>
             Full Safety Score method
           </a>
         </p>
         <SafetyGradeScaleBar />
+        <p className="border-t border-border/50 pt-3 text-xs leading-relaxed text-muted-foreground">
+          New to stablecoin design?{" "}
+          <Link href="/learn/mechanisms/" className={METHODOLOGY_LINK_CLASS}>
+            Learn how each stablecoin design produces its peg
+          </Link>{" "}
+          before the scoring formulas.
+        </p>
       </section>
 
       <div className="pharos-card-shell px-4 py-4 md:hidden">
         <div className="space-y-3">
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <p className="pharos-label">Reader guide</p>
             <p className="text-sm text-foreground">{READER_GUIDE_COPY}</p>
           </div>
-          <MethodologyModeToggle className="w-full justify-between border-border/70 bg-background/90" />
+          <MethodologyModeToggle className="w-full justify-between" />
           <p className="text-xs leading-relaxed text-muted-foreground">
             Page rhythm: <span className="text-foreground">summary</span>, quick facts, worked example, technical
             notes.
           </p>
-          <div className="mt-4 grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2 pt-1">
             {METHODOLOGY_READING_STEPS.map((step) => (
-              <div key={step.label} className="rounded-md border border-border/50 bg-background/40 p-2">
+              <div key={step.label} className="pharos-inset p-2.5">
                 <p className="text-2xs font-semibold text-foreground">{step.label}</p>
-                <p className="text-3xs text-muted-foreground leading-snug">{step.description}</p>
+                <p className="text-3xs leading-snug text-muted-foreground">{step.description}</p>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      <p className="text-sm leading-relaxed text-muted-foreground">
-        New to stablecoin design?{" "}
-        <Link
-          href="/learn/mechanisms/"
-          className="pharos-focus-ring rounded-sm text-foreground underline underline-offset-4 hover:text-foreground"
-        >
-          Learn how each stablecoin design produces its peg
-        </Link>{" "}
-        before the scoring formulas.
-      </p>
-
-      <Card className="pharos-card-shell hidden md:block">
-        <CardHeader className="space-y-3 pb-2">
-          <CardTitle as="h2">How to read this page</CardTitle>
-          <p className="text-sm text-muted-foreground">
+      <section
+        aria-labelledby="methodology-reading-guide"
+        className="pharos-subtle-band hidden space-y-3 px-4 py-3.5 md:block"
+      >
+        <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+          <h2 id="methodology-reading-guide" className="pharos-label text-foreground">
+            How to read this page
+          </h2>
+          <p className="text-xs text-muted-foreground">
             Each section follows the same rhythm so you can skim first, then expand only the parts that need a deeper
             read.
           </p>
-        </CardHeader>
-        <CardContent className="grid gap-4 border-t border-border/40 pt-5 text-sm text-muted-foreground md:grid-cols-2 xl:grid-cols-4">
+        </div>
+        <ol className="grid gap-3 border-t border-border/50 pt-3 text-sm text-muted-foreground md:grid-cols-2 xl:grid-cols-4">
           {METHODOLOGY_READING_STEPS.map((step, index) => (
-            <div
+            <li
               key={step.label}
               className={cn(
-                "space-y-2 border-border/50",
-                index % 2 === 1 ? "md:border-l md:pl-4" : "md:pl-0",
-                index > 0 ? "xl:border-l xl:pl-4" : "xl:border-l-0 xl:pl-0",
+                "space-y-1 border-border/50",
+                index % 2 === 1 ? "md:border-l md:pl-3.5" : "md:pl-0",
+                index > 0 ? "xl:border-l xl:pl-3.5" : "xl:border-l-0 xl:pl-0",
               )}
             >
               <p className="pharos-label">{step.label}</p>
-              <p className="text-foreground">{step.description}</p>
-            </div>
+              <p className="text-xs leading-relaxed text-foreground/90">{step.description}</p>
+            </li>
           ))}
-        </CardContent>
-      </Card>
+        </ol>
+      </section>
 
       {/* Long-form preface: pinned copy, written once, not regenerated. */}
       <section
         aria-label="Editorial preface"
-        className="mx-auto w-full max-w-[68ch] border-y border-border/60 py-10 md:py-12"
+        className="mx-auto w-full max-w-[68ch] border-y border-border/60 py-6 md:py-8"
       >
         <p className="pharos-label text-foreground/80">Editorial preface</p>
-        <h2
-          className="mt-3 text-[clamp(1.65rem,3.2vw,2.35rem)] font-semibold leading-tight tracking-tight text-foreground [text-wrap:balance]"
-        >
+        <h2 className="pharos-display mt-2.5 text-2xl font-semibold leading-tight tracking-tight text-foreground sm:text-3xl">
           How Pharos grades every stablecoin, and what it refuses to grade.
         </h2>
-        <div className="mt-6 space-y-5 text-[0.97rem] leading-7 text-foreground/88 sm:text-base sm:leading-8">
+        <div className="mt-5 space-y-4 text-sm leading-relaxed text-foreground/90 sm:text-base sm:leading-7">
           <p>
             Every safety grade Pharos publishes is the answer to one question: if this stablecoin started bleeding
             tomorrow, how much of the loss would the holder eat before the system stopped it? The Safety Score answers
@@ -267,7 +268,7 @@ export default function MethodologyPage() {
             on the structural dimensions alone.
           </p>
         </div>
-        <p className="mt-8 text-sm italic text-muted-foreground">
+        <p className="mt-6 text-sm italic text-muted-foreground">
           Pharos, July 2026
         </p>
       </section>
@@ -279,9 +280,9 @@ export default function MethodologyPage() {
         rightSlot={
           // A hairline separates the mode controls from the scrolling pills so a
           // clipped last pill fades out instead of butting into "Show inputs".
-          <div className="hidden items-center gap-3 border-l border-border/60 pl-3 md:flex">
-            <ShowYourWorkToggle className="pharos-control-pill pharos-focus-ring min-h-9" />
-            <MethodologyModeToggle />
+          <div className="flex items-center gap-2 border-l border-border/60 pl-2 sm:gap-3 sm:pl-3">
+            <ShowYourWorkToggle className="pharos-control-pill pharos-focus-ring hidden min-h-9 md:inline-flex" />
+            <MethodologyModeToggle compact />
           </div>
         }
       />
@@ -289,6 +290,8 @@ export default function MethodologyPage() {
       <MethodologySections />
 
       <FaqSection items={METHODOLOGY_FAQ_ITEMS} title="Methodology FAQ" includeJsonLd />
+
+      <SeeAlsoFooter route="/methodology/" />
     </div>
   );
 }

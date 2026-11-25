@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
@@ -15,6 +16,12 @@ import {
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { METHODOLOGY_RECENT_VERSIONS, methodologyDetailAnchors } from "@shared/lib/methodology-versions/archives";
 
+export interface MethodologySiblingArchive {
+  archive: string;
+  href: string;
+  current: boolean;
+}
+
 interface MethodologyChangelogPageProps {
   breadcrumbName: string;
   path: string;
@@ -28,6 +35,14 @@ interface MethodologyChangelogPageProps {
   jsonLdIdentifier?: PharosUrnJsonLdIdentifier;
   /** A major-version shard: its newest entry is not the changelog's current release. */
   archiveShard?: boolean;
+  /** Owning section anchor on `/methodology/#<anchor>`. */
+  methodologyAnchor?: string;
+  /** Mapped public technical specification under `/docs/<slug>/`. */
+  docsPath?: string;
+  /** Return link rendered above the page title. */
+  backLink?: { href: string; label: string };
+  /** Sibling major-version archive shards for quick jumping. */
+  siblingArchives?: readonly MethodologySiblingArchive[];
   history?: {
     archivePath: (version: string) => string;
     anchorId: (version: string) => string;
@@ -46,21 +61,28 @@ export function MethodologyChangelogPage({
   footerContent,
   jsonLdIdentifier,
   archiveShard = false,
+  methodologyAnchor,
+  docsPath,
+  backLink = { href: "/methodology/", label: "All methodology" },
+  siblingArchives,
   history,
 }: MethodologyChangelogPageProps) {
   const derivedSections = [
     { id: "overview", label: "Overview" },
     ...(archiveShard ? [] : [{ id: "latest-updates", label: "Latest" }]),
-    ...(history ? [{ id: "earlier-versions", label: "Earlier versions" }] : entries.map((entry) => ({
-      id: methodologyChangelogEntryId(entry.version),
-      label: toMethodologyVersionLabel(entry.version),
-    }))),
+    ...(history
+      ? [{ id: "earlier-versions", label: "Earlier versions" }]
+      : entries.map((entry) => ({
+          id: methodologyChangelogEntryId(entry.version),
+          label: toMethodologyVersionLabel(entry.version),
+        }))),
   ];
 
   const navSections = sections ?? derivedSections;
   const latestEntry = entries[0];
   const articleDescription =
     typeof lead === "string" ? lead : `${breadcrumbName} version history for Pharos.`;
+  const currentMethodHref = methodologyAnchor ? `/methodology/#${methodologyAnchor}` : "/methodology/";
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-8">
@@ -74,138 +96,198 @@ export function MethodologyChangelogPage({
       {entries.length > 0 && (
         <JsonLdScript
           json={safeJsonLd(
-              buildArticleJsonLd({
-                additionalType: "https://schema.org/TechArticle",
-                headline: `${title} - Version History`,
-                description: articleDescription,
-                datePublished: `${entries.at(-1)!.date}T00:00:00Z`,
-                dateModified: `${entries[0].date}T00:00:00Z`,
-                author: "person",
-                image: `${SITE_URL}${getPageSocialPreview(path).url}`,
-                mainEntityOfPage: `${SITE_URL}${path}`,
-                ...(jsonLdIdentifier ? { identifier: [jsonLdIdentifier] } : {}),
-              }),
-            )}
+            buildArticleJsonLd({
+              additionalType: "https://schema.org/TechArticle",
+              headline: `${title} - Version History`,
+              description: articleDescription,
+              datePublished: `${entries.at(-1)!.date}T00:00:00Z`,
+              dateModified: `${entries[0].date}T00:00:00Z`,
+              author: "person",
+              image: `${SITE_URL}${getPageSocialPreview(path).url}`,
+              mainEntityOfPage: `${SITE_URL}${path}`,
+              ...(jsonLdIdentifier ? { identifier: [jsonLdIdentifier] } : {}),
+            }),
+          )}
         />
       )}
 
       <div className="space-y-3">
+        <Link
+          href={backLink.href}
+          className="pharos-focus-ring inline-flex min-h-10 items-center gap-1.5 rounded-sm text-xs font-medium text-muted-foreground transition-colors hover:text-foreground sm:min-h-0"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+          <span>{backLink.label}</span>
+        </Link>
         <h1 className="pharos-page-title">{title}</h1>
-
-        <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">{lead}</p>
+        <p className="pharos-page-deck">{lead}</p>
       </div>
 
       <section
         id="overview"
-        className="pharos-card-shell scroll-mt-28 px-5 py-5 sm:px-6"
+        className="pharos-subtle-band scroll-mt-36 space-y-3 px-4 py-3.5 sm:px-5"
       >
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(16rem,0.8fr)]">
-          <div className="space-y-2">
-            <p className="pharos-label">What this controls</p>
-            <h2 className="text-xl font-semibold text-foreground">{title} version history</h2>
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              Use this changelog to trace how Pharos changed the related scoring, data-source, threshold, or
-              interpretation rules over time. Entries record the contract active at each release; archived rules
-              are retained so historical charts and citations can be read against the rules active at the time.
-            </p>
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 text-xs">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground">
+            <span className="pharos-label text-foreground">
+              {archiveShard ? "Historical archive" : "Version history"}
+            </span>
+            {latestEntry ? (
+              <span className="pharos-numeric">
+                {archiveShard
+                  ? `${entries.length} release${entries.length === 1 ? "" : "s"}`
+                  : `${toMethodologyVersionLabel(latestEntry.version)} · ${entries.length} releases`}
+              </span>
+            ) : null}
           </div>
-          <div className="space-y-2 border-border/50 lg:border-l lg:pl-5">
-            <p className="pharos-label">Primary references</p>
-            <div className="flex flex-col gap-2 text-sm">
-              <Link
-                href="/methodology/"
-                className="pharos-focus-ring rounded-sm text-foreground underline underline-offset-4 hover:text-brand-accent-text"
-              >
-                Read the current methodology
-              </Link>
-              <Link
-                href="/docs/"
-                className="pharos-focus-ring rounded-sm text-foreground underline underline-offset-4 hover:text-brand-accent-text"
-              >
-                Browse the public docs archive
-              </Link>
-            </div>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <Link
+              href={currentMethodHref}
+              className="pharos-prose-link whitespace-nowrap text-foreground"
+            >
+              Current methodology{"\u00a0\u2192"}
+            </Link>
+            <Link
+              href={docsPath ?? "/docs/"}
+              className="pharos-prose-link whitespace-nowrap text-muted-foreground"
+            >
+              {docsPath ? "Technical spec" : "Public docs"}
+              {"\u00a0\u2192"}
+            </Link>
           </div>
         </div>
+        {siblingArchives && siblingArchives.length > 1 ? (
+          <div className="flex flex-wrap items-center gap-1.5 border-t border-border/50 pt-2.5">
+            <span className="pharos-label mr-1">Major versions</span>
+            {siblingArchives.map((item) =>
+              item.current ? (
+                <span
+                  key={item.archive}
+                  aria-current="page"
+                  className="pharos-control-pill pharos-control-pill-active pharos-numeric min-h-8 px-2.5 py-1 text-xs"
+                >
+                  {item.archive}
+                </span>
+              ) : (
+                <Link
+                  key={item.archive}
+                  href={item.href}
+                  prefetch={false}
+                  className="pharos-control-pill pharos-focus-ring pharos-numeric min-h-8 px-2.5 py-1 text-xs"
+                >
+                  {item.archive}
+                </Link>
+              ),
+            )}
+          </div>
+        ) : null}
       </section>
 
       <LongformScrollspyNav
         sections={navSections}
         navAriaLabel={navAriaLabel ?? `${title} version navigation`}
       />
+
       {children ?? (
         <>
-          {latestEntry && !archiveShard && (
-            <section
-              id="latest-updates"
-              className="pharos-card-shell scroll-mt-28 px-5 py-5 sm:px-6"
-            >
-              <div className="grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(16rem,0.8fr)]">
-                <div className="space-y-3">
-                  <p className="pharos-label">Latest version</p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-block rounded-full border border-border/60 bg-muted/55 px-2.5 py-0.5 text-xs pharos-numeric font-medium text-foreground">
-                      {toMethodologyVersionLabel(latestEntry.version)}
-                    </span>
-                    <span className="inline-block rounded-full border border-border/60 bg-muted/55 px-2.5 py-0.5 text-xs pharos-numeric font-medium text-foreground">
-                      {formatMethodologyDisplayDate(latestEntry.date)}
-                    </span>
-                    {latestEntry.reconstructed && (
-                      <span className="inline-block rounded-full border border-border/60 bg-background/55 px-2.5 py-0.5 text-xs text-muted-foreground">
-                        Reconstructed
-                      </span>
-                    )}
-                  </div>
-                  <h2 className="text-xl font-semibold tracking-tight">{latestEntry.title}</h2>
-                  <p className="text-sm leading-relaxed text-muted-foreground">{latestEntry.summary}</p>
-                </div>
-                <div className="border-border/50 lg:border-l lg:pl-5">
-                  <p className="pharos-label">Impact snapshot</p>
-                  {latestEntry.impact.length > 0 ? (
-                    <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-                      {latestEntry.impact.slice(0, 4).map((item) => (
-                        <li key={item} className="flex items-start gap-2">
-                          <span className="mt-[0.42rem] h-1.5 w-1.5 rounded-full bg-foreground/40" />
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="mt-3 text-sm text-muted-foreground">No impact notes recorded for this version.</p>
-                  )}
-                </div>
+          {latestEntry && !archiveShard ? (
+            <section id="latest-updates" className="scroll-mt-36 space-y-4">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <p className="pharos-label text-foreground">Latest version</p>
+                {history && entries.length > METHODOLOGY_RECENT_VERSIONS ? (
+                  <p className="pharos-meta">
+                    Showing{" "}
+                    <span className="pharos-numeric text-foreground/85">
+                      {Math.min(entries.length, METHODOLOGY_RECENT_VERSIONS)}
+                    </span>{" "}
+                    of <span className="pharos-numeric text-foreground/85">{entries.length}</span> releases
+                  </p>
+                ) : null}
               </div>
+              {(history ? entries.slice(0, METHODOLOGY_RECENT_VERSIONS) : entries).map((entry, index) => (
+                <MethodologyVersionCard
+                  key={entry.version}
+                  entry={entry}
+                  entryId={history?.anchorId(entry.version) ?? methodologyChangelogEntryId(entry.version)}
+                  defaultOpen={index === 0}
+                  archiveHref={
+                    history
+                      ? `${history.archivePath(entry.version)}#${history.anchorId(entry.version)}`
+                      : undefined
+                  }
+                />
+              ))}
             </section>
+          ) : (
+            <div className="space-y-4">
+              {entries.map((entry, index) => (
+                <MethodologyVersionCard
+                  key={entry.version}
+                  entry={entry}
+                  entryId={history?.anchorId(entry.version) ?? methodologyChangelogEntryId(entry.version)}
+                  defaultOpen={index === 0}
+                  archiveHref={
+                    history
+                      ? `${history.archivePath(entry.version)}#${history.anchorId(entry.version)}`
+                      : undefined
+                  }
+                />
+              ))}
+            </div>
           )}
 
-          <div className="space-y-4">
-            {(history ? entries.slice(0, METHODOLOGY_RECENT_VERSIONS) : entries).map((entry, index) => (
-              <MethodologyVersionCard
-                key={entry.version}
-                entry={entry}
-                entryId={history?.anchorId(entry.version) ?? methodologyChangelogEntryId(entry.version)}
-                defaultOpen={index === 0}
-                archiveHref={history ? `${history.archivePath(entry.version)}#${history.anchorId(entry.version)}` : undefined}
-              />
-            ))}
-          </div>
           {history && entries.length > METHODOLOGY_RECENT_VERSIONS && (
-            <section id="earlier-versions" className="scroll-mt-28 space-y-4">
-              <h2 className="pharos-section-title">Earlier versions</h2>
-              <p className="text-sm text-muted-foreground">Compact summaries retain historical citation targets. Open a version archive for its full evidence and commit provenance.</p>
-              <ol className="divide-y divide-border/60">
+            <section id="earlier-versions" className="scroll-mt-36 space-y-3">
+              <div className="space-y-1">
+                <h2 className="pharos-section-title">Earlier versions</h2>
+                <p className="text-sm text-muted-foreground">
+                  Compact summaries retain historical citation targets. Open a version archive for its full evidence and commit provenance.
+                </p>
+              </div>
+              <ol className="divide-y divide-border/50 overflow-hidden rounded-xl border border-border/60 bg-card/30">
                 {entries.slice(METHODOLOGY_RECENT_VERSIONS).map((entry) => (
-                  <li key={entry.version} id={history.anchorId(entry.version)} className="scroll-mt-28 space-y-1 py-3">
-                    <Link href={`${history.archivePath(entry.version)}#${history.anchorId(entry.version)}`} prefetch={false} className="pharos-focus-ring rounded-sm text-sm font-medium underline underline-offset-4">
-                      {toMethodologyVersionLabel(entry.version)} · {entry.title}
+                  <li
+                    key={entry.version}
+                    id={history.anchorId(entry.version)}
+                    className="scroll-mt-36 grid gap-1.5 px-4 py-3 sm:grid-cols-[5.5rem_7.5rem_minmax(0,1fr)] sm:items-baseline sm:gap-4"
+                  >
+                    <Link
+                      href={`${history.archivePath(entry.version)}#${history.anchorId(entry.version)}`}
+                      prefetch={false}
+                      className="pharos-prose-link pharos-numeric text-xs font-semibold text-foreground"
+                    >
+                      {toMethodologyVersionLabel(entry.version)}
                     </Link>
-                    <p className="text-xs text-muted-foreground">{formatMethodologyDisplayDate(entry.date)}</p>
-                    <p className="max-w-3xl text-sm text-muted-foreground">{entry.summary}</p>
-                    {methodologyDetailAnchors(entry.detail).map((anchor) => (
-                      <Link key={anchor.id} id={anchor.id} href={`${history.archivePath(entry.version)}#${anchor.id}`} prefetch={false} className="pharos-prose-link block scroll-mt-28 text-xs">
-                        {anchor.label}
+                    <span className="pharos-numeric text-xs text-muted-foreground">
+                      {formatMethodologyDisplayDate(entry.date)}
+                    </span>
+                    <div className="min-w-0 space-y-1">
+                      <Link
+                        href={`${history.archivePath(entry.version)}#${history.anchorId(entry.version)}`}
+                        prefetch={false}
+                        className="pharos-prose-link text-sm font-medium text-foreground"
+                      >
+                        {entry.title}
                       </Link>
-                    ))}
+                      <p className="text-xs leading-relaxed text-muted-foreground">
+                        {entry.summary}
+                      </p>
+                      {methodologyDetailAnchors(entry.detail).length > 0 && (
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 pt-0.5">
+                          {methodologyDetailAnchors(entry.detail).map((anchor) => (
+                            <Link
+                              key={anchor.id}
+                              id={anchor.id}
+                              href={`${history.archivePath(entry.version)}#${anchor.id}`}
+                              prefetch={false}
+                              className="pharos-prose-link scroll-mt-36 text-xs text-muted-foreground"
+                            >
+                              {anchor.label}
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </li>
                 ))}
               </ol>

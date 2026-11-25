@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRight, Rss } from "lucide-react";
-import { RouteSeeAlsoFooter } from "@/components/see-also-footer";
+import { RouteSeeAlsoFooter } from "@/components/route-see-also-footer";
 
 const SOCIAL_LINK_CLASS =
   "pharos-focus-ring grid size-9 sm:size-7 lg:size-6 place-items-center rounded-md border border-border/60 bg-muted/35 text-muted-foreground transition-colors hover:border-border hover:bg-muted/55 hover:text-foreground";

@@ -36,6 +36,17 @@ function dashPatternForTone(tone: DiagramTone): string {
   return tone === "danger" ? "5 3" : "3 3";
 }
 
+/**
+ * Light-theme mechanism accents sit at OKLCH L 0.64–0.75 (~2:1 on light cards),
+ * so step numerals mix the accent half-way toward `--foreground` for >= 4.5:1
+ * legibility in both themes while retaining the archetype hue.
+ */
+function stepNumberFill(accentColor?: string): string {
+  return accentColor
+    ? `color-mix(in oklab, ${accentColor} 50%, var(--foreground))`
+    : "var(--text-tertiary)";
+}
+
 export function DiagramStep({
   x,
   y = 30,
@@ -70,7 +81,7 @@ export function DiagramStep({
           fontSize={8}
           fontWeight={700}
           letterSpacing="0.12em"
-          fill={accentColor ?? "var(--text-tertiary)"}
+          fill={stepNumberFill(accentColor)}
           style={{
             fontFamily:
               "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
@@ -326,8 +337,16 @@ export interface MechanismDiagramStep {
   accentColor?: string;
   /** Pass through the algorithmic dashed-border treatment to mobile. */
   dashedBorder?: boolean;
+  /** Pass through step fill tone (e.g. `"danger"` on algorithmic) to mobile. */
+  tone?: DiagramTone;
   /** Step number to render in the mobile fallback. */
   stepNumber?: number;
+}
+
+export interface MechanismDiagramReturnLoop {
+  label: string;
+  tone?: Extract<DiagramTone, "default" | "danger">;
+  dashed?: boolean;
 }
 
 interface MechanismDiagramShellProps {
@@ -336,9 +355,13 @@ interface MechanismDiagramShellProps {
   desktopHeight?: number;
   steps: ReadonlyArray<MechanismDiagramStep>;
   /**
-   * Optional italic footnote rendered beneath the desktop SVG. Used by each
-   * archetype to anchor a dated historical stress event. Hidden in the
-   * mobile-stacked fallback where it doesn't fit cleanly.
+   * Optional return/carry loop caption rendered inside the mobile-stacked SVG
+   * so mobile readers see the same exit or stress loop as desktop readers.
+   */
+  returnLoop?: MechanismDiagramReturnLoop;
+  /**
+   * Optional italic footnote rendered beneath both desktop and mobile SVGs.
+   * Used by each archetype to anchor its local stress path or dated precedent.
    */
   stressFootnote?: string;
   children: ReactNode;
@@ -349,6 +372,7 @@ export function MechanismDiagramShell({
   description,
   desktopHeight = 120,
   steps,
+  returnLoop,
   stressFootnote,
   children,
 }: MechanismDiagramShellProps) {
@@ -363,31 +387,31 @@ export function MechanismDiagramShell({
         <desc>{description}</desc>
         {children}
       </svg>
-      {stressFootnote ? (
-        <p
-          className="hidden sm:block mx-auto mt-2 max-w-2xl text-center text-xs italic"
-          style={{ color: "var(--text-tertiary)" }}
-        >
-          {stressFootnote}
-        </p>
-      ) : null}
       <MobileStackedDiagram
         steps={steps}
+        returnLoop={returnLoop}
         ariaLabel={ariaLabel}
         description={description}
       />
+      {stressFootnote ? (
+        <p className="mx-auto mt-2.5 max-w-2xl text-center text-xs italic text-muted-foreground">
+          {stressFootnote}
+        </p>
+      ) : null}
     </div>
   );
 }
 
 interface MobileStackedDiagramProps {
   steps: ReadonlyArray<MechanismDiagramStep>;
+  returnLoop?: MechanismDiagramReturnLoop;
   ariaLabel: string;
   description: string;
 }
 
 function MobileStackedDiagram({
   steps,
+  returnLoop,
   ariaLabel,
   description,
 }: MobileStackedDiagramProps) {
@@ -398,12 +422,17 @@ function MobileStackedDiagram({
   const gap = 8;
   const padX = 10;
   const padY = 10;
+  const loopGap = 10;
+  const loopHeight = 24;
   const viewWidth = stepWidth + padX * 2;
   const positions = steps.map(
     (_, i) => padY + i * (stepHeight + gap + arrowLength + gap),
   );
   const lastY = positions[positions.length - 1] ?? padY;
-  const viewHeight = lastY + stepHeight + padY;
+  const loopY = lastY + stepHeight + loopGap;
+  const viewHeight = returnLoop
+    ? loopY + loopHeight + padY
+    : lastY + stepHeight + padY;
   const arrowX = padX + stepWidth / 2;
 
   return (
@@ -417,6 +446,7 @@ function MobileStackedDiagram({
       {steps.map((step, i) => {
         const y = positions[i];
         const accent = step.accentColor;
+        const tone = step.tone ?? "default";
         return (
           <g key={`step-${i}`} transform={`translate(${padX}, ${y})`}>
             <rect
@@ -425,10 +455,10 @@ function MobileStackedDiagram({
               width={stepWidth}
               height={stepHeight}
               rx={6}
-              fill="var(--card)"
+              fill={fillForTone(tone)}
               stroke="var(--border-default)"
               strokeWidth={1}
-              strokeDasharray={step.dashedBorder ? "3 3" : undefined}
+              strokeDasharray={step.dashedBorder ? dashPatternForTone(tone) : undefined}
             />
             {accent ? (
               <rect
@@ -447,7 +477,7 @@ function MobileStackedDiagram({
                 fontSize={8}
                 fontWeight={700}
                 letterSpacing="0.12em"
-                fill={accent ?? "var(--text-tertiary)"}
+                fill={stepNumberFill(accent)}
                 style={{
                   fontFamily:
                     "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
@@ -480,15 +510,55 @@ function MobileStackedDiagram({
           </g>
         );
       })}
-      {steps.slice(0, -1).map((_, i) => (
+      {steps.slice(0, -1).map((step, i) => (
         <DiagramArrow
           key={`arrow-${i}`}
           x={arrowX}
           y={positions[i] + stepHeight + gap}
           width={arrowLength}
           direction="down"
+          dashed={Boolean(step.dashedBorder)}
         />
       ))}
+      {returnLoop ? (
+        <g transform={`translate(${padX}, ${loopY})`}>
+          <rect
+            x={0}
+            y={0}
+            width={stepWidth}
+            height={loopHeight}
+            rx={6}
+            fill={returnLoop.tone === "danger" ? fillForTone("danger") : "transparent"}
+            stroke={
+              returnLoop.tone === "danger"
+                ? "var(--severity-severe)"
+                : "var(--border-default)"
+            }
+            strokeWidth={1}
+            strokeDasharray={
+              returnLoop.dashed
+                ? returnLoop.tone === "danger"
+                  ? "5 3"
+                  : "4 3"
+                : undefined
+            }
+          />
+          <text
+            x={stepWidth / 2}
+            y={loopHeight / 2 + 3.5}
+            textAnchor="middle"
+            fontSize={10}
+            fontWeight={600}
+            fill={
+              returnLoop.tone === "danger"
+                ? "var(--severity-severe)"
+                : "var(--text-secondary)"
+            }
+          >
+            {`↺ ${returnLoop.label}`}
+          </text>
+        </g>
+      ) : null}
     </svg>
   );
 }

@@ -5,7 +5,7 @@ import {
 } from "@shared/lib/dex-volume-availability";
 import { LIQUIDITY_SCORE_WEIGHTS, type LiquidityScoreComponentKey } from "@shared/lib/liquidity-score-weights";
 import { ContentTable } from "@/components/table";
-import { MethodologyDetails } from "../../methodology-shared";
+import { MethodologyDetails, MethodologyDiagramFlow } from "../../methodology-shared";
 
 const LIQUIDITY_COMPONENT_DETAILS: Record<LiquidityScoreComponentKey, { label: string; shortLabel: string; description: string }> = {
   tvlDepth: {
@@ -35,53 +35,36 @@ const LIQUIDITY_COMPONENT_DETAILS: Record<LiquidityScoreComponentKey, { label: s
   },
 };
 
-function LiquidityComponentCard({
-  component,
-}: {
-  component: (typeof LIQUIDITY_SCORE_WEIGHTS)[number];
-}) {
-  const detail = LIQUIDITY_COMPONENT_DETAILS[component.key];
-  return (
-    <div
-      className={
-        component.key === "pairDiversity"
-          ? "col-span-2 md:col-span-1 rounded-lg border p-3 text-center"
-          : "rounded-lg border p-3 text-center"
-      }
-    >
-      <p className="text-foreground font-medium text-xs md:text-base">
-        <span className="md:hidden">{detail.shortLabel}</span>
-        <span className="hidden md:inline">{detail.label}</span>
-      </p>
-      <p className="text-xs text-muted-foreground mt-0.5">{component.displayWeight}</p>
-    </div>
-  );
-}
-
 export function LiquidityTechnicalDetails() {
   return (
     <MethodologyDetails summary="Technical details: component weights, TVL scaling, and quality adjustments">
-      <div className="flex flex-col items-center gap-3">
-        <div className="grid grid-cols-2 gap-2 w-full md:grid-cols-5 md:gap-3">
-          {LIQUIDITY_SCORE_WEIGHTS.map((component) => (
-            <LiquidityComponentCard key={component.key} component={component} />
-          ))}
-        </div>
-        <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-        <div className="w-full rounded-lg border p-3 text-center md:w-64">
-          <p className="text-foreground font-medium">Liquidity Score</p>
-          <p className="text-xs text-muted-foreground mt-0.5">0&ndash;100</p>
-        </div>
-      </div>
+      <MethodologyDiagramFlow
+        inputCols={5}
+        inputs={LIQUIDITY_SCORE_WEIGHTS.map((component) => {
+          const detail = LIQUIDITY_COMPONENT_DETAILS[component.key];
+          return {
+            title: detail.label,
+            shortTitle: detail.shortLabel,
+            subtitle: component.displayWeight,
+            itemClassName: component.key === "pairDiversity" ? "col-span-2 md:col-span-1" : undefined,
+          };
+        })}
+        steps={[
+          { title: "Liquidity Score", subtitle: <>0&ndash;100</>, emphasis: "output", className: "md:w-64" },
+        ]}
+      />
 
       <div className="space-y-2">
         <h3 className="text-foreground font-medium">Components</h3>
         <ContentTable
+          chrome="embedded"
           tableId="methodology-liquidity-components"
           testId="methodology-liquidity-components-table"
+          tableClassName="min-w-[560px]"
+          viewportProps={{ mobileScrollHint: "Swipe sideways for more columns" }}
           columns={[
             { id: "component", header: "Component", cellClassName: "text-foreground" },
-            { id: "weight", header: "Weight" },
+            { id: "weight", header: "Weight", cellClassName: "pharos-numeric whitespace-nowrap" },
             { id: "description", header: "How it works", cellClassName: "whitespace-normal" },
           ]}
           rows={LIQUIDITY_SCORE_WEIGHTS.map((component) => ({

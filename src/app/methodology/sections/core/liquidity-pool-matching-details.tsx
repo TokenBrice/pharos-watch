@@ -5,7 +5,7 @@ const VOLUME_ADMISSION_HOURS = DEX_VOLUME_OBSERVATION_MAX_AGE_SEC / 3600;
 
 export function LiquidityPoolMatchingDetails() {
   return (
-    <MethodologyDetails summary="Pool Matching & Deduplication">
+    <MethodologyDetails summary="Pool matching & deduplication">
       <div className="space-y-3">
         <p>
           Dedicated protocol-native sources (Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap V3, Aerodrome
@@ -52,7 +52,7 @@ export function LiquidityPoolMatchingDetails() {
           answer the token-pool indexes, which miss its pools, cannot certify it either.
         </p>
         <p>
-          Matching is chain-aware: `chain + address` resolves first, and symbol fallback is only allowed when it is
+          Matching is chain-aware: <code>chain + address</code> resolves first, and symbol fallback is only allowed when it is
           unique on that chain for addressless tokens. If an upstream token already supplies an unknown address, it is
           dropped instead of being remapped by symbol. A token pair is a matching candidate, not a pool identity:
           opaque provider IDs remain distinct chain-scoped deployments until a physical match is proven.
@@ -100,7 +100,7 @@ export function LiquidityPoolMatchingDetails() {
         </p>
         <p>
           Canonical Ethereum Uniswap V2 and BSC PancakeSwap V2 pools can publish exact constant-product execution only
-          after their factory runtime and exact `getPair` binding are verified. Token order, reserves, and decimals must
+          after their factory runtime and exact <code>getPair</code> binding are verified. Token order, reserves, and decimals must
           resolve at the same pinned block; other V2 forks and any identity, factory, reserve, price, or read failure
           stay capability-gated instead of inheriting executable depth.
         </p>
@@ -148,7 +148,7 @@ export function LiquidityPoolMatchingDetails() {
           scoring and both records clear the price-observation floor; derived or mismatched identities remain excluded. A
           separate challenger snapshot preserves the full retained pool set for depeg checks, instead of relying on the
           visible top-pools subset. Balancer stablecoin pools also get a narrow stable-pair identity fallback when
-          DeFiLlama omits the subtype in `balancer-v3`, preventing direct-API stable pools from being double-counted as faux
+          DeFiLlama omits the subtype in <code>balancer-v3</code>, preventing direct-API stable pools from being double-counted as faux
           weighted rows.
         </p>
         <p>
@@ -167,7 +167,7 @@ export function LiquidityPoolMatchingDetails() {
         </p>
         <p>
           PancakeSwap V3 volume now uses a bounded trailing-hour window from the official subgraph&apos;s
-          `poolHourDatas.volumeUSD` buckets instead of the latest `poolDayDatas` row, so intraday volume no longer decays
+          <code>poolHourDatas.volumeUSD</code> buckets instead of the latest <code>poolDayDatas</code> row, so intraday volume no longer decays
           toward zero between UTC day rollovers.
         </p>
         <p>
@@ -203,7 +203,7 @@ export function LiquidityPoolMatchingDetails() {
         </p>
         <p>
           Address-grade plain Curve StableSwap-NG pools can publish a route model only after fresh same-block state
-          verifies `get_balances`, stored rates, amplification, ordered coins, and static fee state. On-chain stored
+          verifies <code>get_balances</code>, stored rates, amplification, ordered coins, and static fee state. On-chain stored
           rates decide the shape: a non-base rate scales both balances and references, while a base-only array shows
           the pool is plain and is admitted unscaled (rate factor 1). The source-stage 1% price-spread test is only a
           proxy, so a wider spread on an admitted plain pool is reported as a diagnostic instead of withholding the
@@ -212,8 +212,8 @@ export function LiquidityPoolMatchingDetails() {
           all other unreviewed Curve shapes are not widened.
         </p>
         <p>
-          Explicitly reviewed Curve metapools can instead publish exact same-notional execution through pinned
-          <code className="text-xs"> get_dy_underlying</code> calls. LUSD/3Crv uses this path from v6.2: the producer
+          Explicitly reviewed Curve metapools can instead publish exact same-notional execution through pinned{" "}
+          <code>get_dy_underlying</code> calls. LUSD/3Crv uses this path from v6.2: the producer
           verifies its legacy factory registration, implementation, 3pool base relationship, coin order, decimals, and
           runtime code before quoting LUSD to USDC. From v6.3, multiple Curve registry views of the same canonical pool
           address collapse to one physical fingerprint candidate, while distinct addresses with the same coin set remain

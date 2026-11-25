@@ -51,4 +51,11 @@ describe("scheduled delivery card", () => {
     expect(html).toContain("Unavailable");
     expect(html).toContain("No start evidence");
   });
+
+  it("renders as a flat inset panel without a nested Card shell when surface='panel'", () => {
+    const html = renderToStaticMarkup(<SchedulerLivenessCard observation={undefined} surface="panel" />);
+    expect(html).toContain("pharos-inset");
+    expect(html).not.toContain('data-slot="card"');
+    expect(html).toContain("Scheduled delivery");
+  });
 });

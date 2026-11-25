@@ -1,17 +1,22 @@
-import type { CoverageBreakdownItem, CoverageFeatureKey, CoverageFeatureSummary } from "@/lib/coverage";
+import { Filter } from "lucide-react";
+import type { CoverageBreakdownItem, CoverageFeatureSummary } from "@/lib/coverage";
 import {
+  COVERAGE_BAR_TEXT_ON_LIGHT_CLASS,
   COVERAGE_BREAKDOWN_VISUAL_CLASSES,
   COVERAGE_GAP_BAR_CLASS,
   FEATURE_ACCENT_CLASSES,
   FEATURE_ICON,
 } from "@/lib/coverage-page-config";
+import {
+  COVERAGE_FEATURE_SNAPSHOT_FILTERS,
+  type CoverageMatrixFilterKey,
+} from "@/components/coverage/coverage-matrix-controls";
+import { DisclosurePanel } from "@/components/disclosure-panel";
 import { cn } from "@/lib/utils";
 import { CoverageFeatureLink } from "@/components/coverage/coverage-feature-link";
 
 const PRICE_SOURCE_DEPTH_KEYS = new Set(["sources-5-plus", "sources-3-4", "sources-1-2"]);
 const BAR_TEXT_ON_DARK_CLASS = "text-white";
-const GAP_BAR_SURFACE_CLASS =
-  "bg-muted text-foreground bg-[repeating-linear-gradient(135deg,transparent_0_5px,var(--border)_5px_6px)]";
 const BAR_LABEL_MIN_PCT = 8;
 
 /**
@@ -90,6 +95,7 @@ const BAR_LABELS: Partial<Record<string, string>> = {
 
 export interface CoverageFeatureSnapshotRowProps {
   summary: CoverageFeatureSummary;
+  onFilterFeature?: (filter: CoverageMatrixFilterKey) => void;
 }
 
 function getStackedBarItems(summary: CoverageFeatureSummary): CoverageBreakdownItem[] {
@@ -122,9 +128,13 @@ function getStackedBarItems(summary: CoverageFeatureSummary): CoverageBreakdownI
   return unavailableItem ? [...depthItems, unavailableItem] : depthItems;
 }
 
-export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotRowProps) {
+export function CoverageFeatureSnapshotRow({
+  summary,
+  onFilterFeature,
+}: CoverageFeatureSnapshotRowProps) {
   const Icon = FEATURE_ICON[summary.feature.key];
   const accent = FEATURE_ACCENT_CLASSES[summary.feature.key];
+  const matrixFilter = COVERAGE_FEATURE_SNAPSHOT_FILTERS[summary.feature.key];
   const barItems = getStackedBarItems(summary);
   const stackedCount = barItems.reduce((total, item) => total + item.count, 0);
   // "Not covered" is derived from what the bar actually stacks: the shared
@@ -148,13 +158,53 @@ export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotR
     .filter(Boolean)
     .join(", ");
 
+  const segments = [
+    ...barItems.map((item) => {
+      const visual = COVERAGE_BREAKDOWN_VISUAL_CLASSES[summary.feature.key]?.[item.key];
+      const pct = barTotalCount > 0 ? (item.count / barTotalCount) * 100 : 0;
+      const visibleLabel = BAR_LABELS[item.key] ?? item.label;
+      const barText = resolveBarSegmentLabel(
+        visibleLabel,
+        item.count,
+        pct,
+        item.key === "uncovered" ? "gap" : item.key === "unassessed" ? "none" : undefined,
+      );
+      const isGapBar = visual?.bar === COVERAGE_GAP_BAR_CLASS;
+      return {
+        key: `${summary.feature.key}-${item.key}-bar`,
+        label: item.label,
+        count: item.count,
+        barText,
+        barClass: isGapBar ? COVERAGE_GAP_BAR_CLASS : (visual?.bar ?? accent.countBar),
+        textClass: isGapBar
+          ? "text-foreground"
+          : visual
+            ? (visual.barText ?? BAR_TEXT_ON_DARK_CLASS)
+            : COVERAGE_BAR_TEXT_ON_LIGHT_CLASS,
+      };
+    }),
+    ...(missingCount > 0
+      ? [
+          {
+            key: `${summary.feature.key}-missing-bar`,
+            label: "not covered",
+            count: missingCount,
+            barText: resolveBarSegmentLabel("not covered", missingCount, missingPct, "gap"),
+            barClass: COVERAGE_GAP_BAR_CLASS,
+            textClass: "text-foreground",
+          },
+        ]
+      : []),
+  ];
+  const hiddenSegmentCount = segments.filter((segment) => segment.barText == null).length;
+
   return (
     <li
       className={cn(
         "grid gap-4 bg-card px-4 py-4 transition-colors hover:bg-muted/10 md:grid-cols-[minmax(11.5rem,0.85fr)_minmax(0,2fr)_minmax(11.5rem,0.7fr)] md:items-center md:px-5",
       )}
     >
-      <div className="min-w-0">
+      <div className="flex min-w-0 items-center justify-between gap-2 md:block">
         <CoverageFeatureLink
           feature={summary.feature}
           className={cn(
@@ -162,14 +212,9 @@ export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotR
             summary.feature.href ? "pharos-focus-ring text-foreground hover:text-foreground" : "text-foreground",
           )}
         >
-          <Icon className={cn("h-5 w-5 shrink-0", accent.icon)} aria-hidden="true" />
+          <Icon className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
           <span className="min-w-0">
-            <span
-              className={cn(
-                "block truncate text-sm font-semibold leading-tight tracking-tight",
-                accent.title,
-              )}
-            >
+            <span className="block truncate text-sm font-semibold leading-tight tracking-tight text-foreground">
               {summary.feature.label}
             </span>
             <span className="mt-0.5 block truncate text-2xs leading-tight text-muted-foreground">
@@ -178,6 +223,19 @@ export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotR
           </span>
           <span className="sr-only">: {summary.feature.description}</span>
         </CoverageFeatureLink>
+        {onFilterFeature ? (
+          <div className="shrink-0 md:mt-2">
+            <button
+              type="button"
+              onClick={() => onFilterFeature(matrixFilter.filter)}
+              aria-label={matrixFilter.ariaLabel}
+              className="pharos-focus-ring pharos-control-pill min-h-11 gap-1.5 px-2.5 py-1 text-2xs font-medium text-muted-foreground hover:text-foreground sm:h-7 sm:min-h-0"
+            >
+              <Filter className="h-3 w-3 shrink-0" aria-hidden="true" />
+              <span>{matrixFilter.label}</span>
+            </button>
+          </div>
+        ) : null}
       </div>
 
       <div className="min-w-0">
@@ -186,60 +244,56 @@ export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotR
           role="img"
           aria-label={`${summary.feature.label} coverage: ${segmentLabel}`}
         >
-          {barItems.map((item) => {
-            const visual = COVERAGE_BREAKDOWN_VISUAL_CLASSES[summary.feature.key]?.[item.key];
-            const pct = barTotalCount > 0 ? (item.count / barTotalCount) * 100 : 0;
-            const visibleLabel = BAR_LABELS[item.key] ?? item.label;
-            const barText = resolveBarSegmentLabel(
-              visibleLabel,
-              item.count,
-              pct,
-              item.key === "uncovered" ? "gap" : item.key === "unassessed" ? "none" : undefined,
-            );
-            const isGapBar = visual?.bar === COVERAGE_GAP_BAR_CLASS;
-            return (
-              <div
-                key={`${summary.feature.key}-${item.key}-bar`}
-                className={cn(
-                  "flex h-full min-w-0 items-center justify-center border-r border-card/80 px-1.5 last:border-r-0",
-                  isGapBar ? GAP_BAR_SURFACE_CLASS : (visual?.bar ?? accent.countBar),
-                )}
-                style={{ flexGrow: item.count, flexBasis: 0 }}
-                title={`${item.label}: ${item.count}`}
-              >
-                {barText ? (
-                  <span
-                    className={cn(
-                      "whitespace-nowrap text-3xs font-semibold leading-none pharos-numeric",
-                      isGapBar ? "text-foreground" : (visual?.barText ?? BAR_TEXT_ON_DARK_CLASS),
-                    )}
-                  >
-                    {barText}
-                  </span>
-                ) : null}
-              </div>
-            );
-          })}
-          {missingCount > 0 ? (() => {
-            const missingText = resolveBarSegmentLabel("not covered", missingCount, missingPct, "gap");
-            return (
-              <div
-                className={cn(
-                  "flex h-full min-w-0 items-center justify-center border-r border-card/80 px-1.5 last:border-r-0",
-                  GAP_BAR_SURFACE_CLASS,
-                )}
-                style={{ flexGrow: missingCount, flexBasis: 0 }}
-                title={`not covered: ${missingCount}`}
-              >
-                {missingText ? (
-                  <span className="whitespace-nowrap text-3xs font-semibold leading-none text-foreground pharos-numeric">
-                    {missingText}
-                  </span>
-                ) : null}
-              </div>
-            );
-          })() : null}
+          {segments.map((segment) => (
+            <div
+              key={segment.key}
+              className={cn(
+                "flex h-full min-w-0 items-center justify-center border-r border-card/80 px-1.5 last:border-r-0",
+                segment.barClass,
+              )}
+              style={{ flexGrow: segment.count, flexBasis: 0 }}
+              title={`${segment.label}: ${segment.count}`}
+            >
+              {segment.barText ? (
+                <span
+                  className={cn(
+                    "whitespace-nowrap text-3xs font-semibold leading-none pharos-numeric",
+                    segment.textClass,
+                  )}
+                >
+                  {segment.barText}
+                </span>
+              ) : null}
+            </div>
+          ))}
         </div>
+
+        {hiddenSegmentCount > 0 ? (
+          <DisclosurePanel
+            variant="plain"
+            className="mt-1.5"
+            summary={
+              <span>
+                Breakdown ({segments.length} segments · {hiddenSegmentCount} narrow)
+              </span>
+            }
+            summaryClassName="min-h-8 text-2xs sm:min-h-7"
+            contentClassName="mt-1.5"
+          >
+            <ul className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              {segments.map((segment) => (
+                <li key={`${segment.key}-legend`} className="pharos-chart-legend-chip">
+                  <span
+                    aria-hidden="true"
+                    className={cn("h-2 w-2 shrink-0 rounded-xs border border-border/50", segment.barClass)}
+                  />
+                  <span>{segment.label}</span>
+                  <span className="pharos-numeric font-medium text-foreground">{segment.count}</span>
+                </li>
+              ))}
+            </ul>
+          </DisclosurePanel>
+        ) : null}
       </div>
 
       <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2 md:justify-self-end">
@@ -270,16 +324,13 @@ export interface FeatureSnapshotInsightProps {
   label: string;
   title: React.ReactNode;
   detail: React.ReactNode;
-  accent: CoverageFeatureKey;
 }
 
-export function FeatureSnapshotInsight({ label, title, detail, accent }: FeatureSnapshotInsightProps) {
-  const accentClasses = FEATURE_ACCENT_CLASSES[accent];
-
+export function FeatureSnapshotInsight({ label, title, detail }: FeatureSnapshotInsightProps) {
   return (
-    <div className={cn("rounded-lg border px-3 py-2.5", accentClasses.tile)}>
+    <div className="pharos-inset px-3 py-2.5">
       <div className="pharos-label">{label}</div>
-      <div className={cn("mt-1 truncate text-sm font-semibold leading-tight", accentClasses.title)}>{title}</div>
+      <div className="mt-1 truncate text-sm font-semibold leading-tight text-foreground">{title}</div>
       <div className="mt-1 pharos-numeric text-xs text-muted-foreground">{detail}</div>
     </div>
   );

@@ -37,6 +37,7 @@ function buildSteps(
   defaults: readonly [MechanismStepText, MechanismStepText, MechanismStepText],
   accentColor: string,
   dashed: boolean,
+  stepTone: DiagramTone,
 ): MechanismDiagramStep[] {
   return defaults.map((step, index) => ({
     label: step.label,
@@ -44,6 +45,7 @@ function buildSteps(
     accentColor,
     stepNumber: index + 1,
     dashedBorder: dashed ? true : undefined,
+    tone: stepTone !== "default" ? stepTone : undefined,
   }));
 }
 
@@ -57,7 +59,7 @@ export function ThreeStepMechanismDiagram({
   stepTone = "default",
   dashed = false,
 }: ThreeStepMechanismDiagramProps) {
-  const steps = buildSteps(defaultSteps, accentColor, dashed);
+  const steps = buildSteps(defaultSteps, accentColor, dashed, stepTone);
 
   return (
     <MechanismDiagramShell
@@ -65,6 +67,15 @@ export function ThreeStepMechanismDiagram({
       description={description}
       desktopHeight={returnArrow ? 155 : undefined}
       steps={steps}
+      returnLoop={
+        returnArrow
+          ? {
+              label: returnArrow.label,
+              tone: returnArrow.tone,
+              dashed: returnArrow.dashed,
+            }
+          : undefined
+      }
       stressFootnote={stressFootnote}
     >
       <DiagramStep

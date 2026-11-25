@@ -119,8 +119,15 @@ describe("public verdict", () => {
     render(<StatusClient faqItems={[]} />);
     expect(screen.getByRole("button", { name: "Refresh" })).toBeTruthy();
     const fetchNotice = screen.getByText("The status check could not be reached. Showing the last good reading.");
+    expect(fetchNotice.getAttribute("role")).toBe("status");
     // The raw error stays reachable on hover, never as visible copy.
     expect(fetchNotice.getAttribute("title")).toBe("network down");
+    cleanup();
+
+    mockHealth(makeHealthyHealthResponse(), { error: new Error("network down"), isFetching: true });
+    render(<StatusClient faqItems={[]} />);
+    const refreshingBtn = screen.getByRole("button", { name: "Refreshing…" }) as HTMLButtonElement;
+    expect(refreshingBtn.disabled).toBe(true);
     cleanup();
 
     vi.useFakeTimers();
@@ -159,13 +166,13 @@ describe("public history availability", () => {
     expect(screen.getByText("Incident history could not be loaded: history unavailable")).toBeTruthy();
     expect(screen.getByText(/Component history could not be loaded/)).toBeTruthy();
     expect(screen.queryByText(/No incidents recorded/)).toBeNull();
-    expect(screen.queryByRole("img", { name: /last 30 days/ })).toBeNull();
+    expect(screen.queryByRole("group", { name: /last 30 days/ })).toBeNull();
   });
 
   it("renders an observed empty history as empty, with per-component bars", () => {
     render(<StatusClient faqItems={[]} />);
     expect(screen.getByText("No incidents recorded in the last 30 days.")).toBeTruthy();
-    expect(screen.getByRole("img", { name: /^Yield, last 30 days/ })).toBeTruthy();
+    expect(screen.getByRole("group", { name: /^Yield, last 30 days/ })).toBeTruthy();
   });
 });
 

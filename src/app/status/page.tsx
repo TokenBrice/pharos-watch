@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SeeAlsoFooter } from "@/components/see-also-footer";
 import type { FaqItem } from "@/lib/faq";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import StatusClient from "./client";
@@ -29,5 +30,10 @@ const STATUS_FAQ_ITEMS = [
 ] as const satisfies readonly FaqItem[];
 
 export default function StatusPage() {
-  return <StatusClient faqItems={STATUS_FAQ_ITEMS} />;
+  return (
+    <>
+      <StatusClient faqItems={STATUS_FAQ_ITEMS} />
+      <SeeAlsoFooter route="/status/" />
+    </>
+  );
 }

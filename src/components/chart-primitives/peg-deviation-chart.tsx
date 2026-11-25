@@ -367,8 +367,8 @@ export function PegDeviationChart({
   );
 
   const header = (
-    <div className="flex flex-row items-center justify-between gap-3">
-      <div className="flex flex-col gap-0.5">
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex min-w-0 flex-col gap-0.5">
         <DetailSectionTitle as={embedded ? "h3" : "h2"} className={DETAIL_MODULE_TITLE_CLASS}>
           {parCharted ? "Peg deviation" : "Price (USD)"}
         </DetailSectionTitle>

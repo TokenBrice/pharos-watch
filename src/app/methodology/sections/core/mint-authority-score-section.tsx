@@ -13,6 +13,8 @@ export function MintAuthorityScoreMethodologySection() {
       id={MINT_AUTHORITY_SCORE_SECTION_CONTENT.id}
       title={MINT_AUTHORITY_SCORE_SECTION_CONTENT.title}
       versionBadge={{ label: MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL }}
+      liveHref="/safety-scores/"
+      liveLabel="Safety Scores"
       versionNote="The standalone lane is closed. Current economic-authority rules are versioned in the Safety Score changelog; this badge marks the terminal Mint Authority release."
     >
       <p>{markdownParagraphs[0]}</p>
@@ -25,11 +27,12 @@ export function MintAuthorityScoreMethodologySection() {
         ]}
       />
       <ContentTable
+        chrome="embedded"
         tableId="methodology-mint-authority-components"
         testId="methodology-mint-authority-components-table"
         columns={[
           { id: "authority", header: "Effective authority", rowHeader: true },
-          { id: "quality", header: "Base quality" },
+          { id: "quality", header: "Base quality", headerClassName: "text-right", cellClassName: "pharos-numeric text-right" },
         ]}
         rows={[
           { id: "single", cells: { authority: "Verified single signer / one-signature path", quality: ladder.singleSigner } },

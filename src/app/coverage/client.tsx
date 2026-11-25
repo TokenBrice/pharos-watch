@@ -17,16 +17,30 @@ import {
   type CoverageMatrixSortKey,
 } from "@/components/coverage/coverage-matrix-controls";
 import { useCoveragePageModel } from "@/hooks/use-coverage-page-model";
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { useUrlState } from "@/hooks/use-url-state";
 
 export default function CoveragePageClient() {
   const model = useCoveragePageModel();
+  const prefersReducedMotion = usePrefersReducedMotion();
   const { state: matrixUrlState, patchState: patchMatrixUrlState } = useUrlState(COVERAGE_MATRIX_URL_SCHEMA);
   const deferredSearch = useDeferredValue(model.search);
 
   const setFilter = useCallback(
     (next: CoverageMatrixFilterKey) => patchMatrixUrlState({ filter: next }),
     [patchMatrixUrlState],
+  );
+  const handleSnapshotFilter = useCallback(
+    (next: CoverageMatrixFilterKey) => {
+      patchMatrixUrlState({ filter: next });
+      const matrixSection = document.getElementById("coverage-matrix");
+      if (!matrixSection) return;
+      matrixSection.scrollIntoView({
+        behavior: prefersReducedMotion ? "auto" : "smooth",
+        block: "start",
+      });
+    },
+    [patchMatrixUrlState, prefersReducedMotion],
   );
   const setSort = useCallback(
     (next: CoverageMatrixSortKey) => patchMatrixUrlState({ sort: next }),
@@ -49,7 +63,7 @@ export default function CoveragePageClient() {
         <CoverageMatrixDataStateCard state={model.isStablecoinDataUnavailable ? "error" : "loading"} />
       ) : (
         <>
-          <CoverageFeatureSnapshotCard {...model} />
+          <CoverageFeatureSnapshotCard {...model} onFilterFeature={handleSnapshotFilter} />
           <CoverageSafetyScoreDataCard safetyScoreDataCoverage={model.safetyScoreDataCoverage} />
           <CoveragePricingSourcesCard
             pricingSources={model.pricingSources}
