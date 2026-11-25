@@ -34,9 +34,20 @@ import {
 
 const GOLD_METAS = ACTIVE_STABLECOINS.filter((stablecoin) => stablecoin.flags.pegCurrency === "GOLD");
 
+function logXautWithheld(reason: string, metadata: Record<string, unknown> = {}): null {
+  logWorkerEvent({
+    scope: "handler", level: "warn", job: "sync-stablecoins", event: "xaut-supply-withheld",
+    message: `[gold] Withholding XAUT supply (${reason})`,
+    metadata: { stablecoinId: XAUT_ASSET_ID, reason, ...metadata },
+  });
+  return null;
+}
+
 async function readXautSupply(price: SupplementalPriceResolution | null, chainRpcs?: Map<string, ChainRpcConfig>, signal?: AbortSignal) {
   const source = buildXautTransparencySource();
-  if (price?.observedAt == null || !source || !hasRegistryRpc(chainRpcs?.get(XAUT_CANONICAL_CHAIN_ID))) return null;
+  if (price?.observedAt == null || !source || !hasRegistryRpc(chainRpcs?.get(XAUT_CANONICAL_CHAIN_ID))) {
+    return logXautWithheld("missing-price-or-rpc", { hasPriceClock: price?.observedAt != null, hasSource: Boolean(source) });
+  }
   const options = { chainRpcs, signal: signal ?? AbortSignal.timeout(10_000), timeoutMs: 10_000 };
   try {
     // Workers rejects redirect: "error" before sending; manual keeps
@@ -47,25 +58,35 @@ async function readXautSupply(price: SupplementalPriceResolution | null, chainRp
     const disclosure = result?.response.ok ? parseXautTransparencyDisclosure(result.body) : null;
     const now = Math.floor(Date.now() / 1000);
     const disclosureAgeSec = disclosure ? now - disclosure.sourceTimestampSec : null;
-    if (!disclosure || disclosureAgeSec == null || disclosureAgeSec < 0 || disclosureAgeSec > XAUT_SUPPLY_DISCLOSURE_MAX_AGE_SEC ||
-        BigInt(disclosure.quarantinedRaw) !== 0n || price.observedAt > now) return null;
+    if (!disclosure || disclosureAgeSec == null) return logXautWithheld("disclosure-unavailable", { status: result?.response.status ?? null });
+    if (disclosureAgeSec < 0 || disclosureAgeSec > XAUT_SUPPLY_DISCLOSURE_MAX_AGE_SEC) {
+      return logXautWithheld(disclosureAgeSec < 0 ? "disclosure-future-dated" : "disclosure-stale", {
+        sourceTimestampSec: disclosure.sourceTimestampSec, disclosureAgeSec, maxDisclosureAgeSec: XAUT_SUPPLY_DISCLOSURE_MAX_AGE_SEC,
+      });
+    }
+    if (BigInt(disclosure.quarantinedRaw) !== 0n) return logXautWithheld("quarantined-supply-nonzero", { quarantinedRaw: disclosure.quarantinedRaw });
+    if (price.observedAt > now) return logXautWithheld("price-future-dated", { priceObservedAt: price.observedAt, now });
     const block = await fetchEvmBlockHeader(XAUT_CANONICAL_CHAIN_ID, "finalized", options);
     if (!block || block.timestamp > now || now - block.timestamp > XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC ||
-        Math.abs(block.timestamp - price.observedAt) > XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC) return null;
+        Math.abs(block.timestamp - price.observedAt) > XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC) {
+      return logXautWithheld("block-unavailable-or-stale", { blockTimestampSec: block?.timestamp ?? null, priceObservedAt: price.observedAt });
+    }
     const pinned = { ...options, stateBlockHash: block.hash };
     const decimals = await fetchEvmUint256AtBlock(XAUT_CANONICAL_CHAIN_ID, XAUT_CANONICAL_TOKEN_ADDRESS, DECIMALS_SELECTOR, block.number, pinned);
-    if (decimals !== 6n) return null;
+    if (decimals !== 6n) return logXautWithheld("decimals-mismatch", { decimals: decimals?.toString() ?? null });
     const total = await fetchEvmUint256AtBlock(XAUT_CANONICAL_CHAIN_ID, XAUT_CANONICAL_TOKEN_ADDRESS, TOTAL_SUPPLY_SELECTOR, block.number, pinned);
     const treasury = await fetchEvmUint256AtBlock(XAUT_CANONICAL_CHAIN_ID, XAUT_CANONICAL_TOKEN_ADDRESS,
       encodeBalanceOfCallData(XAUT_TREASURY_ADDRESS), block.number, pinned);
     const confirmed = await fetchEvmBlockHeader(XAUT_CANONICAL_CHAIN_ID, block.number, options);
     if (confirmed?.number !== block.number || confirmed.hash !== block.hash || confirmed.timestamp !== block.timestamp || total == null || treasury == null ||
         !xautCirculatingLiabilityReconciles({ canonicalTotalSupplyRaw: total, treasuryBalanceRaw: treasury,
-          disclosedTotalAuthorizedRaw: BigInt(disclosure.totalAuthorizedRaw), disclosedNotIssuedRaw: BigInt(disclosure.notIssuedRaw) })) return null;
+          disclosedTotalAuthorizedRaw: BigInt(disclosure.totalAuthorizedRaw), disclosedNotIssuedRaw: BigInt(disclosure.notIssuedRaw) })) {
+      return logXautWithheld("reconciliation-failed-or-reorg", { blockNumber: block.number, hasTotal: total != null, hasTreasury: treasury != null });
+    }
     // The canonical amount includes bridged stock once, through its L1 lockbox.
     const circulatingNative = Number(total - treasury) / 1_000_000;
     const mcap = circulatingNative * price.price;
-    if (!Number.isFinite(mcap) || mcap < 0) return null;
+    if (!Number.isFinite(mcap) || mcap < 0) return logXautWithheld("invalid-mcap");
     if (disclosureAgeSec > XAUT_DISCLOSURE_MAX_AGE_SEC) {
       logWorkerEvent({
         scope: "handler",
