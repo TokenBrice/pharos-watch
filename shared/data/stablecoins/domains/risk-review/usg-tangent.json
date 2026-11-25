@@ -31,8 +31,8 @@
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",
-      "reviewedAt": "2026-10-01",
-      "reviewer": "Sol curation pass 2026-10-01 (CurM14USDX)",
+      "reviewedAt": "2026-11-25",
+      "reviewer": "Pharos #2275 usg-tangent alignment 2026-11-25 (prior Sol curation pass 2026-10-01)",
       "rationale": "Factory census at finalized Ethereum block 26491610 (2026-11-25T10:30:47Z, matching the 2026-11-22 reserve census at block 26471538) has 21 authorized markets; branches cover only the 13 created through 2026-07-13, leaving msETH/OETH, cbBTC/WBTC, reUSD/sDOLA, CVX/ETH, frxUSD/DUSD, frxUSD/crvUSD, crvUSD/ETH/CRV and PYUSD/crvUSD unassessed.",
       "sources": [
         {
