@@ -586,7 +586,12 @@ function assertPreviousReaderSource() {
   // dependency-graph.ts and report-cards-v9.ts add optional nullable listingClass on
   // DependencyGraphNodeSchema and SafetyGradesResponseSchema (no card/breakdown/trace changes;
   // substituting origin/main's 3 files restores the prior a660a454… digest).
-  if (hash.digest("hex") !== "21cdf3e26b57513503b96a650e5253766d721885dd69d6e76de0c7bb7c673544") throw new Error("Pre-dust reader source/refinement inputs changed");
+  // v10.57 lapsed bridge review monotonicity (#2327): additive-only schema changes in
+  // bridge-risk.ts ("retired" disposition), stablecoin-meta-control-schemas.ts (optional
+  // retiredReason/retired fields), and safety-score-v9-facts.ts (optional lapsedReview flag).
+  // No public card, breakdown, or trace schema changed; substituting origin/main's 3 files
+  // restores the prior 21cdf3e2… digest.
+  if (hash.digest("hex") !== "7b63ea62b515dc23a801285303a203dbad2698b535a3791430702605abd07f08") throw new Error("Pre-dust reader source/refinement inputs changed");
 }
 
 export async function previousReader() {

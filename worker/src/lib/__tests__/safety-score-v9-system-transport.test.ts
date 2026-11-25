@@ -28,13 +28,17 @@ function compileTransport(clockSec = CLOCK) {
     contracts: [{ chain: "hyperevm", address: "0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70", decimals: 18 }],
   }]]) });
   const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(normalizeFixedInput(fixed), extension);
-  return compiled.assets[0]!.controls.find((control) => control.deploymentKey === CORE_ROUTE)!;
+  return {
+    asset: compiled.assets[0]!,
+    control: compiled.assets[0]!.controls.find((control) => control.deploymentKey === CORE_ROUTE),
+  };
 }
 
 describe("same-chain HyperCore system transport", () => {
   it("compiles consensus authority and escrow impairment without bridge-validator or mint credit", () => {
-    const control = compileTransport();
+    const { control } = compileTransport();
     expect(control).toBeDefined();
+    if (!control) return;
     expect(control.status.observationState).toBe("bounded-unknown");
     expect(control.incidentState).toBe("unknown");
     expect(control.factorStatuses?.incidentState).toMatchObject({
@@ -56,10 +60,10 @@ describe("same-chain HyperCore system transport", () => {
     expect(control.failureDomains).toContainEqual({ kind: "bridge-route", key: "consensus:hyperliquid" });
   });
 
-  it("retains stale research as unresolved rather than renewing a system-family label", () => {
-    const control = compileTransport(Date.parse("2026-10-05T00:00:00Z") / 1000 + V9_REVIEW_EVIDENCE_MAX_AGE_SEC + 1);
-    expect(control.status.observationState).not.toBe("known");
-    expect(control.incidentState).toBe("unknown");
+  it("drops stale transport controls and marks bridge review lapsed rather than renewing a system-family label", () => {
+    const { asset, control } = compileTransport(Date.parse("2026-10-05T00:00:00Z") / 1000 + V9_REVIEW_EVIDENCE_MAX_AGE_SEC + 1);
+    expect(control).toBeUndefined();
+    expect(asset.economicControlReview.bridge).toMatchObject({ status: { observationState: "stale" }, lapsedReview: true });
   });
 
   it("admits escrow-only same-chain coverage but rejects an invalid family bypass", () => {
