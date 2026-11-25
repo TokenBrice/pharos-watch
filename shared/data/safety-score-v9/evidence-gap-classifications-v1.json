@@ -25691,47 +25691,6 @@
       "rationale": "The exact whole-position liquidityHorizon of the sUSDC receipt backing SPUSD is not disclosed. Wrapper conversion is instant only into the same receipt; it is not final USDC realization. Lifecycle docs and the pinned current implementation restrict USDC redemption to an owner/operator and require sufficient reserves. Terms, strategy/security docs, monitoring and audit surfaces publish no contractual operator SLA or entire-book realization maximum. This C is for that undisclosed service/liquidity bound, not observable code, roles, balances or lock times."
     },
     {
-      "id": "uw-fusd-finchain-932d816b40694a51",
-      "assetId": "fusd-finchain",
-      "scope": {
-        "componentKey": "control:mint-meta:fusd-finchain:faff4face07e560f7df9",
-        "exposureId": null,
-        "factorKey": "economicLossScope",
-        "pillar": "control",
-        "requiredDatum": "economicLossScope",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-05T08:07:50Z",
-      "reviewer": "Unknown-resolver wave 4 2026-10-05 (R06)",
-      "sourcesRefs": [
-        "source:437136ac7d8f3292c55d009c",
-        "source:d083d229ef12344e95978223",
-        "source:3906b373efc191b82bff5537"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:5e60308cdcf35f2c3cf2446e",
-        "surface:6082cc4045a0e5c38a204892",
-        "surface:2f0f32c2aa55fbd4ff3028f7",
-        "surface:56284cd0a7de7d305c93c5b0",
-        "surface:4bcfae5909d492f9125f2a0a",
-        "surface:3f2cab2fbdd9b5593a5abe08",
-        "surface:955c97daa0ee068637d9f077",
-        "surface:788fa4b2fc80e284d3c0f83e",
-        "surface:dad5cb7b064d24582024f78b",
-        "surface:220442511ad4caf22de742fc",
-        "surface:6ba46bc9ecd518316a2d9a36",
-        "surface:e1c050af791f177e50cb7baa",
-        "surface:f1e325ecb7ab3209b77521f2",
-        "surface:e5f29fda821d6b0ca5160e0a",
-        "surface:c8c35b0ef13a2b9ec13a72b2",
-        "surface:88f24a0a7266579e83b90ea8",
-        "surface:b24d82fc911099dd7c3286cc"
-      ],
-      "rationale": "D-24 C: the undisclosed datum is the issuer claim/loss perimeter of the duplicate-listed Solana mint, not its observable quorum or mint permissions. The issuer docs, LP conversion description, website, legal terms, transparency and contract observations disclose no authoritative canonical-FUSD versus FUSDLP liability mapping. Fresh single-slot mint/multisig/metadata reads retain the conflict. Keep economicLossScope unknown and retain adverse 1-of-3 exposure; never substitute global-claim, deployment or access-only."
-    },
-    {
       "id": "uw-srusd-reservoir-5b500b881a0b17e7",
       "assetId": "srusd-reservoir",
       "scope": {
@@ -42757,81 +42716,6 @@
         "surface:d470f3a876629897afe56faa"
       ],
       "rationale": "The captured source-native exposure is the Nest NAV reconciliation residual (weight 0.00007507963060221269), not the identified LiquidStone/OALS2T or liquid stablecoin legs. The exact issuer positions and price endpoints were successfully read during this review. They enumerate positions and aggregate NAV but do not identify the residual or disclose its issuerOrObligorKey. Operational documentation includes pending asset movements in NAV but does not assign this residual to one. No asset class, obligor, liquidity horizon or maturity maximum is inferred from a numerical reconciliation difference; captured weights and historical review dates remain unchanged."
-    },
-    {
-      "id": "campaign-L57FUSD-v9g-b3d2a0c339cf9d33",
-      "assetId": "fusd-finchain",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "control:mint-meta:fusd-finchain:faff4face07e560f7df9",
-        "factorKey": null,
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "control:mint-meta:fusd-finchain:faff4face07e560f7df9"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-10T23:32:30Z",
-      "reviewer": "Sol curation campaign 2026-10-11 (L57FUSD)",
-      "sourcesRefs": [
-        "source:4cedd7aca156713f85340b3d",
-        "source:1980208788635c61187eff20"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:9c324800a170df6f70df963a",
-        "surface:36d3892dae8bb7a5778b562c"
-      ],
-      "rationale": "Both currently retrieved issuer deployment tables assign Solana mint 51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q to FUSD and FUSDLP. The FUSDLP description defines a distinct appreciating basket claim but does not adjudicate the mint's canonical liability identity. The existing scoped question remains unanswered. This disposition records issuer claim-identity nondisclosure only; it does not certify execution closure, economic loss, incident absence or change the observed 1-of-3 authority."
-    },
-    {
-      "id": "campaign-L57FUSD-v9g-4978ea26189d5174",
-      "assetId": "fusd-finchain",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "deployment-controls",
-        "factorKey": null,
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "deployment-controls"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-10T23:32:30Z",
-      "reviewer": "Sol curation campaign 2026-10-11 (L57FUSD)",
-      "sourcesRefs": [
-        "source:4cedd7aca156713f85340b3d",
-        "source:1980208788635c61187eff20"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:9c324800a170df6f70df963a",
-        "surface:36d3892dae8bb7a5778b562c"
-      ],
-      "rationale": "Both currently retrieved issuer deployment tables assign Solana mint 51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q to FUSD and FUSDLP. The FUSDLP description defines a distinct appreciating basket claim but does not adjudicate the mint's canonical liability identity. The existing scoped question remains unanswered. This disposition records issuer claim-identity nondisclosure only; it does not certify execution closure, economic loss, incident absence or change the observed 1-of-3 authority."
-    },
-    {
-      "id": "campaign-L57FUSD-v9g-e0962fe1aed461e3",
-      "assetId": "fusd-finchain",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "economic-control:mint",
-        "factorKey": null,
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "economic-control:mint"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-10T23:32:30Z",
-      "reviewer": "Sol curation campaign 2026-10-11 (L57FUSD)",
-      "sourcesRefs": [
-        "source:4cedd7aca156713f85340b3d",
-        "source:1980208788635c61187eff20"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:9c324800a170df6f70df963a",
-        "surface:36d3892dae8bb7a5778b562c"
-      ],
-      "rationale": "Both currently retrieved issuer deployment tables assign Solana mint 51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q to FUSD and FUSDLP. The FUSDLP description defines a distinct appreciating basket claim but does not adjudicate the mint's canonical liability identity. The existing scoped question remains unanswered. This disposition records issuer claim-identity nondisclosure only; it does not certify execution closure, economic loss, incident absence or change the observed 1-of-3 authority."
     },
     {
       "id": "campaign-L57FUSD-v9g-37238034a0b5373e",
