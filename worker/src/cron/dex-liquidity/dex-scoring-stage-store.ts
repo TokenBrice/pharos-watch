@@ -22,6 +22,13 @@ interface DexScoringGenerationCoverage {
   public_row_count: number;
 }
 
+export interface LatestPublishedDexGenerationSummary {
+  generationId: string;
+  publishedAt: number | null;
+  methodologyVersion: string | null;
+  curveIdentityStatus: string | null;
+}
+
 export async function loadCurrentDexScoringGenerationId(
   db: D1Database,
   signal?: AbortSignal,
@@ -38,6 +45,50 @@ export async function loadCurrentDexScoringGenerationId(
     .first<{ generation_id: string }>();
   throwIfAborted(signal);
   return row?.generation_id?.trim() || null;
+}
+
+export async function loadLatestPublishedDexGenerationSummary(
+  db: D1Database,
+  signal?: AbortSignal,
+): Promise<LatestPublishedDexGenerationSummary | null> {
+  throwIfAborted(signal);
+  const row = await db
+    .prepare(
+      `SELECT generation_id, published_at, started_at, metadata_json
+       FROM dex_liquidity_publication_generations
+       WHERE state = 'published'
+       ORDER BY published_at DESC, started_at DESC
+       LIMIT 1`,
+    )
+    .first<{
+      generation_id?: string | null;
+      published_at?: number | null;
+      started_at?: number | null;
+      metadata_json?: string | null;
+    }>();
+  throwIfAborted(signal);
+  const generationId = typeof row?.generation_id === "string" ? row.generation_id.trim() : "";
+  if (!generationId) return null;
+  const rawPublishedAt = row?.published_at ?? row?.started_at ?? null;
+  const publishedAt = typeof rawPublishedAt === "number" && Number.isInteger(rawPublishedAt) && rawPublishedAt > 0
+    ? rawPublishedAt
+    : null;
+  let methodologyVersion: string | null = null;
+  let curveIdentityStatus: string | null = null;
+  if (typeof row?.metadata_json === "string" && row.metadata_json.trim().length > 0) {
+    try {
+      const parsed = JSON.parse(row.metadata_json) as Record<string, unknown>;
+      if (typeof parsed.methodologyVersion === "string" && parsed.methodologyVersion.trim().length > 0) {
+        methodologyVersion = parsed.methodologyVersion.trim();
+      }
+      if (typeof parsed.curveIdentityStatus === "string" && parsed.curveIdentityStatus.trim().length > 0) {
+        curveIdentityStatus = parsed.curveIdentityStatus.trim();
+      }
+    } catch {
+      // Unparseable metadata cannot prove a same-epoch v11+ generation.
+    }
+  }
+  return { generationId, publishedAt, methodologyVersion, curveIdentityStatus };
 }
 
 export async function assertCurrentDexScoringGeneration(

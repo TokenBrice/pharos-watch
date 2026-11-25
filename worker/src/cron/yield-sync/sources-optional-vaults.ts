@@ -1,8 +1,10 @@
+import { getCronJobMeta } from "@shared/lib/cron-jobs";
 import { parseRetryAfterSeconds } from "@shared/lib/retry-after";
+import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { isRecord } from "@shared/lib/type-guards";
 import { MORPHO_NET_YIELD_SOURCES, OPTIONAL_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
 import { CHAIN_META, normalizeChainId } from "@shared/types/chain-identity";
-import { throwIfAborted } from "../../lib/abort";
+import { FetchRequestNotStartedError, throwIfAborted } from "../../lib/abort";
 import { finiteDecimalNumberFromBigInt } from "../../lib/bigint";
 import { USER_AGENT } from "../../lib/constants";
 import { DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES, fetchJsonWithRetry, fetchWithRetry } from "../../lib/fetch-retry";
@@ -92,21 +94,18 @@ export async function fetchYearnYboldSource(signal?: AbortSignal): Promise<Resol
   };
 }
 
-interface MorphoVaultItem {
-  address: string;
-  name: string;
-  asset: { symbol: string; address?: string | null };
-  chain: { id: number };
-  state: { netApy: number; totalAssetsUsd: number | null; fee: number } | null;
-}
-
-const MORPHO_GRAPHQL_URL = "https://api.morpho.org/graphql";
 const MORPHO_REST_V0_BASE_URL = "https://api.morpho.org/v0";
 const ETHEREUM_USDC_ADDRESS = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const ETHEREUM_USDC_DECIMALS = 6;
 const MORPHO_FEE_WAD_MAX = 10n ** 18n;
 const MORPHO_PRICE_FUTURE_SKEW_SEC = 5 * 60;
 const MORPHO_REST_MAX_RESPONSE_BYTES = 16 * 1024;
+const MORPHO_REST_LIST_MAX_RESPONSE_BYTES = 1024 * 1024;
+const MORPHO_REST_LIST_LIMIT = 1000;
+const MORPHO_REST_LIST_MAX_PAGES = 10;
+const MORPHO_REST_CONCURRENCY = getCronJobMeta("sync-yield-supplemental")!.maxConnections!;
+const MORPHO_RATE_LIMIT_DEFAULT_BACKOFF_SEC = 600;
+const MORPHO_RATE_LIMIT_MAX_BACKOFF_SEC = 7 * 86400;
 
 function parseUnsignedBigInt(value: unknown): bigint | null {
   return typeof value === "string" && /^\d+$/.test(value) ? BigInt(value) : null;
@@ -119,6 +118,117 @@ function parseMorphoUnixTimestamp(value: unknown): number | null {
     return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
   }
   return null;
+}
+
+function parseMorphoRestStateTotalAssets(
+  stateBody: Record<string, unknown>,
+  expectedChainId: number,
+  expectedVaultAddressLower: string,
+): bigint | null {
+  if (stateBody.data === null) return null;
+  if (!isRecord(stateBody.data)) throw new Error("Malformed Morpho V1 vault state");
+  if (
+    stateBody.data.chain_id !== expectedChainId ||
+    typeof stateBody.data.address !== "string" ||
+    stateBody.data.address.toLowerCase() !== expectedVaultAddressLower
+  ) {
+    throw new Error("Morpho V1 vault state identity mismatch");
+  }
+  if (stateBody.data.total_assets === undefined) throw new Error("Incomplete Morpho V1 vault state");
+  if (stateBody.data.total_assets === null) return null;
+  const totalAssetsRaw = parseUnsignedBigInt(stateBody.data.total_assets);
+  if (totalAssetsRaw == null) throw new Error("Malformed Morpho V1 vault state");
+  return totalAssetsRaw > 0n ? totalAssetsRaw : null;
+}
+
+function parseMorphoRestLatestApyPoint(
+  historyBody: Record<string, unknown>,
+  expectedChainId: number,
+  expectedVaultAddressLower: string,
+  referenceSec: number,
+  apyCheckedAtSec: number,
+): { netApy: number; sourceObservedAt: number } | null {
+  const historyParams = historyBody.params;
+  if (
+    !isRecord(historyParams) ||
+    (historyParams.chain_id !== String(expectedChainId) && historyParams.chain_id !== expectedChainId) ||
+    typeof historyParams.vault_address !== "string" ||
+    historyParams.vault_address.toLowerCase() !== expectedVaultAddressLower
+  ) {
+    throw new Error("Morpho V1 vault APY history identity mismatch");
+  }
+  if (historyBody.data === null) return null;
+  if (!Array.isArray(historyBody.data)) throw new Error("Malformed Morpho V1 vault APY history");
+  if (historyBody.data.length === 0) return null;
+
+  let latestPoint: Record<string, unknown> | null = null;
+  let sourceObservedAt = -Infinity;
+  const lastHistoryItem = historyBody.data[historyBody.data.length - 1];
+  for (const point of historyBody.data) {
+    if (!isRecord(point) || point.timestamp === undefined || point.apy === undefined) {
+      throw new Error("Incomplete Morpho V1 vault APY history");
+    }
+    if (point.timestamp === null) {
+      if (point === lastHistoryItem) return null;
+      continue;
+    }
+    const ts = parseMorphoUnixTimestamp(point.timestamp);
+    if (ts == null) throw new Error("Malformed Morpho V1 vault APY history");
+    if (ts >= sourceObservedAt) {
+      sourceObservedAt = ts;
+      latestPoint = point;
+    }
+  }
+  if (!latestPoint) return null;
+  if (latestPoint.apy === null) return null;
+  if (typeof latestPoint.apy !== "number") throw new Error("Malformed Morpho V1 vault APY history");
+  const netApy = getFiniteNumber(latestPoint.apy);
+  if (netApy == null) return null;
+
+  if (
+    sourceObservedAt > Math.min(referenceSec, apyCheckedAtSec) ||
+    (referenceSec - sourceObservedAt) * 1000 > STALE_THRESHOLD_MS
+  ) {
+    return null;
+  }
+  return { netApy, sourceObservedAt };
+}
+
+function parseMorphoRestTokenPrice(
+  priceBody: Record<string, unknown>,
+  expectedChainId: number,
+  expectedAssetAddressLower: string,
+  referenceSec: number,
+  fetchedAtSec: number,
+): number | null {
+  if (priceBody.data === null) return null;
+  if (
+    !isRecord(priceBody.data) ||
+    priceBody.data.chain_id !== expectedChainId ||
+    typeof priceBody.data.address !== "string" ||
+    priceBody.data.address.toLowerCase() !== expectedAssetAddressLower
+  ) {
+    throw new Error("Morpho V1 token price identity mismatch");
+  }
+  if (priceBody.data.price === undefined || priceBody.data.timestamp === undefined) {
+    throw new Error("Incomplete Morpho V1 token price");
+  }
+  if (priceBody.data.price === null || priceBody.data.timestamp === null) return null;
+  if (typeof priceBody.data.price !== "number") throw new Error("Malformed Morpho V1 token price");
+  const assetPriceUsd = getFiniteNumber(priceBody.data.price);
+  const priceTimestamp = parseMorphoUnixTimestamp(priceBody.data.timestamp);
+  if (priceTimestamp == null) throw new Error("Malformed Morpho V1 token price");
+
+  const maxPriceTimestamp = Math.min(fetchedAtSec, referenceSec + MORPHO_PRICE_FUTURE_SKEW_SEC);
+  if (
+    assetPriceUsd == null ||
+    assetPriceUsd <= 0 ||
+    priceTimestamp > maxPriceTimestamp ||
+    (referenceSec - priceTimestamp) * 1000 > STALE_THRESHOLD_MS
+  ) {
+    return null;
+  }
+  return assetPriceUsd;
 }
 
 async function fetchMorphoRestJson(
@@ -175,71 +285,19 @@ export async function fetchMorphoNetVaultSource(
     signal,
     "Morpho V1 vault state query failed",
   );
-  if (stateBody.data === null) return null;
-  if (!isRecord(stateBody.data)) throw new Error("Malformed Morpho V1 vault state");
-  if (
-    stateBody.data.chain_id !== 1 ||
-    typeof stateBody.data.address !== "string" ||
-    stateBody.data.address.toLowerCase() !== config.vaultAddress
-  ) {
-    throw new Error("Morpho V1 vault state identity mismatch");
-  }
-  if (stateBody.data.total_assets === undefined) throw new Error("Incomplete Morpho V1 vault state");
-  if (stateBody.data.total_assets === null) return null;
-  const totalAssetsRaw = parseUnsignedBigInt(stateBody.data.total_assets);
-  if (totalAssetsRaw == null) throw new Error("Malformed Morpho V1 vault state");
-  if (totalAssetsRaw <= 0n) return null;
+  const totalAssetsRaw = parseMorphoRestStateTotalAssets(stateBody, 1, config.vaultAddress);
+  if (totalAssetsRaw == null) return null;
 
   const historyBody = await fetchMorphoRestJson(
     `/vaults-v1/${vaultKey}/apy/history?lookback=six_hours`,
     signal,
     "Morpho V1 vault APY history query failed",
   );
-  const historyParams = historyBody.params;
-  if (
-    !isRecord(historyParams) ||
-    (historyParams.chain_id !== "1" && historyParams.chain_id !== 1) ||
-    typeof historyParams.vault_address !== "string" ||
-    historyParams.vault_address.toLowerCase() !== config.vaultAddress
-  ) {
-    throw new Error("Morpho V1 vault APY history identity mismatch");
-  }
-  if (historyBody.data === null) return null;
-  if (!Array.isArray(historyBody.data)) throw new Error("Malformed Morpho V1 vault APY history");
-  if (historyBody.data.length === 0) return null;
-
-  let latestPoint: Record<string, unknown> | null = null;
-  let sourceObservedAt = -Infinity;
-  const lastHistoryItem = historyBody.data[historyBody.data.length - 1];
-  for (const point of historyBody.data) {
-    if (!isRecord(point) || point.timestamp === undefined || point.apy === undefined) {
-      throw new Error("Incomplete Morpho V1 vault APY history");
-    }
-    if (point.timestamp === null) {
-      if (point === lastHistoryItem) return null;
-      continue;
-    }
-    const ts = parseMorphoUnixTimestamp(point.timestamp);
-    if (ts == null) throw new Error("Malformed Morpho V1 vault APY history");
-    if (ts >= sourceObservedAt) {
-      sourceObservedAt = ts;
-      latestPoint = point;
-    }
-  }
-  if (!latestPoint) return null;
-  if (latestPoint.apy === null) return null;
-  if (typeof latestPoint.apy !== "number") throw new Error("Malformed Morpho V1 vault APY history");
-  const netApy = getFiniteNumber(latestPoint.apy);
-  if (netApy == null) return null;
-
   const apyCheckedAt = Math.floor(Date.now() / 1000);
-  if (
-    sourceObservedAt > Math.min(startSec, apyCheckedAt) ||
-    (startSec - sourceObservedAt) * 1000 > STALE_THRESHOLD_MS
-  ) {
-    return null;
-  }
-  const currentApy = netApy * 100;
+  const latestApy = parseMorphoRestLatestApyPoint(historyBody, 1, config.vaultAddress, startSec, apyCheckedAt);
+  if (latestApy == null) return null;
+
+  const currentApy = latestApy.netApy * 100;
   if (currentApy < -100 || !isDeterministicApyWithinSanityBounds(currentApy)) return null;
 
   const priceBody = await fetchMorphoRestJson(
@@ -247,34 +305,9 @@ export async function fetchMorphoNetVaultSource(
     signal,
     "Morpho V1 token price query failed",
   );
-  if (priceBody.data === null) return null;
-  if (
-    !isRecord(priceBody.data) ||
-    priceBody.data.chain_id !== 1 ||
-    typeof priceBody.data.address !== "string" ||
-    priceBody.data.address.toLowerCase() !== ETHEREUM_USDC_ADDRESS
-  ) {
-    throw new Error("Morpho V1 token price identity mismatch");
-  }
-  if (priceBody.data.price === undefined || priceBody.data.timestamp === undefined) {
-    throw new Error("Incomplete Morpho V1 token price");
-  }
-  if (priceBody.data.price === null || priceBody.data.timestamp === null) return null;
-  if (typeof priceBody.data.price !== "number") throw new Error("Malformed Morpho V1 token price");
-  const assetPriceUsd = getFiniteNumber(priceBody.data.price);
-  const priceTimestamp = parseMorphoUnixTimestamp(priceBody.data.timestamp);
-  if (priceTimestamp == null) throw new Error("Malformed Morpho V1 token price");
-
   const sourceFetchedAt = Math.floor(Date.now() / 1000);
-  const maxPriceTimestamp = Math.min(sourceFetchedAt, startSec + MORPHO_PRICE_FUTURE_SKEW_SEC);
-  if (
-    assetPriceUsd == null ||
-    assetPriceUsd <= 0 ||
-    priceTimestamp > maxPriceTimestamp ||
-    (startSec - priceTimestamp) * 1000 > STALE_THRESHOLD_MS
-  ) {
-    return null;
-  }
+  const assetPriceUsd = parseMorphoRestTokenPrice(priceBody, 1, ETHEREUM_USDC_ADDRESS, startSec, sourceFetchedAt);
+  if (assetPriceUsd == null) return null;
 
   const totalAssets = finiteDecimalNumberFromBigInt(totalAssetsRaw, ETHEREUM_USDC_DECIMALS);
   const sourceTvlUsd = totalAssets != null ? totalAssets * assetPriceUsd : null;
@@ -293,7 +326,7 @@ export async function fetchMorphoNetVaultSource(
     yieldType: config.yieldType,
     project: config.venueProtocol,
     chain: "ethereum",
-    sourceObservedAt,
+    sourceObservedAt: latestApy.sourceObservedAt,
     sourceFetchedAt,
     comparisonAnchorObservedAt: null,
   };
@@ -352,17 +385,19 @@ const BEEFY_CHAIN_ALIASES: Record<string, string> = {
 export interface SupplementalFamilyFetchResult {
   candidates: ResolvedYieldCandidate[];
   degraded: boolean;
+  /** Machine-readable cause when degraded (R4). */
+  degradedReason?: string;
   /** A 429's retry window, persisted by the supplemental producer. */
-  rateLimited?: PendleRateLimitBackoff;
+  rateLimited?: SupplementalRateLimitBackoff;
 }
 
-interface PendleRateLimitBackoff {
+interface SupplementalRateLimitBackoff {
   backoffSec: number;
   source: "retry-after" | "x-ratelimit-weekly-reset" | "x-ratelimit-reset" | "default";
 }
 
 /** Respect the exhausted quota window, not the weekly reset on an ordinary minute-limit response. */
-function resolvePendleRateLimitBackoff(response: Response, nowMs: number): PendleRateLimitBackoff {
+function resolvePendleRateLimitBackoff(response: Response, nowMs: number): SupplementalRateLimitBackoff {
   const retryAfterSec = parseRetryAfterSeconds(response.headers.get("Retry-After"), { nowMs });
   const weeklyRemaining = response.headers.get("x-ratelimit-weekly-remaining");
   const weeklyExhausted = weeklyRemaining != null && Number(weeklyRemaining) === 0;
@@ -370,7 +405,7 @@ function resolvePendleRateLimitBackoff(response: Response, nowMs: number): Pendl
     ? ["x-ratelimit-weekly-reset", "x-ratelimit-reset"] as const
     : ["x-ratelimit-reset"] as const;
   let backoffSec = retryAfterSec && retryAfterSec > 0 ? retryAfterSec : 0;
-  let source: PendleRateLimitBackoff["source"] = backoffSec ? "retry-after" : "default";
+  let source: SupplementalRateLimitBackoff["source"] = backoffSec ? "retry-after" : "default";
   for (const header of resetHeaders) {
     const resetSec = Number(response.headers.get(header));
     const delaySec = resetSec - Math.floor(nowMs / 1000);
@@ -382,6 +417,20 @@ function resolvePendleRateLimitBackoff(response: Response, nowMs: number): Pendl
   return {
     backoffSec: backoffSec > 0 ? Math.min(backoffSec, 7 * 86400) : PENDLE_SUPPLEMENTAL_FETCH_CADENCE_SEC,
     source,
+  };
+}
+
+function resolveMorphoRateLimitBackoff(response: Response, nowMs: number): SupplementalRateLimitBackoff {
+  const retryAfterSec = parseRetryAfterSeconds(response.headers.get("Retry-After"), { nowMs });
+  if (retryAfterSec != null && retryAfterSec > 0) {
+    return {
+      backoffSec: Math.min(retryAfterSec, MORPHO_RATE_LIMIT_MAX_BACKOFF_SEC),
+      source: "retry-after",
+    };
+  }
+  return {
+    backoffSec: MORPHO_RATE_LIMIT_DEFAULT_BACKOFF_SEC,
+    source: "default",
   };
 }
 
@@ -408,7 +457,6 @@ function resolveBeefyTvl(tvlMap: BeefyTvlPayload, chain: string, vaultId: string
   return typeof flatTvl === "number" ? flatTvl : null;
 }
 
-const MORPHO_PAGE_SIZE = 100;
 const MORPHO_MIN_TVL_USD = 100_000;
 const PENDLE_MIN_EXPIRY_DAYS = 3;
 const PENDLE_MAX_EXPIRY_YEARS = 5;
@@ -458,101 +506,361 @@ function buildSupplementalCandidate(
   };
 }
 
+type MorphoSupplementalFetchOutcome =
+  | { kind: "ok"; body: Record<string, unknown> }
+  | { kind: "rate-limited"; rateLimited: SupplementalRateLimitBackoff }
+  | { kind: "http-error" }
+  | { kind: "malformed" };
+
+interface TrackedMorphoV1Vault {
+  chainId: number;
+  chain: string;
+  vaultAddress: string;
+  vaultAddressLower: string;
+  name: string;
+  assetAddress: string;
+  assetAddressLower: string;
+  assetSelector: string;
+  stablecoinId: string;
+  symbol: string;
+  decimals: number;
+}
+
 export async function fetchMorphoVaultSources(signal?: AbortSignal): Promise<SupplementalFamilyFetchResult> {
   const budget = createOptionalSourceBudget("Morpho vault sources", OPTIONAL_PROTOCOL_API_BUDGET_MS, signal);
-  const filters = buildMorphoFilters();
-  if (filters.symbols.length === 0) return { candidates: [], degraded: false };
+  const rateLimitController = new AbortController();
+  const requestSignal = AbortSignal.any([budget.signal, rateLimitController.signal]);
+  let sharedRateLimited: SupplementalRateLimitBackoff | null = null;
+
+  const fetchMorphoSupplementalRestJson = async (
+    path: string,
+    maxResponseBytes: number,
+  ): Promise<MorphoSupplementalFetchOutcome> => {
+    if (sharedRateLimited) return { kind: "rate-limited", rateLimited: sharedRateLimited };
+    throwIfAborted(budget.budgetController.signal);
+    if (signal?.aborted) throwIfAborted(signal);
+    try {
+      const response = await fetchWithRetry(
+        `${MORPHO_REST_V0_BASE_URL}${path}`,
+        {
+          headers: { Accept: "application/json", "User-Agent": USER_AGENT },
+          signal: requestSignal,
+        },
+        1,
+        {
+          timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS,
+          deadlineMs: budget.deadlineMs,
+          passthroughStatuses: [429],
+          waitOnPassthrough429: false,
+          beforeRequest: () => sharedRateLimited == null,
+        },
+      );
+      if (sharedRateLimited) {
+        if (response) await cancelResponseBodyQuietly(response);
+        return { kind: "rate-limited", rateLimited: sharedRateLimited };
+      }
+      if (!response) return { kind: "http-error" };
+      if (response.status === 429) {
+        const rateLimited = resolveMorphoRateLimitBackoff(response, Date.now());
+        await cancelResponseBodyQuietly(response);
+        if (!sharedRateLimited) {
+          sharedRateLimited = rateLimited;
+          rateLimitController.abort(new Error("Morpho REST API rate limited"));
+        }
+        return { kind: "rate-limited", rateLimited };
+      }
+      if (!response.ok) {
+        await cancelResponseBodyQuietly(response);
+        return { kind: "http-error" };
+      }
+      const remainingMs = budget.deadlineMs - Date.now();
+      if (remainingMs <= 0) {
+        await cancelResponseBodyQuietly(response);
+        throw new FetchRequestNotStartedError("deadline-exceeded", 1);
+      }
+      const bodyTimeout = createTimeoutSignal({
+        timeoutMs: Math.min(OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS, remainingMs),
+        timeoutReason: new DOMException("Morpho REST response body timed out", "TimeoutError"),
+        parentSignal: requestSignal,
+      });
+      try {
+        const body = await readResponseJsonWithinLimitWithSignal<unknown>(
+          response,
+          maxResponseBytes,
+          bodyTimeout.signal,
+        );
+        if (!isRecord(body)) return { kind: "malformed" };
+        return { kind: "ok", body };
+      } finally {
+        bodyTimeout.dispose();
+      }
+    } catch (error) {
+      if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
+      if (sharedRateLimited) return { kind: "rate-limited", rateLimited: sharedRateLimited };
+      if (budget.budgetController.signal.aborted || error instanceof FetchRequestNotStartedError) {
+        throw error instanceof Error ? error : new Error(String(error));
+      }
+      return { kind: "malformed" };
+    }
+  };
 
   try {
+    const filters = buildMorphoFilters();
+    if (filters.assetsByChainAddress.size === 0) return { candidates: [], degraded: false };
+    const startSec = Math.floor(Date.now() / 1000);
+
+    // Stage 1: paginated V1 vault directory.
+    const trackedVaults: TrackedMorphoV1Vault[] = [];
+    const seenCursors = new Set<string>();
+    const seenVaultKeys = new Set<string>();
+    let cursor: string | null = null;
+    let pageCount = 0;
+    while (true) {
+      throwIfAborted(budget.budgetController.signal);
+      if (pageCount >= MORPHO_REST_LIST_MAX_PAGES) {
+        return { candidates: [], degraded: true, degradedReason: "morpho-fetch-failed" };
+      }
+      const path = cursor
+        ? `/vaults-v1?limit=${MORPHO_REST_LIST_LIMIT}&cursor=${encodeURIComponent(cursor)}`
+        : `/vaults-v1?limit=${MORPHO_REST_LIST_LIMIT}`;
+      const outcome = await fetchMorphoSupplementalRestJson(path, MORPHO_REST_LIST_MAX_RESPONSE_BYTES);
+      if (outcome.kind === "rate-limited") {
+        return { candidates: [], degraded: true, rateLimited: outcome.rateLimited };
+      }
+      if (outcome.kind !== "ok" || !Array.isArray(outcome.body.data)) {
+        return { candidates: [], degraded: true, degradedReason: "morpho-fetch-failed" };
+      }
+      pageCount += 1;
+
+      for (const item of outcome.body.data) {
+        if (!isRecord(item)) continue;
+        if (typeof item.chain_id !== "number" || !Number.isSafeInteger(item.chain_id) || item.chain_id <= 0) {
+          continue;
+        }
+        const chain = normalizeChainId(item.chain_id);
+        if (!chain) continue;
+        if (
+          !isNonEmptyString(item.vault_address) ||
+          !isNonEmptyString(item.name) ||
+          !isNonEmptyString(item.asset_address)
+        ) {
+          continue;
+        }
+        const trackedAsset = resolveMorphoTrackedAsset(filters, chain, item.asset_address);
+        if (!trackedAsset) continue;
+        const vaultAddressLower = item.vault_address.toLowerCase();
+        const dedupeKey = `${item.chain_id}:${vaultAddressLower}`;
+        if (seenVaultKeys.has(dedupeKey)) continue;
+        seenVaultKeys.add(dedupeKey);
+        const assetAddressLower = item.asset_address.toLowerCase();
+        trackedVaults.push({
+          chainId: item.chain_id,
+          chain,
+          vaultAddress: item.vault_address,
+          vaultAddressLower,
+          name: item.name,
+          assetAddress: item.asset_address,
+          assetAddressLower,
+          assetSelector: `${item.chain_id}:${assetAddressLower}`,
+          stablecoinId: trackedAsset.stablecoinId,
+          symbol: trackedAsset.symbol,
+          decimals: trackedAsset.decimals,
+        });
+      }
+
+      const nextCursor = outcome.body.cursor;
+      if (nextCursor === undefined || nextCursor === null || nextCursor === "") break;
+      if (typeof nextCursor !== "string" || seenCursors.has(nextCursor)) {
+        return { candidates: [], degraded: true, degradedReason: "morpho-fetch-failed" };
+      }
+      seenCursors.add(nextCursor);
+      cursor = nextCursor;
+    }
+
+    if (trackedVaults.length === 0) return { candidates: [], degraded: false };
+
+    // Stage 2: deduplicated underlying token USD prices (missing price degrades family).
+    const uniqueAssets = new Map<string, { chainId: number; assetAddressLower: string }>();
+    for (const vault of trackedVaults) {
+      if (!uniqueAssets.has(vault.assetSelector)) {
+        uniqueAssets.set(vault.assetSelector, {
+          chainId: vault.chainId,
+          assetAddressLower: vault.assetAddressLower,
+        });
+      }
+    }
+    const assetList = [...uniqueAssets.entries()];
+    const priceByAssetSelector = new Map<string, number>();
+    for (let offset = 0; offset < assetList.length; offset += MORPHO_REST_CONCURRENCY) {
+      throwIfAborted(budget.budgetController.signal);
+      const chunk = assetList.slice(offset, offset + MORPHO_REST_CONCURRENCY);
+      const responses = await Promise.all(
+        chunk.map(async ([selector, asset]) => ({
+          selector,
+          asset,
+          outcome: await fetchMorphoSupplementalRestJson(`/tokens/${selector}/price`, MORPHO_REST_MAX_RESPONSE_BYTES),
+          fetchedAt: Math.floor(Date.now() / 1000),
+        })),
+      );
+      if (sharedRateLimited) {
+        return { candidates: [], degraded: true, rateLimited: sharedRateLimited };
+      }
+      for (const { selector, asset, outcome, fetchedAt } of responses) {
+        if (outcome.kind === "rate-limited") {
+          return { candidates: [], degraded: true, rateLimited: outcome.rateLimited };
+        }
+        if (outcome.kind !== "ok") {
+          return { candidates: [], degraded: true, degradedReason: "morpho-token-price-unavailable" };
+        }
+        let priceUsd: number | null;
+        try {
+          priceUsd = parseMorphoRestTokenPrice(
+            outcome.body,
+            asset.chainId,
+            asset.assetAddressLower,
+            startSec,
+            fetchedAt,
+          );
+        } catch {
+          return { candidates: [], degraded: true, degradedReason: "morpho-token-price-unavailable" };
+        }
+        if (priceUsd == null) {
+          return { candidates: [], degraded: true, degradedReason: "morpho-token-price-unavailable" };
+        }
+        priceByAssetSelector.set(selector, priceUsd);
+      }
+    }
+
+    // Stage 3: vault state reads and $100k TVL pre-filter.
+    const eligibleVaults: Array<TrackedMorphoV1Vault & { sourceTvlUsd: number }> = [];
+    for (let offset = 0; offset < trackedVaults.length; offset += MORPHO_REST_CONCURRENCY) {
+      throwIfAborted(budget.budgetController.signal);
+      const chunk = trackedVaults.slice(offset, offset + MORPHO_REST_CONCURRENCY);
+      const responses = await Promise.all(
+        chunk.map(async (vault) => ({
+          vault,
+          outcome: await fetchMorphoSupplementalRestJson(
+            `/vaults-v1/${vault.chainId}:${vault.vaultAddressLower}/state`,
+            MORPHO_REST_MAX_RESPONSE_BYTES,
+          ),
+        })),
+      );
+      if (sharedRateLimited) {
+        return { candidates: [], degraded: true, rateLimited: sharedRateLimited };
+      }
+      for (const { vault, outcome } of responses) {
+        if (outcome.kind === "rate-limited") {
+          return { candidates: [], degraded: true, rateLimited: outcome.rateLimited };
+        }
+        if (outcome.kind !== "ok") {
+          return { candidates: [], degraded: true, degradedReason: "morpho-fetch-failed" };
+        }
+        let totalAssetsRaw: bigint | null;
+        try {
+          totalAssetsRaw = parseMorphoRestStateTotalAssets(
+            outcome.body,
+            vault.chainId,
+            vault.vaultAddressLower,
+          );
+        } catch {
+          return { candidates: [], degraded: true, degradedReason: "morpho-fetch-failed" };
+        }
+        if (totalAssetsRaw == null) continue;
+        const totalAssets = finiteDecimalNumberFromBigInt(totalAssetsRaw, vault.decimals);
+        const assetPriceUsd = priceByAssetSelector.get(vault.assetSelector)!;
+        const sourceTvlUsd = totalAssets != null ? totalAssets * assetPriceUsd : null;
+        if (sourceTvlUsd == null || !Number.isFinite(sourceTvlUsd) || sourceTvlUsd < MORPHO_MIN_TVL_USD) {
+          continue;
+        }
+        eligibleVaults.push({ ...vault, sourceTvlUsd });
+      }
+    }
+
+    // Stage 4: clocked 6h realized post-fee native APY history for TVL-eligible vaults.
     const results: ResolvedYieldCandidate[] = [];
-    let degraded = false;
-    // Morpho caps assetSymbol_in at 100; keep each filter batch independently paginated.
-    for (let symbolOffset = 0; symbolOffset < filters.symbols.length; symbolOffset += 100) {
-      const symbols = filters.symbols.slice(symbolOffset, symbolOffset + 100);
-      let skip = 0;
-      while (!budget.budgetController.signal.aborted) {
-        throwIfAborted(budget.budgetController.signal);
-        const result = await fetchJsonWithRetry<{ data?: { vaults?: { items?: MorphoVaultItem[] } } }>(
-          MORPHO_GRAPHQL_URL,
+    for (let offset = 0; offset < eligibleVaults.length; offset += MORPHO_REST_CONCURRENCY) {
+      throwIfAborted(budget.budgetController.signal);
+      const chunk = eligibleVaults.slice(offset, offset + MORPHO_REST_CONCURRENCY);
+      const responses = await Promise.all(
+        chunk.map(async (vault) => ({
+          vault,
+          outcome: await fetchMorphoSupplementalRestJson(
+            `/vaults-v1/${vault.chainId}:${vault.vaultAddressLower}/apy/history?lookback=six_hours`,
+            MORPHO_REST_MAX_RESPONSE_BYTES,
+          ),
+          apyCheckedAt: Math.floor(Date.now() / 1000),
+        })),
+      );
+      if (sharedRateLimited) {
+        return { candidates: [], degraded: true, rateLimited: sharedRateLimited };
+      }
+      for (const { vault, outcome, apyCheckedAt } of responses) {
+        if (outcome.kind === "rate-limited") {
+          return { candidates: [], degraded: true, rateLimited: outcome.rateLimited };
+        }
+        if (outcome.kind !== "ok") {
+          return { candidates: [], degraded: true, degradedReason: "morpho-fetch-failed" };
+        }
+        let latestApy: { netApy: number; sourceObservedAt: number } | null;
+        try {
+          latestApy = parseMorphoRestLatestApyPoint(
+            outcome.body,
+            vault.chainId,
+            vault.vaultAddressLower,
+            startSec,
+            apyCheckedAt,
+          );
+        } catch {
+          return { candidates: [], degraded: true, degradedReason: "morpho-fetch-failed" };
+        }
+        if (latestApy == null) continue;
+        const currentApy = latestApy.netApy * 100;
+        if (currentApy <= 0 || !isDeterministicApyWithinSanityBounds(currentApy)) continue;
+
+        results.push(buildSupplementalCandidate(
           {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
-            body: JSON.stringify({
-              query: `query($symbols: [String!]!, $first: Int!, $skip: Int!, $minTvl: Float!) {
-    vaults(first: $first, skip: $skip, where: { listed: true, assetSymbol_in: $symbols, totalAssetsUsd_gte: $minTvl }) {
-      items {
-        address name
-        asset { symbol address }
-        chain { id }
-        state { netApy totalAssetsUsd fee }
-      }
-    }
-  }`,
-              variables: { symbols, first: MORPHO_PAGE_SIZE, skip, minTvl: MORPHO_MIN_TVL_USD },
-            }),
-            signal: budget.signal,
+            stablecoinId: vault.stablecoinId,
+            symbol: vault.symbol,
+            chain: vault.chain,
+            address: vault.assetAddress,
           },
-          0,
-          { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
-        );
-        if (!result?.response.ok) return { candidates: results, degraded: true };
-        const sourceFetchedAt = Math.floor(Date.now() / 1000);
-
-        const body = result.body;
-        const items = body.data?.vaults?.items;
-        if (!Array.isArray(items)) {
-          degraded = true;
-          break;
-        }
-        if (items.length === 0) break;
-
-        for (const vault of items) {
-          if (!symbols.includes(vault.asset?.symbol)) continue;
-          const apy = vault.state?.netApy;
-          if (typeof apy !== "number" || !Number.isFinite(apy) || apy <= 0) continue;
-
-          const tvl = vault.state?.totalAssetsUsd;
-          if (typeof tvl !== "number" || tvl < MORPHO_MIN_TVL_USD) continue;
-          if (!isNonEmptyString(vault.address) || !isNonEmptyString(vault.asset?.symbol)) continue;
-          const chain = normalizeChainId(vault.chain?.id);
-          if (!chain) continue;
-          const trackedAsset = resolveMorphoTrackedAsset(filters, chain, vault.asset);
-          if (!trackedAsset) continue;
-
-          results.push(buildSupplementalCandidate(
-            { stablecoinId: trackedAsset.stablecoinId, symbol: trackedAsset.symbol, chain, address: vault.asset.address ?? null },
-            apy * 100, vault.address, tvl,
-            `protocol-api:morpho-vault:${chain}:${vault.address.toLowerCase()}`,
-            `Morpho: ${vault.name}`, "lending-opportunity", sourceFetchedAt,
-          ));
-        }
-        skip += items.length;
-        if (items.length < MORPHO_PAGE_SIZE) break;
+          currentApy,
+          vault.vaultAddress,
+          vault.sourceTvlUsd,
+          `protocol-api:morpho-vault:${vault.chain}:${vault.vaultAddressLower}`,
+          `Morpho: ${vault.name}`,
+          "lending-opportunity",
+          apyCheckedAt,
+          latestApy.sourceObservedAt,
+        ));
       }
     }
-    // A budget abort exits pagination mid-run, so the snapshot is partial.
-    return { candidates: results, degraded: degraded || budget.budgetController.signal.aborted };
+
+    return { candidates: results, degraded: budget.budgetController.signal.aborted };
   } catch (error) {
     if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
-    if (budget.budgetController.signal.aborted) {
+    if (sharedRateLimited) {
+      return { candidates: [], degraded: true, rateLimited: sharedRateLimited };
+    }
+    if (budget.budgetController.signal.aborted || error instanceof FetchRequestNotStartedError) {
       logWorkerEvent({
         scope: "lib",
-        job: "sync-yield-data",
+        job: "sync-yield-supplemental",
         level: "warn",
         event: "morpho-sources-budget-exhausted",
         message: "Morpho vault sources budget exhausted; continuing without this source family",
       });
-      return { candidates: [], degraded: true };
+      return { candidates: [], degraded: true, degradedReason: "morpho-budget-exhausted" };
     }
     logWorkerEvent({
       scope: "lib",
-      job: "sync-yield-data",
+      job: "sync-yield-supplemental",
       level: "warn",
       event: "morpho-sources-failed",
       message: "Morpho vault sources failed",
       error,
     });
-    return { candidates: [], degraded: true };
+    return { candidates: [], degraded: true, degradedReason: "morpho-fetch-failed" };
   } finally {
     budget.cleanup();
   }

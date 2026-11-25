@@ -835,57 +835,76 @@ export function parseYieldSupplementalCountDropState(
   }
 }
 
-/** PENDLE-RL: machine-readable cause recorded when the unkeyed quota backoff degrades the family. */
-export const PENDLE_RATE_LIMIT_BACKOFF_REASON = "pendle-rate-limited-backoff";
+export type RateLimitedSupplementalFamilyKey = "pendle" | "morpho";
 
-export type YieldSupplementalPendleBackoffSource =
+export const RATE_LIMITED_SUPPLEMENTAL_FAMILY_KEYS: readonly RateLimitedSupplementalFamilyKey[] = [
+  "pendle",
+  "morpho",
+];
+
+/** PENDLE-RL / MORPHO-RL: machine-readable causes recorded when unkeyed quota backoff degrades the family. */
+export const PENDLE_RATE_LIMIT_BACKOFF_REASON = "pendle-rate-limited-backoff";
+export const MORPHO_RATE_LIMIT_BACKOFF_REASON = "morpho-rate-limited-backoff";
+
+export const SUPPLEMENTAL_FAMILY_RATE_LIMIT_BACKOFF_REASONS: Record<RateLimitedSupplementalFamilyKey, string> = {
+  pendle: PENDLE_RATE_LIMIT_BACKOFF_REASON,
+  morpho: MORPHO_RATE_LIMIT_BACKOFF_REASON,
+};
+
+export type YieldSupplementalFamilyBackoffSource =
   | "retry-after"
   | "x-ratelimit-weekly-reset"
   | "x-ratelimit-reset"
   | "default";
 
-export interface YieldSupplementalPendleBackoff {
+export interface YieldSupplementalFamilyBackoff {
   backoffUntilSec: number;
   reason: string;
-  source: YieldSupplementalPendleBackoffSource;
+  source: YieldSupplementalFamilyBackoffSource;
   recordedAtSec: number;
 }
 
 /**
- * PENDLE-RL: persisted 429 backoff for the unkeyed Pendle API. The row records
- * when the per-IP quota window is expected to replenish; the pendle family
- * loader refuses to call Pendle again before that time. An expired or
- * malformed row reads as "no active backoff", so a lost or corrupt row can
- * only cost one request, never wedge the lane.
+ * Persisted 429 backoff for unkeyed supplemental APIs (Pendle and Morpho).
+ * The row records when the per-IP quota window is expected to replenish; the
+ * family loader refuses to call the upstream again before that time. An
+ * expired or malformed row reads as "no active backoff", so a lost or corrupt
+ * row can only cost one request, never wedge the lane.
  */
-export function getYieldSupplementalPendleBackoffCacheKey(): string {
-  return `${YIELD_SUPPLEMENTAL_FAMILY_CACHE_PREFIX}pendle-backoff`;
+export function getYieldSupplementalFamilyBackoffCacheKey(
+  family: RateLimitedSupplementalFamilyKey,
+): string {
+  return `${YIELD_SUPPLEMENTAL_FAMILY_CACHE_PREFIX}${family}-backoff`;
 }
 
-const PENDLE_BACKOFF_SOURCES: readonly YieldSupplementalPendleBackoffSource[] = [
+const SUPPLEMENTAL_FAMILY_BACKOFF_SOURCES: readonly YieldSupplementalFamilyBackoffSource[] = [
   "retry-after",
   "x-ratelimit-weekly-reset",
   "x-ratelimit-reset",
   "default",
 ];
 
-export function buildYieldSupplementalPendleBackoff(input: {
-  backoffUntilSec: number;
-  source: YieldSupplementalPendleBackoffSource;
-  recordedAtSec: number;
-}): string {
+export function buildYieldSupplementalFamilyBackoff(
+  family: RateLimitedSupplementalFamilyKey,
+  input: {
+    backoffUntilSec: number;
+    source: YieldSupplementalFamilyBackoffSource;
+    recordedAtSec: number;
+  },
+): string {
   return JSON.stringify({
     backoffUntilSec: input.backoffUntilSec,
-    reason: PENDLE_RATE_LIMIT_BACKOFF_REASON,
+    reason: SUPPLEMENTAL_FAMILY_RATE_LIMIT_BACKOFF_REASONS[family],
     source: input.source,
     recordedAtSec: input.recordedAtSec,
-  } satisfies YieldSupplementalPendleBackoff);
+  } satisfies YieldSupplementalFamilyBackoff);
 }
 
-export function parseYieldSupplementalPendleBackoff(
+export function parseYieldSupplementalFamilyBackoff(
+  family: RateLimitedSupplementalFamilyKey,
   raw: string | null | undefined,
   nowSec: number,
-): YieldSupplementalPendleBackoff | null {
+): YieldSupplementalFamilyBackoff | null {
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as unknown;
@@ -904,12 +923,12 @@ export function parseYieldSupplementalPendleBackoff(
     ) {
       return null;
     }
-    const source = PENDLE_BACKOFF_SOURCES.includes(parsed.source as YieldSupplementalPendleBackoffSource)
-      ? (parsed.source as YieldSupplementalPendleBackoffSource)
+    const source = SUPPLEMENTAL_FAMILY_BACKOFF_SOURCES.includes(parsed.source as YieldSupplementalFamilyBackoffSource)
+      ? (parsed.source as YieldSupplementalFamilyBackoffSource)
       : "default";
     return {
       backoffUntilSec,
-      reason: PENDLE_RATE_LIMIT_BACKOFF_REASON,
+      reason: SUPPLEMENTAL_FAMILY_RATE_LIMIT_BACKOFF_REASONS[family],
       source,
       recordedAtSec: parsed.recordedAtSec,
     };

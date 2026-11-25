@@ -350,6 +350,13 @@ export interface CurvePoolEntry {
 
 export type { SymbolLookups } from "./token-resolution-types";
 
+export interface CurveIdentityAttachment {
+  curvePoolCount: number;
+  attachedPoolCount: number;
+  unmatchedPoolCount: number;
+  status: "ok" | "partial" | "unavailable";
+}
+
 export interface DataSources {
   pools: LlamaPool[];
   /** Count before tracked-token compaction. Retained for progress and run metadata. */
@@ -364,6 +371,8 @@ export interface DataSources {
   curvePayloads: (CurveApiPayload | null)[];
   /** Curve chains whose per-chain read returned no payload this run. Empty when the circuit skipped the fan-out. */
   curveFailedChains: string[];
+  /** Exact-address identity attachment summary from `poolsPro?project=curve-dex`. */
+  curveIdentityAttachment?: CurveIdentityAttachment;
   graphApiKey: string | null;
   dlYieldsAvailable: boolean;
   dlProtocolsAvailable: boolean;
@@ -379,6 +388,8 @@ export interface CurveLookups {
   curvePoolMap: Map<string, CurvePoolEntry>;
   /** Exact-address candidates retained when a coin-set fingerprint is ambiguous. */
   curvePoolCandidatesByFingerprint: Map<string, CurvePoolEntry[]>;
+  /** Fingerprints with >=1 >=$10k pool and >=1 distinct-address <$10k non-broken sibling. */
+  curveBelowFloorTwinFingerprints: Set<string>;
   priceObservations: Map<string, DexPriceObs[]>;
 }
 

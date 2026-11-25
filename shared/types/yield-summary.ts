@@ -65,6 +65,7 @@ export const YieldRankingSummarySchema = DetailedYieldRankingSchema.pick({
   id: true,
   symbol: true,
   name: true,
+  listingClass: true,
   currentApy: true,
   apy30d: true,
   yieldSource: true,

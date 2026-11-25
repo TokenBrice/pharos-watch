@@ -28,6 +28,21 @@ export const CURVE_CHAINS = [...CURVE_NATIVE_DISCOVERY_CHAINS] as const;
 export const CURVE_API_CHAIN_PATHS: Record<string, string> = { gnosis: "xdai" };
 export const DEX_LIQUIDITY_POOL_MIN_TVL_USD = 10_000;
 /**
+ * Layer-2 TVL coherence bound for single-row UUID Curve joins on fingerprints
+ * that also have a below-floor physical sibling (`#2260`). Live drift across
+ * 282 native tracked Curve pools peaked at 1.094x; 2.0x preserves >10x margin
+ * while blocking orphaned stale twins (e.g., $13.4k vs $2.19M = 163x).
+ */
+export const CURVE_TWIN_FINGERPRINT_MAX_TVL_RATIO = 2.0;
+/**
+ * Bounded hold ceiling on `:16` publication when `poolsPro?project=curve-dex`
+ * is completely unavailable (`#2260`, Option F2). Holds only while the newest
+ * accepted same-epoch v11+ generation is strictly under two hours old, then
+ * falls through to Layer-2 publication so a prolonged outage cannot stall DEX
+ * liquidity indefinitely.
+ */
+export const CURVE_IDENTITY_OUTAGE_HOLD_MAX_AGE_SEC = 2 * 3600;
+/**
  * Registry sources whose usable stored 24h zero is trade-verified (liquidity v6.92
  * dead-pool floor). The CoinGecko onchain intake (`cgPoolVolume24hReading`, used
  * by the token-pool crawl and the stale-pool refresh) stores 0 only when the

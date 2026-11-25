@@ -19,6 +19,7 @@ export function makeDexExecutionTargetFactoryInput(
       stablecoinPriceById: new Map(),
       measuredTargetCapturedAt: 1_785_000_000,
       curvePoolCandidatesByFingerprint: new Map(),
+      curveBelowFloorTwinFingerprints: new Set(),
       uniswapV4ExecutionCandidates: new Map(),
     },
     identity: {

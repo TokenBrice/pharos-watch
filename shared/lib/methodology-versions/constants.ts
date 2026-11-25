@@ -20,7 +20,7 @@ export const DDR_METHODOLOGY_VERSION = "5.2";
 export const DDR_METHODOLOGY_VERSION_LABEL = methodologyLabel(DDR_METHODOLOGY_VERSION);
 export const DDR_METHODOLOGY_CHANGELOG_PATH = "/methodology/depeg-resolver-changelog/";
 
-export const LIQUIDITY_METHODOLOGY_VERSION = "7.55";
+export const LIQUIDITY_METHODOLOGY_VERSION = "7.56";
 export const LIQUIDITY_METHODOLOGY_VERSION_LABEL = methodologyLabel(LIQUIDITY_METHODOLOGY_VERSION);
 export const LIQUIDITY_METHODOLOGY_CHANGELOG_PATH = "/methodology/liquidity-score-changelog/";
 
@@ -49,6 +49,6 @@ export const PSI_METHODOLOGY_VERSION = "3.71";
 export const PSI_METHODOLOGY_VERSION_LABEL = methodologyLabel(PSI_METHODOLOGY_VERSION);
 export const PSI_METHODOLOGY_CHANGELOG_PATH = "/methodology/stability-index-changelog/";
 
-export const YIELD_METHODOLOGY_VERSION = "8.61";
+export const YIELD_METHODOLOGY_VERSION = "8.62";
 export const YIELD_METHODOLOGY_VERSION_LABEL = methodologyLabel(YIELD_METHODOLOGY_VERSION);
 export const YIELD_METHODOLOGY_CHANGELOG_PATH = "/methodology/yield-changelog/";

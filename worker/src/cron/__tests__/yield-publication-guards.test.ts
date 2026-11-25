@@ -9,6 +9,7 @@ import { computePysRewardShare, derivePysSourceRiskPenalty } from "@shared/lib/y
 import {
   COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
   LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
+  MORPHO_SUPPLEMENTAL_STALE_THRESHOLD_MS,
   PRICE_DERIVED_STALE_THRESHOLD_MS,
   PENDLE_SUPPLEMENTAL_STALE_THRESHOLD_MS,
   STALE_THRESHOLD_MS,
@@ -94,7 +95,7 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources", () => {
     {
       label: "does not add data-stale for healthy supplemental protocol-api rows",
       boundary: "before threshold",
-      sourceObservedAt: (nowSec) => nowSec - SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS / 1000 + 60,
+      sourceObservedAt: (nowSec) => nowSec - MORPHO_SUPPLEMENTAL_STALE_THRESHOLD_MS / 1000 + 60,
       overrides: {
         dataSource: "protocol-api",
         sourceKey: "protocol-api:morpho-vault:ethereum:0xvault",
@@ -105,7 +106,7 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources", () => {
     {
       label: "adds data-stale once supplemental protocol-api rows miss their cadence window",
       boundary: "after threshold",
-      sourceObservedAt: (nowSec) => nowSec - SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS / 1000 - 60,
+      sourceObservedAt: (nowSec) => nowSec - MORPHO_SUPPLEMENTAL_STALE_THRESHOLD_MS / 1000 - 60,
       overrides: {
         dataSource: "protocol-api",
         sourceKey: "protocol-api:morpho-vault:ethereum:0xvault",
