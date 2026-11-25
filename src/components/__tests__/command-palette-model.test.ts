@@ -159,6 +159,29 @@ describe("command palette model", () => {
     const actionsGroup = groups.find((group) => group.section === "Actions");
     expect(actionsGroup?.items.some((item) => item.actionId === "portfolio-watchlist")).toBe(true);
   });
+
+  it("indexes Guided Picker, Safety Score Map, and Depeg Event Archive without regressing parent hubs", () => {
+    const pickerPages = buildCommandPaletteResultDescriptors({ query: "picker", history: [], isDark: false })
+      .filter((item) => item.section === "Pages");
+    expect(pickerPages[0]).toMatchObject({ href: "/screener/picker/", label: "Guided Picker" });
+
+    const mapPages = buildCommandPaletteResultDescriptors({ query: "treemap", history: [], isDark: false })
+      .filter((item) => item.section === "Pages");
+    expect(mapPages[0]).toMatchObject({ href: "/safety-scores/map/", label: "Safety Score Map" });
+
+    const archivePages = buildCommandPaletteResultDescriptors({ query: "archive", history: [], isDark: false })
+      .filter((item) => item.section === "Pages");
+    expect(archivePages[0]).toMatchObject({ href: "/depeg/archive/", label: "Depeg Event Archive" });
+
+    const safetyFirst = groupCommandPaletteResults(
+      buildCommandPaletteResultDescriptors({ query: "safety", history: [], isDark: false }),
+    )[0]?.items[0];
+    expect(safetyFirst).toMatchObject({ href: "/safety-scores/", label: "Safety Scores" });
+
+    const apiActions = buildCommandPaletteResultDescriptors({ query: "api", history: [], isDark: false })
+      .filter((item) => item.section === "Actions");
+    expect(apiActions.some((item) => item.label === "Open API reference")).toBe(true);
+  });
 });
 
 describe("command palette action helpers", () => {

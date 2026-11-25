@@ -2,9 +2,10 @@
 
 import { ThemeProvider } from "next-themes";
 import { usePathname } from "next/navigation";
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { OPEN_COMMAND_PALETTE_EVENT } from "@/lib/command-palette";
+import { OPEN_KEYBOARD_SHORTCUTS_EVENT, dismissChromeOverlays, subscribeChromeDismiss } from "@/lib/chrome-popover";
 import { isSingleKeyShortcutDisabled } from "@/lib/keyboard-shortcut-settings";
 import { SourceNavigationProvider } from "@/components/back-to-source";
 import { isEditorialPath } from "@/lib/editorial-routes";
@@ -61,45 +62,89 @@ const ToastContainer = lazy(() =>
 function GlobalSearchProvider({ children }: { children: React.ReactNode }) {
   const [loaded, setLoaded] = useState(false);
   const [open, setOpen] = useState(false);
+  const openRef = useRef(false);
+  const [shortcutsLoaded, setShortcutsLoaded] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+
+  const setPaletteOpen = useCallback((next: boolean) => {
+    openRef.current = next;
+    if (next) {
+      dismissChromeOverlays("command-palette");
+      setShortcutsOpen(false);
+    }
+    setOpen(next);
+  }, []);
+
+  const setShortcutsDialogOpen = useCallback((next: boolean) => {
+    if (next) {
+      dismissChromeOverlays("keyboard-shortcuts");
+      openRef.current = false;
+      setOpen(false);
+    }
+    setShortcutsOpen(next);
+  }, []);
 
   useEffect(() => {
     const openSearch = () => {
       setLoaded(true);
-      setOpen(true);
+      setPaletteOpen(true);
+    };
+    const openShortcuts = () => {
+      setShortcutsLoaded(true);
+      setShortcutsDialogOpen(true);
     };
     function handleKeyDown(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
         setLoaded(true);
-        setOpen((value) => !value);
+        setPaletteOpen(!openRef.current);
         return;
       }
-      if (event.ctrlKey || event.metaKey || event.altKey || isSingleKeyShortcutDisabled()) return;
       if (
         event.target instanceof HTMLInputElement ||
         event.target instanceof HTMLTextAreaElement ||
         event.target instanceof HTMLSelectElement ||
         (event.target instanceof HTMLElement && event.target.isContentEditable)
       ) return;
+
+      // `?` opens the shortcuts dialog on every route (including static
+      // editorial routes) and even when single-key shortcuts are off so the
+      // opt-out toggle remains reachable anywhere (WCAG 2.1.4).
+      if (event.key === "?" && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        event.preventDefault();
+        openShortcuts();
+        return;
+      }
+
+      if (event.ctrlKey || event.metaKey || event.altKey || isSingleKeyShortcutDisabled()) return;
       if (event.key === "/") {
         event.preventDefault();
         openSearch();
       }
     }
+    const stopShortcuts = subscribeChromeDismiss("keyboard-shortcuts", () => setShortcutsOpen(false));
     window.addEventListener(OPEN_COMMAND_PALETTE_EVENT, openSearch);
+    window.addEventListener(OPEN_KEYBOARD_SHORTCUTS_EVENT, openShortcuts);
     window.addEventListener("keydown", handleKeyDown);
     return () => {
+      stopShortcuts();
       window.removeEventListener(OPEN_COMMAND_PALETTE_EVENT, openSearch);
+      window.removeEventListener(OPEN_KEYBOARD_SHORTCUTS_EVENT, openShortcuts);
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, []);
+  }, [setPaletteOpen, setShortcutsDialogOpen]);
 
   return (
     <>
       {children}
       {loaded && (
         <Suspense fallback={null}>
-          <CommandPalette open={open} onOpenChange={setOpen} />
+          <CommandPalette open={open} onOpenChange={setPaletteOpen} />
+        </Suspense>
+      )}
+      {shortcutsLoaded && (
+        <Suspense fallback={null}>
+          <KeyboardShortcuts open={shortcutsOpen} onOpenChange={setShortcutsDialogOpen} />
         </Suspense>
       )}
     </>
@@ -116,8 +161,6 @@ const InteractiveProviders = lazy(async () => {
   function LoadedInteractiveProviders() {
     const { toasts, addToast, removeToast } = toastHook.useToast();
     const { toggleTheme } = themeHook.useThemeToggle({ toast: addToast });
-    const [keyboardShortcutsLoaded, setKeyboardShortcutsLoaded] = useState(false);
-    const [keyboardShortcutsOpen, setKeyboardShortcutsOpen] = useState(false);
 
     useEffect(() => {
       function handleGlobalOverlayKeyDown(event: KeyboardEvent) {
@@ -130,19 +173,9 @@ const InteractiveProviders = lazy(async () => {
           return;
         }
 
-        // `?` opens the shortcuts dialog even when single-key shortcuts are
-        // off: the dialog is the only surface that can turn them back on.
-        if (event.key === "?" && !event.ctrlKey && !event.metaKey && !event.altKey) {
-          event.preventDefault();
-          setKeyboardShortcutsLoaded(true);
-          setKeyboardShortcutsOpen(true);
-          return;
-        }
-
         if (event.ctrlKey || event.metaKey || event.altKey || shortcutSettings.isSingleKeyShortcutDisabled()) return;
 
         if (event.key >= "1" && event.key <= "9") {
-          if (shortcutSettings.isSingleKeyShortcutDisabled()) return;
           event.preventDefault();
           window.dispatchEvent(
             new CustomEvent<SortColumnEventDetail>(SORT_COLUMN_EVENT, {
@@ -169,11 +202,6 @@ const InteractiveProviders = lazy(async () => {
     return (
       <>
         <routeProgress.RouteProgressBar />
-        {keyboardShortcutsLoaded && (
-          <Suspense fallback={null}>
-            <KeyboardShortcuts open={keyboardShortcutsOpen} onOpenChange={setKeyboardShortcutsOpen} />
-          </Suspense>
-        )}
         {toasts.length > 0 && (
           <Suspense fallback={null}>
             <ToastContainer toasts={toasts} removeToast={removeToast} />
@@ -197,9 +225,10 @@ function RouteProviders() {
 
 /**
  * Theme and the query client are the immutable shell: the global chrome
- * (TopNav health menu, RegimeBar PSI) queries on every route, including static
- * content routes, so the provider cannot be route-gated. Search listeners and
- * their lazy overlay host are global; other interactive features remain gated.
+ * (TopNav incident badge, RegimeBar PSI) queries on every route, including
+ * static content routes, so the provider cannot be route-gated. Search and
+ * keyboard-shortcuts listeners and their lazy overlay hosts are global; other
+ * interactive features remain gated.
  */
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient({ defaultOptions: PHAROS_QUERY_DEFAULT_OPTIONS }));

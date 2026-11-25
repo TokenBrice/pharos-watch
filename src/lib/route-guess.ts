@@ -11,27 +11,19 @@ const KNOWN_ROUTES: { href: string; label: string }[] = [
   { href: "/", label: "Home" },
   { href: "/stablecoins/usd/", label: "Stablecoins · USD" },
   { href: "/stablecoins/eur/", label: "Stablecoins · EUR" },
-  { href: "/digest/", label: "Daily Digest" },
-  { href: "/depeg/", label: "Depeg" },
-  { href: "/timeline/", label: "Timeline" },
-  { href: "/changelog/", label: "Changelog" },
-  { href: "/screener/", label: "Screener" },
-  { href: "/compare/", label: "Compare" },
-  { href: "/methodology/", label: "Methodology" },
-  { href: "/cemetery/", label: "Cemetery" },
-  { href: "/about/", label: "About" },
-  { href: "/api/", label: "API Access" },
+  { href: "/screener/picker/", label: "Guided Picker" },
   ...NAV_ITEMS
-    .filter((item) => !item.external)
+    .filter((item) => !item.external && item.href !== "/")
     .map((item) => ({ href: item.href, label: item.label })),
 ];
 
 /** Canonical aliases — common legacy paths the user might still type. */
 const ALIASES: { match: RegExp; href: string; label: string }[] = [
-  { match: /^\/peg[-_]?tracker\/?$/i, href: "/depeg/", label: "Depeg" },
+  { match: /^\/peg[-_]?tracker\/?$/i, href: "/depeg/", label: "Depeg & Recovery" },
   { match: /^\/tape\/?$/i, href: "/timeline/", label: "Timeline" },
   { match: /^\/news\/?$/i, href: "/digest/", label: "Daily Digest" },
   { match: /^\/dashboard\/?$/i, href: "/", label: "Home" },
+  { match: /^\/api[-_]?access\/?$/i, href: "/api/", label: "API" },
 ];
 
 function normalize(path: string): string {

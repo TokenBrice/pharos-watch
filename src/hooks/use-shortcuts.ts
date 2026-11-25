@@ -9,21 +9,29 @@ const SHORTCUTS_STORAGE_KEY = "pharos-shortcuts";
 // label/icon happens in the consuming component so this hook stays data-only and
 // any href that no longer maps to a nav destination is dropped at render time.
 export const DEFAULT_SHORTCUT_HREFS: string[] = [
-  "/chains/",
-  "/upcoming/",
-  "/portfolio/",
-  "/alt-pegs/",
-  "/cemetery/",
-  "https://pharosville.pharos.watch/",
-  "/yield/",
-  "/liquidity/",
   "/screener/",
   "/compare/",
+  "/liquidity/",
+  "/chains/",
+  "/portfolio/",
   "/dependency-map/",
-  "/timeline/",
 ];
 
 const LEGACY_DEFAULT_SHORTCUT_HREFS: string[][] = [
+  [
+    "/chains/",
+    "/upcoming/",
+    "/portfolio/",
+    "/alt-pegs/",
+    "/cemetery/",
+    "https://pharosville.pharos.watch/",
+    "/yield/",
+    "/liquidity/",
+    "/screener/",
+    "/compare/",
+    "/dependency-map/",
+    "/timeline/",
+  ],
   [
     "/chains/",
     "/upcoming/",
@@ -48,7 +56,7 @@ function shortcutListsMatch(a: string[], b: string[]): boolean {
 
 // Dedupe + drop non-string entries on read; an empty array is a valid (user
 // cleared everything) state and is preserved, only malformed payloads fall back
-// to the defaults. Exact legacy defaults migrate to the expanded default set.
+// to the defaults. Exact legacy defaults migrate to the current default set.
 function decodeShortcuts(raw: unknown): string[] {
   if (!Array.isArray(raw)) return [...DEFAULT_SHORTCUT_HREFS];
   const seen = new Set<string>();

@@ -203,7 +203,7 @@ Draw a metaphor only when every shape encodes a published field. Keep underlying
 
 ### Homepage Composition (signature surface: the locked triage layout)
 
-[Homepage](docs/homepage.md#route-shape) owns section order, responsive composition and density: Hero -> Live Tape -> Market Pulse (permanent Row 1 `Active depegs | Peg health | PSI + Mint / Burn`, mobile 2x2 KPI compression) -> fresh Blog banner -> Stablecoin Overview (with in-place quick filters) -> full-width cross-device Daily Digest editorial strip -> Yield Intelligence -> On the horizon -> DDR -> curated 6-tool Shortcuts -> API / Media / Status strips. Do not reorder its bands through a general design change. Hero figures are neutral ink unless a semantic scale or an explicit route exception supplies color.
+[Homepage](docs/homepage.md#route-shape) owns section order, responsive composition and density: Hero -> Live Tape -> Market Pulse (permanent Row 1 `Active depegs | Peg health | PSI + Mint / Burn`, mobile 2x3 KPI compression) -> fresh Blog banner -> Stablecoin Overview (with in-place quick filters) -> full-width cross-device Daily Digest editorial strip -> Yield Intelligence -> On the horizon -> DDR -> curated 6-tool Shortcuts -> API / Media / Status strips. Do not reorder its bands through a general design change. Hero figures are neutral ink unless a semantic scale or an explicit route exception supplies color.
 
 ### Motion
 

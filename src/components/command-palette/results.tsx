@@ -57,6 +57,8 @@ export interface CommandPaletteSearchResult extends CommandPaletteSectionedItem 
   stablecoinHealth?: CommandPaletteStablecoinHealth;
   /** Render the sublabel in the mono face (tickers, dates - data, not prose). */
   mono?: boolean;
+  /** True when selecting this row navigates to another route (suppresses opener refocus). */
+  navigates?: boolean;
   onSelect: () => void;
   keywords?: string[];
 }
@@ -263,6 +265,16 @@ function buildSearchResult(
   };
 
   const kindIcon = getKindIcon(descriptor.kind);
+  const navigates =
+    (Boolean(descriptor.href) && !descriptor.external)
+    || descriptor.actionId === "open-digest"
+    || descriptor.actionId === "open-methodology"
+    || descriptor.actionId === "open-api-docs"
+    || (descriptor.actionId === "compare-watchlist" && watchlistIds.length >= 2)
+    || (descriptor.actionId === "portfolio-watchlist" && watchlistIds.length > 0)
+    || ((descriptor.actionId === "context-portfolio"
+      || descriptor.actionId === "context-compare"
+      || descriptor.actionId === "context-alerts") && Boolean(descriptor.contextCoinId));
 
   return {
     id: descriptor.id,
@@ -289,6 +301,7 @@ function buildSearchResult(
     marketCapAsOf: descriptor.kind === "stablecoin" ? descriptor.marketCapAsOf : undefined,
     stablecoinHealth: descriptor.kind === "stablecoin" ? descriptor.stablecoinHealth : undefined,
     mono: descriptor.kind === "stablecoin" || descriptor.kind === "stablecoin-yield" || descriptor.kind === "depeg-event",
+    navigates,
     onSelect,
   };
 }
@@ -349,6 +362,7 @@ export function buildCommandPaletteSearchResults({
       section: "Run command",
       kind: "verb-run",
       icon: <PlayCircle className="h-4 w-4" />,
+      navigates: verbPreview.runnable && !/^(?:pin|unpin|watchlist)\b/i.test(query.trim()),
       onSelect: () => {
         if (verbPreview.runnable) runVerb();
       },

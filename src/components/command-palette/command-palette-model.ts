@@ -1,13 +1,12 @@
 import {
-  BookOpen,
   Coins,
-  Heart,
   KeyRound,
   Landmark,
   LockKeyhole,
   Scale,
   ScrollText,
   ShieldCheck,
+  SlidersHorizontal,
   TableProperties,
 } from "lucide-react";
 import { NAV_ITEMS } from "@/lib/nav-config";
@@ -85,10 +84,25 @@ const COMMAND_PALETTE_EXTRA_PAGES: readonly NavItem[] = [
     description: "Browse shared stablecoin infrastructure and deployment families",
   },
   {
-    href: "/docs/",
-    label: "Docs",
-    icon: BookOpen,
-    description: "Public documentation archive for Pharos methods and data contracts",
+    href: "/screener/picker/",
+    label: "Guided Picker",
+    icon: SlidersHorizontal,
+    description: "Step-by-step stablecoin shortlist wizard for treasury, yield, or trading",
+    keywords: "picker guided selector wizard shortlist recommend choose",
+  },
+  {
+    href: "/safety-scores/map/",
+    label: "Safety Score Map",
+    icon: ShieldCheck,
+    description: "Visual map of every rated stablecoin by safety grade and market cap",
+    keywords: "map poster treemap visual grade",
+  },
+  {
+    href: "/depeg/archive/",
+    label: "Depeg Event Archive",
+    icon: ScrollText,
+    description: "Historical depeg archive of closed stablecoin events",
+    keywords: "archive history past events incidents",
   },
   {
     href: "/privacy/",
@@ -113,20 +127,6 @@ const COMMAND_PALETTE_EXTRA_PAGES: readonly NavItem[] = [
     label: "Report Card Changelog",
     icon: TableProperties,
     description: "Version history for Safety Score and report-card scoring",
-  },
-  // Footer-only routes: demoted out of NAV_GROUPS by the 2026-09-04 nav
-  // revamp, so the palette must carry them explicitly or search loses them.
-  {
-    href: "/coverage/",
-    label: "Coverage",
-    icon: TableProperties,
-    description: "Truth surface for what each route can show per coin",
-  },
-  {
-    href: "/funding/",
-    label: "Funding",
-    icon: Heart,
-    description: "Running costs, supporter ledger, and public sustainability path",
   },
 ] as const;
 
@@ -377,7 +377,7 @@ function buildCommandPaletteActionDefinitions(
     {
       id: "action-open-api-docs",
       actionId: "open-api-docs",
-      label: "Open API docs",
+      label: "Open API reference",
       sublabel: "Auth model, key requirement, and full endpoint reference",
       keywords: "api docs endpoint reference keys",
       icon: "api-docs",
