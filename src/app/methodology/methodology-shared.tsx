@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 export const METHODOLOGY_LINK_CLASS = "pharos-prose-link text-foreground/85";
 
 const METHODOLOGY_PROSE_SCOPE_CLASS =
-  "[&_p]:max-w-[72ch] [&_ul]:max-w-[72ch] [&_ol]:max-w-[72ch] [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:tracking-tight [&_h3]:text-foreground [&_p_code]:rounded-sm [&_p_code]:bg-muted/70 [&_p_code]:px-1 [&_p_code]:py-0.5 [&_p_code]:font-mono [&_p_code]:text-xs [&_p_code]:text-foreground [&_li_code]:rounded-sm [&_li_code]:bg-muted/70 [&_li_code]:px-1 [&_li_code]:py-0.5 [&_li_code]:font-mono [&_li_code]:text-xs [&_li_code]:text-foreground [&_dd_code]:rounded-sm [&_dd_code]:bg-muted/70 [&_dd_code]:px-1 [&_dd_code]:py-0.5 [&_dd_code]:font-mono [&_dd_code]:text-xs [&_dd_code]:text-foreground [&_td_code]:rounded-sm [&_td_code]:bg-muted/70 [&_td_code]:px-1 [&_td_code]:py-0.5 [&_td_code]:font-mono [&_td_code]:text-xs [&_td_code]:text-foreground";
+  "[&_h3]:text-sm [&_h3]:font-semibold [&_h3]:tracking-tight [&_h3]:text-foreground [&_p_code]:rounded-sm [&_p_code]:bg-muted/70 [&_p_code]:px-1 [&_p_code]:py-0.5 [&_p_code]:font-mono [&_p_code]:text-xs [&_p_code]:text-foreground [&_li_code]:rounded-sm [&_li_code]:bg-muted/70 [&_li_code]:px-1 [&_li_code]:py-0.5 [&_li_code]:font-mono [&_li_code]:text-xs [&_li_code]:text-foreground [&_dd_code]:rounded-sm [&_dd_code]:bg-muted/70 [&_dd_code]:px-1 [&_dd_code]:py-0.5 [&_dd_code]:font-mono [&_dd_code]:text-xs [&_dd_code]:text-foreground [&_td_code]:rounded-sm [&_td_code]:bg-muted/70 [&_td_code]:px-1 [&_td_code]:py-0.5 [&_td_code]:font-mono [&_td_code]:text-xs [&_td_code]:text-foreground";
 
 export const METHODOLOGY_READING_STEPS = [
   {
@@ -105,7 +105,7 @@ export function MethodologySectionShell({
           )}
         </div>
         {versionNote && (
-          <p className="max-w-[72ch] text-xs leading-relaxed text-muted-foreground">{versionNote}</p>
+          <p className="text-xs leading-relaxed text-muted-foreground">{versionNote}</p>
         )}
       </CardHeader>
       <CardContent

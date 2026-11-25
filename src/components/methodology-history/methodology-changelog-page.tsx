@@ -120,7 +120,7 @@ export function MethodologyChangelogPage({
           <span>{backLink.label}</span>
         </Link>
         <h1 className="pharos-page-title">{title}</h1>
-        <p className="pharos-page-deck max-w-[72ch]">{lead}</p>
+        <p className="pharos-page-deck">{lead}</p>
       </div>
 
       <section
@@ -240,7 +240,7 @@ export function MethodologyChangelogPage({
             <section id="earlier-versions" className="scroll-mt-36 space-y-3">
               <div className="space-y-1">
                 <h2 className="pharos-section-title">Earlier versions</h2>
-                <p className="max-w-[72ch] text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   Compact summaries retain historical citation targets. Open a version archive for its full evidence and commit provenance.
                 </p>
               </div>
@@ -269,7 +269,7 @@ export function MethodologyChangelogPage({
                       >
                         {entry.title}
                       </Link>
-                      <p className="max-w-[72ch] text-xs leading-relaxed text-muted-foreground">
+                      <p className="text-xs leading-relaxed text-muted-foreground">
                         {entry.summary}
                       </p>
                       {methodologyDetailAnchors(entry.detail).length > 0 && (

@@ -132,7 +132,7 @@ function ChangelogDetailBlocks({ blocks }: { blocks: readonly MethodologyChangel
  */
 export function StructuredChangelogDetail({ entry }: { entry: MethodologyChangelogEntry }) {
   return (
-    <div className="space-y-4 [&_p]:max-w-[72ch] [&_ul]:max-w-[72ch] [&_ol]:max-w-[72ch] [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:tracking-tight [&_h3]:text-foreground">
+    <div className="space-y-4 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:tracking-tight [&_h3]:text-foreground">
       {entry.detail ? (
         <ChangelogDetailBlocks blocks={entry.detail} />
       ) : (

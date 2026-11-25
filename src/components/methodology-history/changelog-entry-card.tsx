@@ -132,7 +132,7 @@ export function ChangelogEntryCard({
       </p>
 
       {headline && (
-        <p className="mt-3 max-w-[68ch] text-base font-medium leading-snug text-foreground">
+        <p className="mt-3 text-base font-medium leading-snug text-foreground">
           {headline}
         </p>
       )}
@@ -140,7 +140,7 @@ export function ChangelogEntryCard({
       {fieldNotes && (
         <div className="mt-4 border-l-2 border-border/70 pl-4">
           <p className="pharos-label">Editor&apos;s note</p>
-          <p className="mt-1.5 max-w-[68ch] text-sm leading-relaxed text-foreground/85">
+          <p className="mt-1.5 text-sm leading-relaxed text-foreground/85">
             {fieldNotes}
           </p>
         </div>
@@ -193,7 +193,7 @@ export function ChangelogEntryCard({
                     </span>
                   )}
                 </div>
-                <p className="max-w-[68ch] text-sm leading-relaxed text-muted-foreground">
+                <p className="text-sm leading-relaxed text-muted-foreground">
                   {item.description}
                 </p>
               </li>

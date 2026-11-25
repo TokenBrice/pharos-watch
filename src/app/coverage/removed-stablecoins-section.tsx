@@ -17,7 +17,7 @@ export function RemovedStablecoinsSection() {
           <span className="sr-only"> removed coins</span>
         </span>
       </div>
-      <p className="mt-2 max-w-[72ch] text-sm leading-relaxed text-muted-foreground">
+      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
         Stablecoins Pharos once tracked and later removed from its registry. Old profile links lead to the coin&apos;s
         cemetery record or matching currency page where one exists, otherwise here.
       </p>

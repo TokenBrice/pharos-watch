@@ -61,7 +61,7 @@ export function ScoringChangelogSummaryTables() {
           Quick reference
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6 text-sm leading-relaxed text-muted-foreground [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:tracking-tight [&_h3]:text-foreground [&_p]:max-w-[72ch]">
+      <CardContent className="space-y-6 text-sm leading-relaxed text-muted-foreground [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:tracking-tight [&_h3]:text-foreground">
         <div className="space-y-2">
           <h3>Weight evolution (V8 and earlier)</h3>
           <p>V9 replaced these dimensions with Backing 40%, Exit 35%, and Economic Control 25%.</p>

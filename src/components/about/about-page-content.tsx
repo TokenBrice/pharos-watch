@@ -252,7 +252,7 @@ function FeaturedAppearance({ appearance }: { appearance: MediaAppearance }) {
               <time dateTime={appearance.date}>{appearanceDateLabel(appearance.date)}</time>
             </p>
           </div>
-          <p className="max-w-[68ch] text-sm leading-relaxed text-muted-foreground">{appearance.description}</p>
+          <p className="text-sm leading-relaxed text-muted-foreground">{appearance.description}</p>
           <Button asChild variant="outline" size="sm">
             <a href={appearance.href} target="_blank" rel="noopener noreferrer">
               Watch the broadcast
@@ -490,7 +490,7 @@ export function AboutPageContent() {
               <div className="space-y-3">
                 <p
                   id="about-lede"
-                  className="pharos-display max-w-[65ch] text-xl font-bold leading-snug tracking-tight text-foreground sm:text-2xl"
+                  className="pharos-display text-xl font-bold leading-snug tracking-tight text-foreground sm:text-2xl"
                 >
                   Every stablecoin makes two promises at once: that it will redeem at par, and that it can be redeemed
                   at all. Pharos watches both across active stablecoins, tracked variants, tokenized funds, and the
@@ -527,8 +527,8 @@ export function AboutPageContent() {
             <p className="pharos-label">Why it exists</p>
             <h2 className="pharos-display text-2xl font-bold tracking-tight text-foreground">Why Pharos?</h2>
           </div>
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,68ch)_minmax(0,1fr)] lg:items-start">
-            <div className="max-w-[68ch] space-y-3.5 text-sm leading-relaxed text-muted-foreground">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1.65fr)_minmax(18rem,1fr)] lg:items-start">
+            <div className="space-y-3.5 text-sm leading-relaxed text-muted-foreground">
               <p>
                 The data needed to evaluate stablecoins is scattered, inconsistent, or buried behind paywalls. Worse,
                 marketing claims rarely match reality: a &quot;decentralized&quot; stablecoin may rely entirely on
@@ -657,7 +657,7 @@ export function AboutPageContent() {
           <Card variant="shell" className="gap-6 py-6">
             <CardHeader className="px-5 sm:px-6" kicker="The team" heading="Who is building Pharos?" />
             <CardContent className="px-5 text-sm leading-relaxed text-muted-foreground sm:px-6">
-              <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,68ch)] lg:items-start">
+              <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] lg:items-start">
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-2">
                   {TEAM_MEMBERS.map((member) => (
                     <figure key={member.name} className="pharos-inset flex items-center gap-3 p-3">
@@ -675,7 +675,7 @@ export function AboutPageContent() {
                     </figure>
                   ))}
                 </div>
-                <div className="max-w-[68ch] space-y-3">
+                <div className="space-y-3">
                   <p>
                     <a
                       href="https://tokenbrice.xyz/"
@@ -762,7 +762,7 @@ export function AboutPageContent() {
           items={COMPUTED_FEATURES}
           footer={
             <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="max-w-[68ch] text-sm leading-relaxed text-muted-foreground">
+              <p className="text-sm leading-relaxed text-muted-foreground">
                 Telegram alerts cover DEWS state changes, depeg events, and safety grade changes.
               </p>
               <Button asChild variant="outline" size="sm">
@@ -796,7 +796,7 @@ export function AboutPageContent() {
                     <div className="flex size-10 shrink-0 items-center justify-center rounded-md border border-border/60 bg-background/75">
                       <item.icon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                     </div>
-                    <div className="min-w-0 max-w-[68ch] space-y-1">
+                    <div className="min-w-0 space-y-1">
                       <h3 className="text-sm font-semibold tracking-tight text-foreground">{item.title}</h3>
                       <div className="text-xs leading-relaxed text-muted-foreground">{item.description}</div>
                     </div>
@@ -861,7 +861,7 @@ export function AboutPageContent() {
               }
             />
             <CardContent className="space-y-6 px-5 text-sm leading-relaxed text-muted-foreground sm:px-6">
-              <div className="max-w-[68ch] space-y-3">
+              <div className="space-y-3">
                 <p className="text-foreground/90">{BLUECHIP_LEDE}</p>
                 <div className="pharos-subtle-band rounded-lg text-xs leading-relaxed text-muted-foreground">
                   <p>
@@ -880,7 +880,7 @@ export function AboutPageContent() {
                 <div className="space-y-3">
                   <div className="space-y-1">
                     <h3 className="text-sm font-semibold tracking-tight text-foreground">The gates</h3>
-                    <p className="max-w-[68ch] text-xs leading-relaxed text-muted-foreground">
+                    <p className="text-xs leading-relaxed text-muted-foreground">
                       Each gate is independent. A coin clears Bluechip only when every gate clears at the same moment,
                       and only while it continues to do so.
                     </p>
@@ -981,7 +981,7 @@ export function AboutPageContent() {
               }
             />
             <CardContent className="px-5 text-sm leading-relaxed text-muted-foreground sm:px-6">
-              <p className="max-w-[68ch]">
+              <p>
                 Pharos Safety Score grades stablecoins across Backing, Exit, and Economic Control, then applies peg
                 behavior, deployment adjustments, and binding caps. The methodology page covers the full grading
                 formula, peg score computation, DEX liquidity scoring, and dependency propagation.
@@ -993,7 +993,7 @@ export function AboutPageContent() {
         <FaqSection items={faqItems} title="About Pharos FAQ" includeJsonLd />
 
         <aside className="pharos-subtle-band text-xs leading-relaxed text-muted-foreground">
-          <p className="max-w-[75ch]">
+          <p>
             <span className="font-semibold text-foreground">Disclaimer:</span> Pharos is an informational tool, not a
             licensed financial advisor. Nothing on this site constitutes financial, investment, or legal advice. All
             data is provided as-is and may contain errors or delays. Always do your own research and consult a qualified
@@ -1005,7 +1005,7 @@ export function AboutPageContent() {
           <Card variant="shell" className="gap-5 py-6">
             <CardHeader className="px-5 sm:px-6" kicker="Reach out" heading="Get in touch" />
             <CardContent className="space-y-4 px-5 text-sm leading-relaxed text-muted-foreground sm:px-6">
-              <p className="max-w-[68ch]">
+              <p>
                 Pharos code and data are MIT-licensed. If you spot a bad data point, want a stablecoin added, or want to
                 understand how something is computed, open the code or reach out directly.
               </p>

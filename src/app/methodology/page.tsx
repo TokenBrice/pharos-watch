@@ -114,7 +114,7 @@ export default function MethodologyPage() {
           <div className="space-y-3">
             <div className="space-y-2">
               <h1 className="pharos-page-title">Methodology</h1>
-              <p className="pharos-page-lead max-w-[72ch]">
+              <p className="pharos-page-lead">
                 How Pharos grades stablecoins: transparent scoring across safety, peg stability, mint control,
                 liquidity, yield, and dependency risk.
               </p>
@@ -125,7 +125,7 @@ export default function MethodologyPage() {
                   {formatUtcDayLabel(new Date(`${SAFETY_SCORE_LATEST_ENTRY_DATE}T00:00:00Z`))}
                 </time>
               </p>
-              <p className="pharos-lead max-w-[72ch]">
+              <p className="pharos-lead">
                 Treat this page like a reference manual, not a marketing explainer. All scoring methodologies operate
                 over the active subset of tracked stablecoins; pre-launch and frozen coins are excluded from new
                 computations and live aggregates.
@@ -150,7 +150,7 @@ export default function MethodologyPage() {
             What a Safety Score grade means
           </h2>
         </div>
-        <p className="max-w-[72ch] text-sm leading-relaxed text-muted-foreground">
+        <p className="text-sm leading-relaxed text-muted-foreground">
           A grade answers one question: if the coin started bleeding tomorrow, how much of the loss would the holder
           eat before the system stopped it? Backing (
           <span className="pharos-numeric">{formatWeight(pillarWeights.backing)}</span>), Exit (

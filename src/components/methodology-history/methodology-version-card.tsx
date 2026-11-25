@@ -59,7 +59,7 @@ export function MethodologyVersionCard({
             </div>
             <div className="space-y-1.5">
               <h2 className="pharos-section-title">{entry.title}</h2>
-              <p className="max-w-[72ch] text-sm leading-relaxed text-muted-foreground">{entry.summary}</p>
+              <p className="text-sm leading-relaxed text-muted-foreground">{entry.summary}</p>
             </div>
           </div>
           <span className="mt-0.5 inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-muted-foreground">

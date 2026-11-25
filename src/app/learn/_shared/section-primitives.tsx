@@ -56,7 +56,7 @@ export function NumberedListSection({
           <span className="pharos-numeric text-xs font-semibold text-muted-foreground">
             {String(i + 1).padStart(2, "0")}
           </span>
-          <p className="max-w-[68ch] text-base leading-relaxed text-foreground/90">
+          <p className={cn("text-base leading-relaxed text-foreground/90", !framed && "max-w-[68ch]")}>
             {item}
           </p>
         </li>
