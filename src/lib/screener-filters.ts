@@ -71,6 +71,7 @@ export type ScreenerStateValue = (typeof SCREENER_STATE_VALUES)[number];
 
 export interface ScreenerFilters {
   coins: readonly string[];
+  includeFunds: boolean;
   dewsMin: number;
   dewsMax: number;
   supplyMin: number;
@@ -98,6 +99,7 @@ export interface ScreenerFilters {
 /** Default scalar ranges. A value at the bound counts as "no filter". */
 export const SCREENER_FILTER_DEFAULTS: ScreenerFilters = {
   coins: [],
+  includeFunds: false,
   dewsMin: 0,
   dewsMax: 100,
   supplyMin: 0,
@@ -132,6 +134,10 @@ export const SCREENER_URL_SCHEMA: UrlStateSchema<ScreenerFilters> = {
     defaultValue: SCREENER_FILTER_DEFAULTS.coins,
     allowedValues: SCREENER_COIN_VALUES,
     maxItems: 8,
+  },
+  includeFunds: {
+    kind: "boolean",
+    defaultValue: SCREENER_FILTER_DEFAULTS.includeFunds,
   },
   dewsMin: {
     kind: "boundedNumber",
@@ -260,6 +266,8 @@ export interface ScreenerRow {
   symbol: string;
   /** Lifecycle bucket: defaults to "active" when meta.status is absent. */
   lifecycle: StablecoinStatus;
+  /** Policy 2.0 tokenized-fund class; excluded from default results unless `includeFunds` is enabled. */
+  isTokenizedFund?: boolean;
   /** Mechanism archetype from the slim client registry (may be undefined). */
   mechanism: MechanismArchetype | null;
   /**
@@ -445,6 +453,7 @@ export function applyFilters(rows: readonly ScreenerRow[], filters: ScreenerFilt
     // URL fields describe the reusable broad projection, but must not hide a
     // relaxed recommendation or a result admitted by a Picker-only gate.
     if (coinSet) return coinSet.has(row.id);
+    if (!filters.includeFunds && row.isTokenizedFund) return false;
     if (!passesRange(row.dewsScore, filters.dewsMin, filters.dewsMax, dewsActive)) return false;
     if (!passesRange(row.supplyUsd, filters.supplyMin, filters.supplyMax || Infinity, supplyActive)) return false;
     if (safetyGradeSet) {
@@ -539,6 +548,9 @@ export function hasActiveFilters(filters: ScreenerFilters): boolean {
 export function countActiveScreenerFilters(filters: ScreenerFilters): number {
   let count = 0;
   if (filters.coins.length > 0) {
+    count += 1;
+  }
+  if (filters.includeFunds) {
     count += 1;
   }
   if (isScoreRangeActive(filters.dewsMin, filters.dewsMax)) {

@@ -82,7 +82,7 @@ describe("business-calendar settlement consumers", () => {
       docs: [{ label: "Funded claim after maturity", url: "https://example.com/funded-claim", supports: ["settlement"] }],
     }, clock)).toBe(259200);
   });
-  it.each(["eutbl-spiko", "ustbl-spiko", "safo-spiko-usd", "eursafo-spiko"])(
+  it.each(["eutbl-spiko", "ustbl-spiko"])(
     "keeps %s issuer zero fee without inventing an unconditional cash-completion scalar", (assetId) => {
       const config = getRedemptionBackstopConfig(assetId)!;
       const row = makeSupplyFullRedemption({ stablecoinId: assetId, settlementModel: "same-day", settlementDelaySec: 86400, feeBps: 0 });
@@ -101,8 +101,8 @@ describe("business-calendar settlement consumers", () => {
     expect(buildSafetyScoreV9RouteReviews(fixed(row, clockSec), assetId)[0])
       .toMatchObject({ settlementModel: "queued", settlementSlaSec: 259200 });
   });
-  it.each(["syusd-aegis", "usp-pikudao", "avusd-avant", "savusd-avant", "hbusdt-hyperbeat", "usn-noon",
-    "ustbl-spiko", "safo-spiko-usd", "uktbl-spiko", "gbpsafo-spiko", "eutbl-spiko", "eursafo-spiko", "spkcc-spiko", "eurspkcc-spiko"])(
+  it.each(["syusd-aegis", "avusd-avant", "savusd-avant", "hbusdt-hyperbeat", "usn-noon",
+    "ustbl-spiko", "eutbl-spiko"])(
     "does not promote %s processing/cooldown/conditional terms into completed settlement", (assetId) => {
       const config = getRedemptionBackstopConfig(assetId)!;
       const row = makeSupplyFullRedemption({ stablecoinId: assetId, routeFamily: config.routeFamily,

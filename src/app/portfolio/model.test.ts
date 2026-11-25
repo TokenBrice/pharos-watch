@@ -1,11 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
+  PORTFOLIO_COIN_OPTION_IDS,
   computePortfolioConcentrations,
   groupDependencyExposure,
   parseUsdInput,
   rankExceptionalHoldings,
 } from "./model";
+import { PORTFOLIO_PRESETS } from "./presets";
 import type { CoinState } from "@shared/lib/coin-state";
+import { isClientTokenizedFundId } from "@shared/lib/stablecoins/aggregate-client-registry";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
+import { getSnapshotSafetyAssessment } from "@/lib/safety-grade-snapshot";
 import { mergeCoinsParam } from "@/lib/portfolio-codec";
 
 describe("portfolio page model", () => {
@@ -106,5 +112,30 @@ describe("portfolio page model", () => {
     const peg = strips.find((strip) => strip.id === "peg")!;
     expect(peg.buckets[0]).toMatchObject({ key: "USD", label: "USD", amountUsd: 800, sharePct: 80 });
     expect(peg.unavailableIds).toEqual(["unknown-synthetic-id"]);
+  });
+
+  it("builds every starter preset exclusively from active, rated, non-fund core stablecoins", () => {
+    const optionIds = new Set(PORTFOLIO_COIN_OPTION_IDS);
+    for (const preset of PORTFOLIO_PRESETS) {
+      const total = preset.holdings.reduce((sum, holding) => sum + holding.amount, 0);
+      expect(total, preset.title).toBe(100);
+      for (const holding of preset.holdings) {
+        const meta = CLIENT_TRACKED_META_BY_ID.get(holding.coinId);
+        expect(meta, `${preset.title}: ${holding.coinId}`).toBeDefined();
+        expect(isActiveStablecoinMeta(meta!), `${preset.title}: ${holding.coinId} active`).toBe(true);
+        expect(isClientTokenizedFundId(holding.coinId), `${preset.title}: ${holding.coinId} not a fund`).toBe(false);
+        expect(optionIds.has(holding.coinId), `${preset.title}: ${holding.coinId} selectable`).toBe(true);
+        const snapshot = getSnapshotSafetyAssessment(holding.coinId);
+        expect(snapshot?.grade, `${preset.title}: ${holding.coinId} rated`).toBeTruthy();
+      }
+    }
+    const treasury = PORTFOLIO_PRESETS.find((preset) => preset.title === "Treasury Heavy");
+    expect(treasury).toBeDefined();
+    expect(treasury!.holdings.map((h) => h.coinId)).toEqual([
+      "usdtb-ethena",
+      "frxusd-frax",
+      "usd0-usual",
+      "usdc-circle",
+    ]);
   });
 });

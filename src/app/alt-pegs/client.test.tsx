@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AltPegsClient } from "@/app/alt-pegs/client";
 import { makeAltPegCoin, makeStablecoin } from "@shared/test-utils/stablecoin";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC } from "@shared/lib/stablecoins/aggregate-universe";
 import { CORE_NON_USD_IDS, coreNonUsdRows } from "@shared/test-utils/alt-peg-fixtures";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 
@@ -332,6 +333,22 @@ describe("AltPegsClient", () => {
     const row = screen.getByText("1-year change").parentElement!;
     expect(row.textContent).toContain("+65.0%");
     expect(row.textContent).toContain("partial coverage");
+  });
+
+  it("withholds the 1-year change stat when history spans the listing-policy v2 perimeter cutover", () => {
+    const cutover = CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC;
+    const saved = useNonUsdShareMock();
+    useNonUsdShareMock.mockReturnValue({
+      ...saved,
+      data: [
+        { date: cutover - 360 * 86400, commodityShare: 2, fiatNonUsdShare: 1.5, commodity: 20, fiatNonUsd: 15, total: 1000 },
+        { date: cutover + 5 * 86400, commodityShare: 2, fiatNonUsdShare: 0.4, commodity: 20, fiatNonUsd: 4, total: 980 },
+      ],
+    });
+    render(<AltPegsClient />);
+    const row = screen.getByText("1-year change").parentElement!;
+    expect(row.textContent).toContain("—");
+    expect(row.textContent).toContain("withheld across perimeter change");
   });
 
   it("leads with the core non-USD cap, a computed universe chip and a dated share", () => {

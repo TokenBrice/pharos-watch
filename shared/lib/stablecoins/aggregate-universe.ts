@@ -1,6 +1,28 @@
-import { getListingClass, isCoreAggregateListingClass, type ListingClass } from "./listing-governance";
+import {
+  getListingClass,
+  isCoreAggregateListingClass,
+  isTokenizedFundId,
+  type ListingClass,
+} from "./listing-governance";
+import {
+  CORE_STABLECOIN_AGGREGATE_UNIVERSE,
+  CORE_STABLECOIN_AGGREGATE_UNIVERSE_V1,
+  CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE,
+  CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC,
+  CoreStablecoinAggregateUniverseSchema,
+  getCoreAggregateUniverseForTimestamp,
+  type CoreStablecoinAggregateUniverse,
+} from "../../types/aggregate-universe";
 
-export const CORE_STABLECOIN_AGGREGATE_UNIVERSE = "core-stablecoins-v1" as const;
+export {
+  CORE_STABLECOIN_AGGREGATE_UNIVERSE,
+  CORE_STABLECOIN_AGGREGATE_UNIVERSE_V1,
+  CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE,
+  CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC,
+  CoreStablecoinAggregateUniverseSchema,
+  getCoreAggregateUniverseForTimestamp,
+  type CoreStablecoinAggregateUniverse,
+};
 
 interface StablecoinIdentity {
   id: string;
@@ -16,6 +38,10 @@ function hasListingClass(stablecoinId: string, listingClass: ListingClass): bool
 
 export function filterCoreAggregateStablecoins<T extends StablecoinIdentity>(rows: readonly T[]): T[] {
   return rows.filter((row) => isCoreAggregateStablecoinId(row.id));
+}
+
+export function filterTokenizedFunds<T extends StablecoinIdentity>(rows: readonly T[]): T[] {
+  return rows.filter((row) => isTokenizedFundId(row.id));
 }
 
 export function filterStablecoinsByListingClass<T extends StablecoinIdentity>(

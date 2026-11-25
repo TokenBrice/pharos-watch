@@ -7,6 +7,7 @@ import {
   CHART_BLUE,
   CHART_ORANGE,
   CHART_PALETTE,
+  CHART_SLATE,
   CHART_SLATE_STRONG,
   USDC_BLUE,
   USDT_GREEN,
@@ -15,6 +16,7 @@ import {
   CHART_AXIS_TICK,
   CHART_GRID_DASH,
   CHART_GRID_STROKE,
+  CHART_REFERENCE_DASH,
   CHART_STROKE_WIDTH,
   CHART_TICK_FONT_SIZE,
 } from "@/lib/chart-theme";
@@ -22,6 +24,7 @@ import { formatCurrencyTick, niceTicks, niceTimeTicks } from "@/lib/chart-ticks"
 import { computeChartYDomain } from "@/lib/chart-utils";
 import { ChartTooltipSurface } from "@/components/pharos-chart-tooltip";
 import type { TotalMcapChartRow } from "@shared/lib/total-mcap-chart";
+import { MARKET_PERIMETER_MARKERS, type MarketPerimeterMarker } from "@shared/lib/supply-perimeter-changes";
 import { formatChartDate, formatCurrency } from "@shared/lib/format";
 import { DAY_MS } from "@shared/lib/time-constants";
 
@@ -285,11 +288,13 @@ function HomeAltChartFrame({
   height,
   rows,
   yDomain,
+  markers,
 }: {
   width: number;
   height: number;
   rows: TotalMcapChartRow[];
   yDomain: ReturnType<typeof computeChartYDomain>;
+  markers: readonly MarketPerimeterMarker[];
 }) {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const rawId = useId();
@@ -446,6 +451,33 @@ function HomeAltChartFrame({
               >
                 <title>Total market cap</title>
               </path>
+              {markers.map((marker) => {
+                const markerX = scales.x(marker.tsMs);
+                const anchorEnd = markerX > x0 + (x1 - x0) * 0.72;
+                return (
+                  <g key={marker.id} data-perimeter-marker={marker.id}>
+                    <line
+                      x1={markerX}
+                      x2={markerX}
+                      y1={y0}
+                      y2={y1}
+                      stroke={CHART_SLATE}
+                      strokeDasharray={CHART_REFERENCE_DASH}
+                      strokeWidth={CHART_STROKE_WIDTH.guide}
+                    >
+                      <title>{marker.note}</title>
+                    </line>
+                    <text
+                      x={anchorEnd ? markerX - 6 : markerX + 6}
+                      y={y0 + CHART_TICK_FONT_SIZE + 2}
+                      textAnchor={anchorEnd ? "end" : "start"}
+                      {...CHART_AXIS_TICK}
+                    >
+                      {marker.shortLabel}
+                    </text>
+                  </g>
+                );
+              })}
             </g>
           ) : null}
         </g>
@@ -549,6 +581,15 @@ export function HomeAltHeroChart({ rows }: HomeAltHeroChartProps) {
   const { chartContainerRef, isChartReady, width, height } = useChartShell<HTMLDivElement>();
 
   const rangedRows = useMemo(() => filterRowsByRange(rows, range), [rows, range]);
+  const visibleMarkers = useMemo(
+    () =>
+      rangedRows.length >= 2
+        ? MARKET_PERIMETER_MARKERS.filter(
+            (marker) => marker.tsMs > rangedRows[0]!.ts && marker.tsMs <= rangedRows[rangedRows.length - 1]!.ts,
+          )
+        : [],
+    [rangedRows],
+  );
 
   const yDomain = useMemo(
     () =>
@@ -590,13 +631,22 @@ export function HomeAltHeroChart({ rows }: HomeAltHeroChartProps) {
       </div>
       <div ref={chartContainerRef} className="relative min-h-0 flex-1 w-full">
         {chartReady ? (
-          <HomeAltChartFrame width={width} height={height} rows={rangedRows} yDomain={yDomain} />
+          <HomeAltChartFrame width={width} height={height} rows={rangedRows} yDomain={yDomain} markers={visibleMarkers} />
         ) : (
           <div className="h-full p-4">
             <ChartSkeleton aria-hidden className="h-full w-full" />
           </div>
         )}
       </div>
+      {visibleMarkers.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 border-t border-border/40 px-4 py-1.5 text-2xs text-muted-foreground sm:px-5">
+          {visibleMarkers.map((marker) => (
+            <p key={marker.id} data-perimeter-note={marker.id}>
+              {marker.note}
+            </p>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

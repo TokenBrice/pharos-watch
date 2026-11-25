@@ -2851,5 +2851,91 @@
         "dexPriceCheckExpiresAt": null
       }
     }
+  },
+  {
+    "id": "fpi-frax",
+    "capturedAt": "2026-11-24T17:18:57.973Z",
+    "peggedAssetRow": {
+      "id": "fpi-frax",
+      "name": "Frax Price Index",
+      "symbol": "FPI",
+      "geckoId": "frax-price-index",
+      "pegType": "peggedVAR",
+      "pegMechanism": "crypto-backed",
+      "price": 1.1462704616862447,
+      "priceSource": "coingecko",
+      "priceConfidence": "single-source",
+      "priceUpdatedAt": 1795540554,
+      "priceObservedAt": 1795540554,
+      "priceObservedAtMode": "upstream",
+      "priceSyncedAt": 1795540537,
+      "consensusSources": [
+        "coingecko"
+      ],
+      "agreeSources": [
+        "coingecko"
+      ],
+      "supplySource": "defillama",
+      "supplyChangeBaselines": {
+        "month": null
+      },
+      "circulatingNative": 6139909.176125513,
+      "valuationPriceUsd": 1.1425425800839164,
+      "valuationObservedAtSec": null,
+      "circulating": {
+        "peggedVAR": 7015107.671571357
+      },
+      "circulatingPrevDay": {
+        "peggedVAR": 7041586.922501509
+      },
+      "circulatingPrevWeek": {
+        "peggedVAR": 7018650.543926806
+      },
+      "circulatingPrevMonth": {},
+      "chainCirculating": {
+        "ZKsync Era": {
+          "current": 285635.6450209791,
+          "circulatingPrevDay": 285635.6450209791,
+          "circulatingPrevWeek": 285635.6450209791,
+          "circulatingPrevMonth": 285635.6450209791
+        },
+        "Ethereum": {
+          "current": 6729472.026550379,
+          "circulatingPrevDay": 6729472.026550379,
+          "circulatingPrevWeek": 6729472.026550379,
+          "circulatingPrevMonth": 6729472.026550379
+        }
+      },
+      "chains": [
+        "Ethereum",
+        "ZKsync Era"
+      ],
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x5ca135cb8527d76e932f34b5145575f9d8cbe08e",
+          "decimals": 18
+        },
+        {
+          "chain": "fraxtal",
+          "address": "0xfc00000000000000000000000000000000000003",
+          "decimals": 18
+        },
+        {
+          "chain": "zksync",
+          "address": "0xd405617db7473b0a3158356be7bc9ebec6d88b85",
+          "decimals": 18
+        }
+      ],
+      "currentPeg": {
+        "currentDeviationBps": null,
+        "pegReference": null,
+        "pegReferenceUnavailable": false,
+        "currentPriceUnavailable": false,
+        "primaryTrust": "confirm_required",
+        "dexPriceCheck": null,
+        "dexPriceCheckExpiresAt": null
+      }
+    }
   }
 ]

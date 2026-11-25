@@ -340,4 +340,48 @@ describe("ScreenerTable pagination", () => {
     expect(toggleSort).toHaveBeenCalledWith("supply");
     expect(opened).not.toHaveBeenCalled();
   });
+
+  it("renders Not graded for tokenized funds and surfaces an Include tokenized funds empty-state hint", () => {
+    const fundRow: ScreenerRow = {
+      ...row,
+      id: "buidl-blackrock",
+      name: "BlackRock BUIDL",
+      symbol: "BUIDL",
+      isTokenizedFund: true,
+      safetyGrade: null,
+      safetyScore: null,
+      ratingStatus: "not-rated",
+      safetyBackingScore: null,
+      safetyExitScore: null,
+      safetyControlScore: null,
+      safetyEvidence: null,
+      safetyWeakestPillar: null,
+      safetyWeakestScore: null,
+    };
+    const { rerender } = render(
+      <ScreenerTable rows={[fundRow]} dataState="ready" hasActiveFilters={false} sort={makeSort()} />,
+    );
+    const desktop = within(screen.getByTestId("stablecoin-screener-table"));
+    const mobile = within(screen.getByTestId("stablecoin-screener-mobile"));
+    expect(desktop.getByText("Not graded")).toBeTruthy();
+    expect(mobile.getByText("Not graded")).toBeTruthy();
+    expect(desktop.getByText("Tokenized fund")).toBeTruthy();
+    expect(desktop.queryByText("Safety Score is not rated.")).toBeNull();
+    expect(desktop.queryByLabelText("Safety grade NR")).toBeNull();
+
+    const onIncludeFunds = vi.fn();
+    rerender(
+      <ScreenerTable
+        rows={[]}
+        dataState="ready"
+        hasActiveFilters
+        hiddenFundMatchCount={2}
+        onIncludeFunds={onIncludeFunds}
+        sort={makeSort()}
+      />,
+    );
+    expect(desktop.getByText("2 tokenized funds match these filters and are currently hidden.")).toBeTruthy();
+    fireEvent.click(desktop.getByRole("button", { name: "Include tokenized funds (2)" }));
+    expect(onIncludeFunds).toHaveBeenCalledOnce();
+  });
 });

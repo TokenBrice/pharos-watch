@@ -238,6 +238,7 @@ export const V9_LEGACY_RESPONSIBILITY_BY_REASON = {
   "single-pillar-pipeline-gap": "unresearched",
   "all-pillars-pipeline-gap": "unresearched",
   "f-without-measured-adverse": "unresearched",
+  "tokenized-fund-not-graded": "method-unsupported",
 } as const satisfies Record<V9ReasonCode, V9EvidenceResponsibility>;
 
 if (Object.keys(V9_LEGACY_RESPONSIBILITY_BY_REASON).length !== V9_REASON_CODES.length) {

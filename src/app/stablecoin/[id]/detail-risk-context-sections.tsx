@@ -24,6 +24,7 @@ import type {
   PillarEvidenceBoardVisibility,
 } from "@/components/stablecoin-detail/safety-score-v9-breakdown";
 import { SectionBanner } from "@/components/stablecoin-detail/section-banner";
+import { TokenizedFundPanel } from "@/components/stablecoin-detail/tokenized-fund-panel";
 import { DETAIL_MODULE_TITLE_CLASS, SECTION_SCROLL_MT } from "@/components/stablecoin-detail/section-title-class";
 import { LazySection } from "@/components/lazy-section";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,8 @@ import type { TransferReviewView } from "@/lib/transfer-review";
 import { cn } from "@/lib/utils";
 import type { DetailSharedModules } from "./detail-shared-modules";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { isClientTokenizedFundId } from "@shared/lib/stablecoins/aggregate-client-registry";
+import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { resolveMechanismArchetype } from "@shared/lib/classification";
 import {
   DEWSDetail,
@@ -465,14 +468,15 @@ export function DetailRiskContextSections({
   const documentationOnlyLimited = reportCardsResponse && "projection" in reportCardsResponse
     ? reportCardsResponse.documentationOnlyLimited
     : undefined;
-  const showScoreCard = reportCard != null && reportCardsResponse != null;
+  const isTokenizedFund = isActiveStablecoinMeta(viewModel.coin) && isClientTokenizedFundId(viewModel.coin.id);
+  const showScoreCard = !isTokenizedFund && reportCard != null && reportCardsResponse != null;
   // Reserve the paired score column from first paint only when the build
   // snapshot's saved letter grade says a rated card will render: `savedGrade`
   // exists only while an active coin's first report-card read is in flight.
   // Coins without one (unrated, pipeline gap, no published row) reserve
   // nothing, so a read that returns no card has no placeholder to collapse.
-  const reserveScoreCardSlot = !showScoreCard && viewModel.hero.savedGrade != null;
-  const hasScoreCardSlot = showScoreCard || reserveScoreCardSlot;
+  const reserveScoreCardSlot = !isTokenizedFund && !showScoreCard && viewModel.hero.savedGrade != null;
+  const hasScoreCardSlot = isTokenizedFund || showScoreCard || reserveScoreCardSlot;
   const reserveScoreNote = describeReserveScoreAdmission(
     viewModel.coin.reserveAdmissionSummary,
     reportCard,
@@ -512,7 +516,17 @@ export function DetailRiskContextSections({
             slack sits above its folds, not as a blank band under them. */}
         <div className={cn("grid gap-6", pairScoreAndReserves ? "items-stretch lg:grid-cols-2" : "items-start")}>
           <section id="report-card" className={cn("min-w-0", SECTION_SCROLL_MT, pairScoreAndReserves && "lg:flex lg:flex-col lg:[&>*]:flex-1")}>
-            {reportCard && reportCardsResponse ? (
+            {isTokenizedFund ? (
+              <TokenizedFundPanel
+                coin={viewModel.coin}
+                coinData={viewModel.coinData}
+                pegRef={viewModel.pegRef}
+                reserves={viewModel.reserves}
+                redemptionBackstop={viewModel.redemptionBackstop ?? null}
+                hasReservesSection={showReserves}
+                hasRedemptionSection={sharedModules.redemptionEvidence.kind === "route"}
+              />
+            ) : reportCard && reportCardsResponse ? (
               <StablecoinSafetyScoreV9Card
                 card={reportCard}
                 identity={reportCardsResponse.safetyScoreIdentity}

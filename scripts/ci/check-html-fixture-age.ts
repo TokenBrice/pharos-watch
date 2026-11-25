@@ -70,8 +70,6 @@ const NON_HTML_FIXTURE_EXEMPTIONS: Readonly<Record<string, string>> = {
     "Immutable adverse-state replay captured 2026-10-07 from api.makina.finance/v1/strategies/0x6b006870C83b1Cd49E766Ac9209f8d68763Df721; freezes issuer AUM disagreement and stale underlying accounting.",
   "makina-allocations-oct7-2026.json":
     "Immutable adverse-state replay captured 2026-10-07 from api.makina.finance/v1/strategies/0x6b006870C83b1Cd49E766Ac9209f8d68763Df721/allocations; paired counted-position clocks and net allocation book must remain historical.",
-  "midas-rejection-oct7-2026.json":
-    "Immutable adverse-state replay captured 2026-10-07 from api-prod.midas.app/api/transparency and its by-timestamp route; product-specific stale, undated, opaque, leveraged and missing-position bodies preserve rejection evidence.",
   "xusd-balances-oct7-2026.json":
     "Immutable adverse-state replay captured 2026-10-07 from public-node.rsk.co at Rootstock block 9305511; pins ten reserve balances and nominal liability shortfall rather than following current chain state.",
   "xusd-decimals-oct7-2026.json":
@@ -84,8 +82,6 @@ const NON_HTML_FIXTURE_EXEMPTIONS: Readonly<Record<string, string>> = {
     "Immutable adverse-state replay captured 2026-10-07 from api-monad-mainnet-full.n.dwellir.com at Monad block 111423307; preserves six state responses proving the designated-reserve deficit.",
   "axis-transparency-api-2026-11-02.json":
     "captured 2026-11-03 from https://transparency-api.axis.to/dashboard?reserves_period=max&performance_period=max (payload overview.last_updated 2026-11-02T08:46:44.936Z), trimmed to overview, dashboard_details.asset_classes and reserves_history; frozen regression input whose clock the adapter tests pin, JSON cannot carry an HTML-comment capture header",
-  "midas-mtbill-transparency.json":
-    "captured 2026-09-14 from the mTBILL issuer transparency API (payload updatedAt 2026-09-14T13:06:24.130Z); frozen JSON regression input cannot carry an HTML-comment capture header",
   "tether-transparency.json":
     "captured 2026-07-09 (per tether-transparency.test.ts); JSON cannot carry an HTML-comment capture header",
   "frax-balance-sheet.json": "JSON cannot carry an HTML-comment capture header",

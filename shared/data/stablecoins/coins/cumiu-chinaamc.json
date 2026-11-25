@@ -115,5 +115,14 @@
     "yieldSource": "ChinaAMC USD money-market portfolio",
     "yieldType": "nav-appreciation"
   },
-  "launchDate": "2025-08-13"
+  "launchDate": "2025-08-13",
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "Accumulating USD money-market fund share (ChinaAMC Digital MMF Class I), not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
+    "source": {
+      "label": "ChinaAMC USD Digital MMF key facts",
+      "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/chinaamc/resources/E-KFS-ChinaAMCUSDDigitalMMF(UnlistedClass)(April2026).pdf"
+    }
+  }
 }

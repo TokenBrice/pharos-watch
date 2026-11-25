@@ -2,7 +2,8 @@ import complianceAsset from "@shared/data/stablecoins/coins.compliance.generated
 import { getSnapshotSafetyAssessment } from "@/lib/safety-grade-snapshot";
 import { GENIUS_REGIME_STATE, isGeniusRegimeEffective } from "@shared/lib/compliance-regime-state";
 import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
-import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { isTokenizedFundId } from "@shared/lib/stablecoins/listing-governance";
+import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 
 /** Build-time coverage facts for the /api/ header and the team-plan card; counted, never hardcoded. */
 export interface ApiCoverageFacts {
@@ -14,16 +15,17 @@ export interface ApiCoverageFacts {
 }
 
 export function getApiCoverageFacts(): ApiCoverageFacts {
+  const activeStablecoins = ACTIVE_STABLECOINS.filter((coin) => !isTokenizedFundId(coin.id));
   const chains = new Set<string>();
   let deployments = 0;
-  for (const coin of TRACKED_STABLECOINS) {
+  for (const coin of activeStablecoins) {
     for (const contract of [...(coin.contracts ?? []), ...(coin.tradedContracts ?? [])]) {
       deployments += 1;
       chains.add(contract.chain);
     }
   }
   return {
-    stablecoins: ACTIVE_STABLECOINS.length,
+    stablecoins: activeStablecoins.length,
     deployments,
     chains: chains.size,
     complianceDossiers: complianceAsset.length,

@@ -453,20 +453,4 @@ describe("tracked holder source contracts", () => {
       sqlite.close();
     }
   });
-
-  it("isolates a D1 anchor-read failure in the Ondo USDY oracle entry", async () => {
-    const db = mockD1(
-      [matchMarker("yield-sync:nav-oracle-prior-anchor", [], { throwError: new Error("D1_ERROR: disk I/O error") })],
-      { assertMatchesUsed: true },
-    );
-    const onOutcome = vi.fn();
-    const entry = TRACKED_OPTIONAL_SOURCE_REGISTRY.find((candidate) => candidate.stablecoinId === "usdy-ondo-finance"
-      && candidate.sourceKey === "protocol-api:ondo-usdy-continuous-oracle");
-    expect(entry).toBeDefined();
-
-    // A reader failure is one failed optional source, not a whole-run abort.
-    await expect(entry!.run({ db, startSec: 1_771_000_000, onOutcome })).resolves.toBeNull();
-    expect(onOutcome).toHaveBeenCalledTimes(1);
-    expect(onOutcome).toHaveBeenCalledWith({ label: "Ondo USDY oracle source", outcome: "failed" });
-  });
 });

@@ -6,6 +6,7 @@ import {
 import { isThreatBand, type ThreatBand } from "@shared/lib/classification";
 import { getV9GradeRiskBucket, type V9GradeRiskBucket } from "@shared/lib/safety-grade-buckets";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { isTokenizedFundId } from "@shared/lib/stablecoins/listing-governance";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { SAFETY_GRADE_VALUES, type SafetyGrade } from "@shared/types/report-card-grade";
@@ -110,7 +111,7 @@ function buildAssessmentIndex(): Map<string, SnapshotSafetyAssessment> {
   const index = new Map<string, SnapshotSafetyAssessment>();
   const rows = Array.isArray(SCORES_LATEST_DATASET.rows) ? SCORES_LATEST_DATASET.rows : [];
   for (const row of rows) {
-    if (typeof row.stablecoinId !== "string") continue;
+    if (typeof row.stablecoinId !== "string" || isTokenizedFundId(row.stablecoinId)) continue;
     const assessment = toSnapshotSafetyAssessment(row.safetyGrade, row.safetyScore);
     if (assessment) index.set(row.stablecoinId, assessment);
   }
@@ -126,6 +127,7 @@ const ASSESSMENT_BY_STABLECOIN_ID = buildAssessmentIndex();
  * the release's snapshot; coins without a rated grade return null.
  */
 export function getSnapshotSafetyAssessment(stablecoinId: string): SnapshotSafetyAssessment | null {
+  if (isTokenizedFundId(stablecoinId)) return null;
   return ASSESSMENT_BY_STABLECOIN_ID.get(stablecoinId) ?? null;
 }
 
@@ -140,7 +142,8 @@ export function toScoresLatestSnapshotRow(
 ): ScoresLatestSnapshotRow | null {
   const asOfMs = typeof asOfISO === "string" ? Date.parse(asOfISO) : Number.NaN;
   if (!Number.isFinite(asOfMs) || asOfMs <= 0) return null;
-  const assessment = toSnapshotSafetyAssessment(row.safetyGrade, row.safetyScore);
+  const isTokenizedFund = typeof row.stablecoinId === "string" && isTokenizedFundId(row.stablecoinId);
+  const assessment = isTokenizedFund ? null : toSnapshotSafetyAssessment(row.safetyGrade, row.safetyScore);
   const projected: ScoresLatestSnapshotRow = {
     grade: assessment?.grade ?? null,
     score: assessment?.score ?? null,
@@ -177,6 +180,7 @@ export function formatSnapshotSafetyScoreLabel(
   stablecoinId: string,
   release?: SnapshotReleasePin,
 ): string | null {
+  if (isTokenizedFundId(stablecoinId)) return null;
   const assessment = release
     ? (release.assessments[stablecoinId] ?? null)
     : getSnapshotSafetyAssessment(stablecoinId);
@@ -373,6 +377,10 @@ export function admitSafetyScoresPreviewRows(
       continue;
     }
     ratedCount += 1;
+    if (isTokenizedFundId(stablecoinId)) {
+      omitted.push({ id: stablecoinId, reason: "tokenized-fund-not-graded" });
+      continue;
+    }
     const score = row.data.safetyScore;
     const grade = row.data.safetyGrade;
     if (typeof score !== "number" || !Number.isFinite(score) || score < 0 || score > 100) {

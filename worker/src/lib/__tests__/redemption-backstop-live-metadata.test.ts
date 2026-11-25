@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readRedemptionBackstopLiveMetadata } from "../redemption-backstop/live-metadata";
 import type { ReserveSyncStateRecord } from "../live-reserves/store";
 import { parseReserveCompositionRow } from "../live-reserves/store-row-decoding";
-import { dusdOpenQueueMetadata, fpiControllerState, liveSnapshot } from "./redemption-backstop-sources.test-support";
+import { dusdOpenQueueMetadata, liveSnapshot } from "./redemption-backstop-sources.test-support";
 
 const now = 1_780_000_000;
 
@@ -529,56 +529,6 @@ describe("readRedemptionBackstopLiveMetadata", () => {
     expect(metadata).toMatchObject({
       freshnessKind: "unverified", hasScoringEligibleFreshness: false,
       capacityConfidence, canUseCapacity, capacityReason,
-    });
-  });
-
-  it("parses only accepted FPI controller attempts without changing legacy telemetry", () => {
-    const legacyRedemption = {
-      capacityUsd: 2_000_000,
-      capacityKind: "live-proxy-validated",
-      freshnessKind: "verified-source-timestamp",
-      sourceTimestamp: now - 60,
-      routeStatus: "open",
-      routeStatusSource: "protocol-api",
-      feeBps: 17,
-    };
-    const state = fpiControllerState(now, 30);
-    const accepted = readMetadata("fpi-frax", {
-      freshnessMode: "verified",
-      sourceTimestamp: now - 60,
-      redemption: {
-        ...legacyRedemption,
-        v9RouteAttempt: { status: "accepted", attemptedAtSec: now, state },
-      },
-    });
-    const rejected = readMetadata("fpi-frax", {
-      freshnessMode: "verified",
-      sourceTimestamp: now - 60,
-      redemption: {
-        ...legacyRedemption,
-        v9RouteAttempt: {
-          status: "rejected",
-          attemptedAtSec: now,
-          rejectionCode: "calculation-mismatch",
-          blockNumber: 25_600_682,
-        },
-      },
-    });
-
-    expect(accepted.v9FpiControllerRouteState).toEqual(state);
-    expect(rejected.v9FpiControllerRouteState).toBeNull();
-    expect({
-      canUseCapacity: accepted.canUseCapacity,
-      canUseFee: accepted.canUseFee,
-      immediateRedeemableUsd: accepted.immediateRedeemableUsd,
-      redemptionFeeBps: accepted.redemptionFeeBps,
-      routeStatus: accepted.routeStatus,
-    }).toEqual({
-      canUseCapacity: rejected.canUseCapacity,
-      canUseFee: rejected.canUseFee,
-      immediateRedeemableUsd: rejected.immediateRedeemableUsd,
-      redemptionFeeBps: rejected.redemptionFeeBps,
-      routeStatus: rejected.routeStatus,
     });
   });
 

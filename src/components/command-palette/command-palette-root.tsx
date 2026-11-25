@@ -16,6 +16,10 @@ import { useWatchlist } from "@/hooks/use-watchlist";
 import { useCoinStates } from "@/hooks/use-coin-states";
 import { CoinStateChip } from "@/components/coin-state-chip";
 import { SafetyGradeBadge } from "@/components/safety-scores/safety-grade-badge";
+import {
+  CLIENT_ACTIVE_TOKENIZED_FUND_IDS,
+  isClientTokenizedFundId,
+} from "@shared/lib/stablecoins/aggregate-client-registry";
 import type { ReportCardGrade } from "@shared/types/report-card-grade";
 import { groupCommandPaletteResults } from "@/components/command-palette/command-palette-model";
 import { clampCommandPaletteSelectedIndex } from "@/components/command-palette/command-palette-actions";
@@ -114,17 +118,17 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     const map = new Map<string, ReportCardGrade>();
     if (safetyGradesData?.grades) {
       for (const row of safetyGradesData.grades) {
-        if (row.grade) map.set(row.id, row.grade);
+        if (row.grade && !isClientTokenizedFundId(row.id)) map.set(row.id, row.grade);
       }
     }
     if (reportCardsFullData?.cards) {
       for (const card of reportCardsFullData.cards) {
-        if (card.grade) map.set(card.id, card.grade);
+        if (card.grade && !isClientTokenizedFundId(card.id)) map.set(card.id, card.grade);
       }
     }
     if (reportCardsTableData?.cards) {
       for (const card of reportCardsTableData.cards) {
-        if (card.grade) map.set(card.id, card.grade);
+        if (card.grade && !isClientTokenizedFundId(card.id)) map.set(card.id, card.grade);
       }
     }
     return map;
@@ -435,6 +439,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                 const currentIndex = flatIndex++;
                 const isSelected = currentIndex === selectedIndex;
                 const coinState = item.coinId ? coinStates.get(item.coinId)?.[0] : undefined;
+                const isTokenizedFund = item.coinId ? CLIENT_ACTIVE_TOKENIZED_FUND_IDS.has(item.coinId) : false;
                 const safetyGrade = item.coinId ? cachedSafetyGrades.get(item.coinId) : undefined;
 
                 return (
@@ -493,7 +498,14 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                         </span>
                       )}
                     </div>
-                    {safetyGrade ? (
+                    {isTokenizedFund ? (
+                      <span
+                        className="shrink-0 rounded-full border border-border/60 bg-muted/40 px-1.5 py-0.5 text-3xs font-medium leading-tight text-muted-foreground"
+                        title="Tokenized fund — not graded on Safety Score"
+                      >
+                        Not graded
+                      </span>
+                    ) : safetyGrade ? (
                       <SafetyGradeBadge
                         grade={safetyGrade}
                         size="xs"

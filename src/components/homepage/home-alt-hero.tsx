@@ -20,6 +20,7 @@ import { HEADLINE_STABLECOIN_COUNT, HEADLINE_STABLECOIN_LABEL } from "@/lib/univ
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { buildStaticCompareHref } from "@/lib/compare-links";
 import { DIRECTION_TONE_CLASSES } from "@shared/lib/classification";
+import { getLatestSupplyPerimeterChange } from "@shared/lib/supply-perimeter-changes";
 import { DAY_MS } from "@shared/lib/time-constants";
 
 // OTHERS cohort dot; violet pulled from the shared chart palette.
@@ -40,7 +41,7 @@ function computeHistorySupplyDeltaPct(rows: readonly TotalMcapChartRow[], days: 
   if (!latest) return null;
 
   const targetTs = latest.ts - days * DAY_MS;
-  let bestPrior: { diff: number; total: number } | null = null;
+  let bestPrior: { diff: number; ts: number; total: number } | null = null;
   for (const row of rows) {
     if (row.total == null || !Number.isFinite(row.total) || row.total <= 0) continue;
     if (row.ts >= latest.ts) continue;
@@ -48,10 +49,11 @@ function computeHistorySupplyDeltaPct(rows: readonly TotalMcapChartRow[], days: 
     if (offset < -DELTA_MAX_BEFORE_MS || offset > DELTA_MAX_AFTER_MS) continue;
     const diff = Math.abs(offset);
     if (!bestPrior || diff < bestPrior.diff) {
-      bestPrior = { diff, total: row.total };
+      bestPrior = { diff, ts: row.ts, total: row.total };
     }
   }
   if (!bestPrior) return null;
+  if (getLatestSupplyPerimeterChange(bestPrior.ts / 1000, latest.ts / 1000) !== null) return null;
   const pct = ((latest.total - bestPrior.total) / bestPrior.total) * 100;
   return Number.isFinite(pct) ? pct : null;
 }

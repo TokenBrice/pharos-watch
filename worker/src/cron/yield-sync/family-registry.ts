@@ -148,9 +148,10 @@ const YIELD_SOURCE_KEY_ROUTES: readonly YieldSourceKeyRoute[] = [
     { routeOrder: 1, prefix: "protocol-api:vaults-fyi:", venueProtocol: "vaults-fyi", chainSegmentIndex: 2, family: null },
     { routeOrder: 2, prefix: "protocol-api:bima-susbd", venueProtocol: "bima", chainSegmentIndex: null, family: null },
     { routeOrder: 3, prefix: "protocol-api:etherfuse-cetes-current-issuance", venueProtocol: "etherfuse", chainSegmentIndex: null, family: null },
+    { routeOrder: 5, prefix: "protocol-api:ondo-usdy-oracle", venueProtocol: "ondo-yield-assets", chainSegmentIndex: null, family: null },
+    { routeOrder: 5, prefix: "protocol-api:ondo-usdy-continuous-oracle", venueProtocol: "ondo-yield-assets", chainSegmentIndex: null, family: null },
+    { routeOrder: 6, prefix: "protocol-api:midas-mmev-nav-oracle", venueProtocol: "midas-rwa", chainSegmentIndex: null, family: null },
     { routeOrder: 12, prefix: "onchain:bd-basedollar", venueProtocol: "base-dollar", chainSegmentIndex: null, family: null },
-    { routeOrder: OPTIONAL_YIELD_SOURCES.ondo.routeOrder, prefix: OPTIONAL_YIELD_SOURCES.ondo.legacySourceKey,
-      venueProtocol: OPTIONAL_YIELD_SOURCES.ondo.venueProtocol, chainSegmentIndex: null, family: null },
   ].sort((a, b) => a.routeOrder - b.routeOrder).map(({ routeOrder: _routeOrder, ...route }) => route),
   ...SUPPLEMENTAL_SOURCE_FAMILY_KEYS.flatMap((family) =>
     SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY[family].routes.map((route) => ({ ...route, family })),

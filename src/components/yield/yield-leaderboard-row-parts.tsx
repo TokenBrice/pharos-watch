@@ -15,7 +15,7 @@ import type { PysBreakdownValues } from "@/lib/yield-row-display";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 import { trackEvent } from "@/lib/analytics";
 import type { YieldResolvedRowBenchmark } from "@/lib/yield-benchmark";
-import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
+import { selectRowInvestmentWarningSignals } from "@/lib/yield-view-model-filter-axes";
 
 type AvailableYieldSource = {
   sourceKey: string;
@@ -60,6 +60,7 @@ export function YieldExpandedDetails({
   totalSourceCount: number;
   onOpenSourceSheet: (stablecoinId: string) => void;
 }) {
+  const investmentWarnings = selectRowInvestmentWarningSignals(row.warningSignals, Boolean(row.isTokenizedFund));
   return (
     <div className="border-t border-border/55 bg-muted/30 px-4 py-4">
       {row.pharosYieldScore !== null ? (
@@ -71,6 +72,7 @@ export function YieldExpandedDetails({
           sustainabilityMult={breakdown.sustainabilityMult}
           grade={grade}
           safetyScore={safetyScore}
+          tokenizedFund={row.isTokenizedFund}
           adjustedRiskPenalty={breakdown.adjustedRiskPenalty}
           sourceRiskPenalty={breakdown.sourceRiskPenalty}
           sourceRiskDriverLabel={sourceRiskDrivers[0]?.label ?? null}
@@ -101,7 +103,7 @@ export function YieldExpandedDetails({
                     trackEvent("yield_row_action", {
                       action: "provider_opened",
                       coin_id: row.id,
-                      warning_count: selectInvestmentWarningSignals(row.warningSignals).length,
+                      warning_count: investmentWarnings.length,
                     });
                   }}
                 >
@@ -125,10 +127,10 @@ export function YieldExpandedDetails({
             {!isYieldRankingSummary(row) ? (
               <YieldAccessStructure sourceRisk={row.sourceRisk} compact />
             ) : null}
-            {selectInvestmentWarningSignals(row.warningSignals).length > 0 ? (
+            {investmentWarnings.length > 0 ? (
               <ExpandedMetricSection title="Signals">
                 <ul className="mt-0.5 space-y-0.5 text-xs text-state-warn-solid">
-                  {selectInvestmentWarningSignals(row.warningSignals).map((signal) => (
+                  {investmentWarnings.map((signal) => (
                     <li key={signal}>
                       <span>{formatYieldWarningSignal(signal)}</span>
                       <span className="block text-muted-foreground">{formatYieldWarningSignalDescription(signal)}</span>

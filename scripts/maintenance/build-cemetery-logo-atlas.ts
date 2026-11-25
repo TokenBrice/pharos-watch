@@ -80,10 +80,11 @@ export const ATLAS_CELL_GUTTER = 2;
  * keep the 127-row atlas under the 150 KB budget. FXD takes q64 to 150.6 KB;
  * q63 keeps the expanded atlas within that unchanged budget. The 2026-11-18
  * logo-resolution pass gives ten frozen rows sharper sources, which take q63
- * to 150.2 KB; q62 keeps them within the same budget.
+ * to 150.2 KB; q62 keeps them within the same budget. The listing-policy 2.0
+ * freeze of FPI takes q62 (and q61) to 151.3 KB; q60 keeps it within the same budget.
  */
 export const ATLAS_WEBP_OPTIONS = {
-  quality: 62,
+  quality: 60,
   alphaQuality: 80,
   effort: 6,
 } as const;

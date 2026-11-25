@@ -55,8 +55,8 @@ function telemetryValue(
 
 describe("buildRedemptionBackstopCardViewModel", () => {
   it.each([
-    { stablecoinId: "mhyper-midas", businessDays: 6 },
-    { stablecoinId: "mre7yield-midas", businessDays: 10 },
+    { stablecoinId: "fusd-finchain", businessDays: 3 },
+    { stablecoinId: "brlv-crown", businessDays: 3 },
     { stablecoinId: "ousd-open-standard", businessDays: null },
   ])("does not infer an elapsed completion maximum for $stablecoinId", ({ stablecoinId, businessDays }) => {
     const config = getRedemptionBackstopConfig(stablecoinId)!;

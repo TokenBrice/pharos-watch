@@ -14,7 +14,6 @@
  */
 import { readFileSync } from "node:fs";
 import { URL } from "node:url";
-import { MIDAS_CONFIG, midasNetwork, MIDAS_CAPTURE_NOW } from "./midas-mtbill.test-support";
 import SOLOMON_CHANCERY_CAPTURE from "./fixtures/solomon-chancery-token-backing.json";
 import QCAD_BALANCES_CAPTURE from "./fixtures/qcad-balances-2026-10-07.json";
 import TETHER_TRANSPARENCY_CAPTURE from "./fixtures/tether-transparency.json";
@@ -29,9 +28,6 @@ import { AXIS_TRANSPARENCY_API_URL } from "../axis-issuer-classes";
 import { MEGAUSD_CUSTODY_DISCOVERY_URL } from "../megausd-custody-onchain";
 import { encodeBalanceOfCallData } from "../../../lib/evm-selectors";
 import COINBASE_ONED_CAPTURE from "./fixtures/coinbase-oned-por.json";
-const BLACKROCK_BRSRV_URL = "https://www.blackrock.com/cash/en-us/products/351891/fund/1464253357814.ajax?fileType=csv&fileName=RSVXX_holdings&dataType=fund";
-const BLACKROCK_BRSRV_CAPTURE = readFileSync(new URL("./fixtures/blackrock-brsrv-holdings.txt", import.meta.url), "utf8")
-  .replace(/<!--[^]*?-->\r?\n/g, "");
 
 export interface AdapterCorpusDrift {
   /** What the upstream changed, in the words of the failure it must produce. */
@@ -74,7 +70,6 @@ const CORPUS_NOT_REPLAYABLE_NAMES = [
   "europ-independent-assurance", "fdusd-independent-assurance", "fidd-independent-assurance", "gemini-independent-assurance",
   "issuer-attested-report", "rlusd-independent-assurance", "sbc-independent-assurance",
   "straitsx-independent-assurance", "paxos-independent-assurance", "myrc-independent-assurance",
-  "chinaamc-holdings-api",
 ] as const;
 export const CORPUS_NOT_REPLAYABLE = reasonsFromNames(
   CORPUS_NOT_REPLAYABLE_NAMES,
@@ -88,7 +83,6 @@ export const CORPUS_NOT_REPLAYABLE = reasonsFromNames(
     "audx-independent-assurance": INDEPENDENT_ASSURANCE_REASON,
     "europ-independent-assurance": "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by its adapter test file.",
     "straitsx-independent-assurance": INDEPENDENT_ASSURANCE_REASON,
-    "chinaamc-holdings-api": "No bound catalog coin: cumiu-chinaamc's liveReservesConfig was withdrawn on 2026-10-29 because the issuer payload duplicates a holding row and totals 103.19%, so the corpus cannot resolve a catalog config. The adapter stays registered for a future reviewed admission; its happy path, source clock and duplicate-row rejection are replayed in chinaamc-holdings-api.test.ts against the reviewed configuration.",
   },
 );
 
@@ -97,19 +91,19 @@ const CORPUS_BACKLOG_NAMES = [
   "astherus-earn-wrapper", "blast-usdb-yield-manager", "bridge-transparency", "cap-vault", "chainlink-nav",
   "chronicle-nav", "chainlink-por", "circle-transparency", "collateral-positions-api", "crvusd", "curated-validated",
   "usdai-hub", "dola-inverse", "erc4626-single-asset", "escrow-balance", "evm-branch-balances", "parallelizer-balances",
-  "xdai-bridge", "xpr-account-balances", "flying-tulip-ftusd", "frax-balance-sheet", "frax-fpi-collateral", "fx",
+  "xdai-bridge", "xpr-account-balances", "flying-tulip-ftusd", "frax-balance-sheet", "fx",
   "sodax-sonic", "gho", "hive-hbd-protocol", "idle-cdo-epoch-variant", "infinifi", "initia-wrapper-vault",
   "kava-cdp", "hliquity-hedera", "krwq-custodian", "liquity-v1", "liquity-native-active-pool", "liquity-v2-branches",
-  "m0", "m0-wrapper-underlying", "megausd-custody", "mento", "nest-vault-positions", "origin-vault-balances",
+  "m0", "m0-wrapper-underlying", "megausd-custody", "mento", "origin-vault-balances",
   "quantoz-transparency", "re-metrics", "reserve-protocol-dtf", "sgforge-coinvertible", "saturn-pyusdx",
   "solstice-attestation", "superstate-liquidity", "united-por", "usdgo-transparency",
   "usdai-proof-of-reserves", "usd1-bundle-oracle", "yamato", "youves-tezos", "zephyr-scanner", "djed-cardano",
-  "dgld-gold-mapper", "matrixdock-frs", "icp-gldt", "onre-holdings-csv", "avant-reserves-api", "afi-proof",
+  "dgld-gold-mapper", "matrixdock-frs", "icp-gldt", "avant-reserves-api", "onre-holdings-csv",
   "kerne-signed-por", "leverup-lvusd",
 ] as const;
 const GENERIC_BACKLOG_OWNERS: Record<string, true> = {
-  "moc-v3-buckets": true, "frax-balance-sheet": true, "frax-fpi-collateral": true, "sodax-sonic": true,
-  "djed-cardano": true, "onre-holdings-csv": true, "avant-reserves-api": true, "afi-proof": true,
+  "moc-v3-buckets": true, "frax-balance-sheet": true, "sodax-sonic": true,
+  "djed-cardano": true, "onre-holdings-csv": true, "avant-reserves-api": true,
 };
 export const CORPUS_BACKLOG = reasonsFromNames(
   CORPUS_BACKLOG_NAMES,
@@ -489,34 +483,6 @@ CORPUS_CASES["single-asset"] = {
   },
 };
 
-const SPIKO_ENDPOINT = "https://public-api.spiko.io/share-classes/SAFO/totals";
-// Trimmed happy path from spiko-api.test.ts; only fields read by the SAFO
-// catalog configuration are retained.
-const SPIKO_FIXTURE = {
-  totalShares: "1000000",
-  totalAssets: { value: "1010000", currency: "USD" },
-  netAssetValue: {
-    amount: { value: "1.0", currency: "USD" },
-    updatedAt: "2026-07-09T12:00:00.000Z",
-  },
-};
-CORPUS_CASES["spiko-api"] = {
-  coinId: "safo-spiko-usd",
-  nowSec: Date.parse("2026-07-09T12:01:00Z") / 1000,
-  network: { json: { [SPIKO_ENDPOINT]: SPIKO_FIXTURE } },
-  drift: {
-    label: "netAssetValue.updatedAt is dropped",
-    network: {
-      json: {
-        [SPIKO_ENDPOINT]: {
-          ...SPIKO_FIXTURE,
-          netAssetValue: { ...SPIKO_FIXTURE.netAssetValue, updatedAt: undefined },
-        },
-      },
-    },
-    outcome: "error",
-  },
-};
 const BTCFI_MARKET_ENDPOINT = "https://www.btcfi.one/api/getBtcfiMarket?isTestnet=false";
 const BTCFI_HANDLERS_ENDPOINT = "https://www.btcfi.one/api/getAvailableBtcfiHandlers?isTestnet=false";
 CORPUS_CASES.btcfi = {
@@ -742,65 +708,6 @@ CORPUS_CASES["river-protocol-info"] = {
   },
 };
 
-// Registry-pinned October 19 discovery, immutable October 16 SAVE object and
-// exact historical portfolio; fixture failure is never replaced by latest.
-CORPUS_CASES["midas-mtbill"] = {
-  coinId: "mtbill-midas",
-  coin: { ...resolveAdapterCoin("chainlink-nav", "mtbill-midas").coin, liveReservesConfig: MIDAS_CONFIG },
-  nowSec: MIDAS_CAPTURE_NOW,
-  network: midasNetwork(),
-  drift: {
-    label: "the exact historical portfolio is absent",
-    network: midasNetwork({ historical: {} }),
-    outcome: "error",
-  },
-};
-
-const USDY_PORTFOLIO_ENDPOINT = "https://ondo.finance/usdy";
-const USDY_PORTFOLIO_CAPTURE = readFileSync(new URL("./fixtures/ondo-usdy-portfolio.html", import.meta.url), "utf8");
-CORPUS_CASES["ondo-usdy"] = {
-  coinId: "usdy-ondo-finance",
-  nowSec: Date.parse("2026-10-25T21:45:00Z") / 1000,
-  network: { html: { [USDY_PORTFOLIO_ENDPOINT]: USDY_PORTFOLIO_CAPTURE } },
-  drift: {
-    label: "a portfolio category is no longer reviewed",
-    network: { html: { [USDY_PORTFOLIO_ENDPOINT]: USDY_PORTFOLIO_CAPTURE.replace("8a072b79-7c71-472b-8093-0a9c3347fb8f", "unknown") } },
-    outcome: "error",
-  },
-};
-
-const OUSG_PORTFOLIO_ENDPOINT = "https://ondo.finance/ousg";
-const OUSG_PORTFOLIO_CAPTURE = readFileSync(new URL("./fixtures/ondo-ousg-portfolio.html", import.meta.url), "utf8");
-const OUSG_CORPUS_NOW = Date.parse("2026-09-14T12:00:00Z") / 1000;
-const ousgCorpusRpc = (): Record<string, AdapterRpcValue> => {
-  const { config } = resolveAdapterCoin("ondo-ousg", "ousg-ondo-finance");
-  const params = parseLiveReserveAdapterParams("ondo-ousg", config.params);
-  const redemption = params.redemptionCapacity!;
-  return {
-    [`${params.tokenAddress}:decimals()`]: 18n,
-    [`${params.tokenAddress}:totalSupply()`]: 3_000_000n * 10n ** 18n,
-    [`${params.oracleAddress}:0xb3596f07`]: 113n * 10n ** 18n,
-    [`${params.oracleAddress}:0xeca6f018`]: "0x0000000000000000000000000000000000000123",
-    "0x0000000000000000000000000000000000000123:0xa4a28168": `0x${abiWord(113n * 10n ** 18n)}${abiWord(BigInt(OUSG_CORPUS_NOW - 60))}`,
-    [`${redemption.managerAddress}:0x8f4f9613`]: redemption.routerAddress,
-    [`${redemption.routerAddress}:0x2021065d`]: redemption.sourceAddress,
-    [`${redemption.managerAddress}:${redemption.pauseSelector}`]: false,
-    [`${redemption.managerAddress}:0x884a0501`]: true,
-    [`${redemption.managerAddress}:0x8f8eb812`]: 5_000n * 10n ** 6n,
-    [`${redemption.routerAddress}:0x6cde714a`]: 10_000_000n * 10n ** 6n,
-  };
-};
-CORPUS_CASES["ondo-ousg"] = {
-  coinId: "ousg-ondo-finance",
-  nowSec: OUSG_CORPUS_NOW,
-  network: { html: { [OUSG_PORTFOLIO_ENDPOINT]: OUSG_PORTFOLIO_CAPTURE }, rpc: ousgCorpusRpc() },
-  drift: {
-    label: "the portfolio scope changes to include non-tokenized book-entry interests",
-    network: { html: { [OUSG_PORTFOLIO_ENDPOINT]: OUSG_PORTFOLIO_CAPTURE.replace("excludes OUSG", "includes OUSG") }, rpc: ousgCorpusRpc() },
-    outcome: "error",
-  },
-};
-
 // Reviewed Ethereum block 26088429 (2026-09-30), using the same raw six-decimal
 // observations as theo-thusd-redemption.test.ts. The allowance-limited float is
 // min(360760.446791, 200400) USDC + min(20000, 400300) USDT = 220400 USD;
@@ -899,22 +806,6 @@ CORPUS_CASES["coinbase-oned-por"] = {
         [COINBASE_ONED_CAPTURE.capture.sourceUrl]: {
           errors: [{ message: "PersistedQueryNotFound", extensions: { code: "PERSISTED_QUERY_NOT_FOUND" } }],
         },
-      },
-    },
-  },
-};
-
-CORPUS_CASES["blackrock-brsrv-holdings"] = {
-  coinId: "brsrv-blackrock",
-  nowSec: Date.parse("2026-10-03T07:00:00Z") / 1000,
-  network: { html: { [BLACKROCK_BRSRV_URL]: BLACKROCK_BRSRV_CAPTURE } },
-  drift: {
-    label: "the securities market-value column is removed",
-    outcome: "error",
-    network: {
-      html: {
-        [BLACKROCK_BRSRV_URL]: BLACKROCK_BRSRV_CAPTURE
-          .replace("Market Value", "Changed Value"),
       },
     },
   },

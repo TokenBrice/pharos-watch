@@ -383,4 +383,48 @@ describe("same-ticker disambiguation and variant relationships", () => {
     expect(screen.getByRole("link", { name: /USDT/i }).getAttribute("href")).toBe("/stablecoin/usdt-tether/");
     expect(screen.getByRole("link", { name: /Browse active peers/i }).getAttribute("href")).toBe("/stablecoins/usd/");
   });
+
+  it("describes tokenized funds without Safety Score promises and routes eligible Telegram alerts only", () => {
+    const claimed: StablecoinAiSummary = {
+      ...summary,
+      text: "The {{grade}} overall grade reflects T-bill collateral.",
+      claimTokens: [{ token: "grade", placeholder: "{{grade}}", source: "report-card.grade", factsAsOf: "2026-05-02" }],
+    };
+    const buidl = TRACKED_META_BY_ID.get("buidl-blackrock")!;
+    const items = buildStablecoinFaqItems(buidl);
+    expect(items[1].answer).toContain("tokenized fund");
+    expect(items[1].answer).toContain("does not assign fund shares a stablecoin Safety Score letter grade");
+    const buidlView = render(<StablecoinDetailSeoContent coin={buidl} summary={claimed} />);
+    expect(buidlView.container.querySelector("h1")?.textContent).toContain("tokenized fund profile");
+    expect(buidlView.container.querySelector("h1")?.textContent).not.toContain("stablecoin analytics");
+    expect(buidlView.container.textContent).toContain("Tokenized fund — not a stablecoin; not Safety-graded");
+    expect(buidlView.container.textContent).not.toContain("The current Safety Score and live assessment are available on the interactive page.");
+    expect(buidlView.container.textContent).toContain("/subscribe dews,depeg buidl-blackrock");
+    expect(buidlView.container.textContent).not.toContain("/subscribe dews,depeg,safety buidl-blackrock");
+    buidlView.unmount();
+
+    const eutbl = TRACKED_META_BY_ID.get("eutbl-spiko")!;
+    const eutblView = render(<StablecoinDetailSeoContent coin={eutbl} summary={claimed} />);
+    expect(eutblView.container.textContent).not.toContain("The current Safety Score and live assessment are available on the interactive page.");
+    expect(eutblView.container.textContent).not.toContain("/subscribe dews");
+    expect(eutblView.container.textContent).not.toContain("Alert command:");
+    expect(screen.queryByRole("link", { name: "Telegram alerts" })).toBeNull();
+    eutblView.unmount();
+
+    const reusd = TRACKED_META_BY_ID.get("reusd-re-protocol")!;
+    const reusdView = render(<StablecoinDetailSeoContent coin={reusd} summary={claimed} />);
+    expect(reusdView.container.textContent).toContain("/subscribe reserve reusd-re-protocol");
+    expect(reusdView.container.textContent).not.toContain("/subscribe dews");
+    reusdView.unmount();
+
+    const susde = TRACKED_META_BY_ID.get("susde-ethena")!;
+    const susdeView = render(<StablecoinDetailSeoContent coin={susde} />);
+    expect(susdeView.container.textContent).toMatch(/\/subscribe safety(,reserve)? susde-ethena/);
+    expect(susdeView.container.textContent).not.toContain("/subscribe dews");
+    susdeView.unmount();
+
+    const frozen = render(<StablecoinDetailSeoContent coin={TRACKED_META_BY_ID.get("msy-main-street")!} summary={claimed} />);
+    expect(frozen.container.querySelector("h1")?.textContent).toContain("frozen stablecoin archive");
+    expect(frozen.container.textContent).not.toContain("The current Safety Score and live assessment are available on the interactive page.");
+  });
 });

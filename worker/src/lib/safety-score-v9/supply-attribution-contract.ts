@@ -221,7 +221,7 @@ const WM_DEPLOYMENT_IDENTITIES: Readonly<Record<string, WmDeploymentIdentity>> =
 const CENTRIFUGE_V3_SPOKE_ADDRESS =
   "0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab";
 export const PHAROS_REVIEWED_DEPLOYMENT_MIN_BLOCK_LAG = 15;
-// Issuer rotation: JTRSY slot 462868190, ACRDX slot 462868261; reverified finalized at slot 465239190.
+// Issuer rotation: JTRSY slot 462868190; reverified finalized at slot 465239190.
 const CENTRIFUGE_SOLANA_MINT_AUTHORITY =
   "BUo4FKP1hSAZ1zcNGzJHTS1V9zcQM8fzUFpYj1NboRK4";
 const SOLANA_TOKEN_2022_PROGRAM =
@@ -324,58 +324,6 @@ const CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES: Readonly<
         "cc94a8560b293e9d6b9a6b460240b51b9d842dcb074dd8e682b6f863c74d5efc",
       controllerAddress: CENTRIFUGE_V3_SPOKE_ADDRESS,
       safeBlockLag: 2,
-    },
-  },
-  "acrdx-anemoy-apollo": {
-    "ethereum:0x9477724bb54ad5417de8baff29e59df3fb4da74f": {
-      runtime: "evm",
-      liabilityModel: "protocol-burn-mint",
-      runtimeCodeSha256:
-        "4013ef4e7e372b27a793ddb12e1ac86b6cd6677f361014d3c06a61e7171cc6e1",
-      controllerAddress: CENTRIFUGE_V3_SPOKE_ADDRESS,
-      safeBlockLag: 2,
-    },
-    "plume:0x9477724bb54ad5417de8baff29e59df3fb4da74f": {
-      runtime: "evm",
-      liabilityModel: "protocol-burn-mint",
-      runtimeCodeSha256:
-        "0212b631a7889adf5f74857c3768a211a2a25dce9c57e5630d25f6f1c056860c",
-      controllerAddress: CENTRIFUGE_V3_SPOKE_ADDRESS,
-      safeBlockLag: 24,
-      extraRpcUrls: SUPPLY_ATTRIBUTION_RPC_URLS.plume,
-    },
-    "monad:0x2fabf1c784b8583d63c00c5c9c0377d8cf1a3245": {
-      runtime: "evm",
-      liabilityModel: "protocol-burn-mint",
-      runtimeCodeSha256:
-        "5c903ebeaedc9bbbef618bab8106f93c4fae50fb2b8e15870bf346056f9bd1c5",
-      controllerAddress: CENTRIFUGE_V3_SPOKE_ADDRESS,
-      safeBlockLag: 10,
-      extraRpcUrls: SUPPLY_ATTRIBUTION_RPC_URLS.monad,
-    },
-    "optimism:0x2fabf1c784b8583d63c00c5c9c0377d8cf1a3245": {
-      runtime: "evm",
-      liabilityModel: "protocol-burn-mint",
-      runtimeCodeSha256:
-        "799525537471dc553ff39869d51105dd1ed4965cb205343248c76b8b6f1c33b6",
-      controllerAddress: CENTRIFUGE_V3_SPOKE_ADDRESS,
-      safeBlockLag: 12,
-    },
-    "base:0x9477724bb54ad5417de8baff29e59df3fb4da74f": {
-      runtime: "evm",
-      liabilityModel: "protocol-burn-mint",
-      runtimeCodeSha256:
-        "2d9d20e9b8c196f718da3e531685c39a9e562f1ca30fd4c2483a4b42e0813a08",
-      controllerAddress: CENTRIFUGE_V3_SPOKE_ADDRESS,
-      safeBlockLag: 12,
-    },
-    "solana:ACDR3LGFrMuDZSDRyJjncFCzo5c8xkQxhWx4im4Vmq8G": {
-      runtime: "solana",
-      liabilityModel: "protocol-burn-mint",
-      programOwner: SOLANA_TOKEN_2022_PROGRAM,
-      mintAuthority: CENTRIFUGE_SOLANA_MINT_AUTHORITY,
-      controllerAddress: CENTRIFUGE_SOLANA_MINT_AUTHORITY,
-      controllerProgramOwner: SOLANA_SYSTEM_PROGRAM,
     },
   },
 };

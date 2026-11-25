@@ -1,4 +1,5 @@
 import { DigestGradeTransitionAccountingSchema, type DigestEventPeriod } from "@shared/types/digest";
+import { CORE_STABLECOIN_AGGREGATE_UNIVERSE } from "@shared/lib/stablecoins/aggregate-universe";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type {
   DigestInputData,
@@ -147,7 +148,7 @@ export function rollupDigestInputs(
   expectedDays: number = WEEKLY_ROLLUP_EXPECTED_DAYS,
   gradeTransitionPeriod?: DigestEventPeriod,
 ): RollupSummary {
-  const coreInputs = inputs.filter((input) => input.aggregateUniverse === "core-stablecoins-v1");
+  const coreInputs = inputs.filter((input) => input.aggregateUniverse === CORE_STABLECOIN_AGGREGATE_UNIVERSE);
   const aggregateInputs = coreInputs.length > 0 ? coreInputs : inputs;
   const psiScores = inputs.map((d) => d.stabilityIndex?.score).filter((s): s is number => s != null && Number.isFinite(s));
   const latestInput = aggregateInputs[aggregateInputs.length - 1];

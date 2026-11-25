@@ -278,6 +278,35 @@ describe("CommandPalette", () => {
     expect(row.querySelector('[aria-label="Safety grade A"]')?.textContent).toBe("A");
   });
 
+  it("shows Not graded only for active tokenized funds and suppresses cached grades on inactive funds", () => {
+    queryClient.setQueryData(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9Table.queryKey, {
+      data: {
+        cards: [
+          { id: "buidl-blackrock", grade: "NR", score: null },
+          { id: "msy-main-street", grade: "B", score: 75 },
+          { id: "benji-franklin-templeton", grade: "A", score: 85 },
+        ],
+      },
+      meta: { updatedAt: Date.now() / 1000, ageSeconds: 0, status: "fresh" },
+    });
+    renderPalette();
+    const input = screen.getByRole("combobox", { name: "Search" });
+    fireEvent.change(input, { target: { value: "BUIDL" } });
+    const activeRow = screen.getByRole("option", { name: /BlackRock USD Institutional Digital Liquidity Fund/i });
+    expect(activeRow.textContent).toContain("Not graded");
+    expect(activeRow.querySelector('[aria-label="Safety grade NR"]')).toBeNull();
+
+    for (const [query, pattern] of [
+      ["msy-main-street", /msY/i],
+      ["benji-franklin-templeton", /BENJI/i],
+    ] as const) {
+      fireEvent.change(input, { target: { value: query } });
+      const row = screen.getByRole("option", { name: pattern });
+      expect(row.textContent).not.toContain("Not graded");
+      expect(row.querySelector('[aria-label^="Safety grade"]')).toBeNull();
+    }
+  });
+
   it("surfaces route-contextual dossier actions and top verb hint chips", () => {
     pathnameMock.current = "/stablecoin/usdc-circle/";
     renderPalette();

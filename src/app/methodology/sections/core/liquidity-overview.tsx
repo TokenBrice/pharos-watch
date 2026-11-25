@@ -47,7 +47,8 @@ export function LiquidityOverview() {
       <p>
         Methodology v6.95 adds pinned reviewed targets on already-active Pancake V3 and Uniswap V3 families.
         Active targets still need quote-time identity, freshness and execution checks; shadow pools remain
-        score-ineligible. CHFSAFO&apos;s exact Aquarius identity supplies supplemental non-exhaustive coverage.
+        score-ineligible. Reviewed Aquarius Soroban identities supply supplemental non-exhaustive coverage
+        (CHFSAFO left active collection when delisted under listing policy 2.0).
         A missing liquidity row schedules maintenance, not a zero-liquidity observation. Component weights,
         budgets, cadence and retained-TVL basis are unchanged. Fresh producer observations and final
         fixed-clock comparison remain required. Activation: October 14, 2026 12:40 UTC (release cut; 1791981600).

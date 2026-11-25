@@ -139,57 +139,6 @@ export function getReviewedUniswapV4Deployment(chain: string): ReviewedUniswapV4
   return UNISWAP_V4_REVIEWED_DEPLOYMENTS.find((deployment) => deployment.chain === normalized) ?? null;
 }
 
-export const CURVE_STABLESWAP_NG_ETHERLINK_FACTORY = {
-  address: "0x8271e06e5887fe5ba05234f5315c19f3ec90e8ad",
-  codeHash: "0xded1a5a542411bf8bced670953ccbed8dfc0443ee9d0e190e61cebc31631f87f",
-} as const;
-
-/** Factory membership, runtime and ordered coins verified at Etherlink block 53,950,012. */
-export const CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS = [
-  {
-    adapterProfileId: DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwapNg,
-    chain: "etherlink",
-    stablecoinId: "mtbill-midas",
-    poolAddress: "0x942644106b073e30d72c2c5d7529d5c296ea91ab",
-    poolCodeHash: "0xc9d3eb4bc778997b41a388aa2b065dc274ce4a518bf131c1a125083a1a484b37",
-    factoryPoolIndex: 2,
-    poolTokens: [
-      { address: "0xdd629e5241cbc5919847783e6c96b2de4754e438", symbol: "MTBILL", decimals: 18, trackedAssetId: "mtbill-midas" },
-      { address: "0x796ea11fa2dd751ed01b53c372ffdb4aaa8f00f9", symbol: "USDC", decimals: 6, trackedAssetId: "usdc-circle" },
-    ],
-    inputIndex: 0,
-    outputIndex: 1,
-  },
-  {
-    adapterProfileId: DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwapNg,
-    chain: "etherlink",
-    stablecoinId: "mmev-midas",
-    poolAddress: "0x269b47978f4348c96f521658ef452ff85906fcfe",
-    poolCodeHash: "0xf3d9267b9a8ef6fd280c75e5fef52d224da8425e4ff0560801cfeb869685cca5",
-    factoryPoolIndex: 4,
-    poolTokens: [
-      { address: "0x5542f82389b76c23f5848268893234d8a63fd5c8", symbol: "MMEV", decimals: 18, trackedAssetId: "mmev-midas" },
-      { address: "0x796ea11fa2dd751ed01b53c372ffdb4aaa8f00f9", symbol: "USDC", decimals: 6, trackedAssetId: "usdc-circle" },
-    ],
-    inputIndex: 0,
-    outputIndex: 1,
-  },
-  {
-    adapterProfileId: DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwapNg,
-    chain: "etherlink",
-    stablecoinId: "mre7yield-midas",
-    poolAddress: "0x5d37f9b272ca7cda2a05245b9a503746eefac88f",
-    poolCodeHash: "0x9f0910e38eb9a99a7c0ef4f620a00cedafe053f9ae1642b36579b3a2066273c6",
-    factoryPoolIndex: 8,
-    poolTokens: [
-      { address: "0x796ea11fa2dd751ed01b53c372ffdb4aaa8f00f9", symbol: "USDC", decimals: 6, trackedAssetId: "usdc-circle" },
-      { address: "0x733d504435a49fc8c4e9759e756c2846c92f0160", symbol: "MRE7YIELD", decimals: 18, trackedAssetId: "mre7yield-midas" },
-    ],
-    inputIndex: 1,
-    outputIndex: 0,
-  },
-] as const;
-
 /**
  * Exact retained-pool recovery within already-active QuoterV2 deployments.
  * Ordered tokens, decimals, fee, factory() and factory getPool() were checked
@@ -215,16 +164,6 @@ export const QUOTER_V2_REVIEWED_RETAINED_POOLS = [
     poolTokens: [
       { address: "0x7e2ac793f3e692f388e66c7dc28f739d13b0b71a", symbol: "GGBR", decimals: 18, trackedAssetId: "ggbr-goldfish-gold" },
       { address: "0xdac17f958d2ee523a2206206994597c13d831ec7", symbol: "USDT", decimals: 6, trackedAssetId: "usdt-tether" },
-    ],
-  },
-  {
-    adapterProfileId: "uniswap-v3-quoter-v2", protocol: "uniswap-v3", chain: "ethereum",
-    poolAddress: "0x48e6f94302ccf91f7a66d0f0c22aed1b8f265aa9", feePips: 10000,
-    factoryAddress: "0x1f98431c8ad98523631ae4a59f267346ea31f984",
-    inputAssetIds: ["mre7yield-midas"],
-    poolTokens: [
-      { address: "0x87c9053c819bb28e0d73d33059e1b3da80afb0cf", symbol: "mRe7YIELD", decimals: 18, trackedAssetId: "mre7yield-midas" },
-      { address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", symbol: "USDC", decimals: 6, trackedAssetId: "usdc-circle" },
     ],
   },
   {

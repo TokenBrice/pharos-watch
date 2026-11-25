@@ -977,17 +977,17 @@ describe("handlePegSummary", () => {
   it("includes navToken coins with peg signals withheld", async () => {
     const db = makePegSummaryDb([
       makeAsset({
-        id: "fpi-frax",
-        name: "Frax Price Index",
-        symbol: "FPI",
+        id: "xgld-unitas",
+        name: "Unitas Gold",
+        symbol: "xGLD",
         pegType: "peggedVAR",
         price: 1.12,
       }),
     ]);
     const res = await handlePegSummary(db);
     const data = PegSummaryResponseSchema.parse(await readJsonResponse(res, 200));
-    const fpi = data.coins.find((c) => c.id === "fpi-frax");
-    expect(fpi).toMatchObject({
+    const xgld = data.coins.find((c) => c.id === "xgld-unitas");
+    expect(xgld).toMatchObject({
       currentDeviationBps: null,
       pegScore: null,
       pegPct: null,
@@ -1006,9 +1006,9 @@ describe("handlePegSummary", () => {
       [
         makeAsset({ id: "usdt-tether", symbol: "USDT" }),
         makeAsset({
-          id: "fpi-frax",
-          name: "Frax Price Index",
-          symbol: "FPI",
+          id: "xgld-unitas",
+          name: "Unitas Gold",
+          symbol: "xGLD",
           pegType: "peggedVAR",
           price: 1.12,
         }),
@@ -1016,8 +1016,8 @@ describe("handlePegSummary", () => {
       undefined,
       [
         makeDepegEventRow({
-          stablecoin_id: "fpi-frax",
-          symbol: "FPI",
+          stablecoin_id: "xgld-unitas",
+          symbol: "xGLD",
           peg_type: "peggedVAR",
           direction: "above",
           peak_deviation_bps: 1200,
@@ -1043,9 +1043,9 @@ describe("handlePegSummary", () => {
     const db = makePegSummaryDb([
       makeAsset({ id: "usdt-tether", symbol: "USDT" }),
       makeAsset({
-        id: "fpi-frax",
-        name: "Frax Price Index",
-        symbol: "FPI",
+        id: "xgld-unitas",
+        name: "Unitas Gold",
+        symbol: "xGLD",
         pegType: "peggedVAR",
         price: 1.12,
       }),
@@ -1071,7 +1071,7 @@ describe("handlePegSummary", () => {
 
     expect(body.coins.length).toBeGreaterThanOrEqual(3);
     expect(body.coins.find((coin) => coin.id === "usdt-tether")?.currentDeviationBps).not.toBeNull();
-    expect(body.coins.find((coin) => coin.id === "fpi-frax")?.currentDeviationBps).toBeNull();
+    expect(body.coins.find((coin) => coin.id === "xgld-unitas")?.currentDeviationBps).toBeNull();
     expect(body.coins.find((coin) => coin.id === "cjpy-yamato")?.currentDeviationBps).toBeNull();
     expect(body.summary.totalTracked).toBe(1);
   });
@@ -1516,12 +1516,12 @@ describe("handlePegSummary", () => {
         expected: null,
       },
       {
-        id: "fpi-frax",
-        asset: makeAsset({ id: "fpi-frax", symbol: "FPI", pegType: "peggedVAR", price: 1.2 }),
+        id: "xgld-unitas",
+        asset: makeAsset({ id: "xgld-unitas", symbol: "xGLD", pegType: "peggedVAR", price: 1.2 }),
         peg: makeCachedPegCoin({
-          id: "fpi-frax",
-          symbol: "FPI",
-          name: "Frax Price Index",
+          id: "xgld-unitas",
+          symbol: "xGLD",
+          name: "Unitas Gold",
           pegType: "peggedVAR",
           pegCurrency: "VAR",
           currentDeviationBps: null,

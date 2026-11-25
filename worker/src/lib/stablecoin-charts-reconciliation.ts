@@ -2,12 +2,18 @@ import { logWorkerEventArgs } from "./structured-log";
 import { normalizeLegacyPegType } from "@shared/lib/peg-price-bounds";
 import { pegTypeFromCurrency as canonicalPegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { CORE_AGGREGATE_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/aggregate-registry";
+import { CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC } from "@shared/lib/stablecoins/aggregate-universe";
+import { CORE_AGGREGATE_V1_MEMBER_IDS } from "@shared/lib/stablecoins/aggregate-universe-v1";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { findAsOfSnapshot, MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC } from "@shared/lib/rate-series";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { StablecoinChartPoint } from "@shared/types/supply";
 
-interface StructuralSupplementalChartConfig {
+export interface StructuralSupplementalChartConfig {
   id: string;
   pegType: string;
+  activeFrom?: number;
+  inactiveFrom?: number;
 }
 
 export interface SupplyHistoryChartRow {
@@ -36,26 +42,66 @@ function pegTypeFromCurrency(pegCurrency: string): string | null {
   return canonicalPegTypeFromCurrency(pegCurrency) ?? null;
 }
 
-export const STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS: StructuralSupplementalChartConfig[] =
-  CORE_AGGREGATE_ACTIVE_STABLECOINS
-    .filter((meta) =>
-      meta.detailProvider
-      && meta.detailProvider !== "defillama"
-      && (!meta.llamaId || DEFILLAMA_CHART_ABSENT_LEGACY_IDS.has(meta.id))
-      && !DEFILLAMA_CHART_PRESENT_WITHOUT_LLAMA_ID.has(meta.id)
-    )
-    .flatMap((meta) => {
-      const pegType = pegTypeFromCurrency(meta.flags.pegCurrency);
-      if (!pegType) {
-        // Skip rather than throw so a new peg currency can roll out without a
-        // simultaneous worker code change crashing the Worker on startup.
-        logWorkerEventArgs("lib", "warn",
-          `[stablecoin-charts] skipping ${meta.id}: unsupported peg currency ${meta.flags.pegCurrency}`,
-        );
-        return [];
-      }
-      return [{ id: meta.id, pegType }];
-    });
+function isStructuralSupplementalCandidate(meta: StablecoinMeta): boolean {
+  return Boolean(
+    meta.detailProvider
+    && meta.detailProvider !== "defillama"
+    && (!meta.llamaId || DEFILLAMA_CHART_ABSENT_LEGACY_IDS.has(meta.id))
+    && !DEFILLAMA_CHART_PRESENT_WITHOUT_LLAMA_ID.has(meta.id),
+  );
+}
+
+function toStructuralSupplementalConfig(meta: StablecoinMeta): StructuralSupplementalChartConfig | null {
+  if (!isStructuralSupplementalCandidate(meta)) return null;
+  const pegType = pegTypeFromCurrency(meta.flags.pegCurrency);
+  if (!pegType) {
+    // Skip rather than throw so a new peg currency can roll out without a
+    // simultaneous worker code change crashing the Worker on startup.
+    logWorkerEventArgs("lib", "warn",
+      `[stablecoin-charts] skipping ${meta.id}: unsupported peg currency ${meta.flags.pegCurrency}`,
+    );
+    return null;
+  }
+  return { id: meta.id, pegType };
+}
+
+/**
+ * Date-fenced structural supplemental chart overlays across the listing-policy v2
+ * cutover: pre-cutover chart dates retain frozen v1 overlays so past history is not
+ * restated, while cutover-and-later dates use current v2 core aggregate membership.
+ */
+export function buildDateFencedSupplementalChartConfigs(
+  v1ActiveIds: ReadonlySet<string> = CORE_AGGREGATE_V1_MEMBER_IDS,
+  v2ActiveCoins: readonly StablecoinMeta[] = CORE_AGGREGATE_ACTIVE_STABLECOINS,
+  trackedMetaById: ReadonlyMap<string, StablecoinMeta> = TRACKED_META_BY_ID,
+  cutoverSec: number = CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC,
+): StructuralSupplementalChartConfig[] {
+  const v2Ids = new Set(v2ActiveCoins.map((meta) => meta.id));
+  const configs: StructuralSupplementalChartConfig[] = [];
+  const seen = new Set<string>();
+
+  for (const meta of v2ActiveCoins) {
+    const base = toStructuralSupplementalConfig(meta);
+    if (!base) continue;
+    seen.add(meta.id);
+    configs.push(v1ActiveIds.has(meta.id) ? base : { ...base, activeFrom: cutoverSec });
+  }
+
+  for (const id of v1ActiveIds) {
+    if (seen.has(id) || v2Ids.has(id)) continue;
+    const meta = trackedMetaById.get(id);
+    if (!meta) continue;
+    const base = toStructuralSupplementalConfig(meta);
+    if (!base) continue;
+    seen.add(id);
+    configs.push({ ...base, inactiveFrom: cutoverSec });
+  }
+
+  return configs;
+}
+
+export const STRUCTURAL_SUPPLEMENTAL_CHART_OVERLAYS: StructuralSupplementalChartConfig[] =
+  buildDateFencedSupplementalChartConfigs();
 
 function addBucketValue(target: Record<string, number | null>, pegType: string, value: number): void {
   if (!Number.isFinite(value) || value < 0) return;
@@ -67,7 +113,7 @@ function addBucketValue(target: Record<string, number | null>, pegType: string, 
 export function mergeStructuralSupplementalHistoryIntoCharts(
   basePoints: StablecoinChartPoint[],
   rows: SupplyHistoryChartRow[],
-  configs: readonly StructuralSupplementalChartConfig[] = STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS,
+  configs: readonly StructuralSupplementalChartConfig[] = STRUCTURAL_SUPPLEMENTAL_CHART_OVERLAYS,
 ): StablecoinChartPoint[] {
   if (basePoints.length === 0 || configs.length === 0) {
     return basePoints;
@@ -92,6 +138,8 @@ export function mergeStructuralSupplementalHistoryIntoCharts(
 
   const state = configs.map((config) => ({
     pegType: config.pegType,
+    activeFrom: config.activeFrom,
+    inactiveFrom: config.inactiveFrom,
     series: (rowsById.get(config.id) ?? []).sort((left, right) => left.date - right.date),
   }));
 
@@ -100,6 +148,8 @@ export function mergeStructuralSupplementalHistoryIntoCharts(
     const totals = { ...point.totalCirculatingUSD };
 
     for (const overlay of state) {
+      if (overlay.activeFrom != null && point.date < overlay.activeFrom) continue;
+      if (overlay.inactiveFrom != null && point.date >= overlay.inactiveFrom) continue;
       const snapshot = findAsOfSnapshot(
         overlay.series,
         point.date,

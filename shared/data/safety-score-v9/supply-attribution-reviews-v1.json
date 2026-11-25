@@ -3254,17 +3254,11 @@
   "providerRowExclusionReviews": [],
   "independentLiabilityAssetIds": [
     "usdz-anzen",
-    "brsrv-blackrock",
     "jpyt-dephaser",
-    "mhyper-midas",
-    "gldon-ondo",
-    "iauon-ondo",
-    "slvon-ondo",
     "ustb-superstate",
     "usdai-usd-ai",
     "susdai-usd-ai",
-    "zaru-blocktower",
-    "chfsafo-spiko"
+    "zaru-blocktower"
   ],
   "nativeSingleRouteReviews": [
     {

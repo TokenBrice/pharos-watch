@@ -38,6 +38,7 @@ export function SafetyGradeHero({
   savedGrade = null,
   read = "settled",
   mobile = false,
+  tokenizedFund = false,
 }: {
   reportCard: V9ConsumerCard | null;
   /** The release's dated grade, shown while the live read is pending. */
@@ -49,12 +50,16 @@ export function SafetyGradeHero({
    */
   read?: "settled" | "pending" | "failed";
   mobile?: boolean;
+  /** Tokenized funds are tracked without a stablecoin Safety Score grade. */
+  tokenizedFund?: boolean;
 }) {
   const letterClass = mobile ? "text-3xl" : "text-5xl";
   // Beside the name (below xl) the grade needs its own caption: a bare letter
   // reads as any rating.
   const caption = mobile ? (
-    <span className="w-full text-right text-2xs font-medium text-muted-foreground">Safety Score</span>
+    <span className="w-full text-right text-2xs font-medium text-muted-foreground">
+      {tokenizedFund ? "Tokenized fund" : "Safety Score"}
+    </span>
   ) : null;
   const scoreClass = mobile ? "text-xs" : "text-base";
   // The score rides inside the grade's trigger: the trigger's 44px minimum tap
@@ -64,6 +69,15 @@ export function SafetyGradeHero({
   const trackClass = mobile
     ? "flex min-h-16 w-32 shrink-0 flex-wrap items-baseline justify-end gap-x-1.5 gap-y-1"
     : "flex min-h-14 w-48 shrink-0 flex-wrap items-baseline justify-end gap-x-1.5 gap-y-1";
+
+  if (tokenizedFund) {
+    return (
+      <div className={trackClass} data-safety-grade-track data-safety-state="tokenized-fund">
+        {caption}
+        <span className="text-right text-xs font-semibold leading-tight text-muted-foreground">Not graded</span>
+      </div>
+    );
+  }
 
   if (!reportCard && read === "pending" && savedGrade?.grade) {
     // The release's grade, dated, until the live card arrives.

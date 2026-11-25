@@ -1,5 +1,6 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import ts from "typescript";
 import { z } from "zod";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { CHAIN_META } from "@shared/types/chain-identity";
@@ -7,7 +8,7 @@ import { normalizeDeploymentAddress } from "@shared/lib/deployment-resolver";
 import { COMMODITY_PEG_CURRENCIES, isCommodityPeg } from "@shared/lib/filter-tags";
 import { DEDICATED_SINGLE_TOKEN_GOLD_PROTOCOL_SLUGS, isDedicatedSingleTokenGoldProtocolSlug } from "@shared/lib/commodity-protocols";
 import { CanonicalOrderAssetSchema } from "@shared/lib/stablecoins/schema";
-import { type ListingDecisionRegistry } from "@shared/lib/stablecoins/listing-governance";
+import { LISTING_POLICY_VERSION, type ListingDecisionRegistry } from "@shared/lib/stablecoins/listing-governance";
 import { isActiveStablecoinMeta, isReadableStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { validateMintBridgeOwnership } from "@shared/lib/stablecoins/mint-bridge-ownership";
 import { validateVariantRelationships } from "@shared/lib/stablecoins/validate-variants";
@@ -16,6 +17,7 @@ import { classifyPegClass, normalizePegTypeFromCurrency } from "@shared/lib/peg-
 import { hasRuntimeOnchainSupplyPath } from "@shared/lib/onchain-supply-probe";
 import type { DeadStablecoin } from "@shared/types/cemetery";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
+import { LISTING_CLASS_VALUES } from "@shared/types/stablecoin-taxonomy";
 import { NativeBankDenomSchema } from "@shared/types/stablecoin-meta-primitives";
 import { isValidIsoDateOnly } from "@shared/types/date-primitives";
 import { MANIFEST_SOURCES } from "@shared/data/live-reserves/independent-assurance";
@@ -68,18 +70,10 @@ const ACTIVE_DEAD_LLAMA_ID_OVERLAP_ALLOWLIST = new Set([
   "65::usdh-hubble::usdh-hubble-2026-05",
 ]);
 
-const LISTING_CLASS_VALUES = [
-  "core-stablecoin",
-  "cash-equivalent",
-  "stablecoin-variant",
-  "stable-value-investment",
-  "excluded",
-] as const;
-
 const ListingDecisionRegistrySchema: z.ZodType<ListingDecisionRegistry> = z
   .object({
     schemaVersion: z.literal(1),
-    policyVersion: z.string().trim().min(1),
+    policyVersion: z.literal(LISTING_POLICY_VERSION),
     listingClassById: z.record(z.string().trim().min(1), z.enum(LISTING_CLASS_VALUES)),
   })
   .strict();
@@ -613,40 +607,224 @@ export function getListingGovernanceIssues(
     const holdListingClass = coin.mechanismArchetype == null
       && coin.mechanismArchetypeReview?.disposition === "unresolved"
       && MechanismArchetypeReviewSchema.safeParse(coin.mechanismArchetypeReview).success;
-    const expectedListingClass = coin.status === "delisted"
-      ? "excluded"
-      : coin.variantOf
-        ? "stablecoin-variant"
-        : coin.mechanismArchetype === "rwa-credit-fund"
-          ? "stable-value-investment"
-          : coin.flags.navToken === true || coin.mechanismArchetype === "tbill"
-            ? "cash-equivalent"
-            : holdListingClass
-              ? "stable-value-investment"
-              : "core-stablecoin";
-    if (listingClass !== expectedListingClass) {
-      issues.push(
-        `listing-decisions.json class for "${coin.id}" is ${listingClass}; expected ${expectedListingClass}`,
-      );
-    }
 
     if (coin.status === "delisted") {
       if (listingClass !== "excluded") {
-        issues.push(`listing-decisions.json must classify delisted "${coin.id}" as excluded`);
+        issues.push(
+          `listing-decisions.json class for "${coin.id}" is ${listingClass}; delisted assets must be excluded`,
+        );
       }
-    } else if (listingClass === "excluded") {
+      continue;
+    }
+
+    if (coin.priceBasis != null) {
+      issues.push(`priceBasis is reserved for sourced delisting records; remove it from "${coin.id}"`);
+    }
+    if (coin.exitMechanism != null) {
+      issues.push(`exitMechanism is reserved for sourced delisting records; remove it from "${coin.id}"`);
+    }
+
+    if (listingClass === "excluded") {
       issues.push(`listing-decisions.json marks non-delisted "${coin.id}" as excluded`);
-    } else {
-      if (coin.priceBasis != null) {
-        issues.push(`priceBasis is reserved for sourced delisting records; remove it from "${coin.id}"`);
+      continue;
+    }
+
+    if (coin.variantOf) {
+      if (listingClass !== "stablecoin-variant") {
+        issues.push(
+          `listing-decisions.json class for "${coin.id}" is ${listingClass}; expected stablecoin-variant (variantOf "${coin.variantOf}")`,
+        );
       }
-      if (coin.exitMechanism != null) {
-        issues.push(`exitMechanism is reserved for sourced delisting records; remove it from "${coin.id}"`);
+      continue;
+    }
+
+    if (holdListingClass) {
+      if (listingClass !== "review-hold") {
+        issues.push(
+          `listing-decisions.json class for "${coin.id}" is ${listingClass}; expected review-hold (unresolved mechanism review)`,
+        );
       }
+      continue;
+    }
+
+    if (listingClass !== "core-stablecoin" && listingClass !== "tokenized-fund") {
+      const reason = listingClass === "stablecoin-variant"
+        ? "variantOf is absent"
+        : "no valid unresolved mechanism review with null mechanismArchetype";
+      issues.push(
+        `listing-decisions.json class for "${coin.id}" is ${listingClass} (${reason}); expected core-stablecoin or tokenized-fund`,
+      );
     }
   }
 
   return issues;
+}
+
+export interface ReviewedLiveAdapterTokenizedFundLink {
+  linkerCoinId: string;
+  adapter: string;
+  adapterFile: string;
+  mapName: string;
+}
+
+/**
+ * Reviewed active `tokenized-fund` listings whose sole active non-fund linker
+ * lives in a live reserve adapter's `coinId` map rather than static coin or
+ * reserve sidecar data. Bound to the adapter map and active linker coin below;
+ * remove an entry when the adapter link retires.
+ */
+export const REVIEWED_LIVE_ADAPTER_ONLY_TOKENIZED_FUND_LINKS: Readonly<
+  Record<string, ReviewedLiveAdapterTokenizedFundLink>
+> = {
+  "jaaa-janus-henderson-anemoy": {
+    linkerCoinId: "usdf-falcon",
+    adapter: "falcon",
+    adapterFile: "worker/src/cron/reserve-adapters/falcon.ts",
+    mapName: "FALCON_TRACKED_RWA_ASSETS",
+  },
+  "jtrsy-anemoy": {
+    linkerCoinId: "usdf-falcon",
+    adapter: "falcon",
+    adapterFile: "worker/src/cron/reserve-adapters/falcon.ts",
+    mapName: "FALCON_TRACKED_RWA_ASSETS",
+  },
+};
+
+function unwrapExpression(expr: ts.Expression): ts.Expression {
+  let current = expr;
+  while (
+    ts.isParenthesizedExpression(current) ||
+    ts.isAsExpression(current) ||
+    ts.isSatisfiesExpression(current)
+  ) {
+    current = current.expression;
+  }
+  return current;
+}
+
+function propertyNameText(name: ts.PropertyName): string | null {
+  if (ts.isIdentifier(name) || ts.isStringLiteral(name) || ts.isNoSubstitutionTemplateLiteral(name)) {
+    return name.text;
+  }
+  return null;
+}
+
+export function extractAdapterMappedCoinIds(
+  adapterFile: string,
+  mapName: string,
+  repoRoot = process.cwd(),
+): Set<string> {
+  const filePath = join(repoRoot, adapterFile);
+  const source = ts.createSourceFile(filePath, readFileSync(filePath, "utf8"), ts.ScriptTarget.Latest, true);
+  const coinIds = new Set<string>();
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === mapName &&
+      node.initializer
+    ) {
+      const init = unwrapExpression(node.initializer);
+      if (ts.isObjectLiteralExpression(init)) {
+        for (const prop of init.properties) {
+          if (!ts.isPropertyAssignment(prop)) continue;
+          const entry = unwrapExpression(prop.initializer);
+          if (!ts.isObjectLiteralExpression(entry)) continue;
+          for (const entryProp of entry.properties) {
+            if (!ts.isPropertyAssignment(entryProp) || propertyNameText(entryProp.name) !== "coinId") continue;
+            const value = unwrapExpression(entryProp.initializer);
+            if (ts.isStringLiteral(value) || ts.isNoSubstitutionTemplateLiteral(value)) {
+              coinIds.add(value.text);
+            }
+          }
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return coinIds;
+}
+
+/**
+ * Advisory policy 2.0 retention check: every active `tokenized-fund` must be
+ * linked by at least one active non-fund asset in static dependencies, reserve
+ * sidecar `coinId` slices, or `dependencyReview.relationships` (or appear in
+ * `REVIEWED_LIVE_ADAPTER_ONLY_TOKENIZED_FUND_LINKS` backed by an active linker
+ * coin and matching adapter `coinId` entry). `nonLinkDispositions` do not
+ * qualify.
+ */
+export function getUnlinkedActiveTokenizedFundWarnings(
+  coins: readonly StablecoinMeta[],
+  listingDecisions: unknown = listingDecisionsAsset,
+  liveAdapterOnlyLinks: Readonly<
+    Record<string, ReviewedLiveAdapterTokenizedFundLink>
+  > = REVIEWED_LIVE_ADAPTER_ONLY_TOKENIZED_FUND_LINKS,
+  resolveAdapterCoinIds: (adapterFile: string, mapName: string) => ReadonlySet<string> = (adapterFile, mapName) =>
+    extractAdapterMappedCoinIds(adapterFile, mapName),
+): string[] {
+  const decisionsResult = ListingDecisionRegistrySchema.safeParse(listingDecisions);
+  if (!decisionsResult.success) return [];
+
+  const { listingClassById } = decisionsResult.data;
+  const activeNonFundById = new Map<string, StablecoinMeta>();
+  const linkedByActiveNonFund = new Set<string>();
+  for (const coin of coins) {
+    if (!isActiveStablecoinMeta(coin)) continue;
+    const coinClass = listingClassById[coin.id];
+    if (coinClass === "tokenized-fund" || coinClass === "excluded") continue;
+
+    activeNonFundById.set(coin.id, coin);
+    for (const dependency of coin.dependencies ?? []) {
+      linkedByActiveNonFund.add(dependency.id);
+    }
+    for (const reserve of coin.reserves ?? []) {
+      if (reserve.coinId) {
+        linkedByActiveNonFund.add(reserve.coinId);
+      }
+    }
+    for (const relationship of coin.dependencyReview?.relationships ?? []) {
+      linkedByActiveNonFund.add(relationship.id);
+    }
+  }
+
+  const adapterCoinIdsCache = new Map<string, ReadonlySet<string>>();
+  const getAdapterCoinIds = (adapterFile: string, mapName: string): ReadonlySet<string> => {
+    const cacheKey = `${adapterFile}::${mapName}`;
+    let cached = adapterCoinIdsCache.get(cacheKey);
+    if (!cached) {
+      cached = resolveAdapterCoinIds(adapterFile, mapName);
+      adapterCoinIdsCache.set(cacheKey, cached);
+    }
+    return cached;
+  };
+
+  const warnings: string[] = [];
+  for (const coin of coins) {
+    if (!isActiveStablecoinMeta(coin)) continue;
+    if (listingClassById[coin.id] !== "tokenized-fund") continue;
+    if (linkedByActiveNonFund.has(coin.id)) continue;
+    const adapterLink = Object.prototype.hasOwnProperty.call(liveAdapterOnlyLinks, coin.id)
+      ? liveAdapterOnlyLinks[coin.id]
+      : undefined;
+    if (adapterLink) {
+      const linker = activeNonFundById.get(adapterLink.linkerCoinId);
+      const linkerUsesAdapter =
+        linker?.liveReservesConfig?.adapter === adapterLink.adapter &&
+        linker.liveReservesConfig.suspended == null;
+      if (linkerUsesAdapter && getAdapterCoinIds(adapterLink.adapterFile, adapterLink.mapName).has(coin.id)) {
+        continue;
+      }
+      warnings.push(
+        `active tokenized-fund "${coin.id}" has a stale reviewed live-adapter link (${adapterLink.linkerCoinId} via ${adapterLink.adapterFile}#${adapterLink.mapName})`,
+      );
+      continue;
+    }
+    warnings.push(
+      `active tokenized-fund "${coin.id}" has no active non-fund linker in static dependencies, reserves, or dependencyReview (delist at next review or record a reviewed live-adapter link)`,
+    );
+  }
+  return warnings;
 }
 
 function getDeadStablecoinRegistryIssues(deadCoins: readonly DeadStablecoin[]): string[] {
@@ -897,6 +1075,10 @@ function runStablecoinDataCheck(): void {
 
     for (const issue of getListingGovernanceIssues(allEntries.map((entry) => entry.coin))) {
       reportError(`${STABLECOIN_DATA_DIR}: ${issue}`);
+    }
+
+    for (const warning of getUnlinkedActiveTokenizedFundWarnings(allEntries.map((entry) => entry.coin))) {
+      reportWarning(`${STABLECOIN_DATA_DIR}: ${warning}`);
     }
 
     const canonicalIssues = findCanonicalOrderIssues(canonicalOrder, allEntries);

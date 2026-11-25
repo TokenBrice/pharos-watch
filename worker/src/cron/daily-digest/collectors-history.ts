@@ -1,5 +1,6 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { DigestInputData } from "@shared/types/digest";
+import { CORE_STABLECOIN_AGGREGATE_UNIVERSE } from "@shared/lib/stablecoins/aggregate-universe";
 import { SUPPLY_PERIMETER_CHANGES, getLatestSupplyPerimeterChange, isAmbiguousSupplyPerimeterDay } from "@shared/lib/supply-perimeter-changes";
 import { round1 } from "@shared/lib/math";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
@@ -24,14 +25,14 @@ export async function collectTotalMcapAth(
         `SELECT CAST(json_extract(input_data, '$.totalMcapUsd') AS REAL) as ath_value, generated_at as ath_date
          FROM daily_digest
          WHERE (${NON_WEEKLY_DIGEST_SQL_FILTER})
-           AND json_extract(input_data, '$.aggregateUniverse') = 'core-stablecoins-v1'
+           AND json_extract(input_data, '$.aggregateUniverse') = ?
            AND json_extract(input_data, '$.totalMcapUsd') IS NOT NULL
            AND json_extract(input_data, '$.supplyCoverage.complete') = 1
            AND generated_at >= ?
          ORDER BY CAST(json_extract(input_data, '$.totalMcapUsd') AS REAL) DESC
          LIMIT 1`,
       )
-      .bind(getLatestSupplyPerimeterChange(0, ctx.nowSec) ?? 0)
+      .bind(CORE_STABLECOIN_AGGREGATE_UNIVERSE, getLatestSupplyPerimeterChange(0, ctx.nowSec) ?? 0)
       .first<{ ath_value: number | null; ath_date: number | null }>();
     if (!row || row.ath_value == null || row.ath_date == null || row.ath_value <= 0) return collectorOk(undefined);
     const dayTs = bucketUnixSecondsToUtcDay(row.ath_date);
@@ -106,8 +107,9 @@ export async function collectHistoricalContext(
       .prepare(
         `SELECT MIN(generated_at) as oldest FROM daily_digest
          WHERE (${NON_WEEKLY_DIGEST_SQL_FILTER})
-           AND json_extract(input_data, '$.aggregateUniverse') = 'core-stablecoins-v1'`,
+           AND json_extract(input_data, '$.aggregateUniverse') = ?`,
       )
+      .bind(CORE_STABLECOIN_AGGREGATE_UNIVERSE)
       .first<{ oldest: number | null }>();
     // The tracking window must measure the same rows the precedent query
     // searches below: a record-low claim cannot span pre-cutover editions that
@@ -126,10 +128,10 @@ export async function collectHistoricalContext(
            WHERE json_extract(input_data, '$.stabilityIndex.score') <= ?
              AND generated_at < ?
              AND (${NON_WEEKLY_DIGEST_SQL_FILTER})
-             AND json_extract(input_data, '$.aggregateUniverse') = 'core-stablecoins-v1'
+             AND json_extract(input_data, '$.aggregateUniverse') = ?
            ORDER BY generated_at DESC LIMIT 1`,
         )
-        .bind(displayScore, ctx.todayTs)
+        .bind(displayScore, ctx.todayTs, CORE_STABLECOIN_AGGREGATE_UNIVERSE)
         .first<{ generated_at: number; psi_score: number; psi_band: string }>();
 
       let psiPrecedent: {
@@ -241,10 +243,12 @@ export async function collectCrossDayTrends(
           psiTrajectory.push({ date, score: data.stabilityIndex.score, band: data.stabilityIndex.band });
         }
         const comparableSupply = perimeterChangedAt == null || row.generated_at >= perimeterChangedAt;
-        if (comparableSupply && data.aggregateUniverse === "core-stablecoins-v1" && data.supplyCoverage?.complete === true) {
+        if (comparableSupply && data.aggregateUniverse === CORE_STABLECOIN_AGGREGATE_UNIVERSE && data.supplyCoverage?.complete === true) {
           mcapTrajectory.push({ date, mcapUsd: data.totalMcapUsd });
         }
-        if (comparableSupply && data.supplyCoverage?.complete === true) completeCoverageMcapTrajectory.push({ date, mcapUsd: data.totalMcapUsd });
+        if (comparableSupply && data.aggregateUniverse == null && data.supplyCoverage?.complete === true) {
+          completeCoverageMcapTrajectory.push({ date, mcapUsd: data.totalMcapUsd });
+        }
         if (data.mintBurnFlows) {
           gaugeTrajectory.push({ date, gaugeScore: data.mintBurnFlows.gaugeScore });
         }

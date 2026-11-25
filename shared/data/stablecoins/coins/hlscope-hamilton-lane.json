@@ -101,5 +101,14 @@
       "message": "CoinGecko reports a live price and market cap but little or no secondary-market volume; Pharos treats HLSCOPE as a NAV-priced fund share."
     }
   ],
-  "launchDate": "2023-05-04"
+  "launchDate": "2023-05-04",
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "NAV-accreting tokenized senior secured private-credit feeder fund share (Hamilton Lane SCOPE), not a fixed-par stablecoin; no active stablecoin links it (listing policy 2.0).",
+    "source": {
+      "label": "Securitize Hamilton Lane SCOPE page",
+      "url": "https://securitize.io/primary-market/hl-scope"
+    }
+  }
 }

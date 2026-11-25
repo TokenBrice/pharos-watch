@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { HomeAltHeroChart } from "@/components/homepage/home-alt-hero-chart";
 import { HomeAltHeroStaticChart } from "@/components/homepage/home-alt-hero-static-chart";
 import { HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS } from "@/lib/homepage-hero-snapshot";
+import { MARKET_PERIMETER_MARKERS } from "@shared/lib/supply-perimeter-changes";
 import type { HomepageHistory, HomepageLaneMeta } from "@shared/types/homepage";
 
 vi.mock("@/hooks/use-chart-shell", () => ({
@@ -121,6 +122,29 @@ describe("HomeAltHeroChart", () => {
     expect(container.innerHTML).not.toContain("NaN");
     expect(container.innerHTML).not.toContain("Infinity");
   });
+
+  it("marks the listing-policy v2 perimeter step with a reference line and note only when spanned", () => {
+    const marker = MARKET_PERIMETER_MARKERS[0]!;
+    const spannedRows = [
+      { ...rows[0]!, ts: marker.tsMs - 20 * 86_400_000, total: 260 },
+      { ...rows[1]!, ts: marker.tsMs + 5 * 86_400_000, total: 248 },
+    ];
+    const { container, rerender } = render(<HomeAltHeroChart rows={spannedRows} />);
+    expect(container.querySelector(`[data-perimeter-marker="${marker.id}"]`)).not.toBeNull();
+    expect(container.querySelector(`[data-perimeter-note="${marker.id}"]`)?.textContent).toBe(marker.note);
+
+    // Pure post-cutover range carries no step marker.
+    rerender(
+      <HomeAltHeroChart
+        rows={[
+          { ...rows[0]!, ts: marker.tsMs + 86_400_000, total: 248 },
+          { ...rows[1]!, ts: marker.tsMs + 10 * 86_400_000, total: 250 },
+        ]}
+      />,
+    );
+    expect(container.querySelector(`[data-perimeter-marker="${marker.id}"]`)).toBeNull();
+    expect(container.querySelector(`[data-perimeter-note="${marker.id}"]`)).toBeNull();
+  });
 });
 
 describe("dated hero history preview", () => {
@@ -149,5 +173,22 @@ describe("dated hero history preview", () => {
   it.each([null, (now - HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS - 1) / 1000, now / 1000 + 1])("withholds an undated, expired or future generation (%s)", (updatedAt) => {
     render(<HomeAltHeroStaticChart history={history(updatedAt)} nowMs={now} />);
     expect(screen.queryByText(/Total market cap history/)).toBeNull();
+  });
+
+  it("marks the listing-policy v2 perimeter step in the static preview when spanned", () => {
+    const marker = MARKET_PERIMETER_MARKERS[0]!;
+    const afterCutover = marker.tsMs + 2 * 86_400_000;
+    const assessment = { source: "stablecoin-charts", assessedAt: afterCutover / 1000, freshBudgetSec: 3600, degradedBudgetSec: 7200, reason: "dated-build-fallback", warning: null };
+    const meta: HomepageLaneMeta = { ...assessment, updatedAt: afterCutover / 1000, ageSeconds: 0, status: "fresh" };
+    const spannedHistory: HomepageHistory = {
+      sources: { total: meta, usdt: meta, usdc: meta, usds: meta, dai: meta },
+      rows: [
+        { ts: marker.tsMs - 2 * 86_400_000, total: 260, usdt: null, usdc: null, sky: null, others: null, nonUsd: null },
+        { ts: afterCutover, total: 248, usdt: null, usdc: null, sky: null, others: null, nonUsd: null },
+      ],
+    };
+    const { container } = render(<HomeAltHeroStaticChart history={spannedHistory} nowMs={afterCutover} />);
+    expect(container.querySelector(`[data-perimeter-marker="${marker.id}"]`)).not.toBeNull();
+    expect(container.querySelector(`[data-perimeter-note="${marker.id}"]`)?.textContent).toBe(marker.note);
   });
 });

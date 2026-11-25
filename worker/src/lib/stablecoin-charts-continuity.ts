@@ -1,4 +1,11 @@
+import {
+  CORE_STABLECOIN_AGGREGATE_UNIVERSE,
+  CORE_STABLECOIN_AGGREGATE_UNIVERSE_V1,
+  CoreStablecoinAggregateUniverseSchema,
+  type CoreStablecoinAggregateUniverse,
+} from "@shared/lib/stablecoins/aggregate-universe";
 import type { StablecoinChartPoint } from "@shared/types/supply";
+import { parseJson } from "./json-parse";
 
 /**
  * Continuity budgets for the published stablecoin chart history. The producer
@@ -16,17 +23,81 @@ export const STABLECOIN_CHART_CONTINUITY_THRESHOLDS = {
   perBucketRatioCeiling: 2,
 } as const;
 
+/** Sibling cache key tracking the published aggregate perimeter identity for `stablecoin-charts`. */
+export const STABLECOIN_CHARTS_PERIMETER_CACHE_KEY = "stablecoin-charts:perimeter" as const;
+
+export interface StablecoinChartsPerimeterRecord {
+  universe: CoreStablecoinAggregateUniverse;
+  cutoverDate: string;
+  acceptedFromUniverse?: CoreStablecoinAggregateUniverse;
+  acceptedAt?: number;
+}
+
+export function isPlannedChartPerimeterCutover(
+  previousUniverse: CoreStablecoinAggregateUniverse | null | undefined,
+  nextUniverse: CoreStablecoinAggregateUniverse | null | undefined,
+): boolean {
+  return previousUniverse === CORE_STABLECOIN_AGGREGATE_UNIVERSE_V1
+    && nextUniverse === CORE_STABLECOIN_AGGREGATE_UNIVERSE;
+}
+
+function isChartPerimeterUniverseRegression(
+  previousUniverse: CoreStablecoinAggregateUniverse | null | undefined,
+  nextUniverse: CoreStablecoinAggregateUniverse | null | undefined,
+): boolean {
+  return previousUniverse === CORE_STABLECOIN_AGGREGATE_UNIVERSE
+    && nextUniverse === CORE_STABLECOIN_AGGREGATE_UNIVERSE_V1;
+}
+
+export function parseStablecoinChartsPerimeterRecord(raw: string): StablecoinChartsPerimeterRecord | null {
+  const parsed = parseJson(raw);
+  if (!parsed.ok || parsed.value == null || typeof parsed.value !== "object" || Array.isArray(parsed.value)) {
+    return null;
+  }
+  const value = parsed.value as Record<string, unknown>;
+  const universe = CoreStablecoinAggregateUniverseSchema.safeParse(value.universe);
+  if (!universe.success || typeof value.cutoverDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value.cutoverDate)) {
+    return null;
+  }
+  const acceptedFrom = value.acceptedFromUniverse === undefined
+    ? null
+    : CoreStablecoinAggregateUniverseSchema.safeParse(value.acceptedFromUniverse);
+  if (acceptedFrom && (!acceptedFrom.success || !isPlannedChartPerimeterCutover(acceptedFrom.data, universe.data))) {
+    return null;
+  }
+  if (value.acceptedAt !== undefined && (typeof value.acceptedAt !== "number" || !Number.isFinite(value.acceptedAt) || value.acceptedAt <= 0)) {
+    return null;
+  }
+  return {
+    universe: universe.data,
+    cutoverDate: value.cutoverDate,
+    ...(acceptedFrom?.success ? { acceptedFromUniverse: acceptedFrom.data } : {}),
+    ...(typeof value.acceptedAt === "number" ? { acceptedAt: value.acceptedAt } : {}),
+  };
+}
+
 export type ChartContinuityCode =
   | "point-count-collapse"
   | "history-start-truncated"
   | "bucket-missing"
-  | "bucket-value-drift";
+  | "bucket-value-drift"
+  | "perimeter-universe-regression";
 
 export interface ChartContinuityFinding {
   code: ChartContinuityCode;
   previous: number;
   next: number;
   bucket?: string;
+}
+
+export interface ChartContinuityOptions {
+  previousUniverse?: CoreStablecoinAggregateUniverse | null;
+  nextUniverse?: CoreStablecoinAggregateUniverse | null;
+}
+
+export interface ChartContinuityAssessment {
+  blockingFindings: ChartContinuityFinding[];
+  acceptedCutoverFindings: ChartContinuityFinding[];
 }
 
 function latestPoint(points: readonly StablecoinChartPoint[]): StablecoinChartPoint | null {
@@ -38,28 +109,44 @@ function latestPoint(points: readonly StablecoinChartPoint[]): StablecoinChartPo
 }
 
 /**
- * Compare a candidate publication with the previously published payload. An
- * absent or empty baseline returns no findings (nothing to preserve); the
- * caller reports that absence rather than treating it as healthy continuity.
+ * Compare a candidate publication with the previously published payload.
+ * Only a forward `core-stablecoins-v1` -> `core-stablecoins-v2` cutover accepts
+ * finite non-negative non-USD bucket-value drift and non-USD bucket removals
+ * once (returned in `acceptedCutoverFindings`). Truncation, point-count collapse,
+ * invalid bucket values, `peggedUSD` disappearance or drift, and backward
+ * `v2` -> `v1` universe regressions always remain blocking.
  */
-export function assessStablecoinChartContinuity(
+export function assessStablecoinChartContinuityWithCutover(
   previous: readonly StablecoinChartPoint[],
   next: readonly StablecoinChartPoint[],
-): ChartContinuityFinding[] {
-  if (previous.length === 0) return [];
-  const findings: ChartContinuityFinding[] = [];
+  options: ChartContinuityOptions = {},
+): ChartContinuityAssessment {
+  if (previous.length === 0) {
+    return { blockingFindings: [], acceptedCutoverFindings: [] };
+  }
+  const blockingFindings: ChartContinuityFinding[] = [];
+  const acceptedCutoverFindings: ChartContinuityFinding[] = [];
   if (next.length === 0) {
-    return [{ code: "point-count-collapse", previous: previous.length, next: 0 }];
+    return {
+      blockingFindings: [{ code: "point-count-collapse", previous: previous.length, next: 0 }],
+      acceptedCutoverFindings: [],
+    };
   }
   if (next.length < previous.length * STABLECOIN_CHART_CONTINUITY_THRESHOLDS.minPointShare) {
-    findings.push({ code: "point-count-collapse", previous: previous.length, next: next.length });
+    blockingFindings.push({ code: "point-count-collapse", previous: previous.length, next: next.length });
   }
 
   const previousOldest = Math.min(...previous.map((point) => point.date));
   const nextOldest = Math.min(...next.map((point) => point.date));
   if (nextOldest - previousOldest > STABLECOIN_CHART_CONTINUITY_THRESHOLDS.maxOldestDateAdvanceSec) {
-    findings.push({ code: "history-start-truncated", previous: previousOldest, next: nextOldest });
+    blockingFindings.push({ code: "history-start-truncated", previous: previousOldest, next: nextOldest });
   }
+
+  if (isChartPerimeterUniverseRegression(options.previousUniverse, options.nextUniverse)) {
+    blockingFindings.push({ code: "perimeter-universe-regression", previous: 2, next: 1 });
+  }
+
+  const isPlannedCutover = isPlannedChartPerimeterCutover(options.previousUniverse, options.nextUniverse);
 
   const previousLatest = latestPoint(previous);
   const nextLatest = latestPoint(next);
@@ -69,20 +156,30 @@ export function assessStablecoinChartContinuity(
       if (previousValue == null || !Number.isFinite(previousValue) || previousValue <= 0) continue;
       const nextValue = nextLatest.totalCirculatingUSD[bucket];
       if (nextValue === undefined) {
-        findings.push({ code: "bucket-missing", previous: 1, next: 0, bucket });
+        const finding: ChartContinuityFinding = { code: "bucket-missing", previous: 1, next: 0, bucket };
+        if (isPlannedCutover && bucket !== "peggedUSD") {
+          acceptedCutoverFindings.push(finding);
+        } else {
+          blockingFindings.push(finding);
+        }
         continue;
       }
       if (nextValue == null) continue;
       if (!Number.isFinite(nextValue) || nextValue < 0) {
-        findings.push({ code: "bucket-value-drift", previous: previousValue, next: nextValue, bucket });
+        blockingFindings.push({ code: "bucket-value-drift", previous: previousValue, next: nextValue, bucket });
         continue;
       }
       const ratio = nextValue / previousValue;
       if (ratio < STABLECOIN_CHART_CONTINUITY_THRESHOLDS.perBucketRatioFloor
         || ratio > STABLECOIN_CHART_CONTINUITY_THRESHOLDS.perBucketRatioCeiling) {
-        findings.push({ code: "bucket-value-drift", previous: previousValue, next: nextValue, bucket });
+        const finding: ChartContinuityFinding = { code: "bucket-value-drift", previous: previousValue, next: nextValue, bucket };
+        if (isPlannedCutover && bucket !== "peggedUSD") {
+          acceptedCutoverFindings.push(finding);
+        } else {
+          blockingFindings.push(finding);
+        }
       }
     }
   }
-  return findings;
+  return { blockingFindings, acceptedCutoverFindings };
 }

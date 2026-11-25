@@ -1,0 +1,22 @@
+import { z } from "zod";
+import {
+  CORE_STABLECOIN_AGGREGATE_UNIVERSE,
+  CORE_STABLECOIN_AGGREGATE_UNIVERSE_V1,
+  CORE_STABLECOIN_AGGREGATE_UNIVERSES,
+  CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE,
+  CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC,
+  getCoreAggregateUniverseForTimestamp,
+  type CoreStablecoinAggregateUniverse,
+} from "./aggregate-universe-constants";
+
+export {
+  CORE_STABLECOIN_AGGREGATE_UNIVERSE,
+  CORE_STABLECOIN_AGGREGATE_UNIVERSE_V1,
+  CORE_STABLECOIN_AGGREGATE_UNIVERSES,
+  CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE,
+  CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC,
+  getCoreAggregateUniverseForTimestamp,
+  type CoreStablecoinAggregateUniverse,
+};
+
+export const CoreStablecoinAggregateUniverseSchema = z.enum(CORE_STABLECOIN_AGGREGATE_UNIVERSES);

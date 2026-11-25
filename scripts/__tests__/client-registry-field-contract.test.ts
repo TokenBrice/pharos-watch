@@ -104,7 +104,7 @@ describe("client registry field contract", () => {
     }
   });
 
-  it.each(["sodax-sonic", "nest-vault-positions", "single-asset", "evm-branch-balances"])(
+  it.each(["sodax-sonic", "single-asset", "evm-branch-balances"])(
     "omits suspended %s reader provenance from list and detail projections",
     (adapter) => {
       const liveReservesConfig = { adapter, version: 1 };

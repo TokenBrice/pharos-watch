@@ -10,7 +10,7 @@ import { REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS as DISPS } from "@shared/data
 import type { StablecoinData } from "@shared/types/supply";
 import type { applyOutputDependencyResolution as ApplyOut, buildRedemptionBackstopEntry as BuildEnt, buildFailedRedemptionBackstopEntry as BuildFail, resolveRedemptionBackstopEntry as ResolveEnt } from "../redemption-backstop/sources";
 import type { ExecutableRedemptionObservation as ExecObs } from "../../cron/reserve-adapters/executable-redemption-read-client";
-import { buildEntryFixture, dusdOpenQueueMetadata, fpiControllerState, route, severeMarketEvidence as mktEv, liveSnapshot as liveSnap } from "./redemption-backstop-sources.test-support";
+import { buildEntryFixture, dusdOpenQueueMetadata, route, severeMarketEvidence as mktEv, liveSnapshot as liveSnap } from "./redemption-backstop-sources.test-support";
 import { readRedemptionBackstopLiveMetadata as readLive } from "../redemption-backstop/live-metadata";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { buildChainRpcs } from "../chain-registry";
@@ -359,7 +359,8 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(e.reserveInput).toEqual(stale ? undefined : reserveInput);
   });
 
-  it.each(["filqa-fidelity-international", "fiusd-sygnum"])("models %s USD cash output separately from its NAV-priced share input", async (id) => {
+  it("models frnt-wyoming USD cash output separately from its NAV-priced share input", async () => {
+    const id = "frnt-wyoming";
     const c = cfg(id);
     expect(c.outputAssets).toBeUndefined();
     expect(c.v9RouteReviewTerms?.missingScoringFields).toEqual(["capacity", "settlement", "cost"]);
@@ -541,7 +542,7 @@ describe("buildRedemptionBackstopEntry", () => {
         sourceTimestamp: now - 120, evidenceObservedAt: now - 120, sourceUrls: ["https://example.com/redemption.json"],
         settlementDelaySec: null, queueDepthUsd: null, dailyLimitUsd: null, minRedeemUsd: null, liveHolderEligibility: null,
         redemptionFeeBps: 4, buyFeeBpsMin: null, buyFeeBpsMax: null, routeStatus: "open", routeStatusSource: "protocol-api",
-        routeStatusReason: null, routeStatusReviewedAt: null, v9FpiControllerRouteState: null, v9SfrxusdCrosschainRouteState: null,
+        routeStatusReason: null, routeStatusReviewedAt: null, v9SfrxusdCrosschainRouteState: null,
       },
     })).toMatchObject({ provider: "reserve-sync-metadata", immediateCapacityUsd: 12.5e6, feeBps: 4, sourceTimestamp: now - 120, sourceUrls: ["https://example.com/redemption.json"] });
   });
@@ -715,24 +716,6 @@ describe("buildRedemptionBackstopEntry", () => {
 
   it("rejects docs resolution for unknown coins", async () => {
     await expect(build(TEST, route({ capacityModel: { kind: "supply-full" }, costModel: freeFee, docs: [] }))).rejects.toThrow(/Unknown tracked stablecoin id "test-coin"/);
-  });
-
-  it("adds the accepted FPI controller route without changing legacy entry fields", async () => {
-    const c = getCfg("fpi-frax"); expect(c).toBeDefined();
-    const st = fpiControllerState(now, 20);
-    const fpiSnap = (v9RouteAttempt?: Record<string, unknown>) => ({
-      stablecoinId: "fpi-frax", fetchedAt: now - 30, source: "frax-fpi-collateral",
-      metadata: { freshnessMode: "verified" as const, sourceTimestamp: now - 30, redemption: { capacityUsd: 2e6, capacityKind: "live-proxy-validated" as const, freshnessKind: "verified-source-timestamp" as const, sourceTimestamp: now - 30, routeStatus: "open" as const, routeStatusSource: "protocol-api" as const, sourceUrls: ["https://frax.com/transparency"], ...(v9RouteAttempt ? { v9RouteAttempt } : {}) } },
-      warningCount: 0, warnings: [], sourceModel: "dynamic-mix" as const, evidenceClass: "independent" as const, syncStatus: "ok" as const,
-    });
-    const base = await build("fpi-frax", c!, 1e7, null, { reserveSnapshotMetadata: fpiSnap() });
-    const acc = await build("fpi-frax", c!, 1e7, null, { reserveSnapshotMetadata: fpiSnap({ status: "accepted", attemptedAtSec: now, state: st }) });
-    const rej = await build("fpi-frax", c!, 1e7, null, { reserveSnapshotMetadata: fpiSnap({ status: "rejected", attemptedAtSec: now, rejectionCode: "calculation-mismatch", blockNumber: 25_600_682 }) });
-    expect(acc.capacityProfile?.exitRouteObservations?.[0]).toMatchObject({ routeId: "redemption:fpi-frax:fpi-controller:ethereum", scope: { kind: "chain-contract", contractOrPoolId: st.controllerAddress }, output: { kind: "tracked-stablecoin", trackedAssetIds: ["frax-frax"] }, evidenceKind: "onchain-contract-state", scoreEligible: true, executableUsd: 5e5, completionRatio: 1 });
-    expect(rej.capacityProfile?.exitRouteObservations?.[0]).toMatchObject({ routeId: "redemption:fpi-frax:collateral-redeem", scoreEligible: false });
-    const [aL, bL] = [structuredClone(acc), structuredClone(base)];
-    delete aL.capacityProfile?.exitRouteObservations; delete bL.capacityProfile?.exitRouteObservations;
-    expect(aL).toEqual(bL);
   });
 });
 

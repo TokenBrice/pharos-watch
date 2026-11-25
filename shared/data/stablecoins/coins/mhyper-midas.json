@@ -108,35 +108,6 @@
   "collateralQuality": "exotic",
   "custodyModel": "mixed",
   "governanceQuality": "single-entity",
-  "liveReservesConfig": {
-    "adapter": "chainlink-nav",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "mhyper-midas",
-    "scoring": {
-      "maxSourceAgeSec": 777600
-    },
-    "display": {
-      "url": "https://midas.app/mhyper",
-      "label": "Midas mHYPER NAV"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "alchemy"
-      }
-    },
-    "params": {
-      "navScope": "portfolio",
-      "oracleAddress": "0x43881B05C3BE68B2d33eb70aDdF9F666C5005f68",
-      "tokenAddress": "0x9b5528528656dbc094765e2abb79f293c21191b9",
-      "sourceKey": "chainlink-nav:token:0x9b5528528656dbc094765e2abb79f293c21191b9",
-      "assetLabel": "Hyperithm market-neutral stablecoin strategy NAV",
-      "assetRisk": "high",
-      "maxOracleAgeSec": 777600
-    }
-  },
   "yieldConfig": {
     "yieldSource": "Midas mHYPER / Hyperithm NAV",
     "yieldType": "nav-appreciation"
@@ -162,5 +133,14 @@
         "url": "https://api-prod.midas.app/api/transparency?token=mHYPER"
       }
     ]
+  },
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "NAV-accreting debt certificate tracking Hyperithm market-neutral crypto strategies, not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
+    "source": {
+      "label": "Midas mHYPER Final Terms",
+      "url": "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/Rh0tXsofDB8UQWaklyuE/Midas_Final_Terms_mHYPER_2025.pdf"
+    }
   }
 }

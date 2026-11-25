@@ -37,8 +37,8 @@ const FINALIZED_OFFCHAIN_ISSUER_BACKSTOP_REGISTRY = finalizeBackstopRegistry(
       stablecoinIds: [
         "usdt-tether", "usdc-circle", "pyusd-paypal", "fdusd-first-digital", "rlusd-ripple",
         "eurc-circle", "usdg-paxos", "usd1-world-liberty-financial", "ausd-agora", "tusd-trueusd",
-        "brz-transfero", "a7a5-old-vector", "ylds-figure", "usdtb-ethena", "gusd-gate",
-        "usyc-hashnote", "buidl-blackrock", "usdy-ondo-finance", "paxg-paxos", "xaut-tether",
+        "brz-transfero", "a7a5-old-vector", "ylds-figure", "usdtb-ethena",
+        "usyc-hashnote", "buidl-blackrock", "paxg-paxos", "xaut-tether",
         "kau-kinesis", "kag-kinesis",
       ],
     },

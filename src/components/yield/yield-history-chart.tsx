@@ -21,6 +21,7 @@ import { CHART_AMBER, CHART_BLUE, CHART_SLATE } from "@/lib/chart-colors";
 import { CHART_GRID_DASH, CHART_GRID_STROKE } from "@/lib/chart-theme";
 import { toTimestampMs } from "@/lib/time";
 import { cn } from "@/lib/utils";
+import { isClientTokenizedFundId } from "@shared/lib/stablecoins/aggregate-client-registry";
 import { isPublicWarning } from "@/lib/data-health";
 import {
   BRAND_ACCENT,
@@ -343,7 +344,7 @@ export function YieldHistoryChart({
               />
               <Tooltip
                 cursor={{ stroke: "var(--color-border)", strokeWidth: 1, strokeDasharray: "3 3" }}
-                content={<YieldHistoryTooltip showBreakdown={model.effectiveShowBreakdown} compact={compact} spikesByDate={spikesByDate} primarySource={model.primarySourceLabel} overlaySources={model.overlayLabels} />}
+                content={<YieldHistoryTooltip showBreakdown={model.effectiveShowBreakdown} compact={compact} spikesByDate={spikesByDate} primarySource={model.primarySourceLabel} overlaySources={model.overlayLabels} tokenizedFund={isClientTokenizedFundId(stablecoinId)} />}
               />
               {benchmarkRate != null ? (
                 <ReferenceLine

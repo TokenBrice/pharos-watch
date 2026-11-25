@@ -102,29 +102,6 @@
     "yieldSource": "Spiko Cash and Carry EUR NAV",
     "yieldType": "nav-appreciation"
   },
-  "liveReservesConfig": {
-    "adapter": "spiko-api",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "eurspkcc-spiko",
-    "display": {
-      "url": "https://www.spiko.io/spiko-cash-and-carry",
-      "label": "Spiko public share-class API"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "http-json",
-        "url": "https://public-api.spiko.io/share-classes/eurSPKCC/totals"
-      }
-    },
-    "params": {
-      "shareClassSymbol": "eurSPKCC",
-      "slice": {
-        "name": "Spiko Digital Assets Cash & Carry Fund - Euro Share Class shares",
-        "risk": "high"
-      }
-    }
-  },
   "notices": [
     {
       "type": "warning",
@@ -132,5 +109,14 @@
       "message": "Reserve weights use a conservative template because the cash-and-carry strategy allocation can vary over time."
     }
   ],
-  "launchDate": "2025-07-24"
+  "launchDate": "2025-07-24",
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "French FPS alternative investment fund share (EUR crypto basis strategy), not a fixed-par stablecoin; no active stablecoin links it (listing policy 2.0).",
+    "source": {
+      "label": "Spiko Cash and Carry product page",
+      "url": "https://www.spiko.io/spiko-cash-and-carry"
+    }
+  }
 }

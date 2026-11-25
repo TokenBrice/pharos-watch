@@ -114,6 +114,7 @@ export function RailSafetySummary({
   items,
   navToken = false,
   frozen = false,
+  tokenizedFund = false,
   gradeRead = "settled",
   liveAsOf = null,
   card = null,
@@ -125,6 +126,8 @@ export function RailSafetySummary({
   navToken?: boolean;
   /** Frozen archives are no longer scored. */
   frozen?: boolean;
+  /** Tokenized funds are tracked for reserves/dependencies without a Safety Score grade. */
+  tokenizedFund?: boolean;
   /**
    * The report-card read behind the grade. "Not scored" is a finding, so it
    * needs a settled read: a first fetch in flight shows a placeholder and a
@@ -142,7 +145,7 @@ export function RailSafetySummary({
   if (!hero) return null;
   const rest = signals.filter((item) => hasSignalReading(item, navToken));
 
-  const graded = hero.primary !== UNAVAILABLE;
+  const graded = !tokenizedFund && hero.primary !== UNAVAILABLE;
   const gradeClass = graded
     ? getSafetyGradeMetadata(hero.primary as ReportCardGrade).pulse.accentClassName
     : "text-muted-foreground";
@@ -150,17 +153,22 @@ export function RailSafetySummary({
   return (
     <div className="pharos-card-shell p-4">
       <div className="flex items-center justify-between gap-3">
-        <h2 className={DETAIL_MODULE_TITLE_CLASS}>Safety Score</h2>
+        <h2 className={DETAIL_MODULE_TITLE_CLASS}>{tokenizedFund ? "Tokenized fund" : "Safety Score"}</h2>
         <Link
           href="#report-card"
           prefetch={false}
-          aria-label="Jump to the full safety report card"
+          aria-label={tokenizedFund ? "Jump to the Tokenized fund panel" : "Jump to the full safety report card"}
           className={DETAIL_HEADER_ICON_BUTTON_CLASS}
         >
           <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
         </Link>
       </div>
-      {graded ? (
+      {tokenizedFund ? (
+        <p className="mt-2.5 flex items-baseline gap-1.5" data-safety-state="tokenized-fund">
+          <span className="text-lg font-semibold leading-tight text-foreground">Not graded</span>
+          <span className="text-sm text-muted-foreground">· fund shares</span>
+        </p>
+      ) : graded ? (
         <Link
           href={hero.href}
           prefetch={false}

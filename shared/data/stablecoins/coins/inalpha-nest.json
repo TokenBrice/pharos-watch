@@ -43,31 +43,6 @@
     }
   ],
   "governanceQuality": "multisig",
-  "liveReservesConfig": {
-    "adapter": "nest-vault-positions",
-    "version": 1,
-    "semantics": "collateral-mix",
-    "breakerScope": "inalpha-nest",
-    "suspended": {
-      "reason": "dust vault — NAV $1.889 vs positions $0.410, accountant last priced ~197d",
-      "since": "2026-09-09",
-      "reviewBy": "2027-03-09"
-    },
-    "display": {
-      "url": "https://www.nest.credit/",
-      "label": "Nest Credit API"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "http-json",
-        "url": "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/positions"
-      }
-    },
-    "params": {
-      "priceUrl": "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/price",
-      "lastPriceUpdateUrl": "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/last-price-update"
-    }
-  },
   "yieldConfig": {
     "yieldSource": "Nest Alpha Vault NAV",
     "yieldType": "nav-appreciation"
@@ -79,5 +54,14 @@
       "message": "inALPHA is tracked because it references a dollar base, but the token behaves like a vault share rather than a pure par stablecoin."
     }
   ],
-  "launchDate": "2025-05-19"
+  "launchDate": "2025-05-19",
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "Legacy NAV-priced Nest vault share with unreconciled positions and suspended reserve tracking, not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
+    "source": {
+      "label": "Nest Credit documentation",
+      "url": "https://docs.nest.credit/"
+    }
+  }
 }

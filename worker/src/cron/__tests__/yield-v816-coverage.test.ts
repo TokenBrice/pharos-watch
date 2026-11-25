@@ -8,10 +8,10 @@ const DAY_SECONDS = 24 * 60 * 60;
 const NOW_SEC = 1_779_210_000;
 
 describe("yield v8.16 coverage paths", () => {
-  it("derives FILQA yield from two clocked market quotes with unavailable native supply", async () => {
+  it("derives price-derived yield from two clocked market quotes with unavailable native supply", async () => {
     const latestQuote = NOW_SEC - 60;
     const anchorQuote = latestQuote - 14 * DAY_SECONDS;
-    const id = "filqa-fidelity-international";
+    const id = "earnusd-lido";
     vi.useFakeTimers().setSystemTime(NOW_SEC * 1000);
     const { sqlite, db } = createLatestSchemaSqlite();
     try {
@@ -45,7 +45,7 @@ describe("yield v8.16 coverage paths", () => {
     const nowSec = latestBucket + 55 * 60;
     const latestQuote = nowSec - quoteLagSec;
     const anchorQuote = latestQuote - quoteDays * DAY_SECONDS;
-    const stablecoinId = "filqa-fidelity-international";
+    const stablecoinId = "earnusd-lido";
     vi.useFakeTimers().setSystemTime(nowSec * 1000);
     const { sqlite, db } = createLatestSchemaSqlite();
     try {
@@ -66,19 +66,19 @@ describe("yield v8.16 coverage paths", () => {
     }
   });
 
-  it("derives NAV-appreciation APY from supply_history anchors for v8.16 NAV additions", async () => {
+  it("derives NAV-appreciation APY from supply_history anchors for NAV assets", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(NOW_SEC * 1000));
     const sqlite = createLatestSchemaSqlite().sqlite;
     try {
-            const insert = sqlite.prepare(
+      const insert = sqlite.prepare(
         `INSERT INTO supply_history (stablecoin_id, circulating_usd, price, snapshot_date, price_observed_at)
          VALUES (?, 1_000_000, ?, ?, ?)`,
       );
       for (const stablecoinId of [
-        "fpi-frax",
+        "earnusd-lido",
         "silk-shade-protocol",
-        "isc-international-stable-currency",
+        "sdai-sky",
       ]) {
         insert.run(stablecoinId, 1.0000, NOW_SEC - 14 * DAY_SECONDS, NOW_SEC - 14 * DAY_SECONDS);
         insert.run(stablecoinId, 1.0015, NOW_SEC - 60, NOW_SEC - 60);
@@ -86,9 +86,9 @@ describe("yield v8.16 coverage paths", () => {
 
       const db = createSqliteD1(sqlite);
       for (const stablecoinId of [
-        "fpi-frax",
+        "earnusd-lido",
         "silk-shade-protocol",
-        "isc-international-stable-currency",
+        "sdai-sky",
       ]) {
         const result = await getPriceDerivedApy(db, stablecoinId);
         expect(result, stablecoinId).not.toBeNull();
@@ -119,10 +119,10 @@ describe("yield v8.16 coverage paths", () => {
         `INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price, price_observed_at)
          VALUES (?, ?, 1_000_000, ?, ?)`,
       );
-      insert.run("fpi-frax", anchorLabel, 1.0, anchorObservedAt);
-      insert.run("fpi-frax", todayLabel, 1.0015, quoteObservedAt);
+      insert.run("earnusd-lido", anchorLabel, 1.0, anchorObservedAt);
+      insert.run("earnusd-lido", todayLabel, 1.0015, quoteObservedAt);
 
-      const result = await getPriceDerivedApy(createSqliteD1(sqlite), "fpi-frax");
+      const result = await getPriceDerivedApy(createSqliteD1(sqlite), "earnusd-lido");
 
       expect(result, "an observed 14-day price pair is still an observation").not.toBeNull();
       expect(result?.sourceObservedAt).toBe(quoteObservedAt);
@@ -146,10 +146,10 @@ describe("yield v8.16 coverage paths", () => {
         `INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price, price_observed_at)
          VALUES (?, ?, 1_000_000, ?, NULL)`,
       );
-      insert.run("isc-international-stable-currency", todayLabel - 14 * DAY_SECONDS, 1.0);
-      insert.run("isc-international-stable-currency", todayLabel, 1.0015);
+      insert.run("sdai-sky", todayLabel - 14 * DAY_SECONDS, 1.0);
+      insert.run("sdai-sky", todayLabel, 1.0015);
 
-      const result = await getPriceDerivedApy(createSqliteD1(sqlite), "isc-international-stable-currency");
+      const result = await getPriceDerivedApy(createSqliteD1(sqlite), "sdai-sky");
 
       // The UTC day label is a bucket, not an observation, so an unclocked row
       // cannot publish a price-derived APY.
@@ -173,14 +173,14 @@ describe("yield v8.16 coverage paths", () => {
          VALUES (?, ?, 1_000_000, ?, ?)`,
       );
       // Pre-migration-0253 rows keep a NULL clock inside the 45-day window.
-      insert.run("fpi-frax", todayLabel - 40 * DAY_SECONDS, 0.998, null);
-      insert.run("fpi-frax", todayLabel - 45 * DAY_SECONDS, 0.995, nowSec - 45 * DAY_SECONDS - 3600);
+      insert.run("earnusd-lido", todayLabel - 40 * DAY_SECONDS, 0.998, null);
+      insert.run("earnusd-lido", todayLabel - 45 * DAY_SECONDS, 0.995, nowSec - 45 * DAY_SECONDS - 3600);
       const anchorObservedAt = clockedAnchorLabel - 2 * DAY_SECONDS;
-      insert.run("fpi-frax", clockedAnchorLabel - DAY_SECONDS, 1.001, clockedAnchorLabel - DAY_SECONDS);
-      insert.run("fpi-frax", clockedAnchorLabel, 1.0, anchorObservedAt);
-      insert.run("fpi-frax", todayLabel, 1.0015, nowSec - 3600);
+      insert.run("earnusd-lido", clockedAnchorLabel - DAY_SECONDS, 1.001, clockedAnchorLabel - DAY_SECONDS);
+      insert.run("earnusd-lido", clockedAnchorLabel, 1.0, anchorObservedAt);
+      insert.run("earnusd-lido", todayLabel, 1.0015, nowSec - 3600);
 
-      const result = await getPriceDerivedApy(createSqliteD1(sqlite), "fpi-frax");
+      const result = await getPriceDerivedApy(createSqliteD1(sqlite), "earnusd-lido");
 
       expect(result).not.toBeNull();
       expect(result?.comparisonAnchorObservedAt).toBe(anchorObservedAt);

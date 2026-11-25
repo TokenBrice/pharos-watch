@@ -101,18 +101,18 @@ describe("stablecoin intake admission", () => {
   });
 
   it.each(["onchain-total-supply", "coingecko-fallback"])(
-    "keeps preferred STAC with a fresh price after failed native reads and a cached %s row", async (supplySource) => {
+    "keeps preferred USYC with a fresh price after failed native reads and a cached %s row", async (supplySource) => {
       const nowSec = 1_777_000_000;
       vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
-      const meta = ACTIVE_META_BY_ID.get("stac-securitize")!;
+      const meta = ACTIVE_META_BY_ID.get("usyc-hashnote")!;
       const previous = makePeggedAsset({
         id: meta.id, name: meta.name, symbol: meta.symbol, geckoId: meta.geckoId,
         pegMechanism: meta.flags.backing, price: 1.05, priceSource: "coingecko",
         priceConfidence: "single-source", priceObservedAt: nowSec - 60, priceObservedAtMode: "upstream",
         circulating: { peggedUSD: 300 }, supplySource, supplyObservedAt: nowSec - 120,
         circulatingNative: 200, valuationPriceUsd: 1.5, valuationObservedAtSec: nowSec - 240,
-        chainCirculating: { Ethereum: { chainId: "ethereum", current: 100 }, Solana: { chainId: "solana", current: 200 } },
-        chains: ["Ethereum", "Solana"],
+        chainCirculating: { Ethereum: { chainId: "ethereum", current: 100 }, BSC: { chainId: "bsc", current: 100 }, Solana: { chainId: "solana", current: 100 }, Arc: { chainId: "arc", current: 0 } },
+        chains: ["Ethereum", "BSC", "Solana", "Arc"],
       });
       const { db, sqlite } = fixtures.open();
       sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")

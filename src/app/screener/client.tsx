@@ -31,6 +31,7 @@ import {
   CLIENT_ACTIVE_META_BY_ID,
   CLIENT_TRACKED_STABLECOINS,
 } from "@shared/lib/stablecoins/client-registry";
+import { isTokenizedFundListingClass } from "@shared/lib/stablecoins/listing-class";
 import { isThreatBand, resolveMechanismArchetype } from "@shared/lib/classification";
 import { getResolvedBlacklistStatusLabel } from "@shared/lib/blacklist-status";
 import { isIncludedInArchetype } from "@shared/lib/stablecoins/mechanism-membership";
@@ -64,8 +65,10 @@ const SCREENABLE_COINS = CLIENT_TRACKED_STABLECOINS
       mechanismIncluded: isIncludedInArchetype(meta, mechanism),
       custodyModel: resolveCustodyModel(meta),
       blacklistable: projectBlacklistable(meta.blacklistStatus),
+      isTokenizedFund: isTokenizedFundListingClass(meta.listingClass),
     };
   });
+const SCREENABLE_FUND_COUNT = SCREENABLE_COINS.filter((entry) => entry.isTokenizedFund).length;
 
 const EXPORT_COLUMNS: CsvColumn<ScreenerRow>[] = [
   { header: "id", accessor: (row) => row.id },
@@ -254,8 +257,9 @@ export function ScreenerClient() {
     }
 
     const rows: ScreenerRow[] = [];
-    for (const { meta, mechanism, mechanismIncluded, custodyModel, blacklistable } of SCREENABLE_COINS) {
+    for (const { meta, mechanism, mechanismIncluded, custodyModel, blacklistable, isTokenizedFund } of SCREENABLE_COINS) {
       const safety = safetyById[meta.id] ?? null;
+      const suppressFundSafety = isTokenizedFund && safety?.ratingStatus !== "pipeline-gap";
       const pegCoin = pegById.get(meta.id);
       const mintAuthorityScore = safetyPublicationAvailable
         ? resolveMintAuthorityScoreDisplay(safety?.mint)
@@ -266,6 +270,7 @@ export function ScreenerClient() {
         name: meta.name,
         symbol: meta.symbol,
         lifecycle: meta.status ?? "active",
+        isTokenizedFund,
         type: meta.flags.governance,
         mechanism,
         mechanismIncluded,
@@ -275,23 +280,24 @@ export function ScreenerClient() {
         dewsScore: stressData?.signals[meta.id]?.score ?? null,
         dewsBand: dewsBand !== undefined && isThreatBand(dewsBand) ? dewsBand : null,
         liquidityScore: dexData?.[meta.id]?.liquidityScore ?? null,
-        safetyGrade: safety?.grade ?? null,
-        safetyScore: safety?.score ?? null,
-        ratingStatus: safety?.ratingStatus ?? null,
-        partialEvidence: safety?.partialEvidence ?? null,
-        pillars: safety?.pillars,
-        safetyBackingScore: safety?.pillars.backing.score ?? null,
-        safetyExitScore: safety?.pillars.exit.score ?? null,
-        safetyControlScore: safety?.pillars.control.score ?? null,
-        safetyEvidence:
-          safety?.ratingStatus === "pipeline-gap"
+        safetyGrade: suppressFundSafety ? null : (safety?.grade ?? null),
+        safetyScore: suppressFundSafety ? null : (safety?.score ?? null),
+        ratingStatus: suppressFundSafety ? (safety ? "not-rated" : null) : (safety?.ratingStatus ?? null),
+        partialEvidence: suppressFundSafety ? null : (safety?.partialEvidence ?? null),
+        pillars: suppressFundSafety ? undefined : safety?.pillars,
+        safetyBackingScore: suppressFundSafety ? null : (safety?.pillars.backing.score ?? null),
+        safetyExitScore: suppressFundSafety ? null : (safety?.pillars.exit.score ?? null),
+        safetyControlScore: suppressFundSafety ? null : (safety?.pillars.control.score ?? null),
+        safetyEvidence: suppressFundSafety
+          ? null
+          : safety?.ratingStatus === "pipeline-gap"
             ? "pipeline-gap"
             : safety?.ratingStatus === "not-rated"
               ? "nr"
               : safety?.evidence.level ?? null,
-        safetyWeakestPillar: safety?.weakestPillar?.pillar ?? null,
-        safetyWeakestScore: safety?.weakestPillar?.score ?? null,
-        safetyBindingCapReason: safety?.bindingCapReason ?? null,
+        safetyWeakestPillar: suppressFundSafety ? null : (safety?.weakestPillar?.pillar ?? null),
+        safetyWeakestScore: suppressFundSafety ? null : (safety?.weakestPillar?.score ?? null),
+        safetyBindingCapReason: suppressFundSafety ? null : (safety?.bindingCapReason ?? null),
         custodyModel,
         blacklistable,
         mintAuthority: meta.mintAuthorityStatus ?? "unknown",
@@ -330,6 +336,19 @@ export function ScreenerClient() {
         row.id.toLowerCase().includes(normalizedSearch),
     );
   }, [allRows, filters, normalizedSearch, scoreFilterDataState]);
+  const hiddenFundMatchCount = useMemo(() => {
+    if (scoreFilterDataState !== "ready" || filters.includeFunds || filters.coins.length > 0 || filteredRows.length > 0) {
+      return 0;
+    }
+    const matchingFunds = applyFilters(allRows, { ...filters, includeFunds: true }).filter((row) => row.isTokenizedFund);
+    if (!normalizedSearch) return matchingFunds.length;
+    return matchingFunds.filter(
+      (row) =>
+        row.symbol.toLowerCase().includes(normalizedSearch) ||
+        row.name.toLowerCase().includes(normalizedSearch) ||
+        row.id.toLowerCase().includes(normalizedSearch),
+    ).length;
+  }, [allRows, filteredRows.length, filters, normalizedSearch, scoreFilterDataState]);
   const { sortKey, sortDirection, toggleSort, getAriaSortValue } = useSort<ScreenerSortKey>("safetyScore", "desc");
   const sortedRows = useMemo(
     () => sortScreenerRows(filteredRows, sortKey, sortDirection),
@@ -412,14 +431,20 @@ export function ScreenerClient() {
     generations[0] ?? null,
   ) ?? "unknown";
 
-  const totalTracked = SCREENABLE_COINS.length;
-  const totalRows = hasStablecoinRows ? allRows.length : totalTracked;
+  const includeFundsScope = filters.includeFunds || filters.coins.length > 0;
+  const totalTracked = includeFundsScope
+    ? SCREENABLE_COINS.length
+    : SCREENABLE_COINS.length - SCREENABLE_FUND_COUNT;
+  const totalRows = hasStablecoinRows
+    ? (includeFundsScope ? allRows.length : allRows.filter((row) => !row.isTokenizedFund).length)
+    : totalTracked;
   const matchingRows = filteredRows.length;
   const active = hasActiveFilters(filters) || normalizedSearch.length > 0;
   const activeFilterCount = countActiveScreenerFilters(filters) + (normalizedSearch.length > 0 ? 1 : 0);
-  // One coin-count story: the screener universe is the full tracked registry
-  // (visible pre-launch and frozen rows included), unlike the active-only dashboard table.
-  // Policy-withheld quarantined and delisted records remain detail-only.
+  // One coin-count story: the default screener universe is tracked stablecoins
+  // (visible pre-launch and frozen rows included; tokenized funds opt-in via
+  // `includeFunds`), unlike the active-only dashboard table. Policy-withheld
+  // quarantined and delisted records remain detail-only.
   // The live matched count is the toolbar's One Beam (frost) figure.
 
   return (
@@ -430,6 +455,7 @@ export function ScreenerClient() {
         onSearchChange={setSearchQuery}
         matchingRows={matchingRows}
         totalRows={totalRows}
+        fundCount={SCREENABLE_FUND_COUNT}
         dataState={dataState}
         activeFilterCount={activeFilterCount}
         onChange={setFilters}
@@ -468,6 +494,8 @@ export function ScreenerClient() {
           dataState={dataState}
           onClearFilters={active ? resetFilters : undefined}
           hasActiveFilters={active}
+          hiddenFundMatchCount={hiddenFundMatchCount}
+          onIncludeFunds={hiddenFundMatchCount > 0 ? () => setFilters({ ...filters, includeFunds: true }) : undefined}
           sort={{ sortKey, sortDirection, toggleSort, getAriaSortValue }}
           selectedIds={selectedIds}
           onToggleSelect={handleToggleSelect}

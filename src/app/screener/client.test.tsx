@@ -628,4 +628,70 @@ describe("ScreenerClient freshness notices", () => {
     expect(row?.supplyUsd).toBeNull();
     expect(supplyColumn?.accessor(row!, 0)).toBe("");
   });
+
+  it("excludes tokenized funds by default, hints when hidden funds match search, and suppresses fund grades when included", () => {
+    mocks.useStablecoins.mockReturnValue({
+      data: {
+        peggedAssets: [
+          makeStablecoin({ id: "usdc-circle" }),
+          makeStablecoin({ id: "buidl-blackrock", name: "BUIDL", symbol: "BUIDL" }),
+        ],
+      },
+      isLoading: false,
+      error: null,
+      dataUpdatedAt: 1_700_000_000,
+      meta: null,
+      refetch,
+    });
+    mocks.useReportCardsV9.mockReturnValue({
+      data: makeReportCardsV9Response({
+        cards: [
+          makeV9Card({ id: "usdc-circle", grade: "A+", score: 87 }),
+          makeV9Card({ id: "buidl-blackrock", grade: "NR", score: null, ratingStatus: "not-rated" }),
+        ],
+      }),
+      isLoading: false,
+      error: null,
+      dataUpdatedAt: 1_700_000_000,
+      meta: null,
+      refetch,
+    });
+
+    const replaceParams = vi.fn();
+    mocks.useUrlFilters.mockReturnValue({
+      searchParams: new URLSearchParams(),
+      replaceParams,
+    });
+
+    const view = render(<ScreenerClient />);
+    const defaultRows = (mocks.ScreenerTable.mock.calls.at(-1)?.[0] as { rows: ScreenerRow[] }).rows;
+    expect(defaultRows.some((row) => row.id === "usdc-circle")).toBe(true);
+    expect(defaultRows.some((row) => row.id === "buidl-blackrock")).toBe(false);
+
+    // Searching for a hidden fund surfaces hiddenFundMatchCount and an include callback.
+    fireEvent.change(view.getByLabelText(/Search stablecoins by name or ticker/i), {
+      target: { value: "buidl" },
+    });
+    const emptyCall = mocks.ScreenerTable.mock.calls.at(-1)?.[0] as {
+      rows: ScreenerRow[];
+      hiddenFundMatchCount?: number;
+      onIncludeFunds?: () => void;
+    };
+    expect(emptyCall.rows).toHaveLength(0);
+    expect(emptyCall.hiddenFundMatchCount).toBe(1);
+    expect(typeof emptyCall.onIncludeFunds).toBe("function");
+    emptyCall.onIncludeFunds?.();
+    expect(replaceParams).toHaveBeenCalled();
+
+    mocks.useUrlFilters.mockReturnValue({
+      searchParams: new URLSearchParams("includeFunds=true"),
+      replaceParams: vi.fn(),
+    });
+    view.rerender(<ScreenerClient />);
+    const withFundsRows = (mocks.ScreenerTable.mock.calls.at(-1)?.[0] as { rows: ScreenerRow[] }).rows;
+    const buidl = withFundsRows.find((row) => row.id === "buidl-blackrock");
+    expect(buidl).toBeDefined();
+    expect(buidl?.isTokenizedFund).toBe(true);
+    expect(buidl?.safetyGrade).toBeNull();
+  });
 });

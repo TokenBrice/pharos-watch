@@ -5,6 +5,7 @@ import { createCronResult } from "../lib/cron-result";
 import { throwIfAborted } from "../lib/abort";
 import type { ReportCardGrade } from "@shared/types/report-card-grade";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
+import { isTokenizedFundId } from "@shared/lib/stablecoins/listing-governance";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import {
   fetchLatestSafetyScoreHistoryV2Rows,
@@ -108,7 +109,7 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
     );
     const currentAttemptPublished = attempt?.outcome === "published-clean" || attempt?.outcome === "published-partial";
     liveCards = active.snapshot.cards
-      .filter((card) => !FROZEN_IDS.has(card.id))
+      .filter((card) => !FROZEN_IDS.has(card.id) && !isTokenizedFundId(card.id))
       .flatMap((card) => card.ratingStatus === "pipeline-gap" || card.grade === null ? [] : [{
         id: card.id,
         grade: card.grade,

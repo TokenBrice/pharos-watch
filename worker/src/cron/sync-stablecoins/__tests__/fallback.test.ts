@@ -216,7 +216,7 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
 
   it.each(["native", "coingecko", "missing", "expired", "incomplete-roster"] as const)(
     "keeps a preferred coin and fresh price after a failed native read with %s prior supply", async (prior) => {
-      const meta = ACTIVE_META_BY_ID.get("stac-securitize")!;
+      const meta = ACTIVE_META_BY_ID.get("usyc-hashnote")!;
       const cgData = buildRealCgData(Infinity);
       cgData[meta.geckoId!] = { usd: 1.12, usd_market_cap: 900_000, last_updated_at: NOW_SEC };
       const previous: PeggedAsset = {
@@ -227,8 +227,8 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
         circulating: { peggedUSD: 300 },
         chainCirculating: prior === "incomplete-roster"
           ? { Ethereum: { chainId: "ethereum", current: 300 } }
-          : { Ethereum: { chainId: "ethereum", current: 100 }, Solana: { chainId: "solana", current: 200 } },
-        chains: ["Ethereum", "Solana"],
+          : { Ethereum: { chainId: "ethereum", current: 100 }, BSC: { chainId: "bsc", current: 100 }, Solana: { chainId: "solana", current: 100 }, Arc: { chainId: "arc", current: 0 } },
+        chains: ["Ethereum", "BSC", "Solana", "Arc"],
       };
       subPhaseMocks.loadPreviousStablecoinsById.mockResolvedValueOnce({
         previousAssetsById: new Map(prior === "missing" ? [] : [[meta.id, previous]]), cacheState: { state: "ok" },

@@ -14,7 +14,6 @@ import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import usdx from "@shared/data/stablecoins/coins/usdx-kava.json";
 import { LIVE_RESERVE_ADAPTER_KEYS, type LiveReserveAdapterKey, type LiveReserveWarning } from "@shared/types/live-reserves";
 import { CORPUS_BACKLOG as CAPTURE_BACKLOG, CORPUS_CASES as CAPTURE_CASES, CORPUS_NOT_REPLAYABLE, type AdapterCorpusCase } from "./adapter-corpus.test-support";
-import { AFI_PROOF_PAYLOAD } from "./afi-proof.test-support";
 import { MEGAUSD_BACKING, MEGAUSD_URL } from "./megausd-custody.test-support";
 import { NOW_SEC as LIQUITY_NOW_SEC, TROVE_MANAGER, v1Network } from "./liquity-v1.test-support";
 import {
@@ -36,7 +35,6 @@ import {
 import type { AdapterResult } from "../types";
 import m0SolanaCapture from "./fixtures/m0-solana-local-2026-10-21.json";
 // Keep numeric-contract source ownership explicit alongside registered replay.
-import "../afi-proof";
 import "../blast-usdb-yield-manager";
 import "../custody-inventory";
 import "../liquity-v1";
@@ -63,7 +61,6 @@ interface NumericAdapterCorpusCase extends AdapterCorpusCase {
   drift: AdapterCorpusCase["drift"] & { error?: RegExp; nowSec?: number };
 }
 
-const AFI_ENDPOINT = "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/proofs";
 const BLAST_YIELD_MANAGER = "0xa230285d5683c74935ad14c446e137c8c8828438";
 const BLAST_USDB = "0x4300000000000000000000000000000000000003";
 const BLAST_SUPPLY_RPC = {
@@ -227,37 +224,6 @@ const NUMERIC_CORPUS_CASES: Record<string, NumericAdapterCorpusCase> = {
       network: m0SolanaNetwork(true),
       outcome: "error",
       error: /global/,
-    },
-  },
-  // Full proof payload moved unchanged from afi-proof.test.ts.
-  "afi-proof": {
-    coinId: "rwausdi-multipli",
-    nowSec: 1_788_978_660,
-    network: { json: { [AFI_ENDPOINT]: AFI_PROOF_PAYLOAD } },
-    expected: {
-      slices: [{
-        name: "Institutional credit and market-neutral fund basket",
-        sourceKey: "afi-proof:aggregate",
-        pct: 100,
-        risk: "high",
-        assetClass: "other",
-        issuerOrObligor: expect.any(String),
-      }],
-      metadata: {
-        totalReserveUsd: 1_500_000_000,
-        totalLiabilitiesUsd: 479_782_100,
-        collateralizationRatio: expect.closeTo(1_500_000_000 / 479_782_100, 9),
-        unknownExposurePct: 100,
-        freshnessMode: "unverified",
-        details: { proofId: "fa575eeac9391401", opaqueBasket: true, active: true },
-      },
-      warnings: [{ code: "opaque-reserve-basket", effect: "info", severity: "info" }],
-      absentMetadata: [],
-    },
-    drift: {
-      label: "the proof endpoint returns HTTP 500",
-      network: { json: { [AFI_ENDPOINT]: { status: 500, json: {} } } },
-      outcome: "error",
     },
   },
   // Synthetic RPC values retained from blast-usdb-yield-manager.test.ts.

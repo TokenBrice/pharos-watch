@@ -99,29 +99,6 @@
     "yieldSource": "Spiko Amundi Overnight Swap Fund GBP NAV",
     "yieldType": "nav-appreciation"
   },
-  "liveReservesConfig": {
-    "adapter": "spiko-api",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "gbpsafo-spiko",
-    "display": {
-      "url": "https://www.spiko.io/spiko-pound",
-      "label": "Spiko public share-class API"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "http-json",
-        "url": "https://public-api.spiko.io/share-classes/gbpSAFO/totals"
-      }
-    },
-    "params": {
-      "shareClassSymbol": "gbpSAFO",
-      "slice": {
-        "name": "Spiko Amundi Overnight Swap Fund (GBP) shares",
-        "risk": "medium"
-      }
-    }
-  },
   "launchDate": "2026-03-19",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
@@ -175,6 +152,15 @@
           "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
         }
       ]
+    }
+  },
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "AMF-authorized UCITS GBP accumulating fund share using overnight total-return swaps, not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
+    "source": {
+      "label": "Spiko Smart Cash legal documentation",
+      "url": "https://docs.spiko.io/documentation/product_overview/smart_cash/legal_documentation/"
     }
   }
 }

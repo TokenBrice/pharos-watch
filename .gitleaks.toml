@@ -180,7 +180,6 @@ regexes = ['''^d80ceabb-07a6-4dc4-9020-70ec86b4f42f$''']
 paths = [
   '''(?:^|/)shared/data/stablecoins/coins/mhyper-midas\.json$''',
   '''(?:^|/)shared/data/stablecoins/domains/compliance/mtbill-midas\.json$''',
-  '''(?:^|/)shared/lib/redemption-backstop-configs/offchain-issuer/non-usd-and-tokenized\.ts$''',
   '''(?:^|/)shared/data/safety-score-v9/evidence-gap-classifications-v1\.json$''',
   '''(?:^|/)\.github/(?:workflows/)?artifacts/safety-score-missing-data-reviewed-ledger\.json$''',
 ]
@@ -245,8 +244,8 @@ regexTarget = "secret"
 regexes = ['''^(?:34ae6ee1-5f94-4ce9-87e8-c98bcec11762|19d915b4-356f-4abd-a4b2-d331515adc22|79d5fd49-deae-41b4-a809-9e1afaa02f32|7a7a500e-1321-4e9d-8046-46ae8199e244|9bfe7105-c648-406b-b51c-b9c4431bc335)$''']
 paths = ['''(?:^|/)shared/data/safety-score-v9/evidence-gap-classifications-v1\.json$''']
 
-# Reviewed wave-4 public document links: Reservoir's SSC bridge audit, and
-# Midas's 2026/2025 base prospectuses. Pin each capability to its citing file.
+# Reviewed wave-4 public document link: Reservoir's SSC bridge audit. Pin the
+# capability to its citing file.
 [[allowlists]]
 description = "Reservoir publicly linked SSC bridge audit download token"
 targetRules = ["generic-api-key"]
@@ -254,14 +253,6 @@ condition = "AND"
 regexTarget = "secret"
 regexes = ['''^168abe3d-0650-454c-bfa5-592b7c08ad83$''']
 paths = ['''(?:^|/)shared/data/safety-score-v9/evidence-gap-classifications-v1\.json$''']
-
-[[allowlists]]
-description = "Midas publicly linked 2026 and 2025 base prospectus download tokens in settlement evidence"
-targetRules = ["generic-api-key"]
-condition = "AND"
-regexTarget = "secret"
-regexes = ['''^(?:58c911b9-1ab7-495c-97ba-d379fe9c4e5e|9bfe7105-c648-406b-b51c-b9c4431bc335)$''']
-paths = ['''(?:^|/)shared/lib/redemption-backstop-configs/offchain-issuer/coverage-and-stablecoin-audit\.ts$''']
 
 # Wave-4 custody research cites krUSDC's reviewed mint control by its hash-derived
 # control key; its 20-hex digest suffix resembles an API key. Exact value only.

@@ -58,31 +58,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
-  "liveReservesConfig": {
-    "adapter": "nest-vault-positions",
-    "version": 1,
-    "semantics": "collateral-mix",
-    "scoring": {
-      "allowedDegradedWarningCodes": [
-        "nest-nav-coverage-gap"
-      ]
-    },
-    "breakerScope": "nwisdom-nest",
-    "display": {
-      "url": "https://www.nest.credit/",
-      "label": "Nest Credit API"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "http-json",
-        "url": "https://api.nest.credit/v1/vaults/nest-wisdom-vault/positions"
-      }
-    },
-    "params": {
-      "priceUrl": "https://api.nest.credit/v1/vaults/nest-wisdom-vault/price",
-      "lastPriceUpdateUrl": "https://api.nest.credit/v1/vaults/nest-wisdom-vault/last-price-update"
-    }
-  },
   "yieldConfig": {
     "yieldSource": "Nest Wisdom Vault NAV (WisdomTree-backed strategy)",
     "yieldType": "nav-appreciation"
@@ -94,5 +69,14 @@
       "message": "nWISDOM is a Nest vault share whose value tracks the underlying WisdomTree fund book. It behaves like a vault share rather than a hard 1:1 par stablecoin."
     }
   ],
-  "launchDate": "2025-10-27"
+  "launchDate": "2025-10-27",
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "NAV-priced Nest vault share over a WisdomTree fund book and undisclosed nUSDR receivable, not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
+    "source": {
+      "label": "Nest Credit documentation",
+      "url": "https://docs.nest.credit/"
+    }
+  }
 }

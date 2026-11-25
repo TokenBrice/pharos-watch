@@ -175,7 +175,7 @@ export function checkEditorialContent(repoRoot = process.cwd()): string[] {
     try { validateMethodologyVersion({ currentVersion: lane.currentLabel.slice(1), changelogPath: lane.publicPath, changelog: lane.entries }); }
     catch (error) { issues.push(`${lane.publicPath}: ${String(error)}`); }
   }
-  issues.push(...mechanismExplainerIssues(repoRoot));
+  issues.push(...mechanismExplainerIssues());
   const mint = validData.get("shared/data/methodology-changelogs/mint-authority/v1.json");
   if (mint) {
     try { validateMethodologyVersion({ currentVersion: MINT_AUTHORITY_METHODOLOGY_VERSION, changelogPath: MINT_AUTHORITY_METHODOLOGY_PATH, changelog: MethodologyContentSchema.parse(mint) }); }

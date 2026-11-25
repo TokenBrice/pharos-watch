@@ -1356,7 +1356,7 @@ describe("handleHealth", () => {
     ["degrades when three or more circuit groups are open",
       ["circuit:defillama-stablecoins", "circuit:coingecko-prices", "circuit:dexscreener-prices"], "degraded"],
     ["keeps public health healthy when only live-reserve circuit groups are open",
-      ["circuit:live-reserves:ethena", "circuit:live-reserves:feusd-felix", "circuit:live-reserves:mtbill-midas"], "healthy"],
+      ["circuit:live-reserves:ethena", "circuit:live-reserves:feusd-felix", "circuit:live-reserves:mf-one-midas"], "healthy"],
   ] as const)("%s", async (_name, circuitKeys, expectedStatus) => {
     const now = Math.floor(Date.now() / 1000);
     const openCircuitValue = (openedAt: number) =>

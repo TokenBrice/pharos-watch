@@ -791,6 +791,7 @@ export async function runSafetyScoreV9Publication(
           accepted,
           pipeline.measuredExitExpiry.witnessesByAssetId,
           pipeline.verifiedEmptyExitBaselineOptions,
+          pipeline.lenderCollateralBackingScoresByAssetId,
         ),
       publicationReplayCaptureValue: replayCaptureValue,
       publicationReplayBaseValue: replayCaptureValue === undefined ? undefined : input.fixedInputCacheValue,

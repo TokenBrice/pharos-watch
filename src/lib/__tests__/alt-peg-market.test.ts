@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { makeAltPegCoin } from "@shared/test-utils/stablecoin";
 import { CORE_NON_USD_IDS, coreNonUsdRows } from "@shared/test-utils/alt-peg-fixtures";
 import { getCoreNonUsdPeg } from "@shared/lib/alt-peg-snapshot";
+import { CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC } from "@shared/lib/stablecoins/aggregate-universe";
 import { NonUsdShareResponseSchema } from "@shared/types/supply";
 import { buildAltPegSnapshot, buildAltPegTrendStats, parseAltPegParam } from "@/lib/alt-peg-market";
 import { coinEmblemSize, FIAT_MAP_SIZE_CEIL, SIZE_CEIL, SIZE_FLOOR, sizeCapMarketCap } from "@/lib/alt-peg-sizing";
@@ -146,6 +147,34 @@ describe("alt-peg-market", () => {
       expect(buildAltPegTrendStats([{ ...old, coverage: complete }, latest])?.valueCoverageIncomplete).toBe(false);
     },
   );
+
+  it("withholds 1-year deltas when the window spans a market-wide perimeter change and resumes after", () => {
+    const complete = { basis: "interior-gap-prior-value" as const, total: 1, commodity: 1, fiatNonUsd: 1 };
+    const partial = { basis: "interior-gap-prior-value" as const, total: 0.99, commodity: 1, fiatNonUsd: 1 };
+    const cutover = CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC;
+    const across = buildAltPegTrendStats([
+      { date: cutover - 360 * 86400, commodityShare: 2, fiatNonUsdShare: 1.5, commodity: 20, fiatNonUsd: 15, total: 1_000, coverage: partial },
+      { date: cutover + 5 * 86400, commodityShare: 2, fiatNonUsdShare: 0.4, commodity: 20, fiatNonUsd: 4, total: 980, coverage: complete },
+    ]);
+    expect(across).toEqual({
+      latestDate: cutover + 5 * 86400,
+      latestSharePct: 2.4,
+      latestCoverageIncomplete: false,
+      latestAltMarketCap: 24,
+      yearlyShareDeltaPctPoints: null,
+      yearlyMarketCapChangePct: null,
+      yearlyDeltaWithheldReason: "perimeter-change",
+      valueCoverageIncomplete: false,
+    });
+
+    const postOnly = buildAltPegTrendStats([
+      { date: cutover, commodityShare: 2, fiatNonUsdShare: 0.5, commodity: 20, fiatNonUsd: 5, total: 1_000, coverage: complete },
+      { date: cutover + 365 * 86400, commodityShare: 2.5, fiatNonUsdShare: 1, commodity: 25, fiatNonUsd: 10, total: 1_000, coverage: complete },
+    ]);
+    expect(postOnly?.yearlyDeltaWithheldReason).toBeUndefined();
+    expect(postOnly?.yearlyShareDeltaPctPoints).toBeCloseTo(1, 5);
+    expect(postOnly?.yearlyMarketCapChangePct).toBeCloseTo(40, 5);
+  });
 
   it("returns no trend for absent or empty history", () => {
     expect(buildAltPegTrendStats()).toBeNull();

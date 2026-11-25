@@ -65,7 +65,7 @@ import {
 } from "@shared/lib/yield-workbench-fallback";
 import type { YieldBenchmarkRegistry } from "@shared/types/yield";
 import { isOpportunityDerivedSafety, YIELD_OPPORTUNITY_SAFETY_DESCRIPTION } from "@shared/lib/yield-opportunity-provenance";
-import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
+import { selectRowInvestmentWarningSignals } from "@/lib/yield-view-model-filter-axes";
 
 interface HeroHighlightRowProps {
   label: string;
@@ -177,16 +177,17 @@ function formatHeroRiskContext(
 ): ReactNode {
   // E5: judge the hero zone against the row's own benchmark.
   const benchmark = resolveYieldRowBenchmark(row, benchmarks, riskFreeRate);
-  const zone = resolveYieldZone(row.safetyScore, row.apy30d, benchmark.rate);
+  const zone = row.isTokenizedFund ? null : resolveYieldZone(row.safetyScore, row.apy30d, benchmark.rate);
   const opportunitySafety = isOpportunityDerivedSafety(row.provenance?.safetyProvenance);
-  const gradeDisplay =
-    row.safetyGrade && row.safetyGrade !== "NR"
+  const gradeDisplay = row.isTokenizedFund
+    ? "Not graded"
+    : row.safetyGrade && row.safetyGrade !== "NR"
       ? `${row.safetyGrade}${opportunitySafety ? "\u2020" : ""}`
       : "NR";
   const pys = row.pharosYieldScore !== null ? `PYS ${row.pharosYieldScore.toFixed(1)}` : "PYS NR";
   const states = row.coinStates ?? [];
   // Counts what the warnings filter hides: investment signals plus blocking coin/venue states.
-  const warningCount = selectInvestmentWarningSignals(row.warningSignals).length + states.filter(isYieldBlockingCoinState).length;
+  const warningCount = selectRowInvestmentWarningSignals(row.warningSignals, Boolean(row.isTokenizedFund)).length + states.filter(isYieldBlockingCoinState).length;
   const parts = [gradeDisplay, pys, `${warningCount} ${warningCount === 1 ? "warn" : "warns"}`];
   if (zone !== null) parts.unshift(YIELD_ZONE_LABELS[zone]);
   if (liveStateNote) parts.push(liveStateNote);
@@ -312,6 +313,7 @@ export function YieldClient() {
       trending: searchParams.get("trending"),
       watchlist: searchParams.get("watchlist"),
       attention: searchParams.get("attention"),
+      includeFunds: searchParams.get("includeFunds"),
     }),
     [searchParams],
   );
@@ -332,9 +334,12 @@ export function YieldClient() {
       }),
     [data?.benchmarks, data?.provenance?.benchmark, data?.provenance?.benchmarks, urlParams, yieldUniverse],
   );
-  // Compare/selection universe ignores the landing risk band so a selected
-  // D-grade row does not vanish from the drawer.
-  const comparisonRows = useMemo(() => selectVisibleYieldRows(yieldUniverse, { risk: riskBudgetUrlValue("all") }), [yieldUniverse]);
+  // Compare/selection universe ignores the landing risk band and tokenized-fund
+  // filter so a selected row or detail-fallback fund stays visible in the drawer.
+  const comparisonRows = useMemo(
+    () => selectVisibleYieldRows(yieldUniverse, { risk: riskBudgetUrlValue("all"), includeFunds: "true" }),
+    [yieldUniverse],
+  );
   const visibleRows = viewModel.visibleRows;
   const storyCallouts = useMemo(() => buildYieldStoryCallouts(visibleRows), [visibleRows]);
   const activeFilterSummaries = useMemo(() => getYieldActiveFilterSummaries(viewModel), [viewModel]);
@@ -383,12 +388,14 @@ export function YieldClient() {
   // benchmark rows honest.
   const currencyCounts = useMemo(() => {
     const counts: Record<string, number> = {};
+    const includeFunds = viewModel.filters.includeFunds === "include";
     for (const facet of yieldUniverse.rowFacets) {
       if (facet.peg === null) continue;
+      if (!includeFunds && facet.isTokenizedFund) continue;
       counts[facet.peg] = (counts[facet.peg] ?? 0) + 1;
     }
     return counts;
-  }, [yieldUniverse.rowFacets]);
+  }, [viewModel.filters.includeFunds, yieldUniverse.rowFacets]);
 
   useEffect(() => {
     if (!data || isLoading || error) return;
@@ -429,13 +436,15 @@ export function YieldClient() {
     (key: string, value: string) => {
       const trackedValue = key === "q" ? (value.trim() ? "non-empty" : "empty") : value || "all";
       const clearing = trackedValue === "all" || trackedValue === "empty";
-      if (key === "risk") {
-        // Whole-band move (empty-state "Show all risk levels"): drop every
-        // explicit band key so the requested band alone decides.
+      if (key === "risk" || key === "risk+includeFunds") {
+        // Whole-band move (empty-state "Show all risk levels", optionally also
+        // admitting tokenized funds): drop explicit band keys so the requested
+        // band alone decides.
         replaceParams((params) => {
           for (const riskKey of RISK_BUDGET_FILTER_KEYS) params.delete(riskKey);
           if (clearing) params.delete("risk");
           else params.set("risk", value);
+          if (key === "risk+includeFunds") params.set("includeFunds", "true");
         });
       } else if (clearing && RISK_BUDGET_FILTER_KEYS.includes(key as (typeof RISK_BUDGET_FILTER_KEYS)[number])) {
         // Deleting a risk-budget key alone would let the URL risk band re-fill

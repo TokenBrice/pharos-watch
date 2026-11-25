@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   BACKING_PROSE_LABELS,
@@ -27,6 +27,7 @@ import {
   INSTITUTIONAL_API_KEY_USD_PER_YEAR,
 } from "@shared/lib/public-api-contract";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { isTokenizedFundId } from "@shared/lib/stablecoins/listing-governance";
 import { PUBLIC_DOCS } from "@shared/lib/public-docs";
 import { METHODOLOGY_CHANGELOG_REGISTRY } from "@shared/lib/methodology-versions/registry";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
@@ -56,6 +57,9 @@ function escapeMarkdown(text: string): string {
   return text.replaceAll("\\", "\\\\").replaceAll("[", "\\[").replaceAll("]", "\\]").replace(/\s+/g, " ").trim();
 }
 
+const ACTIVE_STABLECOIN_LIST = ACTIVE_STABLECOINS.filter((coin) => !isTokenizedFundId(coin.id));
+const ACTIVE_TOKENIZED_FUND_LIST = ACTIVE_STABLECOINS.filter((coin) => isTokenizedFundId(coin.id));
+
 function stablecoinDescription(coin: StablecoinMeta): string {
   const governance = GOVERNANCE_PROSE_LABELS[coin.flags.governance] ?? coin.flags.governance;
   const backing = BACKING_PROSE_LABELS[coin.flags.backing] ?? coin.flags.backing;
@@ -63,6 +67,14 @@ function stablecoinDescription(coin: StablecoinMeta): string {
 
   const scoreLabel = formatSnapshotSafetyScoreLabel(coin.id);
   return `${governance} stablecoin ${backing} pegged to ${peg}.${scoreLabel ? ` ${scoreLabel}.` : ""}`;
+}
+
+function tokenizedFundDescription(coin: StablecoinMeta): string {
+  const governance = GOVERNANCE_PROSE_LABELS[coin.flags.governance] ?? coin.flags.governance;
+  const backing = BACKING_PROSE_LABELS[coin.flags.backing] ?? coin.flags.backing;
+  const peg = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
+
+  return `${governance} tokenized fund ${backing} denominated in ${peg}. Not graded on Safety Score.`;
 }
 
 function loadDigests(): DigestContentEntry[] {
@@ -226,12 +238,12 @@ function renderLinkList(links: readonly (readonly [string, string, string])[]): 
   });
 }
 
-function render(): string {
+export function renderLlmsTxt(): string {
   const digests = loadDigests();
   const lines: string[] = [
     "# Pharos",
     "",
-    `> Pharos tracks ${ACTIVE_STABLECOINS.length} active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.`,
+    `> Pharos tracks ${ACTIVE_STABLECOIN_LIST.length} active stablecoins and ${ACTIVE_TOKENIZED_FUND_LIST.length} tokenized funds across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.`,
     "",
     "## Core Data",
     "",
@@ -272,9 +284,16 @@ function render(): string {
     "",
     "## Stablecoins Index",
     "",
-    ...ACTIVE_STABLECOINS.map(
+    ...ACTIVE_STABLECOIN_LIST.map(
       (coin) =>
         `- [${escapeMarkdown(`${coin.name} (${coin.symbol})`)}](${absolute(buildStablecoinUrl(coin.id))}): ${stablecoinDescription(coin)}`,
+    ),
+    "",
+    "## Tokenized Funds Index",
+    "",
+    ...ACTIVE_TOKENIZED_FUND_LIST.map(
+      (coin) =>
+        `- [${escapeMarkdown(`${coin.name} (${coin.symbol})`)}](${absolute(buildStablecoinUrl(coin.id))}): ${tokenizedFundDescription(coin)}`,
     ),
     "",
   ];
@@ -282,12 +301,16 @@ function render(): string {
   return lines.join("\n");
 }
 
-const output = render();
+const isEntrypoint = Boolean(process.argv[1]) && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
-syncGeneratedArtifacts({
-  artifacts: [{ path: OUTPUT_PATH, contents: output }],
-  check: CHECK_MODE,
-  staleMessage: "public/llms.txt is out of date. Run `npm run prebuild` and commit the generated file.",
-  currentMessage: "public/llms.txt is current",
-  writtenMessage: `Generated llms.txt for ${ACTIVE_STABLECOINS.length} active stablecoins`,
-});
+if (isEntrypoint) {
+  const output = renderLlmsTxt();
+
+  syncGeneratedArtifacts({
+    artifacts: [{ path: OUTPUT_PATH, contents: output }],
+    check: CHECK_MODE,
+    staleMessage: "public/llms.txt is out of date. Run `npm run prebuild` and commit the generated file.",
+    currentMessage: "public/llms.txt is current",
+    writtenMessage: `Generated llms.txt for ${ACTIVE_STABLECOIN_LIST.length} active stablecoins and ${ACTIVE_TOKENIZED_FUND_LIST.length} tokenized funds`,
+  });
+}

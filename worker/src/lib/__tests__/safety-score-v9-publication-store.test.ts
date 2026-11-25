@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
-import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
+import { makeWorkerSafetyScoreV9Publication, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
 import {
   loadSafetyScoreV9Publication,
   loadSafetyScoreV9PublicationIdentityEnvelope,
@@ -877,6 +877,29 @@ describe("Safety Score V9 publication store", () => {
           message: "cause not recorded (legacy record)",
         },
       ],
+    });
+  });
+
+  it("records tokenized-fund-not-graded as scoreIndex notRatedReason even when another NR code precedes it", async () => {
+    const { sqlite, db } = database();
+    const fundCard = makeWorkerV9Card({
+      id: "buidl-blackrock",
+      ratingStatus: "not-rated",
+      score: null,
+      grade: "NR",
+      nrReasons: [
+        { code: "critical-unresolved", message: "Earlier-sorting NR reason.", field: "backing", origin: "asset" },
+        { code: "tokenized-fund-not-graded", message: "Tokenized fund shares are tracked without a Safety Score grade.", field: null, origin: "asset" },
+      ],
+      reasonCodes: ["critical-unresolved", "tokenized-fund-not-graded"],
+    });
+    const publication = makeWorkerSafetyScoreV9Publication({ cards: [fundCard] });
+    await persistSafetyScoreV9Publication(db, { ...currentInput(publication), deferPublicMaterialization: true });
+    const raw = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex)!.value as string;
+    const scoreIndex = JSON.parse(raw) as { scores: Record<string, { grade: string | null; notRatedReason?: string }> };
+    expect(scoreIndex.scores["buidl-blackrock"]).toMatchObject({
+      grade: "NR",
+      notRatedReason: "tokenized-fund-not-graded",
     });
   });
 });

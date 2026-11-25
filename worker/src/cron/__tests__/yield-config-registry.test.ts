@@ -91,18 +91,6 @@ describe("yield config registry", () => {
     expect(missing).toEqual([]);
   });
 
-  it("does not expose stale PikuDAO USP native DeFiLlama pool coverage", () => {
-    expect(YIELD_POOL_MAP["usp-pikudao"]).toBeUndefined();
-    expect(YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === "usp-pikudao")?.strategies).not.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          kind: "native-pool",
-          sourceKey: "2fb2f840-9be7-4de9-b29a-ea928205c476",
-        }),
-      ]),
-    );
-  });
-
   it("keeps deterministic on-chain configs unique and attached to tracked contracts or reviewed rate providers", () => {
     const ids = ON_CHAIN_RATE_CONFIGS.map((config) => config.stablecoinId);
     expect(new Set(ids).size).toBe(ids.length);
@@ -234,12 +222,11 @@ describe("yield config registry", () => {
     }
   });
 
-  it("keeps rejected gross holder-yield pins absent and the HedgeCore gap effective", () => {
+  it("keeps rejected gross holder-yield pins absent and intentional gaps effective", () => {
     expect(YIELD_POOL_MAP["sbold-k3-capital"]).toBeUndefined();
     expect(EXPLICIT_YIELD_SOURCE_POOL_MAP["sbold-k3-capital"]).toBeUndefined();
-    expect(YIELD_POOL_MAP["susd-hedgecore"]).toBeUndefined();
-    expect(YIELD_ADAPTER_LIFECYCLE["susd-hedgecore"]?.lifecycle).toBe("intentional-gap");
-    expect(isPriceDerivedYieldEligible("susd-hedgecore", INTENTIONAL_GAP_REASONS["susd-hedgecore"])).toBe(false);
+    expect(YIELD_ADAPTER_LIFECYCLE["usdn-smardex"]?.lifecycle).toBe("intentional-gap");
+    expect(isPriceDerivedYieldEligible("usdn-smardex", INTENTIONAL_GAP_REASONS["usdn-smardex"])).toBe(false);
   });
 
   it("records auto-lending same-symbol collision blocks", () => {
@@ -339,7 +326,7 @@ describe("yield config registry", () => {
     expect(isPriceDerivedYieldEligible("usdb-blast", INTENTIONAL_GAP_REASONS["usdb-blast"])).toBe(false);
     // usdb-blast is frozen, so its fallback membership no longer yields a manifest entry.
     expect(YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === "usdb-blast")).toBeUndefined();
-    for (const id of ["fpi-frax", "isc-international-stable-currency", "sdai-sky"]) {
+    for (const id of ["earnusd-lido", "sdai-sky"]) {
       expect(isPriceDerivedYieldEligible(id), id).toBe(true);
       expect(YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === id)
         ?.strategies.some((entry) => entry.kind === "price-derived"), id).toBe(true);

@@ -1,25 +1,27 @@
 import { describe, expect, it } from "vitest";
-import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC } from "@shared/lib/stablecoins/aggregate-universe";
+import { ACTIVE_META_BY_ID, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC } from "@shared/lib/rate-series";
 import {
+  buildDateFencedSupplementalChartConfigs,
   mergeStructuralSupplementalHistoryIntoCharts,
-  STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS,
+  STRUCTURAL_SUPPLEMENTAL_CHART_OVERLAYS,
 } from "../stablecoin-charts-reconciliation";
 
 describe("stablecoin-charts reconciliation", () => {
   it("excludes llama-backed charts while preserving the audited empty BRZ legacy chart", () => {
-    const llamaBacked = STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.filter(
-      ({ id }) => ACTIVE_META_BY_ID.get(id)?.llamaId != null,
+    const llamaBacked = STRUCTURAL_SUPPLEMENTAL_CHART_OVERLAYS.filter(
+      ({ id }) => TRACKED_META_BY_ID.get(id)?.llamaId != null,
     );
     expect(llamaBacked).toEqual([{ id: "brz-transfero", pegType: "peggedREAL" }]);
     const forbidden = [
       "audm-mento", "cadm-mento", "chfm-mento", "copm-mento", "gbpm-mento", "zarm-mento",
     ];
-    expect(STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.filter(({ id }) => forbidden.includes(id))).toEqual([]);
+    expect(STRUCTURAL_SUPPLEMENTAL_CHART_OVERLAYS.filter(({ id }) => forbidden.includes(id))).toEqual([]);
   });
 
   it("excludes a DefiLlama-charted asset that carries no registry llamaId", () => {
-    expect(STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.map(({ id }) => id)).not.toContain("sofid-sofi");
+    expect(STRUCTURAL_SUPPLEMENTAL_CHART_OVERLAYS.map(({ id }) => id)).not.toContain("sofid-sofi");
   });
 
   it("merges structural supplemental history into the base chart series", () => {
@@ -86,6 +88,41 @@ describe("stablecoin-charts reconciliation", () => {
       [],
       [{ id: "missing", pegType: "peggedUSD" }],
     )).toEqual([{ date: 100, totalCirculatingUSD: { peggedUSD: 100 } }]);
+  });
+
+  it("fences v1-only and v2-only supplemental overlays cleanly across the cutover timestamp", () => {
+    const cutover = CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC;
+    const pre = cutover - 86_400;
+    const post = cutover + 86_400;
+    const v1Fund = ACTIVE_META_BY_ID.get("eutbl-spiko")!;
+    const keptCoin = ACTIVE_META_BY_ID.get("usg-tangent")!;
+    const v2OnlyCoin = ACTIVE_META_BY_ID.get("paxg-paxos")!;
+    const configs = buildDateFencedSupplementalChartConfigs(
+      new Set([v1Fund.id, keptCoin.id]),
+      [keptCoin, v2OnlyCoin],
+      new Map([[v1Fund.id, v1Fund], [keptCoin.id, keptCoin], [v2OnlyCoin.id, v2OnlyCoin]]),
+      cutover,
+    );
+    expect(configs).toEqual([
+      { id: keptCoin.id, pegType: "peggedUSD" },
+      { id: v2OnlyCoin.id, pegType: "peggedGOLD", activeFrom: cutover },
+      { id: v1Fund.id, pegType: "peggedEUR", inactiveFrom: cutover },
+    ]);
+
+    const merged = mergeStructuralSupplementalHistoryIntoCharts(
+      [pre, cutover, post].map((date) => ({ date, totalCirculatingUSD: { peggedUSD: 100, peggedEUR: 10 } })),
+      [pre, cutover, post].flatMap((snapshot_date) => [
+        { stablecoin_id: v1Fund.id, snapshot_date, circulating_usd: 50 },
+        { stablecoin_id: keptCoin.id, snapshot_date, circulating_usd: 20 },
+        { stablecoin_id: v2OnlyCoin.id, snapshot_date, circulating_usd: 7 },
+      ]),
+      configs,
+    );
+    expect(merged).toEqual([
+      { date: pre, totalCirculatingUSD: { peggedUSD: 120, peggedEUR: 60 } },
+      { date: cutover, totalCirculatingUSD: { peggedUSD: 120, peggedEUR: 10, peggedGOLD: 7 } },
+      { date: post, totalCirculatingUSD: { peggedUSD: 120, peggedEUR: 10, peggedGOLD: 7 } },
+    ]);
   });
 
 });

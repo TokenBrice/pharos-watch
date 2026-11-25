@@ -25,7 +25,6 @@ import { moveusdOrcaProvider } from "./moveusd-orca";
 import { azndCurvePoolProvider } from "./aznd-curve-pool";
 import { swanusdCurvePoolProvider } from "./swanusd-curve-pool";
 import { stbtCurvePoolProvider } from "./stbt-curve-pool";
-import { usd3CurvePoolProvider } from "./usd3-curve-pool";
 import { mentoFpmmProvider } from "./mento-fpmm";
 import { mentoBrokerProvider } from "./mento-broker";
 import { aidUsdcRedeemerProvider } from "./aid-usdc-redeemer";
@@ -34,7 +33,6 @@ import { deuroEurcBridgeProvider } from "./deuro-eurc-bridge";
 import { erc4626NavProvider, previewRedeemProvider } from "./erc4626-nav";
 import { m0ExtensionProvider } from "./m0-extension";
 import { nusdSynapsePoolProvider } from "./nusd-synapse-pool";
-import { rwausdiChainlinkNavProvider } from "./rwausdi-chainlink-nav";
 import {
   CACHED_VAULT_RATE_SOURCE,
   type CurrentPriceOverride,
@@ -70,7 +68,6 @@ const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
   deuroEurcBridgeProvider,
   iusdInfinifiProvider,
   m0ExtensionProvider,
-  rwausdiChainlinkNavProvider,
   nusdSynapsePoolProvider,
   inheritedTrackedPriceProvider,
   mentoBrokerProvider,
@@ -78,7 +75,6 @@ const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
   azndCurvePoolProvider,
   swanusdCurvePoolProvider,
   stbtCurvePoolProvider,
-  usd3CurvePoolProvider,
   usduFinanceCurvePoolProvider,
   moveusdOrcaProvider,
   usdvJupiterProvider,

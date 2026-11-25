@@ -134,7 +134,7 @@ function DigestSafetyMapCard({ inputData }: { inputData: DigestSnapshotInputData
             {freshnessLabel}
           </p>
           <div className="space-y-1.5 text-sm text-foreground/90">
-            <p>Graded supply: <span className="font-medium">{formatCurrency(summary.totalMcapUsd, 1)}</span> across {summary.gradedCount} coins (incl. variants and stable-value investments)</p>
+            <p>Graded supply: <span className="font-medium">{formatCurrency(summary.totalMcapUsd, 1)}</span> across {summary.gradedCount} coins (incl. tracked variants)</p>
             <p>A tier: <span className="font-medium">{aTier.count} coins</span> · {aSharePct}%</p>
             <p>C/D/F tiers: <span className="font-medium">{outerCount} coins</span> · {outerSharePct}%</p>
           </div>

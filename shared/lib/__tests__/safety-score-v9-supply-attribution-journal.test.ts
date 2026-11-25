@@ -203,12 +203,12 @@ describe("Safety Score V9 supply attribution journal runtime", () => {
   it("records Centrifuge deployment packets as onchain evidence", () => {
     const onchain = createSupplyAttributionJournalV1(
       payload({
-        assetId: "acrdx-anemoy-apollo",
+        assetId: "jtrsy-anemoy",
         sourceId: "centrifuge.reviewed-deployment-unit-partition.v1",
       }),
     );
     expect(onchain).toMatchObject({
-      assetId: "acrdx-anemoy-apollo",
+      assetId: "jtrsy-anemoy",
       sourceOriginClass: "onchain-observation",
       admissionCode: "supply-attribution.admission.accepted",
     });

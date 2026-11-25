@@ -254,12 +254,14 @@ export async function main(argv: readonly string[] = process.argv.slice(2), opti
     { buildDirectHubExposures },
     { createV9ContagionScenarioEvaluator },
     { loadV9CandidateMethodologyPolicy },
+    { isTokenizedFundId },
   ] = await Promise.all([
     import("./replay-safety-score-v9"),
     import("@shared/types/report-cards-v9"),
     import("@shared/lib/dependency-exposure"),
     import("@shared/lib/safety-score-v9/contagion"),
     import("@shared/lib/safety-score-v9/policy"),
+    import("@shared/lib/stablecoins/listing-governance"),
   ]);
   const start = performance.now(), cpu = process.cpuUsage();
   const capture = JSON.parse(readFileSync(resolve(values.input as string), "utf8"));
@@ -301,6 +303,22 @@ export async function main(argv: readonly string[] = process.argv.slice(2), opti
   replay = null as unknown as typeof replay;
   const policy = loadV9CandidateMethodologyPolicy(fixedInput.clockSec);
   const evaluateScenario = createV9ContagionScenarioEvaluator({ rawCompileInput, policy, clock: fixedInput.clockSec, publicationGenerationId: candidate.publicationGenerationId });
+  const nullifyFundPillars = (
+    pillars: NonNullable<DependencyScenarioArtifact["scenarios"][number]["results"][number]["publishedPillars"]>,
+  ): NonNullable<DependencyScenarioArtifact["scenarios"][number]["results"][number]["publishedPillars"]> => ({
+    backing: {
+      score: null,
+      ...(pillars.backing.aggregationDisposition === undefined ? {} : { aggregationDisposition: pillars.backing.aggregationDisposition }),
+    },
+    exit: {
+      score: null,
+      ...(pillars.exit.aggregationDisposition === undefined ? {} : { aggregationDisposition: pillars.exit.aggregationDisposition }),
+    },
+    control: {
+      score: null,
+      ...(pillars.control.aggregationDisposition === undefined ? {} : { aggregationDisposition: pillars.control.aggregationDisposition }),
+    },
+  });
   const scenarios: DependencyScenarioArtifact["scenarios"] = [];
   for (const { hubId: rootId } of hubs) {
     const shocks: ContagionShock[] = [
@@ -313,16 +331,47 @@ export async function main(argv: readonly string[] = process.argv.slice(2), opti
       const id = `${rootId}:${shock.kind}`;
       const result = evaluateScenario({ id, shocks: [shock] });
       const assumptions = shock.kind === "score-limit" ? ["Root downstream-consumed final projection is limited to 40; its published headline score is not overwritten."] : shock.kind === "depeg" ? ["Active depeg of 1,000 bps for one day; captured historical peg performance and exit facts are held fixed."] : ["Root mint authority is compromised; missing mint control is modeled as global unbounded EOA minting with zero delay."];
-      scenarios.push({ id, rootId, shock, assumptions, results: result.rows.filter(row => row.failure === null && (row.coinId === rootId || row.changedDimensions.length > 0)).map(row => ({
-        assetId: row.coinId, publishedScore: row.baselineScore, publishedGrade: publishedById?.has(row.coinId) ? publishedById.get(row.coinId)!.grade : row.baselineGrade,
-        publishedRatingStatus: row.baselineRatingStatus, publishedPartialEvidence: row.baselinePartialEvidence,
-        publishedPillars: row.baselinePillars,
-        modeledScore: row.scenarioScore, modeledGrade: row.scenarioGrade,
-        modeledRatingStatus: row.scenarioRatingStatus!, modeledPartialEvidence: row.scenarioPartialEvidence,
-        modeledPillars: row.scenarioPillars,
-        deltaScore: row.delta, minHop: row.shortestHop,
-        roles: [...new Set((byId.get(row.coinId)?.dependencies.roles ?? []).map(role => role.role))].sort(),
-      })), failures: result.rows.filter(row => row.failure !== null).map(row => ({ assetId: row.coinId, code: row.failure! })) });
+      scenarios.push({ id, rootId, shock, assumptions, results: result.rows.filter(row => row.failure === null && (row.coinId === rootId || row.changedDimensions.length > 0)).map(row => {
+        const isFund = isTokenizedFundId(row.coinId);
+        const suppressPublished = isFund && row.baselineRatingStatus !== "pipeline-gap";
+        const suppressModeled = isFund && row.scenarioRatingStatus !== "pipeline-gap";
+        const publishedScore = suppressPublished ? null : row.baselineScore;
+        const publishedGrade = suppressPublished
+          ? "NR" as const
+          : publishedById?.has(row.coinId)
+            ? publishedById.get(row.coinId)!.grade
+            : row.baselineGrade;
+        const publishedRatingStatus = suppressPublished ? "not-rated" as const : row.baselineRatingStatus;
+        const publishedPillars = row.baselinePillars === undefined
+          ? undefined
+          : suppressPublished
+            ? nullifyFundPillars(row.baselinePillars)
+            : row.baselinePillars;
+        const modeledScore = suppressModeled ? null : row.scenarioScore;
+        const modeledGrade = suppressModeled ? "NR" as const : row.scenarioGrade;
+        const modeledRatingStatus = suppressModeled ? "not-rated" as const : row.scenarioRatingStatus!;
+        const modeledPillars = row.scenarioPillars === undefined
+          ? undefined
+          : suppressModeled
+            ? nullifyFundPillars(row.scenarioPillars)
+            : row.scenarioPillars;
+        return {
+          assetId: row.coinId,
+          publishedScore,
+          publishedGrade,
+          publishedRatingStatus,
+          publishedPartialEvidence: row.baselinePartialEvidence,
+          ...(publishedPillars === undefined ? {} : { publishedPillars }),
+          modeledScore,
+          modeledGrade,
+          modeledRatingStatus,
+          modeledPartialEvidence: row.scenarioPartialEvidence,
+          ...(modeledPillars === undefined ? {} : { modeledPillars }),
+          deltaScore: publishedScore === null || modeledScore === null ? null : modeledScore - publishedScore,
+          minHop: row.shortestHop,
+          roles: [...new Set((byId.get(row.coinId)?.dependencies.roles ?? []).map(role => role.role))].sort(),
+        };
+      }), failures: result.rows.filter(row => row.failure !== null).map(row => ({ assetId: row.coinId, code: row.failure! })) });
     }
   }
   const artifact = DependencyScenarioArtifactSchema.parse({ schemaVersion: 2, sourcePublicationGenerationId: candidate.publicationGenerationId, sourceBaseInputGenerationId: candidate.baseInputGenerationId, methodologyVersion: source?.methodology.version ?? candidate.policyVersion, evaluationBuildDigest: candidate.evaluationBuildDigest, computedAtSec: Math.floor(Date.now() / 1000), cohort: { rootIds: hubs.map(hub => hub.hubId), selection: "Top 15 hubs by A1 direct exposure USD using source-publication supply and published dependencies; shared books counted once. Unknown supply or shares excluded, not zero." }, scenarios });

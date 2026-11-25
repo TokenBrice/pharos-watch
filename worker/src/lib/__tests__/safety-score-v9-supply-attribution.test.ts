@@ -684,7 +684,7 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
 });
 
 describe("Safety Score V9 Centrifuge burn/mint supply attribution", () => {
-  const assetId = "acrdx-anemoy-apollo";
+  const assetId = "jtrsy-anemoy";
   const aggregateSupplyUsd = 51_033_069.79770032;
 
   beforeEach(() => {
@@ -798,7 +798,7 @@ describe("Safety Score V9 Centrifuge burn/mint supply attribution", () => {
         status: "rejected",
         rejectionCode: "deployment-identity-mismatch",
         failedRouteId:
-          "plume:0x9477724bb54ad5417de8baff29e59df3fb4da74f",
+          "plume:0xa5d465251fbcc907f5dd6bb2145488dfc6a2627b",
       });
 
     const capture = await captureSafetyScoreV9SupplyAttribution(
@@ -814,7 +814,7 @@ describe("Safety Score V9 Centrifuge burn/mint supply attribution", () => {
       fallbackCode: "supply-attribution.fallback.aggregate-only",
       rejectionCode: "deployment-identity-mismatch",
       failedRouteId:
-        "plume:0x9477724bb54ad5417de8baff29e59df3fb4da74f",
+        "plume:0xa5d465251fbcc907f5dd6bb2145488dfc6a2627b",
       contentSha256: null,
     });
   });

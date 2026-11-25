@@ -320,15 +320,15 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     expect(result.warnings).toContain(`stablecoin-publication-incomplete:${missing.join(",")}`);
   });
 
-  it("keeps a bounded USDY omission and its short price gap out of overall and website availability", async () => {
+  it("keeps a bounded single-asset omission and its short price gap out of overall and website availability", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const ids = [...ACTIVE_IDS];
-    const missingId = "usdy-ondo-finance";
+    const missingId = "usyc-hashnote";
     const assets = ids.filter((id) => id !== missingId).map((id) => ({ id, price: 1, priceSource: "coingecko" }));
     const activePriceCoverage = evaluateStablecoinActivePriceCoverage(assets, ids, {
       nowSec,
       previousAcceptedAssetsById: new Map([[missingId, {
-        id: missingId, circulating: { peggedUSD: 2_344_462_796.3038855 },
+        id: missingId, circulating: { peggedUSD: 2_115_690_902 },
         supplyObservedAt: nowSec - 7 * 86400,
       }]]),
     });

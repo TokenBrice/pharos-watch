@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { createMockD1Preset, findD1HistoryEntry, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { mockFetchRetry } from "../../test-helpers/cron";
@@ -6,7 +7,16 @@ import { mockFetchRetry } from "../../test-helpers/cron";
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
 
 import { syncStablecoinCharts } from "../sync-stablecoin-charts";
-import { STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS } from "../../lib/stablecoin-charts-reconciliation";
+import {
+  STRUCTURAL_SUPPLEMENTAL_CHART_OVERLAYS,
+} from "../../lib/stablecoin-charts-reconciliation";
+import { STABLECOIN_CHARTS_PERIMETER_CACHE_KEY } from "../../lib/stablecoin-charts-continuity";
+import {
+  CORE_STABLECOIN_AGGREGATE_UNIVERSE,
+  CORE_STABLECOIN_AGGREGATE_UNIVERSE_V1,
+  CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE,
+  CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC,
+} from "@shared/lib/stablecoins/aggregate-universe";
 import { normalizeStablecoinChartPoints, sampleHistoricalDatePoints } from "../../lib/stablecoin-charts-payload";
 import { handleStablecoinCharts } from "../../api/cache-handlers";
 
@@ -24,6 +34,7 @@ const DEFAULT_CHART_D1_TABLES: MockTableConfig[] = [
 ];
 
 const mockD1 = createMockD1Preset(DEFAULT_CHART_D1_TABLES);
+const sqliteFixtures = createLatestSchemaFixtureTracker();
 
 /** The FX reader loads the rates/meta pair in one statement. */
 function fxPairRead(updatedAt: number, rates: Record<string, number>, meta?: Record<string, unknown>): MockTableConfig {
@@ -90,6 +101,7 @@ describe("syncStablecoinCharts", () => {
   });
 
   afterEach(() => {
+    sqliteFixtures.closeAll();
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
@@ -121,7 +133,7 @@ describe("syncStablecoinCharts", () => {
       {
         match: "FROM supply_history",
         rows: makeRawChartPoints(120, nowSec).flatMap((point) =>
-          STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.map((config) => ({
+          STRUCTURAL_SUPPLEMENTAL_CHART_OVERLAYS.map((config) => ({
             stablecoin_id: config.id, snapshot_date: point.date, circulating_usd: 0,
           }))),
       },
@@ -165,7 +177,7 @@ describe("syncStablecoinCharts", () => {
     const db = mockD1([{
       match: "FROM supply_history",
       rows: points.flatMap((point) =>
-        STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.map((config) => ({
+        STRUCTURAL_SUPPLEMENTAL_CHART_OVERLAYS.map((config) => ({
           stablecoin_id: config.id,
           snapshot_date: point.date,
           circulating_usd: withOverlay && config.id === "usg-tangent" ? 25 : 0,
@@ -247,7 +259,7 @@ describe("syncStablecoinCharts", () => {
       {
         match: "FROM supply_history",
         rows: makeRawChartPoints(120, nowSec).flatMap((point) =>
-          STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.map((config) => ({
+          STRUCTURAL_SUPPLEMENTAL_CHART_OVERLAYS.map((config) => ({
             stablecoin_id: config.id,
             snapshot_date: point.date,
             circulating_usd: point.date >= nowSec - 30 * 86_400
@@ -266,7 +278,7 @@ describe("syncStablecoinCharts", () => {
     // Chunked at the 90-bind limit; the config size drives how many chunks the
     // supplemental supply-history query splits into.
     expect(metadata.supplementalHistoryChunks).toBe(
-      Math.ceil(STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.length / 90),
+      Math.ceil(STRUCTURAL_SUPPLEMENTAL_CHART_OVERLAYS.length / 90),
     );
     expect(metadata.supplementalHistoryMaxBindCount).toBeLessThanOrEqual(90);
 
@@ -547,7 +559,7 @@ describe("syncStablecoinCharts", () => {
       }),
       {
         match: "FROM supply_history",
-        rows: STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.map((config) => ({
+        rows: STRUCTURAL_SUPPLEMENTAL_CHART_OVERLAYS.map((config) => ({
           stablecoin_id: config.id, snapshot_date: oldPointDate, circulating_usd: 0,
         })),
       },
@@ -565,5 +577,253 @@ describe("syncStablecoinCharts", () => {
     }>;
     const oldPoint = cached.find((point) => point.date === oldPointDate);
     expect(oldPoint?.totalCirculatingUSD.peggedEUR).toBe(500);
+  });
+
+  it("accepts planned v1 -> v2 bucket drift once on cutover and restores strict drift checks on the next run", async () => {
+    const cutoverNowSec = CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC + 3_600;
+    vi.setSystemTime(new Date(cutoverNowSec * 1000));
+
+    const rawPreviousPoints = Array.from({ length: 120 }, (_, i) => ({
+      date: cutoverNowSec - (120 - i) * 86_400,
+      totalCirculatingUSD: { peggedUSD: 250_000_000, peggedEUR: 1_000_000, peggedGBP: 500_000 },
+    }));
+    const previousPoints = sampleHistoricalDatePoints(rawPreviousPoints, cutoverNowSec - 3_600);
+    const nextRawPoints = [
+      ...rawPreviousPoints.slice(0, 119).map((point) => ({
+        date: point.date,
+        totalCirculating: point.totalCirculatingUSD,
+        totalCirculatingUSD: point.totalCirculatingUSD,
+      })),
+      {
+        date: CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC,
+        totalCirculating: { peggedUSD: 240_000_000, peggedEUR: 230_000, peggedGBP: 140_000 },
+        totalCirculatingUSD: { peggedUSD: 240_000_000, peggedEUR: 230_000, peggedGBP: 140_000 },
+      },
+    ];
+    mockFetch([{ match: "stablecoincharts/all", body: nextRawPoints }]);
+
+    // First post-cutover run: previous cache exists with no perimeter record (legacy v1 baseline).
+    const cutoverDb = mockD1([
+      fxPairRead(cutoverNowSec, { peggedUSD: 1, peggedEUR: 1, peggedGBP: 1 }),
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["stablecoin-charts"],
+        rows: [],
+        first: { value: JSON.stringify(previousPoints), updated_at: cutoverNowSec - 3_600 },
+      },
+    ]);
+    const cutoverResult = await syncStablecoinCharts(cutoverDb);
+    expect(cutoverResult.status).toBeUndefined();
+    expect(cutoverResult.itemCount).toBeGreaterThan(0);
+    const cutoverMeta = JSON.parse(cutoverResult.metadata ?? "{}") as {
+      perimeterUniverse: string;
+      previousPerimeterUniverse: string;
+      perimeterCutover: { accepted: boolean; fromUniverse: string; toUniverse: string; cutoverDate: string; acceptedFindings: unknown[] } | null;
+    };
+    expect(cutoverMeta.previousPerimeterUniverse).toBe(CORE_STABLECOIN_AGGREGATE_UNIVERSE_V1);
+    expect(cutoverMeta.perimeterUniverse).toBe(CORE_STABLECOIN_AGGREGATE_UNIVERSE);
+    expect(cutoverMeta.perimeterCutover).toMatchObject({
+      accepted: true,
+      fromUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE_V1,
+      toUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
+      cutoverDate: CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE,
+    });
+    expect(cutoverMeta.perimeterCutover?.acceptedFindings).toEqual(expect.arrayContaining([
+      ["bucket-value-drift", 1_000_000, 230_000, "peggedEUR"],
+      ["bucket-value-drift", 500_000, 140_000, "peggedGBP"],
+    ]));
+
+    const perimeterInsert = findD1HistoryEntry(cutoverDb, "INSERT INTO cache", [0, STABLECOIN_CHARTS_PERIMETER_CACHE_KEY]);
+    expect(perimeterInsert).toBeDefined();
+    expect(JSON.parse(String(perimeterInsert?.binds[1]))).toEqual({
+      universe: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
+      cutoverDate: CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE,
+      acceptedFromUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE_V1,
+      acceptedAt: cutoverNowSec,
+    });
+
+    // Second run with the same v2 perimeter recorded: ordinary bucket drift now trips.
+    const nextRunDb = mockD1([
+      fxPairRead(cutoverNowSec, { peggedUSD: 1, peggedEUR: 1, peggedGBP: 1 }),
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["stablecoin-charts"],
+        rows: [],
+        first: { value: JSON.stringify(previousPoints), updated_at: cutoverNowSec - 3_600 },
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [STABLECOIN_CHARTS_PERIMETER_CACHE_KEY],
+        rows: [],
+        first: { value: String(perimeterInsert?.binds[1]), updated_at: cutoverNowSec - 3_600 },
+      },
+    ]);
+    const nextRunResult = await syncStablecoinCharts(nextRunDb);
+    expect(nextRunResult.status).toBe("degraded");
+    expect(JSON.parse(nextRunResult.metadata ?? "{}")).toMatchObject({
+      reason: "chart-history-truncated",
+      quality: { codes: ["bucket-value-drift"] },
+    });
+    expect(getCacheInsert(nextRunDb)).toBeUndefined();
+  });
+
+  it("fails closed when the chart perimeter cache row is malformed, invalid, or unreadable", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    mockFetch([{ match: "stablecoincharts/all", body: makeRawChartPoints(120, nowSec) }]);
+    for (const [label, row] of [
+      ["corrupt JSON", { value: "{corrupt-json", updated_at: nowSec - 3_600 }],
+      ["invalid acceptedFromUniverse", {
+        value: JSON.stringify({
+          universe: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
+          cutoverDate: CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE,
+          acceptedFromUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
+          acceptedAt: nowSec - 3_600,
+        }),
+        updated_at: nowSec - 3_600,
+      }],
+    ] as const) {
+      const db = mockD1([
+        fxPairRead(nowSec, { peggedUSD: 1 }),
+        {
+          match: "SELECT value, updated_at FROM cache WHERE key = ?",
+          matchBinds: [STABLECOIN_CHARTS_PERIMETER_CACHE_KEY],
+          rows: [],
+          first: row,
+        },
+      ]);
+      const result = await syncStablecoinCharts(db);
+      expect(result.status, label).toBe("degraded");
+      expect(JSON.parse(result.metadata ?? "{}"), label).toMatchObject({ reason: "chart-perimeter-baseline-invalid" });
+      expect(getCacheInsert(db), label).toBeUndefined();
+    }
+
+    const readFailDb = mockD1([
+      fxPairRead(nowSec, { peggedUSD: 1 }),
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [STABLECOIN_CHARTS_PERIMETER_CACHE_KEY],
+        rows: [],
+        throwError: new Error("d1 perimeter read boom"),
+      },
+    ]);
+    const readFailResult = await syncStablecoinCharts(readFailDb);
+    expect(readFailResult.status).toBe("degraded");
+    expect(JSON.parse(readFailResult.metadata ?? "{}")).toMatchObject({ reason: "chart-perimeter-baseline-read-failed" });
+    expect(getCacheInsert(readFailDb)).toBeUndefined();
+  });
+
+  it("blocks v2 -> v1 regression, peggedUSD cutover drift, missing post-cutover perimeter re-arming, and unconfirmed perimeter writes", async () => {
+    const cutoverNowSec = CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC + 3_600;
+    vi.setSystemTime(new Date(cutoverNowSec * 1000));
+
+    const makeSeries = (endSec: number, buckets: Record<string, number>) =>
+      Array.from({ length: 120 }, (_, i) => ({
+        date: endSec - (119 - i) * 86_400,
+        totalCirculating: buckets,
+        totalCirculatingUSD: buckets,
+      }));
+    const v1Buckets = { peggedUSD: 250_000_000, peggedEUR: 1_000_000 };
+    const v2Buckets = { peggedUSD: 240_000_000, peggedEUR: 230_000 };
+    const prevPreCutover = sampleHistoricalDatePoints(
+      makeSeries(CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC - 86_400, v1Buckets),
+      cutoverNowSec - 3_600,
+    );
+    const prevAtCutover = sampleHistoricalDatePoints(
+      makeSeries(CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC, v2Buckets),
+      cutoverNowSec - 3_600,
+    );
+
+    // 1. Backward v2 -> v1 regression (lagging upstream payload before cutover) blocks without touching cache.
+    mockFetch([{ match: "stablecoincharts/all", body: makeSeries(CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC - 86_400, v2Buckets) }]);
+    const reverseDb = mockD1([
+      fxPairRead(cutoverNowSec, { peggedUSD: 1, peggedEUR: 1 }),
+      { match: "SELECT value, updated_at FROM cache WHERE key = ?", matchBinds: ["stablecoin-charts"], rows: [], first: { value: JSON.stringify(prevAtCutover), updated_at: cutoverNowSec - 3_600 } },
+      { match: "SELECT value, updated_at FROM cache WHERE key = ?", matchBinds: [STABLECOIN_CHARTS_PERIMETER_CACHE_KEY], rows: [], first: { value: JSON.stringify({ universe: CORE_STABLECOIN_AGGREGATE_UNIVERSE, cutoverDate: CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE }), updated_at: cutoverNowSec - 3_600 } },
+    ]);
+    const reverseResult = await syncStablecoinCharts(reverseDb);
+    expect(reverseResult.status).toBe("degraded");
+    expect(JSON.parse(reverseResult.metadata ?? "{}")).toMatchObject({
+      reason: "chart-history-truncated",
+      quality: { codes: expect.arrayContaining(["perimeter-universe-regression"]) },
+    });
+    expect(getCacheInsert(reverseDb)).toBeUndefined();
+
+    // 2. peggedUSD drift during v1 -> v2 cutover stays fail-closed.
+    mockFetch([{ match: "stablecoincharts/all", body: makeSeries(CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC, { peggedUSD: 80_000_000, peggedEUR: 230_000 }) }]);
+    const usdDriftDb = mockD1([
+      fxPairRead(cutoverNowSec, { peggedUSD: 1, peggedEUR: 1 }),
+      { match: "SELECT value, updated_at FROM cache WHERE key = ?", matchBinds: ["stablecoin-charts"], rows: [], first: { value: JSON.stringify(prevPreCutover), updated_at: cutoverNowSec - 3_600 } },
+    ]);
+    const usdDriftResult = await syncStablecoinCharts(usdDriftDb);
+    expect(usdDriftResult.status).toBe("degraded");
+    expect(JSON.parse(usdDriftResult.metadata ?? "{}")).toMatchObject({
+      reason: "chart-history-truncated",
+      quality: { codes: ["bucket-value-drift"] },
+    });
+    expect(getCacheInsert(usdDriftDb)).toBeUndefined();
+
+    // 3. Missing perimeter row on a baseline strictly past cutover day never re-arms the cutover waiver.
+    const postCutoverSec = CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC + 3 * 86_400;
+    vi.setSystemTime(new Date((postCutoverSec + 3_600) * 1000));
+    const prevPostCutover = sampleHistoricalDatePoints(
+      makeSeries(postCutoverSec - 86_400, v1Buckets),
+      postCutoverSec,
+    );
+    mockFetch([{ match: "stablecoincharts/all", body: makeSeries(postCutoverSec, v2Buckets) }]);
+    const missingPostDb = mockD1([
+      fxPairRead(postCutoverSec + 3_600, { peggedUSD: 1, peggedEUR: 1 }),
+      { match: "SELECT value, updated_at FROM cache WHERE key = ?", matchBinds: ["stablecoin-charts"], rows: [], first: { value: JSON.stringify(prevPostCutover), updated_at: postCutoverSec } },
+    ]);
+    const missingPostResult = await syncStablecoinCharts(missingPostDb);
+    expect(missingPostResult.status).toBe("degraded");
+    expect(JSON.parse(missingPostResult.metadata ?? "{}")).toMatchObject({
+      reason: "chart-history-truncated",
+      previousPerimeterUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
+    });
+    expect(getCacheInsert(missingPostDb)).toBeUndefined();
+
+    // 4. Unconfirmed perimeter write degrades without advancing cadence.
+    vi.setSystemTime(new Date(cutoverNowSec * 1000));
+    mockFetch([{ match: "stablecoincharts/all", body: makeSeries(CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC, v2Buckets) }]);
+    const unconfirmedDb = mockD1([
+      fxPairRead(cutoverNowSec, { peggedUSD: 1, peggedEUR: 1 }),
+      { match: "SELECT value, updated_at FROM cache WHERE key = ?", matchBinds: ["stablecoin-charts"], rows: [], first: { value: JSON.stringify(prevPreCutover), updated_at: cutoverNowSec - 3_600 } },
+      { match: "WHERE EXISTS", rows: [], runMeta: { changes: 0 } },
+    ]);
+    const unconfirmedResult = await syncStablecoinCharts(unconfirmedDb);
+    expect(unconfirmedResult.status).toBe("degraded");
+    expect(JSON.parse(unconfirmedResult.metadata ?? "{}")).toMatchObject({
+      reason: "chart-perimeter-write-unconfirmed",
+      lastWriteAdvanced: false,
+    });
+    expect(getCadenceCompletion(unconfirmedDb)).toBeUndefined();
+
+    // 5. Real SQLite transaction atomicity: a failing perimeter write rolls back the chart write.
+    const { db: sqliteDb, sqlite } = sqliteFixtures.open();
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+      "stablecoin-charts",
+      JSON.stringify(prevPreCutover),
+      cutoverNowSec - 3_600,
+    );
+    sqlite.exec(`CREATE TRIGGER fail_perimeter_write BEFORE INSERT ON cache WHEN NEW.key = '${STABLECOIN_CHARTS_PERIMETER_CACHE_KEY}' BEGIN SELECT RAISE(ABORT, 'perimeter-write-failed'); END;`);
+    await expect(syncStablecoinCharts(sqliteDb)).rejects.toThrow(/perimeter-write-failed/);
+    expect(sqlite.prepare("SELECT updated_at FROM cache WHERE key = 'stablecoin-charts'").get()).toEqual({
+      updated_at: cutoverNowSec - 3_600,
+    });
+    expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(STABLECOIN_CHARTS_PERIMETER_CACHE_KEY)).toBeUndefined();
+
+    // Once healthy, both chart and perimeter commit together atomically in one batch.
+    sqlite.exec("DROP TRIGGER fail_perimeter_write;");
+    const atomicResult = await syncStablecoinCharts(sqliteDb);
+    expect(atomicResult.status).toBeUndefined();
+    expect(sqlite.prepare("SELECT updated_at FROM cache WHERE key = 'stablecoin-charts'").get()).toEqual({
+      updated_at: cutoverNowSec,
+    });
+    const storedPerimeter = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?").get(STABLECOIN_CHARTS_PERIMETER_CACHE_KEY) as { value: string; updated_at: number } | undefined;
+    expect(storedPerimeter?.updated_at).toBe(cutoverNowSec);
+    expect(JSON.parse(storedPerimeter!.value)).toMatchObject({
+      universe: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
+      acceptedFromUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE_V1,
+    });
   });
 });

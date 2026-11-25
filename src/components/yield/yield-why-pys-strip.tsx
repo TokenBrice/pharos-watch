@@ -9,6 +9,7 @@ interface YieldWhyPysStripProps {
   sustainabilityMult: number | null;
   grade: string | null;
   safetyScore: number | null;
+  tokenizedFund?: boolean;
   adjustedRiskPenalty: number;
   sourceRiskPenalty: number;
   sourceRiskDriverLabel: string | null;
@@ -22,6 +23,7 @@ export function YieldWhyPysStrip({
   sustainabilityMult,
   grade,
   safetyScore,
+  tokenizedFund = false,
   adjustedRiskPenalty,
   sourceRiskPenalty,
   sourceRiskDriverLabel,
@@ -33,11 +35,13 @@ export function YieldWhyPysStrip({
   const stabilityValue = stabilityPct !== null ? `${stabilityPct}%` : "—";
   const stabilitySub = sustainabilityMult === PYS_SUSTAINABILITY_FLOOR ? "(floor)" : "30d APY variance";
   const safetyValue =
-    grade && grade !== "NR"
-      ? grade
-      : safetyScore !== null
-        ? `${Math.round(safetyScore)}/100`
-        : "—";
+    tokenizedFund
+      ? "Not graded"
+      : grade && grade !== "NR"
+        ? grade
+        : safetyScore !== null
+          ? `${Math.round(safetyScore)}/100`
+          : "—";
   const safetySub = `÷${adjustedRiskPenalty.toFixed(1)}× penalty`;
   const sourceRiskValue = `${sourceRiskPenalty.toFixed(2)}×`;
   const sourceRiskSub = sourceRiskPenalty <= 1 ? "Neutral" : sourceRiskDriverLabel ?? "—";

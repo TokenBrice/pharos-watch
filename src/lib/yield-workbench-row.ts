@@ -18,6 +18,7 @@ import {
   type YieldSourceClockInput,
   type YieldSourceDisplayClock,
 } from "@/lib/yield-source-presentation";
+import { isClientTokenizedFundId } from "@shared/lib/stablecoins/aggregate-client-registry";
 import { isMorphoNetYieldSourceKey } from "@shared/lib/yield-source-history";
 import type {
   YieldBenchmarkSelectionMode,
@@ -116,7 +117,11 @@ export function deriveYieldRowPresentation(row: YieldWorkbenchRanking, clock?: Y
     }), freshness?.status === "stale"),
     rankChip: buildRankChangeChipDisplay(getYieldRankChangeAttribution(row)),
     pysNullReasonText:
-      row.pharosYieldScore === null && row.pysNullReason ? PYS_NULL_REASON_TEXT[row.pysNullReason] : null,
+      row.pharosYieldScore === null && row.pysNullReason
+        ? isClientTokenizedFundId(row.id) && row.pysNullReason === "safety-unrated"
+          ? "Tokenized fund — not graded on Safety Score."
+          : PYS_NULL_REASON_TEXT[row.pysNullReason]
+        : null,
     availableSources: getYieldAvailableSources(row),
     altSourceCount: getYieldAlternateSourceCount(row),
     benchmarkReferenceText: getYieldBenchmarkReferenceText(row),

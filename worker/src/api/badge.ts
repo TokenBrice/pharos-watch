@@ -5,6 +5,8 @@ import {
   type SafetyBadgeTheme,
 } from "@shared/lib/safety-badge-svg";
 import { WORKER_ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { isTokenizedFundId } from "@shared/lib/stablecoins/listing-governance";
+import { TOKENIZED_FUND_NOT_GRADED_REASON_CODE } from "@shared/lib/safety-score-v9/public";
 import { errorResponse } from "../lib/api-response";
 import { loadActiveSafetyScoreIndex } from "../lib/safety-score-index";
 import {
@@ -65,6 +67,20 @@ export async function handleSafetyBadge(
 
   const { style, theme } = parseSafetyBadgeOptions(url);
   const headOnly = method === "HEAD";
+  if (isTokenizedFundId(canonicalId)) {
+    const svg = renderSafetyBadgeSvg(
+      { kind: "tokenized-fund", symbol: meta.symbol, name: meta.name },
+      { style, theme },
+    );
+    return new Response(headOnly ? null : svg, {
+      status: 200,
+      headers: {
+        "Content-Type": SVG_CONTENT_TYPE,
+        "Cache-Control": "public, s-maxage=3600, max-age=300",
+        "X-Badge-Reason": TOKENIZED_FUND_NOT_GRADED_REASON_CODE,
+      },
+    });
+  }
   const index = await loadActiveSafetyScoreIndex(db);
 
   if (index.kind === "error") {
@@ -117,8 +133,11 @@ export async function handleSafetyBadge(
     });
   }
 
+  const isUngradedFund = isTokenizedFundId(canonicalId) || card.notRatedReason === TOKENIZED_FUND_NOT_GRADED_REASON_CODE;
   let badgeState: SafetyBadgeState;
-  if (card.ratingStatus === "not-rated" || card.score == null || card.grade == null || card.grade === "NR") {
+  if (isUngradedFund) {
+    badgeState = { kind: "tokenized-fund", symbol: meta.symbol, name: meta.name };
+  } else if (card.ratingStatus === "not-rated" || card.score == null || card.grade == null || card.grade === "NR") {
     badgeState = { kind: "not-rated", symbol: meta.symbol, name: meta.name };
   } else {
     badgeState = {
@@ -147,6 +166,7 @@ export async function handleSafetyBadge(
     "X-Safety-Score-Generation": index.snapshot.safetyScoreIdentity.publicationGenerationId,
     "X-Data-Updated-At": String(index.snapshot.updatedAt),
     "X-Data-Freshness-Budget": String(SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC),
+    ...(isUngradedFund ? { "X-Badge-Reason": TOKENIZED_FUND_NOT_GRADED_REASON_CODE } : {}),
     ...(sMaxage > 0 ? { Date: new Date(nowSec * 1000).toUTCString() } : {}),
   };
 

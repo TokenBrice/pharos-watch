@@ -211,7 +211,7 @@ describe("handleDigestSnapshot", () => {
     expect(body.comparison).toBeNull();
   });
 
-  it.each(["matched", "changed", "partial", "legacy", "counts-only"])(
+  it.each(["matched", "changed", "universe-changed", "partial", "legacy", "counts-only"])(
     "returns the actual skipped-day endpoint and requires cohort proof (%s)",
     async (kind) => {
       const { sqlite, db } = fixtures.open();
@@ -227,7 +227,8 @@ describe("handleDigestSnapshot", () => {
         aggregateUniverse: "core-stablecoins-v1", totalMcapUsd: 90e9, supplyCoverage: priorCoverage,
       }));
       insert.run(day + 3600, JSON.stringify({
-        aggregateUniverse: "core-stablecoins-v1", totalMcapUsd: 100e9, supplyCoverage: coverage,
+        aggregateUniverse: kind === "universe-changed" ? "core-stablecoins-v2" : "core-stablecoins-v1",
+        totalMcapUsd: 100e9, supplyCoverage: coverage,
       }));
       const body = DigestSnapshotResponseSchema.parse(await (await handleDigestSnapshot(
         db, new URL("https://x/api/digest-snapshot?date=2026-10-01"),

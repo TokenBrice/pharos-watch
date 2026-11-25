@@ -182,9 +182,16 @@ export function validateSafetyScoreV9ReplayIntegrity(value: unknown): asserts va
   for (const card of pipeline.candidate.cards) {
     const trace = evaluated.get(card.id)!.trace;
     const compact = legacy ? projectLegacyTrace(trace) : projectCompactV9ScoreTrace(trace);
-    same([card.score, card.grade], [compact.score, compact.grade], `card ${card.id}`);
-    if (!legacy) same(card.ratingStatus, trace.ratingStatus, `card status ${card.id}`);
-    same([card.pillars.backing.score, card.pillars.exit.score, card.pillars.control.score], [compact.pillars.backing, compact.pillars.exit, compact.pillars.control], `pillars ${card.id}`);
+    const ungradedFund = !legacy && card.ratingStatus === "not-rated"
+      && card.nrReasons.some((reason) => reason.code === "tokenized-fund-not-graded");
+    if (ungradedFund) {
+      same([card.score, card.grade], [null, "NR"], `card ${card.id}`);
+      same([card.pillars.backing.score, card.pillars.exit.score, card.pillars.control.score], [null, null, null], `pillars ${card.id}`);
+    } else {
+      same([card.score, card.grade], [compact.score, compact.grade], `card ${card.id}`);
+      if (!legacy) same(card.ratingStatus, trace.ratingStatus, `card status ${card.id}`);
+      same([card.pillars.backing.score, card.pillars.exit.score, card.pillars.control.score], [compact.pillars.backing, compact.pillars.exit, compact.pillars.control], `pillars ${card.id}`);
+    }
     same([trace.baseInputGenerationId, trace.factSetDigest, trace.policyId, trace.policyDigest, trace.evaluationBuildDigest, trace.asOfSec], [base, facts, identity.policyId, identity.policyDigest, identity.evaluationBuildDigest, pipeline.fixedInput.clockSec], `trace bindings ${card.id}`);
   }
 }

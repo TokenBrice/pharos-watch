@@ -324,7 +324,7 @@ describe("DigestSnapshot safety map", () => {
     expect(image.getAttribute("src")).toContain("date=2026-08-30");
     expect(image.getAttribute("src")).not.toContain("latest");
     const mapRegion = screen.getByRole("region", { name: "The dated market census behind this edition" });
-    expect(mapRegion.textContent).toContain("Graded supply: $100.0B across 10 coins (incl. variants and stable-value investments)");
+    expect(mapRegion.textContent).toContain("Graded supply: $100.0B across 10 coins (incl. tracked variants)");
     expect(mapRegion.textContent).toContain("A tier: 2 coins · 70.0%");
     expect(mapRegion.textContent).toContain("C/D/F tiers: 6 coins · 15.0%");
   });

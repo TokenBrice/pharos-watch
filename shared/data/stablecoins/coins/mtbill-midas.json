@@ -116,38 +116,18 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
-  "liveReservesConfig": {
-    "adapter": "chainlink-nav",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "mtbill-midas",
-    "scoring": {
-      "maxSourceAgeSec": 345600
-    },
-    "display": {
-      "url": "https://midas.app/transparency?token=mtbill",
-      "label": "Midas mTBILL NAV"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "alchemy"
-      }
-    },
-    "params": {
-      "navScope": "portfolio",
-      "oracleAddress": "0x056339C044055819E8Db84E71f5f2E1F536b2E5b",
-      "tokenAddress": "0xdd629e5241cbc5919847783e6c96b2de4754e438",
-      "sourceKey": "chainlink-nav:token:0xdd629e5241cbc5919847783e6c96b2de4754e438",
-      "assetLabel": "Midas mTBILL U.S. Treasury bill portfolio NAV",
-      "assetRisk": "low",
-      "maxOracleAgeSec": 604800
-    }
-  },
   "yieldConfig": {
     "yieldSource": "Midas T-bill fund",
     "yieldType": "nav-appreciation"
   },
-  "launchDate": "2023-12-01"
+  "launchDate": "2023-12-01",
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "NAV-accreting secured Treasury-bill debt certificate wrapping USTB and BUIDL, not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
+    "source": {
+      "label": "Midas mTBILL legal documentation",
+      "url": "https://docs.midas.app/resources/legal-product-documentation/mtbill"
+    }
+  }
 }

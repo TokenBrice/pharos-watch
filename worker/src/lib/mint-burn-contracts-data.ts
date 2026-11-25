@@ -44,8 +44,6 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
   { stablecoinId: "brz-transfero", dustThreshold: 10_000 },
   { stablecoinId: "kag-kinesis", dustThreshold: 10 },
   { stablecoinId: "satusd-river", dustThreshold: 10_000 },
-  { stablecoinId: "rwausdi-multipli", dustThreshold: 10_000 },
-  { stablecoinId: "fpi-frax", dustThreshold: 10_000 },
   { stablecoinId: "usdq-quantoz", dustThreshold: 10_000 },
   { stablecoinId: "usdx-hex-trust", dustThreshold: 10_000 },
   { stablecoinId: "usat-tether", dustThreshold: 10_000 },
@@ -85,7 +83,6 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
   { stablecoinId: "usdf-falcon", dustThreshold: 10_000 },
   { stablecoinId: "usyc-hashnote", dustThreshold: 10_000 },
   { stablecoinId: "rlusd-ripple", dustThreshold: 10_000 },
-  { stablecoinId: "usdy-ondo-finance", dustThreshold: 10_000 },
   { stablecoinId: "buidl-blackrock", dustThreshold: 10_000 },
   { stablecoinId: "usdd-tron-dao-reserve", dustThreshold: 10_000 },
   { stablecoinId: "usdtb-ethena", dustThreshold: 10_000 },
@@ -96,7 +93,6 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
   { stablecoinId: "frax-frax", dustThreshold: 10_000 },
   { stablecoinId: "dola-inverse-finance", dustThreshold: 10_000 },
   { stablecoinId: "iusd-infinifi", dustThreshold: 10_000 },
-  { stablecoinId: "gusd-gate", dustThreshold: 10_000 },
   {
     stablecoinId: "avusd-avant",
     dustThreshold: 10_000,
@@ -146,10 +142,7 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
     dustThreshold: 10_000,
     originDollarRebaseVault: "0xe75d77b1865ae93c7eaa3040b038d7aa7bc02f70",
   },
-  { stablecoinId: "usp-pikudao", dustThreshold: 10_000 },
   { stablecoinId: "ustb-superstate", dustThreshold: 1_000 },
-  { stablecoinId: "ousg-ondo-finance", dustThreshold: 100 },
-  { stablecoinId: "mtbill-midas", dustThreshold: 10_000 },
   { stablecoinId: "thbill-theo", dustThreshold: 10_000 },
   { stablecoinId: "thusd-theo", dustThreshold: 10_000 },
   { stablecoinId: "wsrusd-reservoir", dustThreshold: 10_000 },
@@ -225,17 +218,6 @@ export const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
     bridgeDetection: cctpBridgeDetection([
       "0xfd78ee919681417d192449715b2594ab58f5d002",
     ], "usdc-circle"),
-  },
-  {
-    chain: ETHEREUM,
-    stablecoinId: "brsrv-blackrock",
-    contractSource: "primary",
-    dustThreshold: 10_000,
-    startBlock: 25_590_451,
-    tier: "extended",
-    startBlockSource: "ethereum-creation-receipt-0x2eef66c3a1df6f83f1230fc67074103675653df308a0437439fb36b5344bc0a1-reviewed-2026-10-15",
-    startBlockConfidence: "high",
-    events: transferMintBurn(),
   },
   {
     chain: ETHEREUM,
@@ -471,18 +453,6 @@ export const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
     events: transferMintBurn(),
   },
 
-  // CHFSAFO native Ethereum register only; other native registers remain outside flow scope.
-  {
-    chain: ETHEREUM,
-    stablecoinId: "chfsafo-spiko",
-    dustThreshold: 10_000,
-    startBlock: 24_540_949,
-    startBlockSource: "https://eth.blockscout.com/tx/0x6d98798a86bde1112b6b3b905ddb86d7c4969278f6e69cc732bd988aa004c22a",
-    startBlockConfidence: "high",
-    tier: "extended",
-    events: transferMintBurn(),
-  },
-
   // --- Top-50/100/150 supported expansion (Ethereum only) ---
   // Mechanical default-block entries live in EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS.
   ...EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS.map(
@@ -499,19 +469,6 @@ export const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
       events: transferMintBurn(),
     }),
   ),
-  {
-    chain: ETHEREUM,
-    stablecoinId: "gldon-ondo",
-    dustThreshold: 10,
-    startBlock: 23_984_676,
-    tier: "extended",
-    bridgeDetection: layerZeroOftBridgeDetection([
-      "0x6d119ebada730583ef8dc7b8506fa317a374796a",
-    ], "gldon-ondo", "ethereum", "0xff2baba46df92919705e60120c477ae5b7341eb3", "0x000000000000000000000000000000000000dead"),
-    startBlockSource: "exact-gldon-initialization-2025-12-10-etherscan-0xd44893c63ea157f403239cb968ffee492e53423c283b42c222260882e5a1e2a1",
-    startBlockConfidence: "high",
-    events: transferMintBurn(),
-  },
   // DefiLlama's Ethereum BUIDL supply sums both registered share-class tokens.
   // Keep the second token explicit: default identity resolution selects the first.
   {

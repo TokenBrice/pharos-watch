@@ -52,7 +52,6 @@ import {
   deriveSupplyModelExitRouteObservation,
   REDEMPTION_SETTLEMENT_HORIZON_CEILING_SEC,
 } from "../redemption-exit-route-observations";
-import { buildFpiControllerV9ExitRouteObservation } from "../fpi-controller-redemption-route";
 import { buildSfrxusdCrosschainV9ExitRouteObservation } from "../sfrxusd-crosschain-redemption-route";
 import { deriveCurrentPegObservationMap } from "../current-peg-observations";
 import { getPegTaxonomyByType } from "@shared/lib/peg-taxonomy";
@@ -276,7 +275,6 @@ export async function buildRedemptionBackstopEntry(
     routeStatusReason: preserveAdverseStatus ? observedLiveMetadata.routeStatusReason : null,
     routeStatusReviewedAt: preserveAdverseStatus ? observedLiveMetadata.routeStatusReviewedAt : null,
     liveHolderEligibility: null,
-    v9FpiControllerRouteState: null,
     v9SfrxusdCrosschainRouteState: null,
     v9OutputValuation: null,
   };
@@ -431,16 +429,7 @@ export async function buildRedemptionBackstopEntry(
         resolutionState,
         now,
       })
-    : (liveMetadata.v9FpiControllerRouteState
-        ? buildFpiControllerV9ExitRouteObservation({
-            state: liveMetadata.v9FpiControllerRouteState,
-            modeledExitSizeUsd,
-            routeStatus,
-            resolutionState,
-            now,
-          })
-        : null) ??
-      buildRedemptionExitRouteObservation({
+    : buildRedemptionExitRouteObservation({
         stablecoinId,
         config: { ...config, settlementModel },
         capacityProfile: baseCapacityProfile,
@@ -507,7 +496,7 @@ export async function buildRedemptionBackstopEntry(
           mergedRouteStatus.routeStatusSource === reserveRouteStatus.routeStatusSource
           || (reserveRouteStatus.routeStatus === "unknown" && !reserveRouteStatus.routeStatusSource && mergedRouteStatus.routeStatusSource === "static-config")
         ))
-      || (!routeSuspension && exitRouteObservation && (liveMetadata.v9SfrxusdCrosschainRouteState || liveMetadata.v9FpiControllerRouteState || liveMetadata.v9OutputValuation))
+      || (!routeSuspension && exitRouteObservation && (liveMetadata.v9SfrxusdCrosschainRouteState || liveMetadata.v9OutputValuation))
     ) ? { reserveInput: options.reserveInput } : {}),
     score,
     dexLiquidityScore,

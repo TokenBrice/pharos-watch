@@ -1,5 +1,19 @@
 [
   {
+    "version": "1.91",
+    "title": "Listing policy v2 core aggregate cutover",
+    "date": "2026-11-25",
+    "effectiveAt": 1795564800,
+    "summary": "Under listing policy v2, tokenized fund shares leave the core stablecoin aggregate on a dated cutover (core-stablecoins-v2), narrowing the chain stablecoin supply, concentration, quality, peg-stability, and backing-diversity denominators to active core stablecoins without restating prior history.",
+    "impact": [
+      "Chains hosting significant tokenized fund share supply (for example Ethereum and non-USD Treasury fund deployments) see lower core stablecoin totals and updated concentration, quality, peg-coverage, and backing-diversity readings from the cutover onward.",
+      "Previously published chain history and snapshots are not restated across the boundary.",
+      "Factor weights, the 50% rated-supply quality gate, the 95% peg-coverage composite gate, L2BEAT tier mapping, and health bands are unchanged. Activation is 2026-11-25 00:00 UTC (1795564800); re-date effectiveAt if deploy slips."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "1.9",
     "title": "Peg coverage and dated chain supply",
     "date": "2026-11-19",

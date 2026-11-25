@@ -3,8 +3,14 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { RailSafetySummary } from "../rail-safety-summary";
+import { TokenizedFundPanel } from "../tokenized-fund-panel";
 import type { HeroSignalRailItem } from "../hero-card-metrics";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
+import { buildStablecoinDetailClientCoin } from "@/lib/stablecoin-detail-client-coin";
+import { REDEMPTION_ACCESS_LABELS, REDEMPTION_HOLDER_ELIGIBILITY_LABELS, REDEMPTION_SETTLEMENT_LABELS } from "@shared/lib/classification";
+import { getPricingSourceLabel } from "@shared/lib/pricing-sources";
+import type { RedemptionBackstopEntry } from "@shared/types/redemption";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 
 // Vitest hoists the factory above static imports, so the helper loads dynamically.
 vi.mock("next/link", async () => {
@@ -137,5 +143,89 @@ describe("RailSafetySummary", () => {
     const pendingBars = container.querySelector("[data-pillar-bars-pending]");
     expect(pendingBars).not.toBeNull();
     expect(pendingBars?.querySelectorAll("li")).toHaveLength(3);
+  });
+
+  it("renders tokenized-fund status in the rail and structured values with valid <dl> nesting in TokenizedFundPanel", () => {
+    const rail = render(<RailSafetySummary items={signals({ grade: "NR", dews: "—" })} tokenizedFund />);
+    expect(rail.container.querySelector('[data-safety-state="tokenized-fund"]')?.textContent).toContain("Not graded");
+    expect(rail.container.textContent).toContain("Tokenized fund");
+    rail.unmount();
+
+    const buidl = buildStablecoinDetailClientCoin(TRACKED_META_BY_ID.get("buidl-blackrock")!);
+    const redemptionBackstop = {
+      stablecoinId: buidl.id,
+      accessModel: "issuer-api",
+      settlementModel: "same-day",
+      holderEligibility: "whitelisted-primary",
+      routeStatus: "open",
+      feeBps: 0,
+    } as RedemptionBackstopEntry;
+
+    const livePanel = render(
+      <TokenizedFundPanel
+        coin={buidl}
+        coinData={{ price: 1, priceSource: "protocol-redeem", priceObservedAtMode: "upstream" }}
+        pegRef={1}
+        reserves={{
+          reserves: [{ name: "U.S. Treasury Bills", pct: 95, risk: "very-low" }, { name: "Cash & repo", pct: 5, risk: "very-low" }],
+          estimated: false,
+          mode: "live",
+        }}
+        redemptionBackstop={redemptionBackstop}
+        hasReservesSection
+        hasRedemptionSection
+      />,
+    );
+    expect(livePanel.container.querySelector("[data-tokenized-fund-panel]")).not.toBeNull();
+    const liveText = livePanel.container.textContent ?? "";
+    expect(liveText).toContain("95% U.S. Treasury Bills · 5.0% Cash & repo");
+    expect(liveText).toContain("Live reserve feed");
+    expect(liveText).toContain(`$1.0000 via ${getPricingSourceLabel("protocol-redeem")}`);
+    expect(liveText).not.toContain("Par-targeted fund share");
+    expect(liveText).toContain(
+      `${REDEMPTION_ACCESS_LABELS["issuer-api"]} · ${REDEMPTION_SETTLEMENT_LABELS["same-day"]} · 0% redemption fee`,
+    );
+    expect(liveText).toContain(REDEMPTION_HOLDER_ELIGIBILITY_LABELS["whitelisted-primary"]);
+    // Valid HTML5 <dl>: every <dt> and <dd> is a direct child of <dl> or a direct <div> child of <dl>.
+    const dl = livePanel.container.querySelector("dl")!;
+    for (const termOrDesc of Array.from(dl.querySelectorAll("dt, dd"))) {
+      expect(termOrDesc.parentElement === dl || termOrDesc.parentElement?.parentElement === dl).toBe(true);
+    }
+    livePanel.unmount();
+
+    const fallbackPanel = render(
+      <TokenizedFundPanel
+        coin={buidl}
+        coinData={{ price: 1, priceSource: "coingecko", priceObservedAtMode: "upstream" }}
+        pegRef={1}
+        reserves={{
+          reserves: [{ name: "Treasury basket", pct: 100, risk: "very-low" }],
+          estimated: false,
+          mode: "curated-fallback",
+        }}
+        redemptionBackstop={null}
+      />,
+    );
+    expect(fallbackPanel.container.textContent).toContain("Reviewed composition fallback");
+    expect(fallbackPanel.container.textContent).not.toContain("Live reserve feed");
+    fallbackPanel.unmount();
+
+    const ustb = buildStablecoinDetailClientCoin(TRACKED_META_BY_ID.get("ustb-superstate")!);
+    const estimatedPanel = render(
+      <TokenizedFundPanel
+        coin={ustb}
+        coinData={{ price: 10.52, priceSource: "chainlink-nav", priceObservedAtMode: "upstream" }}
+        pegRef={1}
+        reserves={{
+          reserves: [{ name: "Estimated T-Bills", pct: 100, risk: "very-low" }],
+          estimated: true,
+          mode: "template-fallback",
+        }}
+        redemptionBackstop={null}
+      />,
+    );
+    expect(estimatedPanel.container.textContent).toContain("Estimated from category template");
+    expect(estimatedPanel.container.textContent).toContain(`$10.5200 via ${getPricingSourceLabel("chainlink-nav")}`);
+    expect(estimatedPanel.container.textContent).toContain("NAV-accreting price");
   });
 });

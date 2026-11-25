@@ -219,7 +219,6 @@ describe("issuer payout identity", () => {
     ["srusde-strata", ["usde-ethena", "susde-ethena"]],
     ["dllr-sovryn", ["asset:zusd", "doc-money-on-chain"]],
     ["gldy-streamex", ["fiat:USD", "stablecoin:identity-unspecified", "physical:XAU"]],
-    ["spusd-soulpeg", ["asset:susdc-soulpeg"]],
   ] as const)("keeps %s explicit unresolved outputs instead of parent, fiat or basket inference", (id, keys) => {
     const reviewed = getRedemptionBackstopConfig(id)!;
     expect(build({ stablecoinId: id, config: reviewed })?.output).toEqual({
@@ -879,14 +878,6 @@ describe("derived supply-model route observations", () => {
       });
     };
 
-    for (const [stablecoinId, trackedAssetIds] of [
-      ["ntbill-nest", ["usdc-circle", "pusd-plume"]],
-      ["nbasis-nest", ["usdc-circle", "pusd-plume"]],
-      ["nopal-nest", ["usdc-circle", "pusd-plume", "usdt-tether"]],
-      ["nwisdom-nest", ["usdc-circle", "pusd-plume"]],
-    ] as const) {
-      expect(buildConfigured(stablecoinId)?.output).toEqual({ kind: "tracked-stablecoin", trackedAssetIds });
-    }
     expect(buildConfigured("ussd-sonic-labs")?.output).toEqual({
       kind: "tracked-stablecoin",
       trackedAssetIds: ["frxusd-frax"],

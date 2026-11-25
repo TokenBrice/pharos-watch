@@ -116,6 +116,12 @@ export function ChainHealthMethodologySection() {
       </p>
 
       <p>
+        Under listing policy v2 (v1.91, <code className="text-xs">core-stablecoins-v2</code>), tokenized fund shares
+        leave the core stablecoin aggregate on a dated cutover without restating prior history, so Chain Health
+        denominators cover active core stablecoins from the cutover onward.
+      </p>
+
+      <p>
         Only a fresh, accepted Safety Score publication contributes Safety quality. Missing, held, stale, or invalid Safety Score data leaves
         quality and the composite NR; Chain Health never falls back to a legacy model or a stale score map.
       </p>

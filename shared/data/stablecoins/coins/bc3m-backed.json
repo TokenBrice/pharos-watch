@@ -135,45 +135,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
-  "liveReservesConfig": {
-    "adapter": "chainlink-por",
-    "version": 3,
-    "semantics": "attestation-mix",
-    "scoring": {
-      "maxSourceAgeSec": 4000000,
-      "allowedDegradedWarningCodes": [
-        "partial-supply-read-failure"
-      ]
-    },
-    "breakerScope": "bc3m-backed",
-    "display": {
-      "url": "https://data.chain.link/feeds/polygon/mainnet/bc3m-por",
-      "label": "Chainlink LedgerLens PoR (Polygon)"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "polygon",
-        "rpcMode": "etherscan-proxy"
-      }
-    },
-    "params": {
-      "porFeedAddress": "0x648e0ff6a36d58f6fce5927cb77601b73cadc2af",
-      "assetLabel": "AMUNDI GOVIES 0-6 Months Euro Investment Grade ETF shares",
-      "assetRisk": "very-low",
-      "reserveUnit": "SHARES",
-      "issuerCirculationProbe": {
-        "kind": "backed-graphql",
-        "url": "https://api.backed.fi/graphql",
-        "reserveSymbol": "C3M.MI",
-        "maxReserveSupplySkewSec": 86400,
-        "temporalReview": {
-          "reviewedAt": "2026-10-08",
-          "evidenceRef": "https://reference-data-directory.vercel.app/feeds-matic-mainnet.json"
-        }
-      }
-    }
-  },
   "yieldConfig": {
     "yieldSource": "AMUNDI GOVIES 0-6 Months Euro Investment Grade ETF NAV accretion",
     "yieldType": "nav-appreciation"
@@ -200,5 +161,14 @@
   "launchDate": "2023-06-15",
   "marketAvailability": "legacy-or-wind-down",
   "windDownAnnouncedAt": "2026-03-25",
-  "windDownSourceUrl": "https://backed.fi/news-updates/the-future-is-xstocks-upgrading-btokens"
+  "windDownSourceUrl": "https://backed.fi/news-updates/the-future-is-xstocks-upgrading-btokens",
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "NAV-accreting Swiss DLT debt tracker certificate for Amundi 0-6m Eurozone bond UCITS ETF (also winding down by end-2026), not a fixed-par stablecoin; no active stablecoin links it (listing policy 2.0).",
+    "source": {
+      "label": "Backed bTokens wind-down announcement",
+      "url": "https://backed.fi/news-updates/the-future-is-xstocks-upgrading-btokens"
+    }
+  }
 }

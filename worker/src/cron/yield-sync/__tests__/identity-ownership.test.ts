@@ -205,9 +205,4 @@ describe("yield identity and ownership boundaries", () => {
       expect(matches).toEqual([{ pool: expected.pool, apy: expected.apy, apyBase: expected.apyBase, apyReward: null, tvlUsd: expected.tvlUsd }]);
     }
   });
-
-  it("does not quote Venus gross returns for HedgeCore holders after quarantine", () => {
-    const venus = pool({ pool: "89eba1e5-1b1b-47b6-958b-38138a04c244", symbol: "USDC", chain: "BSC", project: "venus-core-pool", apy: 3.8333 });
-    expect(matchAllDlPools("susd-hedgecore", "sUSD", [venus], YIELD_POOL_MAP, {}, { contractAddresses: ["0xbe1922750760c4cae69edb6fe79a22ae9b62a23d"] })).toEqual([]);
-  });
 });

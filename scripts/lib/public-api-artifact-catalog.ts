@@ -322,7 +322,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = {
   "stablecoin-charts": {
     referenceOrder: 7,
     summary: "Stablecoin charts",
-    description: "Historical total supply chart data.",
+    description: "Historical total supply chart data with per-point `aggregateUniverse` (`legacy-provider-all-stablecoins-v1`, `core-stablecoins-v1`, or `core-stablecoins-v2`).",
     tags: ["Stablecoins", "History"],
     responseSchema: "StablecoinChartResponse",
   },
@@ -510,7 +510,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = {
     referenceOrder: 30,
     summary: "Safety Score grades (no key)",
     description:
-      "Free schema-1, no-key projection of the accepted V9 publication: nullable score/grade, ratingStatus and compact partialEvidence per tracked stablecoin, plus methodology version and publication status. Pipeline-gap never means NR. See [Safety Score availability](https://pharos.watch/api/reference/#safety-score-availability).",
+      "Free schema-1, no-key projection of the accepted V9 publication: nullable score/grade, ratingStatus, optional notRatedReason (present only on not-rated rows, such as `tokenized-fund-not-graded`), and compact partialEvidence per tracked stablecoin, plus methodology version and publication status. Pipeline-gap never means NR. See [Safety Score availability](https://pharos.watch/api/reference/#safety-score-availability).",
     tags: ["Risk"],
     responseSchema: "SafetyGradesResponse",
     postman: {
@@ -572,7 +572,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = {
   "stability-index": {
     referenceOrder: 28,
     summary: "Pharos Stability Index",
-    description: "PSI and history. Daily components preserve null versus observed zero; partial averages disclose `dailyProvenance.componentSampleCounts`. All-day averaging and mixed-version provenance remain intact; `componentsUnavailable` names gaps. Legacy counts remain unknown. Partial samples retain unpriced-event diagnostics and stored `current.inputDegradation.supplyUnavailableIds` / `carriedSupplyIds` / `trendUnavailableIds`. A DefiLlama-outage carry (`supplyRestored` with `supplyRestoreMode: \"outage-fallback\"`) remains an index weight but is excluded from `universeCoverage.admittedSupply` and never claimed as an observation; routine main-path carries keep their existing treatment. Unavailable supply is excluded from denominators and contributors, and unusable aggregate market-cap or paired trend inputs retain the previous sample, never invented zero.",
+    description: "PSI and history, with optional `current.aggregateUniverse` (`core-stablecoins-v1` or `core-stablecoins-v2`). Daily components preserve null versus observed zero; partial averages disclose `dailyProvenance.componentSampleCounts`. All-day averaging and mixed-version provenance remain intact; `componentsUnavailable` names gaps. Legacy counts remain unknown. Partial samples retain unpriced-event diagnostics and stored `current.inputDegradation.supplyUnavailableIds` / `carriedSupplyIds` / `trendUnavailableIds`. A DefiLlama-outage carry (`supplyRestored` with `supplyRestoreMode: \"outage-fallback\"`) remains an index weight but is excluded from `universeCoverage.admittedSupply` and never claimed as an observation; routine main-path carries keep their existing treatment. Unavailable supply is excluded from denominators and contributors, and unusable aggregate market-cap or paired trend inputs retain the previous sample, never invented zero.",
     tags: ["Risk"],
     responseSchema: "StabilityIndexResponse",
     parameters: [
@@ -908,7 +908,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = {
   "digest-snapshot": {
     referenceOrder: 21,
     summary: "Digest snapshot",
-    description: "Build-time digest context snapshot for a specific digest date. An elapsed UTC day is archive data; an in-progress day omits `blacklistSummary` and uses the standard 5-minute profile because its cohort is not complete.",
+    description: "Build-time digest context snapshot for a specific digest date, carrying optional `inputData.aggregateUniverse` and `prevInputData.aggregateUniverse` (`core-stablecoins-v1` or `core-stablecoins-v2`; equal universes are required for `comparison.supplyComparable`). An elapsed UTC day is archive data; an in-progress day omits `blacklistSummary` and uses the standard 5-minute profile because its cohort is not complete.",
     tags: ["Digest"],
     responseSchema: "DigestSnapshotResponse",
     parameters: [

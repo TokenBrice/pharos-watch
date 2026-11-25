@@ -12,7 +12,7 @@ vi.mock("@shared/lib/tracked-stablecoin-utils", async (importOriginal) => {
     // exercises one identity path: Layer-3 venue skips, a pinned issuer pool and
     // a reviewed vault share whose own venue is the matched project.
     ACTIVE_YIELD_BEARING_STABLECOINS: [
-      "eursafo-spiko",
+      "eutbl-spiko",
       "susd-solayer",
       "apyusd-apyx",
       "sbold-k3-capital",
@@ -133,20 +133,20 @@ it.each([
 });
 
 describe("Layer 3 never adopts a lending-venue pool", () => {
-  it("skips a Morpho Blue market instead of publishing it as EURSAFO's own yield", async () => {
+  it("skips a Morpho Blue market instead of publishing it as EUTBL's own yield", async () => {
     const morphoPool = pool({
       pool: "e0c3e6dc-128a-5b72-8106-239bc4577f7b",
-      symbol: "EURSAFO",
+      symbol: "EUTBL",
       chain: "Ethereum",
       project: "morpho-blue",
       tvlUsd: 810_355,
       apy: 2.19,
       apyBase: 2.19,
-      underlyingTokens: ["0x0990b149e915cb08e2143a5c6f669c907eddc8b0"],
+      underlyingTokens: ["0xa0769f7a8fc65e47de93797b4e21c073c117fc80"],
     });
     const resolved = await resolvePools([morphoPool]);
 
-    expect(hasSource(resolved, "eursafo-spiko", morphoPool.pool)).toBe(false);
+    expect(hasSource(resolved, "eutbl-spiko", morphoPool.pool)).toBe(false);
   });
 
   it("skips a Project 0 Solana market instead of publishing a sUSD venue row", async () => {
@@ -256,17 +256,17 @@ describe("Layer 3 never adopts a lending-venue pool", () => {
 
   it("keeps a Layer 3 match native when its project is not a lending venue", async () => {
     const issuerPool = pool({
-      pool: "spiko-eursafo-pool",
-      symbol: "EURSAFO",
+      pool: "spiko-eutbl-pool",
+      symbol: "EUTBL",
       chain: "Ethereum",
       project: "spiko",
       tvlUsd: 900_000_000,
       apy: 2.3,
       apyBase: 2.3,
-      underlyingTokens: ["0x0990b149e915cb08e2143a5c6f669c907eddc8b0"],
+      underlyingTokens: ["0xa0769f7a8fc65e47de93797b4e21c073c117fc80"],
     });
     const resolved = await resolvePools([issuerPool]);
-    const row = resolved.find((entry) => entry.id === "eursafo-spiko" && entry.yield?.sourceKey === issuerPool.pool);
+    const row = resolved.find((entry) => entry.id === "eutbl-spiko" && entry.yield?.sourceKey === issuerPool.pool);
 
     expect(row?.yield).toMatchObject({
       dataSource: "defillama",

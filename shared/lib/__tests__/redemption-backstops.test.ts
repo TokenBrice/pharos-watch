@@ -68,15 +68,6 @@ describe("getRedemptionBackstopConfig", () => {
     expect(resolveV9RedemptionRouteCostBpsAtNotional(config, 1_000_000)).toBeNull();
   });
 
-  it("keeps SoulPeg atomic receipt conversion and zero protocol fee distinct from a USDC payout", () => {
-    const config = getRedemptionBackstopConfig("spusd-soulpeg")!;
-    expect(config.holderEligibility).toBe("any-holder");
-    expect(config.settlementModel).toBe("atomic");
-    expect(config.v9RouteReviewTerms).toMatchObject({ settlementDelaySec: 0, missingScoringFields: ["capacity"] });
-    expect(resolveV9RedemptionRouteCostBpsAtNotional(config, 1_000_000)).toBe(0);
-    expect(config.costModel).not.toHaveProperty("gasOrBridgeCostUsd");
-  });
-
   it("records ZARU legal entitlement as eventual-only with all executable terms withheld", () => {
     const config = getRedemptionBackstopConfig("zaru-blocktower")!;
     expect(config.capacityModel).toEqual({ kind: "supply-full", confidence: "documented-bound", basis: "issuer-term-redemption" });

@@ -4,6 +4,7 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import { ACTIVE_MINT_BURN_CONFIGS, buildAggregateQueryParams, buildCoinSummaries, fetchAggregateData } from "../../lib/mint-burn-pipeline/flow-aggregate";
 import { buildMintBurnLegacySpans, MINT_BURN_LEGACY_CUTOVER, mintBurnScanFingerprint, mintBurnWindowAdmits, type MintBurnScanSegment } from "../../lib/mint-burn-pipeline/scan-coverage";
 import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
+import { isGrandfatheredMintBurnConfig } from "../../lib/mint-burn-publication";
 import { MINT_BURN_WATERMARK_MAX_AGE_SEC, mintBurnWindowCoverage, resolveMintBurnWatermark, cachedFlowFallbackResponse } from "../../lib/mint-burn-flows-service";
 import { makeMintBurnScanSegments, mintBurnScenario } from "../../test-helpers/__shared/mint-burn";
 import { hydrateMintBurn } from "../../lib/dews/source-state/hydration";
@@ -43,7 +44,7 @@ function openTransition() {
 }
 async function openPublishedTransition() {
   const fixture = openTransition();
-  const extended = ACTIVE_MINT_BURN_CONFIGS.find((entry) => entry.tier === "extended")!;
+  const extended = ACTIVE_MINT_BURN_CONFIGS.find((entry) => entry.tier === "extended" && isGrandfatheredMintBurnConfig(entry))!;
   fixture.sqlite.prepare("UPDATE mint_burn_scan_coverage SET to_timestamp = ? WHERE config_key = ?")
     .run(END - HOUR / 2, mintBurnConfigKey(extended));
   const now = END + 300;
@@ -75,7 +76,7 @@ describe("bounded legacy transition and common scan watermark", () => {
 
   it("anchors every coin, baseline and total to the extended lane's common closed hour", async () => {
     const { db, sqlite } = openTransition();
-    const extended = ACTIVE_MINT_BURN_CONFIGS.find((entry) => entry.tier === "extended")!;
+    const extended = ACTIVE_MINT_BURN_CONFIGS.find((entry) => entry.tier === "extended" && isGrandfatheredMintBurnConfig(entry))!;
     sqlite.prepare("UPDATE mint_burn_scan_coverage SET to_timestamp = ? WHERE config_key = ?")
       .run(END - HOUR / 2, mintBurnConfigKey(extended));
     const data = await fetchAggregateData(db, buildAggregateQueryParams(END + 300, 24));

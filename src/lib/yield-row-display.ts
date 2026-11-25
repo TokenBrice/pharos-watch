@@ -6,7 +6,7 @@ import { formatYieldSourceRiskSummary, getYieldSourceDepthDisplay, isNativeYield
 import { buildPysNeutralizeInput, selectPysRowDrags } from "@/lib/yield-presentation";
 import { buildYieldPysBreakdown, type YieldPresentationContext } from "@/lib/yield-presentation-context";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
-import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
+import { selectRowInvestmentWarningSignals } from "@/lib/yield-view-model-filter-axes";
 
 export type PysBreakdownValues = {
   scalingFactor: number;
@@ -26,7 +26,11 @@ export function isOpportunityDerivedYieldRow(row: YieldViewModelRow): boolean {
 export function formatYieldSafetySrLabel(
   grade: YieldViewModelRow["safetyGrade"],
   safetyScore: number | null,
+  isTokenizedFund = false,
 ): string {
+  if (isTokenizedFund) {
+    return "Not graded: tokenized fund";
+  }
   return grade && grade !== "NR"
     ? safetyScore !== null
       ? `Safety grade: ${grade}, score ${Math.round(safetyScore)} out of 100`
@@ -56,7 +60,7 @@ export function deriveYieldRowDisplay(
     grade: row.safetyGrade,
     safetyScore: row.safetyScore,
     pysColor: getPysColor(row.pharosYieldScore),
-    warningCount: selectInvestmentWarningSignals(row.warningSignals).length,
+    warningCount: selectRowInvestmentWarningSignals(row.warningSignals, Boolean(row.isTokenizedFund)).length,
     sourceRiskSummary: formatYieldSourceRiskSummary(row.sourceRisk),
     depthDisplay: getYieldSourceDepthDisplay({
       depthLens: row.sourceDepthLens,
@@ -87,7 +91,7 @@ function formatYieldRowLabels(row: YieldViewModelRow) {
     tvlIsNative,
     stabilityPct,
     apySrLabel,
-    safetySrLabel: formatYieldSafetySrLabel(grade, safetyScore),
+    safetySrLabel: formatYieldSafetySrLabel(grade, safetyScore, row.isTokenizedFund),
     pysSrLabel:
       row.pharosYieldScore !== null
         ? `Pharos Yield Score ${formatScore(row.pharosYieldScore)} out of 100`

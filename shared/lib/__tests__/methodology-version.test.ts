@@ -16,6 +16,10 @@ import {
   METHODOLOGY_CHANGELOG_REGISTRY,
   SAFETY_SCORE_METHODOLOGY_CHANGELOG,
 } from "../methodology-versions/registry";
+import {
+  CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE,
+  CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC,
+} from "../stablecoins/aggregate-universe";
 
 function entry(version: string, effectiveAt: number): MethodologyChangelogEntry {
   return { version, title: "", date: "", effectiveAt, summary: "", impact: [], commits: [], reconstructed: false };
@@ -187,6 +191,23 @@ describe("methodology registry", () => {
       expect(getMethodologyVersionAt(key, cut - 1)).toBe(before);
       expect(getMethodologyVersionAt(key, cut)).toBe(after);
       expect(getMethodologyVersionAt(key, cut + 1)).toBe(after);
+    }
+  });
+
+  it("aligns every listing-policy v2 cutover changelog entry with the shared cutover constant", () => {
+    for (const [key, version, priorVersion] of [
+      ["safety-score", "10.55", "10.54"],
+      ["stability-index", "3.71", "3.70"],
+      ["chain-health", "1.91", "1.9"],
+      ["pricing-pipeline", "6.95", "6.94"],
+    ] as const) {
+      const release = METHODOLOGY_CHANGELOG_REGISTRY.find((entry) => entry.key === key)
+        ?.entries.find((entry) => entry.version === version);
+      expect(release, `${key} v${version}`).toBeDefined();
+      expect(release!.date, `${key} v${version} date`).toBe(CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE);
+      expect(release!.effectiveAt, `${key} v${version} effectiveAt`).toBe(CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC);
+      expect(getMethodologyVersionAt(key, CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC - 1)).toBe(priorVersion);
+      expect(getMethodologyVersionAt(key, CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC)).toBe(version);
     }
   });
 

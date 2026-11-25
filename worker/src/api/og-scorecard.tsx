@@ -76,6 +76,8 @@ async function scorecardElement(metadata: SocialScorecardMetadata): Promise<Soci
     : buildSocialScorecardElement({ ...drawn.card, identity }, { measure, logos: new Map() });
 }
 
+import { isTokenizedFundId } from "@shared/lib/stablecoins/listing-governance";
+
 function admitSubject(snapshot: SafetyScoreGradeSnapshot, id: string): SocialScorecardMetadata["subject"] | null {
   if (id === SOCIAL_SCORECARD_OVERVIEW_ID) {
     let ratedCount = 0;
@@ -84,7 +86,7 @@ function admitSubject(snapshot: SafetyScoreGradeSnapshot, id: string): SocialSco
     let totalScore = 0;
     for (const card of snapshot.cards) {
       if (card.ratingStatus === "pipeline-gap") unavailableCount++;
-      else if (card.ratingStatus === "not-rated") notRatedCount++;
+      else if (card.ratingStatus === "not-rated" || isTokenizedFundId(card.id)) notRatedCount++;
       else if (card.score !== null && card.grade !== null) { ratedCount++; totalScore += card.score; }
       else return null;
     }
@@ -98,6 +100,12 @@ function admitSubject(snapshot: SafetyScoreGradeSnapshot, id: string): SocialSco
   const coin = TRACKED_META_BY_ID.get(id);
   const card = snapshot.cards.find((candidate) => candidate.id === id);
   if (!coin || !card || card.ratingStatus === "pipeline-gap" || card.grade === null) return null;
+  if (isTokenizedFundId(id)) {
+    return {
+      kind: "stablecoin", id, name: coin.name, symbol: coin.symbol, score: null, grade: "NR",
+      ratingStatus: "not-rated",
+    };
+  }
   const ratings = snapshot.scorecardPillars?.id === id ? snapshot.scorecardPillars.ratings : undefined;
   const pillars = V9_QUALITY_PILLARS.flatMap(pillar => {
     const rating = ratings?.[pillar];

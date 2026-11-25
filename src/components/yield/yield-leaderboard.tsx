@@ -48,7 +48,7 @@ import type { YieldBenchmarkRegistry } from "@shared/types/yield";
 import { downloadCsvWithPreamble, type CsvColumn } from "@/lib/exports/csv";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 import { YIELD_LEADERBOARD_CSV_COLUMNS } from "@/lib/yield-presentation";
-import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
+import { selectRowInvestmentWarningSignals } from "@/lib/yield-view-model-filter-axes";
 
 const SORT_KEY_LABELS: Record<YieldTableSortKey, string> = {
   pys: "PYS",
@@ -284,7 +284,7 @@ export function YieldLeaderboard({
         trackEvent("yield_row_action", {
           action: "history_opened",
           coin_id: stablecoinId,
-          warning_count: selectInvestmentWarningSignals(row?.warningSignals).length,
+          warning_count: selectRowInvestmentWarningSignals(row?.warningSignals, Boolean(row?.isTokenizedFund)).length,
         });
       }
       setExpandedId((current) => (current === stablecoinId ? null : stablecoinId));
@@ -297,7 +297,7 @@ export function YieldLeaderboard({
       trackEvent("yield_row_action", {
         action: "source_opened",
         coin_id: stablecoinId,
-        warning_count: selectInvestmentWarningSignals(row?.warningSignals).length,
+        warning_count: selectRowInvestmentWarningSignals(row?.warningSignals, Boolean(row?.isTokenizedFund)).length,
       });
       setSheetRankingId(stablecoinId);
     },
@@ -605,10 +605,11 @@ export function YieldMobileCard({
           safetySrLabel={safetySrLabel}
           opportunityDerived={isOpportunityDerivedSafety(row.provenance?.safetyProvenance)}
           usedDefaultSafety={usedDefaultSafety}
+          tokenizedFund={row.isTokenizedFund}
           compact
         />
         <YieldZoneChip
-          safetyScore={usedDefaultSafety ? null : safetyScore}
+          safetyScore={row.isTokenizedFund || usedDefaultSafety ? null : safetyScore}
           apy30d={row.apy30d}
           benchmarkRate={resolvedBenchmark.rate}
         />
@@ -659,7 +660,7 @@ export function YieldMobileCard({
 
       {warningCount > 0 ? (
         <ul className="mt-3 space-y-1 text-xs text-state-warn-bright">
-          {selectInvestmentWarningSignals(row.warningSignals).slice(0, 2).map((signal) => (
+          {selectRowInvestmentWarningSignals(row.warningSignals, Boolean(row.isTokenizedFund)).slice(0, 2).map((signal) => (
             <li key={signal}>{formatYieldWarningSignal(signal)}</li>
           ))}
         </ul>
@@ -742,6 +743,7 @@ export function YieldMobileCard({
               sustainabilityMult={sustainabilityMult}
               grade={grade}
               safetyScore={safetyScore}
+              tokenizedFund={row.isTokenizedFund}
               adjustedRiskPenalty={adjustedRiskPenalty}
               sourceRiskPenalty={sourceRiskPenalty}
               sourceRiskDriverLabel={sourceRiskDrivers[0]?.label ?? null}

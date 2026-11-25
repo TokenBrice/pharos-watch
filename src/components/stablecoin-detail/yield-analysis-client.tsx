@@ -45,6 +45,7 @@ import {
 import {
   CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID,
 } from "@shared/lib/stablecoins/client-registry";
+import { isClientTokenizedFundId } from "@shared/lib/stablecoins/aggregate-client-registry";
 import { loadClientStablecoinDetail } from "@shared/lib/stablecoins/client-detail";
 import type { StablecoinClientDetailMeta } from "@shared/types/stablecoin-client-meta";
 import type { CoinNotice } from "@shared/types/stablecoin-meta-primitives";
@@ -52,7 +53,7 @@ import { formatChartDate, formatPercent, formatScore } from "@shared/lib/format"
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT, getProfilePegLabel, YIELD_TYPE_LABELS } from "@shared/lib/classification";
 import { hasStaticYieldWorkbench } from "@shared/lib/yield-auto-lending";
 import type { YieldHistoryPoint } from "@shared/types/yield-evidence-schemas";
-import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
+import { selectRowInvestmentWarningSignals } from "@/lib/yield-view-model-filter-axes";
 
 // Keep each chart-bearing piece behind its own client import boundary. The
 // shared Webpack recharts-vendor group deduplicates charts across these loaders.
@@ -251,6 +252,7 @@ function StablecoinYieldDetailHeader({
   model: YieldDetailReadyModel | null;
 }) {
   const ranking = model?.ranking ?? null;
+  const isTokenizedFund = model?.isTokenizedFund ?? isClientTokenizedFundId(staticCoin.id);
 
   return (
     <section className="pharos-card-shell overflow-hidden px-4 py-4 sm:px-5">
@@ -262,7 +264,14 @@ function StablecoinYieldDetailHeader({
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="pharos-page-title text-2xl sm:text-3xl">{staticCoin.name}</h1>
                 <span className="font-mono tabular-nums text-base text-muted-foreground">{staticCoin.symbol}</span>
-                {ranking?.safetyGrade ? (
+                {isTokenizedFund ? (
+                  <span
+                    className="inline-flex rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-2xs font-medium text-muted-foreground"
+                    title="Tokenized fund — not graded on Safety Score"
+                  >
+                    Not graded
+                  </span>
+                ) : ranking?.safetyGrade ? (
                   <SafetyGradeBadge
                     grade={ranking.safetyGrade}
                     score={ranking.safetyScore}
@@ -307,6 +316,7 @@ function StablecoinYieldDetailHeader({
               sustainabilityMult={model.pysBreakdown.sustainabilityMult}
               grade={ranking.safetyGrade}
               safetyScore={ranking.safetyScore}
+              tokenizedFund={isTokenizedFund}
               sourceRiskDrivers={model.sourceRiskDrivers}
               scalingFactor={model.pysBreakdown.scalingFactor}
             />
@@ -368,10 +378,10 @@ function EmptyStateCard({ title, message }: { title: string; message: string }) 
   );
 }
 
-function deriveWarningEvents(history: YieldHistoryPoint[]): WarningSignalGroup[] {
+function deriveWarningEvents(history: YieldHistoryPoint[], isTokenizedFund = false): WarningSignalGroup[] {
   const events: WarningSignalEvent[] = [];
   for (const point of history) {
-    const pointWarnings = selectInvestmentWarningSignals(point.warningSignals);
+    const pointWarnings = selectRowInvestmentWarningSignals(point.warningSignals, isTokenizedFund);
     if (pointWarnings.length === 0) continue;
     const timestamp = toTimestampMs(point.date);
     if (!Number.isFinite(timestamp)) continue;
@@ -498,7 +508,11 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc, notices }
     [id, ranking, agedRankings?.rankings],
   );
 
-  const warningEvents = useMemo(() => deriveWarningEvents(historyQuery.data?.history ?? []), [historyQuery.data]);
+  const isTokenizedFund = isClientTokenizedFundId(id);
+  const warningEvents = useMemo(
+    () => deriveWarningEvents(historyQuery.data?.history ?? [], isTokenizedFund),
+    [historyQuery.data, isTokenizedFund],
+  );
   // Unreadable persisted warnings are unknown, not clean: no fetched point can prove an all-clear.
   const unreadableWarningPoints = useMemo(
     () => (historyQuery.data?.history ?? []).filter((point) => point.warningSignalsStatus === "unreadable").length,

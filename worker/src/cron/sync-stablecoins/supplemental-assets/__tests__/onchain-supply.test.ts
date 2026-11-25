@@ -68,7 +68,7 @@ afterEach(() => vi.restoreAllMocks());
 
 describe("supply deployment failure reasons", () => {
   it.each([
-    "acrdx-anemoy-apollo", "susdai-usd-ai", "myrc-blox", "stac-securitize", "eurspkcc-spiko",
+    "jtrsy-anemoy", "susdai-usd-ai", "myrc-blox", "usyc-hashnote",
   ])("prefers %s's reviewed complete native stock and withholds an unreadable leg", async (id) => {
     const meta = TRACKED_META_BY_ID.get(id)!;
     expect(prefersOnChainSupplyMcap(meta)).toBe(true);
@@ -78,7 +78,7 @@ describe("supply deployment failure reasons", () => {
   });
 
   it.each([
-    "onyc-onre", "thbill-theo", "ustb-superstate", "gtusdcp-gauntlet", "usd3-reserve-protocol",
+    "onyc-onre", "thbill-theo", "ustb-superstate", "gtusdcp-gauntlet",
   ])("keeps %s outside preferred on-chain replacement", (id) => {
     const meta = TRACKED_META_BY_ID.get(id);
     expect(meta).toBeDefined();
@@ -308,29 +308,6 @@ function makeSusdeMeta(): StablecoinMeta {
   });
 }
 
-function makeAcrdxMeta(): StablecoinMeta {
-  const share = "0x9477724bb54ad5417de8baff29e59df3fb4da74f";
-  const spoke = "0x2fabf1c784b8583d63c00c5c9c0377d8cf1a3245";
-  return makeMeta({
-    id: "acrdx-anemoy-apollo",
-    name: "Anemoy Apollo",
-    symbol: "ACRDX",
-    contracts: [
-      { chain: "ethereum", address: share, decimals: 18 },
-      { chain: "plume", address: share, decimals: 18 },
-      { chain: "monad", address: spoke, decimals: 18 },
-      { chain: "base", address: share, decimals: 18 },
-      { chain: "optimism", address: spoke, decimals: 18 },
-      { chain: "solana", address: "ACDR3LGFrMuDZSDRyJjncFCzo5c8xkQxhWx4im4Vmq8G", decimals: 6 },
-    ],
-    flags: {
-      governance: "centralized",
-      yieldBearing: true,
-      navToken: true,
-    },
-  });
-}
-
 function makeGldtMeta(): StablecoinMeta {
   const evm = "0x86856814e74456893cfc8946bedcbb472b5fa856";
   return makeMeta({
@@ -348,29 +325,6 @@ function makeGldtMeta(): StablecoinMeta {
       pegCurrency: "GOLD",
       yieldBearing: false,
       navToken: false,
-    },
-  });
-}
-
-function makeMre7yieldMeta(): StablecoinMeta {
-  return makeMeta({
-    id: "mre7yield-midas",
-    name: "Midas Re7 Yield",
-    symbol: "mRe7YIELD",
-    contracts: [
-      { chain: "ethereum", address: "0x87c9053c819bb28e0d73d33059e1b3da80afb0cf", decimals: 18 },
-      { chain: "tac", address: "0x0a72ed3c34352ab2dd912b30f2252638c873d6f0", decimals: 18 },
-      { chain: "etherlink", address: "0x733d504435a49fc8c4e9759e756c2846c92f0160", decimals: 18 },
-      {
-        chain: "starknet",
-        address: "0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc",
-        decimals: 18,
-      },
-    ],
-    flags: {
-      governance: "centralized",
-      yieldBearing: true,
-      navToken: true,
     },
   });
 }
@@ -779,27 +733,6 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
     await expect(fetchCuratedAggregateOnChainMcap(makeSusdeMeta(), 1)).resolves.toBeNull();
   });
 
-  it("reads ACRDX's zero-supply Solana mint instead of failing the aggregate closed", async () => {
-    probeTrackedTokenSupplyMock.mockImplementation(async (_meta, input) => {
-      if (input?.chain === "ethereum") return 378_869n * 10n ** 18n;
-      if (input?.chain === "plume") return 32_320_262n * 10n ** 18n;
-      if (input?.chain === "monad") return 9_837_361n * 10n ** 18n;
-      if (input?.chain === "optimism") return 97_931n * 10n ** 18n;
-      return null;
-    });
-    fetchErc20TotalSupplyMock.mockResolvedValue(0n);
-    fetchSolanaTokenSupplyMock.mockResolvedValue(0n);
-
-    const result = await fetchCuratedAggregateOnChainMcap(makeAcrdxMeta(), 1);
-
-    expect(result?.mcap).toBe(42_634_423);
-    expect(result?.chainCirculating?.Base?.current).toBe(0);
-    expect(result?.chainCirculating?.Solana?.current).toBe(0);
-    expect(fetchSolanaTokenSupplyMock).toHaveBeenCalledTimes(1);
-    // The Solana leg must never route through the probe, which rejects zero.
-    expect(probeTrackedTokenSupplyMock.mock.calls.every(([, input]) => input?.kind !== "onchain-solana")).toBe(true);
-  });
-
   it("reallocates GLDT's canonical ICP ledger supply across its Omnity EVM legs", async () => {
     fetchIcrcLedgerTotalSupplyMock.mockResolvedValue(59_450_000_000_000n);
     probeTrackedTokenSupplyMock.mockImplementation(async (_meta, input) => {
@@ -819,34 +752,6 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
     expect(fetchIcrcLedgerTotalSupplyMock.mock.calls[0]?.[0]).toMatchObject({
       canisterId: "6c7su-kiaaa-aaaar-qaira-cai",
     });
-  });
-
-  it("sums mRe7YIELD's Starknet leg into the aggregate denominator", async () => {
-    probeTrackedTokenSupplyMock.mockImplementation(async (_meta, input) => {
-      if (input?.chain === "ethereum") return 6_792_507n * 10n ** 18n;
-      if (input?.chain === "etherlink") return 1_041_331n * 10n ** 18n;
-      if (input?.chain === "tac") return 630_603n * 10n ** 18n;
-      return null;
-    });
-    fetchStarknetTotalSupplyMock.mockResolvedValue(175_676n * 10n ** 18n);
-
-    const result = await fetchCuratedAggregateOnChainMcap(makeMre7yieldMeta(), 1);
-
-    expect(result?.mcap).toBe(8_640_117);
-    expect(result?.chainCirculating?.TAC?.current).toBe(630_603);
-    expect(result?.chainCirculating?.Starknet?.current).toBe(175_676);
-    expect(fetchStarknetTotalSupplyMock.mock.calls[0]?.[0]).toMatchObject({
-      contract: "0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc",
-    });
-  });
-
-  it("fails mRe7YIELD closed when the Starknet leg cannot be read", async () => {
-    probeTrackedTokenSupplyMock.mockImplementation(async (_meta, input) =>
-      input?.chain === "ethereum" ? 6_792_507n * 10n ** 18n : 1_041_331n * 10n ** 18n,
-    );
-    fetchStarknetTotalSupplyMock.mockRejectedValue(new Error("starknet_call failed"));
-
-    await expect(fetchCuratedAggregateOnChainMcap(makeMre7yieldMeta(), 1)).resolves.toBeNull();
   });
 
   it("reads hbUSDT's HyperEVM-only supply through its reviewed pin when the Worker registry has no HyperEVM RPC", async () => {
@@ -870,7 +775,7 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
 
   it.each([0, -1, 1.5])("rejects an invalid partition leg concurrency (%s)", async (legConcurrency) => {
     await expect(fetchCuratedAggregateOnChainMcap(
-      TRACKED_META_BY_ID.get("eurspkcc-spiko")!, 1, undefined, undefined, undefined, undefined, legConcurrency,
+      TRACKED_META_BY_ID.get("eutbl-spiko")!, 1, undefined, undefined, undefined, undefined, legConcurrency,
     )).rejects.toThrow("legConcurrency requires a positive integer");
   });
 
@@ -1103,16 +1008,6 @@ describe("eEARN complete native aggregate", () => {
 describe("discovery native supply aggregates", () => {
   const cases = [
     {
-      id: "uscc-superstate",
-      contracts: [
-        { chain: "ethereum", address: "0x14d60e7fdc0d71d8611742720e4c50e7a974020c", decimals: 6 },
-        { chain: "plume", address: "0x4c21b7577c8fe8b0b0669165ee7c8f67fa1454cf", decimals: 6 },
-        { chain: "solana", address: "BTRR3sj1Bn2ZjuemgbeQ6SCtf84iXS81CS7UDTSxUCaK", decimals: 6 },
-      ],
-      supplies: [9_102_522_978_447n, 1_441_528_020_930n, 708_371_216_894n],
-      units: 11_252_422.216271,
-    },
-    {
       id: "pyusdx-moonpay",
       contracts: ["ethereum", "arbitrum", "monad", "base", "0g"].map((chain) => ({
         chain, address: "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d", decimals: 6,
@@ -1168,7 +1063,7 @@ describe("discovery native supply aggregates", () => {
   });
 
   it.each([0n, 1n, 7_000_000n])("includes observed 0G stock, including a real zero (%s)", async (raw) => {
-    const { id, contracts, supplies, units } = cases[1];
+    const { id, contracts, supplies, units } = cases[0];
     const observed = [...supplies];
     observed[4] = raw;
     installReads(contracts, observed);
@@ -1183,7 +1078,7 @@ describe("discovery native supply aggregates", () => {
   });
 
   it("withholds PYUSDx when a native deployment is missing from the contract roster", async () => {
-    const { id, contracts, supplies } = cases[1];
+    const { id, contracts, supplies } = cases[0];
     installReads(contracts, supplies);
     for (const missing of contracts) {
       await expect(fetchCuratedAggregateOnChainMcap(makeMeta({
@@ -1194,7 +1089,7 @@ describe("discovery native supply aggregates", () => {
   });
 
   it.each([NaN, Infinity])("withholds PYUSDx rather than publishing a non-finite valuation (%s)", async (price) => {
-    const { id, contracts, supplies } = cases[1];
+    const { id, contracts, supplies } = cases[0];
     installReads(contracts, supplies);
     await expect(fetchCuratedAggregateOnChainMcap(
       makeMeta({ id, name: id, symbol: id, contracts }), price, buildChainRpcs(),
@@ -1202,7 +1097,7 @@ describe("discovery native supply aggregates", () => {
   });
 
   it("withholds the complete PYUSDx aggregate on a 0G RPC exception", async () => {
-    const { id, contracts, supplies } = cases[1];
+    const { id, contracts, supplies } = cases[0];
     installReads(contracts, supplies);
     const nativeRead = fetchErc20TotalSupplyMock.getMockImplementation()!;
     fetchErc20TotalSupplyMock.mockImplementation(async (input, ...args) => {

@@ -4,7 +4,6 @@ import {
   UNISWAP_V4_DEPLOYMENT,
   UNISWAP_V4_REVIEWED_DEPLOYMENTS,
   getReviewedUniswapV4Deployment,
-  CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS,
 } from "@shared/lib/measured-execution-deployment-policies";
 import { getCurveStableSwapNgPolicy } from "../curve-stableswap-ng";
 import { getUniswapV4Deployment } from "../uniswap-v4";
@@ -22,10 +21,6 @@ describe("measured deployment policy registry", () => {
       ...["base", "xlayer"].map((chain) => ({
         adapterProfileId: "uniswap-v3-quoter-v2", chain, poolId: `${chain}:0x${"ab".repeat(20)}`,
       })),
-      ...CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS.map((deployment) => ({
-        adapterProfileId: deployment.adapterProfileId, chain: deployment.chain,
-        poolId: `${deployment.chain}:${deployment.poolAddress}`,
-      })),
     ] as DexMeasuredExecutionTarget[];
     for (const target of targets) {
       expect(resolveTargetDeployment(target)).not.toBeNull();
@@ -36,15 +31,10 @@ describe("measured deployment policy registry", () => {
         expect(deployment?.expectedCodeHash).toMatch(/^0x[0-9a-f]{64}$/);
         expect(deployment?.poolManagerAddress).toMatch(/^0x[0-9a-f]{40}$/);
         expect(deployment?.stateViewAddress).toMatch(/^0x[0-9a-f]{40}$/);
-      } else if (target.adapterProfileId === "uniswap-v3-quoter-v2") {
+      } else {
         const quoter = getDexMeasuredExecutionDeployment(target.adapterProfileId, target.chain);
         expect(quoter?.factoryAddress).toMatch(/^0x[0-9a-f]{40}$/);
         expect(quoter?.expectedCodeHash).toMatch(/^0x[0-9a-f]{64}$/);
-      } else {
-        const curve = getCurveStableSwapNgPolicy(target.chain, target.poolId.split(":")[1]!);
-        expect(curve).toMatchObject({ mode: "shadow", scoreEligible: false });
-        expect(curve?.factoryAddress).toMatch(/^0x[0-9a-f]{40}$/);
-        expect(curve?.expectedPoolCodeHash).toMatch(/^0x[0-9a-f]{64}$/);
       }
     }
     expect(getUniswapV4Deployment("ethereum")).toMatchObject({ mode: "active", scoreEligible: true });

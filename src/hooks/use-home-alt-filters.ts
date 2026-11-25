@@ -6,7 +6,7 @@ import { COMMODITY_PEG_TAGS, NON_USD_NON_COMMODITY_PEG_TAGS } from "@shared/lib/
 import type { FilterTag } from "@shared/types/stablecoin-meta-primitives";
 
 export type HomeAltPegFilter = "all" | "usd-peg" | "fiat-non-usd-peg" | "commodity-peg";
-export type HomeAltUniverse = "core" | "variants" | "catalog";
+export type HomeAltUniverse = "core" | "variants" | "catalog" | "funds";
 
 const VALID_PEG_VALUES: ReadonlySet<HomeAltPegFilter> = new Set([
   "all",
@@ -26,6 +26,7 @@ function normalizePeg(raw: string | null): HomeAltPegFilter {
 function normalizeUniverse(raw: string | null): HomeAltUniverse {
   if (raw === "variants") return "variants";
   if (raw === "catalog") return "catalog";
+  if (raw === "funds") return "funds";
   return "core";
 }
 

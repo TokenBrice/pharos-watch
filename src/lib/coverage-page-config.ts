@@ -175,6 +175,7 @@ const COVERAGE_BREAKDOWN_TONES: Partial<
   },
   safety: {
     rated: "emerald",
+    "not-graded": "slate",
     nr: "gap",
     "data-unavailable": "amberOutage",
   },

@@ -139,37 +139,6 @@ describe("chronicle-nav BUIDL binding", () => {
   });
 });
 
-// Existing bindings keep their native-fund-share admission
-
-describe("chronicle-nav ACRDX binding", () => {
-  it("aggregates the coin's EVM deployments and omits the Solana deployment with an info warning", async () => {
-    const acrdx = { network: { rpc: {
-      "ethereum:0x9a3bf392f86acd1b1ec07d026b326302eaed7488:0x393e5ede": encodeReadWithAge(1_027_991_334_000_000_000n, NOW_SEC - 60),
-      "ethereum:0x9477724bb54ad5417de8baff29e59df3fb4da74f:0x313ce567": 18n,
-      "ethereum:0x9477724bb54ad5417de8baff29e59df3fb4da74f:0x18160ddd": 100_000_000_000_000_000_000n,
-      "plume:0x9477724bb54ad5417de8baff29e59df3fb4da74f:0x18160ddd": 20_000_000_000_000_000_000n,
-      "monad:0x2fabf1c784b8583d63c00c5c9c0377d8cf1a3245:0x18160ddd": 5_000_000_000_000_000_000n,
-      "base:0x9477724bb54ad5417de8baff29e59df3fb4da74f:0x18160ddd": 7_000_000_000_000_000_000n,
-      "optimism:0x2fabf1c784b8583d63c00c5c9c0377d8cf1a3245:0x18160ddd": 3_000_000_000_000_000_000n,
-    } } };
-
-    const { result } = await runAdapter("chronicle-nav", "acrdx-anemoy-apollo", { ...acrdx, nowSec: NOW_SEC });
-
-    expect(result.slices).toEqual([
-      {
-        sourceKey: "chronicle-nav:token:0x9477724bb54ad5417de8baff29e59df3fb4da74f",
-        name: "Apollo Diversified Credit Fund NAV",
-        pct: 100,
-        risk: "high",
-      },
-    ]);
-    expect(result.metadata?.supplyContributions).toHaveLength(5);
-    expect(result.metadata?.supplyCoverageComplete).toBe(false);
-    expectWarnings(result, ["por-supply-chain-omitted"]);
-    expectWarningEffect(result, "por-supply-chain-omitted", "info");
-  });
-});
-
 describe("adaptChronicleNavResponse", () => {
   it("rejects a zero NAV value", () => {
     expect(() => adaptChronicleNavResponse(

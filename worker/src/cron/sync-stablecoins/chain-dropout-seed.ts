@@ -240,10 +240,15 @@ export const REVIEWED_CHAIN_SUPPLY_COLLAPSES: readonly ReviewedChainSupplyCollap
   // EURQ came under the guard in v6.81, after changedAt: its stale XRPL pair relearns from the observed row
   // and no XRPL pair was flagged before changedAt, so the acceptance generated below goes unused. The
   // guard's perimeter loop still withholds its earlier anchors.
-  ...SUPPLY_PERIMETER_CHANGES.flatMap((change) => change.chainIds.map((chainId) => ({
-    assetId: change.stablecoinId, chainId,
-    policy: "accept-observed-collapse" as const,
-    reviewedAt: change.changedAt,
-    evidenceUrl: change.evidenceUrl,
-  }))),
+  ...SUPPLY_PERIMETER_CHANGES.flatMap((change) => {
+    const assetId = change.stablecoinId;
+    if (assetId == null) return [];
+    return change.chainIds.map((chainId) => ({
+      assetId,
+      chainId,
+      policy: "accept-observed-collapse" as const,
+      reviewedAt: change.changedAt,
+      evidenceUrl: change.evidenceUrl,
+    }));
+  }),
 ];

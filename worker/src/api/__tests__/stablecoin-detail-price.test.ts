@@ -99,8 +99,8 @@ describe("missing detail price enrichment", () => {
       date: NOW - days * 86_400, totalCirculatingUSD: { peggedUSD: 900_000 }, totalCirculating: { peggedUSD: 800_000 },
     }));
     const result = await overlayCanonicalDetail(makeDb({
-      id: "stac-securitize", circulating: {}, supplySource: "onchain-supply-withheld", price: 1.12,
-    }), "stac-securitize", makeResponse(JSON.stringify({
+      id: "usyc-hashnote", circulating: {}, supplySource: "onchain-supply-withheld", price: 1.12,
+    }), "usyc-hashnote", makeResponse(JSON.stringify({
       tokens: history, currentCirculatingUSD: { peggedUSD: 900_000 }, currentCirculatingPrevDayUSD: { peggedUSD: 890_000 },
       currentSupplyObservedAt: NOW - 60, currentSupplyRestored: true,
     })));

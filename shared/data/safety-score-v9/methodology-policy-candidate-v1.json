@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "10.54",
+  "releaseVersion": "10.55",
   "semantic": {
     "unknownQuality": {
       "backing": { "C": 35, "U": 50 },
@@ -2379,6 +2379,13 @@
       "boundedness": "not-applicable", "permittedTreatments": ["diagnostic"], "defaultTreatment": "diagnostic",
       "releaseSeverity": "diagnostic", "auditClassification": "unresolved-methodology",
       "publicLabel": "Score below the F threshold without a measured adverse fact"
+    },
+    {
+      "code": "tokenized-fund-not-graded", "ownerDomain": "methodology",
+      "archetypes": ["*"], "pathKinds": ["methodology"], "defaultFactClass": "applicability-unresolved",
+      "boundedness": "not-applicable", "permittedTreatments": ["NR"], "defaultTreatment": "NR",
+      "releaseSeverity": "diagnostic", "auditClassification": "unsupported-design",
+      "publicLabel": "Tokenized fund shares are not graded on the stablecoin Safety Score scale"
     }
   ]
 }

@@ -160,8 +160,20 @@ describe("reviewed settlement output binding", () => {
   });
 
   it.each([[USD, null], [trk(USDC), null], [trk("usdon-ondo"), 3600]] as const)("does not lend the USDon instant SLA to a different captured endpoint (%j)", (output, sla) => {
-    const { fixedInput } = redFx({ rowOverrides: { stablecoinId: "slvon-ondo", settlementModel: "days", outputAssetType: "nav" }, output, clockSec: utc(2026, 9, 5, 12) });
-    expect(rev0(fixedInput, "slvon-ondo")).toMatchObject({ settlementSlaSec: sla, settlementModel: "bounded-delay" });
+    const id = "usyc-hashnote";
+    withCfg(id, {
+      settlementModel: "immediate",
+      outputAssetType: "stable-single",
+      outputAssets: ["usdon-ondo"],
+      v9RouteReviewTerms: {
+        settlementModel: "immediate",
+        reviewedAt: "2026-09-01",
+        docs: [{ label: "Fixture instant terms", url: "https://example.com/terms", supports: ["settlement"] }],
+      },
+    }, () => {
+      const { fixedInput } = redFx({ rowOverrides: { stablecoinId: id, settlementModel: "days", outputAssetType: "nav" }, output, clockSec: utc(2026, 9, 5, 12) });
+      expect(rev0(fixedInput, id)).toMatchObject({ settlementSlaSec: sla, settlementModel: "bounded-delay" });
+    });
   });
 });
 
@@ -436,7 +448,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
   });
 
   it("expires a favorable settlement after the producer persisted its current reviewed model", () => {
-    const id = "usdy-ondo-finance";
+    const id = "msusd-main-street";
     withTerms(id, { ...FAST_SETTLE, settlementModel: "atomic", settlementDelaySec: 0 }, () => {
       const cur = utc(2026, 7, 26), stale = utc(2027, 7, 26), ps = resSettle(getCfg(id)!, cur);
       const row = mkFull({ stablecoinId: id, settlementModel: ps, settlementDelaySec: 0 });

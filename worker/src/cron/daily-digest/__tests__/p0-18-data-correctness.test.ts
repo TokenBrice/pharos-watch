@@ -271,11 +271,13 @@ describe("P0-18 daily digest data correctness", () => {
   });
 
   it("limits PSI precedent to the core aggregate universe and falls back cleanly when absent", async () => {
+    const todayTs = Math.floor(NOW / 86_400) * 86_400;
     const baseTables = [
       { match: "SELECT COUNT(*) as cnt FROM stability_index", rows: [], first: { cnt: 31 } },
       { match: "SELECT MIN(generated_at) as oldest FROM daily_digest", rows: [], first: { oldest: null } },
       {
-        match: "json_extract(input_data, '$.aggregateUniverse') = 'core-stablecoins-v1'",
+        match: "json_extract(input_data, '$.aggregateUniverse') = ?",
+        matchBinds: [91, todayTs, "core-stablecoins-v2"],
         rows: [],
         first: {
           generated_at: NOW - 86_400,
@@ -285,8 +287,10 @@ describe("P0-18 daily digest data correctness", () => {
       },
       { match: "ORDER BY computed_at DESC LIMIT 90", rows: [{ date: NOW, score: 91, band: "BEDROCK" }] },
     ];
+    const ctx = makeCollectorCtx(mockD1(baseTables));
+    ctx.todayTs = todayTs;
     const result = await collectHistoricalContext(
-      makeCollectorCtx(mockD1(baseTables)),
+      ctx,
       91,
       "BEDROCK",
       NOW,
@@ -296,10 +300,12 @@ describe("P0-18 daily digest data correctness", () => {
     expect(result.value?.psiPrecedent).toMatchObject({ lastSeenScore: 89, lastSeenBand: "STEADY" });
     expect(result.degradedReasons).toEqual([]);
 
+    const noPrecedentCtx = makeCollectorCtx(mockD1(baseTables.map((table) =>
+      table.match.includes("aggregateUniverse") ? { ...table, first: null } : table,
+    )));
+    noPrecedentCtx.todayTs = todayTs;
     const noPrecedent = await collectHistoricalContext(
-      makeCollectorCtx(mockD1(baseTables.map((table) =>
-        table.match.includes("aggregateUniverse") ? { ...table, first: null } : table,
-      ))),
+      noPrecedentCtx,
       91,
       "BEDROCK",
       NOW,
@@ -338,14 +344,18 @@ describe("P0-18 daily digest data correctness", () => {
           )
           .run(TODAY - daysAgo * DAY_SECONDS, 85, "STEADY", "{}", "{}", "3.0");
       }
-      // The pre-cutover archive holds a lower PSI (70) than today's 75, but the
-      // precedent query only searches core-marked rows, so it cannot see it.
+      // Pre-cutover legacy and v1 rows hold lower PSI (70) than today's 75, but
+      // the precedent query only searches v2-marked rows, so it cannot see them.
       insertDigest(CORE_UNIVERSE_CUTOVER - 5 * DAY_SECONDS, {
+        stabilityIndex: { score: 70, band: "TREMOR", components: { severity: 24, breadth: 6, trend: 0 } },
+      });
+      insertDigest(CORE_UNIVERSE_CUTOVER - 2 * DAY_SECONDS, {
+        aggregateUniverse: "core-stablecoins-v1",
         stabilityIndex: { score: 70, band: "TREMOR", components: { severity: 24, breadth: 6, trend: 0 } },
       });
       for (let index = 0; index < 7; index += 1) {
         insertDigest(CORE_UNIVERSE_CUTOVER + (index + 1) * 7 * DAY_SECONDS, {
-          aggregateUniverse: "core-stablecoins-v1",
+          aggregateUniverse: "core-stablecoins-v2",
           stabilityIndex: { score: 80 + index, band: "STEADY", components: { severity: 12, breadth: 4, trend: 0 } },
         });
       }

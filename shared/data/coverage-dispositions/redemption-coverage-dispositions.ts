@@ -195,23 +195,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     allowedRouteFamilyIfProven: null,
   }),
   reviewedOn("2026-10-07", {
-    id: "isc-international-stable-currency",
-    disposition: "needs-research",
-    reasonCode: "route-status-unverified",
-    blocker:
-      "The ISC website and dashboard recovered with non-browser HTTP 200 on 2026-10-07, but neither identifies a holder-callable redemption. The whitepaper describes issuer reserve-market buying and selling; the mutable reserve API provides no binding payout identity, fee or source period.",
-    rationale:
-      "Recovered websites, a Solana mint identity and reserve-market buybacks do not prove an ordinary-holder claim. Historical dashboard zero figures are not current observed capacity.",
-    evidenceNeeded:
-      "An identified current program/instruction or binding issuer holder-redemption terms with complete output, execution, capacity, fees and completed-settlement evidence.",
-    evidenceUrls: [
-      "https://isc.money/",
-      "https://isc.money/dashboard",
-      "https://wp.isc.money/how-isc-works/the-isc-reserves/basic-mechanics",
-    ],
-    allowedRouteFamilyIfProven: null,
-  }),
-  reviewedOn("2026-10-07", {
     id: "lvusd-leverup",
     disposition: "defer",
     reasonCode: "route-status-unverified",
@@ -303,18 +286,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     allowedRouteFamilyIfProven: "queue-redeem",
   }),
   reviewed({
-    id: "susd-hedgecore",
-    disposition: "hard-reject",
-    reasonCode: "no-holder-route",
-    blocker:
-      "HedgeCore documents operator-controlled redemption and a one-way transferable wrapper without a reverse conversion for ordinary holders.",
-    rationale: "Operator discretion and the absent reverse wrapper path prevent treating sUSD as holder-redeemable.",
-    evidenceNeeded:
-      "New public reverse conversion and USDC withdrawal mechanics with audited contracts and current capacity.",
-    evidenceUrls: ["https://docs.hedgecore.io/docs/protocol/yield-generation"],
-    allowedRouteFamilyIfProven: null,
-  }),
-  reviewed({
     id: "usda-alpha-partner",
     disposition: "hard-reject",
     reasonCode: "documentation-insufficient",
@@ -324,17 +295,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
       "Issuer marketing claims and owner-controlled mint/burn permissions do not create a holder redemption right.",
     evidenceNeeded: "Audited reserve evidence and binding official redemption terms backed by a live route.",
     evidenceUrls: ["https://alphapartner.vip/", "https://ap-organization-1.gitbook.io/alpha-partners"],
-    allowedRouteFamilyIfProven: null,
-  }),
-  reviewed({
-    id: "usdr-ring",
-    disposition: "hard-reject",
-    reasonCode: "no-holder-route",
-    blocker:
-      "Ring documents protocol-controlled reserve and liquidity management without a holder-exercisable USDR redemption claim.",
-    rationale: "Protocol-controlled value and secondary pools cannot substitute for deterministic redemption.",
-    evidenceNeeded: "New official holder redemption terms and live callable route evidence.",
-    evidenceUrls: ["https://docs.ring.exchange/"],
     allowedRouteFamilyIfProven: null,
   }),
   reviewed({

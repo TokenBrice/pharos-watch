@@ -77,35 +77,6 @@
   "collateralQuality": "exotic",
   "custodyModel": "unknown",
   "governanceQuality": "single-entity",
-  "liveReservesConfig": {
-    "adapter": "chainlink-nav",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "mmev-midas",
-    "scoring": {
-      "maxSourceAgeSec": 777600
-    },
-    "display": {
-      "url": "https://midas.app/mmev",
-      "label": "Midas mMEV NAV"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "alchemy"
-      }
-    },
-    "params": {
-      "navScope": "portfolio",
-      "oracleAddress": "0x5f09Aff8B9b1f488B7d1bbaD4D89648579e55d61",
-      "tokenAddress": "0x030b69280892c888670edcdcd8b69fd8026a0bf3",
-      "sourceKey": "chainlink-nav:token:0x030b69280892c888670edcdcd8b69fd8026a0bf3",
-      "assetLabel": "Midas mMEV strategy NAV (shared with mROX)",
-      "assetRisk": "high",
-      "maxOracleAgeSec": 777600
-    }
-  },
   "yieldConfig": {
     "yieldSource": "Midas mMEV strategy NAV",
     "yieldType": "nav-appreciation"
@@ -138,5 +109,14 @@
         "url": "https://docs.midas.app/tokens/mmev/risks"
       }
     ]
+  },
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "NAV-accreting DeFi strategy debt certificate discontinued by Midas on May 10, 2026, not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
+    "source": {
+      "label": "Midas April 2026 recap (mMEV discontinuation)",
+      "url": "https://blog.midas.app/midas-in-april-2026-recap/"
+    }
   }
 }

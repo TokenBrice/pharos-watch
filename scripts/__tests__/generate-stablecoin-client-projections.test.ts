@@ -25,7 +25,7 @@ describe("pre-launch hub pegs", () => {
       active,
       coreAggregateActive: active,
       activeVariants: [],
-      activeStableValueInvestments: [],
+      activeTokenizedFunds: [],
       preLaunch,
       dead: [],
     });

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import { CLIENT_ACTIVE_STABLECOINS as TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
+import { isTokenizedFundListingClass } from "@shared/lib/stablecoins/listing-class";
 import type { YieldType } from "@shared/types/yield-vocabulary";
 
 interface CoinIndexEntry {
@@ -40,6 +41,7 @@ function buildCoinIndexGroups(): CoinIndexGroup[] {
 
   for (const coin of TRACKED_STABLECOINS) {
     if (!coin.flags?.yieldBearing) continue;
+    if (isTokenizedFundListingClass(coin.listingClass)) continue;
     const yieldType = coin.yieldType ?? "unclassified";
     const list = buckets.get(yieldType);
     const entry: CoinIndexEntry = { id: coin.id, symbol: coin.symbol };
@@ -95,7 +97,7 @@ export function YieldCoinIndex() {
           Per-coin yield detail
         </h2>
         <p className="max-w-3xl text-sm text-muted-foreground">
-          {totalCoins} yield-bearing tracked coins, grouped by how they earn. Jump to a coin&rsquo;s
+          {totalCoins} yield-bearing tracked stablecoins, grouped by how they earn. Jump to a coin&rsquo;s
           dedicated yield page for arbitration history, alternates, and methodology.
         </p>
       </div>

@@ -729,4 +729,71 @@ describe("Safety Score V9 publication assessment", () => {
     }).success).toBe(false);
   });
 
+  it("handles ungraded tokenized funds in exit expiry, cardDeteriorated exemption, and verified-empty Exit carry", () => {
+    const { fixedInput, observation, card, publication, clockSec } = measuredHistoryFixture();
+    publication.sourceGenerations.dex = fixedInput.dexGenerationId;
+    const baseline = buildSafetyScoreV9AcceptedPublicationBaseline(publication);
+    fixedInput.clockSec = clockSec + 10_801;
+    fixedInput.dexGenerationId = "dex-liquidity-next";
+    const fundNrReason = {
+      code: "tokenized-fund-not-graded" as const,
+      message: "Tokenized fund shares are tracked without a Safety Score grade.",
+      field: null,
+      origin: "asset" as const,
+    };
+    const ungradedFund = {
+      ...card,
+      ratingStatus: "not-rated" as const,
+      score: null,
+      grade: "NR" as const,
+      breakdowns: null,
+      nrReasons: [fundNrReason],
+    };
+    // T5: rated -> tokenized-fund-not-graded transition after route reselection is not deterioration.
+    publication.cards[0] = ungradedFund;
+    expect(expiredMeasuredExitAssetIds(fixedInput, publication, baseline)).toEqual([]);
+    // Ordinary NR still counts as deterioration and catches the expired former route.
+    publication.cards[0] = { ...card, ratingStatus: "not-rated", score: null, grade: "NR", breakdowns: null, nrReasons: [] };
+    expect(expiredMeasuredExitAssetIds(fixedInput, publication, baseline)).toEqual(["alpha"]);
+    // An ungraded tokenized fund whose internal Exit still selects the expired DEX route IS caught.
+    publication.cards[0] = ungradedFund;
+    const currentRouteKey = canonicalV9RouteKey("dex", fixedInput.dexGenerationId, observation.routeId);
+    const internalRoutes = { alpha: { primaryRouteKey: currentRouteKey, diversificationRouteKey: null, diversificationBonus: 0 } };
+    const resolved = resolveMeasuredExitExpiry(projectExpiredMeasuredExitRoutes(fixedInput), publication, baseline, internalRoutes);
+    expect(resolved.assetIds).toEqual(["alpha"]);
+    expect(resolved.witnessesByAssetId.alpha).toEqual([{
+      routeId: observation.routeId, dexGenerationId: fixedInput.dexGenerationId,
+      observationWindowEndedAt: clockSec, freshnessMaxSec: 10_800,
+    }]);
+    // Verified-empty Exit witnesses record, carry, and clear for ungraded tokenized funds via internalExitStateByAssetId.
+    const t0 = 1_700_000_000;
+    const fundPub0 = {
+      ...candidate([ungradedFund]),
+      sourceGenerations: { registry: "registry:test", dex: "dex-liquidity-1700000000" },
+      asOfSec: t0, publishedAtSec: t0 + 30, publicationGenerationId: "report-cards:v9:v1:fund0",
+    };
+    const fundBase0 = AcceptedPublicationBaselineSchema.parse(
+      buildSafetyScoreV9AcceptedPublicationBaseline(fundPub0, {}, { internalExitStateByAssetId: { alpha: "verified-empty" } }),
+    );
+    expect(fundBase0.verifiedEmptyExitByAssetId).toEqual({
+      alpha: { verifiedAtSec: t0, dexGenerationId: "dex-liquidity-1700000000", publicationGenerationId: "report-cards:v9:v1:fund0" },
+    });
+    const fundPub1 = { ...fundPub0, asOfSec: t0 + 3_600, publishedAtSec: t0 + 3_630, publicationGenerationId: "report-cards:v9:v1:fund1" };
+    const fundBaseCarry = AcceptedPublicationBaselineSchema.parse(
+      buildSafetyScoreV9AcceptedPublicationBaseline(fundPub1, {}, {
+        priorVerifiedEmptyExitByAssetId: fundBase0.verifiedEmptyExitByAssetId,
+        verifiedEmptyCarryMaxAgeSec: 172_800,
+      }),
+    );
+    expect(fundBaseCarry.verifiedEmptyExitByAssetId).toEqual(fundBase0.verifiedEmptyExitByAssetId);
+    const fundBaseClear = AcceptedPublicationBaselineSchema.parse(
+      buildSafetyScoreV9AcceptedPublicationBaseline(fundPub1, {}, {
+        priorVerifiedEmptyExitByAssetId: fundBase0.verifiedEmptyExitByAssetId,
+        verifiedEmptyCarryMaxAgeSec: 172_800,
+        internalExitStateByAssetId: { alpha: "positive-route" },
+      }),
+    );
+    expect(fundBaseClear.verifiedEmptyExitByAssetId).toBeUndefined();
+  });
+
 });

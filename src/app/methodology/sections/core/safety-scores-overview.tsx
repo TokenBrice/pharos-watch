@@ -40,7 +40,7 @@ export const SAFETY_GRADE_SCALE_TIERS: readonly SafetyGradeScaleTier[] = [
   { tier: "C", ...buildTierSummary("C"), meaning: "Meets baseline with notable weaknesses" },
   { tier: "D", ...buildTierSummary("D"), meaning: "Elevated structural or peg risk" },
   { tier: "F", ...buildTierSummary("F"), meaning: "Severe impairment or defunct" },
-  { tier: "NR", range: "Unrated", subgrades: "Evidence unavailable", meaning: "Missing required inputs, not a low score" },
+  { tier: "NR", range: "Unrated", subgrades: "Unrated or fund", meaning: "Missing required inputs or tokenized fund (not graded), never a low score" },
 ];
 
 /** Compact 6-tier explained scale bar (A through F plus NR). */
@@ -102,7 +102,7 @@ export function SafetyScoresOverview() {
           { label: "Required sources", value: "Backing, exit, control, peg, dependency, and evidence-provenance inputs" },
           {
             label: "Failure behavior",
-            value: "Technical gaps have no score/grade; NR requires genuine unavailability, never a low score; global failures hold accepted state",
+            value: "Technical gaps have no score/grade; NR requires genuine unavailability (or tokenized-fund non-grading), never a low score; global failures hold accepted state",
           },
         ]}
       />

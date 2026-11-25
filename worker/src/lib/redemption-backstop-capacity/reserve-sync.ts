@@ -110,11 +110,8 @@ export async function resolveReserveSyncCapacity(
       routeStatusReviewedAt: null,
     };
   }
-  // Older packets for these two adapters used the wrong units or payout book.
-  const capacityBasisUnverified = liveMetadata.canUseCapacity &&
-    (stablecoinId === "jupusd-jupiter" ||
-      (stablecoinId === "usd3-reserve-protocol" &&
-        (liveMetadata.sourceTimestamp == null || liveMetadata.immediateRedeemableUsd == null)));
+  // Older packets for this adapter used the wrong payout book.
+  const capacityBasisUnverified = liveMetadata.canUseCapacity && stablecoinId === "jupusd-jupiter";
 
   // A validated async marker invalidates immediate/scoring cash even on an
   // unknown route or a configured fallback. A measured pause remains zero.

@@ -27,18 +27,14 @@ describe("redemption backstop config consistency", () => {
     }
   });
 
-  it.each(["slvon-ondo", "iauon-ondo"])("does not apply the %s USDon review before its evidence date", (id) => {
-    const config = getRedemptionBackstopConfig(id)!;
+  it("does not apply a dated completion review override before its evidence date", () => {
+    const config = getRedemptionBackstopConfig("hlusd-hela")!;
     const reviewed = config.v9RouteReviewTerms!;
     const reviewClockSec = Date.parse(`${reviewed.reviewedAt}T00:00:00Z`) / 1_000;
-    // The current documentary route never promises completed settlement, on
-    // either side of its evidence date.
     for (const clockSec of [reviewClockSec - 1, reviewClockSec + 86_400]) {
-      expect(resolveReviewedRedemptionSettlement(config, clockSec)).toBe("immediate");
+      expect(resolveReviewedRedemptionSettlement(config, clockSec)).toBe("days");
       expect(resolveReviewedRedemptionSettlementDelay(reviewed, clockSec)).toBeUndefined();
     }
-    // Isolate the admission guard with a completion-bound fixture; this is not
-    // a claim that the real Ondo route has an atomic completed endpoint.
     const datedCompletionFixture = {
       ...config,
       v9RouteReviewTerms: {
@@ -48,7 +44,7 @@ describe("redemption backstop config consistency", () => {
         missingScoringFields: reviewed.missingScoringFields!.filter((field) => field !== "settlement"),
       },
     };
-    expect(resolveReviewedRedemptionSettlement(datedCompletionFixture, reviewClockSec - 1)).toBe("immediate");
+    expect(resolveReviewedRedemptionSettlement(datedCompletionFixture, reviewClockSec - 1)).toBe("days");
     expect(resolveReviewedRedemptionSettlement(datedCompletionFixture, reviewClockSec + 86_400)).toBe("atomic");
   });
 
@@ -160,7 +156,7 @@ describe("redemption backstop config consistency", () => {
     // members carry their own reviewed sources. Inheriting the batch's first-id
     // docs would repeat one URL across siblings.
     const expandedDocGroups = [
-      ["usyc-hashnote", "a7a5-old-vector", "gusd-gate"],
+      ["usyc-hashnote", "a7a5-old-vector"],
       ["zarp-zarp", "cetes-etherfuse"],
       [
         "audx-aussie-dollar-token", "brl1-brl1", "cngn-compliant-naira", "reur-royal-euro",

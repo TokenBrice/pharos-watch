@@ -134,5 +134,14 @@
       "title": "Tokenized ETF exposure",
       "message": "GLDon provides economic exposure to SPDR Gold Shares. Holders have no right to receive ETF shares or physical gold; investor eligibility and issuer redemption restrictions apply."
     }
-  ]
+  ],
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "Tokenized SPDR Gold Shares (GLD) ETF tracker debt security without metal or ETF delivery rights, not a fixed-weight metal stablecoin; no active stablecoin links it (listing policy 2.0).",
+    "source": {
+      "label": "Ondo GLDon Final Terms",
+      "url": "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf"
+    }
+  }
 }

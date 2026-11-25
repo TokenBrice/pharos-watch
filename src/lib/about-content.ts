@@ -60,7 +60,7 @@ export function getAboutLeadParagraphs({
 }: Pick<AboutStablecoinCounts, "activeStablecoins">): string[] {
   return [
     "Most trackers show price. Pharos shows risk.",
-    `Live reserve feeds where a reviewed adapter exists, forward-looking depeg warnings across a ${activeStablecoins}-asset core universe of stablecoins and cash equivalents, and public blacklist monitoring: everything that could make a stable asset fail.`,
+    `Live reserve feeds where a reviewed adapter exists, forward-looking depeg warnings across a ${activeStablecoins}-asset core universe of stablecoins, and public blacklist monitoring: everything that could make a stable asset fail.`,
   ];
 }
 
@@ -76,7 +76,7 @@ export const DATA_SOURCE_GROUPS = [
     label: "Reserve transparency",
     summary: "Issuer and protocol reserve APIs, third-party attestations, proof-of-reserve feeds, and direct on-chain vault reads.",
     sources:
-      "Issuer and protocol reserve APIs, dashboards, proof-of-reserve feeds, independent accounting examinations, and direct on-chain vault reads including Circle, Tether, Paxos/KPMG, Ripple/Deloitte, First Digital Labs, SG-FORGE, Sky/MakerDAO, Ethena, Frax, Aave GHO, Ondo, Midas, OpenEden, Origin, Reserve Protocol, Backed, Chainlink PoR/NAV oracles, Chronicle Proof of Asset, Morpho vaults, Spark, Curve, Pendle, Accountable, Axis, MegaUSD, BlackRock BRSRV, Coinbase ONED, Wyoming FRNT, and direct bridge/custodian balance reads.",
+      "Issuer and protocol reserve APIs, dashboards, proof-of-reserve feeds, independent accounting examinations, and direct on-chain vault reads including Circle, Tether, Paxos/KPMG, Ripple/Deloitte, First Digital Labs, SG-FORGE, Sky/MakerDAO, Ethena, Frax, Aave GHO, OpenEden, Origin, Reserve Protocol, Chainlink PoR/NAV oracles, Chronicle Proof of Asset, Morpho vaults, Spark, Curve, Pendle, Accountable, Axis, MegaUSD, Coinbase ONED, Wyoming FRNT, and direct bridge/custodian balance reads.",
   },
   {
     label: "On-chain reads & events",
@@ -100,7 +100,7 @@ export const DATA_SOURCE_GROUPS = [
     label: "DEX data",
     summary: "Yield and liquidity APIs, subgraphs, and direct pool reads across DEXs and lending markets.",
     sources:
-      "DeFiLlama Yields & Protocols, protocol-native yield APIs and on-chain readers (Morpho, Aave V3, Compound V3, Yearn Kong, Beefy, Pendle, Curve, Hashnote, Ondo, Midas, Re Protocol, Royco Dawn), The Graph, Curve Finance API, Fluid, Balancer, Raydium, Orca, Jupiter, Meteora, Bluefin, Stellar Horizon, Aquarius, TzKT, Balanced, Kava, SundaeSwap, PancakeSwap, SUN.io, Uniswap V3/V4, Aerodrome, Velodrome, Aero, Shadow Exchange, GeckoTerminal, and DexScreener.",
+      "DeFiLlama Yields & Protocols, protocol-native yield APIs and on-chain readers (Morpho, Aave V3, Compound V3, Yearn Kong, Beefy, Pendle, Curve, Hashnote, Re Protocol, Royco Dawn), The Graph, Curve Finance API, Fluid, Balancer, Raydium, Orca, Jupiter, Meteora, Bluefin, Stellar Horizon, Aquarius, TzKT, Balanced, Kava, SundaeSwap, PancakeSwap, SUN.io, Uniswap V3/V4, Aerodrome, Velodrome, Aero, Shadow Exchange, GeckoTerminal, and DexScreener.",
   },
   {
     label: "AI generation",
@@ -151,7 +151,7 @@ export const COMPUTED_FEATURES: readonly AboutFeatureItem[] = [
   {
     title: "Pharos Stability Index (PSI)",
     description:
-      "A 30-minute ecosystem health score that combines active-depeg severity, market-cap breadth, DEWS stress breadth, and 7-day market-cap trend across core stablecoins and cash equivalents, without double-counting tracked variants.",
+      "A 30-minute ecosystem health score that combines active-depeg severity, market-cap breadth, DEWS stress breadth, and 7-day market-cap trend across core stablecoins, excluding tracked variants, tokenized funds, and review-hold listings.",
     icon: Gauge,
     href: "/stability-index/",
     linkLabel: "Open stability index",
@@ -214,9 +214,9 @@ export function getTrackedFeatures({
 }: AboutStablecoinCounts): AboutFeatureItem[] {
   return [
     {
-      title: `${activeStablecoins} core stable assets`,
+      title: `${activeStablecoins} core stablecoins`,
       description:
-        "Core stablecoins and cash equivalents across supported chains, with variants classified and browsable separately.",
+        "Core stablecoins across supported chains, with tracked variants and tokenized funds classified and browsable separately.",
       icon: BarChart3,
     },
     {
@@ -310,7 +310,7 @@ export function getAboutFaqItems({
     },
     {
       question: "What does Pharos track?",
-      answer: `Pharos uses ${activeStablecoins} core stablecoins and cash equivalents for ecosystem market aggregates, while keeping tracked variants and stable-value investments visible as separate listing classes. It documents ${deadStablecoins} dead stablecoins in the cemetery, monitors issuer freeze and blacklist events on-chain, provides peg scores and depeg heatmaps, scores DEX liquidity, computes a 30-minute Pharos Stability Index, and publishes risk report cards.`,
+      answer: `Pharos uses ${activeStablecoins} core stablecoins for ecosystem market aggregates, while keeping tracked variants and tokenized funds visible as separate listing classes. It documents ${deadStablecoins} dead stablecoins in the cemetery, monitors issuer freeze and blacklist events on-chain, provides peg scores and depeg heatmaps, scores DEX liquidity, computes a 30-minute Pharos Stability Index, and publishes risk report cards.`,
     },
     {
       question: "How does Pharos classify stablecoins?",

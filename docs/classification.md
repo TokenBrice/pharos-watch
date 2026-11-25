@@ -52,17 +52,17 @@ Use a variable reference and neutral Variable labeling for VAR. Active non-NAV O
 
 ### Boolean Flags
 
-- `yieldBearing` — token itself accrues yield (e.g., USDY, sUSDe, BUIDL)
+- `yieldBearing` — token itself accrues yield (e.g., sUSDe, YLDS, BUIDL)
 - `rwa` — backed by real-world assets like treasuries/bonds (distinct from `rwa-backed` which also includes plain fiat reserves)
-- `navToken` — price appreciates over time as yield accrues (USYC, USDY, TBILL, YLDS). Excluded from peg deviation metrics; table shows "NAV" instead of bps, while the price column still shows the observed price in the peg currency (converted with a same-currency peer's published peg reference; USD when none exists). Also used for CPI-indexed tokens (FPI) — table shows "CPI" for VAR-pegged navTokens
+- `navToken` — price appreciates over time as yield accrues (e.g., USYC, USTB, sUSDe). Excluded from peg deviation metrics; table shows "NAV" instead of bps, while the price column still shows the observed price in the peg currency (converted with a same-currency peer's published peg reference; USD when none exists). Also used for CPI-indexed tokens (such as archived FPI, now frozen) — table shows "CPI" for VAR-pegged navTokens
 
 ### Listing Class And Lifecycle
 
-`shared/data/stablecoins/listing-decisions.json` assigns exactly one listing class to every catalog ID, and the compact ledger stores only that class mapping. Listing class is separate from lifecycle, which stays on the per-coin catalog row. Aggregate helpers include active core and cash-equivalent rows, exclude variants from parent-inclusive totals, and report stable-value investments separately.
+`shared/data/stablecoins/listing-decisions.json` assigns exactly one listing class to every catalog ID, and the compact ledger stores only that class mapping. Listing class is separate from lifecycle, which stays on the per-coin catalog row. Aggregate helpers include active `core-stablecoin` rows only, exclude `stablecoin-variant` rows from parent-inclusive totals, and keep `tokenized-fund` and `review-hold` rows outside core monetary aggregates.
 
 [Stablecoin Listing Policy](https://pharos.watch/docs/listing-policy/) owns class tests, precedence, lifecycle, eligibility and review rules.
 
-An unresolved mechanism review cannot validate its currently authored class by identity. CI preserves delisted, variant, credit-fund, and NAV/T-bill precedence first; a remaining unresolved mechanism stays `stable-value-investment` until resolved rather than entering core aggregates.
+An unresolved mechanism review cannot validate a `core-stablecoin` assignment by identity. CI preserves delisted and variant precedence first; a remaining unresolved mechanism with `mechanismArchetype: null` stays `review-hold` until resolved rather than entering core aggregates, and other non-variant rows take an authored `core-stablecoin` or `tokenized-fund` decision.
 
 ### Additional Metadata
 

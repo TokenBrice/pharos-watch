@@ -457,11 +457,11 @@ describe("stablecoin detail view-model builder", () => {
 
   it("keeps NAV tokens out of peg-distressed verdicts, keeps curated danger notices critical, and inherits variant archetypes", () => {
     const nav = readyModel({
-      id: "mhyper-midas", asset: { price: 1.1 },
+      id: "susde-ethena", asset: { price: 1.1 },
       queries: {
         supplyHistory: { data: [{ date: 1_700_000_000, circulatingUsd: 100, price: 1.1 }] },
-        pegSummary: { data: { summary: {} as never, coins: [{ id: "mhyper-midas", symbol: "mHYPER", pegScore: 35, pegPct: 80, eventCount: 1, currentDeviationBps: 1000, activeDepeg: true, trackingSpanDays: 365 }] } as never, dataUpdatedAt: 1 },
-        reportCards: { data: { cards: [makeV9Card({ id: "mhyper-midas", grade: "F", score: 35 })], dependencyGraph: { nodes: [], edges: [] } } as never, dataUpdatedAt: 1 },
+        pegSummary: { data: { summary: {} as never, coins: [{ id: "susde-ethena", symbol: "sUSDe", pegScore: 35, pegPct: 80, eventCount: 1, currentDeviationBps: 1000, activeDepeg: true, trackingSpanDays: 365 }] } as never, dataUpdatedAt: 1 },
+        reportCards: { data: { cards: [makeV9Card({ id: "susde-ethena", grade: "F", score: 35 })], dependencyGraph: { nodes: [], edges: [] } } as never, dataUpdatedAt: 1 },
       },
     });
     expect(nav.isNavToken).toBe(true);

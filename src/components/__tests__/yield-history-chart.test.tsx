@@ -120,6 +120,19 @@ describe("YieldHistoryChart", () => {
     if (primaryApy === null) expect(screen.queryByText("Primary source")).toBeNull();
   });
 
+  it("suppresses safety-unrated warning runs and tooltip entries for tokenized funds", () => {
+    const point = {
+      date: Date.UTC(2026, 8, 1), apy: 4.5, apyBase: 4.5, apyReward: null, sourceTvlUsd: null,
+      warningSignals: ["safety-unrated"], sourceKey: "native", yieldSource: "Native",
+      dataSource: null, isBest: true, sourceSwitch: false,
+    };
+    expect(deriveWarningRuns([point], false)).toHaveLength(1);
+    expect(deriveWarningRuns([point], true)).toEqual([]);
+    render(<YieldHistoryTooltip active label={point.date} payload={[{ dataKey: "apy", payload: point }]}
+      showBreakdown={false} compact={false} tokenizedFund />);
+    expect(screen.queryByText(/Safety unrated/i)).toBeNull();
+  });
+
   it("joins reference labels that would print over each other, stating a shared off-scale note once", () => {
     const domain = [5.5, 7.5] as const;
     const benchmark = { rate: 4.32, label: "USD 3M T-Bill" };

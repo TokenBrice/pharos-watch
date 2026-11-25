@@ -27,6 +27,9 @@ describe("diffObservedSafetyGrades", () => {
     expect(gap.next.a?.grade).toBe("B");
     expect(diffObservedSafetyGrades(gap.next, { a: rated("B") }, symbol, 300).entries).toEqual([]);
     expect(diffObservedSafetyGrades(seed, { a: rated("D", { methodologyVersion: "10.27" }) }, symbol, 300).entries).toEqual([]);
+    const fundDiff = diffObservedSafetyGrades({ "buidl-blackrock": { grade: "B", score: 70, methodologyVersion: "10.54" } }, { "buidl-blackrock": rated("D") }, symbol, 400);
+    expect(fundDiff.entries).toEqual([]);
+    expect(fundDiff.next).not.toHaveProperty("buidl-blackrock");
   });
 });
 

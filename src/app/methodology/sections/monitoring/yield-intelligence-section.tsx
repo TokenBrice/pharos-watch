@@ -171,7 +171,7 @@ export function YieldIntelligenceMethodologySection() {
                       XGLD&apos;s reviewed exchange-rate provider measures XAUt per XGLD, separating gold-denominated
                       NAV changes from gold&apos;s USD price. This is issuer-administered NAV, not reconciled strategy
                       profit; it supplies no measured TVL and still needs a valid historical comparison anchor.
-                      Initial and re-anchor observations remain durable history anchors, including Ondo/Midas NAV
+                      Initial and re-anchor observations remain durable history anchors, including protocol NAV
                       readers, but enter no current yield row, ranking, alternative or rolling sample until a return
                       is measured. They never publish synthetic zero APY; genuine zero and negative returns remain.
                     </li>
@@ -192,13 +192,15 @@ export function YieldIntelligenceMethodologySection() {
                       not representable as a reliable DeFiLlama pool; these rows stay in the curated tier rather than
                       inheriting Tier 1 deterministic precedence reserved for native wrapper readers. Royco Dawn senior
                       and junior tranches publish here as <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">structured-tranche</code>{" "}
-                      rows keyed by <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">royco-dawn:&lt;chainId&gt;:&lt;marketId&gt;:&lt;side&gt;</code>, while Midas mMEV publishes a NAV-appreciation row from the issuer-listed mMEV/USD oracle
+                      rows keyed by <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">royco-dawn:&lt;chainId&gt;:&lt;marketId&gt;:&lt;side&gt;</code>{" "}
+                      (the former Midas mMEV NAV-oracle row retired when mMEV was delisted under listing policy 2.0)
                     </li>
                     <li>
                       <span className="text-foreground">Tier 3 &mdash; Price-derived</span>: derives APY from 7-45 day
                       USD price appreciation only for explicitly catalogued NAV-appreciation or lending-vault mechanisms
-                      with an actual USD return reference and no intentional holder-return gap. FPI and ISC retain
-                      explicitly reviewed USD-based variable-NAV exceptions. XGLD has no USD-price fallback:
+                      with an actual USD return reference and no intentional holder-return gap. Unreviewed
+                      variable-peg assets are never implicitly USD-return eligible (the former FPI and ISC exceptions
+                      retired when FPI froze and ISC was delisted). XGLD has no USD-price fallback:
                       gold&apos;s USD appreciation is not its XAUt return. USD drift also cannot measure distributed
                       rewards or rebasing yield
                     </li>
@@ -252,9 +254,9 @@ export function YieldIntelligenceMethodologySection() {
                   </p>
                   <p>
                     Yield-bearing coverage is now explicitly inventoried per asset. If no reliable runtime source exists,
-                    the asset is marked as an intentional gap rather than silently disappearing from audit coverage.
-                    HedgeCore sUSD is an intentional gap: its gross Venus quote is quarantined because on-chain rate
-                    interfaces revert and the documented 93% pass-through does not establish holder-return equivalence.
+                    the asset is marked as an intentional gap with a machine-readable reason and review date in the
+                    adapter manifest rather than silently disappearing from audit coverage (former gaps for delisted
+                    assets such as HedgeCore sUSD retired when those assets left the active catalog).
                   </p>
                   <p>
                     Royco Dawn tranche rows are opportunity rows, not stablecoin registry additions. Senior rows are capped
@@ -285,7 +287,7 @@ export function YieldIntelligenceMethodologySection() {
                     for the daily benchmark producer. Each source class also emits a midpoint <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">aging</code>{" "}
                     warning (27h price-derived, 30h rate-derived) once an observation misses its refresh slot but has not
                     reached the stale bound. Ordinary exchange-rate anchors expire after 14 days; price-derived and
-                    Midas/Ondo NAV anchors remain valid through their configured 45-day comparison window.
+                    slow NAV anchors remain valid through their configured 45-day comparison window.
                   </p>
                   <p>
                     Freshness eligibility is applied before confidence arbitration. A stale deterministic candidate cannot

@@ -160,6 +160,11 @@ describe("buildStatusMessage safety", () => {
     else if (rs === "rated") expect(m).toContain("Safety grade A (80), some inputs missing");
     else { expect(m).toContain("Safety grade NR"); expect(m).not.toContain("some inputs missing"); }
   });
+  it("reports tokenized funds as not graded rather than NR or unavailable", () => {
+    const m = statusMsg("BUIDL", baseStatus({ stablecoinId: "buidl-blackrock", safety: safe({ grade: "NR", score: null, ratingStatus: "not-rated" }) }));
+    expect(m).toContain("Tokenized fund (not graded)");
+    expect(m).not.toContain("Safety grade");
+  });
 });
 
 describe("buildStatusMessage yield", () => {

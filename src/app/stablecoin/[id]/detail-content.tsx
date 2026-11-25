@@ -55,6 +55,8 @@ import { alignAnchorAfterHydration, revealAnchorId, revealDeferredSectionsThroug
 import { cn } from "@/lib/utils";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { scoreToGrade } from "@shared/lib/report-card-core";
+import { isClientTokenizedFundId } from "@shared/lib/stablecoins/aggregate-client-registry";
+import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import type { AiSummaryClaimValues } from "@shared/types/editorial";
 import {
   buildDetailSharedModules,
@@ -544,6 +546,7 @@ function DetailSummaryRail({
           items={heroModel.signalRailItems}
           navToken={viewModel.isNavToken}
           frozen={viewModel.coin.status === "frozen"}
+          tokenizedFund={isActiveStablecoinMeta(viewModel.coin) && isClientTokenizedFundId(viewModel.coin.id)}
           gradeRead={viewModel.gradeRead}
           liveAsOf={liveSafetyAsOf}
           card={viewModel.reportCard ?? null}
@@ -696,9 +699,12 @@ export function DetailContent({
   // Registered AI-summary claim tokens resolve against the same live values the
   // hero and report card render; pillar grades use the breakdown's scoreToGrade.
   // While the live card is pending (the prerender included), the grade reads the
-  // same dated release value the hero shows.
-  const card = viewModel.reportCard;
-  const savedGrade = heroModel.savedGrade;
+  // same dated release value the hero shows. Tokenized funds are not graded on
+  // the Safety Score scale, so report-card claims stay null and any stale
+  // grade-claiming summary withholds cleanly.
+  const isTokenizedFund = isClientTokenizedFundId(viewModel.coin.id);
+  const card = isTokenizedFund ? null : viewModel.reportCard;
+  const savedGrade = isTokenizedFund ? null : heroModel.savedGrade;
   const pegScore = viewModel.isNavToken ? null : viewModel.pegScoreResult?.pegScore ?? null;
   const claimValues: AiSummaryClaimValues = {
     "report-card.grade": card?.grade ?? savedGrade?.grade ?? null,

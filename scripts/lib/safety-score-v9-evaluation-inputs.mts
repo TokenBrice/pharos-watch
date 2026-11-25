@@ -72,7 +72,6 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/lib/redemption-backstop-configs/offchain-issuer/remediation-and-late-audit.ts",
   "shared/lib/redemption-backstop-configs/offchain-issuer/shared.ts",
   "shared/lib/redemption-backstop-configs/psm-and-basket.ts",
-  "shared/lib/redemption-backstop-configs/queue-redeem-nest-nav.ts",
   "shared/lib/redemption-backstop-configs/queue-redeem.ts",
   "shared/lib/redemption-backstop-configs/review-dates.ts",
   "shared/lib/redemption-backstop-configs/settlement-order.ts",
@@ -164,6 +163,8 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/lib/solidly-v2-math.ts",
   "shared/lib/stable-json.ts",
   "shared/lib/stablecoins/full-catalog.ts",
+  "shared/lib/stablecoins/listing-class.ts",
+  "shared/lib/stablecoins/listing-governance.ts",
   "shared/lib/stablecoins/mint-bridge-ownership.ts",
   "shared/lib/stablecoins/registry-indexes.ts",
   "shared/lib/stablecoins/registry.ts",
@@ -354,7 +355,8 @@ export const V9_SCORE_INPUT_DATA_PATHS = [
   "shared/data/stablecoins/canonical-order.json",
   "shared/data/stablecoins/coins.generated.json",
   "shared/data/stablecoins/coins.worker-full.generated.json",
-  "shared/data/stablecoins/coins.worker-runtime.generated.json"
+  "shared/data/stablecoins/coins.worker-runtime.generated.json",
+  "shared/data/stablecoins/listing-decisions.json"
 ] as const;
 
 export const V9_EVALUATION_BUILD_SOURCE_PATHS = [

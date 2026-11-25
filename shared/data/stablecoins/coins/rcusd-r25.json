@@ -7,7 +7,7 @@
     "disposition": "unresolved",
     "reviewedAt": "2026-11-15",
     "reviewer": "Pharos rcUSD addition review",
-    "rationale": "The exact Sui token has a fixed $1 face value and a separate yield-bearing staking receipt, rcUSDp. Primary sources describe tokenized money-market funds and stablecoins without current weights, fund identities or a Treasury-dominant mandate. This does not establish the tbill archetype, a NAV token or a managed credit-fund share. The listing remains in stable-value-investment under the unresolved-mechanism hold pending an exact-product reserve and holder-claim review.",
+    "rationale": "The exact Sui token has a fixed $1 face value and a separate yield-bearing staking receipt, rcUSDp. Primary sources describe tokenized money-market funds and stablecoins without current weights, fund identities or a Treasury-dominant mandate. This does not establish the tbill archetype, a NAV token or a managed credit-fund share. The listing remains in review-hold under the unresolved-mechanism hold pending an exact-product reserve and holder-claim review.",
     "sources": [
       {
         "label": "Sui Foundation rcUSD and rcUSDp launch, November 25 2025",

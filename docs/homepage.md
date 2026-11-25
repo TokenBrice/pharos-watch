@@ -10,7 +10,7 @@ The homepage follows the locked triage band order (Q6/Q7):
 2. **Live Tape** (`CoreTopRail` -> `homepage-tape.tsx`): sits below navigation in normal flow.
 3. **Market Pulse Grid** (`home-alt-mini-card-grid.tsx`): desktop (`md+`) keeps `ActiveDepegsCard` permanently in Row 1 (`Active depegs | Peg health | PSI + Mint / Burn`, `min-h-[322px]` so rows 1-4 never clip) with `Supply moves | FreezeWatch` in Row 2. Mobile (`< md`) compresses all 6 Market Pulse cards (`Active depegs`, `Peg health`, `Stability Index`, `Mint / Burn`, `Biggest move (7d)`, `Freezable supply`) into a dense 2×3 KPI tile grid.
 4. **Fresh Blog Banner** (`home-blog-banner.tsx`): passed server-only as `blogBanner` into `HomeAltClient` below Market Pulse so Row 1 sits above desktop folds.
-5. **Stablecoin Overview** (`home-alt-rankings-section.tsx`): prefetched at `rootMargin="300px"`, unified on `<StablecoinOverviewSkeleton />` and `.pharos-table-shell`, with `.pharos-segmented` `Core | Variants | All`, inline quick-filter bar (`All | USD | Non-USD | Commodity` plus `Starred`, `Active alerts`, `Unfreezable`), and enabled `MethodologyHint` column headers.
+5. **Stablecoin Overview** (`home-alt-rankings-section.tsx`): prefetched at `rootMargin="300px"`, unified on `<StablecoinOverviewSkeleton />` and `.pharos-table-shell`, with `.pharos-segmented` `Core | Variants | All stablecoins | Tokenized funds` (`All stablecoins` = core + variants + review-hold, excluding tokenized funds; `Tokenized funds` rows display `"Not graded"` in the Safety column), inline quick-filter bar (`All | USD | Non-USD | Commodity` plus `Starred`, `Active alerts`, `Unfreezable`), and enabled `MethodologyHint` column headers.
 6. **Daily Digest Editorial Strip** (`daily-digest-card.tsx`): full-width cross-device strip below Overview, visible on desktop, tablet, and mobile without fixed-height clipping.
 7. **Yield Intelligence** (`home-alt-yield-overview.tsx`): promoted ahead of pre-launch and forecasting modules.
 8. **On the horizon & Depeg Duration Resolver** (`home-alt-upcoming-horizon-constellation.tsx`, `home-alt-ddr-overview.tsx`): unified with `HomeSectionHeader` (semantic `<h2>` and `text-sm` subtitles across all viewports).
@@ -19,7 +19,7 @@ The homepage follows the locked triage band order (Q6/Q7):
 
 ## Top-Fold Contract
 
-Keep exactly one raw visible `h1` across breakpoints. Metadata is canonical `/` with the shared OG card; the title and description use the headline count authority `HEADLINE_STABLECOIN_COUNT`/`HEADLINE_STABLECOIN_LABEL` in `src/lib/universe-vocabulary.ts` ("{N} active stablecoins", the active universe), shared with the site description, `llms.txt` and the About headline; any larger total must name its universe; CollectionPage/ItemList JSON-LD uses core stablecoins/cash equivalents. The server hero fallback and market-cap KPI exclude variants and stable-value investments.
+Keep exactly one raw visible `h1` across breakpoints. Metadata is canonical `/` with the shared OG card; the title and description use the headline count authority `HEADLINE_STABLECOIN_COUNT`/`HEADLINE_STABLECOIN_LABEL` in `src/lib/universe-vocabulary.ts` ("{N} active stablecoins", the active stablecoin universe excluding tokenized funds), shared with the site description, `llms.txt` and the About headline; any larger total must name its universe; CollectionPage/ItemList JSON-LD uses core stablecoins. The server hero fallback and market-cap KPI exclude variants, tokenized funds, and review-hold listings.
 
 `getHomepageHeroSnapshot()` in `src/lib/homepage-static-snapshot.ts` reads checked-in public market data and acquires a bounded dated history preview at build time as fallback only. Preserve that selection through hydration, then reconcile from the dedicated cache-sharing `useHomepageSnapshot()` query. Fallback must be dated and at most 72 hours old; older/undated data is unavailable without live data. A minute clock reevaluates each lane's producer age and fallback expiry. Build history acquisition failures leave the existing dated headline available; they never create an empty or fresh history claim.
 
@@ -78,7 +78,7 @@ The compact homepage snapshot is retained in a versioned, schema-validated Index
 
 ## URL Filter Contract
 
-`use-home-alt-filters.ts` and the shared codec own `peg` (one cohort) and `variant` (core default, variants or catalog). Invalid peg state normalizes to all; all/empty/default values clear the key. Updates replace history without scroll jumps. Peg browse links/counts derive from the canonical taxonomy, not route-local copies.
+`use-home-alt-filters.ts` and the shared codec own `peg` (one cohort) and `variant` (core default, variants, catalog, or funds). Invalid peg state normalizes to all; all/empty/default values clear the key. Updates replace history without scroll jumps. Peg browse links/counts derive from the canonical taxonomy, not route-local copies.
 
 ## Stablecoin Overview
 

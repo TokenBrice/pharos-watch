@@ -12,7 +12,7 @@ import {
   type YieldPysInputsAtPublish,
 } from "@shared/types/yield";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { MORPHO_NET_YIELD_SOURCES, OPTIONAL_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
+import { MORPHO_NET_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
 import { YIELD_BENCHMARK_SCORE_TTL_SEC } from "@shared/lib/status-thresholds";
 import { createLatestSchemaFixtureTracker, createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
@@ -289,38 +289,6 @@ describe("publishYieldCoordinatorResults", () => {
       },
     };
   }
-
-  it("keeps USDY's wrapper identity while projecting a verified long-horizon anchor for rollback", async () => {
-    const { db, sqlite, readLegacy, readCurrent } = rankingsFixture();
-    const { ondo } = OPTIONAL_YIELD_SOURCES;
-    const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
-    const anchorAge = 30 * DAY_SECONDS;
-    const source = makeEvaluatedSource({
-      id: ondo.stablecoinId, symbol: "USDY", sourceKey: ondo.sourceKey,
-      dataSource: "protocol-api", yieldType: "nav-appreciation", currentApy: 5, apy30d: 5,
-      sourceObservedAt: startSec, comparisonAnchorObservedAt: startSec - anchorAge,
-    });
-    const benchmark = makeBenchmarkMeta();
-    const artifacts = buildPreviewYieldRankingsArtifacts({
-      evaluatedSources: [source], bestSourceKeyByCoin: new Map([[source.id, source.sourceKey]]),
-      riskFreeRate: benchmark.rate, riskFreeRateMeta: benchmark, riskFreeRates: makeBenchmarkRegistry(benchmark),
-      dlPoolsMeta: makeYieldSourceMeta(), safetySnapshot: makeSafetySnapshotMeta(), medianApy: 5, startSec,
-    });
-    expect((await publishYieldCoordinatorResults({ ...makePublishParams({ db }), ...artifacts,
-      evaluatedSources: artifacts.acceptedSources })).ok).toBe(true);
-    const [legacyRow] = readLegacy().rankings;
-    const [canonicalRow] = (await readCurrent()).rankings;
-    for (const row of [legacyRow, canonicalRow]) {
-      expect(row).toMatchObject({
-        currentApy: 5, pharosYieldScore: 28,
-        provenance: { sourceKey: ondo.sourceKey, sourceObservedAt: startSec, sourceAgeSeconds: 0 },
-      });
-    }
-    expect(legacyRow.provenance.comparisonAnchorAgeSeconds).toBeUndefined();
-    expect(legacyRow.provenance.comparisonAnchorObservedAt).toBeUndefined();
-    expect(canonicalRow.provenance.comparisonAnchorAgeSeconds).toBe(anchorAge);
-    expect(sqlite.prepare("SELECT source_key, apy FROM yield_history").all()).toEqual([{ source_key: ondo.sourceKey, apy: 5 }]);
-  });
 
   it("keeps a stale Yearn quote in decision evidence and publishes only the admitted Aave APY", async () => {
     const { db, sqlite, readCurrent } = rankingsFixture();

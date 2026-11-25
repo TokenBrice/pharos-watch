@@ -11,6 +11,7 @@ import {
   buildV9HeadlineStats,
   buildV9PillarAverages,
   buildV9SupplyMix,
+  excludeTokenizedFundCards,
   filterAndSortV9Cards,
   formatSafetyCardTopDriverExport,
   groupV9CardsByGrade,
@@ -221,5 +222,15 @@ describe("Safety Scores view model", () => {
     expect(resolveSafetyCardTopDriver(input[2]!)).toBeNull();
     expect(formatSafetyCardTopDriverExport(input[2]!)).toBe("Exit excluded · awaiting curation");
     expect(formatSafetyCardTopDriverExport(input[0]!)).not.toMatch(/\(A\)|\(B\)/);
+  });
+
+  it("excludes tokenized funds from Safety Scores rankings and views", () => {
+    const mixed = [
+      makeV9Card({ id: "usdc-circle", grade: "A", score: 85 }),
+      makeV9Card({ id: "usdtb-ethena", grade: "C+", score: 62 }),
+      makeV9Card({ id: "buidl-blackrock", grade: "NR", score: null, ratingStatus: "not-rated" }),
+      makeV9Card({ id: "usyc-hashnote", grade: "NR", score: null, ratingStatus: "not-rated" }),
+    ].map(projectV9TableCard);
+    expect(excludeTokenizedFundCards(mixed).map((c) => c.id)).toEqual(["usdc-circle", "usdtb-ethena"]);
   });
 });

@@ -21,9 +21,10 @@ import type { YieldSourceDepthLens, YieldSourceRiskDriver } from "@/lib/yield-so
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES, getPysColor } from "@shared/lib/classification";
 import { formatPercentFromRatio } from "@shared/lib/format";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { isClientTokenizedFundId } from "@shared/lib/stablecoins/aggregate-client-registry";
 import type { StablecoinStatus } from "@shared/types/stablecoin-taxonomy";
 import type { YieldRanking, YieldRankingsResponse } from "@shared/types/yield";
-import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
+import { selectRowInvestmentWarningSignals } from "@/lib/yield-view-model-filter-axes";
 
 /** The dossier previews the top three alternate pools; the rest sit behind "Show N more". */
 export const ALT_SOURCE_INITIAL_COUNT = 3;
@@ -40,6 +41,7 @@ export interface YieldDetailRegistryStatus {
 
 export interface YieldDetailReadyModel {
   status: "ready";
+  isTokenizedFund: boolean;
   ranking: YieldRanking;
   benchmarkSubtitle?: string;
   benchmarkRate: number | null;
@@ -106,7 +108,8 @@ export function buildYieldDetailModel(
     }
     return { status: "unavailable", shouldHaveYieldData: registryStatus.shouldHaveYieldData };
   }
-  const investmentWarnings = selectInvestmentWarningSignals(ranking.warningSignals);
+  const isTokenizedFund = isClientTokenizedFundId(registryStatus.stablecoinId);
+  const investmentWarnings = selectRowInvestmentWarningSignals(ranking.warningSignals, isTokenizedFund);
 
   const pysBreakdown = buildYieldPysBreakdown(
     ranking,
@@ -126,6 +129,7 @@ export function buildYieldDetailModel(
 
   return {
     status: "ready",
+    isTokenizedFund,
     ranking,
     benchmarkSubtitle: benchmarkUnitMismatch ? resolvedBenchmark.label : getYieldBenchmarkGapReferenceText(ranking, { includePeriod: false }),
     benchmarkRate: resolvedBenchmark.rate,

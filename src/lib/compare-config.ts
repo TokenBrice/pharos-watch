@@ -69,7 +69,7 @@ export const COMPARISON_PRESETS: readonly ComparePreset[] = [
   {
     title: "Tokenized Treasuries",
     description: "NAV-priced tokens backed by U.S. Treasury bills",
-    coins: ["usyc-hashnote", "usdy-ondo-finance", "ustb-superstate", "buidl-blackrock"],
+    coins: ["usyc-hashnote", "ustb-superstate", "buidl-blackrock"],
   },
   {
     title: "Protocol Stablecoins",

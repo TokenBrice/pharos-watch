@@ -171,8 +171,20 @@ export function compileCeilingCard(meta: V9ExtensionRegistryMeta, clockSec: numb
   if (result.quarantines.length > 0) throw new Error(`${meta.id} quarantined`);
   const card = result.candidate.cards[0]!;
   const components = card.breakdowns?.backing.components ?? [];
-  return { card, facts: result.compiledFacts.assets[0]!, components,
-    reserves: card.breakdowns?.backing.groups.find((row) => row.key === "reserves")?.score ?? Number.NaN,
+  const publicReserves = card.breakdowns?.backing.groups.find((row) => row.key === "reserves")?.score ?? undefined;
+  let reserves: number = publicReserves ?? Number.NaN;
+  if (publicReserves === undefined) {
+    // Ungraded tokenized funds omit public breakdowns while keeping their
+    // internal Backing evaluation intact; derive the reserve-group score from
+    // the evaluated contributions using the same effectiveWeight blend.
+    const backing = result.evaluatedSet.assets[0]!.backing;
+    const reserveRows = backing.contributions.filter((row) => row.source !== "mechanism");
+    const weight = reserveRows.reduce((sum, row) => sum + row.effectiveWeight, 0);
+    reserves = weight > 0
+      ? reserveRows.reduce((sum, row) => sum + (row.score === null ? 0 : row.score * row.effectiveWeight), 0) / weight
+      : Number.NaN;
+  }
+  return { card, facts: result.compiledFacts.assets[0]!, components, reserves,
     residual: components.find((row) => row.key.startsWith("reserve:unclassified-residual")) };
 }
 

@@ -571,4 +571,32 @@ describe("YieldMobileCard — zone chip benchmark resolution", () => {
     expect(screen.getByRole("group", { name: "Why this PYS" }).textContent)
       .toContain("Benchmark unavailable");
   });
+
+  it.each(rowRenderers)("labels an ungraded tokenized fund as Not graded without inventing a score on %s", (surface, renderRow) => {
+    const fundRow = makeYieldViewModelRow({
+      id: "buidl-blackrock",
+      symbol: "BUIDL",
+      name: "BlackRock USD Institutional Digital Liquidity Fund",
+      isTokenizedFund: true,
+      safetyGrade: "NR",
+      safetyScore: 40,
+      pharosYieldScore: null,
+      warningSignals: ["safety-unrated"],
+      provenance: { ...YIELD_TEST_PROVENANCE, usedDefaultSafety: true },
+    });
+    const { container, unmount } = renderRow(fundRow, true);
+    expect(screen.getByLabelText("Not graded: tokenized fund").textContent).toBe("Not graded");
+    expect(container.textContent).not.toContain("40/100");
+    expect(container.textContent).not.toContain("unscored");
+    expect(container.textContent).not.toContain("Safety Unrated");
+    expect(screen.queryByRole("button", { name: /warning signal/ })).toBeNull();
+    if (surface === "desktop") {
+      expect(container.textContent).toContain("Tokenized fund");
+    }
+    unmount();
+
+    const warnedFund = renderRow({ ...fundRow, warningSignals: ["safety-unrated", "yield-spike"] }, true);
+    expect(warnedFund.container.textContent).toContain("Yield spike");
+    expect(warnedFund.container.textContent).not.toContain("Safety Unrated");
+  });
 });

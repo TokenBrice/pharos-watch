@@ -42,8 +42,9 @@ export function RedemptionBackstopMethodologySection() {
       <p>
         Redemption output risk follows what the selected route pays. A single reviewed stablecoin payout is
         100% of output regardless of backing allocations; basket percentages require complete admitted payout
-        weights, otherwise the affected output stays identified with an unknown share. FUSD pays USDT, Noble
-        USDN and Gate GUSD pay USDC, and KAST USDK unwraps to M, not an inferred partner fiat rail.
+        weights, otherwise the affected output stays identified with an unknown share. FUSD pays USDT
+        and KAST USDK unwraps to M, not an inferred partner fiat rail (former Noble USDN and Gate GUSD
+        routes retired when those assets froze or delisted).
         Output identity proves neither current price, funded liquidity, fees, holder access nor settlement.
         A separately fresh nested observation cannot rehabilitate a fatally invalid reserve snapshot.
         Independent DEX alternatives retain their own clock, hash and FX gates; their absence is not redemption failure.
@@ -108,9 +109,10 @@ export function RedemptionBackstopMethodologySection() {
           separately sourced facility or input-token pause survives that mismatch.
         </p>
         <p>
-          GBPA and MXNT retain unquantified capacity. FILQ and Sygnum FIUSD distinguish cash payouts from
-          NAV-based share pricing; strUSD separates permissionless on-chain submission from issuer-discretionary
-          holder eligibility. These corrections do not establish missing completion or all-in cost bounds.
+          GBPA and MXNT retain unquantified capacity. Reviewed routes distinguish cash payouts from
+          NAV-based share pricing (first clarified on now-delisted FILQ and Sygnum FIUSD), and strUSD
+          separates permissionless on-chain submission from issuer-discretionary holder eligibility.
+          These corrections do not establish missing completion or all-in cost bounds.
         </p>
         <p>
           Direct executable observers are a separate route-evidence source, not proof of reserve composition.

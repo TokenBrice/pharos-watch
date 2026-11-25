@@ -4,7 +4,6 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../../../lib/evm-selectors";
 import {
   adaptChainlinkNavResponse,
-  parseOndoPriceData,
   type ChainlinkNavParams,
 } from "../chainlink-nav-core";
 import { installAdapterNetwork, runAdapter, type AdapterNetwork, type AdapterNetworkSpec, type AdapterRpcValue } from "./reserve-adapter.test-support";
@@ -15,23 +14,10 @@ import { buildReviewedReserveClassifications } from "../../../lib/safety-score-v
 import { decodeCurrentReserveNavPrice } from "../../../lib/reserve-nav-price";
 
 const ORACLE_ADDRESS = "0x74f2199AEb743f68f05943e5715A33EaF2b61f53";
-const WRAPPER_ADDRESS = "0x00000000000000000000000000000000000000aa";
 const TOKEN_ADDRESS = "0x136471a34f6ef19fE571EFFC1CA711fdb8E49f2b";
-const MANAGER_ADDRESS = "0x93358db73B6cd4b98D89c8F5f230E81a95c2643a";
-const USDC_ADDRESS = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
-const ROUTER_ADDRESS = "0x99B8d1D1c17a10CD1A878d1A44c11fd7E4daD7bC";
-const SOURCE_ADDRESS = "0x9F205E1aC7698F59EdbAa0a28C4A4c4ed605b722";
 
 function encodeUint256Word(value: bigint): string {
   return value.toString(16).padStart(64, "0");
-}
-
-function encodeAddressResult(address: string): `0x${string}` {
-  return `0x${address.slice(2).padStart(64, "0")}` as `0x${string}`;
-}
-
-function encodeUint256Result(value: bigint): `0x${string}` {
-  return `0x${encodeUint256Word(value)}`;
 }
 
 function makeChainlinkNavConfig(
@@ -79,17 +65,11 @@ function navNetwork(overrides: {
   totalSupply?: bigint;
   oracleDecimals?: bigint;
   latestRoundData?: `0x${string}`;
-  priceData?: `0x${string}`;
-  assetPrice?: bigint;
-  wrapperAddress?: string;
-  redemption?: boolean;
-  pauseValue?: string;
-  capacity?: bigint;
 } = {}): AdapterNetworkSpec {
   const rpc: Record<string, AdapterRpcValue> = {
     [`${TOKEN_ADDRESS}:${DECIMALS_SELECTOR}`]: overrides.tokenDecimals ?? 18n,
     [`${TOKEN_ADDRESS}:${TOTAL_SUPPLY_SELECTOR}`]: overrides.totalSupply ?? 500_000_000_000_000_000_000n,
-    [`${ORACLE_ADDRESS}:${DECIMALS_SELECTOR}`]: overrides.oracleDecimals ?? 18n,
+    [`${ORACLE_ADDRESS}:${DECIMALS_SELECTOR}`]: overrides.oracleDecimals ?? 8n,
     [`${ORACLE_ADDRESS}:${LATEST_ROUND_DATA_SELECTOR}`]: overrides.latestRoundData
       ?? encodeLatestRoundData({
         roundId: 44n,
@@ -98,24 +78,7 @@ function navNetwork(overrides: {
         updatedAt: 1_781_083_007n,
         answeredInRound: 44n,
       }),
-    [`${ORACLE_ADDRESS}:0xa4a28168`]: overrides.priceData
-      ?? "0x"
-        + "00000000000000000000000000000000000000000000000639e961576659e000"
-        + "0000000000000000000000000000000000000000000000000000000069d6caf3",
-    [`${ORACLE_ADDRESS}:0xb3596f07`]: overrides.assetPrice ?? 1_000_000_000_000_000_000n,
   };
-  if (overrides.wrapperAddress) {
-    rpc[`${ORACLE_ADDRESS}:0xeca6f018`] = encodeAddressResult(overrides.wrapperAddress);
-    rpc[`${overrides.wrapperAddress}:0xa4a28168`] = "0xdeadbeef";
-  }
-  if (overrides.redemption) {
-    rpc[`${MANAGER_ADDRESS}:0x8f4f9613`] = encodeAddressResult(ROUTER_ADDRESS);
-    rpc[`${ROUTER_ADDRESS}:0x2021065d`] = encodeAddressResult(SOURCE_ADDRESS);
-    rpc[`${MANAGER_ADDRESS}:0xb235d468`] = overrides.pauseValue ?? encodeUint256Result(0n);
-    rpc[`${MANAGER_ADDRESS}:0x884a0501`] = encodeUint256Result(1n);
-    rpc[`${MANAGER_ADDRESS}:0x8f8eb812`] = 4_999_990_000_000_000_000_000n;
-    rpc[`${ROUTER_ADDRESS}:0x6cde714a`] = overrides.capacity ?? 8_499_999_997_683n;
-  }
   return { rpc };
 }
 
@@ -168,7 +131,7 @@ describe("adaptChainlinkNavResponse", () => {
   };
 
   // WTGXX is quarantined today; its keyed row keeps a reactivated feed classified.
-  it.each(["fiusd-sygnum", "wtgxx-wisdomtree"])("projects %s's native fund-share slice onto its reviewed singleton classification", (id) => {
+  it.each(["vbill-vaneck", "wtgxx-wisdomtree"])("projects %s's native fund-share slice onto its reviewed singleton classification", (id) => {
     const coin = TRACKED_META_BY_ID.get(id)!;
     const config = coin.liveReservesConfig!;
     expect(config.adapter).toBe("chainlink-nav");
@@ -188,7 +151,7 @@ describe("adaptChainlinkNavResponse", () => {
     expect(classifications[0]?.classificationKey).toMatch(/^registry-reviewed:/);
   });
 
-  it.each([{ ...params, navScope: "portfolio" as const }, TRACKED_META_BY_ID.get("mtbill-midas")!.liveReservesConfig!.params as ChainlinkNavParams])("keeps portfolio NAV visible but degrades unverified composition", (portfolio) => {
+  it.each([{ ...params, navScope: "portfolio" as const }, TRACKED_META_BY_ID.get("mf-one-midas")!.liveReservesConfig!.params as ChainlinkNavParams])("keeps portfolio NAV visible but degrades unverified composition", (portfolio) => {
     const result = adaptChainlinkNavResponse(
       { navPerToken: 1_119_000n, navDecimals: 6, totalSupply: 500_000_000n, tokenDecimals: 6, roundId: 384n, updatedAt: 1773405239 },
       portfolio,
@@ -229,7 +192,7 @@ describe("adaptChainlinkNavResponse", () => {
     ).toThrow();
   });
 
-  it("marks getPrice mode as explicitly unverified when no oracle timestamp exists", () => {
+  it("marks missing oracle timestamps as explicitly unverified", () => {
     const result = adaptChainlinkNavResponse(
       { navPerToken: 1_119_000_000_000_000_000n, navDecimals: 18, totalSupply: 500_000_000n, tokenDecimals: 6, roundId: 0n, updatedAt: 0 },
       params,
@@ -239,31 +202,14 @@ describe("adaptChainlinkNavResponse", () => {
       oracleTimestampSource: "unavailable",
       freshnessMode: "unverified",
       details: {
-        freshnessSource: "onchain-oracle-getprice",
+        freshnessSource: "onchain-oracle-round",
       },
     });
   });
 });
 
-describe("parseOndoPriceData", () => {
-  it("parses price and timestamp from a two-word payload", () => {
-    const raw = "0x"
-      + "00000000000000000000000000000000000000000000000639e961576659e000"
-      + "0000000000000000000000000000000000000000000000000000000069d6caf3";
-
-    expect(parseOndoPriceData(raw)).toEqual({
-      price: 114_853_438_000_000_000_000n,
-      updatedAt: 1775684339,
-    });
-  });
-
-  it("throws on malformed payloads", () => {
-    expect(() => parseOndoPriceData("0x1234")).toThrow("malformed payload");
-  });
-});
-
 describe("fetchChainlinkNavCore", () => {
-  it.each(["mre7yield-midas", "mglobal-midas-fasanara"])("uses the reviewed %s round window when reading the reserve NAV for pricing", (id) => {
+  it.each(["mf-one-midas", "mglobal-midas-fasanara"])("uses the reviewed %s round window when reading the reserve NAV for pricing", (id) => {
     const liveReservesConfig = TRACKED_META_BY_ID.get(id)!.liveReservesConfig!;
     const fingerprint = computeLiveReserveConfigFingerprint(liveReservesConfig);
     const observedAt = 1_781_083_007;
@@ -280,6 +226,36 @@ describe("fetchChainlinkNavCore", () => {
     expect(decodeCurrentReserveNavPrice(row, { liveReservesConfig }, fetchedAt))
       .toMatchObject({ price: 1.23, observedAt, maxAgeSec });
     expect(decodeCurrentReserveNavPrice(row, { liveReservesConfig }, fetchedAt + 1)).toBeNull();
+  });
+
+  it("reads standard latestRoundData in one Multicall3 batch and marks freshness verified", async () => {
+    const updatedAt = 1_781_083_007;
+    const { result, network: installed } = await runNav(
+      makeChainlinkNavConfig({
+        params: {
+          assetLabel: "Treasury Fund shares",
+          assetRisk: "very-low",
+          oracleMethod: "latestRoundData",
+        },
+      }),
+      navNetwork(),
+      updatedAt + 60,
+    );
+
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata).toMatchObject({
+      navPerToken: "1.06766689",
+      freshnessMode: "verified",
+      oracleTimestampSource: "oracle-round",
+      oracleUpdatedAt: updatedAt,
+      sourceTimestamp: updatedAt,
+      redemption: {
+        capacityKind: "documented-bound",
+        freshnessKind: "verified-source-timestamp",
+        sourceTimestamp: updatedAt,
+      },
+    });
+    expect(installed.rpcCalls.filter((call) => call.viaMulticall)).toHaveLength(4);
   });
 
   it("throws when standard Chainlink NAV round data exceeds the configured freshness window", async () => {
@@ -322,141 +298,6 @@ describe("fetchChainlinkNavCore", () => {
     ]);
   });
 
-  it("reads getPriceData directly and marks freshness verified", async () => {
-    const updatedAt = 1_775_684_339;
-    const rawPriceData = "0x"
-      + "00000000000000000000000000000000000000000000000639e961576659e000"
-      + "0000000000000000000000000000000000000000000000000000000069d6caf3" as `0x${string}`;
-    const network = navNetwork({ priceData: rawPriceData });
-
-    const { result, network: installed } = await runNav(
-      makeChainlinkNavConfig({
-        params: {
-          assetLabel: "Ondo T-Bills",
-          assetRisk: "very-low",
-          oracleMethod: "getPriceData",
-        },
-      }),
-      network,
-      updatedAt + 60,
-    );
-
-    expect(result.warnings).toBeUndefined();
-    expect(result.metadata).toMatchObject({
-      freshnessMode: "verified",
-      oracleTimestampSource: "ondo-price-data",
-      oracleUpdatedAt: updatedAt,
-      sourceTimestamp: updatedAt,
-    });
-    expect(result.metadata?.navPerToken).toBe("114.853438");
-    expect(result.metadata?.redemption).toMatchObject({
-      capacityKind: "documented-bound",
-      freshnessKind: "verified-source-timestamp",
-    });
-    expect(installed.rpcCalls.filter((call) => !call.viaMulticall)).toHaveLength(3);
-  });
-
-  it("emits opt-in OUSG InstantManager redemption capacity from the pinned default route", async () => {
-    const updatedAt = 1_775_684_339;
-    const rawPriceData = "0x"
-      + "00000000000000000000000000000000000000000000000639e961576659e000"
-      + "0000000000000000000000000000000000000000000000000000000069d6caf3" as `0x${string}`;
-    const network = navNetwork({ priceData: rawPriceData, redemption: true });
-
-    const { result } = await runNav(
-      makeChainlinkNavConfig({
-        params: {
-          assetLabel: "Ondo T-Bills",
-          assetRisk: "very-low",
-          oracleMethod: "getPriceData",
-          redemptionCapacity: {
-            managerAddress: MANAGER_ADDRESS,
-            usdcAddress: USDC_ADDRESS,
-            routerAddress: ROUTER_ADDRESS,
-            sourceAddress: SOURCE_ADDRESS,
-            pauseSelector: "0xb235d468",
-          },
-        },
-      }),
-      network,
-      updatedAt + 60,
-    );
-
-    expect(result.metadata?.redemption).toMatchObject({
-      capacityUsd: 8_499_999.997683,
-      capacityKind: "live-direct",
-      freshnessKind: "same-run-onchain",
-      routeStatus: "open",
-      routeStatusSource: "onchain",
-      holderEligibility: "whitelisted-primary",
-      settlementDelaySec: 0,
-      minRedeemUsd: 4_999.99,
-    });
-  });
-
-  it("does not report an open redemption route when available capacity is zero", async () => {
-    const updatedAt = 1_775_684_339;
-    const { result } = await runNav(
-      makeChainlinkNavConfig({
-        params: {
-          assetLabel: "Ondo T-Bills",
-          assetRisk: "very-low",
-          oracleMethod: "getPriceData",
-          redemptionCapacity: {
-            managerAddress: MANAGER_ADDRESS,
-            usdcAddress: USDC_ADDRESS,
-            routerAddress: ROUTER_ADDRESS,
-            sourceAddress: SOURCE_ADDRESS,
-          },
-        },
-      }),
-      navNetwork({ redemption: true, capacity: 0n }),
-      updatedAt + 60,
-    );
-
-    expect(result.metadata?.redemption).toMatchObject({
-      capacityUsd: 0,
-      routeStatus: "unknown",
-      routeStatusReason: "OUSG redemption route reported zero available capacity",
-    });
-  });
-
-  it("keeps NAV telemetry when the opt-in redemption probe fails closed", async () => {
-    const updatedAt = 1_775_684_339;
-    const rawPriceData = "0x"
-      + "00000000000000000000000000000000000000000000000639e961576659e000"
-      + "0000000000000000000000000000000000000000000000000000000069d6caf3" as `0x${string}`;
-    const network = navNetwork({
-      priceData: rawPriceData,
-      redemption: true,
-      pauseValue: encodeUint256Result(2n),
-    });
-
-    const { result } = await runNav(
-      makeChainlinkNavConfig({
-        params: {
-          assetLabel: "Ondo T-Bills",
-          assetRisk: "very-low",
-          oracleMethod: "getPriceData",
-          redemptionCapacity: {
-            managerAddress: MANAGER_ADDRESS,
-            usdcAddress: USDC_ADDRESS,
-            routerAddress: ROUTER_ADDRESS,
-            sourceAddress: SOURCE_ADDRESS,
-            pauseSelector: "0xb235d468",
-          },
-        },
-      }),
-      network,
-      updatedAt + 60,
-    );
-
-    expect(result.metadata?.navPerToken).toBe("114.853438");
-    expect(result.metadata?.freshnessMode).toBe("verified");
-    expect(result.metadata?.redemption).toBeUndefined();
-    expect(result.warnings).toBeUndefined();
-  });
-
   it("marks the supply perimeter incomplete when the catalog lists other deployments", async () => {
     const updatedAt = 1_781_083_007;
     const { result } = await runAdapter("chainlink-nav", {
@@ -466,7 +307,7 @@ describe("fetchChainlinkNavCore", () => {
         { chain: "solana", address: "Mint1111111111111111111111111111111111", decimals: 6 },
       ],
       liveReservesConfig: makeChainlinkNavConfig({
-        params: { assetLabel: "Ondo T-Bills", assetRisk: "very-low" },
+        params: { assetLabel: "Treasury Fund shares", assetRisk: "very-low" },
       }),
     } as unknown as StablecoinMeta, {
       network: navNetwork({}),
@@ -481,33 +322,5 @@ describe("fetchChainlinkNavCore", () => {
     expect(result.warnings).toEqual([
       expect.objectContaining({ code: "por-supply-chain-omitted", effect: "info", message: expect.stringContaining("solana") }),
     ]);
-  });
-
-  it("emits chainlink-nav-wrapper-oracle-malformed when the wrapper oracle returns garbage", async () => {
-    const network = navNetwork({
-      tokenDecimals: 6n,
-      totalSupply: 500_000_000n,
-      assetPrice: 1_000_000_000_000_000_000n,
-      wrapperAddress: WRAPPER_ADDRESS,
-    });
-    const { result } = await runNav(
-      makeChainlinkNavConfig({
-        semantics: "collateral-mix",
-        params: {
-          navScope: "portfolio",
-          assetLabel: "Ondo T-Bills",
-          assetRisk: "very-low",
-          oracleMethod: "getAssetPrice",
-        },
-      }),
-      network,
-      1_775_684_399,
-    );
-
-    expect(result.warnings?.some((w) => w.code === "chainlink-nav-wrapper-oracle-malformed")).toBe(true);
-    expect(result.warnings).toEqual(expect.arrayContaining([
-      expect.objectContaining({ code: "nav-portfolio-composition-unverified", effect: "degraded" }),
-    ]));
-    expect(result.metadata?.freshnessMode).toBe("unverified");
   });
 });

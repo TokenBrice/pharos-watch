@@ -82,35 +82,6 @@
   "collateralQuality": "exotic",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
-  "liveReservesConfig": {
-    "adapter": "chainlink-nav",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "mapollo-midas",
-    "scoring": {
-      "maxSourceAgeSec": 345600
-    },
-    "display": {
-      "url": "https://midas.app/mapollo",
-      "label": "Midas mAPOLLO NAV"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "alchemy"
-      }
-    },
-    "params": {
-      "navScope": "portfolio",
-      "oracleAddress": "0x84303e5568C7B167fa4fEBc6253CDdfe12b7Ee4B",
-      "tokenAddress": "0x7cf9dec92ca9fd46f8d86e7798b72624bc116c05",
-      "sourceKey": "chainlink-nav:token:0x7cf9dec92ca9fd46f8d86e7798b72624bc116c05",
-      "assetLabel": "Apollo Crypto managed yield strategy NAV",
-      "assetRisk": "high",
-      "maxOracleAgeSec": 604800
-    }
-  },
   "yieldConfig": {
     "yieldSource": "Midas mAPOLLO / Apollo Crypto NAV",
     "yieldType": "nav-appreciation"
@@ -134,5 +105,14 @@
         "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2F7sSYvDMJYrWvBsvKGQFI%2F20260714_mAPOLLO_FT_signed_final.pdf?alt=media"
       }
     ]
+  },
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "NAV-accreting debt certificate tracking an Apollo Crypto managed delta-neutral strategy, not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
+    "source": {
+      "label": "Midas mAPOLLO product page",
+      "url": "https://midas.app/mapollo"
+    }
   }
 }

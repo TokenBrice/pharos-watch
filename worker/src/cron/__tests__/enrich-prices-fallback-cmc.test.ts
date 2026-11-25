@@ -474,9 +474,9 @@ describe("enrichMissingPrices", () => {
   it("skips ambiguous tracked symbols without a slug in CMC fallback", async () => {
     const assets: PeggedAsset[] = [
       makePeggedAsset({
-        id: "gusd-gemini",
-        name: "Gemini Dollar",
-        symbol: "GUSD",
+        id: "usdq-quantoz",
+        name: "Quantoz USDQ",
+        symbol: "USDQ",
         price: 0,
       }),
     ];
@@ -489,7 +489,7 @@ describe("enrichMissingPrices", () => {
     mockFetch([
       {
         match: "pro-api.coinmarketcap.com",
-        body: cmcCategory([{ slug: "gemini-dollar", symbol: "GUSD", quote: { USD: cmcUsdQuote(1.0001) } }]),
+        body: cmcCategory([{ slug: "quantoz-usdq", symbol: "USDQ", quote: { USD: cmcUsdQuote(1.0001) } }]),
       },
     ]);
 

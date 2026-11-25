@@ -25,7 +25,6 @@ import {
 } from "./reserves";
 import {
   ANY_FRESHNESS,
-  BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC,
   BUSINESS_DAY_VERIFIED_VALIDATION,
   DASHBOARD_SOURCE_MAX_AGE_SEC,
   DASHBOARD_VALIDATION,
@@ -572,52 +571,6 @@ const fxParamsSchema = z
   })
   .strict();
 
-const fraxFpiCollateralParamsSchema = z
-  .object({
-    controllerAddress: EvmAddressSchema,
-    fpiTokenAddress: EvmAddressSchema,
-    fraxTokenAddress: EvmAddressSchema,
-    expectedControllerCodeHash: EvmWordSchema,
-    expectedFraxPriceFeedAddress: EvmAddressSchema,
-    expectedFraxPriceFeedCodeHash: EvmWordSchema,
-    expectedFraxPriceFeedDecimals: z.number().int().nonnegative().max(36),
-    expectedFpiPriceFeedAddress: EvmAddressSchema,
-    expectedFpiPriceFeedCodeHash: EvmWordSchema,
-    expectedFpiPriceFeedDecimals: z.number().int().nonnegative().max(36),
-    expectedCpiTrackerAddress: EvmAddressSchema,
-    expectedCpiTrackerCodeHash: EvmWordSchema,
-    maxPriceFeedAgeSec: z.number().int().positive(),
-    fullConfidenceCpiTrackerAgeSec: z.number().int().positive(),
-    maxCpiTrackerAgeSec: z.number().int().positive(),
-    expectedRedeemFeeE6: z.number().int().nonnegative().max(1_000_000),
-    outputTrackedAssetId: z.literal("frax-frax"),
-    minOutputPriceUsd: z.number().finite().positive(),
-    maxOutputPriceUsd: z.number().finite().positive(),
-    // Fraxtal endpoints for valuing issuer rows that omit their USD value; the
-    // Worker chain registry does not resolve Fraxtal.
-    fraxtalRpcUrl: AbsoluteUrlSchema.optional(),
-    fraxtalFallbackRpcUrl: AbsoluteUrlSchema.optional(),
-    ...RequiredSourceUrlsFields,
-    ...OptionalEvmRpcFields,
-  })
-  .strict()
-  .superRefine((params, ctx) => {
-    if (params.minOutputPriceUsd > params.maxOutputPriceUsd) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["minOutputPriceUsd"],
-        message: "minOutputPriceUsd must be less than or equal to maxOutputPriceUsd",
-      });
-    }
-    if (params.fullConfidenceCpiTrackerAgeSec > params.maxCpiTrackerAgeSec) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["fullConfidenceCpiTrackerAgeSec"],
-        message: "fullConfidenceCpiTrackerAgeSec must be less than or equal to maxCpiTrackerAgeSec",
-      });
-    }
-  });
-
 const blastUsdbYieldManagerParamsSchema = z
   .object({
     yieldManagerAddress: EvmAddressSchema,
@@ -642,19 +595,9 @@ const chainlinkNavParamsSchema = z
       .max(160)
       .regex(/^[a-z0-9][a-z0-9._-]*:[a-z0-9][a-z0-9._:/-]*$/)
       .optional(),
-    oracleMethod: z.enum(["latestRoundData", "getPrice", "getPriceData", "getAssetPrice"]).optional(),
+    oracleMethod: z.literal("latestRoundData").optional(),
     ...OptionalEvmRpcFields,
     ...OptionalOracleFreshnessFields,
-    redemptionCapacity: z
-      .object({
-        managerAddress: EvmAddressSchema,
-        usdcAddress: EvmAddressSchema,
-        routerAddress: EvmAddressSchema,
-        sourceAddress: EvmAddressSchema,
-        pauseSelector: EvmSelectorSchema.optional(),
-      })
-      .strict()
-      .optional(),
   })
   .strict();
 
@@ -786,21 +729,6 @@ const capVaultParamsSchema = z
  * compares totals observed more than two days apart.
  */
 const MAX_RESERVE_SUPPLY_SKEW_CAP_SEC = 2 * 24 * 60 * 60;
-const chainlinkPorIssuerCirculationProbeSchema = z
-  .object({
-    kind: z.literal("backed-graphql"),
-    url: AbsoluteUrlSchema,
-    reserveSymbol: z.string().trim().min(1),
-    maxReserveSupplySkewSec: z.number().int().positive().max(MAX_RESERVE_SUPPLY_SKEW_CAP_SEC).optional(),
-    temporalReview: z.object({
-      reviewedAt: StrictIsoDateSchema,
-      evidenceRef: AbsoluteUrlSchema,
-    }).strict().optional(),
-  })
-  .strict()
-  .refine((probe) => (probe.maxReserveSupplySkewSec == null) === (probe.temporalReview == null), {
-    message: "Circulation skew bound and dated source review must be supplied together",
-  });
 
 const LIABILITY_SUPPLY_READER_VALUES = [
   "evm-erc20",
@@ -896,7 +824,6 @@ const chainlinkPorParamsSchema = z
     reserveUnit: z.enum(["USD", "XAU", "XAG", "XAU_G", "XAG_G", "SHARES"]).optional(),
     ...OptionalEvmRpcFields,
     ...OptionalOracleFreshnessFields,
-    issuerCirculationProbe: chainlinkPorIssuerCirculationProbeSchema.optional(),
     /** Reviewed liability perimeter: an issuer-native chain classification, or
      *  a declared not-comparable basis (Kinesis KAU) that withholds the ratio. */
     liabilityScope: liabilityScopeSchema.optional(),
@@ -1416,13 +1343,6 @@ const originVaultBalancesParamsSchema = z
   })
   .strict();
 
-const nestVaultPositionsParamsSchema = z
-  .object({
-    priceUrl: AbsoluteUrlSchema,
-    lastPriceUpdateUrl: AbsoluteUrlSchema,
-  })
-  .strict();
-
 // The credit receivable a `IdleCDOEpochVariant` vault holds is not a tracked
 // asset and must never carry a `coinId`: linking it to the deposit token would
 // present a single-obligor loan as that token's own reserves. The classification
@@ -1808,13 +1728,6 @@ const mentoParamsSchema = z
 const sgForgeCoinvertibleParamsSchema = z
   .object({
     coinType: z.enum(["eur", "usd"]).optional(),
-  })
-  .strict();
-
-const spikoApiParamsSchema = z
-  .object({
-    shareClassSymbol: z.string(),
-    slice: reserveSliceDescriptorSchema,
   })
   .strict();
 
@@ -2255,26 +2168,6 @@ const icpGldtParamsSchema = z
   })
   .strict();
 
-// AFI aggregate proof-of-reserves envelope: the proof verifies only aggregate
-// reserve/liability totals, so the params pin the expected feed symbol and the
-// adapter refuses payloads that carry a different symbol.
-const afiProofParamsSchema = z
-  .object({
-    symbol: z.string().min(1),
-  })
-  .strict();
-
-// Midas mTBILL's signed checkpoint authenticates the aggregate, but the
-// historical composition rows are unsigned. Selection stays fail-closed: the
-// adapter accepts only an exact URL from its reviewed allowlist, and the
-// declaration keeps the value optional so the reviewed default applies when
-// ops does not name a source.
-const midasMtbillParamsSchema = z
-  .object({
-    historicalSourceUrl: AbsoluteUrlSchema.optional(),
-  })
-  .strict();
-
 // MegaUSD custody is read on-chain at one pinned block: the issuer JSON is
 // geo-gated from Workers and its amounts are never published, only used to
 // flag roster drift. Params therefore pin the reviewed custodian roster itself.
@@ -2507,10 +2400,7 @@ const ADAPTER_DECLARATIONS = {
     preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
     configValidation: CONFIG_SINGLE_ASSET_V1_V2,
-    // Redemption capacity is emitted only for coins whose params carry a
-    // redemptionCapacity block (currently OUSG); plain NAV-feed coins never
-    // emit and are not unused-telemetry candidates.
-    redemptionTelemetry: { capacity: "direct", capacityParamsGated: true, fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: TIMESTAMPED_FEED_VALIDATION,
   },
   "jpmorgan-nav": {
@@ -2530,46 +2420,6 @@ const ADAPTER_DECLARATIONS = {
       nextReview: "2026-10-10",
     },
     validation: BUSINESS_DAY_VERIFIED_VALIDATION,
-  },
-  "ondo-usdy": {
-    primaryInputKinds: ["http-html"],
-    paramsSchema: noParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "weak-live-probe",
-    sourceOriginClass: "issuer-attested",
-    preferredFreshnessMode: "verified",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
-    // Issuer CMS portfolio: observed three-day updates plus publication/weekend grace.
-    validation: { ...BUSINESS_DAY_VERIFIED_VALIDATION, maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC },
-  },
-  "ondo-ousg": {
-    primaryInputKinds: ["onchain-evm"],
-    paramsSchema: chainlinkNavParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    sourceOriginClass: "issuer-attested",
-    preferredFreshnessMode: "verified",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_SINGLE_ASSET_V1_V2,
-    redemptionTelemetry: { capacity: "direct", capacityParamsGated: true, fee: "none" },
-    validation: {
-      ...DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
-      maxSourceAgeSec: BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC,
-    },
-  },
-  "midas-mtbill": {
-    primaryInputKinds: ["onchain-evm"],
-    paramsSchema: midasMtbillParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    sourceOriginClass: "issuer-attested",
-    preferredFreshnessMode: "verified",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V2,
-    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
-    validation: DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
   },
   "chronicle-nav": declareAdapter(chronicleNavParamsSchema, ONCHAIN_SINGLE_ASSET_NO_TELEMETRY_V1, {
     // P5: native fund-share exposure only (ACRDX/STAC/BUIDL); portfolio scope
@@ -2752,20 +2602,6 @@ const ADAPTER_DECLARATIONS = {
     displayBadgeKind: "proof",
     sharedSourceMode: "none",
     configValidation: configPolicy(["attestation-mix"], [4]),
-    redemptionTelemetry: PROXY_CAPACITY_TELEMETRY,
-    validation: DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
-  },
-  "frax-fpi-collateral": {
-    primaryInputKinds: ["http-json"],
-    paramsSchema: fraxFpiCollateralParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    preferredFreshnessMode: "verified",
-    sourceOriginClass: "issuer-attested",
-    displayBadgeKind: "proof",
-    sharedSourceMode: "none",
-    // V3 excludes retained normalized books with unavailable material collateral.
-    configValidation: configPolicy(["collateral-mix"], [3]),
     redemptionTelemetry: PROXY_CAPACITY_TELEMETRY,
     validation: DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
   },
@@ -3050,16 +2886,6 @@ const ADAPTER_DECLARATIONS = {
     redemptionTelemetry: DIRECT_CAPACITY_CURRENT_FEE_TELEMETRY,
     validation: LATEST_STATE_VALIDATION,
   },
-  "nest-vault-positions": {
-    primaryInputKinds: ["http-json"],
-    paramsSchema: nestVaultPositionsParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
-    validation: DASHBOARD_VERIFIED_VALIDATION,
-  },
   "origin-vault-balances": declareAdapter(originVaultBalancesParamsSchema, ONCHAIN_DYNAMIC_MIX_DIRECT_CAPACITY_V1),
   "quantoz-transparency": declareAdapter(
     quantozTransparencyParamsSchema,
@@ -3180,19 +3006,6 @@ const ADAPTER_DECLARATIONS = {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
       allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
     },
-  },
-
-  "spiko-api": {
-    primaryInputKinds: ["http-json"],
-    paramsSchema: spikoApiParamsSchema,
-    sourceModel: "single-bucket",
-    // P5: independent admission is limited to the named native fund-share exposure.
-    evidenceClass: "independent",
-    sourceOriginClass: "issuer-attested",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_SINGLE_ASSET_V1,
-    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
-    validation: BUSINESS_DAY_VERIFIED_VALIDATION,
   },
 
   "superstate-liquidity": declareAdapter(superstateLiquidityParamsSchema, ONCHAIN_SINGLE_ASSET_V1, {
@@ -3405,21 +3218,6 @@ const ADAPTER_DECLARATIONS = {
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },
-  "afi-proof": declareAdapter(afiProofParamsSchema, HTTP_PROTOCOL_V1, {
-    // Proof generation is not asset observation: the envelope verifies only
-    // aggregate totals, so this stays a weak live probe with ratio telemetry.
-    sourceOriginClass: "issuer-attested",
-    displayBadgeKind: "proof",
-    configValidation: CONFIG_SINGLE_ASSET_V1,
-    freshnessLimitation:
-      "The AFI proof carries a generation timestamp, but proof generation does not establish the as-of dates of the underlying assets; ratio telemetry publishes as unverified.",
-    validation: {
-      // The basket is 100% opaque by design: a permanent structural fact
-      // surfaced as info, not a per-run degradation.
-      maxUnknownExposurePct: 100,
-      allowedFreshnessModes: ["unverified"],
-    },
-  }),
   "frnt-ledgerlens": {
     primaryInputKinds: ["http-json"],
     paramsSchema: noParamsSchema,
@@ -3447,30 +3245,6 @@ const ADAPTER_DECLARATIONS = {
       rationale: "Ordinary public persisted GraphQL GET verified200 on 2026-10-03; exact Base ONED stock and complete published USDC wallets reconcile. Source-controlled query hash/schema drift fail closed with stable machine reasons, without HTML/stale/partial fallback. This remains issuer-attested telemetry, not independent financial assurance or funded redemption capacity.",
     },
   }),
-  "blackrock-brsrv-holdings": {
-    primaryInputKinds: ["http-html"],
-    paramsSchema: noParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "weak-live-probe",
-    sourceOriginClass: "issuer-attested",
-    preferredFreshnessMode: "verified",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
-    validation: BUSINESS_DAY_VERIFIED_VALIDATION,
-  },
-  "chinaamc-holdings-api": {
-    primaryInputKinds: ["http-json"],
-    paramsSchema: noParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "weak-live-probe",
-    sourceOriginClass: "issuer-attested",
-    preferredFreshnessMode: "verified",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
-    validation: BUSINESS_DAY_VERIFIED_VALIDATION,
-  },
 
 } as const satisfies Record<LiveReserveAdapterKey, LiveReserveAdapterDescriptor>;
 

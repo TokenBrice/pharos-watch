@@ -17,14 +17,12 @@ import {
   REVIEWED_EXIT_CREDIT_AT,
   REVIEWED_FIRST_WAVE_AT,
   REVIEWED_FOLLOWUP_REMEDIATION_AT,
-  REVIEWED_MAY_BATCH_AT,
   REVIEWED_REMEDIATION_AT,
   REVIEWED_YIELD_COVERAGE_WAVE_AT,
 } from "./review-dates";
 
 const REVIEWED_BASKET_REDEMPTION_AT = REVIEWED_FIRST_WAVE_AT;
 const REVIEWED_ROUTE_TUNING_AT = "2026-04-04";
-const REVIEWED_RESERVE_PROTOCOL_DTF_AT = REVIEWED_MAY_BATCH_AT;
 const REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT = "2026-07-19";
 const REVIEWED_MENTO_XOFM_PSM_AT = "2026-07-27";
 const reviewedBasketRedemptionSupplyFull = documentedBoundSupplyFull(REVIEWED_BASKET_REDEMPTION_AT);
@@ -585,52 +583,6 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
       "Verified at Ethereum block 25737172: `redemptionAvailable()` returned exactly 5,000,000.00 against a supply of 22,834,920.56, and the basket handler reached through the RToken's own `main()` reported status SOUND (0). The throttle is therefore binding at roughly 22% of supply, which is what the full-supply model had been overstating.",
     ],
   },
-  "usd3-reserve-protocol": {
-    ...basketRedeemBase,
-    ...documentedBoundSupplyFull(REVIEWED_RESERVE_PROTOCOL_DTF_AT),
-    unresolvedOutputAssetKeys: [
-      "susds-sky",
-      "asset:ethereum:0x0adc69041a2b086f8772acce2a754f410f211bed",
-      "asset:ethereum:0x27f2f159fe990ba83d57f39fd69661764bebf37a",
-      "asset:ethereum:0xbeef01735c132ada46aa9aa4c54623caa92a64cb",
-    ],
-    unresolvedOutputDisposition: "reviewed-external",
-    executionModel: "deterministic-basket",
-    outputAssetType: "stable-basket",
-    // The throttle is measured in shares. Only a same-block basket valuation
-    // marks it in USD, and the USD mark does not establish a downstream unwind.
-    capacityModel: { kind: "reserve-sync-metadata" },
-    reviewedAt: REVIEWED_EXIT_CREDIT_AT,
-    costModel: fixedFee(
-      0,
-      "Reserve Yield DTF revenue is documented as onchain collateral yield and issuer revenue shares rather than a user-charged redemption fee, and redemption returns the entire backing basket, so the reviewed ceiling is 0 bps",
-    ),
-    notes: [
-      "Capacity became live-only 2026-08-12: the adapter now reads the RToken's own `redemptionAvailable()` throttle each run as the direct redeemable bound, so the prior documented-bound full-supply model is removed. The throttle refills over time and shrinks as it is drawn down, so a static supply figure would consistently overstate what a holder can exit right now.",
-      "The read also degrades on basket state: when the collateral basket is not SOUND the measured capacity is withheld rather than published, and if the throttle cannot be read at all the route is left unrated instead of falling back to a static bound",
-      "Fee bound declared 2026-08-12: the Yield DTF overview states holders can mint by depositing the complete collateral basket and that a DTF is \"redeemed for the entire basket as well\", with protocol revenue coming from \"yield from lending collateral tokens onchain, revenue shares with collateral token issuers, or any other source of onchain yield\" — no redemption charge. Throttles still bound redemption size, which the documented-bound capacity model already carries, not its cost.",
-      "Source-scoped correction. Source-scoped output correction researched 2026-10-20; the original August 12 route review and historical capacity/fee pins remain unchanged. Reserve's current exact USD3 basket and verified RTokenP1 redeemTo transfer sUSDS, Static Aave Ethereum USDC receipts, wrapped Compound USDCv3 receipts and legacy Steakhouse USDC V1 shares directly to the holder. These are not a payout of native USDC or the separately tracked Steakhouse V2 shares. The full four-member output identity set is retained as unresolved until exact receipt valuation or a measured composed unwrap route is admitted; underlying NAV conversion arithmetic is not executed holder unwind capacity.",
-    ],
-    docs: [
-      sourceRefFull("Reserve Yield DTF overview", "https://docs.reserve.org/core-components/yield-dtfs/overview"),
-      sourceRef("Reserve DTF API", "https://api.reserve.org/discover/dtfs", ["capacity"]),
-      sourceRef(
-        "Reserve USD3 app",
-        "https://app.reserve.org/ethereum/token/0x0d86883faf4ffd7aeb116390af37746f45b6f378/overview",
-        ["capacity"],
-      ),
-      sourceRef(
-        "Verified exact USD3 RTokenP1 redeemTo collateral-transfer semantics (retrieved 2026-10-20)",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x258ce833cf9ad19208372763a00aa1565dd40b3c",
-        ["route"],
-      ),
-      sourceRef(
-        "Exact legacy Steakhouse USDC V1 receipt identity (retrieved 2026-10-20)",
-        "https://eth.blockscout.com/api/v2/tokens/0xbeef01735c132ada46aa9aa4c54623caa92a64cb",
-        ["route"],
-      ),
-    ],
-  },
   "xmd-metal-dollar": {
     ...basketRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_FOLLOWUP_REMEDIATION_AT),
@@ -749,7 +701,6 @@ const FINALIZED_PSM_AND_BASKET_BACKSTOP_REGISTRY = finalizeBackstopRegistry(
   defineRecordEntries(RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS),
   [
     { stablecoinIds: ["dai-makerdao", "usds-sky", "dusd-alto"], reviewedAt: REVIEWED_REMEDIATION_AT },
-    { stablecoinIds: ["usd3-reserve-protocol"], reviewedAt: REVIEWED_RESERVE_PROTOCOL_DTF_AT },
   ],
 );
 

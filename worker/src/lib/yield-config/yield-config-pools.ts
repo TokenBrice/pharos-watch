@@ -36,8 +36,6 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   "ustb-superstate": "1910847a-f8b5-40ce-a1ab-1dafdded5fbb",
   // USYC - Circle native fund shares, Ethereum; underlying matches the tracked contract.
   "usyc-hashnote": "448a64ff-06fd-4e56-b63c-03662ac39010",
-  // USDY - ondo-yield-assets native, Ethereum, $149M TVL, ~3.6% APY
-  "usdy-ondo-finance": "ac61ee82-2fe4-4f9b-a9cd-7fb33f598859",
   // BUIDL (173) - no DL pool; Blackrock/Securitize fund not tracked by DL Yields
   // YLDS (272) - no DL pool; Figure Markets not tracked by DL Yields
   // reUSD -> reUSDe uses the Re Protocol API; no verified DeFiLlama pool UUID
@@ -89,8 +87,6 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   "usdu-unitas": "7f980c43-5b87-4690-a11a-b0e8a5e37a63",
   // GAIB sAID - gaib native savings, Ethereum, $15M TVL, ~10.5% APY
   "said-gaib": "e575606e-5642-4f87-b9ad-3e53d6f83c82",
-  // OUSG - ondo-yield-assets native, Ethereum, $519M TVL, ~3.1% APY
-  "ousg-ondo-finance": "7436db9b-2872-46c8-81a2-da6baff902b7",
   // sUSDai - usd-ai native savings, Arbitrum, $217M TVL, ~7.7% APY
   "susdai-usd-ai": "712ce948-bd9e-4f4a-8916-b72c447f7578",
   // wsrUSD - reservoir-protocol native, Ethereum, $159M TVL, ~4.8% APY
@@ -107,10 +103,6 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   "usn-noon": "a18a761b-49cd-416d-8342-839cac722094",
   // Cap stcUSD - cap native staking, Ethereum, $90M+ TVL, ~5.9% APY
   "stcusd-cap": "bf6ca887-e357-49ec-8031-0d1a6141c455",
-  // HedgeCore sUSD's gross Venus USDC pin is permanently excluded (2026-09-27):
-  // holder rewards are 93% of Venus APY, not the gross pool quote. Read-only BSC
-  // convertToAssets / exchangeRateStored / totalAssets calls revert on sUSD;
-  // no measurable holder exchange-rate history proves equivalence.
   // Corroborating quotes for the selected Morpho V1 API rows.
   "gtusdc-gauntlet": MORPHO_NET_YIELD_SOURCES.gtusdcMorpho.corroboratingPoolId,
   "bbqusdc-steakhouse": MORPHO_NET_YIELD_SOURCES.bbqusdcMorpho.corroboratingPoolId,

@@ -6,6 +6,7 @@ import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
 import { resolveMintAuthorityScoreDisplay, resolveMintAuthorityStatus } from "@/lib/mint-authority-display";
 import { deviationColorClass } from "@/lib/severity-colors";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { isTokenizedFundListingClass } from "@shared/lib/stablecoins/listing-class";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { buildSupplyObservationProvenance, classifySupplyCoverage, isSupplyWindowComparable } from "@shared/lib/supply-provenance";
 import { getVariantAccessibleLabel, getVariantDisplay } from "@shared/lib/variant-display";
@@ -53,6 +54,7 @@ export function buildStablecoinTableRowModel({
     prevDay,
     prevWeek,
     meta,
+    isTokenizedFund: isTokenizedFundListingClass(meta?.listingClass),
     reportCard: reportCards?.[coin.id],
     pegScore,
     liquidityScore,

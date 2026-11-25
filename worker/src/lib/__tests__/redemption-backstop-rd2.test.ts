@@ -3,7 +3,6 @@ import { getRedemptionBackstopConfig, resolveV9RedemptionRouteCostBpsAtNotional 
 import { resolveFeeConfidence, resolveFeeModelKind } from "@shared/lib/redemption-backstop-confidence";
 import { evaluateV9Exit, projectV9ExitEvaluationRoute } from "@shared/lib/safety-score-v9/exit";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { resolveReviewedRedemptionSettlementDelay } from "@shared/lib/redemption-backstop-configs/settlement";
 import { resolveRedemptionCapacity } from "../redemption-backstop/capacity";
 import { buildRedemptionExitRouteObservation, deriveSupplyModelExitRouteObservation } from "../redemption-exit-route-observations";
 import { buildSafetyScoreV9RetainedRedemptionRoutes, buildSafetyScoreV9RouteReviews } from "../safety-score-v9/extension-routes";
@@ -20,9 +19,6 @@ const now = Date.UTC(2026, 9, 12, 12) / 1_000;
 const supplyUsd = 100_000_000;
 const db = {} as D1Database;
 const eventualClaims = [
-  ["brsrv-blackrock", "allowlisted"],
-  ["cumiu-chinaamc", "institutional-eligible"],
-  ["chfsafo-spiko", "institutional-eligible"],
   ["eurw-newrails", "institutional-eligible"],
   ["usdsm-stable-mint", "institutional-eligible"],
   ["usdu-universal", "allowlisted"],
@@ -96,7 +92,6 @@ function assertConsumerGaps(row: RedemptionBackstopEntry, clockSec = now) {
 describe("RD2 legal entitlement remains eventual diagnostic evidence", () => {
   it.each([
     ["fusd-finchain", "usdt-tether"],
-    ["gusd-gate", "usdc-circle"],
     ["usdk-kast", "m-m0"],
   ])("preserves %s's reviewed token endpoint through the real producer and Safety review", async (id, outputId) => {
     const config = getRedemptionBackstopConfig(id)!;
@@ -195,7 +190,7 @@ describe("RD2 legal entitlement remains eventual diagnostic evidence", () => {
   });
 
   it("keeps unavailable wave-G capacity absent despite documented holder access and outputs", async () => {
-    for (const id of ["mantrausd-mantra", "spusd-soulpeg", "usdxl-last", "usdm-moneta"]) {
+    for (const id of ["mantrausd-mantra", "usdxl-last", "usdm-moneta"]) {
       const { capacity, row } = await resolve(id);
       expect(capacity).toMatchObject({
         resolutionState: "missing-capacity",
@@ -265,7 +260,7 @@ describe("RD2 legal entitlement remains eventual diagnostic evidence", () => {
     },
   );
 
-  it.each(["gldon-ondo", "pyusdx-moonpay", "filqa-fidelity-international", "fiusd-sygnum", "uscc-superstate", "oned-gennius", "umint-ubs", "mxnt-tether"])(
+  it.each(["pyusdx-moonpay", "oned-gennius", "mxnt-tether"])(
     "does not promote %s from conditional, historical, different-product or account-conversion context", async (id) => {
       const { capacity, row } = await resolve(id);
       expect(capacity).toMatchObject({ capacityConfidence: "heuristic", immediateCapacityUsd: null, scoringCapacityUsd: null });
@@ -305,30 +300,6 @@ describe("RD2 issuer-fee and output boundaries", () => {
       output: { kind: "unresolved-asset", assetKeys: ["fiat:USD", "stablecoin:identity-unspecified", "physical:XAU"] },
     });
     expect(reviews).toMatchObject([{ settlementSlaSec: null }]);
-  });
-
-  it("keeps GLDon's instant alternatives separate from the standard USDC/USDT investor put", async () => {
-    const { config, observation, reviews } = await captured("gldon-ondo");
-    expect(resolveV9RedemptionRouteCostBpsAtNotional(config, 1_000_000)).toBeNull();
-    // RD5-03 withholds completed-settlement scalars despite the diagnostic immediate category.
-    expect(resolveReviewedRedemptionSettlementDelay(config.v9RouteReviewTerms, now)).toBeUndefined();
-    expect(observation).toMatchObject({ scoreEligible: false, output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdon-ondo"] } });
-    expect(observation.output).not.toHaveProperty("basketWeights");
-    expect(reviews).toMatchObject([{ holderAccess: "institutional-eligible", minRedeemUsd: 1 }]);
-  });
-
-  it("keeps ChinaAMC's single Redemption Charge distinct from an all-in distributor cost bound", () => {
-    const config = getRedemptionBackstopConfig("cumiu-chinaamc")!;
-    expect(config.v9RouteReviewTerms).toMatchObject({
-      minRedeemUsd: 1000,
-      missingScoringFields: ["capacity", "settlement", "cost"],
-    });
-    expect(config.capacityModel).toEqual({
-      kind: "supply-full", confidence: "documented-bound", basis: "issuer-term-redemption",
-    });
-    for (const notional of [1_000, 1_000_000, 25_000_000]) {
-      expect(resolveV9RedemptionRouteCostBpsAtNotional(config, notional)).toBeNull();
-    }
   });
 
   it("retains GoldZip physical delivery without inventing USD proceeds or free delivery", async () => {

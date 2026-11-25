@@ -33,6 +33,17 @@ export const GOVERNANCE_BADGE_STYLES: Record<GovernanceType, BadgeStyle> = proje
   (descriptor) => ({ label: descriptor.badgeLabel, cls: descriptor.badgeCls }),
 );
 
+/**
+ * Policy 2.0 classification badge for active tokenized funds tracked because
+ * they back stablecoins Pharos follows. Static Tailwind classes only.
+ */
+export const TOKENIZED_FUND_BADGE = {
+  label: "Tokenized fund — not a stablecoin",
+  notice:
+    "Tracked because it backs stablecoins Pharos follows. Not counted in stablecoin totals and not Safety-graded.",
+  cls: "border-amber-500/35 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+} as const;
+
 export const BACKING_BADGE_STYLES: Record<BackingType, BadgeStyle> = projectDescriptors(
   BACKING_DESCRIPTORS,
   (descriptor) => ({ label: descriptor.badgeLabel, cls: descriptor.badgeCls }),

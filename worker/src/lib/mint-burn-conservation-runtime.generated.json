@@ -126,16 +126,6 @@
     },
     {
       "chainId": "ethereum",
-      "stablecoinId": "brsrv-blackrock",
-      "address": "0x3078bcf707e457d3af2f938a2a478bbeea50a942",
-      "decimals": 6,
-      "disposition": "unsupported",
-      "unsupportedReason": "total-supply-override",
-      "eventSet": "transfer",
-      "invariant": "transfer-supply"
-    },
-    {
-      "chainId": "ethereum",
       "stablecoinId": "brz-transfero",
       "address": "0x01d33fd36ec67c6ada32cf36b31e88ee190b1839",
       "decimals": 18,
@@ -193,15 +183,6 @@
       "stablecoinId": "chfau-allunity",
       "address": "0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78",
       "decimals": 6,
-      "disposition": "admitted",
-      "eventSet": "transfer",
-      "invariant": "transfer-supply"
-    },
-    {
-      "chainId": "ethereum",
-      "stablecoinId": "chfsafo-spiko",
-      "address": "0x18b5c15e5196a38a162b1787875295b76e4313fb",
-      "decimals": 5,
       "disposition": "admitted",
       "eventSet": "transfer",
       "invariant": "transfer-supply"
@@ -434,15 +415,6 @@
     },
     {
       "chainId": "ethereum",
-      "stablecoinId": "fpi-frax",
-      "address": "0x5ca135cb8527d76e932f34b5145575f9d8cbe08e",
-      "decimals": 18,
-      "disposition": "admitted",
-      "eventSet": "transfer",
-      "invariant": "transfer-supply"
-    },
-    {
-      "chainId": "ethereum",
       "stablecoinId": "frax-frax",
       "address": "0x853d955acef822db058eb8505911ed77f175b99e",
       "decimals": 18,
@@ -510,25 +482,6 @@
           }
         ]
       }
-    },
-    {
-      "chainId": "ethereum",
-      "stablecoinId": "gldon-ondo",
-      "address": "0x423d42e505e64f99b6e277eb7ed324cc5606f139",
-      "decimals": 18,
-      "disposition": "admitted",
-      "eventSet": "transfer",
-      "invariant": "transfer-supply"
-    },
-    {
-      "chainId": "ethereum",
-      "stablecoinId": "gusd-gate",
-      "address": "0xaf6186b3521b60e27396b5d23b48abc34bf585c5",
-      "decimals": 6,
-      "disposition": "unsupported",
-      "unsupportedReason": "unverified-implementation-source",
-      "eventSet": "transfer",
-      "invariant": "transfer-supply"
     },
     {
       "chainId": "ethereum",
@@ -606,15 +559,6 @@
       "chainId": "ethereum",
       "stablecoinId": "msusd-metronome",
       "address": "0xab5eb14c09d416f0ac63661e57edb7aecdb9befa",
-      "decimals": 18,
-      "disposition": "admitted",
-      "eventSet": "transfer",
-      "invariant": "transfer-supply"
-    },
-    {
-      "chainId": "ethereum",
-      "stablecoinId": "mtbill-midas",
-      "address": "0xdd629e5241cbc5919847783e6c96b2de4754e438",
       "decimals": 18,
       "disposition": "admitted",
       "eventSet": "transfer",
@@ -746,15 +690,6 @@
     },
     {
       "chainId": "ethereum",
-      "stablecoinId": "ousg-ondo-finance",
-      "address": "0x1b19c19393e2d034d8ff31ff34c81252fcbbee92",
-      "decimals": 18,
-      "disposition": "admitted",
-      "eventSet": "transfer",
-      "invariant": "transfer-supply"
-    },
-    {
-      "chainId": "ethereum",
       "stablecoinId": "paxg-paxos",
       "address": "0x45804880de22913dafe09f4980848ece6ecbaf78",
       "decimals": 18,
@@ -828,16 +763,6 @@
       "address": "0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
       "decimals": 18,
       "disposition": "admitted",
-      "eventSet": "transfer",
-      "invariant": "transfer-supply"
-    },
-    {
-      "chainId": "ethereum",
-      "stablecoinId": "rwausdi-multipli",
-      "address": "0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4",
-      "decimals": 6,
-      "disposition": "unsupported",
-      "unsupportedReason": "unverified-implementation-source",
       "eventSet": "transfer",
       "invariant": "transfer-supply"
     },
@@ -1329,15 +1254,6 @@
     },
     {
       "chainId": "ethereum",
-      "stablecoinId": "usdy-ondo-finance",
-      "address": "0x96f6ef951840721adbf46ac996b59e0235cb985c",
-      "decimals": 18,
-      "disposition": "admitted",
-      "eventSet": "transfer",
-      "invariant": "transfer-supply"
-    },
-    {
-      "chainId": "ethereum",
       "stablecoinId": "usdz-anzen",
       "address": "0xa469b7ee9ee773642b3e93e842e5d9b5baa10067",
       "decimals": 18,
@@ -1358,15 +1274,6 @@
       "chainId": "ethereum",
       "stablecoinId": "usn-noon",
       "address": "0xda67b4284609d2d48e5d10cfac411572727dc1ed",
-      "decimals": 18,
-      "disposition": "admitted",
-      "eventSet": "transfer",
-      "invariant": "transfer-supply"
-    },
-    {
-      "chainId": "ethereum",
-      "stablecoinId": "usp-pikudao",
-      "address": "0x098697ba3fee4ea76294c5d6a466a4e3b3e95fe6",
       "decimals": 18,
       "disposition": "admitted",
       "eventSet": "transfer",

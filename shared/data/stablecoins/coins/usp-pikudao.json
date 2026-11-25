@@ -43,5 +43,14 @@
     "yieldType": "nav-appreciation"
   },
   "launchDate": "2025-09-23",
-  "mechanismArchetype": "synthetic-delta-neutral"
+  "mechanismArchetype": "synthetic-delta-neutral",
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "NAV-appreciating FX and DeFi carry strategy vault token disclaiming a fixed 1:1 USD peg, not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
+    "source": {
+      "label": "PikuDAO documentation",
+      "url": "https://docs.piku.co/piku"
+    }
+  }
 }

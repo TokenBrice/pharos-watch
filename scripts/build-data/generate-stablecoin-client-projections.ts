@@ -4,7 +4,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import {
-  ACTIVE_STABLE_VALUE_INVESTMENTS,
+  ACTIVE_TOKENIZED_FUNDS,
   ACTIVE_VARIANT_STABLECOINS,
   CORE_AGGREGATE_ACTIVE_STABLECOINS,
 } from "@shared/lib/stablecoins/aggregate-registry";
@@ -84,7 +84,7 @@ export interface StablecoinClientProjectionSources {
   active: readonly StablecoinClientProjectionCoin[];
   coreAggregateActive: readonly StablecoinClientProjectionCoin[];
   activeVariants: readonly unknown[];
-  activeStableValueInvestments: readonly unknown[];
+  activeTokenizedFunds: readonly unknown[];
   preLaunch: readonly StablecoinClientProjectionCoin[];
   dead: readonly unknown[];
   pegOrder?: readonly string[];
@@ -96,7 +96,7 @@ export function buildStablecoinClientProjections({
   active,
   coreAggregateActive,
   activeVariants,
-  activeStableValueInvestments,
+  activeTokenizedFunds,
   preLaunch,
   dead,
   pegOrder = PEG_ORDER,
@@ -130,7 +130,7 @@ export function buildStablecoinClientProjections({
     activeStablecoinCount: active.length,
     coreAggregateStablecoinCount: coreAggregateActive.length,
     activeVariantStablecoinCount: activeVariants.length,
-    activeStableValueInvestmentCount: activeStableValueInvestments.length,
+    activeTokenizedFundCount: activeTokenizedFunds.length,
     preLaunchStablecoinCount: preLaunch.length,
     deadStablecoinCount: dead.length + tracked.filter((coin) => coin.status === "frozen").length,
     activePegCurrencyCounts,
@@ -154,7 +154,7 @@ export const TRACKED_STABLECOIN_COUNT = ${projection.trackedStablecoinCount};
 export const ACTIVE_STABLECOIN_COUNT = ${projection.activeStablecoinCount};
 export const CORE_AGGREGATE_STABLECOIN_COUNT = ${projection.coreAggregateStablecoinCount};
 export const ACTIVE_VARIANT_STABLECOIN_COUNT = ${projection.activeVariantStablecoinCount};
-export const ACTIVE_STABLE_VALUE_INVESTMENT_COUNT = ${projection.activeStableValueInvestmentCount};
+export const ACTIVE_TOKENIZED_FUND_COUNT = ${projection.activeTokenizedFundCount};
 export const PRE_LAUNCH_STABLECOIN_COUNT = ${projection.preLaunchStablecoinCount};
 export const DEAD_STABLECOIN_COUNT = ${projection.deadStablecoinCount};
 
@@ -187,7 +187,7 @@ export function runCli({ check = process.argv.includes("--check") } = {}): void 
     active: ACTIVE_STABLECOINS,
     coreAggregateActive: CORE_AGGREGATE_ACTIVE_STABLECOINS,
     activeVariants: ACTIVE_VARIANT_STABLECOINS,
-    activeStableValueInvestments: ACTIVE_STABLE_VALUE_INVESTMENTS,
+    activeTokenizedFunds: ACTIVE_TOKENIZED_FUNDS,
     preLaunch: PRE_LAUNCH_STABLECOINS,
     dead: DEAD_STABLECOINS,
   });

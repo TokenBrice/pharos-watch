@@ -287,6 +287,14 @@ describe("HeroCard", () => {
     expect(goldHtml).toContain("+1.00%");
     expect(goldHtml).toContain("+2.28%");
     expect(goldHtml).not.toContain("-99.98%");
+
+    const fundHtml = renderHero({
+      coin: { id: "buidl-blackrock", name: "BlackRock USD Institutional Digital Liquidity Fund", symbol: "BUIDL" },
+      coinData: { id: "buidl-blackrock", name: "BlackRock USD Institutional Digital Liquidity Fund", symbol: "BUIDL" },
+    });
+    expect(fundHtml).toContain("Tokenized fund — not a stablecoin");
+    expect(fundHtml).toContain("Not counted in stablecoin totals and not Safety-graded");
+    expect(html).not.toContain("Tokenized fund — not a stablecoin");
   });
 });
 
@@ -344,6 +352,26 @@ describe("HeroIdentityHeader", () => {
       const heldHeader = renderHeader();
       expect(heldHeader).toContain('href="/portfolio/"');
       expect(heldHeader).not.toMatch(/\/portfolio\/\?(coins|p)=/);
+      expect(heldHeader).toContain("/subscribe dews, depeg, safety usdc-circle");
+
+      const navStable = renderHeader({ coin: { id: "susde-ethena", name: "Staked USDe", symbol: "sUSDe", flags: { navToken: true, yieldBearing: true } } });
+      expect(navStable).toContain("/subscribe safety susde-ethena");
+      expect(navStable).not.toContain("/subscribe dews");
+
+      const buidlFund = renderHeader({ coin: { id: "buidl-blackrock", name: "BUIDL", symbol: "BUIDL", flags: { navToken: false } } });
+      expect(buidlFund).toContain("/subscribe dews, depeg buidl-blackrock");
+      expect(buidlFund).not.toContain("safety buidl-blackrock");
+
+      const reserveFund = renderHeader({
+        coin: { id: "reusd-re-protocol", name: "Re USD", symbol: "reUSD", flags: { navToken: true }, reserveDriftAlertEligible: true } as HeroBuilderOverrides["coin"],
+      });
+      expect(reserveFund).toContain("/subscribe reserve reusd-re-protocol");
+      expect(reserveFund).toContain("live reserve-mix drift alerts");
+      expect(reserveFund).not.toContain("/subscribe dews");
+
+      const navFundNoAlerts = renderHeader({ coin: { id: "usyc-hashnote", name: "USYC", symbol: "USYC", flags: { navToken: true } } });
+      expect(navFundNoAlerts).not.toContain("/subscribe dews");
+      expect(navFundNoAlerts).not.toContain(">Alerts<");
     } finally {
       portfolioFixture.forceOpen = false;
       portfolioFixture.holdings = [];

@@ -2,11 +2,14 @@
 
 import type { ReactNode } from "react";
 import { IntentLink } from "@/components/intent-link";
-import { AlertTriangle, Archive, BadgeCheck, CircleDashed, Rocket, ShieldAlert, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Archive, BadgeCheck, CircleDashed, Info, Rocket, ShieldAlert, type LucideIcon } from "lucide-react";
 import { CoinStateChip } from "@/components/coin-state-chip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { DetailQuote } from "@/lib/stablecoin-detail-view-model-types";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { isClientTokenizedFundId } from "@shared/lib/stablecoins/aggregate-client-registry";
+import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { formatShortDate } from "@shared/lib/format";
 import type { CoinState } from "@shared/lib/coin-state";
 import type { StablecoinVerdict, StablecoinVerdictArchetype } from "@shared/lib/stablecoin-verdict";
@@ -20,6 +23,7 @@ import {
   HERO_CHIP_BACKING_LABELS,
   HERO_CHIP_GOVERNANCE_LABELS,
   HERO_CHIP_PEG_LABELS,
+  TOKENIZED_FUND_BADGE,
   VERDICT_TONES,
   getHeroPegLabel,
 } from "@shared/lib/classification";
@@ -65,6 +69,43 @@ const VERDICT_ICONS: Record<StablecoinVerdictArchetype, LucideIcon> = {
   uncategorized: CircleDashed,
 };
 
+function TokenizedFundHeroBadge() {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          data-tokenized-fund-badge
+          title={TOKENIZED_FUND_BADGE.notice}
+          className="pharos-focus-ring group -my-3 inline-flex min-h-11 items-center rounded-full sm:-my-1 sm:min-h-7"
+        >
+          <span
+            className={cn(
+              "inline-flex h-5 items-center gap-1 rounded-full border px-2.5 text-xs font-semibold leading-none transition-colors group-hover:brightness-105",
+              TOKENIZED_FUND_BADGE.cls,
+            )}
+          >
+            <Info aria-hidden="true" className="h-3 w-3 shrink-0" />
+            <span>{TOKENIZED_FUND_BADGE.label}</span>
+          </span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-80 space-y-2 p-3 text-xs leading-relaxed">
+        <p className="font-semibold text-foreground">{TOKENIZED_FUND_BADGE.label}</p>
+        <p className="text-muted-foreground">{TOKENIZED_FUND_BADGE.notice}</p>
+        <p>
+          <IntentLink
+            href="/docs/listing-policy/"
+            className="pharos-focus-ring rounded-sm font-medium text-brand-accent-text underline-offset-2 hover:underline"
+          >
+            Read the listing policy
+          </IntentLink>
+        </p>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 /**
  * The hero's lead chip: the coin's highest exceptional state when one exists
  * (the shared `CoinStateChip`), else its verdict in the verdict's own tone.
@@ -72,6 +113,7 @@ const VERDICT_ICONS: Record<StablecoinVerdictArchetype, LucideIcon> = {
 export function HeroChipRail({ coin, verdict, state = null }: { coin: StablecoinMeta; verdict: StablecoinVerdict; state?: CoinState | null }) {
   const showVerdict = isHeroVerdictShown(verdict);
   const VerdictIcon = VERDICT_ICONS[verdict.archetype];
+  const isTokenizedFund = isActiveStablecoinMeta(coin) && isClientTokenizedFundId(coin.id);
   const launchDate = formatChipLaunchDate(coin.launchDate);
   const pegLabel = coin.flags.navToken
     ? getHeroPegLabel(
@@ -104,6 +146,7 @@ export function HeroChipRail({ coin, verdict, state = null }: { coin: Stablecoin
             {verdict.label}
           </span>
         ) : null}
+        {isTokenizedFund ? <TokenizedFundHeroBadge /> : null}
         <HeroCompactChip href={buildPegLandingUrl(coin.flags.pegCurrency)}>{pegLabel}</HeroCompactChip>
         <HeroCompactChip href={buildBackingTaxonomyUrl(coin.flags.backing)}>{backingLabel}</HeroCompactChip>
         <HeroCompactChip href={buildGovernanceTaxonomyUrl(coin.flags.governance)}>{governanceLabel}</HeroCompactChip>
@@ -119,6 +162,11 @@ export function HeroChipRail({ coin, verdict, state = null }: { coin: Stablecoin
           </span>
         ) : null}
       </div>
+      {isTokenizedFund ? (
+        <p data-tokenized-fund-notice className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+          {TOKENIZED_FUND_BADGE.notice}
+        </p>
+      ) : null}
     </div>
   );
 }

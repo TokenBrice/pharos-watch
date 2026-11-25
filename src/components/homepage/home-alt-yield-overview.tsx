@@ -80,7 +80,7 @@ function buildOverview(
     coveredCount: snapshot?.coveredCount ?? null,
     trackedCount: snapshot?.trackedCount ?? null,
     inViewCount: visibleRows.length,
-    totalRowCount: universe.rowFacets.length,
+    totalRowCount: universe.nonFundRowCount,
     highestApy: buildYieldStoryCallouts(visibleRows)?.topYield ?? null,
     bestPaid: leaders[0] ?? null,
     leaders,

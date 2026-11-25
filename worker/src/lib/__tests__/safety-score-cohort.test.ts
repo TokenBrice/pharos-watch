@@ -311,6 +311,35 @@ describe("Safety Score V9 accepted projection writers", () => {
     },
   );
 
+  it("retains internal Backing scores for ungraded tokenized funds in the lender projection while omitting pipeline-gap or unprovided funds", () => {
+    const fund = makeWorkerV9Card({
+      id: "eutbl-spiko", score: null, grade: "NR", ratingStatus: "not-rated",
+      nrReasons: [{ code: "tokenized-fund-not-graded", message: "Tokenized fund shares are tracked without a Safety Score grade.", field: null, origin: "asset" }],
+    });
+    fund.pillars.backing.score = null;
+    fund.pillars.backing.limitedEvidenceCauses = ["U"];
+    fund.localCauseGaps = ["reserve-review"];
+    fund.pillars.backing.causeGapRefs = [0];
+    const gapFund = makeWorkerV9Card({ id: "buidl-blackrock", score: null, grade: null, ratingStatus: "pipeline-gap" });
+    gapFund.pillars.backing.score = null;
+    const publication = makeWorkerSafetyScoreV9Publication({ cards: [gapFund, fund] });
+    const projection = buildSafetyScoreV9LenderCollateralProjection(publication, {
+      "eutbl-spiko": 91.5,
+      "buidl-blackrock": 88,
+    });
+    expect(projection.byAssetId).toEqual({
+      "eutbl-spiko": {
+        assetId: "eutbl-spiko",
+        backingScore: 91.5,
+        cardSha256: sha256Hex(stableJsonStringifyV1(fund)),
+        sourceCause: "U",
+        sourceGapIds: ["eutbl-spiko:gap:reserve-review"],
+      },
+    });
+    // Without the internal backing map, the ungraded fund is omitted (never fabricated as 0).
+    expect(buildSafetyScoreV9LenderCollateralProjection(publication).byAssetId).toEqual({});
+  });
+
   it("hashes the admitted transformed card identically after publication transport round-trip", async () => {
     const input = makeWorkerSafetyScoreV9Publication();
     input.cards[0]!.pillars.backing.supportedComponentKeys = ["z-normalized", "a-normalized"];

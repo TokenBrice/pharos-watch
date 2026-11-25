@@ -67,23 +67,6 @@
   ],
   "collateralQuality": "exotic",
   "governanceQuality": "single-entity",
-  "liveReservesConfig": {
-    "adapter": "curated-validated",
-    "version": 1,
-    "semantics": "collateral-mix",
-    "breakerScope": "usdr-ring",
-    "display": {
-      "url": "https://docs.ring.exchange/",
-      "label": "Ring Protocol docs"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
-      }
-    }
-  },
   "notices": [
     {
       "type": "info",
@@ -91,5 +74,14 @@
       "message": "Ring Protocol materials describe protocol liquidity controls, but Pharos has not source-reviewed a holder-exercisable redemption route for backstop scoring."
     }
   ],
-  "launchDate": "2025-09-12"
+  "launchDate": "2025-09-12",
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "Centrally controlled synthetic-dollar token with undisclosed backing, peg mechanism, and holder redemption path at the reviewed block; fails scope and evidence rules (listing policy 2.0).",
+    "source": {
+      "label": "Ring Protocol documentation",
+      "url": "https://docs.ring.exchange/"
+    }
+  }
 }

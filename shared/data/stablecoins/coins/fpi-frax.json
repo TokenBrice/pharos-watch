@@ -54,53 +54,21 @@
     "yieldSource": "FPI CPI redemption price",
     "yieldType": "nav-appreciation"
   },
-  "liveReservesConfig": {
-    "adapter": "frax-fpi-collateral",
-    "version": 3,
-    "semantics": "collateral-mix",
-    "breakerScope": "fpi-frax",
-    "display": {
-      "url": "https://frax.com/transparency",
-      "label": "Frax On-chain Collateral Index"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "http-json",
-        "url": "https://api.frax.finance/v2/fpifpis/fpi-collateral"
-      }
-    },
-    "params": {
-      "controllerAddress": "0x2397321b301b80a1c0911d6f9ed4b6033d43cf51",
-      "fpiTokenAddress": "0x5ca135cb8527d76e932f34b5145575f9d8cbe08e",
-      "fraxTokenAddress": "0x853d955acef822db058eb8505911ed77f175b99e",
-      "expectedControllerCodeHash": "0x8f8968ffbb928926343d4217667f094cc938f359e253ef25ff33ee7b85ec1132",
-      "expectedFraxPriceFeedAddress": "0xb9e1e3a9feff48998e45fa90847ed4d467e8bcfd",
-      "expectedFraxPriceFeedCodeHash": "0xbd6f524cdc4268b6bd1bb6f77a8821faeea9c52ee9e0afa0b6d948ce82c966c2",
-      "expectedFraxPriceFeedDecimals": 8,
-      "expectedFpiPriceFeedAddress": "0x59985d79e1e69f659f4ab97db07a35ce73d9174b",
-      "expectedFpiPriceFeedCodeHash": "0x2b165ff401e6d9ee29c0ef100b238ecb2fb7c89715104dde46b95547cea302fb",
-      "expectedFpiPriceFeedDecimals": 18,
-      "expectedCpiTrackerAddress": "0x66b7dff2ac66dc4d6fbb3db1cb627bbb01ff3146",
-      "expectedCpiTrackerCodeHash": "0xb989d68e59e9df4ef6d1782d56efe24f44bbb1d9e015c523c6e30adde9a7821d",
-      "maxPriceFeedAgeSec": 7200,
-      "fullConfidenceCpiTrackerAgeSec": 5356800,
-      "maxCpiTrackerAgeSec": 31622400,
-      "expectedRedeemFeeE6": 3000,
-      "outputTrackedAssetId": "frax-frax",
-      "minOutputPriceUsd": 0.98,
-      "maxOutputPriceUsd": 1.02,
-      "fraxtalRpcUrl": "https://rpc.frax.com",
-      "fraxtalFallbackRpcUrl": "https://fraxtal.drpc.org",
-      "sourceUrls": [
-        "https://docs.frax.finance/frax-price-index/fpi-controller-pool",
-        "https://github.com/FraxFinance/frax-solidity/blob/master/src/hardhat/contracts/FPI/FPIControllerPool.sol",
-        "https://etherscan.io/address/0x2397321b301b80a1c0911d6f9ed4b6033d43cf51"
-      ]
-    }
-  },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "governanceQuality": "multisig",
   "windDownAnnouncedAt": "2026-06-17",
   "windDownSourceUrl": "https://gov.frax.finance/t/fip-448-wind-down-the-frax-price-index-fpi-system/3861",
-  "launchDate": "2022-03-29"
+  "launchDate": "2022-03-29",
+  "status": "frozen",
+  "frozenAt": "2026-06-28",
+  "obituary": {
+    "causeOfDeath": "abandoned",
+    "deathDate": "2026-06-28",
+    "recordedAt": "2026-11-24",
+    "epitaph": "Frax froze the CPI peg and wound down FPI",
+    "obituary": "Frax launched FPI in March 2022 as an inflation-indexed unit of account whose redemption price tracked the U.S. CPI-U index through the FPI Controller Pool and FPIS governance token. Supply peaked near $114.0M before declining to roughly $7.0M by 2026. On June 17, 2026 Frax governance proposed FIP-448 to wind down the FPI system, and the Snapshot vote closed unanimously on June 28, 2026 (26.59M For, 0 Against). FIP-448 permanently froze FPI's CPI reference price, disabled new minting and LayerZero bridging, folded FPI's remaining balance sheet into Legacy FRAX, and left Ethereum redemptions into FRAX open.",
+    "peakMcap": 114000255,
+    "sourceUrl": "https://snapshot.box/#/s:frax.eth/proposal/0xfda865b089b84e4ddb70e49fe3023e9ba05a3d5c875f57d6e1a3ebe680dcea3d",
+    "sourceLabel": "Frax FIP-448 Snapshot vote (closed 2026-06-28)"
+  }
 }

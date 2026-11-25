@@ -285,4 +285,41 @@ describe("StablecoinTableRowCells liquidity availability", () => {
     expect(liquiditySpans.length).toBeGreaterThanOrEqual(2);
     expect(model.liquidityScore).toBe(liquidityScore);
   });
+
+  it.each([
+    { grade: "NR" as const, score: null, ratingStatus: "not-rated" as const },
+    { grade: "A" as const, score: 84, ratingStatus: "rated" as const },
+  ])("renders Not graded instead of $grade for tokenized funds in mobile and desktop grade cells", ({ grade, score, ratingStatus }) => {
+    const fundCoin = makeStablecoin({ id: "buidl-blackrock", symbol: "BUIDL", name: "BlackRock BUIDL" });
+    const row: StablecoinTableRowCellProps = {
+      ...buildRow(),
+      coin: fundCoin,
+      isVisible: (column) => column === "name" || column === "grade",
+      reportCards: {
+        [fundCoin.id]: {
+          id: fundCoin.id,
+          grade,
+          score,
+          ratingStatus,
+          partialEvidence: null,
+          pillars: { backing: { score: null }, exit: { score: null }, control: { score: null } },
+          evidence: { level: "nr" },
+          weakestPillar: null,
+          bindingCapReason: null,
+          mint: null,
+        } as unknown as NonNullable<StablecoinTableRowCellProps["reportCards"]>[string],
+      },
+    };
+    const model = buildStablecoinTableRowModel({
+      coin: row.coin, reportCards: row.reportCards, density: row.density, variant: "default",
+    });
+    const html = renderToStaticMarkup(
+      <table><tbody><tr><StablecoinTableRowCells row={row} model={model} /></tr></tbody></table>,
+    );
+    const [mobile, desktop] = html.split("</td>");
+    expect(mobile).toContain("Not graded");
+    expect(desktop).toContain("Not graded");
+    expect(desktop).not.toContain(`>${grade}<`);
+    expect(desktop).not.toContain("Pharos grade:");
+  });
 });

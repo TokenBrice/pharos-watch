@@ -68,5 +68,14 @@
       "title": "Issuer entered survival mode 2024-12-04",
       "message": "ISC Money's co-founder announced that business development, marketing, integrations and the points system shut down; the token stayed live."
     }
-  ]
+  ],
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "Multi-asset purchasing-power basket index token with no fiat or metal par (issuer in survival mode since December 2024), not a fixed-par stablecoin (listing policy 2.0).",
+    "source": {
+      "label": "ISC whitepaper",
+      "url": "https://wp.isc.money/"
+    }
+  }
 }

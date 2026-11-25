@@ -1,5 +1,6 @@
 import { DigestSupplyQuantityEvidenceSchema } from "@shared/types/digest";
 import { getLatestSupplyPerimeterChange } from "@shared/lib/supply-perimeter-changes";
+import { CORE_STABLECOIN_AGGREGATE_UNIVERSE } from "@shared/lib/stablecoins/aggregate-universe";
 import { formatCurrency, formatIsoDate } from "@shared/lib/format";
 import { DAY_SECONDS, HOUR_SECONDS } from "@shared/lib/time-constants";
 import { getDepegEditorialImpactScore, getDepegMarketImpactScore, isCriticalDepegRisk } from "@shared/lib/digest-risk";
@@ -874,7 +875,7 @@ export function buildWeeklyInputData(
   if (parsed.length < 5) return null;
 
   const psiScores = parsed.map((d) => d.inputData.stabilityIndex?.score).filter((s): s is number => s != null);
-  const coreMarketInputs = parsed.filter((day) => day.inputData.aggregateUniverse === "core-stablecoins-v1");
+  const coreMarketInputs = parsed.filter((day) => day.inputData.aggregateUniverse === CORE_STABLECOIN_AGGREGATE_UNIVERSE);
   const perimeterChangedAt = getLatestSupplyPerimeterChange(parsed[0].generatedAt, parsed[parsed.length - 1].generatedAt);
   const marketInputs = (coreMarketInputs.length > 0 ? coreMarketInputs : parsed)
     .filter((day) => perimeterChangedAt == null || day.generatedAt >= perimeterChangedAt);

@@ -2,7 +2,7 @@
 
 Chain Health Score is the 0-100 composite used by `GET /api/chains`, `/chains/`, and `/chains/[chain]/` to summarize the quality and concentration of stablecoin supply on each supported chain.
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-chain-health -->`v1.9`<!-- GENERATED-END: methodology-version-chain-health -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-chain-health -->`v1.91`<!-- GENERATED-END: methodology-version-chain-health -->
 - **Runtime source:** `shared/lib/chains/health.ts` (the canonical implementation; no compatibility shim is retained)
 - **Version source:** `shared/lib/methodology-versions/registry.ts` (shared constants: `shared/lib/methodology-versions/constants.ts`)
 - **API source:** `worker/src/api/chains.ts`
@@ -12,7 +12,7 @@ Chain Health Score is the 0-100 composite used by `GET /api/chains`, `/chains/`,
 
 ## Inputs
 
-`GET /api/chains` loads the strict stablecoins cache, restricts it to `CORE_AGGREGATE_ACTIVE_IDS`, reads the published per-asset peg reference, and hydrates Safety Score inputs only from a fresh accepted V9 publication. The endpoint returns `503` if the stablecoins cache is unavailable. A missing, held, stale, or invalid V9 dependency does not fail the route; the score map stays empty, so quality and the composite are `null`/NR.
+`GET /api/chains` loads the strict stablecoins cache, restricts it to `CORE_AGGREGATE_ACTIVE_IDS`, reads the published per-asset peg reference, and hydrates Safety Score inputs only from a fresh accepted V9 publication. The endpoint returns `503` if the stablecoins cache is unavailable. A missing, held, stale, or invalid V9 dependency does not fail the route; the score map stays empty, so quality and the composite are `null`/NR. Under listing policy v2 (`v1.91`, `core-stablecoins-v2`, dated cutover `CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE`), tokenized fund shares leave the core aggregate so `CORE_AGGREGATE_ACTIVE_IDS` covers active core stablecoins without restating prior history.
 
 The Chain Environment factor reads the static L2BEAT chain-risk snapshot in `shared/lib/chains/l2beat-risk.ts` before using the legacy Pharos resilience tier. The snapshot is sourced from `https://l2beat.com/api/scaling/summary` and is not fetched live at request time.
 

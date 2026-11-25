@@ -69,6 +69,7 @@ export function makeYieldViewModelRow(overrides: Partial<YieldViewModelRow> = {}
     altSources: [],
     provenance: YIELD_TEST_PROVENANCE,
     sourceRisk: null,
+    isTokenizedFund: false,
     peg: "USD",
     viewRank: 1,
     rankLabel: "#1",

@@ -170,16 +170,16 @@ describe("Sui retained discovery and shadow scope", () => {
   });
 
   it("rotates Cetus directions independently and excludes retired Bluefin collection", () => {
-    const pool = pinned[0].fixture.poolId;
+    const pool = pinned[2].fixture.poolId;
     const other = pinned[1].fixture.poolId;
     const rows = [
-      { pool_id: `sui:${pool}`, stablecoin_id: "usdy-ondo-finance", tvl_usd: 100, project: "cetus" },
-      { pool_id: `sui:${pool}`, stablecoin_id: "usdy-ondo-finance", tvl_usd: 90, project: "cetus-clmm" },
+      { pool_id: `sui:${pool}`, stablecoin_id: "usdsui-sui", tvl_usd: 100, project: "cetus" },
+      { pool_id: `sui:${pool}`, stablecoin_id: "usdsui-sui", tvl_usd: 90, project: "cetus-clmm" },
       { pool_id: `sui:${pool}`, stablecoin_id: "usdc-circle", tvl_usd: 80, project: "cetus" },
       { pool_id: `sui:${other}`, stablecoin_id: "usdsui-sui", tvl_usd: 70, project: "bluefin" },
-      { pool_id: `fp:sui:cetus:${pool}`, stablecoin_id: "usdy-ondo-finance", tvl_usd: 1000, project: "cetus" },
+      { pool_id: `fp:sui:cetus:${pool}`, stablecoin_id: "usdsui-sui", tvl_usd: 1000, project: "cetus" },
     ];
-    expect(selectSuiShadowPools(rows, null).selected.map((row) => row.stablecoin_id)).toEqual(["usdy-ondo-finance", "usdc-circle"]);
+    expect(selectSuiShadowPools(rows, null).selected.map((row) => row.stablecoin_id)).toEqual(["usdsui-sui", "usdc-circle"]);
     expect(selectSuiShadowPools(rows, "1").selected.map((row) => row.stablecoin_id)).toEqual(["usdc-circle"]);
     expect(selectSuiShadowPools(rows, "2").total).toBe(2);
     expect(selectSuiShadowPools(rows.filter((row) => row.project === "bluefin"), null).selected).toEqual([]);
@@ -276,18 +276,18 @@ describe("Sui bounded archival checkpoint transport", () => {
   });
 });
 
-const usdy = fixtures.fixtures[0];
+const usdsui = fixtures.fixtures[2];
 const buck = fixtures.fixtures[3];
-const nowSec = Math.floor(Number(usdy.capture.checkpoint.timestampMs) / 1000);
+const nowSec = Math.floor(Number(usdsui.capture.checkpoint.timestampMs) / 1000);
 const rows = [
-  { pool_id: usdy.poolId, stablecoin_id: "usdy-ondo-finance", tvl_usd: 200_000, project: "cetus" },
+  { pool_id: usdsui.poolId, stablecoin_id: "usdsui-sui", tvl_usd: 200_000, project: "cetus" },
   { pool_id: buck.poolId, stablecoin_id: "buck-bucket-protocol", tvl_usd: 100_000, project: "cetus" },
 ];
 const env = { DWELLIR_API_KEY: "test-header-only-key" };
 
 function asset(id: string, overrides: Record<string, unknown> = {}) {
   return { id, name: id, symbol: id, pegType: "peggedUSD", pegMechanism: "fiat-backed",
-    price: id === "usdy-ondo-finance" ? 1.15 : 0.997, priceSource: "coingecko", priceConfidence: "single-source",
+    price: id === "usdsui-sui" ? 1.001 : 0.997, priceSource: "coingecko", priceConfidence: "single-source",
     priceObservedAt: nowSec, priceUpdatedAt: nowSec, priceObservedAtMode: "upstream",
     circulating: { peggedUSD: 1_000_000 }, chainCirculating: {}, chains: ["Sui"], ...overrides };
 }
@@ -330,7 +330,7 @@ describe("Sui shadow diagnostic price preflight and reasons", () => {
     const summary = await collectSuiClmmShadowQuotes({ db: database(assets, rows.slice(0, 1)), env });
     expect(summary).toMatchObject({ attempted: 1, persisted: 0, failed: 1, requests: 0,
       reason: "sui-trusted-input-reference-unavailable", lastFailureReason: "sui-trusted-input-reference-unavailable" });
-    expect(summary.failures).toEqual([`${usdy.poolId}:sui-trusted-input-reference-unavailable`]);
+    expect(summary.failures).toEqual([`${usdsui.poolId}:sui-trusted-input-reference-unavailable`]);
     expect(fetcher).not.toHaveBeenCalled();
   });
 
@@ -343,7 +343,7 @@ describe("Sui shadow diagnostic price preflight and reasons", () => {
 
   it("persists diagnostic quote inputs and their source, clock, confidence and freshness budget", async () => {
     const db = database([asset(rows[0].stablecoin_id, { priceObservedAt: null, priceUpdatedAt: nowSec - DEPEG_PRIMARY_PRICE_MAX_AGE_SEC })], rows.slice(0, 1));
-    vi.spyOn(stateReader, "fetchSuiClmmCapture").mockResolvedValue(usdy.capture as stateReader.SuiClmmCapture);
+    vi.spyOn(stateReader, "fetchSuiClmmCapture").mockResolvedValue(usdsui.capture as stateReader.SuiClmmCapture);
     const inspection = vi.spyOn(independentQuote, "inspectSuiClmmQuotes");
     const fetcher = vi.spyOn(globalThis, "fetch");
     const summary = await collectSuiClmmShadowQuotes({ db, env });
@@ -356,7 +356,7 @@ describe("Sui shadow diagnostic price preflight and reasons", () => {
     const sample = SuiClmmShadowHistorySchema.parse(JSON.parse(String(write!.binds[1]))).samples[0];
     expect(sample.inputPriceReference).toEqual({ source: "coingecko", confidence: "single-source",
       observedAtSec: nowSec - DEPEG_PRIMARY_PRICE_MAX_AGE_SEC, cacheUpdatedAtSec: nowSec, maxAgeSec: DEPEG_PRIMARY_PRICE_MAX_AGE_SEC });
-    expect(sample.inputPriceUsd).toBe(1.15);
+    expect(sample.inputPriceUsd).toBe(1.001);
     expect(sample.quotes.length).toBeGreaterThan(0);
     expect(sample.independentCheck).toBe("failed");
     expect(sample.independentCheckReason).toBe("sui-grpc-inspection-unsupported");

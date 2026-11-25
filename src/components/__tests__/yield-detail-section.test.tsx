@@ -517,6 +517,20 @@ describe("YieldDetailSection", () => {
     },
   );
 
+  it("renders Not graded without Safety Unrated or Default safety inputs for tokenized funds", () => {
+    mockRankings([makeRanking({
+      id: "buidl-blackrock", symbol: "BUIDL", name: "BlackRock BUIDL",
+      pharosYieldScore: null, pysNullReason: "safety-unrated", warningSignals: ["safety-unrated"],
+      safetyScore: null, safetyGrade: "NR",
+      provenance: makeYieldProvenance({ scoreQualification: "NR", usedDefaultSafety: true }),
+    })]);
+    const { container } = render(<YieldDetailSection stablecoinId="buidl-blackrock" />);
+    expect(screen.getByText("Not graded")).toBeTruthy();
+    expect(screen.getByText("Not graded · tokenized fund")).toBeTruthy();
+    expect(container.textContent).not.toContain("Default safety inputs");
+    expect(container.textContent).not.toContain("Safety Unrated");
+  });
+
   it("distinguishes an absent comparison from measured unchanged", () => {
     mockRankings([makeRanking({ rankChangeAttribution: undefined })]);
 

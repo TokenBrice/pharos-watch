@@ -31,7 +31,7 @@ import {
   type YieldSourceSegment,
   type YieldHistorySourceDisplay,
 } from "./yield-history-chart-model";
-import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
+import { selectRowInvestmentWarningSignals } from "@/lib/yield-view-model-filter-axes";
 
 interface AxisTickProps {
   x?: number | string;
@@ -125,6 +125,7 @@ export function YieldHistoryTooltip({
   spikesByDate,
   primarySource,
   overlaySources = [],
+  tokenizedFund = false,
 }: {
   active?: boolean;
   payload?: Array<{ dataKey?: string; payload: YieldHistoryChartSeriesPoint }>;
@@ -134,6 +135,7 @@ export function YieldHistoryTooltip({
   spikesByDate?: Map<number, SpikeTooltipInfo>;
   primarySource?: YieldHistorySourceDisplay;
   overlaySources?: readonly YieldHistorySourceDisplay[];
+  tokenizedFund?: boolean;
 }) {
   const labelTimestamp = toTimestampMs(label);
   if (!active || !payload || payload.length === 0 || !Number.isFinite(labelTimestamp)) {
@@ -144,6 +146,7 @@ export function YieldHistoryTooltip({
   if (!point) return null;
 
   const spikeInfo = spikesByDate?.get(point.date) ?? null;
+  const visibleWarnings = selectRowInvestmentWarningSignals(point.warningSignals, tokenizedFund);
 
   return (
     <ChartTooltipSurface className={cn("min-w-[180px]", compact ? "text-2xs" : "text-xs")}>
@@ -201,13 +204,13 @@ export function YieldHistoryTooltip({
       {point.warningSignalsStatus === "unreadable" ? (
         <p className="mt-2 border-t border-border/60 pt-2 text-muted-foreground">Warnings unreadable</p>
       ) : null}
-      {selectInvestmentWarningSignals(point.warningSignals).length > 0 ? (
+      {visibleWarnings.length > 0 ? (
         <div className="mt-2 border-t border-border/60 pt-2">
           <p className="text-3xs font-medium text-state-warn">
             Warning signals
           </p>
           <div className="mt-1 space-y-1">
-            {selectInvestmentWarningSignals(point.warningSignals).map((signal) => (
+            {visibleWarnings.map((signal) => (
               <div key={signal} className="text-muted-foreground">
                 <span className="font-medium text-foreground">{formatYieldWarningSignal(signal)}</span>
                 <span className="block">{formatYieldWarningSignalDescription(signal)}</span>

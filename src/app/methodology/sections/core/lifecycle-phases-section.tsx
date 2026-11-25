@@ -24,9 +24,11 @@ export function LifecyclePhasesMethodologySection() {
         <p>
           Default state. Full worker data collection (supply, price, blacklist, mint/burn, DEX liquidity,
           yield), subject to each domain&apos;s coverage and listing-class eligibility. Active status does
-          not guarantee inclusion in every score or live aggregate: PSI monetary aggregation includes
-          only active core stablecoins and cash equivalents, not tracked variants or stable-value
-          investment products. Listed in the homepage table, search, compare picker, and sitemap.
+          not guarantee inclusion in every score or live aggregate: PSI monetary aggregation and core
+          market-cap totals include only active core stablecoins, not tracked variants, tokenized funds,
+          or review-hold listings. Active core stablecoins and variants appear in the homepage table,
+          search, compare picker, and sitemap; retained tokenized funds are browsable via the dedicated
+          Tokenized Funds filter and profile pages.
         </p>
       </div>
       <div className="space-y-2">

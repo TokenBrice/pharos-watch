@@ -83,15 +83,35 @@ describe("handleNonUsdShare", () => {
     expect(response.headers.get("Cache-Control")).toContain("s-maxage=3600");
   });
 
-  it.each(["malformed", "generation-changed", "cohort-changed"])("fails closed on %s publication evidence", async (kind) => {
+  it("falls back to request-time computation when only cohortIdentity changes across a deploy", async () => {
+    const { db, sqlite, date, updatedAt } = await publishedFixture();
+    const row = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(NON_USD_SHARE_HISTORY_KEY) as { value: string };
+    const payload = JSON.parse(row.value) as Record<string, unknown>;
+    payload.cohortIdentity = "old-cohort";
+    const oldValue = JSON.stringify(payload);
+    sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(oldValue, NON_USD_SHARE_HISTORY_KEY);
+
+    const prepare = vi.spyOn(db, "prepare");
+    const response = await handleNonUsdShare(db, new URL("https://x/api/non-usd-share?days=30"));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual([{
+      date, total: 100, commodity: 0, fiatNonUsd: 0, commodityShare: 0, fiatNonUsdShare: 0,
+      coverage: { basis: "interior-gap-prior-value", total: 1, commodity: 1, fiatNonUsd: 1 },
+    }]);
+    expect(response.headers.get("X-Data-Updated-At")).toBe(String(updatedAt));
+    expect(prepare.mock.calls.some(([sql]) => sql.includes("FROM supply_history"))).toBe(true);
+    expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(NON_USD_SHARE_HISTORY_KEY)).toEqual({ value: oldValue });
+  });
+
+  it.each(["malformed", "generation-changed", "missing-cohort-identity"])("fails closed on %s publication evidence", async (kind) => {
     const { db, sqlite } = await publishedFixture();
     if (kind === "malformed") sqlite.prepare("UPDATE cache SET value = '{broken' WHERE key = ?").run(NON_USD_SHARE_HISTORY_KEY);
     if (kind === "generation-changed") sqlite.prepare("UPDATE cache SET value = ? WHERE key = 'snapshot-supply:last-write'")
       .run(JSON.stringify({ snapshotDate: 1, generationId: "replacement-at-the-same-second" }));
-    if (kind === "cohort-changed") {
+    if (kind === "missing-cohort-identity") {
       const row = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(NON_USD_SHARE_HISTORY_KEY) as { value: string };
-      const payload = JSON.parse(row.value);
-      payload.cohortIdentity = "old-cohort";
+      const payload = JSON.parse(row.value) as Record<string, unknown>;
+      delete payload.cohortIdentity;
       sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(JSON.stringify(payload), NON_USD_SHARE_HISTORY_KEY);
     }
     const prepare = vi.spyOn(db, "prepare");

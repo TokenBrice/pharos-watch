@@ -1,5 +1,19 @@
 [
   {
+    "version": "3.71",
+    "title": "Listing policy v2 core aggregate cutover",
+    "date": "2026-11-25",
+    "effectiveAt": 1795564800,
+    "summary": "Under listing policy v2, tokenized fund shares leave the core stablecoin aggregate on a dated cutover (core-stablecoins-v2). Published PSI history is not restated; pre-cutover replays keep the frozen core-stablecoins-v1 membership while days from the cutover onward use v2 membership.",
+    "impact": [
+      "Core aggregate identity advances from `core-stablecoins-v1` to `core-stablecoins-v2` on `CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE` (`2026-11-25`, 00:00 UTC). Live PSI samples and post-cutover replays stamp `aggregateUniverse: \"core-stablecoins-v2\"`; cross-boundary digest and weekly-recap comparisons fence against mixing v1 and v2 universes.",
+      "Pre-cutover published daily rows remain exactly as published without restatement. Historical PSI replays strictly before the cutover resolve membership from the frozen `core-stablecoins-v1` member snapshot (`shared/data/stablecoins/core-aggregate-v1-members.json`) and stamp `core-stablecoins-v1`; replays from the cutover onward use active v2 membership.",
+      "Formula weights, component caps, depreciation schedule, reference-market rules, and condition bands are unchanged. Activation is 2026-11-25 00:00 UTC (1795564800); re-date effectiveAt if deploy slips."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "3.70",
     "title": "Admitted event coverage and dated index inputs",
     "date": "2026-11-19",

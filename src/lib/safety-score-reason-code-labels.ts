@@ -104,6 +104,7 @@ const REASON_CODE_LABELS = {
   "single-pillar-pipeline-gap": "Only one pillar available — pipeline gap",
   "all-pillars-pipeline-gap": "No pillars available — pipeline gap",
   "f-without-measured-adverse": "Score below the F threshold without a measured adverse fact",
+  "tokenized-fund-not-graded": "Tokenized fund shares are not graded on the stablecoin Safety Score scale",
 } satisfies Record<string, string>;
 
 /** Compile-time guard: every live reason code must carry a label. */

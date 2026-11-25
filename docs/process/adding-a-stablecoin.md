@@ -299,11 +299,11 @@ Three optional clusters on `StablecoinMeta` drive the hero verdict, mechanism sc
 Mapping cheatsheet:
 
 - `fiat-cash`: RWA-backed + centralized + cash/repo/short-T-Bill mix (USDC, USDT, PYUSD). Protocol-reserve-backed FX inventory (the Mento class: USDm, EURm, and the Mento FX stables) is `shared-reserve`, not `fiat-cash`; Mento CDP currencies remain `cdp`. See [Native mechanism families](../classification.md#native-mechanism-families).
-- `tbill`: RWA-backed + dominantly Treasury fund or NAV-bearing (USTB, USDtb, USDY)
+- `tbill`: RWA-backed + dominantly Treasury-backed or short-duration sovereign reserve (USTB, USDtb, USDO)
 - `cdp`: crypto-backed + decentralized + overcollateralized vaults (DAI, LUSD, crvUSD)
 - `synthetic-delta-neutral`: crypto + hedging in `pegMechanism` (USDe, USR)
 - `algorithmic`: mechanism archetype for reflexive/programmatic peg mechanisms; it is not tied to `flags.backing`. Current active entries with this archetype remain classified by actual collateral base.
-- `rwa-credit-fund`: tokenized share of a managed credit/fund book whose value comes from NAV rather than a redeemable cash float; it selects `stable-value-investment` for non-variants. An unresolved mechanism review can also select that class under [listing-class precedence](../listing-policy.md#listing-classes).
+- `rwa-credit-fund`: tokenized share of a managed credit/fund book whose value comes from NAV rather than a redeemable cash float; non-variants receive an authored `tokenized-fund` decision under [listing-class precedence](../listing-policy.md#listing-classes), where unresolved mechanism reviews sit in `review-hold` until resolved.
 - `commodity-claim`: redeemable claim on allocated physical commodity (PAXG, XAUT).
 
 Wrappers (with `variantOf` set) generally inherit the parent's archetype; omit on the child if uncertain.
@@ -373,7 +373,7 @@ Author the profile in `shared/data/stablecoins/domains/mint-authority/<id>.json`
 
 - Add or update the asset's JSON object in `shared/data/stablecoins/coins/*.json`.
 - Add the ID to `shared/data/stablecoins/canonical-order.json`.
-- Add the ID and derived class to `shared/data/stablecoins/listing-decisions.json`.
+- Add the ID and authored listing class to `shared/data/stablecoins/listing-decisions.json`.
 - Hand off completed source edits for the single Phase 7 generation/check pass; do not regenerate while specialists are still editing.
 - Keep new keys canonical and consistent with the current schema.
 - For active assets, record the Phase 1a price + market-cap path in the packet (Phase 1a owns the enumeration; do not rely on `canonical-order.json` alone — static routes can exist before the Worker `/api/stablecoins` cache has a row).

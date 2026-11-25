@@ -83,33 +83,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
-  "liveReservesConfig": {
-    "adapter": "chainlink-nav",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "acred-apollo-securitize",
-    "display": {
-      "url": "https://data.chain.link/feeds/ethereum/mainnet/acred-nav",
-      "label": "Chainlink ACRED NAV"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "alchemy"
-      }
-    },
-    "params": {
-      "navScope": "native-fund-share",
-      "oracleAddress": "0x35DDfB90011E686CCf837a6819562705076207EB",
-      "tokenAddress": "0x17418038ecf73ba4026c4f428547bf099706f27b",
-      "sourceKey": "chainlink-nav:token:0x17418038ecf73ba4026c4f428547bf099706f27b",
-      "assetLabel": "Apollo Diversified Credit Fund shares",
-      "assetRisk": "high",
-      "oracleMethod": "latestRoundData",
-      "maxOracleAgeSec": 345600
-    }
-  },
   "yieldConfig": {
     "yieldSource": "Apollo Diversified Credit Fund (private credit strategy NAV)",
     "yieldType": "nav-appreciation"
@@ -121,5 +94,14 @@
       "message": "ACRED is a feeder into Apollo Diversified Credit Fund, which holds direct lending and structured credit positions. Risk profile is medium-to-high and closer to syrupUSDC than to BUIDL or BENJI. Token transfers are permissioned; fund exits are anchored by quarterly repurchase offers of at least 5% of shares, with an on-demand pool or secondary-market sales for intra-quarter liquidity. Pharos tracks the Ethereum, Aptos, Avalanche, Ink, Polygon, Sei, and Solana deployments."
     }
   ],
-  "launchDate": "2025-01-30"
+  "launchDate": "2025-01-30",
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "NAV-accreting tokenized private-credit feeder fund share into Apollo Diversified Credit Fund, not a fixed-par stablecoin; no active stablecoin links it (listing policy 2.0).",
+    "source": {
+      "label": "Securitize Apollo Diversified Credit Fund page",
+      "url": "https://securitize.io/primary-market/apollo-diversified-credit-securitize-fund"
+    }
+  }
 }

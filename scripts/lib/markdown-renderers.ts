@@ -17,6 +17,7 @@ import {
   type PublicDoc,
 } from "@shared/lib/public-docs";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { isTokenizedFundId } from "@shared/lib/stablecoins/listing-governance";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import {
   AI_SUMMARY_UNAVAILABLE_NOTICE,
@@ -159,20 +160,27 @@ export function renderStablecoinDetail(
   const coin = TRACKED_META_BY_ID.get(id);
   if (!coin) throw new Error(`Unknown stablecoin id: ${id}`);
 
+  const active = isActiveStablecoinMeta(coin);
+  const activeTokenizedFund = active && isTokenizedFundId(id);
   const summary = summariesById[id];
   const parts: string[] = [
     frontMatterBlock({
-      title: `${coin.name} (${coin.symbol}) Stablecoin Analytics`,
+      title: activeTokenizedFund
+        ? `${coin.name} (${coin.symbol}) Tokenized Fund Profile`
+        : `${coin.name} (${coin.symbol}) Stablecoin Analytics`,
       canonical: `https://pharos.watch${buildStablecoinUrl(id)}`,
-      description: `Build-time stablecoin profile for ${coin.name} (${coin.symbol}).${
-        isActiveStablecoinMeta(coin)
-          ? " Live price, supply, peg, liquidity, and flow data are served by the Pharos API."
-          : ""
-      }`,
+      description: activeTokenizedFund
+        ? `Build-time tokenized fund profile for ${coin.name} (${coin.symbol}). Tokenized fund — not a stablecoin; not Safety-graded. Live price, supply, reserve, and liquidity data are served by the Pharos API.`
+        : `Build-time stablecoin profile for ${coin.name} (${coin.symbol}).${
+            active
+              ? " Live price, supply, peg, liquidity, and flow data are served by the Pharos API."
+              : ""
+          }`,
       ...(summary?.updatedAt ? { dateModified: summary.updatedAt } : {}),
     }),
     `# ${coin.name} (${coin.symbol})`,
     [
+      ...(activeTokenizedFund ? ["**Classification:** Tokenized fund — not a stablecoin; not Safety-graded"] : []),
       `**Peg:** ${PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency}`,
       `**Backing:** ${BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing}`,
       `**Governance:** ${GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance}`,
@@ -182,13 +190,22 @@ export function renderStablecoinDetail(
 
   // Lead with the dated release grade (the same source as the profile FAQ).
   // Markdown never hydrates, so do not publish summary claims without live inputs.
-  const scoreLabel = isActiveStablecoinMeta(coin) ? formatSnapshotSafetyScoreLabel(id, release) : null;
+  const scoreLabel = active && !activeTokenizedFund ? formatSnapshotSafetyScoreLabel(id, release) : null;
   const gradeSentence = scoreLabel ? `${coin.symbol} held ${scoreLabel} in Pharos's scores-latest release dataset.` : null;
   const resolvedSummary = summary?.text && hasAvailableAiSummaryClaims(summary.text, summary.claimTokens)
     ? stripTermMarkup(resolveAiSummaryClaims(summary.text, summary.claimTokens).text)
     : null;
-  if (gradeSentence || summary?.text) {
-    const overview = [gradeSentence, resolvedSummary ?? AI_SUMMARY_UNAVAILABLE_NOTICE].filter(Boolean).join(" ");
+  if (activeTokenizedFund) {
+    const overview = [
+      "Tokenized fund — not a stablecoin; not Safety-graded. Tracked because it backs stablecoins Pharos follows.",
+      resolvedSummary,
+    ].filter(Boolean).join(" ");
+    parts.push(`## Overview\n\n${overview}`);
+  } else if (gradeSentence || resolvedSummary || (active && summary?.text)) {
+    const overview = [
+      gradeSentence,
+      resolvedSummary ?? (active ? AI_SUMMARY_UNAVAILABLE_NOTICE : null),
+    ].filter(Boolean).join(" ");
     parts.push(`## Overview\n\n${overview}`);
   }
 

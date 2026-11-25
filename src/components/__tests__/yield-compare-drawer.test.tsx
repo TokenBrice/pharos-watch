@@ -322,4 +322,32 @@ describe("YieldCompareDrawer", () => {
     expect(screen.getAllByText("USD 3M T-Bill (fallback)").length).toBeGreaterThan(0);
     expect(screen.getAllByText("USD 3M T-Bill").length).toBeGreaterThan(0);
   });
+
+  it("shows Not graded and strips safety-unrated for tokenized fund rows in comparison", () => {
+    window.history.replaceState(null, "", "/yield/?compare=buidl-blackrock,usdc-circle");
+    render(
+      <YieldCompareDrawer
+        open
+        onOpenChange={vi.fn()}
+        rows={[
+          makeRow({
+            id: "buidl-blackrock",
+            symbol: "BUIDL",
+            name: "BlackRock BUIDL",
+            isTokenizedFund: true,
+            safetyGrade: "NR",
+            safetyScore: 40,
+            warningSignals: ["safety-unrated"],
+            provenance: { usedDefaultSafety: true },
+          } as Partial<YieldViewModelRow>),
+          usdc,
+        ]}
+        logos={{}}
+      />,
+    );
+
+    expect(screen.getAllByLabelText("Not graded: tokenized fund").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Safety Unrated")).toBeNull();
+    expect(screen.queryByTitle(/defaulted to 40/)).toBeNull();
+  });
 });

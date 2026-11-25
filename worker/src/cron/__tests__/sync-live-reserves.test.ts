@@ -11,7 +11,6 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { installAdapterNetwork } from "../reserve-adapters/__tests__/reserve-adapter.test-support";
 import { fetchEscrowBalanceReserves } from "../reserve-adapters/escrow-balance";
 import { fetchCrvUsdReserves } from "../reserve-adapters/crvusd";
-import { fetchFraxFpiCollateralReserves } from "../reserve-adapters/frax";
 import { fetchFlyingTulipFtUsdReserves } from "../reserve-adapters/flying-tulip-ftusd";
 import flyingTulipCapture from "../reserve-adapters/__tests__/fixtures/flying-tulip-ftusd-dashboard-2026-09-30.json";
 import { fetchJupUsdReserves } from "../reserve-adapters/jupusd";
@@ -257,19 +256,15 @@ describe("syncLiveReserves", () => {
     expect(orig?.reserves.map((s) => s.pct)).toEqual([50, 50]);
   });
 
-  it.each([{ id: "fpi-frax", adapter: "frax-fpi-collateral", reason: "asset-coverage-incomplete" }, { id: "ftusd-flying-tulip", adapter: "flying-tulip-ftusd", reason: "unexpected-chain" }] as const)(
-    "retains the complete $id book and original clocks after scope loss",
-    async ({ id, adapter, reason }) => {
-      let nowMs = Date.now(), incomplete = false; vi.spyOn(Date, "now").mockImplementation(() => nowMs);
-      const url = "https://reserves.example/book";
-      const net = installAdapterNetwork({ code: { "0x2397321b301b80a1c0911d6f9ed4b6033d43cf51": "0x" }, json: { [url]: () => adapter === "frax-fpi-collateral" ? { updatedAtTimestampSec: Math.floor(nowMs / 1000), assets: [{ tokenSymbol: "FRAX", valueUsd: 100 }, { tokenSymbol: "FXS", valueUsd: 100 }, ...(incomplete ? [{ tokenSymbol: "sfrxUSD", valueUsd: null }] : [])], liabilities: [{ tokenSymbol: "FPI", valueUsd: 200 }] } : { ...flyingTulipCapture, lastUpdated: new Date(nowMs).toISOString(), chains: [...flyingTulipCapture.chains, ...(incomplete ? [{ chainId: 137, chainName: "Polygon", tvlUsd: 900, metrics: { totalSupplyUsd: 900 } }] : [])] } } });
-      mockSingleAdapter(id, (c, cfg) => (adapter === "frax-fpi-collateral" ? fetchFraxFpiCollateralReserves : fetchFlyingTulipFtUsdReserves)(c, { ...cfg, inputs: { primary: { kind: "http-json", url } } }, runController.signal, { chainRpcs: net.chainRpcs }));
-      await expectRetainedBook(id, () => { incomplete = true; nowMs += 60_000; }, (st) => {
-        if (adapter === "frax-fpi-collateral") { expect(JSON.parse(String(st.warnings))).toContainEqual(expect.objectContaining({ code: reason, effect: "fatal" })); expect(JSON.parse(String(st.metadata)).adapterDiagnostics).toMatchObject({ compositionComplete: false, knownCollateralUsd: 200, totalLiabilitiesUsd: 200 }); }
-        else expect(st.last_error).toContain(reason);
-      });
-    },
-  );
+  it("retains the complete ftusd-flying-tulip book and original clocks after scope loss", async () => {
+    let nowMs = Date.now(), incomplete = false; vi.spyOn(Date, "now").mockImplementation(() => nowMs);
+    const url = "https://reserves.example/book";
+    const net = installAdapterNetwork({ json: { [url]: () => ({ ...flyingTulipCapture, lastUpdated: new Date(nowMs).toISOString(), chains: [...flyingTulipCapture.chains, ...(incomplete ? [{ chainId: 137, chainName: "Polygon", tvlUsd: 900, metrics: { totalSupplyUsd: 900 } }] : [])] }) } });
+    mockSingleAdapter("ftusd-flying-tulip", (c, cfg) => fetchFlyingTulipFtUsdReserves(c, { ...cfg, inputs: { primary: { kind: "http-json", url } } }, runController.signal, { chainRpcs: net.chainRpcs }));
+    await expectRetainedBook("ftusd-flying-tulip", () => { incomplete = true; nowMs += 60_000; }, (st) => {
+      expect(st.last_error).toContain("unexpected-chain");
+    });
+  });
 
   it.each([{ id: "jupusd-jupiter", adapter: "jupusd", reason: "holdings-incomplete" }, { id: "usdx-kava", adapter: "kava-cdp", reason: "collateral-coverage-incomplete" }] as const)(
     "retains the complete $id book and original clocks after unavailable valuation",

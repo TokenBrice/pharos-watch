@@ -24,7 +24,7 @@ vi.mock("@shared/lib/stablecoins/client-registry", () => ({
 describe("YieldCoinIndex", () => {
   it("groups compact taxonomy without sidecars and retains every eligible coin including unclassified entries", () => {
     render(<YieldCoinIndex />);
-    expect(screen.getByText(/3 yield-bearing tracked coins/)).toBeTruthy();
+    expect(screen.getByText(/3 yield-bearing tracked stablecoins/)).toBeTruthy();
     expect(screen.getByRole("link", { name: "REB" }).getAttribute("href")).toBe(buildStablecoinUrl("rebase-test", "yield/"));
     expect(screen.getByRole("link", { name: "FIXED" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "UNKNOWN" }).closest("dl")?.textContent).toContain("Other");

@@ -51,7 +51,6 @@ import {
   CURVE_USDG_USDC_STABLESWAP_NG_POLICY,
 } from "../curve-stableswap-ng";
 import {
-  CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS,
   UNISWAP_V4_REVIEWED_DEPLOYMENTS,
 } from "@shared/lib/measured-execution-deployment-policies";
 import { CURVE_3POOL_TOKEN_ADDRESSES } from "./measured-execution.test-support";
@@ -941,12 +940,6 @@ describe("measured profile score-eligibility contract", () => {
         policy.chain,
         `${policy.chain}:${policy.poolAddress}`,
         policy.scoreEligible,
-      )),
-      ...CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS.map((deployment) => profile(
-        deployment.adapterProfileId,
-        deployment.chain,
-        `${deployment.chain}:${deployment.poolAddress}`,
-        false,
       )),
       ...UNISWAP_V4_REVIEWED_DEPLOYMENTS.map((deployment) => deployment.chain).map(
         (chain) => {

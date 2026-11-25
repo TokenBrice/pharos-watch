@@ -1,11 +1,15 @@
 import listingDecisionsAsset from "../../data/stablecoins/listing-decisions.json";
 import { type ListingClass } from "../../types/stablecoin-taxonomy";
+import { isCoreAggregateListingClass, isTokenizedFundListingClass } from "./listing-class";
 
 export type { ListingClass };
+export { isCoreAggregateListingClass, isTokenizedFundListingClass };
+
+export const LISTING_POLICY_VERSION = "2.0" as const;
 
 export interface ListingDecisionRegistry {
   schemaVersion: 1;
-  policyVersion: string;
+  policyVersion: typeof LISTING_POLICY_VERSION;
   listingClassById: Record<string, ListingClass>;
 }
 
@@ -19,11 +23,6 @@ export function getListingClass(stablecoinId: string): ListingClass | null {
   return LISTING_CLASS_BY_ID.get(stablecoinId) ?? null;
 }
 
-const CORE_AGGREGATE_LISTING_CLASSES: ReadonlySet<ListingClass> = new Set([
-  "core-stablecoin",
-  "cash-equivalent",
-]);
-
-export function isCoreAggregateListingClass(listingClass: ListingClass | null | undefined): boolean {
-  return listingClass != null && CORE_AGGREGATE_LISTING_CLASSES.has(listingClass);
+export function isTokenizedFundId(stablecoinId: string): boolean {
+  return isTokenizedFundListingClass(getListingClass(stablecoinId));
 }

@@ -1,3 +1,4 @@
+import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
 import { formatTvlOption, matchesYieldPeg, matchesYieldSearch } from "@/lib/yield-view-model-helpers";
 import type { YieldRowFacet, YieldViewModelOptions } from "@/lib/yield-view-model-types";
 import {
@@ -5,6 +6,36 @@ import {
   type YieldFilterOption,
   type YieldViewModelFilters,
 } from "@/lib/yield-view-config";
+
+/**
+ * Policy 2.0 tokenized funds are not graded on the Safety Score scale. When a
+ * viewer explicitly enables `includeFunds`, ungraded funds are exempt from
+ * `minSafety` floors rather than compared against the default NR fallback (40).
+ */
+export function isUngradedTokenizedFundFacet(
+  facet: Pick<YieldRowFacet, "isTokenizedFund" | "row">,
+): boolean {
+  return facet.isTokenizedFund && (
+    facet.row.safetyGrade === null
+    || facet.row.safetyGrade === "NR"
+    || facet.row.provenance?.usedDefaultSafety === true
+  );
+}
+
+/**
+ * Investment warnings applicable to a yield row. Tokenized funds are
+ * intentionally ungraded on Safety Score, so `safety-unrated` reflects policy
+ * rather than an investment warning that hides them under `warnings=hide`.
+ */
+export function selectRowInvestmentWarningSignals(
+  signals: readonly string[] | null | undefined,
+  isTokenizedFund: boolean,
+): string[] {
+  const investment = selectInvestmentWarningSignals(signals);
+  return isTokenizedFund
+    ? investment.filter((signal) => signal !== "safety-unrated")
+    : investment;
+}
 
 function describeOption<T extends string>(
   options: ReadonlyArray<YieldFilterOption<T>>,
@@ -63,6 +94,7 @@ export const YIELD_FILTER_AXIS_REGISTRY: readonly YieldFilterAxisDescriptor[] = 
     key: "minSafety",
     isActive: (filters) => filters.minSafety !== DEFAULT_FILTERS.minSafety,
     matches: (facet, filters) => filters.minSafety === null
+      || (filters.includeFunds === "include" && isUngradedTokenizedFundFacet(facet))
       || (facet.row.safetyScore !== null && facet.row.safetyScore >= filters.minSafety),
     describeRelax: (filters) => `Drop ${filters.minSafety}+ safety floor`,
     relaxTargetValue: null,
@@ -161,6 +193,13 @@ export const YIELD_FILTER_AXIS_REGISTRY: readonly YieldFilterAxisDescriptor[] = 
     isActive: (filters) => filters.trending !== DEFAULT_FILTERS.trending,
     matches: (facet, filters) => filters.trending !== "rising" || facet.isRising,
     describeRelax: () => "Drop trending filter",
+    relaxTargetValue: null,
+  },
+  {
+    key: "includeFunds",
+    isActive: (filters) => filters.includeFunds !== DEFAULT_FILTERS.includeFunds,
+    matches: (facet, filters) => filters.includeFunds === "include" || !facet.isTokenizedFund,
+    describeRelax: () => "Exclude tokenized funds",
     relaxTargetValue: null,
   },
 ];

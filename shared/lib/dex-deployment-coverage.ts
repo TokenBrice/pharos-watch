@@ -97,7 +97,12 @@ export const CURVE_NATIVE_DISCOVERY_CHAINS: ReadonlySet<string> = new Set([
 const HORIZON_DISCOVERY_CHAINS: ReadonlySet<string> = new Set(["stellar"]);
 
 
-/** The exact nine Spiko Soroban token ids currently covered by Aquarius. */
+/**
+ * Reviewed Spiko Soroban token-id register for Aquarius discovery. Runtime
+ * discovery scopes queries to active tracked assets (delisted share classes
+ * such as CHFSAFO remain in the static register but do not enter active
+ * discovery).
+ */
 export const AQUARIUS_SUPPORTED_TOKEN_IDS: Readonly<Record<string, true>> = {
   CBOOCGZSVRSZFRE4U2NWR2B4RXYVJWRCBTGOUD2JPI2TDJPWMTJX7FZP: true,
   CDWOB6T7SVSMMQN5V3P2OPTBAXOP7DAZHGVW3PYTZIKHVFKN6TBSXR6A: true,
@@ -107,7 +112,8 @@ export const AQUARIUS_SUPPORTED_TOKEN_IDS: Readonly<Record<string, true>> = {
   CDS2GCAQTNQINSCJUJIVBJXILKBWP5PU7LOBGHMP3X47QCQBFKPMTCNT: true,
   CDT3KU6TQZNOHKNOHNAFFDQZDURVC3MSTL4ML7TUTZGNOPBZCLABP4FR: true,
   CARUUX2FZNPH6DGJOEUFSIUQWYHNL5AVDV7PMVSHWL7OBYIBFC76F4TO: true,
-  // CHFSAFO: reviewed native register, confirmed by the exact share-class API:
+  // CHFSAFO: reviewed native register (delisted under listing policy 2.0; retained
+  // in static register only), confirmed by the exact share-class API:
   // https://public-api.spiko.io/share-classes/chfSAFO (ISIN FR0014015LG6).
   CAJD2IBSP7VO2VYJQUYJSOGPJINTUYV7MQITINXVPTIH3CCLCUENNMW4: true,
 };

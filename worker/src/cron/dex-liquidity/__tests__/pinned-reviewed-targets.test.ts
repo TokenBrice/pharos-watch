@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS, QUOTER_V2_REVIEWED_RETAINED_POOLS } from "@shared/lib/measured-execution-deployment-policies";
+import { QUOTER_V2_REVIEWED_RETAINED_POOLS } from "@shared/lib/measured-execution-deployment-policies";
 import { buildDexMeasuredExecutionTargetId, DexMeasuredExecutionTargetSchema } from "@shared/types/measured-execution";
 import { attachPinnedReviewedExecutionTargets } from "../execution-targets/pinned-reviewed";
 import { estimateAdmissionCohortRpcRequestBreakdown, isDexMeasuredExecutionTargetScoreEligible } from "../../measured-execution/admission";
@@ -7,48 +7,57 @@ import { getDexMeasuredExecutionDeployment } from "../../measured-execution/regi
 import type { SourcePoolGraph } from "../types";
 
 describe("pinned retained shadow targets", () => {
-  const policy = CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS[0];
-  function fixture(deployment: (typeof CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS)[number] = policy) {
-    const pool = { poolId: `${deployment.chain}:${deployment.poolAddress}`, chain: deployment.chain, project: "curve", tvlUsd: 1_000_000, symbol: "yield token / USDC", poolType: "cg-amm", source: "cg_onchain", volumeUsd1d: 0 };
+  const shadowPool = {
+    chain: "xlayer",
+    stablecoinId: "satusd-river",
+    poolAddress: "0x849aea45a38e0ee2459be4cec52cb5d73bfc5761",
+    poolTokens: [
+      { address: "0x779ded0c9e1022225f8e0630b35a9b54be713736", trackedAssetId: "usdt-tether" },
+      { address: "0xcef6c74ce218c0e1f48ca2430635d0a65cd3737a", trackedAssetId: "satusd-river" },
+    ],
+  } as const;
+
+  function fixture() {
+    const pool = { poolId: `${shadowPool.chain}:${shadowPool.poolAddress}`, chain: shadowPool.chain, project: "uniswap-v3", tvlUsd: 1_000_000, symbol: "SATUSD / USDT", poolType: "cg-concentrated", source: "cg_onchain", volumeUsd1d: 0 };
     return {
-      metrics: new Map([[deployment.stablecoinId, { pools: [pool] } as SourcePoolGraph]]),
-      stablecoinPriceById: new Map([[deployment.stablecoinId, 1.05], ["usdc-circle", 1]]),
+      metrics: new Map([[shadowPool.stablecoinId, { pools: [pool] } as SourcePoolGraph]]),
+      stablecoinPriceById: new Map([[shadowPool.stablecoinId, 1], ["usdt-tether", 1]]),
       capturedAt: 1_800_000_000,
-      chainAddressToId: new Map<string, string>(deployment.poolTokens.map((token) => [`${deployment.chain}:${token.address}`, token.trackedAssetId])),
+      chainAddressToId: new Map<string, string>(shadowPool.poolTokens.map((token) => [`${shadowPool.chain}:${token.address}`, token.trackedAssetId])),
     };
   }
 
-  it.each(CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS)("materializes $stablecoinId in reviewed order without scoring", (deployment) => {
-    const input = fixture(deployment);
+  it("materializes satusd-river shadow pool in reviewed order without scoring", () => {
+    const input = fixture();
     attachPinnedReviewedExecutionTargets(input);
-    const target = input.metrics.get(deployment.stablecoinId)!.pools[0]!.extra?.measuredExecutionTarget;
+    const target = input.metrics.get(shadowPool.stablecoinId)!.pools[0]!.extra?.measuredExecutionTarget;
     expect(DexMeasuredExecutionTargetSchema.safeParse(target).success).toBe(true);
-    expect(target?.poolTokenAddresses).toEqual(deployment.poolTokens.map((token) => token.address));
-    expect(target?.tokenIn.address).toBe(deployment.poolTokens[deployment.inputIndex].address);
-    expect(target?.tokenIn.trackedAssetId).toBe(deployment.stablecoinId);
-    expect(target?.tokenOut.trackedAssetId).toBe("usdc-circle");
+    expect(target?.poolTokenAddresses).toEqual(shadowPool.poolTokens.map((token) => token.address));
+    expect(target?.tokenIn.address).toBe(shadowPool.poolTokens[1].address);
+    expect(target?.tokenIn.trackedAssetId).toBe(shadowPool.stablecoinId);
+    expect(target?.tokenOut.trackedAssetId).toBe("usdt-tether");
     expect(isDexMeasuredExecutionTargetScoreEligible(target!)).toBe(false);
   });
 
   it("rejects a conflicting tracked contract identity", () => {
     const input = fixture();
-    input.chainAddressToId.set(`etherlink:${policy.poolTokens[0].address}`, "unrelated-asset");
+    input.chainAddressToId.set(`xlayer:${shadowPool.poolTokens[0].address}`, "unrelated-asset");
     attachPinnedReviewedExecutionTargets(input);
-    expect(input.metrics.get(policy.stablecoinId)!.pools[0]!.extra?.measuredExecutionTarget).toBeUndefined();
+    expect(input.metrics.get(shadowPool.stablecoinId)!.pools[0]!.extra?.measuredExecutionTarget).toBeUndefined();
   });
 
   it("does not create a target without a current validated price", () => {
     const input = fixture();
-    input.stablecoinPriceById.delete(policy.stablecoinId);
+    input.stablecoinPriceById.delete(shadowPool.stablecoinId);
     attachPinnedReviewedExecutionTargets(input);
-    expect(input.metrics.get(policy.stablecoinId)!.pools[0]!.extra?.measuredExecutionTarget).toBeUndefined();
+    expect(input.metrics.get(shadowPool.stablecoinId)!.pools[0]!.extra?.measuredExecutionTarget).toBeUndefined();
   });
 
   it("does not manufacture a missing retained physical row", () => {
     const input = fixture();
-    input.metrics.get(policy.stablecoinId)!.pools = [];
+    input.metrics.get(shadowPool.stablecoinId)!.pools = [];
     attachPinnedReviewedExecutionTargets(input);
-    expect(input.metrics.get(policy.stablecoinId)!.pools).toHaveLength(0);
+    expect(input.metrics.get(shadowPool.stablecoinId)!.pools).toHaveLength(0);
   });
 });
 
@@ -95,10 +104,10 @@ describe("reviewed active retained-pool targets", () => {
       attachPinnedReviewedExecutionTargets(input);
       return input.metrics.get(direction.stablecoinId)!.pools[0]!.extra!.measuredExecutionTarget!;
     });
-    expect(QUOTER_V2_REVIEWED_RETAINED_POOLS).toHaveLength(9);
-    expect(targets).toHaveLength(10);
+    expect(QUOTER_V2_REVIEWED_RETAINED_POOLS).toHaveLength(8);
+    expect(targets).toHaveLength(9);
     expect(estimateAdmissionCohortRpcRequestBreakdown(targets)).toEqual({
-      setupRpcRequests: 12, quoteRpcRequests: 29, totalRpcRequests: 41,
+      setupRpcRequests: 12, quoteRpcRequests: 28, totalRpcRequests: 40,
     });
   });
 

@@ -4,25 +4,21 @@ import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-
 import { CHAIN_META, resolveChainId } from "@shared/types/chain-identity";
 import { SUPPLY_RPC_DEFAULTS } from "@shared/lib/chain-rpc-registry";
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
-import { getLiveReserveAdapterMaxUnknownExposurePct, parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { sha256Hex } from "@shared/lib/sha256";
-import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
+import { throwIfAborted } from "../../lib/abort";
 import { DECIMALS_SELECTOR, encodeBalanceOfCallData, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
 import { fetchEvmMulticall3Aggregate3AtBlock, fetchEvmUint256AtBlock, parseUint256Hex } from "../../lib/evm-rpc";
 import type { AdapterContext, AdapterResult } from "./types";
 import { runAdapterIo } from "./concurrency";
-import { observeFpiControllerRedemptionRoute } from "./fpi-controller-redemption";
 import {
   buildRedemptionSnapshotMetadata,
   buildUnknownExposureWarning,
   catchAndWarn,
   computeUnknownExposurePct,
   decimalNumberFromBigInt,
-  fetchDefiLlamaPrices,
   fetchJsonAdapterInput,
-  fetchOnchainUint256,
   freshnessMetadataFromTimestamp,
   normalizeSlices,
   parseTimestampLikeToUnixSeconds,
@@ -31,7 +27,6 @@ import {
   reserveFatalWarning,
   reserveInfoWarning,
   SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT,
-  sourceKeySlug,
 } from "./helpers";
 
 interface BalanceSheetAsset {
@@ -55,38 +50,10 @@ export interface FraxBalanceSheetResponse {
   assets?: BalanceSheetAsset[];
 }
 
-/* ---------- v2 FPI collateral API types ---------- */
-
-interface FraxFpiCollateralRow {
-  key?: string;
-  name?: string;
-  chain?: string;
-  ownerAddress?: string;
-  tokenAddress?: string;
-  tokenSymbol?: string;
-  tokenName?: string;
-  tokenQuantity?: number | null;
-  tokenPrice?: number | null;
-  valueUsd?: number | null;
-}
-
-export interface FraxFpiCollateralResponse {
-  updatedAtBlock?: number;
-  updatedAtTimestampSec?: number;
-  assets?: FraxFpiCollateralRow[];
-  liabilities?: FraxFpiCollateralRow[];
-}
-
 interface TokenDisplayConfig {
   label: string;
   risk: ReserveSlice["risk"];
   coinId?: string;
-  /**
-   * Stable slice identity for rows that map to a fixed on-chain contract
-   * rather than a symbol. When set, it is emitted verbatim so the key cannot
-   * drift if the issuer relabels the position.
-   */
-  sourceKey?: string;
 }
 
 const TOKEN_DISPLAY: Record<string, TokenDisplayConfig> = {
@@ -160,24 +127,6 @@ const TOKEN_DISPLAY: Record<string, TokenDisplayConfig> = {
   stkcvxFPIFRAX: { label: "stkcvxFPIFRAX (staked Convex FPI/FRAX LP)", risk: "medium" },
   wfrxETH: { label: "wfrxETH", risk: "medium" },
   ZZ: { label: "ZZ", risk: "very-high" },
-};
-
-// FPI collateral rows in this allowlist report no tokenSymbol, only a `name`.
-// Keep them separate from tokenSymbol mappings so arbitrary provider row names
-// cannot collide with trusted symbols such as FRAX, DAI, or USDC.
-const FPI_COLLATERAL_NAME_ONLY_DISPLAY: Record<string, TokenDisplayConfig> = {
-  // FPIS is FPI's own governance token, so this LP is rated like FXS rather
-  // than a stable pair. The slice identity is the Fraxswap V2 FRAX/FPIS pair
-  // contract on Ethereum, read from the Fraxswap V2 factory getPair(FRAX,
-  // FPIS) (factory 0x43ec799eadd63848443e2347c49f5f52e8fe0f6f; token0 FRAX
-  // 0x853d955acef822db058eb8505911ed77f175b99e, token1 FPIS
-  // 0xc2544a32872a91f4a553b404c6950e89de901fdb), so a provider-side relabel
-  // cannot move the reviewed slice key.
-  "Fraxswap V2 FRAX/FPIS": {
-    label: "Fraxswap V2 FRAX/FPIS",
-    risk: "high",
-    sourceKey: "frax-fpi-collateral:ethereum:0x56695c26b3cdb528815cd22ff7b47510ab821efd",
-  },
 };
 
 const ETHEREUM_FRAX = "0x853d955acef822db058eb8505911ed77f175b99e";
@@ -1136,312 +1085,12 @@ export function adaptFraxBalanceSheet(
   };
 }
 
-/* ---------- v2 FPI collateral adapter ---------- */
-
 function nonnegativeFinite(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
 }
 
-function isFpiSelfHolding(row: FraxFpiCollateralRow): boolean {
-  return row.tokenSymbol === "FPI";
-}
-
-function describeFpiCollateralRow(row: FraxFpiCollateralRow): string {
-  const symbol = row.tokenSymbol?.trim();
-  if (symbol) return symbol;
-  const name = row.name?.trim();
-  if (name) return name;
-  return row.key?.trim() || "unlabeled-row";
-}
-
-function getFpiCollateralMappingKey(row: FraxFpiCollateralRow): string | undefined {
-  const symbol = row.tokenSymbol?.trim();
-  if (symbol) return symbol;
-
-  const name = row.name?.trim();
-  return name && FPI_COLLATERAL_NAME_ONLY_DISPLAY[name] ? name : undefined;
-}
-
-function getFpiCollateralDisplayConfig(key: string): TokenDisplayConfig | undefined {
-  return TOKEN_DISPLAY[key] ?? FPI_COLLATERAL_NAME_ONLY_DISPLAY[key];
-}
-
-/**
- * Pharos-side USD value for non-FPI rows whose issuer `valueUsd` is missing:
- * the row's disclosed token quantity, else the owner's on-chain balance, times
- * the row's own token price, else a policy-checked DefiLlama quote for the same
- * token contract. `rpcByChain` supplies configured endpoints for chains the
- * Worker registry does not resolve. A row absent from the result cannot be
- * valued without inventing precision, so the adapter keeps failing closed on
- * it. FPI self-holdings are never estimated: they net against FPI liabilities.
- */
-async function valueUnpricedFpiCollateralRows(
-  assets: readonly FraxFpiCollateralRow[],
-  rpcByChain: Readonly<Record<string, { rpcUrl?: string; fallbackRpcUrl?: string }>>,
-  signal: AbortSignal,
-  ctx?: AdapterContext,
-): Promise<Map<FraxFpiCollateralRow, number>> {
-  const rows = assets.flatMap((row, index) => {
-    if (nonnegativeFinite(row.valueUsd) != null || isFpiSelfHolding(row)) return [];
-    const chain = row.chain?.trim();
-    const token = canonicalEvmAddress(row.tokenAddress, { allowZero: false });
-    const owner = canonicalEvmAddress(row.ownerAddress, { allowZero: false });
-    const disclosedPrice = nonnegativeFinite(row.tokenPrice);
-    const rowPrice = disclosedPrice != null && disclosedPrice > 0 ? disclosedPrice : undefined;
-    return [{ row, key: String(index), chain, token, owner, rowPrice }];
-  });
-  if (rows.length === 0) return new Map();
-
-  // One row at a time: each row opens at most two concurrent RPC reads, so the
-  // valuation stays inside the Worker connection budget however many rows lack
-  // an issuer value.
-  const quantities = new Map<FraxFpiCollateralRow, number>();
-  for (const { row, chain, token, owner } of rows) {
-    const disclosed = nonnegativeFinite(row.tokenQuantity);
-    if (disclosed != null) {
-      quantities.set(row, disclosed);
-      continue;
-    }
-    if (!chain || !token || !owner) continue;
-    try {
-      const read = (data: string) => fetchOnchainUint256({ contract: token, data, chain, signal, ctx, ...rpcByChain[chain] });
-      const [balanceRaw, decimals] = await Promise.all([read(encodeBalanceOfCallData(owner)), read(DECIMALS_SELECTOR)]);
-      if (balanceRaw == null || decimals == null || decimals > 36n) continue;
-      quantities.set(row, decimalNumberFromBigInt(balanceRaw, Number(decimals)));
-    } catch (error) {
-      rethrowIfAborted(error, signal);
-    }
-  }
-
-  const quoteLookups = rows.flatMap(({ row, key, chain, token, rowPrice }) =>
-    (quantities.get(row) ?? 0) > 0 && rowPrice == null && chain && token ? [{ key, chain, address: token }] : []);
-  let quotes = new Map<string, number>();
-  try {
-    const result = await fetchDefiLlamaPrices(quoteLookups, signal, ctx);
-    if (result.warnings.some((warning) => warning.code === "defillama-quote-quality")) {
-      throw new Error("Frax FPI DefiLlama quotes fail quality policy");
-    }
-    quotes = result.prices;
-  } catch (error) {
-    rethrowIfAborted(error, signal);
-  }
-
-  const values = new Map<FraxFpiCollateralRow, number>();
-  for (const { row, key, rowPrice } of rows) {
-    const quantity = quantities.get(row);
-    if (quantity == null) continue;
-    if (quantity === 0) {
-      values.set(row, 0);
-      continue;
-    }
-    const price = rowPrice ?? quotes.get(key);
-    const valueUsd = price != null ? quantity * price : undefined;
-    if (valueUsd != null && Number.isFinite(valueUsd)) values.set(row, valueUsd);
-  }
-  return values;
-}
-
-export function adaptFraxFpiCollateral(
-  payload: FraxFpiCollateralResponse,
-  unpricedRowValuesUsd: ReadonlyMap<FraxFpiCollateralRow, number> = new Map(),
-): AdapterResult {
-  const assets = payload.assets;
-  if (!assets?.length) {
-    throw new Error("Frax FPI collateral response missing or empty assets array");
-  }
-
-  const warnings: LiveReserveWarning[] = [];
-  const bySymbol = new Map<string, number>();
-  const unknownLabels = new Set<string>();
-  let unknownUsd = 0;
-  let selfHeldFpiUsd = 0;
-  const unavailableAssetLabels: string[] = [];
-  let selfHoldingsComplete = true;
-  const unpricedAssetLabels: string[] = [];
-  let unpricedUsd = 0;
-
-  for (const asset of assets) {
-    const usd = nonnegativeFinite(asset.valueUsd);
-    if (usd == null) {
-      const estimateUsd = isFpiSelfHolding(asset) ? undefined : nonnegativeFinite(unpricedRowValuesUsd.get(asset));
-      if (estimateUsd != null) {
-        if (estimateUsd === 0) continue;
-        unpricedUsd += estimateUsd;
-        unpricedAssetLabels.push(describeFpiCollateralRow(asset));
-        continue;
-      }
-      unavailableAssetLabels.push(describeFpiCollateralRow(asset));
-      if (isFpiSelfHolding(asset)) selfHoldingsComplete = false;
-      continue;
-    }
-    if (usd === 0) continue;
-    if (isFpiSelfHolding(asset)) {
-      selfHeldFpiUsd += usd;
-      continue;
-    }
-
-    const symbol = getFpiCollateralMappingKey(asset);
-    const config = symbol ? getFpiCollateralDisplayConfig(symbol) : undefined;
-    if (symbol && config) {
-      bySymbol.set(symbol, (bySymbol.get(symbol) ?? 0) + usd);
-    } else {
-      unknownUsd += usd;
-      unknownLabels.add(describeFpiCollateralRow(asset));
-    }
-  }
-
-  const mappedCollateralUsd = [...bySymbol.values()].reduce((sum, usd) => sum + usd, 0);
-  const valuedCollateralUsd = mappedCollateralUsd + unknownUsd;
-  if (valuedCollateralUsd <= 0) {
-    throw new Error("Frax FPI collateral response has no positive non-FPI collateral assets");
-  }
-  // A row the issuer left unpriced but Pharos could value is admitted as
-  // explicit unpriced exposure only while it, together with any unmapped
-  // exposure, stays under the adapter's shared unknown-exposure ceiling (the
-  // same combined figure the snapshot validator gates); a material one fails
-  // closed like any other unavailable row rather than resting the composition
-  // on Pharos' estimate.
-  const unpricedAdmitted = computeUnknownExposurePct(unknownUsd + unpricedUsd, valuedCollateralUsd + unpricedUsd)
-    <= getLiveReserveAdapterMaxUnknownExposurePct("frax-fpi-collateral");
-  if (!unpricedAdmitted) unavailableAssetLabels.push(...unpricedAssetLabels);
-  const admittedUnpricedUsd = unpricedAdmitted ? unpricedUsd : 0;
-  const totalCollateralUsd = valuedCollateralUsd + admittedUnpricedUsd;
-
-  const liabilities = payload.liabilities;
-  const unavailableLiabilityCount = liabilities?.filter((row) => nonnegativeFinite(row.valueUsd) == null).length ?? 0;
-  const liabilityCoverageComplete = Array.isArray(liabilities) && liabilities.length > 0 && unavailableLiabilityCount === 0;
-  const compositionComplete = unavailableAssetLabels.length === 0;
-  const totalLiabilitiesUsd = liabilityCoverageComplete
-    ? liabilities.reduce((sum, liability) => sum + liability.valueUsd!, 0)
-    : undefined;
-  const netExternalLiabilitiesUsd = compositionComplete && totalLiabilitiesUsd != null
-    ? totalLiabilitiesUsd - selfHeldFpiUsd
-    : undefined;
-  const collateralizationRatio = netExternalLiabilitiesUsd != null && netExternalLiabilitiesUsd > 0
-    ? totalCollateralUsd / netExternalLiabilitiesUsd
-    : undefined;
-  if (!compositionComplete) {
-    warnings.push(reserveFatalWarning("asset-coverage-incomplete",
-      `Frax FPI asset values unavailable: ${unavailableAssetLabels.join(", ")}`));
-  }
-  if (!liabilityCoverageComplete || (netExternalLiabilitiesUsd != null && netExternalLiabilitiesUsd < 0)) {
-    warnings.push(reserveDegradedWarning("liability-coverage-incomplete",
-      "Frax FPI liabilities are unavailable or inconsistent with self holdings"));
-  }
-  const sourceTimestamp = parseTimestampLikeToUnixSeconds(payload.updatedAtTimestampSec);
-  const stableRedeemableUsd = ["FRAX", "sFRAX", "sfrxUSD"].reduce(
-    (sum, symbol) => sum + (bySymbol.get(symbol) ?? 0),
-    0,
-  );
-
-  const slices: ReserveSlice[] = [];
-  for (const [symbol, usd] of bySymbol) {
-    const config = getFpiCollateralDisplayConfig(symbol);
-    if (!config) continue;
-    slices.push({
-      sourceKey: config.sourceKey ?? `frax-fpi-collateral:${sourceKeySlug(symbol)}`,
-      name: config.label,
-      pct: (usd / totalCollateralUsd) * 100,
-      risk: config.risk,
-      ...(config.coinId ? { coinId: config.coinId, depType: "collateral" as const } : {}),
-    });
-  }
-
-  if (unknownUsd > 0) {
-    const unknownExposurePct = (unknownUsd / totalCollateralUsd) * 100;
-    slices.push({
-      sourceKey: "frax-fpi-collateral:unknown",
-      name: "Unmapped Frax FPI collateral assets",
-      pct: unknownExposurePct,
-      risk: "high",
-    });
-    warnings.push(
-      buildUnknownExposureWarning({
-        adapterKey: "frax-fpi-collateral",
-        code: "unknown-token",
-        message: `Frax FPI collateral unknown token(s): ${[...unknownLabels].sort().join(", ")}`,
-        unknownExposurePct,
-      }),
-    );
-  }
-
-  if (unpricedAdmitted && unpricedAssetLabels.length > 0) {
-    const unpricedExposurePct = (admittedUnpricedUsd / totalCollateralUsd) * 100;
-    slices.push({
-      sourceKey: "frax-fpi-collateral:unpriced",
-      name: "Unpriced Frax FPI collateral assets",
-      pct: unpricedExposurePct,
-      risk: "high",
-    });
-    warnings.push(
-      buildUnknownExposureWarning({
-        adapterKey: "frax-fpi-collateral",
-        code: "asset-value-unavailable",
-        message: `Frax FPI asset values unavailable upstream; valued by Pharos as unpriced exposure: ${unpricedAssetLabels.join(", ")}`,
-        unknownExposurePct: unpricedExposurePct,
-      }),
-    );
-  }
-
-  if (collateralizationRatio != null && collateralizationRatio < 1) {
-    warnings.push(
-      reserveDegradedWarning(
-        "undercollateralized",
-        `Frax FPI non-FPI collateral is ${(collateralizationRatio * 100).toFixed(2)}% of net external FPI liabilities`,
-      ),
-    );
-  }
-
-  return {
-    slices: compositionComplete ? normalizeSlices(slices, null) : [],
-    ...(warnings.length > 0 ? { warnings } : {}),
-    metadata: {
-      ...(compositionComplete ? { totalCollateralUsd } : { knownCollateralUsd: totalCollateralUsd }),
-      compositionComplete,
-      unavailableAssetCount: unavailableAssetLabels.length,
-      unavailableAssetLabels,
-      liabilityCoverageComplete,
-      unavailableLiabilityCount,
-      mappedCollateralUsd,
-      unknownCollateralUsd: unknownUsd,
-      ...(unpricedAdmitted && unpricedAssetLabels.length > 0
-        ? { unpricedCollateralUsd: admittedUnpricedUsd, unpricedAssetLabels }
-        : {}),
-      ...(compositionComplete
-        ? { unknownExposurePct: computeUnknownExposurePct(unknownUsd + admittedUnpricedUsd, totalCollateralUsd) }
-        : {}),
-      ...(selfHoldingsComplete ? { selfHeldFpiUsd } : { knownSelfHeldFpiUsd: selfHeldFpiUsd }),
-      ...(totalLiabilitiesUsd != null ? { totalLiabilitiesUsd } : {}),
-      ...(netExternalLiabilitiesUsd != null && netExternalLiabilitiesUsd >= 0 ? { netExternalLiabilitiesUsd } : {}),
-      ...(collateralizationRatio != null ? { collateralizationRatio } : {}),
-      assetCount: assets.length,
-      liabilityCount: payload.liabilities?.length ?? 0,
-      ...(payload.updatedAtBlock != null ? { updatedAtBlock: payload.updatedAtBlock } : {}),
-      ...freshnessMetadataFromTimestamp(
-        sourceTimestamp,
-        "frax-fpi-collateral-api",
-        "Frax FPI collateral response did not include updatedAtTimestampSec",
-      ),
-      ...buildRedemptionSnapshotMetadata({
-        ...(compositionComplete ? { capacityUsd: stableRedeemableUsd } : {}),
-        capacityKind: "live-proxy-validated",
-        freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" : "unverified",
-        ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
-        routeStatus: "open",
-        routeStatusSource: "static-config",
-        sourceUrls: ["https://frax.com/transparency"],
-      }),
-    },
-  };
-}
-
 function isBalanceSheetResponse(payload: unknown): payload is FraxBalanceSheetResponse {
   return Array.isArray((payload as FraxBalanceSheetResponse)?.assets);
-}
-
-function isFpiCollateralResponse(payload: unknown): payload is FraxFpiCollateralResponse {
-  const response = payload as FraxFpiCollateralResponse;
-  return Array.isArray(response?.assets) && Array.isArray(response?.liabilities);
 }
 
 /**
@@ -1467,57 +1116,5 @@ export async function fetchFraxBalanceSheetReserves(
   return {
     ...result,
     warnings: [...(result.warnings ?? []), ...recovery.warnings],
-  };
-}
-
-/**
- * Dedicated adapter entrypoint for the Frax FPI collateral endpoint. FPI
- * balances controlled by FPI system addresses are treasury/self holdings, so
- * they are excluded from reserve slices and netted against FPI liabilities.
- */
-export async function fetchFraxFpiCollateralReserves(
-  _coin: ReserveAdapterCoin,
-  config: LiveReservesConfig,
-  signal: AbortSignal,
-  ctx?: AdapterContext,
-): Promise<AdapterResult> {
-  const payload = await fetchJsonAdapterInput<FraxFpiCollateralResponse>(config, "frax-fpi-collateral", signal, 12_000, ctx);
-
-  if (!isFpiCollateralResponse(payload)) {
-    throw new Error("frax-fpi-collateral adapter requires the FPI collateral API response");
-  }
-  // Reserve composition and the V9-only route attempt publish as one adapter
-  // result. If the issuer payload fails, no new or stale route attempt is
-  // attached to an otherwise non-authoritative reserve snapshot.
-  const params = parseLiveReserveAdapterParams("frax-fpi-collateral", config.params);
-  const unpricedRowValuesUsd = await valueUnpricedFpiCollateralRows(payload.assets ?? [], {
-    ethereum: { rpcUrl: params.rpcUrl, fallbackRpcUrl: params.fallbackRpcUrl },
-    fraxtal: { rpcUrl: params.fraxtalRpcUrl, fallbackRpcUrl: params.fraxtalFallbackRpcUrl },
-  }, signal, ctx);
-  const result = adaptFraxFpiCollateral(payload, unpricedRowValuesUsd);
-  const routeAttempt = await observeFpiControllerRedemptionRoute(params, signal, ctx);
-  const routeWarnings: LiveReserveWarning[] =
-    routeAttempt.status === "rejected"
-      ? [
-          {
-            code: "fpi-controller-route-unavailable",
-            message: `FPI Controller Pool V9 route observation rejected: ${routeAttempt.rejectionCode}`,
-            severity: "warning",
-            effect: "info",
-          },
-        ]
-      : [];
-  return {
-    ...result,
-    ...(routeWarnings.length > 0 || (result.warnings?.length ?? 0) > 0
-      ? { warnings: [...(result.warnings ?? []), ...routeWarnings] }
-      : {}),
-    metadata: {
-      ...(result.metadata ?? {}),
-      redemption: {
-        ...(result.metadata?.redemption ?? {}),
-        v9RouteAttempt: routeAttempt,
-      },
-    },
   };
 }

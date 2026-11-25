@@ -12,11 +12,11 @@ export const PORTFOLIO_PRESETS: readonly PortfolioPreset[] = [
   },
   {
     title: "Treasury Heavy",
-    description: "A mix tilted toward tokenized T-bills and institutional cash wrappers.",
+    description: "A mix tilted toward Treasury-backed fixed-par stablecoins and institutional cash reserves.",
     holdings: [
-      { coinId: "buidl-blackrock", amount: 30 },
-      { coinId: "usdy-ondo-finance", amount: 25 },
-      { coinId: "usyc-hashnote", amount: 25 },
+      { coinId: "usdtb-ethena", amount: 30 },
+      { coinId: "frxusd-frax", amount: 25 },
+      { coinId: "usd0-usual", amount: 25 },
       { coinId: "usdc-circle", amount: 20 },
     ],
   },

@@ -3,6 +3,7 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { DigestInputData } from "@shared/types/digest";
 import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
 import { getCirculatingRawOrNull, isOutageFallbackCarry } from "@shared/lib/supply";
+import { isTokenizedFundId } from "@shared/lib/stablecoins/listing-governance";
 import { DEWS_SIGNAL_LABELS, type DewsSignalKey } from "@shared/lib/dews-config";
 import { THREAT_BAND_ORDER, isDewsAlertBand, isThreatBand } from "@shared/lib/classification";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
@@ -82,7 +83,7 @@ export async function collectSafetyScores(
     }
 
     const allGrades: CanonicalSafetyGradeRow[] = source.snapshot.cards
-      .filter((card) => ctx.trackedStablecoinIds.has(card.id))
+      .filter((card) => ctx.trackedStablecoinIds.has(card.id) && !isTokenizedFundId(card.id))
       .flatMap((card) => {
         if (card.ratingStatus === "pipeline-gap" || card.grade === null) return [];
         const pillars = projectV9EvidencePillars(card.pillars, card.scoreTrace.aggregation?.pricedUnknownPillars);
@@ -384,6 +385,7 @@ export async function collectGradeTransitions(
     const gradeMap = new Map(safetyGrades.map((grade) => [grade.id, grade]));
     const eligibleIds = ctx.trackedStablecoinAssets
       .filter((coin) => {
+        if (isTokenizedFundId(coin.id)) return false;
         const supply = getCirculatingRawOrNull(coin);
         return gradeMap.has(coin.id) && supply !== null && supply > 10_000_000;
       })

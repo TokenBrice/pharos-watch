@@ -563,7 +563,21 @@ function assertPreviousReaderSource() {
   // No public card, breakdown, or trace schema changed; every pre-dust input still parses
   // identically (verified by substituting fd0259e97's two files, which restores the prior
   // 45c54905… digest).
-  if (hash.digest("hex") !== "28090be64f07c33f83e68f3bba8013a5520abd76cd0123861156330119e3c66f") throw new Error("Pre-dust reader source/refinement inputs changed");
+  // v10.55 + listing-policy v2 refresh: stablecoin-taxonomy.ts (48315a494) replaces retired
+  // listing classes with tokenized-fund/review-hold; safety-score-v9.ts appends
+  // tokenized-fund-not-graded to V9_REASON_CODES; safety-score-v9-public-attribution.ts adds
+  // isUngradedTokenizedFundCard (only matching tokenized-fund-not-graded NR cards); and
+  // report-cards-v9.ts adds optional notRatedReason on SafetyGradesResponseSchema. Every
+  // pre-dust input still parses identically (verified against base commit 3660bd95c).
+  // Delist-code adapter prune (b793b64c9): live-reserve-core.ts removes 9 retired adapter keys
+  // from ADAPTER_KEYS (unused by reserve-input.ts or any public card, breakdown, or trace schema);
+  // substituting c4726bf73's live-reserve-core.ts restores the prior ac9397e4… digest.
+  // v10.55 fx-safety refresh: safety-score-v9-public-attribution.ts exports primaryV9NotRatedReason
+  // (prioritizing tokenized-fund-not-graded) and extends isUngradedTokenizedFundCard exemption to
+  // serial dependency attribution; report-cards-v9.ts uses primaryV9NotRatedReason in
+  // projectSafetyGrades. Both changes are strictly scoped to tokenized-fund-not-graded (absent
+  // from PRE_DUST_REASON_CODES), so every pre-dust input parses identically.
+  if (hash.digest("hex") !== "b35c7f4b8d0b84ce35e7e26a7b66ffe40c83aaea908d875b2bd18a4fbf85a9c1") throw new Error("Pre-dust reader source/refinement inputs changed");
 }
 
 export async function previousReader() {
@@ -578,7 +592,7 @@ export async function previousReader() {
     return { default: { ...policy.default,
       reasonRegistry: policy.default.reasonRegistry.map((reason) => PRE_DUST_REASON_CODES.includes(reason.code)
         ? reason
-        : { ...reason, permittedTreatments: ["diagnostic"], defaultTreatment: "diagnostic" }) } };
+        : { ...reason, defaultFactClass: "optional-unsupported", permittedTreatments: ["diagnostic"], defaultTreatment: "diagnostic" }) } };
   });
   vi.doMock("../safety-score-v9", async (original) => ({
     ...await original<typeof import("../safety-score-v9")>(),

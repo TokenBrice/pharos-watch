@@ -147,9 +147,11 @@ export function NonUsdHero({
   const shareDetail = trendStats
     ? `as of ${formatChartDate(trendStats.latestDate * 1000, "short-year")}${trendStats.latestCoverageIncomplete ? " · partial coverage" : ""}`
     : undefined;
-  const changeDetail = trendStats?.valueCoverageIncomplete
-    ? "tracked core history · partial coverage"
-    : "tracked core history";
+  const changeDetail = trendStats?.yearlyDeltaWithheldReason === "perimeter-change"
+    ? "withheld across perimeter change"
+    : trendStats?.valueCoverageIncomplete
+      ? "tracked core history · partial coverage"
+      : "tracked core history";
 
   return (
     <div

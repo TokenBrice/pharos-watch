@@ -137,6 +137,8 @@ interface ScreenerTableProps {
   dataState: NonNullable<TablePaginationProps["dataState"]>;
   onClearFilters?: () => void;
   hasActiveFilters: boolean;
+  hiddenFundMatchCount?: number;
+  onIncludeFunds?: () => void;
   sort: DataTableSortControls<ScreenerSortKey>;
   selectedIds?: readonly string[];
   onToggleSelect?: (coinId: string) => void;
@@ -150,6 +152,8 @@ export function ScreenerTable({
   dataState,
   onClearFilters,
   hasActiveFilters,
+  hiddenFundMatchCount = 0,
+  onIncludeFunds,
   sort,
   selectedIds: controlledSelectedIds,
   onToggleSelect: controlledToggleSelect,
@@ -312,7 +316,12 @@ export function ScreenerTable({
             Screener inputs unavailable. Retry using the data notice above.
           </p>
         ) : rows.length === 0 ? (
-          <ScreenerEmptyState hasActiveFilters={hasActiveFilters} onClearFilters={onClearFilters} />
+          <ScreenerEmptyState
+            hasActiveFilters={hasActiveFilters}
+            onClearFilters={onClearFilters}
+            hiddenFundMatchCount={hiddenFundMatchCount}
+            onIncludeFunds={onIncludeFunds}
+          />
         ) : (
           <div className="space-y-3">
             {pageRows.map((row) => (
@@ -352,7 +361,13 @@ export function ScreenerTable({
             </DataTableEmptyRow>
           ) : rows.length === 0 ? (
             <DataTableEmptyRow colSpan={columns.length}>
-              <ScreenerEmptyState hasActiveFilters={hasActiveFilters} onClearFilters={onClearFilters} compact />
+              <ScreenerEmptyState
+                hasActiveFilters={hasActiveFilters}
+                onClearFilters={onClearFilters}
+                hiddenFundMatchCount={hiddenFundMatchCount}
+                onIncludeFunds={onIncludeFunds}
+                compact
+              />
             </DataTableEmptyRow>
           ) : (
             pageRows.map((row, index) => (
@@ -520,13 +535,17 @@ function DewsReading({ score, band }: { score: number | null; band?: ThreatBand 
 function ScreenerEmptyState({
   hasActiveFilters,
   onClearFilters,
+  hiddenFundMatchCount = 0,
+  onIncludeFunds,
   compact = false,
 }: {
   hasActiveFilters: boolean;
   onClearFilters?: () => void;
+  hiddenFundMatchCount?: number;
+  onIncludeFunds?: () => void;
   compact?: boolean;
 }) {
-  if (!hasActiveFilters) {
+  if (!hasActiveFilters && hiddenFundMatchCount === 0) {
     return (
       <div className={compact ? "space-y-2" : "rounded-xl border border-dashed border-border/70 bg-background/35 px-4 py-8 text-center text-sm text-muted-foreground"}>
         <p>No stablecoins available in this dataset.</p>
@@ -534,20 +553,38 @@ function ScreenerEmptyState({
     );
   }
 
+  const hiddenFundsHint = hiddenFundMatchCount > 0
+    ? `${hiddenFundMatchCount} tokenized ${hiddenFundMatchCount === 1 ? "fund matches" : "funds match"} these filters and ${hiddenFundMatchCount === 1 ? "is" : "are"} currently hidden.`
+    : undefined;
+
   return (
     <EmptyStateIllustration
       kind="no-matches"
       title="No stablecoins match these filters."
+      description={hiddenFundsHint}
       className={compact ? "py-6" : "rounded-xl border border-dashed border-border/70 bg-background/35 px-4"}
       action={
-        onClearFilters ? (
-          <button
-            type="button"
-            onClick={onClearFilters}
-            className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/60 bg-background/60 px-4 py-2 text-sm text-foreground hover:text-foreground/80 md:min-h-9"
-          >
-            Reset filters and try again.
-          </button>
+        onIncludeFunds || onClearFilters ? (
+          <>
+            {hiddenFundMatchCount > 0 && onIncludeFunds ? (
+              <button
+                type="button"
+                onClick={onIncludeFunds}
+                className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border bg-foreground px-4 py-2 text-sm font-medium text-background transition-opacity hover:opacity-90 md:min-h-9"
+              >
+                Include tokenized funds ({hiddenFundMatchCount})
+              </button>
+            ) : null}
+            {onClearFilters ? (
+              <button
+                type="button"
+                onClick={onClearFilters}
+                className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/60 bg-background/60 px-4 py-2 text-sm text-foreground hover:text-foreground/80 md:min-h-9"
+              >
+                Reset filters and try again.
+              </button>
+            ) : null}
+          </>
         ) : undefined
       }
     />
@@ -604,7 +641,14 @@ function ScreenerMobileCard({
 
       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         {row.states?.[0] ? <CoinStateChip state={row.states[0]} showDetail /> : null}
-        {row.safetyGrade !== null || row.ratingStatus === "pipeline-gap" ? (
+        {row.isTokenizedFund && row.ratingStatus !== "pipeline-gap" ? (
+          <span
+            className="whitespace-nowrap rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-2xs font-medium text-muted-foreground"
+            title="Tokenized fund — not graded on Safety Score"
+          >
+            Not graded
+          </span>
+        ) : row.safetyGrade !== null || row.ratingStatus === "pipeline-gap" ? (
           <SafetyGradeBadge
             grade={row.safetyGrade}
             score={row.safetyScore}
@@ -718,7 +762,14 @@ function ScreenerTableRow({
       </TableCell>
       <DesktopScoreCell value={row.liquidityScore} />
       <TableCell className="whitespace-nowrap text-center">
-        {row.safetyGrade !== null || row.ratingStatus === "pipeline-gap" ? (
+        {row.isTokenizedFund && row.ratingStatus !== "pipeline-gap" ? (
+          <span
+            className="inline-flex items-center rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-2xs font-medium text-muted-foreground"
+            title="Tokenized fund — not graded on Safety Score"
+          >
+            Not graded
+          </span>
+        ) : row.safetyGrade !== null || row.ratingStatus === "pipeline-gap" ? (
           <SafetyGradeBadge
             grade={row.safetyGrade}
             score={row.safetyScore}
@@ -777,6 +828,7 @@ function ScreenerTableRow({
 // than fetching or reconstructing the full card.
 function projectScreenerTopDriver(row: ScreenerRow): SafetyScoreTopDriverProps["driver"] {
   if (row.ratingStatus === "pipeline-gap" || row.ratingStatus === null) return null;
+  if (row.isTokenizedFund) return null;
   if (row.safetyGrade === null || row.safetyGrade === "NR") {
     return {
       kind: "withheld",
@@ -808,6 +860,16 @@ function projectScreenerTopDriver(row: ScreenerRow): SafetyScoreTopDriverProps["
 }
 
 function SafetyProfile({ row, compact = false }: { row: ScreenerRow; compact?: boolean }) {
+  if (row.isTokenizedFund && row.ratingStatus !== "pipeline-gap") {
+    return (
+      <span
+        className="whitespace-nowrap rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-3xs font-medium leading-none text-muted-foreground"
+        title="Tokenized fund — not graded on Safety Score"
+      >
+        Tokenized fund
+      </span>
+    );
+  }
   const partial = describePartialEvidence(row);
   const unavailableEvidence = row.safetyEvidence === null || row.safetyEvidence === "pipeline-gap";
   const evidenceLabel = row.safetyEvidence === null ? "Unavailable"

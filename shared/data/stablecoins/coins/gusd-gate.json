@@ -69,22 +69,14 @@
       "message": "Gate's October 20, 2026 announcement asks holders of GUSD on ABS (Abstract) to deposit and convert through Gate before November 30, 2026 at 08:00 UTC because ABS is expected to cease operations on December 15. This is an ABS-route warning, not a whole-token redemption suspension. Source: https://www.gate.com/announcements/article/102321"
     }
   ],
-  "liveReservesConfig": {
-    "adapter": "curated-validated",
-    "version": 1,
-    "semantics": "collateral-mix",
-    "breakerScope": "gusd-gate",
-    "display": {
-      "url": "https://www.gate.com/staking/USDT?isDebtType=1&pid=33",
-      "label": "Gate USD"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
-      }
+  "launchDate": "2025-08-29",
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "Exchange account-linked yield product redeemable only inside Gate accounts with undisclosed reserves, not an open fixed-par stablecoin (listing policy 2.0).",
+    "source": {
+      "label": "Gate GUSD product page",
+      "url": "https://www.gate.com/staking/USDT?isDebtType=1&pid=33"
     }
-  },
-  "launchDate": "2025-08-29"
+  }
 }

@@ -79,26 +79,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
-  "liveReservesConfig": {
-    "adapter": "nest-vault-positions",
-    "version": 1,
-    "semantics": "collateral-mix",
-    "breakerScope": "ntbill-nest",
-    "display": {
-      "url": "https://www.nest.credit/",
-      "label": "Nest Credit API"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "http-json",
-        "url": "https://api.nest.credit/v1/vaults/nest-treasury-vault/positions"
-      }
-    },
-    "params": {
-      "priceUrl": "https://api.nest.credit/v1/vaults/nest-treasury-vault/price",
-      "lastPriceUpdateUrl": "https://api.nest.credit/v1/vaults/nest-treasury-vault/last-price-update"
-    }
-  },
   "yieldConfig": {
     "yieldSource": "Nest Treasury Vault NAV",
     "yieldType": "nav-appreciation"
@@ -110,5 +90,14 @@
       "message": "nTBILL is a Nest vault share whose value tracks the underlying Treasury fund book. It behaves like a vault share rather than a hard 1:1 par stablecoin."
     }
   ],
-  "launchDate": "2025-03-15"
+  "launchDate": "2025-03-15",
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-11-24",
+    "reason": "NAV-accreting Nest Treasury vault share routing into JTRSY and USTB, not a fixed-par stablecoin; no active stablecoin links it as reserve backing (listing policy 2.0).",
+    "source": {
+      "label": "Nest Credit documentation",
+      "url": "https://docs.nest.credit/"
+    }
+  }
 }

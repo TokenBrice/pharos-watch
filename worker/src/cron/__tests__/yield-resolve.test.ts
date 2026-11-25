@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
-import { OPTIONAL_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
 import {
   findPublishedYieldRow,
   getYieldRankingsCachePayload,
@@ -24,7 +23,6 @@ import {
 import { makeDlYieldPool } from "./yield-resolve.test-support";
 import { buildDlStablecoinPoolsCache } from "../yield-sync/cache";
 import { appendOptionalYieldCandidate, appendPoolFamilyYieldSources, type YieldCandidateAppendStatus } from "../yield-sync/resolve-pools";
-import { loadOndoOracleAnchorRow } from "../yield-sync/optional-nav-history";
 import { loadTier1PrevRateRows } from "../yield-sync/resolve-observations";
 import type { ResolvedYieldCandidate, ResolvedYieldEntry } from "../yield-sync/types";
 
@@ -195,84 +193,6 @@ describe("tracked optional source anchors", () => {
     } finally {
       sqlite.close();
       vi.useRealTimers();
-    }
-  });
-
-
-  it("ignores unpublished Ondo oracle anchor rows when selecting prior exchange rates", async () => {
-    const sqlite = createLatestSchemaSqlite().sqlite;
-    try {
-      const insertHistory = sqlite.prepare(
-        `INSERT INTO yield_history (
-          stablecoin_id, source_key, apy, data_source, exchange_rate, recorded_at,
-          publication_generation_id, publication_state
-        ) VALUES (?, ?, 0, 'defillama', ?, ?, ?, ?)`,
-      );
-      const nowSec = 1_747_000_000;
-      const { stablecoinId, sourceKey } = OPTIONAL_YIELD_SOURCES.ondo;
-      insertHistory.run(stablecoinId, sourceKey, 1.09, nowSec - 8 * 86_400, "gen-failed", "failed");
-      insertHistory.run(stablecoinId, sourceKey, 1.08, nowSec - 9 * 86_400, "gen-staged", "staged");
-      insertHistory.run(stablecoinId, sourceKey, 1.07, nowSec - 10 * 86_400, "gen-published", "published");
-      insertHistory.run(stablecoinId, sourceKey, 1.06, nowSec - 11 * 86_400, null, null);
-
-      const row = await loadOndoOracleAnchorRow(createSqliteD1(sqlite), nowSec);
-
-      expect(row?.exchange_rate).toBe(1.07);
-    } finally {
-      sqlite.close();
-    }
-  });
-
-  it("falls back to the daily tier for an anchor older than the raw retention window", async () => {
-    // Daily history must cover the 30–45 day NAV window after raw retention.
-    const sqlite = createLatestSchemaSqlite().sqlite;
-    try {
-      const nowSec = 1_747_000_000;
-      const { stablecoinId, sourceKey } = OPTIONAL_YIELD_SOURCES.ondo;
-      sqlite
-        .prepare(
-          `INSERT INTO yield_history_daily (
-            stablecoin_id, source_key, snapshot_date, recorded_at, is_best, apy,
-            data_source, exchange_rate, publication_state
-          ) VALUES (?, ?, ?, ?, 1, 0, 'protocol-api', ?, 'published')`,
-        )
-        .run(stablecoinId, sourceKey, nowSec - 40 * 86_400, nowSec - 40 * 86_400, 1.11);
-
-      const row = await loadOndoOracleAnchorRow(createSqliteD1(sqlite), nowSec);
-
-      expect(row?.exchange_rate).toBe(1.11);
-      expect(row?.recorded_at).toBe(nowSec - 40 * 86_400);
-    } finally {
-      sqlite.close();
-    }
-  });
-
-  it("prefers the raw tier when both tiers can satisfy the anchor window", async () => {
-    const sqlite = createLatestSchemaSqlite().sqlite;
-    try {
-      const nowSec = 1_747_000_000;
-      const { stablecoinId, sourceKey } = OPTIONAL_YIELD_SOURCES.ondo;
-      sqlite
-        .prepare(
-          `INSERT INTO yield_history (
-            stablecoin_id, source_key, apy, data_source, exchange_rate, recorded_at, publication_state
-          ) VALUES (?, ?, 0, 'protocol-api', ?, ?, 'published')`,
-        )
-        .run(stablecoinId, sourceKey, 1.09, nowSec - 10 * 86_400);
-      sqlite
-        .prepare(
-          `INSERT INTO yield_history_daily (
-            stablecoin_id, source_key, snapshot_date, recorded_at, is_best, apy,
-            data_source, exchange_rate, publication_state
-          ) VALUES (?, ?, ?, ?, 1, 0, 'protocol-api', ?, 'published')`,
-        )
-        .run(stablecoinId, sourceKey, nowSec - 40 * 86_400, nowSec - 40 * 86_400, 1.11);
-
-      const row = await loadOndoOracleAnchorRow(createSqliteD1(sqlite), nowSec);
-
-      expect(row?.exchange_rate).toBe(1.09);
-    } finally {
-      sqlite.close();
     }
   });
 });

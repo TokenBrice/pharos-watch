@@ -28,7 +28,7 @@ vi.mock("../sources-optional", async (importOriginal) => {
 });
 
 const now = 1790467200;
-const excluded = ["vbill-vaneck", "stkgho-umbrella-aave", "bc3m-backed"];
+const excluded = ["vbill-vaneck", "stkgho-umbrella-aave", "eutbl-spiko"];
 const frozenExcluded = ["usdb-blast", "usda-avalon"];
 
 function benchmarks() {
@@ -118,10 +118,6 @@ describe("derived source admission", () => {
       expect(row.provenance).not.toHaveProperty("benchmarkFreshness");
     } else {
       expect(goldSources).toEqual([]);
-    }
-    for (const id of ["fpi-frax", "isc-international-stable-currency"]) {
-      expect(result.resolved.find((entry) => entry.id === id && entry.yield?.dataSource === "price-derived")
-        ?.yield?.currentApy).toBeCloseTo((Math.pow(1.01, 365.25 / 30) - 1) * 100);
     }
   });
 
@@ -290,7 +286,7 @@ describe("derived source admission", () => {
     try {
       const insert = sqlite.prepare(`INSERT INTO supply_history
         (stablecoin_id, snapshot_date, circulating_usd, price, price_observed_at) VALUES (?, ?, 1e6, ?, ?)`);
-      const id = "filqa-fidelity-international";
+      const id = "earnusd-lido";
       const quoteAt = now - DAY_SECONDS + 60;
       const anchorAt = quoteAt - 8 * DAY_SECONDS;
       insert.run(id, now - 8 * DAY_SECONDS, 1, anchorAt);

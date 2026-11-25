@@ -1,4 +1,3 @@
-import { OPTIONAL_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
 import { buildOnChainSourceKey } from "../yield-utils";
 
 interface YieldHistoryIdentityTransitions {
@@ -14,7 +13,6 @@ export const YIELD_HISTORY_IDENTITY_TRANSITIONS: YieldHistoryIdentityTransitions
   ],
   legacyCarryForwardBreaks: [
     { stablecoinId: "scrvusd-curve", sourceKey: "onchain:scrvusd-curve:scrvusd-current-rate" },
-    { stablecoinId: OPTIONAL_YIELD_SOURCES.ondo.stablecoinId, sourceKey: OPTIONAL_YIELD_SOURCES.ondo.sourceKey },
   ],
   ownershipHandoffs: {
     "usde-ethena": [

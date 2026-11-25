@@ -209,22 +209,6 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     expiresAt: Date.UTC(2026, 11, 6, 12, 0) / 1000,
   },
   {
-    stablecoinId: "spusd-soulpeg",
-    owner: "ops",
-    reason:
-      "Reviewed 2026-11-24 14:37 UTC with fresh GETs (owner decision #12): CoinGecko soulpeg-usd remains frozen at $0.991029 ($6,660,966.28 cap, $49.65 24h vol) last updated 2026-11-21T01:25:49Z (outside the 15-minute primary budget); both tickers — PancakeSwap (v2) ($0.996934, last traded 2026-11-20T15:25:50Z) and Uniswap V3 (BSC) ($0.991029, last traded 2026-11-20T17:24:55Z) — are flagged is_stale true. DefiLlama detail 413 publishes price null (circulating $54,693,539.91) and coins.llama.fi returns {} for coingecko:soulpeg-usd and BSC 0x40ff3dea2eec93a7b71879874dc4407918da77a6. Exact-contract BSC DexScreener returns []. GeckoTerminal BSC pools hold only sub-floor liquidity with zero 24h volume and zero 24h trades: PancakeSwap V2 SPUSD/USDC holds $8,564.42 and Uniswap V3 SPUSD/USDC holds $3,631.65, far below the unchanged $50K floor. No protocol-redemption USD quote exists because ordinary unwrap returns the SoulPeg sUSDC receipt rather than USDC. Keep spUSD active and the price missing without admitting a stale mark; all admission gates preserved. Owner ops rechecks for an admitted observed market by 2026-12-08 14:37 UTC.",
-    sources: [
-      "https://api.coingecko.com/api/v3/simple/price?ids=soulpeg-usd&vs_currencies=usd&include_market_cap=true&include_24hr_vol=true&include_last_updated_at=true",
-      "https://api.coingecko.com/api/v3/coins/soulpeg-usd/tickers",
-      "https://stablecoins.llama.fi/stablecoin/413",
-      "https://coins.llama.fi/prices/current/coingecko:soulpeg-usd,bsc:0x40ff3dea2eec93a7b71879874dc4407918da77a6",
-      "https://api.dexscreener.com/token-pairs/v1/bsc/0x40ff3dea2eec93a7b71879874dc4407918da77a6",
-      "https://api.geckoterminal.com/api/v2/networks/bsc/tokens/0x40ff3dea2eec93a7b71879874dc4407918da77a6/pools",
-    ],
-    reviewedAt: Date.UTC(2026, 10, 24, 14, 37) / 1000,
-    expiresAt: Date.UTC(2026, 11, 8, 14, 37) / 1000,
-  },
-  {
     stablecoinId: "usdplus-streamflow",
     owner: "ops",
     reason:

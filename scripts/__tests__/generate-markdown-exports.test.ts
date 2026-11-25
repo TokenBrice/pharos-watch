@@ -11,6 +11,7 @@ import {
   renderStablecoinDetail,
 } from "../lib/markdown-renderers";
 import { writeMarkdownRoute } from "../maintenance/generate-markdown-exports";
+import { renderLlmsTxt } from "../maintenance/generate-llms-txt";
 import { MARKDOWN_FIXTURE_RELEASE } from "../lib/markdown-fixture-release";
 import { buildStablecoinFaqItems } from "../../src/components/stablecoin-detail/static-seo-content";
 import { ContractDeployments } from "../../src/components/stablecoin-detail/contract-deployments";
@@ -25,7 +26,8 @@ import { METHODOLOGY_CHANGELOG_REGISTRY } from "@shared/lib/methodology-versions
 import { METHODOLOGY_HISTORY_ARCHIVES } from "@shared/lib/methodology-versions/archives";
 
 import { CHAIN_META } from "@shared/types/chain-identity";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { isTokenizedFundId } from "@shared/lib/stablecoins/listing-governance";
 import type { StablecoinAiSummary } from "@shared/types/editorial";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { makeCoverageCoin as coin } from "./helpers/coverage-coin";
@@ -127,6 +129,24 @@ describe("stablecoin markdown", () => {
     expect(md).toContain("The current Safety Score and live assessment are available on the interactive page.");
     expect(md).not.toContain("Holds a N/A grade.");
     expect(md).not.toContain("{{grade}}");
+  });
+
+  it("uses tokenized-fund framing and suppresses live Safety Score notices for active funds and frozen archives", () => {
+    for (const id of ["buidl-blackrock", "eutbl-spiko"] as const) {
+      const md = renderStablecoinDetail(id, { [id]: claimedSummary }, MARKDOWN_FIXTURE_RELEASE);
+      expect(md).toContain("Tokenized Fund Profile");
+      expect(md).toContain("Build-time tokenized fund profile");
+      expect(md).toContain("Tokenized fund — not a stablecoin; not Safety-graded");
+      expect(md).not.toContain("Stablecoin Analytics");
+      expect(md).not.toContain("Build-time stablecoin profile");
+      expect(md).not.toContain("The current Safety Score and live assessment are available on the interactive page.");
+      expect(md).not.toContain("{{grade}}");
+    }
+
+    const frozenMd = renderStablecoinDetail("fpi-frax", { "fpi-frax": claimedSummary }, MARKDOWN_FIXTURE_RELEASE);
+    expect(frozenMd).toContain("Stablecoin Analytics");
+    expect(frozenMd).toContain("frozen Pharos archive");
+    expect(frozenMd).not.toContain("The current Safety Score and live assessment are available on the interactive page.");
   });
 
   it.each(["usdt-tether", "usdc-circle"] as const)("puts Quick answers and reviewed Sources before Contracts for %s", (id) => {
@@ -375,6 +395,25 @@ describe("public llms index", () => {
     expect(llms).toContain(
       "- [Depeg history dataset (JSON)](https://pharos.watch/datasets/depeg-history/latest.json): Retrospective depeg-event snapshot with source dates and historical coverage; current depegs are shown on the Depeg Tracker.",
     );
+  });
+
+  it("separates active stablecoins from tokenized funds in renderLlmsTxt headline and indexes", () => {
+    const rendered = renderLlmsTxt();
+    const activeStablecoins = ACTIVE_STABLECOINS.filter((c) => !isTokenizedFundId(c.id));
+    const activeFunds = ACTIVE_STABLECOINS.filter((c) => isTokenizedFundId(c.id));
+    expect(rendered).toContain(
+      `> Pharos tracks ${activeStablecoins.length} active stablecoins and ${activeFunds.length} tokenized funds`,
+    );
+    const stablecoinsIndex = markdownSection(rendered, "## Stablecoins Index");
+    const fundsIndex = markdownSection(rendered, "## Tokenized Funds Index");
+    expect(stablecoinsIndex).toContain("https://pharos.watch/stablecoin/usdc-circle/");
+    expect(stablecoinsIndex).not.toContain("https://pharos.watch/stablecoin/buidl-blackrock/");
+    expect(fundsIndex).toContain("https://pharos.watch/stablecoin/buidl-blackrock/");
+    const buidlLine = fundsIndex.split("\n").find((line) => line.includes("/stablecoin/buidl-blackrock/"));
+    const buidlDescription = buidlLine?.split("): ")[1] ?? "";
+    expect(buidlDescription).toContain("tokenized fund");
+    expect(buidlDescription).toContain("Not graded on Safety Score.");
+    expect(buidlDescription).not.toMatch(/\bstablecoin\b/i);
   });
 });
 

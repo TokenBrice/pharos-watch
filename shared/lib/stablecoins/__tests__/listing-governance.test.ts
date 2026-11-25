@@ -4,6 +4,8 @@ import {
   LISTING_CLASS_BY_ID,
   getListingClass,
   isCoreAggregateListingClass,
+  isTokenizedFundId,
+  isTokenizedFundListingClass,
 } from "../listing-governance";
 import { TRACKED_STABLECOINS } from "../registry";
 
@@ -24,11 +26,22 @@ describe("listing governance", () => {
     expect(retainedCemeteryIds).toContain("xai-silo-finance");
   });
 
-  it("limits the core aggregate to monetary and cash-equivalent classes", () => {
+  it("limits the core aggregate to core-stablecoin only and identifies tokenized funds", () => {
     expect(isCoreAggregateListingClass("core-stablecoin")).toBe(true);
-    expect(isCoreAggregateListingClass("cash-equivalent")).toBe(true);
     expect(isCoreAggregateListingClass("stablecoin-variant")).toBe(false);
-    expect(isCoreAggregateListingClass("stable-value-investment")).toBe(false);
+    expect(isCoreAggregateListingClass("tokenized-fund")).toBe(false);
+    expect(isCoreAggregateListingClass("review-hold")).toBe(false);
     expect(isCoreAggregateListingClass("excluded")).toBe(false);
+
+    expect(isTokenizedFundListingClass("tokenized-fund")).toBe(true);
+    expect(isTokenizedFundListingClass("core-stablecoin")).toBe(false);
+    expect(isTokenizedFundListingClass("stablecoin-variant")).toBe(false);
+    expect(isTokenizedFundListingClass("review-hold")).toBe(false);
+    expect(isTokenizedFundListingClass("excluded")).toBe(false);
+    expect(isTokenizedFundListingClass(null)).toBe(false);
+
+    expect(isTokenizedFundId("buidl-blackrock")).toBe(true);
+    expect(isTokenizedFundId("usdc-circle")).toBe(false);
+    expect(isTokenizedFundId("unreviewed-asset")).toBe(false);
   });
 });

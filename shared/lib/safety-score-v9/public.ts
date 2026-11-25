@@ -55,7 +55,17 @@ import { effectiveAuthoritySignatureRequirement } from "./control-scope";
 import { v9BridgeMintControlKey, v9ControlChainLabel } from "./control-component-keys";
 import { readableV9PublicWitnesses } from "./public-witness-texts";
 import { assertV9PublicCardProjections } from "../report-cards-v9-projections";
+import { isTokenizedFundId } from "../stablecoins/listing-governance";
+import { isUngradedTokenizedFundCard } from "../../types/safety-score-v9-public-attribution";
 import type { V9OpenEvidence } from "../../types/safety-score-v9-open-evidence";
+
+export const TOKENIZED_FUND_NOT_GRADED_REASON_CODE = "tokenized-fund-not-graded" as const;
+const TOKENIZED_FUND_NOT_GRADED_MESSAGE =
+  "Pharos tracks this asset as a tokenized fund for reserve and dependency transparency and does not assign it a stablecoin Safety Score letter grade.";
+
+function isUngradedTokenizedFundProjection(input: V9PublicCardProjectionInput): boolean {
+  return input.trace.ratingStatus !== "pipeline-gap" && isTokenizedFundId(input.trace.assetId);
+}
 
 type V9PublicAccessProjectionInput = V9AccessPostureResult & {
   reasons?: readonly V9PillarReason[];
@@ -729,8 +739,9 @@ function projectControlBreakdown(
 
 function projectBreakdowns(
   input: V9PublicCardProjectionInput,
+  ungradedTokenizedFund = false,
 ): V9UninternedPublicCard["breakdowns"] {
-  if (input.trace.ratingStatus === "not-rated") return null;
+  if (input.trace.ratingStatus === "not-rated" || ungradedTokenizedFund) return null;
   return {
     backing: projectBackingBreakdown(input),
     exit: projectExitBreakdown(input),
@@ -758,9 +769,20 @@ function canonicalPublicReasons(reasons: readonly V9PillarReason[]): V9Uninterne
   );
 }
 
-function canonicalNrReasons(trace: V9ProductionScoreTrace): V9UninternedPublic<SafetyScoreV9NrReason>[] {
+function canonicalNrReasons(
+  trace: V9ProductionScoreTrace,
+  ungradedTokenizedFund = false,
+): V9UninternedPublic<SafetyScoreV9NrReason>[] {
   if (trace.ratingStatus === "pipeline-gap") return [];
   const reasons: V9UninternedPublic<SafetyScoreV9NrReason>[] = [
+    ...(ungradedTokenizedFund
+      ? [{
+          code: TOKENIZED_FUND_NOT_GRADED_REASON_CODE,
+          message: TOKENIZED_FUND_NOT_GRADED_MESSAGE,
+          field: null,
+          origin: "asset" as const,
+        }]
+      : []),
     ...trace.nrReasons.map((reason) => ({
       code: reason.code,
       message: reason.message,
@@ -783,6 +805,8 @@ function canonicalNrReasons(trace: V9ProductionScoreTrace): V9UninternedPublic<S
     ).values(),
   ].sort(
     (left, right) =>
+      Number(right.code === TOKENIZED_FUND_NOT_GRADED_REASON_CODE) -
+        Number(left.code === TOKENIZED_FUND_NOT_GRADED_REASON_CODE) ||
       compareText(left.origin, right.origin) ||
       compareText(left.code, right.code) ||
       compareText(left.field ?? "", right.field ?? "") ||
@@ -810,7 +834,10 @@ function overallFreshness(input: V9PublicCardProjectionInput): SafetyScoreV9Evid
   return freshness.every((value) => value === "current") ? "current" : "unknown";
 }
 
-function projectPillars(input: V9PublicCardProjectionInput): V9UninternedPublicCard["pillars"] {
+function projectPillars(
+  input: V9PublicCardProjectionInput,
+  ungradedTokenizedFund = false,
+): V9UninternedPublicCard["pillars"] {
   const contributions = new Map(
     input.trace.pillarContributions.map((contribution) => [contribution.pillar, contribution.score]),
   );
@@ -825,7 +852,7 @@ function projectPillars(input: V9PublicCardProjectionInput): V9UninternedPublicC
       throw new Error(`Safety Score v9 ${input.trace.assetId} ${pillar} trace contains a missing pillar`);
     }
     return {
-      score: evaluation.score,
+      score: ungradedTokenizedFund ? null : evaluation.score,
       ...pillarCauseFields(input, pillar),
       supportedComponentKeys: uniqueSorted(evaluation.supportedComponentKeys),
       evidenceLevel: evaluation.evidenceLevel,
@@ -976,7 +1003,10 @@ function projectDocumentationEvidence(
   };
 }
 
-function projectScoreTrace(input: V9PublicCardProjectionInput): V9UninternedPublicCard["scoreTrace"] {
+function projectScoreTrace(
+  input: V9PublicCardProjectionInput,
+  ungradedTokenizedFund = false,
+): V9UninternedPublicCard["scoreTrace"] {
   const trace = input.trace;
   if (trace.aggregation !== null && trace.aggregation.method !== "smooth-bounded-headroom") {
     throw new Error(
@@ -1089,6 +1119,52 @@ function projectScoreTrace(input: V9PublicCardProjectionInput): V9UninternedPubl
       ? null
       : round4(trace.baseAssetScore - trace.deploymentAdjustedScore);
 
+  if (ungradedTokenizedFund) {
+    return {
+      schemaVersion: 4,
+      ...(input.providerRowExclusions?.length ? { providerRowExclusions: input.providerRowExclusions } : {}),
+      legacyAliases: {
+        qualityScore: "weighted-pillar-mean",
+        pegAdjustedScore: "post-deployment-pre-cap-score",
+        score: "post-cap-public-score",
+      },
+      aggregation: null,
+      stages: {
+        weightedPillarMean: null,
+        aggregatedQualityScore: null,
+        pegMultiplier: null,
+        baseAssetScore: null,
+        deploymentAdjustedScore: null,
+        deploymentAdjustmentPoints: null,
+        preCapScore: null,
+        publishedScore: null,
+      },
+      deploymentRisk: {
+        method: "holder-slice-exposure-weighted-v2",
+        totalAdjustmentPoints: null,
+        adjustments: [],
+        unresolvedExposures: [],
+      },
+      adverseAttribution: {
+        semantics: "causal-measured-adverse-v1",
+        items: [],
+      },
+      boundedUncertaintyAttribution: {
+        semantics: "causal-bounded-uncertainty-v1",
+        items: [],
+      },
+      evidenceResponsibility: {
+        semantics: "limiting-fact-cause-v2",
+        totalFactCount: trace.unresolvedFacts.length,
+        facts: responsibilityFacts,
+        summaries: responsibilitySummaries,
+        ...(documentation === undefined ? {} : { documentation }),
+      },
+      scoreAdjustments: [],
+      wrapperParentLimit: null,
+    };
+  }
+
   return {
     schemaVersion: 4,
     ...(input.providerRowExclusions?.length ? { providerRowExclusions: input.providerRowExclusions } : {}),
@@ -1189,8 +1265,12 @@ function projectScoreTrace(input: V9PublicCardProjectionInput): V9UninternedPubl
   };
 }
 
-function allPublicReasonCodes(input: V9PublicCardProjectionInput): V9ReasonCode[] {
+function allPublicReasonCodes(
+  input: V9PublicCardProjectionInput,
+  ungradedTokenizedFund = false,
+): V9ReasonCode[] {
   return uniqueSorted([
+    ...(ungradedTokenizedFund ? [TOKENIZED_FUND_NOT_GRADED_REASON_CODE] : []),
     ...input.trace.nrReasons.map((reason) => reason.code),
     ...input.trace.propagatedParentReasons.map((reason) => reason.code),
     ...PILLARS.flatMap((pillar) => input.scoreInput.pillars[pillar].reasons.map((reason) => reason.code)),
@@ -1252,19 +1332,22 @@ function projectLocalAuthorityExposure(input: V9PublicCardProjectionInput): Safe
 }
 
 function projectSafetyScoreV9CardUnchecked(input: V9PublicCardProjectionInput): V9InternedPublicCardDraft {
-  const isRateable = input.trace.finalScore !== null;
-  const caps = input.trace.caps.map((cap) => ({
-    kind: cap.kind,
-    limit: cap.limit,
-    source: cap.source,
-    reason: cap.reason,
-    binding: isRateable && cap.binding,
-  }));
+  const ungradedTokenizedFund = isUngradedTokenizedFundProjection(input);
+  const isRateable = !ungradedTokenizedFund && input.trace.finalScore !== null;
+  const caps = ungradedTokenizedFund
+    ? []
+    : input.trace.caps.map((cap) => ({
+        kind: cap.kind,
+        limit: cap.limit,
+        source: cap.source,
+        reason: cap.reason,
+        binding: isRateable && cap.binding,
+      }));
   const bindingCap = isRateable ? (caps.find((cap) => cap.binding) ?? null) : null;
-  const breakdowns = projectBreakdowns(input);
+  const breakdowns = projectBreakdowns(input, ungradedTokenizedFund);
   const unknownPricedWeightShare = isRateable
     ? computeV9UnknownPricedWeightShare(breakdowns, input.trace.aggregation) : 0;
-  const localAuthorityExposure = projectLocalAuthorityExposure(input);
+  const localAuthorityExposure = ungradedTokenizedFund ? undefined : projectLocalAuthorityExposure(input);
   return internV9PublicCauseGaps(readableV9PublicWitnesses({
     id: input.trace.assetId,
     supply: input.supply ?? { circulatingUsdAtEvaluation: null, asOfSec: null, generationId: null },
@@ -1274,21 +1357,21 @@ function projectSafetyScoreV9CardUnchecked(input: V9PublicCardProjectionInput): 
       ? {}
       : { backingFromLiveReserves: input.backingFromLiveReserves }),
     ...(input.reserveCompositionAdmission === undefined ? {} : { reserveCompositionAdmission: input.reserveCompositionAdmission }),
-    score: input.trace.finalScore,
-    grade: input.trace.finalGrade,
+    score: ungradedTokenizedFund ? null : input.trace.finalScore,
+    grade: ungradedTokenizedFund ? "NR" : input.trace.finalGrade,
     ...(unknownPricedWeightShare > V9_PROVISIONAL_UNKNOWN_WEIGHT_THRESHOLD ? { provisional: true as const, unknownPricedWeightShare } : {}),
     ...(localAuthorityExposure === undefined ? {} : { localAuthorityExposure }),
-    ratingStatus: input.trace.ratingStatus,
+    ratingStatus: ungradedTokenizedFund ? "not-rated" : input.trace.ratingStatus,
     partialEvidence: projectPartialEvidence(input),
-    qualityScore: input.trace.weightedQuality,
-    pegMultiplier: input.trace.pegMultiplier,
-    pegAdjustedScore: input.trace.preCapScore,
-    pillars: projectPillars(input),
-    weakestPillar: input.trace.weakestPillar,
+    qualityScore: ungradedTokenizedFund ? null : input.trace.weightedQuality,
+    pegMultiplier: ungradedTokenizedFund ? null : input.trace.pegMultiplier,
+    pegAdjustedScore: ungradedTokenizedFund ? null : input.trace.preCapScore,
+    pillars: projectPillars(input, ungradedTokenizedFund),
+    weakestPillar: ungradedTokenizedFund ? null : input.trace.weakestPillar,
     caps,
     bindingCap,
-    nrReasons: canonicalNrReasons(input.trace),
-    reasonCodes: allPublicReasonCodes(input),
+    nrReasons: canonicalNrReasons(input.trace, ungradedTokenizedFund),
+    reasonCodes: allPublicReasonCodes(input, ungradedTokenizedFund),
     evidence: {
       level: overallEvidenceLevel(input),
       freshness: overallFreshness(input),
@@ -1305,7 +1388,7 @@ function projectSafetyScoreV9CardUnchecked(input: V9PublicCardProjectionInput): 
       ...(input.access.freezeLookthrough == null ? {} : { freezeLookthrough: input.access.freezeLookthrough }),
     },
     dependencies: projectDependencies(input),
-    scoreTrace: projectScoreTrace(input),
+    scoreTrace: projectScoreTrace(input, ungradedTokenizedFund),
     breakdowns,
   }));
 }
@@ -1364,6 +1447,7 @@ export function projectSafetyScoreV9CommonModeGroups(
       const trace = resultById.get(assetId)?.trace;
       const card = cardById.get(assetId);
       if (!trace || !card) throw new Error(`Common-mode member ${assetId} has no evaluated public card`);
+      if (isUngradedTokenizedFundCard(card)) return [];
       const deploymentAdjustmentIndices = card.scoreTrace.deploymentRisk.adjustments.flatMap(
         (adjustment, index) => adjustment.failureDomainKey === id ? [index] : [],
       );

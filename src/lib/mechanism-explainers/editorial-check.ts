@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getActiveByArchetype } from "@shared/lib/stablecoins/by-mechanism";
@@ -30,15 +28,13 @@ interface MechanismExplainerSources {
 
 /**
  * Authored mechanism-explainer prose is content, not runtime code: every
- * representative coin must resolve to its own archetype, DEWS bullets may not
- * promise coverage the engine skips, and the OUSG note may not contradict the
- * reviewed reserve composition it describes.
+ * representative coin must resolve to its own archetype and DEWS bullets may
+ * not promise coverage the engine skips.
  *
  * `overrides` exists so the owning test can drive one rule at a time; the guard
  * itself always runs against the authored sources and the real repo files.
  */
 export function mechanismExplainerIssues(
-  repoRoot: string,
   overrides: Partial<MechanismExplainerSources> = {},
 ): string[] {
   const sources: MechanismExplainerSources = {
@@ -93,28 +89,6 @@ export function mechanismExplainerIssues(
     }
   }
 
-  const ousgNote = sources.content.tbill.representativeCoins.find((entry) => entry.coinId === "ousg-ondo-finance")?.note;
-  if (!ousgNote) {
-    issues.push("src/lib/mechanism-explainers: tbill OUSG example is missing its note");
-  } else {
-    try {
-      const { reserves } = JSON.parse(
-        readFileSync(join(repoRoot, "shared/data/stablecoins/domains/reserves/ousg-ondo-finance.json"), "utf8"),
-      ) as { reserves: Array<{ name: string; pct: number }> };
-      const topReserve = [...reserves].sort((left, right) => right.pct - left.pct)[0]?.name ?? "";
-      if (!topReserve.includes("State Street")) {
-        issues.push(`src/lib/mechanism-explainers: OUSG reviewed reserves no longer lead with State Street (${topReserve})`);
-      }
-    } catch (error) {
-      issues.push(`shared/data/stablecoins/domains/reserves/ousg-ondo-finance.json: ${String(error)}`);
-    }
-    if (/mostly BUIDL|FedFund/i.test(ousgNote)) {
-      issues.push("src/lib/mechanism-explainers: OUSG note names a reserve mix its reviewed composition contradicts");
-    }
-    if (!ousgNote.includes("OUSGInstantManager")) {
-      issues.push("src/lib/mechanism-explainers: OUSG note no longer names the OUSGInstantManager route");
-    }
-  }
   return issues;
 }
 

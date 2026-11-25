@@ -1,3 +1,4 @@
+import { CORE_STABLECOIN_AGGREGATE_UNIVERSES } from "./aggregate-universe";
 import { z } from "zod";
 import {
   PriceConfidenceSchema,
@@ -386,7 +387,7 @@ export const NonUsdShareResponseSchema = z.array(NonUsdSharePointSchema);
 export const STABLECOIN_CHART_LEGACY_AGGREGATE_UNIVERSE = "legacy-provider-all-stablecoins-v1" as const;
 export const StablecoinChartAggregateUniverseSchema = z.enum([
   STABLECOIN_CHART_LEGACY_AGGREGATE_UNIVERSE,
-  "core-stablecoins-v1",
+  ...CORE_STABLECOIN_AGGREGATE_UNIVERSES,
 ]);
 
 export const StablecoinChartResponseSchema = z.array(

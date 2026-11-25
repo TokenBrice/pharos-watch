@@ -95,6 +95,31 @@ describe("modeled dependency results", () => {
     view.rerender(surface());
     expect(screen.getAllByRole("columnheader", { name: "Modeled Safety Score change" })).toHaveLength(2);
   });
+  it("shows Not graded for tokenized-fund scenario rows while preserving pipeline-gap", () => {
+    const data = response();
+    data.artifact!.cohort.rootIds = ["buidl-blackrock"];
+    const base = data.artifact!.scenarios[0]!;
+    data.artifact!.scenarios = [{
+      ...base,
+      rootId: "buidl-blackrock",
+      shock: { kind: "score-limit", assetId: "buidl-blackrock", dimension: "final", limit: 20 },
+      results: [
+        { ...base.results[0]!, assetId: "buidl-blackrock", publishedRatingStatus: "not-rated", publishedGrade: "NR", publishedScore: null, modeledRatingStatus: "not-rated", modeledGrade: "NR", modeledScore: null, deltaScore: null },
+        { ...base.results[1]!, assetId: "ustb-superstate", publishedRatingStatus: "rated", publishedGrade: "A", publishedScore: 86, modeledRatingStatus: "rated", modeledGrade: "C", modeledScore: 52, deltaScore: -34 },
+        { ...base.results[1]!, assetId: "usyc-hashnote", publishedRatingStatus: "not-rated", publishedGrade: "NR", publishedScore: null, modeledRatingStatus: "pipeline-gap", modeledGrade: null, modeledScore: null, deltaScore: null, modeledPartialEvidence: { reasonCode: "partial-evidence-pipeline-gap", excludedPillars: ["backing", "exit"], causes: ["A"] } },
+      ],
+    }];
+    query.data = data;
+    render(surface(["buidl-blackrock"]));
+    const panel = screen.getByRole("region", { name: "Modeled Safety Score results" });
+    expect(within(panel).getAllByText("Not graded").length).toBeGreaterThanOrEqual(2);
+    expect(within(panel).getAllByText("Not graded · tokenized fund")).toHaveLength(2);
+    expect(within(panel).getByText("Not graded → Pipeline gap")).toBeTruthy();
+    expect(within(panel).queryByText("NR → NR")).toBeNull();
+    expect(within(panel).queryByText("Modeled NR · change unavailable")).toBeNull();
+    expect(within(panel).queryByText("-34.00 points")).toBeNull();
+  });
+
   it("fails closed on elapsed budget, a failed refetch and a future artifact clock", () => {
     const data = response();
     for (const selected of [selectDependencyScenario(data, ["root"], "", "pub", false, 901 + DEPENDENCY_SCENARIOS_FRESHNESS_BUDGET_SEC), selectDependencyScenario(data, ["root"], "", "pub", true, 1000), selectDependencyScenario(data, ["root"], "", "pub", false, 899)]) {

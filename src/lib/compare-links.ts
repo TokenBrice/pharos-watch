@@ -46,15 +46,12 @@ export const STATIC_COMPARE_PAIRS = [
   ["usde-ethena", "usdf-falcon"],
   ["fxusd-f-x-protocol", "crvusd-curve"],
   ["gho-aave", "usds-sky"],
-  ["usdy-ondo-finance", "buidl-blackrock"],
   ["sdai-sky", "susde-ethena"],
   ["eurc-circle", "eure-monerium"],
   ["eurc-circle", "eur0-usual"],
   ["brla-brla-digital", "brz-transfero"],
   // 2026-10 expansion — sibling demand (combined profile impressions in
   // Search Console) under the same gate: active, non-frozen, full profiles.
-  ["jpyc-jpyc", "jpysc-sbi-startale"],
-  ["usdy-ondo-finance", "usyc-hashnote"],
   ["eurc-circle", "eurcv-societe-generale-forge"],
   ["xaut-tether", "xaum-matrixdock"],
   ["usd1-world-liberty-financial", "usdt-tether"],

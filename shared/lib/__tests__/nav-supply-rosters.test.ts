@@ -3,9 +3,9 @@ import { TRACKED_META_BY_ID } from "../stablecoins/registry";
 import { CURATED_AGGREGATE_EXCLUDED_REPRESENTATIONS, onchainSupplyProbeFamily, selectCuratedAggregateOnchainSupplyProbeContracts } from "../onchain-supply-probe";
 
 describe("NAV native supply rosters", () => {
-  for (const meta of TRACKED_META_BY_ID.values()) {
-    if (!meta.id.endsWith("-spiko") && meta.id !== "safo-spiko-usd" && meta.id !== "usdy-ondo-finance" && meta.id !== "ousg-ondo-finance") continue;
-    it(`requires every reviewed ${meta.symbol} leg or exact IBC representation accounting`, () => {
+  for (const id of ["eutbl-spiko", "ustbl-spiko"] as const) {
+    const meta = TRACKED_META_BY_ID.get(id)!;
+    it(`requires every reviewed ${meta.symbol} leg or exact representation accounting`, () => {
       const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta)!;
       const excluded = CURATED_AGGREGATE_EXCLUDED_REPRESENTATIONS[meta.id] ?? [];
       expect(selected).not.toBeNull();
@@ -20,34 +20,15 @@ describe("NAV native supply rosters", () => {
       })).toBeNull();
     });
   }
-  it.each(["eursafo-spiko", "safo-spiko-usd", "gbpsafo-spiko", "chfsafo-spiko"])("reads both exact Arbitrum registers for %s regardless of catalog order", (id) => {
-    const meta = TRACKED_META_BY_ID.get(id)!;
-    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta)!;
-    const arbitrum = selected.filter(({ contract }) => contract.chain === "arbitrum");
-    expect(arbitrum).toHaveLength(2);
-    expect(new Set(arbitrum.map(({ contract }) => contract.address)).size).toBe(2);
-    expect(arbitrum.every(({ config }) => config.allowZeroSupply)).toBe(true);
-    expect(selectCuratedAggregateOnchainSupplyProbeContracts({ ...meta, contracts: [...meta.contracts!].reverse() }))
-      .toEqual(selected);
-    expect(selectCuratedAggregateOnchainSupplyProbeContracts({ ...meta,
-      contracts: [...meta.contracts!, { ...arbitrum[0].contract, address: "0x0000000000000000000000000000000000000001" }],
-    })).toBeNull();
-  });
-  it("does not excuse mutated IBC denominations or omit their canonical backing leg", () => {
-    const meta = TRACKED_META_BY_ID.get("usdy-ondo-finance")!;
-    expect(selectCuratedAggregateOnchainSupplyProbeContracts({ ...meta,
-      contracts: meta.contracts!.map((contract) => contract.chain === "osmosis" ? { ...contract, address: "ibc/other" } : contract),
-    })).toBeNull();
-  });
-  it("recognizes only supported Stellar identities, native Noble and the reviewed Sui coin", () => {
-    for (const meta of TRACKED_META_BY_ID.values()) {
-      if (meta.id !== "usdy-ondo-finance" && !meta.id.includes("spiko")) continue;
+  it("recognizes only supported Stellar identities and the reviewed Sui coin", () => {
+    for (const id of ["eutbl-spiko", "ustbl-spiko"] as const) {
+      const meta = TRACKED_META_BY_ID.get(id)!;
       for (const contract of meta.contracts ?? []) {
-        if (["stellar", "noble", "sui"].includes(contract.chain)) expect(onchainSupplyProbeFamily(contract)).toBe(contract.chain);
+        if (contract.chain === "stellar") expect(onchainSupplyProbeFamily(contract)).toBe("stellar");
       }
     }
     expect(onchainSupplyProbeFamily({ chain: "stellar", address: "USDY-Cbad", decimals: 7 })).toBeNull();
-    expect(onchainSupplyProbeFamily({ chain: "noble", address: "ibc/unknown", decimals: 18 })).toBeNull();
+    expect(onchainSupplyProbeFamily({ chain: "noble", address: "ausdy", decimals: 18 })).toBeNull();
     expect(onchainSupplyProbeFamily({ chain: "sui", address: "0x123::unknown::COIN", decimals: 6 })).toBeNull();
   });
 });
