@@ -267,6 +267,35 @@ describe("runV9AfterCoreWithinWindow", () => {
       } finally { sqlite.close(); }
     });
 
+    it("yields at :53 while a finished :52 resume slot still has an active :22-seeded Queue run", async () => {
+      const scheduledTimeMs = Date.parse("2026-10-23T09:53:00Z");
+      const core = Date.parse("2026-10-23T09:45:00Z") / 1_000;
+      const seedSlot = Date.parse("2026-10-23T09:22:00Z") / 1_000;
+      const resumeSlot = Date.parse("2026-10-23T09:52:00Z") / 1_000;
+      vi.useFakeTimers();
+      vi.setSystemTime(scheduledTimeMs + 1_000);
+      const { db, sqlite } = createLatestSchemaSqlite();
+      try {
+        sqlite.prepare(`INSERT INTO cron_slot_executions
+          (slot_key,slot_started_at,state,result_status,execution_owner,started_at,updated_at,worker_version)
+          VALUES (?, ?, 'finished', 'ok', 'owner', ?, ?, 'worker-v2')`).run("quarterHourly", core, core, core);
+        sqlite.prepare(`INSERT INTO cron_slot_executions
+          (slot_key,slot_started_at,state,result_status,execution_owner,started_at,updated_at,worker_version)
+          VALUES (?, ?, 'finished', 'ok', 'owner', ?, ?, 'worker-v2')`).run("v9PublicationOffset", resumeSlot, resumeSlot, resumeSlot);
+        sqlite.prepare(`INSERT INTO v9_eval_runs
+          (run_id,schedule_key,slot_started_at,clock_sec,source_generation,base_input_generation_id,
+           registry_fingerprint,evaluation_build_digest,plan_digest,policy_digest,chunk_count,
+           stage,state,execution_owner,created_at,updated_at)
+          VALUES ('run-resumed','v9PublicationOffset',?,?,'src','base','reg','eval','plan','pol',4,'committing','active','owner',?,?)`)
+          .run(seedSlot, seedSlot, seedSlot, resumeSlot);
+        const run = vi.fn(async () => ({ status: "ok" as const, itemCount: 1 }));
+        const yielded = await runV9AfterCoreWithinWindow(attributionOptions(db, scheduledTimeMs), run);
+        expect(yielded).toMatchObject({ status: "skipped_neutral", productivity: { reason: "v9-publication-priority" } });
+        expect(JSON.parse(yielded.metadata!)).toMatchObject({ publicationSlotState: "queue:committing" });
+        expect(run).not.toHaveBeenCalled();
+      } finally { sqlite.close(); }
+    });
+
     it("runs after the publication window closed or when no publication shares the core window", async () => {
       for (const [scheduled, now] of [
         ["2026-10-23T09:23:00Z", "2026-10-23T09:25:00Z"],

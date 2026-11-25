@@ -209,8 +209,10 @@ export async function loadV9PublicationHourAcceptedAtSec(
  * first to claim the lease wins and the other skips. Losing an attribution run
  * costs one 15-minute refresh, losing a publication costs a public Safety
  * Score slot, so attribution yields while this core window's publication slot
- * has no finished row and its execution window is still open. The :52 second
- * chance counts only while its hour still lacks an accepted publication.
+ * has no finished row (or while an ADR-26 Queue evaluation run for the slot —
+ * including a `:22`-seeded chain resumed at `:52` — remains `active`) and its
+ * execution window is still open. The :52 second chance counts only while its
+ * hour still lacks an accepted publication.
  */
 async function loadDueV9PublicationSlot(
   db: D1Database,
@@ -229,20 +231,32 @@ async function loadDueV9PublicationSlot(
   );
   if (slotStartedAt < coreSlotStartedAt || Date.now() >= deadlineMs) return null;
   if (secondChance && await loadV9PublicationHourAcceptedAtSec(db, slotStartedAt) != null) return null;
+  const sql = secondChance
+    ? `SELECT cse.state AS state,
+              (SELECT r.stage
+                 FROM v9_eval_runs r
+                WHERE r.schedule_key = cse.slot_key
+                  AND r.slot_started_at BETWEEN cse.slot_started_at - 1800 AND cse.slot_started_at
+                  AND r.state = 'active'
+                ORDER BY r.created_at DESC, r.run_id DESC
+                LIMIT 1) AS active_queue_stage
+         FROM cron_slot_executions cse
+        WHERE cse.slot_key = 'v9PublicationOffset'
+          AND cse.slot_started_at = ?`
+    : `SELECT cse.state AS state,
+              (SELECT r.stage
+                 FROM v9_eval_runs r
+                WHERE r.schedule_key = cse.slot_key
+                  AND r.slot_started_at = cse.slot_started_at
+                  AND r.state = 'active'
+                ORDER BY r.created_at DESC, r.run_id DESC
+                LIMIT 1) AS active_queue_stage
+         FROM cron_slot_executions cse
+        WHERE cse.slot_key = 'v9PublicationOffset'
+          AND cse.slot_started_at = ?`;
   const row = await runWithOverloadRetry(() =>
     db
-      .prepare(
-        `SELECT cse.state AS state,
-                (SELECT r.stage
-                   FROM v9_eval_runs r
-                  WHERE r.schedule_key = cse.slot_key
-                    AND r.slot_started_at = cse.slot_started_at
-                    AND r.state = 'active'
-                  LIMIT 1) AS active_queue_stage
-           FROM cron_slot_executions cse
-          WHERE cse.slot_key = 'v9PublicationOffset'
-            AND cse.slot_started_at = ?`,
-      )
+      .prepare(sql)
       .bind(slotStartedAt)
       .first<{ state: string; active_queue_stage?: string | null }>(),
   );
