@@ -70,7 +70,7 @@ export interface SundaeSwapAdaUsdLoadResult extends SundaeSwapAdaUsdDiagnostic {
 export type SundaeSwapAdaUsdLoader = () => Promise<SundaeSwapAdaUsdLoadResult | SundaeSwapAdaUsdReference | null>;
 
 /** Validate a clocked CoinGecko ADA/USD quote under the shared freshness authority. */
-export function validateSundaeSwapAdaUsdQuote(
+function validateSundaeSwapAdaUsdQuote(
   priceUsd: unknown,
   observedAtSec: unknown,
   nowSec: number,

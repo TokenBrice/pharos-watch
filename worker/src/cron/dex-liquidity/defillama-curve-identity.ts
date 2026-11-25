@@ -5,7 +5,7 @@ import type { LlamaPool } from "./types";
 
 export const DEFILLAMA_CURVE_IDENTITIES_URL =
   "https://yields.llama.fi/poolsPro?project=curve-dex";
-export const DEFILLAMA_CURVE_IDENTITIES_MAX_ROWS = 2_000;
+const DEFILLAMA_CURVE_IDENTITIES_MAX_ROWS = 2_000;
 export const DEFILLAMA_CURVE_IDENTITIES_MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
 export const DEFILLAMA_CURVE_IDENTITIES_TIMEOUT_MS = 10_000;
 
