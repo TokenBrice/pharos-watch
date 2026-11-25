@@ -33,7 +33,7 @@ Not for:
 - Unknown is not reviewed absence, and a failed read proves neither. Record what stays unknown as a scoped question on the exact control.
 - Route by capability: native issuance belongs to Mint Authority, representations and transfer machinery to Bridge Risk. Never author the same capability in both, invent a native route, or copy a parent's or sibling's qualification.
 - Never target a grade, add relief the evidence does not show, or refresh a review date without re-reading the evidence.
-- Authority: research, write and commit on the task branch without a check-in. Stop and report instead of committing when primary sources or reads conflict on who controls issuance, a control cannot be read at a pin, the review surfaces a live compromise or unremediated incident, or an owning check fails.
+- Authority: research, write and commit on the task branch without a check-in. Stop and report instead of committing when primary sources or reads conflict on who controls issuance, a control cannot be read at a pin, the review surfaces a live compromise or unremediated incident, an active-asset replay shows a Safety Score mover or depeg-verdict shift the edit does not explain, or an owning check fails.
 
 ## Branch Reads And Actions
 
@@ -46,7 +46,7 @@ Not for:
 ## Checks Owned By The Verifier
 
 - `npm run bootstrap:generated`, then `npm run check:stablecoin-data` and `npm run check:generated-artifacts`.
-- `npm run audit:mint-authority-review` and `npm run audit:mint-bridge-ownership` ([Curation Audits](../../../docs/scripts.md#curation-audits)); neither gates a merge nor replaces pinned evidence.
+- `npm run audit:mint-authority-review` and `npm run audit:mint-bridge-ownership`, plus `npm run audit:bridge-route-coverage` when `bridgeRouteRisk` changed ([Curation Audits](../../../docs/scripts.md#curation-audits)); none gates a merge or replaces pinned evidence.
 - Score-affecting edits: the replay, diff and movers checks owned by safety-score-curation.
 - `git diff --check`.
 

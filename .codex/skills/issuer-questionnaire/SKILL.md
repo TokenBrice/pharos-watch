@@ -43,5 +43,5 @@ Route each answer to its owner; none of them is edited here:
 
 - Identity and contracts: [stablecoin-identity-contracts](../stablecoin-identity-contracts/SKILL.md); a full addition or promotion: [stablecoin-addition-orchestrator](../stablecoin-addition-orchestrator/SKILL.md).
 - Reserves, custody and the `collateralQuality` / `custodyModel` labels: [reserve-research](../reserve-research/SKILL.md). Compliance: [compliance-research](../compliance-research/SKILL.md).
-- Mint Authority: [mint-authority-research](../mint-authority-research/SKILL.md). Oracle, bridge-route and blacklistability reviews: the risk-review sidecar under [Domain Ownership](../../../docs/process/stablecoin-research-sidecars.md#domain-ownership). Redemption routes: `docs/redemption-backstops.md`.
+- Mint Authority and bridge-route controls: [mint-authority-research](../mint-authority-research/SKILL.md). Oracle and blacklistability reviews: the risk-review sidecar under [Domain Ownership](../../../docs/process/stablecoin-research-sidecars.md#domain-ownership). Redemption routes: `docs/redemption-backstops.md`.
 - Safety Score overlays, gap classifications, incident reviews and the replay they require: [safety-score-curation](../safety-score-curation/SKILL.md).

@@ -24,7 +24,7 @@ Choose regime `genius`, `mica`, or `both`, then the operation: single-coin resea
 - `mica`: read `docs/mica-tracker.md`, including [status criteria](../../../docs/mica-tracker.md#status-criteria), [boundary rules](../../../docs/mica-tracker.md#boundary-rules) and [source rules](../../../docs/mica-tracker.md#data-sourcing--maintenance).
 - Never claim authorization without primary regulator evidence naming the relevant entity and supporting the exact status. Prefer an omitted field or conservative status to a guess. Record conflicts and negative searches with their review date.
 - "Not assessed" is absence of a row; it is not an out-of-scope finding.
-- Statuses are informational and not a methodology score, with one exception: `genius.issuerEntity` seeds the Safety Score issuer key (`worker/src/lib/safety-score-v9/extension.ts`). Changing it is score-affecting.
+- Statuses are informational and not a methodology score, with one exception: `genius.issuerEntity` seeds the Safety Score issuer key (`issuerEntity` in `worker/src/lib/safety-score-v9/extension-mint.ts`). Changing it is score-affecting.
 
 ## Branch Reads And Actions
 
@@ -44,7 +44,7 @@ Standalone approved edits:
 
 - `npm run bootstrap:generated`, `npm run check:stablecoin-data`, `npm run check:generated-artifacts`.
 - `genius.issuerEntity` changed: the replay and movers gates owned by [safety-score-curation](../safety-score-curation/SKILL.md).
-- Regime-state change: `npm run typecheck`, then confirm the compliance page after the Pages release the tracker requires.
+- Regime-state change: `npm run typecheck`, `npm run typecheck:worker` and `npx vitest run shared/lib/__tests__/compliance-regime-state.test.ts`, then confirm the compliance page and the Worker `/api/compliance` response after the release the tracker requires.
 
 ## Completion Evidence
 

@@ -7,8 +7,8 @@ import { fileURLToPath } from 'node:url';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { parseStrictCliArgs, requireCliString, runDirectCli } from '../../../../scripts/lib/cli-args.mjs';
 import { sumPegBucketsOrNull, getCirculatingRawOrNull, getPrevMonthRawOrNull } from '../../../../shared/lib/supply.ts';
-import { getListingClass } from '../../../../shared/lib/stablecoins/listing-governance.ts';
-import { MARKET_PERIMETER_MARKERS } from '../../../../shared/lib/supply-perimeter-changes.ts';
+import { getListingClass, isCoreAggregateListingClass } from '../../../../shared/lib/stablecoins/listing-governance.ts';
+import { MARKET_PERIMETER_MARKERS, SUPPLY_PERIMETER_CHANGES } from '../../../../shared/lib/supply-perimeter-changes.ts';
 
 const DAY = 86400;
 const launched = Date.now();
@@ -153,18 +153,19 @@ async function main() {
   const coinMap = new Map(coins.map((coin) => [coin.id, coin]));
   // Listing policy: tokenized funds are tracked but are not stablecoins, so they stay out of rankings and aggregates.
   const isFund = (coin) => getListingClass(coin.id) === 'tokenized-fund';
-  const stablecoins = coins.filter((coin) => !isFund(coin));
+  // Aggregates follow the headline's core universe: a variant's supply is already counted in its parent.
+  const stablecoins = coins.filter((coin) => { const listingClass = getListingClass(coin.id); return listingClass == null || isCoreAggregateListingClass(listingClass); });
   const movers = [];
   const excluded = [];
   for (const coin of coins) {
     const now = getCirculatingRawOrNull(coin);
     const before = getPrevMonthRawOrNull(coin);
-    const row = { id: coin.id, symbol: coin.symbol, pegType: coin.pegType, mechanism: coin.pegMechanism, supplyUsd_now: now, supplyUsd_30dAgo: before, deltaUsd: now != null && before != null ? now - before : null, deltaPct: pct(now, before) };
+    const row = { id: coin.id, symbol: coin.symbol, listingClass: getListingClass(coin.id) ?? '', pegType: coin.pegType, mechanism: coin.pegMechanism, supplyUsd_now: now, supplyUsd_30dAgo: before, deltaUsd: now != null && before != null ? now - before : null, deltaPct: pct(now, before) };
     const reasons = [numericId(coin.id) && 'numeric-id', isFund(coin) && 'tokenized-fund', now == null && 'absent-current', before == null && 'absent-baseline', before === 0 && 'zero-baseline'].filter(Boolean);
     if (reasons.length) excluded.push({ ...row, reason: reasons.join(';') }); else movers.push(row);
   }
   movers.sort(absDelta);
-  const columns = ['id', 'symbol', 'pegType', 'mechanism', 'supplyUsd_now', 'supplyUsd_30dAgo', 'deltaUsd', 'deltaPct'];
+  const columns = ['id', 'symbol', 'pegType', 'mechanism', 'supplyUsd_now', 'supplyUsd_30dAgo', 'deltaUsd', 'deltaPct', 'listingClass'];
   await save('movers-30d.csv', csv(columns, movers));
   await save('movers-excluded.csv', csv([...columns, 'reason'], excluded));
   const attribution = movers.slice(0, 25).map((row) => {
@@ -196,11 +197,15 @@ async function main() {
   const baseline30d = baselineFor(date(start));
   const baselineMtd = baselineFor(`${date(end).slice(0, 7)}-01`);
   // A total on one side of a market perimeter change cannot be compared with a total on the other.
-  const crossed = (row) => row ? MARKET_PERIMETER_MARKERS.find((marker) => row.generatedAt * 1000 < marker.tsMs && marker.tsMs <= current.generatedAt * 1000) ?? null : null;
+  const perimeterSteps = [
+    ...MARKET_PERIMETER_MARKERS.map((marker) => ({ tsMs: marker.tsMs, label: `${marker.shortLabel} (${marker.date})` })),
+    ...SUPPLY_PERIMETER_CHANGES.filter((step) => step.marketWide).map((step) => ({ tsMs: step.changedAt * 1000, label: `${step.stablecoinId} supply perimeter change (${date(step.changedAt)})` })),
+  ];
+  const crossed = (row) => row ? perimeterSteps.find((step) => row.generatedAt * 1000 < step.tsMs && step.tsMs <= current.generatedAt * 1000) ?? null : null;
   const change = (baseline) => {
     const marker = crossed(baseline);
     const comparable = baseline && !marker;
-    return { baseline, deltaUsd: comparable ? current.totalMcapUsd - baseline.totalMcapUsd : null, deltaPct: comparable ? pct(current.totalMcapUsd, baseline.totalMcapUsd) : null, withheld: marker ? `crosses ${marker.shortLabel} (${marker.date})` : null };
+    return { baseline, deltaUsd: comparable ? current.totalMcapUsd - baseline.totalMcapUsd : null, deltaPct: comparable ? pct(current.totalMcapUsd, baseline.totalMcapUsd) : null, withheld: marker ? `crosses ${marker.label}` : null };
   };
   // The peak is taken from the current perimeter only, so its drawdown stays comparable.
   const peak = series.filter((row) => !crossed(row)).reduce((best, row) => row.totalMcapUsd > best.totalMcapUsd ? row : best);

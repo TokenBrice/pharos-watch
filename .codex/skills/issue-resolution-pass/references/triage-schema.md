@@ -38,7 +38,7 @@ One row per open issue. Columns, in order:
 
 Order the plan by urgency flags found here: `ci:nightly-red`, a review or waiver expiring before the next session (`npm run digest:curation` prints the expiry lookahead), an overdue `Due:`, and test-corpus headroom ([Test corpus budget](../../../../docs/testing.md#test-corpus-budget)).
 
-User intake (`data-correction`, `feature-request`): verify the claim against primary sources before any verdict. A coin-addition request is `fix` only after the read-only [runtime gate](../../stablecoin-runtime-price-marketcap-gate/SKILL.md) passes; otherwise `excluded-blocked` with the gate result.
+User intake (`data-correction`, `feature-request`): verify the claim against primary sources before any verdict. A coin-addition request first clears [Instrument Eligibility](../../../../docs/listing-policy.md#instrument-eligibility) (out of scope is `needs-decision`, proposing a decline), and is `fix` only after the read-only [runtime gate](../../stablecoin-runtime-price-marketcap-gate/SKILL.md) passes; otherwise `excluded-blocked` with the gate result.
 
 ## Due-Check Verdicts
 

@@ -12,6 +12,7 @@ Use when a dated operational review, waiver, disposition, exclusion or calendar 
 Not for:
 
 - Safety Score evidence: anything under `shared/data/safety-score-v9/` (chain-maturity reviews included, although the digest lists them) and any `check:calendar-horizon` row that names a redemption config. Use [safety-score-curation](../safety-score-curation/SKILL.md).
+- Yield reviews the digest lists (venue risk, dependency concentration, opportunity exclusions, adapter lifecycle): [yield-coverage-audit-drain](../yield-coverage-audit-drain/SKILL.md) owns them with its own hard stops and recompute.
 - Reserve composition or attestation refreshes: [reserve-research](../reserve-research/SKILL.md).
 - A native roster or perimeter fix that would end a supply carry, re-baseline or omitted-chain exclusion: [supply-plan-authoring](../supply-plan-authoring/SKILL.md).
 - Quarantine, freeze or delist decisions and their `reviewBy` dates: the owner decides under the [lifecycle policy](../../../docs/listing-policy.md#lifecycle-policy).
@@ -35,7 +36,7 @@ Pick the entry point, then give every entry exactly one decision: `retire`, `ren
 - An acknowledgement changes alert classification only. Never change published values, source clocks, price floors, freshness budgets, quarantine, or production review state, leases or checkpoints.
 - A renewal takes effect only when the Worker carrying it is live. Compare the earliest expiry with the next release; [expiry re-arms alerts](../../../docs/runbooks/review-renewal.md#at-expiry) by design.
 - A renewal neither satisfies nor extends a lifecycle or holder-exit deadline. Keep that deadline and its owner in the reason and report it.
-- Authority: research, edit and commit on the task branch without a check-in. Stop and report instead of committing when primary sources conflict or are unreachable, the entry needs a longer window than its cap, the evidence points to termination or delisting, or an owning check fails for a reason the entry does not explain.
+- Authority: research, edit and commit on the task branch without a check-in. Stop and report instead of committing when primary sources conflict or are unreachable, the entry needs a longer window than its cap, the evidence points to termination or delisting, the entry is a publication waiver (`STABLECOIN_PUBLICATION_WAIVERS` in `worker/src/lib/stablecoin-publication-reviews.ts`), a permanent exclusion or a net-new waiver or acknowledgement rather than a within-cap renewal of an existing one (each is an owner decision), or an owning check fails for a reason the entry does not explain.
 
 ## Branch Reads And Actions
 

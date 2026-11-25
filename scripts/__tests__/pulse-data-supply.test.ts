@@ -92,8 +92,8 @@ globalThis.fetch = async (input) => {
       expect(brief).toContain("partial: $0.00M now; current coverage 2/3 (partial)");
       expect(brief).toContain("comparable coverage 1/3 (partial)");
       const excluded = readFileSync(path.join(dir, "data/movers-excluded.csv"), "utf8");
-      expect(excluded).toContain("negative,negative,peggedUSD,negative,,,,,absent-current;absent-baseline");
-      expect(excluded).toContain("zero,zero,peggedUSD,zero,0,0,0,,zero-baseline");
+      expect(excluded).toContain("negative,negative,peggedUSD,negative,,,,,,absent-current;absent-baseline");
+      expect(excluded).toContain("zero,zero,peggedUSD,zero,0,0,0,,,zero-baseline");
     } finally { rmSync(dir, { recursive: true, force: true }); }
   });
 });

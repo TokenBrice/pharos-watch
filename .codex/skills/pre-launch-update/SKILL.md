@@ -46,7 +46,7 @@ A credible primary-source announcement of an in-scope stablecoin gets a pre-laun
 A stub is a normal pre-launch addition and carries its coupled files:
 
 - Headroom under `SAFETY_SCORE_V9_CATALOG_MAX_ASSETS` in `shared/lib/safety-score-v9-capacity-limits.ts`.
-- The coin file, its `blacklistabilityReview` sidecar, `shared/data/stablecoins/canonical-order.json`, and an authored class in `shared/data/stablecoins/listing-decisions.json` (`core-stablecoin` for a fixed-par stub, `stablecoin-variant` with `variantOf`).
+- The coin file, its `blacklistabilityReview` sidecar, `shared/data/stablecoins/canonical-order.json`, and an authored class in `shared/data/stablecoins/listing-decisions.json` (`core-stablecoin`; a pre-launch row cannot declare `variantOf` or the `stablecoin-variant` class until its post-launch promotion).
 - A `data/ai-summaries.json` entry that states only what the announcement supports, and a logo when one exists; `npm run logos:compact` for an oversized raster ([6a](../../../docs/process/adding-a-stablecoin.md#6a-logos)).
 - `npm run bootstrap:generated`, then commit the regenerated tracked artifacts with the stub.
 

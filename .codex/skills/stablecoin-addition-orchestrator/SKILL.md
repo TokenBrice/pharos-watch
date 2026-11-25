@@ -23,7 +23,7 @@ Use for an active listing, a researched pre-launch draft, a pre-launch promotion
 | Publicly issued, gate fails | Runtime gate FAIL, or own open questions the receipt cannot close: keep `status: "pre-launch"` with `launchPhase: "launched"` per [Launched, awaiting data](../../../docs/process/adding-a-stablecoin.md#launched-awaiting-data). Never force it active. |
 | Re-admission | Meet [Re-Admission](../../../docs/listing-policy.md#re-admission) first, then unwind the retirement: `public/_redirects`, `shared/data/stablecoins/legacy-route-redirects.json`, `src/lib/removed-stablecoins.ts`, the retained `excluded` listing decision, and record the application in `docs/listing-policy.md`. |
 | Parent of a tracked variant | Also re-author the child (`variantOf`, `variantKind`, sidecars, `stablecoin-variant` class), update the variant list in `shared/lib/__tests__/stablecoins.test.ts`, and attribute the child's Safety Score movement. |
-| Existing-coin repair routed here by `recommendedSkill` in `scripts/lib/safety-score-v9-missing-data-work-types.ts` | No admission gates. Apply the matching Phase 5 branch and sidecar owner as a standalone approved edit, then that work type's completion criteria. |
+| Existing-coin repair routed here by `recommendedSkill` in `scripts/lib/safety-score-v9-missing-data-work-types.ts` | No admission gates. Apply the work type's own instructions and likely repo areas under the owning schema or sidecar rules as a standalone approved edit, then its completion criteria. |
 
 ## Mandatory Core
 
