@@ -1,39 +1,49 @@
+import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { normalizeChainId } from "@shared/types/chain-identity";
 import { buildChainAddressKey } from "../dex-liquidity/token-resolution";
-import { buildTrackedYieldAssetIndex } from "./identity";
+import { getTrackedContracts } from "./identity";
 
 export interface TrackedOptionalAsset {
   stablecoinId: string;
   symbol: string;
 }
 
+interface TrackedMorphoAsset extends TrackedOptionalAsset {
+  decimals: number;
+}
+
 interface TrackedMorphoFilters {
-  symbols: string[];
-  assetsByChainAddress: Map<string, TrackedOptionalAsset>;
+  assetsByChainAddress: Map<string, TrackedMorphoAsset>;
 }
 
 export function buildMorphoFilters(): TrackedMorphoFilters {
   const stablecoins = ACTIVE_STABLECOINS.filter(
     (meta) => meta.flags.pegCurrency !== "GOLD" && meta.flags.pegCurrency !== "SILVER",
   );
-  return {
-    symbols: [...new Set(stablecoins.map((meta) => meta.symbol))].sort((a, b) => a.localeCompare(b)),
-    assetsByChainAddress: buildTrackedYieldAssetIndex(stablecoins),
-  };
+  const assetsByChainAddress = new Map<string, TrackedMorphoAsset>();
+  for (const meta of stablecoins) {
+    for (const contract of getTrackedContracts(meta)) {
+      const chain = normalizeChainId(contract.chain);
+      const address = contract.address?.trim() ?? "";
+      if (!chain || !address || !isFixedDecimalDeployment(contract)) continue;
+      assetsByChainAddress.set(buildChainAddressKey(chain, address), {
+        stablecoinId: meta.id,
+        symbol: meta.symbol,
+        decimals: contract.decimals,
+      });
+    }
+  }
+  return { assetsByChainAddress };
 }
 
 export function resolveMorphoTrackedAsset(
   filters: TrackedMorphoFilters,
   chain: string,
-  asset: { symbol: string; address?: string | null },
-): TrackedOptionalAsset | null {
-  const address = asset.address?.trim() ?? "";
-  if (address) {
-    const byAddress = filters.assetsByChainAddress.get(buildChainAddressKey(chain, address));
-    if (byAddress) return byAddress;
-  }
-
-  return null;
+  assetAddress: string | null | undefined,
+): TrackedMorphoAsset | null {
+  const address = assetAddress?.trim() ?? "";
+  return address ? (filters.assetsByChainAddress.get(buildChainAddressKey(chain, address)) ?? null) : null;
 }
 
 export function resolveVaultDepositToken(

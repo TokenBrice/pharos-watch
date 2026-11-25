@@ -1,7 +1,9 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import {
   COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
   LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
+  MORPHO_SUPPLEMENTAL_STALE_THRESHOLD_MS,
   PRICE_DERIVED_STALE_THRESHOLD_MS,
   PENDLE_SUPPLEMENTAL_STALE_THRESHOLD_MS,
   RATE_DERIVED_STALE_THRESHOLD_MS,
@@ -10,6 +12,7 @@ import {
   SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
   derivePysNullReason,
   getComparisonAnchorStaleThresholdMs,
+  getRankingAgingThresholdMs,
   getRankingStaleThresholdMs,
 } from "../../lib/yield-ranking-helpers";
 import {
@@ -40,9 +43,12 @@ describe("getRankingStaleThresholdMs", () => {
   });
 
   it("uses the supplemental threshold for protocol-api rows", () => {
-    expect(getRankingStaleThresholdMs("protocol-api", "protocol-api:morpho-vault:ethereum:0xvault")).toBe(
-      SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
-    );
+    const k = (s: string) => getRankingStaleThresholdMs("protocol-api", `protocol-api:${s}:ethereum:0x1`);
+    expect(MORPHO_SUPPLEMENTAL_STALE_THRESHOLD_MS).toBe(CRON_INTERVALS["sync-yield-supplemental"] * 2000);
+    expect([k("beefy"), k("morpho-vault"), k("morpho-net")]).toEqual([
+      SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS, MORPHO_SUPPLEMENTAL_STALE_THRESHOLD_MS, STALE_THRESHOLD_MS,
+    ]);
+    expect(getRankingAgingThresholdMs("protocol-api", "protocol-api:morpho-vault:ethereum:0x1")).toBe(21_600_000);
   });
 
   it("uses the daily pendle budget for pendle rows", () => {
