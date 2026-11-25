@@ -40,6 +40,7 @@ export interface ProcessPoolMetricsInput {
   volumeObservedAtSec?: number;
   validationReferences?: PriceValidationReferences;
   curvePoolCandidatesByFingerprint?: ReadonlyMap<string, readonly CurvePoolEntry[]>;
+  curveBelowFloorTwinFingerprints?: ReadonlySet<string>;
   uniswapV4ExecutionCandidates?: ReadonlyMap<
     string,
     readonly UniswapV4ExecutionCandidate[]
@@ -59,12 +60,16 @@ export interface PoolProcessingContext
     | "uniV3ExecutionCandidates"
     | "measuredTargetCapturedAt"
     | "curvePoolCandidatesByFingerprint"
+    | "curveBelowFloorTwinFingerprints"
     | "uniswapV4ExecutionCandidates"
     | "fallbackCounters"
   > {
   uniV3ExecutionCandidates: Map<string, UniV3ExecutionCandidate[]>;
   measuredTargetCapturedAt: number;
   curvePoolCandidatesByFingerprint: ReadonlyMap<string, readonly CurvePoolEntry[]>;
+  curveBelowFloorTwinFingerprints: ReadonlySet<string>;
+  dlCurvePoolCountByFingerprint?: ReadonlyMap<string, number>;
+  claimedExactCurveAddresses?: ReadonlySet<string>;
   uniswapV4ExecutionCandidates: ReadonlyMap<
     string,
     readonly UniswapV4ExecutionCandidate[]
@@ -79,6 +84,7 @@ export interface ResolvedPoolIdentity {
   protocol: string;
   chainNorm: string;
   reviewedCurveAddress?: string;
+  exactCurveAddress?: string;
   addrCurveKey: string;
   fpCurveKey: string | null;
   symCurveKey: string | null;

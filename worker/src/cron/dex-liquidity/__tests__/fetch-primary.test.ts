@@ -36,6 +36,7 @@ import { fetchJsonWithRetry } from "../../../lib/fetch-retry";
 import { buildDlStablecoinPoolsCache } from "../../yield-sync/cache";
 import type { CurveApiPayload, CurvePool, LlamaPool } from "../types";
 import { buildKnownPoolAddresses, buildCurveLookups, fetchDataSources } from "../fetch-primary";
+import { attachDefiLlamaCurvePoolIdentities } from "../defillama-curve-identity";
 import { logWorkerEvent } from "../../../lib/structured-log";
 import { buildPoolFingerprint } from "../pool-helpers";
 import { buildPoolIdentity, getIdentityDedupReason } from "../pool-identity";
@@ -401,6 +402,26 @@ describe("fetchDataSources", () => {
       expect.stringContaining("poolsPro?project=uniswap-v4"),
       expect.anything(), 0, { timeoutMs: 10_000, maxResponseBytes: 4 * 1024 * 1024 },
     );
+  });
+
+  it("attaches Curve poolsPro identities and reports ok/partial/unavailable", async () => {
+    const E = "Ethereum", x = (c: string) => `0x${c.repeat(40)}`, t = "12345678".split("").map(x), a = x("a"), b = x("b"), c = x("c"), t2 = t.slice(0, 2), t3 = [t[0]!, t[2]!];
+    const mk = (pool: string, underlyingTokens = t2, chain = E, tvlUsd = 1e5): LlamaPool => ({ ...FAKE_DL_POOLS[0], pool, chain, project: "curve-dex", symbol: "A-B", exposure: "multi", underlyingTokens, tvlUsd, volumeUsd1d: null, volumeUsd7d: null, sigma: 0, count: 1 });
+    const pr = (pool: string, pool_old: string, underlyingTokens = t2, chain = E, poolTokenAddress?: string) => ({ pool, chain, project: "curve-dex", pool_old, underlyingTokens, poolTokenAddress });
+    const ps = [mk("u2"), mk("u8", t, "Gnosis"), mk("ub"), mk("ud"), mk("i1"), mk("i2", t3)], att = attachDefiLlamaCurvePoolIdentities;
+    expect([att(ps, { data: [pr("u2", `${a}-ethereum`, [t[1]!, t[0]!], E, a), pr("u8", `${b}-xdai`, t, "Gnosis"), pr("ub", `${x("f")}-ethereum`, t2, E, b), pr("ud", `${x("d")}-ethereum`), pr("ud", `${x("e")}-ethereum`), pr("i1", `${c}-ethereum`), pr("i2", `${c}-ethereum`, t3)] }), ...ps.map((p) => p.pool)]).toEqual([2, a, b, "ub", "ud", "i1", "i2"]);
+    expect([att([ps[2]!], null), att([ps[2]!], { data: Array(2001).fill({}) })]).toEqual([0, 0]);
+    for (const [st, n] of [["ok", 2], ["partial", 1], ["unavailable", 0]] as const) {
+      const r1 = mk("u1", t2, E, 123456), r2 = mk("u2", t3, E, 5e4), res = (body: unknown) => ({ response: new Response(""), body });
+      vi.mocked(fetchJsonWithRetry).mockImplementation(async (u) => {
+        const k = String(u);
+        if (k.includes("poolsPro?project=curve-dex")) return n ? res({ data: [{ ...r1, pool_old: `${a}-ethereum`, tvlUsd: 1 }, ...(n > 1 ? [{ ...r2, pool_old: `${b}-ethereum`, tvlUsd: 2 }] : [])] }) : null;
+        return res(k.includes("yields.llama.fi") ? { data: [r1, r2, ...FAKE_DL_POOLS] } : k.includes("protocols") ? [] : { data: { poolData: [] } });
+      });
+      const r = await fetchDataSources(null, createMockDb(), { chainAddressToId: new Map([[`ethereum:${t[0]!}`, "usdc-circle"]]), symbolToChainScopedIds: new Map() });
+      expect([Object.values(r!.curveIdentityAttachment!), r!.pools.map((p) => [p.pool, p.tvlUsd])]).toEqual([[2, n, 2 - n, st], [[n ? a : "u1", 123456], [n > 1 ? b : "u2", 5e4]]]);
+      expect(vi.mocked(buildDlStablecoinPoolsCache)).not.toHaveBeenLastCalledWith(expect.arrayContaining([expect.objectContaining({ pool: a })]));
+    }
   });
 
   it.each([null, { data: null }, { data: {} }])("keeps malformed transport envelopes source-wide (%j)", async (body) => {
@@ -876,64 +897,17 @@ describe("buildCurveLookups", () => {
   });
 
   it("indexes pools by coin-set fingerprint and fails closed on duplicates", async () => {
-    const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
-    const USDT = "0xdac17f958d2ee523a2206206994597c13d831ec7";
-    const curvePayloads = [
-      {
-        data: {
-          poolData: [
-            makeApiPool("0x1111111111111111111111111111111111111111", [
-              { symbol: "USDC", address: USDC },
-              { symbol: "USDT", address: USDT },
-            ]) as CurvePool,
-            // Distinct coin set: fingerprint survives.
-            makeApiPool("0x2222222222222222222222222222222222222222", [
-              { symbol: "USDC", address: USDC },
-              { symbol: "FRAX", address: "0x853d955acef822db058eb8505911ed77f175b99e" },
-            ]) as CurvePool,
-            // Same coin set as the first pool: both fingerprints fail closed.
-            makeApiPool("0x3333333333333333333333333333333333333333", [
-              { symbol: "USDC", address: USDC },
-              { symbol: "USDT", address: USDT },
-            ]) as CurvePool,
-            // Dust duplicates do not poison the retained pool's address-grade join.
-            makeApiPool(
-              "0x4444444444444444444444444444444444444444",
-              [
-                { symbol: "USDC", address: USDC },
-                { symbol: "FRAX", address: "0x853d955acef822db058eb8505911ed77f175b99e" },
-              ],
-              40,
-            ) as CurvePool,
-          ],
-        },
-      },
-    ] satisfies CurveApiPayload[];
-
-    const { curvePoolMap, curvePoolCandidatesByFingerprint } = await buildCurveLookups(
-      curvePayloads,
-      new Map(),
-      new Map(),
-      new Map(),
-    );
-
-    const duplicatedFingerprint = `fp:ethereum:curve:${[USDC, USDT].sort().join(":")}`;
-    expect(curvePoolMap.has(duplicatedFingerprint)).toBe(false);
-    expect(curvePoolCandidatesByFingerprint.get(duplicatedFingerprint)?.map((entry) => entry.poolAddress)).toEqual([
-      "0x1111111111111111111111111111111111111111",
-      "0x3333333333333333333333333333333333333333",
-    ]);
-    const uniqueFingerprint = `fp:ethereum:curve:${[USDC, "0x853d955acef822db058eb8505911ed77f175b99e"].sort().join(":")}`;
-    expect(curvePoolMap.get(uniqueFingerprint)).toBe(
-      curvePoolMap.get("ethereum:0x2222222222222222222222222222222222222222"),
-    );
-    expect(curvePoolCandidatesByFingerprint.get(uniqueFingerprint)).toEqual([
-      curvePoolMap.get("ethereum:0x2222222222222222222222222222222222222222"),
-    ]);
-    // Address keys stay intact for all three pools.
-    expect(curvePoolMap.has("ethereum:0x1111111111111111111111111111111111111111")).toBe(true);
-    expect(curvePoolMap.has("ethereum:0x3333333333333333333333333333333333333333")).toBe(true);
-    expect(curvePoolMap.has("ethereum:0x4444444444444444444444444444444444444444")).toBe(true);
+    const x = (c: string) => `0x${c.repeat(40)}`, USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", USDT = "0xdac17f958d2ee523a2206206994597c13d831ec7", FRAX = "0x853d955acef822db058eb8505911ed77f175b99e";
+    const ab = [{ symbol: "USDC", address: USDC }, { symbol: "USDT", address: USDT }], af = [{ symbol: "USDC", address: USDC }, { symbol: "FRAX", address: FRAX }];
+    const poolData = [makeApiPool(x("1"), ab), makeApiPool(x("2"), af), makeApiPool(x("3"), ab), makeApiPool(x("4"), af, 40)] as CurvePool[];
+    const { curvePoolMap, curvePoolCandidatesByFingerprint, curveBelowFloorTwinFingerprints } = await buildCurveLookups([{ data: { poolData } }], new Map(), new Map(), new Map());
+    const dupFp = `fp:ethereum:curve:${[USDC, USDT].sort().join(":")}`, uniqFp = `fp:ethereum:curve:${[USDC, FRAX].sort().join(":")}`, uEnt = curvePoolMap.get(`ethereum:${x("2")}`);
+    expect([curvePoolMap.has(dupFp), curvePoolMap.has("ethereum:USDC-USDT"), curvePoolCandidatesByFingerprint.get(dupFp)?.map((e) => e.poolAddress)]).toEqual([false, false, [x("1"), x("3")]]);
+    expect([curvePoolMap.get(uniqFp), curvePoolCandidatesByFingerprint.get(uniqFp), curvePoolMap.has(`ethereum:${x("1")}`), curvePoolMap.has(`ethereum:${x("3")}`), curvePoolMap.has(`ethereum:${x("4")}`)]).toEqual([uEnt, [uEnt], true, true, true]);
+    const rev = await buildCurveLookups([{ data: { poolData: [...poolData].reverse() } }], new Map(), new Map(), new Map());
+    for (const r of [{ curveBelowFloorTwinFingerprints, curvePoolMap }, rev]) {
+      expect([r.curveBelowFloorTwinFingerprints.has(uniqFp), r.curvePoolMap.get("ethereum:FRAX-USDC")?.poolAddress]).toEqual([true, uEnt?.poolAddress]);
+    }
   });
 
   it("keeps one exact fingerprint when Curve exposes the same physical pool through two registries", async () => {

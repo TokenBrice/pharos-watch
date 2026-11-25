@@ -22,6 +22,7 @@ import {
   isCurrentDexCensusStateComplete,
 } from "./census-state-machine";
 import { crawlCoin } from "./crawl-sources";
+import { createSundaeSwapAdaUsdLoader } from "./crawl-sundaeswap-pools";
 import {
   createDexScreenerDiscoveryRunState,
   finalizeDexScreenerDiscoveryRun,
@@ -482,6 +483,13 @@ export async function syncDexDiscovery(
   };
   let stalePoolRefresh: StalePoolRefreshSummary | null = null;
   const dexScreenerRunState = createDexScreenerDiscoveryRunState();
+  const sundaeSwapAdaUsdLoader = createSundaeSwapAdaUsdLoader({
+    db,
+    cgApiKey,
+    deadlineMs,
+    finalizationTailBudgetMs: DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS,
+    signal,
+  });
   const buildRunMetadata = (extra: Record<string, unknown> = {}): Record<string, unknown> => ({
     coinsCrawled,
     poolsDiscovered,
@@ -514,6 +522,7 @@ export async function syncDexDiscovery(
       successfulRequests: dexScreenerRunState.successfulRequests,
       hardRefusal: dexScreenerRunState.hardRefusal,
     },
+    ...(sundaeSwapAdaUsdLoader.getDiagnostic() ? { sundaeswapAdaUsd: sundaeSwapAdaUsdLoader.getDiagnostic() } : {}),
     ...extra,
   });
 
@@ -791,6 +800,7 @@ export async function syncDexDiscovery(
             });
           } : undefined,
           loadMarketPrices,
+          sundaeSwapAdaUsdLoader.load,
         );
         const discoveredPools = result.pools.filter((pool) => pool.source !== "cg_tickers");
         const discoveredPoolCount = discoveredPools.length;

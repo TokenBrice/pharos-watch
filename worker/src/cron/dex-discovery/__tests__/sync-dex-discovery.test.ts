@@ -140,23 +140,27 @@ const db = makeNoopD1({
           ]
         : [],
     }),
+    bind: () => ({ first: async () => null }),
   }),
 });
 
 describe("syncDexDiscovery", () => {
   it("retains the coin and provider in progress for abandonment reconciliation", async () => {
-    const onProgress = vi.fn(async () => {});
+    const onProgress = vi.fn(async () => {}), t = Math.floor(Date.now() / 1e3) - 30;
+    const spy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ cardano: { usd: 0.2, last_updated_at: t } }), { status: 200 }));
     vi.mocked(crawlCoin).mockImplementationOnce(async (...args) => {
-      await args[9]?.("curve");
+      await args[9]?.("curve"); await args[11]?.(); await args[11]?.();
       return { pools: [], unresolvedChains: [], deploymentOutcomes: [], checkedDeploymentKeys: [] };
     });
 
-    await syncDexDiscovery(db, null, undefined, onProgress);
-
-    expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({
-      stage: "crawl-curve:coin-a",
-      message: "Crawling coin-a via curve",
-    }));
+    try {
+      const res = await syncDexDiscovery(db, null, undefined, onProgress);
+      expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({
+        stage: "crawl-curve:coin-a",
+        message: "Crawling coin-a via curve",
+      }));
+      expect([JSON.parse(res.metadata ?? "{}").sundaeswapAdaUsd, spy.mock.calls.length]).toEqual([{ status: "ok", observedAtSec: t, ageSec: expect.any(Number) }, 1]);
+    } finally { spy.mockRestore(); }
   });
 
   it("degrades and names the provider when two deployments flip to verified-empty", async () => {
@@ -383,6 +387,7 @@ describe("syncDexDiscovery", () => {
     expect(vi.mocked(cleanupStaging)).toHaveBeenCalledTimes(1);
 
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    expect(metadata.sundaeswapAdaUsd).toBeUndefined();
     expect(metadata).toMatchObject({
       coinsCrawled: 1,
       poolsDiscovered: 2,

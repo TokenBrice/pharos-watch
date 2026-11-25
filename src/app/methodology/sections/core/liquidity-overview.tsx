@@ -9,9 +9,11 @@ export function LiquidityOverview() {
         prices. The score aggregates genuine pool data across major DEXes and chains.
       </p>
       <p>
-        Liquidity v7.51 identifies the two reviewed Ethereum Curve USDC/sUSDat pools by address, even when Curve omits
-        a pool&apos;s valuation. Each physical pool contributes once. TVL trends compare observations within the same
-        measurement epoch so this cutover cannot appear as a market move.
+        Liquidity v7.56 generalizes v7.51&apos;s exact Curve pool-address identification across all DeFiLlama Curve
+        pools, with fail-closed below-floor twin guards and a &lt;2h neutral outage hold while keeping DeFiLlama Yields
+        as the measurement authority. Each physical pool contributes once, even when Curve omits a twin&apos;s
+        valuation. TVL trends compare observations within the same measurement epoch so this cutover cannot appear as a
+        market move.
       </p>
       <p>
         Dead or explicitly blocked DEX slugs such as Bunni are excluded upstream from crawl intake, retained pools,
