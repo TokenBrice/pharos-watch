@@ -606,7 +606,7 @@ export function addSafetyScoreV9NegativeIncidentEvidence(
   }
 }
 
-function controlIncidentMatchesScope(incident: V9ControlIncident, control: ControlOverlay): boolean {
+export function controlIncidentMatchesScope(incident: V9ControlIncident, control: ControlOverlay): boolean {
   return incident.posture.controlKinds.includes(control.controlKind) &&
     (incident.scope.kind === "root-claim" ||
       (incident.scope.kind === "deployment" && incident.scope.deploymentKey === control.deploymentKey) ||

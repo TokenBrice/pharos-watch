@@ -218,6 +218,16 @@ export function loadV9MethodologyPolicy(
   const policy = V9MethodologyPolicySchema.parse(
     policyWithRegistryMatureChains(rawPolicy, resolution.admittedChainSlugs),
   );
+  const bridgeFloor = lapsedBridgeReviewFloor(policy.semantic);
+  const minControlUnknown = Math.min(
+    policy.semantic.unknownQuality.control.C,
+    policy.semantic.unknownQuality.control.U,
+  );
+  if (bridgeFloor > minControlUnknown) {
+    throw new Error(
+      `Safety Score v9 policy monotonicity invariant violated: bridgeTierQuality["external-lock-mint"] (${bridgeFloor}) must be <= min(unknownQuality.control.C, unknownQuality.control.U) (${minControlUnknown})`,
+    );
+  }
   const identity = {
     schemaVersion: 1,
     evaluationClockSec: resolution.evaluationClockSec,
@@ -351,4 +361,15 @@ export function unknownQuality(
   semantic: Pick<V9MethodologySemantic, "unknownQuality"> = V9_CANDIDATE_POLICY_V1.policy.semantic,
 ): number {
   return semantic.unknownQuality[pillar][cause === "C" ? "C" : "U"];
+}
+
+/**
+ * R5 single authority for v10.57 lapsed/retired/expired bridge review capping:
+ * derived directly from `bridgeTierQuality["external-lock-mint"]` (`45`) rather
+ * than duplicating a separate policy key. Never-reviewed assets stay on `unknownQuality`.
+ */
+export function lapsedBridgeReviewFloor(
+  semantic: Pick<V9MethodologySemantic, "control"> = V9_CANDIDATE_POLICY_V1.policy.semantic,
+): number {
+  return semantic.control.bridgeTierQuality["external-lock-mint"];
 }

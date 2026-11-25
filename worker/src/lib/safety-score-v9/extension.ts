@@ -567,6 +567,7 @@ export function createSafetyScoreV9BaselineExtensionSource(
           clockSec,
           chainRows,
           supplyAdmission.censusDiagnostics,
+          reviewedIncidents,
         );
         admissionPath = "controlReview";
         const incidentControlRoute = routeSafetyScoreV9ControlIncidents(

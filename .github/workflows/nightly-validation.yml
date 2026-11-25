@@ -292,6 +292,19 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+  v9-monotonicity:
+    name: V9 synthetic monotonicity sweep
+    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: $/.github/actions/setup-workspace
+        with:
+          node-modules-cache: "true"
+      - run: npm run safety-score-v9:check-monotonicity
+
 
   lighthouse:
     name: Static-export Lighthouse baseline
@@ -386,7 +399,7 @@ jobs:
 
   nightly-red:
     name: Nightly red issue
-    needs: [full-static, full-tests, safety-map-render, v9-resource, lighthouse, web-vitals, test-timings, test-plan-parity, worker-shared-stability]
+    needs: [full-static, full-tests, safety-map-render, v9-resource, v9-monotonicity, lighthouse, web-vitals, test-timings, test-plan-parity, worker-shared-stability]
     if: ${{ always() && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -401,6 +414,7 @@ jobs:
       FULL_TESTS_RESULT: ${{ needs.full-tests.result }}
       SAFETY_MAP_RENDER_RESULT: ${{ needs.safety-map-render.result }}
       V9_RESOURCE_RESULT: ${{ needs.v9-resource.result }}
+      V9_MONOTONICITY_RESULT: ${{ needs.v9-monotonicity.result }}
       LIGHTHOUSE_RESULT: ${{ needs.lighthouse.result }}
       WEB_VITALS_RESULT: ${{ needs.web-vitals.result }}
       TEST_TIMINGS_RESULT: ${{ needs.test-timings.result }}
@@ -419,6 +433,7 @@ jobs:
             "full-tests:${FULL_TESTS_RESULT}" \
             "safety-map-render:${SAFETY_MAP_RENDER_RESULT}" \
             "v9-resource:${V9_RESOURCE_RESULT}" \
+            "v9-monotonicity:${V9_MONOTONICITY_RESULT}" \
             "lighthouse:${LIGHTHOUSE_RESULT}" \
             "web-vitals:${WEB_VITALS_RESULT}" \
             "test-timings:${TEST_TIMINGS_RESULT}" \

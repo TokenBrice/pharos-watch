@@ -585,6 +585,7 @@ function summarizeBridgeDomainExposure(
   const lowerByDomain = new Map<string, number>();
   const tiersByDomain = new Map<string, Set<V9BridgeRouteTier>>();
   const validJoinedDeployments = new Set<string>();
+  const lapsedBridgeDeployments = new Set<string>();
   const joinedDomainDeployments = new Set<string>();
   const unresolvedDomains = new Set<string>();
   const supplyBridgeDomainKeys: ReadonlySet<string> = new Set(
@@ -601,6 +602,7 @@ function summarizeBridgeDomainExposure(
       unresolvedJoin = true;
       continue;
     }
+    if (review.lapsedReview === true) lapsedBridgeDeployments.add(control.deploymentKey);
     const bridgeDomains = control.failureDomains.filter((domain) => domain.kind === "bridge-route");
     if (bridgeDomains.length === 0) {
       unresolvedJoin = true;
@@ -662,8 +664,9 @@ function summarizeBridgeDomainExposure(
   }
 
   for (const route of asset.supply.selectedBridgeRoutes) {
+    const isLapsedRoute = lapsedBridgeDeployments.has(route.deploymentRouteKey);
     if (
-      route.reviewState !== "selected-reviewed" ||
+      (route.reviewState !== "selected-reviewed" && !isLapsedRoute) ||
       route.reviewedRouteKind === "native" ||
       validJoinedDeployments.has(route.deploymentRouteKey)
     ) {

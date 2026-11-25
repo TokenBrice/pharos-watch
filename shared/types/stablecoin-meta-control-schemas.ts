@@ -346,6 +346,7 @@ const BridgeRouteDeploymentSchema = /* @__PURE__ */ (() => z
     scope: z.enum(BRIDGE_ROUTE_SCOPE_VALUES),
     reviewDisposition: z.enum(BRIDGE_ROUTE_REVIEW_DISPOSITION_VALUES),
     reviewNote: z.string().min(12).optional(),
+    retiredReason: z.string().min(12).optional(),
     mappingVersion: z.string().min(1).optional(),
     controllerChain: z.string().min(1).optional(),
     controllerAddress: z.string().min(1).optional(),
@@ -365,6 +366,9 @@ const BridgeRouteDeploymentSchema = /* @__PURE__ */ (() => z
       issue(ctx, [route.controllerChain == null ? "controllerChain" : "controllerAddress"], "bridge route controllerChain and controllerAddress must be authored together");
     }
     if (route.reviewDisposition === "reviewed") {
+      if (route.retiredReason !== undefined) {
+        issue(ctx, ["retiredReason"], "retiredReason is only valid when reviewDisposition is retired");
+      }
       if (!hasSourceLinks(route.sources)) {
         issue(ctx, ["sources"], "reviewed bridge route requires route-level sources");
       }
@@ -379,7 +383,23 @@ const BridgeRouteDeploymentSchema = /* @__PURE__ */ (() => z
       ) {
         issue(ctx, ["reviewDisposition"], "reviewed bridge route cannot retain unknown classification facts");
       }
+    } else if (route.reviewDisposition === "retired") {
+      if (!hasText(route.retiredReason)) {
+        issue(ctx, ["retiredReason"], "retired bridge route requires an explicit retiredReason");
+      }
+      if (
+        route.scope !== "unknown" ||
+        route.routeClass !== "unknown" ||
+        route.issuanceModel !== "unknown" ||
+        route.semantics !== "unknown" ||
+        route.riskTier !== "opaque-or-unknown"
+      ) {
+        issue(ctx, ["reviewDisposition"], "retired bridge route must keep classification facts unknown");
+      }
     } else {
+      if (route.retiredReason !== undefined) {
+        issue(ctx, ["retiredReason"], "retiredReason is only valid when reviewDisposition is retired");
+      }
       if (!hasText(route.reviewNote)) {
         issue(ctx, ["reviewNote"], "unresolved bridge route requires an explicit reviewNote");
       }
@@ -442,9 +462,17 @@ export const BridgeRouteRiskProfileSchema = /* @__PURE__ */ (() => z
     nativeExternalTransferReviews: z.array(NativeExternalTransferReviewSchema).min(1).optional(),
     controls: z.array(z.lazy(() => BridgeRouteControlSchema)).min(1).optional(),
     scopedQuestions: z.array(z.lazy(() => ControlScopedQuestionSchema)).min(1).optional(),
+    retired: z.object({
+      reviewedAt: ReviewDateSchema,
+      reviewer: z.string().min(1),
+      reason: z.string().min(12),
+    }).strict().optional(),
   })
   .strict()
   .superRefine((profile, ctx) => {
+    if (profile.retired !== undefined && profile.retired.reviewedAt < profile.reviewedAt) {
+      issue(ctx, ["retired", "reviewedAt"], "retired.reviewedAt cannot predate profile.reviewedAt");
+    }
     const transferIds = new Set<string>();
     const transferRouteIds = new Set<string>();
     for (const [index, transfer] of (profile.nativeExternalTransferReviews ?? []).entries()) {

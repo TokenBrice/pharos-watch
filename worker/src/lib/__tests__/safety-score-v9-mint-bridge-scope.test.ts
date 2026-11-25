@@ -400,11 +400,16 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
         }),
       });
       const adapted = adaptBridgeFixture(metadata, null, undefined, SCOPE_CLOCK);
-      const control = adapted.controls.find((candidate) => candidate.deploymentKey === BASE_ROUTE)!;
-      expect(control).toMatchObject({
-        keyCustody: state === "current" ? kind : "unknown",
-        scopedQuestionSubject: "key-custody-independence",
-      });
+      const control = adapted.controls.find((candidate) => candidate.deploymentKey === BASE_ROUTE);
+      if (state === "stale-profile") {
+        expect(control).toBeUndefined();
+        expect(adapted.review).toMatchObject({ status: { observationState: "stale" }, lapsedReview: true });
+      } else {
+        expect(control).toMatchObject({
+          keyCustody: state === "current" ? kind : "unknown",
+          scopedQuestionSubject: "key-custody-independence",
+        });
+      }
     }
   });
 
@@ -1498,18 +1503,18 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       control.controlKey.startsWith(`bridge-meta:${metadata.id}:`),
     );
 
-    expect(bridge).toMatchObject({
-      deploymentKey: BASE_ROUTE,
-      capabilities: ["bridge-mint"],
-    });
-    expect(asset.economicControlReview.bridge.status.observationState).toBe(
-      controls === undefined ? "known" : "bounded-unknown",
-    );
-    if (controls !== undefined) {
+    if (controls === undefined) {
       expect(bridge).toMatchObject({
-        capSemantics: { kind: "unknown" },
-        claimImpairment: "unknown",
-        incidentState: "unknown",
+        deploymentKey: BASE_ROUTE,
+        capabilities: ["bridge-mint"],
+      });
+      expect(asset.economicControlReview.bridge.status.observationState).toBe("known");
+    } else {
+      // v10.57: whole-profile stale bridge reviews drop non-incident controls and route to the lapsed floor.
+      expect(bridge).toBeUndefined();
+      expect(asset.economicControlReview.bridge).toMatchObject({
+        status: { observationState: "stale" },
+        lapsedReview: true,
       });
     }
   });

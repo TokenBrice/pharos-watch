@@ -111,6 +111,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("worker/scripts/check-safety-score-v9-live-withheld.ts"),
     strict("worker/scripts/compute-dependency-scenarios.ts"),
     strict("worker/scripts/dex-liquidity-acceptance-capture.ts"),
+    strict("worker/scripts/check-safety-score-v9-monotonicity.ts"),
     strict("worker/scripts/diff-safety-score-v9-movers.ts"),
     strict("worker/scripts/diff-safety-score-v9-replays.ts"),
     strict("worker/scripts/export-safety-score-capture-archive.ts"),

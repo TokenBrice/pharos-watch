@@ -630,7 +630,18 @@ export function validateMintBridgeOwnership(
 
   // Only meaningful once a Mint Authority review exists; unreviewed assets are owned by the
   // mint-authority and bridge-route coverage audits, not by this cross-domain ownership rule.
-  if (active && mintAuthority && isMultiDeployment && resolvedNativeRoutes.length === 0 && !reviewedNoLocalIssuanceException) {
+  // An explicit whole-profile retirement tombstone keeps history auditable while routing the
+  // bridge review to the v10.57 lapsed ceiling; raw deletion or retiring the last native route
+  // on an active profile still fails closed.
+  const bridgeProfileRetired = meta.bridgeRouteRisk?.retired != null;
+  if (
+    active &&
+    mintAuthority &&
+    isMultiDeployment &&
+    resolvedNativeRoutes.length === 0 &&
+    !reviewedNoLocalIssuanceException &&
+    !bridgeProfileRetired
+  ) {
     addViolation(
       violations,
       seen,

@@ -1329,6 +1329,10 @@
         {
           "sources": ["scripts/lib/mechanism-measurement/capture-summary.ts", "scripts/lib/mechanism-measurement/shock-schema.ts", "shared/data/safety-score-v9/mechanism-measurements/**/*.summary.json"],
           "tests": ["scripts/__tests__/generate-safety-score-v9-evaluation-build-manifest.test.ts"]
+        },
+        {
+          "sources": ["worker/scripts/diff-safety-score-v9-*.ts", "worker/scripts/check-safety-score-v9-monotonicity.ts"],
+          "tests": ["worker/scripts/__tests__/diff-safety-score-v9-replays.test.ts"]
         }
       ],
       "rules": [

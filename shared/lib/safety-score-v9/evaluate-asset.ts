@@ -25,6 +25,7 @@ import {
 import { evaluateV9Backing } from "./archetypes";
 import { selectV9CdpLiquidationCapacity } from "./archetypes/cdp";
 import { evaluateV9EconomicControl } from "./control";
+import { provenNullShareDeploymentBound } from "./control-bridge-join";
 import { v9BridgeMintControlKey } from "./control-component-keys";
 import { deriveV9MintPosture, resolveV9StatusCauses, type V9EconomicControlResult } from "./control-primitives";
 import { isUnboundedMintPosture } from "./mint-posture";
@@ -53,11 +54,12 @@ import {
   decimalSnap,
   type V9PillarAdverseAttribution,
 } from "./formula";
-import { resolveV9ReasonTreatment } from "./policy";
+import { lapsedBridgeReviewFloor, resolveV9ReasonTreatment } from "./policy";
 import {
   effectiveV9ControllerKeys,
   isV9SharedControllerSignalAlreadyPriced,
   pricedV9ControllerKeys,
+  type V9ScopedRiskSignal,
 } from "./scoped-risk";
 import {
   canonicalDomains,
@@ -310,17 +312,36 @@ function structuralSignalFromControl(
         control.status.evidenceRefIds.length > 0 &&
         isUnboundedMintPosture(posture);
     });
+  const controlsCarryActiveIncidentEvidence =
+    failure.kind === "active-control-incident" &&
+    controls.length > 0 &&
+    controls.length === failure.controlKeys.length &&
+    controls.every(
+      (control) =>
+        control.incidentState === "active" &&
+        control.status.applicability.state !== "not-applicable" &&
+        control.status.evidenceRefIds.length > 0,
+    );
   const knownOraclePathEvidence =
     failure.kind === "weak-oracle-branch" &&
     asset.economicControlReview.oracle.knownPathTier !== undefined &&
     asset.economicControlReview.oracle.paths?.some((path) =>
       path.applicability.state === "required" && path.observationState === "known",
     );
+  const knownBridgeRouteUnderPartialLapse =
+    (failure.kind === "material-bridge" || failure.kind === "peripheral-bridge") &&
+    asset.economicControlReview.bridge.lapsedReview !== true &&
+    asset.economicControlReview.bridge.routes.some((route) => route.lapsedReview === true) &&
+    reviewStatus.applicability.state === "required" &&
+    reviewStatus.observationState === "bounded-unknown";
   const responsibility: V9EvidenceResponsibility =
     failure.kind !== "unreviewed-upgrade" &&
     ((reviewStatus.applicability.state === "required" && reviewStatus.observationState === "known") ||
-      failure.kind === "centralized-mint" || failure.kind === "active-control-incident" || knownOraclePathEvidence) &&
-    (controlsKnown || controlsCarryAdverseMintEvidence) &&
+      failure.kind === "centralized-mint" ||
+      failure.kind === "active-control-incident" ||
+      knownOraclePathEvidence ||
+      knownBridgeRouteUnderPartialLapse) &&
+    (controlsKnown || controlsCarryAdverseMintEvidence || controlsCarryActiveIncidentEvidence) &&
     economicLossScope !== undefined
       ? "measured-adverse"
       : failure.kind === "unreviewed-upgrade"
@@ -354,9 +375,25 @@ function structuralSignalFromControl(
         : "low",
     // Only the linked component owns pillar pricing. Shared controller identity
     // cannot suppress a worse local path with different economic bounds.
+    // Under a lapsed/retired bridge review, retain deployment-scoped active
+    // bridge compromise signals in scopedRisk even while the compromised bridge
+    // component binds Control at 25: because Control=25 still carries +20
+    // compensability headroom (baseAssetScore up to 45), dropping the 25 scoped
+    // deduction can otherwise lift multi-incident assets above their pre-lapse
+    // score.
     ...(economicLossScope === "deployment" &&
     failure.materialSharePct !== null &&
-    !failure.controlKeys.some((controlKey) => bindingComponentControlKeys.has(controlKey))
+    (!failure.controlKeys.some((controlKey) => bindingComponentControlKeys.has(controlKey)) ||
+      (failure.kind === "active-control-incident" &&
+        controls.length > 0 &&
+        controls.every(
+          (control) =>
+            control.controlKind === "bridge" &&
+            (asset.economicControlReview.bridge.lapsedReview === true ||
+              asset.economicControlReview.bridge.routes.some(
+                (route) => route.controlKey === control.controlKey && route.lapsedReview === true,
+              )),
+        )))
       ? {}
       : { pricedInPillar: "control" as const }),
     failureDomainKeys,
@@ -1133,7 +1170,11 @@ function controlPillar(
       return gapsForStatus(asset.economicControlReview.mint.status);
     }
     if (reason.code === "selected-bridge-route-unresolved") {
-      return gapsForStatus(asset.economicControlReview.bridge.status);
+      const route = reason.controlKey === null
+        ? undefined
+        : asset.economicControlReview.bridge.routes.find((candidate) => candidate.controlKey === reason.controlKey);
+      const routeGaps = route?.factorStatuses?.tier ? gapsForStatus(route.factorStatuses.tier) : [];
+      return routeGaps.length > 0 ? routeGaps : gapsForStatus(asset.economicControlReview.bridge.status);
     }
     if (reason.code === "runtime-bridge-materiality-unavailable") {
       const supplyReviewGaps = gapsForStatus(asset.supply.status).filter(
@@ -1235,6 +1276,83 @@ function controlPillar(
       }];
     });
   });
+  const bridgeReview = asset.economicControlReview.bridge;
+  const bridgeFloor = lapsedBridgeReviewFloor(envelope.policy.semantic);
+  const lapsedBridgeDeploymentCeilings: V9ScopedRiskSignal[] = [];
+  if (bridgeReview.status.applicability.state !== "not-applicable") {
+    const hasLapsedRoute = bridgeReview.routes.some((route) => route.lapsedReview === true);
+    const wholeBridgeFallback =
+      bridgeReview.lapsedReview === true ||
+      (hasLapsedRoute && result.components.some((component) => component.componentKey === "bridge:unverified"));
+    if (wholeBridgeFallback) {
+      // Whole-bridge lapse (whole-profile expired/retired, or a material retired route
+      // that collapsed bridge evaluation into `bridge:unverified` and skipped sibling routes):
+      // cap the bridged share at F_bridge (45) using last-reviewed s_bridged = max(0, 1 - s_native)
+      // solely as a downward-only ceiling (1.0 fallback when no partition rows exist).
+      // Active deployment-scoped bridge compromise shares (exposedScore < 45) are
+      // excluded from this remainder so a 45 ceiling never dilutes a 25 active incident.
+      const selectedRows = asset.supply.selectedBridgeRoutes;
+      const sNative = selectedRows.reduce(
+        (sum, row) =>
+          sum + (row.reviewState === "selected-reviewed" && row.reviewedRouteKind === "native" ? row.supplyShare : 0),
+        0,
+      );
+      const activeBridgeIncidentShare = pillar.structuralSignals.reduce(
+        (sum, signal) =>
+          sum +
+          (signal.kind === "active-control-incident" &&
+          signal.economicLossScope === "deployment" &&
+          signal.responsibility === "measured-adverse" &&
+          signal.pricedInPillar === undefined &&
+          signal.materialSharePct !== undefined &&
+          (signal.exposedScore ?? bridgeFloor) < bridgeFloor
+            ? signal.materialSharePct / 100
+            : 0),
+        0,
+      );
+      const rawBridgedShare = selectedRows.length === 0 ? 1 : Math.min(1, Math.max(0, 1 - sNative));
+      const exposureShare = Math.min(1, Math.max(0, rawBridgedShare - activeBridgeIncidentShare));
+      if (exposureShare > 0) {
+        lapsedBridgeDeploymentCeilings.push({
+          signalKey: `lapsed-bridge-review:${asset.assetId}`,
+          exposureKey: `lapsed-bridge-review:${asset.assetId}`,
+          riskEventKey: `lapsed-bridge-review:${asset.assetId}`,
+          failureDomainKeys: [`bridge-review:${asset.assetId}`],
+          economicLossScope: "deployment",
+          exposureShare,
+          exposedScore: bridgeFloor,
+          reason: "Bridge review lapsed (capped at 45)",
+        });
+      }
+    } else {
+      const materialShareThreshold = envelope.policy.semantic.materiality.deploymentMaterialSharePct / 100;
+      for (const route of bridgeReview.routes) {
+        if (route.lapsedReview !== true) continue;
+        const control = asset.controls.find((candidate) => candidate.controlKey === route.controlKey);
+        if (!control) continue;
+        const nullShareBound = provenNullShareDeploymentBound(asset, control);
+        const provenImmaterial = nullShareBound !== null && nullShareBound < materialShareThreshold;
+        const exposureShare = control.materialSupplyShare ?? (provenImmaterial ? nullShareBound : 1);
+        if (exposureShare <= 0) continue;
+        const failureDomainKeys = control.failureDomains.length > 0
+          ? control.failureDomains.map(domainKey)
+          : [control.deploymentKey];
+        lapsedBridgeDeploymentCeilings.push({
+          signalKey: `lapsed-bridge-route:${route.controlKey}`,
+          exposureKey: deploymentExposureKey([control.deploymentKey]),
+          riskEventKey: `lapsed-bridge-route:${route.controlKey}`,
+          failureDomainKeys,
+          economicLossScope: "deployment",
+          exposureShare,
+          exposedScore: bridgeFloor,
+          reason: "Bridge review lapsed (capped at 45)",
+        });
+      }
+    }
+  }
+  if (lapsedBridgeDeploymentCeilings.length > 0) {
+    pillar.lapsedBridgeDeploymentCeilings = lapsedBridgeDeploymentCeilings;
+  }
   return Object.assign(pillar, reasonClassifiedEvidence(score, pillar.reasons, "strong", result.aggregationDisposition === "excluded-a-b"));
 }
 

@@ -920,7 +920,7 @@ describe("CI workflow scope", () => {
     const base: NodeJS.ProcessEnv = {
       ...process.env, PATH: `${root}:${process.env.PATH ?? ""}`, GH_LOG: log, RUNNER_TEMP: root,
       RUN_URL: "https://example.test/run/1", FULL_STATIC_RESULT: "success", FULL_TESTS_RESULT: "success",
-      SAFETY_MAP_RENDER_RESULT: "success", V9_RESOURCE_RESULT: "success", LIGHTHOUSE_RESULT: "success",
+      SAFETY_MAP_RENDER_RESULT: "success", V9_RESOURCE_RESULT: "success", V9_MONOTONICITY_RESULT: "success", LIGHTHOUSE_RESULT: "success",
       WEB_VITALS_RESULT: "skipped", TEST_TIMINGS_RESULT: "success", TEST_PLAN_PARITY_RESULT: "success",
       WORKER_SHARED_STABILITY_RESULT: "success",
     };
