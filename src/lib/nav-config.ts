@@ -31,6 +31,7 @@ import {
   Heart,
   Sigma,
   TableProperties,
+  Unlink,
   createLucideIcon,
 } from "lucide-react";
 import { isRouteActive } from "@/lib/navigation";
@@ -328,6 +329,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     items: [
       { href: "/learn/mechanisms/", label: "Mechanisms", icon: Lightbulb, description: "How each design holds its peg", keywords: "mechanism archetype design how it works collateral algorithmic" },
       { href: "/learn/case-studies/", label: "Case Studies", icon: BookMarked, description: "Retrospectives of major depegs", keywords: "case study retrospective post-mortem history terra ust svb" },
+      { href: "/learn/scenarios/", label: "Failure Scenarios", icon: Unlink, description: "Hypothetical failure paths per coin", keywords: "failure scenarios how it breaks stress path attack vector falsifiers" },
       { href: "/methodology/", label: "Methodology", icon: Sigma, description: "Formulas, thresholds, and versions", keywords: "methodology formula threshold how computed calculated version glossary definitions terms" },
       { href: "/docs/", label: "Documentation", icon: FileText, description: "Technical methodology specs & Markdown", keywords: "docs documentation specs architecture data contracts markdown reference" },
     ],

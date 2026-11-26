@@ -20,6 +20,7 @@ import type { PortfolioPreset } from "@/components/portfolio/portfolio-empty-sta
 import { TelegramSubscribeCommand } from "@/components/selector/telegram-subscribe-command";
 import {
   PortfolioConcentrationCard,
+  PortfolioFailureScenariosCallout,
   PortfolioHeroStrip,
   PortfolioHoldingsEditor,
   PortfolioLoadingState,
@@ -63,7 +64,9 @@ function pillarFillClass(score: number): string {
   return "bg-[var(--chart-primary)]";
 }
 
-export function PortfolioClient() {
+const EMPTY_SCENARIO_COIN_IDS: readonly string[] = [];
+
+export function PortfolioClient({ scenarioCoinIds = EMPTY_SCENARIO_COIN_IDS }: { scenarioCoinIds?: readonly string[] } = {}) {
   const logos = logosById;
   const watchlist = useWatchlist();
   const [toast, setToast] = useState<string | null>(null);
@@ -152,6 +155,11 @@ export function PortfolioClient() {
   const portfolioCoinIds = useMemo(
     () => portfolio.holdings.map((holding) => holding.coinId),
     [portfolio.holdings],
+  );
+  const scenarioCoinIdSet = useMemo(() => new Set(scenarioCoinIds), [scenarioCoinIds]);
+  const heldScenarioIds = useMemo(
+    () => portfolioCoinIds.filter((coinId) => scenarioCoinIdSet.has(coinId)),
+    [portfolioCoinIds, scenarioCoinIdSet],
   );
 
   const handleShare = useCallback(async () => {
@@ -423,6 +431,8 @@ export function PortfolioClient() {
                 })}
               </div>
             ) : null}
+
+            <PortfolioFailureScenariosCallout coinIds={heldScenarioIds} />
 
             <TelegramSubscribeCommand
               coinIds={portfolioCoinIds}

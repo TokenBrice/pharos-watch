@@ -188,6 +188,11 @@ const learnLinks = [
     absolute(`/learn/case-studies/${study.slug}/`),
     study.subtitle,
   ] as const),
+  [
+    "Failure Scenarios",
+    absolute("/learn/scenarios/"),
+    "Curated hypothetical failure paths for selected stablecoins: each step, missing safeguards, stop conditions, and falsifiers. Not Safety Score inputs.",
+  ],
 ] as const;
 
 const formatQuota = (value: number): string => value.toLocaleString("en-US");

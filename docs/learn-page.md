@@ -1,10 +1,10 @@
 # Learn Pages
 
-Contract for `/learn/case-studies/`, `/learn/case-studies/[slug]/`, `/learn/mechanisms/`, and `/learn/mechanisms/[archetype]/`. These are static educational surfaces, not scoring engines. `/learn/` redirects to Case Studies; `/learn/glossary/` redirects to the A–Z [Definitions](./methodology-page.md#definitions) on `/methodology/`. Keep those redirects in `public/_redirects`.
+Contract for `/learn/case-studies/`, `/learn/case-studies/[slug]/`, `/learn/mechanisms/`, `/learn/mechanisms/[archetype]/`, and `/learn/scenarios/`. These are static educational surfaces, not scoring engines. `/learn/` redirects to Case Studies; `/learn/glossary/` redirects to the A–Z [Definitions](./methodology-page.md#definitions) on `/methodology/`. Keep those redirects in `public/_redirects`.
 
 ## Route Shape
 
-`src/app/learn/_shared/learn-page-shell.tsx` owns the shared editorial shell; [feature-page heroes](./design-language.md#feature-page-heroes) owns its design grammar. Case-study routes live under `src/app/learn/case-studies/`; mechanism routes under `src/app/learn/mechanisms/`. Both generate static params from their canonical registries. Invalid case-study slugs return `notFound()` and non-indexing metadata, not an empty article.
+`src/app/learn/_shared/learn-page-shell.tsx` owns the shared editorial shell; [feature-page heroes](./design-language.md#feature-page-heroes) owns its design grammar. Case-study routes live under `src/app/learn/case-studies/`; mechanism routes under `src/app/learn/mechanisms/`; the failure-scenarios hub lives at `src/app/learn/scenarios/page.tsx`. Case-study and mechanism detail routes generate static params from their canonical registries. Invalid case-study slugs return `notFound()` and non-indexing metadata, not an empty article.
 
 ## Case Studies
 
@@ -49,15 +49,22 @@ The shared shell emits Breadcrumb JSON-LD. The hub adds DefinedTermSet and distr
 3. Prefer a `THREE_STEP_ARCHETYPE_CONFIG` entry in `src/components/stablecoin-detail/mechanism-diagrams/three-step-archetype-diagram.tsx` plus a `mechanismDiagramFor` branch. Add a dedicated diagram and `mechanism-template.ts` flow only for a genuinely different layout. Coin-fact variations add config, `MechanismTemplateFacts` and `resolveThreeStepConfig` handling, not per-coin entries in `coin-overrides.ts`.
 4. Regenerate the destination-specific evergreen preview; run the content, exact-static-param, sitemap and generated-artifact checks below. Existing bespoke PNGs stay unchanged for old inbound URLs.
 
+## Failure Scenarios
+
+`src/lib/failure-scenario-index.ts` (server-only via `import "server-only"`; never imported from `"use client"`) selects records from `data/failure-scenarios.json` in canonical catalog order via `selectFailureScenario(..., { allowDrafts: false })` for active and frozen coins whose dossiers render `#how-it-breaks` (excluding pre-launch, quarantined, and delisted coins), exporting `PUBLISHED_FAILURE_SCENARIOS` and `PUBLISHED_FAILURE_SCENARIO_IDS`. Drafts never appear on `/learn/scenarios/` or `/portfolio/`, even in development.
+
+Each card links directly to `/stablecoin/<id>/#how-it-breaks` and displays only the coin logo, symbol, approved `title`, verbatim `thesis`, qualified `window.label` and `window.duration`, and reviewed date (omitting key figures and raw addresses). Lead copy states explicitly that scenarios are hypothetical stress analyses and not Safety Score inputs, and a plain empty-state note renders when zero records are published. The hub emits Breadcrumb and ItemList JSON-LD and `<SeeAlsoFooter route="/learn/scenarios/" />`.
+
 ## Sitemap + Inbound Surfaces
 
-`src/app/sitemap.ts` includes both hubs and every registered detail route. `scripts/maintenance/generate-sitemap-dates.ts` derives article modification dates from the Git commit history of each study's JSON plus its shared renderer and `shared/types/editorial-content.ts` schema, never deploy-time `now` or checkout mtime; a scanned source without history fails generation. Article `dateModified` reads that date (else `datePublished`); no Updated byline is shown.
+`src/app/sitemap.ts` includes all three Learn hubs and every registered case-study and mechanism detail route (`/learn/scenarios/` sits in `PUBLIC_REFERENCE_ROUTES` at `monthly` / `0.6`, dated by `max(lastEdited(path), newestPublishedReviewedAt)` where `lastEdited("/learn/scenarios/")` tracks both `src/app/learn/scenarios/page.tsx` and `data/failure-scenarios.json` so withdrawals also advance `lastmod`). `scripts/maintenance/generate-sitemap-dates.ts` derives article modification dates from the Git commit history of each study's JSON plus its shared renderer and `shared/types/editorial-content.ts` schema, never deploy-time `now` or checkout mtime; a scanned source without history fails generation. Article `dateModified` reads that date (else `datePublished`); no Updated byline is shown.
 
-Shared navigation links directly to Mechanisms and Case Studies. Mechanism pages link to relevant studies; event pages use study reverse lookups. Coin-detail Mechanism cards gate the explainer CTA and help primer on the resolved archetype; their review fold does not duplicate that link. Explore Next instead uses `/screener/?mechanisms=<archetype>&lifecycle=active`. Preserve methodology/About entry links and command-palette archetype discovery without inventing additional route families.
+Shared navigation links directly to Mechanisms, Case Studies, and Failure Scenarios (keeping the footer lean without a Failure Scenarios entry). Mechanism pages link to relevant studies; event pages use study reverse lookups; `/about/` links its Failure scenarios tile to `/learn/scenarios/`; `/portfolio/` links held coins with published scenarios to `/stablecoin/<id>/#how-it-breaks` plus an `All scenarios` link to `/learn/scenarios/`. Coin-detail Mechanism cards gate the explainer CTA and help primer on the resolved archetype; their review fold does not duplicate that link. Explore Next instead uses `/screener/?mechanisms=<archetype>&lifecycle=active`. Preserve methodology/About entry links and command-palette archetype discovery without inventing additional route families.
 
 ## Maintenance Checks
 
-- `src/app/__tests__/static-content-route-contracts.test.tsx`: exact registered static params; `src/app/__tests__/sitemap-frozen.test.ts`: canonical public route inventory.
+- `src/app/__tests__/static-content-route-contracts.test.tsx`: exact registered static params and `/learn/scenarios/` hub parity with `PUBLISHED_FAILURE_SCENARIOS`; `src/app/__tests__/sitemap-frozen.test.ts`: canonical public route inventory.
+- `npm run check:failure-scenarios`: schema, reference, content-hash, and approval validation for `data/failure-scenarios.json`.
 - `src/app/learn/case-studies/__tests__/content.test.ts`: coin references, chart reachability, chronology, deviation consistency, widget relationships and event lookups. `npm run check:editorial-content` owns metadata/body shapes, registration, filenames, tracked/cemetery identities, internal links, and every authored mechanism-explainer representative coin against the mechanism registry.
 - `src/lib/__tests__/term-markup.test.ts`: glossary marker parsing/visible labels and AI-summary corpus integrity.
 - `npm run check:generated-artifacts -- --only=case-study-client-index,social-preview-images`: client-safe projection and subject-specific immutable preview generation. Legacy bespoke PNGs are inert.

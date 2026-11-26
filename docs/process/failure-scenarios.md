@@ -1,6 +1,6 @@
 # Curated Failure Scenarios
 
-The dossier's **How does X break?** section is a curated, hypothetical failure chain, not a simulator, a prediction, an observed compromise, or a Safety Score input. Its editorial source is `data/failure-scenarios.json`, keyed by tracked catalog ID. Structural schemas and their inferred public types live in `shared/types/failure-scenarios.ts`, without a runtime catalog dependency. `shared/lib/failure-scenarios.ts` strengthens them with tracked-ID and EVM-address admission, cross-record reference checks, content identity, and publication selection. Structural parsing alone never authorizes publication.
+The dossier's **How does X break?** section, together with the `/learn/scenarios/` hub and matching holding links on `/portfolio/`, presents a curated, hypothetical failure chain, not a simulator, a prediction, an observed compromise, or a Safety Score input. Its editorial source is `data/failure-scenarios.json`, keyed by tracked catalog ID. Structural schemas and their inferred public types live in `shared/types/failure-scenarios.ts`, without a runtime catalog dependency. `shared/lib/failure-scenarios.ts` strengthens them with tracked-ID and EVM-address admission, cross-record reference checks, content identity, and publication selection. `src/lib/failure-scenario-index.ts` selects approved records (`allowDrafts: false`) in canonical catalog order for `/learn/scenarios/` and `/portfolio/`. Structural parsing alone never authorizes publication.
 
 The lifecycle is **draft → verify → one-time maintainer approval → monthly re-verification**. Approval binds the exact content; the monthly `scenario-verification` skill reports changes to the recorded facts for a maintainer decision, rather than renewing approval automatically.
 
@@ -39,7 +39,7 @@ The digest is SHA-256 of UTF-8 canonical JSON for the complete record **minus `r
 - a `reviewedAt` that is not in the future;
 - no falsifier with `status: "met"`.
 
-Malformed, edited, future-dated, or falsified approvals return no scenario and no navigation pill. Preview permission does not rescue an invalid approved record. A met falsifier also suppresses a draft preview. Unverified falsifiers remain visibly qualified evidence gaps; they are not silently treated as verified negative findings.
+Malformed, edited, future-dated, or falsified approvals return no scenario, no dossier navigation pill, and no `/learn/scenarios/` or `/portfolio/` entry. Preview permission does not rescue an invalid approved record, and `/learn/scenarios/` and `/portfolio/` never include drafts even in development. A met falsifier also suppresses a draft preview. Unverified falsifiers remain visibly qualified evidence gaps; they are not silently treated as verified negative findings.
 
 `npm run check:failure-scenarios` uses the same publication conditions for every approved record and exits nonzero on any violation. Its focused registration in `docs/doc-ownership.json` selects this gate and the behavior tests for scenario data/logic changes without adding unrelated release gates.
 
@@ -55,4 +55,4 @@ The routine reports findings; it does not approve notes or silently edit the app
 
 When a falsifier becomes met, record that finding immediately and withdraw the record to draft or retire it. Publication selection suppresses it even if an otherwise matching approval stamp exists; the CI gate fails until the approved record is withdrawn to draft or revised and re-approved by the maintainer.
 
-Because the dossier is a static export, selection runs at build time, not on every page view. A local data flip does not change an already deployed export: a withheld record only drops at the next rebuild and redeploy. Rebuild and redeploy promptly to remove the section after a finding. Deployment remains a separate maintainer-owned workflow.
+Because the site is a static export, selection runs at build time, not on every page view. A local data flip does not change an already deployed export: a withheld record only drops from the dossier, `/learn/scenarios/`, and `/portfolio/` at the next rebuild and redeploy. Rebuild and redeploy promptly to remove the record after a finding. Deployment remains a separate maintainer-owned workflow.
