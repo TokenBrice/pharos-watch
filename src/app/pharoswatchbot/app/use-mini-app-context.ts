@@ -45,17 +45,54 @@ interface CachedCoinEntry {
   signal: TelegramMiniAppCoinSignal;
   depeg: TelegramMiniAppActiveDepeg | null;
   depegProvenance: TelegramMiniAppContextProvenance;
+  expiresAtMs: number | null;
+}
+
+interface CachedHomeLane {
+  status: "ok" | "unavailable";
+  events: TelegramMiniAppActiveDepeg[];
+  expiresAtMs: number | null;
+}
+
+interface CachedPresetsEntry {
+  status: "ok" | "unavailable";
+  byId: ReadonlyMap<string, TelegramMiniAppPresetSummary>;
+  expiresAtMs: number | null;
 }
 
 interface LaunchContextCache {
   launchKey: string;
   coinsById: ReadonlyMap<string, CachedCoinEntry>;
   failedCoinKeys: ReadonlySet<string>;
-  homeDepegLaneByKey: ReadonlyMap<string, { status: "ok" | "unavailable"; events: TelegramMiniAppActiveDepeg[] }>;
-  presets: { status: "ok" | "unavailable"; byId: ReadonlyMap<string, TelegramMiniAppPresetSummary> } | null;
+  homeDepegLaneByKey: ReadonlyMap<string, CachedHomeLane>;
+  presets: CachedPresetsEntry | null;
 }
 
 const EMPTY_PRESETS_MAP: ReadonlyMap<string, TelegramMiniAppPresetSummary> = new Map();
+
+function provenanceExpiresAtMs(
+  provenance: TelegramMiniAppContextProvenance,
+  serverNowSec: number,
+  receivedWallMs: number,
+): number | null {
+  if (provenance.status !== "ok" || provenance.observedAt == null) return null;
+  // Server admits `nowSec - observedAt <= budgetSec`, so the first invalid second is `observedAt + budgetSec + 1`.
+  const remainingSec = Math.max(1, (provenance.observedAt + provenance.budgetSec + 1) - serverNowSec);
+  return receivedWallMs + remainingSec * 1000;
+}
+
+function minExpiryMs(values: readonly (number | null)[]): number | null {
+  let min: number | null = null;
+  for (const value of values) {
+    if (value == null) continue;
+    min = min == null ? value : Math.min(min, value);
+  }
+  return min;
+}
+
+function isExpiredEntry(expiresAtMs: number | null, nowMs: number): boolean {
+  return expiresAtMs != null && nowMs >= expiresAtMs;
+}
 
 function createEmptyCache(launchKey: string): LaunchContextCache {
   return {
@@ -144,6 +181,7 @@ export function useMiniAppContext({
 
   const [cache, setCache] = useState<LaunchContextCache>(() => createEmptyCache(""));
   const [retryNonce, setRetryNonce] = useState(0);
+  const [clockMs, setClockMs] = useState(0);
   const inFlightKeysRef = useRef<Set<string>>(new Set());
   const retriedKeysRef = useRef<Set<string>>(new Set());
   const pendingRetryRef = useRef<{ key: string; timerId: number } | null>(null);
@@ -156,6 +194,7 @@ export function useMiniAppContext({
   const clearPendingRetry = () => {
     if (pendingRetryRef.current != null) {
       window.clearTimeout(pendingRetryRef.current.timerId);
+      retriedKeysRef.current.delete(pendingRetryRef.current.key);
       pendingRetryRef.current = null;
     }
   };
@@ -187,7 +226,8 @@ export function useMiniAppContext({
     [isNewUser, state],
   );
   const watchedCoinIds = watchedSelection.coinIds;
-  const homeTruncated = watchedSelection.totalSelectableCount > watchedCoinIds.length;
+  const homeTruncated = watchedSelection.totalSelectableCount > watchedCoinIds.length
+    || Boolean(state?.presets.some((preset) => preset.memberIds == null));
   const homeCoinKey = useMemo(
     () => [...watchedCoinIds].sort().join(","),
     [watchedCoinIds],
@@ -234,15 +274,64 @@ export function useMiniAppContext({
     clearPendingRetry();
   }, [desiredKey, launchKey]);
 
+  const activeExpiryMs = useMemo(() => {
+    if (!desired) return null;
+    if (desired.request.kind === "presets") return activeCache.presets?.expiresAtMs ?? null;
+    if (desired.key.startsWith("coin:")) {
+      return activeCache.coinsById.get(desired.request.stablecoinIds[0]!)?.expiresAtMs ?? null;
+    }
+    return activeCache.homeDepegLaneByKey.get(homeCoinKey)?.expiresAtMs ?? null;
+  }, [activeCache, desired, homeCoinKey]);
+
+  const lastFiredExpiryRef = useRef<number | null>(null);
+  // Expire cached live evidence on schedule (and on visibility return) so a continuously
+  // open Mini App never keeps displaying expired peg/DEWS/Safety verdicts past their budget.
+  useEffect(() => {
+    if (!enabled || activeExpiryMs == null) return undefined;
+    let timerId: number | undefined;
+    const fireOnce = () => {
+      if (lastFiredExpiryRef.current === activeExpiryMs) return;
+      lastFiredExpiryRef.current = activeExpiryMs;
+      setClockMs(Date.now());
+    };
+    const schedule = () => {
+      const remainingMs = activeExpiryMs - Date.now();
+      if (remainingMs <= 0) {
+        fireOnce();
+        return;
+      }
+      window.clearTimeout(timerId);
+      timerId = window.setTimeout(fireOnce, Math.min(remainingMs, 2_147_483_647));
+    };
+    schedule();
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") schedule();
+    };
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onVisibility);
+    }
+    return () => {
+      window.clearTimeout(timerId);
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", onVisibility);
+      }
+    };
+  }, [activeExpiryMs, enabled]);
+
   const isCached = useMemo(() => {
     if (!desired) return true;
-    if (desired.request.kind === "presets") return activeCache.presets != null;
+    if (desired.request.kind === "presets") {
+      return activeCache.presets != null && !isExpiredEntry(activeCache.presets.expiresAtMs, clockMs);
+    }
     if (desired.key.startsWith("coin:")) {
       const id = desired.request.stablecoinIds[0]!;
-      return activeCache.coinsById.has(id) || activeCache.failedCoinKeys.has(desired.key);
+      const cached = activeCache.coinsById.get(id);
+      if (cached && !isExpiredEntry(cached.expiresAtMs, clockMs)) return true;
+      return activeCache.failedCoinKeys.has(desired.key);
     }
-    return activeCache.homeDepegLaneByKey.has(homeCoinKey);
-  }, [activeCache, desired, homeCoinKey]);
+    const lane = activeCache.homeDepegLaneByKey.get(homeCoinKey);
+    return lane != null && !isExpiredEntry(lane.expiresAtMs, clockMs);
+  }, [activeCache, clockMs, desired, homeCoinKey]);
 
   useEffect(() => {
     if (!enabled || !desired || !launchKey || isCached) return;
@@ -261,6 +350,8 @@ export function useMiniAppContext({
     })
       .then((response) => {
         if (epochRef.current !== requestEpoch || activeLaunchKeyRef.current !== launchKey) return;
+        const receivedWallMs = Date.now();
+        setClockMs(receivedWallMs);
         setCache((prev) => {
           const base = prev.launchKey === launchKey ? prev : createEmptyCache(launchKey);
           if (response.context.kind === "presets") {
@@ -272,6 +363,7 @@ export function useMiniAppContext({
               presets: {
                 status: response.context.provenance.status === "ok" ? "ok" : "unavailable",
                 byId,
+                expiresAtMs: provenanceExpiresAtMs(response.context.provenance, response.serverNowSec, receivedWallMs),
               },
             };
           }
@@ -279,18 +371,26 @@ export function useMiniAppContext({
             response.context.activeDepegs.events.map((event) => [event.stablecoinId, event] as const),
           );
           const depegProvenance = response.context.activeDepegs.provenance;
+          const depegExpiresAtMs = provenanceExpiresAtMs(depegProvenance, response.serverNowSec, receivedWallMs);
           const nextCoinsById = new Map(base.coinsById);
           for (const [id, signal] of Object.entries(response.context.coinSignals)) {
             nextCoinsById.set(id, {
               signal,
               depeg: depegById.get(id) ?? null,
               depegProvenance,
+              expiresAtMs: minExpiryMs([
+                depegExpiresAtMs,
+                provenanceExpiresAtMs(signal.price.provenance, response.serverNowSec, receivedWallMs),
+                provenanceExpiresAtMs(signal.dews.provenance, response.serverNowSec, receivedWallMs),
+                provenanceExpiresAtMs(signal.safety.provenance, response.serverNowSec, receivedWallMs),
+              ]),
             });
           }
           const nextHomeDepegLaneByKey = capturedKey.startsWith("home:")
             ? new Map(base.homeDepegLaneByKey).set(capturedHomeKey, {
                 status: depegProvenance.status === "ok" ? "ok" : "unavailable",
                 events: depegProvenance.status === "ok" ? response.context.activeDepegs.events : [],
+                expiresAtMs: depegExpiresAtMs,
               })
             : base.homeDepegLaneByKey;
           return {
@@ -342,11 +442,11 @@ export function useMiniAppContext({
         setCache((prev) => {
           const base = prev.launchKey === launchKey ? prev : createEmptyCache(launchKey);
           if (capturedRequest.kind === "presets") {
-            return { ...base, presets: { status: "unavailable", byId: EMPTY_PRESETS_MAP } };
+            return { ...base, presets: { status: "unavailable", byId: EMPTY_PRESETS_MAP, expiresAtMs: null } };
           }
           if (capturedKey.startsWith("home:")) {
             const nextHome = new Map(base.homeDepegLaneByKey);
-            nextHome.set(capturedHomeKey, { status: "unavailable", events: [] });
+            nextHome.set(capturedHomeKey, { status: "unavailable", events: [], expiresAtMs: null });
             return { ...base, homeDepegLaneByKey: nextHome };
           }
           const nextFailed = new Set(base.failedCoinKeys);
@@ -359,20 +459,23 @@ export function useMiniAppContext({
           inFlightKeysRef.current.delete(capturedKey);
         }
       });
-  }, [desired, enabled, homeCoinKey, initData, isCached, launchKey, retryNonce]);
+  }, [clockMs, desired, enabled, homeCoinKey, initData, isCached, launchKey, retryNonce]);
 
   const homePegContext = useMemo<HomePegContext>(() => {
     if (!enabled || isNewUser || !homeCoinKey) return { status: "idle", events: [], truncated: false };
     const lane = activeCache.homeDepegLaneByKey.get(homeCoinKey);
-    return lane ? { ...lane, truncated: homeTruncated } : { status: "idle", events: [], truncated: homeTruncated };
-  }, [activeCache, enabled, homeCoinKey, homeTruncated, isNewUser]);
+    if (!lane || isExpiredEntry(lane.expiresAtMs, clockMs)) {
+      return { status: "idle", events: [], truncated: homeTruncated };
+    }
+    return { status: lane.status, events: lane.events, truncated: homeTruncated };
+  }, [activeCache, clockMs, enabled, homeCoinKey, homeTruncated, isNewUser]);
 
   const coinLiveContext = useMemo<CoinLiveContext>(() => {
     if (!enabled || !coinScreenId || !coinScreenSelectable) {
       return { status: "idle", signal: null, depeg: null, depegProvenance: null };
     }
     const cached = activeCache.coinsById.get(coinScreenId);
-    if (cached) {
+    if (cached && !isExpiredEntry(cached.expiresAtMs, clockMs)) {
       return {
         status: "ok",
         signal: cached.signal,
@@ -384,14 +487,14 @@ export function useMiniAppContext({
       return { status: "unavailable", signal: null, depeg: null, depegProvenance: null };
     }
     return { status: "idle", signal: null, depeg: null, depegProvenance: null };
-  }, [activeCache, coinScreenId, coinScreenSelectable, enabled]);
+  }, [activeCache, clockMs, coinScreenId, coinScreenSelectable, enabled]);
 
   const presetsLiveContext = useMemo<PresetsLiveContext>(() => {
-    if (!enabled || !activeCache.presets) {
+    if (!enabled || !activeCache.presets || isExpiredEntry(activeCache.presets.expiresAtMs, clockMs)) {
       return { status: "idle", byId: EMPTY_PRESETS_MAP };
     }
-    return activeCache.presets;
-  }, [activeCache, enabled]);
+    return { status: activeCache.presets.status, byId: activeCache.presets.byId };
+  }, [activeCache, clockMs, enabled]);
 
   return { homePegContext, coinLiveContext, presetsLiveContext };
 }

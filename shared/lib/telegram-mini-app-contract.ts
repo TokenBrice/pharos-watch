@@ -514,6 +514,7 @@ const TelegramMiniAppActiveDepegSchema = z.object({
   peakDeviationBps: z.number().finite(),
   currentDeviationBps: z.number().finite().nullable(),
   currentDirection: z.enum(["above", "below"]).nullable().optional(),
+  currentPeerRelative: z.literal(true).optional(),
   priceUsd: z.number().finite().positive().nullable(),
   pegReference: z.number().finite().positive().nullable(),
   startedAt: z.number().int().nonnegative(),

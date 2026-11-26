@@ -3,10 +3,12 @@ import {
   STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC,
 } from "@shared/lib/api-freshness";
 import { isThreatBand } from "@shared/lib/classification/risk";
+import { DEPEG_EVENT_MIN_SUPPLY_USD } from "@shared/lib/depeg-config";
 import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { TELEGRAM_PRESET_IDS } from "@shared/lib/telegram-presets";
 import type {
   TelegramMiniAppActiveDepeg,
@@ -19,24 +21,32 @@ import type {
 } from "@shared/lib/telegram-mini-app-contract";
 import type { StablecoinData } from "@shared/types/supply";
 import {
-  getLatestSuccessfulCronTimestampResult,
-  type CronTimestampLookupResult,
-} from "../../lib/api-freshness";
-import { EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL } from "../../lib/depeg-event-projection";
-import { isPairedDepegPeak } from "../../lib/depeg-helpers";
+  decodeActiveIncidentProjections,
+  EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL,
+  prepareActiveIncidentProjections,
+  rowToPublicDepegEvent,
+} from "../../lib/depeg-event-projection";
+import { isPairedDepegPeak, type DepegRow } from "../../lib/depeg-helpers";
+import {
+  latestDepegLedgerRun,
+  loadDepegCensusRuns,
+  type DepegCensusRun,
+} from "../../lib/depeg-ledger-clock";
 import { readAdmittedPeerOnset, readAdmittedPeerPeak, readPendingObservationReceipt } from "../../lib/depeg-pending";
+import { getDepegThresholdBps } from "../../lib/depeg-threshold-policy";
 import { readDewsPublishedGenerationResult } from "../../lib/dews-publication-pointer";
 import { loadActiveSafetyScoreIndex } from "../../lib/safety-score-index";
 import { loadStablecoinsCache, type StablecoinsCacheLoadResult } from "../../lib/stablecoins-cache";
 import { resolveTelegramPresetTargets } from "../common/presets";
 import { isSubscribableCoin } from "../store/subscription-eligibility";
 
-const DEPEG_EVENTS_PRODUCER_JOB = "sync-stablecoins";
+type ContextDepegRow = DepegRow & { reviewed_dispute?: number };
 
-type ContextDepegRow = Parameters<typeof readAdmittedPeerPeak>[0] & {
-  direction: string;
-  peg_reference: number;
-};
+type DepegCensusLoadResult =
+  | { status: "ok"; run: DepegCensusRun & { census: NonNullable<DepegCensusRun["census"]> } }
+  | { status: "missing" }
+  | { status: "pipeline_unavailable"; reason: string }
+  | { status: "lookup_failed" };
 
 interface ScopedDewsRow {
   stablecoin_id: string;
@@ -94,27 +104,53 @@ export function validateContextRequestCoinIds(stablecoinIds: readonly string[]):
 async function loadScopedOpenDepegs(
   db: D1Database,
   stablecoinIds: readonly string[],
-): Promise<{ ok: true; rows: ContextDepegRow[] } | { ok: false; reason: string }> {
-  if (stablecoinIds.length === 0) return { ok: true, rows: [] };
+): Promise<
+  | { ok: true; rows: ContextDepegRow[]; projections: Parameters<typeof rowToPublicDepegEvent>[1] }
+  | { ok: false; reason: string }
+> {
+  if (stablecoinIds.length === 0) return { ok: true, rows: [], projections: new Map() };
   const placeholders = stablecoinIds.map(() => "?").join(", ");
   try {
     // SAFETY: placeholders match bounded 1..20 validated stablecoinIds and
     // EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL is a static SQL fragment; values use D1 binds.
-    const result = await db
-      .prepare(
-        `SELECT stablecoin_id, direction, peak_deviation_bps, started_at, peg_reference, peg_type,
-                start_price, peak_price, peak_peg_reference, peak_quote_domain, peer_basis_json
-           FROM depeg_events_with_provenance
-          WHERE ended_at IS NULL
-            AND stablecoin_id IN (${placeholders})
-            AND ${EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL}
-          ORDER BY started_at DESC`,
-      )
-      .bind(...stablecoinIds)
-      .all<ContextDepegRow>();
-    return { ok: true, rows: result.results ?? [] };
+    const [result, projectionRaw] = await Promise.all([
+      db
+        .prepare(
+          `SELECT *
+             FROM depeg_events_with_provenance
+            WHERE ended_at IS NULL
+              AND stablecoin_id IN (${placeholders})
+              AND ${EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL}
+            ORDER BY started_at DESC`,
+        )
+        .bind(...stablecoinIds)
+        .all<ContextDepegRow>(),
+      prepareActiveIncidentProjections(db, stablecoinIds.length === 1 ? stablecoinIds[0]! : null).all(),
+    ]);
+    const decoded = decodeActiveIncidentProjections(projectionRaw);
+    if (!decoded.available) {
+      return { ok: false, reason: decoded.reason };
+    }
+    return { ok: true, rows: result.results ?? [], projections: decoded.projections };
   } catch {
     return { ok: false, reason: "depeg-events-read-failed" };
+  }
+}
+
+async function loadLatestDepegCensus(db: D1Database): Promise<DepegCensusLoadResult> {
+  try {
+    const runs = await loadDepegCensusRuns(db);
+    if (runs.length === 0) return { status: "missing" };
+    const latest = latestDepegLedgerRun(runs);
+    if (!latest || !latest.census) {
+      return {
+        status: "pipeline_unavailable",
+        reason: runs[0]?.unavailableReason ?? "depeg-pipeline-unavailable",
+      };
+    }
+    return { status: "ok", run: latest as DepegCensusRun & { census: NonNullable<DepegCensusRun["census"]> } };
+  } catch {
+    return { status: "lookup_failed" };
   }
 }
 
@@ -200,7 +236,25 @@ function buildPriceSignal(
       priceUsd: null,
     };
   }
-  if (!isObservedPrice(asset)) {
+  if (
+    (asset.priceSource != null && typeof asset.priceSource !== "string")
+    || (asset.priceObservedAtMode != null && typeof asset.priceObservedAtMode !== "string")
+  ) {
+    return {
+      provenance: nonOkProvenance("unavailable", "stablecoins-cache", nowSec, pubUpdatedAt, generation, budgetSec, "price-source-invalid"),
+      priceUsd: null,
+    };
+  }
+  let observedPrice = false;
+  try {
+    observedPrice = isObservedPrice(asset);
+  } catch {
+    return {
+      provenance: nonOkProvenance("unavailable", "stablecoins-cache", nowSec, pubUpdatedAt, generation, budgetSec, "price-source-invalid"),
+      priceUsd: null,
+    };
+  }
+  if (!observedPrice) {
     return {
       provenance: nonOkProvenance("unavailable", "stablecoins-cache", nowSec, pubUpdatedAt, generation, budgetSec, "price-not-observed"),
       priceUsd: null,
@@ -212,7 +266,11 @@ function buildPriceSignal(
       priceUsd: null,
     };
   }
-  const rawObservedAt = asset.priceObservedAt ?? asset.priceUpdatedAt ?? null;
+  // Preserve explicit `priceObservedAt: null` per shared/types/supply.ts; only fall back to
+  // `priceUpdatedAt` when `priceObservedAt` is omitted (`undefined`).
+  const rawObservedAt = asset.priceObservedAt === undefined
+    ? (asset.priceUpdatedAt ?? null)
+    : asset.priceObservedAt;
   if (typeof rawObservedAt !== "number" || !Number.isFinite(rawObservedAt) || rawObservedAt <= 0 || rawObservedAt > nowSec) {
     return {
       provenance: nonOkProvenance("unavailable", "stablecoins-cache", nowSec, null, generation, budgetSec, "price-clock-invalid"),
@@ -403,7 +461,7 @@ interface ActiveDepegsBuildResult {
 
 function buildActiveDepegsLane(
   depegRead: Awaited<ReturnType<typeof loadScopedOpenDepegs>>,
-  depegClock: CronTimestampLookupResult,
+  depegCensus: DepegCensusLoadResult,
   priceSignalById: ReadonlyMap<string, TelegramMiniAppCoinSignal["price"]>,
   nowSec: number,
 ): ActiveDepegsBuildResult {
@@ -422,23 +480,39 @@ function buildActiveDepegsLane(
   const seenIds = new Set<string>();
   const quarantinedDepegIds = new Set<string>();
   let hasInvalidDepegRowId = false;
-  const events: TelegramMiniAppActiveDepeg[] = [];
+  const eventsById = new Map<string, TelegramMiniAppActiveDepeg>();
 
   for (const row of depegRead.rows) {
     if (typeof row.stablecoin_id !== "string" || row.stablecoin_id.trim().length === 0) {
       hasInvalidDepegRowId = true;
       continue;
     }
-    if (seenIds.has(row.stablecoin_id) || quarantinedDepegIds.has(row.stablecoin_id)) continue;
+    if (quarantinedDepegIds.has(row.stablecoin_id)) continue;
+    let projected: ReturnType<typeof rowToPublicDepegEvent>;
+    try {
+      projected = rowToPublicDepegEvent(row, depegRead.projections);
+    } catch {
+      quarantinedDepegIds.add(row.stablecoin_id);
+      eventsById.delete(row.stablecoin_id);
+      seenIds.delete(row.stablecoin_id);
+      continue;
+    }
+    if (projected.provenance?.pegScoreEligible === false) continue;
     if (
-      (row.direction !== "above" && row.direction !== "below")
-      || typeof row.peak_deviation_bps !== "number"
-      || !Number.isFinite(row.peak_deviation_bps)
-      || typeof row.started_at !== "number"
-      || !Number.isInteger(row.started_at)
-      || row.started_at < 0
+      (projected.direction !== "above" && projected.direction !== "below")
+      || typeof projected.peakDeviationBps !== "number"
+      || !Number.isFinite(projected.peakDeviationBps)
+      || typeof projected.startedAt !== "number"
+      || !Number.isInteger(projected.startedAt)
+      || projected.startedAt < 0
     ) {
       quarantinedDepegIds.add(row.stablecoin_id);
+      eventsById.delete(row.stablecoin_id);
+      seenIds.delete(row.stablecoin_id);
+      continue;
+    }
+    const existing = eventsById.get(row.stablecoin_id);
+    if (existing && Math.abs(projected.peakDeviationBps) <= Math.abs(existing.peakDeviationBps)) {
       continue;
     }
     seenIds.add(row.stablecoin_id);
@@ -450,13 +524,14 @@ function buildActiveDepegsLane(
     const isFixedUsd = row.peg_type === "peggedUSD";
     let currentDeviationBps: number | null = null;
     let currentDirection: "above" | "below" | null = null;
+    let currentPeerRelative: true | undefined;
     if (isFixedUsd) {
       if (livePriceUsd != null) {
         const sig = deriveDepegSignal(livePriceUsd, 1);
         currentDeviationBps = sig?.bps ?? null;
-        currentDirection = sig == null
+        currentDirection = sig == null || sig.bps === 0
           ? null
-          : sig.bps > 0 ? "above" : sig.bps < 0 ? "below" : row.direction;
+          : sig.bps > 0 ? "above" : "below";
       }
     } else {
       const latest = readPendingObservationReceipt(row.peer_basis_json)?.latest;
@@ -470,39 +545,44 @@ function buildActiveDepegsLane(
         && latest.observedAt <= nowSec
         && nowSec - latest.observedAt <= STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC
       ) {
-        currentDeviationBps = Math.round(latest.bps);
-        currentDirection = latest.bps > 0 ? "above" : latest.bps < 0 ? "below" : row.direction;
+        const roundedBps = Math.round(latest.bps);
+        currentDeviationBps = roundedBps;
+        currentDirection = roundedBps === 0 ? null : roundedBps > 0 ? "above" : "below";
+        if (latest.basis === "peer-relative") currentPeerRelative = true;
       }
     }
-    events.push({
+    eventsById.set(row.stablecoin_id, {
       stablecoinId: row.stablecoin_id,
-      direction: row.direction,
-      peakDeviationBps: row.peak_deviation_bps,
+      direction: projected.direction,
+      peakDeviationBps: projected.peakDeviationBps,
       currentDeviationBps,
       currentDirection,
+      ...(currentPeerRelative ? { currentPeerRelative } : {}),
       priceUsd: livePriceUsd,
       pegReference,
-      startedAt: row.started_at,
+      startedAt: projected.startedAt,
       ...depegComparisonBasis(row),
     });
   }
 
-  const validObservedAt = depegClock.status === "ok"
-    && depegClock.timestamp != null
-    && Number.isFinite(depegClock.timestamp)
-    && depegClock.timestamp > 0
-    && depegClock.timestamp <= nowSec
-    ? Math.floor(depegClock.timestamp)
+  const rawObservedAt = depegCensus.status === "ok" ? depegCensus.run.census.evaluatedAt : null;
+  const validObservedAt = rawObservedAt != null
+    && Number.isInteger(rawObservedAt)
+    && rawObservedAt > 0
+    && rawObservedAt <= nowSec
+    ? rawObservedAt
     : null;
-  const generation = validObservedAt != null ? `sync-stablecoins:${validObservedAt}` : null;
+  const generation = validObservedAt != null ? `depeg-census:${validObservedAt}` : null;
 
   let provenance: TelegramMiniAppContextProvenance;
   if (hasInvalidDepegRowId) {
     provenance = nonOkProvenance("unavailable", "depeg_events", nowSec, validObservedAt, generation, budgetSec, "depeg-row-invalid");
-  } else if (depegClock.status === "lookup_failed") {
+  } else if (depegCensus.status === "lookup_failed") {
     provenance = nonOkProvenance("unavailable", "depeg_events", nowSec, null, null, budgetSec, "depeg-freshness-lookup-failed");
-  } else if (depegClock.status === "missing") {
+  } else if (depegCensus.status === "missing") {
     provenance = nonOkProvenance("unavailable", "depeg_events", nowSec, null, null, budgetSec, "depeg-producer-history-missing");
+  } else if (depegCensus.status === "pipeline_unavailable") {
+    provenance = nonOkProvenance("unavailable", "depeg_events", nowSec, null, null, budgetSec, depegCensus.reason);
   } else if (validObservedAt == null) {
     provenance = nonOkProvenance("unavailable", "depeg_events", nowSec, null, null, budgetSec, "invalid-depeg-producer-clock");
   } else if (nowSec - validObservedAt > budgetSec) {
@@ -512,34 +592,63 @@ function buildActiveDepegsLane(
   }
 
   return {
-    lane: { provenance, events },
-    activeDepegIds: seenIds,
+    lane: {
+      provenance,
+      events: provenance.status === "ok" ? [...eventsById.values()] : [],
+    },
+    activeDepegIds: provenance.status === "ok" ? seenIds : new Set(),
     quarantinedDepegIds,
   };
 }
 
 function deriveCoinPegStatus(
   stablecoinId: string,
+  asset: StablecoinData | undefined,
   price: TelegramMiniAppCoinSignal["price"],
   activeDepegsResult: ActiveDepegsBuildResult,
+  censusUnavailableIds: ReadonlySet<string>,
 ): NonNullable<TelegramMiniAppCoinSignal["pegStatus"]> {
   if (activeDepegsResult.quarantinedDepegIds.has(stablecoinId)) {
+    return "unavailable";
+  }
+  if (activeDepegsResult.lane.provenance.status !== "ok") {
     return "unavailable";
   }
   if (activeDepegsResult.activeDepegIds.has(stablecoinId)) {
     return "off-peg";
   }
-  if (activeDepegsResult.lane.provenance.status !== "ok") {
-    return "unavailable";
-  }
   const meta = WORKER_TRACKED_META_BY_ID.get(stablecoinId);
   if (!meta || !isActiveStablecoinMeta(meta) || meta.navToken === true || meta.flags.navToken === true) {
     return "not-monitored";
   }
-  if (price.provenance.status !== "ok") {
+  if (!asset) {
     return "unavailable";
   }
-  return "on-peg";
+  const supplyUsd = getCirculatingRawOrNull(asset);
+  if (supplyUsd == null) {
+    return "unavailable";
+  }
+  if (supplyUsd < DEPEG_EVENT_MIN_SUPPLY_USD) {
+    return "not-monitored";
+  }
+  if (price.provenance.status !== "ok" || price.priceUsd == null) {
+    return "unavailable";
+  }
+  if (censusUnavailableIds.has(stablecoinId)) {
+    return "unavailable";
+  }
+  if (asset.currentPeg?.pegReferenceUnavailable === true) {
+    return "unavailable";
+  }
+  const thresholdBps = getDepegThresholdBps(asset.pegType);
+  if (typeof asset.currentPeg?.currentDeviationBps === "number" && Number.isFinite(asset.currentPeg.currentDeviationBps)) {
+    return Math.abs(asset.currentPeg.currentDeviationBps) < thresholdBps ? "on-peg" : "unavailable";
+  }
+  if (asset.pegType === "peggedUSD" || (asset.pegType == null && meta.pegCurrency === "USD")) {
+    const sig = deriveDepegSignal(price.priceUsd, 1);
+    return sig != null && Math.abs(sig.bps) < thresholdBps ? "on-peg" : "unavailable";
+  }
+  return "unavailable";
 }
 
 async function loadCoinsContext(
@@ -547,10 +656,10 @@ async function loadCoinsContext(
   stablecoinIds: readonly string[],
   nowSec: number,
 ): Promise<TelegramMiniAppCoinsContext> {
-  const [stablecoinsCache, depegRead, depegClock, dewsState, safetyIndex] = await Promise.all([
+  const [stablecoinsCache, depegRead, depegCensus, dewsState, safetyIndex] = await Promise.all([
     loadStablecoinsCache(db, { mode: "strict" }),
     loadScopedOpenDepegs(db, stablecoinIds),
-    getLatestSuccessfulCronTimestampResult(db, DEPEG_EVENTS_PRODUCER_JOB),
+    loadLatestDepegCensus(db),
     loadScopedDews(db, stablecoinIds, nowSec),
     loadActiveSafetyScoreIndex(db),
   ]);
@@ -573,15 +682,21 @@ async function loadCoinsContext(
     priceSignalById.set(stablecoinId, buildPriceSignal(assetById.get(stablecoinId), stablecoinsCache, nowSec));
   }
 
-  const activeDepegsResult = buildActiveDepegsLane(depegRead, depegClock, priceSignalById, nowSec);
+  const activeDepegsResult = buildActiveDepegsLane(depegRead, depegCensus, priceSignalById, nowSec);
+  const censusUnavailableIds = new Set(
+    depegCensus.status === "ok"
+      ? (depegCensus.run.census.unavailableAssets ?? []).map((entry) => entry.id)
+      : [],
+  );
   const coinSignals: Record<string, TelegramMiniAppCoinSignal> = {};
   for (const stablecoinId of stablecoinIds) {
+    const asset = assetById.get(stablecoinId);
     const price = priceSignalById.get(stablecoinId)!;
     coinSignals[stablecoinId] = {
       price,
       dews: buildDewsSignal(stablecoinId, dewsState, nowSec),
       safety: buildSafetySignal(stablecoinId, safetyIndex, safetyCardsById, nowSec),
-      pegStatus: deriveCoinPegStatus(stablecoinId, price, activeDepegsResult),
+      pegStatus: deriveCoinPegStatus(stablecoinId, asset, price, activeDepegsResult, censusUnavailableIds),
     };
   }
 

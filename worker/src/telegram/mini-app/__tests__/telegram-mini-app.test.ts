@@ -636,10 +636,15 @@ describe("handleTelegramMiniAppSession", () => {
           { id: "dai-makerdao", symbol: "DAI", name: "Dai", price: -5, priceSource: "coingecko", priceObservedAt: NOW_SEC - 30, circulating: { peggedUSD: 500_000_000 } },
         ],
       }), NOW_SEC - 30);
+      const depegCensusMeta = JSON.stringify({
+        cacheWriteMode: "published",
+        capabilities: { depegPipeline: true },
+        quality: { depegObservation: { scope: "psi-non-nav-before-supply-floor", evaluatedAt: NOW_SEC - 30, eligibleCount: 3, observedCount: 3, unavailableCount: 0, belowFloorCount: 0, reasonCounts: {} } },
+      });
       sqlite.prepare(`
         INSERT INTO cron_runs (job, started_at, duration_ms, status, item_count, metadata)
-        VALUES ('sync-stablecoins', ?, 1200, 'ok', 150, '{"cacheWriteMode":"published"}')
-      `).run(NOW_SEC - 30);
+        VALUES ('sync-stablecoins', ?, 1200, 'ok', 150, ?)
+      `).run(NOW_SEC - 30, depegCensusMeta);
       sqlite.prepare(`
         INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peak_price, peg_reference, source)
         VALUES ('usdc-circle', 'USDC', 'peggedUSD', 'below', -150, ?, 0.985, 0.985, 1, 'live')
@@ -786,13 +791,18 @@ describe("handleTelegramMiniAppSession", () => {
       };
       sqlite.prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = 'stablecoins'").run(JSON.stringify({
         peggedAssets: [
-          { id: "usdt-tether", symbol: "USDT", name: "Tether", price: 1, priceSource: "coingecko", priceObservedAt: NOW_SEC - 30, circulating: { peggedUSD: 2e9 } },
-          { id: "eurc-circle", symbol: "EURC", name: "EURC", price: 1.08, priceSource: "coingecko", priceObservedAt: NOW_SEC - 30, circulating: { peggedEUR: 1e8 } },
-          { id: "dai-makerdao", symbol: "DAI", name: "Dai", price: 1, priceSource: "coingecko", priceObservedAt: NOW_SEC - 30, circulating: { peggedUSD: 5e8 } },
-          { id: nav.id, symbol: nav.symbol, name: nav.name, price: 1.15, priceSource: "coingecko", priceObservedAt: NOW_SEC - 30, circulating: { peggedUSD: 5e8 } },
+          { id: "usdt-tether", symbol: "USDT", name: "Tether", pegType: "peggedUSD", price: 1, priceSource: "coingecko", priceObservedAt: NOW_SEC - 30, circulating: { peggedUSD: 2e9 } },
+          { id: "eurc-circle", symbol: "EURC", name: "EURC", pegType: "peggedEUR", price: 1.08, priceSource: "coingecko", priceObservedAt: NOW_SEC - 30, circulating: { peggedEUR: 1e8 } },
+          { id: "dai-makerdao", symbol: "DAI", name: "Dai", pegType: "peggedUSD", price: 1, priceSource: "coingecko", priceObservedAt: NOW_SEC - 30, circulating: { peggedUSD: 5e8 } },
+          { id: nav.id, symbol: nav.symbol, name: nav.name, pegType: "peggedUSD", price: 1.15, priceSource: "coingecko", priceObservedAt: NOW_SEC - 30, circulating: { peggedUSD: 5e8 } },
         ],
       }), NOW_SEC - 30);
-      sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status, item_count, metadata) VALUES ('sync-stablecoins', ?, 1000, 'ok', 150, '{\"cacheWriteMode\":\"published\"}')").run(NOW_SEC - 30);
+      const okCensusMeta = JSON.stringify({
+        cacheWriteMode: "published",
+        capabilities: { depegPipeline: true },
+        quality: { depegObservation: { scope: "psi-non-nav-before-supply-floor", evaluatedAt: NOW_SEC - 30, eligibleCount: 4, observedCount: 4, unavailableCount: 0, belowFloorCount: 0, reasonCounts: {} } },
+      });
+      sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status, item_count, metadata) VALUES ('sync-stablecoins', ?, 1000, 'ok', 150, ?)").run(NOW_SEC - 30, okCensusMeta);
       sqlite.prepare("INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peak_price, peg_reference, source) VALUES ('dai-makerdao', 'DAI', 'peggedUSD', 'below', -200, -1, 0.98, 0.98, 1, 'live')").run();
       sqlite.prepare("INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peak_price, peg_reference, source, peer_basis_json) VALUES ('eurc-circle', 'EURC', 'peggedEUR', 'below', -180, ?, 1.05, 1.05, 1.08, 'live', ?)").run(
         NOW_SEC - 4_000, JSON.stringify({ latest: { basis: "native-peg", observedAt: NOW_SEC - STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC - 10, price: 1.06, pegReference: 1.08, bps: -185 } }),
@@ -832,6 +842,33 @@ describe("handleTelegramMiniAppSession", () => {
       expect(second.activeDepegs.events).toEqual([expect.objectContaining({ stablecoinId: "eurc-circle", direction: "below", currentDeviationBps: 139, currentDirection: "above" })]);
       expect(second.coinSignals["usdt-tether"]?.dews).toMatchObject({ provenance: { status: "ok" }, band: "CALM", score: 25 });
       expect(second.coinSignals["eurc-circle"]?.dews.provenance).toMatchObject({ status: "unavailable", reason: "dews-unobserved" });
+
+      // Sub-$1M floor, $0.90 unlogged quote, unavailable FX, null priceObservedAt, malformed priceSource, and degraded depegPipeline never certify on-peg.
+      sqlite.prepare("DELETE FROM depeg_events").run();
+      sqlite.prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = 'stablecoins'").run(JSON.stringify({
+        peggedAssets: [
+          { id: "usdc-circle", symbol: "USDC", name: "USD Coin", pegType: "peggedUSD", price: 0.90, priceSource: "coingecko", priceObservedAt: NOW_SEC - 20, circulating: { peggedUSD: 2e9 } },
+          { id: "usdt-tether", symbol: "USDT", name: "Tether", pegType: "peggedUSD", price: 1.0, priceSource: "coingecko", priceObservedAt: null, priceUpdatedAt: NOW_SEC - 20, circulating: { peggedUSD: 2e9 } },
+          { id: "dai-makerdao", symbol: "DAI", name: "Dai", pegType: "peggedUSD", price: 0.90, priceSource: "coingecko", priceObservedAt: NOW_SEC - 20, circulating: { peggedUSD: 500_000 } },
+          { id: "eurc-circle", symbol: "EURC", name: "EURC", pegType: "peggedEUR", price: 1.08, priceSource: "coingecko", priceObservedAt: NOW_SEC - 20, circulating: { peggedEUR: 1e8 }, currentPeg: { pegReferenceUnavailable: true } },
+          { id: "pyusd-paypal", symbol: "PYUSD", name: "PayPal USD", pegType: "peggedUSD", price: 1.0, priceSource: { bad: true }, priceObservedAt: NOW_SEC - 20, circulating: { peggedUSD: 5e8 } },
+        ],
+      }), NOW_SEC - 20);
+      vi.setSystemTime((NOW_SEC + 4) * 1000);
+      const third = await postCoins(["usdc-circle", "usdt-tether", "dai-makerdao", "eurc-circle", "pyusd-paypal"]);
+      expect(third.coinSignals["usdc-circle"]?.pegStatus).toBe("unavailable");
+      expect(third.coinSignals["usdt-tether"]).toMatchObject({ price: { provenance: { status: "unavailable", reason: "price-clock-invalid" } }, pegStatus: "unavailable" });
+      expect(third.coinSignals["dai-makerdao"]?.pegStatus).toBe("not-monitored");
+      expect(third.coinSignals["eurc-circle"]?.pegStatus).toBe("unavailable");
+      expect(third.coinSignals["pyusd-paypal"]).toMatchObject({ price: { provenance: { status: "unavailable", reason: "price-source-invalid" } }, pegStatus: "unavailable" });
+
+      sqlite.prepare("DELETE FROM cron_runs").run();
+      sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status, item_count, metadata) VALUES ('sync-stablecoins', ?, 1000, 'degraded', 150, '{\"cacheWriteMode\":\"published\",\"capabilities\":{\"depegPipeline\":false}}')").run(NOW_SEC - 10);
+      sqlite.prepare("INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peak_price, peg_reference, source) VALUES ('usdc-circle', 'USDC', 'peggedUSD', 'below', -200, ?, 0.98, 0.98, 1, 'live')").run(NOW_SEC - 600);
+      vi.setSystemTime((NOW_SEC + 6) * 1000);
+      const degraded = await postCoins(["usdc-circle"]);
+      expect(degraded.activeDepegs).toMatchObject({ provenance: { status: "unavailable", reason: "depeg-pipeline-unavailable" }, events: [] });
+      expect(degraded.coinSignals["usdc-circle"]?.pegStatus).toBe("unavailable");
     } finally {
       sqlite.close();
     }

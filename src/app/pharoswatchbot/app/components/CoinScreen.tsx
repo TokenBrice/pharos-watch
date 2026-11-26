@@ -165,7 +165,10 @@ export function CoinScreen({
   const coinSnoozeUntil = subscription?.snoozeUntilTs ?? null;
   const coinSnoozed = coinSnoozeUntil != null && coinSnoozeUntil > nowSec;
   const canSnoozeCoin = tracked && (subscription != null || anyInherited);
-  const liveHeaderLine = tracked && liveContext ? formatCoinLiveHeaderLine(liveContext, catalogCoin) : null;
+  const rawLiveHeaderLine = tracked && liveContext ? formatCoinLiveHeaderLine(liveContext, catalogCoin) : null;
+  const liveHeaderLine = catalogCoin?.status === "pre-launch" && rawLiveHeaderLine === "Live data unavailable."
+    ? null
+    : rawLiveHeaderLine;
   const headerSubtitle = [
     secondaryName,
     catalogCoin?.pegLabel ?? (catalogCoin?.peg ? `${catalogCoin.peg} peg` : null),

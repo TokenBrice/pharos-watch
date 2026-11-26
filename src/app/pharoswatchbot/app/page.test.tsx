@@ -1330,7 +1330,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(1_100); });
     expect(coinsAttempts).toBe(2);
     expect(screen.getByRole("heading", { name: "2+ watched coins off peg" })).toBeTruthy();
-    expect(screen.getByText("Checked top 20 watched coins by market cap.")).toBeTruthy();
+    expect(screen.getByText("Checked 20 of your watched coins.")).toBeTruthy();
 
     // A second 429 on retry degrades cleanly without an infinite retry loop.
     fireEvent.click(screen.getByRole("button", { name: "Follow a preset" }));

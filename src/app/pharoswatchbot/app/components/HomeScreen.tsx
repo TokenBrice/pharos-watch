@@ -406,7 +406,7 @@ export function HomeScreen({
 
   return (
     <>
-      <section className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl bg-[var(--mini-card)] px-4 py-3" aria-label="Alert status">
+      <section className={cn("flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl bg-[var(--mini-card)] px-4 py-3", strip.tappableToSettings && "relative")} aria-label="Alert status">
         <span aria-hidden="true" className={cn("h-2.5 w-2.5 shrink-0 self-start mt-1.5 rounded-full", STRIP_DOT[strip.tone])} />
         <div className="min-w-[9rem] flex-1">
           <h1 tabIndex={-1} className="outline-none text-base font-semibold text-foreground">{strip.title}</h1>
@@ -417,7 +417,7 @@ export function HomeScreen({
             type="button"
             aria-label="Open delivery status in Settings"
             onClick={() => push({ name: "settings" })}
-            className="-my-1 -mr-2 inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground/70 transition-colors active:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+            className="-my-1 -mr-2 inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground/70 transition-colors after:absolute after:inset-0 after:rounded-xl active:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
           >
             <ChevronRight className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -447,7 +447,7 @@ export function HomeScreen({
       {activeDepegs.length > 0 ? (
         <ListSection
           title="Off peg now"
-          footer={truncated ? "Checked top 20 watched coins by market cap." : undefined}
+          footer={truncated ? "Checked 20 of your watched coins." : undefined}
         >
           {activeDepegs.slice(0, OFF_PEG_ROW_LIMIT).map((event) => {
             const sym = symbolById.get(event.stablecoinId) ?? event.stablecoinId;

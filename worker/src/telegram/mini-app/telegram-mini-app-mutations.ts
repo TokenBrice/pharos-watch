@@ -553,15 +553,15 @@ export async function executeTelegramMiniAppBulkWatchlistApply(
   ];
 
   const followedPresetIds = current.state.presets.map((preset) => preset.presetId as TelegramPresetId);
-  let inheritedSources: Map<string, Array<"preset" | "global">>;
+  let inheritedSources: Map<string, Array<"preset" | "global">> | null = null;
   try {
     inheritedSources = await sourceImpactAfter(db, chatId, [...adds, ...removes], followedPresetIds, {
       getStablecoinsCacheResult: options.getStablecoinsCacheResult,
       toleratePresetUnavailable: true,
     });
   } catch {
-    // Direct patch already committed; degrade post-commit impact metadata instead of surfacing a 500.
-    inheritedSources = new Map();
+    // Direct patch already committed; omit impact entries rather than claiming zero inherited sources.
+    inheritedSources = null;
   }
   const nowSec = options.nowSec ?? unixNow();
 
@@ -570,18 +570,20 @@ export async function executeTelegramMiniAppBulkWatchlistApply(
       adds,
       removes,
       unchanged,
-      sourceImpact: [
-        ...adds.map((stablecoinId) => ({
-          stablecoinId,
-          action: "add" as const,
-          inheritedSourcesAfter: inheritedSources.get(stablecoinId) ?? [],
-        })),
-        ...removes.map((stablecoinId) => ({
-          stablecoinId,
-          action: "remove" as const,
-          inheritedSourcesAfter: inheritedSources.get(stablecoinId) ?? [],
-        })),
-      ],
+      sourceImpact: inheritedSources == null
+        ? []
+        : [
+            ...adds.map((stablecoinId) => ({
+              stablecoinId,
+              action: "add" as const,
+              inheritedSourcesAfter: inheritedSources.get(stablecoinId) ?? [],
+            })),
+            ...removes.map((stablecoinId) => ({
+              stablecoinId,
+              action: "remove" as const,
+              inheritedSourcesAfter: inheritedSources.get(stablecoinId) ?? [],
+            })),
+          ],
     },
     undo: {
       expectedPreferenceGeneration: expectedPreferenceGeneration + 1,

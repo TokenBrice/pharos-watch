@@ -231,14 +231,18 @@ function formatDepegDeviation(
   }
   const usingCurrent = depeg.currentDeviationBps != null;
   const bps = usingCurrent ? depeg.currentDeviationBps! : depeg.peakDeviationBps;
+  const isNeutralZero = usingCurrent && (Math.abs(bps) < 5 || depeg.currentDirection === null);
   const direction = usingCurrent
-    ? (depeg.currentDirection ?? (bps > 0 ? "above" : bps < 0 ? "below" : depeg.direction))
+    ? (depeg.currentDirection ?? (bps > 0 ? "above" : bps < 0 ? "below" : null))
     : depeg.direction;
   const pct = (Math.abs(bps) / 100).toFixed(1);
-  const base = withPegWord ? `${pct}% ${direction} peg` : `${pct}% ${direction}`;
+  const base = isNeutralZero || direction == null
+    ? (withPegWord ? "0.0% from peg" : "0.0%")
+    : (withPegWord ? `${pct}% ${direction} peg` : `${pct}% ${direction}`);
+  const peerQualifier = usingCurrent ? depeg.currentPeerRelative === true : depeg.peerRelative === true;
   const qualifiers = [
     !usingCurrent ? "peak" : null,
-    depeg.peerRelative ? "vs peers" : null,
+    peerQualifier ? "vs peers" : null,
   ].filter((part): part is string => part != null);
   return qualifiers.length > 0 ? `${base} (${qualifiers.join(", ")})` : base;
 }
@@ -272,7 +276,7 @@ export function formatCoinLiveHeaderLine(
   const { signal, depeg, depegProvenance } = input;
 
   const priceOk = signal.price.provenance.status === "ok" && signal.price.priceUsd != null;
-  const pegStatus = signal.pegStatus ?? (
+  const rawPegStatus = signal.pegStatus ?? (
     depeg != null && depegProvenance?.status === "ok"
       ? "off-peg"
       : (coinMeta?.status != null && coinMeta.status !== "active") || Boolean(coinMeta?.pegLabel)
@@ -281,6 +285,9 @@ export function formatCoinLiveHeaderLine(
           ? "on-peg"
           : "unavailable"
   );
+  const pegStatus = rawPegStatus === "off-peg" && depegProvenance != null && depegProvenance.status !== "ok"
+    ? "unavailable"
+    : rawPegStatus;
   const pegAvailable = pegStatus === "off-peg" || pegStatus === "on-peg";
   const dewsOk = signal.dews.provenance.status === "ok" && signal.dews.band != null && signal.dews.score != null;
   const safetyHeld = signal.safety.held === true && signal.safety.ratingStatus != null;

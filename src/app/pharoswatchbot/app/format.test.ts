@@ -184,6 +184,9 @@ describe("live risk context formatting", () => {
     expect(formatOffPegRowValue(depeg)).toBe("$0.9871 · 1.3% below");
     expect(formatOffPegRowValue({ ...depeg, currentDeviationBps: 45, currentDirection: "above", priceUsd: 1.0045 })).toBe("$1.0045 · 0.5% above");
     expect(formatOffPegRowValue({ ...depeg, currentDeviationBps: 45, priceUsd: 1.0045 })).toBe("$1.0045 · 0.5% above");
+    expect(formatOffPegRowValue({ ...depeg, currentDeviationBps: 0, currentDirection: null, priceUsd: 1.0 })).toBe("$1.0000 · 0.0%");
+    expect(formatOffPegRowValue({ ...depeg, currentDeviationBps: -129, currentDirection: "below", peerRelative: true })).toBe("$0.9871 · 1.3% below");
+    expect(formatOffPegRowValue({ ...depeg, currentDeviationBps: -129, currentDirection: "below", currentPeerRelative: true })).toBe("$0.9871 · 1.3% below (vs peers)");
     expect(formatOffPegRowValue({ ...depeg, currentDeviationBps: null, peerRelative: true })).toBe("$0.9871 · 1.5% below (peak, vs peers)");
 
     const fullSignal = {

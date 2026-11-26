@@ -288,6 +288,12 @@ export function AddCoinsScreen({
             enterKeyHint="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Escape" && query.length > 0) {
+                event.preventDefault();
+                setQuery("");
+              }
+            }}
             placeholder="Search 400+ coins: USDT, sUSDe, EURC"
             className="h-full min-w-0 flex-1 bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground"
           />
