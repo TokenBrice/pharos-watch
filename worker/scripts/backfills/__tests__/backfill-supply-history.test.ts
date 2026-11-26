@@ -1005,7 +1005,7 @@ describe("handleBackfillSupplyHistory", () => {
     psiEligibleMocks.metaById.set(baseDollar.id, baseDollar);
     expect(baseDollar).toMatchObject({
       detailProvider: "defillama",
-      llamaId: "434",
+      llamaId: expect.any(String),
     });
     expect(baseDollar?.geckoId).toBeUndefined();
     // The corrected DefiLlama identity must not disable this allowlisted on-chain

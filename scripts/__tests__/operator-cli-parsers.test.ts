@@ -2,7 +2,7 @@ import {join} from "node:path"
 import fs from "node:fs"
 import cp from "node:child_process"
 import {syncBuiltinESMExports as sync} from "node:module"
-import {afterEach,expect as e,it,vi,type MockInstance} from "vitest"
+import {afterEach,describe,expect as e,it,vi,type MockInstance} from "vitest"
 import {withTempRepo} from "./helpers/test-state"
 import pkg from "../../package.json"
 
@@ -10,7 +10,8 @@ const launch=vi.hoisted(()=>vi.fn())
 vi.mock("playwright",()=>({chromium:{launch}}))
 import {parseFreezeStablecoinArgs as freeze} from "../maintenance/freeze-stablecoin"
 import {parseD1InsightsArgs as d1} from "../maintenance/capture-d1-insights.mjs"
-import {parseSeoRenderBudgetArgs as seo,runSeoRenderBudget as runSeo} from "../maintenance/audit-seo-render-budget.mjs"
+import {failedRouteRow,formatTable,parseSeoRenderBudgetArgs as seo,runSeoRenderBudget as runSeo} from "../maintenance/audit-seo-render-budget.mjs"
+import {isReplayEligibleRoute} from "../lib/seo-render-facts.mjs"
 import {parseAgentLandArgs as land,runAgentLand as runLand} from "../maintenance/agent-land"
 import {parseAgentWorktreeArgs as worktree,runAgentWorktree as runTree} from "../maintenance/agent-worktree"
 import {run as wait} from "../maintenance/wait-pages-release-marker.ts"
@@ -83,3 +84,41 @@ e(new URL(String(input)).searchParams.get("expected")).toBe("target");return Res
 await wait(["--url","https://one.test/m.json","--marker",join(dir,"m.json"),"--attempts","2","--delay-ms","0"])
 e(fetch).toHaveBeenCalledTimes(2)
 }))
+
+describe("SEO render audit CLI and report", () => {
+  it("bounds replay selection to eligible requested routes", () => {
+    e(isReplayEligibleRoute("/alt-pegs/")).toBe(true);
+    e(isReplayEligibleRoute("/safety-scores/")).toBe(true);
+    e(isReplayEligibleRoute("/compliance/")).toBe(true);
+    e(isReplayEligibleRoute("/stablecoin/usdt-tether/")).toBe(true);
+    e(isReplayEligibleRoute("/stablecoin/usdt-tether/yield/")).toBe(false);
+    e(isReplayEligibleRoute("/")).toBe(false);
+    e(isReplayEligibleRoute("/api/reference/")).toBe(false);
+    e(seo([]).routes).toEqual(e.arrayContaining(["/alt-pegs/", "/compliance/"]));
+    e(seo([]).routes).toEqual(
+      e.arrayContaining(["/chains/ethereum/", "/chains/solana/", "/chains/base/"]),
+    );
+  });
+
+  it("adds capture, sentinel, href-loss, failure and injection counters to the text report", () => {
+    const row = {
+      ...failedRouteRow("/", "https://pharos.watch/", new Error("boom")),
+      sentinels: [
+        { id: "a", status: "missing", reason: "x", observedCount: 0, sourceGeneration: null },
+        { id: "b", status: "not-observed", reason: "y", observedCount: null, sourceGeneration: null },
+      ],
+      hrefLoss: { mobile: ["/a/"], tall: null },
+      failures: {
+        httpData: [{}],
+        failedRequests: [],
+        pageErrors: [],
+        intentionalBlocks: [{ kind: "api-failure-replay", url: "https://pharos.watch/_site-data/x", status: 503 }],
+      },
+    };
+    const report = formatTable([row]);
+    const [headers, values] = report.split("\n");
+
+    e(headers.split("\t")).toEqual(e.arrayContaining(["capture", "missing", "notObs", "hrefLost", "dataFail", "inject"]));
+    e(values.split("\t")).toEqual(e.arrayContaining(["failed", "1", "1", "1", "1", "1"]));
+  });
+});
