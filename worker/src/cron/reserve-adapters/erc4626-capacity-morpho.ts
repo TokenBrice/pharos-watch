@@ -5,7 +5,6 @@ import { isRecord } from "@shared/lib/type-guards";
 import { FetchRequestNotStartedError } from "../../lib/abort";
 import { finiteDecimalNumberFromBigInt } from "../../lib/bigint";
 import { fetchEvmBlockTimestamp } from "../../lib/evm-rpc";
-import { fetchWithRetry } from "../../lib/fetch-retry";
 import {
   MORPHO_RATE_LIMIT_CACHE_KEY,
   parseMorphoRateLimitBackoff,
@@ -17,7 +16,7 @@ import { cancelResponseBodyQuietly, readResponseJsonWithinLimitWithSignal } from
 import { redactProviderUrls } from "../../lib/safe-error-message";
 import { decodeStrictAddressWord } from "./abi-decode";
 import { runAdapterIo } from "./concurrency";
-import { ADAPTER_USER_AGENT, createRequestBodyObserver, getCachedRequest } from "./request";
+import { createRequestBodyObserver, fetchAdapterResponseWithRetry, getCachedRequest } from "./request";
 import { parseBoundedDecimals } from "./slice-math";
 import { parseDecimalNumber } from "./strict-amount";
 import type { AdapterContext } from "./types";
@@ -247,14 +246,12 @@ async function fetchMorphoReadJson(
     const observation = createRequestBodyObserver(ctx, maxResponseBytes);
 
     try {
-      const response = await fetchWithRetry(
+      const response = await fetchAdapterResponseWithRetry(
         url,
+        requestSignal,
         {
-          headers: { Accept: "application/json", "User-Agent": ADAPTER_USER_AGENT },
-          signal: requestSignal,
-        },
-        1,
-        {
+          headers: { Accept: "application/json" },
+          maxRetries: 1,
           timeoutMs: attemptTimeoutMs,
           ...(effectiveDeadlineMs != null ? { deadlineMs: effectiveDeadlineMs } : {}),
           ...(options?.passthrough404 ? { passthrough404: true } : {}),
