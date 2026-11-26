@@ -4,7 +4,7 @@ import type { DigestInputData } from "@shared/types/digest";
 import { ReferenceAdmissionSchema } from "@shared/types/reference-admission";
 import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
 import { reviewedDepegDisputeSql } from "@shared/data/depegs/reviewed-depeg-disposition-sql";
-import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
 import { isNativePegEvent } from "@shared/lib/depeg-quote-domain";
 import { projectCurrentPegDeviation } from "@shared/lib/current-peg-projection";
 import { deriveDepegSignal, hasPublishedDeviation } from "@shared/lib/depeg-signals";
@@ -186,7 +186,7 @@ export async function collectActiveDepegs(
       const livePrice = nativeEvent ? nativeObservation?.value ?? null :
         ctx.stablecoinsCacheIsFresh &&
         usdObservedAt != null && Number.isSafeInteger(usdObservedAt) && usdObservedAt > 0 && usdObservedAt <= ctx.nowSec &&
-        ctx.nowSec - usdObservedAt <= API_FRESHNESS_MAX_AGE_SEC.stablecoins &&
+        ctx.nowSec - usdObservedAt <= DEPEG_PRIMARY_PRICE_MAX_AGE_SEC &&
         asset != null && hasUsableCurrentPrice(asset)
           ? asset.price
           : null;

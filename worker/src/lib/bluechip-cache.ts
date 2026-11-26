@@ -10,6 +10,7 @@ import { validatePayloadWithSchema } from "./api-schema";
 import { decodeCachedJson } from "./cache-json";
 import { createCacheHandler, recordJsonParseFailure } from "./api-cache-read";
 
+// pharos-allow-freshness-clamp: HTTP response freshness only; Bluechip availability follows the daily producer.
 export const handleBluechipRatings = createCacheHandler(
   "bluechip-ratings",
   "bluechip-ratings",

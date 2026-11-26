@@ -19,7 +19,6 @@ import { createLatestSchemaFixtureTracker, createLatestSchemaSqlite } from "@sha
 import { DatabaseSync } from "node:sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { PSI_NATIVE_EVIDENCE_MAX_AGE_SEC as NATIVE_MAX } from "@shared/lib/depeg-quote-domain";
-import { API_FRESHNESS_MAX_AGE_SEC as FRESH_MAX } from "@shared/lib/api-freshness";
 import { NATIVE_EVENT_QUOTE_CACHE_PREFIX as NATIVE_PFX } from "../../lib/native-peg-quote-cache";
 import { PSI_CONDITION_BAND_VALUES } from "@shared/types/stability-constants";
 import { CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC } from "@shared/lib/stablecoins/aggregate-universe";
@@ -517,7 +516,7 @@ describe("market and risk collectors", () => {
 
   it("pages a stale cache but keeps a partial core supply cohort as metadata", async () => {
     const sc = mkScen(), src = sc.sourcePayload as { updatedAt: number; payload: { peggedAssets: Array<Record<string, unknown>> } };
-    src.updatedAt = nowS() - FRESH_MAX.stablecoins - 1;
+    src.updatedAt = nowS() - 1_801;
     src.payload.peggedAssets = src.payload.peggedAssets.filter((a) => a.id === "usdt-tether").map(({ circulatingPrevWeek: _d, ...a }) => a);
     vm(loadCache).mockResolvedValue(sc.sourcePayload);
     const rec = (await buildIn(sc.db)).inputData.dataQuality?.degradedSources ?? [];
@@ -641,14 +640,13 @@ describe("market and risk collectors", () => {
     expect(qualityReasons).toEqual(["active-depeg-reference-market-closed"]);
   });
 
-  it.each([["upstream", "pyth", "current"], ["legacy", "pyth", "current"], ["legacy", "binance", "peak-fallback"]] as const)("reads the %s USD quote clock from %s", async (clock, src, basis) => {
+  it.each([["upstream", "pyth", 1_800, "current"], ["upstream", "pyth", 1_801, "peak-fallback"], ["legacy", "pyth", 60, "current"], ["legacy", "binance", 60, "peak-fallback"]] as const)("reads %s USD quote from %s at %is", async (clock, src, age, basis) => {
     const ctx = ctxFor(depegTbl([{ ...activeRows.usdc, peak_deviation_bps: -1000, peg_reference: 1 }])), a = ctx.stablecoinAssetById.get("usdc-circle")!;
-    a.price = 0.98; a.priceSource = src; a.priceUpdatedAt = ctx.nowSec - 60;
+    a.price = 0.98; a.priceSource = src; a.priceUpdatedAt = ctx.nowSec - age;
     if (clock === "legacy") { const l: Partial<typeof a> = a; delete l.priceObservedAt; delete l.priceObservedAtMode; } else a.priceObservedAt = a.priceUpdatedAt;
-    const { value } = await colDepegs(ctx);
-    expect(value.topDepegs[0]).toMatchObject({ severityBasis: basis, peakBps: -1000 });
-    expect(value.topDepegs[0].currentBps).toBe(basis === "current" ? -200 : undefined);
-    expect(value.topDepegs[0].priceObservedAt).toBe(basis === "current" ? a.priceUpdatedAt : undefined);
+    const { value } = await colDepegs(ctx), top = value.topDepegs[0];
+    expect(top).toMatchObject({ severityBasis: basis, peakBps: -1000 });
+    expect([top.currentBps, top.priceObservedAt]).toEqual(basis === "current" ? [-200, a.priceUpdatedAt] : [undefined, undefined]);
   });
 
   it("keeps a native-quote event on the event-native reference", async () => {
@@ -1167,9 +1165,10 @@ describe("daily digest generation", () => {
 
     it.each([
       ["active-depeg read fails", "active-depegs-query", "usx-dforce", "USX"],
-      ["stablecoins cache is stale", "stablecoins-cache-stale", "usdt-tether", "USDT"],
+      ["stablecoins cache is stale at 1801s", "stablecoins-cache-stale", "usdt-tether", "USDT"],
+      ["stablecoins cache is fresh at 1800s", "stablecoins-cache-fresh", "usdt-tether", "USDT"],
       ["open USD event has no current reference", "active-depeg-reference-unavailable", "usdt-tether", "USDT"],
-    ])("retains the pending depeg lifecycle queue when the %s", async (_c, reason, sid, sym) => {
+    ])("handles the pending depeg lifecycle queue when the %s", async (_c, reason, sid, sym) => {
       const now = nowS(), { sqlite, db } = createLatestSchemaSqlite({ onAll: (sql) => { if (reason === "active-depegs-query" && sql.includes("FROM depeg_events e LEFT JOIN depeg_event_provenance")) throw new Error("D1 read failed"); } });
       try {
         const pAt = now - 86_400, pFlags = [{ stablecoinId: sid, symbol: sym, kind: "stalled-collapse", currentBps: -6_200, ageDays: 27, mcapUsd: 12_000_000 }];
@@ -1177,17 +1176,22 @@ describe("daily digest generation", () => {
         const comp = js({ severity: 2, breadth: 1, trend: 0, stressBreadth: 0 });
         sqlite.prepare("INSERT INTO stability_index_samples (stored_at, score, band, components, input_snapshot) VALUES (?, ?, ?, ?, ?)").run(now - 600, 91.2, "BEDROCK", comp, "{}");
         sqlite.prepare("INSERT INTO stability_index (computed_at, score, band, components, input_snapshot) VALUES (?, ?, ?, ?, ?)").run(now - (now % 86_400), 89.5, "STEADY", comp, "{}");
-        if (reason === "stablecoins-cache-stale") vm(loadCache).mockResolvedValueOnce({ ...scen.sourcePayload, updatedAt: now - 3_600 } as typeof scen.sourcePayload);
+        if (reason === "stablecoins-cache-stale" || reason === "stablecoins-cache-fresh") vm(loadCache).mockResolvedValueOnce({ ...scen.sourcePayload, updatedAt: now - (reason === "stablecoins-cache-stale" ? 1_801 : 1_800) } as typeof scen.sourcePayload);
         else if (reason === "active-depeg-reference-unavailable") {
           sqlite.prepare("INSERT INTO depeg_events (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peak_price, peg_reference, source) VALUES (201, 'usdt-tether', 'USDT', 'peggedUSD', 'below', -150, ?, 0.998, 0.998, 1, 'live')").run(now - 3 * 86_400);
           const src = scen.sourcePayload as Extract<typeof scen.sourcePayload, { kind: "ok" }>;
           vm(loadCache).mockResolvedValueOnce({ ...src, payload: { ...src.payload, peggedAssets: src.payload.peggedAssets.map((a) => a.id === "usdt-tether" ? { ...a, price: null } : a) } });
         }
         const res = await genDigest(db, "anthropic-key", null, false, null); expect(res.itemCount).toBe(1);
-        if (reason === "active-depeg-reference-unavailable") expect((jp(String((sqlite.prepare("SELECT input_data FROM daily_digest ORDER BY generated_at DESC LIMIT 1").get() as { input_data: string }).input_data)) as { degradedSources?: string[] }).degradedSources).toContain(reason);
-        else expect(res.metadata).toContain(reason);
         const row = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?").get(FLAGS_KEY) as { value: string; updated_at: number } | undefined;
-        expect(row).toBeDefined(); expect(jp(String(row!.value))).toEqual({ updatedAt: pAt, flags: pFlags }); expect(row!.updated_at).toBe(pAt);
+        if (reason === "stablecoins-cache-fresh") {
+          expect(res.metadata ?? "").not.toContain("stablecoins-cache-stale");
+          expect(row).toBeDefined(); expect(jp(String(row!.value))).toEqual({ updatedAt: now, flags: [] }); expect(row!.updated_at).toBe(now);
+        } else {
+          if (reason === "active-depeg-reference-unavailable") expect((jp(String((sqlite.prepare("SELECT input_data FROM daily_digest ORDER BY generated_at DESC LIMIT 1").get() as { input_data: string }).input_data)) as { degradedSources?: string[] }).degradedSources).toContain(reason);
+          else expect(res.metadata).toContain(reason);
+          expect(row).toBeDefined(); expect(jp(String(row!.value))).toEqual({ updatedAt: pAt, flags: pFlags }); expect(row!.updated_at).toBe(pAt);
+        }
       } finally { sqlite.close(); }
     });
 

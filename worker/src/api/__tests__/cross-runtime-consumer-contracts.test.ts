@@ -136,34 +136,17 @@ describe("GET /api/chains readers", () => {
 describe("GET /api/bluechip-ratings readers", () => {
   it("serves the rating map the Pages selector snapshot parses", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const rating = {
-      grade: "A",
-      slug: "tether",
-      lastObservedAt: nowSec - 60,
-      observationState: "current",
-      observationReason: null,
-      collateralization: 100,
-      smartContractAudit: true,
-      dateOfRating: "2026-01-01",
-      dateLastChange: "2026-01-01",
-      smidge: {
-        stability: "4", management: "4", implementation: "4",
-        decentralization: "4", governance: "4", externals: "4",
-      },
-    };
-    const db = mockD1([{
-      match: "cache",
-      rows: [{ key: "bluechip-ratings", value: JSON.stringify({ "usdt-tether": rating }), updated_at: nowSec - 60 }],
-      first: { key: "bluechip-ratings", value: JSON.stringify({ "usdt-tether": rating }), updated_at: nowSec - 60 },
-    }]);
-
-    const response = await handleBluechipRatings(db);
+    const row = { key: "bluechip-ratings", value: JSON.stringify({ "usdt-tether": {
+      grade: "A", slug: "tether", lastObservedAt: nowSec - 60, observationState: "current", observationReason: null,
+      collateralization: 100, smartContractAudit: true, dateOfRating: "2026-01-01", dateLastChange: "2026-01-01",
+      smidge: { stability: "4", management: "4", implementation: "4", decentralization: "4", governance: "4", externals: "4" },
+    } }), updated_at: nowSec - 60 };
+    const response = await handleBluechipRatings(mockD1([{ match: "cache", rows: [row], first: row }]));
     expect(response.status).toBe(200);
     const { _meta, ...payload } = await response.json() as Record<string, unknown>;
-    expect(_meta).toBeDefined();
+    expect(_meta).toMatchObject({ freshBudgetSec: 43_200 * 8, degradedBudgetSec: 43_200 * 12 });
     expectParses(BluechipRatingsMapSchema, payload, "Pages/frontend bluechip ratings");
-    const parsed = BluechipRatingsMapSchema.parse(payload);
-    expect(parsed["usdt-tether"]?.observationState).toBe("current");
+    expect(BluechipRatingsMapSchema.parse(payload)["usdt-tether"]?.observationState).toBe("current");
   });
 });
 

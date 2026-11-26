@@ -2,7 +2,7 @@ import { loadPsiSampleAverage } from "../../lib/psi-sample-projection";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { DigestInputData } from "@shared/types/digest";
 import { DigestSafetyMapCaptureSchema, type DigestSafetyMapCapture } from "@shared/types/digest-safety-map-contract";
-import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { isRecord } from "@shared/lib/type-guards";
 import { round1 } from "@shared/lib/math";
 import type { StablecoinData } from "@shared/types/supply";
@@ -247,7 +247,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   const stablecoinsCacheIsFresh =
     stablecoinsCacheResult.updatedAt != null &&
     stablecoinsCacheResult.updatedAt <= nowSec &&
-    nowSec - stablecoinsCacheResult.updatedAt <= API_FRESHNESS_MAX_AGE_SEC.stablecoins;
+    nowSec - stablecoinsCacheResult.updatedAt <= STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC;
   // Use the full stablecoins payload for peg references. The collector also
   // checks each published reference verdict against the selected quote clock.
   const currentPegObservationById = stablecoinsCacheIsFresh
@@ -277,10 +277,10 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     yesterdayTs,
   };
 
-  // Stablecoins prices are quoted as live/current in the digest. Use the same
-  // public freshness budget as /api/stablecoins and the depeg resolver; once
-  // stale, collectors may still use market-cap context but must not treat the
-  // cached price as a current depeg-severity signal.
+  // Stablecoins prices are quoted as live/current in the digest. Use the
+  // consumer generation budget (STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC);
+  // once stale, collectors may still use market-cap context but must not treat
+  // the cached price as a current depeg-severity signal.
   const collectorResults: CollectorResult<unknown>[] = [];
   if (!ctx.stablecoinsCacheIsFresh) {
     collectorResults.push(collectorDegraded(undefined, "stablecoins-cache-stale"));
