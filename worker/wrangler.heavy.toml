@@ -66,9 +66,10 @@ crons = [
 # staged rows (shipped with the reader in the same release as this flag).
 SAFETY_V9_DEFERRED_MATERIALIZATION = "on"
 # Safety Score V9 Queue continuation switch (ADR-26 Release 2).
-# Rolled back to "off" (monolithic :22/:52) after 2026-11-25 17:22Z Seed hit
-# exceededMemory (211.70 MiB) staging commitContext; Queue bindings stay provisioned.
-WORKER_V9_QUEUE_MODE = "off"
+# Active ("on") at the 397-asset cap after bounded 4-stage pipeline (#2390),
+# hosted nightly v9-resource pass, and same-build acceptance; set "off" to roll
+# back to monolithic :22/:52 evaluation.
+WORKER_V9_QUEUE_MODE = "on"
 
 [[d1_databases]]
 binding = "DB"
