@@ -29,6 +29,8 @@ import { localRegistrySnapshot, registrySnapshotFingerprint } from "../../../scr
 import { createReplayFixedInput } from "../../../scripts/__tests__/safety-score-v9-replay.test-support";
 import { normalizeFixedInput } from "../report-cards-fixed-input";
 
+const incidentReplayRegistry = localRegistrySnapshot();
+
 const CLOCK_SEC = Date.parse("2026-08-24T23:59:59.000Z") / 1_000;
 
 const NOW = Date.parse("2026-10-07T14:00:00Z") / 1_000;
@@ -540,41 +542,28 @@ describe("Safety Score v9 authored incident-review identity", () => {
     }
   });
 
-  // Cold evaluator admission exceeds 20s under weekly V8 coverage.
-  it.each([
-    ["deployment", "canonical", false], ["global", "native", false], ["global", "native", true],
-    ["route", "native", false], ["exposure", "native", false], ["global", "canonical", false],
-  ] as const)("isolates unreadable disclosures: %s/%s issuer=%s", async (scope, routeClass, issuerOperated) => {
+  const unreadableDisclosureVariants = [
+    ["deployment", "canonical"], ["global", "native"], ["route", "native"],
+    ["exposure", "native"], ["global", "canonical"],
+  ] as const;
+
+  async function assertUnreadableDisclosures(
+    variants: readonly (typeof unreadableDisclosureVariants)[number][],
+    issuerOperated: boolean,
+  ) {
+    const original = incidentReplayRegistry;
     const providerKey = issuerOperated ? "chainlink-ccip" : "layerzero";
     const assetId = "frnt-wyoming";
     const clockSec = 1_793_404_800;
-    const original = localRegistrySnapshot();
     const meta = original.activeStablecoins.find((coin) => coin.id === assetId)!;
     const routeId = meta.bridgeRouteRisk!.routes!.find((route) => route.id.startsWith("arbitrum:"))!.id;
     const siblingId = meta.bridgeRouteRisk!.routes![0]!.id;
     const contributors = meta.bridgeRouteRisk!.controls!.filter((row) => row.routeRefs.includes(routeId)).map((row) => row.id);
-    const rows: typeof original = { ...original, activeStablecoins: original.activeStablecoins.map((coin) => coin.id !== assetId ? coin :
-      { ...coin, mintAuthority: undefined, bridgeRouteRisk: { ...coin.bridgeRouteRisk!,
-        routes: coin.bridgeRouteRisk!.routes!.map((route) => {
-          const selected = route.id === routeId;
-          if (!selected && (!issuerOperated || route.id !== siblingId)) return route;
-          const issuerRail = issuerOperated && selected;
-          return { ...route, rail: issuerRail ? "issuer-operated" : undefined,
-            providerKeys: issuerRail ? undefined : [providerKey], routeClass: selected ? routeClass : "canonical",
-            issuanceModel: selected && scope === "global" ? "native-issuance" : "bridge-representation" };
-        }),
-      } }) };
-    const registrySnapshot = { ...rows, fingerprint: registrySnapshotFingerprint(rows) };
-    const { baseInputGenerationId: _base, ...draft } = createReplayFixedInput(clockSec, { activeAssetIds: [assetId] });
-    const fixedInput = normalizeFixedInput({ ...draft, registryFingerprint: registrySnapshot.fingerprint });
     const provider = { ...providerRow(), assetId, scope: { kind: "provider" as const, providerKey,
       surface: "dvn-set" as const, coveredRoutes: [{ assetId, routeId }] } };
     const issuer = { ...issuerRow(), assetId, scope: { kind: "issuer-surface" as const, coveredRoutes: [routeId] } };
     const foreign = { ...provider, assetId: "other-asset", reviewId: "invalid-foreign-review", providerIncidents: undefined,
       scope: { ...provider.scope, coveredRoutes: [{ assetId: "other-asset", routeId: ROUTE_B }] } };
-    const certificate = laneCertificate({ subjectDeploymentKey: routeId });
-    const screeningSetId = laneIncidentCertificateScreeningSetId({ ...certificate, contributorControlIds: contributors });
-    const laneDescriptor = { ...descriptor(), assetId, subjectDeploymentKey: routeId, contributorControlIds: contributors, screeningSetId };
     const runtime = await vi.importActual<{ default: Record<string, unknown> }>(registryPath);
     vi.doMock(registryPath, () => ({
       default: { ...runtime.default, negativeReviews: [issuer, foreign, issuerOperated
@@ -583,53 +572,82 @@ describe("Safety Score v9 authored incident-review identity", () => {
     }));
     vi.resetModules();
     try {
-      const adapter = await import("../safety-score-v9/extension-bridge");
-      const adapt = adapter.adaptBridgeReview;
-      vi.spyOn(adapter, "adaptBridgeReview").mockImplementation((...args) => {
-        const result = adapt(...args);
-        return { ...result, controls: result.controls.map((row) => row.deploymentKey === routeId ? { ...row, scope } : row) };
-      });
       const { buildSafetyScoreV9ReplayArtifact } = await import("../../../scripts/replay-safety-score-v9");
       const { buildSafetyScoreV9ReplayLaneScreening } = await import("../safety-score-v9/publication-replay-capture");
-      const replayInput = { fixedInput, registrySnapshot, publishedAtSec: clockSec,
-        laneScreening: buildSafetyScoreV9ReplayLaneScreening({ descriptors: [laneDescriptor],
-          certificates: new Map([[routeId, { screeningSetId, certificate }]]) }),
-      };
-      const replay = buildSafetyScoreV9ReplayArtifact(replayInput);
-      expect(replay.pipeline.candidate.cards.find((card) => card.id === assetId)!.ratingStatus).toBe("rated");
-      expect(replay.pipeline.quarantines).toEqual([]);
-      expect(replay.pipeline.compiledFacts.assets.find((asset) => asset.assetId === assetId)!.controls
-        .find((control) => control.deploymentKey === routeId)!.incidentState).toBe("unknown");
-      const failures = replay.pipeline.bridgeJoinDiagnostics.find((row) => row.assetId === assetId)!.incidentClosureFailures ?? [];
-      expect(failures.some((row) => row.deploymentRouteKey === siblingId)).toBe(false);
-      expect(failures.filter((row) => row.deploymentRouteKey === routeId)).toEqual(
-        scope === "deployment" || (scope === "global" && routeClass === "native")
-          ? [{ deploymentRouteKey: routeId, providerKey, code: "provider-incident-disclosures-unreadable", foreignAssetIds: ["other-asset"] }] : []);
+      const adapter = await import("../safety-score-v9/extension-bridge");
+      const adapt = adapter.adaptBridgeReview;
       const isolated = await import("../safety-score-v9/extension-incidents");
-      const read = isolated.getSafetyScoreV9NegativeIncidentReviews(assetId, clockSec, [providerKey]);
-      expect(read.unreadableProviders).toEqual(new Map([[providerKey, ["other-asset"]]]));
-      expect(() => isolated.getSafetyScoreV9NegativeIncidentReviews("other-asset", clockSec)).toThrow();
-      const target = authored({ ...bridgeRow(routeId, "bridge-meta:frnt-wyoming:fixture"), scope },
-        { id: "*", ids: contributors });
-      const inputs = { descriptors: [laneDescriptor], certificates: new Map([[routeId, { screeningSetId, certificate }]]),
-        contributorControls: meta.bridgeRouteRisk!.controls,
-        routes: new Map([[routeId, { rail: issuerOperated ? "issuer-operated" as const : null,
-          providerKeys: issuerOperated ? [] : [providerKey], routeClass }]]) };
-      expect(isolated.routeSafetyScoreV9NegativeIncidentReviews(
-        [target], assetId, clockSec, read.reviews, [], inputs)[0]!.incidentState)
-        .toBe(scope === "deployment" || (scope === "global" && routeClass === "native") ? "none" : "unknown");
-      expect(isolated.routeSafetyScoreV9NegativeIncidentReviews(
-        [target], assetId, clockSec, read.reviews, [], { ...inputs, unreadableProviders: read.unreadableProviders })[0]!.incidentState)
-        .toBe("unknown");
-      if (issuerOperated) {
-        vi.spyOn(isolated, "getSafetyScoreV9NegativeIncidentReviews").mockImplementation(() => { throw new Error("own-review-failed"); });
-        expect(buildSafetyScoreV9ReplayArtifact(replayInput).pipeline.extension.assets[0]!.admissionQuarantine?.path).toBe("reviewedIncidents");
+      for (const [scope, routeClass] of variants) {
+        const label = `${scope}/${routeClass} issuer=${issuerOperated}`;
+        const rows: typeof original = { ...original, activeStablecoins: original.activeStablecoins.map((coin) => coin.id !== assetId ? coin :
+          { ...coin, mintAuthority: undefined, bridgeRouteRisk: { ...coin.bridgeRouteRisk!,
+            routes: coin.bridgeRouteRisk!.routes!.map((route) => {
+              const selected = route.id === routeId;
+              if (!selected && (!issuerOperated || route.id !== siblingId)) return route;
+              const issuerRail = issuerOperated && selected;
+              return { ...route, rail: issuerRail ? "issuer-operated" : undefined,
+                providerKeys: issuerRail ? undefined : [providerKey], routeClass: selected ? routeClass : "canonical",
+                issuanceModel: selected && scope === "global" ? "native-issuance" : "bridge-representation" };
+            }),
+          } }) };
+        const registrySnapshot = { ...rows, fingerprint: registrySnapshotFingerprint(rows) };
+        const { baseInputGenerationId: _base, ...draft } = createReplayFixedInput(clockSec, { activeAssetIds: [assetId] });
+        const fixedInput = normalizeFixedInput({ ...draft, registryFingerprint: registrySnapshot.fingerprint });
+        const certificate = laneCertificate({ subjectDeploymentKey: routeId });
+        const screeningSetId = laneIncidentCertificateScreeningSetId({ ...certificate, contributorControlIds: contributors });
+        const laneDescriptor = { ...descriptor(), assetId, subjectDeploymentKey: routeId, contributorControlIds: contributors, screeningSetId };
+        const adaptSpy = vi.spyOn(adapter, "adaptBridgeReview").mockImplementation((...args) => {
+          const result = adapt(...args);
+          return { ...result, controls: result.controls.map((row) => row.deploymentKey === routeId ? { ...row, scope } : row) };
+        });
+        const replayInput = { fixedInput, registrySnapshot, publishedAtSec: clockSec,
+          laneScreening: buildSafetyScoreV9ReplayLaneScreening({ descriptors: [laneDescriptor],
+            certificates: new Map([[routeId, { screeningSetId, certificate }]]) }),
+        };
+        const replay = buildSafetyScoreV9ReplayArtifact(replayInput);
+        expect(replay.pipeline.candidate.cards.find((card) => card.id === assetId)!.ratingStatus, label).toBe("rated");
+        expect(replay.pipeline.quarantines, label).toEqual([]);
+        expect(replay.pipeline.compiledFacts.assets.find((asset) => asset.assetId === assetId)!.controls
+          .find((control) => control.deploymentKey === routeId)!.incidentState, label).toBe("unknown");
+        const failures = replay.pipeline.bridgeJoinDiagnostics.find((row) => row.assetId === assetId)!.incidentClosureFailures ?? [];
+        expect(failures.some((row) => row.deploymentRouteKey === siblingId), label).toBe(false);
+        expect(failures.filter((row) => row.deploymentRouteKey === routeId), label).toEqual(
+          scope === "deployment" || (scope === "global" && routeClass === "native")
+            ? [{ deploymentRouteKey: routeId, providerKey, code: "provider-incident-disclosures-unreadable", foreignAssetIds: ["other-asset"] }] : []);
+        const read = isolated.getSafetyScoreV9NegativeIncidentReviews(assetId, clockSec, [providerKey]);
+        expect(read.unreadableProviders, label).toEqual(new Map([[providerKey, ["other-asset"]]]));
+        expect(() => isolated.getSafetyScoreV9NegativeIncidentReviews("other-asset", clockSec), label).toThrow();
+        const target = authored({ ...bridgeRow(routeId, "bridge-meta:frnt-wyoming:fixture"), scope },
+          { id: "*", ids: contributors });
+        const inputs = { descriptors: [laneDescriptor], certificates: new Map([[routeId, { screeningSetId, certificate }]]),
+          contributorControls: meta.bridgeRouteRisk!.controls,
+          routes: new Map([[routeId, { rail: issuerOperated ? "issuer-operated" as const : null,
+            providerKeys: issuerOperated ? [] : [providerKey], routeClass }]]) };
+        expect(isolated.routeSafetyScoreV9NegativeIncidentReviews(
+          [target], assetId, clockSec, read.reviews, [], inputs)[0]!.incidentState, label)
+          .toBe(scope === "deployment" || (scope === "global" && routeClass === "native") ? "none" : "unknown");
+        expect(isolated.routeSafetyScoreV9NegativeIncidentReviews(
+          [target], assetId, clockSec, read.reviews, [], { ...inputs, unreadableProviders: read.unreadableProviders })[0]!.incidentState, label)
+          .toBe("unknown");
+        if (issuerOperated) {
+          vi.spyOn(isolated, "getSafetyScoreV9NegativeIncidentReviews").mockImplementation(() => { throw new Error("own-review-failed"); });
+          expect(buildSafetyScoreV9ReplayArtifact(replayInput).pipeline.extension.assets[0]!.admissionQuarantine?.path, label).toBe("reviewedIncidents");
+        }
+        adaptSpy.mockRestore();
       }
     } finally {
       vi.restoreAllMocks();
       vi.doUnmock(registryPath);
       vi.resetModules();
     }
+  }
+
+  it("isolates unreadable provider disclosures across route scopes", async () => {
+    await assertUnreadableDisclosures(unreadableDisclosureVariants, false);
+  }, 60_000);
+
+  it("isolates unreadable issuer-operated disclosures", async () => {
+    await assertUnreadableDisclosures([["global", "native"]], true);
   }, 60_000);
 
   it.each([

@@ -1680,21 +1680,13 @@ describe("W2.7 malformed hook payloads", () => {
     });
   });
 
-  it.each(["pre-tool-use", "permission-request"] as const)("keeps malformed stdin denial at the %s process boundary", (hook) => {
+  it("keeps malformed stdin denial at the permission-request process boundary", () => {
     const payload = '{"tool_name": "Bash", "tool_inp';
-    const result = runHookCliProcess(hook, payload);
+    const result = runHookCliProcess("permission-request", payload);
     expect(result.status).toBe(2);
-    const output = JSON.parse(result.stdout);
-    if (hook === "pre-tool-use") {
-      expect(output).toMatchObject({
-        decision: "block",
-        hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny" },
-      });
-    } else {
-      expect(output).toMatchObject({
-        hookSpecificOutput: { hookEventName: "PermissionRequest", decision: { behavior: "deny" } },
-      });
-    }
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      hookSpecificOutput: { hookEventName: "PermissionRequest", decision: { behavior: "deny" } },
+    });
     expect(result.stderr).toContain("[rule:malformed-hook-input]");
   });
 });

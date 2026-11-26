@@ -1,3 +1,4 @@
+// Nightly tier: PR coverage retained by scripts/__tests__/operator-cli-parsers.test.ts
 import { describe, expect, it, vi } from "vitest";
 import { JSDOM } from "jsdom";
 
@@ -8,10 +9,7 @@ import {
   captureRawSnapshot,
   collectAuditRows,
   createApiFailureReplayHandler,
-  failedRouteRow,
-  formatTable,
   installFailureListeners,
-  parseSeoRenderBudgetArgs,
 } from "../maintenance/audit-seo-render-budget.mjs";
 import {
   classifyRouteSurface,
@@ -20,7 +18,6 @@ import {
   diffInternalHrefs,
   evaluateSentinels,
   getRouteExpectations,
-  isReplayEligibleRoute,
   selectReplayRoutes,
   UNENROLLED_SENTINEL_EXPECTATIONS,
 } from "../lib/seo-render-facts.mjs";
@@ -130,7 +127,7 @@ function poolSection({
 // Nightly tier: audit-seo-render-budget is an operator tool with no CI caller and
 // no PR-tier guard; only its untagged "SEO render audit CLI and report" cases
 // (argument parsing, route eligibility, report counters) stay on the PR tier.
-describe("SEO render audit fixture collection", { tags: ["nightly"] }, () => {
+describe("SEO render audit fixture collection", () => {
   it("counts factual table rows separately from an identical empty skeleton", () => {
     const factual = makeSnapshot(poolSection({ rows: 2 }));
     const skeleton = makeSnapshot(poolSection({ rows: 2, factual: false }));
@@ -199,7 +196,7 @@ describe("SEO render audit fixture collection", { tags: ["nightly"] }, () => {
   });
 });
 
-describe("SEO render audit sentinels", { tags: ["nightly"] }, () => {
+describe("SEO render audit sentinels", () => {
   it("accepts bounded pool facts inside a closed disclosure and a deferred chart", () => {
     const snapshot = makeSnapshot(poolSection({ rows: 5 }));
     const sentinels = evaluate(snapshot, { raw: snapshot });
@@ -599,7 +596,7 @@ describe("SEO render audit sentinels", { tags: ["nightly"] }, () => {
   });
 });
 
-describe("SEO render audit failure buckets", { tags: ["nightly"] }, () => {
+describe("SEO render audit failure buckets", () => {
   function makeEventPage() {
     const handlers = new Map<string, Array<(arg: unknown) => unknown>>();
     return {
@@ -692,7 +689,7 @@ describe("SEO render audit failure buckets", { tags: ["nightly"] }, () => {
 
 });
 
-describe("SEO render audit API-failure replay", { tags: ["nightly"] }, () => {
+describe("SEO render audit API-failure replay", () => {
   function makeFakeRoute(url: string) {
     const fulfill = vi.fn(async () => undefined);
     const fallback = vi.fn(async () => undefined);
@@ -897,7 +894,7 @@ describe("SEO render audit API-failure replay", { tags: ["nightly"] }, () => {
   });
 });
 
-describe("SEO render audit route orchestration", { tags: ["nightly"] }, () => {
+describe("SEO render audit route orchestration", () => {
   const rawSnapshot = () => makeSnapshot(poolSection({ rows: 5 }), { mode: "raw" });
   const mobileSnapshot = () => makeSnapshot(poolSection({ rows: 5 }));
 
@@ -1049,43 +1046,5 @@ describe("SEO render audit route orchestration", { tags: ["nightly"] }, () => {
     expect(yieldRow.apiFailureReplay).toMatchObject({ status: "not-applicable", reason: "route-not-replay-eligible" });
     expect(selectReplayRoutes(["/", "/stablecoin/usdt-tether/", "/stablecoin/usdt-tether/yield/", "/alt-pegs/", "/safety-scores/", "/compliance/", "/api/"]))
       .toEqual(["/stablecoin/usdt-tether/", "/alt-pegs/", "/safety-scores/", "/compliance/"]);
-  });
-});
-
-describe("SEO render audit CLI and report", () => {
-  it("bounds replay selection to eligible requested routes", () => {
-    expect(isReplayEligibleRoute("/alt-pegs/")).toBe(true);
-    expect(isReplayEligibleRoute("/safety-scores/")).toBe(true);
-    expect(isReplayEligibleRoute("/compliance/")).toBe(true);
-    expect(isReplayEligibleRoute("/stablecoin/usdt-tether/")).toBe(true);
-    expect(isReplayEligibleRoute("/stablecoin/usdt-tether/yield/")).toBe(false);
-    expect(isReplayEligibleRoute("/")).toBe(false);
-    expect(isReplayEligibleRoute("/api/reference/")).toBe(false);
-    expect(parseSeoRenderBudgetArgs([]).routes).toEqual(expect.arrayContaining(["/alt-pegs/", "/compliance/"]));
-    expect(parseSeoRenderBudgetArgs([]).routes).toEqual(
-      expect.arrayContaining(["/chains/ethereum/", "/chains/solana/", "/chains/base/"]),
-    );
-  });
-
-  it("adds capture, sentinel, href-loss, failure and injection counters to the text report", () => {
-    const row = {
-      ...failedRouteRow("/", "https://pharos.watch/", new Error("boom")),
-      sentinels: [
-        { id: "a", status: "missing", reason: "x", observedCount: 0, sourceGeneration: null },
-        { id: "b", status: "not-observed", reason: "y", observedCount: null, sourceGeneration: null },
-      ],
-      hrefLoss: { mobile: ["/a/"], tall: null },
-      failures: {
-        httpData: [{}],
-        failedRequests: [],
-        pageErrors: [],
-        intentionalBlocks: [{ kind: "api-failure-replay", url: "https://pharos.watch/_site-data/x", status: 503 }],
-      },
-    };
-    const report = formatTable([row]);
-    const [headers, values] = report.split("\n");
-
-    expect(headers.split("\t")).toEqual(expect.arrayContaining(["capture", "missing", "notObs", "hrefLost", "dataFail", "inject"]));
-    expect(values.split("\t")).toEqual(expect.arrayContaining(["failed", "1", "1", "1", "1", "1"]));
   });
 });

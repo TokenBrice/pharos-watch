@@ -74,6 +74,10 @@ const nqFx = createLatestSchemaFixtureTracker();
 beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date("2026-03-06T12:00:00Z")); vm(loadSafe).mockReset().mockResolvedValue(safeSrc([])); });
 afterEach(() => { nqFx.closeAll(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
+function carriedMap() {
+  return { kind: "available" as const, imageUrl: "https://pharos.watch/safety-scores/map.png?date=2026-08-30", freshness: "carried-forward" as const, ageDays: 2, manifest: { date: "2026-08-30", asOfSec: 1_788_000_000, renderedAtSec: 1_788_001_000, edition: "daily" as const, bytes: { png: 1_000_000 }, mapSummary: MAP_SUM } };
+}
+
 describe("response and editorial contracts", () => {
   it.each([
     ["natural leads", ["gauge-flip", "psi-band-change", "issuer-concentration", "regime-divergence", "chain-migration", "reserve-event"], "lead"],
@@ -259,7 +263,7 @@ describe("intelligence, prompt, and regime contracts", () => {
     expect(prompt(unavail)).toContain("Flight-to-Quality: unavailable (identity-missing)");
     expect(buildIntel(unavail, null).riskTape).toContainEqual(expect.objectContaining({ detail: expect.stringContaining("unavailable") }));
     const data: DigestInputData = { totalMcapUsd: 100e9, mcap7dDelta: 0, activeDepegCount: 0, topDepegs: [], biggestSupplyChange: null, stabilityIndex: null, yesterdayIndex: null, safetyContext: BASE_SAFE };
-    const res = { kind: "available" as const, imageUrl: "https://pharos.watch/safety-scores/map.png?date=2026-08-30", freshness: "carried-forward" as const, ageDays: 2, manifest: { date: "2026-08-30", asOfSec: 1_788_000_000, renderedAtSec: 1_788_001_000, edition: "daily" as const, bytes: { png: 1_000_000 }, mapSummary: MAP_SUM } };
+    const res = carriedMap();
     const cap = buildMapCap(data, res);
     expect(cap).toMatchObject({ manifest: { mapSummary: { date: "2026-08-30" } } });
     expect(prompt({ ...data, safetyMap: cap! })).toContain("A tier: 2 coins, 70.0% of known mapped supply");
@@ -321,9 +325,9 @@ describe("market and risk collectors", () => {
     expect(scores.value.safetyContext).toMatchObject({ status: "available", expectedModel: "v9" });
     expect(scores.value.safetyScores).toMatchObject({ model: "v9", mentionedCoins: [{ symbol: "USDT", grade: "A", score: 88 }] });
     const id = scores.value.safetyIdentity!, { sqlite } = nqFx.open(), now = nowS();
-    const ins = sqlite.prepare("INSERT INTO safety_score_history_v2 (history_id, stablecoin_id, recorded_at, model, identity_schema_version, methodology_version, policy_id, policy_digest, evaluation_build_digest, base_input_generation_id, model_publication_generation_id, transition_kind, grade, score, prev_grade, prev_score, created_at) VALUES (?, ?, ?, 'v9', ?, ?, ?, ?, ?, ?, ?, ?, 'A-', ?, ?, ?, ?)");
+    const ins = prepareSafetyHistoryInsert(sqlite);
     const add = (hid: string, at: number, coin = "usdt-tether", s = 80, pr = 85, bld = id.evaluationBuildDigest, kind = "organic-grade-change", pol = id.policyDigest) =>
-      ins.run(hid, coin, at, id.schemaVersion, id.methodologyVersion, id.policyId, pol, bld, id.baseInputGenerationId, id.publicationGenerationId, kind, s, kind === "organic-grade-change" ? "A" : null, kind === "organic-grade-change" ? pr : null, now);
+      ins.run(hid, coin, at, id.schemaVersion, id.methodologyVersion, id.policyId, pol, bld, id.baseInputGenerationId, id.publicationGenerationId, kind, "A-", s, kind === "organic-grade-change" ? "A" : null, kind === "organic-grade-change" ? pr : null, now);
     for (let i = 0; i < 1003; i++) add(`eligible:${String(i).padStart(4, "0")}`, now - 60, "usdt-tether", i % 2 ? 80 : 90);
     for (let i = 0; i < 12; i++) add(`small:${i}`, now - 120 - i, "dai-makerdao", 0, 100);
     for (let i = 0; i < 16; i++) add(`bump:${i}`, now - 300, "usdt-tether", 100, 0);
@@ -879,9 +883,13 @@ const nowSec = 1_785_000_000;
 const v9Id: SafetyScoreV9PublicationIdentity = { model: "v9", schemaVersion: 1, methodologyVersion: "9.0", policyId: "safety-score-v9", policyDigest: "a".repeat(64), evaluationBuildDigest: "b".repeat(64), baseInputGenerationId: `report-cards-input:v1:${"c".repeat(64)}`, publicationGenerationId: "report-cards:v9:current" };
 const mkHarness = () => { const sqlite = createLatestSchemaSqlite().sqlite; openDbs.push(sqlite); return { sqlite, db: createSqliteD1(sqlite) }; };
 const mkGradeCtx = (db: D1Database, assets: ReturnType<typeof makeAsset>[], mcap: number): CollectorContext => ({ db, trackedStablecoinAssets: assets, trackedStablecoinIds: new Set(assets.map((a) => a.id)), coreAggregateStablecoinAssets: assets, coreAggregateStablecoinIds: new Set(assets.map((a) => a.id)), stablecoinAssetById: new Map(assets.map((a) => [a.id, a])), mcapById: new Map(assets.map((a) => [a.id, mcap])), currentPegObservationById: new Map(), stablecoinsCacheIsFresh: true, nowSec, todayTs: nowSec - (nowSec % 86_400), yesterdayTs: nowSec - (nowSec % 86_400) - 86_400 });
+function prepareSafetyHistoryInsert(sqlite: DatabaseSync) {
+  return sqlite.prepare("INSERT INTO safety_score_history_v2 (history_id, stablecoin_id, recorded_at, model, identity_schema_version, methodology_version, policy_id, policy_digest, evaluation_build_digest, base_input_generation_id, model_publication_generation_id, transition_kind, grade, score, prev_grade, prev_score, created_at) VALUES (?, ?, ?, 'v9', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+}
+
 const insHist = (sqlite: DatabaseSync, o: Partial<{ historyId: string; stablecoinId: string; grade: string; score: number; transitionKind: string; policyId: string; policyDigest: string; evaluationBuildDigest: string; baseInputGenerationId: string; publicationGenerationId: string; prevGrade: string | null; prevScore: number | null }> = {}) => {
-  sqlite.prepare("INSERT INTO safety_score_history_v2 (history_id, stablecoin_id, recorded_at, model, identity_schema_version, methodology_version, policy_id, policy_digest, evaluation_build_digest, base_input_generation_id, model_publication_generation_id, transition_kind, grade, score, prev_grade, prev_score, created_at) VALUES (?, ?, ?, 'v9', 1, '9.0', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-    .run(o.historyId ?? "organic-current", o.stablecoinId ?? "usdt-tether", nowSec - 60, o.policyId ?? v9Id.policyId, o.policyDigest ?? v9Id.policyDigest, o.evaluationBuildDigest ?? v9Id.evaluationBuildDigest, o.baseInputGenerationId ?? `report-cards-input:v1:${"d".repeat(64)}`, o.publicationGenerationId ?? "report-cards:v9:prior", o.transitionKind ?? "organic-grade-change", o.grade ?? "A", o.score ?? 88, o.prevGrade === undefined ? "B+" : o.prevGrade, o.prevScore === undefined ? 84 : o.prevScore, nowSec - 60);
+  prepareSafetyHistoryInsert(sqlite)
+    .run(o.historyId ?? "organic-current", o.stablecoinId ?? "usdt-tether", nowSec - 60, 1, "9.0", o.policyId ?? v9Id.policyId, o.policyDigest ?? v9Id.policyDigest, o.evaluationBuildDigest ?? v9Id.evaluationBuildDigest, o.baseInputGenerationId ?? `report-cards-input:v1:${"d".repeat(64)}`, o.publicationGenerationId ?? "report-cards:v9:prior", o.transitionKind ?? "organic-grade-change", o.grade ?? "A", o.score ?? 88, o.prevGrade === undefined ? "B+" : o.prevGrade, o.prevScore === undefined ? 84 : o.prevScore, nowSec - 60);
 };
 afterEach(() => { for (const s of openDbs.splice(0)) s.close(); });
 
@@ -921,7 +929,7 @@ describe("daily digest Safety Score transitions", () => {
     const mLine = (p: string) => p.split("\n").find((l) => l.trimStart().startsWith("Grade movers (last 48h)"));
     const failed = mLine(prompt(inp));
     expect(failed).toBeDefined(); expect(failed).not.toContain("none recorded"); expect(failed).toContain("unavailable (grade-transitions-query)");
-    const sm = buildMapCap(inp, { kind: "available", imageUrl: "https://pharos.watch/safety-scores/map.png?date=2026-08-30", freshness: "carried-forward", ageDays: 2, manifest: { date: "2026-08-30", asOfSec: 1_788_000_000, renderedAtSec: 1_788_001_000, edition: "daily", bytes: { png: 1_000_000 }, mapSummary: MAP_SUM } });
+    const sm = buildMapCap(inp, carriedMap());
     expect(sm).not.toBeNull();
     expect(mLine(prompt({ ...inp, safetyMap: sm!, gradeTransitionAccounting: { complete: true, window, safetyScoreIdentity: BASE_SAFE.identity, count: 0, identities: [] }, degradedSources: [] }))).toContain("none recorded");
   });

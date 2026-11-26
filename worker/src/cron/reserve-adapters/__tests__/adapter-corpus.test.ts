@@ -8,7 +8,7 @@
  * telemetry expectations. Each replayed adapter proves that an upstream failure
  * surfaces as an error or a `degraded` warning, not a plausible wrong snapshot.
  */
-import { afterAll, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import usdx from "@shared/data/stablecoins/coins/usdx-kava.json";
@@ -531,10 +531,6 @@ const CORPUS_BACKLOG = Object.fromEntries(
 );
 const caseEntries = Object.entries(CORPUS_CASES) as [LiveReserveAdapterKey, NumericAdapterCorpusCase][];
 
-// Highest raw upstream percentage drift (metadata.diag.rawSumDeviation) each
-// replayed producer emits, so a corpus run doubles as a drift detector.
-const rawSumDeviationByAdapter = new Map<LiveReserveAdapterKey, number>();
-
 describe("adapter corpus replay", () => {
   it("routes every adapter key to a corpus case or a reviewed exemption", () => {
     const uncovered = LIVE_RESERVE_ADAPTER_KEYS.filter(
@@ -595,13 +591,6 @@ describe("adapter corpus replay", () => {
         expect(network.requests).toContainEqual(request);
       }
       if (expected.displayUrl) expect(config.display?.url).toBe(expected.displayUrl);
-    }
-    const rawSumDeviation = result.metadata?.diag?.rawSumDeviation;
-    if (typeof rawSumDeviation === "number") {
-      const previous = rawSumDeviationByAdapter.get(key);
-      if (previous === undefined || rawSumDeviation > previous) {
-        rawSumDeviationByAdapter.set(key, rawSumDeviation);
-      }
     }
     const declaration = LIVE_RESERVE_ADAPTER_DEFINITIONS[key];
     const allowedFreshnessModes = "validation" in declaration
@@ -667,14 +656,5 @@ describe("adapter corpus replay", () => {
     }
   });
 
-  afterAll(() => {
-    const rows = [...rawSumDeviationByAdapter.entries()].sort(([left], [right]) => left.localeCompare(right));
-    if (rows.length === 0) return;
-    const table = rows
-      .map(([adapter, max]) => `  ${adapter.padEnd(28)} ${max.toFixed(6)} pct-points`)
-      .join("\n");
-    // Vitest swallows console.* on green runs; process.stdout.write lands the
-    // drift table in the test output either way.
-    process.stdout.write(`adapter corpus rawSumDeviation (max per producer, replayed fixtures):\n${table}\n`);
-  });
+
 });

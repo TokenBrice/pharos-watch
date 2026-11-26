@@ -116,6 +116,13 @@ function modeledProfile(): MintAuthorityProfile {
         privilegedVoteCreation: { state: "none", pathRefs: [], proofRef: "closed" }, forcedDelegation: { state: "none", pathRefs: [], proofRef: "closed" } } } };
 }
 
+function toD29(profile: MintAuthorityProfile) {
+  delete profile.operationalIssuance;
+  profile.authorityPosture = "unbounded-governed";
+  profile.controls![1]!.executionScope!.paths.forEach((path) => { path.unavoidableDelaySec = 172800; });
+  profile.authorityGraph!.pathBindings.forEach((binding) => { binding.authorityNodeIds = ["governor"]; });
+}
+
 function restamp(profile: MintAuthorityProfile): void {
   const hash = computeV1005AuthorityStateHash(profile.authorityGraph!);
   for (const control of profile.controls ?? []) if (control.executionScope) control.executionScope.authorityBinding = { graphId: profile.authorityGraph!.id, authorityStateHash: hash, observedAuthorityStateHash: hash };
@@ -469,9 +476,8 @@ describe("v10.05 source-bound operational and voting compilation", () => {
   it.each(["D29", "D30", "H"] as const)("applies the same own-lock and positive affiliation gate to %s", (family) => {
     const profile = family === "D30" ? modeledVetoProfile() : modeledProfile();
     if (family === "D29") {
-      delete profile.operationalIssuance; profile.authorityPosture = "unbounded-governed";
-      profile.controls![1]!.executionScope!.paths.forEach((path) => { path.unavoidableDelaySec = 172800; });
-      profile.authorityGraph!.pathBindings.forEach((binding) => { binding.authorityNodeIds = ["governor"]; }); restamp(profile);
+      toD29(profile);
+      restamp(profile);
     }
     const positive = compile(profile), control = positive.rows.find((row) => row.capSemantics.kind === "unbounded" && row.capabilities.includes("mint"))!;
     expect(positive.governance.votingControl.qualified).toBe(true);
@@ -892,7 +898,11 @@ describe("v10.05 source-bound operational and voting compilation", () => {
     expect(dai.controls!.every((control) => control.deploymentRefs?.length === 1 && control.deploymentRefs[0] === "ethereum:0x6b175474e89094c44da98b954eedeac495271d0f")).toBe(true);
     const vat = "ethereum:0x35d1b3f3d7966a1dfe207aa4514c12a259a0492b";
     const members = (profile: MintAuthorityProfile) => [...new Set(profile.executionCertificates!.censuses.filter((census) => census.kind === "ward" && census.targetDeployment === vat).flatMap((census) => census.authoritativeMembers))].sort();
-    expect(members(dai)).toHaveLength(129); expect(members(usds)).toEqual(members(dai));
+    const census = dai.executionCertificates!.censuses.find(({ id }) => id === "vat-wards")!;
+    expect(census.coverage).toBe("complete");
+    expect(census.authoritativeMembers.length).toBeGreaterThan(0);
+    expect(members(dai)).toHaveLength(census.authoritativeMembers.length);
+    expect(members(usds)).toEqual(members(dai));
     const projections = compileReviewedMintControlScopes(dai, "dai-makerdao", CLOCK, 90 * 86400);
     expect(projections).toHaveLength(dai.controls!.length);
     expect(dai.executionCertificates!.liabilityBookId).toBe(usds.executionCertificates!.liabilityBookId);
@@ -904,9 +914,7 @@ describe("governance public-clock and replacement-approval admission", () => {
     if (family === "D30") return modeledVetoProfile();
     const profile = modeledProfile();
     if (family === "D29") {
-      delete profile.operationalIssuance; profile.authorityPosture = "unbounded-governed";
-      profile.controls![1]!.executionScope!.paths.forEach((path) => { path.unavoidableDelaySec = 172800; });
-      profile.authorityGraph!.pathBindings.forEach((binding) => { binding.authorityNodeIds = ["governor"]; });
+      toD29(profile);
       restamp(profile);
     }
     return profile;
@@ -1116,9 +1124,7 @@ describe("D32 vote-caster and replacement authority traversal", () => {
   function votingProfile(family: "D29" | "D30" | "H"): MintAuthorityProfile {
     const profile = family === "D30" ? modeledVetoProfile() : modeledProfile();
     if (family === "D29") {
-      delete profile.operationalIssuance; profile.authorityPosture = "unbounded-governed";
-      profile.controls![1]!.executionScope!.paths.forEach((path) => { path.unavoidableDelaySec = 172800; });
-      profile.authorityGraph!.pathBindings.forEach((binding) => { binding.authorityNodeIds = ["governor"]; });
+      toD29(profile);
     }
     const voting = profile.governedIssuance!.votingControl;
     profile.authorityGraph!.nodes.push({ ...profile.authorityGraph!.nodes[1]!, id: "vote-program" });

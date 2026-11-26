@@ -72,10 +72,13 @@ function makeUsdEvent(overrides: Partial<DepegDetectionRow> = {}, pricing = true
     ...(pricing ? { peak_deviation_bps: -200, start_price: 0.98, peak_price: 0.98 } : {}), peg_reference: 1, ...overrides });
 }
 
+const brzAssetFields = { id: "brz-transfero", symbol: "BRZ", pegType: "peggedREAL" } as const;
+const brzNativeEvent = () => makeExistingEvent({ direction: "below", peak_deviation_bps: -242, start_price: 0.9758, peak_price: 0.9758, peg_reference: 1 });
+
 const brzAsset = (price: number, overrides: Partial<PegAssetBase> = {}) =>
-  makeAsset({ id: "brz-transfero", symbol: "BRZ", price, pegType: "peggedREAL",
+  makeAsset({ ...brzAssetFields, price,
     priceObservedAt: 1_750_259_140, priceObservedAtMode: "upstream", ...overrides });
-const brzQuote = (price: number) => ({ stablecoinId: "brz-transfero", geckoId: "brz", pegCurrency: "BRL", price, updatedAt: 1_750_259_200 - 60, derivation: tradedPair });
+const brzQuote = (price: number, updatedAt = 1_750_259_200 - 60) => ({ stablecoinId: "brz-transfero", geckoId: "brz", pegCurrency: "BRL", price, updatedAt, derivation: tradedPair });
 const withheldBrz = [{ level: "warn", message: "[depeg] Withheld implausible BRL native quote for BRZ: reason=native-quote-extreme-move" }];
 
 function assertNativeOpening({ circulating, nativePrice, expectedBps, expectedReason, expectSeenEventIds = false, dexCorroboration, admitted = true }: {
@@ -829,7 +832,7 @@ describe("decideDepegAsset", () => {
   it("closes a native-peg event after sustained recovery in native units", () => {
     const decision = decideDepegAsset({
       now: 1_750_260_100,
-      asset: makeAsset({ id: "brz-transfero", symbol: "BRZ", price: 0.1919, pegType: "peggedREAL" }),
+      asset: makeAsset({ ...brzAssetFields, price: 0.1919 }),
       meta: brlMeta,
       existing: makeExistingEvent({
         direction: "below",
@@ -841,7 +844,7 @@ describe("decideDepegAsset", () => {
         recovery_last_seen_at: 1_750_259_200,
       }),
       ...brlPeg,
-      nativePegQuote: { stablecoinId: "brz-transfero", geckoId: "brz", pegCurrency: "BRL", price: 0.997, updatedAt: 1_750_260_040, derivation: tradedPair },
+      nativePegQuote: brzQuote(0.997, 1_750_260_040),
     });
 
     expect(decision.commands).toEqual([{ type: "close-event", id: 7, endedAt: 1_750_260_100, recoveryPrice: 0.997, recoveryPegReference: 1, closeReason: "recovered-native" }]);
@@ -851,13 +854,13 @@ describe("decideDepegAsset", () => {
     const decision = decideDepegAsset({
       now: 1_750_260_100,
       asset: makeAsset({
-        id: "brz-transfero", symbol: "BRZ", price: 0.18, pegType: "peggedREAL",
+        ...brzAssetFields, price: 0.18,
         priceSource, priceUpdatedAt: 1_750_260_040, priceObservedAtMode: "upstream", priceObservedAt: 1_750_260_040,
       }),
       meta: brlMeta,
       existing: makeExistingEvent({ quote_mode: "usd", direction: "below", peg_reference: 0.19, recovery_evidence_source: "native", recovery_first_seen_at: 1_750_259_140, recovery_last_seen_at: 1_750_259_200 }),
       ...clockedBenchmark("peggedREAL", 0.19, 1_750_260_040),
-      nativePegQuote: { stablecoinId: "brz-transfero", geckoId: "brz", pegCurrency: "BRL", price: 1, updatedAt: 1_750_260_040, derivation: tradedPair },
+      nativePegQuote: brzQuote(1, 1_750_260_040),
     });
     expect(decision.commands).toEqual([{
       type: "close-event", id: 7, endedAt: 1_750_260_100,
@@ -868,9 +871,9 @@ describe("decideDepegAsset", () => {
   it("holds a native-peg event open when the native quote is missing", () => {
     const decision = decideDepegAsset({
       now: 1_750_260_100,
-      asset: makeAsset({ id: "brz-transfero", symbol: "BRZ", price: 0.1919, pegType: "peggedREAL" }),
+      asset: makeAsset({ ...brzAssetFields, price: 0.1919 }),
       meta: brlMeta,
-      existing: makeExistingEvent({ direction: "below", peak_deviation_bps: -242, start_price: 0.9758, peak_price: 0.9758, peg_reference: 1 }),
+      existing: brzNativeEvent(),
       ...brlPeg,
     });
 
@@ -881,11 +884,11 @@ describe("decideDepegAsset", () => {
   it("does not supersede a native event from an opposite USD-domain signal", () => {
     const decision = decideDepegAsset({
       now: 1_750_260_100,
-      asset: makeAsset({ id: "brz-transfero", symbol: "BRZ", price: 0.195, pegType: "peggedREAL" }),
+      asset: makeAsset({ ...brzAssetFields, price: 0.195 }),
       meta: brlMeta,
-      existing: makeExistingEvent({ direction: "below", peak_deviation_bps: -242, start_price: 0.9758, peak_price: 0.9758, peg_reference: 1 }),
+      existing: brzNativeEvent(),
       ...brlPeg,
-      nativePegQuote: { stablecoinId: "brz-transfero", geckoId: "brz", pegCurrency: "BRL", price: 0.9758, updatedAt: 1_750_260_040, derivation: tradedPair },
+      nativePegQuote: brzQuote(0.9758, 1_750_260_040),
     });
 
     expect(decision.seenEventIds).toEqual([7]);
@@ -895,11 +898,11 @@ describe("decideDepegAsset", () => {
   it("supersedes a native-peg event when the native quote reverses direction", () => {
     const decision = decideDepegAsset({
       now: 1_750_260_100,
-      asset: makeAsset({ id: "brz-transfero", symbol: "BRZ", price: 0.1919, pegType: "peggedREAL" }),
+      asset: makeAsset({ ...brzAssetFields, price: 0.1919 }),
       meta: brlMeta,
-      existing: makeExistingEvent({ direction: "below", peak_deviation_bps: -242, start_price: 0.9758, peak_price: 0.9758, peg_reference: 1 }),
+      existing: brzNativeEvent(),
       ...brlPeg,
-      nativePegQuote: { stablecoinId: "brz-transfero", geckoId: "brz", pegCurrency: "BRL", price: 1.03, updatedAt: 1_750_260_040, derivation: tradedPair },
+      nativePegQuote: brzQuote(1.03, 1_750_260_040),
     });
 
     expect(decision.seenEventIds).toEqual([]);
@@ -987,7 +990,7 @@ describe("decideDepegAsset", () => {
   it("preserves a live event when a thin fiat peg reference is not authoritative", () => {
     const decision = decideDepegAsset({
       now: 1_750_260_100,
-      asset: makeAsset({ id: "brz-transfero", symbol: "BRZ", price: 0.1919, pegType: "peggedREAL" }),
+      asset: makeAsset({ ...brzAssetFields, price: 0.1919 }),
       meta: brlMeta,
       existing: makeExistingEvent(),
       pegRates: { peggedREAL: 0.191895 },
@@ -1156,11 +1159,11 @@ describe("decideDepegAsset", () => {
   it("updates a native-peg event peak from the native quote domain", () => {
     const decision = decideDepegAsset({
       now: 1_750_260_100,
-      asset: makeAsset({ id: "brz-transfero", symbol: "BRZ", price: 0.1879, pegType: "peggedREAL" }),
+      asset: makeAsset({ ...brzAssetFields, price: 0.1879 }),
       meta: brlMeta,
-      existing: makeExistingEvent({ direction: "below", peak_deviation_bps: -242, start_price: 0.9758, peak_price: 0.9758, peg_reference: 1 }),
+      existing: brzNativeEvent(),
       ...brlPeg,
-      nativePegQuote: { stablecoinId: "brz-transfero", geckoId: "brz", pegCurrency: "BRL", price: 0.97, updatedAt: 1_750_260_040, derivation: tradedPair },
+      nativePegQuote: brzQuote(0.97, 1_750_260_040),
     });
 
     expect(decision.commands).toMatchObject([{ type: "update-peak", id: 7, peakDeviationBps: -300, peakPrice: 0.97,
@@ -1170,11 +1173,11 @@ describe("decideDepegAsset", () => {
   it("updates a native-peg event peak when the USD primary is inside the trigger threshold", () => {
     const decision = decideDepegAsset({
       now: 1_750_260_100,
-      asset: makeAsset({ id: "brz-transfero", symbol: "BRZ", price: 0.19, pegType: "peggedREAL" }),
+      asset: makeAsset({ ...brzAssetFields, price: 0.19 }),
       meta: brlMeta,
-      existing: makeExistingEvent({ direction: "below", peak_deviation_bps: -242, start_price: 0.9758, peak_price: 0.9758, peg_reference: 1 }),
+      existing: brzNativeEvent(),
       ...brlPeg,
-      nativePegQuote: { stablecoinId: "brz-transfero", geckoId: "brz", pegCurrency: "BRL", price: 0.95, updatedAt: 1_750_260_040, derivation: tradedPair },
+      nativePegQuote: brzQuote(0.95, 1_750_260_040),
     });
 
     expect(decision.observation).toEqual({ kind: "observed" });

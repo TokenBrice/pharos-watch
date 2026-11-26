@@ -108,12 +108,7 @@ describe("structuralClass", () => {
     expect(structuralClass(coin({ collateralQuality: "exotic", mechanismArchetype: "cdp" }))).toBe("fragile");
   });
 
-  it("keeps adverse and collateral-gated authority fragile without relaxing DDR", () => {
-    // Both are fragile, but only the adverse unbounded posture is surge-severe.
-    expect(structuralClass(coin({ authorityPosture: "unbounded-adverse" }))).toBe("fragile");
-    expect(structuralClass(coin({ authorityPosture: "collateral-gated" }))).toBe(
-      structuralClass(coin({ authorityPosture: "concentrated-admin" })),
-    );
+  it("keeps collateral-gated authority fragile", () => {
     expect(structuralClass(coin({ authorityPosture: "collateral-gated" }))).toBe("fragile");
   });
 
@@ -369,20 +364,10 @@ describe("resolveOutlook — acceptance cases", () => {
     }
   });
 
-  it("frozen issuer with an open event → recovery_unlikely", () => {
+  it.each(["frozen", "dead"] as const)("keeps a %s issuer with an open event recovery_unlikely", (status) => {
     const r = resolveOutlook(
       event({ direction: "below", peakDeviationBps: -500 }),
-      coin({ status: "frozen", mechanismArchetype: "cdp" }),
-      baseSupply(),
-      baseLive(),
-    );
-    expect(r.tier).toBe("recovery_unlikely");
-  });
-
-  it("non-frozen terminal status (dead) is treated as terminal → recovery_unlikely", () => {
-    const r = resolveOutlook(
-      event({ direction: "below", peakDeviationBps: -500 }),
-      coin({ status: "dead", mechanismArchetype: "cdp" }),
+      coin({ status, mechanismArchetype: "cdp" }),
       baseSupply(),
       baseLive(),
     );

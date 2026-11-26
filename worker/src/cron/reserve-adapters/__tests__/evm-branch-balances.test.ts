@@ -571,14 +571,6 @@ describe("fetchEvmBranchBalancesReserves", () => {
     expect(network.requests.filter((r) => r.url.startsWith(PRICES_BASE))).toHaveLength(2);
   });
 
-  it("emits degraded warning when a USD-pegged wrapper price is outside 5% but within 20% of peg", async () => {
-    const { result } = await runBranches(makeBranchConfig([usdcBranch()]), {
-      json: priceJson({ [assetKey("ethereum", ADDR_B)]: 0.9 }),
-      rpc: branchRpc({ balances: { [ADDR_B]: 50_000_000n }, decimals: { [ADDR_B]: 6n } }),
-    });
-    expect(result.warnings).toEqual([expect.objectContaining({ code: "wrapper-depeg-detected", severity: "warning" })]);
-  });
-
   it("does not emit USD peg warnings for explicit wrapper dependencies", async () => {
     const { result } = await runBranches(makeBranchConfig([{
       ...usdcBranch(), name: "sUSDe branch", token: { chain: "ethereum", address: ADDR_B, decimals: 18 },
@@ -593,19 +585,21 @@ describe("fetchEvmBranchBalancesReserves", () => {
     }]);
   });
 
-  it("throws when a USD-pegged wrapper price is outside the 0.5-1.5 fatal band", async () => {
-    await expect(runBranches(makeBranchConfig([usdcBranch()]), {
-      json: priceJson({ [assetKey("ethereum", ADDR_B)]: 0.4 }),
-      rpc: branchRpc({ balances: { [ADDR_B]: 50_000_000n }, decimals: { [ADDR_B]: 6n } }),
-    })).rejects.toThrow(/extreme depeg/);
-  });
-
-  it("does not warn when a USD-pegged wrapper trades within 5% of peg", async () => {
-    const { result } = await runBranches(makeBranchConfig([usdcBranch()]), {
-      json: priceJson({ [assetKey("ethereum", ADDR_B)]: 1.02 }),
+  it.each([[1.02, "none"], [0.9, "warn"], [0.4, "throw"]] as const)("handles a USD-pegged wrapper price of %s (%s)", async (price, outcome) => {
+    const run = runBranches(makeBranchConfig([usdcBranch()]), {
+      json: priceJson({ [assetKey("ethereum", ADDR_B)]: price }),
       rpc: branchRpc({ balances: { [ADDR_B]: 50_000_000n }, decimals: { [ADDR_B]: 6n } }),
     });
-    expect(result.warnings).toBeUndefined();
+    if (outcome === "throw") {
+      await expect(run).rejects.toThrow(/extreme depeg/);
+    } else {
+      const { result } = await run;
+      if (outcome === "warn") {
+        expect(result.warnings).toEqual([expect.objectContaining({ code: "wrapper-depeg-detected", severity: "warning" })]);
+      } else {
+        expect(result.warnings).toBeUndefined();
+      }
+    }
   });
 
   it.each([

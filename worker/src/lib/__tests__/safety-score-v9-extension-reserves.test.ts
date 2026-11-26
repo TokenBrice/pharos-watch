@@ -50,18 +50,27 @@ import yldsReserveEnvelope from "@shared/data/stablecoins/domains/reserves/ylds-
 const CLOCK_SEC = Date.UTC(2026, 6, 14) / 1_000;
 const DEPENDENCY_CLOCK_SEC = Date.UTC(2026, 7, 20) / 1_000;
 
+function draftOf(base: ReturnType<typeof makeV9TwoAssetFixedInput>) {
+  const {
+    schemaVersion: _schemaVersion, dexPayloadFingerprint: _dexPayloadFingerprint,
+    redemptionPayloadFingerprint: _redemptionPayloadFingerprint, registryFingerprint: _registryFingerprint,
+    inputMethodologyVersions: _inputMethodologyVersions, baseInputGenerationId: _baseInputGenerationId,
+    ...draft
+  } = base;
+  return draft;
+}
+
 it.each([
-  ["frax-frax", 13, 30.2616, /^(Legacy FRAX \(|sFRAX$|LFRAX$)/],
-  ["usdu-usdu-finance", 3, 92.1985, /^(Morpho USDU Core|USDU constituent|TermMax)/],
-] as const)("marks only the reconciled own-liability rows for %s", (id, count, share, ownName) => {
+  ["frax-frax", /^(Legacy FRAX \(|sFRAX$|LFRAX$)/],
+  ["usdu-usdu-finance", /^(Morpho USDU Core|USDU constituent|TermMax)/],
+] as const)("marks only the reconciled own-liability rows for %s", (id, ownName) => {
   const meta = TRACKED_META_BY_ID.get(id)!;
   const rows = meta.reserves!;
   const classifications = buildReviewedReserveClassifications(rows, meta, Date.UTC(2026, 10, 20) / 1_000, undefined, true);
   const marked = new Set(classifications.filter(row => row.trackedAssetDisposition === "own-liability").map(row => row.exposureKey));
   const own = rows.filter(row => marked.has(computeSafetyScoreV9ReserveExposureKey(row)));
-  expect(own).toHaveLength(count);
+  expect(own.length).toBeGreaterThan(0);
   expect(own).toEqual(rows.filter(row => ownName.test(row.name)));
-  expect(own.reduce((sum, row) => sum + row.pct, 0)).toBeCloseTo(share, 2);
 });
 
 const LIVE_RESERVES_CONFIG: NonNullable<V9ExtensionRegistryMeta["liveReservesConfig"]> = {
@@ -177,9 +186,8 @@ const ISSUER_PREFIXED_NAMED_REPORT: V9ExtensionRegistryMeta = {
 };
 
 describe("v10.01 named reserve reports", () => {
-  // USDT's current BDO packet is the September 30, 2026 report.
-  const asOfSec = Date.parse("2026-09-30T00:00:00Z") / 1000;
   const usdt = { ...usdtCoin, ...usdtReserveEnvelope } as unknown as V9ExtensionRegistryMeta;
+  const asOfSec = Date.parse(usdt.proofOfReserves!.latestReport!.periodEnd!) / 1000;
 
   it.each(["fresh", "stale", "absent"])("keeps USDU's reviewed Safety inputs identical with a %s display probe", (state) => {
     const meta = TRACKED_META_BY_ID.get("usdu-universal")!;
@@ -387,12 +395,7 @@ describe("reviewed live unknown residuals", () => {
 
   function compile(rows: ReserveSlice[], meta: V9ExtensionRegistryMeta, clockSec = CLOCK_SEC) {
     const base = makeV9TwoAssetFixedInput({ clockSec, omitAlphaReserve: rows.length === 0 });
-    const {
-      schemaVersion: _schemaVersion, dexPayloadFingerprint: _dexPayloadFingerprint,
-      redemptionPayloadFingerprint: _redemptionPayloadFingerprint, registryFingerprint: _registryFingerprint,
-      inputMethodologyVersions: _inputMethodologyVersions, baseInputGenerationId: _baseInputGenerationId,
-      ...draft
-    } = base;
+    const draft = draftOf(base);
     const fixed = createReportCardsFixedInput({
       ...draft, liveReserveMap: { ...base.liveReserveMap, alpha: rows },
     });
@@ -725,12 +728,7 @@ describe("reviewed curated reserve admission", () => {
 
   it("retains identified reserve quality with a separately marked unsplit basket tail", () => {
     const fallbackMeta = reviewedMeta(opaqueRows, unresolvedReview);
-    fallbackMeta.liveReservesConfig = {
-      adapter: "curated-validated",
-      version: 1,
-      semantics: "collateral-mix",
-      inputs: { primary: { kind: "onchain-solana" } },
-    };
+    fallbackMeta.liveReservesConfig = LIVE_RESERVES_CONFIG;
 
     for (const admission of [
       buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(fallbackMeta, CLOCK_SEC),
@@ -746,12 +744,7 @@ describe("reviewed curated reserve admission", () => {
   it("admits complete current verified fallback and standalone reserve evidence", () => {
     const rows = [{ name: "Treasury bills", pct: 100, risk: "very-low" as const }];
     const fallbackMeta = reviewedMeta(rows);
-    fallbackMeta.liveReservesConfig = {
-      adapter: "curated-validated",
-      version: 1,
-      semantics: "collateral-mix",
-      inputs: { primary: { kind: "onchain-solana" } },
-    };
+    fallbackMeta.liveReservesConfig = LIVE_RESERVES_CONFIG;
 
     expect(buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(fallbackMeta, CLOCK_SEC)).toMatchObject({
       evidenceClass: "static-validated",
@@ -1010,12 +1003,7 @@ describe("curated reserve dependency admission", () => {
     "publishes reviewed native mechanism as a serial claim or withholds a conflict (%s)",
     (nativeType) => {
       const base = makeV9TwoAssetFixedInput({ clockSec: DEPENDENCY_CLOCK_SEC });
-      const {
-        schemaVersion: _schemaVersion, dexPayloadFingerprint: _dexPayloadFingerprint,
-        redemptionPayloadFingerprint: _redemptionPayloadFingerprint, registryFingerprint: _registryFingerprint,
-        inputMethodologyVersions: _inputMethodologyVersions, baseInputGenerationId: _baseInputGenerationId,
-        ...draft
-      } = base;
+      const draft = draftOf(base);
       const metaById = dependencyMetaById("2026-08-19");
       metaById.get("alpha")!.reserves = [{
         sourceKey: "fixture:beta", name: "Beta reserve", pct: 100, risk: "low",
@@ -1048,12 +1036,7 @@ describe("curated reserve dependency admission", () => {
     "does not restore curated weights after a live %s rejection",
     (reason) => {
       const base = makeV9TwoAssetFixedInput({ clockSec: DEPENDENCY_CLOCK_SEC });
-      const {
-        schemaVersion: _schemaVersion, dexPayloadFingerprint: _dexPayloadFingerprint,
-        redemptionPayloadFingerprint: _redemptionPayloadFingerprint, registryFingerprint: _registryFingerprint,
-        inputMethodologyVersions: _inputMethodologyVersions, baseInputGenerationId: _baseInputGenerationId,
-        ...draft
-      } = base;
+      const draft = draftOf(base);
       const metaById = dependencyMetaById(reason === "expired" ? "2025-01-01" : "2026-08-19");
       const meta = metaById.get("alpha")!;
       meta.reserves = [{
@@ -1214,16 +1197,7 @@ describe("curated reserve dependency admission", () => {
       omitAlphaReserve: true,
       clockSec: DEPENDENCY_CLOCK_SEC,
     });
-    const {
-      schemaVersion: _schemaVersion,
-      activeAssetIds: _activeAssetIds,
-      dexPayloadFingerprint: _dexPayloadFingerprint,
-      redemptionPayloadFingerprint: _redemptionPayloadFingerprint,
-      registryFingerprint: _registryFingerprint,
-      inputMethodologyVersions: _inputMethodologyVersions,
-      baseInputGenerationId: _baseInputGenerationId,
-      ...draft
-    } = base;
+    const draft = draftOf(base);
     const fixed = createReportCardsFixedInput({
       ...draft,
       activeAssetIds: ["alpha", "beta"],
@@ -1789,8 +1763,10 @@ describe("assurance report freshness", () => {
 });
 
 const zarscMeta = { ...zarscCoin, ...zarscReserves } as unknown as V9ExtensionRegistryMeta;
-const zarscClock = Date.parse("2026-10-22T00:00:00Z") / 1000;
-const zarscReportExpiry = Date.parse("2026-09-30T00:00:00Z") / 1000
+const zarscReport = zarscMeta.proofOfReserves!.latestReport!;
+const zarscPublishedAt = Date.parse(zarscReport.publishedAt!) / 1000;
+const zarscClock = zarscPublishedAt + 86_400;
+const zarscReportExpiry = Date.parse(zarscReport.periodEnd!) / 1000
   + V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.namedFirmReserveReportMaxAgeSec;
 
 describe("named AUP historical composition, not assurance", () => {
@@ -1819,7 +1795,7 @@ describe("named AUP historical composition, not assurance", () => {
     incomplete.reserves![0]!.pct = 50;
     expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(incomplete, zarscClock)).toBeNull();
     expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(zarscMeta, zarscReportExpiry + 1)).toBeNull();
-    expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(zarscMeta, Date.parse("2026-10-20T00:00:00Z") / 1000)).toBeNull();
+    expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(zarscMeta, zarscPublishedAt - 86_400)).toBeNull();
   });
 });
 

@@ -41,6 +41,35 @@ function resetFetchRetryMocks(): void {
 import { syncFxRates } from "../sync-fx-rates";
 import { loadExchangeRateApiPayload, loadFrankfurterPayload, loadSecondaryCurrencyCandidate } from "../sync-fx-rates-sources";
 import { buildFxCacheStatus, getFxReferenceTypeFromState, hydrateFxRateState } from "../../lib/fx-rate-state";
+
+const FULL_USD_RATES = {
+  EUR: 0.925, GBP: 0.79, CHF: 0.88, BRL: 5.0, JPY: 149.5, IDR: 15800, SGD: 1.35, TRY: 36,
+  AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2, CNH: 7.28, RUB: 90, UAH: 41, ARS: 1400, KGS: 87, NGN: 1370, XOF: 560,
+  MYR: 4.5, KRW: 1380, HKD: 7.81, INR: 85.5, VND: 25000, KES: 129, GHS: 11.6, COP: 3200, CLP: 950, PEN: 3.4,
+  CZK: 21.8, PLN: 3.8998, AED: 3.6725,
+};
+
+function staleSilverDb(nowSec: number) {
+  const previousRates = makeCompleteFxRates({ peggedGOLD: 2900, peggedSILVER: 40.448374 });
+  const previousMeta = makeFxRatesMeta(previousRates, {
+    usableSyncAt: nowSec - 60,
+    updatedAt: nowSec - 3600,
+  });
+  previousMeta.sourceUpdatedAtByPeg.peggedSILVER = nowSec - 26 * 3600;
+  return makeFxRatesDb({
+    previousRates: makeCacheRow(previousRates, nowSec - 60),
+    previousMeta: makeCacheRow(previousMeta, nowSec - 60),
+  });
+}
+
+function readRates(db: Parameters<typeof findCacheWrite>[0]): Record<string, number> {
+  return JSON.parse(String(findCacheWrite(db, "fx-rates")?.binds[1] ?? "{}"));
+}
+
+function readMeta<T>(db: Parameters<typeof findCacheWrite>[0]): T {
+  return JSON.parse(String(findCacheWrite(db, "fx-rates-meta")?.binds[1] ?? "{}"));
+}
+
 describe("syncFxRates", () => {
   const fixtures = createLatestSchemaFixtureTracker();
   beforeEach(() => {
@@ -79,8 +108,7 @@ describe("syncFxRates", () => {
     expect(metadata.sources.fawazahmed0).toBe("partial");
     expect(metadata.mode).toBe("live");
 
-    const write = findCacheWrite(db, "fx-rates");
-    const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
+    const cachedRates = readRates(db);
     expect(cachedRates.peggedCNH).toBeCloseTo(1 / 7.28, 6);
     expect(cachedRates.peggedCNH).not.toBe(cachedRates.peggedCNY);
     expect(cachedRates.peggedHKD).toBeCloseTo(1 / 7.81, 6);
@@ -95,14 +123,13 @@ describe("syncFxRates", () => {
     expect(findCacheWrite(db, "cron:event:sync-fx-rates:hardcoded-rate-used")).toBeUndefined();
     expect(findCacheWrite(db, "cron:event:sync-fx-rates:ecb-rates-stale")).toBeUndefined();
 
-    const metaWrite = findCacheWrite(db, "fx-rates-meta");
-    const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+    const cachedMeta = readMeta<{
       usableSyncAt: number;
       mode: string;
       sourceUpdatedAtByPeg: Record<string, number>;
       sourceCadenceByPeg: Record<string, string>;
       sourceDateByPeg: Record<string, string | null>;
-    };
+    }>(db);
     expect(cachedMeta.usableSyncAt).toBe(Math.floor(Date.now() / 1000));
     expect(cachedMeta.mode).toBe("live");
     expect(cachedMeta.sourceUpdatedAtByPeg.peggedEUR).toBeGreaterThan(0);
@@ -230,18 +257,18 @@ describe("syncFxRates", () => {
     expect(metadata.sources["commodity-peer-median"]).toBe("partial");
 
     const write = findCacheWrite(db, "fx-rates");
-    const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
+    const cachedRates = readRates(db);
     expect(cachedRates.peggedGOLD).toBeCloseTo(2905, 6);
     // Only KAG and XAGm are active silver coins in production; GRAMS is
     // quarantined, so the two-coin group must not stand in for spot.
     expect(cachedRates.peggedSILVER).toBeUndefined();
 
     const metaWrite = findCacheWrite(db, "fx-rates-meta");
-    const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+    const cachedMeta = readMeta<{
       sourceUpdatedAtByPeg: Record<string, number>;
       sourceCadenceByPeg: Record<string, string>;
       sourceDateByPeg: Record<string, string | null>;
-    };
+    }>(db);
     expect(cachedMeta.sourceUpdatedAtByPeg.peggedGOLD).toBe(stablecoinsUpdatedAt - 30);
     expect(cachedMeta.sourceUpdatedAtByPeg.peggedSILVER).toBeUndefined();
     expect(cachedMeta.sourceCadenceByPeg.peggedGOLD).toBe("intraday");
@@ -269,15 +296,13 @@ describe("syncFxRates", () => {
     expect(metadata.sources["commodity-peer-median"]).toBe("partial");
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Rejected gold-api.com peggedGOLD rate 3100"));
 
-    const write = findCacheWrite(db, "fx-rates");
-    const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
+    const cachedRates = readRates(db);
     expect(cachedRates.peggedGOLD).toBeCloseTo(2905, 6);
     expect(cachedRates.peggedSILVER).toBeCloseTo(32, 6);
 
-    const metaWrite = findCacheWrite(db, "fx-rates-meta");
-    const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+    const cachedMeta = readMeta<{
       sourceUpdatedAtByPeg: Record<string, number | null>;
-    };
+    }>(db);
     expect(cachedMeta.sourceUpdatedAtByPeg.peggedGOLD).toBe(stablecoinsUpdatedAt - 30);
     expect(cachedMeta.sourceUpdatedAtByPeg.peggedSILVER).toBeNull();
   });
@@ -290,29 +315,18 @@ describe("syncFxRates", () => {
       silver: { body: { price: 5.0378, updatedAt: new Date(silverObservedAt * 1000).toISOString() } },
     }));
 
-    const previousRates = makeCompleteFxRates({ peggedGOLD: 2900, peggedSILVER: 40.448374 });
-    const previousMeta = makeFxRatesMeta(previousRates, {
-      usableSyncAt: nowSec - 60,
-      updatedAt: nowSec - 3600,
-    });
-    previousMeta.sourceUpdatedAtByPeg.peggedSILVER = nowSec - 26 * 3600;
-    const db = makeFxRatesDb({
-      previousRates: makeCacheRow(previousRates, nowSec - 60),
-      previousMeta: makeCacheRow(previousMeta, nowSec - 60),
-    });
+    const db = staleSilverDb(nowSec);
 
     const result = await syncFxRates(db);
     const metadata = JSON.parse(result.metadata ?? "{}");
     expect(metadata.sources["gold-api.com"]).toBe("partial");
 
-    const write = findCacheWrite(db, "fx-rates");
-    const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
+    const cachedRates = readRates(db);
     expect(cachedRates.peggedSILVER).toBeCloseTo(40.448374, 6);
 
-    const metaWrite = findCacheWrite(db, "fx-rates-meta");
-    const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+    const cachedMeta = readMeta<{
       sourceUpdatedAtByPeg: Record<string, number | null>;
-    };
+    }>(db);
     expect(cachedMeta.sourceUpdatedAtByPeg.peggedSILVER).toBe(nowSec - 26 * 3600);
   });
 
@@ -331,30 +345,19 @@ describe("syncFxRates", () => {
       { match: "gold-api.com/price/XAG", body: { price: 50.39, updatedAt: new Date(silverObservedAt * 1000).toISOString() } },
     ], { requireMatch: true });
 
-    const previousRates = makeCompleteFxRates({ peggedGOLD: 2900, peggedSILVER: 40.448374 });
-    const previousMeta = makeFxRatesMeta(previousRates, {
-      usableSyncAt: nowSec - 60,
-      updatedAt: nowSec - 3600,
-    });
-    previousMeta.sourceUpdatedAtByPeg.peggedSILVER = nowSec - 26 * 3600;
-    const db = makeFxRatesDb({
-      previousRates: makeCacheRow(previousRates, nowSec - 60),
-      previousMeta: makeCacheRow(previousMeta, nowSec - 60),
-    });
+    const db = staleSilverDb(nowSec);
 
     const result = await syncFxRates(db, undefined, undefined, chainRpcs);
     const metadata = JSON.parse(result.metadata ?? "{}");
     expect(metadata.sources["gold-api.com"]).toBe("ok");
     expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining("Rejected peggedSILVER=50.39"));
 
-    const write = findCacheWrite(db, "fx-rates");
-    const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
+    const cachedRates = readRates(db);
     expect(cachedRates.peggedSILVER).toBeCloseTo(50.39, 6);
 
-    const metaWrite = findCacheWrite(db, "fx-rates-meta");
-    const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+    const cachedMeta = readMeta<{
       sourceUpdatedAtByPeg: Record<string, number | null>;
-    };
+    }>(db);
     expect(cachedMeta.sourceUpdatedAtByPeg.peggedSILVER).toBe(silverObservedAt);
   });
 
@@ -372,21 +375,11 @@ describe("syncFxRates", () => {
       { match: "gold-api.com/price/XAG", body: { price: 50.39, updatedAt: new Date(silverObservedAt * 1000).toISOString() } },
     ], { requireMatch: true });
 
-    const previousRates = makeCompleteFxRates({ peggedGOLD: 2900, peggedSILVER: 40.448374 });
-    const previousMeta = makeFxRatesMeta(previousRates, {
-      usableSyncAt: nowSec - 60,
-      updatedAt: nowSec - 3600,
-    });
-    previousMeta.sourceUpdatedAtByPeg.peggedSILVER = nowSec - 26 * 3600;
-    const db = makeFxRatesDb({
-      previousRates: makeCacheRow(previousRates, nowSec - 60),
-      previousMeta: makeCacheRow(previousMeta, nowSec - 60),
-    });
+    const db = staleSilverDb(nowSec);
 
     await syncFxRates(db, undefined, undefined, chainRpcs);
 
-    const write = findCacheWrite(db, "fx-rates");
-    const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
+    const cachedRates = readRates(db);
     expect(cachedRates.peggedSILVER).toBeCloseTo(40.448374, 6);
   });
 
@@ -422,15 +415,14 @@ describe("syncFxRates", () => {
     expect(metadata.mode).toBe("cached-fallback");
     expect(metadata.consecutiveFallbackRuns).toBe(1);
 
-    const metaWrite = findCacheWrite(db, "fx-rates-meta");
-    const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+    const cachedMeta = readMeta<{
       usableSyncAt: number;
       mode: string;
       sourceUpdatedAtByPeg: Record<string, number>;
       sourceCadenceByPeg: Record<string, string>;
       sourceDateByPeg: Record<string, string | null>;
       consecutiveFallbackRuns: number;
-    };
+    }>(db);
     expect(cachedMeta.usableSyncAt).toBe(Math.floor(Date.now() / 1000));
     expect(cachedMeta.mode).toBe("cached-fallback");
     expect(cachedMeta.sourceUpdatedAtByPeg.peggedEUR).toBe(Math.floor(Date.now() / 1000) - 3600);
@@ -480,18 +472,16 @@ describe("syncFxRates", () => {
     expect(metadata.sources.frankfurter).toBe("error");
     expect(metadata.sources.fawazahmed0).toBe("ok");
 
-    const write = findCacheWrite(db, "fx-rates");
-    const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
+    const cachedRates = readRates(db);
     expect(cachedRates.peggedEUR).toBeCloseTo(1 / 0.925, 6);
     expect(cachedRates.peggedCNH).toBeCloseTo(1 / 7.28, 6);
 
-    const metaWrite = findCacheWrite(db, "fx-rates-meta");
-    const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+    const cachedMeta = readMeta<{
       mode: string;
       sourceCadenceByPeg: Record<string, string>;
       sourceDateByPeg: Record<string, string | null>;
       sourceLastSuccessAtBySource: Record<string, number>;
-    };
+    }>(db);
     expect(cachedMeta.mode).toBe("live");
     expect(cachedMeta.sourceCadenceByPeg.peggedEUR).toBe("calendar-daily");
     expect(cachedMeta.sourceDateByPeg.peggedEUR).toBe("2025-06-15");
@@ -532,8 +522,7 @@ describe("syncFxRates", () => {
     const metadata = JSON.parse(result.metadata ?? "{}");
     expect(metadata.reason).toBe("partial-live-fallback-coverage");
     expect(metadata.sources.fawazahmed0).toBe("partial");
-    const write = findCacheWrite(db, "fx-rates");
-    const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
+    const cachedRates = readRates(db);
     expect(cachedRates).toMatchObject({ ...previousRates, peggedREAL: 1 / 5.1 });
     const meta = JSON.parse(String(findCacheWrite(db, "fx-rates-meta")?.binds[1]));
     expect(meta.observations.peggedREAL.source).toBe("fawazahmed0");
@@ -579,7 +568,7 @@ describe("syncFxRates", () => {
     expect(result.status).toBe("degraded");
     expect(metadata.reason).toBe("partial-live-fallback-coverage");
     expect(metadata.sources.fawazahmed0).toBe("partial");
-    const cachedRates = JSON.parse(String(findCacheWrite(db, "fx-rates")?.binds[1] ?? "{}")) as Record<string, number>;
+    const cachedRates = readRates(db);
     // The rejected quote is not admitted live, and the ten-day-old cached value
     // is not a cadence-valid observation that could stand in as live coverage.
     expect(cachedRates.peggedARS).toBe(previousRates.peggedARS);
@@ -623,9 +612,9 @@ describe("syncFxRates", () => {
     expect(result.status).toBe("degraded");
     expect(metadata.reason).toBe("partial-live-fallback-coverage");
     expect(metadata.sources.fawazahmed0).toBe("partial");
-    const persistedMeta = JSON.parse(String(findCacheWrite(db, "fx-rates-meta")?.binds[1] ?? "{}")) as {
+    const persistedMeta = readMeta<{
       sources: Record<string, string>;
-    };
+    }>(db);
     expect(persistedMeta.sources.fawazahmed0).toBe("partial");
   });
 
@@ -642,12 +631,7 @@ describe("syncFxRates", () => {
         body: {
           result: "success",
           time_last_update_unix: exchangeRateUpdatedAt,
-          rates: {
-            EUR: 0.925, GBP: 0.79, CHF: 0.88, BRL: 5.0, JPY: 149.5, IDR: 15800, SGD: 1.35, TRY: 36,
-            AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2, CNH: 7.28, RUB: 90, UAH: 41, ARS: 1400, KGS: 87, NGN: 1370, XOF: 560,
-            MYR: 4.5, KRW: 1380, HKD: 7.81, INR: 85.5, VND: 25000, KES: 129, GHS: 11.6, COP: 3200, CLP: 950, PEN: 3.4,
-            CZK: 21.8, PLN: 3.8998, AED: 3.6725,
-          },
+          rates: FULL_USD_RATES,
         },
       },
     }));
@@ -662,17 +646,15 @@ describe("syncFxRates", () => {
     expect(metadata.sources.frankfurter).toBe("error");
     expect(metadata.sources.exchangeRateApi).toBe("ok");
 
-    const write = findCacheWrite(db, "fx-rates");
-    const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
+    const cachedRates = readRates(db);
     expect(cachedRates.peggedEUR).toBeCloseTo(1 / 0.925, 6);
     expect(cachedRates.peggedCNH).toBeCloseTo(1 / 7.28, 6);
 
-    const metaWrite = findCacheWrite(db, "fx-rates-meta");
-    const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+    const cachedMeta = readMeta<{
       mode: string;
       sourceCadenceByPeg: Record<string, string>;
       sourceDateByPeg: Record<string, string | null>;
-    };
+    }>(db);
     expect(cachedMeta.mode).toBe("live");
     expect(cachedMeta.sourceCadenceByPeg.peggedEUR).toBe("calendar-daily");
     expect(cachedMeta.sourceDateByPeg.peggedEUR).toBe("2025-06-15");
@@ -687,13 +669,7 @@ describe("syncFxRates", () => {
       exchangeRate: {
         body: {
           result: "success",
-          rates: {
-            EUR: 0.925, GBP: 0.79, CHF: 0.88, BRL: 5.0, JPY: 149.5, IDR: 15800, SGD: 1.35, TRY: 36,
-            AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2, CNH: 7.28, RUB: 90,
-            UAH: 41, ARS: 1400, KGS: 87, NGN: 1370, XOF: 560, MYR: 4.5, KRW: 1380, HKD: 7.81,
-            INR: 85.5, VND: 25000, KES: 129, GHS: 11.6, COP: 3200, CLP: 950, PEN: 3.4,
-            CZK: 21.8, PLN: 3.8998, AED: 3.6725,
-          },
+          rates: FULL_USD_RATES,
         },
       },
     }));
@@ -784,12 +760,11 @@ describe("syncFxRates", () => {
     expect(metadata.consecutiveFallbackRuns).toBe(0);
     expect(metadata.sources.cache).toBe("carry-forward");
 
-    const metaWrite = findCacheWrite(db, "fx-rates-meta");
-    const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+    const cachedMeta = readMeta<{
       mode: string;
       sourceDateByPeg: Record<string, string | null>;
       consecutiveFallbackRuns: number;
-    };
+    }>(db);
     expect(cachedMeta.mode).toBe("live");
     expect(cachedMeta.sourceDateByPeg.peggedEUR).toBe("2025-06-13");
     expect(cachedMeta.sourceDateByPeg.peggedCNH).toBe("2025-06-15");
@@ -806,7 +781,7 @@ describe("syncFxRates", () => {
     const db = makeFxRatesDb();
 
     await syncFxRates(db);
-    const cachedRates = JSON.parse(String(findCacheWrite(db, "fx-rates")?.binds[1] ?? "{}"));
+    const cachedRates = readRates(db);
     expect(cachedRates.peggedAED).toBe(1 / 3.672);
   });
 
@@ -818,7 +793,7 @@ describe("syncFxRates", () => {
     const db = makeFxRatesDb();
     await syncFxRates(db);
 
-    const cachedRates = JSON.parse(String(findCacheWrite(db, "fx-rates")?.binds[1] ?? "{}"));
+    const cachedRates = readRates(db);
     expect(cachedRates.peggedCZK).toBe(1 / 21.8);
     expect(cachedRates.peggedPLN).toBe(1 / 3.8998);
     expect(cachedRates.peggedAED).toBeUndefined();
@@ -837,14 +812,12 @@ describe("syncFxRates", () => {
 
     await syncFxRates(db);
 
-    const write = findCacheWrite(db, "fx-rates");
-    const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
+    const cachedRates = readRates(db);
     expect(cachedRates.peggedCNH).toBeCloseTo(1 / 7.28, 6);
 
-    const metaWrite = findCacheWrite(db, "fx-rates-meta");
-    const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+    const cachedMeta = readMeta<{
       sourceDateByPeg: Record<string, string | null>;
-    };
+    }>(db);
     expect(cachedMeta.sourceDateByPeg.peggedCNH).toBe("2025-06-15");
   });
 
@@ -900,13 +873,13 @@ describe("syncFxRates", () => {
 
     // A mirror carrying a 2025-06-13 snapshot must not replace the fresher
     // 2025-06-15 observation the generation already holds.
-    const ratesWrite = findCacheWrite(db, "fx-rates");    const persistedRates = JSON.parse(String(ratesWrite?.binds[1] ?? "{}")) as Record<string, number>;
+    const ratesWrite = findCacheWrite(db, "fx-rates");    const persistedRates = readRates(db);
     expect(persistedRates.peggedCNH).toBe(previousRates.peggedCNH);
     expect(persistedRates.peggedAED).toBe(previousRates.peggedAED);
     const metaWrite = findCacheWrite(db, "fx-rates-meta");
-    const persistedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+    const persistedMeta = readMeta<{
       sourceDateByPeg: Record<string, string | null>;
-    };
+    }>(db);
     expect(persistedMeta.sourceDateByPeg.peggedCNH).toBe("2025-06-15");
     expect(persistedMeta.sourceDateByPeg.peggedAED).toBe("2025-06-15");
     expect(findCacheWrite(db, "cron:event:sync-fx-rates:older-fx-observation-skipped")).toBeDefined();
@@ -939,8 +912,7 @@ describe("syncFxRates", () => {
     expect(JSON.parse(String(findCacheWrite(db, `circuit:${CIRCUIT_SOURCE.CHAINLINK_FEEDS}`)?.binds[1])))
       .toMatchObject({ consecutiveFailures: 0 });
 
-    const write = findCacheWrite(db, "fx-rates");
-    const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
+    const cachedRates = readRates(db);
     if (age > 0) {
       expect(cachedRates.peggedEUR).toBeCloseTo(1 / 0.925);
       const diagnostic = findCacheWrite(db, "cron:event:sync-fx-rates:chainlink-reference-out-of-budget");
@@ -951,11 +923,10 @@ describe("syncFxRates", () => {
     }
     expect(cachedRates.peggedEUR).toBeCloseTo(1.08101, 4);
 
-    const metaWrite = findCacheWrite(db, "fx-rates-meta");
-    const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+    const cachedMeta = readMeta<{
       sourceCadenceByPeg: Record<string, string>;
       sourceDateByPeg: Record<string, string | null>;
-    };
+    }>(db);
     expect(cachedMeta.sourceCadenceByPeg.peggedEUR).toBe("intraday");
     expect(cachedMeta.sourceDateByPeg.peggedEUR).toBeNull();
   });
@@ -1083,15 +1054,13 @@ describe("syncFxRates", () => {
     const metadata = JSON.parse(result.metadata ?? "{}") as { sources?: { chainlink?: string } };
     expect(metadata.sources?.chainlink).toBe("partial");
 
-    const write = findCacheWrite(db, "fx-rates");
-    const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
+    const cachedRates = readRates(db);
     expect(cachedRates.peggedSILVER).toBeCloseTo(32, 6);
 
-    const metaWrite = findCacheWrite(db, "fx-rates-meta");
-    const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+    const cachedMeta = readMeta<{
       sourceUpdatedAtByPeg: Record<string, number | null>;
       sourceCadenceByPeg: Record<string, string>;
-    };
+    }>(db);
     expect(cachedMeta.sourceUpdatedAtByPeg.peggedSILVER).toBe(olderUpdatedAt);
     expect(cachedMeta.sourceCadenceByPeg.peggedSILVER).toBe("intraday");
 
@@ -1138,14 +1107,12 @@ describe("syncFxRates", () => {
     const metadata = JSON.parse(result.metadata ?? "{}") as { sources?: { chainlink?: string } };
     expect(metadata.sources?.chainlink).toBe("partial");
 
-    const write = findCacheWrite(db, "fx-rates");
-    const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
+    const cachedRates = readRates(db);
     expect(cachedRates.peggedSILVER).toBeCloseTo(32, 6);
 
-    const metaWrite = findCacheWrite(db, "fx-rates-meta");
-    const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+    const cachedMeta = readMeta<{
       sourceUpdatedAtByPeg: Record<string, number | null>;
-    };
+    }>(db);
     expect(cachedMeta.sourceUpdatedAtByPeg.peggedSILVER).toBeNull();
     expect(findCacheWrite(db, "cron:event:sync-fx-rates:chainlink-rate-diverged")).toBeDefined();
   });
@@ -1186,13 +1153,12 @@ describe("syncFxRates", () => {
     expect(metadata.consecutiveFallbackRuns).toBe(0);
     expect(metadata.sources.cache).toBe("carry-forward");
 
-    const metaWrite = findCacheWrite(db, "fx-rates-meta");
-    const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+    const cachedMeta = readMeta<{
       mode: string;
       sourceCadenceByPeg: Record<string, string>;
       sourceDateByPeg: Record<string, string | null>;
       consecutiveFallbackRuns: number;
-    };
+    }>(db);
     expect(cachedMeta.mode).toBe("live");
     expect(cachedMeta.sourceCadenceByPeg.peggedEUR).toBe("business-daily");
     expect(cachedMeta.sourceCadenceByPeg.peggedCNH).toBe("calendar-daily");
@@ -1215,12 +1181,7 @@ describe("syncFxRates", () => {
       openExchange: {
         body: {
           timestamp: oxrObservedAt,
-          rates: {
-            EUR: 0.925, GBP: 0.79, CHF: 0.88, BRL: 5.0, JPY: 149.5, IDR: 15800, SGD: 1.35, TRY: 36,
-            AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, CNH: 7.28, PHP: 56, MXN: 17.2, RUB: 90, UAH: 41, ARS: 1400, KGS: 87, NGN: 1370, XOF: 560,
-            MYR: 4.5, KRW: 1380, HKD: 7.81, INR: 85.5, VND: 25000, KES: 129, GHS: 11.6, COP: 3200, CLP: 950, PEN: 3.4,
-            CZK: 21.8, PLN: 3.8998, AED: 3.6725,
-          },
+          rates: FULL_USD_RATES,
         },
       },
     }));
@@ -1248,12 +1209,11 @@ describe("syncFxRates", () => {
     expect(findCacheWrite(db, "fx-oxr-last-attempt")).toBeDefined();
     expect(findCacheWrite(db, "fx-oxr-last-success")).toBeDefined();
 
-    const metaWrite = findCacheWrite(db, "fx-rates-meta");
-    const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+    const cachedMeta = readMeta<{
       mode: string;
       sourceUpdatedAtByPeg: Record<string, number>;
       consecutiveFallbackRuns: number;
-    };
+    }>(db);
     expect(cachedMeta.mode).toBe("live");
     // Provenance is the OXR snapshot time, never this run's fetch clock.
     expect(cachedMeta.sourceUpdatedAtByPeg.peggedJPY).toBe(oxrObservedAt);
@@ -1297,18 +1257,16 @@ describe("syncFxRates", () => {
     expect(metadata.consecutiveFallbackRuns).toBe(3);
     expect(metadata.sources.openExchangeRates).toBe("ok");
 
-    const metaWrite = findCacheWrite(db, "fx-rates-meta");
-    const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+    const cachedMeta = readMeta<{
       mode: string;
       sourceUpdatedAtByPeg: Record<string, number>;
       consecutiveFallbackRuns: number;
-    };
+    }>(db);
     expect(cachedMeta.mode).toBe("cached-fallback");
     expect(cachedMeta.sourceUpdatedAtByPeg.peggedEUR).toBe(oxrObservedAt);
     expect(cachedMeta.sourceUpdatedAtByPeg.peggedGBP).toBe(staleUpdatedAt);
     expect(cachedMeta.consecutiveFallbackRuns).toBe(3);
-    const ratesWrite = findCacheWrite(db, "fx-rates");
-    const cachedRates = JSON.parse(String(ratesWrite?.binds[1] ?? "{}")) as Record<string, number>;
+    const cachedRates = readRates(db);
     expect(cachedRates.peggedRUB).toBeUndefined();
   });
 
@@ -1374,11 +1332,11 @@ describe("syncFxRates", () => {
     expect(findCacheWrite(db, "fx-oxr-last-success")).toBeUndefined();
     expect(findCacheWrite(db, "cron:event:sync-fx-rates:openexchange-rates-observation-rejected")).toBeDefined();
 
-    const cachedRates = JSON.parse(String(findCacheWrite(db, "fx-rates")?.binds[1] ?? "{}")) as Record<string, number>;
+    const cachedRates = readRates(db);
     expect(cachedRates.peggedEUR).toBeCloseTo(1 / 0.925, 6);
-    const cachedMeta = JSON.parse(String(findCacheWrite(db, "fx-rates-meta")?.binds[1] ?? "{}")) as {
+    const cachedMeta = readMeta<{
       sourceCadenceByPeg: Record<string, string>;
-    };
+    }>(db);
     expect(cachedMeta.sourceCadenceByPeg.peggedEUR).toBe("business-daily");
   });
 

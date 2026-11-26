@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
-import { describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-input-identity";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
@@ -136,27 +136,45 @@ describe("Safety Score v9 deterministic replay CLI", () => {
     }
   });
 
-  it("admits a batch using captured and explicitly sourced supply", async () => {
-    const dir = mkdtempSync(resolve(tmpdir(), "pharos-v9-admit-"));
-    try {
-      const capture = resolve(dir, "capture.json"), output = resolve(dir, "out.json"), supply = resolve(dir, "supply.json");
-      const { baseInputGenerationId: _old, ...base } = nativeInput;
-      const dexLiqMap = { "usdc-circle": base.dexLiqMap["usdc-circle"]! };
-      const input = normalizeSafetyScoreV9CompilerInput({ ...base, dexLiqMap, activeAssetIds: ["usdc-circle"],
-        registryFingerprint: "b".repeat(64),
-        aggregateCirculatingById: { "usdt-tether": { circulating: { peggedUSD: 10_000_000 }, observedAtSec: base.clockSec } },
-        dexPayloadFingerprint: computeNativeDexLiquidityPayloadFingerprint(dexLiqMap, base.dexGenerationId) });
-      const observation = { circulating: { peggedUSD: 1_000_000 }, observedAtSec: null,
-        url: "https://stablecoins.llama.fi/stablecoins", field: "peggedAssets[42].circulating", retrievedAtSec: input.clockSec + 1 };
+  describe("batch asset admission", () => {
+    let dir: string;
+    let capture: string, output: string, supply: string;
+    const { baseInputGenerationId: _old, ...base } = nativeInput;
+    const dexLiqMap = { "usdc-circle": base.dexLiqMap["usdc-circle"]! };
+    const input = normalizeSafetyScoreV9CompilerInput({ ...base, dexLiqMap, activeAssetIds: ["usdc-circle"],
+      registryFingerprint: "b".repeat(64),
+      aggregateCirculatingById: { "usdt-tether": { circulating: { peggedUSD: 10_000_000 }, observedAtSec: base.clockSec } },
+      dexPayloadFingerprint: computeNativeDexLiquidityPayloadFingerprint(dexLiqMap, base.dexGenerationId) });
+    const observation = { circulating: { peggedUSD: 1_000_000 }, observedAtSec: null,
+      url: "https://stablecoins.llama.fi/stablecoins", field: "peggedAssets[42].circulating", retrievedAtSec: input.clockSec + 1 };
+    const dai = ["--admit-asset", "dai-makerdao"], usdt = ["--admit-asset", "usdt-tether"];
+    const cliArgs = (inputPath: string, outputPath: string, supplyPath?: string) => [
+      "--input", inputPath, "--output", outputPath, "--published-at", String(input.clockSec),
+      "--allow-future-reviews", "--allow-registry-mismatch",
+      ...(supplyPath ? ["--supply-observations", supplyPath] : []),
+    ];
+    let bytes: string;
+    let replay: SafetyScoreV9ReplayArtifact;
+
+    beforeAll(async () => {
+      dir = mkdtempSync(resolve(tmpdir(), "pharos-v9-admit-"));
+      capture = resolve(dir, "capture.json");
+      output = resolve(dir, "out.json");
+      supply = resolve(dir, "supply.json");
       writeFileSync(capture, JSON.stringify(input));
       writeFileSync(supply, JSON.stringify({ "dai-makerdao": observation }));
-      const args = ["--input", capture, "--output", output, "--published-at", String(input.clockSec), "--allow-future-reviews", "--allow-registry-mismatch"];
-      const dai = ["--admit-asset", "dai-makerdao"], usdt = ["--admit-asset", "usdt-tether"];
-      await expect(runSafetyScoreV9ReplayCli([...args, ...dai])).rejects.toThrow("requires a --supply-observations entry");
-      args.push("--supply-observations", supply);
-      await runSafetyScoreV9ReplayCli([...args, ...usdt, ...dai]);
-      const bytes = readFileSync(output, "utf8");
-      const replay = JSON.parse(bytes) as SafetyScoreV9ReplayArtifact;
+      await runSafetyScoreV9ReplayCli([...cliArgs(capture, output, supply), ...usdt, ...dai]);
+      bytes = readFileSync(output, "utf8");
+      replay = JSON.parse(bytes) as SafetyScoreV9ReplayArtifact;
+    });
+
+    afterAll(() => {
+      if (dir) rmSync(dir, { recursive: true, force: true });
+    });
+
+    it("admits captured and explicitly sourced supply and requires missing observations", async () => {
+      await expect(runSafetyScoreV9ReplayCli([...cliArgs(capture, resolve(dir, "missing.json")), ...dai]))
+        .rejects.toThrow("requires a --supply-observations entry");
       const { pipeline, replayScenario } = replay;
       expect(pipeline.fixedInput).toMatchObject({
         activeAssetIds: ["dai-makerdao", "usdc-circle", "usdt-tether"],
@@ -194,8 +212,12 @@ describe("Safety Score v9 deterministic replay CLI", () => {
       });
       expect(replayScenario?.kind === "asset-admission" ? replayScenario.evaluationBuildDigest : null)
         .toBe(pipeline.candidateIdentity.evaluationBuildDigest);
+    });
+
+    it("rejects a mismatched evaluation build digest", () => {
+      const { replayScenario } = replay;
       expect(() => buildSafetyScoreV9ReplayArtifact({
-        fixedInput: pipeline.fixedInput,
+        fixedInput: exactFixedInput(),
         publishedAtSec: input.clockSec,
         allowRegistryMismatch: true,
         replayScenario: {
@@ -203,18 +225,28 @@ describe("Safety Score v9 deterministic replay CLI", () => {
           evaluationBuildDigest: "0".repeat(64),
         },
       })).toThrow(/evaluationBuildDigest/i);
-      await runSafetyScoreV9ReplayCli([...args, ...dai, ...usdt]);
-      expect(readFileSync(output, "utf8")).toBe(bytes);
+    });
 
+    it("emits byte-identical output regardless of admit order", async () => {
+      const reversedOutput = resolve(dir, "out-reversed.json");
+      await runSafetyScoreV9ReplayCli([...cliArgs(capture, reversedOutput, supply), ...dai, ...usdt]);
+      expect(readFileSync(reversedOutput, "utf8")).toBe(bytes);
+    });
+
+    it("admits clocked supply while refusing captured supply overrides and replay envelopes", async () => {
+      const clockedCapture = resolve(dir, "clocked-capture.json");
+      const clockedOutput = resolve(dir, "clocked-out.json");
+      const clockedSupply = resolve(dir, "clocked-supply.json");
       const observedAtSec = input.clockSec - 123;
       const aggregateCirculatingById = { "dai-makerdao": { circulating: {}, observedAtSec },
         "usdt-tether": { circulating: { peggedUSD: 0 }, observedAtSec } };
       const { "usdt-tether": _usdtChain, ...chainCirculatingById } = input.chainCirculatingById;
-      writeFileSync(capture, JSON.stringify(normalizeSafetyScoreV9CompilerInput({ ...input,
+      writeFileSync(clockedCapture, JSON.stringify(normalizeSafetyScoreV9CompilerInput({ ...input,
         baseInputGenerationId: undefined, aggregateCirculatingById, chainCirculatingById })));
-      writeFileSync(supply, JSON.stringify({ "dai-makerdao": { ...observation, observedAtSec } }));
-      await runSafetyScoreV9ReplayCli([...args, ...dai, ...usdt]);
-      const clocked = (JSON.parse(readFileSync(output, "utf8")) as SafetyScoreV9ReplayArtifact).pipeline;
+      writeFileSync(clockedSupply, JSON.stringify({ "dai-makerdao": { ...observation, observedAtSec } }));
+      const clockedArgs = cliArgs(clockedCapture, clockedOutput, clockedSupply);
+      await runSafetyScoreV9ReplayCli([...clockedArgs, ...dai, ...usdt]);
+      const clocked = (JSON.parse(readFileSync(clockedOutput, "utf8")) as SafetyScoreV9ReplayArtifact).pipeline;
       expect(clocked.fixedInput.aggregateCirculatingById).toEqual(aggregateCirculatingById);
       expect(clocked.compiledFacts.assets.find(({ assetId }) => assetId === "dai-makerdao")?.supply.circulatingUsd).toBe(1_000_000);
       expect(clocked.compiledFacts.assets.find(({ assetId }) => assetId === "dai-makerdao")!.evidence)
@@ -222,21 +254,22 @@ describe("Safety Score v9 deterministic replay CLI", () => {
           sourceGenerationId: clocked.fixedInput.baseInputGenerationId, url: observation.url, observedAtSec,
           freshness: expect.objectContaining({ state: "current", ageSec: 123 }) }));
       expect(clocked.candidate.cards.find(({ id }) => id === "dai-makerdao")?.supply?.asOfSec).toBe(observedAtSec);
-      writeFileSync(supply, JSON.stringify({ "usdt-tether": observation }));
-      await expect(runSafetyScoreV9ReplayCli([...args, ...usdt])).rejects.toThrow("usdt-tether already has usable captured supply");
+      const overrideSupply = resolve(dir, "override-supply.json");
+      writeFileSync(overrideSupply, JSON.stringify({ "usdt-tether": observation }));
+      await expect(runSafetyScoreV9ReplayCli([...cliArgs(clockedCapture, clockedOutput, overrideSupply), ...usdt]))
+        .rejects.toThrow("usdt-tether already has usable captured supply");
 
       const scenarioInput = clocked.fixedInput;
       const identity = buildSafetyScoreV9InputIdentity({ methodologyVersion: scenarioInput.methodologyVersion,
         baseInputGenerationId: scenarioInput.baseInputGenerationId, publicationGenerationId: scenarioInput.sourceGeneration });
-      writeFileSync(capture, JSON.stringify(scenarioInput));
-      await expect(runSafetyScoreV9ReplayCli(args.slice(0, -2))).rejects.toThrow(/replaySupplyObservationsById/);
+      const envelopeCapture = resolve(dir, "envelope-capture.json");
+      writeFileSync(envelopeCapture, JSON.stringify(scenarioInput));
+      await expect(runSafetyScoreV9ReplayCli(cliArgs(envelopeCapture, clockedOutput))).rejects.toThrow(/replaySupplyObservationsById/);
       await expect(buildNativeV9InputCacheEntry(scenarioInput, identity)).rejects.toThrow(/replaySupplyObservationsById/);
       const envelope = await buildFixedInputCacheEntry({ schemaVersion: 2, sourceGeneration: scenarioInput.sourceGeneration,
         safetyScoreIdentity: identity, payload: scenarioInput, label: "admission input" });
       await expect(parseSafetyScoreV9ReplayFixedInput(envelope.value)).rejects.toThrow(/replaySupplyObservationsById/);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
+    });
   });
 
   it("requires explicit current-redemption mode and reseals only targeted captured rows", async () => {

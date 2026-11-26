@@ -719,20 +719,24 @@ describe("filterPrimaryPoolsPreferDirectApi", () => {
   const USDS_MINT = "USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA", USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
   const solMap = new Map([[`solana:${USDS_MINT}`, "usds-sky"], [`solana:${USDC_MINT}`, USDC]]);
 
+  const dedup = (derived: number) => ({
+    skippedByExactIdentity: 0, skippedByUniqueDerivedIdentity: derived, skippedByOptionalWildcardIdentity: 0,
+  });
+
   it("does not let an absurd direct-API pool suppress a healthy primary pool", () => {
     const r = filterPools([llamaPool({ pool: "0xpool", chain: "Fantom", project: "balancer-stable", symbol: "USDC-USDT", tvlUsd: 2.5e6, volumeUsd1d: 25e4, volumeUsd7d: 1.5e6, stablecoin: true, underlyingTokens: ["0xusdc", "0xusdt"], count: 2 })], [apiPool({ source: "balancer", chain: "Fantom", poolAddress: "0xpool", poolType: "balancer-stable", tokens: [{ address: "0xusdc", symbol: "USDC", decimals: 6 }, { address: "0xusdt", symbol: "USDT", decimals: 6 }], tvlUsd: 337e9, volume24hUsd: 1e5, balances: [1e6, 1e6] })]);
-    expect(r).toMatchObject({ skippedByExactIdentity: 0, skippedByUniqueDerivedIdentity: 0, skippedByOptionalWildcardIdentity: 0 }); expect(r.filteredPools).toHaveLength(1);
+    expect(r).toMatchObject(dedup(0)); expect(r.filteredPools).toHaveLength(1);
   });
 
   it("deduplicates an Orca DL pool via unique derived identity when fee metadata is missing", () => {
     const { primary, direct } = makeOrcaPair();
-    expect(filterPools([primary], [direct])).toMatchObject({ filteredPools: [], skippedByExactIdentity: 0, skippedByUniqueDerivedIdentity: 1, skippedByOptionalWildcardIdentity: 0 });
+    expect(filterPools([primary], [direct])).toMatchObject({ filteredPools: [], ...dedup(1) });
   });
 
   it("deduplicates a Balancer V3 DL stable pool via na-variant derived identity when DL omits the stable subtype", () => {
     const t0 = "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef", t1 = "0xe0126f0c4451b2b917064a93040fd4770d6774b5";
     expect(filterPools([llamaPool({ pool: "0511276f-4d37-4919-95ab-6cdf418ddd08", chain: "Plasma", project: "balancer-v3", symbol: "USDAI-WAPLAUSDT0", tvlUsd: 547_701, stablecoin: true, underlyingTokens: [t0, t1], apy: 1.39196, count: 180 })], [apiPool({ source: "balancer", chain: "Plasma", poolAddress: "0x01e2c7fcde2b8d5d1413732c4e274ba5b06b1e54", poolType: "balancer-stable", tokens: [{ address: t0, symbol: "USDai", decimals: 18 }, { address: t1, symbol: "waPlaUSDT0", decimals: 18 }], price: 0.999939, tvlUsd: 547_664.8, volume24hUsd: 5_900.52, balances: [240_716.79906230856, 301_609.539917] })]))
-      .toMatchObject({ filteredPools: [], skippedByExactIdentity: 0, skippedByUniqueDerivedIdentity: 1, skippedByOptionalWildcardIdentity: 0 });
+      .toMatchObject({ filteredPools: [], ...dedup(1) });
   });
 
   it("deduplicates a DL raydium-amm stable pair against the direct Raydium pool via the tracked-pair stability hint", () => {

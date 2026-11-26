@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { aggregateChains } from "@shared/lib/chains/aggregator";
@@ -1103,20 +1104,22 @@ describe("chain dropout guard", () => {
   });
 
   it.each([
-    ["satusd-river", "arbitrum", "Arbitrum", "peggedUSD", 10_735_947.2549878, 1_149_846.870580486, "2026-10-16T06:18:46Z"],
-    ["satusd-river", "bob", "BOB", "peggedUSD", 15_262_228.437422091, 1_361_964.0212558752, "2026-11-03T10:09:25Z"],
-    ["satusd-river", "base", "Base", "peggedUSD", 10_558_605.699254569, 239_013.52127648407, "2026-11-03T10:09:25Z"],
-    ["satusd-river", "ethereum", "Ethereum", "peggedUSD", 8_377_639.753921411, 932_368.8165761745, "2026-11-03T10:09:23Z"],
-    ["dusd-standx", "solana", "Solana", "peggedUSD", 3_013_043.925487889, 786_947.5441566098, "2026-11-03T10:16:00Z"],
-    ["eurs-stasis", "polygon", "Polygon", "peggedEUR", 2_125_295.460187289, 472_657.74823731947, "2026-10-16T06:18:46Z"],
-    ["sbc-brale", "polygon", "Polygon", "peggedUSD", 1_846_461.79, 362_696.62, "2026-11-06T18:42:00Z"],
-    ["sbc-brale", "solana", "Solana", "peggedUSD", 15_916_420.30, 7_797_825.36, "2026-11-07T19:45:46Z"],
-    ["gbpa-agant", "ethereum", "Ethereum", "peggedGBP", 1_338_734.83, 136.06, "2026-11-07T19:45:46Z"],
-    ["europ-schuman", "solana", "Solana", "peggedEUR", 5_470_671.34, 2_397_116.59, "2026-11-06T18:42:00Z"],
-    ["tryb-bilira", "plasma", "Plasma", "peggedTRY", 1_419_521, 267_810, "2026-11-04T00:05:26Z"],
-    ["usdq-quantoz", "ethereum", "Ethereum", "peggedUSD", 7_000_000, 2_000_000, "2026-11-04T09:03:51Z"],
-    ["usdglo-glo", "base", "Base", "peggedUSD", 1_018_000, 91_319.484821, "2026-11-04T09:03:51Z"],
-  ] as const)("accepts only dated reviewed %s / %s reductions, not omitted or later incidents", async (assetId, chainId, chainLabel, pegKey, baseline, current, reviewDate) => {
+    ["satusd-river", "arbitrum", 10_735_947.2549878, 1_149_846.870580486, "2026-10-16T06:18:46Z"],
+    ["satusd-river", "bob", 15_262_228.437422091, 1_361_964.0212558752, "2026-11-03T10:09:25Z"],
+    ["satusd-river", "base", 10_558_605.699254569, 239_013.52127648407, "2026-11-03T10:09:25Z"],
+    ["satusd-river", "ethereum", 8_377_639.753921411, 932_368.8165761745, "2026-11-03T10:09:23Z"],
+    ["dusd-standx", "solana", 3_013_043.925487889, 786_947.5441566098, "2026-11-03T10:16:00Z"],
+    ["eurs-stasis", "polygon", 2_125_295.460187289, 472_657.74823731947, "2026-10-16T06:18:46Z"],
+    ["sbc-brale", "polygon", 1_846_461.79, 362_696.62, "2026-11-06T18:42:00Z"],
+    ["sbc-brale", "solana", 15_916_420.30, 7_797_825.36, "2026-11-07T19:45:46Z"],
+    ["gbpa-agant", "ethereum", 1_338_734.83, 136.06, "2026-11-07T19:45:46Z"],
+    ["europ-schuman", "solana", 5_470_671.34, 2_397_116.59, "2026-11-06T18:42:00Z"],
+    ["tryb-bilira", "plasma", 1_419_521, 267_810, "2026-11-04T00:05:26Z"],
+    ["usdq-quantoz", "ethereum", 7_000_000, 2_000_000, "2026-11-04T09:03:51Z"],
+    ["usdglo-glo", "base", 1_018_000, 91_319.484821, "2026-11-04T09:03:51Z"],
+  ] as const)("accepts only dated reviewed %s / %s reductions, not omitted or later incidents", async (assetId, chainId, baseline, current, reviewDate) => {
+    const chainLabel = CHAIN_META[chainId].name;
+    const pegKey = pegTypeFromCurrency(ACTIVE_META_BY_ID.get(assetId)!.flags.pegCurrency)!;
     const reviewedAt = Date.parse(reviewDate) / 1000;
     expect(REVIEWED_CHAIN_SUPPLY_COLLAPSES).toContainEqual(expect.objectContaining({ assetId, chainId, reviewedAt }));
     const key = JSON.stringify([assetId, chainId]);

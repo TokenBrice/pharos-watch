@@ -15,8 +15,8 @@ import {
 } from "@shared/types/safety-score-v9-evidence-queue";
 import { V9DocumentationReasonSchema } from "@shared/types/safety-score-v9";
 import type { V9EvidenceResponsibility } from "@shared/types/safety-score-v9-fact-primitives";
-import { factStatuses, V9FactStatusV2Schema, type V9FactSetCoreV3, type V9FactStatusV2 } from "@shared/types/safety-score-v9-facts";
-import { compileNativeV3FactSet, coreFixture } from "./safety-score-v9-facts.fixture-support";
+import { factStatuses, V9FactStatusV2Schema, type V9FactSetCoreV3, type V9FactStatusV2, V9FactSetCoreV3Schema } from "@shared/types/safety-score-v9-facts";
+import { compileNativeV3FactSet, coreFixture, createV9FactStatus, requiredV9Applicability, V9_CANDIDATE_POLICY_V1 } from "./safety-score-v9-facts.fixture-support";
 
 const AS_OF_SEC = 1_000;
 const BASE_INPUT_GENERATION_ID = `report-cards-input:v1:${"a".repeat(64)}`;
@@ -811,5 +811,49 @@ describe("Safety Score v9 evidence-gap queue", () => {
       { cause: "U", reason: "not-yet-researched", evidenceRefIds: [] },
       maxAgeSec,
     )).toBeNull();
+  });
+});
+
+const cases = [
+  { reasonCode: "partial-reserve-review", componentKey: "reserve-residual:unidentified",
+    policyRuleId: "v9.backing.reserve-composition" },
+  { reasonCode: "unreviewed-reserve-envelope", componentKey: "reserve-bound:unavailable-term",
+    policyRuleId: "v9.backing.reserve-bounds" },
+] as const;
+
+function queueForGap(row: typeof cases[number], permittedPath: boolean) {
+  const { v9FactSetDigest: _digest, ...compiledCore } = compileNativeV3FactSet(coreFixture());
+  const core = V9FactSetCoreV3Schema.parse(compiledCore);
+  const asset = core.assets[0]!;
+  const gapId = `${asset.assetId}:gap:${row.componentKey}`;
+  const status = createV9FactStatus({ applicability: requiredV9Applicability(row.policyRuleId),
+    observationState: "missing", gapIds: [gapId] });
+  asset.gaps.push(createV9FactGapV3({ gapId, reasonCode: row.reasonCode, ownerDomain: "backing",
+    policyRuleId: row.policyRuleId, observationState: "missing", responsibility: "unresearched",
+    path: permittedPath ? { kind: "local-component", componentKey: row.componentKey }
+      : { kind: "methodology", componentKey: row.componentKey },
+    message: "The missing reserve datum has not been researched." }));
+  asset.reserveStatus = status;
+  if (row.reasonCode === "partial-reserve-review") {
+    asset.reserveExposures.forEach((exposure) => { exposure.weight *= 0.8; });
+    asset.reserveResiduals = [{ residualId: "unidentified", weight: 0.2, status }];
+  }
+  const factSet = compileV9FactSetV3(core);
+  return buildV9EvidenceGapQueue({ factSet, policy: V9_CANDIDATE_POLICY_V1 })
+    .entries.find((entry) => entry.gapId === gapId)!;
+}
+
+describe("reserve remainder and unavailable-bound policy binding", () => {
+  it.each(cases)("routes $reasonCode local evidence work without inventing a holding", (row) => {
+    const entry = queueForGap(row, true);
+    expect(entry.policyBindingIssues).toEqual([]);
+    expect(entry).toMatchObject({ action: "collect-evidence", cause: "U",
+      critical: false, treatment: "pillar", responsibility: "unresearched" });
+  });
+
+  it.each(cases)("still rejects a methodology path for $reasonCode evidence work", (row) => {
+    const entry = queueForGap(row, false);
+    expect(entry.policyBindingIssues).toEqual(["path-kind-not-permitted"]);
+    expect(entry.action).toBe("reconcile-policy-binding");
   });
 });

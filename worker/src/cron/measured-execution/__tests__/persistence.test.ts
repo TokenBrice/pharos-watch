@@ -1,3 +1,4 @@
+import type { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
@@ -35,6 +36,14 @@ afterEach(() => databases.closeAll());
 const fixtureTarget = (chain: string): DexMeasuredExecutionTarget =>
   makeV3Target({ chain });
 
+function seedTargetCandidate(sqlite: DatabaseSync, generationId: string, startedAt: number, expectedRows: number) {
+  sqlite.prepare(`INSERT INTO surface_publication_generations
+    (surface, generation_id, started_at, state, expected_rows, producer_schedule_key, producer_job, producer_path, producer_kind, invocation_id)
+    VALUES ('dex-measured-execution-targets', ?, ?, 'candidate', ?,
+      'halfHourlyChartsOffset', 'sync-dex-liquidity', 'halfHourlyChartsOffset', 'scheduled-job', 'invocation')`)
+    .run(generationId, startedAt, expectedRows);
+}
+
 function fixtureProfile(
   target: DexMeasuredExecutionTarget,
   identity: { targetGenerationId?: string; quoteGenerationId?: string; quotedAt?: number } = {},
@@ -60,6 +69,15 @@ function fixtureProfile(
         passesCostBound: false,
       },
     ],
+  });
+}
+
+
+function lkgProfile(target: DexMeasuredExecutionTarget) {
+  return fixtureProfile(target, {
+    targetGenerationId: "target-generation-lkg",
+    quoteGenerationId: "quote-generation-lkg",
+    quotedAt: 1_900,
   });
 }
 
@@ -467,14 +485,10 @@ describe("measured execution last-known-good selection", () => {
       quoteGenerationId: "cutoff", resolution: "last-known-good",
     });
   });
-  it.each(["request-budget-exhausted"])(
-    "retains original source time across a latest %s operational failure", async (failureReason) => {
+  it("retains original source time across a latest request-budget-exhausted operational failure", async () => {
+    const failureReason = "request-budget-exhausted";
     const measuredTarget = fixtureTarget("ethereum");
-    const historicalProfile = fixtureProfile(measuredTarget, {
-      targetGenerationId: "target-generation-lkg",
-      quoteGenerationId: "quote-generation-lkg",
-      quotedAt: 1_900,
-    });
+    const historicalProfile = lkgProfile(measuredTarget);
     const { db } = evidenceDb({
       target: measuredTarget,
       latest: {
@@ -518,27 +532,21 @@ describe("measured execution last-known-good selection", () => {
     });
   });
 
-  it.each(["pool-manager-code-absent"])(
-    "does not resurrect a measured profile after %s proves the runtime absent",
-    async (failureReason) => {
-      const measuredTarget = fixtureTarget("ethereum");
-      const historicalProfile = fixtureProfile(measuredTarget, {
-        targetGenerationId: "target-generation-lkg",
-        quoteGenerationId: "quote-generation-lkg",
-        quotedAt: 1_900,
-      });
-      const { db } = evidenceDb({
-        target: measuredTarget,
-        latest: { status: "failed", failureReason, profile: null },
-        historical: [{ target: measuredTarget, profile: historicalProfile }],
-      });
+  it("does not resurrect a measured profile after pool-manager-code-absent proves the runtime absent", async () => {
+    const failureReason = "pool-manager-code-absent";
+    const measuredTarget = fixtureTarget("ethereum");
+    const historicalProfile = lkgProfile(measuredTarget);
+    const { db } = evidenceDb({
+      target: measuredTarget,
+      latest: { status: "failed", failureReason, profile: null },
+      historical: [{ target: measuredTarget, profile: historicalProfile }],
+    });
 
-      const entry = (await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010))
-        ?.byTargetId.get(measuredTarget.targetId);
+    const entry = (await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010))
+      ?.byTargetId.get(measuredTarget.targetId);
 
-      expect(entry).toMatchObject({ status: "failed", resolution: "latest", failureReason });
-    },
-  );
+    expect(entry).toMatchObject({ status: "failed", resolution: "latest", failureReason });
+  });
 
   it("logs an LKG enrichment read failure while returning current evidence", async () => {
     const measuredTarget = fixtureTarget("ethereum");
@@ -581,7 +589,8 @@ describe("measured execution last-known-good selection", () => {
     consoleWarn.mockRestore();
   });
 
-  it.each(["quoter-rpc-unavailable"])("preserves mature conservative history across a latest %s operational failure", async (failureReason) => {
+  it("preserves mature conservative history across a latest quoter-rpc-unavailable operational failure", async () => {
+    const failureReason = "quoter-rpc-unavailable";
     const measuredTarget = fixtureTarget("ethereum");
     const newerProfile = fixtureProfile(measuredTarget, {
       targetGenerationId: "target-generation-g2",
@@ -621,13 +630,10 @@ describe("measured execution last-known-good selection", () => {
     });
   });
 
-  it.each(["pool-revert"])("does not mask deterministic %s with older evidence", async (failureReason) => {
+  it("does not mask deterministic pool-revert with older evidence", async () => {
+    const failureReason = "pool-revert";
     const measuredTarget = fixtureTarget("ethereum");
-    const historicalProfile = fixtureProfile(measuredTarget, {
-      targetGenerationId: "target-generation-lkg",
-      quoteGenerationId: "quote-generation-lkg",
-      quotedAt: 1_900,
-    });
+    const historicalProfile = lkgProfile(measuredTarget);
     const { db } = evidenceDb({
       target: measuredTarget,
       latest: {
@@ -697,11 +703,7 @@ describe("measured execution last-known-good selection", () => {
       quoteGenerationId: "quote-generation-latest",
       quotedAt: 2_000,
     });
-    const historicalProfile = fixtureProfile(measuredTarget, {
-      targetGenerationId: "target-generation-lkg",
-      quoteGenerationId: "quote-generation-lkg",
-      quotedAt: 1_900,
-    });
+    const historicalProfile = lkgProfile(measuredTarget);
     const { db } = evidenceDb({
       target: measuredTarget,
       latest: {
@@ -731,11 +733,7 @@ describe("measured execution last-known-good selection", () => {
   it("exposes exact-identity historical evidence for a target absent from the latest quote generation", async () => {
     const latestTarget = fixtureTarget("ethereum");
     const historicalTarget = fixtureTarget("base");
-    const historicalProfile = fixtureProfile(historicalTarget, {
-      targetGenerationId: "target-generation-lkg",
-      quoteGenerationId: "quote-generation-lkg",
-      quotedAt: 1_900,
-    });
+    const historicalProfile = lkgProfile(historicalTarget);
     const { db } = evidenceDb({
       target: latestTarget,
       latest: {
@@ -794,6 +792,12 @@ describe("measured execution last-known-good selection", () => {
     });
   });
 });
+
+const CLOCKED_COHORTS = [
+  { generationId: "quote-generation-admitted", publishedAt: 1_300, state: "superseded" as const, quotedAt: 1_000 },
+  { generationId: "quote-generation-displaced", publishedAt: 1_600, state: "superseded" as const, quotedAt: 1_240 },
+  { generationId: "quote-generation-latest", publishedAt: 1_900, state: "published" as const, quotedAt: 1_600 },
+];
 
 describe("measured execution clock-bounded cohort reads", () => {
   it.each([false, true])("ages source clocks independently of publication with history=%s", async (withHistory) => {
@@ -861,12 +865,8 @@ describe("measured execution clock-bounded cohort reads", () => {
     const { db, sqlite } = databases.open();
     const target = fixtureTarget("ethereum");
     const targetGenerationId = "target-generation-clocked";
-    const cohorts = [
-      { generationId: "quote-generation-admitted", publishedAt: 1_300, state: "superseded" as const, quotedAt: 1_000 },
-      { generationId: "quote-generation-displaced", publishedAt: 1_600, state: "superseded" as const, quotedAt: 1_240 },
-      { generationId: "quote-generation-latest", publishedAt: 1_900, state: "published" as const, quotedAt: 1_600 },
-    ];
-    for (const cohort of cohorts) {
+
+    for (const cohort of CLOCKED_COHORTS) {
       seedGeneration(sqlite, { generationId: cohort.generationId, targetGenerationId,
         publishedAt: cohort.publishedAt, state: cohort.state,
         rows: [{ target, profile: fixtureProfile(target, {
@@ -910,12 +910,8 @@ describe("measured execution clock-bounded cohort reads", () => {
     const measured = fixtureTarget("ethereum");
     const deferred = fixtureTarget("base");
     const targetGenerationId = "target-generation-lkg-clocked";
-    const cohorts = [
-      { generationId: "quote-generation-admitted", publishedAt: 1_300, state: "superseded" as const, quotedAt: 1_000 },
-      { generationId: "quote-generation-displaced", publishedAt: 1_600, state: "superseded" as const, quotedAt: 1_240 },
-      { generationId: "quote-generation-latest", publishedAt: 1_900, state: "published" as const, quotedAt: 1_600 },
-    ];
-    for (const cohort of cohorts) {
+
+    for (const cohort of CLOCKED_COHORTS) {
       seedGeneration(sqlite, { generationId: cohort.generationId, targetGenerationId,
         publishedAt: cohort.publishedAt, state: cohort.state,
         rows: [
@@ -986,11 +982,7 @@ describe("measured execution generation prune", () => {
       invocationId: "invocation", clockSec: nowSec - 14_401 });
     // Cleanup may run beside a newer invocation of the same producer job.
     sqlite.prepare(`INSERT INTO cron_leases VALUES ('sync-dex-liquidity', 'unrelated-owner', ?, ?, ?)`).run(nowSec + 900, nowSec, nowSec);
-    sqlite.prepare(`INSERT INTO surface_publication_generations
-      (surface, generation_id, started_at, state, expected_rows, producer_schedule_key, producer_job, producer_path, producer_kind, invocation_id)
-      VALUES ('dex-measured-execution-targets', ?, ?, 'candidate', 2037,
-        'halfHourlyChartsOffset', 'sync-dex-liquidity', 'halfHourlyChartsOffset', 'scheduled-job', 'invocation')`)
-      .run(generationId, nowSec - 14_401);
+    seedTargetCandidate(sqlite, generationId, nowSec - 14_401, 2037);
     const targetInsert = sqlite.prepare(`INSERT INTO dex_measured_execution_targets
       (generation_id, target_id, stablecoin_id, adapter_profile_id, protocol, chain, pool_id, captured_at, target_json)
       VALUES (?, ?, 'usdc-circle', 'uniswap-v3-quoter-v2', 'uniswap-v3', 'ethereum', ?, ?, '{}')`);
@@ -1017,11 +1009,7 @@ describe("measured execution generation prune", () => {
       const generationId = "protected-active-targets";
       seedMeasuredProducerAttempt(sqlite, { job: "sync-dex-liquidity", scheduleKey: "halfHourlyChartsOffset",
         invocationId: "invocation", clockSec: nowSec - 14_401 });
-      sqlite.prepare(`INSERT INTO surface_publication_generations
-        (surface, generation_id, started_at, state, expected_rows, producer_schedule_key, producer_job, producer_path, producer_kind, invocation_id)
-        VALUES ('dex-measured-execution-targets', ?, ?, 'candidate', 1,
-          'halfHourlyChartsOffset', 'sync-dex-liquidity', 'halfHourlyChartsOffset', 'scheduled-job', 'invocation')`)
-        .run(generationId, nowSec - 14_401);
+      seedTargetCandidate(sqlite, generationId, nowSec - 14_401, 1);
       const target = fixtureTarget("ethereum");
       sqlite.prepare(`INSERT INTO dex_measured_execution_targets
         (generation_id, target_id, stablecoin_id, adapter_profile_id, protocol, chain, pool_id, captured_at, target_json)

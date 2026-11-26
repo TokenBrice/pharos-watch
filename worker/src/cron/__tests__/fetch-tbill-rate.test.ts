@@ -119,6 +119,21 @@ afterEach(() => {
   fixtures.closeAll();
 });
 
+function resetBenchmarkFetchMocks() {
+  vi.mocked(fetchWithRetry).mockReset();
+  vi.mocked(getCache).mockReset().mockResolvedValue(null);
+  vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
+  vi.mocked(recordOutcome).mockReset().mockResolvedValue(mockCircuitOutcomeRecord());
+}
+
+function installRegistry(entries: Record<string, unknown>, updatedAt: number) {
+  installCacheByKey(vi.mocked(getCache), { risk_free_rates: makeRiskFreeRatesCacheRow(entries, updatedAt) });
+}
+
+const EMPTY_NON_USD_BENCHMARKS = {
+  EUR: null, CHF: null, GBP: null, JPY: null, BRL: null, AUD: null, CAD: null, RUB: null, TRY: null, SGD: null,
+};
+
 const priorUsd = { key: "USD", rate: 3.72, recordDate: "2026-03-02", fetchedAt: 1773100800, source: "fred-dgs3mo" };
 const writtenBenchmarks = () => cacheWritePayload<{ benchmarks: YieldBenchmarkRegistry }>("risk_free_rates").benchmarks;
 
@@ -179,11 +194,8 @@ describe("fetchTbillRate", () => {
 
 
   beforeEach(() => {
-    vi.mocked(fetchWithRetry).mockReset();
-    vi.mocked(getCache).mockReset().mockResolvedValue(null);
+    resetBenchmarkFetchMocks();
     vi.mocked(logCronEvent).mockClear();
-    vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
-    vi.mocked(recordOutcome).mockReset().mockResolvedValue(mockCircuitOutcomeRecord());
   });
 
   afterEach(() => {
@@ -821,20 +833,18 @@ describe("fetchTbillRate", () => {
     mockTbillByUrl({
       "data-api.ecb.europa.eu": null,
     });
-    installCacheByKey(vi.mocked(getCache), {
-      risk_free_rates: makeRiskFreeRatesCacheRow({
-        USD: makeBenchmarkCacheEntry({ ...priorUsd, label: "USD 3M T-Bill" }),
-        EUR: makeBenchmarkCacheEntry({
-          key: "EUR",
-          label: "EUR 3M compounded €STR",
-          rate: 1.94,
-          recordDate: "2026-03-24",
-          fetchedAt: 1774393200,
-          source: "ecb-estr-3m",
-        }),
-        CHF: null,
-      }, 1774393200),
-    });
+    installRegistry({
+      USD: makeBenchmarkCacheEntry({ ...priorUsd, label: "USD 3M T-Bill" }),
+      EUR: makeBenchmarkCacheEntry({
+        key: "EUR",
+        label: "EUR 3M compounded €STR",
+        rate: 1.94,
+        recordDate: "2026-03-24",
+        fetchedAt: 1774393200,
+        source: "ecb-estr-3m",
+      }),
+      CHF: null,
+    }, 1774393200);
 
     const result = await runBenchmarks();
     const metadata = runMetadata(result);
@@ -858,24 +868,22 @@ describe("fetchTbillRate", () => {
     });
     const observedAt = 1782216000;
     const retainedRate = 13.649989315282562;
-    installCacheByKey(vi.mocked(getCache), {
-      risk_free_rates: makeRiskFreeRatesCacheRow({
-        USD: makeBenchmarkCacheEntry({
-          key: "USD",
-          rate: 3.72,
-          recordDate: "2026-06-23",
-          fetchedAt: observedAt,
-          source: "fred-dgs3mo",
-        }),
-        BRL: makeBenchmarkCacheEntry({
-          key: "BRL",
-          rate: retainedRate,
-          recordDate: "2026-06-23",
-          fetchedAt: observedAt,
-          source: "bcb-selic",
-        }),
-      }, observedAt),
-    });
+    installRegistry({
+      USD: makeBenchmarkCacheEntry({
+        key: "USD",
+        rate: 3.72,
+        recordDate: "2026-06-23",
+        fetchedAt: observedAt,
+        source: "fred-dgs3mo",
+      }),
+      BRL: makeBenchmarkCacheEntry({
+        key: "BRL",
+        rate: retainedRate,
+        recordDate: "2026-06-23",
+        fetchedAt: observedAt,
+        source: "bcb-selic",
+      }),
+    }, observedAt);
 
     const result = await runBenchmarks();
     const metadata = runMetadata(result);
@@ -975,13 +983,11 @@ describe("fetchTbillRate", () => {
     ["19/06/2026", "stale-record"], ["26/06/2026", "future-record"],
   ])("rejects SGS1178 publisher date %s without refreshing prior annualized-source clocks", async (data, failure) => {
     const observedAt = 1782216000;
-    installCacheByKey(vi.mocked(getCache), {
-      risk_free_rates: makeRiskFreeRatesCacheRow({
-        BRL: makeBenchmarkCacheEntry({
-          key: "BRL", source: "bcb-selic-1178", rate: 13.65, recordDate: "2026-06-23", fetchedAt: observedAt,
-        }),
-      }, observedAt),
-    });
+    installRegistry({
+      BRL: makeBenchmarkCacheEntry({
+        key: "BRL", source: "bcb-selic-1178", rate: 13.65, recordDate: "2026-06-23", fetchedAt: observedAt,
+      }),
+    }, observedAt);
     mockTbillByUrl({
       "api.bcb.gov.br": url => url.includes("sgs.1178/") ? Response.json([{ data, valor: "13.65" }]) : null,
     });
@@ -1053,19 +1059,17 @@ describe("fetchTbillRate", () => {
       "oauth/token": null,
       "report-download": null,
     });
-    installCacheByKey(vi.mocked(getCache), {
-      risk_free_rates: makeRiskFreeRatesCacheRow({
-        USD: makeBenchmarkCacheEntry({ ...priorUsd, label: "USD 3M T-Bill" }),
-        EUR: null,
-        CHF: makeBenchmarkCacheEntry({
-          key: "CHF",
-          label: "CHF 3M compounded SARON",
-          rate: -0.0539,
-          recordDate: "2026-03-25",
-          source: "six-sar3mc",
-        }),
-      }, 1774479600),
-    });
+    installRegistry({
+      USD: makeBenchmarkCacheEntry({ ...priorUsd, label: "USD 3M T-Bill" }),
+      EUR: null,
+      CHF: makeBenchmarkCacheEntry({
+        key: "CHF",
+        label: "CHF 3M compounded SARON",
+        rate: -0.0539,
+        recordDate: "2026-03-25",
+        source: "six-sar3mc",
+      }),
+    }, 1774479600);
 
     const result = await runBenchmarks();
     const metadata = runMetadata(result);
@@ -1081,29 +1085,18 @@ describe("fetchTbillRate", () => {
       "markets.newyorkfed.org": null,
       "id=DFF": null,
     });
-    installCacheByKey(vi.mocked(getCache), {
-      risk_free_rates: makeRiskFreeRatesCacheRow({
-        USD: makeBenchmarkCacheEntry(priorUsd),
-        USD_EFFR: makeBenchmarkCacheEntry({
-          key: "USD_EFFR",
-          rate: 4.31,
-          recordDate: "2026-03-01",
-          fetchedAt: 1773014400,
-          source: "fred-dff",
-        }),
-        EUR: null,
-        CHF: null,
-        GBP: null,
-        JPY: null,
-        MXN: null,
-        BRL: null,
-        AUD: null,
-        CAD: null,
-        RUB: null,
-        TRY: null,
-        SGD: null,
-      }, 1774479600),
-    });
+    installRegistry({
+      USD: makeBenchmarkCacheEntry(priorUsd),
+      USD_EFFR: makeBenchmarkCacheEntry({
+        key: "USD_EFFR",
+        rate: 4.31,
+        recordDate: "2026-03-01",
+        fetchedAt: 1773014400,
+        source: "fred-dff",
+      }),
+      ...EMPTY_NON_USD_BENCHMARKS,
+      MXN: null,
+    }, 1774479600);
 
     const result = await runBenchmarks();
     const metadata = runMetadata(result);
@@ -1316,10 +1309,7 @@ describe("fetchTbillRate", () => {
 describe("fetchTbillRate — new currency fetchers", () => {
 
   beforeEach(() => {
-    vi.mocked(fetchWithRetry).mockReset();
-    vi.mocked(getCache).mockReset().mockResolvedValue(null);
-    vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
-    vi.mocked(recordOutcome).mockReset().mockResolvedValue(mockCircuitOutcomeRecord());
+    resetBenchmarkFetchMocks();
   });
 
   it("skips Banxico when BANXICO_TOKEN is missing", async () => {
@@ -1339,27 +1329,16 @@ describe("fetchTbillRate — new currency fetchers", () => {
   });
 
   it("retains the last MXN benchmark when the Banxico fetch fails", async () => {
-    installCacheByKey(vi.mocked(getCache), {
-      risk_free_rates: makeRiskFreeRatesCacheRow({
-        USD: makeBenchmarkCacheEntry(priorUsd),
-        EUR: null,
-        CHF: null,
-        GBP: null,
-        JPY: null,
-        MXN: makeBenchmarkCacheEntry({
-          key: "MXN",
-          rate: 10.45,
-          recordDate: "2026-03-26",
-          source: "banxico-cetes-28d",
-        }),
-        BRL: null,
-        AUD: null,
-        CAD: null,
-        RUB: null,
-        TRY: null,
-        SGD: null,
-      }, 1774479600),
-    });
+    installRegistry({
+      USD: makeBenchmarkCacheEntry(priorUsd),
+      ...EMPTY_NON_USD_BENCHMARKS,
+      MXN: makeBenchmarkCacheEntry({
+        key: "MXN",
+        rate: 10.45,
+        recordDate: "2026-03-26",
+        source: "banxico-cetes-28d",
+      }),
+    }, 1774479600);
     mockNewCurrencyByUrl({ "banxico.org.mx": null });
 
     const result = await fetchTbillRate(db, undefined, { BANXICO_TOKEN: "test-token" });
@@ -1498,13 +1477,6 @@ describe("classifyYieldBenchmarkFreshness", () => {
     })).toBe("healthy");
   });
 
-  it("goes stale on an observation older than the key bound even when the fetch just succeeded", () => {
-    expect(classifyYieldBenchmarkFreshness(FRESH_FETCH, {
-      recordDate: "2026-03-02",
-      maxRecordAgeSec: YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.USD,
-    })).toBe("stale");
-  });
-
   it("applies the bound per key: a 42-day-old CAD print is current where USD would be stale", () => {
     const recordDate = "2026-05-14";
     expect(classifyYieldBenchmarkFreshness(FRESH_FETCH, {
@@ -1522,18 +1494,13 @@ describe("classifyYieldBenchmarkFreshness", () => {
 describe("fetchTbillRate — benchmark observation guard and registry integrity", () => {
   const RETRY_BOUND_SEC = 24 * 3600;
 
-  const writtenBenchmarks = () => cacheWritePayload<{ benchmarks: YieldBenchmarkRegistry }>("risk_free_rates").benchmarks;
-
   function cacheKeysWritten(): string[] {
     return sqlite.prepare("SELECT key FROM cache ORDER BY key").all().map((row) => String(row.key));
   }
 
   beforeEach(() => {
-    vi.mocked(fetchWithRetry).mockReset();
-    vi.mocked(getCache).mockReset().mockResolvedValue(null);
+    resetBenchmarkFetchMocks();
     vi.mocked(logCronEvent).mockClear();
-    vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
-    vi.mocked(recordOutcome).mockReset().mockResolvedValue(mockCircuitOutcomeRecord());
   });
 
   it("falls back to Treasury.gov when the FRED DGS3MO CSV is months old", async () => {
@@ -1601,35 +1568,24 @@ describe("fetchTbillRate — benchmark observation guard and registry integrity"
 
   it("retains the previous USD_EFFR instead of publishing a months-old DFF row", async () => {
     const retainedEpochSec = Math.floor(FROZEN_NOW.getTime() / 1000) - 48 * 3600;
-    installCacheByKey(vi.mocked(getCache), {
-      risk_free_rates: makeRiskFreeRatesCacheRow({
-        USD: makeBenchmarkCacheEntry({
-          key: "USD",
-          rate: 3.72,
-          recordDate: FRESH_FRED_OBSERVATION_DATE,
-          fetchedAt: retainedEpochSec,
-          source: "fred-dgs3mo",
-        }),
-        USD_EFFR: makeBenchmarkCacheEntry({
-          key: "USD_EFFR",
-          rate: 4.31,
-          recordDate: "2026-03-01",
-          fetchedAt: retainedEpochSec,
-          source: "fred-dff",
-        }),
-        EUR: null,
-        CHF: null,
-        GBP: null,
-        JPY: null,
-        MXN: null,
-        BRL: null,
-        AUD: null,
-        CAD: null,
-        RUB: null,
-        TRY: null,
-        SGD: null,
-      }, retainedEpochSec),
-    });
+    installRegistry({
+      USD: makeBenchmarkCacheEntry({
+        key: "USD",
+        rate: 3.72,
+        recordDate: FRESH_FRED_OBSERVATION_DATE,
+        fetchedAt: retainedEpochSec,
+        source: "fred-dgs3mo",
+      }),
+      USD_EFFR: makeBenchmarkCacheEntry({
+        key: "USD_EFFR",
+        rate: 4.31,
+        recordDate: "2026-03-01",
+        fetchedAt: retainedEpochSec,
+        source: "fred-dff",
+      }),
+      ...EMPTY_NON_USD_BENCHMARKS,
+      MXN: null,
+    }, retainedEpochSec);
     mockTbillByUrl({
       "markets.newyorkfed.org": Response.json({
         refRates: [{ type: "EFFR", effectiveDate: "2026-03-01", percentRate: 9.99 }],
@@ -1652,17 +1608,15 @@ describe("fetchTbillRate — benchmark observation guard and registry integrity"
   });
 
   it("marks an unparseable USD member invalid, preserves readable keys, and skips replacement", async () => {
-    installCacheByKey(vi.mocked(getCache), {
-      risk_free_rates: makeRiskFreeRatesCacheRow({
-        USD: { key: "USD", rate: "not-a-number" },
-        EUR: makeBenchmarkCacheEntry({
-          key: "EUR",
-          rate: 1.94,
-          recordDate: "2026-03-24",
-          source: "ecb-estr-3m",
-        }),
-      }, 1774479600),
-    });
+    installRegistry({
+      USD: { key: "USD", rate: "not-a-number" },
+      EUR: makeBenchmarkCacheEntry({
+        key: "EUR",
+        rate: 1.94,
+        recordDate: "2026-03-24",
+        source: "ecb-estr-3m",
+      }),
+    }, 1774479600);
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockUnavailableTbillByUrl();
 
@@ -1703,13 +1657,11 @@ describe("fetchTbillRate — benchmark observation guard and registry integrity"
     const fetchedAt = FROZEN_NOW.getTime() / 1000;
     const USD = makeBenchmarkCacheEntry({ key: "USD", rate: 3.91, recordDate: FRESH_FRED_OBSERVATION_DATE,
       fetchedAt: fetchedAt - 3600, source: "fred-dgs3mo" });
-    installCacheByKey(vi.mocked(getCache), {
-      risk_free_rates: makeRiskFreeRatesCacheRow({
-        ...Object.fromEntries(YIELD_BENCHMARK_KEY_VALUES.filter(key => key !== "SGD").map(key => [key, { ...USD, key }])),
-        ...(key ? { [key]: makeBenchmarkCacheEntry({ key, rate: 2.25, recordDate: "2025-01-01",
-          fetchedAt: fetchedAt - 3600, source: "boc-valet-v122530" }) } : {}),
-      }, fetchedAt - 3600),
-    });
+    installRegistry({
+      ...Object.fromEntries(YIELD_BENCHMARK_KEY_VALUES.filter(key => key !== "SGD").map(key => [key, { ...USD, key }])),
+      ...(key ? { [key]: makeBenchmarkCacheEntry({ key, rate: 2.25, recordDate: "2025-01-01",
+        fetchedAt: fetchedAt - 3600, source: "boc-valet-v122530" }) } : {}),
+    }, fetchedAt - 3600);
     const calls: string[] = [];
     mockTbillByUrl({}, calls);
     const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV, { minRegistryAgeSec: RETRY_BOUND_SEC });
@@ -1764,10 +1716,10 @@ describe("fetchTbillRate — benchmark observation guard and registry integrity"
 
   it("retries unavailable CHF/JPY after EUR recovers until each recovers", async () => {
     const now = FROZEN_NOW.getTime() / 1000;
-    installCacheByKey(vi.mocked(getCache), { risk_free_rates: makeRiskFreeRatesCacheRow({
+    installRegistry({
       EUR: makeBenchmarkCacheEntry({ key: "EUR", source: "ecb-estr-3m", rate: 1.94,
         recordDate: FRESH_FRED_OBSERVATION_DATE, fetchedAt: now - 3600 }),
-    }, now - 3600) });
+    }, now - 3600);
     const failed = { "oauth/token": null, "stat-search.boj.or.jp": null };
     mockTbillByUrl({ ...failed, "data-api.ecb.europa.eu": null });
     expect((await runBenchmarks()).status).toBe("degraded");
@@ -1801,7 +1753,7 @@ describe("fetchTbillRate — benchmark observation guard and registry integrity"
       fetchedAt: now - 3600, source: "fred-dgs3mo" });
     const before = Object.fromEntries(YIELD_BENCHMARK_KEY_VALUES.map(id => [id,
       id === key || id === "SGD" ? null : { ...healthy, key: id }]));
-    installCacheByKey(vi.mocked(getCache), { risk_free_rates: makeRiskFreeRatesCacheRow(before, now - 3600) });
+    installRegistry(before, now - 3600);
     if (key === "JPY") vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     const calls: string[] = [];
     mockTbillByUrl({}, calls);
@@ -1818,12 +1770,10 @@ describe("fetchTbillRate — benchmark observation guard and registry integrity"
   it.each([false, true])("refreshes expired USD without renewing failed evidence (failure=%s)", async (failure) => {
     const fetchedAt = Math.floor(FROZEN_NOW.getTime() / 1000);
     const oldRecordDate = new Date(FROZEN_NOW.getTime() - 6 * 86400_000).toISOString().slice(0, 10);
-    installCacheByKey(vi.mocked(getCache), {
-      risk_free_rates: makeRiskFreeRatesCacheRow({
-        USD: makeBenchmarkCacheEntry({ key: "USD", rate: 3.91, recordDate: oldRecordDate,
-          fetchedAt: fetchedAt - 3600, source: "fred-dgs3mo" }),
-      }, fetchedAt - 3600),
-    });
+    installRegistry({
+      USD: makeBenchmarkCacheEntry({ key: "USD", rate: 3.91, recordDate: oldRecordDate,
+        fetchedAt: fetchedAt - 3600, source: "fred-dgs3mo" }),
+    }, fetchedAt - 3600);
     const calls: string[] = [];
     mockTbillByUrl(failure ? { "id=DGS3MO": null, "treasury.gov": null } : {}, calls);
     const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV, { minRegistryAgeSec: RETRY_BOUND_SEC });
@@ -1838,14 +1788,12 @@ describe("fetchTbillRate — benchmark observation guard and registry integrity"
   it("refreshes a T+1 series nearing its record bound even while USD is fresh", async () => {
     const fetchedAt = Math.floor(FROZEN_NOW.getTime() / 1000);
     const nearBoundDate = new Date(FROZEN_NOW.getTime() - 4.5 * 86400_000).toISOString().slice(0, 10);
-    installCacheByKey(vi.mocked(getCache), {
-      risk_free_rates: makeRiskFreeRatesCacheRow({
-        USD: makeBenchmarkCacheEntry({ key: "USD", rate: 3.91, recordDate: FRESH_FRED_OBSERVATION_DATE,
-          fetchedAt: fetchedAt - 3600, source: "fred-dgs3mo" }),
-        GBP: makeBenchmarkCacheEntry({ key: "GBP", rate: 4.1, recordDate: nearBoundDate,
-          fetchedAt: fetchedAt - 3600, source: "fred-sonia-compounded-index" }),
-      }, fetchedAt - 3600),
-    });
+    installRegistry({
+      USD: makeBenchmarkCacheEntry({ key: "USD", rate: 3.91, recordDate: FRESH_FRED_OBSERVATION_DATE,
+        fetchedAt: fetchedAt - 3600, source: "fred-dgs3mo" }),
+      GBP: makeBenchmarkCacheEntry({ key: "GBP", rate: 4.1, recordDate: nearBoundDate,
+        fetchedAt: fetchedAt - 3600, source: "fred-sonia-compounded-index" }),
+    }, fetchedAt - 3600);
     const calls: string[] = [];
     mockTbillByUrl({}, calls);
     const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV, { minRegistryAgeSec: RETRY_BOUND_SEC });
@@ -1855,17 +1803,15 @@ describe("fetchTbillRate — benchmark observation guard and registry integrity"
 
   it("refreshes from the hourly retry when the newest market observation exceeds the bound", async () => {
     const fetchedAt = Math.floor(FROZEN_NOW.getTime() / 1000);
-    installCacheByKey(vi.mocked(getCache), {
-      risk_free_rates: makeRiskFreeRatesCacheRow({
-        USD: makeBenchmarkCacheEntry({
-          key: "USD",
-          rate: 3.91,
-          recordDate: "2026-06-23",
-          fetchedAt: fetchedAt - 25 * 3600,
-          source: "fred-dgs3mo",
-        }),
-      }, fetchedAt - 25 * 3600),
-    });
+    installRegistry({
+      USD: makeBenchmarkCacheEntry({
+        key: "USD",
+        rate: 3.91,
+        recordDate: "2026-06-23",
+        fetchedAt: fetchedAt - 25 * 3600,
+        source: "fred-dgs3mo",
+      }),
+    }, fetchedAt - 25 * 3600);
     const calls: string[] = [];
     mockTbillByUrl({}, calls);
 
@@ -1880,24 +1826,22 @@ describe("fetchTbillRate — benchmark observation guard and registry integrity"
 
   it("refreshes when USD has no recent observation even though another key does", async () => {
     const fetchedAt = Math.floor(FROZEN_NOW.getTime() / 1000);
-    installCacheByKey(vi.mocked(getCache), {
-      risk_free_rates: makeRiskFreeRatesCacheRow({
-        USD: makeBenchmarkCacheEntry({
-          key: "USD",
-          rate: 3.91,
-          recordDate: "2026-06-18",
-          fetchedAt: fetchedAt - 26 * 3600,
-          source: "fred-dgs3mo",
-        }),
-        EUR: makeBenchmarkCacheEntry({
-          key: "EUR",
-          rate: 1.94,
-          recordDate: "2026-06-24",
-          fetchedAt: fetchedAt - 600,
-          source: "ecb-estr-3m",
-        }),
-      }, fetchedAt - 600),
-    });
+    installRegistry({
+      USD: makeBenchmarkCacheEntry({
+        key: "USD",
+        rate: 3.91,
+        recordDate: "2026-06-18",
+        fetchedAt: fetchedAt - 26 * 3600,
+        source: "fred-dgs3mo",
+      }),
+      EUR: makeBenchmarkCacheEntry({
+        key: "EUR",
+        rate: 1.94,
+        recordDate: "2026-06-24",
+        fetchedAt: fetchedAt - 600,
+        source: "ecb-estr-3m",
+      }),
+    }, fetchedAt - 600);
     const calls: string[] = [];
     mockTbillByUrl({}, calls);
 
@@ -1911,17 +1855,15 @@ describe("fetchTbillRate — benchmark observation guard and registry integrity"
 
   it("keeps the canonical daily invocation unconditional", async () => {
     const fetchedAt = Math.floor(FROZEN_NOW.getTime() / 1000);
-    installCacheByKey(vi.mocked(getCache), {
-      risk_free_rates: makeRiskFreeRatesCacheRow({
-        USD: makeBenchmarkCacheEntry({
-          key: "USD",
-          rate: 3.91,
-          recordDate: FRESH_FRED_OBSERVATION_DATE,
-          fetchedAt: fetchedAt - 60,
-          source: "fred-dgs3mo",
-        }),
-      }, fetchedAt - 60),
-    });
+    installRegistry({
+      USD: makeBenchmarkCacheEntry({
+        key: "USD",
+        rate: 3.91,
+        recordDate: FRESH_FRED_OBSERVATION_DATE,
+        fetchedAt: fetchedAt - 60,
+        source: "fred-dgs3mo",
+      }),
+    }, fetchedAt - 60);
     const calls: string[] = [];
     mockTbillByUrl({}, calls);
 

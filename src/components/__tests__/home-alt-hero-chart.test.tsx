@@ -7,6 +7,21 @@ import { HomeAltHeroStaticChart } from "@/components/homepage/home-alt-hero-stat
 import { HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS } from "@/lib/homepage-hero-snapshot";
 import { MARKET_PERIMETER_MARKERS } from "@shared/lib/supply-perimeter-changes";
 import type { HomepageHistory, HomepageLaneMeta } from "@shared/types/homepage";
+import { HomeAltHeroLiveChart } from "@/components/homepage/home-alt-hero-live-chart";
+
+const { useHomepageHistoryMock } = vi.hoisted(() => ({
+  useHomepageHistoryMock: vi.fn(),
+}));
+
+vi.mock("@/hooks/api-hooks", () => ({
+  useHomepageHistory: useHomepageHistoryMock,
+}));
+
+vi.mock("next/dynamic", () => ({
+  default: () => function MockChart() {
+    return <div data-testid="hero-chart" />;
+  },
+}));
 
 vi.mock("@/hooks/use-chart-shell", () => ({
   useChartShell: () => ({
@@ -190,5 +205,38 @@ describe("dated hero history preview", () => {
     const { container } = render(<HomeAltHeroStaticChart history={spannedHistory} nowMs={afterCutover} />);
     expect(container.querySelector(`[data-perimeter-marker="${marker.id}"]`)).not.toBeNull();
     expect(container.querySelector(`[data-perimeter-note="${marker.id}"]`)?.textContent).toBe(marker.note);
+  });
+});
+
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+});
+
+describe("HomeAltHeroLiveChart", () => {
+  it("settles an empty live history into the neutral placeholder", () => {
+    useHomepageHistoryMock.mockReturnValue({
+      data: { rows: [] },
+      error: null,
+      isLoading: false,
+    });
+
+    render(<HomeAltHeroLiveChart nowMs={Date.now()} />);
+
+    expect(screen.getByText("Updating")).toBeTruthy();
+    expect(screen.queryByTestId("hero-chart")).toBeNull();
+  });
+
+  it("keeps the live chart when the read carries rows", () => {
+    useHomepageHistoryMock.mockReturnValue({
+      data: { rows: [{ ts: 1, total: 1, usdt: null, usdc: null, sky: null, others: null }] },
+      error: null,
+      isLoading: false,
+    });
+
+    render(<HomeAltHeroLiveChart nowMs={Date.now()} />);
+
+    expect(screen.getByTestId("hero-chart")).toBeTruthy();
+    expect(screen.queryByText("Updating")).toBeNull();
   });
 });

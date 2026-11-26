@@ -31,6 +31,12 @@ import {
 } from "./yield-evaluation.test-support";
 
 
+const PACED = { yieldToEventLoop: () => Promise.resolve() };
+
+function coinA(yieldSource: ResolvedYield) {
+  return { id: "coin-a", symbol: "A", yield: yieldSource };
+}
+
 function gbpBenchmark(observedAt: number, ageSeconds: number, rate = 4.5) {
   return {
     ...withYieldBenchmarkStaticMeta("GBP", {
@@ -296,16 +302,12 @@ describe("evaluateYieldSourcesCooperative", () => {
         startSec,
         sevenDaysAgoSec: startSec - 7 * 86400,
         resolved: [
-          { id: "coin-a", symbol: "A", yield: source },
-          ...(scenario.extraResolved ?? []).map((extra) => ({
-            id: "coin-a",
-            symbol: "A",
-            yield: resolvedYield(extra),
-          })),
+          coinA(source),
+          ...(scenario.extraResolved ?? []).map((extra) => (coinA(resolvedYield(extra)))),
         ],
         sourceHistory,
         ...(scenario.input ?? {}),
-      }), { yieldToEventLoop: () => Promise.resolve() });
+      }), PACED);
       const evaluated = result.evaluatedSources[0];
 
       expect(evaluated?.sourceRiskPenalty, row.label).toBeCloseTo(
@@ -333,14 +335,14 @@ describe("evaluateYieldSourcesCooperative", () => {
     const result = await evaluateYieldSourcesCooperative(baseEvaluationInput({
       startSec,
       sevenDaysAgoSec: startSec - 7 * 86400,
-      resolved: [{ id: "coin-a", symbol: "A", yield: source }],
+      resolved: [coinA(source)],
       sourceHistory: new Map([
         [
           buildHistoryKey("coin-a", source.sourceKey),
           historyRows(source.sourceKey, 1, startSec, Number.NaN),
         ],
       ]),
-    }), { yieldToEventLoop: () => Promise.resolve() });
+    }), PACED);
 
     expect(result.evaluatedSources[0]?.apy7d).toBe(source.currentApy);
     expect(result.evaluatedSources[0]?.apy30d).toBe(source.currentApy);
@@ -354,10 +356,10 @@ describe("evaluateYieldSourcesCooperative", () => {
       historyRows("defillama:coin-a:base", 9, startSec),
     ]]);
     const missing = (await evaluateYieldSourcesCooperative(baseEvaluationInput({
-      resolved: [{ id: "coin-a", symbol: "A", yield: resolvedYield({}) }],
+      resolved: [coinA(resolvedYield({}))],
       safetyScores: new Map(),
       sourceHistory,
-    }), { yieldToEventLoop: () => Promise.resolve() })).evaluatedSources[0];
+    }), PACED)).evaluatedSources[0];
     expect(missing).toMatchObject({
       safetyGrade: "NR",
       usedDefaultSafety: true,
@@ -369,10 +371,10 @@ describe("evaluateYieldSourcesCooperative", () => {
     expect(missing?.warnings).toContain("safety-unrated");
 
     const notRated = (await evaluateYieldSourcesCooperative(baseEvaluationInput({
-      resolved: [{ id: "coin-a", symbol: "A", yield: resolvedYield({}) }],
+      resolved: [coinA(resolvedYield({}))],
       safetyScores: new Map([["coin-a", { score: 40, grade: "NR" }]]),
       sourceHistory,
-    }), { yieldToEventLoop: () => Promise.resolve() })).evaluatedSources[0];
+    }), PACED)).evaluatedSources[0];
     expect(notRated).toMatchObject({
       safetyGrade: "NR",
       usedDefaultSafety: false,
@@ -386,29 +388,25 @@ describe("evaluateYieldSourcesCooperative", () => {
 
   it("keeps rows explicit NR when the identified compact safety snapshot is unavailable", async () => {
     const unavailable = (await evaluateYieldSourcesCooperative(baseEvaluationInput({
-      resolved: [{
-        id: "coin-a",
-        symbol: "A",
-        yield: resolvedYield({
-          sourceRisk: {
-            venueProtocol: "aave-v3",
+      resolved: [coinA(resolvedYield({
+        sourceRisk: {
+          venueProtocol: "aave-v3",
+          underlyingSafetyScore: 80,
+          trancheSafetyScore: 72,
+          trancheSafetyPenalty: 8,
+          opportunityRisk: {
+            opportunityClass: "lending",
             underlyingSafetyScore: 80,
-            trancheSafetyScore: 72,
-            trancheSafetyPenalty: 8,
-            opportunityRisk: {
-              opportunityClass: "lending",
-              underlyingSafetyScore: 80,
-              opportunitySafetyScore: 72,
-              opportunitySafetyPenalty: 8,
-              venueReviewed: true,
-              missingCriticalEvidence: [],
-            },
+            opportunitySafetyScore: 72,
+            opportunitySafetyPenalty: 8,
+            venueReviewed: true,
+            missingCriticalEvidence: [],
           },
-        }),
-      }],
+        },
+      }))],
       safetySnapshotAvailable: false,
       safetyScores: new Map([["coin-a", { score: 80, grade: "B+" }]]),
-    }), { yieldToEventLoop: () => Promise.resolve() })).evaluatedSources[0];
+    }), PACED)).evaluatedSources[0];
 
     expect(unavailable).toMatchObject({
       safetyScore: 40,
@@ -434,27 +432,19 @@ describe("evaluateYieldSourcesCooperative", () => {
   it("uses risk-adjusted utility for same-tier arbitration when a source-risk penalty is present", async () => {
     const result = await evaluateYieldSourcesCooperative(baseEvaluationInput({
       resolved: [
-        {
-          id: "coin-a",
-          symbol: "A",
-          yield: resolvedYield({
-            sourceKey: "defillama:coin-a:fragile",
-            currentApy: 10,
-            sourceRisk: { sourceRiskPenalty: 2.5 },
-          }),
-        },
-        {
-          id: "coin-a",
-          symbol: "A",
-          yield: resolvedYield({
-            sourceKey: "protocol-api:coin-a:clean",
-            currentApy: 8,
-            dataSource: "protocol-api",
-            sourceRisk: null,
-          }),
-        },
+        coinA(resolvedYield({
+          sourceKey: "defillama:coin-a:fragile",
+          currentApy: 10,
+          sourceRisk: { sourceRiskPenalty: 2.5 },
+        })),
+        coinA(resolvedYield({
+          sourceKey: "protocol-api:coin-a:clean",
+          currentApy: 8,
+          dataSource: "protocol-api",
+          sourceRisk: null,
+        })),
       ],
-    }), { yieldToEventLoop: () => Promise.resolve() });
+    }), PACED);
 
     expect(result.bestSourceKeyByCoin.get("coin-a")).toBe("protocol-api:coin-a:clean");
     const fragile = result.evaluatedSources.find((source) => source.sourceKey === "defillama:coin-a:fragile");
@@ -468,26 +458,18 @@ describe("evaluateYieldSourcesCooperative", () => {
   it("rejects discovered source that diverges >35% from canonical reference", async () => {
     const result = await evaluateYieldSourcesCooperative(baseEvaluationInput({
       resolved: [
-        {
-          id: "coin-a",
-          symbol: "A",
-          yield: resolvedYield({
-            sourceKey: "defillama:coin-a:native",
-            currentApy: 5,
-            dataSource: "defillama",
-          }),
-        },
-        {
-          id: "coin-a",
-          symbol: "A",
-          yield: resolvedYield({
-            sourceKey: "defillama-auto:coin-a:divergent",
-            currentApy: 15,
-            dataSource: "defillama-auto",
-          }),
-        },
+        coinA(resolvedYield({
+          sourceKey: "defillama:coin-a:native",
+          currentApy: 5,
+          dataSource: "defillama",
+        })),
+        coinA(resolvedYield({
+          sourceKey: "defillama-auto:coin-a:divergent",
+          currentApy: 15,
+          dataSource: "defillama-auto",
+        })),
       ],
-    }), { yieldToEventLoop: () => Promise.resolve() });
+    }), PACED);
 
     const divergent = result.evaluatedSources.find(
       (source) => source.sourceKey === "defillama-auto:coin-a:divergent",
@@ -500,14 +482,10 @@ describe("evaluateYieldSourcesCooperative", () => {
   });
   it("computes excessYield = apy30d - riskFreeRate for each source", async () => {
     const result = await evaluateYieldSourcesCooperative(baseEvaluationInput({
-      resolved: [{
-        id: "coin-a",
-        symbol: "A",
-        yield: resolvedYield({
-          currentApy: 6,
-        }),
-      }],
-    }), { yieldToEventLoop: () => Promise.resolve() });
+      resolved: [coinA(resolvedYield({
+        currentApy: 6,
+      }))],
+    }), PACED);
 
     expect(result.evaluatedSources[0]?.excessYield).toBeCloseTo(1.8, 6);
   });
@@ -515,29 +493,21 @@ describe("evaluateYieldSourcesCooperative", () => {
   it("keeps fixed-yield PT rows as alternatives when a holder-yield source exists", async () => {
     const result = await evaluateYieldSourcesCooperative(baseEvaluationInput({
       resolved: [
-        {
-          id: "coin-a",
-          symbol: "A",
-          yield: resolvedYield({
-            sourceKey: "rate-derived",
-            dataSource: "rate-derived",
-            currentApy: 4,
-            yieldType: "governance-set",
-          }),
-        },
-        {
-          id: "coin-a",
-          symbol: "A",
-          yield: resolvedYield({
-            sourceKey: "protocol-api:pendle:ethereum:0xpt",
-            dataSource: "protocol-api",
-            currentApy: 8,
-            yieldSource: "Pendle fixed yield: Fixture PT-A",
-            yieldType: "fixed-yield",
-          }),
-        },
+        coinA(resolvedYield({
+          sourceKey: "rate-derived",
+          dataSource: "rate-derived",
+          currentApy: 4,
+          yieldType: "governance-set",
+        })),
+        coinA(resolvedYield({
+          sourceKey: "protocol-api:pendle:ethereum:0xpt",
+          dataSource: "protocol-api",
+          currentApy: 8,
+          yieldSource: "Pendle fixed yield: Fixture PT-A",
+          yieldType: "fixed-yield",
+        })),
       ],
-    }), { yieldToEventLoop: () => Promise.resolve() });
+    }), PACED);
 
     expect(result.bestSourceKeyByCoin.get("coin-a")).toBe("rate-derived");
     expect(result.evaluatedSources.find(
@@ -550,31 +520,23 @@ describe("evaluateYieldSourcesCooperative", () => {
     const result = await evaluateYieldSourcesCooperative(baseEvaluationInput({
       startSec,
       resolved: [
-        {
-          id: "coin-a",
-          symbol: "A",
-          yield: resolvedYield({
-            sourceKey: "protocol-api:coin-a:fragile",
-            currentApy: 10,
-            apyReward: 9,
-            sourceTvlUsd: 1_000,
-            dataSource: "protocol-api",
-            sourceObservedAt: startSec - 7 * 60 * 60,
-          }),
-        },
-        {
-          id: "coin-a",
-          symbol: "A",
-          yield: resolvedYield({
-            sourceKey: "protocol-api:coin-a:clean",
-            currentApy: 8,
-            dataSource: "protocol-api",
-            sourceTvlUsd: 10_000_000,
-          }),
-        },
+        coinA(resolvedYield({
+          sourceKey: "protocol-api:coin-a:fragile",
+          currentApy: 10,
+          apyReward: 9,
+          sourceTvlUsd: 1_000,
+          dataSource: "protocol-api",
+          sourceObservedAt: startSec - 7 * 60 * 60,
+        })),
+        coinA(resolvedYield({
+          sourceKey: "protocol-api:coin-a:clean",
+          currentApy: 8,
+          dataSource: "protocol-api",
+          sourceTvlUsd: 10_000_000,
+        })),
       ],
       stablecoinSupplyById: new Map([["coin-a", 10_000_000]]),
-    }), { yieldToEventLoop: () => Promise.resolve() });
+    }), PACED);
 
     expect(result.bestSourceKeyByCoin.get("coin-a")).toBe("protocol-api:coin-a:clean");
     const fragile = result.evaluatedSources.find((source) => source.sourceKey === "protocol-api:coin-a:fragile");
@@ -595,16 +557,12 @@ describe("evaluateYieldSourcesCooperative", () => {
         fallbackMode: null,
       },
       resolved: [
-        {
-          id: "coin-a",
-          symbol: "A",
-          yield: resolvedYield({
-            sourceKey: "defillama:coin-a:stale",
-            sourceObservedAt: undefined,
-          }),
-        },
+        coinA(resolvedYield({
+          sourceKey: "defillama:coin-a:stale",
+          sourceObservedAt: undefined,
+        })),
       ],
-    }), { yieldToEventLoop: () => Promise.resolve() });
+    }), PACED);
 
     const stale = result.evaluatedSources.find((source) => source.sourceKey === "defillama:coin-a:stale");
     expect(stale).toMatchObject({
@@ -629,16 +587,12 @@ describe("evaluateYieldSourcesCooperative", () => {
         fallbackMode: null,
       },
       resolved: [
-        {
-          id: "coin-a",
-          symbol: "A",
-          yield: resolvedYield({
-            sourceKey: "defillama:coin-a:row-stale",
-            sourceObservedAt: rowObservedAt,
-          }),
-        },
+        coinA(resolvedYield({
+          sourceKey: "defillama:coin-a:row-stale",
+          sourceObservedAt: rowObservedAt,
+        })),
       ],
-    }), { yieldToEventLoop: () => Promise.resolve() });
+    }), PACED);
 
     const stale = result.evaluatedSources.find((source) => source.sourceKey === "defillama:coin-a:row-stale");
     expect(stale?.sourceObservedAt).toBe(rowObservedAt);
@@ -650,18 +604,14 @@ describe("evaluateYieldSourcesCooperative", () => {
     const result = await evaluateYieldSourcesCooperative(baseEvaluationInput({
       startSec,
       resolved: [
-        {
-          id: "coin-a",
-          symbol: "A",
-          yield: resolvedYield({
-            sourceKey: "onchain:coin-a",
-            dataSource: "onchain",
-            sourceObservedAt: startSec,
-            comparisonAnchorObservedAt: startSec - 15 * 86400,
-          }),
-        },
+        coinA(resolvedYield({
+          sourceKey: "onchain:coin-a",
+          dataSource: "onchain",
+          sourceObservedAt: startSec,
+          comparisonAnchorObservedAt: startSec - 15 * 86400,
+        })),
       ],
-    }), { yieldToEventLoop: () => Promise.resolve() });
+    }), PACED);
 
     const source = result.evaluatedSources.find((row) => row.sourceKey === "onchain:coin-a");
     expect(source?.sourceObservedAt).toBe(startSec);
@@ -671,19 +621,15 @@ describe("evaluateYieldSourcesCooperative", () => {
   it("penalizes reward-heavy rows when reward APY exceeds current APY", async () => {
     const result = await evaluateYieldSourcesCooperative(baseEvaluationInput({
       resolved: [
-        {
-          id: "coin-a",
-          symbol: "A",
-          yield: resolvedYield({
-            sourceKey: "protocol-api:coin-a:reward-heavy",
-            currentApy: 8,
-            apyBase: -4,
-            apyReward: 12,
-            dataSource: "protocol-api",
-          }),
-        },
+        coinA(resolvedYield({
+          sourceKey: "protocol-api:coin-a:reward-heavy",
+          currentApy: 8,
+          apyBase: -4,
+          apyReward: 12,
+          dataSource: "protocol-api",
+        })),
       ],
-    }), { yieldToEventLoop: () => Promise.resolve() });
+    }), PACED);
 
     const source = result.evaluatedSources.find((row) => row.sourceKey === "protocol-api:coin-a:reward-heavy");
     expect(source?.sourceRiskPenalty).toBeGreaterThanOrEqual(1.5);
@@ -692,25 +638,17 @@ describe("evaluateYieldSourcesCooperative", () => {
   it("keeps APY-first ordering for same-tier candidates when source-risk is missing", async () => {
     const result = await evaluateYieldSourcesCooperative(baseEvaluationInput({
       resolved: [
-        {
-          id: "coin-a",
-          symbol: "A",
-          yield: resolvedYield({
-            sourceKey: "defillama:coin-a:lower",
-            currentApy: 7,
-          }),
-        },
-        {
-          id: "coin-a",
-          symbol: "A",
-          yield: resolvedYield({
-            sourceKey: "protocol-api:coin-a:higher",
-            currentApy: 8,
-            dataSource: "protocol-api",
-          }),
-        },
+        coinA(resolvedYield({
+          sourceKey: "defillama:coin-a:lower",
+          currentApy: 7,
+        })),
+        coinA(resolvedYield({
+          sourceKey: "protocol-api:coin-a:higher",
+          currentApy: 8,
+          dataSource: "protocol-api",
+        })),
       ],
-    }), { yieldToEventLoop: () => Promise.resolve() });
+    }), PACED);
 
     expect(result.bestSourceKeyByCoin.get("coin-a")).toBe("protocol-api:coin-a:higher");
   });
@@ -718,28 +656,20 @@ describe("evaluateYieldSourcesCooperative", () => {
   it("keeps a curated native row ahead of a lower external lending opportunity", async () => {
     const result = await evaluateYieldSourcesCooperative(baseEvaluationInput({
       resolved: [
-        {
-          id: "coin-a",
-          symbol: "A",
-          yield: resolvedYield({
-            sourceKey: "defillama:coin-a:native",
-            currentApy: 4.5,
-            dataSource: "defillama",
-            yieldType: "lending-vault",
-          }),
-        },
-        {
-          id: "coin-a",
-          symbol: "A",
-          yield: resolvedYield({
-            sourceKey: "protocol-api:coin-a:opportunity",
-            currentApy: 2.2,
-            dataSource: "protocol-api",
-            yieldType: "lending-opportunity",
-          }),
-        },
+        coinA(resolvedYield({
+          sourceKey: "defillama:coin-a:native",
+          currentApy: 4.5,
+          dataSource: "defillama",
+          yieldType: "lending-vault",
+        })),
+        coinA(resolvedYield({
+          sourceKey: "protocol-api:coin-a:opportunity",
+          currentApy: 2.2,
+          dataSource: "protocol-api",
+          yieldType: "lending-opportunity",
+        })),
       ],
-    }), { yieldToEventLoop: () => Promise.resolve() });
+    }), PACED);
 
     expect(result.bestSourceKeyByCoin.get("coin-a")).toBe("defillama:coin-a:native");
     expect(result.evaluatedSources.find(
@@ -753,30 +683,22 @@ describe("evaluateYieldSourcesCooperative", () => {
   it("prefers a non-fixed-yield holder row over a fixed-yield market for the same coin", async () => {
     const result = await evaluateYieldSourcesCooperative(baseEvaluationInput({
       resolved: [
-        {
-          id: "coin-a",
-          symbol: "A",
-          yield: resolvedYield({
-            sourceKey: "protocol-api:pendle:ethereum:0xpool",
-            yieldSource: "Pendle fixed yield: A",
-            yieldType: "fixed-yield",
-            currentApy: 12,
-            dataSource: "protocol-api",
-          }),
-        },
-        {
-          id: "coin-a",
-          symbol: "A",
-          yield: resolvedYield({
-            sourceKey: "protocol-api:coin-a:holder",
-            yieldSource: "Holder row",
-            yieldType: "lending-vault",
-            currentApy: 5,
-            dataSource: "protocol-api",
-          }),
-        },
+        coinA(resolvedYield({
+          sourceKey: "protocol-api:pendle:ethereum:0xpool",
+          yieldSource: "Pendle fixed yield: A",
+          yieldType: "fixed-yield",
+          currentApy: 12,
+          dataSource: "protocol-api",
+        })),
+        coinA(resolvedYield({
+          sourceKey: "protocol-api:coin-a:holder",
+          yieldSource: "Holder row",
+          yieldType: "lending-vault",
+          currentApy: 5,
+          dataSource: "protocol-api",
+        })),
       ],
-    }), { yieldToEventLoop: () => Promise.resolve() });
+    }), PACED);
 
     expect(result.bestSourceKeyByCoin.get("coin-a")).toBe("protocol-api:coin-a:holder");
     expect(result.evaluatedSources.find((source) => source.sourceKey === "protocol-api:pendle:ethereum:0xpool"))
@@ -792,14 +714,10 @@ describe("evaluateYieldSourcesCooperative", () => {
       startSec,
       sevenDaysAgoSec: startSec - 7 * 86400,
       resolved: [
-        {
-          id: "coin-a",
-          symbol: "A",
-          yield: resolvedYield({
-            sourceKey: "defillama:coin-a:base",
-            sourceTvlUsd: 2_500_000,
-          }),
-        },
+        coinA(resolvedYield({
+          sourceKey: "defillama:coin-a:base",
+          sourceTvlUsd: 2_500_000,
+        })),
       ],
       stablecoinSupplyById: new Map([["coin-a", 10_000_000]]),
       sourceHistory: new Map([
@@ -823,7 +741,7 @@ describe("evaluateYieldSourcesCooperative", () => {
         ],
       ]),
       sourceSwitchCount30dByCoin: new Map([["coin-a", 2]]),
-    }), { yieldToEventLoop: () => Promise.resolve() });
+    }), PACED);
 
     expect(result.evaluatedSources[0]?.sourceDepthRatio).toBe(0.25);
     expect(result.evaluatedSources[0]?.observationCount30d).toBe(2);
@@ -849,14 +767,10 @@ describe("evaluateYieldSourcesCooperative", () => {
       startSec,
       sevenDaysAgoSec: startSec - 7 * 86400,
       resolved: [
-        {
-          id: "coin-a",
-          symbol: "A",
-          yield: resolvedYield({ sourceKey: "defillama:coin-a:base" }),
-        },
+        coinA(resolvedYield({ sourceKey: "defillama:coin-a:base" })),
       ],
       sourceHistory: new Map([[buildHistoryKey("coin-a", "defillama:coin-a:base"), historyRows]]),
-    }), { yieldToEventLoop: () => Promise.resolve() });
+    }), PACED);
 
     expect(result.evaluatedSources[0]?.observationCount30d).toBe(2);
     expect(result.evaluatedSources[0]?.sourceRiskPenalty).toBeGreaterThan(1);
@@ -865,26 +779,18 @@ describe("evaluateYieldSourcesCooperative", () => {
   it("keeps a fresh direct observation ahead of a deterministic modeled proxy", async () => {
     const result = await evaluateYieldSourcesCooperative(baseEvaluationInput({
       resolved: [
-        {
-          id: "coin-a",
-          symbol: "A",
-          yield: resolvedYield({
-            sourceKey: "rate-derived:coin-a",
-            currentApy: 5,
-            dataSource: "rate-derived",
-            sourceRisk: { sourceRiskPenalty: 2.5 },
-          }),
-        },
-        {
-          id: "coin-a",
-          symbol: "A",
-          yield: resolvedYield({
-            sourceKey: "defillama:coin-a:high",
-            currentApy: 20,
-          }),
-        },
+        coinA(resolvedYield({
+          sourceKey: "rate-derived:coin-a",
+          currentApy: 5,
+          dataSource: "rate-derived",
+          sourceRisk: { sourceRiskPenalty: 2.5 },
+        })),
+        coinA(resolvedYield({
+          sourceKey: "defillama:coin-a:high",
+          currentApy: 20,
+        })),
       ],
-    }), { yieldToEventLoop: () => Promise.resolve() });
+    }), PACED);
 
     expect(result.bestSourceKeyByCoin.get("coin-a")).toBe("defillama:coin-a:high");
     expect(result.evaluatedSources.find((source) => source.sourceKey === "rate-derived:coin-a")).toMatchObject({
@@ -903,27 +809,19 @@ describe("evaluateYieldSourcesCooperative", () => {
     const result = await evaluateYieldSourcesCooperative(baseEvaluationInput({
       startSec,
       resolved: [
-        {
-          id: "coin-a",
-          symbol: "A",
-          yield: resolvedYield({
-            sourceKey: "rate-derived:coin-a",
-            dataSource: "rate-derived",
-            currentApy: 12,
-            sourceObservedAt: startSec - 49 * 60 * 60,
-          }),
-        },
-        {
-          id: "coin-a",
-          symbol: "A",
-          yield: resolvedYield({
-            sourceKey: "defillama:coin-a:fresh",
-            currentApy: 5,
-            sourceObservedAt: startSec - 60,
-          }),
-        },
+        coinA(resolvedYield({
+          sourceKey: "rate-derived:coin-a",
+          dataSource: "rate-derived",
+          currentApy: 12,
+          sourceObservedAt: startSec - 49 * 60 * 60,
+        })),
+        coinA(resolvedYield({
+          sourceKey: "defillama:coin-a:fresh",
+          currentApy: 5,
+          sourceObservedAt: startSec - 60,
+        })),
       ],
-    }), { yieldToEventLoop: () => Promise.resolve() });
+    }), PACED);
 
     expect(result.bestSourceKeyByCoin.get("coin-a")).toBe("defillama:coin-a:fresh");
     expect(result.evaluatedSources.find((source) => source.sourceKey === "rate-derived:coin-a")).toMatchObject({
@@ -940,16 +838,12 @@ describe("evaluateYieldSourcesCooperative", () => {
     const startSec = 1776729600;
     const result = await evaluateYieldSourcesCooperative(baseEvaluationInput({
       startSec,
-      resolved: [{
-        id: "coin-a",
-        symbol: "A",
-        yield: resolvedYield({
-          sourceKey: "rate-derived:coin-a",
-          dataSource: "rate-derived",
-          sourceObservedAt: startSec - 49 * 60 * 60,
-        }),
-      }],
-    }), { yieldToEventLoop: () => Promise.resolve() });
+      resolved: [coinA(resolvedYield({
+        sourceKey: "rate-derived:coin-a",
+        dataSource: "rate-derived",
+        sourceObservedAt: startSec - 49 * 60 * 60,
+      }))],
+    }), PACED);
 
     expect(result.bestSourceKeyByCoin.get("coin-a")).toBe("rate-derived:coin-a");
     expect(result.evaluatedSources[0]).toMatchObject({
@@ -978,7 +872,8 @@ describe("evaluateYieldSourcesCooperative", () => {
     });
     input.riskFreeRates.GBP = gbpBenchmark(startSec - staleAgeSeconds, staleAgeSeconds);
 
-    const [source] = (await evaluateYieldSourcesCooperative(input, { yieldToEventLoop: () => Promise.resolve() })).evaluatedSources;
+    const result = await evaluateYieldSourcesCooperative(input, PACED);
+    const [source] = result.evaluatedSources;
     expect(source).toMatchObject({
       benchmarkKey: "GBP",
       sourceFreshness: "fresh",
@@ -990,23 +885,7 @@ describe("evaluateYieldSourcesCooperative", () => {
       pysNullReason: "benchmark-stale",
       warnings: expect.arrayContaining(["benchmark-stale"]),
     });
-  });
 
-  it("publishes a fresh row unscored when its native benchmark is stale", async () => {
-    const startSec = 1776729600;
-    const staleAgeSeconds = 49 * 60 * 60;
-    const input = baseEvaluationInput({
-      startSec,
-      resolved: [{
-        id: "tgbp-tokenised",
-        symbol: "TGBP",
-        yield: resolvedYield({ sourceKey: "defillama:tgbp:fresh", sourceObservedAt: startSec - 60 }),
-      }],
-      safetyScores: new Map([["tgbp-tokenised", { score: 75, grade: "B" }]]),
-    });
-    input.riskFreeRates.GBP = gbpBenchmark(startSec - staleAgeSeconds, staleAgeSeconds);
-
-    const result = await evaluateYieldSourcesCooperative(input, { yieldToEventLoop: () => Promise.resolve() });
     const { viewsByCoinId } = buildYieldPublicationViews({
       evaluatedSources: result.evaluatedSources,
       bestSourceKeyByCoin: result.bestSourceKeyByCoin,
@@ -1020,7 +899,6 @@ describe("evaluateYieldSourcesCooperative", () => {
       },
     });
     expect(viewsByCoinId.get("tgbp-tokenised")?.selected.sourceKey).toBe("defillama:tgbp:fresh");
-    expect(result.evaluatedSources[0]).toMatchObject({ rejected: false, pharosYieldScore: null, pysNullReason: "benchmark-stale" });
   });
 
   it("publishes a fresh non-USD row unscored when the USD normalization reference is stale", async () => {
@@ -1052,7 +930,7 @@ describe("evaluateYieldSourcesCooperative", () => {
       lastMarketSource: "ecb-estr-test",
     };
 
-    const result = await evaluateYieldSourcesCooperative(input, { yieldToEventLoop: () => Promise.resolve() });
+    const result = await evaluateYieldSourcesCooperative(input, PACED);
     const source = result.evaluatedSources[0];
     expect(source).toMatchObject({
       benchmarkKey: "EUR",
@@ -1149,7 +1027,7 @@ describe("evaluateYieldSourcesCooperative", () => {
       ]),
       prevBestSourceKeyByCoin: new Map([["scrvusd-curve", "onchain:scrvusd-curve"]]),
       stablecoinSupplyById: new Map([["scrvusd-curve", 100_000_000]]),
-    }), { yieldToEventLoop: () => Promise.resolve() });
+    }), PACED);
 
     const [source] = result.evaluatedSources;
     expect(source?.currentApy).toBeCloseTo(4.2747, 4);
@@ -1157,171 +1035,39 @@ describe("evaluateYieldSourcesCooperative", () => {
     expect(source?.usedLegacyHistory).toBe(false);
   });
 
-  it("excludes deterministic on-chain bootstrap seed rows from rolling APY stats", async () => {
+  it.each(["onchain", "protocol-api"] as const)("excludes %s seed rows from rolling APY stats", async (dataSource) => {
     const startSec = 1776729600;
-    const sourceKey = "onchain:iusd-infinifi";
+    const onchain = dataSource === "onchain";
+    const id = onchain ? "iusd-infinifi" : "usyc-hashnote";
+    const symbol = onchain ? "iUSD" : "USYC";
+    const sourceKey = onchain ? "onchain:iusd-infinifi" : "protocol-api:hashnote-usyc";
+    const yieldSource = onchain ? "infiniFi savings (siUSD)" : "Hashnote USYC";
+    const yieldType = onchain ? "lending-vault" : "nav-appreciation";
+    const sourceInput = {
+      currentApy: 6, apyBase: 6, apyReward: null, sourcePool: null, sourceTvlUsd: null,
+      dataSource, exchangeRate: 1.06, sourceKey, sourceObservedAt: startSec,
+      comparisonAnchorObservedAt: startSec - 7 * 86400, yieldSource, yieldType,
+    } as const;
+    const history = ([[6, 0, 1.01], [5, 0, 1.02], [1, 5, 1.05]] as const).map(([days, apy, exchange_rate]): YieldHistorySnapshotRow => {
+      const recorded_at = startSec - days * 86400;
+      return {
+        stablecoin_id: id, source_key: sourceKey, recorded_at,
+        ...(!onchain && { source_observed_at: recorded_at - (apy ? 3600 : 0) }),
+        is_best: apy ? 1 : 0, apy, apy_base: apy || null, source_tvl_usd: null,
+        data_source: dataSource, yield_source: yieldSource, yield_type: yieldType, exchange_rate,
+      };
+    });
     const result = await evaluateYieldSourcesCooperative(baseEvaluationInput({
-      resolved: [
-        {
-          id: "iusd-infinifi",
-          symbol: "iUSD",
-          yield: {
-            currentApy: 6,
-            apyBase: 6,
-            apyReward: null,
-            sourcePool: null,
-            sourceTvlUsd: null,
-            dataSource: "onchain",
-            exchangeRate: 1.06,
-            sourceKey,
-            sourceObservedAt: startSec,
-            comparisonAnchorObservedAt: startSec - 7 * 86400,
-            yieldSource: "infiniFi savings (siUSD)",
-            yieldType: "lending-vault",
-          },
-        },
-      ],
+      resolved: [{ id, symbol, yield: onchain ? sourceInput : resolvedYield(sourceInput) }],
       startSec,
-      safetyScores: new Map([["iusd-infinifi", { score: 72, grade: "B" }]]),
-      riskFreeRates: {
-        ...baseEvaluationInput().riskFreeRates,
-        USD: buildHardcodedUsdBenchmark("test"),
-      },
-      sourceHistory: new Map([
-        [
-          buildHistoryKey("iusd-infinifi", sourceKey),
-          [
-            {
-              stablecoin_id: "iusd-infinifi",
-              source_key: sourceKey,
-              recorded_at: startSec - 6 * 86400,
-              is_best: 0,
-              apy: 0,
-              apy_base: null,
-              source_tvl_usd: null,
-              data_source: "onchain",
-              yield_source: "infiniFi savings (siUSD)",
-              yield_type: "lending-vault",
-              exchange_rate: 1.01,
-            },
-            {
-              stablecoin_id: "iusd-infinifi",
-              source_key: sourceKey,
-              recorded_at: startSec - 5 * 86400,
-              is_best: 0,
-              apy: 0,
-              apy_base: null,
-              source_tvl_usd: null,
-              data_source: "onchain",
-              yield_source: "infiniFi savings (siUSD)",
-              yield_type: "lending-vault",
-              exchange_rate: 1.02,
-            },
-            {
-              stablecoin_id: "iusd-infinifi",
-              source_key: sourceKey,
-              recorded_at: startSec - 1 * 86400,
-              is_best: 1,
-              apy: 5,
-              apy_base: 5,
-              source_tvl_usd: null,
-              data_source: "onchain",
-              yield_source: "infiniFi savings (siUSD)",
-              yield_type: "lending-vault",
-              exchange_rate: 1.05,
-            },
-          ],
-        ],
-      ]),
-      stablecoinSupplyById: new Map([["iusd-infinifi", 100_000_000]]),
-    }), { yieldToEventLoop: () => Promise.resolve() });
+      safetyScores: new Map([[id, { score: onchain ? 72 : 74, grade: "B" }]]),
+      ...(onchain && { riskFreeRates: { ...baseEvaluationInput().riskFreeRates, USD: buildHardcodedUsdBenchmark("test") } }),
+      sourceHistory: new Map([[buildHistoryKey(id, sourceKey), history]]),
+      stablecoinSupplyById: new Map([[id, 100_000_000]]),
+    }), PACED);
 
     const [source] = result.evaluatedSources;
-    expect(source?.apy30d).toBeCloseTo(5.5, 4);
-    expect(source?.apy7d).toBeCloseTo(5.5, 4);
-  });
-
-  it("excludes protocol-api NAV seed rows from rolling APY stats", async () => {
-    const startSec = 1776729600;
-    const sourceKey = "protocol-api:hashnote-usyc";
-    const result = await evaluateYieldSourcesCooperative(baseEvaluationInput({
-      resolved: [
-        {
-          id: "usyc-hashnote",
-          symbol: "USYC",
-          yield: resolvedYield({
-            currentApy: 6,
-            apyBase: 6,
-            apyReward: null,
-            sourcePool: null,
-            sourceTvlUsd: null,
-            dataSource: "protocol-api",
-            exchangeRate: 1.06,
-            sourceKey,
-            sourceObservedAt: startSec,
-            comparisonAnchorObservedAt: startSec - 7 * 86400,
-            yieldSource: "Hashnote USYC",
-            yieldType: "nav-appreciation",
-          }),
-        },
-      ],
-      startSec,
-      safetyScores: new Map([["usyc-hashnote", { score: 74, grade: "B" }]]),
-      sourceHistory: new Map([
-        [
-          buildHistoryKey("usyc-hashnote", sourceKey),
-          [
-            {
-              stablecoin_id: "usyc-hashnote",
-              source_key: sourceKey,
-              recorded_at: startSec - 6 * 86400,
-              source_observed_at: startSec - 6 * 86400,
-              is_best: 0,
-              apy: 0,
-              apy_base: null,
-              source_tvl_usd: null,
-              data_source: "protocol-api",
-              yield_source: "Hashnote USYC",
-              yield_type: "nav-appreciation",
-              exchange_rate: 1.01,
-            },
-            {
-              stablecoin_id: "usyc-hashnote",
-              source_key: sourceKey,
-              recorded_at: startSec - 5 * 86400,
-              source_observed_at: startSec - 5 * 86400,
-              is_best: 0,
-              apy: 0,
-              apy_base: null,
-              source_tvl_usd: null,
-              data_source: "protocol-api",
-              yield_source: "Hashnote USYC",
-              yield_type: "nav-appreciation",
-              exchange_rate: 1.02,
-            },
-            {
-              stablecoin_id: "usyc-hashnote",
-              source_key: sourceKey,
-              recorded_at: startSec - 1 * 86400,
-              source_observed_at: startSec - 1 * 86400 - 3600,
-              is_best: 1,
-              apy: 5,
-              apy_base: 5,
-              source_tvl_usd: null,
-              data_source: "protocol-api",
-              yield_source: "Hashnote USYC",
-              yield_type: "nav-appreciation",
-              exchange_rate: 1.05,
-            },
-          ],
-        ],
-      ]),
-      stablecoinSupplyById: new Map([["usyc-hashnote", 100_000_000]]),
-    }), { yieldToEventLoop: () => Promise.resolve() });
-
-    const [source] = result.evaluatedSources;
-    // Both seed rows are inside the 7d window, so carrying them would publish
-    // apy7d/apy30d of 2.75 — only the anchored observation may count.
+    // Both seeds are inside the 7d window, but only the anchored observation counts.
     expect(source?.apy30d).toBeCloseTo(5.5, 4);
     expect(source?.apy7d).toBeCloseTo(5.5, 4);
     expect(source?.apyMin30d).toBe(5);
@@ -1348,7 +1094,7 @@ describe("evaluateYieldSourcesCooperative", () => {
       },
     });
 
-    const [source] = (await evaluateYieldSourcesCooperative(input, { yieldToEventLoop: () => Promise.resolve() })).evaluatedSources;
+    const [source] = (await evaluateYieldSourcesCooperative(input, PACED)).evaluatedSources;
     expect(source?.currentApy).toBe(4.2);
     expect(source?.benchmarkKey).toBe("USD_EFFR");
     expect(source?.benchmarkRate).toBe(3.9);
@@ -1360,18 +1106,14 @@ describe("evaluateYieldSourcesCooperative", () => {
     const result = await evaluateYieldSourcesCooperative(baseEvaluationInput({
       startSec,
       resolved: [
-        {
-          id: "coin-a",
-          symbol: "A",
-          yield: resolvedYield({
-            sourceKey: "defillama:coin-a:now",
-            sourceObservedAt: startSec,
-          }),
-        },
+        coinA(resolvedYield({
+          sourceKey: "defillama:coin-a:now",
+          sourceObservedAt: startSec,
+        })),
       ],
       prevBestSourceKeyByCoin: new Map([["coin-a", "defillama:coin-a:gone"]]),
       sourceSwitchCount30dByCoin: new Map([["coin-a", 4]]),
-    }), { yieldToEventLoop: () => Promise.resolve() });
+    }), PACED);
 
     expect(result.sourceSwitches).toBe(0);
     const [source] = result.evaluatedSources;
@@ -1390,30 +1132,22 @@ describe("evaluateYieldSourcesCooperative", () => {
       const result = await evaluateYieldSourcesCooperative(baseEvaluationInput({
         startSec,
         resolved: [
-          {
-            id: "coin-a",
-            symbol: "A",
-            yield: resolvedYield({
-              sourceKey: "protocol-api:venue:ethereum:0xa",
-              dataSource: "protocol-api",
-              currentApy: 5,
-              sourceTvlUsd: 1_000_000,
-            }),
-          },
-          {
-            id: "coin-a",
-            symbol: "A",
-            yield: resolvedYield({
-              sourceKey: "protocol-api:venue:ethereum:0xb",
-              dataSource: "protocol-api",
-              currentApy: 5.02,
-              sourceTvlUsd: 1_000_000,
-            }),
-          },
+          coinA(resolvedYield({
+            sourceKey: "protocol-api:venue:ethereum:0xa",
+            dataSource: "protocol-api",
+            currentApy: 5,
+            sourceTvlUsd: 1_000_000,
+          })),
+          coinA(resolvedYield({
+            sourceKey: "protocol-api:venue:ethereum:0xb",
+            dataSource: "protocol-api",
+            currentApy: 5.02,
+            sourceTvlUsd: 1_000_000,
+          })),
         ],
         prevBestSourceKeyByCoin: new Map([["coin-a", "protocol-api:venue:ethereum:0xa"]]),
         sourceSwitchCount30dByCoin: new Map([["coin-a", prior]]),
-      }), { yieldToEventLoop: () => Promise.resolve() });
+      }), PACED);
 
       const label = `prior ${prior}`;
       expect(result.bestSourceKeyByCoin.get("coin-a"), label).toBe("protocol-api:venue:ethereum:0xa");
@@ -1431,12 +1165,8 @@ describe("evaluateYieldSourcesCooperative", () => {
   it("breaks exact arbitration ties deterministically and antisymmetrically", async () => {
     const run = async (keys: [string, string]) =>
       await evaluateYieldSourcesCooperative(baseEvaluationInput({
-        resolved: keys.map((sourceKey) => ({
-          id: "coin-a",
-          symbol: "A",
-          yield: resolvedYield({ sourceKey, currentApy: 5, sourceTvlUsd: 1_000_000 }),
-        })),
-      }), { yieldToEventLoop: () => Promise.resolve() });
+        resolved: keys.map((sourceKey) => (coinA(resolvedYield({ sourceKey, currentApy: 5, sourceTvlUsd: 1_000_000 })))),
+      }), PACED);
 
     const forward = await run(["defillama:coin-a:alpha", "defillama:coin-a:beta"]);
     const reversed = await run(["defillama:coin-a:beta", "defillama:coin-a:alpha"]);
@@ -1473,7 +1203,7 @@ describe("evaluateYieldSourcesCooperative", () => {
           buildHistoryKey("eurc-circle", "defillama:eurc-circle:main"),
           historyRows("defillama:eurc-circle:main", 9, startSec),
         ]]),
-      }), { yieldToEventLoop: () => Promise.resolve() })).evaluatedSources[0];
+      }), PACED)).evaluatedSources[0];
 
     const healthy = await run(usdBenchmark());
     expect(healthy).toMatchObject({
@@ -1516,7 +1246,7 @@ describe("evaluateYieldSourcesCooperative", () => {
         startSec,
         resolved,
         riskFreeRates: { ...baseEvaluationInput().riskFreeRates, USD: rewoundUsd, EUR: eurBenchmark() },
-      }), { yieldToEventLoop: () => Promise.resolve() })).evaluatedSources[0];
+      }), PACED)).evaluatedSources[0];
 
     const eurRow = await run([
       {
@@ -1542,15 +1272,11 @@ describe("evaluateYieldSourcesCooperative", () => {
     expect(eurRow?.warnings).toContain("reference-benchmark-degraded");
 
     const usdRow = await run([
-      {
-        id: "coin-a",
-        symbol: "A",
-        yield: resolvedYield({
-          sourceKey: "defillama:coin-a:main",
-          sourceObservedAt: startSec,
-          dataSource: "defillama",
-        }),
-      },
+      coinA(resolvedYield({
+        sourceKey: "defillama:coin-a:main",
+        sourceObservedAt: startSec,
+        dataSource: "defillama",
+      })),
     ]);
     // The row's own benchmark is judged against its own key's record bound.
     expect(usdRow).toMatchObject({
@@ -1569,19 +1295,15 @@ describe("opportunity-level risk (yield v8.32)", () => {
     const startSec = 1776729600;
     const [source] = (await evaluateYieldSourcesCooperative(baseEvaluationInput({
       startSec,
-      resolved: [{
-        id: "coin-a",
-        symbol: "A",
-        yield: resolvedYield({
-          sourceKey: "defillama:coin-a:aave",
-          project: "aave-v3",
-          yieldType: "lending-opportunity",
-        }),
-      }],
+      resolved: [coinA(resolvedYield({
+        sourceKey: "defillama:coin-a:aave",
+        project: "aave-v3",
+        yieldType: "lending-opportunity",
+      }))],
       sourceHistory: new Map([
         [buildHistoryKey("coin-a", "defillama:coin-a:aave"), historyRows("defillama:coin-a:aave", 9, startSec)],
       ]),
-    }), { yieldToEventLoop: () => Promise.resolve() })).evaluatedSources;
+    }), PACED)).evaluatedSources;
 
     // A1: `fallback-usd` selection is a per-row methodology decision (coin-a has
     // no native benchmark feed), not a degraded feed, so the fresh USD benchmark
@@ -1609,16 +1331,12 @@ describe("opportunity-level risk (yield v8.32)", () => {
 
   it("deducts opportunity safety for a reviewed higher-risk venue without touching the underlying input", async () => {
     const [source] = (await evaluateYieldSourcesCooperative(baseEvaluationInput({
-      resolved: [{
-        id: "coin-a",
-        symbol: "A",
-        yield: resolvedYield({
-          sourceKey: "defillama:coin-a:clearpool",
-          project: "clearpool",
-          yieldType: "lending-opportunity",
-        }),
-      }],
-    }), { yieldToEventLoop: () => Promise.resolve() })).evaluatedSources;
+      resolved: [coinA(resolvedYield({
+        sourceKey: "defillama:coin-a:clearpool",
+        project: "clearpool",
+        yieldType: "lending-opportunity",
+      }))],
+    }), PACED)).evaluatedSources;
 
     expect(source?.safetyProvenance).toBe("opportunity-safety");
     expect(source?.safetyScore).toBeLessThan(80);
@@ -1633,16 +1351,12 @@ describe("opportunity-level risk (yield v8.32)", () => {
 
   it("keeps an unreviewed opportunity published as NR", async () => {
     const [source] = (await evaluateYieldSourcesCooperative(baseEvaluationInput({
-      resolved: [{
-        id: "coin-a",
-        symbol: "A",
-        yield: resolvedYield({
-          sourceKey: "defillama:coin-a:obscure",
-          project: "obscure-unreviewed-venue",
-          yieldType: "lending-opportunity",
-        }),
-      }],
-    }), { yieldToEventLoop: () => Promise.resolve() })).evaluatedSources;
+      resolved: [coinA(resolvedYield({
+        sourceKey: "defillama:coin-a:obscure",
+        project: "obscure-unreviewed-venue",
+        yieldType: "lending-opportunity",
+      }))],
+    }), PACED)).evaluatedSources;
 
     expect(source).toMatchObject({
       safetyScore: 80,
@@ -1662,17 +1376,13 @@ describe("opportunity-level risk (yield v8.32)", () => {
 
   it("keeps an opportunity published as NR when market size is unavailable", async () => {
     const [source] = (await evaluateYieldSourcesCooperative(baseEvaluationInput({
-      resolved: [{
-        id: "coin-a",
-        symbol: "A",
-        yield: resolvedYield({
-          sourceKey: "defillama:coin-a:aave",
-          project: "aave-v3",
-          yieldType: "lending-opportunity",
-          sourceTvlUsd: null,
-        }),
-      }],
-    }), { yieldToEventLoop: () => Promise.resolve() })).evaluatedSources;
+      resolved: [coinA(resolvedYield({
+        sourceKey: "defillama:coin-a:aave",
+        project: "aave-v3",
+        yieldType: "lending-opportunity",
+        sourceTvlUsd: null,
+      }))],
+    }), PACED)).evaluatedSources;
 
     expect(source).toMatchObject({
       pysNullReason: "opportunity-evidence-missing",
@@ -1688,20 +1398,16 @@ describe("opportunity-level risk (yield v8.32)", () => {
     const startSec = 1776729600;
     const [source] = (await evaluateYieldSourcesCooperative(baseEvaluationInput({
       startSec,
-      resolved: [{
-        id: "coin-a",
-        symbol: "A",
-        yield: resolvedYield({
-          sourceKey: "defillama:coin-a:holder",
-          project: "obscure-unreviewed-venue",
-          yieldType: "lending-vault",
-        }),
-      }],
+      resolved: [coinA(resolvedYield({
+        sourceKey: "defillama:coin-a:holder",
+        project: "obscure-unreviewed-venue",
+        yieldType: "lending-vault",
+      }))],
       sourceHistory: new Map([[
         buildHistoryKey("coin-a", "defillama:coin-a:holder"),
         historyRows("defillama:coin-a:holder", 9, startSec),
       ]]),
-    }), { yieldToEventLoop: () => Promise.resolve() })).evaluatedSources;
+    }), PACED)).evaluatedSources;
 
     expect(source?.pharosYieldScore).toBeGreaterThan(0);
     expect(source?.safetyProvenance).toBe("cached-publish");
@@ -1710,26 +1416,22 @@ describe("opportunity-level risk (yield v8.32)", () => {
 
   it("publishes the opportunity contract for Royco Dawn tranches from the bespoke tranche model", async () => {
     const [source] = (await evaluateYieldSourcesCooperative(baseEvaluationInput({
-      resolved: [{
-        id: "coin-a",
-        symbol: "A",
-        yield: resolvedYield({
-          sourceKey: "royco-dawn:ethereum:0xmarket:junior",
-          dataSource: "protocol-api",
-          yieldType: "structured-tranche",
-          sourceRisk: {
-            trancheSide: "junior",
-            venueProtocol: "royco-dawn",
-            // Venue review is the weighted score; the tier is derived from it
-            // (yield v8.33), so a reviewed venue must publish the weighted value.
-            venueRiskTier: "medium",
-            venueRiskWeighted: 3,
-            marketStatus: "normal",
-            marketTvlUsd: 2_000_000,
-          },
-        }),
-      }],
-    }), { yieldToEventLoop: () => Promise.resolve() })).evaluatedSources;
+      resolved: [coinA(resolvedYield({
+        sourceKey: "royco-dawn:ethereum:0xmarket:junior",
+        dataSource: "protocol-api",
+        yieldType: "structured-tranche",
+        sourceRisk: {
+          trancheSide: "junior",
+          venueProtocol: "royco-dawn",
+          // Venue review is the weighted score; the tier is derived from it
+          // (yield v8.33), so a reviewed venue must publish the weighted value.
+          venueRiskTier: "medium",
+          venueRiskWeighted: 3,
+          marketStatus: "normal",
+          marketTvlUsd: 2_000_000,
+        },
+      }))],
+    }), PACED)).evaluatedSources;
 
     expect(source?.safetyProvenance).toBe("opportunity-safety");
     expect(source?.safetyScore).toBeLessThan(80);
@@ -1749,16 +1451,16 @@ describe("opportunity-level risk (yield v8.32)", () => {
     const sourceKey = "royco-dawn:ethereum:0xmarket:junior";
     const [source] = (await evaluateYieldSourcesCooperative(baseEvaluationInput({
       startSec,
-      resolved: [{ id: "coin-a", symbol: "A", yield: resolvedYield({
-        sourceKey, currentApy: 9, apyBase: 9, sourceObservedAt: startSec,
-        dataSource: "protocol-api", yieldType: "structured-tranche",
-        sourceRisk: {
-          trancheSide: "junior", venueProtocol: "royco-dawn",
-          venueRiskWeighted: 3, marketStatus, marketTvlUsd: 2_000_000,
-        },
-      }) }],
+      resolved: [coinA(resolvedYield({
+      sourceKey, currentApy: 9, apyBase: 9, sourceObservedAt: startSec,
+      dataSource: "protocol-api", yieldType: "structured-tranche",
+      sourceRisk: {
+        trancheSide: "junior", venueProtocol: "royco-dawn",
+        venueRiskWeighted: 3, marketStatus, marketTvlUsd: 2_000_000,
+      },
+      }))],
       sourceHistory: new Map([[buildHistoryKey("coin-a", sourceKey), historyRows(sourceKey, 9, startSec)]]),
-    }), { yieldToEventLoop: () => Promise.resolve() })).evaluatedSources;
+    }), PACED)).evaluatedSources;
     expect(source).toMatchObject({
       currentApy: 9, scoreQualification: "NR", rejected: false,
       pharosYieldScore: null, pysNullReason: "opportunity-evidence-missing",
@@ -1777,20 +1479,20 @@ describe("source eligibility and unavailable score inputs", () => {
     const discoveredKey = "discovered";
     const result = await evaluateYieldSourcesCooperative(baseEvaluationInput({
       resolved: [
-        { id: "coin-a", symbol: "A", yield: resolvedYield({
-          sourceKey: canonicalKey,
-          currentApy: 5,
-          sourceObservedAt: freshness === "unknown" ? null : input.startSec - (freshness === "stale" ? 86400 : 0),
-        }) },
-        { id: "coin-a", symbol: "A", yield: resolvedYield({
-          sourceKey: discoveredKey,
-          dataSource: "defillama-auto",
-          yieldType: "lending-opportunity",
-          project: "aave-v3",
-          currentApy: 12,
-        }) },
+        coinA(resolvedYield({
+        sourceKey: canonicalKey,
+        currentApy: 5,
+        sourceObservedAt: freshness === "unknown" ? null : input.startSec - (freshness === "stale" ? 86400 : 0),
+        })),
+        coinA(resolvedYield({
+        sourceKey: discoveredKey,
+        dataSource: "defillama-auto",
+        yieldType: "lending-opportunity",
+        project: "aave-v3",
+        currentApy: 12,
+        })),
       ],
-    }), { yieldToEventLoop: () => Promise.resolve() });
+    }), PACED);
     const discovered = result.evaluatedSources.find((row) => row.sourceKey === discoveredKey);
     expect(discovered?.rejected).toBe(freshness === "fresh");
     expect(result.bestSourceKeyByCoin.get("coin-a")).toBe(freshness === "fresh" ? canonicalKey : discoveredKey);
@@ -1801,9 +1503,9 @@ describe("source eligibility and unavailable score inputs", () => {
     const startSec = 1776729600;
     const sourceKey = "defillama:coin-a:base";
     const result = await evaluateYieldSourcesCooperative(baseEvaluationInput({
-      resolved: [{ id: "coin-a", symbol: "A", yield: resolvedYield({ currentApy: 5 }) }],
+      resolved: [coinA(resolvedYield({ currentApy: 5 }))],
       sourceHistory: new Map([[buildHistoryKey("coin-a", sourceKey), historyRows(sourceKey, 1, startSec, 4)]]),
-    }), { yieldToEventLoop: () => Promise.resolve() });
+    }), PACED);
     const row = result.evaluatedSources[0];
     expect(row.yieldStability).toBe(0.89);
     expect(row.apyVarianceScore).toBeCloseTo(0.11, 12);
@@ -1822,8 +1524,8 @@ describe("source eligibility and unavailable score inputs", () => {
 
   it("keeps a source without measured variance published but unscored", async () => {
     const result = await evaluateYieldSourcesCooperative(baseEvaluationInput({
-      resolved: [{ id: "coin-a", symbol: "A", yield: resolvedYield({}) }],
-    }), { yieldToEventLoop: () => Promise.resolve() });
+      resolved: [coinA(resolvedYield({}))],
+    }), PACED);
     expect(result.evaluatedSources[0]).toMatchObject({
       rejected: false,
       yieldStability: null,
@@ -1947,23 +1649,23 @@ describe("current anchor-only resolution", () => {
   it.each(["onchain", "protocol-api"] as const)("excludes %s re-anchor seeds before statistics and arbitration", async (dataSource) => {
     const input = baseEvaluationInput();
     const sourceKey = `${dataSource}:coin-a:nav`;
-    const seed = { id: "coin-a", symbol: "A", yield: resolvedYield({
-      observationKind: "anchor-only", dataSource, sourceKey,
-      currentApy: 0, apyBase: null, exchangeRate: 1.1,
-    }) };
+    const seed = coinA(resolvedYield({
+    observationKind: "anchor-only", dataSource, sourceKey,
+    currentApy: 0, apyBase: null, exchangeRate: 1.1,
+    }));
     input.resolved = [seed];
     input.sourceHistory.set(buildHistoryKey("coin-a", sourceKey), [
       { ...historyLegacyRow(input.startSec - DAY_SECONDS), stablecoin_id: "coin-a", source_key: sourceKey, apy: 6 },
     ]);
-    const anchorOnly = await evaluateYieldSourcesCooperative(input, { yieldToEventLoop: () => Promise.resolve() });
+    const anchorOnly = await evaluateYieldSourcesCooperative(input, PACED);
     expect(anchorOnly.evaluatedSources).toEqual([]);
     expect(anchorOnly.bestSourceKeyByCoin.size).toBe(0);
     expect(anchorOnly.medianApy).toBeNull();
     expect(anchorOnly.rowsRejected).toBe(0);
 
-    const measured = { id: "coin-a", symbol: "A", yield: resolvedYield({ currentApy: 4, apyBase: 4 }) };
+    const measured = coinA(resolvedYield({ currentApy: 4, apyBase: 4 }));
     input.resolved = [seed, measured];
-    const withAlternative = await evaluateYieldSourcesCooperative(input, { yieldToEventLoop: () => Promise.resolve() });
+    const withAlternative = await evaluateYieldSourcesCooperative(input, PACED);
     expect(withAlternative.evaluatedSources).toHaveLength(1);
     expect(withAlternative.bestSourceKeyByCoin.get("coin-a")).toBe(measured.yield.sourceKey);
     expect(withAlternative.evaluatedSources[0]).toMatchObject({ currentApy: 4, apy7d: 4, apy30d: 4 });
@@ -1972,14 +1674,14 @@ describe("current anchor-only resolution", () => {
   it.each([0, -2])("keeps a genuinely measured %s%% return after an anchor-only observation", async (apy) => {
     const input = baseEvaluationInput();
     const sourceKey = "onchain:coin-a";
-    input.resolved = [{ id: "coin-a", symbol: "A", yield: resolvedYield({
-      sourceKey, dataSource: "onchain", currentApy: apy, apyBase: apy, exchangeRate: (1 + apy / 100) ** (7 / 365.25),
-    }) }];
+    input.resolved = [coinA(resolvedYield({
+    sourceKey, dataSource: "onchain", currentApy: apy, apyBase: apy, exchangeRate: (1 + apy / 100) ** (7 / 365.25),
+    }))];
     input.sourceHistory.set(buildHistoryKey("coin-a", sourceKey), [{
       ...historyLegacyRow(input.startSec - 7 * DAY_SECONDS), stablecoin_id: "coin-a", source_key: sourceKey,
       data_source: "onchain", apy: 0, apy_base: null, exchange_rate: 1,
     }]);
-    const result = await evaluateYieldSourcesCooperative(input, { yieldToEventLoop: () => Promise.resolve() });
+    const result = await evaluateYieldSourcesCooperative(input, PACED);
     expect(result.evaluatedSources[0]).toMatchObject({ currentApy: apy, apy7d: apy, apy30d: expect.closeTo(apy, 10) });
     expect(result.bestSourceKeyByCoin.get("coin-a")).toBe(sourceKey);
   });
@@ -2183,7 +1885,7 @@ describe("computeYieldCandidateStatistics", () => {
   const onchain = resolvedYield({ dataSource: "onchain", sourceKey: "onchain:a", exchangeRate: 0.99, currentApy: 0 });
 
   it("on-chain apy30d uses the oldest own rate; warnings keep the sample mean", async () => {
-    const input = baseEvaluationInput({ resolved: [{ id: "coin-a", symbol: "A", yield: onchain }] });
+    const input = baseEvaluationInput({ resolved: [coinA(onchain)] });
     input.sourceHistory.set(buildHistoryKey("coin-a", "onchain:a"), rows);
     const { evaluatedSources: [source] } = await evaluateYieldSourcesCooperative(input);
     expect(source.apy30d).toBe(computeApyFromRate(0.99, 1, 29));

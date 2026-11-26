@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { appendFileSync, chmodSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync } from "node:fs";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { appendFileSync, chmodSync, cpSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -32,6 +32,11 @@ import { localRegistrySnapshot, registrySnapshotFingerprint } from "../lib/safet
 import { loadReviewedLaneEmitterCatalog } from "../../src/lib/safety-score-v9/lane-emitter-catalog";
 import { buildSafetyScoreV9ReplayLaneScreening } from "../../src/lib/safety-score-v9/publication-replay-capture";
 import { V9LaneIncidentCertificateSchema } from "@shared/types/safety-score-v9-incidents";
+
+let registrySnapshot: ReturnType<typeof localRegistrySnapshot> | undefined;
+function localSnapshot() {
+  return registrySnapshot ??= localRegistrySnapshot();
+}
 
 const temporaryDirectories: string[] = [];
 afterEach(() => temporaryDirectories.splice(0).forEach(directory => rmSync(directory, { recursive: true, force: true })));
@@ -148,9 +153,17 @@ function createInProcessHarness(directory: string, databasePath: string) {
     invoke: (env: ScenarioEnv = {}) => run(["--mode", "publish", "--out-dir", directory], env),
   };
 }
-function setup(payloadSize?: number) {
+function readEvents(directory: string) {
+  return readFileSync(resolve(directory, "events.jsonl"), "utf8").trim().split("\n").map(line => JSON.parse(line));
+}
+
+function makeTempDirectory() {
   const directory = mkdtempSync(resolve(tmpdir(), "pharos-scenario-publish-"));
   temporaryDirectories.push(directory);
+  return directory;
+}
+
+function setup(payloadSize?: number, directory = makeTempDirectory()) {
   const bin = resolve(directory, "bin");
   mkdirSync(bin);
   writeFileSync(resolve(bin, "npx"), WRANGLER_SIMULATOR);
@@ -198,7 +211,7 @@ globalThis.fetch = async () => {
 };`);
   const harness = createInProcessHarness(directory, databasePath);
   const invokeSpawn = (extraEnv: Record<string, string> = {}) => spawnSync(process.execPath, ["--import", "tsx", "--import", readerShim, "worker/scripts/compute-dependency-scenarios.ts", "--mode", "publish", "--out-dir", directory], { cwd: process.cwd(), encoding: "utf8", timeout: 30_000, env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, SCENARIO_TEST_DB: databasePath, SCENARIO_TEST_EVENTS: resolve(directory, "events.jsonl"), SCENARIO_TEST_MARKER_KEY: markerKey, ...extraEnv } });
-  return { directory, databasePath, publishedKey, bytes, ...harness, invokeSpawn, events: () => readFileSync(resolve(directory, "events.jsonl"), "utf8").trim().split("\n").map(line => JSON.parse(line)) };
+  return { directory, databasePath, publishedKey, bytes, ...harness, invokeSpawn, events: () => readEvents(directory) };
 }
 function prepareComputeFixture(directory: string) {
   const input = createReplayFixedInput(1_800_000_000);
@@ -208,8 +221,8 @@ function prepareComputeFixture(directory: string) {
   writeFileSync(resolve(directory, "publication.json"), JSON.stringify(source));
 }
 
-async function prepareSupplyAttributionReplayFixture() {
-  const fixture = setup();
+async function prepareSupplyAttributionReplayFixture(directory: string) {
+  const fixture = setup(undefined, directory);
   // The current wM catalog has newly discovered routes without reviewed code
   // identities. Use the supported XAUT packet for these real-child-CLI replays.
   const base = makeV9FixedInput({ assetId: "xaut-tether", clockSec: 1_800_000_000, aggregateCirculating: { peggedGOLD: 2_480_000_000 } });
@@ -226,7 +239,6 @@ async function prepareSupplyAttributionReplayFixture() {
   });
   const candidate = buildSafetyScoreV9ReplayArtifact({ fixedInput, publishedAtSec: base.clockSec }).pipeline.candidate;
   const source = projectSafetyScoreV9PublicationToPublicSnapshot(candidate, { schemaVersion: 2, status: "current", acceptedPublicationGenerationId: candidate.publicationGenerationId, acceptedAtSec: candidate.publishedAtSec, attemptedAtSec: candidate.publishedAtSec, heldSinceSec: null, reasons: [] });
-  const invoke = () => fixture.run(["--mode", "compute", "--input", resolve(fixture.directory, "capture.json"), "--publication", resolve(fixture.directory, "publication.json"), "--out-dir", fixture.directory]);
   writeFileSync(resolve(fixture.directory, "publication.json"), JSON.stringify(source));
   writeFileSync(resolve(fixture.directory, "capture.json"), JSON.stringify(base));
   const entry = await buildSafetyScoreV9PublicationReplayCapture(candidate, fixedInput, null, null);
@@ -240,11 +252,35 @@ async function prepareSupplyAttributionReplayFixture() {
       db.prepare("INSERT OR REPLACE INTO cache VALUES (?, ?, ?)").run(key, value, base.clockSec);
     }
   } finally { db.close(); }
-  const plan = () => fixture.run(["--mode", "plan", "--out-dir", fixture.directory]);
-  return { ...fixture, base, candidate, entry, invoke, plan };
+  return { base, candidate, entry };
 }
 
 describe("dependency scenario accepted-publication verification stamp", () => {
+  let templateDirectory: string;
+  let template: Awaited<ReturnType<typeof prepareSupplyAttributionReplayFixture>>;
+
+  beforeAll(async () => {
+    templateDirectory = mkdtempSync(resolve(tmpdir(), "pharos-scenario-template-"));
+    template = await prepareSupplyAttributionReplayFixture(templateDirectory);
+  });
+
+  afterAll(() => {
+    if (templateDirectory) rmSync(templateDirectory, { recursive: true, force: true });
+  });
+
+  function copySupplyAttributionReplayFixture() {
+    const directory = makeTempDirectory();
+    cpSync(templateDirectory, directory, { recursive: true });
+    const databasePath = resolve(directory, "cache.sqlite");
+    const { run } = createInProcessHarness(directory, databasePath);
+    return {
+      ...template, directory, databasePath, run,
+      events: () => readEvents(directory),
+      invoke: () => run(["--mode", "compute", "--input", resolve(directory, "capture.json"), "--publication", resolve(directory, "publication.json"), "--out-dir", directory]),
+      plan: () => run(["--mode", "plan", "--out-dir", directory]),
+    };
+  }
+
   it("rebuilds an accepted certificate-closed deployment from captured lane witnesses", async () => {
     const fixture = setup();
     const clockSec = 1_793_404_800;
@@ -254,7 +290,7 @@ describe("dependency scenario accepted-publication verification stamp", () => {
     // Documented cohort snapshot: this capture replays one asset, so only its row
     // is needed. Fingerprinting the whole ~386-asset catalog is the expensive
     // part of every snapshot verification (four of them in this case).
-    const original = localRegistrySnapshot();
+    const original = localSnapshot();
     const scenarioCoin = original.activeStablecoins.find((coin) => coin.id === descriptor.assetId)!;
     const rows = {
       activeStablecoins: [{ ...scenarioCoin, mintAuthority: undefined, bridgeRouteRisk: { ...scenarioCoin.bridgeRouteRisk!,
@@ -301,14 +337,14 @@ describe("dependency scenario accepted-publication verification stamp", () => {
   }, 60_000);
 
   it("rejects a stripped base capture that lacks accepted compute-time supply attribution", async () => {
-    const fixture = await prepareSupplyAttributionReplayFixture();
+    const fixture = copySupplyAttributionReplayFixture();
     const incomplete = await fixture.invoke();
     expect(incomplete.status).not.toBe(0);
     expect(incomplete.stderr).toContain("factSetDigest");
     expect(existsSync(resolve(fixture.directory, "artifact.verified.sha256"))).toBe(false);
   }, 30_000);
   it("reproduces accepted compute-time supply attribution from the atomic D1 snapshot", async () => {
-    const fixture = await prepareSupplyAttributionReplayFixture();
+    const fixture = copySupplyAttributionReplayFixture();
     const planned = await fixture.plan();
     expect(planned.status, planned.stderr).toBe(0);
     expect(fixture.events()).toHaveLength(1);
@@ -322,7 +358,7 @@ describe("dependency scenario accepted-publication verification stamp", () => {
     expect(JSON.parse(readFileSync(replayPath, "utf8")).pipeline.candidate.publicationGenerationId).toBe(fixture.candidate.publicationGenerationId);
   }, 30_000);
   it("exports the exact retained rows that the historical evaluator's own capture reader verifies and publishes", async () => {
-    const fixture = await prepareSupplyAttributionReplayFixture();
+    const fixture = copySupplyAttributionReplayFixture();
     const planned = await fixture.plan();
     expect(planned.status, planned.stderr).toBe(0);
     const raw = JSON.parse(readFileSync(resolve(fixture.directory, "accepted.raw.json"), "utf8"));
@@ -336,11 +372,17 @@ describe("dependency scenario accepted-publication verification stamp", () => {
     expect(JSON.parse(compute.stdout).acceptedPublicationVerified).toBe(true);
     expect(existsSync(resolve(fixture.directory, "artifact.verified.sha256"))).toBe(false);
     for (const name of ["artifact.json", "artifact.verified.sha256"]) writeFileSync(resolve(fixture.directory, name), readFileSync(resolve(historical, name)));
-    const publish = await fixture.invoke();
+    const publish = await fixture.run(["--mode", "publish", "--out-dir", fixture.directory]);
     expect(publish.status, publish.stderr).toBe(0);
+    const publishedArtifactBytes = readFileSync(resolve(fixture.directory, "artifact.json"), "utf8");
+    const db = new DatabaseSync(fixture.databasePath);
+    try {
+      const marker = db.prepare("SELECT value FROM cache WHERE key = ?").get(markerKey) as { value: string } | undefined;
+      expect(marker?.value).toBe(`${artifactPrefix}${createHash("sha256").update(publishedArtifactBytes).digest("hex")}`);
+    } finally { db.close(); }
   }, 60_000);
   it("fails plan explicitly on a legacy capture without a retained admission baseline", async () => {
-    const fixture = await prepareSupplyAttributionReplayFixture();
+    const fixture = copySupplyAttributionReplayFixture();
     const { safetyScoreV9SupplyAttributionById, evidenceJournalById, supplyAttributionJournalById, pegProvenanceById } =
       (await parseSafetyScoreV9PublicationReplayCapture(fixture.entry.value, fixture.base)).fixedInput;
     const legacy = await buildFixedInputCacheEntry({
@@ -362,7 +404,7 @@ describe("dependency scenario accepted-publication verification stamp", () => {
     ["publication generation", "accepted-publication-replay-capture-generation-mismatch"],
     ["missing publication", "accepted-publication-snapshot-unavailable"],
   ] as const)("rejects an accepted snapshot with %s mismatch", async (defect, reason) => {
-    const fixture = await prepareSupplyAttributionReplayFixture();
+    const fixture = copySupplyAttributionReplayFixture();
     const changedDb = new DatabaseSync(fixture.databasePath);
     try {
       if (defect === "retention clock") {
@@ -434,7 +476,7 @@ describe("dependency scenario accepted-publication verification stamp", () => {
   it("projects tokenized-fund scenario rows as schema-valid ungraded NR both with and without --publication (NS-01)", async () => {
     const fixture = setup();
     const clockSec = 1_800_000_000;
-    const original = localRegistrySnapshot();
+    const original = localSnapshot();
     const ids = ["buidl-blackrock", "usdtb-ethena"] as const;
     const rows = {
       activeStablecoins: ids.map((id) => original.activeStablecoins.find((coin) => coin.id === id)!),

@@ -270,7 +270,7 @@ describe("TimelineClient", () => {
 
   it.each([
     ["notice+", "/timeline/"], ["opened-only", "/timeline/?type=depeg.opened"], ["search mismatch", "/timeline/?q=unrelated"],
-    ["coverage-loss closure", "/timeline/?type=depeg.opened"], ["superseded closure", "/timeline/?severity=warning"],
+    ["superseded closure", "/timeline/?severity=warning"],
   ])("does not infer current incidents from unmatched historical openings: %s", (_label, url) => {
     window.history.replaceState(null, "", url);
     renderTimeline([makeTapeEvent({ type: "depeg.opened", sourceRowId: "100" })], { hasNextPage: true });

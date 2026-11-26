@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { describe, expect, it, afterEach, vi } from "vitest";
 import * as assurance from "@shared/lib/independent-assurance";
 import * as adapters from "@shared/lib/live-reserve-adapters";
@@ -61,6 +62,13 @@ const PROFILE: IndependentAssuranceProfile = {
       (/\bJune 2026\b/i.test(value) || /\/reviewed\.pdf$/i.test(href) ? "2026-06-30" : null);
   },
 };
+
+const AUDX_PARAMS = { product: "AUDX" as const, profile: "audx-v1", indexHost: "www.audxtoken.com", reportHosts: ["www.audxtoken.com"] };
+const CASH_PROFILE: IndependentAssuranceProfile = { ...PROFILE, classifications: { cash: { name: "Cash", risk: "very-low" } } };
+
+function htmlConfig(config: LiveReservesConfig, url: string) {
+  return { ...config, inputs: { primary: { kind: "http-html" as const, url } } };
+}
 
 function manifest(overrides: Partial<IndependentAssuranceManifest> = {}): IndependentAssuranceManifest {
   return {
@@ -268,10 +276,6 @@ function assuranceFenceCases() {
 }
 
 describe("independent-assurance manifest framework", () => {
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    vi.restoreAllMocks();
-  });
 
   it.each(assuranceFenceCases())(
     "$adapter keeps the reviewed index and redirect hosts fail-closed and lets a newer report reach the PDF gates",
@@ -409,10 +413,8 @@ describe("independent-assurance manifest framework", () => {
       const fetchMock = installFetch();
       const coin = routedAssuranceCoin("audx-aussie-dollar-token");
       const config = coin.liveReservesConfig!;
-      const profile = { ...PROFILE, classifications: { cash: { name: "Cash", risk: "very-low" as const } } };
-      const params = { product: "AUDX" as const, profile: "audx-v1", indexHost: "www.audxtoken.com", reportHosts: ["www.audxtoken.com"] };
       await expect(fetchIndependentAssuranceReserves(
-        coin, config, new AbortController().signal, profile, params,
+        coin, config, new AbortController().signal, CASH_PROFILE, AUDX_PARAMS,
       )).rejects.toThrow("static-validated/issuer-attested");
       expect(fetchMock).not.toHaveBeenCalled();
 
@@ -425,7 +427,7 @@ describe("independent-assurance manifest framework", () => {
         ...descriptor, evidenceClass: "static-validated", sourceOriginClass: "issuer-attested",
       } as unknown as typeof descriptor);
       const result = await fetchIndependentAssuranceReserves(
-        coin, config, new AbortController().signal, profile, params,
+        coin, config, new AbortController().signal, CASH_PROFILE, AUDX_PARAMS,
       );
       expect(result.slices).toEqual([{ sourceKey: "test-independent-assurance:audx:cash", name: "Cash", risk: "very-low", pct: 100 }]);
       expect(result.metadata).toMatchObject({ freshnessMode: "verified", collateralizationRatio: 1.01 });
@@ -439,10 +441,10 @@ describe("independent-assurance manifest framework", () => {
     const coin = routedAssuranceCoin("audx-aussie-dollar-token");
     const result = await fetchIndependentAssuranceReserves(
       coin,
-      { ...coin.liveReservesConfig!, inputs: { primary: { kind: "http-html", url: reviewed.officialIndexUrl } } },
+      htmlConfig(coin.liveReservesConfig!, reviewed.officialIndexUrl),
       new AbortController().signal,
       { ...PROFILE, classifications: { cash: { name: "Renamed bank reserve", risk: "very-low" } } },
-      { product: "AUDX", profile: "audx-v1", indexHost: "www.audxtoken.com", reportHosts: ["www.audxtoken.com"] },
+      AUDX_PARAMS,
     );
     const meta = {
       ...coin,
@@ -466,11 +468,10 @@ describe("independent-assurance manifest framework", () => {
     installFetch();
     const result = await fetchIndependentAssuranceReserves(
       routedAssuranceCoin("audx-aussie-dollar-token"),
-      { ...routedAssuranceCoin("audx-aussie-dollar-token").liveReservesConfig!,
-        inputs: { primary: { kind: "http-html", url: reviewed.officialIndexUrl } } },
+      htmlConfig(routedAssuranceCoin("audx-aussie-dollar-token").liveReservesConfig!, reviewed.officialIndexUrl),
       new AbortController().signal,
-      { ...PROFILE, classifications: { cash: { name: "Cash", risk: "very-low" } } },
-      { product: "AUDX", profile: "audx-v1", indexHost: "www.audxtoken.com", reportHosts: ["www.audxtoken.com"] },
+      CASH_PROFILE,
+      AUDX_PARAMS,
     );
     expect(result.slices).toEqual([{ sourceKey: "test-independent-assurance:audx:cash", name: "Cash", risk: "very-low", pct: 100 }]);
     expect(result.metadata?.collateralizationRatio).toBe(liability === "200" ? 0.505 : undefined);
@@ -898,7 +899,10 @@ const agoraAnchor = (href: string) => `<a href="${href}">2026 Sep - Agora Dollar
 // link; the frozen August capture plus the served September anchor reproduces it.
 const agoraCurrentIndex = () => indexFixture(agoraFixture) + agoraAnchor(agoraFern);
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 describe("Agora reviewed September examination", () => {
   it("parses Fern dates across report naming conventions", () => {
@@ -1022,10 +1026,6 @@ describe("anchorage-independent-assurance (Deloitte Anchorage examinations)", ()
 
 describe("audd-independent-assurance (William Buck ASRS 4400 AUP)", () => {
   const manifest = getIndependentAssuranceManifest("AUDD");
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    vi.restoreAllMocks();
-  });
 
   it("reviews the October 2026 agreed-upon-procedures report and reconciles every chain's circulation", () => {
     expect(manifest.assuranceTier).toBe("agreed-upon-procedures");
@@ -1069,10 +1069,6 @@ describe("audd-independent-assurance (William Buck ASRS 4400 AUP)", () => {
 });
 
 describe("cadd-independent-assurance (Baker Tilly CSAE 3000)", () => {
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    vi.restoreAllMocks();
-  });
 
   it("reviews the September 30 2026 reasonable assurance report and reconciles CAD circulation across Base, Tempo and Ethereum", () => {
     const manifest = getIndependentAssuranceManifest("CADD");
@@ -1188,6 +1184,14 @@ const YEAR_RECORD = {
 const SIGNED_URL = `https://file.notion.com/f/f/space/${BRLA_NOTION_PIN.attachmentId}/Avenia_-_Transparency_Report_-_20261031_(Audit_Attestation).pdf?table=block&id=${BRLA_NOTION_PIN.reportBlockId}&spaceId=space&expirationTimestamp=1792454400000&signature=signature`;
 const BRLA_PDF_STUB = "%PDF-";
 
+function brlaStubManifest() {
+  return {
+    ...getIndependentAssuranceManifest("BRLA"),
+    reportSha256: createHash("sha256").update(BRLA_PDF_STUB).digest("hex"),
+    reportByteLength: BRLA_PDF_STUB.length,
+  };
+}
+
 function installBrlaFetch(options: { rootRecord?: unknown; yearRecord?: unknown; signedUrl?: string; indexUrl?: string } = {}) {
   const {
     rootRecord = ROOT_RECORD,
@@ -1227,10 +1231,6 @@ const discoveryArgs = (overrides: Record<string, unknown> = {}) => ({
 });
 
 describe("BRLA Notion reviewed discovery", () => {
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    vi.restoreAllMocks();
-  });
 
   it("resolves the reviewed October report through pinned block identity", async () => {
     installBrlaFetch();
@@ -1261,11 +1261,7 @@ describe("BRLA Notion reviewed discovery", () => {
 
   it("admits the reconciled cash-only report through the bound adapter", async () => {
     const coin = ACTIVE_STABLECOINS.find(({ id }) => id === "brla-brla-digital")!;
-    vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue({
-      ...getIndependentAssuranceManifest("BRLA"),
-      reportSha256: createHash("sha256").update(BRLA_PDF_STUB).digest("hex"),
-      reportByteLength: BRLA_PDF_STUB.length,
-    });
+    vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue(brlaStubManifest());
     installBrlaFetch();
     const result = await getReserveAdapter("brla-independent-assurance")!.fetch(coin, coin.liveReservesConfig!, AbortSignal.timeout(1000));
     expect(coin.reserves).toHaveLength(5);
@@ -1279,12 +1275,10 @@ describe("BRLA Notion reviewed discovery", () => {
 
   it("admits September's repo sleeve only when it reconciles", async () => {
     const coin = ACTIVE_STABLECOINS.find(({ id }) => id === "brla-brla-digital")!;
-    const manifest = getIndependentAssuranceManifest("BRLA");
+    const manifest = brlaStubManifest();
     const repo = { code: "repurchase-agreements", label: "Overnight repurchase agreements", amount: "60103684.97" };
     vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue({
       ...manifest,
-      reportSha256: createHash("sha256").update(BRLA_PDF_STUB).digest("hex"),
-      reportByteLength: BRLA_PDF_STUB.length,
       assets: [
         { code: "cash-and-cash-equivalents", label: "Cash or Equivalent", amount: "72064692.29" },
         repo,
@@ -1400,7 +1394,6 @@ describe("BRLA Notion reviewed discovery", () => {
 });
 
 describe("BRLA PDF byte verification", () => {
-  afterEach(() => vi.unstubAllGlobals());
 
   const bytes = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x37, 0x0a, 0x25, 0xaa, 0xbb]);
   const manifest = {

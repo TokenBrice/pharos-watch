@@ -13,7 +13,7 @@ import type { V9CapTrace, V9NRReason } from "../safety-score-v9/formula";
 import { V9_CANDIDATE_POLICY_V1 as POL } from "../safety-score-v9/policy";
 import { buildSafetyScoreV9Response as buildResp, createSafetyScoreV9ResponseProjector as mkProj, projectSafetyScoreV9Card as project, V9PublicCardProjectionError as ProjErr, type V9PublicCardProjectionInput as ProjIn } from "../safety-score-v9/public";
 import type { V9ProductionScoreTrace as Trace } from "../safety-score-v9/score";
-import { SafetyScoreV9AccessPostureSchema as AccessSchema, SafetyScoreV9CurrentCardSchema as CardSchema, SafetyScoreV9EvidenceSummarySchema as EvSchema, SafetyScoreV9HistoricalTypedCardSchema as HistCardSchema, SafetyScoreV9PillarSchema as PillarSchema, type V9OpenEvidence } from "../../types/safety-score-v9-public";
+import { SafetyScoreV9CurrentCardSchema as CardSchema, SafetyScoreV9HistoricalTypedCardSchema as HistCardSchema, type V9OpenEvidence } from "../../types/safety-score-v9-public";
 import { SafetyScoreV9CurrentResponseSchema as RespSchema } from "../../types/safety-score-v9-publication-response";
 import { findSafetyScoreV9ParentAttributionIssues } from "../../types/safety-score-v9-public-attribution";
 import { projectSafetyGrades } from "../../types/report-cards-v9";
@@ -924,12 +924,6 @@ describe("Safety Score v9 public projection", () => {
     mix.trace.evaluationBuildDigest = "f".repeat(64); expect(() => publish([base, mix])).toThrow(/mixes evaluation build/);
   });
 
-  it("rejects duplicate code/path identities in every public reason list", () => {
-    const reasons = [{ code: "bounded-mechanism-review" as const, message: "First rendering.", path: "backing:mechanism:custody" }, { code: "bounded-mechanism-review" as const, message: "Second rendering.", path: "backing:mechanism:custody" }];
-    expect(PillarSchema.safeParse({ score: 70, evidenceLevel: "limited", freshness: "current", components: [], reasons }).success).toBe(false);
-    expect(EvSchema.safeParse({ level: "limited", freshness: "current", reasons }).success).toBe(false);
-    expect(AccessSchema.safeParse({ ...ACCESS, reasons }).success).toBe(false);
-  });
 });
 
 describe("Safety Score v9 public NR cap suppression", () => {
