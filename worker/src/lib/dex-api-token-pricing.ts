@@ -33,6 +33,7 @@ export function getAdmittedDexMarketMark(
   prices: DexValuationPrices | undefined,
   stablecoinId: string,
   assessedAtSec: number,
+  maxAgeSec = DEPEG_PRIMARY_PRICE_MAX_AGE_SEC,
 ): DexMarketMark | null {
   const mark = prices?.marketMarks?.get(stablecoinId);
   if (
@@ -40,7 +41,7 @@ export function getAdmittedDexMarketMark(
     !Number.isFinite(mark.priceUsd) || mark.priceUsd <= 0 || !mark.source.trim() ||
     !Number.isSafeInteger(assessedAtSec) ||
     !Number.isSafeInteger(mark.observedAtSec) || mark.observedAtSec <= 0 ||
-    mark.observedAtSec > assessedAtSec || assessedAtSec - mark.observedAtSec > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC
+    mark.observedAtSec > assessedAtSec || assessedAtSec - mark.observedAtSec > maxAgeSec
   ) return null;
   return mark;
 }

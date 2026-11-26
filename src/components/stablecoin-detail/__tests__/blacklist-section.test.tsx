@@ -30,80 +30,46 @@ import type { ApiMeta } from "@/lib/api";
 type EventsPageResult = ReturnType<typeof useBlacklistEventsPage>;
 
 const FREEZE_EVENT: BlacklistEvent = {
-  id: "evt-1",
-  stablecoin: "USDC",
-  chainId: "ethereum",
-  chainName: "Ethereum",
-  eventType: "blacklist",
-  address: "0x0000000000000000000000000000000000000001",
-  amountNative: null,
-  amountUsdAtEvent: null,
-  amountSource: "unavailable",
-  amountStatus: "permanently_unavailable",
+  id: "evt-1", stablecoin: "USDC", chainId: "ethereum", chainName: "Ethereum", eventType: "blacklist",
+  address: "0x0000000000000000000000000000000000000001", amountNative: null, amountUsdAtEvent: null,
+  amountSource: "unavailable", amountStatus: "permanently_unavailable",
   txHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-  blockNumber: 1,
-  timestamp: Date.parse("2026-05-30T00:00:00Z"),
-  methodologyVersion: "5.91",
-  contractAddress: null,
-  configKey: null,
-  eventSignature: null,
-  eventTopic0: null,
-  explorerTxUrl: "https://etherscan.io/tx/0x0",
-  explorerAddressUrl: "https://etherscan.io/address/0x0",
+  blockNumber: 1, timestamp: Date.parse("2026-05-30T00:00:00Z"), methodologyVersion: "5.91",
+  contractAddress: null, configKey: null, eventSignature: null, eventTopic0: null,
+  explorerTxUrl: "https://etherscan.io/tx/0x0", explorerAddressUrl: "https://etherscan.io/address/0x0",
 };
 
-const ONE_EVENT_PAGE = {
-  data: { events: [FREEZE_EVENT], total: 1 },
-  isLoading: false,
-  isError: false,
-  error: null,
-  meta: null,
-  dataUpdatedAt: Date.now(),
-} as unknown as EventsPageResult;
+const pageStub = (events: BlacklistEvent[]) => ({
+  data: { events, total: events.length }, isLoading: false, isError: false, error: null, meta: null, dataUpdatedAt: Date.now(),
+} as unknown as EventsPageResult);
+const ONE_EVENT_PAGE = pageStub([FREEZE_EVENT]);
+const EMPTY_EVENT_PAGE = pageStub([]);
 
-const EMPTY_EVENT_PAGE = {
-  data: { events: [], total: 0 },
-  isLoading: false,
-  isError: false,
-  error: null,
-  meta: null,
-  dataUpdatedAt: Date.now(),
-} as unknown as EventsPageResult;
-
-function summaryStub(
-  overrides: {
-    perCoinTotalEvents?: Record<string, number>;
-    perCoinFrozenAddressCount?: Record<string, number>;
-    perCoinFrozenTotal?: Record<string, number>;
-    perCoinDestroyedTotal?: Record<string, number>;
-    perCoinQuarterlyEventTypes?: Record<
-      string,
-      Array<{ quarter: string; blacklist: number; unblacklist: number; destroy: number }>
-    >;
-  } = {},
-) {
+function summaryStub(overrides: Record<string, unknown> = {}) {
   return {
     data: {
       stats: {
-        perCoinTotalEvents: overrides.perCoinTotalEvents ?? { USDC: 5 },
-        perCoinFrozenAddressCount: overrides.perCoinFrozenAddressCount ?? { USDC: 3 },
-        perCoinFrozenTotal: overrides.perCoinFrozenTotal ?? { USDC: 1000 },
-        perCoinDestroyedTotal: overrides.perCoinDestroyedTotal ?? { USDC: 0 },
-        perCoinQuarterlyEventTypes: overrides.perCoinQuarterlyEventTypes ?? {
-          USDC: [{ quarter: "Q1 '26", blacklist: 5, unblacklist: 0, destroy: 0 }],
-        },
+        perCoinTotalEvents: { USDC: 5 }, perCoinFrozenAddressCount: { USDC: 3 },
+        perCoinFrozenTotal: { USDC: 1000 }, perCoinDestroyedTotal: { USDC: 0 },
+        perCoinQuarterlyEventTypes: { USDC: [{ quarter: "Q1 '26", blacklist: 5, unblacklist: 0, destroy: 0 }] },
+        ...overrides,
       },
     },
-    isLoading: false,
-    isError: false,
+    isLoading: false, isError: false,
   } as unknown as ReturnType<typeof useBlacklistSummary>;
 }
 
 describe("BlacklistSection", () => {
-  it("returns null for a coin not in BLACKLIST_STABLECOINS", () => {
-    vi.mocked(useBlacklistSummary).mockReturnValue(summaryStub());
-    const { container } = render(<BlacklistSection stablecoinId="makerdao-dai" symbol={"DAI" as "USDC"} />);
-    expect(container.firstChild).toBeNull();
+  it("returns null for untracked coins and admits retired archives with recorded history", () => {
+    vi.mocked(useBlacklistSummary).mockReturnValue(summaryStub({
+      perCoinTotalEvents: { USDA: 2, AEUR: 1, USDF: 3 },
+      perCoinQuarterlyEventTypes: { USDA: [], AEUR: [], USDF: [] },
+    }));
+    expect(render(<BlacklistSection stablecoinId="makerdao-dai" symbol={"DAI" as "USDC"} />).container.firstChild).toBeNull();
+    expect(render(<BlacklistSection stablecoinId="usdf-astherus" symbol="USDF" />).container.firstChild).toBeNull();
+    expect(render(<BlacklistSection stablecoinId="usdf-flipcash" symbol="USDF" />).container.firstChild).toBeNull();
+    expect(render(<BlacklistSection stablecoinId="usda-avalon" symbol="USDA" />).container.firstChild).not.toBeNull();
+    expect(render(<BlacklistSection stablecoinId="aeur-anchored-coins" symbol="AEUR" />).container.firstChild).not.toBeNull();
   });
 
   it("returns null for a supported coin with zero events", () => {

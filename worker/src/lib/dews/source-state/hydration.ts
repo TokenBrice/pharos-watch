@@ -30,7 +30,7 @@ import {
   getBlacklistConfigByContract,
   getBlacklistConfigByKey,
 } from "../../blacklist-contracts";
-import { getDexAggregateObservedAt, getDexPriceSourceEntries, getDexTrustPolicy, isAffirmativeDexPriceRow } from "../../depeg-trust-policy";
+import { getDexAggregateObservedAt, getDexAggregateRejectionReason, getDexPriceSourceEntries, getDexTrustPolicy } from "../../depeg-trust-policy";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { validatePricingSourceFreshness } from "../../pricing-source-freshness";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../dex-cron-constants";
@@ -351,12 +351,14 @@ export async function hydrateDexPrices(ctx: HydrationContext): Promise<DexPriceH
       const ageSec = getRowAgeSec(aggregateObservedAt, ctx.nowSec);
       const publicationAgeSec = getRowAgeSec(row.updated_at, ctx.nowSec);
       if (ageSec != null) dexPriceAgeSecById.set(row.stablecoin_id, ageSec);
+      const rejectionReason = getDexAggregateRejectionReason({ ...row, aggregateObservedAt }, ctx.nowSec, "depeg");
       // An unreadable aggregate or publication clock is never fresh evidence.
       if (ageSec == null || publicationAgeSec == null || ageSec >= DEWS_DEX_PRICE_TRUST_POLICY.maxAgeSec ||
-        publicationAgeSec >= DEWS_DEX_PRICE_TRUST_POLICY.maxAgeSec) {
+        publicationAgeSec >= DEWS_DEX_PRICE_TRUST_POLICY.maxAgeSec ||
+        rejectionReason === "aggregate-clock-stale" || rejectionReason === "publication-stale") {
         dexPriceStaleIds.add(row.stablecoin_id);
       }
-      if (!isAffirmativeDexPriceRow({ ...row, aggregateObservedAt }, ctx.nowSec, "depeg")) continue;
+      if (rejectionReason != null) continue;
       dexPriceMap.set(row.stablecoin_id, {
         dexPriceUsd: row.dex_price_usd,
         sourceTotalTvl: row.source_total_tvl,

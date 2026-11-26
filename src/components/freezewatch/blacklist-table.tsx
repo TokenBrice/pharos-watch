@@ -10,6 +10,7 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { getBlacklistStablecoinIdBySymbol } from "@shared/lib/blacklist-contract-specs";
 import { coinIdBySymbol } from "@/lib/coin-id-by-symbol";
 import { logosById } from "@/lib/logos";
 import { downloadCsv } from "@/lib/exports/csv";
@@ -234,7 +235,7 @@ export function BlacklistTable({
 }
 
 function StablecoinCellLink({ symbol }: { symbol: string }) {
-  const coinId = coinIdBySymbol(symbol);
+  const coinId = getBlacklistStablecoinIdBySymbol(symbol) ?? coinIdBySymbol(symbol);
   const logoSrc = coinId ? logosById[coinId] : undefined;
 
   if (!coinId) {

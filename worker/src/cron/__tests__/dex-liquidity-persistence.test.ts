@@ -1001,44 +1001,42 @@ describe("dex-liquidity persistence", () => {
     expect(JSON.parse(String(historyRoute)).observations[0].routeId).toBe(previousObservation.routeId);
   });
 
-  it("does not publish freshness when the signal aborts after score batch writes", async () => {
+  function persistMinimalUsdt(db: ReturnType<typeof makeDb>, signal?: AbortSignal) {
     const metrics = initMetrics("usdt-tether", "USDT");
+    return persistScores(
+      db,
+      new Map([["usdt-tether", metrics]]),
+      new Map([["usdt-tether", makeFullScoreResult()]]),
+      {
+        totalTvl: 1,
+        totalVol24h: 1,
+        totalVol7d: 1,
+        volumeAvailability: makeCompleteVolumeAvailability(1, 1),
+        poolCount: 1,
+        chainCount: 1,
+        protocolTvl: {},
+        chainTvl: {},
+      },
+      1_700_000_000,
+      new Map(),
+      signal,
+    );
+  }
+
+  it("does not publish freshness when the signal aborts after score batch writes", async () => {
     const db = makeDb();
     const controller = new AbortController();
     const abortError = new Error("cron timed out");
-
     vi.mocked(batchExecute).mockImplementationOnce(async (_db, _stmts, options) => {
       expect(options).toMatchObject({ signal: controller.signal });
       controller.abort(abortError);
       return 1;
     });
-
-    await expect(
-      persistScores(
-        db,
-        new Map([["usdt-tether", metrics]]),
-        new Map([["usdt-tether", makeFullScoreResult()]]),
-        {
-          totalTvl: 1,
-          totalVol24h: 1,
-          totalVol7d: 1,
-          volumeAvailability: makeCompleteVolumeAvailability(1, 1),
-          poolCount: 1,
-          chainCount: 1,
-          protocolTvl: {},
-          chainTvl: {},
-        },
-        1_700_000_000,
-        new Map(),
-        controller.signal,
-      ),
-    ).rejects.toThrow("cron timed out");
-
+    await expect(persistMinimalUsdt(db, controller.signal)).rejects.toThrow("cron timed out");
     expect(db.getHistory().some((entry) => entry.binds.includes("freshness:dex-liquidity"))).toBe(false);
   });
 
   it("does not publish current rows when a candidate generation is incomplete", async () => {
-    const metrics = initMetrics("usdt-tether", "USDT");
     const db = makeDb({
       candidateCoverage: {
         row_count: ACTIVE_STABLECOINS.length,
@@ -1046,27 +1044,7 @@ describe("dex-liquidity persistence", () => {
         global_rows: 1,
       },
     });
-
-    await expect(
-      persistScores(
-        db,
-        new Map([["usdt-tether", metrics]]),
-        new Map([["usdt-tether", makeFullScoreResult()]]),
-        {
-          totalTvl: 1,
-          totalVol24h: 1,
-          totalVol7d: 1,
-          volumeAvailability: makeCompleteVolumeAvailability(1, 1),
-          poolCount: 1,
-          chainCount: 1,
-          protocolTvl: {},
-          chainTvl: {},
-        },
-        1_700_000_000,
-        new Map(),
-      ),
-    ).rejects.toThrow("Incomplete DEX liquidity generation");
-
+    await expect(persistMinimalUsdt(db)).rejects.toThrow("Incomplete DEX liquidity generation");
     const publishCalls = vi.mocked(batchExecute).mock.calls.filter(([, statements]) =>
       (statements as PreparedStatementWithMeta[]).some((stmt) => stmt.sql.includes("INSERT INTO dex_liquidity")),
     );
@@ -1076,109 +1054,42 @@ describe("dex-liquidity persistence", () => {
   });
 
   it("does not publish current rows when candidate chunked writes fail", async () => {
-    const metrics = initMetrics("usdt-tether", "USDT");
     const db = makeDb();
-
     vi.mocked(batchExecute).mockRejectedValueOnce(new Error("candidate batch failed"));
-
-    await expect(
-      persistScores(
-        db,
-        new Map([["usdt-tether", metrics]]),
-        new Map([["usdt-tether", makeFullScoreResult()]]),
-        {
-          totalTvl: 1,
-          totalVol24h: 1,
-          totalVol7d: 1,
-          volumeAvailability: makeCompleteVolumeAvailability(1, 1),
-          poolCount: 1,
-          chainCount: 1,
-          protocolTvl: {},
-          chainTvl: {},
-        },
-        1_700_000_000,
-        new Map(),
-      ),
-    ).rejects.toThrow("candidate batch failed");
-
+    await expect(persistMinimalUsdt(db)).rejects.toThrow("candidate batch failed");
     expect(vi.mocked(batchExecute).mock.calls).toHaveLength(1);
     expect(db.getHistory().some((entry) => entry.binds.includes("freshness:dex-liquidity"))).toBe(false);
     expect(db.getHistory().some((entry) => entry.sql.includes("state = 'failed'"))).toBe(true);
   });
 
   it("keeps current publication fail-closed after a later candidate batch fails", async () => {
-    const metrics = initMetrics("usdt-tether", "USDT");
     const db = makeDb();
-
     vi.mocked(batchExecute)
       .mockImplementationOnce(async (_db, statements) => statements.length)
       .mockRejectedValueOnce(new Error("second candidate batch failed"));
-
-    await expect(
-      persistScores(
-        db,
-        new Map([["usdt-tether", metrics]]),
-        new Map([["usdt-tether", makeFullScoreResult()]]),
-        {
-          totalTvl: 1,
-          totalVol24h: 1,
-          totalVol7d: 1,
-          volumeAvailability: makeCompleteVolumeAvailability(1, 1),
-          poolCount: 1,
-          chainCount: 1,
-          protocolTvl: {},
-          chainTvl: {},
-        },
-        1_700_000_000,
-        new Map(),
-      ),
-    ).rejects.toThrow("second candidate batch failed");
-
+    await expect(persistMinimalUsdt(db)).rejects.toThrow("second candidate batch failed");
     expect(batchExecute).toHaveBeenCalledTimes(2);
-    expect(vi.mocked(batchExecute).mock.calls.every(([, statements]) =>
-      statements.length <= 5
-    )).toBe(true);
+    expect(vi.mocked(batchExecute).mock.calls.every(([, statements]) => statements.length <= 5)).toBe(true);
     expect(getPreparedBatchStatements("INSERT INTO dex_liquidity")).toHaveLength(0);
     expect(db.getHistory().some((entry) => entry.sql.includes("state = 'failed'"))).toBe(true);
     expect(db.getHistory().some((entry) => entry.binds.includes("freshness:dex-liquidity"))).toBe(false);
   });
 
   it("does not advance freshness when the atomic current-generation batch fails", async () => {
-    const metrics = initMetrics("usdt-tether", "USDT");
     const db = makeDb();
     vi.mocked(batchExecute).mockImplementation(async (_db, statements) => {
       if ((statements as PreparedStatementWithMeta[]).some((statement) =>
-        statement.sql.includes("INSERT INTO dex_liquidity")
+        statement.sql.includes("INSERT INTO dex_liquidity"),
       )) {
         throw new Error("atomic generation publish failed");
       }
       return statements.length;
     });
-
-    await expect(
-      persistScores(
-        db,
-        new Map([["usdt-tether", metrics]]),
-        new Map([["usdt-tether", makeFullScoreResult()]]),
-        {
-          totalTvl: 1,
-          totalVol24h: 1,
-          totalVol7d: 1,
-          volumeAvailability: makeCompleteVolumeAvailability(1, 1),
-          poolCount: 1,
-          chainCount: 1,
-          protocolTvl: {},
-          chainTvl: {},
-        },
-        1_700_000_000,
-        new Map(),
-      ),
-    ).rejects.toThrow("atomic generation publish failed");
-
+    await expect(persistMinimalUsdt(db)).rejects.toThrow("atomic generation publish failed");
     const publishCall = vi.mocked(batchExecute).mock.calls.find(([, statements]) =>
       (statements as PreparedStatementWithMeta[]).some((statement) =>
-        statement.sql.includes("INSERT INTO dex_liquidity")
-      )
+        statement.sql.includes("INSERT INTO dex_liquidity"),
+      ),
     );
     expect(publishCall?.[1]).toHaveLength(2);
     expect(db.getHistory().some((entry) => entry.sql.includes("state = 'failed'"))).toBe(true);

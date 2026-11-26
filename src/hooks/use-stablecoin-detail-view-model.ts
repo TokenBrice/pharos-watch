@@ -27,7 +27,7 @@ import { useFreshnessBoundary } from "@/hooks/use-freshness-boundary";
 import { useUtcDayNowMs } from "@/hooks/use-utc-day-clock";
 import { isDepegResolverEnabled } from "@/lib/feature-flags";
 import { refetchQueryGroup, type QueryRefetchFn } from "@/lib/query-refetch-group";
-import { BLACKLIST_STABLECOINS } from "@shared/types/blacklist";
+import { hasBlacklistLedgerHistoryById } from "@shared/lib/blacklist-contract-specs";
 import {
   buildStablecoinDetailViewModel,
   type StablecoinDetailSummary,
@@ -184,7 +184,7 @@ export function useStablecoinDetailViewModel({
   const redemptionBackstopsQuery = useRedemptionBackstopCoin(id, { enabled: redemptionEnabled });
   const yieldRankingsQuery = useYieldRankingsCoin(id, { enabled: yieldEnabled });
   const stressSignalsQuery = useStressSignals({ enabled: stressEnabled });
-  const blacklistSupported = (BLACKLIST_STABLECOINS as readonly string[]).includes(coin.symbol);
+  const blacklistSupported = hasBlacklistLedgerHistoryById(id);
   const blacklistEnabled = blacklistSupported && (supplementalQueryControls?.blacklist ?? true);
   const reservesEnabled = current && !!coin?.liveReservesConfig && (supplementalQueryControls?.reserves ?? true);
   const flowsQuery = useMintBurnFlows(24, { enabled: flowsEnabled });

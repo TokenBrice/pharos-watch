@@ -42,7 +42,7 @@ import { usePortfolio } from "@/hooks/use-portfolio";
 import { useWatchlist } from "@/hooks/use-watchlist";
 import { formatRelativeAgeSeconds } from "@shared/lib/relative-time";
 import { formatCurrency, formatShortDate } from "@shared/lib/format";
-import { isBlacklistStablecoin } from "@shared/lib/blacklist";
+import { isBlacklistTrackedStablecoinId } from "@shared/lib/blacklist-contract-specs";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { isClientTokenizedFundId } from "@shared/lib/stablecoins/aggregate-client-registry";
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
@@ -334,7 +334,7 @@ function resolveHeroAlertRecommendation({
   if ((tokenizedFund || navToken) && reserveDriftAlertEligible) {
     types.push("reserve");
   }
-  if (types.length === 0 && isBlacklistStablecoin(coinSymbol.toUpperCase())) {
+  if (types.length === 0 && isBlacklistTrackedStablecoinId(coinId)) {
     types.push("freeze");
   }
   if (types.length === 0) return null;

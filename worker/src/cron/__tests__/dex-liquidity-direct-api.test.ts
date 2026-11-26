@@ -6,10 +6,17 @@ import { fetchFluidPools } from "../dex-liquidity/fetch-fluid";
 import { fetchOrcaPools } from "../dex-liquidity/fetch-orca";
 import { fetchRaydiumPools } from "../dex-liquidity/fetch-raydium";
 import { jsonResponse, mockFetch as createFetchMock } from "@shared/test-utils/mock-fetch";
-import { makeFluidTicker, makeFluidRpcResponse, makeBalancerPool, makeOrcaPool, makeCursorDb, orcaRoute } from "./dex-liquidity-direct-api.test-support";
+import {
+  fetchDirectApiFixture,
+  makeBalancerPool,
+  makeCursorDb,
+  makeFluidRpcResponse,
+  makeFluidTicker,
+  makeOrcaPool,
+  orcaRoute,
+} from "./dex-liquidity-direct-api.test-support";
 import { acknowledgeDexSourcePagination } from "../dex-liquidity/source-pagination-state";
 import { buildAuthoritativeStagedPoolConfirmationIndex } from "../dex-liquidity/orchestrator-phases/authoritative";
-import { fetchDirectApiFixture } from "./dex-liquidity-direct-api.test-support";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const fixtures = createLatestSchemaFixtureTracker();
@@ -33,17 +40,57 @@ function mockTextFetch(body: string, status: number): void {
   mockFetch.mockImplementation(() => Promise.resolve(new Response(body, { status })));
 }
 
+function makeFluidEthRpcs() {
+  return new Map<string, ChainRpcConfig>([
+    ["ethereum", makeChainRpcConfig({
+      chainId: "ethereum",
+      chainName: "Ethereum",
+      rpcUrls: ["https://rpc.example"],
+      explorerUrl: "https://etherscan.io",
+    })],
+  ]);
+}
+
+function makeRaydiumPool(overrides: Record<string, unknown> = {}) {
+  return {
+    type: "Concentrated",
+    id: "pool1",
+    mintA: { address: "addr1", symbol: "USDC", decimals: 6 },
+    mintB: { address: "addr2", symbol: "USDT", decimals: 6 },
+    price: 1.0,
+    tvl: 100_000,
+    mintAmountA: 50_000,
+    mintAmountB: 50_000,
+    feeRate: 0.0001,
+    day: { volume: 5_000 },
+    ...overrides,
+  };
+}
+
+function raydiumPage(rows: unknown[]) {
+  return jsonResponse({ success: true, data: { count: rows.length, data: rows } });
+}
+
+function balancerTokens(a = "0xa", b = "0xb") {
+  return [
+    { address: a, symbol: "USDC", decimals: 6, balance: "50000", balanceUSD: "50000" },
+    { address: b, symbol: "USDT", decimals: 6, balance: "50000", balanceUSD: "50000" },
+  ];
+}
+
+function orcaResponse(data: unknown[], next: string | null = null) {
+  return { data, meta: { cursor: { next } } };
+}
 
 describe("fetchFluidPools", () => {
   const FLUID_POOL_ADDRESS = "0x1111111111111111111111111111111111111111";
 
-  afterEach(() => { mockFetch = createFetchMock([], { requireMatch: true }); });
+  afterEach(() => {
+    mockFetch = createFetchMock([], { requireMatch: true });
+  });
 
   it("fetches all chains and normalizes to DexApiPool[]", async () => {
-    mockJsonFetch([
-      makeFluidTicker(),
-    ]);
-
+    mockJsonFetch([makeFluidTicker()]);
     const pools = await fetchFluidPools();
     expect(pools.pools.length).toBeGreaterThan(0);
     expect(pools.ok).toBe(true);
@@ -51,7 +98,7 @@ describe("fetchFluidPools", () => {
     const pool = pools.pools[0];
     expect(pool.source).toBe("fluid");
     expect(pool.poolType).toBe("fluid-dex");
-    expect(pool.tvlUsd).toBe(500000);
+    expect(pool.tvlUsd).toBe(500_000);
     expect(pool.price).toBeCloseTo(0.9999);
     expect(pool.tokens).toHaveLength(2);
   });
@@ -60,89 +107,69 @@ describe("fetchFluidPools", () => {
     mockFetch.mockImplementation((input, init) => {
       const url = String(input);
       if (url === "https://api.fluid.instadapp.io/v2/1/dexes/stats/tickers") {
-        return Promise.resolve(jsonResponse([
-          makeFluidTicker(),
-        ]));
+        return Promise.resolve(jsonResponse([makeFluidTicker()]));
       }
       if (url.startsWith("https://api.fluid.instadapp.io/v2/")) {
         return Promise.resolve(jsonResponse([]));
       }
       if (url.includes("ethereum-rpc.publicnode.com") || url.includes("eth.llamarpc.com")) {
         const body = String(init?.body ?? "");
-        if (body.includes("0x957755e6")) {
-          return Promise.resolve(makeFluidRpcResponse([1_500_000, 500_000, 0, 0]));
-        }
-        if (body.includes("0x55181f11")) {
-          return Promise.resolve(makeFluidRpcResponse([0, 0, 500_000, 2_500_000, 0, 0]));
-        }
-        if (body.includes("0x42fcc6fb")) {
-          return Promise.resolve(makeFluidRpcResponse([100]));
-        }
+        if (body.includes("0x957755e6")) return Promise.resolve(makeFluidRpcResponse([1_500_000, 500_000, 0, 0]));
+        if (body.includes("0x55181f11")) return Promise.resolve(makeFluidRpcResponse([0, 0, 500_000, 2_500_000, 0, 0]));
+        if (body.includes("0x42fcc6fb")) return Promise.resolve(makeFluidRpcResponse([100]));
       }
       return Promise.resolve(new Response("unexpected", { status: 500 }));
     });
-
     const pools = await fetchFluidPools();
-    expect(pools.pools[0].balances).toEqual([2000000, 3000000]);
+    expect(pools.pools[0].balances).toEqual([2_000_000, 3_000_000]);
     expect(pools.pools[0].feeRate).toBeCloseTo(0.0001);
   });
 
-  it.each(["all", "collateral", "debt"])("keeps Fluid source healthy when retained-pool enrichment fails (%s)", async (failedRead) => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    mockFetch.mockImplementation((input, init) => {
-      const url = String(input);
-      if (url === "https://api.fluid.instadapp.io/v2/1/dexes/stats/tickers") {
-        return Promise.resolve(jsonResponse([
-          makeFluidTicker(),
-        ]));
-      }
-      if (url.startsWith("https://api.fluid.instadapp.io/v2/")) {
-        return Promise.resolve(jsonResponse([]));
-      }
-      if (url === "https://rpc.example") {
-        // Malformed bytes now become null at the strict RPC boundary. A single
-        // failed half must still follow the pre-existing enrichment failure path.
-        const body = String(init?.body ?? "");
-        if (failedRead !== "all") {
-          if (body.includes("0x957755e6") && failedRead !== "collateral") {
-            return Promise.resolve(makeFluidRpcResponse([1_500_000, 500_000, 0, 0]));
-          }
-          if (body.includes("0x55181f11") && failedRead !== "debt") {
-            return Promise.resolve(makeFluidRpcResponse([0, 0, 500_000, 2_500_000, 0, 0]));
-          }
-          if (body.includes("0x42fcc6fb")) return Promise.resolve(makeFluidRpcResponse([100]));
+  it.each(["all", "collateral", "debt"])(
+    "keeps Fluid source healthy when retained-pool enrichment fails (%s)",
+    async (failedRead) => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      mockFetch.mockImplementation((input, init) => {
+        const url = String(input);
+        if (url === "https://api.fluid.instadapp.io/v2/1/dexes/stats/tickers") {
+          return Promise.resolve(jsonResponse([makeFluidTicker()]));
         }
-        return Promise.resolve(jsonResponse({ jsonrpc: "2.0", id: 1, result: `0x${"z".repeat(64)}` }));
-      }
-      return Promise.resolve(new Response("unexpected", { status: 500 }));
-    });
+        if (url.startsWith("https://api.fluid.instadapp.io/v2/")) {
+          return Promise.resolve(jsonResponse([]));
+        }
+        if (url === "https://rpc.example") {
+          const body = String(init?.body ?? "");
+          if (failedRead !== "all") {
+            if (body.includes("0x957755e6") && failedRead !== "collateral") {
+              return Promise.resolve(makeFluidRpcResponse([1_500_000, 500_000, 0, 0]));
+            }
+            if (body.includes("0x55181f11") && failedRead !== "debt") {
+              return Promise.resolve(makeFluidRpcResponse([0, 0, 500_000, 2_500_000, 0, 0]));
+            }
+            if (body.includes("0x42fcc6fb")) return Promise.resolve(makeFluidRpcResponse([100]));
+          }
+          return Promise.resolve(jsonResponse({ jsonrpc: "2.0", id: 1, result: `0x${"z".repeat(64)}` }));
+        }
+        return Promise.resolve(new Response("unexpected", { status: 500 }));
+      });
 
-    const chainRpcs = new Map<string, ChainRpcConfig>([
-      ["ethereum", makeChainRpcConfig({
-        chainId: "ethereum",
-        chainName: "Ethereum",
-        rpcUrls: ["https://rpc.example"],
-        explorerUrl: "https://etherscan.io",
-      })],
-    ]);
-
-    const pools = await fetchFluidPools(undefined, chainRpcs);
-
-    expect(pools.pools.map((pool) => pool.poolAddress)).toEqual([FLUID_POOL_ADDRESS]);
-    expect(pools.pools[0]).toMatchObject({
-      balances: null,
-      feeRate: failedRead === "all" ? null : 0.0001,
-      tvlUsd: 500_000,
-      tokenVolumes24h: [100_000, 100_000],
-    });
-    expect(pools.ok).toBe(true);
-    expect(pools.degraded).toBe(false);
-    expect(pools.errors).toEqual([]);
-    expect(pools.warnings).toHaveLength(1);
-    expect(pools.warnings?.[0]).toContain("enrichment failed");
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("[fetch-fluid] Pool enrichment failed:"));
-    warnSpy.mockRestore();
-  });
+      const pools = await fetchFluidPools(undefined, makeFluidEthRpcs());
+      expect(pools.pools.map((pool) => pool.poolAddress)).toEqual([FLUID_POOL_ADDRESS]);
+      expect(pools.pools[0]).toMatchObject({
+        balances: null,
+        feeRate: failedRead === "all" ? null : 0.0001,
+        tvlUsd: 500_000,
+        tokenVolumes24h: [100_000, 100_000],
+      });
+      expect(pools.ok).toBe(true);
+      expect(pools.degraded).toBe(false);
+      expect(pools.errors).toEqual([]);
+      expect(pools.warnings).toHaveLength(1);
+      expect(pools.warnings?.[0]).toContain("enrichment failed");
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("[fetch-fluid] Pool enrichment failed:"));
+      warnSpy.mockRestore();
+    },
+  );
 
   it("skips malformed Fluid pool IDs while preserving valid pools", async () => {
     const malformedPoolAddress = "not-a-20-byte-hex-address";
@@ -151,16 +178,14 @@ describe("fetchFluidPools", () => {
       if (url === "https://api.fluid.instadapp.io/v2/1/dexes/stats/tickers") {
         return Promise.resolve(jsonResponse([
           makeFluidTicker(),
-          {
+          makeFluidTicker({
             ticker_id: "0xbroken_0xquote",
-            base_currency: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-            target_currency: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
             last_price: "1.0001",
             base_volume: "50000",
             target_volume: "50000",
             pool_id: malformedPoolAddress,
             liquidity_in_usd: "400000",
-          },
+          }),
         ]));
       }
       if (url.startsWith("https://api.fluid.instadapp.io/v2/")) {
@@ -168,34 +193,17 @@ describe("fetchFluidPools", () => {
       }
       if (url === "https://rpc.example") {
         const body = String(init?.body ?? "");
-        if (body.includes("0x957755e6")) {
-          return Promise.resolve(makeFluidRpcResponse([1_500_000, 500_000, 0, 0]));
-        }
-        if (body.includes("0x55181f11")) {
-          return Promise.resolve(makeFluidRpcResponse([0, 0, 500_000, 2_500_000, 0, 0]));
-        }
-        if (body.includes("0x42fcc6fb")) {
-          return Promise.resolve(makeFluidRpcResponse([100]));
-        }
+        if (body.includes("0x957755e6")) return Promise.resolve(makeFluidRpcResponse([1_500_000, 500_000, 0, 0]));
+        if (body.includes("0x55181f11")) return Promise.resolve(makeFluidRpcResponse([0, 0, 500_000, 2_500_000, 0, 0]));
+        if (body.includes("0x42fcc6fb")) return Promise.resolve(makeFluidRpcResponse([100]));
       }
       return Promise.resolve(new Response("unexpected", { status: 500 }));
     });
 
-    const chainRpcs = new Map<string, ChainRpcConfig>([
-      ["ethereum", makeChainRpcConfig({
-        chainId: "ethereum",
-        chainName: "Ethereum",
-        rpcUrls: ["https://rpc.example"],
-        explorerUrl: "https://etherscan.io",
-      })],
-    ]);
-
-    const pools = await fetchFluidPools(undefined, chainRpcs);
-
+    const pools = await fetchFluidPools(undefined, makeFluidEthRpcs());
     expect(pools.pools.map((pool) => pool.poolAddress)).toEqual([FLUID_POOL_ADDRESS]);
-    expect(pools.pools[0].balances).toEqual([2000000, 3000000]);
+    expect(pools.pools[0].balances).toEqual([2_000_000, 3_000_000]);
     expect(pools.ok).toBe(true);
-    // Cosmetic row-skip notes are warnings, not fetch-level degradation (w-dex:2).
     expect(pools.degraded).toBe(false);
     expect(pools.warnings?.[0]).toContain(malformedPoolAddress);
     expect(pools.warnings?.[0]).toContain("invalid EVM address");
@@ -208,255 +216,144 @@ describe("fetchFluidPools", () => {
       .mockRejectedValueOnce(new Error("network error"))
       .mockRejectedValueOnce(new Error("network error"))
       .mockImplementation(() => Promise.resolve(jsonResponse([])));
-
     const pools = await fetchFluidPools();
-    // Should not throw — partial failure is OK
     expect(Array.isArray(pools.pools)).toBe(true);
     expect(pools.ok).toBe(true);
     expect(pools.degraded).toBe(true);
   });
 
-  it("returns empty array on complete failure", async () => {
-    mockFetch.mockRejectedValue(new Error("all chains down"));
+  it.each([
+    { label: "complete failure", setup: () => mockFetch.mockRejectedValue(new Error("all chains down")) },
+    { label: "non-array response body", setup: () => mockJsonFetch({ error: "bad request" }) },
+    { label: "HTTP 500 error", setup: () => mockTextFetch("Server Error", 500) },
+  ])("returns empty degraded result on $label", async ({ setup }) => {
+    setup();
     const pools = await fetchFluidPools();
     expect(pools.pools).toHaveLength(0);
     expect(pools.ok).toBe(false);
     expect(pools.degraded).toBe(true);
   });
 
-  it("skips tickers with zero or invalid TVL", async () => {
+  it("skips tickers with zero/invalid TVL and nulls invalid price, feeRate, and balances", async () => {
     mockJsonFetch([
-      {
-        ticker_id: "tid",
-        base_currency: "0xa",
-        target_currency: "0xb",
-        last_price: "1.0",
-        base_volume: "100",
-        target_volume: "100",
-        pool_id: "0x3333333333333333333333333333333333333333",
-        liquidity_in_usd: "0",
-      },
-      {
-        ticker_id: "tid2",
-        base_currency: "0xc",
-        target_currency: "0xd",
-        last_price: "1.0",
-        base_volume: "100",
-        target_volume: "100",
-        pool_id: "0x4444444444444444444444444444444444444444",
-        liquidity_in_usd: "NaN",
-      },
+      makeFluidTicker({ pool_id: "0x3333333333333333333333333333333333333333", liquidity_in_usd: "0" }),
+      makeFluidTicker({ pool_id: "0x4444444444444444444444444444444444444444", liquidity_in_usd: "NaN" }),
     ]);
+    const empty = await fetchFluidPools();
+    expect(empty).toMatchObject({ pools: [], ok: true, degraded: false });
 
-    const pools = await fetchFluidPools();
-    expect(pools.pools).toHaveLength(0);
-    expect(pools.ok).toBe(true);
-    expect(pools.degraded).toBe(false);
-  });
-
-  it("sets price to null for invalid prices", async () => {
     mockJsonFetch([
-      {
-        ticker_id: "tid",
-        base_currency: "0xa",
-        target_currency: "0xb",
-        last_price: "not-a-number",
-        base_volume: "100",
-        target_volume: "100",
-        pool_id: "0x3333333333333333333333333333333333333333",
-        liquidity_in_usd: "100000",
-      },
+      makeFluidTicker({ pool_id: "0x3333333333333333333333333333333333333333", last_price: "not-a-number", liquidity_in_usd: "100000" }),
     ]);
-
-    const pools = await fetchFluidPools();
-    expect(pools.pools[0].price).toBeNull();
-  });
-
-  it("sets feeRate to null (Fluid API does not provide fee data)", async () => {
-    mockJsonFetch([
-      {
-        ticker_id: "tid",
-        base_currency: "0xa",
-        target_currency: "0xb",
-        last_price: "1.0",
-        base_volume: "100",
-        target_volume: "100",
-        pool_id: "0x3333333333333333333333333333333333333333",
-        liquidity_in_usd: "100000",
-      },
-    ]);
-
-    const pools = await fetchFluidPools();
-    expect(pools.pools[0].feeRate).toBeNull();
-    expect(pools.pools[0].balances).toBeNull();
-  });
-
-  it("handles non-array response body", async () => {
-    mockJsonFetch({ error: "bad request" });
-
-    const pools = await fetchFluidPools();
-    expect(pools.pools).toHaveLength(0);
-    expect(pools.ok).toBe(false);
-    expect(pools.degraded).toBe(true);
-  });
-
-  it("handles HTTP error status gracefully", async () => {
-    mockTextFetch("Server Error", 500);
-
-    const pools = await fetchFluidPools();
-    expect(pools.pools).toHaveLength(0);
-    expect(pools.ok).toBe(false);
-    expect(pools.degraded).toBe(true);
+    const invalidPrice = await fetchFluidPools();
+    expect(invalidPrice.pools[0]).toMatchObject({ price: null, feeRate: null, balances: null });
   });
 });
 
 describe("fetchBalancerPools", () => {
-  afterEach(() => { mockFetch = createFetchMock([], { requireMatch: true }); });
+  afterEach(() => {
+    mockFetch = createFetchMock([], { requireMatch: true });
+  });
 
-  it("fetches stable pools and classifies pool type", async () => {
+  it("fetches stable pools, prefers exact address over 32-byte vault id, and classifies weighted/stable variants", async () => {
     mockJsonFetch({
-      data: { poolGetPools: [{
-        id: "0xpool",
-        address: "0x0000000000000000000000000000000000000abc",
-        type: "STABLE",
-        chain: "MAINNET",
-        dynamicData: { totalLiquidity: "1000000", volume24h: "50000", swapFee: "0.0001" },
-        poolTokens: [
-          { address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", symbol: "USDC", decimals: 6, balance: "500000", balanceUSD: "500000" },
-          { address: "0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f", symbol: "GHO", decimals: 18, balance: "500000", balanceUSD: "500000" },
+      data: {
+        poolGetPools: [
+          makeBalancerPool({
+            id: "0x4e415957aa4fd703ad701e43ee5335d1d7891d8300020000000000000000053b",
+            address: "0x4e415957aa4fd703ad701e43ee5335d1d7891d83",
+            dynamicData: { totalLiquidity: "1000000", volume24h: "50000", swapFee: "0.0001" },
+            poolTokens: [
+              { address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", symbol: "USDC", decimals: 6, balance: "500000", balanceUSD: "500000" },
+              { address: "0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f", symbol: "GHO", decimals: 18, balance: "500000", balanceUSD: "500000" },
+            ],
+          }),
+          makeBalancerPool({
+            id: "0xweighted",
+            type: "WEIGHTED",
+            chain: "ARBITRUM",
+            dynamicData: { totalLiquidity: "200000", volume24h: "10000", swapFee: "0.003" },
+            poolTokens: balancerTokens("0xtoken1", "0xtoken2"),
+          }),
         ],
-      }]},
+      },
     });
-
     const pools = await fetchBalancerPools();
-    expect(pools.pools.length).toBe(1);
-    expect(pools.pools[0].source).toBe("balancer");
-    expect(pools.pools[0].poolType).toBe("balancer-stable");
-    expect(pools.pools[0].tvlUsd).toBe(1000000);
+    expect(pools.pools).toHaveLength(2);
+    expect(pools.pools[0]).toMatchObject({
+      source: "balancer",
+      poolType: "balancer-stable",
+      tvlUsd: 1_000_000,
+      poolAddress: "0x4e415957aa4fd703ad701e43ee5335d1d7891d83",
+      balances: [500_000, 500_000],
+      balancesNormalized: true,
+    });
     expect(pools.pools[0].feeRate).toBeCloseTo(0.0001);
-    expect(pools.pools[0].poolAddress).toBe("0x0000000000000000000000000000000000000abc");
-    expect(pools.pools[0].balances).toEqual([500000, 500000]);
-    expect(pools.pools[0].balancesNormalized).toBe(true);
-  });
+    expect(pools.pools[1].poolType).toBe("balancer-weighted");
 
-  it("uses the exact pool address exposed by the API instead of the 32-byte vault pool id", async () => {
-    mockJsonFetch({
-      data: { poolGetPools: [{
-        id: "0x4e415957aa4fd703ad701e43ee5335d1d7891d8300020000000000000000053b",
-        address: "0x4e415957aa4fd703ad701e43ee5335d1d7891d83",
-        type: "STABLE",
-        chain: "MAINNET",
-        dynamicData: { totalLiquidity: "100000", volume24h: "1000", swapFee: "0.0001" },
-        poolTokens: [
-          { address: "0xa", symbol: "USDC", decimals: 6, balance: "50000", balanceUSD: "50000" },
-          { address: "0xb", symbol: "USDT", decimals: 6, balance: "50000", balanceUSD: "50000" },
-        ],
-      }]},
-    });
-
-    const pools = await fetchBalancerPools();
-    expect(pools.pools[0].poolAddress).toBe("0x4e415957aa4fd703ad701e43ee5335d1d7891d83");
-  });
-
-  it("classifies WEIGHTED pools correctly", async () => {
-    mockJsonFetch({
-      data: { poolGetPools: [{
-        id: "0xweighted",
-        type: "WEIGHTED",
-        chain: "ARBITRUM",
-        dynamicData: { totalLiquidity: "200000", volume24h: "10000", swapFee: "0.003" },
-        poolTokens: [
-          { address: "0xtoken1", symbol: "USDC", decimals: 6, balance: "100000", balanceUSD: "100000" },
-          { address: "0xtoken2", symbol: "WETH", decimals: 18, balance: "50", balanceUSD: "100000" },
-        ],
-      }]},
-    });
-
-    const pools = await fetchBalancerPools();
-    expect(pools.pools[0].poolType).toBe("balancer-weighted");
-  });
-
-  it("classifies all stable pool variants as balancer-stable", async () => {
     const stableTypes = ["STABLE", "COMPOSABLE_STABLE", "META_STABLE", "PHANTOM_STABLE", "GYRO", "GYROE"];
-    const poolData = stableTypes.map((type, i) => ({
-      id: `0xpool${i}`,
-      type,
-      chain: "MAINNET",
-      dynamicData: { totalLiquidity: "100000", volume24h: "1000", swapFee: "0.0001" },
-      poolTokens: [
-        { address: `0xtoken${i}a`, symbol: "USDC", decimals: 6, balance: "50000", balanceUSD: "50000" },
-        { address: `0xtoken${i}b`, symbol: "USDT", decimals: 6, balance: "50000", balanceUSD: "50000" },
-      ],
-    }));
-
-    mockJsonFetch({ data: { poolGetPools: poolData } });
-
-    const pools = await fetchBalancerPools();
-    expect(pools.pools).toHaveLength(stableTypes.length);
-    for (const pool of pools.pools) {
+    mockJsonFetch({
+      data: {
+        poolGetPools: stableTypes.map((type, i) => makeBalancerPool({
+          id: `0xpool${i}`,
+          type,
+          poolTokens: balancerTokens(`0xtoken${i}a`, `0xtoken${i}b`),
+        })),
+      },
+    });
+    const stableResult = await fetchBalancerPools();
+    expect(stableResult.pools).toHaveLength(stableTypes.length);
+    for (const pool of stableResult.pools) {
       expect(pool.poolType).toBe("balancer-stable");
     }
   });
 
-  it("derives per-token priceUsd from balanceUSD / balance", async () => {
+  it("derives per-token priceUsd, nulls zero-balance prices, and maps chain enums", async () => {
     mockJsonFetch({
-      data: { poolGetPools: [{
-        id: "0xpool",
-        type: "STABLE",
-        chain: "MAINNET",
-        dynamicData: { totalLiquidity: "200000", volume24h: "5000", swapFee: "0.0001" },
-        poolTokens: [
-          { address: "0xa", symbol: "USDC", decimals: 6, balance: "100000", balanceUSD: "100050" },
-          { address: "0xb", symbol: "DAI", decimals: 18, balance: "99950", balanceUSD: "99950" },
+      data: {
+        poolGetPools: [
+          makeBalancerPool({
+            id: "0xp1",
+            chain: "MAINNET",
+            poolTokens: [
+              { address: "0xa", symbol: "USDC", decimals: 6, balance: "100000", balanceUSD: "100050" },
+              { address: "0xb", symbol: "DAI", decimals: 18, balance: "99950", balanceUSD: "99950" },
+            ],
+          }),
+          makeBalancerPool({
+            id: "0xp2",
+            chain: "POLYGON",
+            poolTokens: [
+              { address: "0xa", symbol: "USDC", decimals: 6, balance: "0", balanceUSD: "0" },
+              { address: "0xb", symbol: "DAI", decimals: 18, balance: "50000", balanceUSD: "50000" },
+            ],
+          }),
         ],
-      }]},
+      },
     });
-
     const pools = await fetchBalancerPools();
-    expect(pools.pools[0].tokens[0].priceUsd).toBeCloseTo(100050 / 100000);
-    expect(pools.pools[0].tokens[1].priceUsd).toBeCloseTo(99950 / 99950);
-  });
-
-  it("sets token priceUsd to null when balance is zero", async () => {
-    mockJsonFetch({
-      data: { poolGetPools: [{
-        id: "0xpool",
-        type: "STABLE",
-        chain: "MAINNET",
-        dynamicData: { totalLiquidity: "50000", volume24h: "0", swapFee: "0.0001" },
-        poolTokens: [
-          { address: "0xa", symbol: "USDC", decimals: 6, balance: "0", balanceUSD: "0" },
-          { address: "0xb", symbol: "DAI", decimals: 18, balance: "50000", balanceUSD: "50000" },
-        ],
-      }]},
-    });
-
-    const pools = await fetchBalancerPools();
-    expect(pools.pools[0].tokens[0].priceUsd).toBeNull();
+    expect(pools.pools[0].chain).toBe("ethereum");
+    expect(pools.pools[0].tokens[0].priceUsd).toBeCloseTo(100_050 / 100_000);
     expect(pools.pools[0].tokens[1].priceUsd).toBeCloseTo(1.0);
+    expect(pools.pools[1].chain).toBe("polygon");
+    expect(pools.pools[1].tokens[0].priceUsd).toBeNull();
+    expect(pools.pools[1].tokens[1].priceUsd).toBeCloseTo(1.0);
   });
 
   it("paginates through multiple pages", async () => {
-    // Page 1: full page (1000 items)
-    const page1 = Array.from({ length: 1000 }, (_, i) => (makeBalancerPool({ id: `0xpool${i}`, type: "STABLE", poolTokens: [
-      { address: `0xa${i}`, symbol: "USDC", decimals: 6, balance: "50000", balanceUSD: "50000" },
-      { address: `0xb${i}`, symbol: "USDT", decimals: 6, balance: "50000", balanceUSD: "50000" },
-    ] })));
-    // Page 2: partial page (1 item) — signals end
-    const page2 = [{
+    const page1 = Array.from({ length: 1000 }, (_, i) => makeBalancerPool({
+      id: `0xpool${i}`,
+      poolTokens: balancerTokens(`0xa${i}`, `0xb${i}`),
+    }));
+    const page2 = [makeBalancerPool({
       id: "0xpoolLast",
       type: "WEIGHTED",
       chain: "BASE",
-      dynamicData: { totalLiquidity: "50000", volume24h: "500", swapFee: "0.003" },
-      poolTokens: [
-        { address: "0xlast1", symbol: "USDC", decimals: 6, balance: "25000", balanceUSD: "25000" },
-        { address: "0xlast2", symbol: "WETH", decimals: 18, balance: "10", balanceUSD: "25000" },
-      ],
-    }];
-
+      poolTokens: balancerTokens("0xlast1", "0xlast2"),
+    })];
     mockFetch
-      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { poolGetPools: page1 } })))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { poolGetPools: page2 } })))
+      .mockResolvedValueOnce(jsonResponse({ data: { poolGetPools: page1 } }))
+      .mockResolvedValueOnce(jsonResponse({ data: { poolGetPools: page2 } }))
       .mockResolvedValueOnce(new Response(null, { status: 404 }));
 
     const pools = await fetchBalancerPools();
@@ -464,246 +361,107 @@ describe("fetchBalancerPools", () => {
     expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 
-  it("skips pools with unknown chain", async () => {
-    mockJsonFetch({
-      data: { poolGetPools: [{
-        id: "0xpool",
-        type: "STABLE",
-        chain: "UNKNOWN_CHAIN",
-        dynamicData: { totalLiquidity: "100000", volume24h: "1000", swapFee: "0.0001" },
-        poolTokens: [
-          { address: "0xa", symbol: "USDC", decimals: 6, balance: "50000", balanceUSD: "50000" },
-        ],
-      }]},
-    });
-
+  it.each([
+    { label: "unknown chain", pool: makeBalancerPool({ id: "0xpool", chain: "UNKNOWN_CHAIN", poolTokens: balancerTokens().slice(0, 1) }) },
+    { label: "zero TVL", pool: makeBalancerPool({ id: "0xpool", dynamicData: { totalLiquidity: "0", volume24h: "0", swapFee: "0.0001" }, poolTokens: balancerTokens().slice(0, 1) }) },
+  ])("skips pools with $label without degrading", async ({ pool }) => {
+    mockJsonFetch({ data: { poolGetPools: [pool] } });
     const pools = await fetchBalancerPools();
-    expect(pools.pools).toHaveLength(0);
-    expect(pools.ok).toBe(true);
-    expect(pools.degraded).toBe(false);
+    expect(pools).toMatchObject({ pools: [], ok: true, degraded: false });
   });
 
-  it("skips pools with zero TVL", async () => {
-    mockJsonFetch({
-      data: { poolGetPools: [{
-        id: "0xpool",
-        type: "STABLE",
-        chain: "MAINNET",
-        dynamicData: { totalLiquidity: "0", volume24h: "0", swapFee: "0.0001" },
-        poolTokens: [
-          { address: "0xa", symbol: "USDC", decimals: 6, balance: "0", balanceUSD: "0" },
-        ],
-      }]},
-    });
-
+  it.each([
+    { label: "HTTP 500", setup: () => mockTextFetch("Internal Server Error", 500), err: undefined },
+    { label: "missing poolGetPools", setup: () => mockJsonFetch({ data: {} }), err: undefined },
+    { label: "invalid JSON", setup: () => mockFetch.mockResolvedValueOnce(new Response("{bad-json", { status: 200 })), err: "invalid JSON" },
+    { label: "null JSON root", setup: () => mockFetch.mockResolvedValueOnce(new Response("null", { status: 200 })), err: "non-object JSON root" },
+  ])("returns degraded empty result on $label", async ({ setup, err }) => {
+    setup();
     const pools = await fetchBalancerPools();
-    expect(pools.pools).toHaveLength(0);
-    expect(pools.ok).toBe(true);
-    expect(pools.degraded).toBe(false);
-  });
-
-  it("returns empty array when API returns error status", async () => {
-    mockTextFetch("Internal Server Error", 500);
-    const pools = await fetchBalancerPools();
-    expect(pools.pools).toHaveLength(0);
-    expect(pools.ok).toBe(false);
-    expect(pools.degraded).toBe(true);
-  });
-
-  it("returns empty array when response has no poolGetPools", async () => {
-    mockJsonFetch({ data: {} });
-    const pools = await fetchBalancerPools();
-    expect(pools.pools).toHaveLength(0);
-    expect(pools.ok).toBe(false);
-    expect(pools.degraded).toBe(true);
-  });
-
-  it("returns a degraded result when Balancer returns invalid JSON", async () => {
-    mockFetch.mockResolvedValueOnce(new Response("{bad-json", { status: 200 }));
-
-    const pools = await fetchBalancerPools();
-
-    expect(pools.pools).toHaveLength(0);
-    expect(pools.ok).toBe(false);
-    expect(pools.degraded).toBe(true);
-    expect(pools.errors[0]).toContain("invalid JSON");
-  });
-
-  it("returns a degraded result when Balancer returns a null root", async () => {
-    mockFetch.mockResolvedValueOnce(new Response("null", { status: 200 }));
-
-    const pools = await fetchBalancerPools();
-
-    expect(pools.pools).toHaveLength(0);
-    expect(pools.ok).toBe(false);
-    expect(pools.degraded).toBe(true);
-    expect(pools.errors[0]).toContain("non-object JSON root");
+    expect(pools).toMatchObject({ pools: [], ok: false, degraded: true });
+    if (err) expect(pools.errors[0]).toContain(err);
   });
 
   it("skips malformed Balancer pool rows while preserving valid rows from the same page", async () => {
     mockJsonFetch({
-      data: { poolGetPools: [
-        {
-          id: "0xbroken",
-          type: "STABLE",
-          chain: "MAINNET",
-          poolTokens: [
-            { address: "0xa", symbol: "USDC", decimals: 6, balance: "50000", balanceUSD: "50000" },
-          ],
-        },
-        makeBalancerPool({ id: "0xvalid", type: "STABLE", poolTokens: [
-          { address: "0xb", symbol: "USDT", decimals: 6, balance: "50000", balanceUSD: "50000" },
-          { address: "0xc", symbol: "DAI", decimals: 18, balance: "50000", balanceUSD: "50000" },
-        ] }),
-      ]},
+      data: {
+        poolGetPools: [
+          { id: "0xbroken", type: "STABLE", chain: "MAINNET", poolTokens: balancerTokens().slice(0, 1) },
+          makeBalancerPool({ id: "0xvalid", poolTokens: balancerTokens("0xb", "0xc") }),
+        ],
+      },
     });
-
     const pools = await fetchBalancerPools();
-
-    expect(pools.ok).toBe(true);
-    // Cosmetic row-skip notes are warnings, not fetch-level degradation (w-dex:2).
-    expect(pools.degraded).toBe(false);
+    expect(pools).toMatchObject({ ok: true, degraded: false });
     expect(pools.pools).toHaveLength(1);
     expect(pools.pools[0].poolAddress).toBe("0xvalid");
     expect(pools.warnings).toContain("page 1 skipped 1 malformed pool rows");
   });
-
-  it("maps Balancer chain enums to internal chain names", async () => {
-    mockJsonFetch({
-      data: { poolGetPools: [
-        {
-          id: "0xp1", type: "STABLE", chain: "MAINNET",
-          dynamicData: { totalLiquidity: "100000", volume24h: "0", swapFee: "0.0001" },
-          poolTokens: [{ address: "0xa", symbol: "X", decimals: 6, balance: "50000", balanceUSD: "50000" }],
-        },
-        {
-          id: "0xp2", type: "STABLE", chain: "POLYGON",
-          dynamicData: { totalLiquidity: "100000", volume24h: "0", swapFee: "0.0001" },
-          poolTokens: [{ address: "0xb", symbol: "Y", decimals: 6, balance: "50000", balanceUSD: "50000" }],
-        },
-      ]},
-    });
-
-    const pools = await fetchBalancerPools();
-    expect(pools.pools[0].chain).toBe("ethereum");
-    expect(pools.pools[1].chain).toBe("polygon");
-  });
 });
 
 describe("fetchRaydiumPools", () => {
-  afterEach(() => { mockFetch = createFetchMock([], { requireMatch: true }); });
+  afterEach(() => {
+    mockFetch = createFetchMock([], { requireMatch: true });
+  });
 
-  it("fetches concentrated pools and maps to DexApiPool", async () => {
+  it("fetches concentrated and standard pools, maps to solana, and nulls zero prices", async () => {
     mockFetch
-      .mockResolvedValueOnce(jsonResponse({
-        success: true,
-        data: { count: 1, data: [{
-          type: "Concentrated",
+      .mockResolvedValueOnce(raydiumPage([
+        makeRaydiumPool({
           id: "poolAddr1",
-          mintA: { address: "USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA", symbol: "USDS", decimals: 6 },
-          mintB: { address: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", symbol: "USDC", decimals: 6 },
           price: 0.9999,
-          tvl: 42000000,
-          mintAmountA: 20000000,
-          mintAmountB: 22000000,
-          feeRate: 0.0001,
-          day: { volume: 2000000 },
-        }]},
-      }))
-      .mockResolvedValueOnce(jsonResponse({
-        success: true,
-        data: { count: 0, data: [] },
-      }));
+          tvl: 42_000_000,
+          mintAmountA: 20_000_000,
+          mintAmountB: 22_000_000,
+          day: { volume: 2_000_000 },
+        }),
+        makeRaydiumPool({ id: "zeroPrice", price: 0 }),
+      ]))
+      .mockResolvedValueOnce(raydiumPage([
+        makeRaydiumPool({ type: "Standard", id: "stdPool", price: 1.0001, feeRate: 0.0025 }),
+      ]));
 
     const pools = await fetchRaydiumPools();
-    expect(pools.pools.length).toBe(1);
-    expect(pools.pools[0].source).toBe("raydium");
-    expect(pools.pools[0].poolType).toBe("raydium-clmm");
-    expect(pools.pools[0].tvlUsd).toBe(42000000);
-    expect(pools.pools[0].price).toBeCloseTo(0.9999);
-    expect(pools.pools[0].balances).toEqual([20000000, 22000000]);
-  });
-
-  it("classifies standard pools as raydium-amm", async () => {
-    // First call for concentrated returns empty, second for standard returns pool
-    mockFetch
-      .mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: { count: 0, data: [] } })))
-      .mockResolvedValueOnce(new Response(JSON.stringify({
-        success: true,
-        data: { count: 1, data: [{
-          type: "Standard",
-          id: "stdPool",
-          mintA: { address: "addr1", symbol: "USDC", decimals: 6 },
-          mintB: { address: "addr2", symbol: "USDT", decimals: 6 },
-          price: 1.0001,
-          tvl: 100000,
-          mintAmountA: 50000,
-          mintAmountB: 50000,
-          feeRate: 0.0025,
-          day: { volume: 5000 },
-        }]},
-      })));
-
-    const pools = await fetchRaydiumPools();
-    const std = pools.pools.find((p) => p.poolType === "raydium-amm");
-    expect(std).toBeDefined();
-    expect(std?.balancesNormalized).toBe(true);
-  });
-
-  it("sets chain to solana for all pools", async () => {
-    mockJsonFetch({
-      success: true,
-      data: { count: 1, data: [{
-        type: "Concentrated",
-        id: "pool1",
-        mintA: { address: "addr1", symbol: "USDC", decimals: 6 },
-        mintB: { address: "addr2", symbol: "USDT", decimals: 6 },
-        price: 1.0,
-        tvl: 500000,
-        mintAmountA: 250000,
-        mintAmountB: 250000,
-        feeRate: 0.0001,
-        day: { volume: 10000 },
-      }]},
+    expect(pools.pools).toHaveLength(3);
+    expect(pools.pools[0]).toMatchObject({
+      source: "raydium",
+      chain: "solana",
+      poolType: "raydium-clmm",
+      tvlUsd: 42_000_000,
+      balances: [20_000_000, 22_000_000],
     });
-
-    const pools = await fetchRaydiumPools();
-    expect(pools.pools[0].chain).toBe("solana");
+    expect(pools.pools[0].price).toBeCloseTo(0.9999);
+    expect(pools.pools[1].price).toBeNull();
+    expect(pools.pools[2]).toMatchObject({
+      chain: "solana",
+      poolType: "raydium-amm",
+      balancesNormalized: true,
+    });
   });
 
   it("filters low-TVL rows on a short page", async () => {
     mockJsonFetch({
       success: true,
-      data: { count: 2, data: [
-        {
-          type: "Concentrated", id: "pool1",
-          mintA: { address: "a1", symbol: "USDC", decimals: 6 },
-          mintB: { address: "b1", symbol: "USDT", decimals: 6 },
-          price: 1.0, tvl: 50000, mintAmountA: 25000, mintAmountB: 25000,
-          feeRate: 0.0001, day: { volume: 1000 },
-        },
-        {
-          type: "Concentrated", id: "pool2",
-          mintA: { address: "a2", symbol: "USDC", decimals: 6 },
-          mintB: { address: "b2", symbol: "DAI", decimals: 18 },
-          price: 1.0, tvl: 5000, mintAmountA: 2500, mintAmountB: 2500,
-          feeRate: 0.0001, day: { volume: 100 },
-        },
-      ]},
+      data: {
+        count: 2,
+        data: [
+          makeRaydiumPool({ id: "pool1", tvl: 50_000 }),
+          makeRaydiumPool({ id: "pool2", tvl: 5_000 }),
+        ],
+      },
     });
-
     const pools = await fetchRaydiumPools();
-    // Short pages stop normally; low-TVL rows are excluded independently.
     const clmm = pools.pools.filter((p) => p.poolType === "raydium-clmm");
     expect(clmm).toHaveLength(1);
-    expect(clmm[0].tvlUsd).toBe(50000);
+    expect(clmm[0].tvlUsd).toBe(50_000);
   });
 
   it.each([
     { eligiblePages: [1], expectedPages: [1, 2, 3] },
     { eligiblePages: [1, 3], expectedPages: [1, 2, 3, 4, 5] },
   ])("stops after two consecutive full low-TVL pages, resetting on eligibility: $eligiblePages", async ({
-    eligiblePages, expectedPages,
+    eligiblePages,
+    expectedPages,
   }) => {
     const requested: Record<string, number[]> = { concentrated: [], standard: [] };
     mockFetch.mockImplementation(async (input) => {
@@ -714,14 +472,12 @@ describe("fetchRaydiumPools", () => {
         throw new Error(`Unexpected request: ${url}`);
       }
       requested[type].push(page);
-      const rows = type === "standard" || page > expectedPages.length ? [] :
-        Array.from({ length: 1000 }, (_, index) => ({
-          type: "Concentrated", id: `page-${page}-row-${index}`,
-          mintA: { address: "a", symbol: "USDC", decimals: 6 },
-          mintB: { address: "b", symbol: "USDT", decimals: 6 },
-          price: 1, tvl: eligiblePages.includes(page) && index === 0 ? 50_000 : 5_000,
-          mintAmountA: 2500, mintAmountB: 2500, feeRate: 0.0001, day: { volume: 100 },
-        }));
+      const rows = type === "standard" || page > expectedPages.length
+        ? []
+        : Array.from({ length: 1000 }, (_, index) => makeRaydiumPool({
+            id: `page-${page}-row-${index}`,
+            tvl: eligiblePages.includes(page) && index === 0 ? 50_000 : 5_000,
+          }));
       return jsonResponse({ success: true, data: { data: rows } });
     });
     const result = await fetchRaydiumPools();
@@ -730,241 +486,126 @@ describe("fetchRaydiumPools", () => {
     expect(result.degraded).toBe(false);
   });
 
-  it("handles complete API failure gracefully", async () => {
-    mockFetch.mockRejectedValue(new Error("network error"));
+  it.each([
+    { label: "network error", setup: () => mockFetch.mockRejectedValue(new Error("network error")), err: undefined },
+    { label: "HTTP 503", setup: () => mockTextFetch("error", 503), err: undefined },
+    { label: "null data body", setup: () => mockJsonFetch({ success: true, data: null }), err: undefined },
+    { label: "null JSON root", setup: () => mockFetch.mockImplementation(() => Promise.resolve(new Response("null", { status: 200 }))), err: "non-object JSON root" },
+  ])("handles $label gracefully", async ({ setup, err }) => {
+    setup();
     const pools = await fetchRaydiumPools();
-    expect(pools.pools).toHaveLength(0);
-    expect(pools.ok).toBe(false);
-    expect(pools.degraded).toBe(true);
-  });
-
-  it("handles HTTP error status", async () => {
-    mockTextFetch("error", 503);
-    const pools = await fetchRaydiumPools();
-    expect(pools.pools).toHaveLength(0);
-    expect(pools.ok).toBe(false);
-    expect(pools.degraded).toBe(true);
-  });
-
-  it("handles malformed response body", async () => {
-    mockJsonFetch({ success: true, data: null });
-    const pools = await fetchRaydiumPools();
-    expect(pools.pools).toHaveLength(0);
-    expect(pools.ok).toBe(false);
-    expect(pools.degraded).toBe(true);
+    expect(pools).toMatchObject({ pools: [], ok: false, degraded: true });
+    if (err) expect(pools.errors.every((error) => error.includes(err))).toBe(true);
   });
 
   it("preserves Raydium standard pools when concentrated returns invalid JSON", async () => {
     mockFetch
       .mockResolvedValueOnce(new Response("{bad-json", { status: 200 }))
-      .mockResolvedValueOnce(jsonResponse({
-        success: true,
-        data: { count: 1, data: [{
-          type: "Standard",
-          id: "stdPool",
-          mintA: { address: "addr1", symbol: "USDC", decimals: 6 },
-          mintB: { address: "addr2", symbol: "USDT", decimals: 6 },
-          price: 1.0001,
-          tvl: 100000,
-          mintAmountA: 50000,
-          mintAmountB: 50000,
-          feeRate: 0.0025,
-          day: { volume: 5000 },
-        }]},
-      }));
+      .mockResolvedValueOnce(raydiumPage([makeRaydiumPool({ type: "Standard", id: "stdPool", price: 1.0001, feeRate: 0.0025 })]));
 
     const pools = await fetchRaydiumPools();
-
-    expect(pools.ok).toBe(true);
-    expect(pools.degraded).toBe(true);
+    expect(pools).toMatchObject({ ok: true, degraded: true });
     expect(pools.pools).toHaveLength(1);
     expect(pools.pools[0].poolType).toBe("raydium-amm");
     expect(pools.errors.some((error) => error.includes("invalid JSON"))).toBe(true);
   });
 
-  it("returns a degraded result when Raydium returns a null root", async () => {
-    mockFetch.mockImplementation(() => Promise.resolve(new Response("null", { status: 200 })));
-
-    const pools = await fetchRaydiumPools();
-
-    expect(pools.pools).toHaveLength(0);
-    expect(pools.ok).toBe(false);
-    expect(pools.degraded).toBe(true);
-    expect(pools.errors.every((error) => error.includes("non-object JSON root"))).toBe(true);
-  });
-
   it("skips malformed Raydium pool rows while preserving valid rows from the same page", async () => {
+    const broken = makeRaydiumPool({ id: "brokenPool" });
+    delete (broken as Record<string, unknown>).mintA;
     mockFetch
-      .mockResolvedValueOnce(jsonResponse({
-        success: true,
-        data: { count: 2, data: [
-          {
-            type: "Concentrated",
-            id: "brokenPool",
-            mintB: { address: "addr2", symbol: "USDT", decimals: 6 },
-            price: 1.0,
-            tvl: 100000,
-            mintAmountA: 50000,
-            mintAmountB: 50000,
-            feeRate: 0.0001,
-            day: { volume: 5000 },
-          },
-          {
-            type: "Concentrated",
-            id: "validPool",
-            mintA: { address: "addr1", symbol: "USDC", decimals: 6 },
-            mintB: { address: "addr2", symbol: "USDT", decimals: 6 },
-            price: 1.0,
-            tvl: 100000,
-            mintAmountA: 50000,
-            mintAmountB: 50000,
-            feeRate: 0.0001,
-            day: { volume: 5000 },
-          },
-        ]},
-      }))
-      .mockResolvedValueOnce(jsonResponse({
-        success: true,
-        data: { count: 0, data: [] },
-      }));
+      .mockResolvedValueOnce(raydiumPage([broken, makeRaydiumPool({ id: "validPool" })]))
+      .mockResolvedValueOnce(raydiumPage([]));
 
     const pools = await fetchRaydiumPools();
-
     expect(pools.ok).toBe(true);
     expect(pools.pools).toHaveLength(1);
     expect(pools.pools[0].poolAddress).toBe("validPool");
     expect(pools.physicalPoolCensus).toEqual({
-      exactPoolKeys: ["solana:brokenPool", "solana:validPool"], incompleteChains: [],
+      exactPoolKeys: ["solana:brokenPool", "solana:validPool"],
+      incompleteChains: [],
     });
   });
 
-  it.each([true, false])("preserves raw Raydium confirmation keys and withholds damaged census authority (identity %s)", async (hasIdentity) => {
-    mockFetch.mockResolvedValueOnce(jsonResponse({
-      success: true, data: { data: [
-        { id: hasIdentity ? "brokenPool" : "", tvl: 100000 },
-        { id: "validPool", tvl: 100000, mintA: { address: "a", symbol: "A", decimals: 6 },
-          mintB: { address: "b", symbol: "B", decimals: 6 }, day: { volume: 5000 } },
-      ] },
-    })).mockResolvedValueOnce(jsonResponse({ success: true, data: { data: [] } }));
-    const result = await fetchRaydiumPools();
-    expect(result.pools).toHaveLength(1);
-    const phase = await fetchDirectApiFixture(({
-      results: [{ name: "Raydium", circuitKey: "raydium", normalizedProtocol: "raydium",
-        supportedChains: ["solana"], censusScope: "exhaustive" as const, result }],
-      failedSources: [], degradedSources: [], attemptedProtocolChains: [], fallbackSignals: [],
-      sourceWarnings: [], circuitEvents: [],
-    }).results, { chainAddressToId: new Map(), symbolToChainScopedIds: new Map(), contractMetaByChainAddress: new Map() });
-    const index = buildAuthoritativeStagedPoolConfirmationIndex(phase.results);
-    expect(index.enforcedChainsByProtocol.get("raydium")?.has("solana") ?? false).toBe(hasIdentity);
-    expect(index.confirmedExactKeysByProtocol.get("raydium")?.has("solana:brokenPool") ?? false).toBe(hasIdentity);
-  });
+  it.each([true, false])(
+    "preserves raw Raydium confirmation keys and withholds damaged census authority (identity %s)",
+    async (hasIdentity) => {
+      mockFetch
+        .mockResolvedValueOnce(raydiumPage([
+          { id: hasIdentity ? "brokenPool" : "", tvl: 100_000 },
+          makeRaydiumPool({ id: "validPool" }),
+        ]))
+        .mockResolvedValueOnce(raydiumPage([]));
+      const result = await fetchRaydiumPools();
+      expect(result.pools).toHaveLength(1);
+      const phase = await fetchDirectApiFixture(
+        [{ name: "Raydium", circuitKey: "raydium", normalizedProtocol: "raydium", supportedChains: ["solana"], censusScope: "exhaustive", result }],
+        { chainAddressToId: new Map(), symbolToChainScopedIds: new Map(), contractMetaByChainAddress: new Map() },
+      );
+      const index = buildAuthoritativeStagedPoolConfirmationIndex(phase.results);
+      expect(index.enforcedChainsByProtocol.get("raydium")?.has("solana") ?? false).toBe(hasIdentity);
+      expect(index.confirmedExactKeysByProtocol.get("raydium")?.has("solana:brokenPool") ?? false).toBe(hasIdentity);
+    },
+  );
 
   it("never infers exhausted Raydium coverage from full pages with unreadable TVL", async () => {
     mockFetch.mockImplementation(async (input) => {
       const url = new URL(String(input));
       const page = Number(url.searchParams.get("page"));
-      const rows = url.searchParams.get("poolType") === "standard" ? []
-        : page <= 2 ? Array.from({ length: 1000 }, (_, index) => ({ id: `unknown-${page}-${index}`, tvl: "unknown" }))
-          : [{ id: "late-valid", tvl: 100000, mintA: { address: "a", symbol: "A", decimals: 6 },
-            mintB: { address: "b", symbol: "B", decimals: 6 }, day: { volume: 5000 } }];
+      const rows = url.searchParams.get("poolType") === "standard"
+        ? []
+        : page <= 2
+          ? Array.from({ length: 1000 }, (_, index) => ({ id: `unknown-${page}-${index}`, tvl: "unknown" }))
+          : [makeRaydiumPool({ id: "late-valid" })];
       return jsonResponse({ success: true, data: { data: rows } });
     });
     const result = await fetchRaydiumPools();
     expect(result.pools.map((pool) => pool.poolAddress)).toEqual(["late-valid"]);
     expect(result.physicalPoolCensus?.exactPoolKeys).toContain("solana:late-valid");
-    expect(mockFetch.mock.calls.filter(([url]) => String(url).includes("poolType=concentrated")))
-      .toHaveLength(3);
-  });
-
-  it("sets price to null when pool price is zero", async () => {
-    mockJsonFetch({
-      success: true,
-      data: { count: 1, data: [{
-        type: "Concentrated", id: "pool1",
-        mintA: { address: "a", symbol: "X", decimals: 6 },
-        mintB: { address: "b", symbol: "Y", decimals: 6 },
-        price: 0, tvl: 100000, mintAmountA: 50000, mintAmountB: 50000,
-        feeRate: 0.001, day: { volume: 1000 },
-      }]},
-    });
-
-    const pools = await fetchRaydiumPools();
-    expect(pools.pools[0].price).toBeNull();
+    expect(mockFetch.mock.calls.filter(([url]) => String(url).includes("poolType=concentrated"))).toHaveLength(3);
   });
 });
 
 describe("fetchOrcaPools", () => {
-  afterEach(() => { mockFetch = createFetchMock([], { requireMatch: true }); });
+  afterEach(() => {
+    mockFetch = createFetchMock([], { requireMatch: true });
+  });
 
-  it("fetches whirlpools and normalizes to DexApiPool", async () => {
-    mockJsonFetch({
-      data: [{
-        address: "9tXiuRRw7kbejLhZXtxDxYs2REe43uH2e7k1kocgdM9B",
+  it("fetches whirlpools, parses string balances, and nulls invalid price strings", async () => {
+    mockJsonFetch(orcaResponse([
+      makeOrcaPool("9tXiuRRw7kbejLhZXtxDxYs2REe43uH2e7k1kocgdM9B", {
         price: "0.99991840037040574739",
         tvlUsdc: "29901161.1424620915653082",
-        feeRate: 100,
-        tokenA: { address: "mint1", symbol: "PYUSD", decimals: 6 },
-        tokenB: { address: "mint2", symbol: "USDC", decimals: 6 },
-        tokenBalanceA: "17723442437577",
-        tokenBalanceB: "12182931105377",
+        tokenBalanceA: "250000500000",
+        tokenBalanceB: "249999500000",
         stats: { "24h": { volume: "1635006.18" } },
-      }],
-      meta: { cursor: { next: null } },
-    });
+      }),
+      makeOrcaPool("invalidPricePool", { price: "invalid" }),
+    ]));
 
     const pools = await fetchOrcaPools();
-    expect(pools.pools.length).toBe(1);
-    expect(pools.pools[0].source).toBe("orca");
-    expect(pools.pools[0].poolType).toBe("orca-whirlpool");
+    expect(pools.pools).toHaveLength(2);
+    expect(pools.pools[0]).toMatchObject({
+      source: "orca",
+      poolType: "orca-whirlpool",
+      balances: [250_000.5, 249_999.5],
+    });
     expect(pools.pools[0].price).toBeCloseTo(0.9999184);
-    expect(pools.pools[0].tvlUsd).toBeCloseTo(29901161.14);
-    expect(pools.pools[0].feeRate).toBeCloseTo(0.0001); // 100 / 1_000_000
+    expect(pools.pools[0].tvlUsd).toBeCloseTo(29_901_161.14);
+    expect(pools.pools[0].feeRate).toBeCloseTo(0.0001);
+    expect(pools.pools[1].price).toBeNull();
   });
 
   it("skips malformed Orca pool rows while preserving valid rows from the same page", async () => {
-    mockJsonFetch({
-      data: [
-        {
-          address: "brokenPoolMissingToken",
-          price: "1.0",
-          tvlUsdc: "100000",
-          feeRate: 100,
-          tokenB: { address: "mintB", symbol: "USDT", decimals: 6 },
-          tokenBalanceA: "50000",
-          tokenBalanceB: "50000",
-          stats: { "24h": { volume: "1000" } },
-        },
-        {
-          address: "brokenPoolBadDecimals",
-          price: "1.0",
-          tvlUsdc: "100000",
-          feeRate: 100,
-          tokenA: { address: "mintA", symbol: "USDC", decimals: "6" },
-          tokenB: { address: "mintB", symbol: "USDT", decimals: 6 },
-          tokenBalanceA: "50000",
-          tokenBalanceB: "50000",
-          stats: { "24h": { volume: "1000" } },
-        },
-        {
-          address: "validPool",
-          price: "1.0",
-          tvlUsdc: "100000",
-          feeRate: 100,
-          tokenA: { address: "mintA", symbol: "USDC", decimals: 6 },
-          tokenB: { address: "mintB", symbol: "USDT", decimals: 6 },
-          tokenBalanceA: "50000",
-          tokenBalanceB: "50000",
-          stats: { "24h": { volume: "1000" } },
-        },
-      ],
-      meta: { cursor: { next: null } },
+    const missingToken = makeOrcaPool("brokenPoolMissingToken");
+    delete (missingToken as Record<string, unknown>).tokenA;
+    const badDecimals = makeOrcaPool("brokenPoolBadDecimals", {
+      tokenA: { address: "mintA", symbol: "USDC", decimals: "6" as unknown as number },
     });
+    mockJsonFetch(orcaResponse([missingToken, badDecimals, makeOrcaPool("validPool")]));
 
     const pools = await fetchOrcaPools();
-
-    expect(pools.ok).toBe(true);
-    // Cosmetic row-skip notes are warnings, not fetch-level degradation (w-dex:2).
-    expect(pools.degraded).toBe(false);
+    expect(pools).toMatchObject({ ok: true, degraded: false });
     expect(pools.pools).toHaveLength(1);
     expect(pools.pools[0].poolAddress).toBe("validPool");
     expect(pools.warnings).toContain("page 1 skipped 2 malformed pool rows");
@@ -974,40 +615,41 @@ describe("fetchOrcaPools", () => {
     });
   });
 
-  it.each([true, false])("preserves raw Orca identities and never acknowledges an unreadable inventory row (identity %s)", async (hasIdentity) => {
-    mockJsonFetch({
-      data: [{ address: hasIdentity ? "brokenPool" : "" }, makeOrcaPool("validPool")],
-      meta: { cursor: { next: null } },
-    });
-    const { db } = fixtures.open();
-    const result = await fetchOrcaPools(undefined, db);
-    expect(result.pools).toHaveLength(1);
-    const phase = await fetchDirectApiFixture(({
-      results: [{ name: "Orca", circuitKey: "orca", normalizedProtocol: "orca",
-        supportedChains: ["solana"], censusScope: "exhaustive" as const, result }],
-      failedSources: [], degradedSources: [], attemptedProtocolChains: [], fallbackSignals: [],
-      sourceWarnings: [], circuitEvents: [],
-    }).results, { chainAddressToId: new Map(), symbolToChainScopedIds: new Map(), contractMetaByChainAddress: new Map() });
-    const index = buildAuthoritativeStagedPoolConfirmationIndex(phase.results);
-    expect(result.pagination?.state).toBe(hasIdentity ? "complete" : "partial");
-    expect(result.pendingPaginationUpdates).toHaveLength(hasIdentity ? 1 : 0);
-    expect(index.enforcedChainsByProtocol.get("orca")?.has("solana") ?? false).toBe(hasIdentity);
-    expect(index.confirmedExactKeysByProtocol.get("orca")?.has("solana:brokenPool") ?? false).toBe(hasIdentity);
-  });
+  it.each([true, false])(
+    "preserves raw Orca identities and never acknowledges an unreadable inventory row (identity %s)",
+    async (hasIdentity) => {
+      mockJsonFetch(orcaResponse([{ address: hasIdentity ? "brokenPool" : "" }, makeOrcaPool("validPool")]));
+      const { db } = fixtures.open();
+      const result = await fetchOrcaPools(undefined, db);
+      expect(result.pools).toHaveLength(1);
+      const phase = await fetchDirectApiFixture(
+        [{ name: "Orca", circuitKey: "orca", normalizedProtocol: "orca", supportedChains: ["solana"], censusScope: "exhaustive", result }],
+        { chainAddressToId: new Map(), symbolToChainScopedIds: new Map(), contractMetaByChainAddress: new Map() },
+      );
+      const index = buildAuthoritativeStagedPoolConfirmationIndex(phase.results);
+      expect(result.pagination?.state).toBe(hasIdentity ? "complete" : "partial");
+      expect(result.pendingPaginationUpdates).toHaveLength(hasIdentity ? 1 : 0);
+      expect(index.enforcedChainsByProtocol.get("orca")?.has("solana") ?? false).toBe(hasIdentity);
+      expect(index.confirmedExactKeysByProtocol.get("orca")?.has("solana:brokenPool") ?? false).toBe(hasIdentity);
+    },
+  );
 
-  it("handles 429 rate limit gracefully", async () => {
-    mockTextFetch("rate limited", 429);
+  it.each([
+    { label: "429 rate limit", setup: () => mockTextFetch("rate limited", 429), degraded: true, err: undefined },
+    { label: "HTTP 500 error", setup: () => mockTextFetch("error", 500), degraded: true, err: undefined },
+    { label: "empty response", setup: () => mockJsonFetch(orcaResponse([])), degraded: false, err: undefined },
+    { label: "all pools below minTvl", setup: () => mockJsonFetch(orcaResponse([makeOrcaPool("pool1", { tvlUsdc: "5000" })])), degraded: true, err: "page 1 had no eligible pools despite minTvl filter" },
+  ])("marks Orca $label as unavailable", async ({ setup, degraded, err }) => {
+    setup();
     const pools = await fetchOrcaPools();
-    expect(pools.pools).toHaveLength(0);
-    expect(pools.ok).toBe(false);
-    expect(pools.degraded).toBe(true);
+    expect(pools).toMatchObject({ pools: [], ok: false, degraded });
+    if (err) expect(pools.errors).toContain(err);
   });
 
   it("follows cursor-based pagination", async () => {
-
     mockFetch = createFetchMock([
-      orcaRoute(null, [{ body: { data: [makeOrcaPool("pool1")], meta: { cursor: { next: "cursor123" } } } }]),
-      orcaRoute("cursor123", [{ body: { data: [makeOrcaPool("pool2")], meta: { cursor: { next: null } } } }]),
+      orcaRoute(null, [{ body: orcaResponse([makeOrcaPool("pool1")], "cursor123") }]),
+      orcaRoute("cursor123", [{ body: orcaResponse([makeOrcaPool("pool2")]) }]),
     ], { requireMatch: true, strictUrl: true });
 
     const pools = await fetchOrcaPools();
@@ -1015,11 +657,9 @@ describe("fetchOrcaPools", () => {
     expect(pools.censusScope).toBe("exhaustive");
     expect(buildAuthoritativeStagedPoolConfirmationIndex([{
       name: "Orca", circuitKey: "orca", normalizedProtocol: "orca", supportedChains: ["solana"],
-      censusScope: "exhaustive",
-      result: pools, authoritativeExactPoolKeys: new Set(["solana:pool1", "solana:pool2"]),
+      censusScope: "exhaustive", result: pools, authoritativeExactPoolKeys: new Set(["solana:pool1", "solana:pool2"]),
     }]).enforcedChainsByProtocol.get("orca")).toEqual(new Set(["solana"]));
     expect(mockFetch).toHaveBeenCalledTimes(2);
-    // Second call should include the cursor
     const secondCallUrl = mockFetch.mock.calls[1][0] as string;
     expect(secondCallUrl).toContain("next=cursor123");
     expect(secondCallUrl).toContain("sortBy=tvl");
@@ -1029,13 +669,11 @@ describe("fetchOrcaPools", () => {
 
   it("does not certify an exhaustive census from a full page with no readable next cursor", async () => {
     const rows = Array.from({ length: 200 }, (_, index) => makeOrcaPool(`fullPage${index}`));
-    // A size=200 page followed by unreadable metadata is not proof that the
-    // inventory ended; only an explicit end or a short page completes a cycle.
     mockFetch = createFetchMock([orcaRoute(null, [{ body: { data: rows, meta: {} } }])], {
-      requireMatch: true, strictUrl: true,
+      requireMatch: true,
+      strictUrl: true,
     });
     const { db, sqlite } = fixtures.open();
-
     const result = await fetchOrcaPools(undefined, db);
 
     expect(result.pools).toHaveLength(200);
@@ -1043,8 +681,7 @@ describe("fetchOrcaPools", () => {
     expect(result.censusScope).toBe("bounded-sample");
     expect(buildAuthoritativeStagedPoolConfirmationIndex([{
       name: "Orca", circuitKey: "orca", normalizedProtocol: "orca", supportedChains: ["solana"],
-      censusScope: "exhaustive",
-      result, authoritativeExactPoolKeys: new Set(result.physicalPoolCensus?.exactPoolKeys ?? []),
+      censusScope: "exhaustive", result, authoritativeExactPoolKeys: new Set(result.physicalPoolCensus?.exactPoolKeys ?? []),
     }]).enforcedChainsByProtocol.has("orca")).toBe(false);
 
     await acknowledgeDexSourcePagination(db, result.pendingPaginationUpdates ?? []);
@@ -1056,13 +693,12 @@ describe("fetchOrcaPools", () => {
 
   it("refreshes the Orca head before resuming a durable tail cursor", async () => {
     mockFetch = createFetchMock([
-      orcaRoute(null, [{ body: { data: [makeOrcaPool("head")], meta: { cursor: { next: "fresh-head-tail" } } } }]),
-      orcaRoute("stored-cursor", [{ body: { data: [makeOrcaPool("stored-tail")], meta: { cursor: { next: null } } } }]),
+      orcaRoute(null, [{ body: orcaResponse([makeOrcaPool("head")], "fresh-head-tail") }]),
+      orcaRoute("stored-cursor", [{ body: orcaResponse([makeOrcaPool("stored-tail")]) }]),
     ], { requireMatch: true, strictUrl: true });
     const { db, state } = makeCursorDb("stored-cursor");
 
     const result = await fetchOrcaPools(undefined, db);
-
     expect(String(mockFetch.mock.calls[0][0])).toContain("sortBy=tvl");
     expect(String(mockFetch.mock.calls[1][0])).toContain("next=stored-cursor");
     expect(String(mockFetch.mock.calls[1][0])).toContain("minTvl=10000");
@@ -1070,8 +706,7 @@ describe("fetchOrcaPools", () => {
     expect(result.pagination).toMatchObject({ state: "partial", headRefreshed: true, cycleCompleted: true });
     expect(buildAuthoritativeStagedPoolConfirmationIndex([{
       name: "Orca", circuitKey: "orca", normalizedProtocol: "orca", supportedChains: ["solana"],
-      censusScope: "exhaustive",
-      result, authoritativeExactPoolKeys: new Set(["solana:head", "solana:stored-tail"]),
+      censusScope: "exhaustive", result, authoritativeExactPoolKeys: new Set(["solana:head", "solana:stored-tail"]),
     }]).enforcedChainsByProtocol.has("orca")).toBe(false);
     expect(state.cursor).toBe("stored-cursor");
     await acknowledgeDexSourcePagination(db, result.pendingPaginationUpdates ?? []);
@@ -1080,14 +715,9 @@ describe("fetchOrcaPools", () => {
 
   it("keeps a failed acknowledgement retryable without degrading fetched evidence", async () => {
     mockFetch = createFetchMock([
-      orcaRoute(null, [1, 2].map((run) => ({
-        body: { data: [makeOrcaPool(`head-${run}`)], meta: { cursor: { next: `fresh-head-tail-${run}` } } },
-      }))),
-      orcaRoute("stored-tail", [1, 2].map((run) => ({
-        body: { data: [makeOrcaPool(`tail-${run}`)], meta: { cursor: { next: null } } },
-      }))),
+      orcaRoute(null, [1, 2].map((run) => ({ body: orcaResponse([makeOrcaPool(`head-${run}`)], `fresh-head-tail-${run}`) }))),
+      orcaRoute("stored-tail", [1, 2].map((run) => ({ body: orcaResponse([makeOrcaPool(`tail-${run}`)]) }))),
     ], { requireMatch: true, strictUrl: true });
-
     const { db, state } = makeCursorDb("stored-tail", 1);
 
     const failedWrite = await fetchOrcaPools(undefined, db);
@@ -1114,15 +744,12 @@ describe("fetchOrcaPools", () => {
 
   it("preserves a far-tail cursor across a transient failure and retries it next run", async () => {
     mockFetch = createFetchMock([
-      orcaRoute(null, [1, 2].map((run) => ({
-        body: { data: [makeOrcaPool(`head-${run}`)], meta: { cursor: { next: `fresh-head-tail-${run}` } } },
-      }))),
+      orcaRoute(null, [1, 2].map((run) => ({ body: orcaResponse([makeOrcaPool(`head-${run}`)], `fresh-head-tail-${run}`) }))),
       orcaRoute("far-tail-cursor", [
         { response: new Response("temporary upstream failure", { status: 503 }) },
-        { body: { data: [makeOrcaPool("far-tail-retry")], meta: { cursor: { next: null } } } },
+        { body: orcaResponse([makeOrcaPool("far-tail-retry")]) },
       ]),
     ], { requireMatch: true, strictUrl: true });
-
     const { db, state } = makeCursorDb("far-tail-cursor");
 
     const transientFailure = await fetchOrcaPools(undefined, db);
@@ -1131,11 +758,7 @@ describe("fetchOrcaPools", () => {
     await acknowledgeDexSourcePagination(db, retriedTail.pendingPaginationUpdates ?? []);
 
     expect(transientFailure).toMatchObject({ ok: true, degraded: true });
-    expect(transientFailure.pagination).toMatchObject({
-      state: "partial",
-      cursor: "far-tail-cursor",
-      cycleCompleted: false,
-    });
+    expect(transientFailure.pagination).toMatchObject({ state: "partial", cursor: "far-tail-cursor", cycleCompleted: false });
     expect(retriedTail).toMatchObject({ ok: true, degraded: false });
     expect(String(mockFetch.mock.calls[1]?.[0])).toContain("next=far-tail-cursor");
     expect(String(mockFetch.mock.calls[3]?.[0])).toContain("next=far-tail-cursor");
@@ -1143,15 +766,13 @@ describe("fetchOrcaPools", () => {
   });
 
   it("resets a tail only when the API explicitly rejects its cursor", async () => {
-    const pool = makeOrcaPool("head");
     mockFetch = createFetchMock([
-      orcaRoute(null, [{ body: { data: [pool], meta: { cursor: { next: "fresh-head-tail" } } } }]),
+      orcaRoute(null, [{ body: orcaResponse([makeOrcaPool("head")], "fresh-head-tail") }]),
       orcaRoute("expired-tail", [{ response: new Response("expired cursor", { status: 404 }) }]),
     ], { requireMatch: true, strictUrl: true });
     const { db, state } = makeCursorDb("expired-tail");
 
     const result = await fetchOrcaPools(undefined, db);
-
     expect(result.pagination).toMatchObject({ state: "partial", cursor: "fresh-head-tail" });
     expect(result.errors).toContain("API rejected tail cursor (404); restarting from refreshed head");
     expect(state.cursor).toBe("expired-tail");
@@ -1161,20 +782,7 @@ describe("fetchOrcaPools", () => {
 
   it("stops pagination on 429 mid-pagination and returns partial results", async () => {
     mockFetch
-      .mockResolvedValueOnce(jsonResponse({
-        data: [{
-          address: "pool1",
-          price: "1.0",
-          tvlUsdc: "100000",
-          feeRate: 100,
-          tokenA: { address: "mintA", symbol: "USDC", decimals: 6 },
-          tokenB: { address: "mintB", symbol: "USDT", decimals: 6 },
-          tokenBalanceA: "50000",
-          tokenBalanceB: "50000",
-          stats: { "24h": { volume: "1000" } },
-        }],
-        meta: { cursor: { next: "cursor456" } },
-      }))
+      .mockResolvedValueOnce(jsonResponse(orcaResponse([makeOrcaPool("pool1")], "cursor456")))
       .mockResolvedValueOnce(new Response("rate limited", { status: 429 }))
       .mockResolvedValueOnce(new Response("rate limited", { status: 429 }))
       .mockResolvedValueOnce(new Response("rate limited", { status: 429 }))
@@ -1185,87 +793,5 @@ describe("fetchOrcaPools", () => {
     expect(pools.pools[0].poolAddress).toBe("pool1");
     expect(pools.ok).toBe(true);
     expect(pools.degraded).toBe(true);
-  });
-
-  it("marks Orca pages with no pools above the TVL threshold as unavailable", async () => {
-    mockJsonFetch({
-      data: [{
-        address: "pool1",
-        price: "1.0",
-        tvlUsdc: "5000", // below 10K threshold
-        feeRate: 100,
-        tokenA: { address: "mintA", symbol: "USDC", decimals: 6 },
-        tokenB: { address: "mintB", symbol: "USDT", decimals: 6 },
-        tokenBalanceA: "2500",
-        tokenBalanceB: "2500",
-        stats: { "24h": { volume: "100" } },
-      }],
-      meta: { cursor: { next: null } },
-    });
-
-    const pools = await fetchOrcaPools();
-    expect(pools.pools).toHaveLength(0);
-    expect(pools.ok).toBe(false);
-    expect(pools.degraded).toBe(true);
-    expect(pools.errors).toContain("page 1 had no eligible pools despite minTvl filter");
-  });
-
-  it("returns empty array on HTTP error", async () => {
-    mockTextFetch("error", 500);
-    const pools = await fetchOrcaPools();
-    expect(pools.pools).toHaveLength(0);
-    expect(pools.ok).toBe(false);
-    expect(pools.degraded).toBe(true);
-  });
-
-  it("marks empty Orca responses as unavailable", async () => {
-    mockJsonFetch({
-      data: [],
-      meta: { cursor: { next: null } },
-    });
-    const pools = await fetchOrcaPools();
-    expect(pools.pools).toHaveLength(0);
-    expect(pools.ok).toBe(false);
-    expect(pools.degraded).toBe(false);
-  });
-
-  it("parses string token balances correctly", async () => {
-    mockJsonFetch({
-      data: [{
-        address: "pool1",
-        price: "0.9998",
-        tvlUsdc: "500000",
-        feeRate: 100,
-        tokenA: { address: "mintA", symbol: "PYUSD", decimals: 6 },
-        tokenB: { address: "mintB", symbol: "USDC", decimals: 6 },
-        tokenBalanceA: "250000500000",
-        tokenBalanceB: "249999500000",
-        stats: { "24h": { volume: "10000" } },
-      }],
-      meta: { cursor: { next: null } },
-    });
-
-    const pools = await fetchOrcaPools();
-    expect(pools.pools[0].balances).toEqual([250000.5, 249999.5]);
-  });
-
-  it("sets price to null for invalid price strings", async () => {
-    mockJsonFetch({
-      data: [{
-        address: "pool1",
-        price: "invalid",
-        tvlUsdc: "100000",
-        feeRate: 100,
-        tokenA: { address: "mintA", symbol: "USDC", decimals: 6 },
-        tokenB: { address: "mintB", symbol: "USDT", decimals: 6 },
-        tokenBalanceA: "50000",
-        tokenBalanceB: "50000",
-        stats: { "24h": { volume: "1000" } },
-      }],
-      meta: { cursor: { next: null } },
-    });
-
-    const pools = await fetchOrcaPools();
-    expect(pools.pools[0].price).toBeNull();
   });
 });

@@ -35,7 +35,7 @@ type BlacklistTooltipEntry = {
   color: string;
 };
 
-type BlacklistChartInputRow = BlacklistSummaryResponse["chart"][number] &
+type BlacklistChartInputRow = Pick<BlacklistSummaryResponse["chart"][number], "quarter" | "total"> &
   Partial<Record<BlacklistStablecoin, number>>;
 
 export type BlacklistChartSeriesKey = BlacklistStablecoin | typeof BLACKLIST_CHART_OTHER_KEY;

@@ -6,6 +6,7 @@
  */
 
 import type { DexPriceLineage } from "./price-lineage";
+import type { CurveNavSpotQuoteEvidence } from "./types";
 
 // The legacy REAL NOT NULL cell can hold text. Main admits only finite numeric
 // prices, so it cannot reuse a quote whose independence requires the receipt.
@@ -32,6 +33,10 @@ export interface DexPriceChallengerLoadRow extends DexPriceLineage {
   priceObservedAt?: number | null;
   /** Fallback clock for undated legacy price sources only. Null marks invalid clock evidence. */
   legacyAggregateObservedAt?: number | null;
+  /** Clocked Curve StableSwap-NG spot quote receipt carried for reader freshness enforcement. */
+  curveNavSpotQuote?: CurveNavSpotQuoteEvidence;
+  quotePublishedAtSec?: number;
+  quoteExpiresAtSec?: number;
 }
 
 export interface DexPriceChallengerLoadDiagnostics {

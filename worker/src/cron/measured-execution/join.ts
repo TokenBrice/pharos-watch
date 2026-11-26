@@ -794,6 +794,9 @@ export function stripDexMeasuredExecutionInternalFields(pools: readonly PoolEntr
   releaseDexMeasuredExecutionProofFields(pools);
   for (const pool of pools) {
     if (!pool.extra) continue;
+    if (pool.extra.measuredExecution != null && pool.extra.measuredExecutionPhysicalPoolId != null) {
+      pool.verifiedMeasuredPhysicalPoolId = pool.extra.measuredExecutionPhysicalPoolId;
+    }
     delete pool.extra.measuredExecutions;
     delete pool.extra.measuredExecutionPhysicalPoolId;
   }

@@ -3,9 +3,17 @@ import { isRecord } from "@shared/lib/type-guards";
 import { readDexPriceLineage, type DexPriceLineage } from "./price-lineage";
 import { loadLegacyDexPoolChallengers } from "./challenger-legacy";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
-import { isFreshDexPoolObservation } from "../../lib/depeg-trust-policy";
+import {
+  isFreshDexPoolObservation,
+  validateClockedCurveNavCaptureRecord,
+} from "../../lib/depeg-trust-policy";
 import { recordRuntimeFallbackUsage } from "../../lib/runtime-fallback-telemetry";
 import { CHALLENGER_LINEAGE_PRICE } from "./challenger-types";
+import {
+  CURVE_NAV_SPOT_QUOTE_POLICY,
+  isCurveNavSpotQuoteEvidenceShape,
+  type CurveNavSpotQuoteEvidence,
+} from "./types";
 import type {
   DexPriceChallengerLoadRow,
   DexPriceChallengerLoadDiagnostics,
@@ -21,22 +29,90 @@ export type {
 type LegacyDexPoolChallengerLoadResult = Awaited<ReturnType<typeof loadLegacyDexPoolChallengers>>;
 
 function isChallengerObservationFresh(row: DexPriceChallengerLoadRow, nowSec: number): boolean {
+  if (
+    row.curveNavSpotQuote !== undefined ||
+    row.quotePublishedAtSec !== undefined ||
+    row.quoteExpiresAtSec !== undefined
+  ) {
+    if (
+      !isCurveNavSpotQuoteEvidenceShape(row.curveNavSpotQuote) ||
+      row.priceObservedAt == null ||
+      !Number.isSafeInteger(row.priceObservedAt) ||
+      row.priceObservedAt <= 0 ||
+      row.priceObservedAt > nowSec
+    ) {
+      return false;
+    }
+    if (
+      row.quoteExpiresAtSec !== undefined &&
+      (!Number.isSafeInteger(row.quoteExpiresAtSec) || nowSec >= row.quoteExpiresAtSec)
+    ) {
+      return false;
+    }
+    const maxAgeSec = CURVE_NAV_SPOT_QUOTE_POLICY.quoteMaxAgeSec;
+    if (
+      row.snapshotAt > nowSec ||
+      row.publishedAt > nowSec ||
+      nowSec - row.snapshotAt >= maxAgeSec ||
+      nowSec - row.publishedAt >= maxAgeSec
+    ) {
+      return false;
+    }
+    const effectivePublishedAtSec = row.quotePublishedAtSec ?? row.publishedAt;
+    if (
+      !Number.isSafeInteger(effectivePublishedAtSec) ||
+      effectivePublishedAtSec <= 0 ||
+      effectivePublishedAtSec > nowSec ||
+      nowSec - effectivePublishedAtSec >= maxAgeSec
+    ) {
+      return false;
+    }
+    return validateClockedCurveNavCaptureRecord(row.curveNavSpotQuote, {
+      nowSec,
+      effectivePublishedAtSec,
+      publicationUpdatedAt: row.snapshotAt,
+      aggregateObservedAt: row.priceObservedAt,
+    }).reason == null;
+  }
   return (row.priceObservedAt == null && row.upstreamKeys === undefined) ||
     isFreshDexPoolObservation(row.priceObservedAt, nowSec);
 }
 
-function readStoredChallengerLineage(json: string | null | undefined): DexPriceLineage & { priceUsd?: number } {
+function readStoredChallengerLineage(
+  json: string | null | undefined,
+): DexPriceLineage & {
+  priceUsd?: number;
+  curveNavSpotQuote?: CurveNavSpotQuoteEvidence;
+  quotePublishedAtSec?: number;
+  quoteExpiresAtSec?: number;
+} {
   if (json == null) return {};
   try {
     const receipt: unknown = JSON.parse(json);
     if (isRecord(receipt)) {
       if (Object.keys(receipt).length === 0) return {};
-      if ("pricePoolKeys" in receipt && "upstreamKeys" in receipt) {
-        const lineage = readDexPriceLineage(receipt);
+      const hasLineageKeys = "pricePoolKeys" in receipt && "upstreamKeys" in receipt;
+      const hasCurveNav = "curveNavSpotQuote" in receipt;
+      if (hasLineageKeys || hasCurveNav) {
+        const lineage = hasLineageKeys ? readDexPriceLineage(receipt) : {};
+        if (hasCurveNav && !isCurveNavSpotQuoteEvidenceShape(receipt.curveNavSpotQuote)) {
+          return { pricePoolKeys: [], upstreamKeys: [] };
+        }
+        const lineageOk = !hasLineageKeys || Boolean(lineage.upstreamKeys?.length && lineage.pricePoolKeys?.length);
+        const quotePublishedAtSec =
+          typeof receipt.quotePublishedAtSec === "number" && Number.isSafeInteger(receipt.quotePublishedAtSec) && receipt.quotePublishedAtSec > 0
+            ? receipt.quotePublishedAtSec
+            : undefined;
+        const quoteExpiresAtSec =
+          typeof receipt.quoteExpiresAtSec === "number" && Number.isSafeInteger(receipt.quoteExpiresAtSec) && receipt.quoteExpiresAtSec > 0
+            ? receipt.quoteExpiresAtSec
+            : undefined;
         return {
           ...lineage,
-          ...(lineage.upstreamKeys?.length && lineage.pricePoolKeys?.length &&
-            typeof receipt.priceUsd === "number" && { priceUsd: receipt.priceUsd }),
+          ...(lineageOk && typeof receipt.priceUsd === "number" && { priceUsd: receipt.priceUsd }),
+          ...(hasCurveNav ? { curveNavSpotQuote: receipt.curveNavSpotQuote as CurveNavSpotQuoteEvidence } : {}),
+          ...(quotePublishedAtSec !== undefined ? { quotePublishedAtSec } : {}),
+          ...(quoteExpiresAtSec !== undefined ? { quoteExpiresAtSec } : {}),
         };
       }
     }

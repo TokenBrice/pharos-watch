@@ -55,6 +55,13 @@ export interface DexLiquidityScoringSourceState {
   subgraphFailures?: SubgraphFailureTelemetry;
   /** Exact Curve identity attachment summary from `poolsPro?project=curve-dex`. */
   curveIdentityAttachment?: CurveIdentityAttachment;
+  /** Per-coin Curve NAV integrity rejections quarantined while decoding staged price observations (R8). */
+  curveNavStageRejections?: Array<{
+    stablecoinId: string;
+    poolKey: string | null;
+    chain?: string;
+    reason: import("./scoring-helpers").CurveNavQuoteScoringRejectionReason;
+  }>;
   directApiSourceSummary: DexLiquidityDirectApiSourceSummary;
 }
 

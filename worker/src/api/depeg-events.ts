@@ -40,7 +40,12 @@ import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base
 import { WORKER_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { DepegEvent, DepegPendingIncident } from "@shared/types/peg";
 import { toErrorMessage } from "@shared/lib/error-utils";
-import { isAffirmativeDexPriceRow, isTrustedDexPriceRow, readDexAggregateObservedAt } from "../lib/depeg-trust-policy";
+import {
+  getDexAggregateObservedAt,
+  isAffirmativeDexPriceRow,
+  isTrustedDexPriceRow,
+  parseDexPricePayload,
+} from "../lib/depeg-trust-policy";
 import { prepareDepegEventsCountStatements } from "../lib/depeg-events-count-cache";
 import { isExtremeMovePending } from "../lib/depeg-helpers";
 
@@ -97,17 +102,36 @@ async function loadDexAvailability(
            stablecoin_id, source_total_tvl, updated_at, price_sources_json FROM dex_prices
          WHERE stablecoin_id IN (SELECT value FROM json_each(?))`,
       ).bind(JSON.stringify(stablecoinIds)).all<DexAvailabilityRow>();
-    return new Map((result.results ?? []).map((row) => [
-      row.stablecoin_id,
-      typeof row.updated_at === "number" &&
-        typeof row.source_total_tvl === "number" &&
-        isTrustedDexPriceRow({ updated_at: row.updated_at, source_total_tvl: row.source_total_tvl }, nowSec, "depeg") &&
-        isAffirmativeDexPriceRow({
-          updated_at: row.updated_at,
-          source_total_tvl: row.source_total_tvl,
-          aggregateObservedAt: readDexAggregateObservedAt(row.price_sources_json, nowSec),
-        }, nowSec, "depeg"),
-    ]));
+    return new Map((result.results ?? []).map((row) => {
+      if (typeof row.updated_at !== "number" || typeof row.source_total_tvl !== "number") {
+        return [row.stablecoin_id, false] as const;
+      }
+      const pricePayload = parseDexPricePayload(row.price_sources_json);
+      const aggregateClock = getDexAggregateObservedAt(pricePayload, nowSec);
+      const admitted =
+        isTrustedDexPriceRow(
+          {
+            updated_at: row.updated_at,
+            source_total_tvl: row.source_total_tvl,
+            aggregateObservedAt: aggregateClock.aggregateObservedAt,
+            pricePayload,
+          },
+          nowSec,
+          "depeg",
+        ) &&
+        isAffirmativeDexPriceRow(
+          {
+            updated_at: row.updated_at,
+            source_total_tvl: row.source_total_tvl,
+            aggregateObservedAt: aggregateClock.aggregateObservedAt,
+            aggregateClockReason: aggregateClock.aggregateClockReason,
+            pricePayload,
+          },
+          nowSec,
+          "depeg",
+        );
+      return [row.stablecoin_id, admitted] as const;
+    }));
   } catch (err) {
     const msg = toErrorMessage(err);
     if (isMissingTableError(err)) return new Map();

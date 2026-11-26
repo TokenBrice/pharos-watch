@@ -163,19 +163,19 @@ describe("fetchBalancerPools stable-math amp join", () => {
     });
   });
 
+  const balancerGate = (reason: string) => ({ family: "balancer-amm", reason });
+  const withHexTag = <T extends { id: string; address: string }>(pool: T, tag: string): T => {
+    const address = `0x${tag}bbccddeeff00112233445566778899aabbccdd`;
+    return { ...pool, address, id: `${address}00020000000000000000000${tag[0]}` };
+  };
+
   it("fails closed when stable-math numeric inputs contain malformed suffixes", async () => {
-    const malformedAmp = stablePool();
-    malformedAmp.id = "0x66bbccddeeff00112233445566778899aabbccdd000200000000000000000006";
-    malformedAmp.address = "0x66bbccddeeff00112233445566778899aabbccdd";
-    const malformedRate = stablePool();
-    malformedRate.id = "0x77bbccddeeff00112233445566778899aabbccdd000200000000000000000007";
-    malformedRate.address = "0x77bbccddeeff00112233445566778899aabbccdd";
+    const malformedAmp = withHexTag(stablePool(), "66");
+    const malformedRate = withHexTag(stablePool(), "77");
     malformedRate.poolTokens = malformedRate.poolTokens.map((token, index) =>
       index === 1 ? { ...token, priceRate: "1.02junk" } : token,
     );
-    const malformedFee = stablePool();
-    malformedFee.id = "0x88bbccddeeff00112233445566778899aabbccdd000200000000000000000008";
-    malformedFee.address = "0x88bbccddeeff00112233445566778899aabbccdd";
+    const malformedFee = withHexTag(stablePool(), "88");
     malformedFee.dynamicData.swapFee = "0.0001junk";
 
     dispatchByQuery(
@@ -188,103 +188,94 @@ describe("fetchBalancerPools stable-math amp join", () => {
     expect(result.pools).toHaveLength(3);
     for (const pool of result.pools) {
       expect(pool.amp).toBeUndefined();
-      expect(pool.executionCapabilityGate).toEqual({
-        family: "balancer-amm",
-        reason: "invalid-invariant-parameters",
-      });
+      expect(pool.executionCapabilityGate).toEqual(balancerGate("invalid-invariant-parameters"));
     }
-  });
-
-  it("fails closed when a weighted invariant input contains a malformed suffix", async () => {
-    const weighted = weightedPool();
-    weighted.poolTokens = weighted.poolTokens.map((token, index) =>
-      index === 1 ? { ...token, weight: "0.5junk" } : token,
-    );
-    dispatchByQuery([weighted], []);
-
-    const result = await fetchBalancerPools();
-
-    expect(result.pools).toHaveLength(1);
-    expect(result.pools[0]?.executionCapabilityGate).toEqual({
-      family: "balancer-amm",
-      reason: "invalid-invariant-parameters",
-    });
   });
 
   it("retains paused, swap-disabled, and unknown-state pools behind explicit gates", async () => {
     const paused = {
-      ...stablePool(),
-      id: "0x33bbccddeeff00112233445566778899aabbccdd000200000000000000000003",
-      address: "0x33bbccddeeff00112233445566778899aabbccdd",
-      dynamicData: {
-        totalLiquidity: "5000000",
-        volume24h: "1000000",
-        swapFee: "0.0001",
-        isPaused: true,
-        swapEnabled: true,
-      },
+      ...withHexTag(stablePool(), "33"),
+      dynamicData: { totalLiquidity: "5000000", volume24h: "1000000", swapFee: "0.0001", isPaused: true, swapEnabled: true },
     };
     const disabled = {
       ...weightedPool(),
-      dynamicData: {
-        totalLiquidity: "5000000",
-        volume24h: "1000000",
-        swapFee: "0.0001",
-        isPaused: false,
-        swapEnabled: false,
-      },
+      dynamicData: { totalLiquidity: "5000000", volume24h: "1000000", swapFee: "0.0001", isPaused: false, swapEnabled: false },
     };
     const unknown = {
-      ...stablePool(),
-      id: "0x44bbccddeeff00112233445566778899aabbccdd000200000000000000000004",
-      address: "0x44bbccddeeff00112233445566778899aabbccdd",
-      dynamicData: {
-        totalLiquidity: "5000000",
-        volume24h: "1000000",
-        swapFee: "0.0001",
-        isPaused: false,
-      },
+      ...withHexTag(stablePool(), "44"),
+      dynamicData: { totalLiquidity: "5000000", volume24h: "1000000", swapFee: "0.0001", isPaused: false },
     };
     dispatchByQuery([paused, disabled, unknown], []);
     const result = await fetchBalancerPools();
     expect(result.pools).toHaveLength(3);
-    expect(result.pools.find((pool) => pool.poolAddress === paused.address)?.executionCapabilityGate).toEqual({
-      family: "balancer-amm",
-      reason: "paused-or-swap-disabled",
-    });
-    expect(result.pools.find((pool) => pool.poolAddress === disabled.address)?.executionCapabilityGate).toEqual({
-      family: "balancer-amm",
-      reason: "paused-or-swap-disabled",
-    });
-    expect(result.pools.find((pool) => pool.poolAddress === unknown.address)?.executionCapabilityGate).toEqual({
-      family: "balancer-amm",
-      reason: "incomplete-exact-capture",
-    });
+    expect(result.pools.find((pool) => pool.poolAddress === paused.address)?.executionCapabilityGate)
+      .toEqual(balancerGate("paused-or-swap-disabled"));
+    expect(result.pools.find((pool) => pool.poolAddress === disabled.address)?.executionCapabilityGate)
+      .toEqual(balancerGate("paused-or-swap-disabled"));
+    expect(result.pools.find((pool) => pool.poolAddress === unknown.address)?.executionCapabilityGate)
+      .toEqual(balancerGate("incomplete-exact-capture"));
   });
 
   it("keeps complete-sweep misses explicit for stable and weighted candidates", async () => {
     dispatchByQuery([stablePool(), weightedPool()], []);
     const result = await fetchBalancerPools();
-    expect(result.pools.find((pool) => pool.poolType === "balancer-stable")?.executionCapabilityGate).toEqual({
-      family: "balancer-amm",
-      reason: "rate-bearing-inputs",
-    });
-    expect(result.pools.find((pool) => pool.poolType === "balancer-weighted")?.executionCapabilityGate).toEqual({
-      family: "balancer-amm",
-      reason: "incomplete-exact-capture",
-    });
+    expect(result.pools.find((pool) => pool.poolType === "balancer-stable")?.executionCapabilityGate)
+      .toEqual(balancerGate("rate-bearing-inputs"));
+    expect(result.pools.find((pool) => pool.poolType === "balancer-weighted")?.executionCapabilityGate)
+      .toEqual(balancerGate("incomplete-exact-capture"));
   });
 
-  it("authorizes a weighted model only when the hook-free capability sweep contains it", async () => {
-    const weighted = weightedPool();
-    dispatchByQuery(
-      [weighted],
-      [{ id: weighted.id, chain: weighted.chain, amp: null }],
-    );
+  it.each<{
+    label: string;
+    build: () => { pool: ReturnType<typeof weightedPool>; sweep: Array<{ id: string; chain: string; amp: string | null }> };
+    expectedGate: ReturnType<typeof balancerGate> | undefined;
+    expectedPoolType?: string;
+  }>([
+    {
+      label: "fails closed when a weighted invariant input contains a malformed suffix",
+      build: () => {
+        const weighted = weightedPool();
+        weighted.poolTokens = weighted.poolTokens.map((token, index) =>
+          index === 1 ? { ...token, weight: "0.5junk" } : token,
+        );
+        return { pool: weighted, sweep: [] };
+      },
+      expectedGate: balancerGate("invalid-invariant-parameters"),
+    },
+    {
+      label: "authorizes a weighted model only when the hook-free capability sweep contains it",
+      build: () => {
+        const weighted = weightedPool();
+        return { pool: weighted, sweep: [{ id: weighted.id, chain: weighted.chain, amp: null }] };
+      },
+      expectedGate: undefined,
+    },
+    {
+      label: "keeps missing amplification unavailable even when membership is reviewed",
+      build: () => {
+        const pool = stablePool();
+        return { pool, sweep: [{ id: pool.id, chain: pool.chain, amp: null }] };
+      },
+      expectedGate: balancerGate("incomplete-exact-capture"),
+    },
+    {
+      label: "retains a reviewed custom invariant as a gated diagnostic row",
+      build: () => {
+        const custom = weightedPool();
+        custom.type = "COW_AMM";
+        return { pool: custom, sweep: [] };
+      },
+      expectedGate: balancerGate("unsupported-invariant"),
+      expectedPoolType: "balancer-custom",
+    },
+  ])("$label", async ({ build, expectedGate, expectedPoolType }) => {
+    const { pool, sweep } = build();
+    dispatchByQuery([pool], sweep);
     const result = await fetchBalancerPools();
     expect(result.pools).toHaveLength(1);
-    expect(result.pools[0]?.executionCapabilityGate).toBeUndefined();
     expect(result.pools[0]?.amp).toBeUndefined();
+    expect(result.pools[0]?.executionCapabilityGate).toEqual(expectedGate);
+    if (expectedPoolType) expect(result.pools[0]?.poolType).toBe(expectedPoolType);
   });
 
   it("gates a weighted pool withheld from the enrichment sweep instead of authorizing its model", async () => {
@@ -301,10 +292,7 @@ describe("fetchBalancerPools stable-math amp join", () => {
 
     const result = await fetchBalancerPools();
     expect(result.pools).toHaveLength(1);
-    expect(result.pools[0]?.executionCapabilityGate).toEqual({
-      family: "balancer-amm",
-      reason: "incomplete-exact-capture",
-    });
+    expect(result.pools[0]?.executionCapabilityGate).toEqual(balancerGate("incomplete-exact-capture"));
 
     // The gate withholds the exact weighted-constant-mean model downstream.
     const shaped = convertToGtNewPools(
@@ -346,14 +334,12 @@ describe("fetchBalancerPools stable-math amp join", () => {
   });
 
   it("never derives enabled flags or missing rates from provider membership", async () => {
-    const unknownPause = weightedPool();
-    const missingPause = { ...unknownPause, dynamicData: {
-      totalLiquidity: "5000000", volume24h: "1000000", swapFee: "0.0001", swapEnabled: true,
-    } };
+    const missingPause = {
+      ...weightedPool(),
+      dynamicData: { totalLiquidity: "5000000", volume24h: "1000000", swapFee: "0.0001", swapEnabled: true },
+    };
     const missingRate = stablePool();
-    missingRate.poolTokens = missingRate.poolTokens.map((token) => ({
-      ...token, priceRate: undefined,
-    }));
+    missingRate.poolTokens = missingRate.poolTokens.map((token) => ({ ...token, priceRate: undefined }));
     dispatchByQuery([missingPause, missingRate], [
       { id: missingPause.id, chain: missingPause.chain, amp: null },
       { id: missingRate.id, chain: missingRate.chain, amp: "250" },
@@ -364,92 +350,46 @@ describe("fetchBalancerPools stable-math amp join", () => {
     expect(result.pools.every((pool) => pool.amp == null)).toBe(true);
   });
 
-  it("keeps missing amplification unavailable even when membership is reviewed", async () => {
-    const pool = stablePool();
-    dispatchByQuery([pool], [{ id: pool.id, chain: pool.chain, amp: null }]);
-    const result = await fetchBalancerPools();
-    expect(result.pools[0]?.amp).toBeUndefined();
-    expect(result.pools[0]?.executionCapabilityGate?.reason).toBe("incomplete-exact-capture");
-  });
-
-  it("retains a reviewed custom invariant as a gated diagnostic row", async () => {
-    const custom = weightedPool();
-    custom.type = "COW_AMM";
-    dispatchByQuery([custom], []);
-    const result = await fetchBalancerPools();
-    expect(result.pools).toHaveLength(1);
-    expect(result.pools[0]?.poolType).toBe("balancer-custom");
-    expect(result.pools[0]?.executionCapabilityGate).toEqual({
-      family: "balancer-amm",
-      reason: "unsupported-invariant",
-    });
-  });
-
   it("never authorizes exact models with malformed EVM pool or token identities", async () => {
-    const malformedPool = weightedPool();
-    malformedPool.address = "not-an-address";
-    malformedPool.id = "not-a-pool-id";
-    const malformedToken = weightedPool();
-    malformedToken.id = "0x55bbccddeeff00112233445566778899aabbccdd000200000000000000000005";
-    malformedToken.address = "0x55bbccddeeff00112233445566778899aabbccdd";
+    const malformedPool = { ...weightedPool(), address: "not-an-address", id: "not-a-pool-id" };
+    const malformedToken = withHexTag(weightedPool(), "55");
     malformedToken.poolTokens[1]!.address = "0xbb";
-    dispatchByQuery(
-      [malformedPool, malformedToken],
-      [
-        { id: malformedPool.id, chain: malformedPool.chain, amp: null },
-        { id: malformedToken.id, chain: malformedToken.chain, amp: null },
-      ],
-    );
+    dispatchByQuery([malformedPool, malformedToken], [
+      { id: malformedPool.id, chain: malformedPool.chain, amp: null },
+      { id: malformedToken.id, chain: malformedToken.chain, amp: null },
+    ]);
 
     const result = await fetchBalancerPools();
 
     expect(result.pools).toHaveLength(2);
     expect(result.pools.map((pool) => pool.executionCapabilityGate)).toEqual([
-      { family: "balancer-amm", reason: "incomplete-exact-capture" },
-      { family: "balancer-amm", reason: "incomplete-exact-capture" },
+      balancerGate("incomplete-exact-capture"),
+      balancerGate("incomplete-exact-capture"),
     ]);
     expect(result.pools.every((pool) => pool.amp == null)).toBe(true);
   });
 
   it("keys the amp join by chain so same-id pools on other chains cannot cross-attach", async () => {
     const mainnetPool = stablePool();
-    const arbitrumPool = stablePool();
-    arbitrumPool.chain = "ARBITRUM";
-    dispatchByQuery(
-      [mainnetPool, arbitrumPool],
-      [
-        { id: mainnetPool.id, chain: "MAINNET", amp: "250.0" },
-        { id: arbitrumPool.id, chain: "ARBITRUM", amp: "5000" },
-      ],
-    );
+    const arbitrumPool = { ...stablePool(), chain: "ARBITRUM" };
+    dispatchByQuery([mainnetPool, arbitrumPool], [
+      { id: mainnetPool.id, chain: "MAINNET", amp: "250.0" },
+      { id: arbitrumPool.id, chain: "ARBITRUM", amp: "5000" },
+    ]);
     const result = await fetchBalancerPools();
-    const mainnet = result.pools.find((pool) => pool.chain === "ethereum");
-    const arbitrum = result.pools.find((pool) => pool.chain === "arbitrum");
-    expect(mainnet?.amp).toBe(250);
-    expect(arbitrum?.amp).toBe(5000);
+    expect(result.pools.find((pool) => pool.chain === "ethereum")?.amp).toBe(250);
+    expect(result.pools.find((pool) => pool.chain === "arbitrum")?.amp).toBe(5000);
   });
 
   it("degrades a failed capability sweep to an explicit incomplete-capture gate", async () => {
     mockFetch([
-      {
-        match: "api-v3.balancer.fi",
-        matchBody: "aggregatorPools",
-        body: { errors: [{ message: "nope" }] },
-        status: 500,
-      },
-      {
-        match: "api-v3.balancer.fi",
-        matchBody: "poolGetPools",
-        body: { data: { poolGetPools: [stablePool()] } },
-      },
+      { match: "api-v3.balancer.fi", matchBody: "aggregatorPools", body: { errors: [{ message: "nope" }] }, status: 500 },
+      { match: "api-v3.balancer.fi", matchBody: "poolGetPools", body: { data: { poolGetPools: [stablePool()] } } },
     ], { requireMatch: true });
     const result = await fetchBalancerPools();
     expect(result.pools.length).toBe(1);
     expect(result.pools[0]!.amp).toBeUndefined();
-    expect(result.pools[0]!.executionCapabilityGate).toEqual({
-      family: "balancer-amm",
-      reason: "incomplete-exact-capture",
-    });
+    expect(result.pools[0]!.executionCapabilityGate).toEqual(balancerGate("incomplete-exact-capture"));
     expect(result.ok).toBe(true);
   });
 });
@@ -493,46 +433,18 @@ describe("fetchBalancerPools enrichment admission (absent volume is not a zero)"
   const SMALL = "0xaaaa000000000000000000000000000000000001";
   const LARGE = "0xbbbb000000000000000000000000000000000002";
 
-  it("enriches a small pool whose volume field is unparseable (absent, not zero)", async () => {
-    dispatch([admissionPool(SMALL, "5000000", "not-a-number")]);
+  it.each([
+    { label: "small pool with unparseable volume", addr: SMALL, tvl: "5000000", vol: "not-a-number", expVol: null, expAmp: 250 },
+    { label: "large pool with absent volume", addr: LARGE, tvl: "150000000", vol: "not-a-number", expVol: null, expAmp: undefined },
+    { label: "large pool with measured volume clearing floor", addr: LARGE, tvl: "150000000", vol: "60000", expVol: 60_000, expAmp: 250 },
+    { label: "large pool with zero measured volume", addr: LARGE, tvl: "150000000", vol: "0.00", expVol: 0, expAmp: undefined },
+    { label: "pool whose vol/TVL ratio exceeds sanity bound", addr: SMALL, tvl: "5000000", vol: "300000000", expVol: 300_000_000, expAmp: undefined },
+  ])("handles enrichment admission for $label", async ({ addr, tvl, vol, expVol, expAmp }) => {
+    dispatch([admissionPool(addr, tvl, vol)]);
     const result = await fetchBalancerPools();
-    const pool = result.pools.find((row) => row.poolAddress === SMALL);
-    expect(pool?.volume24hUsd).toBeNull();
-    expect(pool?.amp).toBe(250);
-    expect(pool?.executionCapabilityGate).toBeUndefined();
-  });
-
-  it("skips the capability sweep for a large pool with an absent volume reading", async () => {
-    dispatch([admissionPool(LARGE, "150000000", "not-a-number")]);
-    const result = await fetchBalancerPools();
-    const pool = result.pools.find((row) => row.poolAddress === LARGE);
-    expect(pool?.volume24hUsd).toBeNull();
-    expect(pool?.amp).toBeUndefined();
-    expect(pool?.executionCapabilityGate).toBeUndefined();
-  });
-
-  it("enriches a large pool whose measured volume clears the floor", async () => {
-    dispatch([admissionPool(LARGE, "150000000", "60000")]);
-    const result = await fetchBalancerPools();
-    const pool = result.pools.find((row) => row.poolAddress === LARGE);
-    expect(pool?.volume24hUsd).toBe(60000);
-    expect(pool?.amp).toBe(250);
-  });
-
-  it("does not enrich a large pool whose measured volume is zero", async () => {
-    dispatch([admissionPool(LARGE, "150000000", "0.00")]);
-    const result = await fetchBalancerPools();
-    const pool = result.pools.find((row) => row.poolAddress === LARGE);
-    expect(pool?.volume24hUsd).toBe(0);
-    expect(pool?.amp).toBeUndefined();
-    expect(pool?.executionCapabilityGate).toBeUndefined();
-  });
-
-  it("does not enrich any pool whose measured vol/TVL ratio exceeds the sanity bound", async () => {
-    dispatch([admissionPool(SMALL, "5000000", "300000000")]);
-    const result = await fetchBalancerPools();
-    const pool = result.pools.find((row) => row.poolAddress === SMALL);
-    expect(pool?.amp).toBeUndefined();
+    const pool = result.pools.find((row) => row.poolAddress === addr);
+    expect(pool?.volume24hUsd).toBe(expVol);
+    expect(pool?.amp).toBe(expAmp);
     expect(pool?.executionCapabilityGate).toBeUndefined();
   });
 });

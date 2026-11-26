@@ -1,5 +1,20 @@
 [
   {
+    "version": "4.64",
+    "title": "Wave-1 Ethereum pilots for Falcon USDf and OSL USDGO",
+    "date": "2026-11-26",
+    "effectiveAt": 1795651200,
+    "summary": "Adds Ethereum FreezeWatch event scanning for Falcon Finance USDf (usdf-falcon) and OSL USDGO (usdgo-osl), adds the falcon-restriction boolean-direction event family, and resolves frontend FreezeWatch eligibility by canonical stablecoin ID.",
+    "impact": [
+      "Adds Ethereum scanning for Falcon Finance USDf (usdf-falcon, ledger symbol USDF, startBlock 21818184) using the new falcon-restriction event family for AddressRestrictionSet(address,bool), reading the indexed account strictly from topic[1] and the boolean restriction flag from data slot 0 (true maps to blacklist, false maps to unblacklist), with USD-par valuation consistent with USDX and USDA.",
+      "Adds Ethereum scanning for OSL USDGO (usdgo-osl, ledger symbol USDGO, startBlock 26000413), reusing the Anchorage usdtb batch AccountsBlocked(address[]) and AccountsUnblocked(address[]) event family.",
+      "Pins addressTopicIndex 1 on Falcon AddressRestrictionSet decoding so logs missing topic[1] quarantine instead of reading data word 0, expands boolean-direction event families in public coverage eventTypes to advertise both blacklist and unblacklist, and declares uncovered non-Ethereum deployments for usdf-falcon (BSC, Base, XDC, Solana) and usdgo-osl (Solana, Morph) in the deferred coverage manifest.",
+      "Migrates frontend FreezeWatch lookups from symbol matching to canonical stablecoin ID lookups derived from BLACKLIST_CONTRACT_SPECS so usdf-falcon maps to USDF while same-ticker coins (usdf-astherus, usdf-flipcash) stay excluded."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "4.63",
     "title": "Active balances after Ethereum USDT wipes",
     "date": "2026-11-19",

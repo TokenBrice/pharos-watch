@@ -16,7 +16,8 @@ import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { makeDepegRow } from "../../test-helpers/__shared/fixtures";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleDepegEvents } from "../depeg-events";
-import { DEPEG_PENDING_EXPIRY_SEC, DEPEG_PENDING_EXTENDED_EXPIRY_SEC, DEPEG_PENDING_SEVERE_EXPIRY_SEC } from "@shared/lib/depeg-config";
+import { makeClockedCurveNavPayload } from "./p4-route-response.test-support";
+import { DEPEG_PENDING_EXPIRY_SEC, DEPEG_PENDING_EXTENDED_EXPIRY_SEC, DEPEG_PENDING_SEVERE_EXPIRY_SEC, DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => {
@@ -755,6 +756,42 @@ describe("handleDepegEvents", () => {
           missingConfirmationCategories: [...(dexAvailable ? [] : ["dex"]), ...(pool ? [] : ["pool"])],
         }]);
       }
+    });
+
+    it("rejects stale-mark clocked Curve NAV dex_prices rows even while updated_at is fresh", async () => {
+      const nowSec = 1_800_000_000;
+      vi.useFakeTimers();
+      vi.setSystemTime(nowSec * 1000);
+      const staleNavPayload = makeClockedCurveNavPayload({
+        poolRatioObservedAt: nowSec - 120,
+        quoteMarkObservedAt: nowSec - DEX_FRESHNESS_SEC,
+        captureEvaluatedAtSec: nowSec - 60,
+        quotePublishedAtSec: nowSec - 60,
+      });
+      const db = mockEvents([], null, [
+        {
+          match: "FROM depeg_pending",
+          rows: [{
+            id: 11, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD", direction: "below",
+            first_seen_bps: -180, first_seen_at: nowSec - 600, first_price: 0.982,
+            last_seen_bps: -240, last_seen_at: nowSec - 120, last_price: 0.976,
+            peak_seen_bps: -310, peak_price: 0.969, peg_reference: 1,
+            reason: "large-cap+low-confidence", updated_at: nowSec - 120,
+          }],
+        },
+        {
+          match: "FROM dex_prices",
+          rows: [{
+            stablecoin_id: "usdt-tether", source_pool_count: 1, source_total_tvl: 2_500_000, updated_at: nowSec - 60,
+            price_sources_json: JSON.stringify(staleNavPayload),
+          }],
+        },
+        { match: "FROM dex_price_challenger_snapshots", rows: [] },
+      ]);
+      const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?includeTotal=false&includePending=true&stablecoin=usdt-tether"));
+      const body = DepegEventsResponseSchema.parse(await readJsonResponse(res, 200));
+      expect(body.pending?.[0]?.availableConfirmationCategories).toEqual(["offchain"]);
+      expect(body.pending?.[0]?.missingConfirmationCategories).toEqual(["dex", "pool"]);
     });
   });
 

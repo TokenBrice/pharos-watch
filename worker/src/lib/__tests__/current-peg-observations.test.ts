@@ -1,7 +1,9 @@
 import { getReferenceSessionState } from "@shared/lib/reference-market-hours";
+import { DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { describe, expect, it } from "vitest";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
-import { createCurrentPegReader, deriveCurrentPegObservationMap } from "../current-peg-observations";
+import { makeClockedCurveNavPayload } from "../../api/__tests__/p4-route-response.test-support";
+import { createCurrentPegReader, deriveCurrentPegObservationMap, selectCurrentPegDexPrices } from "../current-peg-observations";
 
 const AS_OF = 1_700_000_000;
 
@@ -146,5 +148,27 @@ describe("current peg observations", () => {
     const market = makeSolayer("coinbase", "accrued-token");
     expect(deriveCurrentPegObservationMap({ peggedAssets: [market], asOf: AS_OF, fxReferenceObservations: {}, dexPrices }).get(market.id))
       .toMatchObject({ currentDeviationBps: 0, admittedDeviationBps: 0, dexPriceCheck: null });
+  });
+
+  it("bounds selectCurrentPegDexPrices expiresAt and UI admission by clocked Curve NAV quoteMaxAgeSec", () => {
+    const pub = AS_OF - 100;
+    const markAt = pub - 240;
+    const row = {
+      stablecoin_id: "stusds-sky",
+      dex_price_usd: 1.07,
+      deviation_from_primary_bps: -210,
+      source_pool_count: 1,
+      source_total_tvl: 2_500_000,
+      updated_at: pub,
+      price_sources_json: JSON.stringify(makeClockedCurveNavPayload({
+        poolRatioObservedAt: pub - 120,
+        quoteMarkObservedAt: markAt,
+        captureEvaluatedAtSec: pub - 60,
+        quotePublishedAtSec: pub,
+      })),
+    };
+    expect(selectCurrentPegDexPrices([row], AS_OF).get("stusds-sky"))
+      .toMatchObject({ observedAtSec: markAt, expiresAt: markAt + DEX_FRESHNESS_SEC });
+    expect(selectCurrentPegDexPrices([row], markAt + DEX_FRESHNESS_SEC).has("stusds-sky")).toBe(false);
   });
 });

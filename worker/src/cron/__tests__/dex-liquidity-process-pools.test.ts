@@ -63,6 +63,27 @@ function makeCurveEntry(overrides: Partial<CurvePoolEntry>): CurvePoolEntry {
 }
 
 const noV3 = () => ({ uniV3PoolFees: new Map(), uniV3SymbolFees: new Map() });
+const USDC_USDT_SYMBOLS = new Map<string, string[]>([
+  ["USDT", ["usdt-tether"]],
+  ["USDC", ["usdc-circle"]],
+]);
+const ETH_USDC_USDT_ADDRS = new Map<string, string>([
+  ["ethereum:0xusdt", "usdt-tether"],
+  ["ethereum:0xusdc", "usdc-circle"],
+]);
+
+function runProcess(
+  overrides: Partial<Parameters<typeof processPoolMetrics>[0]> & { pools: LlamaPool[] },
+) {
+  return processPoolMetrics({
+    dexProjects: new Set(["curve"]),
+    symbolToChainScopedIds: new Map(),
+    chainAddressToId: new Map(),
+    curvePoolMap: new Map(),
+    ...noV3(),
+    ...overrides,
+  });
+}
 
 describe("processPoolMetrics", () => {
   beforeEach(() => {
@@ -327,43 +348,21 @@ describe("processPoolMetrics", () => {
 
   it("rethrows internal processing exceptions", () => {
     const invariant = new Error("metric invariant failed");
-    const pool = makePool({
-      pool: "0xinvariant",
-      symbol: "USDC-USDC",
-      tvlUsd: 150_000,
-    });
+    const pool = makePool({ pool: "0xinvariant", symbol: "USDC-USDC", tvlUsd: 150_000 });
     Object.defineProperty(pool, "count", {
       get() {
         throw invariant;
       },
     });
-    const symbolToIds = new Map<string, string[]>([["USDC", ["usdc-circle"]]]);
-
     expect(() =>
-      processPoolMetrics({
+      runProcess({
         pools: [pool],
-        dexProjects: new Set(["curve"]),
-        symbolToChainScopedIds: buildSymbolToChainScopedIds(
-          symbolToIds,
-          ["ethereum"],
-        ),
-        chainAddressToId: new Map(),
-        curvePoolMap: new Map(),
-        ...noV3(),
+        symbolToChainScopedIds: buildSymbolToChainScopedIds(new Map([["USDC", ["usdc-circle"]]]), ["ethereum"]),
       }),
     ).toThrow(invariant);
   });
 
   it("does not apply Curve symbol fallback enrichment to non-Curve DeFiLlama rows", () => {
-
-    const symbolToIds = new Map<string, string[]>([
-      ["USDT", ["usdt-tether"]],
-      ["USDC", ["usdc-circle"]],
-    ]);
-    const chainAddressToId = new Map<string, string>([
-      ["ethereum:0xusdt", "usdt-tether"],
-      ["ethereum:0xusdc", "usdc-circle"],
-    ]);
     const curvePoolMap = new Map<string, CurvePoolEntry>([
       [
         "ethereum:USDC-USDT",
@@ -379,7 +378,7 @@ describe("processPoolMetrics", () => {
       ],
     ]);
 
-    const metrics = processPoolMetrics({
+    const { metrics } = runProcess({
       pools: [
         makePool({
           pool: "uuid-uniswap-v3",
@@ -391,11 +390,10 @@ describe("processPoolMetrics", () => {
         }),
       ],
       dexProjects: new Set(["uniswap-v3"]),
-      symbolToChainScopedIds: buildSymbolToChainScopedIds(symbolToIds, ["ethereum"]),
-      chainAddressToId,
+      symbolToChainScopedIds: buildSymbolToChainScopedIds(USDC_USDT_SYMBOLS, ["ethereum"]),
+      chainAddressToId: ETH_USDC_USDT_ADDRS,
       curvePoolMap,
-      ...noV3(),
-    }).metrics;
+    });
 
     const usdt = metrics.get("usdt-tether");
     const pool = usdt?.pools[0];
@@ -411,18 +409,13 @@ describe("processPoolMetrics", () => {
     vi.spyOn(Date, "now").mockReturnValue(nowMs);
 
     const symbolToIds = new Map<string, string[]>([
-      ["USDT", ["usdt-tether"]],
-      ["USDC", ["usdc-circle"]],
+      ...USDC_USDT_SYMBOLS,
       ["USDE", ["usde-ethena"]],
       ["DAI", ["dai-makerdao"]],
       ["CUSD", ["cusd-cap", "cusd-celo"]],
     ]);
-    const addressToId = new Map<string, string>([["0xusdt", "usdt-tether"]]);
     const chains = ["ethereum", "base"];
-    const symbolToChainScopedIds = buildSymbolToChainScopedIds(symbolToIds, chains);
-    const chainAddressToId = buildChainAddressToId(addressToId, chains);
-    const dexProjects = new Set(["curve", "uniswap-v3", "aerodrome", "sushiswap"]);
-
+    const chainAddressToId = buildChainAddressToId(new Map([["0xusdt", "usdt-tether"]]), chains);
     const curvePoolMap = new Map<string, CurvePoolEntry>([
       [
         "ethereum:0xcurve1",
@@ -454,85 +447,28 @@ describe("processPoolMetrics", () => {
         }),
       ],
     ]);
-    const uniV3PoolFees = new Map<string, number>([["ethereum:0xuni1", 100]]);
-    const uniV3SymbolFees = new Map<string, number>([["ethereum:USDC:USDE", 3000]]);
 
-    const metrics = processPoolMetrics({
+    const { metrics } = runProcess({
       pools: [
         makePool({ pool: "0xdust", tvlUsd: 5_000 }),
         makePool({ pool: "0xabsurd", tvlUsd: 2e12 }),
         makePool({ pool: "0xblocked", project: "retro", tvlUsd: 50_000 }),
         makePool({ pool: "0xnotdex", project: "not-in-whitelist", tvlUsd: 50_000 }),
         makePool({ pool: "0xlending", exposure: "single", tvlUsd: 50_000 }),
-        makePool({
-          pool: "0xcurve1",
-          project: "curve",
-          symbol: "USDT-USDC",
-          tvlUsd: 1_000_000,
-          volumeUsd1d: 200_000,
-          volumeUsd7d: 1_400_000,
-          underlyingTokens: ["0xusdt", "0xusdc-new"],
-          apyBase: 4,
-          apy: 10,
-          count: 30,
-        }),
-        makePool({
-          pool: "0xcurve2",
-          project: "curve",
-          symbol: "USDT-USDC",
-          tvlUsd: 750_000,
-          volumeUsd1d: 60_000,
-          volumeUsd7d: 420_000,
-        }),
-        makePool({
-          pool: "0xuni1",
-          project: "uniswap-v3",
-          symbol: "USDT-DAI",
-          tvlUsd: 500_000,
-          volumeUsd1d: 100_000,
-          volumeUsd7d: 700_000,
-          apyBase: 0.02,
-          apy: 0.005,
-          count: 45,
-        }),
-        makePool({
-          pool: "0xuni2",
-          project: "uniswap-v3",
-          symbol: "USDC-USDE",
-          tvlUsd: 400_000,
-          volumeUsd1d: 80_000,
-          volumeUsd7d: 560_000,
-          apyBase: 0,
-          apy: 0,
-          count: 20,
-        }),
-        makePool({
-          pool: "0xaero",
-          chain: "Base",
-          project: "aerodrome",
-          symbol: "USDC-USDT",
-          tvlUsd: 300_000,
-          volumeUsd1d: 90_000,
-          volumeUsd7d: 630_000,
-          count: 12,
-        }),
-        makePool({
-          pool: "0xcollision",
-          project: "sushiswap",
-          symbol: "CUSD-USDT",
-          tvlUsd: 200_000,
-          volumeUsd1d: 50_000,
-          volumeUsd7d: 350_000,
-          count: 10,
-        }),
+        makePool({ pool: "0xcurve1", tvlUsd: 1_000_000, volumeUsd1d: 200_000, volumeUsd7d: 1_400_000, underlyingTokens: ["0xusdt", "0xusdc-new"], apyBase: 4, apy: 10, count: 30 }),
+        makePool({ pool: "0xcurve2", tvlUsd: 750_000, volumeUsd1d: 60_000, volumeUsd7d: 420_000 }),
+        makePool({ pool: "0xuni1", project: "uniswap-v3", symbol: "USDT-DAI", tvlUsd: 500_000, volumeUsd1d: 100_000, volumeUsd7d: 700_000, apyBase: 0.02, apy: 0.005, count: 45 }),
+        makePool({ pool: "0xuni2", project: "uniswap-v3", symbol: "USDC-USDE", tvlUsd: 400_000, volumeUsd1d: 80_000, volumeUsd7d: 560_000, apyBase: 0, apy: 0, count: 20 }),
+        makePool({ pool: "0xaero", chain: "Base", project: "aerodrome", symbol: "USDC-USDT", tvlUsd: 300_000, volumeUsd1d: 90_000, volumeUsd7d: 630_000, count: 12 }),
+        makePool({ pool: "0xcollision", project: "sushiswap", symbol: "CUSD-USDT", tvlUsd: 200_000, volumeUsd1d: 50_000, volumeUsd7d: 350_000, count: 10 }),
       ],
-      dexProjects,
-      symbolToChainScopedIds,
+      dexProjects: new Set(["curve", "uniswap-v3", "aerodrome", "sushiswap"]),
+      symbolToChainScopedIds: buildSymbolToChainScopedIds(symbolToIds, chains),
       chainAddressToId,
       curvePoolMap,
-      uniV3PoolFees,
-      uniV3SymbolFees,
-    }).metrics;
+      uniV3PoolFees: new Map([["ethereum:0xuni1", 100]]),
+      uniV3SymbolFees: new Map([["ethereum:USDC:USDE", 3000]]),
+    });
 
     expect(chainAddressToId.get("ethereum:0xusdc-new")).toBeUndefined();
     expect(metrics.has("cusd-cap")).toBe(false);
@@ -541,78 +477,45 @@ describe("processPoolMetrics", () => {
     const usdt = metrics.get("usdt-tether");
     expect(usdt).toBeDefined();
     const rebuiltUsdt = rebuildMetricsFromPools(usdt?.pools ?? []);
-    expect(rebuiltUsdt.totalTvlUsd).toBe(2_650_000);
-    expect(rebuiltUsdt.poolCount).toBe(5);
-    expect(rebuiltUsdt.protocolTvl).toEqual({
-      curve: 1_650_000,
-      "uniswap-v3": 500_000,
-      aerodrome: 300_000,
-      sushiswap: 200_000,
+    expect(rebuiltUsdt).toMatchObject({
+      totalTvlUsd: 2_650_000,
+      poolCount: 5,
+      protocolTvl: { curve: 1_650_000, "uniswap-v3": 500_000, aerodrome: 300_000, sushiswap: 200_000 },
+      chainTvl: { ethereum: 2_350_000, base: 300_000 },
+      totalTvlForBalance: 1_650_000,
+      organicTvlWeightedSum: 860_000,
+      totalTvlForOrganic: 1_400_000,
+      oldestPoolDays: 200,
     });
-    expect(rebuiltUsdt.chainTvl).toEqual({
-      ethereum: 2_350_000,
-      base: 300_000,
-    });
-    expect(rebuiltUsdt.totalTvlForBalance).toBe(1_650_000);
-    expect(rebuiltUsdt.organicTvlWeightedSum).toBe(860_000);
-    expect(rebuiltUsdt.totalTvlForOrganic).toBe(1_400_000);
-    expect(rebuiltUsdt.oldestPoolDays).toBe(200);
 
     const curveAddressPool = usdt?.pools.find((pool) => pool.poolId === "ethereum:defillama:0xcurve1");
     expect(curveAddressPool).toMatchObject({
       poolType: "curve-stableswap-high-a",
       extra: {
-        amplificationCoefficient: 700,
-        balanceRatio: 0.8,
-        registryId: "main-stableswap",
-        isMetaPool: false,
-        organicFraction: 0.4,
-        pairQuality: 1,
-        maturityDays: 200,
+        amplificationCoefficient: 700, balanceRatio: 0.8, registryId: "main-stableswap",
+        isMetaPool: false, organicFraction: 0.4, pairQuality: 1, maturityDays: 200, effectiveTvl: 643988,
       },
     });
-    expect(curveAddressPool?.extra?.effectiveTvl).toBe(643988);
 
     const curveFallbackPool = usdt?.pools.find((pool) => pool.poolId === "ethereum:defillama:0xcurve2");
     expect(curveFallbackPool).toMatchObject({
       poolType: "curve-cryptoswap",
-      extra: {
-        amplificationCoefficient: 80,
-        isMetaPool: true,
-        registryId: "tricrypto-factory",
-        maturityDays: 100,
-      },
+      extra: { amplificationCoefficient: 80, isMetaPool: true, registryId: "tricrypto-factory", maturityDays: 100, effectiveTvl: 132583 },
     });
-    expect(curveFallbackPool?.extra?.effectiveTvl).toBe(132583);
     expect(curveFallbackPool?.extra?.permanentLiquidity).toBeUndefined();
 
-    const uniAddressPool = usdt?.pools.find((pool) => pool.poolId === "ethereum:defillama:0xuni1");
-    expect(uniAddressPool).toMatchObject({
+    expect(usdt?.pools.find((pool) => pool.poolId === "ethereum:defillama:0xuni1")).toMatchObject({
       poolType: "uniswap-v3-1bp",
-      extra: {
-        feeTier: 1,
-        organicFraction: 1,
-        maturityDays: 45,
-      },
+      extra: { feeTier: 1, organicFraction: 1, maturityDays: 45 },
     });
 
     const usdc = metrics.get("usdc-circle");
-    const rebuiltUsdc = rebuildMetricsFromPools(usdc?.pools ?? []);
-    expect(rebuiltUsdc.poolCount).toBe(3);
-    expect(rebuiltUsdc.totalTvlUsd).toBe(1_450_000);
-
-    const uniSymbolPool = usdc?.pools.find((pool) => pool.poolId === "ethereum:defillama:0xuni2");
-    expect(uniSymbolPool).toMatchObject({
+    expect(rebuildMetricsFromPools(usdc?.pools ?? [])).toMatchObject({ poolCount: 3, totalTvlUsd: 1_450_000 });
+    expect(usdc?.pools.find((pool) => pool.poolId === "ethereum:defillama:0xuni2")).toMatchObject({
       poolType: "uniswap-v3-30bp",
-      extra: {
-        feeTier: 30,
-        organicFraction: 0,
-        maturityDays: 20,
-      },
+      extra: { feeTier: 30, organicFraction: 0, maturityDays: 20 },
     });
-
-    const aerodromePool = usdc?.pools.find((pool) => pool.poolId === "base:defillama:0xaero");
-    expect(aerodromePool?.poolType).toBe("aerodrome-volatile");
+    expect(usdc?.pools.find((pool) => pool.poolId === "base:defillama:0xaero")?.poolType).toBe("aerodrome-volatile");
 
     const usde = metrics.get("usde-ethena");
     expect(rebuildMetricsFromPools(usde?.pools ?? []).poolCount).toBe(1);
@@ -620,61 +523,29 @@ describe("processPoolMetrics", () => {
   });
 
   it("does not learn wrapper addresses from positional DeFiLlama symbols", () => {
-
-    const symbolToIds = new Map<string, string[]>([["USR", ["usr-resolv"]]]);
-    const symbolToChainScopedIds = buildSymbolToChainScopedIds(symbolToIds, ["base"]);
     const chainAddressToId = new Map<string, string>([["base:0xusr", "usr-resolv"]]);
-
-    const metrics = processPoolMetrics({
+    const { metrics } = runProcess({
       pools: [
         makePool({
-          chain: "Base",
-          project: "curve",
-          symbol: "AAVEGHO-USR",
-          underlyingTokens: ["0xusr", "0xwabasgho"],
-          tvlUsd: 200_000,
-          volumeUsd1d: 50_000,
-          volumeUsd7d: 350_000,
+          chain: "Base", symbol: "AAVEGHO-USR", underlyingTokens: ["0xusr", "0xwabasgho"],
+          tvlUsd: 200_000, volumeUsd1d: 50_000, volumeUsd7d: 350_000,
         }),
       ],
-      dexProjects: new Set(["curve"]),
-      symbolToChainScopedIds,
+      symbolToChainScopedIds: buildSymbolToChainScopedIds(new Map([["USR", ["usr-resolv"]]]), ["base"]),
       chainAddressToId,
-      curvePoolMap: new Map(),
-      ...noV3(),
-    }).metrics;
+    });
 
     expect(chainAddressToId.get("base:0xwabasgho")).toBeUndefined();
-    const rebuilt = rebuildMetricsFromPools(metrics.get("usr-resolv")?.pools ?? []);
-    expect(rebuilt.poolCount).toBe(1);
-    expect(rebuilt.totalTvlUsd).toBe(200_000);
+    expect(rebuildMetricsFromPools(metrics.get("usr-resolv")?.pools ?? [])).toMatchObject({ poolCount: 1, totalTvlUsd: 200_000 });
   });
 
   it("disables the DEX whitelist filter when the project index is empty", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-
-    const metrics = processPoolMetrics({
-      pools: [
-        makePool({
-          pool: "0xfree",
-          project: "unknown-dex",
-          symbol: "USDT-USDC",
-          tvlUsd: 75_000,
-          volumeUsd1d: 9_000,
-        }),
-      ],
+    const { metrics } = runProcess({
+      pools: [makePool({ pool: "0xfree", project: "unknown-dex", tvlUsd: 75_000, volumeUsd1d: 9_000 })],
       dexProjects: new Set(),
-      symbolToChainScopedIds: buildSymbolToChainScopedIds(
-        new Map([
-          ["USDT", ["usdt-tether"]],
-          ["USDC", ["usdc-circle"]],
-        ]),
-        ["ethereum"],
-      ),
-      chainAddressToId: new Map(),
-      curvePoolMap: new Map(),
-      ...noV3(),
-    }).metrics;
+      symbolToChainScopedIds: buildSymbolToChainScopedIds(USDC_USDT_SYMBOLS, ["ethereum"]),
+    });
 
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining("[dex-liquidity] DEX project index is empty — project whitelist filter disabled for this run"),
@@ -684,80 +555,41 @@ describe("processPoolMetrics", () => {
   });
 
   it("skips blocked dead DEX variants including bunni", () => {
-    const metrics = processPoolMetrics({
+    const { metrics } = runProcess({
       pools: [
-        makePool({
-          pool: "0xbunni-root",
-          project: "bunni",
-          symbol: "USDT-USDC",
-          underlyingTokens: ["0xusdt", "0xusdc"],
-        }),
-        makePool({
-          pool: "0xbunni-eth",
-          project: "bunni-ethereum",
-          symbol: "USDT-USDC",
-          underlyingTokens: ["0xusdt", "0xusdc"],
-        }),
+        makePool({ pool: "0xbunni-root", project: "bunni", underlyingTokens: ["0xusdt", "0xusdc"] }),
+        makePool({ pool: "0xbunni-eth", project: "bunni-ethereum", underlyingTokens: ["0xusdt", "0xusdc"] }),
       ],
       dexProjects: new Set(["bunni", "bunni-ethereum"]),
-      symbolToChainScopedIds: buildSymbolToChainScopedIds(
-        new Map([
-          ["USDT", ["usdt-tether"]],
-          ["USDC", ["usdc-circle"]],
-        ]),
-        ["ethereum"],
-      ),
-      chainAddressToId: new Map([
-        ["ethereum:0xusdt", "usdt-tether"],
-        ["ethereum:0xusdc", "usdc-circle"],
-      ]),
-      curvePoolMap: new Map(),
-      ...noV3(),
-    }).metrics;
+      symbolToChainScopedIds: buildSymbolToChainScopedIds(USDC_USDT_SYMBOLS, ["ethereum"]),
+      chainAddressToId: ETH_USDC_USDT_ADDRS,
+    });
 
     expect(metrics.size).toBe(0);
   });
 
   it.each([[NaN, 5, 0], [3, Infinity, 100_000]])("handles organic inputs %s/%s", (apyBase, apy, organicTvl) => {
-    const { metrics } = processPoolMetrics({
-      pools: [makePool({ apyBase, apy })], dexProjects: new Set(["curve"]),
-      symbolToChainScopedIds: buildSymbolToChainScopedIds(new Map([["USDT", ["usdt-tether"]], ["USDC", ["usdc-circle"]]]), ["ethereum"]),
-      chainAddressToId: new Map(), curvePoolMap: new Map(), ...noV3(),
+    const { metrics } = runProcess({
+      pools: [makePool({ apyBase, apy })],
+      symbolToChainScopedIds: buildSymbolToChainScopedIds(USDC_USDT_SYMBOLS, ["ethereum"]),
     });
     expect(rebuildMetricsFromPools(metrics.get("usdt-tether")!.pools).totalTvlForOrganic).toBe(organicTvl);
   });
 
   it("normalizes top-pool project labels for DeFiLlama Orca rows", () => {
-    const metrics = processPoolMetrics({
+    const usdcMint = "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1";
+    const usdtMint = "Es9vMFrzaCERmJfrF4H2FY6q2JvE4YJzS83p2wM8wus";
+    const { metrics } = runProcess({
       pools: [
         makePool({
-          chain: "Solana",
-          project: "orca-dex",
-          symbol: "USDC-USDT",
-          underlyingTokens: [
-            "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1",
-            "Es9vMFrzaCERmJfrF4H2FY6q2JvE4YJzS83p2wM8wus",
-          ],
-          tvlUsd: 500_000,
-          volumeUsd1d: 100_000,
-          volumeUsd7d: 700_000,
+          chain: "Solana", project: "orca-dex", symbol: "USDC-USDT",
+          underlyingTokens: [usdcMint, usdtMint], tvlUsd: 500_000, volumeUsd1d: 100_000, volumeUsd7d: 700_000,
         }),
       ],
       dexProjects: new Set(["orca-dex"]),
-      symbolToChainScopedIds: buildSymbolToChainScopedIds(
-        new Map([
-          ["USDC", ["usdc-circle"]],
-          ["USDT", ["usdt-tether"]],
-        ]),
-        ["solana"],
-      ),
-      chainAddressToId: new Map([
-        ["solana:EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1", "usdc-circle"],
-        ["solana:Es9vMFrzaCERmJfrF4H2FY6q2JvE4YJzS83p2wM8wus", "usdt-tether"],
-      ]),
-      curvePoolMap: new Map(),
-      ...noV3(),
-    }).metrics;
+      symbolToChainScopedIds: buildSymbolToChainScopedIds(USDC_USDT_SYMBOLS, ["solana"]),
+      chainAddressToId: new Map([[`solana:${usdcMint}`, "usdc-circle"], [`solana:${usdtMint}`, "usdt-tether"]]),
+    });
 
     expect(metrics.get("usdc-circle")?.pools[0]?.project).toBe("orca");
     expect(metrics.get("usdt-tether")?.pools[0]?.project).toBe("orca");
@@ -765,22 +597,10 @@ describe("processPoolMetrics", () => {
 
   it("Curve metapool counts its base-LP leg: full usdTotal, not Curve's base-pool-excluded total", () => {
     // LUSD/3Crv regression: excluding the 3Crv leg published $4.3M of a $12.9M pool.
-
-    const symbolToIds = new Map<string, string[]>([
-      ["USDC", ["usdc-circle"]],
-      ["USDT", ["usdt-tether"]],
-    ]);
-    const symbolToChainScopedIds = buildSymbolToChainScopedIds(symbolToIds, ["ethereum"]);
-    const chainAddressToId = new Map<string, string>([
-      ["ethereum:0xusdc", "usdc-circle"],
-      ["ethereum:0xusdt", "usdt-tether"],
-    ]);
-
     const curvePoolMap = new Map<string, CurvePoolEntry>([
       [
         "ethereum:0xmetapool",
         makeCurveEntry({
-          A: 100,
           balanceRatio: 0.49,
           balanceRatioById: { "usdc-circle": 1, "usdt-tether": 0.49 },
           registryId: "factory-meta",
@@ -793,51 +613,33 @@ describe("processPoolMetrics", () => {
         }),
       ],
     ]);
-
-    const metrics = processPoolMetrics({
-      pools: [
-        makePool({
-          pool: "0xmetapool",
-          project: "curve",
-          symbol: "USDC-USDT",
-          tvlUsd: 100_000_000,
-          underlyingTokens: ["0xusdc", "0xusdt"],
-          count: 5,
-        }),
-      ],
-      dexProjects: new Set(["curve"]),
-      symbolToChainScopedIds,
-      chainAddressToId,
+    const { metrics } = runProcess({
+      pools: [makePool({ pool: "0xmetapool", symbol: "USDC-USDT", tvlUsd: 100_000_000, underlyingTokens: ["0xusdc", "0xusdt"], count: 5 })],
+      symbolToChainScopedIds: buildSymbolToChainScopedIds(USDC_USDT_SYMBOLS, ["ethereum"]),
+      chainAddressToId: ETH_USDC_USDT_ADDRS,
       curvePoolMap,
-      ...noV3(),
-    }).metrics;
+    });
 
     const usdc = metrics.get("usdc-circle");
     expect(usdc).toBeDefined();
-    const rebuiltUsdc = rebuildMetricsFromPools(usdc?.pools ?? []);
-    expect(rebuiltUsdc.totalTvlUsd).toBe(100_000_000);
-    expect(rebuiltUsdc.protocolTvl.curve).toBe(100_000_000);
+    expect(rebuildMetricsFromPools(usdc?.pools ?? [])).toMatchObject({
+      totalTvlUsd: 100_000_000,
+      protocolTvl: { curve: 100_000_000 },
+      qualityAdjustedTvl: 85_000_000,
+      effectiveTvl: 85_000_000,
+    });
     expect(usdc?.pools[0]?.tvlUsd).toBe(100_000_000);
     expect(usdc?.pools[0]?.extra?.measurement?.balanceMeasured).toBe(true);
-    expect(rebuiltUsdc.qualityAdjustedTvl).toBe(85_000_000);
-    expect(rebuiltUsdc.effectiveTvl).toBe(85_000_000);
     // v7.2: each coin reads its own side; only over-held USDT is penalised.
     expect(usdc?.pools[0]?.extra?.balanceRatio).toBe(1);
     expect(metrics.get("usdt-tether")?.pools[0]?.extra?.balanceRatio).toBe(0.49);
   });
 
-
   it("joins UUID-id DeFiLlama rows to Curve pools via the coin-set fingerprint", () => {
     const USDC = "0x00000000000000000000000000000000000000c1";
     const USDT = "0x00000000000000000000000000000000000000c2";
-    const addressToId = new Map([
-      [USDC, "usdc-circle"],
-      [USDT, "usdt-tether"],
-    ]);
-    const chainAddressToId = buildChainAddressToId(addressToId, ["ethereum"]);
-    const symbolToIds = new Map<string, string[]>();
-    const symbolToChainScopedIds = buildSymbolToChainScopedIds(symbolToIds, ["ethereum"]);
-
+    const chainAddressToId = buildChainAddressToId(new Map([[USDC, "usdc-circle"], [USDT, "usdt-tether"]]), ["ethereum"]);
+    const symbolToChainScopedIds = buildSymbolToChainScopedIds(new Map(), ["ethereum"]);
     const entry = makeCurveEntry({
       A: 200,
       executionCoins: [
@@ -847,7 +649,6 @@ describe("processPoolMetrics", () => {
     });
     const fingerprintKey = buildPoolFingerprint("ethereum", "curve", [USDC, USDT]);
     expect(fingerprintKey).not.toBeNull();
-    const curvePoolMap = new Map([[fingerprintKey!, entry]]);
 
     // Production DeFiLlama yields rows carry UUID pool ids, never addresses.
     const uuidRow = makePool({
@@ -859,61 +660,43 @@ describe("processPoolMetrics", () => {
       count: 3,
     });
 
-    const metrics = processPoolMetrics({
+    const { metrics } = runProcess({
       pools: [uuidRow],
       dexProjects: new Set(["curve-dex"]),
       symbolToChainScopedIds,
       chainAddressToId,
-      curvePoolMap,
-      ...noV3(),
-    }).metrics;
+      curvePoolMap: new Map([[fingerprintKey!, entry]]),
+    });
 
     const usdc = metrics.get("usdc-circle");
     expect(usdc).toBeDefined();
     const topPool = usdc!.pools[0]!;
     // Address-grade fingerprint match: Curve's TVL replaces the row's own TVL.
     expect(topPool.tvlUsd).toBe(1_000_000);
-    const model = topPool.extra?.ammExecutionModel;
-    expect(model).toBeDefined();
-    expect(model).toMatchObject({
-      source: "curve",
-      invariant: "stableswap",
-      amplification: 100,
-    });
+    expect(topPool.extra?.ammExecutionModel).toMatchObject({ source: "curve", invariant: "stableswap", amplification: 100 });
 
     // A reviewed lock follows the join, never onto a row naming another pool address.
     const poolAddress = "0x00000000000000000000000000000000000000a1";
     const permanentLiquidity = { lpShare: 0.5, chain: "ethereum", lpToken: "0x1", holder: "0x2", proof: "burn-address", verifiedAtBlock: 1 };
-    const lockOn = (pool: string) => processPoolMetrics({
-      pools: [{ ...uuidRow, pool }], dexProjects: new Set(["curve-dex"]), symbolToChainScopedIds, chainAddressToId,
-      curvePoolMap: new Map([[`ethereum:${poolAddress}`, { ...entry, poolAddress, permanentLiquidity }], [fingerprintKey!, { ...entry, poolAddress, permanentLiquidity }]]), ...noV3(),
+    const lockOn = (pool: string) => runProcess({
+      pools: [{ ...uuidRow, pool }],
+      dexProjects: new Set(["curve-dex"]),
+      symbolToChainScopedIds,
+      chainAddressToId,
+      curvePoolMap: new Map([
+        [`ethereum:${poolAddress}`, { ...entry, poolAddress, permanentLiquidity }],
+        [fingerprintKey!, { ...entry, poolAddress, permanentLiquidity }],
+      ]),
     }).metrics.get("usdc-circle")?.pools[0]?.extra?.permanentLiquidity;
-    expect([lockOn(uuidRow.pool), lockOn(poolAddress), lockOn(poolAddress.replace("a1", "a2"))]).toEqual([permanentLiquidity, permanentLiquidity, undefined]);
+    expect([lockOn(uuidRow.pool), lockOn(poolAddress), lockOn(poolAddress.replace("a1", "a2"))])
+      .toEqual([permanentLiquidity, permanentLiquidity, undefined]);
   });
 
   it("retains an exact-address Curve invariant gate for P4 completeness", () => {
     const USDC = "0x00000000000000000000000000000000000000c1";
     const WETH = "0x00000000000000000000000000000000000000c2";
-    const addressToId = new Map([[USDC, "usdc-circle"]]);
-    const chainAddressToId = buildChainAddressToId(addressToId, ["ethereum"]);
-    const symbolToIds = new Map<string, string[]>();
-    const symbolToChainScopedIds = buildSymbolToChainScopedIds(symbolToIds, ["ethereum"]);
-    const fingerprintKey = buildPoolFingerprint("ethereum", "curve", [USDC, WETH]);
-    const curvePoolMap = new Map([
-      [
-        fingerprintKey!,
-        makeCurveEntry({
-          A: 20_000_000,
-          registryId: "factory-twocrypto",
-          executionCoins: [
-            { address: USDC, symbol: "USDC", decimals: 6, balance: 5_000_000, usdPrice: 1 },
-            { address: WETH, symbol: "WETH", decimals: 18, balance: 2_000, usdPrice: 2_500 },
-          ],
-        }),
-      ],
-    ]);
-
-    const metrics = processPoolMetrics({
+    const fingerprintKey = buildPoolFingerprint("ethereum", "curve", [USDC, WETH])!;
+    const { metrics } = runProcess({
       pools: [
         makePool({
           pool: "4dbfda50-1111-2222-3333-444455556666",
@@ -925,17 +708,19 @@ describe("processPoolMetrics", () => {
         }),
       ],
       dexProjects: new Set(["curve-dex"]),
-      symbolToChainScopedIds,
-      chainAddressToId,
-      curvePoolMap,
-      ...noV3(),
-    }).metrics;
+      chainAddressToId: buildChainAddressToId(new Map([[USDC, "usdc-circle"]]), ["ethereum"]),
+      curvePoolMap: new Map([[fingerprintKey, makeCurveEntry({
+        A: 20_000_000,
+        registryId: "factory-twocrypto",
+        executionCoins: [
+          { address: USDC, symbol: "USDC", decimals: 6, balance: 5_000_000, usdPrice: 1 },
+          { address: WETH, symbol: "WETH", decimals: 18, balance: 2_000, usdPrice: 2_500 },
+        ],
+      })]]),
+    });
 
     expect(metrics.get("usdc-circle")?.pools[0]?.extra).toMatchObject({
-      executionCapabilityGate: {
-        family: "curve-cryptoswap",
-        reason: "unsupported-invariant",
-      },
+      executionCapabilityGate: { family: "curve-cryptoswap", reason: "unsupported-invariant" },
     });
     expect(metrics.get("usdc-circle")?.pools[0]?.extra?.ammExecutionModel).toBeUndefined();
   });
@@ -979,13 +764,7 @@ describe("processPoolMetrics", () => {
     const USDT = "0x00000000000000000000000000000000000000c2";
     const POOL_A = "0x00000000000000000000000000000000000000a1";
     const POOL_B = "0x00000000000000000000000000000000000000b1";
-    const addressToId = new Map([
-      [USDC, "usdc-circle"],
-      [USDT, "usdt-tether"],
-    ]);
-    const chainAddressToId = buildChainAddressToId(addressToId, ["ethereum"]);
-    const symbolToIds = new Map<string, string[]>();
-    const symbolToChainScopedIds = buildSymbolToChainScopedIds(symbolToIds, ["ethereum"]);
+    const chainAddressToId = buildChainAddressToId(new Map([[USDC, "usdc-circle"], [USDT, "usdt-tether"]]), ["ethereum"]);
     const entry = makeCurveEntry({
       executionCoins: [
         { address: USDC, symbol: "USDC", decimals: 6, balance: 5_000_000, usdPrice: 1 },
@@ -1009,7 +788,7 @@ describe("processPoolMetrics", () => {
     ];
 
     for (const testCase of cases) {
-      const metrics = processPoolMetrics({
+      const { metrics } = runProcess({
         pools: [
           makePool({
             pool: "4dbfda50-1111-2222-3333-444455556666",
@@ -1021,35 +800,24 @@ describe("processPoolMetrics", () => {
           }),
         ],
         dexProjects: new Set(["curve-dex"]),
-        symbolToChainScopedIds,
         chainAddressToId,
         curvePoolMap: testCase.curvePoolMap,
-        ...noV3(),
-      }).metrics;
+      });
       const retainedPools = metrics.get("usdc-circle")?.pools ?? [];
       expect(retainedPools, testCase.name).toHaveLength(1);
       expect(retainedPools[0]?.extra, testCase.name).toMatchObject({
-        executionCapabilityGate: {
-          family: "curve-stableswap",
-          reason: "exact-pool-join-unresolved",
-        },
+        executionCapabilityGate: { family: "curve-stableswap", reason: "exact-pool-join-unresolved" },
       });
       expect(retainedPools[0]?.extra?.ammExecutionModel, testCase.name).toBeUndefined();
 
-      const routeResult = buildP4DexExitRouteObservations({
-        stablecoinId: "usdc-circle",
-        retainedPools,
-        observedAt: 1_000,
-      });
+      const routeResult = buildP4DexExitRouteObservations({ stablecoinId: "usdc-circle", retainedPools, observedAt: 1_000 });
       expect(routeResult.coverage, testCase.name).toMatchObject({
         capabilityMatrixVersion: DEX_ROUTE_CAPABILITY_MATRIX_VERSION,
         retainedPoolCount: 1,
         scoreEligiblePoolCount: 0,
         scoreEligibleCapabilityPoolCount: 1,
         unsupportedPoolCount: 1,
-        unsupportedReasons: {
-          "executionCapabilityGate:curve-stableswap:exact-pool-join-unresolved": 1,
-        },
+        unsupportedReasons: { "executionCapabilityGate:curve-stableswap:exact-pool-join-unresolved": 1 },
       });
     }
   });
@@ -1064,17 +832,16 @@ describe("processPoolMetrics", () => {
       chain: "ethereum", poolId, feePips: 100, tickSpacing: 1,
       hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS, activeLiquidity: "1215742317323",
       tvlUsd: -222031.942086, token0Price: 0.9988856322499521, token1Price: 1.0011156109509132,
-      tokens: [{ address: usdc, symbol: "USDC", decimals: 6 },
-        { address: thusd, symbol: "thUSD", decimals: 6 }],
+      tokens: [{ address: usdc, symbol: "USDC", decimals: 6 }, { address: thusd, symbol: "thUSD", decimals: 6 }],
     };
     const key = buildUniswapV4ExecutionCandidateKey("ethereum", [usdc, thusd], 100)!;
-    const run = (candidates: UniswapV4ExecutionCandidate[]) => processPoolMetrics({
-      pools: [makePool({ pool: poolId, project: "uniswap-v4", symbol: "USDC-THUSD",
-        tvlUsd: 5_561_855, volumeUsd1d: 10_000, volumeUsd7d: 70_000,
-        underlyingTokens: [usdc, thusd], poolMeta: "0.01%" })],
-      dexProjects: new Set(["uniswap-v4"]), symbolToChainScopedIds: new Map(),
+    const run = (candidates: UniswapV4ExecutionCandidate[]) => runProcess({
+      pools: [makePool({
+        pool: poolId, project: "uniswap-v4", symbol: "USDC-THUSD",
+        tvlUsd: 5_561_855, underlyingTokens: [usdc, thusd], poolMeta: "0.01%",
+      })],
+      dexProjects: new Set(["uniswap-v4"]),
       chainAddressToId: new Map([[`ethereum:${usdc}`, "usdc-circle"], [`ethereum:${thusd}`, "thusd-theo"]]),
-      curvePoolMap: new Map(), ...noV3(),
       stablecoinPriceById: new Map([["usdc-circle", 1], ["thusd-theo", 1]]),
       measuredTargetCapturedAt: 1_790_748_609,
       uniswapV4ExecutionCandidates: new Map([[key, candidates]]),
@@ -1082,17 +849,13 @@ describe("processPoolMetrics", () => {
     const measured = run([candidate]);
     const unresolved = run([]);
     expect(measured.pools).toHaveLength(1);
-    expect(measured.pools[0]).toMatchObject({ poolId: `ethereum:${poolId}`,
-      tvlUsd: 5_561_855, volumeUsd1d: 10_000, volumeUsd7d: 70_000,
-      extra: { measuredExecutionTarget: { poolId: `ethereum:${poolId}`,
-        tokenIn: { trackedAssetId: "thusd-theo" } } } });
-    expect(rebuildMetricsFromPools(measured.pools)).toMatchObject({
-      totalTvlUsd: 5_561_855, poolCount: 1,
+    expect(measured.pools[0]).toMatchObject({
+      poolId: `ethereum:${poolId}`, tvlUsd: 5_561_855, volumeUsd1d: 10_000, volumeUsd7d: 70_000,
+      extra: { measuredExecutionTarget: { poolId: `ethereum:${poolId}`, tokenIn: { trackedAssetId: "thusd-theo" } } },
     });
-    expect(unresolved.pools[0]).toMatchObject({
-      tvlUsd: 5_561_855, volumeUsd1d: 10_000, volumeUsd7d: 70_000,
-    });
+    expect(rebuildMetricsFromPools(measured.pools)).toMatchObject({ totalTvlUsd: 5_561_855, poolCount: 1 });
     expect(unresolved.pools).toHaveLength(1);
+    expect(unresolved.pools[0]).toMatchObject({ tvlUsd: 5_561_855, volumeUsd1d: 10_000, volumeUsd7d: 70_000 });
     expect(unresolved.pools[0]?.extra?.executionCapabilityGate?.reason).toBe("target-unresolved");
   });
 
@@ -1100,72 +863,34 @@ describe("processPoolMetrics", () => {
     const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
     const USDT = "0xdac17f958d2ee523a2206206994597c13d831ec7";
     const poolId = computeUniswapV4PoolId({
-      currency0: USDC,
-      currency1: USDT,
-      feePips: 100,
-      tickSpacing: 1,
-      hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS,
+      currency0: USDC, currency1: USDT, feePips: 100, tickSpacing: 1, hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS,
     });
     const candidate: UniswapV4ExecutionCandidate = {
-      chain: "ethereum",
-      poolId,
-      feePips: 100,
-      tickSpacing: 1,
-      hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS,
-      activeLiquidity: "1000000",
-      tvlUsd: 2_000_000,
-      token0Price: 1,
-      token1Price: 1,
-      tokens: [
-        { address: USDC, symbol: "USDC", decimals: 6 },
-        { address: USDT, symbol: "USDT", decimals: 6 },
-      ],
+      chain: "ethereum", poolId, feePips: 100, tickSpacing: 1, hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS,
+      activeLiquidity: "1000000", tvlUsd: 2_000_000, token0Price: 1, token1Price: 1,
+      tokens: [{ address: USDC, symbol: "USDC", decimals: 6 }, { address: USDT, symbol: "USDT", decimals: 6 }],
     };
-    const addressToId = new Map([
-      [USDC, "usdc-circle"],
-      [USDT, "usdt-tether"],
-    ]);
-    const chainAddressToId = buildChainAddressToId(addressToId, ["ethereum"]);
-    const symbolToIds = new Map<string, string[]>([
-      ["USDC", ["usdc-circle"]],
-      ["USDT", ["usdt-tether"]],
-    ]);
-    const symbolToChainScopedIds = buildSymbolToChainScopedIds(
-      symbolToIds,
-      ["ethereum"],
-    );
-    const key = buildUniswapV4ExecutionCandidateKey(
-      "ethereum",
-      [USDC, USDT],
-      100,
-    )!;
-    const run = (candidates: UniswapV4ExecutionCandidate[], retainedId = "4dbfda50-1111-2222-3333-444455556666", retainedTokens = [USDC, USDT], poolMeta: string | null = "Uniswap V4 0.01%") =>
-      processPoolMetrics({
-        pools: [
-          makePool({
-            pool: retainedId,
-            project: "uniswap-v4-ethereum",
-            poolMeta,
-            symbol: "USDC-USDT",
-            tvlUsd: 2_000_000,
-            underlyingTokens: retainedTokens,
-          }),
-        ],
-        dexProjects: new Set(["uniswap-v4-ethereum"]),
-        symbolToChainScopedIds,
-        chainAddressToId,
-        curvePoolMap: new Map(),
-        ...noV3(),
-        uniV3ExecutionCandidates: new Map(),
-        stablecoinPriceById: new Map([
-          ["usdc-circle", 1],
-          ["usdt-tether", 1],
-        ]),
-        measuredTargetCapturedAt: 1_785_000_000,
-        validationReferences: undefined,
-        curvePoolCandidatesByFingerprint: new Map(),
-        uniswapV4ExecutionCandidates: new Map([[key, candidates]]),
-      }).metrics.get("usdc-circle")?.pools[0];
+    const key = buildUniswapV4ExecutionCandidateKey("ethereum", [USDC, USDT], 100)!;
+    const run = (
+      candidates: UniswapV4ExecutionCandidate[],
+      retainedId = "4dbfda50-1111-2222-3333-444455556666",
+      retainedTokens = [USDC, USDT],
+      poolMeta: string | null = "Uniswap V4 0.01%",
+    ) => runProcess({
+      pools: [makePool({
+        pool: retainedId, project: "uniswap-v4-ethereum", poolMeta, symbol: "USDC-USDT",
+        tvlUsd: 2_000_000, underlyingTokens: retainedTokens,
+      })],
+      dexProjects: new Set(["uniswap-v4-ethereum"]),
+      symbolToChainScopedIds: buildSymbolToChainScopedIds(USDC_USDT_SYMBOLS, ["ethereum"]),
+      chainAddressToId: buildChainAddressToId(new Map([[USDC, "usdc-circle"], [USDT, "usdt-tether"]]), ["ethereum"]),
+      uniV3ExecutionCandidates: new Map(),
+      stablecoinPriceById: new Map([["usdc-circle", 1], ["usdt-tether", 1]]),
+      measuredTargetCapturedAt: 1_785_000_000,
+      validationReferences: undefined,
+      curvePoolCandidatesByFingerprint: new Map(),
+      uniswapV4ExecutionCandidates: new Map([[key, candidates]]),
+    }).metrics.get("usdc-circle")?.pools[0];
 
     expect(run([candidate])?.extra?.measuredExecutionTarget).toMatchObject({
       adapterProfileId: "uniswap-v4-hook-free-quoter-v1",
@@ -1173,32 +898,18 @@ describe("processPoolMetrics", () => {
       hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS,
     });
     expect(run([candidate])?.extra?.executionCapabilityGate).toBeUndefined();
-
     expect(run([candidate], poolId, [USDT.toUpperCase().replace("0X", "0x"), USDC], null)?.extra?.measuredExecutionTarget).toBeDefined();
-    expect(run([candidate], poolId, [USDC, "0x0000000000000000000000000000000000000001"])?.extra).toMatchObject({
-      executionCapabilityGate: { family: "measured-execution", reason: "target-unresolved" },
-    });
 
-    expect(run([{ ...candidate, activeLiquidity: "0" }])?.extra).toMatchObject({
-      executionCapabilityGate: {
-        family: "measured-execution",
-        reason: "target-unresolved",
-      },
-    });
+    const unresolvedGate = { executionCapabilityGate: { family: "measured-execution", reason: "target-unresolved" } };
+    expect(run([candidate], poolId, [USDC, "0x0000000000000000000000000000000000000001"])?.extra).toMatchObject(unresolvedGate);
+    expect(run([{ ...candidate, activeLiquidity: "0" }])?.extra).toMatchObject(unresolvedGate);
 
     const hookedCollision: UniswapV4ExecutionCandidate = {
       ...candidate,
       poolId: `0x${"1".repeat(64)}`,
       hookAddress: "0x0000000000000000000000000000000000000001",
     };
-    expect(run([candidate, hookedCollision])?.extra).toMatchObject({
-      executionCapabilityGate: {
-        family: "measured-execution",
-        reason: "target-unresolved",
-      },
-    });
-    expect(
-      run([candidate, hookedCollision])?.extra?.measuredExecutionTarget,
-    ).toBeUndefined();
+    expect(run([candidate, hookedCollision])?.extra).toMatchObject(unresolvedGate);
+    expect(run([candidate, hookedCollision])?.extra?.measuredExecutionTarget).toBeUndefined();
   });
 });

@@ -20,7 +20,7 @@ import { buildLiveCompareUrl, buildStaticComparisonSlug, STATIC_COMPARE_PAIRS } 
 import { mergeCoinsParam } from "@/lib/portfolio-codec";
 import { decodeState, encodeState } from "@/lib/url-state";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import { BLACKLIST_STABLECOINS } from "@shared/types/blacklist";
+import { isBlacklistTrackedStablecoinId } from "@shared/lib/blacklist-contract-specs";
 import {
   SCREENER_URL_SCHEMA,
   type ScreenerFilters,
@@ -169,13 +169,11 @@ const STABLECOIN_META_BY_ID = new Map<string, { name: string; symbol: string }>(
   COMMAND_PALETTE_STABLECOINS.map(([id, name, symbol]) => [id, { name, symbol }]),
 );
 
-const BLACKLIST_SYMBOL_SET: ReadonlySet<string> = new Set(BLACKLIST_STABLECOINS);
-
 interface SectionIntentSpec {
   sectionKey: CommandPaletteDossierSectionKey;
   sectionLabel: string;
   hash: string;
-  resolveTarget?: (meta: { name: string; symbol: string } | null) => { sectionLabel: string; hash: string };
+  resolveTarget?: (coinId: string | null) => { sectionLabel: string; hash: string };
 }
 
 const SECTION_INTENT_BY_TOKEN: Readonly<Record<string, SectionIntentSpec>> = {
@@ -194,8 +192,8 @@ const SECTION_INTENT_BY_TOKEN: Readonly<Record<string, SectionIntentSpec>> = {
     sectionKey: "freeze",
     sectionLabel: "Blacklist Events",
     hash: "#blacklist",
-    resolveTarget: (meta) => {
-      if (!meta || BLACKLIST_SYMBOL_SET.has(meta.symbol)) {
+    resolveTarget: (coinId) => {
+      if (!coinId || isBlacklistTrackedStablecoinId(coinId)) {
         return { sectionLabel: "Blacklist Events", hash: "#blacklist" };
       }
       return { sectionLabel: "Freeze & Seizure", hash: "#freeze-seizure" };
@@ -217,7 +215,7 @@ function buildSectionVerb(
   const trimmedCoin = coinQuery.trim();
   const resolvedCoinId = trimmedCoin ? resolveCoinIdFromToken(trimmedCoin) : null;
   const meta = resolvedCoinId ? STABLECOIN_META_BY_ID.get(resolvedCoinId) ?? null : null;
-  const resolvedTarget = spec.resolveTarget ? spec.resolveTarget(meta) : spec;
+  const resolvedTarget = spec.resolveTarget ? spec.resolveTarget(resolvedCoinId) : spec;
   return {
     kind: "section",
     sectionKey: spec.sectionKey,

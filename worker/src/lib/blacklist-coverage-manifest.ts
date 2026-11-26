@@ -32,6 +32,8 @@ export interface BlacklistDeferredCoverageEntry {
 
 const REVIEWER = "Codex blacklist coverage pass";
 const REVIEWED_AT = "2026-05-12";
+const WAVE1_PILOT_REVIEWER = "FreezeWatch Wave-1 Ethereum pilot review";
+const WAVE1_PILOT_REVIEWED_AT = "2026-11-26";
 
 const DEFERRED_BLACKLIST_COVERAGE_MANIFEST = [
   { symbol: "AID", stablecoinId: "aid-gaib", chainId: "base", reason: "deferred_contract_creation_verification" },
@@ -47,11 +49,20 @@ const DEFERRED_BLACKLIST_COVERAGE_MANIFEST = [
   // A7A5 is 98.75% on Tron and the tracked token emitted Blacklisted/DestroyedBlackFunds,
   // but its Tron result-key and amount decoding still needs review.
   { symbol: "A7A5", stablecoinId: "a7a5-old-vector", chainId: "tron", reason: "deferred_tron_result_key_verification" },
+  // Wave-1 Ethereum pilot non-Ethereum deployments (usdf-falcon CCIP representations and usdgo-osl native deployments).
+  { symbol: "USDF", stablecoinId: "usdf-falcon", chainId: "bsc", reason: "deferred_contract_creation_verification", reviewer: WAVE1_PILOT_REVIEWER, reviewedAt: WAVE1_PILOT_REVIEWED_AT },
+  { symbol: "USDF", stablecoinId: "usdf-falcon", chainId: "base", reason: "deferred_contract_creation_verification", reviewer: WAVE1_PILOT_REVIEWER, reviewedAt: WAVE1_PILOT_REVIEWED_AT },
+  { symbol: "USDF", stablecoinId: "usdf-falcon", chainId: "xdc", reason: "deferred_unsupported_chain_scanner", reviewer: WAVE1_PILOT_REVIEWER, reviewedAt: WAVE1_PILOT_REVIEWED_AT },
+  { symbol: "USDF", stablecoinId: "usdf-falcon", chainId: "solana", reason: "deferred_unsupported_chain_scanner", reviewer: WAVE1_PILOT_REVIEWER, reviewedAt: WAVE1_PILOT_REVIEWED_AT },
+  { symbol: "USDGO", stablecoinId: "usdgo-osl", chainId: "solana", reason: "deferred_unsupported_chain_scanner", reviewer: WAVE1_PILOT_REVIEWER, reviewedAt: WAVE1_PILOT_REVIEWED_AT },
+  { symbol: "USDGO", stablecoinId: "usdgo-osl", chainId: "morph-l2", reason: "deferred_unsupported_chain_scanner", reviewer: WAVE1_PILOT_REVIEWER, reviewedAt: WAVE1_PILOT_REVIEWED_AT },
 ] as const satisfies ReadonlyArray<{
   symbol: BlacklistStablecoin;
   stablecoinId: string;
   chainId: string;
   reason: string;
+  reviewer?: string;
+  reviewedAt?: string;
 }>;
 
 export function getSupportedBlacklistChainIds(
@@ -91,8 +102,8 @@ function buildDeferredCoverageEntries(): BlacklistCoverageManifestEntry[] {
     status: "deferred",
     reason: entry.reason,
     source: "worker/src/lib/blacklist-coverage-manifest.ts",
-    reviewer: REVIEWER,
-    reviewedAt: REVIEWED_AT,
+    reviewer: "reviewer" in entry ? entry.reviewer : REVIEWER,
+    reviewedAt: "reviewedAt" in entry ? entry.reviewedAt : REVIEWED_AT,
     expectedSymbol: entry.symbol,
   }));
 }

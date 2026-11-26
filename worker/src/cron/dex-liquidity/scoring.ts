@@ -20,14 +20,19 @@ import {
   applyPoolVolumeEligibility,
   quarantineProtocolTvlOutliers,
   classifyCoverage,
+  classifyCurveNavCandidateIntegrityFailure,
+  classifyPoolCurveNavIntegrityFailure,
   filterRetainedPools,
   isP4OnlyPausedBalancerPool,
+  normalizeCurveNavScoringRejectionReason,
   rebuildMetricsFromPools,
   summarizeRetainedPoolVolume,
+  type CurveNavQuoteRejectionRecord,
   type DeadPoolExclusionTally,
   type DexVolumeClock,
   type GlobalPoolAggregateEntry,
 } from "./scoring-helpers";
+import { admitCurveStableswapNgNavCandidates } from "./curve-stableswap-rates";
 import { DEX_DEAD_POOL_TVL_MIN_USD, DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
 import { applyDexRouteObservationBounds, collectDexRoutePackingOmissions, selectDexRouteObservationPoolSet, selectDexRouteObservationPools, selectDexRouteObservations, type DexRouteSelectionDiagnostic } from "./dex-route-observation-selection";
 import { DEX_LIQUIDITY_SCORING_BATCH_SIZE, DEX_PRICE_STAGE_RETENTION_GENERATIONS_PER_RUN, computeSeriesStability, loadConfidentHistoryStability, loadCurrentDexScoringGenerationId, pruneExpiredDexPriceStages } from "./dex-scoring-stage-store";
@@ -58,6 +63,8 @@ interface ScoreDiagnostics {
   /** Internal plain-NG admissions that overrode the source-stage price-spread proxy. */
   curveStableswapPlainAdmissions: CurveStableswapPlainAdmissionDiagnostic[];
   curveStableswapPlainAdmissionsOmitted: number;
+  /** Clocked Curve NG NAV candidate rejections from pre-filter & scoring-stage admission, forwarded to price publication. */
+  curveNavRejectionsByStablecoin?: Map<string, CurveNavQuoteRejectionRecord[]>;
   routeSelection: DexRouteSelectionDiagnostic[];
   measuredTargetFunnel: MeasuredTargetFunnel;
   routeRemovalEvidence: Map<string, DexRouteRemovalEvidence>;
@@ -222,6 +229,15 @@ export async function computeStablecoinScores(
   const p4OnlyRetainedPools = new Map<string, LiquidityMetrics["topPools"]>();
   const deadPoolExclusionsByStablecoin: Array<{ stablecoinId: string } & DeadPoolExclusionTally> = [];
   const curveStableswapPlainAdmissions: CurveStableswapPlainAdmissionDiagnostic[] = [];
+  const curveNavRejectionsByStablecoin = new Map<string, CurveNavQuoteRejectionRecord[]>();
+  const recordPreAdmissionCurveNavRejection = (
+    stablecoinId: string,
+    record: CurveNavQuoteRejectionRecord,
+  ): void => {
+    const list = curveNavRejectionsByStablecoin.get(stablecoinId) ?? [];
+    list.push(record);
+    curveNavRejectionsByStablecoin.set(stablecoinId, list);
+  };
 
   // Nothing mutates metrics' key set across either pass (value-level updates
   // only), so direct iteration visits identical entries in insertion order.
@@ -234,6 +250,18 @@ export async function computeStablecoinScores(
     const candidatePools = m.pools;
     candidatePoolsByStablecoin.set(id, candidatePools);
     for (const pool of candidatePools) {
+      // Capture ALL Curve NAV rejection records BEFORE filterRetainedPools so
+      // filtering out a Curve pool can never erase its rejection or let a
+      // Curve REST / DefiLlama duplicate of that rejected pool slip through.
+      const priorRejectedReason = pool.extra?.curveNavSpotQuoteRejectedReason;
+      if (priorRejectedReason !== undefined && pool.extra) {
+        delete pool.extra.curveNavSpotQuoteRejectedReason;
+        recordPreAdmissionCurveNavRejection(id, {
+          poolKey: pool.poolId,
+          chain: pool.chain,
+          reason: normalizeCurveNavScoringRejectionReason(priorRejectedReason),
+        });
+      }
       const plainAdmission = pool.extra?.curveStableswapPlainAdmissionDiagnostic;
       if (plainAdmission) {
         curveStableswapPlainAdmissions.push(plainAdmission);
@@ -269,6 +297,27 @@ export async function computeStablecoinScores(
     candidatePoolsByStablecoin.delete(id);
     const retainedPoolSet = new Set(retainedPools);
     for (const pool of candidatePools) {
+      if (!retainedPoolSet.has(pool)) {
+        // A Curve NAV candidate and/or quote filtered out before admission must
+        // check BOTH fields and preserve any integrity failure over pool-ineligible.
+        const hasNavCand = pool.extra?.curveNavSpotQuoteCandidate !== undefined;
+        const hasNavQuote = pool.curveNavSpotQuote !== undefined;
+        if (hasNavCand || hasNavQuote) {
+          const cand = hasNavCand ? pool.extra!.curveNavSpotQuoteCandidate : undefined;
+          if (hasNavCand) delete pool.extra!.curveNavSpotQuoteCandidate;
+          const candIntegrity = hasNavCand
+            ? classifyCurveNavCandidateIntegrityFailure(cand, pool.poolId, routeObservedAt)
+            : null;
+          const quoteIntegrity = hasNavQuote
+            ? classifyPoolCurveNavIntegrityFailure(pool, routeObservedAt)
+            : null;
+          recordPreAdmissionCurveNavRejection(id, {
+            poolKey: pool.poolId,
+            chain: pool.chain,
+            reason: candIntegrity ?? quoteIntegrity ?? "pool-ineligible",
+          });
+        }
+      }
       for (const profile of measuredPoolProfileIds(pool)) {
         const group = getMeasuredTargetFunnelGroup(targetFunnelGroups, profile, pool.chain);
         if (retainedPoolSet.has(pool)) group.retained++;
@@ -470,6 +519,19 @@ export async function computeStablecoinScores(
   }
   joinEvidence?.byTargetId.clear();
 
+  // Resolve staged Curve StableSwap-NG active-NAV spot quote candidates AFTER
+  // `measuredExecution` joins onto corroborator pools and BEFORE top-pool projection.
+  const curveNavAdmission = admitCurveStableswapNgNavCandidates({
+    poolsByStablecoin: preparedRetainedPools,
+    nowSec: routeObservedAt,
+    volumeClock,
+  });
+  for (const [stablecoinId, rejections] of curveNavAdmission.rejectionsByStablecoin) {
+    const list = curveNavRejectionsByStablecoin.get(stablecoinId) ?? [];
+    list.push(...rejections);
+    curveNavRejectionsByStablecoin.set(stablecoinId, list);
+  }
+
   for (const [id, graph] of metrics) {
     if (!ACTIVE_IDS.has(id)) continue;
     throwIfAborted(signal);
@@ -640,6 +702,9 @@ export async function computeStablecoinScores(
       deadPoolExclusions: summarizeDeadPoolExclusions(deadPoolExclusionsByStablecoin),
       curveStableswapPlainAdmissions: boundedPlainAdmissions,
       curveStableswapPlainAdmissionsOmitted: curveStableswapPlainAdmissions.length - boundedPlainAdmissions.length,
+      ...(curveNavRejectionsByStablecoin.size > 0
+        ? { curveNavRejectionsByStablecoin }
+        : {}),
       routeSelection: routeSelectionDiagnostics,
       measuredTargetFunnel: summarizeMeasuredTargetFunnel(targetFunnelGroups),
       routeRemovalEvidence,

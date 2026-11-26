@@ -31,6 +31,8 @@ import { handleMcp } from "../mcp";
 import { handleResolve, resolveContractDeployment } from "../resolve";
 import { handleRiskCheck } from "../risk-check";
 import { resolveRoute } from "../../router";
+import { DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
+import { makeClockedCurveNavPayload } from "./p4-route-response.test-support";
 
 const makeMcpKey = (overrides: Partial<AuthenticatedApiKey> = {}): AuthenticatedApiKey => ({
   id: 1, keyPrefix: "ph_t", name: "k", ownerEmail: null, tier: "standard", plan: "commercial",
@@ -1127,6 +1129,39 @@ describe("Wave 2 endpoints: compliance, resolve, risk-check", () => {
     const lateSMaxAge = Number(/s-maxage=(\d+)/.exec(lateCacheControl)?.[1]);
     expect(lateSMaxAge).toBeGreaterThan(0);
     expect(lateSMaxAge).toBeLessThanOrEqual(30);
+
+    // An admitted clocked Curve NAV DEX price bounds Cache-Control / cacheValidUntil by the NAV quote expiry.
+    const navPubAt = nowSec - 60;
+    const navMarkAt = nowSec - DEX_FRESHNESS_SEC + 15;
+    const navPayload = makeClockedCurveNavPayload({
+      poolRatioObservedAt: navPubAt - 120,
+      quoteMarkObservedAt: navMarkAt,
+      captureEvaluatedAtSec: navPubAt - 60,
+      quotePublishedAtSec: navPubAt,
+    });
+    const navCase = buildRiskCheckMockDb(nowSec, {
+      dexRowOverrides: {
+        "usdc-circle": {
+          dex_price_usd: 1.07,
+          dex_price_updated_at: navPubAt,
+          dex_price_sources_json: JSON.stringify(navPayload),
+        },
+      },
+    });
+    vi.setSystemTime(nowSec * 1000);
+    const navRes = await handleRiskCheck(navCase.db, new URL("https://api.pharos.watch/api/risk-check?ids=usdc-circle"));
+    expect(navRes.status).toBe(200);
+    const navCc = navRes.headers.get("Cache-Control") ?? "";
+    const navSMaxAge = Number(/s-maxage=(\d+)/.exec(navCc)?.[1]);
+    expect(navSMaxAge).toBeGreaterThan(0);
+    expect(navSMaxAge).toBeLessThanOrEqual(15);
+    const navBody = RiskCheckResponseSchema.parse(await navRes.json());
+    expect(navBody.assets["usdc-circle"].liquidity.dexPriceUsd).toBe(1.07);
+
+    // Once the NAV quote crosses the <4,500 s boundary, /api/risk-check withholds the DEX price.
+    vi.setSystemTime((navMarkAt + DEX_FRESHNESS_SEC) * 1000);
+    const expiredNavRes = await handleRiskCheck(navCase.db, new URL("https://api.pharos.watch/api/risk-check?ids=usdc-circle"));
+    expect(RiskCheckResponseSchema.parse(await expiredNavRes.json()).assets["usdc-circle"].liquidity.dexPriceUsd).toBeNull();
   });
 
   it("discloses eventual-only redemption semantics and keeps /api/risk-check fresh past 30m DEWS cadence", async () => {

@@ -187,9 +187,26 @@ describe("blacklist summary freeze aggregates", () => {
     const summary = await response.json() as BlacklistSummaryResponse;
 
     expect(summary.totalEvents).toBe(1);
+    expect(summary.coverage?.supported.find((c) => c.stablecoinId === "usdf-falcon")?.eventTypes).toEqual(["blacklist", "unblacklist"]);
     expect(response.headers.get("X-Data-Updated-At")).toBe("unknown");
     expect(response.headers.get("X-Data-Age")).toBe("unavailable");
     expect(response.headers.get("Cache-Control")).toBe("no-store");
+  });
+
+  it("serves pre-pilot cached chart points missing USDF/USDGO only, rejecting damaged historical keys", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
+    const now = 2_000_000_000;
+    sqlite.prepare("INSERT INTO blacklist_current_balances (id, stablecoin, chain_id, address, amount_native, amount_usd, source, status, observed_at) VALUES ('b1', 'USDC', 'ethereum', '0xabc', 100, 100, 'current_balance', 'resolved', ?)").run(now);
+    await materializeBlacklistSummarySnapshot(db, now, now);
+    sqlite.prepare("UPDATE cache SET value = json_remove(value, '$.payload.chart[0].USDF', '$.payload.chart[0].USDGO') WHERE key = ?").run(BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY);
+    sqlite.prepare("DELETE FROM blacklist_current_balances").run();
+    const res = await handleBlacklistSummary(db);
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as BlacklistSummaryResponse).chart[0]).toMatchObject({ USDC: 100, USDF: 0, USDGO: 0, total: 100 });
+
+    sqlite.prepare("UPDATE cache SET value = json_remove(value, '$.payload.chart[0].USDC') WHERE key = ?").run(BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY);
+    const damagedRes = await handleBlacklistSummary(db);
+    expect(damagedRes.status).toBe(503);
   });
 
   it("derives cold-request coverage freshness from the oldest config success, not cron output", async () => {

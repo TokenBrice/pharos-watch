@@ -5,10 +5,26 @@ import { batchExecute, executeAtomicBatch } from "../../lib/db";
 import { isBlockedDexId } from "../../lib/dex-cron-constants";
 import { isFreshDexPoolObservation } from "../../lib/depeg-trust-policy";
 import { requireFiniteNumber } from "../../lib/number-utils";
-import type { PoolEntry } from "./types";
+import {
+  CURVE_NAV_SPOT_QUOTE_POLICY,
+  type CurveNavSpotQuoteEvidence,
+  type PoolEntry,
+} from "./types";
 import { getDexGroupLineage, selectIndependentChallengerPools, type DexPriceLineage } from "./price-lineage";
 import { CHALLENGER_LINEAGE_PRICE, hasChallengerPriceLineageColumn } from "./challenger-types";
-import { projectRetainedPoolPrice } from "./scoring-helpers";
+import {
+  areUniformClockedCurveNavObservations,
+  buildCurveNavRejectedPoolFilter,
+  canonicalCurveNavPoolKey,
+  classifyPoolCurveNavIntegrityFailure,
+  isIndependentlyVerifiedClockedObservation,
+  isValidClockedNavCorroboratorObservation,
+  matchesRejectedCurveNavPool,
+  normalizeCurveNavScoringRejectionReason,
+  projectRetainedPoolPrice,
+  validateClockedCurveNavObservation,
+  type CurveNavQuoteRejectionRecord,
+} from "./scoring-helpers";
 import { SCHEDULED_EVENT_WALL_CLOCK_LIMIT_MS } from "../../lib/cron-timeouts";
 
 export interface DexPriceChallengerPoolRow extends DexPriceLineage {
@@ -20,6 +36,9 @@ export interface DexPriceChallengerPoolRow extends DexPriceLineage {
   priceUsd: number;
   tvlUsd: number;
   priceObservedAt: number | null;
+  curveNavSpotQuote?: CurveNavSpotQuoteEvidence;
+  quotePublishedAtSec?: number;
+  quoteExpiresAtSec?: number;
 }
 
 
@@ -66,11 +85,58 @@ export function projectPoolChallenger(
   pool: PoolEntry,
   minPoolTvlUsd: number,
   nowSec: number,
+  curveNavRejections?: readonly CurveNavQuoteRejectionRecord[],
 ): DexPriceChallengerPoolRow | null {
   if (isBlockedDexId(pool.project)) return null;
-  const price = projectRetainedPoolPrice(pool);
-  if (!price || price.tvl < minPoolTvlUsd ||
-      (price.observedAt != null && !isFreshDexPoolObservation(price.observedAt, nowSec))) return null;
+  if (
+    pool.extra?.curveNavSpotQuoteCandidate !== undefined ||
+    pool.extra?.curveNavSpotQuoteRejectedReason !== undefined
+  ) {
+    return null;
+  }
+  const rejectionFilter = curveNavRejections?.length
+    ? buildCurveNavRejectedPoolFilter(curveNavRejections)
+    : null;
+  if (
+    rejectionFilter &&
+    matchesRejectedCurveNavPool(pool.poolId, pool.chain, pool.project, rejectionFilter)
+  ) {
+    return null;
+  }
+  const price = projectRetainedPoolPrice(pool, stablecoinId);
+  if (!price || price.tvl < minPoolTvlUsd) return null;
+  if (
+    rejectionFilter?.hasIntegrityRejection &&
+    price.curveNavSpotQuote == null &&
+    !isIndependentlyVerifiedClockedObservation(price, nowSec)
+  ) {
+    return null;
+  }
+  let curveNavMeta:
+    | {
+        curveNavSpotQuote: CurveNavSpotQuoteEvidence;
+        quotePublishedAtSec: number;
+        quoteExpiresAtSec: number;
+      }
+    | undefined;
+  if (pool.curveNavSpotQuote !== undefined || price.curveNavSpotQuote !== undefined) {
+    if (validateClockedCurveNavObservation(price, nowSec) != null) return null;
+    const quote = price.curveNavSpotQuote!;
+    curveNavMeta = {
+      curveNavSpotQuote: quote,
+      quotePublishedAtSec: nowSec,
+      quoteExpiresAtSec:
+        Math.min(quote.poolRatioObservedAt, quote.quoteMarkObservedAt, nowSec) +
+        CURVE_NAV_SPOT_QUOTE_POLICY.quoteMaxAgeSec,
+    };
+  } else {
+    if (price.observedAt != null && !isFreshDexPoolObservation(price.observedAt, nowSec)) {
+      return null;
+    }
+    if (price.counterpartyPrice?.observedAtSec != null && price.counterpartyPrice.observedAtSec > nowSec) {
+      return null;
+    }
+  }
   const lineage = getDexGroupLineage([price]);
   if (lineage?.upstreamKeys.length === 0) return null;
   return {
@@ -83,7 +149,129 @@ export function projectPoolChallenger(
     tvlUsd: price.tvl,
     priceObservedAt: price.observedAt ?? null,
     ...(lineage && { pricePoolKeys: lineage.pricePoolKeys, upstreamKeys: lineage.upstreamKeys }),
+    ...(curveNavMeta ?? {}),
   };
+}
+
+export function evaluateDexPriceChallengerPoolAdmission(
+  stablecoinId: string,
+  pools: readonly PoolEntry[],
+  minPoolTvlUsd: number,
+  nowSec = Math.floor(Date.now() / 1000),
+  curveNavRejections?: readonly CurveNavQuoteRejectionRecord[],
+): {
+  qualifying: DexPriceChallengerPoolRow[];
+  rowsByPool: Map<PoolEntry, DexPriceChallengerPoolRow>;
+} {
+  // Collect independently verified upstream-clocked non-Curve PoolEntry instances
+  // (retaining exact object refs so larger unverified copies sharing poolId can
+  // never inherit verification during isolation or TVL deduplication).
+  const verifiedNonCurveByPoolKey = new Map<string, ReturnType<typeof projectRetainedPoolPrice> & object>();
+  const verifiedNonCurvePoolRefs = new Set<PoolEntry>();
+  for (const pool of pools) {
+    if (pool.curveNavSpotQuote !== undefined) continue;
+    const obs = projectRetainedPoolPrice(pool, stablecoinId);
+    if (obs && isIndependentlyVerifiedClockedObservation(obs, nowSec) && obs.poolKey) {
+      verifiedNonCurvePoolRefs.add(pool);
+      const existing = verifiedNonCurveByPoolKey.get(obs.poolKey);
+      if (!existing || obs.tvl > existing.tvl) verifiedNonCurveByPoolKey.set(obs.poolKey, obs);
+    }
+  }
+
+  const allRejections: CurveNavQuoteRejectionRecord[] = [...(curveNavRejections ?? [])];
+  for (const pool of pools) {
+    const embeddedReason = pool.extra?.curveNavSpotQuoteRejectedReason;
+    if (embeddedReason !== undefined) {
+      allRejections.push({
+        poolKey: pool.poolId,
+        chain: pool.chain,
+        reason: normalizeCurveNavScoringRejectionReason(embeddedReason),
+      });
+    }
+  }
+  const priorFilter = buildCurveNavRejectedPoolFilter(allRejections);
+  const curveGroups = new Map<string, Array<{ pool: PoolEntry; obs: ReturnType<typeof projectRetainedPoolPrice> }>>();
+  for (const pool of pools) {
+    if (pool.curveNavSpotQuote === undefined) continue;
+    const key = canonicalCurveNavPoolKey(pool.chain, pool.poolId) ?? pool.poolId;
+    const list = curveGroups.get(key) ?? [];
+    list.push({ pool, obs: projectRetainedPoolPrice(pool, stablecoinId) });
+    curveGroups.set(key, list);
+  }
+
+  const admittedCurvePoolRefs = new Set<PoolEntry>();
+  for (const group of curveGroups.values()) {
+    const validObs = group.map((entry) => entry.obs).filter((obs): obs is NonNullable<typeof obs> => obs != null);
+    if (group.length > 1 && (validObs.length !== group.length || !areUniformClockedCurveNavObservations(validObs))) {
+      for (const { pool } of group) {
+        allRejections.push({ poolKey: pool.poolId, chain: pool.chain, reason: "conflict" });
+      }
+      continue;
+    }
+    const admittedGroupEntries: Array<{ pool: PoolEntry; obs: NonNullable<ReturnType<typeof projectRetainedPoolPrice>> }> = [];
+    let groupRejected = false;
+    for (const { pool, obs } of group) {
+      // Classify integrity/validity BEFORE skipping a prior pool rejection so a
+      // future-dated or malformed copy of a pool-ineligible pool still triggers
+      // coin-level integrity isolation.
+      const failure = obs
+        ? validateClockedCurveNavObservation(obs, nowSec)
+        : (classifyPoolCurveNavIntegrityFailure(pool, nowSec) ?? "insufficient-support");
+      if (failure != null || !obs) {
+        allRejections.push({ poolKey: pool.poolId, chain: pool.chain, reason: failure ?? "invalid-policy" });
+        groupRejected = true;
+        continue;
+      }
+      if (matchesRejectedCurveNavPool(pool.poolId, pool.chain, pool.project, priorFilter)) {
+        groupRejected = true;
+        continue;
+      }
+      const quote = obs.curveNavSpotQuote!;
+      if (quote.admissionMode === "corroborated") {
+        const matched = [...new Set(quote.corroboratorPoolIds ?? [])]
+          .map((poolId) => verifiedNonCurveByPoolKey.get(poolId))
+          .filter((candidate): candidate is NonNullable<typeof candidate> =>
+            candidate != null && isValidClockedNavCorroboratorObservation(candidate, obs, nowSec));
+        const combinedTvl = obs.tvl + matched.reduce((sum, entry) => sum + entry.tvl, 0);
+        if (matched.length === 0 || combinedTvl < CURVE_NAV_SPOT_QUOTE_POLICY.corroboratedCombinedMinTvlUsd) {
+          allRejections.push({ poolKey: pool.poolId, chain: pool.chain, reason: "corroborator-missing" });
+          groupRejected = true;
+          continue;
+        }
+      }
+      admittedGroupEntries.push({ pool, obs });
+    }
+    if (!groupRejected && admittedGroupEntries.length > 0) {
+      // For identical uniform copies, retain the conservative min-TVL representative.
+      const rep = [...admittedGroupEntries].sort((a, b) => a.obs.tvl - b.obs.tvl || a.pool.poolId.localeCompare(b.pool.poolId))[0]!;
+      admittedCurvePoolRefs.add(rep.pool);
+    }
+  }
+
+  const finalFilter = buildCurveNavRejectedPoolFilter(allRejections);
+  if (finalFilter.hasIntegrityRejection) {
+    admittedCurvePoolRefs.clear();
+  }
+  const enforceClockedIsolation = admittedCurvePoolRefs.size > 0 || finalFilter.hasIntegrityRejection;
+  const rowsByPool = new Map<PoolEntry, DexPriceChallengerPoolRow>();
+  const qualifying: DexPriceChallengerPoolRow[] = [];
+  for (const pool of pools) {
+    if (enforceClockedIsolation) {
+      if (!admittedCurvePoolRefs.has(pool) && !verifiedNonCurvePoolRefs.has(pool)) continue;
+    } else if (
+      pool.curveNavSpotQuote !== undefined ||
+      matchesRejectedCurveNavPool(pool.poolId, pool.chain, pool.project, finalFilter)
+    ) {
+      continue;
+    }
+    const row = projectPoolChallenger(stablecoinId, pool, minPoolTvlUsd, nowSec, allRejections);
+    if (row) {
+      rowsByPool.set(pool, row);
+      qualifying.push(row);
+    }
+  }
+  qualifying.sort((a, b) => b.tvlUsd - a.tvlUsd || a.poolId.localeCompare(b.poolId));
+  return { qualifying, rowsByPool };
 }
 
 export function selectDexPriceChallengerRowsFromPools(
@@ -91,11 +279,15 @@ export function selectDexPriceChallengerRowsFromPools(
   pools: PoolEntry[],
   minPoolTvlUsd: number,
   nowSec = Math.floor(Date.now() / 1000),
+  curveNavRejections?: readonly CurveNavQuoteRejectionRecord[],
 ): DexPriceChallengerPoolRow[] {
-  const qualifying = pools.flatMap((pool) => {
-    const row = projectPoolChallenger(stablecoinId, pool, minPoolTvlUsd, nowSec);
-    return row ? [row] : [];
-  }).sort((a, b) => b.tvlUsd - a.tvlUsd || a.poolId.localeCompare(b.poolId));
+  const { qualifying } = evaluateDexPriceChallengerPoolAdmission(
+    stablecoinId,
+    pools,
+    minPoolTvlUsd,
+    nowSec,
+    curveNavRejections,
+  );
 
   if (qualifying.length === 0) return [];
 
@@ -165,12 +357,13 @@ export function buildStoredChallengerPoolsJson(
   pools: PoolEntry[],
   minPoolTvlUsd: number,
   nowSec = Math.floor(Date.now() / 1000),
+  curveNavRejections?: readonly CurveNavQuoteRejectionRecord[],
 ): string | null {
-  const rows = selectDexPriceChallengerRowsFromPools(stablecoinId, pools, minPoolTvlUsd, nowSec);
+  const rows = selectDexPriceChallengerRowsFromPools(stablecoinId, pools, minPoolTvlUsd, nowSec, curveNavRejections);
   return rows.length === 0
     ? null
     : JSON.stringify(rows.map(({ stablecoinId: _stablecoinId, priceUsd, ...row }) =>
-      row.upstreamKeys ? { ...row, lineagePriceUsd: priceUsd } : { ...row, priceUsd }));
+      row.upstreamKeys || row.curveNavSpotQuote ? { ...row, lineagePriceUsd: priceUsd } : { ...row, priceUsd }));
 }
 
 export async function publishDexPriceChallengerSnapshots(
@@ -182,6 +375,7 @@ export async function publishDexPriceChallengerSnapshots(
     retainedPoolsByStablecoin: Map<string, PoolEntry[]>;
     minPoolTvlUsd: number;
     consumeRetainedPools?: boolean;
+    curveNavRejectionsByStablecoin?: ReadonlyMap<string, ReadonlyArray<CurveNavQuoteRejectionRecord>>;
   },
   signal?: AbortSignal,
 ): Promise<{ publishedStablecoins: number; skippedStablecoins: number }> {
@@ -208,8 +402,13 @@ export async function publishDexPriceChallengerSnapshots(
   for (const meta of ACTIVE_STABLECOINS) {
     throwIfAborted(signal);
     const pools = input.retainedPoolsByStablecoin.get(meta.id) ?? [];
-    const rows = selectDexPriceChallengerRowsFromPools(meta.id, pools, input.minPoolTvlUsd, input.admissionNowSec ?? snapshotAt)
-      .filter((row) => storeLineage || row.upstreamKeys === undefined);
+    const rows = selectDexPriceChallengerRowsFromPools(
+      meta.id,
+      pools,
+      input.minPoolTvlUsd,
+      input.admissionNowSec ?? snapshotAt,
+      input.curveNavRejectionsByStablecoin?.get(meta.id),
+    ).filter((row) => storeLineage || (row.upstreamKeys === undefined && row.curveNavSpotQuote === undefined));
     if (input.consumeRetainedPools) {
       input.retainedPoolsByStablecoin.delete(meta.id);
       pools.length = 0;
@@ -218,13 +417,27 @@ export async function publishDexPriceChallengerSnapshots(
       CHALLENGER_D1_MAX_BOUND_PARAMETERS / (storeLineage ? 10 : 9),
     ));
     if (pending.length + statementCount > DEX_PRICE_CHALLENGER_BATCH_SIZE) await flush();
-    for (const statement of prepareMultiRowStatements(db, rows.map((row) => [
-      publicationId, row.stablecoinId, row.poolId, row.chain, row.protocol,
-      row.sourceFamily, row.upstreamKeys ? CHALLENGER_LINEAGE_PRICE : row.priceUsd, row.tvlUsd, row.priceObservedAt,
-      ...(storeLineage ? [row.upstreamKeys
-        ? JSON.stringify({ pricePoolKeys: row.pricePoolKeys, upstreamKeys: row.upstreamKeys, priceUsd: row.priceUsd })
-        : null] : []),
-    ]), storeLineage)) {
+    for (const statement of prepareMultiRowStatements(db, rows.map((row) => {
+      const requiresReceipt = row.upstreamKeys !== undefined || row.curveNavSpotQuote !== undefined;
+      return [
+        publicationId, row.stablecoinId, row.poolId, row.chain, row.protocol,
+        row.sourceFamily, requiresReceipt ? CHALLENGER_LINEAGE_PRICE : row.priceUsd, row.tvlUsd, row.priceObservedAt,
+        ...(storeLineage ? [requiresReceipt
+          ? JSON.stringify({
+              ...(row.pricePoolKeys ? { pricePoolKeys: row.pricePoolKeys } : {}),
+              ...(row.upstreamKeys ? { upstreamKeys: row.upstreamKeys } : {}),
+              priceUsd: row.priceUsd,
+              ...(row.curveNavSpotQuote
+                ? {
+                    curveNavSpotQuote: row.curveNavSpotQuote,
+                    quotePublishedAtSec: row.quotePublishedAtSec,
+                    quoteExpiresAtSec: row.quoteExpiresAtSec,
+                  }
+                : {}),
+            })
+          : null] : []),
+      ];
+    }), storeLineage)) {
       pending.push(statement);
       if (pending.length >= DEX_PRICE_CHALLENGER_BATCH_SIZE) await flush();
     }

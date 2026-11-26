@@ -10,7 +10,6 @@ import {
   type BlacklistTrackedChainId,
 } from "@shared/lib/blacklist-contract-specs";
 import { requireChainConfig, type ChainConfig } from "./chain-config";
-import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { resolveRequiredTrackedContractConfig } from "./tracked-contract-resolution";
 
 export interface ContractEventConfig {
@@ -598,6 +597,25 @@ const CENTRE_BLOCKLISTED_FAMILY: readonly BlacklistEventDef[] = [
   },
 ];
 
+// --- Falcon USD (USDf) event definitions ---
+// Verified implementation ABI emits AddressRestrictionSet(address indexed,bool):
+// account address in topics[1] and direction bool at data slot 0 resolved via
+// eventTypeFromDataBoolIndex (true -> blacklist, false -> unblacklist).
+
+const FALCON_ADDRESS_RESTRICTION_SET_TOPIC =
+  "0xf28feb0f201748ef16ccc442dd23ba17ae3e2957006c4e351a718bcd5f65d516"; // AddressRestrictionSet(address,bool)
+
+const FALCON_RESTRICTION_FAMILY: readonly BlacklistEventDef[] = [
+  {
+    signature: "AddressRestrictionSet(address,bool)",
+    topicHash: FALCON_ADDRESS_RESTRICTION_SET_TOPIC,
+    eventType: "blacklist", // fallback — actual direction resolved from bool slot
+    hasAmount: false,
+    addressTopicIndex: 1,
+    eventTypeFromDataBoolIndex: 0,
+  },
+];
+
 const BLACKLIST_EVENT_FAMILIES: Record<BlacklistEventFamilyId, readonly BlacklistEventDef[]> = {
   usdc: USDC_EVENT_FAMILY,
   usdt: USDT_EVENT_FAMILY,
@@ -622,20 +640,19 @@ const BLACKLIST_EVENT_FAMILIES: Record<BlacklistEventFamilyId, readonly Blacklis
   "fidelity-restriction": FIDELITY_RESTRICTION_FAMILY,
   trueusd: TRUEUSD_EVENT_FAMILY,
   "centre-blocklisted": CENTRE_BLOCKLISTED_FAMILY,
+  "falcon-restriction": FALCON_RESTRICTION_FAMILY,
 };
 
 const BLACKLIST_STABLECOIN_SET = new Set<BlacklistStablecoin>(BLACKLIST_STABLECOINS);
 
 function resolveBlacklistStablecoinSymbol(
   stablecoinId: string,
-  override?: BlacklistStablecoin,
+  symbol: BlacklistStablecoin,
 ): BlacklistStablecoin {
-  if (override) return override;
-  const symbol = WORKER_TRACKED_META_BY_ID.get(stablecoinId)?.symbol;
-  if (!symbol || !BLACKLIST_STABLECOIN_SET.has(symbol as BlacklistStablecoin)) {
+  if (!BLACKLIST_STABLECOIN_SET.has(symbol)) {
     throw new Error(`Unsupported blacklist stablecoin symbol for ${stablecoinId}`);
   }
-  return symbol as BlacklistStablecoin;
+  return symbol;
 }
 
 function resolveBlacklistContractConfig(

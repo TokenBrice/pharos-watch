@@ -152,6 +152,7 @@ export function getDexObservationLineage(row: DexPriceObs): DexObservationLineag
     : row.poolKey;
   if (!isCanonicalPricePoolKey(key)) return null;
   const published = readDexPriceLineage(mark);
+  if (typeof mark.source !== "string" || !mark.source.trim()) return null;
   const symbol = WORKER_TRACKED_META_BY_ID.get(mark.stablecoinId)?.symbol;
   const venueKeys = mark.source.split("+").map((source) => directUsdVenueKeys(source, symbol, mark.stablecoinId));
   if (published.upstreamKeys?.length === 0 || (published.pricePoolKeys?.length === 0 && !published.upstreamKeys)) return null;

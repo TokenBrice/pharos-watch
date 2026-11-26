@@ -551,36 +551,20 @@ describe("buildCurveLookups", () => {
   });
 
   it("uses one computed Curve USD balance surface for ratio and balance details", async () => {
-    const pool = makeApiPool("0x1111111111111111111111111111111111111111", [
-      { symbol: "USDC", address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" },
-      { symbol: "USDT", address: "0xdac17f958d2ee523a2206206994597c13d831ec7" },
-    ]);
+    const addr = "0x1111111111111111111111111111111111111111";
+    const usdc = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
+    const usdt = "0xdac17f958d2ee523a2206206994597c13d831ec7";
+    const pool = makeApiPool(addr, [{ symbol: "USDC", address: usdc }, { symbol: "USDT", address: usdt }]);
     pool.coins[0]!.poolBalance = "120000000000";
     pool.coins[1]!.poolBalance = "80000000000";
-    const curvePayloads = [{
-      generatedTimeMs: 1_800_000_000_000, readStartedAtSec: 1_800_000_240, data: { poolData: [pool] },
-    }] as CurveApiPayload[];
-    const symbolToIds = new Map([
-      ["USDC", ["usd-coin"]],
-      ["USDT", ["tether"]],
-    ]);
-    const symbolToChainScopedIds = new Map([
-      ["USDC", new Map([["ethereum", ["usd-coin"]]])],
-      ["USDT", new Map([["ethereum", ["tether"]]])],
-    ]);
-    const chainAddressToId = new Map([
-      ["ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usd-coin"],
-      ["ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7", "tether"],
-    ]);
-
     const { curvePoolMap, priceObservations } = await buildCurveLookups(
-      curvePayloads,
-      symbolToIds,
-      symbolToChainScopedIds,
-      chainAddressToId,
+      [{ generatedTimeMs: 1_800_000_000_000, readStartedAtSec: 1_800_000_240, data: { poolData: [pool] } }] as CurveApiPayload[],
+      new Map([["USDC", ["usd-coin"]], ["USDT", ["tether"]]]),
+      new Map([["USDC", new Map([["ethereum", ["usd-coin"]]])], ["USDT", new Map([["ethereum", ["tether"]]])]]),
+      new Map([[`ethereum:${usdc}`, "usd-coin"], [`ethereum:${usdt}`, "tether"]]),
     );
 
-    const entry = curvePoolMap.get("ethereum:0x1111111111111111111111111111111111111111");
+    const entry = curvePoolMap.get(`ethereum:${addr}`);
     expect(entry).toBeDefined();
     expect(entry!.priceObservedAt).toBeNull();
     expect(entry!.poolCoins).toBeUndefined();
@@ -590,29 +574,9 @@ describe("buildCurveLookups", () => {
       { symbol: "USDC", balancePct: 60, isTracked: true },
       { symbol: "USDT", balancePct: 40, isTracked: true },
     ]);
-    expect(priceObservations.get("usd-coin")).toEqual([
-      expect.objectContaining({
-        price: 1,
-        observedAt: null,
-        tvl: 200_000,
-        chain: "ethereum",
-        protocol: "curve",
-        poolKey: "ethereum:0x1111111111111111111111111111111111111111",
-        identityConfidence: "exact",
-        sourceFamily: "dl",
-      }),
-    ]);
-    expect(priceObservations.get("tether")).toEqual([
-      expect.objectContaining({
-        price: 1,
-        tvl: 200_000,
-        chain: "ethereum",
-        protocol: "curve",
-        poolKey: "ethereum:0x1111111111111111111111111111111111111111",
-        identityConfidence: "exact",
-        sourceFamily: "dl",
-      }),
-    ]);
+    const expectedObs = { price: 1, tvl: 200_000, chain: "ethereum", protocol: "curve", poolKey: `ethereum:${addr}`, identityConfidence: "exact", sourceFamily: "dl" };
+    expect(priceObservations.get("usd-coin")).toEqual([expect.objectContaining({ ...expectedObs, observedAt: null })]);
+    expect(priceObservations.get("tether")).toEqual([expect.objectContaining(expectedObs)]);
   });
 
   it("retains every reviewed shadow metapool physical identity and no address variants", () => {
@@ -629,208 +593,79 @@ describe("buildCurveLookups", () => {
   });
 
   it("retains extra physical coin identity only for reviewed composite Curve pools", async () => {
-    const makePool = (input: {
-      address: string;
-      isMetaPool: boolean;
-      basePoolAddress?: string;
-      coins: Array<{
-        symbol: string;
-        address: string;
-        decimals: string;
-        isBasePoolLpToken?: boolean;
-      }>;
-    }) => ({
-      address: input.address,
-      name: input.coins.map((coin) => coin.symbol).join("/"),
-      amplificationCoefficient: "1000",
-      coins: input.coins.map((coin) => ({
-        ...coin,
-        poolBalance: "1000000000000000000",
-        usdPrice: 1,
-      })),
-      usdTotal: 200_000,
-      isMetaPool: input.isMetaPool,
-      assetTypeName: "USD",
-      totalSupply: 0,
-      registryId: "factory-stable-ng",
-      isBroken: false,
-      virtualPrice: "1",
-      creationTs: 123,
-      basePoolAddress: input.basePoolAddress ?? null,
-      gaugeCrvApy: null,
+    const makeCompositePool = (
+      address: string,
+      isMetaPool: boolean,
+      coins: Array<{ symbol: string; address: string; decimals: string; isBasePoolLpToken?: boolean }>,
+      basePoolAddress: string | null = null,
+    ) => ({
+      ...makeApiPool(address, coins),
+      isMetaPool,
+      basePoolAddress,
+      coins: coins.map((coin) => ({ ...coin, poolBalance: "1000000000000000000", usdPrice: 1 })),
     });
     const usd1BasePool = "0x4f493b7de8aac7d55f71853688b1f7c8f0243c85";
+    const unreviewedAddr = "0x1111111111111111111111111111111111111111";
     const curvePayloads = [{
       data: {
         poolData: [
-          makePool({
-            address: CURVE_DOLA_SUSDE_COMPOSITE_POOL_ADDRESS,
-            isMetaPool: false,
-            coins: [
-              {
-                symbol: "DOLA",
-                address: "0x865377367054516e17014ccded1e7d814edc9ce4",
-                decimals: "18",
-              },
-              {
-                symbol: "sUSDe",
-                address: "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
-                decimals: "18",
-              },
-            ],
-          }),
-          makePool({
-            address: CURVE_USD1_COMPOSITE_POOL_ADDRESS,
-            isMetaPool: true,
-            basePoolAddress: usd1BasePool,
-            coins: [
-              {
-                symbol: "USD1",
-                address: "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d",
-                decimals: "18",
-              },
-              {
-                symbol: "crv2pool",
-                address: usd1BasePool,
-                decimals: "18",
-                isBasePoolLpToken: true,
-              },
-            ],
-          }),
-          makePool({
-            address: "0x1111111111111111111111111111111111111111",
-            isMetaPool: true,
-            basePoolAddress: "0x2222222222222222222222222222222222222222",
-            coins: [
-              {
-                symbol: "OTHER",
-                address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-                decimals: "6",
-              },
-              {
-                symbol: "otherLP",
-                address: "0x2222222222222222222222222222222222222222",
-                decimals: "18",
-                isBasePoolLpToken: true,
-              },
-            ],
-          }),
+          makeCompositePool(CURVE_DOLA_SUSDE_COMPOSITE_POOL_ADDRESS, false, [
+            { symbol: "DOLA", address: "0x865377367054516e17014ccded1e7d814edc9ce4", decimals: "18" },
+            { symbol: "sUSDe", address: "0x9d39a5de30e57443bff2a8307a4256c8797a3497", decimals: "18" },
+          ]),
+          makeCompositePool(CURVE_USD1_COMPOSITE_POOL_ADDRESS, true, [
+            { symbol: "USD1", address: "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d", decimals: "18" },
+            { symbol: "crv2pool", address: usd1BasePool, decimals: "18", isBasePoolLpToken: true },
+          ], usd1BasePool),
+          makeCompositePool(unreviewedAddr, true, [
+            { symbol: "OTHER", address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", decimals: "6" },
+            { symbol: "otherLP", address: "0x2222222222222222222222222222222222222222", decimals: "18", isBasePoolLpToken: true },
+          ], "0x2222222222222222222222222222222222222222"),
         ],
       },
     }];
 
-    const { curvePoolMap } = await buildCurveLookups(
-      curvePayloads,
-      new Map(),
-      new Map(),
-      new Map(),
-    );
+    const { curvePoolMap } = await buildCurveLookups(curvePayloads, new Map(), new Map(), new Map());
 
-    expect(
-      curvePoolMap.get(`ethereum:${CURVE_DOLA_SUSDE_COMPOSITE_POOL_ADDRESS}`)?.poolCoins,
-    ).toHaveLength(2);
-    expect(
-      curvePoolMap.get(`ethereum:${CURVE_USD1_COMPOSITE_POOL_ADDRESS}`)?.poolCoins,
-    ).toEqual([
+    expect(curvePoolMap.get(`ethereum:${CURVE_DOLA_SUSDE_COMPOSITE_POOL_ADDRESS}`)?.poolCoins).toHaveLength(2);
+    expect(curvePoolMap.get(`ethereum:${CURVE_USD1_COMPOSITE_POOL_ADDRESS}`)?.poolCoins).toEqual([
       expect.objectContaining({ symbol: "USD1", isBasePoolLpToken: false }),
-      expect.objectContaining({
-        address: usd1BasePool,
-        symbol: "crv2pool",
-        isBasePoolLpToken: true,
-      }),
+      expect.objectContaining({ address: usd1BasePool, symbol: "crv2pool", isBasePoolLpToken: true }),
     ]);
-    expect(
-      curvePoolMap.get("ethereum:0x1111111111111111111111111111111111111111")?.poolCoins,
-    ).toBeUndefined();
-    expect(
-      curvePoolMap.get("ethereum:0x1111111111111111111111111111111111111111")?.basePoolAddress,
-    ).toBeUndefined();
+    expect(curvePoolMap.get(`ethereum:${unreviewedAddr}`)?.poolCoins).toBeUndefined();
+    expect(curvePoolMap.get(`ethereum:${unreviewedAddr}`)?.basePoolAddress).toBeUndefined();
   });
 
   it("retains exact NXUSD metapool underlying output identity only on the reviewed pool", async () => {
     const avalancheIndex = CURVE_CHAINS.indexOf("avalanche");
     const basePoolAddress = "0x7f90122BF0700F9E7e1F688fe926940E8839F353";
-    const pool: CurvePool = {
-      address: CURVE_NXUSD_COMPOSITE_POOL_ADDRESS,
+    const pool = {
+      ...makeApiPool(CURVE_NXUSD_COMPOSITE_POOL_ADDRESS, [], 328_267),
       name: "NXUSD/av3CRV",
       amplificationCoefficient: "200",
-      coins: [
-        {
-          symbol: "NXUSD",
-          address: "0xF14f4CE569cB3679E99d5059909E23B07bd2F387",
-          poolBalance: "375108949072839290225563",
-          usdPrice: 0.8094,
-          decimals: "18",
-          isBasePoolLpToken: false,
-        },
-        {
-          symbol: "av3CRV",
-          address: "0x1337BedC9D22ecbe766dF105c9623922A27963EC",
-          poolBalance: "21712968896565567155722",
-          usdPrice: 1.135,
-          decimals: "18",
-          isBasePoolLpToken: true,
-        },
-      ],
-      underlyingCoins: [
-        {
-          symbol: "NXUSD",
-          address: "0xF14f4CE569cB3679E99d5059909E23B07bd2F387",
-          usdPrice: 0.8094,
-          decimals: "18",
-        },
-        {
-          symbol: "avDAI",
-          address: "0x47AFa96Cdc9fAb46904A55a6ad4bf6660B53c38a",
-          usdPrice: 0.99989,
-          decimals: "18",
-        },
-        {
-          symbol: "avUSDC",
-          address: "0x46A51127C3ce23fb7AB1DE06226147F446e4a857",
-          usdPrice: 0.99986,
-          decimals: "6",
-        },
-        {
-          symbol: "avUSDT",
-          address: "0x532E6537FEA298397212F09A61e03311686f548e",
-          usdPrice: 0.99882,
-          decimals: "6",
-        },
-      ],
-      usdTotal: 328_267,
       isMetaPool: true,
-      assetTypeName: "USD",
-      totalSupply: 0,
       registryId: "factory",
-      isBroken: false,
-      virtualPrice: "1",
       creationTs: 0,
       basePoolAddress,
-      gaugeCrvApy: null,
-    };
-    const curvePayloads = CURVE_CHAINS.map(() => null) as Array<{
-      data: { poolData: typeof pool[] };
-    } | null>;
+      coins: [
+        { symbol: "NXUSD", address: "0xF14f4CE569cB3679E99d5059909E23B07bd2F387", poolBalance: "375108949072839290225563", usdPrice: 0.8094, decimals: "18", isBasePoolLpToken: false },
+        { symbol: "av3CRV", address: "0x1337BedC9D22ecbe766dF105c9623922A27963EC", poolBalance: "21712968896565567155722", usdPrice: 1.135, decimals: "18", isBasePoolLpToken: true },
+      ],
+      underlyingCoins: [
+        { symbol: "NXUSD", address: "0xF14f4CE569cB3679E99d5059909E23B07bd2F387", usdPrice: 0.8094, decimals: "18" },
+        { symbol: "avDAI", address: "0x47AFa96Cdc9fAb46904A55a6ad4bf6660B53c38a", usdPrice: 0.99989, decimals: "18" },
+        { symbol: "avUSDC", address: "0x46A51127C3ce23fb7AB1DE06226147F446e4a857", usdPrice: 0.99986, decimals: "6" },
+        { symbol: "avUSDT", address: "0x532E6537FEA298397212F09A61e03311686f548e", usdPrice: 0.99882, decimals: "6" },
+      ],
+    } as CurvePool;
+    const curvePayloads = CURVE_CHAINS.map(() => null) as Array<{ data: { poolData: CurvePool[] } } | null>;
     curvePayloads[avalancheIndex] = {
-      data: {
-        poolData: [
-          pool,
-          { ...pool, address: "0x1111111111111111111111111111111111111111" },
-        ],
-      },
+      data: { poolData: [pool, { ...pool, address: "0x1111111111111111111111111111111111111111" }] },
     };
 
-    const { curvePoolMap } = await buildCurveLookups(
-      curvePayloads,
-      new Map(),
-      new Map(),
-      new Map(),
-    );
+    const { curvePoolMap } = await buildCurveLookups(curvePayloads, new Map(), new Map(), new Map());
 
-    expect(
-      curvePoolMap.get(`avalanche:${CURVE_NXUSD_COMPOSITE_POOL_ADDRESS}`),
-    ).toMatchObject({
+    expect(curvePoolMap.get(`avalanche:${CURVE_NXUSD_COMPOSITE_POOL_ADDRESS}`)).toMatchObject({
       basePoolAddress,
       poolCoins: [
         { symbol: "NXUSD", decimals: 18, isBasePoolLpToken: false },
@@ -839,60 +674,37 @@ describe("buildCurveLookups", () => {
       underlyingCoins: [
         { symbol: "NXUSD", decimals: 18 },
         { symbol: "avDAI", decimals: 18 },
-        {
-          address: "0x46A51127C3ce23fb7AB1DE06226147F446e4a857",
-          symbol: "avUSDC",
-          decimals: 6,
-          usdPrice: 0.99986,
-        },
+        { address: "0x46A51127C3ce23fb7AB1DE06226147F446e4a857", symbol: "avUSDC", decimals: 6, usdPrice: 0.99986 },
         { symbol: "avUSDT", decimals: 6 },
       ],
     });
-    expect(
-      curvePoolMap.get("avalanche:0x1111111111111111111111111111111111111111")
-        ?.underlyingCoins,
-    ).toBeUndefined();
+    expect(curvePoolMap.get("avalanche:0x1111111111111111111111111111111111111111")?.underlyingCoins).toBeUndefined();
   });
 
   it("skips Curve fingerprinting for malformed coin addresses while preserving later pools", async () => {
     const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
     const USDT = "0xdac17f958d2ee523a2206206994597c13d831ec7";
-    const curvePayloads = [
-      {
+    const p1 = "0x1111111111111111111111111111111111111111";
+    const p2 = "0x2222222222222222222222222222222222222222";
+    const { curvePoolMap, priceObservations } = await buildCurveLookups(
+      [{
         data: {
           poolData: [
-            makeApiPool("0x1111111111111111111111111111111111111111", [
-              { symbol: "USDC", address: null },
-              { symbol: "USDT", address: USDT },
-            ]),
-            makeApiPool("0x2222222222222222222222222222222222222222", [
-              { symbol: "USDC", address: USDC },
-              { symbol: "USDT", address: USDT },
-            ]),
+            makeApiPool(p1, [{ symbol: "USDC", address: null }, { symbol: "USDT", address: USDT }]),
+            makeApiPool(p2, [{ symbol: "USDC", address: USDC }, { symbol: "USDT", address: USDT }]),
           ],
         },
-      },
-    ];
-
-    const { curvePoolMap, priceObservations } = await buildCurveLookups(
-      curvePayloads as never,
+      }] as never,
       new Map([["USDC", ["usd-coin"]]]),
       new Map([["USDC", new Map([["ethereum", ["usd-coin"]]])]]),
       new Map([[`ethereum:${USDC}`, "usd-coin"]]),
     );
 
-    expect(curvePoolMap.has("ethereum:0x1111111111111111111111111111111111111111")).toBe(true);
-    expect(curvePoolMap.has("ethereum:0x2222222222222222222222222222222222222222")).toBe(true);
-    expect(curvePoolMap.get(`fp:ethereum:curve:${[USDC, USDT].sort().join(":")}`)).toBe(
-      curvePoolMap.get("ethereum:0x2222222222222222222222222222222222222222"),
-    );
+    expect(curvePoolMap.has(`ethereum:${p1}`)).toBe(true);
+    expect(curvePoolMap.has(`ethereum:${p2}`)).toBe(true);
+    expect(curvePoolMap.get(`fp:ethereum:curve:${[USDC, USDT].sort().join(":")}`)).toBe(curvePoolMap.get(`ethereum:${p2}`));
     expect(priceObservations.get("usd-coin")).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          poolKey: "ethereum:0x2222222222222222222222222222222222222222",
-          identityConfidence: "exact",
-        }),
-      ]),
+      expect.arrayContaining([expect.objectContaining({ poolKey: `ethereum:${p2}`, identityConfidence: "exact" })]),
     );
   });
 
@@ -914,39 +726,18 @@ describe("buildCurveLookups", () => {
     const LUSD = "0x5f98805a4e8be255a32880fdec7f6728c6568ba0";
     const THREE_CRV = "0x6c3f90f043a72fa612cbac8115ee7e52bde6e490";
     const makeRegistryView = (registryId: "main" | "factory") => ({
-      address: CURVE_LUSD_3CRV_METAPOOL_ADDRESS,
+      ...makeApiPool(CURVE_LUSD_3CRV_METAPOOL_ADDRESS, [], 11_900_000),
       name: "LUSD/3Crv",
       amplificationCoefficient: "500",
-      coins: [
-        {
-          symbol: "LUSD",
-          address: LUSD,
-          poolBalance: "1683708673575847743884936",
-          usdPrice: 1,
-          decimals: "18",
-          isBasePoolLpToken: false,
-        },
-        {
-          symbol: "3Crv",
-          address: THREE_CRV,
-          poolBalance: "9827744887275855307610500",
-          usdPrice: 1,
-          decimals: "18",
-          isBasePoolLpToken: true,
-        },
-      ],
-      underlyingCoins: [],
-      usdTotal: 11_900_000,
       isMetaPool: true,
-      assetTypeName: "USD",
-      totalSupply: 0,
       registryId,
-      isBroken: false,
-      virtualPrice: "1",
       usdTotalExcludingBasePool: 1_700_000,
-      creationTs: 123,
       basePoolAddress: "0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7",
-      gaugeCrvApy: null,
+      underlyingCoins: [],
+      coins: [
+        { symbol: "LUSD", address: LUSD, poolBalance: "1683708673575847743884936", usdPrice: 1, decimals: "18", isBasePoolLpToken: false },
+        { symbol: "3Crv", address: THREE_CRV, poolBalance: "9827744887275855307610500", usdPrice: 1, decimals: "18", isBasePoolLpToken: true },
+      ],
     });
 
     const { curvePoolMap, curvePoolCandidatesByFingerprint } = await buildCurveLookups(
@@ -980,12 +771,7 @@ describe("buildCurveLookups", () => {
         ["ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc-circle"],
         ["ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7", "usdt-tether"],
       ]),
-      stablecoinPriceById: new Map([
-        ["lusd-liquity", 1],
-        ["dai-makerdao", 1],
-        ["usdc-circle", 1],
-        ["usdt-tether", 1],
-      ]),
+      stablecoinPriceById: new Map([["lusd-liquity", 1], ["dai-makerdao", 1], ["usdc-circle", 1], ["usdt-tether", 1]]),
       retainedTvlUsd: 1_700_000,
       capturedAt: 1_788_220_800,
     })).toMatchObject({
@@ -1002,33 +788,20 @@ describe("buildCurveLookups", () => {
     const USDT = "0x94b008aa00579c1307b0ef2c499aad98a8ce58e58";
     const optimismPayload = {
       data: {
-        poolData: [
-          {
-            address: "0x1337BedC9D22ecbe766dF105c9623922A27963EC",
-            name: "Curve.fi DAI/USDC/USDT",
-            amplificationCoefficient: "2000",
-            coins: [
-              { symbol: "DAI", address: DAI, poolBalance: "31868512011738815990995", usdPrice: 1, decimals: "18" },
-              { symbol: "USDC", address: USDC, poolBalance: "30000000000", usdPrice: 1, decimals: "6" },
-              { symbol: "USDT", address: USDT, poolBalance: "30000000000", usdPrice: 1, decimals: "6" },
-            ],
-            usdTotal: 92_000,
-            isMetaPool: false,
-            assetTypeName: "usd",
-            totalSupply: 0,
-            registryId: "factory-stable-ng",
-            isBroken: false,
-            virtualPrice: "1",
-            creationTs: 123,
-            basePoolAddress: null,
-            gaugeCrvApy: null,
-          },
-        ],
+        poolData: [{
+          ...makeApiPool("0x1337BedC9D22ecbe766dF105c9623922A27963EC", [], 92_000),
+          name: "Curve.fi DAI/USDC/USDT",
+          amplificationCoefficient: "2000",
+          assetTypeName: "usd",
+          coins: [
+            { symbol: "DAI", address: DAI, poolBalance: "31868512011738815990995", usdPrice: 1, decimals: "18" },
+            { symbol: "USDC", address: USDC, poolBalance: "30000000000", usdPrice: 1, decimals: "6" },
+            { symbol: "USDT", address: USDT, poolBalance: "30000000000", usdPrice: 1, decimals: "6" },
+          ],
+        }],
       },
     };
-    const curvePayloads = [...Array(8).fill(null), optimismPayload];
-
-    const { curvePoolMap } = await buildCurveLookups(curvePayloads, new Map(), new Map(), new Map());
+    const { curvePoolMap } = await buildCurveLookups([...Array(8).fill(null), optimismPayload], new Map(), new Map(), new Map());
 
     const byAddress = curvePoolMap.get("optimism:0x1337bedc9d22ecbe766df105c9623922a27963ec");
     expect(byAddress).toBeDefined();

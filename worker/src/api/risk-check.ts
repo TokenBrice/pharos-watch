@@ -618,6 +618,7 @@ export async function handleRiskCheck(db: D1Database, url: URL): Promise<Respons
   // Assemble per-asset blocks
   const assets: Record<string, RiskCheckAsset> = {};
   let minMentoPhaseValidUntilSec = Infinity;
+  let minClockedCurveNavValidUntilSec = Infinity;
 
   for (const id of resolvedIds) {
     const meta = WORKER_TRACKED_META_BY_ID.get(id) as WorkerRuntimeStablecoinMeta;
@@ -795,6 +796,17 @@ export async function handleRiskCheck(db: D1Database, url: URL): Promise<Respons
           "24h",
         );
         const dexPriceUsd = priceAdmission.unavailableReason == null ? dexRow.dex_price_usd : null;
+        if (
+          priceAdmission.clockedCurveNav &&
+          priceAdmission.unavailableReason == null &&
+          dexPriceUsd != null &&
+          priceAdmission.priceRemainingSec != null
+        ) {
+          minClockedCurveNavValidUntilSec = Math.min(
+            minClockedCurveNavValidUntilSec,
+            nowSec + priceAdmission.priceRemainingSec,
+          );
+        }
         liquidityBlock = {
           liquidityScore: dexRow.liquidity_score,
           totalTvlUsd: dexRow.total_tvl_usd,
@@ -1126,6 +1138,7 @@ export async function handleRiskCheck(db: D1Database, url: URL): Promise<Respons
     const cacheValidUntil = Math.min(
       bindingValidUntilSec,
       minMentoPhaseValidUntilSec,
+      minClockedCurveNavValidUntilSec,
       redemptionBackstopPhaseValidUntil(redemptionEntryById, nowSec),
     );
     headers = addFreshnessHeaders(

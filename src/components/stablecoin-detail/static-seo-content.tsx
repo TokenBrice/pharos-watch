@@ -38,7 +38,7 @@ import {
 import { buildAiDisclosureLine, formatAiSummaryDate } from "@/components/ai-summary/ai-disclosure";
 import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
 import { buildFreezeControlDescriptor, describeFreezeControl } from "@/lib/stablecoin-detail-blacklistability-client";
-import { isBlacklistStablecoin } from "@shared/lib/blacklist";
+import { isBlacklistTrackedStablecoinId } from "@shared/lib/blacklist-contract-specs";
 import { isReserveDriftAlertEligible } from "@/lib/stablecoin-detail-client-coin";
 import { buildStaticCompareHref } from "@/lib/compare-links";
 import { buildContractDeploymentParts } from "@/lib/contract-deployment-summary";
@@ -491,7 +491,7 @@ function buildAlertCommand(coin: StablecoinMeta): string | null {
   if ((tokenizedFund || navToken) && isReserveDriftAlertEligible(coin)) {
     types.push("reserve");
   }
-  if (types.length === 0 && isBlacklistStablecoin(coin.symbol.toUpperCase())) {
+  if (types.length === 0 && isBlacklistTrackedStablecoinId(coin.id)) {
     types.push("freeze");
   }
   return types.length > 0 ? `/subscribe ${types.join(",")} ${coin.id}` : null;
@@ -537,7 +537,7 @@ export function buildStablecoinFaqItems(coin: StablecoinMeta, release?: Snapshot
     coin.status === "frozen"
       ? `${coin.symbol} is a frozen Pharos archive; the recorded history below is read-only.`
       : isActiveStablecoinMeta(coin)
-        ? isBlacklistStablecoin(coin.symbol.toUpperCase())
+        ? isBlacklistTrackedStablecoinId(coin.id)
           ? `Live freeze and blacklist events for ${coin.symbol}, when applicable, appear in the live dossier on this page.`
           : null
         : `${coin.symbol} is outside active monitoring; this static record preserves the reviewed control context.`,

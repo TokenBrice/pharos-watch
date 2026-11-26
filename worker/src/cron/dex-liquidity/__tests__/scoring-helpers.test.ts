@@ -560,43 +560,30 @@ describe("quarantineProtocolTvlOutliers", () => {
 });
 
 describe("filterRetainedPools", () => {
-  it("drops large direct pools when zero volume is explicitly unmeasured", () => {
-    const retained = filterRetainedPools([
-      makePool({
+  it.each([
+    {
+      label: "drops large direct pools when zero volume is explicitly unmeasured",
+      pool: makePool({
         poolId: "base:0xslipstream",
         project: "aerodrome-slipstream",
         chain: "Base",
         tvlUsd: 150_000_000,
         volumeUsd1d: 0,
         source: "direct_api",
-        extra: {
-          measurement: {
-            tvlMeasured: true,
-            volumeMeasured: false,
-          },
-        },
+        extra: { measurement: { tvlMeasured: true, volumeMeasured: false } },
       }),
-    ]);
-
-    expect(retained).toHaveLength(0);
-  });
-
-  it("still drops large pools with measured low volume", () => {
-    const retained = filterRetainedPools([
-      makePool({
+    },
+    {
+      label: "still drops large pools with measured low volume",
+      pool: makePool({
         poolId: "ethereum:0xmeasured",
         tvlUsd: 150_000_000,
         volumeUsd1d: 0,
-        extra: {
-          measurement: {
-            tvlMeasured: true,
-            volumeMeasured: true,
-          },
-        },
+        extra: { measurement: { tvlMeasured: true, volumeMeasured: true } },
       }),
-    ]);
-
-    expect(retained).toHaveLength(0);
+    },
+  ])("$label", ({ pool }) => {
+    expect(filterRetainedPools([pool])).toHaveLength(0);
   });
 
   describe("dead-pool floor (v6.92)", () => {

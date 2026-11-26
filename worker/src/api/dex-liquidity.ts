@@ -14,6 +14,7 @@ import {
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import {
   admitDexPriceRow,
+  boundCacheControlMaxAge,
   buildDexLiquidityWarning,
   getDexTvlObservedAt,
   getDexLiquidityTrendTolerances,
@@ -178,6 +179,7 @@ export const handleDexLiquidity = async (
   // Normalizers intentionally retain raw diagnostic fields until wire-schema admission.
   const map: Record<string, unknown> = {};
   let coinUnavailableReason: "invalid-coverage-evidence" | null = null;
+  let earliestClockedNavRemainingSec: number | null = null;
   for (const row of rows) {
     const id = row.stablecoin_id;
     const currentTvl = row.total_tvl_usd;
@@ -194,9 +196,25 @@ export const handleDexLiquidity = async (
 
     // Prices are a separate publication; liquidity's clock cannot admit them.
     const priceRow = dexPriceById.get(id);
-    const { pricePayload, priceAgeSeconds, priceMaxAgeSec, unavailableReason: priceUnavailableReason } =
-      admitDexPriceRow(priceRow, row.updated_at, nowSec, `dex-liquidity:${id}:price_sources_json`);
+    const {
+      pricePayload,
+      priceAgeSeconds,
+      priceMaxAgeSec,
+      unavailableReason: priceUnavailableReason,
+      clockedCurveNav,
+      priceRemainingSec,
+      quotePublishedAtSec,
+      clockedCurveNavPoolIds,
+    } = admitDexPriceRow(priceRow, row.updated_at, nowSec, `dex-liquidity:${id}:price_sources_json`);
     const dexPrice = priceUnavailableReason == null ? priceRow : undefined;
+    const recordClockedNavRemaining = (remainingSec: number) => {
+      earliestClockedNavRemainingSec = earliestClockedNavRemainingSec == null
+        ? remainingSec
+        : Math.min(earliestClockedNavRemainingSec, remainingSec);
+    };
+    if (clockedCurveNav && priceUnavailableReason == null && priceRemainingSec != null) {
+      recordClockedNavRemaining(priceRemainingSec);
+    }
     let evidence: NormalizedDexLiquidityEvidence | null = null;
     try {
       evidence = normalizeDexLiquidityEvidence(row);
@@ -209,7 +227,22 @@ export const handleDexLiquidity = async (
       `dex-liquidity:${id}:score_components_json`,
     );
 
-    const normalizedTopPools = normalizeTopPools(row.top_pools_json, `dex-liquidity:${id}:top_pools_json`);
+    const normalizedTopPools = normalizeTopPools(
+      row.top_pools_json,
+      `dex-liquidity:${id}:top_pools_json`,
+      {
+        nowSec,
+        publicationUpdatedAt: priceUnavailableReason === "publication-mismatch"
+          ? row.updated_at
+          : (priceRow?.updated_at ?? row.updated_at),
+        quotePublishedAtSec,
+        parentHasPriceRow: priceRow != null && priceUnavailableReason !== "publication-mismatch",
+        parentClockedNav: clockedCurveNav,
+        parentClockedNavUnavailable: clockedCurveNav && priceUnavailableReason != null,
+        parentClockedNavPoolIds: clockedCurveNavPoolIds,
+        onClockedNavRemainingSec: recordClockedNavRemaining,
+      },
+    );
     const parseOk = normalizedTopPools !== null;
     const topPools = normalizedTopPools ?? [];
     const inferred7dMeasured =
@@ -296,6 +329,10 @@ export const handleDexLiquidity = async (
       exitRouteObservations: evidence == null ? null : scoreDetails.exitRouteObservations,
       ...(evidence == null ? {} : { exitRouteObservationCoverage: scoreDetails.exitRouteObservationCoverage }),
     };
+  }
+
+  if (earliestClockedNavRemainingSec != null && headers["Cache-Control"]) {
+    headers["Cache-Control"] = boundCacheControlMaxAge(headers["Cache-Control"], earliestClockedNavRemainingSec);
   }
 
   const degradedWarning = advisoryUnavailableWarning ?? buildDexLiquidityWarning(latestCron, { scope: "global" });

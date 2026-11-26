@@ -24,13 +24,13 @@ import { tryParseJson } from "../../lib/json-parse";
 import { createDexGenerationStore } from "./generation-store";
 import { createDexRouteObservationPacking, publishedDexRouteCounts } from "./dex-route-observation-selection";
 import type { CurveIdentityAttachment, LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
-import { summarizeRetainedPoolVolume } from "./scoring-helpers";
+import { summarizeRetainedPoolVolume, type CurveNavQuoteRejectionRecord } from "./scoring-helpers";
 import { normalizeProtocol } from "./pool-helpers";
 import { getReferenceMarket, getReferenceMarketClosureStart } from "@shared/lib/reference-market-hours";
 import { getDexMeasuredExecutionFreshnessMaxSec } from "@shared/types/measured-execution";
 import { canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import { DEX_MEASURED_CLOSURE_VALUATION_UNAVAILABLE } from "../measured-execution/valuation-admission";
-import { buildStoredChallengerPoolsJson, projectPoolChallenger } from "./challenger-publish";
+import { buildStoredChallengerPoolsJson, evaluateDexPriceChallengerPoolAdmission } from "./challenger-publish";
 import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { DexLiquidityAnchorReviewDecision } from "../../lib/schemas";
@@ -66,11 +66,34 @@ export function buildStoredTopPoolsJson(
   stablecoinId: string,
   topPools: LiquidityMetrics["topPools"],
   nowSec = Math.floor(Date.now() / 1000),
+  curveNavRejections?: readonly CurveNavQuoteRejectionRecord[],
+  retainedPools: LiquidityMetrics["topPools"] = topPools,
 ): string {
+  const evaluationPools = retainedPools === topPools
+    ? topPools
+    : [...new Set([...retainedPools, ...topPools])];
+  const { rowsByPool } = evaluateDexPriceChallengerPoolAdmission(
+    stablecoinId,
+    evaluationPools,
+    POOL_CHALLENGE_MIN_TVL,
+    nowSec,
+    curveNavRejections,
+  );
   return JSON.stringify(topPools.map((entry) => {
-    const { volumeReading: _volumeReading, price, ...pool } = entry;
-    const challenger = projectPoolChallenger(stablecoinId, entry, POOL_CHALLENGE_MIN_TVL, nowSec);
-    if (challenger && !challenger.upstreamKeys && challenger.tvlUsd === pool.tvlUsd) return { ...pool, price };
+    const {
+      volumeReading: _volumeReading,
+      verifiedMeasuredPhysicalPoolId: _verifiedMeasuredPhysicalPoolId,
+      price,
+      ...pool
+    } = entry;
+    const challenger = rowsByPool.get(entry) ?? null;
+    if (entry.curveNavSpotQuote !== undefined && !challenger) {
+      // Never store a Curve NAV displayPrice when full-set challenger admission rejected the quote.
+      return { ...pool };
+    }
+    if (challenger && !challenger.upstreamKeys && !challenger.curveNavSpotQuote && challenger.tvlUsd === pool.tvlUsd) {
+      return { ...pool, price };
+    }
     // Main weights the top-pool price by total inventory, regardless of its receipt.
     return {
       ...pool,
@@ -79,6 +102,12 @@ export function buildStoredTopPoolsJson(
         challengerTvlUsd: challenger.tvlUsd,
         upstreamKeys: challenger.upstreamKeys,
         pricePoolKeys: challenger.pricePoolKeys,
+        ...(challenger.curveNavSpotQuote
+          ? {
+              quotePublishedAtSec: challenger.quotePublishedAtSec,
+              quoteExpiresAtSec: challenger.quoteExpiresAtSec,
+            }
+          : {}),
       }),
     };
   }));
@@ -951,6 +980,7 @@ export async function persistScores(
   retainedPoolsByStablecoin?: ReadonlyMap<string, LiquidityMetrics["topPools"]>,
   anchorReviewDecision?: DexLiquidityAnchorReviewDecision,
   curveIdentityStatus?: CurveIdentityAttachment["status"],
+  curveNavRejectionsByStablecoin?: ReadonlyMap<string, ReadonlyArray<CurveNavQuoteRejectionRecord>>,
 ): Promise<PersistScoresResult> {
   let placeholderCount = 0;
   let orphanRowsDeleted = 0;
@@ -1184,6 +1214,7 @@ export async function persistScores(
       }
 
       const retainedPools = retainedPoolsByStablecoin?.get(id);
+      const coinCurveNavRejections = curveNavRejectionsByStablecoin?.get(id);
       await queueRunRow([
         generationId,
         id,
@@ -1196,8 +1227,10 @@ export async function persistScores(
         JSON.stringify(m.protocolTvl),
         JSON.stringify(m.chainTvl),
         // `volumeReading` is producer-internal raw evidence (aged readings included); never published.
-        buildStoredTopPoolsJson(id, m.topPools, challengerNowSec),
-        retainedPools == null ? null : buildStoredChallengerPoolsJson(id, retainedPools, POOL_CHALLENGE_MIN_TVL, challengerNowSec),
+        buildStoredTopPoolsJson(id, m.topPools, challengerNowSec, coinCurveNavRejections, retainedPools ?? m.topPools),
+        retainedPools == null
+          ? null
+          : buildStoredChallengerPoolsJson(id, retainedPools, POOL_CHALLENGE_MIN_TVL, challengerNowSec, coinCurveNavRejections),
         sr.score,
         sr.hhi,
         sr.avgStress,

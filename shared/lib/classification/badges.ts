@@ -339,4 +339,6 @@ export const BLACKLIST_CHART_COLORS: Record<BlacklistStablecoin, string> = {
   JPYC: "#ea580c",
   FRXUSD: "#f97316",
   FIDD: "#166534",
+  USDF: "#4f46e5",
+  USDGO: "#0d9488",
 };

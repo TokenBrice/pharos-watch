@@ -7,6 +7,8 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { summarizeDexVolumeWindow, type DexPoolVolumeObservationInput } from "@shared/lib/dex-volume-availability";
 import { DexLiquidityMapSchema } from "@shared/types/dex-liquidity";
+import { DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
+import { makeClockedCurveNavApiRows } from "./p4-route-response.test-support";
 
 function makeDexDeploymentOutcomeFallbackTable() {
   return { match: "FROM dex_deployment_outcomes", rows: [] };
@@ -407,106 +409,61 @@ describe("handleDexLiquidity", () => {
     ]) expect(coin).toHaveProperty(field);
   });
 
-  it("returns null 7d volume when the producer marked 7d volume as unmeasured", async () => {
-    const db = mockDexD1([
-      {
-        match: "dex_liquidity",
-        rows: [
-          makeDexLiquidityRow({
-            total_volume_24h_usd: 2_890_000,
-            total_volume_7d_usd: 0,
-            total_volume_7d_measured: 0,
-            top_pools_json: JSON.stringify([
-              {
-                project: "gate",
-                chain: "orderbook",
-                tvlUsd: 517_330,
-                symbol: "GUSD/USDT",
-                volumeUsd1d: 2_890_000,
-                poolType: "cex-orderbook",
-                source: "cg_tickers",
-              },
-            ]),
-          }),
-        ],
+  it.each([
+    {
+      label: "producer marked 7d volume as unmeasured",
+      overrides: {
+        total_volume_24h_usd: 2_890_000,
+        total_volume_7d_usd: 0,
+        total_volume_7d_measured: 0,
+        top_pools_json: JSON.stringify([{
+          project: "gate", chain: "orderbook", tvlUsd: 517_330, symbol: "GUSD/USDT",
+          volumeUsd1d: 2_890_000, poolType: "cex-orderbook", source: "cg_tickers",
+        }]),
       },
+      expected24h: 2_890_000,
+      expected7d: null,
+      expectedPool7d: undefined,
+    },
+    {
+      label: "pre-migration fallback rows whose top pools lack 7d volume",
+      overrides: {
+        total_volume_24h_usd: 100_000,
+        total_volume_7d_usd: 0,
+        total_volume_7d_measured: undefined,
+        top_pools_json: JSON.stringify([{
+          project: "gate", chain: "orderbook", tvlUsd: 50_000, symbol: "GUSD/USDT",
+          volumeUsd1d: 100_000, poolType: "cex-orderbook", source: "cg_tickers",
+        }]),
+      },
+      expected24h: 100_000,
+      expected7d: null,
+      expectedPool7d: undefined,
+    },
+    {
+      label: "measured pre-migration 7d volume when top pools include finite 7d volume",
+      overrides: {
+        total_volume_7d_usd: 700_000,
+        total_volume_7d_measured: undefined,
+        top_pools_json: JSON.stringify([{
+          project: "curve", chain: "Ethereum", tvlUsd: 500_000, symbol: "USDT/USDC",
+          volumeUsd1d: 100_000, volumeUsd7d: 700_000, poolType: "curve-stableswap", source: "dl",
+        }]),
+      },
+      expected24h: undefined,
+      expected7d: 700_000,
+      expectedPool7d: 700_000,
+    },
+  ])("handles 7d volume truth for $label", async ({ overrides, expected24h, expected7d, expectedPool7d }) => {
+    const db = mockDexD1([
+      { match: "dex_liquidity", rows: [makeDexLiquidityRow(overrides)] },
       { match: "dex_liquidity_history", rows: [] },
       { match: "dex_prices", rows: [] },
     ]);
-
-    const res = await handleDexLiquidity(db);
-    const body = (await res.json()) as Record<string, Record<string, unknown>>;
-
-    expect(body["usdt-tether"]?.totalVolume24hUsd).toBe(2_890_000);
-    expect(body["usdt-tether"]?.totalVolume7dUsd).toBeNull();
-    expect((body["usdt-tether"]?.topPools as Array<Record<string, unknown>>)[0]?.volumeUsd7d).toBeUndefined();
-  });
-
-  it("infers null 7d volume for pre-migration fallback rows whose top pools lack 7d volume", async () => {
-    const db = mockDexD1([
-      {
-        match: "dex_liquidity",
-        rows: [
-          makeDexLiquidityRow({
-            total_volume_24h_usd: 100_000,
-            total_volume_7d_usd: 0,
-            total_volume_7d_measured: undefined,
-            top_pools_json: JSON.stringify([
-              {
-                project: "gate",
-                chain: "orderbook",
-                tvlUsd: 50_000,
-                symbol: "GUSD/USDT",
-                volumeUsd1d: 100_000,
-                poolType: "cex-orderbook",
-                source: "cg_tickers",
-              },
-            ]),
-          }),
-        ],
-      },
-      { match: "dex_liquidity_history", rows: [] },
-      { match: "dex_prices", rows: [] },
-    ]);
-
-    const res = await handleDexLiquidity(db);
-    const body = (await res.json()) as Record<string, Record<string, unknown>>;
-
-    expect(body["usdt-tether"]?.totalVolume7dUsd).toBeNull();
-  });
-
-  it("keeps measured pre-migration 7d volume when top pools include finite 7d volume", async () => {
-    const db = mockDexD1([
-      {
-        match: "dex_liquidity",
-        rows: [
-          makeDexLiquidityRow({
-            total_volume_7d_usd: 700_000,
-            total_volume_7d_measured: undefined,
-            top_pools_json: JSON.stringify([
-              {
-                project: "curve",
-                chain: "Ethereum",
-                tvlUsd: 500_000,
-                symbol: "USDT/USDC",
-                volumeUsd1d: 100_000,
-                volumeUsd7d: 700_000,
-                poolType: "curve-stableswap",
-                source: "dl",
-              },
-            ]),
-          }),
-        ],
-      },
-      { match: "dex_liquidity_history", rows: [] },
-      { match: "dex_prices", rows: [] },
-    ]);
-
-    const res = await handleDexLiquidity(db);
-    const body = (await res.json()) as Record<string, Record<string, unknown>>;
-
-    expect(body["usdt-tether"]?.totalVolume7dUsd).toBe(700_000);
-    expect((body["usdt-tether"]?.topPools as Array<Record<string, unknown>>)[0]?.volumeUsd7d).toBe(700_000);
+    const body = (await (await handleDexLiquidity(db)).json()) as Record<string, Record<string, unknown>>;
+    if (expected24h !== undefined) expect(body["usdt-tether"]?.totalVolume24hUsd).toBe(expected24h);
+    expect(body["usdt-tether"]?.totalVolume7dUsd).toBe(expected7d);
+    expect((body["usdt-tether"]?.topPools as Array<Record<string, unknown>>)[0]?.volumeUsd7d).toBe(expectedPool7d);
   });
 
   it("exposes exact deployment outcome truth", async () => {
@@ -572,64 +529,29 @@ describe("handleDexLiquidity", () => {
     expect(body).toEqual({});
   });
 
-  // Fails closed: the router boundary turns this throw into the JSON 500 pinned by
-  // `router-contract.test.ts` ("returns a router-level JSON 500 when an unwrapped
-  // route handler throws"). Asserting the throw here keeps the cause visible.
-  it("fails closed when dex_prices fails unexpectedly", async () => {
+  // Fails closed on unexpected DB errors while treating undeployed optional tables as absent.
+  it.each([
+    { table: "dex_prices", error: "database is locked", rejects: true, expectedNullFields: [] },
+    { table: "dex_prices", error: "no such table: dex_prices", rejects: false, expectedNullFields: ["dexPriceUsd", "priceSources"] },
+    { table: "dex_deployment_outcomes", error: "no such table: dex_deployment_outcomes", rejects: false, expectedNullFields: ["deploymentCoverage"] },
+    { table: "dex_deployment_outcomes", error: "database is locked", rejects: true, expectedNullFields: [] },
+  ])("handles $table error ($error)", async ({ table, error, rejects, expectedNullFields }) => {
     const db = mockDexD1([
       { match: "dex_liquidity", rows: [row] },
       { match: "dex_liquidity_history", rows: [] },
-      { match: "dex_prices", rows: [], throwError: new Error("database is locked") },
+      { match: "dex_prices", rows: [], ...(table === "dex_prices" ? { throwError: new Error(error) } : {}) },
+      ...(table === "dex_deployment_outcomes"
+        ? [{ match: "dex_deployment_outcomes", rows: [], throwError: new Error(error) }]
+        : []),
     ]);
-
-    await expect(handleDexLiquidity(db)).rejects.toThrow("database is locked");
-  });
-
-  it("treats dex_prices as optional when the table is not deployed yet", async () => {
-    const db = mockDexD1([
-      { match: "dex_liquidity", rows: [row] },
-      { match: "dex_liquidity_history", rows: [] },
-      { match: "dex_prices", rows: [], throwError: new Error("no such table: dex_prices") },
-    ]);
-
-    const res = await handleDexLiquidity(db);
-
-    const body = (await readJsonResponse(res, 200)) as Record<string, Record<string, unknown>>;
-    expect(body["usdt-tether"]?.dexPriceUsd).toBeNull();
-    expect(body["usdt-tether"]?.priceSources).toBeNull();
-  });
-
-  it("treats deployment outcomes as optional when the table is not deployed yet", async () => {
-    const db = mockDexD1([
-      { match: "dex_liquidity", rows: [row] },
-      { match: "dex_liquidity_history", rows: [] },
-      { match: "dex_prices", rows: [] },
-      {
-        match: "dex_deployment_outcomes",
-        rows: [],
-        throwError: new Error("no such table: dex_deployment_outcomes"),
-      },
-    ]);
-
-    const res = await handleDexLiquidity(db);
-
-    const body = (await readJsonResponse(res, 200)) as Record<string, Record<string, unknown>>;
-    expect(body["usdt-tether"]?.deploymentCoverage).toBeNull();
-  });
-
-  it("fails closed when deployment outcomes fail unexpectedly", async () => {
-    const db = mockDexD1([
-      { match: "dex_liquidity", rows: [row] },
-      { match: "dex_liquidity_history", rows: [] },
-      { match: "dex_prices", rows: [] },
-      {
-        match: "dex_deployment_outcomes",
-        rows: [],
-        throwError: new Error("database is locked"),
-      },
-    ]);
-
-    await expect(handleDexLiquidity(db)).rejects.toThrow("database is locked");
+    if (rejects) {
+      await expect(handleDexLiquidity(db)).rejects.toThrow(error);
+      return;
+    }
+    const body = (await readJsonResponse(await handleDexLiquidity(db), 200)) as Record<string, Record<string, unknown>>;
+    for (const field of expectedNullFields) {
+      expect(body["usdt-tether"]?.[field]).toBeNull();
+    }
   });
 
   it("falls back to row timestamps when cron freshness lookups fail", async () => {
@@ -759,82 +681,47 @@ describe("handleDexLiquidity", () => {
     expect(body["usdt-tether"]?.methodologyVersion).toBe("5.91");
   });
 
-  it("adds a Warning header when the latest liquidity cron run was degraded", async () => {
+  it.each([
+    {
+      label: "degraded",
+      status: "degraded",
+      metadata: {
+        failedSources: ["defillama-yields"],
+        sourceCoverage: { nearCoverageGuard: true, nearValueGuard: false, nearMajorCoverageGuard: false },
+      },
+      expected: ["Latest sync-dex-liquidity run degraded", "failedSources=defillama-yields"],
+    },
+    {
+      label: "ok with high quality drift",
+      status: "ok",
+      metadata: {
+        sourceCoverage: {
+          qualityDriftSeverity: "high",
+          qualityDriftFlags: ["price-observation-drop", "measured-balance-drop"],
+        },
+      },
+      expected: ["shows high quality drift", "qualityDrift=high"],
+    },
+    {
+      label: "error",
+      status: "error",
+      metadata: {
+        failedSources: ["defillama-yields"],
+        sourceCoverage: { nearValueGuard: true },
+      },
+      expected: ["run failed", "failedSources=defillama-yields", "nearValueGuard"],
+    },
+  ])("adds a Warning header when the latest liquidity cron run is $label", async ({ status, metadata, expected }) => {
     const db = mockDexD1([
       { match: "dex_liquidity_history", rows: [] },
       { match: "dex_prices", rows: [] },
-      {
-        match: "cron_runs",
-        rows: [],
-        first: {
-          status: "degraded",
-          metadata: JSON.stringify({
-            failedSources: ["defillama-yields"],
-            sourceCoverage: {
-              nearCoverageGuard: true,
-              nearValueGuard: false,
-              nearMajorCoverageGuard: false,
-            },
-          }),
-        },
-      },
+      { match: "cron_runs", rows: [], first: { status, metadata: JSON.stringify(metadata) } },
       { match: "dex_liquidity", rows: [row] },
     ]);
-
-    const res = await handleDexLiquidity(db);
-    expect(res.headers.get("Warning") ?? "").toContain("Latest sync-dex-liquidity run degraded");
-    expect(res.headers.get("Warning") ?? "").toContain("failedSources=defillama-yields");
-  });
-
-  it("adds a Warning header when the latest liquidity cron run is ok but shows high quality drift", async () => {
-    const db = mockDexD1([
-      { match: "dex_liquidity_history", rows: [] },
-      { match: "dex_prices", rows: [] },
-      {
-        match: "cron_runs",
-        rows: [],
-        first: {
-          status: "ok",
-          metadata: JSON.stringify({
-            sourceCoverage: {
-              qualityDriftSeverity: "high",
-              qualityDriftFlags: ["price-observation-drop", "measured-balance-drop"],
-            },
-          }),
-        },
-      },
-      { match: "dex_liquidity", rows: [row] },
-    ]);
-
-    const res = await handleDexLiquidity(db);
-    expect(res.headers.get("Warning") ?? "").toContain("shows high quality drift");
-    expect(res.headers.get("Warning") ?? "").toContain("qualityDrift=high");
-  });
-
-  it("adds a failure warning when the latest liquidity cron run errored", async () => {
-    const db = mockDexD1([
-      { match: "dex_liquidity_history", rows: [] },
-      { match: "dex_prices", rows: [] },
-      {
-        match: "cron_runs",
-        rows: [],
-        first: {
-          status: "error",
-          metadata: JSON.stringify({
-            failedSources: ["defillama-yields"],
-            sourceCoverage: {
-              nearValueGuard: true,
-            },
-          }),
-        },
-      },
-      { match: "dex_liquidity", rows: [row] },
-    ]);
-
-    const res = await handleDexLiquidity(db);
-    expect(res.headers.get("Warning") ?? "").toContain("run failed");
-    expect(res.headers.get("Warning") ?? "").toContain("failedSources=defillama-yields");
-    expect(res.headers.get("Warning") ?? "").toContain("nearValueGuard");
+    const warning = (await handleDexLiquidity(db)).headers.get("Warning") ?? "";
+    for (const fragment of expected) {
+      expect(warning).toContain(fragment);
+    }
   });
 
   it("omits retired topPools source values and uses score-row time for freshness", async () => {
@@ -1022,5 +909,58 @@ describe("handleDexLiquidity DEC-19 volume availability (release A readers)", ()
       }),
     });
     expect(rated.liquidityScoreUnavailableReason).toBeNull();
+  });
+
+  it("caps Cache-Control TTL by earliest aggregate or topPools-only NAV quote expiry and nulls expired topPools[].price", async () => {
+    const upd = 1_790_000_000;
+    const ratioAt = upd - 120;
+    const { liquidityRow, priceRow } = makeClockedCurveNavApiRows({
+      updatedAt: upd,
+      poolRatioObservedAt: ratioAt,
+      quoteMarkObservedAt: ratioAt,
+      captureEvaluatedAtSec: upd - 60,
+      quotePublishedAtSec: upd,
+      embedTopPoolQuote: true,
+    });
+    const db = mockDexD1([
+      { match: "dex_liquidity_history", rows: [] },
+      { match: "dex_prices", rows: [priceRow] },
+      { match: "dex_liquidity", rows: [liquidityRow] },
+    ]);
+    try {
+      vi.spyOn(Date, "now").mockReturnValue((ratioAt + DEX_FRESHNESS_SEC - 45) * 1000);
+      for (const res of [await handleDexLiquidity(db), await handleDexLiquidity(db, "stusds-sky")]) {
+        const cc = res.headers.get("Cache-Control") ?? "";
+        expect(Number(cc.match(/s-maxage=(\d+)/)?.[1])).toBeLessThanOrEqual(45);
+        expect(Number(cc.match(/(?:^|,\s*)max-age=(\d+)/)?.[1])).toBeLessThanOrEqual(45);
+      }
+      vi.spyOn(Date, "now").mockReturnValue((ratioAt + DEX_FRESHNESS_SEC) * 1000);
+      const body = DexLiquidityMapSchema.parse(await (await handleDexLiquidity(db)).json());
+      expect(body["stusds-sky"]).toMatchObject({
+        dexPriceUsd: null,
+        dexPriceUnavailableReason: "stale-price",
+        totalTvlUsd: 2_500_000,
+      });
+      expect(body["stusds-sky"]?.topPools[0]).toMatchObject({ price: null, tvlUsd: 2_500_000 });
+
+      // Missing aggregate dex_prices row + 1 s left on topPools[].price still caps Cache-Control to s-maxage=1, max-age=1.
+      const topPoolOnlyDb = mockDexD1([
+        { match: "dex_liquidity_history", rows: [] },
+        { match: "dex_prices", rows: [] },
+        { match: "dex_liquidity", rows: [liquidityRow] },
+      ]);
+      vi.spyOn(Date, "now").mockReturnValue((ratioAt + DEX_FRESHNESS_SEC - 1) * 1000);
+      const oneSecRes = await handleDexLiquidity(topPoolOnlyDb);
+      expect(oneSecRes.headers.get("Cache-Control")).toContain("s-maxage=1");
+      expect(oneSecRes.headers.get("Cache-Control")).toContain("max-age=1");
+      const oneSecBody = DexLiquidityMapSchema.parse(await oneSecRes.json());
+      expect(oneSecBody["stusds-sky"]?.topPools[0]?.price).toBe(1.07);
+
+      vi.spyOn(Date, "now").mockReturnValue((ratioAt + DEX_FRESHNESS_SEC) * 1000);
+      const expiredTopOnly = await handleDexLiquidity(topPoolOnlyDb);
+      expect(DexLiquidityMapSchema.parse(await expiredTopOnly.json())["stusds-sky"]?.topPools[0]?.price).toBeNull();
+    } finally {
+      vi.restoreAllMocks();
+    }
   });
 });

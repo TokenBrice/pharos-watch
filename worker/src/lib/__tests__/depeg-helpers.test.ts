@@ -9,7 +9,9 @@ import {
   type DepegRow,
 } from "../depeg-helpers";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
-import { getDexAggregateRejectionReason, isAffirmativeDexPriceRow } from "../depeg-trust-policy";
+import { getDexAggregateRejectionReason, isAffirmativeDexPriceRow, isTrustedDexPriceRow } from "../depeg-trust-policy";
+import { DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
+import { makeClockedCurveNavPayload } from "../../api/__tests__/p4-route-response.test-support";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "@shared/lib/depeg-closure";
 import { buildUpsertPendingDepegStmt, normalizePendingDepegRow, type PendingDepegRow, type PendingDepegUpsertParams } from "../depeg-pending";
@@ -223,6 +225,27 @@ describe("original DEX source observation admission", () => {
       expect(isAffirmativeDexPriceRow(row, now, "depeg")).toBe(false);
       expect(loaded.dexPriceSources.size).toBe(0);
     }
+  });
+  it("preserves clocked Curve NAV pricePayload in loadDexPrices so veto lanes reject stale-mark rows at >=4500s", async () => {
+    const stalePayload = makeClockedCurveNavPayload({
+      poolRatioObservedAt: now - 120,
+      quoteMarkObservedAt: now - DEX_FRESHNESS_SEC,
+      captureEvaluatedAtSec: now - 60,
+      quotePublishedAtSec: now - 60,
+    });
+    const loaded = await loadDexPrices(database({
+      stablecoin_id: "stusds-sky",
+      updated_at: now - 60,
+      source_total_tvl: 2_500_000,
+      dex_price_usd: 1.07,
+      price_sources_json: JSON.stringify(stalePayload),
+    }), now);
+    const row = loaded.dexPriceRows.get("stusds-sky")!;
+    expect(row.pricePayload).toBeDefined();
+    expect(isTrustedDexPriceRow(row, now, "depeg")).toBe(false);
+    expect(isAffirmativeDexPriceRow(row, now, "depeg")).toBe(false);
+    expect(getDexAggregateRejectionReason(row, now, "depeg")).toBe("aggregate-clock-stale");
+    expect(loaded.dexPriceSources.has("stusds-sky")).toBe(false);
   });
   it.each(["confirm", "recover"] as const)("admits %s groups using their original clock, never a compatibility clock", async (mode) => {
     const observedAt = now - 60;

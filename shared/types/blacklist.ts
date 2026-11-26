@@ -36,6 +36,8 @@ export const BLACKLIST_STABLECOINS = [
   "JPYC",
   "FRXUSD",
   "FIDD",
+  "USDF",
+  "USDGO",
 ] as const;
 
 export type BlacklistStablecoin = (typeof BLACKLIST_STABLECOINS)[number];
@@ -95,11 +97,22 @@ export const BlacklistResponseSchema = z.object({
 });
 export type BlacklistResponse = z.infer<typeof BlacklistResponseSchema>;
 
-const BlacklistChartPointSchema = z.object({
+// Rollout-only compatibility: default ONLY the two newly added Wave-1 ETH pilot
+// keys so pre-pilot cached snapshots parse cleanly during rollout while damaged
+// historical chart rows missing any existing symbol still fail validation.
+const BLACKLIST_ROLLOUT_OPTIONAL_CHART_SYMBOLS = new Set<BlacklistStablecoin>(["USDF", "USDGO"]);
+
+export const BlacklistChartPointSchema = z.object({
   quarter: z.string(),
-  ...Object.fromEntries(BLACKLIST_STABLECOINS.map((s) => [s, z.number()])),
+  ...(Object.fromEntries(
+    BLACKLIST_STABLECOINS.map((s) => [
+      s,
+      BLACKLIST_ROLLOUT_OPTIONAL_CHART_SYMBOLS.has(s) ? z.number().optional().default(0) : z.number(),
+    ]),
+  ) as Record<BlacklistStablecoin, z.ZodNumber | z.ZodDefault<z.ZodOptional<z.ZodNumber>>>),
   total: z.number(),
 });
+export type BlacklistChartPoint = z.infer<typeof BlacklistChartPointSchema>;
 
 export const BlacklistQuarterlyEventTypePointSchema = z.object({
   quarter: z.string(),

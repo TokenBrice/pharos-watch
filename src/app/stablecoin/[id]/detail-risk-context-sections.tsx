@@ -375,7 +375,7 @@ function ControlBoard({
         <FreezeSeizureModule
           summary={blacklistabilitySummary}
           transferReview={transferReview}
-          symbol={coin.symbol}
+          stablecoinId={coin.id}
           variant="tile"
           stripForm={stripForm}
         />

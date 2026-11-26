@@ -86,7 +86,7 @@ function statsFor(symbol: string, values: { events: number; addresses: number; f
 }
 
 function renderModule(props: Partial<FreezeSeizureModuleProps> = {}) {
-  return render(<FreezeSeizureModule summary={SUMMARY} symbol="USDT" variant="tile" {...props} />);
+  return render(<FreezeSeizureModule summary={SUMMARY} stablecoinId="usdt-tether" variant="tile" {...props} />);
 }
 
 function rail() {
@@ -100,9 +100,9 @@ describe("FreezeSeizureModule", () => {
   });
 
   it("renders nothing without a review", () => {
-    const { container, rerender } = render(<FreezeSeizureModule summary={null} symbol="USDT" variant="tile" />);
+    const { container, rerender } = render(<FreezeSeizureModule summary={null} stablecoinId="usdt-tether" variant="tile" />);
     expect(container.firstChild).toBeNull();
-    rerender(<FreezeSeizureModule symbol="USDT" variant="tile" />);
+    rerender(<FreezeSeizureModule stablecoinId="usdt-tether" variant="tile" />);
     expect(container.firstChild).toBeNull();
   });
 
@@ -177,7 +177,7 @@ describe("FreezeSeizureModule", () => {
 
   it("omits the used station for a coin the freeze tracker does not watch, without fetching", () => {
     usageResult(statsFor("DAI", { events: 4, addresses: 2, frozen: 500, destroyed: 0 }));
-    renderModule({ symbol: "DAI", transferReview: TRANSFER_REVIEW });
+    renderModule({ stablecoinId: "dai-makerdao", transferReview: TRANSFER_REVIEW });
     expect(rail().textContent).not.toMatch(/used/i);
     expect(vi.mocked(useBlacklistSummary).mock.calls.every(([options]) => options?.enabled === false)).toBe(true);
   });
@@ -278,10 +278,10 @@ it.each([
   else expect(container.querySelector("[data-health-state]")).toBeNull();
   expect(rail().getAttribute("aria-label")).toMatch(/used/i);
   usageResult({ ...result, dataUpdatedAt: receipt + 30_000 });
-  rerender(<FreezeSeizureModule summary={SUMMARY} symbol="USDT" variant="tile" />);
+  rerender(<FreezeSeizureModule summary={SUMMARY} stablecoinId="usdt-tether" variant="tile" />);
   expect(container.querySelector("time")?.getAttribute("datetime")).toBe(producerTime);
   usageResult({ ...result, error: new Error("refresh failed"), refetch: vi.fn() });
-  rerender(<FreezeSeizureModule summary={SUMMARY} symbol="USDT" variant="tile" />);
+  rerender(<FreezeSeizureModule summary={SUMMARY} stablecoinId="usdt-tether" variant="tile" />);
   expect(container.querySelector("time")?.getAttribute("datetime")).toBe(producerTime);
   expect(screen.queryByText(/refresh failed/i)).toBeNull();
   expect(rail().getAttribute("aria-label")).toMatch(/used/i);

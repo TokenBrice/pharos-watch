@@ -206,43 +206,19 @@ describe("EventCard enrichment", () => {
   });
 
   it.each([
-    {
-      action: "unblocked",
-      amountUsdAtEvent: 839_738,
-      badge: "$840K",
-    },
-    {
-      action: "unblocked",
-      amountUsdAtEvent: 0,
-      badge: null,
-    },
-    {
-      action: "blocked",
-      amountUsdAtEvent: 343_007,
-      badge: "$343K",
-    },
+    { action: "unblocked", amountUsdAtEvent: 839_738, badge: "$840K" },
+    { action: "unblocked", amountUsdAtEvent: 0, badge: null },
+    { action: "blocked", amountUsdAtEvent: 343_007, badge: "$343K" },
   ])("freeze.$action with amount $amountUsdAtEvent renders action and badge signals", ({ action, amountUsdAtEvent, badge }) => {
     const blocked = action === "blocked";
-    render(
-      <EventCard
-        event={freezeEvent({
-          type: blocked ? "freeze.blocked" : "freeze.unblocked",
-          severity: blocked ? "notice" : "info",
-          chain: blocked ? "Tron" : "Ethereum",
-          title: blocked ? "USDT freeze $343k · Tron" : "USDT address unfrozen · Ethereum",
-          payload: {
-            stablecoin: "USDT",
-            chainId: blocked ? "tron" : "ethereum",
-            chainName: blocked ? "Tron" : "Ethereum",
-            amountUsdAtEvent,
-            sourceEventId: blocked ? "tron-0xdef-1" : "ethereum-0xabc-0x1cf",
-          },
-        })}
-      />,
-    );
+    render(<EventCard event={freezeEvent({
+      type: blocked ? "freeze.blocked" : "freeze.unblocked",
+      severity: blocked ? "notice" : "info",
+      chain: blocked ? "Tron" : "Ethereum",
+      title: blocked ? "USDT freeze $343k · Tron" : "USDT address unfrozen · Ethereum",
+      payload: { stablecoin: "USDT", chainId: blocked ? "tron" : "ethereum", chainName: blocked ? "Tron" : "Ethereum", amountUsdAtEvent, sourceEventId: blocked ? "tron-0xdef-1" : "ethereum-0xabc-0x1cf" },
+    })} />);
     if (badge === null) {
-      // Zero-amount freezes render no body enrichment at all — no badge and
-      // no action label.
       expect(screen.queryByText(/^\$\d/)).toBeNull();
       expect(screen.queryByText("unfrozen")).toBeNull();
       expect(screen.queryByText("frozen")).toBeNull();
@@ -251,6 +227,11 @@ describe("EventCard enrichment", () => {
       expect(screen.getByText(blocked ? "frozen" : "unfrozen")).toBeTruthy();
       expect(screen.getByText((content) => content.includes(`freeze ${action}`))).toBeTruthy();
     }
+  });
+
+  it("resolves Falcon USDF freeze events to usdf-falcon for the stablecoin logo", () => {
+    render(<EventCard event={freezeEvent({ type: "freeze.blocked", payload: { ...freezeEvent().payload, stablecoin: "USDF", amountUsdAtEvent: 1000 } })} />);
+    expect(screen.getByRole("img", { name: "usdf-falcon logo" })).toBeTruthy();
   });
 
   it("psi.band.shifted_up renders band pills with one-decimal score delta", () => {

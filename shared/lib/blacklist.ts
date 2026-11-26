@@ -48,6 +48,9 @@ const BLACKLIST_ASSETS: Record<BlacklistStablecoin, { priceAssetId: string | nul
   JPYC: { priceAssetId: "jpyc-jpyc", commodity: null },
   FRXUSD: { priceAssetId: null, commodity: null },
   FIDD: { priceAssetId: null, commodity: null },
+  // USD-par valuation consistent with USDX/USDA precedent.
+  USDF: { priceAssetId: null, commodity: null },
+  USDGO: { priceAssetId: null, commodity: null },
 };
 
 export function isGoldBlacklistStablecoin(symbol: string): symbol is "PAXG" | "XAUT" | "XAUM" {

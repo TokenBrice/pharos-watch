@@ -1,7 +1,7 @@
 import type { MechanismArchetype } from "@shared/types/stablecoin-taxonomy";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
-import { BLACKLIST_STABLECOINS } from "@shared/types/blacklist";
+import { hasBlacklistLedgerHistoryById } from "@shared/lib/blacklist-contract-specs";
 import type { BlacklistStatus } from "@shared/lib/report-card-blacklist-matchers";
 import {
   BACKING_BADGE_STYLES,
@@ -115,7 +115,7 @@ function buildFreezePassportItem(
   // section).
   const href = coin.blacklistabilitySummary
     ? "#freeze-seizure"
-    : (BLACKLIST_STABLECOINS as readonly string[]).includes(coin.symbol)
+    : hasBlacklistLedgerHistoryById(coin.id)
       ? "#blacklist"
       : buildCoinTrackerLink(coin.id, "freezewatch", coin.symbol).href;
 

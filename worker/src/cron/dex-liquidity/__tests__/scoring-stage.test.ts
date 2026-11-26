@@ -951,4 +951,54 @@ describe("DEX liquidity scoring stage", () => {
     expect(retention.deletedRows).toBe(0);
     expect(retention.error).toBe("scoring-stage retention unavailable");
   });
+
+  it("quarantines malformed staged price observations per coin without aborting sibling assets", () => {
+    const source = sourceState();
+    source.priceObservations = new Map([
+      ["stusds-sky", [{
+        price: 1.07,
+        tvl: 2_500_000,
+        chain: "ethereum",
+        protocol: "curve",
+        sourceFamily: "direct_api",
+        identityConfidence: "exact",
+        poolKey: "ethereum:0x2c7c98a3b1582d83c43987202aeff638312478ae",
+        observedAt: 19_900,
+        curveNavSpotQuote: {
+          policyId: "curve-stableswap-ng-nav-spot",
+          poolId: "ethereum:0x2c7c98a3b1582d83c43987202aeff638312478ae",
+          blockNumber: 26_500_642,
+          blockHash: `0x${"11".repeat(32)}`,
+          poolRatioObservedAt: 19_900,
+          quoteMarkObservedAt: 19_900,
+          captureEvaluatedAtSec: 19_940,
+          sourceGenerationId: "dex-stage:fixture",
+          admissionMode: "sole-venue",
+        },
+      }]],
+      ["usdc-circle", [{
+        price: 1,
+        tvl: 5_000_000,
+        chain: "ethereum",
+        protocol: "uniswap-v3",
+        sourceFamily: "direct_api",
+        poolKey: "ethereum:0x0000000000000000000000000000000000000005",
+        observedAt: 19_950,
+      }]],
+    ]);
+    const chunks = encode(source, poolState(1));
+    const corrupted = chunks.map((chunk) => ({
+      ...chunk,
+      payload: chunk.payload.replace('"observedAt":19900', '"observedAt":"bad"'),
+    }));
+    const decoded = decode(corrupted);
+    expect(decoded.sourceState.priceObservations.get("stusds-sky")).toEqual([]);
+    expect(decoded.sourceState.priceObservations.get("usdc-circle")).toHaveLength(1);
+    expect(decoded.sourceState.curveNavStageRejections).toEqual([{
+      stablecoinId: "stusds-sky",
+      poolKey: "ethereum:0x2c7c98a3b1582d83c43987202aeff638312478ae",
+      chain: "ethereum",
+      reason: "invalid-clock",
+    }]);
+  });
 });

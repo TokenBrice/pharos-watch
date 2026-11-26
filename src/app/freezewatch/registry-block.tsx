@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { buildBlacklistStatusBuckets } from "@shared/lib/blacklist-status-buckets";
-import { BLACKLIST_STABLECOINS } from "@shared/types/blacklist";
-import { coinIdBySymbol } from "@/lib/coin-id-by-symbol";
+import {
+  BLACKLIST_RETIRED_LEDGER_SPECS,
+  BLACKLIST_TRACKED_STABLECOIN_ID_LIST,
+  getBlacklistStablecoinById,
+} from "@shared/lib/blacklist-contract-specs";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import {
   FREEZEWATCH_BUCKET_DESCRIPTIONS,
   FREEZEWATCH_BUCKET_LABELS,
@@ -29,18 +34,29 @@ export function FreezeWatchRegistryBlock() {
           </div>
         ))}
       </dl>
-      <div className="space-y-1">
+      <div className="space-y-2">
         <h3 className="text-sm font-medium text-foreground">Assets with event tracking</h3>
         <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-          {BLACKLIST_STABLECOINS.map((symbol) => {
-            const id = coinIdBySymbol(symbol);
+          {BLACKLIST_TRACKED_STABLECOIN_ID_LIST.map((id) => {
+            const label = CLIENT_TRACKED_META_BY_ID.get(id)?.symbol ?? getBlacklistStablecoinById(id) ?? id;
             return (
-              <li key={symbol}>
-                {id ? <Link href={`/stablecoin/${id}/`} className="underline">{symbol}</Link> : symbol}
+              <li key={id}>
+                <Link href={buildStablecoinUrl(id)} className="underline">{label}</Link>
               </li>
             );
           })}
         </ul>
+        <p className="pharos-meta">
+          Retired archives (historical ledger only):{" "}
+          {BLACKLIST_RETIRED_LEDGER_SPECS.map((entry, index) => (
+            <span key={entry.stablecoinId}>
+              {index > 0 ? ", " : null}
+              <Link href={buildStablecoinUrl(entry.stablecoinId)} className="underline">
+                {CLIENT_TRACKED_META_BY_ID.get(entry.stablecoinId)?.symbol ?? entry.stablecoin}
+              </Link>
+            </span>
+          ))}
+        </p>
       </div>
     </section>
   );

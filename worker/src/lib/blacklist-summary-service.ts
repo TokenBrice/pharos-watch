@@ -18,6 +18,7 @@ import { queryBlacklistGapMetrics, type BlacklistGapMetrics } from "./blacklist-
 import {
   BLACKLIST_STABLECOINS,
   BlacklistSummaryResponseSchema,
+  type BlacklistChartPoint,
   type BlacklistSummaryRefresh,
   type BlacklistSummaryResponse,
   type BlacklistEvent,
@@ -96,8 +97,6 @@ const BLACKLIST_SUMMARY_RETRYABLE_ERRORS = new Set([
   "blacklist-summary-superseded",
   "blacklist-summary-rebuilding",
 ]);
-
-type BlacklistChartPoint = { quarter: string; total: number } & Record<BlacklistStablecoin, number>;
 
 function quarterToSortKey(timestamp: number): number {
   const d = new Date(timestamp * 1000);
@@ -184,7 +183,15 @@ function buildCoverage() {
       configKey: config.configKey,
       providerSource,
       eventFamilies: [...new Set(config.events.map((event) => event.signature))],
-      eventTypes: [...new Set(config.events.map((event) => event.eventType))],
+      eventTypes: [
+        ...new Set(
+          config.events.flatMap((event) =>
+            typeof event.eventTypeFromDataBoolIndex === "number"
+              ? (["blacklist", "unblacklist"] as const)
+              : [event.eventType],
+          ),
+        ),
+      ],
     };
   });
 
@@ -517,9 +524,33 @@ function isBlacklistSummaryPayload(value: unknown): value is BlacklistSummaryPay
   return BlacklistSummaryCachePayloadSchema.safeParse(value).success;
 }
 
+// Rollout-only compatibility: pre-pilot cached snapshots written right before
+// Wave-1 ETH pilot expansion omit only these two newly added pilot keys.
+// Historical symbols remain strictly required so damaged chart rows still fail.
+const BLACKLIST_ROLLOUT_OPTIONAL_CHART_SYMBOLS: readonly BlacklistStablecoin[] = ["USDF", "USDGO"];
+
+function hydratePrePilotChartPoints(payload: unknown): unknown {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return payload;
+  const record = payload as Record<string, unknown>;
+  if (!Array.isArray(record.chart)) return payload;
+  let changed = false;
+  const chart = record.chart.map((point) => {
+    if (!point || typeof point !== "object" || Array.isArray(point)) return point;
+    const pointRecord = point as Record<string, unknown>;
+    const missing = BLACKLIST_ROLLOUT_OPTIONAL_CHART_SYMBOLS.filter((symbol) => !(symbol in pointRecord));
+    if (missing.length === 0) return point;
+    changed = true;
+    const hydrated: Record<string, unknown> = { ...pointRecord };
+    for (const symbol of missing) hydrated[symbol] = 0;
+    return hydrated;
+  });
+  return changed ? { ...record, chart } : payload;
+}
+
 function parseBlacklistSummarySnapshot(value: string, now = Math.floor(Date.now() / 1000)): CachedBlacklistSummarySnapshot | null {
   try {
     const parsed = JSON.parse(value) as Partial<CachedBlacklistSummarySnapshot>;
+    const hydratedPayload = hydratePrePilotChartPoints(parsed.payload);
     if (
       parsed.version !== BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION ||
       typeof parsed.materializedAt !== "number" ||
@@ -529,7 +560,7 @@ function parseBlacklistSummarySnapshot(value: string, now = Math.floor(Date.now(
         !["ok", "missing", "lookup_failed"].includes(parsed.freshnessStatus)) ||
       (parsed.postWipeValidThrough !== undefined &&
         (!Number.isSafeInteger(parsed.postWipeValidThrough) || parsed.postWipeValidThrough < now)) ||
-      !isBlacklistSummaryPayload(parsed.payload)
+      !isBlacklistSummaryPayload(hydratedPayload)
     ) {
       return null;
     }
@@ -539,7 +570,7 @@ function parseBlacklistSummarySnapshot(value: string, now = Math.floor(Date.now(
       generation: parsed.generation,
       freshnessTs: parsed.freshnessTs,
       freshnessStatus: parsed.freshnessStatus,
-      payload: parsed.payload,
+      payload: hydratedPayload,
       postWipeValidThrough: parsed.postWipeValidThrough,
     };
   } catch {
