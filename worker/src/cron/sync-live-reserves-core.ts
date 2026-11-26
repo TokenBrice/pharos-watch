@@ -510,12 +510,6 @@ export async function syncReserveCoin(args: {
       return timedResult({ breakerKey, status: "failed", warningMessages: warnings.map((warning) => `${coin.id}:${warning.code}`), hasWarnings: true });
     }
 
-    if (result.slices.length === 0) {
-      logWorkerEventArgs("handler", "warn", `[sync-live-reserves] Adapter returned empty slices for ${coin.id}`);
-      await recordFailure("error", "Adapter returned zero reserve slices", "empty-slices", [], { durationMs });
-      return timedResult({ breakerKey, status: "failed", warningMessages: [], hasWarnings: false });
-    }
-
     const warnings = [...(result.warnings ?? []), ...validation.warnings];
     if (hasFatalWarnings(warnings)) {
       const message = warnings

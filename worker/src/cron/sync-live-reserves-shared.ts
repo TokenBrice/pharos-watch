@@ -249,7 +249,7 @@ export function classifyFailure(reason: string, lastError: string | null): Reser
   if (reason === "storage-write-timeout" || reason === "success-finalize-rejected") return "storage-write";
   if (reason === "storage-exception") return "storage-write";
   if (reason === "run-budget-exhausted") return "run-budget-exhausted";
-  if (reason === "validation-failed" || reason === "fatal-warning" || reason === "empty-slices") return "validation";
+  if (reason === "validation-failed" || reason === "fatal-warning") return "validation";
 
   const message = (lastError ?? "").toLowerCase();
   // Upstream IP geo-gates (e.g. MegaUSD) answer HTTP 200 by redirecting to a
