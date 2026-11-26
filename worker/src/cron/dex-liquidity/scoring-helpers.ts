@@ -1,19 +1,28 @@
-import { getDexGroupLineage } from "./price-lineage";
+import { directUsdVenueKeys, getDexGroupLineage, getDexObservationLineage, readDexPriceLineage } from "./price-lineage";
 import { retainedPoolVolumeSanityRejection } from "./pool-volume-sanity";
 import type { CurveBasePoolOverlapEvidence } from "./process-pool-protocol-enrichment";
-import type {
-  DexPoolVolumeReading,
-  DexPriceObs,
-  LiquidityCoverageClass,
-  LiquidityFallbackCounters,
-  LiquidityMetrics,
-  LiquiditySourceMixByFamily,
-  PoolEntry,
+import {
+  CURVE_NAV_SPOT_QUOTE_POLICY,
+  CURVE_NAV_SPOT_QUOTE_POLICY_ID,
+  isCurveNavSpotQuoteEvidenceShape,
+  type CurveNavSpotQuoteCandidate,
+  type CurveNavSpotQuoteEvidence,
+  type DexPoolVolumeReading,
+  type DexPriceObs,
+  type LiquidityCoverageClass,
+  type LiquidityFallbackCounters,
+  type LiquidityMetrics,
+  type LiquiditySourceMixByFamily,
+  type PoolEntry,
 } from "./types";
+export { isCurveNavSpotQuoteEvidenceShape };
 import type { DexVolumeAvailabilityRecord } from "@shared/types/dex-liquidity";
 import { isBlockedDexId } from "../../lib/dex-cron-constants";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/dex-cron-constants";
+import { pricesAgreeWithinBps } from "../../lib/price-divergence";
 import { clamp } from "@shared/lib/math";
+import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { median, weightedMedian } from "@shared/lib/stats";
 import {
   DEX_DEAD_POOL_TVL_MIN_USD,
@@ -621,13 +630,40 @@ export function collapseDuplicateObservations(
 
     duplicateGroups++;
     duplicateObservations += group.length - 1;
+    const clockedMembers = group.filter((item) => item.curveNavSpotQuote != null);
+    if (clockedMembers.length > 0) {
+      // Never strip a clocked Curve NAV tag or merge non-clocked duplicates into default mode.
+      if (clockedMembers.length === 1) {
+        passthrough.push(clockedMembers[0]!);
+        continue;
+      }
+      if (areUniformClockedCurveNavObservations(clockedMembers)) {
+        const rep = [...clockedMembers].sort((left, right) => right.tvl - left.tvl || left.protocol.localeCompare(right.protocol))[0]!;
+        passthrough.push({
+          ...rep,
+          tvl: Math.min(...clockedMembers.map((item) => item.tvl)),
+        });
+      } else {
+        // Conflicting clocked Curve NAV copies for one pool key quarantine as "conflict" without falling back to default mode.
+        const rep = clockedMembers[0]!;
+        passthrough.push({
+          ...rep,
+          curveNavConflict: true as const,
+        });
+      }
+      continue;
+    }
+
     const representative = [...group].sort((left, right) => right.tvl - left.tvl || left.protocol.localeCompare(right.protocol))[0]!;
     const lineage = getDexGroupLineage(group);
     const contributor = lineage?.aggregateContributors?.[0];
     const sameFamilies = contributor && lineage?.aggregateContributors?.every((input) =>
       input.providerFamily === contributor.providerFamily && input.venueFamily === contributor.venueFamily);
+    const allVerifiedClockedVenue = group.every((item) => item.verifiedClockedVenue === true);
+    const { verifiedClockedVenue: _droppedVerified, ...representativeBase } = representative;
     passthrough.push({
-      ...representative,
+      ...representativeBase,
+      ...(allVerifiedClockedVenue ? { verifiedClockedVenue: true as const } : {}),
       mergedLineage: lineage ? {
         upstreamKeys: lineage.upstreamKeys,
         providerFamily: sameFamilies ? contributor.providerFamily : null,
@@ -681,20 +717,844 @@ export function aggregateProtocolSources(
 }
 
 /** Quote provenance and support are independent of the retained value observation. */
-export function projectRetainedPoolPrice(pool: LiquidityMetrics["topPools"][number]): DexPriceObs | null {
+export function projectRetainedPoolPrice(
+  pool: LiquidityMetrics["topPools"][number],
+  stablecoinId?: string,
+): DexPriceObs | null {
   const tvl = Math.min(pool.tvlUsd, pool.priceEvidenceTvlUsd ?? pool.tvlUsd);
   if (typeof pool.price !== "number" || !Number.isFinite(pool.price) || pool.price <= 0 ||
       !Number.isFinite(tvl) || tvl <= 0) return null;
+  const verifiedClockedVenue =
+    pool.curveNavSpotQuote == null &&
+    pool.priceCounterparty?.observedAtMode === "upstream" &&
+    hasVerifiedClockedVenueProof(pool, { stablecoinId });
+  const measuredQuotedAt = verifiedClockedVenue ? pool.extra?.measuredExecution?.quotedAt : undefined;
+  const observedAt =
+    pool.priceObservedAt != null &&
+    verifiedClockedVenue &&
+    pool.extra?.ammExecutionModel?.source !== "uniswap-v2" &&
+    pool.extra?.ammExecutionModel?.source !== "pancakeswap-v2" &&
+    isPositiveSafeInt(measuredQuotedAt)
+      ? Math.min(pool.priceObservedAt, measuredQuotedAt)
+      : (pool.priceObservedAt ?? null);
   return {
     price: pool.price,
-    observedAt: pool.priceObservedAt ?? null,
+    observedAt,
     ...(pool.priceCounterparty ? { counterpartyPrice: pool.priceCounterparty } : {}),
+    ...(pool.curveNavSpotQuote ? { curveNavSpotQuote: pool.curveNavSpotQuote } : {}),
+    ...(verifiedClockedVenue ? { verifiedClockedVenue: true as const } : {}),
     tvl,
     chain: pool.chain,
     protocol: pool.project,
     poolKey: pool.poolId,
     identityConfidence: "exact",
     sourceFamily: pool.priceSource ?? pool.source,
+  };
+}
+
+export type CurveNavIntegrityRejectionReason =
+  | "capture-generation-mismatch"
+  | "capture-invalid"
+  | "capture-future"
+  | "quote-mark-future"
+  | "future-timestamp"
+  | "invalid-clock"
+  | "invalid-policy"
+  | "conflict";
+
+export type CurveNavEligibilityRejectionReason =
+  | "pool-ineligible"
+  | "insufficient-support"
+  | "insufficient-volume"
+  | "quote-mark-unavailable"
+  | "quote-mark-stale"
+  | "quote-stale"
+  | "capture-stale"
+  | "corroborator-missing"
+  | "depth-test-failed";
+
+export type CurveNavQuoteScoringRejectionReason =
+  | CurveNavIntegrityRejectionReason
+  | CurveNavEligibilityRejectionReason;
+
+export interface CurveNavQuoteRejectionRecord {
+  poolKey: string | null;
+  chain?: string;
+  reason: CurveNavQuoteScoringRejectionReason;
+}
+
+const CURVE_NAV_ELIGIBILITY_REJECTION_SET = new Set<string>([
+  "pool-ineligible",
+  "insufficient-support",
+  "insufficient-volume",
+  "quote-mark-unavailable",
+  "quote-mark-stale",
+  "quote-stale",
+  "capture-stale",
+  "corroborator-missing",
+  "depth-test-failed",
+]);
+
+const CURVE_NAV_INTEGRITY_REJECTION_SET = new Set<string>([
+  "capture-generation-mismatch",
+  "capture-invalid",
+  "capture-future",
+  "quote-mark-future",
+  "future-timestamp",
+  "invalid-clock",
+  "invalid-policy",
+  "conflict",
+]);
+
+/**
+ * Fail-closed integrity vs eligibility split (R8): anything outside the explicit
+ * eligibility/support/staleness class isolates the coin fail-closed.
+ */
+function isCurveNavIntegrityRejectionReason(reason: string): boolean {
+  return !CURVE_NAV_ELIGIBILITY_REJECTION_SET.has(reason);
+}
+
+export function normalizeCurveNavScoringRejectionReason(reason: string): CurveNavQuoteScoringRejectionReason {
+  if (reason === "uncorroborated") return "corroborator-missing";
+  if (CURVE_NAV_ELIGIBILITY_REJECTION_SET.has(reason) || CURVE_NAV_INTEGRITY_REJECTION_SET.has(reason)) {
+    return reason as CurveNavQuoteScoringRejectionReason;
+  }
+  return "invalid-policy";
+}
+
+export function pickDecisiveCurveNavRejectionReason(
+  rejections: readonly { reason: CurveNavQuoteScoringRejectionReason }[],
+): CurveNavQuoteScoringRejectionReason {
+  const integrity = rejections.find((entry) => isCurveNavIntegrityRejectionReason(entry.reason));
+  return integrity?.reason ?? rejections[0]!.reason;
+}
+
+export function canonicalCurveNavPoolKey(
+  chain: string | undefined,
+  poolKey: string | null | undefined,
+): string | null {
+  if (!poolKey || !poolKey.trim()) return null;
+  const trimmed = poolKey.trim();
+  const separator = trimmed.indexOf(":");
+  if (separator > 0) {
+    return canonicalExitRouteScopedKey(trimmed.slice(0, separator), trimmed.slice(separator + 1));
+  }
+  return chain ? canonicalExitRouteScopedKey(chain, trimmed) : trimmed.toLowerCase();
+}
+
+export function buildCurveNavRejectedPoolFilter(
+  rejections: readonly CurveNavQuoteRejectionRecord[],
+): { rejectedPoolKeys: Set<string>; hasNullKeyRejection: boolean; hasIntegrityRejection: boolean } {
+  const rejectedPoolKeys = new Set<string>();
+  let hasNullKeyRejection = false;
+  let hasIntegrityRejection = false;
+  for (const entry of rejections) {
+    if (isCurveNavIntegrityRejectionReason(entry.reason)) hasIntegrityRejection = true;
+    if (entry.poolKey == null || !entry.poolKey.trim()) {
+      hasNullKeyRejection = true;
+    } else {
+      rejectedPoolKeys.add(entry.poolKey);
+      const canonical = canonicalCurveNavPoolKey(entry.chain, entry.poolKey);
+      if (canonical) rejectedPoolKeys.add(canonical);
+    }
+  }
+  return { rejectedPoolKeys, hasNullKeyRejection, hasIntegrityRejection };
+}
+
+export function matchesRejectedCurveNavPool(
+  poolKey: string | null | undefined,
+  chain: string | undefined,
+  protocol: string,
+  filter: { rejectedPoolKeys: ReadonlySet<string>; hasNullKeyRejection: boolean },
+): boolean {
+  if (filter.hasNullKeyRejection && normalizeProtocol(protocol) === "curve") return true;
+  if (!poolKey) return false;
+  if (filter.rejectedPoolKeys.has(poolKey)) return true;
+  const canonical = canonicalCurveNavPoolKey(chain, poolKey);
+  return canonical != null && filter.rejectedPoolKeys.has(canonical);
+}
+
+const POOL_CONVERSION_SOURCE_UMBRELLAS = new Set(["curve-onchain", "dex-promoted"]);
+
+function normalizeNavDependencyKey(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const lower = trimmed.toLowerCase();
+  if (lower.startsWith("venue:")) {
+    const venue = lower.slice(6).trim();
+    if (!venue) return null;
+    const normalized = normalizePricingSourceKeys([venue]);
+    return normalized.length === 1 ? `venue:${normalized[0]}` : `venue:${venue}`;
+  }
+  const separator = trimmed.indexOf(":");
+  if (separator > 0) {
+    return canonicalExitRouteScopedKey(trimmed.slice(0, separator), trimmed.slice(separator + 1));
+  }
+  const normalized = normalizePricingSourceKeys([lower]);
+  return normalized.length === 1 ? `venue:${normalized[0]}` : `venue:${lower}`;
+}
+
+function canonicalCounterMarkSignature(obs: DexPriceObs): string | null {
+  const mark = obs.counterpartyPrice;
+  if (
+    !mark ||
+    !isNonEmptyString(mark.stablecoinId) ||
+    !isNonEmptyString(mark.source) ||
+    !Number.isFinite(mark.priceUsd) ||
+    mark.priceUsd <= 0 ||
+    !isPositiveSafeInt(mark.observedAtSec)
+  ) {
+    return null;
+  }
+  const explicit = readDexPriceLineage(mark);
+  const explicitUpstream = [...(explicit.upstreamKeys ?? [])]
+    .map((key) => normalizeNavDependencyKey(key) ?? key)
+    .sort()
+    .join(",");
+  const explicitPools = [...(explicit.pricePoolKeys ?? [])]
+    .map((key) => normalizeNavDependencyKey(key) ?? key)
+    .sort()
+    .join(",");
+  const obsLineage = getDexObservationLineage(obs);
+  const obsUpstream = [...(obsLineage?.upstreamKeys ?? [])]
+    .map((key) => normalizeNavDependencyKey(key) ?? key)
+    .sort()
+    .join(",");
+  const normalizedSources = normalizePricingSourceKeys([mark.source]).sort().join("+");
+  return JSON.stringify([
+    mark.stablecoinId.trim(),
+    mark.priceUsd,
+    mark.source.trim().toLowerCase(),
+    normalizedSources,
+    mark.observedAtMode ?? null,
+    mark.observedAtSec,
+    explicitUpstream,
+    explicitPools,
+    obsUpstream,
+  ]);
+}
+
+export function areUniformClockedCurveNavObservations(members: readonly DexPriceObs[]): boolean {
+  if (members.length === 0) return false;
+  const first = members[0]!;
+  const firstQuote = first.curveNavSpotQuote;
+  if (!isCurveNavSpotQuoteEvidenceShape(firstQuote)) return false;
+  const firstMarkSig = canonicalCounterMarkSignature(first);
+  if (firstMarkSig == null) return false;
+  const firstCorroborators = [...(firstQuote.corroboratorPoolIds ?? [])].sort().join(",");
+  return members.every((item) => {
+    const q = item.curveNavSpotQuote;
+    return (
+      isCurveNavSpotQuoteEvidenceShape(q) &&
+      item.curveNavConflict !== true &&
+      item.price === first.price &&
+      item.observedAt === first.observedAt &&
+      q.policyId === firstQuote.policyId &&
+      q.poolId === firstQuote.poolId &&
+      q.blockNumber === firstQuote.blockNumber &&
+      q.blockHash === firstQuote.blockHash &&
+      q.poolRatioObservedAt === firstQuote.poolRatioObservedAt &&
+      q.quoteMarkObservedAt === firstQuote.quoteMarkObservedAt &&
+      q.captureEvaluatedAtSec === firstQuote.captureEvaluatedAtSec &&
+      q.sourceGenerationId === firstQuote.sourceGenerationId &&
+      q.admissionMode === firstQuote.admissionMode &&
+      [...(q.corroboratorPoolIds ?? [])].sort().join(",") === firstCorroborators &&
+      canonicalCounterMarkSignature(item) === firstMarkSig
+    );
+  });
+}
+
+export function classifyCurveNavCandidateIntegrityFailure(
+  candidate: unknown,
+  poolId: string,
+  nowSec: number,
+): CurveNavQuoteScoringRejectionReason | null {
+  if (!isCurveNavSpotQuoteCandidateShape(candidate) || candidate.poolId !== poolId) {
+    return "invalid-policy";
+  }
+  if (!isPositiveSafeInt(nowSec)) return "invalid-clock";
+  if (
+    candidate.poolRatioObservedAt > nowSec ||
+    candidate.quoteMarkObservedAt > nowSec ||
+    candidate.counterpartyPrice.observedAtSec > nowSec ||
+    candidate.captureEvaluatedAtSec > nowSec ||
+    candidate.poolRatioObservedAt > candidate.captureEvaluatedAtSec
+  ) {
+    return "future-timestamp";
+  }
+  if (
+    candidate.counterpartyPrice.observedAtMode !== "upstream" ||
+    candidate.counterpartyPrice.observedAtSec !== candidate.quoteMarkObservedAt
+  ) {
+    return "invalid-clock";
+  }
+  return null;
+}
+
+export function classifyPoolCurveNavIntegrityFailure(
+  pool: PoolEntry,
+  nowSec: number,
+): CurveNavQuoteScoringRejectionReason | null {
+  if (pool.curveNavSpotQuote === undefined) return null;
+  const quote = pool.curveNavSpotQuote;
+  if (
+    !isCurveNavSpotQuoteEvidenceShape(quote) ||
+    quote.poolId !== pool.poolId ||
+    (pool.priceSource ?? pool.source) !== "direct_api" ||
+    typeof pool.price !== "number" ||
+    !Number.isFinite(pool.price) ||
+    pool.price <= 0 ||
+    !Number.isFinite(pool.priceEvidenceTvlUsd ?? pool.tvlUsd)
+  ) {
+    return "invalid-policy";
+  }
+  const mark = pool.priceCounterparty;
+  if (!mark || !isNonEmptyString(mark.stablecoinId) || !isNonEmptyString(mark.source)) {
+    return "invalid-policy";
+  }
+  if (!isPositiveSafeInt(nowSec) || !isPositiveSafeInt(pool.priceObservedAt) || !isPositiveSafeInt(mark.observedAtSec)) {
+    return "invalid-clock";
+  }
+  if (
+    quote.poolRatioObservedAt > nowSec ||
+    quote.quoteMarkObservedAt > nowSec ||
+    mark.observedAtSec > nowSec ||
+    quote.captureEvaluatedAtSec > nowSec ||
+    quote.poolRatioObservedAt > quote.captureEvaluatedAtSec
+  ) {
+    return "future-timestamp";
+  }
+  const expectedObservedAt = Math.min(quote.poolRatioObservedAt, quote.quoteMarkObservedAt);
+  if (
+    pool.priceObservedAt !== expectedObservedAt ||
+    mark.observedAtMode !== "upstream" ||
+    mark.observedAtSec !== quote.quoteMarkObservedAt ||
+    !Number.isFinite(mark.priceUsd) ||
+    mark.priceUsd <= 0
+  ) {
+    return "invalid-clock";
+  }
+  return null;
+}
+
+function isPositiveSafeInt(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function isTrackedNavTokenId(stablecoinId: string): boolean {
+  const meta = WORKER_TRACKED_META_BY_ID.get(stablecoinId);
+  return meta?.navToken === true || meta?.flags.navToken === true;
+}
+
+/** Defensive runtime shape check for staged Curve NAV quote candidates. */
+export function isCurveNavSpotQuoteCandidateShape(value: unknown): value is CurveNavSpotQuoteCandidate {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const record = value as Record<string, unknown>;
+  if (
+    record.policyId !== CURVE_NAV_SPOT_QUOTE_POLICY_ID ||
+    !isNonEmptyString(record.poolId) ||
+    !isNonEmptyString(record.blockHash) ||
+    !isNonEmptyString(record.sourceGenerationId) ||
+    typeof record.priceUsd !== "number" || !Number.isFinite(record.priceUsd) || record.priceUsd <= 0 ||
+    typeof record.supportUsd !== "number" || !Number.isFinite(record.supportUsd) || record.supportUsd <= 0 ||
+    typeof record.volume24hUsd !== "number" || !Number.isFinite(record.volume24hUsd) || record.volume24hUsd < 0 ||
+    !isPositiveSafeInt(record.blockNumber) ||
+    !isPositiveSafeInt(record.poolRatioObservedAt) ||
+    !isPositiveSafeInt(record.quoteMarkObservedAt) ||
+    !isPositiveSafeInt(record.captureEvaluatedAtSec)
+  ) {
+    return false;
+  }
+  const mark = record.counterpartyPrice;
+  if (!mark || typeof mark !== "object" || Array.isArray(mark)) return false;
+  const markRecord = mark as Record<string, unknown>;
+  return (
+    isNonEmptyString(markRecord.stablecoinId) &&
+    typeof markRecord.priceUsd === "number" && Number.isFinite(markRecord.priceUsd) && markRecord.priceUsd > 0 &&
+    isPositiveSafeInt(markRecord.observedAtSec) &&
+    markRecord.observedAtMode === "upstream" &&
+    isNonEmptyString(markRecord.source)
+  );
+}
+
+/**
+ * Verify that a non-Curve `direct_api` pool carries an execution proof (`measuredExecution`
+ * or pinned V2 `ammExecutionModel`) directly tied to its actual price observation.
+ */
+export function hasVerifiedClockedVenueProof(
+  pool: PoolEntry,
+  options: { stablecoinId?: string; nowSec?: number; sourceGenerationId?: string } = {},
+): boolean {
+  if (
+    normalizeProtocol(pool.project) === "curve" ||
+    (pool.priceSource ?? pool.source) !== "direct_api" ||
+    pool.extra?.executionCapabilityGate != null ||
+    typeof pool.price !== "number" ||
+    !Number.isFinite(pool.price) ||
+    pool.price <= 0 ||
+    !isPositiveSafeInt(pool.priceObservedAt)
+  ) {
+    return false;
+  }
+  const observedAt = pool.priceObservedAt;
+  const mark = pool.priceCounterparty;
+  if (
+    !mark ||
+    !isNonEmptyString(mark.stablecoinId) ||
+    !isNonEmptyString(mark.source) ||
+    isTrackedNavTokenId(mark.stablecoinId) ||
+    (options.stablecoinId != null && mark.stablecoinId === options.stablecoinId) ||
+    !Number.isFinite(mark.priceUsd) ||
+    mark.priceUsd <= 0 ||
+    !isPositiveSafeInt(mark.observedAtSec) ||
+    mark.observedAtMode !== "upstream" ||
+    observedAt > mark.observedAtSec
+  ) {
+    return false;
+  }
+  if (options.nowSec != null) {
+    if (
+      !isPositiveSafeInt(options.nowSec) ||
+      observedAt > options.nowSec ||
+      options.nowSec - observedAt >= CURVE_NAV_SPOT_QUOTE_POLICY.quoteMaxAgeSec ||
+      mark.observedAtSec > options.nowSec ||
+      options.nowSec - mark.observedAtSec >= CURVE_NAV_SPOT_QUOTE_POLICY.quoteMaxAgeSec
+    ) {
+      return false;
+    }
+  }
+
+  const model = pool.extra?.ammExecutionModel;
+  if (
+    model &&
+    (model.source === "uniswap-v2" || model.source === "pancakeswap-v2") &&
+    model.capture &&
+    (options.sourceGenerationId == null || model.capture.sourceGenerationId === options.sourceGenerationId) &&
+    isPositiveSafeInt(model.capture.blockTimestamp) &&
+    observedAt <= model.capture.blockTimestamp &&
+    (options.nowSec == null ||
+      (model.capture.blockTimestamp <= options.nowSec &&
+        options.nowSec - model.capture.blockTimestamp < CURVE_NAV_SPOT_QUOTE_POLICY.quoteMaxAgeSec)) &&
+    model.tokens.length === 2
+  ) {
+    const tracked = model.tokens[model.trackedTokenIndex];
+    const counter = model.tokens[1 - model.trackedTokenIndex];
+    if (
+      tracked &&
+      counter &&
+      tracked.balance > 0 &&
+      counter.balance > 0 &&
+      (options.stablecoinId == null || tracked.trackedAssetId == null || tracked.trackedAssetId === options.stablecoinId) &&
+      (counter.trackedAssetId == null || counter.trackedAssetId === mark.stablecoinId)
+    ) {
+      const reservePriceUsd = (counter.balance / tracked.balance) * mark.priceUsd;
+      if (
+        Number.isFinite(reservePriceUsd) &&
+        reservePriceUsd > 0 &&
+        pricesAgreeWithinBps(reservePriceUsd, pool.price, CURVE_NAV_SPOT_QUOTE_POLICY.corroboratorMaxDivergenceBps)
+      ) {
+        return true;
+      }
+    }
+  }
+
+  const measured = pool.extra?.measuredExecution;
+  const measuredPhysicalPoolId = pool.extra?.measuredExecutionPhysicalPoolId ?? pool.verifiedMeasuredPhysicalPoolId;
+  if (
+    measured &&
+    isPositiveSafeInt(measured.quotedAt) &&
+    (options.nowSec == null ||
+      (measured.quotedAt <= options.nowSec &&
+        options.nowSec - measured.quotedAt < CURVE_NAV_SPOT_QUOTE_POLICY.quoteMaxAgeSec)) &&
+    (canonicalExitRouteScopedKey(pool.chain, measured.poolId) === canonicalExitRouteScopedKey(pool.chain, pool.poolId) ||
+      (measuredPhysicalPoolId != null &&
+        canonicalExitRouteScopedKey(pool.chain, measured.poolId) ===
+          canonicalExitRouteScopedKey(pool.chain, measuredPhysicalPoolId))) &&
+    (options.stablecoinId == null || measured.tokenIn?.trackedAssetId == null || measured.tokenIn.trackedAssetId === options.stablecoinId) &&
+    (measured.tokenOut?.trackedAssetId == null || measured.tokenOut.trackedAssetId === mark.stablecoinId) &&
+    typeof measured.marginalOutputRatio === "number" &&
+    Number.isFinite(measured.marginalOutputRatio) &&
+    measured.marginalOutputRatio > 0 &&
+    typeof measured.tokenIn?.referencePriceUsd === "number" &&
+    Number.isFinite(measured.tokenIn.referencePriceUsd) &&
+    measured.tokenIn.referencePriceUsd > 0
+  ) {
+    const outRef = measured.tokenOut?.referencePriceUsd;
+    const rawRatio =
+      typeof outRef === "number" && Number.isFinite(outRef) && outRef > 0
+        ? (measured.marginalOutputRatio * measured.tokenIn.referencePriceUsd) / outRef
+        : measured.marginalOutputRatio * measured.tokenIn.referencePriceUsd;
+    const measuredPriceUsd = rawRatio * mark.priceUsd;
+    if (
+      Number.isFinite(measuredPriceUsd) &&
+      measuredPriceUsd > 0 &&
+      pricesAgreeWithinBps(measuredPriceUsd, pool.price, CURVE_NAV_SPOT_QUOTE_POLICY.corroboratorMaxDivergenceBps)
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function resolveNavMarkDependencySets(
+  obs: DexPriceObs,
+): { markDeps: Set<string>; allDeps: Set<string> } | null {
+  const mark = obs.counterpartyPrice;
+  const markDeps = new Set<string>();
+  const allDeps = new Set<string>();
+  const obsPoolKey = canonicalCurveNavPoolKey(obs.chain, obs.poolKey);
+  if (obsPoolKey) allDeps.add(obsPoolKey);
+
+  const obsLineage = getDexObservationLineage(obs);
+  if (obsLineage) {
+    for (const key of obsLineage.upstreamKeys) {
+      const normalized = normalizeNavDependencyKey(key);
+      if (!normalized) continue;
+      allDeps.add(normalized);
+      if (normalized !== obsPoolKey) markDeps.add(normalized);
+    }
+  }
+
+  if (mark) {
+    const explicit = readDexPriceLineage(mark);
+    if (
+      (explicit.upstreamKeys !== undefined && explicit.upstreamKeys.length === 0) ||
+      (explicit.pricePoolKeys !== undefined && explicit.pricePoolKeys.length === 0 && !explicit.upstreamKeys)
+    ) {
+      return null;
+    }
+    const hasExplicit = (explicit.upstreamKeys?.length ?? 0) > 0 || (explicit.pricePoolKeys?.length ?? 0) > 0;
+    for (const key of [...(explicit.upstreamKeys ?? []), ...(explicit.pricePoolKeys ?? [])]) {
+      const normalized = normalizeNavDependencyKey(key);
+      if (normalized) {
+        markDeps.add(normalized);
+        allDeps.add(normalized);
+      }
+    }
+    if (!isNonEmptyString(mark.stablecoinId) || !isNonEmptyString(mark.source)) {
+      return null;
+    }
+    const symbol = WORKER_TRACKED_META_BY_ID.get(mark.stablecoinId)?.symbol;
+    for (const part of normalizePricingSourceKeys([mark.source])) {
+      if (hasExplicit && POOL_CONVERSION_SOURCE_UMBRELLAS.has(part)) continue;
+      const directKeys = directUsdVenueKeys(part, symbol, mark.stablecoinId);
+      if (directKeys && directKeys.length > 0) {
+        for (const venueKey of directKeys) {
+          const normalized = normalizeNavDependencyKey(venueKey);
+          if (normalized) {
+            markDeps.add(normalized);
+            allDeps.add(normalized);
+          }
+        }
+      }
+      const normalizedPart = normalizeNavDependencyKey(part);
+      if (normalizedPart) {
+        markDeps.add(normalizedPart);
+        allDeps.add(normalizedPart);
+      }
+    }
+  }
+
+  if (markDeps.size === 0) return null;
+  return { markDeps, allDeps };
+}
+
+/**
+ * Require independent mark/venue lineage between a Curve NAV quote and its
+ * corroborator so a shared quote-token price source cannot falsely corroborate itself.
+ */
+export function hasIndependentNavMarkLineage(
+  primaryObs: DexPriceObs,
+  corroboratorObs: DexPriceObs,
+): boolean {
+  const primaryDeps = resolveNavMarkDependencySets(primaryObs);
+  const corrDeps = resolveNavMarkDependencySets(corroboratorObs);
+  if (!primaryDeps || !corrDeps) return false;
+  for (const key of corrDeps.allDeps) {
+    if (primaryDeps.allDeps.has(key)) return false;
+  }
+  return true;
+}
+
+/**
+ * Re-validate a clocked Curve StableSwap-NG spot quote at scoring time against
+ * the council freshness (`<= 600 s` capture against BOTH capture evaluation and
+ * live scoring clock, `< 4,500 s` USD evidence, zero future skew) and support budgets.
+ */
+export function validateClockedCurveNavObservation(
+  observation: DexPriceObs,
+  admittedAtSec: number,
+): CurveNavQuoteScoringRejectionReason | null {
+  if (observation.curveNavConflict === true) {
+    return "conflict";
+  }
+  const quote = observation.curveNavSpotQuote;
+  if (
+    !isCurveNavSpotQuoteEvidenceShape(quote) ||
+    observation.sourceFamily !== "direct_api" ||
+    observation.identityConfidence !== "exact" ||
+    observation.poolKey !== quote.poolId ||
+    !Number.isFinite(observation.price) ||
+    observation.price <= 0 ||
+    !Number.isFinite(observation.tvl)
+  ) {
+    return "invalid-policy";
+  }
+  const expectedObservedAt = Math.min(quote.poolRatioObservedAt, quote.quoteMarkObservedAt);
+  const mark = observation.counterpartyPrice;
+  if (!mark || !isNonEmptyString(mark.stablecoinId) || !isNonEmptyString(mark.source)) {
+    return "invalid-policy";
+  }
+  if (!isPositiveSafeInt(admittedAtSec) || !isPositiveSafeInt(observation.observedAt) || !isPositiveSafeInt(mark.observedAtSec)) {
+    return "invalid-clock";
+  }
+  if (
+    quote.poolRatioObservedAt > admittedAtSec ||
+    quote.quoteMarkObservedAt > admittedAtSec ||
+    mark.observedAtSec > admittedAtSec ||
+    quote.captureEvaluatedAtSec > admittedAtSec ||
+    quote.poolRatioObservedAt > quote.captureEvaluatedAtSec
+  ) {
+    return "future-timestamp";
+  }
+  if (
+    observation.observedAt !== expectedObservedAt ||
+    mark.observedAtMode !== "upstream" ||
+    mark.observedAtSec !== quote.quoteMarkObservedAt ||
+    !Number.isFinite(mark.priceUsd) ||
+    mark.priceUsd <= 0
+  ) {
+    return "invalid-clock";
+  }
+  if (
+    quote.captureEvaluatedAtSec - quote.poolRatioObservedAt > CURVE_NAV_SPOT_QUOTE_POLICY.captureMaxAgeSec ||
+    admittedAtSec - quote.poolRatioObservedAt > CURVE_NAV_SPOT_QUOTE_POLICY.captureMaxAgeSec
+  ) {
+    return "capture-stale";
+  }
+  if (
+    admittedAtSec - quote.poolRatioObservedAt >= CURVE_NAV_SPOT_QUOTE_POLICY.quoteMaxAgeSec ||
+    admittedAtSec - quote.quoteMarkObservedAt >= CURVE_NAV_SPOT_QUOTE_POLICY.quoteMaxAgeSec
+  ) {
+    return "quote-stale";
+  }
+  if (observation.tvl < CURVE_NAV_SPOT_QUOTE_POLICY.corroboratedPrimaryMinTvlUsd) {
+    return "insufficient-support";
+  }
+  if (quote.admissionMode === "sole-venue") {
+    return observation.tvl >= CURVE_NAV_SPOT_QUOTE_POLICY.soleVenueMinTvlUsd ? null : "insufficient-support";
+  }
+  if (quote.admissionMode === "corroborated") {
+    return Array.isArray(quote.corroboratorPoolIds) && quote.corroboratorPoolIds.length > 0
+      ? null
+      : "corroborator-missing";
+  }
+  return "invalid-policy";
+}
+
+export function isIndependentlyVerifiedClockedObservation(
+  candidate: DexPriceObs,
+  admittedAtSec: number,
+): boolean {
+  if (
+    candidate.curveNavSpotQuote != null ||
+    candidate.verifiedClockedVenue !== true ||
+    candidate.sourceFamily !== "direct_api" ||
+    candidate.identityConfidence !== "exact" ||
+    !isNonEmptyString(candidate.poolKey) ||
+    normalizeProtocol(candidate.protocol) === "curve" ||
+    !Number.isFinite(candidate.price) ||
+    candidate.price <= 0 ||
+    !Number.isFinite(candidate.tvl) ||
+    candidate.tvl < DEX_PRICE_OBSERVATION_MIN_TVL_USD ||
+    !isPositiveSafeInt(candidate.observedAt) ||
+    candidate.observedAt > admittedAtSec ||
+    admittedAtSec - candidate.observedAt >= CURVE_NAV_SPOT_QUOTE_POLICY.quoteMaxAgeSec
+  ) {
+    return false;
+  }
+  const mark = candidate.counterpartyPrice;
+  if (
+    !mark ||
+    !isNonEmptyString(mark.stablecoinId) ||
+    !isNonEmptyString(mark.source) ||
+    isTrackedNavTokenId(mark.stablecoinId) ||
+    mark.observedAtMode !== "upstream" ||
+    !Number.isFinite(mark.priceUsd) ||
+    mark.priceUsd <= 0 ||
+    !isPositiveSafeInt(mark.observedAtSec) ||
+    mark.observedAtSec > admittedAtSec ||
+    admittedAtSec - mark.observedAtSec >= CURVE_NAV_SPOT_QUOTE_POLICY.quoteMaxAgeSec ||
+    candidate.observedAt > mark.observedAtSec
+  ) {
+    return false;
+  }
+  return true;
+}
+
+export function isValidClockedNavCorroboratorObservation(
+  candidate: DexPriceObs,
+  primary: DexPriceObs,
+  admittedAtSec: number,
+): boolean {
+  const candidateCanonical = canonicalCurveNavPoolKey(candidate.chain, candidate.poolKey);
+  const primaryCanonical = canonicalCurveNavPoolKey(primary.chain, primary.poolKey);
+  if (
+    !isIndependentlyVerifiedClockedObservation(candidate, admittedAtSec) ||
+    candidate.poolKey === primary.poolKey ||
+    (candidateCanonical != null && candidateCanonical === primaryCanonical) ||
+    candidate.tvl < CURVE_NAV_SPOT_QUOTE_POLICY.corroboratorMinTvlUsd
+  ) {
+    return false;
+  }
+  if (!hasIndependentNavMarkLineage(primary, candidate)) {
+    return false;
+  }
+  return pricesAgreeWithinBps(primary.price, candidate.price, CURVE_NAV_SPOT_QUOTE_POLICY.corroboratorMaxDivergenceBps);
+}
+
+/**
+ * Isolate clocked Curve StableSwap-NG NAV observations under an explicit
+ * integrity vs eligibility R8 split:
+ * - Admitted clocked Curve NAV quote(s): full `clocked-curve-nav` isolation
+ *   (admitted Curve quotes + independently verified upstream-clocked non-Curve
+ *   venues only; never blend Curve REST `observedAt: null`, untimestamped DL,
+ *   or local-clock venues).
+ * - Integrity-class Curve rejection (`capture-generation-mismatch`,
+ *   `capture-invalid`, `capture-future`, `quote-mark-future`, `future-timestamp`,
+ *   `invalid-clock`, `invalid-policy`, `conflict`): isolate the coin fail-closed
+ *   to independently verified upstream-clocked non-Curve venues, withholding if none.
+ * - Eligibility/support/staleness Curve rejection (`pool-ineligible`,
+ *   `insufficient-support`, `insufficient-volume`, `quote-mark-unavailable`,
+ *   `quote-mark-stale`, `quote-stale`, `capture-stale`, `corroborator-missing`,
+ *   `depth-test-failed`): record in R4 diagnostics and quarantine ONLY the
+ *   rejected Curve pool(s) (by raw + canonical scoped key), leaving healthy
+ *   unrelated non-Curve venues intact under default rules (R8).
+ */
+export function selectClockedCurveNavObservations(
+  observations: readonly DexPriceObs[],
+  admittedAtSec: number,
+  priorRejections: readonly CurveNavQuoteRejectionRecord[] = [],
+): {
+  mode: "default" | "clocked-curve-nav";
+  observations: DexPriceObs[];
+  captures: CurveNavSpotQuoteEvidence[];
+  rejected: CurveNavQuoteRejectionRecord[];
+} {
+  const curveNavRows = observations.filter((observation) => observation.curveNavSpotQuote != null);
+  if (curveNavRows.length === 0 && priorRejections.length === 0) {
+    return { mode: "default", observations: [...observations], captures: [], rejected: [] };
+  }
+
+  const verifiedNonCurveByPoolKey = new Map<string, DexPriceObs>();
+  for (const observation of observations) {
+    if (!isIndependentlyVerifiedClockedObservation(observation, admittedAtSec)) continue;
+    const key = observation.poolKey!;
+    const existing = verifiedNonCurveByPoolKey.get(key);
+    if (!existing || observation.tvl > existing.tvl) verifiedNonCurveByPoolKey.set(key, observation);
+  }
+
+  const admittedQuotes: DexPriceObs[] = [];
+  const rejected: CurveNavQuoteRejectionRecord[] = [...priorRejections];
+  const priorRejectionFilter = buildCurveNavRejectedPoolFilter(priorRejections);
+
+  const curveNavGroups = new Map<string, DexPriceObs[]>();
+  for (const row of curveNavRows) {
+    const groupKey = canonicalCurveNavPoolKey(row.chain, row.poolKey) ?? row.poolKey ?? "";
+    const list = curveNavGroups.get(groupKey) ?? [];
+    list.push(row);
+    curveNavGroups.set(groupKey, list);
+  }
+
+  for (const group of curveNavGroups.values()) {
+    if (group.length > 1 && !areUniformClockedCurveNavObservations(group)) {
+      for (const row of group) {
+        rejected.push({ poolKey: row.poolKey ?? null, chain: row.chain, reason: "conflict" });
+      }
+      continue;
+    }
+    for (const row of group) {
+      // Classify integrity/validity BEFORE skipping a prior pool rejection so a
+      // future-dated or malformed copy of a pool-ineligible pool still triggers
+      // coin-level integrity isolation.
+      const failure = validateClockedCurveNavObservation(row, admittedAtSec);
+      if (failure) {
+        rejected.push({ poolKey: row.poolKey ?? null, chain: row.chain, reason: failure });
+        continue;
+      }
+      if (matchesRejectedCurveNavPool(row.poolKey, row.chain, row.protocol, priorRejectionFilter)) {
+        continue;
+      }
+      const quote = row.curveNavSpotQuote!;
+      if (quote.admissionMode === "corroborated") {
+        const matched: DexPriceObs[] = [];
+        for (const poolId of new Set(quote.corroboratorPoolIds ?? [])) {
+          const candidate = verifiedNonCurveByPoolKey.get(poolId);
+          if (candidate && isValidClockedNavCorroboratorObservation(candidate, row, admittedAtSec)) {
+            matched.push(candidate);
+          }
+        }
+        const combinedTvl = row.tvl + matched.reduce((sum, entry) => sum + entry.tvl, 0);
+        if (matched.length === 0 || combinedTvl < CURVE_NAV_SPOT_QUOTE_POLICY.corroboratedCombinedMinTvlUsd) {
+          rejected.push({ poolKey: row.poolKey ?? null, chain: row.chain, reason: "corroborator-missing" });
+          continue;
+        }
+      }
+      admittedQuotes.push(row);
+    }
+  }
+
+  const rejectionFilter = buildCurveNavRejectedPoolFilter(rejected);
+  const survivingAdmittedQuotes = rejectionFilter.hasIntegrityRejection
+    ? []
+    : admittedQuotes.filter(
+        (row) => !matchesRejectedCurveNavPool(row.poolKey, row.chain, row.protocol, rejectionFilter),
+      );
+
+  if (survivingAdmittedQuotes.length > 0) {
+    return {
+      mode: "clocked-curve-nav",
+      observations: [...survivingAdmittedQuotes, ...verifiedNonCurveByPoolKey.values()],
+      captures: survivingAdmittedQuotes.map((row) => row.curveNavSpotQuote!),
+      rejected,
+    };
+  }
+
+  if (rejectionFilter.hasIntegrityRejection) {
+    if (verifiedNonCurveByPoolKey.size > 0) {
+      return {
+        mode: "default",
+        observations: [...verifiedNonCurveByPoolKey.values()],
+        captures: [],
+        rejected,
+      };
+    }
+    // Fail closed on integrity rejections: never fall back to unverified/local-clock/untimestamped venues.
+    return {
+      mode: "clocked-curve-nav",
+      observations: [],
+      captures: [],
+      rejected,
+    };
+  }
+
+  // Eligibility/support/staleness rejections quarantine ONLY the rejected Curve pool(s)
+  // (including any Curve REST / DefiLlama copies sharing their poolKey / canonical key),
+  // preserving unrelated non-Curve venues under existing default rules (R8).
+  const survivingDefault = observations.filter(
+    (observation) =>
+      observation.curveNavSpotQuote == null &&
+      !matchesRejectedCurveNavPool(observation.poolKey, observation.chain, observation.protocol, rejectionFilter),
+  );
+  return {
+    mode: "default",
+    observations: survivingDefault,
+    captures: [],
+    rejected,
   };
 }
 
@@ -736,7 +1596,7 @@ export function buildDexPriceObservationsFromRetainedPools(
       }
 
       if (typeof pool.price === "number" && Number.isFinite(pool.price) && pool.price > 0) {
-        const priceEvidence = projectRetainedPoolPrice(pool);
+        const priceEvidence = projectRetainedPoolPrice(pool, stablecoinId);
         if (!priceEvidence) {
           rejectedPriceEvidenceCount++;
           continue;

@@ -1,187 +1,129 @@
-import { describe, expect, it, vi } from "vitest";
-import { encodeFunctionResult, parseAbi } from "viem/utils";
-
-import { initSourcePoolGraph } from "../pool-helpers";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { DatabaseSync } from "node:sqlite";
 import {
-  CURVE_STABLESWAP_RATE_CAPTURE_MAX_AGE_SEC,
+  CURVE_NAV_SPOT_QUOTE_POLICY_ID,
+  admitCurveStableswapNgNavCandidates,
   enrichCurveStableswapRateInputExecutionModels,
+  quoteCurveStableswapNgSpotUsd,
+  refreshCurveStableswapNgNavPrices,
+  simulateCurveStableswapNgGetDy,
 } from "../curve-stableswap-rates";
-import type { CurveStableswapRateInputExecutionCandidate, PoolEntry } from "../types";
+import {
+  hasIndependentNavMarkLineage,
+  validateClockedCurveNavObservation,
+} from "../scoring-helpers";
+import { initSourcePoolGraph } from "../pool-helpers";
+import { computeStablecoinScores } from "../scoring";
+import { computeDexPrices } from "../dex-price-publisher";
+import type { DexPriceObs, PoolEntry } from "../types";
+import { seedGeneration } from "../../measured-execution/__tests__/persistence.test-support";
+import { readPublicPriceRows, seedPublishedDexGeneration } from "./scoring-test-support";
+import {
+  CURVE_BLOCK_HASH,
+  CURVE_BLOCK_NUMBER,
+  CURVE_BLOCK_TIMESTAMP,
+  CURVE_CANDIDATE,
+  CURVE_CORR_POOL,
+  CURVE_FRXUSD,
+  CURVE_GEN,
+  CURVE_MIXED_DEC_COINS,
+  CURVE_NG_8COIN_OVERFLOW_VECTOR,
+  CURVE_NG_CORROBORATION_SPECS,
+  CURVE_NG_GATE_CASES,
+  CURVE_NG_PARITY_VECTORS,
+  CURVE_NG_REJECTION_SPECS,
+  CURVE_NG_STUSDS_BAL,
+  CURVE_NG_STUSDS_RATES,
+  CURVE_PINNED_RATES,
+  CURVE_POOL,
+  CURVE_SFRXUSD,
+  CURVE_STUSDS,
+  CURVE_STUSDS_CANDIDATE,
+  CURVE_STUSDS_POOL,
+  CURVE_USDS,
+  encodeCurveNgMulticallResults,
+  makeClockedCurveNavPool,
+  makeCurveNgCapState,
+  makeCurveNgNavPool,
+  makeCurveNgPoolEntry,
+  makeDexValuationPrices,
+  makeStusdsMeasuredCorroboratorPacket,
+  type CurveNgMulticallInput,
+} from "./fixtures/curve-stableswap-ng-fixtures";
 
-// Captured from the Ethereum Curve factory-stable-ng sfrxUSD/frxUSD pool.
-const SFRXUSD = "0xcf62f905562626cfcdd2261162a51fd02fc9c5b6" as const;
-const FRXUSD = "0xcacd6fd266af91b8aed52accc382b4e165586e29" as const;
-const POOL = "0xf292eb6c5dcb693eaaf392d0562a01c3710e5978" as const;
-const BLOCK_NUMBER = 25_626_087;
-const BLOCK_TIMESTAMP = 1_785_178_691;
-const BLOCK_HASH = "0x0305aed7bdf9bb7711ac23ad7322cd7569380b004b56408b4bec0a4a7a7eaf82" as const;
-const PINNED_BALANCES = [6_226_811_020_583_753_593_486_721n, 4_346_120_891_108_167_689_089_439n];
-const PINNED_RATES = [1_203_657_319_587_784_076n, 1_000_000_000_000_000_000n];
-const PINNED_AMPLIFICATION = 10_000n;
-const PINNED_FEE = 1_000_000n;
-const PINNED_OFFPEG_FEE_MULTIPLIER = 10_000_000_000n;
-
-const POOL_ABI = parseAbi([
-  "function get_balances() view returns (uint256[])",
-  "function stored_rates() view returns (uint256[])",
-  "function A() view returns (uint256)",
-  "function fee() view returns (uint256)",
-  "function offpeg_fee_multiplier() view returns (uint256)",
-  "function coins(uint256) view returns (address)",
-]);
-
-const candidate: CurveStableswapRateInputExecutionCandidate = {
-  poolAddress: POOL,
-  coins: [
-    { address: SFRXUSD, symbol: "sfrxUSD", decimals: 18, referencePriceUsd: 1.2038465312792253 },
-    { address: FRXUSD, symbol: "frxUSD", decimals: 18, referencePriceUsd: 1.000155068994295 },
-  ],
-};
-
-function ok(label: string, returnData: `0x${string}`) {
-  return { label, success: true, returnData };
-}
-
-function stateResults(calls: readonly { label: string }[], overrides: {
-  balances?: bigint[];
-  rates?: bigint[];
-  fee?: bigint;
-  offpegFeeMultiplier?: bigint;
-  coinAddresses?: readonly `0x${string}`[];
-} = {}) {
-  const rates = overrides.rates ?? PINNED_RATES;
-  const fee = overrides.fee ?? PINNED_FEE;
-  const offpegFeeMultiplier = overrides.offpegFeeMultiplier ?? PINNED_OFFPEG_FEE_MULTIPLIER;
-  const coinAddresses = overrides.coinAddresses ?? [SFRXUSD, FRXUSD];
-  return calls.map((call) => {
-    if (call.label.endsWith("-balances")) {
-      return ok(call.label, encodeFunctionResult({
-        abi: POOL_ABI,
-        functionName: "get_balances",
-        result: overrides.balances ?? PINNED_BALANCES,
-      }));
-    }
-    if (call.label.endsWith("-rates")) {
-      return ok(call.label, encodeFunctionResult({ abi: POOL_ABI, functionName: "stored_rates", result: rates }));
-    }
-    if (call.label.endsWith("-A")) {
-      return ok(call.label, encodeFunctionResult({ abi: POOL_ABI, functionName: "A", result: PINNED_AMPLIFICATION }));
-    }
-    if (call.label.endsWith("-fee")) {
-      return ok(call.label, encodeFunctionResult({ abi: POOL_ABI, functionName: "fee", result: fee }));
-    }
-    if (call.label.endsWith("-offpeg-fee-multiplier")) {
-      return ok(call.label, encodeFunctionResult({
-        abi: POOL_ABI,
-        functionName: "offpeg_fee_multiplier",
-        result: offpegFeeMultiplier,
-      }));
-    }
-    const match = call.label.match(/-coin-(\d+)$/);
-    if (!match) throw new Error(`unexpected call ${call.label}`);
-    const index = Number(match[1]);
-    return ok(call.label, encodeFunctionResult({
-      abi: POOL_ABI,
-      functionName: "coins",
-      result: coinAddresses[index]!,
-    }));
-  });
-}
-
-function poolEntry(overrides: Partial<PoolEntry["extra"]> = {}): PoolEntry {
-  return {
-    poolId: `ethereum:${POOL}`,
-    project: "curve",
-    chain: "ethereum",
-    tvlUsd: 11_842_920,
-    symbol: "sfrxUSD-frxUSD",
-    volumeUsd1d: 1_000_000,
-    poolType: "curve-stableswap",
-    source: "dl",
-    extra: {
-      executionCapabilityGate: { family: "curve-stableswap", reason: "incomplete-exact-capture" },
-      curveStableswapRateInputExecutionCandidate: candidate,
-      ...overrides,
-    },
-  };
-}
-
-function metrics(pool = poolEntry()) {
-  const metric = initSourcePoolGraph("frxusd-frax", "frxUSD");
-  metric.pools.push(pool);
-  return new Map([[metric.stablecoinId, metric]]);
-}
-
-function dependencies(input: {
-  header?: { timestamp: number; hash: `0x${string}` };
-  confirmedHeader?: { timestamp: number; hash: `0x${string}` };
-  balances?: bigint[];
-  rates?: bigint[];
-  fee?: bigint;
-  offpegFeeMultiplier?: bigint;
-  coinAddresses?: readonly `0x${string}`[];
-  multicallFails?: boolean;
-} = {}) {
+function makeCurveNgDeps(
+  input: CurveNgMulticallInput & {
+    header?: { timestamp: number; hash: `0x${string}` };
+    confirmedHeader?: { timestamp: number; hash: `0x${string}` };
+    multicallFails?: boolean;
+    onConfirmedHeader?: () => void;
+  } = {},
+) {
   const header = {
-    number: BLOCK_NUMBER,
-    timestamp: input.header?.timestamp ?? BLOCK_TIMESTAMP,
-    hash: input.header?.hash ?? BLOCK_HASH,
+    number: CURVE_BLOCK_NUMBER,
+    timestamp: input.header?.timestamp ?? CURVE_BLOCK_TIMESTAMP,
+    hash: input.header?.hash ?? CURVE_BLOCK_HASH,
   };
   const confirmed = {
-    number: BLOCK_NUMBER,
+    number: CURVE_BLOCK_NUMBER,
     timestamp: input.confirmedHeader?.timestamp ?? header.timestamp,
     hash: input.confirmedHeader?.hash ?? header.hash,
   };
+  let headerCalls = 0;
   return {
-    fetchBlockNumber: vi.fn().mockResolvedValue(BLOCK_NUMBER),
-    fetchBlockHeader: vi.fn()
-      .mockResolvedValueOnce(header)
-      .mockResolvedValueOnce(confirmed),
+    fetchBlockNumber: vi.fn().mockResolvedValue(CURVE_BLOCK_NUMBER),
+    fetchBlockHeader: vi.fn(async () => {
+      if (headerCalls++ === 0) return header;
+      input.onConfirmedHeader?.();
+      return confirmed;
+    }),
     fetchMulticall: vi.fn(async (_chain: string, calls: readonly { label: string }[]) =>
-      input.multicallFails
-        ? null
-        : stateResults(calls, {
-            balances: input.balances,
-            rates: input.rates,
-            fee: input.fee,
-            offpegFeeMultiplier: input.offpegFeeMultiplier,
-            coinAddresses: input.coinAddresses,
-          }),
+      input.multicallFails ? null : encodeCurveNgMulticallResults(calls, input),
     ),
   };
 }
 
-const chainAddressToId = new Map([[`ethereum:${FRXUSD}`, "frxusd-frax"]]);
+function makeCurveNgMetrics(pool = makeCurveNgPoolEntry(), id = "frxusd-frax", symbol = "frxUSD") {
+  const metric = initSourcePoolGraph(id, symbol);
+  metric.pools.push(pool);
+  return new Map([[metric.stablecoinId, metric]]);
+}
 
-function run(pool: PoolEntry, state = dependencies(), nowSec = BLOCK_TIMESTAMP + 60) {
+function runCurveNgCapture(
+  pool: PoolEntry,
+  state = makeCurveNgDeps(),
+  nowSec: number | (() => number) = CURVE_BLOCK_TIMESTAMP + 60,
+  chainAddressToId = new Map([[`ethereum:${CURVE_FRXUSD}`, "frxusd-frax"]]),
+) {
   return enrichCurveStableswapRateInputExecutionModels({
-    sourceGenerationId: "dex-stage:fixture",
-    metrics: metrics(pool),
+    sourceGenerationId: CURVE_GEN,
+    metrics: makeCurveNgMetrics(pool),
     chainAddressToId,
     chainRpcs: new Map([["ethereum", {} as never]]),
-    nowSec,
+    ...(typeof nowSec === "function" ? { getNowSec: nowSec } : { nowSec }),
     dependencies: state as never,
   });
 }
 
-describe("Curve StableSwap-NG rate-input state capture", () => {
-  it("builds the scaled model from a recorded same-block static-fee state", async () => {
-    const state = dependencies();
-    const pool = poolEntry();
-    await run(pool, state);
+const openDatabases: DatabaseSync[] = [];
+afterEach(() => {
+  for (const sqlite of openDatabases.splice(0)) {
+    sqlite.close();
+  }
+});
 
+describe("Curve StableSwap-NG rate-input state capture", () => {
+  it("builds scaled (untracked-leg) and base-only models with full invariants", async () => {
+    const state = makeCurveNgDeps();
+    const pool = makeCurveNgPoolEntry();
+    await runCurveNgCapture(pool, state);
     expect(state.fetchMulticall).toHaveBeenCalledWith(
       "ethereum",
-      expect.arrayContaining([
-        expect.objectContaining({ label: "curve-rate-0-balances", target: POOL }),
-        expect.objectContaining({ label: "curve-rate-0-rates", target: POOL }),
-        expect.objectContaining({ label: "curve-rate-0-A", target: POOL }),
-        expect.objectContaining({ label: "curve-rate-0-fee", target: POOL }),
-        expect.objectContaining({ label: "curve-rate-0-offpeg-fee-multiplier", target: POOL }),
-        expect.objectContaining({ label: "curve-rate-0-coin-0", target: POOL }),
-        expect.objectContaining({ label: "curve-rate-0-coin-1", target: POOL }),
-      ]),
-      BLOCK_NUMBER,
+      expect.arrayContaining(
+        ["balances", "rates", "A", "fee", "offpeg-fee-multiplier", "coin-0", "coin-1"]
+          .map((suffix) => expect.objectContaining({ label: `curve-rate-0-${suffix}`, target: CURVE_POOL })),
+      ),
+      CURVE_BLOCK_NUMBER,
       expect.any(Object),
     );
     expect(state.fetchBlockHeader).toHaveBeenCalledTimes(2);
@@ -189,236 +131,669 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
     expect(pool.extra?.curveStableswapPlainAdmissionDiagnostic).toBeUndefined();
     expect(pool.extra?.executionCapabilityGate).toBeUndefined();
     expect(pool.extra?.measurement).toMatchObject({ balanceMeasured: true });
-    const model = pool.extra?.ammExecutionModel;
-    expect(model).toMatchObject({
+    const scaled = pool.extra?.ammExecutionModel;
+    expect(scaled).toMatchObject({
       source: "curve",
       invariant: "stableswap",
       trackedTokenIndex: 1,
       amplification: 5_000,
       feeRate: 0.0001,
       capture: {
-        blockNumber: BLOCK_NUMBER, blockHash: BLOCK_HASH, blockTimestamp: BLOCK_TIMESTAMP,
-        sourceGenerationId: "dex-stage:fixture",
+        blockNumber: CURVE_BLOCK_NUMBER,
+        blockHash: CURVE_BLOCK_HASH,
+        blockTimestamp: CURVE_BLOCK_TIMESTAMP,
+        sourceGenerationId: CURVE_GEN,
       },
       tokens: [
-        { address: SFRXUSD, symbol: "sfrxUSD" },
-        { address: FRXUSD, symbol: "frxUSD", trackedAssetId: "frxusd-frax" },
+        { address: CURVE_SFRXUSD, symbol: "sfrxUSD" },
+        { address: CURVE_FRXUSD, symbol: "frxUSD", trackedAssetId: "frxusd-frax" },
       ],
     });
-    expect(model?.tokens[0]?.balance).toBeCloseTo(7_494_946.662615514, 6);
-    expect(model?.tokens[0]?.referencePriceUsd).toBeCloseTo(1.0001571973088703, 12);
-    expect(model?.tokens[1]?.balance).toBeCloseTo(4_346_120.891108167, 6);
-    expect(model?.tokens[1]?.referencePriceUsd).toBeCloseTo(1.000155068994295, 12);
-  });
+    expect(scaled?.tokens[0]?.balance).toBeCloseTo(7_494_946.662615514, 6);
+    expect(scaled?.tokens[0]?.referencePriceUsd).toBeCloseTo(1.0001571973088703, 12);
+    expect(scaled?.tokens[1]?.balance).toBeCloseTo(4_346_120.891108167, 6);
+    expect(scaled?.tokens[1]?.referencePriceUsd).toBeCloseTo(1.000155068994295, 12);
 
-  it("keeps the capability gate when the pinned rate array is incomplete", async () => {
-    const state = dependencies({ rates: [10n ** 18n] });
-    const pool = poolEntry();
-    await run(pool, state);
-
-    expect(pool.extra?.ammExecutionModel).toBeUndefined();
-    expect(pool.extra?.curveStableswapPlainAdmissionDiagnostic).toBeUndefined();
-    expect(pool.extra?.curveStableswapRateInputExecutionCandidate).toBeUndefined();
-    expect(pool.extra?.executionCapabilityGate).toEqual({
-      family: "curve-stableswap",
-      reason: "incomplete-exact-capture",
-    });
-  });
-
-  it("admits a base-only NG capture as a plain pool despite a >1% source price spread", async () => {
-    const state = dependencies({ rates: [10n ** 18n, 10n ** 18n] });
-    const pool = poolEntry();
-    await run(pool, state);
-
-    expect(pool.extra?.executionCapabilityGate).toBeUndefined();
-    expect(pool.extra?.curveStableswapRateInputExecutionCandidate).toBeUndefined();
-    expect(pool.extra?.measurement).toMatchObject({ balanceMeasured: true });
-    const model = pool.extra?.ammExecutionModel;
-    expect(model).toMatchObject({
+    const plain = makeCurveNgPoolEntry();
+    await runCurveNgCapture(plain, makeCurveNgDeps({ rates: [10n ** 18n, 10n ** 18n] }));
+    expect(plain.extra?.executionCapabilityGate).toBeUndefined();
+    expect(plain.extra?.curveStableswapRateInputExecutionCandidate).toBeUndefined();
+    expect(plain.extra?.measurement).toMatchObject({ balanceMeasured: true });
+    expect(plain.extra?.ammExecutionModel).toMatchObject({
       source: "curve",
       invariant: "stableswap",
       trackedTokenIndex: 1,
       amplification: 5_000,
       feeRate: 0.0001,
-      capture: {
-        blockNumber: BLOCK_NUMBER, blockHash: BLOCK_HASH, blockTimestamp: BLOCK_TIMESTAMP,
-        sourceGenerationId: "dex-stage:fixture",
-      },
       tokens: [
-        { address: SFRXUSD, symbol: "sfrxUSD", referencePriceUsd: 1.2038465312792253 },
-        { address: FRXUSD, symbol: "frxUSD", trackedAssetId: "frxusd-frax" },
+        { address: CURVE_SFRXUSD, symbol: "sfrxUSD", referencePriceUsd: 1.2038465312792253 },
+        { address: CURVE_FRXUSD, symbol: "frxUSD", trackedAssetId: "frxusd-frax" },
       ],
     });
-    // A base-only stored_rates() array is a rate factor of 1: balances and
-    // references stay unscaled.
-    expect(model?.tokens[0]?.balance).toBeCloseTo(6_226_811.020583753, 6);
-    expect(model?.tokens[1]?.balance).toBeCloseTo(4_346_120.891108167, 6);
-    expect(model?.tokens[1]?.referencePriceUsd).toBeCloseTo(1.000155068994295, 12);
-    const diagnostic = pool.extra?.curveStableswapPlainAdmissionDiagnostic;
-    expect(diagnostic).toMatchObject({
+    expect(plain.extra?.ammExecutionModel?.tokens[0]?.balance).toBeCloseTo(6_226_811.020583753, 6);
+    expect(plain.extra?.ammExecutionModel?.tokens[1]?.balance).toBeCloseTo(4_346_120.891108167, 6);
+    expect(plain.extra?.ammExecutionModel?.tokens[1]?.referencePriceUsd).toBeCloseTo(1.000155068994295, 12);
+    expect(plain.extra?.curveStableswapPlainAdmissionDiagnostic).toMatchObject({
       stablecoinId: "frxusd-frax",
       chain: "ethereum",
-      poolId: `ethereum:${POOL}`,
-      poolAddress: POOL,
+      poolId: `ethereum:${CURVE_POOL}`,
+      poolAddress: CURVE_POOL,
     });
-    expect(diagnostic?.sourcePriceSpreadRatio).toBeCloseTo(1.2036598809520127, 12);
+    expect(plain.extra?.curveStableswapPlainAdmissionDiagnostic?.sourcePriceSpreadRatio)
+      .toBeCloseTo(1.2036598809520127, 12);
   });
 
-  it("admits a mixed-decimal base-only pool unscaled (EURC/EURS/EURQ shape: 6/2/6)", async () => {
-    const eurc = "0x00000000000000000000000000000000000e0c06" as const;
-    const eurs = "0x00000000000000000000000000000000000e0502" as const;
-    const eurq = "0x00000000000000000000000000000000000e0a06" as const;
-    const pool = poolEntry({
+  it("admits mixed-decimal base-only pool (6/2/6) and dynamic/static off-peg fee bounds", async () => {
+    const [eurc, eurs, eurq] = CURVE_MIXED_DEC_COINS;
+    const mixed = makeCurveNgPoolEntry({
       curveStableswapRateInputExecutionCandidate: {
-        poolAddress: POOL,
-        coins: [
-          { address: eurc, symbol: "EURC", decimals: 6, referencePriceUsd: 1.1166 },
-          { address: eurs, symbol: "EURS", decimals: 2, referencePriceUsd: 1.1488 },
-          { address: eurq, symbol: "EURQ", decimals: 6, referencePriceUsd: 1.0775 },
-        ],
+        poolAddress: CURVE_POOL,
+        coins: [...CURVE_MIXED_DEC_COINS],
       },
-    });
-    const metric = initSourcePoolGraph("eurs-stasis", "EURS");
-    metric.pools.push(pool);
-    const state = dependencies({
-      balances: [4_000_000_000_000n, 300_000_000n, 5_000_000_000_000n],
-      // Base rates are 10^(36 - decimals): the pool is plain.
-      rates: [10n ** 30n, 10n ** 34n, 10n ** 30n],
-      coinAddresses: [eurc, eurs, eurq],
     });
     await enrichCurveStableswapRateInputExecutionModels({
-      sourceGenerationId: "dex-stage:fixture",
-      metrics: new Map([[metric.stablecoinId, metric]]),
-      chainAddressToId: new Map([[`ethereum:${eurs}`, "eurs-stasis"]]),
+      sourceGenerationId: CURVE_GEN,
+      metrics: makeCurveNgMetrics(mixed, "eurs-stasis", "EURS"),
+      chainAddressToId: new Map([[`ethereum:${eurs.address}`, "eurs-stasis"]]),
       chainRpcs: new Map([["ethereum", {} as never]]),
-      nowSec: BLOCK_TIMESTAMP + 60,
-      dependencies: state as never,
+      nowSec: CURVE_BLOCK_TIMESTAMP + 60,
+      dependencies: makeCurveNgDeps({
+        balances: [4_000_000_000_000n, 300_000_000n, 5_000_000_000_000n],
+        rates: [10n ** 30n, 10n ** 34n, 10n ** 30n],
+        coinAddresses: [eurc.address, eurs.address, eurq.address],
+      }) as never,
     });
-
-    expect(pool.extra?.executionCapabilityGate).toBeUndefined();
-    const model = pool.extra?.ammExecutionModel;
-    expect(model?.trackedTokenIndex).toBe(1);
-    expect(model?.tokens.map((token) => token.balance)).toEqual([4_000_000, 3_000_000, 5_000_000]);
-    expect(model?.tokens.map((token) => token.referencePriceUsd)).toEqual([1.1166, 1.1488, 1.0775]);
-    expect(pool.extra?.curveStableswapPlainAdmissionDiagnostic).toMatchObject({
+    expect(mixed.extra?.executionCapabilityGate).toBeUndefined();
+    expect(mixed.extra?.ammExecutionModel?.trackedTokenIndex).toBe(1);
+    expect(mixed.extra?.ammExecutionModel?.tokens.map((t) => t.balance)).toEqual([4_000_000, 3_000_000, 5_000_000]);
+    expect(mixed.extra?.ammExecutionModel?.tokens.map((t) => t.referencePriceUsd)).toEqual([1.1166, 1.1488, 1.0775]);
+    expect(mixed.extra?.curveStableswapPlainAdmissionDiagnostic).toMatchObject({
       stablecoinId: "eurs-stasis",
-      poolAddress: POOL,
+      poolAddress: CURVE_POOL,
     });
-    expect(pool.extra?.curveStableswapPlainAdmissionDiagnostic?.sourcePriceSpreadRatio).toBeCloseTo(1.1488 / 1.0775, 12);
-  });
+    expect(mixed.extra?.curveStableswapPlainAdmissionDiagnostic?.sourcePriceSpreadRatio)
+      .toBeCloseTo(1.1488 / 1.0775, 12);
 
-  it("prices a dynamic off-peg pool with near-equal source marks at its pinned maximum fee", async () => {
-    // Live StableSwap-NG pools publish multipliers of 2x-20x; the captured
-    // model carries fee * multiplier so the exit capacity stays a lower bound.
-    const state = dependencies({ offpegFeeMultiplier: 20_000_000_000n });
-    const pool = poolEntry({
+    const dyn = makeCurveNgPoolEntry({
       curveStableswapRateInputExecutionCandidate: {
-        ...candidate,
-        coins: candidate.coins.map((coin) => ({ ...coin, referencePriceUsd: 1 })),
+        ...CURVE_CANDIDATE,
+        coins: CURVE_CANDIDATE.coins.map((c) => ({ ...c, referencePriceUsd: 1 })),
       },
     });
-    await run(pool, state);
+    await runCurveNgCapture(dyn, makeCurveNgDeps({ offpegFeeMultiplier: 20_000_000_000n }));
+    expect(dyn.extra?.executionCapabilityGate).toBeUndefined();
+    expect(dyn.extra?.ammExecutionModel?.feeRate).toBeCloseTo(0.0002, 12);
+    expect(dyn.extra?.ammExecutionModel?.tokens[0]?.referencePriceUsd)
+      .toBeCloseTo(1 / (Number(CURVE_PINNED_RATES[0]!) / 1e18), 12);
 
-    expect(pool.extra?.executionCapabilityGate).toBeUndefined();
-    expect(pool.extra?.ammExecutionModel?.feeRate).toBeCloseTo(0.0002, 12);
-    expect(pool.extra?.ammExecutionModel?.tokens[0]?.referencePriceUsd).toBeCloseTo(
-      1 / (Number(PINNED_RATES[0]!) / 1e18), 12,
+    const stat = makeCurveNgPoolEntry();
+    await runCurveNgCapture(stat, makeCurveNgDeps({ offpegFeeMultiplier: 0n }));
+    expect(stat.extra?.executionCapabilityGate).toBeUndefined();
+    expect(stat.extra?.ammExecutionModel?.feeRate).toBeCloseTo(0.0001, 12);
+  });
+
+  it("stamps captureEvaluatedAtSec post-confirmed-header per chain and enforces zero future skew", async () => {
+    let clock = CURVE_BLOCK_TIMESTAMP - 5;
+    const postHeader = CURVE_BLOCK_TIMESTAMP + 2;
+    const pool = makeCurveNgPoolEntry();
+    const captured = await runCurveNgCapture(
+      pool,
+      makeCurveNgDeps({
+        onConfirmedHeader: () => {
+          clock = postHeader;
+        },
+      }),
+      () => clock,
     );
+    expect(captured.get(pool)?.captureEvaluatedAtSec).toBe(postHeader);
+
+    const futurePool = makeCurveNgPoolEntry();
+    const withheld = await runCurveNgCapture(
+      futurePool,
+      makeCurveNgDeps({ header: { timestamp: postHeader + 1, hash: CURVE_BLOCK_HASH } }),
+      () => postHeader,
+    );
+    expect(withheld.has(futurePool)).toBe(false);
   });
 
-  it("prices a multiplier at or below the fee denominator as the static fee", async () => {
-    const state = dependencies({ offpegFeeMultiplier: 0n });
-    const pool = poolEntry();
-    await run(pool, state);
-
-    expect(pool.extra?.executionCapabilityGate).toBeUndefined();
-    expect(pool.extra?.ammExecutionModel?.feeRate).toBeCloseTo(0.0001, 12);
-  });
-
-  it("keeps the capability gate when the bounded fee reaches the whole trade", async () => {
-    const state = dependencies({ fee: 9_000_000_000n, offpegFeeMultiplier: 20_000_000_000n });
-    const pool = poolEntry();
-    await run(pool, state);
-
-    expect(pool.extra?.ammExecutionModel).toBeUndefined();
-    expect(pool.extra?.curveStableswapRateInputExecutionCandidate).toBeUndefined();
-    expect(pool.extra?.executionCapabilityGate).toEqual({
-      family: "curve-stableswap",
-      reason: "incomplete-exact-capture",
-    });
-  });
-
-  it("keeps the capability gate when coin order fails at the pinned block", async () => {
-    const state = dependencies({ coinAddresses: [FRXUSD, SFRXUSD] });
-    const pool = poolEntry();
-    await run(pool, state);
-
-    expect(pool.extra?.ammExecutionModel).toBeUndefined();
-    expect(pool.extra?.curveStableswapPlainAdmissionDiagnostic).toBeUndefined();
-    expect(pool.extra?.curveStableswapRateInputExecutionCandidate).toBeUndefined();
-    expect(pool.extra?.executionCapabilityGate).toEqual({
-      family: "curve-stableswap",
-      reason: "incomplete-exact-capture",
-    });
-  });
-
-  it("reports unavailable transport rather than admitting a source model when the capture fails", async () => {
-    const state = dependencies({ rates: [10n ** 18n, 10n ** 18n], multicallFails: true });
-    const pool = poolEntry();
-    await run(pool, state);
-
-    expect(state.fetchBlockHeader).toHaveBeenCalledTimes(1);
-    expect(pool.extra?.ammExecutionModel).toBeUndefined();
-    expect(pool.extra?.curveStableswapPlainAdmissionDiagnostic).toBeUndefined();
-    expect(pool.extra?.executionCapabilityGate).toEqual({
-      family: "curve-stableswap",
-      reason: "transport-unavailable",
-    });
-  });
-
-  it("rejects a stale source-stage block before any multicall", async () => {
-    const state = dependencies({
-      header: { timestamp: BLOCK_TIMESTAMP - CURVE_STABLESWAP_RATE_CAPTURE_MAX_AGE_SEC - 1, hash: BLOCK_HASH },
-    });
-    const pool = poolEntry();
-    await run(pool, state, BLOCK_TIMESTAMP);
-
-    expect(state.fetchMulticall).not.toHaveBeenCalled();
-    expect(pool.extra?.ammExecutionModel).toBeUndefined();
-    expect(pool.extra?.curveStableswapPlainAdmissionDiagnostic).toBeUndefined();
-    expect(pool.extra?.curveStableswapRateInputExecutionCandidate).toBeUndefined();
-    expect(pool.extra?.executionCapabilityGate).toEqual({
-      family: "curve-stableswap",
-      reason: "stale-observation",
-    });
-  });
-
-  it("rejects the whole capture when the pinned block hash changes", async () => {
-    const state = dependencies({
-      confirmedHeader: { timestamp: BLOCK_TIMESTAMP, hash: `0x${"22".repeat(32)}` as `0x${string}` },
-    });
-    const pool = poolEntry();
-    await run(pool, state);
-
-    expect(state.fetchMulticall).toHaveBeenCalledTimes(1);
-    expect(pool.extra?.ammExecutionModel).toBeUndefined();
-    expect(pool.extra?.curveStableswapRateInputExecutionCandidate).toBeUndefined();
-    expect(pool.extra?.executionCapabilityGate).toEqual({
-      family: "curve-stableswap",
-      reason: "incomplete-exact-capture",
-    });
-  });
+  it.each(CURVE_NG_GATE_CASES)(
+    "gates %s as %s with zero captured quote state",
+    async (_label, depInput, reason, nowSec, multicalls, headerCalls) => {
+      const state = makeCurveNgDeps(depInput);
+      const pool = makeCurveNgPoolEntry();
+      expect((await runCurveNgCapture(pool, state, nowSec)).size).toBe(0);
+      expect(state.fetchMulticall).toHaveBeenCalledTimes(multicalls);
+      expect(state.fetchBlockHeader).toHaveBeenCalledTimes(headerCalls);
+      expect(pool.extra?.ammExecutionModel).toBeUndefined();
+      expect(pool.extra?.curveStableswapPlainAdmissionDiagnostic).toBeUndefined();
+      expect(pool.extra?.curveStableswapRateInputExecutionCandidate).toBeUndefined();
+      expect(pool.extra?.executionCapabilityGate).toEqual({ family: "curve-stableswap", reason });
+    },
+  );
 
   it("does not replace an existing score-facing measured route", async () => {
-    const state = dependencies();
-    const pool = poolEntry({ measuredExecution: {} as never });
-    await run(pool, state);
-
+    const state = makeCurveNgDeps();
+    const pool = makeCurveNgPoolEntry({ measuredExecution: {} as never });
+    expect((await runCurveNgCapture(pool, state)).size).toBe(0);
     expect(state.fetchBlockNumber).not.toHaveBeenCalled();
     expect(pool.extra?.curveStableswapRateInputExecutionCandidate).toBeUndefined();
     expect(pool.extra?.executionCapabilityGate).toEqual({
       family: "curve-stableswap",
       reason: "incomplete-exact-capture",
     });
+  });
+});
+
+describe("StableSwap-NG exact get_dy parity (live Ethereum pinned blocks)", () => {
+  it.each(CURVE_NG_PARITY_VECTORS)(
+    "0-wei on-chain parity (%s)",
+    (_label, balances, rates, amplification, fee, offpegFeeMultiplier, i, j, dx, expected) => {
+      expect(
+        simulateCurveStableswapNgGetDy({
+          balances,
+          rates,
+          amplification,
+          fee,
+          offpegFeeMultiplier,
+          i,
+          j,
+          dx,
+        })?.dy,
+      ).toBe(expected);
+    },
+  );
+
+  it("fails closed on invalid inputs and Vyper checked uint256 overflow", () => {
+    const base = {
+      balances: CURVE_NG_STUSDS_BAL,
+      rates: CURVE_NG_STUSDS_RATES,
+      amplification: 100n,
+      fee: 1_000_000n,
+      offpegFeeMultiplier: 10n ** 10n,
+      i: 0,
+      j: 1,
+      dx: 10n ** 18n,
+    };
+    expect(simulateCurveStableswapNgGetDy({ ...base, j: 0 })).toBeNull();
+    expect(simulateCurveStableswapNgGetDy({ ...base, fee: 10n ** 10n })).toBeNull();
+    expect(simulateCurveStableswapNgGetDy({ ...base, balances: [0n, 10n ** 18n] })).toBeNull();
+    expect(simulateCurveStableswapNgGetDy(CURVE_NG_8COIN_OVERFLOW_VECTOR)).toBeNull();
+  });
+});
+
+describe("refreshCurveStableswapNgNavPrices and scoring-stage corroboration", () => {
+  const NOW = CURVE_BLOCK_TIMESTAMP + 120;
+  const CORR_ID = `ethereum:${CURVE_CORR_POOL}`;
+
+  it("emits clocked sole-venue quote with zero extra RPCs, untouched priceMeasured, and isolated siblings", async () => {
+    const dep = makeCurveNgDeps({
+      balances: CURVE_NG_STUSDS_BAL,
+      rates: CURVE_NG_STUSDS_RATES,
+      amplification: 500n,
+      fee: 10_000_000n,
+      offpegFeeMultiplier: 50_000_000_000n,
+      coinAddresses: [CURVE_USDS, CURVE_STUSDS],
+    });
+    const candExtra = {
+      executionCapabilityGate: { family: "curve-stableswap" as const, reason: "incomplete-exact-capture" as const },
+      curveStableswapRateInputExecutionCandidate: CURVE_STUSDS_CANDIDATE,
+      measurement: { balanceMeasured: true, priceMeasured: false },
+    };
+    const navPool = makeCurveNgNavPool(NOW, { extra: { ...candExtra } });
+    const siblingPool = makeCurveNgNavPool(NOW, { extra: { ...candExtra } });
+    const uncapturedPool = makeCurveNgNavPool(NOW, {
+      poolId: "ethereum:0x9999999999999999999999999999999999999999",
+      price: 1.02,
+      priceObservedAt: null,
+    });
+    const graph = new Map([
+      ["stusds-sky", { stablecoinId: "stusds-sky", symbol: "stUSDS", pools: [navPool] }],
+      ["usds-sky", { stablecoinId: "usds-sky", symbol: "USDS", pools: [siblingPool] }],
+      ["susdat-saturn", { stablecoinId: "susdat-saturn", symbol: "sUSDat", pools: [uncapturedPool] }],
+    ]);
+    const captured = await enrichCurveStableswapRateInputExecutionModels({
+      sourceGenerationId: CURVE_GEN,
+      metrics: graph,
+      chainAddressToId: new Map([
+        [`ethereum:${CURVE_USDS}`, "usds-sky"],
+        [`ethereum:${CURVE_STUSDS}`, "stusds-sky"],
+      ]),
+      chainRpcs: new Map([["ethereum", {} as never]]),
+      nowSec: CURVE_BLOCK_TIMESTAMP + 60,
+      dependencies: dep as never,
+    });
+    expect([
+      dep.fetchBlockNumber.mock.calls.length,
+      dep.fetchBlockHeader.mock.calls.length,
+      dep.fetchMulticall.mock.calls.length,
+    ]).toEqual([1, 2, 1]);
+
+    for (const [markTs, clock] of [
+      [CURVE_BLOCK_TIMESTAMP - 400, CURVE_BLOCK_TIMESTAMP - 400],
+      [CURVE_BLOCK_TIMESTAMP + 30, CURVE_BLOCK_TIMESTAMP],
+    ] as const) {
+      const prices = makeDexValuationPrices([
+        ["usds-sky", { priceUsd: 0.9998, observedAtSec: markTs, observedAtMode: "upstream", source: "kraken" }],
+      ]);
+      expect(refreshCurveStableswapNgNavPrices({
+        metrics: graph,
+        capturedPools: captured,
+        sourceGenerationId: CURVE_GEN,
+        stablecoinPriceById: prices,
+        registryEvaluatedAtSec: NOW,
+        nowSec: NOW,
+      })).toMatchObject({
+        policyId: CURVE_NAV_SPOT_QUOTE_POLICY_ID,
+        evaluatedPools: 1,
+        admittedPools: 1,
+        admittedSoleVenue: 1,
+        admittedCorroborated: 0,
+      });
+      expect(navPool).toMatchObject({
+        priceObservedAt: clock,
+        priceSource: "direct_api",
+        priceCounterparty: {
+          stablecoinId: "usds-sky",
+          priceUsd: 0.9998,
+          observedAtSec: markTs,
+          observedAtMode: "upstream",
+          source: "kraken",
+        },
+        curveNavSpotQuote: {
+          policyId: CURVE_NAV_SPOT_QUOTE_POLICY_ID,
+          poolId: navPool.poolId,
+          blockNumber: CURVE_BLOCK_NUMBER,
+          blockHash: CURVE_BLOCK_HASH,
+          poolRatioObservedAt: CURVE_BLOCK_TIMESTAMP,
+          quoteMarkObservedAt: markTs,
+          sourceGenerationId: CURVE_GEN,
+          admissionMode: "sole-venue",
+        },
+      });
+    }
+    const quoted = quoteCurveStableswapNgSpotUsd({
+      state: captured.get(navPool)!,
+      counterTokenIndex: 0,
+      counterMarkPriceUsd: 0.9998,
+    });
+    expect(quoted.ok && navPool.price).toBe(quoted.ok ? quoted.priceUsd : -1);
+    expect(navPool.extra?.measurement?.priceMeasured).toBe(false);
+    expect([dep.fetchBlockNumber.mock.calls.length, dep.fetchMulticall.mock.calls.length]).toEqual([1, 1]);
+    expect(siblingPool.priceObservedAt).toBeNull();
+    expect(siblingPool.curveNavSpotQuote).toBeUndefined();
+    expect(uncapturedPool.priceObservedAt).toBeNull();
+  });
+
+  it("corroborates staged $300K/$40K Curve candidate in scoring and preserves provider-specific measured pool binding", async () => {
+    const h = seedPublishedDexGeneration({ nowSec: NOW });
+    openDatabases.push(h.sqlite);
+    const { target, profile } = makeStusdsMeasuredCorroboratorPacket({
+      poolId: CORR_ID,
+      quotedAt: NOW - 300,
+      capturedAt: NOW - 300,
+      priceUsd: 1.07,
+      retainedTvlUsd: 250_000,
+    });
+    seedGeneration(h.sqlite, {
+      generationId: "quote-gen-1",
+      targetGenerationId: "target-gen-1",
+      publishedAt: NOW - 60,
+      state: "published",
+      rows: [{ target, profile, status: "measured" }],
+    });
+
+    const primary = makeCurveNgNavPool(NOW, {
+      tvlUsd: 300_000,
+      volumeUsd1d: 40_000,
+      volumeReading: { volume24hUsd: 40_000, volume7dUsd: 200_000, observedAtSec: NOW - 60 },
+    });
+    const providerPoolId = "ethereum:defillama:stusds-univ3-provider-id";
+    const corr = makeCurveNgNavPool(NOW, {
+      poolId: providerPoolId,
+      project: "uniswap-v3",
+      poolType: "uniswap-v3-5bp",
+      source: "direct_api",
+      priceSource: "direct_api",
+      tvlUsd: 250_000,
+      volumeUsd1d: 25_000,
+      price: 1.07,
+      priceObservedAt: NOW - 120,
+      volumeReading: { volume24hUsd: 25_000, volume7dUsd: 100_000, observedAtSec: NOW - 60 },
+      priceCounterparty: {
+        stablecoinId: "usds-sky",
+        priceUsd: 1,
+        observedAtSec: NOW - 60,
+        observedAtMode: "upstream",
+        source: "binance",
+      },
+      extra: {
+        measuredExecutionTarget: target,
+        measuredExecutionPhysicalPoolId: CORR_ID,
+      },
+    });
+    const metrics = new Map([["stusds-sky", { stablecoinId: "stusds-sky", symbol: "stUSDS", pools: [primary, corr] }]]);
+    const staged = refreshCurveStableswapNgNavPrices({
+      metrics,
+      capturedPools: new Map([[primary, makeCurveNgCapState({ balances: [150_000n * 10n ** 18n, 150_000n * 10n ** 18n] })]]),
+      sourceGenerationId: CURVE_GEN,
+      stablecoinPriceById: makeDexValuationPrices([
+        ["usds-sky", { priceUsd: 1, observedAtSec: NOW - 60, observedAtMode: "upstream", source: "kraken" }],
+      ]),
+      registryEvaluatedAtSec: NOW,
+      nowSec: NOW,
+      stageOnly: true,
+    });
+    expect(staged).toMatchObject({ stagedCandidates: 1, admittedPools: 0 });
+    expect(primary.extra?.curveNavSpotQuoteCandidate).toBeDefined();
+
+    const scored = await computeStablecoinScores(
+      h.db, metrics, new Map(), undefined, NOW, new Map(), undefined, new Map(), "none", NOW,
+    );
+    expect(scored.diagnostics.measuredExecution.join.failuresByReason).toEqual({});
+    expect(scored.diagnostics.curveNavRejectionsByStablecoin).toBeUndefined();
+    const retained = scored.retainedPoolsByStablecoin.get("stusds-sky")!;
+    const admittedCurve = retained.find((p) => p.poolId === `ethereum:${CURVE_STUSDS_POOL}`);
+    const admittedCorr = retained.find((p) => p.poolId === providerPoolId);
+    expect(admittedCurve?.extra?.curveNavSpotQuoteCandidate).toBeUndefined();
+    expect(admittedCurve?.curveNavSpotQuote).toMatchObject({
+      admissionMode: "corroborated",
+      corroboratorPoolIds: [providerPoolId],
+    });
+    expect(admittedCorr?.extra?.measuredExecutionPhysicalPoolId).toBeUndefined();
+    expect(admittedCorr?.verifiedMeasuredPhysicalPoolId).toBe(CORR_ID);
+
+    await computeDexPrices({
+      db: h.db,
+      retainedPoolsByStablecoin: scored.retainedPoolsByStablecoin,
+      nowSec: NOW,
+      generationId: h.generationId,
+      primaryPrices: new Map([["stusds-sky", 1.09]]),
+      curveNavRejectionsByStablecoin: scored.diagnostics.curveNavRejectionsByStablecoin,
+    });
+    const [row] = readPublicPriceRows(h.sqlite);
+    expect(row).toMatchObject({ stablecoin_id: "stusds-sky", source_pool_count: 2, source_total_tvl: 550_000 });
+    expect(JSON.parse(row!.price_sources_json!)).toMatchObject({
+      quotePolicy: CURVE_NAV_SPOT_QUOTE_POLICY_ID,
+      quoteCaptures: [expect.objectContaining({
+        poolId: `ethereum:${CURVE_STUSDS_POOL}`,
+        admissionMode: "corroborated",
+        corroboratorPoolIds: [providerPoolId],
+      })],
+    });
+  });
+
+  it("captures Curve NAV rejections BEFORE filterRetainedPools so DL duplicates are quarantined", async () => {
+    const h = seedPublishedDexGeneration({ nowSec: NOW });
+    openDatabases.push(h.sqlite);
+    const rejectedCurve = makeCurveNgNavPool(NOW, {
+      tvlUsd: 500,
+      volumeUsd1d: 0,
+      price: 1.05,
+      priceObservedAt: null,
+      extra: {
+        measurement: { balanceMeasured: true, priceMeasured: false },
+        curveNavSpotQuoteRejectedReason: "insufficient-support",
+      },
+    });
+    const dlDuplicate = makeCurveNgNavPool(NOW, {
+      poolId: `ethereum:${CURVE_STUSDS_POOL}`,
+      tvlUsd: 2_500_000,
+      volumeUsd1d: 500_000,
+      price: 0.99,
+      priceObservedAt: NOW - 30,
+      source: "dl",
+      extra: {},
+    });
+    const metrics = new Map([
+      ["stusds-sky", { stablecoinId: "stusds-sky", symbol: "stUSDS", pools: [rejectedCurve, dlDuplicate] }],
+    ]);
+    const scored = await computeStablecoinScores(
+      h.db, metrics, new Map(), undefined, NOW, new Map(), undefined, new Map(), "none", NOW,
+    );
+    expect(scored.diagnostics.curveNavRejectionsByStablecoin?.get("stusds-sky")).toEqual(
+      expect.arrayContaining([expect.objectContaining({
+        poolKey: `ethereum:${CURVE_STUSDS_POOL}`,
+        reason: "insufficient-support",
+      })]),
+    );
+    await computeDexPrices({
+      db: h.db,
+      retainedPoolsByStablecoin: scored.retainedPoolsByStablecoin,
+      nowSec: NOW,
+      generationId: h.generationId,
+      primaryPrices: new Map([["stusds-sky", 1.09]]),
+      curveNavRejectionsByStablecoin: scored.diagnostics.curveNavRejectionsByStablecoin,
+    });
+    expect(readPublicPriceRows(h.sqlite)).toEqual([]);
+  });
+
+  it("rejects counter USD marks lacking upstream clock provenance across capture, staging, and validation", () => {
+    const pool = makeCurveNgNavPool(NOW);
+    const localMark = { priceUsd: 1, observedAtSec: NOW - 60, source: "coingecko+kraken" };
+    const summary = refreshCurveStableswapNgNavPrices({
+      metrics: new Map([["stusds-sky", { stablecoinId: "stusds-sky", symbol: "stUSDS", pools: [pool] }]]),
+      capturedPools: new Map([[pool, makeCurveNgCapState()]]),
+      sourceGenerationId: CURVE_GEN,
+      stablecoinPriceById: makeDexValuationPrices([["usds-sky", localMark]]),
+      registryEvaluatedAtSec: NOW,
+      nowSec: NOW,
+    });
+    expect(summary.admittedPools).toBe(0);
+    expect(summary.rejectedByReason["quote-mark-unavailable"]).toBe(1);
+    expect(pool.priceObservedAt).toBeNull();
+
+    const stagedPool = makeCurveNgNavPool(NOW, {
+      extra: {
+        curveNavSpotQuoteCandidate: {
+          quote: {
+            policyId: CURVE_NAV_SPOT_QUOTE_POLICY_ID,
+            poolId: `ethereum:${CURVE_STUSDS_POOL}`,
+            blockNumber: CURVE_BLOCK_NUMBER,
+            blockHash: CURVE_BLOCK_HASH,
+            poolRatioObservedAt: NOW - 120,
+            quoteMarkObservedAt: NOW - 60,
+            captureEvaluatedAtSec: NOW - 60,
+            sourceGenerationId: CURVE_GEN,
+            admissionMode: "sole-venue",
+          },
+          priceUsd: 1.07,
+          priceObservedAt: NOW - 120,
+          counterpartyPrice: {
+            stablecoinId: "usds-sky",
+            priceUsd: 1,
+            observedAtSec: NOW - 60,
+            source: "coingecko+kraken",
+          },
+          requiredSupportTvlUsd: 500_000,
+        } as never,
+      },
+    });
+    const admittedResult = admitCurveStableswapNgNavCandidates({
+      poolsByStablecoin: new Map([["stusds-sky", [stagedPool]]]),
+      nowSec: NOW,
+      volumeClock: { asOfSec: NOW, maxObservationAgeSec: 72 * 3600 },
+    });
+    expect(admittedResult.rejectionsByStablecoin.get("stusds-sky")).toEqual([
+      { poolKey: stagedPool.poolId, chain: "ethereum", reason: "invalid-clock" },
+    ]);
+    expect(stagedPool.curveNavSpotQuote).toBeUndefined();
+
+    const clocked = makeClockedCurveNavPool(NOW, {
+      priceCounterparty: {
+        stablecoinId: "usds-sky",
+        priceUsd: 1,
+        observedAtSec: NOW - 60,
+        source: "coingecko+kraken",
+      },
+    });
+    const obs: DexPriceObs = {
+      price: clocked.price!,
+      tvl: clocked.tvlUsd,
+      chain: clocked.chain,
+      protocol: clocked.project,
+      sourceFamily: "direct_api",
+      identityConfidence: "exact",
+      poolKey: clocked.poolId,
+      observedAt: clocked.priceObservedAt!,
+      counterpartyPrice: clocked.priceCounterparty,
+      curveNavSpotQuote: clocked.curveNavSpotQuote,
+    };
+    expect(validateClockedCurveNavObservation(obs, NOW)).toBe("invalid-clock");
+  });
+
+  it("enforces uniform lineage intersection for venue:kraken vs kraken and fails closed on empty dependencies", () => {
+    const primaryObs: DexPriceObs = {
+      price: 1.07,
+      tvl: 300_000,
+      chain: "ethereum",
+      protocol: "curve",
+      poolKey: `ethereum:${CURVE_STUSDS_POOL}`,
+      observedAt: NOW - 60,
+      counterpartyPrice: {
+        stablecoinId: "usds-sky",
+        priceUsd: 1,
+        observedAtSec: NOW - 60,
+        observedAtMode: "upstream",
+        source: "curve-onchain",
+        upstreamKeys: ["venue:kraken"],
+      },
+    };
+    const collidingCorr: DexPriceObs = {
+      price: 1.07,
+      tvl: 250_000,
+      chain: "ethereum",
+      protocol: "uniswap-v3",
+      poolKey: "ethereum:defillama:provider-specific-pool-id",
+      observedAt: NOW - 60,
+      counterpartyPrice: {
+        stablecoinId: "usds-sky",
+        priceUsd: 1,
+        observedAtSec: NOW - 60,
+        observedAtMode: "upstream",
+        source: "kraken",
+      },
+    };
+    const disjointCorr: DexPriceObs = {
+      ...collidingCorr,
+      counterpartyPrice: {
+        stablecoinId: "usds-sky",
+        priceUsd: 1,
+        observedAtSec: NOW - 60,
+        observedAtMode: "upstream",
+        source: "binance",
+      },
+    };
+    const emptyCorr: DexPriceObs = {
+      ...collidingCorr,
+      counterpartyPrice: undefined,
+    };
+    expect(hasIndependentNavMarkLineage(primaryObs, collidingCorr)).toBe(false);
+    expect(hasIndependentNavMarkLineage(primaryObs, disjointCorr)).toBe(true);
+    expect(hasIndependentNavMarkLineage(primaryObs, emptyCorr)).toBe(false);
+  });
+
+  it.each(CURVE_NG_CORROBORATION_SPECS)("corroboration: %s -> %s", (_label, spec, admitted) => {
+    const primary = makeCurveNgNavPool(NOW, {
+      tvlUsd: 300_000,
+      volumeUsd1d: 40_000,
+      volumeReading: { volume24hUsd: 40_000, volume7dUsd: 200_000, observedAtSec: NOW - 60 },
+    });
+    const pools: PoolEntry[] = [primary];
+    if (spec) {
+      const s = spec as {
+        project?: string;
+        source?: PoolEntry["source"];
+        priceSource?: PoolEntry["priceSource"];
+        priceObservedAt?: null;
+        priceObservedAtOffset?: number;
+        tvlUsd?: number;
+        vol?: number;
+        price?: number;
+        markSource?: string;
+        measured?: "valid" | "divergent";
+        ammSource?: "solidly-v2" | "balancer";
+      };
+      const vol24h = s.vol ?? 25_000;
+      const extra: PoolEntry["extra"] = s.measured
+        ? {
+            measuredExecution: makeStusdsMeasuredCorroboratorPacket({
+              poolId: CORR_ID,
+              quotedAt: NOW - 180,
+              priceUsd: 1.07,
+              marginalOutputRatio: s.measured === "divergent" ? 0.9 : 1,
+            }).profile,
+          }
+        : s.ammSource
+          ? { ammExecutionModel: { source: s.ammSource, capture: { blockTimestamp: NOW - 30, sourceGenerationId: CURVE_GEN } } as never }
+          : {};
+      pools.push(makeCurveNgNavPool(NOW, {
+        poolId: CORR_ID,
+        project: s.project ?? "uniswap-v3",
+        source: s.source ?? "direct_api",
+        priceSource: s.priceSource ?? (s.source ? undefined : "direct_api"),
+        priceObservedAt: s.priceObservedAt === null ? null : NOW + (s.priceObservedAtOffset ?? -120),
+        tvlUsd: s.tvlUsd ?? 250_000,
+        volumeReading: { volume24hUsd: vol24h, volume7dUsd: vol24h * 4, observedAtSec: NOW - 60 },
+        price: s.price ?? 1.07,
+        priceCounterparty: s.markSource
+          ? { stablecoinId: "usds-sky", priceUsd: 1, observedAtSec: NOW - 60, observedAtMode: "upstream", source: s.markSource }
+          : undefined,
+        extra,
+      }));
+    }
+    const summary = refreshCurveStableswapNgNavPrices({
+      metrics: new Map([["stusds-sky", { stablecoinId: "stusds-sky", symbol: "stUSDS", pools }]]),
+      capturedPools: new Map([[primary, makeCurveNgCapState({ balances: [150_000n * 10n ** 18n, 150_000n * 10n ** 18n] })]]),
+      sourceGenerationId: CURVE_GEN,
+      stablecoinPriceById: makeDexValuationPrices([
+        ["usds-sky", { priceUsd: 1, observedAtSec: NOW - 60, observedAtMode: "upstream", source: "kraken" }],
+      ]),
+      registryEvaluatedAtSec: NOW,
+      nowSec: NOW,
+    });
+    expect(summary.admittedPools).toBe(admitted ? 1 : 0);
+    if (admitted) {
+      expect(primary.curveNavSpotQuote).toMatchObject({ admissionMode: "corroborated", corroboratorPoolIds: [CORR_ID] });
+    } else {
+      expect(summary.rejectedByReason.uncorroborated).toBe(1);
+      expect(primary.priceObservedAt).toBeNull();
+    }
+  });
+
+  it.each(CURVE_NG_REJECTION_SPECS)("rejects %s as %s", (_label, pSpec, sSpec, markOffsetSec, reason) => {
+    const p = pSpec as { tvlUsd?: number; volume24h?: number };
+    const s = sSpec as { lowCounterDepth?: boolean; captureOffsetSec?: number; evalOffsetSec?: number; sourceGenerationId?: string };
+    const pool = makeCurveNgNavPool(NOW, {
+      ...(p.tvlUsd !== undefined ? { tvlUsd: p.tvlUsd } : {}),
+      ...(p.volume24h !== undefined ? { volumeReading: { volume24hUsd: p.volume24h, volume7dUsd: 100_000, observedAtSec: NOW - 60 } } : {}),
+    });
+    const capState = makeCurveNgCapState({
+      ...(s.lowCounterDepth ? { balances: [9_000n * 10n ** 18n, 2_500_000n * 10n ** 18n] } : {}),
+      ...(s.captureOffsetSec !== undefined || s.sourceGenerationId !== undefined
+        ? {
+            capture: {
+              blockNumber: CURVE_BLOCK_NUMBER,
+              blockHash: CURVE_BLOCK_HASH,
+              blockTimestamp: s.captureOffsetSec !== undefined ? NOW + s.captureOffsetSec : CURVE_BLOCK_TIMESTAMP,
+              sourceGenerationId: s.sourceGenerationId ?? CURVE_GEN,
+            },
+          }
+        : {}),
+      ...(s.evalOffsetSec !== undefined ? { captureEvaluatedAtSec: NOW + s.evalOffsetSec } : {}),
+    });
+    const summary = refreshCurveStableswapNgNavPrices({
+      metrics: new Map([["stusds-sky", { stablecoinId: "stusds-sky", symbol: "stUSDS", pools: [pool] }]]),
+      capturedPools: new Map([[pool, capState]]),
+      sourceGenerationId: CURVE_GEN,
+      stablecoinPriceById: makeDexValuationPrices([
+        ["usds-sky", { priceUsd: 1, observedAtSec: NOW + markOffsetSec, observedAtMode: "upstream", source: "kraken" }],
+      ]),
+      registryEvaluatedAtSec: NOW,
+      nowSec: NOW,
+    });
+    expect(summary.admittedPools).toBe(0);
+    expect(summary.rejectedByReason[reason]).toBe(1);
+    expect(pool.priceObservedAt).toBeNull();
+    expect(pool.curveNavSpotQuote).toBeUndefined();
   });
 });

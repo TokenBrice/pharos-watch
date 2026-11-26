@@ -1,5 +1,101 @@
+import { DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import type { PoolProcessingRejection } from "./pool-rejection-types";
 import type { DexMarketMark } from "../../lib/dex-api-token-pricing";
+
+export const CURVE_NAV_SPOT_QUOTE_POLICY_ID = "curve-stableswap-ng-nav-spot" as const;
+
+/**
+ * Single authority (R5) for clocked Curve StableSwap-NG active-NAV spot quote
+ * admission, depth verification, corroboration, and API read-time freshness.
+ */
+export const CURVE_NAV_SPOT_QUOTE_POLICY = {
+  policyId: CURVE_NAV_SPOT_QUOTE_POLICY_ID,
+  probeNotionalUsd: 100,
+  sellNotionalUsd: 10_000,
+  maxSellImpactBps: 500,
+  captureMaxAgeSec: 10 * 60,
+  quoteMaxAgeSec: DEX_FRESHNESS_SEC,
+  corroboratedPrimaryMinTvlUsd: 250_000,
+  corroboratedPrimaryMinVolume24hUsd: 25_000,
+  corroboratorMinTvlUsd: 100_000,
+  corroboratorMinVolume24hUsd: 10_000,
+  corroboratorMaxDivergenceBps: 250,
+  corroboratedCombinedMinTvlUsd: 500_000,
+  soleVenueMinTvlUsd: 2_000_000,
+  soleVenueMinVolume24hUsd: 250_000,
+} as const;
+
+/**
+ * JSON-safe provenance for an admitted clocked Curve StableSwap-NG spot quote,
+ * carried from pinned capture through scoring and stamped into `dex_prices`.
+ */
+export interface CurveNavSpotQuoteEvidence {
+  policyId: typeof CURVE_NAV_SPOT_QUOTE_POLICY_ID;
+  poolId: string;
+  blockNumber: number;
+  blockHash: string;
+  poolRatioObservedAt: number;
+  quoteMarkObservedAt: number;
+  captureEvaluatedAtSec: number;
+  sourceGenerationId: string;
+  admissionMode: "sole-venue" | "corroborated";
+  corroboratorPoolIds?: readonly string[];
+}
+
+function isNonEmptyCurveString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function isPositiveCurveSafeInt(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
+}
+
+/** Defensive runtime shape check for persisted/staged Curve NAV quote provenance. */
+export function isCurveNavSpotQuoteEvidenceShape(value: unknown): value is CurveNavSpotQuoteEvidence {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const record = value as Record<string, unknown>;
+  if (
+    record.policyId !== CURVE_NAV_SPOT_QUOTE_POLICY_ID ||
+    !isNonEmptyCurveString(record.poolId) ||
+    !isNonEmptyCurveString(record.blockHash) ||
+    !isNonEmptyCurveString(record.sourceGenerationId) ||
+    !isPositiveCurveSafeInt(record.blockNumber) ||
+    !isPositiveCurveSafeInt(record.poolRatioObservedAt) ||
+    !isPositiveCurveSafeInt(record.quoteMarkObservedAt) ||
+    !isPositiveCurveSafeInt(record.captureEvaluatedAtSec) ||
+    (record.admissionMode !== "sole-venue" && record.admissionMode !== "corroborated")
+  ) {
+    return false;
+  }
+  if (
+    record.corroboratorPoolIds !== undefined &&
+    (!Array.isArray(record.corroboratorPoolIds) ||
+      !record.corroboratorPoolIds.every((id) => isNonEmptyCurveString(id)))
+  ) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * JSON-safe staged candidate for a clocked Curve StableSwap-NG active-NAV spot
+ * quote. Built during the source stage at zero extra RPC cost and resolved in
+ * scoring AFTER `measuredExecution` joins onto corroborator pools.
+ */
+export interface CurveNavSpotQuoteCandidate {
+  policyId: typeof CURVE_NAV_SPOT_QUOTE_POLICY_ID;
+  poolId: string;
+  priceUsd: number;
+  supportUsd: number;
+  volume24hUsd: number;
+  blockNumber: number;
+  blockHash: string;
+  poolRatioObservedAt: number;
+  quoteMarkObservedAt: number;
+  captureEvaluatedAtSec: number;
+  sourceGenerationId: string;
+  counterpartyPrice: NonNullable<DexPriceObs["counterpartyPrice"]>;
+}
 
 export interface LlamaPool {
   pool: string;
@@ -170,7 +266,8 @@ export interface DexPoolVolumeReading {
   deadPoolSignature?: true;
 }
 
-export interface PoolEntry extends Omit<DexLiquidityPool, "source" | "extra"> {
+export interface PoolEntry extends Omit<DexLiquidityPool, "source" | "extra" | "price"> {
+  price?: number;
   curveBasePoolOverlap?: { basePoolKey: string; lpLegTvlUsd: number };
   poolId: string;
   /** Candidate metadata only; never an exact aggregate or physical identity. */
@@ -202,6 +299,10 @@ export interface PoolEntry extends Omit<DexLiquidityPool, "source" | "extra"> {
   priceSource?: LiquidityPoolSourceFamily;
   /** The price-observing row's own TVL claim; caps the price observation's weight. */
   priceEvidenceTvlUsd?: number;
+  /** Clocked Curve StableSwap-NG spot quote provenance for active NAV tokens. */
+  curveNavSpotQuote?: CurveNavSpotQuoteEvidence;
+  /** Internal verified physical pool ID binding preserved after stripping `extra.measuredExecutionPhysicalPoolId` for price publication. Never persisted. */
+  verifiedMeasuredPhysicalPoolId?: string;
   extra?: NonNullable<DexLiquidityPool["extra"]> & {
     qualityAdjustedTvl?: number;
     hasMeasuredOrganicFraction?: boolean;
@@ -212,6 +313,10 @@ export interface PoolEntry extends Omit<DexLiquidityPool, "source" | "extra"> {
     curveStableswapRateInputExecutionCandidate?: CurveStableswapRateInputExecutionCandidate;
     /** Internal plain-NG admission evidence; consumed into cron metadata before scoring and never published. */
     curveStableswapPlainAdmissionDiagnostic?: CurveStableswapPlainAdmissionDiagnostic;
+    /** Internal clocked Curve NG NAV spot quote candidate; resolved after measuredExecution join and stripped before persistence. */
+    curveNavSpotQuoteCandidate?: CurveNavSpotQuoteCandidate;
+    /** Internal rejection reason for a failed/malformed Curve NG NAV quote; preserves NAV isolation and stripped before persistence. */
+    curveNavSpotQuoteRejectedReason?: string;
     /** Internal all-retained target descriptor; stripped before top-pool publication. */
     measuredExecutionTarget?: DexMeasuredExecutionTarget;
     /** Internal multi-direction packet for reviewed pools; stripped before publication. */
@@ -257,6 +362,12 @@ export interface DexPriceObs {
   derivedMatchKey?: string;
   identityConfidence?: "exact" | "derived_unique" | "derived_ambiguous" | "none";
   sourceFamily?: string;
+  /** Clocked Curve StableSwap-NG spot quote provenance preserved across scoring. */
+  curveNavSpotQuote?: CurveNavSpotQuoteEvidence;
+  /** Internal in-memory marker for conflicting clocked Curve NAV duplicate copies quarantined as "conflict". */
+  curveNavConflict?: true;
+  /** Internal in-memory marker for independently verified upstream-clocked non-Curve venues. */
+  verifiedClockedVenue?: true;
 }
 
 // GeckoTerminal response types

@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { DEX_UNSUPPORTED_CHAIN_WAIVER_REASON } from "@shared/lib/dex-deployment-coverage";
+import { CURVE_NAV_SPOT_QUOTE_POLICY } from "../../cron/dex-liquidity/types";
 import {
+  admitDexPriceRow,
+  boundCacheControlMaxAge,
   buildDexDeploymentCoverage,
   normalizeTopPools,
   selectTrendBaseline,
 } from "../../lib/dex-liquidity-response";
+import { makeClockedCurveNavPayload, NAV_CURVE_POOL_ID } from "./p4-route-response.test-support";
 
 describe("stored trend evidence admission", () => {
   it.each([
@@ -308,5 +313,151 @@ describe("buildDexDeploymentCoverage", () => {
 
     const expired = buildDexDeploymentCoverage(rows, 200).get("usdt-tether");
     expect(expired?.deployments[1]?.waiver).toBeNull();
+  });
+});
+
+describe("clocked Curve StableSwap-NG NAV API price admission and caching", () => {
+  const baseSec = 1_790_000_000;
+  const cap = CURVE_NAV_SPOT_QUOTE_POLICY.captureMaxAgeSec;
+  const admit = (payload: unknown, updatedAt: number, nowSec: number) =>
+    admitDexPriceRow({ updated_at: updatedAt, price_sources_json: JSON.stringify(payload) }, updatedAt, nowSec, "test");
+
+  it("enforces <4500s read-time, 600s/601s capture-to-publication, zero future skew, and payload invariants", () => {
+    const ok = makeClockedCurveNavPayload({
+      poolRatioObservedAt: baseSec - 120,
+      quoteMarkObservedAt: baseSec - 300,
+      captureEvaluatedAtSec: baseSec - 60,
+      quotePublishedAtSec: baseSec,
+    });
+    expect(admit(ok, baseSec, baseSec - 300 + DEX_FRESHNESS_SEC - 1)).toMatchObject({
+      unavailableReason: null,
+      clockedCurveNav: true,
+      priceRemainingSec: 1,
+    });
+    expect(admit(ok, baseSec, baseSec - 300 + DEX_FRESHNESS_SEC)).toMatchObject({
+      unavailableReason: "stale-price",
+      priceRemainingSec: null,
+    });
+    expect(admit(ok, baseSec + 1, baseSec)).toMatchObject({ unavailableReason: "future-timestamp" });
+    expect(admit(
+      makeClockedCurveNavPayload({
+        poolRatioObservedAt: baseSec - cap,
+        quoteMarkObservedAt: baseSec - 60,
+        captureEvaluatedAtSec: baseSec - cap,
+      }),
+      baseSec,
+      baseSec + 120,
+    ).unavailableReason).toBeNull();
+    expect(admit(
+      makeClockedCurveNavPayload({
+        poolRatioObservedAt: baseSec - cap - 1,
+        quoteMarkObservedAt: baseSec - 60,
+        captureEvaluatedAtSec: baseSec - cap - 1,
+      }),
+      baseSec,
+      baseSec + 120,
+    ).unavailableReason).toBe("stale-price");
+    expect(admit(
+      makeClockedCurveNavPayload({
+        poolRatioObservedAt: baseSec + 120,
+        quoteMarkObservedAt: baseSec - 60,
+        captureEvaluatedAtSec: baseSec + 180,
+        quotePublishedAtSec: baseSec + 360,
+      }),
+      baseSec,
+      baseSec + 400,
+    ).unavailableReason).toBeNull();
+    expect(admit(
+      makeClockedCurveNavPayload({ poolRatioObservedAt: baseSec - 60, quoteMaxAgeSec: 7200 }),
+      baseSec,
+      baseSec + 60,
+    ).unavailableReason).toBe("invalid-timestamp");
+    expect(admit(
+      makeClockedCurveNavPayload({ poolRatioObservedAt: baseSec - 60, quoteCaptures: [] }),
+      baseSec,
+      baseSec + 60,
+    ).unavailableReason).toBe("invalid-timestamp");
+    expect(admit({ aggregateObservedAt: baseSec - 5000, sources: [] }, baseSec, baseSec + 100)).toMatchObject({
+      unavailableReason: null,
+      clockedCurveNav: false,
+    });
+  });
+
+  it("bounds Cache-Control TTL, rejects NAV topPools on non-NAV parent rows, and reports standalone remaining TTL", () => {
+    expect(boundCacheControlMaxAge("public, s-maxage=300, max-age=60", 45)).toBe("public, s-maxage=45, max-age=45");
+    expect(boundCacheControlMaxAge("public, s-maxage=300, max-age=60", 0)).toBe("no-store");
+
+    const quote = makeClockedCurveNavPayload({
+      poolRatioObservedAt: baseSec - 120,
+      quoteMarkObservedAt: baseSec - 300,
+      captureEvaluatedAtSec: baseSec - 60,
+    }).quoteCaptures[0];
+
+    const poolsJson = JSON.stringify([
+      {
+        poolId: NAV_CURVE_POOL_ID,
+        project: "curve",
+        chain: "Ethereum",
+        tvlUsd: 2_500_000,
+        volumeUsd1d: 800_000,
+        price: 1.07,
+        source: "dl",
+        curveNavSpotQuote: quote,
+      },
+      {
+        poolId: "ethereum:0xother",
+        project: "uniswap-v3",
+        chain: "Ethereum",
+        tvlUsd: 400_000,
+        volumeUsd1d: 50_000,
+        price: 1.06,
+        source: "dl",
+      },
+    ]);
+
+    const expiredPools = normalizeTopPools(poolsJson, "test", {
+      nowSec: baseSec + 5_000,
+      parentHasPriceRow: true,
+      parentClockedNav: true,
+      parentClockedNavUnavailable: true,
+      parentClockedNavPoolIds: new Set([NAV_CURVE_POOL_ID]),
+    });
+    expect(expiredPools[0]).toMatchObject({ price: null, tvlUsd: 2_500_000, volumeUsd1d: 800_000 });
+    expect(expiredPools[1]).toMatchObject({ price: 1.06, tvlUsd: 400_000 });
+
+    // Same-generation parent dex_prices row lacking clocked NAV metadata explicitly nulls NAV-tagged topPools[].price.
+    const mismatchedParent = normalizeTopPools(poolsJson, "test", {
+      nowSec: baseSec,
+      publicationUpdatedAt: baseSec,
+      parentHasPriceRow: true,
+      parentClockedNav: false,
+    });
+    expect(mismatchedParent[0]?.price).toBeNull();
+    expect(mismatchedParent[1]?.price).toBe(1.06);
+
+    // Standalone topPools without a parent dex_prices row requires a standalone quotePublishedAtSec receipt.
+    const rejectedRemaining: number[] = [];
+    const missingReceipt = normalizeTopPools(poolsJson, "test", {
+      nowSec: baseSec - 300 + DEX_FRESHNESS_SEC - 1,
+      publicationUpdatedAt: baseSec,
+      parentHasPriceRow: false,
+      onClockedNavRemainingSec: (sec) => rejectedRemaining.push(sec),
+    });
+    expect(missingReceipt[0]?.price).toBeNull();
+    expect(rejectedRemaining).toEqual([]);
+
+    const standalonePoolsJson = JSON.stringify([
+      { ...JSON.parse(poolsJson)[0], quotePublishedAtSec: baseSec },
+      JSON.parse(poolsJson)[1],
+    ]);
+    const reportedRemaining: number[] = [];
+    const standalone = normalizeTopPools(standalonePoolsJson, "test", {
+      nowSec: baseSec - 300 + DEX_FRESHNESS_SEC - 1,
+      publicationUpdatedAt: baseSec,
+      parentHasPriceRow: false,
+      onClockedNavRemainingSec: (sec) => reportedRemaining.push(sec),
+    });
+    expect(standalone[0]?.price).toBe(1.07);
+    expect(reportedRemaining).toEqual([1]);
   });
 });

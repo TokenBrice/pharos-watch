@@ -86,7 +86,10 @@ import { enrichEvmV2ExecutionModels, refreshUsdaV2Price } from "./constant-produ
 import { refreshTempoPathUsdPrice } from "./tempo-price";
 import { enrichQuoterV2ExecutionTargets } from "./enrich-quoter-v2-targets";
 import { enrichCurveStableswapFactoryExecutionModels } from "./curve-stableswap-factory";
-import { enrichCurveStableswapRateInputExecutionModels } from "./curve-stableswap-rates";
+import {
+  enrichCurveStableswapRateInputExecutionModels,
+  refreshCurveStableswapNgNavPrices,
+} from "./curve-stableswap-rates";
 import { enrichUniswapV4ExecutionTargets } from "./uniswap-v4-identity";
 import { attachPinnedReviewedExecutionTargets } from "./execution-targets/pinned-reviewed";
 import {
@@ -1067,12 +1070,11 @@ async function buildDexLiquidityPoolState(
     signal: ctx.signal,
     deadline: ctx.deadline,
   });
-  await enrichCurveStableswapRateInputExecutionModels({
+  const curveStableswapNgCaptures = await enrichCurveStableswapRateInputExecutionModels({
     metrics,
     chainAddressToId: sourceState.lookups.chainAddressToId,
     chainRpcs: ctx.chainRpcs,
     signal: ctx.signal,
-    nowSec: Math.floor(Date.now() / 1000),
     sourceGenerationId: `dex-liquidity-scoring-stage:${ctx.sourceSlotStartedAt ?? ctx.syncStartSec}`,
   });
   // Last of the three on-chain capture stages: it only touches Curve rows the
@@ -1110,7 +1112,17 @@ async function buildDexLiquidityPoolState(
       stablecoinPriceProvenanceById: sourceState.stablecoinPriceProvenanceById,
       chainRpcs: ctx.chainRpcs, signal: ctx.signal, nowSec: Math.floor(Date.now() / 1000),
       deadlineMs: priceRefreshDeadlines(ctx.readinessDeadlineMs, ctx.deadline).tempo }),
+    curveNav: refreshCurveStableswapNgNavPrices({
+      metrics,
+      capturedPools: curveStableswapNgCaptures,
+      sourceGenerationId: `dex-liquidity-scoring-stage:${ctx.sourceSlotStartedAt ?? ctx.syncStartSec}`,
+      stablecoinPriceById: sourceState.stablecoinPriceById,
+      registryEvaluatedAtSec: staged.registryEvaluatedAtSec,
+      nowSec: Math.floor(Date.now() / 1000),
+      stageOnly: true,
+    }),
   } };
+  curveStableswapNgCaptures.clear();
   await ctx.reportDexProgress("pool-price-refresh-complete", {
     message: "Completed exact-pool price refresh", providerFamily: "cg-onchain",
     counts: { requests: priceRefresh.requests, refreshed: priceRefresh.refreshed },
@@ -1223,6 +1235,19 @@ async function scoreDexLiquidityPoolState(
     new Set(poolState.closureValuationRejectedAssetIds),
     poolState.closureValuationMarketMarks && new Map(poolState.closureValuationMarketMarks),
   );
+  if (sourceState.curveNavStageRejections?.length) {
+    const merged = diagnostics.curveNavRejectionsByStablecoin ?? new Map();
+    for (const entry of sourceState.curveNavStageRejections) {
+      const list = merged.get(entry.stablecoinId) ?? [];
+      list.push({
+        poolKey: entry.poolKey,
+        ...(entry.chain ? { chain: entry.chain } : {}),
+        reason: entry.reason,
+      });
+      merged.set(entry.stablecoinId, list);
+    }
+    diagnostics.curveNavRejectionsByStablecoin = merged;
+  }
   const funnel = diagnostics.measuredTargetFunnel;
   funnel.sourceFailures = [...new Set(sourceState.failedSources)].slice(0, 32);
   funnel.sourceFailuresOmitted = Math.max(0, new Set(sourceState.failedSources).size - 32);
@@ -1376,6 +1401,7 @@ async function persistDexLiquidityScoreState(
           scoreState.retainedPoolsByStablecoin,
           scoreState.analysis.sourceCoverage.poolRejectionCoverage.anchorReviewDecision,
           sourceState.curveIdentityAttachment?.status,
+          scoreState.diagnostics.curveNavRejectionsByStablecoin,
         ),
       3,
       ctx.signal,
@@ -1415,6 +1441,7 @@ async function persistDexLiquidityScoreState(
     signal: ctx.signal,
     exactPriceEvidenceByStablecoin: sourceState.priceObservations,
     generationId: publicationGenerationId,
+    curveNavRejectionsByStablecoin: scoreState.diagnostics.curveNavRejectionsByStablecoin,
   });
   sourceState.stablecoinPriceById.clear();
   sourceState.primaryPriceById?.clear();
@@ -1433,6 +1460,7 @@ async function persistDexLiquidityScoreState(
       retainedPoolsByStablecoin: scoreState.retainedPoolsByStablecoin,
       minPoolTvlUsd: POOL_CHALLENGE_MIN_TVL,
       consumeRetainedPools: true,
+      curveNavRejectionsByStablecoin: scoreState.diagnostics.curveNavRejectionsByStablecoin,
     },
     ctx.signal,
   );

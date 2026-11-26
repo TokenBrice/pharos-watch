@@ -23,7 +23,13 @@ import {
 import { isMissingTableError } from "./db";
 import { logMalformedJsonPath } from "./json-decode-observability";
 import { toErrorMessage } from "@shared/lib/error-utils";
-import { getDexAggregateObservedAt, getDexPriceSourceEntries, type DexAggregateClock } from "./depeg-trust-policy";
+import {
+  assessClockedCurveNavPayload,
+  getDexAggregateObservedAt,
+  getDexPriceSourceEntries,
+  isClockedCurveNavPayload,
+  type DexAggregateClock,
+} from "./depeg-trust-policy";
 
 /** D1 row shape for the depeg_events table (snake_case columns) */
 export interface DepegRow {
@@ -91,6 +97,8 @@ export interface DexPriceRow extends DexPriceLineage {
   updated_at: number;
   aggregateObservedAt?: number | null;
   aggregateClockReason?: DexAggregateClock["aggregateClockReason"];
+  /** Preserved parsed `price_sources_json` payload when clocked Curve NAV policy checks apply. */
+  pricePayload?: unknown;
 }
 
 export type PendingDepegReasonFlag = "confirmation-window" | "large-cap" | "low-confidence" | "extreme-move" | "peer-relative";
@@ -347,16 +355,31 @@ export async function loadDexPrices(
           maxAgeSec,
         });
       }
-      const decoded = decodeJsonString<{ sources: DexPoolSource[] } & DexAggregateClock & DexPriceLineage, DexJsonDecodeReason>(row.price_sources_json, {
+      const priceRow = dexPriceRows.get(row.stablecoin_id)!;
+      const decoded = decodeJsonString<
+        { sources: DexPoolSource[]; rawPayload: unknown } & DexAggregateClock & DexPriceLineage,
+        DexJsonDecodeReason
+      >(row.price_sources_json, {
         updatedAt: row.updated_at,
         missingReason: "missing",
         parseErrorReason: "json-parse-failed",
         normalize: (parsed) => {
+          if (isClockedCurveNavPayload(parsed)) {
+            priceRow.pricePayload = parsed;
+          }
           const sources = getDexPriceSourceEntries(parsed);
           // A null/primitive element is not a DexPoolSource and would throw in
           // the per-source clock filter; quarantine the row instead (R8).
           return sources != null && sources.every((source) => source != null && typeof source === "object" && !Array.isArray(source))
-            ? { ok: true, payload: { sources: sources as DexPoolSource[], ...readDexPriceLineage(parsed), ...getDexAggregateObservedAt(parsed, nowSec) } }
+            ? {
+                ok: true,
+                payload: {
+                  sources: sources as DexPoolSource[],
+                  rawPayload: parsed,
+                  ...readDexPriceLineage(parsed),
+                  ...getDexAggregateObservedAt(parsed, nowSec),
+                },
+              }
             : { ok: false, reason: "invalid-shape" };
         },
       });
@@ -377,10 +400,19 @@ export async function loadDexPrices(
         });
         continue;
       }
-      const priceRow = dexPriceRows.get(row.stablecoin_id)!;
       Object.assign(priceRow, readDexPriceLineage(decoded.payload));
       priceRow.aggregateObservedAt = decoded.payload.aggregateObservedAt;
       if (decoded.payload.aggregateClockReason) priceRow.aggregateClockReason = decoded.payload.aggregateClockReason;
+      if (
+        isClockedCurveNavPayload(decoded.payload.rawPayload) &&
+        assessClockedCurveNavPayload(decoded.payload.rawPayload, {
+          nowSec,
+          publicationUpdatedAt: row.updated_at,
+          aggregateObservedAt: decoded.payload.aggregateObservedAt,
+        }).reason != null
+      ) {
+        continue;
+      }
       const sources = decoded.payload.sources
         .filter((source) => {
           if (typeof source.observedAt !== "number" || !Number.isFinite(source.observedAt) || source.observedAt <= 0 ||

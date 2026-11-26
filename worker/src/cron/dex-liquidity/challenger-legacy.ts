@@ -6,6 +6,7 @@ import { logMalformedJsonPath } from "../../lib/json-decode-observability";
 import type { DexPriceChallengerLoadRow } from "./challenger-types";
 import { getDexPriceSourceEntries } from "@shared/lib/dex-price-sources";
 import { isRecord } from "@shared/lib/type-guards";
+import { isCurveNavSpotQuoteEvidenceShape } from "./types";
 
 interface LegacyDexPoolSource {
   protocol: string;
@@ -24,6 +25,9 @@ interface LegacyChallengerPoolRow {
   lineagePriceUsd?: unknown;
   tvlUsd?: unknown;
   priceObservedAt?: unknown;
+  curveNavSpotQuote?: unknown;
+  quotePublishedAtSec?: unknown;
+  quoteExpiresAtSec?: unknown;
 }
 
 type LegacyJsonDecodeReason = "missing" | "json-parse-failed" | "invalid-shape";
@@ -104,7 +108,12 @@ export async function loadLegacyDexPoolChallengers(
       );
       for (const pool of stored ?? []) {
         const lineage = readDexPriceLineage(pool);
-        const price = lineage.upstreamKeys?.length && lineage.pricePoolKeys?.length && typeof pool.lineagePriceUsd === "number"
+        const curveNavSpotQuote = pool.curveNavSpotQuote !== undefined
+          ? (isCurveNavSpotQuoteEvidenceShape(pool.curveNavSpotQuote) ? pool.curveNavSpotQuote : null)
+          : undefined;
+        if (curveNavSpotQuote === null) continue;
+        const price = ((lineage.upstreamKeys?.length && lineage.pricePoolKeys?.length) || curveNavSpotQuote !== undefined) &&
+          typeof pool.lineagePriceUsd === "number"
           ? pool.lineagePriceUsd : Number(pool.priceUsd);
         const tvlUsd = typeof pool.tvlUsd === "number" ? pool.tvlUsd : Number(pool.tvlUsd);
         if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(tvlUsd) || tvlUsd < minPoolTvlUsd) continue;
@@ -124,6 +133,13 @@ export async function loadLegacyDexPoolChallengers(
           priceObservedAt: typeof pool.priceObservedAt === "number" && Number.isFinite(pool.priceObservedAt)
             ? pool.priceObservedAt
             : null,
+          ...(curveNavSpotQuote !== undefined ? { curveNavSpotQuote } : {}),
+          ...(typeof pool.quotePublishedAtSec === "number" && Number.isSafeInteger(pool.quotePublishedAtSec)
+            ? { quotePublishedAtSec: pool.quotePublishedAtSec }
+            : {}),
+          ...(typeof pool.quoteExpiresAtSec === "number" && Number.isSafeInteger(pool.quoteExpiresAtSec)
+            ? { quoteExpiresAtSec: pool.quoteExpiresAtSec }
+            : {}),
         });
       }
     }
@@ -147,6 +163,10 @@ export async function loadLegacyDexPoolChallengers(
       }
       if (!Array.isArray(pools) || pools.length === 0) continue;
       for (const pool of pools) {
+        const curveNavSpotQuote = pool.curveNavSpotQuote !== undefined
+          ? (isCurveNavSpotQuoteEvidenceShape(pool.curveNavSpotQuote) ? pool.curveNavSpotQuote : null)
+          : undefined;
+        if (curveNavSpotQuote === null) continue;
         const hasBoundedProjection = typeof pool.challengerTvlUsd === "number";
         const price = hasBoundedProjection ? pool.displayPrice : Number(pool.price);
         const tvlUsd = Math.min(Number(pool.tvlUsd), Number(pool.challengerTvlUsd ?? pool.priceEvidenceTvlUsd ?? pool.tvlUsd));
@@ -163,6 +183,13 @@ export async function loadLegacyDexPoolChallengers(
           snapshotAt: row.updated_at,
           publishedAt: row.updated_at,
           ...(typeof pool.priceObservedAt === "number" && { priceObservedAt: pool.priceObservedAt }),
+          ...(curveNavSpotQuote !== undefined ? { curveNavSpotQuote } : {}),
+          ...(typeof pool.quotePublishedAtSec === "number" && Number.isSafeInteger(pool.quotePublishedAtSec)
+            ? { quotePublishedAtSec: pool.quotePublishedAtSec }
+            : {}),
+          ...(typeof pool.quoteExpiresAtSec === "number" && Number.isSafeInteger(pool.quoteExpiresAtSec)
+            ? { quoteExpiresAtSec: pool.quoteExpiresAtSec }
+            : {}),
         });
       }
     }

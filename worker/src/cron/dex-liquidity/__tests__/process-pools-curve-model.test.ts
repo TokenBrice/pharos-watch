@@ -247,28 +247,22 @@ describe("buildCurveStableswapExecutionModel", () => {
     expect(model?.amplification).toBeCloseTo(4000 / 9, 10);
   });
 
+  const ethCap = (curveData: CurvePoolEntry | undefined, stablecoinId = "usdc-circle") =>
+    buildCurveStableswapExecutionCapability(curveData, "ethereum", stablecoinId, chainAddressToId);
+
   it("fails closed on metapools, missing capture, and untracked input", () => {
-    expect(
-      buildCurveStableswapExecutionModel(entry({ isMetaPool: true }), "ethereum", "usdc-circle", chainAddressToId),
-    ).toBeNull();
-    expect(
-      buildCurveStableswapExecutionModel(
-        entry({ executionCoins: undefined }),
-        "ethereum",
-        "usdc-circle",
-        chainAddressToId,
-      ),
-    ).toBeNull();
-    expect(buildCurveStableswapExecutionModel(entry(), "ethereum", "dai-makerdao", chainAddressToId)).toBeNull();
-    expect(buildCurveStableswapExecutionModel(undefined, "ethereum", "usdc-circle", chainAddressToId)).toBeNull();
-    expect(
-      buildCurveStableswapExecutionCapability(
-        entry({ isMetaPool: true }),
-        "ethereum",
-        "usdc-circle",
-        chainAddressToId,
-      ).gate,
-    ).toEqual({ family: "curve-stableswap", reason: "metapool-unsupported" });
+    for (const [data, id] of [
+      [entry({ isMetaPool: true }), "usdc-circle"],
+      [entry({ executionCoins: undefined }), "usdc-circle"],
+      [entry(), "dai-makerdao"],
+      [undefined, "usdc-circle"],
+    ] as const) {
+      expect(ethCap(data, id).executionModel).toBeNull();
+    }
+    expect(ethCap(entry({ isMetaPool: true })).gate).toEqual({
+      family: "curve-stableswap",
+      reason: "metapool-unsupported",
+    });
   });
 
   it("routes only the ten reviewed metapools into measured execution", () => {
@@ -281,17 +275,10 @@ describe("buildCurveStableswapExecutionModel", () => {
         basePoolAddress: policy.metapool.basePoolAddress,
         tvl: 1_000_000,
         poolCoins: policy.poolTokens.map((token, index) => ({
-          address: token.address,
-          symbol: token.symbol,
-          decimals: token.decimals,
-          usdPrice: 1,
-          isBasePoolLpToken: index === 1,
+          address: token.address, symbol: token.symbol, decimals: token.decimals, usdPrice: 1, isBasePoolLpToken: index === 1,
         })),
         underlyingCoins: policy.executionTokens.map((token) => ({
-          address: token.address,
-          symbol: token.symbol,
-          decimals: token.decimals,
-          usdPrice: 1,
+          address: token.address, symbol: token.symbol, decimals: token.decimals, usdPrice: 1,
         })),
       };
       const capability = compositeCapability(source, policy.chain, policy.stablecoinId);
@@ -312,20 +299,8 @@ describe("buildCurveStableswapExecutionModel", () => {
         isMetaPool: true,
         basePoolAddress: "0x2222222222222222222222222222222222222222",
         poolCoins: [
-          {
-            address: "0x3333333333333333333333333333333333333333",
-            symbol: "UNKNOWN",
-            decimals: 18,
-            usdPrice: 1,
-            isBasePoolLpToken: false,
-          },
-          {
-            address: "0x4444444444444444444444444444444444444444",
-            symbol: "3Crv",
-            decimals: 18,
-            usdPrice: 1,
-            isBasePoolLpToken: true,
-          },
+          { address: "0x3333333333333333333333333333333333333333", symbol: "UNKNOWN", decimals: 18, usdPrice: 1, isBasePoolLpToken: false },
+          { address: "0x4444444444444444444444444444444444444444", symbol: "3Crv", decimals: 18, usdPrice: 1, isBasePoolLpToken: true },
         ],
       },
       "ethereum",
@@ -339,30 +314,10 @@ describe("buildCurveStableswapExecutionModel", () => {
   });
 
   it("fails closed on CryptoSwap registries despite a published amplification", () => {
-    expect(
-      buildCurveStableswapExecutionModel(
-        entry({ registryId: "factory-twocrypto", A: 20_000_000 }),
-        "ethereum",
-        "usdc-circle",
-        chainAddressToId,
-      ),
-    ).toBeNull();
-    expect(
-      buildCurveStableswapExecutionCapability(
-        entry({ registryId: "factory-twocrypto", A: 20_000_000 }),
-        "ethereum",
-        "usdc-circle",
-        chainAddressToId,
-      ).gate,
-    ).toEqual({ family: "curve-cryptoswap", reason: "unsupported-invariant" });
-    expect(
-      buildCurveStableswapExecutionModel(
-        entry({ registryId: "factory-tricrypto" }),
-        "ethereum",
-        "usdc-circle",
-        chainAddressToId,
-      ),
-    ).toBeNull();
+    const twoCrypto = ethCap(entry({ registryId: "factory-twocrypto", A: 20_000_000 }));
+    expect(twoCrypto.executionModel).toBeNull();
+    expect(twoCrypto.gate).toEqual({ family: "curve-cryptoswap", reason: "unsupported-invariant" });
+    expect(ethCap(entry({ registryId: "factory-tricrypto" })).executionModel).toBeNull();
   });
 
   it.each([1, 1.01, 1.24])("requires pinned StableSwap-NG inputs at source mark %s", (quoteUsd) => {
@@ -374,12 +329,7 @@ describe("buildCurveStableswapExecutionModel", () => {
         { address: USDT, symbol: "sUSDe", decimals: 18, balance: 5_000_000, usdPrice: quoteUsd },
       ],
     });
-    const capability = buildCurveStableswapExecutionCapability(
-      rateBearing,
-      "ethereum",
-      "usdc-circle",
-      chainAddressToId,
-    );
+    const capability = ethCap(rateBearing);
 
     expect(capability.executionModel).toBeNull();
     expect(capability.gate).toEqual({ family: "curve-stableswap", reason: "incomplete-exact-capture" });
@@ -390,22 +340,8 @@ describe("buildCurveStableswapExecutionModel", () => {
         { address: USDT, symbol: "sUSDe", decimals: 18, referencePriceUsd: quoteUsd },
       ],
     });
-    expect(
-      buildCurveStableswapExecutionCapability(
-        { ...rateBearing, registryId: "main" },
-        "ethereum",
-        "usdc-circle",
-        chainAddressToId,
-      ).rateInputCandidate,
-    ).toBeUndefined();
-    expect(
-      buildCurveStableswapExecutionCapability(
-        { ...rateBearing, isMetaPool: true },
-        "ethereum",
-        "usdc-circle",
-        chainAddressToId,
-      ).rateInputCandidate,
-    ).toBeUndefined();
+    expect(ethCap({ ...rateBearing, registryId: "main" }).rateInputCandidate).toBeUndefined();
+    expect(ethCap({ ...rateBearing, isMetaPool: true }).rateInputCandidate).toBeUndefined();
   });
 
   it("builds an exact measured target for an activated crvUSD TwoCrypto pool", () => {
@@ -522,6 +458,12 @@ describe("buildCurveStableswapExecutionModel", () => {
     });
   });
 
+  const THREEPOOL_ADDR_IDS = new Map([
+    [`ethereum:${DAI_3POOL}`, "dai-makerdao"],
+    [`ethereum:${USDC_3POOL}`, "usdc-circle"],
+    [`ethereum:${USDT_3POOL}`, "usdt-tether"],
+  ]);
+
   it("builds an atomic two-output measured packet for reviewed 3pool inputs", () => {
     const threePool = entry({
       poolAddress: THREEPOOL,
@@ -535,58 +477,36 @@ describe("buildCurveStableswapExecutionModel", () => {
         { address: USDT_3POOL, symbol: "USDT", decimals: 6, balance: 103_289_773, usdPrice: 0.9992 },
       ],
     });
-    const addressIds = new Map([
-      [`ethereum:${DAI_3POOL}`, "dai-makerdao"],
-      [`ethereum:${USDC_3POOL}`, "usdc-circle"],
-      [`ethereum:${USDT_3POOL}`, "usdt-tether"],
-    ]);
     const prices = new Map([
       ["dai-makerdao", 1.00005],
       ["usdc-circle", 1.00001],
       ["usdt-tether", 0.9992518040104241],
     ]);
-
-    const usdtTargets = buildCurveStableSwapMeasuredExecutionTargets({
+    const buildFor = (stablecoinId: string) => buildCurveStableSwapMeasuredExecutionTargets({
       curveData: threePool,
       chain: "ethereum",
-      stablecoinId: "usdt-tether",
-      chainAddressToId: addressIds,
+      stablecoinId,
+      chainAddressToId: THREEPOOL_ADDR_IDS,
       stablecoinPriceById: prices,
       retainedTvlUsd: 160_047_206,
       capturedAt: 1_784_877_491,
     });
+
+    const usdtTargets = buildFor("usdt-tether");
     expect(usdtTargets).toHaveLength(2);
-    expect(usdtTargets.map((target) => target.tokenOut.trackedAssetId)).toEqual([
-      "dai-makerdao",
-      "usdc-circle",
-    ]);
+    expect(usdtTargets.map((target) => target.tokenOut.trackedAssetId)).toEqual(["dai-makerdao", "usdc-circle"]);
     expect(usdtTargets).toEqual(expect.arrayContaining([
       expect.objectContaining({
         adapterProfileId: DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwap,
         poolId: `ethereum:${THREEPOOL}`,
-        tokenIn: expect.objectContaining({
-          trackedAssetId: "usdt-tether",
-          referencePriceUsd: 0.9992518040104241,
-        }),
+        tokenIn: expect.objectContaining({ trackedAssetId: "usdt-tether", referencePriceUsd: 0.9992518040104241 }),
         tokenOut: expect.objectContaining({ referencePriceUsd: 1.00005 }),
       }),
       expect.objectContaining({
-        tokenOut: expect.objectContaining({
-          trackedAssetId: "usdc-circle",
-          referencePriceUsd: 1.00001,
-        }),
+        tokenOut: expect.objectContaining({ trackedAssetId: "usdc-circle", referencePriceUsd: 1.00001 }),
       }),
     ]));
-
-    expect(buildCurveStableSwapMeasuredExecutionTargets({
-      curveData: threePool,
-      chain: "ethereum",
-      stablecoinId: "usdc-circle",
-      chainAddressToId: addressIds,
-      stablecoinPriceById: prices,
-      retainedTvlUsd: 160_047_206,
-      capturedAt: 1_784_877_491,
-    })).toHaveLength(2);
+    expect(buildFor("usdc-circle")).toHaveLength(2);
   });
 
   it("keeps DAI out and fails closed without independent 3pool reference prices", () => {
@@ -600,40 +520,24 @@ describe("buildCurveStableswapExecutionModel", () => {
         { address: USDT_3POOL, symbol: "USDT", decimals: 6, balance: 1, usdPrice: 1 },
       ],
     });
-    const addressIds = new Map([
-      [`ethereum:${DAI_3POOL}`, "dai-makerdao"],
-      [`ethereum:${USDC_3POOL}`, "usdc-circle"],
-      [`ethereum:${USDT_3POOL}`, "usdt-tether"],
-    ]);
     const build = (stablecoinId: string, prices: Map<string, number>) =>
       buildCurveStableSwapMeasuredExecutionTargets({
         curveData: threePool,
         chain: "ethereum",
         stablecoinId,
-        chainAddressToId: addressIds,
+        chainAddressToId: THREEPOOL_ADDR_IDS,
         stablecoinPriceById: prices,
         retainedTvlUsd: 10_000_000,
         capturedAt: 1_784_877_491,
       });
+    const fullPrices = new Map([["dai-makerdao", 1], ["usdc-circle", 1], ["usdt-tether", 1]]);
 
-    expect(build("dai-makerdao", new Map([
-      ["dai-makerdao", 1],
-      ["usdc-circle", 1],
-      ["usdt-tether", 1],
-    ]))).toEqual([]);
-    expect(build("usdt-tether", new Map([
-      ["usdc-circle", 1],
-      ["usdt-tether", 1],
-    ]))).toEqual([]);
-    expect(resolveReviewedCurveStableSwapPhysicalPoolId({
-      curveData: threePool,
-      chain: "ethereum",
-    })).toBe(`ethereum:${THREEPOOL}`);
-    expect(build("usdt-tether", new Map([
-      ["dai-makerdao", 1],
-      ["usdc-circle", 1],
-      ["usdt-tether", 1],
-    ])), "reviewed packet should restore only when every independent price is present").toHaveLength(2);
+    expect(build("dai-makerdao", fullPrices)).toEqual([]);
+    expect(build("usdt-tether", new Map([["usdc-circle", 1], ["usdt-tether", 1]]))).toEqual([]);
+    expect(resolveReviewedCurveStableSwapPhysicalPoolId({ curveData: threePool, chain: "ethereum" }))
+      .toBe(`ethereum:${THREEPOOL}`);
+    expect(build("usdt-tether", fullPrices), "reviewed packet should restore only when every independent price is present")
+      .toHaveLength(2);
   });
 
   it("builds only exact reviewed StableSwap-NG get_dy targets", () => {
@@ -651,60 +555,39 @@ describe("buildCurveStableswapExecutionModel", () => {
     const addressIds = new Map([
       [`ethereum:${USDG_NG}`, "usdg-paxos"],
       [`ethereum:${USDC_NG}`, "usdc-circle"],
+      [`ethereum:${DUSD_NG}`, "dusd-dialectic"],
     ]);
-    const prices = new Map([
-      ["usdg-paxos", 0.9999],
-      ["usdc-circle", 1.00001],
-    ]);
-    const build = (overrides: {
-      curveData?: CurvePoolEntry;
-      stablecoinId?: string;
-      prices?: Map<string, number>;
-    } = {}) =>
+    const prices = new Map([["usdg-paxos", 0.9999], ["usdc-circle", 1.00001], ["dusd-dialectic", 1.033115]]);
+    const build = (overrides: { curveData?: CurvePoolEntry; stablecoinId?: string; prices?: Map<string, number> } = {}) =>
       buildCurveStableSwapNgMeasuredExecutionTarget({
         curveData: overrides.curveData ?? ngPool,
         chain: "ethereum",
         stablecoinId: overrides.stablecoinId ?? "usdg-paxos",
         chainAddressToId: addressIds,
         stablecoinPriceById: overrides.prices ?? prices,
-        retainedTvlUsd: 20_501_133,
+        retainedTvlUsd: (overrides.curveData ?? ngPool).tvl,
         capturedAt: 1_784_879_199,
       });
 
-    expect(resolveReviewedCurveStableSwapNgPhysicalPoolId({
-      curveData: ngPool,
-      chain: "ethereum",
-    })).toBe(`ethereum:${USDG_NG_POOL}`);
+    expect(resolveReviewedCurveStableSwapNgPhysicalPoolId({ curveData: ngPool, chain: "ethereum" }))
+      .toBe(`ethereum:${USDG_NG_POOL}`);
     expect(build()).toMatchObject({
       adapterProfileId: DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwapNg,
       stablecoinId: "usdg-paxos",
       poolId: `ethereum:${USDG_NG_POOL}`,
       retainedPoolPriceUsd: 0.9999,
-      tokenIn: {
-        address: USDG_NG,
-        trackedAssetId: "usdg-paxos",
-        referencePriceUsd: 0.9999,
-      },
-      tokenOut: {
-        address: USDC_NG,
-        trackedAssetId: "usdc-circle",
-        referencePriceUsd: 1.00001,
-      },
+      tokenIn: { address: USDG_NG, trackedAssetId: "usdg-paxos", referencePriceUsd: 0.9999 },
+      tokenOut: { address: USDC_NG, trackedAssetId: "usdc-circle", referencePriceUsd: 1.00001 },
     });
-    expect(build({ stablecoinId: "usdc-circle" })).toBeNull();
-    expect(build({ prices: new Map([["usdg-paxos", 1]]) })).toBeNull();
-    expect(build({
-      curveData: {
-        ...ngPool,
-        executionCoins: [...ngPool.executionCoins!].reverse(),
-      },
-    })).toBeNull();
-    expect(build({
-      curveData: { ...ngPool, poolAddress: "0x1111111111111111111111111111111111111111" },
-    })).toBeNull();
-    expect(build({
-      curveData: { ...ngPool, registryId: "main" },
-    })).toBeNull();
+    for (const invalid of [
+      { stablecoinId: "usdc-circle" },
+      { prices: new Map([["usdg-paxos", 1]]) },
+      { curveData: { ...ngPool, executionCoins: [...ngPool.executionCoins!].reverse() } },
+      { curveData: { ...ngPool, poolAddress: "0x1111111111111111111111111111111111111111" } },
+      { curveData: { ...ngPool, registryId: "main" } },
+    ]) {
+      expect(build(invalid)).toBeNull();
+    }
 
     const dusdPool = entry({
       poolAddress: DUSD_NG_POOL,
@@ -717,39 +600,14 @@ describe("buildCurveStableswapExecutionModel", () => {
         { address: DUSD_NG, symbol: "DUSD", decimals: 18, balance: 19_939.689669, usdPrice: 1.033115 },
       ],
     });
-    const dusdTarget = buildCurveStableSwapNgMeasuredExecutionTarget({
-      curveData: dusdPool,
-      chain: "ethereum",
-      stablecoinId: "dusd-dialectic",
-      chainAddressToId: new Map([
-        [`ethereum:${USDC_NG}`, "usdc-circle"],
-        [`ethereum:${DUSD_NG}`, "dusd-dialectic"],
-      ]),
-      stablecoinPriceById: new Map([
-        ["dusd-dialectic", 1.033115],
-        ["usdc-circle", 1],
-      ]),
-      retainedTvlUsd: 27_477,
-      capturedAt: 1_784_879_199,
-    });
-    expect(resolveReviewedCurveStableSwapNgPhysicalPoolId({
-      curveData: dusdPool,
-      chain: "ethereum",
-    })).toBe(`ethereum:${DUSD_NG_POOL}`);
-    expect(dusdTarget).toMatchObject({
+    expect(resolveReviewedCurveStableSwapNgPhysicalPoolId({ curveData: dusdPool, chain: "ethereum" }))
+      .toBe(`ethereum:${DUSD_NG_POOL}`);
+    expect(build({ curveData: dusdPool, stablecoinId: "dusd-dialectic" })).toMatchObject({
       adapterProfileId: DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwapNg,
       stablecoinId: "dusd-dialectic",
       poolId: `ethereum:${DUSD_NG_POOL}`,
-      tokenIn: {
-        address: DUSD_NG,
-        trackedAssetId: "dusd-dialectic",
-        decimals: 18,
-      },
-      tokenOut: {
-        address: USDC_NG,
-        trackedAssetId: "usdc-circle",
-        decimals: 6,
-      },
+      tokenIn: { address: DUSD_NG, trackedAssetId: "dusd-dialectic", decimals: 18 },
+      tokenOut: { address: USDC_NG, trackedAssetId: "usdc-circle", decimals: 6 },
     });
   });
 
@@ -766,33 +624,18 @@ describe("buildCurveStableswapExecutionModel", () => {
       registryId: "factory-twocrypto",
       tvl: 7_494_912,
     });
+    const resolve = (candidates: CurvePoolEntry[], tvl: number) =>
+      resolveActiveCurveCryptoSwapCandidateByTvl(candidates, tvl, "ethereum");
 
-    expect(resolveActiveCurveCryptoSwapCandidateByTvl([active, sibling], 46_360_886, "ethereum")).toBe(active);
-    expect(resolveActiveCurveCryptoSwapCandidateByTvl([active, sibling], 45_000_000, "ethereum")).toBeNull();
-    expect(
-      resolveActiveCurveCryptoSwapCandidateByTvl(
-        [active, { ...active, poolAddress: sibling.poolAddress, tvl: 46_500_000 }],
-        46_450_000,
-        "ethereum",
-      ),
-    ).toBeNull();
+    expect(resolve([active, sibling], 46_360_886)).toBe(active);
+    expect(resolve([active, sibling], 45_000_000)).toBeNull();
+    expect(resolve([active, { ...active, poolAddress: sibling.poolAddress, tvl: 46_500_000 }], 46_450_000)).toBeNull();
     // R3 promoted the reviewed Ethereum TwoCrypto census, so a family-anchored
     // address now resolves like a pinned one.
-    expect(
-      resolveActiveCurveCryptoSwapCandidateByTvl(
-        [{ ...active, poolAddress: "0xe79fb88c7937b39b3e1cabd44faefa5258578b2d" }],
-        active.tvl,
-        "ethereum",
-      )?.poolAddress,
-    ).toBe("0xe79fb88c7937b39b3e1cabd44faefa5258578b2d");
+    expect(resolve([{ ...active, poolAddress: "0xe79fb88c7937b39b3e1cabd44faefa5258578b2d" }], active.tvl)?.poolAddress)
+      .toBe("0xe79fb88c7937b39b3e1cabd44faefa5258578b2d");
     // A still-shadow generation (tricrypto-ng has no reviewed family) stays out.
-    expect(
-      resolveActiveCurveCryptoSwapCandidateByTvl(
-        [{ ...active, poolAddress: "0x4ebdf703948ddcea3b11f675b4d1fba9d2414a14" }],
-        active.tvl,
-        "ethereum",
-      ),
-    ).toBeNull();
+    expect(resolve([{ ...active, poolAddress: "0x4ebdf703948ddcea3b11f675b4d1fba9d2414a14" }], active.tvl)).toBeNull();
   });
 
   it("resolves an ambiguous StableSwap coin-set join by unique retained TVL", () => {

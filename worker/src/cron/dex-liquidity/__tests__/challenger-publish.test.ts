@@ -17,7 +17,8 @@ import { filterRetainedPools } from "../scoring-helpers";
 import { seedPublishedDexGeneration } from "./scoring-test-support";
 import { loaderFixtures, loaderScenario } from "./challenger-load.test-support";
 import { scorePoolGraph } from "./scoring-test-builders";
-import type { PoolEntry } from "../types";
+import { CURVE_NAV_SPOT_QUOTE_POLICY, type PoolEntry } from "../types";
+import { makeClockedCurveNavPool } from "./fixtures/curve-stableswap-ng-fixtures";
 
 afterEach(() => loaderFixtures.closeAll());
 
@@ -703,38 +704,33 @@ describe("challenger load", () => {
     expect(filtered.diagnostics.mode).toBe("published");
   });
 
+  const makeSnapRow = (id: string, overrides: Record<string, unknown> = {}) => ({
+    stablecoin_id: id,
+    snapshot_at: 100,
+    published_at: 110,
+    has_rows: 1,
+    source_coverage_complete: 1,
+    pool_id: `${id}:published`,
+    chain: "Ethereum",
+    protocol: "published-protocol",
+    source_family: "published",
+    price_usd: 0.998,
+    tvl_usd: 50_000,
+    ...overrides,
+  });
+
+  const makeLegacyTopRow = (id: string, chain: string, tvlUsd: number, price: number) => ({
+    stablecoin_id: id,
+    top_pools_json: JSON.stringify([{ poolId: `${id}:legacy-top`, chain, project: "legacy-top", tvlUsd, price }]),
+    updated_at: 100,
+  });
+
   it("does not run the full legacy JSON load when published snapshots cover", async () => {
-    const db = mockD1(
-      [
-        {
-          match: "SELECT stablecoin_id\n     FROM dex_liquidity",
-          rows: [],
-        },
-        {
-          match: "SELECT stablecoin_id\n     FROM dex_prices",
-          rows: [],
-        },
-        {
-          match: "FROM dex_price_challenger_snapshots",
-          rows: [
-            {
-              stablecoin_id: "coin-a",
-              snapshot_at: 100,
-              published_at: 110,
-              has_rows: 1,
-              source_coverage_complete: 1,
-              pool_id: "coin-a:published",
-              chain: "Ethereum",
-              protocol: "published-protocol",
-              source_family: "published",
-              price_usd: 0.998,
-              tvl_usd: 50_000,
-            },
-          ],
-        },
-      ],
-      { assertMatchesUsed: true },
-    ) as MockD1Database;
+    const db = mockD1([
+      { match: "SELECT stablecoin_id\n     FROM dex_liquidity", rows: [] },
+      { match: "SELECT stablecoin_id\n     FROM dex_prices", rows: [] },
+      { match: "FROM dex_price_challenger_snapshots", rows: [makeSnapRow("coin-a")] },
+    ], { assertMatchesUsed: true }) as MockD1Database;
 
     const result = await loadPublishedDexPoolChallengers(db, 20_000, 1_000, 120);
 
@@ -758,111 +754,32 @@ describe("challenger load", () => {
   });
 
   it("loads published challenger snapshots when present, falls back per coin, and keeps empty snapshots authoritative", async () => {
-    const db = mockD1(
-      [
-        {
-          match: "FROM dex_price_challenger_snapshots",
-          rows: [
-            {
-              stablecoin_id: "coin-a",
-              snapshot_at: 100,
-              published_at: 110,
-              has_rows: 1,
-              source_coverage_complete: 1,
-              pool_id: "coin-a:published",
-              chain: "Ethereum",
-              protocol: "published-protocol",
-              source_family: "published",
-              price_usd: 0.998,
-              tvl_usd: 50_000,
-            },
-            {
-              stablecoin_id: "coin-b",
-              snapshot_at: 100,
-              published_at: 110,
-              has_rows: 0,
-              source_coverage_complete: 1,
-              pool_id: null,
-            },
-            {
-              stablecoin_id: "coin-c",
-              snapshot_at: 100,
-              published_at: 110,
-              has_rows: 1,
-              source_coverage_complete: 0,
-              pool_id: "coin-c:published",
-              chain: "Solana",
-              protocol: "published-protocol",
-              source_family: "published",
-              price_usd: 0.996,
-              tvl_usd: 30_000,
-            },
-          ],
-        },
-        {
-          match: "FROM dex_liquidity",
-          rows: [
-            {
-              stablecoin_id: "coin-b",
-              top_pools_json: JSON.stringify([
-                {
-                  poolId: "coin-b:legacy-top",
-                  chain: "Base",
-                  project: "legacy-top",
-                  tvlUsd: 45_000,
-                  price: 0.991,
-                },
-              ]),
-              updated_at: 100,
-            },
-            {
-              stablecoin_id: "coin-c",
-              top_pools_json: JSON.stringify([
-                {
-                  poolId: "coin-c:legacy-top",
-                  chain: "Solana",
-                  project: "legacy-top",
-                  tvlUsd: 35_000,
-                  price: 0.988,
-                },
-              ]),
-              updated_at: 100,
-            },
-            {
-              stablecoin_id: "coin-d",
-              top_pools_json: JSON.stringify([
-                {
-                  poolId: "coin-d:legacy-top",
-                  chain: "Ethereum",
-                  project: "legacy-top",
-                  tvlUsd: 25_000,
-                  price: 0.985,
-                },
-              ]),
-              updated_at: 100,
-            },
-          ],
-        },
-        {
-          match: "FROM dex_prices",
-          rows: [
-            {
-              stablecoin_id: "coin-e",
-              price_sources_json: JSON.stringify([
-                {
-                  protocol: "legacy-source",
-                  chain: "Arbitrum",
-                  price: 0.982,
-                  tvl: 60_000,
-                },
-              ]),
-              updated_at: 100,
-            },
-          ],
-        },
-      ],
-      { assertMatchesUsed: true },
-    );
+    const db = mockD1([
+      {
+        match: "FROM dex_price_challenger_snapshots",
+        rows: [
+          makeSnapRow("coin-a"),
+          { stablecoin_id: "coin-b", snapshot_at: 100, published_at: 110, has_rows: 0, source_coverage_complete: 1, pool_id: null },
+          makeSnapRow("coin-c", { source_coverage_complete: 0, chain: "Solana", price_usd: 0.996, tvl_usd: 30_000 }),
+        ],
+      },
+      {
+        match: "FROM dex_liquidity",
+        rows: [
+          makeLegacyTopRow("coin-b", "Base", 45_000, 0.991),
+          makeLegacyTopRow("coin-c", "Solana", 35_000, 0.988),
+          makeLegacyTopRow("coin-d", "Ethereum", 25_000, 0.985),
+        ],
+      },
+      {
+        match: "FROM dex_prices",
+        rows: [{
+          stablecoin_id: "coin-e",
+          price_sources_json: JSON.stringify([{ protocol: "legacy-source", chain: "Arbitrum", price: 0.982, tvl: 60_000 }]),
+          updated_at: 100,
+        }],
+      },
+    ], { assertMatchesUsed: true });
 
     const result = await loadPublishedDexPoolChallengers(db, 20_000, 1_000, 120);
 
@@ -870,52 +787,16 @@ describe("challenger load", () => {
     expect(result.diagnostics.emptyPublishedCoins).toEqual(["coin-b"]);
     expect(result.diagnostics.incompletePublishedCoins).toEqual(["coin-c"]);
     expect(new Set(result.diagnostics.legacyFallbackCoins)).toEqual(new Set(["coin-c", "coin-d", "coin-e"]));
-
-    expect(result.challengersByStablecoin.get("coin-a")).toEqual([
-      expect.objectContaining({
-        stablecoinId: "coin-a",
-        poolId: "coin-a:published",
-        sourceFamily: "published",
-        priceUsd: 0.998,
-        tvlUsd: 50_000,
-        snapshotAt: 100,
-        publishedAt: 110,
-      }),
-    ]);
     expect(result.challengersByStablecoin.get("coin-b")).toEqual([]);
-    expect(result.challengersByStablecoin.get("coin-c")).toEqual([
-      expect.objectContaining({
-        stablecoinId: "coin-c",
-        poolId: "coin-c:legacy-top",
-        sourceFamily: "legacy-top-pools",
-        priceUsd: 0.988,
-        tvlUsd: 35_000,
-        snapshotAt: 100,
-        publishedAt: 100,
-      }),
-    ]);
-    expect(result.challengersByStablecoin.get("coin-d")).toEqual([
-      expect.objectContaining({
-        stablecoinId: "coin-d",
-        poolId: "coin-d:legacy-top",
-        sourceFamily: "legacy-top-pools",
-        priceUsd: 0.985,
-        tvlUsd: 25_000,
-        snapshotAt: 100,
-        publishedAt: 100,
-      }),
-    ]);
-    expect(result.challengersByStablecoin.get("coin-e")).toEqual([
-      expect.objectContaining({
-        stablecoinId: "coin-e",
-        poolId: "coin-e:legacy-source:Arbitrum",
-        sourceFamily: "legacy-price-sources",
-        priceUsd: 0.982,
-        tvlUsd: 60_000,
-        snapshotAt: 100,
-        publishedAt: 100,
-      }),
-    ]);
+
+    for (const expected of [
+      { stablecoinId: "coin-a", poolId: "coin-a:published", sourceFamily: "published", priceUsd: 0.998, tvlUsd: 50_000, snapshotAt: 100, publishedAt: 110 },
+      { stablecoinId: "coin-c", poolId: "coin-c:legacy-top", sourceFamily: "legacy-top-pools", priceUsd: 0.988, tvlUsd: 35_000, snapshotAt: 100, publishedAt: 100 },
+      { stablecoinId: "coin-d", poolId: "coin-d:legacy-top", sourceFamily: "legacy-top-pools", priceUsd: 0.985, tvlUsd: 25_000, snapshotAt: 100, publishedAt: 100 },
+      { stablecoinId: "coin-e", poolId: "coin-e:legacy-source:Arbitrum", sourceFamily: "legacy-price-sources", priceUsd: 0.982, tvlUsd: 60_000, snapshotAt: 100, publishedAt: 100 },
+    ]) {
+      expect(result.challengersByStablecoin.get(expected.stablecoinId)).toEqual([expect.objectContaining(expected)]);
+    }
   });
 
   it("keeps a qualifying large pool with no observed 24h flow when the published challenger snapshot is stale", async () => {
@@ -1061,6 +942,76 @@ describe("challenger load", () => {
       expect(warn).toHaveBeenCalledTimes(2);
     } finally {
       warn.mockRestore();
+    }
+  });
+
+  it("enforces Curve NAV 600s/601s capture age, rejection quarantine, and <4500s expiry across challenger publish and load", async () => {
+    const cap = CURVE_NAV_SPOT_QUOTE_POLICY.captureMaxAgeSec;
+    const coin = "stusds-sky";
+    const ratioAt600 = SNAPSHOT - cap;
+    const markAt = SNAPSHOT - 300;
+    const provenCounterparty = {
+      stablecoinId: "usdc-circle",
+      priceUsd: 1,
+      observedAtSec: markAt,
+      observedAtMode: "upstream" as const,
+      source: "kraken",
+    };
+    const at600 = makeClockedCurveNavPool(SNAPSHOT, {
+      price: 1.07,
+      priceCounterparty: provenCounterparty,
+      quoteOverrides: {
+        poolRatioObservedAt: ratioAt600,
+        quoteMarkObservedAt: markAt,
+        captureEvaluatedAtSec: ratioAt600,
+      },
+    });
+    const at601 = makeClockedCurveNavPool(SNAPSHOT, {
+      price: 1.07,
+      priceCounterparty: provenCounterparty,
+      quoteOverrides: {
+        poolRatioObservedAt: ratioAt600 - 1,
+        quoteMarkObservedAt: markAt,
+        captureEvaluatedAtSec: ratioAt600 - 1,
+      },
+    });
+    const admitted = selectDexPriceChallengerRowsFromPools(coin, [at600], 20_000, SNAPSHOT);
+    expect(admitted).toHaveLength(1);
+    expect(admitted[0]).toMatchObject({
+      poolId: at600.poolId,
+      priceUsd: 1.07,
+      quotePublishedAtSec: SNAPSHOT,
+      quoteExpiresAtSec: Math.min(ratioAt600, markAt, SNAPSHOT) + DEX_FRESHNESS_SEC,
+    });
+    expect(selectDexPriceChallengerRowsFromPools(coin, [at601], 20_000, SNAPSHOT)).toEqual([]);
+
+    // Rejected Curve pool also quarantines any DL duplicate of the same Curve pool.
+    const dlCopy: PoolEntry = {
+      ...challengerPools(1)[0]!,
+      poolId: at600.poolId,
+      project: "curve",
+      chain: "ethereum",
+      tvlUsd: 2_500_000,
+      price: 0.99,
+      priceObservedAt: SNAPSHOT - 30,
+    };
+    expect(selectDexPriceChallengerRowsFromPools(coin, [dlCopy], 20_000, SNAPSHOT, [
+      { poolKey: at600.poolId, reason: "insufficient-support" },
+    ])).toEqual([]);
+
+    // Persisted challenger receipt enforces <4,500 s expiry on load.
+    const { db, sqlite, generationId } = seedPublishedDexGeneration({ nowSec: SNAPSHOT });
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(SNAPSHOT * 1000);
+    try {
+      await publishDexPriceChallengerSnapshots(db, publicationInput(generationId, [at600], SNAPSHOT, coin));
+      const expiresAt = admitted[0]!.quoteExpiresAtSec!;
+      const beforeExpiry = await loadPublishedDexPoolChallengers(db, 20_000, 10_000, expiresAt - 1);
+      expect(beforeExpiry.challengersByStablecoin.get(coin)).toHaveLength(1);
+      const atExpiry = await loadPublishedDexPoolChallengers(db, 20_000, 10_000, expiresAt);
+      expect(atExpiry.challengersByStablecoin.get(coin)).toEqual([]);
+    } finally {
+      nowSpy.mockRestore();
+      sqlite.close();
     }
   });
 });

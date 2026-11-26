@@ -1,6 +1,24 @@
 import { describe, expect, it } from "vitest";
 import { CRON_INTERVALS, DEX_LIQUIDITY_STAGE_LEAD_SEC } from "@shared/lib/cron-jobs";
-import { chooseIndependentOffchainDepegConfirmer as chooseConf, classifyPrimaryDepegTrust as classify, getDexAggregateObservedAt as getAggAt, getDexAggregateRejectionReason as getAggRej, getDexTrustPolicy as dexPol, getFreshIndependentPrimarySourceFamilies as freshInd, getPrimaryDepegSourceFamilies as priFams, hasFreshMultiSourcePrimaryAgreement as multiAgree, isAffirmativeDexPriceRow as isAffDex, isAuthoritativeDepegPegReference as isAuthRef, isTrustedDexPriceRow as isTrustDex, readDexAggregateObservedAt as readAggAt, resolveDepegSourceFamily as resFam } from "../depeg-trust-policy";
+import { DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
+import { CURVE_NAV_SPOT_QUOTE_POLICY } from "../../cron/dex-liquidity/types";
+import { makeClockedCurveNavPayload } from "../../api/__tests__/p4-route-response.test-support";
+import {
+  chooseIndependentOffchainDepegConfirmer as chooseConf,
+  classifyPrimaryDepegTrust as classify,
+  getDexAggregateObservedAt as getAggAt,
+  getDexAggregateRejectionReason as getAggRej,
+  getDexTrustPolicy as dexPol,
+  getFreshIndependentPrimarySourceFamilies as freshInd,
+  getPrimaryDepegSourceFamilies as priFams,
+  hasFreshMultiSourcePrimaryAgreement as multiAgree,
+  isAffirmativeDexPriceRow as isAffDex,
+  isAuthoritativeDepegPegReference as isAuthRef,
+  isTrustedDexPriceRow as isTrustDex,
+  mapClockedCurveNavReasonToApiUnavailableReason as mapNavApiReason,
+  readDexAggregateObservedAt as readAggAt,
+  resolveDepegSourceFamily as resFam,
+} from "../depeg-trust-policy";
 
 type PF = Parameters<typeof classify>[0];
 const N = 1_700_000_000;
@@ -105,6 +123,35 @@ describe("DEX trust policy", () => {
   it("rejects future-dated and non-finite rows for every tier", () => {
     const f = { updated_at: N + 86_400, source_total_tvl: 50e6 };
     expect([isTrustDex(f, N, "ui"), isTrustDex(f, N, "depeg"), isTrustDex({ updated_at: NaN, source_total_tvl: 50e6 }, N, "ui"), isTrustDex({ updated_at: N - 60, source_total_tvl: NaN }, N, "ui")]).toEqual([false, false, false, false]);
+  });
+  it("enforces shared clocked Curve NAV <4500s and <=600s capture rules across ui and depeg tiers", () => {
+    const pub = N - 200;
+    const cap = CURVE_NAV_SPOT_QUOTE_POLICY.captureMaxAgeSec;
+    const valid = makeClockedCurveNavPayload({
+      poolRatioObservedAt: pub - 120,
+      quoteMarkObservedAt: pub - 180,
+      captureEvaluatedAtSec: pub - 60,
+      quotePublishedAtSec: pub,
+    });
+    const row = { updated_at: pub, source_total_tvl: 2_500_000, aggregateObservedAt: pub - 180, pricePayload: valid };
+    expect([isTrustDex(row, N, "ui"), isAffDex(row, N, "ui"), isAffDex(row, N, "depeg")]).toEqual([true, true, true]);
+    const exp = pub - 180 + DEX_FRESHNESS_SEC;
+    expect([isTrustDex(row, exp, "ui"), getAggRej(row, exp, "ui"), getAggRej(row, exp, "depeg")])
+      .toEqual([false, "aggregate-clock-stale", "aggregate-clock-stale"]);
+
+    // Opus #6: capture-stale unifies under staleness across trust policy and API contracts.
+    const late = makeClockedCurveNavPayload({
+      poolRatioObservedAt: pub - cap - 1,
+      quoteMarkObservedAt: pub - 60,
+      captureEvaluatedAtSec: pub - cap - 1,
+      quotePublishedAtSec: pub,
+    });
+    expect(getAggAt(late, N)).toEqual({ aggregateObservedAt: pub - cap - 1, aggregateClockReason: null });
+    expect(mapNavApiReason("capture-stale")).toBe("stale-price");
+    expect([
+      isTrustDex({ updated_at: pub, source_total_tvl: 2_500_000, pricePayload: late }, N, "ui"),
+      getAggRej({ updated_at: pub, source_total_tvl: 2_500_000, aggregateObservedAt: pub - cap - 1, pricePayload: late }, N, "depeg"),
+    ]).toEqual([false, "aggregate-clock-stale"]);
   });
 });
 

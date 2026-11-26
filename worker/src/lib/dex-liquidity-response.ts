@@ -2,7 +2,15 @@ import { logWorkerEventArgs } from "./structured-log";
 import { safeJsonParse } from "./api-cache-read";
 import { assessFreshnessTimestamp } from "./api-freshness-age";
 import { STAGED_POOL_PRICE_MAX_AGE_HOURS } from "./dex-cron-constants";
-import { getDexAggregateObservedAt } from "./depeg-trust-policy";
+import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
+import { CURVE_NAV_SPOT_QUOTE_POLICY } from "../cron/dex-liquidity/types";
+import {
+  assessClockedCurveNavPayload,
+  getDexAggregateObservedAt,
+  isClockedCurveNavPayload,
+  mapClockedCurveNavReasonToApiUnavailableReason,
+  validateClockedCurveNavCaptureRecord,
+} from "./depeg-trust-policy";
 import { CURRENT_DEPLOYMENT_KEYS, deploymentKey, normalizeDexLiquidityEvidence } from "./dex-liquidity";
 import { DexLiquidityCronMetadataSchema } from "./schemas";
 import {
@@ -62,6 +70,25 @@ export interface DexPriceAdmission {
   priceAgeSeconds: number | null;
   priceMaxAgeSec: number;
   unavailableReason: string | null;
+  clockedCurveNav: boolean;
+  priceRemainingSec: number | null;
+  quotePublishedAtSec: number | null;
+  clockedCurveNavPoolIds: ReadonlySet<string>;
+}
+
+/**
+ * Bound a cacheable `Cache-Control` header (`s-maxage` and `max-age`) by the
+ * earliest remaining NAV quote lifetime, emitting `no-store` when `<= 0`.
+ */
+export function boundCacheControlMaxAge(cacheControl: string, maxLifetimeSec: number): string {
+  if (/\b(?:no-store|no-cache|private)\b/i.test(cacheControl)) return cacheControl;
+  const boundedSec = Number.isFinite(maxLifetimeSec) ? Math.floor(maxLifetimeSec) : 0;
+  if (boundedSec <= 0) return CACHE_PROFILES.noStore;
+  return cacheControl.replace(/\b(s-maxage|max-age)\s*=\s*(\d+)/gi, (_match, directive: string, value: string) => {
+    const existing = Number(value);
+    const next = Number.isFinite(existing) ? Math.min(existing, boundedSec) : boundedSec;
+    return `${directive}=${Math.max(1, next)}`;
+  });
 }
 
 /**
@@ -75,20 +102,52 @@ export function admitDexPriceRow(
   nowSec: number,
   logContext: string,
 ): DexPriceAdmission {
-  const priceMaxAgeSec = STAGED_POOL_PRICE_MAX_AGE_HOURS * 3600;
   const pricePayload = safeJsonParse<unknown>(priceRow?.price_sources_json, null, logContext);
+  const clockedCurveNav = isClockedCurveNavPayload(pricePayload);
+  const priceMaxAgeSec = clockedCurveNav
+    ? CURVE_NAV_SPOT_QUOTE_POLICY.quoteMaxAgeSec
+    : STAGED_POOL_PRICE_MAX_AGE_HOURS * 3600;
   const { aggregateObservedAt, aggregateClockReason } = getDexAggregateObservedAt(pricePayload, nowSec, "display");
-  const publicationAge = assessFreshnessTimestamp(nowSec, priceRow?.updated_at);
-  const priceAge = assessFreshnessTimestamp(nowSec, aggregateObservedAt);
+  const publicationAge = clockedCurveNav
+    ? assessFreshnessTimestamp(nowSec, priceRow?.updated_at, 0)
+    : assessFreshnessTimestamp(nowSec, priceRow?.updated_at);
+  const priceAge = clockedCurveNav
+    ? assessFreshnessTimestamp(nowSec, aggregateObservedAt, 0)
+    : assessFreshnessTimestamp(nowSec, aggregateObservedAt);
+  const isAgeStale = (ageSeconds: number) =>
+    clockedCurveNav ? ageSeconds >= priceMaxAgeSec : ageSeconds > priceMaxAgeSec;
+  const captureAssessment = clockedCurveNav
+    ? assessClockedCurveNavPayload(pricePayload, {
+        nowSec,
+        publicationUpdatedAt: priceRow?.updated_at,
+        aggregateObservedAt,
+      })
+    : null;
   const unavailableReason = !priceRow ? "missing-price"
     : publicationAge.reason != null ? publicationAge.reason
-    : publicationAge.ageSeconds > priceMaxAgeSec ? "stale-price"
+    : isAgeStale(publicationAge.ageSeconds) ? "stale-price"
     : priceRow.updated_at !== liquidityUpdatedAt ? "publication-mismatch"
     : aggregateClockReason === "aggregate-clock-invalid" ? "invalid-timestamp"
     : aggregateClockReason === "aggregate-clock-future" ? "future-timestamp"
     : priceAge.reason != null ? priceAge.reason
-    : priceAge.ageSeconds > priceMaxAgeSec ? "stale-price" : null;
-  return { pricePayload, priceAgeSeconds: priceAge.ageSeconds, priceMaxAgeSec, unavailableReason };
+    : isAgeStale(priceAge.ageSeconds) ? "stale-price"
+    : captureAssessment?.reason != null
+      ? mapClockedCurveNavReasonToApiUnavailableReason(captureAssessment.reason)
+    : null;
+  const priceRemainingSec =
+    clockedCurveNav && unavailableReason == null && captureAssessment?.earliestClockSec != null
+      ? captureAssessment.earliestClockSec + priceMaxAgeSec - nowSec
+      : null;
+  return {
+    pricePayload,
+    priceAgeSeconds: priceAge.ageSeconds,
+    priceMaxAgeSec,
+    unavailableReason,
+    clockedCurveNav,
+    priceRemainingSec,
+    quotePublishedAtSec: captureAssessment?.quotePublishedAtSec ?? null,
+    clockedCurveNavPoolIds: new Set(captureAssessment?.poolIds ?? []),
+  };
 }
 
 export interface DexLiquidityCronRow {
@@ -324,16 +383,34 @@ const ALLOWED_EXTRA_KEYS = new Set<string>([
   "permanentLiquidity",
 ]);
 
+export interface TopPoolsPriceAdmissionContext {
+  nowSec: number;
+  publicationUpdatedAt?: number | null;
+  quotePublishedAtSec?: number | null;
+  parentHasPriceRow?: boolean;
+  parentClockedNav?: boolean;
+  parentClockedNavUnavailable?: boolean;
+  parentClockedNavPoolIds?: ReadonlySet<string>;
+  /** Invoked with the remaining lifetime (seconds) of each admitted non-null clocked NAV topPool price. */
+  onClockedNavRemainingSec?: (remainingSec: number) => void;
+}
+
 const TOP_POOLS_PARSE_FAILURE = Symbol("top-pools-parse-failure");
 
-export function normalizeTopPools(json: string): DexLiquidityPoolResponse[];
+export function normalizeTopPools(
+  json: string,
+  context?: string,
+  priceContext?: TopPoolsPriceAdmissionContext,
+): DexLiquidityPoolResponse[];
 export function normalizeTopPools(
   json: string | null,
   context?: string,
+  priceContext?: TopPoolsPriceAdmissionContext,
 ): DexLiquidityPoolResponse[] | null;
 export function normalizeTopPools(
   json: string | null,
   context = "dex-liquidity-response:top_pools_json",
+  priceContext?: TopPoolsPriceAdmissionContext,
 ): DexLiquidityPoolResponse[] | null {
   const parsed = safeJsonParse<unknown>(json, TOP_POOLS_PARSE_FAILURE, context);
   if (parsed === TOP_POOLS_PARSE_FAILURE) return null;
@@ -347,6 +424,100 @@ export function normalizeTopPools(
     if (cleaned.price === undefined && typeof poolRecord.displayPrice === "number" &&
       Number.isFinite(poolRecord.displayPrice) && poolRecord.displayPrice > 0) {
       cleaned.price = poolRecord.displayPrice;
+    }
+    if (priceContext && cleaned.price !== undefined) {
+      const poolNavQuote = poolRecord.curveNavSpotQuote;
+      const poolId = typeof poolRecord.poolId === "string" && poolRecord.poolId.trim().length > 0
+        ? poolRecord.poolId
+        : null;
+      let navQuoteFailed = false;
+      let navQuoteRemainingSec: number | null = null;
+      if (poolNavQuote !== undefined) {
+        const maxAgeSec = CURVE_NAV_SPOT_QUOTE_POLICY.quoteMaxAgeSec;
+        const publicationUpdatedAt = priceContext.publicationUpdatedAt ?? null;
+        const hasValidParentClockedNavMeta =
+          priceContext.parentClockedNav === true &&
+          priceContext.parentClockedNavUnavailable !== true &&
+          (priceContext.quotePublishedAtSec == null ||
+            (Number.isSafeInteger(priceContext.quotePublishedAtSec) && priceContext.quotePublishedAtSec > 0));
+        // Explicitly reject NAV-tagged topPools when a same-generation parent dex_prices
+        // row exists without clocked NAV policy metadata, instead of relying on
+        // captureEvaluatedAtSec > updated_at side effects.
+        const parentRejectedClockedNavPolicy =
+          priceContext.parentHasPriceRow === true && priceContext.parentClockedNav === false;
+        const poolQuotePublishedAtSec =
+          typeof poolRecord.quotePublishedAtSec === "number" &&
+          Number.isSafeInteger(poolRecord.quotePublishedAtSec) &&
+          poolRecord.quotePublishedAtSec > 0
+            ? poolRecord.quotePublishedAtSec
+            : null;
+        const poolQuoteExpiresAtSec =
+          poolRecord.quoteExpiresAtSec === undefined
+            ? undefined
+            : typeof poolRecord.quoteExpiresAtSec === "number" &&
+                Number.isSafeInteger(poolRecord.quoteExpiresAtSec) &&
+                poolRecord.quoteExpiresAtSec > 0
+              ? poolRecord.quoteExpiresAtSec
+              : null;
+        const effectivePublishedAtSec = hasValidParentClockedNavMeta
+          ? (priceContext.quotePublishedAtSec ?? publicationUpdatedAt)
+          : poolQuotePublishedAtSec;
+        const missingStandaloneReceipt = !hasValidParentClockedNavMeta && effectivePublishedAtSec == null;
+        const poolExpiryInvalid =
+          poolQuoteExpiresAtSec === null ||
+          (poolQuoteExpiresAtSec !== undefined && priceContext.nowSec >= poolQuoteExpiresAtSec);
+        const publicationClockInvalid =
+          !Number.isSafeInteger(priceContext.nowSec) ||
+          priceContext.nowSec <= 0 ||
+          (publicationUpdatedAt != null &&
+            (!Number.isSafeInteger(publicationUpdatedAt) ||
+              publicationUpdatedAt <= 0 ||
+              publicationUpdatedAt > priceContext.nowSec ||
+              priceContext.nowSec - publicationUpdatedAt >= maxAgeSec)) ||
+          (effectivePublishedAtSec != null &&
+            (!Number.isSafeInteger(effectivePublishedAtSec) ||
+              effectivePublishedAtSec <= 0 ||
+              effectivePublishedAtSec > priceContext.nowSec ||
+              priceContext.nowSec - effectivePublishedAtSec >= maxAgeSec ||
+              (publicationUpdatedAt != null && effectivePublishedAtSec < publicationUpdatedAt)));
+        if (parentRejectedClockedNavPolicy || missingStandaloneReceipt || poolExpiryInvalid || publicationClockInvalid) {
+          navQuoteFailed = true;
+        } else {
+          const check = validateClockedCurveNavCaptureRecord(poolNavQuote, {
+            nowSec: priceContext.nowSec,
+            effectivePublishedAtSec,
+            publicationUpdatedAt,
+          });
+          const omittedFromParentCaptures =
+            hasValidParentClockedNavMeta &&
+            (priceContext.parentClockedNavPoolIds?.size ?? 0) > 0 &&
+            (poolId == null || priceContext.parentClockedNavPoolIds?.has(poolId) !== true);
+          if (check.reason != null || omittedFromParentCaptures) {
+            navQuoteFailed = true;
+          } else if (check.earliestClockSec != null) {
+            let clockFloor = check.earliestClockSec;
+            if (publicationUpdatedAt != null) clockFloor = Math.min(clockFloor, publicationUpdatedAt);
+            if (effectivePublishedAtSec != null) clockFloor = Math.min(clockFloor, effectivePublishedAtSec);
+            navQuoteRemainingSec = clockFloor + maxAgeSec - priceContext.nowSec;
+            if (poolQuoteExpiresAtSec !== undefined) {
+              navQuoteRemainingSec = Math.min(navQuoteRemainingSec, poolQuoteExpiresAtSec - priceContext.nowSec);
+            }
+            if (navQuoteRemainingSec <= 0) navQuoteFailed = true;
+          }
+        }
+      }
+      const matchesParentClockedNav =
+        priceContext.parentClockedNavUnavailable === true && (
+          poolNavQuote !== undefined ||
+          poolId == null ||
+          (priceContext.parentClockedNavPoolIds?.size ?? 0) === 0 ||
+          priceContext.parentClockedNavPoolIds?.has(poolId) === true
+        );
+      if (navQuoteFailed || matchesParentClockedNav) {
+        cleaned.price = null;
+      } else if (navQuoteRemainingSec != null && cleaned.price != null) {
+        priceContext.onClockedNavRemainingSec?.(navQuoteRemainingSec);
+      }
     }
     if (typeof poolRecord.chain === "string") {
       cleaned.chain = toChainDisplay(poolRecord.chain);

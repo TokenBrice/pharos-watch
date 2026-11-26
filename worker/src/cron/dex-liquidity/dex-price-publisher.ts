@@ -4,19 +4,40 @@ import { relativeBps } from "@shared/lib/depeg-signals";
 import { DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { executeAtomicBatch } from "../../lib/db";
-import { DEX_PROTOCOL_SOURCE_MIN_TVL_USD } from "../../lib/dex-cron-constants";
+import { DEX_PRICE_OBSERVATION_MIN_TVL_USD, DEX_PROTOCOL_SOURCE_MIN_TVL_USD, isBlockedDexId } from "../../lib/dex-cron-constants";
 import { isFreshDexPoolObservation } from "../../lib/depeg-trust-policy";
 import { validatePricingSourceFreshness } from "../../lib/pricing-source-freshness";
 import { logWorkerEvent, logWorkerEventArgs } from "../../lib/structured-log";
 import type { PriceValidationReferences } from "../../lib/price-validation";
-import type { DexPriceObs, LiquidityMetrics } from "./types";
+import {
+  CURVE_NAV_SPOT_QUOTE_POLICY,
+  CURVE_NAV_SPOT_QUOTE_POLICY_ID,
+  type DexPriceObs,
+  type LiquidityMetrics,
+} from "./types";
 import { dexPriceConfidenceForSourceFamily } from "./constants";
 import { classifyDexObservationPrice } from "./price-sanity";
 import { admitsRollbackDexVote, configuredPrimaryUpstreamKeys, getDexGroupLineage, getDexObservationLineage, selectIndependentChallengerPools, type DexPriceLineage } from "./price-lineage";
 import { pricesAgreeWithinBps } from "../../lib/price-divergence";
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
 import { dexPriceEvidenceWeight } from "./coingecko-tickers-shared";
-import { aggregateProtocolSources, buildDexPriceObservationsFromRetainedPools, collapseDuplicateObservations, hasDexPricePrimaryReference, oldestPriceObservation } from "./scoring-helpers";
+import {
+  aggregateProtocolSources,
+  buildCurveNavRejectedPoolFilter,
+  buildDexPriceObservationsFromRetainedPools,
+  classifyPoolCurveNavIntegrityFailure,
+  collapseDuplicateObservations,
+  hasDexPricePrimaryReference,
+  isValidClockedNavCorroboratorObservation,
+  matchesRejectedCurveNavPool,
+  normalizeCurveNavScoringRejectionReason,
+  oldestPriceObservation,
+  pickDecisiveCurveNavRejectionReason,
+  projectRetainedPoolPrice,
+  selectClockedCurveNavObservations,
+  type CurveNavQuoteRejectionRecord,
+  type CurveNavQuoteScoringRejectionReason,
+} from "./scoring-helpers";
 import { DEX_LIQUIDITY_SCORING_BATCH_SIZE, assertCurrentDexScoringGeneration, flushScoringStatements, pruneExpiredDexPriceStages, type DexPriceStageRetentionResult } from "./dex-scoring-stage-store";
 
 const PRIMARY_PRICE_OUTLIER_MAX_DEVIATION_RATIO = 2.5;
@@ -112,15 +133,25 @@ export interface DexPricePersistenceDiagnostics {
   }>;
   truncatedStablecoins: number;
   /** Fail-closed withhold records: a primary-anchored publication whose
-   *  primary reference is NULL cannot pass its guards, so the row is withheld
-   *  (R2/R4) instead of publishing as if the guards had passed. */
+   *  primary reference is NULL, or a clocked Curve NAV asset whose quotes were
+   *  rejected without an independently verified venue, is withheld (R2/R4). */
   withheldByStablecoin?: Array<{
     stablecoinId: string;
-    reason: "primary-missing";
+    reason: "primary-missing" | CurveNavQuoteScoringRejectionReason;
     observationCount: number;
     totalTvlUsd: number;
   }>;
   truncatedWithheldStablecoins?: number;
+  /** Scoring-time clocked Curve StableSwap-NG NAV quote rejections (R4). */
+  curveNavRejectedByStablecoin?: Array<{
+    stablecoinId: string;
+    rejections: Array<{
+      poolKey: string | null;
+      reason: CurveNavQuoteScoringRejectionReason;
+    }>;
+    truncated: number;
+  }>;
+  truncatedCurveNavRejectedStablecoins?: number;
   retention?: DexPriceStageRetentionResult;
 }
 
@@ -137,6 +168,7 @@ export async function computeDexPrices({
   exactPriceEvidenceByStablecoin,
   generationId = `dex-liquidity-${nowSec}`,
   admissionNowSec = nowSec,
+  curveNavRejectionsByStablecoin,
 }: {
   db: D1Database;
   retainedPoolsByStablecoin: Map<string, LiquidityMetrics["topPools"]>;
@@ -152,6 +184,7 @@ export async function computeDexPrices({
   signal?: AbortSignal;
   exactPriceEvidenceByStablecoin?: Map<string, DexPriceObs[]>;
   generationId?: string;
+  curveNavRejectionsByStablecoin?: ReadonlyMap<string, ReadonlyArray<CurveNavQuoteRejectionRecord>>;
 }): Promise<DexPricePersistenceDiagnostics> {
   if (!generationId.trim()) throw new Error("DEX price publication requires a generation id");
   throwIfAborted(signal);
@@ -186,13 +219,72 @@ export async function computeDexPrices({
   let rejectedObservationCount = 0;
   let rejectedStablecoinCount = 0;
   let withheldStablecoinCount = 0;
+  let curveNavRejectedStablecoinCount = 0;
   const rejectedByStablecoin: DexPricePersistenceDiagnostics["rejectedByStablecoin"] = [];
   const withheldByStablecoin: NonNullable<DexPricePersistenceDiagnostics["withheldByStablecoin"]> = [];
+  const curveNavRejectedByStablecoin: NonNullable<DexPricePersistenceDiagnostics["curveNavRejectedByStablecoin"]> = [];
   const contributorAdmissionByStablecoin: NonNullable<DexPricePersistenceDiagnostics["contributorAdmissionByStablecoin"]> = [];
+  const recordCurveNavRejections = (
+    stablecoinId: string,
+    rejections: readonly CurveNavQuoteRejectionRecord[],
+  ) => {
+    if (rejections.length === 0) return;
+    curveNavRejectedStablecoinCount++;
+    if (curveNavRejectedByStablecoin.length < MAX_DEX_PRICE_REJECTION_ASSETS) {
+      curveNavRejectedByStablecoin.push({
+        stablecoinId,
+        rejections: rejections.slice(0, MAX_DEX_PRICE_REJECTIONS_PER_ASSET).map((entry) => ({
+          poolKey: entry.poolKey,
+          reason: entry.reason,
+        })),
+        truncated: Math.max(0, rejections.length - MAX_DEX_PRICE_REJECTIONS_PER_ASSET),
+      });
+    }
+  };
+  const admittedAtSec = Math.max(nowSec, admissionNowSec);
   const priceEvidence = buildDexPriceObservationsFromRetainedPools(
     retainedPoolsByStablecoin,
     exactPriceEvidenceByStablecoin,
   );
+  const poolEmbeddedRejectionsByStablecoin = new Map<string, CurveNavQuoteRejectionRecord[]>();
+  const pushEmbeddedRejection = (stablecoinId: string, record: CurveNavQuoteRejectionRecord) => {
+    const list = poolEmbeddedRejectionsByStablecoin.get(stablecoinId) ?? [];
+    list.push(record);
+    poolEmbeddedRejectionsByStablecoin.set(stablecoinId, list);
+  };
+  for (const [stablecoinId, pools] of retainedPoolsByStablecoin) {
+    for (const pool of pools) {
+      const embeddedReason = pool.extra?.curveNavSpotQuoteRejectedReason;
+      if (embeddedReason !== undefined) {
+        pushEmbeddedRejection(stablecoinId, {
+          poolKey: pool.poolId,
+          chain: pool.chain,
+          reason: normalizeCurveNavScoringRejectionReason(embeddedReason),
+        });
+      }
+      if (pool.curveNavSpotQuote !== undefined) {
+        const droppedBeforeProjection =
+          isBlockedDexId(pool.project) ||
+          !Number.isFinite(pool.tvlUsd) ||
+          pool.tvlUsd < DEX_PRICE_OBSERVATION_MIN_TVL_USD ||
+          typeof pool.price !== "number" ||
+          !Number.isFinite(pool.price) ||
+          pool.price <= 0 ||
+          projectRetainedPoolPrice(pool, stablecoinId) == null;
+        if (droppedBeforeProjection) {
+          // Classify every dropped tagged Curve quote BEFORE the $10K price TVL floor
+          // or unprojectable price omits it, so integrity failures never vanish.
+          const integrityFailure = classifyPoolCurveNavIntegrityFailure(pool, admittedAtSec);
+          pushEmbeddedRejection(stablecoinId, {
+            poolKey: pool.poolId,
+            chain: pool.chain,
+            reason: integrityFailure ?? "insufficient-support",
+          });
+        }
+      }
+    }
+  }
+  const handledCurveNavRejectionIds = new Set<string>();
   for (const [id, observations] of priceEvidence) {
     throwIfAborted(signal);
     if (observations.length === 0) continue;
@@ -208,15 +300,38 @@ export async function computeDexPrices({
 
     // Validate before selecting the aggregate so an impossible quote cannot
     // enter dex_prices while merely being hidden from price_sources_json.
+    const priorRejections = [
+      ...(curveNavRejectionsByStablecoin?.get(id) ?? []),
+      ...(poolEmbeddedRejectionsByStablecoin.get(id) ?? []),
+    ];
+    if (priorRejections.length > 0) handledCurveNavRejectionIds.add(id);
+    const curveNavSelection = selectClockedCurveNavObservations(collapsedObservations, admittedAtSec, priorRejections);
+    const coinCurveNavRejections: CurveNavQuoteRejectionRecord[] = [...curveNavSelection.rejected];
+    const candidateObservations = curveNavSelection.observations;
+    if (candidateObservations.length === 0) {
+      recordCurveNavRejections(id, coinCurveNavRejections);
+      if (coinCurveNavRejections.length > 0) {
+        withheldStablecoinCount++;
+        if (withheldByStablecoin.length < MAX_DEX_PRICE_REJECTION_ASSETS) {
+          withheldByStablecoin.push({
+            stablecoinId: id,
+            reason: pickDecisiveCurveNavRejectionReason(coinCurveNavRejections),
+            observationCount: collapsedObservations.length,
+            totalTvlUsd: Math.round(collapsedObservations.reduce((sum, obs) => sum + obs.tvl, 0)),
+          });
+        }
+      }
+      continue;
+    }
+
     const plausibleObservations: DexPriceObs[] = [];
     const rejectedObservations: DexPriceObs[] = [];
-    const admittedAtSec = Math.max(nowSec, admissionNowSec);
-    const currentLineage = collapsedObservations.flatMap((row) => {
+    const currentLineage = candidateObservations.flatMap((row) => {
       const lineage = getDexObservationLineage(row);
       return lineage && row.observedAt != null && row.observedAt <= admittedAtSec &&
         admittedAtSec - row.observedAt < DEX_FRESHNESS_SEC ? [{ row, lineage }] : [];
     });
-    for (const observation of collapsedObservations) {
+    for (const observation of candidateObservations) {
       const status = classifyDexObservationPrice(id, observation.price, references);
       const deciding = status === "provisional" ? currentLineage.find(({ row }) => row === observation) : undefined;
       const corroborated = deciding && currentLineage.some(({ row, lineage }) =>
@@ -243,7 +358,69 @@ export async function computeDexPrices({
         });
       }
     }
-    if (plausibleObservations.length === 0) continue;
+
+    // Re-verify post-plausibility that corroborated clocked Curve NAV quotes still
+    // have surviving corroborator(s) meeting combined TVL after plausibility filtering.
+    const verifiedPlausibleByPoolKey = new Map<string, DexPriceObs>();
+    for (const obs of plausibleObservations) {
+      if (obs.curveNavSpotQuote == null && obs.verifiedClockedVenue === true && obs.poolKey) {
+        const existing = verifiedPlausibleByPoolKey.get(obs.poolKey);
+        if (!existing || obs.tvl > existing.tvl) verifiedPlausibleByPoolKey.set(obs.poolKey, obs);
+      }
+    }
+    const postPlausibilityObs: DexPriceObs[] = [];
+    for (const obs of plausibleObservations) {
+      if (obs.curveNavSpotQuote?.admissionMode !== "corroborated") {
+        postPlausibilityObs.push(obs);
+        continue;
+      }
+      const survivingCorroborators: DexPriceObs[] = [];
+      for (const poolId of new Set(obs.curveNavSpotQuote.corroboratorPoolIds ?? [])) {
+        const candidate = verifiedPlausibleByPoolKey.get(poolId);
+        if (candidate && isValidClockedNavCorroboratorObservation(candidate, obs, admittedAtSec)) {
+          survivingCorroborators.push(candidate);
+        }
+      }
+      const combinedTvl = obs.tvl + survivingCorroborators.reduce((sum, entry) => sum + entry.tvl, 0);
+      if (
+        survivingCorroborators.length === 0 ||
+        combinedTvl < CURVE_NAV_SPOT_QUOTE_POLICY.corroboratedCombinedMinTvlUsd
+      ) {
+        coinCurveNavRejections.push({ poolKey: obs.poolKey ?? null, chain: obs.chain, reason: "corroborator-missing" });
+        continue;
+      }
+      postPlausibilityObs.push({
+        ...obs,
+        curveNavSpotQuote: {
+          ...obs.curveNavSpotQuote,
+          corroboratorPoolIds: survivingCorroborators.map((entry) => entry.poolKey!),
+        },
+      });
+    }
+    const finalPlausibleObservations = postPlausibilityObs.some((obs) => obs.curveNavSpotQuote != null)
+      ? postPlausibilityObs
+      : (() => {
+          if (coinCurveNavRejections.length === 0) return postPlausibilityObs;
+          const filter = buildCurveNavRejectedPoolFilter(coinCurveNavRejections);
+          return postPlausibilityObs.filter(
+            (obs) => !matchesRejectedCurveNavPool(obs.poolKey, obs.chain, obs.protocol, filter),
+          );
+        })();
+    recordCurveNavRejections(id, coinCurveNavRejections);
+    if (finalPlausibleObservations.length === 0) {
+      if (coinCurveNavRejections.length > 0 && plausibleObservations.length > 0) {
+        withheldStablecoinCount++;
+        if (withheldByStablecoin.length < MAX_DEX_PRICE_REJECTION_ASSETS) {
+          withheldByStablecoin.push({
+            stablecoinId: id,
+            reason: pickDecisiveCurveNavRejectionReason(coinCurveNavRejections),
+            observationCount: plausibleObservations.length,
+            totalTvlUsd: Math.round(plausibleObservations.reduce((sum, obs) => sum + obs.tvl, 0)),
+          });
+        }
+      }
+      continue;
+    }
 
     // Look up primary price early — used for outlier filtering and deviation calc.
     // Fail closed (R2/R4): every guard below (outlier filter, deviation band,
@@ -258,25 +435,25 @@ export async function computeDexPrices({
         withheldByStablecoin.push({
           stablecoinId: id,
           reason: "primary-missing",
-          observationCount: plausibleObservations.length,
-          totalTvlUsd: Math.round(plausibleObservations.reduce((sum, obs) => sum + obs.tvl, 0)),
+          observationCount: finalPlausibleObservations.length,
+          totalTvlUsd: Math.round(finalPlausibleObservations.reduce((sum, obs) => sum + obs.tvl, 0)),
         });
       }
       continue;
     }
     observedIds.add(id);
 
-    const inBudgetObservations = plausibleObservations.filter((observation) =>
+    const inBudgetObservations = finalPlausibleObservations.filter((observation) =>
       typeof observation.observedAt === "number" && Number.isFinite(observation.observedAt) &&
       observation.observedAt > 0 && observation.observedAt <= admittedAtSec &&
       admittedAtSec - observation.observedAt < DEX_FRESHNESS_SEC
     );
     // With no current contributor, preserve the full blend for conservative vetoes.
-    const aggregateObservations = inBudgetObservations.length > 0 ? inBudgetObservations : plausibleObservations;
+    const aggregateObservations = inBudgetObservations.length > 0 ? inBudgetObservations : finalPlausibleObservations;
     contributorAdmissionByStablecoin.push({
       stablecoinId: id,
       inBudgetContributorCount: inBudgetObservations.length,
-      totalContributorCount: plausibleObservations.length,
+      totalContributorCount: finalPlausibleObservations.length,
       fallbackReason: inBudgetObservations.length === 0 ? "no-in-budget-contributors" : null,
     });
 
@@ -284,8 +461,11 @@ export async function computeDexPrices({
     // When a source (e.g. CoinGecko aggregate) reports a price near peg for a severely
     // depegged stablecoin, its high TVL can dominate the TVL-weighted median.
     // Only apply when 3+ observations exist and majority by count agrees with primary.
+    // Clocked Curve NG NAV quotes stay unclamped relative to protocol NAV (R7),
+    // but ONLY when at least one clocked Curve quote survived plausibility.
+    const hasPlausibleCurveNav = aggregateObservations.some((obs) => obs.curveNavSpotQuote != null);
     let medianInputObs = aggregateObservations;
-    if (aggregateObservations.length >= 3) {
+    if (!hasPlausibleCurveNav && aggregateObservations.length >= 3) {
       const nearPrimary = aggregateObservations.filter((o) => {
         const ratio = o.price / primaryPrice;
         return (
@@ -307,7 +487,11 @@ export async function computeDexPrices({
     ) ?? medianInputObs[0].price;
 
     // Preserve the full-blend fallback's existing veto depth and display provenance.
-    const publishedObservations = inBudgetObservations.length > 0 ? medianInputObs : plausibleObservations;
+    const publishedObservations = inBudgetObservations.length > 0 ? medianInputObs : finalPlausibleObservations;
+    const publishedCurveNavCaptures = publishedObservations.flatMap((obs) =>
+      obs.curveNavSpotQuote ? [obs.curveNavSpotQuote] : [],
+    );
+    const hasPublishedCurveNav = publishedCurveNavCaptures.length > 0;
     const totalTvl = publishedObservations.reduce((s, o) => s + o.tvl, 0);
     const deviationBps = relativeBps(medianPrice, primaryPrice)?.bps ?? null;
 
@@ -317,10 +501,14 @@ export async function computeDexPrices({
     // The scoring-level sanity gate has a wide 1% floor to avoid rejecting legitimately
     // depegged stablecoins. For the per-protocol display surface, apply a tighter 50%
     // primary-price ratio guard on top so near-peg alias-collapse rows are filtered.
-    const sanePriceObs = publishedObservations.filter((obs) => {
-      const ratio = obs.price / primaryPrice;
-      return ratio >= DISPLAY_PRICE_RATIO_MIN && ratio <= DISPLAY_PRICE_RATIO_MAX;
-    });
+    // Clocked Curve NG NAV spot quotes bypass the 0.5x–2.0x clamp so genuine >50%
+    // distressed NAV discounts stay observable (R7).
+    const sanePriceObs = hasPublishedCurveNav
+      ? publishedObservations
+      : publishedObservations.filter((obs) => {
+          const ratio = obs.price / primaryPrice;
+          return ratio >= DISPLAY_PRICE_RATIO_MIN && ratio <= DISPLAY_PRICE_RATIO_MAX;
+        });
     // The clock covers every published input (price, count, TVL), not the display-source filter.
     const aggregateObservedAt = oldestPriceObservation(publishedObservations);
     const protocolSources = aggregateProtocolSources(sanePriceObs);
@@ -342,6 +530,26 @@ export async function computeDexPrices({
       ...(sources.length !== displaySources.length && { displaySources }),
       ...(lineage && { pricePoolKeys: lineage.pricePoolKeys, upstreamKeys: lineage.upstreamKeys }),
       aggregateContributors: countedLineage?.aggregateContributors ?? [],
+      ...(hasPublishedCurveNav
+        ? {
+            quotePolicy: CURVE_NAV_SPOT_QUOTE_POLICY_ID,
+            quoteMaxAgeSec: CURVE_NAV_SPOT_QUOTE_POLICY.quoteMaxAgeSec,
+            quotePublishedAtSec: admittedAtSec,
+            quoteCaptures: publishedCurveNavCaptures.map((capture) => ({
+              poolId: capture.poolId,
+              blockNumber: capture.blockNumber,
+              blockHash: capture.blockHash,
+              poolRatioObservedAt: capture.poolRatioObservedAt,
+              quoteMarkObservedAt: capture.quoteMarkObservedAt,
+              captureEvaluatedAtSec: capture.captureEvaluatedAtSec,
+              sourceGenerationId: capture.sourceGenerationId,
+              admissionMode: capture.admissionMode,
+              ...(capture.corroboratorPoolIds?.length
+                ? { corroboratorPoolIds: [...capture.corroboratorPoolIds] }
+                : {}),
+            })),
+          }
+        : {}),
     };
     const symbol = meta?.symbol ?? id;
 
@@ -378,6 +586,22 @@ export async function computeDexPrices({
           generationId,
         ),
     );
+  }
+
+  // Coins with zero price evidence record their Curve NAV candidate rejections in
+  // R4 diagnostics without inflating withheldStablecoinCount (nothing was withheld).
+  const allUnseenRejectionIds = new Set<string>([
+    ...(curveNavRejectionsByStablecoin?.keys() ?? []),
+    ...poolEmbeddedRejectionsByStablecoin.keys(),
+  ]);
+  for (const id of allUnseenRejectionIds) {
+    if (handledCurveNavRejectionIds.has(id)) continue;
+    const rejections = [
+      ...(curveNavRejectionsByStablecoin?.get(id) ?? []),
+      ...(poolEmbeddedRejectionsByStablecoin.get(id) ?? []),
+    ];
+    if (rejections.length === 0) continue;
+    recordCurveNavRejections(id, rejections);
   }
 
   let retiredCount = 0;
@@ -482,15 +706,17 @@ export async function computeDexPrices({
   }
 
   if (observedIds.size > 0 || retiredCount > 0 || withheldStablecoinCount > 0) {
+    const withheldReasons = [...new Set(withheldByStablecoin.map((entry) => entry.reason))];
+    const withheldDetail = withheldReasons.length === 1 && withheldReasons[0] === "primary-missing"
+      ? `; withheld ${withheldStablecoinCount} asset(s) with no admitted primary comparison price (reason: primary-missing)`
+      : `; withheld ${withheldStablecoinCount} asset(s) (reasons: ${withheldReasons.join(", ")})`;
     logWorkerEventArgs("handler", withheldStablecoinCount > 0 ? "warn" : "info",
       `[dex-liquidity] Wrote ${observedIds.size} DEX price observations to dex_prices` +
         (collapsedDuplicateGroups > 0
           ? ` after collapsing ${collapsedDuplicateObservations} duplicate observations across ${collapsedDuplicateGroups} pool group(s)`
           : "") +
         (retiredCount > 0 ? ` and retired ${retiredCount} stale rows` : "") +
-        (withheldStablecoinCount > 0
-          ? `; withheld ${withheldStablecoinCount} asset(s) with no admitted primary comparison price (reason: primary-missing)`
-          : ""),
+        (withheldStablecoinCount > 0 ? withheldDetail : ""),
     );
   }
   return {
@@ -502,6 +728,15 @@ export async function computeDexPrices({
       ? {
           withheldByStablecoin,
           truncatedWithheldStablecoins: Math.max(0, withheldStablecoinCount - withheldByStablecoin.length),
+        }
+      : {}),
+    ...(curveNavRejectedStablecoinCount > 0
+      ? {
+          curveNavRejectedByStablecoin,
+          truncatedCurveNavRejectedStablecoins: Math.max(
+            0,
+            curveNavRejectedStablecoinCount - curveNavRejectedByStablecoin.length,
+          ),
         }
       : {}),
     retention,

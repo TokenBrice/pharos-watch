@@ -13,7 +13,16 @@ import type {
   DexLiquidityPoolState,
   DexLiquidityScoringSourceState,
 } from "./scoring-stage-contract";
-import type { DexPriceObs, SourcePoolGraph, PoolEntry } from "./types";
+import {
+  isCurveNavSpotQuoteCandidateShape,
+  isCurveNavSpotQuoteEvidenceShape,
+  type CurveNavQuoteScoringRejectionReason,
+} from "./scoring-helpers";
+import type {
+  DexPriceObs,
+  SourcePoolGraph,
+  PoolEntry,
+} from "./types";
 
 // Manifest layout version. D1 pins `dex_liquidity_scoring_stages.schema_version`
 // with CHECK (schema_version = 1); it versions the manifest/chunk table layout,
@@ -200,6 +209,12 @@ interface ScoringStageDecoder {
   stablecoinMcapById: Map<string, number>;
   protocolTvlCaps: Map<string, number>;
   priceObservations: Map<string, DexPriceObs[]>;
+  curveNavStageRejections: Array<{
+    stablecoinId: string;
+    poolKey: string | null;
+    chain?: string;
+    reason: CurveNavQuoteScoringRejectionReason;
+  }>;
   metrics: Map<string, SourcePoolGraph>;
   pancakeMeasuredExecutionTargets: Map<string, DexMeasuredExecutionTarget>;
   slipstreamMeasuredExecutionTargets: Map<string, DexMeasuredExecutionTarget>;
@@ -470,6 +485,7 @@ function createScoringStageDecoder(): ScoringStageDecoder {
     stablecoinMcapById: new Map(),
     protocolTvlCaps: new Map(),
     priceObservations: new Map(),
+    curveNavStageRejections: [],
     metrics: new Map(),
     pancakeMeasuredExecutionTargets: new Map(),
     slipstreamMeasuredExecutionTargets: new Map(),
@@ -530,24 +546,60 @@ function decodeScoringStageRecord(decoder: ScoringStageDecoder, record: ScoringS
       decoder.priceObservations.set(record.stablecoinId, []);
       return;
     case "price-observation": {
-      if (
-        typeof record.stablecoinId !== "string" ||
-        !isRecord(record.observation) ||
-        typeof record.observation.chain !== "string" ||
-        typeof record.observation.protocol !== "string"
-      ) {
+      if (typeof record.stablecoinId !== "string" || record.stablecoinId.length === 0) {
         throw new Error("DEX liquidity scoring stage contains an invalid price observation");
-      }
-      requireFiniteNumber(record.observation.price, "price observation price");
-      requireFiniteNumber(record.observation.tvl, "price observation TVL");
-      if (record.observation.observedAt != null) {
-        assertTimestamp("price observation clock", record.observation.observedAt);
       }
       const observations = decoder.priceObservations.get(record.stablecoinId);
       if (!observations) {
         throw new Error(
           `DEX liquidity scoring stage observation precedes missing key "${record.stablecoinId}"`,
         );
+      }
+      const obs = record.observation as unknown;
+      const recordObs = isRecord(obs) ? obs : null;
+      const isCurveNavTagged = recordObs !== null && recordObs.curveNavSpotQuote !== undefined;
+      const poolKey = recordObs && typeof recordObs.poolKey === "string" && recordObs.poolKey.trim().length > 0
+        ? recordObs.poolKey
+        : null;
+      const chain = recordObs && typeof recordObs.chain === "string" && recordObs.chain.trim().length > 0
+        ? recordObs.chain
+        : undefined;
+      const priceValid = recordObs !== null && typeof recordObs.price === "number" && Number.isFinite(recordObs.price);
+      const tvlValid = recordObs !== null && typeof recordObs.tvl === "number" && Number.isFinite(recordObs.tvl);
+      const observedAtValid =
+        recordObs !== null &&
+        (recordObs.observedAt == null ||
+          (typeof recordObs.observedAt === "number" &&
+            Number.isInteger(recordObs.observedAt) &&
+            recordObs.observedAt >= 0));
+      const shapeValid =
+        recordObs !== null &&
+        typeof recordObs.chain === "string" &&
+        typeof recordObs.protocol === "string" &&
+        priceValid &&
+        tvlValid &&
+        observedAtValid;
+      if (!shapeValid) {
+        // Quarantine only this malformed observation without aborting sibling assets (R8).
+        if (isCurveNavTagged) {
+          decoder.curveNavStageRejections.push({
+            stablecoinId: record.stablecoinId,
+            poolKey,
+            ...(chain ? { chain } : {}),
+            reason: !observedAtValid ? "invalid-clock" : "invalid-policy",
+          });
+        }
+        return;
+      }
+      if (isCurveNavTagged && !isCurveNavSpotQuoteEvidenceShape(record.observation.curveNavSpotQuote)) {
+        // Quarantine only this malformed Curve NAV observation without aborting sibling assets (R8).
+        decoder.curveNavStageRejections.push({
+          stablecoinId: record.stablecoinId,
+          poolKey,
+          ...(chain ? { chain } : {}),
+          reason: "invalid-policy",
+        });
+        return;
       }
       observations.push(record.observation);
       return;
@@ -582,8 +634,27 @@ function decodeScoringStageRecord(decoder: ScoringStageDecoder, record: ScoringS
       requireFiniteNumber(record.pool.tvlUsd, "pool TVL");
       requireFiniteNumberOrNull(record.pool.volumeUsd1d, "pool 24h volume");
       requirePoolVolumeReading(record.pool.volumeReading);
-      if (record.pool.priceObservedAt != null) {
-        assertTimestamp("pool price observation clock", record.pool.priceObservedAt);
+      const poolHasCurveNav =
+        record.pool.curveNavSpotQuote !== undefined ||
+        record.pool.extra?.curveNavSpotQuoteCandidate !== undefined;
+      const poolPriceObservedAtValid =
+        record.pool.priceObservedAt == null ||
+        (typeof record.pool.priceObservedAt === "number" &&
+          Number.isInteger(record.pool.priceObservedAt) &&
+          record.pool.priceObservedAt >= 0);
+      if (record.pool.priceObservedAt != null && !poolPriceObservedAtValid) {
+        if (!poolHasCurveNav) {
+          assertTimestamp("pool price observation clock", record.pool.priceObservedAt);
+        }
+        // Quarantine only this pool's malformed Curve NAV clock without aborting sibling assets (R8).
+        delete record.pool.price;
+        delete record.pool.priceObservedAt;
+        delete record.pool.priceSource;
+        delete record.pool.priceEvidenceTvlUsd;
+        delete record.pool.priceCounterparty;
+        delete record.pool.curveNavSpotQuote;
+        record.pool.extra = { ...(record.pool.extra ?? {}), curveNavSpotQuoteRejectedReason: "invalid-clock" };
+        delete record.pool.extra.curveNavSpotQuoteCandidate;
       }
       const metric = decoder.metrics.get(record.stablecoinId);
       if (!metric) {
@@ -594,6 +665,26 @@ function decodeScoringStageRecord(decoder: ScoringStageDecoder, record: ScoringS
       if (record.pool.extra?.ammExecutionModel?.source === "solidly-v2") {
         const retired = DexRetiredSolidlyLegacyModelSchema.safeParse(record.pool.extra.ammExecutionModel);
         if (retired.success) record.pool.extra.ammExecutionModel = retired.data;
+      }
+      if (
+        record.pool.curveNavSpotQuote !== undefined &&
+        !isCurveNavSpotQuoteEvidenceShape(record.pool.curveNavSpotQuote)
+      ) {
+        // Quarantine only this pool's malformed quote without aborting sibling assets (R8).
+        delete record.pool.price;
+        delete record.pool.priceObservedAt;
+        delete record.pool.priceSource;
+        delete record.pool.priceEvidenceTvlUsd;
+        delete record.pool.priceCounterparty;
+        delete record.pool.curveNavSpotQuote;
+        record.pool.extra = { ...(record.pool.extra ?? {}), curveNavSpotQuoteRejectedReason: "invalid-policy" };
+      }
+      if (
+        record.pool.extra?.curveNavSpotQuoteCandidate !== undefined &&
+        !isCurveNavSpotQuoteCandidateShape(record.pool.extra.curveNavSpotQuoteCandidate)
+      ) {
+        delete record.pool.extra.curveNavSpotQuoteCandidate;
+        record.pool.extra.curveNavSpotQuoteRejectedReason = "invalid-policy";
       }
       metric.pools.push(record.pool);
       return;
@@ -710,6 +801,9 @@ function finishScoringStageDecode(decoder: ScoringStageDecoder): {
       primaryPriceById,
       stablecoinMcapById: decoder.stablecoinMcapById,
       protocolTvlCaps: decoder.protocolTvlCaps,
+      ...(decoder.curveNavStageRejections.length > 0
+        ? { curveNavStageRejections: decoder.curveNavStageRejections }
+        : {}),
       priceObservations: decoder.priceObservations,
     },
     poolState: {
