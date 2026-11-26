@@ -88,10 +88,10 @@ describe("validateAdapterOutput redemption telemetry", () => {
       .toBe(scoring !== undefined || adapterCap !== undefined);
   });
 
-  it.each([0, -1])("degrades non-positive verified source clock %s without treating it as current", (sourceTimestamp) => {
-    const result = validateAdapterOutput({ slices, metadata: { freshnessMode: "verified", sourceTimestamp } },
-      { now: 1_790_467_200, adapter: getReserveAdapter("infinifi")!, maxSourceAgeSec: 3600 });
-    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "stale-source-data", effect: "degraded" }));
+  it.each([["verified", 0], ["verified", -1], ["verified", NaN], ["not-applicable", null]])("rejects %s source clock %s", (freshnessMode, sourceTimestamp) => {
+    const result = validateAdapterOutput({ slices, metadata: { freshnessMode, sourceTimestamp } as never },
+      { now: 1_790_467_200, adapter: getReserveAdapter("infinifi")! });
+    expect(result).toMatchObject({ valid: false, warnings: [{ code: "invalid-source-timestamp", effect: "fatal" }] });
   });
 
   it("rejects upstream source clocks beyond the skew allowance", () => {
@@ -611,7 +611,7 @@ describe("validateAdapterOutput", () => {
     },
     {
       label: "verified freshness without a source timestamp",
-      adapterKey: "ethena" as AdapterKey,
+      adapterKey: "coinbase-oned-por" as AdapterKey,
       redemptionTelemetry: false,
       metadata: { freshnessMode: "verified" },
       now: undefined,

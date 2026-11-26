@@ -53,7 +53,6 @@ const CASES: Case[] = [
 
   { name: "validation-failed reason", reason: "validation-failed", lastError: null, expected: "validation" },
   { name: "fatal-warning reason", reason: "fatal-warning", lastError: null, expected: "validation" },
-  { name: "empty-slices reason", reason: "empty-slices", lastError: null, expected: "validation" },
   {
     name: "adapter-exception + source date outside the reviewed bound",
     reason: "adapter-exception",

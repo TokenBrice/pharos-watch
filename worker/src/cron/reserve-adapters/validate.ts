@@ -184,6 +184,16 @@ export function validateAdapterOutput(input: ValidationInput, options?: Validati
   if (futureTimestampWarning) {
     return { valid: false, warnings: [futureTimestampWarning] };
   }
+  // An unreadable clock is unavailable, not epoch 0 (R1), and `verified` is a
+  // positive freshness claim for every evidence class (R2): both fail closed.
+  if (input.metadata?.sourceTimestamp !== undefined && !(sourceTimestamp != null && sourceTimestamp > 0)) {
+    return { valid: false, warnings: [reserveFatalWarning("invalid-source-timestamp",
+      `Upstream reserve source timestamp is not a positive unix-second value${describeAdapter(options?.adapter)}`)] };
+  }
+  if (input.metadata?.freshnessMode === "verified" && sourceTimestamp == null) {
+    return { valid: false, warnings: [reserveFatalWarning("verified-freshness-missing-source-timestamp",
+      `Live reserve output marked freshness as verified without sourceTimestamp${describeAdapter(options?.adapter)}`)] };
+  }
 
   const redemptionWarnings = validateRedemptionTelemetry(input.metadata, options?.adapter);
   if (hasFatalWarnings(redemptionWarnings)) {
@@ -375,18 +385,6 @@ export function validateAdapterOutput(input: ValidationInput, options?: Validati
   }
 
   if (options?.adapter?.evidenceClass === "independent") {
-    if (freshnessMode === "verified" && sourceTimestamp == null) {
-      return {
-        valid: false,
-        warnings: [
-          reserveFatalWarning(
-            "verified-freshness-missing-source-timestamp",
-            `Independent live reserve output marked freshness as verified without sourceTimestamp${adapterLabel}`,
-          ),
-        ],
-      };
-    }
-
     if (sourceTimestamp != null && freshnessMode == null) {
       warnings.push(
         reserveDegradedWarning(
