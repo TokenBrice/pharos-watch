@@ -649,13 +649,10 @@ export function compileSafetyScoreV9FactSetFromExtensionSource(
   return { ...compilation, bridgeJoinDiagnostics: bridgeJoinDiagnostics.sort((left, right) => compareText(left.assetId, right.assetId)) };
 }
 
-function assertCompilationInput(
+function assertCompilationCohortIdentity(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
-  extension: SafetyScoreV9FactSetExtensionV2,
+  extension: Pick<SafetyScoreV9FactSetExtensionV2, "registryFingerprint">,
 ): void {
-  if (!materializedExtensions.has(extension)) {
-    throw new Error("Trusted Safety Score v9 compilation requires an in-process materialized extension");
-  }
   if (
     fixedInput.captureKind !== "native-v9-inputs" &&
     fixedInput.captureKind !== "exact-publication-inputs"
@@ -670,6 +667,16 @@ function assertCompilationInput(
   // One admission for the whole cohort: a capture bound to a different premium
   // weight mixes two discount rates no per-asset quarantine could isolate.
   assertSafetyScoreV9DirectionalPegAdmission(fixedInput.safetyScoreV9DirectionalPeg);
+}
+
+function assertCompilationInput(
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  extension: SafetyScoreV9FactSetExtensionV2,
+): void {
+  if (!materializedExtensions.has(extension)) {
+    throw new Error("Trusted Safety Score v9 compilation requires an in-process materialized extension");
+  }
+  assertCompilationCohortIdentity(fixedInput, extension);
 }
 
 function compileSafetyScoreV9FactSetWithIsolation(
@@ -829,6 +836,7 @@ export function* compileSafetyScoreV9AssetSlice(
 ) {
   const { assets: _assets, ...extensionHeader } = source.extension;
   const extension = { ...admitSafetyScoreV9FactSetExtensionHeader(extensionHeader), assets: [] };
+  assertCompilationCohortIdentity(fixedInput, extension);
   const { validateAsset } = createV9FactSetAssetValidator(factHeader);
   const researchHash = factHeader.sourceFingerprints.researchOverlays.payloadSha256;
   let index = 0;

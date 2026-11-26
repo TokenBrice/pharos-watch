@@ -20,7 +20,8 @@ import {
   V9_EVAL_CHUNK_MAX_ROW_BYTES, writeV9EvalChunk,
 } from "../../lib/safety-score-v9/chunked-eval-store";
 import { ALERT_SAFETY_V9_SOURCE_CACHE_KEY } from "../../lib/alert-safety-source-cache";
-import { compileSafetyScoreV9FactSetFromExtensionSource } from "../../lib/safety-score-v9/fact-set";
+import { compileSafetyScoreV9AssetSlice, compileSafetyScoreV9FactSetFromExtensionSource } from "../../lib/safety-score-v9/fact-set";
+import { createV9FactSetAssetValidator } from "@shared/lib/safety-score-v9/compile";
 import { createSafetyScoreV9BaselineExtensionSource } from "../../lib/safety-score-v9/extension";
 import { withNormalizedV9JournalProjections } from "../../lib/safety-score-v9/native-input";
 import { loadSafetyScoreV9PublicationHealth } from "../../lib/safety-score-v9/publication-health";
@@ -77,6 +78,17 @@ describe("Safety Score V9 ADR-26 chunked Queue evaluation", () => {
     await expect(runChunkedV9EvalStep(db, (await loadV9EvalRun(db, first.runId))!, "test:pending", {
       workerVersion: V9_QUEUE_TEST_WORKER_VERSION, deadlineMs: Date.now() + 60_000,
     })).rejects.toThrow(message);
+
+    // Eval slice admission rejects extension registry fingerprint mismatch and preserves cohort asset indices.
+    const two = makePublishableV9Input(createNativeSafetyScoreV9CohortInput(["usdc-circle", "usdt-tether"]));
+    const compiledTwo = compileSafetyScoreV9FactSetFromExtensionSource(two, createSafetyScoreV9BaselineExtensionSource(two));
+    const { assets: twoAssets, v9FactSetDigest: _digest, ...twoHeader } = compiledTwo.factSet;
+    const mismatchSource = createSafetyScoreV9BaselineExtensionSource(two);
+    const mismatchExt = { ...mismatchSource.extension, registryFingerprint: "f".repeat(64) };
+    expect(() => [...compileSafetyScoreV9AssetSlice(two, { ...mismatchSource, extension: mismatchExt }, twoHeader, ["usdc-circle"], new Map())])
+      .toThrow(/registry fingerprint/i);
+    const { validateAsset } = createV9FactSetAssetValidator({ ...twoHeader, sourceFingerprints: { ...twoHeader.sourceFingerprints, dex: { ...twoHeader.sourceFingerprints.dex, generationId: "dex:mismatch" } } });
+    expect(() => validateAsset(twoAssets[1]!)).toThrow(/"assets",\s*1/s);
   });
 
   it("matches monolithic publication across cross-chunk upstreams, cleans N6 rollback, recovers N3 crash, records N4 evidence, and checks SCC partitioning", async () => {

@@ -52,7 +52,7 @@ import {
   buildSafetyScoreV9AcceptedPublicationBaseline,
   projectExpiredMeasuredExitRoutes,
 } from "../safety-score-v9/publication-assessment";
-import { ACTIVE_IDS, ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { canonicalizeLenderBookObservation, deriveLenderBookObservationIdentity } from "@shared/lib/safety-score-v9/lender-book-registry";
 import { LenderBookObservationSchema, type LenderCollateralBacking } from "@shared/types/safety-score-v9-lender-book";
 import type { V9PublicationHealth } from "@shared/types/report-cards-v9";
@@ -69,10 +69,16 @@ import { buildSafetyScoreV9LenderCollateralProjection } from "../safety-score-v9
 import * as acceptedProjectionReaders from "../safety-score-v9/accepted-projection-readers";
 import { captureLenderCollateralBacking } from "../safety-score-v9/capture";
 
-vi.mock("@shared/types/safety-score-v9-coverage", async (original) => ({
-  ...await original<typeof import("@shared/types/safety-score-v9-coverage")>(),
-  V9_MINIMUM_RATEABLE_ASSETS: 3,
-}));
+const coverageFloorOverride = vi.hoisted(() => ({ value: undefined as number | undefined }));
+vi.mock("@shared/types/safety-score-v9-coverage", async (original) => {
+  const actual = await original<typeof import("@shared/types/safety-score-v9-coverage")>();
+  return {
+    ...actual,
+    get V9_MINIMUM_RATEABLE_ASSETS() {
+      return coverageFloorOverride.value ?? actual.V9_MINIMUM_RATEABLE_ASSETS;
+    },
+  };
+});
 
 // One day past the newest reviewed registry date the usdc-circle capture below
 // reads, so the extension's "review is later than the scoring clock" guard stays
@@ -1527,11 +1533,12 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
   });
 });
 
-it("preserves 71-asset parity when a reserve-only reference crosses into a later chunk", async () => {
+it("preserves cross-chunk parity when a reserve-only reference targets a later chunk", async () => {
   const fixtures = createLatestSchemaFixtureTracker();
+  coverageFloorOverride.value = 3;
   try {
     const [mono, chunk] = [fixtures.open(), fixtures.open()];
-    const ids = ["bold-liquity", "usdt-tether", ...[...ACTIVE_IDS].filter(id => id < "usdt-tether" && id !== "bold-liquity").sort().slice(0, 69)];
+    const ids = ["bold-liquity", "usdc-circle", "usdt-tether"] as const;
     const raw = createNativeSafetyScoreV9CohortInput(ids);
     raw.liveReserveMap["bold-liquity"] = [{ name: "Tether", pct: 100, risk: "low", coinId: "usdt-tether" }];
     const input = makePublishableV9Input(raw);
@@ -1539,15 +1546,17 @@ it("preserves 71-asset parity when a reserve-only reference crosses into a later
     await Promise.all([seedPreparedV9Db(mono.db, payload), seedPreparedV9Db(chunk.db, payload)]);
     let first: V9ContinuationMessage | undefined;
     await computeSafetyScoreV9(chunk.db, undefined, undefined, {
-      queueMode: "on", deferPublicMaterialization: true, slotStartedAt: input.clockSec, sourceInvocationId: "test:reserve",
+      queueMode: "on", deferPublicMaterialization: true, maxChunkAssets: 1, slotStartedAt: input.clockSec, sourceInvocationId: "test:reserve",
       workerMetadata: V9_QUEUE_TEST_WORKER_META, onContinuation: (message) => { first = message; },
     });
     expect(first).toBeDefined();
     const header = await readV9EvalChunk<{ chunkAssetIds: string[][] }>(chunk.db, {
       runId: first!.runId, chunkKind: "run_context", chunkIndex: 0, quarantineEpoch: 0,
     });
-    expect(header!.chunkAssetIds[0]).toContain("bold-liquity");
-    expect(header!.chunkAssetIds[1]).toEqual(["usdt-tether"]);
+    const boldChunk = header!.chunkAssetIds.findIndex((chunkIds) => chunkIds.includes("bold-liquity"));
+    const usdtChunk = header!.chunkAssetIds.findIndex((chunkIds) => chunkIds.includes("usdt-tether"));
+    expect(boldChunk).toBeGreaterThanOrEqual(0);
+    expect(usdtChunk).toBeGreaterThan(boldChunk);
     await computeSafetyScoreV9(mono.db, undefined, undefined, { queueMode: "off", deferPublicMaterialization: true, workerMetadata: V9_QUEUE_TEST_WORKER_META });
     for (let message: V9ContinuationMessage | undefined = first; message;) {
       const outcome = await deliverV9Continuation(chunk.db, message);
@@ -1555,15 +1564,17 @@ it("preserves 71-asset parity when a reserve-only reference crosses into a later
       message = outcome.sent[0];
     }
     const expected = await loadSafetyScoreV9Publication(mono.db);
-    expect(expected?.cards).toHaveLength(71);
+    expect(expected?.cards).toHaveLength(ids.length);
     expect(await loadSafetyScoreV9Publication(chunk.db)).toEqual(expected);
   } finally {
+    coverageFloorOverride.value = undefined;
     fixtures.closeAll();
   }
 });
 
 it("quarantines all epoch projection failures together and retries an atomic epoch rollback", async () => {
   const fixtures = createLatestSchemaFixtureTracker();
+  coverageFloorOverride.value = 3;
   const { db, sqlite } = fixtures.open();
   const assertCard = projections.assertV9PublicCardProjections;
   const projectionMock = vi.spyOn(projections, "assertV9PublicCardProjections").mockImplementation((card) => {
@@ -1602,6 +1613,7 @@ it("quarantines all epoch projection failures together and retries an atomic epo
     expect(header?.quarantines).toEqual(mono.quarantines);
     expect(await loadV9EvalRun(db, first!.runId)).toMatchObject({ fact_set_digest: mono.candidate.factSetDigest });
   } finally {
+    coverageFloorOverride.value = undefined;
     projectionMock.mockRestore();
     fixtures.closeAll();
   }

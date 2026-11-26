@@ -169,20 +169,40 @@ const CONTAGION_HEAP_LIMIT_MIB = 256;
 const CONTAGION_WALL_BUDGET_MS = 90_000;
 let temporaryDirectory = "";
 let bundledProbe = "";
-let queueSetup: Promise<{ template: string; entry: string }> | undefined;
+let queueTemplate = "";
+let queueProbe = "";
 let bundledInputs: string[] = [];
 
+function createConcurrencyGate(limit: number) {
+  let active = 0;
+  const waiters: Array<() => void> = [];
+  return async <T>(work: () => Promise<T>): Promise<T> => {
+    if (active >= limit) await new Promise<void>((resolveWaiter) => waiters.push(resolveWaiter));
+    active += 1;
+    try {
+      return await work();
+    } finally {
+      active -= 1;
+      waiters.shift()?.();
+    }
+  };
+}
+const runQueueSlot = createConcurrencyGate(2);
+
 describe.skipIf(process.env.PHAROS_V9_RESOURCE_LANE !== "1")("Safety Score V9 contagion and historical capture resource budgets", {
-  // Bounded by the 130-second child kill guard; keeps a wedged contagion step
-  // from pushing the eight-minute lane past its job timeout.
+  // Bounded by the 130-second contagion kill guard; Queue children use their own describe timeout.
   timeout: 150_000,
 }, () => {
-  beforeAll(() => {
+  beforeAll(async () => {
     temporaryDirectory = mkdtempSync(join(tmpdir(), "pharos-v9-resource-"));
     const built = buildSafetyScoreV9ContagionProbe(ROOT, temporaryDirectory);
     bundledProbe = built.outfile;
     bundledInputs = built.inputs;
-  });
+    queueTemplate = join(temporaryDirectory, "queue-template.sqlite");
+    const { buildLatestSchemaTemplate } = await import("@shared/test-utils/latest-schema-sqlite");
+    writeFileSync(queueTemplate, buildLatestSchemaTemplate());
+    queueProbe = (await buildResourceProbe(ROOT, temporaryDirectory, "queue")).outfile;
+  }, 60_000);
 
   afterAll(() => {
     if (temporaryDirectory) {
@@ -235,7 +255,7 @@ describe.skipIf(process.env.PHAROS_V9_RESOURCE_LANE !== "1")("Safety Score V9 co
       candidateBytes: output.candidateBytes, deltaBytes: output.candidateBytes - FROZEN_BASE.bytes });
   });
 
-  it.concurrent(`evaluates a bounded nine-scenario matrix within ${CONTAGION_HEAP_LIMIT_MIB} MiB of old-space`, async () => {
+  it(`evaluates a bounded nine-scenario matrix within ${CONTAGION_HEAP_LIMIT_MIB} MiB of old-space`, async () => {
     const result = await runResourceChildAsync(ROOT, bundledProbe, { CONTAGION_MATRIX: "1" },
       [`--max-old-space-size=${CONTAGION_HEAP_LIMIT_MIB}`, "--expose-gc"], temporaryDirectory, "contagion", Date.now() + 130_000);
     expect(result.status, readFileSync(join(temporaryDirectory, "contagion.stderr"), "utf8")).toBe(0);
@@ -257,25 +277,45 @@ describe.skipIf(process.env.PHAROS_V9_RESOURCE_LANE !== "1")("Safety Score V9 co
     expect(output.wallMs, `nine-scenario matrix wallMs=${output.wallMs}`).toBeLessThan(CONTAGION_WALL_BUDGET_MS);
   });
 
-  it.concurrent.each([[343, "none"], [560, "none"], [343, "eval"], [343, "commit-expiry"]] as const)(
-    "bounds Queue stage resources and matches canonical publication at %i assets (escalation=%s)",
-    async (count, escalation) => {
-      const { template, entry } = await (queueSetup ??= (async () => {
-        const template = join(temporaryDirectory, "queue-template.sqlite");
-        const { buildLatestSchemaTemplate } = await import("@shared/test-utils/latest-schema-sqlite");
-        writeFileSync(template, buildLatestSchemaTemplate());
-        const { outfile: entry } = await buildResourceProbe(ROOT, temporaryDirectory, "queue");
-        return { template, entry };
-      })());
-      const name = `queue-${count}-${escalation}`;
-      const result = await runResourceChildAsync(ROOT, entry, {
-        PHAROS_QUEUE_TEMPLATE: template, PHAROS_QUEUE_ASSETS: String(count), PHAROS_QUEUE_ESCALATION: escalation,
-      }, ["--max-old-space-size=128", "--max-semi-space-size=2"], temporaryDirectory, name, Date.now() + 130_000);
-      const stdout = readFileSync(join(temporaryDirectory, `${name}.stdout`), "utf8");
-      const telemetry = stdout.split("\n").find(line => line.startsWith("queue-telemetry:"));
-      if (telemetry) console.info(telemetry);
-      expect(result.status, readFileSync(join(temporaryDirectory, `${name}.stderr`), "utf8")).toBe(0);
-      expect(telemetry).toBeDefined();
-    },
-  );
+  describe("Queue stage resource and canonical parity gates", { timeout: 300_000 }, () => {
+    // Cap concurrency to 2 after solo contagion so 4-vCPU hosted runners avoid 5-way contention.
+    // Run the two heaviest cohorts first to minimize total two-wave makespan.
+    it.concurrent.each([[560, "none"], [343, "commit-expiry"], [343, "eval"], [343, "none"]] as const)(
+      "bounds Queue stage resources and matches canonical publication at %i assets (escalation=%s)",
+      async (count, escalation) => runQueueSlot(async () => {
+        const name = `queue-${count}-${escalation}`;
+        const queueDb = join(temporaryDirectory, `${name}-queue.sqlite`);
+        const monoDb = join(temporaryDirectory, `${name}-mono.sqlite`);
+        const sharedProtocol = {
+          PHAROS_QUEUE_TEMPLATE: queueTemplate,
+          PHAROS_QUEUE_ASSETS: String(count),
+          PHAROS_QUEUE_ESCALATION: escalation,
+          PHAROS_QUEUE_DB: queueDb,
+          PHAROS_QUEUE_MONO_DB: monoDb,
+        };
+        const queueResult = await runResourceChildAsync(
+          ROOT, queueProbe, { ...sharedProtocol, PHAROS_QUEUE_MODE: "queue" },
+          ["--max-old-space-size=128", "--max-semi-space-size=2"],
+          temporaryDirectory, name, Date.now() + 180_000,
+        );
+        const stdout = readFileSync(join(temporaryDirectory, `${name}.stdout`), "utf8");
+        const telemetry = stdout.split("\n").find(line => line.startsWith("queue-telemetry:"));
+        if (telemetry) console.info(telemetry);
+        expect(queueResult.status, readFileSync(join(temporaryDirectory, `${name}.stderr`), "utf8")).toBe(0);
+        expect(telemetry).toBeDefined();
+        const parsed = JSON.parse(telemetry!.slice("queue-telemetry: ".length)) as { sha: string };
+        const parityName = `${name}-parity`;
+        const parityResult = await runResourceChildAsync(
+          ROOT, queueProbe, { ...sharedProtocol, PHAROS_QUEUE_MODE: "parity", PHAROS_QUEUE_EXPECTED_SHA: parsed.sha },
+          ["--max-old-space-size=512"],
+          temporaryDirectory, parityName, Date.now() + 90_000,
+        );
+        const parityStdout = readFileSync(join(temporaryDirectory, `${parityName}.stdout`), "utf8");
+        const parityTelemetry = parityStdout.split("\n").find(line => line.startsWith("parity-telemetry:"));
+        if (parityTelemetry) console.info(parityTelemetry);
+        expect(parityResult.status, readFileSync(join(temporaryDirectory, `${parityName}.stderr`), "utf8")).toBe(0);
+        expect(parityTelemetry).toBeDefined();
+      }),
+    );
+  });
 });
