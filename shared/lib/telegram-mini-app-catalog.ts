@@ -12,8 +12,14 @@ export interface TelegramMiniAppCatalogCoin {
   status: string;
   /** 1-based position in the curated canonical market-cap order; a sort key, not a published statistic. */
   rank: number;
-  /** Wrapped, savings, vault or yield-bearing variant of another coin (`variantOf` or `flags.yieldBearing`). */
+  /** Wrapped, savings, or vault variant of another coin (`variantOf`); standalone yield-bearing coins stay in the base list. */
   variant: boolean;
+  /** True when the coin is yield-bearing (`flags.yieldBearing`). */
+  yieldBearing: boolean;
+  /** True when a non-suspended live reserve feed adapter is configured. */
+  liveReserves: boolean;
+  /** True when the coin is indexed by the live issuer freeze/blacklist tracker. */
+  freezeTracked: boolean;
 }
 
 export interface TelegramMiniAppCatalogPreset {
@@ -49,5 +55,27 @@ export const TELEGRAM_MINI_APP_CATALOG: TelegramMiniAppCatalog = Object.freeze({
   searchableCoins: Object.freeze(searchableCoins),
 });
 
-/** Content-derived version shared by the Worker and the static client build. */
-export const TELEGRAM_MINI_APP_CATALOG_VERSION = `catalog-v2-${fnv1a32Hex(JSON.stringify(TELEGRAM_MINI_APP_CATALOG))}`;
+/**
+ * Deterministic semantic compatibility hash over coin eligibility, identity,
+ * capability flags, and preset IDs (independent of market-cap `rank` order or
+ * display copy). Routine rank/copy updates roll silently with Pages assets
+ * without forcing `409 catalog-version-mismatch` interrupts.
+ */
+export function computeTelegramMiniAppCatalogVersion(catalog: TelegramMiniAppCatalog): string {
+  const rows = [...catalog.searchableCoins]
+    .sort((a, b) => (a.stablecoinId < b.stablecoinId ? -1 : a.stablecoinId > b.stablecoinId ? 1 : 0))
+    .map((coin) => [
+      coin.stablecoinId,
+      coin.symbol,
+      coin.status,
+      coin.variant === true,
+      coin.yieldBearing === true,
+      coin.liveReserves === true,
+      coin.freezeTracked === true,
+    ]);
+  const sortedPresetIds = [...catalog.recommendedPresets.map((preset) => preset.id)].sort();
+  return `catalog-v3-${fnv1a32Hex(JSON.stringify([3, rows, sortedPresetIds]))}`;
+}
+
+/** Content-derived semantic compatibility version shared by the Worker and the static client build. */
+export const TELEGRAM_MINI_APP_CATALOG_VERSION = computeTelegramMiniAppCatalogVersion(TELEGRAM_MINI_APP_CATALOG);

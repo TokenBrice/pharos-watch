@@ -170,7 +170,7 @@ describe("PortfolioClient URL sync and risk workspace", () => {
     expect(screen.getByRole("link", { name: /Compare holdings/i }).getAttribute("href")).toMatch(/^\/compare\/?\?coins=dai-makerdao,frax-frax$/);
     expect(screen.getByRole("link", { name: /Trace upstream risks/i }).getAttribute("href")).toMatch(/^\/dependency-map\/?\?mode=exposure&root=usdc-circle$/);
     expect(screen.getByRole("heading", { name: "Follow book in Telegram" })).toBeTruthy();
-    expect(screen.getByText("/subscribe dews, depeg, safety dai-makerdao, frax-frax")).toBeTruthy();
+    expect(screen.getByText("/subscribe dews, depeg, safety DAI, FRAX")).toBeTruthy();
     expect(screen.queryByText(/V10|V9/)).toBeNull();
   });
 

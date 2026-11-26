@@ -18,15 +18,15 @@ export const MESSAGING_STATIC_ROUTES = [
   defineLazyStaticRoute("telegram-mini-app-session", () =>
     import("../telegram/mini-app/telegram-mini-app").then(
       ({ handleTelegramMiniAppSession }) =>
-        ({ db, request, telegramBotToken, telegramBotTokenPrevious }) =>
-          handleTelegramMiniAppSession(db, request, telegramBotToken, telegramBotTokenPrevious),
+        ({ db, request, telegramBotToken, telegramBotTokenPrevious, execCtx }) =>
+          handleTelegramMiniAppSession(db, request, telegramBotToken, telegramBotTokenPrevious, execCtx),
     ),
   ),
   defineLazyStaticRoute("telegram-mini-app-mutation", () =>
     import("../telegram/mini-app/telegram-mini-app").then(
       ({ handleTelegramMiniAppMutation }) =>
-        ({ db, request, telegramBotToken, telegramBotTokenPrevious }) =>
-          handleTelegramMiniAppMutation(db, request, telegramBotToken, telegramBotTokenPrevious),
+        ({ db, request, telegramBotToken, telegramBotTokenPrevious, execCtx }) =>
+          handleTelegramMiniAppMutation(db, request, telegramBotToken, telegramBotTokenPrevious, execCtx),
     ),
   ),
   defineLazyStaticRoute("telegram-webhook", () =>

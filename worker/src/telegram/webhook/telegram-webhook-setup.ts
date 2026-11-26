@@ -1,21 +1,21 @@
 /**
  * `/start` onboarding. One card, three choices, a bounded Undo proof:
  *
- *   setup:top25   follow the USD Top 25 preset for depeg and stress alerts
+ *   setup:top25   follow the USD Top 25 preset for depeg and Early warning (DEWS) alerts
  *   setup:undo:<mask>:<expiry>-<generation>.<identity>   restore the preset follow as it was before
  *                 the tap (prior families, base-36 expiry/generation, opaque identity; offered
  *                 only when the tap changed something)
  *   setup:sample  show one sample alert
  *
- * "Choose my own coins" is a Mini App button. Returning users get a short
- * summary instead of the new-user card.
+ * "Choose my own coins" is a Mini App button. Returning users and returning
+ * groups get a short summary instead of the new-user card.
  */
 
 import { TELEGRAM_BOT_URL, TELEGRAM_BOT_USERNAME } from "@shared/lib/telegram-bot-registration";
 import { TELEGRAM_PUBLIC_ALERT_SAMPLES } from "@shared/lib/telegram-alert-samples";
 import { TELEGRAM_PRESET_ALERT_TYPES } from "@shared/lib/telegram-alert-families";
 import { MINI_APP_PAYLOAD_NAMES } from "@shared/lib/telegram-mini-app-payloads";
-import { escapeHtml, type InlineKeyboardButton, type InlineKeyboardMarkup } from "../delivery/telegram";
+import { editMessage, escapeHtml, type InlineKeyboardButton, type InlineKeyboardMarkup } from "../delivery/telegram";
 import { buildTelegramMiniAppUrl } from "../common/mini-app-url";
 import { TELEGRAM_PRESET_LABEL_BY_ID, resolveTelegramPresetTargets, type TelegramPresetId } from "../common/presets";
 import { recordTelegramUsageEvent } from "../store/usage-analytics";
@@ -29,6 +29,7 @@ import { loadSubscriptionRowsByChat } from "../store/subscriptions";
 import {
   MANAGE_ALERTS_LABEL,
   buildPresetUnavailableMessage,
+  cmdForChat,
   describeDeliveryState,
   describeFollows,
   followsNothing,
@@ -44,7 +45,7 @@ const UNDO_TTL_SEC = 24 * 3600;
 const NEW_USER_MESSAGE = `<b>Pharos Watch</b>
 Stablecoin alerts from pharos.watch, sent only when something changes.
 
-Tap below to follow the 25 largest USD stablecoins. You'll hear when one loses its peg or its stress level rises.`;
+Tap below to follow the 25 largest USD stablecoins. You'll hear when one loses its peg or its Early warning (DEWS) stress rises.`;
 
 const GROUP_ADMIN_MESSAGE = `<b>Pharos Watch</b>
 Turn on alerts for this group in one tap, or type /subscribe@${TELEGRAM_BOT_USERNAME} followed by tickers or a preset.`;
@@ -57,12 +58,21 @@ function manageAlertsButton(): InlineKeyboardButton {
   return { text: MANAGE_ALERTS_LABEL, web_app: { url: buildTelegramMiniAppUrl(MINI_APP_PAYLOAD_NAMES.home) } };
 }
 
+/** Framed sample alert shared by `/sample` and `setup:sample`. */
+export function buildSampleAlertMessage(): string {
+  return [
+    "<b>Sample alert</b> (example only, not live)",
+    `<blockquote>${escapeHtml(TELEGRAM_PUBLIC_ALERT_SAMPLES.depeg.message)}</blockquote>`,
+  ].join("\n");
+}
+
 /** The new-user choices. Private chats only: groups cannot open the Mini App. */
-export function buildOnboardingKeyboard(options: { includeSample?: boolean } = {}): InlineKeyboardMarkup {
+export function buildOnboardingKeyboard(options: { includeSample?: boolean; includeManageAlerts?: boolean } = {}): InlineKeyboardMarkup {
   const rows: InlineKeyboardButton[][] = [
     [{ text: FOLLOW_TOP_LABEL, callback_data: "setup:top25" }],
     [{ text: "Choose my own coins", web_app: { url: buildTelegramMiniAppUrl(MINI_APP_PAYLOAD_NAMES.setup) } }],
   ];
+  if (options.includeManageAlerts) rows.push([manageAlertsButton()]);
   if (options.includeSample !== false) rows.push([{ text: "Show me a sample alert", callback_data: "setup:sample" }]);
   return { inline_keyboard: rows };
 }
@@ -87,40 +97,83 @@ async function sendSetupReply(
   });
 }
 
-/** `/start` without a coin or subscribe payload. */
+/** `/start` without a coin, status, or subscribe payload. */
 export async function sendOnboarding(context: OnboardingReplyContext): Promise<void> {
-  if (context.chatType !== "private") {
-    if (!context.isGroupAdmin) {
-      await sendSetupReply(context, GROUP_MEMBER_MESSAGE, {
-        inline_keyboard: [[{ text: "Personal alerts", url: `${TELEGRAM_BOT_URL}?start=setup` }]],
-      });
-      return;
-    }
-    await sendSetupReply(context, GROUP_ADMIN_MESSAGE, {
-      inline_keyboard: [[{ text: FOLLOW_TOP_LABEL, callback_data: "setup:top25" }]],
-    });
-    return;
-  }
-
   const [subscriber, subscriptions, presetSubscriptions] = await Promise.all([
     loadSubscriberByChat(context.db, context.chatId),
     loadSubscriptionRowsByChat(context.db, context.chatId),
     loadPresetSubscriptions(context.db, context.chatId),
   ]);
-  if (followsNothing({ subscriber, subscriptions, presetSubscriptions })) {
+  const empty = followsNothing({ subscriber, subscriptions, presetSubscriptions });
+  const nowSec = context.operationNowSec ?? unixNow();
+  const isPaused = (subscriber?.alert_snooze_until_ts ?? 0) > nowSec;
+
+  if (context.chatType !== "private") {
+    if (empty) {
+      if (!context.isGroupAdmin) {
+        await sendSetupReply(context, GROUP_MEMBER_MESSAGE, {
+          inline_keyboard: [[{ text: "Personal alerts", url: `${TELEGRAM_BOT_URL}?start=setup` }]],
+        });
+        return;
+      }
+      await sendSetupReply(context, GROUP_ADMIN_MESSAGE, {
+        inline_keyboard: [[{ text: FOLLOW_TOP_LABEL, callback_data: "setup:top25" }]],
+      });
+      return;
+    }
+    const lines = [
+      "<b>Pharos Watch is active in this group.</b> Following:",
+      ...describeFollows({
+        subscriber,
+        subscriptions,
+        presetSubscriptions,
+        presetLabelById: TELEGRAM_PRESET_LABEL_BY_ID,
+        nowSec,
+        chatType: context.chatType,
+      }),
+      ...describeDeliveryState(subscriber, nowSec, context.chatType),
+    ];
+    if (!context.isGroupAdmin) {
+      await sendSetupReply(context, lines.join("\n"), {
+        inline_keyboard: [[{ text: "Personal alerts", url: `${TELEGRAM_BOT_URL}?start=setup` }]],
+      });
+      return;
+    }
+    await sendSetupReply(context, lines.join("\n"), {
+      inline_keyboard: [
+        [{ text: "Group settings", callback_data: "settings:home" }],
+        [
+          isPaused ? { text: "Resume alerts", callback_data: "snooze:off" } : { text: "Pause 24h", callback_data: "snooze:24h" },
+          { text: "Help", callback_data: "help:commands" },
+        ],
+      ],
+    });
+    return;
+  }
+
+  if (empty) {
     await sendSetupReply(context, NEW_USER_MESSAGE, buildOnboardingKeyboard());
     return;
   }
-  const nowSec = context.operationNowSec ?? unixNow();
   const lines = [
     "<b>Welcome back.</b> You follow:",
-    ...describeFollows({ subscriber, subscriptions, presetSubscriptions, presetLabelById: TELEGRAM_PRESET_LABEL_BY_ID, nowSec }),
-    ...describeDeliveryState(subscriber, nowSec),
+    ...describeFollows({
+      subscriber,
+      subscriptions,
+      presetSubscriptions,
+      presetLabelById: TELEGRAM_PRESET_LABEL_BY_ID,
+      nowSec,
+      chatType: context.chatType,
+    }),
+    ...describeDeliveryState(subscriber, nowSec, context.chatType),
   ];
   await sendSetupReply(context, lines.join("\n"), {
     inline_keyboard: [
       [manageAlertsButton()],
-      [{ text: "Pause 24h", callback_data: "snooze:24h" }, { text: "Help", callback_data: "help:commands" }],
+      [
+        isPaused ? { text: "Resume alerts", callback_data: "snooze:off" } : { text: "Pause 24h", callback_data: "snooze:24h" },
+        { text: "Help", callback_data: "help:commands" },
+      ],
     ],
   });
 }
@@ -131,6 +184,7 @@ interface SetupCallbackContext {
   chatId: string;
   chatType: string;
   username: string | null;
+  messageId?: number;
 }
 
 /** `setup:top25`: one tap follows the recommended preset; Undo replaces a confirm step. */
@@ -161,21 +215,29 @@ export async function handleSetupFollowTop(context: SetupCallbackContext): Promi
   }
   const count = resolved.presets[0]?.coins.length ?? 0;
   const isPrivate = context.chatType === "private";
-  const lines = [
-    alreadyFollowing
-      ? `<b>You already follow</b> the ${count} largest USD stablecoins for depeg and stress alerts.`
-      : `<b>Done.</b> You follow the ${count} largest USD stablecoins for depeg and stress alerts.`,
-    "",
-    "Here's what an alert looks like:",
-    `<blockquote>${escapeHtml(TELEGRAM_PUBLIC_ALERT_SAMPLES.depeg.message)}</blockquote>`,
-    isPrivate
-      ? `<b>${MANAGE_ALERTS_LABEL}</b> (the button by the message box) is where you add coins, set quiet hours or pause.`
-      : "Change this group's alerts with /settings.",
-    "Pharos news: @pharoswatch · Community: @pharoswatchers",
-  ];
-  const row: InlineKeyboardButton[] = isPrivate ? [manageAlertsButton()] : [];
+  const settingsCmd = escapeHtml(cmdForChat("settings", context.chatType));
+  const lines = alreadyFollowing
+    ? [
+        `<b>You already follow</b> the ${count} largest USD stablecoins for depeg and Early warning (DEWS) alerts.`,
+        isPrivate
+          ? `Open <b>${MANAGE_ALERTS_LABEL}</b> to add coins, set quiet hours or pause.`
+          : `Change this group's alerts with ${settingsCmd}.`,
+      ]
+    : [
+        `<b>Done.</b> You follow the ${count} largest USD stablecoins for depeg and Early warning (DEWS) alerts.`,
+        "",
+        "Here's what an alert looks like:",
+        `<blockquote>${escapeHtml(TELEGRAM_PUBLIC_ALERT_SAMPLES.depeg.message)}</blockquote>`,
+        isPrivate
+          ? `<b>${MANAGE_ALERTS_LABEL}</b> (the button by the message box) is where you add coins, set quiet hours or pause.`
+          : `Change this group's alerts with ${settingsCmd}.`,
+        "Pharos news: @pharoswatch · Community: @pharoswatchers",
+      ];
+  const row: InlineKeyboardButton[] = isPrivate
+    ? [manageAlertsButton()]
+    : [{ text: "Group settings", callback_data: "settings:home" }];
   if (undoData) row.push({ text: "Undo", callback_data: undoData });
-  await sendSetupReply(context, lines.join("\n"), row.length > 0 ? { inline_keyboard: [row] } : undefined);
+  await sendSetupReply(context, lines.join("\n"), { inline_keyboard: [row] });
   return { text: alreadyFollowing ? "Already following." : "Following." };
 }
 
@@ -196,7 +258,11 @@ export async function handleSetupUndo(
   const [fence, identity, extraIdentity] = expiryCode?.split(".") ?? [];
   const [expiry, generationCode, extra] = fence?.split("-") ?? [];
   const generation = generationCode && /^[0-9a-z]{1,11}$/.test(generationCode) ? parseInt(generationCode, 36) : NaN;
-  const expired = { text: "This Undo expired. Change your alerts in Manage Alerts." };
+  const expired = {
+    text: context.chatType === "private"
+      ? "This Undo expired. Change your alerts in Manage Alerts."
+      : `This Undo expired. Use ${cmdForChat("settings", context.chatType)}.`,
+  };
   if (!isUnexpired(expiry) || extra !== undefined || !Number.isSafeInteger(generation) || generation < 1
     || !identity || !/^[\w-]{22}$/.test(identity) || extraIdentity !== undefined) return expired;
   const outcome = await restorePresetSubscription(context.db, context.chatId, RECOMMENDED_PRESET_ID, prior, generation, identity);
@@ -206,23 +272,30 @@ export async function handleSetupUndo(
     actionDetail: "setup_undo",
     outcome: "success",
   });
+  if (context.messageId != null) {
+    await editMessage(context.chatId, context.messageId, "Undone.", context.botToken, {
+      disableWebPagePreview: true,
+      replyMarkup: { inline_keyboard: [] },
+    });
+  }
+  const startCmd = escapeHtml(cmdForChat("start", context.chatType));
   await sendSetupReply(
     context,
     prior.size === 0
-      ? "Undone. You no longer follow the top 25 USD stablecoins. Send /start to choose again."
+      ? `Undone. You no longer follow the top 25 USD stablecoins. Send ${startCmd} to choose again.`
       : "Undone. Your USD Top 25 alerts are back to what they were.",
   );
   return { text: "Undone." };
 }
 
-/** `setup:sample`: the same sample `/sample` sends. */
+/** `setup:sample`: the same framed sample `/sample` sends. */
 export async function handleSetupSample(
   context: Pick<SetupCallbackContext, "db" | "botToken" | "chatId">,
 ): Promise<{ text: string }> {
   await sendSetupReply(
     context,
-    `${escapeHtml(TELEGRAM_PUBLIC_ALERT_SAMPLES.depeg.message)}\n\n<i>This was a sample alert.</i>`,
-    buildOnboardingKeyboard({ includeSample: false }),
+    buildSampleAlertMessage(),
+    buildOnboardingKeyboard({ includeSample: false, includeManageAlerts: true }),
   );
   return { text: "Sample sent." };
 }

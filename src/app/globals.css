@@ -673,25 +673,31 @@
     );
     --border: var(--telegram-border, color-mix(in oklab, var(--mini-text) 18%, transparent));
     --ring: var(--telegram-ring, var(--mini-accent));
+    --mini-safe-top: calc(
+      max(env(safe-area-inset-top, 0px), var(--telegram-hardware-safe-area-top, 0px)) +
+        var(--telegram-content-safe-area-top, 0px)
+    );
+    --mini-safe-right: calc(
+      max(env(safe-area-inset-right, 0px), var(--telegram-hardware-safe-area-right, 0px)) +
+        var(--telegram-content-safe-area-right, 0px)
+    );
+    --mini-safe-bottom: calc(
+      max(env(safe-area-inset-bottom, 0px), var(--telegram-hardware-safe-area-bottom, 0px)) +
+        var(--telegram-content-safe-area-bottom, 0px)
+    );
+    --mini-safe-left: calc(
+      max(env(safe-area-inset-left, 0px), var(--telegram-hardware-safe-area-left, 0px)) +
+        var(--telegram-content-safe-area-left, 0px)
+    );
   }
   @media (prefers-color-scheme: dark) {
     :root:has(.pharos-mini-app) {
+      --background: var(--p-neutral-975);
+      --foreground: var(--p-neutral-50);
       --telegram-bg: var(--p-neutral-975);
       --telegram-text: var(--p-neutral-50);
       --telegram-color-scheme: dark;
     }
-  }
-  .pharos-mini-app .mini-selected {
-    border-color: var(--mini-accent-border);
-    background-color: var(--mini-accent-fill);
-    color: var(--mini-text);
-  }
-  .pharos-mini-app .mini-dot-on {
-    background-color: var(--mini-accent);
-  }
-  .pharos-mini-app .mini-highlight {
-    border-color: var(--mini-accent);
-    box-shadow: 0 0 0 2px var(--mini-accent-fill);
   }
 
   /* Label register (two variants, one tracking token). `.pharos-label` is the

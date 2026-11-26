@@ -28,42 +28,74 @@ function StatusLine(): React.JSX.Element {
   );
 }
 
+/** A scalar is admitted only while the current snapshot carries it as finite and available (R1/R2). */
+function admittedCount(
+  value: number | null | undefined,
+  field: string,
+  unavailableFields: readonly string[],
+): number | null {
+  return typeof value === "number" && Number.isFinite(value) && !unavailableFields.includes(field) ? value : null;
+}
+
+function TelegramFallbackLink(): React.JSX.Element {
+  return (
+    <Link
+      href="/pharoswatchbot/"
+      prefetch={false}
+      className={cn(LINE_LINK_CLASS, "text-muted-foreground hover:text-foreground")}
+    >
+      <Send aria-hidden="true" className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
+      <span className="text-sm">Telegram alerts</span>
+      <SquareArrowRight aria-hidden="true" className={ARROW_CLASS} strokeWidth={2} />
+    </Link>
+  );
+}
+
 /** Right line: public Telegram watcher pulse as a single clickable line → /pharoswatchbot/. */
 function TelegramLine(): React.JSX.Element {
   const { data: pulse, isLoading, isError } = useTelegramPulse();
 
   if (isLoading) return <Skeleton className="h-5 w-44" />;
   if (!pulse || isError) {
-    return (
-      <Link
-        href="/pharoswatchbot/"
-        prefetch={false}
-        className={cn(LINE_LINK_CLASS, "text-muted-foreground hover:text-foreground")}
-      >
-        <Send aria-hidden="true" className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
-        <span className="text-sm">Telegram alerts</span>
-        <SquareArrowRight aria-hidden="true" className={ARROW_CLASS} strokeWidth={2} />
-      </Link>
-    );
+    return <TelegramFallbackLink />;
+  }
+
+  const unavailableFields = pulse.quality?.unavailableFields ?? [];
+  const watcherCount = admittedCount(pulse.activeWatchers, "activeWatchers", unavailableFields);
+  const followCount = admittedCount(pulse.coinSubscriptions, "coinSubscriptions", unavailableFields);
+  if (watcherCount == null && followCount == null) {
+    return <TelegramFallbackLink />;
   }
 
   return (
-    <Link href="/pharoswatchbot/" prefetch={false} className={cn(LINE_LINK_CLASS, "text-foreground hover:text-brand-accent-text")}>
+    <Link
+      href="/pharoswatchbot/"
+      prefetch={false}
+      className={cn(LINE_LINK_CLASS, "flex-wrap gap-x-2 gap-y-0.5 text-foreground hover:text-brand-accent-text")}
+    >
       <Send
         aria-hidden="true"
         className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground"
         strokeWidth={2}
       />
-      <span className="pharos-numeric shrink-0 text-sm font-semibold">{formatDecimal(pulse.activeWatchers, 0, 3)}</span>
-      <span className="shrink-0 text-sm text-muted-foreground" title={TELEGRAM_METRIC_SEMANTICS.activeWatchers.description}>
-        {TELEGRAM_METRIC_SEMANTICS.activeWatchers.label.toLowerCase()}
+      <span className="shrink-0 text-sm font-medium text-muted-foreground">Telegram</span>
+      <span aria-hidden="true" className="text-muted-foreground/40">·</span>
+      <span className="inline-flex items-baseline gap-1.5">
+        <span className="pharos-numeric shrink-0 text-sm font-semibold">
+          {watcherCount == null ? "—" : formatDecimal(watcherCount, 0, 3)}
+        </span>
+        <span className="shrink-0 text-sm text-muted-foreground" title={TELEGRAM_METRIC_SEMANTICS.activeWatchers.description}>
+          {TELEGRAM_METRIC_SEMANTICS.activeWatchers.label.toLowerCase()}
+        </span>
       </span>
       <span aria-hidden="true" className="text-muted-foreground/40">·</span>
-      <span className="pharos-numeric shrink-0 text-sm font-semibold">
-        {pulse.coinSubscriptions == null ? "—" : formatDecimal(pulse.coinSubscriptions, 0, 3)}
-      </span>
-      <span className="shrink-0 text-sm text-muted-foreground" title={TELEGRAM_METRIC_SEMANTICS.coinFollows.description}>
-        {TELEGRAM_METRIC_SEMANTICS.coinFollows.label.toLowerCase()}
+      <span className="inline-flex items-baseline gap-1.5">
+        <span className="pharos-numeric shrink-0 text-sm font-semibold">
+          {followCount == null ? "—" : formatDecimal(followCount, 0, 3)}
+        </span>
+        <span className="shrink-0 text-sm text-muted-foreground" title={TELEGRAM_METRIC_SEMANTICS.coinFollows.description}>
+          {TELEGRAM_METRIC_SEMANTICS.coinFollows.label.toLowerCase()}
+        </span>
       </span>
       <SquareArrowRight aria-hidden="true" className={ARROW_CLASS} strokeWidth={2} />
     </Link>

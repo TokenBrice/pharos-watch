@@ -34,19 +34,19 @@ describe("describeSubscriptionSettings", () => {
     expect(descSub(mkSub("x", { alert_depeg: 1, alert_safety: 1, alert_launch: 1, alert_reserve: 1, alert_freeze: 1 }))).toBe("DEWS, Depeg, Safety, Reserve, Freeze");
   });
   it("shows inherited defaults when no types or overrides are enabled", () => {
-    expect(descSub(mkSub("x", { alert_dews: 0 }))).toBe("Inherits preset/global defaults");
+    expect(descSub(mkSub("x", { alert_dews: 0 }))).toBe("via preset");
   });
   it("appends a snooze countdown when alert_snooze_until_ts is in the future (P1-U10)", () => {
-    expect(descSub(mkSub("x", { alert_snooze_until_ts: N + 38 * 60 }), N)).toBe("DEWS — snoozed for 38 min");
+    expect(descSub(mkSub("x", { alert_snooze_until_ts: N + 38 * 60 }), N)).toBe("DEWS · snoozed 38 min");
   });
   it("ignores an expired alert_snooze_until_ts", () => {
     expect(descSub(mkSub("x", { alert_snooze_until_ts: N - 60 }), N)).toBe("DEWS");
   });
   it("distinguishes snooze-only inheritance, one-family off, and fully explicit muting", () => {
     const r = mkSub("x", { ...allOff, alert_snooze_until_ts: N + 3600 });
-    expect(descSub(r, N, { perCoinTag: true })).toBe("Inherits preset/global defaults — snoozed for 1 h");
-    expect(descSub({ ...r, alert_depeg_override: 1 }, N + 3600, { perCoinTag: true })).toBe("Inherits preset/global defaults; off: Depeg (overrides defaults)");
-    expect(descSub({ ...r, ...allOv }, N + 3600, { perCoinTag: true })).toBe("Muted (overrides defaults)");
+    expect(descSub(r, N, { perCoinTag: true })).toBe("via preset · snoozed 1 h");
+    expect(descSub({ ...r, alert_depeg_override: 1 }, N + 3600, { perCoinTag: true })).toBe("via preset · Depeg off");
+    expect(descSub({ ...r, ...allOv }, N + 3600, { perCoinTag: true })).toBe("All alerts off");
   });
 });
 
@@ -64,10 +64,10 @@ describe("describeSubscriptionSettings list override projection", () => {
       sqlite.prepare(`UPDATE telegram_subscriptions SET ${cols.map((c) => `${c} = 1`).join(", ")} WHERE chat_id = '42'`).run();
     }
     const [row] = await loadSubscriptionRowsByChat(db, "42"), desc = descSub(row, NOW, { perCoinTag: true });
-    if (mode === "all-off") expect(desc).toBe("Muted (overrides defaults)");
-    else { expect(desc).toContain("Inherits preset/global defaults"); expect(desc).not.toContain("Muted"); }
-    if (mode === "depeg-off") expect(desc).toContain("off: Depeg");
-    if (mode === "snooze-only") expect(desc).toContain("snoozed for 1 h");
+    if (mode === "all-off") expect(desc).toBe("All alerts off");
+    else { expect(desc).toContain("via preset"); expect(desc).not.toContain("All alerts off"); }
+    if (mode === "depeg-off") expect(desc).toContain("Depeg off");
+    if (mode === "snooze-only") expect(desc).toContain("snoozed 1 h");
   });
 });
 
@@ -85,7 +85,7 @@ describe("buildListMessage", () => {
   it("names presets by label and global follows in plain words", () => {
     const m = list({ subscriber: quiet, presetSubscriptions: [{ preset_id: "usd-top25", alert_dews: 1, alert_depeg: 1, alert_safety: 0, depeg_worsening_bps_step: null }] });
     expect(m).toContain("<b>USD Top 25</b> (preset, updates with market cap): DEWS, Depeg");
-    expect(m).toContain("<b>Every tracked coin:</b> DEWS"); expect(m).toContain("Quiet hours 22:00–07:00 UTC");
+    expect(m).toContain("<b>All stablecoins:</b> DEWS"); expect(m).toContain("Quiet hours 22:00-07:00 UTC");
     expect(m).not.toMatch(/usd-top25|Precedence|\/presets/);
   });
 
@@ -99,15 +99,15 @@ describe("buildListMessage", () => {
     expect(list({ subscriber: { ...quiet, quiet_hours_start_utc: 13, quiet_hours_end_utc: 14, timezone: "Europe/Paris" } })).toContain("Quiet hours active until 14:00 Europe/Paris");
   });
 
-  it("lists followed coins by symbol and fully muted coins separately", () => {
+  it("lists followed coins one per line by symbol and fully off coins separately", () => {
     const m = list({ subscriptions: [mkSub("usdc-circle", { alert_dews: 0, ...allOv }), mkSub("dai-makerdao")] });
-    expect(m).toContain("<b>Coins:</b> DAI (DEWS)"); expect(m).toContain("<b>Muted:</b> USDC"); expect(m).not.toContain("dai-makerdao");
+    expect(m).toContain("<b>Coins (1):</b>\n• DAI — DEWS"); expect(m).toContain("<b>Alerts off:</b> USDC"); expect(m).not.toContain("dai-makerdao");
   });
 
-  it("does not label a coin muted while its unmarked zeroes inherit global follows", () => {
+  it("does not label a coin alerts-off while its unmarked zeroes inherit global follows", () => {
     const m = list({ subscriber: mkSubr({ global_alert_depeg: 1 }), subscriptions: [mkSub("usdc-circle", { alert_dews: 0, alert_dews_override: 1 })] });
-    expect(m).toContain("<b>Coins:</b> USDC (Inherits preset/global defaults; off: DEWS (overrides defaults))");
-    expect(m).not.toContain("<b>Muted:</b>");
+    expect(m).toContain("<b>Coins (1):</b>\n• USDC — via preset · DEWS off");
+    expect(m).not.toContain("<b>Alerts off:</b>");
   });
 });
 
@@ -115,14 +115,14 @@ describe("buildStatusMessage 24h mint/burn flow (C122)", () => {
   const now = Math.floor(Date.now() / 1000);
   const fl = (netFlowUsd: number, age = 0) => ({ netFlowUsd, updatedAt: now - age, stale: age > 21_600, assessedAt: now, freshBudgetSec: 21_600 });
   it.each([[12_300_000, "+$12.3M"], [0, "$0"], [-4_000_000, "-$4.0M"]])("renders signed net flow %s", (v, exp) => {
-    expect(statusMsg("USDC", baseStatus({ supplyUsd: 1, flow: fl(v) }), now)).toContain(`24h net flow ${exp}`);
+    expect(statusMsg("USDC", baseStatus({ supplyUsd: 1, flow: fl(v) }), now)).toContain(`<b>24h flow:</b> ${exp}`);
   });
   it("omits the flow for untracked coins without an n/a placeholder", () => {
-    expect(statusMsg("USDC", baseStatus({ flow: null }), now)).not.toContain("net flow");
+    expect(statusMsg("USDC", baseStatus({ flow: null }), now)).not.toContain("24h flow");
   });
   it("shows the flow's real age instead of a freshness verdict", () => {
     const m = statusMsg("USDC", baseStatus({ supplyUsd: 1, flow: fl(123_500, 7 * 3600) }), now);
-    expect(m).toContain("24h net flow +$123.5K (updated 7h ago)"); expect(m).not.toMatch(/stale|fresh/);
+    expect(m).toContain("<b>24h flow:</b> +$123.5K (updated 7h ago)"); expect(m).not.toMatch(/stale|fresh/);
   });
 });
 
@@ -133,13 +133,13 @@ describe("buildStatusMessage supply and DEX context", () => {
   });
   it("states unavailable liquidity and supply instead of omitting them or showing $0", () => {
     const m = statusMsg("USDC", baseStatus({ liquidity: null, liquidityUnavailableReason: "invalid-coverage-evidence", supplyUsd: null }), now);
-    expect(m).toContain("DEX liquidity not available right now"); expect(m).toContain("Supply not available right now");
-    expect(m).not.toContain("invalid-coverage-evidence"); expect(m).not.toContain("Supply $0");
+    expect(m).toContain("<b>DEX liquidity:</b> not available right now"); expect(m).toContain("<b>Supply:</b> not available right now");
+    expect(m).not.toContain("invalid-coverage-evidence"); expect(m).not.toContain("Supply:</b> $0");
   });
   it("keeps an explicit zero supply and shows each value's age", () => {
-    expect(statusMsg("USDC", baseStatus({ supplyUsd: 0, supplyObservedAt: now, supplyCurrent: true }), now)).toContain("Supply $0, updated just now");
+    expect(statusMsg("USDC", baseStatus({ supplyUsd: 0, supplyObservedAt: now, supplyCurrent: true }), now)).toContain("<b>Supply:</b> $0, updated just now");
     const old = statusMsg("USDC", baseStatus({ supplyUsd: 5e9, supplyObservedAt: now - 30 * 86_400, liquidity: { score: 91, totalTvlUsd: 123e6, updatedAt: now - 30 * 86_400, current: false } }), now);
-    expect(old).toContain("Supply $5.0B, updated 30d ago"); expect(old).toContain("DEX liquidity $123.0M (score 91/100), updated 30d ago");
+    expect(old).toContain("<b>Supply:</b> $5.0B, updated 30d ago"); expect(old).toContain("<b>DEX liquidity:</b> $123.0M (score 91/100), updated 30d ago");
   });
 });
 
@@ -149,20 +149,20 @@ describe("buildStatusMessage safety", () => {
   });
   it("renders the grade without model, version, or generation ids", () => {
     const m = statusMsg("USDC", baseStatus({ safety: safe() }));
-    expect(m).toContain("Safety grade A (90)"); expect(m).not.toMatch(/V9|10\.26|report-cards/);
-    expect(statusMsg("USDC", baseStatus({ safetyUnavailableReason: "canonical-snapshot-unavailable" }))).toContain("Safety grade not available right now");
+    expect(m).toContain("<b>Safety:</b> A (90)"); expect(m).not.toMatch(/V9|10\.26|report-cards/);
+    expect(statusMsg("USDC", baseStatus({ safetyUnavailableReason: "canonical-snapshot-unavailable" }))).toContain("<b>Safety:</b> not available right now");
   });
   it.each(["pipeline-gap", "rated", "not-rated"] as const)("keeps %s availability distinct from its grade", (rs) => {
     const v = safe({ grade: rs === "pipeline-gap" ? null : rs === "not-rated" ? "NR" : "A", score: rs === "rated" ? 80 : null, ratingStatus: rs, partialEvidence: rs === "not-rated" ? null : { reasonCode: "partial-evidence-pipeline-gap", excludedPillars: rs === "pipeline-gap" ? ["backing", "exit"] : ["exit"], causes: ["A"] } });
     const m = statusMsg("USDC", baseStatus({ safety: v }));
-    expect(m).toContain(`Safety grade ${formatTelegramSafety(v)}`);
-    if (rs === "pipeline-gap") { expect(m).toContain("Safety grade not available right now"); expect(m).not.toContain("(0)"); }
-    else if (rs === "rated") expect(m).toContain("Safety grade A (80), some inputs missing");
-    else { expect(m).toContain("Safety grade NR"); expect(m).not.toContain("some inputs missing"); }
+    expect(m).toContain(`<b>Safety:</b> ${formatTelegramSafety(v)}`);
+    if (rs === "pipeline-gap") { expect(m).toContain("<b>Safety:</b> not available right now"); expect(m).not.toContain("(0)"); }
+    else if (rs === "rated") expect(m).toContain("<b>Safety:</b> A (80), some inputs missing");
+    else { expect(m).toContain("<b>Safety:</b> NR"); expect(m).not.toContain("some inputs missing"); }
   });
   it("reports tokenized funds as not graded rather than NR or unavailable", () => {
     const m = statusMsg("BUIDL", baseStatus({ stablecoinId: "buidl-blackrock", safety: safe({ grade: "NR", score: null, ratingStatus: "not-rated" }) }));
-    expect(m).toContain("Tokenized fund (not graded)");
+    expect(m).toContain("<b>Safety:</b> Tokenized fund (not graded)");
     expect(m).not.toContain("Safety grade");
   });
 });
@@ -176,10 +176,10 @@ describe("buildStatusMessage yield", () => {
   it("names the source age and never a generation id or budget", () => {
     const obsAt = Math.floor(Date.now() / 1000) - 3600;
     const m = statusMsg("USDC", baseStatus({ yield: { currentApy: 4.8, apy30d: 4.2, source: "Accepted venue", pharosYieldScore: null, pysUnavailableReason: "source-stale", generationId: "yield-retained", provenance: makeYieldProvenance({ sourceObservedAt: obsAt, sourceMaxAgeSeconds: 7200, sourceFreshness: "stale" }) } }));
-    expect(m).toContain("Yield 4.20% (30-day, Accepted venue), updated 1h ago"); expect(m).not.toMatch(/yield-retained|budget|source-stale/);
+    expect(m).toContain("<b>Yield:</b> 4.20% (30-day, Accepted venue), updated 1h ago"); expect(m).not.toMatch(/yield-retained|budget|source-stale/);
   });
   it("states a failed yield read but omits the line for coins without yield", () => {
-    expect(statusMsg("USDC", baseStatus({ yieldUnavailableReason: "yield-rankings-unavailable" }))).toContain("Yield not available right now");
+    expect(statusMsg("USDC", baseStatus({ yieldUnavailableReason: "yield-rankings-unavailable" }))).toContain("<b>Yield:</b> not available right now");
     expect(statusMsg("USDC", baseStatus({ yieldUnavailableReason: "yield-ranking-not-found" }))).not.toContain("Yield");
   });
 });

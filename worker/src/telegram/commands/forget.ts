@@ -1,5 +1,8 @@
+import { TELEGRAM_BOT_USERNAME } from "@shared/lib/telegram-bot-registration";
+import { escapeHtml } from "../delivery/telegram";
 import { recordTelegramUsageEvent } from "../store/usage-analytics";
 import { unixNow } from "../store/subscribers";
+import { cmdForChat } from "../webhook/telegram-webhook-messages";
 import type { WebhookCommandHandler } from "./context";
 import { BULK_CONFIRM_TTL_SEC } from "./action-runner";
 
@@ -30,7 +33,12 @@ const FORGET_CONFIRM_MESSAGE = [
 
 export const handleForget: WebhookCommandHandler = async (ctx) => {
   if (ctx.chatType !== "private") {
-    await ctx.replyToChat("Open a private chat with PharosWatchBot to delete your data.");
+    const unsubCmd = cmdForChat("unsubscribe", ctx.chatType);
+    await ctx.replyToChat(
+      escapeHtml(
+        `Removing @${TELEGRAM_BOT_USERNAME} from this group automatically deletes this group's data (or an admin can send ${unsubCmd} all to stop alerts). To delete your personal data, send /forget in a private chat with @${TELEGRAM_BOT_USERNAME}.`,
+      ),
+    );
     await recordTelegramUsageEvent(ctx.db, {
       eventType: "command_forget",
       actionDetail: "command",

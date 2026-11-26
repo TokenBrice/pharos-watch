@@ -17,41 +17,63 @@ const SESSION_ENDPOINT = API_PATHS.telegramMiniAppSession();
 type UseMiniAppSessionLoaderArgs = {
   terminalRef: RefObject<boolean>;
   stateRef: RefObject<TelegramMiniAppState | null>;
-  applyConfirmedSnapshot: (snapshot: TelegramMiniAppClientSnapshot) => void;
+  beginSnapshotEpoch: () => number;
+  isCurrentSnapshotEpoch: (epoch: number) => boolean;
+  applyConfirmedSnapshot: (snapshot: TelegramMiniAppClientSnapshot, readEpoch?: number) => boolean;
   setStatus: Dispatch<SetStateAction<MiniAppSessionStatusValue>>;
   setSessionMessage: Dispatch<SetStateAction<string | null>>;
   setSessionAuthExpired: Dispatch<SetStateAction<boolean>>;
+  setUpdateRequired: Dispatch<SetStateAction<boolean>>;
 };
 
-/** Fetch the signed session snapshot; the terminal/state refs stay inside this hook so the shell can render from the returned callback. */
+/** Fetch the signed session snapshot; monotonic epochs prevent stale reads from overwriting newer confirmed writes. */
 export function useMiniAppSessionLoader({
   terminalRef,
   stateRef,
+  beginSnapshotEpoch,
+  isCurrentSnapshotEpoch,
   applyConfirmedSnapshot,
   setStatus,
   setSessionMessage,
   setSessionAuthExpired,
+  setUpdateRequired,
 }: UseMiniAppSessionLoaderArgs) {
   return useCallback(async (nextInitData: string) => {
     if (terminalRef.current) return;
+    const epoch = beginSnapshotEpoch();
     setStatus("loading");
     try {
       const snapshot = await postMiniAppSnapshot(SESSION_ENDPOINT, { initData: nextInitData });
-      if (terminalRef.current) return;
-      applyConfirmedSnapshot(snapshot);
+      if (terminalRef.current || !isCurrentSnapshotEpoch(epoch)) return;
+      if (!applyConfirmedSnapshot(snapshot, epoch)) return;
       setStatus("ready");
       setSessionMessage(null);
     } catch (err) {
-      if (terminalRef.current) return;
-      if (isMiniAppVersionMismatch(err) && refreshMiniAppBundleOnce({
-        contractVersion: err.serverContractVersion,
-        catalogVersion: err.serverCatalogVersion,
-      })) {
+      if (terminalRef.current || !isCurrentSnapshotEpoch(epoch)) return;
+      if (isMiniAppVersionMismatch(err)) {
+        if (refreshMiniAppBundleOnce({
+          contractVersion: err.serverContractVersion,
+          catalogVersion: err.serverCatalogVersion,
+        })) {
+          return;
+        }
+        setUpdateRequired(true);
+        setSessionMessage(null);
         return;
       }
       if (err instanceof MiniAppRequestError && err.code === "stale-auth") setSessionAuthExpired(true);
       setStatus(stateRef.current ? "stale" : "error");
       setSessionMessage(miniAppErrorMessage(err, "session"));
     }
-  }, [applyConfirmedSnapshot, setSessionAuthExpired, setSessionMessage, setStatus, stateRef, terminalRef]);
+  }, [
+    applyConfirmedSnapshot,
+    beginSnapshotEpoch,
+    isCurrentSnapshotEpoch,
+    setSessionAuthExpired,
+    setSessionMessage,
+    setStatus,
+    setUpdateRequired,
+    stateRef,
+    terminalRef,
+  ]);
 }

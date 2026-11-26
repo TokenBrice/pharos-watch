@@ -1,5 +1,10 @@
+import { TELEGRAM_LAUNCH_RETIRED_MESSAGE } from "@shared/lib/telegram-alert-families";
 import { answerCallbackQuery } from "../delivery/telegram";
 import { handleSettingsCallback } from "../webhook/telegram-webhook-settings";
+import {
+  isSettingsWriteSubAction,
+  parseSettingsCallback,
+} from "../webhook/telegram-webhook-settings-shared";
 import {
   requireAdminForMutatingCallback,
   type ParsedCallbackData,
@@ -7,10 +12,9 @@ import {
 } from "./_shared";
 
 /**
- * Bespoke pre-dispatch entry for `settings:*` callbacks. Lives outside the
- * `CALLBACK_HANDLERS` map because its parsed `parts` are validated by an
- * action-specific allowlist instead of `hasExactParts(_, 2)` + a single
- * argument check.
+ * Bespoke pre-dispatch entry for `settings:*` callbacks. Validates exact
+ * segment counts, allowlisted IDs, coin eligibility, and `0..999` page
+ * clamping via the shared policy authority before admin checks or D1 work.
  */
 export async function handleSettingsInlineCallback(
   db: D1Database,
@@ -24,26 +28,17 @@ export async function handleSettingsInlineCallback(
   };
   const { arg: subAction = "", parts } = parsed;
   const subArg = parts.slice(2).join(":");
-  // `settings:c` uses colon delimiters; registry tests pin stablecoin ids to
-  // the colon-free slug format so the action-specific split remains safe.
-  const validSettingsCallback =
-    (subAction === "home" && (parts.length === 2 || (parts.length === 3 && /^\d+$/.test(parts[2] ?? "")))) ||
-    ((subAction === "q" || subAction === "o") && parts.length === 3) ||
-    // `gt:<type>:<0|1>` sets a value; bare `gt:<type>` buttons from older messages only refresh.
-    (subAction === "gt" && (parts.length === 3 || parts.length === 4)) ||
-    (subAction === "sc" && parts.length === 2) ||
-    (subAction === "c" && parts.length === 5);
-  if (!validSettingsCallback) {
-    await answer("Action not recognized.");
+  const validated = parseSettingsCallback(parts);
+  if (validated.kind === "invalid") {
+    await answer(validated.toast);
     return;
   }
-  const mutatingSettingsCallback =
-    subAction === "gt" ||
-    subAction === "q" ||
-    subAction === "sc" ||
-    subAction === "c";
+  if (validated.kind === "retired_launch") {
+    await answer(TELEGRAM_LAUNCH_RETIRED_MESSAGE);
+    return;
+  }
   if (
-    mutatingSettingsCallback &&
+    isSettingsWriteSubAction(subAction) &&
     !(await requireAdminForMutatingCallback(db, botToken, cb, chatId))
   ) {
     return;

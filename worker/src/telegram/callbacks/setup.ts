@@ -1,4 +1,5 @@
 import { answerCallbackQuery } from "../delivery/telegram";
+import { cmdForChat } from "../webhook/telegram-webhook-messages";
 import {
   handleSetupFollowTop,
   handleSetupSample,
@@ -27,12 +28,20 @@ export async function handleSetupCallback(
   parsed: ParsedCallbackData,
 ): Promise<void> {
   const answer = (text: string) => answerCallbackQuery(cb.id, botToken, { text });
+  const chatType = callbackChatType(cb);
   const subAction = hasExactParts(parsed.parts, parsed.arg === "undo" ? 4 : 2) ? parsed.arg : null;
   if (subAction !== "top25" && subAction !== "undo" && subAction !== "sample") {
-    await answer("This setup button is out of date. Send /start to begin again.");
+    await answer(`This setup button is out of date. Send ${cmdForChat("start", chatType)} to begin again.`);
     return;
   }
-  const context = { db, botToken, chatId, chatType: callbackChatType(cb), username: callbackUsername(cb) };
+  const context = {
+    db,
+    botToken,
+    chatId,
+    chatType,
+    username: callbackUsername(cb),
+    messageId: cb.message?.message_id,
+  };
   if (subAction === "sample") {
     await answer((await handleSetupSample(context)).text);
     return;

@@ -4,7 +4,7 @@ import { replyWithOptionalMiniApp, type WebhookCommandHandler } from "./context"
 
 const HELP_ROWS: ReadonlyArray<readonly [section: string | null, command: `/${TelegramCommandName}` | `/${TelegramCommandName} ${string}`, meaning: string]> = [
   ["Check", "/status", "your alerts and active depegs"],
-  [null, "/status USDC", "peg, stress and Safety grade for one coin"],
+  [null, "/status USDC", "peg, DEWS and Safety grade for one coin"],
   [null, "/list", "what you follow"],
   ["Change", "/subscribe USDC USDT", "follow coins, or a preset like usd-top25"],
   [null, "/unsubscribe USDC", "stop following a coin"],
@@ -23,7 +23,10 @@ function renderRows(addressed: boolean): string {
   return HELP_ROWS.map(([section, command, meaning]) => {
     const [name, ...rest] = command.split(" ");
     const typed = addressed ? [`${name}@${TELEGRAM_BOT_USERNAME}`, ...rest].join(" ") : command;
-    return `${section ? `\n<b>${section}</b>\n` : ""}${typed}  ${meaning}`;
+    const renderedMeaning = addressed
+      ? meaning.replace(/\/([a-z]+)/g, `/$1@${TELEGRAM_BOT_USERNAME}`)
+      : meaning;
+    return `${section ? `\n<b>${section}</b>\n` : ""}${typed}  ${renderedMeaning}`;
   }).join("\n");
 }
 

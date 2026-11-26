@@ -42,8 +42,9 @@ export const handleStart: WebhookCommandHandler = async (ctx, args) => {
     case "status":
     case "why":
     case "coverage":
-      // Old why_/coverage_ links fold into the status card.
-      await handleStatus(ctx, payload.coinId);
+      // `?start=status` opens the bare chat card; `status_<id>` / legacy
+      // `why_<id>` / `coverage_<id>` open that coin's status card.
+      await handleStatus(ctx, payload.coinId ?? "");
       return;
     case "app":
       // Groups cannot open the Mini App, so they get a link into the bot's DM.
@@ -68,7 +69,7 @@ export const handleStart: WebhookCommandHandler = async (ctx, args) => {
     chatId: ctx.chatId,
     chatType: ctx.chatType,
     isGroupAdmin: isGroupChatType(ctx.chatType)
-      && await isGroupAdminActor(ctx.botToken, ctx.chatId, ctx.actorUserId),
+      && (Boolean(ctx.postedAsGroup) || await isGroupAdminActor(ctx.botToken, ctx.chatId, ctx.actorUserId)),
     operationNowSec: ctx.operationNowSec,
   });
 };

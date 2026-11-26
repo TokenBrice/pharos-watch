@@ -1,8 +1,9 @@
 import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { DEWS_BAND_CODE_BY_VALUE, TELEGRAM_ALERT_PERSISTENCE } from "@shared/lib/telegram-alert-families";
-import { isDepegStepValue, TELEGRAM_DEWS_BANDS, type TelegramDewsBand } from "@shared/types/status/telegram";
+import { isDepegStepValue, TELEGRAM_DEPEG_STEPS, TELEGRAM_DEWS_BANDS, type TelegramDewsBand } from "@shared/types/status/telegram";
 import { executeAtomicBatch } from "../../lib/db";
 import { FEWER_FAMILY_SETTING_CODES, nextFewerSettingValue } from "../common/alerts-formatting";
+import { cmdForChat, formatDepegStepPercent, formatDewsCompactBand } from "../webhook/telegram-webhook-messages";
 import { prepareCoinSettingStatements } from "../webhook/telegram-webhook-settings-mutations";
 import {
   callbackChatType,
@@ -17,20 +18,21 @@ import {
 const FEWER_CODES = new Set<string>(Object.values(FEWER_FAMILY_SETTING_CODES));
 const DEPEG_CODE = TELEGRAM_ALERT_PERSISTENCE.depeg.settingCode;
 const DEWS_CODE = TELEGRAM_ALERT_PERSISTENCE.dews.settingCode;
+const DEPEG_STEP_TOKENS = new Set<string>(TELEGRAM_DEPEG_STEPS.map(String));
 
 const OFF_LABEL_BY_CODE: Record<string, string> = {
   [DEPEG_CODE]: "depeg alerts",
-  [DEWS_CODE]: "stress alerts",
-  [TELEGRAM_ALERT_PERSISTENCE.safety.settingCode]: "Safety alerts",
+  [DEWS_CODE]: "DEWS alerts",
+  [TELEGRAM_ALERT_PERSISTENCE.safety.settingCode]: "Safety Score alerts",
   [TELEGRAM_ALERT_PERSISTENCE.freeze.settingCode]: "freeze alerts",
-  [TELEGRAM_ALERT_PERSISTENCE.reserve.settingCode]: "reserve alerts",
+  [TELEGRAM_ALERT_PERSISTENCE.reserve.settingCode]: "reserve drift alerts",
 };
 
 interface FewerTarget {
   id: string;
   code: string;
-  /** `/settings` value: a depeg step, a DEWS band code, or "0" for off. */
-  value: string;
+  /** `/settings` value: a depeg step, a DEWS band code, "0" for off, or null for an already-quietest no-op. */
+  value: string | null;
 }
 
 type FewerAction =
@@ -111,43 +113,56 @@ function fewerRank(code: string, value: string): number {
   return TELEGRAM_DEWS_BANDS.findIndex((band) => DEWS_BAND_CODE_BY_VALUE[band] === value);
 }
 
+type ResolvedFewerValue = { kind: "write"; value: string } | { kind: "already-quietest" };
+
 /**
  * The value a tap writes. Safety, freeze and reserve always turn off. A
  * carried value (or, for legacy buttons, one notch above the current value)
  * is clamped so it is never noisier than the current effective setting and
  * never re-enables a sub-alert that is off: a depeg follow without a step has
- * worsening alerts off, and any step would turn them on.
+ * worsening alerts off, so a stale carried-value step button refuses as a
+ * no-op instead of turning Depeg start & recovery alerts off in one tap.
  */
 async function resolveFewerValue(
   db: D1Database,
   chatId: string,
   action: FewerAction,
-): Promise<string> {
+): Promise<ResolvedFewerValue> {
   const { id, code } = action;
-  if (code !== DEPEG_CODE && code !== DEWS_CODE) return "0";
+  if (code !== DEPEG_CODE && code !== DEWS_CODE) return { kind: "write", value: "0" };
   const current = await loadEffectiveFewerSetting(db, chatId, id, code);
-  if (current === "0" || (code === DEPEG_CODE && current == null)) return "0";
-  if (action.kind === "step") {
-    return nextFewerSettingValue(code, code === DEPEG_CODE
-      ? Number(current)
-      : TELEGRAM_DEWS_BANDS.find((band) => DEWS_BAND_CODE_BY_VALUE[band] === current));
+  if (current === "0") return { kind: "write", value: "0" };
+  if (code === DEPEG_CODE && current == null) {
+    if (action.kind === "set" && action.value !== "0") return { kind: "already-quietest" };
+    return { kind: "write", value: "0" };
   }
-  return fewerRank(code, action.value) >= fewerRank(code, current!) ? action.value : current!;
+  if (action.kind === "step") {
+    return {
+      kind: "write",
+      value: nextFewerSettingValue(code, code === DEPEG_CODE
+        ? Number(current)
+        : TELEGRAM_DEWS_BANDS.find((band) => DEWS_BAND_CODE_BY_VALUE[band] === current)),
+    };
+  }
+  return {
+    kind: "write",
+    value: fewerRank(code, action.value) >= fewerRank(code, current!) ? action.value : current!,
+  };
 }
 
-function fewerToast({ id, code, value }: FewerTarget, privateChat: boolean): string {
+function fewerToast({ id, code, value }: FewerTarget, chatType: string): string {
   const symbol = TRACKED_META_BY_ID.get(id)?.symbol ?? id;
-  const undo = privateChat ? "Undo in Manage Alerts." : "Undo with /settings.";
+  const undo = chatType === "private" ? "Undo in Manage Alerts." : `Undo with ${cmdForChat("settings", chatType)}.`;
   if (value === "0") return `${symbol}: ${OFF_LABEL_BY_CODE[code]} off. ${undo}`;
-  if (code === DEPEG_CODE) return `${symbol}: depeg alerts now only past ${(Number(value) / 100).toFixed(1)}%. ${undo}`;
+  if (code === DEPEG_CODE) return `${symbol}: depeg alerts from ${formatDepegStepPercent(Number(value))} now. ${undo}`;
   const band = TELEGRAM_DEWS_BANDS.find((candidate) => DEWS_BAND_CODE_BY_VALUE[candidate] === value);
-  return `${symbol}: stress alerts now only at ${band} and above. ${undo}`;
+  return `${symbol}: DEWS alerts from ${formatDewsCompactBand(band ?? "ALERT")} now. ${undo}`;
 }
 
 /** A carried target value must be one the family's setting accepts. */
 function isFewerValueFor(code: string, value: string): boolean {
   if (value === "0") return true;
-  if (code === DEPEG_CODE) return isDepegStepValue(Number(value));
+  if (code === DEPEG_CODE) return DEPEG_STEP_TOKENS.has(value);
   if (code === DEWS_CODE) return TELEGRAM_DEWS_BANDS.some((band) => DEWS_BAND_CODE_BY_VALUE[band] === value);
   return false;
 }
@@ -168,22 +183,30 @@ export const handleFewerCallback: CallbackHandler = async (context) => {
   const generation = action == null ? null : await db.prepare(
     "SELECT preference_generation FROM telegram_subscribers WHERE chat_id = ?",
   ).bind(chatId).first<{ preference_generation: number }>();
-  const value = action == null || generation == null ? null : await resolveFewerValue(db, chatId, action);
+  const resolved = action == null || generation == null ? null : await resolveFewerValue(db, chatId, action);
+  const chatType = callbackChatType(cb);
+  const staleText = resolved?.kind === "already-quietest"
+    ? (chatType === "private"
+        ? "Settings changed. Open Manage Alerts to turn Depeg off."
+        : `Settings changed. Open ${cmdForChat("settings", chatType)} to turn Depeg off.`)
+    : "Settings changed. Please try again.";
   await runCallbackMutation<FewerTarget>(context, {
-    validate: () => (action != null && value != null ? { id: action.id, code: action.code, value } : null),
+    validate: () => (action != null && resolved != null
+      ? { id: action.id, code: action.code, value: resolved.kind === "write" ? resolved.value : null }
+      : null),
     requireAdmin: true,
     eventType: "subscribe",
     actionDetail: "fewer",
     logAction: "fewer",
     logMessage: "fewer callback write failed",
     write: async ({ id, code: setting, value: next }, options) => {
-      if (generation == null) return "stale";
+      if (generation == null || next == null) return "stale";
       const prepared = prepareCoinSettingStatements(db, chatId, callbackUsername(cb), id, setting, next, generation.preference_generation);
       const results = await executeAtomicBatch(db, [...prepared.statements, ...(options.operationStatements ?? [])], { returnResults: true });
       if (Number(results[prepared.statements.length - 1]?.meta?.changes ?? 0) === 0) return "stale";
     },
-    successText: (target) => fewerToast(target, callbackChatType(cb) === "private"),
-    staleText: "Settings changed. Please try again.",
+    successText: (target) => fewerToast(target, chatType),
+    staleText,
     failureText: "Could not save setting. Please try again.",
   });
 };

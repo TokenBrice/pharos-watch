@@ -103,8 +103,24 @@ function dewsGlyphFor(band: string): string {
   return DEWS_SEVERITY_GLYPH[band] ?? "";
 }
 
+/** Sanctioned DEWS severity glyph for a threat band (empty string when unknown). */
+export function dewsSeverityGlyph(band: string): string {
+  return dewsGlyphFor(band);
+}
+
 function glyphPrefix(glyph: string): string {
   return glyph ? `${glyph} ` : "";
+}
+
+function formatCoinSymbol(stablecoinId: string, symbol: string, linkSymbol = false): string {
+  const bold = `<b>${escapeHtml(symbol)}</b>`;
+  return linkSymbol
+    ? `<a href="https://pharos.watch/stablecoin/${encodeURIComponent(stablecoinId)}">${bold}</a>`
+    : bold;
+}
+
+function formatCompactSymbol(stablecoinId: string, symbol: string, linkSymbol = false): string {
+  return linkSymbol ? formatCoinSymbol(stablecoinId, symbol, true) : escapeHtml(symbol);
 }
 
 /**
@@ -131,20 +147,20 @@ function isDewsEscalation(oldBand: string, newBand: string): boolean {
 
 function dewsHeadlinePhrase(e: DewsChange): string {
   if (!isThreatBand(e.oldBand) || !isThreatBand(e.newBand)) {
-    return `early-warning stress is now ${e.newBand} (${e.score}/100)`;
+    return `DEWS stress is now ${e.newBand} (${e.score}/100)`;
   }
   return isDewsEscalation(e.oldBand, e.newBand)
-    ? `early-warning stress rose to ${e.newBand} (${e.score}/100, was ${e.oldBand})`
-    : `stress eased to ${e.newBand} (${e.score}/100, was ${e.oldBand})`;
+    ? `DEWS stress rose to ${e.newBand} (${e.score}/100, was ${e.oldBand})`
+    : `DEWS stress eased to ${e.newBand} (${e.score}/100, was ${e.oldBand})`;
 }
 
-export function formatDewsLine(e: DewsChange): string {
+export function formatDewsLine(e: DewsChange, linkSymbol = false): string {
   // DEWS sub-signal values are 0-100 stress levels (see SignalResult in worker/src/lib/dews.ts), not percentages.
   const signals = e.topSignals
     .slice(0, 2)
     .map((s) => `${dewsSignalLabel(s.name)} ${Math.round(s.value)}`)
     .join(", ");
-  return `${glyphPrefix(dewsGlyphFor(e.newBand))}<b>${escapeHtml(e.symbol)}</b> ${dewsHeadlinePhrase(e)}${signals ? `\nMain drivers: ${escapeHtml(signals)}` : ""}${formatContextLine(e.contextLine)}`;
+  return `${glyphPrefix(dewsGlyphFor(e.newBand))}${formatCoinSymbol(e.stablecoinId, e.symbol, linkSymbol)} ${dewsHeadlinePhrase(e)}${signals ? `\nMain drivers (0-100): ${escapeHtml(signals)}` : ""}${formatContextLine(e.contextLine)}`;
 }
 
 function formatDurationMinutes(durationMinutes: number): string {
@@ -177,28 +193,30 @@ function peerOffsetPhrase(bps: number, direction: "above" | "below", reference?:
   return `${formatBpsPercent(bps)} ${direction} the peer median${value} (lower confidence)`;
 }
 
-export function formatDepegTriggeredLine(e: DepegAlertPayload): string {
+export function formatDepegTriggeredLine(e: DepegAlertPayload, linkSymbol = false): string {
   const glyph = DEPEG_DIRECTION_GLYPH[e.direction];
   const verb = e.direction === "below" ? "lost its peg" : "broke above its peg";
-  const again = e.reopenedAfterMinutes != null
-    ? ` again, ${formatDurationMinutes(e.reopenedAfterMinutes)} after recovering`
+  const reopened = e.reopenedAfterMinutes != null
+    ? ` (reopened ${formatDurationMinutes(e.reopenedAfterMinutes)} after recovering)`
     : "";
   const price = e.price == null ? "" : `${formatPrice(e.price, e.priceCurrency)}, `;
+  const symbol = formatCoinSymbol(e.stablecoinId, e.symbol, linkSymbol);
   if (e.peakBasis === "peer-relative") {
-    return `${glyph} <b>${escapeHtml(e.symbol)}</b> diverged from peers${again}: ${price}${peerOffsetPhrase(e.deviationBps, e.direction, e.pegReference, e.priceCurrency)}${formatContextLine(e.contextLine)}`;
+    return `${glyph} ${symbol} diverged from peers: ${price}${peerOffsetPhrase(e.deviationBps, e.direction, e.pegReference, e.priceCurrency)}${reopened}${formatContextLine(e.contextLine)}`;
   }
-  return `${glyph} <b>${escapeHtml(e.symbol)}</b> ${verb}${again}: ${price}${depegOffsetPhrase(e.deviationBps, e.direction, e.pegReference, e.priceCurrency)}${formatContextLine(e.contextLine)}`;
+  return `${glyph} ${symbol} ${verb}: ${price}${depegOffsetPhrase(e.deviationBps, e.direction, e.pegReference, e.priceCurrency)}${reopened}${formatContextLine(e.contextLine)}`;
 }
 
-export function formatDepegResolvedLine(e: DepegResolved): string {
+export function formatDepegResolvedLine(e: DepegResolved, linkSymbol = false): string {
   const duration = formatDurationMinutes(e.durationMinutes);
+  const symbol = formatCoinSymbol(e.stablecoinId, e.symbol, linkSymbol);
   if (e.peakBasis === "peer-relative") {
     const recovery = e.recoveryPrice != null ? ` · recovery price ${formatPrice(e.recoveryPrice, e.priceCurrency)}` : "";
-    return `<b>${escapeHtml(e.symbol)}</b> peer-relative incident resolved after ${duration}${recovery}\nPeak ${formatBpsPercent(e.peakDeviationBps)} from the peer median (lower confidence)${formatContextLine(e.contextLine)}`;
+    return `${symbol} peer-relative incident resolved after ${duration}${recovery}\nPeak ${formatBpsPercent(e.peakDeviationBps)} from the peer median (lower confidence)${formatContextLine(e.contextLine)}`;
   }
   const headline = e.recoveryPrice != null
-    ? `<b>${escapeHtml(e.symbol)}</b> is back on peg at ${formatPrice(e.recoveryPrice, e.priceCurrency)}`
-    : `<b>${escapeHtml(e.symbol)}</b> is back on peg`;
+    ? `${symbol} is back on peg at ${formatPrice(e.recoveryPrice, e.priceCurrency)}`
+    : `${symbol} is back on peg`;
   const evidence = e.recoveryPrice != null ? "" : "\nRecovery confirmed by a native peg quote";
   return `${headline}\nOff peg for ${duration} · worst point ${formatBpsPercent(e.peakDeviationBps)} from peg${evidence}${formatContextLine(e.contextLine)}`;
 }
@@ -208,19 +226,21 @@ export function formatDepegResolvedLine(e: DepegResolved): string {
  * deviation this chat was last alerted at, so the line names that observation
  * instead of claiming alert provenance the dispatcher does not track.
  */
-export function formatDepegWorseningLine(e: DepegWorsening): string {
+export function formatDepegWorseningLine(e: DepegWorsening, linkSymbol = false): string {
   const glyph = DEPEG_DIRECTION_GLYPH[e.direction];
   const price = e.price == null ? "" : ` (${formatPrice(e.price, e.priceCurrency)})`;
+  const symbol = formatCoinSymbol(e.stablecoinId, e.symbol, linkSymbol);
+  const previous = `\nWas ${formatBpsPercent(e.previousDeviationBps)} at the previous check`;
   if (e.peakBasis === "peer-relative") {
-    return `${glyph} <b>${escapeHtml(e.symbol)}</b> peer divergence deepened to ${peerOffsetPhrase(e.currentDeviationBps, e.direction, e.pegReference, e.priceCurrency)}${price}${formatContextLine(e.contextLine)}`;
+    return `${glyph} ${symbol} peer divergence deepened to ${peerOffsetPhrase(e.currentDeviationBps, e.direction, e.pegReference, e.priceCurrency)}${price}${previous}${formatContextLine(e.contextLine)}`;
   }
-  return `${glyph} <b>${escapeHtml(e.symbol)}</b> depeg deepened to ${depegOffsetPhrase(e.currentDeviationBps, e.direction, e.pegReference, e.priceCurrency)}${price}\nWas ${formatBpsPercent(e.previousDeviationBps)} at the previous check${formatContextLine(e.contextLine)}`;
+  return `${glyph} ${symbol} depeg deepened to ${depegOffsetPhrase(e.currentDeviationBps, e.direction, e.pegReference, e.priceCurrency)}${price}${previous}${formatContextLine(e.contextLine)}`;
 }
 
 /** Plain-language gloss for each Safety Score pillar, shared by alerts and /why. */
 export const SAFETY_PILLAR_GLOSS: Readonly<Record<string, string>> = {
   backing: "what backs the coin",
-  exit: "how easily holders can redeem or sell near $1",
+  exit: "how easily holders can redeem or sell near peg",
   control: "who can mint, freeze or change the coin",
 };
 
@@ -231,17 +251,19 @@ function safetyGradeVerb(oldGrade: string, newGrade: string): string {
   return newRank > oldRank ? "raised" : "downgraded";
 }
 
-export function formatSafetyLine(e: SafetyChange): string {
+export function formatSafetyLine(e: SafetyChange, linkSymbol = false): string {
   const score = e.newScore != null
     ? `\nOverall score ${e.newScore}${e.oldScore != null ? ` (was ${e.oldScore})` : ""}`
     : "";
-  return `<b>${escapeHtml(e.symbol)}</b> Safety grade ${safetyGradeVerb(e.oldGrade, e.newGrade)} to ${escapeHtml(e.newGrade)} (was ${escapeHtml(e.oldGrade)})${formatContextLine(e.contextLine)}${score}`;
+  return `${formatCoinSymbol(e.stablecoinId, e.symbol, linkSymbol)} Safety grade ${safetyGradeVerb(e.oldGrade, e.newGrade)} to ${escapeHtml(e.newGrade)} (was ${escapeHtml(e.oldGrade)})${formatContextLine(e.contextLine)}${score}`;
 }
 
 export interface ReserveAlert {
   stablecoinId: string;
   symbol: string;
   name: string;
+  liveScore?: number | null;
+  curatedScore?: number | null;
 }
 
 export interface FreezeAlert {
@@ -252,10 +274,54 @@ export interface FreezeAlert {
   amountUsdAtEvent: number | null;
   tapeEventId: string;
   sourceEventId: string;
+  /** Unix timestamp (seconds) of the underlying on-chain event from `tape_events.ts`. */
+  eventTsSec?: number | null;
 }
 
 function formatUsdAmount(amount: number): string {
   return `$${amount.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+}
+
+function formatUtcHourMinute(tsSec: number): string {
+  const date = new Date(tsSec * 1000);
+  const hh = String(date.getUTCHours()).padStart(2, "0");
+  const mm = String(date.getUTCMinutes()).padStart(2, "0");
+  return `${hh}:${mm} UTC`;
+}
+
+/**
+ * Deterministic freeze ordering:
+ * (1) destroy events first,
+ * (2) known observed USD amount (including explicit $0) before unpriced (null),
+ * (3) larger observed USD amount first,
+ * (4) newer eventTsSec first,
+ * (5) stable tape/source ID tie-breaker.
+ */
+export function compareFreezeAlerts(a: FreezeAlert, b: FreezeAlert): number {
+  const destroyDiff = Number(b.eventType === "destroy") - Number(a.eventType === "destroy");
+  if (destroyDiff !== 0) return destroyDiff;
+  const aKnown = a.amountUsdAtEvent != null && Number.isFinite(a.amountUsdAtEvent);
+  const bKnown = b.amountUsdAtEvent != null && Number.isFinite(b.amountUsdAtEvent);
+  const knownDiff = Number(bKnown) - Number(aKnown);
+  if (knownDiff !== 0) return knownDiff;
+  if (aKnown && bKnown) {
+    const amountDiff = b.amountUsdAtEvent! - a.amountUsdAtEvent!;
+    if (amountDiff !== 0) return amountDiff;
+  }
+  const aTs = a.eventTsSec != null && Number.isFinite(a.eventTsSec) ? a.eventTsSec : Number.NEGATIVE_INFINITY;
+  const bTs = b.eventTsSec != null && Number.isFinite(b.eventTsSec) ? b.eventTsSec : Number.NEGATIVE_INFINITY;
+  if (bTs !== aTs) return bTs - aTs;
+  return a.tapeEventId.localeCompare(b.tapeEventId) || a.sourceEventId.localeCompare(b.sourceEventId);
+}
+
+/** Bounded (0, 1) severity for cross-family coin ranking without overriding depeg/DEWS/safety magnitudes. */
+function freezeSeverityScore(e: FreezeAlert): number {
+  if (e.eventType === "destroy") return 0.9;
+  if (e.amountUsdAtEvent != null && Number.isFinite(e.amountUsdAtEvent)) {
+    const amount = Math.max(0, e.amountUsdAtEvent);
+    return 0.1 + 0.7 * (amount / (amount + 1_000_000));
+  }
+  return 0.05;
 }
 
 function freezeHeadlinePhrase(e: FreezeAlert): string {
@@ -270,15 +336,35 @@ function freezeHeadlinePhrase(e: FreezeAlert): string {
   return `issuer ${verb} an address on ${chain}${amount != null ? ` holding ${amount}` : ""}`;
 }
 
-export function formatFreezeLine(e: FreezeAlert): string {
-  return `<b>${escapeHtml(e.symbol)}</b> ${freezeHeadlinePhrase(e)}\nRecorded by <a href="https://pharos.watch/freezewatch/">Pharos FreezeWatch</a>`;
+export function formatFreezeLine(e: FreezeAlert, linkSymbol = false): string {
+  const timePrefix = e.eventTsSec != null && Number.isFinite(e.eventTsSec)
+    ? `Event at ${formatUtcHourMinute(e.eventTsSec)} · `
+    : "";
+  return `${formatCoinSymbol(e.stablecoinId, e.symbol, linkSymbol)} ${freezeHeadlinePhrase(e)}\n${timePrefix}Recorded by <a href="https://pharos.watch/freezewatch/">Pharos FreezeWatch</a>`;
+}
+
+function hasReserveDriftScores(e: ReserveAlert): e is ReserveAlert & { liveScore: number; curatedScore: number } {
+  return e.liveScore != null && Number.isFinite(e.liveScore)
+    && e.curatedScore != null && Number.isFinite(e.curatedScore);
+}
+
+function formatSignedScoreDelta(liveScore: number, curatedScore: number): string {
+  const diff = Math.round(liveScore) - Math.round(curatedScore);
+  return `${diff > 0 ? "+" : ""}${diff}`;
 }
 
 // Reserve-drift alert (C123). Shipped glyph-less per the sanctioned-glyph
 // review rule in docs/telegram-alerts.md "Message Types"; adding a data-tied
 // glyph requires a separate review.
-export function formatReserveLine(e: ReserveAlert): string {
-  return `<b>${escapeHtml(e.symbol)}</b> reserves no longer match their reviewed profile\nPharos's live reserve data for ${escapeHtml(e.name)} now differs from the last reviewed mix. Details on the coin page.`;
+export function formatReserveLine(e: ReserveAlert, linkSymbol = false): string {
+  const headline = `${formatCoinSymbol(e.stablecoinId, e.symbol, linkSymbol)} reserves no longer match their reviewed profile`;
+  if (hasReserveDriftScores(e)) {
+    const live = Math.round(e.liveScore);
+    const curated = Math.round(e.curatedScore);
+    const signedDelta = formatSignedScoreDelta(e.liveScore, e.curatedScore);
+    return `${headline}\nLive reserve score ${live}/100 vs reviewed ${curated}/100 (${signedDelta} pts). Advisory only; Safety Score unchanged.`;
+  }
+  return `${headline}\nPharos's live reserve data for ${escapeHtml(e.name)} now differs from the last reviewed mix. Details on the coin page.`;
 }
 
 export interface ConsolidatedAlerts {
@@ -320,10 +406,12 @@ type AlertFamilyKey = "depeg" | "dews" | "safety" | "freeze" | "reserve";
 interface AlertFamilyDescriptor {
   family: AlertFamilyKey;
   getEvents: (alerts: ConsolidatedAlerts) => readonly AlertFamilyEvent[];
-  format: (event: AlertFamilyEvent) => string;
+  format: (event: AlertFamilyEvent, linkSymbol?: boolean) => string;
   /** One-line form used in batches of three or more events. */
-  compact: (event: AlertFamilyEvent) => string;
+  compact: (event: AlertFamilyEvent, linkSymbol?: boolean) => string;
   severity: (event: AlertFamilyEvent) => number;
+  /** Optional deterministic within-family comparator (overrides numeric severity sort). */
+  compare?: (a: AlertFamilyEvent, b: AlertFamilyEvent) => number;
   /** Recoveries, de-escalations and upgrades sort after every adverse event. */
   isRecovery: (event: AlertFamilyEvent) => boolean;
   /** Message order: depeg, DEWS escalations, safety, freeze, reserve. */
@@ -335,9 +423,10 @@ interface AlertFamilyDescriptor {
 function defineAlertFamily<T extends AlertFamilyEvent>(spec: {
   family: AlertFamilyKey;
   getEvents: (alerts: ConsolidatedAlerts) => readonly T[];
-  format: (event: T) => string;
-  compact: (event: T) => string;
+  format: (event: T, linkSymbol?: boolean) => string;
+  compact: (event: T, linkSymbol?: boolean) => string;
   severity: (event: T) => number;
+  compare?: (a: T, b: T) => number;
   isRecovery?: (event: T) => boolean;
   layoutOrder: number;
   rankOrder: number;
@@ -345,17 +434,14 @@ function defineAlertFamily<T extends AlertFamilyEvent>(spec: {
   return {
     family: spec.family,
     getEvents: spec.getEvents,
-    format: (event) => spec.format(event as T),
-    compact: (event) => spec.compact(event as T),
+    format: (event, linkSymbol) => spec.format(event as T, linkSymbol),
+    compact: (event, linkSymbol) => spec.compact(event as T, linkSymbol),
     severity: (event) => spec.severity(event as T),
+    ...(spec.compare ? { compare: (a: AlertFamilyEvent, b: AlertFamilyEvent) => spec.compare!(a as T, b as T) } : {}),
     isRecovery: (event) => spec.isRecovery?.(event as T) ?? false,
     layoutOrder: spec.layoutOrder,
     rankOrder: spec.rankOrder,
   };
-}
-
-function symbolHtml(symbol: string): string {
-  return escapeHtml(symbol);
 }
 
 const ALERT_FAMILY_DESCRIPTORS: readonly AlertFamilyDescriptor[] = [
@@ -363,9 +449,17 @@ const ALERT_FAMILY_DESCRIPTORS: readonly AlertFamilyDescriptor[] = [
     family: "depeg",
     getEvents: (alerts) => alerts.depegTriggered,
     format: formatDepegTriggeredLine,
-    compact: (e) => `${DEPEG_DIRECTION_GLYPH[e.direction]} ${symbolHtml(e.symbol)} ${e.peakBasis === "peer-relative"
-      ? peerOffsetPhrase(e.deviationBps, e.direction)
-      : `${e.direction === "below" ? "lost its peg" : "broke above its peg"}, ${formatBpsPercent(e.deviationBps)} ${e.direction}`}`,
+    compact: (e, linkSymbol = false) => {
+      const sym = formatCompactSymbol(e.stablecoinId, e.symbol, linkSymbol);
+      const price = e.price != null ? formatPrice(e.price, e.priceCurrency) : null;
+      if (e.peakBasis === "peer-relative") {
+        return `${DEPEG_DIRECTION_GLYPH[e.direction]} ${sym}${price ? ` ${price} ·` : ""} ${peerOffsetPhrase(e.deviationBps, e.direction)}`;
+      }
+      if (price != null) {
+        return `${DEPEG_DIRECTION_GLYPH[e.direction]} ${sym} ${price} (${formatBpsPercent(e.deviationBps)} ${e.direction})`;
+      }
+      return `${DEPEG_DIRECTION_GLYPH[e.direction]} ${sym} ${e.direction === "below" ? "lost its peg" : "broke above its peg"} (${formatBpsPercent(e.deviationBps)} ${e.direction})`;
+    },
     severity: (e) => e.deviationBps,
     layoutOrder: 0,
     rankOrder: 0,
@@ -374,9 +468,17 @@ const ALERT_FAMILY_DESCRIPTORS: readonly AlertFamilyDescriptor[] = [
     family: "depeg",
     getEvents: (alerts) => alerts.depegWorsening ?? [],
     format: formatDepegWorseningLine,
-    compact: (e) => `${DEPEG_DIRECTION_GLYPH[e.direction]} ${symbolHtml(e.symbol)} ${e.peakBasis === "peer-relative"
-      ? `peer divergence deepened to ${peerOffsetPhrase(e.currentDeviationBps, e.direction)}`
-      : `depeg deepened to ${formatBpsPercent(e.currentDeviationBps)} ${e.direction}`}`,
+    compact: (e, linkSymbol = false) => {
+      const sym = formatCompactSymbol(e.stablecoinId, e.symbol, linkSymbol);
+      const price = e.price != null ? formatPrice(e.price, e.priceCurrency) : null;
+      if (e.peakBasis === "peer-relative") {
+        return `${DEPEG_DIRECTION_GLYPH[e.direction]} ${sym}${price ? ` ${price} ·` : ""} peer divergence deepened to ${peerOffsetPhrase(e.currentDeviationBps, e.direction)}`;
+      }
+      if (price != null) {
+        return `${DEPEG_DIRECTION_GLYPH[e.direction]} ${sym} ${price} (deepened to ${formatBpsPercent(e.currentDeviationBps)} ${e.direction})`;
+      }
+      return `${DEPEG_DIRECTION_GLYPH[e.direction]} ${sym} deepened to ${formatBpsPercent(e.currentDeviationBps)} ${e.direction}`;
+    },
     severity: (e) => e.currentDeviationBps,
     layoutOrder: 1,
     rankOrder: 1,
@@ -385,9 +487,13 @@ const ALERT_FAMILY_DESCRIPTORS: readonly AlertFamilyDescriptor[] = [
     family: "depeg",
     getEvents: (alerts) => alerts.depegResolved,
     format: formatDepegResolvedLine,
-    compact: (e) => e.peakBasis === "peer-relative"
-      ? `${symbolHtml(e.symbol)} peer incident resolved, peak ${formatBpsPercent(e.peakDeviationBps)} from the peer median (lower confidence)`
-      : `${symbolHtml(e.symbol)} back on peg after ${formatDurationMinutes(e.durationMinutes)}`,
+    compact: (e, linkSymbol = false) => {
+      const sym = formatCompactSymbol(e.stablecoinId, e.symbol, linkSymbol);
+      const recovery = e.recoveryPrice != null ? ` at ${formatPrice(e.recoveryPrice, e.priceCurrency)}` : "";
+      return e.peakBasis === "peer-relative"
+        ? `${sym} peer incident resolved${recovery}, peak ${formatBpsPercent(e.peakDeviationBps)} from the peer median (lower confidence)`
+        : `${sym} back on peg${recovery} after ${formatDurationMinutes(e.durationMinutes)}`;
+    },
     severity: () => 0,
     isRecovery: () => true,
     layoutOrder: 2,
@@ -397,7 +503,7 @@ const ALERT_FAMILY_DESCRIPTORS: readonly AlertFamilyDescriptor[] = [
     family: "dews",
     getEvents: (alerts) => alerts.dews,
     format: formatDewsLine,
-    compact: (e) => `${glyphPrefix(dewsGlyphFor(e.newBand))}${symbolHtml(e.symbol)} ${isDewsEscalation(e.oldBand, e.newBand) ? "stress rose" : "stress eased"} to ${e.newBand} (${e.score}/100)`,
+    compact: (e, linkSymbol = false) => `${glyphPrefix(dewsGlyphFor(e.newBand))}${formatCompactSymbol(e.stablecoinId, e.symbol, linkSymbol)} ${isDewsEscalation(e.oldBand, e.newBand) ? "stress rose" : "stress eased"} to ${e.newBand} (${e.score}/100)`,
     severity: (e) => THREAT_BAND_ORDER[e.newBand as keyof typeof THREAT_BAND_ORDER] ?? 0,
     isRecovery: (e) => !isDewsEscalation(e.oldBand, e.newBand),
     layoutOrder: 3,
@@ -407,7 +513,7 @@ const ALERT_FAMILY_DESCRIPTORS: readonly AlertFamilyDescriptor[] = [
     family: "safety",
     getEvents: (alerts) => alerts.safety,
     format: formatSafetyLine,
-    compact: (e) => `${symbolHtml(e.symbol)} ${safetyGradeVerb(e.oldGrade, e.newGrade)} ${escapeHtml(e.oldGrade)} → ${escapeHtml(e.newGrade)}`,
+    compact: (e, linkSymbol = false) => `${formatCompactSymbol(e.stablecoinId, e.symbol, linkSymbol)} ${safetyGradeVerb(e.oldGrade, e.newGrade)} ${escapeHtml(e.oldGrade)} → ${escapeHtml(e.newGrade)}`,
     severity: (e) => e.oldScore != null && e.newScore != null ? Math.max(0, e.oldScore - e.newScore) : 0,
     isRecovery: (e) => safetyGradeVerb(e.oldGrade, e.newGrade) === "raised",
     layoutOrder: 4,
@@ -417,8 +523,9 @@ const ALERT_FAMILY_DESCRIPTORS: readonly AlertFamilyDescriptor[] = [
     family: "freeze",
     getEvents: (alerts) => alerts.freeze ?? [],
     format: formatFreezeLine,
-    compact: (e) => `${symbolHtml(e.symbol)} ${freezeHeadlinePhrase(e)}`,
-    severity: () => 0,
+    compact: (e, linkSymbol = false) => `${formatCompactSymbol(e.stablecoinId, e.symbol, linkSymbol)} ${freezeHeadlinePhrase(e)}`,
+    severity: freezeSeverityScore,
+    compare: compareFreezeAlerts,
     isRecovery: (e) => e.eventType === "unblacklist",
     layoutOrder: 5,
     rankOrder: 7,
@@ -427,8 +534,16 @@ const ALERT_FAMILY_DESCRIPTORS: readonly AlertFamilyDescriptor[] = [
     family: "reserve",
     getEvents: (alerts) => alerts.reserve,
     format: formatReserveLine,
-    compact: (e) => `${symbolHtml(e.symbol)} reserves no longer match their reviewed profile`,
-    severity: () => 0,
+    compact: (e, linkSymbol = false) => {
+      const sym = formatCompactSymbol(e.stablecoinId, e.symbol, linkSymbol);
+      if (hasReserveDriftScores(e)) {
+        const live = Math.round(e.liveScore);
+        const curated = Math.round(e.curatedScore);
+        return `${sym} reserve drift: live ${live}/100 vs reviewed ${curated}/100 (${formatSignedScoreDelta(e.liveScore, e.curatedScore)} pts)`;
+      }
+      return `${sym} reserves no longer match their reviewed profile`;
+    },
+    severity: (e) => hasReserveDriftScores(e) ? Math.abs(Math.round(e.liveScore) - Math.round(e.curatedScore)) : 0,
     layoutOrder: 6,
     rankOrder: 6,
   }),
@@ -442,13 +557,31 @@ const FAMILY_GROUP_LABEL: Record<AlertFamilyKey, string> = {
   reserve: "Reserves",
 };
 
-/** Family names for the provenance footer. */
-const FAMILY_FOOTER_LABEL: Record<AlertFamilyKey, string> = {
+/** Family names for single-family compact batch headlines ("3 depeg alerts"). */
+const FAMILY_COUNT_LABEL: Record<AlertFamilyKey, string> = {
   depeg: "depeg alerts",
-  dews: "stress alerts",
+  dews: "DEWS alerts",
   safety: "Safety alerts",
   freeze: "freeze alerts",
   reserve: "reserve alerts",
+};
+
+/** Family names for the provenance footer. */
+const FAMILY_FOOTER_LABEL: Record<AlertFamilyKey, string> = {
+  depeg: "depeg alerts",
+  dews: "DEWS alerts",
+  safety: "Safety alerts",
+  freeze: "freeze alerts",
+  reserve: "reserve alerts",
+};
+
+/** Owning Pharos hub page for single-family multi-coin batch footers. */
+const FAMILY_HUB_URL: Record<AlertFamilyKey, string> = {
+  depeg: "https://pharos.watch/depeg/",
+  dews: "https://pharos.watch/stability-index/",
+  safety: "https://pharos.watch/safety-scores/",
+  freeze: "https://pharos.watch/freezewatch/",
+  reserve: "https://pharos.watch",
 };
 
 interface OrderedAlertEvent {
@@ -474,7 +607,9 @@ function orderAlertEvents(alerts: ConsolidatedAlerts): OrderedAlertEvent[] {
     .sort((a, b) =>
       Number(a.recovery) - Number(b.recovery) ||
       a.descriptor.layoutOrder - b.descriptor.layoutOrder ||
-      b.severity - a.severity ||
+      (a.descriptor === b.descriptor && a.descriptor.compare
+        ? a.descriptor.compare(a.event, b.event)
+        : b.severity - a.severity) ||
       a.index - b.index)
     .map(({ descriptor, event }) => ({ descriptor, event }));
 }
@@ -499,16 +634,20 @@ function formatViaFooter(via: AlertVia | null | undefined, families: readonly Al
 /** Up to this many events render with the full template; more use the compact list. */
 const FULL_TEMPLATE_MAX_EVENTS = 2;
 
-function formatCompactBatch(ordered: readonly OrderedAlertEvent[]): string {
+function formatCompactBatch(ordered: readonly OrderedAlertEvent[], linkSymbols: boolean): string {
   const families = [...new Set(ordered.map(({ descriptor }) => descriptor.family))];
-  const headline = `<b>${ordered.length} alerts</b>, led by ${ordered[0]!.descriptor.compact(ordered[0]!.event)}`;
   if (families.length === 1) {
-    return `${headline}\n\n${ordered.map(({ descriptor, event }) => descriptor.compact(event)).join("\n")}`;
+    const lead = ordered[0]!;
+    const leadIntro = lead.descriptor.isRecovery(lead.event) ? "led by" : "worst:";
+    const headline = `<b>${ordered.length} ${FAMILY_COUNT_LABEL[families[0]!]}</b> · ${leadIntro} ${lead.descriptor.compact(lead.event, linkSymbols)}`;
+    const remaining = ordered.slice(1).map(({ descriptor, event }) => descriptor.compact(event, linkSymbols));
+    return remaining.length > 0 ? `${headline}\n\n${remaining.join("\n")}` : headline;
   }
+  const headline = `<b>${ordered.length} alerts</b>, led by ${ordered[0]!.descriptor.compact(ordered[0]!.event, false)}`;
   const groups = families.map((family) => {
     const lines = ordered
       .filter(({ descriptor }) => descriptor.family === family)
-      .map(({ descriptor, event }) => descriptor.compact(event));
+      .map(({ descriptor, event }) => descriptor.compact(event, linkSymbols));
     return `<b>${FAMILY_GROUP_LABEL[family]}</b>\n${lines.join("\n")}`;
   });
   return `${headline}\n\n${groups.join("\n\n")}`;
@@ -525,18 +664,122 @@ export function formatConsolidatedMessage(
   options: FormatConsolidatedMessageOptions = {},
 ): string {
   const ordered = orderAlertEvents(alerts);
-  const body = ordered.length > FULL_TEMPLATE_MAX_EVENTS
-    ? formatCompactBatch(ordered)
-    : ordered.map(({ descriptor, event }) => descriptor.format(event)).join("\n\n");
   const families = [...new Set(ordered.map(({ descriptor }) => descriptor.family))];
-  const footer = formatViaFooter(options.via, families);
   const singleId = getSingleAlertStablecoinId(alerts);
-  const url = singleId ? `https://pharos.watch/stablecoin/${singleId}` : "https://pharos.watch";
+  const isMultiCoin = singleId == null;
+  const body = ordered.length > FULL_TEMPLATE_MAX_EVENTS
+    ? formatCompactBatch(ordered, isMultiCoin)
+    : ordered.map(({ descriptor, event }) => descriptor.format(event, isMultiCoin)).join("\n\n");
+  const footer = formatViaFooter(options.via, families);
+  const url = singleId
+    ? `https://pharos.watch/stablecoin/${encodeURIComponent(singleId)}${families.length === 1 && families[0] === "reserve" ? "#reserves" : ""}`
+    : families.length === 1
+      ? (FAMILY_HUB_URL[families[0]!] ?? "https://pharos.watch")
+      : "https://pharos.watch";
   return `${body}${footer ? `\n\n${footer}` : ""}\n\n<a href="${url}">View on Pharos</a>`;
 }
 
-/** Max characters of a symbol shown on a compact per-coin mute button. */
+/** Max events rendered inline for one coin+chain in an hourly freeze summary before collapsing. */
+const FREEZE_BATCH_BURST_COLLAPSE_THRESHOLD = 4;
+const FREEZE_BATCH_BURST_TOP_ROWS = 3;
+
+function formatFreezeAmountSummary(events: readonly FreezeAlert[]): string {
+  let knownCount = 0;
+  let knownUsd = 0;
+  let unpricedCount = 0;
+  for (const event of events) {
+    if (event.amountUsdAtEvent != null && Number.isFinite(event.amountUsdAtEvent)) {
+      knownCount++;
+      knownUsd += event.amountUsdAtEvent;
+    } else {
+      unpricedCount++;
+    }
+  }
+  if (knownCount === 0) return "amount unavailable";
+  return unpricedCount > 0
+    ? `${formatUsdAmount(knownUsd)} known, ${unpricedCount} unpriced`
+    : `${formatUsdAmount(knownUsd)} known`;
+}
+
+function formatFreezeBurstCollapseSummary(events: readonly FreezeAlert[]): string | null {
+  let knownUsd = 0;
+  let unpricedCount = 0;
+  for (const event of events) {
+    if (event.amountUsdAtEvent != null && Number.isFinite(event.amountUsdAtEvent)) {
+      knownUsd += event.amountUsdAtEvent;
+    } else {
+      unpricedCount++;
+    }
+  }
+  if (knownUsd <= 0) return null;
+  return unpricedCount > 0
+    ? `${formatUsdAmount(knownUsd)} known, ${unpricedCount} unpriced`
+    : `${formatUsdAmount(knownUsd)} known`;
+}
+
+/**
+ * Distinct compact batch wrapper for hourly below-threshold freeze summaries
+ * (`freeze_batch` jobs). Sorts deterministically with `compareFreezeAlerts`,
+ * collapses >4-event bursts per coin+chain to the top 3 + `and N more`,
+ * and always keeps the Pharos FreezeWatch link. Callers still pass every
+ * underlying event's source key for send-time retraction checks.
+ */
+export function formatHourlyFreezeBatchMessage(
+  freezeAlerts: readonly FreezeAlert[],
+  options: FormatConsolidatedMessageOptions = {},
+): string {
+  const sorted = [...freezeAlerts].sort(compareFreezeAlerts);
+  const uniqueCoins = new Set(sorted.map((alert) => alert.stablecoinId));
+  const singleId = uniqueCoins.size === 1 ? sorted[0]?.stablecoinId ?? null : null;
+  const isMultiCoin = singleId == null;
+  const eventCountLabel = sorted.length === 1 ? "1 event" : `${sorted.length} events`;
+  const headline = `<b>Hourly freeze summary</b>: ${eventCountLabel} (${formatFreezeAmountSummary(sorted)})`;
+
+  const groups = new Map<string, FreezeAlert[]>();
+  for (const alert of sorted) {
+    const key = `${alert.stablecoinId}\0${alert.chainName}`;
+    const existing = groups.get(key);
+    if (existing) existing.push(alert);
+    else groups.set(key, [alert]);
+  }
+
+  const lines: string[] = [];
+  for (const group of groups.values()) {
+    const shown = group.length > FREEZE_BATCH_BURST_COLLAPSE_THRESHOLD
+      ? group.slice(0, FREEZE_BATCH_BURST_TOP_ROWS)
+      : group;
+    for (const event of shown) {
+      const timeSuffix = event.eventTsSec != null && Number.isFinite(event.eventTsSec)
+        ? ` (${formatUtcHourMinute(event.eventTsSec)})`
+        : "";
+      lines.push(`${formatCoinSymbol(event.stablecoinId, event.symbol, isMultiCoin)} ${freezeHeadlinePhrase(event)}${timeSuffix}`);
+    }
+    if (group.length > FREEZE_BATCH_BURST_COLLAPSE_THRESHOLD) {
+      const rest = group.slice(FREEZE_BATCH_BURST_TOP_ROWS);
+      const chain = escapeHtml(group[0]!.chainName);
+      const amountSummary = formatFreezeBurstCollapseSummary(rest);
+      lines.push(`<i>and ${rest.length} more on ${chain}${amountSummary ? ` (${amountSummary})` : ""}</i>`);
+    }
+  }
+
+  const footer = formatViaFooter(options.via, ["freeze"]);
+  const url = singleId
+    ? `https://pharos.watch/stablecoin/${encodeURIComponent(singleId)}`
+    : FAMILY_HUB_URL.freeze;
+  const sourceLine = `Recorded by <a href="${FAMILY_HUB_URL.freeze}">Pharos FreezeWatch</a>`;
+  return [
+    headline,
+    lines.join("\n"),
+    sourceLine,
+    ...(footer ? [footer] : []),
+    `<a href="${url}">View on Pharos</a>`,
+  ].join("\n\n");
+}
+
+/** Max characters of a symbol shown on a compact per-coin snooze button. */
 const TOPCOIN_SNOOZE_SYMBOL_MAX = 12;
+/** Max characters for an explicit single-coin threshold-raising button label. */
+const FEWER_BUTTON_MAX_CHARS = 22;
 
 export interface RankedAlertCoin {
   stablecoinId: string;
@@ -555,30 +798,44 @@ export interface RankedAlertCoin {
  * - DEWS band severity via `THREAT_BAND_ORDER` on the new band,
  * - safety downgrade magnitude in score points (old − new, downgrades only).
  *
- * Pure (no IO). Ties preserve first-seen order so the output is stable.
+ * Pure (no IO). Ties preserve first-seen order (or `compareFreezeAlerts` when
+ * both coins are freeze-only) so the output is stable.
  */
 export function rankAlertCoins(alerts: ConsolidatedAlerts): RankedAlertCoin[] {
-  const byId = new Map<string, RankedAlertCoin>();
+  const byId = new Map<string, { coin: RankedAlertCoin; bestFreeze?: FreezeAlert }>();
 
-  const consider = (stablecoinId: string, symbol: string, severity: number) => {
+  const consider = (stablecoinId: string, symbol: string, severity: number, freeze?: FreezeAlert) => {
     const existing = byId.get(stablecoinId);
     if (existing) {
-      if (severity > existing.severity) existing.severity = severity;
+      if (severity > existing.coin.severity) existing.coin.severity = severity;
+      if (freeze && (!existing.bestFreeze || compareFreezeAlerts(freeze, existing.bestFreeze) < 0)) {
+        existing.bestFreeze = freeze;
+      }
       return;
     }
-    byId.set(stablecoinId, { stablecoinId, symbol, severity });
+    byId.set(stablecoinId, { coin: { stablecoinId, symbol, severity }, ...(freeze ? { bestFreeze: freeze } : {}) });
   };
 
   const rankingDescriptors = [...ALERT_FAMILY_DESCRIPTORS].sort((a, b) => a.rankOrder - b.rankOrder);
   for (const descriptor of rankingDescriptors) {
     for (const event of descriptor.getEvents(alerts)) {
-      consider(event.stablecoinId, event.symbol, descriptor.severity(event));
+      consider(
+        event.stablecoinId,
+        event.symbol,
+        descriptor.severity(event),
+        descriptor.family === "freeze" ? (event as FreezeAlert) : undefined,
+      );
     }
   }
 
   return [...byId.values()]
-    .map((coin, index) => ({ coin, index }))
-    .sort((a, b) => b.coin.severity - a.coin.severity || a.index - b.index)
+    .map((entry, index) => ({ ...entry, index }))
+    .sort((a, b) =>
+      b.coin.severity - a.coin.severity ||
+      (a.bestFreeze && b.bestFreeze && a.coin.severity < 1 && b.coin.severity < 1
+        ? compareFreezeAlerts(a.bestFreeze, b.bestFreeze)
+        : 0) ||
+      a.index - b.index)
     .slice(0, 2)
     .map(({ coin }) => coin);
 }
@@ -609,8 +866,8 @@ function isFewerFamily(family: AlertFamilyKey): family is FewerFamily {
 }
 
 /**
- * The "Fewer like this" target: the family with the most events (ties follow
- * message order) and its first coin in message order.
+ * The step-down target on single-coin alerts: the family with the most events
+ * (ties follow message order) and its first coin in message order.
  */
 function resolveFewerTarget(ordered: readonly OrderedAlertEvent[]): { stablecoinId: string; family: FewerFamily; code: string } | null {
   const counts = new Map<FewerFamily, number>();
@@ -652,6 +909,28 @@ export function nextFewerSettingValue(code: string, base: number | string | null
   return "0";
 }
 
+function formatFewerStepSuffix(code: string, value: string): string | null {
+  if (value === "0") return null;
+  if (code === TELEGRAM_ALERT_PERSISTENCE.depeg.settingCode) {
+    const bps = Number(value);
+    if (!Number.isFinite(bps) || bps <= 0) return null;
+    const pct = bps / 100;
+    return `: from ${Number.isInteger(pct) ? String(pct) : pct.toFixed(1)}%`;
+  }
+  if (code === TELEGRAM_ALERT_PERSISTENCE.dews.settingCode) {
+    if (value === DEWS_BAND_CODE_BY_VALUE.WARNING) return ": Warning+";
+    if (value === DEWS_BAND_CODE_BY_VALUE.DANGER) return ": Danger only";
+  }
+  return null;
+}
+
+function formatFewerButtonLabel(symbol: string, code: string, value: string): string | null {
+  const suffix = formatFewerStepSuffix(code, value);
+  if (!suffix) return null;
+  const maxSymbolChars = Math.max(1, FEWER_BUTTON_MAX_CHARS - suffix.length);
+  return `${symbol.slice(0, maxSymbolChars)}${suffix}`;
+}
+
 export interface AlertReplyMarkupOptions {
   /**
    * True when the destination chat is a private DM (Telegram convention:
@@ -659,7 +938,7 @@ export interface AlertReplyMarkupOptions {
    * Telegram in groups/channels, so groups get the in-chat settings callback.
    */
   privateChat?: boolean;
-  /** Routed tuning per family/coin; the Fewer button carries its target value. */
+  /** Routed tuning per family/coin; the threshold-raising button carries its target value. */
   fewerBase?: FewerBaseSettings;
 }
 
@@ -668,11 +947,15 @@ type AlertInlineButton =
   | { text: string; web_app: { url: string } };
 
 /**
- * First-chunk keyboard, identical in shape for every family:
- * [Mute SYM 24h] [Pause all 4h] / [Fewer like this] [Manage Alerts].
- * Overflow chunks keep only the chat-wide pause. Mute targets the top-ranked
- * coin; callback_data stays within Telegram's 64-byte limit for the longest
- * tracked stablecoin id (checked in `telegram-alerts.test.ts`).
+ * First-chunk non-destructive keyboard:
+ * - Row 1: [Snooze SYM 24h] [Pause all 4h]
+ * - Row 2 (single-coin): optional explicit threshold-raising button ONLY when
+ *   a quieter non-Off step exists (never permanent Off!), plus [Manage SYM]
+ *   (private) / [Settings: SYM] (group).
+ * - Row 2 (multi-coin): [Manage Alerts] (private) / [Group settings] (group),
+ *   with no ambiguous step-down button.
+ * Overflow chunks keep only [Pause all 4h]. Callback data stays within
+ * Telegram's 64-byte limit for the longest tracked stablecoin id.
  */
 export function buildAlertReplyMarkup(
   alerts: ConsolidatedAlerts,
@@ -684,32 +967,43 @@ export function buildAlertReplyMarkup(
   if (chunkIndex !== 0 || ordered.length === 0) return { inline_keyboard: [[pauseAll]] };
 
   const topCoin = rankAlertCoins(alerts)[0]!;
+  const topSymbol = topCoin.symbol.slice(0, TOPCOIN_SNOOZE_SYMBOL_MAX);
   const singleId = getSingleAlertStablecoinId(alerts);
   const privateChat = options.privateChat === true;
   const rows: AlertInlineButton[][] = [[
     {
-      text: `Mute ${topCoin.symbol.slice(0, TOPCOIN_SNOOZE_SYMBOL_MAX)} 24h`,
+      text: `Snooze ${topSymbol} 24h`,
       callback_data: `coinsnooze:${topCoin.stablecoinId}:24h`,
     },
     pauseAll,
   ]];
 
   const secondRow: AlertInlineButton[] = [];
-  const fewer = resolveFewerTarget(ordered);
-  if (fewer) {
-    // The target value rides in the button so a retried tap sets the same
-    // value instead of stepping again.
-    const value = nextFewerSettingValue(fewer.code, options.fewerBase?.[`${fewer.family}:${fewer.stablecoinId}`]);
-    secondRow.push({ text: "Fewer like this", callback_data: `fewer:${fewer.stablecoinId}:${fewer.code}:${value}` });
-  }
-  secondRow.push(privateChat
-    ? {
-        text: "Manage Alerts",
-        web_app: {
-          url: buildTelegramMiniAppUrl(singleId ? formatCoinPayload(singleId) : MINI_APP_PAYLOAD_NAMES.watchlist),
-        },
+  if (singleId != null) {
+    const fewer = resolveFewerTarget(ordered);
+    if (fewer) {
+      const value = nextFewerSettingValue(fewer.code, options.fewerBase?.[`${fewer.family}:${fewer.stablecoinId}`]);
+      const stepLabel = formatFewerButtonLabel(topCoin.symbol, fewer.code, value);
+      if (stepLabel) {
+        // The target value rides in the button so a retried tap sets the same
+        // value instead of stepping again; permanent-Off ("0") is never emitted.
+        secondRow.push({ text: stepLabel, callback_data: `fewer:${fewer.stablecoinId}:${fewer.code}:${value}` });
       }
-    : { text: "Manage Alerts", callback_data: singleId ? `settings:o:${singleId}` : "settings:home" });
+    }
+    secondRow.push(privateChat
+      ? {
+          text: `Manage ${topSymbol}`,
+          web_app: { url: buildTelegramMiniAppUrl(formatCoinPayload(singleId)) },
+        }
+      : { text: `Settings: ${topSymbol}`, callback_data: `settings:o:${singleId}` });
+  } else {
+    secondRow.push(privateChat
+      ? {
+          text: "Manage Alerts",
+          web_app: { url: buildTelegramMiniAppUrl(MINI_APP_PAYLOAD_NAMES.watchlist) },
+        }
+      : { text: "Group settings", callback_data: "settings:home" });
+  }
   rows.push(secondRow);
   return { inline_keyboard: rows };
 }

@@ -1,4 +1,5 @@
-import type { TelegramCommandName } from "@shared/lib/telegram-bot-registration";
+import { TELEGRAM_BOT_USERNAME, type TelegramCommandName } from "@shared/lib/telegram-bot-registration";
+import { TELEGRAM_PRESET_IDS } from "@shared/lib/telegram-presets";
 
 export type TelegramCanonicalCommand = `/${TelegramCommandName}` | "/sample";
 
@@ -26,7 +27,9 @@ const CANONICAL_COMMAND_POLICIES: Record<TelegramCanonicalCommand, Readonly<Tele
   "/unsubscribe": MUTATING_COMMAND_POLICY,
   "/settings": READ_COMMAND_POLICY,
   "/pause": MUTATING_COMMAND_POLICY,
-  "/forget": MUTATING_COMMAND_POLICY,
+  // `/forget` only prompts in private chats and explains bot removal in groups;
+  // actual deletion happens on the private-only `forget:yes` callback.
+  "/forget": READ_COMMAND_POLICY,
 };
 
 export const TELEGRAM_COMMAND_ALIASES = {
@@ -37,9 +40,37 @@ export const TELEGRAM_COMMAND_ALIASES = {
   "/coverage": { target: "/status" },
 } as const satisfies Record<string, { target: TelegramCanonicalCommand; args?: string }>;
 
+function formatCompactPresetIdList(presetIds: readonly string[]): string {
+  const grouped: Array<{ prefix: string | null; values: string[] }> = [];
+  const byPrefix = new Map<string, { prefix: string; values: string[] }>();
+  for (const id of presetIds) {
+    const match = /^(.*-top)(\d+)$/.exec(id);
+    if (match) {
+      const [, prefix, count] = match;
+      const existing = byPrefix.get(prefix!);
+      if (existing) {
+        existing.values.push(count!);
+      } else {
+        const entry = { prefix: prefix!, values: [count!] };
+        byPrefix.set(prefix!, entry);
+        grouped.push(entry);
+      }
+    } else {
+      grouped.push({ prefix: null, values: [id] });
+    }
+  }
+  return grouped
+    .map((entry) => (entry.prefix ? `${entry.prefix}${entry.values.join("/")}` : entry.values[0]!))
+    .join(", ");
+}
+
+const GROUP_SETTINGS_CMD = `/settings@${TELEGRAM_BOT_USERNAME}`;
+const GROUP_SUBSCRIBE_CMD = `/subscribe@${TELEGRAM_BOT_USERNAME}`;
+export const GROUP_PRESET_ID_LIST = formatCompactPresetIdList(TELEGRAM_PRESET_IDS);
+
 const SETTINGS_MOVED = {
   private: "That setting moved to Manage Alerts.",
-  group: "Use /settings to change this chat's alerts.",
+  group: `Use ${GROUP_SETTINGS_CMD} to change this chat's alerts.`,
 };
 
 // Redirect order and policy order are both retained from their original tables.
@@ -51,7 +82,7 @@ export const RETIRED_COMMAND_REPLIES = {
   "/presets": {
     policyOrder: 5,
     private: "Follow a preset with /subscribe usd-top25, or browse presets in Manage Alerts.",
-    group: "Follow a preset with /subscribe usd-top25.",
+    group: `Follow a preset with ${GROUP_SUBSCRIBE_CMD} <preset>.\nPresets: ${GROUP_PRESET_ID_LIST}`,
   },
   "/top": {
     policyOrder: 6,
@@ -77,17 +108,17 @@ export const RETIRED_COMMAND_REPLIES = {
   "/export": {
     policyOrder: 10,
     private: "Watchlist export and import were retired. Add coins in Manage Alerts.",
-    group: "Watchlist export and import were retired.",
+    group: `Watchlist export and import were retired. Follow coins with ${GROUP_SUBSCRIBE_CMD} <tickers>.`,
   },
   "/import": {
     policyOrder: 11,
     private: "Watchlist export and import were retired. Add coins in Manage Alerts.",
-    group: "Watchlist export and import were retired.",
+    group: `Watchlist export and import were retired. Follow coins with ${GROUP_SUBSCRIBE_CMD} <tickers>.`,
   },
   "/add": {
     policyOrder: 12,
     private: "Use /subscribe followed by tickers, e.g. /subscribe USDC.",
-    group: "Use /subscribe followed by tickers, e.g. /subscribe USDC.",
+    group: `Use ${GROUP_SUBSCRIBE_CMD} followed by tickers, e.g. ${GROUP_SUBSCRIBE_CMD} USDC.`,
   },
 } as const;
 

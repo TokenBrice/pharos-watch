@@ -96,7 +96,10 @@ describe("handleTelegramWebhook", () => {
     const coverageBody = sentBodies.find((body) => body.text.includes("<b>USDC</b>"));
     expect(coverageBody).toBeDefined();
     const coverageButtons = inlineButtons(coverageBody!);
-    expect(coverageButtons).toEqual([{ text: "Follow USDC", callback_data: "quicksub:usdc-circle" }]);
+    expect(coverageButtons).toEqual([
+      { text: "Follow USDC", callback_data: "quicksub:usdc-circle" },
+      { text: "USDC settings", callback_data: "settings:o:usdc-circle" },
+    ]);
     expect(coverageButtons.some((button) => button.web_app)).toBe(false);
   });
 
@@ -317,7 +320,7 @@ describe("handleTelegramWebhook", () => {
     }
   });
 
-  it("splits long /list replies into Telegram-safe chunks", async () => {
+  it("caps long /list replies at 15 coins with an overflow pointer to Manage Alerts", async () => {
     const subscriptions = Array.from({ length: 220 }, (_, index) => ({
       stablecoin_id: `synthetic-stablecoin-${String(index).padStart(3, "0")}-with-a-long-portfolio-label`,
       alert_dews: 1,
@@ -348,11 +351,11 @@ describe("handleTelegramWebhook", () => {
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/list"), "test-secret", "bot-token");
 
-    expect(fetchSpy.mock.calls.length).toBeGreaterThan(1);
-    for (const [, init] of fetchSpy.mock.calls) {
-      const body = JSON.parse(init?.body as string) as { text: string };
-      expect(body.text.length).toBeLessThanOrEqual(4000);
-    }
+    expect(fetchSpy.mock.calls).toHaveLength(1);
+    const body = sentMessageBody();
+    expect(body.text.length).toBeLessThanOrEqual(4000);
+    expect(body.text).toContain("<b>Coins (220):</b>");
+    expect(body.text).toContain("…and 205 more in Manage Alerts.");
   });
 
   it("attaches the Manage Alerts button to /list in private chats", async () => {

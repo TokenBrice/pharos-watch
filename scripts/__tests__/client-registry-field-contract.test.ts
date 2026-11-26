@@ -214,23 +214,30 @@ describe("client registry field contract", () => {
     expect(searchableCoins.map((entry: { stablecoinId: string; rank: number }) => [entry.stablecoinId, entry.rank])).toEqual([["big", 1], ["small", 2]]);
   });
 
-  it("marks wrapped and yield-bearing variants in the Mini App catalog", ({ onTestFinished }) => {
+  it("projects variant, yieldBearing, liveReserves, and freezeTracked flags in the Mini App catalog", ({ onTestFinished }) => {
     const fixtureDir = mkdtempSync(join(tmpdir(), "pharos-mini-app-catalog-variant-"));
     onTestFinished(() => rmSync(fixtureDir, { recursive: true, force: true }));
     const canonicalOrderJsonPath = join(fixtureDir, "canonical-order.json");
-    writeFileSync(canonicalOrderJsonPath, JSON.stringify(["base", "wrapper", "yield"]));
+    writeFileSync(canonicalOrderJsonPath, JSON.stringify(["usdc-circle", "wrapper", "yield", "suspended"]));
 
     const { searchableCoins } = buildTelegramMiniAppCatalogOutput({
       sourceCoins: [
-        { id: "base", symbol: "BASE", name: "base", flags: { pegCurrency: "USD", yieldBearing: false } },
-        { id: "wrapper", symbol: "WRAP", name: "wrapper", variantOf: "base", flags: { pegCurrency: "USD" } },
+        { id: "usdc-circle", symbol: "USDC", name: "USD Coin", flags: { pegCurrency: "USD", yieldBearing: false }, liveReservesConfig: { adapter: "circle-transparency", version: 1 } },
+        { id: "wrapper", symbol: "WRAP", name: "wrapper", variantOf: "usdc-circle", flags: { pegCurrency: "USD" } },
         { id: "yield", symbol: "YLD", name: "yield", flags: { pegCurrency: "USD", yieldBearing: true } },
+        { id: "suspended", symbol: "SUS", name: "suspended", flags: { pegCurrency: "USD" }, liveReservesConfig: { adapter: "single-asset", version: 1, suspended: { reason: "r", since: "2026-10-08" } } },
       ],
       canonicalOrderJsonPath,
     });
 
-    expect(searchableCoins.map((entry: { stablecoinId: string; variant: boolean }) => [entry.stablecoinId, entry.variant]))
-      .toEqual([["base", false], ["wrapper", true], ["yield", true]]);
+    expect(searchableCoins.map((e: { stablecoinId: string; variant: boolean; yieldBearing: boolean; liveReserves: boolean; freezeTracked: boolean }) =>
+      [e.stablecoinId, e.variant, e.yieldBearing, e.liveReserves, e.freezeTracked]))
+      .toEqual([
+        ["usdc-circle", false, false, true, true],
+        ["wrapper", true, false, false, false],
+        ["yield", false, true, false, false],
+        ["suspended", false, false, false, false],
+      ]);
   });
 
   it("labels NAV-token catalog entries with the site hero peg label", ({ onTestFinished }) => {

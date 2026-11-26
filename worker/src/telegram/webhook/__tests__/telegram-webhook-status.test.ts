@@ -74,7 +74,7 @@ describe("loadStatusForCoin", () => {
     expect(status.liquidity).toBeNull();
     expect(status.liquidityUnavailableReason).toBe("unobserved-liquidity");
     const message = buildStatusMessage("AA_FalconXUSDC", status, nowSec);
-    expect(message).toContain("DEX liquidity not available right now");
+    expect(message).toContain("<b>DEX liquidity:</b> not available right now");
     expect(message).not.toContain("DEX liquidity $0");
   });
 

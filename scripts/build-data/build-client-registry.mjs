@@ -30,6 +30,7 @@ import {
 import { LISTING_CLASS_VALUES as TAXONOMY_LISTING_CLASS_VALUES } from "../../shared/types/stablecoin-taxonomy.ts";
 import { resolveMintAuthorityStatusKind } from "../../shared/lib/classification/mint-authority.ts";
 import { resolveMechanismArchetype } from "../../shared/lib/classification/resolve-mechanism-archetype.ts";
+import { BLACKLIST_TRACKED_STABLECOIN_IDS } from "../../shared/lib/blacklist-contract-specs.ts";
 import { getHeroPegLabel } from "../../shared/lib/classification.ts";
 import { getReserves } from "../../shared/lib/reserve-templates.ts";
 import { isRecord as isPlainObject } from "../../shared/lib/type-guards.ts";
@@ -737,8 +738,11 @@ export function buildTelegramMiniAppCatalogOutput({
         ...(pegLabel ? { pegLabel } : {}),
         status: coin.status ?? "active",
         rank: index + 1,
-        // Wrapped, savings, vault and yield-bearing variants; the Mini App lists base coins first.
-        variant: typeof coin.variantOf === "string" || coin.flags.yieldBearing === true,
+        // Wrapped, savings, or vault variant of another coin (`variantOf`); standalone yield-bearing coins stay in the base list.
+        variant: typeof coin.variantOf === "string",
+        yieldBearing: coin.flags.yieldBearing === true,
+        liveReserves: projectLiveReserveAdapter(coin) !== undefined,
+        freezeTracked: BLACKLIST_TRACKED_STABLECOIN_IDS.has(coin.id),
       };
     });
 

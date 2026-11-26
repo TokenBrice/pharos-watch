@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatPresetPayload,
   miniAppPayloadIntent,
   parseMiniAppPayload,
 } from "../telegram-mini-app-payloads";
@@ -18,10 +19,16 @@ describe("telegram mini app payloads", () => {
   });
 
   it("maps only catalog-issued adoption tokens to their Mini App destinations", () => {
+    expect(parseMiniAppPayload("pw1_landing_miniapp_setup")).toEqual({
+      kind: "adoption",
+      destination: "miniapp_setup",
+    });
+    expect(miniAppPayloadIntent(parseMiniAppPayload("pw1_landing_miniapp_setup")!)).toBe("setup");
     expect(parseMiniAppPayload("pw1_landing_miniapp_home")).toEqual({
       kind: "adoption",
       destination: "miniapp_home",
     });
+    expect(miniAppPayloadIntent(parseMiniAppPayload("pw1_landing_miniapp_home")!)).toBe("home");
     expect(miniAppPayloadIntent(parseMiniAppPayload("pw1_landing_miniapp_watchlist")!)).toBe("watchlist");
     expect(parseMiniAppPayload("pw1_landing_unknown")).toBeNull();
     expect(parseMiniAppPayload("pw1_landing_hero")).toBeNull();
@@ -43,6 +50,19 @@ describe("telegram mini app payloads", () => {
     expect(parseMiniAppPayload("why_")).toBeNull();
     expect(parseMiniAppPayload("coverage_")).toBeNull();
     expect(parseMiniAppPayload("why_usdc circle")).toBeNull();
+  });
+
+  it("parses allowlisted preset and all-stablecoins relaunch payloads and rejects unknown ids", () => {
+    expect(formatPresetPayload("usd-top25")).toBe("preset_usd-top25");
+    expect(formatPresetPayload("all")).toBe("preset_all");
+    expect(parseMiniAppPayload("preset_usd-top25")).toEqual({ kind: "preset", groupId: "usd-top25" });
+    expect(parseMiniAppPayload("PRESET_EUR-TOP10")).toEqual({ kind: "preset", groupId: "eur-top10" });
+    expect(parseMiniAppPayload("preset_all")).toEqual({ kind: "preset", groupId: "all" });
+    expect(miniAppPayloadIntent(parseMiniAppPayload("preset_usd-top25")!)).toBe("preset");
+    expect(miniAppPayloadIntent(parseMiniAppPayload("preset_all")!)).toBe("preset");
+    for (const invalid of ["preset_", "preset_unknown-id", "preset_usd top25"]) {
+      expect(parseMiniAppPayload(invalid)).toBeNull();
+    }
   });
 });
 

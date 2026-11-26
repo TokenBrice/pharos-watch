@@ -1,14 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { TELEGRAM_MINI_APP_CATALOG } from "../telegram-mini-app-catalog";
+import { BLACKLIST_TRACKED_STABLECOIN_IDS } from "../blacklist-contract-specs";
+import {
+  TELEGRAM_MINI_APP_CATALOG,
+  computeTelegramMiniAppCatalogVersion,
+  type TelegramMiniAppCatalog,
+} from "../telegram-mini-app-catalog";
 import {
   TELEGRAM_MINI_APP_CATALOG_VERSION,
   TELEGRAM_MINI_APP_CONTRACT_VERSION,
   TelegramMiniAppCatalogSchema,
   TelegramMiniAppBulkWatchlistResponseSchema,
+  TelegramMiniAppContextRequestSchema,
+  TelegramMiniAppContextResponseSchema,
   TelegramMiniAppMutableStateSchema,
   TelegramMiniAppMutationRequestSchema,
   TelegramMiniAppOperationSchema,
   TelegramMiniAppResponseSchema,
+  TelegramMiniAppSessionRequestSchema,
   createTelegramMiniAppSnapshot,
   telegramMiniAppVersionCompatibility,
   type TelegramMiniAppOperation,
@@ -33,6 +41,7 @@ const { catalog: _catalog, ...mutableState } = makeMiniAppState({
 const operations: TelegramMiniAppOperation[] = [
   { kind: "preview-bulk-watchlist", addStablecoinIds: ["usdc-circle"], removeStablecoinIds: ["dai-makerdao"] },
   { kind: "confirm-bulk-watchlist", addStablecoinIds: ["usdc-circle"], removeStablecoinIds: [], expectedPreferenceGeneration: 4, previewFingerprint: "preview-v1-12-deadbeef" },
+  { kind: "apply-bulk-watchlist", addStablecoinIds: ["usdc-circle"], removeStablecoinIds: ["dai-makerdao"], expectedPreferenceGeneration: 4, expectedDirectFingerprint: "direct-v1-12-deadbeef" },
   { kind: "undo-bulk-watchlist", restoreDirectRows: [{ stablecoinId: "dai-makerdao", alertDews: true, alertDepeg: true, alertSafety: false, alertLaunch: false, alertReserve: false, overrideDews: true, overrideDepeg: true, overrideSafety: false, overrideLaunch: false, overrideReserve: false, dewsMinBand: null, safetyMode: null, depegWorseningBpsStep: null }], removeStablecoinIds: ["usdc-circle"], expectedPreferenceGeneration: 5, expectedFingerprint: "preview-v1-12-deadbeef" },
   { kind: "recommended-setup", presetId: "usd-top25", alertTypes: ["dews", "depeg"] },
   { kind: "set-global", alertType: "reserve", enabled: true },
@@ -142,9 +151,13 @@ describe("Telegram Mini App shared contract", () => {
   });
 
   it("parses both the compact contract and the rolling-deploy legacy response", () => {
-    const snapshot = createTelegramMiniAppSnapshot(mutableState);
+    const snapshot = createTelegramMiniAppSnapshot(mutableState, 1_800_000_000);
+    const laterSnapshot = createTelegramMiniAppSnapshot(mutableState, 1_800_000_500);
     const legacy = { ...mutableState, catalog: TELEGRAM_MINI_APP_CATALOG };
 
+    expect(TELEGRAM_MINI_APP_CONTRACT_VERSION).toBe("10");
+    expect(snapshot.serverNowSec).toBe(1_800_000_000);
+    expect(snapshot.stateRevision).toBe(laterSnapshot.stateRevision);
     expect(TelegramMiniAppResponseSchema.parse(snapshot)).toEqual(snapshot);
     expect(TelegramMiniAppResponseSchema.parse(legacy)).toMatchObject({
       viewer: { userId: "42" },
@@ -202,14 +215,16 @@ describe("Telegram Mini App shared contract", () => {
     }
   });
 
-  it("rejects invalid bulk selections at preview and confirmation boundaries", () => {
+  it("rejects invalid bulk selections at preview, confirmation, and apply boundaries", () => {
     const ids = Array.from({ length: 21 }, (_, index) => `coin-${index}`);
-    for (const kind of ["preview-bulk-watchlist", "confirm-bulk-watchlist"]) {
+    for (const kind of ["preview-bulk-watchlist", "confirm-bulk-watchlist", "apply-bulk-watchlist"]) {
       const base = {
         kind,
         ...(kind === "confirm-bulk-watchlist"
           ? { expectedPreferenceGeneration: 4, previewFingerprint: "preview-v1-12-deadbeef" }
-          : {}),
+          : kind === "apply-bulk-watchlist"
+            ? { expectedPreferenceGeneration: 4, expectedDirectFingerprint: "direct-v1-12-deadbeef" }
+            : {}),
       };
       expect(TelegramMiniAppOperationSchema.safeParse({
         ...base, addStablecoinIds: ids.slice(0, 10), removeStablecoinIds: ids.slice(10, 20),
@@ -228,15 +243,18 @@ describe("Telegram Mini App shared contract", () => {
     }
   });
 
-  it("rejects absent and malformed confirmation and undo fingerprints", () => {
-    for (const kind of ["confirm-bulk-watchlist", "undo-bulk-watchlist"] as const) {
+  it("rejects absent and malformed confirmation, apply, and undo fingerprints", () => {
+    for (const [kind, key, malformed] of [
+      ["confirm-bulk-watchlist", "previewFingerprint", "preview-v1-12-nothex00"],
+      ["apply-bulk-watchlist", "expectedDirectFingerprint", "direct-v1-12-nothex00"],
+      ["undo-bulk-watchlist", "expectedFingerprint", "preview-v1-12-nothex00"],
+    ] as const) {
       const operation = operations.find((entry) => entry.kind === kind)!;
       expect(TelegramMiniAppOperationSchema.safeParse(operation).success).toBe(true);
-      const key = kind === "undo-bulk-watchlist" ? "expectedFingerprint" : "previewFingerprint";
       const missing = { ...operation } as Record<string, unknown>;
       delete missing[key];
       expect(TelegramMiniAppOperationSchema.safeParse(missing).success).toBe(false);
-      expect(TelegramMiniAppOperationSchema.safeParse({ ...operation, [key]: "preview-v1-12-nothex00" }).success).toBe(false);
+      expect(TelegramMiniAppOperationSchema.safeParse({ ...operation, [key]: malformed }).success).toBe(false);
     }
   });
 
@@ -304,7 +322,7 @@ describe("Telegram Mini App shared contract", () => {
         catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
       }),
     ).toBe("compatible");
-    for (const contractVersion of ["5", "6"]) {
+    for (const contractVersion of ["5", "6", "9"]) {
       expect(telegramMiniAppVersionCompatibility({
         contractVersion,
         catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
@@ -325,5 +343,130 @@ describe("Telegram Mini App shared contract", () => {
         catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
       }),
     ).toBe("contract-version-mismatch");
+  });
+
+  it("validates v10 scoped context requests and discriminated R1-R8 provenance envelopes", () => {
+    const twenty = Array.from({ length: 20 }, (_, i) => `coin-${i}`);
+    expect(TelegramMiniAppSessionRequestSchema.safeParse({
+      initData: "signed",
+      contextRequest: { kind: "coins", stablecoinIds: twenty },
+    }).success).toBe(true);
+    expect(TelegramMiniAppSessionRequestSchema.safeParse({
+      initData: "signed",
+      contextRequest: { kind: "presets" },
+    }).success).toBe(true);
+    for (const invalid of [
+      { kind: "coins", stablecoinIds: [] },
+      { kind: "coins", stablecoinIds: ["usdc-circle", "usdc-circle"] },
+      { kind: "coins", stablecoinIds: [...twenty, "coin-20"] },
+    ]) {
+      expect(TelegramMiniAppContextRequestSchema.safeParse(invalid).success).toBe(false);
+    }
+
+    const okProv = {
+      status: "ok", source: "stablecoins-cache", assessedAt: 1_800_000_000, observedAt: 1_800_000_000, generation: "1800000000", budgetSec: 1800,
+    } as const;
+    const unavailProv = {
+      status: "unavailable", source: "safety-score-v9", assessedAt: 1_800_000_000, observedAt: null, generation: null, budgetSec: 3600, reason: "v9-snapshot-unavailable",
+    } as const;
+    const validCoinsResponse = {
+      contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
+      catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
+      serverNowSec: 1_800_000_000,
+      context: {
+        kind: "coins" as const,
+        activeDepegs: {
+          provenance: okProv,
+          events: [{
+            stablecoinId: "usdc-circle", direction: "below" as const, peakDeviationBps: -150,
+            currentDeviationBps: -120, currentDirection: "below" as const, priceUsd: 0.988, pegReference: 1, startedAt: 1_799_999_000,
+          }],
+        },
+        coinSignals: {
+          "usdc-circle": {
+            price: { provenance: okProv, priceUsd: 0.9998 },
+            dews: { provenance: okProv, band: "CALM" as const, score: 12 },
+            safety: {
+              provenance: unavailProv, ratingStatus: null, grade: null, score: null,
+              held: false, partialEvidence: false, methodologyVersion: null, publicationId: null,
+            },
+            pegStatus: "off-peg" as const,
+          },
+        },
+      },
+    };
+    expect(TelegramMiniAppContextResponseSchema.safeParse(validCoinsResponse).success).toBe(true);
+    expect(TelegramMiniAppOperationSchema.safeParse({
+      ...operations.find((entry) => entry.kind === "undo-bulk-watchlist")!,
+      expectedFingerprint: `undo-v1-1800000060-${"a".repeat(64)}`,
+    }).success).toBe(true);
+    // Discriminated provenance rejects `reason` on `ok` and requires `reason` on `stale`/`unavailable`.
+    expect(TelegramMiniAppContextResponseSchema.safeParse({
+      ...validCoinsResponse,
+      context: { ...validCoinsResponse.context, activeDepegs: { provenance: { ...okProv, reason: "should-not-exist" }, events: [] } },
+    }).success).toBe(false);
+    expect(TelegramMiniAppContextResponseSchema.safeParse({
+      ...validCoinsResponse,
+      context: { ...validCoinsResponse.context, activeDepegs: { provenance: { status: "stale", source: "stablecoins-cache", assessedAt: 1_800_000_000, observedAt: 1_799_000_000, generation: null, budgetSec: 1200 }, events: [] } },
+    }).success).toBe(false);
+    expect(TelegramMiniAppContextResponseSchema.safeParse({
+      contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
+      catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
+      serverNowSec: 1_800_000_000,
+      context: {
+        kind: "presets",
+        provenance: okProv,
+        presets: [{ id: "usd-top25", memberCount: 25, topSymbols: ["USDT", "USDC", "USDS"] }],
+      },
+    }).success).toBe(true);
+  });
+
+  const sampleCatalog: TelegramMiniAppCatalog = {
+    recommendedPresets: [
+      { id: "usd-top25", label: "USD Top 25", description: "Top 25 USD" },
+      { id: "eur-top10", label: "EUR Top 10", description: "Top 10 EUR" },
+    ],
+    searchableCoins: [
+      { stablecoinId: "usdc-circle", symbol: "USDC", name: "USD Coin", peg: "USD", status: "active", rank: 2, variant: false, yieldBearing: false, liveReserves: true, freezeTracked: true },
+      { stablecoinId: "susde-ethena", symbol: "sUSDe", name: "Staked USDe", peg: "USD", pegLabel: "USDe NAV", status: "active", rank: 10, variant: true, yieldBearing: true, liveReserves: false, freezeTracked: false },
+    ],
+  };
+
+  it("computes a rank/copy-invariant catalog-v3 semantic hash and matches blacklist parity", () => {
+    expect(TELEGRAM_MINI_APP_CATALOG_VERSION).toMatch(/^catalog-v3-[0-9a-f]{8}$/);
+    const baseline = computeTelegramMiniAppCatalogVersion(sampleCatalog);
+    expect(baseline).toMatch(/^catalog-v3-[0-9a-f]{8}$/);
+    expect(computeTelegramMiniAppCatalogVersion({
+      recommendedPresets: [
+        { id: "eur-top10", label: "Renamed EUR", description: "Changed copy" },
+        { id: "usd-top25", label: "Renamed USD", description: "Changed copy" },
+      ],
+      searchableCoins: [
+        { ...sampleCatalog.searchableCoins[1]!, rank: 99, name: "Changed Name", peg: "EUR", pegLabel: "Changed NAV" },
+        { ...sampleCatalog.searchableCoins[0]!, rank: 1, name: "Circle USD", peg: "USD", pegLabel: "USD NAV" },
+      ],
+    })).toBe(baseline);
+
+    const selectableIds = new Set(TELEGRAM_MINI_APP_CATALOG.searchableCoins.map((c) => c.stablecoinId));
+    const trackedInCatalog = TELEGRAM_MINI_APP_CATALOG.searchableCoins.filter((c) => c.freezeTracked).map((c) => c.stablecoinId).sort();
+    expect(trackedInCatalog).toEqual([...BLACKLIST_TRACKED_STABLECOIN_IDS].filter((id) => selectableIds.has(id)).sort());
+    expect(trackedInCatalog.length).toBeGreaterThan(0);
+    expect(TelegramMiniAppCatalogSchema.safeParse({
+      ...sampleCatalog,
+      searchableCoins: [{ ...sampleCatalog.searchableCoins[0]!, liveReserves: "yes" }],
+    }).success).toBe(false);
+  });
+
+  it.each<[string, (c: TelegramMiniAppCatalog) => TelegramMiniAppCatalog]>([
+    ["stablecoinId", (c) => ({ ...c, searchableCoins: [{ ...c.searchableCoins[0]!, stablecoinId: "usdc-alt" }, c.searchableCoins[1]!] })],
+    ["symbol", (c) => ({ ...c, searchableCoins: [{ ...c.searchableCoins[0]!, symbol: "USDC2" }, c.searchableCoins[1]!] })],
+    ["status", (c) => ({ ...c, searchableCoins: [{ ...c.searchableCoins[0]!, status: "pre-launch" }, c.searchableCoins[1]!] })],
+    ["variant", (c) => ({ ...c, searchableCoins: [{ ...c.searchableCoins[0]!, variant: true }, c.searchableCoins[1]!] })],
+    ["yieldBearing", (c) => ({ ...c, searchableCoins: [{ ...c.searchableCoins[0]!, yieldBearing: true }, c.searchableCoins[1]!] })],
+    ["liveReserves", (c) => ({ ...c, searchableCoins: [{ ...c.searchableCoins[0]!, liveReserves: false }, c.searchableCoins[1]!] })],
+    ["freezeTracked", (c) => ({ ...c, searchableCoins: [{ ...c.searchableCoins[0]!, freezeTracked: false }, c.searchableCoins[1]!] })],
+    ["presetId", (c) => ({ ...c, recommendedPresets: [...c.recommendedPresets, { id: "usd-top50", label: "USD Top 50", description: "Top 50" }] })],
+  ])("changes catalog-v3 hash when %s changes", (_field, mutate) => {
+    expect(computeTelegramMiniAppCatalogVersion(mutate(sampleCatalog))).not.toBe(computeTelegramMiniAppCatalogVersion(sampleCatalog));
   });
 });

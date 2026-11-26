@@ -1,6 +1,12 @@
+import { editMessage } from "../delivery/telegram";
 import { recordTelegramUsageEvent } from "../store/usage-analytics";
 import { forgetSubscriber, unsubscribeAll } from "../store/subscriber-lifecycle";
 import { unixNow, upsertGlobalAlertTypes } from "../store/subscribers";
+import {
+  buildManageAlertsKeyboard,
+  cmdForChat,
+  formatDepegStepPercent,
+} from "../webhook/telegram-webhook-messages";
 import { sendAuditedTelegramReply } from "../webhook/telegram-webhook-replies";
 import { decodeSubscribeTypes } from "./pick";
 import {
@@ -28,13 +34,33 @@ export function isUnexpired(code: string | undefined): boolean {
   return parseInt(code, 36) > unixNow();
 }
 
-async function reply(ctx: CallbackContext, message: string, actionDetail: string, recordReplyOutcome = true): Promise<void> {
-  await sendAuditedTelegramReply(ctx.db, ctx.chatId, message, ctx.botToken, { actionDetail, recordReplyOutcome });
+async function stripPromptButtons(ctx: CallbackContext, replacementText: string): Promise<void> {
+  const messageId = ctx.cb.message?.message_id;
+  if (messageId == null) return;
+  await editMessage(ctx.chatId, messageId, replacementText, ctx.botToken, {
+    disableWebPagePreview: true,
+    replyMarkup: { inline_keyboard: [] },
+  });
+}
+
+async function reply(
+  ctx: CallbackContext,
+  message: string,
+  actionDetail: string,
+  options: { recordReplyOutcome?: boolean; replyMarkup?: unknown } = {},
+): Promise<void> {
+  await sendAuditedTelegramReply(ctx.db, ctx.chatId, message, ctx.botToken, {
+    actionDetail,
+    recordReplyOutcome: options.recordReplyOutcome ?? true,
+    ...(options.replyMarkup ? { replyMarkup: options.replyMarkup } : {}),
+  });
 }
 
 export const handleBulkCallback: CallbackHandler = async (ctx) => {
   const [, op, ...rest] = ctx.parsed.parts;
+  const chatType = callbackChatType(ctx.cb);
   if (op === "no" && rest.length === 0) {
+    await stripPromptButtons(ctx, "Cancelled.");
     await ctx.answerCallback({ text: "Cancelled." });
     return;
   }
@@ -54,13 +80,26 @@ export const handleBulkCallback: CallbackHandler = async (ctx) => {
     await upsertGlobalAlertTypes(ctx.db, ctx.chatId, callbackUsername(ctx.cb), subscribe.alertTypes, {
       depegWorseningBpsStep: subscribe.depegStep,
     });
-    const step = subscribe.depegStep == null ? "" : ` Depeg worsening alerts fire at ${subscribe.depegStep} bps.`;
+    const step = subscribe.depegStep == null
+      ? ""
+      : ` Depeg step set to ${formatDepegStepPercent(subscribe.depegStep)}.`;
     await recordTelegramUsageEvent(ctx.db, { eventType: "subscribe", actionDetail: "all", outcome: "success" });
-    await reply(ctx, `Done. You get ${[...subscribe.alertTypes].join(", ")} alerts for every tracked coin.${step}`, "callback_bulk");
+    await stripPromptButtons(ctx, "Confirmed.");
+    await reply(
+      ctx,
+      `Done. You get ${[...subscribe.alertTypes].join(", ")} alerts for every active stablecoin.${step}`,
+      "callback_bulk",
+      { replyMarkup: chatType === "private" ? buildManageAlertsKeyboard("home") : undefined },
+    );
   } else {
     await unsubscribeAll(ctx.db, ctx.chatId);
     await recordTelegramUsageEvent(ctx.db, { eventType: "unsubscribe", actionDetail: "all", outcome: "success" });
-    await reply(ctx, "Done. This chat no longer follows any stablecoins. Send /start to set up again.", "callback_bulk");
+    await stripPromptButtons(ctx, "Confirmed.");
+    await reply(
+      ctx,
+      `Done. This chat no longer follows any stablecoins. Send ${cmdForChat("start", chatType)} to set up again.`,
+      "callback_bulk",
+    );
   }
   await ctx.answerCallback({ text: "Applied." });
 };
@@ -68,6 +107,7 @@ export const handleBulkCallback: CallbackHandler = async (ctx) => {
 export const handleForgetCallback: CallbackHandler = async (ctx) => {
   const [, op, ...rest] = ctx.parsed.parts;
   if (op === "no" && rest.length === 0) {
+    await stripPromptButtons(ctx, "Cancelled. Nothing was deleted.");
     await ctx.answerCallback({ text: "Cancelled. Nothing was deleted." });
     return;
   }
@@ -85,7 +125,10 @@ export const handleForgetCallback: CallbackHandler = async (ctx) => {
   }
   await forgetSubscriber(ctx.db, ctx.chatId);
   await recordTelegramUsageEvent(ctx.db, { eventType: "command_forget", actionDetail: "callback", outcome: "success" });
+  await stripPromptButtons(ctx, "Data deleted.");
   // The purge just deleted this chat's diagnostics row; do not recreate it.
-  await reply(ctx, "Your data has been deleted. Send /start to begin again.", "callback_forget", false);
+  await reply(ctx, "Your data has been deleted. Send /start to begin again.", "callback_forget", {
+    recordReplyOutcome: false,
+  });
   await ctx.answerCallback({ text: "Deleted." });
 };

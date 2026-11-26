@@ -34,7 +34,7 @@ export function AlertFamilies() {
       lead="Five alert types, each with its own evidence. Pick one to see the exact message the bot sends."
     >
       <div className="grid gap-5 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:gap-7">
-        <div role="group" aria-label="Alert families" className="grid grid-cols-3 gap-2 sm:grid-cols-2 lg:grid-cols-1">
+        <div role="group" aria-label="Alert families" className="flex flex-wrap gap-2 lg:flex-col">
           {TELEGRAM_ALERT_EXAMPLES.map((alert) => {
             const Icon = FAMILY_ICONS[alert.key];
             const active = alert.key === activeKey;
@@ -46,21 +46,21 @@ export function AlertFamilies() {
                 aria-controls={`alert-preview-${alert.key}`}
                 onClick={() => setActiveKey(alert.key)}
                 className={cn(
-                  "pharos-focus-ring flex min-h-11 w-full items-center gap-2 rounded-lg border px-2 py-2 text-left transition-colors sm:gap-3 sm:px-3 sm:py-2.5",
+                  "pharos-focus-ring flex min-h-11 items-center gap-2 rounded-full border px-3.5 py-2 text-left transition-colors lg:w-full lg:gap-3 lg:rounded-lg lg:px-3 lg:py-2.5",
                   active
                     ? "border-foreground/25 bg-muted/60 text-foreground"
                     : "border-border/60 text-muted-foreground hover:bg-muted/40 hover:text-foreground",
                 )}
               >
-                <span className="hidden size-8 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background text-foreground sm:flex">
+                <span className="hidden size-8 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background text-foreground lg:flex">
                   <Icon className="h-4 w-4" aria-hidden="true" />
                 </span>
-                <Icon className="h-4 w-4 shrink-0 sm:hidden" aria-hidden="true" />
-                <span className="min-w-0 flex-1 text-sm font-medium">
-                  <span className="sm:hidden">{alert.shortLabel}</span>
-                  <span className="hidden sm:inline">{alert.label}</span>
+                <Icon className="h-4 w-4 shrink-0 lg:hidden" aria-hidden="true" />
+                <span className="min-w-0 text-sm font-medium lg:flex-1">
+                  <span className="lg:hidden">{alert.shortLabel}</span>
+                  <span className="hidden lg:inline">{alert.label}</span>
                 </span>
-                <code className="hidden shrink-0 font-mono text-2xs text-muted-foreground sm:inline">{alert.key}</code>
+                <code className="hidden shrink-0 font-mono text-2xs text-muted-foreground lg:inline">{alert.key}</code>
               </button>
             );
           })}
@@ -79,16 +79,18 @@ export function AlertFamilies() {
                     bot
                   </span>
                 </figcaption>
-                <p className="mt-3 whitespace-pre-wrap font-mono text-xs leading-relaxed text-foreground [overflow-wrap:anywhere]">
-                  {alert.content}
-                </p>
-                <div className="mt-3 space-y-1.5" aria-label="Buttons under the alert">
+                <div className="mt-3 rounded-lg border border-border/50 bg-background/85 px-3.5 py-3">
+                  <p className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground [overflow-wrap:anywhere]">
+                    {alert.content}
+                  </p>
+                </div>
+                <div className="mt-2.5 space-y-1.5" aria-label="Buttons under the alert">
                   {TELEGRAM_PUBLIC_ALERT_SAMPLES[alert.key].buttons.map((row) => (
                     <div key={row.join("|")} className="flex gap-1.5">
                       {row.map((label) => (
                         <span
                           key={label}
-                          className="flex-1 rounded-md border border-border/60 bg-background px-2 py-1 text-center text-xs text-foreground"
+                          className="flex-1 rounded-md border border-border/60 bg-background px-2.5 py-1.5 text-center text-xs font-medium text-foreground"
                         >
                           {label}
                         </span>

@@ -288,9 +288,10 @@ describe("Fewer button target value", () => {
     const routed = formatPlannedSubscribers(planSubscriberQueue(alertsByChat), () => false);
     const fewerByChat = Object.fromEntries(expandSubscriberChunks(routed).map((message) => [
       message.chatId,
-      JSON.stringify(message.replyMarkup).match(/fewer:[^"]+/)?.[0],
+      JSON.stringify(message.replyMarkup).match(/fewer:[^"]+/)?.[0] ?? null,
     ]));
-    expect(fewerByChat).toEqual({ "1": "fewer:usdc-circle:ds:250", "2": "fewer:usdc-circle:ds:0" });
+    // Chat 1 steps 100 -> 250; chat 2 is already at 500 so no permanent-Off button is emitted.
+    expect(fewerByChat).toEqual({ "1": "fewer:usdc-circle:ds:250", "2": null });
   });
 });
 

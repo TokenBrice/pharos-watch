@@ -72,14 +72,24 @@ function buildGroupWelcomeMessage(adderMention: string): string {
   ].join("\n");
 }
 
+type GroupWelcomeButton =
+  | { text: string; callback_data: string }
+  | { text: string; url: string };
+
 function buildGroupWelcomeReplyMarkup(): {
-  inline_keyboard: { text: string; url: string }[][];
+  inline_keyboard: GroupWelcomeButton[][];
 } {
   return {
-    inline_keyboard: [[
-      { text: "Personal alerts", url: `${TELEGRAM_BOT_URL}?start=setup` },
-      { text: "How it works", url: `https://pharos.watch/${TELEGRAM_BOT_USERNAME.toLowerCase()}/` },
-    ]],
+    inline_keyboard: [
+      [
+        { text: "Follow top 25 USD (admins)", callback_data: "setup:top25" },
+        { text: "Group settings", callback_data: "settings:home" },
+      ],
+      [
+        { text: "Personal alerts", url: `${TELEGRAM_BOT_URL}?start=setup` },
+        { text: "How it works", url: `https://pharos.watch/${TELEGRAM_BOT_USERNAME.toLowerCase()}/` },
+      ],
+    ],
   };
 }
 

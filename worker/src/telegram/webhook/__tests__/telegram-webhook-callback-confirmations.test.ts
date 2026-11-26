@@ -84,7 +84,7 @@ describe("handleTelegramWebhook", () => {
 
   it("keeps every stateless keyboard producer within the 64-byte callback limit", async () => {
     const { db } = fixtures.open();
-    const commands = ["/start", "/subscribe depeg USDF", "/unsubscribe USDF", "/status USDF", "/subscribe dews,depeg,safety all", "/unsubscribe all", "/forget"];
+    const commands = ["/start", "/subscribe dews USDC", "/subscribe depeg USDF", "/unsubscribe USDF", "/status USDF", "/subscribe dews,depeg,safety all", "/unsubscribe all", "/forget"];
     for (const [index, text] of commands.entries()) {
       await handleTelegramWebhook(db, makeWebhookRequest(123, text, "test-secret", { updateId: 9900 + index }), "test-secret", "bot-token");
     }
@@ -153,7 +153,7 @@ describe("handleTelegramWebhook", () => {
             inline_keyboard: [
               [
                 {
-                  text: "Open in app",
+                  text: "Manage USDC",
                   web_app: { url: "https://pharos.watch/pharoswatchbot/app/?startapp=coin_usdc-circle" },
                 },
               ],

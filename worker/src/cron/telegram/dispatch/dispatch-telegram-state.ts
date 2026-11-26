@@ -28,12 +28,14 @@ import {
   buildDepegSnapshot,
   filterAlertableBands,
   isSnapshotMissingOrStale,
+  parseReserveDriftScores,
   parseSnapshotMap,
   type ActiveDepegRow,
   type DepegSnapshot,
   type DewsCandidateSnapshot,
   type DewsRow,
   type DewsSnapshot,
+  type ReserveDriftScores,
   type SafetySnapshot,
 } from "../sources/telegram-alert-snapshots";
 import { isDewsAlertable } from "../../../telegram/common/alerts-formatting";
@@ -148,6 +150,8 @@ export interface DispatchSnapshotState {
   previousReserveDriftIds: string[];
   /** Producer's current drift id-set (read-only in dispatch). */
   currentReserveDriftIds: string[];
+  /** Optional per-coin `{ liveScore, curatedScore }` from enriched producer envelopes. */
+  currentReserveDriftScores?: Readonly<Record<string, ReserveDriftScores>>;
   reserveSourceUnavailable: boolean;
   mustSeedSnapshots: boolean;
   safeDewsSnapshot: DewsSnapshot;
@@ -398,6 +402,8 @@ export function buildDispatchSnapshotState(sourceData: DispatchSourceData, nowSe
   };
   const currentReserveDriftIds =
     parsedCurrentReserveDriftIds == null ? (previousReserveDispatchedIds ?? []) : parsedCurrentReserveDriftIds;
+  const currentReserveDriftScores =
+    parsedCurrentReserveDriftIds == null ? {} : parseReserveDriftScores(sourceData.reserveCache);
   // An unavailable member has no comparable observation. Returning members are
   // cold-seeded by their continuity epoch, including gaps dispatch never saw.
   const previousReserveDriftIds = parsedCurrentReserveDriftIds == null
@@ -424,6 +430,7 @@ export function buildDispatchSnapshotState(sourceData: DispatchSourceData, nowSe
     // prior baseline and suppress reserve transitions for this run.
     previousReserveDriftIds,
     currentReserveDriftIds,
+    currentReserveDriftScores,
     reserveSourceUnavailable,
     mustSeedSnapshots,
     safeDewsSnapshot: previousDewsSnapshot ?? {},

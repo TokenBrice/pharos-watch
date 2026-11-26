@@ -405,6 +405,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
       "shared/data/stablecoins/canonical-order.json",
       "shared/data/stablecoins/coins.generated.json",
       "shared/data/stablecoins/listing-decisions.json",
+      "shared/lib/blacklist-contract-specs.ts",
       "shared/lib/classification.ts",
       "shared/lib/classification/mint-authority.ts",
       "shared/lib/classification/resolve-mechanism-archetype.ts",

@@ -10,7 +10,7 @@ const TELEGRAM_FEATURE_LIST = [
   ...TELEGRAM_ALERT_FAMILIES.map((family) => family.featureLine),
   `Daily Changes message for smaller moves at ${DAILY_CHANGES_TIME} UTC unless you set a time zone`,
   `Quiet by default: at most ${DAILY_LIVE_ALERT_CAP} live alerts a day outside depegs`,
-  "Mute 24h, Pause all 4h and Fewer like this buttons on every alert",
+  "Snooze 24h, Pause all 4h and threshold step-up buttons on alerts",
   "Preset watchlists that keep tracking current cohorts",
   "Timezone-aware quiet hours and pause",
   "Telegram Mini App for coins, quiet hours and delivery status",

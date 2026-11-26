@@ -15,7 +15,7 @@ export const TELEGRAM_PRESET_DEFINITIONS = Object.freeze([
   {
     id: "usd-top10",
     label: "USD Top 10",
-    description: "Top 10 USD stablecoins by current market cap.",
+    description: "The 10 largest USD stablecoins by market cap",
     category: "peg-leaders",
     kind: "peg-top",
     pegCurrency: "USD",
@@ -24,7 +24,7 @@ export const TELEGRAM_PRESET_DEFINITIONS = Object.freeze([
   {
     id: "usd-top25",
     label: "USD Top 25",
-    description: "Top 25 USD stablecoins by current market cap.",
+    description: "The 25 largest USD stablecoins by market cap",
     category: "peg-leaders",
     kind: "peg-top",
     pegCurrency: "USD",
@@ -33,7 +33,7 @@ export const TELEGRAM_PRESET_DEFINITIONS = Object.freeze([
   {
     id: "usd-top50",
     label: "USD Top 50",
-    description: "Top 50 USD stablecoins by current market cap.",
+    description: "The 50 largest USD stablecoins by market cap",
     category: "peg-leaders",
     kind: "peg-top",
     pegCurrency: "USD",
@@ -42,7 +42,7 @@ export const TELEGRAM_PRESET_DEFINITIONS = Object.freeze([
   {
     id: "non-usd-top10",
     label: "Non-USD Top 10",
-    description: "Top 10 non-USD pegs (fiat, gold/silver, baskets) by USD market cap.",
+    description: "The 10 largest non-USD stablecoins by market cap",
     category: "peg-leaders",
     kind: "peg-top",
     excludePegCurrency: "USD",
@@ -51,7 +51,7 @@ export const TELEGRAM_PRESET_DEFINITIONS = Object.freeze([
   {
     id: "non-usd-top25",
     label: "Non-USD Top 25",
-    description: "Top 25 non-USD pegs (fiat, gold/silver, baskets) by USD market cap.",
+    description: "The 25 largest non-USD stablecoins by market cap",
     category: "peg-leaders",
     kind: "peg-top",
     excludePegCurrency: "USD",
@@ -60,7 +60,7 @@ export const TELEGRAM_PRESET_DEFINITIONS = Object.freeze([
   {
     id: "non-usd-top50",
     label: "Non-USD Top 50",
-    description: "Top 50 non-USD pegs (fiat, gold/silver, baskets) by USD market cap.",
+    description: "The 50 largest non-USD stablecoins by market cap",
     category: "peg-leaders",
     kind: "peg-top",
     excludePegCurrency: "USD",
@@ -69,7 +69,7 @@ export const TELEGRAM_PRESET_DEFINITIONS = Object.freeze([
   {
     id: "eur-top10",
     label: "EUR Top 10",
-    description: "Top EUR stablecoins by current market cap.",
+    description: "The 10 largest euro stablecoins by market cap",
     category: "peg-leaders",
     kind: "peg-top",
     pegCurrency: "EUR",
@@ -78,7 +78,7 @@ export const TELEGRAM_PRESET_DEFINITIONS = Object.freeze([
   {
     id: "gold-top5",
     label: "Gold Top 5",
-    description: "Top gold-pegged stablecoins by current market cap.",
+    description: "The 5 largest gold-backed stablecoins by market cap",
     category: "peg-leaders",
     kind: "peg-top",
     pegCurrency: "GOLD",
@@ -86,16 +86,16 @@ export const TELEGRAM_PRESET_DEFINITIONS = Object.freeze([
   },
   {
     id: "mcap-ge-1b",
-    label: "Market Cap >= $1B",
-    description: "Tracked stablecoins with current market cap at or above $1B.",
+    label: "Over $1B",
+    description: "Tracked stablecoins at or above $1B market cap",
     category: "market-cap",
     kind: "market-cap",
     minMarketCapUsd: 1_000_000_000,
   },
   {
     id: "mcap-ge-100m",
-    label: "Market Cap >= $100M",
-    description: "Tracked stablecoins with current market cap at or above $100M.",
+    label: "Over $100M",
+    description: "Tracked stablecoins at or above $100M market cap",
     category: "market-cap",
     kind: "market-cap",
     minMarketCapUsd: 100_000_000,
@@ -111,6 +111,10 @@ export type TelegramPresetDefinition = TelegramPresetDefinitionShape & {
 export const TELEGRAM_PRESET_IDS = TELEGRAM_PRESET_DEFINITIONS.map(
   ({ id }) => id,
 ) as readonly TelegramPresetId[];
+
+export const TELEGRAM_PRESET_DEFINITION_BY_ID: ReadonlyMap<TelegramPresetId, TelegramPresetDefinition> = new Map(
+  TELEGRAM_PRESET_DEFINITIONS.map((definition) => [definition.id, definition] as const),
+);
 
 export const TELEGRAM_PRESET_LABEL_BY_ID: ReadonlyMap<TelegramPresetId, string> = new Map(
   TELEGRAM_PRESET_DEFINITIONS.map((definition) => [definition.id, definition.label] as const),

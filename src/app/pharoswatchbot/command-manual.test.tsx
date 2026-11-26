@@ -57,17 +57,23 @@ describe("CommandManual", () => {
     expect(rendered).toContain("/subscribe@PharosWatchBot <targets>");
     expect(rendered.some((syntax) => syntax?.startsWith("/start"))).toBe(false);
     expect(rendered.some((syntax) => syntax?.startsWith("/forget"))).toBe(false);
+    const groupMenuTerms = within(screen.getByRole("region", { name: "In the menu" }))
+      .getAllByRole("term")
+      .map((term) => term.querySelector("code")?.textContent?.match(/^\/([a-z]+)/)?.[1]);
+    expect(new Set(groupMenuTerms)).toEqual(new Set(TELEGRAM_BOT_GROUP_COMMANDS.map((entry) => entry.command)));
+    expect(groupMenuTerms).toContain("pause");
+    expect(rendered).toContain("/pause@PharosWatchBot [1h|4h|24h|off]");
 
     fireEvent.click(screen.getByRole("button", { name: "Copy /subscribe@PharosWatchBot USDC USDT" }));
     await waitFor(() => expect(copyTextMock).toHaveBeenCalledWith("/subscribe@PharosWatchBot USDC USDT"));
   });
 
-  it("keeps the menus at 7 private and 5 group commands", () => {
+  it("keeps the menus at 7 private and 6 group commands", () => {
     expect(TELEGRAM_BOT_COMMANDS.map((entry) => entry.command)).toEqual([
       "start", "status", "list", "subscribe", "settings", "pause", "help",
     ]);
     expect(TELEGRAM_BOT_GROUP_COMMANDS.map((entry) => entry.command)).toEqual([
-      "status", "list", "subscribe", "settings", "help",
+      "status", "list", "subscribe", "settings", "pause", "help",
     ]);
   });
 });
@@ -148,5 +154,35 @@ describe("SubscribeCommandBuilder", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Copy subscribe command" }));
     await waitFor(() => expect(copyTextMock).toHaveBeenCalledWith("/subscribe@PharosWatchBot dews,depeg,safety USDe"));
+  });
+
+  it("disables Reserve/Freeze on preset targets, reconciles when the last coin is removed, and gates the Mini App link to Private mode", () => {
+    render(<SubscribeCommandBuilder />);
+    const cmd = () => screen.getByTestId("telegram-subscribe-command").textContent;
+    const reserve = () => screen.getByRole("button", { name: "Reserve" }) as HTMLButtonElement;
+    const freeze = () => screen.getByRole("button", { name: "Freeze" }) as HTMLButtonElement;
+
+    expect(cmd()).toBe("/subscribe dews,depeg,safety usd-top25");
+    expect(reserve().disabled).toBe(true);
+    expect(freeze().disabled).toBe(true);
+    expect(screen.getByText(/Pick specific coins above to add Reserve drift or Freeze alerts/)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /USDC/ }));
+    expect(reserve().disabled).toBe(false);
+    fireEvent.click(reserve());
+    fireEvent.click(freeze());
+    expect(cmd()).toBe("/subscribe dews,depeg,safety,reserve,freeze USDC");
+    expect(screen.getByRole("link", { name: /Open USDC in Mini App/ })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Group" }));
+    expect(screen.queryByRole("link", { name: /Open USDC in Mini App/ })).toBeNull();
+    expect(screen.getByText(/Paste in your group chat after adding @PharosWatchBot/)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove USD Coin from command" }));
+    expect(cmd()).toBe("/subscribe@PharosWatchBot dews,depeg,safety usd-top25");
+    expect(reserve().disabled).toBe(true);
+    expect(reserve().getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(screen.getByRole("button", { name: /USDC/ }));
+    expect(cmd()).toBe("/subscribe@PharosWatchBot dews,depeg,safety USDC");
   });
 });

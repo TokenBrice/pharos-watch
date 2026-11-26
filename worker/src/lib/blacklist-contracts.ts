@@ -3,6 +3,12 @@ import {
   type BlacklistStablecoin,
   type BlacklistEventType,
 } from "@shared/types/blacklist";
+import {
+  BLACKLIST_CONTRACT_SPECS,
+  type BlacklistContractSpec,
+  type BlacklistEventFamilyId,
+  type BlacklistTrackedChainId,
+} from "@shared/lib/blacklist-contract-specs";
 import { requireChainConfig, type ChainConfig } from "./chain-config";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { resolveRequiredTrackedContractConfig } from "./tracked-contract-resolution";
@@ -35,26 +41,17 @@ export interface BlacklistEventDef {
   eventTypeFromDataBoolIndex?: number;
 }
 
-interface ContractEventConfigSpec {
-  chain: ChainConfig;
-  stablecoinId: string;
-  stablecoin?: BlacklistStablecoin;
-  contractSource?: "primary" | "traded";
-  contractAddressOverride?: string;
-  decimalsOverride?: number;
-  startBlock?: number;
-  events: readonly BlacklistEventDef[];
-}
-
-const ETHEREUM  = requireChainConfig("ethereum");
-const ARBITRUM  = requireChainConfig("arbitrum");
-const BASE      = requireChainConfig("base");
-const OPTIMISM  = requireChainConfig("optimism");
-const POLYGON   = requireChainConfig("polygon");
-const AVALANCHE = requireChainConfig("avalanche");
-const BSC       = requireChainConfig("bsc");
-const GNOSIS    = requireChainConfig("gnosis");
-const TRON      = requireChainConfig("tron");
+const BLACKLIST_CHAIN_CONFIGS: Record<BlacklistTrackedChainId, ChainConfig> = {
+  ethereum: requireChainConfig("ethereum"),
+  arbitrum: requireChainConfig("arbitrum"),
+  base: requireChainConfig("base"),
+  optimism: requireChainConfig("optimism"),
+  polygon: requireChainConfig("polygon"),
+  avalanche: requireChainConfig("avalanche"),
+  bsc: requireChainConfig("bsc"),
+  gnosis: requireChainConfig("gnosis"),
+  tron: requireChainConfig("tron"),
+};
 
 // --- Event topic hashes (Keccak256) ---
 
@@ -601,6 +598,32 @@ const CENTRE_BLOCKLISTED_FAMILY: readonly BlacklistEventDef[] = [
   },
 ];
 
+const BLACKLIST_EVENT_FAMILIES: Record<BlacklistEventFamilyId, readonly BlacklistEventDef[]> = {
+  usdc: USDC_EVENT_FAMILY,
+  usdt: USDT_EVENT_FAMILY,
+  usdt0: USDT0_EVENT_FAMILY,
+  "usdt-upgraded": USDT_UPGRADED_EVENT_FAMILY,
+  paxg: PAXG_EVENT_FAMILY,
+  pyusd: PYUSD_EVENT_FAMILY,
+  "dual-index-freeze": DUAL_INDEX_FREEZE_EVENT_FAMILY,
+  usd1: USD1_EVENT_FAMILY,
+  rlusd: RLUSD_EVENT_FAMILY,
+  usdtb: USDTB_EVENT_FAMILY,
+  a7a5: A7A5_EVENT_FAMILY,
+  "account-freeze": ACCOUNT_FREEZE_EVENT_FAMILY,
+  "frax-freeze": FRAX_FREEZE_FAMILY,
+  "account-ban": ACCOUNT_BAN_EVENT_FAMILY,
+  "added-removed-blacklist": ADDED_REMOVED_BLACKLIST_EVENT_FAMILY,
+  "deny-list": DENY_LIST_EVENT_FAMILY,
+  banned: BANNED_EVENT_FAMILY,
+  "securitize-seize": SECURITIZE_SEIZE_EVENT_FAMILY,
+  "socgen-freeze": SOCGEN_FREEZE_FAMILY,
+  "neutrl-denylist": NEUTRL_DENYLIST_FAMILY,
+  "fidelity-restriction": FIDELITY_RESTRICTION_FAMILY,
+  trueusd: TRUEUSD_EVENT_FAMILY,
+  "centre-blocklisted": CENTRE_BLOCKLISTED_FAMILY,
+};
+
 const BLACKLIST_STABLECOIN_SET = new Set<BlacklistStablecoin>(BLACKLIST_STABLECOINS);
 
 function resolveBlacklistStablecoinSymbol(
@@ -616,198 +639,28 @@ function resolveBlacklistStablecoinSymbol(
 }
 
 function resolveBlacklistContractConfig(
-  spec: ContractEventConfigSpec,
+  spec: BlacklistContractSpec,
 ): ContractEventConfig {
-  const resolvedContract = resolveRequiredTrackedContractConfig(spec.stablecoinId, spec.chain.chainId, {
+  const chain = BLACKLIST_CHAIN_CONFIGS[spec.chainId];
+  const resolvedContract = resolveRequiredTrackedContractConfig(spec.stablecoinId, spec.chainId, {
     source: spec.contractSource,
     addressOverride: spec.contractAddressOverride,
     decimalsOverride: spec.decimalsOverride,
   });
 
   return {
-    configKey: buildBlacklistConfigKey(spec.chain.chainId, resolvedContract.contractAddress),
-    chain: spec.chain,
+    configKey: buildBlacklistConfigKey(spec.chainId, resolvedContract.contractAddress),
+    chain,
     stablecoinId: spec.stablecoinId,
     stablecoin: resolveBlacklistStablecoinSymbol(spec.stablecoinId, spec.stablecoin),
     contractAddress: resolvedContract.contractAddress,
     decimals: resolvedContract.decimals,
     startBlock: spec.startBlock,
-    events: [...spec.events],
+    events: [...BLACKLIST_EVENT_FAMILIES[spec.eventFamily]],
   };
 }
 
-/**
- * Deferred-chain note (referenced inline as "deferred — see consolidated
- * contract-creation note").
- *
- * Cause: Etherscan v2 free-tier `getcontractcreation` is only available for
- * Ethereum; it 400s on BSC, Avalanche, and Base. Without a verifiable deploy
- * block we can't bootstrap a bounded incremental sync on those chains.
- *
- * Workaround when we do add a deferred chain: use the chain's native explorer
- * (Blockscout / BscScan / Snowtrace / BaseScan) or a public-RPC `eth_getCode`
- * bisect to resolve the deploy block — the XUSD + XAUm BSC entries landed that
- * way in Task 6.4.
- *
- * Follow-up: tracked in GitHub issue TBD.
- */
-const CONTRACT_CONFIG_SPECS: ContractEventConfigSpec[] = [
-  // USDC
-  { chain: ETHEREUM, stablecoinId: "usdc-circle", events: USDC_EVENT_FAMILY },
-  { chain: ARBITRUM, stablecoinId: "usdc-circle", events: USDC_EVENT_FAMILY },
-  { chain: BASE, stablecoinId: "usdc-circle", startBlock: 2_797_221, events: USDC_EVENT_FAMILY },
-  { chain: OPTIMISM, stablecoinId: "usdc-circle", startBlock: 38_198_364, events: USDC_EVENT_FAMILY },
-  { chain: POLYGON, stablecoinId: "usdc-circle", events: USDC_EVENT_FAMILY },
-  { chain: AVALANCHE, stablecoinId: "usdc-circle", startBlock: 7_388_829, events: USDC_EVENT_FAMILY },
-
-  // USDT (EVM)
-  { chain: ETHEREUM, stablecoinId: "usdt-tether", events: USDT_EVENT_FAMILY },
-  { chain: ARBITRUM, stablecoinId: "usdt-tether", events: USDT_UPGRADED_EVENT_FAMILY },
-  { chain: OPTIMISM, stablecoinId: "usdt-tether", contractSource: "traded", startBlock: 133_193_269, events: USDT0_EVENT_FAMILY },
-  { chain: POLYGON, stablecoinId: "usdt-tether", events: USDT_UPGRADED_EVENT_FAMILY },
-  // Avalanche has emitted the indexed family since deployment, not the legacy family.
-  { chain: AVALANCHE, stablecoinId: "usdt-tether", startBlock: 4_663_628, events: USDT0_EVENT_FAMILY },
-  // Binance-Peg BSC and legacy Optimism USDT have no blacklist event surface.
-
-  // USDT (Tron)
-  { chain: TRON, stablecoinId: "usdt-tether", events: USDT_EVENT_FAMILY },
-
-  // PAXG (Ethereum only)
-  { chain: ETHEREUM, stablecoinId: "paxg-paxos", events: PAXG_EVENT_FAMILY },
-
-  // XAUT (Ethereum only — same event pattern as USDT0: BlockPlaced/BlockReleased/DestroyedBlockedFunds)
-  { chain: ETHEREUM, stablecoinId: "xaut-tether", events: USDT0_EVENT_FAMILY },
-
-  // pyUSD (Ethereum + Arbitrum)
-  { chain: ETHEREUM, stablecoinId: "pyusd-paypal", events: PYUSD_EVENT_FAMILY },
-  { chain: ARBITRUM, stablecoinId: "pyusd-paypal", events: PYUSD_EVENT_FAMILY },
-
-  // USD1 (Ethereum + BSC + Tron)
-  { chain: ETHEREUM, stablecoinId: "usd1-world-liberty-financial", startBlock: 21_720_503, events: USD1_EVENT_FAMILY },
-  { chain: BSC, stablecoinId: "usd1-world-liberty-financial", startBlock: 46_151_905, events: USD1_EVENT_FAMILY },
-  { chain: TRON, stablecoinId: "usd1-world-liberty-financial", events: USD1_EVENT_FAMILY },
-
-  // USDG (Paxos Global Dollar — Ethereum only for first-wave coverage)
-  { chain: ETHEREUM, stablecoinId: "usdg-paxos", startBlock: 20_915_336, events: PYUSD_EVENT_FAMILY },
-
-  // RLUSD (Ripple USD — Ethereum account pause/unpause; clawback is not event-covered here)
-  { chain: ETHEREUM, stablecoinId: "rlusd-ripple", startBlock: 20_492_031, events: RLUSD_EVENT_FAMILY },
-
-  // U (United Stables — Ethereum + BSC, same dual-indexed freeze pattern as USD1)
-  { chain: ETHEREUM, stablecoinId: "u-united-stables", startBlock: 24_030_193, events: DUAL_INDEX_FREEZE_EVENT_FAMILY },
-  { chain: BSC, stablecoinId: "u-united-stables", startBlock: 71_922_111, events: DUAL_INDEX_FREEZE_EVENT_FAMILY },
-
-  // USDtb (Ethena / Anchorage — Ethereum batch block/unblock events)
-  { chain: ETHEREUM, stablecoinId: "usdtb-ethena", startBlock: 21_287_284, events: USDTB_EVENT_FAMILY },
-
-  // A7A5 (Old Vector — Ethereum only; Tron requires separate result-key verification)
-  { chain: ETHEREUM, stablecoinId: "a7a5-old-vector", startBlock: 22_080_045, events: A7A5_EVENT_FAMILY },
-
-  // Wave 2A direct EVM coverage
-  { chain: ETHEREUM, stablecoinId: "fdusd-first-digital", stablecoin: "FDUSD", startBlock: 17_144_262, events: DUAL_INDEX_FREEZE_EVENT_FAMILY },
-  { chain: BSC, stablecoinId: "fdusd-first-digital", stablecoin: "FDUSD", startBlock: 27_850_220, events: DUAL_INDEX_FREEZE_EVENT_FAMILY },
-  { chain: ARBITRUM, stablecoinId: "fdusd-first-digital", stablecoin: "FDUSD", startBlock: 336_278_229, events: DUAL_INDEX_FREEZE_EVENT_FAMILY },
-  { chain: ETHEREUM, stablecoinId: "brz-transfero", stablecoin: "BRZ", startBlock: 17_517_084, events: USDC_EVENT_FAMILY },
-  { chain: GNOSIS, stablecoinId: "brz-transfero", stablecoin: "BRZ", startBlock: 33_257_603, events: USDC_EVENT_FAMILY },
-  { chain: ARBITRUM, stablecoinId: "ausd-agora", stablecoin: "AUSD", startBlock: 342_153_906, events: ACCOUNT_FREEZE_EVENT_FAMILY },
-  { chain: BASE, stablecoinId: "ausd-agora", stablecoin: "AUSD", startBlock: 35_760_121, events: ACCOUNT_FREEZE_EVENT_FAMILY },
-  { chain: ETHEREUM, stablecoinId: "euri-banking-circle", stablecoin: "EURI", startBlock: 20_217_556, events: DUAL_INDEX_FREEZE_EVENT_FAMILY },
-  { chain: BSC, stablecoinId: "euri-banking-circle", stablecoin: "EURI", startBlock: 40_115_386, events: DUAL_INDEX_FREEZE_EVENT_FAMILY },
-  { chain: ETHEREUM, stablecoinId: "usdq-quantoz", stablecoin: "USDQ", startBlock: 21_179_575, events: USDT0_EVENT_FAMILY },
-  { chain: POLYGON, stablecoinId: "usdq-quantoz", stablecoin: "USDQ", startBlock: 69_326_454, events: USDT0_EVENT_FAMILY },
-  { chain: ETHEREUM, stablecoinId: "usdo-openeden", stablecoin: "USDO", startBlock: 20_833_910, events: ACCOUNT_BAN_EVENT_FAMILY },
-  { chain: BASE, stablecoinId: "usdo-openeden", stablecoin: "USDO", startBlock: 25_154_101, events: ACCOUNT_BAN_EVENT_FAMILY },
-  { chain: ETHEREUM, stablecoinId: "usdx-hex-trust", stablecoin: "USDX", startBlock: 21_062_695, events: ADDED_REMOVED_BLACKLIST_EVENT_FAMILY },
-  { chain: ETHEREUM, stablecoinId: "aid-gaib", stablecoin: "AID", startBlock: 23_682_560, events: DENY_LIST_EVENT_FAMILY },
-  { chain: ARBITRUM, stablecoinId: "aid-gaib", stablecoin: "AID", startBlock: 394_608_077, events: DENY_LIST_EVENT_FAMILY },
-  // AID on Base: deferred — see consolidated contract-creation note.
-  { chain: ETHEREUM, stablecoinId: "tgbp-tokenised", stablecoin: "TGBP", startBlock: 23_046_391, events: BANNED_EVENT_FAMILY },
-  { chain: AVALANCHE, stablecoinId: "tgbp-tokenised", stablecoin: "TGBP", startBlock: 69_696_101, events: BANNED_EVENT_FAMILY },
-  { chain: POLYGON, stablecoinId: "tgbp-tokenised", stablecoin: "TGBP", startBlock: 74_668_755, events: BANNED_EVENT_FAMILY },
-  // TGBP on Base + BSC: deferred — see consolidated contract-creation note.
-
-  // USDP (Paxos Pax Dollar — same freeze pattern as PYUSD/USDG)
-  { chain: ETHEREUM, stablecoinId: "usdp-paxos", stablecoin: "USDP", startBlock: 6_294_931, events: PYUSD_EVENT_FAMILY },
-
-  // EURC re-enabled with mirror-zero suppression
-  { chain: ETHEREUM, stablecoinId: "eurc-circle", startBlock: 14_807_227, events: USDC_EVENT_FAMILY },
-  { chain: BASE, stablecoinId: "eurc-circle", startBlock: 15_107_859, events: USDC_EVENT_FAMILY },
-  { chain: AVALANCHE, stablecoinId: "eurc-circle", startBlock: 26_857_185, events: USDC_EVENT_FAMILY },
-
-  // TUSD (TrueUSD) — Ethereum proxy implementation emits both Blacklisted(address,bool) and
-  // DestroyedBlackFunds(address,uint256). The ETH Blacklisted event indexes the account in
-  // topics[1] and carries the direction bool at data slot 0, resolved via
-  // eventTypeFromDataBoolIndex. DestroyedBlackFunds reuses USDT_DESTROYED_FUNDS_TOPIC.
-  { chain: ETHEREUM, stablecoinId: "tusd-trueusd", stablecoin: "TUSD", startBlock: 6_988_184, events: TRUEUSD_EVENT_FAMILY },
-  // TUSD on BSC + Avalanche: deferred — see consolidated contract-creation note.
-  //   BSC proxy 0x40af3827f39d0eacbf4a168f8d4ee67c121d11c9 and Avalanche proxy
-  //   0x1c20e891bab6b1727d14da358fae2984ed9b59eb both emit Blacklisted(address,bool)
-  //   only (no DestroyedBlackFunds).
-  // Polygon TUSD (UChildERC20Proxy at 0x2e1ad108ff1d8c782fcbbb89aad783ac49586756) is a bridged
-  // token without Blacklisted / DestroyedBlackFunds events — no blacklist pipeline to cover.
-  // Optimism TUSD (L2StandardERC20 at 0xcb59a0a753fdb7491d5f3d794316f1ade197b21e) is a bridged
-  // token without Blacklisted / DestroyedBlackFunds events — no blacklist pipeline to cover.
-
-  // NUSD (Neutrl) — Ethereum only. Verified ABI uses separate
-  // AddedToDenylist / RemovedFromDenylist events (not the DenyListUpdated
-  // bool pattern the plan anticipated), so the direction is driven by topic hash.
-  { chain: ETHEREUM, stablecoinId: "nusd-neutrl", stablecoin: "NUSD", startBlock: 23_495_846, events: NEUTRL_DENYLIST_FAMILY },
-
-  // EURCV (Societe Generale Forge) — Ethereum only. ERC1967 proxy delegates to
-  // 0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b which emits batch
-  // AddressesFrozen/AddressesUnFrozen events. Reuses the addressArrayData path
-  // already used by USDTB / AID / TGBP deny-list batches.
-  { chain: ETHEREUM, stablecoinId: "eurcv-societe-generale-forge", stablecoin: "EURCV", startBlock: 18_427_793, events: SOCGEN_FREEZE_FAMILY },
-
-  // USAT (Tether USAT) — Ethereum proxy (impl 0x8b98bcd9b1f8ae112fb2b58b45c3bc9a75cc4d0e)
-  // emits BlockPlaced / BlockReleased / DestroyedBlockedFunds with indexed address,
-  // identical to the USDT0 family used by XAUT and USDQ.
-  { chain: ETHEREUM, stablecoinId: "usat-tether", stablecoin: "USAT", startBlock: 23_998_151, events: USDT0_EVENT_FAMILY },
-
-  // JPYC (JPY Coin — CENTRE fork) — Ethereum + Polygon. Implementation behind ERC1967Proxy
-  // emits Blocklisted(address indexed) / UnBlocklisted(address indexed). JPY-pegged; price is
-  // resolved via jpyc-jpyc entry in BLACKLIST_PRICE_ASSET_IDS.
-  { chain: ETHEREUM, stablecoinId: "jpyc-jpyc", stablecoin: "JPYC", startBlock: 22_622_960, events: CENTRE_BLOCKLISTED_FAMILY },
-  { chain: POLYGON, stablecoinId: "jpyc-jpyc", stablecoin: "JPYC", startBlock: 72_306_327, events: CENTRE_BLOCKLISTED_FAMILY },
-  // JPYC on Avalanche: deferred — see consolidated contract-creation note.
-
-  // FRXUSD (Frax USD) — Ethereum only. TransparentUpgradeableProxy delegates to
-  // 0x0000000048d2c8baf31742f6765383278bada4d5 which emits AccountFrozen /
-  // AccountThawed with non-indexed address params (addressDataIndex: 0).
-  { chain: ETHEREUM, stablecoinId: "frxusd-frax", stablecoin: "FRXUSD", startBlock: 21_543_360, events: FRAX_FREEZE_FAMILY },
-
-  // FIDD (Fidelity Digital Dollar) — Ethereum only. ERC1967 proxy delegates to
-  // 0x8ae9cb3d9095da33555494110f567e3d974c6753 which emits
-  // TransferRestrictionImposed / TransferRestrictionRemoved events (plan
-  // anticipated AccountRestricted / AccountUnrestricted names).
-  { chain: ETHEREUM, stablecoinId: "fidd-fidelity", stablecoin: "FIDD", startBlock: 16_991_820, events: FIDELITY_RESTRICTION_FAMILY },
-
-  // BUIDL seize-only coverage (Securitize token family)
-  { chain: ETHEREUM, stablecoinId: "buidl-blackrock", stablecoin: "BUIDL", startBlock: 19_343_293, events: SECURITIZE_SEIZE_EVENT_FAMILY },
-  { chain: BSC, stablecoinId: "buidl-blackrock", stablecoin: "BUIDL", startBlock: 63_931_579, events: SECURITIZE_SEIZE_EVENT_FAMILY },
-  { chain: OPTIMISM, stablecoinId: "buidl-blackrock", stablecoin: "BUIDL", startBlock: 127_565_419, events: SECURITIZE_SEIZE_EVENT_FAMILY },
-  { chain: ARBITRUM, stablecoinId: "buidl-blackrock", stablecoin: "BUIDL", startBlock: 270_969_308, events: SECURITIZE_SEIZE_EVENT_FAMILY },
-  { chain: AVALANCHE, stablecoinId: "buidl-blackrock", stablecoin: "BUIDL", startBlock: 52_649_153, events: SECURITIZE_SEIZE_EVENT_FAMILY },
-  { chain: POLYGON, stablecoinId: "buidl-blackrock", stablecoin: "BUIDL", startBlock: 63_877_025, events: SECURITIZE_SEIZE_EVENT_FAMILY },
-
-  // XUSD (StraitsX) — Ethereum + BSC, Circle FiatTokenProxy pattern emits
-  // Blacklisted/UnBlacklisted (USDC_EVENT_FAMILY). Implementation verified for
-  // both chains; BSC deploy block resolved via public RPC eth_getCode bisect
-  // (Etherscan v2 free plan does not support BSC getcontractcreation).
-  { chain: ETHEREUM, stablecoinId: "xusd-straitsx", stablecoin: "XUSD", startBlock: 19_132_912, events: USDC_EVENT_FAMILY },
-  { chain: BSC, stablecoinId: "xusd-straitsx", stablecoin: "XUSD", startBlock: 41_148_046, events: USDC_EVENT_FAMILY },
-
-  // XAUm (Matrixdock) — Ethereum + BSC. Implementation emits indexed
-  // BlockPlaced(address) / BlockReleased(address) with no DestroyedBlockedFunds,
-  // so USDT0_EVENT_FAMILY matches the two observed events (destroy topic is
-  // harmless when absent). Symbol override "XAUM" bypasses the case-sensitive
-  // symbol lookup (data corpus uses "XAUm"). BSC deploy block resolved via
-  // public RPC eth_getCode bisect.
-  { chain: ETHEREUM, stablecoinId: "xaum-matrixdock", stablecoin: "XAUM", startBlock: 20_624_233, events: USDT0_EVENT_FAMILY },
-  { chain: BSC, stablecoinId: "xaum-matrixdock", stablecoin: "XAUM", startBlock: 41_776_362, events: USDT0_EVENT_FAMILY },
-];
-
-export const CONTRACT_CONFIGS: ContractEventConfig[] = CONTRACT_CONFIG_SPECS.map(
+export const CONTRACT_CONFIGS: ContractEventConfig[] = BLACKLIST_CONTRACT_SPECS.map(
   resolveBlacklistContractConfig,
 );
 

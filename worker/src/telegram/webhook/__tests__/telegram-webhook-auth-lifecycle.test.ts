@@ -130,6 +130,20 @@ describe("handleTelegramWebhook", () => {
     expect(db.getHistory()).toHaveLength(0);
   });
 
+  it("ignores ordinary private non-command DMs with zero D1 calls and zero replies", async () => {
+    const db = makeLifecycleDb([]);
+    const prepare = vi.spyOn(db, "prepare");
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(123, "hello there", "test-secret", { updateId: 501 }),
+      "test-secret",
+      "bot-token",
+    );
+    expect(res.status).toBe(200);
+    expect(prepare).not.toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("accepts the previous webhook secret during the overlap window", async () => {
     const db = makeLifecycleDb();
     const res = await handleTelegramWebhook(
@@ -250,6 +264,13 @@ describe("handleTelegramWebhook", () => {
       await vi.runAllTimersAsync();
       await deliveries;
       expect(fetchSpy).toHaveBeenCalledTimes(mode === "sent" ? 0 : 1);
+      if (mode !== "sent") {
+        const welcome = JSON.parse(String(fetchSpy.mock.calls[0]?.[1]?.body)) as {
+          reply_markup?: { inline_keyboard?: Array<Array<{ callback_data?: string }>> };
+        };
+        expect(welcome.reply_markup?.inline_keyboard?.[0]?.map((b) => b.callback_data))
+          .toEqual(["setup:top25", "settings:home"]);
+      }
       expect(threw).toBe(fault);
       expect(sqlite.prepare("SELECT value FROM cache").all()).toEqual([{ value: "1" }]);
     } finally {

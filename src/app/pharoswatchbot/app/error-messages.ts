@@ -45,6 +45,18 @@ export function isMiniAppErrorCode(value: unknown): value is MiniAppErrorCode {
 
 export type MiniAppErrorContext = "session" | "mutation";
 
+/**
+ * True when a mutation failure may have occurred after server persistence
+ * (5xx/internal excluding deterministic pre-write 503s, network drop, timeout,
+ * or malformed success body), so the client cannot claim "nothing was saved"
+ * and should offer an inline Refresh action.
+ */
+export function isAmbiguousMiniAppWriteError(err: unknown): boolean {
+  if (!(err instanceof MiniAppRequestError)) return true;
+  if (err.code === "not-configured" || err.code === "preset-unavailable") return false;
+  return err.code === "internal" || err.status >= 500;
+}
+
 export function miniAppErrorMessage(err: unknown, context: MiniAppErrorContext): string {
   if (err instanceof MiniAppRequestError) {
     // Shared arm: stale auth produces the same copy in both surfaces.
@@ -57,7 +69,11 @@ export function miniAppErrorMessage(err: unknown, context: MiniAppErrorContext):
 
     if (context === "session") {
       if (err.status === 401) return "Telegram couldn't confirm this window. Close and reopen it from PharosWatchBot.";
-      if (err.status === 429) return "Still opening. Wait a moment, then try again.";
+      if (err.status === 429) {
+        return err.retryAfterSec != null
+          ? `Still opening. Wait ${err.retryAfterSec} ${err.retryAfterSec === 1 ? "second" : "seconds"}, then try again.`
+          : "Still opening. Wait a moment, then try again.";
+      }
       if (err.status === 503) return "Pharos is busy right now. Try again in a minute.";
       return "Couldn't load your alerts. Try again.";
     }
@@ -68,12 +84,16 @@ export function miniAppErrorMessage(err: unknown, context: MiniAppErrorContext):
         return "Too many changes in a row. Wait a few seconds, then try again.";
       case "not-private":
         return "Group alerts are managed in the group chat with /settings.";
-      case "validation-error":
-      case "unknown-coin":
-      case "unknown-preset":
-      case "invalid-coin-patch":
       case "invalid-alert-types":
+        return "Keep at least one alert on for this preset.";
       case "invalid-timezone":
+        return "That time zone isn't recognized. Pick another from the list.";
+      case "unknown-coin":
+        return "That coin isn't available for alerts. Nothing was saved.";
+      case "unknown-preset":
+        return "That preset isn't available right now. Nothing was saved.";
+      case "validation-error":
+      case "invalid-coin-patch":
         return "That change wasn't accepted. Nothing was saved.";
       case "body-too-large":
         return "That change was too large to send. Nothing was saved.";
@@ -83,17 +103,17 @@ export function miniAppErrorMessage(err: unknown, context: MiniAppErrorContext):
       case "stale-bulk-preview":
         return "Your coins changed in the meantime. Nothing was saved; check the list and try again.";
       case "internal":
-        return "Something went wrong. We couldn't confirm that change; reopen from PharosWatchBot to check.";
+        return "Couldn't confirm this change.";
       default:
         break;
     }
     if (err.status >= 500) {
-      return "Something went wrong. We couldn't confirm that change; reopen from PharosWatchBot to check.";
+      return "Couldn't confirm this change.";
     }
     return "Change not saved. Try again.";
   }
 
   return context === "session"
     ? "Couldn't load your alerts. Check your connection and try again."
-    : "Change not confirmed. Check the list before retrying.";
+    : "Couldn't confirm this change.";
 }

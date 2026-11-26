@@ -281,4 +281,17 @@ describe("validateTelegramMiniAppInitData", () => {
       nowSec: NOW_SEC,
     })).rejects.toMatchObject({ code: "invalid-signature" });
   });
+
+  it("blocks mutations when signed chat object is non-private or malformed JSON", async () => {
+    for (const [fields, expected] of [
+      [{ chat: JSON.stringify({ id: -1001, type: "supergroup" }) }, { canMutatePrivateChat: false, chatType: "supergroup" }],
+      [{ chat_type: "private", chat: JSON.stringify({ id: -1001, type: "group" }) }, { canMutatePrivateChat: false, chatType: "group" }],
+      [{ chat: "{bad-json" }, { canMutatePrivateChat: false, chatType: "unknown-chat" }],
+      [{ chat: JSON.stringify({ id: -1001 }) }, { canMutatePrivateChat: false, chatType: "unknown-chat" }],
+      [{ chat: JSON.stringify({ id: 42, type: "private" }) }, { canMutatePrivateChat: true, chatType: "private" }],
+    ] as const) {
+      const initData = await signedInitData({ auth_date: String(NOW_SEC - 60), user: JSON.stringify({ id: 42 }), ...fields });
+      await expect(validateTelegramMiniAppInitData(initData, BOT_TOKEN, { maxAgeSec: 86_400, nowSec: NOW_SEC })).resolves.toMatchObject(expected);
+    }
+  });
 });

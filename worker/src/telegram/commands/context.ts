@@ -9,6 +9,8 @@ export interface WebhookCommandContext {
   chatType: string;
   username: string | null;
   actorUserId: string | null;
+  /** True when an anonymous group admin posted as the group itself. */
+  postedAsGroup?: boolean;
   botToken: string;
   /** Stable timestamp captured when the update was normalized. */
   operationNowSec?: number;

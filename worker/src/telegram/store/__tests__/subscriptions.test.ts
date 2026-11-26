@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { applySettingToSubscriptions, loadSubscriptionsByIds, prepareSubscriberAndSubscriptionStatements } from "../subscriptions";
+import {
+  applySettingToSubscriptions,
+  loadSubscriptionsByIds,
+  prepareCompoundCoinEditStatements,
+  prepareSubscriberAndSubscriptionStatements,
+} from "../subscriptions";
 import { prepareCoinSettingStatements } from "../../webhook/telegram-webhook-settings-mutations";
 import type { ParsedSetCommand } from "../../webhook/telegram-webhook-shared";
 import type { TelegramMiniAppOperation } from "@shared/lib/telegram-mini-app-contract";
@@ -178,5 +183,44 @@ describe("per-coin subscription persistence", () => {
     await db.batch(prepareSubscriberAndSubscriptionStatements(db, "42", "alice", new Set(["freeze"]), [COIN.id]));
     expect(sqlite.prepare("SELECT alert_freeze, alert_freeze_override FROM telegram_subscriptions WHERE chat_id = '42'").get())
       .toEqual({ alert_freeze: 1, alert_freeze_override: 1 });
+  });
+
+  it.each([
+    {
+      name: "mixed enable/disable/tuning",
+      priorFollow: false,
+      patch: { alertTypes: { dews: false, depeg: true }, dewsMinBand: "DANGER" as const, depegStepBps: 250 as const, safetyMode: "downgrade-only" as const, reserve: true, freeze: true },
+      sub: { alert_dews: 0, alert_dews_override: 1, dews_min_band: null, alert_depeg: 1, alert_depeg_override: 1, depeg_worsening_bps_step: 250, alert_safety: 1, alert_safety_override: 1, safety_mode: "downgrade-only", alert_reserve: 1, alert_reserve_override: 1, alert_freeze: 1, alert_freeze_override: 1 },
+      subscriber: { alert_dews: 0, alert_depeg: 1, alert_safety: 1, alert_reserve: 1, alert_freeze: 1, preference_generation: 8 },
+      claimsFirstFollow: true,
+    },
+    {
+      name: "existing follow preserves null first_follow_at",
+      priorFollow: true,
+      patch: { alertTypes: { depeg: true }, depegStepBps: null, reserve: true },
+      sub: { alert_depeg: 1, alert_depeg_override: 1, depeg_worsening_bps_step: null, alert_reserve: 1, alert_reserve_override: 1 },
+      subscriber: { alert_depeg: 1, alert_reserve: 1, preference_generation: 8 },
+      claimsFirstFollow: false,
+    },
+    {
+      name: "off-only compound edit retains overrides without claiming first_follow_at",
+      priorFollow: false,
+      patch: { alertTypes: { dews: false, depeg: false, safety: false, reserve: true }, reserve: false },
+      sub: { alert_dews: 0, alert_dews_override: 1, alert_depeg: 0, alert_depeg_override: 1, depeg_worsening_bps_step: null, alert_safety: 0, alert_safety_override: 1, alert_reserve: 0, alert_reserve_override: 1 },
+      subscriber: { alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_reserve: 0, preference_generation: 8 },
+      claimsFirstFollow: false,
+    },
+  ])("plans compound coin edit ($name) with one generation bump", async ({ priorFollow, patch, sub, subscriber, claimsFirstFollow }) => {
+    const { sqlite, db } = seeded();
+    if (!priorFollow) sqlite.exec("DELETE FROM telegram_subscriptions WHERE chat_id = '42'");
+    const stmts = prepareCompoundCoinEditStatements(db, "42", "alice", COIN.id, patch);
+    expect(stmts).not.toBeNull();
+    await db.batch(stmts!);
+    expect(sqlite.prepare("SELECT * FROM telegram_subscriptions WHERE chat_id = '42' AND stablecoin_id = ?").get(COIN.id)).toMatchObject(sub);
+    const row = sqlite.prepare("SELECT alert_dews, alert_depeg, alert_safety, alert_reserve, alert_freeze, preference_generation, first_follow_at FROM telegram_subscribers WHERE chat_id = '42'").get() as Record<string, unknown>;
+    expect(row).toMatchObject(subscriber);
+    expect(row.first_follow_at != null).toBe(claimsFirstFollow);
+    expect(prepareCompoundCoinEditStatements(db, "42", "alice", COIN.id, { alertTypes: { dews: false }, dewsMinBand: "BOGUS" as never })).toBeNull();
+    expect(prepareCompoundCoinEditStatements(db, "42", "alice", COIN.id, { launch: true })).toBeNull();
   });
 });

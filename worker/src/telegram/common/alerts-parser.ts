@@ -1,4 +1,5 @@
 import { WORKER_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { TELEGRAM_PRESET_IDS } from "@shared/lib/telegram-presets";
 import {
   resolveTelegramPresetAlias,
   type TelegramPresetId,
@@ -152,14 +153,54 @@ export function resolveTicker(ticker: string, scope: TickerResolutionScope = "su
   return { status: "not_found", matches: [], suggestion: suggestion ?? undefined };
 }
 
-/** Find a coin whose symbol starts with the given prefix, or null. */
+/** Find the closest coin whose symbol shares a meaningful prefix, or null. */
 function findClosestMatch(lowerTicker: string, symbols: Map<string, ResolvedCoin[]>): ResolvedCoin | null {
+  if (lowerTicker.length < 2) return null;
+  let best: { coin: ResolvedCoin; sharedLen: number; lengthDiff: number } | null = null;
   for (const [key, coins] of symbols) {
-    if (key.startsWith(lowerTicker) || lowerTicker.startsWith(key)) {
-      return coins[0];
+    if (key.length < 2) continue;
+    if (!key.startsWith(lowerTicker) && !lowerTicker.startsWith(key)) continue;
+    const sharedLen = Math.min(key.length, lowerTicker.length);
+    const lengthDiff = Math.abs(key.length - lowerTicker.length);
+    if (
+      !best
+      || sharedLen > best.sharedLen
+      || (sharedLen === best.sharedLen && lengthDiff < best.lengthDiff)
+    ) {
+      best = { coin: coins[0], sharedLen, lengthDiff };
     }
   }
-  return null;
+  return best?.coin ?? null;
+}
+
+/** Suggest a canonical preset id for a near-miss preset token, or null. */
+export function suggestClosestPreset(input: string): TelegramPresetId | null {
+  const needle = input.trim().toLowerCase();
+  if (needle.length < 4) return null;
+  const close = suggestClosestToken(needle, TELEGRAM_PRESET_IDS);
+  if (close) return close as TelegramPresetId;
+  let best: { id: TelegramPresetId; sharedLen: number } | null = null;
+  for (const presetId of TELEGRAM_PRESET_IDS) {
+    if (!presetId.startsWith(needle) && !needle.startsWith(presetId)) continue;
+    const sharedLen = Math.min(presetId.length, needle.length);
+    if (!best || sharedLen > best.sharedLen) {
+      best = { id: presetId, sharedLen };
+    }
+  }
+  return best?.id ?? null;
+}
+
+/**
+ * Returns the suggested live alert type when a `/subscribe` invocation contains
+ * no explicit alert types, no valid targets, and a single unresolved token that
+ * looks like an alert-type typo (within edit distance 1).
+ */
+export function suggestAlertTypeTypo(parsed: ParsedSubscribeArgs): string | null {
+  const hasValidTargets = parsed.tickers.length > 0 || parsed.presetIds.length > 0 || parsed.subscribeAll;
+  if (parsed.alertTypes.size > 0 || hasValidTargets || parsed.invalidTargets.length !== 1) {
+    return null;
+  }
+  return suggestClosestToken(parsed.invalidTargets[0], TELEGRAM_LIVE_ALERT_TYPES);
 }
 
 /**
@@ -272,15 +313,11 @@ export function validateSubscribeArgs(parsed: ParsedSubscribeArgs): string | nul
   }
   if (parsed.invalidTargets.length > 0) {
     const unknown = parsed.invalidTargets.join(", ");
-    if (parsed.alertTypes.size === 0) {
-      const suggestion =
-        parsed.invalidTargets.length === 1
-          ? suggestClosestToken(parsed.invalidTargets[0], TELEGRAM_LIVE_ALERT_TYPES)
-          : null;
-      const hint = suggestion ? ` Did you mean "${suggestion}"?` : "";
-      return `Unknown alert type: ${unknown}.${hint} Valid types: ${ALERT_TYPE_LIST}.`;
+    const alertTypeSuggestion = suggestAlertTypeTypo(parsed);
+    if (alertTypeSuggestion) {
+      return `Unknown alert type: ${unknown}. Did you mean "${alertTypeSuggestion}"? Valid types: ${ALERT_TYPE_LIST}.`;
     }
-    return `Unknown ticker or preset: ${unknown}. Check spelling, use the coin's symbol, or try /presets.`;
+    return `Unknown ticker or preset: ${unknown}. Check spelling or use the coin's symbol.`;
   }
   if (parsed.subscribeAll && (parsed.tickers.length > 0 || parsed.presetIds.length > 0)) {
     return 'Use either "all" or specific tickers/presets in one command, not both.';

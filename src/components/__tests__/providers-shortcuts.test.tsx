@@ -346,4 +346,17 @@ describe("Providers single-key shortcuts (WCAG 2.1.4 disable flag)", () => {
     }
   });
 
+  it("suppresses global keyboard shortcuts and overlays on chromeless /pharoswatchbot/app/", async () => {
+    pathname = "/pharoswatchbot/app/";
+    render(<Providers><div data-testid="mini-app-child" /></Providers>);
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(screen.queryByTestId("route-progress-bar")).toBeNull();
+    for (const [key, opts] of [["/", {}], ["?", {}], ["t", {}], ["k", { metaKey: true }], ["k", { ctrlKey: true }]] as const) {
+      expect(pressKey(key, opts).defaultPrevented).toBe(false);
+    }
+    expect(setThemeMock).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("command-palette")).toBeNull();
+    expect(screen.queryByTestId("keyboard-shortcuts-dialog")).toBeNull();
+  });
+
 });

@@ -73,7 +73,9 @@ describe("parseStartPayload", () => {
     });
   });
 
-  it("returns status/why/coverage payloads with their coin id", () => {
+  it("returns status/why/coverage payloads with their coin id, and bare status for blocked-chat recovery", () => {
+    expect(parseStartPayload("status")).toEqual({ kind: "status", coinId: null });
+    expect(parseStartPayload("STATUS")).toEqual({ kind: "status", coinId: null });
     expect(parseStartPayload("status_usdc-circle")).toEqual({
       kind: "status",
       coinId: "usdc-circle",

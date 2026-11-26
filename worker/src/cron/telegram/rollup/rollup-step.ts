@@ -1,3 +1,4 @@
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { TELEGRAM_ALERT_POLICY, TELEGRAM_ALERT_TTL_SEC, isTelegramSnoozeActive } from "@shared/lib/telegram-delivery-policy";
 import { TELEGRAM_ROLLUP_ALERT_TYPES } from "@shared/lib/telegram-alert-families";
 import { MINI_APP_PAYLOAD_NAMES } from "@shared/lib/telegram-mini-app-payloads";
@@ -8,7 +9,7 @@ import { parseJsonObject } from "../../../lib/json-parse";
 import { logWorkerEvent } from "../../../lib/structured-log";
 import {
   buildAlertReplyMarkup,
-  formatConsolidatedMessage,
+  formatHourlyFreezeBatchMessage,
   splitMessage,
   type FreezeAlert,
 } from "../../../telegram/common/alerts-formatting";
@@ -22,7 +23,7 @@ import { loadRetractedFreezeAlertIds } from "../freeze/telegram-alert-freeze";
 import {
   loadCoinChanges,
   loadFreezeChangesAfter,
-  loadOverflowCounts,
+  loadOverflowSummaries,
   prepareChangeLogPrune,
   type StoredTelegramChange,
 } from "./change-log";
@@ -51,17 +52,28 @@ function isPrivateChat(chatId: string): boolean {
   return Number(chatId) > 0;
 }
 
-/** The roll-up's only button. */
+/** The roll-up's single-row button strip. */
 export function manageAlertsMarkup(chatId: string) {
+  if (!isPrivateChat(chatId)) {
+    return {
+      inline_keyboard: [[
+        { text: "Group settings", callback_data: "settings:home" },
+      ]],
+    };
+  }
   return {
-    inline_keyboard: [[isPrivateChat(chatId)
-      ? { text: "Manage Alerts", web_app: { url: buildTelegramMiniAppUrl(MINI_APP_PAYLOAD_NAMES.watchlist) } }
-      : { text: "Manage Alerts", callback_data: "settings:home" }]],
+    inline_keyboard: [[
+      { text: "Manage Alerts", web_app: { url: buildTelegramMiniAppUrl(MINI_APP_PAYLOAD_NAMES.watchlist) } },
+      { text: "Time zone & quiet hours", web_app: { url: buildTelegramMiniAppUrl(MINI_APP_PAYLOAD_NAMES.settings) } },
+    ]],
   };
 }
 
 function freezeAlertFromChange(change: StoredTelegramChange): FreezeAlert | null {
   if (change.kind !== "freeze") return null;
+  const eventTsSec = typeof change.payload.eventTsSec === "number" && Number.isFinite(change.payload.eventTsSec)
+    ? change.payload.eventTsSec
+    : null;
   return {
     stablecoinId: change.stablecoinId,
     symbol: change.payload.symbol,
@@ -70,6 +82,7 @@ function freezeAlertFromChange(change: StoredTelegramChange): FreezeAlert | null
     amountUsdAtEvent: change.payload.amountUsdAtEvent,
     tapeEventId: change.payload.tapeEventId,
     sourceEventId: change.sourceKey,
+    ...(eventTsSec != null ? { eventTsSec } : {}),
   };
 }
 
@@ -172,7 +185,9 @@ export async function buildFreezeBatchJobPage(
   const deliveries: TelegramDeliveryInput[] = [];
   for (const [chatId, freeze] of alertsByChat) {
     const alerts = { dews: [], depegTriggered: [], depegResolved: [], depegWorsening: [], safety: [], reserve: [], freeze };
-    const chunks = splitMessage(formatConsolidatedMessage(alerts, { via: { presetIds: [], watchlist: true, allStablecoins: false } }));
+    const chunks = splitMessage(
+      formatHourlyFreezeBatchMessage(freeze, { via: { presetIds: [], watchlist: true, allStablecoins: false } }),
+    );
     chunks.forEach((body, seq) => deliveries.push({
       chatId,
       seq,
@@ -181,6 +196,7 @@ export async function buildFreezeBatchJobPage(
       disableWebPagePreview: true,
       coinIds: [...new Set(freeze.map((alert) => alert.stablecoinId))],
       families: ["freeze"],
+      // Every underlying event's source key stays attached even when >4-event bursts collapse visually.
       freezeSourceKeys: freeze.map((alert) => alert.sourceEventId),
     }));
   }
@@ -397,7 +413,7 @@ export async function runDailyRollup(db: D1Database, nowSec: number): Promise<Te
   const changes = await withoutRetractedFreezes(
     db, await loadCoinChanges(db, TELEGRAM_ROLLUP_ALERT_TYPES, minSince, nowSec),
   );
-  const overflowCounts = await loadOverflowCounts(
+  const overflowSummaries = await loadOverflowSummaries(
     db,
     batch.map(({ row }) => row.chat_id),
     new Map(batch.map(({ row, sinceSec }) => [row.chat_id, sinceSec] as const)),
@@ -418,7 +434,16 @@ export async function runDailyRollup(db: D1Database, nowSec: number): Promise<Te
       : [];
     // Every freeze counted in this chat's summary, revalidated before each send.
     const freezeSourceKeys = included.flatMap((change) => change.kind === "freeze" ? [change.sourceKey] : []);
-    const message = formatRollupMessage({ changes: net, overflowCount: overflowCounts.get(chatId) ?? 0 });
+    const overflow = overflowSummaries.get(chatId);
+    const overflowCoinSymbols = overflow?.coinIds.map((id) => WORKER_TRACKED_META_BY_ID.get(id)?.symbol ?? id);
+    const message = formatRollupMessage({
+      changes: net,
+      overflowCount: overflow?.count ?? 0,
+      overflowCoinSymbols,
+      overflowFamilies: overflow?.families,
+      timezone: row.timezone,
+      privateChat: isPrivateChat(chatId),
+    });
     const marker = db.prepare(
       `INSERT INTO telegram_rollup_state (chat_id, last_rollup_local_date, last_rollup_at) VALUES (?, ?, ?)
        ON CONFLICT(chat_id) DO UPDATE SET last_rollup_local_date = excluded.last_rollup_local_date,

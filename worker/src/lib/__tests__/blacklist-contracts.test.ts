@@ -8,10 +8,16 @@ import {
 import { resolveBlacklistStatuses } from "@shared/lib/report-card-blacklist-matchers";
 import { BLACKLIST_STABLECOINS } from "@shared/types/blacklist";
 import {
+  BLACKLIST_CONTRACT_SPECS,
+  BLACKLIST_TRACKED_STABLECOIN_ID_LIST,
+  BLACKLIST_TRACKED_STABLECOIN_IDS as UPSTREAM_BLACKLIST_TRACKED_STABLECOIN_IDS,
+} from "@shared/lib/blacklist-contract-specs";
+import {
   buildBlacklistCoverageManifest,
   getDeferredBlacklistCoverage,
 } from "../blacklist-coverage-manifest";
 import {
+  BLACKLIST_TRACKED_STABLECOIN_IDS,
   CONTRACT_CONFIGS,
   getBlacklistConfigsForSymbolAndChain,
   getBlacklistEventBySignature,
@@ -23,6 +29,14 @@ import { parseEvmLogsWithCoverage, shouldPreferRpcLogScan } from "../../cron/bla
 const trackedBlacklistStatuses = resolveBlacklistStatuses(TRACKED_STABLECOINS);
 
 describe("blacklist-contracts shared metadata alignment", () => {
+  it("keeps upstream declarative tracked IDs identical to resolved BLACKLIST_TRACKED_STABLECOIN_IDS", () => {
+    const resolvedIds = [...BLACKLIST_TRACKED_STABLECOIN_IDS].sort();
+    expect(CONTRACT_CONFIGS).toHaveLength(BLACKLIST_CONTRACT_SPECS.length);
+    expect([...UPSTREAM_BLACKLIST_TRACKED_STABLECOIN_IDS].sort()).toEqual(resolvedIds);
+    expect([...BLACKLIST_TRACKED_STABLECOIN_ID_LIST].sort()).toEqual(resolvedIds);
+    expect(new Set(BLACKLIST_TRACKED_STABLECOIN_ID_LIST).size).toBe(BLACKLIST_TRACKED_STABLECOIN_ID_LIST.length);
+  });
+
   it("marks every blacklist-tracked stablecoin as directly freezable", () => {
     const mismatches = [...new Set(CONTRACT_CONFIGS.map((config) => config.stablecoinId))]
       .filter((stablecoinId) => trackedBlacklistStatuses.get(stablecoinId) !== true);

@@ -4,12 +4,16 @@ import {
   TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM,
   TELEGRAM_MINI_APP_CONTRACT_VERSION,
   TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM,
+  TelegramMiniAppContextResponseSchema,
   TelegramMiniAppErrorResponseSchema,
   TelegramMiniAppBulkWatchlistResponseSchema,
   TelegramMiniAppResponseSchema,
   TelegramMiniAppSnapshotSchema,
   TelegramMiniAppStateSchema as SharedTelegramMiniAppStateSchema,
   telegramMiniAppStateRevision,
+  type TelegramMiniAppBulkApplyResult,
+  type TelegramMiniAppContextRequest,
+  type TelegramMiniAppContextResponse,
   type TelegramMiniAppMutableState,
   type TelegramMiniAppResponse,
   type TelegramMiniAppBulkWatchlistResponse,
@@ -25,7 +29,12 @@ export const TelegramMiniAppStateSchema = SharedTelegramMiniAppStateSchema;
 export interface TelegramMiniAppClientSnapshot {
   state: TelegramMiniAppState;
   stateRevision: string;
+  /** Envelope-level Worker clock (outside `state` so `stateRevision` stays deterministic). */
+  serverNowSec?: number;
+  /** True when the Worker returned a matching Contract v10 compact snapshot. */
+  supportsV10?: boolean;
   undo?: TelegramMiniAppBulkWatchlistResponse["result"]["undo"];
+  bulkResult?: TelegramMiniAppBulkApplyResult;
 }
 
 function parseRetryAfterSec(value: unknown): number | null {
@@ -125,6 +134,7 @@ const MINI_APP_STATE_TRANSPORT_V1 = {
       return {
         state: legacy,
         stateRevision: telegramMiniAppStateRevision(mutableState as TelegramMiniAppMutableState),
+        supportsV10: false,
       };
     }
     const snapshot = compact.data;
@@ -135,7 +145,10 @@ const MINI_APP_STATE_TRANSPORT_V1 = {
         catalog: TELEGRAM_MINI_APP_CATALOG as unknown as TelegramMiniAppState["catalog"],
       },
       stateRevision: snapshot.stateRevision,
+      serverNowSec: snapshot.serverNowSec,
+      supportsV10: true,
       ...(snapshot.undo ? { undo: snapshot.undo } : {}),
+      ...(snapshot.bulkResult ? { bulkResult: snapshot.bulkResult } : {}),
     };
   },
 };
@@ -153,6 +166,17 @@ export async function postVersionedMiniAppJson<T extends VersionedMiniAppRespons
   const response = await postMiniAppJson(appendMiniAppVersions(path), body, schema);
   assertMiniAppVersions(response);
   return response;
+}
+
+/**
+ * Contract v10 on-demand scoped live risk context on `POST /api/telegram-mini-app/session`.
+ * Never mutates client preferences `state` or `stateRevision`.
+ */
+export async function postMiniAppContext(
+  path: string,
+  body: { initData: string; contextRequest: TelegramMiniAppContextRequest },
+): Promise<TelegramMiniAppContextResponse> {
+  return postVersionedMiniAppJson(path, body, TelegramMiniAppContextResponseSchema);
 }
 
 /**

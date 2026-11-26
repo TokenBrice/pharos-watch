@@ -15,6 +15,7 @@ import {
   Flag,
   MoreHorizontal,
   Plus,
+  Smartphone,
   Star,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +45,10 @@ import { formatCurrency, formatShortDate } from "@shared/lib/format";
 import { isBlacklistStablecoin } from "@shared/lib/blacklist";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { isClientTokenizedFundId } from "@shared/lib/stablecoins/aggregate-client-registry";
+import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
+import { isTelegramReservedTargetToken } from "@shared/lib/telegram-command-vocabulary";
+import { formatCoinPayload } from "@shared/lib/telegram-mini-app-payloads";
+import { PHAROSWATCHBOT_BOT_URL } from "@/lib/telegram-route-constants";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { hasStaticYieldWorkbench } from "@shared/lib/yield-auto-lending";
 import { buildSafetyVerdictLine } from "@/lib/stablecoin-detail-hero-metrics";
@@ -281,6 +286,25 @@ function HeroPortfolioAction({
   );
 }
 
+const HERO_TELEGRAM_TARGET_PATTERN = /^[A-Za-z0-9_-]+$/;
+const HERO_SYMBOL_COUNT = new Map<string, number>();
+for (const entry of CLIENT_TRACKED_STABLECOINS) {
+  const key = entry.symbol.toLowerCase();
+  HERO_SYMBOL_COUNT.set(key, (HERO_SYMBOL_COUNT.get(key) ?? 0) + 1);
+}
+
+function resolveHeroAlertTargetToken(coinId: string, coinSymbol: string): string {
+  const trimmed = coinSymbol.trim();
+  if (
+    HERO_TELEGRAM_TARGET_PATTERN.test(trimmed)
+    && !isTelegramReservedTargetToken(trimmed)
+    && (HERO_SYMBOL_COUNT.get(trimmed.toLowerCase()) ?? 0) === 1
+  ) {
+    return trimmed;
+  }
+  return coinId;
+}
+
 interface HeroAlertRecommendation {
   command: string;
   description: string;
@@ -342,7 +366,7 @@ function resolveHeroAlertRecommendation({
   }
 
   return {
-    command: `/subscribe ${types.join(", ")} ${coinId}`,
+    command: `/subscribe ${types.join(", ")} ${resolveHeroAlertTargetToken(coinId, coinSymbol)}`,
     description,
     ariaLabel: types.includes("depeg")
       ? `Alerts: get Telegram alerts for ${coinSymbol} depegs and risk changes`
@@ -363,7 +387,7 @@ function HeroAlertsAction({
 }) {
   const [copied, setCopied] = useState(false);
   const subscribeCommand = recommendation.command;
-  const deepLink = `https://t.me/PharosWatchBot?startapp=coin_${coinId}`;
+  const deepLink = `${PHAROSWATCHBOT_BOT_URL}?startapp=${formatCoinPayload(coinId)}`;
 
   useEffect(() => {
     if (!copied) return;
@@ -395,39 +419,40 @@ function HeroAlertsAction({
             {recommendation.description}
           </p>
         </div>
-        <div className="flex items-center gap-1.5 rounded-md border border-border/60 bg-muted/40 p-2">
-          <code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-xs text-foreground">
-            {subscribeCommand}
-          </code>
-          <button
-            type="button"
-            onClick={() => void handleCopy()}
-            aria-label={copied ? "Copied subscribe command" : "Copy subscribe command"}
-            className="pharos-focus-ring inline-flex size-7 shrink-0 items-center justify-center rounded-md border border-border/60 bg-card text-muted-foreground transition-colors hover:border-border hover:text-foreground"
-          >
-            {copied ? (
-              <Check className="size-3.5 text-state-positive" aria-hidden="true" />
-            ) : (
-              <Copy className="size-3.5" aria-hidden="true" />
-            )}
-          </button>
-        </div>
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
-          <a
-            href={deepLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="pharos-focus-ring inline-flex min-h-9 items-center gap-1.5 rounded-md border border-border/70 bg-card px-3 text-xs font-medium text-foreground transition-colors hover:border-border hover:bg-muted/60"
-          >
-            <span>Open in @PharosWatchBot</span>
+        <Button asChild size="sm" className="w-full gap-1.5">
+          <a href={deepLink} target="_blank" rel="noopener noreferrer">
+            <Smartphone className="size-3.5" aria-hidden="true" />
+            <span>Follow {coinSymbol} in Mini App</span>
             <ExternalLink className="size-3.5" aria-hidden="true" />
           </a>
-          <IntentLink
-            href="/pharoswatchbot/#getting-started"
-            className="pharos-focus-ring rounded-sm text-xs font-medium text-brand-accent-text underline-offset-2 hover:underline"
-          >
-            Setup guide
-          </IntentLink>
+        </Button>
+        <div className="space-y-1.5 border-t border-border/55 pt-2.5">
+          <div className="flex items-center justify-between gap-2">
+            <span className="pharos-label">Or paste in chat / group</span>
+            <IntentLink
+              href="/pharoswatchbot/#getting-started"
+              className="pharos-focus-ring rounded-sm text-xs font-medium text-brand-accent-text underline-offset-2 hover:underline"
+            >
+              Setup guide
+            </IntentLink>
+          </div>
+          <div className="flex items-center gap-1.5 rounded-md border border-border/60 bg-muted/40 p-2">
+            <code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-xs text-foreground">
+              {subscribeCommand}
+            </code>
+            <button
+              type="button"
+              onClick={() => void handleCopy()}
+              aria-label={copied ? "Copied subscribe command" : "Copy subscribe command"}
+              className="pharos-focus-ring inline-flex size-7 shrink-0 items-center justify-center rounded-md border border-border/60 bg-card text-muted-foreground transition-colors hover:border-border hover:text-foreground"
+            >
+              {copied ? (
+                <Check className="size-3.5 text-state-positive" aria-hidden="true" />
+              ) : (
+                <Copy className="size-3.5" aria-hidden="true" />
+              )}
+            </button>
+          </div>
         </div>
       </PopoverContent>
     </Popover>

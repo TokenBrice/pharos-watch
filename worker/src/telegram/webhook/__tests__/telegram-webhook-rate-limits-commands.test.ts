@@ -66,6 +66,7 @@ describe("command ingress policy", () => {
     ["/start", "setup", "required", false],
     ["/start", "pw1_landing_hero", "required", false],
     ["/start", "sub_dews_usdc-circle", "required", false],
+    ["/start", "status", "none", false],
     ["/start", "status_usdc-circle", "none", false],
     ["/start", "why_usdc-circle", "none", false],
     ["/start", "coverage_usdc-circle", "none", false],
@@ -75,7 +76,7 @@ describe("command ingress policy", () => {
     ["/subscribe", "", "required", true],
     ["/unsubscribe", "", "required", true],
     ["/pause", "", "required", true],
-    ["/forget", "", "required", true],
+    ["/forget", "", "none", false],
     ["/unsnooze", "", "required", true],
     ["/settings", "", "none", false],
     ["/why", "", "none", false],
@@ -100,8 +101,11 @@ describe("command ingress policy", () => {
     ["bulk:sa:x", true], ["bulk:ua:x", true], ["bulk:no", false],
     ["forget:yes:1", true], ["forget:no", false],
     ["setup:top25", true], ["setup:undo", true], ["setup:sample", false],
-    ["settings:home", false], ["settings:gt:dews", true],
-    ["snooze:1h", true], ["status:usdc-circle", false],
+    ["settings:home", false], ["settings:g", false], ["settings:o:usdc-circle:0", false],
+    ["settings:p:usd-top25:0", false], ["settings:pu:usd-top25:0", false],
+    ["settings:gt:dews", true], ["settings:pf:usd-top25:d:0:0", true], ["settings:pc:usd-top25:0", true],
+    ["settings:sn:4h", true], ["settings:c:usdc-circle:ds:a:0", true],
+    ["snooze:1h", true], ["snooze:off", true], ["snooze:pause", true], ["status:usdc-circle", false],
     ["tz:UTC", false], ["unsub:usdc-circle", false], ["select:1", false], ["manage:page:1", false],
   ] as const)("classifies callback %s as mutating=%s", (data, mutating) => {
     expect(callbackMutatesChatState(data)).toBe(mutating);
@@ -330,6 +334,23 @@ describe("handleTelegramWebhook", () => {
     ).toBe(false);
     expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_preset_subscriptions"))).toBe(false);
     expect(wrotePendingRow(db)).toBe(false);
+  });
+
+  it("/start status opens chat status for blocked-chat recovery while plain DM text stays silent", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      sqlite.exec(`
+        INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('123', 1, 1);
+        INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_depeg) VALUES ('123', 'usdc-circle', 1);
+      `);
+      expect((await handleTelegramWebhook(db, makeWebhookRequest(123, "hello"), "test-secret", "bot-token")).status).toBe(200);
+      expect(fetchSpy).not.toHaveBeenCalled();
+      expect((await handleTelegramWebhook(db, makeWebhookRequest(123, "/start status"), "test-secret", "bot-token")).status).toBe(200);
+      expect(sentMessageBody().text).toContain("<b>Your alerts</b>");
+      expect(sentMessageBody().text).toContain("<b>Following:</b> USDC");
+    } finally {
+      sqlite.close();
+    }
   });
 
   it.each(["status", "why", "coverage"])("/start %s_<coinId> dispatches into the status card", async (prefix) => {
