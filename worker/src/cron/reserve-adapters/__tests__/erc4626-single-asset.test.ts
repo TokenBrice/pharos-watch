@@ -882,6 +882,16 @@ describe("fetchErc4626SingleAssetReserves", () => {
     const recovered = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "morpho-vault-v2", chainId: 1 }), { requestCache: budgetCache });
     expect(nonInfoWarnings(recovered.warnings)).toEqual([]);
     expect(recovered.metadata?.redemptionCapacityRaw).toBe("30000000");
+
+    // Transient unreadable block header is never retained in requestCache across retries.
+    const blockCache = new Map<string, Promise<unknown>>();
+    installErc4626Network({ liquidityAdapter: 1, blockTimestamp: null, json: morphoReadJson({ version: "v2", withdrawable: "30000000" }) });
+    const miss = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "morpho-vault-v2", chainId: 1 }), { requestCache: blockCache });
+    expect(nonInfoWarnings(miss.warnings)).toEqual([expect.objectContaining({ code: "morpho-vault-v2-liquidity-unavailable" })]);
+    installErc4626Network({ liquidityAdapter: 1, json: morphoReadJson({ version: "v2", withdrawable: "30000000" }) });
+    const healed = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "morpho-vault-v2", chainId: 1 }), { requestCache: blockCache });
+    expect(nonInfoWarnings(healed.warnings)).toEqual([]);
+    expect(healed.metadata?.redemptionCapacityRaw).toBe("30000000");
   });
 
   it("reuses cached Morpho directory, block timestamp, and token price across vaults sharing requestCache", async () => {

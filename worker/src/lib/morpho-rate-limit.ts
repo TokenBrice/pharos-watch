@@ -1,6 +1,5 @@
 import { parseRetryAfterSeconds } from "@shared/lib/retry-after";
 import { isRecord } from "@shared/lib/type-guards";
-import { prepareCacheUpsert } from "./db-cache";
 
 /**
  * Single D1 cache authority (R5) for Morpho Read API HTTP 429 cooldowns shared
@@ -8,22 +7,24 @@ import { prepareCacheUpsert } from "./db-cache";
  */
 export const MORPHO_RATE_LIMIT_CACHE_KEY = "yield:supplemental-sources:v1:morpho-backoff";
 export const MORPHO_RATE_LIMIT_BACKOFF_REASON = "morpho-rate-limited-backoff";
-export const MORPHO_RATE_LIMIT_DEFAULT_BACKOFF_SEC = 600;
-export const MORPHO_RATE_LIMIT_MAX_BACKOFF_SEC = 7 * 86_400;
+const MORPHO_RATE_LIMIT_DEFAULT_BACKOFF_SEC = 600;
+const MORPHO_RATE_LIMIT_MAX_BACKOFF_SEC = 7 * 86_400;
 const MORPHO_RATE_LIMIT_MAX_FUTURE_SKEW_SEC = 60;
 
-export type MorphoRateLimitBackoffSource = "retry-after" | "default";
+type MorphoRateLimitBackoffSource = "retry-after" | "default";
+type MorphoRateLimitOrigin = "yield-supplemental" | "reserve-adapter";
 
 export interface MorphoRateLimitBackoff {
   backoffSec: number;
   source: MorphoRateLimitBackoffSource;
 }
 
-export interface PersistedMorphoRateLimitBackoff {
+interface PersistedMorphoRateLimitBackoff {
   backoffUntilSec: number;
   reason: typeof MORPHO_RATE_LIMIT_BACKOFF_REASON;
   source: MorphoRateLimitBackoffSource;
   recordedAtSec: number;
+  origin?: MorphoRateLimitOrigin;
 }
 
 export function resolveMorphoRateLimitBackoff(response: Response, nowMs: number): MorphoRateLimitBackoff {
@@ -40,15 +41,17 @@ export function resolveMorphoRateLimitBackoff(response: Response, nowMs: number)
   };
 }
 
-export function buildMorphoRateLimitBackoffPayload(
+function buildMorphoRateLimitBackoffPayload(
   backoff: MorphoRateLimitBackoff,
   recordedAtSec: number,
+  origin: MorphoRateLimitOrigin,
 ): string {
   return JSON.stringify({
     backoffUntilSec: recordedAtSec + backoff.backoffSec,
     reason: MORPHO_RATE_LIMIT_BACKOFF_REASON,
     source: backoff.source,
     recordedAtSec,
+    origin,
   } satisfies PersistedMorphoRateLimitBackoff);
 }
 
@@ -75,29 +78,49 @@ export function parseMorphoRateLimitBackoff(
       return null;
     }
     const source: MorphoRateLimitBackoffSource = parsed.source === "retry-after" ? "retry-after" : "default";
+    const origin: MorphoRateLimitOrigin | undefined =
+      parsed.origin === "yield-supplemental" || parsed.origin === "reserve-adapter"
+        ? parsed.origin
+        : undefined;
     return {
       backoffUntilSec,
       reason: MORPHO_RATE_LIMIT_BACKOFF_REASON,
       source,
       recordedAtSec,
+      ...(origin ? { origin } : {}),
     };
   } catch {
     return null;
   }
 }
 
+/**
+ * Atomically persist the Morpho 429 cooldown while preserving whichever valid
+ * row extends `backoffUntilSec` further into the future (replacing expired or
+ * malformed rows so overlapping reserve/yield lanes never shorten a Retry-After).
+ */
 export async function persistMorphoRateLimitBackoff(
   db: D1Database,
   backoff: MorphoRateLimitBackoff,
   recordedAtSec: number,
+  origin: MorphoRateLimitOrigin,
 ): Promise<void> {
-  await prepareCacheUpsert(
-    db,
-    {
-      key: MORPHO_RATE_LIMIT_CACHE_KEY,
-      value: buildMorphoRateLimitBackoffPayload(backoff, recordedAtSec),
-      updatedAt: recordedAtSec,
-    },
-    "if-newer",
-  ).run();
+  const payload = buildMorphoRateLimitBackoffPayload(backoff, recordedAtSec, origin);
+  await db
+    .prepare(
+      "INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?) "
+      + "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at "
+      + "WHERE CASE "
+      + "WHEN json_valid(cache.value) "
+      + "AND json_type(cache.value, '$.backoffUntilSec') = 'integer' "
+      + "AND json_type(cache.value, '$.recordedAtSec') = 'integer' "
+      + "AND CAST(json_extract(cache.value, '$.recordedAtSec') AS INTEGER) >= 0 "
+      + "AND CAST(json_extract(cache.value, '$.recordedAtSec') AS INTEGER) <= excluded.updated_at + 60 "
+      + "AND CAST(json_extract(cache.value, '$.backoffUntilSec') AS INTEGER) > CAST(json_extract(cache.value, '$.recordedAtSec') AS INTEGER) "
+      + "AND CAST(json_extract(cache.value, '$.backoffUntilSec') AS INTEGER) - CAST(json_extract(cache.value, '$.recordedAtSec') AS INTEGER) <= 604800 "
+      + "THEN CAST(json_extract(cache.value, '$.backoffUntilSec') AS INTEGER) "
+      + "ELSE 0 END < CAST(json_extract(excluded.value, '$.backoffUntilSec') AS INTEGER)",
+    )
+    .bind(MORPHO_RATE_LIMIT_CACHE_KEY, payload, recordedAtSec)
+    .run();
 }

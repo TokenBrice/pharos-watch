@@ -326,20 +326,15 @@ function invalidToolArgsResponse(id: string | number | null, detail: string): Re
   });
 }
 
-const MCP_TOOL_ENTITLEMENT_PATH: Record<string, string | ((rawArgs: unknown) => string)> = {
+const MCP_TOOL_ENTITLEMENT_PATH: Record<string, string> = {
   get_risk_check: API_PATHS.riskCheck(),
-  get_compliance: (rawArgs) => {
-    const id = rawArgs && typeof rawArgs === "object" && !Array.isArray(rawArgs)
-      ? (rawArgs as { id?: unknown }).id
-      : undefined;
-    return typeof id === "string" && id.length > 0 ? API_PATHS.complianceCoin(id) : API_PATHS.compliance();
-  },
+  get_compliance: API_PATHS.compliance(),
 };
 
-function resolveMcpToolEntitlementPath(toolName: string, rawArgs?: unknown): string | null {
-  if (!Object.prototype.hasOwnProperty.call(MCP_TOOL_ENTITLEMENT_PATH, toolName)) return null;
-  const entry = MCP_TOOL_ENTITLEMENT_PATH[toolName];
-  return typeof entry === "function" ? entry(rawArgs) : entry;
+function resolveMcpToolEntitlementPath(toolName: string): string | null {
+  return Object.prototype.hasOwnProperty.call(MCP_TOOL_ENTITLEMENT_PATH, toolName)
+    ? MCP_TOOL_ENTITLEMENT_PATH[toolName]!
+    : null;
 }
 
 function isMcpToolEntitled(
@@ -362,7 +357,7 @@ async function executeToolCall(
   rawArgs: unknown,
 ): Promise<Response> {
   const argsInput = rawArgs ?? {};
-  const entitlementPath = resolveMcpToolEntitlementPath(toolName, argsInput);
+  const entitlementPath = resolveMcpToolEntitlementPath(toolName);
   if (entitlementPath && !trustedAdmin) {
     const entitlementFailure = checkApiKeyEndpointEntitlement(apiKey, entitlementPath);
     if (entitlementFailure) {

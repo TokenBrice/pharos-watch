@@ -48,6 +48,7 @@ type MorphoReadVersion = "v1" | "v2";
 interface MorphoVaultDirectory {
   assets: Map<string, string>;
   poisoned: Set<string>;
+  unparseableRowCount: number;
 }
 
 const DEFAULT_MORPHO_API_BASE_URL = "https://api.morpho.org";
@@ -61,7 +62,6 @@ const MORPHO_DIRECTORY_MAX_PAGES = 10;
 const MORPHO_STATE_MAX_AGE_SEC = 1_800;
 const MORPHO_STATE_MAX_FUTURE_SKEW_SEC = 300;
 const MORPHO_PRICE_MAX_AGE_SEC = 86_400;
-export const MORPHO_RATE_LIMITED_CACHE_KEY = MORPHO_RATE_LIMIT_CACHE_KEY;
 
 // Morpho applies a 7-day IP ban at 3,334 req/10 min; trip a run-scoped flag
 // and share the Retry-After-aware D1 backoff row with the yield Morpho lane
@@ -112,14 +112,14 @@ async function checkMorphoRateLimited(ctx?: AdapterContext): Promise<boolean> {
 async function markMorphoRateLimited(
   ctx: AdapterContext | undefined,
   backoff: MorphoRateLimitBackoff,
+  recordedAtSec: number,
   options?: { nonBlocking?: boolean },
 ): Promise<void> {
   const scope = rateLimitScope(ctx);
   if (scope != null) morphoRateLimitedRuns.set(scope, true);
   const db = ctx?.db;
   if (!db) return;
-  const recordedAtSec = ctx?.nowSec ?? Math.floor(Date.now() / 1000);
-  const writePromise = persistMorphoRateLimitBackoff(db, backoff, recordedAtSec).catch(() => {
+  const writePromise = persistMorphoRateLimitBackoff(db, backoff, recordedAtSec, "reserve-adapter").catch(() => {
     // Best-effort continuation persistence; in-memory scope flag is already tripped.
   });
   if (options?.nonBlocking) {
@@ -260,6 +260,7 @@ async function fetchMorphoReadJson(
           ...(options?.passthrough404 ? { passthrough404: true } : {}),
           passthroughStatuses: [429],
           waitOnPassthrough429: false,
+          throwOnFinalNetworkError: true,
           beforeRequest: () => !isMorphoRateLimitedSync(ctx),
         },
       );
@@ -273,11 +274,13 @@ async function fetchMorphoReadJson(
         return { kind: "unavailable", detail: "HTTP request failed", cacheable: !timedOutByBudget };
       }
       if (response.status === 429) {
-        const backoff = resolveMorphoRateLimitBackoff(response, Date.now());
+        const receivedAtMs = Date.now();
+        const receivedAtSec = Math.floor(receivedAtMs / 1000);
+        const backoff = resolveMorphoRateLimitBackoff(response, receivedAtMs);
         const scope = rateLimitScope(ctx);
         if (scope != null) morphoRateLimitedRuns.set(scope, true);
         await cancelResponseBodyQuietly(response);
-        await markMorphoRateLimited(ctx, backoff, { nonBlocking: options?.isDiagnostic === true });
+        await markMorphoRateLimited(ctx, backoff, receivedAtSec, { nonBlocking: options?.isDiagnostic === true });
         return { kind: "rate-limited" };
       }
       if (response.status === 404) {
@@ -352,6 +355,7 @@ async function fetchMorphoVaultDirectory(
         const seenCursors = new Set<string>();
         let cursor: string | null = null;
         let pageCount = 0;
+        let unparseableRowCount = 0;
 
         for (;;) {
           if (pageCount >= MORPHO_DIRECTORY_MAX_PAGES) {
@@ -378,10 +382,16 @@ async function fetchMorphoVaultDirectory(
           pageCount += 1;
 
           for (const item of outcome.body.data) {
-            if (!isRecord(item)) continue;
+            if (!isRecord(item)) {
+              unparseableRowCount += 1;
+              continue;
+            }
             const chainId = parseMorphoChainId(item.chain_id);
             const vaultAddress = canonicalEvmAddress(item.vault_address);
-            if (chainId == null || !vaultAddress) continue;
+            if (chainId == null || !vaultAddress) {
+              unparseableRowCount += 1;
+              continue;
+            }
             const key = `${chainId}:${vaultAddress}`;
             const assetAddress = canonicalEvmAddress(item.asset_address);
             if (!assetAddress) {
@@ -412,7 +422,7 @@ async function fetchMorphoVaultDirectory(
         }
 
         return {
-          value: { assets, poisoned },
+          value: { assets, poisoned, unparseableRowCount },
           cacheBytes: Math.max(64, (assets.size + poisoned.size) * 256),
           basis: "declared-estimate" as const,
         };
@@ -434,7 +444,7 @@ async function fetchIndexedBlockTimestamp(
   const extraRpcUrls = [input.rpcUrl, input.fallbackRpcUrl].filter((url): url is string => Boolean(url));
   const cacheKey = `morpho-indexed-block-ts:${input.chain}:${blockNumber}`;
   try {
-    return await getCachedRequest<number | null>(
+    return await getCachedRequest<number>(
       cacheKey,
       async () => {
         const timestamp = await runAdapterIo(
@@ -448,9 +458,14 @@ async function fetchIndexedBlockTimestamp(
                 ? AbortSignal.any([input.signal, input.ctx.abortSignal])
                 : input.signal,
               timeoutMs: Math.min(input.timeoutMs, MORPHO_REQUEST_TIMEOUT_MS),
+              ...(input.ctx?.attemptDeadlineMs != null ? { deadlineMs: input.ctx.attemptDeadlineMs } : {}),
             }),
           { signal: input.signal },
         );
+        // Never retain a transient RPC failure in requestCache so retries and sibling vaults can recover.
+        if (timestamp == null) {
+          throw new MorphoReadFailure("unavailable", "block header timestamp unavailable", false);
+        }
         return { value: timestamp, cacheBytes: 64, basis: "declared-estimate" as const };
       },
       input.ctx,
@@ -595,6 +610,9 @@ async function fetchMorphoVaultLiquidity(input: MorphoLiquidityInput): Promise<C
     }
     const listedAsset = directory.assets.get(vaultSelector);
     if (listedAsset == null) {
+      if (directory.unparseableRowCount > 0) {
+        return morphoFailure(input, "liquidity-invalid", "directory contained unparseable rows; cannot certify vault absence");
+      }
       return morphoFailure(
         input,
         "unlisted",

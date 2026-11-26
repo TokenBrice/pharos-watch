@@ -62,10 +62,10 @@ import { resolveYieldBenchmarkDependencies } from "../lib/yield-config/yield-ben
 import { isReviewedPublishedYieldSourceExcluded, YIELD_OPPORTUNITY_EXCLUSIONS } from "../lib/yield-config/yield-opportunity-exclusions";
 import { readCoinProjectionId } from "../lib/api-coin-projection";
 import { readYieldRankingsCache, readYieldRankingsCoinCache, readYieldCoinCohort, readYieldCoinCohortLease, claimYieldCoinCohort, publishYieldCoinCohort, releaseYieldCoinCohort, YIELD_COHORT_LAST_EXPIRY_CACHE_KEY } from "../lib/yield-rankings-coin-cache";
-
-const lastRecordedYieldCohortExpiryByDb = new WeakMap<D1Database, number>();
 import { YIELD_BENCHMARK_SCORE_TTL_SEC } from "@shared/lib/status-thresholds";
 import { YieldCoinCohortSchema, type YieldRankingsCoinResponse } from "@shared/types/yield";
+
+const lastRecordedYieldCohortExpiryByDb = new WeakMap<D1Database, number>();
 
 const YIELD_RANKINGS_MAX_AGE_SEC = CRON_INTERVALS["sync-yield-data"];
 const YIELD_HOLD_SIGNATURE = createHash("sha256").update(JSON.stringify(

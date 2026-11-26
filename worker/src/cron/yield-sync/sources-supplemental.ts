@@ -24,6 +24,7 @@ import {
 import {
   logWorkerEvent,
 } from "../../lib/structured-log";
+import { persistMorphoRateLimitBackoff } from "../../lib/morpho-rate-limit";
 import {
   normalizeTokenAddress,
 } from "../dex-liquidity/token-resolution";
@@ -495,7 +496,19 @@ async function runRateLimitedSupplementalFamily(
     // this execution, and the next run re-derives it from a fresh 429.
     if (db) {
       try {
-        await setCache(db, backoffKey, buildYieldSupplementalFamilyBackoff(family, backoff), signal);
+        if (family === "morpho") {
+          await persistMorphoRateLimitBackoff(
+            db,
+            {
+              backoffSec: value.rateLimited.backoffSec,
+              source: value.rateLimited.source === "retry-after" ? "retry-after" : "default",
+            },
+            recordedAtSec,
+            "yield-supplemental",
+          );
+        } else {
+          await setCache(db, backoffKey, buildYieldSupplementalFamilyBackoff(family, backoff), signal);
+        }
         await logCronEvent(db, {
           job: "sync-yield-supplemental",
           eventType: backoffReason,

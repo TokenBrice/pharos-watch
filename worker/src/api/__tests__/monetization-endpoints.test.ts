@@ -1312,6 +1312,7 @@ describe("Wave 3 endpoints: MCP server & SVG safety badge", () => {
       for (const [name, args, restPath] of [
         ["get_risk_check", { ids: ["usdc-circle"] }, "/api/risk-check"],
         ["get_compliance", { id: "usdc-circle" }, "/api/compliance/usdc-circle"],
+        ["get_compliance", { id: "\uD800" }, "/api/compliance"],
       ] as const) {
         const deniedRes = await postMcp({ jsonrpc: "2.0", id: 7, method: "tools/call", params: { name, arguments: args } }, key);
         expect(isMcpPlanDeniedResponse(deniedRes)).toBe(true);

@@ -254,11 +254,28 @@ describe("buildAlertContextLines", () => {
   });
 
   describe("supply and DEX context clocks", () => {
-    const NOW_SEC = 1_800_000_000, DEX_BUDGET = TELEGRAM_CONTEXT_BUDGET_SEC.dexLiquidity;
-    const liquidityDb = (updatedAt: number | null) => makeNoopD1({ prepare: vi.fn(() => ({ bind: () => ({ all: async () => ({ results: [{ stablecoin_id: "usdc-circle", liquidity_score: 91, total_tvl_usd: 123_000_000, updated_at: updatedAt }] }) }) })) });
-    const stablecoins = (circulating: Record<string, unknown> | undefined, updatedAt = NOW_SEC, supplyObservedAt?: number) => {
-      mocks.loadStablecoinsCache.mockResolvedValue({ kind: "ok", updatedAt, payload: { peggedAssets: [{ id: "usdc-circle", symbol: "USDC", circulating, supplyObservedAt }] } });
-    };
+    const NOW_SEC = 1_800_000_000;
+    const DEX_BUDGET = TELEGRAM_CONTEXT_BUDGET_SEC.dexLiquidity;
+
+    function liquidityDb(updatedAt: number | null) {
+      return makeNoopD1({
+        prepare: vi.fn(() => ({
+          bind: () => ({
+            all: async () => ({
+              results: [{ stablecoin_id: "usdc-circle", liquidity_score: 91, total_tvl_usd: 123_000_000, updated_at: updatedAt }],
+            }),
+          }),
+        })),
+      });
+    }
+
+    function stablecoins(circulating: Record<string, unknown> | undefined, updatedAt = NOW_SEC, supplyObservedAt?: number) {
+      mocks.loadStablecoinsCache.mockResolvedValue({
+        kind: "ok",
+        updatedAt,
+        payload: { peggedAssets: [{ id: "usdc-circle", symbol: "USDC", circulating, supplyObservedAt }] },
+      });
+    }
 
     beforeEach(() => {
       vi.useFakeTimers();

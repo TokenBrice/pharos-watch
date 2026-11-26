@@ -559,6 +559,11 @@ export function buildMorphoFailureCases(nowSec = Math.floor(Date.now() / 1000)) 
       code: "morpho-vault-v2-liquidity-invalid", callsState: false,
     },
     {
+      label: "unparseable directory row with missing target", source: "morpho-vault-v2" as const,
+      opts: { version: "v2" as const, overrides: { "https://api.morpho.org/v0/vaults-v2?limit=1000": { data: [{ chain_id: "bad" }], cursor: null } } },
+      code: "morpho-vault-v2-liquidity-invalid", callsState: false,
+    },
+    {
       label: "directory cursor cycle", source: "morpho-vault-v2" as const,
       opts: { version: "v2" as const, overrides: { "https://api.morpho.org/v0/vaults-v2?limit=1000": { data: [], cursor: "c1" }, "https://api.morpho.org/v0/vaults-v2?limit=1000&cursor=c1": { data: [], cursor: "c1" } } },
       code: "morpho-vault-v2-liquidity-unavailable", callsState: false,
