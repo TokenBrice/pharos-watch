@@ -1,4 +1,5 @@
 import { parseTelegramLandingToken } from "./telegram-landing-links";
+import { TELEGRAM_PRESET_IDS, type TelegramPresetId } from "./telegram-presets";
 
 /**
  * Telegram Mini App deep-link payload registry.
@@ -67,22 +68,27 @@ export type MiniAppPayloadName =
   (typeof MINI_APP_PAYLOAD_NAMES)[keyof typeof MINI_APP_PAYLOAD_NAMES];
 
 const PAYLOAD_NAME_VALUES = new Set<string>(Object.values(MINI_APP_PAYLOAD_NAMES));
+const PRESET_ID_VALUES = new Set<string>(TELEGRAM_PRESET_IDS);
 
 /**
  * Parametric payloads. Stablecoin IDs may contain hyphens (e.g.
  * `usdc-circle`, `isc-international-stable-currency`), which the shared
- * charset permits.
+ * charset permits. Preset payloads are allowlisted against `TELEGRAM_PRESET_IDS`
+ * plus `preset_all`.
  */
 const COIN_PAYLOAD_PREFIX = "coin_";
 const WHY_PAYLOAD_PREFIX = "why_";
 const COVERAGE_PAYLOAD_PREFIX = "coverage_";
+const PRESET_PAYLOAD_PREFIX = "preset_";
+const PRESET_ALL_PAYLOAD = "preset_all";
 
 export type TelegramMiniAppPayload =
   | { kind: "named"; name: MiniAppPayloadName }
   | { kind: "adoption"; destination: "miniapp_setup" | "miniapp_home" | "miniapp_watchlist" }
   | { kind: "coin"; coinId: string }
   | { kind: "why"; coinId: string }
-  | { kind: "coverage"; coinId: string };
+  | { kind: "coverage"; coinId: string }
+  | { kind: "preset"; groupId: TelegramPresetId | "all" };
 
 function parsePrefixedPayload(payload: string, prefix: string): string | null {
   if (!payload.startsWith(prefix) || payload.length <= prefix.length) return null;
@@ -97,6 +103,11 @@ export function formatCoinPayload(coinId: string): string {
 /** Constructs a `why_<id>` payload. Does not validate `coinId`. */
 export function formatWhyPayload(coinId: string): string {
   return `${WHY_PAYLOAD_PREFIX}${coinId}`;
+}
+
+/** Constructs a `preset_<id>` or `preset_all` payload for preset/all-stablecoins deep links. */
+export function formatPresetPayload(groupId: TelegramPresetId | "all"): string {
+  return groupId === "all" ? PRESET_ALL_PAYLOAD : `${PRESET_PAYLOAD_PREFIX}${groupId}`;
 }
 
 /**
@@ -127,6 +138,15 @@ export function parseMiniAppPayload(raw: string | null | undefined): TelegramMin
   if (PAYLOAD_NAME_VALUES.has(lower)) {
     return { kind: "named", name: lower as MiniAppPayloadName };
   }
+  if (lower === PRESET_ALL_PAYLOAD) {
+    return { kind: "preset", groupId: "all" };
+  }
+  const presetId = parsePrefixedPayload(lower, PRESET_PAYLOAD_PREFIX);
+  if (presetId) {
+    return PRESET_ID_VALUES.has(presetId)
+      ? { kind: "preset", groupId: presetId as TelegramPresetId }
+      : null;
+  }
   const coinId = parsePrefixedPayload(lower, COIN_PAYLOAD_PREFIX);
   if (coinId) {
     return { kind: "coin", coinId };
@@ -152,6 +172,7 @@ export type TelegramMiniAppIntent =
   | "settings"
   | "watchlist"
   | "presets"
+  | "preset"
   | "quiet-hours"
   | "snooze"
   | "health"
@@ -167,6 +188,7 @@ export function miniAppPayloadIntent(payload: TelegramMiniAppPayload): TelegramM
     if (payload.destination === "miniapp_setup") return "setup";
     return payload.destination === "miniapp_watchlist" ? "watchlist" : "home";
   }
+  if (payload.kind === "preset") return "preset";
   if (payload.kind === "coin") return "coin";
   if (payload.kind === "why") return "why";
   if (payload.kind === "coverage") return "coverage";

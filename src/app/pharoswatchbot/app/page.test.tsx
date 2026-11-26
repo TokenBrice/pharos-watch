@@ -7,6 +7,7 @@ import {
   TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM,
   TELEGRAM_MINI_APP_CONTRACT_VERSION,
   TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM,
+  createTelegramMiniAppSnapshot,
 } from "@shared/lib/telegram-mini-app-contract";
 import { PAUSE_SENTINEL_TS } from "@shared/lib/telegram-delivery-policy";
 import { isMiniAppErrorCode, miniAppErrorMessage, MiniAppRequestError } from "./error-messages";
@@ -471,8 +472,7 @@ describe("PharosWatchBotMiniAppPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /View on Pharos/ }));
     expect(openLink).toHaveBeenCalledWith("https://pharos.watch/stablecoin/usdc-circle");
-    fireEvent.click(screen.getByRole("button", { name: /Send status to chat/ }));
-    expect(openTelegramLink).toHaveBeenCalledWith("https://t.me/PharosWatchBot?start=status_usdc-circle");
+    expect(screen.queryByRole("button", { name: /Send status to chat/ })).toBeNull();
 
     // Legacy upgrade-only recovery chip clears safetyMode to null.
     fireEvent.click(within(screen.getByRole("group", { name: "Turn on live downgrade alerts for USDC" })).getByRole("button"));
@@ -589,7 +589,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     };
     const fetchMock = mockStateResponses(state);
     fetchMock.mockResolvedValueOnce(ok({ contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION, catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
-      stateRevision: "removed", state: { ...state, subscriptions: [] }, undo })).mockResolvedValueOnce(ok(state));
+      serverNowSec: 1_800_000_000, stateRevision: "removed", state: { ...state, subscriptions: [] }, undo })).mockResolvedValueOnce(ok(state));
     await renderReadyMiniApp({ fetchImpl: fetchMock, launch: { MainButton: main, initDataUnsafe: { start_param: "coin_usdc-circle" } } });
     fireEvent.click(screen.getByRole("button", { name: "Use All stablecoins settings for USDC" }));
     await screen.findByText("USDC reset to All stablecoins settings.");
@@ -921,7 +921,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(await screen.findByRole("heading", { name: "Update required" })).toBeTruthy();
     await waitFor(() => expect(main.text).toBe("Reopen"));
     act(() => main.click());
-    expect(openTelegramLink).toHaveBeenCalledWith("https://t.me/PharosWatchBot?startapp=home");
+    expect(openTelegramLink).toHaveBeenCalledWith("https://t.me/PharosWatchBot?startapp=preset_all");
     expect(close).toHaveBeenCalledOnce();
 
     // 409 stale-bulk-preview triggers read-only session refresh and reconciles AddCoinsScreen draft.
@@ -1080,6 +1080,189 @@ describe("PharosWatchBotMiniAppPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Back" }));
     expect(screen.getByRole("heading", { level: 1, name: "Alerts on" })).toBeTruthy();
     expect(disableClosingConfirmation).toHaveBeenCalled();
+  });
+
+  it("tracks write-auth expiry via monotonic clock without a pre-expiry countdown and applies v10 bulk edits in 1 RTT", async () => {
+    vi.useFakeTimers();
+    const nowSec = 1_800_000_000;
+    vi.setSystemTime(nowSec * 1000);
+    const main = nativeButton();
+    const { catalog: _c, ...mutable } = makeMiniAppState({
+      viewer: { mutationAuthExpiresAt: nowSec + 120 },
+      directStateProof: { preferenceGeneration: 4, directFingerprint: "direct-v1-10-deadbeef" },
+    });
+    const okProv = { status: "ok", source: "s", assessedAt: nowSec, observedAt: nowSec, generation: "g", budgetSec: 1200 } as const;
+    const emptyCoinsCtx = {
+      contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
+      catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
+      serverNowSec: nowSec,
+      context: { kind: "coins", activeDepegs: { provenance: okProv, events: [] }, coinSignals: {} },
+    };
+    const appliedSnapshot = {
+      ...createTelegramMiniAppSnapshot(mutable, nowSec + 90),
+      bulkResult: { adds: ["usdt-tether"], removes: [], unchanged: [], sourceImpact: [] },
+      undo: { expectedPreferenceGeneration: 5, expectedFingerprint: "preview-v1-5-abcdef12", restoreDirectRows: [], removeStablecoinIds: ["usdt-tether"] },
+    };
+    const fetchMock = vi.fn().mockImplementation(async (input: string, init?: RequestInit) => {
+      const parsed = init?.body ? JSON.parse(String(init.body)) as { contextRequest?: unknown; operation?: { kind?: string } } : {};
+      if (input.includes("/session") && parsed.contextRequest) return ok(emptyCoinsCtx);
+      if (input.includes("/session")) return ok(createTelegramMiniAppSnapshot(mutable, nowSec));
+      if (input.includes("/mutate")) return ok(appliedSnapshot);
+      throw new Error(`Unexpected call: ${input}`);
+    });
+    renderMiniApp({ fetchImpl: fetchMock, launch: { MainButton: main, openTelegramLink: vi.fn() } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(20); });
+    expect(screen.getByRole("heading", { name: "Alerts on" })).toBeTruthy();
+
+    // Advance to 30s left in the write window: NO noisy <60s countdown banner!
+    await act(async () => { await vi.advanceTimersByTimeAsync(90_000); });
+    expect(screen.queryByRole("heading", { name: "Editing paused" })).toBeNull();
+    expect(screen.queryByText(/seconds? left|expir/i)).toBeNull();
+
+    // Single-RTT bulk apply uses `apply-bulk-watchlist` directly (zero preview POST).
+    fireEvent.click(screen.getByRole("button", { name: "Add coins" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "USDT Tether" }));
+    expect(main.text).toBe("Add 1 coin");
+    act(() => main.click());
+    await act(async () => { await vi.advanceTimersByTimeAsync(20); });
+    const mutateBodies = fetchMock.mock.calls
+      .filter(([url]) => String(url).includes("/mutate"))
+      .map(([, init]) => JSON.parse(String(init?.body)).operation);
+    expect(mutateBodies).toEqual([{
+      kind: "apply-bulk-watchlist",
+      addStablecoinIds: ["usdt-tether"],
+      removeStablecoinIds: [],
+      expectedPreferenceGeneration: 4,
+      expectedDirectFingerprint: "direct-v1-10-deadbeef",
+    }]);
+    expect(screen.getByText("Added 1 coin.")).toBeTruthy();
+
+    // Advance past mutationAuthExpiresAt: cleanly flips to Editing paused + Reopen to edit without another POST.
+    const callsBeforeExpiry = fetchMock.mock.calls.length;
+    await act(async () => { await vi.advanceTimersByTimeAsync(35_000); });
+    expect(screen.getByRole("heading", { name: "Editing paused" })).toBeTruthy();
+    expect(main.text).toBe("Reopen to edit");
+    expect(fetchMock.mock.calls.length).toBe(callsBeforeExpiry);
+  });
+
+  it("renders scoped live risk context across Home, Coin, and Follow a preset slots with cache reuse and honest unavailable states", async () => {
+    const nowSec = 1_800_000_000;
+    const okProv = { status: "ok", source: "s", assessedAt: nowSec, observedAt: nowSec, generation: "g", budgetSec: 1200 } as const;
+    const unavailProv = { status: "unavailable", source: "s", assessedAt: nowSec, observedAt: null, generation: null, budgetSec: 1200, reason: "missing" } as const;
+    const { catalog: _c, ...mutable } = makeMiniAppState({
+      subscriptions: [
+        { ...baseState.subscriptions[0]!, stablecoinId: "usdt-tether", symbol: "USDT", name: "Tether", snoozeUntilTs: null },
+        { ...baseState.subscriptions[0]!, stablecoinId: "dai-makerdao", symbol: "DAI", name: "Dai", snoozeUntilTs: 9_000_000_000 },
+        { ...baseState.subscriptions[0]!, stablecoinId: "usdc-circle", symbol: "USDC", name: "USD Coin", snoozeUntilTs: null },
+      ],
+    });
+    const coinsContextBody = {
+      contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
+      catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
+      serverNowSec: nowSec,
+      context: {
+        kind: "coins",
+        activeDepegs: {
+          provenance: okProv,
+          events: [{
+            stablecoinId: "usdc-circle", direction: "below", peakDeviationBps: -150, currentDeviationBps: -130,
+            priceUsd: 0.9871, pegReference: 1, startedAt: nowSec - 600,
+          }],
+        },
+        coinSignals: {
+          "usdc-circle": {
+            price: { provenance: okProv, priceUsd: 0.9871 },
+            dews: { provenance: okProv, band: "WARNING", score: 68 },
+            safety: { provenance: okProv, ratingStatus: "rated", grade: "A-", score: 86, held: false, methodologyVersion: "9.0", publicationId: "p1" },
+          },
+          "usdt-tether": {
+            price: { provenance: okProv, priceUsd: 0.9999 },
+            dews: { provenance: okProv, band: "CALM", score: 12 },
+            safety: { provenance: okProv, ratingStatus: "rated", grade: "B+", score: 78, held: false, methodologyVersion: "9.0", publicationId: "p1" },
+          },
+          "dai-makerdao": {
+            price: { provenance: okProv, priceUsd: 1.0 },
+            dews: { provenance: okProv, band: "CALM", score: 10 },
+            safety: { provenance: okProv, ratingStatus: "rated", grade: "A-", score: 84, held: false, methodologyVersion: "9.0", publicationId: "p1" },
+          },
+        },
+      },
+    };
+    const presetsContextBody = {
+      contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
+      catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
+      serverNowSec: nowSec,
+      context: {
+        kind: "presets",
+        provenance: okProv,
+        presets: [{ id: "usd-top25", memberCount: 25, topSymbols: ["USDT", "USDC", "USDS"] }],
+      },
+    };
+    const contextCalls: unknown[] = [];
+    const fetchMock = vi.fn().mockImplementation(async (input: string, init?: RequestInit) => {
+      const parsed = init?.body ? JSON.parse(String(init.body)) as { contextRequest?: { kind: string } } : {};
+      if (input.includes("/session") && parsed.contextRequest) {
+        contextCalls.push(parsed.contextRequest);
+        return ok(parsed.contextRequest.kind === "presets" ? presetsContextBody : coinsContextBody);
+      }
+      return ok(createTelegramMiniAppSnapshot(mutable, nowSec));
+    });
+    await renderReadyMiniApp({ fetchImpl: fetchMock });
+
+    // Slot 1: Home status strip + Off peg now section + state-first sort (off-peg -> snoozed -> rank).
+    expect(await screen.findByRole("heading", { name: "USDC is off its peg" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Off peg now" })).toBeTruthy();
+    const yourCoinsSection = screen.getByRole("heading", { name: "Your coins" }).closest("section")!;
+    const coinButtons = within(yourCoinsSection)
+      .getAllByRole("button")
+      .filter((button) => !(button.textContent ?? "").startsWith("Add"))
+      .map((button) => button.textContent ?? "");
+    expect(coinButtons.map((t) => t.match(/^(USDC|DAI|USDT)/)?.[1])).toEqual(["USDC", "DAI", "USDT"]);
+
+    // Slot 2: Tapping Off peg now row opens CoinScreen reusing cached Home signal (zero extra context fetch).
+    const offPegSection = screen.getByRole("heading", { name: "Off peg now" }).closest("section")!;
+    fireEvent.click(within(offPegSection).getByRole("button", { name: /USDC/ }));
+    expect(await screen.findByText("$0.9871 · 1.3% below peg · DEWS Warning 68 · Safety A-")).toBeTruthy();
+    expect(contextCalls).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: /Send status to chat/ })).toBeNull();
+
+    // Slot 3: Follow a preset loads `{ kind: "presets" }` and displays live member count + top 3 symbols.
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    fireEvent.click(screen.getByRole("button", { name: "Follow a preset" }));
+    expect(await screen.findByText("25 coins: USDT, USDC, USDS and 22 more")).toBeTruthy();
+    expect(contextCalls).toEqual([
+      { kind: "coins", stablecoinIds: expect.arrayContaining(["usdc-circle", "usdt-tether", "dai-makerdao"]) },
+      { kind: "presets" },
+    ]);
+
+    // Unavailable lane shows muted line under Home strip and "Live data unavailable." on CoinScreen.
+    cleanup();
+    const unavailableFetch = vi.fn().mockImplementation(async (input: string, init?: RequestInit) => {
+      const parsed = init?.body ? JSON.parse(String(init.body)) as { contextRequest?: unknown } : {};
+      if (input.includes("/session") && parsed.contextRequest) {
+        return ok({
+          contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
+          catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
+          serverNowSec: nowSec,
+          context: {
+            kind: "coins",
+            activeDepegs: { provenance: unavailProv, events: [] },
+            coinSignals: {
+              "usdc-circle": {
+                price: { provenance: unavailProv, priceUsd: null },
+                dews: { provenance: unavailProv, band: null, score: null },
+                safety: { provenance: unavailProv, ratingStatus: null, grade: null, score: null, held: false, methodologyVersion: null, publicationId: null },
+              },
+            },
+          },
+        });
+      }
+      return ok(createTelegramMiniAppSnapshot(mutable, nowSec));
+    });
+    await renderReadyMiniApp({ fetchImpl: unavailableFetch });
+    expect(await screen.findByText("Live peg status unavailable.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /^USDC/ }));
+    expect(await screen.findByText("Live data unavailable.")).toBeTruthy();
   });
 });
 

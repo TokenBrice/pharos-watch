@@ -5,8 +5,10 @@ import type { TelegramMiniAppAuthContext } from "../mini-app-auth";
 import {
   TelegramMiniAppMutationError,
   applyTelegramMiniAppMutation,
+  executeTelegramMiniAppBulkWatchlistApply,
   executeTelegramMiniAppBulkWatchlistPreview,
 } from "../telegram-mini-app-mutations";
+import { loadTelegramMiniAppState } from "../telegram-mini-app-state";
 
 const NOW = 1_800_000_000;
 const databases: Array<ReturnType<typeof createLatestSchemaSqlite>["sqlite"]> = [];
@@ -340,5 +342,69 @@ describe("Telegram Mini App bulk watchlist lifecycle", () => {
       kind: "unfollow-preset",
       presetId: "unknown-preset",
     } as never)).rejects.toMatchObject({ code: "unknown-preset" } satisfies Partial<TelegramMiniAppMutationError>);
+  });
+
+  it("applies proof-bearing single-RTT bulk edits, restores dormant/snoozed rows on undo, and fences drift", async () => {
+    const { db, sqlite } = setup();
+    sqlite.prepare("INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_launch, alert_launch_override) VALUES (?, 'usdt-tether', 1, 1)").run(AUTH.userId);
+    const initial = await loadTelegramMiniAppState(db, AUTH, { mutationMaxAgeSec: 300, nowSec: NOW });
+    expect(initial.directStateProof).toEqual({
+      preferenceGeneration: 7,
+      directFingerprint: expect.stringMatching(/^direct-v1-[0-9]+-[0-9a-f]{8}$/),
+    });
+
+    // Wrong fingerprint or stale generation is rejected pre-commit.
+    await expect(executeTelegramMiniAppBulkWatchlistApply(db, AUTH, {
+      kind: "apply-bulk-watchlist",
+      addStablecoinIds: ["usdt-tether"],
+      removeStablecoinIds: ["usdc-circle"],
+      expectedPreferenceGeneration: 7,
+      expectedDirectFingerprint: "direct-v1-1-deadbeef",
+    })).rejects.toMatchObject({ code: "stale-bulk-preview" });
+
+    // Dormant-row mutation without bumping generation still changes directFingerprint and is fenced.
+    sqlite.prepare("UPDATE telegram_subscriptions SET alert_launch_override = 0 WHERE chat_id = ? AND stablecoin_id = 'usdt-tether'").run(AUTH.userId);
+    await expect(executeTelegramMiniAppBulkWatchlistApply(db, AUTH, {
+      kind: "apply-bulk-watchlist",
+      addStablecoinIds: ["usdt-tether"],
+      removeStablecoinIds: ["usdc-circle"],
+      expectedPreferenceGeneration: initial.directStateProof!.preferenceGeneration,
+      expectedDirectFingerprint: initial.directStateProof!.directFingerprint,
+    })).rejects.toMatchObject({ code: "stale-bulk-preview" });
+    sqlite.prepare("UPDATE telegram_subscriptions SET alert_launch_override = 1 WHERE chat_id = ? AND stablecoin_id = 'usdt-tether'").run(AUTH.userId);
+
+    const applied = await executeTelegramMiniAppBulkWatchlistApply(db, AUTH, {
+      kind: "apply-bulk-watchlist",
+      addStablecoinIds: ["usdt-tether"],
+      removeStablecoinIds: ["usdc-circle", "eurc-circle"],
+      expectedPreferenceGeneration: initial.directStateProof!.preferenceGeneration,
+      expectedDirectFingerprint: initial.directStateProof!.directFingerprint,
+    });
+    expect(applied.bulkResult).toMatchObject({
+      adds: ["usdt-tether"],
+      removes: ["usdc-circle"],
+      unchanged: ["eurc-circle"],
+      sourceImpact: expect.arrayContaining([
+        expect.objectContaining({ stablecoinId: "usdc-circle", action: "remove", inheritedSourcesAfter: expect.arrayContaining(["global", "preset"]) }),
+      ]),
+    });
+    expect(applied.undo).toMatchObject({ expectedPreferenceGeneration: 8 });
+    await applyTelegramMiniAppMutation(db, AUTH, { kind: "undo-bulk-watchlist", ...applied.undo });
+    expect(sqlite.prepare("SELECT stablecoin_id, alert_launch, alert_snooze_until_ts FROM telegram_subscriptions WHERE chat_id = ? ORDER BY stablecoin_id").all(AUTH.userId))
+      .toEqual([
+        { stablecoin_id: "dai-makerdao", alert_launch: 0, alert_snooze_until_ts: null },
+        { stablecoin_id: "usdc-circle", alert_launch: 0, alert_snooze_until_ts: NOW + 3_600 },
+        { stablecoin_id: "usdt-tether", alert_launch: 1, alert_snooze_until_ts: null },
+      ]);
+
+    // Absent subscriber vs generation-0 empty subscriber produce distinct directFingerprints.
+    const emptyFixture = createLatestSchemaSqlite();
+    databases.push(emptyFixture.sqlite);
+    const absentProof = (await loadTelegramMiniAppState(emptyFixture.db, AUTH, { mutationMaxAgeSec: 300, nowSec: NOW })).directStateProof!;
+    emptyFixture.sqlite.prepare("INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at, preference_generation) VALUES (?, ?, ?, 0)").run(AUTH.userId, NOW, NOW);
+    const presentProof = (await loadTelegramMiniAppState(emptyFixture.db, AUTH, { mutationMaxAgeSec: 300, nowSec: NOW })).directStateProof!;
+    expect(absentProof.preferenceGeneration).toBe(0);
+    expect(presentProof.preferenceGeneration).toBe(0);
+    expect(absentProof.directFingerprint).not.toBe(presentProof.directFingerprint);
   });
 });

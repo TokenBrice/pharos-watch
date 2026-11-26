@@ -5,6 +5,7 @@ import {
   DEFAULT_QUIET_START_HOUR,
   TELEGRAM_MINI_APP_CATALOG_VERSION,
   TELEGRAM_MINI_APP_CONTRACT_VERSION,
+  type TelegramMiniAppBulkApplyResult,
   type TelegramMiniAppOperation,
   type TelegramMiniAppBulkWatchlistOperation,
   type TelegramMiniAppBulkWatchlistResponse,
@@ -16,8 +17,11 @@ import { executeAtomicBatch } from "../../lib/db";
 import type { StablecoinsCacheLoadResult } from "../../lib/stablecoins-cache";
 import { isSubscribableCoin } from "../store/subscription-eligibility";
 import {
+  computeDirectStateFingerprint,
+  emptyWatchlistDirectState,
   packWatchlistDirectState,
   WATCHLIST_REGISTRY_VERSION,
+  type StoredDirectFingerprintRow,
   type WatchlistDirectState,
   type WatchlistState,
 } from "./watchlist-state";
@@ -186,20 +190,49 @@ function fromBulkDirectRow(row: BulkUndoRow): WatchlistDirectState {
   };
 }
 
+function allStoredDirectRowsFromPortable(current: {
+  state: WatchlistState;
+  directSnoozes: Map<string, number | null>;
+}): StoredDirectFingerprintRow[] {
+  const byId = new Map<string, StoredDirectFingerprintRow>();
+  for (const row of current.state.direct) {
+    byId.set(row.stablecoinId, {
+      ...row,
+      snoozeUntilTs: current.directSnoozes.get(row.stablecoinId) ?? null,
+    });
+  }
+  for (const [stablecoinId, snoozeUntilTs] of current.directSnoozes) {
+    if (!byId.has(stablecoinId)) {
+      byId.set(stablecoinId, {
+        ...emptyWatchlistDirectState(stablecoinId),
+        snoozeUntilTs,
+      });
+    }
+  }
+  return [...byId.values()];
+}
+
 async function sourceImpactAfter(
   db: D1Database,
   chatId: string,
   stablecoinIds: readonly string[],
   followedPresetIds: readonly TelegramPresetId[],
+  options: {
+    getStablecoinsCacheResult?: () => Promise<StablecoinsCacheLoadResult>;
+    toleratePresetUnavailable?: boolean;
+  } = {},
 ): Promise<Map<string, Array<"preset" | "global">>> {
   const uniqueIds = [...new Set(stablecoinIds)];
   const result = new Map(uniqueIds.map((stablecoinId) => [stablecoinId, [] as Array<"preset" | "global">]));
   if (uniqueIds.length === 0) return result;
+  const presetOptions = options.getStablecoinsCacheResult
+    ? { getStablecoinsCacheResult: options.getStablecoinsCacheResult }
+    : {};
   const [subscriber, resolved] = followedPresetIds.length === 0
     ? [await loadSubscriberByChat(db, chatId), null]
     : await Promise.all([
         loadSubscriberByChat(db, chatId),
-        resolveTelegramPresetTargets(db, followedPresetIds),
+        resolveTelegramPresetTargets(db, followedPresetIds, presetOptions),
       ]);
   const hasGlobal = TELEGRAM_LIVE_ALERT_TYPES.some((type) =>
     subscriber?.[TELEGRAM_ALERT_PERSISTENCE[type].globalColumn]);
@@ -207,7 +240,10 @@ async function sourceImpactAfter(
     for (const stablecoinId of uniqueIds) result.get(stablecoinId)?.push("global");
   }
   if (resolved == null) return result;
-  if (resolved.kind !== "ok") throw new TelegramMiniAppMutationError("preset-unavailable", 503);
+  if (resolved.kind !== "ok") {
+    if (options.toleratePresetUnavailable) return result;
+    throw new TelegramMiniAppMutationError("preset-unavailable", 503);
+  }
   const presetCoinIds = new Set(resolved.presets.flatMap((preset) => preset.stablecoinIds));
   for (const stablecoinId of uniqueIds) {
     if (presetCoinIds.has(stablecoinId)) result.get(stablecoinId)?.push("preset");
@@ -354,6 +390,111 @@ export async function executeTelegramMiniAppBulkWatchlistPreview(
   };
 }
 
+export interface BulkWatchlistApplyExecution {
+  bulkResult: TelegramMiniAppBulkApplyResult;
+  undo: TelegramMiniAppBulkWatchlistResponse["result"]["undo"];
+}
+
+/**
+ * Contract v10 single-RTT bulk watchlist apply: verifies both the expected
+ * preference generation and the canonical direct-state fingerprint (over ALL
+ * stored direct rows, including dormant/inert rows), derives exact adds,
+ * removes, unchanged items, pre-images, and commits under the SQL generation
+ * lease in one atomic batch.
+ */
+export async function executeTelegramMiniAppBulkWatchlistApply(
+  db: D1Database,
+  auth: TelegramMiniAppAuthContext,
+  operation: Extract<TelegramMiniAppBulkWatchlistOperation, { kind: "apply-bulk-watchlist" }>,
+  options: ApplyTelegramMiniAppMutationOptions = {},
+): Promise<BulkWatchlistApplyExecution> {
+  const chatId = privateChatId(auth);
+  for (const stablecoinId of operation.addStablecoinIds) assertCoinCanSubscribe(stablecoinId);
+  for (const stablecoinId of operation.removeStablecoinIds) assertCoin(stablecoinId);
+
+  const current = await loadWatchlistPortableState(db, chatId, WATCHLIST_REGISTRY_VERSION, true);
+  const subscriberExists = current.preferenceGeneration != null;
+  const expectedPreferenceGeneration = current.preferenceGeneration ?? 0;
+  const allRows = allStoredDirectRowsFromPortable(current);
+  const currentFingerprint = computeDirectStateFingerprint({ subscriberExists, rows: allRows });
+  if (
+    operation.expectedPreferenceGeneration !== expectedPreferenceGeneration
+    || operation.expectedDirectFingerprint !== currentFingerprint
+  ) {
+    throw new TelegramMiniAppMutationError("stale-bulk-preview", 409);
+  }
+
+  const allDirectById = new Map(allRows.map((row) => [row.stablecoinId, row]));
+  const liveIds = liveDirectIds(current);
+  const adds = operation.addStablecoinIds.filter((stablecoinId) => !liveIds.has(stablecoinId)).sort();
+  const removes = operation.removeStablecoinIds.filter((stablecoinId) => liveIds.has(stablecoinId)).sort();
+  const unchanged = [
+    ...operation.addStablecoinIds.filter((stablecoinId) => liveIds.has(stablecoinId)),
+    ...operation.removeStablecoinIds.filter((stablecoinId) => !liveIds.has(stablecoinId)),
+  ].sort();
+  if (adds.length + removes.length === 0) {
+    throw new TelegramMiniAppMutationError("stale-bulk-preview", 409);
+  }
+
+  const outcome = await applyWatchlistDirectPatch(db, {
+    chatId,
+    ...(current.preferenceGeneration == null ? { ensureSubscriber: { username: auth.username } } : {}),
+    expectedPreferenceGeneration,
+    generationLease: importGenerationLease(),
+    directEntriesToUpsert: adds.map(directDefault).map(packWatchlistDirectState),
+    directRemoveIds: removes,
+  });
+  if (outcome !== "applied") throw new TelegramMiniAppMutationError("stale-bulk-preview", 409);
+
+  // Adding over a dormant or inert stored row replaces it; undo restores its exact pre-image.
+  const dormantAdds = adds.filter((stablecoinId) => allDirectById.has(stablecoinId));
+  const restoreDirectRows: BulkUndoRow[] = [...removes, ...dormantAdds].map((stablecoinId) => ({
+    ...allDirectById.get(stablecoinId)!,
+  }));
+  const removeStablecoinIds = adds.filter((stablecoinId) => !allDirectById.has(stablecoinId));
+  const desiredDirect = [
+    ...current.state.direct.filter((row) => !removes.includes(row.stablecoinId) && !adds.includes(row.stablecoinId)),
+    ...adds.map(directDefault),
+  ];
+
+  const followedPresetIds = current.state.presets.map((preset) => preset.presetId as TelegramPresetId);
+  const inheritedSources = await sourceImpactAfter(db, chatId, [...adds, ...removes], followedPresetIds, {
+    getStablecoinsCacheResult: options.getStablecoinsCacheResult,
+    toleratePresetUnavailable: true,
+  });
+
+  return {
+    bulkResult: {
+      adds,
+      removes,
+      unchanged,
+      sourceImpact: [
+        ...adds.map((stablecoinId) => ({
+          stablecoinId,
+          action: "add" as const,
+          inheritedSourcesAfter: inheritedSources.get(stablecoinId) ?? [],
+        })),
+        ...removes.map((stablecoinId) => ({
+          stablecoinId,
+          action: "remove" as const,
+          inheritedSourcesAfter: inheritedSources.get(stablecoinId) ?? [],
+        })),
+      ],
+    },
+    undo: {
+      expectedPreferenceGeneration: expectedPreferenceGeneration + 1,
+      expectedFingerprint: bulkUndoFingerprint(
+        expectedPreferenceGeneration + 1,
+        desiredDirect,
+        restoreDirectRows,
+        removeStablecoinIds,
+      ),
+      restoreDirectRows,
+      removeStablecoinIds,
+    },
+  };
+}
+
 async function confirmBulkWatchlist(
   db: D1Database,
   auth: TelegramMiniAppAuthContext,
@@ -440,6 +581,8 @@ export async function applyTelegramMiniAppMutation(
     case "confirm-bulk-watchlist":
       await confirmBulkWatchlist(db, auth, operation);
       return;
+    case "apply-bulk-watchlist":
+      return (await executeTelegramMiniAppBulkWatchlistApply(db, auth, operation, options)).undo;
     case "undo-bulk-watchlist":
       await undoBulkWatchlist(db, auth, operation);
       return;
@@ -557,6 +700,7 @@ export async function applyTelegramMiniAppMutation(
 export function mutationActionDetail(operation: TelegramMiniAppOperation): string {
   if (operation.kind === "preview-bulk-watchlist") return "bulk_watchlist_preview";
   if (operation.kind === "confirm-bulk-watchlist") return "bulk_watchlist_confirm";
+  if (operation.kind === "apply-bulk-watchlist") return "bulk_watchlist_apply";
   if (operation.kind === "undo-bulk-watchlist") return "bulk_watchlist_undo";
   if (operation.kind === "set-global") return operation.alertType;
   if (operation.kind === "set-global-depeg-step") return "depeg_step";

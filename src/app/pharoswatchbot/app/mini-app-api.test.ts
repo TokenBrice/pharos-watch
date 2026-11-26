@@ -15,6 +15,7 @@ import { SchemaValidationError } from "@/lib/api";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import {
   postMiniAppBulkWatchlistPreview,
+  postMiniAppContext,
   postMiniAppSnapshot,
   refreshMiniAppBundleOnce,
 } from "./mini-app-api";
@@ -44,7 +45,7 @@ describe("Mini App versioned API client", () => {
   it("sends version capabilities and hydrates a compact snapshot from the bundled catalog", async () => {
     const fetchMock = mockFetch([{
       match: "/api/telegram-mini-app/session",
-      body: createTelegramMiniAppSnapshot(mutableState),
+      body: createTelegramMiniAppSnapshot(mutableState, 1_800_000_000),
     }], { requireMatch: true });
 
     const snapshot = await postMiniAppSnapshot("/api/telegram-mini-app/session", { initData: "signed" });
@@ -57,7 +58,9 @@ describe("Mini App versioned API client", () => {
       TELEGRAM_MINI_APP_CATALOG_VERSION,
     ]);
     expect(snapshot.state.catalog.searchableCoins.length).toBeGreaterThan(300);
-    expect(snapshot.stateRevision).toBe(createTelegramMiniAppSnapshot(mutableState).stateRevision);
+    expect(snapshot.stateRevision).toBe(createTelegramMiniAppSnapshot(mutableState, 1_800_000_000).stateRevision);
+    expect(snapshot.serverNowSec).toBe(1_800_000_000);
+    expect(snapshot.supportsV10).toBe(true);
   });
 
   it("appends one version pair after an existing query", async () => {
@@ -86,6 +89,34 @@ describe("Mini App versioned API client", () => {
     expect(snapshot.state.catalog.searchableCoins).toEqual(legacyState.catalog.searchableCoins);
     expect(snapshot.state.subscriber).not.toHaveProperty("recap");
     expect(snapshot.stateRevision).toBe(telegramMiniAppStateRevision(normalizedLegacyState.mutable));
+    expect(snapshot.supportsV10).toBe(false);
+    expect(snapshot.serverNowSec).toBeUndefined();
+  });
+
+  it("posts versioned scoped context requests and enforces contract and catalog versions", async () => {
+    const okProv = {
+      status: "ok", source: "stablecoins-cache", assessedAt: 1_800_000_000, observedAt: 1_800_000_000, generation: "stablecoins:1800000000", budgetSec: 1200,
+    } as const;
+    const body = {
+      contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
+      catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
+      serverNowSec: 1_800_000_000,
+      context: { kind: "presets", provenance: okProv, presets: [{ id: "usd-top25", memberCount: 25, topSymbols: ["USDT", "USDC", "USDS"] }] },
+    };
+    const fetchMock = mockFetch([{ match: "/api/telegram-mini-app/session", body }], { requireMatch: true });
+    const response = await postMiniAppContext("/api/telegram-mini-app/session", {
+      initData: "signed", contextRequest: { kind: "presets" },
+    });
+    expect(response.context.kind).toBe("presets");
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain(`${TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM}=${TELEGRAM_MINI_APP_CONTRACT_VERSION}`);
+
+    mockFetch([{
+      match: "/api/telegram-mini-app/session",
+      body: { ...body, contractVersion: "worker-next" },
+    }], { requireMatch: true });
+    await expect(postMiniAppContext("/api/telegram-mini-app/session", {
+      initData: "signed", contextRequest: { kind: "presets" },
+    })).rejects.toMatchObject({ status: 409, code: "contract-version-mismatch" });
   });
 
   it.each([

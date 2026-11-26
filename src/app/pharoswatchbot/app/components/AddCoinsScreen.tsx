@@ -117,7 +117,9 @@ export function AddCoinsScreen({
   const matches = useMemo(() => searchCatalog(ranked, query), [query, ranked]);
   const changeCount = adds.length + removes.length;
   const atLimit = changeCount >= BULK_SELECTION_LIMIT;
-  const applying = pendingOperation?.kind === "preview-bulk-watchlist" || pendingOperation?.kind === "confirm-bulk-watchlist";
+  const applying = pendingOperation?.kind === "apply-bulk-watchlist"
+    || pendingOperation?.kind === "preview-bulk-watchlist"
+    || pendingOperation?.kind === "confirm-bulk-watchlist";
 
   useEffect(() => {
     onDirtyChange?.(changeCount > 0);

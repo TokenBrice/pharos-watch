@@ -15,8 +15,12 @@ import {
 import {
   TELEGRAM_MINI_APP_CATALOG_VERSION,
   TELEGRAM_MINI_APP_CONTRACT_VERSION,
+  TelegramMiniAppContextResponseSchema,
   TelegramMiniAppSnapshotSchema,
 } from "@shared/lib/telegram-mini-app-contract";
+import { buildDewsStablecoinIdsDigest, DEWS_PUBLICATION_POINTER_CACHE_KEY } from "../../../lib/dews-publication-pointer";
+import * as safetyScoreIndex from "../../../lib/safety-score-index";
+import { createMiniAppSqlite } from "../../webhook/__tests__/telegram-sqlite.test-support.ts";
 
 const { handleTelegramMiniAppMutation, handleTelegramMiniAppSession } = await import("../telegram-mini-app");
 
@@ -50,14 +54,28 @@ describe("handleTelegramMiniAppSession", () => {
       BOT_TOKEN,
     );
     const legacyText = await legacyResponse.text();
-    const legacy = JSON.parse(legacyText) as { catalog?: { searchableCoins?: unknown[] } };
+    const legacy = JSON.parse(legacyText) as {
+      serverNowSec?: unknown;
+      directStateProof?: unknown;
+      viewer?: { mutationAuthExpiresAt?: unknown };
+      catalog?: { searchableCoins?: unknown[] };
+    };
 
     expect(compactResponse.status).toBe(200);
     expect(compact.contractVersion).toBe(TELEGRAM_MINI_APP_CONTRACT_VERSION);
     expect(compact.catalogVersion).toBe(TELEGRAM_MINI_APP_CATALOG_VERSION);
+    expect(compact.serverNowSec).toBe(NOW_SEC);
+    expect(compact.state.viewer.mutationAuthExpiresAt).toBe(NOW_SEC - 60 + 301);
+    expect(compact.state.directStateProof).toEqual({
+      preferenceGeneration: 0,
+      directFingerprint: expect.stringMatching(/^direct-v1-[0-9]+-[0-9a-f]{8}$/),
+    });
     expect(compact.stateRevision).toMatch(/^state-v1-/);
     expect(compact).not.toHaveProperty("catalog");
     expect(compact.state).not.toHaveProperty("catalog");
+    expect(legacy).not.toHaveProperty("serverNowSec");
+    expect(legacy).not.toHaveProperty("directStateProof");
+    expect(legacy.viewer).not.toHaveProperty("mutationAuthExpiresAt");
     expect(legacy.catalog?.searchableCoins?.length).toBeGreaterThan(300);
     expect(compactText.length).toBeLessThan(legacyText.length / 10);
   });
@@ -211,6 +229,15 @@ describe("handleTelegramMiniAppSession", () => {
 
     expect(body.viewer.canMutate).toBe(false);
     expect(body.viewer.mutationBlockReason).toBe("not-private");
+
+    const v10GroupRes = await handleTelegramMiniAppSession(
+      makeMiniAppDb(),
+      makeVersionedMiniAppRequest("/api/telegram-mini-app/session", { initData }),
+      BOT_TOKEN,
+    );
+    const v10Group = TelegramMiniAppSnapshotSchema.parse(await readJsonResponse(v10GroupRes, 200));
+    expect(v10Group.state.viewer.mutationAuthExpiresAt).toBeNull();
+    expect(v10Group.state.directStateProof).toBeNull();
   });
 
   it("treats direct-link sender launches as mutable private-chat state", async () => {
@@ -559,5 +586,167 @@ describe("handleTelegramMiniAppSession", () => {
     expect(execCtx.waitUntil).toHaveBeenCalledTimes(1);
     await Promise.all(waitUntilPromises);
     expect(historyMatches(db, "INSERT INTO telegram_usage_daily", { 1: "mini_app_session_valid" })).toBe(true);
+  });
+
+  it("enforces v10 negotiation, private-chat boundary, and coin allowlist on scoped contextRequest", async () => {
+    const initData = await privateInitData();
+    const unversionedDb = makeMiniAppDb();
+    expect(await readJsonResponse(await handleTelegramMiniAppSession(
+      unversionedDb,
+      makeMiniAppRequest("/api/telegram-mini-app/session", { initData, contextRequest: { kind: "presets" } }),
+      BOT_TOKEN,
+    ), 409)).toMatchObject({ code: "contract-version-mismatch", contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION });
+    expect(unversionedDb.getHistory()).toEqual([]);
+
+    const v9Db = makeMiniAppDb();
+    expect(await readJsonResponse(await handleTelegramMiniAppSession(
+      v9Db,
+      makeVersionedMiniAppRequest("/api/telegram-mini-app/session", { initData, contextRequest: { kind: "presets" } }, { contractVersion: "9" }),
+      BOT_TOKEN,
+    ), 409)).toMatchObject({ code: "contract-version-mismatch" });
+    expect(v9Db.getHistory()).toEqual([]);
+
+    const groupInit = await signedInitData({ auth_date: String(NOW_SEC - 60), chat_type: "supergroup", user: JSON.stringify({ id: 42 }) });
+    const groupDb = makeMiniAppDb();
+    expect(await readJsonResponse(await handleTelegramMiniAppSession(
+      groupDb,
+      makeVersionedMiniAppRequest("/api/telegram-mini-app/session", { initData: groupInit, contextRequest: { kind: "coins", stablecoinIds: ["usdc-circle"] } }),
+      BOT_TOKEN,
+    ), 403)).toMatchObject({ code: "not-private" });
+    expect(groupDb.getHistory()).toEqual([]);
+
+    const unknownDb = makeMiniAppDb();
+    expect(await readJsonResponse(await handleTelegramMiniAppSession(
+      unknownDb,
+      makeVersionedMiniAppRequest("/api/telegram-mini-app/session", { initData, contextRequest: { kind: "coins", stablecoinIds: ["removed-from-registry"] } }),
+      BOT_TOKEN,
+    ), 400)).toMatchObject({ code: "unknown-coin" });
+  });
+
+  it("serves scoped coins and presets context with R1-R8 provenance, independent 1s cooldown, and zero duplicate session telemetry", async () => {
+    const { db, sqlite } = createMiniAppSqlite();
+    try {
+      const initData = await privateInitData();
+      sqlite.prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = 'stablecoins'").run(JSON.stringify({
+        peggedAssets: [
+          { id: "usdt-tether", symbol: "USDT", name: "Tether", price: 0.9999, priceSource: "coingecko", priceObservedAt: NOW_SEC - 30, circulating: { peggedUSD: 2_000_000_000 } },
+          { id: "usdc-circle", symbol: "USDC", name: "USD Coin", price: 0.9871, priceSource: "coingecko", priceObservedAt: NOW_SEC - 30, circulating: { peggedUSD: 1_000_000_000 } },
+          { id: "dai-makerdao", symbol: "DAI", name: "Dai", price: -5, priceSource: "coingecko", priceObservedAt: NOW_SEC - 30, circulating: { peggedUSD: 500_000_000 } },
+        ],
+      }), NOW_SEC - 30);
+      sqlite.prepare(`
+        INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peak_price, peg_reference, source)
+        VALUES ('usdc-circle', 'USDC', 'peggedUSD', 'below', -150, ?, 0.985, 0.985, 1, 'live')
+      `).run(NOW_SEC - 600);
+      const dewsIds = ["usdc-circle", "usdt-tether"];
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+        DEWS_PUBLICATION_POINTER_CACHE_KEY,
+        JSON.stringify({
+          updatedAt: NOW_SEC - 60,
+          source: "compute-dews",
+          publishStatus: "published",
+          coverageVersion: 2,
+          expectedRowCount: dewsIds.length,
+          stablecoinIdsDigest: buildDewsStablecoinIdsDigest(dewsIds),
+        }),
+        NOW_SEC - 60,
+      );
+      const insertDews = sqlite.prepare("INSERT INTO stress_signals_latest (stablecoin_id, score, band, signals_json, computed_at, updated_at) VALUES (?, ?, ?, '{}', ?, ?)");
+      insertDews.run("usdc-circle", 68, "WARNING", NOW_SEC - 60, NOW_SEC - 60);
+      insertDews.run("usdt-tether", 12, "CALM", NOW_SEC - 60, NOW_SEC - 60);
+
+      vi.spyOn(safetyScoreIndex, "loadActiveSafetyScoreIndex").mockResolvedValue({
+        kind: "v9",
+        snapshot: {
+          lifecycle: "active",
+          safetyScoreIdentity: { publicationGenerationId: "v9-gen-1", methodologyVersion: "9.0" } as never,
+          methodology: { version: "9.0" },
+          asOfSec: NOW_SEC - 60,
+          updatedAt: NOW_SEC - 60,
+          publicationHealth: {} as never,
+          completeness: { expectedCount: 3 },
+          cards: [
+            { id: "usdc-circle", ratingStatus: "rated", grade: "A-", score: 86 } as never,
+            { id: "usdt-tether", ratingStatus: "not-rated", grade: "NR", score: null } as never,
+            // Malformed rated card gets quarantined per-asset without failing the rest.
+            { id: "dai-makerdao", ratingStatus: "rated", grade: "B", score: 999 } as never,
+          ],
+        },
+      });
+
+      // Normal session open followed immediately by context request succeeds (independent cooldown buckets).
+      expect((await handleTelegramMiniAppSession(
+        db, makeVersionedMiniAppRequest("/api/telegram-mini-app/session", { initData }), BOT_TOKEN,
+      )).status).toBe(200);
+      const coinsRes = await handleTelegramMiniAppSession(
+        db,
+        makeVersionedMiniAppRequest("/api/telegram-mini-app/session", {
+          initData,
+          contextRequest: { kind: "coins", stablecoinIds: ["usdc-circle", "usdt-tether", "dai-makerdao"] },
+        }),
+        BOT_TOKEN,
+      );
+      const coinsBody = TelegramMiniAppContextResponseSchema.parse(await readJsonResponse(coinsRes, 200));
+      expect(coinsBody.context.kind).toBe("coins");
+      if (coinsBody.context.kind === "coins") {
+        expect(coinsBody.context.activeDepegs.provenance.status).toBe("ok");
+        expect(coinsBody.context.activeDepegs.events).toEqual([expect.objectContaining({
+          stablecoinId: "usdc-circle", direction: "below", peakDeviationBps: -150, currentDeviationBps: -129, priceUsd: 0.9871,
+        })]);
+        expect(coinsBody.context.coinSignals["usdc-circle"]).toMatchObject({
+          price: { provenance: { status: "ok" }, priceUsd: 0.9871 },
+          dews: { provenance: { status: "ok" }, band: "WARNING", score: 68 },
+          safety: { provenance: { status: "ok" }, ratingStatus: "rated", grade: "A-", score: 86, held: false },
+        });
+        // Per-asset quarantine: DAI bad price & invalid safety score become unavailable while USDC/USDT remain ok.
+        expect(coinsBody.context.coinSignals["dai-makerdao"]?.price.provenance).toMatchObject({ status: "unavailable", reason: "price-missing" });
+        expect(coinsBody.context.coinSignals["dai-makerdao"]?.safety.provenance).toMatchObject({ status: "unavailable", reason: "safety-card-invalid" });
+      }
+      // Only the initial session open wrote `mini_app_session_valid`, not the context read.
+      expect(sqlite.prepare("SELECT count FROM telegram_usage_daily WHERE event_type = 'mini_app_session_valid'").get()).toEqual({ count: 1 });
+
+      // Immediate back-to-back context call hits the 1s `mini-app:context` cooldown.
+      expect(await readJsonResponse(await handleTelegramMiniAppSession(
+        db, makeVersionedMiniAppRequest("/api/telegram-mini-app/session", { initData, contextRequest: { kind: "presets" } }), BOT_TOKEN,
+      ), 429)).toMatchObject({ code: "rate-limited" });
+
+      // After cooldown, presets returns exact memberCount + max 3 topSymbols.
+      vi.setSystemTime((NOW_SEC + 2) * 1000);
+      const presetsRes = await handleTelegramMiniAppSession(
+        db, makeVersionedMiniAppRequest("/api/telegram-mini-app/session", { initData, contextRequest: { kind: "presets" } }), BOT_TOKEN,
+      );
+      const presetsBody = TelegramMiniAppContextResponseSchema.parse(await readJsonResponse(presetsRes, 200));
+      expect(presetsBody.context).toMatchObject({
+        kind: "presets",
+        provenance: { status: "ok" },
+        presets: expect.arrayContaining([
+          expect.objectContaining({ id: "usd-top25", memberCount: 3, topSymbols: ["USDT", "USDC", "DAI"] }),
+        ]),
+      });
+
+      // Missing cache yields explicit unavailable provenance (never fabricated zeros or "on peg").
+      vi.restoreAllMocks();
+      sqlite.prepare("DELETE FROM cache WHERE key IN ('stablecoins', ?)").run(DEWS_PUBLICATION_POINTER_CACHE_KEY);
+      vi.setSystemTime((NOW_SEC + 4) * 1000);
+      const unavailablePresets = TelegramMiniAppContextResponseSchema.parse(await readJsonResponse(
+        await handleTelegramMiniAppSession(db, makeVersionedMiniAppRequest("/api/telegram-mini-app/session", { initData, contextRequest: { kind: "presets" } }), BOT_TOKEN),
+        200,
+      ));
+      expect(unavailablePresets.context).toMatchObject({ kind: "presets", provenance: { status: "unavailable", reason: expect.any(String) }, presets: [] });
+
+      vi.setSystemTime((NOW_SEC + 6) * 1000);
+      const unavailableCoins = TelegramMiniAppContextResponseSchema.parse(await readJsonResponse(
+        await handleTelegramMiniAppSession(db, makeVersionedMiniAppRequest("/api/telegram-mini-app/session", { initData, contextRequest: { kind: "coins", stablecoinIds: ["usdc-circle"] } }), BOT_TOKEN),
+        200,
+      ));
+      if (unavailableCoins.context.kind === "coins") {
+        expect(unavailableCoins.context.activeDepegs.provenance.status).toBe("unavailable");
+        expect(unavailableCoins.context.coinSignals["usdc-circle"]?.price.provenance.status).toBe("unavailable");
+        expect(unavailableCoins.context.coinSignals["usdc-circle"]?.dews.provenance.status).toBe("unavailable");
+        expect(unavailableCoins.context.coinSignals["usdc-circle"]?.safety.provenance.status).toBe("unavailable");
+      }
+    } finally {
+      sqlite.close();
+    }
   });
 });

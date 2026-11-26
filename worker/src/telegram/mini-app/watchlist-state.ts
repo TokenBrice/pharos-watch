@@ -3,6 +3,7 @@
  * its preview/undo fingerprints. Each row packs to `<id>~<base36 bitfield>`.
  */
 
+import { fnv1a32Hex } from "@shared/lib/fnv1a";
 import { TELEGRAM_MINI_APP_CATALOG_VERSION } from "@shared/lib/telegram-mini-app-catalog";
 
 const DIRECT_PACK_MAX = 0x3ffff;
@@ -123,4 +124,50 @@ export function unpackWatchlistDirectState(value: string): WatchlistDirectState 
     safetyMode: decodeSafetyMode((packed >> 12) & 0x3),
     depegWorseningBpsStep: decodeDepegStep((packed >> 14) & 0x3),
   };
+}
+
+export interface StoredDirectFingerprintRow extends WatchlistDirectState {
+  snoozeUntilTs: number | null;
+}
+
+export function emptyWatchlistDirectState(stablecoinId: string): WatchlistDirectState {
+  return {
+    stablecoinId,
+    alertDews: false,
+    alertDepeg: false,
+    alertSafety: false,
+    alertLaunch: false,
+    alertReserve: false,
+    alertFreeze: false,
+    overrideDews: false,
+    overrideDepeg: false,
+    overrideSafety: false,
+    overrideLaunch: false,
+    overrideReserve: false,
+    overrideFreeze: false,
+    dewsMinBand: null,
+    safetyMode: null,
+    depegWorseningBpsStep: null,
+  };
+}
+
+/**
+ * Deterministic direct-state fingerprint covering ALL stored direct rows
+ * (including dormant/retired-launch and inert rows: 6 enable bits, 6 override
+ * bits, normalized tunings, raw snooze timestamp) plus `subscriberExists` to
+ * distinguish an absent subscriber from an existing subscriber at generation 0.
+ */
+export function computeDirectStateFingerprint(input: {
+  subscriberExists: boolean;
+  rows: readonly StoredDirectFingerprintRow[];
+}): string {
+  const canonicalRows = [...input.rows]
+    .sort((left, right) => (left.stablecoinId < right.stablecoinId ? -1 : left.stablecoinId > right.stablecoinId ? 1 : 0))
+    .map((row) => [packWatchlistDirectState(row), row.snoozeUntilTs ?? null] as const);
+  const serialized = JSON.stringify({
+    v: 1,
+    subscriberExists: input.subscriberExists,
+    rows: canonicalRows,
+  });
+  return `direct-v1-${serialized.length}-${fnv1a32Hex(serialized)}`;
 }

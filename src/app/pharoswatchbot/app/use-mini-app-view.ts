@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import {
   MINI_APP_PAYLOAD_NAMES,
   formatCoinPayload,
+  formatPresetPayload,
   miniAppPayloadIntent,
   parseMiniAppPayload,
 } from "@shared/lib/telegram-mini-app-payloads";
@@ -27,6 +28,7 @@ const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffec
  */
 export function relaunchPayloadForScreen(screen: MiniAppScreen): string {
   if (screen.name === "coin") return formatCoinPayload(screen.coinId);
+  if (screen.name === "group") return formatPresetPayload(screen.groupId);
   if (screen.name === "settings") return MINI_APP_PAYLOAD_NAMES.settings;
   if (screen.name === "add-coins") return MINI_APP_PAYLOAD_NAMES.setup;
   if (screen.name === "add-group") return MINI_APP_PAYLOAD_NAMES.presets;
@@ -39,6 +41,9 @@ export function initialStackFromStartParam(startParam: string | null): { stack: 
   const intent = miniAppPayloadIntent(payload);
   if (payload.kind === "coin" || payload.kind === "why" || payload.kind === "coverage") {
     return { stack: [HOME, { name: "coin", coinId: payload.coinId }] };
+  }
+  if (payload.kind === "preset") {
+    return { stack: [HOME, { name: "group", groupId: payload.groupId }] };
   }
   if (intent === "presets") {
     return { stack: [HOME, { name: "add-group" }] };

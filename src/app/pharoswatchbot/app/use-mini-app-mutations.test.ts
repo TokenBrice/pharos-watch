@@ -468,6 +468,36 @@ describe("useMiniAppMutations", () => {
     expect(result.current.notice).toMatchObject({ text: "Added 1 coin.", undoLabel: "Undo" });
   });
 
+  it("applies a bulk edit in a single RTT with directStateProof and arms the server-derived undo", async () => {
+    const undo = { expectedPreferenceGeneration: 5, expectedFingerprint: "preview-v1-5-abcdef12", restoreDirectRows: [], removeStablecoinIds: ["usdt-tether"] };
+    apiMocks.postMiniAppSnapshot.mockResolvedValueOnce({
+      ...makeSnapshot(),
+      bulkResult: {
+        adds: ["usdt-tether"], removes: ["usdc-circle"], unchanged: [],
+        sourceImpact: [{ stablecoinId: "usdc-circle", action: "remove", inheritedSourcesAfter: ["preset"] }],
+      },
+      undo,
+    }).mockResolvedValueOnce(makeSnapshot());
+    const proofState = { ...baseState, directStateProof: { preferenceGeneration: 4, directFingerprint: "direct-v1-10-deadbeef" } };
+    const { result } = renderHook(() => useMiniAppMutations(makeArgs({ state: proofState })));
+    await act(async () => { expect(await result.current.applyBulkWatchlist(["usdt-tether"], ["usdc-circle"])).toBe(true); });
+    expect(apiMocks.postMiniAppBulkWatchlistPreview).not.toHaveBeenCalled();
+    expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledOnce();
+    expect(apiMocks.postMiniAppSnapshot.mock.calls[0]?.[1].operation).toEqual({
+      kind: "apply-bulk-watchlist",
+      addStablecoinIds: ["usdt-tether"],
+      removeStablecoinIds: ["usdc-circle"],
+      expectedPreferenceGeneration: 4,
+      expectedDirectFingerprint: "direct-v1-10-deadbeef",
+    });
+    expect(result.current.notice).toMatchObject({
+      text: "Added 1 coin, removed 1. USDC is still covered by a preset.",
+      undoLabel: "Undo",
+    });
+    await act(async () => { result.current.undo(); });
+    expect(apiMocks.postMiniAppSnapshot.mock.calls[1]?.[1].operation).toEqual({ kind: "undo-bulk-watchlist", ...undo });
+  });
+
   it("keeps a bulk edit as unsaved intent once launch auth expired, without a preview read", async () => {
     const { result } = renderHook(() => useMiniAppMutations(makeArgs({ authExpired: true })));
     await act(async () => { expect(await result.current.applyBulkWatchlist(["usdt-tether", "usdc-circle"], [])).toBe(false); });

@@ -1,8 +1,7 @@
 "use client";
 
 import { Fragment, useCallback } from "react";
-import { ExternalLink, MessageCircle } from "lucide-react";
-import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
+import { ExternalLink } from "lucide-react";
 import { isPausedSentinel, isTelegramSnoozeActive } from "@shared/lib/telegram-delivery-policy";
 import {
   ALERT_DESCRIPTIONS,
@@ -22,12 +21,14 @@ import {
   coinInheritedCoverSource,
   displayCoinName,
   formatClock,
+  formatCoinLiveHeaderLine,
   formatSnoozeUntil,
   isCoverageActive,
   type FamilyCoverage,
 } from "../format";
 import { usePrimaryAction } from "../primary-action";
 import type { TelegramWebAppSdk } from "../telegram-sdk";
+import type { CoinLiveContext } from "../use-mini-app-context";
 import type { MiniAppScreen } from "../use-mini-app-view";
 import type { MiniAppScreenProps, SubscribedCoin, TelegramAlertType, TelegramMiniAppOperation } from "../types";
 import { ChoiceChips, ListRow, ListSection, SelectRow, Switch } from "./List";
@@ -62,6 +63,7 @@ export interface CoinScreenProps extends MiniAppScreenProps {
   webApp: TelegramWebAppSdk | null;
   onRemove: (coin: SubscribedCoin, coveredBySource?: string | null) => void;
   push?: (screen: MiniAppScreen) => void;
+  liveContext?: CoinLiveContext;
 }
 
 export function CoinScreen({
@@ -79,6 +81,7 @@ export function CoinScreen({
   webApp,
   onRemove,
   push,
+  liveContext,
 }: CoinScreenProps) {
   const subscription = state.subscriptions.find((coin) => coin.stablecoinId === coinId) ?? null;
   const catalogCoin = state.catalog.searchableCoins.find((coin) => coin.stablecoinId === coinId) ?? null;
@@ -143,10 +146,7 @@ export function CoinScreen({
   const coinSnoozeUntil = subscription?.snoozeUntilTs ?? null;
   const coinSnoozed = coinSnoozeUntil != null && coinSnoozeUntil > nowSec;
   const canSnoozeCoin = tracked && (subscription != null || anyInherited);
-  const openBot = (url: string) => {
-    if (webApp?.openTelegramLink) webApp.openTelegramLink(url);
-    else webApp?.openLink?.(url);
-  };
+  const liveHeaderLine = tracked && liveContext ? formatCoinLiveHeaderLine(liveContext) : null;
 
   return (
     <>
@@ -156,6 +156,9 @@ export function CoinScreen({
           {[secondaryName, catalogCoin?.pegLabel ?? (catalogCoin?.peg ? `${catalogCoin.peg} peg` : null)].filter(Boolean).join(" · ")
             || (tracked ? null : "Pharos no longer tracks this coin")}
         </p>
+        {liveHeaderLine ? (
+          <p className="mt-1 text-xs tabular-nums text-muted-foreground">{liveHeaderLine}</p>
+        ) : null}
         {chatPaused && chatSnoozeUntil != null ? (
           <p className="mt-1 text-xs text-muted-foreground">
             {isPausedSentinel(chatSnoozeUntil)
@@ -305,13 +308,6 @@ export function CoinScreen({
             trailing={<ExternalLink className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />}
             disabled={!webApp}
             onClick={() => webApp?.openLink?.(`${PHAROS_COIN_PAGE_PREFIX}${coinId}`)}
-          />
-          <ListRow
-            title="Send status to chat"
-            subtitle="Current peg, DEWS and Safety Score from the bot"
-            trailing={<MessageCircle className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />}
-            disabled={!webApp}
-            onClick={() => openBot(`${TELEGRAM_BOT_URL}?start=status_${coinId}`)}
           />
         </ListSection>
       ) : (

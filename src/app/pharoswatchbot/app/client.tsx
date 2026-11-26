@@ -7,6 +7,7 @@ import { isPausedSentinel, isTelegramBlockedFailureClass, isTelegramSnoozeActive
 import type { MiniAppPrimaryAction, MiniAppScreenProps, TelegramMiniAppOperation, TelegramMiniAppState } from "./types";
 import { useTelegramMainButton } from "./use-telegram-main-button";
 import { useTelegramBridge } from "./use-telegram-bridge";
+import { useMiniAppContext } from "./use-mini-app-context";
 import { useMiniAppMutations } from "./use-mini-app-mutations";
 import { useMiniAppSessionLoader } from "./use-mini-app-session-loader";
 import { presetLabel as presetCopyLabel } from "./constants";
@@ -39,6 +40,18 @@ const VISIBILITY_REFRESH_THRESHOLD_MS = 10 * 60 * 1000;
 const CLOCK_TICK_MS = 30 * 1000;
 
 const EMPTY_PRESET_MEMBER_MAP: ReadonlyMap<string, ReadonlySet<string>> = new Map();
+
+function monotonicNowMs(): number {
+  return typeof performance !== "undefined" && typeof performance.now === "function"
+    ? performance.now()
+    : Date.now();
+}
+
+interface WriteAuthClockAnchor {
+  receivedMonoMs: number;
+  receivedWallMs: number;
+  remainingMs: number;
+}
 
 /** No subscriber yet, or nothing followed at all: Home doubles as setup. */
 function isNewUser(state: TelegramMiniAppState): boolean {
@@ -102,6 +115,10 @@ export function PharosWatchBotMiniAppClient() {
   // Telegram never refreshes initData inside a running Mini App, so a session
   // `stale-auth` is terminal: no refresh can succeed without a fresh launch.
   const [sessionAuthExpired, setSessionAuthExpired] = useState(false);
+  const [clockAuthExpired, setClockAuthExpired] = useState(false);
+  const [writeAuthAnchor, setWriteAuthAnchor] = useState<WriteAuthClockAnchor | null>(null);
+  const [supportsV10, setSupportsV10] = useState(false);
+  const [contextRefreshGeneration, setContextRefreshGeneration] = useState(0);
   const [sessionUpdateRequired, setSessionUpdateRequired] = useState(false);
   const [screenAction, setScreenAction] = useState<MiniAppPrimaryAction | null>(null);
   const [dismissedIntentId, setDismissedIntentId] = useState<number | null>(null);
@@ -163,6 +180,31 @@ export function PharosWatchBotMiniAppClient() {
     setState(snapshot.state);
     setStateRevision(snapshot.stateRevision);
     setRefreshedAtMs(Date.now());
+    setSupportsV10(snapshot.supportsV10 === true);
+    if (readEpoch !== undefined) {
+      // Explicit session read/refresh refreshes live context cache too.
+      setContextRefreshGeneration((current) => current + 1);
+    }
+    // Track the 5-minute write window from `(mutationAuthExpiresAt - serverNowSec)`
+    // using a monotonic clock anchor (null for read-only groups and legacy responses).
+    const expiresAt = snapshot.state.viewer.mutationAuthExpiresAt;
+    if (snapshot.serverNowSec != null && expiresAt != null) {
+      const remainingSec = expiresAt - snapshot.serverNowSec;
+      if (remainingSec <= 0) {
+        setWriteAuthAnchor(null);
+        setClockAuthExpired(true);
+      } else {
+        setClockAuthExpired(false);
+        setWriteAuthAnchor({
+          receivedMonoMs: monotonicNowMs(),
+          receivedWallMs: Date.now(),
+          remainingMs: remainingSec * 1000,
+        });
+      }
+    } else if (expiresAt === null) {
+      setWriteAuthAnchor(null);
+      setClockAuthExpired(false);
+    }
     return true;
   }, [resetExpanded]);
 
@@ -172,6 +214,9 @@ export function PharosWatchBotMiniAppClient() {
     setState(null);
     setStateRevision(null);
     setRefreshedAtMs(null);
+    setWriteAuthAnchor(null);
+    setClockAuthExpired(false);
+    setSupportsV10(false);
     setHasUnsavedDraft(false);
     setForgotten(true);
   }, []);
@@ -206,7 +251,7 @@ export function PharosWatchBotMiniAppClient() {
     webApp,
     onSnapshotReplaced: applyConfirmedSnapshot,
     onForgotten: enterForgottenState,
-    authExpired: sessionAuthExpired || state?.viewer.mutationBlockReason === "stale-auth",
+    authExpired: sessionAuthExpired || clockAuthExpired || state?.viewer.mutationBlockReason === "stale-auth",
     mutationsAllowed: status === "ready" && !sessionUpdateRequired,
     signedReadsAllowed: status === "ready" && !sessionAuthExpired && !sessionUpdateRequired,
     onSessionAuthExpired: markSessionAuthExpired,
@@ -335,9 +380,41 @@ export function PharosWatchBotMiniAppClient() {
     return () => { cancelled = true; };
   }, []);
 
+  // Flip cleanly to `authExpired` (`Reopen to edit`) when the server-anchored
+  // 5-minute write window elapses, re-evaluating on visibility return with no
+  // noisy pre-expiry countdown banner (D1).
+  useEffect(() => {
+    if (!writeAuthAnchor || clockAuthExpired || forgotten || updateRequired) return undefined;
+    let timer: number | undefined;
+    const evaluate = () => {
+      const monoElapsed = Math.max(0, monotonicNowMs() - writeAuthAnchor.receivedMonoMs);
+      const wallElapsed = Math.max(0, Date.now() - writeAuthAnchor.receivedWallMs);
+      const remaining = writeAuthAnchor.remainingMs - Math.max(monoElapsed, wallElapsed);
+      if (remaining <= 0) {
+        setClockAuthExpired(true);
+        return;
+      }
+      window.clearTimeout(timer);
+      timer = window.setTimeout(evaluate, Math.min(remaining, 2_147_483_647));
+    };
+    evaluate();
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") evaluate();
+    };
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onVisibility);
+    }
+    return () => {
+      window.clearTimeout(timer);
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", onVisibility);
+      }
+    };
+  }, [clockAuthExpired, forgotten, updateRequired, writeAuthAnchor]);
+
   // Edits expire after 5 minutes (`authExpired`), but signed reads stay valid for
   // 24h, so only a session-read `stale-auth` stops refreshing.
-  const authExpired = sessionAuthExpired || state?.viewer.mutationBlockReason === "stale-auth" || staleAuth != null;
+  const authExpired = sessionAuthExpired || clockAuthExpired || state?.viewer.mutationBlockReason === "stale-auth" || staleAuth != null;
   const triggerRefresh = useCallback(() => {
     if (forgotten || updateRequired || sessionAuthExpired || !initData || status === "loading" || isMutating) return;
     void loadSession(initData);
@@ -416,7 +493,7 @@ export function PharosWatchBotMiniAppClient() {
     };
   }, [webApp]);
 
-  const canMutate = Boolean(!forgotten && !updateRequired && initData && status === "ready" && state?.viewer.canMutate);
+  const canMutate = Boolean(!forgotten && !updateRequired && !authExpired && initData && status === "ready" && state?.viewer.canMutate);
   // Expired private sessions keep edit controls live (not greyed out); the
   // mutations hook turns each attempt into visible unsaved intent instead of a request.
   const canEdit = canMutate || Boolean(!forgotten && !updateRequired && authExpired && state?.viewer.chatId != null);
@@ -424,6 +501,27 @@ export function PharosWatchBotMiniAppClient() {
   const busy = isMutating || rateLimited;
   const newUser = Boolean(state && !readOnlyGroup && isNewUser(state));
   const hasMainButton = Boolean(webApp?.MainButton);
+
+  const { homePegContext, coinLiveContext, presetsLiveContext } = useMiniAppContext({
+    enabled: Boolean(
+      supportsV10
+      && status === "ready"
+      && initData
+      && state
+      && !readOnlyGroup
+      && !forgotten
+      && !forgottenView
+      && !sessionAuthExpired
+      && !updateRequired,
+    ),
+    initData,
+    state,
+    screen,
+    isNewUser: newUser,
+    refreshGeneration: contextRefreshGeneration,
+    onSessionAuthExpired: markSessionAuthExpired,
+    onUpdateRequired: markUpdateRequired,
+  });
 
   const presetMemberSetById = useMemo(
     () => (state ? buildPresetMemberSetById(state.presets) : EMPTY_PRESET_MEMBER_MAP),
@@ -610,6 +708,7 @@ export function PharosWatchBotMiniAppClient() {
               hasMainButton={hasMainButton}
               coinsExpanded={homeCoinsExpanded}
               onExpandCoins={() => setHomeCoinsExpanded(true)}
+              homePegContext={homePegContext}
             />
           );
       case "coin":
@@ -619,6 +718,7 @@ export function PharosWatchBotMiniAppClient() {
             coinId={screen.coinId}
             webApp={webApp}
             push={push}
+            liveContext={coinLiveContext}
             onRemove={(coin, coveredBySource) => void remove(coin, coveredBySource).then((removed) => { if (removed) back(); })}
           />
         );
@@ -647,7 +747,7 @@ export function PharosWatchBotMiniAppClient() {
           />
         );
       case "add-group":
-        return <AddGroupScreen state={state} push={push} />;
+        return <AddGroupScreen state={state} push={push} presetsLiveContext={presetsLiveContext} />;
       case "settings":
         return (
           <SettingsScreen

@@ -48,6 +48,7 @@ interface StateOverrides {
   subscriptions?: TelegramMiniAppState["subscriptions"];
   catalog?: TelegramMiniAppState["catalog"];
   health?: Partial<TelegramMiniAppState["health"]>;
+  directStateProof?: TelegramMiniAppState["directStateProof"];
 }
 
 /**
@@ -56,7 +57,7 @@ interface StateOverrides {
  * state cannot leak into the base fixture or sibling tests.
  */
 export function makeMiniAppState(overrides: StateOverrides = {}): TelegramMiniAppState {
-  const { viewer, subscriber, presets, subscriptions, catalog, health } = overrides;
+  const { viewer, subscriber, presets, subscriptions, catalog, health, directStateProof } = overrides;
   const { globalAlerts, quietHours, ...subscriberRest } = subscriber ?? {};
   return {
     ...baseState,
@@ -71,5 +72,6 @@ export function makeMiniAppState(overrides: StateOverrides = {}): TelegramMiniAp
     subscriptions: subscriptions ?? baseState.subscriptions,
     catalog: catalog ?? baseState.catalog,
     health: { ...baseState.health, ...health },
+    ...(directStateProof !== undefined ? { directStateProof } : {}),
   };
 }

@@ -16,6 +16,7 @@ import {
   displayCoinName,
   formatClock,
   formatHour,
+  formatOffPegRowValue,
   formatSnoozeUntil,
   hasAnyCoverage,
   hasOwnEnabledFamily,
@@ -23,15 +24,30 @@ import {
   joinLabels,
 } from "../format";
 import { canUseTelegramPopup, type TelegramWebAppSdk } from "../telegram-sdk";
+import type { HomePegContext } from "../use-mini-app-context";
 import type { MiniAppScreen } from "../use-mini-app-view";
-import type { MiniAppPrimaryActionKind, MiniAppScreenProps, SubscribedCoin, TelegramMiniAppState } from "../types";
+import type {
+  MiniAppPrimaryActionKind,
+  MiniAppScreenProps,
+  SubscribedCoin,
+  TelegramMiniAppActiveDepeg,
+  TelegramMiniAppState,
+} from "../types";
 import { ChoiceChips, ListRow, ListSection } from "./List";
 
 type StripTone = "positive" | "neutral" | "warn" | "danger";
 
 const COLLAPSED_COIN_LIMIT = 8;
+const OFF_PEG_ROW_LIMIT = 3;
 
-function statusStrip(state: TelegramMiniAppState, nowSec: number, ownCount: number, hasAnyGlobal: boolean): {
+function statusStrip(
+  state: TelegramMiniAppState,
+  nowSec: number,
+  ownCount: number,
+  hasAnyGlobal: boolean,
+  activeDepegs: readonly TelegramMiniAppActiveDepeg[],
+  symbolById: ReadonlyMap<string, string>,
+): {
   tone: StripTone;
   title: string;
   subtitle: string | null;
@@ -46,28 +62,8 @@ function statusStrip(state: TelegramMiniAppState, nowSec: number, ownCount: numb
     };
   }
   const snoozeUntil = state.subscriber.snoozeUntilTs;
-  if (snoozeUntil != null && isTelegramSnoozeActive(snoozeUntil, nowSec)) {
-    return {
-      tone: "warn",
-      title: isPausedSentinel(snoozeUntil) ? "Alerts paused" : "Alerts snoozed",
-      subtitle: isPausedSentinel(snoozeUntil)
-        ? "Until you resume them"
-        : `Until ${formatClock(snoozeUntil, state.subscriber.quietHours.timezone, nowSec)}`,
-    };
-  }
-  if (!hasAnyCoverage(state)) {
-    return { tone: "neutral", title: "No alerts on", subtitle: "Follow a preset or add coins below." };
-  }
-  if (failure) {
-    return {
-      tone: "warn",
-      // Only the blocked classes name a recovery path; any other class may be
-      // permanent, so the strip never promises a retry it cannot verify.
-      title: "Last delivery failed",
-      subtitle: "Open delivery status in Settings",
-      tappableToSettings: true,
-    };
-  }
+  const snoozed = snoozeUntil != null && isTelegramSnoozeActive(snoozeUntil, nowSec);
+  const covered = hasAnyCoverage(state);
   const quiet = state.subscriber.quietHours;
   const quietPart = isQuietHoursActiveNow(quiet, nowSec)
     ? `Quiet until ${formatHour(quiet.endHourUtc)}`
@@ -82,6 +78,53 @@ function statusStrip(state: TelegramMiniAppState, nowSec: number, ownCount: numb
     presetPart,
     ownCount > 0 ? `${ownCount} ${ownCount === 1 ? "coin" : "coins"}` : null,
   ].filter((part): part is string => part != null);
+
+  if (activeDepegs.length > 0 && covered) {
+    const first = activeDepegs[0]!;
+    const firstSymbol = symbolById.get(first.stablecoinId) ?? first.stablecoinId;
+    const alertStatusPart = snoozed && snoozeUntil != null
+      ? isPausedSentinel(snoozeUntil)
+        ? "Alerts paused"
+        : `Alerts snoozed until ${formatClock(snoozeUntil, quiet.timezone, nowSec)}`
+      : failure
+        ? "Last delivery failed"
+        : "Alerts on";
+    const summaryParts = [alertStatusPart, ...baseParts];
+    const parts = quietPart
+      ? [...summaryParts.slice(0, 2), quietPart]
+      : summaryParts.slice(0, 3);
+    return {
+      tone: "danger",
+      title: activeDepegs.length === 1
+        ? `${firstSymbol} is off its peg`
+        : `${activeDepegs.length} coins are off their peg`,
+      subtitle: parts.join(" · "),
+      tappableToSettings: Boolean(failure && !snoozed),
+    };
+  }
+
+  if (snoozed && snoozeUntil != null) {
+    return {
+      tone: "warn",
+      title: isPausedSentinel(snoozeUntil) ? "Alerts paused" : "Alerts snoozed",
+      subtitle: isPausedSentinel(snoozeUntil)
+        ? "Until you resume them"
+        : `Until ${formatClock(snoozeUntil, quiet.timezone, nowSec)}`,
+    };
+  }
+  if (!covered) {
+    return { tone: "neutral", title: "No alerts on", subtitle: "Follow a preset or add coins below." };
+  }
+  if (failure) {
+    return {
+      tone: "warn",
+      // Only the blocked classes name a recovery path; any other class may be
+      // permanent, so the strip never promises a retry it cannot verify.
+      title: "Last delivery failed",
+      subtitle: "Open delivery status in Settings",
+      tappableToSettings: true,
+    };
+  }
   const parts = quietPart
     ? [...baseParts.slice(0, 2), quietPart]
     : baseParts.slice(0, 3);
@@ -151,6 +194,7 @@ export interface HomeScreenProps extends MiniAppScreenProps {
   hasMainButton: boolean;
   coinsExpanded: boolean;
   onExpandCoins: () => void;
+  homePegContext?: HomePegContext;
 }
 
 export function HomeScreen({
@@ -167,20 +211,42 @@ export function HomeScreen({
   hasMainButton,
   coinsExpanded,
   onExpandCoins,
+  homePegContext,
 }: HomeScreenProps) {
   const rankById = useMemo(
     () => new Map(state.catalog.searchableCoins.map((coin) => [coin.stablecoinId, coin.rank ?? Number.MAX_SAFE_INTEGER])),
     [state.catalog.searchableCoins],
   );
-  // State-first sort: actively snoozed coins float to the top, followed by market-cap order.
+  const symbolById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const coin of state.catalog.searchableCoins) map.set(coin.stablecoinId, coin.symbol);
+    for (const coin of state.subscriptions) map.set(coin.stablecoinId, coin.symbol);
+    return map;
+  }, [state.catalog.searchableCoins, state.subscriptions]);
+  const activeDepegs = useMemo(() => {
+    if (homePegContext?.status !== "ok" || homePegContext.events.length === 0) return [];
+    return [...homePegContext.events].sort((left, right) => {
+      const leftMag = Math.abs(left.currentDeviationBps ?? left.peakDeviationBps);
+      const rightMag = Math.abs(right.currentDeviationBps ?? right.peakDeviationBps);
+      if (rightMag !== leftMag) return rightMag - leftMag;
+      return (rankById.get(left.stablecoinId) ?? Number.MAX_SAFE_INTEGER)
+        - (rankById.get(right.stablecoinId) ?? Number.MAX_SAFE_INTEGER)
+        || (symbolById.get(left.stablecoinId) ?? left.stablecoinId).localeCompare(symbolById.get(right.stablecoinId) ?? right.stablecoinId);
+    });
+  }, [homePegContext, rankById, symbolById]);
+  const offPegIds = useMemo(() => new Set(activeDepegs.map((event) => event.stablecoinId)), [activeDepegs]);
+  // State-first sort: off-peg coins first, then actively snoozed coins, then market-cap order.
   const coins = useMemo(() => {
     const ranked = sortCoinsByRank(state.subscriptions, rankById);
-    return ranked.sort((left, right) => {
-      const leftSnoozed = left.snoozeUntilTs != null && left.snoozeUntilTs > nowSec ? 0 : 1;
-      const rightSnoozed = right.snoozeUntilTs != null && right.snoozeUntilTs > nowSec ? 0 : 1;
-      return leftSnoozed - rightSnoozed;
-    });
-  }, [nowSec, rankById, state.subscriptions]);
+    const priorityBucket = (coin: SubscribedCoin) => (
+      offPegIds.has(coin.stablecoinId)
+        ? 0
+        : coin.snoozeUntilTs != null && coin.snoozeUntilTs > nowSec
+          ? 1
+          : 2
+    );
+    return ranked.sort((left, right) => priorityBucket(left) - priorityBucket(right));
+  }, [nowSec, offPegIds, rankById, state.subscriptions]);
   const coinSummaryById = useMemo(() => {
     const summaries = new Map<string, string>();
     for (const coin of state.subscriptions) {
@@ -190,7 +256,7 @@ export function HomeScreen({
   }, [presetMemberSetById, state]);
   const ownCount = useMemo(() => coins.filter(hasOwnEnabledFamily).length, [coins]);
   const hasAnyGlobal = LIVE_ALERT_TYPES.some((type) => state.subscriber.globalAlerts[type]);
-  const strip = statusStrip(state, nowSec, ownCount, hasAnyGlobal);
+  const strip = statusStrip(state, nowSec, ownCount, hasAnyGlobal, activeDepegs, symbolById);
   const snoozeUntil = state.subscriber.snoozeUntilTs;
   const snoozed = snoozeUntil != null && isTelegramSnoozeActive(snoozeUntil, nowSec);
   const isBlocked = isTelegramBlockedFailureClass(state.health.recentFailureClass);
@@ -384,6 +450,29 @@ export function HomeScreen({
           ) : null}
         </section>
       )}
+
+      {homePegContext?.status === "unavailable" ? (
+        <p className="mt-2 px-1 text-xs text-muted-foreground">Live peg status unavailable.</p>
+      ) : null}
+
+      {activeDepegs.length > 0 ? (
+        <ListSection title="Off peg now">
+          {activeDepegs.slice(0, OFF_PEG_ROW_LIMIT).map((event) => {
+            const sym = symbolById.get(event.stablecoinId) ?? event.stablecoinId;
+            const detail = formatOffPegRowValue(event);
+            return (
+              <ListRow
+                key={event.stablecoinId}
+                ariaLabel={`${sym}, ${detail}`}
+                title={<span className="font-medium">{sym}</span>}
+                value={<span className="tabular-nums">{detail}</span>}
+                chevron
+                onClick={() => push({ name: "coin", coinId: event.stablecoinId })}
+              />
+            );
+          })}
+        </ListSection>
+      ) : null}
 
       {coinsFirst ? (
         <>

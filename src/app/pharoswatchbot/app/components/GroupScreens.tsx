@@ -16,9 +16,10 @@ import {
   presetLabel,
   type PresetAlertType,
 } from "../constants";
-import { ALL_STABLECOINS_LABEL, displayCoinName } from "../format";
+import { ALL_STABLECOINS_LABEL, displayCoinName, formatPresetSummaryLine } from "../format";
 import { usePrimaryAction } from "../primary-action";
 import type { TelegramWebAppSdk } from "../telegram-sdk";
+import type { PresetsLiveContext } from "../use-mini-app-context";
 import type { MiniAppScreen } from "../use-mini-app-view";
 import type { FollowedPreset, MiniAppScreenProps, TelegramAlertType, TelegramDepegStepBps, TelegramMiniAppState } from "../types";
 import { sortCoinsByRank } from "./HomeScreen";
@@ -391,7 +392,15 @@ export function GroupScreen({
   );
 }
 
-export function AddGroupScreen({ state, push }: { state: TelegramMiniAppState; push: (screen: MiniAppScreen) => void }) {
+export function AddGroupScreen({
+  state,
+  push,
+  presetsLiveContext,
+}: {
+  state: TelegramMiniAppState;
+  push: (screen: MiniAppScreen) => void;
+  presetsLiveContext?: PresetsLiveContext;
+}) {
   const followedIds = new Set(state.presets.map((preset) => preset.id));
   const hasAnyGlobal = LIVE_ALERT_TYPES.some((type) => state.subscriber.globalAlerts[type]);
   const sections = ["By peg", "By size"] as const;
@@ -409,22 +418,30 @@ export function AddGroupScreen({ state, push }: { state: TelegramMiniAppState; p
         <ListSection key={section} title={section} className={index === 0 ? "mt-5" : undefined}>
           {state.catalog.recommendedPresets
             .filter((preset) => presetCategory(preset.id) === section)
-            .map((preset) => (
-              <ListRow
-                key={preset.id}
-                title={presetLabel(preset.id, preset.label)}
-                subtitle={presetDescription(preset.id, preset.description) ?? undefined}
-                className="min-h-[3.25rem]"
-                trailing={followedIds.has(preset.id) ? (
-                  <>
-                    <span className="sr-only">Following</span>
-                    <Check className="h-4 w-4 shrink-0 text-[color:var(--telegram-link,var(--mini-accent))]" aria-hidden="true" />
-                  </>
-                ) : undefined}
-                chevron
-                onClick={() => push({ name: "group", groupId: preset.id })}
-              />
-            ))}
+            .map((preset) => {
+              const liveSummary = presetsLiveContext?.status === "ok"
+                ? presetsLiveContext.byId.get(preset.id)
+                : undefined;
+              const subtitle = (liveSummary ? formatPresetSummaryLine(liveSummary) : null)
+                ?? presetDescription(preset.id, preset.description)
+                ?? undefined;
+              return (
+                <ListRow
+                  key={preset.id}
+                  title={presetLabel(preset.id, preset.label)}
+                  subtitle={subtitle}
+                  className="min-h-[3.25rem]"
+                  trailing={followedIds.has(preset.id) ? (
+                    <>
+                      <span className="sr-only">Following</span>
+                      <Check className="h-4 w-4 shrink-0 text-[color:var(--telegram-link,var(--mini-accent))]" aria-hidden="true" />
+                    </>
+                  ) : undefined}
+                  chevron
+                  onClick={() => push({ name: "group", groupId: preset.id })}
+                />
+              );
+            })}
         </ListSection>
       ))}
       <ListSection title="Everything">

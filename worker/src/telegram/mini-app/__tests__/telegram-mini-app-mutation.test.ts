@@ -104,7 +104,7 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(sqlite.prepare("SELECT first_follow_at FROM telegram_subscribers WHERE chat_id = '42'").get()).toEqual({ first_follow_at: null });
   });
 
-  it.each(["5", "6"])("rejects retired contract %s before database access", async (contractVersion) => {
+  it.each(["5", "6", "9"])("rejects retired contract %s before database access", async (contractVersion) => {
     const db = makeMiniAppDb();
     const res = await handleTelegramMiniAppSession(
       db, makeVersionedMiniAppRequest("/api/telegram-mini-app/session", { initData: await privateInitData() }, { contractVersion }), BOT_TOKEN,
@@ -689,5 +689,75 @@ describe("handleTelegramMiniAppMutation", () => {
   it("returns not-configured when the bot token is missing", async () => {
     expect(await readJsonResponse(await postMutate(makeMiniAppDb(), { kind: "clear-snooze" }, { initData: "x", botToken: undefined }), 503))
       .toMatchObject({ code: "not-configured" });
+  });
+
+  it("gates apply-bulk-watchlist on v10 negotiation, returns bulkResult + undo, and suppresses undo on post-write drift", async () => {
+    const legacyDb = makeMiniAppDb();
+    const unversioned = await postMutate(legacyDb, {
+      kind: "apply-bulk-watchlist",
+      addStablecoinIds: ["usdt-tether"],
+      removeStablecoinIds: [],
+      expectedPreferenceGeneration: 0,
+      expectedDirectFingerprint: "direct-v1-10-deadbeef",
+    });
+    expect(await readJsonResponse(unversioned, 409)).toMatchObject({
+      code: "contract-version-mismatch",
+      contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
+    });
+    expect(legacyDb.getHistory()).toEqual([]);
+
+    const initData = await privateInitData();
+    const { db } = persistedDb();
+    const sessionRes = await handleTelegramMiniAppSession(
+      db,
+      makeVersionedMiniAppRequest("/api/telegram-mini-app/session", { initData }),
+      BOT_TOKEN,
+    );
+    const session = TelegramMiniAppSnapshotSchema.parse(await readJsonResponse(sessionRes, 200));
+    expect(session.state.directStateProof).toBeTruthy();
+
+    const applyRes = await postMutate(db, {
+      kind: "apply-bulk-watchlist",
+      addStablecoinIds: ["usdt-tether"],
+      removeStablecoinIds: [],
+      expectedPreferenceGeneration: session.state.directStateProof!.preferenceGeneration,
+      expectedDirectFingerprint: session.state.directStateProof!.directFingerprint,
+    }, { initData, versioned: true });
+    const applied = TelegramMiniAppSnapshotSchema.parse(await readJsonResponse(applyRes, 200));
+    expect(applied.serverNowSec).toBe(NOW_SEC);
+    expect(applied.bulkResult).toMatchObject({ adds: ["usdt-tether"], removes: [], unchanged: [] });
+    expect(applied.undo).toMatchObject({ expectedPreferenceGeneration: 1, removeStablecoinIds: ["usdt-tether"] });
+
+    // Interleave a concurrent generation bump right before the post-write state read so undo is suppressed.
+    let bumped = false;
+    const { db: driftDb, sqlite: driftSqlite } = persistedDb({
+      onRun(sql) {
+        if (!bumped && sql.includes("FROM telegram_subscribers") && !sql.includes("WITH subscriber AS")) {
+          const row = driftSqlite.prepare("SELECT preference_generation FROM telegram_subscribers WHERE chat_id = '42'").get() as { preference_generation: number } | undefined;
+          if (row && row.preference_generation === 1) {
+            bumped = true;
+            driftSqlite.prepare("UPDATE telegram_subscribers SET preference_generation = 2 WHERE chat_id = '42'").run();
+          }
+        }
+      },
+    });
+    const driftSessionRes = await handleTelegramMiniAppSession(
+      driftDb,
+      makeVersionedMiniAppRequest("/api/telegram-mini-app/session", { initData }),
+      BOT_TOKEN,
+    );
+    const driftProof = TelegramMiniAppSnapshotSchema.parse(await readJsonResponse(driftSessionRes, 200)).state.directStateProof!;
+    const driftedRes = await postMutate(driftDb, {
+      kind: "apply-bulk-watchlist",
+      addStablecoinIds: ["usdc-circle"],
+      removeStablecoinIds: [],
+      expectedPreferenceGeneration: driftProof.preferenceGeneration,
+      expectedDirectFingerprint: driftProof.directFingerprint,
+    }, { initData, versioned: true });
+    const drifted = TelegramMiniAppSnapshotSchema.parse(await readJsonResponse(driftedRes, 200));
+    expect(bumped).toBe(true);
+    expect(drifted.bulkResult).toMatchObject({ adds: ["usdc-circle"] });
+    expect(drifted.state.directStateProof?.preferenceGeneration).toBe(2);
+    expect(drifted.undo).toBeUndefined();
   });
 });

@@ -9,6 +9,7 @@ import { TELEGRAM_ALERT_TYPES, TELEGRAM_LIVE_ALERT_TYPES, type TelegramAlertType
 import { isDepegStepValue, isTelegramSafetyMode } from "@shared/types/status/telegram";
 import { isDewsAlertBand } from "@shared/lib/classification/risk";
 import type { TelegramMiniAppMutableState } from "@shared/lib/telegram-mini-app-contract";
+import { computeDirectStateFingerprint, type StoredDirectFingerprintRow } from "./watchlist-state";
 import {
   listTelegramPresets,
   resolveTelegramPresetTargets,
@@ -179,14 +180,14 @@ export async function loadTelegramMiniAppState(
           db.prepare(
             `SELECT global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_reserve, global_alert_freeze,
                     global_depeg_worsening_bps_step, quiet_hours_enabled, quiet_hours_start_utc,
-                    quiet_hours_end_utc, timezone, alert_snooze_until_ts
+                    quiet_hours_end_utc, timezone, alert_snooze_until_ts, preference_generation
                FROM telegram_subscribers
               WHERE chat_id = ?`,
           ).bind(chatId),
           db.prepare(
-            `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_reserve, alert_freeze,
+            `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve, alert_freeze,
                     alert_dews_override, alert_depeg_override, alert_safety_override,
-                    alert_reserve_override, alert_freeze_override,
+                    alert_launch_override, alert_reserve_override, alert_freeze_override,
                     dews_min_band, safety_mode, depeg_worsening_bps_step, alert_snooze_until_ts
                FROM telegram_subscriptions
               WHERE chat_id = ?
@@ -237,6 +238,39 @@ export async function loadTelegramMiniAppState(
     },
   );
 
+  const rawSubscriptions = subscriptions.results ?? [];
+  const directStateProof = chatId
+    ? (() => {
+        const subscriberExists = subscriber != null;
+        const rawGen = subscriber?.preference_generation;
+        const parsedGen = rawGen == null ? 0 : Number(rawGen);
+        const preferenceGeneration = Number.isSafeInteger(parsedGen) && parsedGen >= 0 ? parsedGen : 0;
+        const storedRows: StoredDirectFingerprintRow[] = rawSubscriptions.map((row) => ({
+          stablecoinId: row.stablecoin_id,
+          alertDews: boolFlag(row.alert_dews),
+          alertDepeg: boolFlag(row.alert_depeg),
+          alertSafety: boolFlag(row.alert_safety),
+          alertLaunch: boolFlag(row.alert_launch),
+          alertReserve: boolFlag(row.alert_reserve),
+          alertFreeze: boolFlag(row.alert_freeze),
+          overrideDews: boolFlag(row.alert_dews_override),
+          overrideDepeg: boolFlag(row.alert_depeg_override),
+          overrideSafety: boolFlag(row.alert_safety_override),
+          overrideLaunch: boolFlag(row.alert_launch_override),
+          overrideReserve: boolFlag(row.alert_reserve_override),
+          overrideFreeze: boolFlag(row.alert_freeze_override),
+          dewsMinBand: row.dews_min_band != null && isDewsAlertBand(row.dews_min_band) ? row.dews_min_band : null,
+          safetyMode: isTelegramSafetyMode(row.safety_mode) ? row.safety_mode : null,
+          depegWorseningBpsStep: isDepegStepValue(row.depeg_worsening_bps_step) ? row.depeg_worsening_bps_step : null,
+          snoozeUntilTs: row.alert_snooze_until_ts ?? null,
+        }));
+        return {
+          preferenceGeneration,
+          directFingerprint: computeDirectStateFingerprint({ subscriberExists, rows: storedRows }),
+        };
+      })()
+    : null;
+
   return {
     viewer: {
       userId: auth.userId,
@@ -247,6 +281,8 @@ export async function loadTelegramMiniAppState(
       startParam: auth.startParam,
       canMutate,
       mutationBlockReason,
+      // `nowSec - authDate > mutationMaxAgeSec` rejects starting at `authDate + mutationMaxAgeSec + 1`.
+      mutationAuthExpiresAt: auth.canMutatePrivateChat ? auth.authDate + options.mutationMaxAgeSec + 1 : null,
     },
     subscriber: {
       exists: subscriber != null,
@@ -265,7 +301,7 @@ export async function loadTelegramMiniAppState(
       },
       snoozeUntilTs: subscriber?.alert_snooze_until_ts ?? null,
     },
-    subscriptions: (subscriptions.results ?? []).filter(shouldProjectSubscription).map((row) => {
+    subscriptions: rawSubscriptions.filter(shouldProjectSubscription).map((row) => {
       const meta = coinMeta(row.stablecoin_id);
       return {
         stablecoinId: row.stablecoin_id,
@@ -301,5 +337,6 @@ export async function loadTelegramMiniAppState(
       recentFailureClass: health.available ? health.diagnostics?.recentFailureClass ?? null : null,
       queuedAlerts: Number(pending?.queued_alerts ?? 0),
     },
+    directStateProof,
   };
 }

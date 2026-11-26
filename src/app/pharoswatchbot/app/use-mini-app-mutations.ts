@@ -446,9 +446,10 @@ function mutationSuccessAnnouncement(
 ): string {
   switch (operation.kind) {
     case "preview-bulk-watchlist":
-    case "confirm-bulk-watchlist": {
-      // The preview may classify part of the selection as already matching; the
-      // confirmation applies only its adds/removes, so report those counts.
+    case "confirm-bulk-watchlist":
+    case "apply-bulk-watchlist": {
+      // The server may classify part of the selection as already matching; report
+      // the actual applied adds/removes and any remaining inherited coverage.
       const added = appliedBulk?.added ?? operation.addStablecoinIds.length;
       const removed = appliedBulk?.removed ?? operation.removeStablecoinIds.length;
       const impactSuffix = formatRemovalSourceImpact(state, appliedBulk?.sourceImpact);
@@ -1078,8 +1079,16 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
           ?? (currentOptions?.useResponseUndo && next.undo
             ? { kind: "undo-bulk-watchlist" as const, ...next.undo }
             : undefined);
+        const appliedBulkSummary: AppliedBulkSummary | undefined = currentOptions?.appliedBulk
+          ?? (next.bulkResult
+            ? {
+                added: next.bulkResult.adds.length,
+                removed: next.bulkResult.removes.length,
+                sourceImpact: next.bulkResult.sourceImpact,
+              }
+            : undefined);
         const noticeText = currentOptions?.successMessage
-          ?? mutationSuccessAnnouncement(currentOp, preState ?? next.state, currentOptions?.appliedBulk);
+          ?? mutationSuccessAnnouncement(currentOp, preState ?? next.state, appliedBulkSummary);
         showNotice("success", noticeText, {
           undo: undoOp,
           undoRevision: undoOp ? next.stateRevision : undefined,
@@ -1090,6 +1099,7 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
           || currentOp.kind === "set-coin"
           || currentOp.kind === "remove-coin"
           || currentOp.kind === "confirm-bulk-watchlist"
+          || currentOp.kind === "apply-bulk-watchlist"
         ) {
           haptics?.notificationOccurred?.("success");
         } else {
@@ -1312,11 +1322,26 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
   const applyBulkWatchlist = useCallback(async (addStablecoinIds: string[], removeStablecoinIds: string[]): Promise<boolean> => {
     const selection = { addStablecoinIds, removeStablecoinIds };
     if (authExpiredRef.current || staleAuthRef.current) {
-      // Same visible-intent path as performMutation; the preview read would fail too.
+      // Same visible-intent path as performMutation; never send an expired request.
       recordStaleAuthIntent({ kind: "preview-bulk-watchlist", ...selection });
       webAppRef.current?.HapticFeedback?.notificationOccurred?.("warning");
       return false;
     }
+    const proof = stateRef.current?.directStateProof ?? null;
+    if (proof != null) {
+      // Contract v10 single-RTT proof-bearing apply: no separate preview round-trip.
+      const next = await dispatchMutation(
+        {
+          kind: "apply-bulk-watchlist",
+          ...selection,
+          expectedPreferenceGeneration: proof.preferenceGeneration,
+          expectedDirectFingerprint: proof.directFingerprint,
+        },
+        { useResponseUndo: true },
+      );
+      return next != null;
+    }
+    // Legacy rolling-deploy fallback when the session came from a pre-v10 Worker without directStateProof.
     const response = await performBulkWatchlistPreview({ kind: "preview-bulk-watchlist", ...selection });
     if (response?.result.kind !== "bulk-watchlist-preview") return false;
     const preview = response.result;

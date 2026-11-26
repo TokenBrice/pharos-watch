@@ -35,10 +35,12 @@ import { unixNow } from "../store/subscribers";
 import {
   TelegramMiniAppMutationError,
   applyTelegramMiniAppMutation,
+  executeTelegramMiniAppBulkWatchlistApply,
   executeTelegramMiniAppBulkWatchlistPreview,
   isTelegramMiniAppBulkWatchlistPreviewOperation,
   mutationActionDetail,
 } from "./telegram-mini-app-mutations";
+import { loadTelegramMiniAppContext, validateContextRequestCoinIds } from "./telegram-mini-app-context";
 import { acquireTelegramMiniAppMutationBurst } from "./telegram-mini-app-rate-limit";
 import { loadTelegramMiniAppState } from "./telegram-mini-app-state";
 import { loadStablecoinsCache, type StablecoinsCacheLoadResult } from "../../lib/stablecoins-cache";
@@ -49,6 +51,7 @@ export const TELEGRAM_MINI_APP_SESSION_AUTH_MAX_AGE_SEC = 24 * 60 * 60;
 export const TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC = 5 * 60;
 const SESSION_COOLDOWN_SEC = 2;
 const BULK_PREVIEW_COOLDOWN_SEC = 1;
+const CONTEXT_COOLDOWN_SEC = 1;
 // Telegram never refreshes initData inside a running Mini App, so one expired
 // launch (one initData hash) is one incident however often the client retries.
 // Matches the 7-day short-lived chat cache retention that prunes the key.
@@ -87,13 +90,24 @@ function versionMismatchResponse(
 function stateResponse(
   state: TelegramMiniAppMutableState,
   compatibility: Extract<TelegramMiniAppVersionCompatibility, "legacy" | "compatible">,
-  undo?: TelegramMiniAppSnapshot["undo"],
+  options: {
+    serverNowSec: number;
+    undo?: TelegramMiniAppSnapshot["undo"];
+    bulkResult?: TelegramMiniAppSnapshot["bulkResult"];
+  },
 ): Response {
   if (compatibility === "legacy") {
-    return jsonResponse({ ...state, catalog: TELEGRAM_MINI_APP_CATALOG }, NO_STORE);
+    // Preserve legacy unversioned full-state shape without adding v10-only top-level/viewer fields.
+    const { directStateProof: _proof, viewer, ...rest } = state;
+    const { mutationAuthExpiresAt: _expiresAt, ...legacyViewer } = viewer;
+    return jsonResponse({ ...rest, viewer: legacyViewer, catalog: TELEGRAM_MINI_APP_CATALOG }, NO_STORE);
   }
-  const snapshot = createTelegramMiniAppSnapshot(state);
-  return jsonResponse({ ...snapshot, ...(undo ? { undo } : {}) }, NO_STORE);
+  const snapshot = createTelegramMiniAppSnapshot(state, options.serverNowSec);
+  return jsonResponse({
+    ...snapshot,
+    ...(options.undo ? { undo: options.undo } : {}),
+    ...(options.bulkResult ? { bulkResult: options.bulkResult } : {}),
+  }, NO_STORE);
 }
 
 function requestVersionCompatibility(
@@ -389,6 +403,50 @@ export const handleTelegramMiniAppSession = miniAppErrorHandler(
     if (prepared instanceof Response) return prepared;
     const { parsed, compatibility, start, botToken: configuredBotToken } = prepared;
 
+    if (parsed.contextRequest != null) {
+      // Scoped live context is a Contract v10 capability; reject unversioned callers pre-auth.
+      if (compatibility !== "compatible") {
+        return versionMismatchResponse("contract-version-mismatch");
+      }
+      const auth = await validateOrResponse(db, parsed.initData, configuredBotToken, {
+        maxAgeSec: TELEGRAM_MINI_APP_SESSION_AUTH_MAX_AGE_SEC,
+        start,
+        staleAuthEvent: { eventType: "mini_app_session_invalid" },
+      }, botTokenPrevious, execCtx);
+      if (auth instanceof Response) return auth;
+
+      if (!auth.canMutatePrivateChat) {
+        return miniAppError(403, "not-private", "Mini App context is private-chat only");
+      }
+      if (
+        parsed.contextRequest.kind === "coins"
+        && !validateContextRequestCoinIds(parsed.contextRequest.stablecoinIds)
+      ) {
+        return miniAppError(400, "unknown-coin", "Unknown stablecoin");
+      }
+
+      const nowSec = unixNow();
+      const cooldown = await acquireTelegramCommandCooldown(db, {
+        chatId: auth.userId,
+        commandKey: "mini-app:context",
+        nowSec,
+        cooldownSec: CONTEXT_COOLDOWN_SEC,
+      });
+      if (!cooldown.allowed) {
+        return miniAppError(429, "rate-limited", "Mini App context rate limited", {
+          retryAfterSec: cooldown.retryAfterSec,
+        });
+      }
+
+      const context = await loadTelegramMiniAppContext(db, parsed.contextRequest, nowSec);
+      return jsonResponse({
+        contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
+        catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
+        serverNowSec: nowSec,
+        context,
+      }, NO_STORE);
+    }
+
     const auth = await validateOrResponse(db, parsed.initData, configuredBotToken, {
       maxAgeSec: TELEGRAM_MINI_APP_SESSION_AUTH_MAX_AGE_SEC,
       start,
@@ -396,10 +454,11 @@ export const handleTelegramMiniAppSession = miniAppErrorHandler(
     }, botTokenPrevious, execCtx);
     if (auth instanceof Response) return auth;
 
+    const nowSec = unixNow();
     const cooldown = await acquireTelegramCommandCooldown(db, {
       chatId: auth.userId,
       commandKey: "mini-app:session",
-      nowSec: unixNow(),
+      nowSec,
       cooldownSec: SESSION_COOLDOWN_SEC,
     });
     if (!cooldown.allowed) {
@@ -419,7 +478,7 @@ export const handleTelegramMiniAppSession = miniAppErrorHandler(
     }
 
     const state = await loadTelegramMiniAppState(db, auth, {
-      nowSec: unixNow(),
+      nowSec,
       mutationMaxAgeSec: TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC,
     });
     const latencyMs = Date.now() - start;
@@ -435,7 +494,7 @@ export const handleTelegramMiniAppSession = miniAppErrorHandler(
       sessionEvents.push({ eventType: "mini_app_group_readonly", auth, outcome: "readonly", latencyMs });
     }
     await dispatchBestEffortTelemetry(execCtx, () => recordMiniAppEvents(db, sessionEvents));
-    return stateResponse(state, compatibility);
+    return stateResponse(state, compatibility, { serverNowSec: nowSec });
   },
 );
 
@@ -456,6 +515,10 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
     );
     if (prepared instanceof Response) return prepared;
     const { parsed, compatibility, start, botToken: configuredBotToken } = prepared;
+
+    if (parsed.operation.kind === "apply-bulk-watchlist" && compatibility !== "compatible") {
+      return versionMismatchResponse("contract-version-mismatch");
+    }
 
     const bulkPreviewOperation = isTelegramMiniAppBulkWatchlistPreviewOperation(parsed.operation)
       ? parsed.operation
@@ -533,6 +596,7 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
     };
 
     let undo: TelegramMiniAppSnapshot["undo"];
+    let bulkResult: TelegramMiniAppSnapshot["bulkResult"];
     try {
       if (bulkPreviewOperation) {
         const preview = await executeTelegramMiniAppBulkWatchlistPreview(db, auth, bulkPreviewOperation);
@@ -548,9 +612,17 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
         );
         return jsonResponse(preview, NO_STORE);
       }
-      undo = await applyTelegramMiniAppMutation(db, auth, parsed.operation, {
-        getStablecoinsCacheResult,
-      }) ?? undefined;
+      if (parsed.operation.kind === "apply-bulk-watchlist") {
+        const applied = await executeTelegramMiniAppBulkWatchlistApply(db, auth, parsed.operation, {
+          getStablecoinsCacheResult,
+        });
+        undo = applied.undo;
+        bulkResult = applied.bulkResult;
+      } else {
+        undo = await applyTelegramMiniAppMutation(db, auth, parsed.operation, {
+          getStablecoinsCacheResult,
+        }) ?? undefined;
+      }
     } catch (err) {
       if (err instanceof TelegramMiniAppMutationError) {
         const latencyMs = Date.now() - start;
@@ -569,11 +641,20 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
       throw err;
     }
 
+    const postMutationNowSec = unixNow();
     const state = await loadTelegramMiniAppState(db, auth, {
-      nowSec: unixNow(),
+      nowSec: postMutationNowSec,
       mutationMaxAgeSec: TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC,
       stablecoinsCachePromise,
     });
+    // Suppress undo if a concurrent write advanced generation before the post-write snapshot read.
+    if (
+      undo != null
+      && state.directStateProof != null
+      && state.directStateProof.preferenceGeneration !== undo.expectedPreferenceGeneration
+    ) {
+      undo = undefined;
+    }
     const latencyMs = Date.now() - start;
     await dispatchBestEffortTelemetry(execCtx, () =>
       recordMiniAppEvent(db, {
@@ -584,6 +665,6 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
         latencyMs,
       }),
     );
-    return stateResponse(state, compatibility, undo);
+    return stateResponse(state, compatibility, { serverNowSec: postMutationNowSec, undo, bulkResult });
   },
 );

@@ -1,6 +1,17 @@
+import { THREAT_BAND_LABELS } from "@shared/lib/classification/risk";
+import { formatUsdPriceAdaptive } from "@shared/lib/format";
 import { isPausedSentinel } from "@shared/lib/telegram-delivery-policy";
 import { LIVE_ALERT_TYPES, PRESET_ALERT_TYPES, presetLabel } from "./constants";
-import type { FollowedPreset, SubscribedCoin, TelegramAlertType, TelegramMiniAppState } from "./types";
+import type {
+  FollowedPreset,
+  SubscribedCoin,
+  TelegramAlertType,
+  TelegramMiniAppActiveDepeg,
+  TelegramMiniAppCoinSignal,
+  TelegramMiniAppContextProvenance,
+  TelegramMiniAppPresetSummary,
+  TelegramMiniAppState,
+} from "./types";
 
 type GlobalAlerts = TelegramMiniAppState["subscriber"]["globalAlerts"];
 
@@ -202,4 +213,98 @@ export function formatTimeZoneCity(timezone: string | null | undefined): string 
 /** "Early warning, Depeg" style list, or null when nothing is on. */
 export function joinLabels(labels: readonly string[]): string | null {
   return labels.length > 0 ? labels.join(" · ") : null;
+}
+
+/**
+ * Format an active depeg's deviation honestly: live current deviation when
+ * available, otherwise peak deviation (marked `peak`), or `"Off peg"` when
+ * peak basis is unavailable; preserves peer-relative caveats.
+ */
+export function formatDepegDeviation(
+  depeg: TelegramMiniAppActiveDepeg,
+  options: { withPegWord?: boolean } = {},
+): string {
+  const { withPegWord = false } = options;
+  if (depeg.currentDeviationBps == null && depeg.peakBasisUnavailable) {
+    return depeg.peerRelative ? "Off peg (vs peers)" : "Off peg";
+  }
+  const bps = depeg.currentDeviationBps ?? depeg.peakDeviationBps;
+  const pct = (Math.abs(bps) / 100).toFixed(1);
+  const base = withPegWord ? `${pct}% ${depeg.direction} peg` : `${pct}% ${depeg.direction}`;
+  const qualifiers = [
+    depeg.currentDeviationBps == null ? "peak" : null,
+    depeg.peerRelative ? "vs peers" : null,
+  ].filter((part): part is string => part != null);
+  return qualifiers.length > 0 ? `${base} (${qualifiers.join(", ")})` : base;
+}
+
+/** Format a Home `Off peg now` trailing value, e.g. `$0.9871 · 1.3% below`. */
+export function formatOffPegRowValue(depeg: TelegramMiniAppActiveDepeg): string {
+  const priceText = depeg.priceUsd != null ? `$${formatUsdPriceAdaptive(depeg.priceUsd)}` : null;
+  const deviationText = formatDepegDeviation(depeg, { withPegWord: false });
+  return priceText ? `${priceText} · ${deviationText}` : deviationText;
+}
+
+/**
+ * Format the single quiet live-status line for Coin detail header:
+ * `$0.9998 · On peg · DEWS Calm 12 · Safety A-` (or `1.3% below peg`),
+ * per-lane `—` on partial failure, `Safety Held` when held, and
+ * `Live data unavailable.` when every lane is unavailable.
+ */
+export function formatCoinLiveHeaderLine(input: {
+  status: "idle" | "ok" | "unavailable";
+  signal: TelegramMiniAppCoinSignal | null;
+  depeg: TelegramMiniAppActiveDepeg | null;
+  depegProvenance: TelegramMiniAppContextProvenance | null;
+}): string | null {
+  if (input.status === "idle") return null;
+  if (input.status === "unavailable" || !input.signal) return "Live data unavailable.";
+  const { signal, depeg, depegProvenance } = input;
+
+  const priceOk = signal.price.provenance.status === "ok" && signal.price.priceUsd != null;
+  const pegOk = depegProvenance?.status === "ok";
+  const dewsOk = signal.dews.provenance.status === "ok" && signal.dews.band != null && signal.dews.score != null;
+  const safetyHeld = signal.safety.held;
+  const safetyRated = signal.safety.provenance.status === "ok"
+    && signal.safety.ratingStatus === "rated"
+    && signal.safety.grade != null;
+  const safetyAnyAvailable = safetyHeld || safetyRated;
+
+  if (!priceOk && !pegOk && !dewsOk && !safetyAnyAvailable) {
+    return "Live data unavailable.";
+  }
+
+  const pricePart = priceOk && signal.price.priceUsd != null
+    ? `$${formatUsdPriceAdaptive(signal.price.priceUsd)}`
+    : "Price —";
+  const pegPart = pegOk
+    ? depeg
+      ? formatDepegDeviation(depeg, { withPegWord: true })
+      : "On peg"
+    : "Peg —";
+  const dewsPart = dewsOk && signal.dews.band != null && signal.dews.score != null
+    ? `DEWS ${THREAT_BAND_LABELS[signal.dews.band]} ${Math.round(signal.dews.score)}`
+    : "DEWS —";
+  const safetyPart = safetyHeld
+    ? "Safety Held"
+    : safetyRated && signal.safety.grade != null
+      ? `Safety ${signal.safety.grade}`
+      : "Safety —";
+
+  return `${pricePart} · ${pegPart} · ${dewsPart} · ${safetyPart}`;
+}
+
+/**
+ * Format the Follow a preset summary line, e.g.
+ * `25 coins: USDT, USDC, USDS and 22 more` or `3 coins: PAXG, XAUT, KAU`.
+ */
+export function formatPresetSummaryLine(summary: TelegramMiniAppPresetSummary): string | null {
+  if (summary.memberCount === 0) return "0 coins right now";
+  const countWord = summary.memberCount === 1 ? "coin" : "coins";
+  if (summary.topSymbols.length === 0) return `${summary.memberCount} ${countWord}`;
+  const remaining = summary.memberCount - summary.topSymbols.length;
+  if (remaining > 0) {
+    return `${summary.memberCount} ${countWord}: ${summary.topSymbols.join(", ")} and ${remaining} more`;
+  }
+  return `${summary.memberCount} ${countWord}: ${summary.topSymbols.join(", ")}`;
 }

@@ -6,6 +6,9 @@ import {
   familyCoverage,
   formatAgo,
   formatClock,
+  formatCoinLiveHeaderLine,
+  formatOffPegRowValue,
+  formatPresetSummaryLine,
   formatQuietHoursRange,
   formatSnoozeUntil,
   formatTimeZoneCity,
@@ -164,5 +167,56 @@ describe("time formatting", () => {
     expect(formatAgo(now - 86_400, now)).toBe("Yesterday");
     expect(formatTimeZoneCity("America/Los_Angeles")).toBe("Los Angeles");
     expect(formatTimeZoneCity(null)).toBe("UTC");
+  });
+});
+
+describe("live risk context formatting", () => {
+  const ok = { status: "ok", source: "s", assessedAt: 1_800_000_000, observedAt: 1_800_000_000, generation: "g", budgetSec: 1200 } as const;
+  const unavail = { status: "unavailable", source: "s", assessedAt: 1_800_000_000, observedAt: null, generation: null, budgetSec: 1200, reason: "missing" } as const;
+  const stale = { status: "stale", source: "s", assessedAt: 1_800_000_000, observedAt: 1_799_000_000, generation: "g", budgetSec: 1200, reason: "v9-publication-held" } as const;
+
+  it("formats off-peg values, coin live headers across healthy/degraded/held lanes, and preset summaries", () => {
+    const depeg = {
+      stablecoinId: "usdc-circle", direction: "below" as const, peakDeviationBps: -150, currentDeviationBps: -130,
+      priceUsd: 0.9871, pegReference: 1, startedAt: 1_799_999_000,
+    };
+    expect(formatOffPegRowValue(depeg)).toBe("$0.9871 · 1.3% below");
+    expect(formatOffPegRowValue({ ...depeg, currentDeviationBps: null, peerRelative: true })).toBe("$0.9871 · 1.5% below (peak, vs peers)");
+
+    const fullSignal = {
+      price: { provenance: ok, priceUsd: 0.9998 },
+      dews: { provenance: ok, band: "CALM" as const, score: 12 },
+      safety: { provenance: ok, ratingStatus: "rated" as const, grade: "A-", score: 86, held: false, methodologyVersion: "9.0", publicationId: "p1" },
+    };
+    expect(formatCoinLiveHeaderLine({ status: "idle", signal: null, depeg: null, depegProvenance: null })).toBeNull();
+    expect(formatCoinLiveHeaderLine({ status: "ok", signal: fullSignal, depeg: null, depegProvenance: ok }))
+      .toBe("$0.9998 · On peg · DEWS Calm 12 · Safety A-");
+    expect(formatCoinLiveHeaderLine({ status: "ok", signal: { ...fullSignal, price: { provenance: ok, priceUsd: 0.9871 } }, depeg, depegProvenance: ok }))
+      .toBe("$0.9871 · 1.3% below peg · DEWS Calm 12 · Safety A-");
+    expect(formatCoinLiveHeaderLine({
+      status: "ok",
+      signal: {
+        ...fullSignal,
+        dews: { provenance: unavail, band: null, score: null },
+        safety: { provenance: stale, ratingStatus: "rated", grade: "A-", score: 86, held: true, methodologyVersion: "9.0", publicationId: "p1" },
+      },
+      depeg: null,
+      depegProvenance: ok,
+    })).toBe("$0.9998 · On peg · DEWS — · Safety Held");
+    expect(formatCoinLiveHeaderLine({
+      status: "ok",
+      signal: {
+        price: { provenance: unavail, priceUsd: null },
+        dews: { provenance: unavail, band: null, score: null },
+        safety: { provenance: unavail, ratingStatus: null, grade: null, score: null, held: false, methodologyVersion: null, publicationId: null },
+      },
+      depeg: null,
+      depegProvenance: unavail,
+    })).toBe("Live data unavailable.");
+
+    expect(formatPresetSummaryLine({ id: "usd-top25", memberCount: 25, topSymbols: ["USDT", "USDC", "USDS"] }))
+      .toBe("25 coins: USDT, USDC, USDS and 22 more");
+    expect(formatPresetSummaryLine({ id: "gold-top5", memberCount: 3, topSymbols: ["PAXG", "XAUT", "KAU"] }))
+      .toBe("3 coins: PAXG, XAUT, KAU");
   });
 });

@@ -12,7 +12,7 @@ import { TELEGRAM_PRESET_IDS } from "./telegram-presets";
 
 export type { TelegramAlertType };
 
-export const TELEGRAM_MINI_APP_CONTRACT_VERSION = "9";
+export const TELEGRAM_MINI_APP_CONTRACT_VERSION = "10";
 export const TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM = "mini_app_contract";
 export const TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM = "mini_app_catalog";
 export { TELEGRAM_MINI_APP_CATALOG_VERSION };
@@ -142,6 +142,13 @@ const BulkDirectRowSchema = z.object({
   snoozeUntilTs: z.number().int().nullable().optional(),
 }).strict();
 
+const DirectFingerprintSchema = z.string().regex(/^direct-v1-[0-9]+-[0-9a-f]{8}$/);
+
+export const TelegramMiniAppDirectStateProofSchema = z.object({
+  preferenceGeneration: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
+  directFingerprint: DirectFingerprintSchema,
+}).strict();
+
 const BulkWatchlistUndoSchema = z.object({
   expectedPreferenceGeneration: z.number().int().nonnegative(),
   expectedFingerprint: z.string().regex(/^preview-v1-[0-9]+-[0-9a-f]{8}$/),
@@ -157,6 +164,11 @@ export const TelegramMiniAppOperationSchema = z.discriminatedUnion("kind", [
     kind: z.literal("confirm-bulk-watchlist"),
     expectedPreferenceGeneration: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
     previewFingerprint: z.string().regex(/^preview-v1-[0-9]+-[0-9a-f]{8}$/),
+  }).merge(BulkWatchlistSelectionSchema).strict(),
+  z.object({
+    kind: z.literal("apply-bulk-watchlist"),
+    expectedPreferenceGeneration: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
+    expectedDirectFingerprint: DirectFingerprintSchema,
   }).merge(BulkWatchlistSelectionSchema).strict(),
   z.object({
     kind: z.literal("undo-bulk-watchlist"),
@@ -274,7 +286,7 @@ export const TelegramMiniAppOperationSchema = z.discriminatedUnion("kind", [
 export type TelegramMiniAppOperation = z.infer<typeof TelegramMiniAppOperationSchema>;
 export type TelegramMiniAppBulkWatchlistOperation = Extract<
   TelegramMiniAppOperation,
-  { kind: "preview-bulk-watchlist" | "confirm-bulk-watchlist" | "undo-bulk-watchlist" }
+  { kind: "preview-bulk-watchlist" | "confirm-bulk-watchlist" | "apply-bulk-watchlist" | "undo-bulk-watchlist" }
 >;
 export type TelegramDewsBand = z.infer<typeof TelegramDewsBandSchema>;
 export type TelegramDepegStepBps = z.infer<typeof TelegramDepegStepBpsSchema>;
@@ -285,11 +297,27 @@ const VersionCapabilitySchema = z.object({
   catalogVersion: z.string().min(1).max(64).optional(),
 });
 
+export const TelegramMiniAppContextRequestSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("coins"),
+    stablecoinIds: z.array(z.string().min(1).max(128)).min(1).max(20).refine(
+      (ids) => hasUniqueIds(ids),
+      { message: "contextRequest stablecoinIds must be unique" },
+    ),
+  }).strict(),
+  z.object({
+    kind: z.literal("presets"),
+  }).strict(),
+]);
+
+export type TelegramMiniAppContextRequest = z.infer<typeof TelegramMiniAppContextRequestSchema>;
+
 export const TelegramMiniAppSessionRequestSchema = VersionCapabilitySchema.extend({
   initData: z
     .string()
     .min(1)
     .max(8 * 1024),
+  contextRequest: TelegramMiniAppContextRequestSchema.optional(),
 }).strict();
 
 export const TelegramMiniAppMutationRequestSchema = VersionCapabilitySchema.extend({
@@ -340,6 +368,8 @@ export const TelegramMiniAppMutableStateSchema = z
         startParam: z.string().nullable().optional(),
         canMutate: z.boolean(),
         mutationBlockReason: z.enum(["not-private", "stale-auth"]).nullable(),
+        /** First invalid unix second for the 5-minute write window (`authDate + 301`), or `null` for groups. */
+        mutationAuthExpiresAt: z.number().int().nonnegative().nullable().optional(),
       })
       .passthrough(),
     subscriber: z
@@ -398,6 +428,8 @@ export const TelegramMiniAppMutableStateSchema = z
         diagnosticsAvailable: z.boolean().optional(),
       })
       .passthrough(),
+    /** Proof over ALL stored direct rows from the same transactional read as `subscriptions[]`; `null` for groups. */
+    directStateProof: TelegramMiniAppDirectStateProofSchema.nullable().optional(),
   })
   .passthrough();
 
@@ -405,23 +437,32 @@ export const TelegramMiniAppStateSchema = TelegramMiniAppMutableStateSchema.exte
   catalog: TelegramMiniAppCatalogSchema,
 }).passthrough();
 
-export const TelegramMiniAppSnapshotSchema = z
-  .object({
-    contractVersion: z.string(),
-    catalogVersion: z.string(),
-    stateRevision: z.string(),
-    state: TelegramMiniAppMutableStateSchema,
-    undo: BulkWatchlistUndoSchema.optional(),
-  })
-  .strict();
-
-export const TelegramMiniAppResponseSchema = z.union([TelegramMiniAppSnapshotSchema, TelegramMiniAppStateSchema]);
-
 const TelegramMiniAppBulkSourceImpactSchema = z.object({
   stablecoinId: z.string(),
   action: z.enum(["add", "remove"]),
   inheritedSourcesAfter: z.array(z.enum(["preset", "global"])),
 }).strict();
+
+export const TelegramMiniAppBulkApplyResultSchema = z.object({
+  adds: z.array(z.string()),
+  removes: z.array(z.string()),
+  unchanged: z.array(z.string()),
+  sourceImpact: z.array(TelegramMiniAppBulkSourceImpactSchema),
+}).strict();
+
+export const TelegramMiniAppSnapshotSchema = z
+  .object({
+    contractVersion: z.string(),
+    catalogVersion: z.string(),
+    serverNowSec: z.number().int().nonnegative(),
+    stateRevision: z.string(),
+    state: TelegramMiniAppMutableStateSchema,
+    undo: BulkWatchlistUndoSchema.optional(),
+    bulkResult: TelegramMiniAppBulkApplyResultSchema.optional(),
+  })
+  .strict();
+
+export const TelegramMiniAppResponseSchema = z.union([TelegramMiniAppSnapshotSchema, TelegramMiniAppStateSchema]);
 
 export const TelegramMiniAppBulkWatchlistResponseSchema = z.object({
   contractVersion: z.string(),
@@ -438,6 +479,100 @@ export const TelegramMiniAppBulkWatchlistResponseSchema = z.object({
   }).strict(),
 }).strict();
 
+const ContextProvenanceBase = {
+  source: z.string().min(1),
+  assessedAt: z.number().int().nonnegative(),
+  observedAt: z.number().int().nonnegative().nullable(),
+  generation: z.string().min(1).nullable(),
+  budgetSec: z.number().int().positive(),
+};
+
+export const TelegramMiniAppContextProvenanceSchema = z.discriminatedUnion("status", [
+  z.object({
+    status: z.literal("ok"),
+    ...ContextProvenanceBase,
+  }).strict(),
+  z.object({
+    status: z.literal("stale"),
+    ...ContextProvenanceBase,
+    reason: z.string().min(1),
+  }).strict(),
+  z.object({
+    status: z.literal("unavailable"),
+    ...ContextProvenanceBase,
+    reason: z.string().min(1),
+  }).strict(),
+]);
+
+export const TelegramMiniAppActiveDepegSchema = z.object({
+  stablecoinId: z.string().min(1),
+  direction: z.enum(["above", "below"]),
+  peakDeviationBps: z.number().finite(),
+  currentDeviationBps: z.number().finite().nullable(),
+  priceUsd: z.number().finite().positive().nullable(),
+  pegReference: z.number().finite().positive().nullable(),
+  startedAt: z.number().int().nonnegative(),
+  peerRelative: z.literal(true).optional(),
+  peerOpening: z.literal(true).optional(),
+  peakBasisUnavailable: z.literal(true).optional(),
+}).strict();
+
+const TelegramMiniAppCoinPriceSignalSchema = z.object({
+  provenance: TelegramMiniAppContextProvenanceSchema,
+  priceUsd: z.number().finite().positive().nullable(),
+}).strict();
+
+const TelegramMiniAppCoinDewsSignalSchema = z.object({
+  provenance: TelegramMiniAppContextProvenanceSchema,
+  band: z.enum(["CALM", "WATCH", "ALERT", "WARNING", "DANGER"]).nullable(),
+  score: z.number().finite().min(0).max(100).nullable(),
+}).strict();
+
+const TelegramMiniAppCoinSafetySignalSchema = z.object({
+  provenance: TelegramMiniAppContextProvenanceSchema,
+  ratingStatus: z.enum(["rated", "not-rated", "pipeline-gap"]).nullable(),
+  grade: z.string().min(1).nullable(),
+  score: z.number().finite().min(0).max(100).nullable(),
+  held: z.boolean(),
+  methodologyVersion: z.string().min(1).nullable(),
+  publicationId: z.string().min(1).nullable(),
+}).strict();
+
+export const TelegramMiniAppCoinSignalSchema = z.object({
+  price: TelegramMiniAppCoinPriceSignalSchema,
+  dews: TelegramMiniAppCoinDewsSignalSchema,
+  safety: TelegramMiniAppCoinSafetySignalSchema,
+}).strict();
+
+export const TelegramMiniAppPresetSummarySchema = z.object({
+  id: TelegramPresetIdSchema,
+  memberCount: z.number().int().nonnegative(),
+  topSymbols: z.array(z.string().min(1)).max(3),
+}).strict();
+
+export const TelegramMiniAppContextSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("coins"),
+    activeDepegs: z.object({
+      provenance: TelegramMiniAppContextProvenanceSchema,
+      events: z.array(TelegramMiniAppActiveDepegSchema),
+    }).strict(),
+    coinSignals: z.record(z.string(), TelegramMiniAppCoinSignalSchema),
+  }).strict(),
+  z.object({
+    kind: z.literal("presets"),
+    provenance: TelegramMiniAppContextProvenanceSchema,
+    presets: z.array(TelegramMiniAppPresetSummarySchema),
+  }).strict(),
+]);
+
+export const TelegramMiniAppContextResponseSchema = z.object({
+  contractVersion: z.string(),
+  catalogVersion: z.string(),
+  serverNowSec: z.number().int().nonnegative(),
+  context: TelegramMiniAppContextSchema,
+}).strict();
+
 export const TelegramMiniAppErrorResponseSchema = z
   .object({
     error: z.string(),
@@ -452,17 +587,31 @@ export type TelegramMiniAppMutableState = z.infer<typeof TelegramMiniAppMutableS
 export type TelegramMiniAppState = z.infer<typeof TelegramMiniAppStateSchema>;
 export type TelegramMiniAppSnapshot = z.infer<typeof TelegramMiniAppSnapshotSchema>;
 export type TelegramMiniAppResponse = z.infer<typeof TelegramMiniAppResponseSchema>;
+export type TelegramMiniAppDirectStateProof = z.infer<typeof TelegramMiniAppDirectStateProofSchema>;
+export type TelegramMiniAppBulkApplyResult = z.infer<typeof TelegramMiniAppBulkApplyResultSchema>;
 export type TelegramMiniAppBulkWatchlistResponse = z.infer<typeof TelegramMiniAppBulkWatchlistResponseSchema>;
+export type TelegramMiniAppContextProvenance = z.infer<typeof TelegramMiniAppContextProvenanceSchema>;
+export type TelegramMiniAppActiveDepeg = z.infer<typeof TelegramMiniAppActiveDepegSchema>;
+export type TelegramMiniAppCoinSignal = z.infer<typeof TelegramMiniAppCoinSignalSchema>;
+export type TelegramMiniAppPresetSummary = z.infer<typeof TelegramMiniAppPresetSummarySchema>;
+export type TelegramMiniAppContext = z.infer<typeof TelegramMiniAppContextSchema>;
+export type TelegramMiniAppCoinsContext = Extract<TelegramMiniAppContext, { kind: "coins" }>;
+export type TelegramMiniAppPresetsContext = Extract<TelegramMiniAppContext, { kind: "presets" }>;
+export type TelegramMiniAppContextResponse = z.infer<typeof TelegramMiniAppContextResponseSchema>;
 
 export function telegramMiniAppStateRevision(state: TelegramMiniAppMutableState): string {
   const serialized = JSON.stringify(state);
   return `state-v1-${serialized.length}-${fnv1a32Hex(serialized)}`;
 }
 
-export function createTelegramMiniAppSnapshot(state: TelegramMiniAppMutableState): TelegramMiniAppSnapshot {
+export function createTelegramMiniAppSnapshot(
+  state: TelegramMiniAppMutableState,
+  serverNowSec = Math.floor(Date.now() / 1000),
+): TelegramMiniAppSnapshot {
   return {
     contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
     catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
+    serverNowSec,
     stateRevision: telegramMiniAppStateRevision(state),
     state,
   };
