@@ -129,13 +129,19 @@
   "notices": [
     {
       "type": "info",
-      "title": "Not for South Korean residents",
-      "message": "KRWQ is KYC-gated to institutional counterparties (exchanges, market makers, OTC desks) and is not currently offered to South Korean residents pending domestic stablecoin legislation under the Korean National Assembly."
-    },
-    {
-      "type": "info",
-      "title": "No public audit yet",
-      "message": "Chainlink Proof of Reserve was integrated on June 16, 2026 and now provides automated on-chain reserve verification for KRWQ. No traditional CPA-style monthly attestation report has yet been named or published."
+      "title": "Institutional-only access and no CPA audit yet",
+      "message": "KRWQ is KYC-gated to institutional counterparties and unavailable to South Korean residents pending domestic legislation (drafted November 24, 2026, with rollout not expected before 2028). Chainlink Proof of Reserve launched June 16, 2026, with no CPA attestation published yet.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "KRWQ: official site",
+          "url": "https://krwq.cash/"
+        },
+        {
+          "label": "Chosun: Korea stablecoin law",
+          "url": "https://www.chosun.com/english/market-money-en/2026/11/25/4TS6HPNDVFDGNOY534MDYPSMIM"
+        }
+      ]
     }
   ],
   "launchDate": "2025-10-30",

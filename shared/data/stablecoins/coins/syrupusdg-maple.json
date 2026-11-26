@@ -169,7 +169,18 @@
     {
       "type": "warning",
       "title": "Credit losses and unbounded withdrawal queue",
-      "message": "syrupUSDG is a share of Maple's loan and strategy portfolio. Principal can decline through defaults or impairments, including while a withdrawal is pending. FIFO withdrawals depend on available liquidity and have no guaranteed maximum wait."
+      "message": "syrupUSDG represents a share of Maple's loan and strategy portfolio with no first-loss cover. Principal can decline through borrower defaults, including while a withdrawal is pending, and FIFO exits have no maximum wait time.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Maple: syrupUSDG terms",
+          "url": "https://docs.maple.finance/legal/syrupusdg-product-disclosures-and-disclaimers.md"
+        },
+        {
+          "label": "Maple: Q4 2026 update",
+          "url": "https://maple.finance/insights/q4-26-update-from-maple"
+        }
+      ]
     }
   ],
   "collateralQuality": "rwa",

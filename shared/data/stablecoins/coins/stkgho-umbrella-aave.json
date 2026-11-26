@@ -67,9 +67,18 @@
     },
     "params": {
       "redemptionLock": [
-        { "selector": "getCooldown()", "kind": "cooldown-seconds" },
-        { "selector": "getUnstakeWindow()", "kind": "unstake-window-seconds" },
-        { "selector": "paused()", "kind": "paused-bool" }
+        {
+          "selector": "getCooldown()",
+          "kind": "cooldown-seconds"
+        },
+        {
+          "selector": "getUnstakeWindow()",
+          "kind": "unstake-window-seconds"
+        },
+        {
+          "selector": "paused()",
+          "kind": "paused-bool"
+        }
       ],
       "slice": {
         "name": "GHO staked in Aave Umbrella safety module",
@@ -82,5 +91,23 @@
   },
   "windDownAnnouncedAt": "2026-06-16",
   "windDownSourceUrl": "https://governance.aave.com/t/arfc-umbrella-parameter-update-target-liquidity-and-emission-optimization/25154",
-  "launchDate": "2025-06-05"
+  "launchDate": "2025-06-05",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Umbrella staking sunset: zero yield, still slashable",
+      "message": "Aave AIP-507 (executed July 26, 2026) cut stkGHO rewards to zero and raised the GHO deficit offset to 3M GHO. Remaining stakers earn no yield, remain slashable above the offset, and face a 20-day cooldown plus two-day withdrawal window; Aave directs savers to sGHO.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Aave: Umbrella sunset ARFC",
+          "url": "https://governance.aave.com/t/arfc-umbrella-parameter-update-target-liquidity-and-emission-optimization/25154"
+        },
+        {
+          "label": "Kvorum: AIP-507 execution",
+          "url": "https://app.kvorum.watch/daos/aave/proposals/aave_governance_v3/507"
+        }
+      ]
+    }
+  ]
 }

@@ -67,18 +67,17 @@
   "notices": [
     {
       "type": "warning",
-      "title": "Issuer sunsetting sUSD: deposits closed, yield ended",
-      "message": "Solayer announced on 2026-07-22 that sUSD is being sunset: deposits closed 2026-08-01 and yield accrual ended 2026-09-30.",
+      "title": "Solayer sunsetting sUSD: deposits closed",
+      "message": "Solayer announced on July 22, 2026 that sUSD is being sunset: deposits closed August 1 and yield accrual ended September 30. Self-serve withdrawals close on December 31, 2026, after which remaining holders must rely on manual processing.",
       "kind": "paused",
-      "asOf": "2026-10-30"
-    },
-    {
-      "type": "warning",
-      "title": "Self-serve sUSD withdrawal ends December 31, 2026",
-      "message": "Solayer's sunset schedule ends self-serve sUSD withdrawal on 2026-12-31; after that date, withdrawals move to manual processing.",
-      "kind": "deadline",
       "deadline": "2026-12-31",
-      "asOf": "2026-10-30"
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Solayer: sunset schedule",
+          "url": "https://x.com/solayer_labs/status/2080010441087222114"
+        }
+      ]
     }
   ],
   "launchDate": "2024-10-28"

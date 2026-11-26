@@ -105,7 +105,14 @@
     {
       "type": "info",
       "title": "Unsecured debt and restricted redemption",
-      "message": "STBT holders have an unsecured claim against Prometheus, not ownership of Treasury or fund assets. Transfers require allowlisting. April 2026 operational redemption terms do not remove the January 2025 legal loss deductions or account restrictions. BNB Chain and Arbitrum links on the issuer site refer to separate non-rebasing wrapped tokens, excluded from native STBT supply."
+      "message": "STBT represents an unsecured claim on issuer Matrixdock restricted to qualified institutional investors, with primary T+0 (up to $1M) or T+2 redemption under April 28, 2026 terms.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Matrixdock: STBT overview",
+          "url": "https://www.matrixdock.com/stbt"
+        }
+      ]
     }
   ]
 }

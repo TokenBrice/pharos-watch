@@ -230,8 +230,35 @@ describe("calendar-only catalog dates", () => {
     });
   });
 
-  it.each([{ kind: "deadline" }, { kind: "paused", deadline: "2026-11-26" }])("couples a notice deadline date to kind deadline (%o)", (extra) => {
-    expect(StablecoinMetaSourceAssetSchema.safeParse(makeCoin({ notices: [{ type: "warning", title: "T", message: "M", ...extra }] })).success).toBe(false);
+  const source = { label: "Issuer notice", url: "https://example.com/notice" };
+  const date = "2026-11-26";
+  it.each<[Record<string, unknown>, string | null]>([
+    [{ kind: "deadline" }, "deadline"], [{ deadline: date }, "deadline"], [{ kind: "history", deadline: date }, "deadline"],
+    [{ kind: "paused", deadline: date }, null], [{ kind: "deadline", deadline: date, chains: ["noble", "abstract"] }, null],
+    [{ type: "danger", chains: ["noble"] }, "chains"], [{ kind: "paused", chains: ["noble"] }, "chains"], [{ kind: "depeg", chains: ["noble"] }, "chains"],
+    [{ chains: ["constructor"] }, "chains.0"], [{ chains: ["noble", "noble"] }, "chains"], [{ chains: [] }, "chains"],
+    [{ sources: [source] }, null], [{ sources: [{ ...source, label: " " }] }, "sources.0.label"], [{ sources: [] }, "sources"],
+  ])("validates notice deadline, chain scope and sources (%o)", (extra, path) => {
+    const result = StablecoinMetaSourceAssetSchema.safeParse(makeCoin({ notices: [{ type: "warning", title: "T", message: "M", ...extra }] }));
+    const issues = result.success ? [] : result.error.issues.map((e) => e.path.join("."));
+    expect(issues).toEqual(path === null ? [] : expect.arrayContaining([`notices.0.${path}`]));
+  });
+
+  const notice = { type: "warning", title: "T", message: "M", asOf: date, sources: [source] };
+  const deployments = { contracts: [{ chain: "ethereum", address: "0x1", decimals: 6 }], tradedContracts: [{ chain: "base", address: "0x2", decimals: 6 }] };
+  const legacy = [{ type: "info", title: "T", message: "https://x.test" }, { type: "info", title: "T", message: "M", chains: ["noble"] }];
+  it.each<[Record<string, unknown>, Record<string, unknown>[], string[]]>([
+    [{}, [notice, { ...notice, title: "U", chains: ["base"] }, { ...notice, title: "H", kind: "history", chains: ["ethereum", "base"] }], []],
+    [{}, [{ ...notice, asOf: undefined, sources: undefined, message: "See http://x.test" }], ["notices.0.asOf", "notices.0.sources", "notices.0.message"]],
+    [{}, [notice, notice], ["notices.1.title"]],
+    [{}, [{ ...notice, chains: ["ethereum", "base"] }], ["notices.0.chains"]],
+    [{}, [{ ...notice, chains: ["noble"] }], ["notices.0.chains.0"]],
+    [{ status: "frozen" }, legacy, []],
+    [{ status: "active" }, legacy, ["notices.0.asOf", "notices.0.sources", "notices.0.message", "notices.1.asOf", "notices.1.sources", "notices.1.title", "notices.1.chains.0"]],
+  ])("enforces active notice curation (%o)", (overrides, notices, expected) => {
+    const result = StablecoinMetaAssetSchema.safeParse(makeCoin({ ...deployments, ...overrides, notices }));
+    const issues = result.success ? [] : result.error.issues.map((e) => e.path.join(".")).filter((path) => path.startsWith("notices"));
+    expect(issues).toEqual(expected);
   });
 
   it.each(["2024", "2024-02", "2024-Q1", "2024-H1", "2024-02-29"])("keeps fuzzy launch-date precision %s", (date) => {

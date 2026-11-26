@@ -41,10 +41,15 @@
   "notices": [
     {
       "type": "warning",
-      "title": "Sustained soft depeg",
-      "message": "NXUSD has shown a sustained soft-depeg pattern, with extended periods between $0.95 and $1.01 on CoinGecko/DefiLlama feeds. Treat collateral classification as advisory rather than live redemption assurance.",
-      "kind": "depeg",
-      "asOf": "2026-05-13"
+      "title": "Inactive protocol surface and near-zero liquidity",
+      "message": "Nereus Finance's website now markets Polygon perpetuals with no NXUSD documentation or active redemption interface, though no formal sunset has been announced. Secondary trading is nearly illiquid with a history of off-peg prints, and legacy collateral data is unverified.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Nereus Finance: website",
+          "url": "https://nereus.finance/"
+        }
+      ]
     }
   ],
   "liveReservesConfig": {

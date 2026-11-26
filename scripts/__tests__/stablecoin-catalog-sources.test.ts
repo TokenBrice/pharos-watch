@@ -469,7 +469,7 @@ describe("real stablecoin catalog composed records", () => {
       expect.objectContaining({ coinId: coin.variantOf, depType: "wrapper", pct: 100 }),
     ]);
     expect(coin.custodyProfile?.segregation).toBe("unknown");
-    expect(coin.notices?.map((notice) => notice.type)).toEqual(["warning"]);
+    expect(coin.notices?.map((notice) => notice.type)).toEqual(["info"]);
     expect(domainFields(coin, "risk-review")).toEqual(["blacklistabilityReview", "oracleRisk"]);
   });
 

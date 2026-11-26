@@ -82,8 +82,15 @@
   "notices": [
     {
       "type": "info",
-      "title": "Redemption and reserve coverage",
-      "message": "Live reserves compare the local M vault with minted USD+; they do not establish upstream financial assurance, complete bridge liabilities or executable redemption. No modeled direct issuer redemption backstop is established. Holder yield is distributed in additional tokens and has no reviewed live APY reader."
+      "title": "Local vault coverage and unmodeled direct exit",
+      "message": "Live reserves compare the local M vault against minted USD+, without independently verifying upstream assurance or executable direct issuer redemption. Yield distributes in additional tokens without a live APY feed.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Streamflow: USD+ overview",
+          "url": "https://usd-plus.com/learn-more"
+        }
+      ]
     }
   ],
   "liveReservesConfig": {

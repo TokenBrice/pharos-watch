@@ -53,9 +53,27 @@
   "notices": [
     {
       "type": "warning",
-      "title": "No contract exit at full utilization; first loss on a book that cannot liquidate",
-      "message": "Holders can withdraw only USDS that SKY-backed Lockstake borrowers have not drawn. The module has been fully lent since about November 10, 2026, so contract withdrawals are effectively zero and the stUSDS Rate sits at its 50% maximum. Exit depends on about $3M of DEX liquidity, where stUSDS traded roughly 10% below its redemption value on November 24. Holders also absorb that book's losses first, and its liquidation auctions have been switched off since stUSDS launched: on November 24, $30.5M (19%) of the debt sat below the protocol's own safety price. The collateral is SKY, Sky's own governance token, and the largest borrower carries 47% of the debt.",
-      "asOf": "2026-11-25"
+      "title": "Full utilization blocks contract exit",
+      "message": "Contract withdrawals have been virtually blocked since November 10, 2026 near 100% Lockstake utilization, leaving holders reliant on thin DEX liquidity at steep discounts. stUSDS absorbs first losses while liquidations stay disabled, and Sky opened a November 25 governance vote for a $25M USDS transfer to restore liquidity.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Rune Christensen: debt note",
+          "url": "https://x.com/RuneKek/status/2124860307998732354"
+        },
+        {
+          "label": "Sky Forum: OTC proposal",
+          "url": "https://forum.skyeco.com/t/proposal-to-resolve-the-stusds-liquidity-crisis-immediately-40-50m-atomic-otc-debt-for-sky/28473"
+        },
+        {
+          "label": "Cointelegraph: $25M vote",
+          "url": "https://cointelegraph.com/news/sky-emergency-vote-25m-transfer-stusds-liquidity-stress"
+        },
+        {
+          "label": "Sky: stUSDS docs",
+          "url": "https://developers.skyeco.com/protocol/tokens/stusds/"
+        }
+      ]
     }
   ],
   "liveReservesConfig": {

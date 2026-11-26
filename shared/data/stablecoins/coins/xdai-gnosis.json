@@ -90,8 +90,15 @@
   "notices": [
     {
       "type": "info",
-      "title": "Native gas-token supply",
-      "message": "xDAI is native to Gnosis Chain; the configured WXDAI deployment is a same-chain wrapped representation used for bridge-route identity, not canonical native supply."
+      "title": "Native gas-token supply on Gnosis Chain",
+      "message": "xDAI is the native gas currency of Gnosis Chain; the listed WXDAI contract is a same-chain wrapped representation used for token routing, not canonical native supply.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Gnosis: xDAI documentation",
+          "url": "https://docs.gnosischain.com/about/tokens/xdai"
+        }
+      ]
     }
   ],
   "liveReservesConfig": {

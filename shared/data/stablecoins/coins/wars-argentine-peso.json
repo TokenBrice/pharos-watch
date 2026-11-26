@@ -169,7 +169,12 @@
           "risk": "high",
           "assetClass": "bank-deposit",
           "issuerOrObligor": "Undisclosed Argentine financial institutions",
-          "riskFactors": ["counterparty", "liquidity", "custody", "concentration"],
+          "riskFactors": [
+            "counterparty",
+            "liquidity",
+            "custody",
+            "concentration"
+          ],
           "liquidityHorizon": "unknown"
         }
       ],
@@ -182,8 +187,19 @@
   "notices": [
     {
       "type": "info",
-      "title": "Account-based conversion is distinct from a token redemption right",
-      "message": "Ripio advertises conversion of wARS to pesos through its platform. The linked token whitepaper grants holders no direct redemption right. Argentina off-ramp documentation requires approved KYC, accepted terms and a validated payout account; fiat withdrawal is asynchronous, and a completed crypto sale may still have a failed fiat payout. Public documentation does not establish a maximum time to final ARS receipt or funded capacity at the scored notional."
+      "title": "Account conversion differs from direct redemption",
+      "message": "Ripio's ARS conversion path operates through verified Ripio exchange accounts and local rails, not an unconditional bearer token redemption right for all on-chain holders.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Ripio: wARS overview",
+          "url": "https://www.ripio.com/es/criptomonedas/wars"
+        },
+        {
+          "label": "Ripio: Argentina ramps docs",
+          "url": "https://docs.ripio.com/ramps-api/overview/countries/argentina.md"
+        }
+      ]
     }
   ],
   "launchDate": "2025-11-01"

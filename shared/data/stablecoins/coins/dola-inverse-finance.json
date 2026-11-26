@@ -8,8 +8,8 @@
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-"collateral": "Overcollateralized FiRM loans, predominantly secured by DOLA-paired stablecoin LP tokens; Inverse's LP-positions API publishes each market's estimated underlying split. These debt claims are not wholly external stablecoin reserves. Permissioned operator minting is not collateral-gated. The canonical USDS PSM held 200,000 DOLA of inventory and zero USDS or sUSDS reserves at Pharos's Ethereum block 26296822 read (2026-10-29T07:12:23Z); reserve accumulation is demand-driven, with no committed target.",
-"pegMechanism": "FiRM Fed issuance supports fixed-rate collateralized borrowing, while the canonical PSM provides a USDS swap rail. Frontier is deprecated, with no new borrowing; its Fed shrinks as legacy bad debt is repaid but remains an authorized minter. A flash minter can draw up to 5 million DOLA per transaction and burns the principal before the transaction ends; the PSM Fed is capped at 10 million DOLA. The 48-hour Timelock operator can also mint without a collateral check or numeric token cap.",
+  "collateral": "Overcollateralized FiRM loans, predominantly secured by DOLA-paired stablecoin LP tokens; Inverse's LP-positions API publishes each market's estimated underlying split. These debt claims are not wholly external stablecoin reserves. Permissioned operator minting is not collateral-gated. The canonical USDS PSM held 200,000 DOLA of inventory and zero USDS or sUSDS reserves at Pharos's Ethereum block 26296822 read (2026-10-29T07:12:23Z); reserve accumulation is demand-driven, with no committed target.",
+  "pegMechanism": "FiRM Fed issuance supports fixed-rate collateralized borrowing, while the canonical PSM provides a USDS swap rail. Frontier is deprecated, with no new borrowing; its Fed shrinks as legacy bad debt is repaid but remains an authorized minter. A flash minter can draw up to 5 million DOLA per transaction and burns the principal before the transaction ends; the PSM Fed is capped at 10 million DOLA. The 48-hour Timelock operator can also mint without a collateral check or numeric token cap.",
   "mechanismArchetype": "cdp",
   "llamaId": "15",
   "detailProvider": "defillama",
@@ -78,19 +78,44 @@
   "notices": [
     {
       "type": "warning",
-      "title": "Historical oracle-manipulation incident",
-      "message": "Inverse Finance suffered an April 2022 oracle-manipulation exploit that let an attacker borrow and withdraw DOLA against manipulated collateral, leaving bad debt through the stablecoin issuance route.",
-      "kind": "history"
+      "title": "Unsupported legacy Multichain bridge tokens",
+      "message": "The BSC, Fantom, and Avalanche DOLA contracts are unsupported legacy bridge tokens stranded since Multichain's July 2023 collapse, and Fantom Opera shut down on June 30, 2026. Inverse Finance recognizes only canonical Ethereum DOLA and native L2 bridges, with no compensation approved for legacy IOUs.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Inverse: DOLA bridges",
+          "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/dola-cross-chain-guide"
+        }
+      ]
     },
     {
       "type": "info",
       "title": "Polygon fxDOLA representation",
-      "message": "The listed Polygon contract is fxDOLA, the FxPortal representation of Ethereum DOLA, not native Polygon issuance. Its symbol and 18 decimals were confirmed at Polygon block 95710090 (2026-10-17T20:54:42Z)."
+      "message": "The listed Polygon contract is fxDOLA, the FxPortal bridged representation of Ethereum DOLA, not native Polygon issuance.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Inverse: DOLA bridges",
+          "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/dola-cross-chain-guide"
+        }
+      ]
     },
     {
-      "type": "warning",
-      "title": "Legacy third-party bridge representations",
-      "message": "The BSC and Fantom contracts are legacy Multichain/Anyswap representations; Avalanche is also retained as a legacy third-party bridge representation. All three had outstanding supply in the October 17, 2026 review. Inverse confirmed on October 28, 2026 that only canonical Ethereum DOLA is recognized as issuer supply and that these three representations are unsupported; its July 2023 Multichain-DOLA FAQ describes them as bridge IOUs with blocked exits, advises holders to avoid Multichain-bridged DOLA, and records no approved compensation. Their token balances do not establish a live bridge, solvent backing, or redemption at par."
+      "type": "info",
+      "title": "April 2022 Frontier oracle exploit",
+      "message": "On April 2, 2022, an oracle-manipulation exploit on Inverse Finance's Frontier market drained roughly $15.6M and created legacy DOLA bad debt that Inverse continues repaying from protocol revenue.",
+      "kind": "history",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Inverse: Frontier legacy",
+          "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/legacy-products/frontier-anchor"
+        },
+        {
+          "label": "Inverse: DOLA transparency",
+          "url": "https://www.inverse.finance/transparency/dola"
+        }
+      ]
     }
   ],
   "liveReservesConfig": {

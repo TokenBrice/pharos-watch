@@ -55,9 +55,16 @@
   "notices": [
     {
       "type": "info",
-      "title": "Historical EEA trading restriction",
-      "message": "Binance announced that XUSD trading pairs would be delisted for EEA users on 2025-03-31. This venue restriction is retained separately from legal status. The 2026-10-01 review withdrew Pharos's categorical MiCA non-compliant label because the cited venue notice and register absence do not meet the token-specific regulator or competent legal determination threshold; MiCA is now not assessed.",
-      "kind": "history"
+      "title": "Binance EEA delisting under MiCA",
+      "message": "Binance delisted XUSD trading pairs for EEA users on March 31, 2025 under MiCA venue rules. Because this reflects an exchange restriction and not an EU regulator ruling, Pharos leaves XUSD's MiCA status unassessed.",
+      "kind": "history",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Binance: EEA delistings",
+          "url": "https://www.binance.com/en/support/announcement/detail/bcaa1f68d6a6450099056ff694ad6c46"
+        }
+      ]
     }
   ],
   "jurisdiction": {

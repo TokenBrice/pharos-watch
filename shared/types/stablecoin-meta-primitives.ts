@@ -465,15 +465,45 @@ export const CoinNoticeSchema = /* @__PURE__ */ (() => z
     message: z.string(),
     /** What the notice means for holders; absent = a standing caveat. */
     kind: z.enum(COIN_NOTICE_KIND_VALUES).optional(),
-    /** The date holders must act by; required with, and only with, `kind: "deadline"`. */
+    /**
+     * The date holders must act by: required with `kind: "deadline"`, and
+     * allowed on `kind: "paused"` so one notice can name a stopped operation
+     * and its closing date.
+     */
     deadline: StrictIsoDateSchema.optional(),
     /** The date the notice text was last written or confirmed, shown so readers can judge staleness. */
     asOf: StrictIsoDateSchema.optional(),
+    /** Labeled primary sources rendered in the notice footer. */
+    sources: z
+      .array(StablecoinLinkSchema.refine((link) => link.label.trim().length > 0, { path: ["label"], message: "Notice source label must be non-empty" }))
+      .min(1)
+      .optional(),
+    /**
+     * Chain IDs the notice is scoped to; absent = asset-wide. A chain-scoped
+     * notice shows on the dossier and its chains' pages, never as an
+     * asset-wide state, so it can be neither danger nor paused/depeg.
+     */
+    chains: z
+      .array(z.string().refine((chain) => Object.prototype.hasOwnProperty.call(CHAIN_META, chain), "Unknown chain ID"))
+      .min(1)
+      .refine((chains) => new Set(chains).size === chains.length, "Duplicate chain ID")
+      .optional(),
   })
   .strict()
   .superRefine((notice, ctx) => {
-    if ((notice.kind === "deadline") !== (notice.deadline !== undefined)) {
-      issue(ctx, ["deadline"], "a notice carries a deadline date exactly when its kind is \"deadline\"");
+    if (notice.kind === "deadline" && notice.deadline === undefined) {
+      issue(ctx, ["deadline"], "a notice of kind \"deadline\" carries a deadline date");
+    }
+    if (notice.deadline !== undefined && notice.kind !== "deadline" && notice.kind !== "paused") {
+      issue(ctx, ["deadline"], "only a notice of kind \"deadline\" or \"paused\" carries a deadline date");
+    }
+    if (notice.chains !== undefined) {
+      if (notice.type === "danger") {
+        issue(ctx, ["chains"], "a chain-scoped notice cannot be danger: danger notices are asset-wide states");
+      }
+      if (notice.kind === "paused" || notice.kind === "depeg") {
+        issue(ctx, ["chains"], `a chain-scoped notice cannot be of kind "${notice.kind}": that kind is an asset-wide state`);
+      }
     }
   }))();
 

@@ -9,9 +9,10 @@ import { makeChain, makeCoin } from "@/hooks/__tests__/chain-profile-fixtures";
 
 const push = vi.fn();
 const refetchAll = vi.fn();
-const { useChainProfileDataMock, useCoinStatesMock } = vi.hoisted(() => ({
+const { useChainProfileDataMock, useCoinStatesMock, clock } = vi.hoisted(() => ({
   useChainProfileDataMock: vi.fn(),
   useCoinStatesMock: vi.fn(),
+  clock: { nowMs: null as number | null },
 }));
 
 vi.mock("next/navigation", () => ({
@@ -38,6 +39,26 @@ vi.mock("@/hooks/use-chain-profile-data", () => ({
 }));
 
 vi.mock("@/hooks/use-coin-states", () => ({ useCoinStates: useCoinStatesMock }));
+vi.mock("@/hooks/use-utc-day-clock", () => ({ useUtcDayNowMs: () => clock.nowMs }));
+
+// Two fixture coins carrying Noble-scoped alerts (one event shared) beside the real active registry,
+// whose live alerts are stripped so catalog notices cannot perturb the fixture.
+vi.mock("@shared/lib/stablecoins/client-registry", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@shared/lib/stablecoins/client-registry")>();
+  const closes = { type: "warning", title: "Noble route closes", kind: "deadline", deadline: "2027-01-12", chains: ["noble"] };
+  const scoped = {
+    ...actual.CLIENT_ACTIVE_STABLECOINS[0]!, id: "scoped-usd", symbol: "SUSD", name: "Scoped USD", chainIds: ["noble"],
+    alerts: [
+      { type: "warning", title: "Noble bridge caveat", chains: ["noble"] },
+      closes,
+      { type: "info", title: "Old Noble migration", kind: "deadline", deadline: "2026-09-01", chains: ["noble"] },
+      { type: "warning", title: "Asset-wide cutoff", kind: "deadline", deadline: "2026-12-01" },
+    ],
+  };
+  const second = { ...scoped, id: "scoped-two", symbol: "XUSD", name: "Second Scoped USD", alerts: [{ ...closes }] };
+  const real = actual.CLIENT_ACTIVE_STABLECOINS.map(({ alerts: _alerts, ...coin }) => coin);
+  return { ...actual, CLIENT_ACTIVE_STABLECOINS: [...real, scoped, second] };
+});
 
 function makeHookState(overrides: Record<string, unknown> = {}) {
   return {
@@ -66,6 +87,7 @@ describe("ChainProfileClient", () => {
     useChainProfileDataMock.mockReset();
     useChainProfileDataMock.mockReturnValue(makeHookState());
     useCoinStatesMock.mockReturnValue({ byId: new Map(), liveReady: true });
+    clock.nowMs = null;
   });
 
   it("shows an unavailable share and suppresses composition without an admitted detail total", () => {
@@ -100,10 +122,57 @@ describe("ChainProfileClient", () => {
     });
     const { container } = render(<ChainProfileClient chainId="initia" />);
     expect(screen.getByRole("status").textContent)
-      .toContain("1 tracked coin reports a critical or paused state: iUSD — Initia L1 halted (updated 2026-10-30).");
+      .toContain("1 tracked coin reports a critical, paused or deadline state: iUSD: Initia L1 halted (updated 2026-10-30).");
     expect(container.querySelector("[data-coin-state=critical]")?.textContent).toContain("Critical notice · Initia L1 halted");
     expect(container.querySelector("[data-slot=skeleton]")).toBeNull();
     expect(screen.queryByText(/may have been removed/)).toBeNull();
+  });
+
+  // Chain-scoped alerts show under the hero whatever the chain read says, outside the 30-day chip horizon:
+  // one row per shared event, earliest date first and dateless last, each coin its own link.
+  const clocked = Date.parse("2026-11-26T12:00:00Z");
+  const both = ["scoped-usd", "scoped-two"];
+  it.each([
+    ["a live Noble read, clock known", "noble", {}, clocked, "Holder notices for Noble", [
+      ["SUSD, XUSD: Noble route closes Jan 12, 2027 · in 47 days", both],
+      ["SUSD: Noble bridge caveat", ["scoped-usd"]],
+    ]],
+    ["no Noble read, before hydration", "noble", { ...absent, coins: [], totalUsd: null }, null, "Holder notices for Noble", [
+      ["SUSD: Old Noble migration Sep 1, 2026", ["scoped-usd"]],
+      ["SUSD, XUSD: Noble route closes Jan 12, 2027", both],
+      ["SUSD: Noble bridge caveat", ["scoped-usd"]],
+    ]],
+    ["another chain", "ethereum", {}, clocked, null, []],
+  ] as const)("lists chain-scoped holder notices on %s", (_label, chainId, hookState, nowMs, heading, items) => {
+    useChainProfileDataMock.mockReturnValue(makeHookState(hookState));
+    clock.nowMs = nowMs;
+    render(<ChainProfileClient chainId={chainId} />);
+    expect(useCoinStatesMock).toHaveBeenCalledWith({ chainId });
+    const banner = screen.queryByRole("region", { name: /Holder notices? for/ });
+    expect(banner ? within(banner).getByRole("heading").textContent : null).toBe(heading);
+    const rows = banner ? within(banner).getAllByRole("listitem") : [];
+    expect(rows.map((row) => [
+      row.textContent?.replace(/\s+/g, " ").trim(),
+      within(row).getAllByRole("link").map((link) => link.getAttribute("href")?.match(/^\/stablecoin\/([^/]+)\/?$/)?.[1]),
+    ])).toEqual(items);
+  });
+
+  it("leaves a chain-scoped deadline to the holder notices and names an asset-wide one on a chain with no read", () => {
+    useChainProfileDataMock.mockReturnValue(makeHookState({ ...absent, coins: [], totalUsd: null }));
+    const deadline = (title: string, date: string, daysToDeadline: number, chains?: string[]) =>
+      ({ kind: "deadline", notice: { type: "warning", title, kind: "deadline", deadline: date, ...(chains ? { chains } : {}) }, daysToDeadline });
+    useCoinStatesMock.mockReturnValue({
+      byId: new Map([
+        ["scoped-usd", [deadline("Noble route closes", "2026-12-15", 19, ["noble"])]],
+        ["scoped-two", [deadline("Asset-wide cutoff", "2026-12-01", 5)]],
+      ]),
+      liveReady: true,
+    });
+    const { container } = render(<ChainProfileClient chainId="noble" />);
+    expect(screen.getByText(/tracked coins? reports?/).textContent)
+      .toBe("1 tracked coin reports a critical, paused or deadline state: XUSD: Asset-wide cutoff (Dec 1, 2026 · in 5 days).");
+    // Both coins keep their state chips in the tracked list.
+    expect(container.querySelectorAll("[data-coin-state=deadline]")).toHaveLength(2);
   });
 
   it("shows unavailable supply rather than untracked copy for a coverage-listed chain", () => {

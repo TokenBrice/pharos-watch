@@ -4,8 +4,17 @@
     "version": 2,
     "semantics": "collateral-mix",
     "breakerScope": "usdfc-secured-finance",
-    "display": { "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts.md", "label": "USDFC active FIL collateral" },
-    "inputs": { "primary": { "kind": "onchain-evm", "chain": "filecoin", "rpcMode": "public-rpc" } },
+    "display": {
+      "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts.md",
+      "label": "USDFC active FIL collateral"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "filecoin",
+        "rpcMode": "public-rpc"
+      }
+    },
     "params": {
       "activePoolAddress": "0x8637ac7fdbb4c763b72e26504afb659df71c7803",
       "collateralLabel": "Native FIL",
@@ -23,7 +32,10 @@
       "borrowerOperationsAddress": "0x5ab87c2398454125dd424425e39c8909bbe16022",
       "redemptionRateSelector": "0xc52861f2",
       "redemptionRateDecimals": 18,
-      "sourceUrls": ["https://docs.secured.finance/usdfc-stablecoin/deployed-contracts.md", "https://docs.secured.finance/usdfc-stablecoin/core-mechanics/redemption.md"],
+      "sourceUrls": [
+        "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts.md",
+        "https://docs.secured.finance/usdfc-stablecoin/core-mechanics/redemption.md"
+      ],
       "rpcUrl": "https://api.node.glif.io/rpc/v1"
     }
   },
@@ -130,5 +142,20 @@
   "governanceQuality": "multisig",
   "infrastructures": [
     "liquity-v1"
+  ],
+  "notices": [
+    {
+      "type": "info",
+      "title": "September 2026 lending exploit resolved",
+      "message": "An order-book defect in Secured Finance's fixed-rate lending markets led to a $180,856 exploit on September 5 to 7, 2026, pausing lending markets and TokenVault until October 16. The Foundation absorbed the loss with no user losses reported, and core Troves were unaffected.",
+      "kind": "history",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Secured Finance: post-mortem",
+          "url": "https://medium.com/secured-finance/28bd48e68f22"
+        }
+      ]
+    }
   ]
 }

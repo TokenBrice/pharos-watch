@@ -138,5 +138,28 @@
       }
     }
   },
-  "launchDate": "2025-01-27"
+  "launchDate": "2025-01-27",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Sophon mainnet shuts down",
+      "message": "Sophon mainnet shuts down on November 30, 2026 after a November 25 recommended withdrawal cutoff, with stuck bridge exits already logged on Noon's recovery forum. Holders of sUSN on Sophon should withdraw or follow Noon's reconciliation log; deployments on other networks are unaffected.",
+      "kind": "deadline",
+      "deadline": "2026-11-30",
+      "chains": [
+        "sophon"
+      ],
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Sophon: shutdown notice",
+          "url": "https://x.com/Sophon/status/2112253258030882831"
+        },
+        {
+          "label": "Noon: bridge recovery log",
+          "url": "https://forum.noon.capital/t/bridge-reconciliation-mechanism-process-overview-and-recovery-log/107"
+        }
+      ]
+    }
+  ]
 }

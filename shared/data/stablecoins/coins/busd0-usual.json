@@ -88,5 +88,23 @@
     "yieldType": "fee-sharing"
   },
   "launchDate": "2024-07-26",
-  "status": "active"
+  "status": "active",
+  "notices": [
+    {
+      "type": "info",
+      "title": "Fixed-maturity bond maturing June 11, 2028",
+      "message": "bUSD0 is a fixed-maturity USD0 bond (replacing USD0++ under UIP-12) that redeems 1:1 for USD0 at maturity on June 11, 2028 and trades at a discount beforehand. Early par exit requires pairing equal rt-bUSD0 tokens.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Usual: bUSD0 fact sheet",
+          "url": "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/busd0"
+        },
+        {
+          "label": "Usual: bUSD0 contracts",
+          "url": "https://tech.usual.money/smart-contracts/token-contracts/usd0++"
+        }
+      ]
+    }
+  ]
 }

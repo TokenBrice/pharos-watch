@@ -83,8 +83,23 @@
   "notices": [
     {
       "type": "warning",
-      "title": "Historical reserve-governance and depeg risk",
-      "message": "USDD has a history of peg stress, including a March 2023 depeg around $0.93. In August 2024, Tron DAO Reserve removed roughly 12,000 BTC from USDD collateral without prior DAO approval, leaving reserve governance dependent on Tron DAO Reserve decisions."
+      "title": "Legacy reserve governance and USDD 2.0 split",
+      "message": "Legacy USDD (USDDOLD) depegged near $0.93 in March 2023 and saw roughly 12,000 BTC removed from Tron DAO Reserve collateral in August 2024 without prior DAO vote. USDD 2.0 launched in January 2025 with user vaults and a PSM, while USDDOLD stays circulating with an open migration path.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "USDD: 2.0 migration guide",
+          "url": "https://docs.usdd.io/user-guide/migrate"
+        },
+        {
+          "label": "USDD: USDDOLD overview",
+          "url": "https://docs.usdd.io/introduction/what-is-usddold"
+        },
+        {
+          "label": "Protos: BTC reserve removal",
+          "url": "https://protos.com/justin-suns-usdd-removes-12000-btc-without-dao-approval"
+        }
+      ]
     }
   ]
 }

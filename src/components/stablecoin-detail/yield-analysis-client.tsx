@@ -11,7 +11,7 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DataHealthBanner } from "@/components/data-health-banner";
 import { NoticeStack, placeCoinNotices } from "@/components/coin-notice";
 import { useUtcDayNowMs } from "@/hooks/use-utc-day-clock";
-import { isSpentDeadline } from "@shared/lib/coin-state";
+import { isSpentDeadline, noticeAppliesToScope } from "@shared/lib/coin-state";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { SafetyGradeBadge } from "@/components/safety-scores/safety-grade-badge";
@@ -343,7 +343,7 @@ function YieldAnalysisFrame({
   const dayNowMs = useUtcDayNowMs();
   const nowSec = dayNowMs === null ? null : Math.floor(dayNowMs / 1000);
   const placed = placeCoinNotices(notices, { nowSec });
-  const alerts = [...placed.critical, ...placed.paused, ...placed.rest.filter((notice) => notice.kind === "deadline" && (nowSec === null || !isSpentDeadline(notice, nowSec)))];
+  const alerts = [...placed.critical, ...placed.paused, ...placed.rest.filter((notice) => notice.kind === "deadline" && noticeAppliesToScope(notice, null) && (nowSec === null || !isSpentDeadline(notice, nowSec)))];
   return (
     <div className="space-y-6">
       <nav aria-label={`${staticCoin.symbol} workspace navigation`} className="pharos-segmented w-fit">

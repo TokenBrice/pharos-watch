@@ -41,8 +41,15 @@
   "notices": [
     {
       "type": "info",
-      "title": "XPR Network contract gap",
-      "message": "CoinGecko resolves XMD on XPR Network, which is not currently a Pharos-supported chain. Runtime coverage uses CoinGecko price and market cap, while contract-level coverage is intentionally skipped."
+      "title": "Native XPR asset expanded to Ethereum",
+      "message": "XMD circulates natively on XPR Network (a chain Pharos does not index at the contract level) and expanded to Ethereum in September 2026; supply currently relies on market feeds.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Metal Dollar: reserves",
+          "url": "https://metaldollar.com/reserves"
+        }
+      ]
     }
   ],
   "mechanismArchetype": "fiat-cash",

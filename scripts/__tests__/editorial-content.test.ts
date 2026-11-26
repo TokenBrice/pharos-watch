@@ -69,9 +69,14 @@ describe("authored editorial JSON", () => {
     expect(WeeklyContentSchema.safeParse({ ...weekly, summary: [{ ...weekly.summary[0], href: "//example.com" }] }).success).toBe(false);
   });
 
-  it("discovers nested authored JSON and TypeScript with the existing editorial exclusions", () => {
+  it("discovers nested authored JSON and TypeScript with the existing editorial exclusions and gates active notice prose", () => {
+    const notices = (title: string, message: string, status?: string) => JSON.stringify({ status, notices: [{ title, message }] });
     withTempRepo("pharos-editorial-content", {
       "shared/data/stablecoins/coins/demo.json": "{}",
+      "shared/data/stablecoins/coins/hard.json": notices("Paused — act now", "Redeem — soon."),
+      "shared/data/stablecoins/coins/advisory.json": notices("T", "Delve into the landscape.", "active"),
+      "shared/data/stablecoins/coins/frozen.json": notices("Paused — act now", "Redeem — soon.", "frozen"),
+      "shared/data/stablecoins/coins/bad.json": "{",
       "public/datasets/stablecoin-cemetery.json": "{\"rows\":[]}",
       "shared/lib/methodology-versions/registry.ts": "export {};",
       "shared/lib/methodology-versions/depeg-resolver.ts": "export {};",
@@ -96,6 +101,9 @@ describe("authored editorial JSON", () => {
       }
       expect(issues).toContain("src/lib/case-studies/nested/unregistered.json: Content source is not registered");
       expect(issues.some((issue) => issue.includes("ignored"))).toBe(false);
+      const coinIssues = issues.filter((issue) => issue.startsWith("shared/data/stablecoins/"));
+      expect(coinIssues.filter((issue) => issue.startsWith("shared/data/stablecoins/coins/bad.json: SyntaxError"))).toHaveLength(1);
+      expect(coinIssues.filter((issue) => !issue.includes("bad.json"))).toEqual(["title", "message"].map((field) => `shared/data/stablecoins/coins/hard.json:notices[0].${field} [no-clause-dash] —`));
     });
   });
 

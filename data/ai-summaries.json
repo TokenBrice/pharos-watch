@@ -557,11 +557,11 @@
   },
   "steakusdg-steakhouse": {
     "title": "USDG lending shares on Robinhood Chain",
-    "text": "steakUSDG is Steakhouse’s High Yield Instant USDG lending vault on Robinhood Chain. Its current borrower markets take longer-tail collateral, including productive stablecoins and savings tokens such as syrupUSDG, spUSDG and USDe, so the yield depends on borrower demand and the quality of those collateral positions. ERC-4626 shares accrue lending interest and absorb strategy losses. The immutable core requires deposited USDG before creating user shares, while configurable fees can dilute each holder’s claim. Withdrawals burn shares and pay USDG from idle balances and the selected liquidity adapter; the full lending position has no guaranteed cash-realization timetable. Morpho still flagged deposits disabled on 15 October 2026, separately from existing holders’ liquidity-dependent redemption rights. USDG issuer reserve and freeze risks remain upstream. Whole-book custody, enforceable insolvency priority and independently funded stressed recovery are not established by the vault’s code or the curator’s terms.",
-    "updatedAt": "2026-10-19",
+    "text": "steakUSDG is Steakhouse’s High Yield Instant USDG lending vault on Robinhood Chain. Its current borrower markets take longer-tail collateral, including productive stablecoins and savings tokens such as syrupUSDG, spUSDG and USDe, so the yield depends on borrower demand and the quality of those collateral positions. ERC-4626 shares accrue lending interest and absorb strategy losses. The immutable core requires deposited USDG before creating user shares, while configurable fees can dilute each holder’s claim. Withdrawals burn shares and pay USDG from idle balances and the selected liquidity adapter; the full lending position has no fixed cash-realization timetable. USDG issuer reserve and freeze risks remain upstream. Whole-book custody, enforceable insolvency priority and independently funded stressed recovery are not established by the vault’s code or the curator’s terms.",
+    "updatedAt": "2026-11-26",
     "authoredBy": "ai",
-    "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19"
+    "model": "gemini-4-neon-xhigh",
+    "factsAsOf": "2026-11-26"
   },
   "strusd-tori": {
     "title": "Tori savings with a cooldown and seizure powers",
@@ -2289,11 +2289,11 @@
   },
   "usx-solstice": {
     "title": "Synthetic dollar, aggregate proof",
-    "text": "Solstice's USX is a Swiss-domiciled synthetic dollar on Solana, minted through KYC-gated institutional issuance against a reserve the issuer describes as audited cash, tokenized {{term:treasury}}Treasuries{{/term}}, and {{term:delta-neutral}}delta-neutral{{/term}} hedged positions, with Copper and Ceffu named as custodians. What Pharos can verify is narrower than that description. The Accountable attestation feed reports aggregate reserves slightly above supply, with cryptographic proof material but no asset-level balances, so the current split among cash, Treasuries, and hedges is unpublished and the backing pillar is scored on limited evidence. Minting and {{term:redemption}}redemption{{/term}} validate collateral through Solstice's own oracle cross-checked against Pyth, and the issuer's program holds live mint and freeze authority.  Redemption is eligibility-gated, so retail holders depend on Solana secondary markets, and a December 2025 thin-liquidity episode took USX to a small fraction of par on a DEX before it recovered. The peg record has been quiet since, but the structure has not changed: an institutional redemption window in front, an aggregate-only solvency proof behind, and everyone else trading the gap.",
-    "updatedAt": "2026-10-27",
+    "text": "Solstice's USX is a Swiss-domiciled synthetic dollar on Solana, minted through KYC-gated institutional issuance against a reserve the issuer describes as audited cash, tokenized {{term:treasury}}Treasuries{{/term}}, and {{term:delta-neutral}}delta-neutral{{/term}} hedged positions, with Copper and Ceffu named as custodians. What Pharos can verify is narrower than that description. The Accountable attestation feed reports aggregate reserves slightly above supply, with cryptographic proof material but no asset-level balances, so the current split among cash, Treasuries, and hedges is unpublished and the backing pillar is scored on limited evidence. Minting and {{term:redemption}}redemption{{/term}} validate collateral through Solstice's own oracle cross-checked against Pyth, and the issuer's program holds live mint and freeze authority. Redemption is eligibility-gated, so retail holders depend on Solana secondary markets, where a December 2025 thin-liquidity episode took USX down to $0.78 on Solana DEXs before liquidity injection restored parity within hours. The peg record has been quiet since, but the structure has not changed: an institutional redemption window in front, an aggregate-only solvency proof behind, and everyone else trading the gap.",
+    "updatedAt": "2026-11-26",
     "authoredBy": "ai",
-    "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19"
+    "model": "gemini-4-neon-xhigh",
+    "factsAsOf": "2026-11-26"
   },
   "hollar-hydrated": {
     "title": "Hydration's Aave-fork dollar on Polkadot",
@@ -2833,17 +2833,17 @@
   },
   "yousd-yield-optimizer": {
     "title": "A USDC aggregator whose NAV carries venue losses",
-    "text": "A USDC-only yield aggregator on Base whose NAV moves with strategy outcomes rather than tracking a fixed dollar claim.\n\nYO Protocol's yoUSD automates what DeFi power users do manually: rebalancing USDC across 50+ yield sources on Ethereum, Base, Arbitrum, and Unichain, ranked by risk scores with per-pool and per-protocol concentration caps. That diversification still leaves holders exposed to venue and allocator risk. The card has no current estimate of how quickly the deployed strategy positions could return to cash. The March 22, 2026 Resolv exploit reached yoUSD through its RLP strategy exposure. YO then charged a 2.95% withdrawal fee, a realized loss for holders who exited, and that loss caps the {{grade}} overall grade. Instant redemptions run only up to the vault's liquidity buffer, and larger withdrawals can take up to a day while cross-chain positions unwind. The durable constraint is that the yield and the losses come from the same set of venues, and both flow through the NAV.",
-    "updatedAt": "2026-11-14",
+    "text": "A USDC-only yield aggregator on Base whose NAV moves with strategy outcomes rather than tracking a fixed dollar claim.\n\nYO Protocol's yoUSD automates what DeFi power users do manually: rebalancing USDC across 50+ yield sources on Ethereum, Base, Arbitrum, and Unichain, ranked by risk scores with per-pool and per-protocol concentration caps. That diversification still leaves holders exposed to venue and allocator risk. The card has no current estimate of how quickly the deployed strategy positions could return to cash. The March 22, 2026 Resolv exploit reached yoUSD through its RLP strategy exposure. YO briefly imposed a 2.95% withdrawal fee (removed on April 16) before distributing recovered USDC and quarterly-vesting RESOLV on June 11, and that realized drawdown caps the {{grade}} overall grade. Instant redemptions run only up to the vault's liquidity buffer, and larger withdrawals can take up to a day while cross-chain positions unwind. The durable constraint is that the yield and the losses come from the same set of venues, and both flow through the NAV.",
+    "updatedAt": "2026-11-26",
     "authoredBy": "ai",
-    "model": "deepseek-v4.1-flash",
-    "factsAsOf": "2026-11-14",
+    "model": "gemini-4-neon-xhigh",
+    "factsAsOf": "2026-11-26",
     "claimTokens": [
       {
         "token": "grade",
         "placeholder": "{{grade}}",
         "source": "report-card.grade",
-        "factsAsOf": "2026-11-14"
+        "factsAsOf": "2026-11-26"
       }
     ]
   },
@@ -5081,18 +5081,18 @@
     "factsAsOf": "2026-10-19"
   },
   "iusd-initia": {
-    "title": "Initia's AUSD-wrapped ecosystem dollar",
-    "text": "iUSD is the native dollar on Initia, a recently launched Move-based Cosmos L1: a single-chain wrapper backed 1:1 by Agora's AUSD bridged in through LayerZero. The reserve trace therefore ends in Agora's short-dated U.S. {{term:treasury}}Treasuries{{/term}}, overnight repos and cash, reported for AUSD as a whole rather than for the wrapper. Unlike standard fiat-backed stables, holding iUSD carries no claim on reserve yield; Initia says reserve-related revenue may support ecosystem incentives, development and grants. Initia publishes no dedicated proof-of-reserves feed for the wrapper, and the card scores backing on limited evidence. The card credits no exit route: Pharos has no DEX pool it can price an exit through, and no issuer redemption route on record. Getting out means Initia's bridge converting iUSD to AUSD, a LayerZero {{term:bridge}}bridge{{/term}} hop to Ethereum and a swap into USDC, and Pharos has no same-notional route evidence for that path at size. The overall grade is {{grade}} despite a clean peg record. Holders depend on the LayerZero bridge for any exit, on Agora's {{term:redemption}}redemption{{/term}} terms beyond it, and on Agora's reserve {{term:custody}}custody{{/term}} and freeze controls for the asset itself.",
-    "updatedAt": "2026-11-14",
+    "title": "Initia's appchain dollar amid an unverified reserve switch",
+    "text": "iUSD is the native dollar on Initia, a Move-based Cosmos L1. It launched as a 1:1 wrapper backed by AUSD0 (bridged Agora AUSD on Initia), with holders receiving no claim on reserve yield because Initia directs reserve revenue toward ecosystem incentives and grants. That backing is now in transition: after two chain halts in October and November 2026, Initia relaunched on November 20 and stated it migrated iUSD reserves from AUSD0 to USDC.inj (Initia's replacement USDC token). On-chain vault reads confirm zero AUSD0 remains, while Pharos has not yet verified the replacement USDC.inj balance or live {{term:redemption}}redemption{{/term}} path, and Pharos's automated vault feed remains suspended. No DEX pool or verified issuer exit route is credited on the card, leaving the overall grade at {{grade}}. Until Pharos verifies the replacement collateral and exit {{term:bridge}}bridge{{/term}} path, holders bear unverified reserve {{term:custody}}custody{{/term}} and operational continuity risk on Initia.",
+    "updatedAt": "2026-11-26",
     "authoredBy": "ai",
-    "model": "deepseek-v4.1-flash",
-    "factsAsOf": "2026-11-14",
+    "model": "gemini-4-neon-xhigh",
+    "factsAsOf": "2026-11-26",
     "claimTokens": [
       {
         "token": "grade",
         "placeholder": "{{grade}}",
         "source": "report-card.grade",
-        "factsAsOf": "2026-11-14"
+        "factsAsOf": "2026-11-26"
       }
     ]
   },

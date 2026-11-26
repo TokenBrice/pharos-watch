@@ -106,8 +106,15 @@
   "notices": [
     {
       "type": "info",
-      "title": "Legacy bridge-liquidity asset",
-      "message": "NUSD is included because DefiLlama still returns a live price and circulating supply, but it represents a legacy Synapse bridge-liquidity stable asset rather than a standalone modern issuer token. The current Synapse token list documents the reviewed cross-chain deployments."
+      "title": "Legacy Synapse bridge-liquidity token",
+      "message": "NUSD is a legacy Synapse bridge-liquidity pool token spanning older cross-chain deployments, not a standalone fiat-redeemable issuer stablecoin.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Synapse: documentation",
+          "url": "https://docs.synapseprotocol.com/"
+        }
+      ]
     }
   ],
   "launchDate": "2021-08-16",

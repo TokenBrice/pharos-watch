@@ -117,5 +117,23 @@
     "attestorJurisdiction": "United States"
   },
   "launchDate": "2026-02-18",
-  "mechanismArchetype": "rwa-credit-fund"
+  "mechanismArchetype": "rwa-credit-fund",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Preferred-equity backing and floating redemption",
+      "message": "apxUSD is backed primarily by Digital Asset Treasury preferred shares (including Strategy's STRC) and tracks a floating Redemption Value, not a fixed $1 claim. Direct redemption is whitelist-only; apxUSD fell near $0.74 during June 2026 STRC stress and has continued showing multi-percent secondary discounts.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Apyx: documentation",
+          "url": "https://docs.apyx.fi"
+        },
+        {
+          "label": "Yearn: apxUSD risk report",
+          "url": "https://github.com/yearn/risk-score/blob/master/reports/report/apyx-apxusd.md"
+        }
+      ]
+    }
+  ]
 }

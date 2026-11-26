@@ -14,8 +14,12 @@
  *   > depeg     an open confirmed depeg incident
  *   > paused    a warning/info notice of kind "paused" (mint, deposit, redemption, transfer…)
  *   > dews      a DEWS band of ALERT or worse
- *   > deadline  a holder deadline within DEADLINE_HORIZON_DAYS, or passed within DEADLINE_GRACE_DAYS
+ *   > deadline  the nearest upcoming holder deadline within DEADLINE_HORIZON_DAYS, else the most
+ *               recently passed one within DEADLINE_GRACE_DAYS
  * Labels and tones live in `classification/coin-state.ts`.
+ *
+ * A notice with `chains` applies only on those chains' pages (`chainId`);
+ * every other surface resolves asset-wide and skips it.
  */
 
 import type { DdrResolutionTier } from "../types/depeg-resolver";
@@ -37,7 +41,14 @@ export const COIN_STATE_KIND_VALUES = [
 export type CoinStateKind = (typeof COIN_STATE_KIND_VALUES)[number];
 
 /** The curated-notice fields the ladder reads: the client list projection's alert shape. */
-export type CoinStateNotice = Pick<CoinNotice, "type" | "title" | "kind" | "deadline" | "asOf">;
+export type CoinStateNotice = Pick<CoinNotice, "type" | "title" | "kind" | "deadline" | "asOf" | "chains">;
+
+/**
+ * The one notice-staleness authority (ADR-32): a current notice whose `asOf`
+ * is more than this many days old is due for re-confirmation. A paused
+ * notice reads its own budget before its type's.
+ */
+export const NOTICE_STALE_DAYS = { paused: 14, danger: 30, warning: 90, info: 180 } as const;
 
 /** A deadline state shows from this many days before the date… */
 export const DEADLINE_HORIZON_DAYS = 30;
@@ -60,6 +71,8 @@ export interface CoinStateInputs {
   dewsBand?: string | null;
   /** Wall-clock seconds. Only deadline states read it; without it no deadline state is claimed. */
   nowSec?: number | null;
+  /** The chain page resolving the states; absent or null resolves asset-wide, skipping chain-scoped notices. */
+  chainId?: string | null;
 }
 
 export type CoinState = (
@@ -88,11 +101,26 @@ export function daysUntilIsoDate(isoDate: string, nowSec: number | null | undefi
   return Math.round(deadlineMs / 1000 / DAY_SEC) - Math.floor(nowSec / DAY_SEC);
 }
 
-/** A deadline notice is spent once its grace window has passed, or while the clock is unknown. */
+/** A notice applies asset-wide unless it names chains, and then only on one of them. */
+export function noticeAppliesToScope(notice: Pick<CoinStateNotice, "chains">, chainId?: string | null): boolean {
+  return !notice.chains?.length || (chainId != null && notice.chains.includes(chainId));
+}
+
+/**
+ * A deadline notice is spent once its grace window has passed, or while the
+ * clock is unknown. Only `kind: "deadline"` retires: a paused notice that
+ * names a closing date stays current until it is edited.
+ */
 export function isSpentDeadline(notice: Pick<CoinStateNotice, "kind" | "deadline">, nowSec: number | null | undefined): boolean {
   if (notice.kind !== "deadline" || !notice.deadline) return false;
   const days = daysUntilIsoDate(notice.deadline, nowSec);
   return days === null || days < -DEADLINE_GRACE_DAYS;
+}
+
+/** Whether a deadline `days` away displaces the current lead: upcoming beats passed, then nearest wins. */
+function deadlineLeads(days: number, leadDays: number): boolean {
+  if ((days >= 0) !== (leadDays >= 0)) return days >= 0;
+  return days >= 0 ? days < leadDays : days > leadDays;
 }
 
 /** Every exceptional state that applies, highest precedence first, each kind at most once. */
@@ -105,7 +133,8 @@ export function resolveCoinStates(inputs: CoinStateInputs): CoinState[] {
 
   // A deadline notice whose grace window has ended is spent: it reads as history, never an alarm.
   // Without the clock its window is unknown, so it claims nothing (deadline states need the clock too).
-  const current = (inputs.notices ?? []).filter((notice) => notice.kind !== "history" && !isSpentDeadline(notice, inputs.nowSec));
+  const current = (inputs.notices ?? []).filter((notice) =>
+    notice.kind !== "history" && !isSpentDeadline(notice, inputs.nowSec) && noticeAppliesToScope(notice, inputs.chainId));
   const critical = current.find((notice) => notice.type === "danger");
   if (critical) states.push({ kind: "critical", notice: critical });
 
@@ -125,13 +154,16 @@ export function resolveCoinStates(inputs: CoinStateInputs): CoinState[] {
     states.push({ kind: "dews", band: inputs.dewsBand });
   }
 
+  // The nearest upcoming date in the window leads over any passed one; when every
+  // date has passed, the most recently passed leads. Equal dates keep authored order.
+  let lead: { notice: CoinStateNotice & { deadline: string }; days: number } | null = null;
   for (const notice of current) {
     if (notice.kind !== "deadline" || !notice.deadline) continue;
     const days = daysUntilIsoDate(notice.deadline, inputs.nowSec);
     if (days === null || days > DEADLINE_HORIZON_DAYS || days < -DEADLINE_GRACE_DAYS) continue;
-    states.push({ kind: "deadline", notice: { ...notice, deadline: notice.deadline }, daysToDeadline: days });
-    break;
+    if (lead === null || deadlineLeads(days, lead.days)) lead = { notice: { ...notice, deadline: notice.deadline }, days };
   }
+  if (lead) states.push({ kind: "deadline", notice: lead.notice, daysToDeadline: lead.days });
   return states;
 }
 

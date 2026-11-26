@@ -224,5 +224,28 @@
       }
     }
   },
-  "launchDate": "2025-01-02"
+  "launchDate": "2025-01-02",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Abstract network shuts down",
+      "message": "Abstract will shut down its L2 network permanently on December 15, 2026, making unbridged tokens inaccessible. Holders of frxUSD on Abstract must bridge off before that date. frxUSD deployments on other networks are unaffected.",
+      "kind": "deadline",
+      "deadline": "2026-12-15",
+      "chains": [
+        "abstract"
+      ],
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Abstract: shutdown notice",
+          "url": "https://x.com/AbstractChain/article/2107554632675340420"
+        },
+        {
+          "label": "CoinDesk: Abstract shutdown",
+          "url": "https://www.coindesk.com/tech/2026/10/07/pudgy-penguins-abstract-becomes-second-ethereum-layer-2-to-shut-in-a-week"
+        }
+      ]
+    }
+  ]
 }

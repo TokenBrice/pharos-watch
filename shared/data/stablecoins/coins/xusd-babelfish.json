@@ -66,7 +66,9 @@
       "census": {
         "kind": "reviewed-roster",
         "reviewedAt": "2026-10-01",
-        "sourceUrls": ["https://babelfish.gitbook.io/the-babelfish-gitbook/getting-started/balancing-curves.md"]
+        "sourceUrls": [
+          "https://babelfish.gitbook.io/the-babelfish-gitbook/getting-started/balancing-curves.md"
+        ]
       },
       "branches": [
         {
@@ -217,9 +219,19 @@
     {
       "type": "danger",
       "title": "BabelFish minting and redemption stopped",
-      "message": "Reviewed November 12, 2026: the November 4 ownership stop removed the converter's XUSD mint/burn authority. The Sovryn XUSD/WRBTC pair was delisted November 2, and no current market was verified in the checked indexes. Ordinary XUSD transfers remain separate. The disclosed reward-inventory loss does not establish an equal shortfall for remaining holders; no reopening date is set. Sources: https://forum.sovryn.com/t/sovryn-mitigation-and-recovery-manifest/3611 ; https://forum.sovryn.com/t/sovryn-attack-disclosure-bob-rootstock-and-babelfish/3612",
+      "message": "BabelFish minting and redemption stay stopped after a November 4, 2026 ownership action revoked converter mint and burn authority following the Sovryn and BabelFish attacks. Sovryn delisted XUSD/WRBTC on November 2, no active primary market is confirmed, and no reopening date is set. Token transfers still work, and the disclosed 69,381 XUSD reward loss leaves remaining holder coverage unverified.",
       "kind": "paused",
-      "asOf": "2026-11-12"
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Sovryn: recovery manifest",
+          "url": "https://forum.sovryn.com/t/sovryn-mitigation-and-recovery-manifest/3611"
+        },
+        {
+          "label": "Sovryn: attack disclosure",
+          "url": "https://forum.sovryn.com/t/sovryn-attack-disclosure-bob-rootstock-and-babelfish/3612"
+        }
+      ]
     }
   ]
 }

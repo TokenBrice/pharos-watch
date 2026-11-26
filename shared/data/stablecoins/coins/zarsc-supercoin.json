@@ -4,19 +4,39 @@
     "version": 1,
     "semantics": "attestation-mix",
     "breakerScope": "zarsc-supercoin",
-    "scoring": { "maxSourceAgeSec": 6048000 },
-    "display": { "url": "https://www.supercoin.co.za/proof-of-reserves-reports", "label": "Supercoin reviewed reserve-report index" },
-    "inputs": { "primary": { "kind": "http-html", "url": "https://www.supercoin.co.za/proof-of-reserves-reports" } },
+    "scoring": {
+      "maxSourceAgeSec": 6048000
+    },
+    "display": {
+      "url": "https://www.supercoin.co.za/proof-of-reserves-reports",
+      "label": "Supercoin reviewed reserve-report index"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-html",
+        "url": "https://www.supercoin.co.za/proof-of-reserves-reports"
+      }
+    },
     "params": {
       "reviewedReport": {
         "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6ad8adcc2dde2a518e28202b_6ad8acbed517875aae5c68c9_ZARsc%2520Proof%2520of%2520Reserves%2520Report%2520(Agreed-Upon%2520Procedures)%2520-%2520Sept%2520Snapshot%25202026-09-30%25201400%2520UTC.pdf",
         "balanceDate": "2026-09-30"
       },
-      "slices": [{
-        "name": "ZAR cash in Absa current account", "pct": 100, "risk": "low",
-        "assetClass": "bank-deposit", "issuerOrObligor": "Absa Bank Limited",
-        "riskFactors": ["counterparty", "custody", "concentration"], "liquidityHorizon": "immediate"
-      }]
+      "slices": [
+        {
+          "name": "ZAR cash in Absa current account",
+          "pct": 100,
+          "risk": "low",
+          "assetClass": "bank-deposit",
+          "issuerOrObligor": "Absa Bank Limited",
+          "riskFactors": [
+            "counterparty",
+            "custody",
+            "concentration"
+          ],
+          "liquidityHorizon": "immediate"
+        }
+      ]
     }
   },
   "id": "zarsc-supercoin",
@@ -37,8 +57,14 @@
     "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
     "rationale": "Binding terms describe one-rand reserve-backed native Solana tokens, with no interest or collective-investment share. The exact Token-2022 mint creation and initializeMint transaction at slot 361067527 on 2025-08-19 establishes implementation age independently of recent exchange-listing history.",
     "sources": [
-      {"label": "Supercoin binding issuance and redemption terms", "url": "https://www.supercoin.co.za/terms-of-service"},
-      {"label": "Exact mint creation and initialization", "url": "https://solscan.io/tx/3PacyyoqY8ik8smXoNF6ED6MLUt9Jxk9w7ie7vcrVqYouxcLwtyn5xdsRGKrMwV17xfjLWShhraik7Yb95Xdrx3r"}
+      {
+        "label": "Supercoin binding issuance and redemption terms",
+        "url": "https://www.supercoin.co.za/terms-of-service"
+      },
+      {
+        "label": "Exact mint creation and initialization",
+        "url": "https://solscan.io/tx/3PacyyoqY8ik8smXoNF6ED6MLUt9Jxk9w7ie7vcrVqYouxcLwtyn5xdsRGKrMwV17xfjLWShhraik7Yb95Xdrx3r"
+      }
     ]
   },
   "detailProvider": "coingecko",
@@ -109,7 +135,14 @@
     {
       "type": "info",
       "title": "Direct app redemption is not yet live",
-      "message": "Supercoin's terms make direct issuer redemption and the two-business-day bank-payment promise conditional on the app's launch. Current exchange sales and off-ramps have no issuer-guaranteed price, liquidity or settlement time."
+      "message": "Supercoin's terms make direct issuer redemption and two-business-day bank payouts conditional on its app launch. Current secondary sales and off-ramps carry no issuer-backed price, liquidity, or settlement timeframe.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Supercoin: terms of service",
+          "url": "https://www.supercoin.co.za/terms-of-service"
+        }
+      ]
     }
   ],
   "proofOfReserves": {

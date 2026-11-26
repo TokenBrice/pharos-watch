@@ -195,14 +195,27 @@
   "notices": [
     {
       "type": "danger",
-      "title": "Material issuer and market-stability risks",
-      "message": "TrueUSD has multiple unresolved 2025-2026 risk events: Archblock filed Chapter 11 on February 6, 2026; Kraken scheduled TUSD delisting with remaining balances liquidated on March 1, 2026; S&P Global assigned TUSD its weakest stablecoin stability score of 5 on November 14, 2025; and the DIFC Digital Economy Court issued a worldwide freezing injunction up to USD 456M in Techteryx-related reserve litigation.",
-      "asOf": "2026-06-12"
-    },
-    {
-      "type": "info",
-      "title": "Announced TUSD-to-USDD transition",
-      "message": "Issuer's now-removed announcement offers TUSD holders an optional 1:1 swap into USDD once a timeline is set; TUSD continues to redeem and trade normally."
+      "title": "Disputed $456M reserves and legal insolvency risks",
+      "message": "TrueUSD faces active litigation in Dubai's DIFC Court over $456M in disputed reserves, where a worldwide freezing injunction targets defendant assets held through First Digital Trust structures. Former operator Archblock filed Chapter 11 on February 6, 2026, Kraken delisted and liquidated TUSD balances on March 1, 2026, and S&P Global reaffirmed its weakest 5 (weak) stability score on November 11, 2026.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "DIFC Court: Techteryx order",
+          "url": "https://www.difccourts.ae/rules-decisions/judgments-orders/digital-economy-court/techteryx-ltd-v-1-aria-commodities-dmcc-2-mashreq-bank-psc-3-emirates-nbd-bank-pjsc-4-abu-dhabi-islamic-bank-pjsc-2025-difc-dec"
+        },
+        {
+          "label": "S&P Global: TUSD rating",
+          "url": "https://www.spglobal.com/ratings/en/regulatory/article/stablecoin-stability-assessment-trueusd-tusd-s101717808"
+        },
+        {
+          "label": "Stretto: Archblock Ch. 11",
+          "url": "https://cases.stretto.com/archblock"
+        },
+        {
+          "label": "CryptoSlate: DIFC order",
+          "url": "https://cryptoslate.com/trueusds-456m-stablecoin-court-case-gives-defendant-days-to-reveal-who-funded-their-legal-defense-or-face-court-sanctions"
+        }
+      ]
     }
   ]
 }

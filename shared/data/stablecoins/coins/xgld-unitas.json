@@ -4,9 +4,19 @@
     "version": 1,
     "semantics": "protocol-reserve",
     "breakerScope": "xgld-unitas",
-    "scoring": { "maxSourceAgeSec": 259200 },
-    "display": { "url": "https://accountable.unitas.so/?type=xgld", "label": "Unitas Accountable location observations" },
-    "inputs": { "primary": { "kind": "http-json", "url": "https://api-accountable.unitas.so/v1/dashboard?type=xgld" } },
+    "scoring": {
+      "maxSourceAgeSec": 259200
+    },
+    "display": {
+      "url": "https://accountable.unitas.so/?type=xgld",
+      "label": "Unitas Accountable location observations"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://api-accountable.unitas.so/v1/dashboard?type=xgld"
+      }
+    },
     "params": {
       "bucket": "reserves_split",
       "riskMap": {
@@ -161,13 +171,15 @@
   "notices": [
     {
       "type": "info",
-      "title": "Leveraged gold strategy position",
-      "message": "NAV depends on XAUt and borrowed-USDT strategies. Direct XAUt redemption requires whitelisting and a 7-day cooldown; full debt and custody allocation are not disclosed."
-    },
-    {
-      "type": "info",
-      "title": "Deployment and interface coverage differ",
-      "message": "Issuer guides support BNB Chain and Base. Ethereum and Mantle OFTs are independently verified on-chain, but issuer-interface access and direct redemption on those chains are not established."
+      "title": "Leveraged gold vault and narrow UI coverage",
+      "message": "xGLD tracks a leveraged XAUt and borrowed-USDT strategy with undisclosed debt and custody splits; direct XAUt redemption needs whitelisting and a seven-day cooldown. Issuer UI support covers BNB Chain and Base, leaving Ethereum and Mantle OFT direct exits unverified.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Unitas: xGLD overview",
+          "url": "https://docs.unitas.so/overview/xgld"
+        }
+      ]
     }
   ]
 }

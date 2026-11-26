@@ -180,8 +180,8 @@ export type ClientMintAuthorityStatus =
   | "inherited-authority"
   | "unknown";
 
-/** A state-bearing curated notice in the list projection; its message stays in the detail projection. */
-export type StablecoinClientAlert = Pick<CoinNotice, "type" | "title" | "kind" | "deadline" | "asOf">;
+/** A state-bearing curated notice in the list projection; its message and sources stay in the detail projection. */
+export type StablecoinClientAlert = Pick<CoinNotice, "type" | "title" | "kind" | "deadline" | "asOf" | "chains">;
 
 export type StablecoinClientListMeta = Pick<StablecoinMeta, (typeof STABLECOIN_CLIENT_LIST_FIELDS)[number]> & {
   /** Chain IDs are derived from contracts and tradedContracts at build time. */
@@ -199,7 +199,7 @@ export type StablecoinClientListMeta = Pick<StablecoinMeta, (typeof STABLECOIN_C
   hasCuratedReserves?: boolean;
   /** Compact yield taxonomy badge; source-specific yield configuration stays in detail. */
   yieldType?: NonNullable<StablecoinMeta["yieldConfig"]>["yieldType"];
-  /** Danger, paused and deadline notices in authored order (never resolved history), for cross-coin state chips. */
+  /** Danger, paused, deadline and other chain-scoped notices in authored order (never resolved history), for cross-coin state chips and chain pages; messages and sources stay in detail. */
   alerts?: StablecoinClientAlert[];
 };
 

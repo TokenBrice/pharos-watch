@@ -112,13 +112,19 @@
   "notices": [
     {
       "type": "info",
-      "title": "Issuer not licensed",
-      "message": "Blox Blockchain Sdn Bhd does not hold a Bank Negara Malaysia or Securities Commission Malaysia license. SC Malaysia disclaimed jurisdiction in 2022; BNM has not yet established a payment-stablecoin framework as of 2026."
-    },
-    {
-      "type": "info",
-      "title": "Small float, single-jurisdiction",
-      "message": "MYRC has a small circulating float and its reserve disclosures identify only Malaysian financial institutions, without naming providers or publishing provider concentration."
+      "title": "Unlicensed issuer with small domestic float",
+      "message": "Blox is not licensed by Bank Negara Malaysia, which has signaled clearer stablecoin guidance by end-2026. MYRC has a small float concentrated in Malaysia, with the latest reserve attestation dated August 2026.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Blox: product term sheet",
+          "url": "https://www.blox.my/policies/product-term-sheet"
+        },
+        {
+          "label": "Blox: Aug 2026 attestation",
+          "url": "https://cdn.blox.my/attestations/2026/Blox%20Attestation%20Report-2026-08-August.pdf"
+        }
+      ]
     }
   ],
   "launchDate": "2023-08-31"

@@ -64,13 +64,27 @@
   "notices": [
     {
       "type": "warning",
-      "title": "Protocol haircut mechanism",
-      "message": "HBD redemptions depend on Hive protocol conversion rules and can be haircut when system debt is above configured thresholds."
+      "title": "Protocol haircut activates above 30% debt ratio",
+      "message": "HBD-to-HIVE protocol conversions apply a haircut whenever HBD debt exceeds 30% of Hive's combined market capitalization, paying less than $1 worth of HIVE per HBD during severe HIVE drawdowns.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Hive: HBD overview",
+          "url": "https://hive.io/hbd/"
+        }
+      ]
     },
     {
       "type": "info",
-      "title": "Hive-native asset",
-      "message": "HBD is issued by the Hive protocol rather than an EVM-style token contract. Pharos does not list a contract address until Hive is supported in the chain metadata registry."
+      "title": "Native Hive asset without EVM contracts",
+      "message": "HBD is issued natively by the Hive blockchain without an EVM token contract, so no contract address is listed on Pharos.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Hive: developer docs",
+          "url": "https://developers.hive.io/"
+        }
+      ]
     }
   ],
   "launchDate": "2020-03-20",

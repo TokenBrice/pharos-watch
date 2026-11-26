@@ -11,7 +11,7 @@ import { editorialReferenceIssues, validateMethodologyVersion } from "../lib/edi
 import { parseStrictCliArgs, runDirectCli, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import { collectSourceFiles } from "../lib/source-files.mts";
 
-const USAGE = "Usage: npm run check:editorial-content\nValidate authored JSON content, registry membership, metadata, ADR-3, and internal references.";
+const USAGE = "Usage: npm run check:editorial-content\nValidate authored JSON content, registry membership, metadata, ADR-3, internal references, and active coin-notice prose.";
 
 function registeredJsonFiles(repoRoot: string, owners: readonly string[]): Set<string> {
   const registered = new Set<string>();
@@ -113,12 +113,39 @@ export function scanSelectorEditorialSource(file: string, source: string): Selec
   return findings;
 }
 
+/**
+ * Active coin notices are urgent Pharos prose: hard `notice`-register findings
+ * fail the gate, advisory ones stay authoring feedback. Archived and stub
+ * coins keep their historical wording.
+ */
+function coinNoticeEditorialIssues(repoRoot: string, coinFiles: readonly string[]): string[] {
+  const issues: string[] = [];
+  for (const file of coinFiles) {
+    let coin: { status?: unknown; notices?: unknown } | null;
+    try { coin = JSON.parse(readFileSync(join(repoRoot, "shared/data/stablecoins/coins", file), "utf8")); }
+    catch (error) { issues.push(`shared/data/stablecoins/coins/${file}: ${String(error)}`); continue; }
+    if (coin == null || (coin.status != null && coin.status !== "active") || !Array.isArray(coin.notices)) continue;
+    for (const [index, notice] of (coin.notices as (Record<string, unknown> | null)[]).entries()) {
+      for (const field of ["title", "message"] as const) {
+        const text = notice?.[field];
+        if (typeof text !== "string") continue;
+        for (const finding of scanEditorialText(text, { register: "notice", field })) {
+          if (finding.severity === "hard") issues.push(`shared/data/stablecoins/coins/${file}:notices[${index}].${field} [${finding.ruleId}] ${finding.excerpt}`);
+        }
+      }
+    }
+  }
+  return issues;
+}
+
 export function checkEditorialContent(repoRoot = process.cwd()): string[] {
   const issues: string[] = [];
   const routes = new Set(PUBLIC_ROUTE_PATHS);
+  const coinFiles = readdirSync(join(repoRoot, "shared/data/stablecoins/coins")).filter((name) => name.endsWith(".json")).sort();
+  issues.push(...coinNoticeEditorialIssues(repoRoot, coinFiles));
   const references = {
     routes,
-    coinIds: new Set(readdirSync(join(repoRoot, "shared/data/stablecoins/coins")).filter((name) => name.endsWith(".json")).map((name) => name.slice(0, -5))),
+    coinIds: new Set(coinFiles.map((name) => name.slice(0, -5))),
     cemeteryIds: new Set<string>((JSON.parse(readFileSync(join(repoRoot, "public/datasets/stablecoin-cemetery.json"), "utf8")).rows as { id: string }[]).map((row) => row.id)),
   };
   const surfaces = [
@@ -198,5 +225,5 @@ runDirectCli(import.meta.url, () => {
   if (writeCliHelpIfRequested(values, USAGE)) return;
   const issues = checkEditorialContent();
   if (issues.length) throw new Error(`Editorial content validation failed:\n${issues.join("\n")}`);
-  console.log("Editorial JSON metadata, registry membership, ADR-3, and internal references validated.");
+  console.log("Editorial JSON metadata, registry membership, ADR-3, internal references, and active coin-notice prose validated.");
 }, { label: "check:editorial-content", usage: USAGE });

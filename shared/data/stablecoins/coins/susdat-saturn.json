@@ -23,11 +23,26 @@
     "reviewer": "Rev_SusdatSaturn batch64 primary-source review",
     "rationale": "The native ERC-4626 receipt accepts USDat, but totalAssets includes a dominant STRCon position rather than preserving the cash-backed parent reserve. At Ethereum block 26197300 (2026-10-15T10:25:11Z), STRCon recognized value was 50,957,019.855957 USDat-equivalent out of 51,544,690.719554 totalAssets. Ondo identifies STRCon as Strategy Stretch Preferred exposure and its family documents describe structured notes issued by Ondo Global Markets (BVI) Limited. The local rwa-credit-fund override preserves preferred-equity, note-issuer and Saturn operational risks; it does not assert direct ownership, enforceable priority or a complete legal recovery claim. Missing exact terms remain unavailable, and no numerical rating is promised.",
     "sources": [
-      { "label": "Saturn sUSDat vault overview", "url": "https://saturncredit.gitbook.io/saturn-docs/solution/susdat-overview.md" },
-      { "label": "Current Saturn V2 migration runbook", "url": "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/main/docs/v2-deployment-runbook.md" },
-      { "label": "Strategy Stretch Preferred tokenized note identity", "url": "https://app.ondo.finance/assets/strcon" },
-      { "label": "Ondo structured-note legal framework", "url": "https://docs.ondo.finance/ondo-stocks/legal-and-regulatory.md" },
-      { "label": "Ethereum block 26197300 (2026-10-15T10:25:11Z), pinned totalAssets and recognizedValue", "url": "https://api-ethereum-mainnet.n.dwellir.com" }
+      {
+        "label": "Saturn sUSDat vault overview",
+        "url": "https://saturncredit.gitbook.io/saturn-docs/solution/susdat-overview.md"
+      },
+      {
+        "label": "Current Saturn V2 migration runbook",
+        "url": "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/main/docs/v2-deployment-runbook.md"
+      },
+      {
+        "label": "Strategy Stretch Preferred tokenized note identity",
+        "url": "https://app.ondo.finance/assets/strcon"
+      },
+      {
+        "label": "Ondo structured-note legal framework",
+        "url": "https://docs.ondo.finance/ondo-stocks/legal-and-regulatory.md"
+      },
+      {
+        "label": "Ethereum block 26197300 (2026-10-15T10:25:11Z), pinned totalAssets and recognizedValue",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      }
     ]
   },
   "detailProvider": "coingecko",
@@ -41,34 +56,99 @@
     "cadence": "real-time"
   },
   "links": [
-    { "label": "Website", "url": "https://saturn.credit/" },
-    { "label": "Docs", "url": "https://saturncredit.gitbook.io/saturn-docs/solution/susdat-overview.md" },
-    { "label": "App", "url": "https://app.saturn.credit/" },
-    { "label": "Current implementation and migration runbook", "url": "https://github.com/saturn-organization/saturn-yield-dollar" },
-    { "label": "Official deployments", "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/key-addresses.md" },
-    { "label": "STRCon product", "url": "https://app.ondo.finance/assets/strcon" },
-    { "label": "Terms and restrictions", "url": "https://saturn.credit/legal/terms-conditions" },
-    { "label": "Audits and transparency", "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/transparency-and-audits.md" },
-    { "label": "Current V2 FAQ and withdrawal terms", "url": "https://saturncredit.gitbook.io/saturn-docs/get-started/saturn-faqs.md" },
-    { "label": "Certora V2 final security assessment", "url": "https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FaoxN2WzhSM74tsJUct0C%2Fuploads%2FmH2VnHMcqzc5l5eygoPP%2FCertora%20-%20Saturn-sUSDat%20v2.pdf?alt=media&token=937d6687-03b4-4c9b-a525-5f180793a6a2" },
-    { "label": "Ethereum vault", "url": "https://etherscan.io/address/0xd166337499e176bbc38a1fbd113ab144e5bd2df7#readProxyContract" }
+    {
+      "label": "Website",
+      "url": "https://saturn.credit/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://saturncredit.gitbook.io/saturn-docs/solution/susdat-overview.md"
+    },
+    {
+      "label": "App",
+      "url": "https://app.saturn.credit/"
+    },
+    {
+      "label": "Current implementation and migration runbook",
+      "url": "https://github.com/saturn-organization/saturn-yield-dollar"
+    },
+    {
+      "label": "Official deployments",
+      "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/key-addresses.md"
+    },
+    {
+      "label": "STRCon product",
+      "url": "https://app.ondo.finance/assets/strcon"
+    },
+    {
+      "label": "Terms and restrictions",
+      "url": "https://saturn.credit/legal/terms-conditions"
+    },
+    {
+      "label": "Audits and transparency",
+      "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/transparency-and-audits.md"
+    },
+    {
+      "label": "Current V2 FAQ and withdrawal terms",
+      "url": "https://saturncredit.gitbook.io/saturn-docs/get-started/saturn-faqs.md"
+    },
+    {
+      "label": "Certora V2 final security assessment",
+      "url": "https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FaoxN2WzhSM74tsJUct0C%2Fuploads%2FmH2VnHMcqzc5l5eygoPP%2FCertora%20-%20Saturn-sUSDat%20v2.pdf?alt=media&token=937d6687-03b4-4c9b-a525-5f180793a6a2"
+    },
+    {
+      "label": "Ethereum vault",
+      "url": "https://etherscan.io/address/0xd166337499e176bbc38a1fbd113ab144e5bd2df7#readProxyContract"
+    }
   ],
-  "jurisdiction": { "country": "British Virgin Islands" },
+  "jurisdiction": {
+    "country": "British Virgin Islands"
+  },
   "contracts": [
-    { "chain": "ethereum", "address": "0xd166337499e176bbc38a1fbd113ab144e5bd2df7", "decimals": 18 },
-    { "chain": "bsc", "address": "0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25", "decimals": 18 },
-    { "chain": "monad", "address": "0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25", "decimals": 18 },
-    { "chain": "xlayer", "address": "0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25", "decimals": 18 }
+    {
+      "chain": "ethereum",
+      "address": "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25",
+      "decimals": 18
+    },
+    {
+      "chain": "monad",
+      "address": "0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25",
+      "decimals": 18
+    },
+    {
+      "chain": "xlayer",
+      "address": "0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25",
+      "decimals": 18
+    }
   ],
   "collateralQuality": "rwa",
   "custodyModel": "unknown",
   "governanceQuality": "wrapper",
-  "yieldConfig": { "yieldSource": "STRCon/Strategy preferred-credit dividends recognized in Saturn vault NAV", "yieldType": "nav-appreciation" },
+  "yieldConfig": {
+    "yieldSource": "STRCon/Strategy preferred-credit dividends recognized in Saturn vault NAV",
+    "yieldType": "nav-appreciation"
+  },
   "notices": [
     {
       "type": "warning",
-      "title": "Preferred-credit exposure and incomplete recovery evidence",
-      "message": "Most vault NAV is STRCon, an Ondo structured note tracking Strategy preferred shares. Cash-backed USDat is only a liquidity buffer. Exact note terms, Saturn holder priority and executed recovery arrangements have not been verified; on-chain holdings do not establish legal ownership or independent financial assurance. Queued redemption depends on operator processing and realizable liquidity, with no verified maximum delay."
+      "title": "Preferred-credit exposure and unverified recovery",
+      "message": "Nearly all vault NAV (98.7% on November 25, 2026) sits in STRCon, an Ondo note tracking Strategy preferred shares, with cash-backed USDat as a thin liquidity buffer. Note priority and recovery rights are unverified, and queued redemptions have no maximum delay.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Saturn: sUSDat overview",
+          "url": "https://saturncredit.gitbook.io/saturn-docs/solution/susdat-overview"
+        },
+        {
+          "label": "Saturn: live reserves API",
+          "url": "https://app.saturn.credit/api/analytics/reserves"
+        }
+      ]
     }
   ]
 }

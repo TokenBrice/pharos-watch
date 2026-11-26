@@ -29,8 +29,10 @@ export interface CoinStatesResult {
  * DDR verdicts. The three live reads are shared React Query entries, so a page
  * that already loads them pays nothing extra. Deadline states need the
  * visitor's clock (`useUtcDayNowMs`), so they appear only after hydration.
+ * `chainId` scopes the read to one chain's page, adding notices scoped to that
+ * chain; every other caller resolves asset-wide.
  */
-export function useCoinStates({ enabled = true }: { enabled?: boolean } = {}): CoinStatesResult {
+export function useCoinStates({ enabled = true, chainId = null }: { enabled?: boolean; chainId?: string | null } = {}): CoinStatesResult {
   const peg = usePegSummary({ enabled });
   const stress = useStressSignals({ enabled });
   const resolver = useDepegResolver({ enabled: enabled && isDepegResolverEnabled() });
@@ -63,11 +65,12 @@ export function useCoinStates({ enabled = true }: { enabled?: boolean } = {}): C
         ddrMethodologyVersion: verdict?.methodologyVersion,
         dewsBand: signals?.[meta.id]?.band,
         nowSec,
+        chainId,
       });
       if (states.length > 0) map.set(meta.id, states);
     }
     return map;
-  }, [pegCoins, signals, resolverData, dayIndex]);
+  }, [pegCoins, signals, resolverData, dayIndex, chainId]);
 
   return { byId, liveReady: peg.isSuccess && stress.isSuccess, clockReady: dayIndex !== null };
 }

@@ -43,11 +43,28 @@
   "notices": [
     {
       "type": "info",
-      "title": "lisUSD CDP winding down: 31 October 2026",
-      "message": "Lista DAO is retiring the CDP that mints lisUSD; existing positions must migrate to Lista Lending or be repaid and withdrawn by 31 October 2026. New CDP borrowing already reverts protocol-wide, and lisUSD continues in Lista Lending and the PSM.",
-      "kind": "deadline",
-      "deadline": "2026-10-31",
-      "asOf": "2026-10-30"
+      "title": "Do not deposit slisBNB in temporary migration CDP",
+      "message": "Lista DAO keeps a temporary CDP market open only for partner migration after the legacy lisUSD CDP sunset. Holders should not deposit slisBNB into that temporary CDP market; use Lista Lending or the PSM instead.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Lista DAO: sunset complete",
+          "url": "https://x.com/lista_dao/status/2122160705562358240"
+        }
+      ]
+    },
+    {
+      "type": "info",
+      "title": "Legacy lisUSD CDP sunset completed",
+      "message": "Lista DAO retired legacy lisUSD CDPs on October 31, 2026 and settled remaining user positions by November 16, while lisUSD continues in Lista Lending and the PSM.",
+      "kind": "history",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Lista DAO: sunset complete",
+          "url": "https://x.com/lista_dao/status/2122160705562358240"
+        }
+      ]
     }
   ],
   "launchDate": "2022-08-19"

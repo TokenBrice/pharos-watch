@@ -106,9 +106,16 @@
   },
   "notices": [
     {
-      "type": "warning",
-      "title": "Contract-priced strategy token",
-      "message": "CoinGecko reports a live price and market cap but little or no secondary-market volume; Pharos treats MGLOBAL as a NAV-priced tokenized certificate."
+      "type": "info",
+      "title": "NAV-priced tokenized strategy certificate",
+      "message": "mGLOBAL is a NAV-priced tokenized strategy certificate with minimal secondary-market trading volume, not a par-pegged stablecoin.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Midas: mGLOBAL product",
+          "url": "https://midas.app/mglobal"
+        }
+      ]
     }
   ],
   "launchDate": "2026-04-16"

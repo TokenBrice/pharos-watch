@@ -59,9 +59,20 @@
   "governanceQuality": "single-entity",
   "notices": [
     {
-      "type": "warning",
-      "title": "Backing disclosure conflict and active depeg",
-      "message": "WEUSD trades near $0.91 while PicWe's current docs describe 1:1 USDC backing and older PicWe-linked materials describe a roughly 9 USDT + 1 MOVE basket. Treat the peg and redemption model as disputed until PicWe publishes reconciled reserve evidence."
+      "type": "danger",
+      "title": "Severe depeg and conflicting reserve disclosures",
+      "message": "WEUSD has traded more than 30% below $1 on thin liquidity in November 2026 with no reconciled reserve proof. Current PicWe documentation describes 1:1 USDC backing while older materials describe a 9 USDT plus 1 MOVE basket, leaving redemption terms and collateral coverage disputed.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "PicWe: WEUSD overview",
+          "url": "https://docs.picwe.org/what-is-weusd"
+        },
+        {
+          "label": "PicWe: mint and redeem",
+          "url": "https://docs.picwe.org/mint-and-redeem"
+        }
+      ]
     }
   ],
   "launchDate": "2025-06-26",

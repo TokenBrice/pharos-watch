@@ -72,12 +72,5 @@
   ],
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
-  "governanceQuality": "single-entity",
-  "notices": [
-    {
-      "type": "info",
-      "title": "sUSDM watchlisted",
-      "message": "Monetrix's sUSDM wrapper has an official contract, but it currently lacks a DefiLlama stablecoin row, CoinGecko ID, or Pharos ERC-4626 NAV runtime adapter. Pharos tracks base USDM until sUSDM has a maintained price and market-cap source."
-    }
-  ]
+  "governanceQuality": "single-entity"
 }

@@ -151,7 +151,18 @@
     {
       "type": "info",
       "title": "Multi-chain EU-regulated MMF",
-      "message": "EUTBL is issued on Ethereum, Arbitrum, Polygon, Base, Etherlink, Starknet, and Stellar, with cross-chain transfers relayed via Chainlink CCIP where supported."
+      "message": "EUTBL's September 1, 2026 prospectus lists native issuance across Ethereum, Arbitrum, Polygon, Base, Etherlink, Starknet, Stellar, and Solana. Spiko announced Chainlink CCIP support, though production CCIP lanes are not yet listed in Chainlink's directory.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Spiko: SICAV prospectus",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+        },
+        {
+          "label": "Spiko: CCIP announcement",
+          "url": "https://www.spiko.io/blog/spiko-chainlink-ccip"
+        }
+      ]
     }
   ],
   "launchDate": "2024-06-12"

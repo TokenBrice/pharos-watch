@@ -65,5 +65,19 @@
   },
   "windDownAnnouncedAt": "2025-05-07",
   "windDownSourceUrl": "https://blog.defi.money/sunsetting-defimoney",
-  "launchDate": "2024-09-10"
+  "launchDate": "2024-09-10",
+  "notices": [
+    {
+      "type": "info",
+      "title": "Protocol sunset and web interface offline",
+      "message": "defi.money ended team support on May 7, 2025 and shut down its web interface on June 1, 2025. Contracts stay live on Arbitrum, Optimism, and Base, so managing or closing positions requires direct contract calls.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "defi.money: sunset notice",
+          "url": "https://blog.defi.money/sunsetting-defimoney"
+        }
+      ]
+    }
+  ]
 }

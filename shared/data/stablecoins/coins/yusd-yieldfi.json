@@ -122,11 +122,25 @@
   },
   "notices": [
     {
-      "type": "warning",
-      "title": "Mint and redemption paused",
-      "message": "YieldFi states mint and redeem for yUSD and vyUSD are paused pending SAGA remediation.",
+      "type": "danger",
+      "title": "Minting and redemption paused pending Saga recovery",
+      "message": "YieldFi keeps yUSD and vyUSD minting and redemption paused while pursuing contractual recovery from Saga after SagaEVM's January 2026 exploit. SagaEVM shut down permanently on November 23, 2026. YieldFi's transparency page excludes Saga assets and has not disclosed the exact impaired share or any reopening date.",
       "kind": "paused",
-      "asOf": "2026-10-30"
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "YieldFi: vyUSD portal",
+          "url": "https://v2.yield.fi/vyusd"
+        },
+        {
+          "label": "Saga: chain shutdown",
+          "url": "https://x.com/SagaAILabs/status/2103129920243200467"
+        },
+        {
+          "label": "Saga: exploit update",
+          "url": "https://medium.com/sagaxyz/sagaevm-security-incident-investigation-update-29a1d2a6b0cd"
+        }
+      ]
     }
   ],
   "launchDate": "2025-04-28",

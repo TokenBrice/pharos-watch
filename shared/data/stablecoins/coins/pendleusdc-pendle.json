@@ -144,7 +144,14 @@
     {
       "type": "info",
       "title": "Curator terms restrict UK and US access",
-      "message": "Armitage's terms prohibit UK and US persons from accessing or using its covered vaults, including through third-party interfaces. Direct contract permissions do not override those terms; withdrawals remain subject to market liquidity."
+      "message": "Armitage's May 19, 2026 terms prohibit UK and US persons from using Covered Vaults, including via third-party interfaces. Direct contract permissions do not waive those restrictions, and withdrawals depend on market liquidity.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Armitage: terms of use",
+          "url": "https://armitage.wintermute.com/terms-of-use"
+        }
+      ]
     }
   ],
   "launchDate": "2026-08-12"

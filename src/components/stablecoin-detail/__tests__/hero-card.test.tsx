@@ -1,3 +1,6 @@
+// @vitest-environment jsdom
+
+import { render, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { HeroCard, HeroIdentityHeader } from "@/components/stablecoin-detail/hero-card";
@@ -14,6 +17,7 @@ import type { DexLiquidityData } from "@shared/types/dex-liquidity";
 import type { PegSummaryCoin } from "@shared/types/peg";
 import type { StablecoinData } from "@shared/types/supply";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
+import type { CoinNotice } from "@shared/types/stablecoin-meta-primitives";
 import type { StressSignalEntry } from "@shared/types/stress";
 import type { YieldRanking } from "@shared/types/yield";
 
@@ -444,6 +448,66 @@ describe("HeroSupplyMetric, fourth figure, verdict, notices, and muted readings"
     const frozen = renderHero({ coin: { status: "frozen", frozenAt: "2026-04-27" } });
     expect(frozen.match(/Last observed · 2026-04-27/g)?.length).toBeGreaterThanOrEqual(4);
     expect(frozen).not.toMatch(/24H|24h|7D|7d</);
+  });
+
+  it("renders chain scope, sources, paused closing dates and prose-safe links, in a deterministic order", () => {
+    const src = (n: number) => ({ label: `Source ${n}`, url: `https://example.com/s${n}` });
+    const notices: CoinNotice[] = [
+      { type: "info", title: "Info caveat", message: "See (docs https://example.com/a_(b)). Then https://example.com/c, done.", sources: [src(1)] },
+      { type: "warning", title: "Late cutoff", message: "M.", kind: "deadline", deadline: "2027-01-12", chains: ["noble"], asOf: "2026-11-20", sources: [src(1), src(2)] },
+      { type: "warning", title: "Standing caveat", message: "M.", chains: ["noble", "abstract", "sophon"], sources: [src(1), src(2), src(3)] },
+      { type: "warning", title: "Exploit repaid", message: "M.", kind: "history", sources: [src(4)] },
+      { type: "warning", title: "Early cutoff", message: "M.", kind: "deadline", deadline: "2026-12-15", chains: ["abstract"] },
+      { type: "warning", title: "Deposits paused", message: "M.", kind: "paused", deadline: "2026-01-01" },
+      { type: "warning", title: "Withdrawals paused", message: "M.", kind: "paused", deadline: "2027-01-31" },
+    ];
+    clock.nowMs = Date.parse("2026-11-26T12:00:00Z");
+    try {
+      const placed = placeCoinNotices(notices, { nowSec: clock.nowMs / 1000 });
+      expect([placed.critical, placed.paused, placed.rest].map((group) => group.map((n) => n.title))).toEqual([
+        [], ["Deposits paused", "Withdrawals paused"], ["Early cutoff", "Late cutoff", "Standing caveat", "Info caveat", "Exploit repaid"],
+      ]);
+      const view = within(render(<NoticeStack notices={[...placed.paused, ...placed.rest]} />).container);
+      // A callout's body: the element holding its title line and everything under it.
+      const callout = (title: string) => within(view.getByText(title).closest("p")!.parentElement!);
+      const hrefs = (links: HTMLElement[]) => links.map((link) => link.getAttribute("href"));
+
+      // A paused operation keeps its kicker and names when it closes, or closed; it never folds as spent.
+      expect(callout("Deposits paused").getByText("Paused now · Action may be needed")).toBeTruthy();
+      expect(callout("Withdrawals paused").getByText("Closes Jan 31, 2027 · in 66 days")).toBeTruthy();
+      expect(callout("Deposits paused").getByText("Closed Jan 1, 2026")).toBeTruthy();
+      expect(view.queryByText(/Passed/)).toBeNull();
+      expect(callout("Late cutoff").getByText("Noble only")).toBeTruthy();
+      expect(["Noble", "Abstract"].map((name) => callout("Standing caveat").getByText(name))).toHaveLength(2);
+      expect(callout("Standing caveat").getByTitle("Sophon").textContent).toBe("+1: Sophon");
+      const details = callout("Info caveat").getAllByRole("link", { name: "More details" });
+      expect(hrefs(details)).toEqual(["https://example.com/a_(b)", "https://example.com/c"]);
+      expect(details[0]!.closest("p")!.textContent).toBe("See (docs More details). Then More details, done.");
+
+      // One or two sources sit inline after their label with no dangling separator.
+      const lateFooter = within(callout("Late cutoff").getByText("Sources:").closest("[data-notice-footer]") as HTMLElement);
+      expect(lateFooter.getByText("Updated Nov 20, 2026")).toBeTruthy();
+      expect(hrefs(lateFooter.getAllByRole("link"))).toEqual(["https://example.com/s1", "https://example.com/s2"]);
+      expect(lateFooter.getAllByRole("link").map((link) => [link.getAttribute("target"), link.getAttribute("rel")]))
+        .toEqual([["_blank", "noopener noreferrer"], ["_blank", "noopener noreferrer"]]);
+      expect(lateFooter.getByText("Sources:").closest("[data-notice-footer]")!.textContent).not.toContain("·");
+      expect(hrefs(callout("Info caveat").getAllByRole("link", { name: "Source 1" }))).toEqual(["https://example.com/s1"]);
+      expect(callout("Info caveat").getByText("Source:")).toBeTruthy();
+      // Three or more sources fold behind "Sources (3)", the links outside the summary; past events keep theirs.
+      const summary = callout("Standing caveat").getByText("Sources").closest("summary")!;
+      expect(summary.textContent).toBe("Sources (3)");
+      expect(within(summary).queryAllByRole("link")).toHaveLength(0);
+      expect(hrefs(within(summary.parentElement!).getAllByRole("link", { hidden: true })))
+        .toEqual(["https://example.com/s1", "https://example.com/s2", "https://example.com/s3"]);
+      const history = within(view.getByText("Past event: Exploit repaid").closest("details")!);
+      expect(hrefs(history.getAllByRole("link", { hidden: true }))).toEqual(["https://example.com/s4"]);
+    } finally {
+      clock.nowMs = null;
+    }
+
+    // A titleless, unscoped notice (the site-session toast) renders its message with no empty header line.
+    const toast = render(<NoticeStack notices={[{ type: "info", title: "", message: "Live data paused." }]} />).container;
+    expect(Array.from(toast.querySelectorAll("p"), (p) => p.textContent)).toEqual(["Live data paused."]);
   });
 
   it("mutes Peg and DEWS readings that cannot read calm", () => {

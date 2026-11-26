@@ -72,9 +72,16 @@
   },
   "notices": [
     {
-      "type": "warning",
+      "type": "info",
       "title": "Perpetuals liquidity-layer stablecoin",
-      "message": "lvUSD is included through CoinGecko price and market-cap coverage, but its collateral and redemption model are tied to LeverUp's trading system rather than a conventional issuer reserve."
+      "message": "lvUSD's collateral and redemption mechanics are tied directly to LeverUp's perpetuals liquidity layer, not a segregated fiat reserve.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "LeverUp: lvUSD docs",
+          "url": "https://leverup.gitbook.io/docs/liquidity-layer/lvusd-stablecoin"
+        }
+      ]
     }
   ]
 }

@@ -4,12 +4,14 @@
  * Human-readable weekly curation rollup. Prints a structured markdown
  * digest covering each editorial stream tracked by Pharos:
  *
- *   1. oneLiner coverage (binary: 100% expected)
- *   2. mechanismArchetype coverage in the top-segment cohort
- *   3. proofOfReserves.attestorTier coverage (independent-audit cohort)
- *   4. AI summary staleness (>180 days for active coins)
- *   5. Chart annotation queue health
- *   6. Dated-review expiry lookahead (14 days, across all dated registries)
+ *   1. Active coin-notice health (expired deadlines, invalid dates,
+ *      missing sources, and NOTICE_STALE_DAYS staleness)
+ *   2. oneLiner coverage (binary: 100% expected)
+ *   3. mechanismArchetype coverage in the top-segment cohort
+ *   4. proofOfReserves.attestorTier coverage (independent-audit cohort)
+ *   5. AI summary staleness (>180 days for active coins)
+ *   6. Chart annotation queue health
+ *   7. Dated-review expiry lookahead (14 days, across all dated registries)
  *
  * Pure stdout by default. With --write the digest is also archived to
  * `agents/curation-digest-<date>.md`.
@@ -22,6 +24,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { CHAIN_MATURITY_REVIEWS_V1 } from "../../shared/data/safety-score-v9/chain-maturity-reviews-v1.ts";
+import { NOTICE_STALE_DAYS } from "../../shared/lib/coin-state.ts";
 import { DEX_COVERAGE_WAIVERS } from "../../shared/lib/dex-deployment-coverage.ts";
 import {
   VENUE_RISK_SCORE_MAX_AGE_DAYS,
@@ -65,6 +68,9 @@ const QUEUE_WARN_AGE_DAYS = 60;
 const ANNOTATION_STALE_YEARS = 2;
 const QUARTERLY_HAND_CHECK_DAYS = 90;
 export const EXPIRY_LOOKAHEAD_DAYS = 14;
+// Per-bucket bullet cap so a staleness wave cannot push later digest sections
+// past the workflow's 180-line excerpt.
+const MAX_NOTICE_HEALTH_ROWS = 10;
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, "utf8"));
@@ -580,6 +586,90 @@ export function renderDatedReviewExpiries(report) {
   return lines.join("\n");
 }
 
+function isIsoDate(value) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const ms = Date.parse(`${value}T00:00:00Z`);
+  return Number.isFinite(ms) && new Date(ms).toISOString().slice(0, 10) === value;
+}
+
+/** A paused notice reads its own budget before its type's (coin-state.ts). */
+function noticeStaleBudget(notice) {
+  if (notice.kind === "paused") return { budget: "paused", days: NOTICE_STALE_DAYS.paused };
+  if (notice.type === "danger") return { budget: "danger", days: NOTICE_STALE_DAYS.danger };
+  if (notice.type === "warning") return { budget: "warning", days: NOTICE_STALE_DAYS.warning };
+  return { budget: "info", days: NOTICE_STALE_DAYS.info };
+}
+
+const byCoinTitle = (a, b) => a.coinId.localeCompare(b.coinId) || a.title.localeCompare(b.title);
+
+/**
+ * Active coin notices due for curation, by UTC calendar day: deadlines
+ * already past (the deadline day itself stays actionable), missing or
+ * unparseable dates, missing sources, and `asOf` older than the
+ * NOTICE_STALE_DAYS budget (history notices are exempt from age only).
+ */
+export function analyzeNoticeHealth(coins, nowMs = Date.now()) {
+  const today = new Date(nowMs).toISOString().slice(0, 10);
+  const report = { today, totalNotices: 0, expiredDeadlines: [], invalidDates: [], missingSources: [], stale: [] };
+  for (const coin of coins) {
+    if (status(coin) !== "active" || !Array.isArray(coin.notices)) continue;
+    for (const notice of coin.notices) {
+      report.totalNotices += 1;
+      const row = { coinId: coin.id, title: String(notice?.title ?? "") };
+      const asOfValid = isIsoDate(notice?.asOf);
+      if (!asOfValid) report.invalidDates.push({ ...row, field: "asOf", value: notice?.asOf ?? null });
+      const deadlineRequired = notice?.kind === "deadline";
+      const hasDeadline = deadlineRequired || (notice?.kind === "paused" && notice.deadline !== undefined);
+      if (hasDeadline && !isIsoDate(notice.deadline)) {
+        report.invalidDates.push({ ...row, field: "deadline", value: notice.deadline ?? null });
+      } else if (hasDeadline && notice.deadline < today) {
+        report.expiredDeadlines.push({ ...row, deadline: notice.deadline, daysAgo: daysBetween(notice.deadline, today) });
+      }
+      if (!Array.isArray(notice?.sources) || notice.sources.length === 0) report.missingSources.push(row);
+      if (!asOfValid || notice.kind === "history") continue;
+      const ageDays = daysBetween(notice.asOf, today);
+      const { budget, days } = noticeStaleBudget(notice);
+      if (ageDays > days) report.stale.push({ ...row, asOf: notice.asOf, ageDays, budget, budgetDays: days });
+    }
+  }
+  report.expiredDeadlines.sort((a, b) => b.daysAgo - a.daysAgo || byCoinTitle(a, b));
+  report.invalidDates.sort((a, b) => byCoinTitle(a, b) || a.field.localeCompare(b.field));
+  report.missingSources.sort(byCoinTitle);
+  report.stale.sort((a, b) => b.ageDays - a.ageDays || byCoinTitle(a, b));
+  return report;
+}
+
+/**
+ * @param {ReturnType<typeof analyzeNoticeHealth>} report
+ */
+export function renderNoticeHealth(report) {
+  const lines = [`## Notice health`, ""];
+  const counts = [
+    [report.expiredDeadlines.length, "expired deadline"],
+    [report.invalidDates.length, "invalid date"],
+    [report.missingSources.length, "missing sources"],
+    [report.stale.length, "stale"],
+  ].filter(([count]) => count > 0);
+  if (counts.length === 0) {
+    lines.push(`Status: **OK** — ${report.totalNotices} active notices dated, sourced, and within their staleness budgets as of ${report.today}.`);
+    lines.push("");
+    return lines.join("\n");
+  }
+  lines.push(`Status: **DRIFT** — ${report.totalNotices} active notices as of ${report.today}: ${counts.map(([count, label]) => `${count} ${label}`).join("; ")}.`);
+  lines.push("");
+  const label = (row) => `- ${row.coinId} — "${row.title}"`;
+  const pushRows = (rows, detail) => {
+    for (const row of rows.slice(0, MAX_NOTICE_HEALTH_ROWS)) lines.push(`${label(row)} (${detail(row)})`);
+    if (rows.length > MAX_NOTICE_HEALTH_ROWS) lines.push(`- ...and ${rows.length - MAX_NOTICE_HEALTH_ROWS} more`);
+  };
+  pushRows(report.expiredDeadlines, (row) => `deadline ${row.deadline}, expired ${row.daysAgo}d ago`);
+  pushRows(report.invalidDates, (row) => `${row.field} ${row.value == null ? "missing" : `invalid: ${JSON.stringify(row.value)}`}`);
+  pushRows(report.missingSources, () => "no sources");
+  pushRows(report.stale, (row) => `asOf ${row.asOf}, ${row.ageDays}d > ${row.budgetDays}d ${row.budget} budget`);
+  lines.push("");
+  return lines.join("\n");
+}
+
 function quarterlyDueIn(curatedTimestamps) {
   // Anchor to the digest file's mtime is unreliable across machines; instead
   // we anchor to the most recent date inserted into the curated JSON assets. The
@@ -608,9 +698,11 @@ function main() {
   const queue = analyzeAnnotationQueue(queueText, curatedTimestamps);
   const expiries = collectDatedReviewExpiries();
   const dueIn = quarterlyDueIn(curatedTimestamps);
+  const noticeHealth = analyzeNoticeHealth(coins);
 
   const out = [
     renderHeader(dueIn),
+    renderNoticeHealth(noticeHealth),
     renderOneLiner(oneLiner),
     renderArchetype(archetype),
     renderAttestor(attestor),

@@ -80,10 +80,29 @@
   },
   "notices": [
     {
-      "type": "danger",
-      "title": "Resolv-linked strategy loss",
-      "message": "yoUSD reported a roughly 2.95% drawdown after the March 22 2026 Resolv exploit impaired Resolv-linked exposure. Treat the NAV as strategy-risk-bearing, not a monotonic dollar claim. https://resolv.xyz/blog/resolv-postmortem-march-22-2026-incident",
-      "asOf": "2026-05-20"
+      "type": "info",
+      "title": "March 2026 Resolv RLP loss and recovery",
+      "message": "The March 22, 2026 Resolv exploit impaired yoUSD's 2.75% RLP sleeve, triggering a brief pause and a 2.95% withdrawal fee that YO removed on April 16. After Resolv's recovery portal opened, YO distributed recovered USDC on June 11 alongside quarterly-vesting RESOLV.",
+      "kind": "history",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "YO: USDC recovery payout",
+          "url": "https://x.com/yield/status/2064867204055584981"
+        },
+        {
+          "label": "YO Forum: RLP carve-out",
+          "url": "https://forum.yo.xyz/t/request-for-feedback-proposed-yousd-rlp-plan/9"
+        },
+        {
+          "label": "Resolv: recovery portal",
+          "url": "https://docs.resolv.xyz/litepaper/using-resolv/resolv-recovery-portal-overview"
+        },
+        {
+          "label": "Blockscout: April 16 fee tx",
+          "url": "https://eth.blockscout.com/tx/0xd97410f766374e682c48c5b4824b104a151a7774da18936a5aba12c65a6a09a2"
+        }
+      ]
     }
   ],
   "yieldConfig": {

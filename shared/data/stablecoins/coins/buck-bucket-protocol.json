@@ -36,5 +36,19 @@
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "governanceQuality": "single-entity",
-  "launchDate": "2023-06-28"
+  "launchDate": "2023-06-28",
+  "notices": [
+    {
+      "type": "info",
+      "title": "Legacy V1 token in exit-only migration to USDB",
+      "message": "Bucket Protocol disabled new BUCK minting in September 2025 and placed V1 CDPs in exit-only mode. Holders can migrate BUCK 1:1 into USDB with no protocol fee and no announced deadline.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Bucket: USDB migration",
+          "url": "https://docs.bucketprotocol.io/user-guides/bucket-upgrade-and-migration"
+        }
+      ]
+    }
+  ]
 }

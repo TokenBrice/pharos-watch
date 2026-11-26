@@ -449,6 +449,28 @@ export const StablecoinMetaAssetSchema = StablecoinMetaAssetRawSchema.superRefin
   },
 )
   .superRefine((meta, ctx) => {
+    // Archived, frozen, delisted, quarantined and pre-launch assets keep their
+    // historical notices; CoinNoticeSchema still checks their structure, but
+    // only active notices must be dated, sourced, unique and chain-scoped.
+    if (!isActiveStablecoinMeta(meta)) return;
+    const deploymentChains = new Set([...(meta.contracts ?? []), ...(meta.tradedContracts ?? [])].map((row) => row.chain));
+    const titles = new Set<string>();
+    for (const [index, notice] of (meta.notices ?? []).entries()) {
+      if (notice.asOf === undefined) issue(ctx, ["notices", index, "asOf"], "an active notice requires asOf");
+      if ((notice.sources?.length ?? 0) === 0) issue(ctx, ["notices", index, "sources"], "an active notice requires at least one source");
+      if (/https?:\/\//i.test(notice.message)) issue(ctx, ["notices", index, "message"], "an active notice puts URLs in sources, not the message");
+      if (titles.has(notice.title)) issue(ctx, ["notices", index, "title"], `duplicate notice title "${notice.title}"`);
+      titles.add(notice.title);
+      if (notice.chains === undefined || notice.kind === "history") continue;
+      for (const [chainIndex, chain] of notice.chains.entries()) {
+        if (!deploymentChains.has(chain)) issue(ctx, ["notices", index, "chains", chainIndex], `notice chain ${chain} is not a contracts or tradedContracts deployment`);
+      }
+      if (notice.chains.length >= deploymentChains.size) {
+        issue(ctx, ["notices", index, "chains"], "a chain-scoped notice must name a strict subset of deployment chains; omit chains for an asset-wide notice");
+      }
+    }
+  })
+  .superRefine((meta, ctx) => {
     if (
       !meta.oracleRisk ||
       meta.variantOf ||

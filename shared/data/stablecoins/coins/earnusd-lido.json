@@ -175,7 +175,18 @@
     {
       "type": "info",
       "title": "Interface eligibility restrictions",
-      "message": "Lido's September 23, 2026 terms exclude Lido Earn access or deposits from U.S. and UK citizens or residents and users accessing from those countries. The linked strategist terms separately restrict vault use to professional or business capacity, not consumers. See the linked terms for the full eligibility conditions."
+      "message": "Lido's September 23, 2026 terms exclude US and UK persons and users accessing from those jurisdictions from Lido Earn. Runtime Labs' strategist terms restrict vault use to professional or business capacity.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Lido: terms of use",
+          "url": "https://lido.fi/terms-of-use"
+        },
+        {
+          "label": "Mellow: Runtime Labs notice",
+          "url": "https://mellow.finance/Runtime-Labs-Vault-Legal-Notice.pdf"
+        }
+      ]
     }
   ],
   "launchDate": "2026-03-12"

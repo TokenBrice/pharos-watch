@@ -84,5 +84,23 @@
       }
     }
   },
-  "launchDate": "2024-05-16"
+  "launchDate": "2024-05-16",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Sustained ~15% secondary discount and gated exit",
+      "message": "USDz has traded roughly 14% to 16% below $1 since September 2026 with no issuer statement explaining the discount. Direct redemption against SPCT private-credit collateral is limited to institutions and periodic buybacks, and token terms grant holders no direct claim on underlying notes.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Anzen: USDz overview",
+          "url": "https://docs.anzen.finance/usdz-101/overview"
+        },
+        {
+          "label": "Anzen: buyback mechanics",
+          "url": "https://x.com/AnzenFinance/status/1866781325992268028"
+        }
+      ]
+    }
+  ]
 }

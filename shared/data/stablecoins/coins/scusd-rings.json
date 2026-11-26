@@ -51,13 +51,35 @@
   "notices": [
     {
       "type": "warning",
-      "title": "Stream Finance loss impaired staking wrappers",
-      "message": "Trevee's stkscUSD/stkscETH lost backing in the Nov 2025 Stream Finance fraud; staking and unstaking remain disabled and remaining backing depends on Stream legal cases (issuer, 2026-04-01)."
+      "title": "Stream Finance losses impair staking wrappers",
+      "message": "Trevee's stkscUSD and stkscETH wrappers remain frozen with staking and unstaking disabled after losing backing in the November 2025 Stream Finance collapse. Stream began collecting creditor claims via Cooley LLP in June 2026, with no holder payout confirmed.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Trevee: Stream post-mortem",
+          "url": "https://x.com/Trevee_xyz/status/1986815227371905223"
+        },
+        {
+          "label": "The Defiant: wind-down",
+          "url": "https://thedefiant.io/news/defi/stream-finance-breaks-six-month-silence-with-wind-down-plan"
+        },
+        {
+          "label": "The Defiant: claims open",
+          "url": "https://thedefiant.io/news/defi/stream-finance-starts-collecting-creditor-claims-in-step-toward-global-resolution"
+        }
+      ]
     },
     {
       "type": "info",
-      "title": "On-chain reserve tracking pending",
-      "message": "Trevee publishes backing addresses but no dated allocation; idle balances alone do not prove full backing composition."
+      "title": "Undated reserve wallet disclosures",
+      "message": "Trevee publishes treasury backing addresses without a dated allocation schedule, so idle wallet balances alone do not verify full backing composition.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Trevee: backing addresses",
+          "url": "https://docs.trevee.xyz/trevee-earn/sonic-scassets/treasury-backing-address"
+        }
+      ]
     }
   ],
   "launchDate": "2024-12-09",

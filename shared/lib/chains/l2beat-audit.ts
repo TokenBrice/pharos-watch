@@ -288,7 +288,7 @@ function stablecoinRouteSearchText(coin: StablecoinMeta): string {
     pieces.push(link.label, link.url);
   }
   for (const notice of coin.notices ?? []) {
-    pieces.push(notice.title, notice.message);
+    pieces.push(notice.title, notice.message, ...(notice.sources ?? []).flatMap((source) => [source.label, source.url]));
   }
   if (coin.mintAuthority) {
     pieces.push(

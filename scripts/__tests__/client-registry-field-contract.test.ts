@@ -56,11 +56,23 @@ describe("client registry field contract", () => {
       { type: "danger", title: "Halted", message: "M", kind: "paused", asOf: "2026-10-30" },
       { type: "warning", title: "Exploit repaid", message: "M", kind: "history" },
       { type: "info", title: "Wind-down", message: "M", kind: "deadline", deadline: "2027-01-31" },
+      {
+        type: "warning", title: "Noble route closes", message: "M", kind: "deadline", deadline: "2027-01-12",
+        chains: ["noble"], sources: [{ label: "Noble docs", url: "https://example.com/noble" }],
+      },
+      { type: "warning", title: "Noble bridge caveat", message: "M", chains: ["noble"] },
+      { type: "info", title: "Abstract note", message: "M", chains: ["abstract"], asOf: "2026-11-20" },
+      { type: "warning", title: "Old Noble exploit", message: "M", kind: "history", chains: ["noble"] },
     ];
     const projected = projectListCoin({ id: "alerts-test", notices }, STABLECOIN_CLIENT_LIST_FIELDS, "core-stablecoin");
     expect(projected).toHaveProperty("alerts", [
       { type: "danger", title: "Halted", kind: "paused", asOf: "2026-10-30" },
       { type: "info", title: "Wind-down", kind: "deadline", deadline: "2027-01-31" },
+      // Chain scope travels with the alert; message and sources stay in the detail projection.
+      { type: "warning", title: "Noble route closes", kind: "deadline", deadline: "2027-01-12", chains: ["noble"] },
+      // A dateless chain-scoped notice projects for its chain page; history never does, scoped or not.
+      { type: "warning", title: "Noble bridge caveat", chains: ["noble"] },
+      { type: "info", title: "Abstract note", asOf: "2026-11-20", chains: ["abstract"] },
     ]);
     expect(projectAlerts({ notices: notices.slice(0, 1) })).toBeUndefined();
   });

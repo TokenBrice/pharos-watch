@@ -19,11 +19,20 @@
     "reviewer": "Pharos dependency-map evidence review",
     "confidence": "verified",
     "sources": [
-      {"label": "Ethereum old FalconX facility token() and AATranche() at block 26088256 (2026-09-30)", "url": "https://ethereum-rpc.publicnode.com"}
+      {
+        "label": "Ethereum old FalconX facility token() and AATranche() at block 26088256 (2026-09-30)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
     ],
     "rationale": "At Ethereum block 26088256, the old facility 0x433d5b175148da32ffe1e1a37a939e1b7e79be4d returned canonical USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 from token() and the tracked token 0xc26a6fa2c37b38e549a4a1807543801db684f99c from AATranche(). This verifies the exact Ethereum tranche's USDC settlement lineage without substituting the newer Optimism facility or Falcon Finance USDf. The retained serial strategy-vault claim describes settlement dependence, not USDC held as collateral; the facility receivable remains FalconX credit risk.",
     "relationships": [
-      {"id": "usdc-circle", "weight": 1, "type": "wrapper", "economicRole": "serial-claim", "reason": "Exact old Ethereum CDO token() and AATranche() join at block 26088256 establishes the tracked AA tranche's USDC settlement asset."}
+      {
+        "id": "usdc-circle",
+        "weight": 1,
+        "type": "wrapper",
+        "economicRole": "serial-claim",
+        "reason": "Exact old Ethereum CDO token() and AATranche() join at block 26088256 establishes the tracked AA tranche's USDC settlement asset."
+      }
     ]
   },
   "collateral": "A senior (AA) tranche claim on a single-obligor FalconX credit facility curated by M11 Credit. USDC is sent to the borrower's wallet rather than held as collateral, so the vault's asset is the FalconX receivable. Issuers cite overcollateralized loans and transaction-level collateral; the loan tape is unpublished.",
@@ -88,7 +97,13 @@
         "risk": "high",
         "assetClass": "private-credit",
         "issuerOrObligor": "FalconX",
-        "riskFactors": ["credit", "counterparty", "concentration", "liquidity", "legal"]
+        "riskFactors": [
+          "credit",
+          "counterparty",
+          "concentration",
+          "liquidity",
+          "legal"
+        ]
       },
       "unlentSlice": {
         "sourceKey": "idle-cdo:unlent-usdc",
@@ -97,7 +112,11 @@
         "coinId": "usdc-circle",
         "depType": "collateral",
         "assetClass": "stablecoin",
-        "riskFactors": ["counterparty", "custody", "smart-contract"],
+        "riskFactors": [
+          "counterparty",
+          "custody",
+          "smart-contract"
+        ],
         "blacklistable": true
       },
       "sourceUrls": [
@@ -117,7 +136,14 @@
     {
       "type": "warning",
       "title": "Private-credit vault exposure",
-      "message": "AA_FalconXUSDC is a Pareto credit-vault share, not a par-redeemable Falcon Finance USDf wrapper. Monthly exits depend on the vault credit line and Pareto redemption process."
+      "message": "AA_FalconXUSDC is a Pareto credit-vault share, not a par-redeemable Falcon Finance USDf wrapper. Monthly exits depend on the vault credit line and Pareto's redemption process.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Pareto: live credit vaults",
+          "url": "https://docs.pareto.credit/product/credit-vaults/live-vaults"
+        }
+      ]
     }
   ],
   "launchDate": "2025-07-10",
