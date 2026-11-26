@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { streamValidatedV9FactSetDigestInput } from "@shared/lib/safety-score-v9/facts";
-import { compileV9FactSetV3, createV9FactSetAssetValidator, createV9PublicationAssetCompactor, createV9PublicationResearchHashRebinder, safeParseV9AssetFactsV3 } from "@shared/lib/safety-score-v9/compile";
+import { assertV9FinalPublicationEvidenceHash, compileV9FactSetV3, createV9FactSetAssetValidator, createV9PublicationAssetCompactor, createV9PublicationResearchHashRebinder, safeParseV9AssetFactsV3 } from "@shared/lib/safety-score-v9/compile";
 import { sha256HexFromUtf8Chunks } from "../hash";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import {
@@ -827,7 +827,8 @@ export function* compileSafetyScoreV9AssetSlice(
   evaluationFailures: ReadonlyMap<string, string>,
   verifiedEmptyExitByAssetId?: Readonly<Record<string, SafetyScoreV9VerifiedEmptyExitWitness>>,
 ) {
-  const { extension } = source;
+  const { assets: _assets, ...extensionHeader } = source.extension;
+  const extension = { ...admitSafetyScoreV9FactSetExtensionHeader(extensionHeader), assets: [] };
   const { validateAsset } = createV9FactSetAssetValidator(factHeader);
   const researchHash = factHeader.sourceFingerprints.researchOverlays.payloadSha256;
   let index = 0;
@@ -840,6 +841,7 @@ export function* compileSafetyScoreV9AssetSlice(
       ? compileAssetOutcome(fixedInput, extension, asset, researchHash, verifiedEmptyExitByAssetId)
       : evaluationQuarantineOutcome(fixedInput, extension, asset, researchHash, failure);
     validateAsset(outcome.facts);
+    for (const evidence of outcome.facts.evidence) assertV9FinalPublicationEvidenceHash(evidence.contentSha256);
     yield outcome;
   }
   if (index !== assetIds.length) throw new Error("V9 asset slice is incomplete");

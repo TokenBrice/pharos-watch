@@ -1,3 +1,4 @@
+import { createReportCardEvidenceJournalV1 } from "@shared/lib/report-card-evidence-journal";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { SAFETY_SCORE_V9_CACHE_KEYS } from "@shared/types/safety-score-cache-keys";
@@ -11,13 +12,17 @@ vi.mock("@shared/types/safety-score-v9-coverage", () => ({
 
 import { computeSafetyScoreV9 } from "../compute-safety-score-v9";
 import { createNativeSafetyScoreV9CohortInput } from "../../lib/__tests__/fixtures/safety-score-v9-full-registry-input";
-import { resumeActiveChunkedV9Evaluation } from "../../lib/safety-score-v9/chunked-eval-pipeline";
+import { resumeActiveChunkedV9Evaluation, runChunkedV9EvalStep, seedChunkedV9Evaluation } from "../../lib/safety-score-v9/chunked-eval-pipeline";
 import { partitionV9DependencyChunks } from "../../lib/safety-score-v9/chunked-eval-plan";
 import {
   cleanupAbandonedV9EvalRunsOnOffMode, encodeV9EvalChunkParts, loadV9EvalRun,
   markV9EvalRunCompletedAndPrune, readV9EvalChunk, sweepStaleV9EvalRuns,
   V9_EVAL_CHUNK_MAX_ROW_BYTES, writeV9EvalChunk,
 } from "../../lib/safety-score-v9/chunked-eval-store";
+import { ALERT_SAFETY_V9_SOURCE_CACHE_KEY } from "../../lib/alert-safety-source-cache";
+import { compileSafetyScoreV9FactSetFromExtensionSource } from "../../lib/safety-score-v9/fact-set";
+import { createSafetyScoreV9BaselineExtensionSource } from "../../lib/safety-score-v9/extension";
+import { withNormalizedV9JournalProjections } from "../../lib/safety-score-v9/native-input";
 import { loadSafetyScoreV9PublicationHealth } from "../../lib/safety-score-v9/publication-health";
 import { loadSafetyScoreV9Publication } from "../../lib/safety-score-v9/publication-store";
 import * as supplyAttrGen from "../../lib/safety-score-v9/supply-attribution-generation";
@@ -33,16 +38,47 @@ const seedDb = (db: D1Database) => (cachedSeed ??= prepareV9SeedPayload(COHORT_I
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => { fixtures.closeAll(); coverageFloor.minRateableAssets = 3; vi.restoreAllMocks(); });
 
-async function seedRun(db: D1Database, maxChunkAssets = 2, sourceInvocationId = "test:seed", deferPublicMaterialization = true) {
+async function seedRun(db: D1Database, maxChunkAssets = 2, sourceInvocationId = "test:seed", deferPublicMaterialization = true, input = COHORT_INPUT) {
   let first: V9ContinuationMessage | undefined;
   const res = await computeSafetyScoreV9(db, undefined, undefined, {
-    queueMode: "on", deferPublicMaterialization, maxChunkAssets, slotStartedAt: COHORT_INPUT.clockSec,
+    queueMode: "on", deferPublicMaterialization, maxChunkAssets, slotStartedAt: input.clockSec,
     sourceInvocationId, workerMetadata: V9_QUEUE_TEST_WORKER_META, onContinuation: (m) => { first = m; },
   });
   return { res, first: first! };
 }
 
 describe("Safety Score V9 ADR-26 chunked Queue evaluation", () => {
+  it("rejects pending reserve evidence hashes in monolithic compilation, Seed and Eval", async () => {
+    const { db } = fixtures.open();
+    const id = "usdfr-forest-road";
+    const input = makePublishableV9Input(createNativeSafetyScoreV9CohortInput([id]));
+    const clockSec = input.clockSec;
+    const fixedInput = withNormalizedV9JournalProjections({
+      ...input, liveReserveMap: {}, liveReserveProvenanceMap: {},
+      evidenceJournalById: { [id]: [createReportCardEvidenceJournalV1({
+        schemaVersion: 1, lane: "reserve", assetId: id, attemptId: "pending-test", sourceId: "reserve-test",
+        sourceOriginClass: "onchain-observation", attemptCode: "reserve.collector.attempted",
+        admissionCode: "reserve.admission.rejected-upstream", fallbackCode: "reserve.fallback.unavailable",
+        attemptedAtSec: clockSec, completedAtSec: clockSec, sourceTimestampSec: null, sourceBlock: null,
+        contentSha256: "0".repeat(64), sidecarMaterializationSha256: null,
+      })] },
+    });
+    const message = "V9 publication evidence cannot retain a pending research hash";
+    expect(() => compileSafetyScoreV9FactSetFromExtensionSource(fixedInput, createSafetyScoreV9BaselineExtensionSource(fixedInput))).toThrow(message);
+    await expect(seedChunkedV9Evaluation({
+      db, fixedInput, transferMaterialityGeneration: null, slotStartedAt: clockSec,
+      sourceInvocationId: "test:pending", workerVersion: V9_QUEUE_TEST_WORKER_VERSION, deferPublicMaterialization: true, maxChunkAssets: 4,
+    })).rejects.toThrow(message);
+    await seedPreparedV9Db(db, await prepareV9SeedPayload(input));
+    const { first } = await seedRun(db, 4, "test:eval-pending", true, input);
+    await writeV9EvalChunk(db, {
+      runId: first.runId, chunkKind: "run_context", chunkIndex: 1, quarantineEpoch: 0, value: { schemaVersion: 1, fixedInput }, createdAt: clockSec,
+    });
+    await expect(runChunkedV9EvalStep(db, (await loadV9EvalRun(db, first.runId))!, "test:pending", {
+      workerVersion: V9_QUEUE_TEST_WORKER_VERSION, deadlineMs: Date.now() + 60_000,
+    })).rejects.toThrow(message);
+  });
+
   it("matches monolithic publication across cross-chunk upstreams, cleans N6 rollback, recovers N3 crash, records N4 evidence, and checks SCC partitioning", async () => {
     const [mono, chunk] = [fixtures.open(), fixtures.open()];
     await Promise.all([seedDb(mono.db), seedDb(chunk.db)]);
@@ -83,7 +119,8 @@ describe("Safety Score V9 ADR-26 chunked Queue evaluation", () => {
     const origBatch = chunk.db.batch.bind(chunk.db);
     let crashedOnce = false;
     chunk.db.batch = (async (stmts: D1PreparedStatement[]) => {
-      if (!crashedOnce && (await loadSafetyScoreV9Publication(chunk.db)) !== null && stmts.length >= 3) {
+      if (!crashedOnce && stmts.length >= 3 &&
+        await countRows(chunk.db, "SELECT COUNT(*) AS c FROM cache WHERE key = ?", SAFETY_SCORE_V9_CACHE_KEYS.publication) > 0) {
         crashedOnce = true;
         throw new Error("sim-crash-before-transition");
       }
@@ -93,8 +130,11 @@ describe("Safety Score V9 ADR-26 chunked Queue evaluation", () => {
     expect(crashedOnce).toBe(true);
     chunk.db.batch = origBatch;
 
+    await chunk.db.prepare("DELETE FROM cache WHERE key = ?").bind(ALERT_SAFETY_V9_SOURCE_CACHE_KEY).run();
     const recovered = await deliverV9Continuation(chunk.db, cur!, { deliveryId: "commit-1", attempts: 2 });
     expect(recovered.acked).toBe(true);
+    const alert = await chunk.db.prepare("SELECT json_extract(value, '$.publicationGenerationId') AS generation FROM cache WHERE key = ?")
+      .bind(ALERT_SAFETY_V9_SOURCE_CACHE_KEY).first<{ generation: string }>();
     expect(recovered.sent[0]?.stage).toBe("materialize");
     expect((await deliverV9Continuation(chunk.db, recovered.sent[0]!)).acked).toBe(true);
 
@@ -108,6 +148,7 @@ describe("Safety Score V9 ADR-26 chunked Queue evaluation", () => {
       chunk.db.prepare("SELECT generation_id, published_at, state FROM surface_publication_generations WHERE surface = 'safety-score-v9'").first(),
     ]);
     expect(chunkPub).toEqual(monoPub);
+    expect(alert?.generation).toBe(monoPub!.publicationGenerationId);
     expect(JSON.parse(chunkMat!.value)).toMatchObject({ publicationGenerationId: monoPub!.publicationGenerationId, payloadSha256: (JSON.parse(monoRow!.value) as { payloadSha256: string }).payloadSha256 });
     expect(runRow?.state).toBe("completed");
     expect(await countRows(chunk.db, "SELECT COUNT(*) AS c FROM v9_eval_chunks WHERE run_id = ?", first.runId)).toBe(0);
@@ -119,10 +160,11 @@ describe("Safety Score V9 ADR-26 chunked Queue evaluation", () => {
     expect(surfaceRow).toEqual({ generation_id: monoPub!.publicationGenerationId, published_at: COHORT_INPUT.clockSec, state: "published" });
 
     expect(partitionV9DependencyChunks(
-      { topologicalOrder: ["root-a", "scc-1", "scc-2", "leaf-b"], cyclicComponents: [["scc-1", "scc-2"]], cyclicAssetIds: new Set(["scc-1", "scc-2"]) } as never,
+      { topologicalOrder: ["root-a", "scc-1", "scc-2", "leaf-b"], cyclicComponents: [["scc-1", "scc-2"]], serialPaths: [], basketPaths: [], exitPaths: [], controlPaths: [], oracleNavPaths: [] } as never,
       new Map([["root-a", []], ["scc-1", ["root-a", "scc-2"]], ["scc-2", ["scc-1"]], ["leaf-b", ["scc-1"]]]), 2,
     )).toMatchObject({ chunks: [["root-a"], ["scc-1", "scc-2"], ["leaf-b"]], exportedUpstreamsByChunk: [["root-a"], ["scc-1"], []], requiredPriorChunksByChunk: [[], [0], [1]] });
-    expect(() => partitionV9DependencyChunks({ topologicalOrder: ["a", "b"], cyclicComponents: [], cyclicAssetIds: new Set() } as never, new Map([["a", ["b"]], ["b", []]]), 1)).toThrow(/topological order/);
+    expect(() => partitionV9DependencyChunks({ topologicalOrder: ["a", "b"], cyclicComponents: [], serialPaths: [{ assetId: "a", upstreamAssetId: "b" }], basketPaths: [], exitPaths: [], controlPaths: [], oracleNavPaths: [] } as never, new Map(), 1)).toThrow(/topological order/);
+    expect(() => partitionV9DependencyChunks({} as never, new Map(), 71)).toThrow(/Invalid V9 maxChunkAssets/);
     expect(await resumeActiveChunkedV9Evaluation({ db: chunk.db, sourceInvocationId: "test:idle", options: { workerVersion: V9_QUEUE_TEST_WORKER_VERSION, deadlineMs: Date.now() + 60_000 } })).toBeNull();
   });
 

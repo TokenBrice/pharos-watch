@@ -474,14 +474,19 @@ export async function seedChunkedV9Evaluation(
   const nowSec = Math.floor(nowMs / 1_000);
   const swept = await sweepStaleV9EvalRuns(input.db, nowSec, nowMs, input.signal);
 
-  const acceptedState = await loadSafetyScoreV9AcceptedBaselineState(input.db, input.signal);
-  if (acceptedState.kind === "unavailable") {
-    throw new SafetyScoreV9AcceptedBaselineProjectionError(acceptedState.reason);
-  }
-  const acceptedPublication = acceptedState.kind === "accepted" ? acceptedState.projection.baseline : null;
-  const acceptedBaselineSha256 =
-    acceptedPublication === null ? null : sha256HexFromUtf8Chunks(stableJsonStringifyChunksV1(acceptedPublication));
-  const previousHealth = acceptedState.health;
+  const { acceptedBaselineSha256, acceptedPublicationGenerationId, previousHealth, verifiedEmptyExitByAssetId } = await (async () => {
+    const state = await loadSafetyScoreV9AcceptedBaselineState(input.db, input.signal);
+    if (state.kind === "unavailable") {
+      throw new SafetyScoreV9AcceptedBaselineProjectionError(state.reason);
+    }
+    const baseline = state.kind === "accepted" ? state.projection.baseline : null;
+    return {
+      acceptedBaselineSha256: baseline === null ? null : sha256HexFromUtf8Chunks(stableJsonStringifyChunksV1(baseline)),
+      acceptedPublicationGenerationId: baseline?.publicationGenerationId ?? null,
+      previousHealth: state.health,
+      verifiedEmptyExitByAssetId: baseline?.verifiedEmptyExitByAssetId,
+    };
+  })();
 
   const laneIncidentCertificates = new Map<string, LaneIncidentCertificateView>();
   const { descriptors: laneEmitterDescriptors, reasons: laneCertificateWarnings } = loadReviewedLaneEmitterCatalog();
@@ -517,7 +522,7 @@ export async function seedChunkedV9Evaluation(
     runId,
     quarantineEpoch: 0,
     fixedInput: normalizedInput,
-    verifiedEmptyExitByAssetId: acceptedPublication?.verifiedEmptyExitByAssetId,
+    verifiedEmptyExitByAssetId,
     previousHealth,
     transferMaterialityGeneration: input.transferMaterialityGeneration,
     laneIncidentCertificates,
@@ -575,7 +580,7 @@ export async function seedChunkedV9Evaluation(
         normalizedInput.registryFingerprint,
         SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST,
         workerVersion,
-        acceptedPublication?.publicationGenerationId ?? null,
+        acceptedPublicationGenerationId,
         acceptedBaselineSha256,
         normalizedInput.dexGenerationId,
         normalizedInput.redemptionGenerationId,
@@ -776,12 +781,13 @@ async function escalateQuarantineEpoch(input: {
   run: V9EvalRunRow;
   header: V9EvalRunContextHeader;
   commitContext: V9EvalCommitContextBlob;
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>;
   newFailures: readonly [string, string][];
   updatedExpiryWitnesses: ReadonlyMap<string, SafetyScoreV9DexExpiryWitness[]>;
   sourceInvocationId: string;
   workerVersion: string;
   signal?: AbortSignal;
-}): Promise<{ status: "escalated"; quarantineEpoch: number; nextMessage: V9ContinuationMessage } | { status: "missing-pinned" }> {
+}): Promise<{ quarantineEpoch: number; nextMessage: V9ContinuationMessage }> {
   const existingFailures = new Map(input.header.evaluationFailures);
   const existingQuarantines = new Set(input.header.quarantines.map((q) => q.assetId));
   for (const [assetId] of input.newFailures) {
@@ -793,26 +799,12 @@ async function escalateQuarantineEpoch(input: {
     existingFailures.set(assetId, message);
   }
 
-  const pinned = await readV9EvalChunk<V9EvalPinnedInputBlob>(
-    input.db,
-    {
-      runId: input.run.run_id,
-      chunkKind: "run_context",
-      chunkIndex: RUN_CONTEXT_PINNED_INPUT_INDEX,
-      quarantineEpoch: 0,
-    },
-    input.signal,
-  );
-  if (!pinned) {
-    return { status: "missing-pinned" };
-  }
-
   const nextEpoch = input.run.quarantine_epoch + 1;
   const nowSec = Math.floor(Date.now() / 1_000);
   const artifacts = buildEpochStageArtifacts({
     runId: input.run.run_id,
     quarantineEpoch: nextEpoch,
-    fixedInput: withNormalizedV9JournalProjections(pinned.fixedInput),
+    fixedInput: input.fixedInput,
     verifiedEmptyExitByAssetId: input.commitContext.verifiedEmptyExitByAssetId,
     previousHealth: input.commitContext.previousHealth,
     transferMaterialityGeneration: input.commitContext.transferMaterialityGeneration,
@@ -826,101 +818,75 @@ async function escalateQuarantineEpoch(input: {
     hasFixedInputCacheValue: input.header.hasFixedInputCacheValue,
   });
 
-  // Fence ownership atomically before deleting previous-epoch blobs (preserving immutable run_context[1] & [4]).
-  const pruneResults = await runWithOverloadRetry(
-    () =>
-      input.db.batch([
-        input.db.prepare(
-          `UPDATE v9_eval_runs
-              SET updated_at = MAX(updated_at, ?)
-            WHERE run_id = ?
-              AND state = 'active'
-              AND execution_generation = ?
-              AND quarantine_epoch = ?
-              AND worker_version = ?`,
-        ).bind(
-          nowSec,
-          input.run.run_id,
-          input.run.execution_generation,
-          input.run.quarantine_epoch,
-          input.workerVersion,
-        ),
-        input.db.prepare(
-          `DELETE FROM v9_eval_chunks
-            WHERE run_id = ?
-              AND NOT (chunk_kind = 'run_context' AND chunk_index IN (?, ?))
-              AND EXISTS (
-                SELECT 1 FROM v9_eval_runs
-                 WHERE run_id = ?
-                   AND state = 'active'
-                   AND execution_generation = ?
-                   AND quarantine_epoch = ?
-                   AND worker_version = ?
-              )`,
-        ).bind(
-          input.run.run_id,
-          RUN_CONTEXT_PINNED_INPUT_INDEX,
-          RUN_CONTEXT_REPLAY_INDEX,
-          input.run.run_id,
-          input.run.execution_generation,
-          input.run.quarantine_epoch,
-          input.workerVersion,
-        ),
-      ]),
-    3,
-    input.signal,
-  );
-  if ((pruneResults[0]?.meta.changes ?? 0) !== 1) {
-    throw new Error(`V9 eval run ${input.run.run_id} lost ownership before quarantine escalation`);
-  }
-
   const epochFence: V9EvalChunkWriteFence = {
     executionGeneration: input.run.execution_generation,
     expectedQuarantineEpoch: input.run.quarantine_epoch,
+    workerVersion: input.workerVersion,
   };
-  await persistEpochStagingChunks(input.db, {
+  const contextWrite = {
     runId: input.run.run_id,
+    chunkKind: "run_context" as const,
     quarantineEpoch: nextEpoch,
-    header: artifacts.header,
-    commitContext: artifacts.commitContext,
-    nowSec,
+    createdAt: nowSec,
     fence: epochFence,
-    signal: input.signal,
-  });
-
-  const update = await runWithOverloadRetry(
-    () =>
-      input.db.batch([
-        input.db.prepare(
-          `UPDATE v9_eval_runs
-              SET quarantine_epoch = ?,
-                  chunk_count = ?,
-                  next_chunk_index = 0,
-                  stage = 'evaluating',
-                  fact_set_digest = ?,
-                  plan_digest = ?,
-                  updated_at = ?
-            WHERE run_id = ?
-              AND state = 'active'
-              AND execution_generation = ?
-              AND quarantine_epoch = ?
-              AND worker_version = ?`,
-        ).bind(
-          nextEpoch,
-          artifacts.header.chunkAssetIds.length,
-          artifacts.factSetDigest,
-          artifacts.planDigest,
-          nowSec,
-          input.run.run_id,
-          input.run.execution_generation,
-          input.run.quarantine_epoch,
-          input.workerVersion,
-        ),
-      ]),
-    3,
-    input.signal,
-  );
-  if (update[0]?.meta.changes !== 1) {
+  };
+  // Pruning, replacement and epoch advancement must commit together for retries.
+  const statements = [
+    input.db.prepare(
+      `DELETE FROM v9_eval_chunks
+        WHERE run_id = ?
+          AND NOT (chunk_kind = 'run_context' AND chunk_index IN (?, ?))
+          AND EXISTS (
+            SELECT 1 FROM v9_eval_runs
+             WHERE run_id = ?
+               AND state = 'active'
+               AND execution_generation = ?
+               AND quarantine_epoch = ?
+               AND worker_version = ?
+          )`,
+    ).bind(
+      input.run.run_id,
+      RUN_CONTEXT_PINNED_INPUT_INDEX,
+      RUN_CONTEXT_REPLAY_INDEX,
+      input.run.run_id,
+      input.run.execution_generation,
+      input.run.quarantine_epoch,
+      input.workerVersion,
+    ),
+    ...buildWriteV9EvalChunkStatements(input.db, {
+      ...contextWrite, chunkIndex: RUN_CONTEXT_HEADER_INDEX, value: artifacts.header,
+    }).statements,
+    ...buildWriteV9EvalChunkStatements(input.db, {
+      ...contextWrite, chunkIndex: RUN_CONTEXT_COMMIT_INDEX, value: artifacts.commitContext,
+    }).statements,
+    input.db.prepare(
+      `UPDATE v9_eval_runs
+          SET quarantine_epoch = ?,
+              chunk_count = ?,
+              next_chunk_index = 0,
+              stage = 'evaluating',
+              fact_set_digest = ?,
+              plan_digest = ?,
+              updated_at = ?
+        WHERE run_id = ?
+          AND state = 'active'
+          AND execution_generation = ?
+          AND quarantine_epoch = ?
+          AND worker_version = ?`,
+    ).bind(
+      nextEpoch,
+      artifacts.header.chunkAssetIds.length,
+      artifacts.factSetDigest,
+      artifacts.planDigest,
+      nowSec,
+      input.run.run_id,
+      input.run.execution_generation,
+      input.run.quarantine_epoch,
+      input.workerVersion,
+    ),
+  ];
+  const update = await runWithOverloadRetry(() => input.db.batch(statements), 3, input.signal);
+  if (update[update.length - 1]?.meta.changes !== 1) {
     throw new Error(`V9 eval run ${input.run.run_id} lost ownership during quarantine escalation`);
   }
 
@@ -934,7 +900,7 @@ async function escalateQuarantineEpoch(input: {
     },
     input.sourceInvocationId,
   )!;
-  return { status: "escalated", quarantineEpoch: nextEpoch, nextMessage };
+  return { quarantineEpoch: nextEpoch, nextMessage };
 }
 
 function classifyRunBuildDrift(
@@ -1120,10 +1086,11 @@ export async function runChunkedV9EvalStep(
   assertV9ValidatedPolicyEnvelope(policy);
   const sortedGlobalAssetIndexById = new Map(header.sortedGlobalAssetIds.map((id, index) => [id, index]));
 
+  const fixedInput = withNormalizedV9JournalProjections(pinned.fixedInput);
   const outcome = evaluateV9Chunk({
     chunkIndex,
     assets: compileV9ChunkAssets({
-      fixedInput: withNormalizedV9JournalProjections(pinned.fixedInput),
+      fixedInput,
       factSetHeader: header.factSetHeader,
       assetIds: header.chunkAssetIds[chunkIndex]!,
       evaluationFailures: new Map(header.evaluationFailures),
@@ -1162,15 +1129,13 @@ export async function runChunkedV9EvalStep(
       run,
       header,
       commitContext,
+      fixedInput,
       newFailures: outcome.failures,
       updatedExpiryWitnesses: new Map(header.expiryWitnesses),
       sourceInvocationId,
       workerVersion: runningWorkerVersion,
       signal: options.signal,
     });
-    if (escalated.status === "missing-pinned") {
-      return failRunOnMissingBlob(db, run, "eval", "run_context[1]", options.signal);
-    }
     return {
       status: "quarantine-escalated",
       stage: "eval",
@@ -1281,6 +1246,7 @@ export async function runChunkedV9EvalStep(
 
 async function readCommittedPublicationPayloadSha256(
   db: D1Database,
+  publicationGenerationId: string,
   signal?: AbortSignal,
 ): Promise<string | null> {
   throwIfAborted(signal);
@@ -1288,53 +1254,24 @@ async function readCommittedPublicationPayloadSha256(
     () => db.prepare(
       `SELECT json_extract(value, '$.payloadSha256') AS payload_sha256
          FROM cache
-        WHERE key = ?`,
-    ).bind(SAFETY_SCORE_V9_CACHE_KEYS.publication).first<{ payload_sha256: string | null }>(),
+        WHERE key = ?
+          AND json_extract(value, '$.identity.publicationGenerationId') = ?`,
+    ).bind(SAFETY_SCORE_V9_CACHE_KEYS.publication, publicationGenerationId).first<{ payload_sha256: string | null }>(),
     3,
     signal,
   );
   return typeof row?.payload_sha256 === "string" && row.payload_sha256.length > 0 ? row.payload_sha256 : null;
 }
 
-/** Execute one claimed `commit` stage (canonical assembly, 10.35 check, baseline fence, assess, persist). */
-export async function runChunkedV9CommitStep(
+async function prepareV9Commit(
   db: D1Database,
   run: V9EvalRunRow,
-  sourceInvocationId: string,
-  options: RunChunkedV9StageOptions,
-): Promise<V9ChunkedStageStepResult> {
-  throwIfAborted(options.signal);
-  const runningWorkerVersion = assertRunMatchesRunningBuild(run, options.workerVersion);
-  if (run.stage !== "committing") {
-    throw new Error(`V9 eval run ${run.run_id} is in stage ${run.stage}, not committing`);
-  }
-
-  const header = await readV9EvalChunk<V9EvalRunContextHeader>(
-    db,
-    {
-      runId: run.run_id,
-      chunkKind: "run_context",
-      chunkIndex: RUN_CONTEXT_HEADER_INDEX,
-      quarantineEpoch: run.quarantine_epoch,
-    },
-    options.signal,
-  );
-  if (!header) return failRunOnMissingBlob(db, run, "commit", "run_context[0]", options.signal);
-
-  const commitContext = await readV9EvalChunk<V9EvalCommitContextBlob>(
-    db,
-    {
-      runId: run.run_id,
-      chunkKind: "run_context",
-      chunkIndex: RUN_CONTEXT_COMMIT_INDEX,
-      quarantineEpoch: run.quarantine_epoch,
-    },
-    options.signal,
-  );
-  if (!commitContext) return failRunOnMissingBlob(db, run, "commit", "run_context[2]", options.signal);
-
+  header: V9EvalRunContextHeader,
+  commitContext: V9EvalCommitContextBlob,
+  signal?: AbortSignal,
+) {
   // Verify the live baseline before using any of its scoring inputs.
-  const liveAcceptedState = await loadSafetyScoreV9AcceptedBaselineState(db, options.signal);
+  const liveAcceptedState = await loadSafetyScoreV9AcceptedBaselineState(db, signal);
   if (liveAcceptedState.kind === "unavailable") {
     throw new SafetyScoreV9AcceptedBaselineProjectionError(liveAcceptedState.reason);
   }
@@ -1346,7 +1283,7 @@ export async function runChunkedV9CommitStep(
     liveGenerationId === run.accepted_baseline_generation_id &&
     liveBaselineSha256 === run.accepted_baseline_sha256;
   if (!baselineMatchesPinned && liveBaseline?.publishedAtSec !== header.clockSec) {
-    return abortRunFenced(db, run, "commit", "accepted-baseline-drift", options.signal);
+    return { result: await abortRunFenced(db, run, "commit", "accepted-baseline-drift", signal) };
   }
 
   const chunkSummaries: V9EvalChunkSummaryPayload[] = [];
@@ -1359,10 +1296,15 @@ export async function runChunkedV9CommitStep(
         chunkIndex,
         quarantineEpoch: run.quarantine_epoch,
       },
-      options.signal,
+      signal,
     );
-    if (!summary) return failRunOnMissingBlob(db, run, "commit", `chunk_summary[${chunkIndex}]`, options.signal);
+    if (!summary) return { result: await failRunOnMissingBlob(db, run, "commit", `chunk_summary[${chunkIndex}]`, signal) };
     chunkSummaries.push(summary);
+  }
+
+  const projectionFailures = chunkSummaries.flatMap((summary) => summary.projectionFailures);
+  if (projectionFailures.length > 0) {
+    return { newFailures: projectionFailures, expiryWitnesses: new Map(header.expiryWitnesses) };
   }
 
   let cardShardIndex = 0;
@@ -1373,7 +1315,7 @@ export async function runChunkedV9CommitStep(
         chunkKind: "card_shard",
         chunkIndex: cardShardIndex,
         quarantineEpoch: run.quarantine_epoch,
-      }, options.signal);
+      }, signal);
     }
   }
 
@@ -1398,12 +1340,12 @@ export async function runChunkedV9CommitStep(
     verifiedEmptyExitByAssetId: commitContext.verifiedEmptyExitByAssetId,
   });
 
-  if (!assembled) return failRunOnMissingBlob(db, run, "commit", `card_shard[${cardShardIndex}]`, options.signal);
+  if (!assembled) return { result: await failRunOnMissingBlob(db, run, "commit", `card_shard[${cardShardIndex}]`, signal) };
 
   const alreadyCommitted = liveGenerationId === assembled.publicationGenerationId &&
     liveBaseline?.publishedAtSec === header.clockSec;
   if (!baselineMatchesPinned && !alreadyCommitted) {
-    return abortRunFenced(db, run, "commit", "accepted-baseline-drift", options.signal);
+    return { result: await abortRunFenced(db, run, "commit", "accepted-baseline-drift", signal) };
   }
 
   const expiredRoutes = deserializeExpiredRoutes(commitContext.expiredRoutes);
@@ -1439,20 +1381,75 @@ export async function runChunkedV9CommitStep(
       assetId,
       measuredExitExpiryMessage(expiry.witnessesByAssetId[assetId]!, header.clockSec).slice(0, 500),
     ]);
+    return { newFailures, expiryWitnesses };
+  }
+
+  const { verifiedEmptyExitBaselineOptions, lenderCollateralBackingScoresByAssetId } = assembled;
+  return {
+    publication, liveBaseline, liveHealth: liveAcceptedState.health, alreadyCommitted, expiredRoutes, expiryWitnesses,
+    verifiedEmptyExitBaselineOptions, lenderCollateralBackingScoresByAssetId,
+  };
+}
+
+/** Execute one claimed `commit` stage (canonical assembly, 10.35 check, baseline fence, assess, persist). */
+async function commitV9Evaluation(
+  db: D1Database,
+  run: V9EvalRunRow,
+  sourceInvocationId: string,
+  options: RunChunkedV9StageOptions,
+  archive: { input?: Parameters<typeof archiveSafetyScoreCapture>[0] },
+): Promise<V9ChunkedStageStepResult> {
+  throwIfAborted(options.signal);
+  const runningWorkerVersion = assertRunMatchesRunningBuild(run, options.workerVersion);
+  if (run.stage !== "committing") {
+    throw new Error(`V9 eval run ${run.run_id} is in stage ${run.stage}, not committing`);
+  }
+
+  const header = await readV9EvalChunk<V9EvalRunContextHeader>(
+    db,
+    {
+      runId: run.run_id,
+      chunkKind: "run_context",
+      chunkIndex: RUN_CONTEXT_HEADER_INDEX,
+      quarantineEpoch: run.quarantine_epoch,
+    },
+    options.signal,
+  );
+  if (!header) return failRunOnMissingBlob(db, run, "commit", "run_context[0]", options.signal);
+
+  const commitContext = await readV9EvalChunk<V9EvalCommitContextBlob>(
+    db,
+    {
+      runId: run.run_id,
+      chunkKind: "run_context",
+      chunkIndex: RUN_CONTEXT_COMMIT_INDEX,
+      quarantineEpoch: run.quarantine_epoch,
+    },
+    options.signal,
+  );
+  if (!commitContext) return failRunOnMissingBlob(db, run, "commit", "run_context[2]", options.signal);
+
+  const prepared = await prepareV9Commit(db, run, header, commitContext, options.signal);
+  if (prepared.result) return prepared.result;
+  if (prepared.newFailures) {
+    const pinned = await readV9EvalChunk<V9EvalPinnedInputBlob>(
+      db,
+      { runId: run.run_id, chunkKind: "run_context", chunkIndex: RUN_CONTEXT_PINNED_INPUT_INDEX, quarantineEpoch: 0 },
+      options.signal,
+    );
+    if (!pinned) return failRunOnMissingBlob(db, run, "commit", "run_context[1]", options.signal);
     const escalated = await escalateQuarantineEpoch({
       db,
       run,
       header,
       commitContext,
-      newFailures,
-      updatedExpiryWitnesses: expiryWitnesses,
+      fixedInput: withNormalizedV9JournalProjections(pinned.fixedInput),
+      newFailures: prepared.newFailures,
+      updatedExpiryWitnesses: prepared.expiryWitnesses,
       sourceInvocationId,
       workerVersion: runningWorkerVersion,
       signal: options.signal,
     });
-    if (escalated.status === "missing-pinned") {
-      return failRunOnMissingBlob(db, run, "commit", "run_context[1]", options.signal);
-    }
     return {
       status: "quarantine-escalated",
       stage: "commit",
@@ -1460,6 +1457,10 @@ export async function runChunkedV9CommitStep(
       nextMessage: escalated.nextMessage,
     };
   }
+  const {
+    publication, liveBaseline, liveHealth, alreadyCommitted, expiredRoutes, expiryWitnesses,
+    verifiedEmptyExitBaselineOptions, lenderCollateralBackingScoresByAssetId,
+  } = prepared;
 
   const coverageFloors = observationCoverageFloors(
     publication.cards.length,
@@ -1518,15 +1519,15 @@ export async function runChunkedV9CommitStep(
   if (assessment.decision === "hold") {
     await requireRunOwnership(db, run, "committing", runningWorkerVersion, nowSec, "before persisting held commit", options.signal);
     const alreadyHeld =
-      liveAcceptedState.health?.status === "held" &&
-      liveAcceptedState.health.attemptedAtSec === header.clockSec;
+      liveHealth?.status === "held" &&
+      liveHealth.attemptedAtSec === header.clockSec;
     if (!alreadyHeld) {
       await persistSafetyScoreV9Publication(db, {
         publicationHealth: heldPublicationHealth({
           attemptedAtSec: header.clockSec,
           reasons: assessment.reasons,
           acceptedPublication: liveBaseline,
-          previousHealth: commitContext.previousHealth,
+          previousHealth: liveHealth ?? commitContext.previousHealth,
         }),
         publicationAttempt: publicationAttempt({
           attemptedAtSec: header.clockSec,
@@ -1571,7 +1572,6 @@ export async function runChunkedV9CommitStep(
   const partial = assessment.affectedAssetIds.length > 0;
   let persistedPayloadSha256: string | null = null;
   let shouldDeferMaterialization = header.deferPublicMaterialization;
-  let archiveInput: Parameters<typeof archiveSafetyScoreCapture>[0] | undefined;
 
   if (!alreadyCommitted) {
     let replayCaptureValue: string | undefined;
@@ -1613,6 +1613,15 @@ export async function runChunkedV9CommitStep(
             metadata: { reason: toErrorMessage(error).slice(0, 200) },
           });
         }
+      } else {
+        logWorkerEvent({
+          scope: "lib",
+          level: "warn",
+          event: "safety_score_v9_replay_capture_retention_failed",
+          job: "compute-safety-score-v9",
+          message: "Accepted replay input is missing during chunked commit",
+          metadata: { reason: "missing-staging-blob:run_context[4]" },
+        });
       }
     }
 
@@ -1622,8 +1631,8 @@ export async function runChunkedV9CommitStep(
         buildSafetyScoreV9AcceptedProjections(
           accepted,
           measuredExitExpiryWitnessesByAssetId,
-          assembled.verifiedEmptyExitBaselineOptions,
-          assembled.lenderCollateralBackingScoresByAssetId,
+          verifiedEmptyExitBaselineOptions,
+          lenderCollateralBackingScoresByAssetId,
         ),
       publicationReplayCaptureValue: replayCaptureValue,
       publicationReplayBaseValue: replayCaptureValue === undefined ? undefined : fixedInputCacheValue,
@@ -1648,39 +1657,8 @@ export async function runChunkedV9CommitStep(
       deferPublicMaterialization: header.deferPublicMaterialization,
     });
 
-    // Post-commit best-effort alert envelope, journal, and archive matching publication-runner.ts.
-    await persistAlertSafetyV9SourceEnvelope(
-      db,
-      {
-        cards: publication.cards,
-        safetyScoreIdentity: buildSafetyScoreV9PublicationIdentity(publication),
-        publishedAt: header.clockSec,
-      },
-      options.signal,
-    ).catch((error) => {
-      logWorkerEvent({
-        scope: "lib",
-        level: "warn",
-        event: "safety_score_v9_alert_source_envelope_persist_failed",
-        job: "compute-safety-score-v9",
-        message: "Safety Score V9 alert source envelope could not be persisted",
-        metadata: { error: String(error).slice(0, 200) },
-      });
-    });
-
-    await journalSafetyScorePublication({
-      db,
-      publication,
-      fixedInput: journalFixedInputSummary,
-      attemptId,
-      attemptedAtSec,
-      outcome: "accepted",
-      transferMaterialityGenerationId: commitContext.transferMaterialityGeneration?.generationId ?? null,
-      signal: options.signal,
-    }).catch(() => undefined);
-
     if (options.captureArchiveBucket && persisted.captureArchiveCacheRows) {
-      archiveInput = {
+      archive.input = {
         db,
         bucket: options.captureArchiveBucket,
         publication: {
@@ -1696,33 +1674,42 @@ export async function runChunkedV9CommitStep(
     persistedPayloadSha256 = persisted.publicationPayloadSha256;
     shouldDeferMaterialization = persisted.acceptedMaterialization !== null;
   } else {
-    // Crash-after-persist recovery: ensure journal entry exists once (INSERT OR IGNORE on attemptId).
-    await journalSafetyScorePublication({
-      db,
-      publication,
-      fixedInput: journalFixedInputSummary,
-      attemptId,
-      attemptedAtSec,
-      outcome: "accepted",
-      transferMaterialityGenerationId: commitContext.transferMaterialityGeneration?.generationId ?? null,
-      signal: options.signal,
-    }).catch(() => undefined);
-    persistedPayloadSha256 =
-      run.payload_sha256 ?? (await readCommittedPublicationPayloadSha256(db, options.signal));
+    persistedPayloadSha256 = run.payload_sha256 ??
+      await readCommittedPublicationPayloadSha256(db, publication.publicationGenerationId, options.signal);
   }
 
+  // Restore the alert envelope and idempotent journal on crash-after-persist recovery too.
+  await persistAlertSafetyV9SourceEnvelope(
+    db,
+    {
+      cards: publication.cards,
+      safetyScoreIdentity: buildSafetyScoreV9PublicationIdentity(publication),
+      publishedAt: header.clockSec,
+    },
+    options.signal,
+  ).catch((error) => {
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "safety_score_v9_alert_source_envelope_persist_failed",
+      job: "compute-safety-score-v9",
+      message: "Safety Score V9 alert source envelope could not be persisted",
+      metadata: { error: String(error).slice(0, 200) },
+    });
+  });
+
+  await journalSafetyScorePublication({
+    db,
+    publication,
+    fixedInput: journalFixedInputSummary,
+    attemptId,
+    attemptedAtSec,
+    outcome: "accepted",
+    transferMaterialityGenerationId: commitContext.transferMaterialityGeneration?.generationId ?? null,
+    signal: options.signal,
+  }).catch(() => undefined);
+
   const payloadSha256 = persistedPayloadSha256;
-  const archiveAfterTransition = async () => {
-    if (!archiveInput) return;
-    const archive = archiveSafetyScoreCapture(archiveInput).catch(() => undefined);
-    try {
-      if (options.captureArchiveContext) options.captureArchiveContext.waitUntil(archive);
-      else await archive;
-    } catch (error) {
-      logWorkerEvent({ scope: "lib", level: "warn", event: "safety_score_v9_archive_handoff_failed",
-        message: "Safety capture archive handoff failed after commit", metadata: { reason: toErrorMessage(error).slice(0, 200) } });
-    }
-  };
 
   if (shouldDeferMaterialization) {
     const materializeHeader: V9MaterializeHeaderBlob = {
@@ -1795,7 +1782,6 @@ export async function runChunkedV9CommitStep(
       throw new Error(`V9 eval run ${run.run_id} lost ownership transitioning to materializing`);
     }
 
-    await archiveAfterTransition();
     const nextMessage = buildNextV9ContinuationMessage(
       {
         ...run,
@@ -1827,7 +1813,6 @@ export async function runChunkedV9CommitStep(
     "completing commit",
     options.signal,
   );
-  await archiveAfterTransition();
   return {
     status: "published-materialized",
     stage: "commit",
@@ -1840,6 +1825,19 @@ export async function runChunkedV9CommitStep(
     affectedAssetCount: assessment.affectedAssetIds.length,
     nextMessage: null,
   };
+}
+
+/** Execute one claimed Commit and await bounded archiving after the transition. */
+export async function runChunkedV9CommitStep(
+  db: D1Database,
+  run: V9EvalRunRow,
+  sourceInvocationId: string,
+  options: RunChunkedV9StageOptions,
+): Promise<V9ChunkedStageStepResult> {
+  const archive: { input?: Parameters<typeof archiveSafetyScoreCapture>[0] } = {};
+  const result = await commitV9Evaluation(db, run, sourceInvocationId, options, archive);
+  if (archive.input) await archiveSafetyScoreCapture(archive.input).catch(() => undefined);
+  return result;
 }
 
 /**

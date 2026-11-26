@@ -1,3 +1,5 @@
+import { z } from "zod";
+import * as projections from "@shared/lib/report-cards-v9-projections";
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
 import { computeDexLiquidityPayloadFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
 import { iterateEvidenceResponsibilityFacts } from "@shared/types/safety-score-v9-public-evidence-facts";
@@ -50,14 +52,27 @@ import {
   buildSafetyScoreV9AcceptedPublicationBaseline,
   projectExpiredMeasuredExitRoutes,
 } from "../safety-score-v9/publication-assessment";
-import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_IDS, ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { canonicalizeLenderBookObservation, deriveLenderBookObservationIdentity } from "@shared/lib/safety-score-v9/lender-book-registry";
 import { LenderBookObservationSchema, type LenderCollateralBacking } from "@shared/types/safety-score-v9-lender-book";
 import type { V9PublicationHealth } from "@shared/types/report-cards-v9";
+import { computeSafetyScoreV9 } from "../../cron/compute-safety-score-v9";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import type { V9ContinuationMessage } from "@shared/types/v9-continuation";
+import { loadV9EvalRun, readV9EvalChunk } from "../safety-score-v9/chunked-eval-store";
+import { loadSafetyScoreV9Publication } from "../safety-score-v9/publication-store";
+import {
+  countRows, deliverV9Continuation, makePublishableV9Input, prepareV9SeedPayload, seedPreparedV9Db, V9_QUEUE_TEST_WORKER_META,
+} from "../../test-helpers/v9-queue-harness";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { buildSafetyScoreV9LenderCollateralProjection } from "../safety-score-v9/accepted-projections";
 import * as acceptedProjectionReaders from "../safety-score-v9/accepted-projection-readers";
 import { captureLenderCollateralBacking } from "../safety-score-v9/capture";
+
+vi.mock("@shared/types/safety-score-v9-coverage", async (original) => ({
+  ...await original<typeof import("@shared/types/safety-score-v9-coverage")>(),
+  V9_MINIMUM_RATEABLE_ASSETS: 3,
+}));
 
 // One day past the newest reviewed registry date the usdc-circle capture below
 // reads, so the extension's "review is later than the scoring clock" guard stays
@@ -1510,4 +1525,84 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     const { baseInputGenerationId: _bb, factSetDigest: _bf, ...beforeTrace } = before.run2.evaluatedSet.assets.find((a) => a.assetId === VAULT_ID)!.trace;
     expect(afterTrace).toEqual(beforeTrace);
   });
+});
+
+it("preserves 71-asset parity when a reserve-only reference crosses into a later chunk", async () => {
+  const fixtures = createLatestSchemaFixtureTracker();
+  try {
+    const [mono, chunk] = [fixtures.open(), fixtures.open()];
+    const ids = ["bold-liquity", "usdt-tether", ...[...ACTIVE_IDS].filter(id => id < "usdt-tether" && id !== "bold-liquity").sort().slice(0, 69)];
+    const raw = createNativeSafetyScoreV9CohortInput(ids);
+    raw.liveReserveMap["bold-liquity"] = [{ name: "Tether", pct: 100, risk: "low", coinId: "usdt-tether" }];
+    const input = makePublishableV9Input(raw);
+    const payload = await prepareV9SeedPayload(input);
+    await Promise.all([seedPreparedV9Db(mono.db, payload), seedPreparedV9Db(chunk.db, payload)]);
+    let first: V9ContinuationMessage | undefined;
+    await computeSafetyScoreV9(chunk.db, undefined, undefined, {
+      queueMode: "on", deferPublicMaterialization: true, slotStartedAt: input.clockSec, sourceInvocationId: "test:reserve",
+      workerMetadata: V9_QUEUE_TEST_WORKER_META, onContinuation: (message) => { first = message; },
+    });
+    expect(first).toBeDefined();
+    const header = await readV9EvalChunk<{ chunkAssetIds: string[][] }>(chunk.db, {
+      runId: first!.runId, chunkKind: "run_context", chunkIndex: 0, quarantineEpoch: 0,
+    });
+    expect(header!.chunkAssetIds[0]).toContain("bold-liquity");
+    expect(header!.chunkAssetIds[1]).toEqual(["usdt-tether"]);
+    await computeSafetyScoreV9(mono.db, undefined, undefined, { queueMode: "off", deferPublicMaterialization: true, workerMetadata: V9_QUEUE_TEST_WORKER_META });
+    for (let message: V9ContinuationMessage | undefined = first; message;) {
+      const outcome = await deliverV9Continuation(chunk.db, message);
+      expect(outcome.acked).toBe(true);
+      message = outcome.sent[0];
+    }
+    const expected = await loadSafetyScoreV9Publication(mono.db);
+    expect(expected?.cards).toHaveLength(71);
+    expect(await loadSafetyScoreV9Publication(chunk.db)).toEqual(expected);
+  } finally {
+    fixtures.closeAll();
+  }
+});
+
+it("quarantines all epoch projection failures together and retries an atomic epoch rollback", async () => {
+  const fixtures = createLatestSchemaFixtureTracker();
+  const { db, sqlite } = fixtures.open();
+  const assertCard = projections.assertV9PublicCardProjections;
+  const projectionMock = vi.spyOn(projections, "assertV9PublicCardProjections").mockImplementation((card) => {
+    if (["usds-sky", "susds-sky"].includes(card.id) && card.ratingStatus === "rated") z.literal("valid").parse("invalid");
+    return assertCard(card);
+  });
+  try {
+    const input = makePublishableV9Input(createNativeSafetyScoreV9CohortInput(["usdc-circle", "usds-sky", "susds-sky", "buidl-blackrock"]));
+    await seedPreparedV9Db(db, await prepareV9SeedPayload(input));
+    let first: V9ContinuationMessage | undefined;
+    await computeSafetyScoreV9(db, undefined, undefined, {
+      queueMode: "on", deferPublicMaterialization: true, maxChunkAssets: 1, slotStartedAt: input.clockSec,
+      sourceInvocationId: "test:projection", workerMetadata: V9_QUEUE_TEST_WORKER_META, onContinuation: (message) => { first = message; },
+    });
+    expect(first).toBeDefined();
+    sqlite.exec(`CREATE TRIGGER reject_epoch_advance BEFORE UPDATE OF quarantine_epoch ON v9_eval_runs
+      WHEN NEW.quarantine_epoch = 1 BEGIN SELECT RAISE(ABORT, 'epoch advance unavailable'); END`);
+    const mono = buildSafetyScoreV9CandidateWithPolicy({ fixedInput: input, publishedAtSec: input.clockSec });
+    expect(mono.quarantines.map(({ assetId }) => assetId).sort()).toEqual(["susds-sky", "usds-sky"]);
+    let message = first!;
+    while (message.stage === "eval") {
+      message = (await deliverV9Continuation(db, message)).sent[0]!;
+      expect(message.quarantineEpoch).toBe(0);
+    }
+    const before = await countRows(db, "SELECT COUNT(*) AS c FROM v9_eval_chunks WHERE run_id = ?", first!.runId);
+    expect((await deliverV9Continuation(db, message, { deliveryId: "projection-commit" })).retried).toBe(true);
+    sqlite.exec("DROP TRIGGER reject_epoch_advance");
+    expect(await countRows(db, "SELECT COUNT(*) AS c FROM v9_eval_chunks WHERE run_id = ? AND quarantine_epoch = 0", first!.runId)).toBe(before);
+    expect(await countRows(db, "SELECT COUNT(*) AS c FROM v9_eval_chunks WHERE run_id = ? AND quarantine_epoch = 1", first!.runId)).toBe(0);
+    expect(await loadV9EvalRun(db, first!.runId)).toMatchObject({ quarantine_epoch: 0, stage: "committing" });
+    const retry = await deliverV9Continuation(db, message, { deliveryId: "projection-commit", attempts: 2 });
+    expect(retry.sent[0]?.quarantineEpoch).toBe(1);
+    const header = await readV9EvalChunk<{ quarantines: typeof mono.quarantines }>(db, {
+      runId: first!.runId, chunkKind: "run_context", chunkIndex: 0, quarantineEpoch: 1,
+    });
+    expect(header?.quarantines).toEqual(mono.quarantines);
+    expect(await loadV9EvalRun(db, first!.runId)).toMatchObject({ fact_set_digest: mono.candidate.factSetDigest });
+  } finally {
+    projectionMock.mockRestore();
+    fixtures.closeAll();
+  }
 });

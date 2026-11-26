@@ -89,6 +89,7 @@ export interface V9EvalQueueFence {
 export interface V9EvalChunkWriteFence {
   executionGeneration: number;
   expectedQuarantineEpoch: number;
+  workerVersion?: string;
 }
 
 export type V9ContinuationClaimResult =
@@ -201,6 +202,7 @@ export function buildWriteV9EvalChunkStatements(
                    AND state = 'active'
                    AND execution_generation = ?
                    AND quarantine_epoch = ?
+                   AND worker_version IS COALESCE(?, worker_version)
               )`,
         ).bind(
           input.runId,
@@ -209,6 +211,7 @@ export function buildWriteV9EvalChunkStatements(
           input.runId,
           input.fence.executionGeneration,
           input.fence.expectedQuarantineEpoch,
+          input.fence.workerVersion ?? null,
         )
       : db.prepare(
           `DELETE FROM v9_eval_chunks
@@ -233,6 +236,7 @@ export function buildWriteV9EvalChunkStatements(
                    AND state = 'active'
                    AND execution_generation = ?
                    AND quarantine_epoch = ?
+                   AND worker_version IS COALESCE(?, worker_version)
               )`,
           ).bind(
             input.runId,
@@ -248,6 +252,7 @@ export function buildWriteV9EvalChunkStatements(
             input.runId,
             input.fence.executionGeneration,
             input.fence.expectedQuarantineEpoch,
+            input.fence.workerVersion ?? null,
           )
         : db.prepare(
             `INSERT INTO v9_eval_chunks (

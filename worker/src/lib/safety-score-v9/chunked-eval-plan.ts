@@ -145,6 +145,7 @@ export interface V9EvalChunkSummaryPayload {
   internalExitRoutes: Array<[string, SafetyScoreV9InternalExitRouteSummary]>;
   dexObservedAtSec: Array<[string, number | null]>;
   foreignCauseGaps: string[];
+  projectionFailures: Array<[string, string]>;
 }
 
 export interface V9EvalCardShardPayload {
@@ -168,7 +169,7 @@ export function partitionV9DependencyChunks(
   upstreamsByAssetId: ReadonlyMap<string, readonly string[]>,
   maxChunkAssets = V9_EVAL_DEFAULT_MAX_CHUNK_ASSETS,
 ): V9ChunkPartitionPlan {
-  if (!Number.isInteger(maxChunkAssets) || maxChunkAssets < 1) {
+  if (!Number.isInteger(maxChunkAssets) || maxChunkAssets < 1 || maxChunkAssets > V9_EVAL_DEFAULT_MAX_CHUNK_ASSETS) {
     throw new Error(`Invalid V9 maxChunkAssets: ${maxChunkAssets}`);
   }
   const sccByAsset = new Map<string, number>();
@@ -221,18 +222,30 @@ export function partitionV9DependencyChunks(
     }
   }
 
+  for (const path of [
+    ...dependencyPlan.serialPaths,
+    ...dependencyPlan.basketPaths,
+    ...dependencyPlan.exitPaths,
+    ...dependencyPlan.controlPaths,
+    ...dependencyPlan.oracleNavPaths,
+  ]) {
+    const chunkIndex = chunkIndexByAsset.get(path.assetId)!;
+    const upstreamChunk = chunkIndexByAsset.get(path.upstreamAssetId)!;
+    if (upstreamChunk > chunkIndex) {
+      throw new Error(
+        `V9 chunk partition violates topological order: ${path.assetId} (chunk ${chunkIndex}) depends on ${path.upstreamAssetId} (chunk ${upstreamChunk})`,
+      );
+    }
+  }
+
   const exportedSets = chunks.map(() => new Set<string>());
   const requiredPriorSets = chunks.map(() => new Set<number>());
   for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
     for (const assetId of chunks[chunkIndex]!) {
+      // Lookup-only references can read earlier results without constraining evaluation order.
       for (const upstreamId of upstreamsByAssetId.get(assetId) ?? []) {
         const upstreamChunk = chunkIndexByAsset.get(upstreamId);
         if (upstreamChunk === undefined) continue;
-        if (upstreamChunk > chunkIndex) {
-          throw new Error(
-            `V9 chunk partition violates topological order: ${assetId} (chunk ${chunkIndex}) depends on ${upstreamId} (chunk ${upstreamChunk})`,
-          );
-        }
         if (upstreamChunk < chunkIndex) {
           exportedSets[upstreamChunk]!.add(upstreamId);
           requiredPriorSets[chunkIndex]!.add(upstreamChunk);
@@ -530,18 +543,7 @@ export function evaluateV9Chunk(input: {
     }
   }
 
-  if (projectionFailures.length > 0) {
-    projectionFailures.sort((left, right) => compareText(left.assetId, right.assetId));
-    const projectionError = new V9PublicCardProjectionError(projectionFailures);
-    return {
-      status: "quarantine-required",
-      failures: projectionError.failures.map((failure) => [
-        failure.assetId,
-        projectionError.messageFor(failure.assetId),
-      ]),
-    };
-  }
-
+  const projectionError = projectionFailures.length === 0 ? null : new V9PublicCardProjectionError(projectionFailures);
   return {
     status: "ok",
     cardShard: {
@@ -564,6 +566,7 @@ export function evaluateV9Chunk(input: {
       internalExitRoutes,
       dexObservedAtSec,
       foreignCauseGaps: [...foreignCauseGapSet].sort(),
+      projectionFailures: projectionFailures.map(({ assetId }) => [assetId, projectionError!.messageFor(assetId)]),
     },
     cumulativeDocumentationGapEntries: [...docGapIds.entries()],
   };

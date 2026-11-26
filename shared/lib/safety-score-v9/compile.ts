@@ -135,11 +135,16 @@ export function createV9PublicationAssetCompactor(): (asset: V9AssetFactsV3) => 
   };
 }
 
+const PENDING_RESEARCH_HASH = "0".repeat(64);
+
+export function assertV9FinalPublicationEvidenceHash(contentSha256: string | null): void {
+  if (contentSha256 === PENDING_RESEARCH_HASH) throw new Error("V9 publication evidence cannot retain a pending research hash");
+}
+
 /** Finalize only the cohort research hash on already admitted immutable facts. */
 export function createV9PublicationResearchHashRebinder(previousHash: string, finalHash: string): (asset: V9AssetFactsV3) => V9AssetFactsV3 {
   Sha256Schema.parse(previousHash);
   Sha256Schema.parse(finalHash);
-  const pendingHash = "0".repeat(64);
   let cachedAsset: V9AssetFactsV3 | null = null;
   let cachedEvidence: V9AssetFactsV3["evidence"] | null = null;
   function evidence(asset: V9AssetFactsV3): V9AssetFactsV3["evidence"] {
@@ -155,7 +160,7 @@ export function createV9PublicationResearchHashRebinder(previousHash: string, fi
           if (reference.contentSha256 !== previousHash) throw new Error("V9 research evidence hash does not match its pending cohort");
           rebound = { ...reference, contentSha256: finalHash };
         }
-        if (rebound.contentSha256 === pendingHash) throw new Error("V9 publication evidence cannot retain a pending research hash");
+        assertV9FinalPublicationEvidenceHash(rebound.contentSha256);
         return rebound;
       });
       deepFreeze(cachedEvidence);

@@ -1,12 +1,17 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
-import { inflateRawSync } from "node:zlib";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { ACTIVE_IDS, ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { V9_PUBLIC_MATERIALIZATION_CACHE_KEY } from "@shared/types/report-cards-v9-materialization";
 import { SAFETY_SCORE_V9_CACHE_KEYS } from "@shared/types/safety-score-cache-keys";
 import type { V9ContinuationMessage } from "@shared/types/v9-continuation";
+import { getDexMeasuredExecutionFreshnessMaxSec } from "@shared/types/measured-execution";
+import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
+import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
+import { currentInput } from "./safety-score-v9-publication-store.test-support";
+import { buildSafetyScoreV9AcceptedProjections } from "../safety-score-v9/accepted-projections";
+import { persistSafetyScoreV9Publication } from "../safety-score-v9/publication-store";
 import { computeSafetyScoreV9 } from "../../cron/compute-safety-score-v9";
 import {
   deliverV9Continuation, makePublishableV9Input, prepareV9SeedPayload, seedPreparedV9Db, V9_QUEUE_TEST_WORKER_META,
@@ -14,11 +19,14 @@ import {
 import { createNativeSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input";
 import { V9_EVAL_DEFAULT_MAX_CHUNK_ASSETS } from "../safety-score-v9/chunked-eval-plan";
 import {
-  loadV9EvalRun, readV9EvalChunk, V9_EVAL_CHUNK_MAX_JSON_BYTES, V9_EVAL_CHUNK_MAX_ROW_BYTES,
+  loadV9EvalRun, readV9EvalChunk, V9_EVAL_CHUNK_MAX_ROW_BYTES,
 } from "../safety-score-v9/chunked-eval-store";
 
 const count = Number(process.env.PHAROS_QUEUE_ASSETS);
-const escalation = process.env.PHAROS_QUEUE_ESCALATION === "true";
+const escalation = process.env.PHAROS_QUEUE_ESCALATION;
+const startedAt = performance.now();
+const bootArrayBuffers = process.memoryUsage().arrayBuffers;
+assert.ok(process.execArgv.includes("--max-old-space-size=128"));
 const active = ACTIVE_STABLECOINS as Array<(typeof ACTIVE_STABLECOINS)[number]>;
 const metaById = ACTIVE_META_BY_ID as Map<string, (typeof active)[number]>;
 const template = active.find(({ id }) => id === "usdc-circle")!;
@@ -40,71 +48,84 @@ const options = { deferPublicMaterialization: true, workerMetadata: V9_QUEUE_TES
 async function seedInputs() {
   const input = makePublishableV9Input(createNativeSafetyScoreV9FullRegistryInput(undefined, ids));
   const payload = await prepareV9SeedPayload(input);
-  await seedPreparedV9Db(mono, payload);
-  await seedPreparedV9Db(db, payload);
+  for (const destination of [mono, db]) {
+    if (escalation === "commit-expiry") {
+      const publishedAtSec = input.clockSec - 1_800;
+      const accepted = makeWorkerSafetyScoreV9Publication({
+        cards: [makeReportCardsV9PipelineGapCard(null, "A", { id: target })],
+        publishedAtSec, asOfSec: publishedAtSec,
+      });
+      await persistSafetyScoreV9Publication(destination, {
+        ...currentInput(accepted),
+        deferPublicMaterialization: true,
+        buildAcceptedProjections: (publication) => buildSafetyScoreV9AcceptedProjections(publication, {
+          [target]: [{
+            routeId: input.dexLiqMap[target]!.exitRouteObservations![0]!.routeId,
+            dexGenerationId: input.dexGenerationId,
+            observationWindowEndedAt: input.clockSec - getDexMeasuredExecutionFreshnessMaxSec() - 1,
+            freshnessMaxSec: getDexMeasuredExecutionFreshnessMaxSec(),
+          }],
+        }),
+      });
+    }
+    await seedPreparedV9Db(destination, payload);
+  }
   return input.clockSec;
 }
-const clockSec = await seedInputs();
-const peaks: Record<string, { heap: number; postGc: number; rss: number; jsonBytes: number; rowBytes: number }> = {};
-let stage = "seed";
-function sample(collect = false) {
+const peaks: Record<string, { heap: number; arrayBuffers: number; combined: number; rss: number; jsonBytes: number; fixedInputBytes: number; rowBytes: number }> = {};
+const phaseHits = new Set<string>();
+let stage = "";
+function sample() {
   if (!stage) return;
-  const peak = peaks[stage] ??= { heap: 0, postGc: 0, rss: 0, jsonBytes: 0, rowBytes: 0 };
-  const { heapUsed, rss } = process.memoryUsage();
+  const peak = peaks[stage] ??= { heap: 0, arrayBuffers: 0, combined: 0, rss: 0, jsonBytes: 0, fixedInputBytes: 0, rowBytes: 0 };
+  const { heapUsed, arrayBuffers, rss } = process.memoryUsage();
+  const buffersAboveBoot = Math.max(0, arrayBuffers - bootArrayBuffers);
   peak.heap = Math.max(peak.heap, heapUsed);
+  peak.arrayBuffers = Math.max(peak.arrayBuffers, buffersAboveBoot);
+  peak.combined = Math.max(peak.combined, heapUsed + buffersAboveBoot);
   peak.rss = Math.max(peak.rss, rss);
-  if (collect) {
-    global.gc!();
-    peak.postGc = Math.max(peak.postGc, process.memoryUsage().heapUsed);
-  }
 }
 let injected = false;
 let assetsSeen = 0;
 Object.assign(globalThis, {
-  __pharosResourcePhase(phase: string, assetId?: string) {
-    if (phase === "evaluate" && escalation && !injected && assetId === target) {
+  __pharosResourcePhase(phase: string, detail?: string | { jsonBytes: number; fixedInput: boolean; rowBytes: number }) {
+    if (phase === "evaluate" && escalation === "eval" && !injected && detail === target) {
       injected = true;
       throw new Error("resource-probe-quarantine");
     }
-    if (phase === "asset-compiled") sample(++assetsSeen % 24 === 0);
-    else if (phase !== "evaluate") sample(true);
+    if (!stage) return;
+    if (phase === "queue-staging-encoded" && typeof detail === "object") {
+      const peak = peaks[stage]!;
+      if (detail.fixedInput) peak.fixedInputBytes = Math.max(peak.fixedInputBytes, detail.jsonBytes);
+      else peak.jsonBytes = Math.max(peak.jsonBytes, detail.jsonBytes);
+      peak.rowBytes = Math.max(peak.rowBytes, detail.rowBytes);
+      return;
+    }
+    if (phase.startsWith("queue-")) phaseHits.add(phase);
+    if (phase !== "evaluate" && (phase !== "asset-compiled" || ++assetsSeen % 8 === 0)) sample();
   },
 });
 const batch = db.batch.bind(db);
 db.batch = (stmts) => { sample(); return batch(stmts); };
 
-function measureStaging(where: string) {
-  const peak = peaks[stage]!;
-  const rows = queueSqlite.prepare(`SELECT chunk_kind, chunk_index, payload FROM v9_eval_chunks
-    WHERE ${where} ORDER BY chunk_kind, chunk_index, part_index`).all();
-  const parts = new Map<string, string[]>();
-  for (const { chunk_kind, chunk_index, payload } of rows) {
-    assert.notEqual(chunk_kind, "fact_shard");
-    const key = `${chunk_kind}:${chunk_index}`;
-    const list = parts.get(key) ?? [];
-    list.push(String(payload));
-    parts.set(key, list);
-    peak.rowBytes = Math.max(peak.rowBytes, String(payload).length);
-  }
-  for (const blobs of parts.values()) {
-    const raw = inflateRawSync(Buffer.from(blobs.join(""), "base64")).byteLength;
-    peak.jsonBytes = Math.max(peak.jsonBytes, raw);
-  }
-}
 const canonicalSha = (sqlite: DatabaseSync) => sqlite.prepare(
   "SELECT json_extract(value, '$.payloadSha256') AS sha FROM cache WHERE key = ?",
 ).get(SAFETY_SCORE_V9_CACHE_KEYS.publication)?.sha;
 
 try {
-  sample(true);
+  const clockSec = await seedInputs().catch((error: unknown) => {
+    throw new Error(`Queue resource setup failed: ${String(error)}`);
+  });
+  stage = "seed";
+  sample();
   let first: V9ContinuationMessage | undefined;
   const seeded = await computeSafetyScoreV9(db, undefined, undefined, {
     ...options, queueMode: "on", slotStartedAt: clockSec, sourceInvocationId: "v9-resource:seed",
     onContinuation: (message) => { first = message; },
   });
   assert.ok(first, seeded.metadata ?? "Seed returned no continuation");
-  sample(true);
-  measureStaging("1 = 1");
+  sample();
+  assert.ok(peaks.seed!.fixedInputBytes > 0);
   const plan = await readV9EvalChunk<{ chunkAssetIds: string[][] }>(db, {
     runId: first.runId, chunkKind: "run_context", chunkIndex: 0, quarantineEpoch: 0,
   });
@@ -113,25 +134,34 @@ try {
   assert.ok(Math.max(...chunkSizes) <= V9_EVAL_DEFAULT_MAX_CHUNK_ASSETS);
   let delivered = 0;
   let message: V9ContinuationMessage | undefined = first;
+  let escalatedAt: string | undefined;
+  let lastStage: string | undefined;
   while (message) {
     const { chunkIndex, quarantineEpoch, stage: kind } = message;
+    lastStage = kind;
     assert.ok(delivered++ < chunkSizes.length * 2 + 3);
     stage = `e${quarantineEpoch}:${kind}${kind === "eval" ? chunkIndex : ""}`;
-    sample(true);
+    sample();
     const result = await deliverV9Continuation(db, message, { deliveryId: `resources-${delivered}` });
-    sample(true);
+    sample();
     assert.equal(result.acked, true, stage);
     const next = result.sent[0];
-    measureStaging(kind === "eval" && next?.quarantineEpoch === quarantineEpoch
-      ? `(chunk_kind = 'run_context' AND chunk_index = 3) OR (chunk_kind != 'run_context' AND chunk_index = ${chunkIndex})`
-      : "1 = 1");
+    if (next && next.quarantineEpoch !== quarantineEpoch) escalatedAt = kind;
+    assert.equal(queueSqlite.prepare("SELECT COUNT(*) AS count FROM v9_eval_chunks WHERE chunk_kind = 'fact_shard'").get()?.count, 0);
     message = next;
   }
-  console.info(`queue-telemetry: ${JSON.stringify({ count, escalation, chunkSizes, peaks })}`);
+  const queueMs = Math.round(performance.now() - startedAt);
+  assert.equal(escalatedAt, escalation === "commit-expiry" ? "commit" : escalation === "eval" ? "eval" : undefined);
+  assert.equal(lastStage, "materialize", String(queueSqlite.prepare("SELECT value FROM cache WHERE key = ?")
+    .get(SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth)?.value));
+  for (const phase of ["queue-commit-summaries", "queue-commit-shards", "queue-candidate", "queue-materialize-decoded", "queue-materialize-staged"]) {
+    assert.ok(phaseHits.has(phase), `missing sample: ${phase}`);
+  }
   stage = "";
   for (const [name, peak] of Object.entries(peaks)) {
-    assert.ok(peak.postGc <= 110 * 1024 * 1024, `${name}: ${peak.postGc} post-GC bytes`);
-    assert.ok(peak.jsonBytes <= V9_EVAL_CHUNK_MAX_JSON_BYTES, `${name}: ${peak.jsonBytes} JSON bytes`);
+    assert.ok(peak.combined <= 128 * 1024 * 1024, `${name}: ${peak.combined} heap and buffer bytes (${JSON.stringify(peak)})`);
+    assert.ok(peak.jsonBytes <= 4 * 1024 * 1024, `${name}: ${peak.jsonBytes} staging JSON bytes`);
+    assert.ok(peak.fixedInputBytes <= 6 * 1024 * 1024, `${name}: ${peak.fixedInputBytes} pinned input JSON bytes`);
     assert.ok(peak.rowBytes <= V9_EVAL_CHUNK_MAX_ROW_BYTES, `${name}: ${peak.rowBytes} row bytes`);
   }
   const run = await loadV9EvalRun(db, first.runId);
@@ -141,8 +171,8 @@ try {
   assert.equal(marker.payloadSha256, sha);
   assert.equal(marker.publicationGenerationId, run?.publication_generation_id);
   assert.equal(run?.state, "completed");
-  assert.equal(run.quarantine_epoch, escalation ? 1 : 0);
-  assert.equal(injected, escalation);
+  assert.equal(run.quarantine_epoch, escalation === "none" ? 0 : 1);
+  assert.equal(injected, escalation === "eval");
   assert.equal(queueSqlite.prepare("SELECT COUNT(*) AS count FROM v9_eval_chunks").get()?.count, 0);
   queueSqlite.close();
 
@@ -151,7 +181,10 @@ try {
   const monoRes = await computeSafetyScoreV9(mono, undefined, undefined, { ...options, queueMode: "off" });
   assert.equal(JSON.parse(monoRes.metadata!).publication.status, "published", monoRes.metadata ?? "Monolithic publication failed");
   assert.equal(canonicalSha(monoSqlite), sha);
-  assert.equal(injected, escalation);
+  assert.equal(injected, escalation === "eval");
+  console.info(`queue-telemetry: ${JSON.stringify({
+    count, escalation, escalatedAt, chunkSizes, bootArrayBuffers, queueMs, totalMs: Math.round(performance.now() - startedAt), peaks,
+  })}`);
 } finally {
   if (queueSqlite.isOpen) queueSqlite.close();
   monoSqlite.close();

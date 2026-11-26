@@ -88,7 +88,13 @@ const COMPUTE_SITES: Site[] = [
 const QUEUE_SITES: Site[] = [
   { file: "worker/src/lib/safety-score-v9/fact-set.ts", fn: "compileAssetOutcome", phase: "asset-compiled", kind: "variable", name: "parsed" },
   { file: "shared/lib/safety-score-v9/evaluate-asset.ts", fn: "evaluateV9Asset", phase: "evaluate", kind: "variable", name: "gapIndex", argument: "asset.assetId" },
-  { file: "worker/src/lib/safety-score-v9/chunked-eval-pipeline.ts", fn: "runChunkedV9CommitStep", phase: "queue-candidate", kind: "variable", name: "assembled" },
+  { file: "worker/src/lib/safety-score-v9/chunked-eval-pipeline.ts", fn: "prepareV9Commit", phase: "queue-candidate", kind: "variable", name: "assembled" },
+  { file: "worker/src/lib/safety-score-v9/chunked-eval-plan.ts", fn: "assembleV9ChunkedCandidate", phase: "queue-commit-summaries", kind: "assignment", name: "input.chunkSummaries.length", before: true },
+  { file: "worker/src/lib/safety-score-v9/chunked-eval-plan.ts", fn: "assembleV9ChunkedCandidate", phase: "queue-commit-shards", kind: "variable", name: "cards" },
+  { file: "worker/src/lib/safety-score-v9/publication-materialization.ts", fn: "retryPendingSafetyScoreV9PublicMaterialization", phase: "queue-materialize-decoded", kind: "variable", name: "publication" },
+  { file: "worker/src/lib/report-cards-v9-materialization.ts", fn: "materializeV9AcceptedPublication", phase: "queue-materialize-staged", kind: "assignment", name: "staged" },
+  { file: "worker/src/lib/safety-score-v9/chunked-eval-store.ts", fn: "encodeV9EvalChunkParts", phase: "queue-staging-encoded", kind: "return", name: "parts", before: true,
+    argument: '{ jsonBytes: json.byteLength, fixedInput: value !== null && typeof value === "object" && "fixedInput" in value, rowBytes: Math.max(...parts.map(part => part.payloadBytes)) }' },
   ...COMPUTE_SITES.filter((site) => ["publication-gzip-complete", "publication-committed"].includes(site.phase)),
 ];
 function instrumentation(root: string, sites = COMPUTE_SITES): Plugin {

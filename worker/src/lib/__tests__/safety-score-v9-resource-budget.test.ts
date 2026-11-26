@@ -18,7 +18,7 @@ import { assessSafetyScoreV9ResourceBudget } from "../safety-score-v9/resource-b
 import { buildResourcePressure } from "../cron-resource-pressure";
 import { REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES } from "../report-cards-fixed-input-cache-codec";
 import { createResourceProbeEnv } from "./safety-score-v9-resource-env.test-support";
-import { buildResourceProbe, buildSafetyScoreV9ContagionProbe, runResourceChild } from "./safety-score-v9-resource-budget.test-support";
+import { buildResourceProbe, buildSafetyScoreV9ContagionProbe, runResourceChildAsync } from "./safety-score-v9-resource-budget.test-support";
 import { hasV9ContagionInput } from "../../../scripts/lib/v9-resource-policy";
 import { measurePublicationByteBudget, PublicationByteMetricsSchema, RESOURCE_PUBLICATION_CARD_UNIT_MAX_BYTES, RESOURCE_PUBLICATION_STREAMED_TOTAL_REGRESSION_MAX_BYTES } from "@shared/lib/safety-score-v9-resource-bytes";
 import { SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES } from "@shared/lib/safety-score-v9-publication-limits";
@@ -169,7 +169,7 @@ const CONTAGION_HEAP_LIMIT_MIB = 256;
 const CONTAGION_WALL_BUDGET_MS = 90_000;
 let temporaryDirectory = "";
 let bundledProbe = "";
-let queueProbe = "";
+let queueSetup: Promise<{ template: string; entry: string }> | undefined;
 let bundledInputs: string[] = [];
 
 describe.skipIf(process.env.PHAROS_V9_RESOURCE_LANE !== "1")("Safety Score V9 contagion and historical capture resource budgets", {
@@ -235,18 +235,11 @@ describe.skipIf(process.env.PHAROS_V9_RESOURCE_LANE !== "1")("Safety Score V9 co
       candidateBytes: output.candidateBytes, deltaBytes: output.candidateBytes - FROZEN_BASE.bytes });
   });
 
-  it(`evaluates a bounded nine-scenario matrix within ${CONTAGION_HEAP_LIMIT_MIB} MiB of old-space`, () => {
-    const result = spawnSync(process.execPath, [
-      `--max-old-space-size=${CONTAGION_HEAP_LIMIT_MIB}`, "--expose-gc", bundledProbe,
-    ], {
-      // Wall-clock guard only (memory is the asserted bound): v10.01 cause
-      // tracing raises evaluation CPU, and shared CI runners exceeded 45s.
-      cwd: ROOT, encoding: "utf8", timeout: 130_000,
-      env: createResourceProbeEnv(process.env, { contagion: true }),
-    });
-    expect(result.error).toBeUndefined();
-    expect(result.status, result.stderr).toBe(0);
-    const output = JSON.parse(result.stdout) as {
+  it.concurrent(`evaluates a bounded nine-scenario matrix within ${CONTAGION_HEAP_LIMIT_MIB} MiB of old-space`, async () => {
+    const result = await runResourceChildAsync(ROOT, bundledProbe, { CONTAGION_MATRIX: "1" },
+      [`--max-old-space-size=${CONTAGION_HEAP_LIMIT_MIB}`, "--expose-gc"], temporaryDirectory, "contagion", Date.now() + 130_000);
+    expect(result.status, readFileSync(join(temporaryDirectory, "contagion.stderr"), "utf8")).toBe(0);
+    const output = JSON.parse(readFileSync(join(temporaryDirectory, "contagion.stdout"), "utf8")) as {
       expected: number; wallMs: number;
       counts: Array<{ evaluated: number; failed: number }>;
     };
@@ -264,19 +257,20 @@ describe.skipIf(process.env.PHAROS_V9_RESOURCE_LANE !== "1")("Safety Score V9 co
     expect(output.wallMs, `nine-scenario matrix wallMs=${output.wallMs}`).toBeLessThan(CONTAGION_WALL_BUDGET_MS);
   });
 
-  it.each([[343, false], [560, false], [343, true]] as const)(
+  it.concurrent.each([[343, "none"], [560, "none"], [343, "eval"], [343, "commit-expiry"]] as const)(
     "bounds Queue stage resources and matches canonical publication at %i assets (escalation=%s)",
-    async (count, injectFailure) => {
-      const template = join(temporaryDirectory, "queue-template.sqlite");
-      if (!queueProbe) {
+    async (count, escalation) => {
+      const { template, entry } = await (queueSetup ??= (async () => {
+        const template = join(temporaryDirectory, "queue-template.sqlite");
         const { buildLatestSchemaTemplate } = await import("@shared/test-utils/latest-schema-sqlite");
         writeFileSync(template, buildLatestSchemaTemplate());
-        queueProbe = (await buildResourceProbe(ROOT, temporaryDirectory, "queue")).outfile;
-      }
-      const name = `queue-${count}-${injectFailure}`;
-      const result = runResourceChild(ROOT, queueProbe, {
-        PHAROS_QUEUE_TEMPLATE: template, PHAROS_QUEUE_ASSETS: String(count), PHAROS_QUEUE_ESCALATION: String(injectFailure),
-      }, ["--expose-gc", "--max-old-space-size=256"], temporaryDirectory, name, Date.now() + 130_000);
+        const { outfile: entry } = await buildResourceProbe(ROOT, temporaryDirectory, "queue");
+        return { template, entry };
+      })());
+      const name = `queue-${count}-${escalation}`;
+      const result = await runResourceChildAsync(ROOT, entry, {
+        PHAROS_QUEUE_TEMPLATE: template, PHAROS_QUEUE_ASSETS: String(count), PHAROS_QUEUE_ESCALATION: escalation,
+      }, ["--max-old-space-size=128", "--max-semi-space-size=2"], temporaryDirectory, name, Date.now() + 130_000);
       const stdout = readFileSync(join(temporaryDirectory, `${name}.stdout`), "utf8");
       const telemetry = stdout.split("\n").find(line => line.startsWith("queue-telemetry:"));
       if (telemetry) console.info(telemetry);
