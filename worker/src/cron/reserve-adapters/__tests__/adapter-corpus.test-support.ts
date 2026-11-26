@@ -14,11 +14,13 @@
  */
 import { readFileSync } from "node:fs";
 import { URL } from "node:url";
+import { vi } from "vitest";
+import type { LiveReserveAdapterKey } from "@shared/types/live-reserves";
 import SOLOMON_CHANCERY_CAPTURE from "./fixtures/solomon-chancery-token-backing.json";
 import QCAD_BALANCES_CAPTURE from "./fixtures/qcad-balances-2026-10-07.json";
 import TETHER_TRANSPARENCY_CAPTURE from "./fixtures/tether-transparency.json";
 import { FOREST_ACCOUNTING_NETWORK, FOREST_MANAGER, SPARK_BALANCE_CALL, SPARK_INVENTORY_NETWORK, SPARK_SUSDS } from "./fixtures/identity-bound-reserve-readers";
-import { resolveAdapterCoin, type AdapterNetworkSpec, type AdapterRpcValue } from "./reserve-adapter.test-support";
+import { resolveAdapterCoin, runAdapter, type AdapterNetworkSpec, type AdapterRpcValue, type AdapterRun } from "./reserve-adapter.test-support";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { BTCFI_HANDLER_ROWS, BTCFI_MARKET_ROWS } from "./reserve-adapter-payloads.test-support";
 import { MAKINA_ALLOCATIONS_FIXTURE, makinaNetworkSpec } from "./makina-strategy.test-support";
@@ -810,3 +812,118 @@ CORPUS_CASES["coinbase-oned-por"] = {
     },
   },
 };
+
+export type G6FaultVector = "data-less-200" | "numeric-leaf-na" | "second-response-503";
+export interface G6CleanBaseline { result: AdapterRun["result"]; degradedCodes: Set<string>; distinctHttpUrls: string[]; }
+export interface G6FaultExecution { targetUrl: string; injectedHits: number; ok: boolean; run?: AdapterRun; error?: unknown; }
+interface HttpEnvelope { status?: number; body?: string; json?: unknown; headers?: Record<string, string>; }
+
+const isHttpEnvelope = (v: unknown): v is HttpEnvelope =>
+  typeof v === "object" && v !== null && !Array.isArray(v) && ("status" in v || "body" in v || "json" in v || "headers" in v);
+const normalizeHttpUrl = (url: string) => url.replace(/\/$/, "");
+const healthyHttpEntries = (spec: AdapterNetworkSpec) =>
+  [...Object.entries(spec.json ?? {}), ...Object.entries(spec.html ?? {})].filter(([, r]) => !(isHttpEnvelope(r) && (r.status ?? 200) >= 400));
+
+export function buildG6FaultRows<T extends AdapterCorpusCase>(entries: ReadonlyArray<readonly [LiveReserveAdapterKey, T]>) {
+  const rows: Array<readonly [LiveReserveAdapterKey, G6FaultVector, T]> = [];
+  for (const [key, corpusCase] of entries) {
+    const healthy = healthyHttpEntries(corpusCase.network);
+    if (healthy.length === 0) continue;
+    rows.push([key, "data-less-200", corpusCase], [key, "numeric-leaf-na", corpusCase]);
+    // Distinct responders separate genuine multi-endpoint reads from failover mirrors of one RPC endpoint.
+    if (new Set(healthy.map(([, r]) => r)).size >= 2) rows.push([key, "second-response-503", corpusCase]);
+  }
+  return rows;
+}
+
+function isNumericLeafString(value: string): boolean {
+  const s = value.trim();
+  return /^-?\d+$/.test(s) || /^-?\d+\.\d+$/.test(s);
+}
+
+function corruptNumericLeaves(value: unknown, isRoot = true): unknown {
+  if (value == null) return value;
+  if (typeof value === "number" || (typeof value === "string" && isNumericLeafString(value))) return "n/a";
+  if (Array.isArray(value)) return value.map((item) => corruptNumericLeaves(item, false));
+  if (typeof value === "object") {
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, isRoot && k === "code" && v === 0 ? v : corruptNumericLeaves(v, false)]));
+  }
+  return value;
+}
+
+export function createG6CleanBaselineLoader<T extends AdapterCorpusCase>() {
+  const cache = new Map<string, Promise<G6CleanBaseline>>();
+  return (key: LiveReserveAdapterKey, corpusCase: T): Promise<G6CleanBaseline> => {
+    let pending = cache.get(key);
+    if (!pending) {
+      pending = runAdapter(key, corpusCase.coin ?? corpusCase.coinId, { network: corpusCase.network, nowSec: corpusCase.nowSec, validate: false }).then(({ result, report, network }) => {
+        const healthyUrls = new Set(healthyHttpEntries(corpusCase.network).map(([u]) => normalizeHttpUrl(u)));
+        const distinctHttpUrls: string[] = [];
+        for (const req of network.requests) {
+          const norm = normalizeHttpUrl(req.url);
+          if (healthyUrls.has(norm) && !distinctHttpUrls.includes(norm)) distinctHttpUrls.push(norm);
+        }
+        const degradedCodes = new Set([...(result.warnings ?? []), ...report.warnings].filter((w) => w.effect === "degraded" || w.effect === "fatal").map((w) => w.code));
+        return { result, degradedCodes, distinctHttpUrls };
+      });
+      cache.set(key, pending);
+    }
+    return pending;
+  };
+}
+
+function mutateNetworkForUrl(spec: AdapterNetworkSpec, fault: G6FaultVector, targetUrl: string, tracker: { injectedHits: number }): AdapterNetworkSpec {
+  const targetResp = healthyHttpEntries(spec).find(([u]) => normalizeHttpUrl(u) === targetUrl)?.[1];
+  const wrap = (table: Record<string, unknown> | undefined, html: boolean) =>
+    table && Object.fromEntries(Object.entries(table).map(([url, resp]) => {
+      const norm = normalizeHttpUrl(url);
+      // Mirror RPC pools share one responder; fault the whole pool for payload vectors,
+      // while second-response-503 strictly targets only the selected secondary URL and its retries.
+      const isTarget = fault === "second-response-503" ? norm === targetUrl : norm === targetUrl || (typeof targetResp === "function" && resp === targetResp);
+      return [url, async (req: Request) => {
+        const raw = typeof resp === "function" ? await (resp as (r: Request) => unknown)(req) : resp;
+        const env = isHttpEnvelope(raw);
+        if ((env && (raw.status ?? 200) >= 400) || !isTarget) return raw;
+        tracker.injectedHits += 1;
+        if (fault === "second-response-503") return { status: 503, body: "upstream unavailable" };
+        if (html) {
+          const text = env ? (raw.body ?? "") : String(raw);
+          const next = fault === "data-less-200" ? "" : text.replace(/<!--[\s\S]*?-->|\d+\.\d+|\d+/g, (m) => (m.startsWith("<!--") ? m : "n/a"));
+          return env ? { ...raw, body: next } : next;
+        }
+        const payload = env ? raw.json : raw;
+        const zeroCode = typeof payload === "object" && payload !== null && !Array.isArray(payload) && (payload as Record<string, unknown>).code === 0;
+        const next = fault === "data-less-200" ? (zeroCode ? { code: 0 } : {}) : corruptNumericLeaves(payload);
+        return env ? { ...raw, json: next } : next;
+      }];
+    }));
+  return { ...spec, json: wrap(spec.json, false), html: wrap(spec.html, true) as AdapterNetworkSpec["html"] };
+}
+
+export async function runG6FaultTargets<T extends AdapterCorpusCase>(
+  key: LiveReserveAdapterKey, fault: G6FaultVector, corpusCase: T, clean: G6CleanBaseline,
+): Promise<G6FaultExecution[]> {
+  const targetUrls = fault === "second-response-503"
+    ? [clean.distinctHttpUrls[1]!]
+    : fault === "data-less-200" && clean.distinctHttpUrls.length >= 2
+      ? [clean.distinctHttpUrls[0]!, clean.distinctHttpUrls[1]!]
+      : [clean.distinctHttpUrls[0]!];
+  const executions: G6FaultExecution[] = [];
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  try {
+    for (const targetUrl of targetUrls) {
+      const tracker = { injectedHits: 0 };
+      let settled = false;
+      const promise = runAdapter(key, corpusCase.coin ?? corpusCase.coinId, {
+        network: mutateNetworkForUrl(corpusCase.network, fault, targetUrl, tracker),
+        nowSec: corpusCase.nowSec, validate: false, allowUnmatched: true,
+      }).then((run) => ({ ok: true as const, run }), (error: unknown) => ({ ok: false as const, error })).finally(() => { settled = true; });
+      while (!settled) await vi.advanceTimersByTimeAsync(500);
+      const outcome = await promise;
+      executions.push({ targetUrl, injectedHits: tracker.injectedHits, ok: outcome.ok, ...(outcome.ok ? { run: outcome.run } : { error: outcome.error }) });
+    }
+  } finally {
+    vi.useRealTimers();
+  }
+  return executions;
+}

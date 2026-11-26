@@ -1,11 +1,14 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_STABLECOINS, ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { sha256Hex } from "@shared/lib/sha256";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { PegSummaryCoinSchema, type PegSummaryCoin } from "@shared/types/peg";
-import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
+import {
+  SAFETY_SCORE_V9_CACHE_KEYS,
+  SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY,
+  SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY,
+} from "@shared/types/safety-score-cache-keys";
 import { assessReserveFetchFreshness } from "../live-reserves/store-snapshot-state";
 import { makeRedemptionWriteRecord } from "./redemption-backstops-store.test-support";
 import type * as SnapshotModule from "../report-cards-snapshot";
@@ -20,27 +23,23 @@ vi.mock("../report-cards-snapshot", async (original) => ({
   ...(await original<typeof SnapshotModule>()), loadExactDexPublicationGeneration: vi.fn(async () => ({ generationId: "dex-liquidity-1790000000", updatedAt: 1790000000 })),
 }));
 import { buildNativeSafetyScoreV9Capture } from "./safety-score-v9-capture.test-support";
-import { inheritPureWrapperPegObservations } from "../safety-score-v9/capture";
+import {
+  CHILD, G5_ANCHOR_ID, G5_R1_QUARANTINED_DEX_ID, G5_R2_ERRATUM_ID, G5_R3_DUST_SUSPENDED_ID,
+  G5_R4_FOREIGN_PROVIDER_ID, makeV9CaptureFixtureSources, OBSERVED_REFERENCE, observedParent, pegRow,
+  runInheritance, V9_CAPTURE_TEST_RUN, wrapperMeta, type TestMeta,
+} from "./fixtures/safety-score-v9-g5-fixtures";
+import type { runG5PipelineHarness } from "./safety-score-v9-publication-input.test-support";
+import { decodeSafetyScoreCaptureArchiveObject, safetyScoreCaptureArchiveKey } from "../safety-score-v9/capture-archive-contract";
 import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension";
-const RUN = 1790000000;
+import { parseNativeV9InputCacheArtifact } from "../safety-score-v9/native-input";
+import { parseSafetyScoreV9Publication } from "../safety-score-v9/publication-codec";
+import { parseSafetyScoreV9PublicationReplayCapture } from "../safety-score-v9/publication-replay-capture";
+const RUN = V9_CAPTURE_TEST_RUN;
 
 function fixture(scoringClock: number, fetchedAt = RUN - 48 * 3600 + 60, metadataValid = true, runAt = RUN) {
-  const entry = { ...makeRedemptionWriteRecord(), stablecoinId: "iusd-infinifi", updatedAt: runAt };
-  const reserveInput = { generationId: "reserve:1790000000:test", contentSha256: "a".repeat(64), stablecoinId: entry.stablecoinId, attemptId: "success",
-    configFingerprint: computeLiveReserveConfigFingerprint(ACTIVE_META_BY_ID.get(entry.stablecoinId)!.liveReservesConfig!),
-    freshness: assessReserveFetchFreshness({ fetchedAt, attemptId: "success", metadata: { freshnessMode: "not-applicable" } }, runAt, 172800) };
-  const runMetadata = metadataValid ? { reserveViewSchemaVersion: 2, reserveGenerationId: reserveInput.generationId, reserveContentSha256: reserveInput.contentSha256,
-    runClockSec: runAt, consumedReserveInputs: { [entry.stablecoinId]: reserveInput } } : {};
-  mocks.inputs.mockResolvedValue({
-    stablecoinsCached: { kind: "ok", updatedAt: runAt, payload: { peggedAssets: [] } },
-    dexLiquiditySnapshot: { latestUpdatedAt: runAt, map: Object.fromEntries(ACTIVE_STABLECOINS.map((coin) => [coin.id, { methodologyVersion: "1.0" }])) },
-    redemptionBackstopMap: { [entry.stablecoinId]: { ...entry, reserveInput } },
-    redemptionSnapshotProvenance: { runId: "redemption:actual", latestUpdatedAt: runAt, methodologyVersion: entry.methodologyVersion, runMetadata },
-    liveReserveMap: new Map(), liveReserveProvenanceMap: new Map(), liquidityStale: false, redemptionStale: false,
-    inputFreshness: { dexLiquidity: { updatedAt: runAt, ageSeconds: 0, stale: false }, redemptionBackstops: { updatedAt: runAt, ageSeconds: 0, stale: false } },
-    v9PublicationInputHealth: { dex: { state: "current" }, redemption: { state: "current", generationId: "redemption:actual", updatedAtSec: runAt }, liveReserves: { state: "available", coverageRatio: 1 } },
-  });
-  mocks.peg.mockResolvedValue({ nowSec: scoringClock, pegDataById: new Map(), eventsByCoin: new Map() });
+  const sources = makeV9CaptureFixtureSources(scoringClock, fetchedAt, metadataValid, runAt);
+  mocks.inputs.mockResolvedValue(sources.inputs);
+  mocks.peg.mockResolvedValue(sources.peg);
 }
 
 beforeEach(() => vi.clearAllMocks());
@@ -174,30 +173,6 @@ describe("V9 consumed reserve scoring-clock admission", () => {
     })]);
     expect(input.pipelineGapByAssetId?.[other.id]).toBeUndefined();
   });
-  it("keeps the unaffected cohort when a published DEX row is quarantined", async () => {
-    fixture(RUN + 1, RUN - 60);
-    const loaded = await mocks.inputs();
-    // The reader rejected usdc-circle's persisted row and named the reason; the
-    // rest of the publication is still admitted (R8/ADR-35).
-    loaded.dexLiquiditySnapshot = {
-      latestUpdatedAt: RUN,
-      map: Object.fromEntries(ACTIVE_STABLECOINS
-        .filter((coin) => coin.id !== "usdc-circle")
-        .map((coin) => [coin.id, { methodologyVersion: "1.0" }])),
-      quarantined: { "usdc-circle": { reason: "invalid-coverage-evidence", methodologyVersion: "1.0" } },
-    };
-    mocks.inputs.mockResolvedValue(loaded);
-
-    const { input } = await buildNativeSafetyScoreV9Capture(mockD1());
-
-    // The quarantined asset keeps an evidence-free row: the input still covers
-    // the cohort, and the exit compiler reads unavailable DEX evidence rather
-    // than an absent subject or a zero-liquidity market (R1/R2).
-    expect(Object.keys(input.dexLiqMap).sort()).toEqual(input.activeAssetIds);
-    expect(input.dexLiqMap["usdc-circle"]).toEqual({ updatedAt: RUN });
-    expect(input.pipelineGapByAssetId?.["usdc-circle"]?.map(({ verdict }) =>
-      verdict.proof.rejectionCode).join(" ")).toMatch(/dex|coverage/i);
-  });
 
   it("still holds the cohort when a quarantined DEX row carries another methodology", async () => {
     fixture(RUN + 1, RUN - 60);
@@ -284,70 +259,6 @@ describe("V9 lender-book capture availability provenance", () => {
     expect(loaded.liveReserveProvenanceMap.has("kpkusdcyield-kpk")).toBe(false);
   });
 });
-
-const CHILD = "usdn-noble";
-const PARENT = "m-m0";
-
-type TestMeta = Pick<StablecoinMeta, "variantOf" | "variantKind" | "pegReferenceId" | "flags">;
-
-const OBSERVED_REFERENCE = { valueUsd: 1, source: "median" as const, contributorCount: 294, asOf: 1_793_294_137 };
-
-function pegRow(overrides: Partial<PegSummaryCoin> = {}): PegSummaryCoin {
-  return PegSummaryCoinSchema.parse({
-    id: CHILD,
-    symbol: "USDN",
-    name: "Noble Dollar",
-    pegType: "peggedUSD",
-    pegCurrency: "USD",
-    governance: "centralized",
-    currentDeviationBps: null,
-    currentPriceUnavailable: true,
-    priceSource: "protocol-par",
-    priceObservedAtMode: "nominal_reference",
-    nominalPriceReference: { price: 1, source: "protocol-par", mode: "nominal_reference" },
-    pegScore: 100,
-    pegPct: 99.99,
-    severityScore: 99.9,
-    spreadPenalty: 0,
-    eventCount: 2,
-    worstDeviationBps: -189,
-    activeDepeg: false,
-    lastEventAt: 1_774_651_713,
-    trackingSpanDays: 603,
-    methodologyVersion: "10.36",
-    ...overrides,
-  });
-}
-
-function wrapperMeta(overrides: Partial<TestMeta> = {}): TestMeta {
-  return {
-    variantOf: PARENT,
-    variantKind: "pure-wrapper",
-    pegReferenceId: PARENT,
-    flags: { backing: "rwa-backed", pegCurrency: "USD", governance: "centralized", yieldBearing: false, rwa: true, navToken: false },
-    ...overrides,
-  };
-}
-
-function observedParent(overrides: Partial<PegSummaryCoin> = {}): PegSummaryCoin {
-  return pegRow({
-    id: PARENT,
-    symbol: "M",
-    currentDeviationBps: -5,
-    currentPriceUnavailable: undefined,
-    priceSource: "coingecko",
-    priceObservedAt: 1_774_651_720,
-    priceObservedAtMode: "upstream",
-    nominalPriceReference: undefined,
-    pegReference: OBSERVED_REFERENCE,
-    eventCount: 1,
-    ...overrides,
-  });
-}
-
-function runInheritance(rows: PegSummaryCoin[], meta: Record<string, TestMeta> = { [CHILD]: wrapperMeta() }) {
-  return inheritPureWrapperPegObservations(new Map(rows.map((entry) => [entry.id, entry])), new Map(Object.entries(meta)));
-}
 
 describe("Safety Score V9 capture — reviewed 1:1 wrapper peg observation inheritance", () => {
   it("retains the legacy wrapper summary until an explicit clock or reference rejection withholds it", () => {
@@ -440,4 +351,113 @@ describe("Safety Score V9 capture — reviewed 1:1 wrapper peg observation inher
     }).get(CHILD)!;
     expect(child.currentPriceUnavailable).toBe(true);
   });
+});
+
+// Stubbed upstream capture loaders (snapshot-inputs, peg-analytics, journals, DEX gen)
+// plus one injected foreign provider review; real downstream capture -> peg-provenance
+// seed -> full-cohort normalizeNativeV9Input -> subset compile -> schema -> R2 archive decode.
+describe("G5 Safety Score V9 runtime guard (#2305)", () => {
+  let g5: Awaited<ReturnType<typeof runG5PipelineHarness>>;
+
+  beforeAll(async () => {
+    // Scope the injected foreign provider review strictly to G5 so earlier tests read the real runtime asset.
+    vi.resetModules();
+    vi.doMock("@shared/data/safety-score-v9/incident-runtime-v1.generated.json", async (original) => {
+      const mod = await original<{ default: { negativeReviews?: unknown[] } }>();
+      return {
+        default: {
+          ...mod.default,
+          negativeReviews: [...(mod.default.negativeReviews ?? []), {
+            reviewId: "g5-foreign-unreadable-ccip", assetId: "zz-foreign-ccip",
+            scope: { kind: "provider", providerKey: "chainlink-ccip", surface: "dvn-set", coveredRoutes: [{ assetId: "zz-foreign-ccip", routeId: "ethereum:0x0" }] },
+            reviewedAt: "2026-10-01", windowStartSec: 1_700_000_000, windowEndSec: 1_790_000_000, sources: [["a".repeat(64), "https://example.com/foreign"]],
+          }],
+        },
+      };
+    });
+    const { loadExactDexPublicationGeneration } = await import("../report-cards-snapshot");
+    const { runG5PipelineHarness: runG5 } = await import("./safety-score-v9-publication-input.test-support");
+    g5 = await runG5({
+      db: mockD1(),
+      setSources: (sources, dexAt) => {
+        vi.mocked(loadExactDexPublicationGeneration).mockResolvedValueOnce({ generationId: `dex-liquidity-${dexAt}`, updatedAt: dexAt });
+        mocks.inputs.mockResolvedValueOnce(sources.inputs);
+        mocks.peg.mockResolvedValueOnce(sources.peg);
+      },
+    });
+  });
+
+  afterAll(() => {
+    vi.doUnmock("@shared/data/safety-score-v9/incident-runtime-v1.generated.json");
+    vi.resetModules();
+  });
+
+  it.each([
+    ["R1: quarantined DEX row yields excluded unavailable exit while cohort stays complete and anchor scores", () => {
+      // R8/ADR-35 + R1/R2: the quarantined DEX row keeps an evidence-free slot so
+      // the cohort stays complete and exit reads unavailable evidence, not zero liquidity.
+      const { dexAt, captureOut, fullNormalized, pipeline, parsedPub } = g5;
+      expect(fullNormalized.activeAssetIds.length).toBe(ACTIVE_STABLECOINS.length);
+      expect(fullNormalized.baseInputGenerationId).toBe(captureOut.input.baseInputGenerationId);
+      expect(Object.keys(fullNormalized.dexLiqMap).sort()).toEqual(fullNormalized.activeAssetIds);
+      expect(fullNormalized.dexLiqMap[G5_R1_QUARANTINED_DEX_ID]).toEqual({ updatedAt: dexAt });
+      expect(fullNormalized.pipelineGapByAssetId?.[G5_R1_QUARANTINED_DEX_ID]?.[0]?.verdict.proof.rejectionCode).toMatch(/dex|coverage/i);
+      const r1Ev = pipeline.evaluatedSet.assets.find((a) => a.assetId === G5_R1_QUARANTINED_DEX_ID)!;
+      const r1Card = parsedPub.cards.find((c) => c.id === G5_R1_QUARANTINED_DEX_ID)!;
+      expect(r1Ev.exit).toMatchObject({ score: null, aggregationDisposition: "excluded-a-b", primaryRouteKey: null });
+      expect(r1Ev.exit.reasons.length).toBeGreaterThan(0);
+      expect(r1Card.pillars.exit).toMatchObject({ score: null, aggregationDisposition: "excluded-a-b", evidenceLevel: "insufficient" });
+      expect(r1Card.breakdowns?.exit).toMatchObject({ evaluatedScore: null, primaryRoute: null });
+      expect(r1Card.partialEvidence?.excludedPillars).toContain("exit");
+      expect(parsedPub.cards.find((c) => c.id === G5_ANCHOR_ID)!.pillars.exit.score).toBeGreaterThan(0);
+    }],
+    ["R2: clockless disputed erratum propagates through peg-provenance enrichment into compiled fact set and card", () => {
+      const { fullNormalized, pipeline, parsedPub } = g5;
+      expect(fullNormalized.pegProvenanceById[G5_R2_ERRATUM_ID]).toMatchObject({
+        classes: { "audit-excluded": { eventCount: 1 } },
+        legacyInclusive: { result: { scoredEventCount: 0, excludedEventCount: 1, pegScore: 100 } },
+      });
+      expect(pipeline.fixedInput.pegProvenanceById[G5_R2_ERRATUM_ID]?.classes["audit-excluded"].eventCount).toBe(1);
+      expect(pipeline.compiledFacts.assets.find((a) => a.assetId === G5_R2_ERRATUM_ID)!.peg).toMatchObject({
+        status: { observationState: "known" }, pegScore: 100, activeDepeg: false,
+      });
+      expect(parsedPub.cards.find((c) => c.id === G5_R2_ERRATUM_ID)!.pegMultiplier).toBe(1);
+    }],
+    ["R3: dust DEX beside a reviewed suspended channel scores exit 0, not unknown", () => {
+      const r3Ev = g5.pipeline.evaluatedSet.assets.find((a) => a.assetId === G5_R3_DUST_SUSPENDED_ID)!;
+      expect(r3Ev.exit.score).toBe(0);
+      expect(r3Ev.exit.reasons).toContain("no-viable-exit-path");
+      expect(r3Ev.exit.routes.some((r) => r.routeSuspension !== undefined)).toBe(true);
+    }],
+    ["R4: foreign unreadable provider review isolates lane without quarantining asset", () => {
+      expect(g5.pipeline.quarantines.some((q) => q.assetId === G5_R4_FOREIGN_PROVIDER_ID)).toBe(false);
+      expect(g5.pipeline.bridgeJoinDiagnostics.find((d) => d.assetId === G5_R4_FOREIGN_PROVIDER_ID)?.incidentClosureFailures).toContainEqual(
+        expect.objectContaining({ providerKey: "chainlink-ccip", code: "provider-incident-disclosures-unreadable", foreignAssetIds: ["zz-foreign-ccip"] }),
+      );
+    }],
+    ["R5: accepted capture archive object round-trips through decodeSafetyScoreCaptureArchiveObject and recovers cards and delta", async () => {
+      const { archive, parsedPub } = g5;
+      expect(archive.archiveResult.status).toBe("written");
+      expect(archive.key).toBe(safetyScoreCaptureArchiveKey(parsedPub.publishedAtSec, parsedPub.publicationGenerationId));
+      const decoded = decodeSafetyScoreCaptureArchiveObject(archive.index, archive.bytes);
+      expect(decoded).toMatchObject({
+        schemaVersion: 1, generationId: parsedPub.publicationGenerationId, publishedAt: parsedPub.publishedAtSec,
+        methodologyVersion: parsedPub.policyVersion, policyDigest: parsedPub.policy.semanticDigest,
+        evaluationBuildDigest: parsedPub.evaluationBuildDigest,
+        base: { key: SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY },
+        delta: { key: SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY },
+        cards: { key: SAFETY_SCORE_V9_CACHE_KEYS.publication },
+      });
+      expect(await parseSafetyScoreV9Publication(decoded.cards.value)).toEqual(parsedPub);
+      const recoveredBase = await parseNativeV9InputCacheArtifact(decoded.base.value);
+      expect(recoveredBase.input.baseInputGenerationId).toBe(parsedPub.baseInputGenerationId);
+      const replayedDelta = await parseSafetyScoreV9PublicationReplayCapture(decoded.delta.value, recoveredBase.input);
+      expect(replayedDelta.publicationGenerationId).toBe(parsedPub.publicationGenerationId);
+      expect(replayedDelta.fixedInput.pegProvenanceById[G5_R2_ERRATUM_ID]?.classes["audit-excluded"].eventCount).toBe(1);
+      expect(() => decodeSafetyScoreCaptureArchiveObject({ ...archive.index, object_sha256: "0".repeat(64) }, archive.bytes))
+        .toThrow(/capture-archive-sha256-mismatch/);
+      expect(() => decodeSafetyScoreCaptureArchiveObject({ ...archive.index, r2_key: "captures/safety-score-v9-accepted/wrong.json" }, archive.bytes))
+        .toThrow(/capture-archive-index-identity-mismatch/);
+    }],
+  ] as const)("%s", async (_label, run) => { await run(); });
 });

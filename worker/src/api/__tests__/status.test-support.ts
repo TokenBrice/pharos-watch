@@ -468,6 +468,26 @@ export function completePublicationEntry(
   };
 }
 
+export function makeCronHistoryScenario(
+  overrides: NonNullable<StatusD1ScenarioOptions["overrides"]>,
+): MockD1Database {
+  const now = Math.floor(Date.now() / 1000);
+  return buildStatusD1Scenario({
+    sections: ["sentinel", "live", "publication", "derived", "reserves", "statusState", "cronState"],
+    healthyLive: true,
+    overrides: [
+      { match: "WITH slot_lag", rows: [{ started_slots: 0, late_slots: 0, max_lag_sec: null }] },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["yield-rankings"], rows: [], first: null },
+      { match: "FROM status_transitions WHERE scope", rows: [], first: { cnt: 0 } },
+      { match: "FROM cache\n           WHERE key IN", rows: [] },
+      { match: "SELECT MAX(updated_at) as latest, COUNT(DISTINCT", rows: [], first: { latest: now - 60, tracked: 1 } },
+      { match: "HAVING latest_update <", rows: [], first: { cnt: 0 } },
+      { match: "SELECT stablecoin_id, SUM(supply) as total_supply", rows: [] },
+      ...overrides,
+    ],
+  });
+}
+
 const fixtureMakeApiRequest = makeApiRequest;
 const fixtureMockFetch = mockFetch;
 const fixtureCRON_INTERVALS = CRON_INTERVALS;

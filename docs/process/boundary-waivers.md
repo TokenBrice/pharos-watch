@@ -51,6 +51,18 @@ The reviewed frontend→worker waivers are listed in `FRONTEND_TO_WORKER_WAIVED_
   - The script is an offline maintenance CLI (`npm run digest:curation`) that never ships in any deployed bundle and never runs as a CI gate.
 - **Retirement plan:** Drop individual Worker imports if a registry moves to `shared/`, and retire the waiver if all dated operational review registries become shared.
 
+### 4. `scripts/maintenance/freeze-validation-archive.ts`
+
+- **Waiver ID:** `validation-archive-v9-capture-decode`
+- **Status:** Active for the offline pre-cliff baseline and rolling validation archive CLI.
+- **Reason:** Rolling daily validation archives copy the first accepted Safety Score V9 capture per UTC day from `captures/safety-score-v9-accepted/**` to `pinned/validation/rolling/v9-accepted/<day>.json.gz`. Importing `archiveObjectKey` and `decodeSafetyScoreCaptureArchiveObject` directly from `worker/src/lib/safety-score-v9/capture-archive-contract.ts` preserves a single authority (R5) for canonical key derivation, SHA-256/byte-length verification, schema parsing, and index-to-object identity validation without re-implementing the contract in `scripts/`.
+- **What was tried:** Moving `capture-archive-contract.ts` into `shared/lib/` would modify Worker/shared runtime surfaces and trigger unnecessary Worker/V9 resource deployments for a maintenance-only CLI addition.
+- **Mitigations:**
+  - The waiver names this exact entrypoint and its header points here.
+  - `capture-archive-contract.ts` imports only `node:buffer`, `@shared/lib/sha256`, and `@shared/types/safety-score-capture-archive` (no Worker-only bindings or runtime globals).
+  - The script is an operator-invoked offline CLI that never ships in any Pages or Worker bundle.
+- **Retirement plan:** Retire the waiver if `capture-archive-contract.ts` is promoted into `shared/lib/` during a scheduled Worker/V9 release, or after the post-cliff validation archive window closes.
+
 ## Adding a Waiver
 
 1. Confirm the cross-layer import cannot be replaced by promoting metadata into `shared/`.

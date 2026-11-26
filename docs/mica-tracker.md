@@ -101,6 +101,7 @@ MiCA labels, descriptions, and badge classes live in `shared/lib/mica.ts`; statu
 - A likely-status seed is not evidence; confirm each token/entity/authorization against the source order above at data-entry time.
 - Route verification: run `npm run lint`, `npm run typecheck`, `npm run build`, and `npm run seo:check` when route/UI behavior changes.
 - **Not a methodology-version bump:** MiCA status is a tracked attribute, not a score. Assignment criteria live in this doc, not in `/methodology` versioning.
+- **Pre-cliff baseline:** pre-registered quasi-experimental design and immutable December 2026 baseline archive for the 2027-01-08 ESMA CASP remediation cliff live in [Pre-Cliff MiCA / GENIUS Baseline](./process/pre-cliff-baseline.md).
 
 ---
 
