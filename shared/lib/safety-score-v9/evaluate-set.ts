@@ -30,6 +30,7 @@ import {
   resolveV9DependencyInput,
   type V9CommonModeMember,
   type V9DependencyEvaluationPlan,
+  type V9DependencyPlanningAsset,
   type V9DependencyPathPlan,
   type V9UpstreamResult,
 } from "./dependencies";
@@ -147,19 +148,54 @@ export class V9AssetEvaluationError extends Error {
   }
 }
 
-export type V9PlanningFacts = Pick<V9AssetFactsV3,
-  "assetId" | "assetIssuerKey" | "dependencies" | "reserveExposures" |
-  "exitRoutes" | "exitStatus" | "controls" | "peg" | "supply" | "economicControlReview"
->;
+type V9PlanningControl = Pick<V9AssetFactsV3["controls"][number],
+  "controlKey" | "failureDomains" | "status" | "scope" | "economicLossScope" |
+  "claimImpairment" | "deploymentKey" | "materialSupplyShare" | "controlKind" |
+  "capabilities" | "executionScopeComplete" | "controllerAssetId"> & {
+  executionScope?: true;
+  authorityKnown: boolean;
+  capSemanticsKind: V9AssetFactsV3["controls"][number]["capSemantics"]["kind"];
+};
+type V9PlanningBridge = V9AssetFactsV3["economicControlReview"]["bridge"];
+type V9PlanningRoute = Pick<V9AssetFactsV3["exitRoutes"][number],
+  "routeKey" | "status" | "failureDomains" | "lane" | "scoreEligible" | "coverageClass">;
 
-export function projectPlanningFacts(asset: V9AssetFactsV3): V9PlanningFacts {
+export type V9PlanningFacts = Pick<V9AssetFactsV3, "assetId" | "assetIssuerKey" | "dependencies" | "supply"> & {
+  reserveExposures: readonly Pick<V9AssetFactsV3["reserveExposures"][number], "exposureKey" | "failureDomains" | "status" | "trackedAssetId">[];
+  exitRoutes: readonly V9PlanningRoute[];
+  controls: readonly V9PlanningControl[];
+  peg: Pick<V9AssetFactsV3["peg"], "failureDomains" | "status">;
+  bridge: Pick<V9PlanningBridge, "status"> & {
+    routes: readonly Pick<V9PlanningBridge["routes"][number], "controlKey" | "tier" | "lapsedReview">[];
+  };
+  dexExposureByDomain: ReadonlyMap<string, V9ConservativeShareBounds>;
+};
+
+export function projectPlanningFacts(asset: V9AssetFactsV3, envelope: V9ValidatedPolicyEnvelope): V9PlanningFacts {
   return {
     assetId: asset.assetId, assetIssuerKey: asset.assetIssuerKey,
-    dependencies: asset.dependencies, reserveExposures: asset.reserveExposures,
-    exitRoutes: asset.exitRoutes, exitStatus: asset.exitStatus,
-    controls: asset.controls, peg: asset.peg, supply: asset.supply,
-    economicControlReview: asset.economicControlReview,
-  };
+    dependencies: asset.dependencies,
+    reserveExposures: asset.reserveExposures.map(({ exposureKey, failureDomains, status, trackedAssetId }) =>
+      ({ exposureKey, failureDomains, status, trackedAssetId })),
+    exitRoutes: asset.exitRoutes.map(({ routeKey, status, failureDomains, lane, scoreEligible, coverageClass }) =>
+      ({ routeKey, status, failureDomains, lane, scoreEligible, coverageClass })),
+    controls: asset.controls.map((control) => ({
+      controlKey: control.controlKey, failureDomains: control.failureDomains, status: control.status,
+      scope: control.scope, economicLossScope: control.economicLossScope, claimImpairment: control.claimImpairment,
+      deploymentKey: control.deploymentKey, materialSupplyShare: control.materialSupplyShare, controlKind: control.controlKind,
+      capabilities: control.capabilities, executionScopeComplete: control.executionScopeComplete,
+      controllerAssetId: control.controllerAssetId,
+      ...(control.executionScope || control.executionScopeContributors ? { executionScope: true as const } : {}),
+      authorityKnown: control.authority !== null, capSemanticsKind: control.capSemantics.kind,
+    })),
+    peg: { failureDomains: asset.peg.failureDomains, status: asset.peg.status },
+    supply: asset.supply,
+    bridge: {
+      status: asset.economicControlReview.bridge.status,
+      routes: asset.economicControlReview.bridge.routes.map(({ controlKey, tier, lapsedReview }) => ({ controlKey, tier, lapsedReview })),
+    },
+    dexExposureByDomain: summarizeDexDomainExposure(asset, envelope),
+  } satisfies V9PlanningFacts & V9DependencyPlanningAsset;
 }
 
 export function marketRankByAsset(
@@ -196,7 +232,7 @@ export function marketRankByAsset(
   return result;
 }
 
-export function sourceGenerations(factSet: CompiledV9FactSetV3): Readonly<Record<string, string>> {
+export function sourceGenerations(factSet: Pick<CompiledV9FactSetV3, "sourceFingerprints">): Readonly<Record<string, string>> {
   return Object.fromEntries(
     Object.entries(factSet.sourceFingerprints)
       .sort(([left], [right]) => compareText(left, right))
@@ -370,7 +406,7 @@ function referenceExitRequest(envelope: V9ValidatedPolicyEnvelope): V9ExitStress
 }
 
 function summarizeDexDomainExposure(
-  asset: V9PlanningFacts,
+  asset: Pick<V9AssetFactsV3, "exitRoutes" | "exitStatus">,
   envelope: V9ValidatedPolicyEnvelope,
 ): ReadonlyMap<string, V9ConservativeShareBounds> {
   const request = referenceExitRequest(envelope);
@@ -429,7 +465,8 @@ export interface V9ControlDomainScopeAssessment {
 export function assessV9ControlDomainScope(
   failureDomain: V9FailureDomainRef,
   members: readonly V9CommonModeMember[],
-  asset: Pick<V9AssetFactsBase, "controls"> | undefined,
+  asset: { controls: readonly Pick<V9PlanningControl,
+    "controlKey" | "status" | "scope" | "economicLossScope" | "claimImpairment" | "deploymentKey" | "materialSupplyShare">[] } | undefined,
   supplyExposure: V9SupplyChainExposure,
 ): V9ControlDomainScopeAssessment {
   const globalClaim = (): V9ControlDomainScopeAssessment => ({
@@ -592,11 +629,11 @@ function summarizeBridgeDomainExposure(
     asset.supply.failureDomains.filter((domain) => domain.kind === "bridge-route").map(domainKey),
   );
   const domainKeys = new Set(supplyBridgeDomainKeys);
-  const bridgeReviewKnown = isKnownRequiredStatus(asset.economicControlReview.bridge.status);
+  const bridgeReviewKnown = isKnownRequiredStatus(asset.bridge.status);
   const supplyConsistent = bridgeSupplyIsConsistent(asset.supply);
   let unresolvedJoin = !bridgeReviewKnown || !supplyConsistent;
 
-  for (const review of asset.economicControlReview.bridge.routes) {
+  for (const review of asset.bridge.routes) {
     const control = controlsByKey.get(review.controlKey);
     if (!control) {
       unresolvedJoin = true;
@@ -615,8 +652,8 @@ function summarizeBridgeDomainExposure(
       control.status.observationState === "bounded-unknown" &&
       // Pooled groups stay bounded-unknown on unreviewed custody/incidents even
       // after every member signing model is researched; accept any non-null authority.
-      control.authority !== null &&
-      control.capSemantics.kind !== "unknown" &&
+      control.authorityKnown &&
+      control.capSemanticsKind !== "unknown" &&
       control.claimImpairment !== "unknown" &&
       control.economicLossScope === "deployment" &&
       control.materialSupplyShare !== null &&
@@ -718,7 +755,7 @@ function buildCommonModeContext(
   }
   return {
     supplyExposure: summarizeSupplyChainExposure(asset.supply),
-    dexExposureByDomain: summarizeDexDomainExposure(asset, envelope),
+    dexExposureByDomain: asset.dexExposureByDomain,
     bridgeExposureByDomain: summarizeBridgeDomainExposure(
       asset,
       Math.min(
@@ -1292,7 +1329,7 @@ function evaluateV9FactSetRead(
   const factShards = onAssetProjected === undefined ? null : new Map<string, Uint8Array>();
   const planningById = new Map<string, V9PlanningFacts>();
   for (const [assetId, asset] of assetsById) {
-    planningById.set(assetId, projectPlanningFacts(asset));
+    planningById.set(assetId, projectPlanningFacts(asset, envelope));
     if (factShards !== null) {
       factShards.set(assetId, serializeV9FactShard(asset));
       assetsById.delete(assetId);

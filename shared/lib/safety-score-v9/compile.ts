@@ -3,6 +3,8 @@ import {
   V9FactSetCoreV2Schema,
   V9AssetFactsV3Schema,
   createV9FactSetCoreV3Schema,
+  V9FactSetHeaderV3Schema,
+  validateFactSetAsset,
   type V9AssetFactsV3,
   type CompiledV9FactSetV2,
   type CompiledV9FactSetV3,
@@ -87,6 +89,27 @@ const inProcessFactSetSchema = createV9FactSetCoreV3Schema(z.union([
   }
 });
 
+/** The streamed compiler uses the same cohort checks with the full active-ID set. */
+export function createV9FactSetAssetValidator(input: Omit<V9FactSetCoreV3, "assets">) {
+  const header = V9FactSetHeaderV3Schema.parse(input);
+  const activeIds = new Set(header.activeAssetIds);
+  const assetIndexById = new Map(header.activeAssetIds.map((id, idx) => [id, idx]));
+  const validate = z.custom<V9AssetFactsV3>((value) => validatedAssetFacts.has(value as object))
+    .superRefine((asset, ctx) => {
+      if (asset.cdpStressCoverage !== undefined && header.sourceFingerprints.shockCoverage === undefined) {
+        ctx.addIssue({ code: "custom", path: ["sourceFingerprints", "shockCoverage"], message: "Stress coverage requires a source fingerprint" });
+      }
+      const assetIndex = assetIndexById.get(asset.assetId) ?? 0;
+      validateFactSetAsset(header, asset, activeIds, assetIndex, ctx);
+      for (const { exposureIndex, factor, message } of findV9ReserveBoundFactorStatusIssues(
+        asset, V9_CANDIDATE_RESERVE_BOUND_POLICY.backing, header.asOfSec,
+      )) {
+        ctx.addIssue({ code: "custom", path: ["assets", assetIndex, "reserveExposures", exposureIndex, "factorStatuses", factor], message });
+      }
+    });
+  return { header, validateAsset: (asset: V9AssetFactsV3) => validate.parse(asset) };
+}
+
 /** Admit once, then retain only immutable identity proof, never an extra fact graph. */
 export function safeParseV9AssetFactsV3(input: unknown) {
   const parsed = admittedAssetSchema.safeParse(input);
@@ -114,11 +137,16 @@ export function createV9PublicationAssetCompactor(): (asset: V9AssetFactsV3) => 
   };
 }
 
+const PENDING_RESEARCH_HASH = "0".repeat(64);
+
+export function assertV9FinalPublicationEvidenceHash(contentSha256: string | null): void {
+  if (contentSha256 === PENDING_RESEARCH_HASH) throw new Error("V9 publication evidence cannot retain a pending research hash");
+}
+
 /** Finalize only the cohort research hash on already admitted immutable facts. */
 export function createV9PublicationResearchHashRebinder(previousHash: string, finalHash: string): (asset: V9AssetFactsV3) => V9AssetFactsV3 {
   Sha256Schema.parse(previousHash);
   Sha256Schema.parse(finalHash);
-  const pendingHash = "0".repeat(64);
   let cachedAsset: V9AssetFactsV3 | null = null;
   let cachedEvidence: V9AssetFactsV3["evidence"] | null = null;
   function evidence(asset: V9AssetFactsV3): V9AssetFactsV3["evidence"] {
@@ -134,7 +162,7 @@ export function createV9PublicationResearchHashRebinder(previousHash: string, fi
           if (reference.contentSha256 !== previousHash) throw new Error("V9 research evidence hash does not match its pending cohort");
           rebound = { ...reference, contentSha256: finalHash };
         }
-        if (rebound.contentSha256 === pendingHash) throw new Error("V9 publication evidence cannot retain a pending research hash");
+        assertV9FinalPublicationEvidenceHash(rebound.contentSha256);
         return rebound;
       });
       deepFreeze(cachedEvidence);

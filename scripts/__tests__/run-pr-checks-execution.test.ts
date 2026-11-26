@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, unlinkSync, w
 import { tmpdir } from "node:os";
 import { inspectPrCheckout, runPrChecks, type RunPrChecksOptions } from "../maintenance/run-pr-checks.ts";
 import { writePrCheckReceipt, type PrCheckReceipt } from "../lib/pr-check-receipt.mts";
-import { assertFaithfulResourceReport, assertRequiredResourceCases, decideV9Contagion, RESOURCE_TEST_FILE, runV9ResourceLane } from "../maintenance/run-v9-resource-lane.ts";
+import { assertFaithfulResourceReport, assertRequiredResourceCases, decideV9Contagion, QUEUE_CASES, RESOURCE_TEST_FILE, runV9ResourceLane } from "../maintenance/run-v9-resource-lane.ts";
 import type * as ChangedFilesModule from "../lib/changed-files.mts";
 import type * as CriticalOwnershipModule from "../lib/critical-ownership.mts";
 import { RESOURCE_HARNESS_REVISION, RESOURCE_PHASES } from "../../worker/scripts/lib/v9-resource-policy";
@@ -122,14 +122,14 @@ describe("isolated V9 resource execution", () => {
     if (command.args.includes("worker/scripts/measure-v9-resource.ts")) {
       const id = command.args.find((arg) => arg.startsWith("--invocation-id="))!.split("=")[1];
       writeFileSync(resolve(directory, "report.json"), JSON.stringify(guardReport(id, cycles)));
-    } else writeFileSync(resolve(directory, "vitest.json"), JSON.stringify(report([{ title: contagion, status: "passed" }])));
+    } else writeFileSync(resolve(directory, "vitest.json"), JSON.stringify(report([{ title: contagion, status: "passed" }, ...QUEUE_CASES.map(title => ({ title, status: "passed" }))])));
     return 0;
   };
   const runResource = (directory: string, options: Parameters<typeof runV9ResourceLane>[0]) =>
     runV9ResourceLane({ argv: [], outputDirectory: directory, resourceDirectory: directory, ...options });
 
   it("requires the independent named contagion pass, never an arbitrary pass count or optional capture", () => {
-    const passed = [{ title: contagion, status: "passed" }];
+    const passed = [{ title: contagion, status: "passed" }, ...QUEUE_CASES.map(title => ({ title, status: "passed" }))];
     expect(() => assertRequiredResourceCases(report([
       ...passed, { title: "keeps the frozen same-capture production envelope within both byte budgets", status: "pending" },
     ]))).not.toThrow();
@@ -238,7 +238,8 @@ describe("isolated V9 resource execution", () => {
       env: { PR_BASE_SHA: baseSha }, listChangedFiles: () => [file],
       runCommand: resourceChild(directory, 1, commands),
     })).toBe(0);
-    expect(commands).toHaveLength(required ? 2 : 1);
+    expect(commands).toHaveLength(2);
+    expect(commands[1].includes("-t")).toBe(!required);
     expect(commands[0]).toContain("--publication-cycles=1");
     const lane = readJson(directory, "report.json").lane;
     const contagion = { required, reason: required ? "contagion-inputs" : "no-contagion-inputs",

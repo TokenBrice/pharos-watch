@@ -169,7 +169,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
 
 export interface SafetyScoreV9BaselineExtensionSource {
   extension: SafetyScoreV9FactSetExtensionV2;
-  assets(): IterableIterator<ExtensionAsset>;
+  assets(ids?: readonly string[]): IterableIterator<ExtensionAsset>;
 }
 
 /** Rebuild asset-local overlays per traversal; retain only the shared dependency graph. */
@@ -313,8 +313,8 @@ export function createSafetyScoreV9BaselineExtensionSource(
   const assetIds = options.assetIds === undefined
       ? fixedInput.activeAssetIds
       : fixedInput.activeAssetIds.filter((assetId) => options.assetIds!.has(assetId));
-  return { extension, *assets() {
-    for (const assetId of assetIds) {
+  return { extension, *assets(ids = assetIds) {
+    for (const assetId of ids) {
       const reuseScopeRoot = createV9ControlExecutionScopeRootReuse();
       // Asset-local admission boundary (R8): a curation, adapter, or
       // point-in-time failure below — including the future-review guards — is

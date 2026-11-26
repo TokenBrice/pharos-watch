@@ -7,13 +7,14 @@ import {
   type CompiledV9FactSetV3,
   type V9EvidenceResponsibility,
   type V9FactGapV2,
+  type V9AssetFactsV3,
   type V9FactSetCoreV2,
   type V9FactSetCoreV3,
 } from "../../types/safety-score-v9-facts";
 import type { DependencyType, V9DependencyEconomicRole } from "../../types/dependency-types";
 import { V9_REASON_CODES, type V9ReasonCode } from "../../types/safety-score-v9";
 import { sha256HexFromUtf8Chunks } from "../sha256";
-import { stableJsonStringifyChunksV1 } from "../stable-json";
+import { stableJsonStringifyChunksV1, stableJsonStringifyV1 } from "../stable-json";
 import { V9_UNRESEARCHED_CAUSE_PROOF } from "../../types/safety-score-v9-causes";
 
 import { findV9CauseEvidenceBindingIssues } from "./evidence";
@@ -111,6 +112,26 @@ function projectValidatedV9FactSetDigestPayload(input: V9FactSetCore | CompiledV
     activeAssetIds: input.activeAssetIds,
     assets: input.assets,
   };
+}
+
+/** Stream the same canonical envelope while admitting and releasing one asset at a time. */
+export function* streamValidatedV9FactSetDigestInput(
+  header: Omit<V9FactSetCoreV3, "assets">,
+  assets: Iterable<V9AssetFactsV3>,
+): Iterable<string> {
+  const envelope = stableJsonStringifyV1({
+    domain: V9_FACT_SET_DIGEST_DOMAINS[header.schemaVersion],
+    factSet: projectValidatedV9FactSetDigestPayload({ ...header, assets: [] }),
+  });
+  const emptyAssets = envelope.indexOf('"assets":[]') + '"assets":['.length;
+  yield envelope.slice(0, emptyAssets);
+  let first = true;
+  for (const asset of assets) {
+    if (!first) yield ",";
+    first = false;
+    yield* stableJsonStringifyChunksV1(asset);
+  }
+  yield envelope.slice(emptyAssets);
 }
 
 /** Hash a schema-validated fact set without cloning its full object graph. */

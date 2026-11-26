@@ -49,10 +49,21 @@ export const V9_RESERVE_RESIDUAL_QUESTION_IDENTITY = "reserve-residual:sub-0.01p
  */
 export type V9DocumentationGapClassifier = (gap: V9FactGapV3) => V9DocumentationReason | null;
 
+/** Columns needed to resolve an open question from a compiled gap. */
+export type V9OpenEvidenceGap = Pick<V9FactGapV3, "gapId" | "causeScope"> & {
+  causeProof: { cause: "C"; reviewedAt: string } | { cause: Exclude<V9EvidenceCause, "C"> };
+};
+
+export function projectV9OpenEvidenceGap(gap: V9FactGapV3): V9OpenEvidenceGap {
+  const { causeProof, gapId, causeScope } = gap;
+  return { gapId, causeScope, causeProof: causeProof.cause === "C"
+    ? { cause: "C", reviewedAt: causeProof.reviewedAt } : { cause: causeProof.cause } };
+}
+
 /** One obligation of a question, as the public fact row carries it. */
-export interface V9OpenQuestionObligation {
+export interface V9OpenQuestionObligation<Gap extends V9OpenEvidenceGap = V9FactGapV3> {
   /** Compiled gap behind the obligation; null when the fact names no resolvable gap. */
-  readonly gap: V9FactGapV3 | null;
+  readonly gap: Gap | null;
   readonly reasonCode: V9ReasonCode;
   readonly cause: V9EvidenceCause;
   readonly responsibility: V9EvidenceResponsibility;
@@ -82,9 +93,9 @@ export interface V9OpenQuestionControlIdentity {
 }
 
 /** A compiled asset: every gap the cohort can resolve, plus control identities. */
-export interface V9OpenEvidenceAsset {
+export interface V9OpenEvidenceAsset<Gap extends V9OpenEvidenceGap = V9FactGapV3> {
   readonly assetId: string;
-  readonly gaps: readonly V9FactGapV3[];
+  readonly gaps: readonly Gap[];
   readonly controls?: readonly V9OpenQuestionControlIdentity[];
 }
 
@@ -215,10 +226,10 @@ export function classifyV9OpenQuestion(
  * already a source under that owner. `measured-adverse` facts are not evidence
  * gaps and never reach the open-evidence question set.
  */
-function obligationsForCard(
+function obligationsForCard<Gap extends V9OpenEvidenceGap>(
   facts: readonly V9OpenQuestionFact[],
-  gapsById: ReadonlyMap<string, V9FactGapV3>,
-): V9OpenQuestionObligation[] {
+  gapsById: ReadonlyMap<string, Gap>,
+): V9OpenQuestionObligation<Gap>[] {
   const byOwner = new Map<V9EvidenceResponsibility, V9OpenQuestionFact[]>();
   for (const fact of facts) {
     if (fact.cause === "D") continue;
@@ -226,8 +237,8 @@ function obligationsForCard(
     if (rows === undefined) byOwner.set(fact.responsibility, [fact]);
     else rows.push(fact);
   }
-  const obligations: V9OpenQuestionObligation[] = [];
-  const obligationFor = (fact: V9OpenQuestionFact, gapId: string | null): V9OpenQuestionObligation => {
+  const obligations: V9OpenQuestionObligation<Gap>[] = [];
+  const obligationFor = (fact: V9OpenQuestionFact, gapId: string | null): V9OpenQuestionObligation<Gap> => {
     const gap = gapId === null ? undefined : gapsById.get(gapId);
     return {
       gap: gap ?? null,
@@ -274,7 +285,7 @@ interface CardQuestionAccumulator {
   issuerReviewedAtSec: number | null;
 }
 
-function reviewedAtSec(gap: V9FactGapV3 | null): number | null {
+function reviewedAtSec(gap: V9OpenEvidenceGap | null): number | null {
   const proof = gap?.causeProof;
   if (proof === undefined || proof.cause !== "C") return null;
   const parsed = Date.parse(proof.reviewedAt);
@@ -305,11 +316,11 @@ function accumulateQuestion(
   return created;
 }
 
-function indexOpenEvidenceAssets(assets: readonly V9OpenEvidenceAsset[]): {
-  gapsById: Map<string, V9FactGapV3>;
+function indexOpenEvidenceAssets<Gap extends V9OpenEvidenceGap>(assets: readonly V9OpenEvidenceAsset<Gap>[]): {
+  gapsById: Map<string, Gap>;
   authoredControlScopeByKey: Map<string, string>;
 } {
-  const gapsById = new Map<string, V9FactGapV3>();
+  const gapsById = new Map<string, Gap>();
   const authoredControlScopeByKey = new Map<string, string>();
   for (const asset of assets) {
     for (const gap of asset.gaps) gapsById.set(gap.gapId, gap);
@@ -326,7 +337,7 @@ function indexOpenEvidenceAssets(assets: readonly V9OpenEvidenceAsset[]): {
 function authoredControlScopeForGap(
   authoredControlScopeByKey: ReadonlyMap<string, string>,
   cardId: string,
-  gap: V9FactGapV3,
+  gap: V9OpenEvidenceGap,
 ): string | null {
   const scope = gap.causeScope;
   if (scope === undefined || scope.pillar !== "control" || !scope.componentKey.startsWith("control:")) return null;
@@ -334,13 +345,13 @@ function authoredControlScopeForGap(
   return authoredControlScopeByKey.get(`${root}\u0000${scope.componentKey}`) ?? null;
 }
 
-function resolveObligationQuestion(
+function resolveObligationQuestion<Gap extends V9OpenEvidenceGap>(
   cardId: string,
-  obligation: V9OpenQuestionObligation,
+  obligation: V9OpenQuestionObligation<Gap>,
   authoredControlScopeByKey: ReadonlyMap<string, string>,
-  isDocumentationGap: V9DocumentationGapClassifier,
+  isDocumentationGap: (gap: Gap) => V9DocumentationReason | null,
 ): {
-  gap: V9FactGapV3 | null;
+  gap: Gap | null;
   documentationReason: V9DocumentationReason | null;
   questionKey: V9QuestionKey;
 } {
@@ -356,10 +367,10 @@ function resolveObligationQuestion(
   return { gap, documentationReason, questionKey };
 }
 
-class OpenEvidenceCounter implements V9OpenEvidenceCounter {
-  private readonly gapsById: Map<string, V9FactGapV3>;
+class OpenEvidenceCounter<Gap extends V9OpenEvidenceGap> implements V9OpenEvidenceCounter {
+  private readonly gapsById: Map<string, Gap>;
   private readonly authoredControlScopeByKey: Map<string, string>;
-  private readonly isDocumentationGap: V9DocumentationGapClassifier;
+  private readonly isDocumentationGap: (gap: Gap) => V9DocumentationReason | null;
   private readonly questions = new Map<string, QuestionAccumulator>();
   private readonly cardQuestions = new Map<string, Map<string, CardQuestionAccumulator>>();
   private readonly documentationGapIds = new Set<string>();
@@ -367,7 +378,7 @@ class OpenEvidenceCounter implements V9OpenEvidenceCounter {
   private readonly cards = new Set<string>();
   private block: V9OpenEvidence | null = null;
 
-  constructor(assets: readonly V9OpenEvidenceAsset[], isDocumentationGap: V9DocumentationGapClassifier) {
+  constructor(assets: readonly V9OpenEvidenceAsset<Gap>[], isDocumentationGap: (gap: Gap) => V9DocumentationReason | null) {
     this.isDocumentationGap = isDocumentationGap;
     const indexed = indexOpenEvidenceAssets(assets);
     this.gapsById = indexed.gapsById;
@@ -725,9 +736,9 @@ export function projectV9CardOpenEvidence(
  * evaluated asset at a time and release it, while the compiled gap table stays
  * readable for the same cohort. `countV9OpenEvidence` is the batch wrapper.
  */
-export function createV9OpenEvidenceCounter(
-  assets: readonly V9OpenEvidenceAsset[],
-  isDocumentationGap: V9DocumentationGapClassifier,
+export function createV9OpenEvidenceCounter<Gap extends V9OpenEvidenceGap>(
+  assets: readonly V9OpenEvidenceAsset<Gap>[],
+  isDocumentationGap: (gap: Gap) => V9DocumentationReason | null,
 ): V9OpenEvidenceCounter {
   return new OpenEvidenceCounter(assets, isDocumentationGap);
 }

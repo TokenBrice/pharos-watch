@@ -1,5 +1,8 @@
 import {
+  appendFileSync,
   mkdtempSync,
+  readFileSync,
+  writeFileSync,
   rmSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -16,7 +19,7 @@ import { assessSafetyScoreV9ResourceBudget } from "../safety-score-v9/resource-b
 import { buildResourcePressure } from "../cron-resource-pressure";
 import { REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES } from "../report-cards-fixed-input-cache-codec";
 import { createResourceProbeEnv } from "./safety-score-v9-resource-env.test-support";
-import { buildSafetyScoreV9ContagionProbe } from "./safety-score-v9-resource-budget.test-support";
+import { buildResourceProbe, buildSafetyScoreV9ContagionProbe, runResourceChildAsync } from "./safety-score-v9-resource-budget.test-support";
 import { hasV9ContagionInput } from "../../../scripts/lib/v9-resource-policy";
 import { measurePublicationByteBudget, PublicationByteMetricsSchema, RESOURCE_PUBLICATION_CARD_UNIT_MAX_BYTES, RESOURCE_PUBLICATION_STREAMED_TOTAL_REGRESSION_MAX_BYTES } from "@shared/lib/safety-score-v9-resource-bytes";
 import { SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES } from "@shared/lib/safety-score-v9-publication-limits";
@@ -167,19 +170,40 @@ const CONTAGION_HEAP_LIMIT_MIB = 256;
 const CONTAGION_WALL_BUDGET_MS = 90_000;
 let temporaryDirectory = "";
 let bundledProbe = "";
+let queueTemplate = "";
+let queueProbe = "";
 let bundledInputs: string[] = [];
 
+function createConcurrencyGate(limit: number) {
+  let active = 0;
+  const waiters: Array<() => void> = [];
+  return async <T>(work: () => Promise<T>): Promise<T> => {
+    if (active >= limit) await new Promise<void>((resolveWaiter) => waiters.push(resolveWaiter));
+    active += 1;
+    try {
+      return await work();
+    } finally {
+      active -= 1;
+      waiters.shift()?.();
+    }
+  };
+}
+const runQueueSlot = createConcurrencyGate(2);
+
 describe.skipIf(process.env.PHAROS_V9_RESOURCE_LANE !== "1")("Safety Score V9 contagion and historical capture resource budgets", {
-  // Bounded by the 130-second child kill guard; keeps a wedged contagion step
-  // from pushing the eight-minute lane past its job timeout.
+  // Bounded by the 130-second contagion kill guard; Queue children use their own describe timeout.
   timeout: 150_000,
 }, () => {
-  beforeAll(() => {
+  beforeAll(async () => {
     temporaryDirectory = mkdtempSync(join(tmpdir(), "pharos-v9-resource-"));
     const built = buildSafetyScoreV9ContagionProbe(ROOT, temporaryDirectory);
     bundledProbe = built.outfile;
     bundledInputs = built.inputs;
-  });
+    queueTemplate = join(temporaryDirectory, "queue-template.sqlite");
+    const { buildLatestSchemaTemplate } = await import("@shared/test-utils/latest-schema-sqlite");
+    writeFileSync(queueTemplate, buildLatestSchemaTemplate());
+    queueProbe = (await buildResourceProbe(ROOT, temporaryDirectory, "queue")).outfile;
+  }, 60_000);
 
   afterAll(() => {
     if (temporaryDirectory) {
@@ -232,18 +256,11 @@ describe.skipIf(process.env.PHAROS_V9_RESOURCE_LANE !== "1")("Safety Score V9 co
       candidateBytes: output.candidateBytes, deltaBytes: output.candidateBytes - FROZEN_BASE.bytes });
   });
 
-  it(`evaluates a bounded nine-scenario matrix within ${CONTAGION_HEAP_LIMIT_MIB} MiB of old-space`, () => {
-    const result = spawnSync(process.execPath, [
-      `--max-old-space-size=${CONTAGION_HEAP_LIMIT_MIB}`, "--expose-gc", bundledProbe,
-    ], {
-      // Wall-clock guard only (memory is the asserted bound): v10.01 cause
-      // tracing raises evaluation CPU, and shared CI runners exceeded 45s.
-      cwd: ROOT, encoding: "utf8", timeout: 130_000,
-      env: createResourceProbeEnv(process.env, { contagion: true }),
-    });
-    expect(result.error).toBeUndefined();
-    expect(result.status, result.stderr).toBe(0);
-    const output = JSON.parse(result.stdout) as {
+  it(`evaluates a bounded nine-scenario matrix within ${CONTAGION_HEAP_LIMIT_MIB} MiB of old-space`, async () => {
+    const result = await runResourceChildAsync(ROOT, bundledProbe, { CONTAGION_MATRIX: "1" },
+      [`--max-old-space-size=${CONTAGION_HEAP_LIMIT_MIB}`, "--expose-gc"], temporaryDirectory, "contagion", Date.now() + 130_000);
+    expect(result.status, readFileSync(join(temporaryDirectory, "contagion.stderr"), "utf8")).toBe(0);
+    const output = JSON.parse(readFileSync(join(temporaryDirectory, "contagion.stdout"), "utf8")) as {
       expected: number; wallMs: number;
       counts: Array<{ evaluated: number; failed: number }>;
     };
@@ -261,62 +278,50 @@ describe.skipIf(process.env.PHAROS_V9_RESOURCE_LANE !== "1")("Safety Score V9 co
     expect(output.wallMs, `nine-scenario matrix wallMs=${output.wallMs}`).toBeLessThan(CONTAGION_WALL_BUDGET_MS);
   });
 
-  it("matches monolithic full-registry publication under ADR-26 Queue mode with bounded chunks and per-stage heap logging", async () => {
-    const [
-      { createLatestSchemaFixtureTracker }, { SAFETY_SCORE_V9_CACHE_KEYS }, { V9_PUBLIC_MATERIALIZATION_CACHE_KEY },
-      { computeSafetyScoreV9 }, { createNativeSafetyScoreV9FullRegistryInput },
-      { loadV9EvalRun, V9_EVAL_CHUNK_MAX_ROW_BYTES }, { loadSafetyScoreV9Publication },
-      { deliverV9Continuation, makePublishableV9Input, prepareV9SeedPayload, seedPreparedV9Db, V9_QUEUE_TEST_WORKER_META },
-    ] = await Promise.all([
-      import("@shared/test-utils/latest-schema-sqlite"), import("@shared/types/safety-score-cache-keys"), import("@shared/types/report-cards-v9-materialization"),
-      import("../../cron/compute-safety-score-v9"), import("./fixtures/safety-score-v9-full-registry-input"),
-      import("../safety-score-v9/chunked-eval-store"), import("../safety-score-v9/publication-store"),
-      import("../../test-helpers/v9-queue-harness"),
-    ]);
-    const input = makePublishableV9Input(createNativeSafetyScoreV9FullRegistryInput());
-    const payload = await prepareV9SeedPayload(input);
-    const tracker = createLatestSchemaFixtureTracker();
-    try {
-      const [mono, chunk] = [tracker.open(), tracker.open()];
-      await Promise.all([seedPreparedV9Db(mono.db, payload), seedPreparedV9Db(chunk.db, payload)]);
-      const monoRes = await computeSafetyScoreV9(mono.db, undefined, undefined, { queueMode: "off", deferPublicMaterialization: true, workerMetadata: V9_QUEUE_TEST_WORKER_META });
-      expect((JSON.parse(monoRes.metadata!) as { publication: { status: string } }).publication.status).toBe("published");
-      let first: import("@shared/types/v9-continuation").V9ContinuationMessage | undefined;
-      await computeSafetyScoreV9(chunk.db, undefined, undefined, {
-        queueMode: "on", deferPublicMaterialization: true, maxChunkAssets: 140, slotStartedAt: input.clockSec,
-        sourceInvocationId: "v9-resource:seed", workerMetadata: V9_QUEUE_TEST_WORKER_META, onContinuation: (m) => { first = m; },
-      });
-      const heap = () => Number((process.memoryUsage().heapUsed / 1_048_576).toFixed(2));
-      const stageHeapMiB: Record<string, number> = { seed: heap() };
-      let maxChunkBytes = 0;
-      const queue = [first!];
-      for (let i = 1; queue.length > 0; i += 1) {
-        const msg = queue.shift()!;
-        const r = await chunk.db.prepare("SELECT COALESCE(MAX(LENGTH(CAST(payload AS BLOB))), 0) AS m FROM v9_eval_chunks").first<{ m: number }>();
-        maxChunkBytes = Math.max(maxChunkBytes, r?.m ?? 0);
-        const out = await deliverV9Continuation(chunk.db, msg, { deliveryId: `res-${i}-${msg.stage}-${msg.chunkIndex ?? "x"}` });
-        expect(out.acked).toBe(true);
-        stageHeapMiB[`${msg.stage}:${msg.chunkIndex ?? "x"}`] = heap();
-        queue.push(...out.sent);
-      }
-      console.info({ probe: "v9-queue-full-registry-parity", activeAssets: input.activeAssetIds.length, maxChunkBytes, stageHeapMiB });
-      expect(maxChunkBytes).toBeGreaterThan(0);
-      expect(maxChunkBytes).toBeLessThanOrEqual(V9_EVAL_CHUNK_MAX_ROW_BYTES);
-      const [monoPub, chunkPub, monoRow, chunkMat, mRow, runRow, left, cronRow] = await Promise.all([
-        loadSafetyScoreV9Publication(mono.db), loadSafetyScoreV9Publication(chunk.db),
-        mono.db.prepare("SELECT value FROM cache WHERE key = ?").bind(SAFETY_SCORE_V9_CACHE_KEYS.publication).first<{ value: string }>(),
-        chunk.db.prepare("SELECT value FROM cache WHERE key = ?").bind(V9_PUBLIC_MATERIALIZATION_CACHE_KEY).first<{ value: string }>(),
-        chunk.db.prepare("SELECT manifest FROM safety_score_public_manifests LIMIT 1").first<{ manifest: string }>(),
-        loadV9EvalRun(chunk.db, first!.runId),
-        chunk.db.prepare("SELECT COUNT(*) AS c FROM v9_eval_chunks WHERE run_id = ?").bind(first!.runId).first<{ c: number }>(),
-        chunk.db.prepare("SELECT status, productive, item_count FROM cron_runs WHERE idempotency_key = ?").bind(`v9-queue-commit:${first!.runId}`).first(),
-      ]);
-      expect(chunkPub).toEqual(monoPub);
-      expect(JSON.parse(chunkMat!.value)).toMatchObject({ publicationGenerationId: monoPub!.publicationGenerationId, payloadSha256: (JSON.parse(monoRow!.value) as { payloadSha256: string }).payloadSha256 });
-      expect((JSON.parse(mRow!.manifest) as { bytes: number }).bytes).toBeLessThan(24 * 1024 * 1024);
-      expect(runRow?.state).toBe("completed");
-      expect(left?.c).toBe(0);
-      expect(cronRow).toEqual({ status: "ok", productive: 1, item_count: input.activeAssetIds.length });
-    } finally { tracker.closeAll(); }
+  describe("Queue stage resource and canonical parity gates", { timeout: 360_000 }, () => {
+    // Cap concurrency to 2 after solo contagion so 4-vCPU hosted runners avoid 5-way contention.
+    // Run the two heaviest cohorts first to minimize total two-wave makespan.
+    it.concurrent.each([[560, "none"], [343, "commit-expiry"], [343, "eval"], [343, "none"]] as const)(
+      "bounds Queue stage resources and matches canonical publication at %i assets (escalation=%s)",
+      async (count, escalation) => runQueueSlot(async () => {
+        const name = `queue-${count}-${escalation}`;
+        const queueDb = join(temporaryDirectory, `${name}-queue.sqlite`);
+        const monoDb = join(temporaryDirectory, `${name}-mono.sqlite`);
+        const sharedProtocol = {
+          PHAROS_QUEUE_TEMPLATE: queueTemplate,
+          PHAROS_QUEUE_ASSETS: String(count),
+          PHAROS_QUEUE_ESCALATION: escalation,
+          PHAROS_QUEUE_DB: queueDb,
+          PHAROS_QUEUE_MONO_DB: monoDb,
+        };
+        const queueResult = await runResourceChildAsync(
+          ROOT, queueProbe, { ...sharedProtocol, PHAROS_QUEUE_MODE: "queue" },
+          ["--max-old-space-size=128", "--max-semi-space-size=2"],
+          temporaryDirectory, name, Date.now() + 180_000,
+        );
+        const stdout = readFileSync(join(temporaryDirectory, `${name}.stdout`), "utf8");
+        const telemetry = stdout.split("\n").find(line => line.startsWith("queue-telemetry:"));
+        if (telemetry) {
+          console.info(telemetry);
+          if (process.env.PHAROS_V9_RESOURCE_QUEUE_TELEMETRY) {
+            appendFileSync(process.env.PHAROS_V9_RESOURCE_QUEUE_TELEMETRY, `${telemetry.slice("queue-telemetry: ".length)}\n`);
+          }
+        }
+        expect(queueResult.status, readFileSync(join(temporaryDirectory, `${name}.stderr`), "utf8")).toBe(0);
+        expect(telemetry).toBeDefined();
+        const parsed = JSON.parse(telemetry!.slice("queue-telemetry: ".length)) as { sha: string };
+        const parityName = `${name}-parity`;
+        const parityResult = await runResourceChildAsync(
+          ROOT, queueProbe, { ...sharedProtocol, PHAROS_QUEUE_MODE: "parity", PHAROS_QUEUE_EXPECTED_SHA: parsed.sha },
+          ["--max-old-space-size=512"],
+          temporaryDirectory, parityName, Date.now() + 90_000,
+        );
+        const parityStdout = readFileSync(join(temporaryDirectory, `${parityName}.stdout`), "utf8");
+        const parityTelemetry = parityStdout.split("\n").find(line => line.startsWith("parity-telemetry:"));
+        if (parityTelemetry) console.info(parityTelemetry);
+        expect(parityResult.status, readFileSync(join(temporaryDirectory, `${parityName}.stderr`), "utf8")).toBe(0);
+        expect(parityTelemetry).toBeDefined();
+      }),
+    );
   });
 });

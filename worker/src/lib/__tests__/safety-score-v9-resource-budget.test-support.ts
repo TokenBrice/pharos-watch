@@ -55,7 +55,7 @@ export function readHeavyProbeBuildSettings(root: string) {
   };
 }
 
-type Site = { file: string; fn: string; phase: string; kind: "variable" | "call" | "return" | "assignment"; name: string; before?: boolean; contains?: string };
+type Site = { file: string; fn: string; phase: string; kind: "variable" | "call" | "return" | "assignment"; name: string; before?: boolean; contains?: string; argument?: string };
 // Structural hooks are deliberately fail-closed: a renamed/duplicated statement is a protocol revision.
 const SITES: Site[] = [
   { file: "worker/src/cron/compute-safety-score-v9.ts", fn: "computeSafetyScoreV9", phase: "native-envelope-loaded", kind: "variable", name: "caches" },
@@ -79,12 +79,25 @@ const SITES: Site[] = [
   { file: "worker/src/lib/safety-score-v9/capture-archive.ts", fn: "archiveSafetyScoreCapture", phase: "archive-upload-pending", kind: "variable", name: "upload" },
 ];
 
-function instrumentation(root: string): Plugin {
-  const sites = [...SITES];
-  sites.push(
+const COMPUTE_SITES: Site[] = [
+  ...SITES,
     { file: "worker/src/lib/safety-score-v9/publication-codec.ts", fn: "admitAndSerializeSafetyScoreV9Publication", phase: "store-admitted", kind: "variable", name: "publication" },
     { file: "worker/src/lib/safety-score-v9/publication-codec.ts", fn: "admitAndSerializeSafetyScoreV9Publication", phase: "publication-gzip-complete", kind: "variable", name: "compressed" },
-  );
+];
+
+const QUEUE_SITES: Site[] = [
+  { file: "worker/src/lib/safety-score-v9/fact-set.ts", fn: "compileAssetOutcome", phase: "asset-compiled", kind: "variable", name: "parsed" },
+  { file: "shared/lib/safety-score-v9/evaluate-asset.ts", fn: "evaluateV9Asset", phase: "evaluate", kind: "variable", name: "gapIndex", argument: "asset.assetId" },
+  { file: "worker/src/lib/safety-score-v9/chunked-eval-pipeline.ts", fn: "prepareV9Commit", phase: "queue-candidate", kind: "variable", name: "assembled" },
+  { file: "worker/src/lib/safety-score-v9/chunked-eval-plan.ts", fn: "assembleV9ChunkedCandidate", phase: "queue-commit-summaries", kind: "assignment", name: "input.chunkSummaries.length", before: true },
+  { file: "worker/src/lib/safety-score-v9/chunked-eval-plan.ts", fn: "assembleV9ChunkedCandidate", phase: "queue-commit-shards", kind: "variable", name: "cards" },
+  { file: "worker/src/lib/safety-score-v9/publication-materialization.ts", fn: "retryPendingSafetyScoreV9PublicMaterialization", phase: "queue-materialize-decoded", kind: "variable", name: "publication" },
+  { file: "worker/src/lib/report-cards-v9-materialization.ts", fn: "materializeV9AcceptedPublication", phase: "queue-materialize-staged", kind: "assignment", name: "staged" },
+  { file: "worker/src/lib/safety-score-v9/chunked-eval-store.ts", fn: "encodeV9EvalChunkParts", phase: "queue-staging-encoded", kind: "return", name: "parts", before: true,
+    argument: '{ jsonBytes: json.byteLength, fixedInput: value !== null && typeof value === "object" && "fixedInput" in value, rowBytes: Math.max(...parts.map(part => part.payloadBytes)) }' },
+  ...COMPUTE_SITES.filter((site) => ["publication-gzip-complete", "publication-committed"].includes(site.phase)),
+];
+function instrumentation(root: string, sites = COMPUTE_SITES): Plugin {
   const counts = new Map(sites.map((site) => [site.phase, 0]));
   return {
     name: "pharos-resource-phases",
@@ -117,7 +130,7 @@ function instrumentation(root: string): Plugin {
             if (site.kind === "assignment" && ts.isExpressionStatement(node) && ts.isBinaryExpression(node.expression)) matches = node.expression.left.getText(ast) === site.name && node.expression.right.getText(ast) !== '""';
             if (!matches || (site.contains && !node.getText(ast).includes(site.contains))) continue;
             counts.set(site.phase, counts.get(site.phase)! + 1);
-            insertions.push({ at: site.before ? node.getStart(ast) : node.end, text: `;globalThis.__pharosResourcePhase(${JSON.stringify(site.phase)});` });
+            insertions.push({ at: site.before ? node.getStart(ast) : node.end, text: `;globalThis.__pharosResourcePhase(${JSON.stringify(site.phase)}${site.argument ? `, ${site.argument}` : ""});` });
           }
           ts.forEachChild(node, visit);
         }
@@ -153,7 +166,7 @@ export function assertResourceProbeCatalog(metafile: Esbuild.Metafile, packedLoa
   }
 }
 
-export async function buildResourceProbe(root: string, directory: string, mode: "live" | "hard-cap" | "setup") {
+export async function buildResourceProbe(root: string, directory: string, mode: "live" | "hard-cap" | "setup" | "queue") {
   const require = createRequire(resolve(root, "package.json"));
   const wranglerRequire = createRequire(require.resolve("wrangler"));
   const esbuild = wranglerRequire("esbuild") as typeof Esbuild;
@@ -161,16 +174,30 @@ export async function buildResourceProbe(root: string, directory: string, mode: 
   const { configSha256: _configSha256, ...buildSettings } = settings;
   const outfile = resolve(directory, `${mode}.mjs`);
   const result = await esbuild.build({
-    absWorkingDir: root, entryPoints: [resolve(root, `worker/src/lib/__tests__/safety-score-v9-resource-${mode === "setup" ? "fixture" : "probe"}.test-support.ts`)],
+    absWorkingDir: root, entryPoints: [resolve(root, `worker/src/lib/__tests__/safety-score-v9-resource-${mode === "setup" ? "fixture" : mode === "queue" ? "queue-probe" : "probe"}.test-support.ts`)],
     outfile, bundle: true, metafile: true, format: "esm", ...buildSettings,
     external: ["node:*"], tsconfig: resolve(root, "tsconfig.json"), logLevel: "silent",
     banner: { js: `globalThis.__zod_globalConfig = { jitless: true };\n${mode === "live" ? OBSERVER_BANNER : ""}` },
-    plugins: [...buildSettings.plugins, ...(mode === "live" ? [instrumentation(root)] : [])],
+    plugins: [
+      ...buildSettings.plugins,
+      ...(mode === "live" ? [instrumentation(root)] : []),
+      ...(mode === "queue" ? [instrumentation(root, QUEUE_SITES), {
+        name: "queue-probe-active-cap",
+        setup(build) {
+          build.onLoad({ filter: /safety-score-v9-capacity-limits\.ts$/ }, ({ path }) => {
+            const source = readFileSync(path, "utf8");
+            const cap = /SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS = \d+;/u;
+            if (!cap.test(source)) throw new Error("Queue resource probe could not find the active cap");
+            return { contents: source.replace(cap, "SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS = SAFETY_SCORE_V9_CATALOG_MAX_ASSETS;"), loader: "ts" };
+          });
+        },
+      } satisfies Plugin] : []),
+    ],
   } as BuildOptions);
   const metafile = result.metafile!;
   const loader = relative(root, settings.alias["#pharos-full-catalog"]);
   assertResourceProbeCatalog(metafile, loader);
-  if (mode !== "setup") {
+  if (mode === "live" || mode === "hard-cap") {
     for (const input of Object.keys(metafile.inputs)) {
       if (/resource-fixture|full-registry-input|latest-schema-sqlite/.test(input)) throw new Error(`setup-import-in-measured-graph:${input}`);
     }

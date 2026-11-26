@@ -4,7 +4,7 @@ import { canonicalDomains, uniqueSorted } from "./primitives";
 import { canonicalizeV9PublicReasons } from "./reasons";
 import type { V9PillarReason, V9ProductionScoreTrace } from "./score";
 import type { V9ResolvedDependencyInputs } from "./dependencies";
-import type { V9EvaluatedAsset } from "./evaluate-asset";
+import type { V9UpstreamEvaluatedAsset } from "./evaluate-asset";
 
 export function canonicalReasons(reasons: readonly V9PillarReason[]): V9PillarReason[] {
   return canonicalizeV9PublicReasons(reasons);
@@ -13,7 +13,7 @@ export function canonicalReasons(reasons: readonly V9PillarReason[]): V9PillarRe
 function projectV9ResolvedBackingExposure(
   exposureKey: string,
   dependency: V9ResolvedDependencyInputs["basket"][number],
-  upstream: Pick<V9EvaluatedAsset, "backing" | "scoreInput"> | undefined,
+  upstream: Pick<V9UpstreamEvaluatedAsset, "backing" | "scoreInput"> | undefined,
   failureRootAssetIds: readonly string[],
 ): V9ResolvedUpstreamExposure {
   const backingReasons = canonicalReasons(upstream?.scoreInput.pillars.backing.reasons ?? []);
@@ -54,7 +54,7 @@ function projectV9ResolvedBackingExposure(
 export function resolvedBackingExposures(
   asset: V9AssetFactsBase,
   dependencyInputs: V9ResolvedDependencyInputs,
-  evaluatedById: ReadonlyMap<string, V9EvaluatedAsset>,
+  evaluatedById: ReadonlyMap<string, V9UpstreamEvaluatedAsset>,
   unavailabilityRootsById: ReadonlyMap<string, readonly string[]>,
 ): V9ResolvedUpstreamExposure[] {
   const basketByUpstream = new Map(

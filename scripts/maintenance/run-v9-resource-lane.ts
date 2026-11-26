@@ -13,13 +13,19 @@ import { PublicationByteMetricsSchema } from "@shared/lib/safety-score-v9-resour
 export const RESOURCE_TEST_FILE = "worker/src/lib/__tests__/safety-score-v9-resource-budget.test.ts";
 const CONTAGION_CASE = "evaluates a bounded nine-scenario matrix within 256 MiB of old-space";
 const vitestReportSchema = z.object({ testResults: z.array(z.object({
-  name: z.string(), assertionResults: z.array(z.object({ title: z.string(), status: z.string() })),
+  name: z.string(), assertionResults: z.array(z.object({ title: z.string(), status: z.string(), duration: z.number().optional() })),
 })) });
-export function assertRequiredResourceCases(report: unknown): void {
+export const QUEUE_CASES = [[343, "none"], [560, "none"], [343, "eval"], [343, "commit-expiry"]].map(([assets, escalation]) =>
+  `bounds Queue stage resources and matches canonical publication at ${assets} assets (escalation=${escalation})`);
+export function assertRequiredResourceCases(report: unknown, contagionRequired = true): number {
   const cases = vitestReportSchema.parse(report).testResults
     .filter((file) => file.name.replaceAll("\\", "/").endsWith(RESOURCE_TEST_FILE))
-    .flatMap((file) => file.assertionResults).filter((test) => test.title === CONTAGION_CASE);
-  if (cases.length !== 1 || cases[0].status !== "passed") throw new Error(`Required V9 resource case did not pass: ${CONTAGION_CASE}`);
+    .flatMap((file) => file.assertionResults);
+  for (const title of [...(contagionRequired ? [CONTAGION_CASE] : []), ...QUEUE_CASES]) {
+    const matching = cases.filter((test) => test.title === title);
+    if (matching.length !== 1 || matching[0].status !== "passed") throw new Error(`Required V9 resource case did not pass: ${title}`);
+  }
+  return cases.find((test) => test.title === CONTAGION_CASE)?.duration ?? 0;
 }
 const faithfulReportSchema = z.object({
   schemaVersion: z.literal(1), invocationId: z.string(), complete: z.literal(true), diagnosticOnly: z.literal(false),
@@ -81,6 +87,7 @@ export function gitChangedFiles(root: string, baseSha: string): string[] {
 type LaneReport = {
   contagion: { changedFiles: readonly string[]; durationMs: number; reason: string; required: boolean; status: "passed" | "skipped" | "failed" };
   guard: { durationMs: number; status: number };
+  vitestDurationMs: number | null;
   prContext: boolean;
   publicationCycles: 1 | 2;
 };
@@ -100,7 +107,7 @@ function seconds(value: number | undefined) {
   return value === undefined ? "unavailable" : `${(value / 1000).toFixed(1)} s`;
 }
 
-function stageRows(report: SummaryReport | undefined, contagion: LaneReport["contagion"]) {
+function stageRows(report: SummaryReport | undefined, { contagion, vitestDurationMs }: LaneReport) {
   const stages = report?.stages ?? {};
   const duration = (stage: string) => (stages[stage] as { durationMs?: number } | undefined)?.durationMs;
   const cycles = report?.publicationCycles ?? 2;
@@ -110,7 +117,7 @@ function stageRows(report: SummaryReport | undefined, contagion: LaneReport["con
     `| live | ${seconds(duration("live"))} | 256 MiB, forced GC, ${cycles} publication cycle${cycles === 1 ? "" : "s"} |`,
     `| natural | ${seconds(duration("natural"))} | 128 MiB, probe hook inert, ${cycles} publication cycle${cycles === 1 ? "" : "s"} |`,
     `| correctness | ${seconds(duration("correctness"))} | post-exit publication inspection |`,
-    `| contagion | ${contagion.status === "skipped" ? "—" : seconds(contagion.durationMs)} | ${contagion.status === "skipped" ? `skipped (${contagion.reason})` : `nine-scenario matrix (${contagion.status})`} |`,
+    `| resource Vitest | ${vitestDurationMs === null ? "—" : seconds(vitestDurationMs)} | Queue probes${contagion.required ? " and nine-scenario contagion matrix" : ""} |`,
   ].join("\n");
 }
 
@@ -141,15 +148,17 @@ export async function runV9ResourceLane({
   listChangedFiles?: (root: string, baseSha: string) => readonly string[];
 } = {}): Promise<number> {
   const { values } = parseStrictCliArgs(argv);
-  if (values.help) { console.log("Usage: npm run test:v9-resource\nRuns the faithful compute policy guard (live + natural 128 MiB), then the independent 256 MiB contagion matrix for PRs that change a contagion input or any non-PR context."); return 0; }
+  if (values.help) { console.log("Usage: npm run test:v9-resource\nRuns the faithful compute policy guard (live + natural 128 MiB), the Queue stage resource gates, and the independent 256 MiB contagion matrix for PRs that change a contagion input or any non-PR context."); return 0; }
   const root = resolve(import.meta.dirname, "../..");
   resourceDirectory = resolve(root, resourceDirectory);
   outputDirectory = resolve(root, outputDirectory);
   mkdirSync(outputDirectory, { recursive: true });
   mkdirSync(resourceDirectory, { recursive: true });
   const vitestPath = join(outputDirectory, "vitest.json");
+  const queueTelemetryPath = join(outputDirectory, "queue-telemetry.jsonl");
   const reportPath = join(resourceDirectory, "report.json");
   rmSync(vitestPath, { force: true });
+  rmSync(queueTelemetryPath, { force: true });
   rmSync(reportPath, { force: true });
   const invocationId = randomUUID();
   const prContext = Boolean(env.PR_BASE_SHA);
@@ -197,28 +206,34 @@ export async function runV9ResourceLane({
   }
   const guardOk = !failure && status === 0;
   let contagion: LaneReport["contagion"] = { required: false, reason: "skipped-after-failure", status: "skipped", durationMs: 0, changedFiles: [] };
+  let vitestDurationMs: number | null = null;
   if (guardOk) {
     const decision = decideV9Contagion(env.PR_BASE_SHA, (baseSha) => listChangedFiles(root, baseSha));
     contagion = { ...decision, status: "skipped", durationMs: 0 };
-    if (decision.required) {
-      const command = createLocalVitestCommand(["run", RESOURCE_TEST_FILE, "--coverage.enabled=false", "--maxWorkers=1", "--no-file-parallelism", "--reporter=json", `--outputFile=${vitestPath}`]);
-      const contagionStarted = Date.now();
-      const result = await runCommand(command, { PHAROS_V9_RESOURCE_LANE: "1" });
-      contagion.durationMs = Date.now() - contagionStarted;
-      try {
-        assertRequiredResourceCases(JSON.parse(readFileSync(vitestPath, "utf8")));
-        contagion.status = "passed";
-      } catch (error) {
-        contagion.status = "failed";
-        failure = error;
-      }
-      if (!failure) {
-        const vitestStatus = typeof result === "number" ? result : result.status || (result.error || result.aborted ? 1 : 0);
-        if (vitestStatus) status = vitestStatus;
-      }
+    const command = createLocalVitestCommand(["run", RESOURCE_TEST_FILE, "--coverage.enabled=false",
+      "--maxWorkers=1", "--no-file-parallelism", "--reporter=default", "--reporter=json",
+      `--outputFile.json=${vitestPath}`, "--silent=false",
+      ...(decision.required ? [] : ["-t", "bounds Queue stage resources"]),
+    ]);
+    const testStarted = Date.now();
+    const result = await runCommand(command, {
+      PHAROS_V9_RESOURCE_LANE: "1",
+      PHAROS_V9_RESOURCE_QUEUE_TELEMETRY: queueTelemetryPath,
+    });
+    vitestDurationMs = Date.now() - testStarted;
+    try {
+      contagion.durationMs = assertRequiredResourceCases(JSON.parse(readFileSync(vitestPath, "utf8")), decision.required);
+      if (decision.required) contagion.status = "passed";
+    } catch (error) {
+      if (decision.required) contagion.status = "failed";
+      failure = error;
+    }
+    if (!failure) {
+      const vitestStatus = typeof result === "number" ? result : result.status || (result.error || result.aborted ? 1 : 0);
+      if (vitestStatus) status = vitestStatus;
     }
   }
-  const lane: LaneReport = { prContext, publicationCycles, guard: { durationMs: guardDurationMs, status }, contagion };
+  const lane: LaneReport = { prContext, publicationCycles, guard: { durationMs: guardDurationMs, status }, vitestDurationMs, contagion };
   writeFileSync(join(outputDirectory, "contagion.json"), `${JSON.stringify({ ...contagion, prContext, publicationCycles }, null, 2)}\n`);
   if (rawReport) writeFileSync(reportPath, `${JSON.stringify({ ...rawReport, lane }, null, 2)}\n`);
   const artifactLink = process.env.GITHUB_SERVER_URL && process.env.GITHUB_REPOSITORY && process.env.GITHUB_RUN_ID
@@ -228,7 +243,7 @@ export async function runV9ResourceLane({
   const qualification = summaryReport?.policy === "unqualified"
     ? ` Phase limits are NOT enforced without a qualified policy. facts-compiled: ${factsMiB} MiB; qualification requires every phase <=110 MiB over five successful live+natural runs. Complete phases, correctness/bytes and natural 128 MiB remain required. Further remediation (P3/P4) is needed when the ceiling is exceeded.`
     : "";
-  const summary = `## Safety Score V9 resource guard\n\npolicy: **"${summaryReport?.policy ?? "unavailable"}"**.${qualification}\n\n| Phase | Post-GC bytes | Limit bytes | Margin bytes |\n|---|---:|---:|---:|\n${phaseRows}\n\nCanonical byte metrics (one admitted card per unit; streamed total includes envelope metadata):\n\n| Run mode | Card units | Largest unit bytes | Calibrated unit cap bytes | Streamed total bytes | Aggregate regression cap bytes | Hard total cap bytes |\n|---|---:|---:|---:|---:|---:|---:|\n${byteRows.length ? byteRows.join("\n") : "| unavailable | unavailable | unavailable | unavailable | unavailable | unavailable | unavailable |"}\n\nCalibrated byte regression guards do not replace the natural memory gate or the independent compressed/stored transport caps.\n\nStage timings (live and natural children run concurrently after setup; ${publicationCycles} publication cycle${publicationCycles === 1 ? "" : "s"}):\n\n| Stage | Wall time | Note |\n|---|---:|---|\n${stageRows(summaryReport, contagion)}\n\n${contagionLine(contagion)}\n\nNatural 128 MiB exit status: ${summaryReport?.runs[0]?.["hard-cap"]?.status ?? "unavailable"}; signal: ${summaryReport?.runs[0]?.["hard-cap"]?.signal ?? "none observed"}. Node-only regression evidence, not Workers capacity. [Full evidence](${artifactLink}).${failure ? `\n\nV9 resource lane failed: ${String(failure)}. See resource report artifact.\n` : ""}\n`;
+  const summary = `## Safety Score V9 resource guard\n\npolicy: **"${summaryReport?.policy ?? "unavailable"}"**.${qualification}\n\n| Phase | Post-GC bytes | Limit bytes | Margin bytes |\n|---|---:|---:|---:|\n${phaseRows}\n\nCanonical byte metrics (one admitted card per unit; streamed total includes envelope metadata):\n\n| Run mode | Card units | Largest unit bytes | Calibrated unit cap bytes | Streamed total bytes | Aggregate regression cap bytes | Hard total cap bytes |\n|---|---:|---:|---:|---:|---:|---:|\n${byteRows.length ? byteRows.join("\n") : "| unavailable | unavailable | unavailable | unavailable | unavailable | unavailable | unavailable |"}\n\nCalibrated byte regression guards do not replace the natural memory gate or the independent compressed/stored transport caps.\n\nStage timings (live and natural children run concurrently after setup; ${publicationCycles} publication cycle${publicationCycles === 1 ? "" : "s"}):\n\n| Stage | Wall time | Note |\n|---|---:|---|\n${stageRows(summaryReport, lane)}\n\n${contagionLine(contagion)}\n\nNatural 128 MiB exit status: ${summaryReport?.runs[0]?.["hard-cap"]?.status ?? "unavailable"}; signal: ${summaryReport?.runs[0]?.["hard-cap"]?.signal ?? "none observed"}. Node-only regression evidence, not Workers capacity. [Full evidence](${artifactLink}).${failure ? `\n\nV9 resource lane failed: ${String(failure)}. See resource report artifact.\n` : ""}\n`;
   writeFileSync(join(resourceDirectory, "summary.md"), summary);
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary);
   if (failure) throw failure;

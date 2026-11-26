@@ -107,11 +107,46 @@ export interface V9EvaluatedAsset {
   providerRowExclusions?: V9AssetFactsV3["supply"]["providerRowExclusions"];
 }
 
+export interface V9UpstreamEvaluatedAsset {
+  assetId: string;
+  backing: Pick<V9EvaluatedAsset["backing"], "failureDomains" | "collateralizationApplications">;
+  scoreInput: {
+    pillars: {
+      backing: Pick<
+        V9EvaluatedAsset["scoreInput"]["pillars"]["backing"],
+        | "score"
+        | "reasons"
+        | "aggregationDisposition"
+        | "excludedCauses"
+        | "excludedCauseGapIds"
+        | "excludedComponentKeys"
+        | "causeGapIds"
+        | "limitedEvidenceCauses"
+        | "evidenceLevel"
+      >;
+    };
+  };
+  trace: Pick<
+    V9EvaluatedAsset["trace"],
+    | "assetId"
+    | "ratingStatus"
+    | "finalScore"
+    | "inheritableScore"
+    | "causeGapIds"
+    | "limitedEvidenceCauses"
+    | "partialEvidence"
+    | "nrReasons"
+    | "propagatedParentReasons"
+    | "adverseAttribution"
+    | "boundedUncertaintyAttribution"
+  >;
+}
+
 type V9EvaluationGapIndex = V9GapIndex<V9AssetFactsV3["gaps"][number]>;
 
 /** Post-credit backing quality inherited by baskets and wrapper parents. */
 export function projectV9EffectiveBackingPillarScore(
-  result: Pick<V9EvaluatedAsset, "scoreInput">,
+  result: Pick<V9UpstreamEvaluatedAsset, "scoreInput">,
 ): number | null {
   return result.scoreInput.pillars.backing.score;
 }
@@ -522,7 +557,7 @@ function backingPillar(
   result: V9BackingResult,
   envelope: V9ValidatedPolicyEnvelope,
   gapIndex: V9EvaluationGapIndex,
-  evaluatedById: ReadonlyMap<string, V9EvaluatedAsset>,
+  evaluatedById: ReadonlyMap<string, V9UpstreamEvaluatedAsset>,
 ): V9PillarEvaluation {
   const gapProjectedReasons: V9PillarReason[] = [];
   const syntheticReasons: Array<{
@@ -1427,7 +1462,7 @@ export function upstreamOracleNavProjection(
 function resolveInheritedStablecoinBacking(
   asset: V9AssetFactsBase,
   resolved: V9ResolvedDependencyInputs,
-  evaluatedById: ReadonlyMap<string, V9EvaluatedAsset>,
+  evaluatedById: ReadonlyMap<string, V9UpstreamEvaluatedAsset>,
   envelope: V9ValidatedPolicyEnvelope,
 ): V9InheritedStablecoinBacking | undefined {
   if (asset.reserveStatus.applicability.state === "not-applicable") return undefined;
@@ -1541,7 +1576,7 @@ function dependencyReasons(
   inputs: V9ResolvedDependencyInputs,
   plan: V9DependencyEvaluationPlan,
   envelope: V9ValidatedPolicyEnvelope,
-  evaluatedById: ReadonlyMap<string, V9EvaluatedAsset>,
+  evaluatedById: ReadonlyMap<string, V9UpstreamEvaluatedAsset>,
   gapIndex: V9EvaluationGapIndex,
 ): V9PillarReason[] {
   const reasons: V9PillarReason[] = [];
@@ -1674,7 +1709,7 @@ function pegInput(
 export function resolveV9ParentLimitInput(
   asset: V9AssetFactsV3,
   inputs: V9ResolvedDependencyInputs,
-  evaluatedById: ReadonlyMap<string, V9EvaluatedAsset>,
+  evaluatedById: ReadonlyMap<string, V9UpstreamEvaluatedAsset>,
   wrapperTier: V9WrapperStrategyTier | undefined,
   envelope: V9ValidatedPolicyEnvelope,
 ): V9ProductionScoreInput["parent"] {
@@ -1712,7 +1747,7 @@ export function resolveV9ParentLimitInput(
 function parentInput(
   asset: V9AssetFactsV3,
   inputs: V9ResolvedDependencyInputs,
-  evaluatedById: ReadonlyMap<string, V9EvaluatedAsset>,
+  evaluatedById: ReadonlyMap<string, V9UpstreamEvaluatedAsset>,
   wrapperTier: V9WrapperStrategyTier | undefined,
   envelope: V9ValidatedPolicyEnvelope,
   collateralClaim = false,
@@ -1834,7 +1869,7 @@ interface V9EvaluateAssetInput {
   resolved: V9ResolvedDependencyInputs;
   dependencyPlan: V9DependencyEvaluationPlan;
   envelope: V9ValidatedPolicyEnvelope;
-  evaluatedById: ReadonlyMap<string, V9EvaluatedAsset>;
+  evaluatedById: ReadonlyMap<string, V9UpstreamEvaluatedAsset>;
   unavailabilityRootsById: ReadonlyMap<string, readonly string[]>;
   identity: V9ProductionScoreInput["identity"];
   marketRank: number | null;
