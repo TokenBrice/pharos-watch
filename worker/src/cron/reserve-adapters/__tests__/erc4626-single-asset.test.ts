@@ -5,7 +5,6 @@ import { jsonResponse } from "@shared/test-utils/mock-fetch";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { deriveEffectiveDependencySet } from "@shared/lib/dependency-derivation";
 import { computeLiveReserveConfigFingerprint, parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { evaluateLiveReserveAdmission } from "../../../lib/live-reserves/store-snapshot-state";
 import { buildReviewedReserveClassifications } from "../../../lib/safety-score-v9/extension-reserves";
 import { computeSafetyScoreV9ReserveExposureKey } from "../../../lib/safety-score-v9/fact-set";
@@ -18,12 +17,16 @@ import {
 import {
   admission,
   asUnderlyingFixture,
+  buildMorphoFailureCases,
   calcFragmentsResult,
+  CATALOG_CASES as catalogCases,
   cloneConfigWithoutExpectedAsset,
   getErc4626Network,
   installErc4626Network,
   installSbold,
   installTrackedMorphoV2,
+  makeMorphoCacheDb,
+  mockLocks,
   mockYearnV3Rpc,
   morphoReadJson,
   nonInfoWarnings,
@@ -35,16 +38,11 @@ import {
   trackedVaultSnapshot,
   trackedVaultSyncState,
   uint256Result,
+  withLocks,
   withRedemptionLiquidity,
 } from "./erc4626-single-asset.test-support";
 import { resolveRedemptionCapacity } from "../../../lib/redemption-backstop/capacity";
 import { liveSnapshot } from "../../../lib/__tests__/redemption-backstop-sources.test-support";
-
-const catalogCases = [
-  { id: "syzusd-yuzu", asset: "0x6695c0f8706c5ace3bdf8995073179cca47926dc", vault: "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6" },
-  { id: "savusd-avant", asset: "0x24de8771bc5ddb3362db529fc3358f2df3a0e346", vault: "0x06d47f3fb376649c3a9dafe069b3d6e35572219e" },
-  { id: "srusde-strata", asset: "0x4c9edd5852cd905f086c759e8383e09bff1e68b3", vault: "0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003" },
-] as const;
 
 describe("fetchErc4626SingleAssetReserves", () => {
 
@@ -751,40 +749,8 @@ describe("fetchErc4626SingleAssetReserves", () => {
     expect(result.metadata).not.toHaveProperty("redemptionCapacityRaw");
   });
 
-  it.each([
-    { label: "unlisted V2", source: "morpho-vault-v2" as const, opts: { version: "v2" as const, listed: false }, code: "morpho-vault-v2-unlisted", callsState: false },
-    { label: "unlisted V1", source: "morpho-vault-v1" as const, opts: { version: "v1" as const, listed: false }, code: "morpho-vault-v1-unlisted", callsState: false },
-    { label: "asset mismatch", source: "morpho-vault-v2" as const, opts: { version: "v2" as const, dirAsset: "0x000000000000000000000000000000000000dead" }, code: "morpho-vault-v2-asset-mismatch", callsState: false },
-    { label: "address mismatch", source: "morpho-vault-v2" as const, opts: { version: "v2" as const, stateAddress: "0x000000000000000000000000000000000000dead" }, code: "morpho-vault-v2-identity-mismatch", callsState: true },
-    { label: "chain mismatch", source: "morpho-vault-v2" as const, opts: { version: "v2" as const, stateChainId: 8453 }, code: "morpho-vault-v2-chain-mismatch", callsState: true },
-    { label: "invalid withdrawable", source: "morpho-vault-v2" as const, opts: { version: "v2" as const, withdrawable: "invalid" }, code: "morpho-vault-v2-liquidity-invalid", callsState: true },
-    { label: "missing last_indexed_block", source: "morpho-vault-v2" as const, opts: { version: "v2" as const, lastIndexedBlock: null }, code: "morpho-vault-v2-liquidity-invalid", callsState: true },
-    { label: "stale last_accrual_timestamp", source: "morpho-vault-v2" as const, opts: { version: "v2" as const, lastAccrualTimestamp: Math.floor(Date.now() / 1000) - 3600 }, code: "morpho-vault-v2-state-stale", callsState: true },
-    {
-      label: "missing directory cursor", source: "morpho-vault-v2" as const,
-      opts: { version: "v2" as const, overrides: { "https://api.morpho.org/v0/vaults-v2?limit=1000": { data: [] } } },
-      code: "morpho-vault-v2-liquidity-unavailable", callsState: false,
-    },
-    {
-      label: "conflicting duplicate directory asset", source: "morpho-vault-v2" as const,
-      opts: { version: "v2" as const, overrides: { "https://api.morpho.org/v0/vaults-v2?limit=1000": { data: [
-        { chain_id: 1, vault_address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b", asset_address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" },
-        { chain_id: 1, vault_address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b", asset_address: "0x000000000000000000000000000000000000dead" },
-      ], cursor: null } } },
-      code: "morpho-vault-v2-liquidity-unavailable", callsState: false,
-    },
-    {
-      label: "malformed directory row", source: "morpho-vault-v2" as const,
-      opts: { version: "v2" as const, overrides: { "https://api.morpho.org/v0/vaults-v2?limit=1000": { data: [{ chain_id: 1, vault_address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b", asset_address: "bad" }], cursor: null } } },
-      code: "morpho-vault-v2-liquidity-unavailable", callsState: false,
-    },
-    {
-      label: "directory cursor cycle", source: "morpho-vault-v2" as const,
-      opts: { version: "v2" as const, overrides: { "https://api.morpho.org/v0/vaults-v2?limit=1000": { data: [], cursor: "c1" }, "https://api.morpho.org/v0/vaults-v2?limit=1000&cursor=c1": { data: [], cursor: "c1" } } },
-      code: "morpho-vault-v2-liquidity-unavailable", callsState: false,
-    },
-  ])("fails closed on Morpho Read API $label", async ({ source, opts, code, callsState }) => {
-    const net = installErc4626Network({ liquidityAdapter: 1, json: morphoReadJson(opts) });
+  it.each(buildMorphoFailureCases())("fails closed on Morpho Read API $label", async ({ source, opts, blockTimestamp, code, callsState }) => {
+    const net = installErc4626Network({ liquidityAdapter: 1, ...(blockTimestamp !== undefined ? { blockTimestamp } : {}), json: morphoReadJson(opts) });
     const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source, chainId: 1 }));
     expect(nonInfoWarnings(result.warnings)).toEqual([expect.objectContaining({ code, severity: "warning" })]);
     expect(result.metadata).not.toHaveProperty("morphoVaultV2LiquidityRaw");
@@ -799,20 +765,43 @@ describe("fetchErc4626SingleAssetReserves", () => {
     }
   });
 
-  it("suppresses diagnostic *LiquidityUsd on HTTP 206 even with numeric price, bounds diagnostic deadline, and omits mismatched withdrawal-options", async () => {
+  it("isolates malformed peer rows, admits old V2 accrual at fresh block, requires valid price clock, and bounds shared diagnostic deadline", async () => {
+    // Healthy peer survives an unrelated malformed row; old accrual passes when indexed block is fresh; string price clock emits USD.
     installErc4626Network({
       idleBalance: 0, liquidityAdapter: 1,
       json: morphoReadJson({
-        version: "v2", withdrawable: "30000000", price: 1.0, priceStatus: 206,
-        overrides: { "https://api.morpho.org/v0/vaults-v2/1:0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b/withdrawal-options": { data: { chain_id: 8453, vault_address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b", adapter_penalties: [] } } },
+        version: "v2", withdrawable: "30000000", lastAccrualTimestamp: Math.floor(Date.now() / 1000) - 86_400,
+        overrides: { "https://api.morpho.org/v0/vaults-v2?limit=1000": { data: [
+          { chain_id: 1, vault_address: "0x000000000000000000000000000000000000beef", asset_address: "bad" },
+          { chain_id: 1, vault_address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b", asset_address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" },
+        ], cursor: null } },
       }),
     });
-    const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "morpho-vault-v2", chainId: 1 }));
-    expect(nonInfoWarnings(result.warnings)).toEqual([]);
-    expect(result.metadata).toMatchObject({ redemptionCapacityRaw: "30000000", morphoVaultV2LiquidityRaw: "30000000" });
-    expect(result.metadata).not.toHaveProperty("morphoVaultV2LiquidityUsd");
-    expect(result.metadata).not.toHaveProperty("morphoVaultV2ForceDeallocatableLiquidityRaw");
-    expect(result.metadata).not.toHaveProperty("morphoVaultV2ForceDeallocatableLiquidityUsd");
+    const peerOk = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "morpho-vault-v2", chainId: 1 }));
+    expect(nonInfoWarnings(peerOk.warnings)).toEqual([]);
+    expect(peerOk.metadata).toMatchObject({ redemptionCapacityRaw: "30000000", morphoVaultV2LiquidityUsd: 30 });
+
+    // HTTP 206, null/stale/future price timestamps suppress *LiquidityUsd while preserving capacityRaw.
+    for (const priceOpts of [
+      { priceStatus: 206 },
+      { priceTimestamp: null },
+      { omitPriceTimestamp: true },
+      { priceTimestamp: String(Math.floor(Date.now() / 1000) - 90_000) },
+      { priceTimestamp: String(Math.floor(Date.now() / 1000) + 600) },
+    ]) {
+      installErc4626Network({
+        idleBalance: 0, liquidityAdapter: 1,
+        json: morphoReadJson({
+          version: "v2", withdrawable: "30000000", ...priceOpts,
+          overrides: { "https://api.morpho.org/v0/vaults-v2/1:0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b/withdrawal-options": { data: { chain_id: 8453, vault_address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b", adapter_penalties: [] } } },
+        }),
+      });
+      const r = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "morpho-vault-v2", chainId: 1 }));
+      expect(nonInfoWarnings(r.warnings)).toEqual([]);
+      expect(r.metadata?.redemptionCapacityRaw).toBe("30000000");
+      expect(r.metadata).not.toHaveProperty("morphoVaultV2LiquidityUsd");
+      expect(r.metadata).not.toHaveProperty("morphoVaultV2ForceDeallocatableLiquidityRaw");
+    }
 
     // Near-expired attempt deadline skips optional diagnostics while preserving validated capacityRaw.
     const tightNet = installErc4626Network({ idleBalance: 0, liquidityAdapter: 1, json: morphoReadJson({ version: "v2", withdrawable: "30000000" }) });
@@ -850,39 +839,33 @@ describe("fetchErc4626SingleAssetReserves", () => {
     expect(nonInfoWarnings(failed.warnings)).toEqual([expect.objectContaining({ code: "morpho-vault-v2-liquidity-unavailable" })]);
   });
 
-  it("never retries HTTP 429, persists cooldown across continuations via D1, and negatively caches directory outages", async () => {
-    const cacheRows = new Map<string, { value: string; updated_at: number }>();
-    const db = {
-      prepare: () => ({
-        bind: (...args: unknown[]) => ({
-          first: async () => (cacheRows.has(args[0] as string) ? { updated_at: cacheRows.get(args[0] as string)!.updated_at } : null),
-          run: async () => { cacheRows.set(args[0] as string, { value: args[1] as string, updated_at: args[2] as number }); return { success: true }; },
-        }),
-      }),
-    } as unknown as D1Database;
+  it("never retries HTTP 429, shares Retry-After D1 cooldown across continuations, and caches upstream outages without poisoning on local deadlines", async () => {
+    const { db, rows } = makeMorphoCacheDb();
     const requestCache = new Map<string, Promise<unknown>>();
     const net = installErc4626Network({
       liquidityAdapter: 1,
       json: morphoReadJson({
         version: "v2",
-        overrides: { "https://api.morpho.org/v0/vaults-v2?limit=1000": { status: 429, json: { error: "rate limited" } } },
+        overrides: { "https://api.morpho.org/v0/vaults-v2?limit=1000": { status: 429, headers: { "Retry-After": "3600" }, json: { error: "rate limited" } } },
       }),
     });
     const first = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "morpho-vault-v2", chainId: 1 }), { requestCache, db });
     expect(net.requests.filter((r) => r.url.startsWith("https://api.morpho.org"))).toHaveLength(1);
     expect(nonInfoWarnings(first.warnings)).toEqual([expect.objectContaining({ code: "morpho-vault-v2-rate-limited", effect: "degraded" })]);
+    const saved = JSON.parse(rows.get("yield:supplemental-sources:v1:morpho-backoff")!.value) as { backoffUntilSec: number; recordedAtSec: number; source: string };
+    expect(saved).toMatchObject({ source: "retry-after", backoffUntilSec: saved.recordedAtSec + 3600 });
 
     const second = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "morpho-vault-v1", chainId: 1 }), { requestCache, db });
     expect(net.requests.filter((r) => r.url.startsWith("https://api.morpho.org"))).toHaveLength(1);
     expect(nonInfoWarnings(second.warnings)).toEqual([expect.objectContaining({ code: "morpho-vault-v1-rate-limited", effect: "degraded" })]);
     expect(second.metadata).not.toHaveProperty("redemptionCapacityRaw");
 
-    // Distinct requestCache simulating scheduled continuation still respects the D1 600 s cooldown.
-    const resumed = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "morpho-vault-v2", chainId: 1 }), { requestCache: new Map(), db });
+    // Distinct requestCache simulating scheduled continuation still respects the shared Retry-After D1 cooldown.
+    const resumed = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "morpho-vault-v2", chainId: 1 }), { requestCache: new Map(), db, nowSec: saved.recordedAtSec + 1800 });
     expect(net.requests.filter((r) => r.url.startsWith("https://api.morpho.org"))).toHaveLength(1);
     expect(nonInfoWarnings(resumed.warnings)).toEqual([expect.objectContaining({ code: "morpho-vault-v2-rate-limited", effect: "degraded" })]);
 
-    // Non-429 directory failure is negatively cached for the run.
+    // Upstream directory outage is negatively cached, while a local attempt deadline never poisons peers.
     const errCache = new Map<string, Promise<unknown>>();
     const errNet = installErc4626Network({
       liquidityAdapter: 1,
@@ -891,15 +874,24 @@ describe("fetchErc4626SingleAssetReserves", () => {
     await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "morpho-vault-v2", chainId: 1 }), { requestCache: errCache });
     await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "morpho-vault-v2", chainId: 1 }), { requestCache: errCache });
     expect(errNet.requests.filter((r) => r.url.includes("/v0/vaults-v2?limit=1000"))).toHaveLength(1);
+
+    const budgetCache = new Map<string, Promise<unknown>>();
+    installErc4626Network({ liquidityAdapter: 1, json: morphoReadJson({ version: "v2", withdrawable: "30000000" }) });
+    const expired = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "morpho-vault-v2", chainId: 1 }), { requestCache: budgetCache, attemptDeadlineMs: Date.now() - 1 });
+    expect(nonInfoWarnings(expired.warnings)).toEqual([expect.objectContaining({ code: "morpho-vault-v2-liquidity-unavailable" })]);
+    const recovered = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "morpho-vault-v2", chainId: 1 }), { requestCache: budgetCache });
+    expect(nonInfoWarnings(recovered.warnings)).toEqual([]);
+    expect(recovered.metadata?.redemptionCapacityRaw).toBe("30000000");
   });
 
-  it("reuses cached Morpho directory and token price across vaults sharing requestCache", async () => {
+  it("reuses cached Morpho directory, block timestamp, and token price across vaults sharing requestCache", async () => {
     const requestCache = new Map<string, Promise<unknown>>();
     const net = installErc4626Network({ liquidityAdapter: 1, json: morphoReadJson({ version: "v2", withdrawable: "30000000" }) });
     await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "morpho-vault-v2", chainId: 1 }), { requestCache });
     await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "morpho-vault-v2", chainId: 1 }), { requestCache });
     expect(net.requests.filter((r) => r.url.includes("/v0/vaults-v2?limit=1000"))).toHaveLength(1);
     expect(net.requests.filter((r) => r.url.includes("/v0/tokens/"))).toHaveLength(1);
+    expect(net.fetchSpy.mock.calls.filter(([, init]) => String(init?.body ?? "").includes(`0x${(26_500_000).toString(16)}`))).toHaveLength(1);
   });
 
   it("does not label an EUR underlying balance as USD capacity without FX valuation", async () => {
@@ -1074,8 +1066,11 @@ describe("Morpho V2 operational conditions and composition admission", () => {
     expect(competing.every((row) => row.classificationKey.startsWith("source-native:"))).toBe(true);
   });
 
-  it.each(["steakusdg-steakhouse", "krusdc-keyrock"])("admits healthy %s via Read API and enforces admission gates", async (id) => {
-    installTrackedMorphoV2(id);
+  it.each([
+    { id: "steakusdg-steakhouse", paused: undefined as number | undefined, routeStatus: "unknown" as const },
+    { id: "krusdc-keyrock", paused: 0 as number | undefined, routeStatus: "open" as const },
+  ])("admits healthy $id via Read API and enforces admission gates", async ({ id, paused, routeStatus }) => {
+    installTrackedMorphoV2(id, { paused });
     const result = await runTrackedVault(id);
     expect(nonInfoWarnings(result.warnings)).toEqual([]);
     expect(result.slices.map((s) => s.pct)).toEqual([25, 75]);
@@ -1083,8 +1078,12 @@ describe("Morpho V2 operational conditions and composition admission", () => {
     expect(result.metadata).toMatchObject({
       unknownExposurePct: 0, morphoVaultV2LiquidityRaw: "90000000", redemptionCapacityRaw: "90000000",
       redemptionCapacitySource: "morpho-vault-v2-liquidity",
-      redemption: { capacityUsd: 90, freshnessKind: "same-run-api", routeStatus: "open", routeStatusSource: "protocol-api" },
+      redemption: {
+        capacityUsd: 90, freshnessKind: "same-run-api", routeStatus,
+        ...(routeStatus === "open" ? { routeStatusSource: "protocol-api" } : {}),
+      },
     });
+    if (routeStatus === "unknown") expect(result.metadata?.redemption).not.toHaveProperty("routeStatusSource");
     expect(nonInfoWarnings(expectValidAdapterOutput("erc4626-single-asset", result, { subjectId: id }).warnings)).toEqual([]);
     const coin = TRACKED_META_BY_ID.get(id)!;
     const snap = trackedVaultSnapshot(id, result);
@@ -1231,24 +1230,6 @@ describe("ERC-4626 held versus deployed exposure", () => {
     expect(result.warnings).toContainEqual(expect.objectContaining({ code: "erc4626-idle-balance-unavailable", effect: "degraded" }));
   });
 });
-
-const cooldownSelector = toFunctionSelector("cooldownDuration()");
-const windowSelector = toFunctionSelector("getUnstakeWindow()");
-const withLocks = (config: LiveReservesConfig): LiveReservesConfig => ({
-  ...config,
-  params: { ...config.params, redemptionLock: [
-    { selector: "cooldownDuration()", kind: "cooldown-seconds" },
-    { selector: windowSelector, kind: "unstake-window-seconds" },
-    { selector: "paused()", kind: "paused-bool" },
-  ] },
-});
-function mockLocks(cooldown: bigint | null, paused = 0, window = 172800) {
-  installErc4626Network({ idleBalance: 100_000_000n, paused, extraHandlers: [({ call }) => {
-    if (call?.data !== cooldownSelector && call?.data !== windowSelector) return undefined;
-    const value = call.data === cooldownSelector ? cooldown : BigInt(window);
-    return value == null ? null : jsonResponse({ result: `0x${value.toString(16).padStart(64, "0")}` });
-  }] });
-}
 
 describe("ERC4626 redemption locks", () => {
   it("bounds fully backed capacity by the live cooldown, without adding the withdrawal window", async () => {

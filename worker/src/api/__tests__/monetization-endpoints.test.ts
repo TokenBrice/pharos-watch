@@ -1274,9 +1274,9 @@ describe("Wave 3 endpoints: MCP server & SVG safety badge", () => {
     expect(initLatest.headers.get("Cache-Control")).toBe("no-store");
     await expect(initLatest.json()).resolves.toMatchObject({ jsonrpc: "2.0", id: 1, result: { protocolVersion: "2026-07-28", serverInfo: { name: "pharos", version: PUBLIC_API_CONTRACT_VERSION } } });
 
+    // Headerless request exercises the documented default MCP-Protocol-Version: 2025-03-26 fallback.
     const notif = await postMcp({ jsonrpc: "2.0", method: "notifications/initialized" });
     expect(notif.status).toBe(202); expect(await notif.text()).toBe("");
-    // Headerless request exercises the documented default MCP-Protocol-Version: 2025-03-26 fallback.
     expect((await postMcp({ jsonrpc: "2.0", id: 2, method: "tools/list" }, commercial, { "MCP-Protocol-Version": "1999-01-01" })).status).toBe(400);
     const batch = await postMcp([{ jsonrpc: "2.0", id: 1, method: "ping" }]);
     expect(batch.status).toBe(400); await expect(batch.json()).resolves.toMatchObject({ error: { code: -32600 } });
@@ -1327,6 +1327,23 @@ describe("Wave 3 endpoints: MCP server & SVG safety badge", () => {
     }
 
     await expect((await postMcp({ jsonrpc: "2.0", id: 8, method: "tools/call", params: { name: "drop_tables", arguments: {} } })).json()).resolves.toMatchObject({ error: { code: -32602 } });
+
+    // Unmocked router preserves the WeakSet plan-denied marker on POST /api/mcp.
+    const { route: realRoute } = await import("../../router");
+    const routedDenied = await realRoute({
+      url: new URL("https://api.pharos.watch/api/mcp"),
+      db,
+      execCtx,
+      request: new Request("https://api.pharos.watch/api/mcp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 9, method: "tools/call", params: { name: "get_risk_check", arguments: { ids: ["usdc-circle"] } } }),
+      }),
+      trustedAdmin: false,
+      apiKey: freePartner,
+    });
+    expect(routedDenied?.status).toBe(200);
+    expect(routedDenied && isMcpPlanDeniedResponse(routedDenied)).toBe(true);
   });
 
   it("renders GET /api/badge/:id.svg across styles, themes, NR, held, stale, pipeline-gap, and 404 states without <style> blocks", async () => {

@@ -48,7 +48,7 @@ export default function ApiTermsPage() {
       title="API terms"
       variant="longform"
       containerClassName="max-w-2xl"
-      leadParagraphs={["Last updated: November 21, 2026"]}
+      leadParagraphs={["Last updated: November 26, 2026"]}
     >
       <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
         <section className="space-y-2">

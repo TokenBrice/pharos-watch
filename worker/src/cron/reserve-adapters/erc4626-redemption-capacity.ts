@@ -47,15 +47,9 @@ export async function observeConfiguredErc4626Capacity(
 
   let probe: CapacityProbeResult;
   if (configured.source === "morpho-vault-v2") {
-    probe = await fetchMorphoVaultV2Liquidity({
-      ...input,
-      config: configured,
-    });
+    probe = await fetchMorphoVaultV2Liquidity({ ...input, config: configured });
   } else if (configured.source === "morpho-vault-v1") {
-    probe = await fetchMorphoVaultV1Liquidity({
-      ...input,
-      config: configured,
-    });
+    probe = await fetchMorphoVaultV1Liquidity({ ...input, config: configured });
   } else if (configured.source === "yearn-v3-withdrawable") {
     probe = await fetchYearnV3WithdrawableCapacity({
       ...input,

@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { getListingClass } from "@shared/lib/stablecoins/listing-governance";
 import { logWorkerEvent, logWorkerEventArgs } from "../lib/structured-log";
+import { prepareCacheUpsert } from "../lib/db-cache";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import { safetyScorePublicationIdentitiesAreComparable, safetyScorePublicationIdentitiesShareScoringContract } from "@shared/lib/safety-score-publication";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
@@ -61,6 +62,8 @@ import { resolveYieldBenchmarkDependencies } from "../lib/yield-config/yield-ben
 import { isReviewedPublishedYieldSourceExcluded, YIELD_OPPORTUNITY_EXCLUSIONS } from "../lib/yield-config/yield-opportunity-exclusions";
 import { readCoinProjectionId } from "../lib/api-coin-projection";
 import { readYieldRankingsCache, readYieldRankingsCoinCache, readYieldCoinCohort, readYieldCoinCohortLease, claimYieldCoinCohort, publishYieldCoinCohort, releaseYieldCoinCohort, YIELD_COHORT_LAST_EXPIRY_CACHE_KEY } from "../lib/yield-rankings-coin-cache";
+
+const lastRecordedYieldCohortExpiryByDb = new WeakMap<D1Database, number>();
 import { YIELD_BENCHMARK_SCORE_TTL_SEC } from "@shared/lib/status-thresholds";
 import { YieldCoinCohortSchema, type YieldRankingsCoinResponse } from "@shared/types/yield";
 
@@ -1165,26 +1168,26 @@ export async function handleYieldRankingsCoin(db: D1Database, url: URL): Promise
         assessedAt: cohort.assessedAt,
         serveNow,
       };
-      try {
-        // Single-attempt monotonic D1 upsert (no overload retry loop) so a busy D1 never delays Retry-After: 1.
-        await db
-          .prepare(
-            "INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?) "
-            + "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at "
-            + "WHERE excluded.updated_at >= cache.updated_at",
-          )
-          .bind(
-            YIELD_COHORT_LAST_EXPIRY_CACHE_KEY,
-            JSON.stringify({
-              ...metadata,
-              selectedGenerationId: selected.publication?.generationId ?? null,
-              servedGenerationId: cohort.publication?.generationId ?? null,
-            }),
-            serveNow,
-          )
-          .run();
-      } catch {
-        // Diagnostic-only breadcrumb; write failure must never alter the fail-closed 503.
+      if (lastRecordedYieldCohortExpiryByDb.get(db) !== serveNow) {
+        lastRecordedYieldCohortExpiryByDb.set(db, serveNow);
+        try {
+          // Single-attempt monotonic D1 upsert (no overload retry loop, memoized per isolate second).
+          await prepareCacheUpsert(
+            db,
+            {
+              key: YIELD_COHORT_LAST_EXPIRY_CACHE_KEY,
+              value: JSON.stringify({
+                ...metadata,
+                selectedGenerationId: selected.publication?.generationId ?? null,
+                servedGenerationId: cohort.publication?.generationId ?? null,
+              }),
+              updatedAt: serveNow,
+            },
+            "if-newer",
+          ).run();
+        } catch {
+          // Diagnostic-only breadcrumb; write failure must never alter the fail-closed 503.
+        }
       }
       logWorkerEvent({
         scope: "api",

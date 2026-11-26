@@ -213,19 +213,44 @@ describe("buildAlertContextLines", () => {
 
   it("logs a warning and keeps successful liquidity chunks when one chunk fails", async () => {
     let call = 0;
-    const db = makeNoopD1({ prepare: vi.fn(() => {
-      const s = { bind: (..._b: string[]) => s, all: async () => {
-        if (++call === 2) throw new Error("D1 bind failure");
-        return { results: [{ stablecoin_id: "coin-0", liquidity_score: 81, total_tvl_usd: 2_000_000, updated_at: Math.floor(Date.now() / 1000) }] };
-      } };
-      return s;
-    }) });
-    const context = await buildAlertContextLines(db, Array.from({ length: 91 }, (_, i) => `coin-${i}`));
+    const db = makeNoopD1({
+      prepare: vi.fn(() => {
+        const statement = {
+          bind: (..._binds: string[]) => statement,
+          all: async () => {
+            call += 1;
+            if (call === 2) throw new Error("D1 bind failure");
+            return {
+              results: [
+                {
+                  stablecoin_id: "coin-0",
+                  liquidity_score: 81,
+                  total_tvl_usd: 2_000_000,
+                  updated_at: Math.floor(Date.now() / 1000),
+                },
+              ],
+            };
+          },
+        };
+        return statement;
+      }),
+    });
+
+    const ids = Array.from({ length: 91 }, (_, index) => `coin-${index}`);
+    const context = await buildAlertContextLines(db, ids);
+
     expect(context.get("coin-0")).toContain("Liquidity 81");
     expect(context.has("coin-90")).toBe(false);
-    expect(mocks.logTelegramEvent).toHaveBeenCalledWith(expect.objectContaining({
-      level: "warn", action: "alert-context-liquidity", module: "telegram-alert-context", requestedStablecoinCount: 91, chunkSize: 1, errorClass: "d1",
-    }));
+    expect(mocks.logTelegramEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        level: "warn",
+        action: "alert-context-liquidity",
+        module: "telegram-alert-context",
+        requestedStablecoinCount: 91,
+        chunkSize: 1,
+        errorClass: "d1",
+      }),
+    );
   });
 
   describe("supply and DEX context clocks", () => {

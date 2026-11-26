@@ -241,9 +241,17 @@ function canUseEdgeCache(): boolean {
 async function runCachedRestTool(
   restPathWithQuery: string,
   execCtx: ExecutionContext | undefined,
+  auth: { apiKey: AuthenticatedApiKey | null | undefined; trustedAdmin: boolean },
   invokeHandler: (url: URL) => Promise<Response>,
-): Promise<Response> {
+): Promise<{ response: Response; planDenied: boolean }> {
   const syntheticUrl = new URL(restPathWithQuery, API_ORIGIN);
+  // Single-authority defense-in-depth: re-check the resolved REST pathname before any edge-cache read.
+  if (!auth.trustedAdmin) {
+    const entitlementFailure = checkApiKeyEndpointEntitlement(auth.apiKey, syntheticUrl.pathname);
+    if (entitlementFailure) {
+      return { response: entitlementFailure, planDenied: true };
+    }
+  }
   const syntheticRequest = new Request(syntheticUrl.toString(), { method: "GET" });
   const useCache = canUseEdgeCache();
   const edgeCache = useCache ? createEdgeCacheContext(syntheticRequest, syntheticUrl) : null;
@@ -251,14 +259,14 @@ async function runCachedRestTool(
   if (edgeCache) {
     try {
       const cached = await readEdgeCache(edgeCache);
-      if (cached) return cached;
+      if (cached) return { response: cached, planDenied: false };
     } catch {
       // Cache lookup failures never break tool execution.
     }
   }
 
   const response = await invokeHandler(syntheticUrl);
-  if (!edgeCache) return response;
+  if (!edgeCache) return { response, planDenied: false };
 
   // Same representation scoping as the REST dispatcher, so REST hits on an
   // MCP-written entry carry the identical scoped ETag.
@@ -271,7 +279,7 @@ async function runCachedRestTool(
     }
   }
 
-  return cacheResponse;
+  return { response: cacheResponse, planDenied: false };
 }
 
 async function formatToolResponse(id: string | number | null, restResponse: Response): Promise<Response> {
@@ -362,6 +370,12 @@ async function executeToolCall(
     }
   }
 
+  const auth = { apiKey, trustedAdmin };
+  const formatRestToolResult = async (result: { response: Response; planDenied: boolean }) => {
+    const formatted = await formatToolResponse(id, result.response);
+    return result.planDenied ? markMcpPlanDeniedResponse(formatted) : formatted;
+  };
+
   switch (toolName) {
     case "resolve_stablecoin": {
       const parsed = ResolveToolArgsSchema.safeParse(argsInput);
@@ -373,11 +387,10 @@ async function executeToolCall(
         geckoId: parsed.data.geckoId,
         contracts: parsed.data.contracts?.length ? parsed.data.contracts.join(",") : undefined,
       });
-      const res = await runCachedRestTool(query, execCtx, async (url) => {
+      return formatRestToolResult(await runCachedRestTool(query, execCtx, auth, async (url) => {
         const { handleResolve } = await import("./resolve");
         return handleResolve(url);
-      });
-      return formatToolResponse(id, res);
+      }));
     }
 
     case "get_risk_check": {
@@ -387,11 +400,10 @@ async function executeToolCall(
         ids: parsed.data.ids,
         contracts: parsed.data.contracts,
       });
-      const res = await runCachedRestTool(query, execCtx, async (url) => {
+      return formatRestToolResult(await runCachedRestTool(query, execCtx, auth, async (url) => {
         const { handleRiskCheck } = await import("./risk-check");
         return handleRiskCheck(db, url);
-      });
-      return formatToolResponse(id, res);
+      }));
     }
 
     case "get_compliance": {
@@ -400,11 +412,10 @@ async function executeToolCall(
       if (parsed.data.id) {
         const coinId = parsed.data.id;
         const path = API_PATHS.complianceCoin(coinId);
-        const res = await runCachedRestTool(path, execCtx, async () => {
+        return formatRestToolResult(await runCachedRestTool(path, execCtx, auth, async () => {
           const { handleComplianceCoin } = await import("./compliance");
           return handleComplianceCoin(coinId);
-        });
-        return formatToolResponse(id, res);
+        }));
       }
       const query = API_PATHS.compliance({
         regime: parsed.data.regime,
@@ -414,22 +425,20 @@ async function executeToolCall(
         peg: parsed.data.peg,
         includePreLaunch: parsed.data.includePreLaunch,
       });
-      const res = await runCachedRestTool(query, execCtx, async (url) => {
+      return formatRestToolResult(await runCachedRestTool(query, execCtx, auth, async (url) => {
         const { handleCompliance } = await import("./compliance");
         return handleCompliance(url);
-      });
-      return formatToolResponse(id, res);
+      }));
     }
 
     case "get_safety_report_card": {
       const parsed = SafetyReportCardToolArgsSchema.safeParse(argsInput);
       if (!parsed.success) return invalidToolArgsResponse(id, parsed.error.issues[0]?.message ?? "Invalid arguments");
       const query = API_PATHS.reportCardsV9Detail(parsed.data.stablecoin);
-      const res = await runCachedRestTool(query, execCtx, async (url) => {
+      return formatRestToolResult(await runCachedRestTool(query, execCtx, auth, async (url) => {
         const { handleReportCardsV9Detail } = await import("./report-cards-v9-projections");
         return handleReportCardsV9Detail(db, url);
-      });
-      return formatToolResponse(id, res);
+      }));
     }
 
     case "get_depeg_events": {
@@ -442,11 +451,10 @@ async function executeToolCall(
         cursor: parsed.data.cursor,
         includePending: parsed.data.includePending,
       });
-      const res = await runCachedRestTool(query, execCtx, async (url) => {
+      return formatRestToolResult(await runCachedRestTool(query, execCtx, auth, async (url) => {
         const { handleDepegEvents } = await import("./depeg-events");
         return handleDepegEvents(db, url);
-      });
-      return formatToolResponse(id, res);
+      }));
     }
 
     case "get_stress_signals": {
@@ -456,11 +464,10 @@ async function executeToolCall(
         parsed.data.stablecoin,
         parsed.data.stablecoin ? (parsed.data.days ?? 7) : undefined,
       );
-      const res = await runCachedRestTool(query, execCtx, async (url) => {
+      return formatRestToolResult(await runCachedRestTool(query, execCtx, auth, async (url) => {
         const { handleStressSignals } = await import("./stress-signals");
         return handleStressSignals(db, url);
-      });
-      return formatToolResponse(id, res);
+      }));
     }
 
     case "get_stablecoin_reserves": {
@@ -468,11 +475,10 @@ async function executeToolCall(
       if (!parsed.success) return invalidToolArgsResponse(id, parsed.error.issues[0]?.message ?? "Invalid arguments");
       const coinId = parsed.data.stablecoin;
       const path = API_PATHS.stablecoinReserves(coinId);
-      const res = await runCachedRestTool(path, execCtx, async () => {
+      return formatRestToolResult(await runCachedRestTool(path, execCtx, auth, async () => {
         const { handleStablecoinReserves } = await import("./stablecoin-reserves");
         return handleStablecoinReserves(db, coinId);
-      });
-      return formatToolResponse(id, res);
+      }));
     }
 
     default:

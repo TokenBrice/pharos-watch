@@ -1,4 +1,5 @@
 import { fetchErc4626SingleAssetReserves } from "../erc4626-single-asset";
+import { toFunctionSelector } from "viem/utils";
 import type { AdapterContext, AdapterResult } from "../types";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
@@ -37,6 +38,7 @@ export type Erc4626RpcFixture = {
   paused?: bigint | number;
   shutdown?: bigint | number;
   liquidityAdapter?: bigint | number | null;
+  blockTimestamp?: number | null;
   json?: AdapterNetworkSpec["json"];
   extraHandlers?: Erc4626RpcHandler[];
 };
@@ -56,7 +58,8 @@ export interface MorphoReadMockOptions {
   penalties?: string[];
   price?: number | null;
   priceStatus?: number;
-  priceTimestamp?: number | null;
+  priceTimestamp?: number | string | null;
+  omitPriceTimestamp?: boolean;
   overrides?: AdapterNetworkSpec["json"];
 }
 
@@ -75,7 +78,8 @@ export function morphoReadJson({
   penalties = [],
   price = 1,
   priceStatus = 200,
-  priceTimestamp,
+  priceTimestamp = String(Math.floor(Date.now() / 1000) - 60),
+  omitPriceTimestamp = false,
   overrides = {},
 }: MorphoReadMockOptions = {}): NonNullable<AdapterNetworkSpec["json"]> {
   const v = vault.toLowerCase();
@@ -114,7 +118,7 @@ export function morphoReadJson({
           chain_id: chainId,
           address: asset,
           price,
-          ...(priceTimestamp !== undefined ? { timestamp: priceTimestamp } : {}),
+          ...(!omitPriceTimestamp ? { timestamp: priceTimestamp } : {}),
         },
       },
     },
@@ -145,6 +149,7 @@ export function installErc4626Network({
   paused,
   shutdown,
   liquidityAdapter,
+  blockTimestamp,
   json,
   extraHandlers = [],
 }: Erc4626RpcFixture = {}): AdapterNetwork {
@@ -173,6 +178,8 @@ export function installErc4626Network({
       return responseValue(response);
     };
   const rpc: AdapterNetworkSpec["rpc"] = {
+    eth_getBlockByNumber: () =>
+      blockTimestamp === null ? null : { timestamp: blockTimestamp ?? Math.floor(Date.now() / 1000) - 30 },
     [`${vault}:asset()`]: withHandlers(asset == null ? null : asset),
     [`${vault}:totalAssets()`]: withHandlers(totalAssets),
     [`${vault}:totalSupply()`]: withHandlers(totalSupply),
@@ -469,4 +476,92 @@ export function trackedVaultSyncState(snapshot: { fetchedAt: number; attemptId: 
 export function admission(id: string, result: AdapterResult) {
   const snapshot = trackedVaultSnapshot(id, result);
   return evaluateLiveReserveAdmission(snapshot, trackedVaultSyncState(snapshot), TRACKED_META_BY_ID.get(id), snapshot.fetchedAt);
+}
+
+export function makeMorphoCacheDb() {
+  const rows = new Map<string, { value: string; updated_at: number }>();
+  const db = {
+    prepare: () => ({
+      bind: (...args: unknown[]) => ({
+        first: async () => rows.get(args[0] as string) ?? null,
+        run: async () => {
+          const [key, value, updatedAt] = args as [string, string, number];
+          const prev = rows.get(key);
+          if (!prev || prev.updated_at <= updatedAt) rows.set(key, { value, updated_at: updatedAt });
+          return { success: true };
+        },
+      }),
+    }),
+  } as unknown as D1Database;
+  return { db, rows };
+}
+
+export const CATALOG_CASES = [
+  { id: "syzusd-yuzu", asset: "0x6695c0f8706c5ace3bdf8995073179cca47926dc", vault: "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6" },
+  { id: "savusd-avant", asset: "0x24de8771bc5ddb3362db529fc3358f2df3a0e346", vault: "0x06d47f3fb376649c3a9dafe069b3d6e35572219e" },
+  { id: "srusde-strata", asset: "0x4c9edd5852cd905f086c759e8383e09bff1e68b3", vault: "0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003" },
+] as const;
+
+export const COOLDOWN_SELECTOR = toFunctionSelector("cooldownDuration()");
+export const WINDOW_SELECTOR = toFunctionSelector("getUnstakeWindow()");
+
+export const withLocks = (config: LiveReservesConfig): LiveReservesConfig => ({
+  ...config,
+  params: { ...config.params, redemptionLock: [
+    { selector: "cooldownDuration()", kind: "cooldown-seconds" },
+    { selector: WINDOW_SELECTOR, kind: "unstake-window-seconds" },
+    { selector: "paused()", kind: "paused-bool" },
+  ] },
+});
+
+export function mockLocks(cooldown: bigint | null, paused = 0, window = 172800) {
+  installErc4626Network({ idleBalance: 100_000_000n, paused, extraHandlers: [({ call }) => {
+    if (call?.data !== COOLDOWN_SELECTOR && call?.data !== WINDOW_SELECTOR) return undefined;
+    const value = call.data === COOLDOWN_SELECTOR ? cooldown : BigInt(window);
+    return value == null ? null : jsonResponse({ result: `0x${value.toString(16).padStart(64, "0")}` });
+  }] });
+}
+
+export function buildMorphoFailureCases(nowSec = Math.floor(Date.now() / 1000)) {
+  return [
+    { label: "unlisted V2", source: "morpho-vault-v2" as const, opts: { version: "v2" as const, listed: false }, code: "morpho-vault-v2-unlisted", callsState: false },
+    { label: "unlisted V1", source: "morpho-vault-v1" as const, opts: { version: "v1" as const, listed: false }, code: "morpho-vault-v1-unlisted", callsState: false },
+    { label: "asset mismatch", source: "morpho-vault-v2" as const, opts: { version: "v2" as const, dirAsset: "0x000000000000000000000000000000000000dead" }, code: "morpho-vault-v2-asset-mismatch", callsState: false },
+    { label: "address mismatch", source: "morpho-vault-v2" as const, opts: { version: "v2" as const, stateAddress: "0x000000000000000000000000000000000000dead" }, code: "morpho-vault-v2-identity-mismatch", callsState: true },
+    { label: "chain mismatch", source: "morpho-vault-v2" as const, opts: { version: "v2" as const, stateChainId: 8453 }, code: "morpho-vault-v2-chain-mismatch", callsState: true },
+    { label: "invalid withdrawable", source: "morpho-vault-v2" as const, opts: { version: "v2" as const, withdrawable: "invalid" }, code: "morpho-vault-v2-liquidity-invalid", callsState: true },
+    { label: "missing last_indexed_block", source: "morpho-vault-v2" as const, opts: { version: "v2" as const, lastIndexedBlock: null }, code: "morpho-vault-v2-liquidity-invalid", callsState: true },
+    { label: "stale V1 indexed block", source: "morpho-vault-v1" as const, opts: { version: "v1" as const, lastIndexedBlock: "1" }, blockTimestamp: nowSec - 3600, code: "morpho-vault-v1-state-stale", callsState: true },
+    { label: "stale V2 indexed block", source: "morpho-vault-v2" as const, opts: { version: "v2" as const }, blockTimestamp: nowSec - 3600, code: "morpho-vault-v2-state-stale", callsState: true },
+    { label: "unreadable V2 indexed block", source: "morpho-vault-v2" as const, opts: { version: "v2" as const }, blockTimestamp: null as number | null, code: "morpho-vault-v2-liquidity-unavailable", callsState: true },
+    { label: "future last_accrual_timestamp", source: "morpho-vault-v2" as const, opts: { version: "v2" as const, lastAccrualTimestamp: nowSec + 600 }, code: "morpho-vault-v2-state-stale", callsState: true },
+    {
+      label: "HTTP 206 partial directory page", source: "morpho-vault-v2" as const,
+      opts: { version: "v2" as const, overrides: { "https://api.morpho.org/v0/vaults-v2?limit=1000": { status: 206, json: { data: [{ chain_id: 1, vault_address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b", asset_address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" }], cursor: null } } } },
+      code: "morpho-vault-v2-liquidity-unavailable", callsState: false,
+    },
+    {
+      label: "missing directory cursor", source: "morpho-vault-v2" as const,
+      opts: { version: "v2" as const, overrides: { "https://api.morpho.org/v0/vaults-v2?limit=1000": { data: [] } } },
+      code: "morpho-vault-v2-liquidity-unavailable", callsState: false,
+    },
+    {
+      label: "conflicting duplicate target asset", source: "morpho-vault-v2" as const,
+      opts: { version: "v2" as const, overrides: { "https://api.morpho.org/v0/vaults-v2?limit=1000": { data: [
+        { chain_id: 1, vault_address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b", asset_address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" },
+        { chain_id: 1, vault_address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b", asset_address: "0x000000000000000000000000000000000000dead" },
+      ], cursor: null } } },
+      code: "morpho-vault-v2-liquidity-invalid", callsState: false,
+    },
+    {
+      label: "malformed target directory row", source: "morpho-vault-v2" as const,
+      opts: { version: "v2" as const, overrides: { "https://api.morpho.org/v0/vaults-v2?limit=1000": { data: [{ chain_id: 1, vault_address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b", asset_address: "bad" }], cursor: null } } },
+      code: "morpho-vault-v2-liquidity-invalid", callsState: false,
+    },
+    {
+      label: "directory cursor cycle", source: "morpho-vault-v2" as const,
+      opts: { version: "v2" as const, overrides: { "https://api.morpho.org/v0/vaults-v2?limit=1000": { data: [], cursor: "c1" }, "https://api.morpho.org/v0/vaults-v2?limit=1000&cursor=c1": { data: [], cursor: "c1" } } },
+      code: "morpho-vault-v2-liquidity-unavailable", callsState: false,
+    },
+  ];
 }

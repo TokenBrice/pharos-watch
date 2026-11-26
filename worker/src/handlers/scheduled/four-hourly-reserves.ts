@@ -122,6 +122,7 @@ function buildReserveSyncSlotGroups(
                 m0ApiKey: runtime.env.M0_API_KEY,
                 chainRpcs: runtime.chainRpcs,
                 dwellirNative: runtime.dwellirNative,
+                waitUntil: (promise) => runtime.ctx.waitUntil(promise),
               },
               reportProgress,
               { ...slice, runBudgetMs },

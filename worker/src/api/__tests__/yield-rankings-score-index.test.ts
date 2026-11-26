@@ -263,7 +263,6 @@ describe("rankings score-index hydration", () => {
       servedGenerationId: payload.publication!.generationId,
     });
 
-    vi.spyOn(cohortCache, "readYieldCoinCohort").mockResolvedValueOnce(expiredCohort);
     const prepare = db.prepare.bind(db);
     let breadcrumbWriteAttempted = false;
     vi.spyOn(db, "prepare").mockImplementation((sql: string) => {
@@ -273,6 +272,13 @@ describe("rankings score-index hydration", () => {
       }
       return prepare(sql);
     });
+    // Same-second burst is memoized per isolate second so repeated 503s do not spam D1.
+    vi.spyOn(cohortCache, "readYieldCoinCohort").mockResolvedValueOnce(expiredCohort);
+    expect((await handleYieldRankingsCoin(db, coinUrl(id))).status).toBe(503);
+    expect(breadcrumbWriteAttempted).toBe(false);
+
+    vi.advanceTimersByTime(1_000);
+    vi.spyOn(cohortCache, "readYieldCoinCohort").mockResolvedValueOnce(expiredCohort);
     log.mockClear();
     const expiredOnWriteError = await handleYieldRankingsCoin(db, coinUrl(id));
     expect(breadcrumbWriteAttempted).toBe(true);
@@ -282,7 +288,7 @@ describe("rankings score-index hydration", () => {
     expect(await expiredOnWriteError.json()).toMatchObject({ reason: "yield-cohort-assessment-expired" });
     expect(log).toHaveBeenCalledWith(expect.objectContaining({
       event: "yield-cohort-assessment-expired",
-      metadata: expectedMeta,
+      metadata: { ...expectedMeta, serveNow: deadline + 2 },
     }));
     vi.restoreAllMocks();
 
