@@ -82,6 +82,7 @@ async function persistedMutations() {
       database: typeof db,
       context: typeof auth,
       operation: TelegramMiniAppOperation,
+      options?: { botToken?: string },
     ) => Promise<TelegramMiniAppClientSnapshot["undo"] | void>;
   };
   sqlite.prepare("INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('42', ?, ?)").run(now, now);
@@ -95,7 +96,7 @@ async function persistedMutations() {
   const row = () => sqlite.prepare("SELECT * FROM telegram_subscriptions WHERE chat_id = '42' AND stablecoin_id = 'usdc-circle'").get();
   apiMocks.postMiniAppSnapshot.mockImplementation(async (_path: string, { operation }: { operation: TelegramMiniAppOperation }) => {
     try {
-      const undo = await applyTelegramMiniAppMutation(db, auth, operation);
+      const undo = await applyTelegramMiniAppMutation(db, auth, operation, { botToken: "test-bot-token" });
       return { ...makeSnapshot({ ...baseState, subscriptions: row() ? baseState.subscriptions : [] }), ...(undo ? { undo } : {}) };
     } catch (error) {
       if (error instanceof Error && "code" in error) {
