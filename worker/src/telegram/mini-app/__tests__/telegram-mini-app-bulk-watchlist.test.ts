@@ -11,6 +11,7 @@ import {
 import { loadTelegramMiniAppState } from "../telegram-mini-app-state";
 
 const NOW = 1_800_000_000;
+const UNDO_OPTS = { botToken: "test-bot-token" };
 const databases: Array<ReturnType<typeof createLatestSchemaSqlite>["sqlite"]> = [];
 
 const AUTH: TelegramMiniAppAuthContext = {
@@ -92,12 +93,12 @@ describe("Telegram Mini App bulk watchlist lifecycle", () => {
     const bulkTargets = { addStablecoinIds: [], removeStablecoinIds: ["usdc-circle"] };
     let undo;
     if (mode === "remove") {
-      await expect(applyTelegramMiniAppMutation(db, AUTH, { kind: "remove-coin", stablecoinId: "usdc-circle" }))
+      await expect(applyTelegramMiniAppMutation(db, AUTH, { kind: "remove-coin", stablecoinId: "usdc-circle" }, UNDO_OPTS))
         .rejects.toMatchObject({ code: "stale-bulk-preview" });
     } else {
       const stale = await executeTelegramMiniAppBulkWatchlistPreview(db, AUTH, {
         kind: "preview-bulk-watchlist", ...bulkTargets,
-      });
+      }, UNDO_OPTS);
       expect(stale.result).toMatchObject({
         expectedPreferenceGeneration: 7,
         undo: { restoreDirectRows: [{ stablecoinId: "usdc-circle", dewsMinBand: "DANGER", snoozeUntilTs: NOW + 3_600 }] },
@@ -106,7 +107,7 @@ describe("Telegram Mini App bulk watchlist lifecycle", () => {
         kind: "confirm-bulk-watchlist", ...bulkTargets,
         expectedPreferenceGeneration: stale.result.expectedPreferenceGeneration,
         previewFingerprint: stale.result.previewFingerprint,
-      })).rejects.toMatchObject({ code: "stale-bulk-preview" });
+      }, UNDO_OPTS)).rejects.toMatchObject({ code: "stale-bulk-preview" });
     }
     const latest = { dews_min_band: "WARNING", alert_snooze_until_ts: NOW + 7_200 };
     const readCoin = () => sqlite.prepare(`
@@ -117,16 +118,16 @@ describe("Telegram Mini App bulk watchlist lifecycle", () => {
     expect(sqlite.prepare("SELECT preference_generation FROM telegram_subscribers WHERE chat_id = ?").get(AUTH.userId))
       .toEqual({ preference_generation: 8 });
     if (mode === "remove") {
-      undo = await applyTelegramMiniAppMutation(db, AUTH, { kind: "remove-coin", stablecoinId: "usdc-circle" });
+      undo = await applyTelegramMiniAppMutation(db, AUTH, { kind: "remove-coin", stablecoinId: "usdc-circle" }, UNDO_OPTS);
     } else {
       const fresh = await executeTelegramMiniAppBulkWatchlistPreview(db, AUTH, {
         kind: "preview-bulk-watchlist", ...bulkTargets,
-      });
+      }, UNDO_OPTS);
       await applyTelegramMiniAppMutation(db, AUTH, {
         kind: "confirm-bulk-watchlist", ...bulkTargets,
         expectedPreferenceGeneration: fresh.result.expectedPreferenceGeneration,
         previewFingerprint: fresh.result.previewFingerprint,
-      });
+      }, UNDO_OPTS);
       undo = fresh.result.undo;
     }
     if (!undo) throw new Error("Expected fresh removal undo");
@@ -135,7 +136,7 @@ describe("Telegram Mini App bulk watchlist lifecycle", () => {
       restoreDirectRows: [{ stablecoinId: "usdc-circle", dewsMinBand: "WARNING", snoozeUntilTs: NOW + 7_200 }],
     });
     expect(readCoin()).toBeUndefined();
-    await applyTelegramMiniAppMutation(db, AUTH, { kind: "undo-bulk-watchlist", ...undo });
+    await applyTelegramMiniAppMutation(db, AUTH, { kind: "undo-bulk-watchlist", ...undo }, UNDO_OPTS);
     expect(readCoin()).toEqual(latest);
   });
 
@@ -207,9 +208,9 @@ describe("Telegram Mini App bulk watchlist lifecycle", () => {
       ) VALUES (?, 'usdc-circle', 0, 0, 0, ?)
     `).run(AUTH.userId, NOW + 3_600);
     const before = sqlite.prepare("SELECT * FROM telegram_subscriptions WHERE chat_id = ?").all(AUTH.userId);
-    const undo = await applyTelegramMiniAppMutation(db, AUTH, { kind: "remove-coin", stablecoinId: "usdc-circle" });
+    const undo = await applyTelegramMiniAppMutation(db, AUTH, { kind: "remove-coin", stablecoinId: "usdc-circle" }, UNDO_OPTS);
     if (!undo) throw new Error("Expected snooze-only undo");
-    await applyTelegramMiniAppMutation(db, AUTH, { kind: "undo-bulk-watchlist", ...undo });
+    await applyTelegramMiniAppMutation(db, AUTH, { kind: "undo-bulk-watchlist", ...undo }, UNDO_OPTS);
     expect(sqlite.prepare("SELECT * FROM telegram_subscriptions WHERE chat_id = ?").all(AUTH.userId)).toEqual(before);
   });
 
@@ -243,7 +244,7 @@ describe("Telegram Mini App bulk watchlist lifecycle", () => {
       kind: "preview-bulk-watchlist",
       addStablecoinIds: ["usdt-tether"],
       removeStablecoinIds: ["usdc-circle", "dai-makerdao", "eurc-circle"],
-    });
+    }, UNDO_OPTS);
     expect(portableStateReads).toBe(1);
     expect(preview.result).toMatchObject({
       expectedPreferenceGeneration: 7,
@@ -263,7 +264,7 @@ describe("Telegram Mini App bulk watchlist lifecycle", () => {
       removeStablecoinIds: ["usdc-circle", "dai-makerdao", "eurc-circle"],
       expectedPreferenceGeneration: preview.result.expectedPreferenceGeneration,
       previewFingerprint: preview.result.previewFingerprint,
-    })).resolves.toBeUndefined();
+    }, UNDO_OPTS)).resolves.toBeUndefined();
     expect(sqlite.prepare("SELECT stablecoin_id FROM telegram_subscriptions WHERE chat_id = ? ORDER BY stablecoin_id").all(AUTH.userId))
       .toEqual([{ stablecoin_id: "usdt-tether" }]);
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_preset_subscriptions WHERE chat_id = ?").get(AUTH.userId))
@@ -276,14 +277,14 @@ describe("Telegram Mini App bulk watchlist lifecycle", () => {
       removeStablecoinIds: preview.result.undo.removeStablecoinIds,
       expectedPreferenceGeneration: preview.result.undo.expectedPreferenceGeneration,
       expectedFingerprint: "preview-v1-1-deadbeef",
-    })).rejects.toMatchObject({ code: "stale-bulk-preview" } satisfies Partial<TelegramMiniAppMutationError>);
+    }, UNDO_OPTS)).rejects.toMatchObject({ code: "stale-bulk-preview" } satisfies Partial<TelegramMiniAppMutationError>);
     await expect(applyTelegramMiniAppMutation(db, AUTH, {
       kind: "undo-bulk-watchlist",
       restoreDirectRows: legacyRestoreRows,
       removeStablecoinIds: preview.result.undo.removeStablecoinIds,
       expectedPreferenceGeneration: preview.result.undo.expectedPreferenceGeneration,
       expectedFingerprint: preview.result.undo.expectedFingerprint,
-    })).resolves.toBeUndefined();
+    }, UNDO_OPTS)).resolves.toBeUndefined();
     expect(sqlite.prepare("SELECT stablecoin_id, alert_snooze_until_ts FROM telegram_subscriptions WHERE chat_id = ? ORDER BY stablecoin_id").all(AUTH.userId))
       .toEqual([
         { stablecoin_id: "dai-makerdao", alert_snooze_until_ts: null },
@@ -300,7 +301,7 @@ describe("Telegram Mini App bulk watchlist lifecycle", () => {
     ).get(AUTH.userId);
     const preview = await executeTelegramMiniAppBulkWatchlistPreview(db, AUTH, {
       kind: "preview-bulk-watchlist", addStablecoinIds: ["usdt-tether"], removeStablecoinIds: [],
-    });
+    }, UNDO_OPTS);
     expect(preview.result).toMatchObject({ adds: ["usdt-tether"], unchanged: [] });
     expect(preview.result.undo.removeStablecoinIds).toEqual([]);
     expect(preview.result.undo.restoreDirectRows).toEqual([
@@ -312,9 +313,9 @@ describe("Telegram Mini App bulk watchlist lifecycle", () => {
       removeStablecoinIds: [],
       expectedPreferenceGeneration: preview.result.expectedPreferenceGeneration,
       previewFingerprint: preview.result.previewFingerprint,
-    });
+    }, UNDO_OPTS);
     expect(read()).toEqual({ alert_dews: 1, alert_depeg: 1, alert_launch: 0, alert_launch_override: 0 });
-    await applyTelegramMiniAppMutation(db, AUTH, { kind: "undo-bulk-watchlist", ...preview.result.undo });
+    await applyTelegramMiniAppMutation(db, AUTH, { kind: "undo-bulk-watchlist", ...preview.result.undo }, UNDO_OPTS);
     expect(read()).toEqual({ alert_dews: 0, alert_depeg: 0, alert_launch: 1, alert_launch_override: 1 });
   });
 
@@ -379,7 +380,7 @@ describe("Telegram Mini App bulk watchlist lifecycle", () => {
       removeStablecoinIds: ["usdc-circle", "eurc-circle"],
       expectedPreferenceGeneration: initial.directStateProof!.preferenceGeneration,
       expectedDirectFingerprint: initial.directStateProof!.directFingerprint,
-    });
+    }, UNDO_OPTS);
     expect(applied.bulkResult).toMatchObject({
       adds: ["usdt-tether"],
       removes: ["usdc-circle"],
@@ -389,7 +390,7 @@ describe("Telegram Mini App bulk watchlist lifecycle", () => {
       ]),
     });
     expect(applied.undo).toMatchObject({ expectedPreferenceGeneration: 8 });
-    await applyTelegramMiniAppMutation(db, AUTH, { kind: "undo-bulk-watchlist", ...applied.undo });
+    await applyTelegramMiniAppMutation(db, AUTH, { kind: "undo-bulk-watchlist", ...applied.undo }, UNDO_OPTS);
     expect(sqlite.prepare("SELECT stablecoin_id, alert_launch, alert_snooze_until_ts FROM telegram_subscriptions WHERE chat_id = ? ORDER BY stablecoin_id").all(AUTH.userId))
       .toEqual([
         { stablecoin_id: "dai-makerdao", alert_launch: 0, alert_snooze_until_ts: null },
@@ -426,10 +427,11 @@ describe("Telegram Mini App bulk watchlist lifecycle", () => {
     expect(applied.undo.expectedFingerprint).toMatch(/^undo-v1-[0-9]+-[0-9a-f]{64}$/);
     expect(readRows().find((r) => r.stablecoin_id === "usdt-tether")).toMatchObject({ alert_dews: 1, alert_depeg: 1, alert_snooze_until_ts: NOW + 7_200 });
 
-    const rejected: Array<[object, { botToken: string; nowSec: number }, string]> = [
+    const rejected: Array<[object, { botToken?: string; nowSec: number }, string]> = [
       [{ ...applied.undo, expectedFingerprint: "preview-v1-12-deadbeef" }, { botToken: "bot-v1", nowSec: NOW }, "stale-bulk-preview"],
       [applied.undo, { botToken: "bot-v1", nowSec: NOW + 61 }, "stale-bulk-preview"],
       [applied.undo, { botToken: "bot-v2", nowSec: NOW }, "stale-bulk-preview"],
+      [applied.undo, { nowSec: NOW }, "stale-bulk-preview"],
       [{ ...applied.undo, restoreDirectRows: applied.undo.restoreDirectRows.map((r) => ({ ...r, snoozeUntilTs: NOW + 9_999 })) }, { botToken: "bot-v1", nowSec: NOW }, "stale-bulk-preview"],
       [{ ...applied.undo, restoreDirectRows: applied.undo.restoreDirectRows.map((r) => ({ ...r, snoozeUntilTs: 0 })) }, { botToken: "bot-v1", nowSec: NOW }, "invalid-coin-patch"],
     ];

@@ -105,16 +105,12 @@ function alertTypeSet(values: readonly string[]): Set<string> {
 const UNDO_TOKEN_TTL_SEC = 60;
 const UNDO_FINGERPRINT_PATTERN = /^undo-v1-([0-9]+)-([0-9a-f]{64})$/;
 const encoder = new TextEncoder();
-let ephemeralUndoSecret: string | null = null;
 
 function resolveUndoSigningKeys(options: Pick<ApplyTelegramMiniAppMutationOptions, "botToken" | "botTokenPrevious">): string[] {
   const primary = options.botToken?.trim();
   const previous = options.botTokenPrevious?.trim();
-  if (primary) {
-    return previous && previous !== primary ? [primary, previous] : [primary];
-  }
-  ephemeralUndoSecret ??= bytesToHex(crypto.getRandomValues(new Uint8Array(32)));
-  return [ephemeralUndoSecret];
+  if (!primary) return [];
+  return previous && previous !== primary ? [primary, previous] : [primary];
 }
 
 async function hmacSha256Hex(secretKey: string, payload: string): Promise<string> {
@@ -217,7 +213,10 @@ async function signBulkUndoFingerprint(input: {
   const expiresAt = input.nowSec + UNDO_TOKEN_TTL_SEC;
   const payload = buildBulkUndoPayload({ ...input, expiresAt });
   const [signingKey] = resolveUndoSigningKeys(input.options);
-  const mac = await hmacSha256Hex(signingKey!, payload);
+  if (!signingKey) {
+    throw new Error("Telegram Mini App undo token signing requires a configured bot token");
+  }
+  const mac = await hmacSha256Hex(signingKey, payload);
   return `undo-v1-${expiresAt}-${mac}`;
 }
 
@@ -237,8 +236,10 @@ async function verifyBulkUndoFingerprint(input: {
   const expiresAt = Number(match[1]);
   const providedMac = match[2]!;
   if (!Number.isSafeInteger(expiresAt) || expiresAt < input.nowSec) return false;
+  const candidateKeys = resolveUndoSigningKeys(input.options);
+  if (candidateKeys.length === 0) return false;
   const payload = buildBulkUndoPayload({ ...input, expiresAt });
-  for (const candidateKey of resolveUndoSigningKeys(input.options)) {
+  for (const candidateKey of candidateKeys) {
     const expectedMac = await hmacSha256Hex(candidateKey, payload);
     if (await timingSafeCompare(expectedMac, providedMac)) {
       return true;
