@@ -475,13 +475,16 @@
         "shared/types/stablecoin-meta-compliance-schemas.ts",
         "docs/compliance-page.md",
         "docs/genius-tracker.md",
-        "docs/mica-tracker.md"
+        "docs/mica-tracker.md",
+        "docs/process/pre-cliff-baseline.md",
+        "docs/process/pre-cliff-baseline-log.md"
       ],
       "docs": [
         { "path": "docs/compliance-page.md", "anchor": "data-projection" },
         { "path": "docs/mica-tracker.md", "anchor": "status-criteria" },
         { "path": "docs/genius-tracker.md", "anchor": "sourcing--source-kinds" }
       ],
+      "background": ["docs/process/pre-cliff-baseline.md", "docs/process/pre-cliff-baseline-log.md"],
       "rules": ["Compliance is sourced editorial evidence, not pipeline inference; official authorization claims require issuer-specific regulator evidence."]
     },
     {
@@ -1616,6 +1619,14 @@
           ]
         },
         {
+          "sources": ["scripts/maintenance/freeze-validation-archive.ts", "scripts/maintenance/__tests__/freeze-validation-archive.test.ts"],
+          "local": [
+            { "path": "docs/process/pre-cliff-baseline.md" },
+            { "path": "docs/process/pre-cliff-baseline-log.md" },
+            { "path": "docs/scripts.md", "anchor": "pre-cliff-validation-archive" }
+          ]
+        },
+        {
           "sources": ["public/critical-css-loader.js", "scripts/maintenance/inline-homepage-critical-css.ts", "scripts/__tests__/inline-homepage-critical-css.test.ts"],
           "local": [{ "path": "docs/scripts.md", "anchor": "build-and-generated-artifacts" }]
         },
@@ -1663,6 +1674,10 @@
         {
           "sources": [".github/workflows/production-canaries.yml"],
           "tests": ["scripts/__tests__/check-live-api-cache-policy.test.ts", "scripts/__tests__/ci-workflow-scope.test.ts"]
+        },
+        {
+          "sources": ["scripts/maintenance/freeze-validation-archive.ts"],
+          "tests": ["scripts/maintenance/__tests__/freeze-validation-archive.test.ts"]
         }
       ]
     },

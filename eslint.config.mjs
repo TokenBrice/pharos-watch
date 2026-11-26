@@ -94,6 +94,7 @@ const frontendToWorkerRestrictedImportPatterns = [
 // Reviewed waivers documented in docs/process/boundary-waivers.md.
 const FRONTEND_TO_WORKER_WAIVED_FILES = [
   "scripts/ci/check-frozen-invariants.ts",
+  "scripts/maintenance/freeze-validation-archive.ts", // Uses single-authority V9 capture archive contract for offline R2 roll verification.
   "scripts/maintenance/replay-reference-closures.ts", // Runs the Worker lifecycle against captured evidence.
   "scripts/maintenance/weekly-curation-digest.mjs", // Reads Worker-resident dated review registries for the offline expiry lookahead.
 ];

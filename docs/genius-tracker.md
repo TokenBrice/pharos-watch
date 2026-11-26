@@ -162,6 +162,8 @@ After route/crawlability edits: `npm run typecheck`, `npm run build`, `npm run s
 
 Ongoing refresh runs through the `compliance-research` skill (`genius` regime for a single coin or audit; `both` for a broad MiCA + GENIUS pass). GENIUS status is a tracked attribute, **not** a methodology-scored value — assignment criteria live in this doc, not in `/methodology` versioning.
 
+Pre-registered quasi-experimental design and immutable December 2026 baseline archive for the 2027-01-18 statutory effective date live in [Pre-Cliff MiCA / GENIUS Baseline](./process/pre-cliff-baseline.md).
+
 ---
 
 ## Legal framing & non-goals
