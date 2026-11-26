@@ -366,6 +366,7 @@ export async function buildTelegramDispatchEvents(
     new Set(snapshotState.previousReserveDriftIds),
     new Set(snapshotState.currentReserveDriftIds),
     WORKER_TRACKED_META_BY_ID,
+    snapshotState.currentReserveDriftScores,
   );
 
   // Roll-up material, committed by the dispatcher with the baselines.

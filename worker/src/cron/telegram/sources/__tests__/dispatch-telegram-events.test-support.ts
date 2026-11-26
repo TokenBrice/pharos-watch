@@ -53,7 +53,7 @@ export function eventSnapshots(overrides: Partial<DispatchSnapshotState> = {}): 
       state: "missing", ageSeconds: null, generation: null, envelope: null,
     },
     currentSnapshots: { dews: {}, dewsAlertable: {}, depeg: {}, dewsCandidates: {}, dewsUnavailable: false, safety: null, reserveDispatched: null },
-    previousReserveDriftIds: [], currentReserveDriftIds: [], reserveSourceUnavailable: true,
+    previousReserveDriftIds: [], currentReserveDriftIds: [], currentReserveDriftScores: {}, reserveSourceUnavailable: true,
     ...overrides,
   };
 }

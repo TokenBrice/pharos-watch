@@ -86,6 +86,8 @@ describe("daily roll-up", () => {
         { job_id: "rollup:2026-10-21:3", chat_id: "3", families: "safety" },
       ]);
       expect(sent[0]!.body.split("\n")[0]).toBe("<b>Daily changes</b>: 1 change on your coins, led by USDY Safety grade downgraded A → B-");
+      expect(sent[0]!.body).toContain('<a href="https://pharos.watch/stablecoin/usdy"><b>USDY</b></a> Safety grade downgraded A → B-');
+      expect(sent[0]!.body).toContain("<i>Daily summary at 09:00 America/New_York for non-live and cap-held moves</i>");
       expect(sent[0]!.body).not.toContain("USDX");
       expect(sent[0]!.body).not.toContain("USDW");
 
@@ -96,7 +98,7 @@ describe("daily roll-up", () => {
     }
   });
 
-  it("reports cap overflow in the next roll-up and covers only the time since the previous one", async () => {
+  it("reports cap overflow with coin/family details in the next roll-up and attaches private schedule button", async () => {
     const { sqlite, db, subscriber, follow, deliveries } = fixture();
     try {
       subscriber.run("1", null, 0, null, null, 0, 0);
@@ -104,12 +106,19 @@ describe("daily roll-up", () => {
       sqlite.prepare("INSERT INTO telegram_rollup_state VALUES ('1', '2026-10-20', ?)").run(DAY1_0905Z - 86_400);
       await recordTelegramChangeLog(db, [
         safety("usdx", "A", "B", DAY1_0905Z - 90_000), // before the previous roll-up
-        { kind: "overflow", chatId: "1", sourceKey: "overflow:job-1:1", observedAt: DAY1_0905Z - 60, payload: { families: ["dews"], coinIds: ["usdx"] } },
+        { kind: "overflow", chatId: "1", sourceKey: "overflow:job-1:1", observedAt: DAY1_0905Z - 60, payload: { families: ["dews"], coinIds: ["usdt-tether"] } },
       ]);
       expect(await runDailyRollup(db, DAY1_0905Z)).toMatchObject({ sentChats: 1 });
       const [rollup] = deliveries();
       expect(rollup!.body.split("\n")[0]).toBe("<b>Daily changes</b>: 1 alert held back");
+      expect(rollup!.body).toContain("+ 1 alert held back by the 6/day live limit (USDT · DEWS)");
       expect(rollup!.body).not.toContain("A → B");
+      const options = JSON.parse(
+        String((sqlite.prepare("SELECT options_json FROM telegram_deliveries WHERE chat_id = '1'").get() as { options_json: string }).options_json),
+      ) as { replyMarkup: { inline_keyboard: Array<Array<{ text: string; web_app?: { url: string } }>> } };
+      expect(options.replyMarkup.inline_keyboard).toHaveLength(1);
+      expect(options.replyMarkup.inline_keyboard[0]!.map((b) => b.text)).toEqual(["Manage Alerts", "Time zone & quiet hours"]);
+      expect(options.replyMarkup.inline_keyboard[0]![1]!.web_app?.url).toContain("startapp=settings");
     } finally {
       sqlite.close();
     }
@@ -171,14 +180,14 @@ describe("roll-up after live alerts", () => {
       await runDailyRollup(db, DAY1_0905Z);
       const body = (chatId: string) => deliveries().find((row) => row.chat_id === chatId && row.job_id.startsWith("rollup:"))?.body;
       expect(body("1")).not.toContain("USDX");
-      expect(body("1")).toContain("<b>USDZ</b> Safety grade downgraded A → B");
-      expect(body("2")).toContain("<b>USDX</b> Safety grade downgraded B → D");
+      expect(body("1")).toContain('<a href="https://pharos.watch/stablecoin/usdz"><b>USDZ</b></a> Safety grade downgraded A → B');
+      expect(body("2")).toContain('<a href="https://pharos.watch/stablecoin/usdx"><b>USDX</b></a> Safety grade downgraded B → D');
 
       // It moves again after the live alert: the next roll-up reports that move only.
       await recordTelegramChangeLog(db, [safety("usdx", "D", "C", DAY1_0905Z + 3_600)]);
       await runDailyRollup(db, DAY1_0905Z + 86_400);
       const next = deliveries().find((row) => row.job_id === "rollup:2026-10-22:1")?.body;
-      expect(next).toContain("<b>USDX</b> Safety grade raised D → C");
+      expect(next).toContain('<a href="https://pharos.watch/stablecoin/usdx"><b>USDX</b></a> Safety grade raised D → C');
     } finally {
       sqlite.close();
     }
@@ -226,7 +235,7 @@ describe("roll-up after a mixed live alert", () => {
       });
       await runDailyRollup(db, DAY1_0905Z);
       const body = deliveries().find((row) => row.job_id.startsWith("rollup:"))?.body;
-      expect(body).toContain("<b>USDC</b> Safety grade downgraded B → D");
+      expect(body).toContain('<a href="https://pharos.watch/stablecoin/usdc"><b>USDC</b></a> Safety grade downgraded B → D');
       expect(body).not.toContain("stress");
     } finally {
       sqlite.close();
@@ -254,7 +263,7 @@ describe("roll-up after an ambiguous live alert", () => {
         deliveries: [{ chatId: "1", body: "two alerts", families: ["dews", "reserve"], coinIds: ["usdt", "usdc"] }],
       });
       await runDailyRollup(db, DAY1_0905Z);
-      expect(deliveries().find((row) => row.job_id.startsWith("rollup:"))?.body).toContain("<b>USDC</b> stress eased to WATCH");
+      expect(deliveries().find((row) => row.job_id.startsWith("rollup:"))?.body).toContain('\u{1F7E1} <a href="https://pharos.watch/stablecoin/usdc"><b>USDC</b></a> stress eased to WATCH');
     } finally {
       sqlite.close();
     }
@@ -276,6 +285,7 @@ describe("hourly freeze batch", () => {
       expect(job).toMatchObject({ job_id: "freeze_batch:0-3", state: "planning" });
       const { deliveries: rows } = await fanOutFreezeBatch(db, job!.payload_json);
       expect(rows.map((row) => [row.chatId, row.families])).toEqual([["1", ["freeze"]]]);
+      expect(rows[0]!.body).toContain("<b>Hourly freeze summary</b>: 2 events ($5,000 known, 1 unpriced)");
       expect(rows[0]!.body).toContain("issuer froze an address on Ethereum holding $5,000");
       expect(rows[0]!.body).not.toContain("USDT");
 
@@ -289,7 +299,7 @@ describe("hourly freeze batch", () => {
       // The global-only freeze opt-in sees them in its roll-up instead.
       await runDailyRollup(db, at("2026-10-22T09:00:00Z"));
       const rollup = deliveries().find((row) => row.chat_id === "2");
-      expect(rollup?.body).toContain("<b>USDC</b> 3 freeze events, $5,007 known, 1 without a USD amount");
+      expect(rollup?.body).toContain('<a href="https://pharos.watch/stablecoin/usdc"><b>USDC</b></a> 3 freezes · $5,007 known, 1 without a USD amount');
       expect(deliveries().some((row) => row.chat_id === "1" && row.job_id.startsWith("rollup:"))).toBe(false);
     } finally {
       sqlite.close();
@@ -341,7 +351,7 @@ describe("hourly freeze batch", () => {
       expect(rows[0]!.body).toContain("holding $7");
       expect(rows[0]!.body).not.toContain("$5,000");
       await runDailyRollup(db, DAY1_0905Z + 60);
-      expect(deliveries().find((row) => row.chat_id === "2")?.body).toContain("<b>USDC</b> 1 freeze event, $7 known");
+      expect(deliveries().find((row) => row.chat_id === "2")?.body).toContain('<a href="https://pharos.watch/stablecoin/usdc"><b>USDC</b></a> 1 freeze · $7 known');
     } finally {
       sqlite.close();
     }
@@ -518,13 +528,19 @@ describe("freeze claim manifests", () => {
          VALUES ('gone', 'freeze.blocked', 'warning', 1, 'x', 'x', '{}', 'blacklist_events', 'b-gone', 'opened', 1, 1)`,
       ).run();
       await recordTelegramChangeLog(db, [
-        freeze("usdc", "gone", 1, DAY1_0905Z), freeze("usdc", "a", null, DAY1_0905Z), freeze("usdc", "b", 0, DAY1_0905Z),
+        freeze("usdc", "gone", 1, DAY1_0905Z),
+        freeze("usdc", "a", null, DAY1_0905Z),
+        freeze("usdc", "b", 0, DAY1_0905Z),
+        freeze("usdc", "c", 100, DAY1_0905Z),
+        freeze("usdc", "d", 200, DAY1_0905Z),
+        freeze("usdc", "e", 300, DAY1_0905Z),
       ]);
       const page = await buildFreezeBatchJobPage({
-        db, job: {} as TelegramJobRow, payload: { fromChangeId: 0, toChangeId: 3 }, cursor: null, nowSec: 0, limit: 10,
+        db, job: {} as TelegramJobRow, payload: { fromChangeId: 0, toChangeId: 6 }, cursor: null, nowSec: 0, limit: 10,
       });
-      // A retraction excluded before planning is not part of the manifest.
-      expect(page.deliveries.map((row) => row.freezeSourceKeys)).toEqual([["freeze:a", "freeze:b"]]);
+      // Visual burst collapsing (>4 events) still preserves every underlying event's source key for send-time revalidation.
+      expect(page.deliveries[0]!.body).toContain("and 2 smaller on Ethereum");
+      expect(page.deliveries.map((row) => row.freezeSourceKeys)).toEqual([["freeze:a", "freeze:b", "freeze:c", "freeze:d", "freeze:e"]]);
     } finally {
       sqlite.close();
     }
@@ -549,7 +565,7 @@ describe("freeze claim manifests", () => {
         ["2", "freeze,safety", ["freeze:n", "freeze:z"]],
         ["3", "safety", null],
       ]);
-      expect(deliveries().find((row) => row.chat_id === "2")?.body).toContain("2 freeze events");
+      expect(deliveries().find((row) => row.chat_id === "2")?.body).toContain("2 freezes · $0 known, 1 without a USD amount");
     } finally {
       sqlite.close();
     }

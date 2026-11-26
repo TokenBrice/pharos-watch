@@ -23,10 +23,11 @@ export const SNAPSHOT_KEYS = {
   depeg: "alert:depeg-snapshot",
   depegRecoveries: "alert:depeg-pending-recoveries",
   safety: "alert:safety-snapshot",
-  // Reserve-drift snapshot. Written by the four-hourly reserve slot
-  // (four-hourly-reserves.ts) as the LAUNCH-STYLE id-set of currently-drifting
-  // coins; the dispatch cron only diffs prior-vs-current from this cache and
-  // never recomputes drift (keeps reserve-adapter I/O out of the dispatch pool).
+  // Reserve-drift snapshot. Written by the four-hourly reserve post-sync
+  // watchdog (reserve-post-sync-watchdog.ts) as a versioned envelope carrying
+  // the drift id-set, observation epochs, and optional per-coin drift scores;
+  // the dispatch cron only diffs prior-vs-current from this cache and never
+  // recomputes drift (keeps reserve-adapter I/O out of the dispatch pool).
   reserve: "alert:reserve-snapshot",
   // Dispatch-owned baseline for the reserve-drift family: the drift id-set the
   // dispatcher last acted on. Diffing the producer's `reserve` set against this
@@ -114,6 +115,48 @@ export function projectDepegPeakPrice(row: ActiveDepegRow): Pick<DepegAlertPaylo
     priceCurrency: native ? peg?.currency : "USD",
     ...projectDepegPeakBasis(row),
   };
+}
+
+export interface ReserveDriftScores {
+  liveScore: number;
+  curatedScore: number;
+}
+
+export function buildReserveDriftScoreMap(
+  entries: readonly { id: string; liveScore: number; curatedScore: number }[],
+): Record<string, ReserveDriftScores> {
+  const scores: Record<string, ReserveDriftScores> = {};
+  for (const entry of entries) {
+    if (!Number.isFinite(entry.liveScore) || !Number.isFinite(entry.curatedScore)) continue;
+    scores[entry.id] = { liveScore: entry.liveScore, curatedScore: entry.curatedScore };
+  }
+  return scores;
+}
+
+/**
+ * Read optional per-coin `{ liveScore, curatedScore }` attached to the
+ * `alert:reserve-snapshot` envelope. Legacy envelopes lacking `driftScores`
+ * (or carrying invalid entries) cleanly return `{}` so observation continuity
+ * and alert delivery stay 100% backwards-compatible.
+ */
+export function parseReserveDriftScores(
+  cached: { value: string; updatedAt: number } | null,
+): Record<string, ReserveDriftScores> {
+  if (!cached) return {};
+  const parsed = parseJsonObject<{ driftScores?: unknown }>(cached.value);
+  if (!parsed || !parsed.driftScores || typeof parsed.driftScores !== "object" || Array.isArray(parsed.driftScores)) {
+    return {};
+  }
+  const scores: Record<string, ReserveDriftScores> = {};
+  for (const [id, raw] of Object.entries(parsed.driftScores as Record<string, unknown>)) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
+    const entry = raw as { liveScore?: unknown; curatedScore?: unknown };
+    if (typeof entry.liveScore === "number" && Number.isFinite(entry.liveScore)
+      && typeof entry.curatedScore === "number" && Number.isFinite(entry.curatedScore)) {
+      scores[id] = { liveScore: entry.liveScore, curatedScore: entry.curatedScore };
+    }
+  }
+  return scores;
 }
 
 export function parseSnapshotMap<T extends Record<string, unknown>>(

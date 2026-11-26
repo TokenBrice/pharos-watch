@@ -213,14 +213,33 @@ describe("buildDispatchSnapshotState", () => {
     expect(missedGap.previousReserveDriftIds).toContain("coin");
   });
 
-  it("alerts true observed clear to new drift and accepts a complete no-drift result", () => {
+  it("alerts true observed clear to new drift, accepts enriched or legacy reserve scores, and accepts a complete no-drift result", () => {
     const observedSince = { coin: nowSec - 120 };
-    const state = buildDispatchSnapshotState(sourceData({
+    const legacyState = buildDispatchSnapshotState(sourceData({
       reserveCache: cache({ generation: ALERT_RESERVE_SOURCE_GENERATION, publishedAt: nowSec, continuous: true, driftIds: ["coin"], observedSince, unavailableIds: [] }),
       reserveDispatchedCache: cache([]), reserveObservedCache: cache(observedSince),
     }), nowSec);
-    expect(state.previousReserveDriftIds).toEqual([]);
-    expect(state.currentReserveDriftIds).toEqual(["coin"]);
+    expect(legacyState.previousReserveDriftIds).toEqual([]);
+    expect(legacyState.currentReserveDriftIds).toEqual(["coin"]);
+    expect(legacyState.currentReserveDriftScores).toEqual({});
+
+    const enrichedState = buildDispatchSnapshotState(sourceData({
+      reserveCache: cache({
+        generation: ALERT_RESERVE_SOURCE_GENERATION, publishedAt: nowSec, continuous: true,
+        driftIds: ["coin"], observedSince, unavailableIds: [],
+        driftScores: { coin: { liveScore: 62, curatedScore: 84 } },
+      }),
+      reserveDispatchedCache: cache([]), reserveObservedCache: cache(observedSince),
+    }), nowSec);
+    expect(enrichedState.reserveSourceAssessment.state).toBe("ok");
+    expect(enrichedState.currentReserveDriftScores).toEqual({ coin: { liveScore: 62, curatedScore: 84 } });
+    expect(buildReserveTransitions(
+      new Set(enrichedState.previousReserveDriftIds),
+      new Set(enrichedState.currentReserveDriftIds),
+      new Map([["coin", { symbol: "COIN", name: "Coin" }]]),
+      enrichedState.currentReserveDriftScores,
+    )).toEqual([{ stablecoinId: "coin", symbol: "COIN", name: "Coin", liveScore: 62, curatedScore: 84 }]);
+
     const clear = buildDispatchSnapshotState(sourceData({ reserveCache: reserveSource([]) }), nowSec);
     expect(clear.reserveSourceAssessment.state).toBe("ok");
     expect(clear.currentReserveDriftIds).toEqual([]);

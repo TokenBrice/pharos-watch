@@ -2,6 +2,7 @@ import {
   getReportCardGradeRank,
   UNKNOWN_REPORT_CARD_GRADE_RANK,
 } from "@shared/lib/report-card-core";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { SAFETY_PILLAR_GLOSS, type SafetyChange } from "../../../telegram/common/alerts-formatting";
 import type {
   AlertSafetySourceRow,
@@ -99,12 +100,24 @@ function largestPillarMovement(
   )[0] ?? null;
 }
 
+function resolveParentSymbol(stablecoinId?: string, explicitParentSymbol?: string | null): string | null {
+  if (explicitParentSymbol && explicitParentSymbol.trim().length > 0) return explicitParentSymbol.trim();
+  if (!stablecoinId) return null;
+  const parentId = WORKER_TRACKED_META_BY_ID.get(stablecoinId)?.variantOf;
+  if (!parentId) return null;
+  return WORKER_TRACKED_META_BY_ID.get(parentId)?.symbol ?? null;
+}
+
 export function buildV9SafetyReason(
   current: Pick<AlertSafetySourceRow, "grade" | "score" | "v9Explain">,
   previous?: Pick<
     AlertSafetySourceRow,
     "grade" | "score" | "v9Explain"
   >,
+  options?: {
+    stablecoinId?: string;
+    parentSymbol?: string | null;
+  },
 ): string {
   const overallDirection = compareGradeOrScore(
     previous?.grade ?? current.grade,
@@ -126,9 +139,14 @@ export function buildV9SafetyReason(
         previous?.v9Explain.bindingCap?.limit
     )
   ) {
-    return current.v9Explain.bindingCap.kind === "parent"
-      ? "Reason: Capped at the Safety Score of the coin it is built on."
-      : `Reason: ${ensureSentence(current.v9Explain.bindingCap.reason)}`;
+    if (current.v9Explain.bindingCap.kind === "parent") {
+      const limit = Math.round(current.v9Explain.bindingCap.limit);
+      const parentSymbol = resolveParentSymbol(options?.stablecoinId, options?.parentSymbol);
+      return parentSymbol
+        ? `Reason: Capped at ${parentSymbol}'s Safety Score (${limit}).`
+        : `Reason: Capped at the Safety Score of the coin it is built on (${limit}).`;
+    }
+    return `Reason: ${ensureSentence(current.v9Explain.bindingCap.reason)}`;
   }
 
   const pillarMovement = largestPillarMovement(
@@ -180,6 +198,7 @@ export function addSafetyReasonLines(
       contextLine: buildV9SafetyReason(
         current as AlertSafetySourceRow,
         previous?.v9Explain ? previous as AlertSafetySourceRow : undefined,
+        { stablecoinId: change.stablecoinId },
       ),
     };
   });

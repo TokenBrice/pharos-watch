@@ -99,7 +99,7 @@ describe("canonical V9 Telegram safety reasons", () => {
       { coin: current },
       { coin: previous },
     )[0]?.contextLine).toBe(
-      "Reason: Exit score fell from 70 to 41. Exit measures how easily holders can redeem or sell near $1.",
+      "Reason: Exit score fell from 70 to 41. Exit measures how easily holders can redeem or sell near peg.",
     );
   });
 
@@ -116,22 +116,27 @@ describe("canonical V9 Telegram safety reasons", () => {
       },
     });
     expect(buildV9SafetyReason(current as Required<SafetySnapshot[string]>, previous as Required<SafetySnapshot[string]>)).toBe(
-      "Reason: Exit score rose from 35 to 48. Exit measures how easily holders can redeem or sell near $1.",
+      "Reason: Exit score rose from 35 to 48. Exit measures how easily holders can redeem or sell near peg.",
     );
   });
 
-  it("names a newly binding parent cap in plain language on a downgrade", () => {
+  it("names a newly binding parent cap with parent symbol and limit, or falls back cleanly", () => {
     const current = row({
       grade: "D",
-      score: 30,
+      score: 55,
       v9Explain: {
-        bindingCap: { kind: "parent", limit: 30, reason: "A child cannot rate above its required parent." },
+        bindingCap: { kind: "parent", limit: 55, reason: "A child cannot rate above its required parent." },
         reasons: [],
         weakestPillar: { pillar: "exit", score: 70 },
         pillars,
       },
     });
+    expect(buildV9SafetyReason(
+      current as Required<SafetySnapshot[string]>,
+      row() as Required<SafetySnapshot[string]>,
+      { stablecoinId: "susde-ethena" },
+    )).toBe("Reason: Capped at USDe's Safety Score (55).");
     expect(buildV9SafetyReason(current as Required<SafetySnapshot[string]>, row() as Required<SafetySnapshot[string]>))
-      .toBe("Reason: Capped at the Safety Score of the coin it is built on.");
+      .toBe("Reason: Capped at the Safety Score of the coin it is built on (55).");
   });
 });

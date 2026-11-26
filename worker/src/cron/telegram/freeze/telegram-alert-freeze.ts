@@ -79,6 +79,8 @@ function parseFreezeRow(row: FreezeTapeRow): FreezeRowParseResult {
     : row.type === "freeze.unblocked"
       ? "unblacklist"
       : "destroy";
+  const rawTs = Number(row.ts);
+  const eventTsSec = Number.isFinite(rawTs) && rawTs >= 1000 ? Math.floor(rawTs / 1000) : null;
   return {
     alert: {
       stablecoinId,
@@ -90,6 +92,7 @@ function parseFreezeRow(row: FreezeTapeRow): FreezeRowParseResult {
         : null,
       tapeEventId: row.event_id,
       sourceEventId: payload.sourceEventId,
+      ...(eventTsSec != null ? { eventTsSec } : {}),
     },
   };
 }

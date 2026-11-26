@@ -383,8 +383,12 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
         driftCoins: [{ id: COIN, liveScore: 40, curatedScore: 60, delta: 20 }],
       });
       await runReservePostSyncWatchdog(historyDb([]));
-      const recovery = JSON.parse(cache.get(SNAPSHOT_KEYS.reserve)!) as { observedSince: Record<string, number> };
+      const recovery = JSON.parse(cache.get(SNAPSHOT_KEYS.reserve)!) as {
+        observedSince: Record<string, number>;
+        driftScores?: Record<string, { liveScore: number; curatedScore: number }>;
+      };
       expect(recovery.observedSince[COIN]).toBe(t0 + 2 * interval);
+      expect(recovery.driftScores).toEqual({ [COIN]: { liveScore: 40, curatedScore: 60 } });
     } finally {
       nowSpy.mockRestore();
     }

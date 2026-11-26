@@ -70,16 +70,17 @@ export async function buildAlertContextLines(
     // render the unavailable rating as a value.
     if (card?.grade != null) {
       parts.push(
-        `Safety ${card.grade}${card.score != null ? ` ${card.score}` : ""}`,
+        `Safety ${card.grade}${card.score != null ? ` (${card.score})` : ""}`,
       );
     }
     if (liq && assessTelegramContextClock(liq.updatedAt, nowSec, TELEGRAM_CONTEXT_BUDGET_SEC.dexLiquidity).current) {
-      parts.push(`Liquidity ${liq.score ?? "NR"}, DEX TVL ${formatUsdCompact(liq.tvl)}`);
+      const liqScore = liq.score != null ? `${liq.score}/100` : "NR";
+      parts.push(`Liquidity ${liqScore} (DEX ${formatUsdCompact(liq.tvl)})`);
     }
     const supply = supplies.get(id);
     if (supply?.supplyUsd != null && supply.current) parts.push(`Supply ${formatUsdCompact(supply.supplyUsd)}`);
     const flow = flowResult.get(id);
-    if (flow && flow.netFlowUsd !== 0) parts.push(`Flow24h ${formatSignedUsdCompact(flow.netFlowUsd)}`);
+    if (flow && flow.netFlowUsd !== 0) parts.push(`24h flow ${formatSignedUsdCompact(flow.netFlowUsd)}`);
     if (parts.length > 0) out.set(id, `Context: ${parts.join(" · ")}`);
   }
 

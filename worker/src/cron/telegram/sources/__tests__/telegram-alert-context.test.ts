@@ -82,8 +82,9 @@ describe("buildAlertContextLines", () => {
 
     const context = await buildAlertContextLines(db, ["usdc-circle", "dai-makerdao"]);
 
-    expect(context.get("usdc-circle")).toContain("Flow24h +$12");
-    expect(context.get("dai-makerdao") ?? "").not.toContain("Flow24h");
+    expect(context.get("usdc-circle")).toContain("24h flow +$12");
+    expect(context.get("usdc-circle")).not.toContain("Flow24h");
+    expect(context.get("dai-makerdao") ?? "").not.toContain("24h flow");
     // The untracked coin never triggers a flow cache read (bounded to the tracked subset).
     expect(mocks.getCache).toHaveBeenCalledTimes(1);
   });
@@ -102,7 +103,7 @@ describe("buildAlertContextLines", () => {
         prepare: vi.fn(() => ({ bind: () => ({ all: async () => ({ results: [] }) }) })),
       });
       const context = await buildAlertContextLines(db, ["usdc-circle"]);
-      expect((context.get("usdc-circle") ?? "").includes("Flow24h")).toBe(included);
+      expect((context.get("usdc-circle") ?? "").includes("24h flow")).toBe(included);
     },
   );
 
@@ -139,7 +140,7 @@ describe("buildAlertContextLines", () => {
     const line = context.get("usdc-circle") ?? "";
     expect(line).not.toContain("Safety");
     expect(line).not.toContain("null");
-    expect(line).toContain("Liquidity 72, DEX TVL");
+    expect(line).toContain("Liquidity 72/100 (DEX $5");
   });
 
   it("omits safety context when the alert source is not ok", async () => {
@@ -165,7 +166,7 @@ describe("buildAlertContextLines", () => {
 
     const context = await buildAlertContextLines(db, ["usdc-circle"]);
 
-    expect(context.get("usdc-circle")).toBe("Context: Safety A 85");
+    expect(context.get("usdc-circle")).toBe("Context: Safety A (85)");
   });
 
   it("chunks liquidity context reads to stay under the D1 bind limit", async () => {
@@ -294,11 +295,11 @@ describe("buildAlertContextLines", () => {
       const context = await buildAlertContextLines(liquidityDb(NOW_SEC - 30 * 86_400), ["usdc-circle"]);
 
       const line = context.get("usdc-circle") ?? "";
-      expect(line).toContain("Safety A 85");
+      expect(line).toContain("Safety A (85)");
       expect(line).not.toContain("Supply");
       expect(line).not.toContain("$0");
       expect(line).not.toContain("Liquidity");
-      expect(line).not.toContain("DEX TVL");
+      expect(line).not.toContain("DEX ");
     });
 
     it.each([
@@ -335,7 +336,7 @@ describe("buildAlertContextLines", () => {
       stablecoins({ peggedUSD: 5_000_000_000 });
       const line = (await buildAlertContextLines(liquidityDb(NOW_SEC - age), ["usdc-circle"])).get("usdc-circle") ?? "";
 
-      expect(line.includes("Liquidity 91, DEX TVL")).toBe(shown);
+      expect(line.includes("Liquidity 91/100 (DEX $123")).toBe(shown);
       expect(line).toContain("Supply $5");
     });
 

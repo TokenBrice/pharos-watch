@@ -32,6 +32,7 @@ export interface FreezeChangePayload {
   chainName: string;
   amountUsdAtEvent: number | null;
   tapeEventId: string;
+  eventTsSec?: number | null;
 }
 
 export interface ReserveChangePayload {
@@ -101,6 +102,7 @@ export function freezeAlertsToChangeLogEntries(
       chainName: alert.chainName,
       amountUsdAtEvent: alert.amountUsdAtEvent,
       tapeEventId: alert.tapeEventId,
+      ...(alert.eventTsSec != null && Number.isFinite(alert.eventTsSec) ? { eventTsSec: alert.eventTsSec } : {}),
     },
   }));
 }
@@ -170,6 +172,54 @@ export async function loadFreezeChangesAfter(
   return (rows.results ?? []).flatMap((row) => parseChangeLogRow(row) ?? []);
 }
 
+export interface ChatOverflowSummary {
+  count: number;
+  families: string[];
+  coinIds: string[];
+}
+
+/** Cap-overflow counts and affected coins/families per chat in `(sinceSec, untilSec]`. */
+export async function loadOverflowSummaries(
+  db: D1Database,
+  chatIds: readonly string[],
+  sinceByChat: ReadonlyMap<string, number>,
+  untilSec: number,
+): Promise<Map<string, ChatOverflowSummary>> {
+  const summaries = new Map<string, { count: number; families: Set<string>; coinIds: Set<string> }>();
+  if (chatIds.length === 0) return new Map();
+  const minSince = Math.min(...chatIds.map((chatId) => sinceByChat.get(chatId) ?? untilSec));
+  const rows = await db.prepare(
+    `SELECT chat_id, observed_at, payload_json FROM telegram_change_log
+      WHERE chat_id IS NOT NULL AND observed_at > ? AND observed_at <= ?`,
+  ).bind(minSince, untilSec).all<{ chat_id: string; observed_at: number; payload_json: string | null }>();
+  for (const row of rows.results ?? []) {
+    const since = sinceByChat.get(row.chat_id);
+    if (since == null || Number(row.observed_at) <= since) continue;
+    const entry = summaries.get(row.chat_id) ?? { count: 0, families: new Set<string>(), coinIds: new Set<string>() };
+    entry.count += 1;
+    if (typeof row.payload_json === "string") {
+      const parsed = parseJsonObject(row.payload_json, "telegram overflow payload");
+      if (parsed) {
+        if (Array.isArray(parsed.families)) {
+          for (const family of parsed.families) {
+            if (typeof family === "string" && family.length > 0) entry.families.add(family);
+          }
+        }
+        if (Array.isArray(parsed.coinIds)) {
+          for (const coinId of parsed.coinIds) {
+            if (typeof coinId === "string" && coinId.length > 0) entry.coinIds.add(coinId);
+          }
+        }
+      }
+    }
+    summaries.set(row.chat_id, entry);
+  }
+  return new Map([...summaries].map(([chatId, entry]) => [
+    chatId,
+    { count: entry.count, families: [...entry.families], coinIds: [...entry.coinIds] },
+  ]));
+}
+
 /** Cap-overflow counts per chat in `(sinceSec, untilSec]`. */
 export async function loadOverflowCounts(
   db: D1Database,
@@ -177,19 +227,8 @@ export async function loadOverflowCounts(
   sinceByChat: ReadonlyMap<string, number>,
   untilSec: number,
 ): Promise<Map<string, number>> {
-  const counts = new Map<string, number>();
-  if (chatIds.length === 0) return counts;
-  const minSince = Math.min(...chatIds.map((chatId) => sinceByChat.get(chatId) ?? untilSec));
-  const rows = await db.prepare(
-    `SELECT chat_id, observed_at FROM telegram_change_log
-      WHERE chat_id IS NOT NULL AND observed_at > ? AND observed_at <= ?`,
-  ).bind(minSince, untilSec).all<{ chat_id: string; observed_at: number }>();
-  for (const row of rows.results ?? []) {
-    const since = sinceByChat.get(row.chat_id);
-    if (since == null || Number(row.observed_at) <= since) continue;
-    counts.set(row.chat_id, (counts.get(row.chat_id) ?? 0) + 1);
-  }
-  return counts;
+  const summaries = await loadOverflowSummaries(db, chatIds, sinceByChat, untilSec);
+  return new Map([...summaries].map(([chatId, summary]) => [chatId, summary.count]));
 }
 
 export function prepareChangeLogPrune(db: D1Database, nowSec: number): D1PreparedStatement {

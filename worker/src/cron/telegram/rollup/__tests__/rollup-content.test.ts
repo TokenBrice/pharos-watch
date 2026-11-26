@@ -21,10 +21,14 @@ function safety(coin: string, from: string, to: string, observedAt = 100): Store
 function dews(coin: string, from: string, to: string, score = 40): StoredTelegramChange {
   return { id: nextId++, kind: "dews", stablecoinId: coin, sourceKey: `d${nextId}`, observedAt: 100, payload: { symbol: coin.toUpperCase(), from, to, score } };
 }
-function freeze(coin: string, amount: number | null): StoredTelegramChange {
+function freeze(
+  coin: string,
+  amount: number | null,
+  eventType: "blacklist" | "unblacklist" | "destroy" = "blacklist",
+): StoredTelegramChange {
   return {
     id: nextId++, kind: "freeze", stablecoinId: coin, sourceKey: `f${nextId}`, observedAt: 100,
-    payload: { symbol: coin.toUpperCase(), eventType: "blacklist", chainName: "Ethereum", amountUsdAtEvent: amount, tapeEventId: `t${nextId}` },
+    payload: { symbol: coin.toUpperCase(), eventType, chainName: "Ethereum", amountUsdAtEvent: amount, tapeEventId: `t${nextId}` },
   };
 }
 
@@ -86,11 +90,17 @@ describe("computeNetRollupChanges", () => {
       .toEqual([{ kind: "safety", stablecoinId: "usdx", symbol: "USDX", from: "B", to: "C", fromScore: null, toScore: null }]);
   });
 
-  it("counts freezes per coin with known and unpriced amounts, and ignores overflow rows", () => {
+  it("counts freezes by eventType with known and unpriced amounts, and ignores overflow rows", () => {
     expect(computeNetRollupChanges([
-      freeze("usdc", 1_000), freeze("usdc", null), freeze("usdc", 2_500),
+      freeze("usdc", 1_000, "blacklist"),
+      freeze("usdc", null, "unblacklist"),
+      freeze("usdc", 2_500, "blacklist"),
       { id: 99, kind: "overflow", chatId: "1", sourceKey: "o", observedAt: 100, payload: { families: ["safety"], coinIds: [] } },
-    ])).toEqual([{ kind: "freeze", stablecoinId: "usdc", symbol: "USDC", count: 3, knownUsd: 3_500, unpriced: 1 }]);
+    ])).toEqual([{
+      kind: "freeze", stablecoinId: "usdc", symbol: "USDC",
+      count: 3, blacklistCount: 2, unblacklistCount: 1, destroyCount: 0,
+      knownUsd: 3_500, knownCount: 2, unpriced: 1,
+    }]);
   });
 });
 
@@ -99,21 +109,36 @@ describe("formatRollupMessage", () => {
     expect(formatRollupMessage({ changes: [], overflowCount: 0 })).toBeNull();
   });
 
-  it("leads with the worst change, lists improvements last and escapes HTML", () => {
+  it("leads with the worst change, renders inline coin links, score deltas, DEWS glyphs, split freeze types, overflow details and tailored footers", () => {
     const message = formatRollupMessage({
       changes: computeNetRollupChanges([
         safety("up", "C", "B"),
-        safety("x<y", "B", "D"),
+        {
+          id: 900, kind: "safety", stablecoinId: "x<y", sourceKey: "s900", observedAt: 100,
+          payload: { symbol: "X<Y", from: "B", to: "B-", fromScore: 74, toScore: 71 },
+        },
         dews("calm", "WARNING", "ALERT", 61),
-        freeze("usdc", 5_000),
+        freeze("usdc", 7_000, "blacklist"),
+        freeze("usdc", 5_000, "unblacklist"),
+        freeze("usdt", 4_000, "unblacklist"),
       ]),
-      overflowCount: 2,
+      overflowCount: 3,
+      overflowCoinSymbols: ["USDT", "USDe"],
+      overflowFamilies: ["dews", "freeze"],
+      timezone: "America/New_York",
+      privateChat: true,
     })!;
-    expect(message.split("\n")[0]).toBe("<b>Daily changes</b>: 4 changes on your coins, led by X&lt;Y Safety grade downgraded B → D");
-    expect(message).toContain("<b>Safety grades</b>\n<b>X&lt;Y</b> Safety grade downgraded B → D\n<b>UP</b> Safety grade raised C → B");
-    expect(message).toContain("<b>CALM</b> stress eased to ALERT (61/100, was WARNING)");
-    expect(message).toContain("<b>USDC</b> 1 freeze event, $5,000 known");
-    expect(message).toContain(`+ 2 more alerts held back by the limit of ${TELEGRAM_ALERT_POLICY.chatCap.maxRealtimeMessages} live messages a day`);
+    expect(message.split("\n")[0]).toBe("<b>Daily changes</b>: 5 changes on your coins, led by X&lt;Y Safety grade downgraded B → B-, 74 → 71");
+    expect(message).toContain('<b>Safety grades</b>\n<a href="https://pharos.watch/stablecoin/x%3Cy"><b>X&lt;Y</b></a> Safety grade downgraded B → B-, 74 → 71\n<a href="https://pharos.watch/stablecoin/up"><b>UP</b></a> Safety grade raised C → B');
+    expect(message).toContain('\u{1F7E1} <a href="https://pharos.watch/stablecoin/calm"><b>CALM</b></a> stress eased to ALERT (61/100, was WARNING)');
+    expect(message).toContain('<a href="https://pharos.watch/stablecoin/usdc"><b>USDC</b></a> 1 freeze, 1 unfreeze · $12,000 known');
+    expect(message).toContain('<a href="https://pharos.watch/stablecoin/usdt"><b>USDT</b></a> 1 unfreeze · $4,000 known');
+    expect(message).not.toContain("freeze event");
+    expect(message).toContain(`+ 3 alerts held back by the ${TELEGRAM_ALERT_POLICY.chatCap.maxRealtimeMessages}/day live limit (USDT, USDe · DEWS, freezes)`);
+    expect(message).toContain("<i>Daily summary at 09:00 America/New_York for non-live and cap-held moves</i>");
+
+    const groupMsg = formatRollupMessage({ changes: [], overflowCount: 1, privateChat: false })!;
+    expect(groupMsg).toContain("<i>Daily summary at 09:00 UTC for non-live and cap-held moves · /settings@PharosWatchBot</i>");
   });
 
   it("reports cap overflow alone, and folds lines past the list limit into N more changes", () => {

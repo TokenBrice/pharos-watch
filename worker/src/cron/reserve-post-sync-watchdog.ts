@@ -25,7 +25,7 @@ import {
 import { resolveAcknowledgedReserveFeedIds } from "../lib/reserve-feed-reviews";
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { SYNC_ORDERED_CONFIGURED_COINS } from "./sync-live-reserves-shared";
-import { SNAPSHOT_KEYS } from "./telegram/sources/telegram-alert-snapshots";
+import { SNAPSHOT_KEYS, buildReserveDriftScoreMap } from "./telegram/sources/telegram-alert-snapshots";
 import { resolveScheduledSlotPolicy } from "../lib/scheduled-slot-policy";
 
 const PERSISTENTLY_STALE_WARNING_COUNT_THRESHOLD = 3;
@@ -373,7 +373,11 @@ export async function runReservePostSyncWatchdog(
           unavailableIds: drift.fallbackCoins,
         },
       );
-      await setCache(db, SNAPSHOT_KEYS.reserve, JSON.stringify(reserveSourceEnvelope), signal);
+      const driftScores = buildReserveDriftScoreMap(drift.driftCoins);
+      const serializedReserveSource = Object.keys(driftScores).length > 0
+        ? { ...reserveSourceEnvelope, driftScores }
+        : reserveSourceEnvelope;
+      await setCache(db, SNAPSHOT_KEYS.reserve, JSON.stringify(serializedReserveSource), signal);
     } else {
       degradedReasons.push("reserve-drift-census-empty");
       // No previous envelope: continuity is broken, every observation epoch is

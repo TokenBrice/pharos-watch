@@ -17,6 +17,7 @@ import {
   type DewsCandidateSnapshot,
   type DewsRow,
   type DewsSnapshot,
+  type ReserveDriftScores,
   type SafetySnapshot,
 } from "./telegram-alert-snapshots";
 
@@ -311,13 +312,20 @@ export function buildReserveTransitions(
   previousDriftIds: ReadonlySet<string>,
   currentDriftIds: ReadonlySet<string>,
   trackedMetaById: ReadonlyMap<string, { symbol: string; name: string }>,
+  driftScoresById?: Readonly<Record<string, ReserveDriftScores>>,
 ): ReserveAlert[] {
   const transitions: ReserveAlert[] = [];
   for (const id of currentDriftIds) {
     if (previousDriftIds.has(id)) continue;
     const coin = trackedMetaById.get(id);
     if (coin) {
-      transitions.push({ stablecoinId: id, symbol: coin.symbol, name: coin.name });
+      const scores = driftScoresById?.[id];
+      transitions.push({
+        stablecoinId: id,
+        symbol: coin.symbol,
+        name: coin.name,
+        ...(scores ? { liveScore: scores.liveScore, curatedScore: scores.curatedScore } : {}),
+      });
     }
   }
   return transitions;

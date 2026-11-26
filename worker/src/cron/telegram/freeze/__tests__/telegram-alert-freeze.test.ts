@@ -76,6 +76,7 @@ describe("freeze Telegram source gate", () => {
       eventType: "blacklist",
       tapeEventId: "1000-freeze.blocked-deadbeef",
       sourceEventId: "blacklist-row-42",
+      eventTsSec: 3_990,
     });
   });
 
