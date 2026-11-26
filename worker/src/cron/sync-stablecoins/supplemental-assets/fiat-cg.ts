@@ -6,6 +6,7 @@ import { REVIEWED_ONCHAIN_SUPPLY_PLANS, getOnchainSupplyHoldReason, isOnchainSup
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import { ONCHAIN_PARTITION_DIVERGENCE_DETAIL_LIMIT, type OnchainPartitionSummary } from "@shared/types/status/cron";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import { throwIfAborted } from "../../../lib/abort";
 import type { ChainRpcConfig } from "../../../lib/chain-registry";
 import type { DwellirNativeCapability } from "../../../lib/dwellir-native";
@@ -348,7 +349,8 @@ export async function fetchFiatCoinGeckoTokens(
 
         if (needsClassScope) {
           const nativeShares = await fetchPinnedNativeShares(meta, chainRpcs, signal);
-          const reason = reserveNavSupplyScopeReason(reserveNav, nativeShares, nowSec);
+          const scopeNowSec = Math.max(nowSec, Math.floor(Date.now() / 1000));
+          const reason = reserveNavSupplyScopeReason(reserveNav, nativeShares, scopeNowSec);
           if (reason) {
             logWorkerEvent({
               scope: "handler", level: "warn", event: "reserve-nav-supply-withheld",
@@ -368,10 +370,17 @@ export async function fetchFiatCoinGeckoTokens(
           const nativeSupply = Number(BigInt(nativeShares.rawShares)) / 10 ** nativeShares.decimals;
           mcap = nativeSupply * priceForSupply;
           if (!Number.isFinite(mcap) || mcap <= 0) return null;
+          const legEntries: Array<[string, { chainId: string; current: number }]> = [];
+          for (const leg of nativeShares.legs) {
+            const legMcap = (Number(BigInt(leg.rawShares)) / 10 ** leg.decimals) * priceForSupply;
+            if (!Number.isFinite(legMcap) || legMcap <= 0) return null;
+            const chainLabel = CHAIN_META[leg.chain]?.name ?? leg.chain;
+            legEntries.push([chainLabel, { chainId: leg.chain, current: legMcap }]);
+          }
           circulatingNative = nativeSupply;
           supplySource = "onchain-total-supply";
           supplyObservedAt = nativeShares.observedAt;
-          chainCirculating = { Ethereum: { chainId: nativeShares.chain, current: mcap } };
+          chainCirculating = Object.fromEntries(legEntries);
         }
 
         if (preferOnChainMcap && !mcap) {

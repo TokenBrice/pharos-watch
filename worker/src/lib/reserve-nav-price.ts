@@ -111,17 +111,39 @@ export function reserveNavSupplyScopeReason(
   nowSec = Math.floor(Date.now() / 1000),
 ): ReserveNavSupplyScopeReason | null {
   const classAssetsUsd = parsePositiveNumber(quote?.metadata?.classAssetsUsd);
-  if (quote?.source !== "jpmorgan-nav" || classAssetsUsd == null) return "class-assets-unavailable";
+  const reserveFetchedAt = parsePositiveNumber(quote?.metadata?.reserveFetchedAt);
+  if (
+    quote?.source !== "jpmorgan-nav"
+    || classAssetsUsd == null
+    || reserveFetchedAt == null
+    || reserveFetchedAt > nowSec
+    || nowSec - reserveFetchedAt > LIVE_RESERVE_FRESHNESS_SEC
+    || quote.observedAt == null
+    || !validatePricingSourceFreshness({
+      source: quote.source,
+      observedAt: quote.observedAt,
+      observedAtMode: quote.observedAtMode ?? "upstream",
+      nowSec,
+    }).accepted
+  ) return "class-assets-unavailable";
   const parsed = PinnedNativeShareObservationSchema.safeParse(native);
   if (!parsed.success) return "native-share-observation-unavailable";
   const shares = parsed.data;
-  const raw = BigInt(shares.rawShares);
-  if (raw > BigInt(Number.MAX_SAFE_INTEGER)) return "native-share-precision-unsupported";
-  if (shares.observedAt > nowSec || nowSec - shares.observedAt > LIVE_RESERVE_FRESHNESS_SEC) return "native-share-observation-stale";
+  const totalRaw = shares.legs.reduce((acc, leg) => acc + BigInt(leg.rawShares), 0n);
+  if (totalRaw !== BigInt(shares.rawShares)) return "native-share-observation-unavailable";
+  if (totalRaw > BigInt(Number.MAX_SAFE_INTEGER)) return "native-share-precision-unsupported";
+  if (shares.legs.some((leg) => leg.observedAt > nowSec || nowSec - leg.observedAt > LIVE_RESERVE_FRESHNESS_SEC)) {
+    return "native-share-observation-stale";
+  }
   const review = ReserveNavSupplyAdmissionReviewSchema.safeParse(quote.metadata?.supplyAdmissionReview);
   if (!review.success || Date.parse(`${review.data.reviewedAt}T00:00:00Z`) / 1000 > nowSec) return "native-class-temporal-review-unavailable";
-  if (quote.observedAt == null || Math.abs(shares.observedAt - quote.observedAt) > review.data.maxNavSupplySkewSec) return "nav-supply-time-skew";
-  const onchainNavValuationUsd = Number(raw) / 10 ** shares.decimals * quote.price;
+  if (
+    quote.observedAt == null
+    || shares.legs.some((leg) => Math.abs(leg.observedAt - quote.observedAt!) > review.data.maxNavSupplySkewSec)
+  ) {
+    return "nav-supply-time-skew";
+  }
+  const onchainNavValuationUsd = Number(totalRaw) / 10 ** shares.decimals * quote.price;
   if (!Number.isFinite(onchainNavValuationUsd) || onchainNavValuationUsd <= 0) return "invalid-onchain-valuation";
   return Math.abs(onchainNavValuationUsd - classAssetsUsd) / classAssetsUsd <= JPMORGAN_CLASS_ASSETS_SUPPLY_TOLERANCE
     ? null : "class-assets-supply-divergence";

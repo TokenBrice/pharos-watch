@@ -55,9 +55,10 @@ export async function bootstrapJltxxReserves(db: D1Database, chainRpcs: Map<stri
     return { evidenceCaptured: false, admissionAllowed: false, runtimePriceMarketcapPass: false, reason: "bootstrap-authoritative-readback-unavailable", attemptStatus: result.status, configFingerprint: fingerprint };
   }
   const parsed = parseReserveCompositionRow(row, state).record;
-  const nav = decodeReserveNavPrice(row);
+  const scopeNowSec = Math.floor(Date.now() / 1000);
+  const nav = decodeReserveNavPrice(row, scopeNowSec);
   const native = PinnedNativeShareObservationSchema.safeParse(parsed?.metadata?.details?.nativeShareObservation);
-  const scopeReason = reserveNavSupplyScopeReason(nav, native.success ? native.data : null);
+  const scopeReason = reserveNavSupplyScopeReason(nav, native.success ? native.data : null, scopeNowSec);
   return {
     evidenceCaptured: nav != null, admissionAllowed: false, runtimePriceMarketcapPass: false,
     reason: scopeReason ?? "explicit-admission-review-and-runtime-price-marketcap-pass-required",
