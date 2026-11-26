@@ -354,7 +354,7 @@ describe("dex liquidity scoring stage cycle", () => {
     expect(res.status).toBe("ok");
     expect(m).toMatchObject({ failedSources: [], stagedPoolsSkippedByExactIdentity: 0, stagedPoolsSkippedByUniqueDerivedIdentity: 0, sourceCoverage: { nearCoverageGuard: false, weakCoverageCoins: 0, qualityDriftSeverity: "none", qualityDriftFlags: [], coinsWithoutMeasuredBalances: 0, protocolTvlQuarantine: { tvlUsd: 0 } } });
     expect(m.sourceCoverage).not.toHaveProperty("directCexOrderbookDepth"); expect(fetchSpy).not.toHaveBeenCalled();
-    expect(persistScores).toHaveBeenCalledWith(expect.objectContaining({ prepare: expect.any(Function), batch: expect.any(Function) }), expect.any(Map), fx.current.scores.scores, fx.current.scores.globalAgg, expect.any(Number), fx.current.scores.tvlStabilityMap, undefined, fx.current.scores.diagnostics.routeRemovalEvidence, fx.current.scores.retainedPoolsByStablecoin, undefined, undefined);
+    expect(persistScores).toHaveBeenCalledWith(expect.objectContaining({ prepare: expect.any(Function), batch: expect.any(Function) }), expect.any(Map), fx.current.scores.scores, fx.current.scores.globalAgg, expect.any(Number), fx.current.scores.tvlStabilityMap, undefined, fx.current.scores.diagnostics.routeRemovalEvidence, fx.current.scores.retainedPoolsByStablecoin, undefined, undefined, undefined);
   });
 
   it("carries partial-source telemetry through the stage into consumer metadata", async () => {
