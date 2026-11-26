@@ -62,7 +62,7 @@ export function isSnoozeArg(arg: string | undefined): arg is SnoozeArg {
   return arg === "1h" || arg === "4h" || arg === "24h";
 }
 
-export function isKnownStablecoinId(id: string | undefined): id is string {
+function isKnownStablecoinId(id: string | undefined): id is string {
   return typeof id === "string" && TRACKED_META_BY_ID.has(id);
 }
 

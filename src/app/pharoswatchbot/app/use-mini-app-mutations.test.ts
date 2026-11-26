@@ -645,5 +645,22 @@ describe("useMiniAppMutations", () => {
     apiMocks.postMiniAppBulkWatchlistPreview.mockRejectedValueOnce(new MiniAppRequestError(409, "stale-bulk-preview"));
     await act(async () => { await result.current.performBulkWatchlistPreview(BULK_PREVIEW); });
     expect(onRefreshSession).toHaveBeenCalledOnce();
+
+    // Mid-flight auth expiry records visible unsaved intent for any queued edit instead of dropping silently.
+    const expiring = Promise.withResolvers<TelegramMiniAppClientSnapshot>();
+    apiMocks.postMiniAppSnapshot.mockReturnValueOnce(expiring.promise);
+    const expiryArgs = makeArgs();
+    const { result: expiryResult, rerender: rerenderExpiry } = renderHook(
+      (props) => useMiniAppMutations(props),
+      { initialProps: expiryArgs },
+    );
+    act(() => {
+      expiryResult.current.mutate({ kind: "set-coin", stablecoinId: "usdc-circle", patch: { alertTypes: { safety: true } } });
+      expiryResult.current.mutate({ kind: "set-coin", stablecoinId: "usdc-circle", patch: { alertTypes: { reserve: true } } });
+    });
+    rerenderExpiry({ ...expiryArgs, authExpired: true });
+    expect(expiryResult.current.queuedOperation).toBeNull();
+    expect(expiryResult.current.staleAuth).toMatchObject({ intent: "Not saved: USDC: Reserve drift on." });
+    await act(async () => { expiring.resolve(makeSnapshot()); await Promise.resolve(); });
   });
 });

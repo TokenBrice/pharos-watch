@@ -47,6 +47,7 @@ function statusStrip(
   hasAnyGlobal: boolean,
   activeDepegs: readonly TelegramMiniAppActiveDepeg[],
   symbolById: ReadonlyMap<string, string>,
+  truncated: boolean,
 ): {
   tone: StripTone;
   title: string;
@@ -85,7 +86,7 @@ function statusStrip(
     const alertStatusPart = snoozed && snoozeUntil != null
       ? isPausedSentinel(snoozeUntil)
         ? "Alerts paused"
-        : `Alerts snoozed until ${formatClock(snoozeUntil, quiet.timezone, nowSec)}`
+        : `Alerts paused until ${formatClock(snoozeUntil, quiet.timezone, nowSec)}`
       : failure
         ? "Last delivery failed"
         : "Alerts on";
@@ -97,7 +98,9 @@ function statusStrip(
       tone: "danger",
       title: activeDepegs.length === 1
         ? `${firstSymbol} is off its peg`
-        : `${activeDepegs.length} coins are off their peg`,
+        : truncated
+          ? `${activeDepegs.length}+ watched coins off peg`
+          : `${activeDepegs.length} coins are off their peg`,
       subtitle: parts.join(" · "),
       tappableToSettings: Boolean(failure && !snoozed),
     };
@@ -106,7 +109,7 @@ function statusStrip(
   if (snoozed && snoozeUntil != null) {
     return {
       tone: "warn",
-      title: isPausedSentinel(snoozeUntil) ? "Alerts paused" : "Alerts snoozed",
+      title: "Alerts paused",
       subtitle: isPausedSentinel(snoozeUntil)
         ? "Until you resume them"
         : `Until ${formatClock(snoozeUntil, quiet.timezone, nowSec)}`,
@@ -256,7 +259,8 @@ export function HomeScreen({
   }, [presetMemberSetById, state]);
   const ownCount = useMemo(() => coins.filter(hasOwnEnabledFamily).length, [coins]);
   const hasAnyGlobal = LIVE_ALERT_TYPES.some((type) => state.subscriber.globalAlerts[type]);
-  const strip = statusStrip(state, nowSec, ownCount, hasAnyGlobal, activeDepegs, symbolById);
+  const truncated = Boolean(homePegContext?.truncated);
+  const strip = statusStrip(state, nowSec, ownCount, hasAnyGlobal, activeDepegs, symbolById, truncated);
   const snoozeUntil = state.subscriber.snoozeUntilTs;
   const snoozed = snoozeUntil != null && isTelegramSnoozeActive(snoozeUntil, nowSec);
   const isBlocked = isTelegramBlockedFailureClass(state.health.recentFailureClass);
@@ -293,7 +297,7 @@ export function HomeScreen({
     push({ name: "settings" });
   };
 
-  const presetsSection = (
+  const presetsSection = state.presets.length > 0 || hasAnyGlobal || (!allPresetsFollowed && canEdit) ? (
     <ListSection title="Presets">
       {state.presets.map((preset) => (
         <ListRow
@@ -321,7 +325,7 @@ export function HomeScreen({
         />
       ) : null}
     </ListSection>
-  );
+  ) : null;
 
   const renderEmptyCoinsRow = () => {
     if (state.presets.length === 1) {
@@ -402,61 +406,49 @@ export function HomeScreen({
 
   return (
     <>
-      {strip.tappableToSettings ? (
-        <section aria-label="Alert status">
+      <section className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl bg-[var(--mini-card)] px-4 py-3" aria-label="Alert status">
+        <span aria-hidden="true" className={cn("h-2.5 w-2.5 shrink-0 self-start mt-1.5 rounded-full", STRIP_DOT[strip.tone])} />
+        <div className="min-w-[9rem] flex-1">
+          <h1 tabIndex={-1} className="outline-none text-base font-semibold text-foreground">{strip.title}</h1>
+          {strip.subtitle ? <p className="mt-0.5 text-sm tabular-nums text-muted-foreground">{strip.subtitle}</p> : null}
+        </div>
+        {strip.tappableToSettings ? (
           <button
             type="button"
+            aria-label="Open delivery status in Settings"
             onClick={() => push({ name: "settings" })}
-            className="flex w-full items-center gap-3 rounded-xl bg-[var(--mini-card)] px-4 py-3 text-left transition-colors active:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+            className="-my-1 -mr-2 inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground/70 transition-colors active:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
           >
-            <span aria-hidden="true" className={cn("h-2.5 w-2.5 shrink-0 rounded-full", STRIP_DOT[strip.tone])} />
-            <span className="min-w-0 flex-1">
-              <span
-                role="heading"
-                aria-level={1}
-                tabIndex={-1}
-                className="block outline-none text-base font-semibold text-foreground"
-              >
-                {strip.title}
-              </span>
-              {strip.subtitle ? <span className="mt-0.5 block text-sm text-muted-foreground">{strip.subtitle}</span> : null}
-            </span>
-            <ChevronRight className="-mr-1 h-4 w-4 shrink-0 text-muted-foreground/70" aria-hidden="true" />
+            <ChevronRight className="h-4 w-4" aria-hidden="true" />
           </button>
-        </section>
-      ) : (
-        <section className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl bg-[var(--mini-card)] px-4 py-3" aria-label="Alert status">
-          <span aria-hidden="true" className={cn("h-2.5 w-2.5 shrink-0 self-start mt-1.5 rounded-full", STRIP_DOT[strip.tone])} />
-          <div className="min-w-[9rem] flex-1">
-            <h1 tabIndex={-1} className="outline-none text-base font-semibold text-foreground">{strip.title}</h1>
-            {strip.subtitle ? <p className="mt-0.5 text-sm tabular-nums text-muted-foreground">{strip.subtitle}</p> : null}
-          </div>
-          {showInlineResume ? (
-            <ChoiceChips
-              label="Resume alerts"
-              options={[{ value: "resume", label: "Resume" }]}
-              disabled={controlsDisabled}
-              pendingValue={pendingOperation?.kind === "clear-snooze" ? "resume" : null}
-              onSelect={() => onMutate({ kind: "clear-snooze" })}
-            />
-          ) : showInlinePause ? (
-            <ChoiceChips
-              label="Pause alerts"
-              options={[{ value: "pause", label: "Pause" }]}
-              disabled={controlsDisabled}
-              pendingValue={pausePending ? "pause" : null}
-              onSelect={handlePauseChip}
-            />
-          ) : null}
-        </section>
-      )}
+        ) : showInlineResume ? (
+          <ChoiceChips
+            label="Resume alerts"
+            options={[{ value: "resume", label: "Resume" }]}
+            disabled={controlsDisabled}
+            pendingValue={pendingOperation?.kind === "clear-snooze" ? "resume" : null}
+            onSelect={() => onMutate({ kind: "clear-snooze" })}
+          />
+        ) : showInlinePause ? (
+          <ChoiceChips
+            label="Pause alerts"
+            options={[{ value: "pause", label: "Pause" }]}
+            disabled={controlsDisabled}
+            pendingValue={pausePending ? "pause" : null}
+            onSelect={handlePauseChip}
+          />
+        ) : null}
+      </section>
 
       {homePegContext?.status === "unavailable" ? (
         <p className="mt-2 px-1 text-xs text-muted-foreground">Live peg status unavailable.</p>
       ) : null}
 
       {activeDepegs.length > 0 ? (
-        <ListSection title="Off peg now">
+        <ListSection
+          title="Off peg now"
+          footer={truncated ? "Checked top 20 watched coins by market cap." : undefined}
+        >
           {activeDepegs.slice(0, OFF_PEG_ROW_LIMIT).map((event) => {
             const sym = symbolById.get(event.stablecoinId) ?? event.stablecoinId;
             const detail = formatOffPegRowValue(event);

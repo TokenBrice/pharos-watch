@@ -658,7 +658,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     const state = makeMiniAppState({ subscriber: { snoozeUntilTs: 9_000_000_000 } });
     const fetchMock = vi.fn().mockResolvedValueOnce(ok(state)).mockResolvedValueOnce(ok(baseState));
     await renderReadyMiniApp({ fetchImpl: fetchMock });
-    expect(screen.getByRole("heading", { name: "Alerts snoozed" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Alerts paused" })).toBeTruthy();
     expect(screen.queryByRole("group", { name: "Pause alerts" })).toBeNull();
     fireEvent.click(within(screen.getByRole("group", { name: "Resume alerts" })).getByRole("button"));
     await waitFor(() => expectMutationRequest(fetchMock, { kind: "clear-snooze" }));
@@ -1061,12 +1061,15 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it("supports Escape and inline Back fallback, and arms closing confirmation for dirty Add coins drafts", async () => {
+  it("supports Escape and inline Back fallback, guards SettingsButton and non-empty search Escape, and arms closing confirmation for dirty Add coins drafts", async () => {
     const enableClosingConfirmation = vi.fn();
     const disableClosingConfirmation = vi.fn();
+    const settings = nativeButton();
+    let popupCb: ((id: string) => void) | undefined;
+    const showPopup = vi.fn((_params, cb?: (id: string) => void) => { popupCb = cb; });
     await renderReadyMiniApp({
       state: makeMiniAppState({ catalog: rankedCatalog }),
-      launch: { enableClosingConfirmation, disableClosingConfirmation },
+      launch: { enableClosingConfirmation, disableClosingConfirmation, SettingsButton: settings, showPopup, isVersionAtLeast: () => true },
     });
     fireEvent.click(screen.getByRole("button", { name: "Settings" }));
     expect(screen.getByRole("heading", { level: 1, name: "Settings" })).toBeTruthy();
@@ -1075,10 +1078,21 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Alerts on" })).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Add coins" }));
+    const search = screen.getByLabelText("Search stablecoins");
+    fireEvent.change(search, { target: { value: "usd" } });
+    // Escape inside a non-empty search input does not pop the screen.
+    fireEvent.keyDown(search, { key: "Escape" });
+    expect(screen.getByLabelText("Search stablecoins")).toBeTruthy();
     fireEvent.click(screen.getByRole("checkbox", { name: "USDT Tether" }));
     expect(enableClosingConfirmation).toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "Back" }));
-    expect(screen.getByRole("heading", { level: 1, name: "Alerts on" })).toBeTruthy();
+    // SettingsButton triggers the discard guard and proceeds to Settings only on confirm.
+    act(() => settings.click());
+    expect(showPopup).toHaveBeenCalledWith(expect.objectContaining({ title: "Discard 1 change?" }), expect.any(Function));
+    act(() => popupCb?.("keep"));
+    expect(screen.getByLabelText("Search stablecoins")).toBeTruthy();
+    act(() => settings.click());
+    act(() => popupCb?.("discard"));
+    expect(screen.getByRole("heading", { level: 1, name: "Settings" })).toBeTruthy();
     expect(disableClosingConfirmation).toHaveBeenCalled();
   });
 
@@ -1265,6 +1279,65 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(await screen.findByText("Live data unavailable.")).toBeTruthy();
   });
 
+  it("retries 429 context cooldown once without infinite looping and avoids totalizing truncated Home depegs (R7)", async () => {
+    vi.useFakeTimers();
+    const nowSec = 1_800_000_000;
+    vi.setSystemTime(nowSec * 1000);
+    const { TELEGRAM_MINI_APP_CATALOG } = await import("@shared/lib/telegram-mini-app-catalog");
+    const top21Ids = TELEGRAM_MINI_APP_CATALOG.searchableCoins.slice(0, 21).map((c) => c.stablecoinId);
+    const okProv = { status: "ok", source: "s", assessedAt: nowSec, observedAt: nowSec, generation: "g", budgetSec: 1200 } as const;
+    const { catalog: _c, ...mutable } = makeMiniAppState({
+      subscriptions: [],
+      presets: [top25({ dews: true, depeg: true }, top21Ids)],
+    });
+    let coinsAttempts = 0;
+    let presetsAttempts = 0;
+    const fetchMock = vi.fn().mockImplementation(async (input: string, init?: RequestInit) => {
+      const parsed = init?.body ? JSON.parse(String(init.body)) as { contextRequest?: { kind: string; stablecoinIds?: string[] } } : {};
+      if (input.includes("/session") && parsed.contextRequest?.kind === "coins") {
+        coinsAttempts += 1;
+        if (coinsAttempts === 1) {
+          return { ok: false, status: 429, json: async () => ({ error: "cool", code: "rate-limited", retryAfterSec: 1 }) };
+        }
+        expect(parsed.contextRequest.stablecoinIds).toHaveLength(20);
+        return ok({
+          contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
+          catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
+          serverNowSec: nowSec,
+          context: {
+            kind: "coins",
+            activeDepegs: {
+              provenance: okProv,
+              events: [
+                { stablecoinId: top21Ids[0]!, direction: "below", peakDeviationBps: -150, currentDeviationBps: -130, priceUsd: 0.987, pegReference: 1, startedAt: nowSec - 600 },
+                { stablecoinId: top21Ids[1]!, direction: "above", peakDeviationBps: 120, currentDeviationBps: 110, priceUsd: 1.011, pegReference: 1, startedAt: nowSec - 300 },
+              ],
+            },
+            coinSignals: {},
+          },
+        });
+      }
+      if (input.includes("/session") && parsed.contextRequest?.kind === "presets") {
+        presetsAttempts += 1;
+        return { ok: false, status: 429, json: async () => ({ error: "cool", code: "rate-limited", retryAfterSec: 1 }) };
+      }
+      return ok(createTelegramMiniAppSnapshot(mutable, nowSec));
+    });
+    renderMiniApp({ fetchImpl: fetchMock });
+    await act(async () => { await vi.advanceTimersByTimeAsync(20); });
+    expect(coinsAttempts).toBe(1);
+    expect(screen.queryByText("Live peg status unavailable.")).toBeNull();
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_100); });
+    expect(coinsAttempts).toBe(2);
+    expect(screen.getByRole("heading", { name: "2+ watched coins off peg" })).toBeTruthy();
+    expect(screen.getByText("Checked top 20 watched coins by market cap.")).toBeTruthy();
+
+    // A second 429 on retry degrades cleanly without an infinite retry loop.
+    fireEvent.click(screen.getByRole("button", { name: "Follow a preset" }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(5_000); });
+    expect(presetsAttempts).toBe(2);
+  });
+
   it("shows non-blocking pre-launch and capability hints on CoinScreen without blocking toggles", async () => {
     const state = makeMiniAppState({
       catalog: {
@@ -1333,7 +1406,7 @@ describe("Mini App confirmed watcher status", () => {
   it.each([
     [emptyState, "Get stablecoin alerts in this chat"],
     [makeMiniAppState({ subscriber: { snoozeUntilTs: 4_102_444_800 } }), "Alerts paused"],
-    [makeMiniAppState({ subscriber: { snoozeUntilTs: 9_000_000_000 } }), "Alerts snoozed"],
+    [makeMiniAppState({ subscriber: { snoozeUntilTs: 9_000_000_000 } }), "Alerts paused"],
     [makeMiniAppState({ health: { recentFailureClass: "blocked" } }), "Telegram stopped delivering alerts"],
     [makeMiniAppState({ health: { recentFailureClass: "chat_not_found" } }), "Telegram stopped delivering alerts"],
     [makeMiniAppState(), "Alerts on"],

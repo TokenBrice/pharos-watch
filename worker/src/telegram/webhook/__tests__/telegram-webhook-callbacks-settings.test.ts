@@ -44,7 +44,7 @@ afterEach(() => fixtures.closeAll());
 
 describe("handleCallbackQuery", () => {
   describe("settings dispatch", () => {
-    it.each(["xx:1", "db:bad", "sm:bad", "ds:123", "rs:yes", "fz:"])(
+    it.each(["xx:1", "db:bad", "sm:bad", "ds:123", "ds:+100", "ds:100.0", "ds:0x64", "rs:yes", "fz:"])(
       "acks invalid per-coin setting %s once and dedupes its redelivery",
       async (setting) => {
         resetTelegramWebhookTest();
@@ -169,9 +169,15 @@ describe("handleCallbackQuery", () => {
       },
     );
 
-    it("malformed settings callbacks do not write", async () => {
+    it.each([
+      "settings:q:2",
+      "settings:p:usd-top25",
+      "settings:pu:usd-top25",
+      "settings:pc:usd-top25",
+      "settings:pf:usd-top25:d:0",
+    ])("malformed settings callback %s does not write", async (data) => {
       const db = mockTelegramD1([]);
-      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("settings:q:2", { id: "cb-settings-bad" }));
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery(data, { id: "cb-settings-bad" }));
 
       expect(db.getHistory().some((h) => /INSERT INTO telegram_subscribers/.test(h.sql))).toBe(false);
       const ack = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));

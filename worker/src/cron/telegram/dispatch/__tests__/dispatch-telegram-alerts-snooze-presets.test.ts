@@ -104,7 +104,7 @@ describe("dispatchTelegramAlerts", () => {
     expect(callbackData).toContain("fewer:usdc-circle:db:W");
     expect(callbackData).not.toContain("status:usdc-circle");
     expect(keyboard.inline_keyboard?.length).toBeLessThanOrEqual(2);
-    expect(telegramDeliveryTranscript[0]?.html).toContain("<i>Via your watchlist · stress alerts</i>");
+    expect(telegramDeliveryTranscript[0]?.html).toContain("<i>Via your watchlist · DEWS alerts</i>");
   });
 
   it("skips a chat whose alert_snooze_until_ts is in the future and reports chatsWithActiveSnooze", async () => {

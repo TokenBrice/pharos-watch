@@ -23,7 +23,7 @@ export const TELEGRAM_PUBLIC_ALERT_SAMPLES: Record<TelegramLiveAlertType, Telegr
     message: `🟠 USDT DEWS stress rose to WARNING (58/100, was ALERT)
 Main drivers (0-100): Pool Balance Drift 71, Supply Velocity 64
 
-Via USD Top 25 · stress alerts
+Via USD Top 25 · DEWS alerts
 
 View on Pharos: pharos.watch/stablecoin/usdt-tether`,
     buttons: STANDARD_ALERT_BUTTONS("USDT", "USDT: Warning+"),

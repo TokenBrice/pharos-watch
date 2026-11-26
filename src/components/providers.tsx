@@ -8,6 +8,7 @@ import { OPEN_COMMAND_PALETTE_EVENT } from "@/lib/command-palette";
 import { OPEN_KEYBOARD_SHORTCUTS_EVENT, dismissChromeOverlays, subscribeChromeDismiss } from "@/lib/chrome-popover";
 import { isSingleKeyShortcutDisabled } from "@/lib/keyboard-shortcut-settings";
 import { SourceNavigationProvider } from "@/components/back-to-source";
+import { isEditorialPath } from "@/lib/editorial-routes";
 import { getRouteCapabilities } from "@/lib/route-capabilities";
 import { discardDataBootstrap } from "@/lib/data-bootstrap";
 
@@ -216,7 +217,8 @@ const InteractiveProviders = lazy(async () => {
 
 function ShellProviders({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { chromeless, editorial } = getRouteCapabilities(pathname);
+  const { chromeless } = getRouteCapabilities(pathname);
+  const editorial = isEditorialPath(pathname);
   useEffect(() => {
     if (pathname && window.__pharosDataBootstrap?.route !== pathname) discardDataBootstrap();
   }, [pathname]);

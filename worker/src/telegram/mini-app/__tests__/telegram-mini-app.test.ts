@@ -18,6 +18,8 @@ import {
   TelegramMiniAppContextResponseSchema,
   TelegramMiniAppSnapshotSchema,
 } from "@shared/lib/telegram-mini-app-contract";
+import { STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { WORKER_ACTIVE_STABLECOINS, WORKER_PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { buildDewsStablecoinIdsDigest, DEWS_PUBLICATION_POINTER_CACHE_KEY } from "../../../lib/dews-publication-pointer";
 import * as safetyScoreIndex from "../../../lib/safety-score-index";
 import { createMiniAppSqlite } from "../../webhook/__tests__/telegram-sqlite.test-support.ts";
@@ -635,6 +637,10 @@ describe("handleTelegramMiniAppSession", () => {
         ],
       }), NOW_SEC - 30);
       sqlite.prepare(`
+        INSERT INTO cron_runs (job, started_at, duration_ms, status, item_count, metadata)
+        VALUES ('sync-stablecoins', ?, 1200, 'ok', 150, '{"cacheWriteMode":"published"}')
+      `).run(NOW_SEC - 30);
+      sqlite.prepare(`
         INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peak_price, peg_reference, source)
         VALUES ('usdc-circle', 'USDC', 'peggedUSD', 'below', -150, ?, 0.985, 0.985, 1, 'live')
       `).run(NOW_SEC - 600);
@@ -651,9 +657,11 @@ describe("handleTelegramMiniAppSession", () => {
         }),
         NOW_SEC - 60,
       );
-      const insertDews = sqlite.prepare("INSERT INTO stress_signals_latest (stablecoin_id, score, band, signals_json, computed_at, updated_at) VALUES (?, ?, ?, '{}', ?, ?)");
-      insertDews.run("usdc-circle", 68, "WARNING", NOW_SEC - 60, NOW_SEC - 60);
-      insertDews.run("usdt-tether", 12, "CALM", NOW_SEC - 60, NOW_SEC - 60);
+      const insertPubDews = sqlite.prepare("INSERT INTO stress_signal_publication_rows (stablecoin_id, computed_at, score, band, signals_json) VALUES (?, ?, ?, ?, '{}')");
+      insertPubDews.run("usdc-circle", NOW_SEC - 60, 68, "WARNING");
+      insertPubDews.run("usdt-tether", NOW_SEC - 60, 12, "CALM");
+      // Older row in stress_signals_latest must NEVER be served for an exact v2 pointer.
+      sqlite.prepare("INSERT INTO stress_signals_latest (stablecoin_id, score, band, signals_json, computed_at, updated_at) VALUES ('dai-makerdao', 80, 'DANGER', '{}', ?, ?)").run(NOW_SEC - 300, NOW_SEC - 300);
 
       vi.spyOn(safetyScoreIndex, "loadActiveSafetyScoreIndex").mockResolvedValue({
         kind: "v9",
@@ -666,10 +674,13 @@ describe("handleTelegramMiniAppSession", () => {
           publicationHealth: {} as never,
           completeness: { expectedCount: 3 },
           cards: [
-            { id: "usdc-circle", ratingStatus: "rated", grade: "A-", score: 86 } as never,
-            { id: "usdt-tether", ratingStatus: "not-rated", grade: "NR", score: null } as never,
+            {
+              id: "usdc-circle", ratingStatus: "rated", grade: "A-", score: 86,
+              partialEvidence: { reasonCode: "partial-evidence-pipeline-gap", excludedPillars: ["exit"], causes: ["A"] },
+            } as never,
+            { id: "usdt-tether", ratingStatus: "not-rated", grade: "NR", score: null, partialEvidence: null } as never,
             // Malformed rated card gets quarantined per-asset without failing the rest.
-            { id: "dai-makerdao", ratingStatus: "rated", grade: "B", score: 999 } as never,
+            { id: "dai-makerdao", ratingStatus: "rated", grade: "B", score: 999, partialEvidence: null } as never,
           ],
         },
       });
@@ -691,16 +702,23 @@ describe("handleTelegramMiniAppSession", () => {
       if (coinsBody.context.kind === "coins") {
         expect(coinsBody.context.activeDepegs.provenance.status).toBe("ok");
         expect(coinsBody.context.activeDepegs.events).toEqual([expect.objectContaining({
-          stablecoinId: "usdc-circle", direction: "below", peakDeviationBps: -150, currentDeviationBps: -129, priceUsd: 0.9871,
+          stablecoinId: "usdc-circle", direction: "below", peakDeviationBps: -150, currentDeviationBps: -129, currentDirection: "below", priceUsd: 0.9871,
         })]);
         expect(coinsBody.context.coinSignals["usdc-circle"]).toMatchObject({
-          price: { provenance: { status: "ok" }, priceUsd: 0.9871 },
+          price: { provenance: { status: "ok", budgetSec: STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC }, priceUsd: 0.9871 },
           dews: { provenance: { status: "ok" }, band: "WARNING", score: 68 },
-          safety: { provenance: { status: "ok" }, ratingStatus: "rated", grade: "A-", score: 86, held: false },
+          safety: { provenance: { status: "ok" }, ratingStatus: "rated", grade: "A-", score: 86, held: false, partialEvidence: true },
+          pegStatus: "off-peg",
         });
-        // Per-asset quarantine: DAI bad price & invalid safety score become unavailable while USDC/USDT remain ok.
+        expect(coinsBody.context.coinSignals["usdt-tether"]).toMatchObject({
+          safety: { partialEvidence: false },
+          pegStatus: "on-peg",
+        });
+        // Per-asset quarantine: DAI bad price, missing DEWS (no stale fallback), and invalid safety card become unavailable while USDC/USDT remain ok.
         expect(coinsBody.context.coinSignals["dai-makerdao"]?.price.provenance).toMatchObject({ status: "unavailable", reason: "price-missing" });
-        expect(coinsBody.context.coinSignals["dai-makerdao"]?.safety.provenance).toMatchObject({ status: "unavailable", reason: "safety-card-invalid" });
+        expect(coinsBody.context.coinSignals["dai-makerdao"]?.dews.provenance).toMatchObject({ status: "unavailable", reason: "dews-unobserved" });
+        expect(coinsBody.context.coinSignals["dai-makerdao"]?.safety).toMatchObject({ provenance: { status: "unavailable", reason: "safety-card-invalid" }, held: false });
+        expect(coinsBody.context.coinSignals["dai-makerdao"]?.pegStatus).toBe("unavailable");
       }
       // Only the initial session open wrote `mini_app_session_valid`, not the context read.
       expect(sqlite.prepare("SELECT count FROM telegram_usage_daily WHERE event_type = 'mini_app_session_valid'").get()).toEqual({ count: 1 });
@@ -718,15 +736,16 @@ describe("handleTelegramMiniAppSession", () => {
       const presetsBody = TelegramMiniAppContextResponseSchema.parse(await readJsonResponse(presetsRes, 200));
       expect(presetsBody.context).toMatchObject({
         kind: "presets",
-        provenance: { status: "ok" },
+        provenance: { status: "ok", budgetSec: STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC },
         presets: expect.arrayContaining([
           expect.objectContaining({ id: "usd-top25", memberCount: 3, topSymbols: ["USDT", "USDC", "DAI"] }),
         ]),
       });
 
-      // Missing cache yields explicit unavailable provenance (never fabricated zeros or "on peg").
+      // Missing cache + missing cron output yields explicit unavailable provenance (never fabricated zeros or "on-peg").
       vi.restoreAllMocks();
       sqlite.prepare("DELETE FROM cache WHERE key IN ('stablecoins', ?)").run(DEWS_PUBLICATION_POINTER_CACHE_KEY);
+      sqlite.prepare("DELETE FROM cron_runs").run();
       vi.setSystemTime((NOW_SEC + 4) * 1000);
       const unavailablePresets = TelegramMiniAppContextResponseSchema.parse(await readJsonResponse(
         await handleTelegramMiniAppSession(db, makeVersionedMiniAppRequest("/api/telegram-mini-app/session", { initData, contextRequest: { kind: "presets" } }), BOT_TOKEN),
@@ -736,15 +755,83 @@ describe("handleTelegramMiniAppSession", () => {
 
       vi.setSystemTime((NOW_SEC + 6) * 1000);
       const unavailableCoins = TelegramMiniAppContextResponseSchema.parse(await readJsonResponse(
-        await handleTelegramMiniAppSession(db, makeVersionedMiniAppRequest("/api/telegram-mini-app/session", { initData, contextRequest: { kind: "coins", stablecoinIds: ["usdc-circle"] } }), BOT_TOKEN),
+        await handleTelegramMiniAppSession(db, makeVersionedMiniAppRequest("/api/telegram-mini-app/session", { initData, contextRequest: { kind: "coins", stablecoinIds: ["usdt-tether"] } }), BOT_TOKEN),
         200,
       ));
       if (unavailableCoins.context.kind === "coins") {
-        expect(unavailableCoins.context.activeDepegs.provenance.status).toBe("unavailable");
-        expect(unavailableCoins.context.coinSignals["usdc-circle"]?.price.provenance.status).toBe("unavailable");
-        expect(unavailableCoins.context.coinSignals["usdc-circle"]?.dews.provenance.status).toBe("unavailable");
-        expect(unavailableCoins.context.coinSignals["usdc-circle"]?.safety.provenance.status).toBe("unavailable");
+        expect(unavailableCoins.context.activeDepegs.provenance).toMatchObject({ status: "unavailable", reason: "depeg-producer-history-missing" });
+        expect(unavailableCoins.context.coinSignals["usdt-tether"]?.price.provenance.status).toBe("unavailable");
+        expect(unavailableCoins.context.coinSignals["usdt-tether"]?.dews.provenance).toMatchObject({ status: "unavailable", reason: "dews-publication-missing" });
+        expect(unavailableCoins.context.coinSignals["usdt-tether"]?.safety.provenance.status).toBe("unavailable");
+        expect(unavailableCoins.context.coinSignals["usdt-tether"]?.pegStatus).toBe("unavailable");
       }
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("enforces pegStatus/quarantine, non-USD latest freshness, scoped DEWS errors, and held-without-card guard", async () => {
+    const { db, sqlite } = createMiniAppSqlite();
+    try {
+      const initData = await privateInitData();
+      const nav = WORKER_ACTIVE_STABLECOINS.find((c) => c.navToken || c.flags.navToken)!;
+      const pre = WORKER_PRE_LAUNCH_STABLECOINS[0]!;
+      const postCoins = async (stablecoinIds: string[]) => {
+        const res = await handleTelegramMiniAppSession(
+          db, makeVersionedMiniAppRequest("/api/telegram-mini-app/session", { initData, contextRequest: { kind: "coins", stablecoinIds } }), BOT_TOKEN,
+        );
+        const parsed = TelegramMiniAppContextResponseSchema.parse(await readJsonResponse(res, 200));
+        if (parsed.context.kind !== "coins") throw new Error("Expected coins");
+        return parsed.context;
+      };
+      sqlite.prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = 'stablecoins'").run(JSON.stringify({
+        peggedAssets: [
+          { id: "usdt-tether", symbol: "USDT", name: "Tether", price: 1, priceSource: "coingecko", priceObservedAt: NOW_SEC - 30, circulating: { peggedUSD: 2e9 } },
+          { id: "eurc-circle", symbol: "EURC", name: "EURC", price: 1.08, priceSource: "coingecko", priceObservedAt: NOW_SEC - 30, circulating: { peggedEUR: 1e8 } },
+          { id: "dai-makerdao", symbol: "DAI", name: "Dai", price: 1, priceSource: "coingecko", priceObservedAt: NOW_SEC - 30, circulating: { peggedUSD: 5e8 } },
+          { id: nav.id, symbol: nav.symbol, name: nav.name, price: 1.15, priceSource: "coingecko", priceObservedAt: NOW_SEC - 30, circulating: { peggedUSD: 5e8 } },
+        ],
+      }), NOW_SEC - 30);
+      sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status, item_count, metadata) VALUES ('sync-stablecoins', ?, 1000, 'ok', 150, '{\"cacheWriteMode\":\"published\"}')").run(NOW_SEC - 30);
+      sqlite.prepare("INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peak_price, peg_reference, source) VALUES ('dai-makerdao', 'DAI', 'peggedUSD', 'below', -200, -1, 0.98, 0.98, 1, 'live')").run();
+      sqlite.prepare("INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peak_price, peg_reference, source, peer_basis_json) VALUES ('eurc-circle', 'EURC', 'peggedEUR', 'below', -180, ?, 1.05, 1.05, 1.08, 'live', ?)").run(
+        NOW_SEC - 4_000, JSON.stringify({ latest: { basis: "native-peg", observedAt: NOW_SEC - STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC - 10, price: 1.06, pegReference: 1.08, bps: -185 } }),
+      );
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+        DEWS_PUBLICATION_POINTER_CACHE_KEY, JSON.stringify({ updatedAt: NOW_SEC + 300, source: "compute-dews", publishStatus: "published" }), NOW_SEC + 300,
+      );
+      vi.spyOn(safetyScoreIndex, "loadActiveSafetyScoreIndex").mockResolvedValue({
+        kind: "held", reason: "v9-publication-held", detail: "held",
+        snapshot: {
+          lifecycle: "active", safetyScoreIdentity: { publicationGenerationId: "v9-held-1", methodologyVersion: "9.0" } as never,
+          methodology: { version: "9.0" }, asOfSec: NOW_SEC - 60, updatedAt: NOW_SEC - 60, publicationHealth: {} as never, completeness: { expectedCount: 2 },
+          cards: [
+            { id: "usdt-tether", ratingStatus: "rated", grade: "B+", score: 78, partialEvidence: null } as never,
+            { id: "dai-makerdao", ratingStatus: "rated", grade: "A", score: 150, partialEvidence: null } as never,
+          ],
+        },
+      });
+
+      const first = await postCoins(["usdt-tether", "dai-makerdao", "eurc-circle", nav.id, pre.id]);
+      expect(first.activeDepegs).toMatchObject({ provenance: { status: "ok" }, events: [expect.objectContaining({ stablecoinId: "eurc-circle", currentDeviationBps: null, currentDirection: null })] });
+      expect(first.coinSignals["usdt-tether"]).toMatchObject({ pegStatus: "on-peg", dews: { provenance: { status: "unavailable", reason: "payload updatedAt is in the future" } }, safety: { held: true, partialEvidence: false } });
+      expect(first.coinSignals["dai-makerdao"]).toMatchObject({ pegStatus: "unavailable", safety: { provenance: { status: "unavailable", reason: "safety-card-invalid" }, held: false } });
+      expect(first.coinSignals["eurc-circle"]?.pegStatus).toBe("off-peg");
+      expect(first.coinSignals[nav.id]?.pegStatus).toBe("not-monitored");
+      expect(first.coinSignals[pre.id]).toMatchObject({ pegStatus: "not-monitored", safety: { provenance: { status: "unavailable", reason: "safety-card-missing" }, held: false } });
+
+      sqlite.prepare("UPDATE depeg_events SET peer_basis_json = ? WHERE stablecoin_id = 'eurc-circle'").run(JSON.stringify({
+        latest: { basis: "native-peg", observedAt: NOW_SEC - 20, price: 1.095, pegReference: 1.08, bps: 138.6 },
+      }));
+      sqlite.prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = ?").run(
+        JSON.stringify({ updatedAt: NOW_SEC - 60, source: "compute-dews", publishStatus: "published" }), NOW_SEC - 60, DEWS_PUBLICATION_POINTER_CACHE_KEY,
+      );
+      sqlite.prepare("INSERT INTO stress_signals_latest (stablecoin_id, score, band, signals_json, computed_at, updated_at) VALUES ('usdt-tether', 25, 'CALM', '{}', ?, ?), ('eurc-circle', 70, 'WARNING', '{}', ?, ?)").run(NOW_SEC - 60, NOW_SEC - 60, NOW_SEC - 120, NOW_SEC - 120);
+      vi.setSystemTime((NOW_SEC + 2) * 1000);
+      const second = await postCoins(["usdt-tether", "eurc-circle"]);
+      expect(second.activeDepegs.events).toEqual([expect.objectContaining({ stablecoinId: "eurc-circle", direction: "below", currentDeviationBps: 139, currentDirection: "above" })]);
+      expect(second.coinSignals["usdt-tether"]?.dews).toMatchObject({ provenance: { status: "ok" }, band: "CALM", score: 25 });
+      expect(second.coinSignals["eurc-circle"]?.dews.provenance).toMatchObject({ status: "unavailable", reason: "dews-unobserved" });
     } finally {
       sqlite.close();
     }

@@ -165,16 +165,18 @@ export function CoinScreen({
   const coinSnoozeUntil = subscription?.snoozeUntilTs ?? null;
   const coinSnoozed = coinSnoozeUntil != null && coinSnoozeUntil > nowSec;
   const canSnoozeCoin = tracked && (subscription != null || anyInherited);
-  const liveHeaderLine = tracked && liveContext ? formatCoinLiveHeaderLine(liveContext) : null;
+  const liveHeaderLine = tracked && liveContext ? formatCoinLiveHeaderLine(liveContext, catalogCoin) : null;
+  const headerSubtitle = [
+    secondaryName,
+    catalogCoin?.pegLabel ?? (catalogCoin?.peg ? `${catalogCoin.peg} peg` : null),
+    tracked ? null : "Pharos no longer tracks this coin",
+  ].filter(Boolean).join(" · ") || null;
 
   return (
     <>
       <header className="px-1 pt-2">
         <h1 tabIndex={-1} className="outline-none text-2xl font-semibold tracking-tight text-foreground">{symbol}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {[secondaryName, catalogCoin?.pegLabel ?? (catalogCoin?.peg ? `${catalogCoin.peg} peg` : null)].filter(Boolean).join(" · ")
-            || (tracked ? null : "Pharos no longer tracks this coin")}
-        </p>
+        {headerSubtitle ? <p className="mt-1 text-sm text-muted-foreground">{headerSubtitle}</p> : null}
         {liveHeaderLine ? (
           <p className="mt-1 text-xs tabular-nums text-muted-foreground">{liveHeaderLine}</p>
         ) : null}
@@ -332,13 +334,12 @@ export function CoinScreen({
             onClick={() => webApp?.openLink?.(`${PHAROS_COIN_PAGE_PREFIX}${coinId}`)}
           />
         </ListSection>
-      ) : (
+      ) : !subscription ? (
         <ListSection className="mt-5">
           <ListRow
-            title="Pharos no longer tracks this coin"
-            subtitle={subscription ? "Removing it clears this stored coin permanently." : "It is not in the current catalog."}
+            title="It is not in the current catalog."
           />
-          {!subscription && push ? (
+          {push ? (
             <ListRow
               title="Browse coins"
               tone="accent"
@@ -347,10 +348,13 @@ export function CoinScreen({
             />
           ) : null}
         </ListSection>
-      )}
+      ) : null}
 
       {subscription && canEdit ? (
-        <ListSection>
+        <ListSection
+          className={!tracked ? "mt-5" : undefined}
+          footer={!tracked ? "Removing it clears this stored coin permanently." : undefined}
+        >
           {inheritedCoverSource ? (
             <ListRow
               title={`Use ${inheritedCoverSource} settings for ${symbol}`}

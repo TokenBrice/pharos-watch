@@ -82,7 +82,7 @@ export const TELEGRAM_COMMAND_REFERENCE = {
     variants: [
       {
         syntax: "/subscribe <targets>",
-        help: "Follow coins or a preset for depeg and stress alerts",
+        help: "Follow coins or a preset for DEWS and depeg alerts",
         example: "/subscribe USDC USDT",
       },
       {

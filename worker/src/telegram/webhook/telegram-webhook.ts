@@ -84,6 +84,15 @@ export function resolveChatMigration(message: TelegramWebhookUpdate["message"] |
   return null;
 }
 
+function isSilentPrivateNonCommandMessage(update: TelegramWebhookUpdateWithChatMember): boolean {
+  if (update.callback_query || update.my_chat_member || !update.message) return false;
+  if (resolveChatMigration(update.message) != null) return false;
+  const chatType = update.message.chat?.type ?? "private";
+  if (chatType !== "private") return false;
+  const text = typeof update.message.text === "string" ? update.message.text.trim() : "";
+  return !text.startsWith("/");
+}
+
 /** Routes one authenticated update; returns the processed-row error class, or throws to request redelivery. */
 async function dispatchTelegramUpdate(
   db: D1Database,
@@ -177,6 +186,9 @@ export const handleTelegramWebhook = withErrorHandler(
 
     const updateType = resolveUpdateType(update);
     if (updateType === "unknown") return ok();
+    // Ordinary private DMs without a slash command are silently ignored: return
+    // before claiming `telegram_processed_updates` so they incur zero D1 work.
+    if (isSilentPrivateNonCommandMessage(update)) return ok();
 
     const nowSec = unixNow();
     const updateId = Number.isSafeInteger(update.update_id) ? update.update_id as number : null;

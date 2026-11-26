@@ -364,7 +364,7 @@ describe("Telegram Mini App shared contract", () => {
     }
 
     const okProv = {
-      status: "ok", source: "stablecoins-cache", assessedAt: 1_800_000_000, observedAt: 1_800_000_000, generation: "1800000000", budgetSec: 1200,
+      status: "ok", source: "stablecoins-cache", assessedAt: 1_800_000_000, observedAt: 1_800_000_000, generation: "1800000000", budgetSec: 1800,
     } as const;
     const unavailProv = {
       status: "unavailable", source: "safety-score-v9", assessedAt: 1_800_000_000, observedAt: null, generation: null, budgetSec: 3600, reason: "v9-snapshot-unavailable",
@@ -375,20 +375,31 @@ describe("Telegram Mini App shared contract", () => {
       serverNowSec: 1_800_000_000,
       context: {
         kind: "coins" as const,
-        activeDepegs: { provenance: okProv, events: [] },
+        activeDepegs: {
+          provenance: okProv,
+          events: [{
+            stablecoinId: "usdc-circle", direction: "below" as const, peakDeviationBps: -150,
+            currentDeviationBps: -120, currentDirection: "below" as const, priceUsd: 0.988, pegReference: 1, startedAt: 1_799_999_000,
+          }],
+        },
         coinSignals: {
           "usdc-circle": {
             price: { provenance: okProv, priceUsd: 0.9998 },
             dews: { provenance: okProv, band: "CALM" as const, score: 12 },
             safety: {
               provenance: unavailProv, ratingStatus: null, grade: null, score: null,
-              held: false, methodologyVersion: null, publicationId: null,
+              held: false, partialEvidence: false, methodologyVersion: null, publicationId: null,
             },
+            pegStatus: "off-peg" as const,
           },
         },
       },
     };
     expect(TelegramMiniAppContextResponseSchema.safeParse(validCoinsResponse).success).toBe(true);
+    expect(TelegramMiniAppOperationSchema.safeParse({
+      ...operations.find((entry) => entry.kind === "undo-bulk-watchlist")!,
+      expectedFingerprint: `undo-v1-1800000060-${"a".repeat(64)}`,
+    }).success).toBe(true);
     // Discriminated provenance rejects `reason` on `ok` and requires `reason` on `stale`/`unavailable`.
     expect(TelegramMiniAppContextResponseSchema.safeParse({
       ...validCoinsResponse,

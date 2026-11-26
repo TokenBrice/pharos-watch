@@ -8,12 +8,12 @@ import {
   validateSubscribeArgs,
 } from "../common/alerts-parser";
 import {
-  GROUP_PRESET_ID_LIST,
   buildNotFoundMessage,
   cmdForChat,
 } from "../webhook/telegram-webhook-messages";
 import { buildOnboardingKeyboard } from "../webhook/telegram-webhook-setup";
 import type { WebhookCommandHandler } from "./context";
+import { GROUP_PRESET_ID_LIST } from "./definitions";
 import {
   buildBulkConfirmMessage,
   buildBulkConfirmReplyMarkup,
@@ -63,7 +63,7 @@ export const handleSubscribe: WebhookCommandHandler = async (ctx, args) => {
       const presetSuggestion = suggestClosestPreset(invalidTarget);
       const tickerMatch = presetSuggestion ? null : resolveTicker(invalidTarget);
       const suggestion = presetSuggestion ?? (tickerMatch?.status === "not_found" ? tickerMatch.suggestion : undefined);
-      await ctx.replyToChat(buildNotFoundMessage(invalidTarget, suggestion));
+      await ctx.replyToChat(buildNotFoundMessage(invalidTarget, suggestion, parsed.invalidTargets.length - 1));
       await recordTelegramUsageEvent(db, {
         eventType: "subscribe",
         actionDetail: "validation",

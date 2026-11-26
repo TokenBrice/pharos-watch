@@ -66,7 +66,7 @@ const SETUP_STEPS = [
   },
   {
     title: "Follow the top 25 in one tap",
-    detail: "Depeg and stress alerts for the 25 largest USD stablecoins, updated as the market moves.",
+    detail: "Depeg and early-warning alerts for the 25 largest USD stablecoins, updated as the market moves.",
   },
   {
     title: "Adjust in Manage Alerts",
@@ -182,8 +182,8 @@ export function MiniAppShowcase() {
               Manage Alerts, without typing commands
             </h2>
             <p className="pharos-lead">
-              Tap Manage Alerts under any alert or next to the message box. One screen shows your coins and how
-              quiet things are.
+              Tap Manage Alerts (or Manage USDC on single-coin alerts) under an alert, or open it next to the message
+              box. One screen shows your coins and how quiet things are.
             </p>
           </div>
           {/* Phones see the same screens in the carousel right below, so the list starts at sm. */}

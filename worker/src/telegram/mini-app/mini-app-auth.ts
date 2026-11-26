@@ -77,6 +77,26 @@ function isPrivateUserLaunchChatType(chatType: string | null): boolean {
   return chatType === null || chatType === "private" || chatType === "sender";
 }
 
+function parseSignedChatObject(
+  rawChat: string | null,
+): { present: false } | { present: true; blocked: boolean; chatType: string | null } {
+  if (rawChat === null) return { present: false };
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(rawChat);
+  } catch {
+    return { present: true, blocked: true, chatType: null };
+  }
+  if (!isRecord(parsed)) {
+    return { present: true, blocked: true, chatType: null };
+  }
+  const parsedChatType = typeof parsed.type === "string" && parsed.type.trim().length > 0
+    ? parsed.type.trim()
+    : null;
+  const blocked = parsedChatType !== "private" && parsedChatType !== "sender";
+  return { present: true, blocked, chatType: parsedChatType };
+}
+
 export function resetTelegramMiniAppChatTypeWarningsForTests(): void {
   warnedNovelMiniAppChatTypes.clear();
 }
@@ -131,8 +151,16 @@ export async function validateTelegramMiniAppInitData(
     throw new TelegramMiniAppAuthError("invalid-auth");
   }
   const user = parseUser(params.get("user"));
-  const chatType = params.get("chat_type") || null;
-  warnNovelMiniAppChatType(chatType);
+  const rawChatType = params.get("chat_type") || null;
+  const signedChat = parseSignedChatObject(params.get("chat"));
+  const chatBlocked = signedChat.present && signedChat.blocked;
+  const chatType = chatBlocked
+    ? (!isPrivateUserLaunchChatType(rawChatType) ? rawChatType : signedChat.chatType ?? "unknown-chat")
+    : rawChatType ?? (signedChat.present ? signedChat.chatType : null);
+  warnNovelMiniAppChatType(rawChatType);
+  if (signedChat.present && signedChat.chatType !== rawChatType) {
+    warnNovelMiniAppChatType(signedChat.chatType);
+  }
   const rawStartParam = params.get("start_param");
   const startParam = rawStartParam != null &&
     rawStartParam.length > 0 &&
@@ -149,7 +177,7 @@ export async function validateTelegramMiniAppInitData(
     startParam,
     authDate,
     initDataHash: providedHash,
-    canMutatePrivateChat: isPrivateUserLaunchChatType(chatType),
+    canMutatePrivateChat: isPrivateUserLaunchChatType(rawChatType) && !chatBlocked,
   };
   if (nowSec - authDate > options.maxAgeSec) {
     throw new TelegramMiniAppAuthError("stale-auth", authContext);

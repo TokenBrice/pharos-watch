@@ -238,9 +238,6 @@ export type TelegramSubscriptionOverrideColumn =
 /** Union of every `telegram_subscribers` global column. */
 export type TelegramSubscriberGlobalColumn =
   TelegramAlertPersistenceTable[TelegramAlertType]["globalColumn"];
-/** Union of the `/settings` family codes. */
-export type TelegramAlertSettingCode =
-  TelegramAlertPersistenceTable[TelegramAlertType]["settingCode"];
 
 // SQL identifiers come only from the canonical persistence manifest above, never request data.
 

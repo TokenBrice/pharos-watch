@@ -68,7 +68,7 @@ export const MINI_APP_FEATURES = [
   { title: "Your coins", detail: "Every coin you follow, largest first, with what covers it." },
   { title: "Add coins", detail: "Search by name or ticker and add several at once." },
   { title: "Coin detail", detail: "Peg, coverage and a snooze for one coin." },
-  { title: "Make it quieter", detail: "Quiet hours, pause, and which alerts you get." },
+  { title: "Quiet controls", detail: "Quiet hours, pause, and which alerts you get." },
   { title: "Delivery status", detail: "See whether Telegram can still reach you." },
   { title: "Saves as you go", detail: "No Save button. Chat and app share one setup." },
 ] as const satisfies readonly { title: string; detail: string }[];
@@ -78,7 +78,7 @@ export const MINI_APP_SCREENSHOTS = [
     title: "Home",
     caption: "Every preset and coin you follow, plus active status and quiet hours.",
     src: "/featured/telegram-mini-app/home.jpg",
-    alt: "PharosWatchBot Mini App home screen: alerts on with quiet hours, followed presets, and coins listed largest first with the alerts each one gets",
+    alt: "PharosWatchBot Mini App home screen: alerts on with a Pause button, followed presets, and coins listed with snoozed coins first",
     width: 549,
     height: 1280,
   },
@@ -193,7 +193,7 @@ export const TELEGRAM_FAQ: FaqItem[] = [
   {
     question: "How many messages will I get?",
     answer:
-      `Very few on a normal day. Outside depegs, a chat gets at most ${DAILY_LIVE_ALERT_CAP} live alerts a day; anything past that waits for the daily Changes message. Every alert has Snooze 24h and Pause all 4h buttons (plus a threshold step-up button when a quieter setting exists), and quiet hours keep nights silent.`,
+      `Very few on a normal day. Outside depegs, a chat gets at most ${DAILY_LIVE_ALERT_CAP} live alerts a day; anything past that waits for the daily Changes message. Every alert has Snooze 24h and Pause all 4h buttons (plus a threshold step-up button when a quieter setting exists), and quiet hours deliver overnight alerts without sound.`,
   },
   {
     question: "Where do alerts land: DM or group?",
@@ -203,7 +203,7 @@ export const TELEGRAM_FAQ: FaqItem[] = [
   {
     question: "Do I have to type commands?",
     answer:
-      "No. Tap Manage Alerts, under any alert or next to the message box, to open the Mini App: add coins, set quiet hours and pause in a few taps. Commands such as /status USDC still work, and both share the same setup.",
+      "No. Tap Manage Alerts next to the message box (or Manage USDC under a single-coin alert) to open the Mini App: add coins, set quiet hours and pause in a few taps. Commands such as /status USDC still work, and both share the same setup.",
   },
   {
     question: "What are presets?",

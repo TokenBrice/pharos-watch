@@ -66,6 +66,12 @@ type NormalizedQueuedTarget = NormalizedCoinTarget | NormalizedPresetTarget;
 
 type MutationWaiter = (snapshot: TelegramMiniAppClientSnapshot | null) => void;
 
+function createWaiter<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((res) => { resolve = res; });
+  return { promise, resolve };
+}
+
 type LaneState =
   | { phase: "idle" }
   | {
@@ -783,9 +789,20 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     webApp?.HapticFeedback?.notificationOccurred?.("error");
   }, [showNotice, webApp]);
 
-  const discardQueueOnly = useCallback(() => {
+  const recordStaleAuthIntent = useCallback((operation: TelegramMiniAppOperation) => {
+    staleAuthIdRef.current += 1;
+    const next: MiniAppStaleAuthState = {
+      id: staleAuthIdRef.current,
+      intent: staleAuthIntent(operation, stateRef.current),
+    };
+    staleAuthRef.current = next;
+    setStaleAuth(next);
+  }, []);
+
+  const discardQueueOnly = useCallback((recordAuthExpiryIntent = false) => {
     const lane = laneRef.current;
     if (lane.phase !== "inflight+queued") return;
+    const droppedQueued = lane.queued;
     const droppedWaiters = lane.queuedWaiters;
     laneRef.current = {
       phase: "inflight",
@@ -794,8 +811,11 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
       waiters: lane.waiters,
     };
     setQueuedOperation(null);
+    if (recordAuthExpiryIntent) {
+      recordStaleAuthIntent(toDisplayQueuedOperation(droppedQueued));
+    }
     for (const resolve of droppedWaiters) resolve(null);
-  }, []);
+  }, [recordStaleAuthIntent]);
 
   const invalidateLaunchEpoch = useCallback(() => {
     launchEpochRef.current += 1;
@@ -830,7 +850,7 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
   // Discard any queued patch immediately if auth expires or mutations become disallowed (e.g. stale session).
   useEffect(() => {
     if (authExpired || !mutationsAllowed) {
-      discardQueueOnly();
+      discardQueueOnly(authExpired || staleAuthRef.current != null);
     }
   }, [authExpired, discardQueueOnly, mutationsAllowed]);
 
@@ -902,16 +922,6 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
       if (inflightFlag !== undefined) return inflightFlag;
     }
     return confirmedValue;
-  }, []);
-
-  const recordStaleAuthIntent = useCallback((operation: TelegramMiniAppOperation) => {
-    staleAuthIdRef.current += 1;
-    const next: MiniAppStaleAuthState = {
-      id: staleAuthIdRef.current,
-      intent: staleAuthIntent(operation, stateRef.current),
-    };
-    staleAuthRef.current = next;
-    setStaleAuth(next);
   }, []);
 
   const readLane = (): LaneState => laneRef.current;
@@ -1049,7 +1059,15 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
             setIsMutating(false);
             setPendingOperation(null);
             setQueuedOperation(null);
-            showNotice("success", mutationSuccessAnnouncement(currentOp, preState ?? next.state, currentOptions?.appliedBulk));
+            if (
+              authExpiredRef.current
+              || staleAuthRef.current != null
+              || next.state.viewer.mutationBlockReason === "stale-auth"
+            ) {
+              recordStaleAuthIntent(residual);
+            } else {
+              showNotice("success", mutationSuccessAnnouncement(currentOp, preState ?? next.state, currentOptions?.appliedBulk));
+            }
             for (const resolve of completedWaiters) resolve(next);
             for (const resolve of queuedWaiters) resolve(null);
             return;
@@ -1186,7 +1204,7 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     const currentLane = laneRef.current;
     if (currentLane.phase !== "idle") {
       if (canCoalesce(currentLane.operation, operation)) {
-        const waiter = Promise.withResolvers<TelegramMiniAppClientSnapshot | null>();
+        const waiter = createWaiter<TelegramMiniAppClientSnapshot | null>();
         const mergedTarget = mergeCoalescibleTarget(
           currentLane.phase === "inflight+queued" ? currentLane.queued : null,
           operation,
@@ -1212,7 +1230,7 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
       return Promise.resolve(null);
     }
 
-    const waiter = Promise.withResolvers<TelegramMiniAppClientSnapshot | null>();
+    const waiter = createWaiter<TelegramMiniAppClientSnapshot | null>();
     const epoch = launchEpochRef.current;
     laneRef.current = {
       phase: "inflight",

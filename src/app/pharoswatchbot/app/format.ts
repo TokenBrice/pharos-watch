@@ -217,10 +217,11 @@ export function joinLabels(labels: readonly string[]): string | null {
 
 /**
  * Format an active depeg's deviation honestly: live current deviation when
- * available, otherwise peak deviation (marked `peak`), or `"Off peg"` when
- * peak basis is unavailable; preserves peer-relative caveats.
+ * available (paired with currentDirection or signed bps), otherwise peak
+ * deviation (marked `peak`), or `"Off peg"` when peak basis is unavailable;
+ * preserves peer-relative caveats.
  */
-export function formatDepegDeviation(
+function formatDepegDeviation(
   depeg: TelegramMiniAppActiveDepeg,
   options: { withPegWord?: boolean } = {},
 ): string {
@@ -228,11 +229,15 @@ export function formatDepegDeviation(
   if (depeg.currentDeviationBps == null && depeg.peakBasisUnavailable) {
     return depeg.peerRelative ? "Off peg (vs peers)" : "Off peg";
   }
-  const bps = depeg.currentDeviationBps ?? depeg.peakDeviationBps;
+  const usingCurrent = depeg.currentDeviationBps != null;
+  const bps = usingCurrent ? depeg.currentDeviationBps! : depeg.peakDeviationBps;
+  const direction = usingCurrent
+    ? (depeg.currentDirection ?? (bps > 0 ? "above" : bps < 0 ? "below" : depeg.direction))
+    : depeg.direction;
   const pct = (Math.abs(bps) / 100).toFixed(1);
-  const base = withPegWord ? `${pct}% ${depeg.direction} peg` : `${pct}% ${depeg.direction}`;
+  const base = withPegWord ? `${pct}% ${direction} peg` : `${pct}% ${direction}`;
   const qualifiers = [
-    depeg.currentDeviationBps == null ? "peak" : null,
+    !usingCurrent ? "peak" : null,
     depeg.peerRelative ? "vs peers" : null,
   ].filter((part): part is string => part != null);
   return qualifiers.length > 0 ? `${base} (${qualifiers.join(", ")})` : base;
@@ -248,50 +253,68 @@ export function formatOffPegRowValue(depeg: TelegramMiniAppActiveDepeg): string 
 /**
  * Format the single quiet live-status line for Coin detail header:
  * `$0.9998 · On peg · DEWS Calm 12 · Safety A-` (or `1.3% below peg`),
- * per-lane `—` on partial failure, `Safety Held` when held, and
- * `Live data unavailable.` when every lane is unavailable.
+ * omitting the peg segment for unmonitored coins (NAV/pre-launch), showing
+ * per-lane `—` on partial failure, `Safety Held` when a rated/scored card is
+ * held, `Safety <grade> (partial)` on partial evidence, and
+ * `Live data unavailable.` when every lane is unavailable/omitted.
  */
-export function formatCoinLiveHeaderLine(input: {
-  status: "idle" | "ok" | "unavailable";
-  signal: TelegramMiniAppCoinSignal | null;
-  depeg: TelegramMiniAppActiveDepeg | null;
-  depegProvenance: TelegramMiniAppContextProvenance | null;
-}): string | null {
+export function formatCoinLiveHeaderLine(
+  input: {
+    status: "idle" | "ok" | "unavailable";
+    signal: TelegramMiniAppCoinSignal | null;
+    depeg: TelegramMiniAppActiveDepeg | null;
+    depegProvenance: TelegramMiniAppContextProvenance | null;
+  },
+  coinMeta?: { status?: string | null; pegLabel?: string | null } | null,
+): string | null {
   if (input.status === "idle") return null;
   if (input.status === "unavailable" || !input.signal) return "Live data unavailable.";
   const { signal, depeg, depegProvenance } = input;
 
   const priceOk = signal.price.provenance.status === "ok" && signal.price.priceUsd != null;
-  const pegOk = depegProvenance?.status === "ok";
+  const pegStatus = signal.pegStatus ?? (
+    depeg != null && depegProvenance?.status === "ok"
+      ? "off-peg"
+      : (coinMeta?.status != null && coinMeta.status !== "active") || Boolean(coinMeta?.pegLabel)
+        ? "not-monitored"
+        : depegProvenance?.status === "ok" && priceOk
+          ? "on-peg"
+          : "unavailable"
+  );
+  const pegAvailable = pegStatus === "off-peg" || pegStatus === "on-peg";
   const dewsOk = signal.dews.provenance.status === "ok" && signal.dews.band != null && signal.dews.score != null;
-  const safetyHeld = signal.safety.held;
+  const safetyHeld = signal.safety.held === true && signal.safety.ratingStatus != null;
   const safetyRated = signal.safety.provenance.status === "ok"
     && signal.safety.ratingStatus === "rated"
     && signal.safety.grade != null;
   const safetyAnyAvailable = safetyHeld || safetyRated;
 
-  if (!priceOk && !pegOk && !dewsOk && !safetyAnyAvailable) {
+  if (!priceOk && !pegAvailable && !dewsOk && !safetyAnyAvailable) {
     return "Live data unavailable.";
   }
 
   const pricePart = priceOk && signal.price.priceUsd != null
     ? `$${formatUsdPriceAdaptive(signal.price.priceUsd)}`
     : "Price —";
-  const pegPart = pegOk
-    ? depeg
-      ? formatDepegDeviation(depeg, { withPegWord: true })
-      : "On peg"
-    : "Peg —";
+  const pegPart = pegStatus === "not-monitored"
+    ? null
+    : pegStatus === "off-peg"
+      ? (depeg ? formatDepegDeviation(depeg, { withPegWord: true }) : "Off peg")
+      : pegStatus === "on-peg"
+        ? "On peg"
+        : "Peg —";
   const dewsPart = dewsOk && signal.dews.band != null && signal.dews.score != null
     ? `DEWS ${THREAT_BAND_LABELS[signal.dews.band]} ${Math.round(signal.dews.score)}`
     : "DEWS —";
   const safetyPart = safetyHeld
     ? "Safety Held"
     : safetyRated && signal.safety.grade != null
-      ? `Safety ${signal.safety.grade}`
+      ? signal.safety.partialEvidence === true
+        ? `Safety ${signal.safety.grade} (partial)`
+        : `Safety ${signal.safety.grade}`
       : "Safety —";
 
-  return `${pricePart} · ${pegPart} · ${dewsPart} · ${safetyPart}`;
+  return [pricePart, pegPart, dewsPart, safetyPart].filter((part): part is string => part != null).join(" · ");
 }
 
 /**

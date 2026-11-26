@@ -78,6 +78,7 @@ describe("/subscribe and /unsubscribe", () => {
 
     for (const [args, expected] of [
       ["dews USDC NOTACOINXYZ", "No stablecoin or preset called"],
+      ["FOO BAR BAZ", 'No stablecoin or preset called &quot;FOO&quot; (and 2 more).'],
       ["USDTX", "Did you mean USDT?"],
       ["usd-top24", "Did you mean usd-top25?"],
     ] as const) {

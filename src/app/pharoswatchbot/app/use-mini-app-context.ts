@@ -25,6 +25,8 @@ const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffec
 export interface HomePegContext {
   status: "idle" | "ok" | "unavailable";
   events: TelegramMiniAppActiveDepeg[];
+  /** True when the chat watches more than the 20-coin live-context cap. */
+  truncated: boolean;
 }
 
 export interface CoinLiveContext {
@@ -70,12 +72,13 @@ const EMPTY_CACHE = createEmptyCache("");
 /**
  * Select up to 20 unique selectable watched coins for Home live peg context:
  * direct subscriptions first (sorted by catalog rank), then top members of
- * followed presets in resolver order.
+ * followed presets in resolver order, alongside the total unique selectable
+ * count so callers can avoid totalizing over a truncated sample (R7).
  */
-export function selectWatchedCoinIdsForContext(
+function selectWatchedCoinIdsForContext(
   state: TelegramMiniAppState,
   limit = MAX_WATCHED_CONTEXT_COINS,
-): string[] {
+): { coinIds: string[]; totalSelectableCount: number } {
   const rankById = new Map<string, number>();
   for (const coin of state.catalog.searchableCoins) {
     rankById.set(coin.stablecoinId, coin.rank ?? Number.MAX_SAFE_INTEGER);
@@ -83,9 +86,9 @@ export function selectWatchedCoinIdsForContext(
   const picked: string[] = [];
   const seen = new Set<string>();
   const addIfSelectable = (stablecoinId: string) => {
-    if (picked.length >= limit || seen.has(stablecoinId) || !rankById.has(stablecoinId)) return;
+    if (seen.has(stablecoinId) || !rankById.has(stablecoinId)) return;
     seen.add(stablecoinId);
-    picked.push(stablecoinId);
+    if (picked.length < limit) picked.push(stablecoinId);
   };
   const rankedDirect = [...state.subscriptions].sort(
     (left, right) =>
@@ -97,7 +100,7 @@ export function selectWatchedCoinIdsForContext(
   for (const preset of state.presets) {
     for (const memberId of preset.memberIds ?? []) addIfSelectable(memberId);
   }
-  return picked;
+  return { coinIds: picked, totalSelectableCount: seen.size };
 }
 
 export interface UseMiniAppContextArgs {
@@ -140,11 +143,22 @@ export function useMiniAppContext({
     : "";
 
   const [cache, setCache] = useState<LaunchContextCache>(() => createEmptyCache(""));
+  const [retryNonce, setRetryNonce] = useState(0);
   const inFlightKeysRef = useRef<Set<string>>(new Set());
+  const retriedKeysRef = useRef<Set<string>>(new Set());
+  const pendingRetryRef = useRef<{ key: string; timerId: number } | null>(null);
   const epochRef = useRef(0);
   const activeLaunchKeyRef = useRef(launchKey);
+  const activeDesiredKeyRef = useRef<string | null>(null);
   const onSessionAuthExpiredRef = useRef(onSessionAuthExpired);
   const onUpdateRequiredRef = useRef(onUpdateRequired);
+
+  const clearPendingRetry = () => {
+    if (pendingRetryRef.current != null) {
+      window.clearTimeout(pendingRetryRef.current.timerId);
+      pendingRetryRef.current = null;
+    }
+  };
 
   useIsomorphicLayoutEffect(() => {
     onSessionAuthExpiredRef.current = onSessionAuthExpired;
@@ -156,15 +170,24 @@ export function useMiniAppContext({
       activeLaunchKeyRef.current = launchKey;
       epochRef.current += 1;
       inFlightKeysRef.current.clear();
+      retriedKeysRef.current.clear();
+      clearPendingRetry();
     }
   }, [launchKey]);
 
+  useEffect(() => () => {
+    epochRef.current += 1;
+    clearPendingRetry();
+  }, []);
+
   const activeCache = cache.launchKey === launchKey ? cache : EMPTY_CACHE;
 
-  const watchedCoinIds = useMemo(
-    () => (state && !isNewUser ? selectWatchedCoinIdsForContext(state) : []),
+  const watchedSelection = useMemo(
+    () => (state && !isNewUser ? selectWatchedCoinIdsForContext(state) : { coinIds: [], totalSelectableCount: 0 }),
     [isNewUser, state],
   );
+  const watchedCoinIds = watchedSelection.coinIds;
+  const homeTruncated = watchedSelection.totalSelectableCount > watchedCoinIds.length;
   const homeCoinKey = useMemo(
     () => [...watchedCoinIds].sort().join(","),
     [watchedCoinIds],
@@ -202,6 +225,15 @@ export function useMiniAppContext({
     return null;
   }, [coinScreenId, coinScreenSelectable, enabled, homeCoinKey, isNewUser, screen.name, state, watchedCoinIds]);
 
+  const desiredKey = desired?.key ?? null;
+  useIsomorphicLayoutEffect(() => {
+    activeDesiredKeyRef.current = desiredKey;
+  });
+
+  useEffect(() => () => {
+    clearPendingRetry();
+  }, [desiredKey, launchKey]);
+
   const isCached = useMemo(() => {
     if (!desired) return true;
     if (desired.request.kind === "presets") return activeCache.presets != null;
@@ -215,6 +247,7 @@ export function useMiniAppContext({
   useEffect(() => {
     if (!enabled || !desired || !launchKey || isCached) return;
     if (inFlightKeysRef.current.has(desired.key)) return;
+    if (pendingRetryRef.current?.key === desired.key) return;
 
     inFlightKeysRef.current.add(desired.key);
     const requestEpoch = epochRef.current;
@@ -282,6 +315,30 @@ export function useMiniAppContext({
           onSessionAuthExpiredRef.current();
           return;
         }
+        if (err instanceof MiniAppRequestError && err.status === 429) {
+          // Cooldown 429 must not permanently poison this launch: allow 1 cancellable retry per key.
+          if (activeDesiredKeyRef.current !== capturedKey) return;
+          if (!retriedKeysRef.current.has(capturedKey)) {
+            retriedKeysRef.current.add(capturedKey);
+            clearPendingRetry();
+            const delayMs = (err.retryAfterSec ?? 1) * 1000 + 50;
+            const timerId = window.setTimeout(() => {
+              if (pendingRetryRef.current?.timerId === timerId) {
+                pendingRetryRef.current = null;
+              }
+              if (
+                epochRef.current !== requestEpoch
+                || activeLaunchKeyRef.current !== launchKey
+                || activeDesiredKeyRef.current !== capturedKey
+              ) {
+                return;
+              }
+              setRetryNonce((current) => current + 1);
+            }, delayMs);
+            pendingRetryRef.current = { key: capturedKey, timerId };
+            return;
+          }
+        }
         setCache((prev) => {
           const base = prev.launchKey === launchKey ? prev : createEmptyCache(launchKey);
           if (capturedRequest.kind === "presets") {
@@ -302,12 +359,13 @@ export function useMiniAppContext({
           inFlightKeysRef.current.delete(capturedKey);
         }
       });
-  }, [desired, enabled, homeCoinKey, initData, isCached, launchKey]);
+  }, [desired, enabled, homeCoinKey, initData, isCached, launchKey, retryNonce]);
 
   const homePegContext = useMemo<HomePegContext>(() => {
-    if (!enabled || isNewUser || !homeCoinKey) return { status: "idle", events: [] };
-    return activeCache.homeDepegLaneByKey.get(homeCoinKey) ?? { status: "idle", events: [] };
-  }, [activeCache, enabled, homeCoinKey, isNewUser]);
+    if (!enabled || isNewUser || !homeCoinKey) return { status: "idle", events: [], truncated: false };
+    const lane = activeCache.homeDepegLaneByKey.get(homeCoinKey);
+    return lane ? { ...lane, truncated: homeTruncated } : { status: "idle", events: [], truncated: homeTruncated };
+  }, [activeCache, enabled, homeCoinKey, homeTruncated, isNewUser]);
 
   const coinLiveContext = useMemo<CoinLiveContext>(() => {
     if (!enabled || !coinScreenId || !coinScreenSelectable) {

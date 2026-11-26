@@ -36,9 +36,6 @@ interface AlertFamilyDescriptionOptions {
 const GLOBAL_SAFETY_LABEL = "Safety downgrades of 3+ points";
 const LIST_MAX_COINS = 15;
 
-export const GROUP_PRESET_ID_LIST =
-  "usd-top10/25/50, non-usd-top10/25/50, eur-top10, gold-top5, mcap-ge-1b, mcap-ge-100m";
-
 /** Format a slash command for the chat type (addressed with `@Bot` in groups). */
 export function cmdForChat(name: string, chatType: string): string {
   const bare = name.startsWith("/") ? name.slice(1) : name;
@@ -59,8 +56,13 @@ function formatDepegLabel(step: number | null | undefined): string {
   return step != null ? `Depeg (${formatDepegStepPercent(step)})` : "Depeg";
 }
 
-export function buildNotFoundMessage(ticker: string, suggestion?: ResolvedCoin | string): string {
-  const lines = [`No stablecoin or preset called "${ticker}".`];
+export function buildNotFoundMessage(
+  ticker: string,
+  suggestion?: ResolvedCoin | string,
+  extraInvalidCount = 0,
+): string {
+  const extraSuffix = extraInvalidCount > 0 ? ` (and ${extraInvalidCount} more)` : "";
+  const lines = [`No stablecoin or preset called "${ticker}"${extraSuffix}.`];
   const label = typeof suggestion === "string" ? suggestion : suggestion?.symbol;
   if (label) {
     lines.push(`Did you mean ${label}?`);

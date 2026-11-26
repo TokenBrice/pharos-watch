@@ -1,4 +1,5 @@
 import { TELEGRAM_BOT_USERNAME, type TelegramCommandName } from "@shared/lib/telegram-bot-registration";
+import { TELEGRAM_PRESET_IDS } from "@shared/lib/telegram-presets";
 
 export type TelegramCanonicalCommand = `/${TelegramCommandName}` | "/sample";
 
@@ -39,10 +40,33 @@ export const TELEGRAM_COMMAND_ALIASES = {
   "/coverage": { target: "/status" },
 } as const satisfies Record<string, { target: TelegramCanonicalCommand; args?: string }>;
 
+function formatCompactPresetIdList(presetIds: readonly string[]): string {
+  const grouped: Array<{ prefix: string | null; values: string[] }> = [];
+  const byPrefix = new Map<string, { prefix: string; values: string[] }>();
+  for (const id of presetIds) {
+    const match = /^(.*-top)(\d+)$/.exec(id);
+    if (match) {
+      const [, prefix, count] = match;
+      const existing = byPrefix.get(prefix!);
+      if (existing) {
+        existing.values.push(count!);
+      } else {
+        const entry = { prefix: prefix!, values: [count!] };
+        byPrefix.set(prefix!, entry);
+        grouped.push(entry);
+      }
+    } else {
+      grouped.push({ prefix: null, values: [id] });
+    }
+  }
+  return grouped
+    .map((entry) => (entry.prefix ? `${entry.prefix}${entry.values.join("/")}` : entry.values[0]!))
+    .join(", ");
+}
+
 const GROUP_SETTINGS_CMD = `/settings@${TELEGRAM_BOT_USERNAME}`;
 const GROUP_SUBSCRIBE_CMD = `/subscribe@${TELEGRAM_BOT_USERNAME}`;
-const GROUP_PRESETS_SUMMARY =
-  "usd-top10/25/50, non-usd-top10/25/50, eur-top10, gold-top5, mcap-ge-1b, mcap-ge-100m";
+export const GROUP_PRESET_ID_LIST = formatCompactPresetIdList(TELEGRAM_PRESET_IDS);
 
 const SETTINGS_MOVED = {
   private: "That setting moved to Manage Alerts.",
@@ -58,7 +82,7 @@ export const RETIRED_COMMAND_REPLIES = {
   "/presets": {
     policyOrder: 5,
     private: "Follow a preset with /subscribe usd-top25, or browse presets in Manage Alerts.",
-    group: `Follow a preset with ${GROUP_SUBSCRIBE_CMD} <preset>.\nPresets: ${GROUP_PRESETS_SUMMARY}`,
+    group: `Follow a preset with ${GROUP_SUBSCRIBE_CMD} <preset>.\nPresets: ${GROUP_PRESET_ID_LIST}`,
   },
   "/top": {
     policyOrder: 6,

@@ -61,7 +61,7 @@ export interface AddCoinsScreenProps extends MiniAppScreenProps {
   webApp?: TelegramWebAppSdk | null;
   hasInlineBack?: boolean;
   onDirtyChange?: (dirty: boolean) => void;
-  registerBackGuard?: (guard: (() => boolean) | null) => void;
+  registerBackGuard?: (guard: ((onProceed: () => void) => boolean) | null) => void;
 }
 
 /** One multi-select over the catalog: tick to add, untick a followed coin to remove. */
@@ -79,6 +79,7 @@ export function AddCoinsScreen({
 }: AddCoinsScreenProps) {
   const haptics = useMiniAppHaptics();
   const inputRef = useRef<HTMLInputElement>(null);
+  const mountedRef = useRef(true);
   const [query, setQuery] = useState("");
   const [adds, setAdds] = useState<string[]>([]);
   const [removes, setRemoves] = useState<string[]>([]);
@@ -122,6 +123,13 @@ export function AddCoinsScreen({
     || pendingOperation?.kind === "confirm-bulk-watchlist";
 
   useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
     onDirtyChange?.(changeCount > 0);
     return () => onDirtyChange?.(false);
   }, [changeCount, onDirtyChange]);
@@ -133,7 +141,7 @@ export function AddCoinsScreen({
       return () => registerBackGuard(null);
     }
     const label = `${changeCount} ${changeCount === 1 ? "change" : "changes"}`;
-    registerBackGuard(() => {
+    registerBackGuard((onProceed) => {
       if (canUseTelegramPopup(webApp)) {
         webApp!.showPopup!(
           {
@@ -145,21 +153,21 @@ export function AddCoinsScreen({
             ],
           },
           (buttonId) => {
-            if (buttonId === "discard") onDone();
+            if (buttonId === "discard") onProceed();
           },
         );
         return false;
       }
       if (webApp?.showConfirm) {
         webApp.showConfirm(`Discard ${label}?`, (confirmed) => {
-          if (confirmed) onDone();
+          if (confirmed) onProceed();
         });
         return false;
       }
       return true;
     });
     return () => registerBackGuard(null);
-  }, [applying, changeCount, onDone, registerBackGuard, webApp]);
+  }, [applying, changeCount, registerBackGuard, webApp]);
 
   usePrimaryAction(canEdit && changeCount > 0 ? {
     kind: "apply-bulk",
@@ -168,7 +176,7 @@ export function AddCoinsScreen({
     onClick: () => {
       if (busy) return;
       void onApply(adds, removes).then((saved) => {
-        if (saved) onDone();
+        if (saved && mountedRef.current) onDone();
       });
     },
   } : null);

@@ -569,7 +569,7 @@ const FAMILY_COUNT_LABEL: Record<AlertFamilyKey, string> = {
 /** Family names for the provenance footer. */
 const FAMILY_FOOTER_LABEL: Record<AlertFamilyKey, string> = {
   depeg: "depeg alerts",
-  dews: "stress alerts",
+  dews: "DEWS alerts",
   safety: "Safety alerts",
   freeze: "freeze alerts",
   reserve: "reserve alerts",
@@ -701,10 +701,26 @@ function formatFreezeAmountSummary(events: readonly FreezeAlert[]): string {
     : `${formatUsdAmount(knownUsd)} known`;
 }
 
+function formatFreezeBurstCollapseSummary(events: readonly FreezeAlert[]): string | null {
+  let knownUsd = 0;
+  let unpricedCount = 0;
+  for (const event of events) {
+    if (event.amountUsdAtEvent != null && Number.isFinite(event.amountUsdAtEvent)) {
+      knownUsd += event.amountUsdAtEvent;
+    } else {
+      unpricedCount++;
+    }
+  }
+  if (knownUsd <= 0) return null;
+  return unpricedCount > 0
+    ? `${formatUsdAmount(knownUsd)} known, ${unpricedCount} unpriced`
+    : `${formatUsdAmount(knownUsd)} known`;
+}
+
 /**
  * Distinct compact batch wrapper for hourly below-threshold freeze summaries
  * (`freeze_batch` jobs). Sorts deterministically with `compareFreezeAlerts`,
- * collapses >4-event bursts per coin+chain to the top 3 + `and N smaller`,
+ * collapses >4-event bursts per coin+chain to the top 3 + `and N more`,
  * and always keeps the Pharos FreezeWatch link. Callers still pass every
  * underlying event's source key for send-time retraction checks.
  */
@@ -741,7 +757,8 @@ export function formatHourlyFreezeBatchMessage(
     if (group.length > FREEZE_BATCH_BURST_COLLAPSE_THRESHOLD) {
       const rest = group.slice(FREEZE_BATCH_BURST_TOP_ROWS);
       const chain = escapeHtml(group[0]!.chainName);
-      lines.push(`<i>and ${rest.length} smaller on ${chain} (${formatFreezeAmountSummary(rest)})</i>`);
+      const amountSummary = formatFreezeBurstCollapseSummary(rest);
+      lines.push(`<i>and ${rest.length} more on ${chain}${amountSummary ? ` (${amountSummary})` : ""}</i>`);
     }
   }
 

@@ -38,7 +38,7 @@ export const handleUnsubscribe: WebhookCommandHandler = async (ctx, args) => {
     const presetSuggestion = suggestClosestPreset(invalidTarget);
     const match = presetSuggestion ? null : resolveTicker(invalidTarget, "tracked");
     const suggestion = presetSuggestion ?? (match?.status === "not_found" ? match.suggestion : undefined);
-    await ctx.replyToChat(buildNotFoundMessage(invalidTarget, suggestion));
+    await ctx.replyToChat(buildNotFoundMessage(invalidTarget, suggestion, parsed.invalidTargets.length - 1));
     await recordTelegramUsageEvent(db, {
       eventType: "unsubscribe",
       actionDetail: "validation",

@@ -4,7 +4,7 @@
  * Views:
  *   - Home (`settings:home[:<page>]`): quiet hours, pause/resume, followed presets,
  *     `All stablecoins ▸`, and 2-column paginated direct coins (8/page).
- *   - All stablecoins (`settings:g`): chat-wide family toggles (`settings:gt`).
+ *   - All stablecoins (`settings:g:<page>`): chat-wide family toggles (`settings:gt`).
  *   - Preset detail (`settings:p:<preset>:<page>`): DEWS/Depeg/Safety toggles
  *     (`settings:pf`) and two-step Unfollow (`settings:pu` → `settings:pc`).
  *   - Per-coin (`settings:o:<coin>:<page>`): DEWS, Depeg (including `ds:a`),
@@ -188,7 +188,7 @@ export async function handleSettingsCallback(
       return;
 
     case "global":
-      await renderGlobal(db, chatId, botToken, target);
+      await renderGlobal(db, chatId, botToken, target, parsed.page);
       await answer();
       return;
 
@@ -254,7 +254,7 @@ export async function handleSettingsCallback(
     case "global_toggle":
       if (parsed.next === null) {
         // Legacy bare `settings:gt:<type>` button refreshes without toggling.
-        await renderGlobal(db, chatId, botToken, target);
+        await renderGlobal(db, chatId, botToken, target, parsed.page);
         await answer({ text: "Settings refreshed. Tap again to change." });
         return;
       }
@@ -264,7 +264,7 @@ export async function handleSettingsCallback(
         actionDetail: parsed.alertType,
         outcome: parsed.next ? "opt_in" : "opt_out",
       });
-      await renderGlobal(db, chatId, botToken, target);
+      await renderGlobal(db, chatId, botToken, target, parsed.page);
       await answer({ text: `Global ${parsed.alertType} ${parsed.next ? "on" : "off"}.` });
       return;
 
@@ -362,13 +362,14 @@ async function renderGlobal(
   chatId: string,
   botToken: string,
   target: RenderTarget,
+  returnPage = 0,
 ): Promise<void> {
   const subscriber = await loadSubscriberByChat(db, chatId);
   await deliver(
     db,
     chatId,
     buildGlobalMessage(subscriber),
-    buildGlobalKeyboard(subscriber),
+    buildGlobalKeyboard(subscriber, returnPage),
     botToken,
     target,
   );

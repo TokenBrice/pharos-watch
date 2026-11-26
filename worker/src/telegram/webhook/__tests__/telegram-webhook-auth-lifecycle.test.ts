@@ -130,6 +130,20 @@ describe("handleTelegramWebhook", () => {
     expect(db.getHistory()).toHaveLength(0);
   });
 
+  it("ignores ordinary private non-command DMs with zero D1 calls and zero replies", async () => {
+    const db = makeLifecycleDb([]);
+    const prepare = vi.spyOn(db, "prepare");
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(123, "hello there", "test-secret", { updateId: 501 }),
+      "test-secret",
+      "bot-token",
+    );
+    expect(res.status).toBe(200);
+    expect(prepare).not.toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("accepts the previous webhook secret during the overlap window", async () => {
     const db = makeLifecycleDb();
     const res = await handleTelegramWebhook(

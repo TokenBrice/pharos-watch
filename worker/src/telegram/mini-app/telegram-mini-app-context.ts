@@ -1,7 +1,12 @@
-import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import {
+  API_FRESHNESS_MAX_AGE_SEC,
+  STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC,
+} from "@shared/lib/api-freshness";
 import { isThreatBand } from "@shared/lib/classification/risk";
 import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
+import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { TELEGRAM_PRESET_IDS } from "@shared/lib/telegram-presets";
 import type {
   TelegramMiniAppActiveDepeg,
@@ -13,23 +18,32 @@ import type {
   TelegramMiniAppPresetsContext,
 } from "@shared/lib/telegram-mini-app-contract";
 import type { StablecoinData } from "@shared/types/supply";
+import {
+  getLatestSuccessfulCronTimestampResult,
+  type CronTimestampLookupResult,
+} from "../../lib/api-freshness";
+import { EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL } from "../../lib/depeg-event-projection";
 import { isPairedDepegPeak } from "../../lib/depeg-helpers";
 import { readAdmittedPeerOnset, readAdmittedPeerPeak, readPendingObservationReceipt } from "../../lib/depeg-pending";
 import { readDewsPublishedGenerationResult } from "../../lib/dews-publication-pointer";
 import { loadActiveSafetyScoreIndex } from "../../lib/safety-score-index";
 import { loadStablecoinsCache, type StablecoinsCacheLoadResult } from "../../lib/stablecoins-cache";
-import {
-  loadStressSignalCurrentRowForCoin,
-  loadStressSignalCurrentRows,
-  type StressSignalCurrentRow,
-} from "../../lib/stress-signals-current-rows";
 import { resolveTelegramPresetTargets } from "../common/presets";
 import { isSubscribableCoin } from "../store/subscription-eligibility";
+
+const DEPEG_EVENTS_PRODUCER_JOB = "sync-stablecoins";
 
 type ContextDepegRow = Parameters<typeof readAdmittedPeerPeak>[0] & {
   direction: string;
   peg_reference: number;
 };
+
+interface ScopedDewsRow {
+  stablecoin_id: string;
+  score: number;
+  band: string;
+  computed_at: number;
+}
 
 function okProvenance(
   source: string,
@@ -84,13 +98,16 @@ async function loadScopedOpenDepegs(
   if (stablecoinIds.length === 0) return { ok: true, rows: [] };
   const placeholders = stablecoinIds.map(() => "?").join(", ");
   try {
-    // SAFETY: placeholders match bounded 1..20 validated stablecoinIds; values use D1 binds.
+    // SAFETY: placeholders match bounded 1..20 validated stablecoinIds and
+    // EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL is a static SQL fragment; values use D1 binds.
     const result = await db
       .prepare(
         `SELECT stablecoin_id, direction, peak_deviation_bps, started_at, peg_reference, peg_type,
                 start_price, peak_price, peak_peg_reference, peak_quote_domain, peer_basis_json
-           FROM depeg_events
-          WHERE ended_at IS NULL AND stablecoin_id IN (${placeholders})
+           FROM depeg_events_with_provenance
+          WHERE ended_at IS NULL
+            AND stablecoin_id IN (${placeholders})
+            AND ${EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL}
           ORDER BY started_at DESC`,
       )
       .bind(...stablecoinIds)
@@ -106,7 +123,7 @@ interface DewsLoadState {
   pointerReason: string | null;
   generation: string | null;
   readFailed: boolean;
-  rowsById: Map<string, Pick<StressSignalCurrentRow, "band" | "score" | "computed_at">>;
+  rowsById: Map<string, Pick<ScopedDewsRow, "band" | "score" | "computed_at">>;
 }
 
 async function loadScopedDews(
@@ -119,43 +136,42 @@ async function loadScopedDews(
     const reason = pointer.status === "no-pointer"
       ? "dews-publication-missing"
       : pointer.status === "invalid-pointer"
-        ? "dews-pointer-invalid"
-        : "dews-pointer-read-failed";
-    return { pointerStatus: "unavailable", pointerReason: reason, generation: null, readFailed: false, rowsById: new Map() };
+        ? pointer.reason
+        : pointer.error;
+    return {
+      pointerStatus: "unavailable",
+      pointerReason: reason || "dews-unavailable",
+      generation: null,
+      readFailed: false,
+      rowsById: new Map(),
+    };
   }
   const generation = `dews:${pointer.computedAt}`;
-  let readFailed = false;
-  let unavailableReason: string | null = null;
-  const rowsById = new Map<string, Pick<StressSignalCurrentRow, "band" | "score" | "computed_at">>();
-  const staleAfterSec = API_FRESHNESS_MAX_AGE_SEC.stressSignals;
-  const options = {
-    staleAfterSec,
-    onReadError: () => {
-      readFailed = true;
-    },
-    onGenerationUnavailable: (reason: string) => {
-      unavailableReason = reason;
-    },
-  };
+  if (stablecoinIds.length === 0) {
+    return { pointerStatus: "ok", pointerReason: null, generation, readFailed: false, rowsById: new Map() };
+  }
+  const placeholders = stablecoinIds.map(() => "?").join(", ");
+  const hasExactCoverage = pointer.expectedRowCount != null && pointer.stablecoinIdsDigest != null;
+  const table = hasExactCoverage ? "stress_signal_publication_rows" : "stress_signals_latest";
+  const rowsById = new Map<string, Pick<ScopedDewsRow, "band" | "score" | "computed_at">>();
   try {
-    if (stablecoinIds.length === 1) {
-      const id = stablecoinIds[0]!;
-      const row = await loadStressSignalCurrentRowForCoin(db, id, nowSec, options);
-      if (row) rowsById.set(id, row);
-    } else {
-      const requestedSet = new Set(stablecoinIds);
-      const { results } = await loadStressSignalCurrentRows(db, nowSec, options);
-      for (const row of results) {
-        if (requestedSet.has(row.stablecoin_id)) rowsById.set(row.stablecoin_id, row);
-      }
+    // SAFETY: table is a closed internal literal union and placeholders match bounded 1..20 validated stablecoinIds; values use D1 binds.
+    const result = await db
+      .prepare(
+        `SELECT stablecoin_id, score, band, computed_at
+           FROM ${table}
+          WHERE computed_at = ? AND stablecoin_id IN (${placeholders})`,
+      )
+      .bind(pointer.computedAt, ...stablecoinIds)
+      .all<ScopedDewsRow>();
+    for (const row of result.results ?? []) {
+      rowsById.set(row.stablecoin_id, row);
     }
+    return { pointerStatus: "ok", pointerReason: null, generation, readFailed: false, rowsById };
   } catch {
-    readFailed = true;
+    rowsById.clear();
+    return { pointerStatus: "ok", pointerReason: null, generation, readFailed: true, rowsById };
   }
-  if (unavailableReason) {
-    return { pointerStatus: "unavailable", pointerReason: "dews-pointer-invalid", generation: null, readFailed, rowsById: new Map() };
-  }
-  return { pointerStatus: "ok", pointerReason: null, generation, readFailed, rowsById };
 }
 
 function buildPriceSignal(
@@ -163,7 +179,7 @@ function buildPriceSignal(
   stablecoinsCache: StablecoinsCacheLoadResult,
   nowSec: number,
 ): TelegramMiniAppCoinSignal["price"] {
-  const budgetSec = API_FRESHNESS_MAX_AGE_SEC.stablecoins;
+  const budgetSec = STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC;
   if (stablecoinsCache.kind !== "ok") {
     return {
       provenance: nonOkProvenance("unavailable", "stablecoins-cache", nowSec, null, null, budgetSec, stablecoinsCache.reason),
@@ -229,18 +245,17 @@ function buildDewsSignal(
       score: null,
     };
   }
+  if (dewsState.readFailed) {
+    return {
+      provenance: nonOkProvenance("unavailable", "stress_signals", nowSec, null, dewsState.generation, budgetSec, "dews-read-failed"),
+      band: null,
+      score: null,
+    };
+  }
   const row = dewsState.rowsById.get(stablecoinId);
   if (!row) {
     return {
-      provenance: nonOkProvenance(
-        "unavailable",
-        "stress_signals",
-        nowSec,
-        null,
-        dewsState.generation,
-        budgetSec,
-        dewsState.readFailed ? "dews-read-failed" : "dews-unobserved",
-      ),
+      provenance: nonOkProvenance("unavailable", "stress_signals", nowSec, null, dewsState.generation, budgetSec, "dews-unobserved"),
       band: null,
       score: null,
     };
@@ -290,6 +305,7 @@ function buildSafetySignal(
       grade: null,
       score: null,
       held: false,
+      partialEvidence: false,
       methodologyVersion: null,
       publicationId: null,
     };
@@ -306,7 +322,8 @@ function buildSafetySignal(
       ratingStatus: null,
       grade: null,
       score: null,
-      held,
+      held: false,
+      partialEvidence: false,
       methodologyVersion,
       publicationId,
     };
@@ -327,11 +344,13 @@ function buildSafetySignal(
       ratingStatus: null,
       grade: null,
       score: null,
-      held,
+      held: false,
+      partialEvidence: false,
       methodologyVersion,
       publicationId,
     };
   }
+  const partialEvidence = Boolean(card.partialEvidence);
   if (held) {
     return {
       provenance: nonOkProvenance("stale", "safety-score-index", nowSec, observedAt, publicationId, budgetSec, safetyIndex.reason),
@@ -339,6 +358,7 @@ function buildSafetySignal(
       grade: card.grade,
       score: card.score,
       held: true,
+      partialEvidence,
       methodologyVersion,
       publicationId,
     };
@@ -358,6 +378,7 @@ function buildSafetySignal(
       grade: card.grade,
       score: card.score,
       held: false,
+      partialEvidence,
       methodologyVersion,
       publicationId,
     };
@@ -368,49 +389,56 @@ function buildSafetySignal(
     grade: card.grade,
     score: card.score,
     held: false,
+    partialEvidence,
     methodologyVersion,
     publicationId,
   };
 }
 
+interface ActiveDepegsBuildResult {
+  lane: TelegramMiniAppCoinsContext["activeDepegs"];
+  activeDepegIds: ReadonlySet<string>;
+  quarantinedDepegIds: ReadonlySet<string>;
+}
+
 function buildActiveDepegsLane(
   depegRead: Awaited<ReturnType<typeof loadScopedOpenDepegs>>,
-  stablecoinsCache: StablecoinsCacheLoadResult,
+  depegClock: CronTimestampLookupResult,
   priceSignalById: ReadonlyMap<string, TelegramMiniAppCoinSignal["price"]>,
   nowSec: number,
-): TelegramMiniAppCoinsContext["activeDepegs"] {
+): ActiveDepegsBuildResult {
   const budgetSec = API_FRESHNESS_MAX_AGE_SEC.depegEvents;
   if (!depegRead.ok) {
     return {
-      provenance: nonOkProvenance("unavailable", "depeg_events", nowSec, null, null, budgetSec, depegRead.reason),
-      events: [],
-    };
-  }
-  if (stablecoinsCache.kind !== "ok") {
-    return {
-      provenance: nonOkProvenance("unavailable", "depeg_events", nowSec, null, null, budgetSec, stablecoinsCache.reason),
-      events: [],
-    };
-  }
-  const observedAt = stablecoinsCache.updatedAt;
-  const generation = stablecoinsGeneration(stablecoinsCache);
-  if (!Number.isInteger(observedAt) || observedAt <= 0 || observedAt > nowSec) {
-    return {
-      provenance: nonOkProvenance("unavailable", "depeg_events", nowSec, null, generation, budgetSec, "invalid-publication-clock"),
-      events: [],
+      lane: {
+        provenance: nonOkProvenance("unavailable", "depeg_events", nowSec, null, null, budgetSec, depegRead.reason),
+        events: [],
+      },
+      activeDepegIds: new Set(),
+      quarantinedDepegIds: new Set(),
     };
   }
 
   const seenIds = new Set<string>();
+  const quarantinedDepegIds = new Set<string>();
+  let hasInvalidDepegRowId = false;
   const events: TelegramMiniAppActiveDepeg[] = [];
+
   for (const row of depegRead.rows) {
-    if (seenIds.has(row.stablecoin_id)) continue;
+    if (typeof row.stablecoin_id !== "string" || row.stablecoin_id.trim().length === 0) {
+      hasInvalidDepegRowId = true;
+      continue;
+    }
+    if (seenIds.has(row.stablecoin_id) || quarantinedDepegIds.has(row.stablecoin_id)) continue;
     if (
       (row.direction !== "above" && row.direction !== "below")
+      || typeof row.peak_deviation_bps !== "number"
       || !Number.isFinite(row.peak_deviation_bps)
+      || typeof row.started_at !== "number"
       || !Number.isInteger(row.started_at)
       || row.started_at < 0
     ) {
+      quarantinedDepegIds.add(row.stablecoin_id);
       continue;
     }
     seenIds.add(row.stablecoin_id);
@@ -421,12 +449,29 @@ function buildActiveDepegsLane(
       : null;
     const isFixedUsd = row.peg_type === "peggedUSD";
     let currentDeviationBps: number | null = null;
-    if (isFixedUsd && livePriceUsd != null) {
-      currentDeviationBps = deriveDepegSignal(livePriceUsd, 1)?.bps ?? null;
+    let currentDirection: "above" | "below" | null = null;
+    if (isFixedUsd) {
+      if (livePriceUsd != null) {
+        const sig = deriveDepegSignal(livePriceUsd, 1);
+        currentDeviationBps = sig?.bps ?? null;
+        currentDirection = sig == null
+          ? null
+          : sig.bps > 0 ? "above" : sig.bps < 0 ? "below" : row.direction;
+      }
     } else {
-      const latestBps = readPendingObservationReceipt(row.peer_basis_json)?.latest?.bps;
-      if (typeof latestBps === "number" && Number.isFinite(latestBps)) {
-        currentDeviationBps = Math.round(latestBps);
+      const latest = readPendingObservationReceipt(row.peer_basis_json)?.latest;
+      if (
+        latest != null
+        && typeof latest.bps === "number"
+        && Number.isFinite(latest.bps)
+        && typeof latest.observedAt === "number"
+        && Number.isInteger(latest.observedAt)
+        && latest.observedAt >= row.started_at
+        && latest.observedAt <= nowSec
+        && nowSec - latest.observedAt <= STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC
+      ) {
+        currentDeviationBps = Math.round(latest.bps);
+        currentDirection = latest.bps > 0 ? "above" : latest.bps < 0 ? "below" : row.direction;
       }
     }
     events.push({
@@ -434,6 +479,7 @@ function buildActiveDepegsLane(
       direction: row.direction,
       peakDeviationBps: row.peak_deviation_bps,
       currentDeviationBps,
+      currentDirection,
       priceUsd: livePriceUsd,
       pegReference,
       startedAt: row.started_at,
@@ -441,10 +487,59 @@ function buildActiveDepegsLane(
     });
   }
 
-  const provenance = nowSec - observedAt > budgetSec
-    ? nonOkProvenance("stale", "depeg_events", nowSec, observedAt, generation, budgetSec, "depeg-source-stale")
-    : okProvenance("depeg_events", nowSec, observedAt, generation, budgetSec);
-  return { provenance, events };
+  const validObservedAt = depegClock.status === "ok"
+    && depegClock.timestamp != null
+    && Number.isFinite(depegClock.timestamp)
+    && depegClock.timestamp > 0
+    && depegClock.timestamp <= nowSec
+    ? Math.floor(depegClock.timestamp)
+    : null;
+  const generation = validObservedAt != null ? `sync-stablecoins:${validObservedAt}` : null;
+
+  let provenance: TelegramMiniAppContextProvenance;
+  if (hasInvalidDepegRowId) {
+    provenance = nonOkProvenance("unavailable", "depeg_events", nowSec, validObservedAt, generation, budgetSec, "depeg-row-invalid");
+  } else if (depegClock.status === "lookup_failed") {
+    provenance = nonOkProvenance("unavailable", "depeg_events", nowSec, null, null, budgetSec, "depeg-freshness-lookup-failed");
+  } else if (depegClock.status === "missing") {
+    provenance = nonOkProvenance("unavailable", "depeg_events", nowSec, null, null, budgetSec, "depeg-producer-history-missing");
+  } else if (validObservedAt == null) {
+    provenance = nonOkProvenance("unavailable", "depeg_events", nowSec, null, null, budgetSec, "invalid-depeg-producer-clock");
+  } else if (nowSec - validObservedAt > budgetSec) {
+    provenance = nonOkProvenance("stale", "depeg_events", nowSec, validObservedAt, generation, budgetSec, "depeg-source-stale");
+  } else {
+    provenance = okProvenance("depeg_events", nowSec, validObservedAt, generation, budgetSec);
+  }
+
+  return {
+    lane: { provenance, events },
+    activeDepegIds: seenIds,
+    quarantinedDepegIds,
+  };
+}
+
+function deriveCoinPegStatus(
+  stablecoinId: string,
+  price: TelegramMiniAppCoinSignal["price"],
+  activeDepegsResult: ActiveDepegsBuildResult,
+): NonNullable<TelegramMiniAppCoinSignal["pegStatus"]> {
+  if (activeDepegsResult.quarantinedDepegIds.has(stablecoinId)) {
+    return "unavailable";
+  }
+  if (activeDepegsResult.activeDepegIds.has(stablecoinId)) {
+    return "off-peg";
+  }
+  if (activeDepegsResult.lane.provenance.status !== "ok") {
+    return "unavailable";
+  }
+  const meta = WORKER_TRACKED_META_BY_ID.get(stablecoinId);
+  if (!meta || !isActiveStablecoinMeta(meta) || meta.navToken === true || meta.flags.navToken === true) {
+    return "not-monitored";
+  }
+  if (price.provenance.status !== "ok") {
+    return "unavailable";
+  }
+  return "on-peg";
 }
 
 async function loadCoinsContext(
@@ -452,9 +547,10 @@ async function loadCoinsContext(
   stablecoinIds: readonly string[],
   nowSec: number,
 ): Promise<TelegramMiniAppCoinsContext> {
-  const [stablecoinsCache, depegRead, dewsState, safetyIndex] = await Promise.all([
+  const [stablecoinsCache, depegRead, depegClock, dewsState, safetyIndex] = await Promise.all([
     loadStablecoinsCache(db, { mode: "strict" }),
     loadScopedOpenDepegs(db, stablecoinIds),
+    getLatestSuccessfulCronTimestampResult(db, DEPEG_EVENTS_PRODUCER_JOB),
     loadScopedDews(db, stablecoinIds, nowSec),
     loadActiveSafetyScoreIndex(db),
   ]);
@@ -473,20 +569,25 @@ async function loadCoinsContext(
   );
 
   const priceSignalById = new Map<string, TelegramMiniAppCoinSignal["price"]>();
+  for (const stablecoinId of stablecoinIds) {
+    priceSignalById.set(stablecoinId, buildPriceSignal(assetById.get(stablecoinId), stablecoinsCache, nowSec));
+  }
+
+  const activeDepegsResult = buildActiveDepegsLane(depegRead, depegClock, priceSignalById, nowSec);
   const coinSignals: Record<string, TelegramMiniAppCoinSignal> = {};
   for (const stablecoinId of stablecoinIds) {
-    const price = buildPriceSignal(assetById.get(stablecoinId), stablecoinsCache, nowSec);
-    priceSignalById.set(stablecoinId, price);
+    const price = priceSignalById.get(stablecoinId)!;
     coinSignals[stablecoinId] = {
       price,
       dews: buildDewsSignal(stablecoinId, dewsState, nowSec),
       safety: buildSafetySignal(stablecoinId, safetyIndex, safetyCardsById, nowSec),
+      pegStatus: deriveCoinPegStatus(stablecoinId, price, activeDepegsResult),
     };
   }
 
   return {
     kind: "coins",
-    activeDepegs: buildActiveDepegsLane(depegRead, stablecoinsCache, priceSignalById, nowSec),
+    activeDepegs: activeDepegsResult.lane,
     coinSignals,
   };
 }
@@ -495,7 +596,7 @@ async function loadPresetsContext(
   db: D1Database,
   nowSec: number,
 ): Promise<TelegramMiniAppPresetsContext> {
-  const budgetSec = API_FRESHNESS_MAX_AGE_SEC.stablecoins;
+  const budgetSec = STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC;
   const cacheResult = await loadStablecoinsCache(db, { mode: "strict" });
   if (cacheResult.kind !== "ok") {
     return {

@@ -258,7 +258,7 @@ describe("alert template", () => {
     expect(msg.split("\n")[0]).toBe("<b>3 alerts</b>, led by \u{1F7E1} USDT stress rose to ALERT (40/100)");
     expect(msg).toContain('<b>Early-warning stress</b>\n\u{1F7E1} <a href="https://pharos.watch/stablecoin/usdt-tether"><b>USDT</b></a> stress rose to ALERT (40/100)');
     expect(msg).toContain('<b>Safety grades</b>\n<a href="https://pharos.watch/stablecoin/wm-m0"><b>wM</b></a> downgraded C- → D\n<a href="https://pharos.watch/stablecoin/eurc-circle"><b>EURC</b></a> raised A- → A');
-    expect(msg).toContain("<i>Via all stablecoins · stress alerts and Safety alerts</i>");
+    expect(msg).toContain("<i>Via all stablecoins · DEWS alerts and Safety alerts</i>");
     expect(msg).toContain('href="https://pharos.watch">View on Pharos</a>');
   });
 
@@ -310,10 +310,16 @@ describe("alert template", () => {
 
     const summary = formatHourlyFreezeBatchMessage(ordered, { via: { presetIds: [], watchlist: true, allStablecoins: false } });
     expect(summary.split("\n")[0]).toBe("<b>Hourly freeze summary</b>: 6 events ($10,000 known, 2 unpriced)");
-    expect(summary).toContain("<i>and 3 smaller on Ethereum ($500 known, 1 unpriced)</i>");
+    expect(summary).toContain("<i>and 3 more on Ethereum ($500 known, 1 unpriced)</i>");
     expect(summary).toContain('<a href="https://pharos.watch/freezewatch/">Pharos FreezeWatch</a>');
     expect(formatHourlyFreezeBatchMessage([mk("u1", { amountUsdAtEvent: null })]).split("\n")[0])
       .toBe("<b>Hourly freeze summary</b>: 1 event (amount unavailable)");
+    const zeroBurst = formatHourlyFreezeBatchMessage([
+      mk("b1", { amountUsdAtEvent: 100 }), mk("b2", { amountUsdAtEvent: 50 }), mk("b3", { amountUsdAtEvent: 25 }),
+      mk("b4", { eventType: "unblacklist", amountUsdAtEvent: 0 }), mk("b5", { eventType: "unblacklist", amountUsdAtEvent: null }),
+    ]);
+    expect(zeroBurst).toContain("<i>and 2 more on Ethereum</i>");
+    expect(zeroBurst).not.toContain("$0 known");
   });
 });
 

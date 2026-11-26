@@ -220,17 +220,6 @@ export async function loadOverflowSummaries(
   ]));
 }
 
-/** Cap-overflow counts per chat in `(sinceSec, untilSec]`. */
-export async function loadOverflowCounts(
-  db: D1Database,
-  chatIds: readonly string[],
-  sinceByChat: ReadonlyMap<string, number>,
-  untilSec: number,
-): Promise<Map<string, number>> {
-  const summaries = await loadOverflowSummaries(db, chatIds, sinceByChat, untilSec);
-  return new Map([...summaries].map(([chatId, summary]) => [chatId, summary.count]));
-}
-
 export function prepareChangeLogPrune(db: D1Database, nowSec: number): D1PreparedStatement {
   return db.prepare("DELETE FROM telegram_change_log WHERE observed_at < ?")
     .bind(nowSec - TELEGRAM_ALERT_POLICY.rollup.changeLogRetentionSec);

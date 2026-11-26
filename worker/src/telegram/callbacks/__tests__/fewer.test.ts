@@ -43,6 +43,7 @@ async function tapFewer(
     return {
       row, toast: lastAckBody().text,
       subscriberCount: sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_subscribers").get()?.count,
+      generation: (sqlite.prepare("SELECT preference_generation FROM telegram_subscribers WHERE chat_id = '42'").get() as { preference_generation: number } | undefined)?.preference_generation,
     };
   } finally {
     fixtures.closeAll();
@@ -148,15 +149,19 @@ describe("fewer callback", () => {
   it.each([
     ["a raised depeg step", "fewer:usdc-circle:ds:250", "alert_depeg, alert_depeg_override, depeg_worsening_bps_step", "1, 1, 500", { alert_depeg: 1, depeg_worsening_bps_step: 500 }],
     ["depeg turned off", "fewer:usdc-circle:ds:250", "alert_depeg, alert_depeg_override", "0, 1", { alert_depeg: 0 }],
-    ["worsening alerts off (no step)", "fewer:usdc-circle:ds:250", "alert_depeg, alert_depeg_override, depeg_worsening_bps_step", "1, 1, NULL", { alert_depeg: 0, depeg_worsening_bps_step: null }],
+    ["worsening alerts off (no step)", "fewer:usdc-circle:ds:250", "alert_depeg, alert_depeg_override, depeg_worsening_bps_step", "1, 1, NULL", { alert_depeg: 1, depeg_worsening_bps_step: null }],
     ["a raised DEWS floor", "fewer:usdc-circle:db:W", "alert_dews, alert_dews_override, dews_min_band", "1, 1, 'DANGER'", { alert_dews: 1, dews_min_band: "DANGER" }],
     ["DEWS turned off", "fewer:usdc-circle:db:W", "alert_dews, alert_dews_override", "0, 1", { alert_dews: 0 }],
-  ] as const)("never makes a stale tap noisier than %s", async (_label, data, columns, values, expected) => {
+  ] as const)("never makes a stale tap noisier than %s", async (label, data, columns, values, expected) => {
     const result = await tapFewer(data, seedCoin(columns, values));
     expect(result.row).toMatchObject(expected);
+    if (label === "worsening alerts off (no step)") {
+      expect(result.generation).toBe(0);
+      expect(result.toast).toBe("Settings changed. Open Manage Alerts to turn Depeg off.");
+    }
   });
 
-  it.each(["fewer:usdc-circle:ds:300", "fewer:usdc-circle:db:X", "fewer:usdc-circle:sm:a"])("rejects an invalid carried value %s", async (data) => {
+  it.each(["fewer:usdc-circle:ds:300", "fewer:usdc-circle:ds:+250", "fewer:usdc-circle:db:X", "fewer:usdc-circle:sm:a"])("rejects an invalid carried value %s", async (data) => {
     const result = await tapFewer(data, seedCoin("alert_depeg, alert_dews, alert_safety, depeg_worsening_bps_step", "1, 1, 1, 100"));
     expect(result.row).toMatchObject({ alert_depeg: 1, alert_dews: 1, alert_safety: 1, depeg_worsening_bps_step: 100 });
   });

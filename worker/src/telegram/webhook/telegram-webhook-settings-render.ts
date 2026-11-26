@@ -133,7 +133,7 @@ export function buildHomeKeyboard(
   rows.push([
     {
       text: `All stablecoins: ${activeGlobalCount > 0 ? `${activeGlobalCount} on` : "Off"} ▸`,
-      callback_data: "settings:g",
+      callback_data: `settings:g:${currentPage}`,
     },
   ]);
   rows.push(...buildCoinGridRows(pageRows));
@@ -169,17 +169,20 @@ export function buildGlobalMessage(subscriber: SubscriberRow | null): string {
   ].join("\n");
 }
 
-export function buildGlobalKeyboard(subscriber: SubscriberRow | null): {
+export function buildGlobalKeyboard(
+  subscriber: SubscriberRow | null,
+  returnPage = 0,
+): {
   inline_keyboard: SettingsButton[][];
 } {
   const rows: SettingsButton[][] = GLOBAL_ALERT_TYPES.map((type) => [
     {
       text: `${labelForType(type)}: ${subscriberHasGlobal(subscriber, type) ? "ON" : "OFF"}`,
       // The button names the target value so a redelivered tap cannot flip it back.
-      callback_data: `settings:gt:${type}:${subscriberHasGlobal(subscriber, type) ? "0" : "1"}`,
+      callback_data: `settings:gt:${type}:${subscriberHasGlobal(subscriber, type) ? "0" : "1"}:${returnPage}`,
     },
   ]);
-  rows.push([{ text: "← Back to settings", callback_data: "settings:home" }]);
+  rows.push([{ text: "← Back to settings", callback_data: `settings:home:${returnPage}` }]);
   return { inline_keyboard: rows };
 }
 
@@ -332,12 +335,6 @@ function presetLabel(presetId: string): string {
   return TELEGRAM_PRESET_LABEL_BY_ID.get(presetId as TelegramPresetId) ?? presetId;
 }
 
-const DEWS_BUTTON_LABEL: Record<(typeof TELEGRAM_DEWS_BANDS)[number], string> = {
-  ALERT: "Alert+",
-  WARNING: "Warn+",
-  DANGER: "Danger",
-};
-
 function buildDewsRow(
   coinId: string,
   dewsBand: string | null,
@@ -345,7 +342,7 @@ function buildDewsRow(
   page: number,
 ): Array<{ text: string; callback_data: string }> {
   const row = TELEGRAM_DEWS_BANDS.map((band, index) => ({
-    text: `${index === 0 ? "DEWS: " : ""}${markCompact(dewsBand === band)}${DEWS_BUTTON_LABEL[band]}`,
+    text: `${index === 0 ? "DEWS: " : ""}${markCompact(dewsBand === band)}${formatDewsCompactBand(band)}`,
     callback_data: `settings:c:${coinId}:db:${DEWS_BAND_CODE_BY_VALUE[band]}:${page}`,
   }));
   row.push({

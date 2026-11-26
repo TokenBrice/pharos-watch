@@ -154,7 +154,7 @@ function buildSubscriptionAlertUpsert(spec: SubscriptionUpsertSpec): BuiltSubscr
   };
 }
 
-export function buildDewsUpsert(
+function buildDewsUpsert(
   chatId: string,
   stablecoinId: string,
   enabled: boolean,
@@ -172,7 +172,7 @@ export function buildDewsUpsert(
   });
 }
 
-export function buildSafetyUpsert(
+function buildSafetyUpsert(
   chatId: string,
   stablecoinId: string,
   enabled: boolean,
@@ -207,7 +207,7 @@ function buildDepegUpsert(
   });
 }
 
-export function buildDepegStepUpsert(
+function buildDepegStepUpsert(
   chatId: string,
   stablecoinId: string,
   step: TelegramDepegStepBps | null,

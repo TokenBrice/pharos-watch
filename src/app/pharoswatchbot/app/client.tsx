@@ -92,7 +92,7 @@ export function PharosWatchBotMiniAppClient() {
   const [hasUnsavedDraft, setHasUnsavedDraft] = useState(false);
   const terminalRef = useRef(false);
   const snapshotEpochRef = useRef(0);
-  const backGuardRef = useRef<(() => boolean) | null>(null);
+  const backGuardRef = useRef<((onProceed: () => void) => boolean) | null>(null);
   const lastViewerUserIdRef = useRef<string | null>(null);
   const {
     screen,
@@ -125,18 +125,20 @@ export function PharosWatchBotMiniAppClient() {
   const stateRef = useRef<TelegramMiniAppState | null>(null);
   const lastHiddenAtRef = useRef<number | null>(null);
 
-  const registerBackGuard = useCallback((guard: (() => boolean) | null) => {
+  const registerBackGuard = useCallback((guard: ((onProceed: () => void) => boolean) | null) => {
     backGuardRef.current = guard;
   }, []);
 
   const handleBack = useCallback(() => {
     if (terminalRef.current) return;
-    if (backGuardRef.current && !backGuardRef.current()) return;
+    if (backGuardRef.current && !backGuardRef.current(back)) return;
     back();
   }, [back]);
 
   const onTelegramSettings = useCallback(() => {
-    if (!terminalRef.current) showSettings();
+    if (terminalRef.current) return;
+    if (backGuardRef.current && !backGuardRef.current(showSettings)) return;
+    showSettings();
   }, [showSettings]);
 
   const readOnlyGroup = Boolean(state && state.viewer.mutationBlockReason === "not-private");
@@ -317,6 +319,13 @@ export function PharosWatchBotMiniAppClient() {
         return;
       }
       if (event.target instanceof HTMLSelectElement) return;
+      if (
+        event.target instanceof HTMLInputElement
+        && event.target.type === "search"
+        && event.target.value.length > 0
+      ) {
+        return;
+      }
       event.preventDefault();
       handleBack();
     };

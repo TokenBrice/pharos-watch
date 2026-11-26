@@ -36,8 +36,6 @@ import { isDepegStepValue } from "@shared/types/status/telegram";
 import { formatDepegStepPercent, formatDewsCompactBand } from "./telegram-webhook-messages";
 import type { TelegramPresetId } from "../common/presets";
 
-export { normalizeCoinSetting };
-
 export async function toggleGlobalAlert(
   db: D1Database,
   chatId: string,

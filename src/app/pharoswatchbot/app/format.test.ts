@@ -182,6 +182,8 @@ describe("live risk context formatting", () => {
       priceUsd: 0.9871, pegReference: 1, startedAt: 1_799_999_000,
     };
     expect(formatOffPegRowValue(depeg)).toBe("$0.9871 · 1.3% below");
+    expect(formatOffPegRowValue({ ...depeg, currentDeviationBps: 45, currentDirection: "above", priceUsd: 1.0045 })).toBe("$1.0045 · 0.5% above");
+    expect(formatOffPegRowValue({ ...depeg, currentDeviationBps: 45, priceUsd: 1.0045 })).toBe("$1.0045 · 0.5% above");
     expect(formatOffPegRowValue({ ...depeg, currentDeviationBps: null, peerRelative: true })).toBe("$0.9871 · 1.5% below (peak, vs peers)");
 
     const fullSignal = {
@@ -189,11 +191,48 @@ describe("live risk context formatting", () => {
       dews: { provenance: ok, band: "CALM" as const, score: 12 },
       safety: { provenance: ok, ratingStatus: "rated" as const, grade: "A-", score: 86, held: false, methodologyVersion: "9.0", publicationId: "p1" },
     };
+    const emptySignal = {
+      price: { provenance: unavail, priceUsd: null },
+      dews: { provenance: unavail, band: null, score: null },
+      safety: { provenance: unavail, ratingStatus: null, grade: null, score: null, held: false, methodologyVersion: null, publicationId: null },
+    };
     expect(formatCoinLiveHeaderLine({ status: "idle", signal: null, depeg: null, depegProvenance: null })).toBeNull();
     expect(formatCoinLiveHeaderLine({ status: "ok", signal: fullSignal, depeg: null, depegProvenance: ok }))
       .toBe("$0.9998 · On peg · DEWS Calm 12 · Safety A-");
     expect(formatCoinLiveHeaderLine({ status: "ok", signal: { ...fullSignal, price: { provenance: ok, priceUsd: 0.9871 } }, depeg, depegProvenance: ok }))
       .toBe("$0.9871 · 1.3% below peg · DEWS Calm 12 · Safety A-");
+    expect(formatCoinLiveHeaderLine({
+      status: "ok",
+      signal: { ...fullSignal, pegStatus: "off-peg", price: { provenance: ok, priceUsd: 1.0045 } },
+      depeg: { ...depeg, currentDeviationBps: 45, currentDirection: "above", priceUsd: 1.0045 },
+      depegProvenance: ok,
+    })).toBe("$1.0045 · 0.5% above peg · DEWS Calm 12 · Safety A-");
+    expect(formatCoinLiveHeaderLine({
+      status: "ok",
+      signal: { ...fullSignal, pegStatus: "not-monitored", price: { provenance: ok, priceUsd: 1.17 } },
+      depeg: null,
+      depegProvenance: ok,
+    })).toBe("$1.1700 · DEWS Calm 12 · Safety A-");
+    expect(formatCoinLiveHeaderLine(
+      { status: "ok", signal: { ...fullSignal, price: { provenance: ok, priceUsd: 1.17 } }, depeg: null, depegProvenance: ok },
+      { pegLabel: "USDe NAV" },
+    )).toBe("$1.1700 · DEWS Calm 12 · Safety A-");
+    expect(formatCoinLiveHeaderLine(
+      { status: "ok", signal: emptySignal, depeg: null, depegProvenance: ok },
+      { status: "pre-launch" },
+    )).toBe("Live data unavailable.");
+    expect(formatCoinLiveHeaderLine({
+      status: "ok",
+      signal: { ...emptySignal, dews: fullSignal.dews },
+      depeg: null,
+      depegProvenance: ok,
+    })).toBe("Price — · Peg — · DEWS Calm 12 · Safety —");
+    expect(formatCoinLiveHeaderLine({
+      status: "ok",
+      signal: { ...fullSignal, safety: { ...fullSignal.safety, partialEvidence: true } },
+      depeg: null,
+      depegProvenance: ok,
+    })).toBe("$0.9998 · On peg · DEWS Calm 12 · Safety A- (partial)");
     expect(formatCoinLiveHeaderLine({
       status: "ok",
       signal: {
@@ -206,14 +245,12 @@ describe("live risk context formatting", () => {
     })).toBe("$0.9998 · On peg · DEWS — · Safety Held");
     expect(formatCoinLiveHeaderLine({
       status: "ok",
-      signal: {
-        price: { provenance: unavail, priceUsd: null },
-        dews: { provenance: unavail, band: null, score: null },
-        safety: { provenance: unavail, ratingStatus: null, grade: null, score: null, held: false, methodologyVersion: null, publicationId: null },
-      },
+      signal: { ...emptySignal, safety: { ...emptySignal.safety, held: true } },
       depeg: null,
       depegProvenance: unavail,
     })).toBe("Live data unavailable.");
+    expect(formatCoinLiveHeaderLine({ status: "ok", signal: emptySignal, depeg: null, depegProvenance: unavail }))
+      .toBe("Live data unavailable.");
 
     expect(formatPresetSummaryLine({ id: "usd-top25", memberCount: 25, topSymbols: ["USDT", "USDC", "USDS"] }))
       .toBe("25 coins: USDT, USDC, USDS and 22 more");

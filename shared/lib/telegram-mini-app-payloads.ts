@@ -100,11 +100,6 @@ export function formatCoinPayload(coinId: string): string {
   return `${COIN_PAYLOAD_PREFIX}${coinId}`;
 }
 
-/** Constructs a `why_<id>` payload. Does not validate `coinId`. */
-export function formatWhyPayload(coinId: string): string {
-  return `${WHY_PAYLOAD_PREFIX}${coinId}`;
-}
-
 /** Constructs a `preset_<id>` or `preset_all` payload for preset/all-stablecoins deep links. */
 export function formatPresetPayload(groupId: TelegramPresetId | "all"): string {
   return groupId === "all" ? PRESET_ALL_PAYLOAD : `${PRESET_PAYLOAD_PREFIX}${groupId}`;

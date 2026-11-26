@@ -41,7 +41,7 @@ function normalizeTargetIds(coinIds: readonly string[]): string[] {
  * Resolve a stablecoin ID to its human ticker when unambiguous and command-safe,
  * falling back to the canonical ID otherwise.
  */
-export function resolveTelegramTargetToken(coinId: string): string | null {
+function resolveTelegramTargetToken(coinId: string): string | null {
   const safeId = safeTelegramTargetToken(coinId);
   if (!safeId) return null;
   const coin = TRACKED_BY_ID.get(safeId);

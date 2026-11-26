@@ -407,4 +407,36 @@ describe("Telegram Mini App bulk watchlist lifecycle", () => {
     expect(presentProof.preferenceGeneration).toBe(0);
     expect(absentProof.directFingerprint).not.toBe(presentProof.directFingerprint);
   });
+
+  it("adds snooze-only/override-only coins, survives post-commit impact error, and enforces HMAC undo", async () => {
+    const { db, sqlite } = setup();
+    sqlite.prepare(`INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_dews_override, alert_snooze_until_ts)
+      VALUES (?, 'usdt-tether', 0, 0, 0, 0, ?), (?, 'eurc-circle', 0, 0, 0, 1, NULL)`).run(AUTH.userId, NOW + 7_200, AUTH.userId);
+    const readRows = () => sqlite.prepare(
+      "SELECT stablecoin_id, alert_dews, alert_depeg, alert_dews_override, alert_snooze_until_ts FROM telegram_subscriptions WHERE chat_id = ? AND stablecoin_id IN ('usdt-tether', 'eurc-circle') ORDER BY stablecoin_id",
+    ).all(AUTH.userId);
+    const before = readRows();
+    const proof = (await loadTelegramMiniAppState(db, AUTH, { mutationMaxAgeSec: 300, nowSec: NOW })).directStateProof!;
+    const applied = await executeTelegramMiniAppBulkWatchlistApply(db, AUTH, {
+      kind: "apply-bulk-watchlist", addStablecoinIds: ["usdt-tether", "eurc-circle"], removeStablecoinIds: [],
+      expectedPreferenceGeneration: proof.preferenceGeneration, expectedDirectFingerprint: proof.directFingerprint,
+    }, { botToken: "bot-v1", nowSec: NOW, getStablecoinsCacheResult: () => Promise.reject(new Error("boom")) });
+    expect(applied.bulkResult).toMatchObject({ adds: ["eurc-circle", "usdt-tether"], removes: [], unchanged: [] });
+    expect(applied.bulkResult.sourceImpact.every((e) => e.inheritedSourcesAfter.length === 0)).toBe(true);
+    expect(applied.undo.expectedFingerprint).toMatch(/^undo-v1-[0-9]+-[0-9a-f]{64}$/);
+    expect(readRows().find((r) => r.stablecoin_id === "usdt-tether")).toMatchObject({ alert_dews: 1, alert_depeg: 1, alert_snooze_until_ts: NOW + 7_200 });
+
+    const rejected: Array<[object, { botToken: string; nowSec: number }, string]> = [
+      [{ ...applied.undo, expectedFingerprint: "preview-v1-12-deadbeef" }, { botToken: "bot-v1", nowSec: NOW }, "stale-bulk-preview"],
+      [applied.undo, { botToken: "bot-v1", nowSec: NOW + 61 }, "stale-bulk-preview"],
+      [applied.undo, { botToken: "bot-v2", nowSec: NOW }, "stale-bulk-preview"],
+      [{ ...applied.undo, restoreDirectRows: applied.undo.restoreDirectRows.map((r) => ({ ...r, snoozeUntilTs: NOW + 9_999 })) }, { botToken: "bot-v1", nowSec: NOW }, "stale-bulk-preview"],
+      [{ ...applied.undo, restoreDirectRows: applied.undo.restoreDirectRows.map((r) => ({ ...r, snoozeUntilTs: 0 })) }, { botToken: "bot-v1", nowSec: NOW }, "invalid-coin-patch"],
+    ];
+    for (const [patch, opts, code] of rejected) {
+      await expect(applyTelegramMiniAppMutation(db, AUTH, { kind: "undo-bulk-watchlist", ...patch } as never, opts)).rejects.toMatchObject({ code });
+    }
+    await applyTelegramMiniAppMutation(db, AUTH, { kind: "undo-bulk-watchlist", ...applied.undo }, { botToken: "bot-v2", botTokenPrevious: "bot-v1", nowSec: NOW + 5 });
+    expect(readRows()).toEqual(before);
+  });
 });

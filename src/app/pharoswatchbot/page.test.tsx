@@ -108,7 +108,13 @@ describe("PharosWatchBotPage", () => {
     expect(taglineFor("depeg")).toContain("Set an optional step (1%, 2.5% or 5%)");
     expect(taglineFor("freeze")).toContain("Checked every 6 hours");
     expect(MINI_APP_SCREENSHOTS[0].alt).toContain("followed presets");
+    expect(MINI_APP_SCREENSHOTS[0].alt).toContain("Pause button");
     expect(MINI_APP_SCREENSHOTS[0].alt).not.toContain("followed groups");
+    expect(MINI_APP_FEATURES.map((feature) => feature.title)).toContain("Quiet controls");
+    expect(TELEGRAM_FAQ.find((item) => item.question === "How many messages will I get?")!.answer)
+      .toContain("quiet hours deliver overnight alerts without sound");
+    expect(TELEGRAM_FAQ.find((item) => item.question === "Do I have to type commands?")!.answer)
+      .toContain("Manage USDC");
   });
 
   it("scopes alert coverage to the active alerting universe", () => {

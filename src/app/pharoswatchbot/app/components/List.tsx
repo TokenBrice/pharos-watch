@@ -146,7 +146,7 @@ export function Switch({ checked, disabled, loading, queued, allowWhileLoading, 
         haptics?.selectionChanged?.();
         onChange(!checked);
       }}
-      className="pharos-focus-ring group -my-1 -mr-1 inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full disabled:cursor-not-allowed"
+      className="group -my-1 -mr-1 inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full focus-visible:outline-none disabled:cursor-not-allowed"
     >
       <span
         className={cn(
@@ -155,6 +155,7 @@ export function Switch({ checked, disabled, loading, queued, allowWhileLoading, 
             ? "border-transparent bg-[var(--telegram-button,var(--mini-accent))]"
             : "border-[color:var(--border)] bg-[var(--telegram-switch-off-bg,color-mix(in_oklab,var(--mini-text)_42%,var(--mini-card)))]",
           queued && "ring-2 ring-[color:var(--telegram-link,var(--mini-accent))] ring-offset-2 ring-offset-[var(--mini-card)]",
+          "group-focus-visible:ring-2 group-focus-visible:ring-ring group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-[var(--mini-card)]",
         )}
       >
         <span
@@ -162,7 +163,7 @@ export function Switch({ checked, disabled, loading, queued, allowWhileLoading, 
             "flex h-6 w-6 items-center justify-center rounded-full shadow-sm transition-transform",
             checked
               ? "translate-x-[1.3125rem] bg-[var(--telegram-button-text,white)]"
-              : "translate-x-0.5 bg-white",
+              : "translate-x-0.5 bg-white ring-1 ring-black/15",
           )}
         >
           {loading ? (
@@ -328,7 +329,7 @@ export function ChoiceChips<T extends string>({ label, options, disabled, pendin
               haptics?.selectionChanged?.();
               onSelect(option.value);
             }}
-            className="pharos-focus-ring group inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg px-0.5 disabled:cursor-not-allowed"
+            className="group inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg px-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:cursor-not-allowed"
           >
             <span
               className={cn(

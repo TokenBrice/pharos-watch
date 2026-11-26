@@ -100,7 +100,7 @@ describe("handleSettingsCommand", () => {
         "settings:sn:4h",
         "settings:sn:24h",
         "settings:sn:pause",
-        "settings:g",
+        "settings:g:0",
       ]),
     );
     expect(callbacks.some((c) => c.startsWith("settings:gt:"))).toBe(false);
@@ -132,10 +132,12 @@ describe("handleSettingsCommand", () => {
     expect(sendCalls().length).toBe(1);
     const body = jsonBody(sendCalls()[0]) as {
       text: string;
-      reply_markup: { inline_keyboard: Array<Array<{ callback_data: string }>> };
+      reply_markup: { inline_keyboard: Array<Array<{ text: string; callback_data: string }>> };
     };
     expect(body.text).toContain("USDC settings");
-    const callbacks = body.reply_markup.inline_keyboard.flat().map((b) => b.callback_data);
+    const buttons = body.reply_markup.inline_keyboard.flat();
+    const callbacks = buttons.map((b) => b.callback_data);
+    expect(buttons.map((b) => b.text)).toEqual(expect.arrayContaining(["DEWS: Alert+", "Warning+", "Danger only"]));
     expect(callbacks.some((c) => c.startsWith("settings:c:usdc-circle:db:"))).toBe(true);
     expect(callbacks.some((c) => c.startsWith("settings:c:usdc-circle:sm:"))).toBe(true);
     expect(callbacks.some((c) => c.startsWith("settings:c:usdc-circle:ds:a:"))).toBe(true);
@@ -226,22 +228,29 @@ describe("per-coin local override descriptions", () => {
 });
 
 describe("handleSettingsCallback — chat-level, presets, and pause", () => {
-  it("settings:g opens All stablecoins submenu and settings:gt sets target idempotently", async () => {
+  it("settings:g[:page] opens All stablecoins preserving returnPage and settings:gt sets target idempotently", async () => {
     const { db, sqlite } = fixtures.open();
     sqlite.exec("INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at, global_alert_dews) VALUES ('42', 1, 1, 0)");
     await handleSettingsCallback(db, "fake-token", {
-      id: "cb", data: "settings:g", from: { id: 1 }, message: { chat: { id: 42, type: "group" }, message_id: 999 },
-    }, "g", "");
-    expect(jsonBody(editCalls()[0]).text).toContain("<b>All stablecoins</b>");
+      id: "cb", data: "settings:g:2", from: { id: 1 }, message: { chat: { id: 42, type: "group" }, message_id: 999 },
+    }, "g", "2");
+    const globalView = jsonBody(editCalls()[0]) as {
+      text: string;
+      reply_markup: { inline_keyboard: Array<Array<{ callback_data: string }>> };
+    };
+    expect(globalView.text).toContain("<b>All stablecoins</b>");
+    expect(globalView.reply_markup.inline_keyboard.flat().map((b) => b.callback_data)).toContain("settings:home:2");
 
     for (let delivery = 0; delivery < 2; delivery += 1) {
       await handleSettingsCallback(db, "fake-token", {
-        id: "cb", data: "settings:gt:dews:1", from: { id: 1, username: "alice" },
+        id: "cb", data: "settings:gt:dews:1:2", from: { id: 1, username: "alice" },
         message: { chat: { id: 42, type: "private" }, message_id: 999 },
-      }, "gt", "dews:1");
+      }, "gt", "dews:1:2");
     }
     expect(sqlite.prepare("SELECT global_alert_dews FROM telegram_subscribers WHERE chat_id = '42'").get())
       .toEqual({ global_alert_dews: 1 });
+    expect((jsonBody(lastItem(editCalls())) as { reply_markup: { inline_keyboard: Array<Array<{ callback_data: string }>> } })
+      .reply_markup.inline_keyboard.flat().map((b) => b.callback_data)).toContain("settings:home:2");
     expect(jsonBody(ackCalls()[1]).text).toBe("Global dews on.");
   });
 
@@ -545,7 +554,7 @@ describe("callback_data size budget", () => {
       quiet_hours_enabled: 1, quiet_hours_start_utc: 22, quiet_hours_end_utc: 7,
       alert_snooze_until_ts: Math.floor(Date.now() / 1000) + 3600,
     };
-    checkAll(buildGlobalKeyboard(subscriber).inline_keyboard.flat());
+    checkAll(buildGlobalKeyboard(subscriber, 999).inline_keyboard.flat());
     for (const presetId of TELEGRAM_PRESET_LABEL_BY_ID.keys() as IterableIterator<TelegramPresetId>) {
       checkAll(buildPresetKeyboard(presetId, allPresetRows[0]!, 999).inline_keyboard.flat());
       checkAll(buildPresetUnfollowConfirmKeyboard(presetId, 999).inline_keyboard.flat());

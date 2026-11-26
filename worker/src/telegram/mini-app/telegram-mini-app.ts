@@ -595,11 +595,18 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
       return stablecoinsCachePromise;
     };
 
+    const mutationOptions = {
+      getStablecoinsCacheResult,
+      botToken: configuredBotToken,
+      botTokenPrevious,
+      nowSec: unixNow(),
+    };
+
     let undo: TelegramMiniAppSnapshot["undo"];
     let bulkResult: TelegramMiniAppSnapshot["bulkResult"];
     try {
       if (bulkPreviewOperation) {
-        const preview = await executeTelegramMiniAppBulkWatchlistPreview(db, auth, bulkPreviewOperation);
+        const preview = await executeTelegramMiniAppBulkWatchlistPreview(db, auth, bulkPreviewOperation, mutationOptions);
         const latencyMs = Date.now() - start;
         await dispatchBestEffortTelemetry(execCtx, () =>
           recordMiniAppEvent(db, {
@@ -613,15 +620,11 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
         return jsonResponse(preview, NO_STORE);
       }
       if (parsed.operation.kind === "apply-bulk-watchlist") {
-        const applied = await executeTelegramMiniAppBulkWatchlistApply(db, auth, parsed.operation, {
-          getStablecoinsCacheResult,
-        });
+        const applied = await executeTelegramMiniAppBulkWatchlistApply(db, auth, parsed.operation, mutationOptions);
         undo = applied.undo;
         bulkResult = applied.bulkResult;
       } else {
-        undo = await applyTelegramMiniAppMutation(db, auth, parsed.operation, {
-          getStablecoinsCacheResult,
-        }) ?? undefined;
+        undo = await applyTelegramMiniAppMutation(db, auth, parsed.operation, mutationOptions) ?? undefined;
       }
     } catch (err) {
       if (err instanceof TelegramMiniAppMutationError) {

@@ -539,7 +539,7 @@ describe("freeze claim manifests", () => {
         db, job: {} as TelegramJobRow, payload: { fromChangeId: 0, toChangeId: 6 }, cursor: null, nowSec: 0, limit: 10,
       });
       // Visual burst collapsing (>4 events) still preserves every underlying event's source key for send-time revalidation.
-      expect(page.deliveries[0]!.body).toContain("and 2 smaller on Ethereum");
+      expect(page.deliveries[0]!.body).toContain("<i>and 2 more on Ethereum</i>");
       expect(page.deliveries.map((row) => row.freezeSourceKeys)).toEqual([["freeze:a", "freeze:b", "freeze:c", "freeze:d", "freeze:e"]]);
     } finally {
       sqlite.close();
