@@ -1,4 +1,6 @@
 import { fetchErc4626SingleAssetReserves } from "../erc4626-single-asset";
+import { DatabaseSync } from "node:sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { toFunctionSelector } from "viem/utils";
 import type { AdapterContext, AdapterResult } from "../types";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -479,22 +481,32 @@ export function admission(id: string, result: AdapterResult) {
 }
 
 export function makeMorphoCacheDb() {
-  const rows = new Map<string, { value: string; updated_at: number }>();
-  const db = {
-    prepare: () => ({
-      bind: (...args: unknown[]) => ({
-        first: async () => rows.get(args[0] as string) ?? null,
-        run: async () => {
-          const [key, value, updatedAt] = args as [string, string, number];
-          const prev = rows.get(key);
-          if (!prev || prev.updated_at <= updatedAt) rows.set(key, { value, updated_at: updatedAt });
-          return { success: true };
-        },
-      }),
-    }),
-  } as unknown as D1Database;
-  return { db, rows };
+  const sqlite = new DatabaseSync(":memory:");
+  sqlite.exec("CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL)");
+  const db = createSqliteD1(sqlite);
+  return {
+    db,
+    getRow: (key: string) => sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?").get(key) as { value: string; updated_at: number } | undefined,
+  };
 }
+
+export const MORPHO_SUCCESS_CASES = [
+  {
+    source: "morpho-vault-v1" as const, version: "v1" as const,
+    statePath: "/v0/vaults-v1/1:0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b/state",
+    penalties: [] as string[],
+    metadata: { morphoVaultV1LiquidityRaw: "30000000", morphoVaultV1LiquidityUsd: 30 },
+  },
+  {
+    source: "morpho-vault-v2" as const, version: "v2" as const,
+    statePath: "/v1/vaults-v2/1:0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b/state",
+    penalties: ["20000000", "15000000"],
+    metadata: {
+      morphoVaultV2LiquidityRaw: "30000000", morphoVaultV2LiquidityUsd: 30,
+      morphoVaultV2ForceDeallocatableLiquidityRaw: "35000000", morphoVaultV2ForceDeallocatableLiquidityUsd: 35,
+    },
+  },
+];
 
 export const CATALOG_CASES = [
   { id: "syzusd-yuzu", asset: "0x6695c0f8706c5ace3bdf8995073179cca47926dc", vault: "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6" },

@@ -9,6 +9,7 @@ import { evaluateLiveReserveAdmission } from "../../../lib/live-reserves/store-s
 import { buildReviewedReserveClassifications } from "../../../lib/safety-score-v9/extension-reserves";
 import { computeSafetyScoreV9ReserveExposureKey } from "../../../lib/safety-score-v9/fact-set";
 import { expectValidAdapterOutput, runAdapterWithFakeTimers } from "./reserve-adapter.test-support";
+import { persistMorphoRateLimitBackoff } from "../../../lib/morpho-rate-limit";
 import type { RedemptionCapacityTelemetry } from "../erc4626-capacity-observation";
 import { rpowRay } from "../erc4626-capacity-stusds";
 import {
@@ -28,6 +29,7 @@ import {
   makeMorphoCacheDb,
   mockLocks,
   mockYearnV3Rpc,
+  MORPHO_SUCCESS_CASES,
   morphoReadJson,
   nonInfoWarnings,
   RAY,
@@ -677,23 +679,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
     expect(result.metadata).not.toHaveProperty("stusdsUnusedFundsRaw");
   });
 
-  it.each([
-    {
-      source: "morpho-vault-v1" as const, version: "v1" as const,
-      statePath: "/v0/vaults-v1/1:0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b/state",
-      penalties: [],
-      metadata: { morphoVaultV1LiquidityRaw: "30000000", morphoVaultV1LiquidityUsd: 30 },
-    },
-    {
-      source: "morpho-vault-v2" as const, version: "v2" as const,
-      statePath: "/v1/vaults-v2/1:0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b/state",
-      penalties: ["20000000", "15000000"],
-      metadata: {
-        morphoVaultV2LiquidityRaw: "30000000", morphoVaultV2LiquidityUsd: 30,
-        morphoVaultV2ForceDeallocatableLiquidityRaw: "35000000", morphoVaultV2ForceDeallocatableLiquidityUsd: 35,
-      },
-    },
-  ])("uses $source Read API liquidity rather than idle underlying balance", async ({ source, version, statePath, penalties, metadata }) => {
+  it.each(MORPHO_SUCCESS_CASES)("uses $source Read API liquidity rather than idle underlying balance", async ({ source, version, statePath, penalties, metadata }) => {
     const net = installErc4626Network({
       idleBalance: 0, liquidityAdapter: 1,
       json: morphoReadJson({
@@ -840,7 +826,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("never retries HTTP 429, shares Retry-After D1 cooldown across continuations, and caches upstream outages without poisoning on local deadlines", async () => {
-    const { db, rows } = makeMorphoCacheDb();
+    const { db, getRow } = makeMorphoCacheDb();
     const requestCache = new Map<string, Promise<unknown>>();
     const net = installErc4626Network({
       liquidityAdapter: 1,
@@ -852,8 +838,13 @@ describe("fetchErc4626SingleAssetReserves", () => {
     const first = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "morpho-vault-v2", chainId: 1 }), { requestCache, db });
     expect(net.requests.filter((r) => r.url.startsWith("https://api.morpho.org"))).toHaveLength(1);
     expect(nonInfoWarnings(first.warnings)).toEqual([expect.objectContaining({ code: "morpho-vault-v2-rate-limited", effect: "degraded" })]);
-    const saved = JSON.parse(rows.get("yield:supplemental-sources:v1:morpho-backoff")!.value) as { backoffUntilSec: number; recordedAtSec: number; source: string };
+    const saved = JSON.parse(getRow("yield:supplemental-sources:v1:morpho-backoff")!.value) as { backoffUntilSec: number; recordedAtSec: number; source: string };
     expect(saved).toMatchObject({ source: "retry-after", backoffUntilSec: saved.recordedAtSec + 3600 });
+
+    // A later or out-of-order shorter 600 s write never shortens the active 3,600 s Retry-After window.
+    const retained = await persistMorphoRateLimitBackoff(db, { backoffSec: 600, source: "default" }, saved.recordedAtSec - 61, "yield-supplemental", saved.recordedAtSec + 1);
+    expect(retained.backoffUntilSec).toBe(saved.recordedAtSec + 3600);
+    expect((JSON.parse(getRow("yield:supplemental-sources:v1:morpho-backoff")!.value) as { backoffUntilSec: number }).backoffUntilSec).toBe(saved.recordedAtSec + 3600);
 
     const second = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "morpho-vault-v1", chainId: 1 }), { requestCache, db });
     expect(net.requests.filter((r) => r.url.startsWith("https://api.morpho.org"))).toHaveLength(1);

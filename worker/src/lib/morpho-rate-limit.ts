@@ -97,16 +97,19 @@ export function parseMorphoRateLimitBackoff(
 /**
  * Atomically persist the Morpho 429 cooldown while preserving whichever valid
  * row extends `backoffUntilSec` further into the future (replacing expired or
- * malformed rows so overlapping reserve/yield lanes never shorten a Retry-After).
+ * malformed rows so overlapping or delayed reserve/yield writes never shorten
+ * an active Retry-After window).
  */
 export async function persistMorphoRateLimitBackoff(
   db: D1Database,
   backoff: MorphoRateLimitBackoff,
   recordedAtSec: number,
   origin: MorphoRateLimitOrigin,
-): Promise<void> {
+  nowSec = Math.floor(Date.now() / 1000),
+): Promise<PersistedMorphoRateLimitBackoff> {
   const payload = buildMorphoRateLimitBackoffPayload(backoff, recordedAtSec, origin);
-  await db
+  const checkNowSec = Math.max(recordedAtSec, nowSec);
+  const result = await db
     .prepare(
       "INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?) "
       + "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at "
@@ -115,12 +118,28 @@ export async function persistMorphoRateLimitBackoff(
       + "AND json_type(cache.value, '$.backoffUntilSec') = 'integer' "
       + "AND json_type(cache.value, '$.recordedAtSec') = 'integer' "
       + "AND CAST(json_extract(cache.value, '$.recordedAtSec') AS INTEGER) >= 0 "
-      + "AND CAST(json_extract(cache.value, '$.recordedAtSec') AS INTEGER) <= excluded.updated_at + 60 "
+      + "AND CAST(json_extract(cache.value, '$.recordedAtSec') AS INTEGER) <= ? + 60 "
       + "AND CAST(json_extract(cache.value, '$.backoffUntilSec') AS INTEGER) > CAST(json_extract(cache.value, '$.recordedAtSec') AS INTEGER) "
       + "AND CAST(json_extract(cache.value, '$.backoffUntilSec') AS INTEGER) - CAST(json_extract(cache.value, '$.recordedAtSec') AS INTEGER) <= 604800 "
       + "THEN CAST(json_extract(cache.value, '$.backoffUntilSec') AS INTEGER) "
       + "ELSE 0 END < CAST(json_extract(excluded.value, '$.backoffUntilSec') AS INTEGER)",
     )
-    .bind(MORPHO_RATE_LIMIT_CACHE_KEY, payload, recordedAtSec)
+    .bind(MORPHO_RATE_LIMIT_CACHE_KEY, payload, recordedAtSec, checkNowSec)
     .run();
+  const attempted: PersistedMorphoRateLimitBackoff = {
+    backoffUntilSec: recordedAtSec + backoff.backoffSec,
+    reason: MORPHO_RATE_LIMIT_BACKOFF_REASON,
+    source: backoff.source,
+    recordedAtSec,
+    origin,
+  };
+  if ((result.meta?.changes ?? 1) === 0) {
+    const existing = await db
+      .prepare("SELECT value FROM cache WHERE key = ?")
+      .bind(MORPHO_RATE_LIMIT_CACHE_KEY)
+      .first<{ value: string }>();
+    const retained = parseMorphoRateLimitBackoff(existing?.value, checkNowSec);
+    if (retained) return retained;
+  }
+  return attempted;
 }

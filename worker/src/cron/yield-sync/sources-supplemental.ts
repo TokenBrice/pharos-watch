@@ -497,7 +497,7 @@ async function runRateLimitedSupplementalFamily(
     if (db) {
       try {
         if (family === "morpho") {
-          await persistMorphoRateLimitBackoff(
+          const retained = await persistMorphoRateLimitBackoff(
             db,
             {
               backoffSec: value.rateLimited.backoffSec,
@@ -506,6 +506,12 @@ async function runRateLimitedSupplementalFamily(
             recordedAtSec,
             "yield-supplemental",
           );
+          backoff = {
+            backoffUntilSec: retained.backoffUntilSec,
+            source: retained.source,
+            recordedAtSec: retained.recordedAtSec,
+            reason: retained.reason,
+          };
         } else {
           await setCache(db, backoffKey, buildYieldSupplementalFamilyBackoff(family, backoff), signal);
         }
