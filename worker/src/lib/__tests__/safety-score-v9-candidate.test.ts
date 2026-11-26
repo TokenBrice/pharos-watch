@@ -1535,8 +1535,8 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
 
 it("preserves cross-chunk parity when a reserve-only reference targets a later chunk", async () => {
   const fixtures = createLatestSchemaFixtureTracker();
-  coverageFloorOverride.value = 3;
   try {
+    coverageFloorOverride.value = 3;
     const [mono, chunk] = [fixtures.open(), fixtures.open()];
     const ids = ["bold-liquity", "usdc-circle", "usdt-tether"] as const;
     const raw = createNativeSafetyScoreV9CohortInput(ids);
@@ -1574,14 +1574,15 @@ it("preserves cross-chunk parity when a reserve-only reference targets a later c
 
 it("quarantines all epoch projection failures together and retries an atomic epoch rollback", async () => {
   const fixtures = createLatestSchemaFixtureTracker();
-  coverageFloorOverride.value = 3;
-  const { db, sqlite } = fixtures.open();
-  const assertCard = projections.assertV9PublicCardProjections;
-  const projectionMock = vi.spyOn(projections, "assertV9PublicCardProjections").mockImplementation((card) => {
-    if (["usds-sky", "susds-sky"].includes(card.id) && card.ratingStatus === "rated") z.literal("valid").parse("invalid");
-    return assertCard(card);
-  });
+  let projectionMock: ReturnType<typeof vi.spyOn> | undefined;
   try {
+    coverageFloorOverride.value = 3;
+    const { db, sqlite } = fixtures.open();
+    const assertCard = projections.assertV9PublicCardProjections;
+    projectionMock = vi.spyOn(projections, "assertV9PublicCardProjections").mockImplementation((card) => {
+      if (["usds-sky", "susds-sky"].includes(card.id) && card.ratingStatus === "rated") z.literal("valid").parse("invalid");
+      return assertCard(card);
+    });
     const input = makePublishableV9Input(createNativeSafetyScoreV9CohortInput(["usdc-circle", "usds-sky", "susds-sky", "buidl-blackrock"]));
     await seedPreparedV9Db(db, await prepareV9SeedPayload(input));
     let first: V9ContinuationMessage | undefined;
@@ -1614,7 +1615,7 @@ it("quarantines all epoch projection failures together and retries an atomic epo
     expect(await loadV9EvalRun(db, first!.runId)).toMatchObject({ fact_set_digest: mono.candidate.factSetDigest });
   } finally {
     coverageFloorOverride.value = undefined;
-    projectionMock.mockRestore();
+    projectionMock?.mockRestore();
     fixtures.closeAll();
   }
 });

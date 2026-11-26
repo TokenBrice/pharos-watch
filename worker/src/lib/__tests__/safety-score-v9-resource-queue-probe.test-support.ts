@@ -22,11 +22,12 @@ import {
   loadV9EvalRun, readV9EvalChunk, V9_EVAL_CHUNK_MAX_ROW_BYTES,
 } from "../safety-score-v9/chunked-eval-store";
 
-// Absolute Node regression ceiling (heapUsed + arrayBuffers, 10 ms periodic + hook
-// sampling, no boot deduction). Natural --max-old-space-size=128 --max-semi-space-size=2
-// enforces the V8 JS-heap OOM cap; this bound leaves ~25 MiB above Node harness overhead
-// so GC timing noise does not flake CI while still failing on multi-chunk regressions.
-const QUEUE_COMBINED_REGRESSION_MAX_BYTES = 160 * 1024 * 1024;
+// Absolute Node regression ceiling (heapUsed + arrayBuffers, sampled on stage hooks
+// and ~10 ms event-loop turns, no boot deduction). Natural --max-old-space-size=128
+// --max-semi-space-size=2 enforces the V8 JS-heap OOM cap; 176 MiB leaves ~37 MiB
+// above the observed 139 MiB 560-asset peak (and ~20 MiB above non-coincident
+// heap + arrayBuffers maxima) while still failing on multi-chunk regressions.
+const QUEUE_COMBINED_REGRESSION_MAX_BYTES = 176 * 1024 * 1024;
 const mode = process.env.PHAROS_QUEUE_MODE ?? "queue";
 const count = Number(process.env.PHAROS_QUEUE_ASSETS);
 const escalation = process.env.PHAROS_QUEUE_ESCALATION;

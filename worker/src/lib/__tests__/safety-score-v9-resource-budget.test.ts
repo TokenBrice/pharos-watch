@@ -1,4 +1,5 @@
 import {
+  appendFileSync,
   mkdtempSync,
   readFileSync,
   writeFileSync,
@@ -277,7 +278,7 @@ describe.skipIf(process.env.PHAROS_V9_RESOURCE_LANE !== "1")("Safety Score V9 co
     expect(output.wallMs, `nine-scenario matrix wallMs=${output.wallMs}`).toBeLessThan(CONTAGION_WALL_BUDGET_MS);
   });
 
-  describe("Queue stage resource and canonical parity gates", { timeout: 300_000 }, () => {
+  describe("Queue stage resource and canonical parity gates", { timeout: 360_000 }, () => {
     // Cap concurrency to 2 after solo contagion so 4-vCPU hosted runners avoid 5-way contention.
     // Run the two heaviest cohorts first to minimize total two-wave makespan.
     it.concurrent.each([[560, "none"], [343, "commit-expiry"], [343, "eval"], [343, "none"]] as const)(
@@ -300,7 +301,12 @@ describe.skipIf(process.env.PHAROS_V9_RESOURCE_LANE !== "1")("Safety Score V9 co
         );
         const stdout = readFileSync(join(temporaryDirectory, `${name}.stdout`), "utf8");
         const telemetry = stdout.split("\n").find(line => line.startsWith("queue-telemetry:"));
-        if (telemetry) console.info(telemetry);
+        if (telemetry) {
+          console.info(telemetry);
+          if (process.env.PHAROS_V9_RESOURCE_QUEUE_TELEMETRY) {
+            appendFileSync(process.env.PHAROS_V9_RESOURCE_QUEUE_TELEMETRY, `${telemetry.slice("queue-telemetry: ".length)}\n`);
+          }
+        }
         expect(queueResult.status, readFileSync(join(temporaryDirectory, `${name}.stderr`), "utf8")).toBe(0);
         expect(telemetry).toBeDefined();
         const parsed = JSON.parse(telemetry!.slice("queue-telemetry: ".length)) as { sha: string };

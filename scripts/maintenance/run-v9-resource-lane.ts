@@ -155,8 +155,10 @@ export async function runV9ResourceLane({
   mkdirSync(outputDirectory, { recursive: true });
   mkdirSync(resourceDirectory, { recursive: true });
   const vitestPath = join(outputDirectory, "vitest.json");
+  const queueTelemetryPath = join(outputDirectory, "queue-telemetry.jsonl");
   const reportPath = join(resourceDirectory, "report.json");
   rmSync(vitestPath, { force: true });
+  rmSync(queueTelemetryPath, { force: true });
   rmSync(reportPath, { force: true });
   const invocationId = randomUUID();
   const prContext = Boolean(env.PR_BASE_SHA);
@@ -214,7 +216,10 @@ export async function runV9ResourceLane({
       ...(decision.required ? [] : ["-t", "bounds Queue stage resources"]),
     ]);
     const testStarted = Date.now();
-    const result = await runCommand(command, { PHAROS_V9_RESOURCE_LANE: "1" });
+    const result = await runCommand(command, {
+      PHAROS_V9_RESOURCE_LANE: "1",
+      PHAROS_V9_RESOURCE_QUEUE_TELEMETRY: queueTelemetryPath,
+    });
     vitestDurationMs = Date.now() - testStarted;
     try {
       contagion.durationMs = assertRequiredResourceCases(JSON.parse(readFileSync(vitestPath, "utf8")), decision.required);
