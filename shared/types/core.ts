@@ -41,6 +41,7 @@ export const PEG_CURRENCY_VALUES = [
   "CZK",
   "PLN",
   "AED",
+  "NZD",
   "GOLD",
   "SILVER",
   "VAR",

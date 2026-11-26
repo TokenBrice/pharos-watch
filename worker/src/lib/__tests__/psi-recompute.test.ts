@@ -482,5 +482,9 @@ describe("buildStabilityInputForDay", () => {
     const beforeFrozen = getPsiHistoricalUniverseForDay(supply, Date.UTC(2026, 2, 1) / 1000, undefined, membership);
     expect(beforeFrozen.eligibleIds.has("bib01-backed")).toBe(true);
     expect(beforeFrozen.mcapById.get("bib01-backed")).toBe(0.1e9);
+
+    const live = buildPsiHistoricalMembership();
+    expect(live.get("usdcx-movement")?.windows).toEqual([{ from: -Infinity, until: Date.UTC(2026, 10, 27) / 1000 }]);
+    expect(live.get("benji-franklin-templeton")?.windows).toEqual([{ from: Date.UTC(2021, 3, 6) / 1000, until: Date.UTC(2026, 9, 30) / 1000 }]);
   });
 });

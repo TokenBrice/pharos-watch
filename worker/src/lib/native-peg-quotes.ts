@@ -62,6 +62,7 @@ const SUPPORTED_COINGECKO_NATIVE_PEG_CURRENCIES = new Map<string, string[]>([
   ["MXN", ["mxn"]],
   ["MYR", ["myr"]],
   ["NGN", ["ngn"]],
+  ["NZD", ["nzd"]],
   ["PHP", ["php"]],
   ["PLN", ["pln"]],
   ["RUB", ["rub"]],

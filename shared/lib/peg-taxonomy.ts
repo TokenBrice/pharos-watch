@@ -57,6 +57,7 @@ const PEG_TAXONOMY_FACTS = {
   CZK: { symbol: "Kč", pegClass: "fiat_fx", canonicalPegType: "peggedCZK", hardcodedPriceBounds: [0.02, 0.1], fxRateBounds: [0.02, 0.1] },
   PLN: { symbol: "zł", pegClass: "fiat_fx", canonicalPegType: "peggedPLN", hardcodedPriceBounds: [0.1, 0.5], fxRateBounds: [0.1, 0.5] },
   AED: { symbol: "AED ", pegClass: "fiat_fx", canonicalPegType: "peggedAED", hardcodedPriceBounds: [0.2, 0.35], fxRateBounds: [0.25, 0.3] },
+  NZD: { symbol: "NZ$", pegClass: "fiat_fx", canonicalPegType: "peggedNZD", hardcodedPriceBounds: [0.4, 0.85], fxRateBounds: [0.45, 0.8] },
   GOLD: { symbol: "$", pegClass: "commodity", canonicalPegType: "peggedGOLD", hardcodedPriceBounds: [100, 100_000], fxRateBounds: [500, 10_000], nativePriceUsesUsdSymbol: true },
   SILVER: { symbol: "$", pegClass: "commodity", canonicalPegType: "peggedSILVER", hardcodedPriceBounds: [5, 500], fxRateBounds: [5, 500], nativePriceUsesUsdSymbol: true },
   VAR: { symbol: "$", pegClass: "variable", canonicalPegType: null, nativePriceUsesUsdSymbol: true },

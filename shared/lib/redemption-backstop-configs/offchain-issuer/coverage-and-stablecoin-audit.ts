@@ -418,29 +418,6 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ],
   },
   ...MIDAS_LYT_CONFIGS,
-  "benji-franklin-templeton": {
-    ...issuerBase,
-    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
-    settlementModel: "days",
-    costModel: undisclosedReviewedFee(
-      "Franklin Templeton materials describe BENJI redemptions through the Benji app/platform; public materials reviewed do not publish one fixed redemption fee",
-    ),
-    docs: [
-      sourceRefFull(
-        "Franklin FOBXX prospectus",
-        "https://www.franklintempleton.com/forms-literature/download-preview/9001-P",
-      ),
-      sourceRef(
-        "Franklin FOBXX fund page",
-        "https://www.franklintempleton.com/investments/options/money-market-funds/products/29380/SINGLCLASS/franklin-on-chain-u-s-government-money-fund/FOBXX",
-        ["capacity", "access"],
-      ),
-      sourceRef("Benji app", "https://benji.franklintempleton.com/", ["route", "access"]),
-    ],
-    notes: [
-      "Modeled as KYC-gated Benji platform redemption of fund shares, not as permissionless secondary-market liquidity.",
-    ],
-  },
   "wtgxx-wisdomtree": {
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),

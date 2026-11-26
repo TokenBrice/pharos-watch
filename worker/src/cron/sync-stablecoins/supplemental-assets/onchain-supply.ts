@@ -6,7 +6,17 @@ import { fetchXrplSupply, XrplSupplyValidationError } from "./xrpl-supply";
 import { logWorkerEventArgs } from "../../../lib/structured-log";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReserveInput } from "@shared/types/live-reserves";
-import { PinnedNativeShareObservationSchema, type PinnedNativeShareObservation } from "@shared/types/reserve-nav-supply";
+import {
+  JLTXX_ETHEREUM_CONTRACT,
+  JLTXX_NATIVE_SHARE_DECIMALS,
+  JLTXX_SOLANA_MINT,
+  JLTXX_SOLANA_TOKEN_PROGRAM,
+  PinnedNativeShareObservationSchema,
+  type PinnedNativeShareEthereumLeg,
+  type PinnedNativeShareLeg,
+  type PinnedNativeShareObservation,
+  type PinnedNativeShareSolanaLeg,
+} from "@shared/types/reserve-nav-supply";
 import type { SfraxStockPerimeterObservation } from "@shared/types/sfrax-supply";
 import { fetchSfraxStockSupply } from "./sfrax-supply";
 import { fetchEvmBlockNumber, fetchEvmBlockHeader, fetchEvmUint256AtBlock, type EvmBlockHeader, type EvmRpcOptions } from "../../../lib/evm-rpc";
@@ -124,35 +134,115 @@ export interface SingleContractOnChainMcapResult extends OnChainMcapResult {
   chainLabel: string;
 }
 
-/** JLTXX native shares are read at a hash-bound finalized block, never recovered from market cap. */
+/** JLTXX native shares are read at finalized chain-pinned state, never recovered from market cap. */
 export async function fetchPinnedNativeShares(
   meta: Pick<StablecoinMeta, "id" | "symbol" | "contracts">,
   chainRpcs?: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
 ): Promise<PinnedNativeShareObservation | null> {
-  if (meta.id !== "jltxx-jpmorgan" || meta.symbol !== "JLTXX" || meta.contracts?.length !== 1) return null;
-  const contract = meta.contracts[0];
-  if (contract.chain !== "ethereum" || contract.address.toLowerCase() !== "0x09864f52b035ae22ee739dfa5c748fa080d07bd8" || contract.decimals !== 2) return null;
-  const options = { chainRpcs, signal: signal ?? AbortSignal.timeout(10_000), timeoutMs: 10_000 };
+  if (meta.id !== "jltxx-jpmorgan" || meta.symbol !== "JLTXX") return null;
+  const contracts = meta.contracts;
+  if (!contracts || (contracts.length !== 1 && contracts.length !== 2)) return null;
+
+  let ethereumContract: NonNullable<StablecoinMeta["contracts"]>[number] | null = null;
+  let solanaContract: NonNullable<StablecoinMeta["contracts"]>[number] | null = null;
+  for (const contract of contracts) {
+    if (contract.chain === "ethereum") {
+      if (
+        ethereumContract
+        || contract.address.toLowerCase() !== JLTXX_ETHEREUM_CONTRACT
+        || contract.decimals !== JLTXX_NATIVE_SHARE_DECIMALS
+      ) {
+        return null;
+      }
+      ethereumContract = contract;
+    } else if (contract.chain === "solana") {
+      if (
+        solanaContract
+        || contract.address !== JLTXX_SOLANA_MINT
+        || contract.decimals !== JLTXX_NATIVE_SHARE_DECIMALS
+      ) {
+        return null;
+      }
+      solanaContract = contract;
+    } else {
+      return null;
+    }
+  }
+  if (!ethereumContract) return null;
+
+  const effectiveSignal = signal ?? AbortSignal.timeout(solanaContract ? 20_000 : 10_000);
+  const options = { chainRpcs, signal: effectiveSignal, timeoutMs: 10_000 };
   try {
+    throwIfAborted(signal);
     const block = await fetchEvmBlockHeader("ethereum", "finalized", options);
-    const nowSec = Math.floor(Date.now() / 1000);
-    if (!block || block.timestamp <= 0 || block.timestamp > nowSec || nowSec - block.timestamp > LIVE_RESERVE_FRESHNESS_SEC) return null;
+    const ethNowSec = Math.floor(Date.now() / 1000);
+    if (!block || block.timestamp <= 0 || block.timestamp > ethNowSec || ethNowSec - block.timestamp > LIVE_RESERVE_FRESHNESS_SEC) return null;
     const pinnedOptions = { ...options, stateBlockHash: block.hash };
-    const raw = await fetchEvmUint256AtBlock("ethereum", contract.address, TOTAL_SUPPLY_SELECTOR, block.number, pinnedOptions);
-    const decimals = await fetchEvmUint256AtBlock("ethereum", contract.address, DECIMALS_SELECTOR, block.number, pinnedOptions);
-    throwIfAborted(options.signal);
-    if (raw == null || raw <= 0n || decimals !== 2n) return null;
+    const raw = await fetchEvmUint256AtBlock("ethereum", ethereumContract.address, TOTAL_SUPPLY_SELECTOR, block.number, pinnedOptions);
+    const decimals = await fetchEvmUint256AtBlock("ethereum", ethereumContract.address, DECIMALS_SELECTOR, block.number, pinnedOptions);
+    throwIfAborted(signal);
+    if (raw == null || raw <= 0n || decimals !== BigInt(JLTXX_NATIVE_SHARE_DECIMALS)) return null;
     const closing = await fetchEvmBlockHeader("ethereum", block.number, options);
+    throwIfAborted(signal);
     if (!closing || closing.hash !== block.hash || closing.timestamp !== block.timestamp || closing.number !== block.number) return null;
+
+    const ethereumLeg: PinnedNativeShareEthereumLeg = {
+      chain: "ethereum",
+      contractAddress: JLTXX_ETHEREUM_CONTRACT,
+      rawShares: raw.toString(),
+      decimals: JLTXX_NATIVE_SHARE_DECIMALS,
+      blockNumber: block.number,
+      blockHash: block.hash,
+      observedAt: block.timestamp,
+    };
+
+    const legs: PinnedNativeShareLeg[] = [ethereumLeg];
+    if (solanaContract) {
+      const census = await fetchSolanaAccounts([solanaContract.address], effectiveSignal, { chainRpcs });
+      throwIfAborted(signal);
+      const solNowSec = Math.floor(Date.now() / 1000);
+      const slot = census.observedBlock.number;
+      const solObservedAt = census.observedBlock.timestamp;
+      if (
+        !Number.isSafeInteger(slot) || slot <= 0
+        || !Number.isSafeInteger(solObservedAt) || solObservedAt <= 0
+        || solObservedAt > solNowSec
+        || solNowSec - solObservedAt > LIVE_RESERVE_FRESHNESS_SEC
+      ) {
+        return null;
+      }
+      const mintAccount = census.accounts.get(solanaContract.address);
+      if (!mintAccount || mintAccount.executable || mintAccount.owner !== JLTXX_SOLANA_TOKEN_PROGRAM) {
+        return null;
+      }
+      const mint = readSolanaMint(mintAccount, solObservedAt);
+      if (mint.decimals !== JLTXX_NATIVE_SHARE_DECIMALS || mint.scaledUi || mint.rawSupply <= 0n) {
+        return null;
+      }
+      const solanaLeg: PinnedNativeShareSolanaLeg = {
+        chain: "solana",
+        contractAddress: JLTXX_SOLANA_MINT,
+        rawShares: mint.rawSupply.toString(),
+        decimals: JLTXX_NATIVE_SHARE_DECIMALS,
+        slot,
+        programOwner: JLTXX_SOLANA_TOKEN_PROGRAM,
+        observedAt: solObservedAt,
+      };
+      legs.push(solanaLeg);
+    }
+
+    const totalRawShares = legs.reduce((sum, leg) => sum + BigInt(leg.rawShares), 0n);
+    const observedAt = Math.min(...legs.map((leg) => leg.observedAt));
     const parsed = PinnedNativeShareObservationSchema.safeParse({
-      chain: contract.chain, contractAddress: contract.address.toLowerCase(),
-      rawShares: raw.toString(), decimals: Number(decimals),
-      blockNumber: block.number, blockHash: block.hash, observedAt: block.timestamp,
+      rawShares: totalRawShares.toString(),
+      decimals: JLTXX_NATIVE_SHARE_DECIMALS,
+      observedAt,
+      legs,
     });
     return parsed.success ? parsed.data : null;
   } catch (error) {
-    throwIfAborted(options.signal);
+    throwIfAborted(signal);
     logWorkerEventArgs("handler", "warn", `[fiat-cg] JLTXX pinned native shares unavailable: ${String(error).slice(0, 200)}`);
     return null;
   }

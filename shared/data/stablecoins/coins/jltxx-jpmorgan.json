@@ -81,8 +81,8 @@
   "status": "quarantined",
   "listingStatusReview": {
     "changedAt": "2026-10-03",
-    "reason": "Reviewed 2026-10-30: CoinGecko has no price or market cap. Solana mint live 2026-10-22 holds most shares; Ethereum covers ~7% of class assets. Chain perimeter, NAV/block skew and runtime admission stay unresolved. Reserve recovery unauthorized.",
-    "reviewBy": "2026-11-14",
+    "reason": "2026-10-30: CoinGecko unpriced/no mcap; Solana mint holds most shares, Ethereum ~7%; perimeter/NAV skew unresolved. Reviewed 2026-11-26: hold continued pending verified multi-chain supply admission; review due 2026-12-13.",
+    "reviewBy": "2026-12-13",
     "source": {
       "label": "JPMorgan JLTXX Token Class NAV and class assets",
       "url": "https://am.jpmorgan.com/FundsMarketingHandler/slim/product.md?cusip=46655r119&country=us&role=adv&language=en"

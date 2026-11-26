@@ -6,7 +6,7 @@ export const content: ArchetypeContent = {
   subtitle:
     "Short-duration Treasuries support two families: NAV-accreting tokens and par-stable $1 tokens with separately distributed or retained yield.",
   lead: [
-    "T-Bill / RWA tokens put short-duration U.S. government-securities exposure on-chain, through fund shares or reserve-backed dollar tokens. Subscriptions arrive as USD or permitted stablecoins, and reserves hold Treasury bills, repos, and cash. The wrapper determines the price model: USYC and USTB accrue yield in a rising per-unit net asset value (NAV), while BENJI and BUIDL target a stable $1 unit and distribute yield through additional units. Reserve-backed $1 tokens can instead route yield to a staked wrapper or retain it at the issuer.",
+    "T-Bill / RWA tokens put short-duration U.S. government-securities exposure on-chain, through fund shares or reserve-backed dollar tokens. Subscriptions arrive as USD or permitted stablecoins, and reserves hold Treasury bills, repos, and cash. The wrapper determines the price model: USYC and USTB accrue yield in a rising per-unit net asset value (NAV), while WTGXX and BUIDL target a stable $1 unit and distribute yield through additional units. Reserve-backed $1 tokens can instead route yield to a staked wrapper or retain it at the issuer.",
     "Treasury yield is real, but the legal claim and exit rail differ by product. Fund shares generally restrict holders and transfers, with redemptions through a transfer agent; freely transferable reserve-backed dollars still have permissioned primary mint and redemption rails. Read the specific wrapper rather than assuming every Treasury-backed token trades at $1 or appreciates in price.",
   ],
   howItWorks: [
@@ -23,7 +23,7 @@ export const content: ArchetypeContent = {
     {
       id: "token-units",
       title: "Token units",
-      body: "How the yield reaches the holder depends on the wrapper, and this archetype carries two families. NAV-accreting share classes let per-unit price drift up: USYC and USTB appreciate at the published NAV. Par-stable tokens hold the unit at $1 and move the yield elsewhere: BENJI rebases share count daily, BUIDL mints new units, and the reserve-backed $1 tokens built on the same T-Bill collateral (USDtb, USD0, frxUSD) pass yield through a separate staked wrapper or retain it at the issuer. Roughly half the coins Pharos tracks under this archetype are par-stable rather than NAV-accreting; the detail page reads the coin’s NAV flag. Redemption is bank-wire or stablecoin-out, settled at NAV for fund shares and at par for the rest.",
+      body: "How the yield reaches the holder depends on the wrapper, and this archetype carries two families. NAV-accreting share classes let per-unit price drift up: USYC and USTB appreciate at the published NAV. Par-stable tokens hold the unit at $1 and move the yield elsewhere: WTGXX accrues dividends daily and distributes additional shares, BUIDL mints new units, and the reserve-backed $1 tokens built on the same T-Bill collateral (USDtb, USD0, frxUSD) pass yield through a separate staked wrapper or retain it at the issuer. Roughly half the coins Pharos tracks under this archetype are par-stable rather than NAV-accreting; the detail page reads the coin’s NAV flag. Redemption is bank-wire or stablecoin-out, settled at NAV for fund shares and at par for the rest.",
     },
   ],
   riskProfile: [
@@ -50,8 +50,8 @@ export const content: ArchetypeContent = {
       note: "BlackRock's institutional money-market fund issued under SEC Reg D. Majority short Treasuries with a repo and cash float. Custodied at BNY Mellon, administered by Securitize.",
     },
     {
-      coinId: "benji-franklin-templeton",
-      note: "On-chain share record for Franklin Templeton's FOBXX, an SEC-registered U.S. government money market fund. Stable $1.00 NAV; yield distributed by daily rebasing of share count.",
+      coinId: "wtgxx-wisdomtree",
+      note: "WisdomTree's SEC-registered '40 Act Treasury money market fund tokenized via WisdomTree Connect. Targets a stable $1.00 NAV with daily dividend accrual distributed in additional shares and 24/7 dealer trading at a fixed $1.",
     },
     {
       coinId: "usyc-hashnote",
@@ -70,7 +70,7 @@ export const content: ArchetypeContent = {
     {
       id: "tokenized-money-market-funds",
       title: "Tokenized money-market funds with stable $1 NAV",
-      body: "BENJI and similar share tokens operate as $1-stable funds where yield is paid out by rebasing share count. UX looks fiat-cash; the legal wrapper is a fund.",
+      body: "WTGXX, BUIDL, and similar share tokens operate as $1-stable funds where yield is distributed in additional shares rather than price appreciation. UX looks fiat-cash; the legal wrapper is a fund.",
     },
     {
       id: "nav-accruing-fund-shares",

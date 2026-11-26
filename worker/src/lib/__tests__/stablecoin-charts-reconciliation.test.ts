@@ -123,6 +123,8 @@ describe("stablecoin-charts reconciliation", () => {
       { date: cutover, totalCirculatingUSD: { peggedUSD: 120, peggedEUR: 10, peggedGOLD: 7 } },
       { date: post, totalCirculatingUSD: { peggedUSD: 120, peggedEUR: 10, peggedGOLD: 7 } },
     ]);
+    const usdcx = buildDateFencedSupplementalChartConfigs().find((c) => c.id === "usdcx-movement");
+    expect(usdcx).toEqual({ id: "usdcx-movement", pegType: "peggedUSD", inactiveFrom: Date.parse("2026-11-27T00:00:00Z") / 1000 });
   });
 
 });

@@ -50,8 +50,10 @@ describe("native-peg-quotes", () => {
 
   it("normalizes supported fiat pegs and exposes CoinGecko query currencies", () => {
     expect(normalizeSupportedPegCurrency(" eur ")).toBe("EUR");
+    expect(normalizeSupportedPegCurrency(" nzd ")).toBe("NZD");
     expect(normalizeSupportedPegCurrency("gold")).toBeNull();
     expect(getNativePegQueryCurrencies("CNY")).toEqual(["cny"]);
+    expect(getNativePegQueryCurrencies("NZD")).toEqual(["nzd"]);
     expect(getNativePegQueryCurrencies("CNH")).toEqual([]);
     expect(getNativePegQueryCurrencies("ARS")).toEqual(["ars"]);
     expect(getNativePegQueryCurrencies("BRL")).toEqual(["brl"]);

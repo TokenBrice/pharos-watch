@@ -120,6 +120,7 @@ export const ALL_PEG_SLUGS: Record<PegCurrency, string> = {
   CZK: "czk",
   PLN: "pln",
   AED: "aed",
+  NZD: "nzd",
   IDR: "idr",
   INR: "inr",
   HKD: "hkd",

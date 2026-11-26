@@ -80,6 +80,8 @@ export const REFERENCE_CLOSURE_HOLD_BANDS_BPS: Record<PegCurrency, { weekend: nu
   CZK: { weekend: 400, extended: 2500 },
   PLN: { weekend: 600, extended: 2500 },
   AED: { weekend: 2500, extended: 2500 },
+  // Retained at the uncalibrated 2,500 bps fallback until NZD receives a formal L18 closure calibration.
+  NZD: { weekend: 2500, extended: 2500 },
   GOLD: { weekend: 1200, extended: 2500 },
   SILVER: { weekend: 2450, extended: 2500 },
   VAR: { weekend: 2500, extended: 2500 },

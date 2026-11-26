@@ -22,6 +22,7 @@ export const PRIMARY_PEG_TYPE_TO_CURRENCY_PAIRS = [
   ["peggedINR", "INR"],
   ["peggedCZK", "CZK"],
   ["peggedPLN", "PLN"],
+  ["peggedNZD", "NZD"],
 ] as const;
 
 export const PRIMARY_FX_CURRENCIES = PRIMARY_PEG_TYPE_TO_CURRENCY_PAIRS.map(([, currency]) => currency);

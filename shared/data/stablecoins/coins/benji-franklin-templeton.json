@@ -87,23 +87,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
-  "liveReservesConfig": {
-    "adapter": "curated-validated",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "benji-franklin-templeton",
-    "display": {
-      "url": "https://www.franklintempleton.com/investments/options/money-market-funds/products/29380/SINGLCLASS/franklin-on-chain-u-s-government-money-fund/FOBXX",
-      "label": "Franklin Templeton FOBXX fund page"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "etherscan-proxy"
-      }
-    }
-  },
   "yieldConfig": {
     "yieldSource": "Franklin Templeton FOBXX U.S. government money market fund",
     "yieldType": "rebase"
@@ -112,18 +95,17 @@
     {
       "type": "info",
       "title": "Multi-chain fund with limited on-chain telemetry",
-      "message": "BENJI is the multi-chain share token of Franklin Templeton's FOBXX money market fund. Pharos tracks the Ethereum, Stellar, Polygon, Arbitrum, Avalanche, Aptos, Base, and Solana deployments; BNB Chain and Canton issuances are not yet integrated. Live reserves use a curated weekly snapshot of the official fund factsheet until an on-chain NAV oracle becomes available."
+      "message": "BENJI is the multi-chain share token of Franklin Templeton's FOBXX money market fund. Pharos tracked the Ethereum, Stellar, Polygon, Arbitrum, Avalanche, Aptos, Base, and Solana deployments; BNB Chain and Canton issuances were not integrated. Live reserve tracking was discontinued after BENJI was delisted under Listing Policy v2."
     }
   ],
   "launchDate": "2021-04-06",
-  "status": "quarantined",
+  "status": "delisted",
   "listingStatusReview": {
-    "changedAt": "2026-10-30",
-    "reviewBy": "2026-11-29",
-    "reason": "2026-10-30 review: CoinGecko supply and market cap remain zero and DefiLlama has no stablecoin row. Multi-chain supply now reconciles ($756.54m across eight chains, Aptos 0), but Stellar ($527.82m) still has no runtime supply reader.",
+    "changedAt": "2026-11-26",
+    "reason": "Delisted under Listing Policy v2: tokenized U.S. government money market fund (FOBXX) with no active non-fund tracked stablecoin linking BENJI as reserve backing, and no CoinGecko or DefiLlama live supply path (Stellar supply still has no runtime reader).",
     "source": {
-      "label": "BENJI Stellar supply observed 2026-09-30",
-      "url": "https://horizon.stellar.org/assets?asset_code=BENJI&asset_issuer=GBHNGLLIE3KWGKCHIKMHJ5HVZHYIK7WTBE4QF5PLAKL4CJGSEU7HZIW5"
+      "label": "Franklin OnChain U.S. Government Money Fund (FOBXX) product page",
+      "url": "https://www.franklintempleton.com/investments/options/money-market-funds/products/29380/SINGLCLASS/franklin-on-chain-u-s-government-money-fund/FOBXX"
     }
   }
 }

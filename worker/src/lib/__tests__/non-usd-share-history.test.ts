@@ -463,6 +463,7 @@ describe("non-USD share producer aggregation", () => {
     const actualMembers = buildNonUsdShareCoreMembers();
     expect(actualMembers.get("fpi-frax")).toEqual({ bucket: "fiat-non-usd", inactiveFrom: cutover });
     expect(actualMembers.get("eutbl-spiko")).toEqual({ bucket: "fiat-non-usd", inactiveFrom: cutover });
+    expect(actualMembers.get("usdcx-movement")).toEqual({ bucket: "usd", inactiveFrom: unix("2026-11-27T00:00:00Z") });
     expect(actualMembers.get("aeur-anchored-coins")).toEqual({
       bucket: "fiat-non-usd",
       inactiveFrom: unix("2026-07-11T00:00:00Z"),

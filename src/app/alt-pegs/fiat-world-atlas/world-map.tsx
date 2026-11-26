@@ -31,6 +31,7 @@ const PEG_COUNTRY_CODES: Partial<Record<PegCurrency, readonly string[]>> = {
   MXN: ["MX"],
   ZAR: ["ZA"],
   AUD: ["AU"],
+  NZD: ["NZ"],
   COP: ["CO"],
   PEN: ["PE"],
   CLP: ["CL"],

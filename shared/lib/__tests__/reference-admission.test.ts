@@ -220,6 +220,7 @@ describe("reference admission", () => {
     ["peggedEUR", "EUR", "business-daily", "frankfurter", "2026-11-17T13:10:00Z", 1],
     ["peggedREAL", "BRL", "business-daily", "frankfurter", "2026-11-16T13:10:00Z", 2],
     ["peggedCOP", "COP", "calendar-daily", "fawazahmed0", "2026-11-16T00:00:00Z", 3],
+    ["peggedNZD", "NZD", "business-daily", "frankfurter", "2026-11-17T13:10:00Z", 1],
   ] as const)("gates a %s fixing for detection by its age band", (pegKey, currency, cadence, source, fixing, bucket) => {
     const observedAtSec = sec(fixing);
     const at = sec(["", "2026-11-17T16:00:00Z", "2026-11-18T13:10:00Z", "2026-11-19T01:00:00Z"][bucket]);

@@ -3,7 +3,10 @@ import { normalizeLegacyPegType } from "@shared/lib/peg-price-bounds";
 import { pegTypeFromCurrency as canonicalPegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { CORE_AGGREGATE_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/aggregate-registry";
 import { CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC } from "@shared/lib/stablecoins/aggregate-universe";
-import { CORE_AGGREGATE_V1_MEMBER_IDS } from "@shared/lib/stablecoins/aggregate-universe-v1";
+import {
+  CORE_AGGREGATE_V1_MEMBER_IDS,
+  getCoreAggregatePostCutoverExitSec,
+} from "@shared/lib/stablecoins/aggregate-universe-v1";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { findAsOfSnapshot, MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC } from "@shared/lib/rate-series";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
@@ -94,7 +97,11 @@ export function buildDateFencedSupplementalChartConfigs(
     const base = toStructuralSupplementalConfig(meta);
     if (!base) continue;
     seen.add(id);
-    configs.push({ ...base, inactiveFrom: cutoverSec });
+    const postCutoverExitSec = getCoreAggregatePostCutoverExitSec(id);
+    const inactiveFrom = postCutoverExitSec != null && postCutoverExitSec > cutoverSec
+      ? postCutoverExitSec
+      : cutoverSec;
+    configs.push({ ...base, inactiveFrom });
   }
 
   return configs;

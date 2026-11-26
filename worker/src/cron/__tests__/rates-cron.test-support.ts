@@ -13,7 +13,7 @@ const FX_UNAVAILABLE = { body: { error: "Service unavailable" }, status: 503 } a
 const FX_FRANKFURTER_RATES = {
   EUR: 0.925, GBP: 0.79, CHF: 0.88, JPY: 149.5, BRL: 5.0, IDR: 15800, SGD: 1.35, TRY: 36,
   AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2,
-  CZK: 21.8, PLN: 3.8998,
+  CZK: 21.8, PLN: 3.8998, NZD: 1.7,
 };
 const FX_SECONDARY_USD = { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560, aed: 3.6725 };
 
@@ -85,6 +85,7 @@ const COMPLETE_FX_RATES: Record<string, number> = {
   peggedCZK: 1 / 21.8,
   peggedPLN: 1 / 3.8998,
   peggedAED: 1 / 3.6725,
+  peggedNZD: 1 / 1.7,
 };
 
 export function makeCompleteFxRates(

@@ -21,6 +21,7 @@ describe("fx-config currency maps", () => {
     ["peggedCZK", 21.8],
     ["peggedPLN", 3.8998],
     ["peggedAED", 3.6725],
+    ["peggedNZD", 1.7],
   ] as const)("rejects inverted and dollar-normalized %s provider mistakes", (pegKey, unitsPerUsd) => {
     expect(isValidFxRate(pegKey, invertUnitsPerUsd(unitsPerUsd))).toBe(true);
     expect(isValidFxRate(pegKey, unitsPerUsd)).toBe(false);

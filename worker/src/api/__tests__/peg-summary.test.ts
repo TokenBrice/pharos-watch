@@ -548,6 +548,7 @@ describe("handlePegSummary", () => {
       CZK: "peggedCZK",
       PLN: "peggedPLN",
       AED: "peggedAED",
+      NZD: "peggedNZD",
       GOLD: "peggedGOLD",
       SILVER: "peggedSILVER",
       VAR: undefined,

@@ -289,7 +289,7 @@ describe("CommandPalette", () => {
         cards: [
           { id: "buidl-blackrock", grade: "NR", score: null },
           { id: "msy-main-street", grade: "B", score: 75 },
-          { id: "benji-franklin-templeton", grade: "A", score: 85 },
+          { id: "wtgxx-wisdomtree", grade: "A", score: 85 },
         ],
       },
       meta: { updatedAt: Date.now() / 1000, ageSeconds: 0, status: "fresh" },
@@ -303,7 +303,7 @@ describe("CommandPalette", () => {
 
     for (const [query, pattern] of [
       ["msy-main-street", /msY/i],
-      ["benji-franklin-templeton", /BENJI/i],
+      ["wtgxx-wisdomtree", /WTGXX/i],
     ] as const) {
       fireEvent.change(input, { target: { value: query } });
       const row = screen.getByRole("option", { name: pattern });
