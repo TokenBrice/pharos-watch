@@ -3,7 +3,7 @@ import { API_PATHS, getEndpointRequiredKeyPlans } from "@shared/lib/api-endpoint
 import { PUBLIC_API_CONTRACT_VERSION } from "@shared/lib/public-api-contract";
 import { API_ORIGIN } from "@shared/lib/runtime-origins";
 import { createEdgeCacheContext, readEdgeCache, writeEdgeCache } from "../handlers/http/edge-cache";
-import { checkApiKeyEndpointEntitlement, isApiKeyEntitledToPlans } from "../handlers/http/gates";
+import { checkApiKeyEndpointEntitlement, isApiKeyEntitledToPlans, markMcpPlanDeniedResponse } from "../handlers/http/gates";
 import type { AuthenticatedApiKey } from "../lib/api-key-core";
 import { readRequestTextBounded } from "../lib/api-json-body";
 import { jsonResponse, scopeResponseEtag } from "../lib/api-response";
@@ -318,13 +318,29 @@ function invalidToolArgsResponse(id: string | number | null, detail: string): Re
   });
 }
 
-const MCP_TOOL_ENTITLEMENT_PATH: Partial<Record<string, string>> = {
+const MCP_TOOL_ENTITLEMENT_PATH: Record<string, string | ((rawArgs: unknown) => string)> = {
   get_risk_check: API_PATHS.riskCheck(),
-  get_compliance: API_PATHS.compliance(),
+  get_compliance: (rawArgs) => {
+    const id = rawArgs && typeof rawArgs === "object" && !Array.isArray(rawArgs)
+      ? (rawArgs as { id?: unknown }).id
+      : undefined;
+    return typeof id === "string" && id.length > 0 ? API_PATHS.complianceCoin(id) : API_PATHS.compliance();
+  },
 };
 
-function isMcpToolEntitled(apiKey: AuthenticatedApiKey | null | undefined, toolName: string): boolean {
-  const entitlementPath = MCP_TOOL_ENTITLEMENT_PATH[toolName];
+function resolveMcpToolEntitlementPath(toolName: string, rawArgs?: unknown): string | null {
+  if (!Object.prototype.hasOwnProperty.call(MCP_TOOL_ENTITLEMENT_PATH, toolName)) return null;
+  const entry = MCP_TOOL_ENTITLEMENT_PATH[toolName];
+  return typeof entry === "function" ? entry(rawArgs) : entry;
+}
+
+function isMcpToolEntitled(
+  apiKey: AuthenticatedApiKey | null | undefined,
+  toolName: string,
+  trustedAdmin = false,
+): boolean {
+  if (trustedAdmin) return true;
+  const entitlementPath = resolveMcpToolEntitlementPath(toolName);
   return !entitlementPath || isApiKeyEntitledToPlans(apiKey, getEndpointRequiredKeyPlans(entitlementPath));
 }
 
@@ -332,11 +348,19 @@ async function executeToolCall(
   db: D1Database,
   execCtx: ExecutionContext | undefined,
   apiKey: AuthenticatedApiKey | null | undefined,
+  trustedAdmin: boolean,
   id: string | number | null,
   toolName: string,
   rawArgs: unknown,
 ): Promise<Response> {
   const argsInput = rawArgs ?? {};
+  const entitlementPath = resolveMcpToolEntitlementPath(toolName, argsInput);
+  if (entitlementPath && !trustedAdmin) {
+    const entitlementFailure = checkApiKeyEndpointEntitlement(apiKey, entitlementPath);
+    if (entitlementFailure) {
+      return markMcpPlanDeniedResponse(await formatToolResponse(id, entitlementFailure));
+    }
+  }
 
   switch (toolName) {
     case "resolve_stablecoin": {
@@ -357,8 +381,6 @@ async function executeToolCall(
     }
 
     case "get_risk_check": {
-      const entitlementFailure = checkApiKeyEndpointEntitlement(apiKey, API_PATHS.riskCheck());
-      if (entitlementFailure) return formatToolResponse(id, entitlementFailure);
       const parsed = RiskCheckToolArgsSchema.safeParse(argsInput);
       if (!parsed.success) return invalidToolArgsResponse(id, parsed.error.issues[0]?.message ?? "Invalid arguments");
       const query = API_PATHS.riskCheck({
@@ -373,8 +395,6 @@ async function executeToolCall(
     }
 
     case "get_compliance": {
-      const entitlementFailure = checkApiKeyEndpointEntitlement(apiKey, API_PATHS.compliance());
-      if (entitlementFailure) return formatToolResponse(id, entitlementFailure);
       const parsed = ComplianceToolArgsSchema.safeParse(argsInput);
       if (!parsed.success) return invalidToolArgsResponse(id, parsed.error.issues[0]?.message ?? "Invalid arguments");
       if (parsed.data.id) {
@@ -465,6 +485,7 @@ export async function handleMcp(
   request: Request,
   execCtx?: ExecutionContext,
   apiKey?: AuthenticatedApiKey | null,
+  trustedAdmin = false,
 ): Promise<Response> {
   const rawBody = await readRequestTextBounded(request, MCP_MAX_BODY_BYTES, {
     bodyTooLargeMessage: "MCP request body exceeds 16 KiB limit",
@@ -537,7 +558,7 @@ export async function handleMcp(
 
     case "tools/list":
       return jsonRpcResult(requestId, {
-        tools: MCP_TOOLS.filter((tool) => isMcpToolEntitled(apiKey, tool.name)),
+        tools: MCP_TOOLS.filter((tool) => isMcpToolEntitled(apiKey, tool.name, trustedAdmin)),
       });
 
     case "tools/call": {
@@ -548,7 +569,7 @@ export async function handleMcp(
       if (!callParams.success) {
         return jsonRpcError(requestId, -32602, "Invalid params: expected { name, arguments? }");
       }
-      return executeToolCall(db, execCtx, apiKey, requestId, callParams.data.name, callParams.data.arguments);
+      return executeToolCall(db, execCtx, apiKey, trustedAdmin, requestId, callParams.data.name, callParams.data.arguments);
     }
 
     default:

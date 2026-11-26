@@ -21,7 +21,7 @@ import { ResolveResponseSchema } from "@shared/types/resolve";
 import { RiskCheckResponseSchema } from "@shared/types/risk-check";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { createEdgeCacheContext } from "../../handlers/http/edge-cache";
-import { evaluateAccessGate } from "../../handlers/http/gates";
+import { evaluateAccessGate, isMcpPlanDeniedResponse } from "../../handlers/http/gates";
 import type { AuthenticatedApiKey } from "../../lib/api-key-core";
 import { SAFETY_SCORE_V9_CACHE_KEYS } from "../../lib/safety-score-v9/publication-health";
 import { makeReportCardsV9Response } from "../../test-helpers/report-cards-v9";
@@ -977,113 +977,256 @@ describe("Wave 2 endpoints: compliance, resolve, risk-check", () => {
     "reports tokenized-fund-not-graded on /api/risk-check and MCP get_risk_check (%s snapshot)",
     async (buidlMode) => {
       const nowSec = 1_795_300_000;
-      vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(nowSec * 1000);
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(nowSec * 1000);
       const { db } = buildRiskCheckMockDb(nowSec, { buidlMode });
       const res = await handleRiskCheck(db, new URL("https://api.pharos.watch/api/risk-check?ids=buidl-blackrock,dai-makerdao"));
       expect(res.status).toBe(200);
       const body = RiskCheckResponseSchema.parse(await res.json());
-      expect(body.assets["buidl-blackrock"].safety).toMatchObject({ ratingStatus: "not-rated", score: null, grade: "NR", pillars: null, publicationStatus: "current", unavailableReason: "tokenized-fund-not-graded" });
-      expect(body.assets["dai-makerdao"].safety).toMatchObject({ ratingStatus: "not-rated", score: null, grade: "NR", pillars: null, unavailableReason: "not-rated" });
-      const mcpRes = await handleMcp(db, new Request("https://api.pharos.watch/api/mcp", {
-        method: "POST", headers: { "Content-Type": "application/json", "MCP-Protocol-Version": "2025-11-25" },
-        body: JSON.stringify({ jsonrpc: "2.0", id: 99, method: "tools/call", params: { name: "get_risk_check", arguments: { ids: ["buidl-blackrock"] } } }),
-      }), undefined, makeMcpKey());
+      expect(body.assets["buidl-blackrock"].safety).toMatchObject({
+        ratingStatus: "not-rated",
+        score: null,
+        grade: "NR",
+        pillars: null,
+        publicationStatus: "current",
+        unavailableReason: "tokenized-fund-not-graded",
+      });
+      expect(body.assets["dai-makerdao"].safety).toMatchObject({
+        ratingStatus: "not-rated",
+        score: null,
+        grade: "NR",
+        pillars: null,
+        unavailableReason: "not-rated",
+      });
+      // MCP get_risk_check passes tokenized-fund-not-graded through verbatim.
+      const mcpRes = await handleMcp(
+        db,
+        new Request("https://api.pharos.watch/api/mcp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "MCP-Protocol-Version": "2025-11-25" },
+          body: JSON.stringify({
+            jsonrpc: "2.0", id: 99, method: "tools/call",
+            params: { name: "get_risk_check", arguments: { ids: ["buidl-blackrock"] } },
+          }),
+        }),
+        undefined,
+        makeMcpKey(),
+      );
       expect(mcpRes.status).toBe(200);
-      const mcpBody = (await mcpRes.json()) as { result: { isError: boolean; structuredContent: { assets: Record<string, { safety: Record<string, unknown> }> } } };
+      const mcpBody = (await mcpRes.json()) as {
+        result: { isError: boolean; structuredContent: { assets: Record<string, { safety: { unavailableReason: string | null; grade: string | null; score: number | null; pillars: unknown } }> } };
+      };
       expect(mcpBody.result.isError).toBe(false);
-      expect(mcpBody.result.structuredContent.assets["buidl-blackrock"].safety).toMatchObject({ grade: "NR", score: null, pillars: null, unavailableReason: "tokenized-fund-not-graded" });
+      expect(mcpBody.result.structuredContent.assets["buidl-blackrock"].safety).toMatchObject({
+        grade: "NR",
+        score: null,
+        pillars: null,
+        unavailableReason: "tokenized-fund-not-graded",
+      });
     },
   );
 
   it("enforces R1-R8 on /api/risk-check: held safety, missing peg-analytics cache, redemption run fallback, and DDR errata", async () => {
     const nowSec = 1_795_300_000;
-    vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(nowSec * 1000);
-    const { db } = buildRiskCheckMockDb(nowSec, { heldSafety: true, missingPegAnalytics: true, malformedRedemptionCoinId: "usdt-tether" });
-    const res = await handleRiskCheck(db, new URL("https://api.pharos.watch/api/risk-check?ids=usdc-circle,usdt-tether"));
-    expect(res.status).toBe(200); expect(res.headers.get("Cache-Control")).toBe("no-store"); expect(res.headers.get("X-Safety-Score-Status")).toBe("held");
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(nowSec * 1000);
+
+    // Held safety + missing peg-analytics cache + malformed redemption on usdt-tether
+    const { db } = buildRiskCheckMockDb(nowSec, {
+      heldSafety: true,
+      missingPegAnalytics: true,
+      malformedRedemptionCoinId: "usdt-tether",
+    });
+    const res = await handleRiskCheck(
+      db,
+      new URL("https://api.pharos.watch/api/risk-check?ids=usdc-circle,usdt-tether"),
+    );
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+    expect(res.headers.get("X-Safety-Score-Status")).toBe("held");
     const body = RiskCheckResponseSchema.parse(await res.json());
-    expect(body.assets["usdc-circle"].safety).toMatchObject({ publicationStatus: "held", unavailableReason: "v9-publication-held" });
-    expect(body.assets["usdc-circle"].peg).toMatchObject({ pegScore: null, unavailableReason: "peg-analytics-missing-cache" });
+    expect(body.assets["usdc-circle"].safety.publicationStatus).toBe("held");
+    expect(body.assets["usdc-circle"].safety.unavailableReason).toBe("v9-publication-held");
+    expect(body.assets["usdc-circle"].peg.pegScore).toBeNull();
+    expect(body.assets["usdc-circle"].peg.unavailableReason).toBe("peg-analytics-missing-cache");
+    // The store's run admission: a row-census mismatch rejects run-1 and falls back to run-0.
     expect(body.assets["usdc-circle"].redemption.score).toBe(92);
     expect(body.assets["usdt-tether"].redemption.score).toBe(92);
-    expect(body._meta.dependencies?.redemptionBackstops).toMatchObject({ status: "fresh", generationId: "run-0", updatedAt: nowSec - 3 * 3600 });
-    expect(body._meta.dependencies?.pegAnalytics).toMatchObject({ status: "unavailable", reason: "missing-cache" });
+    expect(body._meta.dependencies?.redemptionBackstops).toMatchObject({
+      status: "fresh",
+      generationId: "run-0",
+      updatedAt: nowSec - 3 * 3600,
+    });
+    expect(body._meta.dependencies?.pegAnalytics).toMatchObject({
+      status: "unavailable",
+      reason: "missing-cache",
+    });
 
+    // Active DDR row triggers conditional manifest+errata lookup; erratum invalidates prediction
     const ddrCase = buildRiskCheckMockDb(nowSec, { activeDdrCoinId: "usdc-circle", ddrErratum: true });
-    const ddrBody = RiskCheckResponseSchema.parse(await (await handleRiskCheck(ddrCase.db, new URL("https://api.pharos.watch/api/risk-check?ids=usdc-circle"))).json());
+    const ddrRes = await handleRiskCheck(
+      ddrCase.db,
+      new URL("https://api.pharos.watch/api/risk-check?ids=usdc-circle"),
+    );
+    const ddrBody = RiskCheckResponseSchema.parse(await ddrRes.json());
     expect(ddrCase.executedSqls.some((sql) => sql.includes("depeg_resolver_publication_snapshots"))).toBe(true);
     expect(ddrCase.executedSqls.some((sql) => sql.includes("SELECT *\n         FROM depeg_resolver_prediction_errata"))).toBe(true);
-    expect(ddrBody.assets["usdc-circle"].ddr).toMatchObject({ outlook: null, unavailableReason: "prediction-invalidated" });
+    expect(ddrBody.assets["usdc-circle"].ddr).toMatchObject({
+      outlook: null,
+      unavailableReason: "prediction-invalidated",
+    });
 
-    expect((await handleRiskCheck(db, new URL("https://api.pharos.watch/api/risk-check?ids=totally-fake-coin"))).status).toBe(404);
-    expect((await handleRiskCheck(db, new URL("https://api.pharos.watch/api/risk-check"))).status).toBe(400);
-    expect((await handleRiskCheck(db, new URL(`https://api.pharos.watch/api/risk-check?ids=${Array.from({ length: 26 }, (_, i) => `c${i}`).join(",")}`))).status).toBe(400);
+    // Unresolved-only returns 404; empty or >25 returns 400
+    const allUnresolved = await handleRiskCheck(
+      db,
+      new URL("https://api.pharos.watch/api/risk-check?ids=totally-fake-coin"),
+    );
+    expect(allUnresolved.status).toBe(404);
+    const empty = await handleRiskCheck(db, new URL("https://api.pharos.watch/api/risk-check"));
+    expect(empty.status).toBe(400);
+    const tooMany = await handleRiskCheck(
+      db,
+      new URL(`https://api.pharos.watch/api/risk-check?ids=${Array.from({ length: 26 }, (_, i) => `c${i}`).join(",")}`),
+    );
+    expect(tooMany.status).toBe(400);
   });
 
   it("grades each /api/risk-check dependency against its own budget and clamps the cache to the earliest runway", async () => {
     const nowSec = 1_795_300_000;
-    vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(nowSec * 1000);
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(nowSec * 1000);
+
+    // Redemption 3 h old is inside its own budget; stablecoins is 5 min old.
     const { db } = buildRiskCheckMockDb(nowSec, { redemptionAgeSec: 3 * 3600, stablecoinsAgeSec: 300 });
     const res = await handleRiskCheck(db, new URL("https://api.pharos.watch/api/risk-check?ids=usdc-circle"));
-    const body = RiskCheckResponseSchema.parse(await res.json()), deps = body._meta.dependencies ?? {};
-    expect(deps.redemptionBackstops).toMatchObject({ status: "fresh", ageSeconds: 3 * 3600 });
-    expect(deps.stablecoins).toMatchObject({ status: "fresh", ageSeconds: 300 });
+    const body = RiskCheckResponseSchema.parse(await res.json());
+    const dependencies = body._meta.dependencies ?? {};
+    expect(dependencies.redemptionBackstops).toMatchObject({ status: "fresh", ageSeconds: 3 * 3600 });
+    expect(dependencies.stablecoins).toMatchObject({ status: "fresh", ageSeconds: 300 });
     expect(body._meta.status).toBe("fresh");
-    const binding = Object.entries(deps)
+
+    const runways = Object.entries(dependencies)
       .filter(([name, dep]) => name !== "compliance" && dep.updatedAt != null && dep.freshBudgetSec != null)
       .map(([, dep]) => ({ updatedAt: dep.updatedAt as number, budget: dep.freshBudgetSec as number }))
-      .sort((a, b) => (a.updatedAt + a.budget) - (b.updatedAt + b.budget))[0];
+      .sort((left, right) => (left.updatedAt + left.budget) - (right.updatedAt + right.budget));
+    const binding = runways[0];
     expect(body._meta).toMatchObject({ updatedAt: binding.updatedAt, freshBudgetSec: binding.budget });
     expect(binding.updatedAt).not.toBe(nowSec - 3 * 3600);
     expect(res.headers.get("X-Data-Updated-At")).toBe(String(binding.updatedAt));
-    const sMaxAge = Number(/s-maxage=(\d+)/.exec(res.headers.get("Cache-Control") ?? "")?.[1]);
-    expect(sMaxAge).toBeGreaterThan(0); expect(sMaxAge).toBeLessThanOrEqual(binding.updatedAt + binding.budget - nowSec);
+    const cacheControl = res.headers.get("Cache-Control") ?? "";
+    expect(cacheControl).toContain("s-maxage=");
+    const sMaxAge = Number(/s-maxage=(\d+)/.exec(cacheControl)?.[1]);
+    expect(sMaxAge).toBeGreaterThan(0);
+    expect(sMaxAge).toBeLessThanOrEqual(binding.updatedAt + binding.budget - nowSec);
+
+    // Near the end of the binding runway the TTL is clamped to what remains.
     vi.setSystemTime((binding.updatedAt + binding.budget - 30) * 1000);
-    const lateSMaxAge = Number(/s-maxage=(\d+)/.exec((await handleRiskCheck(db, new URL("https://api.pharos.watch/api/risk-check?ids=usdc-circle"))).headers.get("Cache-Control") ?? "")?.[1]);
-    expect(lateSMaxAge).toBeGreaterThan(0); expect(lateSMaxAge).toBeLessThanOrEqual(30);
+    const late = await handleRiskCheck(db, new URL("https://api.pharos.watch/api/risk-check?ids=usdc-circle"));
+    const lateCacheControl = late.headers.get("Cache-Control") ?? "";
+    expect(lateCacheControl).toContain("s-maxage=");
+    const lateSMaxAge = Number(/s-maxage=(\d+)/.exec(lateCacheControl)?.[1]);
+    expect(lateSMaxAge).toBeGreaterThan(0);
+    expect(lateSMaxAge).toBeLessThanOrEqual(30);
   });
 
   it("discloses eventual-only redemption semantics and keeps /api/risk-check fresh past 30m DEWS cadence", async () => {
     const nowSec = 1_795_300_000;
-    vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(nowSec * 1000);
-    const { db } = buildRiskCheckMockDb(nowSec, { eventualOnlyRedemptionCoinId: "usdc-circle", dewsAgeSec: 1900 });
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(nowSec * 1000);
+
+    const { db } = buildRiskCheckMockDb(nowSec, {
+      eventualOnlyRedemptionCoinId: "usdc-circle",
+      dewsAgeSec: 1900,
+    });
     const res = await handleRiskCheck(db, new URL("https://api.pharos.watch/api/risk-check?ids=usdc-circle"));
-    expect(res.status).toBe(200); expect(res.headers.get("Cache-Control")).toContain("s-maxage=");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toContain("s-maxage=");
     const body = RiskCheckResponseSchema.parse(await res.json());
     expect(body._meta.status).toBe("fresh");
     expect(body._meta.dependencies?.dews).toMatchObject({ status: "fresh", ageSeconds: 1900, freshBudgetSec: 3600 });
-    expect(body.assets["usdc-circle"].redemption).toMatchObject({ score: null, capacitySemantics: "eventual-only", eventualRedeemabilityScore: 72, unavailableReason: "eventual-only" });
+    expect(body.assets["usdc-circle"].redemption).toMatchObject({
+      score: null,
+      capacitySemantics: "eventual-only",
+      eventualRedeemabilityScore: 72,
+      unavailableReason: "eventual-only",
+    });
   });
 
   it("quarantines per asset on /api/risk-check: degraded stablecoins, one price producer, unreadable depeg rows, DEX admission", async () => {
-    const nowSec = 1_795_300_000, freshAt = nowSec - 60;
-    vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(nowSec * 1000);
-    const depegRow = { id: 801, stablecoin_id: "usdc-circle", symbol: "USDC", peg_type: "peggedUSD", direction: "below", peak_deviation_bps: -250, started_at: freshAt - 7200, ended_at: null, start_price: 0.985, peak_price: 0.975, recovery_price: null, peg_reference: 1, source: "live", confirmation_sources: null, pending_reason: null };
+    const nowSec = 1_795_300_000;
+    const freshAt = nowSec - 60;
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(nowSec * 1000);
+
+    const depegRow = {
+      id: 801,
+      stablecoin_id: "usdc-circle",
+      symbol: "USDC",
+      peg_type: "peggedUSD",
+      direction: "below",
+      peak_deviation_bps: -250,
+      started_at: freshAt - 7200,
+      ended_at: null,
+      start_price: 0.985,
+      peak_price: 0.975,
+      recovery_price: null,
+      peg_reference: 1,
+      source: "live",
+      confirmation_sources: null,
+      pending_reason: null,
+    };
     const { db, executedSqls } = buildRiskCheckMockDb(nowSec, {
-      malformedStablecoinEntry: true, nullStablecoinPriceFor: "usdc-circle",
+      malformedStablecoinEntry: true,
+      nullStablecoinPriceFor: "usdc-circle",
       activeDepegRows: [depegRow, { ...depegRow, id: 802, stablecoin_id: "usdt-tether", symbol: "USDT", direction: "sideways" }],
       dexRowOverrides: { "usdt-tether": { volume_availability_json: "{}", dex_price_updated_at: freshAt - 120 } },
     });
     const res = await handleRiskCheck(db, new URL("https://api.pharos.watch/api/risk-check?ids=usdc-circle,usdt-tether"));
-    expect(res.status).toBe(200); expect(res.headers.get("Cache-Control")).toBe("no-store");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
     const body = RiskCheckResponseSchema.parse(await res.json());
+
+    // A malformed entry degrades the dependency; it does not blank every asset.
     expect(body._meta.dependencies?.stablecoins).toMatchObject({ status: "degraded", reason: "filtered-malformed-entries" });
     expect(body.assets["usdt-tether"].peg.price).toBe(1);
-    expect(body.assets["usdc-circle"].peg).toMatchObject({ price: null, priceSource: "coingecko", priceObservedAt: freshAt, unavailableReason: "price-unavailable" });
+    // The stablecoins producer published an explicit null price: never backfilled from peg analytics.
+    expect(body.assets["usdc-circle"].peg).toMatchObject({
+      price: null,
+      priceSource: "coingecko",
+      priceObservedAt: freshAt,
+      unavailableReason: "price-unavailable",
+    });
+    // A readable active depeg without a DDR row reads "no-ddr-row", never "no active depeg".
     expect(body.assets["usdc-circle"].peg.activeDepeg).toMatchObject({ eventId: 801, direction: "below" });
     expect(body.assets["usdc-circle"].ddr.unavailableReason).toBe("no-ddr-row");
     expect(executedSqls.some((sql) => sql.includes("FROM depeg_resolver_prediction_lock_state ls"))).toBe(true);
+    // One unreadable row quarantines its own coin only.
     expect(body.assets["usdt-tether"].peg).toMatchObject({ activeDepeg: null, unavailableReason: "active-depeg-row-unreadable" });
-    expect(body.assets["usdt-tether"].liquidity).toMatchObject({ totalTvlUsd: 5_200_000_000, volume24hUsd: null, dexPriceUsd: null, unavailableReason: "volume-24h-availability-record-unreadable" });
+    // DEX: an unreadable volume record and a price from another publication are withheld.
+    expect(body.assets["usdt-tether"].liquidity).toMatchObject({
+      totalTvlUsd: 5_200_000_000,
+      volume24hUsd: null,
+      dexPriceUsd: null,
+      unavailableReason: "volume-24h-availability-record-unreadable",
+    });
     expect(body.assets["usdc-circle"].liquidity.dexPriceUsd).toBe(0.9999);
   });
 
   it("canonicalizes sorted comma-separated cache keys for /api/risk-check and /api/resolve", () => {
-    const keyOf = (u: string) => { const url = new URL(u); return createEdgeCacheContext(new Request(url), url).cacheKey.url; };
-    const rcB = keyOf("https://api.pharos.watch/api/risk-check?ids=usdc-circle,usdt-tether");
-    expect(keyOf("https://api.pharos.watch/api/risk-check?ids=usdt-tether,usdc-circle&utm=foo")).toBe(rcB);
-    expect(keyOf("https://api.pharos.watch/api/risk-check?ids=usdc-circle,usdt-tether,usdc-circle")).toBe(rcB);
-    expect(keyOf("https://api.pharos.watch/api/resolve?contracts=b:0x2,a:0x1")).not.toBe(keyOf("https://api.pharos.watch/api/resolve?contracts=a:0x1,b:0x2&ignored=1"));
+    const rcA = new URL("https://api.pharos.watch/api/risk-check?ids=usdt-tether,usdc-circle&utm=foo");
+    const rcB = new URL("https://api.pharos.watch/api/risk-check?ids=usdc-circle,usdt-tether");
+    expect(createEdgeCacheContext(new Request(rcA), rcA).cacheKey.url)
+      .toBe(createEdgeCacheContext(new Request(rcB), rcB).cacheKey.url);
+
+    const rcDup = new URL("https://api.pharos.watch/api/risk-check?ids=usdc-circle,usdt-tether,usdc-circle");
+    expect(createEdgeCacheContext(new Request(rcDup), rcDup).cacheKey.url)
+      .toBe(createEdgeCacheContext(new Request(rcB), rcB).cacheKey.url);
+
+    // /api/resolve answers in input order, so a reordering keeps its own key.
+    const resA = new URL("https://api.pharos.watch/api/resolve?contracts=b:0x2,a:0x1");
+    const resB = new URL("https://api.pharos.watch/api/resolve?contracts=a:0x1,b:0x2&ignored=1");
+    expect(createEdgeCacheContext(new Request(resA), resA).cacheKey.url)
+      .not.toBe(createEdgeCacheContext(new Request(resB), resB).cacheKey.url);
   });
 });
 
@@ -1114,12 +1257,17 @@ describe("Wave 3 endpoints: MCP server & SVG safety badge", () => {
     const put = vi.fn(async (req: Request, res: Response) => { cacheStore.set(req.url, res.clone()); });
     vi.stubGlobal("caches", { default: { match, put } });
     const execCtx = { waitUntil: vi.fn((p: Promise<unknown>) => void p) } as unknown as ExecutionContext;
-    const postMcp = (body: unknown, apiKey: AuthenticatedApiKey | null | undefined = commercial, headers: Record<string, string> = {}) =>
+    const postMcp = (
+      body: unknown,
+      apiKey: AuthenticatedApiKey | null | undefined = commercial,
+      headers: Record<string, string> = {},
+      trustedAdmin = false,
+    ) =>
       handleMcp(db, new Request("https://api.pharos.watch/api/mcp", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "MCP-Protocol-Version": "2025-11-25", ...headers },
+        headers: { "Content-Type": "application/json", ...headers },
         body: typeof body === "string" ? body : JSON.stringify(body),
-      }), execCtx, apiKey);
+      }), execCtx, apiKey, trustedAdmin);
 
     const initLatest = await postMcp({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2026-07-28" } });
     expect(initLatest.status).toBe(200);
@@ -1128,38 +1276,52 @@ describe("Wave 3 endpoints: MCP server & SVG safety badge", () => {
 
     const notif = await postMcp({ jsonrpc: "2.0", method: "notifications/initialized" });
     expect(notif.status).toBe(202); expect(await notif.text()).toBe("");
+    // Headerless request exercises the documented default MCP-Protocol-Version: 2025-03-26 fallback.
     expect((await postMcp({ jsonrpc: "2.0", id: 2, method: "tools/list" }, commercial, { "MCP-Protocol-Version": "1999-01-01" })).status).toBe(400);
     const batch = await postMcp([{ jsonrpc: "2.0", id: 1, method: "ping" }]);
     expect(batch.status).toBe(400); await expect(batch.json()).resolves.toMatchObject({ error: { code: -32600 } });
     expect((await postMcp("x".repeat(17 * 1024))).status).toBe(413);
 
-    for (const [key, expected] of [[commercial, allTools], [institutional, allTools], [freePartner, openTools], [donor, openTools], [null, openTools]] as const) {
-      const list = (await (await postMcp({ jsonrpc: "2.0", id: 3, method: "tools/list" }, key)).json()) as { result: { tools: Array<{ name: string; annotations: { readOnlyHint: boolean } }> } };
+    for (const [key, expected, admin] of [[commercial, allTools, false], [institutional, allTools, false], [freePartner, openTools, false], [donor, openTools, false], [null, openTools, false], [null, allTools, true]] as const) {
+      const list = (await (await postMcp({ jsonrpc: "2.0", id: 3, method: "tools/list" }, key, {}, admin)).json()) as { result: { tools: Array<{ name: string; annotations: { readOnlyHint: boolean } }> } };
       expect(list.result.tools.map((t) => t.name)).toEqual(expected);
       expect(list.result.tools.every((t) => t.annotations.readOnlyHint)).toBe(true);
     }
 
-    // Commercial warms edge cache for both paid tools; institutional also succeeds.
-    const rc = (await (await postMcp({ jsonrpc: "2.0", id: 4, method: "tools/call", params: { name: "get_risk_check", arguments: { ids: ["usdc-circle"] } } }, commercial)).json()) as { result: { isError: boolean; _meta: { safetyScoreStatus: string }; structuredContent: { assets: Record<string, unknown> } } };
+    // Commercial warms edge cache for both paid tools; institutional and trustedAdmin also succeed.
+    const rcRes = await postMcp({ jsonrpc: "2.0", id: 4, method: "tools/call", params: { name: "get_risk_check", arguments: { ids: ["usdc-circle"] } } }, commercial, { "MCP-Protocol-Version": "2025-11-25" });
+    expect(isMcpPlanDeniedResponse(rcRes)).toBe(false);
+    const rc = (await rcRes.json()) as { result: { isError: boolean; _meta: { safetyScoreStatus: string }; structuredContent: { assets: Record<string, unknown> } } };
     expect(rc.result.isError).toBe(false);
     expect(rc.result._meta.safetyScoreStatus).toBe("current");
     expect(rc.result.structuredContent.assets["usdc-circle"]).toBeDefined();
     const comp = (await (await postMcp({ jsonrpc: "2.0", id: 5, method: "tools/call", params: { name: "get_compliance", arguments: { id: "usdc-circle" } } }, institutional)).json()) as { result: { isError: boolean; structuredContent: { coin: { id: string } } } };
     expect(comp.result.isError).toBe(false);
     expect(comp.result.structuredContent.coin.id).toBe("usdc-circle");
+    expect(((await (await postMcp({ jsonrpc: "2.0", id: 50, method: "tools/call", params: { name: "get_risk_check", arguments: { ids: ["usdc-circle"] } } }, null, {}, true)).json()) as { result: { isError: boolean } }).result.isError).toBe(false);
     expect(put).toHaveBeenCalledTimes(2);
     expect(cacheStore.size).toBe(2);
 
-    // Non-entitled keys succeed on open tools, but are rejected on paid tools BEFORE edge-cache reads.
+    // Non-entitled keys succeed on open tools, but are rejected on paid tools BEFORE edge-cache reads and marked non-billable.
     for (const key of [freePartner, donor, null] as const) {
-      const open = (await (await postMcp({ jsonrpc: "2.0", id: 6, method: "tools/call", params: { name: "resolve_stablecoin", arguments: { id: "usdc-circle" } } }, key)).json()) as { result: { isError: boolean } };
+      const openRes = await postMcp({ jsonrpc: "2.0", id: 6, method: "tools/call", params: { name: "resolve_stablecoin", arguments: { id: "usdc-circle" } } }, key);
+      expect(isMcpPlanDeniedResponse(openRes)).toBe(false);
+      const open = (await openRes.json()) as { result: { isError: boolean } };
       expect(open.result.isError).toBe(false);
       match.mockClear();
-      for (const [name, args] of [["get_risk_check", { ids: ["usdc-circle"] }], ["get_compliance", { id: "usdc-circle" }]] as const) {
-        const denied = (await (await postMcp({ jsonrpc: "2.0", id: 7, method: "tools/call", params: { name, arguments: args } }, key)).json()) as { result: { isError: boolean; _meta: { httpStatus: number }; structuredContent: { reason: string; requiredPlans: string[] } } };
+      for (const [name, args, restPath] of [
+        ["get_risk_check", { ids: ["usdc-circle"] }, "/api/risk-check"],
+        ["get_compliance", { id: "usdc-circle" }, "/api/compliance/usdc-circle"],
+      ] as const) {
+        const deniedRes = await postMcp({ jsonrpc: "2.0", id: 7, method: "tools/call", params: { name, arguments: args } }, key);
+        expect(isMcpPlanDeniedResponse(deniedRes)).toBe(true);
+        const denied = (await deniedRes.json()) as { result: { isError: boolean; _meta: { httpStatus: number }; structuredContent: { reason: string; requiredPlans: string[] } } };
         expect(denied.result.isError).toBe(true);
         expect(denied.result._meta.httpStatus).toBe(403);
-        expect(denied.result.structuredContent).toMatchObject({ reason: "plan_upgrade_required", requiredPlans: ["commercial", "institutional"] });
+        expect(denied.result.structuredContent).toMatchObject({
+          reason: "plan_upgrade_required",
+          requiredPlans: getEndpointRequiredKeyPlans(restPath),
+        });
       }
       expect(match).not.toHaveBeenCalled();
     }

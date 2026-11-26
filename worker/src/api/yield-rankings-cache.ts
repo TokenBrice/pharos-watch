@@ -60,7 +60,6 @@ import { loadActiveSafetyScoreIndex, type ActiveSafetyScoreIndex, type SafetySco
 import { resolveYieldBenchmarkDependencies } from "../lib/yield-config/yield-benchmark-dependencies";
 import { isReviewedPublishedYieldSourceExcluded, YIELD_OPPORTUNITY_EXCLUSIONS } from "../lib/yield-config/yield-opportunity-exclusions";
 import { readCoinProjectionId } from "../lib/api-coin-projection";
-import { setCacheIfNewer } from "../lib/db-cache";
 import { readYieldRankingsCache, readYieldRankingsCoinCache, readYieldCoinCohort, readYieldCoinCohortLease, claimYieldCoinCohort, publishYieldCoinCohort, releaseYieldCoinCohort, YIELD_COHORT_LAST_EXPIRY_CACHE_KEY } from "../lib/yield-rankings-coin-cache";
 import { YIELD_BENCHMARK_SCORE_TTL_SEC } from "@shared/lib/status-thresholds";
 import { YieldCoinCohortSchema, type YieldRankingsCoinResponse } from "@shared/types/yield";
@@ -1167,16 +1166,23 @@ export async function handleYieldRankingsCoin(db: D1Database, url: URL): Promise
         serveNow,
       };
       try {
-        await setCacheIfNewer(
-          db,
-          YIELD_COHORT_LAST_EXPIRY_CACHE_KEY,
-          JSON.stringify({
-            ...metadata,
-            selectedGenerationId: selected.publication?.generationId ?? null,
-            servedGenerationId: cohort.publication?.generationId ?? null,
-          }),
-          serveNow,
-        );
+        // Single-attempt monotonic D1 upsert (no overload retry loop) so a busy D1 never delays Retry-After: 1.
+        await db
+          .prepare(
+            "INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?) "
+            + "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at "
+            + "WHERE excluded.updated_at >= cache.updated_at",
+          )
+          .bind(
+            YIELD_COHORT_LAST_EXPIRY_CACHE_KEY,
+            JSON.stringify({
+              ...metadata,
+              selectedGenerationId: selected.publication?.generationId ?? null,
+              servedGenerationId: cohort.publication?.generationId ?? null,
+            }),
+            serveNow,
+          )
+          .run();
       } catch {
         // Diagnostic-only breadcrumb; write failure must never alter the fail-closed 503.
       }

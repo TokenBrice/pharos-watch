@@ -1,7 +1,10 @@
 import { fetchErc4626SingleAssetReserves } from "../erc4626-single-asset";
-import type { AdapterContext } from "../types";
+import type { AdapterContext, AdapterResult } from "../types";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
+import { jsonResponse } from "@shared/test-utils/mock-fetch";
+import { computeLiveReserveConfigFingerprint, parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { evaluateLiveReserveAdmission } from "../../../lib/live-reserves/store-snapshot-state";
 import {
   installAdapterNetwork,
   type AdapterNetwork,
@@ -48,9 +51,12 @@ export interface MorphoReadMockOptions {
   withdrawable?: string | null;
   stateAddress?: string;
   stateChainId?: number;
+  lastIndexedBlock?: string | null;
+  lastAccrualTimestamp?: number | null;
   penalties?: string[];
   price?: number | null;
   priceStatus?: number;
+  priceTimestamp?: number | null;
   overrides?: AdapterNetworkSpec["json"];
 }
 
@@ -64,9 +70,12 @@ export function morphoReadJson({
   withdrawable = "90000000",
   stateAddress = vault,
   stateChainId = chainId,
+  lastIndexedBlock = "26500000",
+  lastAccrualTimestamp = Math.floor(Date.now() / 1000) - 60,
   penalties = [],
   price = 1,
   priceStatus = 200,
+  priceTimestamp,
   overrides = {},
 }: MorphoReadMockOptions = {}): NonNullable<AdapterNetworkSpec["json"]> {
   const v = vault.toLowerCase();
@@ -79,7 +88,13 @@ export function morphoReadJson({
       cursor: null,
     },
     [`${base}/${version === "v1" ? "v0/vaults-v1" : "v1/vaults-v2"}/${sel}/state`]: {
-      data: { chain_id: stateChainId, address: stateAddress, withdrawable_assets: withdrawable },
+      data: {
+        chain_id: stateChainId,
+        address: stateAddress,
+        withdrawable_assets: withdrawable,
+        ...(lastIndexedBlock !== null ? { last_indexed_block: lastIndexedBlock } : {}),
+        ...(version === "v2" && lastAccrualTimestamp !== null ? { last_accrual_timestamp: lastAccrualTimestamp } : {}),
+      },
     },
     ...(version === "v2"
       ? {
@@ -94,7 +109,14 @@ export function morphoReadJson({
       : {}),
     [`${base}/v0/tokens/${chainId}:${a}/price`]: {
       status: priceStatus,
-      json: { data: { chain_id: chainId, address: asset, price } },
+      json: {
+        data: {
+          chain_id: chainId,
+          address: asset,
+          price,
+          ...(priceTimestamp !== undefined ? { timestamp: priceTimestamp } : {}),
+        },
+      },
     },
     ...overrides,
   };
@@ -234,4 +256,217 @@ export async function runTrackedVault(
     new AbortController().signal,
     { chainRpcs: network.chainRpcs, ...ctx },
   );
+}
+
+// Generic underlying-token fixture; not Maple's reviewed pooled claim.
+export function asUnderlyingFixture(config: LiveReservesConfig): LiveReservesConfig {
+  const cloned = structuredClone(config);
+  delete cloned.params!.pooledClaim;
+  cloned.params!.slice = {
+    ...(cloned.params!.slice as object),
+    coinId: "usdc-circle",
+    depType: "wrapper",
+  };
+  return cloned;
+}
+
+export function uint256Result(value: bigint | number): string {
+  return `0x${BigInt(value).toString(16).padStart(64, "0")}`;
+}
+
+export function addressWord(address: string): string {
+  return address.replace(/^0x/i, "").toLowerCase().padStart(64, "0");
+}
+
+export function addressArrayResult(addresses: string[]): string {
+  return `0x${[
+    BigInt(32).toString(16).padStart(64, "0"),
+    BigInt(addresses.length).toString(16).padStart(64, "0"),
+    ...addresses.map(addressWord),
+  ].join("")}`;
+}
+
+export function strategyParamsResult(currentDebtRaw: bigint | number): string {
+  return `0x${[
+    BigInt(1).toString(16).padStart(64, "0"),
+    BigInt(2).toString(16).padStart(64, "0"),
+    BigInt(currentDebtRaw).toString(16).padStart(64, "0"),
+    BigInt(1_000_000_000_000n).toString(16).padStart(64, "0"),
+  ].join("")}`;
+}
+
+export function cloneConfigWithoutExpectedAsset(config: LiveReservesConfig): LiveReservesConfig {
+  const cloned = structuredClone(config) as LiveReservesConfig & {
+    params: { slice?: { expectedAssetAddress?: string } };
+  };
+  delete cloned.params.slice?.expectedAssetAddress;
+  return cloned;
+}
+
+export function nonInfoWarnings(warnings: readonly LiveReserveWarning[] | undefined): readonly LiveReserveWarning[] {
+  return (warnings ?? []).filter((warning) => warning.effect !== "info");
+}
+
+export function withRedemptionLiquidity(redemptionLiquidity: {
+  source: "morpho-vault-v1" | "morpho-vault-v2" | "atomic-full-backing" | "yearn-v3-withdrawable" | "sbold-sp-withdrawable" | "stusds-unused-funds";
+  chainId?: number;
+  settlementDelaySec?: number;
+  vatAddress?: string;
+  jugAddress?: string;
+  clipperAddress?: string;
+  ilk?: string;
+}) {
+  return (config: LiveReservesConfig): LiveReservesConfig => ({
+    ...config, params: { ...config.params, redemptionLiquidity },
+  });
+}
+
+export function calcFragmentsResult(
+  boldAmountRaw: bigint | number,
+  collInBoldRaw: bigint | number = 0,
+): string {
+  return `0x${[
+    uint256Result(100_000_000n).slice(2),
+    uint256Result(boldAmountRaw).slice(2),
+    uint256Result(0).slice(2),
+    uint256Result(collInBoldRaw).slice(2),
+  ].join("")}`;
+}
+
+export function installSbold({
+  paused,
+  fragments = calcFragmentsResult(85_000_000n),
+  maxCollateral = uint256Result(7_500_000n),
+  onFragments,
+}: {
+  paused?: number;
+  fragments?: string;
+  maxCollateral?: string | null;
+  onFragments?: (call: { to?: string; data: string }) => void;
+} = {}) {
+  return installErc4626Network({ idleBalance: 1_000_000n, paused, extraHandlers: [({ call }) => {
+    if (call?.data === "0x160b71df") {
+      onFragments?.(call);
+      return jsonResponse({ result: fragments });
+    }
+    if (call?.data === "0xbf2428e6") return maxCollateral === null ? null : jsonResponse({ result: maxCollateral });
+    return undefined;
+  }] });
+}
+
+export const STUSDS_WIRING = {
+  vatAddress: "0x35d1b3f3d7966a1dfe207aa4514c12a259a0492b",
+  jugAddress: "0x19c0976f590d67707e62397c87829d896dc0f1f1",
+  clipperAddress: "0x836f56750517b1528b5078cba4ac4b94fbe4a399",
+  ilk: "0x4c534556322d534b592d41000000000000000000000000000000000000000000",
+} as const;
+export const RAY = 10n ** 27n;
+
+export function stusdsHandlers(options: {
+  art: bigint; rate: bigint; dueRad?: bigint; duty?: bigint; rhoOffsetSec?: bigint; vat?: string;
+}) {
+  const now = 1_800_000_000n;
+  const vault = "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b";
+  const ilk = STUSDS_WIRING.ilk.slice(2);
+  return ({ call }: { call?: { to?: string; data: string } }) => {
+    if (!call) return undefined;
+    const to = call.to?.toLowerCase();
+    if (to === vault && call.data === "0x36569e77") return jsonResponse({ result: `0x${addressWord(options.vat ?? STUSDS_WIRING.vatAddress)}` });
+    if (to === vault && call.data === "0x84718d89") return jsonResponse({ result: `0x${addressWord(STUSDS_WIRING.jugAddress)}` });
+    if (to === vault && call.data === "0x39b00e41") return jsonResponse({ result: `0x${addressWord(STUSDS_WIRING.clipperAddress)}` });
+    if (to === vault && call.data === "0xc5ce281e") return jsonResponse({ result: STUSDS_WIRING.ilk });
+    if (to === STUSDS_WIRING.vatAddress && call.data === `0xd9638d36${ilk}`) {
+      return jsonResponse({ result: `0x${[options.art, options.rate, 0n, 0n, 0n].map((word) => word.toString(16).padStart(64, "0")).join("")}` });
+    }
+    if (to === STUSDS_WIRING.jugAddress && call.data === `0xd9638d36${ilk}`) {
+      return jsonResponse({ result: `0x${[options.duty ?? RAY, now - (options.rhoOffsetSec ?? 0n)].map((word) => word.toString(16).padStart(64, "0")).join("")}` });
+    }
+    if (to === STUSDS_WIRING.clipperAddress && call.data === "0x08bf162f") return jsonResponse({ result: uint256Result(options.dueRad ?? 0n) });
+    if (call.data === "0x0f28c97d") return jsonResponse({ result: uint256Result(now) });
+    return undefined;
+  };
+}
+
+export function mockYearnV3Rpc(isShutdownRaw?: bigint | number, pausedRaw?: bigint | number) {
+  const strategyA = "0x1111111111111111111111111111111111111111";
+  const strategyB = "0x2222222222222222222222222222222222222222";
+  const vault = "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b";
+  installErc4626Network({
+    idleBalance: 5_000_000n,
+    shutdown: isShutdownRaw,
+    paused: pausedRaw,
+    extraHandlers: [({ call }) => {
+      if (!call) return undefined;
+      const to = call.to?.toLowerCase();
+      if (to === vault && call.data === "0x9aa7df94") {
+        return jsonResponse({ result: uint256Result(5_000_000n) });
+      }
+      if (to === vault && call.data === "0xa9bbf1cc") {
+        return jsonResponse({ result: addressArrayResult([strategyA, strategyB]) });
+      }
+      if (to === vault && call.data.startsWith("0x39ebf823")) {
+        if (call.data === `0x39ebf823${addressWord(strategyA)}`) {
+          return jsonResponse({ result: strategyParamsResult(60_000_000n) });
+        }
+        if (call.data === `0x39ebf823${addressWord(strategyB)}`) {
+          return jsonResponse({ result: strategyParamsResult(35_000_000n) });
+        }
+      }
+      if (call.data === `0xce96cb77${addressWord(vault)}` && to === strategyA) {
+        return jsonResponse({ result: uint256Result(60_000_000n) });
+      }
+      if (call.data === `0xce96cb77${addressWord(vault)}` && to === strategyB) {
+        return jsonResponse({ result: uint256Result(20_000_000n) });
+      }
+      return undefined;
+    }],
+  });
+}
+
+export function installTrackedMorphoV2(
+  id: string,
+  fixture: Erc4626RpcFixture = {},
+  morpho: MorphoReadMockOptions = {},
+) {
+  const coin = TRACKED_META_BY_ID.get(id)!;
+  const config = coin.liveReservesConfig!;
+  const params = parseLiveReserveAdapterParams("erc4626-single-asset", config.params);
+  const primary = config.inputs.primary;
+  if (primary.kind !== "onchain-evm" || params.redemptionLiquidity?.source !== "morpho-vault-v2") {
+    throw new Error(`Missing tracked Morpho V2 fixture for ${id}`);
+  }
+  const vault = coin.contracts!.find((c) => c.chain === primary.chain)!.address;
+  const asset = params.slice.expectedAssetAddress!;
+  const chainId = params.redemptionLiquidity.chainId;
+  return installErc4626Network({
+    chain: primary.chain, vault, asset, paused: 0, liquidityAdapter: 1,
+    json: morphoReadJson({ version: "v2", chainId, vault, asset, ...morpho }),
+    ...fixture,
+  });
+}
+
+export function trackedVaultSnapshot(id: string, result: AdapterResult) {
+  const coin = TRACKED_META_BY_ID.get(id)!;
+  return {
+    stablecoinId: id,
+    slices: result.slices,
+    fetchedAt: Math.floor(Date.now() / 1000),
+    attemptId: "morpho-test-success",
+    source: coin.liveReservesConfig!.adapter,
+    metadata: result.metadata ?? {},
+    warnings: result.warnings ?? [],
+    warningCount: result.warnings?.length ?? 0,
+    adapterSourceModel: "single-bucket" as const,
+    adapterEvidenceClass: "independent" as const,
+    configFingerprint: computeLiveReserveConfigFingerprint(coin.liveReservesConfig!),
+  };
+}
+
+export function trackedVaultSyncState(snapshot: { fetchedAt: number; attemptId: string }) {
+  return { lastSuccessAt: snapshot.fetchedAt, lastSuccessAttemptId: snapshot.attemptId };
+}
+
+export function admission(id: string, result: AdapterResult) {
+  const snapshot = trackedVaultSnapshot(id, result);
+  return evaluateLiveReserveAdmission(snapshot, trackedVaultSyncState(snapshot), TRACKED_META_BY_ID.get(id), snapshot.fetchedAt);
 }

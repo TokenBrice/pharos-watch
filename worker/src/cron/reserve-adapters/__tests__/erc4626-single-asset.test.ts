@@ -1,260 +1,50 @@
 import { LIVE_RESERVE_FRESHNESS_SEC } from "../../../lib/live-reserve-policy";
 import { describe, expect, it } from "vitest";
 import { toFunctionSelector } from "viem/utils";
-import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { jsonResponse } from "@shared/test-utils/mock-fetch";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { deriveEffectiveDependencySet } from "@shared/lib/dependency-derivation";
 import { computeLiveReserveConfigFingerprint, parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { evaluateLiveReserveAdmission } from "../../../lib/live-reserves/store-snapshot-state";
 import { buildReviewedReserveClassifications } from "../../../lib/safety-score-v9/extension-reserves";
 import { computeSafetyScoreV9ReserveExposureKey } from "../../../lib/safety-score-v9/fact-set";
 import { expectValidAdapterOutput, runAdapterWithFakeTimers } from "./reserve-adapter.test-support";
-import type { AdapterResult } from "../types";
 import type { RedemptionCapacityTelemetry } from "../erc4626-capacity-observation";
 import { rpowRay } from "../erc4626-capacity-stusds";
 import {
   finalizeErc4626RedemptionCapacity, projectErc4626RedemptionMetadata, projectErc4626RedemptionTelemetry,
 } from "../erc4626-redemption-capacity";
 import {
+  admission,
+  asUnderlyingFixture,
+  calcFragmentsResult,
+  cloneConfigWithoutExpectedAsset,
   getErc4626Network,
   installErc4626Network,
+  installSbold,
+  installTrackedMorphoV2,
+  mockYearnV3Rpc,
   morphoReadJson,
+  nonInfoWarnings,
+  RAY,
   resetErc4626NetworkForTests,
   runTrackedVault,
-  type Erc4626RpcFixture,
-  type MorphoReadMockOptions,
+  STUSDS_WIRING,
+  stusdsHandlers,
+  trackedVaultSnapshot,
+  trackedVaultSyncState,
+  uint256Result,
+  withRedemptionLiquidity,
 } from "./erc4626-single-asset.test-support";
 import { resolveRedemptionCapacity } from "../../../lib/redemption-backstop/capacity";
 import { liveSnapshot } from "../../../lib/__tests__/redemption-backstop-sources.test-support";
-
-// Generic underlying-token fixture; not Maple's reviewed pooled claim.
-function asUnderlyingFixture(config: LiveReservesConfig): LiveReservesConfig {
-  const cloned = structuredClone(config);
-  delete cloned.params!.pooledClaim;
-  cloned.params!.slice = {
-    ...(cloned.params!.slice as object),
-    coinId: "usdc-circle",
-    depType: "wrapper",
-  };
-  return cloned;
-}
-
-function uint256Result(value: bigint | number): string {
-  return `0x${BigInt(value).toString(16).padStart(64, "0")}`;
-}
-
-function addressWord(address: string): string {
-  return address.replace(/^0x/i, "").toLowerCase().padStart(64, "0");
-}
-
-function addressArrayResult(addresses: string[]): string {
-  return `0x${[
-    BigInt(32).toString(16).padStart(64, "0"),
-    BigInt(addresses.length).toString(16).padStart(64, "0"),
-    ...addresses.map(addressWord),
-  ].join("")}`;
-}
-
-function strategyParamsResult(currentDebtRaw: bigint | number): string {
-  return `0x${[
-    BigInt(1).toString(16).padStart(64, "0"),
-    BigInt(2).toString(16).padStart(64, "0"),
-    BigInt(currentDebtRaw).toString(16).padStart(64, "0"),
-    BigInt(1_000_000_000_000n).toString(16).padStart(64, "0"),
-  ].join("")}`;
-}
-
-function cloneConfigWithoutExpectedAsset(config: LiveReservesConfig): LiveReservesConfig {
-  const cloned = structuredClone(config) as LiveReservesConfig & {
-    params: { slice?: { expectedAssetAddress?: string } };
-  };
-  delete cloned.params.slice?.expectedAssetAddress;
-  return cloned;
-}
-
-// Opaque pooled-claim disclosure is independent of redemption mechanics.
-function nonInfoWarnings(warnings: readonly LiveReserveWarning[] | undefined): readonly LiveReserveWarning[] {
-  return (warnings ?? []).filter((warning) => warning.effect !== "info");
-}
-
-function withRedemptionLiquidity(redemptionLiquidity: {
-  source: "morpho-vault-v1" | "morpho-vault-v2" | "atomic-full-backing" | "yearn-v3-withdrawable" | "sbold-sp-withdrawable" | "stusds-unused-funds";
-  chainId?: number;
-  settlementDelaySec?: number;
-  vatAddress?: string;
-  jugAddress?: string;
-  clipperAddress?: string;
-  ilk?: string;
-}) {
-  return (config: LiveReservesConfig): LiveReservesConfig => ({
-    ...config, params: { ...config.params, redemptionLiquidity },
-  });
-}
-
-// sBOLD calcFragments() -> (totalBold, boldAmount, collValue, collInBold). The
-// adapter reads word index 1 (boldAmount = compounded Stability-Pool BOLD).
-function calcFragmentsResult(
-  boldAmountRaw: bigint | number,
-  collInBoldRaw: bigint | number = 0,
-): string {
-  return `0x${[
-    uint256Result(100_000_000n).slice(2), // totalBold (unused by the adapter)
-    uint256Result(boldAmountRaw).slice(2), // boldAmount — the withdrawable word
-    uint256Result(0).slice(2), // collValue
-    uint256Result(collInBoldRaw).slice(2), // collInBold (not-yet-swapped collateral)
-  ].join("")}`;
-}
-
-// Sky stUSDS wiring for the unused-funds probe (reviewed Ethereum addresses).
-function installSbold({
-  paused,
-  fragments = calcFragmentsResult(85_000_000n),
-  maxCollateral = uint256Result(7_500_000n),
-  onFragments,
-}: {
-  paused?: number;
-  fragments?: string;
-  maxCollateral?: string | null;
-  onFragments?: (call: { to?: string; data: string }) => void;
-} = {}) {
-  return installErc4626Network({ idleBalance: 1_000_000n, paused, extraHandlers: [({ call }) => {
-    if (call?.data === "0x160b71df") {
-      onFragments?.(call);
-      return jsonResponse({ result: fragments });
-    }
-    if (call?.data === "0xbf2428e6") return maxCollateral === null ? null : jsonResponse({ result: maxCollateral });
-    return undefined;
-  }] });
-}
-
-const STUSDS_WIRING = {
-  vatAddress: "0x35d1b3f3d7966a1dfe207aa4514c12a259a0492b",
-  jugAddress: "0x19c0976f590d67707e62397c87829d896dc0f1f1",
-  clipperAddress: "0x836f56750517b1528b5078cba4ac4b94fbe4a399",
-  ilk: "0x4c534556322d534b592d41000000000000000000000000000000000000000000",
-} as const;
-const RAY = 10n ** 27n;
-
-// totalAssets is 100,000,000 raw; Lockstake debt is Art x rate (Jug-accrued) plus
-// clip.Due(). The vault's idle balance stays at the full 100,000,000: it is
-// encumbered first-loss capital, never withdrawable cash.
-function stusdsHandlers(options: {
-  art: bigint; rate: bigint; dueRad?: bigint; duty?: bigint; rhoOffsetSec?: bigint; vat?: string;
-}) {
-  const now = 1_800_000_000n;
-  const vault = "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b";
-  const ilk = STUSDS_WIRING.ilk.slice(2);
-  return ({ call }: { call?: { to?: string; data: string } }) => {
-    if (!call) return undefined;
-    const to = call.to?.toLowerCase();
-    if (to === vault && call.data === "0x36569e77") return jsonResponse({ result: `0x${addressWord(options.vat ?? STUSDS_WIRING.vatAddress)}` });
-    if (to === vault && call.data === "0x84718d89") return jsonResponse({ result: `0x${addressWord(STUSDS_WIRING.jugAddress)}` });
-    if (to === vault && call.data === "0x39b00e41") return jsonResponse({ result: `0x${addressWord(STUSDS_WIRING.clipperAddress)}` });
-    if (to === vault && call.data === "0xc5ce281e") return jsonResponse({ result: STUSDS_WIRING.ilk });
-    if (to === STUSDS_WIRING.vatAddress && call.data === `0xd9638d36${ilk}`) {
-      return jsonResponse({ result: `0x${[options.art, options.rate, 0n, 0n, 0n].map((word) => word.toString(16).padStart(64, "0")).join("")}` });
-    }
-    if (to === STUSDS_WIRING.jugAddress && call.data === `0xd9638d36${ilk}`) {
-      return jsonResponse({ result: `0x${[options.duty ?? RAY, now - (options.rhoOffsetSec ?? 0n)].map((word) => word.toString(16).padStart(64, "0")).join("")}` });
-    }
-    if (to === STUSDS_WIRING.clipperAddress && call.data === "0x08bf162f") return jsonResponse({ result: uint256Result(options.dueRad ?? 0n) });
-    if (call.data === "0x0f28c97d") return jsonResponse({ result: uint256Result(now) });
-    return undefined;
-  };
-}
 
 const catalogCases = [
   { id: "syzusd-yuzu", asset: "0x6695c0f8706c5ace3bdf8995073179cca47926dc", vault: "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6" },
   { id: "savusd-avant", asset: "0x24de8771bc5ddb3362db529fc3358f2df3a0e346", vault: "0x06d47f3fb376649c3a9dafe069b3d6e35572219e" },
   { id: "srusde-strata", asset: "0x4c9edd5852cd905f086c759e8383e09bff1e68b3", vault: "0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003" },
 ] as const;
-
-// Yearn V3 vault: 5M idle plus two queued strategies (60M debt fully redeemable,
-// 35M debt with 20M redeemable) => 85M withdrawable, with isShutdown() pinned.
-function mockYearnV3Rpc(isShutdownRaw?: bigint | number, pausedRaw?: bigint | number) {
-  const strategyA = "0x1111111111111111111111111111111111111111";
-  const strategyB = "0x2222222222222222222222222222222222222222";
-  const vault = "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b";
-  installErc4626Network({
-    idleBalance: 5_000_000n,
-    shutdown: isShutdownRaw,
-    paused: pausedRaw,
-    extraHandlers: [({ call }) => {
-      if (!call) return undefined;
-      const to = call.to?.toLowerCase();
-      if (to === vault && call.data === "0x9aa7df94") {
-        return jsonResponse({ result: uint256Result(5_000_000n) });
-      }
-      if (to === vault && call.data === "0xa9bbf1cc") {
-        return jsonResponse({ result: addressArrayResult([strategyA, strategyB]) });
-      }
-      if (to === vault && call.data.startsWith("0x39ebf823")) {
-        if (call.data === `0x39ebf823${addressWord(strategyA)}`) {
-          return jsonResponse({ result: strategyParamsResult(60_000_000n) });
-        }
-        if (call.data === `0x39ebf823${addressWord(strategyB)}`) {
-          return jsonResponse({ result: strategyParamsResult(35_000_000n) });
-        }
-      }
-      if (call.data === `0xce96cb77${addressWord(vault)}` && to === strategyA) {
-        return jsonResponse({ result: uint256Result(60_000_000n) });
-      }
-      if (call.data === `0xce96cb77${addressWord(vault)}` && to === strategyB) {
-        return jsonResponse({ result: uint256Result(20_000_000n) });
-      }
-      return undefined;
-    }],
-  });
-}
-
-function installTrackedMorphoV2(
-  id: string,
-  fixture: Erc4626RpcFixture = {},
-  morpho: MorphoReadMockOptions = {},
-) {
-  const coin = TRACKED_META_BY_ID.get(id)!;
-  const config = coin.liveReservesConfig!;
-  const params = parseLiveReserveAdapterParams("erc4626-single-asset", config.params);
-  const primary = config.inputs.primary;
-  if (primary.kind !== "onchain-evm" || params.redemptionLiquidity?.source !== "morpho-vault-v2") {
-    throw new Error(`Missing tracked Morpho V2 fixture for ${id}`);
-  }
-  const vault = coin.contracts!.find((c) => c.chain === primary.chain)!.address;
-  const asset = params.slice.expectedAssetAddress!;
-  const chainId = params.redemptionLiquidity.chainId;
-  return installErc4626Network({
-    chain: primary.chain, vault, asset, paused: 0, liquidityAdapter: 1,
-    json: morphoReadJson({ version: "v2", chainId, vault, asset, ...morpho }),
-    ...fixture,
-  });
-}
-
-function trackedVaultSnapshot(id: string, result: AdapterResult) {
-  const coin = TRACKED_META_BY_ID.get(id)!;
-  return {
-    stablecoinId: id,
-    slices: result.slices,
-    fetchedAt: Math.floor(Date.now() / 1000),
-    attemptId: "morpho-test-success",
-    source: coin.liveReservesConfig!.adapter,
-    metadata: result.metadata ?? {},
-    warnings: result.warnings ?? [],
-    warningCount: result.warnings?.length ?? 0,
-    adapterSourceModel: "single-bucket" as const,
-    adapterEvidenceClass: "independent" as const,
-    configFingerprint: computeLiveReserveConfigFingerprint(coin.liveReservesConfig!),
-  };
-}
-
-function trackedVaultSyncState(snapshot: { fetchedAt: number; attemptId: string }) {
-  return { lastSuccessAt: snapshot.fetchedAt, lastSuccessAttemptId: snapshot.attemptId };
-}
-
-function admission(id: string, result: AdapterResult) {
-  const snapshot = trackedVaultSnapshot(id, result);
-  return evaluateLiveReserveAdmission(snapshot, trackedVaultSyncState(snapshot), TRACKED_META_BY_ID.get(id), snapshot.fetchedAt);
-}
 
 describe("fetchErc4626SingleAssetReserves", () => {
 
@@ -968,6 +758,26 @@ describe("fetchErc4626SingleAssetReserves", () => {
     { label: "address mismatch", source: "morpho-vault-v2" as const, opts: { version: "v2" as const, stateAddress: "0x000000000000000000000000000000000000dead" }, code: "morpho-vault-v2-identity-mismatch", callsState: true },
     { label: "chain mismatch", source: "morpho-vault-v2" as const, opts: { version: "v2" as const, stateChainId: 8453 }, code: "morpho-vault-v2-chain-mismatch", callsState: true },
     { label: "invalid withdrawable", source: "morpho-vault-v2" as const, opts: { version: "v2" as const, withdrawable: "invalid" }, code: "morpho-vault-v2-liquidity-invalid", callsState: true },
+    { label: "missing last_indexed_block", source: "morpho-vault-v2" as const, opts: { version: "v2" as const, lastIndexedBlock: null }, code: "morpho-vault-v2-liquidity-invalid", callsState: true },
+    { label: "stale last_accrual_timestamp", source: "morpho-vault-v2" as const, opts: { version: "v2" as const, lastAccrualTimestamp: Math.floor(Date.now() / 1000) - 3600 }, code: "morpho-vault-v2-state-stale", callsState: true },
+    {
+      label: "missing directory cursor", source: "morpho-vault-v2" as const,
+      opts: { version: "v2" as const, overrides: { "https://api.morpho.org/v0/vaults-v2?limit=1000": { data: [] } } },
+      code: "morpho-vault-v2-liquidity-unavailable", callsState: false,
+    },
+    {
+      label: "conflicting duplicate directory asset", source: "morpho-vault-v2" as const,
+      opts: { version: "v2" as const, overrides: { "https://api.morpho.org/v0/vaults-v2?limit=1000": { data: [
+        { chain_id: 1, vault_address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b", asset_address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" },
+        { chain_id: 1, vault_address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b", asset_address: "0x000000000000000000000000000000000000dead" },
+      ], cursor: null } } },
+      code: "morpho-vault-v2-liquidity-unavailable", callsState: false,
+    },
+    {
+      label: "malformed directory row", source: "morpho-vault-v2" as const,
+      opts: { version: "v2" as const, overrides: { "https://api.morpho.org/v0/vaults-v2?limit=1000": { data: [{ chain_id: 1, vault_address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b", asset_address: "bad" }], cursor: null } } },
+      code: "morpho-vault-v2-liquidity-unavailable", callsState: false,
+    },
     {
       label: "directory cursor cycle", source: "morpho-vault-v2" as const,
       opts: { version: "v2" as const, overrides: { "https://api.morpho.org/v0/vaults-v2?limit=1000": { data: [], cursor: "c1" }, "https://api.morpho.org/v0/vaults-v2?limit=1000&cursor=c1": { data: [], cursor: "c1" } } },
@@ -989,11 +799,11 @@ describe("fetchErc4626SingleAssetReserves", () => {
     }
   });
 
-  it("omits diagnostic *LiquidityUsd on HTTP 206 null price and omits forceDeallocatable on withdrawal-options mismatch without degrading capacityRaw", async () => {
+  it("suppresses diagnostic *LiquidityUsd on HTTP 206 even with numeric price, bounds diagnostic deadline, and omits mismatched withdrawal-options", async () => {
     installErc4626Network({
       idleBalance: 0, liquidityAdapter: 1,
       json: morphoReadJson({
-        version: "v2", withdrawable: "30000000", price: null, priceStatus: 206,
+        version: "v2", withdrawable: "30000000", price: 1.0, priceStatus: 206,
         overrides: { "https://api.morpho.org/v0/vaults-v2/1:0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b/withdrawal-options": { data: { chain_id: 8453, vault_address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b", adapter_penalties: [] } } },
       }),
     });
@@ -1003,6 +813,13 @@ describe("fetchErc4626SingleAssetReserves", () => {
     expect(result.metadata).not.toHaveProperty("morphoVaultV2LiquidityUsd");
     expect(result.metadata).not.toHaveProperty("morphoVaultV2ForceDeallocatableLiquidityRaw");
     expect(result.metadata).not.toHaveProperty("morphoVaultV2ForceDeallocatableLiquidityUsd");
+
+    // Near-expired attempt deadline skips optional diagnostics while preserving validated capacityRaw.
+    const tightNet = installErc4626Network({ idleBalance: 0, liquidityAdapter: 1, json: morphoReadJson({ version: "v2", withdrawable: "30000000" }) });
+    const tight = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "morpho-vault-v2", chainId: 1 }), { attemptDeadlineMs: Date.now() + 1_000 });
+    expect(nonInfoWarnings(tight.warnings)).toEqual([]);
+    expect(tight.metadata?.redemptionCapacityRaw).toBe("30000000");
+    expect(tightNet.requests.some((r) => r.url.includes("/withdrawal-options") || r.url.includes("/tokens/"))).toBe(false);
   });
 
   it("retries Morpho Read API 5xx once and succeeds on retry, or fails closed after 2 attempts", async () => {
@@ -1015,7 +832,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
         overrides: {
           [stateUrl]: () => (++attempts === 1
             ? { status: 503, json: { error: "unavailable" } }
-            : { data: { chain_id: 1, address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b", withdrawable_assets: "30000000" } }),
+            : { data: { chain_id: 1, address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b", withdrawable_assets: "30000000", last_indexed_block: "26500000", last_accrual_timestamp: Math.floor(Date.now() / 1000) - 60 } }),
         },
       }),
     });
@@ -1033,7 +850,16 @@ describe("fetchErc4626SingleAssetReserves", () => {
     expect(nonInfoWarnings(failed.warnings)).toEqual([expect.objectContaining({ code: "morpho-vault-v2-liquidity-unavailable" })]);
   });
 
-  it("never retries HTTP 429 and short-circuits remaining Morpho vaults in the same run via requestCache", async () => {
+  it("never retries HTTP 429, persists cooldown across continuations via D1, and negatively caches directory outages", async () => {
+    const cacheRows = new Map<string, { value: string; updated_at: number }>();
+    const db = {
+      prepare: () => ({
+        bind: (...args: unknown[]) => ({
+          first: async () => (cacheRows.has(args[0] as string) ? { updated_at: cacheRows.get(args[0] as string)!.updated_at } : null),
+          run: async () => { cacheRows.set(args[0] as string, { value: args[1] as string, updated_at: args[2] as number }); return { success: true }; },
+        }),
+      }),
+    } as unknown as D1Database;
     const requestCache = new Map<string, Promise<unknown>>();
     const net = installErc4626Network({
       liquidityAdapter: 1,
@@ -1042,15 +868,29 @@ describe("fetchErc4626SingleAssetReserves", () => {
         overrides: { "https://api.morpho.org/v0/vaults-v2?limit=1000": { status: 429, json: { error: "rate limited" } } },
       }),
     });
-    const first = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "morpho-vault-v2", chainId: 1 }), { requestCache });
-    const morphoCallsAfterFirst = net.requests.filter((r) => r.url.startsWith("https://api.morpho.org")).length;
-    expect(morphoCallsAfterFirst).toBe(1);
+    const first = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "morpho-vault-v2", chainId: 1 }), { requestCache, db });
+    expect(net.requests.filter((r) => r.url.startsWith("https://api.morpho.org"))).toHaveLength(1);
     expect(nonInfoWarnings(first.warnings)).toEqual([expect.objectContaining({ code: "morpho-vault-v2-rate-limited", effect: "degraded" })]);
 
-    const second = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "morpho-vault-v1", chainId: 1 }), { requestCache });
-    expect(net.requests.filter((r) => r.url.startsWith("https://api.morpho.org")).length).toBe(1);
+    const second = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "morpho-vault-v1", chainId: 1 }), { requestCache, db });
+    expect(net.requests.filter((r) => r.url.startsWith("https://api.morpho.org"))).toHaveLength(1);
     expect(nonInfoWarnings(second.warnings)).toEqual([expect.objectContaining({ code: "morpho-vault-v1-rate-limited", effect: "degraded" })]);
     expect(second.metadata).not.toHaveProperty("redemptionCapacityRaw");
+
+    // Distinct requestCache simulating scheduled continuation still respects the D1 600 s cooldown.
+    const resumed = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "morpho-vault-v2", chainId: 1 }), { requestCache: new Map(), db });
+    expect(net.requests.filter((r) => r.url.startsWith("https://api.morpho.org"))).toHaveLength(1);
+    expect(nonInfoWarnings(resumed.warnings)).toEqual([expect.objectContaining({ code: "morpho-vault-v2-rate-limited", effect: "degraded" })]);
+
+    // Non-429 directory failure is negatively cached for the run.
+    const errCache = new Map<string, Promise<unknown>>();
+    const errNet = installErc4626Network({
+      liquidityAdapter: 1,
+      json: morphoReadJson({ version: "v2", overrides: { "https://api.morpho.org/v0/vaults-v2?limit=1000": { data: [] } } }),
+    });
+    await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "morpho-vault-v2", chainId: 1 }), { requestCache: errCache });
+    await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "morpho-vault-v2", chainId: 1 }), { requestCache: errCache });
+    expect(errNet.requests.filter((r) => r.url.includes("/v0/vaults-v2?limit=1000"))).toHaveLength(1);
   });
 
   it("reuses cached Morpho directory and token price across vaults sharing requestCache", async () => {
@@ -1238,6 +1078,8 @@ describe("Morpho V2 operational conditions and composition admission", () => {
     installTrackedMorphoV2(id);
     const result = await runTrackedVault(id);
     expect(nonInfoWarnings(result.warnings)).toEqual([]);
+    expect(result.slices.map((s) => s.pct)).toEqual([25, 75]);
+    expect(result.slices[1]).toMatchObject({ risk: "high", depType: "wrapper" });
     expect(result.metadata).toMatchObject({
       unknownExposurePct: 0, morphoVaultV2LiquidityRaw: "90000000", redemptionCapacityRaw: "90000000",
       redemptionCapacitySource: "morpho-vault-v2-liquidity",
@@ -1266,13 +1108,15 @@ describe("Morpho V2 operational conditions and composition admission", () => {
     installTrackedMorphoV2("krusdc-keyrock", { idleBalance: null });
     const noIdle = await runTrackedVault("krusdc-keyrock");
     expect(noIdle.metadata?.unknownExposurePct).toBe(100);
+    expect(noIdle.metadata?.redemption).toMatchObject({ capacityUsd: 90, routeStatus: "open", routeStatusSource: "protocol-api" });
     expect(noIdle.warnings).toContainEqual(expect.objectContaining({ code: "erc4626-idle-balance-unavailable", effect: "degraded" }));
     expect(admission("krusdc-keyrock", noIdle).reasons).toContain("degraded-snapshot");
 
-    installErc4626Network({ paused: 0, convertedAssets: 110_000_000n });
-    const nav = await runTrackedVault("syrupusdc-maple");
+    installTrackedMorphoV2("krusdc-keyrock", { convertedAssets: 110_000_000n });
+    const nav = await runTrackedVault("krusdc-keyrock");
     expect(nav.warnings).toContainEqual(expect.objectContaining({ code: "erc4626-nav-divergence", effect: "degraded" }));
-    expect(nav.metadata?.redemption).toMatchObject({ capacityUsd: 25, routeStatus: "open", routeStatusSource: "onchain" });
+    expect(nav.metadata?.redemption).toMatchObject({ capacityUsd: 90, routeStatus: "open", routeStatusSource: "protocol-api" });
+    expect(admission("krusdc-keyrock", nav).reasons).toContain("degraded-snapshot");
   });
 });
 

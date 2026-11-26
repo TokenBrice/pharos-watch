@@ -589,6 +589,17 @@ export function checkApiKeyEndpointEntitlement(
   );
 }
 
+const MCP_PLAN_DENIED_RESPONSES = new WeakSet<Response>();
+
+export function markMcpPlanDeniedResponse(response: Response): Response {
+  MCP_PLAN_DENIED_RESPONSES.add(response);
+  return response;
+}
+
+export function isMcpPlanDeniedResponse(response: Response): boolean {
+  return MCP_PLAN_DENIED_RESPONSES.has(response);
+}
+
 export function notFoundResponse(): Response {
   return errorResponse(404, "Not found");
 }

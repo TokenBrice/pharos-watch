@@ -49,13 +49,11 @@ export async function observeConfiguredErc4626Capacity(
   if (configured.source === "morpho-vault-v2") {
     probe = await fetchMorphoVaultV2Liquidity({
       ...input,
-      underlyingDecimalsRaw: input.underlyingDecimalsRaw,
       config: configured,
     });
   } else if (configured.source === "morpho-vault-v1") {
     probe = await fetchMorphoVaultV1Liquidity({
       ...input,
-      underlyingDecimalsRaw: input.underlyingDecimalsRaw,
       config: configured,
     });
   } else if (configured.source === "yearn-v3-withdrawable") {

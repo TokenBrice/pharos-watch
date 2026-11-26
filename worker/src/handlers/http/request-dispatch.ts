@@ -22,6 +22,7 @@ import {
   evaluateAccessGate,
   evaluateCachedPublicApiReadFastGate,
   handleMaintenanceMode,
+  isMcpPlanDeniedResponse,
   notFoundResponse,
   warnWorkerEnvIssuesOnce,
 } from "./gates";
@@ -163,16 +164,17 @@ export async function handleHttpRequestImpl(
     requestLane,
     response: gateResponse,
   } = await evaluateAccessGate(routedRequest, url, env, ctx);
-  const recordRequestSource = buildRecorder({
+  const recordRequestSource = (responseThrottled = false) => buildRecorder({
     isAdmin,
     isSiteProxy,
     apiKeyId: apiKey?.id ?? null,
     apiKeyTrafficClass: apiKey?.trafficClass ?? null,
     requestLane,
     // Per-key limiter 429s (per-minute or monthly) and plan entitlement 403s
-    // keep route-level attribution but must not add to the key's own usage counter.
-    apiKeyThrottled: apiKey != null && (gateResponse?.status === 429 || gateResponse?.status === 403),
-  });
+    // (including in-band MCP paid-tool denials) keep route-level attribution
+    // but must not add to the key's own monthly usage counter.
+    apiKeyThrottled: apiKey != null && (gateResponse?.status === 429 || gateResponse?.status === 403 || responseThrottled),
+  })();
   if (gateResponse) {
     recordRequestSource();
     return applyCors(withApiKeyRateLimitHeader(gateResponse, apiKey));
@@ -211,7 +213,7 @@ export async function handleHttpRequestImpl(
   );
 
   recordTelegramIngressHandlerResponse(routedRequest, url, response);
-  recordRequestSource();
+  recordRequestSource(isMcpPlanDeniedResponse(response));
   const cacheResponse = scopeResponseEtag(response, edgeCache.cacheKey.url, !edgeCache.skipCache, safetyScoreResponsePolicy(response));
   writeEdgeCache(edgeCache, cacheResponse, ctx);
   return applyCors(
