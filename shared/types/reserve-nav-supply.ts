@@ -10,7 +10,7 @@ const POSITIVE_RAW_SHARES_RE = /^[1-9][0-9]{0,77}$/;
 const PositiveRawSharesSchema = z.string().regex(POSITIVE_RAW_SHARES_RE);
 
 /** Finalized hash-pinned Ethereum share-class leg. */
-export const PinnedNativeShareEthereumLegSchema = z.object({
+const PinnedNativeShareEthereumLegSchema = z.object({
   chain: z.literal("ethereum"),
   contractAddress: z.literal(JLTXX_ETHEREUM_CONTRACT),
   rawShares: PositiveRawSharesSchema,
@@ -22,7 +22,7 @@ export const PinnedNativeShareEthereumLegSchema = z.object({
 export type PinnedNativeShareEthereumLeg = z.output<typeof PinnedNativeShareEthereumLegSchema>;
 
 /** Finalized Token-2022 Solana share-class leg. */
-export const PinnedNativeShareSolanaLegSchema = z.object({
+const PinnedNativeShareSolanaLegSchema = z.object({
   chain: z.literal("solana"),
   contractAddress: z.literal(JLTXX_SOLANA_MINT),
   rawShares: PositiveRawSharesSchema,
@@ -33,7 +33,7 @@ export const PinnedNativeShareSolanaLegSchema = z.object({
 }).strict();
 export type PinnedNativeShareSolanaLeg = z.output<typeof PinnedNativeShareSolanaLegSchema>;
 
-export const PinnedNativeShareLegSchema = z.discriminatedUnion("chain", [
+const PinnedNativeShareLegSchema = z.discriminatedUnion("chain", [
   PinnedNativeShareEthereumLegSchema,
   PinnedNativeShareSolanaLegSchema,
 ]);
