@@ -13,8 +13,9 @@ import {
   type V9ProductionScoreInput,
 } from "../safety-score-v9/score";
 import { computeV9ResultDigest, projectCompactV9ScoreTrace } from "../safety-score-v9/trace";
-import { makeV9Pillar as pillar, makeV9ProductionScoreInput } from "./safety-score-v9-score.test-support";
-import type { V9StructuralSignal } from "../../types/safety-score-v9";
+import { makeV9Pillar as pillar, makeV9ProductionScoreInput, makeV9ScoringInput } from "./safety-score-v9-score.test-support";
+import type { V9StructuralSignal, V9ScoringInput } from "../../types/safety-score-v9";
+import { scoreV9Input } from "../safety-score-v9/formula";
 
 const DIGEST = "a".repeat(64);
 const BUILD_DIGEST = "b".repeat(64);
@@ -787,4 +788,73 @@ describe("genuinely unavailable pillars", () => {
       );
     },
   );
+});
+
+/** Published ceilings are integers; own scores retain nearest rounding. */
+function quantizationInput(overrides: Partial<V9ScoringInput> = {}): V9ScoringInput {
+  return makeV9ScoringInput({
+    assetId: "quantization-probe",
+    pillars: { backing: 80, exit: 80, control: 80 },
+    trackRecordMonths: 120,
+    ...overrides,
+  });
+}
+
+describe("V9 cap limits are quantized into the published score space", () => {
+  it("floors a fractional parent limit to a whole published point", () => {
+    const trace = scoreV9Input(
+      quantizationInput({ parentRequired: true, parentScore: 49.55 }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+    const parentCap = trace.caps.find((cap) => cap.source === "parent");
+    expect(parentCap?.limit).toBe(49);
+    expect(trace.bindingCap?.limit).toBe(49);
+  });
+
+  it("never raises a ceiling: the floored limit is at or below the measured limit", () => {
+    for (const measured of [43.45, 49.55, 52.2, 61.9, 65.55, 78.5, 81.8]) {
+      const trace = scoreV9Input(
+        quantizationInput({ parentRequired: true, parentScore: measured }),
+        V9_CANDIDATE_POLICY_V1,
+      );
+      const parentCap = trace.caps.find((cap) => cap.source === "parent");
+      expect(parentCap?.limit).toBeLessThanOrEqual(measured);
+      expect(measured - parentCap!.limit).toBeLessThan(1);
+    }
+  });
+
+  it("emits only integer ceilings", () => {
+    const trace = scoreV9Input(
+      quantizationInput({
+        parentRequired: true,
+        parentScore: 61.9,
+        evidenceLevel: "limited",
+        trackRecordMonths: 12,
+      }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+    for (const cap of trace.caps) expect(Number.isInteger(cap.limit)).toBe(true);
+  });
+
+  it("leaves an already-integral limit untouched", () => {
+    const trace = scoreV9Input(
+      quantizationInput({ parentRequired: true, parentScore: 74 }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+    expect(trace.caps.find((cap) => cap.source === "parent")?.limit).toBe(74);
+  });
+
+  it("keeps the published score unchanged when flooring a fractional limit", () => {
+    // A fractional and already-floored parent ceiling constrain identically.
+    const fractional = scoreV9Input(
+      quantizationInput({ parentRequired: true, parentScore: 49.55 }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+    const integral = scoreV9Input(
+      quantizationInput({ parentRequired: true, parentScore: 49 }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+    expect(fractional.finalScore).toBe(integral.finalScore);
+    expect(fractional.finalGrade).toBe(integral.finalGrade);
+  });
 });

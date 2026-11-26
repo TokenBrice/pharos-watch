@@ -12,6 +12,7 @@ import { mintBurnConfigKey } from "../mint-burn-contract-identity";
 import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config";
 import { makeMintBurnScanSegments } from "../../test-helpers/__shared/mint-burn";
 import type { MintBurnScanSegment } from "../mint-burn-pipeline/scan-coverage";
+import { computeMintBurnSyncFreshnessStatus, resolveMintBurnFreshnessConfig } from "../mint-burn-health-config";
 
 const DAY = 86400;
 const END = 200 * DAY + 12 * 3600;
@@ -124,5 +125,37 @@ describe("dense hourly series", () => {
     for (const bucket of series) expect(bucket).toMatchObject({ netFlowUsd: quiet ? 0 : null,
       mintVolumeUsd: 0, burnVolumeUsd: 0, scanCoverage: { complete: quiet },
       classification: { completeness: quiet ? "complete" : "unknown" } });
+  });
+});
+
+describe("resolveMintBurnFreshnessConfig", () => {
+  it("returns defaults with no env overrides", () => {
+    const config = resolveMintBurnFreshnessConfig({});
+    expect(config.majorSymbols).toContain("USDT");
+    expect(config.majorSymbols).toContain("USDC");
+    expect(config.staleWarnSec).toBeGreaterThan(0);
+    expect(config.staleCritSec).toBeGreaterThan(config.staleWarnSec);
+  });
+
+  it("overrides major symbols from env", () => {
+    const config = resolveMintBurnFreshnessConfig({
+      MINT_BURN_MAJOR_SYMBOLS: "USDC,DAI",
+    });
+    expect(config.majorSymbols).toEqual(["USDC", "DAI"]);
+  });
+});
+
+describe("computeMintBurnSyncFreshnessStatus", () => {
+  it.each([
+    [1800, "fresh"], [3600, "fresh"], [4200, "degraded"],
+    [5400, "degraded"], [7200, "stale"], [null, "stale"],
+  ] as const)("returns %s-age freshness %s", (age, expected) => {
+    expect(computeMintBurnSyncFreshnessStatus(10000, age === null ? null : 10000 - age)).toBe(expected);
+  });
+
+  it("rejects clocks beyond the inclusive future allowance", () => {
+    expect(computeMintBurnSyncFreshnessStatus(10000, 10060)).toBe("fresh");
+    expect(computeMintBurnSyncFreshnessStatus(10000, 10061)).toBe("stale");
+    expect(computeMintBurnSyncFreshnessStatus(10000, Infinity)).toBe("stale");
   });
 });

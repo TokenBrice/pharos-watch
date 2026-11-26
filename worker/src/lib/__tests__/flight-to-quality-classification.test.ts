@@ -4,8 +4,10 @@ import {
   buildFlightToQualityClassificationFromV9Snapshot,
 } from "../flight-to-quality-classification";
 import { makeWorkerReportCardsV9Response, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
-import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../safety-score-v9/consumer-freshness";
+import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC, isSafetyScoreV9SnapshotFresh } from "../safety-score-v9/consumer-freshness";
 import { ReportCardsV9CurrentResponseSchema } from "\@shared/types/report-cards-v9-current";
+import { SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC } from "@shared/lib/cron-jobs";
+import { getPublicSafetyScoreStatus } from "@shared/lib/public-health";
 
 describe("buildFlightToQualityClassificationFromV9Snapshot", () => {
   it("uses canonical V9 grade boundaries for safe classifications", () => {
@@ -100,5 +102,105 @@ describe("buildFlightToQualityClassificationFromV9Snapshot", () => {
     expect(buildFlightToQualityClassificationFromV9Snapshot(
       snapshot,
     )).toEqual({ kind: "unavailable", reason: "source-stale" });
+  });
+});
+
+describe("Safety Score V9 consumer freshness", () => {
+  const currentHealth = {
+    schemaVersion: 2 as const,
+    status: "current" as const,
+    acceptedPublicationGenerationId: "v9:test",
+    acceptedAtSec: 1_800_000_000,
+    attemptedAtSec: 1_800_000_000,
+    heldSinceSec: null,
+    reasons: [],
+  };
+
+  it("allows exactly one missed producer refresh", () => {
+    expect(SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC).toBe(60 * 60);
+    expect(SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC).toBe(
+      2 * SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC,
+    );
+  });
+
+  it("accepts the age boundary and rejects an older snapshot", () => {
+    const nowSec = 1_800_000_000;
+
+    expect(
+      isSafetyScoreV9SnapshotFresh(
+        {
+          updatedAt: nowSec - SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
+          publicationHealth: currentHealth,
+        },
+        nowSec,
+      ),
+    ).toBe(true);
+    expect(
+      isSafetyScoreV9SnapshotFresh(
+        {
+          updatedAt: nowSec - SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC - 1,
+          publicationHealth: currentHealth,
+        },
+        nowSec,
+      ),
+    ).toBe(false);
+  });
+
+  it("rejects a nonfinite publication time under current health", () => {
+    const nowSec = 1_800_000_000;
+    expect(isSafetyScoreV9SnapshotFresh({
+      updatedAt: Number.POSITIVE_INFINITY,
+      publicationHealth: currentHealth,
+    }, nowSec)).toBe(false);
+    expect(isSafetyScoreV9SnapshotFresh({
+      updatedAt: Number.NEGATIVE_INFINITY,
+      publicationHealth: currentHealth,
+    }, nowSec)).toBe(false);
+    expect(isSafetyScoreV9SnapshotFresh({
+      updatedAt: nowSec,
+      publicationHealth: currentHealth,
+    }, Number.NaN)).toBe(false);
+  });
+
+  it("accepts the present instant but rejects any future publication time", () => {
+    const nowSec = 1_800_000_000;
+
+    expect(
+      isSafetyScoreV9SnapshotFresh({ updatedAt: nowSec, publicationHealth: currentHealth }, nowSec),
+    ).toBe(true);
+    expect(
+      isSafetyScoreV9SnapshotFresh(
+        { updatedAt: nowSec + 1, publicationHealth: currentHealth },
+        nowSec,
+      ),
+    ).toBe(false);
+  });
+
+  it("treats a held snapshot as unavailable even when its accepted time is fresh", () => {
+    const nowSec = 1_800_000_000;
+    expect(
+      isSafetyScoreV9SnapshotFresh(
+        {
+          updatedAt: nowSec,
+          publicationHealth: {
+            ...currentHealth,
+            status: "held",
+            heldSinceSec: nowSec,
+            reasons: [{ code: "dex-stale" }],
+          },
+        },
+        nowSec,
+      ),
+    ).toBe(false);
+  });
+
+  it("keeps the intentional held divergence: current-only rejects, public health tolerates", () => {
+    const nowSec = 1_800_000_000;
+    const held = {
+      ...currentHealth, status: "held" as const, acceptedAtSec: nowSec - 60,
+      attemptedAtSec: nowSec, heldSinceSec: nowSec - 30, reasons: [{ code: "dex-stale" as const }],
+    };
+    expect(isSafetyScoreV9SnapshotFresh({ updatedAt: nowSec - 60, publicationHealth: held }, nowSec)).toBe(false);
+    expect(getPublicSafetyScoreStatus(held, nowSec)).toBe("healthy");
   });
 });
