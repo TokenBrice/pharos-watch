@@ -551,19 +551,29 @@ function formatRequiredKeyPlansLabel(plans: readonly ApiKeyPlan[]): string {
   return `${labels.slice(0, -1).join(", ")}, or ${labels[labels.length - 1]}`;
 }
 
-function checkApiKeyEndpointEntitlement(
-  key: AuthenticatedApiKey,
-  pathname: string,
-): Response | null {
-  if (key.trafficClass === "site") {
-    return null;
-  }
-  const requiredPlans = getEndpointRequiredKeyPlans(pathname);
+export function isApiKeyEntitledToPlans(
+  key: AuthenticatedApiKey | null | undefined,
+  requiredPlans: readonly ApiKeyPlan[] | null | undefined,
+): boolean {
   if (!requiredPlans || requiredPlans.length === 0) {
-    return null;
+    return true;
+  }
+  if (!key) {
+    return false;
+  }
+  if (key.trafficClass === "site") {
+    return true;
   }
   const effectivePlan = resolveApiKeyPlan(key);
-  if (effectivePlan != null && requiredPlans.includes(effectivePlan)) {
+  return effectivePlan != null && requiredPlans.includes(effectivePlan);
+}
+
+export function checkApiKeyEndpointEntitlement(
+  key: AuthenticatedApiKey | null | undefined,
+  pathname: string,
+): Response | null {
+  const requiredPlans = getEndpointRequiredKeyPlans(pathname);
+  if (!requiredPlans || requiredPlans.length === 0 || isApiKeyEntitledToPlans(key, requiredPlans)) {
     return null;
   }
   const planLabel = formatRequiredKeyPlansLabel(requiredPlans);

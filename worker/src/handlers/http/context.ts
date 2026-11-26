@@ -10,6 +10,7 @@ export function buildRouteContext<const Deps extends readonly EndpointDependency
   execCtx: ExecutionContext;
   trustedAdmin: boolean;
   requestLane?: RouteContext["requestLane"];
+  apiKey?: RouteContext["apiKey"];
   routeDependencies: Deps;
 }): RouteContextFor<Deps> {
   const routeCtx: FullRouteContext = {
@@ -19,6 +20,7 @@ export function buildRouteContext<const Deps extends readonly EndpointDependency
     request: config.request,
     trustedAdmin: config.trustedAdmin,
     ...(config.requestLane !== undefined ? { requestLane: config.requestLane } : {}),
+    ...(config.apiKey !== undefined ? { apiKey: config.apiKey } : {}),
   };
 
   for (const dependency of config.routeDependencies) {

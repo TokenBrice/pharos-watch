@@ -687,7 +687,6 @@ const BASE_ENDPOINT_DEFINITIONS = [
   publicPostProtected({
     key: "mcp",
     path: API_PATHS.mcp(),
-    requiredKeyPlans: ["commercial", "institutional"],
   }),
   publicGet({
     key: "depeg-resolver",

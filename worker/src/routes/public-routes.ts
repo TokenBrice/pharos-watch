@@ -64,7 +64,7 @@ export const PUBLIC_STATIC_ROUTES = [
   defineLazyDbUrlRoute("risk-check", () => import("../api/risk-check").then(({ handleRiskCheck }) => handleRiskCheck)),
   defineLazyStaticRoute("mcp", async () => {
     const { handleMcp } = await import("../api/mcp");
-    return ({ db, request, execCtx }) => handleMcp(db, request, execCtx);
+    return ({ db, request, execCtx, apiKey }) => handleMcp(db, request, execCtx, apiKey);
   }),
   defineLazyDbRoute("depeg-resolver", () => import("../api/depeg-resolver").then(({ handleDepegResolver }) => handleDepegResolver)),
   defineLazyDbRoute("depeg-resolver-review", () => import("../api/depeg-resolver-review").then(({ handleDepegResolverReview }) => handleDepegResolverReview)),

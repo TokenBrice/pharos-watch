@@ -204,6 +204,7 @@ export async function handleHttpRequestImpl(
       execCtx: ctx,
       trustedAdmin: isAdmin,
       requestLane,
+      apiKey,
       routeDependencies: resolvedRoute.routeMatch.dependencies,
     }),
     resolvedRoute,
