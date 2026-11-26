@@ -1,5 +1,19 @@
 [
   {
+    "version": "6.98",
+    "title": "New Zealand Dollar primary FX support and multi-chain JLTXX pinned native share reader",
+    "date": "2026-11-26",
+    "effectiveAt": 1795734000,
+    "summary": "Adds New Zealand Dollar (NZD / peggedNZD) to the primary Frankfurter/ECB business-daily FX pipeline and native-peg quote support, and extends JLTXX's fail-closed pinned native share reader to support both the existing single-chain Ethereum roster and a two-chain finalized Ethereum plus Solana Token-2022 roster while JLTXX remains quarantined.",
+    "impact": [
+      "Primary FX and peg taxonomy (`shared/lib/peg-taxonomy.ts`, `worker/src/lib/fx-config.ts`, `worker/src/lib/native-peg-quotes.ts`): wires `NZD` (`peggedNZD`, symbol `NZ$`, `fiat_fx`) into Frankfurter ECB business-daily FX ingestion and the secondary/tertiary live fallbacks with USD-per-NZD inversion, validation bounds `[0.45, 0.80]` FX and `[0.40, 0.85]` price, and CoinGecko native `nzd` quote support. Missing `NZD` from Frankfurter degrades FX coverage through `EXPECTED_FX_PEG_KEYS` until fallback recovery succeeds.",
+      "Multi-chain JLTXX pinned native shares (`shared/types/reserve-nav-supply.ts`, `worker/src/cron/sync-stablecoins/supplemental-assets/onchain-supply.ts`, `worker/src/lib/reserve-nav-price.ts`, `worker/src/cron/sync-stablecoins/supplemental-assets/fiat-cg.ts`): accepts only the exact 1-leg Ethereum allowlist or the 2-leg Ethereum plus Solana Token-2022 (`J4cTuCH6frt4AnEmKfMS2k8hsUf7K94PV62sjUJno8Cz`) allowlist with 2 decimals, failing closed on any missing, duplicate, or unexpected deployment. Solana reads use finalized `fetchSolanaAccounts` plus `readSolanaMint` (never `observeSolanaTokenSupply`), asserting Token-2022 program ownership, initialized 2-decimal positive supply, absence of `ScaledUiAmount`, `InterestBearingConfig`, and `ConfidentialMintBurn` extensions, and finalized `getBlockTime(slot)` provenance.",
+      "Aggregate precision, per-leg clocks, and per-chain valuation: `PinnedNativeShareObservationSchema` enforces exact `BigInt` sum equality across legs and conservative `observedAt = min(leg.observedAt)`. `reserveNavSupplyScopeReason()` revalidates reserve fetch and NAV source freshness alongside `Number.MAX_SAFE_INTEGER` on the aggregate sum, per-leg freshness, and reviewed NAV/supply skew against a monotonic post-I/O decision clock in `fiat-cg.ts`, publishing per-chain USD `chainCirculating` rows. `jltxx-jpmorgan` stays quarantined on its 1-leg Ethereum catalog record until explicit post-soak activation. Post-cutover core-aggregate exit dates (`CORE_AGGREGATE_V2_POST_CUTOVER_EXIT_DATES`) fence `usdcx-movement` at `2026-11-27T00:00:00Z` across charts, non-USD share history, and PSI replays while preserving `benji-franklin-templeton`'s `2026-10-30` v1 PSI cutoff."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.97",
     "title": "Clocked Curve StableSwap-NG spot quotes for active NAV tokens with two-clock freshness and R8 isolation",
     "date": "2026-11-26",

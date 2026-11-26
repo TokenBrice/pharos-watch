@@ -82,19 +82,19 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/stablecoins/coins.generated.json",
-      "sha256": "1920870db6e1b38d351d7a6264c58d3992c9cbcace9f64270e4c814f522165b5"
+      "sha256": "913efa6fc2f5cfb906d9ca0785bbbf00005e6be0465081c7665b53f7cbae1695"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-full.generated.json",
-      "sha256": "5a49e1ffd242eeb13880566a4874cf57e03371e06fcab383b0ab582d135b04a1"
+      "sha256": "88a8652c283e1ed7eb6cc31ed51aa04cb0ba20ded184dc795cc1c594f5bc7fc3"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-runtime.generated.json",
-      "sha256": "9ef9c832b9306e0f869e7f89c12181fbabe495fec3f3eb3aecb7f811dee44f2c"
+      "sha256": "e6baf8cb70ba4dd0eedf032c21906c64d54cbcf08ec40debe0985457185c3dfd"
     },
     {
       "path": "shared/data/stablecoins/listing-decisions.json",
-      "sha256": "4f5e8768395ddb7fdc502d2cd711c158029b4e8c3413b15d76c2fdf623a5d2fd"
+      "sha256": "9d976a153ed92e3c26a5b9bdd4257e185c632140dec2a190a0deeb2ec0823f8f"
     },
     {
       "path": "shared/lib/base64.ts",
@@ -110,7 +110,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/classification/pegs.ts",
-      "sha256": "8d141ecfbbd0c8bedd99efba0f755c20b7d2e3cdfaf40e4517879fe14ea47b60"
+      "sha256": "673ab6c52e40245b21383a18c2b1aec53b04424639a9fa9939cd7747d5481c70"
     },
     {
       "path": "shared/lib/classification/resolve-implementation-launch-date.ts",
@@ -158,7 +158,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/depeg-config.ts",
-      "sha256": "7094cec13d45b02314c40e7117b427185a360657b5e59df196852f99d1ebe298"
+      "sha256": "ea6ddf69d757faa641820971056ffeef37e879d809a6452174ad4923f3aa34c0"
     },
     {
       "path": "shared/lib/depeg-resolver/hash.ts",
@@ -250,7 +250,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/peg-taxonomy.ts",
-      "sha256": "ee12a69bb4df0ca666494d0121ac1905b8b816efd1e07c98123170e0c4ddaa71"
+      "sha256": "bb20b7c290ab509b063babbb276b520e10ff907d51774ca0d01c622bf6c77af4"
     },
     {
       "path": "shared/lib/peg-utils.ts",
@@ -322,7 +322,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/coverage-and-stablecoin-audit.ts",
-      "sha256": "a8b52a543d915cc88f067ef9dc7d8f9327f8be52f0a0d1c591e3ad567d3e43e5"
+      "sha256": "68bafde0371c46649dbee438e49577c795b1dd4301447a0fc39650369475e18d"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/discovery.ts",
@@ -414,7 +414,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/reference-admission.ts",
-      "sha256": "048aa5669a59431fdfcee8b8dedaa129305dfb71b6f47dfc522460c6b0d786f9"
+      "sha256": "b2ece5975f220a4c3ad8c037233a07bdeb78da281b1de39fc4fe4b033d81a8ce"
     },
     {
       "path": "shared/lib/reference-market-hours.ts",
@@ -794,7 +794,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/core.ts",
-      "sha256": "6597d2db48f8bb31b88e076523fa83294a1cd47496c2400139e20c67778e516a"
+      "sha256": "39227d906b6481a5e8f76b4cda6f4e02cefc0898bf7f09ce7aafcdd509610cb6"
     },
     {
       "path": "shared/types/current-peg.ts",
@@ -930,7 +930,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/reserve-nav-supply.ts",
-      "sha256": "825d3c4b28a52e25054b9dac57265a4281f8fc3ca85f47ae1c658b8f63a0aba8"
+      "sha256": "cfe837b7fbf2de8e00f8c907a1c474668551071df16ca7f9e15737fd1f288560"
     },
     {
       "path": "shared/types/reserves.ts",
@@ -1379,7 +1379,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-11-26-block-26499490-shock-coverage.json.gz"
     }
   ],
-  "digest": "f146c03ac701f13f74c8bd801e92ffb4a4cd9fa08b90bffadc93b28a281af288"
+  "digest": "aa9cd24de763e8b0f15a372a02cf734359de0394769a6b4e1e5f69eee1f205e4"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

@@ -135,7 +135,7 @@ Historical inputs use the core roster effective at the scored time and exact sev
 | Input | Source |
 |-------|--------|
 | Active depegs (bps + mcap) | `depeg_events` where `ended_at IS NULL`; USD-domain events use current stablecoins prices or replay-safe `price_cache` fallback, while native-domain events use per-event `depeg-native-quote:<eventId>` cache or timestamped start/recovery observations, strictly younger than 6h |
-| Total market cap | Sum of admitted finite nonnegative current supply from `CORE_PSI_ELIGIBLE_IDS` (active core aggregate members under `core-stablecoins-v2` + PSI historical assets; pre-cutover replays use frozen `core-stablecoins-v1` membership) |
+| Total market cap | Sum of admitted finite nonnegative current supply from `CORE_PSI_ELIGIBLE_IDS` (active core aggregate members under `core-stablecoins-v2` + PSI historical assets; pre-cutover replays use frozen `core-stablecoins-v1` membership with pinned v1 non-active exit dates in `CORE_AGGREGATE_V1_NON_ACTIVE_EXIT_DATES` such as `benji-franklin-templeton` at `2026-10-30`, and post-cutover listing-class exits keep their reviewed effective UTC dates in `CORE_AGGREGATE_V2_POST_CUTOVER_EXIT_DATES` such as `usdcx-movement` at `2026-11-27`) |
 | 7-day market cap change | Paired current vs previous-week totals; absent, empty, wholly invalid, nonfinite or negative observations leave both trend sides |
 | DEWS stress breadth | Exact core-universe `stress_signal_publication_rows` from the published DEWS generation; only core-aggregate/historical warning bands (`ALERT`, `WARNING`, `DANGER`) contribute after non-empty/fresh generation proof, though DEWS monitors all active listings |
 

@@ -6,12 +6,12 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 runs every 15 minute
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.54`<!-- GENERATED-END: methodology-version-depeg-detection -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.55`<!-- GENERATED-END: methodology-version-depeg-detection -->
 - **Runtime/version source:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-dews/`
 
-DEWS v6.45 admits independently proven isolated canonical-leg outflows only when they raise stress; v6.46 caps a lone Mento Broker observation at WATCH unless independent qualifying evidence releases the cap. See [DEWS](./dews.md) for both evidence rules.
+DEWS v6.45 admits independently proven isolated canonical-leg outflows only when they raise stress; v6.46 caps a lone Mento Broker observation at WATCH unless independent qualifying evidence releases the cap. See [DEWS](./dews.md) for both evidence rules. Shared Depeg/DEWS v6.55 registers `NZD` (`peggedNZD`) in `REFERENCE_CLOSURE_HOLD_BANDS_BPS` (`{ weekend: 2500, extended: 2500 }`) and `CALIBRATED_FIXING_BANDS` (`{ 1: 500, 2: 500, 3: 500 }`) under the conservative `"Other supported FX units"` fallback bands until NZD completes historical L18 calibration.
 
 Pending release obligations are tracked by [DEWS](./dews.md#methodology-versioning).
 
