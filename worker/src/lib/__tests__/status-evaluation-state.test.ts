@@ -1,14 +1,35 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { STATUS_BLACKLIST_THRESHOLDS, STATUS_MISSING_PRICE_THRESHOLDS, STATUS_RESERVE_COHORT_SLO } from "@shared/lib/status-thresholds";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import {
+  getActiveAssetServiceBreadthThreshold,
+  getActivePriceCoverageBreadthStatus,
+  STATUS_BLACKLIST_THRESHOLDS,
+  STATUS_MISSING_PRICE_THRESHOLDS,
+  STATUS_RESERVE_COHORT_SLO,
+} from "@shared/lib/status-thresholds";
 import { CRON_INTERVALS, getCronStatusImpact } from "@shared/lib/cron-jobs";
 import { computeRawStatus } from "../status-evaluation";
-import { buildStatusD1Scenario, cleanupStatusTest, makeCronRow } from "../../api/__tests__/status.test-support";
+import { cleanupStatusTest, makeCronHistoryScenario as makeScenario, makeCronRow } from "../../api/__tests__/status.test-support";
 import { getCircuitImpactStatus, getPublicProducerGraceBudget, getPublicSafetyScoreStatus, PUBLIC_CIRCUIT_IMPACT_QUORUM, PUBLIC_PRODUCER_INTERVAL_SEC } from "@shared/lib/public-health";
+import { applyPublicStatusHysteresis, projectPublicStatus } from "@shared/lib/public-status-components";
 import { transitionHasPublicImpact } from "@shared/lib/status-public-impact";
+import { makeHealthyHealthResponse } from "@shared/test-utils/health-fixtures";
 import type { CronRunDetail, StatusCause, StatusResponse } from "@shared/types/status";
-import type { ReserveFeedReview } from "@shared/types/live-reserves";
+import { resolveReserveSyncRunStatus } from "../../cron/sync-live-reserves-finalize";
 import type { PublicHealthAssessment } from "../public-health-assessment";
-import { makePublicHealth } from "./public-health.test-support";
+import {
+  createReviewExpiryReminderHelpers,
+  makeAvailabilityCauseInput,
+  makeAvailabilityEvaluationInput,
+  makeDataQualityEvaluationInput,
+  makeG4ListingOmissionFixture,
+  makeG4OperationalPublicPrior,
+  makeG4PriceGapCoverage,
+  makeG4ReserveNoHistoryComposition,
+  makeG4ReserveSteadyStateComposition,
+  makePublicHealth,
+  makeReserveComposition,
+} from "./public-health.test-support";
 import {
   makeDataQuality,
   makeReserveComposition as makeBaseReserveComposition,
@@ -21,80 +42,13 @@ import {
   evaluateDepegBlindReviewCauses,
   evaluateReserveCompositionStatus,
   readRedemptionCapacityCoverage,
-  type AvailabilityEvaluationInput,
   type DataQualityEvaluationInput,
 } from "../status/evaluation-rules";
 import {
   evaluateStablecoinActivePriceCoverage,
   STABLECOIN_PRICE_GAP_REVIEWS,
-  type StablecoinPriceGapReview,
 } from "../stablecoin-publication-coverage";
 import { DEPEG_BLIND_EVENT_REVIEWS } from "../canary-checks-depeg";
-
-function makeReserveComposition(
-  overrides?: Partial<Exclude<StatusResponse["reserveComposition"], { status: "unavailable" }>>,
-): Exclude<StatusResponse["reserveComposition"], { status: "unavailable" }> {
-  return makeBaseReserveComposition({
-    configuredCoins: 10,
-    freshCoins: 10,
-    independentFreshEligible: 4,
-    independentFreshUnverified: 2,
-    staticValidatedFresh: 2,
-    weakProbeFresh: 2,
-    lastSuccessAt: 1_700_000_000,
-    oldestFreshAgeSec: 3600,
-    freshCoverageRatio: 1,
-    authoritativeFreshCoverageRatio: 0.8,
-    ...overrides,
-  });
-}
-
-function makeAvailabilityCauseInput(publicHealth: PublicHealthAssessment) {
-  return {
-    publicHealth,
-    availabilityImpactingUnhealthyCrons: 0,
-    watchUnhealthyCrons: 0,
-    degradedCronRuns: 0,
-    cronErrorCount: 0,
-    availabilityImpactingCronErrors: 0,
-    availabilityImpactingConsecutiveCronErrors: 0,
-    cronHistoryQueryFailed: false,
-    cronProgressQueryFailed: false,
-    cronLeaseQueryFailed: false,
-  };
-}
-
-function makeAvailabilityEvaluationInput(
-  overrides: Partial<AvailabilityEvaluationInput> = {},
-): AvailabilityEvaluationInput {
-  return {
-    ...makeAvailabilityCauseInput(overrides.publicHealth ?? makePublicHealth()),
-    ...overrides,
-  };
-}
-
-function makeDataQualityEvaluationInput(
-  overrides: Partial<DataQualityEvaluationInput> = {},
-): DataQualityEvaluationInput {
-  const publicHealth = makePublicHealth();
-  return {
-    nowSec: 1_700_000_000,
-    dataQuality: makeDataQuality(),
-    repairRunnerAutoRepairCount: null,
-    activePriceCoverage: publicHealth.activePriceCoverage,
-    missingPriceRatio: 0,
-    blacklistMissingRatio: 0,
-    blacklistRecentMissing: 0,
-    onchainAssessment: { status: "healthy", causes: [], representative: false },
-    onchainAssessmentCauses: [],
-    reserveCompositionQueryFailed: false,
-    reserveComposition: makeReserveComposition(),
-    reserveCompositionStatus: "healthy",
-    redemptionCapacityCoverage: null,
-    activePriceCoverageImpactStatus: "healthy",
-    ...overrides,
-  };
-}
 
 describe("status evaluation policy", () => {
   it("keeps queued proof catch-up info-only while expired or failed gaps retain severity", () => {
@@ -937,33 +891,6 @@ describe("status cause text", () => {
   });
 
   it.each([
-    [30_000_000, "healthy", "info"],
-    [96_534_823.01, "healthy", "info"],
-    [500_000_000, "healthy", "info"],
-  ] as const)("aligns publication cause and floor for retained cap %s", (cap, expectedStatus, severity) => {
-    const nowSec = 1_790_000_000;
-    const evaluated = evaluateStablecoinActivePriceCoverage([], ["missing"], {
-      nowSec, previousAcceptedAssetsById: new Map([["missing", {
-        id: "missing", circulating: { peggedUSD: cap }, supplyObservedAt: nowSec - 900,
-      }]]),
-    });
-    const result = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
-      nowSec,
-      dataQuality: makeDataQuality({
-        stablecoinPublication: {
-          status: "incomplete", expectedActiveCount: 396, presentActiveCount: 395, waivedActiveCount: 0,
-          missingActiveIds: ["missing"], waivedActiveIds: [], expiredWaiverIds: [], observedAt: nowSec,
-        },
-      }),
-      activePriceCoverage: { ...evaluated, status: "incomplete", observedAt: nowSec },
-    }));
-    expect(result.status).toBe(expectedStatus);
-    expect(result.causes).toContainEqual(expect.objectContaining({
-      code: "stablecoin_publication_incomplete", severity,
-    }));
-  });
-
-  it.each([
     [4, "healthy", "info"],
     [19, "healthy", "info"],
     [20, "degraded", "warning"],
@@ -1020,174 +947,83 @@ describe("status cause text", () => {
     }
   });
 
-  it("emits a durable warning without degrading for incomplete active-price coverage", () => {
-    const activePriceCoverage = {
-      ...makePublicHealth().activePriceCoverage,
-      status: "incomplete" as const,
-      expectedActiveCount: 3,
-      presentActiveCount: 3,
-      pricedActiveCount: 1,
-      missingPriceCount: 2,
-      pricedActiveIds: ["coin-a"],
-      missingActiveIds: ["coin-b", "coin-c"],
-      missingActiveAssets: [
-        {
-          stablecoinId: "coin-b",
-          symbol: "B",
-          marketCapUsd: 20_000_000,
-          currentPrice: null,
-          currentSource: null,
-          currentObservedAt: null,
-          currentConfidence: null,
-          consecutiveMissingGenerations: 2,
-          lastAcceptedPrice: null,
-          lastAcceptedSource: null,
-          lastAcceptedObservedAt: null,
-          rejectionReason: "missing",
-          alertEligible: true,
-        },
-        {
-          stablecoinId: "coin-c",
-          symbol: "C",
-          marketCapUsd: 10_000_000,
-          currentPrice: null,
-          currentSource: null,
-          currentObservedAt: null,
-          currentConfidence: null,
-          consecutiveMissingGenerations: 1,
-          lastAcceptedPrice: null,
-          lastAcceptedSource: null,
-          lastAcceptedObservedAt: null,
-          rejectionReason: "missing",
-          alertEligible: false,
-        },
-      ],
-      alertEligibleCount: 1,
-      alertEligibleIds: ["coin-b"],
-    };
+  const g4Now = 1_790_000_000, g4Roster = Array.from({ length: ACTIVE_STABLECOINS.length }, (_, i) => `a-${i}`);
+  const g4T = Math.ceil(ACTIVE_STABLECOINS.length * 0.05);
 
-    const status = evaluateDataQualityStatus(makeDataQualityEvaluationInput()).status;
-    const causes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ activePriceCoverage })).causes;
-
-    expect(status).toBe("healthy");
-    expect(causes).toContainEqual(
-      expect.objectContaining({
-        code: "active_price_coverage_incomplete",
-        severity: "warning",
-        metric: "missingActivePrices",
-        value: 2,
-        message: expect.stringContaining("coin-b"),
-      }),
-    );
-    expect(causes.find((cause) => cause.code === "active_price_coverage_incomplete")?.message).not.toContain("coin-c");
-    expect(causes.find((cause) => cause.code === "active_price_coverage_duration_degraded")).toBeUndefined();
-  });
-
-  it("keeps a USYC-sized gap past the duration budget a named Watch without a public-impact cause", () => {
-    const generations = STATUS_MISSING_PRICE_THRESHOLDS.generationsElevated + 4;
-    const activePriceCoverage = {
-      ...makePublicHealth().activePriceCoverage,
-      status: "incomplete" as const,
-      expectedActiveCount: 396,
-      presentActiveCount: 396,
-      pricedActiveCount: 394,
-      missingPriceCount: 2,
-      pricedActiveIds: ["coin-a"],
-      missingActiveIds: ["coin-b", "coin-c"],
-      missingActiveAssets: [
-        {
-          stablecoinId: "coin-b",
-          symbol: "B",
-          marketCapUsd: 2_400_000_000,
-          currentPrice: null,
-          currentSource: null,
-          currentObservedAt: null,
-          currentConfidence: null,
-          consecutiveMissingGenerations: generations,
-          lastAcceptedPrice: null,
-          lastAcceptedSource: null,
-          lastAcceptedObservedAt: null,
-          rejectionReason: "missing",
-          alertEligible: true,
-        },
-        {
-          stablecoinId: "coin-c",
-          symbol: "C",
-          marketCapUsd: 10_000_000,
-          currentPrice: null,
-          currentSource: null,
-          currentObservedAt: null,
-          currentConfidence: null,
-          consecutiveMissingGenerations: 1,
-          lastAcceptedPrice: null,
-          lastAcceptedSource: null,
-          lastAcceptedObservedAt: null,
-          rejectionReason: "missing",
-          alertEligible: false,
-        },
-      ],
-      alertEligibleCount: 1,
-      alertEligibleIds: ["coin-b"],
-    };
-
-    const result = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ activePriceCoverage }));
-
-    expect(result.status).toBe("healthy");
-    expect(result.causes.some((cause) => cause.code === "active_price_coverage_duration_degraded")).toBe(false);
-    expect(result.causes.find((cause) => cause.code === "active_price_coverage_incomplete")).toMatchObject({
-      severity: "warning",
-    });
-    expect(result.causes.find((cause) => cause.code === "active_price_coverage_incomplete")?.message).toContain("coin-b");
-  });
-
-  it("emits an info-severity, non-degrading cause for a transient non-alert-eligible price miss", () => {
-    const activePriceCoverage = {
-      ...makePublicHealth().activePriceCoverage,
-      status: "incomplete" as const,
-      expectedActiveCount: 3,
-      presentActiveCount: 3,
-      pricedActiveCount: 2,
-      missingPriceCount: 1,
-      pricedActiveIds: ["coin-a", "coin-c"],
-      missingActiveIds: ["coin-b"],
-      missingActiveAssets: [
-        {
-          stablecoinId: "coin-b",
-          symbol: "B",
-          marketCapUsd: 20_000_000,
-          currentPrice: null,
-          currentSource: null,
-          currentObservedAt: null,
-          currentConfidence: null,
-          consecutiveMissingGenerations: 1,
-          lastAcceptedPrice: null,
-          lastAcceptedSource: null,
-          lastAcceptedObservedAt: null,
-          rejectionReason: "missing",
-          alertEligible: false,
-        },
-      ],
-      alertEligibleCount: 0,
-      alertEligibleIds: [],
-    };
-
-    // Realistic wiring: the gated public impact status is "healthy" for a
-    // transient miss, so the admin dataQualityStatus floor no longer degrades on
-    // it either. The cause is still emitted for observability, but at info
-    // severity so it is neither public-impacting nor durable.
-    const status = evaluateDataQualityStatus(makeDataQualityEvaluationInput()).status;
-    const causes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ activePriceCoverage })).causes;
-
-    expect(status).toBe("healthy");
-    expect(causes).toContainEqual(
-      expect.objectContaining({
-        code: "active_price_coverage_incomplete",
-        severity: "info",
-        metric: "missingActivePrices",
-        value: 1,
-      }),
-    );
-  });
+  it.each([
+    ["A1: breadth <5% stays healthy across listings (any cap) & 2-gen prices; k=T degrades", () => {
+      const N = g4Roster.length;
+      expect(getActiveAssetServiceBreadthThreshold(N)).toBe(g4T);
+      // High-cap listing omissions below 5% stay operational/info notices of any market cap.
+      for (const cap of [30_000_000, 96_534_823.01, 500_000_000]) {
+        const { dataQualityInput, publicHealthInput } = makeG4ListingOmissionFixture(g4Now, N, ["a-0"], cap);
+        const dq = evaluateDataQualityStatus(dataQualityInput), pub = projectPublicStatus(publicHealthInput);
+        expect([dq.status, transitionHasPublicImpact(dq.causes)]).toEqual(["healthy", false]);
+        expect(dq.causes).toContainEqual(expect.objectContaining({ code: "stablecoin_publication_incomplete", severity: "info" }));
+        expect([pub.headline.state, pub.components.find((c) => c.id === "stablecoin-data")?.state]).toEqual(["operational", "operational"]);
+      }
+      for (const k of [1, 6, g4T - 1, g4T]) {
+        const want = k < g4T ? "healthy" : "degraded";
+        const pubRes = evaluateDataQualityStatus(makeG4ListingOmissionFixture(g4Now, N, g4Roster.slice(0, k)).dataQualityInput);
+        expect([pubRes.status, transitionHasPublicImpact(pubRes.causes)]).toEqual([want, k === g4T]);
+        const cov = makeG4PriceGapCoverage(g4Roster, g4Now, k, 2, k === 1 ? { extraTransientCount: 1, boostFirstCapUsd: 2_400_000_000 } : {});
+        const priceRes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
+          nowSec: g4Now, activePriceCoverage: cov, activePriceCoverageImpactStatus: getActivePriceCoverageBreadthStatus(cov),
+        }));
+        expect([priceRes.status, transitionHasPublicImpact(priceRes.causes)]).toEqual([want, k === g4T]);
+        expect(priceRes.causes.some((c) => c.code === "active_price_coverage_duration_degraded")).toBe(false);
+        if (k === 1) {
+          const inc = priceRes.causes.find((c) => c.code === "active_price_coverage_incomplete");
+          expect(inc).toMatchObject({ severity: "warning", metric: "missingActivePrices", value: 2, message: expect.stringContaining("a-0") });
+          expect(inc?.message).not.toContain("a-1");
+        }
+      }
+    }],
+    ["A2: single-sample T 1-gen gaps and single db-unhealthy require hysteresis", () => {
+      const cov = makeG4PriceGapCoverage(g4Roster, g4Now, g4T, 1);
+      const res = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
+        nowSec: g4Now, activePriceCoverage: cov, activePriceCoverageImpactStatus: getActivePriceCoverageBreadthStatus(cov),
+      }));
+      expect([res.status, res.causes.some((c) => c.code === "active_price_coverage_breadth_degraded"), transitionHasPublicImpact(res.causes)])
+        .toEqual(["healthy", false, false]);
+      const raw = projectPublicStatus({ ...makeHealthyHealthResponse(), status: "stale", warnings: ["db-unhealthy"] });
+      expect(raw.headline.state).toBe("degraded");
+      expect(raw.components.every((c) => c.state === "degraded" && c.reasons.includes("db-unavailable"))).toBe(true);
+      const { projection, pending } = applyPublicStatusHysteresis(raw, makeG4OperationalPublicPrior(g4Now), g4Now);
+      expect([projection.headline.state, projection.components.every((c) => c.state === "operational")]).toEqual(["operational", true]);
+      expect(Object.keys(pending)).toHaveLength(raw.components.length);
+      expect(Object.values(pending).every((e) => e.state === "degraded" && e.count === 1)).toBe(true);
+    }],
+    ["A3: reviewed gaps and transient non-eligible misses emit info causes only", () => {
+      // Realistic wiring: a transient miss keeps gated public impact healthy, so the admin floor stays healthy and the cause stays info-only.
+      const rev = STABLECOIN_PRICE_GAP_REVIEWS[0]!;
+      const revCov = {
+        ...evaluateStablecoinActivePriceCoverage([{ id: rev.stablecoinId, price: null }], [rev.stablecoinId], {
+          nowSec: rev.reviewedAt, priceGapReviews: [rev],
+        }),
+        status: "incomplete" as const, observedAt: rev.reviewedAt,
+      };
+      for (const [clock, cov] of [[rev.reviewedAt, revCov], [g4Now, makeG4PriceGapCoverage(g4Roster, g4Now, 1, 1)]] as const) {
+        const res = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ nowSec: clock, activePriceCoverage: cov }));
+        expect([res.status, res.causes.length > 0, res.causes.every((c) => c.severity === "info"), transitionHasPublicImpact(res.causes)])
+          .toEqual(["healthy", true, true, false]);
+        expect(res.causes).toContainEqual(expect.objectContaining({
+          code: "active_price_coverage_incomplete", severity: "info", metric: "missingActivePrices", value: 1,
+        }));
+      }
+    }],
+    ["A4: reserve roster with 1-6 failures, structural-only & explicit no-history stays ok/healthy", () => {
+      for (const failed of [1, 6]) {
+        expect(resolveReserveSyncRunStatus({
+          total: 330, checkpointOwned: false,
+          counts: { synced: 330 - failed, failed, persistenceFailed: 0, skipped: 0, circuitSkipped: 0, deferredSkipped: 0, deferredCoins: 0, attemptedCoins: 330 },
+        })).toBe("ok");
+        expect(evaluateReserveCompositionStatus(makeG4ReserveSteadyStateComposition(330, failed)).status).toBe("healthy");
+      }
+      const noHistory = evaluateReserveCompositionStatus(makeG4ReserveNoHistoryComposition(330));
+      expect([noHistory.bootstrap, noHistory.status]).toEqual([true, "healthy"]);
+    }],
+  ] as const)("G4 runtime guard — %s", (_label, run) => run());
 
   it("retains uncertain-write causes without treating a deferred frontier as degradation", () => {
     const reserveComposition = {
@@ -1376,50 +1212,7 @@ describe("review expiry reminders", () => {
 
   const nowSec = 1_700_000_000;
   const runbookUrl = "https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks/review-renewal.md";
-
-  function priceReview(stablecoinId: string, remainingSec: number): StablecoinPriceGapReview {
-    return {
-      stablecoinId, owner: "ops", reason: "Reviewed missing-price evidence.",
-      sources: ["https://example.com/price-evidence"],
-      reviewedAt: nowSec - 86400, expiresAt: nowSec + remainingSec,
-    };
-  }
-
-  function priceInput(
-    reviews: StablecoinPriceGapReview[],
-    coverageClock = nowSec,
-    price: number | null = null,
-  ): DataQualityEvaluationInput {
-    const evaluated = evaluateStablecoinActivePriceCoverage(
-      reviews.map((review) => ({ id: review.stablecoinId, price })),
-      reviews.map((review) => review.stablecoinId),
-      { nowSec: coverageClock, priceGapReviews: reviews },
-    );
-    return makeDataQualityEvaluationInput({
-      nowSec,
-      activePriceCoverage: { ...evaluated, status: evaluated.complete ? "complete" : "incomplete", observedAt: coverageClock },
-    });
-  }
-
-  function reserveReview(stablecoinId: string, remainingSec: number): ReserveFeedReview {
-    return {
-      stablecoinId, adapterKey: "accountable", failureCategory: "unknown",
-      warningCodes: [], errorPrefix: "primary:http-json: accountable:stale-portfolio-timestamp",
-      owner: "ops", reason: "Reviewed stale portfolio evidence.",
-      sources: [{ url: "https://example.com/reserve-evidence", evidenceDate: "2023-11-13" }],
-      reviewedAt: nowSec - 86400, expiresAt: nowSec + remainingSec,
-    };
-  }
-
-  function reserveInput(reviews: ReserveFeedReview[]): DataQualityEvaluationInput {
-    return makeDataQualityEvaluationInput({
-      nowSec,
-      reserveComposition: makeReserveComposition({
-        acknowledgedFeedIds: reviews.map((review) => review.stablecoinId),
-        acknowledgedFeeds: reviews,
-      }),
-    });
-  }
+  const { priceReview, priceInput, reserveReview, reserveInput } = createReviewExpiryReminderHelpers(nowSec);
 
   for (const lane of ["price", "reserve"] as const) {
     const code = lane === "price" ? "price_gap_reviews_expiring" : "reserve_feed_reviews_expiring";
@@ -1529,30 +1322,7 @@ describe("review expiry reminders", () => {
 describe("status confidence with unreadable cron history", () => {
   afterEach(cleanupStatusTest);
 
-  type StatusD1Overrides = NonNullable<
-    NonNullable<Parameters<typeof buildStatusD1Scenario>[0]>["overrides"]
-  >;
-
-  // Keep every non-cron lane healthy and observable so the only difference
-  // between the scenarios is whether the cron-history read succeeded.
-  function makeScenario(overrides: StatusD1Overrides) {
-    const now = Math.floor(Date.now() / 1000);
-    return buildStatusD1Scenario({
-      sections: ["sentinel", "live", "publication", "derived", "reserves", "statusState", "cronState"],
-      healthyLive: true,
-      overrides: [
-        { match: "WITH slot_lag", rows: [{ started_slots: 0, late_slots: 0, max_lag_sec: null }] },
-        { match: "FROM cache WHERE key = ?", matchBinds: ["yield-rankings"], rows: [], first: null },
-        { match: "FROM status_transitions WHERE scope", rows: [], first: { cnt: 0 } },
-        { match: "FROM cache\n           WHERE key IN", rows: [] },
-        { match: "SELECT MAX(updated_at) as latest, COUNT(DISTINCT", rows: [], first: { latest: now - 60, tracked: 1 } },
-        { match: "HAVING latest_update <", rows: [], first: { cnt: 0 } },
-        { match: "SELECT stablecoin_id, SUM(supply) as total_supply", rows: [] },
-        ...overrides,
-      ],
-    });
-  }
-
+  // Keep every non-cron lane healthy and observable so the only difference between scenarios is whether the cron-history read succeeded.
   it("does not score an unreadable cron history as zero unhealthy crons", async () => {
     const now = Math.floor(Date.now() / 1000);
     vi.spyOn(Date, "now").mockReturnValue(now * 1000);

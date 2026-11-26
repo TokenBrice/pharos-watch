@@ -1,12 +1,24 @@
 import type { PublicHealthAssessment } from "../public-health-assessment";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import { STATUS_MISSING_PRICE_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { makeHealthyHealthResponse } from "@shared/test-utils/health-fixtures";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { assessD1Capacity } from "@shared/lib/d1-capacity";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import type { ReserveFeedReview } from "@shared/types/live-reserves";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 import type { V9PublicationHealth } from "@shared/types/report-cards-v9";
+import { PUBLIC_STATUS_COMPONENT_IDS, type HealthResponse, type StatusResponse } from "@shared/types/status";
+import {
+  makeDataQuality,
+  makeReserveComposition as makeBaseReserveComposition,
+} from "@shared/types/__tests__/status.test-support";
+import type { AvailabilityEvaluationInput, DataQualityEvaluationInput } from "../status/evaluation-rules";
+import {
+  evaluateStablecoinActivePriceCoverage,
+  type StablecoinPriceGapReview,
+} from "../stablecoin-publication-coverage";
 import { EXPECTED_FX_PEG_KEYS } from "../fx-config";
 import { fxRatesCacheRows } from "./fx-rate-state.test-support";
 
@@ -365,4 +377,108 @@ export function makeMintBurnAssessmentDb(
     rowCountLookup,
     { match: "FROM cron_runs", rows: [], first: null },
   ]);
+}
+
+export function makeReserveComposition(overrides?: Partial<Exclude<StatusResponse["reserveComposition"], { status: "unavailable" }>>): Exclude<StatusResponse["reserveComposition"], { status: "unavailable" }> {
+  return makeBaseReserveComposition({
+    configuredCoins: 10, freshCoins: 10, independentFreshEligible: 4, independentFreshUnverified: 2,
+    staticValidatedFresh: 2, weakProbeFresh: 2, lastSuccessAt: 1_700_000_000, oldestFreshAgeSec: 3600,
+    freshCoverageRatio: 1, authoritativeFreshCoverageRatio: 0.8, ...overrides,
+  });
+}
+
+export function makeAvailabilityCauseInput(publicHealth: PublicHealthAssessment) {
+  return {
+    publicHealth, availabilityImpactingUnhealthyCrons: 0, watchUnhealthyCrons: 0, degradedCronRuns: 0,
+    cronErrorCount: 0, availabilityImpactingCronErrors: 0, availabilityImpactingConsecutiveCronErrors: 0,
+    cronHistoryQueryFailed: false, cronProgressQueryFailed: false, cronLeaseQueryFailed: false,
+  };
+}
+
+export function makeAvailabilityEvaluationInput(overrides: Partial<AvailabilityEvaluationInput> = {}): AvailabilityEvaluationInput {
+  return { ...makeAvailabilityCauseInput(overrides.publicHealth ?? makePublicHealth()), ...overrides };
+}
+
+export function makeDataQualityEvaluationInput(overrides: Partial<DataQualityEvaluationInput> = {}): DataQualityEvaluationInput {
+  const publicHealth = makePublicHealth();
+  return {
+    nowSec: 1_700_000_000, dataQuality: makeDataQuality(), repairRunnerAutoRepairCount: null,
+    activePriceCoverage: publicHealth.activePriceCoverage, missingPriceRatio: 0, blacklistMissingRatio: 0,
+    blacklistRecentMissing: 0, onchainAssessment: { status: "healthy", causes: [], representative: false },
+    onchainAssessmentCauses: [], reserveCompositionQueryFailed: false, reserveComposition: makeReserveComposition(),
+    reserveCompositionStatus: "healthy", redemptionCapacityCoverage: null, activePriceCoverageImpactStatus: "healthy", ...overrides,
+  };
+}
+
+export function createReviewExpiryReminderHelpers(nowSec: number) {
+  const priceReview = (stablecoinId: string, remainingSec: number): StablecoinPriceGapReview => ({
+    stablecoinId, owner: "ops", reason: "Reviewed missing-price evidence.",
+    sources: ["https://example.com/price-evidence"], reviewedAt: nowSec - 86400, expiresAt: nowSec + remainingSec,
+  });
+  const priceInput = (reviews: StablecoinPriceGapReview[], coverageClock = nowSec, price: number | null = null): DataQualityEvaluationInput => {
+    const ev = evaluateStablecoinActivePriceCoverage(reviews.map((r) => ({ id: r.stablecoinId, price })), reviews.map((r) => r.stablecoinId), { nowSec: coverageClock, priceGapReviews: reviews });
+    return makeDataQualityEvaluationInput({ nowSec, activePriceCoverage: { ...ev, status: ev.complete ? "complete" : "incomplete", observedAt: coverageClock } });
+  };
+  const reserveReview = (stablecoinId: string, remainingSec: number): ReserveFeedReview => ({
+    stablecoinId, adapterKey: "accountable", failureCategory: "unknown", warningCodes: [],
+    errorPrefix: "primary:http-json: accountable:stale-portfolio-timestamp", owner: "ops", reason: "Reviewed stale portfolio evidence.",
+    sources: [{ url: "https://example.com/reserve-evidence", evidenceDate: "2023-11-13" }], reviewedAt: nowSec - 86400, expiresAt: nowSec + remainingSec,
+  });
+  const reserveInput = (reviews: ReserveFeedReview[]): DataQualityEvaluationInput =>
+    makeDataQualityEvaluationInput({ nowSec, reserveComposition: makeReserveComposition({ acknowledgedFeedIds: reviews.map((r) => r.stablecoinId), acknowledgedFeeds: reviews }) });
+  return { priceReview, priceInput, reserveReview, reserveInput };
+}
+
+export function makeG4ListingOmissionFixture(nowSec: number, expectedActiveCount: number, missingIds: readonly string[], retainedCapUsd = 5_000_000): {
+  dataQualityInput: DataQualityEvaluationInput; publicHealthInput: HealthResponse;
+} {
+  const evaluated = evaluateStablecoinActivePriceCoverage([], [...missingIds], {
+    nowSec,
+    previousAcceptedAssetsById: new Map(missingIds.map((id) => [id, { id, circulating: { peggedUSD: retainedCapUsd }, supplyObservedAt: nowSec - 900 }])),
+  });
+  const stablecoinPublication = {
+    status: "incomplete" as const, expectedActiveCount, presentActiveCount: expectedActiveCount - missingIds.length,
+    waivedActiveCount: 0, missingActiveIds: [...missingIds], waivedActiveIds: [] as string[], expiredWaiverIds: [] as string[], observedAt: nowSec,
+  };
+  return {
+    dataQualityInput: makeDataQualityEvaluationInput({
+      nowSec, dataQuality: makeDataQuality({ stablecoinPublication }),
+      activePriceCoverage: { ...evaluated, status: "incomplete", observedAt: nowSec },
+    }),
+    publicHealthInput: { ...makeHealthyHealthResponse(), stablecoinPublication },
+  };
+}
+
+export function makeG4PriceGapCoverage(
+  roster: readonly string[], nowSec: number, missingCount: number, generations: 1 | 2,
+  options: { extraTransientCount?: number; boostFirstCapUsd?: number } = {},
+): PublicHealthAssessment["activePriceCoverage"] {
+  const first = evaluateStablecoinActivePriceCoverage(roster.slice(missingCount).map((id) => ({ id, price: 1, priceSource: "coingecko" })), [...roster], { nowSec: nowSec - 900 });
+  const evaluated = generations === 1
+    ? first
+    : evaluateStablecoinActivePriceCoverage(roster.slice(missingCount + (options.extraTransientCount ?? 0)).map((id) => ({ id, price: 1, priceSource: "coingecko" })), [...roster], { nowSec, previousCoverage: first });
+  const missingActiveAssets = evaluated.missingActiveAssets.map((a, i) =>
+    i === 0 && options.boostFirstCapUsd != null
+      ? { ...a, marketCapUsd: options.boostFirstCapUsd, consecutiveMissingGenerations: STATUS_MISSING_PRICE_THRESHOLDS.generationsElevated + 4 }
+      : a);
+  return { ...evaluated, missingActiveAssets, status: "incomplete", observedAt: nowSec };
+}
+
+export function makeG4OperationalPublicPrior(nowSec: number) {
+  return new Map(PUBLIC_STATUS_COMPONENT_IDS.map((id) => [id, { state: "operational" as const, since: nowSec - 3_600, reasons: [] as string[], summary: "" }]));
+}
+
+export function makeG4ReserveSteadyStateComposition(configuredCoins: number, failed: number) {
+  return makeReserveComposition({
+    configuredCoins, freshCoins: configuredCoins - 10 - failed, errorCoins: failed, degradedCoins: 6, healthDegradedCoins: 0, missingCoins: 4,
+    independentFreshEligible: 220, independentFreshUnverified: 40, staticValidatedFresh: 30, weakProbeFresh: configuredCoins - 300 - failed,
+  });
+}
+
+export function makeG4ReserveNoHistoryComposition(configuredCoins: number) {
+  return makeReserveComposition({
+    configuredCoins, freshCoins: 0, errorCoins: 0, degradedCoins: 0, healthDegradedCoins: 0, missingCoins: configuredCoins,
+    independentFreshEligible: 0, independentFreshUnverified: 0, staticValidatedFresh: 0, weakProbeFresh: 0,
+    lastSuccessAt: null, oldestFreshAgeSec: null, freshCoverageRatio: 0, authoritativeFreshCoverageRatio: 0, acknowledgedFeedIds: [],
+  });
 }
