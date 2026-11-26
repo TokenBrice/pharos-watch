@@ -1,5 +1,10 @@
 import { TELEGRAM_PRESET_LABEL_BY_ID } from "../common/presets";
-import { buildListMessage, buildManageAlertsKeyboard, followsNothing } from "../webhook/telegram-webhook-messages";
+import {
+  buildListMessage,
+  buildManageAlertsKeyboard,
+  cmdForChat,
+  followsNothing,
+} from "../webhook/telegram-webhook-messages";
 import { buildOnboardingKeyboard } from "../webhook/telegram-webhook-setup";
 import { loadPresetSubscriptions } from "../store/presets";
 import { loadSubscriberByChat } from "../store/subscribers";
@@ -23,7 +28,7 @@ export const handleList: WebhookCommandHandler = async (ctx) => {
       await ctx.replyToChatWithMarkup(message, { replyMarkup: buildOnboardingKeyboard() });
       return;
     }
-    await ctx.replyToChat(`${message} Admins can start with /subscribe@PharosWatchBot usd-top25.`);
+    await ctx.replyToChat(`${message} Admins can start with ${cmdForChat("subscribe", ctx.chatType)} usd-top25.`);
     return;
   }
 
@@ -33,6 +38,7 @@ export const handleList: WebhookCommandHandler = async (ctx) => {
     presetSubscriptions,
     presetLabelById: TELEGRAM_PRESET_LABEL_BY_ID,
     lastDeliveryAt: diagnosticsRead.available ? diagnosticsRead.diagnostics?.lastSuccessfulDeliveryAt ?? null : null,
+    chatType: ctx.chatType,
   });
   await replyWithOptionalMiniApp(ctx, message, buildManageAlertsKeyboard());
 };

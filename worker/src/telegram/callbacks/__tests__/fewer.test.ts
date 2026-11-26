@@ -20,13 +20,21 @@ type SubscriptionRow = {
   dews_min_band: string | null;
 };
 
-async function tapFewer(data: string, seed?: (sqlite: { exec: (sql: string) => void }) => void) {
+async function tapFewer(
+  data: string,
+  seed?: (sqlite: { exec: (sql: string) => void }) => void,
+  chatType = "private",
+) {
   const fixtures = createLatestSchemaFixtureTracker();
   const { sqlite, db } = fixtures.open();
   try {
     sqlite.exec("INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('42', 1, 1)");
     seed?.(sqlite);
-    await handleCallbackQuery(db, "fake-token", makeCallbackQuery(data));
+    await handleCallbackQuery(
+      db,
+      "fake-token",
+      makeCallbackQuery(data, { message: { chat: { id: 42, type: chatType }, message_id: 1 } }),
+    );
     const row = sqlite.prepare(
       `SELECT alert_depeg, alert_dews, alert_safety, alert_freeze, alert_freeze_override,
               depeg_worsening_bps_step, dews_min_band
@@ -47,8 +55,8 @@ const seedCoin = (columns: string, values: string) => (sqlite: { exec: (sql: str
 
 describe("fewer callback", () => {
   it.each([
-    [100, 250, "USDC: depeg alerts now only past 2.5%. Undo in Manage Alerts."],
-    [250, 500, "USDC: depeg alerts now only past 5.0%. Undo in Manage Alerts."],
+    [100, 250, "USDC: depeg alerts from 2.5% now. Undo in Manage Alerts."],
+    [250, 500, "USDC: depeg alerts from 5% now. Undo in Manage Alerts."],
   ] as const)("steps depeg %s bps to %s bps", async (current, next, toast) => {
     const result = await tapFewer(
       "fewer:usdc-circle:ds",
@@ -83,8 +91,8 @@ describe("fewer callback", () => {
   });
 
   it.each([
-    [null, "WARNING", "USDC: stress alerts now only at WARNING and above. Undo in Manage Alerts."],
-    ["WARNING", "DANGER", "USDC: stress alerts now only at DANGER and above. Undo in Manage Alerts."],
+    [null, "WARNING", "USDC: DEWS alerts from Warning+ now. Undo in Manage Alerts."],
+    ["WARNING", "DANGER", "USDC: DEWS alerts from Danger only now. Undo in Manage Alerts."],
   ] as const)("raises the DEWS floor from %s to %s", async (current, next, toast) => {
     const result = await tapFewer(
       "fewer:usdc-circle:db",
@@ -107,7 +115,7 @@ describe("fewer callback", () => {
       }
       expect(sqlite.prepare("SELECT depeg_worsening_bps_step FROM telegram_subscriptions WHERE chat_id = '42' AND stablecoin_id = 'usdc-circle'").get())
         .toEqual({ depeg_worsening_bps_step: 250 });
-      expect(lastAckBody().text).toBe("USDC: depeg alerts now only past 2.5%. Undo in Manage Alerts.");
+      expect(lastAckBody().text).toBe("USDC: depeg alerts from 2.5% now. Undo in Manage Alerts.");
     } finally {
       fixtures.closeAll();
     }
@@ -159,7 +167,7 @@ describe("fewer callback", () => {
   });
 
   it.each([
-    ["sm", "alert_safety", "Safety alerts"],
+    ["sm", "alert_safety", "Safety Score alerts"],
     ["fz", "alert_freeze", "freeze alerts"],
   ] as const)("turns %s off for the coin", async (code, column, label) => {
     const result = await tapFewer(`fewer:usdc-circle:${code}`, seedCoin(column, "1"));

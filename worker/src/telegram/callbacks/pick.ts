@@ -1,16 +1,22 @@
+import { formatCoinPayload } from "@shared/lib/telegram-mini-app-payloads";
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status/telegram";
+import { editMessage, escapeHtml } from "../delivery/telegram";
 import { resolveTicker, type ResolvedCoin } from "../common/alerts-parser";
 import { recordTelegramUsageEvent } from "../store/usage-analytics";
 import { applySubscribeIntent, applyUnsubscribeIntent } from "../store/presets";
 import { loadSubscriptionsByIds } from "../store/subscriptions";
+import { isGroupChatType } from "../webhook/telegram-webhook-auth";
 import {
   buildCoinStatusKeyboard,
+  buildMiniAppOnlyKeyboard,
   buildStatusMessage,
   buildSubscriptionSummaryMessage,
+  buildUnsubscribeNoopKeyboard,
+  buildUnsubscribeNoopMessage,
   buildUnsubscribeSuccessMessage,
   fitsCallbackData,
 } from "../webhook/telegram-webhook-messages";
-import { loadStatusForCoin } from "../webhook/telegram-webhook-status";
+import { loadCoinDirectFollowState, loadStatusForCoin } from "../webhook/telegram-webhook-status";
 import { sendAuditedTelegramReply } from "../webhook/telegram-webhook-replies";
 import {
   callbackChatType,
@@ -122,11 +128,20 @@ export const handlePickCallback: CallbackHandler = async (ctx) => {
     await answerCallback({ text: "This button is out of date. Send the command again." });
     return;
   }
-  const isPrivate = callbackChatType(cb) === "private";
+  const chatType = callbackChatType(cb);
+  const isPrivate = chatType === "private";
 
   if (op === "st") {
-    const status = await loadStatusForCoin(db, coin.id);
-    const replyMarkup = buildCoinStatusKeyboard(coin.id, coin.symbol, { includeMiniAppButton: isPrivate });
+    // Keep `pick:st` buttons intact so the user can inspect multiple ambiguous candidates.
+    const [status, directFollow] = await Promise.all([
+      loadStatusForCoin(db, coin.id),
+      loadCoinDirectFollowState(db, chatId, coin.id),
+    ]);
+    const replyMarkup = buildCoinStatusKeyboard(coin.id, coin.symbol, {
+      includeMiniAppButton: isPrivate,
+      isGroup: isGroupChatType(chatType),
+      alreadyFollowed: directFollow.available && directFollow.followed,
+    });
     await sendAuditedTelegramReply(db, chatId, buildStatusMessage(coin.symbol, status), botToken, {
       ...(replyMarkup ? { replyMarkup } : {}),
       actionDetail: "callback_pick",
@@ -136,6 +151,16 @@ export const handlePickCallback: CallbackHandler = async (ctx) => {
   }
 
   if (!(await requireAdminForMutatingCallback(db, botToken, cb, chatId))) return;
+
+  const stripPickButtons = async (): Promise<void> => {
+    const messageId = cb.message?.message_id;
+    if (messageId == null) return;
+    await editMessage(chatId, messageId, escapeHtml(`Selected ${coin.symbol}.`), botToken, {
+      disableWebPagePreview: true,
+      replyMarkup: { inline_keyboard: [] },
+    });
+  };
+
   if (subscribe) {
     await applySubscribeIntent(db, {
       chatId,
@@ -144,17 +169,48 @@ export const handlePickCallback: CallbackHandler = async (ctx) => {
       directStablecoinIds: [coin.id],
       depegWorseningBpsStep: subscribe.depegStep,
     });
-  } else {
-    await applyUnsubscribeIntent(db, { chatId, directStablecoinIds: [coin.id] });
+    await recordTelegramUsageEvent(db, {
+      eventType: "subscribe",
+      actionDetail: "coin",
+      outcome: "success",
+    });
+    await stripPickButtons();
+    const message = buildSubscriptionSummaryMessage(
+      "Updated subscriptions.",
+      await loadSubscriptionsByIds(db, chatId, [coin.id]),
+    );
+    await sendAuditedTelegramReply(db, chatId, message, botToken, {
+      actionDetail: "callback_pick",
+      ...(isPrivate
+        ? { replyMarkup: buildMiniAppOnlyKeyboard(`Manage ${coin.symbol}`, formatCoinPayload(coin.id)) }
+        : {}),
+    });
+    await answerCallback({ text: "Followed." });
+    return;
   }
-  await recordTelegramUsageEvent(db, {
-    eventType: subscribe ? "subscribe" : "unsubscribe",
-    actionDetail: "coin",
-    outcome: "success",
+
+  // `pick:un`: verify a direct row actually exists before claiming removal.
+  const existing = await loadSubscriptionsByIds(db, chatId, [coin.id]);
+  if (existing.length > 0) {
+    await applyUnsubscribeIntent(db, { chatId, directStablecoinIds: [coin.id] });
+    await recordTelegramUsageEvent(db, {
+      eventType: "unsubscribe",
+      actionDetail: "coin",
+      outcome: "success",
+    });
+    await stripPickButtons();
+    await sendAuditedTelegramReply(db, chatId, buildUnsubscribeSuccessMessage([coin]), botToken, {
+      actionDetail: "callback_pick",
+    });
+    await answerCallback({ text: "Removed." });
+    return;
+  }
+
+  await stripPickButtons();
+  const noopMarkup = buildUnsubscribeNoopKeyboard([coin], chatType);
+  await sendAuditedTelegramReply(db, chatId, buildUnsubscribeNoopMessage([coin], chatType), botToken, {
+    actionDetail: "callback_pick",
+    ...(noopMarkup ? { replyMarkup: noopMarkup } : {}),
   });
-  const message = subscribe
-    ? buildSubscriptionSummaryMessage("Updated subscriptions.", await loadSubscriptionsByIds(db, chatId, [coin.id]))
-    : buildUnsubscribeSuccessMessage([coin]);
-  await sendAuditedTelegramReply(db, chatId, message, botToken, { actionDetail: "callback_pick" });
-  await answerCallback({ text: subscribe ? "Followed." : "Removed." });
+  await answerCallback({ text: "Not followed directly." });
 };

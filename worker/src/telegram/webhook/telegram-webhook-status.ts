@@ -22,6 +22,9 @@ import { loadStressSignalCurrentRowForCoin } from "../../lib/stress-signals-curr
 
 import { TELEGRAM_FLOW_CONTEXT_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
+import { isSubscribableCoin } from "../store/subscription-eligibility";
+import { loadSubscriptionsByIds } from "../store/subscriptions";
+import { hasActiveFamily } from "./telegram-webhook-messages";
 
 /**
  * Data loader for the `/status <ticker>` command.
@@ -347,5 +350,31 @@ export async function loadActiveDepegs(db: D1Database): Promise<ActiveDepeg[] | 
     }));
   } catch {
     return null;
+  }
+}
+
+export type CoinDirectFollowState =
+  | { available: true; followed: boolean }
+  | { available: false };
+
+/**
+ * Single-PK direct follow check used only to omit the redundant `[Follow {SYM}]`
+ * button on `/status <coin>` cards. Returns `{ available: false }` when the
+ * read fails so the read-only status card still renders without turning a D1
+ * error into a false claim.
+ */
+export async function loadCoinDirectFollowState(
+  db: D1Database,
+  chatId: string,
+  stablecoinId: string,
+): Promise<CoinDirectFollowState> {
+  if (!isSubscribableCoin(stablecoinId)) {
+    return { available: true, followed: false };
+  }
+  try {
+    const rows = await loadSubscriptionsByIds(db, chatId, [stablecoinId]);
+    return { available: true, followed: Boolean(rows[0] && hasActiveFamily(rows[0])) };
+  } catch {
+    return { available: false };
   }
 }

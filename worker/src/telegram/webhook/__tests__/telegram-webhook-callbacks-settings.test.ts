@@ -91,11 +91,14 @@ describe("handleCallbackQuery", () => {
       expect(edits.length).toBe(1);
     });
 
-    it("settings:home:<page> routes to the requested per-coin button page", async () => {
+    it("settings:home:<page> routes to the requested 2-column 8/page per-coin button page", async () => {
       const db = mockTelegramD1([
         {
           match: "FROM telegram_subscriptions",
-          rows: ["usdt-tether", "usdc-circle", "dai-makerdao", "pyusd-paypal", "usds-sky", "usde-ethena"].map(
+          rows: [
+            "usdt-tether", "usdc-circle", "dai-makerdao", "pyusd-paypal", "usds-sky",
+            "usde-ethena", "frax-frax", "lusd-liquity", "fdusd-first-digital",
+          ].map(
             (stablecoinId) => ({
               stablecoin_id: stablecoinId,
               alert_dews: 1,
@@ -134,19 +137,37 @@ describe("handleCallbackQuery", () => {
       }
     });
 
-    it("settings mutating callbacks in groups refuse non-admins before D1 writes", async () => {
-      const db = mockTelegramD1([], {
-        fallbackTables: [{ match: "FROM cache WHERE key = ?", rows: [], first: null }],
-      });
-      mockTelegramMembership(fetchSpy, "member", { id: 7, is_bot: false, first_name: "member" });
+    it.each(["settings:gt:dews:1", "settings:pf:usd-top25:d:0:0", "settings:pc:usd-top25:0", "settings:sn:4h"])(
+      "settings mutating callback %s in groups refuses non-admins before D1 writes",
+      async (data) => {
+        const db = mockTelegramD1([], {
+          fallbackTables: [{ match: "FROM cache WHERE key = ?", rows: [], first: null }],
+        });
+        mockTelegramMembership(fetchSpy, "member", { id: 7, is_bot: false, first_name: "member" });
 
-      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("settings:gt:dews:1", { id: "cb-settings-group", from: { id: 7, username: "member" }, message: { chat: { id: -42, type: "supergroup" }, message_id: 999 } }));
+        await handleCallbackQuery(db, "fake-token", makeCallbackQuery(data, {
+          id: "cb-settings-group", from: { id: 7, username: "member" }, message: { chat: { id: -42, type: "supergroup" }, message_id: 999 },
+        }));
 
-      const history = db.getHistory();
-      expect(history.some((h) => /INSERT INTO telegram_subscribers/.test(h.sql))).toBe(false);
-      const ack = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
-      expect(JSON.parse((ack?.[1] as RequestInit).body as string).text).toMatch(/Only group admins/i);
-    });
+        const history = db.getHistory();
+        expect(history.some((h) => /INSERT INTO telegram_(?:subscribers|preset_subscriptions)|DELETE FROM/.test(h.sql))).toBe(false);
+        expect(lastAckBody().text).toMatch(/Only group admins/i);
+      },
+    );
+
+    it.each(["settings:g", "settings:p:usd-top25:0", "settings:pu:usd-top25:0"])(
+      "settings read callback %s in groups allows non-admins without an admin lookup",
+      async (data) => {
+        const db = mockTelegramD1([], {
+          fallbackTables: [{ match: "FROM telegram_subscribers WHERE chat_id = ?", rows: [], first: null }],
+        });
+        await handleCallbackQuery(db, "fake-token", makeCallbackQuery(data, {
+          id: "cb-settings-read", from: { id: 7, username: "member" }, message: { chat: { id: -42, type: "supergroup" }, message_id: 999 },
+        }));
+        expect(fetchSpy.mock.calls.some((c) => String(c[0]).includes("getChatMember"))).toBe(false);
+        expect(fetchSpy.mock.calls.some((c) => String(c[0]).includes("editMessageText"))).toBe(true);
+      },
+    );
 
     it("malformed settings callbacks do not write", async () => {
       const db = mockTelegramD1([]);
@@ -173,7 +194,7 @@ describe("handleCallbackQuery", () => {
           { stablecoin_id: "usdc-circle", alert_snooze_until_ts: 1_771_848_000 },
           { stablecoin_id: "usdt-tether", alert_snooze_until_ts: 123 },
         ]);
-        expect(firstAckBody().text).toMatch(/Snoozed USDC for 4h/);
+        expect(firstAckBody().text).toBe("USDC snoozed for 4h. Undo in Manage Alerts.");
       } finally {
         vi.useRealTimers();
       }
@@ -361,11 +382,38 @@ describe("handleCallbackQuery", () => {
       expect(db.getHistory().some((h) => /INSERT INTO telegram_subscribers/.test(h.sql))).toBe(false);
     });
 
-    it("status cards in group chats keep Follow and drop Mini App buttons", async () => {
+    it("snooze:off and snooze:pause clear/set pause and group toasts name addressed commands", async () => {
+      const { db, sqlite } = fixtures.open();
+      sqlite.exec("INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at, alert_snooze_until_ts) VALUES ('-42', 1, 1, NULL)");
+      mockTelegramMembership(fetchSpy, "administrator", { id: 7, is_bot: false, first_name: "admin" });
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("snooze:pause", {
+        id: "cb-sn-pause", from: { id: 7 }, message: { chat: { id: -42, type: "supergroup" }, message_id: 1 },
+      }));
+      expect(lastAckBody().text).toBe("All alerts paused until you resume. Resume with /pause@PharosWatchBot off.");
+
+      mockTelegramMembership(fetchSpy, "administrator", { id: 7, is_bot: false, first_name: "admin" });
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("snooze:off", {
+        id: "cb-sn-off", from: { id: 7 }, message: { chat: { id: -42, type: "supergroup" }, message_id: 1 },
+      }));
+      expect(lastAckBody().text).toBe("Alerts resumed.");
+      expect(sqlite.prepare("SELECT alert_snooze_until_ts FROM telegram_subscribers WHERE chat_id = '-42'").get())
+        .toEqual({ alert_snooze_until_ts: null });
+
+      mockTelegramMembership(fetchSpy, "administrator", { id: 7, is_bot: false, first_name: "admin" });
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("fewer:usdc-circle:fz", {
+        id: "cb-fewer-grp", from: { id: 7 }, message: { chat: { id: -42, type: "supergroup" }, message_id: 1 },
+      }));
+      expect(lastAckBody().text).toBe("USDC: freeze alerts off. Undo with /settings@PharosWatchBot.");
+    });
+
+    it("status cards in group chats keep Follow + Settings and drop Mini App buttons", async () => {
       const db = mockTelegramD1([]);
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("status:usdc-circle", { id: "cb-status-group", from: { id: 999, username: "alice" }, message: { chat: { id: -42, type: "group" }, message_id: 1 } }));
       const buttons = (firstSentMessageBody().reply_markup?.inline_keyboard ?? []).flat();
-      expect(buttons).toEqual([expect.objectContaining({ text: "Follow USDC", callback_data: "quicksub:usdc-circle" })]);
+      expect(buttons).toEqual([
+        expect.objectContaining({ text: "Follow USDC", callback_data: "quicksub:usdc-circle" }),
+        expect.objectContaining({ text: "USDC settings", callback_data: "settings:o:usdc-circle" }),
+      ]);
     });
 
     it("quicksub:<id> in a group refuses non-admin without writing to D1", async () => {

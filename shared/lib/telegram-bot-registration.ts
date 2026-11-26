@@ -21,7 +21,7 @@ export const TELEGRAM_BOT_SHORT_DESCRIPTION =
   "Alerts when a stablecoin you follow loses its peg, shows rising stress, or changes Safety grade. Free.";
 export const TELEGRAM_BOT_DESCRIPTION = [
   "Pharos Watch messages you when a stablecoin you follow loses its peg, shows early signs of stress, or has its Safety grade changed.",
-  "Tap Start to follow the 25 largest USD stablecoins in one tap, or choose your own coins. Change anything later in Manage Alerts.",
+  "Tap Start to follow the 25 largest USD stablecoins in one tap, or choose your own coins. Change anything later with the Manage Alerts button.",
   "Free. Data and methods: https://pharos.watch/pharoswatchbot/",
 ].join("\n\n");
 
@@ -101,7 +101,7 @@ export const TELEGRAM_COMMAND_REFERENCE = {
   },
   pause: {
     description: "Pause or resume all alerts",
-    menu: "private",
+    menu: "all",
     variants: [
       { syntax: "/pause [1h|4h|24h|off]", help: "Hold all alerts until you resume, or for a set time", example: "/pause 4h" },
     ],

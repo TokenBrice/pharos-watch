@@ -1,3 +1,5 @@
+import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { TELEGRAM_BOT_USERNAME } from "@shared/lib/telegram-bot-registration";
 import { formatCoinPayload } from "@shared/lib/telegram-mini-app-payloads";
 import { formatUsdPriceAdaptive } from "@shared/lib/format";
 import { formatRelativeAgeSeconds, formatRelativeDurationSeconds } from "@shared/lib/relative-time";
@@ -17,6 +19,8 @@ import type { ResolvedCoin } from "../common/alerts-parser";
 import type { TelegramPresetId } from "../common/presets";
 import { isQuietHoursActive } from "../common/quiet-hours";
 import { formatTelegramCompactUsd, formatTelegramSignedCompactUsd } from "../common/telegram-format";
+import { isSubscribableCoin } from "../store/subscription-eligibility";
+import { isGroupChatType } from "./telegram-webhook-auth";
 import type { PresetSubscriptionRow, SubscriberRow, SubscriptionRow } from "./telegram-webhook-shared";
 import { STABLECOIN_BY_ID } from "./telegram-webhook-shared";
 import type { StatusForCoin } from "./telegram-webhook-status";
@@ -30,15 +34,36 @@ interface AlertFamilyDescriptionOptions {
 }
 
 const GLOBAL_SAFETY_LABEL = "Safety downgrades of 3+ points";
+const LIST_MAX_COINS = 15;
 
-function formatDepegLabel(step: number | null | undefined): string {
-  return step != null ? `Depeg +${step}bps` : "Depeg";
+export const GROUP_PRESET_ID_LIST =
+  "usd-top10/25/50, non-usd-top10/25/50, eur-top10, gold-top5, mcap-ge-1b, mcap-ge-100m";
+
+/** Format a slash command for the chat type (addressed with `@Bot` in groups). */
+export function cmdForChat(name: string, chatType: string): string {
+  const bare = name.startsWith("/") ? name.slice(1) : name;
+  return isGroupChatType(chatType) ? `/${bare}@${TELEGRAM_BOT_USERNAME}` : `/${bare}`;
 }
 
-export function buildNotFoundMessage(ticker: string, suggestion?: ResolvedCoin): string {
+export function formatDepegStepPercent(stepBps: number): string {
+  return stepBps % 100 === 0 ? `${stepBps / 100}%` : `${(stepBps / 100).toFixed(1)}%`;
+}
+
+export function formatDewsCompactBand(band: string): string {
+  if (band === "WARNING") return "Warning+";
+  if (band === "DANGER") return "Danger only";
+  return "Alert+";
+}
+
+function formatDepegLabel(step: number | null | undefined): string {
+  return step != null ? `Depeg (${formatDepegStepPercent(step)})` : "Depeg";
+}
+
+export function buildNotFoundMessage(ticker: string, suggestion?: ResolvedCoin | string): string {
   const lines = [`No stablecoin or preset called "${ticker}".`];
-  if (suggestion) {
-    lines.push(`Did you mean ${suggestion.symbol}?`);
+  const label = typeof suggestion === "string" ? suggestion : suggestion?.symbol;
+  if (label) {
+    lines.push(`Did you mean ${label}?`);
   }
   return escapeHtml(lines.join("\n"));
 }
@@ -83,11 +108,12 @@ export function sortSubscriptions(subscriptions: SubscriptionRow[]): Subscriptio
 export function paginateChatRows<T>(
   rows: readonly T[],
   requestedPage: number,
+  pageSize = MANAGE_PAGE_SIZE,
 ): { rows: T[]; page: number; totalPages: number } {
-  const totalPages = Math.max(1, Math.ceil(rows.length / MANAGE_PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
   const page = Math.max(0, Math.min(requestedPage, totalPages - 1));
-  const start = page * MANAGE_PAGE_SIZE;
-  return { rows: rows.slice(start, start + MANAGE_PAGE_SIZE), page, totalPages };
+  const start = page * pageSize;
+  return { rows: rows.slice(start, start + pageSize), page, totalPages };
 }
 
 function describeAlertFamilies(
@@ -140,14 +166,34 @@ export function buildUnsubscribeSuccessMessage(coins: ResolvedCoin[], options: U
   return escapeHtml(lines.join("\n"));
 }
 
-/** A coin with no direct row is not removed; a preset may still cover it. */
-export function buildUnsubscribeNoopMessage(coins: ResolvedCoin[]): string {
+/** A coin with no direct row is not removed; a preset or global follow may still cover it. */
+export function buildUnsubscribeNoopMessage(coins: ResolvedCoin[], chatType = "private"): string {
   const symbols = [...new Set(coins.map((coin) => coin.symbol))].sort((a, b) => a.localeCompare(b));
   const lines = symbols.length > 0
     ? [`Not followed directly: ${symbols.join(", ")}.`, "Nothing was removed."]
     : ["Nothing was removed."];
-  lines.push("Preset follows are unchanged. See /list for this chat's direct follows.");
+  const turnOffHint = chatType === "private"
+    ? "Preset and all-stablecoin follows are unchanged. To turn off alerts for a coin covered by a preset, switch its families off in Manage Alerts."
+    : `Preset and all-stablecoin follows are unchanged. To turn off alerts for a coin covered by a preset, switch its families off in ${cmdForChat("settings", chatType)}.`;
+  lines.push(turnOffHint, `See ${cmdForChat("list", chatType)} for what you follow.`);
   return escapeHtml(lines.join("\n"));
+}
+
+/** Contextual button when `/unsubscribe` (or `pick:un`) was a no-op for one subscribable coin. */
+export function buildUnsubscribeNoopKeyboard(
+  coins: readonly ResolvedCoin[],
+  chatType: string,
+): { inline_keyboard: InlineKeyboardButton[][] } | undefined {
+  if (coins.length !== 1) return undefined;
+  const coin = coins[0]!;
+  if (!isSubscribableCoin(coin.id)) return undefined;
+  if (chatType === "private") {
+    return buildMiniAppOnlyKeyboard(`Manage ${coin.symbol}`, formatCoinPayload(coin.id));
+  }
+  const settingsData = `settings:o:${coin.id}`;
+  return fitsCallbackData(settingsData)
+    ? { inline_keyboard: [[{ text: `${coin.symbol} settings`, callback_data: settingsData }]] }
+    : undefined;
 }
 
 export function buildSubscriptionSummaryMessage(
@@ -173,9 +219,11 @@ export interface ListMessageInput {
   presetLabelById: ReadonlyMap<string, string>;
   lastDeliveryAt?: number | null;
   nowSec?: number;
+  chatType?: string;
+  maxCoins?: number;
 }
 
-function hasActiveFamily(row: SubscriptionRow): boolean {
+export function hasActiveFamily(row: SubscriptionRow): boolean {
   return describeAlertFamilies(row, { scope: "subscription", emptyLabel: "" }) !== "";
 }
 
@@ -194,38 +242,84 @@ export function followsNothing(input: Pick<ListMessageInput, "subscriber" | "sub
   return !input.subscriptions.some(hasActiveFamily) && !activePreset && describeGlobalAlertSettings(input.subscriber) === "None";
 }
 
-/** One line per follow source, in the order a user thinks about them. */
+/** One-line-per-coin follow breakdown used by `/list`, `/settings`, and returning `/start`. */
 export function describeFollows(input: ListMessageInput): string[] {
   const lines: string[] = [];
+  const chatType = input.chatType ?? "private";
+  const maxCoins = input.maxCoins ?? LIST_MAX_COINS;
   for (const row of input.presetSubscriptions) {
     const label = input.presetLabelById.get(row.preset_id) ?? row.preset_id;
     lines.push(`<b>${escapeHtml(label)}</b> (preset, updates with market cap): ${escapeHtml(describePresetSubscriptionSettings(row))}`);
   }
   const sorted = sortSubscriptions(input.subscriptions);
   // Bucket by the override markers, not raw enablement: an unmarked zero
-  // inherits preset/global routing and must not be reported as muted.
+  // inherits preset/global routing and must not be reported as off.
   const followed = sorted.filter((row) => !hasOnlyMarkedOffFamilies(row));
-  const muted = sorted.filter(hasOnlyMarkedOffFamilies);
+  const allOff = sorted.filter(hasOnlyMarkedOffFamilies);
   const nowSec = input.nowSec ?? Math.floor(Date.now() / 1000);
   if (followed.length > 0) {
-    const coins = followed.map((row) => `${formatCoinLabel(row.stablecoin_id)} (${describeSubscriptionSettings(row, nowSec)})`);
-    lines.push(`<b>Coins:</b> ${escapeHtml(coins.join(", "))}`);
+    const shown = followed.slice(0, maxCoins);
+    lines.push(`<b>Coins (${followed.length}):</b>`);
+    for (const row of shown) {
+      lines.push(`• ${escapeHtml(formatCoinLabel(row.stablecoin_id))} — ${escapeHtml(describeSubscriptionSettings(row, nowSec))}`);
+    }
+    const remaining = followed.length - shown.length;
+    if (remaining > 0) {
+      lines.push(
+        chatType === "private"
+          ? `…and ${remaining} more in ${MANAGE_ALERTS_LABEL}.`
+          : `…and ${remaining} more. Use ${escapeHtml(cmdForChat("settings", chatType))} to browse.`,
+      );
+    }
   }
-  if (muted.length > 0) {
-    lines.push(`<b>Muted:</b> ${escapeHtml(muted.map((row) => formatCoinLabel(row.stablecoin_id)).join(", "))}`);
+  if (allOff.length > 0) {
+    lines.push(`<b>Alerts off:</b> ${escapeHtml(allOff.map((row) => formatCoinLabel(row.stablecoin_id)).join(", "))}`);
   }
   const global = describeGlobalAlertSettings(input.subscriber);
-  if (global !== "None") lines.push(`<b>Every tracked coin:</b> ${escapeHtml(global)}`);
+  if (global !== "None") lines.push(`<b>All stablecoins:</b> ${escapeHtml(global)}`);
   return lines;
 }
 
+/** Compact one-line coverage summary for the bare `/status` health + risk card. */
+export function describeFollowsCompact(input: ListMessageInput): string[] {
+  const parts: string[] = [];
+  if (input.presetSubscriptions.length > 0) {
+    const presetLabels = input.presetSubscriptions.map(
+      (row) => input.presetLabelById.get(row.preset_id) ?? row.preset_id,
+    );
+    parts.push(presetLabels.length <= 2 ? presetLabels.join(", ") : `${presetLabels.length} presets`);
+  }
+  const sorted = sortSubscriptions(input.subscriptions);
+  const activeDirect = sorted.filter(hasActiveFamily);
+  const allOff = sorted.filter(hasOnlyMarkedOffFamilies);
+  if (activeDirect.length > 0) {
+    const symbols = activeDirect.map((row) => formatCoinLabel(row.stablecoin_id));
+    parts.push(
+      symbols.length <= 3
+        ? symbols.join(", ")
+        : `${symbols.length} coins`,
+    );
+  }
+  if (describeGlobalAlertSettings(input.subscriber) !== "None") {
+    parts.push("All stablecoins");
+  }
+  if (allOff.length > 0) {
+    parts.push(`${allOff.length} off`);
+  }
+  return parts.length > 0 ? [`<b>Following:</b> ${escapeHtml(parts.join(" · "))}`] : [];
+}
+
 /** Pause and quiet-hours state as user-facing lines; empty when neither applies. */
-export function describeDeliveryState(subscriber: SubscriberRow | null, nowSec: number): string[] {
+export function describeDeliveryState(
+  subscriber: SubscriberRow | null,
+  nowSec: number,
+  chatType = "private",
+): string[] {
   const lines: string[] = [];
   const snoozeUntil = subscriber?.alert_snooze_until_ts ?? null;
   if (snoozeUntil != null && snoozeUntil > nowSec) {
     lines.push(isPausedSentinel(snoozeUntil)
-      ? "Alerts are paused until you resume (/pause off)."
+      ? `Alerts are paused until you resume (${escapeHtml(cmdForChat("pause", chatType))} off).`
       : `Alerts are paused for ${formatSnoozeDuration(snoozeUntil - nowSec)} more.`);
   }
   if (subscriber?.quiet_hours_enabled) {
@@ -236,10 +330,11 @@ export function describeDeliveryState(subscriber: SubscriberRow | null, nowSec: 
 
 export function buildListMessage(input: ListMessageInput): string {
   const nowSec = input.nowSec ?? Math.floor(Date.now() / 1000);
+  const chatType = input.chatType ?? "private";
   const lines = [
     "<b>What you follow</b>",
-    ...describeFollows({ ...input, nowSec }),
-    ...describeDeliveryState(input.subscriber, nowSec),
+    ...describeFollows({ ...input, nowSec, chatType }),
+    ...describeDeliveryState(input.subscriber, nowSec, chatType),
   ];
   if (input.lastDeliveryAt != null) {
     lines.push(`Last alert delivered ${escapeHtml(formatElapsed(input.lastDeliveryAt, nowSec))}.`);
@@ -259,17 +354,19 @@ export function buildPresetSubscriptionSummaryMessage(
     presetIds: readonly TelegramPresetId[];
     presetLabelById: ReadonlyMap<string, string>;
     presetCoinCount: number;
+    chatType?: string;
   },
 ): string {
   const sorted = sortSubscriptions(subscriptions);
   const count = options.presetCoinCount;
+  const chatType = options.chatType ?? "private";
   const lines = [
     `Done. You follow ${formatPresetLabelList(options.presetIds, options.presetLabelById)} (${count} coin${count === 1 ? "" : "s"} today; the list updates with market cap).`,
   ];
   if (sorted.length > 0) {
     lines.push(`Also updated: ${sorted.map((row) => `${formatCoinLabel(row.stablecoin_id)} (${describeSubscriptionSettings(row)})`).join(", ")}`);
   }
-  lines.push("See everything with /list.");
+  lines.push(`See everything with ${cmdForChat("list", chatType)}.`);
   return escapeHtml(lines.join("\n"));
 }
 
@@ -278,8 +375,10 @@ export function buildPresetUnsubscribeSummaryMessage(
   options: {
     presetIds: readonly TelegramPresetId[];
     presetLabelById: ReadonlyMap<string, string>;
+    chatType?: string;
   },
 ): string {
+  const chatType = options.chatType ?? "private";
   const lines = [
     `Stopped following ${formatPresetLabelList(options.presetIds, options.presetLabelById)}. Coins you follow directly are unchanged.`,
   ];
@@ -289,7 +388,7 @@ export function buildPresetUnsubscribeSummaryMessage(
     lines.push(`Also removed (${coins.length}):`, formatCoinLines(shownCoins));
     appendTruncationLine(lines, sortedCoins.length, shownCoins.length);
   }
-  lines.push("See what is left with /list.");
+  lines.push(`See what is left with ${cmdForChat("list", chatType)}.`);
   return escapeHtml(lines.join("\n"));
 }
 
@@ -302,27 +401,25 @@ export function describeSubscriptionSettings(
     scope: "subscription",
     emptyLabel: "",
     labels: {
-      dews: row.dews_min_band ? `DEWS>=${row.dews_min_band}` : "DEWS",
+      dews: row.dews_min_band && row.dews_min_band !== "ALERT"
+        ? `DEWS (${formatDewsCompactBand(row.dews_min_band)})`
+        : "DEWS",
       depeg: formatDepegLabel(row.depeg_worsening_bps_step),
-      safety: row.safety_mode === "downgrade-only"
-        ? "Safety downgrade-only"
-        : row.safety_mode === "upgrade-only"
-          ? "Safety upgrade-only"
-          : "Safety",
+      safety: row.safety_mode === "upgrade-only" ? "Safety (upgrades only)" : "Safety",
     },
   });
   const suppressed = TELEGRAM_LIVE_ALERT_TYPES.filter((family) => {
     const columns = TELEGRAM_ALERT_PERSISTENCE[family];
     return row[columns.overrideColumn] === 1 && row[columns.subscriptionColumn] !== 1;
   });
-  const fullyMuted = suppressed.length === TELEGRAM_LIVE_ALERT_TYPES.length;
-  let base = fullyMuted
-    ? options.perCoinTag ? "Muted (overrides defaults)" : "Muted"
+  const fullyOff = suppressed.length === TELEGRAM_LIVE_ALERT_TYPES.length;
+  let base = fullyOff
+    ? "All alerts off"
     : description
-      ? options.perCoinTag ? `${description} · per-coin` : description
-      : "Inherits preset/global defaults";
-  if (suppressed.length > 0 && !fullyMuted) {
-    base += `; off: ${suppressed.map((family) => TELEGRAM_ALERT_FAMILY_SHORT_LABELS[family]).join(", ")} (overrides defaults)`;
+      ? options.perCoinTag ? `${description} · custom` : description
+      : "via preset";
+  if (suppressed.length > 0 && !fullyOff) {
+    base += ` · ${suppressed.map((family) => TELEGRAM_ALERT_FAMILY_SHORT_LABELS[family]).join(", ")} off`;
   }
 
   // Per-coin snooze countdown (P1-U10): shown alongside the alert list so
@@ -330,15 +427,15 @@ export function describeSubscriptionSettings(
   // open the settings keyboard.
   const snoozeUntil = row.alert_snooze_until_ts;
   if (snoozeUntil != null && snoozeUntil > nowSec) {
-    return `${base} — snoozed for ${formatSnoozeDuration(snoozeUntil - nowSec)}`;
+    return `${base} · snoozed ${formatSnoozeDuration(snoozeUntil - nowSec)}`;
   }
   return base;
 }
 
-function describePresetSubscriptionSettings(row: PresetSubscriptionRow): string {
+export function describePresetSubscriptionSettings(row: PresetSubscriptionRow): string {
   return describeAlertFamilies(row, {
     scope: "subscription",
-    emptyLabel: "Muted",
+    emptyLabel: "Off",
     labels: { depeg: formatDepegLabel(row.depeg_worsening_bps_step) },
   });
 }
@@ -358,7 +455,7 @@ function formatCoinLines(coins: ResolvedCoin[]): string {
   return coins.map((coin) => `- ${coin.symbol}`).join("\n") || "None";
 }
 
-function quietHoursTimezoneLabel(timezone: string | null | undefined): string {
+export function quietHoursTimezoneLabel(timezone: string | null | undefined): string {
   return timezone?.trim() || "UTC";
 }
 
@@ -369,7 +466,7 @@ export function formatQuietHours(
 ): string {
   if (startHourUtc == null || endHourUtc == null) return "Off";
   const pad = (h: number) => String(h).padStart(2, "0");
-  return `${pad(startHourUtc)}:00–${pad(endHourUtc)}:00 ${quietHoursTimezoneLabel(timezone)}`;
+  return `${pad(startHourUtc)}:00-${pad(endHourUtc)}:00 ${quietHoursTimezoneLabel(timezone)}`;
 }
 
 function formatQuietHoursStatus(subscriber: SubscriberRow | null, nowSec: number): string {
@@ -382,11 +479,10 @@ function formatQuietHoursStatus(subscriber: SubscriberRow | null, nowSec: number
   if (isQuietHoursActive(nowSec, true, start, end, subscriber.timezone ?? null)) {
     return `active until ${pad(end)}:00 ${zone}`;
   }
-  return `${pad(start)}:00–${pad(end)}:00 ${zone}`;
+  return `${pad(start)}:00-${pad(end)}:00 ${zone}`;
 }
 
-
-function formatSnoozeDuration(seconds: number): string {
+export function formatSnoozeDuration(seconds: number): string {
   return formatRelativeDurationSeconds(seconds, {
     nowLabel: "less than 1 min",
     unitStyle: "short",
@@ -394,7 +490,6 @@ function formatSnoozeDuration(seconds: number): string {
     dayThresholdSec: 48 * 3600,
   });
 }
-
 
 export function formatElapsed(ts: number | null | undefined, nowSec = Math.floor(Date.now() / 1000)): string {
   if (ts == null || !Number.isFinite(ts)) return "";
@@ -432,17 +527,29 @@ export function buildMiniAppOnlyKeyboard(
   return { inline_keyboard: [[{ text, web_app: { url: buildTelegramMiniAppUrl(payload) } }]] };
 }
 
-/** `/status <coin>` keyboard: follow the coin, plus its Mini App page in private chats. */
+/**
+ * `/status <coin>` keyboard:
+ * - Omitted entirely for non-subscribable (delisted/frozen/etc.) coins.
+ * - Omits `[Follow {SYM}]` when already directly followed.
+ * - Private chats attach `[Manage {SYM}]` (`coin_<id>`).
+ * - Group chats attach `[{SYM} settings]` (`settings:o:<id>`).
+ */
 export function buildCoinStatusKeyboard(
   stablecoinId: string,
   symbol: string,
-  options: { includeMiniAppButton?: boolean } = {},
+  options: { includeMiniAppButton?: boolean; isGroup?: boolean; alreadyFollowed?: boolean } = {},
 ): { inline_keyboard: InlineKeyboardButton[][] } | undefined {
+  if (!isSubscribableCoin(stablecoinId)) return undefined;
   const row: InlineKeyboardButton[] = [];
-  const followData = `quicksub:${stablecoinId}`;
-  if (fitsCallbackData(followData)) row.push({ text: `Follow ${symbol}`, callback_data: followData });
+  if (!options.alreadyFollowed) {
+    const followData = `quicksub:${stablecoinId}`;
+    if (fitsCallbackData(followData)) row.push({ text: `Follow ${symbol}`, callback_data: followData });
+  }
   if (options.includeMiniAppButton) {
     row.push({ text: `Manage ${symbol}`, web_app: { url: buildTelegramMiniAppUrl(formatCoinPayload(stablecoinId)) } });
+  } else if (options.isGroup) {
+    const settingsData = `settings:o:${stablecoinId}`;
+    if (fitsCallbackData(settingsData)) row.push({ text: `${symbol} settings`, callback_data: settingsData });
   }
   return row.length > 0 ? { inline_keyboard: [row] } : undefined;
 }
@@ -464,9 +571,9 @@ function formatYieldLine(status: StatusForCoin, nowSec: number): string | null {
   if (!value) {
     // Coins with no yield have no line; a failed yield read says so.
     const notYieldBearing = status.yieldUnavailableReason == null || status.yieldUnavailableReason === "yield-ranking-not-found";
-    return notYieldBearing ? null : "Yield not available right now";
+    return notYieldBearing ? null : "<b>Yield:</b> not available right now";
   }
-  return `Yield ${value.apy30d.toFixed(2)}% (30-day, ${escapeHtml(value.source)}), ${formatUpdated(value.provenance?.sourceObservedAt, nowSec)}`;
+  return `<b>Yield:</b> ${value.apy30d.toFixed(2)}% (30-day, ${escapeHtml(value.source)}), ${formatUpdated(value.provenance?.sourceObservedAt, nowSec)}`;
 }
 
 function formatActiveDepeg(depeg: Extract<StatusForCoin["depeg"], { status: "active" }>): string {
@@ -479,50 +586,61 @@ function formatActiveDepeg(depeg: Extract<StatusForCoin["depeg"], { status: "act
   return `${opening}, peak ${percent}${depeg.peerOpening ? ` ${depeg.direction} peg` : ""}`;
 }
 
+function formatCoinStatusHeader(symbol: string, stablecoinId: string): string {
+  const meta = TRACKED_META_BY_ID.get(stablecoinId);
+  const boldSymbol = `<b>${escapeHtml(symbol)}</b>`;
+  const distinctName = meta?.name && meta.name.toLowerCase() !== symbol.toLowerCase()
+    ? ` — ${escapeHtml(meta.name)}`
+    : "";
+  const pegTag = meta?.pegCurrency && meta.pegCurrency !== "USD"
+    ? ` (${escapeHtml(meta.pegCurrency)} peg)`
+    : "";
+  return `${boldSymbol}${distinctName}${pegTag}`;
+}
+
 /**
  * `/status <coin>` card. Every value names how old it is and an unavailable
  * value says so instead of disappearing. No freshness verdict is published
  * here; budgets and generations stay on the website and API.
  */
 export function buildStatusMessage(symbol: string, s: StatusForCoin, nowSec = Math.floor(Date.now() / 1000)): string {
-  const name = `<b>${escapeHtml(symbol)}</b>`;
+  const header = formatCoinStatusHeader(symbol, s.stablecoinId);
   const price = s.priceUsd != null ? `$${formatUsdPriceAdaptive(s.priceUsd)}` : null;
   const headline = s.depeg.status === "active"
-    ? `${s.depeg.direction === "below" ? "▼" : "▲"} ${name} ${formatActiveDepeg(s.depeg)}, since ${formatElapsed(s.depeg.startedAt, nowSec)}${price ? `. Price ${price}` : ""}`
-    : price
-      ? `${name} at ${price}, no active depeg`
-      : `${name}: no recent price, no active depeg`;
+    ? `${s.depeg.direction === "below" ? "▼" : "▲"} ${header}\n${formatActiveDepeg(s.depeg)}, since ${formatElapsed(s.depeg.startedAt, nowSec)}${price ? ` · <b>Price:</b> ${price}` : ""}`
+    : `${header}\n<b>Price:</b> ${price ?? "no recent price"} · No active depeg`;
   const isTokenizedFund = isTokenizedFundId(s.stablecoinId);
   const safety = isTokenizedFund && s.safety?.ratingStatus !== "pipeline-gap"
-    ? "Tokenized fund (not graded)"
+    ? "<b>Safety:</b> Tokenized fund (not graded)"
     : s.safety
-      ? `Safety grade ${formatTelegramSafety(s.safety)}`
+      ? `<b>Safety:</b> ${formatTelegramSafety(s.safety)}`
       : s.safetyUnavailableReason
-        ? "Safety grade not available right now"
-        : "Not rated for safety";
+        ? "<b>Safety:</b> not available right now"
+        : "<b>Safety:</b> Not rated";
   const dews = s.dews
-    ? `early-warning stress ${s.dews.band} (${s.dews.score}/100)`
-    : "early-warning stress not available right now";
+    ? `<b>Early warning (DEWS):</b> ${s.dews.band} (${s.dews.score}/100)`
+    : "<b>Early warning (DEWS):</b> not available right now";
   const supply = formatTelegramCompactUsd(s.supplyUsd);
   const flow = s.flow ? formatTelegramSignedCompactUsd(s.flow.netFlowUsd) : null;
   const supplyLine = [
-    supply ? `Supply ${supply}, ${formatUpdated(s.supplyObservedAt, nowSec)}` : "Supply not available right now",
-    flow && s.flow ? `24h net flow ${flow} (${formatUpdated(s.flow.updatedAt, nowSec)})` : null,
+    supply ? `<b>Supply:</b> ${supply}, ${formatUpdated(s.supplyObservedAt, nowSec)}` : "<b>Supply:</b> not available right now",
+    flow && s.flow ? `<b>24h flow:</b> ${flow} (${formatUpdated(s.flow.updatedAt, nowSec)})` : null,
   ].filter(Boolean).join(" · ");
   const liquidityTvl = formatTelegramCompactUsd(s.liquidity?.totalTvlUsd);
   const liquidityLine = s.liquidity
-    ? `DEX liquidity ${liquidityTvl ?? "not available"}${s.liquidity.score != null ? ` (score ${s.liquidity.score}/100)` : ""}, ${formatUpdated(s.liquidity.updatedAt, nowSec)}`
+    ? `<b>DEX liquidity:</b> ${liquidityTvl ?? "not available"}${s.liquidity.score != null ? ` (score ${s.liquidity.score}/100)` : ""}, ${formatUpdated(s.liquidity.updatedAt, nowSec)}`
     : s.liquidityUnavailableReason
-      ? "DEX liquidity not available right now"
+      ? "<b>DEX liquidity:</b> not available right now"
       : null;
   const clocks = [
     s.priceUpdatedAt != null ? `price ${formatUpdated(s.priceUpdatedAt, nowSec)}` : null,
     s.safety && !isTokenizedFund ? `Safety ${formatUpdated(s.safety.publishedAt, nowSec)}` : null,
-    s.dews ? `stress ${formatUpdated(s.dews.computedAt, nowSec)}` : null,
+    s.dews ? `DEWS ${formatUpdated(s.dews.computedAt, nowSec)}` : null,
   ].filter((part): part is string => part != null);
   const lines = [
     headline,
-    `${safety} · ${dews}`,
+    safety,
+    dews,
     supplyLine,
     liquidityLine,
     formatYieldLine(s, nowSec),

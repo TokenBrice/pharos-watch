@@ -1,49 +1,60 @@
 /**
- * /settings inline-keyboard handler (P1-U7).
+ * Group `/settings` inline-keyboard handler.
  *
- * Two views:
- *   - chat-level (no ticker): quiet hours toggle, snooze clear, global alert toggles.
- *   - per-coin (ticker arg): DEWS min band, safety mode, depeg step, reserve, freeze.
+ * Views:
+ *   - Home (`settings:home[:<page>]`): quiet hours, pause/resume, followed presets,
+ *     `All stablecoins ▸`, and 2-column paginated direct coins (8/page).
+ *   - All stablecoins (`settings:g`): chat-wide family toggles (`settings:gt`).
+ *   - Preset detail (`settings:p:<preset>:<page>`): DEWS/Depeg/Safety toggles
+ *     (`settings:pf`) and two-step Unfollow (`settings:pu` → `settings:pc`).
+ *   - Per-coin (`settings:o:<coin>:<page>`): DEWS, Depeg (including `ds:a`),
+ *     Safety on/off, Reserve, Freeze (`settings:c`).
  *
- * Callback namespace is `settings:*`. Render helpers live in
- * `telegram-webhook-settings-render.ts` and D1 mutations in settings/store
- * helpers so each surface stays narrow.
- *
- * Each callback updates D1 then edits the message in place via
- * `editMessage`. If the edit fails (e.g. message too old, identical
- * content rejected by Telegram), the handler sends a fresh message instead.
+ * Each callback updates D1 then edits the message in place via `editMessage`.
+ * If the edit fails (e.g. message too old), it falls back to a fresh reply.
  */
 
-import { answerCallbackQuery, editMessage } from "../delivery/telegram";
+import { answerCallbackQuery, editMessage, escapeHtml } from "../delivery/telegram";
 import { recordTelegramUsageEvent } from "../store/usage-analytics";
 import { resolveTicker } from "../common/alerts-parser";
-import {
-  isKnownStablecoinId,
-  isSubscribableStablecoinId,
-  type TelegramCallbackQuery,
-} from "../callbacks/_shared";
+import { TELEGRAM_PRESET_LABEL_BY_ID, type TelegramPresetId } from "../common/presets";
+import { isSubscribableCoin } from "../store/subscription-eligibility";
+import type { TelegramCallbackQuery } from "../callbacks/_shared";
 import {
   buildNotFoundMessage,
   buildStatusAmbiguousMessage,
+  cmdForChat,
+  fitsCallbackData,
 } from "./telegram-webhook-messages";
 import { clearAlertSnooze } from "../store/snooze";
+import { loadPresetSubscriptions, removePresetSubscriptions } from "../store/presets";
 import { loadSubscriberByChat } from "../store/subscribers";
 import { loadSubscriptionRowsByChat, loadSubscriptionsByIds } from "../store/subscriptions";
 import {
   buildCoinKeyboard,
   buildCoinMessage,
+  buildGlobalKeyboard,
+  buildGlobalMessage,
   buildHomeKeyboard,
   buildHomeMessage,
+  buildPresetKeyboard,
+  buildPresetMessage,
+  buildPresetUnfollowConfirmKeyboard,
+  buildPresetUnfollowConfirmMessage,
 } from "./telegram-webhook-settings-render";
 import {
   applyCoinSetting,
-  normalizeCoinSetting,
+  applySettingsSnooze,
   setQuietHours,
   toggleGlobalAlert,
+  updatePresetFamilySetting,
 } from "./telegram-webhook-settings-mutations";
-import { isGlobalAlertType } from "./telegram-webhook-settings-shared";
+import { parseSettingsCallback } from "./telegram-webhook-settings-shared";
 import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
-import { TELEGRAM_ALERT_PERSISTENCE, TELEGRAM_LAUNCH_RETIRED_MESSAGE } from "@shared/lib/telegram-alert-families";
+import {
+  TELEGRAM_ALERT_FAMILY_SHORT_LABELS,
+  TELEGRAM_LAUNCH_RETIRED_MESSAGE,
+} from "@shared/lib/telegram-alert-families";
 import { isGroupChatType } from "./telegram-webhook-auth";
 
 type SettingsCallbackQuery = TelegramCallbackQuery;
@@ -52,7 +63,10 @@ type RenderTarget = { mode: "send" } | { mode: "edit"; messageId: number };
 interface SettingsRenderOptions {
   includeMiniAppButton?: boolean;
   subscriptionPage?: number;
+  chatType?: string;
 }
+
+const MAX_SETTINGS_DISAMBIGUATION_BUTTONS = 8;
 
 /**
  * Render the chat-level or per-coin settings view as a top-level `/settings`
@@ -67,8 +81,9 @@ export async function handleSettingsCommand(
   options: SettingsRenderOptions = {},
 ): Promise<void> {
   const trimmed = args.trim();
+  const chatType = options.chatType ?? "group";
   if (!trimmed) {
-    await renderHome(db, chatId, botToken, { mode: "send" }, options);
+    await renderHome(db, chatId, botToken, { mode: "send" }, { ...options, chatType });
     return;
   }
   const resolution = resolveTicker(trimmed, "tracked");
@@ -79,12 +94,58 @@ export async function handleSettingsCommand(
     return;
   }
   if (resolution.status === "ambiguous") {
-    await sendAuditedTelegramReply(db, chatId, buildStatusAmbiguousMessage(trimmed, resolution.matches), botToken, {
-      actionDetail: "settings",
-    });
+    const subscribable = resolution.matches.filter((coin) => isSubscribableCoin(coin.id));
+    if (subscribable.length === 0) {
+      await sendAuditedTelegramReply(
+        db,
+        chatId,
+        escapeHtml(`${resolution.matches[0]!.symbol} is not active for alerts.`),
+        botToken,
+        { actionDetail: "settings" },
+      );
+      return;
+    }
+    if (subscribable.length === 1) {
+      await renderCoin(db, chatId, subscribable[0]!.id, botToken, { mode: "send" }, { ...options, chatType });
+      return;
+    }
+    const buttons = subscribable.length <= MAX_SETTINGS_DISAMBIGUATION_BUTTONS
+      ? subscribable.map((coin) => [{
+          text: `${coin.symbol} · ${coin.name}`,
+          callback_data: `settings:o:${coin.id}`,
+        }])
+      : null;
+    if (buttons && buttons.every(([btn]) => fitsCallbackData(btn!.callback_data))) {
+      await sendAuditedTelegramReply(
+        db,
+        chatId,
+        `"${escapeHtml(trimmed)}" matches ${subscribable.length} coins. Which one?`,
+        botToken,
+        { actionDetail: "settings", replyMarkup: { inline_keyboard: buttons } },
+      );
+      return;
+    }
+    await sendAuditedTelegramReply(
+      db,
+      chatId,
+      buildStatusAmbiguousMessage(trimmed, subscribable, cmdForChat("settings", chatType)),
+      botToken,
+      { actionDetail: "settings" },
+    );
     return;
   }
-  await renderCoin(db, chatId, resolution.matches[0].id, botToken, { mode: "send" }, options);
+  const coin = resolution.matches[0]!;
+  if (!isSubscribableCoin(coin.id)) {
+    await sendAuditedTelegramReply(
+      db,
+      chatId,
+      escapeHtml(`${coin.symbol} is not active for alerts.`),
+      botToken,
+      { actionDetail: "settings" },
+    );
+    return;
+  }
+  await renderCoin(db, chatId, coin.id, botToken, { mode: "send" }, { ...options, chatType });
 }
 
 const LAUNCH_RETIRED_TOAST = TELEGRAM_LAUNCH_RETIRED_MESSAGE;
@@ -109,125 +170,165 @@ export async function handleSettingsCallback(
   const chatType = cb.message?.chat?.type ?? "private";
   const username = isGroupChatType(chatType) ? null : cb.from?.username ?? null;
   const target: RenderTarget = { mode: "edit", messageId };
-  if (subAction === "home") {
-    const subscriptionPage = parseSettingsHomePage(subArg);
-    if (subscriptionPage == null) {
-      await answer({ text: "Action not recognized." });
-      return;
-    }
-    await renderHome(db, chatId, botToken, target, { subscriptionPage });
-    await answer();
-    return;
-  }
+  const parts = subArg === "" ? ["settings", subAction] : ["settings", subAction, ...subArg.split(":")];
+  const parsed = parseSettingsCallback(parts);
 
-  // Buttons already sitting in chats can still carry the retired launch family.
-  if ((subAction === "gt" && subArg.split(":")[0] === "launch") || (subAction === "c" && subArg.split(":")[1] === TELEGRAM_ALERT_PERSISTENCE.launch.settingCode)) {
-    await answer({ text: LAUNCH_RETIRED_TOAST });
-    return;
-  }
+  switch (parsed.kind) {
+    case "invalid":
+      await answer({ text: parsed.toast });
+      return;
 
-  if (subAction === "gt") {
-    const [alertType, nextCode, extra] = subArg.split(":");
-    if (!alertType || !isGlobalAlertType(alertType) || extra !== undefined) {
-      await answer({ text: "Unknown alert type." });
+    case "retired_launch":
+      await answer({ text: LAUNCH_RETIRED_TOAST });
       return;
-    }
-    if (nextCode === undefined) {
-      // A pre-v2 toggle button has no target value; show the current state instead of guessing.
-      await renderHome(db, chatId, botToken, target);
-      await answer({ text: "Settings refreshed. Tap again to change." });
-      return;
-    }
-    if (nextCode !== "0" && nextCode !== "1") {
-      await answer({ text: "Action not recognized." });
-      return;
-    }
-    const next: 0 | 1 = nextCode === "1" ? 1 : 0;
-    await toggleGlobalAlert(db, chatId, username, alertType, { next });
-    await recordTelegramUsageEvent(db, {
-      eventType: "global_alert_change",
-      actionDetail: alertType,
-      outcome: next ? "opt_in" : "opt_out",
-    });
-    await renderHome(db, chatId, botToken, target);
-    await answer({ text: `Global ${alertType} ${next ? "on" : "off"}.` });
-    return;
-  }
 
-  if (subAction === "q") {
-    if (subArg !== "0" && subArg !== "1") {
-      await answer({ text: "Action not recognized." });
+    case "home":
+      await renderHome(db, chatId, botToken, target, { subscriptionPage: parsed.page, chatType });
+      await answer();
       return;
-    }
-    const enabled = subArg === "1";
-    await setQuietHours(db, chatId, username, enabled, {});
-    await recordTelegramUsageEvent(db, {
-      eventType: "quiet_hours_change",
-      actionDetail: "settings",
-      outcome: enabled ? "enabled" : "disabled",
-    });
-    await renderHome(db, chatId, botToken, target);
-    await answer({
-      text: enabled ? "Quiet hours enabled." : "Quiet hours disabled.",
-    });
-    return;
-  }
 
-  if (subAction === "sc") {
-    if (subArg !== "") {
-      await answer({ text: "Action not recognized." });
+    case "global":
+      await renderGlobal(db, chatId, botToken, target);
+      await answer();
       return;
-    }
-    await clearAlertSnooze(db, chatId, username, {});
-    await recordTelegramUsageEvent(db, {
-      eventType: "snooze_change",
-      actionDetail: "settings",
-      outcome: "cleared",
-    });
-    await renderHome(db, chatId, botToken, target);
-    await answer({ text: "Snooze cleared." });
-    return;
-  }
 
-  if (subAction === "o") {
-    if (!isKnownStablecoinId(subArg)) {
-      await answer({ text: "Unknown coin." });
+    case "open_coin":
+      await renderCoin(db, chatId, parsed.coinId, botToken, target, { subscriptionPage: parsed.page, chatType });
+      await answer();
       return;
-    }
-    await renderCoin(db, chatId, subArg, botToken, target);
-    await answer();
-    return;
-  }
 
-  if (subAction === "c") {
-    const settingParts = subArg.split(":");
-    if (settingParts.length !== 3) {
-      await answer({ text: "Unknown setting." });
+    case "open_preset":
+      await renderPreset(db, chatId, parsed.presetId, botToken, target, parsed.page);
+      await answer();
       return;
-    }
-    const [coinId, settingCode, settingValue] = settingParts;
-    const normalized = normalizeCoinSetting(settingCode, settingValue);
-    if (!isSubscribableStablecoinId(coinId) || !normalized) {
-      await answer({ text: "Unknown setting." });
-      return;
-    }
-    const { setting, value } = normalized;
-    const applied = await applyCoinSetting(db, chatId, username, coinId, setting, value, {});
-    if (!applied) {
-      await answer({ text: "Unknown setting." });
-      return;
-    }
-    await recordTelegramUsageEvent(db, {
-      eventType: "subscribe",
-      actionDetail: `settings_${setting}`,
-      outcome: value === "0" ? "opt_out" : "opt_in",
-    });
-    await renderCoin(db, chatId, coinId, botToken, target);
-    await answer({ text: applied });
-    return;
-  }
 
-  await answer({ text: "Action not recognized." });
+    case "preset_unfollow_prompt":
+      await deliver(
+        db,
+        chatId,
+        buildPresetUnfollowConfirmMessage(parsed.presetId),
+        buildPresetUnfollowConfirmKeyboard(parsed.presetId, parsed.page),
+        botToken,
+        target,
+      );
+      await answer();
+      return;
+
+    case "preset_unfollow_confirm": {
+      await removePresetSubscriptions(db, chatId, [parsed.presetId]);
+      await recordTelegramUsageEvent(db, {
+        eventType: "preset_unfollow",
+        actionDetail: "settings",
+        outcome: "success",
+      });
+      await renderHome(db, chatId, botToken, target, { subscriptionPage: parsed.page, chatType });
+      const label = TELEGRAM_PRESET_LABEL_BY_ID.get(parsed.presetId) ?? parsed.presetId;
+      await answer({ text: `Unfollowed ${label}.` });
+      return;
+    }
+
+    case "preset_family": {
+      const outcome = await updatePresetFamilySetting(
+        db,
+        chatId,
+        username,
+        parsed.presetId,
+        parsed.family,
+        parsed.enabled,
+      );
+      if (outcome === "last-family-locked") {
+        await answer({ text: "Keep at least one alert on, or tap Unfollow." });
+        return;
+      }
+      await recordTelegramUsageEvent(db, {
+        eventType: "preset_follow",
+        actionDetail: `settings_${parsed.family}`,
+        outcome: parsed.enabled ? "opt_in" : "opt_out",
+      });
+      await renderPreset(db, chatId, parsed.presetId, botToken, target, parsed.page);
+      const familyLabel = TELEGRAM_ALERT_FAMILY_SHORT_LABELS[parsed.family];
+      await answer({ text: `${familyLabel} ${parsed.enabled ? "on" : "off"}.` });
+      return;
+    }
+
+    case "global_toggle":
+      if (parsed.next === null) {
+        // Legacy bare `settings:gt:<type>` button refreshes without toggling.
+        await renderGlobal(db, chatId, botToken, target);
+        await answer({ text: "Settings refreshed. Tap again to change." });
+        return;
+      }
+      await toggleGlobalAlert(db, chatId, username, parsed.alertType, { next: parsed.next });
+      await recordTelegramUsageEvent(db, {
+        eventType: "global_alert_change",
+        actionDetail: parsed.alertType,
+        outcome: parsed.next ? "opt_in" : "opt_out",
+      });
+      await renderGlobal(db, chatId, botToken, target);
+      await answer({ text: `Global ${parsed.alertType} ${parsed.next ? "on" : "off"}.` });
+      return;
+
+    case "quiet_hours":
+      await setQuietHours(db, chatId, username, parsed.enabled, {});
+      await recordTelegramUsageEvent(db, {
+        eventType: "quiet_hours_change",
+        actionDetail: "settings",
+        outcome: parsed.enabled ? "enabled" : "disabled",
+      });
+      await renderHome(db, chatId, botToken, target, { chatType });
+      await answer({ text: parsed.enabled ? "Quiet hours enabled." : "Quiet hours disabled." });
+      return;
+
+    case "snooze_clear":
+      await clearAlertSnooze(db, chatId, username, {});
+      await recordTelegramUsageEvent(db, {
+        eventType: "snooze_change",
+        actionDetail: "settings",
+        outcome: "cleared",
+      });
+      await renderHome(db, chatId, botToken, target, { chatType });
+      await answer({ text: "Alerts resumed." });
+      return;
+
+    case "snooze": {
+      const toast = await applySettingsSnooze(db, chatId, username, parsed.action);
+      await recordTelegramUsageEvent(db, {
+        eventType: "snooze_change",
+        actionDetail: "settings",
+        outcome: parsed.action === "off" ? "cleared" : parsed.action === "pause" ? "enabled" : "set",
+      });
+      await renderHome(db, chatId, botToken, target, { chatType });
+      await answer({ text: toast });
+      return;
+    }
+
+    case "coin_setting": {
+      const applied = await applyCoinSetting(
+        db,
+        chatId,
+        username,
+        parsed.coinId,
+        parsed.setting,
+        parsed.value,
+        {},
+      );
+      if (!applied) {
+        await answer({ text: "Unknown setting." });
+        return;
+      }
+      await recordTelegramUsageEvent(db, {
+        eventType: "subscribe",
+        actionDetail: `settings_${parsed.setting}`,
+        outcome: parsed.value === "0" ? "opt_out" : "opt_in",
+      });
+      await renderCoin(db, chatId, parsed.coinId, botToken, target, {
+        subscriptionPage: parsed.page,
+        chatType,
+      });
+      await answer({ text: applied });
+      return;
+    }
+  }
 }
 
 async function renderHome(
@@ -237,24 +338,60 @@ async function renderHome(
   target: RenderTarget,
   options: SettingsRenderOptions = {},
 ): Promise<void> {
-  const [subscriber, subscriptions] = await Promise.all([
+  const [subscriber, subscriptions, presetSubscriptions] = await Promise.all([
     loadSubscriberByChat(db, chatId),
     loadSubscriptionRowsByChat(db, chatId),
+    loadPresetSubscriptions(db, chatId),
   ]);
   await deliver(
     db,
     chatId,
-    buildHomeMessage(subscriber, { hasCoinControls: subscriptions.length > 0 }),
-    buildHomeKeyboard(subscriber, { ...options, subscriptions }),
+    buildHomeMessage(subscriber, {
+      hasCoinControls: subscriptions.length > 0,
+      presetSubscriptions,
+      chatType: options.chatType,
+    }),
+    buildHomeKeyboard(subscriber, { ...options, subscriptions, presetSubscriptions }),
     botToken,
     target,
   );
 }
 
-function parseSettingsHomePage(subArg: string): number | null {
-  if (subArg === "") return 0;
-  if (!/^\d+$/.test(subArg)) return null;
-  return Number(subArg);
+async function renderGlobal(
+  db: D1Database,
+  chatId: string,
+  botToken: string,
+  target: RenderTarget,
+): Promise<void> {
+  const subscriber = await loadSubscriberByChat(db, chatId);
+  await deliver(
+    db,
+    chatId,
+    buildGlobalMessage(subscriber),
+    buildGlobalKeyboard(subscriber),
+    botToken,
+    target,
+  );
+}
+
+async function renderPreset(
+  db: D1Database,
+  chatId: string,
+  presetId: TelegramPresetId,
+  botToken: string,
+  target: RenderTarget,
+  returnPage: number,
+): Promise<void> {
+  const presets = await loadPresetSubscriptions(db, chatId);
+  const row = presets.find((candidate) => candidate.preset_id === presetId) ?? null;
+  await deliver(
+    db,
+    chatId,
+    buildPresetMessage(presetId, row),
+    buildPresetKeyboard(presetId, row, returnPage),
+    botToken,
+    target,
+  );
 }
 
 async function renderCoin(
@@ -271,7 +408,10 @@ async function renderCoin(
     db,
     chatId,
     buildCoinMessage(coinId, row),
-    buildCoinKeyboard(coinId, row, options),
+    buildCoinKeyboard(coinId, row, {
+      includeMiniAppButton: options.includeMiniAppButton,
+      returnPage: options.subscriptionPage ?? 0,
+    }),
     botToken,
     target,
   );

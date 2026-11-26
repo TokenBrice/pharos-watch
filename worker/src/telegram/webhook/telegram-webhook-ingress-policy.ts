@@ -16,6 +16,7 @@ import {
   resolveGroupAdminStatus,
 } from "./telegram-webhook-auth";
 import { parseStartPayload } from "./telegram-webhook-parsing";
+import { isSettingsWriteSubAction } from "./telegram-webhook-settings-shared";
 import { recordTelegramChatCommandFlood } from "../store/processed-updates";
 
 export type ReplyFn = (message: string) => Promise<void>;
@@ -133,7 +134,7 @@ export function callbackMutatesChatState(data: string): boolean {
   const mutatingSubActions = MUTATING_CALLBACK_SUBACTIONS[action];
   if (mutatingSubActions) return mutatingSubActions.includes(subAction);
   if (READ_ONLY_CALLBACK_ACTIONS.has(action)) return false;
-  if (action === "settings") return subAction !== "home" && subAction !== "o";
+  if (action === "settings") return isSettingsWriteSubAction(subAction);
   return true;
 }
 

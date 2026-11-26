@@ -4,6 +4,7 @@ import {
   resolveTicker,
   parseTargetArgs,
   parseSubscribeArgs,
+  suggestClosestPreset,
   validateSubscribeArgs,
   type ParsedSubscribeArgs,
 } from "../alerts-parser";
@@ -173,25 +174,27 @@ describe("validateSubscribeArgs", () => {
       contains: ["ticker or preset"],
     },
     {
-      name: "names the unknown alert type when no type parsed",
+      name: "treats unknown non-typo tokens beside a valid ticker as unknown ticker or preset",
       parsed: { tickers: ["USDC"], invalidTargets: ["foo"] },
-      contains: ["Unknown alert type: foo", "Valid types"],
+      contains: ["Unknown ticker or preset: foo"],
+      absent: ["Unknown alert type", "/presets"],
     },
     {
-      name: "suggests the closest alert type for a single-token typo",
-      parsed: { tickers: ["USDC"], invalidTargets: ["dewz"] },
+      name: "suggests the closest alert type only when no targets parsed and token resembles an alert type",
+      parsed: { invalidTargets: ["dewz"] },
       contains: ["Unknown alert type: dewz", 'Did you mean "dews"?'],
     },
     {
-      name: "omits the suggestion when no alert type is within edit distance 1",
-      parsed: { tickers: ["USDC"], invalidTargets: ["xyzzy"] },
-      contains: ["Unknown alert type: xyzzy"],
-      absent: ["Did you mean"],
+      name: "does not misdiagnose an unknown ticker or preset typo as an alert type",
+      parsed: { invalidTargets: ["USDTX"] },
+      contains: ["Unknown ticker or preset: USDTX"],
+      absent: ["Unknown alert type", "Did you mean"],
     },
     {
       name: "names the unknown ticker when an alert type is present",
       parsed: { alertTypes: new Set(["dews"]), invalidTargets: ["XYZZY"] },
       contains: ["Unknown ticker or preset: XYZZY"],
+      absent: ["/presets"],
     },
     {
       name: "rejects mixing all with explicit tickers",
@@ -207,6 +210,14 @@ describe("validateSubscribeArgs", () => {
 
   it("returns null for valid args", () => {
     expect(validateSubscribeArgs({ ...baseArgs(), alertTypes: new Set(["dews"]), tickers: ["USDC"] })).toBeNull();
+  });
+
+  it("resolves real USDCx uniquely and suggests presets/tickers without matching single-char coins", () => {
+    expect(resolveTicker("USDCx")).toMatchObject({ status: "unique", matches: [expect.objectContaining({ id: "usdcx-movement" })] });
+    expect(resolveTicker("USDTX")).toMatchObject({ status: "not_found", suggestion: expect.objectContaining({ symbol: "USDT" }) });
+    expect(suggestClosestPreset("usd-top24")).toBe("usd-top25");
+    expect(suggestClosestPreset("usd-top20")).toBe("usd-top10");
+    expect(resolveTicker("usd-top20").suggestion?.symbol).not.toBe("U");
   });
 
   it.each(rejections)("$name", ({ parsed, contains, absent }) => {
@@ -227,7 +238,8 @@ describe("retired launch alert type", () => {
 
   it("is dropped from the valid-type hint", () => {
     expect(validateSubscribeArgs(parseSubscribeArgs("lanch"))).toBe(
-      'Unknown alert type: lanch. Valid types: dews, depeg, safety, reserve, freeze.',
+      "Unknown ticker or preset: lanch. Check spelling or use the coin's symbol.",
     );
+    expect(validateSubscribeArgs(parseSubscribeArgs("dewz"))).not.toContain("launch");
   });
 });

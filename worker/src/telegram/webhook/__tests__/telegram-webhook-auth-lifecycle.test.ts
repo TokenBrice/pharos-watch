@@ -250,6 +250,13 @@ describe("handleTelegramWebhook", () => {
       await vi.runAllTimersAsync();
       await deliveries;
       expect(fetchSpy).toHaveBeenCalledTimes(mode === "sent" ? 0 : 1);
+      if (mode !== "sent") {
+        const welcome = JSON.parse(String(fetchSpy.mock.calls[0]?.[1]?.body)) as {
+          reply_markup?: { inline_keyboard?: Array<Array<{ callback_data?: string }>> };
+        };
+        expect(welcome.reply_markup?.inline_keyboard?.[0]?.map((b) => b.callback_data))
+          .toEqual(["setup:top25", "settings:home"]);
+      }
       expect(threw).toBe(fault);
       expect(sqlite.prepare("SELECT value FROM cache").all()).toEqual([{ value: "1" }]);
     } finally {

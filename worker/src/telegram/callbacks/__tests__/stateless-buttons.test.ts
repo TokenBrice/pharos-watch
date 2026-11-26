@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { createTelegramFetchSpy } from "../../../test-helpers/__shared/telegram";
+import { createTelegramFetchSpy, mockTelegramMembership } from "../../../test-helpers/__shared/telegram";
 import { CALLBACK_HANDLERS, type CallbackAction } from "..";
 import { handleSetupCallback } from "../setup";
 import { buildPickKeyboard, coinIdHash, decodeSubscribeTypes, encodeSubscribeTypes } from "../pick";
@@ -45,7 +45,7 @@ function callbackContext(db: D1Database, data: string, chatType = "private"): Ca
     db,
     botToken: "bot-token",
     chatId: "42",
-    cb: { id: "cb-1", data, from: { id: 99, username: "alice" }, message: { chat: { id: 42, type: chatType } } },
+    cb: { id: "cb-1", data, from: { id: 99, username: "alice" }, message: { chat: { id: 42, type: chatType }, message_id: 77 } },
     parsed: { ...parsed, action: parsed.action as CallbackAction },
     answerCallback: vi.fn().mockResolvedValue(undefined),
   };
@@ -57,10 +57,20 @@ async function tap(db: D1Database, data: string, chatType = "private") {
   return ctx;
 }
 
-function sentTexts(): string[] {
+function sentBodies(): Array<{ text: string; reply_markup?: { inline_keyboard?: Array<Array<{ text?: string; callback_data?: string; web_app?: { url: string } }>> } }> {
   return fetchSpy.mock.calls
     .filter(([url]) => String(url).endsWith("/sendMessage"))
-    .map(([, init]) => (JSON.parse(String(init!.body)) as { text: string }).text);
+    .map(([, init]) => JSON.parse(String(init!.body)));
+}
+
+function sentTexts(): string[] {
+  return sentBodies().map((body) => body.text);
+}
+
+function editBodies(): Array<{ text: string; message_id?: number; reply_markup?: { inline_keyboard?: unknown[] } }> {
+  return fetchSpy.mock.calls
+    .filter(([url]) => String(url).endsWith("/editMessageText"))
+    .map(([, init]) => JSON.parse(String(init!.body)));
 }
 
 describe("pick buttons", () => {
@@ -83,7 +93,7 @@ describe("pick buttons", () => {
     for (const row of keyboard!.inline_keyboard) expect(new TextEncoder().encode(row[0]!.callback_data).length).toBeLessThanOrEqual(64);
   });
 
-  it("re-resolves the ticker on tap and follows the chosen coin", async () => {
+  it("re-resolves the ticker on tap, strips picker buttons, and attaches Manage in DMs", async () => {
     const { sqlite, db } = fixtures.open();
     const candidates = resolveTicker("USDF", "subscribable");
     expect(candidates.status).toBe("ambiguous");
@@ -93,6 +103,30 @@ describe("pick buttons", () => {
     expect(sqlite.prepare("SELECT stablecoin_id, alert_depeg FROM telegram_subscriptions").all())
       .toEqual([{ stablecoin_id: candidates.matches[1]!.id, alert_depeg: 1 }]);
     expect(ctx.answerCallback).toHaveBeenCalledWith({ text: "Followed." });
+    expect(last(editBodies())?.reply_markup).toEqual({ inline_keyboard: [] });
+    expect(last(sentBodies())?.reply_markup?.inline_keyboard?.flat()[0]?.web_app?.url)
+      .toContain(`startapp=coin_${candidates.matches[1]!.id}`);
+  });
+
+  it("pick:un verifies direct row existence before claiming removal and keeps pick:st buttons intact", async () => {
+    const { sqlite, db } = fixtures.open();
+    const candidates = resolveTicker("USDF", "subscribable");
+    const coin = candidates.matches[0]!;
+    const unKb = buildPickKeyboard({ kind: "unsubscribe" }, "USDF", candidates.matches);
+    const noopCtx = await tap(db, unKb!.inline_keyboard[0]![0]!.callback_data);
+    expect(noopCtx.answerCallback).toHaveBeenCalledWith({ text: "Not followed directly." });
+    expect(last(sentBodies())?.text).toContain("Not followed directly");
+    expect(last(editBodies())?.reply_markup).toEqual({ inline_keyboard: [] });
+
+    sqlite.exec(`INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_dews) VALUES ('42', '${coin.id}', 1)`);
+    const rmCtx = await tap(db, unKb!.inline_keyboard[0]![0]!.callback_data);
+    expect(rmCtx.answerCallback).toHaveBeenCalledWith({ text: "Removed." });
+    expect(sqlite.prepare("SELECT * FROM telegram_subscriptions").all()).toEqual([]);
+
+    const editsBeforeStatus = editBodies().length;
+    const stKb = buildPickKeyboard({ kind: "status" }, "USDF", candidates.matches);
+    await tap(db, stKb!.inline_keyboard[0]![0]!.callback_data);
+    expect(editBodies()).toHaveLength(editsBeforeStatus);
   });
 
   it("a safety-only pick neither enables depeg nor clears a stored depeg step", async () => {
@@ -119,11 +153,13 @@ describe("pick buttons", () => {
 describe("bulk and forget confirmations", () => {
   const expiry = (NOW + 900).toString(36);
 
-  it("follows every tracked coin from the button alone", async () => {
+  it("follows every tracked coin from the button alone, strips confirm buttons, and attaches Manage Alerts", async () => {
     const { sqlite, db } = fixtures.open();
     await tap(db, `bulk:sa:6:${expiry}`);
     expect(sqlite.prepare("SELECT global_alert_depeg, global_alert_safety, global_alert_dews FROM telegram_subscribers").get())
       .toEqual({ global_alert_depeg: 1, global_alert_safety: 1, global_alert_dews: 0 });
+    expect(last(editBodies())?.reply_markup).toEqual({ inline_keyboard: [] });
+    expect(last(sentBodies())?.reply_markup?.inline_keyboard?.flat()[0]?.text).toBe("Manage Alerts");
   });
 
   it("stores the depeg step carried by a chat-wide subscribe confirmation", async () => {
@@ -142,23 +178,25 @@ describe("bulk and forget confirmations", () => {
       .toEqual({ global_alert_depeg: 1, global_depeg_worsening_bps_step: null });
   });
 
-  it("rejects an expired button and does nothing on cancel", async () => {
+  it("rejects an expired button and strips buttons on cancel", async () => {
     const { sqlite, db } = fixtures.open();
     const expired = await tap(db, `bulk:sa:6:${(NOW - 1).toString(36)}`);
     expect(expired.answerCallback).toHaveBeenCalledWith({ text: "This confirmation expired. Send the command again." });
     const cancelled = await tap(db, "bulk:no");
     expect(cancelled.answerCallback).toHaveBeenCalledWith({ text: "Cancelled." });
+    expect(last(editBodies())?.reply_markup).toEqual({ inline_keyboard: [] });
     expect(sqlite.prepare("SELECT * FROM telegram_subscribers").all()).toEqual([]);
   });
 
-  it("removes every follow on bulk:ua", async () => {
+  it("removes every follow on bulk:ua and strips confirm buttons", async () => {
     const { sqlite, db } = fixtures.open();
     sqlite.exec(`INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_dews) VALUES ('42', 'usdc-circle', 1)`);
     await tap(db, `bulk:ua:${expiry}`);
     expect(sqlite.prepare("SELECT * FROM telegram_subscriptions").all()).toEqual([]);
+    expect(last(editBodies())?.reply_markup).toEqual({ inline_keyboard: [] });
   });
 
-  it("deletes the chat's data on forget:yes, private chats only", async () => {
+  it("deletes the chat's data on forget:yes (private chats only) and strips buttons on yes/no", async () => {
     const { sqlite, db } = fixtures.open();
     sqlite.exec(`INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('42', 1, 1);
       INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_dews) VALUES ('42', 'usdc-circle', 1)`);
@@ -166,7 +204,11 @@ describe("bulk and forget confirmations", () => {
     expect(group.answerCallback).toHaveBeenCalledWith({ text: "Open a private chat with PharosWatchBot." });
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM telegram_subscriptions").get()).toEqual({ n: 1 });
 
+    await tap(db, "forget:no");
+    expect(last(editBodies())?.reply_markup).toEqual({ inline_keyboard: [] });
+
     await tap(db, `forget:yes:${expiry}`);
+    expect(last(editBodies())?.reply_markup).toEqual({ inline_keyboard: [] });
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM telegram_subscriptions").get()).toEqual({ n: 0 });
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM telegram_subscribers").get()).toEqual({ n: 0 });
   });
@@ -186,8 +228,14 @@ describe("retired buttons in old messages", () => {
 });
 
 describe("setup buttons", () => {
-  function tapSetup(db: D1Database, data: string) {
-    return handleSetupCallback(db, "bot-token", { id: "cb", data, from: { id: 99 }, message: { chat: { id: 42, type: "private" } } }, "42", parseCallbackData(data));
+  function tapSetup(db: D1Database, data: string, chatType = "private") {
+    return handleSetupCallback(
+      db,
+      "bot-token",
+      { id: "cb", data, from: { id: 99 }, message: { chat: { id: 42, type: chatType }, message_id: 77 } },
+      "42",
+      parseCallbackData(data),
+    );
   }
 
   function lastUndoData(): string | undefined {
@@ -308,13 +356,28 @@ describe("setup buttons", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM telegram_preset_subscriptions").get()).toEqual({ n: 1 });
   });
 
-  it("does not offer Undo when the chat already followed the preset", async () => {
-    const { sqlite, db } = fixtures.open();
-    sqlite.exec(`INSERT INTO telegram_preset_subscriptions (chat_id, preset_id, alert_dews, alert_depeg, alert_safety, created_at, updated_at)
-      VALUES ('42', 'usd-top25', 1, 1, 0, 1, 1)`);
-    await tapSetup(db, "setup:top25");
+  it("does not offer Undo when the chat already followed the preset, and handles group setup buttons + expiry", async () => {
+    const { db } = fixtures.open();
+    mockTelegramMembership(fetchSpy, "administrator");
+    await tapSetup(db, "setup:top25", "supergroup");
+    const firstGroupBody = last(sentBodies())!;
+    expect(firstGroupBody.reply_markup?.inline_keyboard?.flat().some((b) => b.callback_data === "settings:home")).toBe(true);
+    const groupUndo = lastUndoData()!;
+
+    // Repeat tap is concise (no sample) and offers no Undo.
+    mockTelegramMembership(fetchSpy, "administrator");
+    await tapSetup(db, "setup:top25", "supergroup");
     expect(lastUndoData()).toBeUndefined();
     expect(last(sentTexts())).toContain("You already follow");
+    expect(last(sentTexts())).not.toContain("Here's what an alert looks like:");
+
+    // Undo strips the button and an expired group Undo points to /settings@PharosWatchBot.
+    mockTelegramMembership(fetchSpy, "administrator");
+    await tapSetup(db, groupUndo, "supergroup");
+    expect(last(editBodies())?.reply_markup).toEqual({ inline_keyboard: [] });
+    mockTelegramMembership(fetchSpy, "administrator");
+    await tapSetup(db, `setup:undo:0:${(NOW - 1).toString(36)}`, "supergroup");
+    expect(lastAnswer()).toBe("This Undo expired. Use /settings@PharosWatchBot.");
   });
 
   it("answers retired wizard buttons with a restart hint", async () => {

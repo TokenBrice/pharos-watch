@@ -3,9 +3,18 @@
  * Unambiguous coins and presets apply at once; each ambiguous ticker gets a
  * stateless `pick:` keyboard. No pending row is written.
  */
+import { formatCoinPayload } from "@shared/lib/telegram-mini-app-payloads";
+import { TELEGRAM_ALERT_FAMILY_SHORT_LABELS } from "@shared/lib/telegram-alert-families";
+import { TELEGRAM_ALERT_POLICY } from "@shared/lib/telegram-delivery-policy";
+import type { TelegramAlertType } from "@shared/types/status";
 import { escapeHtml } from "../delivery/telegram";
 import { recordTelegramUsageEvent } from "../store/usage-analytics";
-import { resolveTicker, type ResolvedCoin, type TickerResolutionScope } from "../common/alerts-parser";
+import {
+  resolveTicker,
+  suggestClosestPreset,
+  type ResolvedCoin,
+  type TickerResolutionScope,
+} from "../common/alerts-parser";
 import {
   TELEGRAM_PRESET_LABEL_BY_ID,
   resolveTelegramPresetTargets,
@@ -13,13 +22,17 @@ import {
 } from "../common/presets";
 import { TELEGRAM_SUBSCRIBABLE_STABLECOINS } from "../store/subscription-eligibility";
 import {
+  buildManageAlertsKeyboard,
+  buildMiniAppOnlyKeyboard,
   buildNotFoundMessage,
   buildPresetSubscriptionSummaryMessage,
   buildPresetUnsubscribeSummaryMessage,
   buildPresetUnavailableMessage,
   buildSubscriptionSummaryMessage,
+  buildUnsubscribeNoopKeyboard,
   buildUnsubscribeNoopMessage,
   buildUnsubscribeSuccessMessage,
+  formatDepegStepPercent,
 } from "../webhook/telegram-webhook-messages";
 import { applySubscribeIntent, applyUnsubscribeIntent } from "../store/presets";
 import { loadSubscriptionsByIds } from "../store/subscriptions";
@@ -47,9 +60,10 @@ export function buildBulkConfirmReplyMarkup(
   const data = choice.kind === "subscribe"
     ? `bulk:sa:${encodeSubscribeTypes(choice.alertTypes, choice.depegStep)}:${expires}`
     : `bulk:ua:${expires}`;
+  const confirmLabel = choice.kind === "subscribe" ? "Follow all stablecoins" : "Remove all follows";
   return {
     inline_keyboard: [[
-      { text: "Confirm", callback_data: data },
+      { text: confirmLabel, callback_data: data },
       { text: "Cancel", callback_data: "bulk:no" },
     ]],
   };
@@ -62,11 +76,24 @@ export function buildBulkConfirmMessage(
   coinSymbols: readonly string[],
   depegStep?: DepegStepChoice,
 ): string {
-  const stepLine = depegStep === undefined ? "" : `; depeg step ${depegStep == null ? "off" : `${depegStep} bps`}`;
-  const typesLine = action === "subscribe" ? `alert types ${escapeHtml(alertTypes.join(", ") || "all")}${stepLine}` : "all alert types";
+  const stepLine = depegStep === undefined
+    ? ""
+    : `; depeg step ${depegStep == null ? "off" : formatDepegStepPercent(depegStep)}`;
+  const typesLine = action === "subscribe"
+    ? `alert types ${escapeHtml(alertTypes.join(", ") || "all")}${stepLine}`
+    : "all alert types";
   const head = coinSymbols.slice(0, BULK_CONFIRM_PREVIEW_LIMIT);
   const more = coinSymbols.length - head.length;
   const preview = head.length > 0 ? `\n${escapeHtml(`${head.join(", ")}${more > 0 ? `, and ${more} more` : ""}`)}` : "";
+  if (action === "subscribe") {
+    const rollupOnly = (TELEGRAM_ALERT_POLICY.rollupOnlyGlobalFamilies as readonly TelegramAlertType[])
+      .filter((family) => alertTypes.includes(family))
+      .map((family) => TELEGRAM_ALERT_FAMILY_SHORT_LABELS[family]);
+    const rollupNote = rollupOnly.length > 0
+      ? `\nGlobal ${escapeHtml(rollupOnly.join(" and "))} changes arrive in the daily Changes message rather than live.`
+      : "";
+    return `This follows every active stablecoin (${count} today, including new coins as Pharos adds them) for ${typesLine}.${rollupNote} Confirm?${preview}`;
+  }
   return `This will ${action} ${count} coins for ${typesLine}. Confirm?${preview}`;
 }
 
@@ -95,7 +122,8 @@ export async function runFollowCommand(
   for (const ticker of tickers) {
     const resolution = resolveTicker(ticker, scope);
     if (resolution.status === "not_found") {
-      await ctx.replyToChat(buildNotFoundMessage(ticker, resolution.suggestion));
+      const suggestion = suggestClosestPreset(ticker) ?? resolution.suggestion;
+      await ctx.replyToChat(buildNotFoundMessage(ticker, suggestion));
       await recordTelegramUsageEvent(ctx.db, {
         eventType: request.kind,
         actionDetail: "validation",
@@ -110,8 +138,12 @@ export async function runFollowCommand(
   const directCoins = dedupeCoins(coins);
 
   if (directCoins.length > 0 || request.presetIds.length > 0) {
-    const reply = await applyFollowRequest(ctx, directCoins, request);
-    await ctx.replyToChat(reply);
+    const result = await applyFollowRequest(ctx, directCoins, request);
+    if (result.replyMarkup) {
+      await ctx.replyToChatWithMarkup(result.text, { replyMarkup: result.replyMarkup });
+    } else {
+      await ctx.replyToChat(result.text);
+    }
   }
 
   const pickAction: PickAction = request.kind === "subscribe"
@@ -141,7 +173,7 @@ async function applyFollowRequest(
   ctx: WebhookCommandContext,
   coins: readonly ResolvedCoin[],
   request: FollowRequest,
-): Promise<string> {
+): Promise<{ text: string; replyMarkup?: unknown }> {
   const coinIds = coins.map((coin) => coin.id);
   // Presets are never copied into direct rows, so only a coin with an existing
   // direct row can be removed by this command. The reply reports that removal
@@ -159,7 +191,7 @@ async function applyFollowRequest(
       outcome: "failure",
       failureClass: "preset_unavailable",
     });
-    return buildPresetUnavailableMessage();
+    return { text: buildPresetUnavailableMessage() };
   }
   const presetCoinCount = resolvedPresets?.kind === "ok"
     ? dedupeCoins(resolvedPresets.presets.flatMap((preset) => preset.coins)).length
@@ -194,21 +226,35 @@ async function applyFollowRequest(
 
   if (request.kind === "unsubscribe") {
     if (request.presetIds.length > 0) {
-      return buildPresetUnsubscribeSummaryMessage(removedCoins, {
-        presetIds: request.presetIds,
-        presetLabelById: TELEGRAM_PRESET_LABEL_BY_ID,
-      });
+      return {
+        text: buildPresetUnsubscribeSummaryMessage(removedCoins, {
+          presetIds: request.presetIds,
+          presetLabelById: TELEGRAM_PRESET_LABEL_BY_ID,
+          chatType: ctx.chatType,
+        }),
+      };
     }
-    return removedCoins.length > 0
-      ? buildUnsubscribeSuccessMessage(removedCoins)
-      : buildUnsubscribeNoopMessage([...coins]);
+    if (removedCoins.length > 0) {
+      return { text: buildUnsubscribeSuccessMessage(removedCoins) };
+    }
+    return {
+      text: buildUnsubscribeNoopMessage([...coins], ctx.chatType),
+      replyMarkup: buildUnsubscribeNoopKeyboard(coins, ctx.chatType),
+    };
   }
   const subscriptions = await loadSubscriptionsByIds(ctx.db, ctx.chatId, coinIds);
-  return request.presetIds.length > 0
+  const text = request.presetIds.length > 0
     ? buildPresetSubscriptionSummaryMessage(subscriptions, {
         presetIds: request.presetIds,
         presetLabelById: TELEGRAM_PRESET_LABEL_BY_ID,
         presetCoinCount: presetCoinCount ?? 0,
+        chatType: ctx.chatType,
       })
     : buildSubscriptionSummaryMessage("Updated subscriptions.", subscriptions);
+  const replyMarkup = ctx.chatType === "private"
+    ? (coins.length === 1 && request.presetIds.length === 0
+        ? buildMiniAppOnlyKeyboard(`Manage ${coins[0]!.symbol}`, formatCoinPayload(coins[0]!.id))
+        : buildManageAlertsKeyboard("home"))
+    : undefined;
+  return { text, replyMarkup };
 }

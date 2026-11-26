@@ -4,7 +4,7 @@ import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { buildTelegramMiniAppUrl, TELEGRAM_MINI_APP_URL } from "../../common/mini-app-url";
 import { COMMAND_HANDLERS, LEGACY_COMMAND_HANDLERS } from "../../commands";
 import { PRIVATE_HELP_MESSAGE, GROUP_HELP_MESSAGE } from "../../commands/help";
-import { TELEGRAM_COMMAND_NAMES } from "@shared/lib/telegram-bot-registration";
+import { TELEGRAM_BOT_DESCRIPTION, TELEGRAM_COMMAND_NAMES } from "@shared/lib/telegram-bot-registration";
 import { TELEGRAM_COMMAND_POLICIES } from "../../commands/definitions";
 import {
   buildTelegramWebhookUrl,
@@ -77,7 +77,7 @@ async function expectedWebhookCacheValue(
 
 function expectedCommandsCacheValue(): string {
   return JSON.stringify({
-    version: 8,
+    version: 9,
     scopes: {
       all_private_chats: TELEGRAM_BOT_COMMANDS,
       all_group_chats: TELEGRAM_BOT_GROUP_COMMANDS,
@@ -384,13 +384,15 @@ describe("reconcileTelegramCommandRegistration", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps group commands to group-safe commands only", () => {
+  it("keeps group commands to group-safe commands including pause and describes the Manage Alerts button", () => {
     const groupCommands = TELEGRAM_BOT_GROUP_COMMANDS.map((entry) => entry.command);
     for (const command of groupCommands) {
       expect(TELEGRAM_BOT_COMMANDS.some((entry) => entry.command === command)).toBe(true);
     }
+    expect(groupCommands).toContain("pause");
     expect(groupCommands).not.toContain("start");
     expect(groupCommands).not.toContain("forget");
+    expect(TELEGRAM_BOT_DESCRIPTION).toContain("Manage Alerts button");
   });
 
   it("skips the second scope call when Telegram rejects the private-chat registration", async () => {

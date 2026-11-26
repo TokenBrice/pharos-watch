@@ -68,7 +68,7 @@ export const handleQuickSubCallback: CallbackHandler = async ({
         botToken,
         {
           actionDetail: "callback_quicksub",
-          replyMarkup: buildMiniAppOnlyKeyboard("Open in app", `coin_${arg}`),
+          replyMarkup: buildMiniAppOnlyKeyboard(`Manage ${meta?.symbol ?? arg}`, `coin_${arg}`),
         },
       );
     }

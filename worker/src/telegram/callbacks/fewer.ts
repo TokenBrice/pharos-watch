@@ -3,6 +3,7 @@ import { DEWS_BAND_CODE_BY_VALUE, TELEGRAM_ALERT_PERSISTENCE } from "@shared/lib
 import { isDepegStepValue, TELEGRAM_DEWS_BANDS, type TelegramDewsBand } from "@shared/types/status/telegram";
 import { executeAtomicBatch } from "../../lib/db";
 import { FEWER_FAMILY_SETTING_CODES, nextFewerSettingValue } from "../common/alerts-formatting";
+import { cmdForChat, formatDepegStepPercent, formatDewsCompactBand } from "../webhook/telegram-webhook-messages";
 import { prepareCoinSettingStatements } from "../webhook/telegram-webhook-settings-mutations";
 import {
   callbackChatType,
@@ -20,10 +21,10 @@ const DEWS_CODE = TELEGRAM_ALERT_PERSISTENCE.dews.settingCode;
 
 const OFF_LABEL_BY_CODE: Record<string, string> = {
   [DEPEG_CODE]: "depeg alerts",
-  [DEWS_CODE]: "stress alerts",
-  [TELEGRAM_ALERT_PERSISTENCE.safety.settingCode]: "Safety alerts",
+  [DEWS_CODE]: "DEWS alerts",
+  [TELEGRAM_ALERT_PERSISTENCE.safety.settingCode]: "Safety Score alerts",
   [TELEGRAM_ALERT_PERSISTENCE.freeze.settingCode]: "freeze alerts",
-  [TELEGRAM_ALERT_PERSISTENCE.reserve.settingCode]: "reserve alerts",
+  [TELEGRAM_ALERT_PERSISTENCE.reserve.settingCode]: "reserve drift alerts",
 };
 
 interface FewerTarget {
@@ -135,13 +136,13 @@ async function resolveFewerValue(
   return fewerRank(code, action.value) >= fewerRank(code, current!) ? action.value : current!;
 }
 
-function fewerToast({ id, code, value }: FewerTarget, privateChat: boolean): string {
+function fewerToast({ id, code, value }: FewerTarget, chatType: string): string {
   const symbol = TRACKED_META_BY_ID.get(id)?.symbol ?? id;
-  const undo = privateChat ? "Undo in Manage Alerts." : "Undo with /settings.";
+  const undo = chatType === "private" ? "Undo in Manage Alerts." : `Undo with ${cmdForChat("settings", chatType)}.`;
   if (value === "0") return `${symbol}: ${OFF_LABEL_BY_CODE[code]} off. ${undo}`;
-  if (code === DEPEG_CODE) return `${symbol}: depeg alerts now only past ${(Number(value) / 100).toFixed(1)}%. ${undo}`;
+  if (code === DEPEG_CODE) return `${symbol}: depeg alerts from ${formatDepegStepPercent(Number(value))} now. ${undo}`;
   const band = TELEGRAM_DEWS_BANDS.find((candidate) => DEWS_BAND_CODE_BY_VALUE[candidate] === value);
-  return `${symbol}: stress alerts now only at ${band} and above. ${undo}`;
+  return `${symbol}: DEWS alerts from ${formatDewsCompactBand(band ?? "ALERT")} now. ${undo}`;
 }
 
 /** A carried target value must be one the family's setting accepts. */
@@ -182,7 +183,7 @@ export const handleFewerCallback: CallbackHandler = async (context) => {
       const results = await executeAtomicBatch(db, [...prepared.statements, ...(options.operationStatements ?? [])], { returnResults: true });
       if (Number(results[prepared.statements.length - 1]?.meta?.changes ?? 0) === 0) return "stale";
     },
-    successText: (target) => fewerToast(target, callbackChatType(cb) === "private"),
+    successText: (target) => fewerToast(target, callbackChatType(cb)),
     staleText: "Settings changed. Please try again.",
     failureText: "Could not save setting. Please try again.",
   });

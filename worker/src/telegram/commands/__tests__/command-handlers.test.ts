@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { PAUSE_SENTINEL_TS } from "@shared/lib/telegram-delivery-policy";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
@@ -46,13 +47,15 @@ afterEach(() => {
 });
 
 describe("/subscribe and /unsubscribe", () => {
-  it("follows a unique ticker for DEWS and depeg by default", async () => {
+  it("follows a unique ticker for DEWS and depeg by default and attaches Manage <SYM>", async () => {
     const { sqlite, db } = fixtures.open();
     const ctx = makeCommandContext(db);
     await handleSubscribe(ctx, "USDC");
     expect(sqlite.prepare("SELECT stablecoin_id, alert_dews, alert_depeg FROM telegram_subscriptions WHERE chat_id = '42'").all())
       .toEqual([{ stablecoin_id: "usdc-circle", alert_dews: 1, alert_depeg: 1 }]);
-    expect(vi.mocked(ctx.replyToChat).mock.calls[0]![0]).toContain("USDC");
+    const [message, options] = vi.mocked(ctx.replyToChatWithMarkup).mock.calls[0]!;
+    expect(message).toContain("USDC");
+    expectMiniAppButton(buttonsFromMarkup(options.replyMarkup), "Manage USDC", "coin_usdc-circle");
   });
 
   it("keeps depeg off and stored depeg tuning intact when only safety is requested", async () => {
@@ -67,12 +70,28 @@ describe("/subscribe and /unsubscribe", () => {
       .toEqual({ alert_depeg: 1, depeg_worsening_bps_step: 500 });
   });
 
-  it("stops on an unknown ticker before writing anything", async () => {
+  it("resolves real USDCx, suggests ticker/preset for unknown tokens, and lists group presets on bare /subscribe", async () => {
     const { sqlite, db } = fixtures.open();
-    const ctx = makeCommandContext(db);
-    await handleSubscribe(ctx, "dews USDC NOTACOINXYZ");
-    expect(sqlite.prepare("SELECT * FROM telegram_subscriptions").all()).toEqual([]);
-    expect(vi.mocked(ctx.replyToChat).mock.calls[0]![0]).toContain("No stablecoin or preset called");
+    await handleSubscribe(makeCommandContext(db), "USDCx");
+    expect(sqlite.prepare("SELECT stablecoin_id FROM telegram_subscriptions WHERE chat_id = '42'").all())
+      .toEqual([{ stablecoin_id: "usdcx-movement" }]);
+
+    for (const [args, expected] of [
+      ["dews USDC NOTACOINXYZ", "No stablecoin or preset called"],
+      ["USDTX", "Did you mean USDT?"],
+      ["usd-top24", "Did you mean usd-top25?"],
+    ] as const) {
+      const ctx = makeCommandContext(db);
+      await handleSubscribe(ctx, args);
+      expect(vi.mocked(ctx.replyToChat).mock.calls[0]![0]).toContain(expected);
+      expect(vi.mocked(ctx.replyToChat).mock.calls[0]![0]).not.toContain("Unknown alert type");
+    }
+
+    const groupCtx = makeCommandContext(db, { chatType: "supergroup" });
+    await handleSubscribe(groupCtx, "");
+    const groupMsg = vi.mocked(groupCtx.replyToChat).mock.calls[0]![0];
+    expect(groupMsg).toContain("/subscribe@PharosWatchBot");
+    expect(groupMsg).toContain("usd-top10/25/50");
   });
 
   it("applies unambiguous coins and offers stateless pick buttons for an ambiguous ticker", async () => {
@@ -81,7 +100,8 @@ describe("/subscribe and /unsubscribe", () => {
     await handleSubscribe(ctx, "depeg USDC USDF");
     expect(sqlite.prepare("SELECT stablecoin_id FROM telegram_subscriptions WHERE chat_id = '42'").all())
       .toEqual([{ stablecoin_id: "usdc-circle" }]);
-    const [message, options] = vi.mocked(ctx.replyToChatWithMarkup).mock.calls[0]!;
+    expect(vi.mocked(ctx.replyToChatWithMarkup).mock.calls[0]![0]).toContain("USDC");
+    const [message, options] = vi.mocked(ctx.replyToChatWithMarkup).mock.calls[1]!;
     expect(message).toContain("\"USDF\" matches");
     const data = buttonsFromMarkup(options.replyMarkup).map((button) => button.callback_data);
     expect(data.length).toBeGreaterThan(1);
@@ -102,8 +122,9 @@ describe("/subscribe and /unsubscribe", () => {
     await handleSubscribe(ctx, "depeg,safety all");
     const [message, options] = vi.mocked(ctx.replyToChatWithMarkup).mock.calls[0]!;
     expect(message).toContain("Confirm?");
-    expect(buttonsFromMarkup(options.replyMarkup).map((button) => button.callback_data))
-      .toEqual([`bulk:sa:6:${(NOW + 900).toString(36)}`, "bulk:no"]);
+    expect(message).toContain("daily Changes");
+    expect(buttonsFromMarkup(options.replyMarkup).map((button) => [button.text, button.callback_data]))
+      .toEqual([["Follow all stablecoins", `bulk:sa:6:${(NOW + 900).toString(36)}`], ["Cancel", "bulk:no"]]);
     expect(sqlite.prepare("SELECT * FROM telegram_subscribers").all()).toEqual([]);
   });
 
@@ -115,21 +136,24 @@ describe("/subscribe and /unsubscribe", () => {
     expect(buttons[0]).toMatchObject({ text: "Follow the top 25 USD stablecoins", callback_data: "setup:top25" });
   });
 
-  it("removes a direct coin and confirms /unsubscribe all statelessly", async () => {
+  it("removes a direct coin, short-circuits empty /unsubscribe all, and confirms non-empty /unsubscribe all", async () => {
     const { sqlite, db } = fixtures.open();
     sqlite.exec(`INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_dews) VALUES ('42', 'usdc-circle', 1)`);
     const ctx = makeCommandContext(db, { operationNowSec: NOW });
     await handleUnsubscribe(ctx, "USDC");
     expect(sqlite.prepare("SELECT * FROM telegram_subscriptions").all()).toEqual([]);
     await handleUnsubscribe(ctx, "all");
-    expect(buttonsFromMarkup(vi.mocked(ctx.replyToChatWithMarkup).mock.calls[0]![1].replyMarkup)[0]?.callback_data)
-      .toBe(`bulk:ua:${(NOW + 900).toString(36)}`);
+    expect(last(vi.mocked(ctx.replyToChat).mock.calls)![0]).toContain("doesn't follow any stablecoins");
+    expect(ctx.replyToChatWithMarkup).not.toHaveBeenCalled();
+
+    sqlite.exec(`INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_dews) VALUES ('42', 'usdc-circle', 1)`);
+    await handleUnsubscribe(ctx, "all");
+    const buttons = buttonsFromMarkup(vi.mocked(ctx.replyToChatWithMarkup).mock.calls[0]![1].replyMarkup);
+    expect(buttons[0]).toMatchObject({ text: "Remove all follows", callback_data: `bulk:ua:${(NOW + 900).toString(36)}` });
   });
 
-  it("does not claim a removal when the coin is only covered by a followed preset", async () => {
+  it("does not claim a removal when the coin is only covered by a followed preset, and attaches Manage USDC", async () => {
     const { sqlite, db } = fixtures.open();
-    // A preset follow is never copied into direct rows; /unsubscribe USDC
-    // therefore removes nothing while the preset keeps USDC's alerts.
     sqlite.exec(`INSERT INTO telegram_preset_subscriptions
       (chat_id, preset_id, alert_dews, alert_depeg, alert_safety, created_at, updated_at)
       VALUES ('42', 'usd-top25', 1, 1, 0, 1, 1)`);
@@ -140,9 +164,11 @@ describe("/subscribe and /unsubscribe", () => {
     expect(sqlite.prepare("SELECT stablecoin_id FROM telegram_subscriptions").all()).toEqual([]);
     expect(sqlite.prepare("SELECT preset_id FROM telegram_preset_subscriptions").all())
       .toEqual([{ preset_id: "usd-top25" }]);
-    const reply = vi.mocked(ctx.replyToChat).mock.calls.map(([message]) => message).join("\n");
+    const [reply, options] = vi.mocked(ctx.replyToChatWithMarkup).mock.calls[0]!;
     expect(reply).not.toMatch(/Removed \d+ coin subscriptions?/i);
     expect(reply).toContain("Not followed directly: USDC");
+    expect(reply).toContain("coin covered by a preset");
+    expectMiniAppButton(buttonsFromMarkup(options.replyMarkup), "Manage USDC", "coin_usdc-circle");
   });
 
   it("does not claim a removal on a repeated /unsubscribe", async () => {
@@ -156,7 +182,7 @@ describe("/subscribe and /unsubscribe", () => {
     const second = makeCommandContext(db);
     await handleUnsubscribe(second, "USDC");
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_subscriptions").get()).toEqual({ count: 0 });
-    expect(vi.mocked(second.replyToChat).mock.calls.map(([message]) => message).join("\n"))
+    expect(vi.mocked(second.replyToChatWithMarkup).mock.calls.map(([message]) => message).join("\n"))
       .not.toMatch(/Removed \d+ coin subscriptions?/i);
   });
 });
@@ -176,36 +202,61 @@ describe("/start onboarding", () => {
     expect(buttons[1]?.web_app?.url).toContain("startapp=setup");
   });
 
-  it("welcomes a returning user with what they follow", async () => {
+  it("welcomes a returning private user (swapping Pause for Resume when paused) and handles returning/anonymous group admins", async () => {
     const { sqlite, db } = fixtures.open();
     sqlite.exec(`INSERT INTO telegram_preset_subscriptions (chat_id, preset_id, alert_dews, alert_depeg, alert_safety, created_at, updated_at)
       VALUES ('42', 'usd-top25', 1, 1, 0, 1, 1)`);
     await handleStart(makeCommandContext(db), "setup");
-    const body = JSON.parse(String(last(fetchSpy.mock.calls)![1]!.body)) as { text: string; reply_markup: unknown };
-    expect(body.text).toContain("Welcome back.");
-    expect(body.text).toContain("USD Top 25");
-    expect(buttonsFromMarkup(body.reply_markup).map((button) => button.callback_data ?? button.text))
+    const activeBody = JSON.parse(String(last(fetchSpy.mock.calls)![1]!.body)) as { text: string; reply_markup: unknown };
+    expect(activeBody.text).toContain("Welcome back.");
+    expect(activeBody.text).toContain("USD Top 25");
+    expect(buttonsFromMarkup(activeBody.reply_markup).map((button) => button.callback_data ?? button.text))
       .toEqual(["Manage Alerts", "snooze:24h", "help:commands"]);
+
+    sqlite.exec(`INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at, alert_snooze_until_ts)
+      VALUES ('42', 1, 1, ${PAUSE_SENTINEL_TS})`);
+    await handleStart(makeCommandContext(db), "");
+    const pausedBody = JSON.parse(String(last(fetchSpy.mock.calls)![1]!.body)) as { text: string; reply_markup: unknown };
+    expect(buttonsFromMarkup(pausedBody.reply_markup).map((button) => button.callback_data ?? button.text))
+      .toEqual(["Manage Alerts", "snooze:off", "help:commands"]);
+
+    await handleStart(makeCommandContext(db, { chatType: "supergroup", postedAsGroup: true }), "");
+    const groupBody = JSON.parse(String(last(fetchSpy.mock.calls)![1]!.body)) as { text: string; reply_markup: unknown };
+    expect(groupBody.text).toContain("USD Top 25");
+    expect(buttonsFromMarkup(groupBody.reply_markup).map((button) => button.callback_data))
+      .toEqual(["settings:home", "snooze:off", "help:commands"]);
   });
 });
 
 describe("/settings, /list and /forget", () => {
-  it("hands private settings off to the Mini App", async () => {
+  it("hands private /settings and /settings <ticker> off to the Mini App and rejects non-subscribable coins", async () => {
     const { db } = fixtures.open();
     const ctx = makeCommandContext(db);
     await handleSettings(ctx, "");
     const [message, options] = vi.mocked(ctx.replyToChatWithMarkup).mock.calls[0]!;
     expect(message).toContain("<b>Alert settings</b>");
     expectMiniAppButton(buttonsFromMarkup(options.replyMarkup), "Manage Alerts", "settings");
+
+    const coinCtx = makeCommandContext(db);
+    await handleSettings(coinCtx, "USDC");
+    expectMiniAppButton(
+      buttonsFromMarkup(vi.mocked(coinCtx.replyToChatWithMarkup).mock.calls[0]![1].replyMarkup),
+      "Manage USDC",
+      "coin_usdc-circle",
+    );
+
+    const frozenCtx = makeCommandContext(db);
+    await handleSettings(frozenCtx, FROZEN_STABLECOINS[0]!.id);
+    expect(vi.mocked(frozenCtx.replyToChat).mock.calls[0]![0]).toContain("not active for alerts");
   });
 
-  it("lists follows without engine rules or coin ids", async () => {
+  it("lists follows one coin per line without engine rules or coin ids", async () => {
     const { sqlite, db } = fixtures.open();
     sqlite.exec(`INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_depeg) VALUES ('42', 'usdc-circle', 1)`);
     const ctx = makeCommandContext(db);
     await handleList(ctx, "");
     const [message] = vi.mocked(ctx.replyToChatWithMarkup).mock.calls[0]!;
-    expect(message).toContain("<b>Coins:</b> USDC (Depeg)");
+    expect(message).toContain("<b>Coins (1):</b>\n• USDC — Depeg");
     expect(message).not.toMatch(/Precedence|usdc-circle|\/presets|\/unsnooze/);
   });
 
@@ -220,15 +271,15 @@ describe("/settings, /list and /forget", () => {
       .toEqual([`forget:yes:${(NOW + 900).toString(36)}`, "forget:no"]);
   });
 
-  it("rejects /forget in a group chat with a private-chat-only message and no disambiguation row", async () => {
+  it("explains group removal on /forget in a group chat without creating disambiguation rows", async () => {
     const replyToChat = vi.fn().mockResolvedValue(undefined);
     const ctx: WebhookCommandContext = makeCommandContext(mockD1(), { chatType: "group", replyToChat });
 
     await handleForget(ctx, "");
 
-    expect(replyToChat).toHaveBeenCalledWith(
-      expect.stringContaining("Open a private chat"),
-    );
+    const text = replyToChat.mock.calls[0]![0] as string;
+    expect(text).toContain("Removing @PharosWatchBot from this group");
+    expect(text).toContain("/unsubscribe@PharosWatchBot all");
     expect((ctx.db as MockD1Database).getHistory().some((entry) =>
       entry.sql.includes("INSERT INTO telegram_pending_disambiguation"),
     )).toBe(false);
@@ -243,16 +294,33 @@ describe("/pause command", () => {
     return fixture;
   }
 
-  it.each([["", PAUSE_SENTINEL_TS], ["off", null], ["resume", null], ["4h", NOW + 14400]] as const)("persists %s only for the current chat", async (arg, until) => {
+  it.each([["", PAUSE_SENTINEL_TS, true], ["off", null, false], ["resume", null, false], ["4h", NOW + 14400, true]] as const)(
+    "persists %s only for the current chat and attaches Resume when paused",
+    async (arg, until, hasResume) => {
+      const { sqlite, db } = seeded();
+      const ctx = makeCommandContext(db);
+      await handlePause(ctx, arg);
+      expect(sqlite.prepare("SELECT chat_id, alert_snooze_until_ts, preference_generation FROM telegram_subscribers ORDER BY chat_id").all()).toEqual([
+        { chat_id: "42", alert_snooze_until_ts: until, preference_generation: 8 },
+        { chat_id: "neighbor", alert_snooze_until_ts: 456, preference_generation: 9 },
+      ]);
+      const buttons = buttonsFromMarkup(vi.mocked(ctx.replyToChatWithMarkup).mock.calls[0]?.[1]?.replyMarkup);
+      expectMiniAppButton(buttons, "Manage Alerts", "snooze");
+      expect(buttons.some((b) => b.callback_data === "snooze:off")).toBe(hasResume);
+    },
+  );
+
+  it("shows status + Resume + duration buttons without overwriting when bare /pause runs while already paused", async () => {
     const { sqlite, db } = seeded();
+    sqlite.exec(`UPDATE telegram_subscribers SET alert_snooze_until_ts = ${NOW + 7200} WHERE chat_id = '42'`);
     const ctx = makeCommandContext(db);
-    await handlePause(ctx, arg);
-    expect(sqlite.prepare("SELECT chat_id, alert_snooze_until_ts, preference_generation FROM telegram_subscribers ORDER BY chat_id").all()).toEqual([
-      { chat_id: "42", alert_snooze_until_ts: until, preference_generation: 8 },
-      { chat_id: "neighbor", alert_snooze_until_ts: 456, preference_generation: 9 },
-    ]);
-    const options = vi.mocked(ctx.replyToChatWithMarkup).mock.calls[0]?.[1];
-    expectMiniAppButton(buttonsFromMarkup(options?.replyMarkup), "Manage Alerts", "snooze");
+    await handlePause(ctx, "");
+    expect(sqlite.prepare("SELECT alert_snooze_until_ts, preference_generation FROM telegram_subscribers WHERE chat_id = '42'").get())
+      .toEqual({ alert_snooze_until_ts: NOW + 7200, preference_generation: 7 });
+    const [message, options] = vi.mocked(ctx.replyToChatWithMarkup).mock.calls[0]!;
+    expect(message).toContain("already paused for 2 h more");
+    expect(buttonsFromMarkup(options.replyMarkup).map((b) => b.callback_data ?? b.text))
+      .toEqual(["snooze:off", "snooze:4h", "snooze:24h", "snooze:pause", "Manage Alerts"]);
   });
 
   it("rejects unknown arguments without changing preferences", async () => {

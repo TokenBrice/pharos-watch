@@ -23,7 +23,7 @@ export type ParsedStartPayload =
   | { kind: "sample" }
   | { kind: "app" }
   | { kind: "subscribe"; args: string }
-  | { kind: "status"; coinId: string }
+  | { kind: "status"; coinId: string | null }
   | { kind: "why"; coinId: string }
   | { kind: "coverage"; coinId: string };
 
@@ -31,6 +31,7 @@ export type ParsedStartPayload =
  * Parse a Telegram `/start <payload>` deep-link payload into a typed action.
  * Payload schemes (all lowercase, no spaces):
  * - `sub_<types>_<targets>` (e.g. `sub_dews-depeg_usd-top25`) → subscribe
+ * - `status` → bare `/status` chat card (used for blocked-chat unblock)
  * - `status_<id>` / `why_<id>` / `coverage_<id>` → read-only insights
  * - `setup` → setup wizard placeholder
  * - `sample` → synthetic `/sample` preview (private-chat-only)
@@ -52,6 +53,7 @@ export function parseStartPayload(args: string): ParsedStartPayload {
   if (lower === "setup") return { kind: "setup" };
   if (lower === "sample") return { kind: "sample" };
   if (lower === "app" || lower === "home") return { kind: "app" };
+  if (lower === "status") return { kind: "status", coinId: null };
 
   const firstSep = lower.indexOf("_");
   if (firstSep === -1) return { kind: "none" };

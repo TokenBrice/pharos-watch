@@ -187,6 +187,7 @@ export async function handleTelegramMessageUpdate(args: {
     chatType,
     username,
     actorUserId,
+    postedAsGroup,
     botToken,
     operationNowSec: nowSec,
     replyToChat: reply,

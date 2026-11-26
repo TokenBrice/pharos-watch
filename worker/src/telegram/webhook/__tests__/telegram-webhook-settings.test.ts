@@ -1,7 +1,8 @@
 import { TELEGRAM_LAUNCH_RETIRED_MESSAGE } from "@shared/lib/telegram-alert-families";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { FROZEN_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { TELEGRAM_PRESET_LABEL_BY_ID, type TelegramPresetId } from "../../common/presets";
 import {
   createTelegramFetchSpy,
   mockTelegramD1 as baseMockD1,
@@ -22,7 +23,7 @@ function mockD1(tables: MockTableConfig[] = [], options: MockTelegramD1Options =
   });
 }
 
-import type { SubscriptionRow } from "../telegram-webhook-shared";
+import type { PresetSubscriptionRow, SubscriptionRow } from "../telegram-webhook-shared";
 
 const {
   handleSettingsCallback,
@@ -30,8 +31,12 @@ const {
 } = await import("../telegram-webhook-settings");
 const {
   buildCoinKeyboard,
+  buildGlobalKeyboard,
+  buildGlobalMessage,
   buildHomeKeyboard,
   buildHomeMessage,
+  buildPresetKeyboard,
+  buildPresetUnfollowConfirmKeyboard,
 } = await import("../telegram-webhook-settings-render");
 
 const { fetchSpy, reset: resetTelegramFetchSpy } = createTelegramFetchSpy();
@@ -40,6 +45,10 @@ afterEach(() => fixtures.closeAll());
 
 function jsonBody(call: unknown[]): Record<string, unknown> {
   return telegramCallBody(call);
+}
+
+function lastItem<T>(items: readonly T[]): T {
+  return items[items.length - 1]!;
 }
 
 function sendCalls(): unknown[][] {
@@ -72,7 +81,7 @@ beforeEach(() => {
 });
 
 describe("handleSettingsCommand", () => {
-  it("sends the home view when called with no ticker", async () => {
+  it("sends the home view with pause row, presets summary, and All stablecoins submenu", async () => {
     const db = mockD1();
     await handleSettingsCommand(db, "fake-token", "42", null, "");
 
@@ -82,25 +91,27 @@ describe("handleSettingsCommand", () => {
       reply_markup: { inline_keyboard: Array<Array<{ callback_data: string }>> };
     };
     expect(body.text).toContain("<b>Settings</b>");
-    expect(body.text).toContain("Quiet hours: off");
+    expect(body.text).toContain("Quiet hours: off (22:00-07:00 UTC)");
+    expect(body.text).toContain("Presets: None");
     const callbacks = body.reply_markup.inline_keyboard.flat().map((b) => b.callback_data);
     expect(callbacks).toEqual(
       expect.arrayContaining([
         "settings:q:1",
-        "settings:gt:dews:1",
-        "settings:gt:depeg:1",
-        "settings:gt:safety:1",
-        "settings:gt:reserve:1",
+        "settings:sn:4h",
+        "settings:sn:24h",
+        "settings:sn:pause",
+        "settings:g",
       ]),
     );
-    expect(callbacks.some((c) => c.startsWith("settings:gt:launch"))).toBe(false);
+    expect(callbacks.some((c) => c.startsWith("settings:gt:"))).toBe(false);
   });
 
-  it("adds paginated per-coin owner buttons to the home view", async () => {
+  it("adds 2-column 8/page paginated per-coin owner buttons to the home view", async () => {
     const db = mockD1([], {
-      subscriptions: ["usdt-tether", "usdc-circle", "dai-makerdao", "pyusd-paypal", "usds-sky", "usde-ethena"].map(
-        subscriptionRow,
-      ),
+      subscriptions: [
+        "usdt-tether", "usdc-circle", "dai-makerdao", "pyusd-paypal", "usds-sky",
+        "usde-ethena", "frax-frax", "lusd-liquity", "fdusd-first-digital",
+      ].map(subscriptionRow),
     });
     await handleSettingsCommand(db, "fake-token", "42", null, "");
     db.assertAllMatchesUsed();
@@ -109,8 +120,9 @@ describe("handleSettingsCommand", () => {
       reply_markup: { inline_keyboard: Array<Array<{ text: string; callback_data?: string }>> };
     };
     const buttons = body.reply_markup.inline_keyboard.flat();
-    expect(buttons.filter((button) => button.callback_data?.startsWith("settings:o:"))).toHaveLength(5);
-    expect(buttons.some((button) => button.callback_data === "settings:home:1")).toBe(true);
+    expect(buttons.filter((button) => button.callback_data?.startsWith("settings:o:"))).toHaveLength(8);
+    expect(buttons.some((button) => button.text === "1/2" && button.callback_data === "settings:home:0")).toBe(true);
+    expect(buttons.some((button) => button.text === "Next ›" && button.callback_data === "settings:home:1")).toBe(true);
   });
 
   it("renders the coin view for /settings USDC", async () => {
@@ -126,10 +138,27 @@ describe("handleSettingsCommand", () => {
     const callbacks = body.reply_markup.inline_keyboard.flat().map((b) => b.callback_data);
     expect(callbacks.some((c) => c.startsWith("settings:c:usdc-circle:db:"))).toBe(true);
     expect(callbacks.some((c) => c.startsWith("settings:c:usdc-circle:sm:"))).toBe(true);
-    expect(callbacks.some((c) => c.startsWith("settings:c:usdc-circle:ds:"))).toBe(true);
+    expect(callbacks.some((c) => c.startsWith("settings:c:usdc-circle:ds:a:"))).toBe(true);
     expect(callbacks.some((c) => c.startsWith("settings:c:usdc-circle:rs:"))).toBe(true);
     expect(callbacks.some((c) => c.startsWith("settings:c:usdc-circle:lc:"))).toBe(false);
-    expect(callbacks).toContain("settings:home");
+    expect(callbacks).toContain("settings:home:0");
+  });
+
+  it("renders inline settings:o buttons for ambiguous /settings <ticker> and guards non-subscribable coins", async () => {
+    const db = mockD1();
+    await handleSettingsCommand(db, "fake-token", "42", null, "USDF", { chatType: "supergroup" });
+    const ambigBody = jsonBody(sendCalls()[0]) as {
+      text: string;
+      reply_markup: { inline_keyboard: Array<Array<{ text: string; callback_data: string }>> };
+    };
+    expect(ambigBody.text).toContain("\"USDF\" matches");
+    expect(ambigBody.text).not.toContain("/status");
+    const ambigButtons = ambigBody.reply_markup.inline_keyboard.flat();
+    expect(ambigButtons.length).toBeGreaterThan(1);
+    for (const button of ambigButtons) expect(button.callback_data).toMatch(/^settings:o:[a-z0-9-]+$/);
+
+    await handleSettingsCommand(db, "fake-token", "42", null, FROZEN_STABLECOINS[0]!.id, { chatType: "supergroup" });
+    expect(jsonBody(sendCalls()[1]).text).toContain("not active for alerts");
   });
 
   it("rejects an unknown ticker with the same not-found path other commands use", async () => {
@@ -142,11 +171,11 @@ describe("handleSettingsCommand", () => {
 
 describe("per-coin local override descriptions", () => {
   it.each([
-    ["dews", "DEWS min band", "db"],
-    ["depeg", "Depeg step", "ds"],
-    ["safety", "Safety mode", "sm"],
+    ["dews", "DEWS", "db"],
+    ["depeg", "Depeg", "ds"],
+    ["safety", "Safety", "sm"],
     ["reserve", "Reserve", "rs"],
-    ["freeze", "Freeze alerts", "fz"],
+    ["freeze", "Freeze", "fz"],
   ])("distinguishes inherited zero from explicit %s off through the Store loader", async (family, label, code) => {
     const { db, sqlite } = fixtures.open();
     sqlite.exec(`INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('42', 1, 1);
@@ -159,7 +188,7 @@ describe("per-coin local override descriptions", () => {
       };
       expect(body.text).toContain(`${label}: ${marker ? "off (local override)" : "inherits chat"}`);
       expect(body.text).toContain("Local overrides");
-      const off = body.reply_markup.inline_keyboard.flat().find((button) => button.callback_data.endsWith(`:${code}:0`));
+      const off = body.reply_markup.inline_keyboard.flat().find((button) => button.callback_data.endsWith(`:${code}:0:0`));
       expect(off?.text.includes("\u2022")).toBe(marker === 1);
     }
   });
@@ -178,11 +207,11 @@ describe("per-coin local override descriptions", () => {
       }
     }
     await handleSettingsCommand(db, "fake-token", "42", null, "USDC");
-    expect(jsonBody(sendCalls()[0]).text).toContain("DEWS min band: inherits chat/preset policy");
-    expect(jsonBody(sendCalls()[0]).text).not.toContain("DEWS min band: off");
+    expect(jsonBody(sendCalls()[0]).text).toContain("DEWS: inherits chat/preset policy");
+    expect(jsonBody(sendCalls()[0]).text).not.toContain("DEWS: off");
   });
 
-  it("shows enabled direct tuning instead of an inherited or off claim", async () => {
+  it("shows enabled direct tuning in percent/compact terms instead of raw bps", async () => {
     const { db, sqlite } = fixtures.open();
     sqlite.exec(`INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('42', 1, 1);
       INSERT INTO telegram_subscriptions
@@ -190,16 +219,21 @@ describe("per-coin local override descriptions", () => {
       VALUES ('42', 'usdc-circle', 1, 1, 1, 'WARNING', 'downgrade-only', 250)`);
     await handleSettingsCommand(db, "fake-token", "42", null, "USDC");
     const text = jsonBody(sendCalls()[0]).text;
-    expect(text).toContain("DEWS min band: WARNING");
-    expect(text).toContain("Safety mode: downgrade-only");
-    expect(text).toContain("Depeg step: +250bps");
+    expect(text).toContain("DEWS: Warning+");
+    expect(text).toContain("Safety: on");
+    expect(text).toContain("Depeg: 2.5%");
   });
 });
 
-describe("handleSettingsCallback — chat-level", () => {
-  it("settings:gt:<type>:<value> sets the target value, so a redelivered tap stays put", async () => {
+describe("handleSettingsCallback — chat-level, presets, and pause", () => {
+  it("settings:g opens All stablecoins submenu and settings:gt sets target idempotently", async () => {
     const { db, sqlite } = fixtures.open();
     sqlite.exec("INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at, global_alert_dews) VALUES ('42', 1, 1, 0)");
+    await handleSettingsCallback(db, "fake-token", {
+      id: "cb", data: "settings:g", from: { id: 1 }, message: { chat: { id: 42, type: "group" }, message_id: 999 },
+    }, "g", "");
+    expect(jsonBody(editCalls()[0]).text).toContain("<b>All stablecoins</b>");
+
     for (let delivery = 0; delivery < 2; delivery += 1) {
       await handleSettingsCallback(db, "fake-token", {
         id: "cb", data: "settings:gt:dews:1", from: { id: 1, username: "alice" },
@@ -208,7 +242,53 @@ describe("handleSettingsCallback — chat-level", () => {
     }
     expect(sqlite.prepare("SELECT global_alert_dews FROM telegram_subscribers WHERE chat_id = '42'").get())
       .toEqual({ global_alert_dews: 1 });
-    expect(jsonBody(ackCalls()[0]).text).toBe("Global dews on.");
+    expect(jsonBody(ackCalls()[1]).text).toBe("Global dews on.");
+  });
+
+  it("manages followed presets (view, toggle, last-family lock, unfollow confirm + delete)", async () => {
+    const { db, sqlite } = fixtures.open();
+    sqlite.exec(`INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('42', 1, 1);
+      INSERT INTO telegram_preset_subscriptions (chat_id, preset_id, alert_dews, alert_depeg, alert_safety, created_at, updated_at)
+      VALUES ('42', 'usd-top25', 1, 1, 0, 1, 1)`);
+    const cb = (data: string) => ({ id: "cb", data, from: { id: 1 }, message: { chat: { id: 42, type: "group" }, message_id: 999 } });
+
+    await handleSettingsCallback(db, "fake-token", cb("settings:p:usd-top25:0"), "p", "usd-top25:0");
+    expect(jsonBody(lastItem(editCalls())).text).toContain("<b>USD Top 25</b> (preset)");
+
+    await handleSettingsCallback(db, "fake-token", cb("settings:pf:usd-top25:d:0:0"), "pf", "usd-top25:d:0:0");
+    expect(sqlite.prepare("SELECT alert_dews, alert_depeg FROM telegram_preset_subscriptions").get())
+      .toEqual({ alert_dews: 0, alert_depeg: 1 });
+
+    // Trying to turn off the last active family leaves it enabled with an explanation.
+    await handleSettingsCallback(db, "fake-token", cb("settings:pf:usd-top25:p:0:0"), "pf", "usd-top25:p:0:0");
+    expect(sqlite.prepare("SELECT alert_depeg FROM telegram_preset_subscriptions").get()).toEqual({ alert_depeg: 1 });
+    expect(jsonBody(lastItem(ackCalls())).text).toContain("Keep at least one alert on");
+
+    await handleSettingsCallback(db, "fake-token", cb("settings:pu:usd-top25:0"), "pu", "usd-top25:0");
+    expect(jsonBody(lastItem(editCalls())).text).toContain("Unfollow USD Top 25?");
+
+    await handleSettingsCallback(db, "fake-token", cb("settings:pc:usd-top25:0"), "pc", "usd-top25:0");
+    expect(sqlite.prepare("SELECT * FROM telegram_preset_subscriptions").all()).toEqual([]);
+    expect(jsonBody(lastItem(ackCalls())).text).toBe("Unfollowed USD Top 25.");
+  });
+
+  it("settings:sn pauses for 4h / indefinitely and resumes alerts", async () => {
+    const { db, sqlite } = fixtures.open();
+    sqlite.exec("INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('42', 1, 1)");
+    const cb = (data: string) => ({ id: "cb", data, from: { id: 1 }, message: { chat: { id: 42, type: "group" }, message_id: 999 } });
+
+    await handleSettingsCallback(db, "fake-token", cb("settings:sn:4h"), "sn", "4h");
+    expect(jsonBody(lastItem(ackCalls())).text).toBe("All alerts paused for 4h.");
+    expect(jsonBody(lastItem(editCalls())).text).toContain("Alerts: Paused");
+
+    await handleSettingsCallback(db, "fake-token", cb("settings:sn:pause"), "sn", "pause");
+    expect(jsonBody(lastItem(ackCalls())).text).toBe("All alerts paused until you resume.");
+    expect(jsonBody(lastItem(editCalls())).text).toContain("Alerts: Paused (indefinite)");
+
+    await handleSettingsCallback(db, "fake-token", cb("settings:sn:off"), "sn", "off");
+    expect(jsonBody(lastItem(ackCalls())).text).toBe("Alerts resumed.");
+    expect(sqlite.prepare("SELECT alert_snooze_until_ts FROM telegram_subscribers WHERE chat_id = '42'").get())
+      .toEqual({ alert_snooze_until_ts: null });
   });
 
   it("refreshes instead of toggling on a bare pre-v2 settings:gt:<type> button", async () => {
@@ -310,35 +390,41 @@ describe("handleSettingsCallback — chat-level", () => {
     );
 
     expect(ackCalls().length).toBe(1);
-    expect(jsonBody(ackCalls()[0]).text).toContain("Snooze cleared");
+    expect(jsonBody(ackCalls()[0]).text).toContain("Alerts resumed");
   });
 });
 
 describe("handleSettingsCallback — per-coin", () => {
-  it("settings:o:<id> opens the coin view via editMessageText", async () => {
+  it("settings:o:<id>:<page> opens the coin view and preserves page in the Back button", async () => {
     const db = mockD1([{ match: "FROM telegram_subscriptions", rows: [] }]);
     await handleSettingsCallback(
       db,
       "fake-token",
       {
         id: "cb",
-        data: "settings:o:usdc-circle",
+        data: "settings:o:usdc-circle:2",
         from: { id: 1 },
         message: { chat: { id: 42 }, message_id: 999 },
       },
       "o",
-      "usdc-circle",
+      "usdc-circle:2",
     );
 
     expect(editCalls().length).toBe(1);
-    const body = jsonBody(editCalls()[0]);
-    expect(body.text as string).toContain("USDC settings");
+    const body = jsonBody(editCalls()[0]) as {
+      text: string;
+      reply_markup: { inline_keyboard: Array<Array<{ callback_data: string }>> };
+    };
+    expect(body.text).toContain("USDC settings");
+    expect(body.reply_markup.inline_keyboard.flat().map((b) => b.callback_data)).toContain("settings:home:2");
   });
 
   it.each([
-    ["db:W", "WARNING"],
-    ["sm:d", "downgrade-only"],
-    ["ds:250", "250bps"],
+    ["db:W", "DEWS Warning+"],
+    ["sm:a", "Safety on"],
+    ["sm:d", "Safety downgrade-only"],
+    ["ds:a", "Depeg on (any)"],
+    ["ds:250", "2.5%"],
     ["ds:0", "Depeg off"],
     ["rs:1", "Reserve on"],
     ["db:0", "DEWS off"],
@@ -356,6 +442,19 @@ describe("handleSettingsCallback — per-coin", () => {
     expect(jsonBody(editCalls()[0]).text).toContain("USDC settings");
     expect(ackCalls()).toHaveLength(1);
     expect(jsonBody(ackCalls()[0]).text).toContain(acknowledgement);
+  });
+
+  it("settings:c:<id>:ds:a replaces a numeric depeg step with default null while keeping depeg enabled", async () => {
+    const { db, sqlite } = fixtures.open();
+    sqlite.exec(`INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('42', 1, 1);
+      INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_depeg, depeg_worsening_bps_step)
+      VALUES ('42', 'usdc-circle', 1, 250)`);
+    await handleSettingsCallback(db, "fake-token", {
+      id: "cb", data: "settings:c:usdc-circle:ds:a:0", from: { id: 1 },
+      message: { chat: { id: 42, type: "group" }, message_id: 999 },
+    }, "c", "usdc-circle:ds:a:0");
+    expect(sqlite.prepare("SELECT alert_depeg, depeg_worsening_bps_step FROM telegram_subscriptions WHERE stablecoin_id = 'usdc-circle'").get())
+      .toEqual({ alert_depeg: 1, depeg_worsening_bps_step: null });
   });
 
   it.each([["c", "usdc-circle:lc:1"], ["gt", "launch"]])("retired launch button settings:%s:%s answers a toast without writing", async (subAction, subArg) => {
@@ -426,38 +525,47 @@ describe("handleSettingsCallback — per-coin", () => {
 });
 
 describe("callback_data size budget", () => {
-  // The longest tracked id bounds every per-coin callback payload.
-  const LONG_ID = Array.from(TRACKED_META_BY_ID.keys()).reduce((a, b) => (b.length > a.length ? b : a));
-
-  it("every keyboard data field stays within Telegram's 64-byte limit", () => {
+  it("every settings keyboard callback across the full coin and preset registries stays <= 64 UTF-8 bytes at page 999", () => {
+    const encoder = new TextEncoder();
+    const checkAll = (buttons: ReadonlyArray<{ callback_data?: string }>) => {
+      for (const button of buttons) {
+        if (!button.callback_data) continue;
+        expect(encoder.encode(button.callback_data).length, button.callback_data).toBeLessThanOrEqual(64);
+      }
+    };
+    const allPresetRows: PresetSubscriptionRow[] = Array.from(TELEGRAM_PRESET_LABEL_BY_ID.keys()).map((presetId) => ({
+      preset_id: presetId,
+      alert_dews: 1,
+      alert_depeg: 1,
+      alert_safety: 0,
+      depeg_worsening_bps_step: null,
+    }));
+    const subscriber = {
+      alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
+      quiet_hours_enabled: 1, quiet_hours_start_utc: 22, quiet_hours_end_utc: 7,
+      alert_snooze_until_ts: Math.floor(Date.now() / 1000) + 3600,
+    };
+    checkAll(buildGlobalKeyboard(subscriber).inline_keyboard.flat());
+    for (const presetId of TELEGRAM_PRESET_LABEL_BY_ID.keys() as IterableIterator<TelegramPresetId>) {
+      checkAll(buildPresetKeyboard(presetId, allPresetRows[0]!, 999).inline_keyboard.flat());
+      checkAll(buildPresetUnfollowConfirmKeyboard(presetId, 999).inline_keyboard.flat());
+    }
     for (const coinId of TRACKED_META_BY_ID.keys()) {
       expect(coinId).toMatch(/^[a-z0-9-]+$/);
+      checkAll(buildCoinKeyboard(coinId, null, { returnPage: 999 }).inline_keyboard.flat());
     }
-    const homeKb = buildHomeKeyboard(
-      {
-        alert_dews: 0,
-        alert_depeg: 0,
-        alert_safety: 0,
-        alert_launch: 0,
-        quiet_hours_enabled: 1,
-        quiet_hours_start_utc: 22,
-        quiet_hours_end_utc: 7,
-        alert_snooze_until_ts: Math.floor(Date.now() / 1000) + 3600,
-      },
-      { subscriptions: [subscriptionRow(LONG_ID)] },
+    checkAll(
+      buildHomeKeyboard(subscriber, {
+        subscriptions: Array.from(TRACKED_META_BY_ID.keys()).map(subscriptionRow),
+        presetSubscriptions: allPresetRows,
+        subscriptionPage: 999,
+      }).inline_keyboard.flat(),
     );
-    const coinKb = buildCoinKeyboard(LONG_ID, null);
-    const sizes = [...homeKb.inline_keyboard.flat(), ...coinKb.inline_keyboard.flat()].map(
-      (b) => new TextEncoder().encode(b.callback_data).length,
-    );
-    for (const size of sizes) {
-      expect(size).toBeLessThanOrEqual(64);
-    }
   });
 });
 
 describe("message builders", () => {
-  it("home message states every global alert family the home keyboard toggles", () => {
+  it("global submenu states every alert family the global keyboard toggles", () => {
     const subscriber = {
       alert_dews: 0,
       alert_depeg: 0,
@@ -465,7 +573,7 @@ describe("message builders", () => {
       alert_launch: 0,
       global_alert_dews: 1,
       global_alert_depeg: 1,
-      global_depeg_worsening_bps_step: 25,
+      global_depeg_worsening_bps_step: 250,
       global_alert_safety: 0,
       global_alert_launch: 1,
       global_alert_reserve: 1,
@@ -476,13 +584,14 @@ describe("message builders", () => {
       alert_snooze_until_ts: null,
     };
 
-    const message = buildHomeMessage(subscriber);
-    expect(message).toContain("<b>Global alerts</b>\nDEWS: ON\nDepeg: ON (+25bps)\nSafety: OFF\nReserve: ON\nFreeze: OFF\n");
+    const message = buildGlobalMessage(subscriber);
+    expect(message).toContain("DEWS: ON");
+    expect(message).toContain("Depeg: ON (2.5%)");
+    expect(message).toContain("Safety: OFF");
+    expect(message).toContain("Reserve: ON");
+    expect(message).toContain("Freeze: OFF");
 
-    // Regression pin: the hand-written copy listed only DEWS/Depeg/Safety/Launch
-    // while buildHomeKeyboard rendered a toggle row for all six, so a chat with
-    // global Reserve or Freeze on saw the toggle but never the state line.
-    const toggleLabels = buildHomeKeyboard(subscriber)
+    const toggleLabels = buildGlobalKeyboard(subscriber)
       .inline_keyboard.flat()
       .flatMap((button) => (button.callback_data?.startsWith("settings:gt:") ? [button.text.split(":")[0]!] : []));
     expect(toggleLabels).toHaveLength(5);
@@ -491,7 +600,7 @@ describe("message builders", () => {
     }
   });
 
-  it("never shows a depeg step that is not in force", () => {
+  it("never shows a depeg step that is not in force and shows saved quiet hours with TZ", () => {
     const subscriber = {
       alert_dews: 0,
       alert_depeg: 0,
@@ -505,27 +614,29 @@ describe("message builders", () => {
       global_alert_reserve: 0,
       global_alert_freeze: 0,
       quiet_hours_enabled: 0,
-      quiet_hours_start_utc: null,
-      quiet_hours_end_utc: null,
+      quiet_hours_start_utc: 23,
+      quiet_hours_end_utc: 6,
+      timezone: "Europe/Paris",
       alert_snooze_until_ts: null,
     };
-    const message = buildHomeMessage(subscriber);
-    expect(message).toContain("Depeg: OFF\n");
-    expect(message).not.toContain("(+250bps)");
+    const globalMsg = buildGlobalMessage(subscriber);
+    expect(globalMsg).toContain("Depeg: OFF\n");
+    expect(globalMsg).not.toContain("2.5%");
+    expect(buildHomeMessage(subscriber)).toContain("Quiet hours: off (23:00-06:00 Europe/Paris)");
   });
 
-  it("marks no per-coin step when the depeg family is on without one", () => {
+  it("marks Any when depeg is on with null step and marks Off when explicitly overridden off", () => {
     const row = { alert_depeg: 1, depeg_worsening_bps_step: null } as unknown as SubscriptionRow;
     const depegButtons = buildCoinKeyboard("usdc-circle", row)
       .inline_keyboard.flat()
       .filter((button) => button.callback_data?.includes(":ds:") ?? false);
-    expect(depegButtons.some((button) => button.text.includes("•"))).toBe(false);
+    expect(depegButtons.find((button) => button.callback_data?.includes(":ds:a:"))?.text).toContain("•Any");
 
     const offRow = { alert_depeg: 0, alert_depeg_override: 1, depeg_worsening_bps_step: 250 } as unknown as SubscriptionRow;
     const offButtons = buildCoinKeyboard("usdc-circle", offRow)
       .inline_keyboard.flat()
       .filter((button) => button.callback_data?.includes(":ds:") ?? false);
-    expect(offButtons.find((button) => button.callback_data?.endsWith(":ds:0"))?.text).toContain("•");
-    expect(offButtons.find((button) => button.callback_data?.endsWith(":ds:250"))?.text).not.toContain("•");
+    expect(offButtons.find((button) => button.callback_data?.includes(":ds:0:"))?.text).toContain("•");
+    expect(offButtons.find((button) => button.callback_data?.includes(":ds:250:"))?.text).not.toContain("•");
   });
 });

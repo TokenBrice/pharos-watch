@@ -3,9 +3,15 @@ import { recordTelegramUsageEvent } from "../store/usage-analytics";
 import {
   parseSubscribeArgs,
   resolveTicker,
+  suggestAlertTypeTypo,
+  suggestClosestPreset,
   validateSubscribeArgs,
 } from "../common/alerts-parser";
-import { buildNotFoundMessage } from "../webhook/telegram-webhook-messages";
+import {
+  GROUP_PRESET_ID_LIST,
+  buildNotFoundMessage,
+  cmdForChat,
+} from "../webhook/telegram-webhook-messages";
 import { buildOnboardingKeyboard } from "../webhook/telegram-webhook-setup";
 import type { WebhookCommandHandler } from "./context";
 import {
@@ -19,16 +25,20 @@ import { unixNow } from "../store/subscribers";
 
 const RECOMMENDED_SUBSCRIBE_TYPES = ["dews", "depeg"] as const;
 const SUBSCRIBE_PROMPT_PRIVATE = "What do you want to follow? Or type tickers, e.g. /subscribe USDC USDT";
-const SUBSCRIBE_PROMPT_GROUP = "Type tickers or a preset, e.g. /subscribe@PharosWatchBot usd-top25";
 
 export const handleSubscribe: WebhookCommandHandler = async (ctx, args) => {
   const { db } = ctx;
+  const subCmd = cmdForChat("subscribe", ctx.chatType);
   if (!args.trim()) {
     // Menu taps send the bare command: offer the one-tap choices instead of a usage error.
     if (ctx.chatType === "private") {
       await ctx.replyToChatWithMarkup(escapeHtml(SUBSCRIBE_PROMPT_PRIVATE), { replyMarkup: buildOnboardingKeyboard() });
     } else {
-      await ctx.replyToChat(escapeHtml(SUBSCRIBE_PROMPT_GROUP));
+      const groupPrompt = [
+        `Type tickers or a preset, e.g. ${subCmd} usd-top25`,
+        `Presets: ${GROUP_PRESET_ID_LIST}`,
+      ].join("\n");
+      await ctx.replyToChat(escapeHtml(groupPrompt));
     }
     await recordTelegramUsageEvent(db, {
       eventType: "subscribe",
@@ -43,10 +53,16 @@ export const handleSubscribe: WebhookCommandHandler = async (ctx, args) => {
   if (targetsOnly) for (const type of RECOMMENDED_SUBSCRIBE_TYPES) parsed.alertTypes.add(type);
   const validationError = validateSubscribeArgs(parsed);
   if (validationError) {
-    if (parsed.invalidTargets.length > 0 && parsed.alertTypes.size > 0) {
+    const isUnresolvedTargetError =
+      parsed.invalidDepegWorseningBpsStep == null
+      && (parsed.retiredAlertTypes?.length ?? 0) === 0
+      && parsed.invalidTargets.length > 0
+      && suggestAlertTypeTypo(parsed) == null;
+    if (isUnresolvedTargetError) {
       const invalidTarget = parsed.invalidTargets[0];
-      const match = resolveTicker(invalidTarget);
-      const suggestion = match.status === "not_found" ? match.suggestion : undefined;
+      const presetSuggestion = suggestClosestPreset(invalidTarget);
+      const tickerMatch = presetSuggestion ? null : resolveTicker(invalidTarget);
+      const suggestion = presetSuggestion ?? (tickerMatch?.status === "not_found" ? tickerMatch.suggestion : undefined);
       await ctx.replyToChat(buildNotFoundMessage(invalidTarget, suggestion));
       await recordTelegramUsageEvent(db, {
         eventType: "subscribe",
@@ -56,7 +72,8 @@ export const handleSubscribe: WebhookCommandHandler = async (ctx, args) => {
       });
       return;
     }
-    await ctx.replyToChat(escapeHtml(validationError));
+    const addressedError = validationError.replace(/\/subscribe\b/g, subCmd);
+    await ctx.replyToChat(escapeHtml(addressedError));
     await recordTelegramUsageEvent(db, {
       eventType: "subscribe",
       actionDetail: "validation",
