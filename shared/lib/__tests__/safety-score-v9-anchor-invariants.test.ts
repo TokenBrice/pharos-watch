@@ -234,5 +234,3 @@ describe("R5 V9-only 36-month peg-window proxy", () => {
     expect(derive({ pegScore: 0, quietHistoryFloor: 100 })).toBe(100);
   });
 });
-
-/** Public four-year peg history stays separate from the V9-only window proxy. */

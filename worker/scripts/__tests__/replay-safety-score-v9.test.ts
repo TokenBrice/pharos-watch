@@ -148,7 +148,12 @@ describe("Safety Score v9 deterministic replay CLI", () => {
     const observation = { circulating: { peggedUSD: 1_000_000 }, observedAtSec: null,
       url: "https://stablecoins.llama.fi/stablecoins", field: "peggedAssets[42].circulating", retrievedAtSec: input.clockSec + 1 };
     const dai = ["--admit-asset", "dai-makerdao"], usdt = ["--admit-asset", "usdt-tether"];
-    let baseArgs: string[], args: string[], bytes: string;
+    const cliArgs = (inputPath: string, outputPath: string, supplyPath?: string) => [
+      "--input", inputPath, "--output", outputPath, "--published-at", String(input.clockSec),
+      "--allow-future-reviews", "--allow-registry-mismatch",
+      ...(supplyPath ? ["--supply-observations", supplyPath] : []),
+    ];
+    let bytes: string;
     let replay: SafetyScoreV9ReplayArtifact;
 
     beforeAll(async () => {
@@ -158,9 +163,7 @@ describe("Safety Score v9 deterministic replay CLI", () => {
       supply = resolve(dir, "supply.json");
       writeFileSync(capture, JSON.stringify(input));
       writeFileSync(supply, JSON.stringify({ "dai-makerdao": observation }));
-      baseArgs = ["--input", capture, "--output", output, "--published-at", String(input.clockSec), "--allow-future-reviews", "--allow-registry-mismatch"];
-      args = [...baseArgs, "--supply-observations", supply];
-      await runSafetyScoreV9ReplayCli([...args, ...usdt, ...dai]);
+      await runSafetyScoreV9ReplayCli([...cliArgs(capture, output, supply), ...usdt, ...dai]);
       bytes = readFileSync(output, "utf8");
       replay = JSON.parse(bytes) as SafetyScoreV9ReplayArtifact;
     });
@@ -170,7 +173,8 @@ describe("Safety Score v9 deterministic replay CLI", () => {
     });
 
     it("admits captured and explicitly sourced supply and requires missing observations", async () => {
-      await expect(runSafetyScoreV9ReplayCli([...baseArgs, ...dai])).rejects.toThrow("requires a --supply-observations entry");
+      await expect(runSafetyScoreV9ReplayCli([...cliArgs(capture, resolve(dir, "missing.json")), ...dai]))
+        .rejects.toThrow("requires a --supply-observations entry");
       const { pipeline, replayScenario } = replay;
       expect(pipeline.fixedInput).toMatchObject({
         activeAssetIds: ["dai-makerdao", "usdc-circle", "usdt-tether"],
@@ -224,20 +228,25 @@ describe("Safety Score v9 deterministic replay CLI", () => {
     });
 
     it("emits byte-identical output regardless of admit order", async () => {
-      await runSafetyScoreV9ReplayCli([...args, ...dai, ...usdt]);
-      expect(readFileSync(output, "utf8")).toBe(bytes);
+      const reversedOutput = resolve(dir, "out-reversed.json");
+      await runSafetyScoreV9ReplayCli([...cliArgs(capture, reversedOutput, supply), ...dai, ...usdt]);
+      expect(readFileSync(reversedOutput, "utf8")).toBe(bytes);
     });
 
     it("admits clocked supply while refusing captured supply overrides and replay envelopes", async () => {
+      const clockedCapture = resolve(dir, "clocked-capture.json");
+      const clockedOutput = resolve(dir, "clocked-out.json");
+      const clockedSupply = resolve(dir, "clocked-supply.json");
       const observedAtSec = input.clockSec - 123;
       const aggregateCirculatingById = { "dai-makerdao": { circulating: {}, observedAtSec },
         "usdt-tether": { circulating: { peggedUSD: 0 }, observedAtSec } };
       const { "usdt-tether": _usdtChain, ...chainCirculatingById } = input.chainCirculatingById;
-      writeFileSync(capture, JSON.stringify(normalizeSafetyScoreV9CompilerInput({ ...input,
+      writeFileSync(clockedCapture, JSON.stringify(normalizeSafetyScoreV9CompilerInput({ ...input,
         baseInputGenerationId: undefined, aggregateCirculatingById, chainCirculatingById })));
-      writeFileSync(supply, JSON.stringify({ "dai-makerdao": { ...observation, observedAtSec } }));
-      await runSafetyScoreV9ReplayCli([...args, ...dai, ...usdt]);
-      const clocked = (JSON.parse(readFileSync(output, "utf8")) as SafetyScoreV9ReplayArtifact).pipeline;
+      writeFileSync(clockedSupply, JSON.stringify({ "dai-makerdao": { ...observation, observedAtSec } }));
+      const clockedArgs = cliArgs(clockedCapture, clockedOutput, clockedSupply);
+      await runSafetyScoreV9ReplayCli([...clockedArgs, ...dai, ...usdt]);
+      const clocked = (JSON.parse(readFileSync(clockedOutput, "utf8")) as SafetyScoreV9ReplayArtifact).pipeline;
       expect(clocked.fixedInput.aggregateCirculatingById).toEqual(aggregateCirculatingById);
       expect(clocked.compiledFacts.assets.find(({ assetId }) => assetId === "dai-makerdao")?.supply.circulatingUsd).toBe(1_000_000);
       expect(clocked.compiledFacts.assets.find(({ assetId }) => assetId === "dai-makerdao")!.evidence)
@@ -245,14 +254,17 @@ describe("Safety Score v9 deterministic replay CLI", () => {
           sourceGenerationId: clocked.fixedInput.baseInputGenerationId, url: observation.url, observedAtSec,
           freshness: expect.objectContaining({ state: "current", ageSec: 123 }) }));
       expect(clocked.candidate.cards.find(({ id }) => id === "dai-makerdao")?.supply?.asOfSec).toBe(observedAtSec);
-      writeFileSync(supply, JSON.stringify({ "usdt-tether": observation }));
-      await expect(runSafetyScoreV9ReplayCli([...args, ...usdt])).rejects.toThrow("usdt-tether already has usable captured supply");
+      const overrideSupply = resolve(dir, "override-supply.json");
+      writeFileSync(overrideSupply, JSON.stringify({ "usdt-tether": observation }));
+      await expect(runSafetyScoreV9ReplayCli([...cliArgs(clockedCapture, clockedOutput, overrideSupply), ...usdt]))
+        .rejects.toThrow("usdt-tether already has usable captured supply");
 
       const scenarioInput = clocked.fixedInput;
       const identity = buildSafetyScoreV9InputIdentity({ methodologyVersion: scenarioInput.methodologyVersion,
         baseInputGenerationId: scenarioInput.baseInputGenerationId, publicationGenerationId: scenarioInput.sourceGeneration });
-      writeFileSync(capture, JSON.stringify(scenarioInput));
-      await expect(runSafetyScoreV9ReplayCli(args.slice(0, -2))).rejects.toThrow(/replaySupplyObservationsById/);
+      const envelopeCapture = resolve(dir, "envelope-capture.json");
+      writeFileSync(envelopeCapture, JSON.stringify(scenarioInput));
+      await expect(runSafetyScoreV9ReplayCli(cliArgs(envelopeCapture, clockedOutput))).rejects.toThrow(/replaySupplyObservationsById/);
       await expect(buildNativeV9InputCacheEntry(scenarioInput, identity)).rejects.toThrow(/replaySupplyObservationsById/);
       const envelope = await buildFixedInputCacheEntry({ schemaVersion: 2, sourceGeneration: scenarioInput.sourceGeneration,
         safetyScoreIdentity: identity, payload: scenarioInput, label: "admission input" });

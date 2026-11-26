@@ -667,6 +667,7 @@ describe("computePegScore when the tracking anchor is at or after the scoring cl
   });
 });
 
+/** Public four-year peg history stays separate from the V9-only window proxy. */
 describe("public peg history and V9 window trust boundary", () => {
   const NOW = 1_800_000_000;
   const TRACKING_START = NOW - PEG_SCORE_LOOKBACK_SEC;

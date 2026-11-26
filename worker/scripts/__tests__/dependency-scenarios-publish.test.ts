@@ -372,8 +372,14 @@ describe("dependency scenario accepted-publication verification stamp", () => {
     expect(JSON.parse(compute.stdout).acceptedPublicationVerified).toBe(true);
     expect(existsSync(resolve(fixture.directory, "artifact.verified.sha256"))).toBe(false);
     for (const name of ["artifact.json", "artifact.verified.sha256"]) writeFileSync(resolve(fixture.directory, name), readFileSync(resolve(historical, name)));
-    const publish = await fixture.invoke();
+    const publish = await fixture.run(["--mode", "publish", "--out-dir", fixture.directory]);
     expect(publish.status, publish.stderr).toBe(0);
+    const publishedArtifactBytes = readFileSync(resolve(fixture.directory, "artifact.json"), "utf8");
+    const db = new DatabaseSync(fixture.databasePath);
+    try {
+      const marker = db.prepare("SELECT value FROM cache WHERE key = ?").get(markerKey) as { value: string } | undefined;
+      expect(marker?.value).toBe(`${artifactPrefix}${createHash("sha256").update(publishedArtifactBytes).digest("hex")}`);
+    } finally { db.close(); }
   }, 60_000);
   it("fails plan explicitly on a legacy capture without a retained admission baseline", async () => {
     const fixture = copySupplyAttributionReplayFixture();

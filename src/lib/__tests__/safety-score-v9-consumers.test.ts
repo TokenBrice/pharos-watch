@@ -120,7 +120,7 @@ describe("V9 safety consumer projections", () => {
         coverageUsd: { total: 50, score: 0, pillars: { backing: 0, exit: 0, control: 0 } },
       } });
   });
-  it("requires a complete exact identity and rejects stale previous publications", () => {
+  it("requires a complete exact identity", () => {
     const response = makeReportCardsV9Response();
     expect(resolveV9ConsumerResponse(response, response.safetyScoreIdentity).status).toBe("available");
 
