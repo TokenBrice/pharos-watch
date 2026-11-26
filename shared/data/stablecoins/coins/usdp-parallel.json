@@ -321,8 +321,15 @@
   "notices": [
     {
       "type": "info",
-      "title": "Not the cemetery PAR or Paxos USDP",
-      "message": "Parallel USDp (llamaId 291, Parallel V3) is distinct from the abandoned Mimo Labs PAR (Euro CDP, llamaId 56) and from Paxos USDP / PAX Dollar. The Parallelizer is a licensed fork of Angle Protocol's Transmuter; Mimo Labs and Cooper Labs hold commercial use rights to the codebase."
+      "title": "Distinct from retired PAR and Paxos USDP",
+      "message": "Parallel USDp (Parallel V3) is distinct from the retired Mimo Labs euro token (PAR) and from Paxos USDP. Its Parallelizer module is a licensed fork of Angle Protocol's Transmuter.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Parallel: USDp docs",
+          "url": "https://docs.parallel.best/products/parallel-v3/stablecoins-and-savings/usdp-and-susdp"
+        }
+      ]
     }
   ],
   "geckoId": "parallel-usdp",

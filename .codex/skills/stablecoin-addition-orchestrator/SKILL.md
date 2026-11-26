@@ -19,7 +19,7 @@ Use for an active listing, a researched pre-launch draft, a pre-launch promotion
 | --- | --- |
 | Active listing | Every gate below. |
 | Pre-launch draft | Exempt from the runtime gate and the admission receipt; everything else applies. |
-| Promotion | Every gate below; drop `launchPhase: "launched"` and its `listingStatusReview`. |
+| Promotion | Every gate below; drop `launchPhase: "launched"` and its `listingStatusReview`, and backfill `asOf` and `sources` on any carried `notices[]`. |
 | Publicly issued, gate fails | Runtime gate FAIL, or own open questions the receipt cannot close: keep `status: "pre-launch"` with `launchPhase: "launched"` per [Launched, awaiting data](../../../docs/process/adding-a-stablecoin.md#launched-awaiting-data). Never force it active. |
 | Re-admission | Meet [Re-Admission](../../../docs/listing-policy.md#re-admission) first, then unwind the retirement: `public/_redirects`, `shared/data/stablecoins/legacy-route-redirects.json`, `src/lib/removed-stablecoins.ts`, the retained `excluded` listing decision, and record the application in `docs/listing-policy.md`. |
 | Parent of a tracked variant | Also re-author the child (`variantOf`, `variantKind`, sidecars, `stablecoin-variant` class), update the variant list in `shared/lib/__tests__/stablecoins.test.ts`, and attribute the child's Safety Score movement. |

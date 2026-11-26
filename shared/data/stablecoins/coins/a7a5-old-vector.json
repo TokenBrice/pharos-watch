@@ -64,9 +64,27 @@
   "notices": [
     {
       "type": "danger",
-      "title": "Multi-jurisdiction sanctions exposure",
-      "message": "A7A5 is a blocked asset: OFAC designated its issuer Old Vector LLC on 2025-08-14 and the A7 Network on 2026-10-01, calling A7A5 a blocked token; the EU bans transactions in it and the UK sanctioned its issuer and venues.",
-      "asOf": "2026-10-30"
+      "title": "Sanctioned and blocked across US, EU, and UK",
+      "message": "US, EU, and UK persons are prohibited from dealing in A7A5. OFAC designated issuer Old Vector LLC on August 14, 2025 and the A7 Network on October 1, 2026, classifying A7A5 as blocked property. EU sanctions ban A7A5 transactions since November 25, 2025, and the UK sanctioned Old Vector LLC and linked exchanges on August 20, 2025.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "US Treasury: A7 sanctions",
+          "url": "https://home.treasury.gov/news/press-releases/sb0644"
+        },
+        {
+          "label": "FinCEN: A7 Network alert",
+          "url": "https://www.fincen.gov/system/files/2026-10/FinCEN-Alert-A7-Network.pdf"
+        },
+        {
+          "label": "UK FCDO: crypto sanctions",
+          "url": "https://www.gov.uk/government/news/uk-targets-sanctions-circumvention-and-crypto-networks-exploited-by-russia"
+        },
+        {
+          "label": "EU Council: 19th package",
+          "url": "https://www.consilium.europa.eu/en/press/press-releases/2025/10/23/19th-package-of-sanctions-against-russia-eu-targets-russian-energy-third-country-banks-and-crypto-providers"
+        }
+      ]
     }
   ]
 }

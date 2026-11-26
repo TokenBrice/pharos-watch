@@ -80,8 +80,15 @@
   "notices": [
     {
       "type": "info",
-      "title": "Reserve mix and redemption terms remain incomplete",
-      "message": "The published rcUSD agreements describe an unsecured issuer obligation and permissioned USDC redemption. Current reserve weights, custody, executable capacity, fees and completed-payout timing are unverified. Pharos retains an unresolved mechanism classification. rcUSDp is a separate yield-bearing staking receipt."
+      "title": "Reserve mix and redemption terms incomplete",
+      "message": "Published rcUSD agreements describe an unsecured issuer obligation with permissioned USDC redemption, while current reserve weights, custody, fees, and payout timing remain unverified with no reserve audit. rcUSDp is a separate staking receipt.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "R25: audit reports",
+          "url": "https://docs.r25.xyz/docs/security/audit-reports"
+        }
+      ]
     }
   ],
   "launchDate": "2025-11-25"

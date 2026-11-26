@@ -17,6 +17,7 @@ Applies to `shared/data/stablecoins/`.
 - Default flags may be omitted or authored explicitly: `pegCurrency: "USD"`, `yieldBearing: false`, `rwa: false`, and `navToken: false` are supplied by the schema when absent; `backing` and `governance` remain required. `npm run check:stablecoin-data` validates parsed values, not default-key omission.
 - Keep `shared/data/stablecoins/canonical-order.json` aligned with the catalog, and add contracts only after source verification.
 - Keep relationships that reserve composition can express out of manual `dependencies`; manual-only relationships require sourced `dependencyReview`.
+- Active coin `notices[]` require `asOf`, non-empty `sources` (non-blank labels, no raw `https?://` in `message`), unique titles per coin, and hard `notice`-register compliance (`npm run check:editorial-content`); use `chains[]` (strict proper subset of deployed chains, never on `danger`/`paused`/`depeg`) for chain-specific cutoffs and follow the copy budgets in `docs/stablecoin-data.md`.
 
 ## Common Checks
 

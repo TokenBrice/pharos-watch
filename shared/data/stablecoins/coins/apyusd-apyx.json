@@ -117,5 +117,23 @@
     "cadence": "monthly",
     "attestorJurisdiction": "United States"
   },
-  "launchDate": "2026-02-20"
+  "launchDate": "2026-02-20",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "30-day exit cooldown and preferred-equity risk",
+      "message": "Unstaking apyUSD requires a 30-day cooldown during which shares earn no yield. Because apyUSD wraps apxUSD with no separate cash buffer, holders inherit apxUSD's preferred-equity NAV swings and secondary-market discounts.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Apyx: documentation",
+          "url": "https://docs.apyx.fi"
+        },
+        {
+          "label": "Yearn: apxUSD risk report",
+          "url": "https://github.com/yearn/risk-score/blob/master/reports/report/apyx-apxusd.md"
+        }
+      ]
+    }
+  ]
 }

@@ -77,8 +77,15 @@
   "notices": [
     {
       "type": "warning",
-      "title": "Migrated to V2 in April 2026",
-      "message": "YieldPoint replaced the Avalanche UTY token 0xdbc5192a6b6ffee7451301bb4ec312f844f02b4a with the Base-hub V2 deployment in April 2026; holders of the old token must migrate."
+      "title": "Legacy Avalanche UTY replaced by V2",
+      "message": "YieldPoint replaced its legacy Avalanche UTY contract with a Base-hub V2 deployment in April 2026. Current documentation lists only V2 contracts, and Pharos has not confirmed whether legacy Avalanche migration remains open.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "YieldPoint: V2 contracts",
+          "url": "https://docs.yieldpoint.io/protocol/architecture/contracts"
+        }
+      ]
     }
   ],
   "liveReservesConfig": {

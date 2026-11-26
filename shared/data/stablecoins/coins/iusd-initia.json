@@ -2,7 +2,7 @@
   "id": "iusd-initia",
   "name": "Initia iUSD",
   "symbol": "iUSD",
-  "oneLiner": "iUSD is an Initia wrapper backed 1:1 by bridged Agora AUSD; holders receive no reserve yield, and the Initia Bridge converts withdrawals through AUSD into USDC.",
+  "oneLiner": "iUSD is Initia's appchain dollar, originally backed 1:1 by Agora AUSD; Initia says reserves moved to USDC.inj in November 2026, which Pharos has not verified.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized-dependent"
@@ -129,11 +129,24 @@
   },
   "notices": [
     {
-      "type": "danger",
-      "title": "Initia L1 halted; iUSD collateral short",
-      "message": "On 2026-10-23 a MoveVM script-cache exploit minted unbacked balances on Initia; L1 and rollups were halted at 15:41:30 UTC. The Initia Foundation approved topping up the iUSD collateral (Noble USDC, WETH, AUSD0) up to 1.08M USDC / 105 ETH / 1.4M AUSD0, to be executed after reconciliation and restored before the planned 2026-11-02 restart. Pharos' last successful vault read (2026-10-29T04:14:20Z) came from the halted chain and is not a current backing observation; no redemption is possible while the chain is down.",
-      "kind": "paused",
-      "asOf": "2026-10-30"
+      "type": "warning",
+      "title": "Post-halt backing switch to USDC.inj unverified",
+      "message": "Initia L1 relaunched November 20, 2026 after two halts (October 23 MoveVM exploit; November 10 $3.27M IBC compromise). Initia Foundation stated it covered shortfalls and switched iUSD backing from AUSD0 to USDC.inj. Zero AUSD0 remains in the vault, and Pharos has not verified the replacement USDC.inj reserve or live redemption.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Initia: Nov 20 relaunch",
+          "url": "https://x.com/initia/status/2123806230296858754"
+        },
+        {
+          "label": "Initia: USDC.inj switch",
+          "url": "https://x.com/initia/status/2123806242435133519"
+        },
+        {
+          "label": "Initia: Nov 10 incident",
+          "url": "https://x.com/initia/status/2120195620442910943"
+        }
+      ]
     }
   ]
 }

@@ -57,13 +57,15 @@
   "notices": [
     {
       "type": "info",
-      "title": "Symbol collision (cross-issuer ticker)",
-      "message": "The USDH/USDh ticker collides across issuers: Hubble USDH is on Solana, Native Markets USDH is on Hyperliquid and HyperEVM, and Hermetica USDh is on Stacks. This entry tracks the original Hubble Protocol USDH."
-    },
-    {
-      "type": "info",
-      "title": "Small float, dormant trading",
-      "message": "Reviewed 2026-10-26: Pharos still tracks USDH, with supply reported by DefiLlama. Hubble's documentation and app were reachable, but Pharos has not verified that borrowing or redemption works. The May 2026 cemetery entry is a historical assessment, not a current exclusion."
+      "title": "Small float and dormant trading",
+      "message": "Hubble USDH has a small circulating float and dormant secondary trading. Hubble's documentation domain (docs.hubbleprotocol.io) no longer resolves, and Pharos has not verified borrowing or redemption on the remaining web app. The May 2026 cemetery entry is a historical assessment, not a current exclusion.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Hubble Protocol: web app",
+          "url": "https://app.hubbleprotocol.io/borrow"
+        }
+      ]
     }
   ]
 }

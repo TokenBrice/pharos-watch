@@ -127,10 +127,25 @@
   "launchDate": "2025-03-20",
   "notices": [
     {
-      "type": "warning",
-      "title": "June 2025 exploit was repaid",
-      "message": "Resupply suffered a June 2025 oracle-manipulation exploit that created about $9.6M of bad debt. The protocol reported the bad debt fully repaid by August 2025 using treasury funds, insurance-pool burn mechanics, and a Yearn DAO loan, but the incident remains relevant to vault/oracle risk.",
-      "kind": "history"
+      "type": "info",
+      "title": "June 2025 wstUSR exploit and repayment",
+      "message": "On June 26, 2025, an oracle-manipulation exploit in Resupply's wstUSR market created about $9.6M in bad debt. By August 2025, Resupply repaid the initial shortfall via treasury and insurance-pool burns and covered the remaining $1.13M with a Yearn DAO loan repaid from revenue.",
+      "kind": "history",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Resupply: incident post",
+          "url": "https://x.com/ResupplyFi/status/1938092252431036491"
+        },
+        {
+          "label": "Resupply: insurance pool",
+          "url": "https://docs.resupply.finance/resupply-protocol/insurance-pool"
+        },
+        {
+          "label": "RootData: repayment note",
+          "url": "https://www.rootdata.com/news/326309"
+        }
+      ]
     }
   ]
 }

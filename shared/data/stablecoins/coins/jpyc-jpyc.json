@@ -78,5 +78,19 @@
       "risk": "very-low"
     }
   },
-  "launchDate": "2025-10-27"
+  "launchDate": "2025-10-27",
+  "notices": [
+    {
+      "type": "info",
+      "title": "JPY 1M statutory transfer cap under Japan PSA",
+      "message": "Japan's amended Payment Services Act (effective June 13, 2026) regulates JPYC as a Funds Transfer Operator stablecoin, capping issuer-rail transfers at JPY 1,000,000 per transaction.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Tokyo Brief: FSA JPY 1M cap",
+          "url": "https://tokyobrief.com/articles/stablecoin-issuers-press-fsa-lift-1mn-transfer-cap-banks-urge-caution"
+        }
+      ]
+    }
+  ]
 }

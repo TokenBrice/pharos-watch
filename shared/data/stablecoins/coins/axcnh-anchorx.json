@@ -114,7 +114,14 @@
     {
       "type": "info",
       "title": "Redemption limited to professional investors",
-      "message": "AnchorX's service terms state that subscription and redemption are currently provided to Professional Investors only."
+      "message": "AnchorX limits direct subscription and redemption to Hong Kong Professional Investors under its service terms; retail holders rely on secondary markets.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "AnchorX: terms of service",
+          "url": "https://www.anchorx.org/terms"
+        }
+      ]
     }
   ],
   "launchDate": "2025-09-17"

@@ -57,5 +57,23 @@
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "governanceQuality": "multisig",
-  "launchDate": "2023-01-10"
+  "launchDate": "2023-01-10",
+  "notices": [
+    {
+      "type": "danger",
+      "title": "Primary swap closed and persistent ~20% discount",
+      "message": "Metronome's synth swap stays closed indefinitely with no independent reserve reconciliation, and msUSD has traded roughly 20% below $1 through November 2026. A July 30, 2026 post-mortem disclosed about 4.57M unbacked msUSD from a Chainlink latency flaw; Metronome reported closing the shortfall on September 16 via buybacks and an $8M USDC loan, without reopening primary swaps.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Metronome: post-mortem",
+          "url": "https://paragraph.com/@metronomedao/post-mortem-msethmsusd-underbacking"
+        },
+        {
+          "label": "Metronome: recovery update",
+          "url": "https://paragraph.com/@metronomedao/metronome-recovery-update"
+        }
+      ]
+    }
+  ]
 }

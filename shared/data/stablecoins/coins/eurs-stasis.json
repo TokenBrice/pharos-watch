@@ -101,5 +101,19 @@
       "risk": "very-low"
     }
   },
-  "launchDate": "2018-06-27"
+  "launchDate": "2018-06-27",
+  "notices": [
+    {
+      "type": "info",
+      "title": "Arbitrum Multichain representation stranded",
+      "message": "The legacy Multichain EURS token on Arbitrum has been stranded since Multichain's July 2023 collapse with no restitution plan. Canonical Ethereum EURS is unaffected by that bridge failure.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "STASIS: transparency",
+          "url": "https://stasis.net/transparency"
+        }
+      ]
+    }
+  ]
 }

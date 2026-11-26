@@ -59,7 +59,18 @@
     {
       "type": "info",
       "title": "USDai supply is not USD.AI protocol TVL",
-      "message": "This page tracks outstanding base USDai, including USDai held inside sUSDai. On September 23, 2026, a transaction burned 128.90M USDai while the issuer's reported loan reserves rose by the same amount. Loan deployment can reduce USDai supply without an equivalent investor outflow. Protocol TVL also includes loans and accrued yield; adding sUSDai NAV to all USDai supply would double-count the vault's USDai holdings."
+      "message": "This page tracks base USDai supply, including USDai held inside sUSDai. Protocol TVL also counts off-chain loans and accrued yield, and loan deployments can burn USDai without an equivalent investor outflow.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "USD.AI: live dashboard",
+          "url": "https://app.usd.ai/dashboard"
+        },
+        {
+          "label": "USD.AI: protocol overview",
+          "url": "https://docs.usd.ai/technical-overview/technical-protocol-overview"
+        }
+      ]
     }
   ],
   "jurisdiction": {

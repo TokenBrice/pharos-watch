@@ -144,5 +144,27 @@
     "yieldSource": "Maple Finance lending",
     "yieldType": "nav-appreciation"
   },
-  "launchDate": "2024-09-10"
+  "launchDate": "2024-09-10",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Multi-day exit queues and self-lending scrutiny",
+      "message": "syrupUSDT carries institutional credit risk with no first-loss cover, and FIFO withdrawals averaged 79 hours in October and November 2026. A November 19 Bitquery report documented Maple wallet self-borrowing (about one-third of pool loans) and 44% depositor concentration in Aave, alongside executive exits; Maple's $1.89B check is not an audit.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Bitquery: Maple analysis",
+          "url": "https://bitquery.io/investigations/maple-finance-syrupusdc-loans"
+        },
+        {
+          "label": "Maple: Q4 2026 update",
+          "url": "https://maple.finance/insights/q4-26-update-from-maple"
+        },
+        {
+          "label": "The Defiant: collateral note",
+          "url": "https://thedefiant.io/news/defi/maple-reports-1-89-billion-in-syrup-loan-collateral"
+        }
+      ]
+    }
+  ]
 }

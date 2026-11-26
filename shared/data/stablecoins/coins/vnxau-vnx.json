@@ -152,5 +152,23 @@
       "risk": "very-low"
     }
   },
-  "launchDate": "2021-12-15"
+  "launchDate": "2021-12-15",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Exchange closed and gold report from December 2025",
+      "message": "VNX Commodities AG suspended vnx.li exchange operations on June 30, 2026, leaving VNXAU redemption available only through institutional onboarding or direct support. The latest published gold reserve report remains dated December 31, 2025.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "VNX: announcements blog",
+          "url": "https://vnx.li/blog"
+        },
+        {
+          "label": "VNX: Gold overview",
+          "url": "https://vnx.io/gold"
+        }
+      ]
+    }
+  ]
 }

@@ -127,7 +127,14 @@
     {
       "type": "info",
       "title": "Multi-chain EU-regulated MMF",
-      "message": "USTBL's prospectus lists issuer-native deployments on Ethereum, Arbitrum, Polygon, Base, Etherlink, Stellar, Starknet, and Solana. Spiko announced Chainlink CCIP interoperability; production adapter and lane controls were not identified in the reviewed sources."
+      "message": "USTBL's September 1, 2026 prospectus lists native issuance across Ethereum, Arbitrum, Polygon, Base, Etherlink, Stellar, Starknet, and Solana. Spiko announced Chainlink CCIP interoperability, though production CCIP lanes are not yet confirmed.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Spiko: SICAV prospectus",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+        }
+      ]
     }
   ],
   "launchDate": "2024-06-12"

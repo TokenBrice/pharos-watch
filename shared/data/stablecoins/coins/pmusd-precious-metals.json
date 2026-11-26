@@ -46,5 +46,28 @@
   ],
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "multisig",
-  "launchDate": "2025-12-09"
+  "launchDate": "2025-12-09",
+  "notices": [
+    {
+      "type": "danger",
+      "title": "Sustained depeg above 50% and unverified redemption",
+      "message": "pmUSD has traded more than 50% below $1 since late April 2026 with no verified par exit. Its sUSDS PSM is one-directional with no wired rebalancer, its Chainlink proof-of-reserve feed has not updated since January 2026, and the APMEX and Kitco physical redemption program announced in May for July 2026 has not been confirmed live.",
+      "kind": "depeg",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "RAAC: redemption program",
+          "url": "https://blog.raac.io/posts/pmusd-redemption-agreement-with-apmex-and-kitco"
+        },
+        {
+          "label": "Chainlink: pmUSD PoR feed",
+          "url": "https://data.chain.link/feeds/ethereum/mainnet/ion-por"
+        },
+        {
+          "label": "CoinGecko: pmUSD price",
+          "url": "https://www.coingecko.com/en/coins/precious-metals-usd"
+        }
+      ]
+    }
+  ]
 }

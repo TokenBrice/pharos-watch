@@ -36,14 +36,16 @@
   "governanceQuality": "single-entity",
   "notices": [
     {
-      "type": "info",
-      "title": "Incomplete current backing disclosure",
-      "message": "The issuer's backing API reports legacy Curve, TermMax and Morpho totals, but does not identify every current and historical residual module or reconcile them to total USDU liabilities. Its displayed collateralization ratio is not a verified whole-book measure."
-    },
-    {
       "type": "warning",
-      "title": "Conflicting issuer disclosures",
-      "message": "USDU's transparency page and protocol-minting docs describe different issuance paths from the reviewed USDC/USDT swap modules. Complete current backing allocation, external valuation and liability reconciliation remain unresolved; the incomplete dashboard alone establishes neither full collateralization nor a reserve shortfall."
+      "title": "Conflicting issuance docs and incomplete backing",
+      "message": "USDU Finance's transparency reporting covers only legacy Curve, TermMax, and Morpho modules and conflicts with its protocol-minting documentation. Residual modules and total liabilities are not reconciled, so reported collateralization is not a verified whole-book measure.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "USDU: protocol minting docs",
+          "url": "https://usdu.gitbook.io/docs/how-usdusdu-works/protocol-minting"
+        }
+      ]
     }
   ],
   "launchDate": "2025-07-04",

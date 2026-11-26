@@ -92,5 +92,24 @@
         "url": "https://dgld.ch/legal/general-terms-conditions-dgld-2"
       }
     ]
-  }
+  },
+  "notices": [
+    {
+      "type": "info",
+      "title": "February 2026 Base bridge exploit resolved",
+      "message": "On February 23, 2026, a phantom-deposit flaw in the former Base bridge let an attacker mint roughly 100M unbacked DGLD before the bridge paused within hours. Gold Token SA migrated balances 1:1 and launched native Base DGLD in September 2026.",
+      "kind": "history",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "DGLD: incident disclosure",
+          "url": "https://x.com/DGLD_Official/status/2025996938869694927"
+        },
+        {
+          "label": "DGLD: Base migration done",
+          "url": "https://x.com/DGLD_Official/status/2071986373985259848"
+        }
+      ]
+    }
+  ]
 }

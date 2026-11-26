@@ -56,6 +56,39 @@ describe("weekly curation coverage", () => {
     expect(queue).not.toContain("(never recorded)");
   });
 
+  it("rolls up active notice health on UTC days and prints it right after the header", async () => {
+    type Health = Record<"expiredDeadlines" | "invalidDates" | "missingSources" | "stale", { title: string; field?: string }[]>;
+    const { analyzeNoticeHealth, renderNoticeHealth } = (await loadDigestModule()) as unknown as {
+      analyzeNoticeHealth: (coins: unknown[], nowMs?: number) => Health; renderNoticeHealth: (report: Health) => string;
+    };
+    const n = (title: string, extra: Record<string, unknown> = {}) =>
+      ({ type: "warning", title, message: "M", asOf: "2026-07-01", sources: [{ label: "S", url: "https://x.test" }], ...extra });
+    const notices = [
+      n("due-today", { kind: "deadline", deadline: "2026-07-01" }), n("due-yesterday", { kind: "deadline", deadline: "2026-06-30" }),
+      ...[["paused-14", "2026-06-17"], ["paused-15", "2026-06-16"]].map(([title, asOf]) => n(title, { type: "danger", kind: "paused", asOf })),
+      n("info-180", { type: "info", asOf: "2026-01-02" }), n("info-181", { type: "info", asOf: "2026-01-01" }),
+      n("history", { kind: "history", asOf: "2020-01-01" }), n("undated", { asOf: undefined, sources: [] }),
+      n("bad-deadline", { kind: "deadline", deadline: "2026-02-30" }), n("bad-paused", { kind: "paused", deadline: "soon" }),
+      n("paused-due-today", { type: "danger", kind: "paused", deadline: "2026-07-01" }), n("paused-expired", { type: "danger", kind: "paused", deadline: "2026-06-29" }),
+    ];
+    const report = analyzeNoticeHealth([coin("a", { notices }), coin("z", { status: "frozen", notices: [n("frozen", { asOf: "2020-01-01" })] })], Date.parse("2026-07-01T23:59:00Z"));
+    const titles = (rows: { title: string; field?: string }[]) => rows.map((row) => [row.title, row.field].filter(Boolean).join(":"));
+    expect([report.expiredDeadlines, report.invalidDates, report.missingSources, report.stale].map(titles)).toEqual([
+      ["paused-expired", "due-yesterday"], ["bad-deadline:deadline", "bad-paused:deadline", "undated:asOf"], ["undated"], ["info-181", "paused-15"],
+    ]);
+    const rendered = renderNoticeHealth(report);
+    for (const row of ['"due-yesterday" (deadline 2026-06-30, expired 1d ago)', '"paused-expired" (deadline 2026-06-29, expired 2d ago)', '"paused-15" (asOf 2026-06-16, 15d > 14d paused budget)', '"undated" (asOf missing)', '"undated" (no sources)', '"bad-paused" (deadline invalid: "soon")']) {
+      expect(rendered).toContain(`- a — ${row}`);
+    }
+    expect(renderNoticeHealth(analyzeNoticeHealth([]))).toContain("Status: **OK** — 0 active notices");
+    const wave = analyzeNoticeHealth([coin("w", { notices: Array.from({ length: 12 }, (_, i) => n(`stale-${i}`, { type: "info", asOf: "2025-01-01" })) })], Date.parse("2026-07-01T23:59:00Z"));
+    const bullets = renderNoticeHealth(wave).split("\n").filter((line) => line.startsWith("- "));
+    expect([bullets.length, bullets.at(-1)]).toEqual([11, "- ...and 2 more"]);
+    const [header, rest] = renderDigest({ coins: [coin("a", { notices: [notices[1]] })] }).split("## Notice health");
+    expect(header).toContain("# Curation digest — 2026-07-01");
+    expect(rest.split("## oneLiner coverage")[0]).toContain('- a — "due-yesterday" (deadline 2026-06-30, expired 1d ago)');
+  });
+
   it("groups dated review expiries within the 14-day lookahead and renders exact statuses", async () => {
     const { analyzeDatedReviewExpiries, EXPIRY_LOOKAHEAD_DAYS, renderDatedReviewExpiries } = await loadDigestModule();
     const nowMs = Date.parse("2026-07-01T00:00:00.000Z");

@@ -146,7 +146,14 @@
     {
       "type": "info",
       "title": "Distinct from Origin Dollar",
-      "message": "Open USD is issued by Bridge for Open Standard. It shares the OUSD ticker with Origin Dollar, a separate stablecoin from Origin Protocol."
+      "message": "Open USD is issued by Bridge for Open Standard. It shares the OUSD ticker with Origin Dollar, an unrelated stablecoin issued by Origin Protocol.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Open Standard: website",
+          "url": "https://joinopenstandard.com/"
+        }
+      ]
     }
   ],
   "launchDate": "2026-09-30",

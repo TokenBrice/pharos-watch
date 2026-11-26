@@ -84,5 +84,23 @@
       }
     }
   },
-  "launchDate": "2024-09-18"
+  "launchDate": "2024-09-18",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Korean exchange halts and USDC freeze scrutiny",
+      "message": "Upbit, Bithumb, and Coinone halted USDS deposits on November 23, 2026 ahead of a December 21 to 24 delisting review. The actions followed a November 19 report alleging $518M in illicit-linked Sky USDC PSM swaps (disputed by Sky at under 0.06% of volume), raising Circle freeze risk; USDS's peg held.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "The Defiant: exchange halts",
+          "url": "https://thedefiant.io/news/cefi/upbit-bithumb-flag-sky-and-usds-for-trading-caution"
+        },
+        {
+          "label": "CoinDesk: PSM freeze risk",
+          "url": "https://www.coindesk.com/business/2026/11/19/north-korean-hackers-used-sky-s-stablecoin-system-putting-billions-at-freeze-risk"
+        }
+      ]
+    }
+  ]
 }

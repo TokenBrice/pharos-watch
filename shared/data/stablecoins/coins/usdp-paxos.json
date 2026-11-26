@@ -103,7 +103,27 @@
         "url": "https://www.paxos.com/transparency/usdp"
       }
     },
-    "params": { "product": "USDP" }
+    "params": {
+      "product": "USDP"
+    }
   },
-  "launchDate": "2018-09-08"
+  "launchDate": "2018-09-08",
+  "notices": [
+    {
+      "type": "info",
+      "title": "Delisted from Binance in September 2026",
+      "message": "Binance delisted all USDP spot pairs, margin, and Convert support on September 24, 2026 after a periodic review, reducing secondary venues. Direct 1:1 Paxos redemption for verified accounts still works.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Binance: USDP delisting",
+          "url": "https://x.com/binance/status/2097929481596076358"
+        },
+        {
+          "label": "FX News Group: USDP note",
+          "url": "https://fxnewsgroup.com/forex-news/cryptocurrency/binance-to-delist-usdp"
+        }
+      ]
+    }
+  ]
 }

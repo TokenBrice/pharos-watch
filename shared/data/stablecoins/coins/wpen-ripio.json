@@ -79,13 +79,19 @@
   "notices": [
     {
       "type": "info",
-      "title": "Peg grouped as Other",
-      "message": "PEN is not yet a first-class Pharos peg-currency enum, so WPEN is grouped under OTHER while the DefiLlama price and circulating-supply path admits the asset at runtime."
-    },
-    {
-      "type": "info",
-      "title": "No per-token attestation located",
-      "message": "Ripio describes wFIAT local-currency backing, but no reliable public per-token reserve attestation was found for WPEN during this addition. Curated reserves remain conservative until source coverage improves."
+      "title": "No per-token reserve attestation published",
+      "message": "Ripio publishes per-token reserve certifications for other wFIAT regional stablecoins, but no dedicated reserve attestation is published for WPEN.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Ripio: local stablecoins",
+          "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+        },
+        {
+          "label": "Ripio: wFIAT whitepaper",
+          "url": "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf"
+        }
+      ]
     }
   ],
   "launchDate": "2025-11-27"

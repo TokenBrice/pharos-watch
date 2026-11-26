@@ -53,8 +53,15 @@
   "notices": [
     {
       "type": "info",
-      "title": "Tokenized-deposit profile",
-      "message": "MoveUSD is tracked because DefiLlama reports a current price and circulating supply, but its public materials present it as a CFX-issued stable token for approved customers rather than an open DeFi-native stablecoin."
+      "title": "Permissioned tokenized-deposit product",
+      "message": "MoveUSD is issued by CFX as a permissioned tokenized-deposit product for approved customers, not an open DeFi-native stablecoin.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "CFX: MoveUSD features",
+          "url": "https://docs.cfx.to/docs/key-features"
+        }
+      ]
     }
   ],
   "launchDate": "2025-04-01"

@@ -4,9 +4,19 @@
     "version": 1,
     "semantics": "collateral-mix",
     "breakerScope": "usdx-axis",
-    "scoring": { "maxSourceAgeSec": 259200 },
-    "display": { "url": "https://app.axis.to/transparency?tab=asset-composition", "label": "Axis issuer asset-class transparency" },
-    "inputs": { "primary": { "kind": "http-json", "url": "https://transparency-api.axis.to/dashboard?reserves_period=max&performance_period=max" } }
+    "scoring": {
+      "maxSourceAgeSec": 259200
+    },
+    "display": {
+      "url": "https://app.axis.to/transparency?tab=asset-composition",
+      "label": "Axis issuer asset-class transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://transparency-api.axis.to/dashboard?reserves_period=max&performance_period=max"
+      }
+    }
   },
   "id": "usdx-axis",
   "name": "Axis USD",
@@ -19,13 +29,28 @@
     "reviewer": "Batch-64 review 2026-10-15 (Rev_UsdxAxis)",
     "rationale": "The canonical Ethereum V2 USDx token is a synthetic dollar backed by stablecoins and liquid assets deployed at trading venues, with directional inventory offset by hedges. The official reserve documentation explicitly describes delta-neutral exposure and offchain venue custody; it does not establish measured hedge coverage. Axis dates the first USDx tranche to April 8, 2026; the legacy Plasma V1 token records that 10,000,000 USDx tranche minted between blocks 18603490 and 18607789 on April 7, 2026 UTC. The current canonical V2 implementation launched on July 23, so its mechanism history does not inherit the private-beta product age.",
     "sources": [
-      { "label": "Axis backing and custody disclosure", "url": "https://docs.axis.to/backing-reserves-and-transparency/backing-custody-transparency.md" },
-      { "label": "Axis canonical V2 deployments", "url": "https://docs.axis.to/reference/contract-addresses.md" },
-      { "label": "Axis dates first USDx issuance to April 8, 2026", "url": "https://www.axis.to/insights/The-Axis-Roadmap" },
-      { "label": "Legacy Plasma V1 first-tranche mint completion, April 7, 2026", "url": "https://plasmascan.to/tx/0xb2018a5cae65942cc64922c8e50cf1bcc72d837f59e8a446fd8245829a304252" }
+      {
+        "label": "Axis backing and custody disclosure",
+        "url": "https://docs.axis.to/backing-reserves-and-transparency/backing-custody-transparency.md"
+      },
+      {
+        "label": "Axis canonical V2 deployments",
+        "url": "https://docs.axis.to/reference/contract-addresses.md"
+      },
+      {
+        "label": "Axis dates first USDx issuance to April 8, 2026",
+        "url": "https://www.axis.to/insights/The-Axis-Roadmap"
+      },
+      {
+        "label": "Legacy Plasma V1 first-tranche mint completion, April 7, 2026",
+        "url": "https://plasmascan.to/tx/0xb2018a5cae65942cc64922c8e50cf1bcc72d837f59e8a446fd8245829a304252"
+      }
     ]
   },
-  "flags": { "backing": "crypto-backed", "governance": "centralized-dependent" },
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized-dependent"
+  },
   "collateral": "Issuer gross asset-form snapshot dated October 29, 2026 (dashboard last_updated 2026-10-29T12:08:46.361Z): liquid hedge inventory 76.24%, stablecoins and settlement tokens 17.30%, yield-bearing and staked collateral 4.08%, tokenized Treasuries or reserve-backed cash equivalents 1.35%, and fiat cash and FX balances 1.02% of USD 69,046,922.15 gross backing assets (display-rounded; reserves sidecar retains exact source weights). Gross shares precede hedge offsets. The issuer marks 48.7527% of the whole book unclassified within liquid inventory (USD 33,662,245.19 across 462 of 494 assets); constituent identities, dependency weights and canonical V2-versus-legacy reserve partition remain unresolved.",
   "pegMechanism": "Approved primary-market accounts sign EIP-712 orders against USDC or USDT collateral; authorized operators settle minting and redemption atomically onchain. Offchain RFQ pricing reflects portfolio unwind costs, and the contract does not independently value collateral using an external oracle. Retail holders rely on secondary markets. Indicative instant and seven-day redemption bands are not committed capacity or settlement guarantees.",
   "llamaId": "442",
@@ -39,19 +64,52 @@
     "cadence": "real-time"
   },
   "links": [
-    { "label": "Website", "url": "https://www.axis.to/" },
-    { "label": "Docs", "url": "https://docs.axis.to/" },
-    { "label": "Transparency", "url": "https://app.axis.to/transparency" },
-    { "label": "Terms", "url": "https://www.axis.to/terms-of-service" },
-    { "label": "Canonical V2 deployment, July 23, 2026", "url": "https://etherscan.io/tx/0xc50b87d6c87b63e5b8b97253aecd32724eed0b081afdf2732e654a027adf3432" },
-    { "label": "Audits", "url": "https://docs.axis.to/backing-reserves-and-transparency/audits.md" },
-    { "label": "Explorer", "url": "https://etherscan.io/address/0xa1fa7777974312f7d801a8880714a218f76233f8#code" },
-    { "label": "X", "url": "https://x.com/AxisFDN" },
-    { "label": "Telegram", "url": "https://t.me/AxisFDN" }
+    {
+      "label": "Website",
+      "url": "https://www.axis.to/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.axis.to/"
+    },
+    {
+      "label": "Transparency",
+      "url": "https://app.axis.to/transparency"
+    },
+    {
+      "label": "Terms",
+      "url": "https://www.axis.to/terms-of-service"
+    },
+    {
+      "label": "Canonical V2 deployment, July 23, 2026",
+      "url": "https://etherscan.io/tx/0xc50b87d6c87b63e5b8b97253aecd32724eed0b081afdf2732e654a027adf3432"
+    },
+    {
+      "label": "Audits",
+      "url": "https://docs.axis.to/backing-reserves-and-transparency/audits.md"
+    },
+    {
+      "label": "Explorer",
+      "url": "https://etherscan.io/address/0xa1fa7777974312f7d801a8880714a218f76233f8#code"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/AxisFDN"
+    },
+    {
+      "label": "Telegram",
+      "url": "https://t.me/AxisFDN"
+    }
   ],
-  "jurisdiction": { "country": "British Virgin Islands" },
+  "jurisdiction": {
+    "country": "British Virgin Islands"
+  },
   "contracts": [
-    { "chain": "ethereum", "address": "0xa1fa7777974312f7d801a8880714a218f76233f8", "decimals": 18 }
+    {
+      "chain": "ethereum",
+      "address": "0xa1fa7777974312f7d801a8880714a218f76233f8",
+      "decimals": 18
+    }
   ],
   "collateralQuality": "exotic",
   "custodyModel": "unknown",
@@ -59,8 +117,15 @@
   "notices": [
     {
       "type": "info",
-      "title": "Primary redemption is restricted and has no modeled capacity",
-      "message": "Direct USDx redemption requires an approved primary-market account and an operator-settled signed order. Public instant and seven-day scenarios are indicative, not committed capacity or settlement guarantees. Pharos does not model an issuer redemption backstop without executable RFQ capacity; other holders rely on secondary markets."
+      "title": "Permissioned RFQ redemption without fixed capacity",
+      "message": "Direct USDx redemption requires an approved primary-market account and operator-settled RFQ orders. Indicative instant and seven-day windows are not committed capacity, leaving other holders reliant on secondary liquidity.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Axis: USDx mint and redeem",
+          "url": "https://docs.axis.to/usdx-the-synthetic-dollar/mint-and-redeem"
+        }
+      ]
     }
   ],
   "launchDate": "2026-04-07",

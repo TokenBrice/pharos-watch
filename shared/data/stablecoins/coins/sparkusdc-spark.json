@@ -117,8 +117,15 @@
   "notices": [
     {
       "type": "warning",
-      "title": "Last-exiter loss exposure",
-      "message": "Morpho V1.1 can retain the reported share price after market bad debt. Later withdrawals may be unable to realize that accounting value unless someone voluntarily covers the loss. This is a design risk, not a claim of current bad debt; lostAssets was zero at the October 15 review."
+      "title": "Last-exiter loss exposure on Morpho V1.1",
+      "message": "Morpho V1.1 vaults can retain their reported share price after market bad debt, leaving later withdrawers unable to realize that accounting value unless losses are covered externally. This is a design risk; lostAssets was zero at the October 15, 2026 review.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Morpho: V1 vault mechanics",
+          "url": "https://docs.morpho.org/curate/tutorials-v1/vault-creation/"
+        }
+      ]
     }
   ],
   "custodyModel": "mixed",

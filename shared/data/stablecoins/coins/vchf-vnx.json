@@ -415,5 +415,23 @@
       }
     }
   },
-  "launchDate": "2022-12-02"
+  "launchDate": "2022-12-02",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Legacy chain deployments excluded from attestations",
+      "message": "VCHF issuance moved to Bermuda-licensed VNX Global Ltd. in July 2026 after vnx.li suspended exchange operations on June 30. Monthly Apex attestations reconcile reserves only across six active chains, excluding legacy Arbitrum, Avalanche, Fraxtal, Polygon, Tezos, and XRPL balances.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "VNX: transparency page",
+          "url": "https://vnx.io/transparency"
+        },
+        {
+          "label": "Walkers: Bermuda license",
+          "url": "https://www.walkersglobal.com/en/About-us/News/2026/08/Acting-for-VNX-on-Bermuda-digital-assets-licence-for-stablecoin-issuance-and-exchange-services"
+        }
+      ]
+    }
+  ]
 }

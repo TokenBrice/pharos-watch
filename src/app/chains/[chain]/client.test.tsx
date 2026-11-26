@@ -41,7 +41,8 @@ vi.mock("@/hooks/use-chain-profile-data", () => ({
 vi.mock("@/hooks/use-coin-states", () => ({ useCoinStates: useCoinStatesMock }));
 vi.mock("@/hooks/use-utc-day-clock", () => ({ useUtcDayNowMs: () => clock.nowMs }));
 
-// Two fixture coins carrying Noble-scoped alerts (one event shared) beside the real active registry.
+// Two fixture coins carrying Noble-scoped alerts (one event shared) beside the real active registry,
+// whose live alerts are stripped so catalog notices cannot perturb the fixture.
 vi.mock("@shared/lib/stablecoins/client-registry", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@shared/lib/stablecoins/client-registry")>();
   const closes = { type: "warning", title: "Noble route closes", kind: "deadline", deadline: "2027-01-12", chains: ["noble"] };
@@ -55,7 +56,8 @@ vi.mock("@shared/lib/stablecoins/client-registry", async (importOriginal) => {
     ],
   };
   const second = { ...scoped, id: "scoped-two", symbol: "XUSD", name: "Second Scoped USD", alerts: [{ ...closes }] };
-  return { ...actual, CLIENT_ACTIVE_STABLECOINS: [...actual.CLIENT_ACTIVE_STABLECOINS, scoped, second] };
+  const real = actual.CLIENT_ACTIVE_STABLECOINS.map(({ alerts: _alerts, ...coin }) => coin);
+  return { ...actual, CLIENT_ACTIVE_STABLECOINS: [...real, scoped, second] };
 });
 
 function makeHookState(overrides: Record<string, unknown> = {}) {

@@ -89,10 +89,33 @@
   },
   "notices": [
     {
-      "type": "danger",
-      "title": "Retail redemption gap and thin-liquidity depeg",
-      "message": "USX traded as low as roughly $0.10 on Orca during a December 2025 thin-liquidity event. Solstice documents institutional/KYC redemption, so retail holders without direct redemption access depend on secondary-market liquidity during stress.",
-      "asOf": "2026-06-12"
+      "type": "info",
+      "title": "Institutional-only primary redemption",
+      "message": "Solstice limits direct 1:1 USX redemption to KYC-approved institutional counterparties, leaving retail holders dependent on Solana secondary markets during periods of thin liquidity.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Solstice: attestation API",
+          "url": "https://attestation-api.solstice.finance/dashboard"
+        }
+      ]
+    },
+    {
+      "type": "info",
+      "title": "December 2025 thin-liquidity depeg",
+      "message": "On December 26, 2025, thin Orca and Raydium pools caused a roughly three-hour secondary-market drop (documented at $0.78 by SolanaFloor, with isolated prints reported lower) before liquidity injection restored parity while reserves stayed above 100%.",
+      "kind": "history",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Solstice: incident thread",
+          "url": "https://x.com/solsticefi/status/2004486619848445978"
+        },
+        {
+          "label": "SolanaFloor: depeg report",
+          "url": "https://solanafloor.com/ko/news/solstice-assures-holders-usx-remains-fully-backed-as-stablecoin-de-pegs-on-secondary"
+        }
+      ]
     }
   ],
   "launchDate": "2025-09-30",

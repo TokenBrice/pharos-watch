@@ -117,9 +117,16 @@
   },
   "notices": [
     {
-      "type": "warning",
+      "type": "info",
       "title": "Wirex EEA trading restriction",
-      "message": "On October 1, 2026, Wirex's MiCA-related EEA delisting notice listed IDRT among the removed tokens. This records Wirex's venue restriction and assessment, not a token-specific regulator or legal determination. Pharos leaves IDRT's categorical MiCA status not assessed pending that evidence."
+      "message": "Wirex lists IDRT among 13 tokens removed from EEA trading under MiCA, restricting access on that venue. Because this is a single exchange policy and not an EU regulator ruling, Pharos leaves IDRT's MiCA status unassessed.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Wirex: EEA delisting list",
+          "url": "https://help.wirexapp.com/article/non-compliant-mica-tokens-delisted-1479"
+        }
+      ]
     }
   ],
   "launchDate": "2019-04-10"

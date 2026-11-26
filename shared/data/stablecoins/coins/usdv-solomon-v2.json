@@ -86,13 +86,19 @@
   "notices": [
     {
       "type": "info",
-      "title": "Separate replacement token",
-      "message": "This profile tracks the six-decimal Chancery USDv mint. Original Solomon USDv remains a separate legacy token with no automatic conversion; its supply, reserves and historical prices are not combined here."
-    },
-    {
-      "type": "warning",
-      "title": "Permissioned direct redemption",
-      "message": "Holding USDv does not grant access to direct redemption. Approved counterparties must complete onboarding and comply with limits, processing windows and available liquidity; other holders rely on market liquidity."
+      "title": "Replacement token with permissioned redemption",
+      "message": "This listing tracks the six-decimal Chancery USDv mint, with no automatic conversion from legacy Solomon USDv. Direct redemption requires approved counterparty onboarding and liquidity windows; other holders rely on secondary markets.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Solomon: USDv docs",
+          "url": "https://docs.solomonlabs.org/usdv/"
+        },
+        {
+          "label": "Solomon: legacy wind-down",
+          "url": "https://blog.solomonlabs.org/p/winding-down-the-original-usdv"
+        }
+      ]
     }
   ]
 }

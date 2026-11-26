@@ -109,9 +109,28 @@
   },
   "notices": [
     {
+      "type": "warning",
+      "title": "Privileged operator can write down vault shares",
+      "message": "The StakedTrUSD contract allows the designated rewards operator to call reportLoss(), burning vault trUSD and lowering assets per strUSD share without a cap or timelock. Losses apply directly to strUSD holders and do not affect base trUSD.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Tori: strUSD documentation",
+          "url": "https://docs.tori.finance/products/strusd.md"
+        }
+      ]
+    },
+    {
       "type": "info",
       "title": "Staking eligibility and holder rights",
-      "message": "Tori's terms do not offer strUSD acquisition to persons with habitual residence or registered office in the EU, EEA or United States. Rewards are discretionary and may be negative; holders have no direct economic recourse to Tori's underlying investments. Unstaking returns trUSD, not dollars."
+      "message": "Tori's terms exclude persons in the EU, EEA, and United States from acquiring strUSD. Rewards are discretionary and may turn negative, holders have no direct claim on underlying investments, and unstaking returns trUSD.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Tori: strUSD documentation",
+          "url": "https://docs.tori.finance/products/strusd.md"
+        }
+      ]
     }
   ],
   "archetypeOverride": true,

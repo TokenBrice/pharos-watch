@@ -113,14 +113,5 @@
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "governanceQuality": "multisig",
-  "notices": [
-    {
-      "type": "warning",
-      "title": "Persistent soft depeg",
-      "message": "MAI continues to trade below its $1 target across supported venues; CoinGecko showed about $0.991 on June 28, 2026, while CDP redemption pressure has not consistently restored parity.",
-      "kind": "depeg",
-      "asOf": "2026-06-28"
-    }
-  ],
   "launchDate": "2021-05-02"
 }

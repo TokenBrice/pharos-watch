@@ -137,8 +137,19 @@
   "notices": [
     {
       "type": "info",
-      "title": "Centrifuge V3 multi-chain availability",
-      "message": "Centrifuge's current share-bridge guide limits burn-and-mint bridging to EVM networks and excludes Solana targets; the Solana deployment's issuance and transfer architecture remains unresolved."
+      "title": "Centrifuge V3 multi-chain bridge scope",
+      "message": "Centrifuge lists JTRSY on EVM networks, Solana, and Stellar, while its current share-bridge guide limits native burn-and-mint bridging to EVM networks. Solana bridge mechanics are not yet documented.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Centrifuge: bridge guide",
+          "url": "https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens"
+        },
+        {
+          "label": "Centrifuge: deployments",
+          "url": "https://docs.centrifuge.io/developer/protocol/deployments/"
+        }
+      ]
     }
   ],
   "launchDate": "2024-08-05"

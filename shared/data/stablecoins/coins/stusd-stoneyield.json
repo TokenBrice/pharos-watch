@@ -46,9 +46,16 @@
   },
   "notices": [
     {
-      "type": "warning",
-      "title": "Yield wrapper, not a plain cash stablecoin",
-      "message": "stUSD is tracked because CoinGecko returns a live price and market cap, but its structure is a managed yield wrapper around stablecoin strategies rather than a simple fiat-backed dollar token."
+      "type": "info",
+      "title": "Managed yield wrapper over stablecoin strategies",
+      "message": "stUSD is a managed yield wrapper allocating across DeFi stablecoin strategies, not a cash-redeemable fiat stablecoin.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "StoneYield: contract design",
+          "url": "https://docs.stoneyield.io/docs/protocol/contract-design"
+        }
+      ]
     }
   ],
   "launchDate": "2025-12-05"

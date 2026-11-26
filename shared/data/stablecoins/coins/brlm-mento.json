@@ -99,5 +99,19 @@
       }
     }
   },
-  "launchDate": "2022-01-27"
+  "launchDate": "2022-01-27",
+  "notices": [
+    {
+      "type": "info",
+      "title": "Mento V2 Broker wind-down caps supply growth",
+      "message": "Mento proposal MGP-18 (August 2026) places V2 Broker pools in wind-down with trading limits capped at 110% of outstanding supply. Direct redemption into USDm stays open with no sunset deadline during the V3 transition.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Celo Forum: MGP-18",
+          "url": "https://forum.celo.org/t/mgp-18-mento-v2-deprecation/13740"
+        }
+      ]
+    }
+  ]
 }

@@ -83,7 +83,14 @@
     {
       "type": "info",
       "title": "Eligible customers only",
-      "message": "FinChain documentation states that FUSD and FUSDLP are available only to eligible customers."
+      "message": "FinChain restricts direct FUSD and FUSDLP access to approved eligible customers under its product documentation.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "FinChain: FUSD overview",
+          "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction"
+        }
+      ]
     }
   ],
   "launchDate": "2026-02-10"

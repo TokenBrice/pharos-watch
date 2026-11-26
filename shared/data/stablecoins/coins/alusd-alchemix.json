@@ -73,8 +73,19 @@
   "notices": [
     {
       "type": "warning",
-      "title": "Arbitrum wind-down approved (AIP-124)",
-      "message": "Alchemix AIP-124 passed, deprecating alAsset bridging and winding down v3 on Arbitrum; execution steps unannounced. alUSD stays live on Ethereum and Optimism."
+      "title": "L2 bridging deprecated and Arbitrum wind-down",
+      "message": "Alchemix deprecated alAsset bridging across all L2s except Optimism on October 29, 2026 following AIP-124's vote to wind down Arbitrum v3. No Arbitrum withdrawal deadline has been set; alUSD remains active on Ethereum and Optimism.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Alchemix: AIP-124 vote",
+          "url": "https://alchemix.fi/governance/0x44b245b8062c89552ec623e291f9c6216062893d837c11767b9bd20086354cf8"
+        },
+        {
+          "label": "Alchemix: bridging sunset",
+          "url": "https://x.com/AlchemixFi/status/2115812408329667014"
+        }
+      ]
     }
   ],
   "launchDate": "2021-02-27"

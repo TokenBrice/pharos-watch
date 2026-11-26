@@ -77,8 +77,19 @@
   "notices": [
     {
       "type": "info",
-      "title": "Single-name equity collateral",
-      "message": "Tokenized single-name equities back part of ZCHF: BOSS (Boss Info AG, a Swiss-listed IT/consulting equity) is the largest of them, alongside quitt.shares, RealUnit, and Switzerlend positions; live weights move with open positions and appear in the reserves panel. Single-name corporate equity introduces issuer- and liquidity-specific risk distinct from the protocol's BTC, ETH, and gold collateral; positions are managed under Frankencoin's veto governance and remain subject to challenge auctions."
+      "title": "Single-name equity collateral exposure",
+      "message": "Tokenized single-name equities (including BOSS, quitt.shares, RealUnit, and Switzerlend) back part of ZCHF alongside crypto and gold. Corporate equity carries issuer and liquidity risks managed under Frankencoin's veto governance and challenge auctions.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Frankencoin: positions docs",
+          "url": "https://docs.frankencoin.com/positions"
+        },
+        {
+          "label": "Frankencoin: positions API",
+          "url": "https://api.frankencoin.com/ecosystem/collateral/positions/details"
+        }
+      ]
     }
   ],
   "liveReservesConfig": {

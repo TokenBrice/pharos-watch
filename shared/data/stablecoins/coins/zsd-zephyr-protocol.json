@@ -85,8 +85,15 @@
   "notices": [
     {
       "type": "info",
-      "title": "Unsupported private chain",
-      "message": "ZSD primarily circulates as a native Zephyr asset on a Monero-derived chain, which is not a configured Pharos chain, so no contract is stored."
+      "title": "Native Zephyr asset without EVM contracts",
+      "message": "ZSD circulates natively on Zephyr's Monero-derived privacy chain without EVM token contracts, so no contract address is listed on Pharos.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Zephyr: documentation",
+          "url": "https://zephyrprotocol.com/documentation"
+        }
+      ]
     }
   ]
 }

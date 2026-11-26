@@ -139,19 +139,16 @@
   },
   "notices": [
     {
-      "type": "warning",
-      "title": "Contract-priced fund token",
-      "message": "CoinGecko reports a live price and market cap but little or no secondary-market volume; Pharos treats JAAA as a NAV-priced fund share, not a liquid stablecoin peg."
-    },
-    {
-      "type": "warning",
-      "title": "Deployment-control semantics remain bounded",
-      "message": "SONG Safety Score V9 deployment-control review on 2026-07-15 verified the Centrifuge ward and 4-of-9 Safe authority path from issuer, protocol, and Safe sources, but did not establish complete current cap, incident, economic-loss, and materiality reconciliation across all mint surfaces."
-    },
-    {
       "type": "info",
       "title": "Issuer redemption terms remain incomplete",
-      "message": "Anemoy describes daily access and stablecoin redemptions for approved non-US professional investors. Its public materials do not establish committed executable capacity or a guaranteed maximum time for final receipt; Centrifuge processes redemption requests at the manager's cadence."
+      "message": "Anemoy offers daily stablecoin redemptions only to approved non-US professional investors. Public materials do not establish committed executable capacity or a fixed settlement window, and Centrifuge processes requests at the manager's cadence; secondary-market trading volume is minimal.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Anemoy: JAAA fund page",
+          "url": "https://www.anemoy.io/funds/jaaa"
+        }
+      ]
     }
   ],
   "launchDate": "2025-06-25"

@@ -49,9 +49,20 @@
   "governanceQuality": "single-entity",
   "notices": [
     {
-      "type": "warning",
-      "title": "Discounted redemption program",
-      "message": "At Ethereum block 26104271 on October 2, 2026, Neutrl's separate redemption contract quoted 0.51 USDC per NUSD. This is a 49% discount to the $1 target, not restored par redemption or a measurement of the recovery value of remaining illiquid reserves. Redemption remains subject to the program terms and wallet acknowledgement."
+      "type": "danger",
+      "title": "Par redemption halted with 0.51 USDC recovery",
+      "message": "Neutrl halted par minting and redemption on August 13, 2026 after reserve losses and opened a recovery contract quoting 0.51 USDC per NUSD (a 49% haircut) originally scheduled through November 14. The contract stayed unpaused with 1.91M USDC against 22.67M circulating NUSD, enough to redeem about 3.7M NUSD (16% of supply), with no extension or further payout announced.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Neutrl: redemption terms",
+          "url": "https://x.com/Neutrl/status/2100614848241414280"
+        },
+        {
+          "label": "Blockscout: NusdRedemption",
+          "url": "https://eth.blockscout.com/address/0xb3f07d3392102fc23264a78e2a1a8b6421123828"
+        }
+      ]
     }
   ],
   "launchDate": "2025-11-10"

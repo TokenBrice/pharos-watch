@@ -100,13 +100,6 @@
     }
   },
   "launchDate": "2025-09-11",
-  "notices": [
-    {
-      "type": "warning",
-      "title": "MiCA assessment withdrawn pending token-specific legal evidence",
-      "message": "On 2026-10-01 Pharos withdrew the prior non-compliant ART assessment, whose references included an ESMA ART-register search dated 2026-08-14. Register absence, KMS Labs' token terms and Kinesis platform currency support do not establish a token-specific regulator or competent legal determination. KAG is now not assessed under MiCA; this does not assert EU authorization or erase the prior assessment. The original source record is preserved in the dated curation findings."
-    }
-  ],
   "mechanismArchetypeReview": {
     "disposition": "resolved",
     "reviewedAt": "2026-10-01",

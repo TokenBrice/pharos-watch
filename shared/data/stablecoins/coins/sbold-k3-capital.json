@@ -90,15 +90,24 @@
   "notices": [
     {
       "type": "danger",
-      "title": "Exploited: do not deposit",
-      "message": "On 2026-11-18, between 12:25 and 12:33 UTC, attackers drained about 3.43M BOLD — nearly all vault assets — from K3 Capital's sBOLD vault; K3 paused the vault at 13:05 UTC and it remains paused. K3's 2026-11-19 post-mortem (ChainSecurity analysis) traces the root cause to the vault's swap() leaving the 1inch router an unused token approval: attackers inflated the sBOLD share price with donations, redeemed at the inflated price, then used the leftover approval to take back the donated collateral. Liquity V2, BOLD and 1inch were not exploited, and no Liquity liquidations were involved. More than half of the loss (about 986 ETH) went to block builders and validators; K3 has identified counterparties holding about 894.5 ETH plus 131,316 yBOLD, offers a 15% recovery bounty, and plans to convert recovered ETH to BOLD and redeem affected depositors case by case. The vault's remaining assets are about 4.5 BOLD against 4.4e19 shares, so a pre-exploit share redeems for effectively nothing. Pharos withholds sBOLD's supply and market cap until the incident is resolved. Sources: K3 post-mortem https://x.com/k3_capital/status/2123395654214967426 ; Liquity https://x.com/LiquityProtocol/status/2123408020579496280",
+      "title": "Exploited: vault paused, do not deposit",
+      "message": "K3 Capital's sBOLD vault stays paused, holding 4.58 BOLD against 43.72M shares after attackers drained about 3.43M BOLD on November 18, 2026 via an unused 1inch router approval. Liquity V2, BOLD, and 1inch were unaffected. Counterparties returned 190.66 ETH and 131,316 BOLD by November 23 under K3's bounty, with no depositor payout schedule announced; Pharos withholds supply and market cap.",
       "kind": "paused",
-      "asOf": "2026-11-19"
-    },
-    {
-      "type": "info",
-      "title": "Limited market-price coverage",
-      "message": "Reviewed 2026-10-25: CoinGecko's sbold-by-k3-capital listing matched this contract but returned no current price or market cap. DefiLlama returned neither a contract quote nor a CoinGecko-mirror quote. The existing redemption-price fallback requires a trusted BOLD price and vault conversion rate; a current sBOLD price can remain unavailable when those inputs cannot be admitted."
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "K3 Capital: post-mortem",
+          "url": "https://x.com/k3_capital/status/2123395654214967426"
+        },
+        {
+          "label": "Liquity: incident note",
+          "url": "https://x.com/LiquityProtocol/status/2123408020579496280"
+        },
+        {
+          "label": "Blockscout: K3 recovery",
+          "url": "https://eth.blockscout.com/address/0x2f02BCd2163176B29C7B070B43A1660A5341C795"
+        }
+      ]
     }
   ],
   "launchDate": "2025-06-09"

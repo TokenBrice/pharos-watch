@@ -153,19 +153,32 @@
   "launchDate": "2026-06-24",
   "notices": [
     {
+      "type": "warning",
+      "title": "Custodians undisclosed and flows reach exchanges",
+      "message": "As of November 26, 2026, Tori's Accountable dashboard assigns 81.4% of reserves to unnamed custodian banks, 9.4% to unnamed investment banks, and 9.2% on-chain without naming entities or legal segregation. Pharos's on-chain tracing of the minting custodian wallet shows collateral routing to BiLira Pro and Binance deposit addresses.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Accountable: Tori dashboard",
+          "url": "https://tori.accountable.capital"
+        },
+        {
+          "label": "Tori: solvency API",
+          "url": "https://app.tori.finance/api/solvency"
+        }
+      ]
+    },
+    {
       "type": "info",
-      "title": "Primary mint/redeem is KYC-whitelisted",
-      "message": "The verified ToriMinting contract (0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e) gates every mint and redeem on both a role-held executor and an on-chain participant whitelist, so NAV mint/redeem requires completing Tori's KYC/AML verification (open application, 10 bps fee). The docs' 'no verification required' language refers only to swapping into trUSD at market rates on secondary liquidity such as Curve."
-    },
-    {
-      "type": "warning",
-      "title": "Custodian identities undisclosed; on-chain flows reach exchanges",
-      "message": "The Accountable dashboard snapshot dated 2026-10-01 reports 75.7816% of reserves under unnamed regulated custodian banks, 9.4727% under unnamed regulated investment banks, and 14.7457% on-chain custody; these category labels do not independently establish provider identity or legal safeguards. Independent on-chain tracing of the sole minting custodian wallet shows collateral flowing to BiLira Pro and Binance deposit addresses and a large USDT balance in an unlabeled externally owned account, so Pharos classifies custody as CEX/off-exchange rather than accepting the custodian-bank framing at face value."
-    },
-    {
-      "type": "warning",
-      "title": "strUSD has a separate privileged loss-reporting path",
-      "message": "The StakedTrUSD wrapper lets the rewards distributor's designated operator call reportLoss(), burning up to the trUSD balance available in the vault and reducing ERC-4626 assets per share without a proportional cap or timelock. This authority affects strUSD's wrapper exchange rate; it does not rewrite ordinary trUSD holder balances or the base token's mint/redeem quote."
+      "title": "Primary mint and redeem are KYC-whitelisted",
+      "message": "Direct NAV minting and redemption require completing Tori's KYC/AML whitelist and paying a 10 bps fee; secondary-market swaps such as Curve do not access issuer redemption.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Tori: trUSD terms",
+          "url": "https://docs.tori.finance/legal/trusd-terms.md"
+        }
+      ]
     }
   ],
   "featuredContent": [

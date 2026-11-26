@@ -106,8 +106,19 @@
   "notices": [
     {
       "type": "info",
-      "title": "Dynamic silver-per-token metric",
-      "message": "Matrixdock publishes the current silver entitlement per XAGm as ozPerToken. Reserve coverage uses that entitlement. Clocked peg comparisons use the contract’s dated entitlement for the token quote. A missing entitlement leaves the comparison unavailable."
+      "title": "Dynamic silver weight with 0.3% custody fee",
+      "message": "Each XAGm token's silver claim declines over time by a 0.3% annual custody fee, and direct physical redemption requires institutional onboarding and a 2,100 XAGm minimum.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Matrixdock: XAGm overview",
+          "url": "https://www.matrixdock.com/xagm"
+        },
+        {
+          "label": "Matrixdock: XAGm launch",
+          "url": "https://www.matrixdock.com/blog/announcements/matrixdock-launches-xagm-bringing-lbma-good-delivery-silver-on-chain"
+        }
+      ]
     }
   ],
   "launchDate": "2026-03-17",

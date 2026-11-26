@@ -108,9 +108,16 @@
   "governanceQuality": "wrapper",
   "notices": [
     {
-      "type": "warning",
+      "type": "info",
       "title": "Curator terms restrict UK and US access",
-      "message": "Armitage's terms, last updated 19 May 2026, prohibit UK and US persons from using Covered Vaults. Permissionless contract execution does not waive these contractual restrictions. The terms identify Corto Industries Limited in the Cayman Islands as curator, disclaim CIMA supervision and do not guarantee withdrawal timing."
+      "message": "Armitage's May 19, 2026 terms prohibit UK and US persons from using Covered Vaults, and permissionless contract access does not waive those restrictions. The terms name Corto Industries Limited (Cayman Islands) as curator, disclaim CIMA supervision, and set no fixed withdrawal timetable.",
+      "asOf": "2026-11-26",
+      "sources": [
+        {
+          "label": "Armitage: terms of use",
+          "url": "https://armitage.wintermute.com/terms-of-use"
+        }
+      ]
     }
   ],
   "yieldConfig": {
