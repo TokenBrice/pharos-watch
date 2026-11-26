@@ -197,8 +197,12 @@ describe("coverage helpers", () => {
     expect(JSON.stringify(flowCoverageFeature.legendItems)).not.toMatch(/Lagging/);
     expect(flowCoverageFeature.resolve(null).available).toBe(false);
 
-    for (const [sym, val, kind] of [["tGBP", true, "live"], ["YES", true, "yes"], ["USDT", "possible", "possible"], ["DAI", "inherited", "upstream"], ["USDQ", false, "no"], ["TBD", null, "data-unavailable"]] as const) {
-      expect(blacklistCoverageFeature.resolve(makeCoin({ symbol: sym }), val).kind).toBe(kind);
+    for (const [id, sym, val, kind] of [
+      ["tgbp-tokenised", "tGBP", true, "live"], ["usdf-falcon", "USDf", true, "live"], ["usdf-astherus", "USDF", true, "yes"],
+      ["test-yes", "YES", true, "yes"], ["usdt-tether", "USDT", "possible", "possible"], ["dai-makerdao", "DAI", "inherited", "upstream"],
+      ["usdq-quantoz", "USDQ", false, "no"], ["test-tbd", "TBD", null, "data-unavailable"],
+    ] as const) {
+      expect(blacklistCoverageFeature.resolve(makeCoin({ id, symbol: sym }), val).kind).toBe(kind);
     }
 
     const micaAuth = micaCoverageFeature.resolve({ status: "authorized", tokenType: "EMT", competentAuthority: "ACPR" });
@@ -400,7 +404,7 @@ describe("coverage helpers", () => {
     ]);
 
     const blSummary = buildCoverageFeatureSummary(coverageFeature("blacklist"), [
-      makeCoverageRow(["tracked", "USDC"], { marketCapUsd: 700, blacklistStatus: true }),
+      makeCoverageRow(["usdc-circle", "USDC"], { marketCapUsd: 700, blacklistStatus: true }),
       makeCoverageRow(["untracked", "YES"], { marketCapUsd: 200, blacklistStatus: true }),
       makeCoverageRow(["possible", "USDT"], { marketCapUsd: 500, blacklistStatus: "possible" }),
       makeCoverageRow(["not-blacklistable", "NO"], { blacklistStatus: false }),

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildBlacklistEventsPath } from "../blacklist-api";
-import { BLACKLIST_STABLECOINS, BlacklistSummaryResponseSchema } from "@shared/types/blacklist";
+import { BLACKLIST_STABLECOINS, BlacklistChartPointSchema, BlacklistSummaryResponseSchema } from "@shared/types/blacklist";
 import type { BlacklistStablecoin, BlacklistSummaryResponse } from "@shared/types/blacklist";
 
 type QuarterlyEventPoint =
@@ -25,112 +25,46 @@ function makePerCoinCounts(offset: number): Record<BlacklistStablecoin, number> 
 }
 
 function makeSummaryPayload() {
+  const zeroFreshness = { fresh: 0, degraded: 0, stale: 0 };
   return {
     stats: {
-      usdcBlacklisted: 1,
-      usdtBlacklisted: 2,
-      goldBlacklisted: 0,
-      frozenAddresses: 3,
-      destroyedTotal: 1_000,
-      activeAddressCount: 3,
-      activeFrozenTotal: 10_000,
-      activeAmountGapCount: 0,
-      trackedAddressCount: 3,
-      trackedFrozenTotal: 10_000,
-      trackedAmountGapCount: 0,
-      recentCount: 4,
-      recentCount24h: 1,
-      recentFreezeCount24h: 1,
-      recentFreezeCount7d: 4,
-      recentFreezeAmount24hUsd: 500,
-      recentFreezeAmount7dUsd: 2_000,
-      recoverableGapCount: 0,
-      perCoinBlacklistCounts: makePerCoinCounts(1),
-      perCoinTotalEvents: makePerCoinCounts(101),
-      perCoinFrozenAddressCount: makePerCoinCounts(201),
-      perCoinFrozenTotal: makePerCoinCounts(10_001),
+      usdcBlacklisted: 1, usdtBlacklisted: 2, goldBlacklisted: 0, frozenAddresses: 3, destroyedTotal: 1_000,
+      activeAddressCount: 3, activeFrozenTotal: 10_000, activeAmountGapCount: 0,
+      trackedAddressCount: 3, trackedFrozenTotal: 10_000, trackedAmountGapCount: 0,
+      recentCount: 4, recentCount24h: 1, recentFreezeCount24h: 1, recentFreezeCount7d: 4,
+      recentFreezeAmount24hUsd: 500, recentFreezeAmount7dUsd: 2_000, recoverableGapCount: 0,
+      perCoinBlacklistCounts: makePerCoinCounts(1), perCoinTotalEvents: makePerCoinCounts(101),
+      perCoinFrozenAddressCount: makePerCoinCounts(201), perCoinFrozenTotal: makePerCoinCounts(10_001),
       perCoinDestroyedTotal: makePerCoinCounts(20_001),
       perCoinQuarterlyEventTypes: makePerCoinRecord<QuarterlyEventPoint[]>(() => []),
       perCoinRecentEventTypes: makePerCoinRecord<RecentEventCounts>((symbol) => ({
-        freezes: BLACKLIST_STABLECOINS.indexOf(symbol),
-        destroys: 2,
-        releases: 3,
+        freezes: BLACKLIST_STABLECOINS.indexOf(symbol), destroys: 2, releases: 3,
       })),
     },
     chart: [],
     chains: [{ id: "ethereum", name: "Ethereum" }],
     coverage: {
-      supported: [],
-      unsupportedDeferred: [],
-      counts: {
-        supportedConfigs: 0,
-        unsupportedDeferredConfigs: 0,
-        bySymbol: {},
-        byChain: {},
-        byProviderSource: {},
-      },
+      supported: [], unsupportedDeferred: [],
+      counts: { supportedConfigs: 0, unsupportedDeferredConfigs: 0, bySymbol: {}, byChain: {}, byProviderSource: {} },
     },
     freezeLedgerMeta: {
-      totalRows: 0,
-      scopedRows: 0,
-      legacyRows: 0,
-      oldestObservedAt: null,
-      newestObservedAt: null,
-      oldestAgeSec: null,
-      newestAgeSec: null,
-      statusDistribution: {},
-      sourceDistribution: {},
-      freshnessDistribution: {
-        fresh: 0,
-        degraded: 0,
-        stale: 0,
-      },
-      currentFreshnessDistribution: {
-        fresh: 0,
-        degraded: 0,
-        stale: 0,
-      },
-      providerFailedCount: 0,
-      lastErrorClassDistribution: {},
-      sourceCategoryCounts: {
-        bootstrap: 0,
-        current: 0,
-        destroy: 0,
-        other: 0,
-      },
+      totalRows: 0, scopedRows: 0, legacyRows: 0,
+      oldestObservedAt: null, newestObservedAt: null, oldestAgeSec: null, newestAgeSec: null,
+      statusDistribution: {}, sourceDistribution: {},
+      freshnessDistribution: { ...zeroFreshness }, currentFreshnessDistribution: { ...zeroFreshness },
+      providerFailedCount: 0, lastErrorClassDistribution: {},
+      sourceCategoryCounts: { bootstrap: 0, current: 0, destroy: 0, other: 0 },
       gaps: {
-        tracked: 0,
-        recoverable: 0,
-        unrecoverable: 0,
-        recentRecoverable: 0,
-        neverAttempted: 0,
-        repeatedFailures: 0,
-        oldestRecoverableAgeSec: null,
-        amountStatusDistribution: {},
-        amountSourceDistribution: {},
+        tracked: 0, recoverable: 0, unrecoverable: 0, recentRecoverable: 0,
+        neverAttempted: 0, repeatedFailures: 0, oldestRecoverableAgeSec: null,
+        amountStatusDistribution: {}, amountSourceDistribution: {},
       },
     },
     dataQuality: {
-      status: "ok",
-      warnings: [],
-      amountGaps: {
-        totalEvents: 5,
-        recoverable: 0,
-        unrecoverable: 0,
-        recentRecoverable: 0,
-        missingRatio: 0,
-        recentWindowSec: 86_400,
-      },
-      freezeLedger: {
-        providerFailedCount: 0,
-        trackedGapCount: 0,
-        scopedRows: 0,
-        legacyRows: 0,
-      },
-      coverage: {
-        supportedConfigs: 0,
-        unsupportedDeferredConfigs: 0,
-      },
+      status: "ok", warnings: [],
+      amountGaps: { totalEvents: 5, recoverable: 0, unrecoverable: 0, recentRecoverable: 0, missingRatio: 0, recentWindowSec: 86_400 },
+      freezeLedger: { providerFailedCount: 0, trackedGapCount: 0, scopedRows: 0, legacyRows: 0 },
+      coverage: { supportedConfigs: 0, unsupportedDeferredConfigs: 0 },
     },
     totalEvents: 5,
   } satisfies BlacklistSummaryResponse;
@@ -177,11 +111,18 @@ describe("blacklist-api", () => {
     expect(BlacklistSummaryResponseSchema.parse(body)).toEqual(body);
   });
 
-  it("accepts cached summary payloads from before the current-freshness split", () => {
-    const result = BlacklistSummaryResponseSchema.parse(makeLegacySummaryWithoutCurrentFreshness());
+  it("accepts cached summary payloads from before the current-freshness split and pre-pilot chart points", () => {
+    const prePilotPoint = {
+      quarter: "Q4 '25",
+      ...Object.fromEntries(BLACKLIST_STABLECOINS.filter((s) => s !== "USDF" && s !== "USDGO").map((s) => [s, s === "USDC" ? 10 : 0])),
+      total: 10,
+    };
+    expect(BlacklistChartPointSchema.parse(prePilotPoint)).toMatchObject({ quarter: "Q4 '25", USDC: 10, USDF: 0, USDGO: 0, total: 10 });
+    const result = BlacklistSummaryResponseSchema.parse({ ...makeLegacySummaryWithoutCurrentFreshness(), chart: [prePilotPoint] });
 
     expect(result.stats.trackedFrozenTotal).toBe(10_000);
     expect(result.stats.perCoinFrozenTotal).toEqual(makePerCoinCounts(10_001));
+    expect(result.chart[0]).toMatchObject({ USDC: 10, USDF: 0, USDGO: 0, total: 10 });
     expect(result.freezeLedgerMeta?.currentFreshnessDistribution).toBeUndefined();
     expect(result.coverage).toBeUndefined();
   });

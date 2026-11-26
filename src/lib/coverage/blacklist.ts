@@ -1,6 +1,6 @@
 import type { BlacklistStatus } from "@shared/lib/report-card-blacklist-matchers";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
-import { BLACKLIST_STABLECOINS } from "@shared/types/blacklist";
+import { isBlacklistTrackedStablecoinId } from "@shared/lib/blacklist-contract-specs";
 import type { CoverageBreakdownItem, CoverageRow, CoverageStatus } from "@/lib/coverage-types";
 import {
   breakdownItem,
@@ -13,8 +13,6 @@ import {
   legendItemsFromPresets,
   type CoverageStatusPreset,
 } from "./shared";
-
-const BLACKLIST_SYMBOLS = new Set<string>(BLACKLIST_STABLECOINS);
 
 const BLACKLIST_STATUS_PRESETS = {
   live: {
@@ -65,14 +63,14 @@ const BLACKLIST_STATUS_PRESETS = {
 
 
 function resolveBlacklist(
-  coin: Pick<StablecoinMeta, "symbol">,
+  coin: Pick<StablecoinMeta, "id">,
   blacklistStatus: BlacklistStatus | null = null,
 ): CoverageStatus {
   if (blacklistStatus === null) {
     return createDataUnavailableStatus("Blacklist status");
   }
 
-  if (blacklistStatus === true && BLACKLIST_SYMBOLS.has(coin.symbol.toUpperCase())) {
+  if (blacklistStatus === true && isBlacklistTrackedStablecoinId(coin.id)) {
     return createPresetStatus(BLACKLIST_STATUS_PRESETS.live);
   }
 

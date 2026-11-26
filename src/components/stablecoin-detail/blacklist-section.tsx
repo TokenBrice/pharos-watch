@@ -9,7 +9,7 @@ import { BlacklistDetailChart } from "./blacklist-detail-chart";
 import { BlacklistDetailEventFeed } from "./blacklist-detail-event-feed";
 import { useBlacklistSummary } from "@/hooks/use-blacklist-events";
 import type { BlacklistStablecoin } from "@shared/types/blacklist";
-import { BLACKLIST_STABLECOINS } from "@shared/types/blacklist";
+import { getBlacklistLedgerStablecoinById } from "@shared/lib/blacklist-contract-specs";
 import { QueryStateNotice } from "@/components/query-state-notice";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { DataHealthBanner } from "@/components/data-health-banner";
@@ -22,9 +22,10 @@ interface BlacklistSectionProps {
   symbol: BlacklistStablecoin;
 }
 
-function useBlacklistVisibility(symbol: BlacklistStablecoin) {
-  const isSupported = (BLACKLIST_STABLECOINS as readonly string[]).includes(symbol);
-  const query = useBlacklistSummary();
+function useBlacklistVisibility(stablecoinId: string, symbol: BlacklistStablecoin) {
+  const resolvedSymbol = getBlacklistLedgerStablecoinById(stablecoinId);
+  const isSupported = resolvedSymbol !== null && resolvedSymbol === symbol;
+  const query = useBlacklistSummary({ enabled: isSupported });
   const { data: summary, isLoading } = query;
   const healthInput = {
     ...DATA_HEALTH_PRESETS.blacklist,
@@ -39,7 +40,7 @@ function useBlacklistVisibility(symbol: BlacklistStablecoin) {
   const health = deriveDataHealth(healthInput, nowMs ?? query.dataUpdatedAt);
 
   if (!isSupported) return { visible: false } as const;
-  if (!isLoading && !query.error && summary && (summary.stats.perCoinTotalEvents[symbol] ?? 0) === 0) {
+  if (!isLoading && !query.error && summary && (summary.stats.perCoinTotalEvents[resolvedSymbol] ?? 0) === 0) {
     return { visible: false } as const;
   }
 
@@ -54,8 +55,8 @@ function useBlacklistVisibility(symbol: BlacklistStablecoin) {
   } as const;
 }
 
-export function BlacklistSection({ symbol }: BlacklistSectionProps) {
-  const state = useBlacklistVisibility(symbol);
+export function BlacklistSection({ stablecoinId, symbol }: BlacklistSectionProps) {
+  const state = useBlacklistVisibility(stablecoinId, symbol);
   if (!state.visible) return null;
   const { summary, isLoading } = state;
 
@@ -105,8 +106,8 @@ export function BlacklistSection({ symbol }: BlacklistSectionProps) {
  * summary only gates visibility; the feed reports its own loading, error and
  * empty states from the events query.
  */
-export function BlacklistHistorySection({ symbol }: BlacklistSectionProps) {
-  const state = useBlacklistVisibility(symbol);
+export function BlacklistHistorySection({ stablecoinId, symbol }: BlacklistSectionProps) {
+  const state = useBlacklistVisibility(stablecoinId, symbol);
   if (!state.visible) return null;
 
   return (

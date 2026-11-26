@@ -22,6 +22,7 @@ import { FreezableSupplyMeter } from "@/components/freezewatch/freezable-supply-
 import { computeFreezableSummary, formatShare } from "@shared/lib/freezewatch/freezable-summary";
 import { InterventionSeismograph } from "@/components/freezewatch/intervention-seismograph";
 import { SovereigntyLattice } from "@/components/freezewatch/sovereignty-lattice";
+import { getBlacklistStablecoinIdBySymbol } from "@shared/lib/blacklist-contract-specs";
 import { coinIdBySymbol } from "@/lib/coin-id-by-symbol";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 import { formatCurrency, formatEventDate } from "@shared/lib/format";
@@ -121,13 +122,10 @@ export default function FreezeWatchClient({ children }: { children?: ReactNode }
     pageSize,
   } = useFreezeWatchPageController();
 
-  const focusedCoin =
-    stablecoinFilter !== "all"
-      ? stablecoins?.find((coin) => coin.symbol === stablecoinFilter)
-      : null;
   const focusedCoinId =
-    focusedCoin?.id ??
-    (stablecoinFilter !== "all" ? coinIdBySymbol(stablecoinFilter) : null);
+    stablecoinFilter !== "all"
+      ? (getBlacklistStablecoinIdBySymbol(stablecoinFilter) ?? coinIdBySymbol(stablecoinFilter))
+      : null;
 
   const heroState = resolveQueryViewState({
     hasData: blacklistStatusBuckets !== null,

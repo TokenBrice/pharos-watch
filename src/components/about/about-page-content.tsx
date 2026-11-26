@@ -13,7 +13,7 @@ import { SeeAlsoFooter } from "@/components/see-also-footer";
 import { formatLongDate } from "@shared/lib/format";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { API_REFERENCE_URL } from "@shared/lib/public-api-contract";
-import { BLACKLIST_STABLECOINS } from "@shared/types/blacklist";
+import { BLACKLIST_TRACKED_STABLECOIN_ID_LIST } from "@shared/lib/blacklist-contract-specs";
 import { cn } from "@/lib/utils";
 import { safeJsonLd } from "@/lib/json-ld";
 import {
@@ -540,7 +540,7 @@ export function AboutPageContent() {
                 Across the active catalog, {UPCOMING_STABLECOIN_COUNT} upcoming launches, and {DEAD_STABLECOIN_COUNT}{" "}
                 dead coins, Pharos scores the core universe with honest governance classification, transitive dependency
                 scoring, and live reserve composition where a reviewed adapter exists. Real-time depeg detection, freeze
-                monitoring across {BLACKLIST_STABLECOINS.length} stablecoins, and a 30-minute ecosystem-wide stability
+                monitoring across {BLACKLIST_TRACKED_STABLECOIN_ID_LIST.length} stablecoins, and a 30-minute ecosystem-wide stability
                 index surface stress as it builds, before it reaches the headlines.
               </p>
               <p>

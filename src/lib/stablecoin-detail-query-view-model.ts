@@ -37,7 +37,7 @@ import type {
 import type {
   YieldRanking,
 } from "@shared/types/yield";
-import { BLACKLIST_STABLECOINS } from "@shared/types/blacklist";
+import { getBlacklistLedgerStablecoinById } from "@shared/lib/blacklist-contract-specs";
 import type { ReportCardsV9DetailResponse } from "@shared/types/report-cards-v9-projections";
 import { MINT_BURN_FTQ_DEPENDENCY_KEY } from "@shared/types/mint-burn";
 import { parseDataHealthWarnings } from "@/lib/data-health";
@@ -463,8 +463,8 @@ export function buildDetailFeatureSnapshot(
   const yieldRanking = yieldRankings.data?.rankings.find((candidate) => candidate.id === id) ?? null;
   const stressSignal = stressSignals.data?.signals[id] ?? null;
   const flowEntry = flows.data?.coins.find((entry) => entry.stablecoinId === id) ?? null;
-  const blacklistSupported = (BLACKLIST_STABLECOINS as readonly string[]).includes(coin.symbol);
-  const blacklistSymbol = blacklistSupported ? (coin.symbol as BlacklistStablecoin) : null;
+  const blacklistSymbol = getBlacklistLedgerStablecoinById(id);
+  const blacklistSupported = blacklistSymbol !== null;
   const blacklistEventCount = blacklistSymbol
     ? blacklist.summary?.stats.perCoinTotalEvents[blacklistSymbol] ?? 0
     : 0;

@@ -957,7 +957,7 @@ describe("syncBlacklist", () => {
     expect(result.itemCount).toBe(0);
     const metadata = {
       ...JSON.parse(result.metadata),
-      configLag: Object.fromEntries(Array.from({ length: 66 }, (_, i) => [i, { cursorKind: "evm_block", frontier: 19_960_000, safeHead: 20_000_000, lag: 40_000 }])),
+      configLag: Object.fromEntries(Array.from({ length: 68 }, (_, i) => [i, { cursorKind: "evm_block", frontier: 19_960_000, safeHead: 20_000_000, lag: 40_000 }])),
     };
     const pack = (data: Record<string, unknown>) => compactCronMetadataForPersistence(JSON.stringify(data), undefined, "sync-blacklist");
     const meta = JSON.parse(pack(metadata).metadata!);

@@ -36,6 +36,8 @@ export const BLACKLIST_STABLECOINS = [
   "JPYC",
   "FRXUSD",
   "FIDD",
+  "USDF",
+  "USDGO",
 ] as const;
 
 export type BlacklistStablecoin = (typeof BLACKLIST_STABLECOINS)[number];
@@ -95,11 +97,14 @@ export const BlacklistResponseSchema = z.object({
 });
 export type BlacklistResponse = z.infer<typeof BlacklistResponseSchema>;
 
-const BlacklistChartPointSchema = z.object({
+export const BlacklistChartPointSchema = z.object({
   quarter: z.string(),
-  ...Object.fromEntries(BLACKLIST_STABLECOINS.map((s) => [s, z.number()])),
+  ...(Object.fromEntries(
+    BLACKLIST_STABLECOINS.map((s) => [s, z.number()]),
+  ) as Record<BlacklistStablecoin, z.ZodNumber>),
   total: z.number(),
 });
+export type BlacklistChartPoint = z.infer<typeof BlacklistChartPointSchema>;
 
 export const BlacklistQuarterlyEventTypePointSchema = z.object({
   quarter: z.string(),

@@ -45,12 +45,13 @@ export type BlacklistEventFamilyId =
   | "neutrl-denylist"
   | "fidelity-restriction"
   | "trueusd"
-  | "centre-blocklisted";
+  | "centre-blocklisted"
+  | "falcon-restriction";
 
 export interface BlacklistContractSpec {
   chainId: BlacklistTrackedChainId;
   stablecoinId: string;
-  stablecoin?: BlacklistStablecoin;
+  stablecoin: BlacklistStablecoin;
   contractSource?: "primary" | "traded";
   contractAddressOverride?: string;
   decimalsOverride?: number;
@@ -73,55 +74,55 @@ export interface BlacklistContractSpec {
  */
 export const BLACKLIST_CONTRACT_SPECS: readonly BlacklistContractSpec[] = [
   // USDC
-  { chainId: "ethereum", stablecoinId: "usdc-circle", eventFamily: "usdc" },
-  { chainId: "arbitrum", stablecoinId: "usdc-circle", eventFamily: "usdc" },
-  { chainId: "base", stablecoinId: "usdc-circle", startBlock: 2_797_221, eventFamily: "usdc" },
-  { chainId: "optimism", stablecoinId: "usdc-circle", startBlock: 38_198_364, eventFamily: "usdc" },
-  { chainId: "polygon", stablecoinId: "usdc-circle", eventFamily: "usdc" },
-  { chainId: "avalanche", stablecoinId: "usdc-circle", startBlock: 7_388_829, eventFamily: "usdc" },
+  { chainId: "ethereum", stablecoinId: "usdc-circle", stablecoin: "USDC", eventFamily: "usdc" },
+  { chainId: "arbitrum", stablecoinId: "usdc-circle", stablecoin: "USDC", eventFamily: "usdc" },
+  { chainId: "base", stablecoinId: "usdc-circle", stablecoin: "USDC", startBlock: 2_797_221, eventFamily: "usdc" },
+  { chainId: "optimism", stablecoinId: "usdc-circle", stablecoin: "USDC", startBlock: 38_198_364, eventFamily: "usdc" },
+  { chainId: "polygon", stablecoinId: "usdc-circle", stablecoin: "USDC", eventFamily: "usdc" },
+  { chainId: "avalanche", stablecoinId: "usdc-circle", stablecoin: "USDC", startBlock: 7_388_829, eventFamily: "usdc" },
 
   // USDT (EVM)
-  { chainId: "ethereum", stablecoinId: "usdt-tether", eventFamily: "usdt" },
-  { chainId: "arbitrum", stablecoinId: "usdt-tether", eventFamily: "usdt-upgraded" },
-  { chainId: "optimism", stablecoinId: "usdt-tether", contractSource: "traded", startBlock: 133_193_269, eventFamily: "usdt0" },
-  { chainId: "polygon", stablecoinId: "usdt-tether", eventFamily: "usdt-upgraded" },
+  { chainId: "ethereum", stablecoinId: "usdt-tether", stablecoin: "USDT", eventFamily: "usdt" },
+  { chainId: "arbitrum", stablecoinId: "usdt-tether", stablecoin: "USDT", eventFamily: "usdt-upgraded" },
+  { chainId: "optimism", stablecoinId: "usdt-tether", stablecoin: "USDT", contractSource: "traded", startBlock: 133_193_269, eventFamily: "usdt0" },
+  { chainId: "polygon", stablecoinId: "usdt-tether", stablecoin: "USDT", eventFamily: "usdt-upgraded" },
   // Avalanche has emitted the indexed family since deployment, not the legacy family.
-  { chainId: "avalanche", stablecoinId: "usdt-tether", startBlock: 4_663_628, eventFamily: "usdt0" },
+  { chainId: "avalanche", stablecoinId: "usdt-tether", stablecoin: "USDT", startBlock: 4_663_628, eventFamily: "usdt0" },
   // Binance-Peg BSC and legacy Optimism USDT have no blacklist event surface.
 
   // USDT (Tron)
-  { chainId: "tron", stablecoinId: "usdt-tether", eventFamily: "usdt" },
+  { chainId: "tron", stablecoinId: "usdt-tether", stablecoin: "USDT", eventFamily: "usdt" },
 
   // PAXG (Ethereum only)
-  { chainId: "ethereum", stablecoinId: "paxg-paxos", eventFamily: "paxg" },
+  { chainId: "ethereum", stablecoinId: "paxg-paxos", stablecoin: "PAXG", eventFamily: "paxg" },
 
   // XAUT (Ethereum only -- same event pattern as USDT0: BlockPlaced/BlockReleased/DestroyedBlockedFunds)
-  { chainId: "ethereum", stablecoinId: "xaut-tether", eventFamily: "usdt0" },
+  { chainId: "ethereum", stablecoinId: "xaut-tether", stablecoin: "XAUT", eventFamily: "usdt0" },
 
   // pyUSD (Ethereum + Arbitrum)
-  { chainId: "ethereum", stablecoinId: "pyusd-paypal", eventFamily: "pyusd" },
-  { chainId: "arbitrum", stablecoinId: "pyusd-paypal", eventFamily: "pyusd" },
+  { chainId: "ethereum", stablecoinId: "pyusd-paypal", stablecoin: "PYUSD", eventFamily: "pyusd" },
+  { chainId: "arbitrum", stablecoinId: "pyusd-paypal", stablecoin: "PYUSD", eventFamily: "pyusd" },
 
   // USD1 (Ethereum + BSC + Tron)
-  { chainId: "ethereum", stablecoinId: "usd1-world-liberty-financial", startBlock: 21_720_503, eventFamily: "usd1" },
-  { chainId: "bsc", stablecoinId: "usd1-world-liberty-financial", startBlock: 46_151_905, eventFamily: "usd1" },
-  { chainId: "tron", stablecoinId: "usd1-world-liberty-financial", eventFamily: "usd1" },
+  { chainId: "ethereum", stablecoinId: "usd1-world-liberty-financial", stablecoin: "USD1", startBlock: 21_720_503, eventFamily: "usd1" },
+  { chainId: "bsc", stablecoinId: "usd1-world-liberty-financial", stablecoin: "USD1", startBlock: 46_151_905, eventFamily: "usd1" },
+  { chainId: "tron", stablecoinId: "usd1-world-liberty-financial", stablecoin: "USD1", eventFamily: "usd1" },
 
   // USDG (Paxos Global Dollar -- Ethereum only for first-wave coverage)
-  { chainId: "ethereum", stablecoinId: "usdg-paxos", startBlock: 20_915_336, eventFamily: "pyusd" },
+  { chainId: "ethereum", stablecoinId: "usdg-paxos", stablecoin: "USDG", startBlock: 20_915_336, eventFamily: "pyusd" },
 
   // RLUSD (Ripple USD -- Ethereum account pause/unpause; clawback is not event-covered here)
-  { chainId: "ethereum", stablecoinId: "rlusd-ripple", startBlock: 20_492_031, eventFamily: "rlusd" },
+  { chainId: "ethereum", stablecoinId: "rlusd-ripple", stablecoin: "RLUSD", startBlock: 20_492_031, eventFamily: "rlusd" },
 
   // U (United Stables -- Ethereum + BSC, same dual-indexed freeze pattern as USD1)
-  { chainId: "ethereum", stablecoinId: "u-united-stables", startBlock: 24_030_193, eventFamily: "dual-index-freeze" },
-  { chainId: "bsc", stablecoinId: "u-united-stables", startBlock: 71_922_111, eventFamily: "dual-index-freeze" },
+  { chainId: "ethereum", stablecoinId: "u-united-stables", stablecoin: "U", startBlock: 24_030_193, eventFamily: "dual-index-freeze" },
+  { chainId: "bsc", stablecoinId: "u-united-stables", stablecoin: "U", startBlock: 71_922_111, eventFamily: "dual-index-freeze" },
 
   // USDtb (Ethena / Anchorage -- Ethereum batch block/unblock events)
-  { chainId: "ethereum", stablecoinId: "usdtb-ethena", startBlock: 21_287_284, eventFamily: "usdtb" },
+  { chainId: "ethereum", stablecoinId: "usdtb-ethena", stablecoin: "USDTB", startBlock: 21_287_284, eventFamily: "usdtb" },
 
   // A7A5 (Old Vector -- Ethereum only; Tron requires separate result-key verification)
-  { chainId: "ethereum", stablecoinId: "a7a5-old-vector", startBlock: 22_080_045, eventFamily: "a7a5" },
+  { chainId: "ethereum", stablecoinId: "a7a5-old-vector", stablecoin: "A7A5", startBlock: 22_080_045, eventFamily: "a7a5" },
 
   // Wave 2A direct EVM coverage
   { chainId: "ethereum", stablecoinId: "fdusd-first-digital", stablecoin: "FDUSD", startBlock: 17_144_262, eventFamily: "dual-index-freeze" },
@@ -150,9 +151,9 @@ export const BLACKLIST_CONTRACT_SPECS: readonly BlacklistContractSpec[] = [
   { chainId: "ethereum", stablecoinId: "usdp-paxos", stablecoin: "USDP", startBlock: 6_294_931, eventFamily: "pyusd" },
 
   // EURC re-enabled with mirror-zero suppression
-  { chainId: "ethereum", stablecoinId: "eurc-circle", startBlock: 14_807_227, eventFamily: "usdc" },
-  { chainId: "base", stablecoinId: "eurc-circle", startBlock: 15_107_859, eventFamily: "usdc" },
-  { chainId: "avalanche", stablecoinId: "eurc-circle", startBlock: 26_857_185, eventFamily: "usdc" },
+  { chainId: "ethereum", stablecoinId: "eurc-circle", stablecoin: "EURC", startBlock: 14_807_227, eventFamily: "usdc" },
+  { chainId: "base", stablecoinId: "eurc-circle", stablecoin: "EURC", startBlock: 15_107_859, eventFamily: "usdc" },
+  { chainId: "avalanche", stablecoinId: "eurc-circle", stablecoin: "EURC", startBlock: 26_857_185, eventFamily: "usdc" },
 
   // TUSD (TrueUSD) -- Ethereum proxy implementation emits both Blacklisted(address,bool) and
   // DestroyedBlackFunds(address,uint256). The ETH Blacklisted event indexes the account in
@@ -225,6 +226,26 @@ export const BLACKLIST_CONTRACT_SPECS: readonly BlacklistContractSpec[] = [
   // public RPC eth_getCode bisect.
   { chainId: "ethereum", stablecoinId: "xaum-matrixdock", stablecoin: "XAUM", startBlock: 20_624_233, eventFamily: "usdt0" },
   { chainId: "bsc", stablecoinId: "xaum-matrixdock", stablecoin: "XAUM", startBlock: 41_776_362, eventFamily: "usdt0" },
+
+  // USDf (Falcon USD) -- Ethereum Wave-1 pilot (pinned block 26499592).
+  // Verified implementation emits AddressRestrictionSet(address indexed,bool)
+  // with direction bool at data word 0 (0 historical logs through 26499592).
+  // Symbol override "USDF" bypasses the case-sensitive lookup ("USDf").
+  { chainId: "ethereum", stablecoinId: "usdf-falcon", stablecoin: "USDF", startBlock: 21_818_184, eventFamily: "falcon-restriction" },
+
+  // USDGO (OSL / AnchorageTokenV2) -- Ethereum Wave-1 pilot (pinned block 26499592).
+  // Reuses Anchorage batch AccountsBlocked(address[]) / AccountsUnblocked(address[])
+  // event family (3 historical block logs, 0 releases through 26499592).
+  { chainId: "ethereum", stablecoinId: "usdgo-osl", stablecoin: "USDGO", startBlock: 26_000_413, eventFamily: "usdtb" },
+];
+
+/** Retired FreezeWatch identities that retain historical ledger rows without live contract scans. */
+export const BLACKLIST_RETIRED_LEDGER_SPECS: readonly {
+  readonly stablecoinId: string;
+  readonly stablecoin: BlacklistStablecoin;
+}[] = [
+  { stablecoinId: "usda-avalon", stablecoin: "USDA" },
+  { stablecoinId: "aeur-anchored-coins", stablecoin: "AEUR" },
 ];
 
 /** Ordered unique canonical stablecoin IDs indexed by the live freeze/blacklist tracker. */
@@ -236,3 +257,42 @@ export const BLACKLIST_TRACKED_STABLECOIN_ID_LIST: readonly string[] = [
 export const BLACKLIST_TRACKED_STABLECOIN_IDS: ReadonlySet<string> = new Set(
   BLACKLIST_TRACKED_STABLECOIN_ID_LIST,
 );
+
+const BLACKLIST_STABLECOIN_BY_ID: ReadonlyMap<string, BlacklistStablecoin> = new Map(
+  BLACKLIST_CONTRACT_SPECS.map((spec) => [spec.stablecoinId, spec.stablecoin]),
+);
+
+const BLACKLIST_LEDGER_STABLECOIN_BY_ID: ReadonlyMap<string, BlacklistStablecoin> = new Map([
+  ...BLACKLIST_CONTRACT_SPECS.map((spec) => [spec.stablecoinId, spec.stablecoin] as const),
+  ...BLACKLIST_RETIRED_LEDGER_SPECS.map((spec) => [spec.stablecoinId, spec.stablecoin] as const),
+]);
+
+const BLACKLIST_STABLECOIN_ID_BY_SYMBOL: ReadonlyMap<string, string> = new Map([
+  ...BLACKLIST_CONTRACT_SPECS.map((spec) => [spec.stablecoin, spec.stablecoinId] as const),
+  ...BLACKLIST_RETIRED_LEDGER_SPECS.map((spec) => [spec.stablecoin, spec.stablecoinId] as const),
+]);
+
+/** Resolve a canonical stablecoin ID to its FreezeWatch ledger symbol, or null when not live-tracked. */
+export function getBlacklistStablecoinById(stablecoinId: string): BlacklistStablecoin | null {
+  return BLACKLIST_STABLECOIN_BY_ID.get(stablecoinId) ?? null;
+}
+
+/** Whether a canonical stablecoin ID has live FreezeWatch contract event tracking. */
+export function isBlacklistTrackedStablecoinId(stablecoinId: string): boolean {
+  return BLACKLIST_TRACKED_STABLECOIN_IDS.has(stablecoinId);
+}
+
+/** Resolve a canonical stablecoin ID to its FreezeWatch ledger symbol (live-tracked or retired archive), or null when not in FreezeWatch. */
+export function getBlacklistLedgerStablecoinById(stablecoinId: string): BlacklistStablecoin | null {
+  return BLACKLIST_LEDGER_STABLECOIN_BY_ID.get(stablecoinId) ?? null;
+}
+
+/** Whether a canonical stablecoin ID has live FreezeWatch tracking or retained retired ledger history. */
+export function hasBlacklistLedgerHistoryById(stablecoinId: string): boolean {
+  return BLACKLIST_LEDGER_STABLECOIN_BY_ID.has(stablecoinId);
+}
+
+/** Resolve a FreezeWatch ledger symbol (live-tracked or retired archive) to its canonical stablecoin ID, or null when unknown. */
+export function getBlacklistStablecoinIdBySymbol(symbol: string): string | null {
+  return BLACKLIST_STABLECOIN_ID_BY_SYMBOL.get(symbol) ?? null;
+}

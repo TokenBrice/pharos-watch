@@ -32,7 +32,7 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { formatCompactUsdShort } from "@shared/lib/format";
 import { numberValue } from "@shared/lib/type-guards";
 import type { BlacklistSummaryResponse } from "@shared/types/blacklist";
-import { BLACKLIST_STABLECOINS } from "@shared/types/blacklist";
+import { getBlacklistStablecoinById } from "@shared/lib/blacklist-contract-specs";
 
 const METHODOLOGY_TOPIC: Record<BlacklistabilityClientStatus, MethodologyContextKey> = {
   freezable: "freezable",
@@ -333,8 +333,8 @@ export interface FreezeSeizureModuleProps {
   summary?: BlacklistabilityClientSummary | null;
   /** Per-deployment transfer review (`buildTransferReviewView`); omits the scope station when null. */
   transferReview?: TransferReviewView | null;
-  /** Coin ticker; usage is read only for coins in `BLACKLIST_STABLECOINS`. */
-  symbol: string;
+  /** Canonical stablecoin ID; usage is read only for live-tracked IDs in `BLACKLIST_CONTRACT_SPECS`. */
+  stablecoinId: string;
   variant: EvidenceModuleVariant;
   stripForm?: boolean;
 }
@@ -353,11 +353,12 @@ export interface FreezeSeizureModuleProps {
 export function FreezeSeizureModule({
   summary,
   transferReview = null,
-  symbol,
+  stablecoinId,
   variant,
   stripForm,
 }: FreezeSeizureModuleProps) {
-  const tracked = (BLACKLIST_STABLECOINS as readonly string[]).includes(symbol);
+  const blacklistSymbol = getBlacklistStablecoinById(stablecoinId);
+  const tracked = blacklistSymbol !== null;
   const { ref: usageGateRef, near } = useNearViewport<HTMLDivElement>("600px");
   const usageQuery = useBlacklistSummary({ enabled: tracked && near && summary != null });
   const healthInput = {
@@ -375,7 +376,7 @@ export function FreezeSeizureModule({
 
   const display = FREEZE_STATUS_DISPLAY[summary.status];
   const usageStats = tracked ? usageQuery.data?.stats : undefined;
-  const usedStation = usageStats ? buildUsedStation(usageStats, symbol) : null;
+  const usedStation = usageStats && blacklistSymbol ? buildUsedStation(usageStats, blacklistSymbol) : null;
   const stations = [
     ...buildPowerStations(summary),
     ...(transferReview && transferReview.deployments.length > 0 ? [buildScopeStation(transferReview)] : []),

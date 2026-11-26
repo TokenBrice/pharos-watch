@@ -23,6 +23,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { getBlacklistStablecoinIdBySymbol } from "@shared/lib/blacklist-contract-specs";
 import { coinIdBySymbol } from "@/lib/coin-id-by-symbol";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import {
@@ -96,7 +97,12 @@ function humanizeEventType(type: string): string {
 // events leave `coinId` null but carry the issuer symbol on `payload.stablecoin`.
 function deriveCoinId(event: TapeEvent): string | null {
   if (event.coinId) return event.coinId;
-  return coinIdBySymbol(deriveTicker(event));
+  const ticker = deriveTicker(event);
+  if (eventClassSlug(event.type) === "freeze") {
+    const freezeSymbol = typeof event.payload?.stablecoin === "string" ? event.payload.stablecoin : ticker;
+    if (freezeSymbol) return getBlacklistStablecoinIdBySymbol(freezeSymbol) ?? coinIdBySymbol(freezeSymbol);
+  }
+  return coinIdBySymbol(ticker);
 }
 
 // ---------------------------------------------------------------------------

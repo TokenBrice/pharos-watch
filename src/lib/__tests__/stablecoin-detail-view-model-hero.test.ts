@@ -244,5 +244,14 @@ describe("hero trend direction, excess-yield help, and tracker links", () => {
     });
     expect(new Set(Object.values(usdcLinks)).size).toBe(Object.keys(usdcLinks).length);
     expect(buildCoinTrackerLink("susde-ethena", "yield", "sUSDe").href).toBe("/stablecoin/susde-ethena/yield/");
+    expect([
+      ["usdf-falcon", "USDf"], ["usdf-astherus", "USDF"], ["usdf-flipcash", "USDF"],
+      ["usda-avalon", "USDA"], ["aeur-anchored-coins", "AEUR"], ["dai-makerdao", "DAI"],
+    ].map(([id, sym]) => buildCoinTrackerLink(id, "freezewatch", sym).href)).toEqual([
+      "/freezewatch/?stablecoin=USDF", "/freezewatch/", "/freezewatch/",
+      "/freezewatch/?stablecoin=USDA", "/freezewatch/?stablecoin=AEUR", "/freezewatch/",
+    ]);
+    expect(passport(buildDetailHero({ coin: { ...coinOf("usdf-astherus"), blacklistabilitySummary: undefined } }), "freeze")?.href).toBe("/freezewatch/");
+    expect(passport(buildDetailHero({ coin: { ...coinOf("usda-avalon"), blacklistabilitySummary: undefined } }), "freeze")?.href).toBe("#blacklist");
   });
 });

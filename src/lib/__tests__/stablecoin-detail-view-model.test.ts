@@ -519,6 +519,12 @@ describe("stablecoin detail view-model builder", () => {
     expect(failed.hasFlows).toBe(true);
     expect(failed.hasBlacklist).toBe(true);
     expect(failed.staleQueries.map((q) => q.preset)).toEqual(expect.arrayContaining(["dexLiquidity", "yieldRankings", "stressSignals", "mintBurnFlows", "blacklist"]));
+
+    const blSummary = { stats: { perCoinTotalEvents: { USDF: 3, USDA: 2, AEUR: 1 } } } as never;
+    expect(["usdf-falcon", "usda-avalon", "aeur-anchored-coins", "usdf-astherus", "usdf-flipcash"].map((id) => {
+      const vm = readyModel({ id, supplemental: { blacklist: { summary: blSummary, enabled: true } } });
+      return [vm.hasBlacklist, vm.blacklistSymbol];
+    })).toEqual([[true, "USDF"], [true, "USDA"], [true, "AEUR"], [false, null], [false, null]]);
   });
 
   it("exposes tracked variant relationships and commodity yield rankings", () => {

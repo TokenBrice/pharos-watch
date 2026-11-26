@@ -28,11 +28,12 @@ export function BlacklistTrackerMethodologySection() {
       changelogClassName={METHODOLOGY_SECTION_ACCENT_CLASSES.blacklist.changelogHover}
     >
       <p>
-        The Blacklist Tracker monitors issuer intervention events across USDC, USDT, PAXG, XAUT, PYUSD, USD1,
-        USDG, RLUSD, U, USDtb, A7A5, FDUSD, BRZ, AUSD, EURI, USDQ, USDO, USDX, AID, TGBP,
-        EURC, BUIDL, USDP, TUSD, NUSD, EURCV, USDA, USAT, XUSD, XAUm, JPYC, FRXUSD, and
-        FIDD contracts, including blacklist, unblacklist, block/unblock, account pause/unpause, and
-        destroy/wipe actions across supported EVM and Tron networks.
+        The Blacklist Tracker monitors issuer intervention events across 34 live-monitored stablecoins (USDC, USDT,
+        PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDtb, A7A5, FDUSD, BRZ, AUSD, EURI, USDQ, USDO, USDX, AID, tGBP,
+        EURC, BUIDL, USDP, TUSD, NUSD, EURCV, USAT, XUSD, XAUm, JPYC, FRXUSD, FIDD, USDf, and USDGO), including
+        blacklist, unblacklist, block/unblock, account pause/unpause, and destroy/wipe actions across supported EVM
+        and Tron networks, while retired identities (USDA and AEUR) retain their recorded ledger history without
+        live scans.
       </p>
       <p>
         Blacklistability uses the report-card four-status model: Yes, Upstream, Possible, and No. The sourced{" "}

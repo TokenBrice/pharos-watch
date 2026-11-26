@@ -7,6 +7,7 @@
  * coin filtering fall back to the canonical stablecoin profile route, so the
  * lateral graph stays unbroken.
  */
+import { getBlacklistLedgerStablecoinById } from "@shared/lib/blacklist-contract-specs";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { hasStaticYieldWorkbench } from "@shared/lib/yield-auto-lending";
@@ -48,13 +49,13 @@ const TRACKER_LABELS: Record<TrackerKind, string> = {
  * - `depeg-history` → `/stablecoin/<id>/#history`
  * - `yield` → `/stablecoin/<id>/yield/` when the coin exports a yield workbench, otherwise `/yield/`
  * - `flows` → `/flows/`
- * - `freezewatch` → `/freezewatch/?stablecoin=<SYMBOL>` (uppercased symbol)
+ * - `freezewatch` → `/freezewatch/?stablecoin=<SYMBOL>` when the coin has FreezeWatch tracking or archived ledger history, otherwise `/freezewatch/`
  * - `timeline` → `/timeline/?coin=<id>`
  */
 export function buildCoinTrackerLink(
   coinId: string,
   tracker: TrackerKind,
-  coinSymbol?: string,
+  _coinSymbol?: string,
 ): CoinTrackerLink {
   const label = TRACKER_LABELS[tracker];
   const profileHref = buildStablecoinUrl(coinId);
@@ -63,8 +64,12 @@ export function buildCoinTrackerLink(
     case "stablecoin-profile":
       return { tracker, label, href: profileHref };
     case "freezewatch": {
-      const symbol = (coinSymbol ?? coinId).toUpperCase();
-      return { tracker, label, href: `/freezewatch/?stablecoin=${encodeURIComponent(symbol)}` };
+      const symbol = getBlacklistLedgerStablecoinById(coinId);
+      return {
+        tracker,
+        label,
+        href: symbol ? `/freezewatch/?stablecoin=${encodeURIComponent(symbol)}` : "/freezewatch/",
+      };
     }
     case "timeline":
       return { tracker, label, href: `/timeline/?coin=${encodeURIComponent(coinId)}` };
