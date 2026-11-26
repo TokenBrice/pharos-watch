@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { TELEGRAM_MINI_APP_CATALOG } from "../telegram-mini-app-catalog";
+import { BLACKLIST_TRACKED_STABLECOIN_IDS } from "../blacklist-contract-specs";
+import {
+  TELEGRAM_MINI_APP_CATALOG,
+  computeTelegramMiniAppCatalogVersion,
+  type TelegramMiniAppCatalog,
+} from "../telegram-mini-app-catalog";
 import {
   TELEGRAM_MINI_APP_CATALOG_VERSION,
   TELEGRAM_MINI_APP_CONTRACT_VERSION,
@@ -403,5 +408,54 @@ describe("Telegram Mini App shared contract", () => {
         presets: [{ id: "usd-top25", memberCount: 25, topSymbols: ["USDT", "USDC", "USDS"] }],
       },
     }).success).toBe(true);
+  });
+
+  const sampleCatalog: TelegramMiniAppCatalog = {
+    recommendedPresets: [
+      { id: "usd-top25", label: "USD Top 25", description: "Top 25 USD" },
+      { id: "eur-top10", label: "EUR Top 10", description: "Top 10 EUR" },
+    ],
+    searchableCoins: [
+      { stablecoinId: "usdc-circle", symbol: "USDC", name: "USD Coin", peg: "USD", status: "active", rank: 2, variant: false, yieldBearing: false, liveReserves: true, freezeTracked: true },
+      { stablecoinId: "susde-ethena", symbol: "sUSDe", name: "Staked USDe", peg: "USD", pegLabel: "USDe NAV", status: "active", rank: 10, variant: true, yieldBearing: true, liveReserves: false, freezeTracked: false },
+    ],
+  };
+
+  it("computes a rank/copy-invariant catalog-v3 semantic hash and matches blacklist parity", () => {
+    expect(TELEGRAM_MINI_APP_CATALOG_VERSION).toMatch(/^catalog-v3-[0-9a-f]{8}$/);
+    const baseline = computeTelegramMiniAppCatalogVersion(sampleCatalog);
+    expect(baseline).toMatch(/^catalog-v3-[0-9a-f]{8}$/);
+    expect(computeTelegramMiniAppCatalogVersion({
+      recommendedPresets: [
+        { id: "eur-top10", label: "Renamed EUR", description: "Changed copy" },
+        { id: "usd-top25", label: "Renamed USD", description: "Changed copy" },
+      ],
+      searchableCoins: [
+        { ...sampleCatalog.searchableCoins[1]!, rank: 99, name: "Changed Name", peg: "EUR", pegLabel: "Changed NAV" },
+        { ...sampleCatalog.searchableCoins[0]!, rank: 1, name: "Circle USD", peg: "USD", pegLabel: "USD NAV" },
+      ],
+    })).toBe(baseline);
+
+    const selectableIds = new Set(TELEGRAM_MINI_APP_CATALOG.searchableCoins.map((c) => c.stablecoinId));
+    const trackedInCatalog = TELEGRAM_MINI_APP_CATALOG.searchableCoins.filter((c) => c.freezeTracked).map((c) => c.stablecoinId).sort();
+    expect(trackedInCatalog).toEqual([...BLACKLIST_TRACKED_STABLECOIN_IDS].filter((id) => selectableIds.has(id)).sort());
+    expect(trackedInCatalog.length).toBeGreaterThan(0);
+    expect(TelegramMiniAppCatalogSchema.safeParse({
+      ...sampleCatalog,
+      searchableCoins: [{ ...sampleCatalog.searchableCoins[0]!, liveReserves: "yes" }],
+    }).success).toBe(false);
+  });
+
+  it.each<[string, (c: TelegramMiniAppCatalog) => TelegramMiniAppCatalog]>([
+    ["stablecoinId", (c) => ({ ...c, searchableCoins: [{ ...c.searchableCoins[0]!, stablecoinId: "usdc-alt" }, c.searchableCoins[1]!] })],
+    ["symbol", (c) => ({ ...c, searchableCoins: [{ ...c.searchableCoins[0]!, symbol: "USDC2" }, c.searchableCoins[1]!] })],
+    ["status", (c) => ({ ...c, searchableCoins: [{ ...c.searchableCoins[0]!, status: "pre-launch" }, c.searchableCoins[1]!] })],
+    ["variant", (c) => ({ ...c, searchableCoins: [{ ...c.searchableCoins[0]!, variant: true }, c.searchableCoins[1]!] })],
+    ["yieldBearing", (c) => ({ ...c, searchableCoins: [{ ...c.searchableCoins[0]!, yieldBearing: true }, c.searchableCoins[1]!] })],
+    ["liveReserves", (c) => ({ ...c, searchableCoins: [{ ...c.searchableCoins[0]!, liveReserves: false }, c.searchableCoins[1]!] })],
+    ["freezeTracked", (c) => ({ ...c, searchableCoins: [{ ...c.searchableCoins[0]!, freezeTracked: false }, c.searchableCoins[1]!] })],
+    ["presetId", (c) => ({ ...c, recommendedPresets: [...c.recommendedPresets, { id: "usd-top50", label: "USD Top 50", description: "Top 50" }] })],
+  ])("changes catalog-v3 hash when %s changes", (_field, mutate) => {
+    expect(computeTelegramMiniAppCatalogVersion(mutate(sampleCatalog))).not.toBe(computeTelegramMiniAppCatalogVersion(sampleCatalog));
   });
 });

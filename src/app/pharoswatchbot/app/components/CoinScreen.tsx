@@ -30,7 +30,7 @@ import { usePrimaryAction } from "../primary-action";
 import type { TelegramWebAppSdk } from "../telegram-sdk";
 import type { CoinLiveContext } from "../use-mini-app-context";
 import type { MiniAppScreen } from "../use-mini-app-view";
-import type { MiniAppScreenProps, SubscribedCoin, TelegramAlertType, TelegramMiniAppOperation } from "../types";
+import type { CatalogCoin, MiniAppScreenProps, SubscribedCoin, TelegramAlertType, TelegramMiniAppOperation } from "../types";
 import { ChoiceChips, ListRow, ListSection, SelectRow, Switch } from "./List";
 
 /** Native <select> values are strings; null tuning (the default) maps to this token. */
@@ -44,18 +44,37 @@ function selectOptions<T extends string | number>(options: readonly { value: T |
 const DEWS_SELECT_OPTIONS = selectOptions(DEWS_BAND_OPTIONS);
 const DEPEG_SELECT_OPTIONS = selectOptions(DEPEG_STEP_OPTIONS);
 
-function coverageSubtitle(type: TelegramAlertType, coverage: FamilyCoverage, symbol: string): string {
+function capabilityHint(type: TelegramAlertType, catalogCoin: CatalogCoin | null): string | null {
+  if (!catalogCoin) return null;
+  if (type === "reserve" && catalogCoin.liveReserves === false) return "No live reserve feed configured";
+  if (type === "freeze" && catalogCoin.freezeTracked === false) return "No issuer freeze tracking configured";
+  return null;
+}
+
+function coverageSubtitle(
+  type: TelegramAlertType,
+  coverage: FamilyCoverage,
+  symbol: string,
+  catalogCoin: CatalogCoin | null,
+): string {
   const description = ALERT_DESCRIPTIONS[type];
+  let base: string;
   switch (coverage.kind) {
     case "via":
-      return `${description}. On via ${coverage.source}.`;
+      base = `${description}. On via ${coverage.source}.`;
+      break;
     case "muted":
-      return `Off for ${symbol}. ${coverage.source} would cover it.`;
+      base = `Off for ${symbol}. ${coverage.source} would cover it.`;
+      break;
     case "unknown":
-      return `Can't check ${coverage.source} coverage right now`;
+      base = `Can't check ${coverage.source} coverage right now`;
+      break;
     default:
-      return description;
+      base = description;
   }
+  const hint = capabilityHint(type, catalogCoin);
+  if (!hint) return base;
+  return base.endsWith(".") ? `${base} ${hint}` : `${base}. ${hint}`;
 }
 
 export interface CoinScreenProps extends MiniAppScreenProps {
@@ -159,6 +178,9 @@ export function CoinScreen({
         {liveHeaderLine ? (
           <p className="mt-1 text-xs tabular-nums text-muted-foreground">{liveHeaderLine}</p>
         ) : null}
+        {catalogCoin?.status === "pre-launch" ? (
+          <p className="mt-1 text-xs text-muted-foreground">Pre-launch: alerts start once tracked live</p>
+        ) : null}
         {chatPaused && chatSnoozeUntil != null ? (
           <p className="mt-1 text-xs text-muted-foreground">
             {isPausedSentinel(chatSnoozeUntil)
@@ -187,7 +209,7 @@ export function CoinScreen({
             const entry = coverage[type];
             const on = entry.kind === "on";
             const confirmedChecked = isCoverageActive(entry);
-            const subtitle = coverageSubtitle(type, entry, symbol);
+            const subtitle = coverageSubtitle(type, entry, symbol, catalogCoin);
             const showSwitch = subscription != null && entry.kind !== "unknown";
             return (
               <Fragment key={type}>

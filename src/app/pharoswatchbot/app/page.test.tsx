@@ -1264,6 +1264,45 @@ describe("PharosWatchBotMiniAppPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /^USDC/ }));
     expect(await screen.findByText("Live data unavailable.")).toBeTruthy();
   });
+
+  it("shows non-blocking pre-launch and capability hints on CoinScreen without blocking toggles", async () => {
+    const state = makeMiniAppState({
+      catalog: {
+        recommendedPresets: [],
+        searchableCoins: [{
+          stablecoinId: "usdc-circle", symbol: "USDC", name: "USD Coin", peg: "USD",
+          status: "pre-launch", rank: 1, variant: false, yieldBearing: false, liveReserves: false, freezeTracked: false,
+        }],
+      },
+    });
+    const fetchMock = await renderReadyMiniApp({ state, launch: { initDataUnsafe: { start_param: "coin_usdc-circle" } } });
+    expect(screen.getByText("Pre-launch: alerts start once tracked live")).toBeTruthy();
+    expect(screen.getByText(/No live reserve feed configured/)).toBeTruthy();
+    expect(screen.getByText(/No issuer freeze tracking configured/)).toBeTruthy();
+    const reserve = screen.getByRole("switch", { name: switchName("USDC Reserve drift") });
+    const freeze = screen.getByRole("switch", { name: switchName("USDC Freezes") });
+    expect(reserve).toHaveProperty("disabled", false);
+    expect(freeze).toHaveProperty("disabled", false);
+    fireEvent.click(reserve);
+    await waitFor(() => expectMutationRequest(fetchMock, { kind: "set-coin", stablecoinId: "usdc-circle", patch: { alertTypes: { reserve: true } } }));
+
+    cleanup();
+    await renderReadyMiniApp({
+      state: makeMiniAppState({
+        catalog: {
+          recommendedPresets: [],
+          searchableCoins: [{
+            stablecoinId: "usdc-circle", symbol: "USDC", name: "USD Coin", peg: "USD",
+            status: "active", rank: 1, variant: false, yieldBearing: false, liveReserves: true, freezeTracked: true,
+          }],
+        },
+      }),
+      launch: { initDataUnsafe: { start_param: "coin_usdc-circle" } },
+    });
+    expect(screen.queryByText("Pre-launch: alerts start once tracked live")).toBeNull();
+    expect(screen.queryByText(/No live reserve feed configured/)).toBeNull();
+    expect(screen.queryByText(/No issuer freeze tracking configured/)).toBeNull();
+  });
 });
 
 describe("Mini App confirmed watcher status", () => {

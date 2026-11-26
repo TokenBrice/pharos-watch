@@ -120,9 +120,10 @@ describe("ranking", () => {
     const withVariants = [
       { ...coin("usdt-tether", "USDT", "Tether", 1), variant: false },
       { ...coin("susdt-spark", "spUSDT", "Spark Savings USDT", 2), variant: true },
+      { ...coin("usdy-ondo", "USDY", "Ondo USDY", 4), variant: false, yieldBearing: true },
       { ...coin("usdc-circle", "USDC", "USD Coin", 6), variant: false },
     ];
-    expect(largestBaseCoins(withVariants, new Set(["usdc-circle"])).map((entry) => entry.symbol)).toEqual(["USDT"]);
+    expect(largestBaseCoins(withVariants, new Set(["usdc-circle"])).map((entry) => entry.symbol)).toEqual(["USDT", "USDY"]);
     expect(searchCatalog(withVariants, "spusdt").map((entry) => entry.symbol)).toEqual(["spUSDT"]);
   });
 

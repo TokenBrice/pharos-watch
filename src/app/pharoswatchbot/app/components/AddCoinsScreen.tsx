@@ -43,7 +43,7 @@ export function searchCatalog(coins: readonly CatalogCoin[], query: string): Cat
     .map((match) => match.coin);
 }
 
-/** The default list: the largest unfollowed base stablecoins, without wrapped or yield-bearing variants. */
+/** The default list: the largest unfollowed base stablecoins, filtering out wrapper variants (`variantOf`) while keeping standalone yield-bearing stablecoins visible. */
 export function largestBaseCoins(ranked: readonly CatalogCoin[], followedIds: ReadonlySet<string>): CatalogCoin[] {
   return ranked.filter((coin) => !coin.variant && !followedIds.has(coin.stablecoinId)).slice(0, SUGGESTION_LIMIT);
 }
@@ -253,7 +253,7 @@ export function AddCoinsScreen({
     () => (hasQuery ? [] : ranked.filter((coin) => followedIds.has(coin.stablecoinId))),
     [followedIds, hasQuery, ranked],
   );
-  // Base stablecoins only; wrapped and yield-bearing variants stay reachable through search.
+  // Base stablecoins (including standalone yield-bearing coins); wrapper variants stay reachable through search.
   const suggestions = useMemo(
     () => (hasQuery ? [] : largestBaseCoins(ranked, followedIds)),
     [followedIds, hasQuery, ranked],

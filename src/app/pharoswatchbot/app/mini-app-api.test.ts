@@ -277,12 +277,12 @@ describe("Mini App versioned API client", () => {
       },
     };
     const refresh = vi.fn();
-    const versions = { contractVersion: "3", catalogVersion: "catalog-v2-next" };
+    const versions = { contractVersion: "3", catalogVersion: "catalog-v3-next" };
 
     expect(refreshMiniAppBundleOnce(versions, { storage, refresh })).toBe(true);
     expect(refreshMiniAppBundleOnce(versions, { storage, refresh })).toBe(false);
     expect(refresh).toHaveBeenCalledTimes(1);
-    expect([...values.values()]).toEqual(["3:catalog-v2-next"]);
+    expect([...values.values()]).toEqual(["3:catalog-v3-next"]);
     expect(JSON.stringify([...values.entries()])).not.toContain("initData");
   });
 
@@ -299,7 +299,7 @@ describe("Mini App versioned API client", () => {
 
     expect(
       refreshMiniAppBundleOnce(
-        { contractVersion: "3", catalogVersion: "catalog-v2-next" },
+        { contractVersion: "3", catalogVersion: "catalog-v3-next" },
         { storage: throwingStorage, refresh },
       ),
     ).toBe(false);
@@ -316,7 +316,7 @@ describe("Mini App versioned API client", () => {
     };
 
     expect(refreshMiniAppBundleOnce(
-      { contractVersion: "3", catalogVersion: "catalog-v2-next" },
+      { contractVersion: "3", catalogVersion: "catalog-v3-next" },
       { storage, refresh },
     )).toBe(false);
     expect(refresh).not.toHaveBeenCalled();
@@ -333,15 +333,15 @@ describe("Mini App versioned API client", () => {
     const refresh = vi.fn();
 
     expect(refreshMiniAppBundleOnce(
-      { contractVersion: "3", catalogVersion: "catalog-v2" },
+      { contractVersion: "3", catalogVersion: "catalog-v3" },
       { storage, refresh },
     )).toBe(true);
     expect(refreshMiniAppBundleOnce(
-      { contractVersion: "4", catalogVersion: "catalog-v2" },
+      { contractVersion: "4", catalogVersion: "catalog-v3" },
       { storage, refresh },
     )).toBe(true);
     expect(refreshMiniAppBundleOnce(
-      { contractVersion: "4", catalogVersion: "catalog-v2" },
+      { contractVersion: "4", catalogVersion: "catalog-v3" },
       { storage, refresh },
     )).toBe(false);
     expect(refresh).toHaveBeenCalledTimes(2);

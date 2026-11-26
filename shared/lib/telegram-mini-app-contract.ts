@@ -328,6 +328,22 @@ export const TelegramMiniAppMutationRequestSchema = VersionCapabilitySchema.exte
   operation: TelegramMiniAppOperationSchema,
 }).strict();
 
+export const TelegramMiniAppCatalogCoinSchema = z
+  .object({
+    stablecoinId: z.string(),
+    symbol: z.string(),
+    name: z.string(),
+    peg: z.string().nullable().optional(),
+    pegLabel: z.string().optional(),
+    status: z.string().nullable().optional(),
+    rank: z.number().int().positive().optional(),
+    variant: z.boolean().optional(),
+    yieldBearing: z.boolean().optional(),
+    liveReserves: z.boolean().optional(),
+    freezeTracked: z.boolean().optional(),
+  })
+  .passthrough();
+
 export const TelegramMiniAppCatalogSchema = z
   .object({
     recommendedPresets: z.array(
@@ -339,20 +355,7 @@ export const TelegramMiniAppCatalogSchema = z
         })
         .passthrough(),
     ),
-    searchableCoins: z.array(
-      z
-        .object({
-          stablecoinId: z.string(),
-          symbol: z.string(),
-          name: z.string(),
-          peg: z.string().nullable().optional(),
-          pegLabel: z.string().optional(),
-          status: z.string().nullable().optional(),
-          rank: z.number().int().positive().optional(),
-          variant: z.boolean().optional(),
-        })
-        .passthrough(),
-    ),
+    searchableCoins: z.array(TelegramMiniAppCatalogCoinSchema),
   })
   .passthrough();
 

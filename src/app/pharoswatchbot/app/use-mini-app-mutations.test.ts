@@ -246,14 +246,14 @@ describe("useMiniAppMutations", () => {
   it("handles 409 version mismatch silently when reload starts and enters terminal update-required otherwise", async () => {
     const error = new MiniAppRequestError(409, "catalog-version-mismatch", null, {
       contractVersion: "3",
-      catalogVersion: "catalog-v2-next",
+      catalogVersion: "catalog-v3-next",
     });
     const webApp = makeWebApp();
     apiMocks.refreshMiniAppBundleOnce.mockReturnValueOnce(true);
     apiMocks.postMiniAppSnapshot.mockRejectedValueOnce(error);
     const { result: reloading } = renderHook(() => useMiniAppMutations(makeArgs({ webApp })));
     await act(async () => { await reloading.current.performMutation({ kind: "pause" }); });
-    expect(apiMocks.refreshMiniAppBundleOnce).toHaveBeenCalledWith({ contractVersion: "3", catalogVersion: "catalog-v2-next" });
+    expect(apiMocks.refreshMiniAppBundleOnce).toHaveBeenCalledWith({ contractVersion: "3", catalogVersion: "catalog-v3-next" });
     expect(reloading.current.notice).toBeNull();
     expect(reloading.current.updateRequired).toBe(false);
     expect(webApp.HapticFeedback?.notificationOccurred).not.toHaveBeenCalled();
