@@ -1,4 +1,3 @@
-import { vi } from "vitest";
 import { computePegScore } from "@shared/lib/peg-score";
 import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-input-identity";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
@@ -106,12 +105,12 @@ export async function deliverV9Continuation(
     CF_VERSION_METADATA: ver === null ? undefined : { id: ver, tag: "", timestamp: "2026-11-25T12:00:00Z" },
     WORKER_V9_QUEUE_MODE: opts.mode ?? "on",
     SAFETY_V9_DEFERRED_MATERIALIZATION: "on",
-    V9_CONTINUATION_QUEUE: { send: vi.fn(async (body: V9ContinuationMessage) => { sent.push(body); }), sendBatch: vi.fn() },
+    V9_CONTINUATION_QUEUE: { send: async (body: V9ContinuationMessage) => { sent.push(body); } },
   } as unknown as HeavyEnv;
-  const ack = vi.fn();
-  const retry = vi.fn();
+  let acked = false;
+  let retried = false;
   const waits: Promise<unknown>[] = [];
-  const ctx = { waitUntil: vi.fn((p: Promise<unknown>) => { waits.push(p); }), passThroughOnException: vi.fn() } as unknown as ExecutionContext;
+  const ctx = { waitUntil: (p: Promise<unknown>) => { waits.push(p); } } as unknown as ExecutionContext;
   const m = message as Partial<V9ContinuationMessage>;
   await handleV9ContinuationBatch({
     queue: V9_CONTINUATION_QUEUE_NAME,
@@ -120,14 +119,12 @@ export async function deliverV9Continuation(
       timestamp: new Date(),
       body: message,
       attempts: opts.attempts ?? 1,
-      ack,
-      retry,
+      ack: () => { acked = true; },
+      retry: () => { retried = true; },
     }],
-    ackAll: vi.fn(),
-    retryAll: vi.fn(),
   } as unknown as MessageBatch<unknown>, env, ctx, Date.now(), { onBeforeEvaluateAsset: opts.onBeforeEvaluateAsset });
   await Promise.allSettled(waits);
-  return { acked: ack.mock.calls.length > 0, retried: retry.mock.calls.length > 0, sent };
+  return { acked, retried, sent };
 }
 
 export async function countRows(db: D1Database, sql: string, ...binds: unknown[]): Promise<number> {

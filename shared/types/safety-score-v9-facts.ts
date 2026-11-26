@@ -2395,7 +2395,7 @@ function validateAssetReferences(
   }
 }
 
-function validateFactSetCore(value: V9FactSetCoreV2 | V9FactSetCoreV3, ctx: z.RefinementCtx): void {
+function validateFactSetHeader(value: Omit<V9FactSetCoreV2 | V9FactSetCoreV3, "assets">, ctx: z.RefinementCtx): void {
   if (value.compiledAtSec < value.asOfSec) {
     issue(ctx, ["compiledAtSec"], "compiledAtSec cannot predate asOfSec");
   }
@@ -2405,180 +2405,196 @@ function validateFactSetCore(value: V9FactSetCoreV2 | V9FactSetCoreV3, ctx: z.Re
     }
   }
 
+}
+
+export const V9FactSetHeaderV3Schema = V9FactSetCoreV3ObjectSchema.omit({ assets: true })
+  .superRefine(validateFactSetHeader);
+
+export function validateFactSetAsset(
+  value: Omit<V9FactSetCoreV2 | V9FactSetCoreV3, "assets">,
+  asset: V9FactSetCoreV2["assets"][number] | V9AssetFactsV3,
+  activeAssetIds: ReadonlySet<string>,
+  assetIndex: number,
+  ctx: z.RefinementCtx,
+): void {
+  if (value.schemaVersion === 4 && "reserveResiduals" in asset) {
+    validateReserveFactorStatuses(asset, ctx, ["assets", assetIndex]);
+  }
+  const claimGraph = asset.accessReview.freeze.claimGraph;
+  if (claimGraph && (claimGraph.clockSec !== value.asOfSec || claimGraph.generationId !== value.baseInputGenerationId)) {
+    issue(ctx, ["assets", assetIndex, "accessReview", "freeze", "claimGraph"], "Access graph must match the admitted clock and input generation");
+  }
+  if (value.schemaVersion === 4 && "reserveResiduals" in asset) {
+    const evidenceById = new Map<string, V9EvidenceReferenceV2>();
+    for (const reference of asset.evidence) evidenceById.set(reference.evidenceId, reference);
+    for (const [gapIndex, gap] of asset.gaps.entries()) {
+      if (!("causeProof" in gap)) continue;
+      for (const message of findV9EvidenceCauseProofIssues({
+        proof: gap.causeProof, assetId: asset.assetId, scope: gap.causeScope ?? null,
+        asOfSec: value.asOfSec, evidence: asset.evidence,
+        researchMaxAgeSec: methodologyPolicy.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec,
+        evidenceById,
+      })) {
+        issue(ctx, ["assets", assetIndex, "gaps", gapIndex, "causeProof"], message);
+      }
+    }
+  }
+  for (const [evidenceIndex, evidence] of asset.evidence.entries()) {
+    if (evidence.observedAtSec > value.asOfSec) {
+      issue(
+                ctx,
+                ["assets", assetIndex, "evidence", evidenceIndex, "observedAtSec"],
+                "Evidence is later than asOfSec",
+              );
+    }
+    if (evidence.publishedAtSec !== null && evidence.publishedAtSec > value.asOfSec) {
+      issue(
+                ctx,
+                ["assets", assetIndex, "evidence", evidenceIndex, "publishedAtSec"],
+                "Publication is later than asOfSec",
+              );
+    }
+    if (evidence.rejection && evidence.rejection.rejectedAtSec > value.asOfSec) {
+      issue(
+                ctx,
+                ["assets", assetIndex, "evidence", evidenceIndex, "rejection"],
+                "Rejection is later than asOfSec",
+              );
+    }
+    if (evidence.freshness.ageSec !== value.asOfSec - evidence.observedAtSec) {
+      issue(
+                ctx,
+                ["assets", assetIndex, "evidence", evidenceIndex, "freshness", "ageSec"],
+                "Evidence age is not clock-derived",
+              );
+    }
+  }
+  if (asset.implementation.launchedAtSec !== null && asset.implementation.launchedAtSec > value.asOfSec) {
+    issue(
+            ctx,
+            ["assets", assetIndex, "implementation", "launchedAtSec"],
+            "Implementation date is later than asOfSec",
+          );
+  }
+  for (const [routeIndex, route] of asset.exitRoutes.entries()) {
+    const expectedGeneration =
+      route.lane === "dex"
+        ? value.sourceFingerprints.dex.generationId
+        : value.sourceFingerprints.redemption.generationId;
+    if (route.sourceGenerationId !== expectedGeneration) {
+      issue(
+                ctx,
+                ["assets", assetIndex, "exitRoutes", routeIndex, "sourceGenerationId"],
+                "Route generation does not match its lane",
+              );
+    }
+    const valuation = route.output.valuation;
+    if (valuation) {
+      if (valuation.asOfSec !== value.asOfSec || valuation.observedAtSec > value.asOfSec) {
+        issue(
+                    ctx,
+                    ["assets", assetIndex, "exitRoutes", routeIndex, "output", "valuation"],
+                    "Valuation clock does not match fact-set clock",
+                  );
+      }
+      if (valuation.freshness.ageSec !== value.asOfSec - valuation.observedAtSec) {
+        issue(
+                    ctx,
+                    ["assets", assetIndex, "exitRoutes", routeIndex, "output", "valuation", "freshness"],
+                    "Valuation age is not clock-derived",
+                  );
+      }
+    }
+  }
+  const expectedDependencyGeneration = asset.dependencies.dependencyFromLive
+    ? value.sourceFingerprints.liveReserves.generationId
+    : value.sourceFingerprints.researchOverlays.generationId;
+  if (asset.dependencies.sourceGenerationId !== expectedDependencyGeneration) {
+    issue(
+            ctx,
+            ["assets", assetIndex, "dependencies", "sourceGenerationId"],
+            "Dependency provenance generation is inconsistent",
+          );
+  }
+  for (const [exposureIndex, exposure] of asset.reserveExposures.entries()) {
+    const expectedGeneration =
+      exposure.provenance === "live"
+        ? value.sourceFingerprints.liveReserves.generationId
+        : value.sourceFingerprints.researchOverlays.generationId;
+    if (exposure.sourceGenerationId !== expectedGeneration) {
+      issue(
+                ctx,
+                ["assets", assetIndex, "reserveExposures", exposureIndex, "sourceGenerationId"],
+                "Reserve provenance generation is inconsistent",
+              );
+    }
+  }
+  for (const [boundIndex, bound] of (asset.reserveBoundFacts ?? []).entries()) {
+    const generation = bound.fact.provenance.kind === "producer-observation"
+      ? value.sourceFingerprints.liveReserves.generationId
+      : value.sourceFingerprints.researchOverlays.generationId;
+    const references = asset.evidence.filter((reference) => bound.status.evidenceRefIds.includes(reference.evidenceId));
+    if (bound.sourceGenerationId !== generation || references.some((reference) => reference.sourceGenerationId !== generation || reference.freshness.maxAgeSec !== bound.freshnessMaxAgeSec)) {
+      issue(ctx, ["assets", assetIndex, "reserveBoundFacts", boundIndex], "Bounded reserve generation or freshness budget is inconsistent");
+    }
+    if (bound.status.observationState === "known" && (bound.fact.asOfSec > value.asOfSec || value.asOfSec - bound.fact.asOfSec > bound.freshnessMaxAgeSec || references.some((reference) => reference.observedAtSec !== bound.fact.asOfSec || reference.freshness.state !== "current"))) {
+      issue(ctx, ["assets", assetIndex, "reserveBoundFacts", boundIndex], "Known bounded reserve facts require their own current snapshot");
+    }
+  }
+  for (const [controlIndex, control] of asset.controls.entries()) {
+    if (control.sourceGenerationId !== value.sourceFingerprints.researchOverlays.generationId) {
+      issue(
+                ctx,
+                ["assets", assetIndex, "controls", controlIndex, "sourceGenerationId"],
+                "Control provenance generation is inconsistent",
+              );
+    }
+  }
+  for (const [branchIndex, branch] of asset.economicControlReview.oracle.branches.entries()) {
+    if (branch.inheritedFromAssetId !== null && !activeAssetIds.has(branch.inheritedFromAssetId)) {
+      issue(
+                ctx,
+                ["assets", assetIndex, "economicControlReview", "oracle", "branches", branchIndex, "inheritedFromAssetId"],
+                "Inherited oracle branch is outside the active set",
+              );
+    }
+  }
+  for (const [reviewIndex, review] of asset.accessReview.freeze.reviews.entries()) {
+    if (review.upstreamAssetId !== null && !activeAssetIds.has(review.upstreamAssetId)) {
+      issue(
+                ctx,
+                ["assets", assetIndex, "accessReview", "freeze", "reviews", reviewIndex, "upstreamAssetId"],
+                "Upstream freeze review is outside the active set",
+              );
+    }
+  }
+  if (asset.peg.sourceGenerationId !== value.sourceFingerprints.peg.generationId) {
+    issue(ctx, ["assets", assetIndex, "peg", "sourceGenerationId"], "Peg provenance generation is inconsistent");
+  }
+  const supplyGenerationId = asset.supply.replayObservation === undefined
+    ? value.sourceFingerprints.chainSupply.generationId : value.baseInputGenerationId;
+  if (asset.supply.sourceGenerationId !== supplyGenerationId) {
+    issue(
+            ctx,
+            ["assets", assetIndex, "supply", "sourceGenerationId"],
+            "Supply provenance generation is inconsistent",
+          );
+  }
+  validateAssetReferences(asset, activeAssetIds, assetIndex, value.schemaVersion, ctx);
+}
+
+function validateFactSetCore(value: V9FactSetCoreV2 | V9FactSetCoreV3, ctx: z.RefinementCtx): void {
+  validateFactSetHeader(value, ctx);
   const assetIds = value.assets.map((asset) => asset.assetId);
   if (JSON.stringify(assetIds) !== JSON.stringify(value.activeAssetIds)) {
     issue(ctx, ["assets"], "Assets must match the exact active asset set");
   }
   const activeAssetIds = new Set(value.activeAssetIds);
-  const hasStressCoverage = value.assets.some((asset) => asset.cdpStressCoverage !== undefined);
-  if (hasStressCoverage && value.sourceFingerprints.shockCoverage === undefined) {
+  if (value.sourceFingerprints.shockCoverage === undefined && value.assets.some((asset) => asset.cdpStressCoverage !== undefined)) {
     issue(ctx, ["sourceFingerprints", "shockCoverage"], "Stress coverage requires a source fingerprint");
   }
-  for (const [assetIndex, asset] of value.assets.entries()) {
-    if (value.schemaVersion === 4 && "reserveResiduals" in asset) {
-      validateReserveFactorStatuses(asset, ctx, ["assets", assetIndex]);
-    }
-    const claimGraph = asset.accessReview.freeze.claimGraph;
-    if (claimGraph && (claimGraph.clockSec !== value.asOfSec || claimGraph.generationId !== value.baseInputGenerationId)) {
-      issue(ctx, ["assets", assetIndex, "accessReview", "freeze", "claimGraph"], "Access graph must match the admitted clock and input generation");
-    }
-    if (value.schemaVersion === 4 && "reserveResiduals" in asset) {
-      const evidenceById = new Map<string, V9EvidenceReferenceV2>();
-      for (const reference of asset.evidence) evidenceById.set(reference.evidenceId, reference);
-      for (const [gapIndex, gap] of asset.gaps.entries()) {
-        if (!("causeProof" in gap)) continue;
-        for (const message of findV9EvidenceCauseProofIssues({
-          proof: gap.causeProof, assetId: asset.assetId, scope: gap.causeScope ?? null,
-          asOfSec: value.asOfSec, evidence: asset.evidence,
-          researchMaxAgeSec: methodologyPolicy.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec,
-          evidenceById,
-        })) {
-          issue(ctx, ["assets", assetIndex, "gaps", gapIndex, "causeProof"], message);
-        }
-      }
-    }
-    for (const [evidenceIndex, evidence] of asset.evidence.entries()) {
-      if (evidence.observedAtSec > value.asOfSec) {
-        issue(
-                  ctx,
-                  ["assets", assetIndex, "evidence", evidenceIndex, "observedAtSec"],
-                  "Evidence is later than asOfSec",
-                );
-      }
-      if (evidence.publishedAtSec !== null && evidence.publishedAtSec > value.asOfSec) {
-        issue(
-                  ctx,
-                  ["assets", assetIndex, "evidence", evidenceIndex, "publishedAtSec"],
-                  "Publication is later than asOfSec",
-                );
-      }
-      if (evidence.rejection && evidence.rejection.rejectedAtSec > value.asOfSec) {
-        issue(
-                  ctx,
-                  ["assets", assetIndex, "evidence", evidenceIndex, "rejection"],
-                  "Rejection is later than asOfSec",
-                );
-      }
-      if (evidence.freshness.ageSec !== value.asOfSec - evidence.observedAtSec) {
-        issue(
-                  ctx,
-                  ["assets", assetIndex, "evidence", evidenceIndex, "freshness", "ageSec"],
-                  "Evidence age is not clock-derived",
-                );
-      }
-    }
-    if (asset.implementation.launchedAtSec !== null && asset.implementation.launchedAtSec > value.asOfSec) {
-      issue(
-              ctx,
-              ["assets", assetIndex, "implementation", "launchedAtSec"],
-              "Implementation date is later than asOfSec",
-            );
-    }
-    for (const [routeIndex, route] of asset.exitRoutes.entries()) {
-      const expectedGeneration =
-        route.lane === "dex"
-          ? value.sourceFingerprints.dex.generationId
-          : value.sourceFingerprints.redemption.generationId;
-      if (route.sourceGenerationId !== expectedGeneration) {
-        issue(
-                  ctx,
-                  ["assets", assetIndex, "exitRoutes", routeIndex, "sourceGenerationId"],
-                  "Route generation does not match its lane",
-                );
-      }
-      const valuation = route.output.valuation;
-      if (valuation) {
-        if (valuation.asOfSec !== value.asOfSec || valuation.observedAtSec > value.asOfSec) {
-          issue(
-                      ctx,
-                      ["assets", assetIndex, "exitRoutes", routeIndex, "output", "valuation"],
-                      "Valuation clock does not match fact-set clock",
-                    );
-        }
-        if (valuation.freshness.ageSec !== value.asOfSec - valuation.observedAtSec) {
-          issue(
-                      ctx,
-                      ["assets", assetIndex, "exitRoutes", routeIndex, "output", "valuation", "freshness"],
-                      "Valuation age is not clock-derived",
-                    );
-        }
-      }
-    }
-    const expectedDependencyGeneration = asset.dependencies.dependencyFromLive
-      ? value.sourceFingerprints.liveReserves.generationId
-      : value.sourceFingerprints.researchOverlays.generationId;
-    if (asset.dependencies.sourceGenerationId !== expectedDependencyGeneration) {
-      issue(
-              ctx,
-              ["assets", assetIndex, "dependencies", "sourceGenerationId"],
-              "Dependency provenance generation is inconsistent",
-            );
-    }
-    for (const [exposureIndex, exposure] of asset.reserveExposures.entries()) {
-      const expectedGeneration =
-        exposure.provenance === "live"
-          ? value.sourceFingerprints.liveReserves.generationId
-          : value.sourceFingerprints.researchOverlays.generationId;
-      if (exposure.sourceGenerationId !== expectedGeneration) {
-        issue(
-                  ctx,
-                  ["assets", assetIndex, "reserveExposures", exposureIndex, "sourceGenerationId"],
-                  "Reserve provenance generation is inconsistent",
-                );
-      }
-    }
-    for (const [boundIndex, bound] of (asset.reserveBoundFacts ?? []).entries()) {
-      const generation = bound.fact.provenance.kind === "producer-observation"
-        ? value.sourceFingerprints.liveReserves.generationId
-        : value.sourceFingerprints.researchOverlays.generationId;
-      const references = asset.evidence.filter((reference) => bound.status.evidenceRefIds.includes(reference.evidenceId));
-      if (bound.sourceGenerationId !== generation || references.some((reference) => reference.sourceGenerationId !== generation || reference.freshness.maxAgeSec !== bound.freshnessMaxAgeSec)) {
-        issue(ctx, ["assets", assetIndex, "reserveBoundFacts", boundIndex], "Bounded reserve generation or freshness budget is inconsistent");
-      }
-      if (bound.status.observationState === "known" && (bound.fact.asOfSec > value.asOfSec || value.asOfSec - bound.fact.asOfSec > bound.freshnessMaxAgeSec || references.some((reference) => reference.observedAtSec !== bound.fact.asOfSec || reference.freshness.state !== "current"))) {
-        issue(ctx, ["assets", assetIndex, "reserveBoundFacts", boundIndex], "Known bounded reserve facts require their own current snapshot");
-      }
-    }
-    for (const [controlIndex, control] of asset.controls.entries()) {
-      if (control.sourceGenerationId !== value.sourceFingerprints.researchOverlays.generationId) {
-        issue(
-                  ctx,
-                  ["assets", assetIndex, "controls", controlIndex, "sourceGenerationId"],
-                  "Control provenance generation is inconsistent",
-                );
-      }
-    }
-    for (const [branchIndex, branch] of asset.economicControlReview.oracle.branches.entries()) {
-      if (branch.inheritedFromAssetId !== null && !activeAssetIds.has(branch.inheritedFromAssetId)) {
-        issue(
-                  ctx,
-                  ["assets", assetIndex, "economicControlReview", "oracle", "branches", branchIndex, "inheritedFromAssetId"],
-                  "Inherited oracle branch is outside the active set",
-                );
-      }
-    }
-    for (const [reviewIndex, review] of asset.accessReview.freeze.reviews.entries()) {
-      if (review.upstreamAssetId !== null && !activeAssetIds.has(review.upstreamAssetId)) {
-        issue(
-                  ctx,
-                  ["assets", assetIndex, "accessReview", "freeze", "reviews", reviewIndex, "upstreamAssetId"],
-                  "Upstream freeze review is outside the active set",
-                );
-      }
-    }
-    if (asset.peg.sourceGenerationId !== value.sourceFingerprints.peg.generationId) {
-      issue(ctx, ["assets", assetIndex, "peg", "sourceGenerationId"], "Peg provenance generation is inconsistent");
-    }
-    const supplyGenerationId = asset.supply.replayObservation === undefined
-      ? value.sourceFingerprints.chainSupply.generationId : value.baseInputGenerationId;
-    if (asset.supply.sourceGenerationId !== supplyGenerationId) {
-      issue(
-              ctx,
-              ["assets", assetIndex, "supply", "sourceGenerationId"],
-              "Supply provenance generation is inconsistent",
-            );
-    }
-    validateAssetReferences(asset, activeAssetIds, assetIndex, value.schemaVersion, ctx);
+  for (const [index, asset] of value.assets.entries()) {
+    validateFactSetAsset(value, asset, activeAssetIds, index, ctx);
   }
 }
 

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SAFETY_SCORE_V9_CATALOG_MAX_ASSETS } from "./safety-score-v9-capacity-limits";
 import { Sha256Schema } from "../types/safety-schema-primitives";
 import { RESERVE_EVIDENCE_SOURCE_ORIGIN_CLASSES } from "../types/report-card-evidence-journal";
 import {
@@ -12,7 +13,7 @@ export type { ReserveEvidenceSourceOriginClass } from "../types/report-card-evid
 const REPORT_CARD_EVIDENCE_JOURNAL_ENTRY_MAX_BYTES = 1_024;
 const REPORT_CARD_EVIDENCE_JOURNAL_FIXED_INPUT_MAX_BYTES = 384 * 1_024;
 export const REPORT_CARD_EVIDENCE_JOURNAL_FIXED_INPUT_MAX_ENTRIES_PER_ASSET = 2;
-export const REPORT_CARD_EVIDENCE_JOURNAL_FIXED_INPUT_MAX_ASSETS = 512;
+export const REPORT_CARD_EVIDENCE_JOURNAL_FIXED_INPUT_MAX_ASSETS = SAFETY_SCORE_V9_CATALOG_MAX_ASSETS;
 
 const JournalIdSchema = z.string().regex(/^report-card-evidence:v1:[a-f0-9]{64}$/);
 

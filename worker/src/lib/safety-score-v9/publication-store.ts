@@ -187,6 +187,7 @@ export interface SafetyScoreV9PersistWork extends V9PublicMaterializationWork {
 }
 
 export interface PersistSafetyScoreV9PublicationResult {
+  publicationPayloadSha256: string | null;
   /** Exact committed transports for the capture archive, when replay retention was written. */
   captureArchiveCacheRows: SafetyScoreCaptureArchiveCacheRows | null;
   /** Source for the deferred public materialization; null when none is pending. */
@@ -643,7 +644,7 @@ export async function persistSafetyScoreV9Publication(
   // re-read live cache rows which a later accepted generation could overwrite.
   // A sharded publication is archived as its single-row-equivalent value.
   if (publicationValue === null || input.publicationReplayBaseValue === undefined ||
-      input.publicationReplayCaptureValue === undefined) return { captureArchiveCacheRows: null, acceptedMaterialization };
+      input.publicationReplayCaptureValue === undefined) return { captureArchiveCacheRows: null, acceptedMaterialization, publicationPayloadSha256 };
   return {
     captureArchiveCacheRows: {
       base: { key: SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY,
@@ -654,5 +655,6 @@ export async function persistSafetyScoreV9Publication(
         value: publicationValue, updatedAt: input.publicationClockSec },
     },
     acceptedMaterialization,
+    publicationPayloadSha256,
   };
 }

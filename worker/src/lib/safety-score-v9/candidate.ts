@@ -203,7 +203,7 @@ function sortedUnique(values: Iterable<string>): string[] {
 }
 
 export function quarantineAffectedAssetIds(
-  factSet: CompiledV9FactSetV3,
+  factSet: { assets: readonly Pick<CompiledV9FactSetV3["assets"][number], "assetId" | "dependencies">[] },
   quarantines: readonly V9AssetQuarantine[],
 ): string[] {
   const affected = new Set(
@@ -366,7 +366,7 @@ export function publicDisplayMetadata(
 export function compilerFactSchemaIdentity(
   fixedInput: SafetyScoreV9CompilerInput,
   extension: SafetyScoreV9FactSetExtensionV2,
-  compiledFacts: CompiledV9FactSetV3,
+  compiledFacts: Pick<CompiledV9FactSetV3, "schemaVersion">,
 ): SafetyScoreV9CompilerFactSchemaIdentityV1 {
   return SafetyScoreV9CompilerFactSchemaIdentityV1Schema.parse({
     schemaVersion: 1,
@@ -532,7 +532,7 @@ const SHARED_BOOK_ID_BY_SCOPE: Readonly<Record<string, string>> = {
 /** Capture disclosure before releasing the compiled fact graph. No scoring inputs change. */
 export function publicDependencyMetadata(
   asset: CompiledV9FactSetV3["assets"][number],
-  factSet: CompiledV9FactSetV3,
+  factSet: Pick<CompiledV9FactSetV3, "sourceFingerprints">,
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   meta: V9ExtensionRegistryMeta | undefined,
 ) {
@@ -639,29 +639,66 @@ export function buildSafetyScoreV9Candidate(
   });
 }
 
+export function prepareV9PublicationExtensionOptions(
+  clockSec: number,
+  options: BuildSafetyScoreV9BaselineExtensionOptions,
+  includeReserveCompositionAdmission = RESERVE_COMPOSITION_ADMISSION_ACTIVATION_SEC !== null &&
+    clockSec >= RESERVE_COMPOSITION_ADMISSION_ACTIVATION_SEC,
+) {
+  const reserveRejections = includeReserveCompositionAdmission
+    ? new Map<string, V9ReserveCompositionAdmission>() : undefined;
+  return {
+    reserveRejections,
+    extensionOptions: {
+      ...options,
+      onReserveCompositionRejected:
+        reserveRejections && ((id, diagnostic) => { reserveRejections.set(id, diagnostic); }),
+    } satisfies BuildSafetyScoreV9BaselineExtensionOptions,
+  };
+}
+
+export function projectV9PublicationAssetFacts(
+  asset: CompiledV9FactSetV3["assets"][number],
+  factSet: Pick<CompiledV9FactSetV3, "sourceFingerprints">,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  meta: V9ExtensionRegistryMeta | undefined,
+  reserveRejections: ReadonlyMap<string, V9ReserveCompositionAdmission> | undefined,
+) {
+  return {
+    display: publicDisplayMetadata(asset),
+    backingFromLiveReserves: asset.reserveExposures.some((exposure) => exposure.provenance === "live"),
+    dexObservedAtSec: fixedInput.dexLiqMap[asset.assetId]?.updatedAt ?? null,
+    dependencyMetadata: {
+      ...publicDependencyMetadata(asset, factSet, fixedInput, meta),
+      reserveCompositionAdmission: reserveRejections?.has(asset.assetId) && asset.gaps.some((gap) =>
+        (gap.reasonCode === "missing-reserve-composition" || gap.reasonCode === "expired-reviewed-reserve-composition") &&
+        asset.reserveStatus.gapIds.includes(gap.gapId))
+        ? reserveRejections.get(asset.assetId) : undefined,
+    },
+  };
+}
+
 function projectCandidatePublicationFacts(
   factSet: CompiledV9FactSetV3,
   quarantines: readonly V9AssetQuarantine[],
   input: BuildSafetyScoreV9CandidateFromNormalizedInput,
   reserveRejections: ReadonlyMap<string, V9ReserveCompositionAdmission> | undefined,
 ) {
+  const displayByAssetId = new Map<string, ReturnType<typeof publicDisplayMetadata>>();
+  const scoreGradeLiveReserveIds = new Set<string>();
+  const dependencyMetadataByAssetId = new Map<string, ReturnType<typeof projectV9PublicationAssetFacts>["dependencyMetadata"]>();
+  const dexObservedAtSec = new Map<string, number>();
+  const metaById = input.registry?.metaById ?? ACTIVE_META_BY_ID;
+  for (const asset of factSet.assets) {
+    const projected = projectV9PublicationAssetFacts(asset, factSet, input.fixedInput, metaById.get(asset.assetId), reserveRejections);
+    displayByAssetId.set(asset.assetId, projected.display);
+    if (projected.backingFromLiveReserves) scoreGradeLiveReserveIds.add(asset.assetId);
+    dependencyMetadataByAssetId.set(asset.assetId, projected.dependencyMetadata);
+    if (projected.dexObservedAtSec !== null) dexObservedAtSec.set(asset.assetId, projected.dexObservedAtSec);
+  }
   return {
     affectedAssetIds: quarantineAffectedAssetIds(factSet, quarantines),
-    displayByAssetId: new Map(factSet.assets.map((asset) => [asset.assetId, publicDisplayMetadata(asset)])),
-    scoreGradeLiveReserveIds: new Set(factSet.assets
-      .filter((asset) => asset.reserveExposures.some((exposure) => exposure.provenance === "live"))
-      .map((asset) => asset.assetId)),
-    dependencyMetadataByAssetId: new Map(factSet.assets.map((asset) => [
-      asset.assetId,
-      {
-        ...publicDependencyMetadata(asset, factSet, input.fixedInput,
-          (input.registry?.metaById ?? ACTIVE_META_BY_ID).get(asset.assetId)),
-        reserveCompositionAdmission: reserveRejections?.has(asset.assetId) && asset.gaps.some((gap) =>
-          (gap.reasonCode === "missing-reserve-composition" || gap.reasonCode === "expired-reviewed-reserve-composition") &&
-          asset.reserveStatus.gapIds.includes(gap.gapId))
-          ? reserveRejections.get(asset.assetId) : undefined,
-      },
-    ])),
+    displayByAssetId, scoreGradeLiveReserveIds, dependencyMetadataByAssetId, dexObservedAtSec,
   };
 }
 
@@ -789,19 +826,13 @@ function buildSafetyScoreV9CandidatePipeline(
   assertV9ValidatedPolicyEnvelope(policy);
   const policyVersion = v9PolicyVersion(policy);
   const clockSec = fixedInput.clockSec;
-  const dexObservedAtSec = new Map(Object.entries(fixedInput.dexLiqMap).map(([id, row]) => [id, row.updatedAt]));
-  const includeReserveCompositionAdmission = input.includeReserveCompositionAdmission ??
-    (RESERVE_COMPOSITION_ADMISSION_ACTIVATION_SEC !== null && clockSec >= RESERVE_COMPOSITION_ADMISSION_ACTIVATION_SEC);
-  const reserveRejections = includeReserveCompositionAdmission
-    ? new Map<string, V9ReserveCompositionAdmission>() : undefined;
-  const extensionOptions: BuildSafetyScoreV9BaselineExtensionOptions = {
+  const { extensionOptions, reserveRejections } = prepareV9PublicationExtensionOptions(clockSec, {
     ...input.registry,
     ...(input.allowRegistryMismatch === true ? { allowRegistryMismatch: true } : {}),
     transferMaterialityGeneration: input.transferMaterialityGeneration ?? null,
     ...(input.laneIncidentCertificates === undefined ? {} : { laneIncidentCertificates: input.laneIncidentCertificates }),
     ...(input.laneEmitterDescriptors === undefined ? {} : { laneEmitterDescriptors: input.laneEmitterDescriptors }),
-    onReserveCompositionRejected: reserveRejections && ((id, diagnostic) => { reserveRejections.set(id, diagnostic); }),
-  };
+  }, input.includeReserveCompositionAdmission);
   const materializeCandidateExtension = (fixedInput: Readonly<SafetyScoreV9CompilerInput>) =>
     materializeSafetyScoreV9FactSetExtension(fixedInput, input.extension ??
       buildSafetyScoreV9BaselineExtensionFromNormalizedInput(fixedInput, extensionOptions));
@@ -997,8 +1028,8 @@ function buildSafetyScoreV9CandidatePipeline(
       exit: asset.exit,
       control: asset.control,
       display: publicationFacts.displayByAssetId.get(asset.assetId),
-      freshness: { exit: exitPillarFreshnessFromDexInput(clockSec, dexObservedAtSec.get(asset.assetId), dexExitRouteMaxAgeSec) },
-      dexObservedAtSec: dexObservedAtSec.get(asset.assetId) ?? null,
+      freshness: { exit: exitPillarFreshnessFromDexInput(clockSec, publicationFacts.dexObservedAtSec.get(asset.assetId), dexExitRouteMaxAgeSec) },
+      dexObservedAtSec: publicationFacts.dexObservedAtSec.get(asset.assetId) ?? null,
       documentationGapIds: documentation.gapIds,
     };
   }
@@ -1079,7 +1110,7 @@ function buildSafetyScoreV9CandidatePipeline(
 
   const verifiedEmptyExitBaselineOptions: BuildAcceptedBaselineVerifiedEmptyOptions = {
     ...(verifiedEmptyExitByAssetId === undefined ? {} : { priorVerifiedEmptyExitByAssetId: verifiedEmptyExitByAssetId }),
-    observedAtByAssetId: Object.fromEntries([...dexObservedAtSec].sort(([left], [right]) => compareText(left, right))),
+    observedAtByAssetId: Object.fromEntries([...publicationFacts.dexObservedAtSec].sort(([left], [right]) => compareText(left, right))),
     verifiedEmptyCarryMaxAgeSec: policy.policy.semantic.exit.verifiedEmptyCarryMaxAgeSec,
     ...(internalVerifiedEmptyExitState.size === 0
       ? {}

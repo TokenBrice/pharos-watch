@@ -121,7 +121,8 @@ function handOffArchiveOperation(
 export async function archiveSafetyScoreCapture(input: {
   db: D1Database;
   bucket?: R2Bucket;
-  publication: Readonly<SafetyScoreV9CurrentResponse>;
+  publication: Readonly<Pick<SafetyScoreV9CurrentResponse,
+    "publicationGenerationId" | "publishedAtSec" | "policyVersion" | "policy" | "evaluationBuildDigest">>;
   cacheRows: SafetyScoreCaptureArchiveCacheRows | null;
   signal?: AbortSignal;
   /** Earlier of the publication timeout and the scheduled execution-window deadline. */

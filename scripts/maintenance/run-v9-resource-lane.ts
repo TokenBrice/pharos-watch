@@ -15,11 +15,16 @@ const CONTAGION_CASE = "evaluates a bounded nine-scenario matrix within 256 MiB 
 const vitestReportSchema = z.object({ testResults: z.array(z.object({
   name: z.string(), assertionResults: z.array(z.object({ title: z.string(), status: z.string() })),
 })) });
-export function assertRequiredResourceCases(report: unknown): void {
+export const QUEUE_CASES = [[343, false], [560, false], [343, true]].map(([assets, escalation]) =>
+  `bounds Queue stage resources and matches canonical publication at ${assets} assets (escalation=${escalation})`);
+export function assertRequiredResourceCases(report: unknown, contagionRequired = true): void {
   const cases = vitestReportSchema.parse(report).testResults
     .filter((file) => file.name.replaceAll("\\", "/").endsWith(RESOURCE_TEST_FILE))
-    .flatMap((file) => file.assertionResults).filter((test) => test.title === CONTAGION_CASE);
-  if (cases.length !== 1 || cases[0].status !== "passed") throw new Error(`Required V9 resource case did not pass: ${CONTAGION_CASE}`);
+    .flatMap((file) => file.assertionResults);
+  for (const title of [...(contagionRequired ? [CONTAGION_CASE] : []), ...QUEUE_CASES]) {
+    const matching = cases.filter((test) => test.title === title);
+    if (matching.length !== 1 || matching[0].status !== "passed") throw new Error(`Required V9 resource case did not pass: ${title}`);
+  }
 }
 const faithfulReportSchema = z.object({
   schemaVersion: z.literal(1), invocationId: z.string(), complete: z.literal(true), diagnosticOnly: z.literal(false),
@@ -141,7 +146,7 @@ export async function runV9ResourceLane({
   listChangedFiles?: (root: string, baseSha: string) => readonly string[];
 } = {}): Promise<number> {
   const { values } = parseStrictCliArgs(argv);
-  if (values.help) { console.log("Usage: npm run test:v9-resource\nRuns the faithful compute policy guard (live + natural 128 MiB), then the independent 256 MiB contagion matrix for PRs that change a contagion input or any non-PR context."); return 0; }
+  if (values.help) { console.log("Usage: npm run test:v9-resource\nRuns the faithful compute policy guard (live + natural 128 MiB), the Queue stage resource gates, and the independent 256 MiB contagion matrix for PRs that change a contagion input or any non-PR context."); return 0; }
   const root = resolve(import.meta.dirname, "../..");
   resourceDirectory = resolve(root, resourceDirectory);
   outputDirectory = resolve(root, outputDirectory);
@@ -200,22 +205,24 @@ export async function runV9ResourceLane({
   if (guardOk) {
     const decision = decideV9Contagion(env.PR_BASE_SHA, (baseSha) => listChangedFiles(root, baseSha));
     contagion = { ...decision, status: "skipped", durationMs: 0 };
-    if (decision.required) {
-      const command = createLocalVitestCommand(["run", RESOURCE_TEST_FILE, "--coverage.enabled=false", "--maxWorkers=1", "--no-file-parallelism", "--reporter=json", `--outputFile=${vitestPath}`]);
-      const contagionStarted = Date.now();
-      const result = await runCommand(command, { PHAROS_V9_RESOURCE_LANE: "1" });
-      contagion.durationMs = Date.now() - contagionStarted;
-      try {
-        assertRequiredResourceCases(JSON.parse(readFileSync(vitestPath, "utf8")));
-        contagion.status = "passed";
-      } catch (error) {
-        contagion.status = "failed";
-        failure = error;
-      }
-      if (!failure) {
-        const vitestStatus = typeof result === "number" ? result : result.status || (result.error || result.aborted ? 1 : 0);
-        if (vitestStatus) status = vitestStatus;
-      }
+    const command = createLocalVitestCommand(["run", RESOURCE_TEST_FILE, "--coverage.enabled=false",
+      "--maxWorkers=1", "--no-file-parallelism", "--reporter=default", "--reporter=json",
+      `--outputFile.json=${vitestPath}`, "--silent=false",
+      ...(decision.required ? [] : ["-t", "bounds Queue stage resources"]),
+    ]);
+    const testStarted = Date.now();
+    const result = await runCommand(command, { PHAROS_V9_RESOURCE_LANE: "1" });
+    if (decision.required) contagion.durationMs = Date.now() - testStarted;
+    try {
+      assertRequiredResourceCases(JSON.parse(readFileSync(vitestPath, "utf8")), decision.required);
+      if (decision.required) contagion.status = "passed";
+    } catch (error) {
+      if (decision.required) contagion.status = "failed";
+      failure = error;
+    }
+    if (!failure) {
+      const vitestStatus = typeof result === "number" ? result : result.status || (result.error || result.aborted ? 1 : 0);
+      if (vitestStatus) status = vitestStatus;
     }
   }
   const lane: LaneReport = { prContext, publicationCycles, guard: { durationMs: guardDurationMs, status }, contagion };

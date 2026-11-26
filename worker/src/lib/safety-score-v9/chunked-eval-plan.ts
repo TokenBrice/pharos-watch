@@ -1,15 +1,15 @@
 import { z } from "zod";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type {
   V9StructuralSignal,
   V9ValidatedPolicyEnvelope,
 } from "@shared/types/safety-score-v9";
 import type {
-  CompiledV9FactSetV3,
   V9AssetFactsV3,
+  V9FactSetCoreV3,
 } from "@shared/types/safety-score-v9-facts";
 import type {
   SafetyScoreV9CurrentCard,
-  V9ReserveCompositionAdmission,
 } from "@shared/types/safety-score-v9-public";
 import {
   SafetyScoreV9CurrentResponseSchema,
@@ -28,9 +28,13 @@ import type { V9DocumentationAssetFacts, V9DocumentationClassification } from "@
 import {
   evaluateV9Asset,
   type V9EvaluatedAsset,
+  type V9UpstreamEvaluatedAsset,
 } from "@shared/lib/safety-score-v9/evaluate-asset";
 import {
   buildV9UpstreamResult,
+  commonModeSignalsByAsset,
+  marketRankByAsset,
+  sourceGenerations,
   computeV9EvaluatedSetDigest,
   evaluatedAssetDigestPayload,
   projectPlanningFacts,
@@ -38,9 +42,10 @@ import {
   type V9AssetDigestPayload,
   type V9PlanningFacts,
 } from "@shared/lib/safety-score-v9/evaluate-set";
-import type { V9ExitHolderEligibility } from "@shared/lib/safety-score-v9/exit";
 import {
   createV9OpenEvidenceCounter,
+  projectV9OpenEvidenceGap,
+  type V9OpenEvidenceGap,
   type V9OpenEvidenceAsset,
   type V9OpenQuestionFact,
 } from "@shared/lib/safety-score-v9/open-questions";
@@ -67,14 +72,22 @@ import {
 import { computeV9CompactResultDigest } from "@shared/lib/safety-score-v9/trace";
 import {
   computeSafetyScoreV9CandidateId,
+  computeSafetyScoreV9CompilerFactSchemaDigest,
+  computeSafetyScoreV9ProducerCapabilityDigest,
   computeSafetyScoreV9PublicationGenerationId,
   SafetyScoreV9CandidateIdentityV1Schema,
 } from "./candidate-identity";
 import {
   exitPillarFreshnessFromDexInput,
   extractV9InternalTokenizedFundState,
-  publicDependencyMetadata,
+  compilerFactSchemaIdentity,
+  prepareV9PublicationExtensionOptions,
+  producerCapabilityIdentity,
+  projectV9PublicationAssetFacts,
+  quarantineAffectedAssetIds,
 } from "./candidate";
+import { compileSafetyScoreV9AssetSlice, planSafetyScoreV9FactSet } from "./fact-set";
+import { createSafetyScoreV9BaselineExtensionSource, type BuildSafetyScoreV9BaselineExtensionOptions } from "./extension";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
 import type {
   BuildAcceptedBaselineVerifiedEmptyOptions,
@@ -82,93 +95,21 @@ import type {
   SafetyScoreV9VerifiedEmptyExitWitness,
 } from "./publication-assessment";
 
-/** Default ADR-26 chunk cap (<= 140 assets/chunk, <= 4 chunks at 560 assets). */
-export const V9_EVAL_DEFAULT_MAX_CHUNK_ASSETS = 140;
+export const V9_EVAL_DEFAULT_MAX_CHUNK_ASSETS = 70;
 
 const DOCUMENTATION_PILLARS = ["backing", "exit", "control"] as const;
 
-export interface V9PublicDisplayMetadata {
-  labels: Record<string, string>;
-  exitHolderEligibility: Record<string, V9ExitHolderEligibility>;
-  exitRouteDetails: Record<
-    string,
-    {
-      chain: string | null;
-      protocol: string | null;
-      poolId: string | null;
-      evidenceKind: string;
-      observedAtSec: number | null;
-    }
-  >;
-}
-
-export interface V9SerializedPublicDependencyMetadata {
-  supply: SafetyScoreV9CurrentCard["supply"];
-  sharedBookId: string | null;
-  dependencyProvenance: Array<
-    readonly [string, NonNullable<SafetyScoreV9CurrentCard["dependencies"]["serial"][number]["provenance"]>]
-  >;
-  dependencyTypes: Array<readonly [string, "wrapper" | "mechanism" | "collateral"]>;
-  dependencyCoverage: NonNullable<SafetyScoreV9CurrentCard["dependencyCoverage"]>;
-  reserveCompositionAdmission?: V9ReserveCompositionAdmission;
-}
-
-export interface V9EvalFactShardAsset {
-  assetId: string;
+type V9ChunkAsset = ReturnType<typeof projectV9PublicationAssetFacts> & {
   facts: V9AssetFactsV3;
-  display: V9PublicDisplayMetadata;
-  dependencyMetadata: V9SerializedPublicDependencyMetadata;
-  backingFromLiveReserves: boolean;
-  dexObservedAtSec: number | null;
   marketRank: number | null;
   dependencySignals: readonly V9StructuralSignal[];
-}
-
-export interface V9EvalFactShardPayload {
-  chunkIndex: number;
-  assets: V9EvalFactShardAsset[];
-}
-
-export interface V9ChunkUpstreamEvaluatedShim {
-  assetId: string;
-  backing: Pick<V9EvaluatedAsset["backing"], "failureDomains" | "collateralizationApplications">;
-  scoreInput: {
-    pillars: {
-      backing: Pick<
-        V9EvaluatedAsset["scoreInput"]["pillars"]["backing"],
-        | "score"
-        | "reasons"
-        | "aggregationDisposition"
-        | "excludedCauses"
-        | "excludedCauseGapIds"
-        | "excludedComponentKeys"
-        | "causeGapIds"
-        | "limitedEvidenceCauses"
-        | "evidenceLevel"
-      >;
-    };
-  };
-  trace: Pick<
-    V9EvaluatedAsset["trace"],
-    | "assetId"
-    | "ratingStatus"
-    | "finalScore"
-    | "inheritableScore"
-    | "causeGapIds"
-    | "limitedEvidenceCauses"
-    | "partialEvidence"
-    | "nrReasons"
-    | "propagatedParentReasons"
-    | "adverseAttribution"
-    | "boundedUncertaintyAttribution"
-  >;
-}
+};
 
 export interface V9ChunkUpstreamSnapshot {
   assetId: string;
   upstreamResult: V9UpstreamResult;
   unavailabilityRoots: readonly string[];
-  evaluatedShim: V9ChunkUpstreamEvaluatedShim;
+  evaluatedShim: V9UpstreamEvaluatedAsset;
 }
 
 export interface V9EvalUpstreamStatePayload {
@@ -194,9 +135,9 @@ export interface V9ChunkOpenEvidenceAssetInput {
 
 export interface V9EvalChunkSummaryPayload {
   chunkIndex: number;
-  localDocumentationGapEntries: Array<[string, V9DocumentationClassification]>;
   documentationCards: V9SerializedDocumentationCard[];
   openEvidenceInputs: V9ChunkOpenEvidenceAssetInput[];
+  openEvidenceAssets: V9OpenEvidenceAsset<V9OpenEvidenceGap>[];
   assetDigests: V9AssetDigestPayload[];
   commonModeResults: V9CommonModeProjectionResult[];
   internalLenderBackingScores: Array<[string, number]>;
@@ -261,6 +202,7 @@ export function partitionV9DependencyChunks(
   const chunks: string[][] = [];
   let current: string[] = [];
   for (const unit of units) {
+    if (unit.length > maxChunkAssets) throw new Error(`V9 dependency component exceeds chunk cap: ${unit.length} > ${maxChunkAssets}`);
     if (current.length > 0 && current.length + unit.length > maxChunkAssets) {
       chunks.push(current);
       current = [];
@@ -307,7 +249,7 @@ export function partitionV9DependencyChunks(
 }
 
 function collectV9AssetUpstreamsMap(
-  assets: readonly Pick<V9AssetFactsV3, "assetId" | "dependencies" | "reserveExposures">[],
+  assets: readonly Pick<V9PlanningFacts, "assetId" | "dependencies" | "reserveExposures">[],
 ): Map<string, readonly string[]> {
   const map = new Map<string, readonly string[]>();
   for (const asset of assets) {
@@ -320,34 +262,6 @@ function collectV9AssetUpstreamsMap(
     );
   }
   return map;
-}
-
-export function serializeV9PublicDependencyMetadata(
-  asset: CompiledV9FactSetV3["assets"][number],
-  factSet: CompiledV9FactSetV3,
-  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
-  meta: Parameters<typeof publicDependencyMetadata>[3],
-  reserveRejections: ReadonlyMap<string, V9ReserveCompositionAdmission> | undefined,
-): V9SerializedPublicDependencyMetadata {
-  const raw = publicDependencyMetadata(asset, factSet, fixedInput, meta);
-  const reserveCompositionAdmission =
-    reserveRejections?.has(asset.assetId) &&
-    asset.gaps.some(
-      (gap) =>
-        (gap.reasonCode === "missing-reserve-composition" ||
-          gap.reasonCode === "expired-reviewed-reserve-composition") &&
-        asset.reserveStatus.gapIds.includes(gap.gapId),
-    )
-      ? reserveRejections.get(asset.assetId)
-      : undefined;
-  return {
-    supply: raw.supply,
-    sharedBookId: raw.sharedBookId,
-    dependencyProvenance: [...raw.dependencyProvenance.entries()],
-    dependencyTypes: [...raw.dependencyTypes.entries()],
-    dependencyCoverage: raw.dependencyCoverage,
-    ...(reserveCompositionAdmission === undefined ? {} : { reserveCompositionAdmission }),
-  };
 }
 
 function projectChunkUpstreamSnapshot(
@@ -419,7 +333,7 @@ export type EvaluateV9ChunkOutcome =
  */
 export function evaluateV9Chunk(input: {
   chunkIndex: number;
-  factShard: V9EvalFactShardPayload;
+  assets: Iterable<V9ChunkAsset>;
   dependencyPlan: Readonly<V9DependencyEvaluationPlan>;
   envelope: V9ValidatedPolicyEnvelope;
   identity: {
@@ -440,20 +354,20 @@ export function evaluateV9Chunk(input: {
 }): EvaluateV9ChunkOutcome {
   assertV9ValidatedPolicyEnvelope(input.envelope);
   const dependencyResolutionContext = createV9DependencyResolutionContext(input.dependencyPlan);
-  const evaluatedById = new Map<string, V9EvaluatedAsset>();
+  const evaluatedById = new Map<string, V9UpstreamEvaluatedAsset>();
   const upstreamResultsById = new Map<string, V9UpstreamResult>();
   const unavailabilityRootsById = new Map<string, readonly string[]>();
 
   for (const snapshot of input.priorUpstreams) {
-    evaluatedById.set(snapshot.assetId, snapshot.evaluatedShim as unknown as V9EvaluatedAsset);
+    evaluatedById.set(snapshot.assetId, snapshot.evaluatedShim);
     upstreamResultsById.set(snapshot.assetId, snapshot.upstreamResult);
     unavailabilityRootsById.set(snapshot.assetId, snapshot.unavailabilityRoots);
   }
 
   const docGapIds = new Map<string, V9DocumentationClassification>(input.priorDocumentationGapEntries);
-  const localChunkDocGapEntries: Array<[string, V9DocumentationClassification]> = [];
   const documentationCards: V9SerializedDocumentationCard[] = [];
   const openEvidenceInputs: V9ChunkOpenEvidenceAssetInput[] = [];
+  const openEvidenceAssets: V9OpenEvidenceAsset<V9OpenEvidenceGap>[] = [];
   const assetDigests: V9AssetDigestPayload[] = [];
   const commonModeResults: V9CommonModeProjectionResult[] = [];
   const internalLenderBackingScores: Array<[string, number]> = [];
@@ -465,7 +379,7 @@ export function evaluateV9Chunk(input: {
   const exportedUpstreams: V9ChunkUpstreamSnapshot[] = [];
   const projectionFailures: V9PublicCardProjectionFailure[] = [];
 
-  for (const item of input.factShard.assets) {
+  for (const item of input.assets) {
     const asset = item.facts;
     let evaluatedAsset: V9EvaluatedAsset;
     let unavailabilityRoots: readonly string[];
@@ -487,7 +401,7 @@ export function evaluateV9Chunk(input: {
       evaluatedAsset = evaluated.evaluatedAsset;
       unavailabilityRoots = evaluated.unavailabilityRoots;
       upstreamResult = buildV9UpstreamResult(evaluatedAsset);
-      evaluatedById.set(asset.assetId, evaluatedAsset);
+
       upstreamResultsById.set(asset.assetId, upstreamResult);
       unavailabilityRootsById.set(asset.assetId, unavailabilityRoots);
     } catch (error) {
@@ -495,9 +409,9 @@ export function evaluateV9Chunk(input: {
       return { status: "quarantine-required", failures: [[wrapped.assetId, wrapped.message]] };
     }
 
-    if (input.exportedUpstreamIds.has(asset.assetId)) {
-      exportedUpstreams.push(projectChunkUpstreamSnapshot(evaluatedAsset, upstreamResult, unavailabilityRoots));
-    }
+    const snapshot = projectChunkUpstreamSnapshot(evaluatedAsset, upstreamResult, unavailabilityRoots);
+    evaluatedById.set(asset.assetId, snapshot.evaluatedShim);
+    if (input.exportedUpstreamIds.has(asset.assetId)) exportedUpstreams.push(snapshot);
 
     const tokenizedFundState = extractV9InternalTokenizedFundState(evaluatedAsset);
     if (tokenizedFundState !== null) {
@@ -524,7 +438,6 @@ export function evaluateV9Chunk(input: {
     for (const [gapId, classification] of collectV9DocumentationGapIds(input.envelope, [enrichedDocFacts])) {
       assetLocalDocGapIds.push(gapId);
       assetLocalDocEntries.push([gapId, classification]);
-      localChunkDocGapEntries.push([gapId, classification]);
       docGapIds.set(gapId, classification);
     }
     documentationCards.push({
@@ -536,10 +449,19 @@ export function evaluateV9Chunk(input: {
         limitingCauseGapIds: evaluatedAsset.scoreInput.pillars[pillar].limitingCauseGapIds,
       })),
     });
+    openEvidenceAssets.push({
+      assetId: asset.assetId,
+      gaps: asset.gaps.map(projectV9OpenEvidenceGap),
+      controls: asset.controls.flatMap(({ controlKey, deploymentKey, authoredControlId }) =>
+        authoredControlId === undefined ? [] : [{ controlKey, deploymentKey, authoredControlId }]),
+    });
     openEvidenceInputs.push({
       assetId: evaluatedAsset.assetId,
       localDocumentationGapEntries: assetLocalDocEntries,
-      unresolvedFacts: evaluatedAsset.trace.unresolvedFacts,
+      unresolvedFacts: evaluatedAsset.trace.unresolvedFacts.map(
+        ({ code, critical, responsibility, cause, sourceGapId, causeGapIds }) =>
+          ({ code, critical, responsibility, cause, sourceGapId, causeGapIds }),
+      ),
     });
 
     assetDigests.push(evaluatedAssetDigestPayload(evaluatedAsset));
@@ -570,8 +492,8 @@ export function evaluateV9Chunk(input: {
         backingFromLiveReserves: item.backingFromLiveReserves,
         supply: item.dependencyMetadata.supply,
         sharedBookId: item.dependencyMetadata.sharedBookId,
-        dependencyProvenance: new Map(item.dependencyMetadata.dependencyProvenance),
-        dependencyTypes: new Map(item.dependencyMetadata.dependencyTypes),
+        dependencyProvenance: item.dependencyMetadata.dependencyProvenance,
+        dependencyTypes: item.dependencyMetadata.dependencyTypes,
         dependencyCoverage: item.dependencyMetadata.dependencyCoverage,
         ...(item.dependencyMetadata.reserveCompositionAdmission === undefined
           ? {}
@@ -632,9 +554,9 @@ export function evaluateV9Chunk(input: {
     },
     chunkSummary: {
       chunkIndex: input.chunkIndex,
-      localDocumentationGapEntries: localChunkDocGapEntries,
       documentationCards,
       openEvidenceInputs,
+      openEvidenceAssets,
       assetDigests,
       commonModeResults,
       internalLenderBackingScores,
@@ -652,7 +574,7 @@ export function evaluateV9Chunk(input: {
  * metadata from all chunk summaries and card shards, matching monolithic
  * `candidate.ts` byte-for-byte.
  */
-export function assembleV9ChunkedCandidate(input: {
+export async function assembleV9ChunkedCandidate(input: {
   envelope: V9ValidatedPolicyEnvelope;
   policyVersion: string;
   publishedAtSec: number;
@@ -665,11 +587,10 @@ export function assembleV9ChunkedCandidate(input: {
   compilerFactSchemaDigest: string;
   producerCapabilityDigest: string;
   dexExitRouteMaxAgeSec: number;
-  openEvidenceCatalog: readonly V9OpenEvidenceAsset[];
-  chunkSummaries: readonly V9EvalChunkSummaryPayload[];
-  cardShards: readonly V9EvalCardShardPayload[];
+  chunkSummaries: V9EvalChunkSummaryPayload[];
+  cardShards: AsyncIterable<V9EvalCardShardPayload | null>;
   verifiedEmptyExitByAssetId?: Readonly<Record<string, SafetyScoreV9VerifiedEmptyExitWitness>>;
-}): {
+}): Promise<{
   candidate: SafetyScoreV9CurrentResponse;
   scoreResultDigest: string;
   evaluatedSetDigest: string;
@@ -678,7 +599,7 @@ export function assembleV9ChunkedCandidate(input: {
   verifiedEmptyExitBaselineOptions: BuildAcceptedBaselineVerifiedEmptyOptions;
   lenderCollateralBackingScoresByAssetId: Record<string, number>;
   internalExitRoutesByAssetId: Record<string, SafetyScoreV9InternalExitRouteSummary>;
-} {
+} | null> {
   assertV9ValidatedPolicyEnvelope(input.envelope);
   const allAssetDigests: V9AssetDigestPayload[] = [];
   const allCommonModeResults: V9CommonModeProjectionResult[] = [];
@@ -691,8 +612,20 @@ export function assembleV9ChunkedCandidate(input: {
 
   // Replay openEvidence in exact topological order with advancing docGapIds union.
   const docGapIds = new Map<string, V9DocumentationClassification>();
-  const openEvidenceCounter = createV9OpenEvidenceCounter(
-    input.openEvidenceCatalog,
+  const referencedGapIds = new Set<string>();
+  for (const chunk of input.chunkSummaries) {
+    for (const asset of chunk.openEvidenceInputs) {
+      for (const fact of asset.unresolvedFacts) {
+        if (fact.cause === "D") continue;
+        if (fact.sourceGapId != null) referencedGapIds.add(fact.sourceGapId);
+        else if (fact.causeGapIds?.length === 1) referencedGapIds.add(fact.causeGapIds[0]!);
+      }
+    }
+  }
+  let openEvidenceCounter: ReturnType<typeof createV9OpenEvidenceCounter> | null = createV9OpenEvidenceCounter(
+    input.chunkSummaries.flatMap((chunk) => chunk.openEvidenceAssets.splice(0).map((asset) => ({
+      ...asset, gaps: asset.gaps.filter((gap) => referencedGapIds.has(gap.gapId)),
+    }))),
     (gap) => docGapIds.get(gap.gapId)?.reason ?? null,
   );
 
@@ -722,6 +655,8 @@ export function assembleV9ChunkedCandidate(input: {
     }
   }
 
+  input.chunkSummaries.length = 0;
+  referencedGapIds.clear();
   allAssetDigests.sort((left, right) => compareText(left.compactTrace.assetId, right.compactTrace.assetId));
   const scoreResultDigest = computeV9CompactResultDigest(allAssetDigests.map((asset) => asset.compactTrace));
   const evaluatedSetDigest = computeV9EvaluatedSetDigest(
@@ -742,6 +677,8 @@ export function assembleV9ChunkedCandidate(input: {
     allAssetDigests,
   );
 
+  allAssetDigests.length = 0;
+
   const candidateIdentity = SafetyScoreV9CandidateIdentityV1Schema.parse({
     schemaVersion: 1,
     policyId: input.envelope.policy.policyId,
@@ -761,6 +698,7 @@ export function assembleV9ChunkedCandidate(input: {
   });
 
   const openEvidence = openEvidenceCounter.finish();
+  openEvidenceCounter = null;
   const carriers = buildV9DocumentationCarriers({
     envelope: input.envelope,
     gapIds: docGapIds,
@@ -768,11 +706,15 @@ export function assembleV9ChunkedCandidate(input: {
     openEvidence,
   });
 
+  allDocCards.length = 0;
+  docGapIds.clear();
+
   const foreignCauseGaps = [...allForeignGapIds].sort();
   const foreignRefs = new Map(foreignCauseGaps.map((id, index) => [id, index]));
   const compactCard = createV9PublicCardShardViewFactory();
   const finalizedById = new Map<string, SafetyScoreV9CurrentCard>();
-  for (const shard of input.cardShards) {
+  for await (const shard of input.cardShards) {
+    if (shard === null) return null;
     for (const draft of shard.drafts) {
       finalizedById.set(draft.id, compactCard(finalizeV9PublicCauseGapCard(draft, foreignRefs)));
     }
@@ -878,33 +820,67 @@ export function assembleV9ChunkedCandidate(input: {
   };
 }
 
-export function buildV9DependencyPlanForCompiledFacts(
-  factSet: CompiledV9FactSetV3,
-): {
-  dependencyPlan: Readonly<V9DependencyEvaluationPlan>;
-  planningById: Map<string, V9PlanningFacts>;
-  upstreamsByAssetId: Map<string, readonly string[]>;
-  openEvidenceCatalog: V9OpenEvidenceAsset[];
-} {
+interface V9ChunkCompilerInput {
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>;
+  extensionOptions: BuildSafetyScoreV9BaselineExtensionOptions;
+  evaluationFailures: ReadonlyMap<string, string>;
+  verifiedEmptyExitByAssetId?: Readonly<Record<string, SafetyScoreV9VerifiedEmptyExitWitness>>;
+}
+
+export function planV9ChunkedEvaluation(input: V9ChunkCompilerInput & {
+  policy: V9ValidatedPolicyEnvelope;
+  maxChunkAssets: number;
+}) {
+  const source = createSafetyScoreV9BaselineExtensionSource(input.fixedInput, input.extensionOptions);
   const planningById = new Map<string, V9PlanningFacts>();
-  const openEvidenceCatalog: V9OpenEvidenceAsset[] = [];
-  for (const asset of factSet.assets) {
-    planningById.set(asset.assetId, projectPlanningFacts(asset));
-    openEvidenceCatalog.push({
-      assetId: asset.assetId,
-      gaps: asset.gaps,
-      controls: asset.controls.map((control) => ({
-        controlKey: control.controlKey,
-        deploymentKey: control.deploymentKey,
-        ...(control.authoredControlId === undefined ? {} : { authoredControlId: control.authoredControlId }),
-      })),
-    });
+  const { factSet, quarantines, bridgeJoinDiagnostics } = planSafetyScoreV9FactSet(
+    input.fixedInput, source, input.evaluationFailures, input.verifiedEmptyExitByAssetId,
+    (asset) => { planningById.set(asset.assetId, projectPlanningFacts(asset, input.policy)); },
+  );
+  const assets = [...planningById.values()];
+  const dependencyPlan = buildV9DependencyEvaluationPlan({ activeAssetIds: factSet.activeAssetIds, assets });
+  const partition = partitionV9DependencyChunks(dependencyPlan, collectV9AssetUpstreamsMap(assets), input.maxChunkAssets);
+  const { v9FactSetDigest, ...factSetHeader } = factSet;
+  return {
+    factSetHeader,
+    factSetDigest: v9FactSetDigest,
+    sourceGenerations: sourceGenerations(factSet),
+    compilerFactSchemaDigest: computeSafetyScoreV9CompilerFactSchemaDigest(
+      compilerFactSchemaIdentity(input.fixedInput, source.extension, factSet),
+    ),
+    producerCapabilityDigest: computeSafetyScoreV9ProducerCapabilityDigest(
+      producerCapabilityIdentity(input.fixedInput, source.extension),
+    ),
+    dexExitRouteMaxAgeSec: source.extension.routeFreshness.dexMaxAgeSec,
+    dependencyPlan,
+    partition,
+    marketRanks: Object.fromEntries(marketRankByAsset(assets, factSet.activeAssetIds)),
+    commonModeSignals: Object.fromEntries(commonModeSignalsByAsset(dependencyPlan, input.policy, planningById)),
+    quarantines,
+    quarantineAffectedAssetIds: quarantineAffectedAssetIds({ assets }, quarantines),
+    bridgeJoinDiagnostics,
+  };
+}
+
+export function* compileV9ChunkAssets(input: V9ChunkCompilerInput & {
+  factSetHeader: Omit<V9FactSetCoreV3, "assets">;
+  assetIds: readonly string[];
+  marketRanks: Readonly<Record<string, number>>;
+  commonModeSignals: Readonly<Record<string, readonly V9StructuralSignal[]>>;
+}): Iterable<V9ChunkAsset> {
+  const { extensionOptions, reserveRejections } = prepareV9PublicationExtensionOptions(
+    input.fixedInput.clockSec, input.extensionOptions,
+  );
+  const source = createSafetyScoreV9BaselineExtensionSource(input.fixedInput, extensionOptions);
+  for (const { facts } of compileSafetyScoreV9AssetSlice(
+    input.fixedInput, source, input.factSetHeader, input.assetIds, input.evaluationFailures, input.verifiedEmptyExitByAssetId,
+  )) {
+    const id = facts.assetId;
+    yield {
+      facts,
+      ...projectV9PublicationAssetFacts(facts, input.factSetHeader, input.fixedInput, ACTIVE_META_BY_ID.get(id), reserveRejections),
+      marketRank: input.marketRanks[id] ?? null,
+      dependencySignals: input.commonModeSignals[id] ?? [],
+    };
   }
-  const planningAssets = [...planningById.values()];
-  const dependencyPlan = buildV9DependencyEvaluationPlan({
-    activeAssetIds: factSet.activeAssetIds,
-    assets: planningAssets,
-  });
-  const upstreamsByAssetId = collectV9AssetUpstreamsMap(factSet.assets);
-  return { dependencyPlan, planningById, upstreamsByAssetId, openEvidenceCatalog };
 }

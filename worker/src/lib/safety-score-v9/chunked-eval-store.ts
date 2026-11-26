@@ -9,6 +9,7 @@ import { V9_MEMORY_LANE_LEASE_KEY } from "../v9-slot-window";
 
 /** Max UTF-8/ASCII payload bytes per `v9_eval_chunks` row (CHECK constraint <= 524,288). */
 export const V9_EVAL_CHUNK_MAX_ROW_BYTES = 524_288;
+export const V9_EVAL_CHUNK_MAX_JSON_BYTES = 10 * 1024 * 1024;
 /** Safe split ceiling leaving headroom below the 512 KiB row CHECK constraint. */
 export const V9_EVAL_CHUNK_PART_TARGET_BYTES = 480_000;
 /** Stale active runs older than 1 hour are swept at Seed and :52 resume. */
@@ -147,7 +148,11 @@ export function encodeV9EvalChunkParts(
   if (!Number.isInteger(maxPartBytes) || maxPartBytes < 1 || maxPartBytes > V9_EVAL_CHUNK_MAX_ROW_BYTES) {
     throw new Error(`Invalid V9 eval chunk part ceiling: ${maxPartBytes}`);
   }
-  const compressed = deflateSync(strToU8(JSON.stringify(value)), { level: 1 });
+  const json = strToU8(JSON.stringify(value));
+  if (json.byteLength > V9_EVAL_CHUNK_MAX_JSON_BYTES) {
+    throw new Error(`V9 eval chunk exceeds JSON byte ceiling: ${json.byteLength}`);
+  }
+  const compressed = deflateSync(json, { level: 1 });
   const encoded = uint8ToBase64(compressed);
   if (encoded.length === 0) {
     throw new Error("Encoded V9 eval chunk payload must be non-empty");

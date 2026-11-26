@@ -3,6 +3,8 @@ import {
   V9FactSetCoreV2Schema,
   V9AssetFactsV3Schema,
   createV9FactSetCoreV3Schema,
+  V9FactSetHeaderV3Schema,
+  validateFactSetAsset,
   type V9AssetFactsV3,
   type CompiledV9FactSetV2,
   type CompiledV9FactSetV3,
@@ -86,6 +88,25 @@ const inProcessFactSetSchema = createV9FactSetCoreV3Schema(z.union([
     }
   }
 });
+
+/** The streamed compiler uses the same cohort checks with the full active-ID set. */
+export function createV9FactSetAssetValidator(input: Omit<V9FactSetCoreV3, "assets">) {
+  const header = V9FactSetHeaderV3Schema.parse(input);
+  const activeIds = new Set(header.activeAssetIds);
+  const validate = z.custom<V9AssetFactsV3>((value) => validatedAssetFacts.has(value as object))
+    .superRefine((asset, ctx) => {
+      if (asset.cdpStressCoverage !== undefined && header.sourceFingerprints.shockCoverage === undefined) {
+        ctx.addIssue({ code: "custom", path: ["sourceFingerprints", "shockCoverage"], message: "Stress coverage requires a source fingerprint" });
+      }
+      validateFactSetAsset(header, asset, activeIds, 0, ctx);
+      for (const { exposureIndex, factor, message } of findV9ReserveBoundFactorStatusIssues(
+        asset, V9_CANDIDATE_RESERVE_BOUND_POLICY.backing, header.asOfSec,
+      )) {
+        ctx.addIssue({ code: "custom", path: ["reserveExposures", exposureIndex, "factorStatuses", factor], message });
+      }
+    });
+  return { header, validateAsset: (asset: V9AssetFactsV3) => validate.parse(asset) };
+}
 
 /** Admit once, then retain only immutable identity proof, never an extra fact graph. */
 export function safeParseV9AssetFactsV3(input: unknown) {

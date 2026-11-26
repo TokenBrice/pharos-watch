@@ -96,6 +96,7 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/lib/report-cards-fixed-input-identity.ts",
   "shared/lib/report-cards-v9-projections.ts",
   "shared/lib/safety-score-publication.ts",
+  "shared/lib/safety-score-v9-capacity-limits.ts",
   "shared/lib/safety-score-v9-supply-attribution-journal.ts",
   "shared/lib/safety-score-v9/access-lookthrough.ts",
   "shared/lib/safety-score-v9/access-posture.ts",

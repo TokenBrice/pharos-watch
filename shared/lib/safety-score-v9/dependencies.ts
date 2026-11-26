@@ -41,7 +41,8 @@ export interface V9DependencyPlanningAsset {
   dependencies: { edges: readonly V9DependencyPlanningEdge[] };
   reserveExposures: readonly ({ exposureKey: string } & FailureDomainCarrier)[];
   exitRoutes: readonly ({ routeKey: string } & FailureDomainCarrier)[];
-  controls: readonly ({ controlKey: string } & FailureDomainCarrier & Partial<Pick<V9DeploymentControlFactV2, "executionScope" | "executionScopeContributors" | "executionScopeComplete" | "capabilities" | "claimImpairment">>)[];
+  controls: readonly ({ controlKey: string } & FailureDomainCarrier & Partial<Pick<V9DeploymentControlFactV2, "executionScopeComplete" | "capabilities" | "claimImpairment">> &
+    { executionScope?: V9DeploymentControlFactV2["executionScope"] | true; executionScopeContributors?: V9DeploymentControlFactV2["executionScopeContributors"] | true })[];
   peg: FailureDomainCarrier;
   supply: FailureDomainCarrier;
 }

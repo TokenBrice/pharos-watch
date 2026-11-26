@@ -948,6 +948,13 @@ Preserve migration lineage: do not repeat old-key/table DROP/DELETE or infer abs
 Post-publication diagnostic retention is documented separately in [Publication journal and movement attribution](../report-cards.md#publication-journal-and-movement-attribution) and [Accepted capture archive and historical replay](../report-cards.md#accepted-capture-archive-and-historical-replay).
 
 
+### Chunked publication
+
+Seed stages pinned input and replay transports at `run_context[1,4]`, plus the dependency plan and commit metadata at `run_context[0,2]`. The run row binds the accepted baseline by generation and digest. Eval recompiles one asset at a time and stages the card drafts, exported upstream state, and per-chunk summaries. The open-evidence summaries carry gap identity, cause, authored control identity and review date. Commit resolves referenced gaps in topological order against the advancing documentation classification, using the same counter as the monolithic path.
+
+Staged blobs are capped at 10 MiB of UTF-8 JSON and 512 KiB per D1 row. The resource lane compares the full canonical payload SHA on 343- and 560-asset cohorts and after quarantine escalation. It checks a 110 MiB post-GC heap ceiling at sampled phases in each Node stage. Production qualification uses Worker memory and execution telemetry after activation.
+
+
 ## Sharded Canonical Storage
 
 The `report-cards:v9` row may hold a sharded envelope (`publication-chunks.ts`): metadata plus `payloadChunks` (count, payload length/SHA-256, single-row-equivalent bytes) instead of `payload`, with base64 text in immutable ≤512 KiB `report-cards:v9:payload-chunk:v1:<payloadSha256>:<NNN>` rows. Acceptance writes chunks, deletes other payloads' chunks and moves the envelope atomically. `loadSafetyScoreV9PublicationStoredRow` reads envelope and chunks in **one** statement, verifies count/order/digest/length and reassembles the exact stored string, so codec checks, archives and `json_extract` readers are unchanged; a missing or altered chunk fails closed. Writers always shard: an admitted 3.1 MB stored value exceeds D1's 2,000,000-byte row limit, so the single-row writer and its heavy `SAFETY_V9_CHUNKED_PUBLICATION_WRITES` flag are retired (2026-10-27). Readers still accept historical inline rows. The rollback floor is the paired chunk- and dictionary-capable Worker with 14.0/2.25/3.1 MB transport caps; a rollback must never restore single-row writes.

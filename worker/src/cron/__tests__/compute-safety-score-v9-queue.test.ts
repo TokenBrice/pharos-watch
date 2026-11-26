@@ -126,6 +126,25 @@ describe("Safety Score V9 ADR-26 chunked Queue evaluation", () => {
     expect(await resumeActiveChunkedV9Evaluation({ db: chunk.db, sourceInvocationId: "test:idle", options: { workerVersion: V9_QUEUE_TEST_WORKER_VERSION, deadlineMs: Date.now() + 60_000 } })).toBeNull();
   });
 
+  it("recovers an inline commit after acceptance when completing the run fails", async () => {
+    const { db } = fixtures.open();
+    await seedDb(db);
+    const { first } = await seedRun(db, COHORT_IDS.length, "test:inline", false);
+    const commit = (await deliverV9Continuation(db, first)).sent[0]!;
+    expect(commit.stage).toBe("commit");
+    const store = await import("../../lib/safety-score-v9/chunked-eval-store");
+    vi.spyOn(store, "markV9EvalRunCompletedAndPrune").mockRejectedValueOnce(new Error("completion unavailable"));
+    expect((await deliverV9Continuation(db, commit, { deliveryId: "inline-commit" })).retried).toBe(true);
+    const accepted = await loadSafetyScoreV9Publication(db);
+    expect(accepted?.cards).toHaveLength(COHORT_IDS.length);
+    expect(await deliverV9Continuation(db, commit, { deliveryId: "inline-commit", attempts: 2 }))
+      .toEqual({ acked: true, retried: false, sent: [] });
+    const run = await loadV9EvalRun(db, first.runId);
+    const stored = await db.prepare("SELECT json_extract(value, '$.payloadSha256') AS sha FROM cache WHERE key = ?")
+      .bind(SAFETY_SCORE_V9_CACHE_KEYS.publication).first<{ sha: string }>();
+    expect(run).toMatchObject({ state: "completed", publication_generation_id: accepted!.publicationGenerationId, payload_sha256: stored!.sha });
+  });
+
   it("handles R8 quarantine escalation, N5 failed/evicted reclaim, held cron_runs, and duplicate/stale rejection", async () => {
     const f = fixtures.open();
     await seedDb(f.db);
