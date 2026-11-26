@@ -658,4 +658,28 @@ describe("YieldAnalysisClient", () => {
     expect(screen.getByTestId("yield-history-chart")).toBeTruthy();
     expect(screen.queryByRole("status")).toBeNull();
   });
+
+  it("shows asset-wide deadlines above the workbench and omits chain-scoped deadlines", () => {
+    // A fixed clock keeps both deadlines inside their windows whatever day the suite runs.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-26T12:00:00Z"));
+    try {
+      setRankingsQuery({ data: makeResponse([makeRanking()]) });
+      setHistoryQuery([]);
+      render(
+        <YieldAnalysisClient
+          id="usdn-smardex"
+          staticCoin={staticCoin("usdn-smardex", "SMARDEX USDN", "USDN", true)}
+          notices={[
+            { type: "warning", kind: "deadline", deadline: "2027-01-31", title: "Global sunset", message: "Redeem everywhere." },
+            { type: "warning", kind: "deadline", deadline: "2026-12-15", chains: ["abstract"], title: "Abstract shutdown", message: "Bridge off Abstract." },
+          ]}
+        />,
+      );
+      expect(screen.getByText("Global sunset")).toBeTruthy();
+      expect(screen.queryByText("Abstract shutdown")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

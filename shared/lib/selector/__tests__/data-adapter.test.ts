@@ -26,7 +26,10 @@ afterAll(() => {
 vi.mock("../../stablecoins/client-registry", async (importOriginal) => {
   const actual = await importOriginal<typeof ClientRegistry>();
   const base = actual.CLIENT_ACTIVE_META_BY_ID.get("usdc-circle")!;
-  const reviewed = { ...base, custodyModel: "cex" as const };
+  // A Noble-only deadline alert must stay off every asset-wide selector read.
+  const reviewed = { ...base, custodyModel: "cex" as const, alerts: [
+    { type: "warning" as const, title: "Noble route closes", kind: "deadline" as const, deadline: "2023-11-20", chains: ["noble"] },
+  ] };
   const unreviewed = { ...base, id: "unreviewed", custodyModel: undefined };
   const structural = {
     ...unreviewed,
@@ -253,10 +256,13 @@ describe("buildSelectorRows", () => {
     expect(result.datasetHash).toMatch(/^[a-f0-9]{64}$/);
   });
 
-  it("carries the highest curated holder notice", () => {
-    const rows = buildSelectorRows(EMPTY_ARGS).rows;
+  it("carries the highest curated holder notice, never a chain-scoped one", () => {
+    const stablecoinsData = { peggedAssets: ["usdc-circle", "halted"].map((id) => ({ id, circulating: { peggedUSD: 10_000_000 } })) };
+    const rows = buildSelectorRows({ ...EMPTY_ARGS, stablecoinsData: stablecoinsData as unknown as StablecoinListResponse }).rows;
     expect(rows.get("halted")!.holderNotice).toEqual({ kind: "critical", title: "Chain halted" });
     expect(rows.get("usdc-circle")!.holderNotice).toBeNull();
+    expect(["usdc-circle", "halted"].map((id) => evaluateExclusions(rows.get(id)!, makeInput())?.reason ?? null))
+      .toEqual([null, "critical-notice"]);
   });
 
   it("keeps an unread supply distinct from an explicit zero", () => {

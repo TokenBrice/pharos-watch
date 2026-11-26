@@ -230,8 +230,18 @@ describe("calendar-only catalog dates", () => {
     });
   });
 
-  it.each([{ kind: "deadline" }, { kind: "paused", deadline: "2026-11-26" }])("couples a notice deadline date to kind deadline (%o)", (extra) => {
-    expect(StablecoinMetaSourceAssetSchema.safeParse(makeCoin({ notices: [{ type: "warning", title: "T", message: "M", ...extra }] })).success).toBe(false);
+  const source = { label: "Issuer notice", url: "https://example.com/notice" };
+  const date = "2026-11-26";
+  it.each<[Record<string, unknown>, string | null]>([
+    [{ kind: "deadline" }, "deadline"], [{ deadline: date }, "deadline"], [{ kind: "history", deadline: date }, "deadline"],
+    [{ kind: "paused", deadline: date }, null], [{ kind: "deadline", deadline: date, chains: ["noble", "abstract"] }, null],
+    [{ type: "danger", chains: ["noble"] }, "chains"], [{ kind: "paused", chains: ["noble"] }, "chains"], [{ kind: "depeg", chains: ["noble"] }, "chains"],
+    [{ chains: ["constructor"] }, "chains.0"], [{ chains: ["noble", "noble"] }, "chains"], [{ chains: [] }, "chains"],
+    [{ sources: [source] }, null], [{ sources: [{ ...source, label: " " }] }, "sources.0.label"], [{ sources: [] }, "sources"],
+  ])("validates notice deadline, chain scope and sources (%o)", (extra, path) => {
+    const result = StablecoinMetaSourceAssetSchema.safeParse(makeCoin({ notices: [{ type: "warning", title: "T", message: "M", ...extra }] }));
+    const issues = result.success ? [] : result.error.issues.map((e) => e.path.join("."));
+    expect(issues).toEqual(path === null ? [] : expect.arrayContaining([`notices.0.${path}`]));
   });
 
   it.each(["2024", "2024-02", "2024-Q1", "2024-H1", "2024-02-29"])("keeps fuzzy launch-date precision %s", (date) => {

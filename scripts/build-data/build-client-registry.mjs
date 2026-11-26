@@ -200,20 +200,22 @@ export function projectLiveReserveAdapter(coin) {
 
 /**
  * State-bearing notices for cross-coin surfaces: every danger notice plus paused
- * and deadline notices, never resolved history. Messages stay in the detail
- * projection; undefined when none apply.
+ * and deadline notices, and any other chain-scoped notice (for its chain page),
+ * never resolved history, with any chain scope. Messages and sources stay in the
+ * detail projection; undefined when none apply.
  */
 export function projectAlerts(coin) {
   const alerts = [];
   for (const notice of coin?.notices ?? []) {
     if (notice?.kind === "history") continue;
-    if (notice?.type !== "danger" && notice?.kind !== "paused" && notice?.kind !== "deadline") continue;
+    if (notice?.type !== "danger" && notice?.kind !== "paused" && notice?.kind !== "deadline" && !notice?.chains?.length) continue;
     alerts.push({
       type: notice.type,
       title: notice.title,
       ...(notice.kind ? { kind: notice.kind } : {}),
       ...(notice.deadline ? { deadline: notice.deadline } : {}),
       ...(notice.asOf ? { asOf: notice.asOf } : {}),
+      ...(notice.chains?.length ? { chains: [...notice.chains] } : {}),
     });
   }
   return alerts.length > 0 ? alerts : undefined;

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { resolveCoinState, resolveCoinStates, type CoinStateNotice } from "../coin-state";
+import { noticeAppliesToScope, resolveCoinState, resolveCoinStates, type CoinStateNotice } from "../coin-state";
 
 const NOW = Date.parse("2026-11-17T12:00:00Z") / 1000;
 const danger: CoinStateNotice = { type: "danger", title: "Chain halted", kind: "paused" };
-const deadline = (date: string, type: CoinStateNotice["type"] = "warning"): CoinStateNotice => ({ type, title: "Migration closes", kind: "deadline", deadline: date });
+const deadline = (date: string, type: CoinStateNotice["type"] = "warning", title = "Migration closes"): CoinStateNotice => ({ type, title, kind: "deadline", deadline: date });
 
 describe("resolveCoinStates", () => {
   it("orders every applicable state by the shared precedence ladder", () => {
@@ -34,5 +34,30 @@ describe("resolveCoinStates", () => {
   it("raises danger notices, paused or ahead, as critical", () => {
     expect(resolveCoinState({ notices: [danger] })).toEqual({ kind: "critical", notice: danger });
     expect(resolveCoinState({ notices: [deadline("2027-03-01", "danger")], nowSec: NOW })).toMatchObject({ kind: "critical" });
+  });
+
+  it("leads with the earliest deadline in the window, authored order on ties", () => {
+    const notices = [deadline("2026-12-10", "warning", "Late"), deadline("2026-11-20", "info", "Early"), deadline("2026-11-20", "warning", "Early tie")];
+    expect(resolveCoinState({ notices, nowSec: NOW })).toMatchObject({ kind: "deadline", notice: { title: "Early" }, daysToDeadline: 3 });
+  });
+
+  it.each([
+    ["an upcoming deadline over a nearer passed one", ["2026-11-15", "2026-12-10"], "2026-12-10", 23],
+    ["the most recently passed when every deadline has passed", ["2026-10-25", "2026-11-10"], "2026-11-10", -7],
+  ] as const)("leads with %s", (_label, dates, lead, days) => {
+    expect(resolveCoinState({ notices: dates.map((date) => deadline(date)), nowSec: NOW }))
+      .toMatchObject({ kind: "deadline", notice: { deadline: lead }, daysToDeadline: days });
+  });
+
+  it("keeps a paused notice with a passed closing date paused, never spent", () => {
+    const paused: CoinStateNotice = { type: "warning", title: "Redemptions paused", kind: "paused", deadline: "2026-01-01" };
+    expect(resolveCoinStates({ notices: [paused], nowSec: NOW })).toEqual([{ kind: "paused", notice: paused }]);
+  });
+
+  // A chain-scoped notice applies only on its chains' pages; asset-wide reads skip it.
+  it.each([[undefined, []], [null, []], ["ethereum", []], ["noble", ["deadline"]]] as const)("scopes chain notices to chainId %s", (chainId, kinds) => {
+    const scoped = { ...deadline("2026-11-26"), chains: ["noble"] };
+    expect(resolveCoinStates({ notices: [scoped], nowSec: NOW, chainId }).map((state) => state.kind)).toEqual(kinds);
+    expect(noticeAppliesToScope({}, chainId)).toBe(true);
   });
 });
