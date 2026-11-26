@@ -8,6 +8,23 @@ import {
   type TelegramDewsBand,
   type TelegramSafetyMode,
 } from "../types/status/telegram";
+import { TELEGRAM_ALERT_POLICY } from "./telegram-delivery-policy";
+
+function formatCompactUsdThreshold(amountUsd: number): string {
+  if (amountUsd >= 1_000_000_000 && amountUsd % 1_000_000_000 === 0) {
+    return `$${amountUsd / 1_000_000_000}B`;
+  }
+  if (amountUsd >= 1_000_000 && amountUsd % 1_000_000 === 0) {
+    return `$${amountUsd / 1_000_000}M`;
+  }
+  if (amountUsd >= 1_000 && amountUsd % 1_000 === 0) {
+    return `$${amountUsd / 1_000}K`;
+  }
+  return `$${amountUsd.toLocaleString("en-US")}`;
+}
+
+const FREEZE_LIVE_THRESHOLD = formatCompactUsdThreshold(TELEGRAM_ALERT_POLICY.freeze.realtimeMinAmountUsd);
+const SAFETY_GLOBAL_MIN_POINTS = TELEGRAM_ALERT_POLICY.safety.globalMinScoreDrop;
 
 /** Durable settings callback codes; null/default is deliberately not callback Off ("0"). */
 export const DEWS_BAND_CODES = { A: TELEGRAM_DEWS_BANDS[0], W: TELEGRAM_DEWS_BANDS[1], D: TELEGRAM_DEWS_BANDS[2] } as const;
@@ -87,13 +104,14 @@ const TELEGRAM_ALERT_FAMILY_REGISTRY = {
     eventIdsKey: "dewsIds",
     rollupOrder: 1,
     public: {
-      label: "DEWS Threat Level",
+      label: "Early warning (DEWS)",
       shortLabel: "DEWS",
       publicPhrase: "DEWS threat bands",
       featureLine: "DEWS threat-band alerts (ALERT, WARNING, DANGER)",
     },
-    miniAppLabel: "Early warning",
-    miniAppDescription: "Stress rises on the DEWS radar",
+    miniAppLabel: "Early warning (DEWS)",
+    miniAppDescription: "Stress on this coin is rising",
+    miniAppGlobalDescription: "Daily summary only, never live",
   },
   depeg: {
     persistence: {
@@ -107,13 +125,14 @@ const TELEGRAM_ALERT_FAMILY_REGISTRY = {
     eventIdsKey: "depegIds",
     rollupOrder: null,
     public: {
-      label: "Depeg Events",
+      label: "Depeg",
       shortLabel: "Depeg",
       publicPhrase: "depeg events",
       featureLine: "Depeg alerts (triggered, worsening milestones, resolved)",
     },
     miniAppLabel: "Depeg",
     miniAppDescription: "Price moves away from the peg",
+    miniAppGlobalDescription: "Live for every coin. Expect the most messages.",
   },
   safety: {
     persistence: {
@@ -127,13 +146,14 @@ const TELEGRAM_ALERT_FAMILY_REGISTRY = {
     eventIdsKey: "safetyIds",
     rollupOrder: 0,
     public: {
-      label: "Safety Grade Changes",
+      label: "Safety Score",
       shortLabel: "Safety",
       publicPhrase: "severe safety-grade downgrades",
       featureLine: "Severe safety-grade downgrade alerts (two or more notches, or into D/F, held 6 hours) with reason lines",
     },
     miniAppLabel: "Safety Score",
     miniAppDescription: "Severe grade drops live, other moves daily",
+    miniAppGlobalDescription: `Daily summary only, moves of ${SAFETY_GLOBAL_MIN_POINTS} points or more`,
   },
   launch: {
     persistence: {
@@ -149,6 +169,7 @@ const TELEGRAM_ALERT_FAMILY_REGISTRY = {
     public: null,
     miniAppLabel: "Launch",
     miniAppDescription: "Retired",
+    miniAppGlobalDescription: "Retired",
   },
   reserve: {
     persistence: {
@@ -162,13 +183,14 @@ const TELEGRAM_ALERT_FAMILY_REGISTRY = {
     eventIdsKey: "reserveIds",
     rollupOrder: 3,
     public: {
-      label: "Reserve Drift",
+      label: "Reserve drift",
       shortLabel: "Reserve",
       publicPhrase: "live reserve-mix drift",
       featureLine: "Live reserve-mix drift alerts for covered stablecoins",
     },
-    miniAppLabel: "Reserve changes",
-    miniAppDescription: "Reserve mix shifts",
+    miniAppLabel: "Reserve drift",
+    miniAppDescription: "Reserves drift from the reviewed mix",
+    miniAppGlobalDescription: "Live, for coins with a live reserve feed",
   },
   freeze: {
     persistence: {
@@ -182,13 +204,14 @@ const TELEGRAM_ALERT_FAMILY_REGISTRY = {
     eventIdsKey: null,
     rollupOrder: 2,
     public: {
-      label: "Freeze and Blacklist Events",
+      label: "Freezes",
       shortLabel: "Freeze",
       publicPhrase: "issuer freeze, unfreeze, and destroy events",
-      featureLine: "Opt-in issuer destroy alerts and freeze or release alerts of $1M or more from the verified tape",
+      featureLine: `Opt-in issuer destroy alerts and freeze or release alerts of ${FREEZE_LIVE_THRESHOLD} or more from the verified tape`,
     },
     miniAppLabel: "Freezes",
-    miniAppDescription: "Large issuer freezes and token destroys",
+    miniAppDescription: `Issuer freezes of ${FREEZE_LIVE_THRESHOLD} or more, and destroys`,
+    miniAppGlobalDescription: `Live at ${FREEZE_LIVE_THRESHOLD} or more, smaller ones daily`,
   },
 } as const satisfies Record<TelegramAlertType, {
   persistence: TelegramAlertPersistence;
@@ -198,6 +221,7 @@ const TELEGRAM_ALERT_FAMILY_REGISTRY = {
   public: Omit<TelegramAlertFamily, "key" | "persistence"> | null;
   miniAppLabel: string;
   miniAppDescription: string;
+  miniAppGlobalDescription: string;
 }>;
 
 /** Per-family persistence descriptors, keyed by alert type. */
@@ -367,6 +391,9 @@ export const TELEGRAM_MINI_APP_ALERT_LABELS = Object.fromEntries(
 ) as Record<TelegramAlertType, string>;
 export const TELEGRAM_MINI_APP_ALERT_DESCRIPTIONS = Object.fromEntries(
   TELEGRAM_ALERT_TYPES.map((type) => [type, TELEGRAM_ALERT_FAMILY_REGISTRY[type].miniAppDescription]),
+) as Record<TelegramAlertType, string>;
+export const TELEGRAM_MINI_APP_GLOBAL_ALERT_DESCRIPTIONS = Object.fromEntries(
+  TELEGRAM_ALERT_TYPES.map((type) => [type, TELEGRAM_ALERT_FAMILY_REGISTRY[type].miniAppGlobalDescription]),
 ) as Record<TelegramAlertType, string>;
 
 /** Short control-surface label per family; retired families keep a label for legacy rows. */

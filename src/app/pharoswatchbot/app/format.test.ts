@@ -1,8 +1,20 @@
 import { describe, it, expect } from "vitest";
 import { PAUSE_SENTINEL_TS } from "@shared/lib/telegram-delivery-policy";
-import { coinCoverage, familyCoverage, formatAgo, formatClock, formatSnoozeUntil, formatTimeZoneCity, hasAnyCoverage } from "./format";
+import {
+  coinCoverage,
+  displayCoinName,
+  familyCoverage,
+  formatAgo,
+  formatClock,
+  formatQuietHoursRange,
+  formatSnoozeUntil,
+  formatTimeZoneCity,
+  hasAnyCoverage,
+  isQuietHoursActiveNow,
+} from "./format";
 import { coinSummary, sortCoinsByRank } from "./components/HomeScreen";
 import { largestBaseCoins, searchCatalog } from "./components/AddCoinsScreen";
+import { coveringPreset } from "./components/GroupScreens";
 import { makeMiniAppState, makeSubscribedCoin as makeCoin } from "@shared/test-utils/telegram-mini-app-state";
 import type { CatalogCoin, FollowedPreset, TelegramMiniAppState } from "./types";
 
@@ -77,10 +89,10 @@ describe("hasAnyCoverage", () => {
 describe("coinSummary", () => {
   const state = makeMiniAppState({ subscriber: { globalAlerts: NO_GLOBAL }, presets: [makePreset({ dews: true, depeg: true })] });
 
-  it("summarizes active, inherited and muted families", () => {
+  it("summarizes active, inherited and off families", () => {
     expect(coinSummary(makeCoin({ dews: true, safety: true }), state)).toBe("DEWS · Depeg · Safety");
     expect(coinSummary(makeCoin({ launch: true }), state)).toBe("DEWS · Depeg via USD Top 25");
-    expect(coinSummary(makeCoin({ dews: true }, { depeg: true }), state)).toBe("DEWS · Depeg muted");
+    expect(coinSummary(makeCoin({ dews: true }, { depeg: true }), state)).toBe("DEWS · Depeg off");
     expect(coinSummary({ ...makeCoin({}), stablecoinId: "usdt-tether" }, state)).toBe("No alerts");
   });
 
@@ -119,6 +131,17 @@ describe("ranking", () => {
       { stablecoinId: "usdt-tether", symbol: "USDT" },
     ], rankById).map((entry) => entry.symbol)).toEqual(["USDT", "USDC", "ZZZ"]);
   });
+  it("matches peg codes, NAV peg labels, case-insensitive names, and market-cap supersets", () => {
+    const eurAndNav: CatalogCoin[] = [
+      { stablecoinId: "eurc-circle", symbol: "EURC", name: "EURC", peg: "EUR", rank: 20 },
+      { stablecoinId: "susde-ethena", symbol: "sUSDe", name: "Ethena Staked USDe", peg: "USD", pegLabel: "USDe NAV", rank: 27, variant: true },
+    ];
+    expect(searchCatalog(eurAndNav, "eur").map((entry) => entry.symbol)).toEqual(["EURC"]);
+    expect(searchCatalog(eurAndNav, "nav").map((entry) => entry.symbol)).toEqual(["sUSDe"]);
+    expect(displayCoinName("DAI", "Dai")).toBeNull();
+    expect(displayCoinName("USDC", "USD Coin")).toBe("USD Coin");
+    expect(coveringPreset("mcap-ge-1b", [{ ...makePreset({ dews: true }), id: "mcap-ge-100m", label: "Over $100M" }])?.id).toBe("mcap-ge-100m");
+  });
 });
 
 describe("time formatting", () => {
@@ -130,9 +153,12 @@ describe("time formatting", () => {
     expect(formatClock(now + 2 * 86_400, "UTC", now)).toBe("Fri 10:00");
   });
 
-  it("labels snooze and pause, relative ages and city names", () => {
+  it("labels snooze and pause, relative ages, ASCII quiet-hour ranges, active quiet window, and city names", () => {
     expect(formatSnoozeUntil(now + 3600, "UTC", now)).toBe("Snoozed until 11:00");
     expect(formatSnoozeUntil(PAUSE_SENTINEL_TS, "UTC", now)).toBe("Paused until you resume");
+    expect(formatQuietHoursRange(22, 7)).toBe("22:00-07:00");
+    expect(isQuietHoursActiveNow({ enabled: true, startHourUtc: 22, endHourUtc: 7, timezone: "UTC" }, now)).toBe(false);
+    expect(isQuietHoursActiveNow({ enabled: true, startHourUtc: 22, endHourUtc: 7, timezone: "UTC" }, Date.UTC(2026, 9, 21, 23, 0) / 1000)).toBe(true);
     expect(formatAgo(null, now)).toBe("Not yet");
     expect(formatAgo(now - 3 * 3600, now)).toBe("3 h ago");
     expect(formatAgo(now - 86_400, now)).toBe("Yesterday");

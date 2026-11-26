@@ -216,8 +216,6 @@ describe("useMiniAppMutations", () => {
     await act(async () => { await mutation; });
     expect(onSnapshotReplaced).toHaveBeenCalledWith(makeSnapshot(nextState));
     expect(result.current.isMutating).toBe(false);
-    expect(webApp.enableClosingConfirmation).toHaveBeenCalledOnce();
-    expect(webApp.disableClosingConfirmation).toHaveBeenCalledOnce();
   });
 
   it("enforces the server retry window and allows a mutation after it expires", async () => {
@@ -245,21 +243,34 @@ describe("useMiniAppMutations", () => {
     expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledTimes(2);
   });
 
-  it("refreshes once for a version mismatch and never replays the rejected mutation", async () => {
+  it("handles 409 version mismatch silently when reload starts and enters terminal update-required otherwise", async () => {
     const error = new MiniAppRequestError(409, "catalog-version-mismatch", null, {
       contractVersion: "3",
       catalogVersion: "catalog-v2-next",
     });
+    const webApp = makeWebApp();
+    apiMocks.refreshMiniAppBundleOnce.mockReturnValueOnce(true);
     apiMocks.postMiniAppSnapshot.mockRejectedValueOnce(error);
-    const { result } = renderHook(() => useMiniAppMutations(makeArgs()));
-
-    await act(async () => { await result.current.performMutation({ kind: "pause" }); });
+    const { result: reloading } = renderHook(() => useMiniAppMutations(makeArgs({ webApp })));
+    await act(async () => { await reloading.current.performMutation({ kind: "pause" }); });
     expect(apiMocks.refreshMiniAppBundleOnce).toHaveBeenCalledWith({ contractVersion: "3", catalogVersion: "catalog-v2-next" });
-    expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledOnce();
-    expect(result.current.notice).toMatchObject({ tone: "error", text: "Pharos was updated. Close and reopen it from PharosWatchBot." });
+    expect(reloading.current.notice).toBeNull();
+    expect(reloading.current.updateRequired).toBe(false);
+    expect(webApp.HapticFeedback?.notificationOccurred).not.toHaveBeenCalled();
+
+    const onUpdateRequired = vi.fn();
+    apiMocks.refreshMiniAppBundleOnce.mockReturnValueOnce(false);
+    apiMocks.postMiniAppSnapshot.mockRejectedValueOnce(error);
+    const { result } = renderHook(() => useMiniAppMutations(makeArgs({ onUpdateRequired })));
+    await act(async () => { await result.current.performMutation({ kind: "pause" }); });
+    expect(onUpdateRequired).toHaveBeenCalledOnce();
+    expect(result.current.updateRequired).toBe(true);
+    expect(result.current.notice).toBeNull();
+    await act(async () => { expect(await result.current.performMutation({ kind: "clear-snooze" })).toBeNull(); });
+    expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledTimes(2);
   });
 
-  it("keeps a stale-auth rejection as visible intent and stops sending edits", async () => {
+  it("keeps a stale-auth rejection as visible intent with monotonic IDs and stops sending edits", async () => {
     apiMocks.postMiniAppSnapshot.mockRejectedValueOnce(new MiniAppRequestError(401, "stale-auth"));
     const onSnapshotReplaced = vi.fn();
     const { result } = renderHook(() => useMiniAppMutations(makeArgs({ onSnapshotReplaced })));
@@ -267,11 +278,11 @@ describe("useMiniAppMutations", () => {
     await act(async () => { await result.current.performMutation({ kind: "pause" }); });
     expect(onSnapshotReplaced).not.toHaveBeenCalled();
     expect(result.current.notice).toBeNull();
-    expect(result.current.staleAuth).toEqual({ intent: "Not saved: Alerts paused until you resume." });
+    expect(result.current.staleAuth).toEqual({ id: 1, intent: "Not saved: Alerts paused until you resume." });
 
-    await act(async () => { await result.current.performMutation({ kind: "clear-snooze" }); });
+    await act(async () => { await result.current.performMutation({ kind: "pause" }); });
     expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledOnce();
-    expect(result.current.staleAuth).toEqual({ intent: "Not saved: Alerts resumed." });
+    expect(result.current.staleAuth).toEqual({ id: 2, intent: "Not saved: Alerts paused until you resume." });
   });
 
   it("ends the session when a signed read hits stale-auth", async () => {
@@ -281,7 +292,7 @@ describe("useMiniAppMutations", () => {
 
     await act(async () => { await result.current.performBulkWatchlistPreview(BULK_PREVIEW); });
     expect(onSessionAuthExpired).toHaveBeenCalledOnce();
-    expect(result.current.staleAuth).toEqual({ intent: null });
+    expect(result.current.staleAuth).toMatchObject({ intent: null });
     expect(result.current.notice).toBeNull();
   });
 
@@ -290,7 +301,7 @@ describe("useMiniAppMutations", () => {
 
     await act(async () => { await result.current.performMutation({ kind: "forget-me" }); });
     expect(apiMocks.postMiniAppSnapshot).not.toHaveBeenCalled();
-    expect(result.current.staleAuth).toEqual({ intent: "Data deletion was not run." });
+    expect(result.current.staleAuth).toMatchObject({ intent: "Data deletion was not run." });
   });
 
   it("restores the persisted server row, not stale client tuning, during the undo window", async () => {
@@ -326,7 +337,7 @@ describe("useMiniAppMutations", () => {
     expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledTimes(2);
   });
 
-  it("does not dispatch a canceled remove confirmation", async () => {
+  it("does not dispatch a canceled remove confirmation and warns when resetting a preset-covered coin", async () => {
     const showConfirm = vi.fn((_message: string, callback: (confirmed: boolean) => void) => callback(false));
     const coin = baseState.subscriptions[0]!;
     const { result } = renderHook(() => useMiniAppMutations(makeArgs({ webApp: makeWebApp({ showConfirm }) })));
@@ -335,10 +346,17 @@ describe("useMiniAppMutations", () => {
     act(() => { removed = result.current.remove(coin); });
     expect(showConfirm).toHaveBeenCalledWith("Remove USDC from your coins?", expect.any(Function));
     await expect(removed).resolves.toBe(false);
+
+    act(() => { removed = result.current.remove(coin, "USD Top 25"); });
+    expect(showConfirm).toHaveBeenLastCalledWith(
+      "USDC goes back to USD Top 25 alerts. Your changes for USDC are removed.",
+      expect.any(Function),
+    );
+    await expect(removed).resolves.toBe(false);
     expect(apiMocks.postMiniAppSnapshot).not.toHaveBeenCalled();
   });
 
-  it("expires the remove undo affordance after five seconds", async () => {
+  it("expires the remove undo affordance after eight seconds and emits one deduplicated notice", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const coin = baseState.subscriptions[0]!;
     const showConfirm = vi.fn((_message: string, callback: (confirmed: boolean) => void) => callback(true));
@@ -347,7 +365,10 @@ describe("useMiniAppMutations", () => {
 
     act(() => { void result.current.remove(coin); });
     await waitFor(() => expect(result.current.notice?.undoLabel).toBe("Undo"));
+    expect(result.current.notice?.id).toBe(1);
     await act(async () => { vi.advanceTimersByTime(5_001); });
+    expect(result.current.notice?.undoLabel).toBe("Undo");
+    await act(async () => { vi.advanceTimersByTime(3_000); });
     expect(result.current.notice?.undoLabel).toBeUndefined();
     await act(async () => { result.current.undo(); });
     expect(row()).toBeUndefined();
@@ -391,20 +412,39 @@ describe("useMiniAppMutations", () => {
     expect(apiMocks.postMiniAppSnapshot.mock.calls[2]?.[1]).toEqual({ initData: "signed-init-data", operation: { kind: "forget-me" } });
     await waitFor(() => expect(result.current.forgottenView).toBe(true));
   });
-  it("previews then confirms a bulk edit and arms the server-derived undo", async () => {
+  it("uses a single native destructive showPopup for forget-me when available", async () => {
+    const showPopup = vi.fn((_params, cb?: (id: string) => void) => cb?.("delete"));
+    apiMocks.postMiniAppSnapshot.mockResolvedValue(makeSnapshot());
+    const { result } = renderHook(() => useMiniAppMutations(makeArgs({ webApp: makeWebApp({ showPopup, isVersionAtLeast: () => true }) })));
+    act(() => { result.current.forgetMe(); });
+    await waitFor(() => expect(result.current.forgottenView).toBe(true));
+    expect(showPopup).toHaveBeenCalledWith(expect.objectContaining({ title: "Delete all my data?", buttons: expect.arrayContaining([expect.objectContaining({ id: "delete", type: "destructive" })]) }), expect.any(Function));
+    expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledWith(expect.any(String), { initData: "signed-init-data", operation: { kind: "forget-me" } });
+  });
+
+  it("previews then confirms a bulk edit, surfaces sourceImpact, and arms the server-derived undo", async () => {
     const undo = { expectedPreferenceGeneration: 3, expectedFingerprint: "preview-v1-3-abcdef12", restoreDirectRows: [], removeStablecoinIds: ["usdt-tether"] };
     apiMocks.postMiniAppBulkWatchlistPreview.mockResolvedValue({
       contractVersion: "9", catalogVersion: "c",
-      result: { kind: "bulk-watchlist-preview", expectedPreferenceGeneration: 2, previewFingerprint: "preview-v1-2-abcdef12", adds: ["usdt-tether"], removes: [], unchanged: [], sourceImpact: [], undo },
+      result: {
+        kind: "bulk-watchlist-preview", expectedPreferenceGeneration: 2, previewFingerprint: "preview-v1-2-abcdef12",
+        adds: ["usdt-tether"], removes: ["usdc-circle"], unchanged: [],
+        sourceImpact: [{ stablecoinId: "usdc-circle", action: "remove", inheritedSourcesAfter: ["preset"] }],
+        undo,
+      },
     });
     apiMocks.postMiniAppSnapshot.mockResolvedValue(makeSnapshot());
     const { result } = renderHook(() => useMiniAppMutations(makeArgs()));
-    await act(async () => { expect(await result.current.applyBulkWatchlist(["usdt-tether"], [])).toBe(true); });
+    await act(async () => { expect(await result.current.applyBulkWatchlist(["usdt-tether"], ["usdc-circle"])).toBe(true); });
     expect(apiMocks.postMiniAppSnapshot.mock.calls[0]?.[1].operation).toEqual({
-      kind: "confirm-bulk-watchlist", addStablecoinIds: ["usdt-tether"], removeStablecoinIds: [],
+      kind: "confirm-bulk-watchlist", addStablecoinIds: ["usdt-tether"], removeStablecoinIds: ["usdc-circle"],
       expectedPreferenceGeneration: 2, previewFingerprint: "preview-v1-2-abcdef12",
     });
-    expect(result.current.notice).toMatchObject({ text: "Added 1 coin.", undoLabel: "Undo" });
+    expect(result.current.notice).toMatchObject({
+      id: 1,
+      text: "Added 1 coin, removed 1. USDC is still covered by a preset.",
+      undoLabel: "Undo",
+    });
     await act(async () => { result.current.undo(); });
     expect(apiMocks.postMiniAppSnapshot.mock.calls[1]?.[1].operation).toEqual({ kind: "undo-bulk-watchlist", ...undo });
   });
@@ -433,7 +473,7 @@ describe("useMiniAppMutations", () => {
     await act(async () => { expect(await result.current.applyBulkWatchlist(["usdt-tether", "usdc-circle"], [])).toBe(false); });
     expect(apiMocks.postMiniAppBulkWatchlistPreview).not.toHaveBeenCalled();
     expect(apiMocks.postMiniAppSnapshot).not.toHaveBeenCalled();
-    expect(result.current.staleAuth).toEqual({ intent: "Not saved: Added 2 coins." });
+    expect(result.current.staleAuth).toMatchObject({ intent: "Not saved: Added 2 coins." });
   });
   it("tells the user a second edit was not sent while one is still saving", async () => {
     const { promise, resolve } = Promise.withResolvers<TelegramMiniAppClientSnapshot>();
@@ -447,9 +487,10 @@ describe("useMiniAppMutations", () => {
     await act(async () => { resolve(makeSnapshot()); await first; });
   });
 
-  it("keeps the undo armed while another request is in flight", async () => {
+  it("keeps the undo armed while another request is in flight and clears it on revision drift", async () => {
     await persistedMutations();
-    const { result } = renderHook(() => useMiniAppMutations(makeArgs()));
+    const args = makeArgs({ stateRevision: "state-v1-test" });
+    const { result, rerender } = renderHook((props) => useMiniAppMutations(props), { initialProps: args });
     await act(async () => { await result.current.remove(baseState.subscriptions[0]!); });
     expect(result.current.notice?.undoLabel).toBe("Undo");
     const pending = Promise.withResolvers<TelegramMiniAppClientSnapshot>();
@@ -464,5 +505,115 @@ describe("useMiniAppMutations", () => {
     await act(async () => { pending.resolve(makeSnapshot()); await busy; });
     apiMocks.postMiniAppSnapshot.mockImplementation(realImpl);
     expect(apiMocks.postMiniAppSnapshot.mock.calls.map((call) => call[1].operation.kind)).toEqual(["remove-coin", "pause"]);
+    // Re-arm undo via a fresh remove response, then advance stateRevision externally while idle: stale undo clears.
+    apiMocks.postMiniAppSnapshot.mockResolvedValueOnce({
+      ...makeSnapshot(),
+      undo: { expectedPreferenceGeneration: 3, expectedFingerprint: "preview-v1-3-abcdef12", restoreDirectRows: [], removeStablecoinIds: ["usdc-circle"] },
+    });
+    await act(async () => { await result.current.remove(baseState.subscriptions[0]!); });
+    expect(result.current.notice?.undoLabel).toBe("Undo");
+    rerender({ ...args, stateRevision: "state-v1-external" });
+    expect(result.current.notice?.undoLabel).toBeUndefined();
+  });
+
+  it.each<[string, TelegramMiniAppOperation, TelegramMiniAppOperation[], TelegramMiniAppState, TelegramMiniAppOperation | null]>([
+    [
+      "depeg 250 bps in flight then off + on resets depegStepBps to null",
+      { kind: "set-coin", stablecoinId: "usdc-circle", patch: { depegStepBps: 250 } },
+      [
+        { kind: "set-coin", stablecoinId: "usdc-circle", patch: { alertTypes: { depeg: false } } },
+        { kind: "set-coin", stablecoinId: "usdc-circle", patch: { alertTypes: { depeg: true } } },
+      ],
+      { ...baseState, subscriptions: [{ ...baseState.subscriptions[0]!, alertOverrides: { dews: true, depeg: true, safety: false, launch: false, reserve: false, freeze: false }, depegStepBps: 250 }] },
+      { kind: "set-coin", stablecoinId: "usdc-circle", patch: { alertTypes: { depeg: true }, depegStepBps: null } },
+    ],
+    [
+      "folds sibling coin edits + reserve alias into one residual compound patch",
+      { kind: "set-coin", stablecoinId: "usdc-circle", patch: { alertTypes: { safety: true } } },
+      [
+        { kind: "set-coin", stablecoinId: "usdc-circle", patch: { reserve: true } },
+        { kind: "set-coin", stablecoinId: "usdc-circle", patch: { alertTypes: { freeze: true } } },
+      ],
+      { ...baseState, subscriptions: [{ ...baseState.subscriptions[0]!, alertTypes: { ...baseState.subscriptions[0]!.alertTypes, safety: true } }] },
+      { kind: "set-coin", stablecoinId: "usdc-circle", patch: { alertTypes: { reserve: true, freeze: true } } },
+    ],
+    [
+      "triple-tap already satisfied by in-flight response skips second write",
+      { kind: "set-coin", stablecoinId: "usdc-circle", patch: { alertTypes: { safety: true } } },
+      [
+        { kind: "set-coin", stablecoinId: "usdc-circle", patch: { alertTypes: { safety: false } } },
+        { kind: "set-coin", stablecoinId: "usdc-circle", patch: { alertTypes: { safety: true } } },
+      ],
+      { ...baseState, subscriptions: [{ ...baseState.subscriptions[0]!, alertTypes: { ...baseState.subscriptions[0]!.alertTypes, safety: true }, alertOverrides: { dews: true, depeg: true, safety: true, launch: false, reserve: false, freeze: false }, safetyMode: null }] },
+      null,
+    ],
+    [
+      "follow-preset merges by field presence without reconstructing untouched booleans",
+      { kind: "follow-preset", presetId: "usd-top25", alertTypes: { safety: true } },
+      [{ kind: "follow-preset", presetId: "usd-top25", alertTypes: { dews: false } }],
+      { ...baseState, presets: [{ id: "usd-top25", label: "USD Top 25", alertTypes: { dews: true, depeg: true, safety: true }, depegStepBps: null, memberIds: ["usdc-circle"] }] },
+      { kind: "follow-preset", presetId: "usd-top25", alertTypes: { dews: false } },
+    ],
+  ])("coalesces same-entity writes: %s", async (_name, firstOp, queuedOps, firstResponseState, expectedResidual) => {
+    const first = Promise.withResolvers<TelegramMiniAppClientSnapshot>();
+    const second = Promise.withResolvers<TelegramMiniAppClientSnapshot>();
+    apiMocks.postMiniAppSnapshot.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+    const { result } = renderHook(() => useMiniAppMutations(makeArgs()));
+    act(() => {
+      result.current.mutate(firstOp);
+      for (const op of queuedOps) result.current.mutate(op);
+    });
+    expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledOnce();
+    expect(result.current.queuedOperation).not.toBeNull();
+    await act(async () => { first.resolve(makeSnapshot(firstResponseState)); await Promise.resolve(); });
+    if (expectedResidual == null) {
+      expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledOnce();
+      expect(result.current.isMutating).toBe(false);
+    } else {
+      await waitFor(() => expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledTimes(2));
+      expect(apiMocks.postMiniAppSnapshot.mock.calls[1]?.[1].operation).toEqual(expectedResidual);
+      await act(async () => { second.resolve(makeSnapshot(firstResponseState)); await Promise.resolve(); });
+      expect(result.current.isMutating).toBe(false);
+    }
+  });
+
+  it("discards queued edits on error, epoch change, and blocks cross-entity writes; handles 429 & drift on reads", async () => {
+    const onRefreshSession = vi.fn();
+    const onSnapshotReplaced = vi.fn();
+    const first = Promise.withResolvers<TelegramMiniAppClientSnapshot>();
+    apiMocks.postMiniAppSnapshot.mockReturnValueOnce(first.promise);
+    const args = makeArgs({ onRefreshSession, onSnapshotReplaced });
+    const { result, rerender } = renderHook((props) => useMiniAppMutations(props), { initialProps: args });
+    act(() => {
+      result.current.mutate({ kind: "set-coin", stablecoinId: "usdc-circle", patch: { alertTypes: { safety: true } } });
+      result.current.mutate({ kind: "set-coin", stablecoinId: "usdc-circle", patch: { alertTypes: { reserve: true } } });
+      // Cross-entity write is rejected without disturbing USDC's queued edit.
+      result.current.mutate({ kind: "set-coin", stablecoinId: "usdt-tether", patch: { alertTypes: { safety: true } } });
+    });
+    expect(result.current.queuedOperation).toMatchObject({ kind: "set-coin", stablecoinId: "usdc-circle" });
+    await act(async () => { first.reject(new MiniAppRequestError(500, "internal")); await Promise.resolve(); });
+    expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledOnce();
+    expect(result.current.queuedOperation).toBeNull();
+    expect(result.current.notice).toMatchObject({ tone: "error", text: "Couldn't confirm this change.", refreshAction: true });
+
+    // Launch epoch change drops late in-flight responses and queued patches.
+    const late = Promise.withResolvers<TelegramMiniAppClientSnapshot>();
+    apiMocks.postMiniAppSnapshot.mockReturnValueOnce(late.promise);
+    act(() => {
+      result.current.mutate({ kind: "set-coin", stablecoinId: "usdc-circle", patch: { alertTypes: { safety: true } } });
+      result.current.mutate({ kind: "set-coin", stablecoinId: "usdc-circle", patch: { alertTypes: { reserve: true } } });
+    });
+    rerender({ ...args, initData: "new-launch-init-data" });
+    await act(async () => { late.resolve(makeSnapshot()); await Promise.resolve(); });
+    expect(onSnapshotReplaced).not.toHaveBeenCalled();
+    expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledTimes(2);
+
+    // Signed read handles 429 retryAfterSec and 409 stale-bulk-preview auto-refresh cleanly.
+    apiMocks.postMiniAppBulkWatchlistPreview.mockRejectedValueOnce(new MiniAppRequestError(429, "rate-limited", 4));
+    await act(async () => { await result.current.performBulkWatchlistPreview(BULK_PREVIEW); });
+    expect(result.current.mutationRetryAfterSec).toBe(4);
+    apiMocks.postMiniAppBulkWatchlistPreview.mockRejectedValueOnce(new MiniAppRequestError(409, "stale-bulk-preview"));
+    await act(async () => { await result.current.performBulkWatchlistPreview(BULK_PREVIEW); });
+    expect(onRefreshSession).toHaveBeenCalledOnce();
   });
 });

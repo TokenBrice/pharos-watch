@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   MINI_APP_FEATURES,
+  MINI_APP_SCREENSHOTS,
   TELEGRAM_ACTIONS,
   TELEGRAM_ALERT_EXAMPLES,
   TELEGRAM_COMMAND_GROUPS,
@@ -69,7 +70,8 @@ describe("PharosWatchBotPage", () => {
       expect(copy).not.toMatch(retired);
     }
     expect(copy).toMatch(/daily Changes message/);
-    expect(copy).toMatch(/Fewer like this/);
+    expect(copy).toMatch(/Snooze 24h/);
+    expect(copy).toMatch(/Pause all 4h/);
     expect(copy).toContain(`at most ${TELEGRAM_ALERT_POLICY.chatCap.maxRealtimeMessages} live alerts a day`);
     expect(copy).toContain(`${String(TELEGRAM_ALERT_POLICY.rollup.localHour).padStart(2, "0")}:00`);
   });
@@ -103,6 +105,10 @@ describe("PharosWatchBotPage", () => {
     // A roll-up-only family's live tagline must still name the global opt-in.
     expect(taglineFor("dews")).toMatch(/Sent live/);
     expect(taglineFor("dews")).toMatch(/All stablecoins/);
+    expect(taglineFor("depeg")).toContain("Set an optional step (1%, 2.5% or 5%)");
+    expect(taglineFor("freeze")).toContain("Checked every 6 hours");
+    expect(MINI_APP_SCREENSHOTS[0].alt).toContain("followed presets");
+    expect(MINI_APP_SCREENSHOTS[0].alt).not.toContain("followed groups");
   });
 
   it("scopes alert coverage to the active alerting universe", () => {

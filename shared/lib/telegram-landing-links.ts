@@ -1,6 +1,6 @@
 // Landing-page deep-link tokens. They only route `/start` and `startapp` to
 // the right destination; no click or funnel telemetry is attached to them.
-export type TelegramLandingDestination = "setup" | "miniapp_home" | "miniapp_watchlist";
+export type TelegramLandingDestination = "setup" | "miniapp_setup" | "miniapp_home" | "miniapp_watchlist";
 
 export interface TelegramLandingLinkEntry {
   placement: "hero" | "setup" | "miniapp_setup" | "miniapp_home" | "miniapp_watchlist";
@@ -11,7 +11,7 @@ export interface TelegramLandingLinkEntry {
 export const TELEGRAM_LANDING_LINK_CATALOG = Object.freeze([
   { placement: "hero", token: "pw1_landing_hero", destination: "setup" },
   { placement: "setup", token: "pw1_landing_setup", destination: "setup" },
-  { placement: "miniapp_setup", token: "pw1_landing_miniapp_setup", destination: "miniapp_home" },
+  { placement: "miniapp_setup", token: "pw1_landing_miniapp_setup", destination: "miniapp_setup" },
   { placement: "miniapp_home", token: "pw1_landing_miniapp_home", destination: "miniapp_home" },
   { placement: "miniapp_watchlist", token: "pw1_landing_miniapp_watchlist", destination: "miniapp_watchlist" },
 ] as const satisfies readonly TelegramLandingLinkEntry[]);

@@ -43,6 +43,7 @@ async function postMutate(
     contractVersion?: string;
     botToken?: string | undefined;
     previousBotToken?: string;
+    execCtx?: ExecutionContext;
   } = {},
 ) {
   const initData = opts.initData ?? (await privateInitData());
@@ -50,7 +51,7 @@ async function postMutate(
     ? makeVersionedMiniAppRequest(MUTATE_PATH, { initData, operation }, opts.contractVersion ? { contractVersion: opts.contractVersion } : undefined)
     : makeMiniAppRequest(MUTATE_PATH, { initData, operation });
   const token = "botToken" in opts ? opts.botToken : BOT_TOKEN;
-  return handleTelegramMiniAppMutation(db, req, token, opts.previousBotToken);
+  return handleTelegramMiniAppMutation(db, req, token, opts.previousBotToken, opts.execCtx);
 }
 
 function seedPreset(sqlite: DatabaseSync, dews: number, depeg: number, safety: number, step: number | null, ts = NOW_SEC) {
@@ -271,16 +272,23 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(historyMatches(db, "INSERT INTO telegram_usage_daily", { 1: "mini_app_portability", 3: "bulk_watchlist_preview" })).toBe(true);
   });
 
-  it("rate-limits repeated read-only bulk previews with portable telemetry", async () => {
-    const cooldownKey = "telegram:command-cooldown:42:mini-app:session";
+  it("rate-limits repeated read-only bulk previews on their own 1s cooldown without colliding with session open", async () => {
+    const cooldownKey = "telegram:command-cooldown:42:mini-app:bulk-preview";
     const db = makeMiniAppDb([
-      { match: "INSERT INTO cache (key, value, updated_at)", matchBinds: [cooldownKey, "1", NOW_SEC, NOW_SEC - 2], rows: [], runMeta: { changes: 0 } },
-      { match: "SELECT updated_at FROM cache WHERE key = ?", matchBinds: [cooldownKey], first: { updated_at: NOW_SEC - 1 }, rows: [{ updated_at: NOW_SEC - 1 }] },
+      { match: "INSERT INTO cache (key, value, updated_at)", matchBinds: [cooldownKey, "1", NOW_SEC, NOW_SEC - 1], rows: [], runMeta: { changes: 0 } },
+      { match: "SELECT updated_at FROM cache WHERE key = ?", matchBinds: [cooldownKey], first: { updated_at: NOW_SEC }, rows: [{ updated_at: NOW_SEC }] },
     ]);
     const res = await postMutate(db, { kind: "preview-bulk-watchlist", addStablecoinIds: ["usdt-tether"], removeStablecoinIds: [] });
     expect(res.status).toBe(429);
     await expect(res.json()).resolves.toMatchObject({ code: "rate-limited", retryAfterSec: 1 });
     expect(historyMatches(db, "INSERT INTO telegram_usage_daily", { 1: "mini_app_portability", 3: "bulk_watchlist_preview", 4: "rate_limited" })).toBe(true);
+
+    // Same-second session open + bulk preview use distinct cooldown keys and do not collide.
+    const { db: liveDb } = persistedDb();
+    const initData = await privateInitData();
+    expect((await handleTelegramMiniAppSession(liveDb, makeMiniAppRequest("/api/telegram-mini-app/session", { initData }), BOT_TOKEN)).status).toBe(200);
+    expect((await postMutate(liveDb, { kind: "preview-bulk-watchlist", addStablecoinIds: ["usdt-tether"], removeStablecoinIds: [] }, { initData })).status).toBe(200);
+    expect((await postMutate(liveDb, { kind: "preview-bulk-watchlist", addStablecoinIds: ["usdt-tether"], removeStablecoinIds: [] }, { initData })).status).toBe(429);
   });
 
   it("applies global depeg-step mutations", async () => {
@@ -656,6 +664,26 @@ describe("handleTelegramMiniAppMutation", () => {
     vi.setSystemTime((NOW_SEC + 29) * 1000);
     expect(await readJsonResponse(await postMutate(db, { kind: "forget-me" }, { initData }), 429)).toMatchObject({ code: "rate-limited", retryAfterSec: 1 });
     expect(sqlite.prepare("SELECT chat_id FROM telegram_subscribers").all()).toEqual([{ chat_id: "42" }]);
+  });
+
+  it("reuses the strict stablecoins publication across follow-preset and post-mutation state, and offloads telemetry to waitUntil", async () => {
+    const { db, sqlite } = persistedDb();
+    const prepareSpy = vi.spyOn(db, "prepare");
+    const waitUntilPromises: Promise<unknown>[] = [];
+    const execCtx = {
+      waitUntil: vi.fn((p: Promise<unknown>) => { waitUntilPromises.push(p); }),
+      passThroughOnException: vi.fn(),
+    } as unknown as ExecutionContext;
+    const res = await postMutate(db, { kind: "follow-preset", presetId: "usd-top10", alertTypes: { dews: true } }, { versioned: true, execCtx });
+    const snapshot = TelegramMiniAppSnapshotSchema.parse(await readJsonResponse(res, 200));
+    const stablecoinsReads = prepareSpy.mock.calls.filter(
+      ([sql]) => sql.includes("SELECT") && sql.includes("value") && sql.includes("cache") && !sql.includes("INSERT INTO cache"),
+    ).length;
+    expect(stablecoinsReads).toBe(1);
+    expect(snapshot.state.presets[0]?.memberIds?.length).toBeGreaterThan(0);
+    expect(execCtx.waitUntil).toHaveBeenCalledTimes(1);
+    await Promise.all(waitUntilPromises);
+    expect(sqlite.prepare("SELECT count FROM telegram_usage_daily WHERE event_type = 'mini_app_mutation'").get()).toEqual({ count: 1 });
   });
 
   it("returns not-configured when the bot token is missing", async () => {

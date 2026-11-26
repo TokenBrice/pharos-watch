@@ -63,41 +63,62 @@ export function useTelegramBridge(opts: UseTelegramBridgeOptions = {}): Telegram
   const [previewName, setPreviewName] = useState<string | null>(null);
   const [status, setStatus] = useState<TelegramBridgeStatus>("loading");
 
-  // Probe the Telegram launch context with a bounded retry loop, then bind theme/viewport.
+  // Expose signed URL launch `initData` immediately at t=0 so the session POST runs
+  // in parallel with `telegram-web-app.js` loading; keep SDK discovery running
+  // independently so late-arriving WebApp chrome still binds and detaches cleanly.
   useEffect(() => {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
     let cleanup = () => {};
     let attempts = 0;
+    let sdkBound = false;
+    let initDataExposed = false;
+
+    const bindSdk = (nextWebApp: TelegramWebAppSdk) => {
+      if (sdkBound) return;
+      sdkBound = true;
+      setWebApp(nextWebApp);
+      applyTelegramTheme(nextWebApp);
+      cleanup = bindTelegramViewportAndTheme(nextWebApp);
+      nextWebApp.ready?.();
+      nextWebApp.expand?.();
+      if (nextWebApp.isVersionAtLeast?.("7.7")) {
+        nextWebApp.disableVerticalSwipes?.();
+      }
+    };
 
     const initialize = () => {
+      if (cancelled) return;
       const launch = getTelegramLaunchContext();
-      const shouldKeepWaiting = !launch.initData
-        && launch.hasTelegramLaunchHint
-        && attempts < TELEGRAM_LAUNCH_MAX_ATTEMPTS;
-      if (shouldKeepWaiting) {
+      // The SDK can load late or fail entirely after Telegram already placed the
+      // signed payload in the launch URL; the Worker HMAC stays the sole authority.
+      const resolvedInitData = launch.initData || (launch.hasTelegramLaunchHint ? launch.launchInitData : "");
+
+      if (launch.webApp && !sdkBound) {
+        bindSdk(launch.webApp);
+        if (launch.previewName) setPreviewName(launch.previewName);
+      }
+
+      if (resolvedInitData && !initDataExposed) {
+        initDataExposed = true;
+        setInitData(resolvedInitData);
+        setStartParam(launch.startParam);
+        if (launch.previewName) setPreviewName(launch.previewName);
+        setStatus("ready");
+      }
+
+      const needsInitData = !initDataExposed && launch.hasTelegramLaunchHint;
+      const needsSdk = !sdkBound && launch.hasTelegramLaunchHint;
+      if ((needsInitData || needsSdk) && attempts < TELEGRAM_LAUNCH_MAX_ATTEMPTS) {
         attempts += 1;
         timer = setTimeout(initialize, TELEGRAM_LAUNCH_RETRY_MS);
         return;
       }
-      if (cancelled) return;
-      // The SDK can fail to load (blocked host, slow WebView) after Telegram has
-      // already put the signed payload in the URL; the Worker HMAC stays the authority.
-      const resolvedInitData = launch.initData || (launch.hasTelegramLaunchHint ? launch.launchInitData : "");
-      setWebApp(launch.webApp);
-      setInitData(resolvedInitData);
-      setStartParam(launch.startParam);
-      setPreviewName(launch.previewName);
-      applyTelegramTheme(launch.webApp);
-      cleanup = bindTelegramViewportAndTheme(launch.webApp);
-      launch.webApp?.ready?.();
-      launch.webApp?.expand?.();
-      if (resolvedInitData) {
-        setStatus("ready");
-      } else if (launch.hasTelegramLaunchHint) {
-        setStatus("missing");
-      } else {
-        setStatus("preview");
+
+      if (!initDataExposed) {
+        setStartParam(launch.startParam);
+        setPreviewName(launch.previewName);
+        setStatus(launch.hasTelegramLaunchHint ? "missing" : "preview");
       }
     };
 

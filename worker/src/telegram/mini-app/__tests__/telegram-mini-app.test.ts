@@ -540,4 +540,24 @@ describe("handleTelegramMiniAppSession", () => {
     expect(row?.binds).not.toContain("42");
     expect(row?.binds).not.toContain("alice");
   });
+
+  it("offloads post-auth session telemetry to execCtx.waitUntil without invoking it pre-auth", async () => {
+    const initData = await privateInitData();
+    const waitUntilPromises: Promise<unknown>[] = [];
+    const execCtx = {
+      waitUntil: vi.fn((promise: Promise<unknown>) => { waitUntilPromises.push(promise); }),
+      passThroughOnException: vi.fn(),
+    } as unknown as ExecutionContext;
+
+    const badRes = await handleTelegramMiniAppSession(makeMiniAppDb(), makeMiniAppRequest("/api/telegram-mini-app/session", { initData: "auth_date=1&hash=" + "0".repeat(64) }), BOT_TOKEN, undefined, execCtx);
+    expect(badRes.status).toBe(401);
+    expect(execCtx.waitUntil).not.toHaveBeenCalled();
+
+    const db = makeMiniAppDb(stateReadTables());
+    const okRes = await handleTelegramMiniAppSession(db, makeMiniAppRequest("/api/telegram-mini-app/session", { initData }), BOT_TOKEN, undefined, execCtx);
+    expect(okRes.status).toBe(200);
+    expect(execCtx.waitUntil).toHaveBeenCalledTimes(1);
+    await Promise.all(waitUntilPromises);
+    expect(historyMatches(db, "INSERT INTO telegram_usage_daily", { 1: "mini_app_session_valid" })).toBe(true);
+  });
 });

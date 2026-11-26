@@ -8,7 +8,7 @@ import { OPEN_COMMAND_PALETTE_EVENT } from "@/lib/command-palette";
 import { OPEN_KEYBOARD_SHORTCUTS_EVENT, dismissChromeOverlays, subscribeChromeDismiss } from "@/lib/chrome-popover";
 import { isSingleKeyShortcutDisabled } from "@/lib/keyboard-shortcut-settings";
 import { SourceNavigationProvider } from "@/components/back-to-source";
-import { isEditorialPath } from "@/lib/editorial-routes";
+import { getRouteCapabilities } from "@/lib/route-capabilities";
 import { discardDataBootstrap } from "@/lib/data-bootstrap";
 
 /**
@@ -214,21 +214,40 @@ const InteractiveProviders = lazy(async () => {
   return { default: LoadedInteractiveProviders };
 });
 
-function RouteProviders() {
+function ShellProviders({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { chromeless, editorial } = getRouteCapabilities(pathname);
   useEffect(() => {
     if (pathname && window.__pharosDataBootstrap?.route !== pathname) discardDataBootstrap();
   }, [pathname]);
-  if (isEditorialPath(pathname)) return null;
-  return <InteractiveProviders />;
+
+  if (chromeless) {
+    return <>{children}</>;
+  }
+
+  return (
+    <GlobalSearchProvider>
+      {SiteSession && process.env.NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK === "true" && (
+        <Suspense fallback={null}>
+          <SiteSession />
+        </Suspense>
+      )}
+      {children}
+      {!editorial && (
+        <Suspense fallback={null}>
+          <InteractiveProviders />
+        </Suspense>
+      )}
+    </GlobalSearchProvider>
+  );
 }
 
 /**
  * Theme and the query client are the immutable shell: the global chrome
  * (TopNav incident badge, RegimeBar PSI) queries on every route, including
- * static content routes, so the provider cannot be route-gated. Search and
- * keyboard-shortcuts listeners and their lazy overlay hosts are global; other
- * interactive features remain gated.
+ * static content routes, so the provider cannot be route-gated. Chromeless
+ * embedded routes (such as the Telegram Mini App) stay isolated from site
+ * search/hotkey listeners, Turnstile session widgets, and global overlays.
  */
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient({ defaultOptions: PHAROS_QUERY_DEFAULT_OPTIONS }));
@@ -236,17 +255,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
       <QueryClientProvider client={queryClient}>
         <SourceNavigationProvider>
-          <GlobalSearchProvider>
-            {SiteSession && process.env.NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK === "true" && (
-              <Suspense fallback={null}>
-                <SiteSession />
-              </Suspense>
-            )}
-            {children}
-            <Suspense fallback={null}>
-              <RouteProviders />
-            </Suspense>
-          </GlobalSearchProvider>
+          <ShellProviders>{children}</ShellProviders>
         </SourceNavigationProvider>
       </QueryClientProvider>
     </ThemeProvider>

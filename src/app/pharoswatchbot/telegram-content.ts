@@ -1,6 +1,7 @@
 import type { FaqItem } from "@/lib/faq";
 import type { TelegramLiveAlertType } from "@shared/types/status";
 import { ACTIVE_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { TELEGRAM_ALERT_FAMILIES } from "@shared/lib/telegram-alert-families";
 import {
   TELEGRAM_COMMAND_REFERENCE,
@@ -18,6 +19,7 @@ export const DAILY_LIVE_ALERT_CAP = TELEGRAM_ALERT_POLICY.chatCap.maxRealtimeMes
 export const DAILY_CHANGES_TIME = `${String(TELEGRAM_ALERT_POLICY.rollup.localHour).padStart(2, "0")}:00`;
 const FREEZE_BATCH_MINUTES = TELEGRAM_ALERT_POLICY.freeze.batchIntervalSec / 60;
 const FREEZE_BATCH_LABEL = FREEZE_BATCH_MINUTES === 60 ? "an hourly batch" : `a batch every ${FREEZE_BATCH_MINUTES} minutes`;
+const FREEZE_SCAN_INTERVAL_LABEL = formatPolicyDuration(CRON_INTERVALS["sync-blacklist"]);
 export const LIVE_FREEZE_MIN_LABEL = `$${TELEGRAM_ALERT_POLICY.freeze.realtimeMinAmountUsd / 1_000_000}M`;
 
 export const TELEGRAM_PAGE_DESCRIPTION =
@@ -65,7 +67,7 @@ export const TELEGRAM_ACTIONS = [
 export const MINI_APP_FEATURES = [
   { title: "Your coins", detail: "Every coin you follow, largest first, with what covers it." },
   { title: "Add coins", detail: "Search by name or ticker and add several at once." },
-  { title: "Coin detail", detail: "Peg, coverage and a mute for one coin." },
+  { title: "Coin detail", detail: "Peg, coverage and a snooze for one coin." },
   { title: "Make it quieter", detail: "Quiet hours, pause, and which alerts you get." },
   { title: "Delivery status", detail: "See whether Telegram can still reach you." },
   { title: "Saves as you go", detail: "No Save button. Chat and app share one setup." },
@@ -74,13 +76,15 @@ export const MINI_APP_FEATURES = [
 export const MINI_APP_SCREENSHOTS = [
   {
     title: "Home",
+    caption: "Every preset and coin you follow, plus active status and quiet hours.",
     src: "/featured/telegram-mini-app/home.jpg",
-    alt: "PharosWatchBot Mini App home screen: alerts on with quiet hours, followed groups, and coins listed largest first with the alerts each one gets",
+    alt: "PharosWatchBot Mini App home screen: alerts on with quiet hours, followed presets, and coins listed largest first with the alerts each one gets",
     width: 549,
     height: 1280,
   },
   {
     title: "Coin detail",
+    caption: "Per-coin alert switches, thresholds, and a snooze for one coin.",
     src: "/featured/telegram-mini-app/coin.jpg",
     alt: "PharosWatchBot Mini App coin screen for USDC with early warning, depeg and safety switches, a snooze row and a link to the coin on Pharos",
     width: 549,
@@ -88,6 +92,7 @@ export const MINI_APP_SCREENSHOTS = [
   },
   {
     title: "Add coins",
+    caption: "Search by name, ticker, or peg and add several coins at once.",
     src: "/featured/telegram-mini-app/add-coins.jpg",
     alt: "PharosWatchBot Mini App search for usd with several stablecoins ticked and an Add 2 coins button",
     width: 549,
@@ -95,12 +100,13 @@ export const MINI_APP_SCREENSHOTS = [
   },
   {
     title: "Settings",
+    caption: "Quiet hours, time zone, delivery status, and data controls.",
     src: "/featured/telegram-mini-app/settings.jpg",
     alt: "PharosWatchBot Mini App settings screen with quiet hours and time zone, delivery status, and data controls",
     width: 549,
     height: 1280,
   },
-] as const satisfies readonly { title: string; src: string; alt: string; width: number; height: number }[];
+] as const satisfies readonly { title: string; caption: string; src: string; alt: string; width: number; height: number }[];
 
 // Page-specific presentation for each alert-family example; keys, labels, and
 // the message bodies themselves derive from the shared manifests so the
@@ -114,7 +120,7 @@ const ALERT_EXAMPLE_PRESENTATION: Record<TelegramLiveAlertType, { tagline: strin
   },
   depeg: {
     tagline:
-      "Sent live when a peg moves past your step (1%, 2.5% or 5%), again each time it gets worse, and when it recovers. Depegs never count toward the daily limit.",
+      "Sent live when a peg breaks and when it recovers. Set an optional step (1%, 2.5% or 5%) to ignore smaller moves and re-alert each time the depeg deepens by that step. Depegs never count toward the daily limit.",
   },
   safety: {
     tagline:
@@ -126,7 +132,7 @@ const ALERT_EXAMPLE_PRESENTATION: Record<TelegramLiveAlertType, { tagline: strin
   },
   freeze: {
     tagline:
-      `An issuer froze, released or destroyed tokens at an address. Destroys, and freezes or releases of ${LIVE_FREEZE_MIN_LABEL} or more, arrive live; smaller ones come in ${FREEZE_BATCH_LABEL}. Off unless you turn it on for a coin.`,
+      `An issuer froze, released or destroyed tokens at an address. Checked every ${FREEZE_SCAN_INTERVAL_LABEL}. Destroys, and freezes or releases of ${LIVE_FREEZE_MIN_LABEL} or more, arrive live; smaller ones come in ${FREEZE_BATCH_LABEL}. Off unless you turn it on for a coin.`,
   },
 };
 
@@ -187,7 +193,7 @@ export const TELEGRAM_FAQ: FaqItem[] = [
   {
     question: "How many messages will I get?",
     answer:
-      `Very few on a normal day. Outside depegs, a chat gets at most ${DAILY_LIVE_ALERT_CAP} live alerts a day; anything past that waits for the daily Changes message. Every alert has Mute 24h, Pause all 4h and Fewer like this buttons, and quiet hours keep nights silent.`,
+      `Very few on a normal day. Outside depegs, a chat gets at most ${DAILY_LIVE_ALERT_CAP} live alerts a day; anything past that waits for the daily Changes message. Every alert has Snooze 24h and Pause all 4h buttons (plus a threshold step-up button when a quieter setting exists), and quiet hours keep nights silent.`,
   },
   {
     question: "Where do alerts land: DM or group?",
@@ -227,5 +233,5 @@ export const TELEGRAM_FAQ: FaqItem[] = [
 ];
 
 export const TELEGRAM_COMMAND_REFERENCE_TIPS = [
-  "In groups, address commands to the bot, as in /subscribe@PharosWatchBot usd-top25. Groups get status, list, subscribe, settings and help.",
+  "In groups, address commands to the bot, as in /subscribe@PharosWatchBot usd-top25. Groups get status, list, subscribe, pause, settings and help.",
 ] as const;

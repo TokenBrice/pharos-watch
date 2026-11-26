@@ -15,6 +15,7 @@ export const PrimaryActionContext = createContext<SetPrimaryAction>(() => {});
 export function usePrimaryAction(action: MiniAppPrimaryAction | null): void {
   const setAction = useContext(PrimaryActionContext);
   const handlerRef = useRef<(() => void) | null>(null);
+  const kind = action?.kind ?? null;
   const text = action?.text ?? null;
   const progress = action?.progress ?? false;
   const onClick = action?.onClick ?? null;
@@ -24,8 +25,8 @@ export function usePrimaryAction(action: MiniAppPrimaryAction | null): void {
   }, [onClick]);
 
   useEffect(() => {
-    if (text == null) return undefined;
-    setAction({ text, progress, onClick: () => handlerRef.current?.() });
+    if (kind == null || text == null) return undefined;
+    setAction({ kind, text, progress, onClick: () => handlerRef.current?.() });
     return () => setAction(null);
-  }, [progress, setAction, text]);
+  }, [kind, progress, setAction, text]);
 }

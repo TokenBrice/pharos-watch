@@ -79,7 +79,7 @@ const COVERAGE_PAYLOAD_PREFIX = "coverage_";
 
 export type TelegramMiniAppPayload =
   | { kind: "named"; name: MiniAppPayloadName }
-  | { kind: "adoption"; destination: "miniapp_home" | "miniapp_watchlist" }
+  | { kind: "adoption"; destination: "miniapp_setup" | "miniapp_home" | "miniapp_watchlist" }
   | { kind: "coin"; coinId: string }
   | { kind: "why"; coinId: string }
   | { kind: "coverage"; coinId: string };
@@ -115,7 +115,11 @@ export function parseMiniAppPayload(raw: string | null | undefined): TelegramMin
   const lower = trimmed.toLowerCase();
   if (lower.startsWith("pw1_")) {
     const adoption = parseTelegramLandingToken(lower);
-    if (adoption?.destination === "miniapp_home" || adoption?.destination === "miniapp_watchlist") {
+    if (
+      adoption?.destination === "miniapp_setup"
+      || adoption?.destination === "miniapp_home"
+      || adoption?.destination === "miniapp_watchlist"
+    ) {
       return { kind: "adoption", destination: adoption.destination };
     }
     return null;
@@ -160,6 +164,7 @@ export type TelegramMiniAppIntent =
 /** Map a parsed payload to a worker-side intent label. */
 export function miniAppPayloadIntent(payload: TelegramMiniAppPayload): TelegramMiniAppIntent {
   if (payload.kind === "adoption") {
+    if (payload.destination === "miniapp_setup") return "setup";
     return payload.destination === "miniapp_watchlist" ? "watchlist" : "home";
   }
   if (payload.kind === "coin") return "coin";

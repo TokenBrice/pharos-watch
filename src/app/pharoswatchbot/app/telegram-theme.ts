@@ -33,6 +33,12 @@ export interface NormalizedTelegramTheme {
   bottomBarBackground: string;
   border: string;
   focusRing: string;
+  snackbarBackground: string;
+  snackbarAction: string;
+  snackbarRing: string;
+  switchOffBackground: string;
+  buttonMuted: string;
+  buttonMutedText: string;
 }
 
 type Rgb = readonly [red: number, green: number, blue: number];
@@ -250,7 +256,7 @@ export function normalizeTelegramTheme(
   );
   const sectionHeaderText = ensureContrastAcross(
     parsed(theme?.section_header_text_color, toHex(accentText)),
-    [sectionBackground],
+    [secondaryBackground, sectionBackground],
     TEXT_CONTRAST,
     text,
   );
@@ -262,6 +268,22 @@ export function normalizeTelegramTheme(
   );
   const border = ensureContrastAcross(hint, surfaces, CONTROL_CONTRAST, text);
   const focusRing = ensureContrastAcross(button, surfaces, CONTROL_CONTRAST, text);
+  const snackbarBackground = ensureSurfaceContrast(mix(text, background, 0.12), background, text);
+  const snackbarAction = ensureContrastAcross(button, [snackbarBackground], TEXT_CONTRAST, background);
+  const snackbarRing = ensureContrastAcross(button, [snackbarBackground], CONTROL_CONTRAST, background);
+  const switchOffBackground = ensureContrastAcross(
+    mix(sectionBackground, text, 0.25),
+    [sectionBackground],
+    CONTROL_CONTRAST,
+    hint,
+  );
+  const buttonMuted = ensureContrastAcross(
+    mix(button, secondaryBackground, 0.55),
+    [background, secondaryBackground],
+    CONTROL_CONTRAST,
+    border,
+  );
+  const buttonMutedText = ensureContrastAcross(buttonText, [buttonMuted], TEXT_CONTRAST, text);
 
   return {
     background: toHex(background),
@@ -281,5 +303,11 @@ export function normalizeTelegramTheme(
     bottomBarBackground: toHex(bottomBarBackground),
     border: toHex(border),
     focusRing: toHex(focusRing),
+    snackbarBackground: toHex(snackbarBackground),
+    snackbarAction: toHex(snackbarAction),
+    snackbarRing: toHex(snackbarRing),
+    switchOffBackground: toHex(switchOffBackground),
+    buttonMuted: toHex(buttonMuted),
+    buttonMutedText: toHex(buttonMutedText),
   };
 }

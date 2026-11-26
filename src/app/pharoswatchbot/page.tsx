@@ -30,8 +30,8 @@ export const metadata: Metadata = buildPageMetadata({
 /**
  * Product page for the Telegram bot on the shared feature-page shell: pitch,
  * clarified CTAs & inline social-proof chip → above-the-fold verbatim alert
- * previews → subscribe command builder → setup → low-noise controls → Mini App
- * → live adoption telemetry → channels → command card → FAQ → closing CTA.
+ * previews → Mini App → setup → low-noise controls → group/batch command
+ * builder → live adoption telemetry → channels → command card → FAQ → closing CTA.
  */
 export default function PharosWatchBotPage() {
   return (
@@ -43,10 +43,10 @@ export default function PharosWatchBotPage() {
       headerSupplement={<PrimaryActions />}
     >
       <AlertFamilies />
-      <SubscribeCommandBuilder />
+      <MiniAppShowcase />
       <GettingStarted />
       <AlertControls />
-      <MiniAppShowcase />
+      <SubscribeCommandBuilder />
       <InstrumentPanel />
       <TelegramChannels />
       <CommandReference />

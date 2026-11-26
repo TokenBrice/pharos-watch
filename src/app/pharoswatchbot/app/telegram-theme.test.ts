@@ -24,7 +24,15 @@ function expectAccessibleTheme(theme: NonNullable<ReturnType<typeof normalizeTel
     expectContrast(theme.focusRing, surface, 3);
   }
   expectContrast(theme.buttonText, theme.button, 3);
+  expectContrast(theme.sectionHeaderText, theme.secondaryBackground, 4.5);
   expectContrast(theme.sectionHeaderText, theme.sectionBackground, 4.5);
+  expectContrast(theme.background, theme.snackbarBackground, 4.5);
+  expectContrast(theme.snackbarAction, theme.snackbarBackground, 4.5);
+  expectContrast(theme.snackbarRing, theme.snackbarBackground, 3);
+  expectContrast(theme.switchOffBackground, theme.sectionBackground, 3);
+  expectContrast(theme.buttonMuted, theme.background, 3);
+  expectContrast(theme.buttonMuted, theme.secondaryBackground, 3);
+  expectContrast(theme.buttonMutedText, theme.buttonMuted, 4.5);
 }
 
 describe("normalizeTelegramTheme", () => {
@@ -84,6 +92,17 @@ describe("normalizeTelegramTheme", () => {
 
     expect(theme).not.toBeNull();
     expectAccessibleTheme(theme!);
+  });
+
+  it("repairs snackbar action, ring and switch-off contrast on dark and monochrome themes", () => {
+    for (const [scheme, params] of [
+      ["dark", { bg_color: "#17212b", text_color: "#f5f5f5", secondary_bg_color: "#0e1621", section_bg_color: "#17212b", button_color: "#5288c1", button_text_color: "#ffffff", section_header_text_color: "#6ab3f3" }],
+      ["light", { bg_color: "#ffffff", text_color: "#111111", secondary_bg_color: "#f4f4f5", section_bg_color: "#ffffff", button_color: "#111111", button_text_color: "#ffffff" }],
+    ] as const) {
+      const theme = normalizeTelegramTheme(params, scheme);
+      expect(theme).not.toBeNull();
+      expectAccessibleTheme(theme!);
+    }
   });
 
   it("leaves the CSS fallback theme authoritative without a valid theme anchor", () => {

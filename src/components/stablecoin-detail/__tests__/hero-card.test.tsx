@@ -356,15 +356,17 @@ describe("HeroIdentityHeader", () => {
       const heldHeader = renderHeader();
       expect(heldHeader).toContain('href="/portfolio/"');
       expect(heldHeader).not.toMatch(/\/portfolio\/\?(coins|p)=/);
-      expect(heldHeader).toContain("/subscribe dews, depeg, safety usdc-circle");
+      expect(heldHeader).toContain("Follow USDC in Mini App");
+      expect(heldHeader).toContain('href="https://t.me/PharosWatchBot?startapp=coin_usdc-circle"');
+      expect(heldHeader).toContain("/subscribe dews, depeg, safety USDC");
 
       const navStable = renderHeader({ coin: { id: "susde-ethena", name: "Staked USDe", symbol: "sUSDe", flags: { navToken: true, yieldBearing: true } } });
-      expect(navStable).toContain("/subscribe safety susde-ethena");
+      expect(navStable).toContain("/subscribe safety sUSDe");
       expect(navStable).not.toContain("/subscribe dews");
 
       const buidlFund = renderHeader({ coin: { id: "buidl-blackrock", name: "BUIDL", symbol: "BUIDL", flags: { navToken: false } } });
-      expect(buidlFund).toContain("/subscribe dews, depeg buidl-blackrock");
-      expect(buidlFund).not.toContain("safety buidl-blackrock");
+      expect(buidlFund).toContain("/subscribe dews, depeg BUIDL");
+      expect(buidlFund).not.toContain("safety BUIDL");
 
       const reserveFund = renderHeader({
         coin: { id: "reusd-re-protocol", name: "Re USD", symbol: "reUSD", flags: { navToken: true }, reserveDriftAlertEligible: true } as HeroBuilderOverrides["coin"],

@@ -231,12 +231,18 @@ describe("Telegram Mini App bulk watchlist lifecycle", () => {
   });
 
   it("previews, confirms, and undoes a bounded direct bulk edit without touching presets", async () => {
-    const { db, sqlite } = setup();
+    let portableStateReads = 0;
+    const { db, sqlite } = setup({
+      onAll(sql) {
+        if (sql.includes("WITH subscriber AS")) portableStateReads += 1;
+      },
+    });
     const preview = await executeTelegramMiniAppBulkWatchlistPreview(db, AUTH, {
       kind: "preview-bulk-watchlist",
       addStablecoinIds: ["usdt-tether"],
       removeStablecoinIds: ["usdc-circle", "dai-makerdao", "eurc-circle"],
     });
+    expect(portableStateReads).toBe(1);
     expect(preview.result).toMatchObject({
       expectedPreferenceGeneration: 7,
       adds: ["usdt-tether"],

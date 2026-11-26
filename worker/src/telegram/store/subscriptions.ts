@@ -5,8 +5,20 @@ import {
   executeAtomicBatch,
 } from "../../lib/db";
 import { TELEGRAM_ALERT_PERSISTENCE, TELEGRAM_TUNED_ALERT_TYPES } from "@shared/lib/telegram-alert-families";
-import { TELEGRAM_ALERT_TYPES, type TelegramAlertType } from "@shared/types/status";
-import type { TelegramDewsBand, TelegramSafetyMode, TelegramDepegStepBps } from "@shared/types/status/telegram";
+import { isDewsAlertBand } from "@shared/lib/classification/risk";
+import {
+  TELEGRAM_ALERT_TYPES,
+  isTelegramAlertType,
+  isTelegramRetiredAlertType,
+  type TelegramAlertType,
+} from "@shared/types/status";
+import {
+  isDepegStepValue,
+  isTelegramSafetyMode,
+  type TelegramDewsBand,
+  type TelegramSafetyMode,
+  type TelegramDepegStepBps,
+} from "@shared/types/status/telegram";
 import type { ResolvedCoin } from "../common/alerts-parser";
 import type {
   ParsedSetCommand,
@@ -422,6 +434,137 @@ export function prepareSettingToSubscriptions(
     `).bind(username, now, chatId, expectedPreferenceGeneration));
   }
   return statements;
+}
+
+export interface CompoundCoinEditPatch {
+  alertTypes?: Partial<Record<TelegramAlertType, boolean>>;
+  dewsMinBand?: TelegramDewsBand | null;
+  depegStepBps?: TelegramDepegStepBps | null;
+  safetyMode?: TelegramSafetyMode | null;
+  launch?: boolean;
+  reserve?: boolean;
+  freeze?: boolean;
+}
+
+function validateCompoundCoinEditPatch(patch: CompoundCoinEditPatch): boolean {
+  if (patch.alertTypes !== undefined) {
+    if (patch.alertTypes == null || typeof patch.alertTypes !== "object") return false;
+    for (const [alertType, enabled] of Object.entries(patch.alertTypes)) {
+      if (enabled === undefined) continue;
+      if (typeof enabled !== "boolean") return false;
+      if (!isTelegramAlertType(alertType) && !isTelegramRetiredAlertType(alertType)) return false;
+    }
+  }
+  if (patch.dewsMinBand !== undefined && patch.dewsMinBand !== null && !isDewsAlertBand(patch.dewsMinBand)) {
+    return false;
+  }
+  if (patch.depegStepBps !== undefined && patch.depegStepBps !== null && !isDepegStepValue(patch.depegStepBps)) {
+    return false;
+  }
+  if (patch.safetyMode !== undefined && patch.safetyMode !== null && !isTelegramSafetyMode(patch.safetyMode)) {
+    return false;
+  }
+  if (patch.launch !== undefined && typeof patch.launch !== "boolean") return false;
+  if (patch.reserve !== undefined && typeof patch.reserve !== "boolean") return false;
+  if (patch.freeze !== undefined && typeof patch.freeze !== "boolean") return false;
+  return true;
+}
+
+/**
+ * Plan a compound per-coin Mini App patch into one atomic statement list:
+ * validates the whole patch up front, unions enabled subscriber `perCoinAlertBumps`,
+ * prepends `first_follow_at` once when the final intent enables at least one family,
+ * issues one generation-advancing subscriber upsert, and appends only per-family
+ * subscription SQL. Returns `null` when invalid or when no live family is edited.
+ */
+export function prepareCompoundCoinEditStatements(
+  db: D1Database,
+  chatId: string,
+  username: string | null,
+  stablecoinId: string,
+  patch: CompoundCoinEditPatch,
+): D1PreparedStatement[] | null {
+  if (!validateCompoundCoinEditPatch(patch)) return null;
+
+  const perCoinAlertBumps: Partial<Record<TelegramAlertType, 0 | 1>> = {};
+  const subscriptionUpserts: BuiltSubscriptionUpsert[] = [];
+
+  const dewsFlag = patch.alertTypes?.dews;
+  if (dewsFlag === false) {
+    subscriptionUpserts.push(buildDewsUpsert(chatId, stablecoinId, false, null));
+  } else if (patch.dewsMinBand !== undefined) {
+    perCoinAlertBumps.dews = 1;
+    subscriptionUpserts.push(buildDewsUpsert(chatId, stablecoinId, true, patch.dewsMinBand));
+  } else if (dewsFlag === true) {
+    perCoinAlertBumps.dews = 1;
+    subscriptionUpserts.push(buildSubscriptionAlertUpsert({
+      alertType: "dews",
+      chatId,
+      stablecoinId,
+      enabled: { kind: "bound", value: 1 },
+      setting: { kind: "none" },
+    }));
+  }
+
+  const depegFlag = patch.alertTypes?.depeg;
+  if (depegFlag === false) {
+    subscriptionUpserts.push(buildDepegUpsert(chatId, stablecoinId, false));
+  } else if (patch.depegStepBps !== undefined) {
+    perCoinAlertBumps.depeg = 1;
+    subscriptionUpserts.push(buildDepegStepUpsert(chatId, stablecoinId, patch.depegStepBps));
+  } else if (depegFlag === true) {
+    perCoinAlertBumps.depeg = 1;
+    subscriptionUpserts.push(buildDepegUpsert(chatId, stablecoinId, true));
+  }
+
+  const safetyFlag = patch.alertTypes?.safety;
+  if (safetyFlag === false) {
+    subscriptionUpserts.push(buildSafetyUpsert(chatId, stablecoinId, false, null));
+  } else if (patch.safetyMode !== undefined) {
+    perCoinAlertBumps.safety = 1;
+    subscriptionUpserts.push(buildSafetyUpsert(chatId, stablecoinId, true, patch.safetyMode));
+  } else if (safetyFlag === true) {
+    perCoinAlertBumps.safety = 1;
+    subscriptionUpserts.push(buildSubscriptionAlertUpsert({
+      alertType: "safety",
+      chatId,
+      stablecoinId,
+      enabled: { kind: "bound", value: 1 },
+      setting: { kind: "none" },
+    }));
+  }
+
+  for (const plainType of ["reserve", "freeze"] as const) {
+    const flag = patch.alertTypes?.[plainType];
+    const direct = patch[plainType];
+    const finalEnabled = flag === false ? false : direct !== undefined ? direct : flag;
+    if (finalEnabled !== undefined) {
+      if (finalEnabled) perCoinAlertBumps[plainType] = 1;
+      subscriptionUpserts.push(buildPlainAlertUpsert(plainType, chatId, stablecoinId, finalEnabled));
+    }
+  }
+
+  if (subscriptionUpserts.length === 0) return null;
+
+  const now = unixNow();
+  const enablesFollow = Object.values(perCoinAlertBumps).some((flag) => flag === 1);
+  return [
+    ...(enablesFollow
+      ? prepareTelegramFirstFollowStatements(db, {
+          chatId,
+          username,
+          nowSec: now,
+          feature: "direct",
+        })
+      : []),
+    prepareUpsertSubscriberRow(db, {
+      chatId,
+      username,
+      nowSec: now,
+      perCoinAlertBumps,
+    }),
+    ...subscriptionUpserts.map((upsert) => bindSubscriptionUpsert(db, upsert)),
+  ];
 }
 
 export async function applySettingToSubscriptions(

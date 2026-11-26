@@ -30,6 +30,11 @@ function resolveCopyText(cmd: TelegramCommandRow, mode: CommandChatMode): string
   return formatForChatMode(cmd.example ?? cmd.command, mode);
 }
 
+const ALL_COMMAND_ROWS: readonly (TelegramCommandRow & { name: TelegramCommandName | null })[] =
+  TELEGRAM_COMMAND_GROUPS.flatMap((group) =>
+    group.commands.map((cmd) => ({ ...cmd, name: commandBaseName(cmd.command) })),
+  );
+
 /**
  * Compact command card: every registered command variant with its one-line
  * help, grouped as the menu and typed-only commands. Rows derive from the
@@ -56,16 +61,23 @@ export function CommandManual() {
   }, []);
 
   const groups = useMemo(() => {
-    return TELEGRAM_COMMAND_GROUPS.map((group) => ({
-      label: group.label,
-      commands:
-        chatMode === "private"
-          ? group.commands
-          : group.commands.filter((cmd) => {
-              const name = commandBaseName(cmd.command);
-              return name === null || !PRIVATE_ONLY_COMMANDS.has(name);
-            }),
-    })).filter((group) => group.commands.length > 0);
+    if (chatMode === "private") return TELEGRAM_COMMAND_GROUPS;
+    // In groups, BotFather only registers `menu: "all"` commands in the slash menu;
+    // `menu: "private"` commands that still work in groups (such as /pause) stay typed-only.
+    const menuCommands: TelegramCommandRow[] = [];
+    const typedCommands: TelegramCommandRow[] = [];
+    for (const row of ALL_COMMAND_ROWS) {
+      if (row.name !== null && PRIVATE_ONLY_COMMANDS.has(row.name)) continue;
+      if (row.name !== null && TELEGRAM_COMMAND_REFERENCE[row.name].menu === "all") {
+        menuCommands.push(row);
+      } else {
+        typedCommands.push(row);
+      }
+    }
+    return [
+      { label: "In the menu", commands: menuCommands },
+      { label: "Typed only", commands: typedCommands },
+    ].filter((group) => group.commands.length > 0);
   }, [chatMode]);
 
   return (

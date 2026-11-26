@@ -49,7 +49,7 @@ export function PrimaryActions() {
       <Button asChild size="lg" variant="outline" className="gap-2">
         <a href={MINI_APP_HOME_DEEP_LINK} target="_blank" rel="noopener noreferrer">
           <Smartphone className="h-4 w-4" aria-hidden="true" />
-          Open Manage Alerts (Mini App)
+          Open the Mini App
           <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
         </a>
       </Button>
@@ -121,7 +121,7 @@ const ALERT_CONTROLS: readonly { icon: LucideIcon; title: string; detail: string
   {
     icon: CalendarClock,
     title: "One daily Changes message",
-    detail: `Smaller grade moves, together at ${DAILY_CHANGES_TIME} UTC unless you set a time zone. Nothing changed, no message.`,
+    detail: `Smaller grade moves, easing stress, market-wide summaries, and cap-held alerts at ${DAILY_CHANGES_TIME} UTC unless you set a time zone. Nothing changed, no message.`,
   },
   {
     icon: Gauge,
@@ -130,13 +130,13 @@ const ALERT_CONTROLS: readonly { icon: LucideIcon; title: string; detail: string
   },
   {
     icon: ThumbsDown,
-    title: "Fewer like this",
-    detail: "Under every alert: mute the coin for 24 hours, pause all for 4, or turn that alert type down.",
+    title: "One-tap quieting",
+    detail: "Under every alert: snooze the coin for 24 hours, pause all for 4, or raise that coin's alert threshold.",
   },
   {
     icon: MoonStar,
     title: "Quiet hours and pause",
-    detail: "Silence nights in your timezone, or pause for 1, 4 or 24 hours.",
+    detail: "Deliver alerts silently overnight, or pause all alerts for 1, 4 or 24 hours.",
   },
   {
     icon: Users,
@@ -199,7 +199,7 @@ export function MiniAppShowcase() {
             <Button asChild variant="outline" className="gap-2">
               <a href={MINI_APP_HOME_DEEP_LINK} target="_blank" rel="noopener noreferrer">
                 <Smartphone className="h-4 w-4" aria-hidden="true" />
-                Open Manage Alerts (Mini App)
+                Open the Mini App
                 <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
               </a>
             </Button>

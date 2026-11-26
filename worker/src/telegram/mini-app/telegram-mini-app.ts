@@ -41,12 +41,14 @@ import {
 } from "./telegram-mini-app-mutations";
 import { acquireTelegramMiniAppMutationBurst } from "./telegram-mini-app-rate-limit";
 import { loadTelegramMiniAppState } from "./telegram-mini-app-state";
+import { loadStablecoinsCache, type StablecoinsCacheLoadResult } from "../../lib/stablecoins-cache";
 import { logWorkerEvent } from "../../lib/structured-log";
 
 export const TELEGRAM_MINI_APP_SESSION_AUTH_MAX_AGE_SEC = 24 * 60 * 60;
 // 5-min mutation window per community consensus; 24h session window preserved for reads.
 export const TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC = 5 * 60;
 const SESSION_COOLDOWN_SEC = 2;
+const BULK_PREVIEW_COOLDOWN_SEC = 1;
 // Telegram never refreshes initData inside a running Mini App, so one expired
 // launch (one initData hash) is one incident however often the client retries.
 // Matches the 7-day short-lived chat cache retention that prunes the key.
@@ -235,6 +237,26 @@ async function recordMiniAppEvents(
   await recordTelegramUsageEvents(db, inputs.map(toUsageEventInput));
 }
 
+/**
+ * Offload post-auth, best-effort telemetry writes onto `execCtx.waitUntil` in
+ * production so D1 analytics writes stay off the HTTP response critical path,
+ * while awaiting inline when `execCtx` is omitted in unit tests.
+ */
+async function dispatchBestEffortTelemetry(
+  execCtx: ExecutionContext | undefined,
+  task: () => Promise<void>,
+): Promise<void> {
+  if (execCtx) {
+    execCtx.waitUntil(
+      task().catch(() => {
+        // Best-effort telemetry never surfaces an unhandled rejection.
+      }),
+    );
+    return;
+  }
+  await task();
+}
+
 function authResponse(err: TelegramMiniAppAuthError): Response {
   if (err.code === "stale-auth") {
     return miniAppError(401, "stale-auth", "Telegram Mini App session expired");
@@ -259,6 +281,7 @@ async function validateOrResponse(
     staleAuthEvent: { eventType: TelegramUsageEventType; actionDetail?: string | null };
   },
   botTokenPrevious?: string,
+  execCtx?: ExecutionContext,
 ): Promise<TelegramMiniAppAuthContext | Response> {
   try {
     return await validateTelegramMiniAppInitData(
@@ -271,6 +294,7 @@ async function validateOrResponse(
     if (err instanceof TelegramMiniAppAuthError) {
       if (err.code === "stale-auth") {
         const staleAuth = err.authContext;
+        const latencyMs = Date.now() - options.start;
         // Stale-auth requires the HMAC signature to have already validated; emit
         // a usage event so operators can distinguish expired sessions from
         // invalid-signature / invalid-auth (which stay silent to avoid an
@@ -279,36 +303,38 @@ async function validateOrResponse(
         // client retries. The cooldown only gates telemetry: every retry still
         // gets 401 `stale-auth` so the client can show the relaunch path. A
         // failed telemetry write is best-effort and never replaces the verdict.
-        try {
-          const firstSighting = staleAuth
-            ? (await acquireTelegramCommandCooldown(db, {
-              chatId: staleAuth.userId,
-              commandKey: `mini-app:stale:${options.staleAuthEvent.eventType}:${staleAuth.initDataHash.slice(0, 16)}`,
-              nowSec: unixNow(),
-              cooldownSec: STALE_AUTH_TELEMETRY_DEDUPE_SEC,
-            })).allowed
-            : true;
-          if (firstSighting) {
-            await recordMiniAppEvent(db, {
-              eventType: options.staleAuthEvent.eventType,
-              auth: staleAuth,
-              actionDetail: options.staleAuthEvent.actionDetail,
-              outcome: err.code,
-              failureClass: err.code,
-              latencyMs: Date.now() - options.start,
+        await dispatchBestEffortTelemetry(execCtx, async () => {
+          try {
+            const firstSighting = staleAuth
+              ? (await acquireTelegramCommandCooldown(db, {
+                chatId: staleAuth.userId,
+                commandKey: `mini-app:stale:${options.staleAuthEvent.eventType}:${staleAuth.initDataHash.slice(0, 16)}`,
+                nowSec: unixNow(),
+                cooldownSec: STALE_AUTH_TELEMETRY_DEDUPE_SEC,
+              })).allowed
+              : true;
+            if (firstSighting) {
+              await recordMiniAppEvent(db, {
+                eventType: options.staleAuthEvent.eventType,
+                auth: staleAuth,
+                actionDetail: options.staleAuthEvent.actionDetail,
+                outcome: err.code,
+                failureClass: err.code,
+                latencyMs,
+              });
+            }
+          } catch (telemetryError) {
+            logWorkerEvent({
+              scope: "api",
+              level: "warn",
+              event: "telegram_mini_app_stale_auth_telemetry_error",
+              route: "telegram-mini-app",
+              source: "telegram-mini-app",
+              message: "Failed to record stale-auth telemetry",
+              error: telemetryError,
             });
           }
-        } catch (telemetryError) {
-          logWorkerEvent({
-            scope: "api",
-            level: "warn",
-            event: "telegram_mini_app_stale_auth_telemetry_error",
-            route: "telegram-mini-app",
-            source: "telegram-mini-app",
-            message: "Failed to record stale-auth telemetry",
-            error: telemetryError,
-          });
-        }
+        });
       }
       return authResponse(err);
     }
@@ -352,6 +378,7 @@ export const handleTelegramMiniAppSession = miniAppErrorHandler(
     request: Request,
     botToken: string | undefined,
     botTokenPrevious?: string | undefined,
+    execCtx?: ExecutionContext,
   ): Promise<Response> => {
     const prepared = await prepareMiniAppRequest(
       request,
@@ -366,7 +393,7 @@ export const handleTelegramMiniAppSession = miniAppErrorHandler(
       maxAgeSec: TELEGRAM_MINI_APP_SESSION_AUTH_MAX_AGE_SEC,
       start,
       staleAuthEvent: { eventType: "mini_app_session_invalid" },
-    }, botTokenPrevious);
+    }, botTokenPrevious, execCtx);
     if (auth instanceof Response) return auth;
 
     const cooldown = await acquireTelegramCommandCooldown(db, {
@@ -376,18 +403,25 @@ export const handleTelegramMiniAppSession = miniAppErrorHandler(
       cooldownSec: SESSION_COOLDOWN_SEC,
     });
     if (!cooldown.allowed) {
-      await recordMiniAppEvent(db, {
-        eventType: "mini_app_session_invalid",
-        auth,
-        outcome: "rate_limited",
-        failureClass: "rate_limited",
-        latencyMs: Date.now() - start,
-      });
+      const latencyMs = Date.now() - start;
+      await dispatchBestEffortTelemetry(execCtx, () =>
+        recordMiniAppEvent(db, {
+          eventType: "mini_app_session_invalid",
+          auth,
+          outcome: "rate_limited",
+          failureClass: "rate_limited",
+          latencyMs,
+        }),
+      );
       return miniAppError(429, "rate-limited", "Mini App session rate limited", {
         retryAfterSec: cooldown.retryAfterSec,
       });
     }
 
+    const state = await loadTelegramMiniAppState(db, auth, {
+      nowSec: unixNow(),
+      mutationMaxAgeSec: TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC,
+    });
     const latencyMs = Date.now() - start;
     const sessionEvents: Parameters<typeof recordMiniAppEvents>[1] = [
       {
@@ -400,12 +434,7 @@ export const handleTelegramMiniAppSession = miniAppErrorHandler(
     if (!auth.canMutatePrivateChat) {
       sessionEvents.push({ eventType: "mini_app_group_readonly", auth, outcome: "readonly", latencyMs });
     }
-    await recordMiniAppEvents(db, sessionEvents);
-
-    const state = await loadTelegramMiniAppState(db, auth, {
-      nowSec: unixNow(),
-      mutationMaxAgeSec: TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC,
-    });
+    await dispatchBestEffortTelemetry(execCtx, () => recordMiniAppEvents(db, sessionEvents));
     return stateResponse(state, compatibility);
   },
 );
@@ -417,6 +446,7 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
     request: Request,
     botToken: string | undefined,
     botTokenPrevious?: string | undefined,
+    execCtx?: ExecutionContext,
   ): Promise<Response> => {
     const prepared = await prepareMiniAppRequest(
       request,
@@ -442,27 +472,29 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
         eventType: readOnlyPreview ? "mini_app_portability" : "mini_app_mutation_denied",
         actionDetail: mutationActionDetail(parsed.operation),
       },
-    }, botTokenPrevious);
+    }, botTokenPrevious, execCtx);
     if (auth instanceof Response) return auth;
-
 
     if (readOnlyPreview) {
       const cooldown = await acquireTelegramCommandCooldown(db, {
         chatId: auth.userId,
-        commandKey: "mini-app:session",
+        commandKey: "mini-app:bulk-preview",
         nowSec: unixNow(),
-        cooldownSec: SESSION_COOLDOWN_SEC,
+        cooldownSec: BULK_PREVIEW_COOLDOWN_SEC,
       });
       if (!cooldown.allowed) {
-        await recordMiniAppEvent(db, {
-          eventType: "mini_app_portability",
-          auth,
-          actionDetail: mutationActionDetail(parsed.operation),
-          outcome: "rate_limited",
-          failureClass: "rate_limited",
-          latencyMs: Date.now() - start,
-        });
-        return miniAppError(429, "rate-limited", "Mini App session rate limited", {
+        const latencyMs = Date.now() - start;
+        await dispatchBestEffortTelemetry(execCtx, () =>
+          recordMiniAppEvent(db, {
+            eventType: "mini_app_portability",
+            auth,
+            actionDetail: mutationActionDetail(parsed.operation),
+            outcome: "rate_limited",
+            failureClass: "rate_limited",
+            latencyMs,
+          }),
+        );
+        return miniAppError(429, "rate-limited", "Mini App preview rate limited", {
           retryAfterSec: cooldown.retryAfterSec,
         });
       }
@@ -475,60 +507,83 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
         nowSec: unixNow(),
       });
       if (!burst.allowed) {
-        await recordMiniAppEvent(db, {
-          eventType: "mini_app_mutation_denied",
-          auth,
-          actionDetail: mutationActionDetail(parsed.operation),
-          outcome: "rate_limited",
-          failureClass: "rate_limited",
-          latencyMs: Date.now() - start,
-        });
+        const latencyMs = Date.now() - start;
+        await dispatchBestEffortTelemetry(execCtx, () =>
+          recordMiniAppEvent(db, {
+            eventType: "mini_app_mutation_denied",
+            auth,
+            actionDetail: mutationActionDetail(parsed.operation),
+            outcome: "rate_limited",
+            failureClass: "rate_limited",
+            latencyMs,
+          }),
+        );
         return miniAppError(429, "rate-limited", "Pharos Mini App edit limit reached", {
           retryAfterSec: burst.retryAfterSec,
         });
       }
     }
 
+    // Request-scoped strict publication promise so preset mutations that already
+    // validated `stablecoins` share that read with post-mutation state loading.
+    let stablecoinsCachePromise: Promise<StablecoinsCacheLoadResult> | undefined;
+    const getStablecoinsCacheResult = (): Promise<StablecoinsCacheLoadResult> => {
+      stablecoinsCachePromise ??= loadStablecoinsCache(db, { mode: "strict" });
+      return stablecoinsCachePromise;
+    };
+
     let undo: TelegramMiniAppSnapshot["undo"];
     try {
       if (bulkPreviewOperation) {
         const preview = await executeTelegramMiniAppBulkWatchlistPreview(db, auth, bulkPreviewOperation);
-        await recordMiniAppEvent(db, {
-          eventType: "mini_app_portability",
-          auth,
-          actionDetail: mutationActionDetail(parsed.operation),
-          outcome: "success",
-          latencyMs: Date.now() - start,
-        });
+        const latencyMs = Date.now() - start;
+        await dispatchBestEffortTelemetry(execCtx, () =>
+          recordMiniAppEvent(db, {
+            eventType: "mini_app_portability",
+            auth,
+            actionDetail: mutationActionDetail(parsed.operation),
+            outcome: "success",
+            latencyMs,
+          }),
+        );
         return jsonResponse(preview, NO_STORE);
       }
-      undo = await applyTelegramMiniAppMutation(db, auth, parsed.operation) ?? undefined;
+      undo = await applyTelegramMiniAppMutation(db, auth, parsed.operation, {
+        getStablecoinsCacheResult,
+      }) ?? undefined;
     } catch (err) {
       if (err instanceof TelegramMiniAppMutationError) {
-        await recordMiniAppEvent(db, {
-          eventType: readOnlyPreview ? "mini_app_portability" : "mini_app_mutation_denied",
-          auth,
-          actionDetail: mutationActionDetail(parsed.operation),
-          outcome: err.code === "not-private" ? "denied" : "validation_error",
-          failureClass: err.code,
-          latencyMs: Date.now() - start,
-        });
+        const latencyMs = Date.now() - start;
+        await dispatchBestEffortTelemetry(execCtx, () =>
+          recordMiniAppEvent(db, {
+            eventType: readOnlyPreview ? "mini_app_portability" : "mini_app_mutation_denied",
+            auth,
+            actionDetail: mutationActionDetail(parsed.operation),
+            outcome: err.code === "not-private" ? "denied" : "validation_error",
+            failureClass: err.code,
+            latencyMs,
+          }),
+        );
         return miniAppError(err.status, mutationErrorResponseCode(err.code), mutationErrorMessage(err));
       }
       throw err;
     }
 
-    await recordMiniAppEvent(db, {
-      eventType: mutationEventType(parsed.operation),
-      auth,
-      actionDetail: mutationActionDetail(parsed.operation),
-      outcome: "success",
-      latencyMs: Date.now() - start,
-    });
     const state = await loadTelegramMiniAppState(db, auth, {
       nowSec: unixNow(),
       mutationMaxAgeSec: TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC,
+      stablecoinsCachePromise,
     });
+    const latencyMs = Date.now() - start;
+    await dispatchBestEffortTelemetry(execCtx, () =>
+      recordMiniAppEvent(db, {
+        eventType: mutationEventType(parsed.operation),
+        auth,
+        actionDetail: mutationActionDetail(parsed.operation),
+        outcome: "success",
+        latencyMs,
+      }),
+    );
     return stateResponse(state, compatibility, undo);
   },
 );

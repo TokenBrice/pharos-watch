@@ -18,10 +18,16 @@ describe("telegram mini app payloads", () => {
   });
 
   it("maps only catalog-issued adoption tokens to their Mini App destinations", () => {
+    expect(parseMiniAppPayload("pw1_landing_miniapp_setup")).toEqual({
+      kind: "adoption",
+      destination: "miniapp_setup",
+    });
+    expect(miniAppPayloadIntent(parseMiniAppPayload("pw1_landing_miniapp_setup")!)).toBe("setup");
     expect(parseMiniAppPayload("pw1_landing_miniapp_home")).toEqual({
       kind: "adoption",
       destination: "miniapp_home",
     });
+    expect(miniAppPayloadIntent(parseMiniAppPayload("pw1_landing_miniapp_home")!)).toBe("home");
     expect(miniAppPayloadIntent(parseMiniAppPayload("pw1_landing_miniapp_watchlist")!)).toBe("watchlist");
     expect(parseMiniAppPayload("pw1_landing_unknown")).toBeNull();
     expect(parseMiniAppPayload("pw1_landing_hero")).toBeNull();

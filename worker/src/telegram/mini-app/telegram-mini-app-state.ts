@@ -15,6 +15,7 @@ import {
   type TelegramPresetDefinition,
   type TelegramPresetId,
 } from "../common/presets";
+import { loadStablecoinsCache, type StablecoinsCacheLoadResult } from "../../lib/stablecoins-cache";
 import { loadTelegramChatHealthDiagnostics } from "../store/usage-analytics";
 import type { TelegramMiniAppAuthContext } from "./mini-app-auth";
 import {
@@ -30,7 +31,18 @@ import type {
 interface LoadTelegramMiniAppStateOptions {
   nowSec: number;
   mutationMaxAgeSec: number;
+  /**
+   * Optional request-scoped strict `stablecoins` publication promise so
+   * mutations that already validated the cache (e.g. `follow-preset`,
+   * `recommended-setup`) avoid reading and parsing it a second time.
+   */
+  stablecoinsCachePromise?: Promise<StablecoinsCacheLoadResult>;
 }
+
+type PreloadedStablecoinsCache =
+  | { kind: "row"; row: { value: string; updatedAt: number } | null }
+  | { kind: "skipped" }
+  | { kind: "error" };
 
 type MiniAppSubscriptionRow = SubscriptionRow & {
   alert_snooze_until_ts: number | null;
@@ -87,6 +99,34 @@ function presetLabel(row: PresetSubscriptionRow): Pick<TelegramPresetDefinition,
 }
 
 /**
+ * Preload the strict `stablecoins` cache row in parallel with the state batch
+ * only when the private chat currently follows at least one preset. Keeps the
+ * read isolated from `db.batch` so a cache failure degrades only `memberIds`.
+ */
+async function preloadStablecoinsCacheIfHasPresets(
+  db: D1Database,
+  chatId: string,
+): Promise<PreloadedStablecoinsCache> {
+  try {
+    const row = await db
+      .prepare(
+        `SELECT c.value, c.updated_at
+           FROM (SELECT 1 FROM telegram_preset_subscriptions WHERE chat_id = ? LIMIT 1) p
+           LEFT JOIN cache c ON c.key = 'stablecoins'`,
+      )
+      .bind(chatId)
+      .first<{ value?: string | null; updated_at?: number | null }>();
+    if (row == null || !("value" in row) || !("updated_at" in row)) return { kind: "skipped" };
+    if (typeof row.value === "string" && typeof row.updated_at === "number") {
+      return { kind: "row", row: { value: row.value, updatedAt: row.updated_at } };
+    }
+    return { kind: "row", row: null };
+  } catch {
+    return { kind: "error" };
+  }
+}
+
+/**
  * Current preset members so the client can say "via USD Top 25" per coin.
  * Membership follows the live market-cap cache; a failed read yields null
  * (unknown), never an empty list that would read as "not covered".
@@ -94,10 +134,25 @@ function presetLabel(row: PresetSubscriptionRow): Pick<TelegramPresetDefinition,
 async function loadPresetMemberIds(
   db: D1Database,
   presetIds: readonly string[],
+  options: {
+    stablecoinsCachePromise?: Promise<StablecoinsCacheLoadResult>;
+    preloadedCache?: PreloadedStablecoinsCache;
+  } = {},
 ): Promise<ReadonlyMap<string, string[]> | null> {
   if (presetIds.length === 0) return new Map();
+  if (options.preloadedCache?.kind === "error") return null;
   try {
-    const resolved = await resolveTelegramPresetTargets(db, presetIds as TelegramPresetId[]);
+    const preloadedCache = options.preloadedCache;
+    const getStablecoinsCacheResult = options.stablecoinsCachePromise
+      ? () => options.stablecoinsCachePromise!
+      : preloadedCache?.kind === "row"
+        ? () => loadStablecoinsCache(db, { mode: "strict", preloadedCache: preloadedCache.row })
+        : undefined;
+    const resolved = await resolveTelegramPresetTargets(
+      db,
+      presetIds as TelegramPresetId[],
+      getStablecoinsCacheResult ? { getStablecoinsCacheResult } : {},
+    );
     if (resolved.kind !== "ok") return null;
     return new Map(resolved.presets.map((preset) => [preset.definition.id, preset.stablecoinIds]));
   } catch {
@@ -117,9 +172,9 @@ export async function loadTelegramMiniAppState(
     ? mutationAuthExpired ? "stale-auth" : null
     : "not-private";
 
-  const [subscriber, subscriptions, presets, health, pending] = chatId
+  const [subscriber, subscriptions, presets, health, pending, preloadedStablecoins] = chatId
     ? await (async () => {
-      const [stateResults, diagnostics] = await Promise.all([
+      const [stateResults, diagnostics, preloadedCache] = await Promise.all([
         db.batch([
           db.prepare(
             `SELECT global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_reserve, global_alert_freeze,
@@ -151,6 +206,9 @@ export async function loadTelegramMiniAppState(
           D1Result<TelegramPendingAlertCountRow>,
         ]>,
         loadTelegramChatHealthDiagnostics(db, chatId),
+        options.stablecoinsCachePromise
+          ? Promise.resolve<PreloadedStablecoinsCache>({ kind: "skipped" })
+          : preloadStablecoinsCacheIfHasPresets(db, chatId),
       ]);
       return [
         stateResults[0].results?.[0] ?? null,
@@ -158,6 +216,7 @@ export async function loadTelegramMiniAppState(
         { results: stateResults[2].results ?? [] },
         diagnostics,
         stateResults[3].results?.[0] ?? null,
+        preloadedCache,
       ] as const;
     })()
     : [
@@ -166,9 +225,17 @@ export async function loadTelegramMiniAppState(
       { results: [] as PresetSubscriptionRow[] },
       { available: false } as const,
       null,
+      { kind: "skipped" } as PreloadedStablecoinsCache,
     ] as const;
 
-  const presetMemberIds = await loadPresetMemberIds(db, (presets.results ?? []).map((row) => row.preset_id));
+  const presetMemberIds = await loadPresetMemberIds(
+    db,
+    (presets.results ?? []).map((row) => row.preset_id),
+    {
+      stablecoinsCachePromise: options.stablecoinsCachePromise,
+      preloadedCache: preloadedStablecoins,
+    },
+  );
 
   return {
     viewer: {

@@ -21,7 +21,9 @@ describe("initialStackFromStartParam", () => {
     ["coverage_usdc-circle", [{ name: "home" }, { name: "coin", coinId: "usdc-circle" }]],
     ["settings", [{ name: "home" }, { name: "settings" }]],
     ["quiet-hours", [{ name: "home" }, { name: "settings" }]],
+    ["snooze", [{ name: "home" }, { name: "settings" }]],
     ["forget", [{ name: "home" }, { name: "settings" }]],
+    ["presets", [{ name: "home" }, { name: "add-group" }]],
     ["setup", [{ name: "home" }, { name: "add-coins" }]],
   ])("routes %s", (startParam, stack) => {
     expect(initialStackFromStartParam(startParam)).toEqual({ stack });
@@ -35,13 +37,13 @@ describe("relaunchPayloadForScreen", () => {
     [{ name: "settings" }, "settings"],
     [{ name: "add-coins" }, "setup"],
     [{ name: "group", groupId: "usd-top25" }, "home"],
-    [{ name: "add-group" }, "home"],
+    [{ name: "add-group" }, "presets"],
   ])("encodes %o as %s", (screen, payload) => {
     expect(relaunchPayloadForScreen(screen)).toBe(payload);
   });
 
-  it("round-trips coin, settings and add-coins screens", () => {
-    for (const screen of [{ name: "coin", coinId: "usdt-tether" }, { name: "settings" }, { name: "add-coins" }] as MiniAppScreen[]) {
+  it("round-trips coin, settings, add-coins and add-group screens", () => {
+    for (const screen of [{ name: "coin", coinId: "usdt-tether" }, { name: "settings" }, { name: "add-coins" }, { name: "add-group" }] as MiniAppScreen[]) {
       expect(initialStackFromStartParam(relaunchPayloadForScreen(screen)).stack.at(-1)).toEqual(screen);
     }
   });

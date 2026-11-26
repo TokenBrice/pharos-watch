@@ -47,6 +47,26 @@ it("keeps exactly one native listener across handler, activity, SDK and unmount 
   expect(second.hide).toHaveBeenCalled();
 });
 
+it("updates text and activity in place without hide/show flicker and applies normalized/muted colors", () => {
+  const button = { show: vi.fn(), hide: vi.fn(), setParams: vi.fn(), onClick: vi.fn(), offClick: vi.fn() };
+  const webApp = {
+    initData: "signed", colorScheme: "light" as const, MainButton: button,
+    themeParams: { bg_color: "#ffffff", text_color: "#111827", button_color: "#fefefe", button_text_color: "#ffffff" },
+  };
+  const props: UseTelegramMainButtonArgs = { webApp, text: "Add 1 coin", handler: vi.fn(), visible: true, active: true };
+  const { rerender, unmount } = renderHook(useTelegramMainButton, { initialProps: props });
+  const activeCall = button.setParams.mock.calls.at(-1)?.[0] as { color?: string; text_color?: string };
+  expect(activeCall.color).not.toBe("#fefefe");
+  expect(activeCall.text_color).not.toBe("#ffffff");
+  rerender({ ...props, text: "Add 2 coins" });
+  rerender({ ...props, text: "Add 2 coins", active: false });
+  expect([button.show.mock.calls.length, button.hide.mock.calls.length]).toEqual([1, 0]);
+  expect(button.setParams.mock.calls.at(-1)?.[0]).toMatchObject({ is_active: false });
+  expect((button.setParams.mock.calls.at(-1)?.[0] as { color?: string }).color).not.toBe(activeCall.color);
+  unmount();
+  expect(button.hide).toHaveBeenCalledOnce();
+});
+
 it("shows the native progress spinner only while the action runs", () => {
   const button = { show: vi.fn(), hide: vi.fn(), setParams: vi.fn(), onClick: vi.fn(), offClick: vi.fn(), showProgress: vi.fn(), hideProgress: vi.fn() };
   const initialProps: UseTelegramMainButtonArgs = { webApp: { initData: "signed", MainButton: button }, text: "Add 2 coins", handler: vi.fn(), progress: false };
