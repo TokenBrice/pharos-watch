@@ -1,4 +1,5 @@
 import { fetchErc4626SingleAssetReserves } from "../erc4626-single-asset";
+import type { AdapterContext } from "../types";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import {
@@ -32,8 +33,72 @@ export type Erc4626RpcFixture = {
   decimals?: bigint | number | null;
   paused?: bigint | number;
   shutdown?: bigint | number;
+  liquidityAdapter?: bigint | number | null;
+  json?: AdapterNetworkSpec["json"];
   extraHandlers?: Erc4626RpcHandler[];
 };
+
+export interface MorphoReadMockOptions {
+  version?: "v1" | "v2";
+  chainId?: number;
+  vault?: string;
+  asset?: string;
+  listed?: boolean;
+  dirAsset?: string;
+  withdrawable?: string | null;
+  stateAddress?: string;
+  stateChainId?: number;
+  penalties?: string[];
+  price?: number | null;
+  priceStatus?: number;
+  overrides?: AdapterNetworkSpec["json"];
+}
+
+export function morphoReadJson({
+  version = "v2",
+  chainId = 1,
+  vault = "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+  asset = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+  listed = true,
+  dirAsset = asset,
+  withdrawable = "90000000",
+  stateAddress = vault,
+  stateChainId = chainId,
+  penalties = [],
+  price = 1,
+  priceStatus = 200,
+  overrides = {},
+}: MorphoReadMockOptions = {}): NonNullable<AdapterNetworkSpec["json"]> {
+  const v = vault.toLowerCase();
+  const a = asset.toLowerCase();
+  const sel = `${chainId}:${v}`;
+  const base = "https://api.morpho.org";
+  return {
+    [`${base}/v0/vaults-${version}?limit=1000`]: {
+      data: listed ? [{ chain_id: chainId, vault_address: vault, asset_address: dirAsset }] : [],
+      cursor: null,
+    },
+    [`${base}/${version === "v1" ? "v0/vaults-v1" : "v1/vaults-v2"}/${sel}/state`]: {
+      data: { chain_id: stateChainId, address: stateAddress, withdrawable_assets: withdrawable },
+    },
+    ...(version === "v2"
+      ? {
+          [`${base}/v0/vaults-v2/${sel}/withdrawal-options`]: {
+            data: {
+              chain_id: chainId,
+              vault_address: vault,
+              adapter_penalties: penalties.map((p) => ({ force_deallocatable_assets: p })),
+            },
+          },
+        }
+      : {}),
+    [`${base}/v0/tokens/${chainId}:${a}/price`]: {
+      status: priceStatus,
+      json: { data: { chain_id: chainId, address: asset, price } },
+    },
+    ...overrides,
+  };
+}
 
 async function responseValue(response: Response | null): Promise<string | null> {
   const payload = response == null ? null : await response.json() as { result?: string } | null;
@@ -57,6 +122,8 @@ export function installErc4626Network({
   decimals = 6,
   paused,
   shutdown,
+  liquidityAdapter,
+  json,
   extraHandlers = [],
 }: Erc4626RpcFixture = {}): AdapterNetwork {
   const vaultAddress = vault.toLowerCase();
@@ -89,6 +156,7 @@ export function installErc4626Network({
     [`${vault}:totalSupply()`]: withHandlers(totalSupply),
     ...(paused === undefined ? {} : { [`${vault}:paused()`]: withHandlers(paused) }),
     ...(shutdown === undefined ? {} : { [`${vault}:isShutdown()`]: withHandlers(shutdown) }),
+    ...(liquidityAdapter === undefined ? {} : { [`${vault}:0xad468d11`]: withHandlers(liquidityAdapter) }),
     [`${vault}:convertToAssets(uint256)`]: withHandlers(convertedAssets),
     ...(underlying
       ? {
@@ -136,14 +204,7 @@ export function installErc4626Network({
   activeNetwork = installAdapterNetwork({
     chains: { [chain]: "https://rpc.example" },
     rpc,
-    json: {
-      "https://api.morpho.org/graphql": async (request: Request) => {
-        const body = await request.json() as Record<string, unknown>;
-        const response = await invokeExtra(undefined, "https://api.morpho.org/graphql", body);
-        if (!response) throw new Error("Unexpected non-RPC request https://api.morpho.org/graphql");
-        return await response.json();
-      },
-    },
+    ...(json ? { json } : {}),
   });
   return activeNetwork;
 }
@@ -161,6 +222,7 @@ export function resetErc4626NetworkForTests(): void {
 export async function runTrackedVault(
   id: string,
   configTransform?: (config: LiveReservesConfig) => LiveReservesConfig,
+  ctx?: Partial<AdapterContext>,
 ): Promise<Awaited<ReturnType<typeof fetchErc4626SingleAssetReserves>>> {
   const coin = TRACKED_META_BY_ID.get(id);
   if (!coin?.liveReservesConfig) throw new Error(`Missing live reserve config for ${id}`);
@@ -170,6 +232,6 @@ export async function runTrackedVault(
     coin,
     config,
     new AbortController().signal,
-    { chainRpcs: network.chainRpcs },
+    { chainRpcs: network.chainRpcs, ...ctx },
   );
 }

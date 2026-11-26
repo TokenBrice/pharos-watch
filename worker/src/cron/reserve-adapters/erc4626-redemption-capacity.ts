@@ -47,9 +47,17 @@ export async function observeConfiguredErc4626Capacity(
 
   let probe: CapacityProbeResult;
   if (configured.source === "morpho-vault-v2") {
-    probe = await fetchMorphoVaultV2Liquidity({ ...input, config: configured });
+    probe = await fetchMorphoVaultV2Liquidity({
+      ...input,
+      underlyingDecimalsRaw: input.underlyingDecimalsRaw,
+      config: configured,
+    });
   } else if (configured.source === "morpho-vault-v1") {
-    probe = await fetchMorphoVaultV1Liquidity({ ...input, config: configured });
+    probe = await fetchMorphoVaultV1Liquidity({
+      ...input,
+      underlyingDecimalsRaw: input.underlyingDecimalsRaw,
+      config: configured,
+    });
   } else if (configured.source === "yearn-v3-withdrawable") {
     probe = await fetchYearnV3WithdrawableCapacity({
       ...input,
@@ -279,9 +287,6 @@ export function finalizeErc4626RedemptionCapacity(input: {
       ? { ...route, ...routeOpenness, capacityKind: route.capacityKind ?? "documented-bound" as const }
       : {}),
     ...(publishProbeTelemetry ? configured.telemetry : {}),
-    ...(configured.diagnostics.morphoWarnings != null
-      ? { observerDiagnostics: { morphoWarnings: configured.diagnostics.morphoWarnings } }
-      : {}),
   };
 }
 

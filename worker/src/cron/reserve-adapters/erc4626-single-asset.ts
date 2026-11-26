@@ -520,9 +520,6 @@ export async function fetchErc4626SingleAssetReserves(
         routeStatus,
         ...(routeStatusSource != null ? { routeStatusSource } : {}),
         ...(routeStatusReason != null ? { routeStatusReason } : {}),
-        ...(!redemptionCapacity && configuredCapacity?.diagnostics.morphoWarnings != null
-          ? { observerDiagnostics: { morphoWarnings: configuredCapacity.diagnostics.morphoWarnings } }
-          : {}),
         ...(configuredCapacity?.v9RouteAttempt
           ? { v9RouteAttempt: configuredCapacity.v9RouteAttempt }
           : {}),
