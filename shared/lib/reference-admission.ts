@@ -66,6 +66,8 @@ const CALIBRATED_FIXING_BANDS: Readonly<Partial<Record<string, DailyFixingBands>
   CZK: { 1: 225, 2: 325, 3: 350 },
   PLN: { 1: 225, 2: 350, 3: 425 },
   AED: { 1: 500, 2: 500, 3: 500 },
+  // Retained at the uncalibrated 500 bps fallback until NZD receives a formal L18 fixing calibration.
+  NZD: { 1: 500, 2: 500, 3: 500 },
 };
 export const DAILY_FIXING_MOVE_BANDS_BPS: Readonly<Partial<Record<string, DailyFixingBands>>> =
   Object.freeze(Object.fromEntries(Object.values(PEG_TAXONOMY)

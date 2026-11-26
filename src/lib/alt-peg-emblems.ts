@@ -29,6 +29,7 @@ export const PEG_ANCHORS: Record<string, { x: number; y: number }> = {
   MXN: { x: 22, y: 42 },
   ZAR: { x: 57, y: 76 },
   AUD: { x: 86, y: 74 },
+  NZD: { x: 94, y: 83 },
   COP: { x: 30, y: 54 },
   PEN: { x: 29, y: 62 },
   CLP: { x: 31, y: 79 },

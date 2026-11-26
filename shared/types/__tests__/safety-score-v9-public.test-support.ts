@@ -593,7 +593,8 @@ function assertPreviousReaderSource() {
   // restores the prior 21cdf3e2… digest.
   // #1827 moves fact-set validation into reusable header and asset checks. Public schemas are unchanged.
   // Notices upgrade (#2396): stablecoin-meta-primitives.ts adds optional sources/chains and paused deadline on CoinNoticeSchema only; no public card/breakdown/trace schema changed (substituting origin/main restores 964de1f7…).
-  if (hash.digest("hex") !== "de9af139cabb6b4f2169cc2a38a2e988371a32e278d723a6e449f0f6bd0f1f17") throw new Error("Pre-dust reader source/refinement inputs changed");
+  // PR-1A NZD: core.ts adds "NZD" to PEG_CURRENCY_VALUES (vocabulary-additive); no public card/breakdown/trace schema changed (substituting origin/main restores de9af139…).
+  if (hash.digest("hex") !== "5a7816d1f4e04555e0605a090792e4bddc55fcde2de238e506081b63ba64b3cc") throw new Error("Pre-dust reader source/refinement inputs changed");
 }
 
 export async function previousReader() {

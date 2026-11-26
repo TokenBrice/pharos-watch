@@ -64,6 +64,7 @@ const PEG_COUNT_ORDER = [
   "CZK",
   "PLN",
   "AED",
+  "NZD",
 ] as const;
 
 export { PRE_LAUNCH_HUB_MIN_COINS };

@@ -57,6 +57,15 @@ describe("peg price bounds", () => {
       fxWidth: 0.027,
     },
     {
+      label: "NZD fiat FX",
+      hardcodedKey: "NZD",
+      hardcodedBounds: [0.4, 0.85],
+      hardcodedWidth: 0.45,
+      fxKey: "peggedNZD",
+      fxBounds: [0.45, 0.8],
+      fxWidth: 0.35,
+    },
+    {
       label: "GOLD commodity",
       hardcodedKey: "GOLD",
       hardcodedBounds: [100, 100_000],

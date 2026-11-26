@@ -48,7 +48,7 @@ Active Pharos taxonomy no longer exposes `algorithmic` as a standalone backing b
 
 Use a variable reference and neutral Variable labeling for VAR. Active non-NAV OTHER promotions require a supported independent peg unit. A lone asset supplies no reference for itself.
 
-`PEG_CURRENCY_VALUES` in `shared/types/core.ts` is the runtime authority. It covers the tracked fiat pegs (including COP, CLP, GHS, KES, PEN, CZK, PLN, and AED), `GOLD`, `SILVER`, `VAR` (variable/CPI-linked), and `OTHER`; do not maintain a second literal enum here. Czech koruna, Polish zloty, and UAE dirham assets use `CZK`, `PLN`, and `AED` rather than `OTHER`.
+`PEG_CURRENCY_VALUES` in `shared/types/core.ts` is the runtime authority. It covers the tracked fiat pegs (including COP, CLP, GHS, KES, PEN, CZK, PLN, AED, and NZD), `GOLD`, `SILVER`, `VAR` (variable/CPI-linked), and `OTHER`; do not maintain a second literal enum here. Czech koruna, Polish zloty, UAE dirham, and New Zealand dollar assets use `CZK`, `PLN`, `AED`, and `NZD` rather than `OTHER`.
 
 ### Boolean Flags
 
@@ -171,7 +171,7 @@ Peg deviation for non-USD stablecoins requires the peg currency's USD value. `sh
 
 Those `fxFallbackRates` are produced by `sync-fx-rates`. Provider cadence and fallback behavior are documented in the [pricing pipeline](https://pharos.watch/docs/pricing-pipeline/); `worker/src/lib/fx-config.ts` owns the primary and secondary fiat-source sets.
 
-CZK and PLN use the primary ECB/Frankfurter business-daily source; AED uses the secondary calendar-daily currency API because ECB does not publish AED. The shared taxonomy owns the canonical DefiLlama peg types, display symbols, and FX/price-validation bounds for all three currencies. RAKBank's pre-launch dirham asset (`aed-rakbank`) uses `AED`. ILS and GEL assets remain unchanged; adding these three currencies does not establish ILS or GEL support.
+CZK, PLN, and NZD use the primary ECB/Frankfurter business-daily source; AED uses the secondary calendar-daily currency API because ECB does not publish AED. The shared taxonomy owns the canonical DefiLlama peg types, display symbols, and FX/price-validation bounds for all four currencies. RAKBank's pre-launch dirham asset (`aed-rakbank`) uses `AED`. ILS and GEL assets remain unchanged; adding these currencies does not establish ILS or GEL support.
 
 ## Commodity & Non-DefiLlama Stablecoins
 

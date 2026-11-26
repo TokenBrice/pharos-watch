@@ -38,7 +38,7 @@ import {
  *
  * CNH, RUB, UAH, ARS, KGS, NGN, XOF, VND, KES, GHS, COP, CLP, PEN, and AED
  * use the secondary currency API because Frankfurter/ECB does not publish them
- * all directly. CZK and PLN use the primary Frankfurter/ECB business-daily path.
+ * all directly. CZK, PLN, and NZD use the primary Frankfurter/ECB business-daily path.
  * Supported Chainlink feeds overlay the reference cache for a curated subset
  * of fiat and commodity pegs when the on-chain quotes are fresh and plausible.
  * Triggered every 15 minutes, with scheduled deliveries grouped into one

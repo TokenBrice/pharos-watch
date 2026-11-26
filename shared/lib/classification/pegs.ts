@@ -428,6 +428,17 @@ export const PEG_METADATA = {
     },
     chart: { label: "AED", textColor: "text-emerald-700 dark:text-emerald-400", bgColor: "bg-emerald-600", hex: "#059669" },
   },
+  NZD: {
+    label: "the New Zealand Dollar",
+    shortLabel: "New Zealand Dollar",
+    filterTag: "nzd-peg",
+    filterLabel: "NZD",
+    badge: {
+      label: "NZD Peg",
+      cls: "bg-teal-600/10 text-teal-700 dark:text-teal-400 border-teal-600/20",
+    },
+    chart: { label: "NZD", textColor: "text-teal-700 dark:text-teal-400", bgColor: "bg-teal-600", hex: "#0d9488" },
+  },
   GOLD: {
     label: "Gold",
     shortLabel: "Gold",

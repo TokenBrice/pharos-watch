@@ -91,6 +91,8 @@ export const PEG_INTRO: Partial<Record<PegCurrency, string>> = {
 
   AED: `UAE Dirham stablecoins provide on-chain AED exposure. Pharos tracks peg performance and supply data for AED-pegged tokens against a live dirham FX reference rather than treating them as USD pegs.`,
 
+  NZD: `New Zealand Dollar stablecoins provide on-chain NZD exposure for Oceanian payments, treasury, and FX use cases. Pharos tracks peg performance and supply data for NZD-pegged tokens against a live New Zealand dollar FX reference.`,
+
   GOLD: `Gold-pegged stablecoins tokenize physical gold, with each token typically backed by one troy ounce of London Good Delivery gold held in insured vaults. PAXG and XAUT are the largest, both regulated and fully reserved. Unlike fiat pegs, gold stablecoin prices track the spot gold market, making them a hedge against both crypto volatility and fiat inflation. Pharos monitors their peg accuracy against live gold prices, supply changes, and safety grades.`,
 
   SILVER: `Silver-pegged stablecoins tokenize physical silver, tracking the spot silver market on-chain. Pharos monitors peg accuracy and supply for silver-backed tokens.`,
@@ -124,6 +126,7 @@ export const PEG_MARKET_CONTEXT: Partial<Record<PegCurrency, string>> = {
   CZK: "CZK pegs reference the Czech koruna; review issuer authorization, reserve composition, redemption access, and venue liquidity separately from the currency's FX rate.",
   PLN: "PLN pegs reference the Polish zloty; compare issuer authorization, reserve composition, redemption access, and venue liquidity before relying on them for settlement.",
   AED: "AED pegs reference the UAE dirham, not a dollar token; the currency's USD peg does not remove token issuer, reserve, or redemption risk.",
+  NZD: "NZD pegs reference the New Zealand dollar; review issuer authorization, reserve composition, redemption access, and secondary liquidity alongside the currency's FX rate.",
   IDR: "IDR pegs provide Indonesian rupiah exposure; assess issuer licensing, local rails, and venue depth before relying on them for treasury flows.",
   GOLD: "Gold pegs are commodity exposure, not fiat cash equivalents; review custody, bar allocation, redemption terms, and tracking against spot gold rather than a fixed 1.00 target.",
   SILVER: "Silver pegs inherit commodity-market volatility and custody questions, so peg accuracy means tracking spot silver rather than holding a fiat unit.",
