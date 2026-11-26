@@ -48,7 +48,7 @@ export default function ApiTermsPage() {
       title="API terms"
       variant="longform"
       containerClassName="max-w-2xl"
-      leadParagraphs={["Last updated: November 21, 2026"]}
+      leadParagraphs={["Last updated: November 26, 2026"]}
     >
       <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
         <section className="space-y-2">
@@ -98,19 +98,21 @@ export default function ApiTermsPage() {
           <ul className="list-disc space-y-1 pl-5">
             <li>
               Supporter key: {DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute,{" "}
-              {formatRequestQuota(DONOR_API_KEY_MONTHLY_REQUEST_QUOTA)} requests per month (core read endpoints and
-              contract resolver).
+              {formatRequestQuota(DONOR_API_KEY_MONTHLY_REQUEST_QUOTA)} requests per month (core read endpoints,
+              contract resolver, and the five core stateless MCP tools).
             </li>
             <li>
               Free partner key for non-commercial open-source public goods and academic research (attribution required):{" "}
               {API_KEY_FREE_PARTNER_RATE_LIMIT_PER_MINUTE} requests per minute,{" "}
-              {formatRequestQuota(API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA)} requests per month (core read endpoints
-              and contract resolver).
+              {formatRequestQuota(API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA)} requests per month (core read endpoints,
+              contract resolver, and the five core stateless MCP tools).
             </li>
             <li>
               Commercial key: {API_KEY_COMMERCIAL_RATE_LIMIT_PER_MINUTE} requests per minute,{" "}
               {formatRequestQuota(API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA)} requests per month, with higher limits on
-              request. Includes Compliance API, Risk-Gate, and stateless MCP.
+              request. Includes Compliance API, Risk-Gate, and the paid MCP tools (
+              <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">get_risk_check</code> and{" "}
+              <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">get_compliance</code>).
             </li>
             <li>
               Institutional key: {API_KEY_INSTITUTIONAL_RATE_LIMIT_PER_MINUTE} requests per minute,{" "}
@@ -122,10 +124,14 @@ export default function ApiTermsPage() {
             Rate limits use fixed 60-second windows; exceeding them returns{" "}
             <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">429</code> with a{" "}
             <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">Retry-After</code> header. Calling a paid-plan
-            endpoint (Compliance API, Risk-Gate, or MCP) with a key on a plan that does not include it returns{" "}
+            REST endpoint (Compliance API or Risk-Gate) with a key on a plan that does not include it returns{" "}
             <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">403</code> with{" "}
-            <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">reason: &quot;plan_upgrade_required&quot;</code>{" "}
-            and counts against the per-minute limiter without consuming monthly quota. Monthly volume is counted per UTC
+            <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">reason: &quot;plan_upgrade_required&quot;</code>;
+            calling a paid MCP tool on <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">/api/mcp</code>{" "}
+            returns a JSON-RPC tool error (<code className="text-xs bg-muted px-1 py-0.5 rounded-sm">isError: true</code>,{" "}
+            <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">_meta.httpStatus: 403</code>,{" "}
+            <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">reason: &quot;plan_upgrade_required&quot;</code>).
+            Both count against the per-minute limiter without consuming monthly quota. Monthly volume is counted per UTC
             calendar month, resets on the 1st (UTC), and applies from {QUOTA_EFFECTIVE_DATE}. The supporter monthly
             volume changes from the 200,000 requests per month published on November 20, 2026 to{" "}
             {formatRequestQuota(DONOR_API_KEY_MONTHLY_REQUEST_QUOTA)} requests per month for every supporter key before

@@ -1092,7 +1092,8 @@ export function scanFreshnessClockSource(file: string, source: string): Freshnes
     if (checkAdvisoryAdmission) {
       if (ts.isPropertyAccessExpression(node)
         && ts.isIdentifier(node.expression) && node.expression.text === "API_FRESHNESS_MAX_AGE_SEC"
-        && TIGHTER_ADVISORY_API_KEYS.has(node.name.text)) {
+        && TIGHTER_ADVISORY_API_KEYS.has(node.name.text)
+        && !hasFreshnessClampAllowComment(node, sourceFile)) {
         const line = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
         violations.push({
           file: relPath,
@@ -1103,7 +1104,8 @@ export function scanFreshnessClockSource(file: string, source: string): Freshnes
       } else if (ts.isElementAccessExpression(node)
         && ts.isIdentifier(node.expression) && node.expression.text === "API_FRESHNESS_MAX_AGE_SEC"
         && ts.isStringLiteral(node.argumentExpression)
-        && TIGHTER_ADVISORY_API_KEYS.has(node.argumentExpression.text)) {
+        && TIGHTER_ADVISORY_API_KEYS.has(node.argumentExpression.text)
+        && !hasFreshnessClampAllowComment(node, sourceFile)) {
         const line = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
         violations.push({
           file: relPath,

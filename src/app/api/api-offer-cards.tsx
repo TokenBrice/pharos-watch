@@ -167,7 +167,7 @@ function TeamPlansCard({ coverage }: { coverage?: ApiCoverageFacts }) {
         >
           <Figure>{API_KEY_COMMERCIAL_RATE_LIMIT_PER_MINUTE}/min</Figure>,{" "}
           <Figure>{formatRequestQuota(API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA)} requests/month</Figure>. Every endpoint,
-          plus the Compliance API, Risk-Gate and the hosted MCP server.
+          plus the Compliance API, Risk-Gate and the paid MCP tools (core MCP tools work on every active key).
         </TierRow>
         <TierRow
           name="Institutional"

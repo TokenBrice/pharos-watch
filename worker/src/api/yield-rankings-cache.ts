@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { getListingClass } from "@shared/lib/stablecoins/listing-governance";
 import { logWorkerEvent, logWorkerEventArgs } from "../lib/structured-log";
+import { prepareCacheUpsert } from "../lib/db-cache";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import { safetyScorePublicationIdentitiesAreComparable, safetyScorePublicationIdentitiesShareScoringContract } from "@shared/lib/safety-score-publication";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
@@ -60,9 +61,11 @@ import { loadActiveSafetyScoreIndex, type ActiveSafetyScoreIndex, type SafetySco
 import { resolveYieldBenchmarkDependencies } from "../lib/yield-config/yield-benchmark-dependencies";
 import { isReviewedPublishedYieldSourceExcluded, YIELD_OPPORTUNITY_EXCLUSIONS } from "../lib/yield-config/yield-opportunity-exclusions";
 import { readCoinProjectionId } from "../lib/api-coin-projection";
-import { readYieldRankingsCache, readYieldRankingsCoinCache, readYieldCoinCohort, readYieldCoinCohortLease, claimYieldCoinCohort, publishYieldCoinCohort, releaseYieldCoinCohort } from "../lib/yield-rankings-coin-cache";
+import { readYieldRankingsCache, readYieldRankingsCoinCache, readYieldCoinCohort, readYieldCoinCohortLease, claimYieldCoinCohort, publishYieldCoinCohort, releaseYieldCoinCohort, YIELD_COHORT_LAST_EXPIRY_CACHE_KEY } from "../lib/yield-rankings-coin-cache";
 import { YIELD_BENCHMARK_SCORE_TTL_SEC } from "@shared/lib/status-thresholds";
 import { YieldCoinCohortSchema, type YieldRankingsCoinResponse } from "@shared/types/yield";
+
+const lastRecordedYieldCohortExpiryByDb = new WeakMap<D1Database, number>();
 
 const YIELD_RANKINGS_MAX_AGE_SEC = CRON_INTERVALS["sync-yield-data"];
 const YIELD_HOLD_SIGNATURE = createHash("sha256").update(JSON.stringify(
@@ -1158,6 +1161,34 @@ export async function handleYieldRankingsCoin(db: D1Database, url: URL): Promise
     }
     const serveNow = Math.floor(Date.now() / 1000);
     if (cohort.validUntil <= serveNow) {
+      const metadata = {
+        stablecoinId: id,
+        boundary: cohort.validUntilBoundary ?? null,
+        validUntil: cohort.validUntil,
+        assessedAt: cohort.assessedAt,
+        serveNow,
+      };
+      if (lastRecordedYieldCohortExpiryByDb.get(db) !== serveNow) {
+        lastRecordedYieldCohortExpiryByDb.set(db, serveNow);
+        try {
+          // Single-attempt monotonic D1 upsert (no overload retry loop, memoized per isolate second).
+          await prepareCacheUpsert(
+            db,
+            {
+              key: YIELD_COHORT_LAST_EXPIRY_CACHE_KEY,
+              value: JSON.stringify({
+                ...metadata,
+                selectedGenerationId: selected.publication?.generationId ?? null,
+                servedGenerationId: cohort.publication?.generationId ?? null,
+              }),
+              updatedAt: serveNow,
+            },
+            "if-newer",
+          ).run();
+        } catch {
+          // Diagnostic-only breadcrumb; write failure must never alter the fail-closed 503.
+        }
+      }
       logWorkerEvent({
         scope: "api",
         level: "warn",
@@ -1165,13 +1196,7 @@ export async function handleYieldRankingsCoin(db: D1Database, url: URL): Promise
         route: "yield-rankings-coin",
         status: 503,
         message: "Yield coin cohort assessment expired before serving",
-        metadata: {
-          stablecoinId: id,
-          boundary: cohort.validUntilBoundary ?? null,
-          validUntil: cohort.validUntil,
-          assessedAt: cohort.assessedAt,
-          serveNow,
-        },
+        metadata,
       });
       return yieldCoinUnavailable("yield-cohort-assessment-expired", true);
     }

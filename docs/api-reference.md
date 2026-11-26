@@ -510,7 +510,7 @@ Source-retracted freeze and large mint/burn claims are absent from lists, search
 
 ## Hosted MCP Server (`POST /api/mcp`)
 
-`POST https://api.pharos.watch/api/mcp` exposes a stateless Streamable HTTP Model Context Protocol (JSON-RPC 2.0) server authenticated with `X-API-Key` only (`requiredKeyPlans: ["commercial", "institutional"]`; `GET /api/mcp` answers `405` with `Allow: POST`). Bodies are bounded to `16 KiB` (`413` on overflow), JSON-RPC batch arrays are rejected with `-32600`, and all responses use `Cache-Control: no-store`. Supported `MCP-Protocol-Version` revisions are `2026-07-28`, `2025-11-25`, `2025-06-18`, and `2025-03-26` (missing header defaults to `2025-03-26`; unsupported values return HTTP `400`).
+`POST https://api.pharos.watch/api/mcp` exposes a stateless Streamable HTTP Model Context Protocol (JSON-RPC 2.0) server authenticated with `X-API-Key` only (open to any active API key, including `free_partner` and donor keys; `GET /api/mcp` answers `405` with `Allow: POST`). Tool entitlements follow the backing REST endpoints: `get_risk_check` and `get_compliance` require `commercial` or `institutional` plans (checked before edge-cache reads and omitted from `tools/list` for non-entitled keys; unauthorized tool calls return `isError: true` with `plan_upgrade_required` and `_meta.httpStatus: 403`). Bodies are bounded to `16 KiB` (`413` on overflow), JSON-RPC batch arrays are rejected with `-32600`, and all responses use `Cache-Control: no-store`. Supported `MCP-Protocol-Version` revisions are `2026-07-28`, `2025-11-25`, `2025-06-18`, and `2025-03-26` (missing header defaults to `2025-03-26`; unsupported values return HTTP `400`).
 
 Supported methods: `initialize`, `notifications/initialized` (`202`), `ping`, `tools/list`, and `tools/call`. Seven read-only tools are exposed (`resolve_stablecoin`, `get_risk_check`, `get_compliance`, `get_safety_report_card`, `get_depeg_events`, `get_stress_signals`, `get_stablecoin_reserves`). Each tool call checks the Worker edge cache under its equivalent REST GET URL before lazily invoking the internal handler, preserving `_meta` and transport freshness headers (`X-Safety-Score-Status`, `X-Data-Updated-At`, `Warning`).
 
@@ -1069,10 +1069,10 @@ Modeled issuer/protocol redemption routes and effective-exit scoring for configu
 {
   "coins": {},
   "methodology": {
-    "version": "4.56",
-    "versionLabel": "v4.56",
-    "currentVersion": "4.56",
-    "currentVersionLabel": "v4.56",
+    "version": "4.57",
+    "versionLabel": "v4.57",
+    "currentVersion": "4.57",
+    "currentVersionLabel": "v4.57",
     "changelogPath": "/methodology/redemption-backstop-changelog/",
     "asOf": 0,
     "isCurrent": true,

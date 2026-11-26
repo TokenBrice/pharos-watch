@@ -57,3 +57,5 @@ If your team wants a 14-day Commercial evaluation key or wants to map out an Ins
 See you at the lighthouse. 🗼
 
 /- TokenBrice
+
+*Updated November 26, 2026:* `POST /api/mcp` is now open to every authenticated API key tier (Supporter, Free partner, Commercial, and Institutional). `tools/list` advertises only the tools included in the caller's plan, so Supporter and Free partner keys can use the five open read tools while `get_risk_check` and `get_compliance` remain gated to Commercial and Institutional keys (returning JSON-RPC `isError: true` with `reason: "plan_upgrade_required"` without consuming monthly quota).

@@ -26,6 +26,7 @@ const mocks = vi.hoisted(() => ({
   evaluateAccessGate: vi.fn(),
   evaluateCachedPublicApiReadFastGate: vi.fn(),
   handleMaintenanceMode: vi.fn(),
+  isMcpPlanDeniedResponse: vi.fn(() => false),
   notFoundResponse: vi.fn(),
   warnWorkerEnvIssuesOnce: vi.fn(),
   evaluateTelegramIngressAbuseGate: vi.fn(),
@@ -65,6 +66,7 @@ vi.mock("../gates", () => ({
   evaluateAccessGate: mocks.evaluateAccessGate,
   evaluateCachedPublicApiReadFastGate: mocks.evaluateCachedPublicApiReadFastGate,
   handleMaintenanceMode: mocks.handleMaintenanceMode,
+  isMcpPlanDeniedResponse: mocks.isMcpPlanDeniedResponse,
   notFoundResponse: mocks.notFoundResponse,
   warnWorkerEnvIssuesOnce: mocks.warnWorkerEnvIssuesOnce,
 }));
@@ -92,6 +94,7 @@ describe("handleHttpRequestImpl", () => {
     mocks.resolveCorsOrigin.mockReturnValue("https://pharos.watch");
     mocks.handleCorsPreflight.mockReturnValue(null);
     mocks.handleMaintenanceMode.mockReturnValue(null);
+    mocks.isMcpPlanDeniedResponse.mockReturnValue(false);
     mocks.evaluateTelegramIngressAbuseGate.mockImplementation(async (request: Request) => ({
       request,
       response: null,
@@ -595,5 +598,34 @@ describe("handleHttpRequestImpl", () => {
       "https://pharos.watch",
       "/api/badge/usdc-circle.svg",
     );
+  });
+
+  it.each([false, true])("marks MCP plan-denied routed responses as apiKeyThrottled=%s so monthly quota is not consumed", async (denied) => {
+    const routedResponse = new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: { isError: denied } }), {
+      status: 200,
+      headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+    });
+    mocks.evaluateAccessGate.mockResolvedValue({
+      isAdmin: false,
+      isSiteProxy: false,
+      apiKey: { id: 456, trafficClass: "external", rateLimitPerMinute: 60 },
+      requestLane: "public-api",
+      response: null,
+    });
+    mocks.route.mockResolvedValue(routedResponse);
+    mocks.isMcpPlanDeniedResponse.mockReturnValue(denied);
+
+    const response = await handleHttpRequestImpl(
+      new Request("https://api.pharos.watch/api/mcp", { method: "POST", headers: { "X-API-Key": "free-key" } }),
+      makeEnv(),
+      makeCtx(),
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.recordRequestSource).toHaveBeenCalledOnce();
+    expect(mocks.createRequestSourceRecorder).toHaveBeenCalledWith(expect.objectContaining({
+      apiKeyId: 456,
+      apiKeyThrottled: denied,
+    }));
   });
 });

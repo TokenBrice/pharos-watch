@@ -279,9 +279,6 @@ export function finalizeErc4626RedemptionCapacity(input: {
       ? { ...route, ...routeOpenness, capacityKind: route.capacityKind ?? "documented-bound" as const }
       : {}),
     ...(publishProbeTelemetry ? configured.telemetry : {}),
-    ...(configured.diagnostics.morphoWarnings != null
-      ? { observerDiagnostics: { morphoWarnings: configured.diagnostics.morphoWarnings } }
-      : {}),
   };
 }
 

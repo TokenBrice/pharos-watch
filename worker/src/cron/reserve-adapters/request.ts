@@ -7,6 +7,7 @@ export { ADAPTER_USER_AGENT } from "../../lib/json-request";
 import {
   fetchBinaryWithRetry as fetchBinaryBodyWithRetry,
   fetchTextWithRetry as fetchTextBodyWithRetry,
+  fetchWithRetry as fetchRawResponseWithRetry,
   DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES,
 } from "../../lib/fetch-retry";
 import { USER_AGENT } from "../../lib/constants";
@@ -487,6 +488,40 @@ export async function fetchBinaryPostWithRetry(
     }
     return result.body;
   });
+}
+
+export async function fetchAdapterResponseWithRetry(
+  url: string,
+  signal: AbortSignal,
+  options?: {
+    headers?: HeadersInit;
+    maxRetries?: number;
+    timeoutMs?: number;
+    deadlineMs?: number;
+    passthrough404?: boolean;
+    passthroughStatuses?: number[];
+    waitOnPassthrough429?: boolean;
+    throwOnFinalNetworkError?: boolean;
+    beforeRequest?: () => boolean;
+  },
+): Promise<Response | null> {
+  return await fetchRawResponseWithRetry(
+    url,
+    {
+      headers: buildRequestHeaders({ "User-Agent": ADAPTER_USER_AGENT }, options?.headers),
+      signal,
+    },
+    options?.maxRetries ?? 1,
+    {
+      ...(options?.timeoutMs != null ? { timeoutMs: options.timeoutMs } : {}),
+      ...(options?.deadlineMs != null ? { deadlineMs: options.deadlineMs } : {}),
+      ...(options?.passthrough404 ? { passthrough404: true } : {}),
+      ...(options?.passthroughStatuses ? { passthroughStatuses: options.passthroughStatuses } : {}),
+      ...(options?.waitOnPassthrough429 != null ? { waitOnPassthrough429: options.waitOnPassthrough429 } : {}),
+      ...(options?.throwOnFinalNetworkError != null ? { throwOnFinalNetworkError: options.throwOnFinalNetworkError } : {}),
+      ...(options?.beforeRequest ? { beforeRequest: options.beforeRequest } : {}),
+    },
+  );
 }
 
 export async function fetchPrimaryHtmlInput(

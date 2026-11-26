@@ -1,5 +1,5 @@
 import type { DigestInputData, DigestNextTrigger } from "@shared/types/digest";
-import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
 import { PSI_NATIVE_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/depeg-quote-domain";
 
 type Depeg = DigestInputData["topDepegs"][number];
@@ -33,10 +33,10 @@ export function describeDigestDepeg(depeg: Depeg) {
 export function currentDepegBps(depeg: Depeg, generatedAt?: number): number | null {
   const observedAt = depeg.priceObservedAt;
   // The collector admitted a native-peg quote under the event-native policy
-  // (six hours); a USD-reference row keeps the public stablecoins budget.
+  // (six hours); a USD-reference row uses the depeg primary-price budget.
   const maxAgeSec = depeg.quoteMode === "native-peg"
     ? PSI_NATIVE_EVIDENCE_MAX_AGE_SEC
-    : API_FRESHNESS_MAX_AGE_SEC.stablecoins;
+    : DEPEG_PRIMARY_PRICE_MAX_AGE_SEC;
   if (depeg.severityBasis !== "current" || !Number.isFinite(depeg.currentBps)
     || !(depeg.pegReference != null && depeg.pegReference > 0)
     || observedAt == null || generatedAt == null || observedAt > generatedAt

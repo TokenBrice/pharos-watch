@@ -123,6 +123,7 @@ async function runReserveRecovery(
       m0ApiKey: runtime.env.M0_API_KEY,
       chainRpcs: runtime.chainRpcs,
       dwellirNative: runtime.dwellirNative,
+      waitUntil: (promise) => runtime.ctx.waitUntil(promise),
     }, { invocationId: runtime.invocationId, scheduleKey: runtime.scheduleKey, slotStartedAt: runtime.slotStartedAt });
     const configReasons = [
       ...(configRecovery.failed.length > 0 ? ["reserve-config-recovery-failed"] : []),

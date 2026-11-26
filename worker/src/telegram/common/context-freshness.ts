@@ -1,4 +1,4 @@
-import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { isFiniteNumber } from "@shared/lib/type-guards";
 import type { StablecoinData } from "@shared/types/supply";
@@ -9,11 +9,11 @@ import { classifyFreshness } from "../../lib/status/freshness-oracle";
  * Optional market context shown beside Telegram alerts and `/status` replies is
  * assessed against budgets the producers/consumers already own — no
  * Telegram-specific numbers:
- * - supply: the published `/api/stablecoins` endpoint budget;
+ * - supply: the stablecoins consumer generation budget (`STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC`);
  * - DEX liquidity: the DEWS DEX-liquidity input budget.
  */
 export const TELEGRAM_CONTEXT_BUDGET_SEC = {
-  supply: API_FRESHNESS_MAX_AGE_SEC.stablecoins,
+  supply: STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC,
   dexLiquidity: DEWS_STALE_DEX_LIQUIDITY_SEC,
 } as const;
 

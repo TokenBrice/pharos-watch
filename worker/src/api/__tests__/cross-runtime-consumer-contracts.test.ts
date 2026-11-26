@@ -160,7 +160,7 @@ describe("GET /api/bluechip-ratings readers", () => {
     const response = await handleBluechipRatings(db);
     expect(response.status).toBe(200);
     const { _meta, ...payload } = await response.json() as Record<string, unknown>;
-    expect(_meta).toBeDefined();
+    expect(_meta).toMatchObject({ freshBudgetSec: 43_200 * 8, degradedBudgetSec: 43_200 * 12 });
     expectParses(BluechipRatingsMapSchema, payload, "Pages/frontend bluechip ratings");
     const parsed = BluechipRatingsMapSchema.parse(payload);
     expect(parsed["usdt-tether"]?.observationState).toBe("current");

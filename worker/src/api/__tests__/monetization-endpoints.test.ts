@@ -21,6 +21,8 @@ import { ResolveResponseSchema } from "@shared/types/resolve";
 import { RiskCheckResponseSchema } from "@shared/types/risk-check";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { createEdgeCacheContext } from "../../handlers/http/edge-cache";
+import { evaluateAccessGate, isMcpPlanDeniedResponse } from "../../handlers/http/gates";
+import type { AuthenticatedApiKey } from "../../lib/api-key-core";
 import { SAFETY_SCORE_V9_CACHE_KEYS } from "../../lib/safety-score-v9/publication-health";
 import { makeReportCardsV9Response } from "../../test-helpers/report-cards-v9";
 import { handleCompliance, handleComplianceCoin } from "../compliance";
@@ -29,6 +31,11 @@ import { handleMcp } from "../mcp";
 import { handleResolve, resolveContractDeployment } from "../resolve";
 import { handleRiskCheck } from "../risk-check";
 import { resolveRoute } from "../../router";
+
+const makeMcpKey = (overrides: Partial<AuthenticatedApiKey> = {}): AuthenticatedApiKey => ({
+  id: 1, keyPrefix: "ph_t", name: "k", ownerEmail: null, tier: "standard", plan: "commercial",
+  trafficClass: "external", rateLimitPerMinute: 120, monthlyRequestQuota: null, isActive: true, expiresAt: null, ...overrides,
+});
 
 const USDC_ETH = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const USDC_ETH_CHECKSUM = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
@@ -1002,6 +1009,8 @@ describe("Wave 2 endpoints: compliance, resolve, risk-check", () => {
             params: { name: "get_risk_check", arguments: { ids: ["buidl-blackrock"] } },
           }),
         }),
+        undefined,
+        makeMcpKey(),
       );
       expect(mcpRes.status).toBe(200);
       const mcpBody = (await mcpRes.json()) as {
@@ -1227,132 +1236,115 @@ describe("Wave 3 endpoints: MCP server & SVG safety badge", () => {
     vi.unstubAllGlobals();
   });
 
-  it("enforces MCP entitlement, 405 on GET, protocol version header, no-batch, 413 cap, and full JSON-RPC lifecycle", async () => {
-    expect(getEndpointRequiredKeyPlans("/api/mcp")).toEqual(["commercial", "institutional"]);
-
-    // GET /api/mcp is rejected with 405 Allow: POST by endpoint method validation
-    const getResolved = resolveRoute(new URL("https://api.pharos.watch/api/mcp"), "GET");
-    expect(getResolved?.methodValidation?.allowedMethods).toEqual(["POST"]);
+  it("enforces MCP auth/per-tool plan gating, 405 on GET, protocol version, no-batch, 413 cap, and JSON-RPC lifecycle", async () => {
+    expect(getEndpointRequiredKeyPlans("/api/mcp")).toBeNull();
+    expect(resolveRoute(new URL("https://api.pharos.watch/api/mcp"), "GET")?.methodValidation?.allowedMethods).toEqual(["POST"]);
+    const unauthReq = new Request("https://api.pharos.watch/api/mcp", { method: "POST" });
+    expect((await evaluateAccessGate(unauthReq, new URL(unauthReq.url), { API_KEY_HASH_PEPPER: "p" } as never)).response?.status).toBe(401);
 
     const nowSec = 1_795_300_000;
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(nowSec * 1000);
     const { db } = buildRiskCheckMockDb(nowSec);
-
-    const postMcp = (body: unknown, headers: Record<string, string> = {}) =>
-      handleMcp(
-        db,
-        new Request("https://api.pharos.watch/api/mcp", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...headers },
-          body: typeof body === "string" ? body : JSON.stringify(body),
-        }),
-      );
-
-    // Initialize negotiates 2026-07-28 and 2025-11-25
-    const initLatest = await postMcp({
-      jsonrpc: "2.0",
-      id: 1,
-      method: "initialize",
-      params: { protocolVersion: "2026-07-28" },
-    });
-    expect(initLatest.status).toBe(200);
-    expect(initLatest.headers.get("Cache-Control")).toBe("no-store");
-    await expect(initLatest.json()).resolves.toMatchObject({
-      jsonrpc: "2.0",
-      id: 1,
-      result: {
-        protocolVersion: "2026-07-28",
-        serverInfo: { name: "pharos", version: PUBLIC_API_CONTRACT_VERSION },
-      },
-    });
-
-    // Notification returns 202 Accepted with empty body
-    const notif = await postMcp({ jsonrpc: "2.0", method: "notifications/initialized" });
-    expect(notif.status).toBe(202);
-    expect(await notif.text()).toBe("");
-
-    // Unsupported MCP-Protocol-Version header returns 400
-    const badProto = await postMcp(
-      { jsonrpc: "2.0", id: 2, method: "tools/list" },
-      { "MCP-Protocol-Version": "1999-01-01" },
-    );
-    expect(badProto.status).toBe(400);
-
-    // Batch array rejected with -32600
-    const batch = await postMcp([{ jsonrpc: "2.0", id: 1, method: "ping" }]);
-    expect(batch.status).toBe(400);
-    await expect(batch.json()).resolves.toMatchObject({ error: { code: -32600 } });
-
-    // Oversized body (> 16 KiB) rejected with 413
-    const huge = await postMcp("x".repeat(17 * 1024));
-    expect(huge.status).toBe(413);
-
-    // tools/list returns all 7 read-only tools
-    const listRes = await postMcp(
-      { jsonrpc: "2.0", id: 3, method: "tools/list" },
-      { "MCP-Protocol-Version": "2025-11-25" },
-    );
-    expect(listRes.status).toBe(200);
-    const listBody = (await listRes.json()) as { result: { tools: Array<{ name: string; annotations: { readOnlyHint: boolean } }> } };
-    expect(listBody.result.tools.map((t) => t.name)).toEqual([
-      "resolve_stablecoin",
-      "get_risk_check",
-      "get_compliance",
-      "get_safety_report_card",
-      "get_depeg_events",
-      "get_stress_signals",
-      "get_stablecoin_reserves",
-    ]);
-    expect(listBody.result.tools.every((t) => t.annotations.readOnlyHint)).toBe(true);
-
-    // tools/call resolve_stablecoin + get_risk_check + get_compliance with edge-cache reuse
-    const match = vi.fn().mockResolvedValue(undefined);
-    const put = vi.fn().mockResolvedValue(undefined);
+    const commercial = makeMcpKey({ plan: "commercial" });
+    const institutional = makeMcpKey({ plan: "institutional" });
+    const freePartner = makeMcpKey({ plan: "free_partner", rateLimitPerMinute: 60 });
+    const donor = makeMcpKey({ tier: "donor", plan: null, rateLimitPerMinute: 10 });
+    const openTools = ["resolve_stablecoin", "get_safety_report_card", "get_depeg_events", "get_stress_signals", "get_stablecoin_reserves"];
+    const allTools = ["resolve_stablecoin", "get_risk_check", "get_compliance", "get_safety_report_card", "get_depeg_events", "get_stress_signals", "get_stablecoin_reserves"];
+    const cacheStore = new Map<string, Response>();
+    const match = vi.fn(async (req: Request) => cacheStore.get(req.url)?.clone());
+    const put = vi.fn(async (req: Request, res: Response) => { cacheStore.set(req.url, res.clone()); });
     vi.stubGlobal("caches", { default: { match, put } });
     const execCtx = { waitUntil: vi.fn((p: Promise<unknown>) => void p) } as unknown as ExecutionContext;
-
-    const callRes = await handleMcp(
-      db,
-      new Request("https://api.pharos.watch/api/mcp", {
+    const postMcp = (
+      body: unknown,
+      apiKey: AuthenticatedApiKey | null | undefined = commercial,
+      headers: Record<string, string> = {},
+      trustedAdmin = false,
+    ) =>
+      handleMcp(db, new Request("https://api.pharos.watch/api/mcp", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "MCP-Protocol-Version": "2025-11-25" },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: 4,
-          method: "tools/call",
-          params: { name: "get_risk_check", arguments: { ids: ["usdc-circle"] } },
-        }),
-      }),
+        headers: { "Content-Type": "application/json", ...headers },
+        body: typeof body === "string" ? body : JSON.stringify(body),
+      }), execCtx, apiKey, trustedAdmin);
+
+    const initLatest = await postMcp({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2026-07-28" } });
+    expect(initLatest.status).toBe(200);
+    expect(initLatest.headers.get("Cache-Control")).toBe("no-store");
+    await expect(initLatest.json()).resolves.toMatchObject({ jsonrpc: "2.0", id: 1, result: { protocolVersion: "2026-07-28", serverInfo: { name: "pharos", version: PUBLIC_API_CONTRACT_VERSION } } });
+
+    // Headerless request exercises the documented default MCP-Protocol-Version: 2025-03-26 fallback.
+    const notif = await postMcp({ jsonrpc: "2.0", method: "notifications/initialized" });
+    expect(notif.status).toBe(202); expect(await notif.text()).toBe("");
+    expect((await postMcp({ jsonrpc: "2.0", id: 2, method: "tools/list" }, commercial, { "MCP-Protocol-Version": "1999-01-01" })).status).toBe(400);
+    const batch = await postMcp([{ jsonrpc: "2.0", id: 1, method: "ping" }]);
+    expect(batch.status).toBe(400); await expect(batch.json()).resolves.toMatchObject({ error: { code: -32600 } });
+    expect((await postMcp("x".repeat(17 * 1024))).status).toBe(413);
+
+    for (const [key, expected, admin] of [[commercial, allTools, false], [institutional, allTools, false], [freePartner, openTools, false], [donor, openTools, false], [null, openTools, false], [null, allTools, true]] as const) {
+      const list = (await (await postMcp({ jsonrpc: "2.0", id: 3, method: "tools/list" }, key, {}, admin)).json()) as { result: { tools: Array<{ name: string; annotations: { readOnlyHint: boolean } }> } };
+      expect(list.result.tools.map((t) => t.name)).toEqual(expected);
+      expect(list.result.tools.every((t) => t.annotations.readOnlyHint)).toBe(true);
+    }
+
+    // Commercial warms edge cache for both paid tools; institutional and trustedAdmin also succeed.
+    const rcRes = await postMcp({ jsonrpc: "2.0", id: 4, method: "tools/call", params: { name: "get_risk_check", arguments: { ids: ["usdc-circle"] } } }, commercial, { "MCP-Protocol-Version": "2025-11-25" });
+    expect(isMcpPlanDeniedResponse(rcRes)).toBe(false);
+    const rc = (await rcRes.json()) as { result: { isError: boolean; _meta: { safetyScoreStatus: string }; structuredContent: { assets: Record<string, unknown> } } };
+    expect(rc.result.isError).toBe(false);
+    expect(rc.result._meta.safetyScoreStatus).toBe("current");
+    expect(rc.result.structuredContent.assets["usdc-circle"]).toBeDefined();
+    const comp = (await (await postMcp({ jsonrpc: "2.0", id: 5, method: "tools/call", params: { name: "get_compliance", arguments: { id: "usdc-circle" } } }, institutional)).json()) as { result: { isError: boolean; structuredContent: { coin: { id: string } } } };
+    expect(comp.result.isError).toBe(false);
+    expect(comp.result.structuredContent.coin.id).toBe("usdc-circle");
+    expect(((await (await postMcp({ jsonrpc: "2.0", id: 50, method: "tools/call", params: { name: "get_risk_check", arguments: { ids: ["usdc-circle"] } } }, null, {}, true)).json()) as { result: { isError: boolean } }).result.isError).toBe(false);
+    expect(put).toHaveBeenCalledTimes(2);
+    expect(cacheStore.size).toBe(2);
+
+    // Non-entitled keys succeed on open tools, but are rejected on paid tools BEFORE edge-cache reads and marked non-billable.
+    for (const key of [freePartner, donor, null] as const) {
+      const openRes = await postMcp({ jsonrpc: "2.0", id: 6, method: "tools/call", params: { name: "resolve_stablecoin", arguments: { id: "usdc-circle" } } }, key);
+      expect(isMcpPlanDeniedResponse(openRes)).toBe(false);
+      const open = (await openRes.json()) as { result: { isError: boolean } };
+      expect(open.result.isError).toBe(false);
+      match.mockClear();
+      for (const [name, args, restPath] of [
+        ["get_risk_check", { ids: ["usdc-circle"] }, "/api/risk-check"],
+        ["get_compliance", { id: "usdc-circle" }, "/api/compliance/usdc-circle"],
+        ["get_compliance", { id: "\uD800" }, "/api/compliance"],
+      ] as const) {
+        const deniedRes = await postMcp({ jsonrpc: "2.0", id: 7, method: "tools/call", params: { name, arguments: args } }, key);
+        expect(isMcpPlanDeniedResponse(deniedRes)).toBe(true);
+        const denied = (await deniedRes.json()) as { result: { isError: boolean; _meta: { httpStatus: number }; structuredContent: { reason: string; requiredPlans: string[] } } };
+        expect(denied.result.isError).toBe(true);
+        expect(denied.result._meta.httpStatus).toBe(403);
+        expect(denied.result.structuredContent).toMatchObject({
+          reason: "plan_upgrade_required",
+          requiredPlans: getEndpointRequiredKeyPlans(restPath),
+        });
+      }
+      expect(match).not.toHaveBeenCalled();
+    }
+
+    await expect((await postMcp({ jsonrpc: "2.0", id: 8, method: "tools/call", params: { name: "drop_tables", arguments: {} } })).json()).resolves.toMatchObject({ error: { code: -32602 } });
+
+    // Unmocked router preserves the WeakSet plan-denied marker on POST /api/mcp.
+    const { route: realRoute } = await import("../../router");
+    const routedDenied = await realRoute({
+      url: new URL("https://api.pharos.watch/api/mcp"),
+      db,
       execCtx,
-    );
-    expect(callRes.status).toBe(200);
-    const callBody = (await callRes.json()) as {
-      result: { isError: boolean; _meta: { safetyScoreStatus: string }; structuredContent: { assets: Record<string, unknown> } };
-    };
-    expect(callBody.result.isError).toBe(false);
-    expect(callBody.result._meta.safetyScoreStatus).toBe("current");
-    expect(callBody.result.structuredContent.assets["usdc-circle"]).toBeDefined();
-    expect(match).toHaveBeenCalledOnce();
-    expect(put).toHaveBeenCalledOnce();
-
-    const compCall = await postMcp({
-      jsonrpc: "2.0",
-      id: 5,
-      method: "tools/call",
-      params: { name: "get_compliance", arguments: { id: "usdc-circle" } },
+      request: new Request("https://api.pharos.watch/api/mcp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 9, method: "tools/call", params: { name: "get_risk_check", arguments: { ids: ["usdc-circle"] } } }),
+      }),
+      trustedAdmin: false,
+      apiKey: freePartner,
     });
-    const compBody = (await compCall.json()) as { result: { isError: boolean; structuredContent: { coin: { id: string } } } };
-    expect(compBody.result.isError).toBe(false);
-    expect(compBody.result.structuredContent.coin.id).toBe("usdc-circle");
-
-    const unknownTool = await postMcp({
-      jsonrpc: "2.0",
-      id: 6,
-      method: "tools/call",
-      params: { name: "drop_tables", arguments: {} },
-    });
-    await expect(unknownTool.json()).resolves.toMatchObject({ error: { code: -32602 } });
+    expect(routedDenied?.status).toBe(200);
+    expect(routedDenied && isMcpPlanDeniedResponse(routedDenied)).toBe(true);
   });
 
   it("renders GET /api/badge/:id.svg across styles, themes, NR, held, stale, pipeline-gap, and 404 states without <style> blocks", async () => {

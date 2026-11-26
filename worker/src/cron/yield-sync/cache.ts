@@ -46,6 +46,7 @@ import {
   SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
 } from "./family-registry";
 import { getRankingStaleThresholdMs, readDefiLlamaBatchTimestamp } from "../../lib/yield-ranking-helpers";
+import { MORPHO_RATE_LIMIT_BACKOFF_REASON, MORPHO_RATE_LIMIT_CACHE_KEY } from "../../lib/morpho-rate-limit";
 
 export function isYieldRelevantDlPool(
   pool: Pick<DlPool, "pool" | "symbol" | "stablecoin" | "exposure">,
@@ -844,7 +845,7 @@ export const RATE_LIMITED_SUPPLEMENTAL_FAMILY_KEYS: readonly RateLimitedSuppleme
 
 /** PENDLE-RL / MORPHO-RL: machine-readable causes recorded when unkeyed quota backoff degrades the family. */
 export const PENDLE_RATE_LIMIT_BACKOFF_REASON = "pendle-rate-limited-backoff";
-export const MORPHO_RATE_LIMIT_BACKOFF_REASON = "morpho-rate-limited-backoff";
+export { MORPHO_RATE_LIMIT_BACKOFF_REASON };
 
 export const SUPPLEMENTAL_FAMILY_RATE_LIMIT_BACKOFF_REASONS: Record<RateLimitedSupplementalFamilyKey, string> = {
   pendle: PENDLE_RATE_LIMIT_BACKOFF_REASON,
@@ -874,6 +875,7 @@ export interface YieldSupplementalFamilyBackoff {
 export function getYieldSupplementalFamilyBackoffCacheKey(
   family: RateLimitedSupplementalFamilyKey,
 ): string {
+  if (family === "morpho") return MORPHO_RATE_LIMIT_CACHE_KEY;
   return `${YIELD_SUPPLEMENTAL_FAMILY_CACHE_PREFIX}${family}-backoff`;
 }
 

@@ -236,20 +236,61 @@ describe("rankings score-index hydration", () => {
 
     const log = vi.spyOn(structuredLog, "logWorkerEvent").mockImplementation(() => {});
     const read = cohortCache.readYieldCoinCohort;
+    let expiredCohort: Awaited<ReturnType<typeof read>> = null;
     vi.spyOn(cohortCache, "readYieldCoinCohort").mockImplementationOnce(async (...args) => {
-      const cohort = await read(...args);
+      expiredCohort = await read(...args);
       vi.setSystemTime((deadline + 1) * 1000);
-      return cohort;
+      return expiredCohort;
     });
+    const expectedMeta = {
+      stablecoinId: id, assessedAt: deadline, validUntil: deadline + 1, serveNow: deadline + 1,
+      boundary: isUsyc ? "usyc-nav-stale" : source === "product-fetch" ? "benchmark-fetch-stale:USD" : "benchmark-record-stale:USD",
+    };
     const expired = await handleYieldRankingsCoin(db, coinUrl(id));
     expect(expired.status).toBe(503);
+    expect(expired.headers.get("Cache-Control")).toBe("no-store");
     expect(expired.headers.get("Retry-After")).toBe("1");
     expect(await expired.json()).toMatchObject({ reason: "yield-cohort-assessment-expired" });
     expect(log).toHaveBeenCalledWith(expect.objectContaining({
       event: "yield-cohort-assessment-expired",
-      metadata: { stablecoinId: id, assessedAt: deadline, validUntil: deadline + 1, serveNow: deadline + 1,
-        boundary: isUsyc ? "usyc-nav-stale" : source === "product-fetch" ? "benchmark-fetch-stale:USD" : "benchmark-record-stale:USD" },
+      metadata: expectedMeta,
     }));
+    const crumb = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?").get("yield-rankings:coin-cohort:last-expiry") as { value: string; updated_at: number } | undefined;
+    expect(crumb?.updated_at).toBe(deadline + 1);
+    expect(JSON.parse(crumb!.value)).toEqual({
+      ...expectedMeta,
+      selectedGenerationId: payload.publication!.generationId,
+      servedGenerationId: payload.publication!.generationId,
+    });
+
+    const prepare = db.prepare.bind(db);
+    let breadcrumbWriteAttempted = false;
+    vi.spyOn(db, "prepare").mockImplementation((sql: string) => {
+      if (sql.includes("INSERT INTO cache")) {
+        breadcrumbWriteAttempted = true;
+        return { bind: () => ({ run: async () => { throw new Error("D1 write failed"); } }) } as never;
+      }
+      return prepare(sql);
+    });
+    // Same-second burst is memoized per isolate second so repeated 503s do not spam D1.
+    vi.spyOn(cohortCache, "readYieldCoinCohort").mockResolvedValueOnce(expiredCohort);
+    expect((await handleYieldRankingsCoin(db, coinUrl(id))).status).toBe(503);
+    expect(breadcrumbWriteAttempted).toBe(false);
+
+    vi.advanceTimersByTime(1_000);
+    vi.spyOn(cohortCache, "readYieldCoinCohort").mockResolvedValueOnce(expiredCohort);
+    log.mockClear();
+    const expiredOnWriteError = await handleYieldRankingsCoin(db, coinUrl(id));
+    expect(breadcrumbWriteAttempted).toBe(true);
+    expect(expiredOnWriteError.status).toBe(503);
+    expect(expiredOnWriteError.headers.get("Cache-Control")).toBe("no-store");
+    expect(expiredOnWriteError.headers.get("Retry-After")).toBe("1");
+    expect(await expiredOnWriteError.json()).toMatchObject({ reason: "yield-cohort-assessment-expired" });
+    expect(log).toHaveBeenCalledWith(expect.objectContaining({
+      event: "yield-cohort-assessment-expired",
+      metadata: { ...expectedMeta, serveNow: deadline + 2 },
+    }));
+    vi.restoreAllMocks();
 
     const stale = YieldRankingsCoinResponseSchema.parse(await (await handleYieldRankingsCoin(db, coinUrl(id))).json());
     expect(stale.rankings[0].pysNullReason).toBe("source-stale");

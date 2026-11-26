@@ -256,7 +256,6 @@ describe("buildAlertContextLines", () => {
   describe("supply and DEX context clocks", () => {
     const NOW_SEC = 1_800_000_000;
     const DEX_BUDGET = TELEGRAM_CONTEXT_BUDGET_SEC.dexLiquidity;
-    const SUPPLY_BUDGET = TELEGRAM_CONTEXT_BUDGET_SEC.supply;
 
     function liquidityDb(updatedAt: number | null) {
       return makeNoopD1({
@@ -281,25 +280,15 @@ describe("buildAlertContextLines", () => {
     beforeEach(() => {
       vi.useFakeTimers();
       vi.setSystemTime(NOW_SEC * 1000);
-      mocks.loadActiveAlertSafetySourceAssessment.mockResolvedValue(
-        safetyAssessment({ "usdc-circle": { grade: "A", score: 85, methodologyVersion: "9.0" } }),
-      );
+      mocks.loadActiveAlertSafetySourceAssessment.mockResolvedValue(safetyAssessment({ "usdc-circle": { grade: "A", score: 85, methodologyVersion: "9.0" } }));
     });
-
-    afterEach(() => {
-      vi.useRealTimers();
-    });
+    afterEach(() => { vi.useRealTimers(); });
 
     it("never presents missing supply or 30-day-old DEX context as current or zero, and still returns the primary context", async () => {
       stablecoins({});
-      const context = await buildAlertContextLines(liquidityDb(NOW_SEC - 30 * 86_400), ["usdc-circle"]);
-
-      const line = context.get("usdc-circle") ?? "";
+      const line = (await buildAlertContextLines(liquidityDb(NOW_SEC - 30 * 86_400), ["usdc-circle"])).get("usdc-circle") ?? "";
       expect(line).toContain("Safety A (85)");
-      expect(line).not.toContain("Supply");
-      expect(line).not.toContain("$0");
-      expect(line).not.toContain("Liquidity");
-      expect(line).not.toContain("DEX ");
+      expect(line).not.toMatch(/Supply|\$0|Liquidity|DEX /);
     });
 
     it.each([
@@ -308,23 +297,19 @@ describe("buildAlertContextLines", () => {
       { name: "invalid-only", circulating: { peggedUSD: "n/a" } },
     ])("omits $name supply buckets", async ({ circulating }) => {
       stablecoins(circulating);
-      const context = await buildAlertContextLines(liquidityDb(NOW_SEC), ["usdc-circle"]);
-
-      expect(context.get("usdc-circle") ?? "").not.toContain("Supply");
+      expect((await buildAlertContextLines(liquidityDb(NOW_SEC), ["usdc-circle"])).get("usdc-circle") ?? "").not.toContain("Supply");
     });
 
-    it("renders an explicit zero and a positive supply only while their clock is inside the supply budget", async () => {
+    it("renders explicit zero and positive supply only within the 1,800s consumer budget", async () => {
+      expect(TELEGRAM_CONTEXT_BUDGET_SEC.supply).toBe(1_800);
       stablecoins({ peggedUSD: 0 });
       expect((await buildAlertContextLines(liquidityDb(NOW_SEC), ["usdc-circle"])).get("usdc-circle")).toContain("Supply $0");
-
-      stablecoins({ peggedUSD: 5_000_000_000 }, NOW_SEC - SUPPLY_BUDGET);
+      stablecoins({ peggedUSD: 5_000_000_000 }, NOW_SEC - 1_800);
       expect((await buildAlertContextLines(liquidityDb(NOW_SEC), ["usdc-circle"])).get("usdc-circle")).toContain("Supply $5");
-
-      stablecoins({ peggedUSD: 5_000_000_000 }, NOW_SEC - SUPPLY_BUDGET - 1);
+      stablecoins({ peggedUSD: 5_000_000_000 }, NOW_SEC - 1_801);
       expect((await buildAlertContextLines(liquidityDb(NOW_SEC), ["usdc-circle"])).get("usdc-circle") ?? "").not.toContain("Supply");
-
       // Retained supply keeps its own older observation clock even inside a fresh publication.
-      stablecoins({ peggedUSD: 5_000_000_000 }, NOW_SEC, NOW_SEC - SUPPLY_BUDGET - 1);
+      stablecoins({ peggedUSD: 5_000_000_000 }, NOW_SEC, NOW_SEC - 1_801);
       expect((await buildAlertContextLines(liquidityDb(NOW_SEC), ["usdc-circle"])).get("usdc-circle") ?? "").not.toContain("Supply");
     });
 

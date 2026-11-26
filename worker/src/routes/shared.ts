@@ -7,6 +7,7 @@ import {
   type EndpointKey,
   type EndpointMethod,
 } from "@shared/lib/api-endpoints";
+import type { AuthenticatedApiKey } from "../lib/api-key-core";
 import type { CloudflareD1StatusBindings } from "../lib/env";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import type { RpcProviderTrialEnv } from "../lib/rpc-provider-parity/report";
@@ -22,6 +23,7 @@ export interface RouteContext {
   request: Request;
   trustedAdmin: boolean;
   requestLane?: "public-api" | "site-api" | null;
+  apiKey?: AuthenticatedApiKey | null;
   /** Set by in-process probers so canonical operator audit is skipped. */
   internalProbe?: InternalRouteProbe;
 }

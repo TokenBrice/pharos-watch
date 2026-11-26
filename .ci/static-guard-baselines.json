@@ -131,15 +131,8 @@
       "worker/src/cron/cron-staleness-watchdog.ts": {
         "adhoc-age-clamp": 1
       },
-      "worker/src/cron/daily-digest/collectors-market.ts": {
-        "advisory-budget-as-admission": 1
-      },
-      "worker/src/cron/daily-digest/digest-evidence.ts": {
-        "advisory-budget-as-admission": 1
-      },
       "worker/src/cron/daily-digest/input.ts": {
-        "adhoc-age-clamp": 1,
-        "advisory-budget-as-admission": 1
+        "adhoc-age-clamp": 1
       },
       "worker/src/cron/dex-liquidity/uniswap-v4-candidate-snapshot.ts": {
         "adhoc-age-clamp": 1
@@ -168,9 +161,6 @@
       "worker/src/lib/blacklist-summary-service.ts": {
         "adhoc-age-clamp": 3
       },
-      "worker/src/lib/bluechip-cache.ts": {
-        "advisory-budget-as-admission": 1
-      },
       "worker/src/lib/dews/source-state/hydration.ts": {
         "adhoc-age-clamp": 3
       },
@@ -197,9 +187,6 @@
       },
       "worker/src/lib/supply-integrity.ts": {
         "adhoc-age-clamp": 1
-      },
-      "worker/src/telegram/common/context-freshness.ts": {
-        "advisory-budget-as-admission": 1
       },
       "worker/src/telegram/outbox/pending-capacity.ts": {
         "adhoc-age-clamp": 2

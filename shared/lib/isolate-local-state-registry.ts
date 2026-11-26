@@ -248,6 +248,14 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "The OG lane never fails closed: crawlers are served regardless, and the flag only bounds logging, never admission.",
   },
   {
+    sourcePath: "worker/src/handlers/http/gates.ts",
+    stateNames: ["MCP_PLAN_DENIED_RESPONSES"],
+    owner: "MCP per-tool plan denial response brand",
+    kind: "coordination",
+    resetOrTtl: "WeakSet keyed by individual Response objects created during a single request; entries are garbage-collectable once the response finishes and reset with the isolate.",
+    durableTruth: "Current authenticated API key plan and MCP tool entitlement metadata are authoritative; the WeakSet only tags a response so request-dispatch skips monthly quota accounting.",
+  },
+  {
     sourcePath: "worker/src/lib/api-key-rate-limit.ts",
     stateNames: ["lastMonthlyQuotaWarnMinute", "monthlyUsageReadsInFlight"],
     owner: "API-key monthly quota fail-open logging and read coalescing",
@@ -427,6 +435,22 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     kind: "cache",
     resetOrTtl: "WeakMap keyed by D1 binding holding at most 5 positively admitted completed run IDs with oldest-entry eviction; full-scan census failure or row-decode failure evicts the run ID, and all entries reset with the isolate.",
     durableTruth: "Completed immutable rows in redemption_backstop_runs and redemption_backstop_run_rows are authoritative; the cache only skips repeating full-run row censuses for already-admitted completed runs.",
+  },
+  {
+    sourcePath: "worker/src/api/yield-rankings-cache.ts",
+    stateNames: ["lastRecordedYieldCohortExpiryByDb"],
+    owner: "Yield coin cohort expiry breadcrumb",
+    kind: "cache",
+    resetOrTtl: "WeakMap keyed by D1 binding storing the last UTC second a yield-cohort expiry breadcrumb was written; throttles duplicate diagnostic writes within one second and resets with the isolate.",
+    durableTruth: "D1 cache row yield-rankings-coin-cohort-last-expiry and the fail-closed 503 cohort expiry check are authoritative; this memo only coalesces diagnostic breadcrumb writes.",
+  },
+  {
+    sourcePath: "worker/src/cron/reserve-adapters/erc4626-capacity-morpho.ts",
+    stateNames: ["morphoRateLimitedRuns", "morphoRateLimitLoadPromises", "morphoDirectoryFailureRuns"],
+    owner: "Morpho Read API per-run rate-limit and directory failure memo",
+    kind: "coordination",
+    resetOrTtl: "WeakMaps keyed by each reserve-sync run's requestCache or AdapterContext; entries live only for that run and reset with the isolate.",
+    durableTruth: "D1 cache row morpho:rate-limited and live Morpho Read API responses are authoritative; these WeakMaps only short-circuit repeat Morpho calls within one run.",
   },
 ] as const satisfies readonly IsolateLocalStateRegistryEntry[];
 

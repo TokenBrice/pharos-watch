@@ -96,7 +96,7 @@ describe("Published tier quotas", () => {
     render(<ApiTermsPage />);
     const terms = document.body.textContent ?? "";
     expect(DONOR_API_KEY_MONTHLY_REQUEST_QUOTA).toBe(100_000);
-    expect(terms).toContain("Last updated: November 21, 2026");
+    expect(terms).toContain("Last updated: November 26, 2026");
     expect(terms).toContain("200,000 requests per month published on November 20, 2026 to 100,000 requests per month");
     expect(terms).toContain("5,000,000 requests per month");
     expect(terms).toContain("plan_upgrade_required");

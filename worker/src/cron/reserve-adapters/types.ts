@@ -29,6 +29,8 @@ export interface AdapterContext {
   abortSignal?: AbortSignal;
   /** Absolute outer attempt/run deadline; optional phases must finish before it. */
   attemptDeadlineMs?: number;
+  /** Retains non-blocking diagnostic side-effects (e.g. cooldown persistence) through invocation shutdown. */
+  waitUntil?: (promise: Promise<unknown>) => void;
 }
 
 export interface AdapterResult {

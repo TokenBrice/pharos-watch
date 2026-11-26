@@ -8,7 +8,7 @@ import { collectActiveDepegs, collectResolvedDepegs } from "../collectors-market
 import { collectDewsStress, collectYieldAnomalies } from "../collectors-risk";
 import { buildChangeSummary } from "../digest-change-summary";
 import { buildForwardLookOutcomes, buildNextTriggers } from "../digest-next-triggers";
-import { comparableDepegs, type DigestEvidence } from "../digest-evidence";
+import { comparableDepegs, currentDepegBps, type DigestEvidence } from "../digest-evidence";
 import { buildEditorialCandidates } from "../editorial-candidates";
 import { buildUserPrompt } from "../prompt";
 import { makeCollectorCtx, makePublishedDewsTables } from "../../__tests__/daily-digest.test-support";
@@ -63,11 +63,14 @@ describe("canonical comparable digest evidence", () => {
   });
 
   it.each(["reference", "event", "stale", "legacy"])("withholds a %s mismatch", (kind) => {
-    const previous = { ...input(113600), nextTriggers: [trigger] };
-    const current = input(200000);
+    const previous = { ...input(113600), nextTriggers: [trigger] }, current = input(200000);
     if (kind === "reference") current.topDepegs[0].pegReference = 2;
     if (kind === "event") current.topDepegs[0].startedAt = 2;
-    if (kind === "stale") current.topDepegs[0].priceObservedAt = 1;
+    if (kind === "stale") {
+      expect(currentDepegBps({ ...current.topDepegs[0], priceObservedAt: 198200 }, 200000)).toBe(200);
+      current.topDepegs[0].priceObservedAt = 198199;
+      expect(currentDepegBps(current.topDepegs[0], 200000)).toBeNull();
+    }
     if (kind === "legacy") delete previous.topDepegs[0].priceObservedAt;
     expect(buildForwardLookOutcomes(current, previous)[0].status).toBe("unavailable");
     expect(buildChangeSummary(current, previous).worsenedSignals).toEqual([]);

@@ -244,7 +244,11 @@ export function ApiPreviewTabs({ examples }: { examples: ApiPreviewExamples }) {
             <code className="rounded-sm bg-muted px-1 py-0.5 font-mono text-xs text-foreground">
               {PUBLIC_API_KEY_HEADER}
             </code>
-            . Commercial or Institutional key required.
+            . Five core tools work with any active API key (including supporter and free partner keys);{" "}
+            <code className="rounded-sm bg-muted px-1 py-0.5 font-mono text-xs text-foreground">get_risk_check</code>{" "}
+            and{" "}
+            <code className="rounded-sm bg-muted px-1 py-0.5 font-mono text-xs text-foreground">get_compliance</code>{" "}
+            require a Commercial or Institutional key.
           </p>
           <div className="flex flex-wrap gap-2">
             {MCP_CLIENTS.map((client) => {

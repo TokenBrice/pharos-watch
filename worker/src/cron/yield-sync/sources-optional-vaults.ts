@@ -8,6 +8,7 @@ import { FetchRequestNotStartedError, throwIfAborted } from "../../lib/abort";
 import { finiteDecimalNumberFromBigInt } from "../../lib/bigint";
 import { USER_AGENT } from "../../lib/constants";
 import { DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES, fetchJsonWithRetry, fetchWithRetry } from "../../lib/fetch-retry";
+import { resolveMorphoRateLimitBackoff } from "../../lib/morpho-rate-limit";
 import { cancelResponseBodyQuietly, readResponseJsonWithinLimitWithSignal } from "../../lib/response-body";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { PENDLE_SUPPLEMENTAL_FETCH_CADENCE_SEC, STALE_THRESHOLD_MS } from "../../lib/yield-ranking-helpers";
@@ -104,8 +105,6 @@ const MORPHO_REST_LIST_MAX_RESPONSE_BYTES = 1024 * 1024;
 const MORPHO_REST_LIST_LIMIT = 1000;
 const MORPHO_REST_LIST_MAX_PAGES = 10;
 const MORPHO_REST_CONCURRENCY = getCronJobMeta("sync-yield-supplemental")!.maxConnections!;
-const MORPHO_RATE_LIMIT_DEFAULT_BACKOFF_SEC = 600;
-const MORPHO_RATE_LIMIT_MAX_BACKOFF_SEC = 7 * 86400;
 
 function parseUnsignedBigInt(value: unknown): bigint | null {
   return typeof value === "string" && /^\d+$/.test(value) ? BigInt(value) : null;
@@ -417,20 +416,6 @@ function resolvePendleRateLimitBackoff(response: Response, nowMs: number): Suppl
   return {
     backoffSec: backoffSec > 0 ? Math.min(backoffSec, 7 * 86400) : PENDLE_SUPPLEMENTAL_FETCH_CADENCE_SEC,
     source,
-  };
-}
-
-function resolveMorphoRateLimitBackoff(response: Response, nowMs: number): SupplementalRateLimitBackoff {
-  const retryAfterSec = parseRetryAfterSeconds(response.headers.get("Retry-After"), { nowMs });
-  if (retryAfterSec != null && retryAfterSec > 0) {
-    return {
-      backoffSec: Math.min(retryAfterSec, MORPHO_RATE_LIMIT_MAX_BACKOFF_SEC),
-      source: "retry-after",
-    };
-  }
-  return {
-    backoffSec: MORPHO_RATE_LIMIT_DEFAULT_BACKOFF_SEC,
-    source: "default",
   };
 }
 
