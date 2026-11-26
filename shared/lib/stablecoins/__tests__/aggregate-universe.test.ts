@@ -29,8 +29,11 @@ import {
   CORE_AGGREGATE_V1_MEMBERS_SNAPSHOT,
   CORE_AGGREGATE_V1_MEMBER_IDS,
   CORE_AGGREGATE_V1_MEMBER_LIST,
+  CORE_AGGREGATE_V1_NON_ACTIVE_EXIT_DATES,
   CORE_AGGREGATE_V1_NON_ACTIVE_MEMBER_IDS,
   CORE_AGGREGATE_V1_NON_ACTIVE_MEMBER_LIST,
+  CORE_AGGREGATE_V2_POST_CUTOVER_EXIT_DATES,
+  getCoreAggregatePostCutoverExitSec,
 } from "../aggregate-universe-v1";
 import { getListingClass, isTokenizedFundId } from "../listing-governance";
 import {
@@ -138,6 +141,17 @@ describe("core stablecoin aggregate universe", () => {
     expect(CORE_AGGREGATE_V1_MEMBER_IDS.has("eutbl-spiko")).toBe(true);
     expect(CORE_AGGREGATE_V1_MEMBER_IDS.has("apxusd-apyx")).toBe(false);
     expect(CORE_AGGREGATE_V1_MEMBER_IDS.has("susds-sky")).toBe(false);
+    for (const [id, date] of Object.entries(CORE_AGGREGATE_V2_POST_CUTOVER_EXIT_DATES)) {
+      expect(CORE_AGGREGATE_V1_MEMBER_IDS.has(id)).toBe(true);
+      expect(isCoreAggregateStablecoinId(id)).toBe(false);
+      expect(date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(getCoreAggregatePostCutoverExitSec(id)!).toBeGreaterThan(CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC);
+    }
+    for (const [id, date] of Object.entries(CORE_AGGREGATE_V1_NON_ACTIVE_EXIT_DATES)) {
+      expect(CORE_AGGREGATE_V1_NON_ACTIVE_MEMBER_IDS.has(id)).toBe(true);
+      expect(date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(Date.parse(`${date}T00:00:00Z`) / 1000).toBeLessThanOrEqual(CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC);
+    }
   });
 
   it("excludes every asset already delisted at the frozen v1 base commit 1b79da4cb", () => {

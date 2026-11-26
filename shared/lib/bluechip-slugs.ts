@@ -19,4 +19,6 @@ export const BLUECHIP_SLUG_MAP: Record<string, string> = {
   xsgd: "xsgd-straitsx",
   ousd: "ousd-origin-protocol",
   cetes: "cetes-etherfuse",
+  audd: "audd-novatti",
+  usdglo: "usdglo-glo",
 };

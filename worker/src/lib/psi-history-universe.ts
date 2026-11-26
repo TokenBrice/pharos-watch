@@ -6,7 +6,9 @@ import {
 } from "@shared/lib/stablecoins/aggregate-universe";
 import {
   CORE_AGGREGATE_V1_MEMBER_IDS,
+  CORE_AGGREGATE_V1_NON_ACTIVE_EXIT_DATES,
   CORE_AGGREGATE_V1_NON_ACTIVE_MEMBER_IDS,
+  getCoreAggregatePostCutoverExitSec,
 } from "@shared/lib/stablecoins/aggregate-universe-v1";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
@@ -26,6 +28,7 @@ export interface PsiHistoricalMembershipEntry {
  * - Days strictly before `cutoverSec` use the frozen listing-policy v1 core membership
  *   plus off-catalog PSI historical assets.
  * - Days from `cutoverSec` onward use the current listing-policy v2 core membership
+ *   (except reviewed post-cutover listing-class exits in `CORE_AGGREGATE_V2_POST_CUTOVER_EXIT_DATES`)
  *   plus off-catalog PSI historical assets.
  */
 export function buildPsiHistoricalMembership(options: {
@@ -53,12 +56,21 @@ export function buildPsiHistoricalMembership(options: {
     const windows: Array<{ from: number; until: number }> = [];
 
     // Pre-cutover v1 window (< cutoverSec). Members active at the v1 snapshot commit
-    // stay in v1 history until the cutover regardless of any backdated later frozenAt
-    // so published history is never restated.
+    // stay in v1 history until the cutover (or their reviewed post-cutover exit date
+    // when later reclassified out of core-stablecoin) so published history is never restated.
     if (isHistoricalShadow || v1ActiveIds.has(coin.id)) {
-      if (launchFrom < cutoverSec) windows.push({ from: launchFrom, until: cutoverSec });
+      const postCutoverExitSec = !isHistoricalShadow && !currentCoreIds.has(coin.id)
+        ? getCoreAggregatePostCutoverExitSec(coin.id)
+        : null;
+      const rawFrozen = coin.frozenAt == null ? NaN : Date.parse(coin.frozenAt) / 1000;
+      const v1Until = postCutoverExitSec != null && postCutoverExitSec > cutoverSec
+        ? (Number.isFinite(rawFrozen) && rawFrozen > cutoverSec ? Math.min(rawFrozen, postCutoverExitSec) : postCutoverExitSec)
+        : cutoverSec;
+      if (launchFrom < v1Until) windows.push({ from: launchFrom, until: v1Until });
     } else if (v1NonActiveIds.has(coin.id)) {
-      const rawUntil = coin.frozenAt ?? coin.listingStatusReview?.changedAt;
+      const rawUntil = CORE_AGGREGATE_V1_NON_ACTIVE_EXIT_DATES[coin.id]
+        ?? coin.frozenAt
+        ?? coin.listingStatusReview?.changedAt;
       const parsedUntil = rawUntil == null ? NaN : Date.parse(rawUntil) / 1000;
       if (Number.isFinite(parsedUntil)) {
         const v1Until = Math.min(parsedUntil, cutoverSec);

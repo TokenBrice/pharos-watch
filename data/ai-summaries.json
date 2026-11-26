@@ -5097,12 +5097,12 @@
     ]
   },
   "usdcx-movement": {
-    "title": "Movement's native USDC-backed dollar",
-    "text": "USDCx is Movement's native dollar, issued through Circle's xReserve contract: deposit USDC, mint USDCx one-for-one, and move it back out via CCTP and Gateway without a third-party {{term:bridge}}bridge{{/term}}. Its solvency is borrowed: the sole reserve is USDC locked in a Circle-deployed contract, so USDCx is a claim on Circle's reserves and {{term:custody}}custody{{/term}} routed through xReserve. Backing sits near the top of the scale for that reason, and the Movement token exposes no local free-mint path. The attester, admin, pause, and package-upgrade powers on the Movement side are scored as bridge controls whose share of supply Pharos has not resolved. A 3-of-6 multisig can upgrade the Movement package with no timelock, so holder-level controls could be added later, and Circle can freeze the USDC in reserve. Exit runs through one issuer-native burn-and-mint route back to Ethereum, on an implementation launched in March 2026. The reserve contract is observable on-chain, but no independent party is documented as reconciling it to USDCx supply. The durable constraint is that USDCx is only ever as good as the wrapper, the route, and the parent underneath.",
-    "updatedAt": "2026-10-27",
+    "title": "Movement's xReserve-wrapped USDC",
+    "text": "USDCx is Movement's 1:1 wrapper of Circle USDC, issued through Circle's xReserve contract on an implementation launched in March 2026. Depositing USDC into the Ethereum xReserve escrow mints USDCx one-for-one on Movement, and burning it releases USDC via Circle CCTP and Gateway without a third-party {{term:bridge}}bridge{{/term}}. Because the sole reserve is locked USDC, USDCx inherits Circle's backing and {{term:custody}}custody{{/term}}, while the Movement token exposes no local free-mint path. Attester, admin, pause, and package-upgrade powers on Movement remain bridge controls. A 3-of-6 multisig can upgrade the Movement package with no timelock, leaving holder-level restrictions possible, while Circle can freeze the USDC in reserve. Exit runs through a queued burn-and-release route back to USDC; final fiat {{term:redemption}}redemption{{/term}} stays with Circle, and the on-chain escrow read is collateral evidence rather than certified instant capacity. Pharos found no published independent attestation reconciling xReserve balances to USDCx supply, and no wrapper-level GENIUS authorization or monthly attestation is published. The durable constraint is that USDCx rests on Circle's underlying USDC, xReserve attester signatures, and Movement's upgradeable wrapper controls.",
+    "updatedAt": "2026-11-26",
     "authoredBy": "ai",
-    "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19"
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-26"
   },
   "usdh-hubble": {
     "title": "Solana CDP dollar, now mostly PSM USDC",
@@ -5146,11 +5146,11 @@
   },
   "benji-franklin-templeton": {
     "title": "The onchain '40 Act fund",
-    "text": "BENJI is the on-chain share token for Franklin Templeton's FOBXX, an SEC-registered U.S. government {{term:money-market-fund}}money market fund{{/term}} with a stable $1.00 NAV, custodied at JPMorgan Chase with Franklin Templeton as transfer agent and the token as the share record. Yield is distributed by rebasing the holder's share count on-chain rather than letting the price drift, so BENJI behaves like a par dollar even though it is legally a fund share. Subscriptions and redemptions are limited to KYC-verified Benji wallets, settling by USD wire or into USDC. Pharos tracks deployments on eight chains, from Stellar and Ethereum to Solana and Aptos, while the BNB Chain and Canton issuances remain unintegrated. The catch is telemetry: reserves run on a curated weekly snapshot of the official factsheet, and since mid-July 2026 Pharos has quarantined the listing. The price resolves, but no permitted source reports a positive market cap or circulating supply, and Aptos and Stellar have no runtime supply reader, so a complete multi-chain count remains unproven. BENJI's constraint is the gap between a registered fund with daily published holdings and an on-chain footprint the dashboard cannot yet add up.",
-    "updatedAt": "2026-10-19",
+    "text": "BENJI is the on-chain share token for Franklin Templeton's FOBXX, an SEC-registered U.S. government {{term:money-market-fund}}money market fund{{/term}} with a stable $1.00 NAV, custodied at JPMorgan Chase with Franklin Templeton as transfer agent and the token as the share record. Yield is distributed by rebasing the holder's share count on-chain rather than letting the price drift, so BENJI behaves like a par dollar even though it is legally a fund share. Subscriptions and redemptions are limited to KYC-verified Benji wallets, settling by USD wire or into USDC. Pharos cataloged deployments on eight chains, from Stellar and Ethereum to Solana and Aptos, while BNB Chain and Canton issuances were not integrated. On November 26, 2026, Pharos delisted BENJI under Listing Policy v2 because no active tracked stablecoin holds BENJI as reserve backing, and no permitted provider reports a positive live market cap or circulating supply. Live reserve collection has stopped, leaving this profile as a static reference record.",
+    "updatedAt": "2026-11-26",
     "authoredBy": "ai",
-    "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19"
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-26"
   },
   "wtgxx-wisdomtree": {
     "title": "WisdomTree's 24/7 dealer-traded Treasury fund",

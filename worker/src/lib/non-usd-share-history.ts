@@ -11,6 +11,7 @@ import {
   CORE_AGGREGATE_V1_MEMBER_LIST,
   CORE_AGGREGATE_V1_NON_ACTIVE_MEMBER_IDS,
   CORE_AGGREGATE_V1_NON_ACTIVE_MEMBER_LIST,
+  getCoreAggregatePostCutoverExitSec,
 } from "@shared/lib/stablecoins/aggregate-universe-v1";
 import { isActiveStablecoinMeta, isFrozenStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { isCommodityPeg } from "@shared/lib/filter-tags";
@@ -42,7 +43,8 @@ export type NonUsdShareCoinMeta = Pick<StablecoinMeta, "id" | "status" | "frozen
 /**
  * Build date-fenced core membership for `/api/non-usd-share`:
  * - Dates strictly before `cutoverSec` use the frozen listing-policy v1 membership.
- * - Dates at or after `cutoverSec` use the current listing-policy v2 membership.
+ * - Dates at or after `cutoverSec` use the current listing-policy v2 membership,
+ *   except reviewed post-cutover listing-class exits in `CORE_AGGREGATE_V2_POST_CUTOVER_EXIT_DATES`.
  * Frozen rows contribute only before their recorded lifecycle cutoff.
  */
 export function buildNonUsdShareCoreMembers(options: {
@@ -71,9 +73,13 @@ export function buildNonUsdShareCoreMembers(options: {
     const inV1Frozen = !inV1Active && v1NonActiveIds.has(coin.id) && frozenFrom != null;
     const inV1 = inV1Active || inV1Frozen;
     // Members active at the v1 snapshot commit stay in v1 history until the cutover
-    // regardless of any backdated post-snapshot frozenAt (no restatement of published history).
+    // (or their reviewed post-cutover listing-class exit date) regardless of any
+    // backdated post-snapshot frozenAt (no restatement of published history).
+    const postCutoverExitSec = getCoreAggregatePostCutoverExitSec(coin.id);
     const v1InactiveFrom = inV1Active
-      ? cutoverSec
+      ? (postCutoverExitSec != null && postCutoverExitSec > cutoverSec
+          ? (frozenFrom != null && frozenFrom > cutoverSec ? Math.min(frozenFrom, postCutoverExitSec) : postCutoverExitSec)
+          : cutoverSec)
       : inV1Frozen
         ? Math.min(frozenFrom!, cutoverSec)
         : null;

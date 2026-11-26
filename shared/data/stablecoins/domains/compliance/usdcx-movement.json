@@ -1,0 +1,145 @@
+{
+  "id": "usdcx-movement",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "USDCx is marketed as a dollar-denominated stablecoin on Movement for payments, remittances, and DeFi, backed 1:1 by Circle USDC locked in the xReserve smart contract. Documented withdrawals burn USDCx to release USDC rather than providing direct USD fiat redemption from a named Movement issuer. GENIUS Act section 2(22) requires an issuer obligation to redeem for a fixed amount of monetary value rather than another digital asset, and reviewed Circle and Movement disclosures do not identify a single legal USDCx redemption obligor, so applicability remains unclear.",
+      "references": [
+        {
+          "label": "Movement USDCx launch announcement",
+          "url": "https://www.movementnetwork.xyz/article/introducing-usdcx-movements-native-usdc-backed-stablecoin",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-03-25",
+          "accessedAt": "2026-11-26"
+        },
+        {
+          "label": "Circle blog: USDCx on Movement now available via Circle xReserve",
+          "url": "https://www.circle.com/blog/usdcx-on-movement-now-available-via-circle-xreserve",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-03-25",
+          "accessedAt": "2026-11-26"
+        },
+        {
+          "label": "Circle xReserve how-it-works documentation",
+          "url": "https://developers.circle.com/xreserve/concepts/how-xreserve-works",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-26"
+        },
+        {
+          "label": "GENIUS Act: payment stablecoin definition, Public Law 119-27 section 2(22)",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-11-26"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://developers.circle.com/xreserve/concepts/how-xreserve-works",
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "Reviewed 2026-11-26. Movement's March 25, 2026 launch announcement states that Move Industries launches USDCx natively on Movement's M1 Mainnet backed 1:1 by Circle USDC in xReserve, while site metadata names Movement Network Foundation (Grand Cayman). Circle's March 25, 2026 announcement states that USDCx on Movement is deployed by Movement and backed 1:1 by USDC held in Circle xReserve, and its legal footer states that Circle Technology Services, LLC is a software provider that does not provide regulated financial services and leaves licensing and legal compliance to the deploying team. Neither disclosure identifies a dedicated legal issuer obligated to redeem USDCx directly for USD fiat; xReserve documents 1:1 burn-and-release into USDC, while direct fiat redemption applies to underlying USDC through eligible Circle Mint accounts. Accordingly, issuerEntity and issuerDomicile are omitted rather than conflating infrastructure software or underlying USDC issuance with a standalone USDCx legal issuer, and redemptionPolicyPresent is false for a wrapper-level fiat redemption policy. Onchain xReserve collateral documentation is present, but no USDCx-specific monthly independent accountant attestation was located; Circle's USDC examination reports cover USDC, not wrapper-level USDCx supply reconciliation. No public USDCx-specific GENIUS approval, application, intent, foreign exception, or enforcement action was located in the bounded sources checked. GENIUS implementing rules remain pre-effective prior to the January 18, 2027 statutory fallback.",
+    "references": [
+      {
+        "label": "Movement USDCx launch announcement",
+        "url": "https://www.movementnetwork.xyz/article/introducing-usdcx-movements-native-usdc-backed-stablecoin",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-03-25",
+        "accessedAt": "2026-11-26"
+      },
+      {
+        "label": "Circle blog: USDCx on Movement now available via Circle xReserve",
+        "url": "https://www.circle.com/blog/usdcx-on-movement-now-available-via-circle-xreserve",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-03-25",
+        "accessedAt": "2026-11-26"
+      },
+      {
+        "label": "Circle xReserve product page",
+        "url": "https://www.circle.com/xreserve",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-11-26"
+      },
+      {
+        "label": "Circle xReserve how-it-works documentation",
+        "url": "https://developers.circle.com/xreserve/concepts/how-xreserve-works",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-11-26"
+      },
+      {
+        "label": "GENIUS Act: payment stablecoin definition, Public Law 119-27 section 2(22)",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-11-26"
+      },
+      {
+        "label": "OCC digital assets licensing applications: reviewed for Movement, Move Industries, and USDCx",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-11-26"
+      },
+      {
+        "label": "NYDFS regulated virtual currency entities and greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-11-26"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "https://www.circle.com/blog/usdcx-on-movement-now-available-via-circle-xreserve",
+        "https://www.movementnetwork.xyz/article/introducing-usdcx-movements-native-usdc-backed-stablecoin",
+        "https://www.circle.com/xreserve",
+        "https://developers.circle.com/xreserve/concepts/how-xreserve-works",
+        "OCC digital assets licensing applications page (full primary HTML inspected)",
+        "NYDFS virtual currency business licensing and Greenlist page (full primary HTML inspected)",
+        "Targeted official-domain search across occ.gov, treasury.gov, federalreserve.gov, fdic.gov, and dfs.ny.gov for Movement, Move Industries, and USDCx"
+      ],
+      "summary": "As of 2026-11-26, the reviewed Circle and Movement primary disclosures, the OCC digital-assets licensing applications page, the NYDFS virtual-currency business directory, and targeted official-domain searches across OCC, Treasury, Federal Reserve, FDIC, and NYDFS did not locate any token-specific GENIUS PPSI approval, state-qualified designation, pending official application, registered foreign exception, issuer licensing-intent announcement, or public GENIUS enforcement action for Movement USDCx. Underlying Circle Internet Financial, LLC licenses and USDC disclosures do not establish standalone GENIUS authorization for the USDCx wrapper. This is bounded public negative evidence and does not exclude confidential filings outside the checked sources.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-11-26",
+      "references": [
+        {
+          "label": "OCC digital assets licensing applications: reviewed for Movement, Move Industries, and USDCx",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-11-26"
+        },
+        {
+          "label": "NYDFS regulated virtual currency entities and greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-11-26"
+        },
+        {
+          "label": "Circle blog: USDCx on Movement now available via Circle xReserve",
+          "url": "https://www.circle.com/blog/usdcx-on-movement-now-available-via-circle-xreserve",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-03-25",
+          "accessedAt": "2026-11-26"
+        },
+        {
+          "label": "Movement USDCx launch announcement",
+          "url": "https://www.movementnetwork.xyz/article/introducing-usdcx-movements-native-usdc-backed-stablecoin",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-03-25",
+          "accessedAt": "2026-11-26"
+        },
+        {
+          "label": "Circle xReserve how-it-works documentation",
+          "url": "https://developers.circle.com/xreserve/concepts/how-xreserve-works",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-26"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-11-26"
+  }
+}

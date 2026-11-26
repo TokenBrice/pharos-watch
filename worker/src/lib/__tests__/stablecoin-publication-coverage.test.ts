@@ -36,7 +36,7 @@ const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
 
 const QUARANTINED = [
-  "benji-franklin-templeton",
+  // benji-franklin-templeton was delisted on 2026-11-26 under listing policy v2.
   "wtgxx-wisdomtree",
   "tbill-openeden",
   "cetes-etherfuse",
