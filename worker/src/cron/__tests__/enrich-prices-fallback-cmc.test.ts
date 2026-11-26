@@ -35,6 +35,10 @@ vi.mock("../../lib/abort", async (importOriginal) => ({
   sleepWithSignal: sleepWithSignalMock,
 }));
 
+function testDollar(overrides: Partial<PeggedAsset> = {}) {
+  return makePeggedAsset({ id: "test-dollar", symbol: "TUSD", price: 0, ...overrides });
+}
+
 function emptyCmcLastFetchCache() {
   return {
     match: "SELECT value, updated_at FROM cache WHERE key = ?",
@@ -43,6 +47,22 @@ function emptyCmcLastFetchCache() {
     first: null,
   };
 }
+function cmcDb(allowUnknownCircuits = false) {
+  return makeEnrichPricesDb([
+    emptyCmcLastFetchCache(),
+    allowUnknownCircuits ? { match: "circuit", rows: [], allowUnused: true } : {
+      match: "SELECT value, updated_at FROM cache WHERE key = ?",
+      matchBinds: [`circuit:${CIRCUIT_SOURCE.CMC_PRICES}`],
+      rows: [],
+      first: null,
+    },
+  ]);
+}
+
+function circuitWrite(db: ReturnType<typeof makeEnrichPricesDb>, source: string) {
+  return db.getHistory().find((entry) => entry.sql.includes("INSERT INTO cache") && entry.binds[0] === `circuit:${source}`);
+}
+
 describe("enrichMissingPrices", () => {
   afterEach(cleanupEnrichMissingPricesTest);
   afterEach(() => vi.useRealTimers());
@@ -51,8 +71,8 @@ describe("enrichMissingPrices", () => {
   it("refreshes verified CMC quotes every available UTC hour from 00:09 through 03:15", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     const { db } = sqliteFixtures.open();
-    const makeAsset = () => makePeggedAsset({
-      id: "test-dollar", symbol: "TUSD", price: 0, cmcSlug: "test-dollar",
+    const makeAsset = () => testDollar({
+      cmcSlug: "test-dollar",
       contracts: [{ chain: "ethereum", address: "0x1111111111111111111111111111111111111111", decimals: 18 }],
     });
     for (let hour = 0; hour <= 3; hour++) {
@@ -115,7 +135,7 @@ describe("enrichMissingPrices", () => {
           body: scenario === "failed" ? "unavailable" : cmcCategory([], 301) },
         { match: "/v3/cryptocurrency/quotes/latest", body: { data: [] } },
       ]);
-      const target = makePeggedAsset({ id: "test-dollar", symbol: "TUSD", price: 0, cmcSlug: "test-dollar" });
+      const target = testDollar({ cmcSlug: "test-dollar" });
       const peers = scenario === "capped" ? Array.from({ length: 25 }, (_, i) => makePeggedAsset({
         id: `peer-${i}`, symbol: `P${i}`, price: 0, cmcSlug: `peer-${i}`,
       })) : [];
@@ -148,7 +168,7 @@ describe("enrichMissingPrices", () => {
         rows: [{ value: JSON.stringify(marker), updated_at: Date.parse(updatedAt) / 1000 }] },
       { match: "circuit", rows: [], allowUnused: true },
     ]);
-    const assets = [makePeggedAsset({ id: "test-dollar", symbol: "TUSD", price: 0, cmcSlug: "test-dollar" })];
+    const assets = [testDollar({ cmcSlug: "test-dollar" })];
     const fetchSpy = mockFetch([{ match: "pro-api.coinmarketcap.com", body: cmcCategory([
       { slug: "test-dollar", symbol: "TUSD", quote: { USD: cmcUsdQuote(1) } },
     ]) }]);
@@ -166,7 +186,7 @@ describe("enrichMissingPrices", () => {
   });
   it("keeps targeted 429 backoff when the category request succeeded", async () => {
     const db = makeEnrichPricesDb([emptyCmcLastFetchCache(), { match: "circuit", rows: [], allowUnused: true }]);
-    const assets = [makePeggedAsset({ id: "test-dollar", symbol: "TUSD", price: 0, cmcSlug: "test-dollar" })];
+    const assets = [testDollar({ cmcSlug: "test-dollar" })];
     mockFetch([
       { match: "/v1/cryptocurrency/category", body: cmcCategory([], 301) },
       { match: "/v3/cryptocurrency/quotes/latest", status: 429, body: { status: { error_message: "rate limited" } } },
@@ -196,10 +216,7 @@ describe("enrichMissingPrices", () => {
       }),
     ];
 
-    const db = makeEnrichPricesDb([
-      emptyCmcLastFetchCache(),
-      { match: "circuit", rows: [], allowUnused: true },
-    ]);
+    const db = cmcDb(true);
 
     mockFetch([
       {
@@ -418,14 +435,8 @@ describe("enrichMissingPrices", () => {
       candidateCount: 0,
     });
     expect(fetchSpy).not.toHaveBeenCalled();
-    const circuitWrite = db
-      .getHistory()
-      .find(
-        (entry) =>
-          entry.sql.includes("INSERT INTO cache") &&
-          entry.binds[0] === `circuit:${CIRCUIT_SOURCE.CMC_PRICES}`,
-      );
-    expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
+    const write = circuitWrite(db, CIRCUIT_SOURCE.CMC_PRICES);
+    expect(JSON.parse(String(write?.binds[1]))).toMatchObject({
       state: "closed",
       consecutiveFailures: 0,
     });
@@ -481,10 +492,7 @@ describe("enrichMissingPrices", () => {
       }),
     ];
 
-    const db = makeEnrichPricesDb([
-      emptyCmcLastFetchCache(),
-      { match: "circuit", rows: [], allowUnused: true },
-    ]);
+    const db = cmcDb(true);
 
     mockFetch([
       {
@@ -501,18 +509,12 @@ describe("enrichMissingPrices", () => {
 
   it("reports CMC fallback diagnostics on successful slug matches", async () => {
     const assets: PeggedAsset[] = [
-      makePeggedAsset({
-        id: "test-dollar",
+      testDollar({
         name: "Test Dollar",
-        symbol: "TUSD",
-        price: 0,
         cmcSlug: "test-dollar",
       }),
     ];
-    const db = makeEnrichPricesDb([
-      emptyCmcLastFetchCache(),
-      { match: "circuit", rows: [], allowUnused: true },
-    ]);
+    const db = cmcDb(true);
 
     mockFetch([
       {
@@ -536,11 +538,8 @@ describe("enrichMissingPrices", () => {
   });
 
   it("retrieves valid targeted quotes while an unrecognized slug remains unpriced", async () => {
-    const assets: PeggedAsset[] = [makePeggedAsset({
-      id: "test-dollar",
+    const assets: PeggedAsset[] = [testDollar({
       name: "Test Dollar",
-      symbol: "TUSD",
-      price: 0,
       cmcSlug: "test-dollar",
       contracts: [{
         chain: "ethereum",
@@ -746,11 +745,8 @@ describe("enrichMissingPrices", () => {
     vi.setSystemTime(new Date("2026-06-25T12:00:00Z"));
     const initialTime = Date.now();
     const observedAt = initialTime / 1000 - 60;
-    const makeAsset = () => makePeggedAsset({
-      id: "test-dollar",
+    const makeAsset = () => testDollar({
       name: "Test Dollar",
-      symbol: "TUSD",
-      price: 0,
       cmcSlug: "test-dollar",
       contracts: [{
         chain: "ethereum",
@@ -845,15 +841,9 @@ describe("enrichMissingPrices", () => {
     // is 3692s old at fetch time and must still be admissible.
     vi.setSystemTime(new Date("2026-09-23T02:09:31Z"));
     const missedRollSec = Math.floor(Date.parse("2026-09-23T01:07:59Z") / 1000);
-    const db = makeEnrichPricesDb([
-      emptyCmcLastFetchCache(),
-      { match: "circuit", rows: [], allowUnused: true },
-    ]);
-    const assets: PeggedAsset[] = [makePeggedAsset({
-      id: "test-dollar",
+    const db = cmcDb(true);
+    const assets: PeggedAsset[] = [testDollar({
       name: "Test Dollar",
-      symbol: "TUSD",
-      price: 0,
       cmcSlug: "test-dollar",
       contracts: [{
         chain: "ethereum",
@@ -898,11 +888,8 @@ describe("enrichMissingPrices", () => {
 
   it("bridges a rotation-skipped fetch hour from the verified cache", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
-    const makeAsset = () => makePeggedAsset({
-      id: "test-dollar",
+    const makeAsset = () => testDollar({
       name: "Test Dollar",
-      symbol: "TUSD",
-      price: 0,
       cmcSlug: "test-dollar",
       contracts: [{
         chain: "ethereum",
@@ -990,11 +977,8 @@ describe("enrichMissingPrices", () => {
       ],
     }]);
     const fetchSpy = mockFetch();
-    const assets: PeggedAsset[] = [makePeggedAsset({
-      id: "test-dollar",
+    const assets: PeggedAsset[] = [testDollar({
       name: "Test Dollar",
-      symbol: "TUSD",
-      price: 0,
       cmcSlug: "test-dollar",
       contracts: [{
         chain: "ethereum",
@@ -1047,8 +1031,8 @@ describe("enrichMissingPrices", () => {
     vi.setSystemTime(new Date("2026-10-08T00:09:00Z"));
     const observedAt = Date.parse("2026-10-08T00:08:00Z") / 1000;
     const { db, sqlite } = sqliteFixtures.open();
-    const makeAsset = () => makePeggedAsset({
-      id: "test-dollar", symbol: "TUSD", price: 0, cmcSlug: "test-dollar",
+    const makeAsset = () => testDollar({
+      cmcSlug: "test-dollar",
       contracts: [{ chain, address, decimals: 6 }],
     });
     const fetchSpy = mockFetch([
@@ -1103,8 +1087,8 @@ describe("enrichMissingPrices", () => {
       volume24h: 50_000, observedAt: nowSec - 60, providerAddress, chain: cachedChain, active: true,
     }]), nowSec);
     put.run("cmc_last_fetch", JSON.stringify({ version: 1, kind: "success" }), nowSec);
-    const assets = [makePeggedAsset({
-      id: "test-dollar", symbol: "TUSD", price: 0, cmcSlug: "test-dollar",
+    const assets = [testDollar({
+      cmcSlug: "test-dollar",
       contracts: [{ chain, address, decimals: 6 }],
     })];
     const fetchSpy = mockFetch();
@@ -1121,11 +1105,8 @@ describe("enrichMissingPrices", () => {
     ["inactive quote", "TUSD", "0x1111111111111111111111111111111111111111", undefined, 0, 143_000],
     ["zero-volume quote", "TUSD", "0x1111111111111111111111111111111111111111", undefined, 1, 0],
   ])("rejects a targeted CMC %s", async (_name, symbol, tokenAddress, lastUpdated, isActive, volume24h) => {
-    const assets: PeggedAsset[] = [makePeggedAsset({
-      id: "test-dollar",
+    const assets: PeggedAsset[] = [testDollar({
       name: "Test Dollar",
-      symbol: "TUSD",
-      price: 0,
       cmcSlug: "test-dollar",
       contracts: [{
         chain: "ethereum",
@@ -1156,18 +1137,12 @@ describe("enrichMissingPrices", () => {
 
   it("skips CMC quotes with stale quote timestamps", async () => {
     const assets: PeggedAsset[] = [
-      makePeggedAsset({
-        id: "test-dollar",
+      testDollar({
         name: "Test Dollar",
-        symbol: "TUSD",
-        price: 0,
         cmcSlug: "test-dollar",
       }),
     ];
-    const db = makeEnrichPricesDb([
-      emptyCmcLastFetchCache(),
-      { match: "circuit", rows: [], allowUnused: true },
-    ]);
+    const db = cmcDb(true);
 
     mockFetch([
       {
@@ -1186,23 +1161,12 @@ describe("enrichMissingPrices", () => {
 
   it("records a CMC breaker failure when an OK response has a malformed payload", async () => {
     const assets: PeggedAsset[] = [
-      makePeggedAsset({
-        id: "test-dollar",
+      testDollar({
         name: "Test Dollar",
-        symbol: "TUSD",
-        price: 0,
         cmcSlug: "test-dollar",
       }),
     ];
-    const db = makeEnrichPricesDb([
-      emptyCmcLastFetchCache(),
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: [`circuit:${CIRCUIT_SOURCE.CMC_PRICES}`],
-        rows: [],
-        first: null,
-      },
-    ]);
+    const db = cmcDb();
 
     mockFetch([
       {
@@ -1219,36 +1183,19 @@ describe("enrichMissingPrices", () => {
       success: false,
       errorClass: "invalid-shape",
     });
-    const circuitWrite = db
-      .getHistory()
-      .find(
-        (entry) =>
-          entry.sql.includes("INSERT INTO cache") &&
-          entry.binds[0] === `circuit:${CIRCUIT_SOURCE.CMC_PRICES}`,
-      );
-    expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
+    const write = circuitWrite(db, CIRCUIT_SOURCE.CMC_PRICES);
+    expect(JSON.parse(String(write?.binds[1]))).toMatchObject({
       consecutiveFailures: 1,
     });
   });
 
   it("ignores truncated category rows while reporting an unseen tail", async () => {
     const assets: PeggedAsset[] = [
-      makePeggedAsset({
-        id: "test-dollar",
+      testDollar({
         name: "Test Dollar",
-        symbol: "TUSD",
-        price: 0,
       }),
     ];
-    const db = makeEnrichPricesDb([
-      emptyCmcLastFetchCache(),
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: [`circuit:${CIRCUIT_SOURCE.CMC_PRICES}`],
-        rows: [],
-        first: null,
-      },
-    ]);
+    const db = cmcDb();
 
     mockFetch([
       {
@@ -1267,14 +1214,8 @@ describe("enrichMissingPrices", () => {
       resolvedCount: 0,
     });
     expect(result.diagnostics?.[0]?.errorMessage).toContain("category rows were ignored");
-    const circuitWrite = db
-      .getHistory()
-      .find(
-        (entry) =>
-          entry.sql.includes("INSERT INTO cache") &&
-          entry.binds[0] === `circuit:${CIRCUIT_SOURCE.CMC_PRICES}`,
-      );
-    expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
+    const write = circuitWrite(db, CIRCUIT_SOURCE.CMC_PRICES);
+    expect(JSON.parse(String(write?.binds[1]))).toMatchObject({
       state: "closed",
       consecutiveFailures: 0,
     });
@@ -1282,18 +1223,12 @@ describe("enrichMissingPrices", () => {
 
   it("drains CMC non-OK response bodies before recording failure", async () => {
     const assets: PeggedAsset[] = [
-      makePeggedAsset({
-        id: "test-dollar",
+      testDollar({
         name: "Test Dollar",
-        symbol: "TUSD",
-        price: 0,
         cmcSlug: "test-dollar",
       }),
     ];
-    const db = makeEnrichPricesDb([
-      emptyCmcLastFetchCache(),
-      { match: "circuit", rows: [], allowUnused: true },
-    ]);
+    const db = cmcDb(true);
     const response = new Response("blocked", { status: 500 });
     installFetch(async () => response);
 
@@ -1305,23 +1240,12 @@ describe("enrichMissingPrices", () => {
 
   it("writes the CMC local cooldown when the category endpoint returns 429", async () => {
     const assets: PeggedAsset[] = [
-      makePeggedAsset({
-        id: "test-dollar",
+      testDollar({
         name: "Test Dollar",
-        symbol: "TUSD",
-        price: 0,
         cmcSlug: "test-dollar",
       }),
     ];
-    const db = makeEnrichPricesDb([
-      emptyCmcLastFetchCache(),
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: [`circuit:${CIRCUIT_SOURCE.CMC_PRICES}`],
-        rows: [],
-        first: null,
-      },
-    ]);
+    const db = cmcDb();
     installFetch(async () => new Response(JSON.stringify({ status: { error_message: "rate limited" } }), {
       status: 429,
       headers: { "Retry-After": "1" },
@@ -1353,6 +1277,14 @@ async function solanaObservationResponse(request: Request, currentSlot: number, 
   return Response.json(body.method === "getBlockTime" ? { result: blockTime } : solanaSlotResponse(currentSlot));
 }
 
+function jupQuote(blockId: number, overrides: Record<string, unknown> = {}) {
+  return { usdPrice: 1.0002, decimals: 6, blockId, ...overrides };
+}
+
+function jupBody(quote: Readonly<Record<string, unknown>>) {
+  return { [USDG_SOLANA_MINT]: quote };
+}
+
 function jupiterRoutes(
   currentSlot: number,
   quote: Readonly<Record<string, unknown>>,
@@ -1360,7 +1292,7 @@ function jupiterRoutes(
 ) {
   return [
     { match: "api.mainnet-beta.solana.com", respond: (request: Request) => solanaObservationResponse(request, currentSlot, blockTime) },
-    { match: "api.jup.ag/price/v3", body: { [USDG_SOLANA_MINT]: quote } },
+    { match: "api.jup.ag/price/v3", body: jupBody(quote) },
   ];
 }
 
@@ -1417,11 +1349,7 @@ describe("enrichMissingPrices", () => {
           : solanaObservationResponse(request, currentSlot, Math.floor(Date.now() / 1000) - 10) },
       { match: "lb.drpc.org/ogrpc", respond: () => new Response("invalid JSON test-drpc-secret") },
       { match: "solana-rpc.publicnode.com", respond: (request) => solanaObservationResponse(request, currentSlot, Math.floor(Date.now() / 1000) - 10) },
-      { match: "api.jup.ag/price/v3", body: {
-        "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH": {
-          usdPrice: 1.0002, decimals: 6, blockId: currentSlot - 20, liquidity: 100_000,
-        },
-      } },
+      { match: "api.jup.ag/price/v3", body: jupBody(jupQuote(currentSlot - 20, { liquidity: 100_000 })) },
     ]);
     const result = await runJupiterPass(assets, undefined, undefined, undefined, undefined, chainRpcs);
     expect(result.resolved).toBe(1);
@@ -1451,7 +1379,7 @@ describe("enrichMissingPrices", () => {
         priceSource: "coingecko", priceConfidence: "single-source",
         consensusSources: ["coingecko"], agreeSources: ["coingecko"],
       }) : makeMissingUsdg();
-      const quote = { usdPrice: 1.0002, decimals: 6, blockId: currentSlot - 20, ...liquidity };
+      const quote = jupQuote(currentSlot - 20, liquidity);
       mockFetch(_label === "nonfinite" ? [
         { match: "api.mainnet-beta.solana.com", respond: (request) => solanaObservationResponse(request, currentSlot, Math.floor(Date.now() / 1000) - 10) },
         { match: "api.jup.ag/price/v3", respond: () => new Response(
@@ -1484,14 +1412,7 @@ describe("enrichMissingPrices", () => {
       { match: "api.mainnet.solana.com", respond: (request) => solanaObservationResponse(request, currentSlot, Math.floor(Date.now() / 1000) - 10) },
       {
         match: "api.jup.ag/price/v3",
-        body: {
-          "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH": {
-            usdPrice: 1.0002,
-            decimals: 6,
-            blockId: currentSlot - 20,
-            liquidity: 100_000,
-          },
-        },
+        body: jupBody(jupQuote(currentSlot - 20, { liquidity: 100_000 })),
       },
     ]);
 
@@ -1529,14 +1450,7 @@ describe("enrichMissingPrices", () => {
       { match: "solana-rpc.publicnode.com", status: 429, body: "rate limited" },
       {
         match: "api.jup.ag/price/v3",
-        body: {
-          "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH": {
-            usdPrice: 1.0002,
-            decimals: 6,
-            blockId: currentSlot - 20,
-            liquidity: 100_000,
-          },
-        },
+        body: jupBody(jupQuote(currentSlot - 20, { liquidity: 100_000 })),
       },
     ]);
 
@@ -1562,12 +1476,7 @@ describe("enrichMissingPrices", () => {
       makeMissingUsdg(),
     ];
 
-    const fetchSpy = mockFetch(jupiterRoutes(currentSlot, {
-      usdPrice: 1.0002,
-      decimals: 6,
-      blockId: currentSlot - 20,
-      liquidity: 100_000,
-    }));
+    const fetchSpy = mockFetch(jupiterRoutes(currentSlot, jupQuote(currentSlot - 20, { liquidity: 100_000 })));
 
     await runJupiterPass(assets, undefined, undefined, undefined, "jup-test-key");
 
@@ -1619,12 +1528,7 @@ describe("enrichMissingPrices", () => {
       }),
     ];
 
-    mockFetch(jupiterRoutes(currentSlot, {
-      usdPrice: 1.0002,
-      liquidity: 250_000,
-      decimals: 6,
-      blockId: currentSlot - 20,
-    }));
+    mockFetch(jupiterRoutes(currentSlot, jupQuote(currentSlot - 20, { liquidity: 250_000 })));
 
     const result = await runJupiterPass(assets, undefined, undefined);
 
@@ -1659,12 +1563,7 @@ describe("enrichMissingPrices", () => {
       }),
     ];
 
-    mockFetch(jupiterRoutes(currentSlot, {
-      usdPrice: 1.0002,
-      liquidity: 250_000,
-      decimals: 6,
-      blockId: currentSlot - 20,
-    }));
+    mockFetch(jupiterRoutes(currentSlot, jupQuote(currentSlot - 20, { liquidity: 250_000 })));
 
     const result = await runJupiterPass(assets, undefined, undefined);
 
@@ -1702,7 +1601,7 @@ describe("enrichMissingPrices", () => {
         const slot = 418_913_760;
         const blockTime = age == null ? null : now - age;
         const asset = makeMissingUsdg();
-        const fetchSpy = mockFetch(jupiterRoutes(slot, { usdPrice: 1.0002, decimals: 6, blockId: slot }, blockTime));
+        const fetchSpy = mockFetch(jupiterRoutes(slot, jupQuote(slot), blockTime));
         const result = await runJupiterPass([asset], undefined, undefined);
         expect(result.resolved).toBe(accepted ? 1 : 0);
         const read = fetchSpy.getHistory().find(({ body }) => body?.includes('"getBlockTime"'));
@@ -1734,12 +1633,7 @@ describe("enrichMissingPrices", () => {
     mockFetch([
       {
         match: "api.jup.ag/price/v3",
-        body: {
-          "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH": {
-            price: 1.0002,
-            blockId: 418_913_700,
-          },
-        },
+        body: jupBody({ price: 1.0002, blockId: 418_913_700 }),
       },
     ]);
 
@@ -1751,14 +1645,8 @@ describe("enrichMissingPrices", () => {
       success: false,
       errorClass: "invalid-shape",
     });
-    const circuitWrite = db
-      .getHistory()
-      .find(
-        (entry) =>
-          entry.sql.includes("INSERT INTO cache") &&
-          entry.binds[0] === `circuit:${CIRCUIT_SOURCE.JUPITER_PRICES}`,
-      );
-    expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
+    const write = circuitWrite(db, CIRCUIT_SOURCE.JUPITER_PRICES);
+    expect(JSON.parse(String(write?.binds[1]))).toMatchObject({
       consecutiveFailures: 1,
     });
   });
@@ -1779,12 +1667,7 @@ describe("enrichMissingPrices", () => {
     mockFetch([
       {
         match: "api.jup.ag/price/v3",
-        body: {
-          "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH": {
-            decimals: 6,
-            createdAt: "2026-02-18T15:12:44Z",
-          },
-        },
+        body: jupBody({ decimals: 6, createdAt: "2026-02-18T15:12:44Z" }),
       },
     ]);
 
@@ -1797,14 +1680,8 @@ describe("enrichMissingPrices", () => {
       responseRowCount: 1,
       rejectionReasonCounts: { "missing-quote": 1 },
     });
-    const circuitWrite = db
-      .getHistory()
-      .find(
-        (entry) =>
-          entry.sql.includes("INSERT INTO cache") &&
-          entry.binds[0] === `circuit:${CIRCUIT_SOURCE.JUPITER_PRICES}`,
-      );
-    expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
+    const write = circuitWrite(db, CIRCUIT_SOURCE.JUPITER_PRICES);
+    expect(JSON.parse(String(write?.binds[1]))).toMatchObject({
       state: "closed",
       consecutiveFailures: 0,
     });

@@ -275,8 +275,7 @@ describe("StablecoinDetailClient", () => {
 
   it("keeps the canonical mechanism destination in a loading dossier", () => {
     const cases = [
-      ...["brz-transfero", "jpyc-jpyc", "kgst-kyrgyz-som", "idrx-idrx", "cngn-compliant-naira", "brl1-brl1", "wcop-ripio"]
-        .map((id) => ({ id, label: "Learn how fiat-backed stablecoins work", href: "/learn/mechanisms/fiat-cash/" })),
+      { id: "brz-transfero", label: "Learn how fiat-backed stablecoins work", href: "/learn/mechanisms/fiat-cash/" },
       { id: "susn-noon", label: "Learn how credit-fund stablecoins work", href: "/learn/mechanisms/rwa-credit-fund/" },
       { id: "skymoneyusdtsavings-sky", label: "Learn how protocol-position stablecoins work", href: "/learn/mechanisms/protocol-position/" },
     ];

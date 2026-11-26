@@ -42,7 +42,7 @@ function makeCronRow(job: string, status = "ok", ageSec = 300) {
   };
 }
 
-function makeDewsPublicationPointerRow(now: number, ageSec = 300) {
+export function makeDewsPublicationPointerRow(now: number, ageSec = 300) {
   const updatedAt = now - ageSec;
   return {
     key: "dews:published-generation",

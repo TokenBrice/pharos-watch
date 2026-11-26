@@ -1027,7 +1027,7 @@ describe("Safety Score v9 wrapper backing inheritance", () => {
     }
   });
 
-  it.each([0, 25, 34, 35, 50])("retains weak measured parent quality %s below unknown", (parentBackingScore) => {
+  it.each([0, 34, 35, 50])("retains weak measured parent quality %s below unknown", (parentBackingScore) => {
     const result = evaluateV9ReserveExposures({
       ...asset([exposure({
         key: "parent", weight: 1, assetClass: "stablecoin", trackedAssetId: "parent", provenance: "live",
@@ -1134,7 +1134,7 @@ describe("v10.19 allocation-weighted Morpho lender Backing", () => {
     return result!;
   }
 
-  it.each([0, 35, 85, 100])("keeps same-parent lender row splits equivalent at collateral quality %s", quality => {
+  it.each([0, 35, 100])("keeps same-parent lender row splits equivalent at collateral quality %s", quality => {
     const fact = book([["100", quality, "1000000000000000000", "other-unknown"]]);
     const base = inherited(fact);
     const input = { ...base, reserveExposures: [

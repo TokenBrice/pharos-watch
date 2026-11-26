@@ -14,7 +14,7 @@ import {
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { MORPHO_NET_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
 import { YIELD_BENCHMARK_SCORE_TTL_SEC } from "@shared/lib/status-thresholds";
-import { createLatestSchemaFixtureTracker, createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
 
 import { type EvaluatedYieldSource } from "../yield-sync/evaluation";
@@ -54,6 +54,20 @@ const MIGRATION_FIXTURES_DIR = path.resolve(__dirname, "../../test-helpers/migra
 const rankingsFixtures = createLatestSchemaFixtureTracker();
 afterEach(rankingsFixtures.closeAll);
 
+function byKey(sources: readonly EvaluatedYieldSource[]) {
+  return new Map(sources.map((source) => [source.id, source.sourceKey]));
+}
+
+function previewArtifacts(input: Omit<Parameters<typeof buildPreviewYieldRankingsArtifacts>[0], "dlPoolsMeta" | "safetySnapshot">) {
+  return buildPreviewYieldRankingsArtifacts({ dlPoolsMeta: makeYieldSourceMeta(), safetySnapshot: makeSafetySnapshotMeta(), ...input });
+}
+
+type AtomicPublication = Parameters<typeof publishYieldRowsAtomically>[1];
+type AtomicRowKeys = "yieldDataRows" | "historyRows" | "decisionRows" | "decisionAlternativeRows";
+function publishAtomic(db: D1Database, input: Omit<AtomicPublication, AtomicRowKeys> & Partial<Pick<AtomicPublication, AtomicRowKeys>>) {
+  return publishYieldRowsAtomically(db, { yieldDataRows: [], historyRows: [], decisionRows: [], decisionAlternativeRows: [], ...input });
+}
+
 function rankingsFixture() {
   const { db, sqlite } = rankingsFixtures.open();
   const legacy = sqlite.prepare("SELECT value FROM cache WHERE key = 'yield-rankings'");
@@ -65,9 +79,8 @@ function rankingsFixture() {
 }
 
 function publishRankings(db: D1Database, startSec: number, rankings: unknown[], generationId = String(startSec)) {
-  return publishYieldRowsAtomically(db, {
+  return publishAtomic(db, {
     rankingsPayload: { rankings, publication: { generationId } }, startSec, generationId,
-    yieldDataRows: [], historyRows: [], decisionRows: [], decisionAlternativeRows: [],
   });
 }
 
@@ -103,14 +116,13 @@ describe("yield current-row conflict updates", () => {
             ...(linked ? [{ stablecoin_id: "usdc-circle", source_key: `linked-variant:${stablecoinId}:${key}`,
               publication_generation_id: generationId }] : []),
           ];
-          expect((await publishYieldRowsAtomically(db, {
+          expect((await publishAtomic(db, {
             rankingsPayload: { publication: { generationId } }, startSec, generationId,
             yieldDataRows: winners.map((row) => ({
               ...row, symbol: "USDC", current_apy: 3, apy_7d: 3, apy_30d: 3,
               yield_source: "Morpho", yield_type: "lending-vault", data_source: dataSource,
               is_best: 1, updated_at: startSec, publication_state: "published",
             })),
-            historyRows: [], decisionRows: [], decisionAlternativeRows: [],
           })).written).toBe(true);
           expect(selected.all(), `${stablecoinId}, linked=${linked}, winner=${dataSource}`).toEqual([
             ...winners, { stablecoin_id: "usdc-circle", source_key: "unrelated", publication_generation_id: "100" },
@@ -167,7 +179,7 @@ describe("yield current-row conflict updates", () => {
   });
 
   it("writes every non-key column, including nulls and generation clocks, without replacing keys", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
+    const { sqlite, db } = rankingsFixtures.open();
     const row = {
       stablecoin_id: "usdc-circle", source_key: "defillama:one", symbol: "USDC",
       current_apy: 5, apy_base: 4, apy_reward: 1, apy_7d: 4.9, apy_30d: 4.8,
@@ -179,53 +191,47 @@ describe("yield current-row conflict updates", () => {
       exchange_rate: 1.1, exchange_rate_prev: 1.09, warning_signals: '["old"]',
       is_best: 1, updated_at: 100, publication_generation_id: "first", publication_state: "published",
     };
-    try {
-      expect(sqlite.prepare("PRAGMA table_info(yield_data)").all().map((column) => column.name).sort())
-        .toEqual(Object.keys(row).sort());
-      await publishYieldRowsAtomically(db, {
-        rankingsPayload: { publication: { generationId: "first" } }, startSec: 100, generationId: "first",
-        yieldDataRows: [row, { ...row, source_key: "defillama:two" }],
-        historyRows: [], decisionRows: [], decisionAlternativeRows: [],
-      });
-      const identity = sqlite.prepare("SELECT rowid FROM yield_data WHERE source_key = 'defillama:one'").get();
-      const replacement = {
-        ...row, symbol: "NEW", current_apy: -1, apy_base: null, apy_reward: null,
-        apy_7d: 2, apy_30d: 3, yield_source: "Changed", yield_type: "nav-appreciation",
-        source_pool: null, source_tvl_usd: null, data_source: "protocol-api",
-        safety_score: null, safety_grade: null, pharos_yield_score: null,
-        yield_to_risk: null, excess_yield: null, yield_stability: null,
-        apy_variance_30d: null, apy_min_30d: null, apy_max_30d: null,
-        exchange_rate: null, exchange_rate_prev: null, warning_signals: null,
-        is_best: 0, updated_at: 200, publication_generation_id: "second", publication_state: "published",
-      };
-      expect(await publishYieldRowsAtomically(db, {
-        rankingsPayload: { publication: { generationId: "second" } }, startSec: 200, generationId: "second",
-        yieldDataRows: [replacement], historyRows: [], decisionRows: [], decisionAlternativeRows: [],
-      })).toMatchObject({ written: true, skippedBecauseNewer: false });
-      expect(sqlite.prepare("SELECT * FROM yield_data WHERE source_key = 'defillama:one'").get()).toEqual(replacement);
-      expect(sqlite.prepare("SELECT rowid FROM yield_data WHERE source_key = 'defillama:one'").get()).toEqual(identity);
-      expect(sqlite.prepare("SELECT * FROM yield_data WHERE source_key = 'defillama:two'").get())
-        .toEqual({ ...row, source_key: "defillama:two" });
-      const sentinel = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = 'freshness:yield-data'").get()!;
-      expect(sentinel.updated_at).toBe(200);
-      expect(JSON.parse(String(sentinel.value))).toMatchObject({ generationId: "second", updatedAt: 200 });
+    expect(sqlite.prepare("PRAGMA table_info(yield_data)").all().map((column) => column.name).sort())
+      .toEqual(Object.keys(row).sort());
+    await publishAtomic(db, {
+      rankingsPayload: { publication: { generationId: "first" } }, startSec: 100, generationId: "first",
+      yieldDataRows: [row, { ...row, source_key: "defillama:two" }],
+    });
+    const identity = sqlite.prepare("SELECT rowid FROM yield_data WHERE source_key = 'defillama:one'").get();
+    const replacement = {
+      ...row, symbol: "NEW", current_apy: -1, apy_base: null, apy_reward: null,
+      apy_7d: 2, apy_30d: 3, yield_source: "Changed", yield_type: "nav-appreciation",
+      source_pool: null, source_tvl_usd: null, data_source: "protocol-api",
+      safety_score: null, safety_grade: null, pharos_yield_score: null,
+      yield_to_risk: null, excess_yield: null, yield_stability: null,
+      apy_variance_30d: null, apy_min_30d: null, apy_max_30d: null,
+      exchange_rate: null, exchange_rate_prev: null, warning_signals: null,
+      is_best: 0, updated_at: 200, publication_generation_id: "second", publication_state: "published",
+    };
+    expect(await publishAtomic(db, {
+      rankingsPayload: { publication: { generationId: "second" } }, startSec: 200, generationId: "second",
+      yieldDataRows: [replacement],
+    })).toMatchObject({ written: true, skippedBecauseNewer: false });
+    expect(sqlite.prepare("SELECT * FROM yield_data WHERE source_key = 'defillama:one'").get()).toEqual(replacement);
+    expect(sqlite.prepare("SELECT rowid FROM yield_data WHERE source_key = 'defillama:one'").get()).toEqual(identity);
+    expect(sqlite.prepare("SELECT * FROM yield_data WHERE source_key = 'defillama:two'").get())
+      .toEqual({ ...row, source_key: "defillama:two" });
+    const sentinel = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = 'freshness:yield-data'").get()!;
+    expect(sentinel.updated_at).toBe(200);
+    expect(JSON.parse(String(sentinel.value))).toMatchObject({ generationId: "second", updatedAt: 200 });
 
-      const before = sqlite.prepare("SELECT * FROM yield_data ORDER BY source_key").all();
-      sqlite.exec(`CREATE TRIGGER reject_current_update BEFORE UPDATE ON yield_data
-        WHEN NEW.source_key = 'defillama:one' BEGIN SELECT RAISE(ABORT, 'current update rejected'); END`);
-      await expect(publishYieldRowsAtomically(db, {
-        rankingsPayload: { publication: { generationId: "failed" } }, startSec: 300, generationId: "failed",
-        yieldDataRows: [{ ...replacement, updated_at: 300, publication_generation_id: "failed" }],
-        historyRows: [], decisionRows: [], decisionAlternativeRows: [],
-      })).rejects.toThrow("current update rejected");
-      expect(sqlite.prepare("SELECT * FROM yield_data ORDER BY source_key").all()).toEqual(before);
-      expect(sqlite.prepare("SELECT updated_at FROM cache WHERE key = 'yield-rankings'").get())
-        .toEqual({ updated_at: 200 });
-      expect(sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = 'freshness:yield-data'").get())
-        .toEqual(sentinel);
-    } finally {
-      sqlite.close();
-    }
+    const before = sqlite.prepare("SELECT * FROM yield_data ORDER BY source_key").all();
+    sqlite.exec(`CREATE TRIGGER reject_current_update BEFORE UPDATE ON yield_data
+      WHEN NEW.source_key = 'defillama:one' BEGIN SELECT RAISE(ABORT, 'current update rejected'); END`);
+    await expect(publishAtomic(db, {
+      rankingsPayload: { publication: { generationId: "failed" } }, startSec: 300, generationId: "failed",
+      yieldDataRows: [{ ...replacement, updated_at: 300, publication_generation_id: "failed" }],
+    })).rejects.toThrow("current update rejected");
+    expect(sqlite.prepare("SELECT * FROM yield_data ORDER BY source_key").all()).toEqual(before);
+    expect(sqlite.prepare("SELECT updated_at FROM cache WHERE key = 'yield-rankings'").get())
+      .toEqual({ updated_at: 200 });
+    expect(sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = 'freshness:yield-data'").get())
+      .toEqual(sentinel);
   });
 });
 
@@ -272,7 +278,7 @@ describe("publishYieldCoordinatorResults", () => {
       evaluatedSources,
       publicationViews: makePublicationViews(
         evaluatedSources,
-        overrides.bestSourceKeyByCoin ?? new Map([[source.id, source.sourceKey]]),
+        overrides.bestSourceKeyByCoin ?? byKey([source]),
         startSec,
       ),
       startSec,
@@ -310,9 +316,9 @@ describe("publishYieldCoordinatorResults", () => {
     });
     const evaluated = await evaluateYieldSourcesCooperative(input);
     const benchmark = input.riskFreeRates.USD!;
-    const artifacts = buildPreviewYieldRankingsArtifacts({
+    const artifacts = previewArtifacts({
       ...evaluated, riskFreeRate: benchmark.rate, riskFreeRateMeta: benchmark, riskFreeRates: input.riskFreeRates,
-      dlPoolsMeta: makeYieldSourceMeta(), safetySnapshot: makeSafetySnapshotMeta(), startSec,
+      startSec,
     });
     expect((await publishYieldCoordinatorResults({ ...makePublishParams({ db }), ...artifacts,
       evaluatedSources: artifacts.acceptedSources })).ok).toBe(true);
@@ -328,7 +334,7 @@ describe("publishYieldCoordinatorResults", () => {
   });
 
   it.each([1, 1.001, 0.999])("persists an anchor without publishing zero, then publishes the measured return at rate %s", async (nextRate) => {
-    const { sqlite, db } = createLatestSchemaSqlite();
+    const { sqlite, db } = rankingsFixtures.open();
     const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
     const id = "sdai-sky";
     const sourceKey = `onchain:${id}`;
@@ -338,59 +344,55 @@ describe("publishYieldCoordinatorResults", () => {
     }) };
     const publish = async (clock: number, sources: EvaluatedYieldSource[], anchors = [seed]) => {
       const benchmark = makeBenchmarkMeta({ fetchedAt: clock });
-      const artifacts = buildPreviewYieldRankingsArtifacts({
-        evaluatedSources: sources, bestSourceKeyByCoin: new Map(sources.map((source) => [source.id, source.sourceKey])),
+      const artifacts = previewArtifacts({
+        evaluatedSources: sources, bestSourceKeyByCoin: byKey(sources),
         riskFreeRate: benchmark.rate, riskFreeRateMeta: benchmark, riskFreeRates: makeBenchmarkRegistry(benchmark),
-        dlPoolsMeta: makeYieldSourceMeta(), safetySnapshot: makeSafetySnapshotMeta(), medianApy: 4.8, startSec: clock,
+        medianApy: 4.8, startSec: clock,
       });
       return publishYieldCoordinatorResults({ ...makePublishParams({ db }), ...artifacts,
         evaluatedSources: artifacts.acceptedSources, anchorOnlySources: anchors, startSec: clock });
     };
-    try {
-      // Independent measured coverage admits the generation; a seed cannot satisfy
-      // the publication's unchanged empty/absolute-coverage guards by itself.
-      const other = makeEvaluatedSource();
-      expect((await publish(startSec, [other])).ok).toBe(true);
-      expect(sqlite.prepare("SELECT apy, apy_base, exchange_rate, is_best, pys_at_publish FROM yield_history WHERE stablecoin_id = ?")
-        .get(id)).toEqual({ apy: 0, apy_base: null, exchange_rate: 1, is_best: 0, pys_at_publish: null });
-      expect(sqlite.prepare("SELECT stablecoin_id FROM yield_data WHERE stablecoin_id = ?").all(id)).toEqual([]);
-      const firstPayload = JSON.parse(String(sqlite.prepare("SELECT value FROM cache WHERE key = 'yield-rankings'").get()!.value)) as {
-        rankings: Array<{ id: string; currentApy: number }>;
-      };
-      expect(firstPayload.rankings.some((row) => row.id === id)).toBe(false);
-      expect(sqlite.prepare("SELECT stablecoin_id FROM yield_source_decisions WHERE stablecoin_id = ?").all(id)).toEqual([]);
+    // Independent measured coverage admits the generation; a seed cannot satisfy
+    // the publication's unchanged empty/absolute-coverage guards by itself.
+    const other = makeEvaluatedSource();
+    expect((await publish(startSec, [other])).ok).toBe(true);
+    expect(sqlite.prepare("SELECT apy, apy_base, exchange_rate, is_best, pys_at_publish FROM yield_history WHERE stablecoin_id = ?")
+      .get(id)).toEqual({ apy: 0, apy_base: null, exchange_rate: 1, is_best: 0, pys_at_publish: null });
+    expect(sqlite.prepare("SELECT stablecoin_id FROM yield_data WHERE stablecoin_id = ?").all(id)).toEqual([]);
+    const firstPayload = JSON.parse(String(sqlite.prepare("SELECT value FROM cache WHERE key = 'yield-rankings'").get()!.value)) as {
+      rankings: Array<{ id: string; currentApy: number }>;
+    };
+    expect(firstPayload.rankings.some((row) => row.id === id)).toBe(false);
+    expect(sqlite.prepare("SELECT stablecoin_id FROM yield_source_decisions WHERE stablecoin_id = ?").all(id)).toEqual([]);
 
-      // An older generation cannot leak anchors through the atomic cache CAS.
-      await publish(startSec - 1, [other], [{ ...seed, id: "stale-seed" }]);
-      expect(sqlite.prepare("SELECT stablecoin_id FROM yield_history WHERE stablecoin_id = 'stale-seed'").all()).toEqual([]);
+    // An older generation cannot leak anchors through the atomic cache CAS.
+    await publish(startSec - 1, [other], [{ ...seed, id: "stale-seed" }]);
+    expect(sqlite.prepare("SELECT stablecoin_id FROM yield_history WHERE stablecoin_id = 'stale-seed'").all()).toEqual([]);
 
-      const nextSec = startSec + 7 * DAY_SECONDS;
-      const anchor = (await loadTier1PrevRateRows(db, [id], startSec)).get(id)!;
-      const apy = computeApyFromRate(nextRate, anchor.exchangeRate!, (nextSec - anchor.recordedAt) / DAY_SECONDS);
-      expect(typeof apy).toBe("number");
-      if (typeof apy !== "number") throw new Error("Expected measured return");
-      const evaluated = await evaluateYieldSourcesCooperative(baseEvaluationInput({
-        startSec: nextSec, sevenDaysAgoSec: startSec,
-        resolved: [{ ...seed, yield: { ...seed.yield, observationKind: undefined,
-          currentApy: apy, apyBase: apy, exchangeRate: nextRate,
-          sourceObservedAt: nextSec, comparisonAnchorObservedAt: startSec } }],
-      }), { yieldToEventLoop: () => Promise.resolve() });
-      const measured = evaluated.evaluatedSources[0];
-      expect(measured).toMatchObject({ apy7d: apy, apy30d: apy });
-      expect((await publish(nextSec, [other, measured], [])).ok).toBe(true);
-      const nextPayload = JSON.parse(String(sqlite.prepare("SELECT value FROM cache WHERE key = 'yield-rankings'").get()!.value)) as {
-        rankings: Array<{ id: string; currentApy: number }>;
-      };
-      expect(nextPayload.rankings.find((row) => row.id === id)?.currentApy).toBeCloseTo(apy);
-      expect(sqlite.prepare("SELECT apy, apy_base, is_best FROM yield_history WHERE stablecoin_id = ? ORDER BY recorded_at DESC LIMIT 1")
-        .get(id)).toEqual({ apy, apy_base: apy, is_best: 1 });
-    } finally {
-      sqlite.close();
-    }
+    const nextSec = startSec + 7 * DAY_SECONDS;
+    const anchor = (await loadTier1PrevRateRows(db, [id], startSec)).get(id)!;
+    const apy = computeApyFromRate(nextRate, anchor.exchangeRate!, (nextSec - anchor.recordedAt) / DAY_SECONDS);
+    expect(typeof apy).toBe("number");
+    if (typeof apy !== "number") throw new Error("Expected measured return");
+    const evaluated = await evaluateYieldSourcesCooperative(baseEvaluationInput({
+      startSec: nextSec, sevenDaysAgoSec: startSec,
+      resolved: [{ ...seed, yield: { ...seed.yield, observationKind: undefined,
+        currentApy: apy, apyBase: apy, exchangeRate: nextRate,
+        sourceObservedAt: nextSec, comparisonAnchorObservedAt: startSec } }],
+    }), { yieldToEventLoop: () => Promise.resolve() });
+    const measured = evaluated.evaluatedSources[0];
+    expect(measured).toMatchObject({ apy7d: apy, apy30d: apy });
+    expect((await publish(nextSec, [other, measured], [])).ok).toBe(true);
+    const nextPayload = JSON.parse(String(sqlite.prepare("SELECT value FROM cache WHERE key = 'yield-rankings'").get()!.value)) as {
+      rankings: Array<{ id: string; currentApy: number }>;
+    };
+    expect(nextPayload.rankings.find((row) => row.id === id)?.currentApy).toBeCloseTo(apy);
+    expect(sqlite.prepare("SELECT apy, apy_base, is_best FROM yield_history WHERE stablecoin_id = ? ORDER BY recorded_at DESC LIMIT 1")
+      .get(id)).toEqual({ apy, apy_base: apy, is_best: 1 });
   });
 
   it("deduplicates Zephyr cron generations and backfill without weakening generation CAS or trailing statistics", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
+    const { sqlite, db } = rankingsFixtures.open();
     const bucket = Math.floor(FIXED_NOW.getTime() / 1000 / 3600) * 3600;
     const sourceKey = "protocol-api:zys-zephyr-protocol";
     const source = makeEvaluatedSource({ id: "zys-zephyr-protocol", symbol: "ZYS", sourceKey,
@@ -398,10 +400,10 @@ describe("publishYieldCoordinatorResults", () => {
     const publish = async (startSec: number, observedAt: number, apy = 4.8) => {
       const evaluated = { ...source, sourceObservedAt: observedAt, currentApy: apy };
       const benchmark = makeBenchmarkMeta({ fetchedAt: startSec });
-      const artifacts = buildPreviewYieldRankingsArtifacts({ evaluatedSources: [evaluated],
-        bestSourceKeyByCoin: new Map([[evaluated.id, sourceKey]]), riskFreeRate: benchmark.rate,
+      const artifacts = previewArtifacts({ evaluatedSources: [evaluated],
+        bestSourceKeyByCoin: byKey([evaluated]), riskFreeRate: benchmark.rate,
         riskFreeRateMeta: benchmark, riskFreeRates: makeBenchmarkRegistry(benchmark),
-        dlPoolsMeta: makeYieldSourceMeta(), safetySnapshot: makeSafetySnapshotMeta(), medianApy: apy, startSec });
+        medianApy: apy, startSec });
       return publishYieldCoordinatorResults({ ...makePublishParams({ db }), ...artifacts,
         evaluatedSources: artifacts.acceptedSources, startSec });
     };
@@ -453,29 +455,24 @@ describe("publishYieldCoordinatorResults", () => {
         .toEqual({ updated_at: bucket + 3610 });
     } finally {
       cleanupYieldSourceTest();
-      sqlite.close();
     }
   });
 
   it("rolls back rankings, rows, and generation state when the atomic sentinel fails", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
-    try {
-      sqlite.exec(`CREATE TRIGGER reject_sentinel BEFORE INSERT ON cache
-        WHEN NEW.key = 'freshness:yield-data' BEGIN SELECT RAISE(ABORT, 'sentinel constraint'); END`);
-      const result = await publishYieldCoordinatorResults(makePublishParams({ db }));
-      expect(result.ok).toBe(false);
-      expect(sqlite.prepare("SELECT * FROM cache").all()).toEqual([]);
-      expect(sqlite.prepare("SELECT * FROM yield_data").all()).toEqual([]);
-      expect(sqlite.prepare("SELECT * FROM yield_history").all()).toEqual([]);
-      expect(sqlite.prepare("SELECT * FROM yield_source_decisions").all()).toEqual([]);
-      expect(sqlite.prepare("SELECT state FROM yield_publication_generations").all()).toEqual([{ state: "failed" }]);
-    } finally {
-      sqlite.close();
-    }
+    const { sqlite, db } = rankingsFixtures.open();
+    sqlite.exec(`CREATE TRIGGER reject_sentinel BEFORE INSERT ON cache
+      WHEN NEW.key = 'freshness:yield-data' BEGIN SELECT RAISE(ABORT, 'sentinel constraint'); END`);
+    const result = await publishYieldCoordinatorResults(makePublishParams({ db }));
+    expect(result.ok).toBe(false);
+    expect(sqlite.prepare("SELECT * FROM cache").all()).toEqual([]);
+    expect(sqlite.prepare("SELECT * FROM yield_data").all()).toEqual([]);
+    expect(sqlite.prepare("SELECT * FROM yield_history").all()).toEqual([]);
+    expect(sqlite.prepare("SELECT * FROM yield_source_decisions").all()).toEqual([]);
+    expect(sqlite.prepare("SELECT state FROM yield_publication_generations").all()).toEqual([{ state: "failed" }]);
   });
 
   it("commits imperfect publication and sentinel together even if aborted after the batch", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
+    const { sqlite, db } = rankingsFixtures.open();
     const controller = new AbortController();
     const batch = db.batch.bind(db);
     vi.spyOn(db, "batch").mockImplementation(async (statements) => {
@@ -483,54 +480,45 @@ describe("publishYieldCoordinatorResults", () => {
       controller.abort(new Error("aborted after commit"));
       return results;
     });
-    try {
-      await expect(publishYieldCoordinatorResults(makePublishParams({
-        db, signal: controller.signal, degradationReasons: ["safety-snapshot-coverage"],
-      }))).rejects.toThrow("aborted after commit");
-      const rankings = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = 'yield-rankings'").get() as { value: string; updated_at: number };
-      const sentinel = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = 'freshness:yield-data'").get() as { value: string; updated_at: number };
-      expect(sentinel.updated_at).toBe(rankings.updated_at);
-      expect(JSON.parse(sentinel.value)).toMatchObject({
-        generationId: JSON.parse(rankings.value).publication.generationId,
-        updatedAt: rankings.updated_at,
-      });
-      expect(sqlite.prepare("SELECT state FROM yield_publication_generations").all()).toEqual([{ state: "published" }]);
-    } finally {
-      sqlite.close();
-    }
+    await expect(publishYieldCoordinatorResults(makePublishParams({
+      db, signal: controller.signal, degradationReasons: ["safety-snapshot-coverage"],
+    }))).rejects.toThrow("aborted after commit");
+    const rankings = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = 'yield-rankings'").get() as { value: string; updated_at: number };
+    const sentinel = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = 'freshness:yield-data'").get() as { value: string; updated_at: number };
+    expect(sentinel.updated_at).toBe(rankings.updated_at);
+    expect(JSON.parse(sentinel.value)).toMatchObject({
+      generationId: JSON.parse(rankings.value).publication.generationId,
+      updatedAt: rankings.updated_at,
+    });
+    expect(sqlite.prepare("SELECT state FROM yield_publication_generations").all()).toEqual([{ state: "published" }]);
   });
 
   it("quarantines a NaN source before every publication artifact", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
-    try {
-      const sources = [
-        makeEvaluatedSource({ id: "usdc-circle" }),
-        makeEvaluatedSource({ id: "bad-source", currentApy: Number.NaN }),
-      ];
-      const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
-      const benchmark = makeBenchmarkMeta();
-      const artifacts = buildPreviewYieldRankingsArtifacts({
-        evaluatedSources: sources,
-        bestSourceKeyByCoin: new Map(sources.map((source) => [source.id, source.sourceKey])),
-        riskFreeRate: benchmark.rate, riskFreeRateMeta: benchmark,
-        riskFreeRates: makeBenchmarkRegistry(benchmark), dlPoolsMeta: makeYieldSourceMeta(),
-        safetySnapshot: makeSafetySnapshotMeta(), medianApy: 4.5, startSec,
-      });
-      const result = await publishYieldCoordinatorResults({
-        ...makePublishParams({ db }), ...artifacts,
-        evaluatedSources: artifacts.acceptedSources,
-        degradationReasons: artifacts.quarantineReasons,
-      });
-      expect(result).toMatchObject({ ok: true, cacheWriteSkipped: false,
-        degradationReasons: ["yield-publication:quarantined-source:bad-source:currentApy"] });
-      for (const table of ["yield_data", "yield_history", "yield_source_decisions"]) {
-        expect(sqlite.prepare(`SELECT stablecoin_id FROM ${table}`).all()).toEqual([{ stablecoin_id: "usdc-circle" }]);
-      }
-      const cached = sqlite.prepare("SELECT value FROM cache WHERE key = 'yield-rankings'").get() as { value: string };
-      expect(JSON.parse(cached.value).rankings.map((row: { id: string }) => row.id)).toEqual(["usdc-circle"]);
-    } finally {
-      sqlite.close();
+    const { sqlite, db } = rankingsFixtures.open();
+    const sources = [
+      makeEvaluatedSource({ id: "usdc-circle" }),
+      makeEvaluatedSource({ id: "bad-source", currentApy: Number.NaN }),
+    ];
+    const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
+    const benchmark = makeBenchmarkMeta();
+    const artifacts = previewArtifacts({
+      evaluatedSources: sources,
+      bestSourceKeyByCoin: byKey(sources),
+      riskFreeRate: benchmark.rate, riskFreeRateMeta: benchmark,
+      riskFreeRates: makeBenchmarkRegistry(benchmark), medianApy: 4.5, startSec,
+    });
+    const result = await publishYieldCoordinatorResults({
+      ...makePublishParams({ db }), ...artifacts,
+      evaluatedSources: artifacts.acceptedSources,
+      degradationReasons: artifacts.quarantineReasons,
+    });
+    expect(result).toMatchObject({ ok: true, cacheWriteSkipped: false,
+      degradationReasons: ["yield-publication:quarantined-source:bad-source:currentApy"] });
+    for (const table of ["yield_data", "yield_history", "yield_source_decisions"]) {
+      expect(sqlite.prepare(`SELECT stablecoin_id FROM ${table}`).all()).toEqual([{ stablecoin_id: "usdc-circle" }]);
     }
+    const cached = sqlite.prepare("SELECT value FROM cache WHERE key = 'yield-rankings'").get() as { value: string };
+    expect(JSON.parse(cached.value).rankings.map((row: { id: string }) => row.id)).toEqual(["usdc-circle"]);
   });
   it("stages then fails a generation when cache payload validation fails before row publication", async () => {
     const db = makePublicationDb();
@@ -555,122 +543,112 @@ describe("publishYieldCoordinatorResults", () => {
   });
 
   it.each([0, 1])("does not mutate a winner when an equal-second or older attempt loses (%s)", async (offset) => {
-    const { sqlite, db } = createLatestSchemaSqlite();
-    try {
-      const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
-      const source = makeEvaluatedSource({ id: "usdc-circle" });
-      const params = makePublishParams({
-        db, evaluatedSources: [source],
-        bestSourceKeyByCoin: new Map([[source.id, source.sourceKey]]),
-        previewRankingsPayload: buildPayloadWithObservedAt(startSec, { id: source.id }),
-      });
-      expect(await publishYieldCoordinatorResults({ ...params, startSec: startSec + offset })).toMatchObject({ ok: true });
-      const tables = ["yield_data", "yield_history", "yield_source_decisions"];
-      const before = tables.map((table) => sqlite.prepare(`SELECT * FROM ${table}`).all());
-      for (const rows of before) expect(rows).toHaveLength(1);
-      const cache = sqlite.prepare("SELECT * FROM cache ORDER BY key").all();
-      const winner = sqlite.prepare("SELECT * FROM yield_publication_generations WHERE state = 'published'").all();
+    const { sqlite, db } = rankingsFixtures.open();
+    const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
+    const source = makeEvaluatedSource({ id: "usdc-circle" });
+    const params = makePublishParams({
+      db, evaluatedSources: [source],
+      bestSourceKeyByCoin: byKey([source]),
+      previewRankingsPayload: buildPayloadWithObservedAt(startSec, { id: source.id }),
+    });
+    expect(await publishYieldCoordinatorResults({ ...params, startSec: startSec + offset })).toMatchObject({ ok: true });
+    const tables = ["yield_data", "yield_history", "yield_source_decisions"];
+    const before = tables.map((table) => sqlite.prepare(`SELECT * FROM ${table}`).all());
+    for (const rows of before) expect(rows).toHaveLength(1);
+    const cache = sqlite.prepare("SELECT * FROM cache ORDER BY key").all();
+    const winner = sqlite.prepare("SELECT * FROM yield_publication_generations WHERE state = 'published'").all();
 
-      const result = await publishYieldCoordinatorResults({
-        ...params, evaluatedSources: [{ ...source, currentApy: 99, apy30d: 99 }],
-      });
+    const result = await publishYieldCoordinatorResults({
+      ...params, evaluatedSources: [{ ...source, currentApy: 99, apy30d: 99 }],
+    });
 
-      expect(result).toMatchObject({ ok: true, cacheWriteSkipped: true, casSkipped: true });
-      expect(tables.map((table) => sqlite.prepare(`SELECT * FROM ${table}`).all())).toEqual(before);
-      expect(sqlite.prepare("SELECT * FROM cache ORDER BY key").all()).toEqual(cache);
-      expect(sqlite.prepare("SELECT * FROM yield_publication_generations WHERE state = 'published'").all()).toEqual(winner);
-      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM yield_publication_generations WHERE state = 'failed'").get()).toEqual({ count: 1 });
-    } finally {
-      sqlite.close();
-    }
+    expect(result).toMatchObject({ ok: true, cacheWriteSkipped: true, casSkipped: true });
+    expect(tables.map((table) => sqlite.prepare(`SELECT * FROM ${table}`).all())).toEqual(before);
+    expect(sqlite.prepare("SELECT * FROM cache ORDER BY key").all()).toEqual(cache);
+    expect(sqlite.prepare("SELECT * FROM yield_publication_generations WHERE state = 'published'").all()).toEqual(winner);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM yield_publication_generations WHERE state = 'failed'").get()).toEqual({ count: 1 });
   });
 
   it("publishes rank-change attribution from the previous cached payload", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
-    try {
-      const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
-      const benchmark = makeBenchmarkMeta();
-      const riskFreeRates = makeBenchmarkRegistry(benchmark);
-      // The cached publication ranked three coins; the run below re-ranks them so
-      // the served comparator sees a real move for two and no move for one.
-      const previousRanking = (id: string, name: string, publishedRank: number, pys: number, currentApy: number) => ({
-        id,
-        name,
-        currentApy,
-        pharosYieldScore: pys,
-        publishedRank,
-        safetyScore: 80,
-      });
-      sqlite
-        .prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
-        .run(
-          "yield-rankings",
-          JSON.stringify({
-            updatedAt: startSec - 3600,
-            methodology: { version: YIELD_METHODOLOGY_VERSION },
-            rankings: [
-              previousRanking("coin-a", "Coin A", 2, 60, 5),
-              previousRanking("coin-b", "Coin B", 1, 90, 9),
-              previousRanking("coin-c", "Coin C", 3, 20, 2),
-            ],
-          }),
-          startSec - 3600,
-        );
+    const { sqlite, db } = rankingsFixtures.open();
+    const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
+    const benchmark = makeBenchmarkMeta();
+    const riskFreeRates = makeBenchmarkRegistry(benchmark);
+    // The cached publication ranked three coins; the run below re-ranks them so
+    // the served comparator sees a real move for two and no move for one.
+    const previousRanking = (id: string, name: string, publishedRank: number, pys: number, currentApy: number) => ({
+      id,
+      name,
+      currentApy,
+      pharosYieldScore: pys,
+      publishedRank,
+      safetyScore: 80,
+    });
+    sqlite
+      .prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run(
+        "yield-rankings",
+        JSON.stringify({
+          updatedAt: startSec - 3600,
+          methodology: { version: YIELD_METHODOLOGY_VERSION },
+          rankings: [
+            previousRanking("coin-a", "Coin A", 2, 60, 5),
+            previousRanking("coin-b", "Coin B", 1, 90, 9),
+            previousRanking("coin-c", "Coin C", 3, 20, 2),
+          ],
+        }),
+        startSec - 3600,
+      );
 
-      const sources: EvaluatedYieldSource[] = [
-        makeEvaluatedSource({ id: "coin-a", symbol: "A", sourceKey: "defillama:coin-a:now", currentApy: 6, pharosYieldScore: 95 }),
-        makeEvaluatedSource({ id: "coin-b", symbol: "B", sourceKey: "defillama:coin-b:now", currentApy: 7, pharosYieldScore: 50 }),
-        makeEvaluatedSource({ id: "coin-c", symbol: "C", sourceKey: "defillama:coin-c:now", currentApy: 2, pharosYieldScore: 20 }),
-      ];
-      const previousYieldPublicationSnapshot = await loadPreviousYieldPublicationSnapshot(db);
-      expect(previousYieldPublicationSnapshot.methodologyVersion).toBe(YIELD_METHODOLOGY_VERSION);
+    const sources: EvaluatedYieldSource[] = [
+      makeEvaluatedSource({ id: "coin-a", symbol: "A", sourceKey: "defillama:coin-a:now", currentApy: 6, pharosYieldScore: 95 }),
+      makeEvaluatedSource({ id: "coin-b", symbol: "B", sourceKey: "defillama:coin-b:now", currentApy: 7, pharosYieldScore: 50 }),
+      makeEvaluatedSource({ id: "coin-c", symbol: "C", sourceKey: "defillama:coin-c:now", currentApy: 2, pharosYieldScore: 20 }),
+    ];
+    const previousYieldPublicationSnapshot = await loadPreviousYieldPublicationSnapshot(db);
+    expect(previousYieldPublicationSnapshot.methodologyVersion).toBe(YIELD_METHODOLOGY_VERSION);
 
-      const { previewRankingsPayload, publicationViews } = buildPreviewYieldRankingsArtifacts({
-        evaluatedSources: sources,
-        bestSourceKeyByCoin: new Map(sources.map((source) => [source.id, source.sourceKey])),
-        riskFreeRate: benchmark.rate,
-        riskFreeRateMeta: benchmark,
-        riskFreeRates,
-        dlPoolsMeta: makeYieldSourceMeta(),
-        safetySnapshot: makeSafetySnapshotMeta(),
-        medianApy: 4.5,
-        startSec,
-        previousPublication: {
-          rankings: previousYieldPublicationSnapshot.rankings,
-          methodologyVersion: previousYieldPublicationSnapshot.methodologyVersion ?? null,
-        },
-      });
+    const { previewRankingsPayload, publicationViews } = previewArtifacts({
+      evaluatedSources: sources,
+      bestSourceKeyByCoin: byKey(sources),
+      riskFreeRate: benchmark.rate,
+      riskFreeRateMeta: benchmark,
+      riskFreeRates,
+      medianApy: 4.5,
+      startSec,
+      previousPublication: {
+        rankings: previousYieldPublicationSnapshot.rankings,
+        methodologyVersion: previousYieldPublicationSnapshot.methodologyVersion ?? null,
+      },
+    });
 
-      const result = await publishYieldCoordinatorResults({
-        db,
-        previewRankingsPayload,
-        evaluatedSources: sources,
-        publicationViews,
-        startSec,
-        degradationReasons: [],
-        safetySnapshotHeld: false,
-        resolvedCount: sources.length,
-        rowsRejected: 0,
-        divergenceFlags: 0,
-        sourceSwitches: 0,
-        previousYieldPublicationSnapshot,
-      });
-      expect(result).toMatchObject({ ok: true });
+    const result = await publishYieldCoordinatorResults({
+      db,
+      previewRankingsPayload,
+      evaluatedSources: sources,
+      publicationViews,
+      startSec,
+      degradationReasons: [],
+      safetySnapshotHeld: false,
+      resolvedCount: sources.length,
+      rowsRejected: 0,
+      divergenceFlags: 0,
+      sourceSwitches: 0,
+      previousYieldPublicationSnapshot,
+    });
+    expect(result).toMatchObject({ ok: true });
 
-      const cacheRow = sqlite
-        .prepare("SELECT value FROM cache WHERE key = ?")
-        .get("yield-rankings") as { value: string } | undefined;
-      const published = JSON.parse(cacheRow?.value ?? "{}") as {
-        rankings: Array<{ id: string; rankChangeAttribution: unknown }>;
-      };
-      const attributionById = new Map(published.rankings.map((row) => [row.id, row.rankChangeAttribution]));
-      expect(attributionById.get("coin-a")).toMatchObject({ previousRank: 2, rankDelta: 1 });
-      expect(attributionById.get("coin-b")).toMatchObject({ previousRank: 1, rankDelta: -1 });
-      // coin-c did not move, so nothing is attributed.
-      expect(attributionById.get("coin-c") ?? null).toBeNull();
-    } finally {
-      sqlite.close();
-    }
+    const cacheRow = sqlite
+      .prepare("SELECT value FROM cache WHERE key = ?")
+      .get("yield-rankings") as { value: string } | undefined;
+    const published = JSON.parse(cacheRow?.value ?? "{}") as {
+      rankings: Array<{ id: string; rankChangeAttribution: unknown }>;
+    };
+    const attributionById = new Map(published.rankings.map((row) => [row.id, row.rankChangeAttribution]));
+    expect(attributionById.get("coin-a")).toMatchObject({ previousRank: 2, rankDelta: 1 });
+    expect(attributionById.get("coin-b")).toMatchObject({ previousRank: 1, rankDelta: -1 });
+    // coin-c did not move, so nothing is attributed.
+    expect(attributionById.get("coin-c") ?? null).toBeNull();
   });
 
   it("returns degraded when the atomic publication transaction throws", async () => {
@@ -753,7 +731,7 @@ describe("publishYieldCoordinatorResults", () => {
       makePublishParams({
         db,
         evaluatedSources: [best, rejected, retained],
-        bestSourceKeyByCoin: new Map([[best.id, best.sourceKey]]),
+        bestSourceKeyByCoin: byKey([best]),
       }),
     );
 
@@ -934,7 +912,7 @@ describe("publishYieldCoordinatorResults", () => {
       evaluatedSources: [best, altA, altB, altC],
       publicationViews: makePublicationViews(
         [best, altA, altB, altC],
-        new Map([[best.id, best.sourceKey]]),
+        byKey([best]),
         startSec,
       ),
       rankingProvenanceByKey: new Map(),
@@ -961,7 +939,7 @@ describe("publishYieldCoordinatorResults", () => {
         db,
         previewRankingsPayload,
         evaluatedSources: [best, altA, altB, altC],
-        bestSourceKeyByCoin: new Map([[best.id, best.sourceKey]]),
+        bestSourceKeyByCoin: byKey([best]),
       }),
     );
     expect(result).toMatchObject({ ok: true });
@@ -1001,26 +979,22 @@ describe("publishYieldCoordinatorResults", () => {
   });
 
   it("replays PYS from a real persisted history row", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
-    try {
-      const source = makeEvaluatedSource({ id: "usdc-circle", pharosYieldScore: 37 });
-      const params = makePublishParams({ db, evaluatedSources: [source],
-        bestSourceKeyByCoin: new Map([[source.id, source.sourceKey]]) });
-      expect(await publishYieldCoordinatorResults(params)).toMatchObject({ ok: true, cacheWriteSkipped: false });
-      const row = sqlite.prepare("SELECT pys_at_publish, pys_inputs_at_publish FROM yield_history").get() as {
-        pys_at_publish: number; pys_inputs_at_publish: string;
-      };
-      const snapshot = JSON.parse(row.pys_inputs_at_publish) as YieldPysInputsAtPublish;
-      expect(computePYS({
-        apy30d: snapshot.apy30d, safetyScore: snapshot.safetyScore,
-        apyVarianceScore: snapshot.varianceScore, scalingFactor: snapshot.scalingFactor,
-        benchmarkRate: snapshot.benchmarkRate,
-        benchmarkCurrency: YIELD_BENCHMARK_KEY_CURRENCY[snapshot.benchmarkKey],
-        sourceRiskPenalty: snapshot.sourceRiskPenalty, usdBenchmarkRate: snapshot.usdBenchmarkRate ?? null,
-      })).toBe(row.pys_at_publish);
-    } finally {
-      sqlite.close();
-    }
+    const { sqlite, db } = rankingsFixtures.open();
+    const source = makeEvaluatedSource({ id: "usdc-circle", pharosYieldScore: 37 });
+    const params = makePublishParams({ db, evaluatedSources: [source],
+      bestSourceKeyByCoin: byKey([source]) });
+    expect(await publishYieldCoordinatorResults(params)).toMatchObject({ ok: true, cacheWriteSkipped: false });
+    const row = sqlite.prepare("SELECT pys_at_publish, pys_inputs_at_publish FROM yield_history").get() as {
+      pys_at_publish: number; pys_inputs_at_publish: string;
+    };
+    const snapshot = JSON.parse(row.pys_inputs_at_publish) as YieldPysInputsAtPublish;
+    expect(computePYS({
+      apy30d: snapshot.apy30d, safetyScore: snapshot.safetyScore,
+      apyVarianceScore: snapshot.varianceScore, scalingFactor: snapshot.scalingFactor,
+      benchmarkRate: snapshot.benchmarkRate,
+      benchmarkCurrency: YIELD_BENCHMARK_KEY_CURRENCY[snapshot.benchmarkKey],
+      sourceRiskPenalty: snapshot.sourceRiskPenalty, usdBenchmarkRate: snapshot.usdBenchmarkRate ?? null,
+    })).toBe(row.pys_at_publish);
   });
 
   it("stores the v8.43 hurdle re-base so a non-USD row replays to its published PYS", async () => {
@@ -1057,7 +1031,7 @@ describe("publishYieldCoordinatorResults", () => {
       makePublishParams({
         db,
         evaluatedSources: [source],
-        bestSourceKeyByCoin: new Map([[source.id, source.sourceKey]]),
+        bestSourceKeyByCoin: byKey([source]),
         previewRankingsPayload: buildPayloadWithObservedAt(startSec, source),
       }),
     );
@@ -1090,7 +1064,7 @@ describe("publishYieldCoordinatorResults", () => {
   });
 
   it("does not count anchor-only seeds as rows that lost their safety evidence", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
+    const { sqlite, db } = rankingsFixtures.open();
     const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
     const source = makeEvaluatedSource();
     const seeds = ACTIVE_YIELD_BEARING_STABLECOINS.slice(0, 10).map((coin, index) => ({
@@ -1107,31 +1081,27 @@ describe("publishYieldCoordinatorResults", () => {
         sourceObservedAt: startSec,
       }),
     }));
-    try {
-      const result = await publishYieldCoordinatorResults({
-        ...makePublishParams({ db, evaluatedSources: [source],
-          bestSourceKeyByCoin: new Map([[source.id, source.sourceKey]]) }),
-        anchorOnlySources: seeds,
-      });
-      expect(result.ok).toBe(true);
-      if (!result.ok) throw new Error(`publication failed: ${result.result.status}`);
+    const result = await publishYieldCoordinatorResults({
+      ...makePublishParams({ db, evaluatedSources: [source],
+        bestSourceKeyByCoin: byKey([source]) }),
+      anchorOnlySources: seeds,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(`publication failed: ${result.result.status}`);
 
-      // Anchor-only observations are separate persistence inputs, excluded
-      // from measured coverage (R1); their null PYS evidence is by design.
-      const nullEvidenceRows = sqlite
-        .prepare("SELECT stablecoin_id FROM yield_history WHERE pys_inputs_at_publish IS NULL ORDER BY stablecoin_id")
-        .all();
-      expect(nullEvidenceRows.map((row) => String(row.stablecoin_id)).sort())
-        .toEqual(seeds.map((seed) => seed.id).sort());
-      expect(result.publicationStats?.pysInputsPersistedCount).toBe(1);
-      expect(result.publicationStats?.pysInputsNullCount).toBe(0);
-    } finally {
-      sqlite.close();
-    }
+    // Anchor-only observations are separate persistence inputs, excluded
+    // from measured coverage (R1); their null PYS evidence is by design.
+    const nullEvidenceRows = sqlite
+      .prepare("SELECT stablecoin_id FROM yield_history WHERE pys_inputs_at_publish IS NULL ORDER BY stablecoin_id")
+      .all();
+    expect(nullEvidenceRows.map((row) => String(row.stablecoin_id)).sort())
+      .toEqual(seeds.map((seed) => seed.id).sort());
+    expect(result.publicationStats?.pysInputsPersistedCount).toBe(1);
+    expect(result.publicationStats?.pysInputsNullCount).toBe(0);
   });
 
   it("reports the publication as applied when a retried batch already committed", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
+    const { sqlite, db } = rankingsFixtures.open();
     const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
     const source = makeEvaluatedSource({ id: "sdai-sky", symbol: "sDAI", sourceKey: "defillama:sdai-sky" });
     const previewRankingsPayload = buildPayloadWithObservedAt(startSec, {
@@ -1156,27 +1126,23 @@ describe("publishYieldCoordinatorResults", () => {
       dump: () => db.dump(),
     } as unknown as D1Database;
 
-    try {
-      const result = await publishYieldCoordinatorResults(makePublishParams({
-        db: retryingDb,
-        previewRankingsPayload,
-        evaluatedSources: [source],
-        bestSourceKeyByCoin: new Map([[source.id, source.sourceKey]]),
-      }));
+    const result = await publishYieldCoordinatorResults(makePublishParams({
+      db: retryingDb,
+      previewRankingsPayload,
+      evaluatedSources: [source],
+      bestSourceKeyByCoin: byKey([source]),
+    }));
 
-      expect(batchAttempts).toBeGreaterThanOrEqual(2);
-      expect(result.ok).toBe(true);
-      if (!result.ok) throw new Error("publication was blocked");
+    expect(batchAttempts).toBeGreaterThanOrEqual(2);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("publication was blocked");
 
-      // D1 serves this run's generation, so the verdict must say applied too.
-      expect(sqlite.prepare("SELECT state FROM yield_publication_generations WHERE generation_id = ?")
-        .get(result.generationId)).toEqual({ state: "published" });
-      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM yield_data WHERE publication_generation_id = ?")
-        .get(result.generationId)).toEqual({ count: 1 });
-      expect(result).toMatchObject({ cacheWriteSkipped: false, skipReason: null });
-    } finally {
-      sqlite.close();
-    }
+    // D1 serves this run's generation, so the verdict must say applied too.
+    expect(sqlite.prepare("SELECT state FROM yield_publication_generations WHERE generation_id = ?")
+      .get(result.generationId)).toEqual({ state: "published" });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM yield_data WHERE publication_generation_id = ?")
+      .get(result.generationId)).toEqual({ count: 1 });
+    expect(result).toMatchObject({ cacheWriteSkipped: false, skipReason: null });
   });
 
   it("classifies retention_reason as 'audit' when no switch, no anomalies, and no rejected higher-confidence source", async () => {
@@ -1215,7 +1181,7 @@ describe("publishYieldCoordinatorResults", () => {
       makePublishParams({
         db,
         evaluatedSources: [best, rejected],
-        bestSourceKeyByCoin: new Map([[best.id, best.sourceKey]]),
+        bestSourceKeyByCoin: byKey([best]),
       }),
     );
     expect(result).toMatchObject({ ok: true });
@@ -1237,7 +1203,7 @@ describe("publishYieldCoordinatorResults", () => {
 // mandatory-schema fail-closed cases.
 describe("pruneYieldTables", () => {
   it("retries transient retention overload without dropping cleanup", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
+    const { db } = rankingsFixtures.open();
     const prepare = db.prepare.bind(db);
     let retentionAttempts = 0;
     vi.spyOn(db, "prepare").mockImplementation((sql) => {
@@ -1246,24 +1212,16 @@ describe("pruneYieldTables", () => {
       }
       return prepare(sql);
     });
-    try {
-      await pruneYieldTables(db, Math.floor(FIXED_NOW.getTime() / 1000));
-      expect(retentionAttempts).toBe(2);
-    } finally {
-      sqlite.close();
-    }
+    await pruneYieldTables(db, Math.floor(FIXED_NOW.getTime() / 1000));
+    expect(retentionAttempts).toBe(2);
   });
 
   it("surfaces a missing mandatory daily-history table during materialization", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
-    try {
-      sqlite.exec("DROP TABLE yield_history_daily");
-      await expect(
-        materializeYieldHistoryDaily(db, Math.floor(FIXED_NOW.getTime() / 1000)),
-      ).rejects.toThrow("no such table: yield_history_daily");
-    } finally {
-      sqlite.close();
-    }
+    const { sqlite, db } = rankingsFixtures.open();
+    sqlite.exec("DROP TABLE yield_history_daily");
+    await expect(
+      materializeYieldHistoryDaily(db, Math.floor(FIXED_NOW.getTime() / 1000)),
+    ).rejects.toThrow("no such table: yield_history_daily");
   });
 
   it("surfaces a missing mandatory decision column during cleanup", async () => {
@@ -1295,80 +1253,68 @@ describe("pruneYieldTables", () => {
   });
 
   it("materializes the last published source point for the daily history tier", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
+    const { sqlite, db } = rankingsFixtures.open();
     const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
     const snapshotDate = Math.floor((startSec - 31 * DAY_SECONDS) / DAY_SECONDS) * DAY_SECONDS;
-    try {
-      const insert = sqlite.prepare(
-        `INSERT INTO yield_history (
-          stablecoin_id, source_key, recorded_at, is_best, apy, data_source, publication_state
-        ) VALUES ('coin-a', 'source-a', ?, 1, ?, 'test', 'published')`,
-      );
-      insert.run(snapshotDate + 60, 4.1);
-      insert.run(snapshotDate + 3_600, 4.4);
+    const insert = sqlite.prepare(
+      `INSERT INTO yield_history (
+        stablecoin_id, source_key, recorded_at, is_best, apy, data_source, publication_state
+      ) VALUES ('coin-a', 'source-a', ?, 1, ?, 'test', 'published')`,
+    );
+    insert.run(snapshotDate + 60, 4.1);
+    insert.run(snapshotDate + 3_600, 4.4);
 
-      await expect(materializeYieldHistoryDaily(db, startSec)).resolves.toBe(1);
-      expect(
-        sqlite
-          .prepare(
-            `SELECT snapshot_date, recorded_at, apy
-               FROM yield_history_daily
-              WHERE stablecoin_id = 'coin-a' AND source_key = 'source-a'`,
-          )
-          .get(),
-      ).toEqual({ snapshot_date: snapshotDate, recorded_at: snapshotDate + 3_600, apy: 4.4 });
-    } finally {
-      sqlite.close();
-    }
+    await expect(materializeYieldHistoryDaily(db, startSec)).resolves.toBe(1);
+    expect(
+      sqlite
+        .prepare(
+          `SELECT snapshot_date, recorded_at, apy
+             FROM yield_history_daily
+            WHERE stablecoin_id = 'coin-a' AND source_key = 'source-a'`,
+        )
+        .get(),
+    ).toEqual({ snapshot_date: snapshotDate, recorded_at: snapshotDate + 3_600, apy: 4.4 });
   });
 
   it("compacts cold-start and below-watermark rows, including a newer close", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
+    const { sqlite, db } = rankingsFixtures.open();
     const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
     const oldDay = Math.floor(startSec / DAY_SECONDS) * DAY_SECONDS - 90 * DAY_SECONDS;
-    try {
-      const insert = sqlite.prepare(`INSERT INTO yield_history
-        (stablecoin_id, source_key, recorded_at, is_best, apy, data_source, publication_state)
-        VALUES ('coin-a', 'source-a', ?, 1, ?, 'test', 'published')`);
-      insert.run(oldDay + 10 * DAY_SECONDS + 60, 4);
-      await materializeYieldHistoryDaily(db, startSec);
-      insert.run(oldDay + 60, 5);
-      await materializeYieldHistoryDaily(db, startSec);
-      insert.run(oldDay + 120, 6);
-      await pruneYieldTables(db, startSec, { allowDestructiveCleanup: false });
-      expect(sqlite.prepare("SELECT recorded_at, apy FROM yield_history_daily ORDER BY recorded_at").all())
-        .toEqual([{ recorded_at: oldDay + 120, apy: 6 }, { recorded_at: oldDay + 10 * DAY_SECONDS + 60, apy: 4 }]);
-      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM yield_history").get()).toEqual({ count: 0 });
-    } finally {
-      sqlite.close();
-    }
+    const insert = sqlite.prepare(`INSERT INTO yield_history
+      (stablecoin_id, source_key, recorded_at, is_best, apy, data_source, publication_state)
+      VALUES ('coin-a', 'source-a', ?, 1, ?, 'test', 'published')`);
+    insert.run(oldDay + 10 * DAY_SECONDS + 60, 4);
+    await materializeYieldHistoryDaily(db, startSec);
+    insert.run(oldDay + 60, 5);
+    await materializeYieldHistoryDaily(db, startSec);
+    insert.run(oldDay + 120, 6);
+    await pruneYieldTables(db, startSec, { allowDestructiveCleanup: false });
+    expect(sqlite.prepare("SELECT recorded_at, apy FROM yield_history_daily ORDER BY recorded_at").all())
+      .toEqual([{ recorded_at: oldDay + 120, apy: 6 }, { recorded_at: oldDay + 10 * DAY_SECONDS + 60, apy: 4 }]);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM yield_history").get()).toEqual({ count: 0 });
   });
 
   it("retains unmaterialized rows while draining a bounded daily backfill", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
+    const { sqlite, db } = rankingsFixtures.open();
     const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
     const oldDay = Math.floor(startSec / DAY_SECONDS) * DAY_SECONDS - 60 * DAY_SECONDS;
-    try {
-      const insert = sqlite.prepare(`INSERT INTO yield_history
-        (stablecoin_id, source_key, recorded_at, is_best, apy, data_source, publication_state)
-        VALUES ('coin-a', ?, ?, 1, ?, 'test', 'published')`);
-      for (let index = 0; index < 1001; index++) insert.run(`source-${index}`, oldDay + 60, index / 100);
-      await pruneYieldTables(db, startSec, { allowDestructiveCleanup: false });
-      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM yield_history_daily").get()).toEqual({ count: 1000 });
-      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM yield_history").get()).toEqual({ count: 1 });
-      const retained = sqlite.prepare("SELECT source_key, apy FROM yield_history").get()!;
-      await pruneYieldTables(db, startSec, { allowDestructiveCleanup: false });
-      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM yield_history").get()).toEqual({ count: 0 });
-      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM yield_history_daily").get()).toEqual({ count: 1001 });
-      expect(sqlite.prepare("SELECT source_key, apy FROM yield_history_daily WHERE source_key = ?")
-        .get(retained.source_key)).toEqual(retained);
-    } finally {
-      sqlite.close();
-    }
+    const insert = sqlite.prepare(`INSERT INTO yield_history
+      (stablecoin_id, source_key, recorded_at, is_best, apy, data_source, publication_state)
+      VALUES ('coin-a', ?, ?, 1, ?, 'test', 'published')`);
+    for (let index = 0; index < 1001; index++) insert.run(`source-${index}`, oldDay + 60, index / 100);
+    await pruneYieldTables(db, startSec, { allowDestructiveCleanup: false });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM yield_history_daily").get()).toEqual({ count: 1000 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM yield_history").get()).toEqual({ count: 1 });
+    const retained = sqlite.prepare("SELECT source_key, apy FROM yield_history").get()!;
+    await pruneYieldTables(db, startSec, { allowDestructiveCleanup: false });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM yield_history").get()).toEqual({ count: 0 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM yield_history_daily").get()).toEqual({ count: 1001 });
+    expect(sqlite.prepare("SELECT source_key, apy FROM yield_history_daily WHERE source_key = ?")
+      .get(retained.source_key)).toEqual(retained);
   });
 
   it("chunks stale cleanup below the bind ceiling and preserves frozen and current rows", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
+    const { sqlite, db } = rankingsFixtures.open();
     const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
     const bindCounts: number[] = [];
     const prepare = db.prepare.bind(db);
@@ -1398,104 +1344,94 @@ describe("pruneYieldTables", () => {
       expect(Math.max(...bindCounts)).toBeLessThanOrEqual(D1_MAX_BOUND_PARAMETERS);
     } finally {
       prepareSpy.mockRestore();
-      sqlite.close();
     }
   });
 
   it("fails closed for unclassified rows and prunes only persisted audit decisions", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
+    const { sqlite, db } = rankingsFixtures.open();
     const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
     const oldSec = startSec - 31 * 24 * 60 * 60;
     const recentSec = startSec - 5 * 24 * 60 * 60;
-    try {
-      const insertDecision = sqlite.prepare(
-        `INSERT INTO yield_source_decisions (
-          generation_id, stablecoin_id, selected_source_key, selected_confidence_tier,
-          selected_data_source, selected_apy_30d, selected_reason, source_switch,
-          alternatives_json, created_at, retention_reason
-        ) VALUES (?, ?, 'source', ?, 'test', 4.2, 'test', ?, ?, ?, ?)`,
-      );
-      insertDecision.run("g-null-audit", "coin-a", "curated", 0, "[]", oldSec, null);
-      insertDecision.run("g-null-switch", "coin-b", "curated", 1, "[]", oldSec, null);
-      insertDecision.run(
-        "g-null-anomaly",
-        "coin-c",
-        "curated",
-        0,
-        JSON.stringify([{ confidenceTier: "discovered", rejected: true, anomalies: ["diverges-from-canonical"] }]),
-        oldSec,
-        null,
-      );
-      insertDecision.run(
-        "g-null-higher",
-        "coin-d",
-        "discovered",
-        0,
-        JSON.stringify([{ confidenceTier: "curated", rejected: true, anomalies: [] }]),
-        oldSec,
-        null,
-      );
-      insertDecision.run("g-old-audit", "coin-e", "curated", 0, "[]", oldSec, "audit");
-      insertDecision.run("g-old-trend", "coin-f", "curated", 0, "[]", oldSec, "trend");
-      insertDecision.run("g-old-episode", "coin-h", "curated", 0, "[]", oldSec, "episode");
-      insertDecision.run("g-audit-switch", "coin-i", "curated", 1, "[]", oldSec, "audit");
-      insertDecision.run("g-recent-null", "coin-g", "curated", 0, "[]", recentSec, null);
-      const insertAlternative = sqlite.prepare(
-        `INSERT INTO yield_source_decision_alternatives (
-          generation_id, stablecoin_id, alt_source_key, alt_yield_source,
-          rejection_reason_code, recorded_at
-        ) VALUES (?, ?, 'alt', 'test', 'lower-confidence', ?)`,
-      );
-      insertAlternative.run("g-null-audit", "coin-a", oldSec);
-      insertAlternative.run("g-null-switch", "coin-b", oldSec);
+    const insertDecision = sqlite.prepare(
+      `INSERT INTO yield_source_decisions (
+        generation_id, stablecoin_id, selected_source_key, selected_confidence_tier,
+        selected_data_source, selected_apy_30d, selected_reason, source_switch,
+        alternatives_json, created_at, retention_reason
+      ) VALUES (?, ?, 'source', ?, 'test', 4.2, 'test', ?, ?, ?, ?)`,
+    );
+    insertDecision.run("g-null-audit", "coin-a", "curated", 0, "[]", oldSec, null);
+    insertDecision.run("g-null-switch", "coin-b", "curated", 1, "[]", oldSec, null);
+    insertDecision.run(
+      "g-null-anomaly",
+      "coin-c",
+      "curated",
+      0,
+      JSON.stringify([{ confidenceTier: "discovered", rejected: true, anomalies: ["diverges-from-canonical"] }]),
+      oldSec,
+      null,
+    );
+    insertDecision.run(
+      "g-null-higher",
+      "coin-d",
+      "discovered",
+      0,
+      JSON.stringify([{ confidenceTier: "curated", rejected: true, anomalies: [] }]),
+      oldSec,
+      null,
+    );
+    insertDecision.run("g-old-audit", "coin-e", "curated", 0, "[]", oldSec, "audit");
+    insertDecision.run("g-old-trend", "coin-f", "curated", 0, "[]", oldSec, "trend");
+    insertDecision.run("g-old-episode", "coin-h", "curated", 0, "[]", oldSec, "episode");
+    insertDecision.run("g-audit-switch", "coin-i", "curated", 1, "[]", oldSec, "audit");
+    insertDecision.run("g-recent-null", "coin-g", "curated", 0, "[]", recentSec, null);
+    const insertAlternative = sqlite.prepare(
+      `INSERT INTO yield_source_decision_alternatives (
+        generation_id, stablecoin_id, alt_source_key, alt_yield_source,
+        rejection_reason_code, recorded_at
+      ) VALUES (?, ?, 'alt', 'test', 'lower-confidence', ?)`,
+    );
+    insertAlternative.run("g-null-audit", "coin-a", oldSec);
+    insertAlternative.run("g-null-switch", "coin-b", oldSec);
 
-      await pruneYieldTables(db, startSec);
+    await pruneYieldTables(db, startSec);
 
-      const generations = sqlite
-        .prepare("SELECT generation_id FROM yield_source_decisions ORDER BY generation_id ASC")
-        .all()
-        .map((row) => (row as { generation_id: string }).generation_id);
-      expect(generations).toEqual([
-        "g-audit-switch",
-        "g-null-anomaly",
-        "g-null-audit",
-        "g-null-higher",
-        "g-null-switch",
-        "g-old-episode",
-        "g-old-trend",
-        "g-recent-null",
-      ]);
-      const alternatives = sqlite
-        .prepare("SELECT generation_id FROM yield_source_decision_alternatives ORDER BY generation_id ASC")
-        .all()
-        .map((row) => (row as { generation_id: string }).generation_id);
-      expect(alternatives).toEqual(["g-null-audit", "g-null-switch"]);
-    } finally {
-      sqlite.close();
-    }
+    const generations = sqlite
+      .prepare("SELECT generation_id FROM yield_source_decisions ORDER BY generation_id ASC")
+      .all()
+      .map((row) => (row as { generation_id: string }).generation_id);
+    expect(generations).toEqual([
+      "g-audit-switch",
+      "g-null-anomaly",
+      "g-null-audit",
+      "g-null-higher",
+      "g-null-switch",
+      "g-old-episode",
+      "g-old-trend",
+      "g-recent-null",
+    ]);
+    const alternatives = sqlite
+      .prepare("SELECT generation_id FROM yield_source_decision_alternatives ORDER BY generation_id ASC")
+      .all()
+      .map((row) => (row as { generation_id: string }).generation_id);
+    expect(alternatives).toEqual(["g-null-audit", "g-null-switch"]);
   });
 });
 
 describe("yield publication migration compatibility", () => {
   it("rolls back the cache rather than silently dropping a history constraint failure", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
-    try {
-      await expect(publishYieldRowsAtomically(db, {
-        rankingsPayload: { rankings: [], publication: { generationId: "attempt-invalid" } },
-        generationId: "attempt-invalid", startSec: 100,
-        yieldDataRows: [], decisionRows: [], decisionAlternativeRows: [],
-        historyRows: [{ stablecoin_id: "coin-a", source_key: "source-a", recorded_at: 100,
-          is_best: 1, apy: null, data_source: "test" }],
-      })).rejects.toThrow();
-      expect(sqlite.prepare("SELECT * FROM cache").all()).toEqual([]);
-      expect(sqlite.prepare("SELECT * FROM yield_history").all()).toEqual([]);
-    } finally {
-      sqlite.close();
-    }
+    const { sqlite, db } = rankingsFixtures.open();
+    await expect(publishAtomic(db, {
+      rankingsPayload: { rankings: [], publication: { generationId: "attempt-invalid" } },
+      generationId: "attempt-invalid", startSec: 100,
+      historyRows: [{ stablecoin_id: "coin-a", source_key: "source-a", recorded_at: 100,
+        is_best: 1, apy: null, data_source: "test" }],
+    })).rejects.toThrow();
+    expect(sqlite.prepare("SELECT * FROM cache").all()).toEqual([]);
+    expect(sqlite.prepare("SELECT * FROM yield_history").all()).toEqual([]);
   });
 
   it("projects every schema column while ignoring only history conflicts and replacing decision evidence", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
+    const { sqlite, db } = rankingsFixtures.open();
     const history = {
       stablecoin_id: "coin-a", source_key: "source-a", recorded_at: 90, is_best: 1, apy: -2,
       apy_base: -3, apy_reward: 1, exchange_rate: 1.02, source_tvl_usd: 500_000,
@@ -1514,45 +1450,39 @@ describe("yield publication migration compatibility", () => {
       generation_id: "g", stablecoin_id: "coin-a", alt_source_key: "source-b", alt_yield_source: "Source B",
       alt_apy30d_delta: -1.5, rejection_reason_code: "lower-confidence", recorded_at: 100,
     };
-    try {
-      await publishYieldRowsAtomically(db, {
-        rankingsPayload: { publication: { generationId: "g" } }, generationId: "g", startSec: 100,
-        yieldDataRows: [], historyRows: [history], decisionRows: [decision],
-        decisionAlternativeRows: [alternative],
-      });
-      for (const [table, row] of [
-        ["yield_history", history], ["yield_source_decisions", decision],
-        ["yield_source_decision_alternatives", alternative],
-      ] as const) {
-        expect(sqlite.prepare(`PRAGMA table_info(${table})`).all().map((column) => column.name).sort())
-          .toEqual(Object.keys(row).sort());
-        expect(sqlite.prepare(`SELECT * FROM ${table}`).all()).toEqual([row]);
-      }
-      const nextDecision = { ...decision, selected_score: null, previous_best_source_key: null,
-        retention_reason: "audit", trend_fingerprint: null };
-      const nextAlternative = { ...alternative, alt_apy30d_delta: null, recorded_at: 200 };
-      await publishYieldRowsAtomically(db, {
-        rankingsPayload: { publication: { generationId: "g" } }, generationId: "g", startSec: 200,
-        yieldDataRows: [], historyRows: [{ ...history, apy: 99 }], decisionRows: [nextDecision],
-        decisionAlternativeRows: [nextAlternative],
-      });
-      expect(sqlite.prepare("SELECT * FROM yield_history").all()).toEqual([history]);
-      expect(sqlite.prepare("SELECT * FROM yield_source_decisions").all()).toEqual([nextDecision]);
-      expect(sqlite.prepare("SELECT * FROM yield_source_decision_alternatives").all()).toEqual([nextAlternative]);
-    } finally {
-      sqlite.close();
+    await publishAtomic(db, {
+      rankingsPayload: { publication: { generationId: "g" } }, generationId: "g", startSec: 100,
+      historyRows: [history], decisionRows: [decision],
+      decisionAlternativeRows: [alternative],
+    });
+    for (const [table, row] of [
+      ["yield_history", history], ["yield_source_decisions", decision],
+      ["yield_source_decision_alternatives", alternative],
+    ] as const) {
+      expect(sqlite.prepare(`PRAGMA table_info(${table})`).all().map((column) => column.name).sort())
+        .toEqual(Object.keys(row).sort());
+      expect(sqlite.prepare(`SELECT * FROM ${table}`).all()).toEqual([row]);
     }
+    const nextDecision = { ...decision, selected_score: null, previous_best_source_key: null,
+      retention_reason: "audit", trend_fingerprint: null };
+    const nextAlternative = { ...alternative, alt_apy30d_delta: null, recorded_at: 200 };
+    await publishAtomic(db, {
+      rankingsPayload: { publication: { generationId: "g" } }, generationId: "g", startSec: 200,
+      historyRows: [{ ...history, apy: 99 }], decisionRows: [nextDecision],
+      decisionAlternativeRows: [nextAlternative],
+    });
+    expect(sqlite.prepare("SELECT * FROM yield_history").all()).toEqual([history]);
+    expect(sqlite.prepare("SELECT * FROM yield_source_decisions").all()).toEqual([nextDecision]);
+    expect(sqlite.prepare("SELECT * FROM yield_source_decision_alternatives").all()).toEqual([nextAlternative]);
   });
 
   it("retains only anomaly episode boundaries as permanent trend decisions", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
+    const { sqlite, db } = rankingsFixtures.open();
     const publish = (generationId: string, startSec: number, fingerprint: string) =>
-      publishYieldRowsAtomically(db, {
+      publishAtomic(db, {
         rankingsPayload: { rankings: [], publication: { generationId } },
         startSec,
         generationId,
-        yieldDataRows: [],
-        historyRows: [],
         decisionRows: [{
           generation_id: generationId,
           stablecoin_id: "coin-a",
@@ -1570,28 +1500,23 @@ describe("yield publication migration compatibility", () => {
           retention_reason: "episode",
           trend_fingerprint: fingerprint,
         }],
-        decisionAlternativeRows: [],
       });
-    try {
-      await publish("g-1", 100, "episode-a");
-      await publish("g-2", 200, "episode-a");
-      await publish("g-3", 300, "episode-b");
-      expect(
-        sqlite
-          .prepare(
-            `SELECT generation_id, retention_reason
-               FROM yield_source_decisions
-              ORDER BY created_at`,
-          )
-          .all(),
-      ).toEqual([
-        { generation_id: "g-1", retention_reason: "trend" },
-        { generation_id: "g-2", retention_reason: "audit" },
-        { generation_id: "g-3", retention_reason: "trend" },
-      ]);
-    } finally {
-      sqlite.close();
-    }
+    await publish("g-1", 100, "episode-a");
+    await publish("g-2", 200, "episode-a");
+    await publish("g-3", 300, "episode-b");
+    expect(
+      sqlite
+        .prepare(
+          `SELECT generation_id, retention_reason
+             FROM yield_source_decisions
+            ORDER BY created_at`,
+        )
+        .all(),
+    ).toEqual([
+      { generation_id: "g-1", retention_reason: "trend" },
+      { generation_id: "g-2", retention_reason: "audit" },
+      { generation_id: "g-3", retention_reason: "trend" },
+    ]);
   });
 
   it("surfaces a missing mandatory atomic-publication column", async () => {
@@ -1604,14 +1529,10 @@ describe("yield publication migration compatibility", () => {
     ]);
 
     await expect(
-      publishYieldRowsAtomically(db, {
+      publishAtomic(db, {
         rankingsPayload: { stablecoins: [] },
         startSec: 1_774_526_400,
         generationId: "yield-1774526400",
-        yieldDataRows: [],
-        historyRows: [],
-        decisionRows: [],
-        decisionAlternativeRows: [],
       }),
     ).rejects.toThrow("D1_ERROR: table yield_history has no column named pys_at_publish");
   });

@@ -33,6 +33,11 @@ import {
 const fixtures = createLatestSchemaFixtureTracker();
 
 const NOW = 1_775_900_000;
+
+function useCanaryClock() {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date(NOW * 1000));
+}
 const TAPE_CLASSES = [
   "psi.band_changed", "dews.escalated", "dews.deescalated", "score.upgraded",
   "score.downgraded", "yield.warning_emitted", "yield.pys_dropped",
@@ -586,8 +591,7 @@ describe("worker data invariant canaries", () => {
   });
 
   it("returns ok for healthy structural data", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(NOW * 1000));
+    useCanaryClock();
     const summary = await runNow();
 
     expect(summary).toMatchObject({
@@ -624,8 +628,7 @@ describe("worker data invariant canaries", () => {
   );
 
   it("accepts a publication read after the serial run assessment clock", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(NOW * 1000));
+    useCanaryClock();
     const summary = await runCanaryChecks(healthyD1(), { observedAt: NOW - 120, mode: "status" });
     expect(summary.results.find((result) => result.checkId === "psi-latest-sample")).toMatchObject({
       status: "ok",
@@ -634,8 +637,7 @@ describe("worker data invariant canaries", () => {
   });
 
   it("rejects a future-dated PSI sample clock instead of publishing a clamped zero age", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(NOW * 1000));
+    useCanaryClock();
     const futureStoredAt = NOW + 3_600;
     const { db, sqlite } = fixtures.open();
     sqlite.prepare(
@@ -940,8 +942,7 @@ describe("worker data invariant canaries", () => {
   });
 
   it("flags a seeded null-identity blacklist row", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(NOW * 1000));
+    useCanaryClock();
     const summary = await runCanaryChecks(healthyD1({ blacklistEventNullIdentityRows: 1 }), {
       observedAt: NOW,
       mode: "status",
@@ -964,8 +965,7 @@ describe("worker data invariant canaries", () => {
   });
 
   it("degrades while the canonical V9 publication is held", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(NOW * 1000));
+    useCanaryClock();
     vi.mocked(activeSafetyScoreSource.loadActiveSafetyScoreCohort)
       .mockResolvedValueOnce(activeV9({ held: true }));
     const summary = await runCanaryChecks(healthyD1(), {
@@ -988,8 +988,7 @@ describe("worker data invariant canaries", () => {
     { label: "held past consumer max age", ageSec: 7_201, held: true, status: "error", severity: "error" },
     { label: "future-dated", ageSec: -3_600, held: false, status: "error", severity: "error" },
   ] as const)("classifies canonical V9 publication $label", async ({ ageSec, held, status, severity }) => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(NOW * 1000));
+    useCanaryClock();
     const v9 = activeV9({ held, updatedAt: NOW - ageSec });
     const generationId = v9.snapshot.safetyScoreIdentity.publicationGenerationId;
     vi.mocked(activeSafetyScoreSource.loadActiveSafetyScoreCohort).mockResolvedValueOnce(v9);
@@ -1018,8 +1017,7 @@ describe("worker data invariant canaries", () => {
   });
 
   it("fails closed when the canonical V9 publication is unavailable", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(NOW * 1000));
+    useCanaryClock();
     vi.mocked(activeSafetyScoreSource.loadActiveSafetyScoreCohort)
       .mockResolvedValueOnce({
         kind: "error",
@@ -1045,8 +1043,7 @@ describe("worker data invariant canaries", () => {
   });
 
   it("derives DEWS canary health from the exact published generation", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(NOW * 1000));
+    useCanaryClock();
     const db = healthyD1();
 
     const summary = await runNow(db);
@@ -1068,8 +1065,7 @@ describe("worker data invariant canaries", () => {
     ["an elevated 1% omission", Math.ceil(ACTIVE_IDS.size * 0.01), "degraded", "warning"],
     ["a systemic >10% omission", Math.floor(ACTIVE_IDS.size * 0.1) + 1, "error", "error"],
   ] as const)("bands %s of active stablecoins", async (_label, missing, status, severity) => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(NOW * 1000));
+    useCanaryClock();
     const summary = await runCanaryChecks(healthyD1({ stablecoinsActiveCount: ACTIVE_IDS.size - missing }), {
       observedAt: NOW,
       mode: "status",
@@ -1090,8 +1086,7 @@ describe("worker data invariant canaries", () => {
   });
 
   it("keeps the GBP benchmark canary degraded until two direct publications", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(NOW * 1000));
+    useCanaryClock();
     const oneRun = await runCanaryChecks(healthyD1({ gbpFreshRuns: 1 }), {
       observedAt: NOW,
       mode: "status",
@@ -1160,8 +1155,7 @@ describe("worker data invariant canaries", () => {
 
   it.each(["registry-generationless", "all-generationless", "legacy-missing-marker", "marker-generationless", "generation-mismatch"] as const)(
     "does not certify unrelated benchmark recovery evidence (%s)", async (kind) => {
-      vi.useFakeTimers();
-      vi.setSystemTime(new Date(NOW * 1000));
+      useCanaryClock();
       const { db, sqlite } = fixtures.open();
       for (const row of gbpCanaryCacheRows()) {
         const payload = JSON.parse(row.value);
@@ -1199,8 +1193,7 @@ describe("worker data invariant canaries", () => {
   );
 
   it("degrades USD when its benchmark record date is missing", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(NOW * 1000));
+    useCanaryClock();
     const summary = await runCanaryChecks(healthyD1({ usdRecordDateMissing: true }), {
       observedAt: NOW,
       mode: "status",
@@ -1213,8 +1206,7 @@ describe("worker data invariant canaries", () => {
   });
 
   it("accepts a live table matching the latest published generation", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(NOW * 1000));
+    useCanaryClock();
     const summary = await runNow(healthyD1({
       latestPublishedRows: 368,
       latestGenerationPublishedRows: 368,
@@ -1236,8 +1228,7 @@ describe("worker data invariant canaries", () => {
   });
 
   it("errors when generation-backed DEX rows in any generation are not published", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(NOW * 1000));
+    useCanaryClock();
     const summary = await runNow(healthyD1({
       rowCount: 377,
       latestPublishedRows: 368,
@@ -1255,8 +1246,7 @@ describe("worker data invariant canaries", () => {
   });
 
   it("errors when the latest DEX generation row count drifts from publication metadata", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(NOW * 1000));
+    useCanaryClock();
     const summary = await runNow(healthyD1({
       rowCount: 377,
       latestPublishedRows: 368,
@@ -1373,8 +1363,7 @@ describe("worker data invariant canaries", () => {
   });
 
   it("degrades noisy invariants without aborting the rest of the run", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(NOW * 1000));
+    useCanaryClock();
     const unhealthyDewsRows = dewsRows(NOW - 60, 2);
     const db = mockD1([
       {
@@ -1471,8 +1460,7 @@ describe("worker data invariant canaries", () => {
   });
 
   it("persists idempotently and selects the latest active checks in the requested mode", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(NOW * 1000));
+    useCanaryClock();
     const { db, sqlite } = fixtures.open();
     await runAndPersistCanaryChecks(db, { observedAt: NOW, mode: "status" });
     const summary = await runAndPersistCanaryChecks(db, { observedAt: NOW, mode: "status" });
@@ -1553,8 +1541,7 @@ describe("worker data invariant canaries", () => {
   });
 
   it("rejects materially future observation clocks without discarding hard findings", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(NOW * 1000));
+    useCanaryClock();
     const { db } = fixtures.open();
     await runAndPersistCanaryChecks(db, { observedAt: NOW + 86_400, mode: "status" });
     expect(await loadCanaryStatus(db, NOW, "status")).toMatchObject({
@@ -1597,8 +1584,7 @@ describe("worker data invariant canaries", () => {
 
 
   it("reports missing mandatory tables as canary errors without aborting sibling checks", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(NOW * 1000));
+    useCanaryClock();
     const db = mockD1([
       {
         match: "canary-dex-current-summary",

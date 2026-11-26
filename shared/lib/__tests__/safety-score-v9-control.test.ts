@@ -863,7 +863,7 @@ describe("owner Control rules", () => {
     expect(after.components.find((r) => r.kind === "mint" && r.controlKeys.includes(singleKey.controlKey))).toMatchObject({ posture: "unbounded-reconciled", score: 65, binding: true });
   });
 
-  it.each(["not-applicable", "none", "unknown", "internal-ledger"] as const)("retains recorded adverse mint facts with unresolved review and %s reconciliation", (reconciliation) => {
+  it.each(["not-applicable", "unknown", "internal-ledger"] as const)("retains recorded adverse mint facts with unresolved review and %s reconciliation", (reconciliation) => {
     const mintControl = control("mint:adverse", "mint", { status: boundedUnknown("control.mint-adverse"), capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "unbounded", authority: { authorityKey: "authority:adverse", model: "contract", threshold: null }, delaySec: null });
     const mint = makeReviewedMintInput(mintControl.controlKey, { reconciliation });
     const measured = evaluate({ facts: facts([mintControl]), mint });

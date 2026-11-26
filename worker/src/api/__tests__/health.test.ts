@@ -5,7 +5,7 @@ import { handleHealth } from "../health";
 import { projectPublicStatus } from "@shared/lib/public-status-components";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import {
-  buildStatusD1Scenario, cleanupStatusTest, completePublicationEntry, healthD1, STABLECOIN_COVERAGE_QUERY_MATCH,
+  buildStatusD1Scenario, cleanupStatusTest, completePublicationEntry, healthD1, makeDewsPublicationPointerRow, STABLECOIN_COVERAGE_QUERY_MATCH,
 } from "./status.test-support";
 import { STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY } from "../../lib/status/public-health-snapshot";
 import { mockD1 } from "@shared/test-utils/mock-d1";
@@ -39,26 +39,15 @@ function makePublicHealthSnapshotRow(now: number, publicHealth: HealthResponse) 
   };
 }
 
+function pinnedNow() {
+  const now = Date.now();
+  vi.spyOn(Date, "now").mockReturnValue(now);
+  return Math.floor(now / 1000);
+}
+
 function dewsPublicationEntry(now: number): MockTableConfig {
-  const updatedAt = now - 60;
-  const row = {
-    key: "dews:published-generation",
-    updated_at: updatedAt,
-    value: JSON.stringify({
-      updatedAt,
-      source: "compute-dews",
-      publishStatus: "published",
-      coverageVersion: 2,
-      expectedRowCount: 1,
-      stablecoinIdsDigest: "a".repeat(64),
-    }),
-  };
-  return {
-    match: "FROM cache WHERE key = ?",
-    matchBinds: ["dews:published-generation"],
-    rows: [row],
-    first: row,
-  };
+  const row = makeDewsPublicationPointerRow(now, 60);
+  return { match: "FROM cache WHERE key = ?", matchBinds: [row.key], rows: [row], first: row };
 }
 
 function makeHealthyHealthDb(now: number, options: HealthDbOptions = {}) {
@@ -136,6 +125,28 @@ function makeHealthyHealthDb(now: number, options: HealthDbOptions = {}) {
         updated_at: now - 60,
       },
     }]),
+  ]);
+}
+
+function telegramHealthDb(deliveries: Pick<MockTableConfig, "first" | "throwError">, metadata: string | null) {
+  const now = Math.floor(Date.now() / 1000);
+  return healthD1([
+    { match: "cache", rows: [] },
+    { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
+    { match: "mint_burn_hourly", rows: [], first: { total: 0 } },
+    { match: "SELECT status", rows: [], first: { status: "ok" } },
+    { match: "status = 'ok'", rows: [], first: { started_at: now - 300 } },
+    { match: "telegram_subscribers", rows: [], first: { n: 42 } },
+    { match: "telegram_deliveries", rows: [], ...deliveries },
+    {
+      match: "dispatch-telegram-alerts",
+      rows: [],
+      first: {
+        started_at: now - 120,
+        status: "ok",
+        metadata,
+      },
+    },
   ]);
 }
 
@@ -282,8 +293,7 @@ describe("handleHealth", () => {
   const dataRefresh = (body: HealthResponse) => body.components!.find((item) => item.id === "data-refresh");
 
   it("keeps a held colour at read time and re-dates its label", async () => {
-    vi.spyOn(Date, "now").mockReturnValue(Date.now());
-    const now = Math.floor(Date.now() / 1000);
+    const now = pinnedNow();
     const publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
     Object.assign(publicHealth, { circuits: null, circuitsUnavailableReason: "circuits-read-failed", assessedAt: now - 60 });
     const held = { since: now - 960, confirmedAt: now - 1801, sections: ["circuits"], expired: false };
@@ -300,8 +310,7 @@ describe("handleHealth", () => {
   });
 
   it.each(["none", "stale", "future", "scheduler"] as const)("holds a publication over the live fallback (snapshot: %s)", async (mode) => {
-    vi.spyOn(Date, "now").mockReturnValue(Date.now());
-    const now = Math.floor(Date.now() / 1000);
+    const now = pinnedNow();
     const published = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
     const at = mode === "scheduler" ? now - 60 : now - 4000;
     const publicHealth = { ...published, assessedAt: at,
@@ -322,8 +331,7 @@ describe("handleHealth", () => {
     [7200, "degraded", "stale", "delayed", false],
     [14400, "stale", "stale", "outage", false],
   ] as const)("ages cached evidence across the %ss band within snapshot TTL", async (band, before, after, state, healthy) => {
-    vi.spyOn(Date, "now").mockReturnValue(Date.now());
-    const now = Math.floor(Date.now() / 1000);
+    const now = pinnedNow();
     const assessedAt = now - 60;
     const publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
     publicHealth.timestamp = assessedAt;
@@ -407,8 +415,7 @@ describe("handleHealth", () => {
     });
 
     it("clears Delayed at once when the producer has published since the snapshot", async () => {
-      vi.spyOn(Date, "now").mockReturnValue(Date.now());
-      const now = Math.floor(Date.now() / 1000);
+      const now = pinnedNow();
       const row = await delayedYieldSnapshot(now, "healthy");
       // A recovered lane was read: its rejected-read marker goes (ADR-42).
       const value = JSON.parse(row.value);
@@ -423,8 +430,7 @@ describe("handleHealth", () => {
     });
 
     it("adopts a recovered clean generation's quality, clearing the obsolete degradation and warning", async () => {
-      vi.spyOn(Date, "now").mockReturnValue(Date.now());
-      const now = Math.floor(Date.now() / 1000);
+      const now = pinnedNow();
       const row = await delayedYieldSnapshot(now, "degraded", { statusExcludingCacheEvidence: "healthy", degradedReason: "old-quality" });
       const body = await (await handleHealth(sentinelDb(now, row, recoveredSentinel(now)))).json() as HealthResponse;
       expect(body.caches["yield-data"]).toMatchObject({
@@ -436,8 +442,7 @@ describe("handleHealth", () => {
     });
 
     it("adopts a recovered degraded generation's quality instead of the stored clean verdict", async () => {
-      vi.spyOn(Date, "now").mockReturnValue(Date.now());
-      const now = Math.floor(Date.now() / 1000);
+      const now = pinnedNow();
       const row = await delayedYieldSnapshot(now, "healthy", { statusExcludingCacheEvidence: "healthy" });
       const body = await (await handleHealth(sentinelDb(now, row, recoveredSentinel(now), 2))).json() as HealthResponse;
       expect(body.caches["yield-data"]).toMatchObject({
@@ -448,8 +453,7 @@ describe("handleHealth", () => {
     });
 
     it("keeps the legacy floor's stored degradation when the snapshot lacks the cache-evidence floor", async () => {
-      vi.spyOn(Date, "now").mockReturnValue(Date.now());
-      const now = Math.floor(Date.now() / 1000);
+      const now = pinnedNow();
       const row = await delayedYieldSnapshot(now, "degraded", { degradedReason: "old-quality" });
       const body = await (await handleHealth(sentinelDb(now, row, recoveredSentinel(now)))).json() as HealthResponse;
       expect(body.caches["yield-data"]).toMatchObject({ generationId: "recovered-generation", degraded: false });
@@ -457,8 +461,7 @@ describe("handleHealth", () => {
     });
 
     it("keeps a genuinely late producer Delayed and never re-reads healthy lanes", async () => {
-      vi.spyOn(Date, "now").mockReturnValue(Date.now());
-      const now = Math.floor(Date.now() / 1000);
+      const now = pinnedNow();
       const stillLate = recoveredSentinel(now);
       const lateAt = now - 3 * yieldInterval - 660;
       stillLate.rows = [{ ...stillLate.rows![0], updated_at: lateAt,
@@ -472,8 +475,7 @@ describe("handleHealth", () => {
     });
 
     it.each(["legacy snapshot", "read failure"] as const)("fails closed to the stored ages on a %s", async (kind) => {
-      vi.spyOn(Date, "now").mockReturnValue(Date.now());
-      const now = Math.floor(Date.now() / 1000);
+      const now = pinnedNow();
       const sentinel = recoveredSentinel(now);
       if (kind === "read failure") sentinel.throwError = new Error("sentinel read failed");
       if (kind === "legacy snapshot") sentinel.allowUnused = true;
@@ -515,8 +517,7 @@ describe("handleHealth", () => {
     };
 
     it("clears a late Safety Score publication from a newer accepted clock with one assessment", async () => {
-      vi.spyOn(Date, "now").mockReturnValue(Date.now());
-      const now = Math.floor(Date.now() / 1000);
+      const now = pinnedNow();
       const { entry } = await retainedSnapshot(now, lateSafety(now));
       const db = makeHealthyHealthDb(now, { extras: [entry] });
       const body = await (await handleHealth(db)).json() as HealthResponse;
@@ -538,8 +539,7 @@ describe("handleHealth", () => {
     });
 
     it("clears late mint/burn sync and its run warning from confirmed newer output", async () => {
-      vi.spyOn(Date, "now").mockReturnValue(Date.now());
-      const now = Math.floor(Date.now() / 1000);
+      const now = pinnedNow();
       const live = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
       expect(live.mintBurn.sync.lastSuccessfulSyncAt).not.toBeNull();
       const { entry } = await retainedSnapshot(now, (health) => {
@@ -557,8 +557,7 @@ describe("handleHealth", () => {
     });
 
     it("refreshes a retained Safety Score hold warning once the publication is current", async () => {
-      vi.spyOn(Date, "now").mockReturnValue(Date.now());
-      const now = Math.floor(Date.now() / 1000);
+      const now = pinnedNow();
       const { entry } = await retainedSnapshot(now, (health) => {
         health.safetyScorePublication = { ...health.safetyScorePublication!, status: "held", heldSinceSec: now - 120,
           reasons: [{ code: "dex-stale" }] };
@@ -573,8 +572,7 @@ describe("handleHealth", () => {
     });
 
     it("does not advance accepted age from a newer held attempt alone", async () => {
-      vi.spyOn(Date, "now").mockReturnValue(Date.now());
-      const now = Math.floor(Date.now() / 1000);
+      const now = pinnedNow();
       const { entry } = await retainedSnapshot(now, lateSafety(now));
       const db = makeHealthyHealthDb(now, { extras: [entry, safetyHealthRow(safetyHealth(now - LATE_SEC, now - 60, true))] });
       const body = await (await handleHealth(db)).json() as HealthResponse;
@@ -588,8 +586,7 @@ describe("handleHealth", () => {
       ["excessively future accepted clock", (now: number) => safetyHealth(now + LATE_SEC)],
       ["missing publication health", null],
     ] as const)("retains the snapshot when replacement evidence is invalid: %s", async (_label, replacement) => {
-      vi.spyOn(Date, "now").mockReturnValue(Date.now());
-      const now = Math.floor(Date.now() / 1000);
+      const now = pinnedNow();
       const { entry, publicHealth } = await retainedSnapshot(now, lateSafety(now));
       const safetyRow: MockTableConfig = replacement
         ? safetyHealthRow(replacement(now))
@@ -607,8 +604,7 @@ describe("handleHealth", () => {
     it.each(["unreadable publication health", "malformed publication health"] as const)(
       "names a failed recovery read and keeps the retained clock: %s",
       async (kind) => {
-        vi.spyOn(Date, "now").mockReturnValue(Date.now());
-        const now = Math.floor(Date.now() / 1000);
+        const now = pinnedNow();
         const { entry } = await retainedSnapshot(now, lateSafety(now));
         const safetyRow: MockTableConfig = {
           match: SNAPSHOT_KEY_MATCH, matchBinds: ["report-cards:v9:publication-health"], rows: [],
@@ -626,8 +622,7 @@ describe("handleHealth", () => {
     );
 
     it("keeps independent circuit floors when the Safety Score recovers", async () => {
-      vi.spyOn(Date, "now").mockReturnValue(Date.now());
-      const now = Math.floor(Date.now() / 1000);
+      const now = pinnedNow();
       const { entry } = await retainedSnapshot(now, lateSafety(now));
       const open = (openedAt: number) => JSON.stringify({ state: "open", consecutiveFailures: 3, lastFailureAt: openedAt - 30, lastSuccessAt: null, openedAt });
       const db = makeHealthyHealthDb(now, { extras: [entry, { match: "key >= 'circuit:' AND key < 'circuit;'", rows: [
@@ -641,8 +636,7 @@ describe("handleHealth", () => {
     });
 
     it("runs no assessment for a snapshot whose Safety and mint/burn evidence is healthy", async () => {
-      vi.spyOn(Date, "now").mockReturnValue(Date.now());
-      const now = Math.floor(Date.now() / 1000);
+      const now = pinnedNow();
       const { entry } = await retainedSnapshot(now, () => {});
       const db = makeHealthyHealthDb(now, { extras: [entry] });
       const body = await (await handleHealth(db)).json() as HealthResponse;
@@ -652,8 +646,7 @@ describe("handleHealth", () => {
   });
 
   it.each([false, true])("retains independent raw and quality blockers (rejected clock: %s)", async (rejectedClock) => {
-    vi.spyOn(Date, "now").mockReturnValue(Date.now());
-    const now = Math.floor(Date.now() / 1000);
+    const now = pinnedNow();
     const publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
     publicHealth.timestamp = now - 60;
     publicHealth.assessedAt = now - 60;
@@ -709,8 +702,7 @@ describe("handleHealth", () => {
     [null, "degraded", "heavy_scheduler_liveness_unavailable"],
   ] as const)("detects heavy delivery loss (%s) through a healthy cached projection", async (age, status, warning) => {
     // Keep the exact age assertion independent of a wall-clock second boundary.
-    vi.spyOn(Date, "now").mockReturnValue(Date.now());
-    const now = Math.floor(Date.now() / 1000);
+    const now = pinnedNow();
     const publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
     const row = makePublicHealthSnapshotRow(now, publicHealth);
     const db = buildStatusD1Scenario({ sections: [], overrides: [
@@ -1031,8 +1023,7 @@ describe("handleHealth", () => {
     [86401, 3600, "degraded"], [3600, 86401, "degraded"],
   ] as const)("keeps yield held-clock verdict %s/%s at %s while in-budget Safety Scores are held (notice)", async (yieldAge, safetyAge, status) => {
     // Fixture creation must not advance an inclusive 86400-second clock to 86401.
-    vi.spyOn(Date, "now").mockReturnValue(Date.now());
-    const now = Math.floor(Date.now() / 1000);
+    const now = pinnedNow();
     const identity = JSON.parse(stampedYieldIdentityJson("a".repeat(64)));
     const envelope = JSON.parse(publicationEnvelopeIdentityJson("a".repeat(64)));
     envelope.publicationGenerationId = identity.publicationGenerationId;
@@ -1388,25 +1379,7 @@ describe("handleHealth", () => {
   });
 
   it("does not expose Telegram delivery lifecycle on the public response", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const db = healthD1([
-      { match: "cache", rows: [] },
-      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
-      { match: "mint_burn_hourly", rows: [], first: { total: 0 } },
-      { match: "SELECT status", rows: [], first: { status: "ok" } },
-      { match: "status = 'ok'", rows: [], first: { started_at: now - 300 } },
-      { match: "telegram_subscribers", rows: [], first: { n: 42 } },
-      { match: "telegram_deliveries", rows: [], first: telegramCapacityRow },
-      {
-        match: "dispatch-telegram-alerts",
-        rows: [],
-        first: {
-          started_at: now - 120,
-          status: "ok",
-          metadata: JSON.stringify({ safetyAlertsSuppressed: false }),
-        },
-      },
-    ]);
+    const db = telegramHealthDb({ first: telegramCapacityRow }, JSON.stringify({ safetyAlertsSuppressed: false }));
     const res = await handleHealth(db);
     const body = await res.json() as Record<string, unknown>;
     expect(body).not.toHaveProperty("telegramSummary");
@@ -1415,21 +1388,7 @@ describe("handleHealth", () => {
   
 
   it("does not expose Telegram lifecycle warnings on the public response", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const db = healthD1([
-      { match: "cache", rows: [] },
-      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
-      { match: "mint_burn_hourly", rows: [], first: { total: 0 } },
-      { match: "SELECT status", rows: [], first: { status: "ok" } },
-      { match: "status = 'ok'", rows: [], first: { started_at: now - 300 } },
-      { match: "telegram_subscribers", rows: [], first: { n: 42 } },
-      { match: "telegram_deliveries", rows: [], throwError: new Error("capacity unavailable") },
-      {
-        match: "dispatch-telegram-alerts",
-        rows: [],
-        first: { started_at: now - 120, status: "ok", metadata: null },
-      },
-    ]);
+    const db = telegramHealthDb({ throwError: new Error("capacity unavailable") }, null);
 
     const response = await handleHealth(db);
     const body = await response.json() as { status: string; warnings: string[] };

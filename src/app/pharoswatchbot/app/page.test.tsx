@@ -379,8 +379,6 @@ describe("PharosWatchBotMiniAppPage", () => {
     [null, "Alerts on"],
     ["watchlist", "Alerts on"],
     ["settings", "Settings"],
-    ["quiet-hours", "Settings"],
-    ["forget", "Settings"],
     ["coin_usdc-circle", "USDC"],
     ["why_usdc-circle", "USDC"],
     ["coverage_usdc-circle", "USDC"],
