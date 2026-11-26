@@ -10,6 +10,7 @@ export function readYieldRankingsCache(db: D1Database) {
 
 const COHORT_CACHE_KEY = "yield-rankings:coin-cohort:v3";
 const COHORT_LEASE_KEY = `${COHORT_CACHE_KEY}:lease`;
+export const YIELD_COHORT_LAST_EXPIRY_CACHE_KEY = "yield-rankings:coin-cohort:last-expiry";
 
 type YieldCoinCache = { value: string; updatedAt: number };
 

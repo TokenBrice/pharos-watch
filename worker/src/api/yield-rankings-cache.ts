@@ -60,7 +60,8 @@ import { loadActiveSafetyScoreIndex, type ActiveSafetyScoreIndex, type SafetySco
 import { resolveYieldBenchmarkDependencies } from "../lib/yield-config/yield-benchmark-dependencies";
 import { isReviewedPublishedYieldSourceExcluded, YIELD_OPPORTUNITY_EXCLUSIONS } from "../lib/yield-config/yield-opportunity-exclusions";
 import { readCoinProjectionId } from "../lib/api-coin-projection";
-import { readYieldRankingsCache, readYieldRankingsCoinCache, readYieldCoinCohort, readYieldCoinCohortLease, claimYieldCoinCohort, publishYieldCoinCohort, releaseYieldCoinCohort } from "../lib/yield-rankings-coin-cache";
+import { setCacheIfNewer } from "../lib/db-cache";
+import { readYieldRankingsCache, readYieldRankingsCoinCache, readYieldCoinCohort, readYieldCoinCohortLease, claimYieldCoinCohort, publishYieldCoinCohort, releaseYieldCoinCohort, YIELD_COHORT_LAST_EXPIRY_CACHE_KEY } from "../lib/yield-rankings-coin-cache";
 import { YIELD_BENCHMARK_SCORE_TTL_SEC } from "@shared/lib/status-thresholds";
 import { YieldCoinCohortSchema, type YieldRankingsCoinResponse } from "@shared/types/yield";
 
@@ -1158,6 +1159,27 @@ export async function handleYieldRankingsCoin(db: D1Database, url: URL): Promise
     }
     const serveNow = Math.floor(Date.now() / 1000);
     if (cohort.validUntil <= serveNow) {
+      const metadata = {
+        stablecoinId: id,
+        boundary: cohort.validUntilBoundary ?? null,
+        validUntil: cohort.validUntil,
+        assessedAt: cohort.assessedAt,
+        serveNow,
+      };
+      try {
+        await setCacheIfNewer(
+          db,
+          YIELD_COHORT_LAST_EXPIRY_CACHE_KEY,
+          JSON.stringify({
+            ...metadata,
+            selectedGenerationId: selected.publication?.generationId ?? null,
+            servedGenerationId: cohort.publication?.generationId ?? null,
+          }),
+          serveNow,
+        );
+      } catch {
+        // Diagnostic-only breadcrumb; write failure must never alter the fail-closed 503.
+      }
       logWorkerEvent({
         scope: "api",
         level: "warn",
@@ -1165,13 +1187,7 @@ export async function handleYieldRankingsCoin(db: D1Database, url: URL): Promise
         route: "yield-rankings-coin",
         status: 503,
         message: "Yield coin cohort assessment expired before serving",
-        metadata: {
-          stablecoinId: id,
-          boundary: cohort.validUntilBoundary ?? null,
-          validUntil: cohort.validUntil,
-          assessedAt: cohort.assessedAt,
-          serveNow,
-        },
+        metadata,
       });
       return yieldCoinUnavailable("yield-cohort-assessment-expired", true);
     }

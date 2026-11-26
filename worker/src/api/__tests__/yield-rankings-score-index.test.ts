@@ -205,52 +205,41 @@ describe("rankings score-index hydration", () => {
 
   it.each(["USYC", "USYC-age-only", "product-fetch", "product-fixing"] as const)("expires a cohort on the %s deadline", async (source) => {
     const { db, sqlite, payload } = await fixture();
-    const isUsyc = source === "USYC" || source === "USYC-age-only";
-    const usycObservedAt = Date.parse("2026-04-22T10:45:00Z") / 1000;
-    const id = isUsyc ? "usyc-hashnote" : "ustbl-spiko";
-    const recordAt = Date.parse("2026-04-21T00:00:00Z") / 1000;
-    const deadline = isUsyc ? Date.parse("2026-04-23T12:45:00Z") / 1000 : NOW + 15 * 60;
-    const benchmark = {
-      ...payload.benchmarks!.USD!,
-      recordDate: "2026-04-21",
+    const isUsyc = source === "USYC" || source === "USYC-age-only", id = isUsyc ? "usyc-hashnote" : "ustbl-spiko";
+    const usycAt = Date.parse("2026-04-22T10:45:00Z") / 1000, recAt = Date.parse("2026-04-21T00:00:00Z") / 1000;
+    const deadline = isUsyc ? Date.parse("2026-04-23T12:45:00Z") / 1000 : NOW + 900;
+    payload.benchmarks = { USD: { ...payload.benchmarks!.USD!, recordDate: "2026-04-21",
       fetchedAt: source === "product-fetch" ? deadline - 48 * 3600 : NOW,
-      maxRecordAgeSec: source === "product-fixing" ? deadline - recordAt : 5 * 86400,
-    };
-    payload.benchmarks = { USD: benchmark };
-    payload.rankings = [makeYieldRanking({
-      id, dataSource: isUsyc ? "protocol-api" : "rate-derived", benchmarkKey: "USD",
-      provenance: makeYieldProvenance({
-        sourceKey: isUsyc ? "protocol-api:hashnote-usyc" : "rate-derived",
-        sourceObservedAt: source === "USYC-age-only" ? undefined : isUsyc ? usycObservedAt : recordAt,
-        sourceAgeSeconds: isUsyc ? NOW - usycObservedAt : NOW - recordAt,
-      }),
-    })];
+      maxRecordAgeSec: source === "product-fixing" ? deadline - recAt : 5 * 86400 } };
+    payload.rankings = [makeYieldRanking({ id, dataSource: isUsyc ? "protocol-api" : "rate-derived", benchmarkKey: "USD",
+      provenance: makeYieldProvenance({ sourceKey: isUsyc ? "protocol-api:hashnote-usyc" : "rate-derived",
+        sourceObservedAt: source === "USYC-age-only" ? undefined : isUsyc ? usycAt : recAt,
+        sourceAgeSeconds: isUsyc ? NOW - usycAt : NOW - recAt }) })];
     sqlite.prepare("UPDATE cache SET value = ? WHERE key = 'yield-rankings'").run(JSON.stringify(payload));
-
     vi.setSystemTime(deadline * 1000);
-    const response = await handleYieldRankingsCoin(db, coinUrl(id));
-    expect(response.headers.get("Cache-Control")).toBe("public, s-maxage=1, max-age=1");
-    const fresh = YieldRankingsCoinResponseSchema.parse(await response.json());
-    expect(fresh.rankings[0].provenance?.sourceFreshness).toBe("fresh");
+    const res = await handleYieldRankingsCoin(db, coinUrl(id));
+    expect(res.headers.get("Cache-Control")).toBe("public, s-maxage=1, max-age=1");
+    expect(YieldRankingsCoinResponseSchema.parse(await res.json()).rankings[0].provenance?.sourceFreshness).toBe("fresh");
     expect(readPublishedCohort(sqlite)?.validUntil).toBe(deadline + 1);
-
-    const log = vi.spyOn(structuredLog, "logWorkerEvent").mockImplementation(() => {});
-    const read = cohortCache.readYieldCoinCohort;
-    vi.spyOn(cohortCache, "readYieldCoinCohort").mockImplementationOnce(async (...args) => {
-      const cohort = await read(...args);
-      vi.setSystemTime((deadline + 1) * 1000);
-      return cohort;
+    const log = vi.spyOn(structuredLog, "logWorkerEvent").mockImplementation(() => {}), read = cohortCache.readYieldCoinCohort;
+    let expiredCohort: Awaited<ReturnType<typeof read>> = null;
+    vi.spyOn(cohortCache, "readYieldCoinCohort").mockImplementationOnce(async (...a) => {
+      expiredCohort = await read(...a); vi.setSystemTime((deadline + 1) * 1000); return expiredCohort;
     });
-    const expired = await handleYieldRankingsCoin(db, coinUrl(id));
-    expect(expired.status).toBe(503);
-    expect(expired.headers.get("Retry-After")).toBe("1");
-    expect(await expired.json()).toMatchObject({ reason: "yield-cohort-assessment-expired" });
-    expect(log).toHaveBeenCalledWith(expect.objectContaining({
-      event: "yield-cohort-assessment-expired",
-      metadata: { stablecoinId: id, assessedAt: deadline, validUntil: deadline + 1, serveNow: deadline + 1,
-        boundary: isUsyc ? "usyc-nav-stale" : source === "product-fetch" ? "benchmark-fetch-stale:USD" : "benchmark-record-stale:USD" },
-    }));
-
+    const meta = { stablecoinId: id, assessedAt: deadline, validUntil: deadline + 1, serveNow: deadline + 1,
+      boundary: isUsyc ? "usyc-nav-stale" : source === "product-fetch" ? "benchmark-fetch-stale:USD" : "benchmark-record-stale:USD" };
+    const assert503 = async (r: Response) => {
+      expect(r.status).toBe(503); expect(r.headers.get("Cache-Control")).toBe("no-store"); expect(r.headers.get("Retry-After")).toBe("1");
+      expect(await r.json()).toMatchObject({ reason: "yield-cohort-assessment-expired" });
+    };
+    await assert503(await handleYieldRankingsCoin(db, coinUrl(id)));
+    expect(log).toHaveBeenCalledWith(expect.objectContaining({ event: "yield-cohort-assessment-expired", metadata: meta }));
+    const crumb = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?").get("yield-rankings:coin-cohort:last-expiry") as { value: string; updated_at: number } | undefined;
+    expect(crumb?.updated_at).toBe(deadline + 1);
+    expect(JSON.parse(crumb!.value)).toEqual({ ...meta, selectedGenerationId: payload.publication!.generationId, servedGenerationId: payload.publication!.generationId });
+    vi.spyOn(cohortCache, "readYieldCoinCohort").mockResolvedValueOnce(expiredCohort);
+    vi.spyOn(dbCache, "setCacheIfNewer").mockRejectedValueOnce(new Error("D1 write failed"));
+    await assert503(await handleYieldRankingsCoin(db, coinUrl(id)));
     const stale = YieldRankingsCoinResponseSchema.parse(await (await handleYieldRankingsCoin(db, coinUrl(id))).json());
     expect(stale.rankings[0].pysNullReason).toBe("source-stale");
     expect(readPublishedCohort(sqlite)?.validUntil).toBeGreaterThan(deadline + 1);
@@ -496,76 +485,49 @@ describe("rankings score-index hydration", () => {
   });
 
   it.each([false, true])("shares exact global ranks and safety coverage across coin URLs (held=%s)", async (held) => {
-    const { db } = await fixture(held);
-    const fullResponse = await handleYieldRankings(db);
-    const full = YieldRankingsResponseSchema.parse(await fullResponse.json());
-    const url = coinUrl;
-    const first = await handleYieldRankingsCoin(db, url("usdc-circle"));
+    const { db } = await fixture(held), fullRes = await handleYieldRankings(db), full = YieldRankingsResponseSchema.parse(await fullRes.json());
+    const first = await handleYieldRankingsCoin(db, coinUrl("usdc-circle"));
     expect(first.status).toBe(200);
-    const firstBody = YieldRankingsCoinResponseSchema.parse(await first.json());
-    expect(firstBody.rankings).toEqual(full.rankings.filter((row) => row.id === "usdc-circle"));
-    expect(firstBody.provenance).toEqual(full.provenance);
-    expect(firstBody.warnings).toEqual(full.warnings);
-    const safety = vi.spyOn(opportunitySafety, "resolveYieldRowSafety");
-    const prepare = vi.spyOn(db, "prepare");
-    const second = await handleYieldRankingsCoin(db, url("usdt-tether"));
+    expect(YieldRankingsCoinResponseSchema.parse(await first.json())).toMatchObject({
+      rankings: full.rankings.filter((r) => r.id === "usdc-circle"), provenance: full.provenance, warnings: full.warnings,
+    });
+    const safety = vi.spyOn(opportunitySafety, "resolveYieldRowSafety"), prepare = vi.spyOn(db, "prepare");
+    const second = await handleYieldRankingsCoin(db, coinUrl("usdt-tether"));
     expect(second.status).toBe(200);
-    const secondBody = YieldRankingsCoinResponseSchema.parse(await second.json());
-    expect(secondBody.rankings).toEqual(full.rankings.filter((row) => row.id === "usdt-tether"));
-    expect(secondBody.projection.totalCount).toBe(2);
-    expect(secondBody.provenance).toEqual(full.provenance);
-    expect(second.headers.get("Warning")).toBe(fullResponse.headers.get("Warning"));
-    // No full ranking read/admission and no unrelated selected/alternate safety
-    // hydration on a different coin's cache miss.
+    expect(YieldRankingsCoinResponseSchema.parse(await second.json())).toMatchObject({
+      rankings: full.rankings.filter((r) => r.id === "usdt-tether"), provenance: full.provenance, projection: { totalCount: 2 },
+    });
+    expect(second.headers.get("Warning")).toBe(fullRes.headers.get("Warning"));
     expect(prepare.mock.calls.filter(([sql]) => sql.startsWith("SELECT value, updated_at FROM cache WHERE key = ("))).toHaveLength(0);
-    expect(safety.mock.calls.every(([input]) => input.yieldType === "lending-opportunity")).toBe(true);
+    expect(safety.mock.calls.every(([i]) => i.yieldType === "lending-opportunity")).toBe(true);
     expect(safety.mock.calls.length).toBeLessThanOrEqual(1);
   });
 
   it("coalesces cold comparator construction and serves the waiter from the winning publication", async () => {
-    const { db } = await fixture();
-    const prepare = vi.spyOn(db, "prepare");
-    const request = (id: string) => handleYieldRankingsCoin(db, new URL(`https://site-api.pharos.watch/api/yield-rankings-coin?stablecoin=${id}`));
-    const responses = await settleWithFakeTimers(Promise.all([request("usdc-circle"), request("usdt-tether")]));
-    expect(responses.map((response) => response.status)).toEqual([200, 200]);
-    for (const response of responses) {
-      expect(response.headers.get("Retry-After")).toBeNull();
-      expect(YieldRankingsCoinResponseSchema.parse(await response.json()).projection.totalCount).toBe(2);
+    const { db } = await fixture(), prepare = vi.spyOn(db, "prepare"), req = (id: string) => handleYieldRankingsCoin(db, coinUrl(id));
+    const responses = await settleWithFakeTimers(Promise.all([req("usdc-circle"), req("usdt-tether")]));
+    expect(responses.map((r) => r.status)).toEqual([200, 200]);
+    for (const r of responses) {
+      expect(r.headers.get("Retry-After")).toBeNull();
+      expect(YieldRankingsCoinResponseSchema.parse(await r.json()).projection.totalCount).toBe(2);
     }
-    // Exactly one full-population hydration, and the waiter did not start another.
     expect(prepare.mock.calls.filter(([sql]) => sql.startsWith("SELECT value, updated_at FROM cache WHERE key = ("))).toHaveLength(1);
-    expect((await request("usdt-tether")).status).toBe(200);
+    expect((await req("usdt-tether")).status).toBe(200);
     expect(prepare.mock.calls.filter(([sql]) => sql.startsWith("SELECT value, updated_at FROM cache WHERE key = ("))).toHaveLength(1);
   });
 
   it("logs the lease claim and measured build duration once, without logging warm reads", async () => {
-    const { db, sqlite } = await fixture();
-    const url = coinUrl();
-    const log = vi.spyOn(structuredLog, "logWorkerEvent").mockImplementation(() => {});
-    const getCache = dbCache.getCache;
-    vi.spyOn(dbCache, "getCache").mockImplementationOnce(async (...args) => {
-      vi.setSystemTime(NOW * 1000 + 1234);
-      return getCache(...args);
-    });
+    const { db, sqlite } = await fixture(), url = coinUrl();
+    const log = vi.spyOn(structuredLog, "logWorkerEvent").mockImplementation(() => {}), getCache = dbCache.getCache;
+    vi.spyOn(dbCache, "getCache").mockImplementationOnce(async (...a) => { vi.setSystemTime(NOW * 1000 + 1234); return getCache(...a); });
     expect((await handleYieldRankingsCoin(db, url)).status).toBe(200);
-    const signature = readPublishedCohort(sqlite)!.signature;
+    const sig = readPublishedCohort(sqlite)!.signature.slice(0, 12);
     expect(log).toHaveBeenCalledTimes(2);
-    expect(log).toHaveBeenCalledWith({
-      scope: "api",
-      level: "info",
-      event: "yield-cohort-lease-claimed",
-      route: "yield-rankings-coin",
+    expect(log).toHaveBeenCalledWith({ scope: "api", level: "info", event: "yield-cohort-lease-claimed", route: "yield-rankings-coin",
       message: "Claimed yield coin cohort preparation lease",
-      metadata: {
-        stablecoinId: "usdc-circle", signaturePrefix: signature.slice(0, 12), leaseOwner: expect.any(String), leaseUntil: NOW + 30,
-      },
-    });
-    expect(log).toHaveBeenLastCalledWith(expect.objectContaining({
-      event: "yield-cohort-built",
-      metadata: { stablecoinId: "usdc-circle", signaturePrefix: signature.slice(0, 12),
-        leaseOwner: expect.any(String), durationMs: 1234 },
-    }));
-    // Warm reads never claim or re-log.
+      metadata: { stablecoinId: "usdc-circle", signaturePrefix: sig, leaseOwner: expect.any(String), leaseUntil: NOW + 30 } });
+    expect(log).toHaveBeenLastCalledWith(expect.objectContaining({ event: "yield-cohort-built",
+      metadata: { stablecoinId: "usdc-circle", signaturePrefix: sig, leaseOwner: expect.any(String), durationMs: 1234 } }));
     expect((await handleYieldRankingsCoin(db, url)).status).toBe(200);
     expect(log).toHaveBeenCalledTimes(2);
   });
