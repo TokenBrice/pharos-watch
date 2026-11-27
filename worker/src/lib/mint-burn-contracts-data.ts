@@ -79,6 +79,9 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
   { stablecoinId: "ybold-yearn", dustThreshold: 10_000 },
   { stablecoinId: "yusd-yieldfi", dustThreshold: 10_000 },
   { stablecoinId: "said-gaib", dustThreshold: 10_000 },
+  { stablecoinId: "siusd-infinifi", dustThreshold: 10_000 },
+  { stablecoinId: "fliteusd-fluid", dustThreshold: 10_000 },
+  { stablecoinId: "svzchf-frankencoin", dustThreshold: 10_000 },
   // --- Top-50 supported expansion (Ethereum only) ---
   { stablecoinId: "usdf-falcon", dustThreshold: 10_000 },
   { stablecoinId: "usyc-hashnote", dustThreshold: 10_000 },
@@ -518,6 +521,17 @@ export const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
     startBlock: 48_631_941,
     tier: "extended",
     startBlockSource: "alchemy-base-code-deployment-2026-07-14-reviewed-2026-09-30",
+    startBlockConfidence: "high",
+    events: transferMintBurn(),
+  },
+  // Steakhouse Prime USDC (Base) immutable VaultV2 deployment on Base.
+  {
+    chain: BASE,
+    stablecoinId: "steakusdc-steakhouse-base",
+    dustThreshold: 10_000,
+    startBlock: 37_404_640,
+    tier: "extended",
+    startBlockSource: "morpho-base-deployment-2025-10-27-reviewed-2026-11-27",
     startBlockConfidence: "high",
     events: transferMintBurn(),
   },

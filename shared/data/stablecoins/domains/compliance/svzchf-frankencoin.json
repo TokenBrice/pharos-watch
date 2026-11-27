@@ -1,0 +1,73 @@
+{
+  "id": "svzchf-frankencoin",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Exact verified SavingsVaultZCHF_2 variable-NAV ERC-4626 share contract",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe5f130253ff137f9917c0107659a4c5262abf6b0"
+      },
+      {
+        "label": "Frankencoin compliance summary",
+        "url": "https://frankencoin.com/compliance/#compliance-summary"
+      },
+      {
+        "label": "ESMA MiCA Article 3(1)(6)-(7), ART and EMT stable-value definitions",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
+      },
+      {
+        "label": "Structural ART/EMT exclusion for variable-value shares; not a statement on EU offering, securities or CASP law",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "svZCHF represents the Ethereum ERC-4626 SavingsVaultZCHF_2 contract at 0xe5f130253ff137f9917c0107659a4c5262abf6b0, an interest-accruing savings wrapper over ZCHF. Verified contract code calculates share redemption from variable totalAssets (deposited ZCHF plus Leadrate accrued interest in the Savings module) divided by totalSupply and redeems shares for ZCHF rather than a fixed monetary-value obligation from a payment-stablecoin issuer under GENIUS Act section 2(22).",
+      "references": [
+        {
+          "label": "Exact verified SavingsVaultZCHF_2 ERC-4626 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe5f130253ff137f9917c0107659a4c5262abf6b0",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "Frankencoin Savings application",
+          "url": "https://app.frankencoin.com/savings?chain=ethereum",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "Frankencoin compliance summary",
+          "url": "https://frankencoin.com/compliance/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "GENIUS Act section 2(22), payment stablecoin definition",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-11-27"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Assessment applies to the svZCHF ERC-4626 savings receipt at 0xe5f130253ff137f9917c0107659a4c5262abf6b0 separately from parent ZCHF. Vault ownership was permanently renounced at block 24118275, and the contract redeems shares at variable ZCHF-per-share NAV derived from Frankencoin's onchain Savings module. No identifiable legal payment-stablecoin issuer is established for this vault share, so issuerEntity and issuerDomicile are omitted. This scope assessment does not resolve parent ZCHF's GENIUS applicability or other securities, investment-company, or service-provider laws.",
+    "references": [
+      {
+        "label": "GENIUS Act section 2(22), payment stablecoin definition",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-11-27"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-11-27"
+  }
+}

@@ -68,6 +68,30 @@ export const REDEMPTION_BACKSTOP_POLICY_ENTRIES: readonly RedemptionBackstopPoli
   },
   {
     kind: "unused-live-redemption-telemetry",
+    stablecoinId: "svzchf-frankencoin",
+    reason:
+      "ZCHF-denominated SavingsVaultZCHF_2 reserve telemetry does not establish same-notional executable USD capacity. Nominal ZCHF units are not USD redemption capacity, so the unquantified ZCHF-output route must not consume reserve telemetry as USD capacity.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-11-27",
+  },
+  {
+    kind: "unused-live-redemption-telemetry",
+    stablecoinId: "fliteusd-fluid",
+    reason:
+      "FluidLiteVault routes all idle USDC immediately into Fluid fUSDC, so raw USDC.balanceOf(vault) is always zero while instant exits draw from the fUSDC buffer (28.17% of vault assets at review). Executable capacity and the 5 bps withdrawal fee are measured by the certified erc4626-instant execution observer rather than raw idle USDC reserve telemetry.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-11-27",
+  },
+  {
+    kind: "unused-live-redemption-telemetry",
+    stablecoinId: "siusd-infinifi",
+    reason:
+      "Generic ERC-4626 reserve telemetry measures idle iUSD held by StakedToken, but ordinary holders cannot call StakedToken.redeem() directly and must exit through InfiniFiGatewayV4.unstake(), which is subject to gateway pause and negative YieldSharing.unaccruedYield() gates. Because the generic adapter neither observes those gateway gates nor proves gateway output identity, the configured iUSD route remains explicitly unquantified.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-11-27",
+  },
+  {
+    kind: "unused-live-redemption-telemetry",
     stablecoinId: "usdr-rise",
     reason:
       "The M-wrapper producer measures native-M backing and a sampled approved-swapper cohort, not executable wM output through the reviewed same-chain holder route. Native-M telemetry must not be attributed to the configured USDR-to-wM route; exact wM output capacity requires separate producer evidence.",

@@ -1,0 +1,85 @@
+{
+  "id": "siusd-infinifi",
+  "name": "Staked infiniFi USD",
+  "symbol": "siUSD",
+  "oneLiner": "siUSD is infiniFi's staked iUSD vault; shares accrue protocol yield and absorb losses after locked liUSD and before unstaked iUSD.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "variantOf": "iusd-infinifi",
+  "variantKind": "risk-absorption",
+  "wrapperOperator": "parent-protocol",
+  "pegReferenceId": "iusd-infinifi",
+  "collateral": "Canonical iUSD receipt tokens held in infiniFi's immutable StakedToken ERC-4626 vault on Ethereum; underlying iUSD reserves are deployed across institutional private credit, funds, and DeFi lending",
+  "pegMechanism": "ERC-4626 NAV shares over iUSD; ordinary users stake and unstake through InfiniFiGatewayV4, which toggles YieldSharing's entry/exit gate to mint or redeem siUSD against vault-held iUSD with zero wrapper fee, while negative unaccrued yield halts withdrawals and YieldSharingV3 slashes siUSD rewards and principal after liUSD and before unstaked iUSD",
+  "mechanismArchetype": "rwa-credit-fund",
+  "detailProvider": "coingecko",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://infinifi.xyz/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/infiniFi"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.infinifi.xyz/dev-docs/tokens/staked-token"
+    },
+    {
+      "label": "Stats",
+      "url": "https://stats.infinifi.xyz/"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/InfiniFi-Labs/infinifi-protocol"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xdbdc1ef57537e34680b898e1febd3d68c7389bcb",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "exotic",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "wrapper",
+  "yieldConfig": {
+    "yieldSource": "infiniFi savings (siUSD)",
+    "yieldType": "lending-vault"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 2,
+    "semantics": "single-asset",
+    "breakerScope": "siusd-infinifi",
+    "display": {
+      "url": "https://stats.infinifi.xyz/",
+      "label": "infiniFi Stats"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "redemptionRoute": "gateway-only",
+      "slice": {
+        "name": "Staked infiniFi USD vault iUSD holdings",
+        "risk": "high",
+        "coinId": "iusd-infinifi",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0x48f9e38f3070ad8945dfeae3fa70987722e3d89c"
+      }
+    }
+  },
+  "launchDate": "2025-05-22"
+}

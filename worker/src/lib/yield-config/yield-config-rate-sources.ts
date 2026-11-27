@@ -38,7 +38,7 @@ function erc4626Rate(
  */
 export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
   erc4626Rate("susde-ethena", "ethereum", "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497", 18, 18, null),
-  erc4626Rate("iusd-infinifi", "ethereum", "0xDBDC1Ef57537E34680B898E1FEBD3D68c7389bCB", 18, 18, null),
+  erc4626Rate("siusd-infinifi", "ethereum", "0xdbdc1ef57537e34680b898e1febd3d68c7389bcb", 18, 18, null),
   erc4626Rate("susds-sky", "ethereum", "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD", 18, 18, null),
   // ERC-4626 over USDS; no pinned DL pool — measure totalAssets as venue TVL.
   erc4626Rate("stusds-sky", "ethereum", "0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9", 18, 18, 18),
@@ -126,6 +126,11 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
   erc4626Rate("kpkusdcyield-kpk", "ethereum", "0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13", 18, 6, 6),
   // USDat-denominated credit-vault NAV includes preferred-note gains and losses.
   erc4626Rate("susdat-saturn", "ethereum", "0xd166337499e176bbc38a1fbd113ab144e5bd2df7", 18, 6, 6),
+  erc4626Rate("fliteusd-fluid", "ethereum", "0x273da948aca9261043fbdb2a857bc255ecc29012", 18, 6, 6),
+  // ZCHF-denominated totalAssets is not USD TVL.
+  erc4626Rate("svzchf-frankencoin", "ethereum", "0xe5f130253ff137f9917c0107659a4c5262abf6b0", 18, 18, null),
+  erc4626Rate("steakusdc-steakhouse-base", "base", "0xbeef0e0834849acc03f0089f01f4f1eeb06873c9", 18, 6, 6),
+  erc4626Rate("gpyusdse-galaxy", "stable", "0x8c3250f028a2c8d29319eb3ee3214b90462394ba", 18, 6, 6),
 ];
 ON_CHAIN_RATE_CONFIGS.sort((a, b) => a.stablecoinId.localeCompare(b.stablecoinId));
 

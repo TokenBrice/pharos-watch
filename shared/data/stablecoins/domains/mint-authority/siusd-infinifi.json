@@ -1,0 +1,220 @@
+{
+  "id": "siusd-infinifi",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "none-resolved-mint",
+    "confidence": "verified",
+    "summary": "siUSD is an immutable ERC-4626 staking vault over iUSD. Share creation occurs only against deposited iUSD through ERC4626 deposit/mint, with no privileged arbitrary share-minter or proxy upgrade on the token itself. Core FINANCE_MANAGER (YieldSharing proxy) can deposit rewards, toggle the entry/exit gate, and slash vault-held iUSD via applyLosses(), while Core GOVERNOR (7-day Timelock proposed by the 4-of-7 admin Safe) can re-point yieldSharing and upgrade YieldSharing. Durable parent iUSD issuance remains inherited from iusd-infinifi.",
+    "headline": "Deposits back immutable siUSD shares; YieldSharing controls slashing and entry gating, while iUSD issuance stays upstream.",
+    "inheritedFrom": "iusd-infinifi",
+    "economicCapSemantics": "bounded",
+    "capSemanticsReview": {
+      "verdict": "bounded-by-construction",
+      "rationale": "At finalized Ethereum block 26506658 (hash 0x2b69b7934b1e88fb42e9f10e6d0bff1f9114b5f1334c87ee41cc2aa8c9210f31), verified immutable StakedToken 0xdbdc1ef57537e34680b898e1febd3d68c7389bcb mints siUSD shares solely through OpenZeppelin ERC4626._deposit after transferring canonical iUSD from the caller. No privileged share-mint entrypoint or proxy upgrade exists on StakedToken. FINANCE_MANAGER can transfer iUSD into the vault via depositRewards() or burn vault iUSD via applyLosses(), changing exchange rate rather than minting unbacked siUSD shares. Parent iUSD unbounded issuance is carried by the serial-claim dependency on iusd-infinifi.",
+      "reviewedAt": "2026-11-27",
+      "reviewer": "Pharos Listing Policy v2 Batch 2 review",
+      "sources": [
+        {
+          "label": "Verified StakedToken (siUSD) Ethereum source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdbdc1ef57537e34680b898e1febd3d68c7389bcb"
+        },
+        {
+          "label": "Ethereum PublicNode RPC: pinned reads at finalized block 26506658 (2026-11-27T12:51:35Z)",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "upgradeability": {
+      "model": "immutable",
+      "deploymentRefs": [
+        "ethereum:0xdbdc1ef57537e34680b898e1febd3d68c7389bcb"
+      ],
+      "canChangeMintLogic": false,
+      "controlRef": "siUSD immutable StakedToken ERC-4626 wrapper",
+      "observedAt": "2026-11-27",
+      "observedBlock": 26506658,
+      "sources": [
+        {
+          "label": "Verified StakedToken (siUSD) Ethereum source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdbdc1ef57537e34680b898e1febd3d68c7389bcb"
+        },
+        {
+          "label": "Ethereum PublicNode RPC: pinned reads at finalized block 26506658 (2026-11-27T12:51:35Z)",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xdbdc1ef57537e34680b898e1febd3d68c7389bcb",
+        "deploymentRefs": [
+          "ethereum:0xdbdc1ef57537e34680b898e1febd3d68c7389bcb"
+        ],
+        "label": "siUSD immutable StakedToken ERC-4626 wrapper",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-27",
+        "observedBlock": 26506658,
+        "sources": [
+          {
+            "label": "Verified StakedToken (siUSD) Ethereum source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdbdc1ef57537e34680b898e1febd3d68c7389bcb"
+          },
+          {
+            "label": "Ethereum PublicNode RPC: pinned reads at finalized block 26506658 (2026-11-27T12:51:35Z)",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At finalized Ethereum block 26506658, StakedToken 0xdbdc1ef57537e34680b898e1febd3d68c7389bcb has zero EIP-1967 implementation, admin, and beacon slots, runtime sha256 ba0a4ba51721a14584973b3f2992105477087de590ec0913e25e9dcdd1178be6, asset() = iUSD 0x48f9e38f3070ad8945dfeae3fa70987722e3d89c, core() = 0xf6d48735eccf12bdc1df2674b1ce3fcb3bd25490, and yieldSharing() = 0x90e91f5bfd9a0a4d925bf30b512add8cd2bbae3b. Verified source mints shares only via ERC4626 deposit/mint against transferred iUSD and creates no durable iUSD supply."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x90e91f5bfd9a0a4d925bf30b512add8cd2bbae3b",
+        "deploymentRefs": [
+          "ethereum:0xdbdc1ef57537e34680b898e1febd3d68c7389bcb"
+        ],
+        "label": "infiniFi YieldSharing proxy (FINANCE_MANAGER)",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-27",
+        "observedBlock": 26506658,
+        "sources": [
+          {
+            "label": "Verified YieldSharingV3 implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d5dbf208a9a7540018d204a9a0ad08a091407e5"
+          },
+          {
+            "label": "infiniFi YieldSharing proxy",
+            "url": "https://eth.blockscout.com/address/0x90e91f5bfd9a0a4d925bf30b512add8cd2bbae3b"
+          }
+        ],
+        "evidence": "At finalized Ethereum block 26506658, YieldSharing proxy 0x90e91f5bfd9a0a4d925bf30b512add8cd2bbae3b (implementation 0x0d5dbf208a9a7540018d204a9a0ad08a091407e5, ProxyAdmin 0x094227ee5e9c3877860ac212f1e5218441e5b4eb) holds Core FINANCE_MANAGER (one of five members) and is StakedToken's yieldSharing target. It gates StakedToken _deposit/_withdraw via canEnterOrExitStakedToken (toggled transiently by InfiniFiGatewayV4), distributes staking profits, and calls StakedToken.applyLosses() to burn vault-held iUSD on negative yield after liUSD is exhausted. It cannot mint unbacked siUSD shares."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x80608f852d152024c0a2087b16939235fec2400c",
+        "deploymentRefs": [
+          "ethereum:0xdbdc1ef57537e34680b898e1febd3d68c7389bcb"
+        ],
+        "label": "infiniFi admin Safe (Timelock PROPOSER_ROLE)",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "timelockDelaySec": 604800,
+        "modulesOrGuardsStatus": "none-detected",
+        "threshold": 4,
+        "signerCount": 7,
+        "safe": {
+          "owners": [
+            "0xcc30e7d9dfbc29613e2a1e272cd624afc3abe1e9",
+            "0x7a823623b18335a9c1284ac45315fe89972fd421",
+            "0xdadb38219425c761dd0f3a4d684fc36f533af7bd",
+            "0x6dfa1a32604088eb969242aaffb92420f78373f6",
+            "0xd53ffb2db125015ab4d461bad3fa959ef1a1e685",
+            "0xfd4691dfa327adb0d6f3c7b4224b3cc881d4f6fa",
+            "0x383965940c950008a4b67bfaa477fdf6ac91a7f7"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": null,
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 26506658,
+          "observedAt": "2026-11-27",
+          "source": "onchain"
+        },
+        "observedAt": "2026-11-27",
+        "observedBlock": 26506658,
+        "sources": [
+          {
+            "label": "Verified InfiniFiCore role administration",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf6d48735eccf12bdc1df2674b1ce3fcb3bd25490"
+          },
+          {
+            "label": "infiniFi Long Timelock verified source",
+            "url": "https://eth.blockscout.com/address/0x3d18480cc32b6ab3b833dcabd80e76cfd41c48a9"
+          },
+          {
+            "label": "Ethereum PublicNode RPC: pinned reads at finalized block 26506658 (2026-11-27T12:51:35Z)",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At finalized Ethereum block 26506658, Safe 0x80608f852d152024c0a2087b16939235fec2400c reports 4-of-7 owners, terminal empty modules, zero guard, and masterCopy 0x41675c099f32341bf84bfc5382af534df5c7461a. It is the sole Core PROPOSER_ROLE member for Long Timelock 0x3d18480cc32b6ab3b833dcabd80e76cfd41c48a9 (getMinDelay() = 604800 seconds), which holds Core GOVERNOR alongside FluidRewardsClaimer 0xd0ec80032c0da717bd78b9569321d9069365241e. GOVERNOR can call StakedToken.setYieldSharing(), grant/revoke FINANCE_MANAGER, and upgrade YieldSharing, while the Safe also holds Core PAUSE, UNPAUSE, ACCRUE_YIELD, and MINOR_ROLES_MANAGER. It cannot mint unbacked siUSD shares."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Verified StakedToken (siUSD) Ethereum source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdbdc1ef57537e34680b898e1febd3d68c7389bcb"
+        },
+        {
+          "label": "Verified InfiniFiCore role administration",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf6d48735eccf12bdc1df2674b1ce3fcb3bd25490"
+        },
+        {
+          "label": "Verified YieldSharingV3 implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d5dbf208a9a7540018d204a9a0ad08a091407e5"
+        },
+        {
+          "label": "Verified InfiniFiGatewayV4 implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x750136ac021a7149f0ee38141d0ba920cca1fc5d"
+        },
+        {
+          "label": "Ethereum PublicNode RPC: pinned reads at finalized block 26506658 (2026-11-27T12:51:35Z)",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ],
+      "evidence": "Reviewed at finalized Ethereum block 26506658 (hash 0x2b69b7934b1e88fb42e9f10e6d0bff1f9114b5f1334c87ee41cc2aa8c9210f31, 2026-11-27T12:51:35Z). StakedToken 0xdbdc1ef57537e34680b898e1febd3d68c7389bcb is immutable (zero EIP-1967 slots) and mints shares exclusively through deposit/mint after pulling canonical iUSD. Core role enumeration confirms GOVERNOR = [FluidRewardsClaimer 0xd0ec80032c0da717bd78b9569321d9069365241e, Long Timelock 0x3d18480cc32b6ab3b833dcabd80e76cfd41c48a9 (604800s)], FINANCE_MANAGER has 5 members including YieldSharing proxy 0x90e91f5bfd9a0a4d925bf30b512add8cd2bbae3b, ENTRY_POINT = [InfiniFiGatewayV4 proxy 0x3f04b65ddbd87f9ce0a2e7eb24d80e7fb87625b5, MigrationController 0x5f5403656e4db95accf1064a714b1bce351839f8], PAUSE has 8 members, UNPAUSE has 2 members, and PROPOSER_ROLE = [admin Safe 0x80608f852d152024c0a2087b16939235fec2400c (4-of-7, zero modules/guard)]. Direct user calls to StakedToken.redeem revert StakedTokenNotAvailable (0x6801b5aa) because YieldSharing.canEnterOrExitStakedToken defaults to false outside InfiniFiGatewayV4. Native parent iUSD issuance remains inherited from iusd-infinifi.",
+      "reviewer": "Pharos Listing Policy v2 Batch 2 review",
+      "reviewedAt": "2026-11-27",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [],
+      "scopedQuestions": [
+        {
+          "controlRef": "ethereum:0x80608f852d152024c0a2087b16939235fec2400c",
+          "question": "For infiniFi admin Safe (ethereum:0x80608f852d152024c0a2087b16939235fec2400c): Safe signer independence and off-chain key-custody attestations are not published; on-chain 4-of-7 quorum verification at block 26506658 does not establish independent beneficial signers.",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-11-27",
+          "reviewer": "Pharos Listing Policy v2 Batch 2 review",
+          "sources": [
+            {
+              "label": "Ethereum PublicNode RPC: pinned reads at finalized block 26506658 (2026-11-27T12:51:35Z)",
+              "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Verified InfiniFiCore role administration",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf6d48735eccf12bdc1df2674b1ce3fcb3bd25490"
+            }
+          ]
+        },
+        {
+          "controlRef": "ethereum:0x90e91f5bfd9a0a4d925bf30b512add8cd2bbae3b",
+          "question": "What is the complete current maximal execution closure across all five Core FINANCE_MANAGER members and YieldSharing proxy upgrade paths? On-chain role enumeration at block 26506658 confirms YieldSharingV3 cannot mint unbacked siUSD shares, but downstream closure of all auxiliary FINANCE_MANAGER contracts and emergencyAction paths remains open.",
+          "reviewedAt": "2026-11-27",
+          "reviewer": "Pharos Listing Policy v2 Batch 2 review",
+          "sources": [
+            {
+              "label": "Verified YieldSharingV3 implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d5dbf208a9a7540018d204a9a0ad08a091407e5"
+            },
+            {
+              "label": "Ethereum PublicNode RPC: pinned reads at finalized block 26506658 (2026-11-27T12:51:35Z)",
+              "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

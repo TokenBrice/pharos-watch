@@ -26379,6 +26379,64 @@
           "sourceUrl": "https://usefelix.gitbook.io/usdhl/sunsetting-usdhl"
         }
       }
+    },
+    {
+      "assetId": "mglo-midas-fasanara",
+      "archetype": "rwa-credit-fund",
+      "reviewedAt": "2026-11-27T13:57:00Z",
+      "sources": [
+        {
+          "label": "Midas mGLO November 25, 2026 SAVE attestation (CID QmeNwyuVyhM5HvEFfKZH9j7zCCvGrLwCBf1hYeWsTocMt1; vlayer TLS-Notary JTC Luxembourg email valuing Compartment mGLO / ISIN LU3357216087 Fasanara SA SICAV-RAIF mGLOBAL Fund SF 36 Class A USD ACC at $193,415,658.76 as of 2026-10-31)",
+          "url": "https://gateway.pinata.cloud/ipfs/QmeNwyuVyhM5HvEFfKZH9j7zCCvGrLwCBf1hYeWsTocMt1"
+        },
+        {
+          "label": "Midas PoR v2 canonical token registry (tokens.json; Compartment mGLO proofId 0x31d6a336...7af5dee, JTC Luxembourg fund manager email config, zero declared on-chain instant-liquidity reserve wallets)",
+          "url": "https://raw.githubusercontent.com/midas-apps/midas-por-v2/main/tokens.json"
+        },
+        {
+          "label": "Midas contracts deployment registry (addresses.ts; Base, Ethereum, Robinhood Chain mGLO vaults and adapters)",
+          "url": "https://github.com/midas-apps/contracts/blob/main/config/constants/addresses.ts"
+        },
+        {
+          "label": "Midas Attestation Engine architecture (Chainlink CRE and vlayer TLS-Notary proofs)",
+          "url": "https://blog.midas.app/introducing-the-midas-attestation-engine/"
+        }
+      ],
+      "metrics": {
+        "weightedAverageMaturityDays": null,
+        "valuationCadenceDays": 30
+      },
+      "metricApplicability": {
+        "weightedAverageMaturityDays": {
+          "state": "unavailable",
+          "rationale": "No mGLO-specific loan tape, prospectus, or Fasanara SA SICAV-RAIF SF 36 offering document confirms portfolio weighted-average maturity; sister-product GDADF duration figures are not imported.",
+          "sourceUrl": "https://gateway.pinata.cloud/ipfs/QmeNwyuVyhM5HvEFfKZH9j7zCCvGrLwCBf1hYeWsTocMt1"
+        }
+      },
+      "components": {
+        "creditQuality": {
+          "quality": "limited"
+        },
+        "seniority": {
+          "quality": "limited"
+        },
+        "legalEnforceability": {
+          "quality": "limited"
+        },
+        "valuationCadence": {
+          "quality": "adequate"
+        },
+        "maturityAndLiquidity": {
+          "quality": "limited"
+        },
+        "custody": {
+          "quality": "limited"
+        },
+        "recovery": {
+          "quality": "limited"
+        }
+      },
+      "notes": "Primary-sourced rwa-credit-fund overlay for Midas Fasanara Global Open (mGLO; Compartment mGLO, ISIN LU3357216087; Fasanara SA SICAV-RAIF mGLOBAL Fund SF 36 Class A USD ACC) authored strictly from mGLO-specific disclosures without importing sister-product GDADF or mGLOBAL credit metrics. The November 25, 2026 Midas SAVE attestation (CID QmeNwyuVyhM5HvEFfKZH9j7zCCvGrLwCBf1hYeWsTocMt1) provides a vlayer TLS-Notary proof of JTC Luxembourg month-end fund valuation (Valuation Date 31/10/2026, $193,415,658.76 with zero pending redemptions), establishing valuationCadenceDays = 30 and valuationCadence = adequate. weightedAverageMaturityDays is left null (metricApplicability unavailable) and creditQuality is graded limited because no mGLO-specific loan tape, obligor census, or offering prospectus for SF 36 was recovered to substantiate duration, subordination, or borrower credit quality. Unlike sister token mGLOBAL, midas-por-v2 declares zero on-chain liquidity-reserve wallets for mGLO and 1token reports only $188.95 in general_wallet, so maturityAndLiquidity is limited. seniority, legalEnforceability, custody, and recovery are all limited because Compartment mGLO offering documents were not recovered (Midas web pages returned HTTP 403), underlying receivables/cash custodians and rehypothecation terms are undisclosed, and cross-border securitisation-compartment enforcement is untested."
     }
   ]
 }

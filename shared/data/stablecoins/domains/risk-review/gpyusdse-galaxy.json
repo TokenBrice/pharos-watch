@@ -1,0 +1,295 @@
+{
+  "id": "gpyusdse-galaxy",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Sourcify verified VaultV2 on Stable (chain 988, 0x8c3250f028a2c8d29319eb3ee3214b90462394ba)",
+        "url": "https://sourcify.dev/server/v2/contract/988/0x8c3250f028a2c8d29319eb3ee3214b90462394ba?fields=all"
+      },
+      {
+        "label": "Sourcify verified PYUSDUUPS implementation on Stable (chain 988, 0xe13878e40f845253d06b24e7cd086af347f7c446)",
+        "url": "https://sourcify.dev/server/v2/contract/988/0xe13878e40f845253d06b24e7cd086af347f7c446?fields=all"
+      },
+      {
+        "label": "Morpho Vault V2 gate and abdication documentation",
+        "url": "https://docs.morpho.org/curate/concepts/gates.md"
+      },
+      {
+        "label": "Stable block 48443292 and 48443381 pinned RPC census (2026-11-27)",
+        "url": "https://rpc.stable.xyz"
+      }
+    ],
+    "evidence": "At Stable blocks 48443292 and 48443381 (2026-11-27T13:06:01Z to 13:07:03Z), all four VaultV2 gate addresses (receiveSharesGate, sendSharesGate, receiveAssetsGate, sendAssetsGate) are zero. setReceiveSharesGate, setSendSharesGate, and setReceiveAssetsGate are permanently abdicated (abdicated = 1), preventing future share-transfer or withdrawal-recipient gates on the immutable Sourcify-verified VaultV2 core; setSendAssetsGate remains mutable at zero delay and affects deposits/mints only. The vault has no discretionary holder freeze or seizure. Underlying native Stable PYUSD (0x28f1f38a9f7db1f769a71af0a13e8bace2ab0e9f, Sourcify exact_match PYUSDUUPS implementation 0xe13878e40f845253d06b24e7cd086af347f7c446) exposes Paxos freeze, freezeBatch, wipeFrozenAddress, and pause controls, so blacklistability is inherited from PYUSD.",
+    "reviewer": "Pharos Listing Policy v2 PR-3 Batch 4 review (gpyusdse-galaxy)",
+    "reviewedAt": "2026-11-27"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "StableEarn Prime PYUSD has a single native VaultV2 share deployment on StableChain (chain 988); no cross-chain share bridge representation exists. Underlying weETH borrower collateral is bridged via LayerZero OFT, which is a collateral-layer risk rather than a vault-share bridge.",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 PR-3 Batch 4 review (gpyusdse-galaxy)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Morpho: StableEarn Prime PYUSD exact vault",
+        "url": "https://app.morpho.org/stable/vault/0x8c3250f028a2c8d29319eb3ee3214b90462394ba"
+      },
+      {
+        "label": "Sourcify verified VaultV2 on Stable (chain 988, 0x8c3250f028a2c8d29319eb3ee3214b90462394ba)",
+        "url": "https://sourcify.dev/server/v2/contract/988/0x8c3250f028a2c8d29319eb3ee3214b90462394ba?fields=all"
+      },
+      {
+        "label": "Stable block 48443292 pinned RPC census (2026-11-27T13:06:01Z)",
+        "url": "https://rpc.stable.xyz"
+      }
+    ],
+    "routes": [
+      {
+        "id": "stable:0x8c3250f028a2c8d29319eb3ee3214b90462394ba",
+        "destinationChain": "stable",
+        "canonicalChain": "stable",
+        "contractAddress": "0x8c3250f028a2c8d29319eb3ee3214b90462394ba",
+        "protocol": "Morpho Vault V2",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Sole native VaultV2 share deployment on StableChain (chain 988). No cross-chain share bridge representation exists; underlying PYUSD issuance and weETH collateral bridging remain upstream.",
+        "observedAt": "2026-11-27",
+        "observedBlock": 48443292,
+        "sources": [
+          {
+            "label": "Sourcify verified VaultV2 on Stable (chain 988, 0x8c3250f028a2c8d29319eb3ee3214b90462394ba)",
+            "url": "https://sourcify.dev/server/v2/contract/988/0x8c3250f028a2c8d29319eb3ee3214b90462394ba?fields=all"
+          },
+          {
+            "label": "Stable block 48443292 pinned RPC census (2026-11-27T13:06:01Z)",
+            "url": "https://rpc.stable.xyz"
+          }
+        ]
+      }
+    ]
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "role": "collateral-pricing",
+    "summary": "At Stable blocks 48443381 to 48443578 (2026-11-27), the complete one-adapter, one-market census identifies a single weETH/PYUSD Morpho Blue market at 86% LLTV priced by MorphoChainlinkOracleV2 0x9529b9b10f6784a28445ca77465b5ac6aa67639f. Its 2557-byte runtime matches Sourcify MorphoChainlinkOracleV2 outside declared immutables and CBOR tail, composing three RedStone 8-decimal feeds: BASE_FEED_1 weETH_FUNDAMENTAL (0xd57b79401956be4872d3d03f0c920639335e350f), BASE_FEED_2 ETH (0x457be3c697c644bf329c2c3ea79ebf1d254d603a), and QUOTE_FEED_1 PYUSD (0x1c30da143e97c228102a5cae3960dbbb41321604). All three feed proxies read from one shared RedStone adapter proxy (0x6165211bef5bf1fe2697dbaa912d907e9fd4c5b1, Sourcify exact_match StableMultiFeedAdapterWithoutRoundsV1 implementation 0xbd7178abfba583730deb86db2ba5e7ea167158c0) requiring 3-of-5 authorized RedStone primary-prod signers with a 30-hour adapter staleness cap. All four RedStone proxies share ProxyAdmin 0x4154f0e4dc70dfa4219309fbea34322225e17b68 owned by 2-of-3 Safe 0x42f01e06b816eb8922a29ba12f69c20faf92fc92. The Morpho composer discards updatedAt and has no fallback oracle; weETH_FUNDAMENTAL reflects protocol redemption value rather than secondary-market weETH/ETH discounts.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-11-27",
+      "reviewer": "Pharos Listing Policy v2 PR-3 Batch 4 review (gpyusdse-galaxy)",
+      "rationale": "The complete adapter and market census at Stable block 48443381 enumerates one active Morpho Blue market (weETH/PYUSD at 86% LLTV) holding 80.74% of vault NAV. Borrower liquidation and bad-debt realization depend directly on the market oracle even though direct VaultV2 share accounting reads Morpho supply balances rather than collateral prices.",
+      "sources": [
+        {
+          "label": "Sourcify verified MorphoMarketV1AdapterV2 on Stable (chain 988, 0xd5f963aea47f502b7c4ec4bcd6b4ba08d7f44cd6)",
+          "url": "https://sourcify.dev/server/v2/contract/988/0xd5f963aea47f502b7c4ec4bcd6b4ba08d7f44cd6?fields=all"
+        },
+        {
+          "label": "Sourcify verified Morpho Blue on Stable (chain 988, 0xa40103088a899514e3fe474cd3cc5bf811b1102e)",
+          "url": "https://sourcify.dev/server/v2/contract/988/0xa40103088a899514e3fe474cd3cc5bf811b1102e?fields=all"
+        },
+        {
+          "label": "Stable block 48443381 pinned market and oracle census (2026-11-27T13:07:03Z)",
+          "url": "https://rpc.stable.xyz"
+        }
+      ]
+    },
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 PR-3 Batch 4 review (gpyusdse-galaxy)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Sourcify verified VaultV2 on Stable (chain 988, 0x8c3250f028a2c8d29319eb3ee3214b90462394ba)",
+        "url": "https://sourcify.dev/server/v2/contract/988/0x8c3250f028a2c8d29319eb3ee3214b90462394ba?fields=all"
+      },
+      {
+        "label": "Sourcify verified Morpho Blue on Stable (chain 988, 0xa40103088a899514e3fe474cd3cc5bf811b1102e)",
+        "url": "https://sourcify.dev/server/v2/contract/988/0xa40103088a899514e3fe474cd3cc5bf811b1102e?fields=all"
+      },
+      {
+        "label": "Sourcify verified AdaptiveCurveIrm on Stable (chain 988, 0x41e846fc8108b8527c1d4edb4c9564e56442940f)",
+        "url": "https://sourcify.dev/server/v2/contract/988/0x41e846fc8108b8527c1d4edb4c9564e56442940f?fields=all"
+      },
+      {
+        "label": "Sourcify exact_match RedStone StableMultiFeedAdapterWithoutRoundsV1 implementation (chain 988, 0xbd7178abfba583730deb86db2ba5e7ea167158c0)",
+        "url": "https://sourcify.dev/server/v2/contract/988/0xbd7178abfba583730deb86db2ba5e7ea167158c0?fields=all"
+      },
+      {
+        "label": "Sourcify MorphoChainlinkOracleV2 reference bytecode for runtime correspondence (base, 0x182e072f2c9c58c6f19f144c97986f7496c6a109)",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0x182e072f2c9c58c6f19f144c97986f7496c6a109?fields=all"
+      },
+      {
+        "label": "Galaxy Curation terms of use, sections 3.6, 9.3, and 10.2 (no loss backstop)",
+        "url": "https://docs.curation.galaxy.com/legal/terms-of-use"
+      },
+      {
+        "label": "Stable blocks 48443381, 48443472, 48443578, and 48443741 pinned RPC census (2026-11-27)",
+        "url": "https://rpc.stable.xyz"
+      }
+    ],
+    "branches": [
+      {
+        "id": "0x37ffcad57010980d3f5a3af6013b0aca69d6803564817807294c733ae27d91ff",
+        "label": "weETH/PYUSD borrower market 0x37ffcad5",
+        "tier": "standard-external",
+        "summary": "Pinned market 0x37ffcad57010980d3f5a3af6013b0aca69d6803564817807294c733ae27d91ff at Stable block 48443381 (2026-11-27T13:07:03Z): collateral weETH (0x60a08269e5f3406d8fd7892567d53188c7f75009), loan PYUSD (0x28f1f38a9f7db1f769a71af0a13e8bace2ab0e9f), immutable LLTV 86.0%, oracle 0x9529b9b10f6784a28445ca77465b5ac6aa67639f. The 2557-byte oracle matches Sourcify MorphoChainlinkOracleV2 outside declared immutables and CBOR tail, composing RedStone weETH_FUNDAMENTAL, ETH, and PYUSD 8-decimal feeds with SCALE_FACTOR 1e16 and zero vault conversions. All three feed proxies read from shared RedStone adapter 0x6165211bef5bf1fe2697dbaa912d907e9fd4c5b1 (Sourcify exact_match StableMultiFeedAdapterWithoutRoundsV1, 3-of-5 authorized signers, 30-hour MAX_DATA_STALENESS) behind ProxyAdmin 0x4154f0e4dc70dfa4219309fbea34322225e17b68 (owned by 2-of-3 Safe 0x42f01e06b816eb8922a29ba12f69c20faf92fc92). The composer discards updatedAt and has no independent fallback oracle; weETH_FUNDAMENTAL tracks ether.fi fundamental exchange rate rather than secondary-market weETH/ETH discounts.",
+        "collateralAssets": [
+          "0x60a08269e5f3406d8fd7892567d53188c7f75009"
+        ],
+        "chains": [
+          "stable"
+        ],
+        "feeds": [
+          {
+            "provider": "MorphoChainlinkOracleV2",
+            "path": "Morpho idToMarketParams(marketId).oracle / price()",
+            "address": "0x9529b9b10f6784a28445ca77465b5ac6aa67639f",
+            "chain": "stable",
+            "observedAt": "2026-11-27",
+            "observedBlock": 48443381
+          },
+          {
+            "provider": "RedStone Price Feed for weETH_FUNDAMENTAL (TransparentUpgradeableProxy)",
+            "path": "BASE_FEED_1 -> shared adapter 0x6165211bef5bf1fe2697dbaa912d907e9fd4c5b1 (impl 0x4045341430fa94bbf5fb09779955549d09ff0263)",
+            "address": "0xd57b79401956be4872d3d03f0c920639335e350f",
+            "chain": "stable",
+            "observedAt": "2026-11-27",
+            "observedBlock": 48443472,
+            "failureDomainKeys": [
+              "oracle:redstone-stable-multifeed-0x6165211bef5bf1fe2697dbaa912d907e9fd4c5b1"
+            ]
+          },
+          {
+            "provider": "RedStone Price Feed for ETH (TransparentUpgradeableProxy)",
+            "path": "BASE_FEED_2 -> shared adapter 0x6165211bef5bf1fe2697dbaa912d907e9fd4c5b1 (impl 0x22c7f3e2d7bf2f1de8d29891929b941ae9045a93)",
+            "address": "0x457be3c697c644bf329c2c3ea79ebf1d254d603a",
+            "chain": "stable",
+            "observedAt": "2026-11-27",
+            "observedBlock": 48443472,
+            "failureDomainKeys": [
+              "oracle:redstone-stable-multifeed-0x6165211bef5bf1fe2697dbaa912d907e9fd4c5b1"
+            ]
+          },
+          {
+            "provider": "RedStone Price Feed for PYUSD (TransparentUpgradeableProxy)",
+            "path": "QUOTE_FEED_1 -> shared adapter 0x6165211bef5bf1fe2697dbaa912d907e9fd4c5b1 (impl 0x2ce5dbaf60c4db625c7d5a4bdeb1024032b70970)",
+            "address": "0x1c30da143e97c228102a5cae3960dbbb41321604",
+            "chain": "stable",
+            "observedAt": "2026-11-27",
+            "observedBlock": 48443472,
+            "failureDomainKeys": [
+              "oracle:redstone-stable-multifeed-0x6165211bef5bf1fe2697dbaa912d907e9fd4c5b1"
+            ]
+          },
+          {
+            "provider": "RedStone StableMultiFeedAdapterWithoutRoundsV1 (3-of-5 primary-prod signers)",
+            "path": "Shared signed-data adapter proxy -> impl 0xbd7178abfba583730deb86db2ba5e7ea167158c0; ProxyAdmin 0x4154f0e4dc70dfa4219309fbea34322225e17b68 owned by 2-of-3 Safe 0x42f01e06b816eb8922a29ba12f69c20faf92fc92",
+            "address": "0x6165211bef5bf1fe2697dbaa912d907e9fd4c5b1",
+            "chain": "stable",
+            "observedAt": "2026-11-27",
+            "observedBlock": 48443578,
+            "failureDomainKeys": [
+              "oracle:redstone-stable-multifeed-0x6165211bef5bf1fe2697dbaa912d907e9fd4c5b1"
+            ]
+          }
+        ],
+        "fallbackBehavior": "MorphoChainlinkOracleV2 has no alternate oracle or circuit breaker; it composes BASE_FEED_1 * BASE_FEED_2 / QUOTE_FEED_1 with SCALE_FACTOR 1e16 and discards updatedAt without a local freshness guard. All three RedStone feed proxies share one upgradeable StableMultiFeedAdapterWithoutRoundsV1 (3-of-5 authorized signers, 30-hour MAX_DATA_STALENESS, authorized updater allowlist) and one ProxyAdmin; a reverting or stale adapter leg blocks pricing with no independent provider failover.",
+        "observedAt": "2026-11-27",
+        "observedBlock": 48443381,
+        "collateralParameters": [
+          {
+            "asset": "0x60a08269e5f3406d8fd7892567d53188c7f75009",
+            "maximumLtvPct": 86.0,
+            "note": "Immutable Morpho market LLTV 86.0% for bridged weETH collateral on Stable."
+          }
+        ],
+        "liquidationMechanism": "Sourcify-verified Morpho Blue on Stable (0xa40103088a899514e3fe474cd3cc5bf811b1102e) checks borrower health against IOracle.price() and immutable 86% LLTV; permissionless liquidators repay PYUSD debt and seize weETH collateral, subject to StableChain execution and liquidator funding.",
+        "backstop": "No committed depositor loss backstop is established. Galaxy Curation LLC terms disclaim loss-prevention guarantees and cap contractual liability, and Morpho Blue liquidation provides no funded insurance pool or make-whole obligation.",
+        "shutdownOrBadDebtBehavior": "When borrower collateral is exhausted during liquidation, Morpho Blue realizes residual badDebtAssets by reducing market totalBorrowAssets and totalSupplyAssets. MorphoMarketV1AdapterV2 realAssets() transmits that reduction into VaultV2 NAV, with no guaranteed par recovery.",
+        "sources": [
+          {
+            "label": "Sourcify verified Morpho Blue on Stable (chain 988, 0xa40103088a899514e3fe474cd3cc5bf811b1102e)",
+            "url": "https://sourcify.dev/server/v2/contract/988/0xa40103088a899514e3fe474cd3cc5bf811b1102e?fields=all"
+          },
+          {
+            "label": "Sourcify exact_match RedStone StableMultiFeedAdapterWithoutRoundsV1 (chain 988, 0xbd7178abfba583730deb86db2ba5e7ea167158c0)",
+            "url": "https://sourcify.dev/server/v2/contract/988/0xbd7178abfba583730deb86db2ba5e7ea167158c0?fields=all"
+          },
+          {
+            "label": "Sourcify MorphoChainlinkOracleV2 reference template (base, 0x182e072f2c9c58c6f19f144c97986f7496c6a109)",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x182e072f2c9c58c6f19f144c97986f7496c6a109?fields=all"
+          },
+          {
+            "label": "Galaxy Curation terms of use (loss risk and liability cap)",
+            "url": "https://docs.curation.galaxy.com/legal/terms-of-use"
+          },
+          {
+            "label": "Stable blocks 48443381, 48443472, and 48443578 pinned RPC census (2026-11-27)",
+            "url": "https://rpc.stable.xyz"
+          }
+        ]
+      }
+    ],
+    "paths": [
+      {
+        "id": "stable:0x8c3250f028a2c8d29319eb3ee3214b90462394ba",
+        "chain": "stable",
+        "address": "0x8c3250f028a2c8d29319eb3ee3214b90462394ba",
+        "pricingAuthority": "none",
+        "applicability": {
+          "disposition": "not-applicable",
+          "reviewedAt": "2026-11-27",
+          "reviewer": "Pharos Listing Policy v2 PR-3 Batch 4 review (gpyusdse-galaxy)",
+          "confidence": "verified",
+          "rationale": "Sourcify-verified VaultV2 (0x8c3250f028a2c8d29319eb3ee3214b90462394ba), MorphoMarketV1AdapterV2 (0xd5f963aea47f502b7c4ec4bcd6b4ba08d7f44cd6), Morpho Blue (0xa40103088a899514e3fe474cd3cc5bf811b1102e), and AdaptiveCurveIrm (0x41e846fc8108b8527c1d4edb4c9564e56442940f) compute direct share NAV from idle PYUSD plus expected Morpho supply balances and interest accrual without reading IOracle.price(). Only direct share-accounting valuation is exempt; the sole weETH/PYUSD borrower-liquidation oracle remains separately applicable.",
+          "sources": [
+            {
+              "label": "Sourcify verified VaultV2 on Stable (chain 988, 0x8c3250f028a2c8d29319eb3ee3214b90462394ba)",
+              "url": "https://sourcify.dev/server/v2/contract/988/0x8c3250f028a2c8d29319eb3ee3214b90462394ba?fields=all"
+            },
+            {
+              "label": "Sourcify verified MorphoMarketV1AdapterV2 on Stable (chain 988, 0xd5f963aea47f502b7c4ec4bcd6b4ba08d7f44cd6)",
+              "url": "https://sourcify.dev/server/v2/contract/988/0xd5f963aea47f502b7c4ec4bcd6b4ba08d7f44cd6?fields=all"
+            },
+            {
+              "label": "Sourcify verified Morpho Blue on Stable (chain 988, 0xa40103088a899514e3fe474cd3cc5bf811b1102e)",
+              "url": "https://sourcify.dev/server/v2/contract/988/0xa40103088a899514e3fe474cd3cc5bf811b1102e?fields=all"
+            },
+            {
+              "label": "Sourcify verified AdaptiveCurveIrm on Stable (chain 988, 0x41e846fc8108b8527c1d4edb4c9564e56442940f)",
+              "url": "https://sourcify.dev/server/v2/contract/988/0x41e846fc8108b8527c1d4edb4c9564e56442940f?fields=all"
+            }
+          ]
+        }
+      },
+      {
+        "id": "stable:0x9529b9b10f6784a28445ca77465b5ac6aa67639f",
+        "chain": "stable",
+        "address": "0x9529b9b10f6784a28445ca77465b5ac6aa67639f",
+        "pricingAuthority": "external-price",
+        "branchId": "0x37ffcad57010980d3f5a3af6013b0aca69d6803564817807294c733ae27d91ff",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-11-27",
+          "reviewer": "Pharos Listing Policy v2 PR-3 Batch 4 review (gpyusdse-galaxy)",
+          "confidence": "verified",
+          "rationale": "At Stable block 48443381, the sole funded borrower market oracle composes RedStone weETH_FUNDAMENTAL, ETH, and PYUSD feeds via MorphoChainlinkOracleV2 to value weETH collateral for liquidations at 86% LLTV. All three feeds share one Sourcify-verified RedStone 3-of-5 signed adapter behind an upgradeable ProxyAdmin with no composer staleness check or independent fallback.",
+          "sources": [
+            {
+              "label": "Sourcify exact_match RedStone StableMultiFeedAdapterWithoutRoundsV1 (chain 988, 0xbd7178abfba583730deb86db2ba5e7ea167158c0)",
+              "url": "https://sourcify.dev/server/v2/contract/988/0xbd7178abfba583730deb86db2ba5e7ea167158c0?fields=all"
+            },
+            {
+              "label": "Stable blocks 48443381, 48443472, and 48443578 pinned RPC census (2026-11-27)",
+              "url": "https://rpc.stable.xyz"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

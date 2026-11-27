@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 3,
+  "receiptMode": "prospective-offline",
+  "kind": "safety-score-v9-new-asset-admission-receipt",
+  "assetId": "mglo-midas-fasanara",
+  "prospectiveInputId": "prospective-admission:v1:03cdce9b78f45f0aff5f76903a3ef6fd96011f3d54dd35c5fb998734b41904cd",
+  "admissionClockSec": 1795793111,
+  "evaluatedCohortIds": [
+    "mglo-midas-fasanara"
+  ],
+  "absentRuntimeLanes": [
+    "chain-supply",
+    "dex",
+    "live-reserves",
+    "peg",
+    "redemption"
+  ],
+  "supplyObservation": {
+    "circulating": {
+      "peggedUSD": 224435376.33
+    },
+    "observedAtSec": 1795783889,
+    "url": "https://mainnet.base.org",
+    "field": "sum(6-chain-native-totalSupply)*base-chainlink-nav:0x6b593a5fabb90f36e125562db833f761d274fcbc",
+    "retrievedAtSec": 1795784785
+  },
+  "registryFingerprint": "d5e6338d30391aaee8fb68d2f7ac274ebab64cfa601fad56cead31ebe6a1489d",
+  "evaluationBuildDigest": "1d128bc5598b6daf4323f12076661a2247488a5f44f9d0da168209746163a9e5",
+  "card": {
+    "id": "mglo-midas-fasanara",
+    "openBucketQuestionsCarried": 5,
+    "inheritedOpenBucketQuestionsCarried": 0,
+    "openBucketObligationsCarried": 5,
+    "documentationObligationsCarried": 0,
+    "issuerNondisclosureReviewedAtSec": 1795787820
+  },
+  "questions": [
+    {
+      "questionKey": "mglo-midas-fasanara|component|economic-control:bridge",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-bridge-routes",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "mglo-midas-fasanara|component|exit-routes",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-runtime-route-evidence",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "mglo-midas-fasanara|control|authored:mglo-midas-fasanara|monad:0x785175a1ae5a8bcd3230e01178ba375f5f2125fe|*",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "runtime-bridge-materiality-unavailable",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "mglo-midas-fasanara|control|authored:mglo-midas-fasanara|optimism:0x1eaf7cceaa5dc6d605760718722fbcc58579b3ff|*",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "runtime-bridge-materiality-unavailable",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "mglo-midas-fasanara|control|authored:mglo-midas-fasanara|xlayer:0x45ec1a004142e1874ceb8f022ee4bb14edf37b4a|*",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "runtime-bridge-materiality-unavailable",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "mglo-midas-fasanara|component|reserve-composition",
+      "bucket": "issuer",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-reserve-composition",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    }
+  ]
+}

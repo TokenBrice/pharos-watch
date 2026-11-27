@@ -59,6 +59,7 @@ export function defineRegistryErc4626NavVault(input: {
   id: string;
   parentId: string;
   chain: string;
+  rpcUrls?: readonly string[];
   allowFreshNonReplaySafeParent?: boolean;
   allowFreshReplaySafeSingleSourceParent?: boolean;
 }): Erc4626NavVaultConfig {
@@ -81,6 +82,7 @@ export function defineRegistryErc4626NavVault(input: {
     vault: vaultDeployment.address,
     vaultDecimals: vaultDeployment.decimals,
     assetDecimals: assetDeployment.decimals,
+    ...(input.rpcUrls && input.rpcUrls.length > 0 ? { rpcUrls: input.rpcUrls } : {}),
     ...(input.allowFreshNonReplaySafeParent === true ? { allowFreshNonReplaySafeParent: true } : {}),
     ...(input.allowFreshReplaySafeSingleSourceParent === true ? { allowFreshReplaySafeSingleSourceParent: true } : {}),
   };

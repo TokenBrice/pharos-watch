@@ -1,0 +1,91 @@
+{
+  "id": "siusd-infinifi",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Verified StakedToken (siUSD) Ethereum source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdbdc1ef57537e34680b898e1febd3d68c7389bcb"
+      },
+      {
+        "label": "Verified InfiniFiCore role administration",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf6d48735eccf12bdc1df2674b1ce3fcb3bd25490"
+      },
+      {
+        "label": "Ethereum PublicNode RPC: pinned reads at finalized block 26506658 (2026-11-27T12:51:35Z)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ],
+    "evidence": "At finalized Ethereum block 26506658 (2026-11-27T12:51:35Z), StakedToken 0xdbdc1ef57537e34680b898e1febd3d68c7389bcb has zero EIP-1967 implementation, admin, and beacon slots and verified immutable OpenZeppelin ERC4626/ERC20 transfer logic. CoreControlled inherits Pausable, and pause() sets maxDeposit/maxMint/maxWithdraw/maxRedeem to zero, but StakedToken does not inherit ERC20Pausable or gate transfer/transferFrom with whenNotPaused, nor does it include a holder blacklist, freeze mapping, or per-holder balance seizure path. YieldSharing FINANCE_MANAGER can call applyLosses() to burn vault-held iUSD pro rata across shares, not freeze individual wallets. Because canonical parent iusd-infinifi carries reviewedStatus inherited (majority custodial USDC, fund, and private-credit reserves), siusd-infinifi inherits upstream freeze exposure without a direct holder-freeze surface on the immutable Ethereum token contract. Verdict: inherited.",
+    "reviewer": "Pharos Listing Policy v2 Batch 2 review",
+    "reviewedAt": "2026-11-27"
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "summary": "siUSD share conversion reads StakedToken.totalAssets(), which equals vault-held iUSD minus unvested epoch rewards and changes when YieldSharingV3 accrues protocol profits or slashes vault principal via applyLosses(). YieldSharingV3.unaccruedYield() depends on infiniFi Accounting valuations across off-chain private credit and funds (monthly administrator NAV for Fasanara slices and protocol accounting for New Silver and other farms), and negative unaccruedYield() immediately zeroes maxRedeem and maxWithdraw until accrue() executes. No local borrower liquidation engine runs on siUSD.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-11-27",
+      "reviewer": "Pharos Listing Policy v2 Batch 2 review",
+      "rationale": "siUSD is an ERC-4626 vault whose share exchange rate and withdrawal availability depend on YieldSharingV3 profit/loss accounting over infiniFi's farm valuations; it has no borrower vaults or collateral liquidation markets, so oracle assessment applies to the top-level conversion path only.",
+      "sources": [
+        {
+          "label": "Verified StakedToken (siUSD) Ethereum source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdbdc1ef57537e34680b898e1febd3d68c7389bcb"
+        },
+        {
+          "label": "Verified YieldSharingV3 implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d5dbf208a9a7540018d204a9a0ad08a091407e5"
+        },
+        {
+          "label": "infiniFi Oracles documentation",
+          "url": "https://docs.infinifi.xyz/oracles.md"
+        }
+      ]
+    },
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 Batch 2 review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Verified StakedToken (siUSD) Ethereum source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdbdc1ef57537e34680b898e1febd3d68c7389bcb"
+      },
+      {
+        "label": "Verified YieldSharingV3 implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d5dbf208a9a7540018d204a9a0ad08a091407e5"
+      },
+      {
+        "label": "infiniFi Oracles documentation",
+        "url": "https://docs.infinifi.xyz/oracles.md"
+      },
+      {
+        "label": "infiniFi Accounting documentation",
+        "url": "https://docs.infinifi.xyz/dev-docs/finance/accounting.md"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "Only the canonical native Ethereum StakedToken ERC-4626 deployment (0xdbdc1ef57537e34680b898e1febd3d68c7389bcb, 50.94M shares at finalized block 26506658) is authored. infiniFi documentation also lists peripheral BNB OFT (observed zero supply on 2026-11-27) and Tempo TIP-20 (observed 4.04 shares dust on 2026-11-27) representations plus a Plasma deployment with a distinct 7-character symbol; none of those peripheral deployments are authored here, and parent iUSD cross-chain bridge exposure remains reviewed on iusd-infinifi.",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 Batch 2 review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Verified StakedToken (siUSD) Ethereum source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdbdc1ef57537e34680b898e1febd3d68c7389bcb"
+      },
+      {
+        "label": "infiniFi contract addresses documentation",
+        "url": "https://docs.infinifi.xyz/dev-docs/contracts.md"
+      },
+      {
+        "label": "Ethereum PublicNode RPC: pinned reads at finalized block 26506658 (2026-11-27T12:51:35Z)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ]
+  }
+}

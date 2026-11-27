@@ -1,0 +1,101 @@
+{
+  "id": "svzchf-frankencoin",
+  "reserves": [
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0xb58e61c3098d85632df34eecfb899a1ed80921cb",
+      "name": "SavingsVault ZCHF idle ZCHF",
+      "pct": 0,
+      "risk": "low",
+      "coinId": "zchf-frankencoin",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Frankencoin protocol (ZCHF)",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0xe5f130253ff137f9917c0107659a4c5262abf6b0:deployed",
+      "name": "ZCHF deposited in Frankencoin Savings module",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "zchf-frankencoin",
+      "depType": "wrapper",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Frankencoin Savings module and ZCHF protocol",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "counterparty",
+        "market",
+        "legal"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 PR-3 primary-source review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Exact verified SavingsVaultZCHF_2 source on Ethereum Blockscout",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe5f130253ff137f9917c0107659a4c5262abf6b0"
+      },
+      {
+        "label": "Exact Sourcify verification for SavingsVaultZCHF_2",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xe5f130253ff137f9917c0107659a4c5262abf6b0?fields=all"
+      },
+      {
+        "label": "Verified Frankencoin Savings and Leadrate contract source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x27d9ad987bde08a0d083ef7e0e4043c857a17b38"
+      },
+      {
+        "label": "Ethereum block 26506626, 2026-11-27T12:45:11Z; pinned svZCHF and Savings state reads",
+        "url": "https://etherscan.io/block/26506626"
+      }
+    ],
+    "rationale": "At finalized Ethereum block 26506626 (2026-11-27T12:45:11Z; hash 0x8a14b3254f4a6a1c2454fbd9739baaf3823a59480b0200eade9f94a35bf59260), asset() resolves to Ethereum ZCHF (0xb58e61c3098d85632df34eecfb899a1ed80921cb) with 18 decimals on both shares and underlying. totalSupply() is 881882238337992191516912 raw shares, totalAssets() is 908380936842188352333967 raw ZCHF, and convertToAssets(1e18) equals previewRedeem(1e18) at 1030047887747615809 raw ZCHF per share. Direct ZCHF.balanceOf(vault) is 0 because _deposit immediately forwards all assets to the immutable Savings contract (0x27d9ad987bde08a0d083ef7e0e4043c857a17b38). At the same block, savings.savings(vault).saved is 908345228456448794237728 raw ZCHF with referrer 0x0 and referralFeePPM 0; adding 35708385739558096239 raw ZCHF of accrued interest reconciles totalAssets() exactly. Savings currentRatePPM is 35000 (3.50% annual) and INTEREST_DELAY is 259200 seconds (3 days), which delays interest accrual on new deposits without locking withdrawals. Under the v2 erc4626-single-asset split, idle ZCHF is 0% under the underlying key and the Savings module position is 100% under the vault :deployed key. Immediate liquidityHorizon reflects synchronous ZCHF withdrawal from Savings; conversion of ZCHF into fiat or USD remains an upstream market and parent-protocol dependency.",
+    "compositionBasis": "Pinned SavingsVaultZCHF_2 and Frankencoin Savings state reconciliation at Ethereum block 26506626; measured idle/deployed split under separate underlying and vault :deployed keys",
+    "compositionAsOf": "2026-11-27",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Local underlying identity and Savings-module principal are fully reconciled onchain. Upstream ZCHF CDP collateral realization, auction liquidity, and stressed CHF/USD conversion remain parent-layer risks.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "SavingsVaultZCHF_2 ERC-4626 vault (Ethereum 0xe5f130253ff137f9917c0107659a4c5262abf6b0)",
+        "role": "other"
+      },
+      {
+        "name": "Frankencoin Savings module (Ethereum 0x27d9ad987bde08a0d083ef7e0e4043c857a17b38)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 PR-3 primary-source review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Exact verified SavingsVaultZCHF_2 source on Ethereum Blockscout",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe5f130253ff137f9917c0107659a4c5262abf6b0"
+      },
+      {
+        "label": "Verified Frankencoin Savings and Leadrate contract source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x27d9ad987bde08a0d083ef7e0e4043c857a17b38"
+      },
+      {
+        "label": "Ethereum block 26506626, 2026-11-27T12:45:11Z; pinned svZCHF and Savings state reads",
+        "url": "https://etherscan.io/block/26506626"
+      }
+    ],
+    "uncertainty": "All deposited ZCHF sits in the immutable onchain Frankencoin Savings contract with no external lending deployment or wrapper custody operator. However, this local onchain accounting does not resolve whole-book custody of ZCHF's underlying collateral basket (which includes wrapped Bitcoin and tokenized corporate equities), legal segregation, or insolvency priority, so custodyModel remains unknown."
+  }
+}

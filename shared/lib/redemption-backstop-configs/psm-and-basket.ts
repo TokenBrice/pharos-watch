@@ -727,6 +727,27 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
       "The second holder rail is borrower-specific sINV collateral redemption via redeem(borrower, amountIn, minAmountOut) at oracle price minus redeemFeeBps (250 bps at block 26506036, cap 500 bps before deadline), limited to opted-in free debt (2,556.23 invUSD, 0.48% of supply). It is not modeled because it pays volatile sINV and is tiny relative to the PSM leg.",
     ],
   },
+  "eusd-own": {
+    ...psmSwapBase,
+    outputAssets: ["usdg-paxos"],
+    capacityModel: { kind: "unquantified" },
+    costModel: fixedFee(
+      0,
+      "EUSDPsm assetConfig(USDG) sets 0 bps mint and redeem fees on Robinhood Chain; separate CDP and LP redemptions charge 50 bps (EUSDLiquidityManager) and 100 to 200 bps (EUSDManagers A through D).",
+    ),
+    reviewedAt: "2026-11-27",
+    docs: [
+      sourceRefFull("Own eUSD peg and PSM documentation", "https://docs.own.money/eusd/peg"),
+      sourceRef("Own eUSD redemptions documentation", "https://docs.own.money/eusd/redemptions", ["route", "access", "settlement"]),
+      sourceRef("Own eUSD risk parameters documentation", "https://docs.own.money/eusd/parameters", ["capacity", "fees"]),
+      sourceRefFull("Own EUSDPsm Solidity source", "https://github.com/own-protocol/own-v2/blob/main/src/eusd/EUSDPsm.sol"),
+      sourceRef("Own Robinhood Chain deployment record", "https://github.com/own-protocol/own-v2/blob/main/docs/contracts-robinhood.md", ["route", "capacity"]),
+    ],
+    notes: [
+      "At pinned Robinhood Chain block 124275851 (2026-11-27T13:16:48Z), EUSDPsm (0xa24a434b7dae50e24e92b19e0907f8878458ccad) held 65,879.28 USDG against 141,513.73 total eUSD supply (46.55% cover; 1,000,000 eUSD debt ceiling, 0 bps fee, unpauseable redemptions). Because curated-validated lacks live PSM capacity telemetry, capacity remains unquantified.",
+      "Beyond PSM capacity, holders can permissionlessly redeem against EUSDLiquidityManager (50 bps) and EUSDManager CDP positions (100 to 200 bps on-chain redeemFeeBps).",
+    ],
+  },
 };
 
 const FINALIZED_PSM_AND_BASKET_BACKSTOP_REGISTRY = finalizeBackstopRegistry(

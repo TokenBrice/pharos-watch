@@ -1,0 +1,341 @@
+{
+  "id": "steakusdc-steakhouse-base",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Morpho exact Steakhouse Prime USDC Base deployment",
+        "url": "https://app.morpho.org/base/vault/0xbeef0e0834849acc03f0089f01f4f1eeb06873c9"
+      },
+      {
+        "label": "Exact verified VaultV2 source (base, 0xbeef0e0834849acc03f0089f01f4f1eeb06873c9)",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0xbeef0e0834849acc03f0089f01f4f1eeb06873c9?fields=all"
+      },
+      {
+        "label": "Steakhouse DeFi vault governing terms",
+        "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+      },
+      {
+        "label": "Base block 62967570, 2026-11-27T12:51:29Z; pinned gate addresses and abdicated setters",
+        "url": "https://basescan.org/block/62967570"
+      }
+    ],
+    "evidence": "At Base block 62967570 (2026-11-27T12:51:29Z), receiveSharesGate, sendSharesGate, and receiveAssetsGate all read zero and all three setters (setReceiveSharesGate, setSendSharesGate, setReceiveAssetsGate) are permanently abdicated. The Sourcify-matched immutable VaultV2 core has ordinary ERC-20 transfers and no direct holder seizure or discretionary forced burn. sendAssetsGate also reads zero, while its setter remains live behind a 604,800-second timelock and governs deposit/mint only. Base USDC held or lent by the vault retains Circle freeze exposure, which is inherited from usdc-circle rather than a direct share blacklist.",
+    "reviewer": "Pharos Listing Policy v2 PR-3 primary-source review",
+    "reviewedAt": "2026-11-27"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "Only the exact native Base VaultV2 share deployment is authored. No bridged share representation is included; underlying USDC cross-chain issuance remains upstream on usdc-circle.",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 PR-3 primary-source review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Morpho exact Steakhouse Prime USDC Base deployment",
+        "url": "https://app.morpho.org/base/vault/0xbeef0e0834849acc03f0089f01f4f1eeb06873c9"
+      },
+      {
+        "label": "Exact verified VaultV2 source (base, 0xbeef0e0834849acc03f0089f01f4f1eeb06873c9)",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0xbeef0e0834849acc03f0089f01f4f1eeb06873c9?fields=all"
+      },
+      {
+        "label": "Base block 62967570, 2026-11-27T12:51:29Z; pinned native Base deployment read",
+        "url": "https://basescan.org/block/62967570"
+      }
+    ]
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "role": "collateral-pricing",
+    "branchModel": "multi-branch",
+    "summary": "Complete same-block sole-adapter census at Base block 62967570 (2026-11-27T12:51:29Z): four funded USDC borrower markets with cbBTC (90.86%), WETH (7.40%), cbETH (1.38%), and wstETH (0.35%) collateral. All four markets use immutable MorphoChainlinkOracleV2 contracts reading Chainlink EACAggregatorProxy feeds (BTC/USD, ETH/USD, CBETH/USD, WSTETH/ETH, USDC/USD). Consumer pricing has no elapsed-time staleness rejection, no independent fallback provider, and no complete feed-admin key-custody closure. Internal vault share NAV remains separate loan-unit accounting.",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-11-27",
+      "reviewer": "Pharos Listing Policy v2 PR-3 primary-source review",
+      "rationale": "Complete marketIdsLength/marketIds and expectedSupplyAssets census at Base block 62967570 proves four funded USDC borrower-price paths. Every Morpho Blue idToMarketParams oracle and LLTV plus all nonzero feed getters were read at the same pin. Loan-unit NAV accounting does not exempt collateral liquidation pricing.",
+      "sources": [
+        {
+          "label": "Exact verified VaultV2 source (base, 0xbeef0e0834849acc03f0089f01f4f1eeb06873c9)",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0xbeef0e0834849acc03f0089f01f4f1eeb06873c9?fields=all"
+        },
+        {
+          "label": "Exact verified MorphoMarketV1AdapterV2 source (base, 0xfdd31cdf6712c47a4e67037d9f2e35587f5404c0)",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0xfdd31cdf6712c47a4e67037d9f2e35587f5404c0?fields=all"
+        },
+        {
+          "label": "Morpho Blue borrower and liquidation specification",
+          "url": "https://docs.morpho.org/developers/contracts/blue/"
+        },
+        {
+          "label": "Base block 62967570, 2026-11-27T12:51:29Z; complete engine parameters and oracle getter census",
+          "url": "https://basescan.org/block/62967570"
+        }
+      ]
+    },
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 PR-3 primary-source review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Exact verified VaultV2 source (base, 0xbeef0e0834849acc03f0089f01f4f1eeb06873c9)",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0xbeef0e0834849acc03f0089f01f4f1eeb06873c9?fields=all"
+      },
+      {
+        "label": "Exact verified MorphoMarketV1AdapterV2 source (base, 0xfdd31cdf6712c47a4e67037d9f2e35587f5404c0)",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0xfdd31cdf6712c47a4e67037d9f2e35587f5404c0?fields=all"
+      },
+      {
+        "label": "Morpho Blue borrower and liquidation specification",
+        "url": "https://docs.morpho.org/developers/contracts/blue/"
+      },
+      {
+        "label": "Morpho core market, liquidation and bad-debt source",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+      },
+      {
+        "label": "Base block 62967570, 2026-11-27T12:51:29Z; complete engine parameters and oracle getter census",
+        "url": "https://basescan.org/block/62967570"
+      }
+    ],
+    "branches": [
+      {
+        "id": "0x9103c3b4e834476c9a62ea009ba2c884ee42e94e6e314a26f04d312434191836",
+        "label": "cbBTC / USDC borrower market",
+        "tier": "standard-external",
+        "summary": "Pinned market 0x9103c3b4e834476c9a62ea009ba2c884ee42e94e6e314a26f04d312434191836 at Base block 62967570 (90.86% of lender assets): collateral cbBTC (0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf), loan USDC (0x833589fcd6edb6e08f4c7c32d4f71b54bda02913), LLTV 86.0%. Sourcify exact-matched MorphoChainlinkOracleV2 0x663becd10dae6c4a3dcd89f1d76c1174199639b9 reads Chainlink BTC/USD EACAggregatorProxy 0x64c911996d3c6ac71f9b455b1e8e7266bcbd848f (aggregator 0xe5ec87a39445b8d5b751b116802a53c5ae7e9df1) with zero quote feed (treating USDC as unity) and no elapsed-time staleness rejection.",
+        "collateralAssets": [
+          "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf"
+        ],
+        "chains": [
+          "base"
+        ],
+        "feeds": [
+          {
+            "provider": "MorphoChainlinkOracleV2",
+            "path": "Morpho idToMarketParams(marketId).oracle / price()",
+            "address": "0x663becd10dae6c4a3dcd89f1d76c1174199639b9",
+            "chain": "base",
+            "observedAt": "2026-11-27",
+            "observedBlock": 62967570
+          },
+          {
+            "provider": "Chainlink EACAggregatorProxy (BTC / USD)",
+            "path": "BASE_FEED_1()",
+            "address": "0x64c911996d3c6ac71f9b455b1e8e7266bcbd848f",
+            "chain": "base",
+            "observedAt": "2026-11-27",
+            "observedBlock": 62967570
+          }
+        ],
+        "fallbackBehavior": "No alternative feed is selected by MorphoChainlinkOracleV2; negative answers or feed reverts halt borrower valuation and liquidation. Upstream feed refresh and proxy replacement remain provider-dependent.",
+        "observedAt": "2026-11-27",
+        "observedBlock": 62967570,
+        "collateralParameters": [
+          {
+            "asset": "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
+            "maximumLtvPct": 86,
+            "note": "LLTV verified from Base Morpho Blue idToMarketParams at block 62967570."
+          }
+        ],
+        "liquidationMechanism": "Morpho Blue checks borrower health at the market oracle price and immutable 86% LLTV; permissionless liquidators repay USDC debt and seize cbBTC collateral.",
+        "backstop": "No independently verified dedicated funded default-recovery backstop for this exact lender receipt is established.",
+        "shutdownOrBadDebtBehavior": "When seized collateral is exhausted, Morpho realizes residual badDebtAssets by reducing totalBorrowAssets and totalSupplyAssets; lender NAV absorbs the shortfall.",
+        "sources": [
+          {
+            "label": "Exact Sourcify verification for cbBTC/USDC MorphoChainlinkOracleV2",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x663becd10dae6c4a3dcd89f1d76c1174199639b9"
+          },
+          {
+            "label": "Base block 62967570, 2026-11-27T12:51:29Z; engine parameters and oracle getter reads",
+            "url": "https://basescan.org/block/62967570"
+          }
+        ]
+      },
+      {
+        "id": "0x8793cf302b8ffd655ab97bd1c695dbd967807e8367a65cb2f4edaf1380ba1bda",
+        "label": "WETH / USDC borrower market",
+        "tier": "standard-external",
+        "summary": "Pinned market 0x8793cf302b8ffd655ab97bd1c695dbd967807e8367a65cb2f4edaf1380ba1bda at Base block 62967570 (7.40% of lender assets): collateral WETH (0x4200000000000000000000000000000000000006), loan USDC (0x833589fcd6edb6e08f4c7c32d4f71b54bda02913), LLTV 86.0%. Sourcify exact-matched MorphoChainlinkOracleV2 0xfea2d58cefcb9fcb597723c6bae66ffe4193afe4 composes Chainlink ETH/USD (0x71041dddad3595f9ced3dccfbe3d1f4b0a16bb70) over USDC/USD (0x7e860098f58bbfc8648a4311b374b1d669a2bc6b) with no elapsed-time staleness rejection.",
+        "collateralAssets": [
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "chains": [
+          "base"
+        ],
+        "feeds": [
+          {
+            "provider": "MorphoChainlinkOracleV2",
+            "path": "Morpho idToMarketParams(marketId).oracle / price()",
+            "address": "0xfea2d58cefcb9fcb597723c6bae66ffe4193afe4",
+            "chain": "base",
+            "observedAt": "2026-11-27",
+            "observedBlock": 62967570
+          },
+          {
+            "provider": "Chainlink EACAggregatorProxy (ETH / USD)",
+            "path": "BASE_FEED_1()",
+            "address": "0x71041dddad3595f9ced3dccfbe3d1f4b0a16bb70",
+            "chain": "base",
+            "observedAt": "2026-11-27",
+            "observedBlock": 62967570
+          },
+          {
+            "provider": "Chainlink EACAggregatorProxy (USDC / USD)",
+            "path": "QUOTE_FEED_1()",
+            "address": "0x7e860098f58bbfc8648a4311b374b1d669a2bc6b",
+            "chain": "base",
+            "observedAt": "2026-11-27",
+            "observedBlock": 62967570
+          }
+        ],
+        "fallbackBehavior": "Composite feed legs are both required, not redundant failover; negative answers or feed reverts halt borrower valuation and liquidation. Upstream feed refresh and proxy replacement remain provider-dependent.",
+        "observedAt": "2026-11-27",
+        "observedBlock": 62967570,
+        "collateralParameters": [
+          {
+            "asset": "0x4200000000000000000000000000000000000006",
+            "maximumLtvPct": 86,
+            "note": "LLTV verified from Base Morpho Blue idToMarketParams at block 62967570."
+          }
+        ],
+        "liquidationMechanism": "Morpho Blue checks borrower health at the market oracle price and immutable 86% LLTV; permissionless liquidators repay USDC debt and seize WETH collateral.",
+        "backstop": "No independently verified dedicated funded default-recovery backstop for this exact lender receipt is established.",
+        "shutdownOrBadDebtBehavior": "When seized collateral is exhausted, Morpho realizes residual badDebtAssets by reducing totalBorrowAssets and totalSupplyAssets; lender NAV absorbs the shortfall.",
+        "sources": [
+          {
+            "label": "Exact Sourcify verification for WETH/USDC MorphoChainlinkOracleV2",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xfea2d58cefcb9fcb597723c6bae66ffe4193afe4"
+          },
+          {
+            "label": "Base block 62967570, 2026-11-27T12:51:29Z; engine parameters and oracle getter reads",
+            "url": "https://basescan.org/block/62967570"
+          }
+        ]
+      },
+      {
+        "id": "0x0ca10126f6c94cbd9cf0a48cc9516ae5e3dec5aa68303e6d988ee37c5149bf0d",
+        "label": "cbETH / USDC borrower market",
+        "tier": "standard-external",
+        "summary": "Pinned market 0x0ca10126f6c94cbd9cf0a48cc9516ae5e3dec5aa68303e6d988ee37c5149bf0d at Base block 62967570 (1.38% of lender assets): collateral cbETH (0x2ae3f1ec7f1f5012cfeab0185bfc7aa3cf0dec22), loan USDC (0x833589fcd6edb6e08f4c7c32d4f71b54bda02913), LLTV 77.0%. Sourcify exact-matched MorphoChainlinkOracleV2 0x97ff9cbd7e77348b2b8ffbb883bf29452ad18295 reads Chainlink CBETH/USD EACAggregatorProxy 0xd7818272b9e248357d13057aab0b417af31e817d (aggregator 0x71e021bc2e8a709b72ac7b6036e5b2bf30f263d0) with zero quote feed and no elapsed-time staleness rejection.",
+        "collateralAssets": [
+          "0x2ae3f1ec7f1f5012cfeab0185bfc7aa3cf0dec22"
+        ],
+        "chains": [
+          "base"
+        ],
+        "feeds": [
+          {
+            "provider": "MorphoChainlinkOracleV2",
+            "path": "Morpho idToMarketParams(marketId).oracle / price()",
+            "address": "0x97ff9cbd7e77348b2b8ffbb883bf29452ad18295",
+            "chain": "base",
+            "observedAt": "2026-11-27",
+            "observedBlock": 62967570
+          },
+          {
+            "provider": "Chainlink EACAggregatorProxy (CBETH / USD)",
+            "path": "BASE_FEED_1()",
+            "address": "0xd7818272b9e248357d13057aab0b417af31e817d",
+            "chain": "base",
+            "observedAt": "2026-11-27",
+            "observedBlock": 62967570
+          }
+        ],
+        "fallbackBehavior": "No alternative feed is selected by MorphoChainlinkOracleV2; negative answers or feed reverts halt borrower valuation and liquidation. Upstream feed refresh and proxy replacement remain provider-dependent.",
+        "observedAt": "2026-11-27",
+        "observedBlock": 62967570,
+        "collateralParameters": [
+          {
+            "asset": "0x2ae3f1ec7f1f5012cfeab0185bfc7aa3cf0dec22",
+            "maximumLtvPct": 77,
+            "note": "LLTV verified from Base Morpho Blue idToMarketParams at block 62967570."
+          }
+        ],
+        "liquidationMechanism": "Morpho Blue checks borrower health at the market oracle price and immutable 77% LLTV; permissionless liquidators repay USDC debt and seize cbETH collateral.",
+        "backstop": "No independently verified dedicated funded default-recovery backstop for this exact lender receipt is established.",
+        "shutdownOrBadDebtBehavior": "When seized collateral is exhausted, Morpho realizes residual badDebtAssets by reducing totalBorrowAssets and totalSupplyAssets; lender NAV absorbs the shortfall.",
+        "sources": [
+          {
+            "label": "Exact Sourcify verification for cbETH/USDC MorphoChainlinkOracleV2",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x97ff9cbd7e77348b2b8ffbb883bf29452ad18295"
+          },
+          {
+            "label": "Base block 62967570, 2026-11-27T12:51:29Z; engine parameters and oracle getter reads",
+            "url": "https://basescan.org/block/62967570"
+          }
+        ]
+      },
+      {
+        "id": "0x13c42741a359ac4a8aa8287d2be109dcf28344484f91185f9a79bd5a805a55ae",
+        "label": "wstETH / USDC borrower market",
+        "tier": "standard-external",
+        "summary": "Pinned market 0x13c42741a359ac4a8aa8287d2be109dcf28344484f91185f9a79bd5a805a55ae at Base block 62967570 (0.35% of lender assets): collateral wstETH (0xc1cba3fcea344f92d9239c08c0568f6f2f0ee452), loan USDC (0x833589fcd6edb6e08f4c7c32d4f71b54bda02913), LLTV 86.0%. MorphoChainlinkOracleV2 0xd7a1aba119a236fea5bbc5cac6836465cbe9289a composes Chainlink WSTETH/ETH (0x43a5c292a453a3bf3606fa856197f09d7b74251a) and ETH/USD (0x71041dddad3595f9ced3dccfbe3d1f4b0a16bb70) over USDC/USD (0x7e860098f58bbfc8648a4311b374b1d669a2bc6b) with no elapsed-time staleness rejection.",
+        "collateralAssets": [
+          "0xc1cba3fcea344f92d9239c08c0568f6f2f0ee452"
+        ],
+        "chains": [
+          "base"
+        ],
+        "feeds": [
+          {
+            "provider": "MorphoChainlinkOracleV2",
+            "path": "Morpho idToMarketParams(marketId).oracle / price()",
+            "address": "0xd7a1aba119a236fea5bbc5cac6836465cbe9289a",
+            "chain": "base",
+            "observedAt": "2026-11-27",
+            "observedBlock": 62967570
+          },
+          {
+            "provider": "Chainlink EACAggregatorProxy (WSTETH / ETH)",
+            "path": "BASE_FEED_1()",
+            "address": "0x43a5c292a453a3bf3606fa856197f09d7b74251a",
+            "chain": "base",
+            "observedAt": "2026-11-27",
+            "observedBlock": 62967570
+          },
+          {
+            "provider": "Chainlink EACAggregatorProxy (ETH / USD)",
+            "path": "BASE_FEED_2()",
+            "address": "0x71041dddad3595f9ced3dccfbe3d1f4b0a16bb70",
+            "chain": "base",
+            "observedAt": "2026-11-27",
+            "observedBlock": 62967570
+          },
+          {
+            "provider": "Chainlink EACAggregatorProxy (USDC / USD)",
+            "path": "QUOTE_FEED_1()",
+            "address": "0x7e860098f58bbfc8648a4311b374b1d669a2bc6b",
+            "chain": "base",
+            "observedAt": "2026-11-27",
+            "observedBlock": 62967570
+          }
+        ],
+        "fallbackBehavior": "All three composite feed legs are required, not redundant failover; negative answers or feed reverts halt borrower valuation and liquidation. Upstream feed refresh and proxy replacement remain provider-dependent.",
+        "observedAt": "2026-11-27",
+        "observedBlock": 62967570,
+        "collateralParameters": [
+          {
+            "asset": "0xc1cba3fcea344f92d9239c08c0568f6f2f0ee452",
+            "maximumLtvPct": 86,
+            "note": "LLTV verified from Base Morpho Blue idToMarketParams at block 62967570."
+          }
+        ],
+        "liquidationMechanism": "Morpho Blue checks borrower health at the market oracle price and immutable 86% LLTV; permissionless liquidators repay USDC debt and seize wstETH collateral.",
+        "backstop": "No independently verified dedicated funded default-recovery backstop for this exact lender receipt is established.",
+        "shutdownOrBadDebtBehavior": "When seized collateral is exhausted, Morpho realizes residual badDebtAssets by reducing totalBorrowAssets and totalSupplyAssets; lender NAV absorbs the shortfall.",
+        "sources": [
+          {
+            "label": "Base block 62967570, 2026-11-27T12:51:29Z; engine parameters and oracle getter reads",
+            "url": "https://basescan.org/block/62967570"
+          },
+          {
+            "label": "Base explorer for wstETH/USDC MorphoChainlinkOracleV2",
+            "url": "https://basescan.org/address/0xd7a1aba119a236fea5bbc5cac6836465cbe9289a"
+          }
+        ]
+      }
+    ]
+  }
+}

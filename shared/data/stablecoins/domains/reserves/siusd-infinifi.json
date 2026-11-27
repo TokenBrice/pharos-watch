@@ -1,0 +1,84 @@
+{
+  "id": "siusd-infinifi",
+  "reserves": [
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0x48f9e38f3070ad8945dfeae3fa70987722e3d89c",
+      "name": "Staked infiniFi USD vault iUSD holdings",
+      "pct": 100.0,
+      "risk": "high",
+      "coinId": "iusd-infinifi",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "infiniFi Protocol (iUSD receipt token)",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 Batch 2 review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Verified StakedToken (siUSD) Ethereum source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdbdc1ef57537e34680b898e1febd3d68c7389bcb"
+      },
+      {
+        "label": "Verified YieldSharingV3 loss-propagation and accrual implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d5dbf208a9a7540018d204a9a0ad08a091407e5"
+      },
+      {
+        "label": "Verified InfiniFiGatewayV4 entry and exit implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x750136ac021a7149f0ee38141d0ba920cca1fc5d"
+      },
+      {
+        "label": "infiniFi StakedToken documentation",
+        "url": "https://docs.infinifi.xyz/dev-docs/tokens/staked-token"
+      },
+      {
+        "label": "Ethereum PublicNode RPC: pinned reads at finalized block 26506658 (2026-11-27T12:51:35Z)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ],
+    "rationale": "At finalized Ethereum block 26506658 (hash 0x2b69b7934b1e88fb42e9f10e6d0bff1f9114b5f1334c87ee41cc2aa8c9210f31, timestamp 2026-11-27T12:51:35Z), immutable StakedToken 0xdbdc1ef57537e34680b898e1febd3d68c7389bcb returns asset() = iUSD 0x48f9e38f3070ad8945dfeae3fa70987722e3d89c, totalSupply() = 50,943,623.409087563466908449 siUSD, totalAssets() = 56,189,220.552912281690590002 iUSD, and iUSD.balanceOf(siUSD) = 56,189,220.552912281690590002 iUSD (exact 100.0% idle iUSD, with epochRewards(2969) = 0 and epochRewards(2970) = 0). No external deployment sits inside the siUSD vault itself; however, verified YieldSharingV3._handleNegativeYield applies protocol losses in order: YieldSharing safety buffer (25,000 iUSD at pin) -> LockingController liUSD (14,530,440.74 iUSD at pin) -> StakedToken.applyLosses (burning siUSD vault iUSD rewards and principal) -> unstaked iUSD oracle rebase. Exits to iUSD route through InfiniFiGatewayV4.unstake() while unpaused and unaccruedYield() >= 0; onward conversion from iUSD to USDC remains subject to the parent iUSD liquidity buffer and redemption queue, so liquidityHorizon stays unknown.",
+    "compositionBasis": "Pinned eth_call reads of asset(), totalSupply(), totalAssets(), epochRewards(), and iUSD.balanceOf(siUSD) at finalized Ethereum block 26506658 (2026-11-27T12:51:35Z).",
+    "compositionAsOf": "2026-11-27",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All 100% of siUSD vault assets are held on-chain as canonical Ethereum iUSD. Underlying private-credit, fund, and DeFi farm allocations and exit horizons remain evaluated on the parent iusd-infinifi record, and siUSD principal remains subordinated to unstaked iUSD in the YieldSharingV3 loss waterfall.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "infiniFi StakedToken Ethereum vault 0xdbdc1ef57537e34680b898e1febd3d68c7389bcb",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 Batch 2 review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Verified StakedToken (siUSD) Ethereum source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdbdc1ef57537e34680b898e1febd3d68c7389bcb"
+      },
+      {
+        "label": "Verified YieldSharingV3 loss-propagation implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d5dbf208a9a7540018d204a9a0ad08a091407e5"
+      },
+      {
+        "label": "Ethereum PublicNode RPC: pinned reads at finalized block 26506658 (2026-11-27T12:51:35Z)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ],
+    "uncertainty": "At Ethereum block 26506658, the immutable StakedToken contract holds 100% of its totalAssets on-chain as canonical iUSD. However, Core FINANCE_MANAGER (YieldSharing proxy) can burn vault-held iUSD via applyLosses(), and infiniFi's off-chain private-credit and fund custody sits beneath parent iUSD. No legal segregation, bankruptcy-remoteness arrangement, or rehypothecation prohibition is established."
+  }
+}

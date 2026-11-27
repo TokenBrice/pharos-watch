@@ -28,6 +28,7 @@ import PRICING_PIPELINE_V3 from "../../data/methodology-changelogs/pricing-pipel
 import PRICING_PIPELINE_V4 from "../../data/methodology-changelogs/pricing-pipeline/v4.json";
 import PRICING_PIPELINE_V5 from "../../data/methodology-changelogs/pricing-pipeline/v5.json";
 import PRICING_PIPELINE_V6 from "../../data/methodology-changelogs/pricing-pipeline/v6.json";
+import PRICING_PIPELINE_V7 from "../../data/methodology-changelogs/pricing-pipeline/v7.json";
 import REDEMPTION_BACKSTOP_V1 from "../../data/methodology-changelogs/redemption-backstop/v1.json";
 import REDEMPTION_BACKSTOP_V2 from "../../data/methodology-changelogs/redemption-backstop/v2.json";
 import REDEMPTION_BACKSTOP_V3 from "../../data/methodology-changelogs/redemption-backstop/v3.json";
@@ -232,6 +233,7 @@ const METHODOLOGY_VERSION_CONFIGS = [
     currentVersion: PRICING_PIPELINE_METHODOLOGY_VERSION,
     changelogPath: PRICING_PIPELINE_METHODOLOGY_CHANGELOG_PATH,
     changelog: [
+      ...PRICING_PIPELINE_V7,
       ...PRICING_PIPELINE_V6,
       ...PRICING_PIPELINE_V5,
       ...PRICING_PIPELINE_V4,

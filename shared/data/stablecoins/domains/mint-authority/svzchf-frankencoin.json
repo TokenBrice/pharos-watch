@@ -1,0 +1,149 @@
+{
+  "id": "svzchf-frankencoin",
+  "mintAuthority": {
+    "capSemanticsReview": {
+      "verdict": "bounded-by-construction",
+      "rationale": "At finalized Ethereum block 26506626 (2026-11-27T12:45:11Z; hash 0x8a14b3254f4a6a1c2454fbd9739baaf3823a59480b0200eade9f94a35bf59260), runtime bytecode (sha256:3f8dc82336e5014397edd3a7802925df0ee332610cf2d856a1d273a6d5cd32a0) is an exact match to verified nonproxy SavingsVaultZCHF_2 source with zero EIP-1967 implementation and admin slots. _deposit() pulls ZCHF from the caller via SafeERC20.safeTransferFrom and deposits it into immutable Savings (0x27d9ad987bde08a0d083ef7e0e4043c857a17b38) before calling _mint(). There is no privileged share mint, fee-share dilution, or upgrade path. owner() and pendingOwner() both read 0x0 following permanent renunciation at block 24118275 (tx 0x4033568d1bb97ab2ab9de69e3ed31e49ae55a55b945b4de3ae87ccbe72b8f3a6), permanently disabling setReferral() with zero referral fee. Upstream ZCHF issuance authority remains inherited from zchf-frankencoin.",
+      "reviewedAt": "2026-11-27",
+      "reviewer": "Pharos Listing Policy v2 PR-3 primary-source review",
+      "sources": [
+        {
+          "label": "Exact verified SavingsVaultZCHF_2 source on Ethereum Blockscout",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe5f130253ff137f9917c0107659a4c5262abf6b0"
+        },
+        {
+          "label": "Exact Sourcify verification for SavingsVaultZCHF_2",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xe5f130253ff137f9917c0107659a4c5262abf6b0?fields=all"
+        },
+        {
+          "label": "Ethereum block 26506626, 2026-11-27T12:45:11Z; pinned svZCHF runtime and renounced ownership reads",
+          "url": "https://etherscan.io/block/26506626"
+        }
+      ]
+    },
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "none-resolved-mint",
+    "confidence": "verified",
+    "summary": "svZCHF shares mint only against deposited ZCHF forwarded into Frankencoin's immutable Savings module, with vault ownership permanently renounced. No local privileged share mint or fee-share dilution exists; underlying ZCHF issuance and Leadrate interest governance remain inherited from zchf-frankencoin.",
+    "headline": "Shares mint only against deposited ZCHF with renounced vault ownership; underlying issuance remains inherited from Frankencoin.",
+    "inheritedFrom": "zchf-frankencoin",
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "upgradeability": {
+      "model": "immutable",
+      "deploymentRefs": [
+        "ethereum:0xe5f130253ff137f9917c0107659a4c5262abf6b0"
+      ],
+      "canChangeMintLogic": false,
+      "controlRef": "svZCHF immutable SavingsVaultZCHF_2 share issuance",
+      "observedAt": "2026-11-27",
+      "observedBlock": 26506626,
+      "sources": [
+        {
+          "label": "Exact verified SavingsVaultZCHF_2 source on Ethereum Blockscout",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe5f130253ff137f9917c0107659a4c5262abf6b0"
+        },
+        {
+          "label": "Exact Sourcify verification for SavingsVaultZCHF_2",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xe5f130253ff137f9917c0107659a4c5262abf6b0?fields=all"
+        },
+        {
+          "label": "Ethereum block 26506626, 2026-11-27T12:45:11Z; pinned zero EIP-1967 implementation slot",
+          "url": "https://etherscan.io/block/26506626"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xe5f130253ff137f9917c0107659a4c5262abf6b0",
+        "deploymentRefs": [
+          "ethereum:0xe5f130253ff137f9917c0107659a4c5262abf6b0"
+        ],
+        "label": "svZCHF immutable SavingsVaultZCHF_2 share issuance",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-27",
+        "observedBlock": 26506626,
+        "sources": [
+          {
+            "label": "Exact verified SavingsVaultZCHF_2 source on Ethereum Blockscout",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe5f130253ff137f9917c0107659a4c5262abf6b0"
+          },
+          {
+            "label": "Exact Sourcify verification for SavingsVaultZCHF_2",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xe5f130253ff137f9917c0107659a4c5262abf6b0?fields=all"
+          },
+          {
+            "label": "Ethereum block 26506626, 2026-11-27T12:45:11Z; pinned svZCHF accounting and ownership reads",
+            "url": "https://etherscan.io/block/26506626"
+          }
+        ],
+        "evidence": "At Ethereum block 26506626, runtime bytecode matches exact verified SavingsVaultZCHF_2 source (6,416 bytes, sha256:3f8dc82336e5014397edd3a7802925df0ee332610cf2d856a1d273a6d5cd32a0) with zero EIP-1967 implementation and admin slots. _deposit() transfers ZCHF and saves into immutable Savings before minting shares; _withdraw() burns shares and calls Savings.withdraw. Ownership transferred from deployer 0x0170f42f224b99ccbbee673093589c5f9691dd06 to 0x0 at block 24118275 (tx 0x4033568d1bb97ab2ab9de69e3ed31e49ae55a55b945b4de3ae87ccbe72b8f3a6), leaving pendingOwner() zero and setReferral() permanently uncallable with zero SetReferral events."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x27d9ad987bde08a0d083ef7e0e4043c857a17b38",
+        "deploymentRefs": [
+          "ethereum:0xe5f130253ff137f9917c0107659a4c5262abf6b0"
+        ],
+        "label": "Frankencoin Savings Leadrate module",
+        "role": "governor",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-27",
+        "observedBlock": 26506626,
+        "sources": [
+          {
+            "label": "Verified Frankencoin Savings and Leadrate contract source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x27d9ad987bde08a0d083ef7e0e4043c857a17b38"
+          },
+          {
+            "label": "Ethereum block 26506626, 2026-11-27T12:45:11Z; pinned Savings rate and vault balance reads",
+            "url": "https://etherscan.io/block/26506626"
+          }
+        ],
+        "evidence": "Immutable Savings (Leadrate + AbstractSavings) holds the vault's ZCHF principal and mints accrued interest via ZCHF.coverLoss() on refresh(). Qualified FPS equity holders (200-bps quorum verified on immutable Equity 0x1ba26788dfde592fec8bcb0eaff472a42be341b2) may call proposeChange(uint24,address[]) with a seven-day delay (604,800 seconds) before applyChange() updates currentRatePPM (currently 35,000 PPM / 3.50%). If currentRatePPM is set to 0, save() reverts with ModuleDisabled() while withdraw() remains callable. Savings cannot mint arbitrary svZCHF shares."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Exact verified SavingsVaultZCHF_2 source on Ethereum Blockscout",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe5f130253ff137f9917c0107659a4c5262abf6b0"
+        },
+        {
+          "label": "Exact Sourcify verification for SavingsVaultZCHF_2",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xe5f130253ff137f9917c0107659a4c5262abf6b0?fields=all"
+        },
+        {
+          "label": "Verified Frankencoin Savings and Leadrate contract source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x27d9ad987bde08a0d083ef7e0e4043c857a17b38"
+        },
+        {
+          "label": "SavingsVaultZCHF_2 creation transaction at block 24118106",
+          "url": "https://etherscan.io/tx/0x100220050204815b4445040fee1974455a4f43e5f78b7f666733a0bf4cda16e4"
+        },
+        {
+          "label": "SavingsVaultZCHF_2 permanent ownership renunciation at block 24118275",
+          "url": "https://etherscan.io/tx/0x4033568d1bb97ab2ab9de69e3ed31e49ae55a55b945b4de3ae87ccbe72b8f3a6"
+        },
+        {
+          "label": "Ethereum block 26506626, 2026-11-27T12:45:11Z; pinned svZCHF and Savings state reads",
+          "url": "https://etherscan.io/block/26506626"
+        }
+      ],
+      "evidence": "Pinned Ethereum block 26506626 (2026-11-27T12:45:11Z; hash 0x8a14b3254f4a6a1c2454fbd9739baaf3823a59480b0200eade9f94a35bf59260) verifies exact immutable SavingsVaultZCHF_2 code, zero EIP-1967 implementation/admin slots, deposit-backed share minting, zero referral fee, and permanently renounced vault ownership (owner() = pendingOwner() = 0x0 since block 24118275). The vault's sole external dependency is immutable Frankencoin Savings (0x27d9ad987bde08a0d083ef7e0e4043c857a17b38), whose Leadrate governance and parent ZCHF minter-admission surface are inherited from zchf-frankencoin.",
+      "reviewer": "Pharos Listing Policy v2 PR-3 primary-source review",
+      "reviewedAt": "2026-11-27",
+      "disposition": "scoreable",
+      "unresolvedQuestions": []
+    }
+  }
+}

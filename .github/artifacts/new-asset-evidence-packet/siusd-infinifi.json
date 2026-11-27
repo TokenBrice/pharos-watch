@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 3,
+  "receiptMode": "prospective-offline",
+  "kind": "safety-score-v9-new-asset-admission-receipt",
+  "assetId": "siusd-infinifi",
+  "prospectiveInputId": "prospective-admission:v1:1d88be3a077c97497b2602993ef7126e51f43576eadd2d24e51c0db18f50415b",
+  "admissionClockSec": 1795793116,
+  "evaluatedCohortIds": [
+    "cusd-cap",
+    "fxsave-f-x-protocol",
+    "fxusd-f-x-protocol",
+    "iusd-infinifi",
+    "mf-one-midas",
+    "mglobal-midas-fasanara",
+    "reusd-re-protocol",
+    "siusd-infinifi",
+    "stcusd-cap",
+    "usdc-circle",
+    "usdg-paxos",
+    "wtgxx-wisdomtree"
+  ],
+  "absentRuntimeLanes": [
+    "chain-supply",
+    "dex",
+    "live-reserves",
+    "peg",
+    "redemption"
+  ],
+  "supplyObservation": {
+    "circulating": {
+      "peggedUSD": 56134210.55
+    },
+    "observedAtSec": 1795783895,
+    "url": "https://ethereum-rpc.publicnode.com",
+    "field": "eth_call(0xdbdc1ef57537e34680b898e1febd3d68c7389bcb,totalSupply)*convertToAssets*iusd-price",
+    "retrievedAtSec": 1795784015
+  },
+  "registryFingerprint": "d5e6338d30391aaee8fb68d2f7ac274ebab64cfa601fad56cead31ebe6a1489d",
+  "evaluationBuildDigest": "1d128bc5598b6daf4323f12076661a2247488a5f44f9d0da168209746163a9e5",
+  "card": {
+    "id": "siusd-infinifi",
+    "openBucketQuestionsCarried": 5,
+    "inheritedOpenBucketQuestionsCarried": 0,
+    "openBucketObligationsCarried": 5,
+    "documentationObligationsCarried": 2
+  },
+  "questions": [
+    {
+      "questionKey": "siusd-infinifi|component|deployment-controls",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "scoped-control-question",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "siusd-infinifi|component|exit-routes",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-runtime-route-evidence",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "siusd-infinifi|component|mechanism-risk-review",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "bounded-mechanism-review",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "siusd-infinifi|control|authored:siusd-infinifi|asset:siusd-infinifi|infiniFi YieldSharing proxy (FINANCE_MANAGER)",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "scoped-control-question",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "siusd-infinifi|reserve-exposure|reserve:89e9e6206abe47571db21e23",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "material-reserve-slice-unstructured",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "siusd-infinifi|component|access:transfer",
+      "bucket": "documentation",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-access-review",
+          "obligations": 1,
+          "documentation": true
+        }
+      ]
+    },
+    {
+      "questionKey": "siusd-infinifi|control|authored:siusd-infinifi|asset:siusd-infinifi|infiniFi admin Safe (Timelock PROPOSER_ROLE)",
+      "bucket": "documentation",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "unresolved-control-identity",
+          "obligations": 1,
+          "documentation": true
+        }
+      ]
+    }
+  ]
+}

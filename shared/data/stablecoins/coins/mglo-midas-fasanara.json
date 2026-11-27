@@ -1,0 +1,160 @@
+{
+  "id": "mglo-midas-fasanara",
+  "name": "Midas Fasanara Global Open",
+  "symbol": "mGLO",
+  "brand": "Midas",
+  "oneLiner": "mGLO is a NAV-accreting Midas tokenized certificate giving exposure to Fasanara's open-ended private-credit receivables fund.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "collateral": "Tokenized exposure to Fasanara SA SICAV-RAIF mGLOBAL Fund (SF 36, Class A USD ACC): an asset-backed lending portfolio investing primarily in short-dated SME trade receivables and digital invoices, held through Midas tokenized-certificate rails (Compartment mGLO; JTC valuation email subject references ISIN LU3357216087).",
+  "pegMechanism": "NAV-accreting Midas tokenized certificate; primary issuance and redemption occur through Midas permissioned rails at independently calculated NAV rather than a fixed $1 peg.",
+  "mechanismArchetype": "rwa-credit-fund",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 PR-3 Batch 1",
+    "rationale": "Midas and the vlayer-notarized JTC Luxembourg valuation attestation (subject: LU3357216087 - mGLO) identify mGLO (Compartment mGLO) as a NAV-linked security certificate referencing Fasanara SA SICAV-RAIF mGLOBAL Fund (SF 36, Class A USD ACC), a managed short-duration receivables and asset-based private-credit strategy. Because holders receive NAV-accreting certificate exposure rather than a fixed-par dollar claim, rwa-credit-fund preserves the underlying instrument structure.",
+    "sources": [
+      {
+        "label": "Midas PoR v2 canonical token registry (tokens.json)",
+        "url": "https://raw.githubusercontent.com/midas-apps/midas-por-v2/main/tokens.json"
+      },
+      {
+        "label": "Midas contracts deployment registry (addresses.ts)",
+        "url": "https://github.com/midas-apps/contracts/blob/main/config/constants/addresses.ts"
+      },
+      {
+        "label": "Midas mGLO November 25, 2026 SAVE attestation (CID QmeNwyuVyhM5HvEFfKZH9j7zCCvGrLwCBf1hYeWsTocMt1; JTC Luxembourg October 31 valuation email)",
+        "url": "https://gateway.pinata.cloud/ipfs/QmeNwyuVyhM5HvEFfKZH9j7zCCvGrLwCBf1hYeWsTocMt1"
+      }
+    ]
+  },
+  "detailProvider": "coingecko",
+  "geckoId": "midas-fasanara-global-open",
+  "identifiers": {
+    "isin": [
+      "LU3357216087"
+    ]
+  },
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://raw.githubusercontent.com/midas-apps/midas-por-v2/main/tokens.json",
+    "provider": "Midas Attestation Engine: on-chain NAV/proof-of-reserves/price anchored via Chainlink CRE and vlayer TLS-Notary JTC Luxembourg valuation emails",
+    "attestorTier": "self",
+    "cadence": "monthly"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://midas.app/mglo"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/MidasRWA"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.midas.app/"
+    },
+    {
+      "label": "CoinGecko",
+      "url": "https://www.coingecko.com/en/coins/midas-fasanara-global-open"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Luxembourg",
+    "license": "Luxembourg securitisation note (Compartment mGLO; JTC valuation email subject references ISIN LU3357216087) referencing Fasanara SA SICAV-RAIF mGLOBAL Fund (SF 36, Class A USD ACC); NAV calculated monthly by independent administrator JTC Luxembourg."
+  },
+  "contracts": [
+    {
+      "chain": "base",
+      "address": "0xfcc9cc1209651ed8867332d6f664cf82743a2584",
+      "decimals": 18
+    },
+    {
+      "chain": "robinhood",
+      "address": "0xfed493f38c1aacb4ea4e6a11f8b9287849ee0096",
+      "decimals": 18
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x1dd91a111606382b77a917633ed90feaf25e0f76",
+      "decimals": 18
+    },
+    {
+      "chain": "xlayer",
+      "address": "0x45ec1a004142e1874ceb8f022ee4bb14edf37b4a",
+      "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0x1eaf7cceaa5dc6d605760718722fbcc58579b3ff",
+      "decimals": 18
+    },
+    {
+      "chain": "monad",
+      "address": "0x785175a1ae5a8bcd3230e01178ba375f5f2125fe",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "exotic",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
+  "liveReservesConfig": {
+    "adapter": "chainlink-nav",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "mglo-midas-fasanara",
+    "display": {
+      "url": "https://base.blockscout.com/address/0x6b593a5fabb90f36e125562db833f761d274fcbc",
+      "label": "Midas mGLO NAV"
+    },
+    "scoring": {
+      "maxSourceAgeSec": 4000000
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "base",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "navScope": "portfolio",
+      "oracleAddress": "0x6b593a5fabb90f36e125562db833f761d274fcbc",
+      "tokenAddress": "0xfcc9cc1209651ed8867332d6f664cf82743a2584",
+      "assetLabel": "Fasanara Global Open diversified alternative debt strategy NAV",
+      "assetRisk": "high",
+      "sourceKey": "chainlink-nav:mglo-midas-fasanara",
+      "maxOracleAgeSec": 4000000
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Midas Fasanara Global Open NAV",
+    "yieldType": "nav-appreciation"
+  },
+  "notices": [
+    {
+      "type": "info",
+      "title": "NAV-priced tokenized credit certificate",
+      "message": "mGLO is a NAV-priced tokenized private-credit certificate with permissioned primary rails, not a par-pegged stablecoin. Pharos tracks it because active stablecoins such as yzUSD hold leveraged-loop collateral exposure to mGLO.",
+      "asOf": "2026-11-27",
+      "sources": [
+        {
+          "label": "Midas mGLO November 25, 2026 SAVE attestation (JTC Luxembourg valuation email)",
+          "url": "https://gateway.pinata.cloud/ipfs/QmeNwyuVyhM5HvEFfKZH9j7zCCvGrLwCBf1hYeWsTocMt1"
+        },
+        {
+          "label": "Midas PoR v2: canonical token registry",
+          "url": "https://raw.githubusercontent.com/midas-apps/midas-por-v2/main/tokens.json"
+        }
+      ]
+    }
+  ],
+  "launchDate": "2026-06-15"
+}

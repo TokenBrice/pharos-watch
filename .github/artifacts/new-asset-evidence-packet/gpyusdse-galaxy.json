@@ -1,0 +1,143 @@
+{
+  "schemaVersion": 3,
+  "receiptMode": "prospective-offline",
+  "kind": "safety-score-v9-new-asset-admission-receipt",
+  "assetId": "gpyusdse-galaxy",
+  "prospectiveInputId": "prospective-admission:v1:aaaf6c209e50bb8d71756541a0bbda5acff5537300cb14440a8637d3caef23bb",
+  "admissionClockSec": 1795793126,
+  "evaluatedCohortIds": [
+    "gpyusdse-galaxy",
+    "pyusd-paypal"
+  ],
+  "absentRuntimeLanes": [
+    "chain-supply",
+    "dex",
+    "live-reserves",
+    "peg",
+    "redemption"
+  ],
+  "supplyObservation": {
+    "circulating": {
+      "peggedUSD": 78547594.5
+    },
+    "observedAtSec": 1795784761,
+    "url": "https://rpc.stable.xyz",
+    "field": "eth_call(0x8c3250f028a2c8d29319eb3ee3214b90462394ba,totalSupply)*convertToAssets*pyusd-price",
+    "retrievedAtSec": 1795784761
+  },
+  "registryFingerprint": "d5e6338d30391aaee8fb68d2f7ac274ebab64cfa601fad56cead31ebe6a1489d",
+  "evaluationBuildDigest": "1d128bc5598b6daf4323f12076661a2247488a5f44f9d0da168209746163a9e5",
+  "card": {
+    "id": "gpyusdse-galaxy",
+    "openBucketQuestionsCarried": 3,
+    "inheritedOpenBucketQuestionsCarried": 0,
+    "openBucketObligationsCarried": 3,
+    "documentationObligationsCarried": 5
+  },
+  "questions": [
+    {
+      "questionKey": "gpyusdse-galaxy|component|exit-routes",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-runtime-route-evidence",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "gpyusdse-galaxy|component|mechanism-risk-review",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-archetype",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "gpyusdse-galaxy|reserve-exposure|reserve:3d0ba26776ad97a0f161c91c",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "material-reserve-slice-unstructured",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "gpyusdse-galaxy|component|access:transfer",
+      "bucket": "documentation",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-access-review",
+          "obligations": 1,
+          "documentation": true
+        }
+      ]
+    },
+    {
+      "questionKey": "gpyusdse-galaxy|control|authored:gpyusdse-galaxy|asset:gpyusdse-galaxy|StableEarn Prime PYUSD allocator",
+      "bucket": "documentation",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "unresolved-control-identity",
+          "obligations": 1,
+          "documentation": true
+        }
+      ]
+    },
+    {
+      "questionKey": "gpyusdse-galaxy|control|authored:gpyusdse-galaxy|asset:gpyusdse-galaxy|StableEarn Prime PYUSD allocator and sentinel",
+      "bucket": "documentation",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "unresolved-control-identity",
+          "obligations": 1,
+          "documentation": true
+        }
+      ]
+    },
+    {
+      "questionKey": "gpyusdse-galaxy|control|authored:gpyusdse-galaxy|asset:gpyusdse-galaxy|StableEarn Prime PYUSD curator parameter authority",
+      "bucket": "documentation",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "unresolved-control-identity",
+          "obligations": 1,
+          "documentation": true
+        }
+      ]
+    },
+    {
+      "questionKey": "gpyusdse-galaxy|control|authored:gpyusdse-galaxy|asset:gpyusdse-galaxy|StableEarn Prime PYUSD owner parameter authority",
+      "bucket": "documentation",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "unresolved-control-identity",
+          "obligations": 1,
+          "documentation": true
+        }
+      ]
+    }
+  ]
+}

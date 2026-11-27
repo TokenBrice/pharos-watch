@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 3,
+  "receiptMode": "prospective-offline",
+  "kind": "safety-score-v9-new-asset-admission-receipt",
+  "assetId": "eusd-own",
+  "prospectiveInputId": "prospective-admission:v1:c858d6016c9a1189d23be1991f6c8a77b24d5527453a7f41d0f56820f3c02906",
+  "admissionClockSec": 1795793128,
+  "evaluatedCohortIds": [
+    "ausd-agora",
+    "buidl-blackrock",
+    "eusd-own",
+    "frxusd-frax",
+    "usdc-circle",
+    "usdg-paxos",
+    "ustb-superstate",
+    "wtgxx-wisdomtree"
+  ],
+  "absentRuntimeLanes": [
+    "chain-supply",
+    "dex",
+    "live-reserves",
+    "peg",
+    "redemption"
+  ],
+  "supplyObservation": {
+    "circulating": {
+      "peggedUSD": 141513.73
+    },
+    "observedAtSec": 1795785408,
+    "url": "https://stablecoins.llama.fi/stablecoin/484",
+    "field": "currentChainBalances['Robinhood Chain'].peggedUSD",
+    "retrievedAtSec": 1795785408
+  },
+  "registryFingerprint": "d5e6338d30391aaee8fb68d2f7ac274ebab64cfa601fad56cead31ebe6a1489d",
+  "evaluationBuildDigest": "1d128bc5598b6daf4323f12076661a2247488a5f44f9d0da168209746163a9e5",
+  "card": {
+    "id": "eusd-own",
+    "openBucketQuestionsCarried": 7,
+    "inheritedOpenBucketQuestionsCarried": 3,
+    "openBucketObligationsCarried": 7,
+    "documentationObligationsCarried": 1,
+    "issuerNondisclosureReviewedAtSec": 1791067857
+  },
+  "questions": [
+    {
+      "questionKey": "eusd-own|component|exit-routes",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-runtime-route-evidence",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "eusd-own|component|mechanism-risk-review",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "bounded-mechanism-review",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "eusd-own|component|peg",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-peg-input",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "eusd-own|reserve-exposure|reserve:47f3888194e7af407350b0d1",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "material-reserve-slice-unstructured",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "usdg-paxos|reserve-exposure|reserve:60e6269db0863ac9295fad18",
+      "bucket": "open",
+      "inherited": true,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "material-reserve-slice-unstructured",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "wtgxx-wisdomtree|component|mechanism-review:lossRecoveryDesign",
+      "bucket": "open",
+      "inherited": true,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "bounded-mechanism-review",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "wtgxx-wisdomtree|component|reserve-composition",
+      "bucket": "open",
+      "inherited": true,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "expired-reviewed-reserve-composition",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "ausd-agora|reserve-exposure|reserve:05d32428c9edb7562d33255d",
+      "bucket": "issuer",
+      "inherited": true,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "material-reserve-slice-unstructured",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "usdg-paxos|reserve-exposure|reserve:e28b774af2fc383cd452e6c4",
+      "bucket": "issuer",
+      "inherited": true,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "material-reserve-slice-unstructured",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "eusd-own|component|access:transfer",
+      "bucket": "documentation",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-access-review",
+          "obligations": 1,
+          "documentation": true
+        }
+      ]
+    }
+  ]
+}

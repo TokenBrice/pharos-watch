@@ -715,6 +715,8 @@ export const YIELD_VARIANT_CHILD_VENUE_PROTOCOLS: Readonly<Record<string, string
   "bbqusdc-steakhouse-v2": "morpho-blue",
   "cscbusdc-clearstar": "morpho-blue",
   "ethenausdc-steakhouse": "morpho-blue",
+  "steakusdc-steakhouse-base": "morpho-blue",
+  "gpyusdse-galaxy": "morpho-blue",
   "hyperusdca-hyperithm": "morpho-blue",
   "sparkusdc-spark": "morpho-blue",
   "sparkusdtbc-spark": "morpho-blue",

@@ -1,0 +1,144 @@
+{
+  "id": "bread-bread-coop",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "BREAD is a pure 1:1 Gnosis Chain wrapper around native xDAI deposited into the Gnosis Savings xDAI ERC-4626 vault. Under the verified Bread.sol implementation, mint() wraps payable xDAI into WXDAI and deposits it into the savings vault before minting BREAD 1:1, burn() withdraws WXDAI from the savings vault and returns native xDAI 1:1, and claimYield() is capped at accrued savings surplus above totalSupply. Wrapper-local logic remains mutable without delay: the 5-of-10 Bread Cooperative Safe holds both the EIP-173 proxy admin slot and contract ownership, so replacement logic can alter the wrapper's economic bound. Base xDAI issuance is inherited from reviewed xdai-gnosis and is not duplicated as a direct BREAD controller.",
+    "inheritedFrom": "xdai-gnosis",
+    "upgradeability": {
+      "model": "custom",
+      "deploymentRefs": [
+        "gnosis:0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3"
+      ],
+      "proxyAddresses": [
+        "0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3"
+      ],
+      "implementationAddresses": [
+        "0x3146b62466b76642127b9f4fe34fa7cd9968bf96"
+      ],
+      "adminAddresses": [
+        "0x918def5d593f46735f74f9e2b280fe51af3a99ad"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "Bread Cooperative 5-of-10 Safe (EIP-173 proxy admin and owner)",
+      "observedAt": "2026-11-27",
+      "observedBlock": 49496158,
+      "sources": [
+        {
+          "label": "Sourcify exact-match verified EIP173ProxyWithReceive proxy (0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3)",
+          "url": "https://repo.sourcify.dev/100/0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3"
+        },
+        {
+          "label": "Sourcify exact-match verified Bread implementation (0x3146b62466b76642127b9f4fe34fa7cd9968bf96)",
+          "url": "https://repo.sourcify.dev/100/0x3146b62466b76642127b9f4fe34fa7cd9968bf96"
+        },
+        {
+          "label": "Gnosis Chain block 49496158 (2026-11-27T13:02:20Z)",
+          "url": "https://gnosisscan.io/block/49496158"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "gnosis",
+        "address": "0x918def5d593f46735f74f9e2b280fe51af3a99ad",
+        "deploymentRefs": [
+          "gnosis:0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3"
+        ],
+        "label": "Bread Cooperative 5-of-10 Safe (EIP-173 proxy admin and owner)",
+        "role": "wrapper",
+        "authorityType": "safe",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "present",
+        "threshold": 5,
+        "signerCount": 10,
+        "safe": {
+          "owners": [
+            "0xb2d95eb137b70700f5fe79e31ce5e4feb1450405",
+            "0x0a435a7ccf409b27a8282cb07adac4716ad7b7ff",
+            "0xc3042c7095ec4dc329e45a98ce4da651c6beba10",
+            "0x8b5e3dd9a19bff07c50c0019b21f69f7c3de555e",
+            "0x3831b92d18140b9fc297501145d653edef4b6f9e",
+            "0x0e6f30f9160eb81b55b05fae498a22f203732d64",
+            "0xa6f4d9f44dd980b7168d829d5f74c2b00a46b2c9",
+            "0x1d60c34f508bbbd7f1cb50b375c4cdd25e718d1c",
+            "0xad7575aefd4d64520c3269fd24eae1b0e13dbe7b",
+            "0x8a6adcd48af68b5597c527c03eea5e9172e3cacd"
+          ],
+          "threshold": 5,
+          "enabledModules": [
+            "0xaa46724893dedd72658219405185fb0fc91e091c",
+            "0xcfbfac74c26f8647cbdb8c5caf80bb5b32e43134"
+          ],
+          "version": "1.4.1",
+          "observedAt": "2026-11-27",
+          "observedBlock": 49496158,
+          "source": "onchain"
+        },
+        "capDescription": "Current Bread.sol implementation 0x3146b62466b76642127b9f4fe34fa7cd9968bf96 restricts mint() to 1:1 payable xDAI deposits into the Gnosis Savings xDAI vault and caps claimYield() at accrued savings surplus above totalSupply, while rescueToken() reverts on the savings vault token. However, the 5-of-10 Safe holds the EIP-173 proxy admin slot with zero timelock and can upgrade the proxy to arbitrary replacement logic, leaving the wrapper-local economic bound unbounded.",
+        "canRaiseCap": true,
+        "sources": [
+          {
+            "label": "Sourcify exact-match verified EIP173ProxyWithReceive proxy (0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3)",
+            "url": "https://repo.sourcify.dev/100/0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3"
+          },
+          {
+            "label": "Sourcify exact-match verified Bread implementation (0x3146b62466b76642127b9f4fe34fa7cd9968bf96)",
+            "url": "https://repo.sourcify.dev/100/0x3146b62466b76642127b9f4fe34fa7cd9968bf96"
+          },
+          {
+            "label": "Gnosis Chain Bread Cooperative Safe (0x918def5d593f46735f74f9e2b280fe51af3a99ad)",
+            "url": "https://gnosisscan.io/address/0x918def5d593f46735f74f9e2b280fe51af3a99ad"
+          },
+          {
+            "label": "Sourcify exact-match verified Safe AllowanceModule 1 (0xaa46724893dedd72658219405185fb0fc91e091c)",
+            "url": "https://repo.sourcify.dev/100/0xaa46724893dedd72658219405185fb0fc91e091c"
+          },
+          {
+            "label": "Sourcify exact-match verified Safe AllowanceModule 2 (0xcfbfac74c26f8647cbdb8c5caf80bb5b32e43134)",
+            "url": "https://repo.sourcify.dev/100/0xcfbfac74c26f8647cbdb8c5caf80bb5b32e43134"
+          },
+          {
+            "label": "Gnosis Chain public JSON-RPC used for pinned reads at block 49496158",
+            "url": "https://rpc.gnosischain.com"
+          }
+        ],
+        "evidence": "At Gnosis Chain block 49496158 (hash 0xdd83760990e1c78618018f9ff8f7753fa4a66a462b652b871466bb4a1a691bb0, 2026-11-27T13:02:20Z), proxy 0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3 returned EIP-1967 implementation 0x3146b62466b76642127b9f4fe34fa7cd9968bf96, EIP-1967 admin 0x918def5d593f46735f74f9e2b280fe51af3a99ad, owner() 0x918def5d593f46735f74f9e2b280fe51af3a99ad, and yieldClaimer() 0xee95a62b749d8a2520e0128d9b3aca241269024b (TransparentUpgradeableProxy pointing to Sourcify-verified YieldDistributor 0x238662b4523149c7148bd1db4728bd3f4432d203). Safe 0x918def5d593f46735f74f9e2b280fe51af3a99ad returned Safe version 1.4.1 (masterCopy 0x29fcb43b46531bca003ddc8fcb67ffe91900c762), threshold 5 of 10 owners, zero guard, fallbackHandler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99, and two enabled modules: 0xaa46724893dedd72658219405185fb0fc91e091c and 0xcfbfac74c26f8647cbdb8c5caf80bb5b32e43134. Both modules are Sourcify exact-match Gnosis Safe AllowanceModule contracts whose execTransactionFromModule calls are limited to ERC-20 transfer() and native xDAI transfers and cannot invoke proxy upgrades or owner functions.",
+        "observedAt": "2026-11-27",
+        "observedBlock": 49496158
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "continuous",
+    "supervision": "none",
+    "review": {
+      "sources": [
+        {
+          "label": "Sourcify exact-match verified EIP173ProxyWithReceive proxy (0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3)",
+          "url": "https://repo.sourcify.dev/100/0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3"
+        },
+        {
+          "label": "Sourcify exact-match verified Bread implementation (0x3146b62466b76642127b9f4fe34fa7cd9968bf96)",
+          "url": "https://repo.sourcify.dev/100/0x3146b62466b76642127b9f4fe34fa7cd9968bf96"
+        },
+        {
+          "label": "Gnosis Chain Bread Cooperative Safe (0x918def5d593f46735f74f9e2b280fe51af3a99ad)",
+          "url": "https://gnosisscan.io/address/0x918def5d593f46735f74f9e2b280fe51af3a99ad"
+        },
+        {
+          "label": "Gnosis Chain block 49496158 (2026-11-27T13:02:20Z)",
+          "url": "https://gnosisscan.io/block/49496158"
+        },
+        {
+          "label": "Gnosis Chain public JSON-RPC used for pinned reads",
+          "url": "https://rpc.gnosischain.com"
+        }
+      ],
+      "evidence": "Pinned verification at Gnosis Chain block 49496158 (2026-11-27T13:02:20Z) establishes BREAD as a single-chain Gnosis wrapper backed 100.189% by Gnosis Savings xDAI vault shares (352,988.180660 WXDAI maxWithdraw vs 352,321.934828 BREAD totalSupply, with 666.245832 xDAI claimable surplus). Current Bread.sol enforces continuous 1:1 on-chain mechanical reconciliation between BREAD liabilities and Savings xDAI assets on every mint(), burn(), and claimYield(). However, the 5-of-10 Bread Cooperative Safe can upgrade the EIP-173 proxy with zero timelock, keeping economicCapSemantics unbounded with no prudential supervision. Inherited xDAI bridge issuance and governance remain reviewed under xdai-gnosis.",
+      "reviewer": "Pharos Listing Policy v2 addition review (2026-11-27)",
+      "reviewedAt": "2026-11-27"
+    }
+  }
+}

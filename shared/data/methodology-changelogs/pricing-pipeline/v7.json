@@ -1,0 +1,16 @@
+[
+  {
+    "version": "7.0",
+    "title": "ERC-4626 NAV vaults, mGLO six-chain preferred native supply, and Paxos Stable PYUSD reconciliation",
+    "date": "2026-11-27",
+    "effectiveAt": 1795784400,
+    "summary": "Adds five reviewed ERC-4626 NAV vaults (siUSD, fLiteUSD, svZCHF, Base Steakhouse Prime USDC, and StableEarn Prime PYUSD with explicit non-archive Stable RPC fallbacks) to authoritative convertToAssets pricing, activates six-chain preferred native supply for tokenized fund mGLO, reconciles PYUSD's StableChain contract from Stargate PYUSD0 to Paxos native PYUSDUUPS, and admits Own eUSD with a post-cutover core-aggregate entry date.",
+    "impact": [
+      "Authoritative ERC-4626 NAV pricing (`worker/src/lib/authoritative-price-sources/erc4626-nav.ts`, `worker/src/lib/authoritative-price-sources/helpers.ts`): registers `siusd-infinifi` (parent `iusd-infinifi`), `fliteusd-fluid` (`usdc-circle`), `svzchf-frankencoin` (`zchf-frankencoin`, `allowFreshReplaySafeSingleSourceParent`), `steakusdc-steakhouse-base` (`usdc-circle` on Base), and `gpyusdse-galaxy` (`pyusd-paypal` on StableChain, extending `defineRegistryErc4626NavVault` with explicit `rpcUrls` backed by `SUPPLY_RPC_DEFAULTS.stable` rather than expanding archive-assuming `PUBLIC_RPC_URLS`).",
+      "Reviewed preferred native supply and PYUSD Stable reconciliation (`shared/lib/onchain-supply-probe.ts`, `shared/lib/supply-perimeter-changes.ts`, `shared/data/stablecoins/coins/pyusd-paypal.json`): adds `mglo-midas-fasanara` (`preferMcap: true`, six additive EVM deployments across Base, Robinhood Chain, Ethereum, X Layer, observed-zero-allowed Optimism and Monad via native DepositVaults and zero-balance LayerZero burn-and-mint adapters, with an asset-scoped perimeter cutover) and updates `pyusd-paypal`'s StableChain deployment from legacy Stargate Hydra `PYUSD0` (`0x99af...`, $1.14) to Paxos native `PYUSDUUPS` (`0x28f1f38a9f7db1f769a71af0a13e8bace2ab0e9f`, $23.96M) across contracts, bridge routes, and native Mint Authority.",
+      "Core-aggregate admission, dependency linkers, and yield ownership: admits `eusd-own` (Robinhood Chain, `llamaId: \"484\"`, `geckoId: \"own-eusd\"`) with a `2026-11-27` post-cutover core-aggregate entry date (`CORE_AGGREGATE_V2_POST_CUTOVER_ENTRY_DATES`); admits `bread-bread-coop` (Gnosis `escrow-balance` wrapper over `sdai-gnosis` redeeming to `xdai-gnosis`); wires reserve linkers from `yzusd-yuzu` to `mglo-midas-fasanara` and from `alusd-alchemix` to `siusd-infinifi` and `fliteusd-fluid`; and hands off parent yield ownership from `iusd-infinifi` to `siusd-infinifi` with an explicit `ownershipHandoffs` record while preserving `zchf-frankencoin`'s module-wide Savings opportunity alongside `svzchf-frankencoin`'s native wrapper rate."
+    ],
+    "commits": [],
+    "reconstructed": false
+  }
+]

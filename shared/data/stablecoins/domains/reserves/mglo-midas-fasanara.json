@@ -1,0 +1,110 @@
+{
+  "id": "mglo-midas-fasanara",
+  "reserves": [
+    {
+      "sourceKey": "chainlink-nav:mglo-midas-fasanara",
+      "name": "Fasanara global private-credit fund shares (Fasanara SA SICAV-RAIF SF 36, Class A USD ACC)",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "Fasanara Capital receivables strategy portfolio (Fasanara SA SICAV-RAIF, mGLOBAL Fund, SF 36, Class A USD ACC; SME trade receivables, digital invoices, asset-based finance) held via Luxembourg securitisation Compartment mGLO (JTC valuation email subject references ISIN LU3357216087)",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 PR-3 Batch 1",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Midas PoR v2 canonical token registry (tokens.json; mGLO proofId 0x31d6a336...7af5dee on Base)",
+        "url": "https://raw.githubusercontent.com/midas-apps/midas-por-v2/main/tokens.json"
+      },
+      {
+        "label": "Midas PoR v2 partner integration guide (SaveRegistryWithClaim 0x2D6e9F60...809d and IPFS recovery)",
+        "url": "https://raw.githubusercontent.com/midas-apps/midas-por-v2/main/INTEGRATION.md"
+      },
+      {
+        "label": "Midas mGLO November 25, 2026 SAVE attestation (CID QmeNwyuVyhM5HvEFfKZH9j7zCCvGrLwCBf1hYeWsTocMt1; method-1 vlayer TLS-Notary JTC Luxembourg email valuing Compartment mGLO at $193,415,658.76 as of 2026-10-31)",
+        "url": "https://gateway.pinata.cloud/ipfs/QmeNwyuVyhM5HvEFfKZH9j7zCCvGrLwCBf1hYeWsTocMt1"
+      },
+      {
+        "label": "Pinned Ethereum finalized block 26506658 (2026-11-27T12:51:35Z) SaveRegistryWithClaim lookup and Ethereum mGLO totalSupply",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Pinned Base finalized block 62967570 (2026-11-27T12:51:29Z) mGLO totalSupply and Base Chainlink NAV oracle 0x6b593a5f...fcbc",
+        "url": "https://mainnet.base.org"
+      },
+      {
+        "label": "Pinned Robinhood Chain block 124269432 (2026-11-27T13:05:24Z) mGLO totalSupply read",
+        "url": "https://rpc.mainnet.chain.robinhood.com"
+      }
+    ],
+    "rationale": "Authored on 2026-11-27 from pinned on-chain reads joined to Midas's canonical midas-por-v2 token registry and the latest Ethereum SaveRegistryWithClaim attestation. At Ethereum finalized block 26506658 (2026-11-27T12:51:35Z, hash 0x2b69b7934b1e88fb42e9f10e6d0bff1f9114b5f1334c87ee41cc2aa8c9210f31), SaveRegistryWithClaim.proofIdToLatestAttestation(0x31d6a336...7af5dee) resolved to digest 0xee51aeb241f3c9089ec505530eb44e9f5e723dee742775cf0a312da7ea65a4f6 (CIDv0 QmeNwyuVyhM5HvEFfKZH9j7zCCvGrLwCBf1hYeWsTocMt1, created 2026-11-25T15:00:33Z, expires 2026-12-02T15:00:33Z). The method-1 attestation includes a vlayer TLS-Notary proof of the 2026-11-25 JTC Luxembourg email (Subject: LU3357216087 / mGLO; Compartment mGLO; Fasanara SA SICAV-RAIF, mGLOBAL Fund, SF 36, Class A USD ACC; Valuation Date 31/10/2026) reporting Fund Value of $193,415,658.76 USD with zero pending redemptions or subscriptions, alongside a 1token portfolio anchor ($188.95 equity in general_wallet, or <0.0001%). Against the 2026-10-31 anchor supply of 186,822,750.687780 tokens ($190,036,174.86 TVL at the Base Chainlink NAV oracle $1.01720039 updated 2026-11-25T13:41:55Z), reported overcollateralization was 1.017784. The same SAVE attestation separately carries ops-reported fields navReportedByOps = $116,758,984.26 and totalSupplyCrossChainReportedByOps = 114,784,643 mGLO (2026-11-25), an unreconciled discrepancy of roughly half the observed 220.64M six-chain on-chain supply. No on-chain liquidity-reserve wallets are declared in midas-por-v2 tokens.json for mGLO, so 100% of the reserve book is represented by the off-chain Fasanara private-credit fund shares. Current six-chain additive on-chain supply on 2026-11-27 is 220,640,277.542025 mGLO ($224,435,376.33 at $1.01720039 NAV): Base 102,420,370.864525 (block 62967570), Robinhood Chain 76,814,424.187131 (block 124269432), Ethereum 38,514,074.249042 (block 26506658), X Layer 2,891,408.006517 (block 77015690), Optimism 0.199960 (block 160093004), and Monad 0.034851 (block 125868406). Confidence is probable rather than verified because underlying loan-level obligors, originators, cash sleeve, ops-reported supply discrepancy, and post-October 31 subscriptions reconciling the 33.82M token growth from October 31 to November 27 are unpublished.",
+    "compositionBasis": "Midas SAVE attestation CID QmeNwyuVyhM5HvEFfKZH9j7zCCvGrLwCBf1hYeWsTocMt1 anchored to the vlayer-notarized 2026-10-31 JTC Luxembourg valuation email ($193,415,658.76 off-chain Fasanara private-credit fund shares vs $188.95 on-chain 1token general_wallet, 100% off-chain fund shares rounded)",
+    "compositionAsOf": "2026-10-31",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The 100% Fasanara private-credit fund-share slice remains an unresolved credit-fund basket: individual receivables obligors, originators, warehouse facilities, and cash-versus-receivables split inside Fasanara SA SICAV-RAIF mGLOBAL Fund SF 36 Class A USD ACC are unpublished. In addition, the latest vlayer-notarized JTC valuation is dated 2026-10-31 ($193.42M against 186.82M tokens), whereas current six-chain on-chain supply on 2026-11-27 is 220.64M tokens ($224.44M TVL); subsequent November subscription inflows and any un-deployed cash sleeve are not independently itemized in midas-por-v2 tokens.json.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Fasanara global private-credit fund shares (Fasanara SA SICAV-RAIF SF 36, Class A USD ACC)",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "Identifies the Compartment mGLO exposure to Fasanara SA SICAV-RAIF mGLOBAL Fund SF 36 Class A USD ACC via the vlayer-notarized JTC Luxembourg valuation, but underlying receivables obligors, originators, cash sleeve, and post-October 31 subscription inflows remain undisclosed."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Luxembourg securitisation vehicle, Compartment mGLO",
+        "role": "other",
+        "jurisdiction": "Luxembourg"
+      },
+      {
+        "name": "JTC Luxembourg (independent fund administrator; monthly NAV valuation)",
+        "role": "other",
+        "jurisdiction": "Luxembourg"
+      },
+      {
+        "name": "Fordefi (platform-level MPC technology; mGLO-specific custody mandate unverified)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 PR-3 Batch 1",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Midas mGLO November 25, 2026 SAVE attestation (JTC Luxembourg valuation email for LU3357216087 / Compartment mGLO)",
+        "url": "https://gateway.pinata.cloud/ipfs/QmeNwyuVyhM5HvEFfKZH9j7zCCvGrLwCBf1hYeWsTocMt1"
+      },
+      {
+        "label": "Midas PoR v2 canonical token registry (tokens.json)",
+        "url": "https://raw.githubusercontent.com/midas-apps/midas-por-v2/main/tokens.json"
+      },
+      {
+        "label": "Midas Attestation Engine",
+        "url": "https://blog.midas.app/introducing-the-midas-attestation-engine/"
+      },
+      {
+        "label": "Fordefi Midas custody case study (platform-level MPC claim)",
+        "url": "https://www.fordefi.com/customer-stories/how-midas-brings-tokenized-investment-opportunities-on-chain-with-fordefis-defi-native-custody-2ti85"
+      }
+    ],
+    "uncertainty": "The vlayer-notarized JTC Luxembourg email (subject: LU3357216087 - mGLO; the email does not state whether ISIN LU3357216087 identifies Compartment mGLO or the underlying Fasanara SF 36 share class) confirms Compartment mGLO holding Fasanara SA SICAV-RAIF mGLOBAL Fund SF 36 Class A USD ACC with monthly independent administration by JTC Luxembourg. Because mGLO-specific offering documents were not recovered (Midas web pages returned HTTP 403), segregation and bankruptcy remoteness are kept unknown rather than inferred from sister-product mGLOBAL blog posts. Public disclosures also do not name the custodian(s) safekeeping underlying receivables or cash accounts, publish no provider shares, and disclose no rehypothecation prohibition. Fordefi remains a platform-level Midas custody claim rather than a mGLO-specific custody agreement."
+  }
+}

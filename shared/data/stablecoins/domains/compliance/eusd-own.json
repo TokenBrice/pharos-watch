@@ -1,0 +1,105 @@
+{
+  "id": "eusd-own",
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "Own eUSD is an overcollateralized on-chain CDP and peg stability module stablecoin on Robinhood Chain backed by smart-contract USDG, frxUSD, tokenized S&P 500 equity (eSPY), and WETH collateral, with no regulated fiat issuer obligated to redeem holders for fixed fiat monetary value under GENIUS Act Section 2(22). Redemptions settle on-chain in USDG or underlying collateral assets rather than bank-wired US dollars.",
+      "references": [
+        {
+          "label": "GENIUS Act: payment stablecoin definition",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "Own eUSD overview documentation",
+          "url": "https://docs.own.money/eusd",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "Own eUSD redemptions documentation",
+          "url": "https://docs.own.money/eusd/redemptions",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://docs.own.money/resources/addresses",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Own operates as an overcollateralized CDP, LP-vault, and PSM smart-contract protocol on Robinhood Chain without a licensed fiat issuer or fixed-money fiat redemption obligation. Protocol documentation publishes verified Robinhood Chain contract addresses, risk parameters, and redemption mechanics, and settles redemptions on-chain in USDG or collateral rather than regulated bank reserves or monthly CPA attestations.",
+    "references": [
+      {
+        "label": "GENIUS Act: payment stablecoin definition",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "Own protocol risks documentation",
+        "url": "https://docs.own.money/protocol/risks",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "Own governance and trust model documentation",
+        "url": "https://docs.own.money/protocol/governance",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-11-27"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "Public Law 119-27, Section 2(22) payment stablecoin definition",
+        "https://docs.own.money/eusd",
+        "https://docs.own.money/protocol/governance",
+        "https://docs.own.money/protocol/risks"
+      ],
+      "summary": "As of 2026-11-27, Own's primary documentation and verified Robinhood Chain contracts establish an overcollateralized on-chain CDP and PSM protocol settling in on-chain USDG and collateral tokens rather than a legal fiat redemption obligation; no GENIUS PPSI authorization or public enforcement action applies or was found.",
+      "reviewer": "Listing Policy v2 PR-3 Batch 5 addition review 2026-11-27",
+      "reviewedAt": "2026-11-27",
+      "references": [
+        {
+          "label": "Own protocol risks documentation",
+          "url": "https://docs.own.money/protocol/risks",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "Own governance and trust model documentation",
+          "url": "https://docs.own.money/protocol/governance",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        }
+      ]
+    },
+    "reviewer": "Listing Policy v2 PR-3 Batch 5 addition review 2026-11-27",
+    "reviewedAt": "2026-11-27"
+  },
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Own eUSD overview documentation",
+        "url": "https://docs.own.money/eusd"
+      },
+      {
+        "label": "Own governance and trust model documentation",
+        "url": "https://docs.own.money/protocol/governance"
+      },
+      {
+        "label": "ESMA Q&A: offering an EMT to the public requires an authorised issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2404"
+      }
+    ]
+  }
+}

@@ -1,0 +1,370 @@
+{
+  "id": "eusd-own",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Own EUSD token Solidity source (non-proxy ERC-20 with allowance-free MINTER_ROLE burn)",
+        "url": "https://github.com/own-protocol/own-v2/blob/main/src/eusd/EUSD.sol"
+      },
+      {
+        "label": "Own governance and trust model documentation",
+        "url": "https://docs.own.money/protocol/governance"
+      },
+      {
+        "label": "Own Robinhood Chain deployment record",
+        "url": "https://github.com/own-protocol/own-v2/blob/main/docs/contracts-robinhood.md"
+      },
+      {
+        "label": "Pinned Robinhood Chain JSON-RPC read at block 124275851 (2026-11-27T13:16:48Z)",
+        "url": "https://robinhood-rpc.publicnode.com"
+      }
+    ],
+    "evidence": "Reviewed 2026-11-27 at Robinhood Chain blocks 124271952 and 124275851. EUSD (0x8b84d644cecaee6d21373f37e1ba00f85ed7cdb7) is a non-proxy ERC-20 token (EIP-1967 implementation slot zero) with no transfer pause or address freeze list in EUSD.sol. However, the 3-of-5 Governance Safe (0x470f35a7e5d4cd490d74799ac01e7beea7f478e2, SafeL2 1.4.1, zero guard, zero modules) holds DEFAULT_ADMIN_ROLE on EUSD with no timelock and can grant MINTER_ROLE to any address or upgrade any minter proxy; EUSD.burn(from, amount) is allowance-free and can destroy arbitrary holder balances. In addition, 89.37% of net external backing is Paxos USDG (directly freezable) and 4.18% is tokenized equity eSPY. Under Pharos taxonomy, the no-delay allowance-free burn authorization path and >50% freezable upstream collateral resolve to Possible.",
+    "reviewer": "Listing Policy v2 PR-3 Batch 5 addition review 2026-11-27",
+    "reviewedAt": "2026-11-27"
+  },
+  "oracleRisk": {
+    "tier": "single-source-or-laggy",
+    "summary": "Own eUSD prices collateral through ChainlinkOracleVerifier (0x985bd814) on Robinhood Chain using Chainlink AggregatorV3 feeds as primary anchor and an EIP-712 signed in-house keeper fallback bounded by per-asset anchor bands during market closures or quiet stretches. Notably, FRXUSD is priced via the USDG/USD Chainlink feed rather than a native frxUSD feed, and Robinhood Chain has no L2 sequencer uptime feed.",
+    "role": "collateral-pricing",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-11-27",
+      "reviewer": "Listing Policy v2 PR-3 Batch 5 addition review 2026-11-27",
+      "rationale": "Own eUSD mints across isolated collateral branches with distinct risk parameters, oracle configurations, and liquidation/redemption paths: USDG (EUSDPsm and Fables USDG/eUSD LP vaults), frxUSD (Fables frxUSD/eUSD LP vault using the USDG/USD proxy feed), WETH (EUSDManager B with 10% in-house fallback band), and legacy eSPY (mint-paused v1 manager reading the legacy ChainlinkOracleVerifier). Each active collateral branch requires its own oracle and liquidation review.",
+      "sources": [
+        {
+          "label": "Own Chainlink feeds and hybrid oracle design documentation",
+          "url": "https://github.com/own-protocol/own-v2/blob/main/docs/chainlink-feeds-robinhood.md"
+        },
+        {
+          "label": "Own eUSD risk parameters documentation",
+          "url": "https://docs.own.money/eusd/parameters"
+        },
+        {
+          "label": "Own ChainlinkOracleVerifier source code",
+          "url": "https://github.com/own-protocol/own-v2/blob/main/src/oracle/ChainlinkOracleVerifier.sol"
+        }
+      ]
+    },
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Listing Policy v2 PR-3 Batch 5 addition review 2026-11-27",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Own Chainlink feeds and hybrid oracle design documentation",
+        "url": "https://github.com/own-protocol/own-v2/blob/main/docs/chainlink-feeds-robinhood.md"
+      },
+      {
+        "label": "Own ChainlinkOracleVerifier source code",
+        "url": "https://github.com/own-protocol/own-v2/blob/main/src/oracle/ChainlinkOracleVerifier.sol"
+      },
+      {
+        "label": "Own eUSD risk parameters documentation",
+        "url": "https://docs.own.money/eusd/parameters"
+      },
+      {
+        "label": "Own eUSD redemptions documentation",
+        "url": "https://docs.own.money/eusd/redemptions"
+      },
+      {
+        "label": "Pinned Robinhood Chain JSON-RPC read at block 124274762 (2026-11-27T13:14:50Z)",
+        "url": "https://robinhood-rpc.publicnode.com"
+      }
+    ],
+    "branches": [
+      {
+        "id": "usdg",
+        "label": "USDG collateral branch (EUSDPsm and EUSDLiquidityManager Pool 0)",
+        "tier": "standard-external",
+        "summary": "ChainlinkOracleVerifier (0x985bd814) prices USDG strictly from Chainlink USDG/USD (0x61b7e565, 8 decimals, 24h heartbeat) with in-house fallback disabled (bandBps = 0, clFreshWindow = 90,000s, maxAnchorAge = 172,800s). EUSDPsm swaps USDG 1:1 with eUSD without price deviation adjustment.",
+        "collateralAssets": [
+          "USDG"
+        ],
+        "chains": [
+          "robinhood"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink AggregatorV3 via ChainlinkOracleVerifier",
+            "path": "Chainlink USDG/USD (8 dec, 24h heartbeat, bandBps=0 Chainlink-only, 90,000s fresh window, 172,800s max anchor) -> ChainlinkOracleVerifier (0x985bd814) -> EUSDLiquidityManager USDG",
+            "address": "0x61b7e5650328764b076a108eff5fa7282a1b9ad2",
+            "chain": "robinhood",
+            "observedAt": "2026-11-27",
+            "failureDomainKeys": [
+              "chainlink-usdg-usd-robinhood",
+              "own-oracle-verifier-robinhood",
+              "robinhood"
+            ]
+          }
+        ],
+        "fallbackBehavior": "In-house keeper fallback is disabled for USDG (bandBps = 0). New LP debt mints require a fresh price within mintPriceMaxAge (3,600s, satisfied while Chainlink answer is younger than the 90,000s fresh window) and pool spot price within 100 bps (poolPriceBandBps) of oracle. No L2 sequencer uptime feed exists on Robinhood Chain. EUSDPsm redemptions remain unpauseable 1:1 swaps.",
+        "observedAt": "2026-11-27",
+        "collateralParameters": [
+          {
+            "asset": "USDG",
+            "note": "EUSDPsm: 1,000,000 eUSD debt ceiling, 0 bps mint/redeem fee, mint not paused. EUSDLiquidityManager USDG Pool 0 (Fables USDG/eUSD): 190% MCR, 120% liquidation threshold, 5% liquidation bonus, 8% staked / 6% unstaked stability fee, 50 bps redeem fee, 2,000,000 eUSD manager debt ceiling, 100 eUSD minDebt."
+          }
+        ],
+        "liquidationMechanism": "EUSDPsm positions are 1:1 cash-backed and do not liquidate. EUSDLiquidityManager USDG LP positions below 120% collateral ratio are permissionlessly liquidatable in part or in full by any keeper burning eUSD for seized LP assets plus a 5% bonus, valued at the conservative oracle lower bound.",
+        "liquidationDelaySec": 0,
+        "backstop": "Permissionless keeper liquidations on FablesAdapter vaults and direct 1:1 USDG PSM reserve buffer; no dedicated Stability Pool exists.",
+        "shutdownOrBadDebtBehavior": "No automated global shutdown; the Governance Safe or Operator can pause minting on EUSDPsm or EUSDLiquidityManager while exits and redemptions remain open. Underwater positions leave residual bad debt uncollected if keepers absorb a shortfall or decline to liquidate.",
+        "failureDomainKeys": [
+          "chainlink-usdg-usd-robinhood",
+          "own-oracle-verifier-robinhood",
+          "fables-dex-robinhood",
+          "robinhood"
+        ],
+        "sources": [
+          {
+            "label": "Own Chainlink feeds documentation",
+            "url": "https://github.com/own-protocol/own-v2/blob/main/docs/chainlink-feeds-robinhood.md"
+          },
+          {
+            "label": "Own EUSDPsm source code",
+            "url": "https://github.com/own-protocol/own-v2/blob/main/src/eusd/EUSDPsm.sol"
+          },
+          {
+            "label": "Own EUSDLiquidityManager source code",
+            "url": "https://github.com/own-protocol/own-v2/blob/main/src/eusd/EUSDLiquidityManager.sol"
+          },
+          {
+            "label": "Pinned Robinhood Chain JSON-RPC read at block 124274762 (2026-11-27T13:14:50Z)",
+            "url": "https://robinhood-rpc.publicnode.com"
+          }
+        ]
+      },
+      {
+        "id": "frxusd",
+        "label": "frxUSD collateral branch (EUSDLiquidityManager Pool 1 via USDG proxy feed)",
+        "tier": "single-source-or-laggy",
+        "summary": "ChainlinkOracleVerifier (0x985bd814) maps the FRXUSD ticker to the Chainlink USDG/USD aggregator (0x61b7e565) rather than a native frxUSD market feed, creating peg-proxy basis risk if frxUSD depegs from USDG.",
+        "collateralAssets": [
+          "frxUSD"
+        ],
+        "chains": [
+          "robinhood"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink AggregatorV3 (USDG/USD proxy feed) via ChainlinkOracleVerifier",
+            "path": "Chainlink USDG/USD (0x61b7e565, 8 dec, bandBps=0, 90,000s fresh window, 172,800s max anchor) aliased as FRXUSD -> ChainlinkOracleVerifier (0x985bd814) -> EUSDLiquidityManager Pool 1",
+            "address": "0x61b7e5650328764b076a108eff5fa7282a1b9ad2",
+            "chain": "robinhood",
+            "observedAt": "2026-11-27",
+            "failureDomainKeys": [
+              "chainlink-usdg-usd-robinhood",
+              "own-oracle-verifier-robinhood",
+              "frxusd-proxy-feed-basis",
+              "robinhood"
+            ]
+          }
+        ],
+        "fallbackBehavior": "In-house fallback disabled (bandBps = 0). Because FRXUSD reads USDG/USD directly, an independent frxUSD depeg would not trigger oracle-based liquidation until pool spot diverges beyond the 100 bps poolPriceBandBps guard on new adds/rebalances. EUSDPsm frxUSD debt ceiling is currently set to 0.",
+        "observedAt": "2026-11-27",
+        "collateralParameters": [
+          {
+            "asset": "frxUSD",
+            "note": "EUSDLiquidityManager USDG Pool 1 (Fables frxUSD/eUSD): 190% MCR, 120% liquidation threshold, 5% liquidation bonus, 8% staked / 6% unstaked stability fee, 50 bps redeem fee, shared 2,000,000 eUSD manager ceiling, 100 eUSD minDebt. EUSDPsm frxUSD assetConfig has debtCeiling = 0."
+          }
+        ],
+        "liquidationMechanism": "Permissionless partial or full liquidation by any keeper when LP vault collateral ratio falls below 120% at the verifier oracle price, paying a 5% bonus. Reliance on the USDG/USD proxy feed means frxUSD-specific depegs are not reflected in oracle health checks.",
+        "liquidationDelaySec": 0,
+        "backstop": "Permissionless keeper liquidations on FablesAdapter vaults; no Stability Pool.",
+        "shutdownOrBadDebtBehavior": "Governance Safe or Operator can pause new mints; exits and redemptions remain open. Uncovered bad debt stays uncollected if keepers decline underwater vaults.",
+        "failureDomainKeys": [
+          "chainlink-usdg-usd-robinhood",
+          "own-oracle-verifier-robinhood",
+          "frxusd-proxy-feed-basis",
+          "fables-dex-robinhood",
+          "robinhood"
+        ],
+        "sources": [
+          {
+            "label": "Own EUSDLiquidityManager source code",
+            "url": "https://github.com/own-protocol/own-v2/blob/main/src/eusd/EUSDLiquidityManager.sol"
+          },
+          {
+            "label": "Own ChainlinkOracleVerifier source code",
+            "url": "https://github.com/own-protocol/own-v2/blob/main/src/oracle/ChainlinkOracleVerifier.sol"
+          },
+          {
+            "label": "Pinned Robinhood Chain JSON-RPC read at block 124274762 (2026-11-27T13:14:50Z)",
+            "url": "https://robinhood-rpc.publicnode.com"
+          }
+        ]
+      },
+      {
+        "id": "espy-legacy",
+        "label": "eSPY collateral branch (Legacy v1 EUSDManager, mint paused)",
+        "tier": "single-source-or-laggy",
+        "summary": "Legacy EUSDManager (0x9748964d, mintPaused = true) values eSPY through legacy ChainlinkOracleVerifier (0x72158ca9) reading Chainlink RHSPY/USD (0x31972439) with EIP-712 signed in-house off-hours fallback during equity market closures.",
+        "collateralAssets": [
+          "eSPY"
+        ],
+        "chains": [
+          "robinhood"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink AggregatorV3 with band-limited Own in-house signer fallback",
+            "path": "Chainlink RHSPY/USD (8 dec, 24/5 market hours, 15m silence / 4h fresh window / 5d anchor age) + EIP-712 Own keeper signer (1h staleness) -> legacy ChainlinkOracleVerifier (0x72158ca9) -> legacy EUSDManager (0x9748964d)",
+            "address": "0x319724394d3a0e3669269846abe664cd621f9f6a",
+            "chain": "robinhood",
+            "observedAt": "2026-11-27",
+            "failureDomainKeys": [
+              "chainlink-spy-usd-robinhood",
+              "own-inhouse-oracle-signer",
+              "own-legacy-oracle-verifier-robinhood",
+              "robinhood"
+            ]
+          }
+        ],
+        "fallbackBehavior": "When Chainlink RHSPY/USD is silent for >15 minutes (including weekends and overnight equity market closures up to 5 days), Own's off-chain signer pushes EIP-712 prices bounded by the configured anchor band. Minting on the legacy manager is permanently paused while repayments, withdrawals, liquidations, and redemptions stay open.",
+        "observedAt": "2026-11-27",
+        "collateralParameters": [
+          {
+            "asset": "eSPY",
+            "note": "Legacy v1 EUSDManager (mintPaused = true): 150% MCR, 120% liquidation threshold, 5% liquidation bonus, 5% stability fee, 2,000,000 eUSD legacy ceiling, 100 eUSD minDebt, 3,600s mintPriceMaxAge. Live exposure winding down (8.436 eSPY backing 383.60 eUSD debt, >1,600% CR)."
+          }
+        ],
+        "liquidationMechanism": "Permissionless partial or full keeper liquidation below 120% collateral ratio with a 5% bonus, running 24/7 even when equity markets are closed.",
+        "liquidationDelaySec": 0,
+        "backstop": "Direct keeper liquidation and sorted-list riskiest-first redemption; no Stability Pool.",
+        "shutdownOrBadDebtBehavior": "Minting is already paused as v1 winds down. An underwater position leaves residual unbacked debt on the borrower's books off the sorted redemption list until repaid or liquidated.",
+        "failureDomainKeys": [
+          "chainlink-spy-usd-robinhood",
+          "own-inhouse-oracle-signer",
+          "own-legacy-oracle-verifier-robinhood",
+          "robinhood"
+        ],
+        "sources": [
+          {
+            "label": "Own legacy Robinhood Chain contracts record",
+            "url": "https://github.com/own-protocol/own-v2/blob/main/docs/legacy-contracts-rh.md"
+          },
+          {
+            "label": "Own Chainlink feeds documentation",
+            "url": "https://github.com/own-protocol/own-v2/blob/main/docs/chainlink-feeds-robinhood.md"
+          },
+          {
+            "label": "Own eUSD redemptions documentation",
+            "url": "https://docs.own.money/eusd/redemptions"
+          }
+        ]
+      },
+      {
+        "id": "weth",
+        "label": "WETH collateral branch (EUSDManager B)",
+        "tier": "single-source-or-laggy",
+        "summary": "EUSDManager B (0xbd0a8dea) values WETH via ChainlinkOracleVerifier (0x985bd814) reading Chainlink ETH/USD (0x78f3556b) with an EIP-712 signed in-house fallback bounded within a 10% (1,000 bps) anchor band.",
+        "collateralAssets": [
+          "WETH"
+        ],
+        "chains": [
+          "robinhood"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink AggregatorV3 with 10% band-limited Own in-house signer fallback",
+            "path": "Chainlink ETH/USD (8 dec, 900s silence, 14,400s fresh window, 93,600s max anchor) + EIP-712 Own keeper signer (1,000 bps band, 3,600s staleness) -> ChainlinkOracleVerifier (0x985bd814) -> EUSDManager B (0xbd0a8dea)",
+            "address": "0x78f3556b67e17df817d51ef5a990cdaf09e8d3a9",
+            "chain": "robinhood",
+            "observedAt": "2026-11-27",
+            "failureDomainKeys": [
+              "chainlink-eth-usd-robinhood",
+              "own-inhouse-oracle-signer",
+              "own-oracle-verifier-robinhood",
+              "robinhood"
+            ]
+          }
+        ],
+        "fallbackBehavior": "After 900s of Chainlink silence, ChainlinkOracleVerifier accepts EIP-712 signed prices from Own's oracle signer within +/-10% (1,000 bps) of the last Chainlink anchor (valid up to 93,600s). Mints and redemptions require a fresh price within 3,600s; repayments and full closes work without a fresh oracle. No L2 sequencer uptime feed exists on Robinhood Chain.",
+        "observedAt": "2026-11-27",
+        "collateralParameters": [
+          {
+            "asset": "WETH",
+            "note": "EUSDManager B: 200% MCR, 140% liquidation threshold, 5% liquidation bonus, 6% stability fee, 100 bps on-chain redeemFeeBps, 2,000,000 eUSD debt ceiling, 100 eUSD minDebt, 3,600s mintPriceMaxAge. Managers A (SPY, QQQ, GLD; 150% MCR, 100 bps redeemFeeBps), C (Big Tech; 175% MCR, 200 bps redeemFeeBps), and D (High Vol; 200% MCR, 200 bps redeemFeeBps) currently hold zero debt."
+          }
+        ],
+        "liquidationMechanism": "Permissionless partial or full liquidation by any keeper when collateral ratio drops below 140%, earning a 5% bonus with surplus refunded to the position owner on full close.",
+        "liquidationDelaySec": 0,
+        "backstop": "Direct keeper liquidations and sorted-list riskiest-first redemption; no Stability Pool.",
+        "shutdownOrBadDebtBehavior": "No automated global shutdown; Governance Safe or Operator can pause minting per manager while exits stay open. Underwater debt above seized collateral remains on the owner's account off the sorted redemption list.",
+        "failureDomainKeys": [
+          "chainlink-eth-usd-robinhood",
+          "own-inhouse-oracle-signer",
+          "own-oracle-verifier-robinhood",
+          "robinhood"
+        ],
+        "sources": [
+          {
+            "label": "Own Chainlink feeds documentation",
+            "url": "https://github.com/own-protocol/own-v2/blob/main/docs/chainlink-feeds-robinhood.md"
+          },
+          {
+            "label": "Own eUSD risk parameters documentation",
+            "url": "https://docs.own.money/eusd/parameters"
+          },
+          {
+            "label": "Pinned Robinhood Chain JSON-RPC read at block 124274762 (2026-11-27T13:14:50Z)",
+            "url": "https://robinhood-rpc.publicnode.com"
+          }
+        ]
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "Own eUSD is issued solely on Robinhood Chain (0x8b84d644cecaee6d21373f37e1ba00f85ed7cdb7). Although EUSD.sol includes an ERC-7802 crosschainMint/crosschainBurn surface, maxNetBridgedIn() and netBridgedIn() are both zero at pinned block 124272592, so no live cross-chain bridge route is active.",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Listing Policy v2 PR-3 Batch 5 addition review 2026-11-27",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Own Robinhood Chain deployment record",
+        "url": "https://github.com/own-protocol/own-v2/blob/main/docs/contracts-robinhood.md"
+      },
+      {
+        "label": "Own EUSD token Solidity source",
+        "url": "https://github.com/own-protocol/own-v2/blob/main/src/eusd/EUSD.sol"
+      },
+      {
+        "label": "Pinned Robinhood Chain JSON-RPC read at block 124272592 (2026-11-27T13:10:58Z)",
+        "url": "https://robinhood-rpc.publicnode.com"
+      }
+    ],
+    "routes": [
+      {
+        "id": "robinhood:0x8b84d644cecaee6d21373f37e1ba00f85ed7cdb7",
+        "destinationChain": "robinhood",
+        "canonicalChain": "robinhood",
+        "contractAddress": "0x8b84d644cecaee6d21373f37e1ba00f85ed7cdb7",
+        "protocol": "Own eUSD (native issuance on Robinhood Chain)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain at Robinhood Chain block 124272592 (2026-11-27): name Own eUSD, symbol eUSD, 18 decimals, non-proxy ERC-20 with maxNetBridgedIn() = 0 and netBridgedIn() = 0. Sole live deployment on Robinhood Chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-27",
+        "observedBlock": 124272592,
+        "sources": [
+          {
+            "label": "Own Robinhood Chain deployment record",
+            "url": "https://github.com/own-protocol/own-v2/blob/main/docs/contracts-robinhood.md"
+          },
+          {
+            "label": "Own eUSD token on Robinhood Blockscout",
+            "url": "https://robinhoodchain.blockscout.com/address/0x8b84d644cecaee6d21373f37e1ba00f85ed7cdb7"
+          }
+        ]
+      }
+    ]
+  }
+}

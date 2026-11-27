@@ -1,0 +1,72 @@
+{
+  "id": "gpyusdse-galaxy",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Morpho: StableEarn Prime PYUSD exact vault",
+        "url": "https://app.morpho.org/stable/vault/0x8c3250f028a2c8d29319eb3ee3214b90462394ba"
+      },
+      {
+        "label": "Morpho Vault V2 lending and variable-NAV share mechanics",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      },
+      {
+        "label": "Galaxy Curation terms: variable lending shares, no custody or financial-service role, sections 3 and 4",
+        "url": "https://docs.curation.galaxy.com/legal/terms-of-use"
+      },
+      {
+        "label": "Structural ART/EMT exclusion for variable-value vault shares; not a statement on EU offering, securities, or CASP law",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "gPYUSDse is a PYUSD-denominated Morpho Vault V2 lending share on StableChain, offered as a yield-bearing lending strategy. Assets per share vary with borrower interest, fees, and realized lending losses, and withdrawals depend on available liquidity. Galaxy Curation LLC terms describe vault shares and variable rewards, disclaim guaranteed withdrawal amounts or timing, and identify Galaxy as a strategy publisher rather than a custodian or payment-stablecoin obligor. These materials establish a variable-NAV lending position rather than a payment stablecoin carrying an issuer obligation to redeem for a fixed amount of monetary value under GENIUS Act section 2(22).",
+      "references": [
+        {
+          "label": "Morpho: StableEarn Prime PYUSD exact vault",
+          "url": "https://app.morpho.org/stable/vault/0x8c3250f028a2c8d29319eb3ee3214b90462394ba",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "Galaxy Curation terms: vault shares, variable rewards, and liquidity-constrained redemption",
+          "url": "https://docs.curation.galaxy.com/legal/terms-of-use",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "Sourcify verified VaultV2 on Stable (chain 988, 0x8c3250f028a2c8d29319eb3ee3214b90462394ba)",
+          "url": "https://sourcify.dev/server/v2/contract/988/0x8c3250f028a2c8d29319eb3ee3214b90462394ba?fields=all",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "Morpho Vault V2 documentation",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Assessment as of 2026-11-27 applies to gPYUSDse separately from underlying Paxos PYUSD. Galaxy Curation LLC is identified by its governing terms as the strategy publisher and curator, not a fixed-value redemption obligor. Shares are minted through the VaultV2 smart contract on StableChain; the reviewed sources do not establish a separate legal payment-stablecoin issuer for this vault share, so issuerEntity and issuerDomicile are omitted consistently with the Morpho vault family precedent. No GENIUS issuer approval, registration, or issuer pathway is asserted, and Paxos PYUSD regulatory authorizations and reserve reports are not attributed to gPYUSDse. This scope assessment does not decide securities, investment-company, adviser, money-transmission, or other legal treatment.",
+    "references": [
+      {
+        "label": "GENIUS Act section 2(22), payment stablecoin definition",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-11-27",
+        "sourceDate": "2025-07-18"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-11-27"
+  }
+}

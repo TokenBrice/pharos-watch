@@ -225,6 +225,16 @@ export const SUPPLY_PERIMETER_CHANGES = [
     evidenceUrl: "https://api.etherfuse.com/statement/attestation/9fa9cef5-3077-435d-9bcf-9f3990256ab3.pdf",
     marketWide: false,
   },
+  // === Listing Policy v2 PR-3 mGLO six-chain native supply plan (Pricing v7.0) ===
+  // Admit Midas Fasanara Global Open (mGLO) on reviewed 6-chain additive native supply
+  // (Base, Robinhood Chain, Ethereum, X Layer, Optimism, Monad; preferMcap: true).
+  {
+    stablecoinId: "mglo-midas-fasanara",
+    changedAt: Date.parse("2026-11-27T16:00:00Z") / 1000,
+    chainIds: ["base", "robinhood", "ethereum", "xlayer", "optimism", "monad"],
+    evidenceUrl: "https://raw.githubusercontent.com/midas-apps/midas-por-v2/main/tokens.json",
+    marketWide: false,
+  },
   // Listing policy v2 (core-stablecoins-v2): Pharos stablecoin totals and non-USD cohorts exclude
   // tokenized fund shares from the cutover without restating pre-cutover core-stablecoins-v1
   // history; provider-sourced /api/stablecoin-charts may still include llamaId fund shares while

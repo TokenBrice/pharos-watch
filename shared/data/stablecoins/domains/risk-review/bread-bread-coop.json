@@ -1,0 +1,81 @@
+{
+  "id": "bread-bread-coop",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Sourcify exact-match verified EIP173ProxyWithReceive proxy (0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3)",
+        "url": "https://repo.sourcify.dev/100/0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3"
+      },
+      {
+        "label": "Sourcify exact-match verified Bread implementation (0x3146b62466b76642127b9f4fe34fa7cd9968bf96)",
+        "url": "https://repo.sourcify.dev/100/0x3146b62466b76642127b9f4fe34fa7cd9968bf96"
+      },
+      {
+        "label": "Gnosis Chain block 49496158 (2026-11-27T13:02:20Z)",
+        "url": "https://gnosisscan.io/block/49496158"
+      },
+      {
+        "label": "Gnosis Chain public JSON-RPC used for pinned reads",
+        "url": "https://rpc.gnosischain.com"
+      }
+    ],
+    "evidence": "Gnosis Chain holds 100% of BREAD supply (352,321.934828 BREAD at block 49496158, 2026-11-27T13:02:20Z). Verified Bread.sol implementation 0x3146b62466b76642127b9f4fe34fa7cd9968bf96 inherits ERC20VotesUpgradeable and OwnableUpgradeable and exposes mint, burn, claimYield, setYieldClaimer, and rescueToken (reverting on the Savings xDAI vault token), with no local holder blacklist, freeze, pause, or privileged arbitrary burn. However, proxy 0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3 is an active mutable EIP173ProxyWithReceive whose EIP-1967 admin slot points to the 5-of-10 Bread Cooperative Safe 0x918def5d593f46735f74f9e2b280fe51af3a99ad with zero timelock. Because an active mutable token upgrade authority can replace transfer logic, FreezeWatch rules classify BREAD as Possible, ahead of its inherited xdai-gnosis backing exposure (100% of reserves).",
+    "reviewer": "Pharos Listing Policy v2 addition review (2026-11-27)",
+    "reviewedAt": "2026-11-27"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "BREAD is deployed exclusively on Gnosis Chain as a single-chain ERC-20 EIP-173 proxy wrapper over native xDAI deposited into the Gnosis Savings xDAI vault. No canonical cross-chain bridge representation or remote-chain minting adapter exists for BREAD itself. Cross-chain bridge risk for the underlying xDAI collateral is inherited separately via the xdai-gnosis serial-claim wrapper dependency.",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 addition review (2026-11-27)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Gnosis Chain BREAD proxy contract (0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3)",
+        "url": "https://gnosisscan.io/address/0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3"
+      },
+      {
+        "label": "Sourcify exact-match verified Bread implementation (0x3146b62466b76642127b9f4fe34fa7cd9968bf96)",
+        "url": "https://repo.sourcify.dev/100/0x3146b62466b76642127b9f4fe34fa7cd9968bf96"
+      },
+      {
+        "label": "Gnosis Chain block 49496158 (2026-11-27T13:02:20Z)",
+        "url": "https://gnosisscan.io/block/49496158"
+      }
+    ],
+    "routes": [
+      {
+        "id": "gnosis:0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3",
+        "destinationChain": "gnosis",
+        "canonicalChain": "gnosis",
+        "contractAddress": "0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3",
+        "protocol": "Bread Cooperative BREAD (Gnosis native EIP-173 proxy wrapper)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Sole canonical deployment verified at Gnosis Chain block 49496158 (2026-11-27T13:02:20Z). BREAD mints and burns strictly 1:1 against native xDAI via the Gnosis Savings xDAI ERC-4626 vault on Gnosis Chain with no cross-chain BREAD bridge routes; wrapper-local proxy upgradeability is scored in Mint Authority.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-27",
+        "observedBlock": 49496158,
+        "sources": [
+          {
+            "label": "Gnosis Chain BREAD proxy contract (0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3)",
+            "url": "https://gnosisscan.io/address/0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3"
+          },
+          {
+            "label": "Sourcify exact-match verified Bread implementation (0x3146b62466b76642127b9f4fe34fa7cd9968bf96)",
+            "url": "https://repo.sourcify.dev/100/0x3146b62466b76642127b9f4fe34fa7cd9968bf96"
+          },
+          {
+            "label": "Gnosis Chain public JSON-RPC used for pinned reads",
+            "url": "https://rpc.gnosischain.com"
+          }
+        ]
+      }
+    ]
+  }
+}

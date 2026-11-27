@@ -273,8 +273,22 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
         sourceUrl: "https://eth.blockscout.com/api/v2/smart-contracts/0xf943Cb8D5f06f2bBF352878ebEF3Ec5C537A20bA",
         note: "This config covers only UsdcVault redeem into USDC through sUSDS redemption and the PSM. The alternate exit() payout in sUSDS is not registered or conflated with this endpoint; current PSM fees, enablement and USDC liquidity must be measured.",
       },
+      {
+        id: "svzchf-frankencoin",
+        outputAsset: "zchf-frankencoin",
+        reviewedAt: "2026-11-27",
+        sourceUrl: "https://eth.blockscout.com/api/v2/smart-contracts/0xe5f130253ff137f9917c0107659a4c5262abf6b0",
+        note: "The reviewed Ethereum SavingsVaultZCHF_2 redeem path synchronously burns svZCHF and withdraws ZCHF from Frankencoin Savings with no withdrawal lock or fee. Output is CHF-pegged ZCHF, not USD; no USD parity or favorable capacity is inferred.",
+      },
+      {
+        id: "fliteusd-fluid",
+        outputAsset: "usdc-circle",
+        reviewedAt: "2026-11-27",
+        sourceUrl: "https://eth.blockscout.com/api/v2/smart-contracts/0xe16ccc91a8134d428e7b6240177f9e2b227b9743",
+        note: "Verified Ethereum FluidLiteVault redeem() executes synchronously against the Fluid fUSDC buffer subject to _withdrawalFeeBPS (5 bps at block 26506658, configurable up to 50 bps) and isWithdrawalsPaused(). Raw USDC.balanceOf(vault) is always zero, so executable capacity and net haircut are measured by the certified erc4626-instant execution observer rather than raw idle USDC reserve telemetry.",
+      },
     ],
-    ({ id: _id, outputAsset, sourceUrl, note }) => {
+    ({ id: _id, outputAsset, sourceUrl, note, reviewedAt = "2026-10-05" }) => {
       const docs = [sourceRef("Reviewed synchronous underlying redemption implementation", sourceUrl, ["route", "access", "settlement", "fees", "capacity"])];
       return defineStablecoinRedeemConfig({
         capacityModel: { kind: "unquantified" },
@@ -285,14 +299,14 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
           "Pinned convertToAssets/previewRedeem and the actual synchronous underlying receipt quantify the withdrawal haircut; no static fee or cost ceiling is assumed. Network gas is excluded as for exact DEX routes.",
           "formula",
         ),
-        reviewedAt: "2026-10-05",
+        reviewedAt,
         v9RouteReviewTerms: {
           settlementModel: "atomic",
           settlementDelaySec: 0,
           scoringDisposition: "bounded-terms-gap",
           missingScoringFields: ["capacity", "cost"],
           rationale: "Source-confirmed synchronous underlying redemption is a real route, but only a fresh admitted execution certificate quantifies same-notional capacity and cost.",
-          reviewedAt: "2026-10-05",
+          reviewedAt,
           docs,
         },
         docs,
@@ -2025,6 +2039,72 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     notes: [
       "Verified USDHL/MExtension unwrap() burns USDhl and transfers canonical M0 M 1:1 with zero fee on HyperEVM for any non-blacklisted holder.",
       "Live m0-wrapper-underlying telemetry verifies M.balanceOf(USDhl) >= USDhl.totalSupply() (100.08% at review). Final fiat liquidity inherits parent m-m0 constraints, and Felix has placed USDhl in sunset maintenance mode.",
+    ],
+  }),
+  "siusd-infinifi": defineStablecoinRedeemConfig({
+    reviewedAt: "2026-11-27",
+    accessModel: "permissionless-onchain",
+    settlementModel: "atomic",
+    executionModel: "rules-based-nav",
+    outputAssetType: "stable-single",
+    outputAssets: ["iusd-infinifi"],
+    routeExitCorrelation: "wrapper-to-parent-dependency",
+    capacityModel: { kind: "unquantified" },
+    costModel: fixedFee(
+      0,
+      "InfiniFiGatewayV4.unstake() redeems siUSD into canonical iUSD at the vault exchange rate with zero wrapper exit fee; direct StakedToken.redeem() reverts StakedTokenNotAvailable outside the gateway, and exits halt while paused or when YieldSharing.unaccruedYield() is negative.",
+    ),
+    v9RouteReviewTerms: {
+      settlementModel: "atomic",
+      settlementDelaySec: 0,
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity"],
+      rationale:
+        "InfiniFiGatewayV4.unstake() redeems siUSD into canonical iUSD atomically with zero wrapper fee, but direct StakedToken.redeem() reverts outside the gateway and exits halt when paused or when YieldSharing.unaccruedYield() is negative. Generic ERC-4626 reserve telemetry measures StakedToken idle iUSD without observing gateway pause/loss gates or emitting gateway output identity, so capacity remains unquantified until a gateway-aware observer is implemented.",
+      reviewedAt: "2026-11-27",
+      docs: [
+        sourceRef("infiniFi StakedToken documentation", "https://docs.infinifi.xyz/dev-docs/tokens/staked-token", ["route", "access", "settlement"]),
+        sourceRef("Verified StakedToken (siUSD) source", "https://eth.blockscout.com/api/v2/smart-contracts/0xdbdc1ef57537e34680b898e1febd3d68c7389bcb", ["route", "capacity", "fees", "settlement"]),
+        sourceRef("Verified InfiniFiGatewayV4 unstake source", "https://eth.blockscout.com/api/v2/smart-contracts/0x750136ac021a7149f0ee38141d0ba920cca1fc5d", ["route", "access", "fees", "settlement"]),
+        sourceRef("Verified YieldSharingV3 loss and gate implementation", "https://eth.blockscout.com/api/v2/smart-contracts/0x0d5dbf208a9a7540018d204a9a0ad08a091407e5", ["capacity", "settlement"]),
+      ],
+    },
+    docs: [
+      sourceRef("infiniFi StakedToken documentation", "https://docs.infinifi.xyz/dev-docs/tokens/staked-token", ["route", "access", "settlement"]),
+      sourceRef("Verified StakedToken (siUSD) source", "https://eth.blockscout.com/api/v2/smart-contracts/0xdbdc1ef57537e34680b898e1febd3d68c7389bcb", ["route", "capacity", "fees", "settlement"]),
+      sourceRef("Verified InfiniFiGatewayV4 unstake source", "https://eth.blockscout.com/api/v2/smart-contracts/0x750136ac021a7149f0ee38141d0ba920cca1fc5d", ["route", "access", "fees", "settlement"]),
+      sourceRef("Verified YieldSharingV3 loss and gate implementation", "https://eth.blockscout.com/api/v2/smart-contracts/0x0d5dbf208a9a7540018d204a9a0ad08a091407e5", ["capacity", "settlement"]),
+      sourceRef("infiniFi risk disclosures", "https://docs.infinifi.xyz/risk-disclosures", ["capacity", "settlement"]),
+    ],
+    notes: [
+      "siUSD holds 100% of its totalAssets as idle canonical Ethereum iUSD; ordinary holders exit atomically via InfiniFiGatewayV4.unstake() (0x3f04b65ddbd87f9ce0a2e7eb24d80e7fb87625b5) rather than calling StakedToken.redeem() directly.",
+      "Because generic ERC-4626 reserve telemetry does not observe gateway pause or negative-unaccruedYield() gates, the route remains explicitly unquantified pending a gateway-aware observer. Onward conversion from iUSD to USDC remains governed by the parent iusd-infinifi buffer and queue-redeem route, and siUSD principal is slashable via applyLosses() after liUSD.",
+    ],
+  }),
+  "bread-bread-coop": defineStablecoinRedeemConfig({
+    reviewedAt: "2026-11-27",
+    accessModel: "permissionless-onchain",
+    settlementModel: "atomic",
+    executionModel: "deterministic-onchain",
+    outputAssetType: "stable-single",
+    outputAssets: ["xdai-gnosis"],
+    capacityModel: {
+      kind: "reserve-sync-metadata",
+      requiredOutputAssetKeys: ["xdai-gnosis"],
+    },
+    costModel: fixedFee(
+      0,
+      "Verified Bread.sol burn(amount, receiver) withdraws WXDAI from the Gnosis Savings xDAI ERC-4626 vault and unwraps to native xDAI 1:1 atomically with zero protocol fee.",
+    ),
+    docs: [
+      sourceRefFull("Sourcify exact-match verified Bread implementation (Gnosis)", "https://repo.sourcify.dev/100/0x3146b62466b76642127b9f4fe34fa7cd9968bf96"),
+      sourceRef("Gnosis Chain BREAD proxy contract", "https://gnosisscan.io/address/0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3", ["route", "access", "capacity"]),
+      sourceRef("Gnosis Chain Savings xDAI vault contract", "https://gnosisscan.io/address/0xaf204776c7245bf4147c2612bf6e5972ee483701", ["capacity", "settlement"]),
+      sourceRef("Bread Cooperative Solidarity Fund", "https://fund.bread.coop/", ["route", "fees", "access"]),
+    ],
+    notes: [
+      "Permissionless 1:1 atomic burn() on Gnosis Chain backed by live Savings xDAI maxWithdraw(BREAD) escrow telemetry (100.19% collateralized at block 49496158); surplus yield above totalSupply goes to Bread Cooperative YieldDistributor.",
+      "Output is native Gnosis xDAI; downstream xDAI-to-Ethereum bridge settlement remains governed by parent xdai-gnosis.",
     ],
   }),
 };

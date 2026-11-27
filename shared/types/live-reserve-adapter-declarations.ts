@@ -1119,7 +1119,7 @@ const erc4626SingleAssetParamsSchema = z
     // Whole-token pooled claim, not an allocation to its accounting asset.
     // Underlying observations remain contextual and look-through stays unknown.
     pooledClaim: erc4626DeployedExposureSchema.optional(),
-    redemptionRoute: z.literal("async-request").optional(),
+    redemptionRoute: z.enum(["async-request", "gateway-only"]).optional(),
     redemptionLock: z.array(z.object({
       selector: z.union([EvmSelectorSchema, z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*\(\)$/)]),
       kind: z.enum(["cooldown-seconds", "unstake-window-seconds", "paused-bool"]),
@@ -1155,6 +1155,13 @@ const erc4626SingleAssetParamsSchema = z
         code: "custom",
         path: ["redemptionLock"],
         message: "Asset-targeted redemption locks require a reviewed slice.expectedAssetAddress",
+      });
+    }
+    if (params.redemptionRoute === "gateway-only" && (params.redemptionLiquidity || params.redemptionLock?.length)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["redemptionRoute"],
+        message: "Gateway-only redemption routes cannot configure vault-only redemptionLiquidity or redemptionLock",
       });
     }
   });
@@ -1204,6 +1211,7 @@ const escrowBalanceSharedParamsShape = {
   holderEligibility: RedemptionHolderEligibilitySchema.optional(),
   settlementDelaySec: z.number().int().nonnegative().optional(),
   compareToCoinSupply: z.boolean().optional(),
+  redemptionOutputAssetKey: z.string().trim().min(1).optional(),
   ...OptionalEvmRpcFields,
 };
 

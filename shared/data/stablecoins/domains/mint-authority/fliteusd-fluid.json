@@ -1,0 +1,305 @@
+{
+  "id": "fliteusd-fluid",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "none-resolved-mint",
+    "confidence": "verified",
+    "summary": "fLiteUSD is a UUPS-upgradeable ERC-4626 strategy vault over Ethereum USDC. Current share minting occurs exclusively against deposited USDC in deposit/mint with no privileged share-minter. However, primary owner FluidTimelockController (24-hour delay, proposed by a 6-of-12 Avocado multisig and executed by a 3-of-5 Safe) can upgrade the vault implementation via UUPS, secondary owner can pause deposits and withdrawals immediately, and upgradeable StrategyHandler can pull USDC funds and set exchange-price accrual parameters. Native USDC issuance remains inherited from usdc-circle.",
+    "headline": "Deposits back fLiteUSD shares; 24-hour timelocked UUPS upgrades and StrategyHandler fund pulls remain, while USDC stays upstream.",
+    "inheritedFrom": "usdc-circle",
+    "economicCapSemantics": "bounded",
+    "capSemanticsReview": {
+      "verdict": "bounded-by-construction",
+      "rationale": "At finalized Ethereum block 26506658 (hash 0x2b69b7934b1e88fb42e9f10e6d0bff1f9114b5f1334c87ee41cc2aa8c9210f31), verified FluidLiteVault implementation 0xe16ccc91a8134d428e7b6240177f9e2b227b9743 creates shares solely inside deposit() and mint() after USDC.safeTransferFrom and FUSDC.deposit. No privileged arbitrary share-mint entrypoint exists in the current implementation. Primary owner FluidTimelockController holds upgrade-only UUPS authority (24-hour delay), which is tracked separately under upgradeability. Parent USDC issuance is carried by the serial-claim dependency on usdc-circle.",
+      "reviewedAt": "2026-11-27",
+      "reviewer": "Pharos Listing Policy v2 Batch 2 review",
+      "sources": [
+        {
+          "label": "Verified FluidLiteVault UUPS implementation source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16ccc91a8134d428e7b6240177f9e2b227b9743"
+        },
+        {
+          "label": "Ethereum PublicNode RPC: pinned reads at finalized block 26506658 (2026-11-27T12:51:35Z)",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "upgradeability": {
+      "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0x273da948aca9261043fbdb2a857bc255ecc29012"
+      ],
+      "proxyAddresses": [
+        "0x273da948aca9261043fbdb2a857bc255ecc29012"
+      ],
+      "implementationAddresses": [
+        "0xe16ccc91a8134d428e7b6240177f9e2b227b9743"
+      ],
+      "adminAddresses": [
+        "0x4d6ce4f4498d59eed397bcbc687805a07f9b2346"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 86400,
+      "controlRef": "FluidTimelockController (fLiteUSD owner and UUPS upgrader)",
+      "observedAt": "2026-11-27",
+      "observedBlock": 26506658,
+      "sources": [
+        {
+          "label": "Verified FluidLiteVaultProxy source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x273da948aca9261043fbdb2a857bc255ecc29012"
+        },
+        {
+          "label": "Verified FluidLiteVault UUPS implementation source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16ccc91a8134d428e7b6240177f9e2b227b9743"
+        },
+        {
+          "label": "Verified FluidTimelockController source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4d6ce4f4498d59eed397bcbc687805a07f9b2346"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x273da948aca9261043fbdb2a857bc255ecc29012",
+        "deploymentRefs": [
+          "ethereum:0x273da948aca9261043fbdb2a857bc255ecc29012"
+        ],
+        "label": "fLiteUSD ERC-4626 UUPS proxy",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-27",
+        "observedBlock": 26506658,
+        "sources": [
+          {
+            "label": "Verified FluidLiteVaultProxy source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x273da948aca9261043fbdb2a857bc255ecc29012"
+          },
+          {
+            "label": "Verified FluidLiteVault UUPS implementation source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16ccc91a8134d428e7b6240177f9e2b227b9743"
+          }
+        ],
+        "evidence": "At finalized Ethereum block 26506658, FluidLiteVaultProxy 0x273da948aca9261043fbdb2a857bc255ecc29012 resolves EIP-1967 implementation 0xe16ccc91a8134d428e7b6240177f9e2b227b9743 (admin and beacon slots zero). Verified implementation mints shares solely after USDC.safeTransferFrom and FUSDC.deposit, and does not create durable USDC supply."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x4d6ce4f4498d59eed397bcbc687805a07f9b2346",
+        "deploymentRefs": [
+          "ethereum:0x273da948aca9261043fbdb2a857bc255ecc29012"
+        ],
+        "label": "FluidTimelockController (fLiteUSD owner and UUPS upgrader)",
+        "role": "proxy-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 86400,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "FluidTimelockController is _owner on FluidLiteVault and can authorize UUPS implementation upgrades, reassign roles, and transfer ownership after its 86,400-second delay.",
+        "observedAt": "2026-11-27",
+        "observedBlock": 26506658,
+        "sources": [
+          {
+            "label": "Verified FluidTimelockController source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4d6ce4f4498d59eed397bcbc687805a07f9b2346"
+          },
+          {
+            "label": "Ethereum PublicNode RPC: pinned reads at finalized block 26506658 (2026-11-27T12:51:35Z)",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At finalized Ethereum block 26506658, FluidLiteVault.getOwner() returns FluidTimelockController 0x4d6ce4f4498d59eed397bcbc687805a07f9b2346 with getMinDelay() = 86400 seconds. Verified TimelockController logs and hasRole reads confirm 6-of-12 Avocado multisig 0x4f6f977acdd1177dcd81ab83074855ecb9c2d49e holds PROPOSER_ROLE and CANCELLER_ROLE, 3-of-5 Safe 0x196ed45ec4aca949e7aa921cec81e219e682775e holds EXECUTOR_ROLE, and the timelock itself holds TIMELOCK_ADMIN_ROLE (no external admin)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x4f6f977acdd1177dcd81ab83074855ecb9c2d49e",
+        "deploymentRefs": [
+          "ethereum:0x273da948aca9261043fbdb2a857bc255ecc29012"
+        ],
+        "label": "Fluid team Avocado multisig (secondary owner, AUTH_LEVEL, Timelock proposer)",
+        "role": "governor",
+        "authorityType": "multisig",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "threshold": 6,
+        "signerCount": 12,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-27",
+        "observedBlock": 26506658,
+        "sources": [
+          {
+            "label": "Verified Avocado multisig proxy source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f6f977acdd1177dcd81ab83074855ecb9c2d49e"
+          },
+          {
+            "label": "Ethereum PublicNode RPC: pinned reads at finalized block 26506658 (2026-11-27T12:51:35Z)",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At finalized Ethereum block 26506658, Avocado multisig 0x4f6f977acdd1177dcd81ab83074855ecb9c2d49e (_avoImpl 0xea4ebf3ec9f3be577a04b02782d8683b2304b614) reports requiredSigners() = 6 and 12 cryptographic signers. It is FluidLiteVault._secondaryOwner and role level 4 (can immediately pauseDeposits and pauseWithdrawals), holds PROPOSER_ROLE and CANCELLER_ROLE on FluidTimelockController, and is secondary owner plus level-4 auth on StrategyHandler. It cannot mint unbacked shares without going through the 24-hour timelock upgrade path."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x196ed45ec4aca949e7aa921cec81e219e682775e",
+        "deploymentRefs": [
+          "ethereum:0x273da948aca9261043fbdb2a857bc255ecc29012"
+        ],
+        "label": "Fluid Timelock executor Safe",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "timelockDelaySec": 86400,
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x599cc75cbc26d6eb20faf70b9e68a939171fa94d",
+            "0x1d895e5cf6e5288c9a56face942e016696fb0c90",
+            "0xa7615cd307f323172331865181dc8b80a2834324",
+            "0xc0c72156c4007b727d1ca4a583d06a2ff9e554f3",
+            "0xd33d3fce969f0470c723e45a3e5b34ce2ed78db7"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": null,
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 26506658,
+          "observedAt": "2026-11-27",
+          "source": "onchain"
+        },
+        "observedAt": "2026-11-27",
+        "observedBlock": 26506658,
+        "sources": [
+          {
+            "label": "Verified SafeProxy source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x196ed45ec4aca949e7aa921cec81e219e682775e"
+          },
+          {
+            "label": "Ethereum PublicNode RPC: pinned reads at finalized block 26506658 (2026-11-27T12:51:35Z)",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At finalized Ethereum block 26506658, Safe 0x196ed45ec4aca949e7aa921cec81e219e682775e reports 3-of-5 owners, terminal empty modules, zero guard, and masterCopy 0x41675c099f32341bf84bfc5382af534df5c7461a (four of its five owners overlap with the 12-signer Avocado proposer multisig). It holds EXECUTOR_ROLE on FluidTimelockController and executes scheduled timelocked operations including UUPS upgrades."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x066e84ca92529b500592867d0be89e78563fa965",
+        "deploymentRefs": [
+          "ethereum:0x273da948aca9261043fbdb2a857bc255ecc29012"
+        ],
+        "label": "StrategyHandler (STRATEGY_HANDLER)",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-27",
+        "observedBlock": 26506658,
+        "sources": [
+          {
+            "label": "Verified StrategyHandler InfiniteProxy source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x066e84ca92529b500592867d0be89e78563fa965"
+          },
+          {
+            "label": "Verified StrategyHandlerDummy interface",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x968505c71ec9f258d5d48e59a48486b866b5ce96"
+          }
+        ],
+        "evidence": "At finalized Ethereum block 26506658, FluidLiteVault immutable STRATEGY_HANDLER points to InfiniteProxy 0x066e84ca92529b500592867d0be89e78563fa965 (owner FluidTimelockController, secondary owner Avocado multisig, five operational role entries across levels 1, 2, and 4). StrategyHandler can call pullFunds/pushFunds on FluidLiteVault, updateConfig (fixedRate up to 30% APR, withdrawalFeeBPS up to 50 bps), updateRewardConfig (up to $100M/yr), and updateExchangePrice (upward only, up to +200 bps per call), but cannot mint unbacked fLiteUSD shares."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Verified FluidLiteVaultProxy source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x273da948aca9261043fbdb2a857bc255ecc29012"
+        },
+        {
+          "label": "Verified FluidLiteVault UUPS implementation source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16ccc91a8134d428e7b6240177f9e2b227b9743"
+        },
+        {
+          "label": "Verified FluidTimelockController source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4d6ce4f4498d59eed397bcbc687805a07f9b2346"
+        },
+        {
+          "label": "Verified Avocado multisig proxy source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f6f977acdd1177dcd81ab83074855ecb9c2d49e"
+        },
+        {
+          "label": "Verified StrategyHandler InfiniteProxy source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x066e84ca92529b500592867d0be89e78563fa965"
+        },
+        {
+          "label": "Ethereum PublicNode RPC: pinned reads at finalized block 26506658 (2026-11-27T12:51:35Z)",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ],
+      "evidence": "Reviewed at finalized Ethereum block 26506658 (hash 0x2b69b7934b1e88fb42e9f10e6d0bff1f9114b5f1334c87ee41cc2aa8c9210f31, 2026-11-27T12:51:35Z). FluidLiteVaultProxy 0x273da948aca9261043fbdb2a857bc255ecc29012 delegates to verified UUPS implementation 0xe16ccc91a8134d428e7b6240177f9e2b227b9743. Current share creation occurs strictly against deposited USDC in deposit()/mint(). Governance authority sits with owner FluidTimelockController 0x4d6ce4f4498d59eed397bcbc687805a07f9b2346 (getMinDelay() = 86400s), whose PROPOSER_ROLE and CANCELLER_ROLE belong to the 6-of-12 Avocado team multisig 0x4f6f977acdd1177dcd81ab83074855ecb9c2d49e and whose EXECUTOR_ROLE belongs to the 3-of-5 Safe 0x196ed45ec4aca949e7aa921cec81e219e682775e (four overlapping signers). Avocado is also secondaryOwner and sole vault role entry (level 4), able to pause deposits and withdrawals immediately. StrategyHandler 0x066e84ca92529b500592867d0be89e78563fa965 controls fund pulls/pushes and exchange-price accrual parameters. Native USDC issuance remains inherited from usdc-circle.",
+      "reviewer": "Pharos Listing Policy v2 Batch 2 review",
+      "reviewedAt": "2026-11-27",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [],
+      "scopedQuestions": [
+        {
+          "controlRef": "ethereum:0x4f6f977acdd1177dcd81ab83074855ecb9c2d49e",
+          "question": "For Fluid team Avocado multisig (ethereum:0x4f6f977acdd1177dcd81ab83074855ecb9c2d49e): signer independence, organizational separation from the 3-of-5 executor Safe (four overlapping addresses), and off-chain key-custody attestations are not published; on-chain 6-of-12 quorum reads at block 26506658 do not establish beneficial independence.",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-11-27",
+          "reviewer": "Pharos Listing Policy v2 Batch 2 review",
+          "sources": [
+            {
+              "label": "Verified Avocado multisig proxy source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f6f977acdd1177dcd81ab83074855ecb9c2d49e"
+            },
+            {
+              "label": "Ethereum PublicNode RPC: pinned reads at finalized block 26506658 (2026-11-27T12:51:35Z)",
+              "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ]
+        },
+        {
+          "controlRef": "ethereum:0x196ed45ec4aca949e7aa921cec81e219e682775e",
+          "question": "For Fluid Timelock executor Safe (ethereum:0x196ed45ec4aca949e7aa921cec81e219e682775e): signer independence and off-chain key-custody attestations are not published; on-chain 3-of-5 ownership and zero-module reads at block 26506658 do not establish independent beneficial signers.",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-11-27",
+          "reviewer": "Pharos Listing Policy v2 Batch 2 review",
+          "sources": [
+            {
+              "label": "Verified SafeProxy source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x196ed45ec4aca949e7aa921cec81e219e682775e"
+            },
+            {
+              "label": "Ethereum PublicNode RPC: pinned reads at finalized block 26506658 (2026-11-27T12:51:35Z)",
+              "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ]
+        },
+        {
+          "controlRef": "ethereum:0x066e84ca92529b500592867d0be89e78563fa965",
+          "question": "What is the complete current maximal execution authority of StrategyHandler (ethereum:0x066e84ca92529b500592867d0be89e78563fa965), including all InfiniteProxy module implementations, the five role holders across levels 1, 2, and 4, and registered strategy proxies? On-chain role and strategy enumeration at block 26506658 does not certify full downstream execution closure.",
+          "reviewedAt": "2026-11-27",
+          "reviewer": "Pharos Listing Policy v2 Batch 2 review",
+          "sources": [
+            {
+              "label": "Verified StrategyHandler InfiniteProxy source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x066e84ca92529b500592867d0be89e78563fa965"
+            },
+            {
+              "label": "Ethereum PublicNode RPC: pinned reads at finalized block 26506658 (2026-11-27T12:51:35Z)",
+              "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

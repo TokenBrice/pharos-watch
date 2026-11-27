@@ -29,22 +29,16 @@ const digest = (value: unknown) => createHash("sha256").update(JSON.stringify(ca
 
 describe("ERC-4626 deployment parity", () => {
   it("preserves every rate field in deterministic source order, including Axis and independent precisions", () => {
-    expect(ON_CHAIN_RATE_CONFIGS).toHaveLength(58);
+    expect(ON_CHAIN_RATE_CONFIGS).toHaveLength(62);
     // The source-ordered fixture includes XGLD's reviewed XAUt return denomination.
-    expect(digest(ON_CHAIN_RATE_CONFIGS)).toBe("112e553c307b65a6645e9c27e30bb7c4109989c4e3ae161cc97f2e032d4a1bad");
+    expect(digest(ON_CHAIN_RATE_CONFIGS)).toBe("320bb708561a6adc1ff5eceb9d6e1b14f8dee23a33d1ccd333541a81effba3a3");
   });
 
   it("preserves every NAV deployment triple, trust flag and route order", () => {
-    expect(navConfigs).toHaveLength(49);
-    expect(navConfigs[47]).toMatchObject({
-      id: "stusds-sky",
-      parentId: "usds-sky",
-      chain: "ethereum",
-      vault: "0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9",
-      vaultDecimals: 18,
-      assetDecimals: 18,
-    });
-    expect(navConfigs[48]).toMatchObject({ id: "sgho-aave", parentId: "gho-aave", chain: "ethereum" });
+    expect(navConfigs).toHaveLength(54);
+    expect(navConfigs[47]).toMatchObject({ id: "stusds-sky", parentId: "usds-sky", chain: "ethereum" });
+    expect(navConfigs[53]).toMatchObject({ id: "sgho-aave", parentId: "gho-aave", chain: "ethereum" });
     expect(digest(navConfigs.slice(0, 47))).toBe("046e3607bcf44822a7107c737e30db8089284367ccf2a6fd06cc739eb2e0bf61");
+    expect(digest(navConfigs)).toBe("b1a01501b9094bb2d098cb9a6be6354535cb82b6e10b10b87da44c7b1ac5c986");
   });
 });

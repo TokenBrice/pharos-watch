@@ -54,6 +54,7 @@ const CORE_AGGREGATE_V2_POST_CUTOVER_ENTRY_DATES: Readonly<Record<string, string
   "invusd-inverse-finance": "2026-11-27",
   "usdv-delpho": "2026-11-27",
   "bnbusd-sigma-money": "2026-11-27",
+  "eusd-own": "2026-11-27",
 };
 
 export function getCoreAggregatePostCutoverEntrySec(stablecoinId: string): number | null {

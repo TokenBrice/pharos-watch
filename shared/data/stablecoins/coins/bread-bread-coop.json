@@ -1,0 +1,137 @@
+{
+  "id": "bread-bread-coop",
+  "name": "Bread",
+  "symbol": "BREAD",
+  "brand": "Bread Cooperative",
+  "oneLiner": "BREAD is Bread Cooperative's 1:1 xDAI-backed wrapper on Gnosis Chain that routes accrued Gnosis Savings xDAI yield to cooperative solidarity grants.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized-dependent"
+  },
+  "variantOf": "xdai-gnosis",
+  "variantKind": "pure-wrapper",
+  "pegReferenceId": "xdai-gnosis",
+  "collateral": "100% tracked Gnosis Savings xDAI (sDAI) ERC-4626 vault shares (over WXDAI) held directly by the BREAD contract on Gnosis Chain, giving 1:1 atomic backing in native xDAI while routing surplus yield above totalSupply to the Bread Cooperative YieldDistributor.",
+  "pegMechanism": "Permissionless 1:1 ERC-20 wrapper around native xDAI on Gnosis Chain. Calling mint(receiver) wraps sent native xDAI into WXDAI, deposits it into the Gnosis Savings xDAI (sDAI) vault, and mints BREAD 1:1 with zero fee. Calling burn(amount, receiver) burns caller BREAD, withdraws the exact WXDAI amount from sDAI, unwraps WXDAI, and returns native xDAI 1:1 atomically with zero fee. Accrued savings yield above totalSupply is claimed separately by the Bread Cooperative YieldDistributor for solidarity grants, so BREAD balances stay fixed at 1:1 xDAI.",
+  "mechanismArchetype": "protocol-position",
+  "archetypeOverride": true,
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 addition review (2026-11-27)",
+    "rationale": "Although BREAD trades and redeems 1:1 against native xDAI (variantOf xdai-gnosis), verified Bread.sol holds 100% of its backing in tracked Gnosis Savings xDAI (sDAI, 0xaf204776c7245bf4147c2612bf6e5972ee483701) ERC-4626 vault shares, which are classified as protocol-position. Assigning protocol-position with archetypeOverride matches the direct sDAI backing layer while preserving serial propagation to xdai-gnosis.",
+    "sources": [
+      {
+        "label": "Sourcify exact-match verified Bread implementation (0x3146b62466b76642127b9f4fe34fa7cd9968bf96)",
+        "url": "https://repo.sourcify.dev/100/0x3146b62466b76642127b9f4fe34fa7cd9968bf96"
+      },
+      {
+        "label": "Bread Cooperative Solidarity Fund web application",
+        "url": "https://fund.bread.coop/"
+      }
+    ]
+  },
+  "detailProvider": "defillama",
+  "geckoId": "bread-3",
+  "llamaId": "180",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://gnosisscan.io/address/0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3#readProxyContract",
+    "provider": "Gnosis Chain on-chain BREAD and Savings xDAI contracts",
+    "cadence": "real-time",
+    "latestReport": {
+      "periodEnd": "2026-11-27",
+      "assuranceMethod": "onchain-proof",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "Pharos Listing Policy v2 addition review (2026-11-27)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Gnosis Chain BREAD proxy contract (0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3)",
+          "url": "https://gnosisscan.io/address/0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3#readProxyContract"
+        },
+        {
+          "label": "Gnosis Chain Savings xDAI vault contract (0xaf204776c7245bf4147c2612bf6e5972ee483701)",
+          "url": "https://gnosisscan.io/address/0xaf204776c7245bf4147c2612bf6e5972ee483701#readContract"
+        },
+        {
+          "label": "Gnosis Chain block 49496158 (2026-11-27T13:02:20Z)",
+          "url": "https://gnosisscan.io/block/49496158"
+        }
+      ]
+    }
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://fund.bread.coop/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/breadcoop"
+    },
+    {
+      "label": "Contract",
+      "url": "https://gnosisscan.io/address/0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "gnosis",
+      "address": "0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3",
+      "decimals": 18
+    }
+  ],
+  "custodyModel": "unknown",
+  "governanceQuality": "wrapper",
+  "liveReservesConfig": {
+    "adapter": "escrow-balance",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "bread-bread-coop",
+    "display": {
+      "url": "https://gnosisscan.io/address/0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3",
+      "label": "BREAD Savings xDAI backing (Gnosisscan)"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "gnosis",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "compareToCoinSupply": true,
+      "holderEligibility": "any-holder",
+      "settlementDelaySec": 0,
+      "redemptionOutputAssetKey": "xdai-gnosis",
+      "reads": [
+        {
+          "contract": "0xaf204776c7245bf4147c2612bf6e5972ee483701",
+          "selector": "0xce96cb77",
+          "args": [
+            "0x000000000000000000000000a555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3"
+          ],
+          "decimals": 18,
+          "identityCheck": {
+            "selector": "0x38d52e0f",
+            "expectedAddress": "0xe91d153e0b41518a2ce8dd3d7944fa863463a97d"
+          }
+        }
+      ],
+      "slice": {
+        "name": "Gnosis Savings xDAI (sDAI) vault balance held by BREAD",
+        "risk": "medium",
+        "coinId": "sdai-gnosis",
+        "depType": "wrapper"
+      },
+      "sourceUrls": [
+        "https://fund.bread.coop/",
+        "https://gnosisscan.io/address/0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3",
+        "https://gnosisscan.io/address/0xaf204776c7245bf4147c2612bf6e5972ee483701"
+      ]
+    }
+  },
+  "launchDate": "2024-03-09"
+}

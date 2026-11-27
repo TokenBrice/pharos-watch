@@ -1,0 +1,309 @@
+{
+  "id": "gpyusdse-galaxy",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "none-resolved-mint",
+    "confidence": "verified",
+    "summary": "gPYUSDse mints shares only against deposited native Stable PYUSD and configured accrual fee shares (currently 0%). Immutable Sourcify-verified VaultV2 and owner, curator, and allocator parameter roles cannot mint native PYUSD, whose issuance remains inherited from Paxos.",
+    "inheritedFrom": "pyusd-paypal",
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "upgradeability": {
+      "model": "immutable",
+      "deploymentRefs": [
+        "stable:0x8c3250f028a2c8d29319eb3ee3214b90462394ba"
+      ],
+      "canChangeMintLogic": false,
+      "controlRef": "StableEarn Prime PYUSD immutable VaultV2 share issuance",
+      "observedAt": "2026-11-27",
+      "observedBlock": 48443292,
+      "sources": [
+        {
+          "label": "Sourcify verified VaultV2 on Stable (chain 988, 0x8c3250f028a2c8d29319eb3ee3214b90462394ba)",
+          "url": "https://sourcify.dev/server/v2/contract/988/0x8c3250f028a2c8d29319eb3ee3214b90462394ba?fields=all"
+        },
+        {
+          "label": "Stable block 48443292 pinned RPC census (2026-11-27T13:06:01Z)",
+          "url": "https://rpc.stable.xyz"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "stable",
+        "address": "0x8c3250f028a2c8d29319eb3ee3214b90462394ba",
+        "deploymentRefs": [
+          "stable:0x8c3250f028a2c8d29319eb3ee3214b90462394ba"
+        ],
+        "label": "StableEarn Prime PYUSD immutable VaultV2 share issuance",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-27",
+        "observedBlock": 48443292,
+        "sources": [
+          {
+            "label": "Sourcify verified VaultV2 on Stable (chain 988, 0x8c3250f028a2c8d29319eb3ee3214b90462394ba)",
+            "url": "https://sourcify.dev/server/v2/contract/988/0x8c3250f028a2c8d29319eb3ee3214b90462394ba?fields=all"
+          },
+          {
+            "label": "Sourcify verified MorphoMarketV1AdapterV2 on Stable (chain 988, 0xd5f963aea47f502b7c4ec4bcd6b4ba08d7f44cd6)",
+            "url": "https://sourcify.dev/server/v2/contract/988/0xd5f963aea47f502b7c4ec4bcd6b4ba08d7f44cd6?fields=all"
+          },
+          {
+            "label": "Stable block 48443292 pinned RPC census (2026-11-27T13:06:01Z)",
+            "url": "https://rpc.stable.xyz"
+          }
+        ],
+        "evidence": "Sourcify runtimeMatch verified VaultV2 (21808 bytes) with zero EIP-1967 implementation, admin, and beacon slots. Shares mint only after PYUSD transfer and on configured fee accrual (currently performanceFee = 0, managementFee = 0). At block 48443292, totalSupply = 78423725872575146561234953, totalAssets = 78572448141989, idle PYUSD = 15134224238568, sole adapter realAssets = 63438223903421, and all four gates are zero with receiveShares, sendShares, receiveAssets, and adapterRegistry setters permanently abdicated. No Paxos PYUSD minting authority is conveyed."
+      },
+      {
+        "chain": "stable",
+        "address": "0x42d510edeb9257f8d920d5b9f5109d95cb22419d",
+        "deploymentRefs": [
+          "stable:0x8c3250f028a2c8d29319eb3ee3214b90462394ba"
+        ],
+        "label": "StableEarn Prime PYUSD owner parameter authority",
+        "role": "governor",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-27",
+        "observedBlock": 48443381,
+        "failureDomainKeys": [
+          "eoa:stable:0x42d510edeb9257f8d920d5b9f5109d95cb22419d"
+        ],
+        "sources": [
+          {
+            "label": "Sourcify verified VaultV2 on Stable (chain 988, 0x8c3250f028a2c8d29319eb3ee3214b90462394ba)",
+            "url": "https://sourcify.dev/server/v2/contract/988/0x8c3250f028a2c8d29319eb3ee3214b90462394ba?fields=all"
+          },
+          {
+            "label": "Stable block 48443381 pinned RPC census (2026-11-27T13:07:03Z)",
+            "url": "https://rpc.stable.xyz"
+          }
+        ],
+        "evidence": "At Stable block 48443381, owner() returns 0x42d510edeb9257f8d920d5b9f5109d95cb22419d with empty code (EOA). Owner can appoint curator, sentinels, and transfer ownership; it cannot create unbacked shares or mint native PYUSD. Off-chain key custody and human signer independence are undisclosed."
+      },
+      {
+        "chain": "stable",
+        "address": "0xa13094eced689b7419baba12851374424c1486f1",
+        "deploymentRefs": [
+          "stable:0x8c3250f028a2c8d29319eb3ee3214b90462394ba"
+        ],
+        "label": "StableEarn Prime PYUSD curator parameter authority",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-27",
+        "observedBlock": 48443381,
+        "failureDomainKeys": [
+          "eoa:stable:0xa13094eced689b7419baba12851374424c1486f1"
+        ],
+        "sources": [
+          {
+            "label": "Sourcify verified VaultV2 on Stable (chain 988, 0x8c3250f028a2c8d29319eb3ee3214b90462394ba)",
+            "url": "https://sourcify.dev/server/v2/contract/988/0x8c3250f028a2c8d29319eb3ee3214b90462394ba?fields=all"
+          },
+          {
+            "label": "Stable block 48443381 pinned RPC census (2026-11-27T13:07:03Z)",
+            "url": "https://rpc.stable.xyz"
+          }
+        ],
+        "evidence": "At Stable block 48443381, curator() returns 0xa13094eced689b7419baba12851374424c1486f1 with empty code (EOA). Curator controls timelocked adapter and allocation-cap changes (604800s delay), fee parameters and forceDeallocatePenalty (259200s delay), and immediate setIsAllocator, setSendAssetsGate, and setSkimRecipient (0s delay); allocation caps are strategy limits rather than a native PYUSD mint ceiling. Off-chain key custody and signer independence remain undisclosed."
+      },
+      {
+        "chain": "stable",
+        "address": "0x20346461dbcf3373fd59cbc1ace0e6f9c263e64b",
+        "deploymentRefs": [
+          "stable:0x8c3250f028a2c8d29319eb3ee3214b90462394ba"
+        ],
+        "label": "StableEarn Prime PYUSD allocator",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-27",
+        "observedBlock": 48443741,
+        "sources": [
+          {
+            "label": "Morpho GraphQL API exact allocator and sentinel roster",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Stable block 48443741 pinned isAllocator and code census (2026-11-27T13:11:13Z)",
+            "url": "https://rpc.stable.xyz"
+          }
+        ],
+        "evidence": "At Stable block 48443741, isAllocator(0x20346461dbcf3373fd59cbc1ace0e6f9c263e64b) is true and eth_getCode is empty (EOA), granted at block 44645007. Allocators route liquidity across approved adapters within caps and configure liquidityAdapter and maxRate; they cannot mint unbacked shares or native PYUSD. Off-chain signing safeguards are undisclosed."
+      },
+      {
+        "chain": "stable",
+        "address": "0x4cd8558edd19a79b432ef88b351d9aef0a2c0e04",
+        "deploymentRefs": [
+          "stable:0x8c3250f028a2c8d29319eb3ee3214b90462394ba"
+        ],
+        "label": "StableEarn Prime PYUSD allocator and sentinel",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-27",
+        "observedBlock": 48443741,
+        "sources": [
+          {
+            "label": "Morpho GraphQL API exact allocator and sentinel roster",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Stable block 48443741 pinned isAllocator, isSentinel, and code census (2026-11-27T13:11:13Z)",
+            "url": "https://rpc.stable.xyz"
+          }
+        ],
+        "evidence": "At Stable block 48443741, both isAllocator and isSentinel return true for 0x4cd8558edd19a79b432ef88b351d9aef0a2c0e04 with empty code (EOA), granted at block 44644601. As allocator it routes liquidity within approved caps and configures liquidityAdapter and maxRate; as sentinel it can deallocate, lower caps, and revoke pending timelocked changes. It cannot raise caps or mint unbacked shares. Off-chain key custody is undisclosed."
+      },
+      {
+        "chain": "stable",
+        "address": "0x5c884d4b1510ead302ec50a2ab4de9c0b9e407ce",
+        "deploymentRefs": [
+          "stable:0x8c3250f028a2c8d29319eb3ee3214b90462394ba"
+        ],
+        "label": "StableEarn Prime PYUSD Blue public allocator",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-27",
+        "observedBlock": 48443741,
+        "sources": [
+          {
+            "label": "Sourcify verified BluePublicAllocator on Stable (chain 988, 0x5c884d4b1510ead302ec50a2ab4de9c0b9e407ce)",
+            "url": "https://sourcify.dev/server/v2/contract/988/0x5c884d4b1510ead302ec50a2ab4de9c0b9e407ce?fields=all"
+          },
+          {
+            "label": "Stable block 48443741 pinned isAllocator and code census (2026-11-27T13:11:13Z)",
+            "url": "https://rpc.stable.xyz"
+          }
+        ],
+        "evidence": "At Stable block 48443741, isAllocator(0x5c884d4b1510ead302ec50a2ab4de9c0b9e407ce) is true and Sourcify verifies BluePublicAllocator (7697 bytes) on chain 988, granted at block 44644938. Permissionless reallocation remains bounded by active adapters, vault caps, and public-allocator flow limits configured by vault allocators; it has no arbitrary share-mint capability."
+      }
+    ],
+    "review": {
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Morpho: StableEarn Prime PYUSD exact vault",
+          "url": "https://app.morpho.org/stable/vault/0x8c3250f028a2c8d29319eb3ee3214b90462394ba"
+        },
+        {
+          "label": "Sourcify verified VaultV2 on Stable (chain 988, 0x8c3250f028a2c8d29319eb3ee3214b90462394ba)",
+          "url": "https://sourcify.dev/server/v2/contract/988/0x8c3250f028a2c8d29319eb3ee3214b90462394ba?fields=all"
+        },
+        {
+          "label": "Sourcify verified MorphoMarketV1AdapterV2 on Stable (chain 988, 0xd5f963aea47f502b7c4ec4bcd6b4ba08d7f44cd6)",
+          "url": "https://sourcify.dev/server/v2/contract/988/0xd5f963aea47f502b7c4ec4bcd6b4ba08d7f44cd6?fields=all"
+        },
+        {
+          "label": "Sourcify verified BluePublicAllocator on Stable (chain 988, 0x5c884d4b1510ead302ec50a2ab4de9c0b9e407ce)",
+          "url": "https://sourcify.dev/server/v2/contract/988/0x5c884d4b1510ead302ec50a2ab4de9c0b9e407ce?fields=all"
+        },
+        {
+          "label": "Morpho GraphQL API exact role, cap, and creationTimestamp census",
+          "url": "https://api.morpho.org/graphql"
+        },
+        {
+          "label": "Galaxy Curation terms of use, sections 3.8 and 4",
+          "url": "https://docs.curation.galaxy.com/legal/terms-of-use"
+        },
+        {
+          "label": "Stable blocks 48443292, 48443381, and 48443741 pinned RPC census (2026-11-27)",
+          "url": "https://rpc.stable.xyz"
+        }
+      ],
+      "evidence": "At Stable blocks 48443292 through 48443741 (2026-11-27T13:06:01Z to 13:11:13Z), Sourcify-verified VaultV2 (21808 bytes), MorphoMarketV1AdapterV2 (11784 bytes), and BluePublicAllocator (7697 bytes) were independently read on-chain. EIP-1967 implementation, admin, and beacon slots on VaultV2 are zero. Selector (timelock seconds, abdicated) census: addAdapter [604800, 0], removeAdapter [604800, 0], increaseAbsoluteCap [604800, 0], increaseRelativeCap [604800, 0], increaseTimelock [604800, 0], setPerformanceFee [259200, 0], setManagementFee [259200, 0], setPerformanceFeeRecipient [259200, 0], setManagementFeeRecipient [259200, 0], setForceDeallocatePenalty [259200, 0], setAdapterRegistry [0, 1], setReceiveAssetsGate [0, 1], setReceiveSharesGate [0, 1], setSendSharesGate [0, 1], setSendAssetsGate [0, 0], setIsAllocator [0, 0], setSkimRecipient [0, 0], decreaseTimelock [0, 0]. Owner (0x42d510edeb9257f8d920d5b9f5109d95cb22419d), curator (0xa13094eced689b7419baba12851374424c1486f1), allocator (0x20346461dbcf3373fd59cbc1ace0e6f9c263e64b), and allocator/sentinel (0x4cd8558edd19a79b432ef88b351d9aef0a2c0e04) are all codeless EOAs; the third allocator is Sourcify-verified BluePublicAllocator (0x5c884d4b1510ead302ec50a2ab4de9c0b9e407ce). All three active cap IDs (adapter, collateral, market) have absoluteCap = uint128 max and relativeCap = 100%; these are strategy allocation limits, not native PYUSD mint ceilings. Share issuance requires deposited PYUSD and cannot mint native PYUSD, which stays inherited from Paxos. Off-chain key custody and signer independence for the EOA controllers remain unestablished.",
+      "reviewer": "Pharos Listing Policy v2 PR-3 Batch 4 review (gpyusdse-galaxy)",
+      "reviewedAt": "2026-11-27",
+      "unresolvedQuestions": [],
+      "scopedQuestions": [
+        {
+          "controlRef": "StableEarn Prime PYUSD owner parameter authority",
+          "question": "Independent human control, operational key custody, and signing policy of the StableEarn Prime PYUSD owner EOA at stable:0x42d510edeb9257f8d920d5b9f5109d95cb22419d are not publicly established; empty contract code does not certify these safeguards.",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-11-27",
+          "reviewer": "Pharos Listing Policy v2 PR-3 Batch 4 review (gpyusdse-galaxy)",
+          "sources": [
+            {
+              "label": "Stable block 48443381 pinned RPC census (2026-11-27T13:07:03Z)",
+              "url": "https://rpc.stable.xyz"
+            },
+            {
+              "label": "Galaxy Curation terms of use, sections 3.8 and 4",
+              "url": "https://docs.curation.galaxy.com/legal/terms-of-use"
+            }
+          ]
+        },
+        {
+          "controlRef": "StableEarn Prime PYUSD curator parameter authority",
+          "question": "Independent human control, operational key custody, and signing policy of the StableEarn Prime PYUSD curator EOA at stable:0xa13094eced689b7419baba12851374424c1486f1 are not publicly established; empty contract code does not certify these safeguards.",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-11-27",
+          "reviewer": "Pharos Listing Policy v2 PR-3 Batch 4 review (gpyusdse-galaxy)",
+          "sources": [
+            {
+              "label": "Stable block 48443381 pinned RPC census (2026-11-27T13:07:03Z)",
+              "url": "https://rpc.stable.xyz"
+            },
+            {
+              "label": "Galaxy Curation terms of use, sections 3.8 and 4",
+              "url": "https://docs.curation.galaxy.com/legal/terms-of-use"
+            }
+          ]
+        },
+        {
+          "controlRef": "StableEarn Prime PYUSD allocator",
+          "question": "Operational key custody, beneficial-human independence, and signing policy for the allocator EOA at stable:0x20346461dbcf3373fd59cbc1ace0e6f9c263e64b are not publicly disclosed; empty contract code does not establish these safeguards.",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-11-27",
+          "reviewer": "Pharos Listing Policy v2 PR-3 Batch 4 review (gpyusdse-galaxy)",
+          "sources": [
+            {
+              "label": "Stable block 48443741 pinned RPC census (2026-11-27T13:11:13Z)",
+              "url": "https://rpc.stable.xyz"
+            },
+            {
+              "label": "Galaxy Curation terms of use, sections 3.8 and 4",
+              "url": "https://docs.curation.galaxy.com/legal/terms-of-use"
+            }
+          ]
+        },
+        {
+          "controlRef": "StableEarn Prime PYUSD allocator and sentinel",
+          "question": "Operational key custody, beneficial-human independence, and signing policy for the dual allocator and sentinel EOA at stable:0x4cd8558edd19a79b432ef88b351d9aef0a2c0e04 are not publicly disclosed; empty contract code does not establish these safeguards.",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-11-27",
+          "reviewer": "Pharos Listing Policy v2 PR-3 Batch 4 review (gpyusdse-galaxy)",
+          "sources": [
+            {
+              "label": "Stable block 48443741 pinned RPC census (2026-11-27T13:11:13Z)",
+              "url": "https://rpc.stable.xyz"
+            },
+            {
+              "label": "Galaxy Curation terms of use, sections 3.8 and 4",
+              "url": "https://docs.curation.galaxy.com/legal/terms-of-use"
+            }
+          ]
+        }
+      ]
+    },
+    "headline": "Deposit-backed shares with inherited PYUSD issuance risk; EOA owner, curator, and allocators retain strategy parameter powers."
+  }
+}

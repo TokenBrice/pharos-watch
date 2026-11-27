@@ -5,15 +5,8 @@
       "name": "InfiniFi siUSD position (Ethereum MYT)",
       "pct": 37.297539,
       "risk": "high",
-      "coinId": "iusd-infinifi",
+      "coinId": "siusd-infinifi",
       "depType": "collateral",
-      "intermediary": {
-        "kind": "vault-share",
-        "label": "siUSD",
-        "chain": "ethereum",
-        "contract": "0xdbdc1ef57537e34680b898e1febd3d68c7389bcb",
-        "verified": true
-      },
       "assetClass": "protocol-position",
       "issuerOrObligor": "infiniFi (siUSD staked iUSD)",
       "riskFactors": [
@@ -44,6 +37,8 @@
       "name": "Fluid Lite USD vault position (Ethereum MYT)",
       "pct": 18.160703,
       "risk": "high",
+      "coinId": "fliteusd-fluid",
+      "depType": "collateral",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Fluid Lite USD Vault (fLiteUSD)",
       "riskFactors": [
@@ -175,13 +170,13 @@
         "url": "https://github.com/TokenBrice/pharos-watch/issues/2113"
       }
     ],
-    "rationale": "Issuer-submitted, on-chain-reproducible composition of the three V3 alUSD MYT vaults (Morpho VaultV2) on Ethereum, Optimism and Arbitrum. Each vault enumerates its strategy adapters through adaptersLength() and adapters(i); each adapter reports realAssets() in USDC. At the pinned blocks the adapters sum exactly to each vault's totalAssets() and idle USDC is zero on all three vaults. Each adapter's target was read from the adapter itself: siUSD 0xdbdc1ef5… (staked iUSD), Yearn yvUSD 0x696d02db…, Fluid Lite USD 0x273da948…, Aave V3 aTokens on Optimism and Arbitrum, Fluid fUSDC 0x1a996cb5… and Euler eUSDC-1 0x0a1ecc5f… on Arbitrum, and Auto Finance autoUSD 0xa7569a44…. Pharos review on 2026-11-19 reproduced the three block hashes, each vault's adapter roster, every realAssets() value, totalAssets() and the zero idle USDC balance at the pinned blocks, and confirmed asset() or UNDERLYING_ASSET_ADDRESS() on every target except the autoUSD adapter, whose 0.51 USDC position exposes no target getter and keeps the submitter's source-based label. yvUSD and the Fluid Lite USD vault are multi-strategy vaults: their USDC denomination does not establish constituent exposure, so both rows stay unlinked as baskets needing a split. Risk, liquidity-horizon and risk-factor labels remain the submitter's proposals aligned to existing Pharos rows for the same venues.",
+    "rationale": "Issuer-submitted, on-chain-reproducible composition of the three V3 alUSD MYT vaults (Morpho VaultV2) on Ethereum, Optimism and Arbitrum. Each vault enumerates its strategy adapters through adaptersLength() and adapters(i); each adapter reports realAssets() in USDC. At the pinned blocks the adapters sum exactly to each vault's totalAssets() and idle USDC is zero on all three vaults. Each adapter's target was read from the adapter itself: siUSD 0xdbdc1ef5… (staked iUSD, now linked directly as siusd-infinifi), Yearn yvUSD 0x696d02db…, Fluid Lite USD 0x273da948… (now linked directly as fliteusd-fluid), Aave V3 aTokens on Optimism and Arbitrum, Fluid fUSDC 0x1a996cb5… and Euler eUSDC-1 0x0a1ecc5f… on Arbitrum, and Auto Finance autoUSD 0xa7569a44…. Pharos review on 2026-11-19 reproduced the three block hashes, each vault's adapter roster, every realAssets() value, totalAssets() and the zero idle USDC balance at the pinned blocks, and confirmed asset() or UNDERLYING_ASSET_ADDRESS() on every target except the autoUSD adapter, whose 0.51 USDC position exposes no target getter and keeps the submitter's source-based label. On 2026-11-27, row 0 repointed from iusd-infinifi to newly admitted siusd-infinifi and row 2 linked to newly admitted fliteusd-fluid; yvUSD remains an untracked multi-strategy vault whose USDC denomination does not establish constituent exposure, so it stays unlinked as a basket needing a split. Risk, liquidity-horizon and risk-factor labels remain the submitter's proposals aligned to existing Pharos rows for the same venues.",
     "compositionBasis": "USDC-denominated realAssets() of every registered strategy adapter across the three V3 alUSD MYT vaults, as a share of their combined totalAssets() (8,819,966.392128 USDC), read at Ethereum block 26443250, Optimism block 159710914 and Arbitrum block 525377731 on 2026-11-18",
     "compositionAsOf": "2026-11-18",
     "scope": "selected-slices",
     "scopedWeights": true,
-    "knownUnknownExposure": "Scope is selected-slices: the weights are shares of gross V3 MYT vault assets, not of whole-token backing. The composition covers all assets of the three MYT vaults, not only the shares backing alUSD: at the pinned blocks the Alchemist and Transmuter together held 97.4% of Ethereum vault shares, 99.8% on Optimism and 99.6% on Arbitrum, and the remainder belongs to other MYT holders pro rata. Borrower collateral above debt is borrower equity, so vault assets exceed the alUSD they secure (totalSyntheticsIssued 5,403,581 alUSD across the three Alchemists). alUSD supply outside V3 issuance (legacy and DAO-minted supply, largely held by DAO market-operations Safes or locked in the Multichain wrapper) is not backed by these vaults and is described in issue #2113. Allocations are mutable by the DAO allocator and will drift from this snapshot. The internal composition of each venue (yvUSD strategies, Fluid Lite, infiniFi) is not decomposed here.",
-    "knownUnknownExposurePct": 55.006364,
+    "knownUnknownExposure": "Scope is selected-slices: the weights are shares of gross V3 MYT vault assets, not of whole-token backing. The composition covers all assets of the three MYT vaults, not only the shares backing alUSD: at the pinned blocks the Alchemist and Transmuter together held 97.4% of Ethereum vault shares, 99.8% on Optimism and 99.6% on Arbitrum, and the remainder belongs to other MYT holders pro rata. Borrower collateral above debt is borrower equity, so vault assets exceed the alUSD they secure (totalSyntheticsIssued 5,403,581 alUSD across the three Alchemists). alUSD supply outside V3 issuance (legacy and DAO-minted supply, largely held by DAO market-operations Safes or locked in the Multichain wrapper) is not backed by these vaults and is described in issue #2113. Allocations are mutable by the DAO allocator and will drift from this snapshot. Yearn yvUSD (36.85%) remains an unlinked multi-strategy basket; siUSD (37.30%) and Fluid Lite USD (18.16%) link to their tracked dossiers, with Fluid Lite USD carrying 71.83% unresolved multi-strategy exposure (~13.04% look-through of MYT assets) that propagates through fliteusd-fluid's own reserve review.",
+    "knownUnknownExposurePct": 36.845661,
     "nonLinkDispositions": [
       {
         "reserveIndex": 1,
@@ -189,16 +184,6 @@
         "pct": 36.845661,
         "disposition": "basket-needs-split",
         "rationale": "yvUSD is a Yearn V3 multi-strategy vault whose asset() is USDC; the adapter reports one USDC-denominated position and the reviewed reads do not split the vault's current strategy allocations.",
-        "candidateCoinIds": [
-          "usdc-circle"
-        ]
-      },
-      {
-        "reserveIndex": 2,
-        "reserveName": "Fluid Lite USD vault position (Ethereum MYT)",
-        "pct": 18.160703,
-        "disposition": "basket-needs-split",
-        "rationale": "The Fluid Lite USD vault runs leveraged strategies on USDC deposits; the adapter reports one USDC-denominated position and the reviewed reads do not split the vault's current holdings.",
         "candidateCoinIds": [
           "usdc-circle"
         ]
