@@ -5,7 +5,7 @@ import { expectWarnings, installAdapterNetwork, runAdapter } from "./reserve-ada
 import capturedSchedule from "./fixtures/onre-holdings-2026-09-30.json";
 
 
-const ONRE_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-bLCCxKNCB2GHgFV5Jo6_fbv4t3CT60dwPMbUDfwhHglt5GBoLp47jp1wcCOY8Ob1ZgjA6KXNczdq/pub?output=csv&gid=1591707661&single=true";
+const ONRE_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-bLCCxKNCB2GHgFV5Jo6_fbv4t3CT60dwPMbUDfwhHglt5GBoLp47jp1wcCOY8Ob1ZgjA6KXNczdq/pub?output=csv&gid=649502523&single=true";
 const FIXTURE_NOW = Math.floor(Date.parse("2026-08-14T01:00:00Z") / 1000);
 
 function onreNetwork(csv: string | { status: number; body: string }) {
