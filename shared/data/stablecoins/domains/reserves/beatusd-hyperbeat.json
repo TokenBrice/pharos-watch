@@ -1,0 +1,42 @@
+{
+  "id": "beatusd-hyperbeat",
+  "reserves": [
+    {
+      "name": "Paxos Global Dollar (USDG) (Hyperbeat-stated 1:1 backing; independent Paxos reconciliation unpublished)",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "usdg-paxos",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "liquidityHorizon": "unknown",
+      "riskFactors": [
+        "custody",
+        "counterparty",
+        "concentration",
+        "legal"
+      ]
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 PR-4 review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Hyperbeat USD+ documentation",
+        "url": "https://docs.hyperbeat.org/hyperbeat-earn/usd+"
+      },
+      {
+        "label": "Hyperbeat USD+ architecture documentation",
+        "url": "https://docs.hyperbeat.org/hyperbeat-earn/usd+/architecture"
+      }
+    ],
+    "rationale": "Hyperbeat's USD+ and USD+ Architecture documentation both state verbatim that 'beatUSD is a stablecoin issued by Paxos, backed 1:1 by USDG.' On-chain, the HyperEVM BoringVault (0x669abe85f96a9e3b34723f7be9bc6f250abc0cc1) is controlled by a Hyperbeat 3-of-5 Safe and holds only residual USDC, and Paxos does not list beatUSD on its public USDG transparency pages, so confidence remains manual-review until independent Paxos reconciliation is published.",
+    "compositionBasis": "Issuer documentation stating 1:1 USDG backing, without independent attestation or on-chain proof of USDG escrow",
+    "compositionAsOf": "2026-11-27",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No independent Paxos attestation naming beatUSD, reserve segregation schedule, or balance-sheet reconciliation between HyperEVM BoringVault liabilities and Paxos USDG reserves has been published.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": []
+  }
+}

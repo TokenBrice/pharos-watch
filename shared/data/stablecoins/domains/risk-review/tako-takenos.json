@@ -1,0 +1,23 @@
+{
+  "id": "tako-takenos",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "TAKO Solana mint",
+        "url": "https://solscan.io/token/He1ZD1o5WTUCHz5QoVMSdfhZjyqecVgYK75TUg95rnhL"
+      },
+      {
+        "label": "Token-2022 permanent-delegate authority",
+        "url": "https://solana.com/docs/tokens/extensions/permanent-delegate"
+      },
+      {
+        "label": "TAKO permanent-delegate 2-of-3 multisig",
+        "url": "https://solscan.io/account/GGXxderQwPcCEXuoQPAcQSf9GJ4P7mwpkFKifsEsqSxf"
+      }
+    ],
+    "evidence": "Read at finalized Solana slot 474608347, blockhash CumeuzxmYFX1WTySmv9eNMZoHceujKGzjhWxoRVbb6Yo, 2026-11-27T15:56:35Z. Token-2022 mint He1ZD1o5WTUCHz5QoVMSdfhZjyqecVgYK75TUg95rnhL retains permanentDelegate GGXxderQwPcCEXuoQPAcQSf9GJ4P7mwpkFKifsEsqSxf, an initialized 2-of-3 SPL Token-2022 multisig with signers 3etmwgxP4Lt2LLEyYpN2f9oKKi1onGy5XHRSP4BRq2vb, DH6TX9TBi48CRGWmLieE83XuZAnB1hXC1zyzXE913nf1, and C32wnRwQxHuorTAkeQyRjdiEftizHSHAhVPVxL6NjpvG. Token-2022 permits that delegate to transfer or burn arbitrary holder balances. Freeze and mint authority addresses are off-curve and their controller topology is unresolved. Default account state is initialized and the transfer-hook program is unset, so no closed-loop transfer allowlist is present. No exercise of seizure is claimed.",
+    "reviewer": "Pharos Wave 4 pre-launch review",
+    "reviewedAt": "2026-11-27"
+  }
+}

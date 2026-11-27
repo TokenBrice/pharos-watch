@@ -1,0 +1,97 @@
+{
+  "id": "beatusd-hyperbeat",
+  "name": "Hyperbeat USD",
+  "symbol": "beatUSD",
+  "brand": "Hyperbeat",
+  "oneLiner": "beatUSD is Hyperbeat's dollar token on HyperEVM for Liquid Banking card spend and settlement, live on-chain with no admitted market price.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false
+  },
+  "collateral": "Hyperbeat's USD+ documentation states beatUSD is issued by Paxos and backed 1:1 by Paxos Global Dollar (USDG). On-chain, however, the HyperEVM BoringVault contract is controlled by a Hyperbeat 3-of-5 Safe and holds only small residual USDC balances, and no independent Paxos attestation naming beatUSD or public balance-sheet reconciliation for beatUSD liabilities has been published.",
+  "pegMechanism": "Non-accruing 6-decimal ERC-20 BoringVault share on HyperEVM used as the Cash Mode spending and settlement balance inside Hyperbeat Liquid Banking. Yield does not accrue to beatUSD itself; users earn yield separately by depositing beatUSD, USDC, or USDT0 into the USD+ vault or through card cashback paid in WHYPE. Direct holder mint and par redemption terms outside Liquid Banking are unpublished.",
+  "mechanismArchetype": "fiat-cash",
+  "llamaId": "397",
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://hyperbeat.org/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.hyperbeat.org/liquid-banking"
+    },
+    {
+      "label": "USD+ Docs",
+      "url": "https://docs.hyperbeat.org/hyperbeat-earn/usd+"
+    },
+    {
+      "label": "USD+ Architecture",
+      "url": "https://docs.hyperbeat.org/hyperbeat-earn/usd+/architecture"
+    },
+    {
+      "label": "Liquid Banking launch",
+      "url": "https://hyperbeat.org/blog/introducing-liquid-banking"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/hyperbeat"
+    }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "unknown",
+  "contracts": [
+    {
+      "chain": "hyperevm",
+      "address": "0x669abe85f96a9e3b34723f7be9bc6f250abc0cc1",
+      "decimals": 6
+    }
+  ],
+  "status": "pre-launch",
+  "announcedDate": "2026-04-08",
+  "launchDate": "2026-04-08",
+  "launchPhase": "launched",
+  "launchPhaseDetail": "Hyperbeat launched Liquid Banking on April 8, 2026 with beatUSD as its on-chain Cash Mode spending and settlement token on HyperEVM (0x669abe85f96a9e3b34723f7be9bc6f250abc0cc1, 6 decimals). Live HyperEVM RPC inspection on November 27, 2026 (block 52396858) confirms positive supply of 886,600.43 beatUSD and an unset beforeTransfer hook (open-loop transfers), matching DefiLlama stablecoin ID 397 supply tracking since June 19, 2026. The same CREATE2 BoringVault address is also deployed on Ethereum mainnet with zero supply. No admitted market price lane exists: DefiLlama price is null, exact-contract quotes are empty, DexScreener lists no pairs, and GeckoTerminal reports null USD price.",
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://hyperbeat.org/blog/introducing-liquid-banking",
+      "title": "Introducing Liquid Banking",
+      "source": "Hyperbeat"
+    },
+    {
+      "type": "article",
+      "url": "https://hyperbeat.org/blog/introducing-usd-plus",
+      "title": "Introducing USD+: the best stablecoin yield on Hyperliquid",
+      "source": "Hyperbeat"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2026-04-08",
+      "type": "milestone",
+      "title": "Hyperbeat launches Liquid Banking with beatUSD on HyperEVM",
+      "description": "Hyperbeat announces Liquid Banking is live on HyperEVM, enabling Cash Mode Visa card spending directly from on-chain beatUSD balances and Credit Mode borrowing.",
+      "sourceUrl": "https://hyperbeat.org/blog/introducing-liquid-banking"
+    },
+    {
+      "date": "2026-11-18",
+      "type": "milestone",
+      "title": "Hyperbeat launches USD+ yield vault accepting beatUSD deposits",
+      "description": "Hyperbeat launches USD+ as a separate yield-accruing vault accepting USDC, USDT0, or beatUSD deposits, including a Liquid Bank credit strategy lending beatUSD to card holders.",
+      "sourceUrl": "https://hyperbeat.org/blog/introducing-usd-plus"
+    }
+  ],
+  "listingStatusReview": {
+    "changedAt": "2026-11-27",
+    "reason": "No admitted price lane: DefiLlama ID 397 price is null, coins.llama.fi contract quote is empty, DexScreener has no pairs, and GeckoTerminal price_usd is null. HyperEVM on-chain totalSupply (886,600.43 beatUSD) and DefiLlama supply are positive.",
+    "reviewBy": "2027-01-26",
+    "source": {
+      "label": "Hyperbeat Liquid Banking launch",
+      "url": "https://hyperbeat.org/blog/introducing-liquid-banking"
+    }
+  }
+}

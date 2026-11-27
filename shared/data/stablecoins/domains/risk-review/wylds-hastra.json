@@ -1,0 +1,27 @@
+{
+  "id": "wylds-hastra",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Verified YieldVaultV2 implementation on Blockscout",
+        "url": "https://eth.blockscout.com/address/0x06e0b9155a3cf07f41ac826ccfee7ef8413a9723?tab=contract"
+      },
+      {
+        "label": "Hastra Ethereum vault compliance specification",
+        "url": "https://raw.githubusercontent.com/provenance-io/hastra-eth-vault/main/docs/COMPLIANCE.md"
+      },
+      {
+        "label": "Hastra Solana vault-mint program source (freeze_token_account)",
+        "url": "https://github.com/provenance-io/hastra-sol-vault/blob/main/programs/vault-mint/src/lib.rs"
+      },
+      {
+        "label": "Executed Solana FreezeTokenAccount transaction on Solscan",
+        "url": "https://solscan.io/tx/67J4bJaWyij7AxWVzwu8D8jTfkoLfLn6aWBDq6w6NskoPXmrWHSiTN5z6rUwVid7uVB9CUTeoiBhBvW9FBTf7rTt"
+      }
+    ],
+    "evidence": "Yes: direct holder-targeted freeze controls are verified live on both deployments as of 2026-11-27. On Ethereum (UUPS proxy 0x6ad038ca6c04e885630851278ca0a856ad9a66cc, verified YieldVaultV2 implementation 0x06e0b9155a3cf07f41ac826ccfee7ef8413a9723 pinned at block 26507604; 307,114,853.282635 wYLDS, 56.8% of combined supply), eth_call confirms active FREEZE_ADMIN_ROLE (0x543dd7347cde3308f4ca610f3d5b513c0c1ce692b559bf3b9637d9557d3aede9) is held by 0x8571de3d27a9190af98260c3b54ab7ff79048926 (DEFAULT_ADMIN_ROLE held by 0x4acd2c83616d42b87788ecef4039e7355dd23a39) with freezeAccount(address) blocking transfers, receives, deposits, and redemptions plus privileged burn on frozen accounts. On Solana (classic SPL Token mint 8fr7WGTVFszfyNWRMXj6fRjZZAnDwmXwEpCrtzmUkdih pinned at finalized slot 474607859; 233,687,912.351330 wYLDS, 43.2% of combined supply), getAccountInfo confirms active freezeAuthority PDA 8A18H7n3atDfQsN8rLvt98hj5WZJWwhqqR8digDvbia6 governed by program 9WUyNREiPDMgwMh5Gt81Fd3JpiCKxpjZ5Dpq9Bo1RhMV's admin-callable freeze_token_account instruction, verified live by executed freeze transaction 67J4bJaWyij7AxWVzwu8D8jTfkoLfLn6aWBDq6w6NskoPXmrWHSiTN5z6rUwVid7uVB9CUTeoiBhBvW9FBTf7rTt (slot 383260107, 2025-11-29) where administrator 4tsSBUAEwYoB7yExZJdftWBk3vDsYdcnf1u7tXML2cNe froze token account ESu8sacS9auxXKNiw7nEvm4PhwJ7bD4HdxeRyxUbj4eJ.",
+    "reviewer": "Pharos Listing Policy v2 PR-4",
+    "reviewedAt": "2026-11-27"
+  }
+}

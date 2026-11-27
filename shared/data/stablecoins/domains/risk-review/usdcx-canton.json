@@ -1,0 +1,19 @@
+{
+  "id": "usdcx-canton",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "CIP-0056 Canton Network Token Standard",
+        "url": "https://raw.githubusercontent.com/global-synchronizer-foundation/cips/main/cip-0056/cip-0056.md"
+      },
+      {
+        "label": "Circle xReserve supported blockchains and domains",
+        "url": "https://developers.circle.com/xreserve/references/supported-blockchains-and-domains"
+      }
+    ],
+    "evidence": "Possible: Canton USDCx implements the CIP-0056 token standard under admin party decentralized-usdc-interchain-rep::12208115f1e168dd7e792320be9c4ca720c751a02a3053c7606e1c1cd3dad9bf60ef, where the token registry participates in transfer workflow approval and can abort transfer instructions, while Ethereum backing sits in Circle xReserve where USDC retains address-level freeze controls. Because Canton sub-transaction privacy prevents public inspection of the live #utility-bridge-v0 Daml DAR, party thresholds, and freeze predicates on-ledger, holder-targeted freeze status remains possible pending verifiable Daml source inspection.",
+    "reviewer": "Pharos Listing Policy v2 PR-4",
+    "reviewedAt": "2026-11-27"
+  }
+}

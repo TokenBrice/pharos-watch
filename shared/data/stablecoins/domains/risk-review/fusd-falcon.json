@@ -1,0 +1,23 @@
+{
+  "id": "fusd-falcon",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "fUSD Ethereum proxy contract",
+        "url": "https://etherscan.io/address/0x1676b80edd36b18a3c3432c11ed25d37fde9c92a"
+      },
+      {
+        "label": "fUSD BSC proxy contract",
+        "url": "https://bscscan.com/address/0x1676b80edd36b18a3c3432c11ed25d37fde9c92a"
+      },
+      {
+        "label": "Verified AnchorageToken implementation on Blockscout",
+        "url": "https://eth.blockscout.com/address/0x6f0ad13ca5e5ddd6e12e49e3c8726c45820dd473"
+      }
+    ],
+    "evidence": "Read live at Ethereum block 26507592, hash 0x398d84af896bc46f7d0b2b5b3b21e2ca856a36af4ffe626609d47f3539f9f82f, 2026-11-27T15:58:35Z, and BSC block 136066642, hash 0xd27507c2da6587ce4da2744ed0784b5e3352a74d1896bbfc0756381632910b9c, 2026-11-27T15:58:45Z. Both ERC-1967 UUPS proxies at 0x1676b80edd36b18a3c3432c11ed25d37fde9c92a delegate to byte-identical AnchorageToken implementation 0x6f0ad13ca5e5ddd6e12e49e3c8726c45820dd473 (17,865 bytes). Verified source implements blockAccounts(address[]) and unblockAccounts(address[]) gated by BLOCKLISTER_ROLE, with _update reverting transfers when sender or recipient is blocked (except burns to address(0)), plus pause() gated by PAUSER_ROLE. On both chains, BLOCKLISTER_ROLE is held by 0x8875b3fc7a66d48cdc1cba611a66b3a5ecd75d23, PAUSER_ROLE by 0xc2a24919afb2328bab581dd7748e94906e480812, and paused() is false. No transfer allowlist exists in _update. No actual blocklist transaction was sent.",
+    "reviewer": "Pharos Wave 4 pre-launch review",
+    "reviewedAt": "2026-11-27"
+  }
+}

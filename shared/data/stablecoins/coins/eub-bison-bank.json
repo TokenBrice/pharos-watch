@@ -1,0 +1,91 @@
+{
+  "id": "eub-bison-bank",
+  "name": "Bison Bank EUB",
+  "symbol": "EUB",
+  "brand": "Bison Bank",
+  "oneLiner": "EUB is Bison Bank's MiCA-authorized euro e-money token on Solana Token-2022, restricted to allowlisted institutional partner wallets with no public mint.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "EUR",
+    "governance": "centralized",
+    "yieldBearing": false
+  },
+  "collateral": "Issued at par against euro funds by Bison Bank S.A., a Portuguese credit institution supervised by Banco de Portugal under CRR/CRD IV/BRRD prudential liquidity and own-funds rules; no separate periodic EUB reserve attestation report is published.",
+  "pegMechanism": "MiCA Title IV euro electronic money token (EMT) issued on Solana using the Token-2022 Program with Fireblocks orchestration. Institutional clients mint EUB at 1:1 through Bison Bank home banking and hold a par redemption right within two business days subject to KYC/AML screening. Holding and transfers are restricted to pre-approved allowlisted institutional partner wallets.",
+  "mechanismArchetype": "fiat-cash",
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://bisonbank.com/en/eub/"
+    },
+    {
+      "label": "EUB MiCA White Paper",
+      "url": "https://bisonbank.com/wp-content/uploads/2026/04/Bison-Bank-EUB-White-Paper_20260312-1.pdf"
+    },
+    {
+      "label": "Launch announcement",
+      "url": "https://bisonbank.com/bison-electronic-money-token-the-first-portuguese-stablecoin-is-launched-today/"
+    },
+    {
+      "label": "ESMA MiCA EMT register",
+      "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Portugal",
+    "regulator": "Banco de Portugal (BdP)",
+    "license": "Credit Institution (MiCA EMT)"
+  },
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "status": "pre-launch",
+  "announcedDate": "2026-01-27",
+  "launchPhase": "launching-soon",
+  "launchPhaseDetail": "Bison Bank S.A. notified its EUB MiCA white paper to Banco de Portugal on March 12, 2026 (ESMA interim EMTWP register FFG DTI JQNWG6VL5, DTI H5MHNTQW9, offer start date April 10, 2026) and announced the launch of EUB and sister USD token USB on May 6, 2026. Pharos keeps EUB in launching-soon rather than launched because no public Solana mint address is disclosed in the white paper or issuer pages, and the white paper restricts issuance, holding, and transfers to pre-approved allowlisted institutional partner wallets via Bison Bank home banking rather than open-loop public circulation.",
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://bisonbank.com/bison-electronic-money-token-the-first-portuguese-stablecoin-is-launched-today/",
+      "title": "Bison electronic money token: The first Portuguese stablecoin is launched today",
+      "source": "Bison Bank"
+    },
+    {
+      "type": "article",
+      "url": "https://bisonbank.com/bison-bank-becomes-portugals-first-mica-regulated-crypto-asset-service-provider/",
+      "title": "Bison Bank becomes Portugal's first MiCA-Regulated Crypto-Asset Service Provider",
+      "source": "Bison Bank"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2026-01-27",
+      "type": "announcement",
+      "title": "Bison Bank announces plan to launch Portugal's first bank-issued stablecoin under MiCA",
+      "description": "Bison Bank announces the merger of subsidiary Bison Digital Assets into the bank, RWA tokenization plans, and a 2026 bank-issued stablecoin following Portugal's MiCA transposition under Law 69/2025.",
+      "sourceUrl": "https://bisonbank.com/strategic-reorganization-and-the-first-portuguese-stablecoin/"
+    },
+    {
+      "date": "2026-03-12",
+      "type": "regulatory",
+      "title": "Bison Bank notifies EUB MiCA white paper to Banco de Portugal",
+      "description": "ESMA's interim MiCA EMT register records Bison Bank S.A. (LEI 549300V4H4USWZUCE073) white paper notification for EUB (FFG DTI JQNWG6VL5, DTI H5MHNTQW9), naming Solana Token-2022 and Fireblocks infrastructure with an April 10, 2026 offer start date.",
+      "sourceUrl": "https://bisonbank.com/wp-content/uploads/2026/04/Bison-Bank-EUB-White-Paper_20260312-1.pdf"
+    },
+    {
+      "date": "2026-05-06",
+      "type": "milestone",
+      "title": "Bison Bank announces launch of EUB and USB institutional e-money tokens",
+      "description": "Bison Bank unveils EUB (euro) and USB (dollar) for cross-border payments among pre-approved institutional partners via its home banking platform; no public Solana mint address or open-loop venue liquidity is published.",
+      "sourceUrl": "https://bisonbank.com/bison-electronic-money-token-the-first-portuguese-stablecoin-is-launched-today/"
+    },
+    {
+      "date": "2026-06-22",
+      "type": "regulatory",
+      "title": "Bison Bank becomes Portugal's first MiCA-regulated bank CASP",
+      "description": "Following positive notice from Portuguese banking and securities regulators, Bison Bank merges Bison Digital Assets and begins operating directly as a MiCA CASP alongside its EUB and USB EMT offering.",
+      "sourceUrl": "https://bisonbank.com/bison-bank-becomes-portugals-first-mica-regulated-crypto-asset-service-provider/"
+    }
+  ]
+}

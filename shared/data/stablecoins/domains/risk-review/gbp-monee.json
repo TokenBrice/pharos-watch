@@ -1,0 +1,19 @@
+{
+  "id": "gbp-monee",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Monee Financial Technologies website",
+        "url": "https://www.monee.io/"
+      },
+      {
+        "label": "FCA Stablecoins Cohort",
+        "url": "https://www.fca.org.uk/firms/innovation/regulatory-sandbox/stablecoins-cohort"
+      }
+    ],
+    "evidence": "Monee describes institutional onboarding, verification, and compliance-first digital financial market infrastructure for its FCA Regulatory Sandbox stablecoin proposal, but no production chain, token contract, or address-freezing interface has been published. Holder-control capability remains unresolved pending deployment and legal terms.",
+    "reviewer": "Pharos Listing Policy v2 PR-4 review",
+    "reviewedAt": "2026-11-27"
+  }
+}

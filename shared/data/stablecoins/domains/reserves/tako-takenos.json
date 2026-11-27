@@ -1,0 +1,57 @@
+{
+  "id": "tako-takenos",
+  "reserves": [
+    {
+      "name": "USD cash, banks undisclosed",
+      "pct": 7.9129,
+      "risk": "low",
+      "assetClass": "cash",
+      "liquidityHorizon": "unknown",
+      "riskFactors": [
+        "custody",
+        "counterparty"
+      ]
+    },
+    {
+      "name": "Treasury category including money-market funds, fund split undisclosed",
+      "pct": 92.0871,
+      "risk": "low",
+      "assetClass": "other",
+      "liquidityHorizon": "unknown",
+      "riskFactors": [
+        "custody",
+        "counterparty"
+      ]
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Wave 4 pre-launch review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Bridge TAKO reserve JSON",
+        "url": "https://transparency.bridge.xyz/v0/stablecoins/tako"
+      },
+      {
+        "label": "Bridge Treasury category definition",
+        "url": "https://reserves.bridge.xyz/tako"
+      }
+    ],
+    "rationale": "Issuer-published amounts were read from the Bridge TAKO feed on 2026-11-27, upstream last_updated 2026-11-27T15:50:41Z. Cash of $1,404,805.67 plus the Treasury category of $16,348,592.92 totals $17,753,398.59, matching reported reserve assets of $17,753,398.59 against 17,734,779.59 TAKO on-chain supply (1.001 collateralization ratio). Each category is divided by the reported reserve total and rounded to four decimals. Issuer-only evidence with no independent TAKO attestation retrieved keeps confidence probable. The Treasury category includes money-market funds with Treasury-bill ladders of less than three-month duration; direct securities versus fund shares are undisclosed, so no Treasury-bill look-through is assigned.",
+    "compositionBasis": "Issuer self-reported reserve category amounts, not an audit or independent attestation",
+    "compositionAsOf": "2026-11-27",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Named cash banks, custody structure, and the composition and fund counterparties inside the Treasury category are undisclosed. Category totals do not establish look-through or legal reserve protections.",
+    "knownUnknownExposurePct": 92.0871,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 1,
+        "reserveName": "Treasury category including money-market funds, fund split undisclosed",
+        "pct": 92.0871,
+        "disposition": "basket-needs-split",
+        "rationale": "Issuer groups direct Treasury exposure and money-market funds without constituent weights or instrument identities; no tracked stablecoin dependency is established."
+      }
+    ]
+  }
+}

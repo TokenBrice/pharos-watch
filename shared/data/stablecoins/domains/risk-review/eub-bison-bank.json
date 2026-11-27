@@ -1,0 +1,19 @@
+{
+  "id": "eub-bison-bank",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Bison Bank EUB MiCA White Paper (Sections D.1, E.2, E.3, F.2)",
+        "url": "https://bisonbank.com/wp-content/uploads/2026/04/Bison-Bank-EUB-White-Paper_20260312-1.pdf"
+      },
+      {
+        "label": "Bison Bank EUB product page",
+        "url": "https://bisonbank.com/en/eub/"
+      }
+    ],
+    "evidence": "Bison Bank's MiCA white paper states that EUB uses the Solana Token-2022 Program Account State feature orchestrated via Fireblocks, which supports either an allowlist (whitelist) or a denylist (blacklist), with the allowlist in active use to restrict receipt, holding, and transfers to bank-approved institutional partner wallets. The white paper further states that Bison Bank reserves the right to block wallets ('Blocked Wallets') and freeze EUB in holder wallets.",
+    "reviewer": "Pharos Listing Policy v2 PR-4 review",
+    "reviewedAt": "2026-11-27"
+  }
+}

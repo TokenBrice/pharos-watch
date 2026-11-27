@@ -282,6 +282,12 @@ const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason>
     since: "2026-10-03",
     note: "JLTXX reinvests daily dividends in same-class shares; the stable $1 NAV feed does not measure distributions, and no reviewed dividend-return adapter consumes the issuer's quoted fund yield",
   },
+  "wylds-hastra": {
+    code: "pre-launch",
+    since: "2026-11-27",
+    nextReviewAt: "2027-01-26",
+    note: "Launched, awaiting data: pre-launch stub pending active price lane, multi-chain perimeter, and Prime (formerly Democratized Prime) vs YLDS reserve deduplication",
+  },
 };
 
 export const INTENTIONAL_GAP_REASONS: Record<string, string> = Object.fromEntries(

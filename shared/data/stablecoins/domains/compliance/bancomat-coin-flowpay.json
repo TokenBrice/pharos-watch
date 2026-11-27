@@ -1,0 +1,22 @@
+{
+  "id": "bancomat-coin-flowpay",
+  "mica": {
+    "status": "pending",
+    "tokenType": "EMT",
+    "competentAuthority": "Banca d'Italia",
+    "references": [
+      {
+        "label": "BANCOMAT press release: BANCOMAT Coin to be issued by FlowPay in early 2027 subject to completion of regulatory authorisation under MiCAR (2026-11-24)",
+        "url": "https://bancomat.it/en/press-releases/nasce-bancomat-coin-la-nuova-stablecoin-in-euro"
+      },
+      {
+        "label": "BANCOMAT press release: EUR.BANK consultations with Bank of Italy and Italian Banking Association",
+        "url": "https://bancomat.it/en/press-releases/bancomat-accelera-su-eur-bank"
+      },
+      {
+        "label": "ESMA interim MiCA EMT register (EMTWP.csv): FlowPay and BANCOMAT S.p.A. not yet listed as authorized EMT issuers (accessed 2026-11-27)",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      }
+    ]
+  }
+}

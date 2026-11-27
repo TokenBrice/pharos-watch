@@ -1,0 +1,89 @@
+{
+  "id": "tako-takenos",
+  "name": "Takenos USD",
+  "symbol": "TAKO",
+  "brand": "Takenos",
+  "status": "pre-launch",
+  "llamaId": "470",
+  "oneLiner": "TAKO is Takenos's Solana dollar stablecoin issued through Bridge, backed by issuer-reported cash and Treasury reserves, awaiting an admitted price lane.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "mechanismArchetype": "fiat-cash",
+  "collateral": "Bridge reports U.S. dollar cash and a Treasury category that includes money-market funds with Treasury-bill ladders of less than three-month duration. Named cash banks, fund allocations, and an independent TAKO reserve attestation were not retrieved.",
+  "pegMechanism": "Bridge issues TAKO on Solana as a Token-2022 stablecoin connected to Bridge fiat on and off-ramps for Takenos users across Latin America. Default token accounts are initialized with no transfer hook; token-specific direct redemption terms for non-app holders remain unverified.",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://reserves.bridge.xyz/tako",
+    "provider": "Bridge issuer dashboard and reserve JSON; no independently reconciled TAKO reserve report retrieved",
+    "attestorTier": "self",
+    "cadence": "real-time"
+  },
+  "contracts": [
+    {
+      "chain": "solana",
+      "address": "He1ZD1o5WTUCHz5QoVMSdfhZjyqecVgYK75TUg95rnhL",
+      "decimals": 6
+    }
+  ],
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://takenos.com/"
+    },
+    {
+      "label": "Bridge reserve dashboard",
+      "url": "https://reserves.bridge.xyz/tako"
+    },
+    {
+      "label": "Reserve data",
+      "url": "https://transparency.bridge.xyz/v0/stablecoins/tako"
+    },
+    {
+      "label": "Official token metadata",
+      "url": "https://token-metadata.bridge.xyz/solana/tako.json"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/TakenosApp"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States"
+  },
+  "collateralQuality": "rwa",
+  "custodyModel": "unknown",
+  "governanceQuality": "single-entity",
+  "launchDate": "2024-07-30",
+  "launchPhase": "launched",
+  "launchPhaseDetail": "TAKO is issued on Solana as an open-loop Token-2022 mint with initialized default accounts and no transfer hook. The recorded launch date reflects the first observed mint on Solana; Bridge publishes live supply and reserve categories, but no admitted price lane exists.",
+  "milestones": [
+    {
+      "date": "2024-07-24",
+      "type": "milestone",
+      "title": "TAKO Token-2022 mint is initialized on Solana",
+      "description": "The Bridge-linked Solana Token-2022 mint is created with initialized default account state and permanent delegate extension.",
+      "sourceUrl": "https://solscan.io/tx/3EzXKtGWAqK6p5vnL3E2d2RrzQRvid6N72aVouR1GA87CfBYGohNwcgTVss69f6dFbQYDriYuvg5Kn9hymUy2fcw"
+    },
+    {
+      "date": "2024-07-30",
+      "type": "milestone",
+      "title": "First positive TAKO issuance is recorded on Solana",
+      "description": "A Token-2022 mintToChecked instruction mints an initial 10 TAKO at the Takenos Solana mint.",
+      "sourceUrl": "https://solscan.io/tx/5PtYzqZGk9qvLW2b9p5St2oTeHaNo1zT8MTrqY8rVz9VedbTY5cHbnvfKQPQtQdJXjsScVpCFdcSjEpmn4R8ar2R"
+    }
+  ],
+  "listingStatusReview": {
+    "changedAt": "2026-11-27",
+    "reason": "No admitted price lane: DefiLlama price is null, the exact-mint quote is empty, CoinGecko returns 404 for takenos-usd, and DexScreener reports zero pools. DefiLlama supply and pinned Solana issuance are positive.",
+    "reviewBy": "2027-01-26",
+    "source": {
+      "label": "Issuer supply and reserves",
+      "url": "https://reserves.bridge.xyz/tako"
+    }
+  }
+}

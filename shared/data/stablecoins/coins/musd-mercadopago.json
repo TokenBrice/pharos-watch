@@ -1,0 +1,109 @@
+{
+  "id": "musd-mercadopago",
+  "name": "Meli Dólar",
+  "symbol": "MUSD",
+  "brand": "Mercado Pago",
+  "status": "pre-launch",
+  "oneLiner": "MUSD is Mercado Libre's Ethereum dollar stablecoin issued by Bermuda-licensed Meli ISAC Ltd. for Mercado Pago users, awaiting an admitted price and supply lane.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "mechanismArchetype": "fiat-cash",
+  "collateral": "Meli ISAC Ltd. states that MUSD is fully backed by liquid, bankruptcy-remote reserves, with monthly audits referenced on melidolar.com. Named custodians, asset-class breakdown and public attestation reports were not retrievable without portal access.",
+  "pegMechanism": "Meli ISAC Ltd. issues MUSD on Ethereum for 1:1 U.S. dollar parity within Mercado Pago and Mercado Libre flows. Verified contract bytecode permits open-loop ERC-20 transfers to external Ethereum wallets subject to denylist and pause controls; direct non-app redemption terms remain unverified.",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://melidolar.com/",
+    "provider": "Meli ISAC Ltd. references monthly audits on melidolar.com; no named attestor or public report was retrievable",
+    "attestorTier": "undisclosed",
+    "cadence": "undisclosed",
+    "attestorJurisdiction": "Bermuda"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x9d64324644cf6deb25731c7344ce9ef6607a7a47",
+      "decimals": 18
+    }
+  ],
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://melidolar.com/"
+    },
+    {
+      "label": "Mercado Pago",
+      "url": "https://www.mercadopago.com"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/mercadopago"
+    },
+    {
+      "label": "Security audit",
+      "url": "https://skynet.certik.com/projects/mercado-libre"
+    },
+    {
+      "label": "MercadoLibre FY2025 Form 10-K",
+      "url": "https://www.sec.gov/Archives/edgar/data/1099590/000109959026000006/meli-20251231.htm"
+    },
+    {
+      "label": "MercadoLibre Q3 2026 Form 10-Q",
+      "url": "https://www.sec.gov/Archives/edgar/data/1099590/000109959026000029/meli-20260930.htm"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Bermuda",
+    "regulator": "BMA",
+    "license": "Class M Digital Asset Business License (Meli ISAC Ltd.)"
+  },
+  "collateralQuality": "rwa",
+  "custodyModel": "unknown",
+  "governanceQuality": "single-entity",
+  "launchDate": "2024-02-20",
+  "launchPhase": "launched",
+  "launchPhaseDetail": "MUSD is live on Ethereum with open-loop ERC-20 transfers verified in the deployed MeliDolar implementation. Operations migrated from Uruguay to Bermuda-licensed Meli ISAC Ltd. in September 2025. Pharos keeps MUSD outside live monitoring because no admitted price or supply lane is available.",
+  "milestones": [
+    {
+      "date": "2024-02-20",
+      "type": "milestone",
+      "title": "Initial MUSD issuance is recorded on Ethereum",
+      "description": "The MeliDolar proxy contract is deployed at block 19269600 and mints an initial 1,000 MUSD at block 19270135.",
+      "sourceUrl": "https://etherscan.io/tx/0x729027d8a3b30dc3f806b9ab9bec4e7246ee71bed14c872c531c59ccdc7db752"
+    },
+    {
+      "date": "2025-08-18",
+      "type": "regulatory",
+      "title": "Bermuda Monetary Authority issues Class M license to Meli ISAC Ltd.",
+      "description": "Following conditional approval in July 2025, the BMA grants Meli ISAC Ltd. a Class M Digital Asset Business license to issue, sell, and redeem Meli Dólar.",
+      "sourceUrl": "https://www.sec.gov/Archives/edgar/data/1099590/000109959026000006/meli-20251231.htm"
+    },
+    {
+      "date": "2025-09-22",
+      "type": "milestone",
+      "title": "Meli Dólar issuance migrates from Uruguay to Bermuda",
+      "description": "MercadoLibre completes the migration of the Meli Dólar business to Meli ISAC Ltd. under its Bermuda Class M regulatory framework.",
+      "sourceUrl": "https://www.sec.gov/Archives/edgar/data/1099590/000109959026000006/meli-20251231.htm"
+    },
+    {
+      "date": "2026-08",
+      "type": "regulatory",
+      "title": "BMA extends Meli ISAC Ltd. Class M license through February 2027",
+      "description": "The Bermuda Monetary Authority extends the Class M Digital Asset Business licenses of Meli ISAC Ltd. and Meli ISA Ltd. for six months through February 18, 2027.",
+      "sourceUrl": "https://www.sec.gov/Archives/edgar/data/1099590/000109959026000029/meli-20260930.htm"
+    }
+  ],
+  "listingStatusReview": {
+    "changedAt": "2026-11-27",
+    "reason": "No admitted price or supply lane: MUSD is absent from DefiLlama stablecoins and CoinGecko, its DefiLlama exact-contract quote is empty, and DexScreener reports zero pools. Pinned Ethereum totalSupply is positive.",
+    "reviewBy": "2027-01-26",
+    "source": {
+      "label": "Meli Dólar website",
+      "url": "https://melidolar.com/"
+    }
+  }
+}

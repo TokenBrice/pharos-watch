@@ -1,0 +1,23 @@
+{
+  "id": "thslvr-theo",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Theo thGOLD & thSLVR documentation",
+        "url": "https://docs.theo.xyz/products/thgold-and-thslvr"
+      },
+      {
+        "label": "Theo deployed addresses and governance roles",
+        "url": "https://docs.theo.xyz/developers/deployed-addresses"
+      },
+      {
+        "label": "Sourcify exact-match MetalToken implementation source (0x899140a8394b9c6a4c51b7ecc529ffbcd3ff82da)",
+        "url": "https://repo.sourcify.dev/1/0x899140a8394B9c6a4c51b7ECC529FfBCD3Ff82DA"
+      }
+    ],
+    "evidence": "thSLVR is deployed on Ethereum at 0x84c8f334434fb6ff769f760653feb88838357039 (ERC-1967 proxy over Sourcify exact-match MetalToken 0x899140a8394b9c6a4c51b7ecc529ffbcd3ff82da, verified 2026-09-17, read at block 26507594 on 2026-11-27). Verified MetalToken.sol inherits ERC20Upgradeable, ERC20BurnableUpgradeable, ERC20PermitUpgradeable, Ownable2StepUpgradeable, and UUPSUpgradeable with no pause, blacklist, transfer fee, or transfer hook. The verdict stays possible because Theo's 2-day TimelockController (0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02) owns the UUPS proxy and can upgrade the implementation; mint is gated to the 4-of-6 Operator Safe (0x94877640dd9e6f1e3cb56bf7b5665b7152601295).",
+    "reviewer": "Pharos Listing Policy v2 PR-4 review",
+    "reviewedAt": "2026-11-27"
+  }
+}

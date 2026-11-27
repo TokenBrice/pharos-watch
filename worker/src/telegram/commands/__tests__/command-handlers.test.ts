@@ -70,9 +70,12 @@ describe("/subscribe and /unsubscribe", () => {
       .toEqual({ alert_depeg: 1, depeg_worsening_bps_step: 500 });
   });
 
-  it("resolves real USDCx, suggests ticker/preset for unknown tokens, and lists group presets on bare /subscribe", async () => {
+  it("disambiguates bare USDCx, resolves usdcx-movement, suggests unknown tokens, and lists group presets", async () => {
     const { sqlite, db } = fixtures.open();
-    await handleSubscribe(makeCommandContext(db), "USDCx");
+    const ambigCtx = makeCommandContext(db);
+    await handleSubscribe(ambigCtx, "USDCx");
+    expect(vi.mocked(ambigCtx.replyToChatWithMarkup).mock.calls[0]![0]).toContain('"USDCx" matches');
+    await handleSubscribe(makeCommandContext(db), "usdcx-movement");
     expect(sqlite.prepare("SELECT stablecoin_id FROM telegram_subscriptions WHERE chat_id = '42'").all())
       .toEqual([{ stablecoin_id: "usdcx-movement" }]);
 

@@ -1,0 +1,79 @@
+{
+  "id": "thslvr-theo",
+  "name": "Theo thSLVR",
+  "symbol": "thSLVR",
+  "brand": "Theo",
+  "oneLiner": "thSLVR is Theo's pre-launch silver token: one non-accruing troy ounce of physical silver that Theo may lease out, with yield only in separate sthSLVR.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "SILVER",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "Physical silver held in Theo's allocated vault account or leased to institutional counterparties (refiners, mints, and industrial fabricators) on short or longer tenors. Per Theo's documentation, all thSLVR backing may be lent whether or not a holder stakes, and the same silver lease book also supports thUSD's hedged carry strategy.",
+  "pegMechanism": "One thSLVR represents one troy ounce of physical silver that does not rebase, drift, or accrue; lease income goes only to the separate sthSLVR ERC-4626 vault, which carries a 5-day redemption lockup. Direct mint and redemption against physical silver are documented as coming soon, and secondary liquidity for thSLVR is still in the works.",
+  "mechanismArchetype": "commodity-claim",
+  "commodityOunces": 1,
+  "detailProvider": "coingecko",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://theo.xyz"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.theo.xyz/products/thgold-and-thslvr"
+    },
+    {
+      "label": "Deployed addresses",
+      "url": "https://docs.theo.xyz/developers/deployed-addresses"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/theo_xyz"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Panama"
+  },
+  "collateralQuality": "rwa",
+  "custodyModel": "unknown",
+  "governanceQuality": "single-entity",
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x84c8f334434fb6ff769f760653feb88838357039",
+      "decimals": 6
+    }
+  ],
+  "status": "pre-launch",
+  "announcedDate": "2026-09-30",
+  "launchPhase": "launching-soon",
+  "launchPhaseDetail": "Theo deployed the thSLVR ERC-1967 proxy on Ethereum on September 17, 2026 (0x84c8f334434fb6ff769f760653feb88838357039, 6 decimals, MetalToken implementation 0x899140a8394b9c6a4c51b7ecc529ffbcd3ff82da) alongside the sthSLVR ERC-4626 staking vault (0x69cf8ce76c39afa240a31c79239a55c9f40b12d2) and announced thSLVR in beta on September 30, 2026. Theo's documentation states that one thSLVR equals one fixed troy ounce of physical silver without accruing yield, while lease income goes exclusively to sthSLVR stakers. The 4-of-6 Operator Safe holds the minter role and a 2-day Timelock owns the UUPS proxies. On November 27, 2026 (Ethereum block 26507594), all 610,400 thSLVR in existence sit in two Theo issuer addresses (610,398 in the thUSD Cash Wallet Safe and 2 in the Yield distributor EOA), sthSLVR supply is zero, direct mint and redemption remain marked coming soon, secondary liquidity is documented as in the works, and no public price feed exists.",
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://theo.xyz/articles/introducing-thslvr-silver-that-works-for-you",
+      "title": "Introducing thSLVR: Silver That Works for You",
+      "source": "Theo"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2026-09-17",
+      "type": "milestone",
+      "title": "thSLVR and sthSLVR contracts deployed and verified on Ethereum",
+      "description": "Theo deploys the 6-decimal thSLVR ERC-1967 MetalToken proxy (0x84c8f334434fb6ff769f760653feb88838357039) and sthSLVR ERC-4626 vault (0x69cf8ce76c39afa240a31c79239a55c9f40b12d2) owned by the 2-day Timelock with the 4-of-6 Operator Safe as minter.",
+      "sourceUrl": "https://docs.theo.xyz/developers/deployed-addresses"
+    },
+    {
+      "date": "2026-09-30",
+      "type": "announcement",
+      "title": "Theo introduces thSLVR tokenized silver in beta",
+      "description": "Theo announces thSLVR backed by physical silver leased to refiners, mints, and industrial fabricators, noting more than $40M in silver leases already active inside thUSD and stating public availability and secondary liquidity are forthcoming.",
+      "sourceUrl": "https://theo.xyz/articles/introducing-thslvr-silver-that-works-for-you"
+    }
+  ]
+}

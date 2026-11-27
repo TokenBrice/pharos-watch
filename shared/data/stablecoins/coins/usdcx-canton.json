@@ -1,0 +1,63 @@
+{
+  "id": "usdcx-canton",
+  "name": "Canton USDCx",
+  "symbol": "USDCx",
+  "brand": "Circle",
+  "status": "pre-launch",
+  "geckoId": "xreserve-bridged-usdc-canton",
+  "oneLiner": "Canton USDCx is a CIP-0056 dollar token on Canton Network backed by Ethereum USDC held in Circle xReserve domain 10001.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "mechanismArchetype": "fiat-cash",
+  "collateral": "Native Ethereum USDC locked in Circle's Ethereum xReserve escrow contract (0x8888888199b2Df864bf678259607d6D5EBb4e3Ce) under Canton remote domain 10001 (0x2711). On-chain Ethereum escrow balance is collateral backing evidence rather than a clocked Canton circulating supply feed.",
+  "pegMechanism": "1:1 USDC-backed CIP-0056 token issued on Canton Network through Circle xReserve attestation rails, identified on mainnet by the composite pair InstrumentId.admin (decentralized-usdc-interchain-rep::12208115f1e168dd7e792320be9c4ca720c751a02a3053c7606e1c1cd3dad9bf60ef) and case-sensitive InstrumentId.id (USDCx), 10 decimals. Cross-chain minting and redemption require an onboarded BridgeUserAgreement rather than a public retail bridge interface, while on-ledger transfers settle peer-to-peer across CIP-0056 wallets and venues.",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.circle.com/xreserve"
+    },
+    {
+      "label": "Docs",
+      "url": "https://developers.circle.com/xreserve/references/supported-blockchains-and-domains"
+    },
+    {
+      "label": "Canton launch announcement",
+      "url": "https://www.canton.network/blog/usdcx-now-live-on-canton-unlocking-private-and-composable-usdc-backed-settlement"
+    },
+    {
+      "label": "Explorer",
+      "url": "https://lighthouse.cantonloop.com/tokens/USDCx"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States"
+  },
+  "collateralQuality": "native",
+  "custodyModel": "institutional-top",
+  "launchDate": "2025-12-04",
+  "launchPhase": "launched",
+  "launchPhaseDetail": "USDCx launched on Canton Network on December 4, 2025 using Circle xReserve (remote domain 10001) and CIP-0056 across 13 launch apps and participants (composite identifier InstrumentId.admin decentralized-usdc-interchain-rep::12208115f1e168dd7e792320be9c4ca720c751a02a3053c7606e1c1cd3dad9bf60ef plus InstrumentId.id USDCx; omitted from contracts[] until composite Canton instrument identities are modeled). Active admission remains blocked because Canton sub-transaction privacy prevents public verification of Daml bridge/mint authority controls, and no unauthenticated clocked Canton supply API reconciles the 2.37x gap between CoinGecko circulating supply ($3.28M) and Ethereum xReserve escrow ($7.79M as of 2026-11-27). Upon active promotion, Canton USDCx is designated for stablecoin-variant classification (variantOf usdc-circle, pure-wrapper, matching usdcx-movement) so USDC supply is not double-counted.",
+  "milestones": [
+    {
+      "date": "2025-12-04",
+      "type": "milestone",
+      "title": "USDCx launches on Canton Network via Circle xReserve",
+      "description": "Canton Network announces mainnet availability of CIP-0056 USDCx backed by Ethereum USDC in Circle xReserve domain 10001 across 13 launch ecosystem participants including Bron, Cumberland DRW, Dfns, Digital Asset, Loop, QCP, and Temple.",
+      "sourceUrl": "https://www.canton.network/blog/usdcx-now-live-on-canton-unlocking-private-and-composable-usdc-backed-settlement"
+    }
+  ],
+  "listingStatusReview": {
+    "changedAt": "2026-11-27",
+    "reason": "Publicly issued on Canton via Circle xReserve (domain 10001). Active admission blocked by non-inspectable Daml bridge/mint authority under sub-transaction privacy and a 2.37x gap between CoinGecko (3.28M) and Eth xReserve escrow (7.79M) with no clocked supply API.",
+    "reviewBy": "2027-01-26",
+    "source": {
+      "label": "Circle xReserve supported blockchains and domains",
+      "url": "https://developers.circle.com/xreserve/references/supported-blockchains-and-domains"
+    }
+  }
+}

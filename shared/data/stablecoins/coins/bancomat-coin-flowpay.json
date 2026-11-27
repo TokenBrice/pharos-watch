@@ -1,0 +1,78 @@
+{
+  "id": "bancomat-coin-flowpay",
+  "name": "BANCOMAT Coin",
+  "symbol": "EUR-BANCOMAT",
+  "brand": "BANCOMAT",
+  "oneLiner": "BANCOMAT Coin is BANCOMAT's planned euro stablecoin to be issued by FlowPay on Arbitrum in early 2027, pending regulatory authorization.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "EUR",
+    "governance": "centralized",
+    "yieldBearing": false
+  },
+  "collateral": "Planned euro reserves held within the European banking system under BANCOMAT's scheme rules to preserve bank deposits; specific reserve composition, custodians, segregation terms, and attestation arrangements remain unpublished ahead of authorization.",
+  "pegMechanism": "Planned MiCA-oriented euro stablecoin to be initially issued by BANCOMAT subsidiary FlowPay and distributed via participating banks and CASPs, with Arbitrum providing public blockchain infrastructure. Direct holder redemption terms, fees, and smart contract specifications have not yet been published.",
+  "mechanismArchetype": "fiat-cash",
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://bancomat.it/en"
+    },
+    {
+      "label": "FlowPay",
+      "url": "https://www.flowpay.it/"
+    },
+    {
+      "label": "BANCOMAT Coin announcement",
+      "url": "https://bancomat.it/en/press-releases/nasce-bancomat-coin-la-nuova-stablecoin-in-euro"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Italy",
+    "regulator": "Banca d'Italia"
+  },
+  "custodyModel": "unknown",
+  "status": "pre-launch",
+  "announcedDate": "2026-11-24",
+  "expectedLaunchDate": "2027-Q1",
+  "launchPhase": "announced",
+  "launchPhaseDetail": "BANCOMAT S.p.A. formally unveiled BANCOMAT Coin (formerly developed under the working title EUR.BANK) on November 24, 2026. Initial issuance is assigned to wholly owned Italian fintech subsidiary FlowPay (acquired July 22, 2025 with Bank of Italy approval), targeting market entry in the first months of 2027 subject to completion of the regulatory authorization process. Arbitrum (developed by Offchain Labs) will provide public blockchain infrastructure alongside Italian ecosystem partners Hercle, Young Platform, CheckSig, and Conio, following technical trials with nine Italian banks. EUR-BANCOMAT is Pharos's descriptive display label because no exchange ticker is published; no mainnet Arbitrum contract is deployed.",
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://bancomat.it/en/press-releases/nasce-bancomat-coin-la-nuova-stablecoin-in-euro",
+      "title": "INTRODUCING BANCOMAT COIN, the new euro stablecoin",
+      "source": "BANCOMAT"
+    },
+    {
+      "type": "article",
+      "url": "https://bancomat.it/en/press-releases/bancomat-welcomes-hercle-to-the-eur-bank-initiative",
+      "title": "BANCOMAT welcomes Hercle to the EUR.BANK initiative",
+      "source": "BANCOMAT"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2025-07-22",
+      "type": "milestone",
+      "title": "BANCOMAT completes FlowPay acquisition with Bank of Italy approval",
+      "description": "BANCOMAT S.p.A. closes its acquisition of Italian open-banking fintech FlowPay following Bank of Italy clearance, positioning FlowPay as the group's regulatory and technological hub.",
+      "sourceUrl": "https://bancomat.it/en/press-releases/bancomat-acquires-flowpay-closing-finalized"
+    },
+    {
+      "date": "2026-10-29",
+      "type": "partnership",
+      "title": "Hercle joins BANCOMAT's EUR.BANK stablecoin ecosystem",
+      "description": "BANCOMAT names Hercle as the first Italian fintech partner in EUR.BANK to support cross-border liquidity and treasury connectivity after technical trials with nine Italian banks.",
+      "sourceUrl": "https://bancomat.it/en/press-releases/bancomat-welcomes-hercle-to-the-eur-bank-initiative"
+    },
+    {
+      "date": "2026-11-24",
+      "type": "announcement",
+      "title": "BANCOMAT unveils BANCOMAT Coin name, FlowPay issuer role, and Arbitrum rail",
+      "description": "BANCOMAT unveils BANCOMAT Coin and its logo, confirming initial issuance by subsidiary FlowPay, public-chain infrastructure on Arbitrum, partners Young Platform, CheckSig, Conio, and Hercle, and a target launch in early 2027 pending regulatory authorization.",
+      "sourceUrl": "https://bancomat.it/en/press-releases/nasce-bancomat-coin-la-nuova-stablecoin-in-euro"
+    }
+  ]
+}

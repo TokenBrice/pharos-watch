@@ -1,0 +1,19 @@
+{
+  "id": "beatusd-hyperbeat",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "beatUSD verified BoringVault contract source (Ethereum CREATE2 mirror, identical runtime bytecode)",
+        "url": "https://eth.blockscout.com/address/0x669abe85f96a9e3b34723f7be9bc6f250abc0cc1?tab=contract"
+      },
+      {
+        "label": "Hyperbeat USD on HyperEVMScan",
+        "url": "https://hyperevmscan.io/address/0x669abe85f96a9e3b34723f7be9bc6f250abc0cc1"
+      }
+    ],
+    "evidence": "Direct HyperEVM RPC inspection at block 52396858 (2026-11-27) confirms 0x669abe85f96a9e3b34723f7be9bc6f250abc0cc1 shares exact 15,872-byte BoringVault runtime bytecode with its verified Ethereum mainnet counterpart, owned by 3-of-5 Safe 0x413f2e80070a069eb1051772fdc4f0af8e8303d7 with RolesAuthority 0x368b75a32db53332bd9916cf27272bf9696bcc45. Verified BoringVault.sol exposes requiresAuth-gated exit(to, asset, assetAmount, from, shareAmount), which calls _burn(from, shareAmount) on arbitrary holder balances without holder approval, and setBeforeTransferHook(address) to attach a transfer-blocking hook (currently unset at 0x0000000000000000000000000000000000000000). Direct on-chain burn/seizure and transfer-blocking authority establishes Yes.",
+    "reviewer": "Pharos Listing Policy v2 PR-4 review",
+    "reviewedAt": "2026-11-27"
+  }
+}

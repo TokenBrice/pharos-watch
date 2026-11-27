@@ -6471,5 +6471,101 @@
     "authoredBy": "ai",
     "model": "gemini-4-neon",
     "factsAsOf": "2026-11-27"
+  },
+  "usdcx-canton": {
+    "title": "Canton Network dollar backed by Circle xReserve",
+    "text": "Canton USDCx is a CIP-0056 dollar token launched on Canton Network in December 2025 through Circle xReserve under remote domain 10001. Ethereum USDC locked in Circle's xReserve contract backs Canton issuance across 13 launch apps and participants, while cross-chain minting and burning require an onboarded BridgeUserAgreement rather than a public retail bridge. Pharos keeps Canton USDCx outside live monitoring because Canton sub-transaction privacy prevents public verification of the live Daml bridge and freeze controllers, and no unauthenticated clocked Canton supply API reconciles the gap between CoinGecko circulating supply ($3.28M) and Ethereum xReserve escrow ($7.79M as of November 27, 2026). Registry transfer control and non-inspectable Daml governance remain the primary structural constraints.",
+    "updatedAt": "2026-11-27",
+    "authoredBy": "ai",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
+  },
+  "wylds-hastra": {
+    "title": "Fixed-dollar yield token over Figure credit pools",
+    "text": "Hastra Wrapped YLDS (wYLDS) is a fixed-dollar yield-bearing token deployed on Ethereum and Solana, backed by Figure YLDS and Figure Prime (formerly Democratized Prime) private-credit lending pools across HELOC, auto, and SMB exposures. Rather than appreciating in NAV, wYLDS holds a 1:1 par conversion ratio while accrued yield is claimed monthly through merkle distributions, and primary redemptions follow an admin-completed two-step queue. On-chain inspection confirms open-loop transfers alongside direct freeze authority on both the Ethereum UUPS proxy and the Solana SPL mint. Pharos keeps wYLDS in pre-launch review-hold because market pricing is stale and illiquid and combined Ethereum and Solana supply ($540.80M as of November 27, 2026) exceeds total Provenance YLDS supply ($301.34M), leaving reserve deduplication and classification unresolved.",
+    "updatedAt": "2026-11-27",
+    "authoredBy": "ai",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
+  },
+  "musd-mercadopago": {
+    "title": "Bermuda-licensed dollar built for Mercado Pago",
+    "text": "Meli Dólar (MUSD) is an Ethereum dollar stablecoin issued by Meli ISAC Ltd., a MercadoLibre subsidiary holding a Bermuda Monetary Authority Class M license extended through February 2027. The verified proxy contract permits open-loop ERC-20 transfers while retaining role-gated denylist and pause controls. Meli ISAC states full backing by liquid, bankruptcy-remote reserves and references monthly audits, though no public reserve breakdown or independent attestation report was retrievable without portal access. Pharos keeps MUSD outside live monitoring because no admitted market price or aggregator supply lane is available. Until independent reserve disclosures and liquid secondary pricing appear, holders face opaque backing composition alongside direct issuer freeze powers.",
+    "updatedAt": "2026-11-27",
+    "authoredBy": "ai",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
+  },
+  "usds-arq": {
+    "title": "Bridge-issued Tempo dollar distributed through ARQ",
+    "text": "ARQ USDs (USDS) is a dollar stablecoin issued natively on Tempo by Bridge Building Inc. and distributed exclusively through ARQ. The TIP-20 token allows open-loop transfers under Tempo chain-global TIP-403 blacklist policy, giving the policy administrator direct blocking authority over senders and recipients. BPM LLP signed an unqualified AICPA examination covering September 2026 reserves across U.S. commercial bank cash and government money-market fund shares, while Bridge publishes live reserve categories that have since shifted heavily toward the broader Treasury category as supply expanded. Pharos keeps USDS outside live monitoring because no admitted price lane exists. The durable constraints are single-distributor reliance, unverified third-party redemption access, and mix shifts between monthly examination dates.",
+    "updatedAt": "2026-11-27",
+    "authoredBy": "ai",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
+  },
+  "tako-takenos": {
+    "title": "Bridge-issued Solana dollar for Takenos accounts",
+    "text": "Takenos USD (TAKO) is a dollar stablecoin issued on Solana through Bridge for Takenos users across Latin America. Bridge publishes self-reported cash and Treasury reserve categories that sum to reported reserve assets, though the Treasury bucket groups direct bills with money-market funds without disclosing fund identities, depository banks, or an independent attestation. Its Token-2022 mint defaults new accounts to initialized with no transfer hook, enabling open-loop transfers, while retaining a two-of-three multisig permanent delegate able to transfer or burn arbitrary holder balances. Pharos keeps TAKO outside live monitoring because no admitted price lane is available. Unaudited reserve categories and permanent-delegate seizure authority remain the main structural constraints.",
+    "updatedAt": "2026-11-27",
+    "authoredBy": "ai",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
+  },
+  "lavausd-lava": {
+    "title": "Bridge-issued Solana dollar built for Lava",
+    "text": "LavaUSD is a dollar stablecoin issued on Solana through Bridge to fund Lava accounts, payments, and stablecoin conversions. Bridge publishes live cash and Treasury reserve totals without naming cash banks, disclosing money-market fund splits, or providing an independent LavaUSD attestation. Its Token-2022 mint initializes new accounts without a transfer hook, permitting open-loop transfers, while keeping an active on-curve permanent delegate able to move or burn balances alongside a freeze authority that has executed on-chain account freezes. Pharos keeps LavaUSD outside live monitoring because no admitted price lane exists. Self-reported reserve buckets and active holder-freeze capabilities remain the core risks.",
+    "updatedAt": "2026-11-27",
+    "authoredBy": "ai",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
+  },
+  "fusd-falcon": {
+    "title": "Federally chartered bank dollar distributed with Falcon",
+    "text": "Falcon Finance USD (fUSD) is an institutional dollar stablecoin issued by OCC-chartered Anchorage Digital Bank, N.A. in partnership with Falcon Finance across Ethereum and BSC. Verified AnchorageToken UUPS proxies allow open-loop ERC-20 transfers while granting role-controlled blocklist and pause powers across both chains. Under Anchorage Covered Stablecoin Terms, onboarded bank clients hold direct dollar redemption rights while non-clients have no contractual claim against the bank, and separate institutional rewards sit outside the token. No fUSD reserve report is published on Anchorage transparency pages yet, and circulating supply remains at seed scale with no admitted market price lane.",
+    "updatedAt": "2026-11-27",
+    "authoredBy": "ai",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
+  },
+  "beatusd-hyperbeat": {
+    "title": "HyperEVM card dollar with owner burn power",
+    "text": "beatUSD is Hyperbeat's dollar token on HyperEVM, launched alongside Liquid Banking in April 2026 to fund Visa card spend in Cash Mode and on-chain credit settlement. Hyperbeat's USD+ documentation states beatUSD is issued by Paxos and backed 1:1 by USDG, while yield stays outside the token itself in the separate USD+ vault or WHYPE card cashback. Live HyperEVM inspection confirms positive circulating supply (886,600 beatUSD as of November 27, 2026) and an unset transfer hook, allowing open-loop transfers, yet no admitted public market price exists on DefiLlama, DexScreener, or GeckoTerminal. The contract is a BoringVault whose 3-of-5 Safe owner and RolesAuthority can attach a transfer hook or invoke exit to burn arbitrary holder balances, while no independent Paxos attestation or balance-sheet reconciliation for beatUSD liabilities has been published.",
+    "updatedAt": "2026-11-27",
+    "authoredBy": "ai",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
+  },
+  "eub-bison-bank": {
+    "title": "Portuguese bank euro token gated by allowlist",
+    "text": "EUB is a MiCA-authorized euro electronic money token issued by Bison Bank S.A., a Lisbon credit institution supervised by Banco de Portugal. ESMA's interim register records the March 2026 white paper notification under FFG DTI JQNWG6VL5 and DTI H5MHNTQW9, and Bison Bank announced the launch of EUB and sister dollar token USB in May 2026. The white paper specifies Solana Token-2022 issuance orchestrated through Fireblocks, with par {{term:redemption}}redemption{{/term}} within two business days under Portuguese banking prudential rules. Transfers and holdings are restricted to pre-approved institutional partner wallets via home banking, and Bison Bank retains explicit authority to block and freeze wallets. Because no public Solana mint address or open-loop circulation is disclosed, Pharos keeps EUB pre-launch.",
+    "updatedAt": "2026-11-27",
+    "authoredBy": "ai",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
+  },
+  "bancomat-coin-flowpay": {
+    "title": "Italian bank payment network euro stablecoin proposal",
+    "text": "BANCOMAT Coin is a planned euro stablecoin unveiled by Italy's domestic payment network BANCOMAT S.p.A. in November 2026 after technical trials with nine Italian banks under the EUR.BANK project name. Initial issuance is assigned to wholly owned open-banking subsidiary FlowPay, targeting market entry in early 2027 once regulatory authorization under MiCA is completed. BANCOMAT names Arbitrum as the public blockchain infrastructure alongside Italian distribution and custody partners Hercle, Young Platform, CheckSig, and Conio, with reserves intended to remain inside the European banking system. No mainnet Arbitrum contract, exchange ticker, white paper, or direct holder {{term:redemption}}redemption{{/term}} schedule has been published yet.",
+    "updatedAt": "2026-11-27",
+    "authoredBy": "ai",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
+  },
+  "gbp-monee": {
+    "title": "UK settlement stablecoin proposal in FCA sandbox",
+    "text": "Monee Financial Technologies Ltd is one of four firms selected by the UK Financial Conduct Authority in February 2026 for its Regulatory Sandbox Stablecoins Cohort, alongside Revolut, ReStabilise, and VVTX. Incorporated in London in April 2025, Monee also participates in the joint Bank of England and FCA Digital Securities Sandbox, the Bank of England RTGS Synchronisation Lab, and the Central Bank of Ireland Innovation Sandbox. Its FCA proposition centers on a UK stablecoin for cross-border issuance, trading, and atomic delivery-versus-payment settlement of digital securities; exact currency denomination is not yet published, so Pharos assumes GBP from the UK FCA cohort and uses GBP-MONEE as a descriptive label. Sandbox selection does not grant issuance authorization, and reserve terms, blockchain rails, and redemption mechanics remain unpublished.",
+    "updatedAt": "2026-11-27",
+    "authoredBy": "ai",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
+  },
+  "thslvr-theo": {
+    "title": "One-ounce silver token backed by leased metal",
+    "text": "thSLVR is Theo's tokenized silver, deployed on Ethereum in September 2026 and announced in beta later that month as the silver counterpart to thGOLD. Theo documents one thSLVR as one fixed troy ounce of physical silver that never rebases or accrues; lease income from lending silver to refiners, mints, and industrial fabricators flows only to stakers in the separate sthSLVR vault, which carries a 5-day exit lockup. Because Theo may lend all thSLVR backing regardless of staking, unstaked holders still bear lease-counterparty and recall exposure without earning the yield. A 4-of-6 Operator Safe holds the minter role and a 2-day Timelock owns the upgradeable proxy. As of November 27, 2026, all 610,400 minted thSLVR sit in two Theo issuer wallets, direct mint and {{term:redemption}}redemption{{/term}} remain coming soon, and no public price feed exists.",
+    "updatedAt": "2026-11-27",
+    "authoredBy": "ai",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
   }
 }
