@@ -126,12 +126,21 @@ function knownDepegIntervals(event: DepegEvent, closures: Array<[number, number]
   ];
 }
 
-export function hasCurrentTrustedDepegObservation(event: DepegEvent, now: number): boolean {
-  const coverage = event.priceCoverage;
-  return event.endedAt == null && coverage != null && coverage.gapStartedAt == null &&
+export function hasCurrentTrustedCoverage(
+  coverage: {
+    lastTrustedObservationAt: number | null;
+    gapStartedAt: number | null;
+  } | null | undefined,
+  now: number,
+): boolean {
+  return coverage != null && coverage.gapStartedAt == null &&
     coverage.lastTrustedObservationAt != null &&
     now >= coverage.lastTrustedObservationAt &&
     now - coverage.lastTrustedObservationAt <= DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC;
+}
+
+export function hasCurrentTrustedDepegObservation(event: DepegEvent, now: number): boolean {
+  return event.endedAt == null && hasCurrentTrustedCoverage(event.priceCoverage, now);
 }
 
 /** Merge unknown complements too, so overlapping incidents do not double-count blind time. */

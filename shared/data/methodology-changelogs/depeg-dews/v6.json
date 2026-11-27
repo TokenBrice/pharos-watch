@@ -1,5 +1,19 @@
 [
   {
+    "version": "6.56",
+    "title": "Long-running (>30d) open incident split, two-sample re-escalation, and materiality-tiered ranking",
+    "date": "2026-11-27",
+    "effectiveAt": 1795776600,
+    "summary": "Distinguishes open confirmed depeg incidents older than 30 days from recent incidents, adds a Day-30-seeded upward-ratcheting re-escalation rule with two-sample confirmation for worsening chronic depegs, and ranks near-par/recovering unconfirmed rows below material off-peg incidents. PegScore, Safety Score V10, PSI, DEWS, DDR/DDRR core scoring, and Telegram alert dispatch are unchanged.",
+    "impact": [
+      "Open confirmed depegs retain their full census (`activeDepeg`, `activeDepegCount`) while exposing a sidecar `openIncidents` map (`eventId`, canonical onset `startedAt`, `escalatedAt`, and live `coverage`) alongside additive `recentActiveDepegCount` and `longRunningActiveDepegCount` totals on `/api/peg-summary`; `/api/homepage-snapshot` forwards only the split counts.",
+      "Re-escalation (`0323_depeg_event_peak_escalation.sql`, `shared/lib/depeg-config.ts`): arms only once canonical incident age exceeds 30 days, seeding `peak_escalation_anchor_bps` on the first post-Day-30 trusted off-peg observation at `max(|bps|, pegThreshold)` (carrying forward across `<=6h` non-split reopenings) and confirming `peak_escalated_at` only after consecutive distinct trusted primary/native observations spanning at least 15 minutes with gap-free `<=20m` continuity (`peak_escalation_candidate_at` / `peak_escalation_candidate_seen_at`) cross `anchor + clamp(250, 1500, round(anchor * 25%))` (keeping downside anchors under 8500 bps reachable below 10000 bps). Confirmed re-escalations promote the incident into the Recent bucket (`Escalating`) for 7 days and ratchet the anchor upward only.",
+      "Display ranking (`shared/lib/active-depegs.ts`): two-tier materiality places confirmed off-peg (`outside`) and unconfirmed off-peg (`|bps| > recoveryBand` or unpriced) rows ahead of recovering (`inside`) and measured near-par (`|bps| <= recoveryBand`) rows, ordered by USD off-peg exposure with confirmed `outside` as tie-break. Homepage, `/depeg/`, global nav badges, and `/api/og/v2/depeg/briefing` adopt the split while keeping PegScore, Safety Score V10, PSI, DEWS, and DDR/DDRR calculations unchanged."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.55",
     "title": "New Zealand Dollar peg closure and daily-fixing admission bands",
     "date": "2026-11-26",

@@ -94,6 +94,35 @@ export const OPEN_INCIDENT_EVIDENCE_LABELS = {
 } as const satisfies Record<OpenIncidentEvidence, string>;
 
 /**
+ * Horizon classification for an open confirmed depeg incident:
+ * - `recent`: canonical onset <= 30 days old
+ * - `escalating`: canonical onset > 30 days old, confirmed re-escalation within 7 days
+ * - `long_running`: canonical onset > 30 days old without recent re-escalation
+ *
+ * Classes intentionally avoid `border-amber-500/30` and health-warning tokens so
+ * badges are safe across both `/depeg/` and Homepage surfaces.
+ */
+export type OpenIncidentTier = "recent" | "escalating" | "long_running";
+
+export const OPEN_INCIDENT_TIER_BADGES = {
+  recent: {
+    label: "Recent",
+    short: "Recent",
+    className: "border-border/70 text-foreground/80",
+  },
+  escalating: {
+    label: "Escalating",
+    short: "Escalating",
+    className: "border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-400",
+  },
+  long_running: {
+    label: "Long-running",
+    short: ">30d",
+    className: "border-slate-500/30 bg-slate-500/10 text-slate-700 dark:text-slate-400",
+  },
+} as const satisfies Record<OpenIncidentTier, { label: string; short: string; className: string }>;
+
+/**
  * Distinct words for states that were all called "pending": a threshold
  * crossing in `/api/depeg-events` `pending[]` that detection has not
  * confirmed yet, and a DDR incident (`pending_lock`) whose forecast has not

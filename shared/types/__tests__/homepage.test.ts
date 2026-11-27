@@ -8,9 +8,9 @@ const unavailable = { ...meta, updatedAt: null, ageSeconds: null, status: "unkno
 describe("homepage wire admission", () => {
   it("requires a generation and effective budgets for a fresh verdict", () => {
     expect(HomepageLaneMetaSchema.safeParse(meta).success).toBe(true);
-    expect(HomepageLaneMetaSchema.safeParse({ ...meta, updatedAt: null }).success).toBe(false);
-    expect(HomepageLaneMetaSchema.safeParse({ ...meta, freshBudgetSec: undefined }).success).toBe(false);
-    expect(HomepageLaneMetaSchema.safeParse({ ...meta, assessedAt: undefined }).success).toBe(false);
+    for (const bad of [{ updatedAt: null }, { freshBudgetSec: undefined }, { assessedAt: undefined }]) {
+      expect(HomepageLaneMetaSchema.safeParse({ ...meta, ...bad }).success).toBe(false);
+    }
   });
   it("requires reasons for failed/degraded lanes", () => {
     expect(HomepageLaneMetaSchema.safeParse(unavailable).success).toBe(true);
@@ -30,5 +30,16 @@ describe("homepage wire admission", () => {
   it("rejects unavailable data disguised as fresh and unadmitted numeric claims", () => {
     expect(HomepageSnapshotSchema.safeParse({ ...snapshot, market: { data: null, meta } }).success).toBe(false);
     expect(HomepageSnapshotSchema.safeParse({ ...snapshot, incidents: { data: { activeDepegCount: -1 }, meta } }).success).toBe(false);
+  });
+  it("admits optional incident horizon split counts while preserving legacy payloads", () => {
+    const split = { activeDepegCount: 17, recentActiveDepegCount: 4, longRunningActiveDepegCount: 13 };
+    expect(HomepageSnapshotSchema.parse({ ...snapshot, incidents: { data: split, meta } }).incidents.data).toEqual(split);
+    expect(HomepageSnapshotSchema.parse(snapshot).incidents.data).toEqual({ activeDepegCount: 0 });
+    for (const bad of [
+      { activeDepegCount: 2, recentActiveDepegCount: -1, longRunningActiveDepegCount: 3 },
+      { activeDepegCount: 2, recentActiveDepegCount: 1.5, longRunningActiveDepegCount: 1 },
+    ]) {
+      expect(HomepageSnapshotSchema.safeParse({ ...snapshot, incidents: { data: bad, meta } }).success).toBe(false);
+    }
   });
 });
