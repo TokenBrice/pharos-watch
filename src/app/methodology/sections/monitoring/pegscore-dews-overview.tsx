@@ -6,6 +6,14 @@ import {
   WorkedExample,
 } from "../../methodology-shared";
 import {
+  DEPEG_LONG_RUNNING_AGE_DAYS,
+  DEPEG_REESCALATION_CONFIRM_MIN_AGE_SEC,
+  DEPEG_REESCALATION_MAX_STEP_BPS,
+  DEPEG_REESCALATION_MIN_STEP_BPS,
+  DEPEG_REESCALATION_STEP_RATIO,
+  DEPEG_REESCALATION_WINDOW_DAYS,
+} from "@shared/lib/depeg-config";
+import {
   DEPEG_BINANCE_CONFIRMATION_DESCRIPTION,
   DEPEG_INCIDENT_PEAK_DESCRIPTION,
   DEPEG_PEER_DIVERGENCE_DESCRIPTION,
@@ -124,6 +132,24 @@ export function PegScoreDewsOverview() {
             PegScore excludes false-positive and disputed audit verdicts, but retains events with no audit data.
             Unknown non-null verdicts are not scoreable evidence. DDR uses the stricter policy: no-data verdicts
             are also ineligible there. Legacy unaudited null verdicts remain eligible in both systems.
+          </p>
+          <p>
+            Since peg methodology 6.56, open confirmed depegs keep their full active census while display surfaces split
+            incidents whose canonical onset is older than {DEPEG_LONG_RUNNING_AGE_DAYS} days out as long-running
+            (&gt;{DEPEG_LONG_RUNNING_AGE_DAYS}d). Re-escalation arms only after Day {DEPEG_LONG_RUNNING_AGE_DAYS}: the
+            first trusted off-peg observation after Day {DEPEG_LONG_RUNNING_AGE_DAYS} seeds an upward-ratcheting anchor at{" "}
+            <code>max(|bps|, pegThreshold)</code> (carried forward across reopenings within 6 hours), and a new escalation
+            is confirmed only when two consecutive trusted primary or native observations separated by at least{" "}
+            {DEPEG_REESCALATION_CONFIRM_MIN_AGE_SEC / 60} minutes cross{" "}
+            <code>
+              anchor + clamp({DEPEG_REESCALATION_MIN_STEP_BPS}, {DEPEG_REESCALATION_MAX_STEP_BPS}, round(anchor &times;{" "}
+              {Math.round(DEPEG_REESCALATION_STEP_RATIO * 100)}%))
+            </code>{" "}
+            bps. Confirmed re-escalations ratchet the anchor upward only and promote the incident back into the Recent
+            bucket (<code>Escalating</code>) for {DEPEG_REESCALATION_WINDOW_DAYS} days. Bounded incident lists and
+            attention ordering apply two-tier materiality so confirmed off-peg and unconfirmed off-peg or unpriced rows
+            rank above recovering and measured near-par rows, then by USD off-peg exposure with confirmed off-peg evidence
+            as tie-break. PegScore, Safety Score, PSI, DEWS, and DDR/DDRR core scoring are unchanged.
           </p>
           <p>
             DEWS (Depeg Early Warning System) computes forward-looking stress every 30 minutes from market, liquidity,

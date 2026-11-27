@@ -8,22 +8,15 @@ import { applyDurationStaleness } from "@shared/lib/depeg-resolver/public-contra
 import type { DdrResponse } from "@shared/types/depeg-resolver";
 import { predictionRow } from "@/components/depeg-resolver-review-test-support";
 
-const { useDepegResolverSurfacesMock } = vi.hoisted(() => ({
+const { useDepegResolverSurfacesMock, usePegSummaryMock } = vi.hoisted(() => ({
   useDepegResolverSurfacesMock: vi.fn(),
+  usePegSummaryMock: vi.fn(() => ({ data: undefined as unknown })),
 }));
+vi.mock("@/hooks/use-depeg-resolver-surfaces", () => ({ useDepegResolverSurfaces: useDepegResolverSurfacesMock }));
+vi.mock("@/hooks/api-hooks", () => ({ usePegSummary: usePegSummaryMock }));
+afterEach(() => { cleanup(); vi.clearAllMocks(); usePegSummaryMock.mockReturnValue({ data: undefined }); });
 
-vi.mock("@/hooks/use-depeg-resolver-surfaces", () => ({
-  useDepegResolverSurfaces: useDepegResolverSurfacesMock,
-}));
-
-afterEach(() => {
-  cleanup();
-  vi.clearAllMocks();
-});
-
-const COMPUTED_AT = 1_800_000_000;
-const refetchResolver = vi.fn();
-const refetchReviewer = vi.fn();
+const COMPUTED_AT = 1_800_000_000, refetchResolver = vi.fn(), refetchReviewer = vi.fn();
 const forecast = {
   kind: "prediction", stablecoinId: "test-usd", symbol: "TUSD", name: "Test USD",
   pegCurrency: "USD", direction: "below", prediction: { state: "frozen" },
@@ -36,33 +29,24 @@ const forecast = {
 };
 
 function setSources({ rows = [forecast], reviewRows = [predictionRow], stale = false, resolverError = null, reviewerError = null, unavailable = false }: {
-  rows?: typeof forecast[];
-  reviewRows?: typeof predictionRow[];
-  stale?: boolean;
-  resolverError?: Error | null;
-  reviewerError?: Error | null;
-  unavailable?: boolean;
+  rows?: typeof forecast[]; reviewRows?: typeof predictionRow[]; stale?: boolean;
+  resolverError?: Error | null; reviewerError?: Error | null; unavailable?: boolean;
 } = {}) {
   const meta = { computedAt: COMPUTED_AT, degraded: stale, degradedReason: stale ? "stale-cache" : null };
   useDepegResolverSurfacesMock.mockReturnValue({
     resolverEnabled: true, resolverReviewerEnabled: true,
-    resolver: {
-      data: unavailable ? undefined : { _meta: meta, rows },
-      error: resolverError, dataUpdatedAt: COMPUTED_AT * 1000, refetch: refetchResolver,
-    },
+    resolver: { data: unavailable ? undefined : { _meta: meta, rows }, error: resolverError, dataUpdatedAt: COMPUTED_AT * 1000, refetch: refetchResolver },
     resolverReview: {
       data: unavailable ? undefined : {
-        _meta: { ...meta, computedAt: COMPUTED_AT - 60 },
-        rows: reviewRows,
-        summary: { headlineScope: "current_policy", headline: { recoveryLikelihoodScoredCount: 10,
-          recoveryLikelihoodCorrectCount: 8, recoveryLikelihoodAccuracyPct: 0.8, baselineRecoverableCorrectCount: 9,
-          lockedPredictionCount: 12, durationScoredCount: 5, horizonHitRates: [] },
-        byPredictionPolicy: [
-          { segmentKind: "prediction_policy", predictionMethodologyVersion: "3.04", predictionPolicyVersion: "sticky-24h-v1",
-            metrics: { recoveryLikelihoodScoredCount: 4 } },
-          { segmentKind: "prediction_policy", predictionMethodologyVersion: "4.6", predictionPolicyVersion: "sticky-24h-v1",
-            metrics: { recoveryLikelihoodScoredCount: 6 } },
-        ] },
+        _meta: { ...meta, computedAt: COMPUTED_AT - 60 }, rows: reviewRows,
+        summary: {
+          headlineScope: "current_policy",
+          headline: { recoveryLikelihoodScoredCount: 10, recoveryLikelihoodCorrectCount: 8, recoveryLikelihoodAccuracyPct: 0.8, baselineRecoverableCorrectCount: 9, lockedPredictionCount: 12, durationScoredCount: 5, horizonHitRates: [] },
+          byPredictionPolicy: [
+            { segmentKind: "prediction_policy", predictionMethodologyVersion: "3.04", predictionPolicyVersion: "sticky-24h-v1", metrics: { recoveryLikelihoodScoredCount: 4 } },
+            { segmentKind: "prediction_policy", predictionMethodologyVersion: "4.6", predictionPolicyVersion: "sticky-24h-v1", metrics: { recoveryLikelihoodScoredCount: 6 } },
+          ],
+        },
       },
       error: reviewerError, dataUpdatedAt: COMPUTED_AT * 1000, refetch: refetchReviewer,
     },
@@ -71,26 +55,18 @@ function setSources({ rows = [forecast], reviewRows = [predictionRow], stale = f
 
 describe("HomeAltDdrOverview", () => {
   it("keeps invalidated, pending, and no-call states visible without live verdicts or durations", () => {
-    const frozen = {
-      resolution: { tier: "recovery_likely", factors: [] },
-      duration: { suppressed: false, medianSec: 86_400 },
-      sourceRow: { currentDeviationBps: -300, peakDeviationBps: -300 },
-    };
-    const base = { name: "Fixture", pegCurrency: "USD", direction: "below",
-      live: { currentDeviationBps: -45, peakDeviationBps: -300 } };
+    const frozen = { resolution: { tier: "recovery_likely", factors: [] }, duration: { suppressed: false, medianSec: 86_400 }, sourceRow: { currentDeviationBps: -300, peakDeviationBps: -300 } };
+    const base = { name: "Fixture", pegCurrency: "USD", direction: "below", live: { currentDeviationBps: -45, peakDeviationBps: -300 } };
     useDepegResolverSurfacesMock.mockReturnValue({
-      resolverEnabled: true, resolverReviewerEnabled: false,
+      resolverEnabled: true, resolverReviewerEnabled: false, resolverReview: { data: undefined, error: null },
       resolver: { error: null, data: { _meta: { degraded: false }, rows: [
         { ...base, stablecoinId: "valid", symbol: "VALID", kind: "prediction", prediction: { state: "frozen" }, frozen },
-        { ...base, stablecoinId: "withdrawn", symbol: "WITHDRAWN", kind: "invalidated_prediction",
-          prediction: { state: "invalidated" }, originalKind: "prediction", originalOutcome: frozen },
+        { ...base, stablecoinId: "withdrawn", symbol: "WITHDRAWN", kind: "invalidated_prediction", prediction: { state: "invalidated" }, originalKind: "prediction", originalOutcome: frozen },
         { ...base, stablecoinId: "pending", symbol: "PENDING", kind: "pending", prediction: { state: "pending_lock" } },
         { ...base, stablecoinId: "no-call", symbol: "NO-CALL", kind: "no_call", prediction: { state: "no_call" } },
       ] } },
-      resolverReview: { data: undefined, error: null },
     });
     render(<HomeAltDdrOverview />);
-
     expect(screen.getByText("1 forecasts")).toBeTruthy();
     expect(screen.getByText("WITHDRAWN").closest("a")?.textContent).toContain("invalidated");
     expect(screen.getByText("PENDING").closest("a")?.textContent).toContain("Forecast not locked yet");
@@ -103,35 +79,10 @@ describe("HomeAltDdrOverview", () => {
 
   it("shows a sealed forecast's current live deviation rather than its lock-time deviation", () => {
     useDepegResolverSurfacesMock.mockReturnValue({
-      resolverEnabled: true,
-      resolverReviewerEnabled: false,
-      resolver: {
-        data: {
-          _meta: { degraded: false },
-          rows: [
-            {
-              kind: "prediction",
-              stablecoinId: "test-usd",
-              symbol: "TUSD",
-              name: "Test USD",
-              pegCurrency: "USD",
-              direction: "below",
-              prediction: { state: "frozen" },
-              frozen: {
-                resolution: { tier: "at_risk", factors: [] },
-                duration: { suppressed: true, medianSec: null },
-                sourceRow: { currentDeviationBps: -300, peakDeviationBps: -300 },
-              },
-              live: { currentDeviationBps: -45, peakDeviationBps: -300 },
-            },
-          ],
-        },
-        error: null,
-      },
-      resolverReview: { data: undefined, error: null },
+      resolverEnabled: true, resolverReviewerEnabled: false, resolverReview: { data: undefined, error: null },
+      resolver: { error: null, data: { _meta: { degraded: false }, rows: [{ ...forecast, frozen: { ...forecast.frozen, resolution: { tier: "at_risk", factors: [] }, duration: { suppressed: true, medianSec: null } } }] } },
     });
     render(<HomeAltDdrOverview />);
-
     expect(screen.getByText("-45 bps")).toBeTruthy();
     expect(screen.queryByText("-300 bps")).toBeNull();
   });
@@ -142,19 +93,13 @@ describe("HomeAltDdrOverview", () => {
       frozen: { ...forecast.frozen, sourceRow: { currentDeviationBps: frozenPeak, peakDeviationBps: frozenPeak } },
       live: { ...forecast.live, currentDeviationBps: null, peakDeviationBps: livePeak },
     });
-    setSources({ rows: [
-      row("lockdeep", -1_000, -100),
-      row("unknown", -2_000, null),
-      row("livedeep", -100, -500),
-    ] as unknown as typeof forecast[] });
+    setSources({ rows: [row("lockdeep", -1_000, -100), row("unknown", -2_000, null), row("livedeep", -100, -500)] as unknown as typeof forecast[] });
     render(<HomeAltDdrOverview />);
-    const symbols = screen.getAllByText(/^(LOCKDEEP|UNKNOWN|LIVEDEEP)$/).map((node) => node.textContent);
-    expect(symbols).toEqual(["LIVEDEEP", "LOCKDEEP", "UNKNOWN"]);
+    expect(screen.getAllByText(/^(LOCKDEEP|UNKNOWN|LIVEDEEP)$/).map((n) => n.textContent)).toEqual(["LIVEDEEP", "LOCKDEEP", "UNKNOWN"]);
   });
 
   it("shows the promoted accuracy with its call fraction and no sub-text under the figure", () => {
-    setSources();
-    render(<HomeAltDdrOverview />);
+    setSources(); render(<HomeAltDdrOverview />);
     expect(screen.getByText("80.0%")).toBeTruthy();
     expect(screen.getByText("Recovery calls correct: 8/10")).toBeTruthy();
     expect(screen.queryByText(/Always-recover baseline/)).toBeNull();
@@ -162,7 +107,6 @@ describe("HomeAltDdrOverview", () => {
     expect(screen.queryByText(/recovery-call accuracy/)).toBeNull();
   });
 
-  // Homepage rule (docs/homepage.md): source health never renders as a warning.
   it("renders stale-cache generations with a neutral as-of stamp and no warning", () => {
     setSources({ stale: true });
     const view = render(<HomeAltDdrOverview />);
@@ -174,8 +118,7 @@ describe("HomeAltDdrOverview", () => {
   });
 
   it("scopes empty forecast copy to its fresh snapshot", () => {
-    setSources({ rows: [] });
-    render(<HomeAltDdrOverview />);
+    setSources({ rows: [] }); render(<HomeAltDdrOverview />);
     expect(screen.getByText(/No published active forecasts/)).toBeTruthy();
     expect(screen.queryByText(/all clear|every monitored coin is on peg/i)).toBeNull();
   });
@@ -186,7 +129,6 @@ describe("HomeAltDdrOverview", () => {
     expect(screen.getByText("Resolver · Updating")).toBeTruthy();
     expect(screen.queryByText(/No published active forecasts/)).toBeNull();
     expect(screen.getByText("80.0%")).toBeTruthy();
-
     setSources({ reviewRows: [], stale: true });
     view.rerender(<HomeAltDdrOverview />);
     expect(screen.getByText("TUSD")).toBeTruthy();
@@ -220,19 +162,13 @@ describe("HomeAltDdrOverview", () => {
       prediction: { state: "frozen", predictionMethodologyVersion: version },
       frozen: { ...forecast.frozen, resolution: { tier, factors: [] } },
     });
-    setSources({ rows: [
-      lockedUnder("v5a", "5.0", "at_risk"),
-      lockedUnder("v5b", "5.0", "recovery_unlikely"),
-      lockedUnder("old", "4.3", "at_risk"),
-    ] });
+    setSources({ rows: [lockedUnder("v5a", "5.0", "at_risk"), lockedUnder("v5b", "5.0", "recovery_unlikely"), lockedUnder("old", "4.3", "at_risk")] });
     render(<HomeAltDdrOverview />);
-
     expect(screen.getByText("V5A").closest("a")?.textContent).toContain("Stress");
     expect(screen.getByText("V5B").closest("a")?.textContent).toContain("Terminal");
     expect(screen.getByText("V5B").closest("a")?.textContent).toContain("may not recover");
     expect(screen.getByText("OLD").closest("a")?.textContent).toContain("At risk");
     expect(screen.getByText("OLD").closest("a")?.textContent).not.toContain("Stress");
-    // The distribution legend never relabels the pre-v5 lock.
     expect(screen.getByText("3 forecasts").parentElement?.textContent).toBe("1Stress1At risk1Terminal3 forecasts");
   });
 
@@ -248,5 +184,16 @@ describe("HomeAltDdrOverview", () => {
     expect(screen.queryByText("locked ~1d")).toBeNull();
     expect(aged.rows[0]!.frozen).toBe(payload.rows[0]!.frozen);
     expect(payload.rows[0]!.live.stale).toBe(false);
+  });
+
+  it("joins openIncidents passively by eventId", () => {
+    const D = 86_400, s = (eventId: number, d: number, e?: number) => ({ eventId, startedAt: COMPUTED_AT - d * D, escalatedAt: e ? COMPUTED_AT - e * D : null, coverage: null });
+    const mk = (id: string, currentEventId: number) => ({ ...forecast, stablecoinId: id, symbol: id.toUpperCase(), live: { ...forecast.live, currentEventId, eventState: "active" } });
+    usePegSummaryMock.mockReturnValue({ data: { openIncidentsAsOfSec: COMPUTED_AT, openIncidents: { esc: s(1, 45, 2), old: s(2, 60), miss: s(9, 60) } } });
+    setSources({ rows: [mk("esc", 1), mk("old", 2), mk("miss", 3)] });
+    render(<HomeAltDdrOverview />);
+    expect(usePegSummaryMock).toHaveBeenCalledWith({ enabled: false });
+    expect([screen.getByText("ESC").closest("a")?.textContent, screen.getByText("OLD").closest("a")?.textContent]).toEqual([expect.stringContaining("Escalating"), expect.stringContaining(">30d")]);
+    expect(screen.getByText("MISS").closest("a")?.textContent).not.toMatch(/Escalating|>30d/);
   });
 });

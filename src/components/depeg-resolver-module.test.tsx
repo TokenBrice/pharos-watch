@@ -17,118 +17,95 @@ vi.mock("@/components/stablecoin-logo", () => ({ StablecoinLogo: () => <span dat
 
 const meta = DDR_TEST_META;
 const makeSourceRow = makeDdrSourceRow;
+const parseRow = DdrV2ResponseRowSchema.parse;
+const gt = (m: Parameters<typeof screen.getByText>[0]) => screen.getByText(m);
+const qt = (m: Parameters<typeof screen.queryByText>[0]) => screen.queryByText(m);
+const LUSD = "lusd-liquity";
+const frozenBase = makeFrozenDdrV2Row();
 
 function predictionMeta(state: DdrPredictionMeta["state"], overrides: Partial<DdrPredictionMeta> = {}): DdrPredictionMeta {
   const unlocked = state === "pending_lock" || state === "lock_deferred" || state === "publication_retry_pending";
   return {
-    state, publicPredictionId: unlocked ? null : 7, incidentKey: "ddr2:test",
-    predictionPolicyVersion: "sticky-24h-v1", predictionMethodologyVersion: DDR_METHODOLOGY_VERSION,
-    predictionMethodologyVersionLabel: DDR_METHODOLOGY_VERSION_LABEL, resolutionRubricVersion: "resolution-rubric-v1",
-    durationModelVersion: "duration-landmark-v1", incidentGroupingVersion: "incident-group-v1",
-    supportRulesVersion: "support-rules-v1", eligibleAt: 86_400, policyDelaySec: 86_400,
-    lockedAt: unlocked ? null : 86_401, publishedAt: unlocked ? null : 86_500,
-    publicationSnapshotToken: unlocked ? null : "ddrpub:test", snapshotGeneration: unlocked ? null : 2,
-    eventAgeAtLockSec: unlocked ? null : 86_400,
+    ...frozenBase.prediction, state,
+    ...(unlocked ? { publicPredictionId: null, lockedAt: null, publishedAt: null, publicationSnapshotToken: null, snapshotGeneration: null, eventAgeAtLockSec: null, rowHash: null } : {}),
     lockTiming: state === "lock_deferred" ? "deferred" : unlocked ? null : "on_time",
-    lockTrigger: "scheduled_24h", readiness: null, backstop: null,
     source: state === "invalidated" ? "erratum" : unlocked ? "pending" : "public_prediction",
-    deferralReason: null, deferralCount: null, rowHash: unlocked ? null : "a".repeat(64),
-    lineage: null, modelAsOf: 86_401, latestErratum: null, errataCount: 0, errataHistory: [], ...overrides,
+    ...overrides,
   };
 }
 
-const baseV2Row = (s: DdrRow) => ({
-  stablecoinId: s.stablecoinId, symbol: s.symbol, name: s.name, pegCurrency: s.pegCurrency,
-  governance: s.governance, status: s.status, eventId: s.eventId, incidentKey: "ddr2:test",
-  startedAt: s.startedAt, direction: s.direction,
-});
+const makePredictionRow = (source = makeSourceRow(), liveOverrides: Record<string, unknown> = {}): DdrV2ResponseRow => {
+  const base = makeFrozenDdrV2Row(source);
+  return parseRow({ ...base, live: { ...base.live, ...liveOverrides } });
+};
+const predRow = (src: Partial<DdrRow> = {}, live: Record<string, unknown> = {}) => makePredictionRow(makeSourceRow(src), live);
 
-const liveOverlay = (s: DdrRow, overrides: Record<string, unknown> = {}) => ({
-  currentEventId: s.eventId, ageSec: s.ageSec, peakDeviationBps: s.peakDeviationBps,
-  currentDeviationBps: s.currentDeviationBps, eventState: "active", updatedAt: s.startedAt + s.ageSec,
-  stale: false, degradedReason: null, ...overrides,
-});
+const makePendingRow = (state: "pending_lock" | "lock_deferred" | "publication_retry_pending", overrides: Partial<DdrPredictionMeta> = {}): DdrV2ResponseRow =>
+  parseRow({ ...frozenBase, kind: "pending", prediction: predictionMeta(state, overrides), frozen: null });
 
-const makePredictionRow = (source = makeSourceRow(), liveOverrides: Record<string, unknown> = {}): DdrV2ResponseRow =>
-  makeFrozenDdrV2Row(source, { live: liveOverlay(source, liveOverrides) });
+const noCallPayload = (relatedContext: DdrRow["relatedContext"]) => ({ lockedAt: 86_401, eventAgeAtLockSec: 86_400, missingReasons: ["no usable live price"], relatedContext });
 
-function makePendingRow(state: "pending_lock" | "lock_deferred" | "publication_retry_pending", overrides: Partial<DdrPredictionMeta> = {}): DdrV2ResponseRow {
-  const source = makeSourceRow();
-  return DdrV2ResponseRowSchema.parse({ ...baseV2Row(source), kind: "pending", prediction: predictionMeta(state, overrides), frozen: null, live: liveOverlay(source) });
-}
-
-function makeNoCallRow(): DdrV2ResponseRow {
-  const source = makeSourceRow();
-  return DdrV2ResponseRowSchema.parse({
-    ...baseV2Row(source), kind: "no_call", prediction: predictionMeta("no_call"),
-    noCall: { lockedAt: 86_401, eventAgeAtLockSec: 86_400, missingReasons: ["no usable live price"], relatedContext: source.relatedContext },
-    frozen: null, live: liveOverlay(source),
-  });
-}
+const makeNoCallRow = (): DdrV2ResponseRow =>
+  parseRow({ ...frozenBase, kind: "no_call", prediction: predictionMeta("no_call"), noCall: noCallPayload(makeSourceRow().relatedContext), frozen: null });
 
 function makeInvalidatedRow(originalKind: "prediction" | "no_call" = "prediction"): DdrV2ResponseRow {
   const source = makeSourceRow({ resolution: { tier: "recovery_likely", factors: [] } });
   const original = makePredictionRow(source);
   if (original.kind !== "prediction") throw new Error("Expected prediction fixture");
-  const noCall = { lockedAt: 86_401, eventAgeAtLockSec: 86_400, missingReasons: ["no usable live price"], relatedContext: source.relatedContext };
-  const erratum = {
-    id: 1, state: "invalidated" as const, publicPredictionId: 7, incidentKey: "ddr2:test", eventId: 1, assessmentId: 1,
-    reason: "event_identity_error" as const, createdAt: 86_500, operatorNote: "Source event repaired after publication",
-    rowHashBefore: "a".repeat(64), replacementAssessmentId: null, replacementRowHash: null, createdBy: "test",
-  };
-  return DdrV2ResponseRowSchema.parse({
-    ...baseV2Row(source), kind: "invalidated_prediction",
+  const noCall = noCallPayload(source.relatedContext);
+  const erratum = { id: 1, state: "invalidated" as const, publicPredictionId: 7, incidentKey: "ddr2:test", eventId: 1, assessmentId: 1, reason: "event_identity_error" as const, createdAt: 86_500, operatorNote: "Source event repaired after publication", rowHashBefore: "a".repeat(64), replacementAssessmentId: null, replacementRowHash: null, createdBy: "test" };
+  return parseRow({
+    ...original, kind: "invalidated_prediction",
     prediction: predictionMeta("invalidated", { latestErratum: erratum, errataCount: 1, errataHistory: [erratum] }),
     originalKind, originalOutcome: originalKind === "prediction" ? original.frozen : noCall,
     frozen: originalKind === "prediction" ? original.frozen : null, noCall: originalKind === "no_call" ? noCall : null,
-    live: liveOverlay(source, { eventState: "event_invalidated" }),
+    live: { ...original.live, eventState: "event_invalidated" },
   });
 }
 
-const row = makePredictionRow();
-const lockedUnder = (version: string | null, source: DdrV2ResponseRow): DdrV2ResponseRow => DdrV2ResponseRowSchema.parse({
-  ...source, prediction: { ...source.prediction, predictionMethodologyVersion: version, predictionMethodologyVersionLabel: version == null ? null : `v${version}` },
+const row = frozenBase;
+const lockedUnder = (version: string | null, source: DdrV2ResponseRow): DdrV2ResponseRow =>
+  parseRow({ ...source, prediction: { ...source.prediction, predictionMethodologyVersion: version, predictionMethodologyVersionLabel: version == null ? null : `v${version}` } });
+const terminalDuration = (extra: Record<string, unknown> = {}) => ({ suppressed: true, suppressedReason: "verdict_terminal", stratum: null, medianSec: null, iqrSec: null, ageStatus: null, horizons: [], ...extra });
+const activeDuration = (extra: Record<string, unknown> = {}) => ({ suppressed: false, suppressedReason: null, stratum: "below · moderate · USD", medianSec: 7200, iqrSec: [3600, 10_800] as [number, number], ageStatus: "ordinary" as const, horizons: [], ...extra });
+const degMeta = (degradedReason: string) => ({ ...meta, degraded: true, degradedReason });
+
+const response = (overrides: Partial<DdrResponse> = {}): DdrResponse => ({
+  _meta: meta, rows: [],
+  methodology: { version: DDR_METHODOLOGY_VERSION, versionLabel: DDR_METHODOLOGY_VERSION_LABEL, currentVersion: DDR_METHODOLOGY_VERSION, currentVersionLabel: DDR_METHODOLOGY_VERSION_LABEL, changelogPath: "/methodology/depeg-resolver-changelog/", asOf: 1, isCurrent: true },
+  ...overrides,
 });
 
-const terminalDuration = (extra: Record<string, unknown> = {}) => ({
-  suppressed: true, suppressedReason: "verdict_terminal", stratum: null, medianSec: null, iqrSec: null, ageStatus: null, horizons: [], ...extra,
-});
-
-function response(overrides: Partial<DdrResponse> = {}): DdrResponse {
-  return {
-    _meta: meta, rows: [],
-    methodology: { version: DDR_METHODOLOGY_VERSION, versionLabel: DDR_METHODOLOGY_VERSION_LABEL, currentVersion: DDR_METHODOLOGY_VERSION, currentVersionLabel: DDR_METHODOLOGY_VERSION_LABEL, changelogPath: "/methodology/depeg-resolver-changelog/", asOf: 1, isCurrent: true },
-    ...overrides,
-  };
+function renderResolver(overrides: Partial<DdrResponse> = {}, extra: Omit<Parameters<typeof DepegResolverModule>[0], "data"> = {}) {
+  const view = render(<DepegResolverModule data={response(overrides)} {...extra} />);
+  return { ...view, re: (o: Partial<DdrResponse> = {}) => view.rerender(<DepegResolverModule data={response(o)} {...extra} />) };
 }
-
-const renderResolver = (overrides: Partial<DdrResponse> = {}, extra: Omit<Parameters<typeof DepegResolverModule>[0], "data"> = {}) =>
-  render(<DepegResolverModule data={response(overrides)} {...extra} />);
-const renderCoinRows = (overrides: Partial<DdrResponse>, stablecoinId = "lusd-liquity") =>
-  render(<StablecoinDepegResolverRows stablecoinId={stablecoinId} data={response(overrides)} />);
+function renderCoinRows(overrides: Partial<DdrResponse>, stablecoinId = LUSD) {
+  const view = render(<StablecoinDepegResolverRows stablecoinId={stablecoinId} data={response(overrides)} />);
+  return { ...view, re: (o: Partial<DdrResponse>, id = LUSD) => view.rerender(<StablecoinDepegResolverRows stablecoinId={id} data={response(o)} />) };
+}
 
 describe("DepegResolverModule", () => {
   it.each(["GOLD", "USD"] as const)("labels the %s peg-relative ratio without publishing a synthetic currency price", (pegCurrency) => {
-    renderResolver({ rows: [makePredictionRow(makeSourceRow({ pegCurrency, startedAt: 1_795_017_600 }), { currentDeviationBps: -500 })] });
-    expect(screen.getByText("95.00% of peg")).toBeTruthy();
-    expect(screen.queryByText("$0.9500")).toBeNull();
-    expect(screen.queryByText("€0.9500")).toBeNull();
+    renderResolver({ rows: [predRow({ pegCurrency, startedAt: 1_795_017_600 }, { currentDeviationBps: -500 })] });
+    expect(gt("95.00% of peg")).toBeTruthy();
+    expect(qt("$0.9500")).toBeNull();
+    expect(qt("€0.9500")).toBeNull();
   });
 
   it("counts only valid frozen predictions in the current forecast book", () => {
     const mixed = [row, makeInvalidatedRow(), makeNoCallRow(), makePendingRow("pending_lock"), makePendingRow("lock_deferred"), makePendingRow("publication_retry_pending")];
-    const book = summarizeResolverBook(mixed);
-    expect(book).toMatchObject({ total: 1, rowCount: 6, tierCounts: { at_risk: 1, recovery_likely: 0, insufficient_signal: 0 } });
+    expect(summarizeResolverBook(mixed)).toMatchObject({ total: 1, rowCount: 6, tierCounts: { at_risk: 1, recovery_likely: 0, insufficient_signal: 0 } });
     expect(summarizeResolverBook(mixed.slice(1)).total).toBe(0);
     renderResolver({ rows: mixed });
-    expect(screen.getByText(/forecast.*across 6 incident rows/).textContent).toContain("1 forecast across 6 incident rows");
+    expect(gt(/forecast.*across 6 incident rows/).textContent).toContain("1 forecast across 6 incident rows");
     fireEvent.click(screen.getByRole("button", { name: "Show all 6 incident rows" }));
-    expect(screen.getByText("Prediction invalidated by erratum")).toBeTruthy();
+    expect(gt("Prediction invalidated by erratum")).toBeTruthy();
   });
 
   describe("new-worst flag compares live deviation with the live event peak", () => {
-    const tiered = (id: string, tier: DdrResolutionTier, current: number, eventState = "active"): DdrV2ResponseRow =>
-      makePredictionRow(makeSourceRow({ stablecoinId: id, symbol: id.toUpperCase(), resolution: { tier, factors: [] }, peakDeviationBps: -10_000, currentDeviationBps: current }), { eventState });
+    const tiered = (id: string, tier: DdrResolutionTier, current: number, eventState = "active") =>
+      predRow({ stablecoinId: id, symbol: id.toUpperCase(), resolution: { tier, factors: [] }, peakDeviationBps: -10_000, currentDeviationBps: current }, { eventState });
 
     function peakRow(id: string, frozenPeak: number | null, live: { peak: number | null; current: number | null }): DdrV2ResponseRow {
       const frozen = makeFrozenDdrV2Row(makeSourceRow({ stablecoinId: id, symbol: id.toUpperCase(), peakDeviationBps: frozenPeak ?? -1, currentDeviationBps: frozenPeak }));
@@ -163,30 +140,44 @@ describe("DepegResolverModule", () => {
       expect([...rows].sort((a, b) => compareResolverUrgency(a, b, caps)).map((r) => r.stablecoinId))
         .toEqual(["terminal", "large", "small", "nocap", "unlocked", "likely", "closed"]);
       renderResolver({ rows: rows.slice(0, 2) }, { marketCaps: caps });
-      screen.getByText("$10.0B market cap");
-      screen.getByText("Market cap unavailable");
+      gt("$10.0B market cap");
+      gt("Market cap unavailable");
 
       const coin = (id: string, bps: number, activeDepeg = true) => makePegSummaryCoin({ id, symbol: id, currentDeviationBps: bps, activeDepeg });
       expect(rankOpenIncidents([coin("calm", -10, false), coin("big", -14), coin("nocap", -9_000), coin("small", -4_500)],
         [tiered("big", "at_risk", -14), tiered("small", "recovery_likely", -4_500, "closed_pending_review")], new Map([["small", 49e6], ["big", 1.5e9]])))
-        .toMatchObject([{ id: "small", ddr: null }, { id: "big", ddr: { stablecoinId: "big" } }, { id: "nocap", ddr: null, marketCapUsd: null }]);
+        .toMatchObject([{ id: "small", ddr: null }, { id: "nocap", ddr: null, marketCapUsd: null }, { id: "big", ddr: { stablecoinId: "big" } }]);
 
       const fx = (id: string, status: "admitted" | "stale-reference") => makePegSummaryCoin({ id, activeDepeg: true, pegCurrency: "EUR", priceObservedAt: FX_REOPEN_QUOTE_AT, ...makeFxCurrentPeg(status, status === "admitted" ? 0 : null) });
       expect(rankOpenIncidents([fx("stale", "stale-reference"), fx("live", "admitted")], [], new Map([["stale", 1e9], ["live", 1e6]])))
-        .toMatchObject([{ id: "live", deviationBps: 0, referenceNote: null }, { id: "stale", deviationBps: null, referenceNote: "Reference not yet updated" }]);
+        .toMatchObject([{ id: "stale", deviationBps: null, referenceNote: "Reference not yet updated" }, { id: "live", deviationBps: 0, referenceNote: null }]);
+    });
+
+    it("ranks verdict > horizon, recent > >30d on equal verdict, and badges by eventId", () => {
+      const D = 86_400, now = 1_700_000_000 + 120 * D;
+      const s = (eventId: number, d: number, e?: number) => ({ eventId, startedAt: now - d * D, escalatedAt: e ? now - e * D : null, coverage: null });
+      const r = (id: string, eventId: number, tier: DdrResolutionTier) => predRow({ stablecoinId: id, symbol: id.toUpperCase(), eventId, resolution: { tier, factors: [] }, peakDeviationBps: -1e4, currentDeviationBps: -500 }, { currentEventId: eventId });
+      const openIncidents = { term: s(11, 60), insuff: s(12, 2), old: s(13, 90), rec: s(14, 3), esc: s(15, 50, 2), miss: s(99, 80) };
+      expect([r("insuff", 12, "insufficient_signal"), r("old", 13, "at_risk"), r("term", 11, "recovery_unlikely"), r("rec", 14, "at_risk"), r("esc", 15, "at_risk")]
+        .sort((a, b) => compareResolverUrgency(a, b, null, { openIncidents, clockSec: now })).map((x) => x.stablecoinId)).toEqual(["term", "esc", "rec", "old", "insuff"]);
+      // Transitivity across equal-verdict active recent, active >30d, and terminal rows regardless of exposure order.
+      const tRow: ReturnType<typeof r> = { ...r("closed", 17, "at_risk"), live: { ...r("closed", 17, "at_risk").live, eventState: "closed_pending_review" } };
+      const caps = new Map<string, number | null>([["old", 300e6], ["closed", 200e6], ["rec", 100e6]]);
+      const cmp = (a: ReturnType<typeof r>, b: ReturnType<typeof r>) => compareResolverUrgency(a, b, caps, { openIncidents, clockSec: now });
+      expect([cmp(r("rec", 14, "at_risk"), r("old", 13, "at_risk")) < 0, cmp(r("old", 13, "at_risk"), tRow) < 0, cmp(r("rec", 14, "at_risk"), tRow) < 0]).toEqual([true, true, true]);
+      const { container } = renderResolver({ rows: [r("esc", 15, "at_risk"), r("old", 13, "at_risk"), r("miss", 16, "at_risk")] }, { openIncidents, clockSec: now });
+      expect([container.querySelector('[data-incident-tier="escalating"]')?.textContent?.includes("Escalating"), container.querySelector('[data-incident-tier="long_running"]')?.textContent?.includes(">30d"), container.querySelectorAll("[data-incident-tier]").length]).toEqual([true, true, 2]);
     });
 
     it("captions the count as a new worst, never as past their worst", () => {
       renderResolver({ rows: [peakRow("a", -300, { peak: -400, current: -900 }), peakRow("b", -300, { peak: -400, current: -900 })] });
-      expect(screen.getByText(/2 at a new worst/)).toBeTruthy();
-      expect(screen.queryByText(/past their worst/)).toBeNull();
+      expect(gt(/2 at a new worst/)).toBeTruthy();
+      expect(qt(/past their worst/)).toBeNull();
     });
   });
 
   describe("calibration lineage caption", () => {
-    const lineage = (incidentCount: number, coinCount: number, quarantinedCoins = 0) => ({
-      trainingWindow: { start: 1, end: 2 }, eventCount: 99_999, incidentCount, coinCount, quarantinedCoins,
-    });
+    const lineage = (incidentCount: number, coinCount: number, quarantinedCoins = 0) => ({ trainingWindow: { start: 1, end: 2 }, eventCount: 99_999, incidentCount, coinCount, quarantinedCoins });
 
     it.each([
       [8_466, 41, 0, "Calibrated on 8,466 historical incidents · 41 coins"],
@@ -195,155 +186,134 @@ describe("DepegResolverModule", () => {
       [8_466, 41, 3, "Calibrated on 8,466 historical incidents · 41 coins (3 excluded)"],
     ] as const)("renders lineage caption (%s, %s, %s)", (incidents, coins, quarantined, expected) => {
       renderResolver({ _meta: { ...meta, lineage: lineage(incidents, coins, quarantined) }, rows: [row] });
-      expect(screen.getByText(/^Calibrated on/).textContent).toBe(expected);
-      expect(screen.queryByText(/recovered\s+incidents|coins? excluded/)).toBeNull();
+      expect(gt(/^Calibrated on/).textContent).toBe(expected);
+      expect(qt(/recovered\s+incidents|coins? excluded/)).toBeNull();
     });
 
     it("omits the caption without lineage", () => {
       renderResolver({ rows: [row] });
-      expect(screen.queryByText(/^Calibrated on/)).toBeNull();
+      expect(qt(/^Calibrated on/)).toBeNull();
     });
   });
 
   it("distinguishes loading, healthy empty, degraded empty, stale-cache retained, and unknown-failure states", () => {
     const { rerender } = render(<DepegResolverModule data={undefined} />);
-    expect(screen.getByText("Resolver data is loading.")).toBeTruthy();
-    expect(screen.queryByText(/No active confirmed depegs/)).toBeNull();
-
-    for (const degradedReason of ["missing-cache", "stale-cache"]) {
-      rerender(<DepegResolverModule data={response({ _meta: { ...meta, degraded: true, degradedReason } })} />);
-      expect(screen.getByText("Resolver data is temporarily unavailable.")).toBeTruthy();
-      expect(screen.queryByText(/No active confirmed depegs|Whole book/)).toBeNull();
+    const re = (o: Partial<DdrResponse> = {}) => rerender(<DepegResolverModule data={response(o)} />);
+    const unavail = "Resolver data is temporarily unavailable.";
+    expect(gt("Resolver data is loading.")).toBeTruthy();
+    expect(qt(/No active confirmed depegs/)).toBeNull();
+    for (const r of ["missing-cache", "stale-cache"]) {
+      re({ _meta: degMeta(r) });
+      expect(gt(unavail)).toBeTruthy();
+      expect(qt(/No active confirmed depegs|Whole book/)).toBeNull();
     }
-
-    rerender(<DepegResolverModule data={response()} />);
-    expect(screen.getByText("No active confirmed depegs.")).toBeTruthy();
-    expect(screen.queryByText("Resolver data is temporarily unavailable.")).toBeNull();
-
-    rerender(<DepegResolverModule data={response({ _meta: { ...meta, degraded: true, degradedReason: "stale-cache" }, rows: [row] })} />);
-    expect(screen.getByText(/Whole book/).textContent).toContain("1 forecast across 1 incident rows");
-    expect(screen.queryByText(/live overlay is stale/i)).toBeNull();
-    expect(screen.getByText("Stress signals")).toBeTruthy();
-
-    rerender(<DepegResolverModule data={response({ _meta: { ...meta, degraded: true, degradedReason: "unknown-failure" }, rows: [row] })} />);
-    expect(screen.getByText("Resolver data is temporarily unavailable.")).toBeTruthy();
-    expect(screen.queryByText(/Whole book|showing all|most urgent|Stress signals/)).toBeNull();
+    re();
+    expect(gt("No active confirmed depegs.")).toBeTruthy();
+    expect(qt(unavail)).toBeNull();
+    re({ _meta: degMeta("stale-cache"), rows: [row] });
+    expect(gt(/Whole book/).textContent).toContain("1 forecast across 1 incident rows");
+    expect(qt(/live overlay is stale/i)).toBeNull();
+    expect(gt("Stress signals")).toBeTruthy();
+    re({ _meta: degMeta("unknown-failure"), rows: [row] });
+    expect(gt(unavail)).toBeTruthy();
+    expect(qt(/Whole book|showing all|most urgent|Stress signals/)).toBeNull();
   });
 
   it("renders pre-v5 terminal, v5 terminal, inline terminal kill signals, and above-peg kill signals accurately", () => {
-    const preV5 = lockedUnder("4.3", makePredictionRow(makeSourceRow({ resolution: { tier: "recovery_unlikely", factors: [] }, duration: terminalDuration() })));
-    const { rerender, container } = renderResolver({ rows: [preV5] });
-    expect(screen.getByText("No recovery expected")).toBeTruthy();
-    expect(screen.queryByText("Terminal evidence")).toBeNull();
-    expect(screen.getByText("DDR does not expect this depeg to recover.")).toBeTruthy();
-    expect(screen.getByText("Comparable structural failures did not return to peg, so no duration estimate is shown.")).toBeTruthy();
-    expect(screen.queryByText(/Duration not estimated/)).toBeNull();
+    const term = (factors: DdrRow["resolution"]["factors"] = [], durExtra: Record<string, unknown> = {}) =>
+      predRow({ resolution: { tier: "recovery_unlikely", factors }, duration: terminalDuration(durExtra) as DdrRow["duration"] });
+    const { re, container } = renderResolver({ rows: [lockedUnder("4.3", term())] });
+    expect(gt("No recovery expected")).toBeTruthy();
+    expect(qt("Terminal evidence")).toBeNull();
+    expect(gt("DDR does not expect this depeg to recover.")).toBeTruthy();
+    expect(gt("Comparable structural failures did not return to peg, so no duration estimate is shown.")).toBeTruthy();
+    expect(qt(/Duration not estimated/)).toBeNull();
 
-    const v5Term = makePredictionRow(makeSourceRow({ resolution: { tier: "recovery_unlikely", factors: [] }, duration: terminalDuration({ estimand: "cumulative_incidence", unresolvedShare30d: null }) }));
-    rerender(<DepegResolverModule data={response({ rows: [v5Term] })} />);
-    expect(screen.getByText("Terminal evidence")).toBeTruthy();
-    expect(screen.getByText("Terminal evidence fired for this break.")).toBeTruthy();
-    expect(screen.getByText(/Hard evidence that this break may not recover/)).toBeTruthy();
-    expect(screen.queryByText("DDR does not expect this depeg to recover.")).toBeNull();
+    re({ rows: [term([], { estimand: "cumulative_incidence", unresolvedShare30d: null })] });
+    expect(gt("Terminal evidence")).toBeTruthy();
+    expect(gt("Terminal evidence fired for this break.")).toBeTruthy();
+    expect(gt(/Hard evidence that this break may not recover/)).toBeTruthy();
+    expect(qt("DDR does not expect this depeg to recover.")).toBeNull();
     expect(screen.getByRole("img", { name: /verdict Terminal evidence; may not recover/ })).toBeTruthy();
 
-    const killTerm = lockedUnder("4.3", makePredictionRow(makeSourceRow({
-      resolution: { tier: "recovery_unlikely", factors: [{ code: "K6_wind_down", kind: "kill", severity: "severe", label: "Issuer announced orderly wind-down" }] },
-      duration: terminalDuration(),
-    })));
-    rerender(<DepegResolverModule data={response({ rows: [killTerm] })} />);
-    const inlineBlock = container.querySelector("[data-ddr-terminal-signals]");
-    expect(inlineBlock?.textContent).toContain("Fired kill signal");
-    expect(inlineBlock?.textContent).toContain("Issuer announced orderly wind-down");
-    expect(inlineBlock?.textContent).toContain("Severe");
-    expect(screen.queryByText("Will it recover?")).toBeNull();
+    re({ rows: [lockedUnder("4.3", term([{ code: "K6_wind_down", kind: "kill", severity: "severe", label: "Issuer announced orderly wind-down" }]))] });
+    const inline = container.querySelector("[data-ddr-terminal-signals]");
+    expect(inline?.textContent).toContain("Fired kill signal");
+    expect(inline?.textContent).toContain("Issuer announced orderly wind-down");
+    expect(inline?.textContent).toContain("Severe");
+    expect(qt("Will it recover?")).toBeNull();
 
-    const abovePeg = makePredictionRow(makeSourceRow({
-      direction: "above", peakDeviationBps: 1_500, currentDeviationBps: 900,
-      resolution: { tier: "recovery_likely", factors: [{ code: "K2_backing_impairment", kind: "kill", severity: "severe", label: "Depends on a frozen/dead collateral asset" }] },
-    }));
-    rerender(<DepegResolverModule data={response({ rows: [abovePeg] })} />);
-    expect(screen.getByText("No break signals")).toBeTruthy();
-    expect(screen.queryByText(/No kill signal fired/)).toBeNull();
-    expect(screen.getByText("Will it recover?").parentElement?.textContent).toContain("1 kill signal · 0 anchors");
+    re({ rows: [predRow({ direction: "above", peakDeviationBps: 1_500, currentDeviationBps: 900, resolution: { tier: "recovery_likely", factors: [{ code: "K2_backing_impairment", kind: "kill", severity: "severe", label: "Depends on a frozen/dead collateral asset" }] } })] });
+    expect(gt("No break signals")).toBeTruthy();
+    expect(qt(/No kill signal fired/)).toBeNull();
+    expect(gt("Will it recover?").parentElement?.textContent).toContain("1 kill signal · 0 anchors");
   });
 
   it.each([["5.0", "Stress signals", "At risk"], ["4.3", "At risk", "Stress signals"], [null, "At risk", "Stress signals"]] as const)(
     "labels a lock under methodology %s with its own tier vocabulary",
     (version, shown, hidden) => {
       renderResolver({ rows: [lockedUnder(version, row)] });
-      expect(screen.getByText(shown)).toBeTruthy();
-      expect(screen.queryByText(hidden)).toBeNull();
-      expect(Boolean(screen.queryByText(/most comparable breaks still recovered/))).toBe(version === "5.0");
+      expect(gt(shown)).toBeTruthy();
+      expect(qt(hidden)).toBeNull();
+      expect(Boolean(qt(/most comparable breaks still recovered/))).toBe(version === "5.0");
     },
   );
 
   it("renders v5 horizon odds without unreached quantiles and renders a reached v5 median", () => {
-    const horizon = (h: "6h" | "24h" | "7d" | "30d", state: "benchmarked" | "not_informative", probability: number | null) => ({
-      horizon: h, state, probability, probabilityDisplay: null, probabilityInterval: null, rawAtRisk: 10, uniqueCoins: 8, intervalClosures: 4, intervalNonClosures: 6,
-    });
-    const { rerender } = renderResolver({ rows: [makePredictionRow(makeSourceRow({
-      duration: { suppressed: false, suppressedReason: null, stratum: "below · deep · USD", medianSec: null, iqrSec: null, ageStatus: "ordinary", horizons: [horizon("6h", "not_informative", 0.12), horizon("24h", "benchmarked", 0.31), horizon("7d", "benchmarked", 0.42), horizon("30d", "benchmarked", 0.47)], estimand: "cumulative_incidence", unresolvedShare30d: 0.53 },
-    }))] });
-    expect(screen.getByText("31%")).toBeTruthy();
-    expect(screen.queryByText("12%")).toBeNull();
-    expect(screen.getByText("6h odds: Not informative at this age")).toBeTruthy();
-    expect(screen.getByText("~55%").parentElement?.textContent).toBe("~55% may not resolve within 30 days");
-    expect(screen.queryByText(/Half of comparable incidents|Typical range|typical range|anchored duration/)).toBeNull();
+    const hz = (horizon: "6h" | "24h" | "7d" | "30d", state: "benchmarked" | "not_informative", probability: number | null) =>
+      ({ horizon, state, probability, probabilityDisplay: null, probabilityInterval: null, rawAtRisk: 10, uniqueCoins: 8, intervalClosures: 4, intervalNonClosures: 6 });
+    const { re } = renderResolver({ rows: [predRow({ duration: activeDuration({ stratum: "below · deep · USD", medianSec: null, iqrSec: null, horizons: [hz("6h", "not_informative", 0.12), hz("24h", "benchmarked", 0.31), hz("7d", "benchmarked", 0.42), hz("30d", "benchmarked", 0.47)], estimand: "cumulative_incidence", unresolvedShare30d: 0.53 }) as DdrRow["duration"] })] });
+    expect(gt("31%")).toBeTruthy();
+    expect(qt("12%")).toBeNull();
+    expect(gt("6h odds: Not informative at this age")).toBeTruthy();
+    expect(gt("~55%").parentElement?.textContent).toBe("~55% may not resolve within 30 days");
+    expect(qt(/Half of comparable incidents|Typical range|typical range|anchored duration/)).toBeNull();
 
-    rerender(<DepegResolverModule data={response({ rows: [makePredictionRow(makeSourceRow({
-      duration: { suppressed: false, suppressedReason: null, stratum: null, medianSec: 3 * 86_400 + 5 * 3600, iqrSec: [5 * 3600 + 1200, 9 * 86_400], ageStatus: "ordinary", horizons: [], estimand: "cumulative_incidence", unresolvedShare30d: 0.02 },
-    }))] })} />);
-    expect(screen.getByText(/Half of comparable incidents recovered within/).textContent).toBe("Half of comparable incidents recovered within ~3d");
-    expect(screen.getByText("5h–9d")).toBeTruthy();
-    expect(screen.getByText("<5%")).toBeTruthy();
-    expect(screen.getByText("~3d (5h-9d)")).toBeTruthy();
+    re({ rows: [predRow({ duration: activeDuration({ stratum: null, medianSec: 3 * 86_400 + 5 * 3600, iqrSec: [5 * 3600 + 1200, 9 * 86_400], estimand: "cumulative_incidence", unresolvedShare30d: 0.02 }) as DdrRow["duration"] })] });
+    expect(gt(/Half of comparable incidents recovered within/).textContent).toBe("Half of comparable incidents recovered within ~3d");
+    expect(gt("5h–9d")).toBeTruthy();
+    expect(gt("<5%")).toBeTruthy();
+    expect(gt("~3d (5h-9d)")).toBeTruthy();
     expect(screen.getByRole("img", { name: /half of comparable incidents recovered within about 3d after lock/ })).toBeTruthy();
   });
 
   it("renders pending, deferred, retry-pending, no-call, and invalidated rows cleanly", () => {
-    const { rerender } = renderResolver({ rows: [makePendingRow("pending_lock")] });
-    expect(screen.getByText("Forecast not locked yet")).toBeTruthy();
-    expect(screen.queryByText(/Stress signals|~resolve/)).toBeNull();
-
-    rerender(<DepegResolverModule data={response({ rows: [makePendingRow("lock_deferred", { deferralReason: "stablecoins cache stale" })] })} />);
-    expect(screen.getByText("Health deferral")).toBeTruthy();
-    expect(screen.getByText("Deferral reason: stablecoins cache stale")).toBeTruthy();
-    expect(screen.queryByText("Stress signals")).toBeNull();
-
-    rerender(<DepegResolverModule data={response({ rows: [makePendingRow("publication_retry_pending")] })} />);
-    expect(screen.getByText("Forecast publication delayed")).toBeTruthy();
-    expect(screen.queryByText("Stress signals")).toBeNull();
-
-    rerender(<DepegResolverModule data={response({ rows: [makeNoCallRow()] })} />);
-    expect(screen.getByText("No-call at lock")).toBeTruthy();
-    expect(screen.getByText("Insufficient signal (sealed)")).toBeTruthy();
-    expect(screen.queryByText("No-call locked")).toBeNull();
-    expect(screen.getByText("no usable live price")).toBeTruthy();
-    expect(screen.queryByText("DDR does not expect this depeg to recover.")).toBeNull();
-
-    rerender(<DepegResolverModule data={response({ rows: [makeInvalidatedRow()] })} />);
-    expect(screen.getByText("Prediction invalidated by erratum")).toBeTruthy();
-    expect(screen.getByText("Erratum and original outcome")).toBeTruthy();
-
-    rerender(<DepegResolverModule data={response({ rows: [makeInvalidatedRow("no_call")] })} />);
-    expect(screen.getByText("no-call")).toBeTruthy();
-    expect(screen.queryByText("published prediction")).toBeNull();
+    const { re } = renderResolver({ rows: [makePendingRow("pending_lock")] });
+    expect(gt("Forecast not locked yet")).toBeTruthy();
+    expect(qt(/Stress signals|~resolve/)).toBeNull();
+    re({ rows: [makePendingRow("lock_deferred", { deferralReason: "stablecoins cache stale" })] });
+    expect(gt("Health deferral")).toBeTruthy();
+    expect(gt("Deferral reason: stablecoins cache stale")).toBeTruthy();
+    expect(qt("Stress signals")).toBeNull();
+    re({ rows: [makePendingRow("publication_retry_pending")] });
+    expect(gt("Forecast publication delayed")).toBeTruthy();
+    expect(qt("Stress signals")).toBeNull();
+    re({ rows: [makeNoCallRow()] });
+    expect(gt("No-call at lock")).toBeTruthy();
+    expect(gt("Insufficient signal (sealed)")).toBeTruthy();
+    expect(qt("No-call locked")).toBeNull();
+    expect(gt("no usable live price")).toBeTruthy();
+    expect(qt("DDR does not expect this depeg to recover.")).toBeNull();
+    re({ rows: [makeInvalidatedRow()] });
+    expect(gt("Prediction invalidated by erratum")).toBeTruthy();
+    expect(gt("Erratum and original outcome")).toBeTruthy();
+    re({ rows: [makeInvalidatedRow("no_call")] });
+    expect(gt("no-call")).toBeTruthy();
+    expect(qt("published prediction")).toBeNull();
   });
 
   it("shows frozen prediction lock metadata separately from live status", () => {
-    const sourceRow = makeSourceRow({ ageSec: 86_400, currentDeviationBps: -250, duration: { suppressed: false, suppressedReason: null, stratum: "below · moderate · USD", medianSec: 7200, iqrSec: [3600, 10_800], ageStatus: "ordinary", horizons: [] } });
-    renderResolver({ rows: [makePredictionRow(sourceRow, { ageSec: 90_000, peakDeviationBps: -320, currentDeviationBps: -180, updatedAt: 90_000 })] });
+    renderResolver({ rows: [predRow({ ageSec: 86_400, currentDeviationBps: -250, duration: activeDuration() }, { ageSec: 90_000, peakDeviationBps: -320, currentDeviationBps: -180, updatedAt: 90_000 })] });
     expect(screen.getAllByText("Prediction frozen").length).toBeGreaterThan(0);
-    for (const t of ["anchored duration", "~2h (1h-3h)", "From lock", "98.20% of peg", "-180 bps", "Live incident", "on time"]) expect(screen.getByText(t)).toBeTruthy();
+    for (const t of ["anchored duration", "~2h (1h-3h)", "From lock", "98.20% of peg", "-180 bps", "Live incident", "on time"]) expect(gt(t)).toBeTruthy();
     expect(screen.getByRole("img", { name: /lock deviation -250 bps/i })).toBeTruthy();
-    expect(screen.queryByText("97.50% of peg")).toBeNull();
-    expect(screen.queryByText("Projected")).toBeNull();
+    expect(qt("97.50% of peg")).toBeNull();
+    expect(qt("Projected")).toBeNull();
   });
 
   it("normalizes mixed v5 and pre-v5 tier counts in the header and renders DDRR track record", () => {
     const mk = (id: string, eventId: number, legacy = false) => {
-      const r = makePredictionRow(makeSourceRow({ stablecoinId: id, eventId, resolution: { tier: "recovery_likely", factors: [] } }));
+      const r = predRow({ stablecoinId: id, eventId, resolution: { tier: "recovery_likely", factors: [] } });
       return legacy ? lockedUnder("4.3", r) : r;
     };
     const review = {
@@ -352,7 +322,7 @@ describe("DepegResolverModule", () => {
       byPredictionPolicy: [],
     } as unknown as Parameters<typeof DepegResolverModule>[0]["review"];
     const { container } = renderResolver({ rows: [mk("v5-a", 11), mk("v5-b", 12), mk("leg-a", 13, true), mk("leg-b", 14, true)] }, { review });
-    for (const t of ["Recovery outlook · DDR", "Forecast track record · DDRR", "Recovery calls correct: 61/74", "see the grading"]) expect(screen.getByText(t)).toBeTruthy();
+    for (const t of ["Recovery outlook · DDR", "Forecast track record · DDRR", "Recovery calls correct: 61/74", "see the grading"]) expect(gt(t)).toBeTruthy();
     expect(screen.getByTitle(/2 no break signals \(current\) · 2 recovery likely \(pre-v5\)/).textContent).toBe("4no break signals");
     expect(container.textContent).not.toContain("2no break signals");
   });
@@ -361,8 +331,8 @@ describe("DepegResolverModule", () => {
 describe("displayed live peak", () => {
   it("uses the admitted DDR observation clock to show weekend gold divergence", () => {
     const weekend = Date.parse("2026-11-14T14:00:00Z") / 1000;
-    const legacy = { ...makePredictionRow(makeSourceRow(), { updatedAt: weekend, currentDeviationBps: -400 }), pegCurrency: "GOLD" };
-    const admitted = DdrV2ResponseRowSchema.parse({ ...legacy, live: { ...legacy.live, currentDeviationObservedAtSec: weekend - 60 } });
+    const legacy = { ...predRow({}, { updatedAt: weekend, currentDeviationBps: -400 }), pegCurrency: "GOLD" };
+    const admitted = parseRow({ ...legacy, live: { ...legacy.live, currentDeviationObservedAtSec: weekend - 60 } });
     expect([isLiveCurrentDeviationHeld(legacy), getLiveCurrentDeviationBps(legacy)]).toEqual([true, null]);
     expect([isLiveCurrentDeviationHeld(admitted), getLiveCurrentDeviationBps(admitted)]).toEqual([false, -400]);
   });
@@ -373,49 +343,46 @@ describe("displayed live peak", () => {
     ["closed", "closed_pending_review", "below", -129, -742, -129],
     ["opposite direction", "active", "below", -129, 742, -129],
   ] as const)("%s", (_label, eventState, direction, peakDeviationBps, currentDeviationBps, expected) => {
-    expect(getDisplayedLivePeakDeviationBps(makePredictionRow(makeSourceRow({ direction, peakDeviationBps, currentDeviationBps }), { eventState, peakDeviationBps, currentDeviationBps }))).toBe(expected);
+    expect(getDisplayedLivePeakDeviationBps(predRow({ direction, peakDeviationBps, currentDeviationBps }, { eventState, peakDeviationBps, currentDeviationBps }))).toBe(expected);
   });
 });
 
 describe("StablecoinDepegResolverRows", () => {
   it("filters rows to the requested stablecoin, shows live peak floor, and hides on non-stale degradation", () => {
-    const { rerender } = renderCoinRows({ rows: [row] }, "usdc-circle");
-    expect(screen.queryByText("Stress signals")).toBeNull();
+    const { re } = renderCoinRows({ rows: [row] }, "usdc-circle");
+    expect(qt("Stress signals")).toBeNull();
     expect(screen.queryByLabelText(/Depeg Duration Resolver/)).toBeNull();
 
-    const other = makePredictionRow(makeSourceRow({ stablecoinId: "usdc-circle", symbol: "USDC", eventId: 2 }));
-    rerender(<StablecoinDepegResolverRows stablecoinId="lusd-liquity" data={response({ rows: [other, row] })} />);
+    re({ rows: [predRow({ stablecoinId: "usdc-circle", symbol: "USDC", eventId: 2 }), row] });
     expect(screen.getAllByLabelText(/Depeg Duration Resolver for /)).toHaveLength(1);
     expect(screen.getByLabelText("Depeg Duration Resolver for LUSD")).toBeTruthy();
-    expect(screen.queryByText("USDC")).toBeNull();
+    expect(qt("USDC")).toBeNull();
 
-    const source = makeSourceRow({ peakDeviationBps: -129, currentDeviationBps: -742 });
     const observedAt = Date.parse("2026-11-24T13:15:00Z") / 1000;
-    rerender(<StablecoinDepegResolverRows stablecoinId="lusd-liquity" data={response({ rows: [makePredictionRow(source, { peakDeviationBps: -129, currentDeviationBps: -742, currentDeviationObservedAtSec: observedAt })] })} />);
-    const liveFacts = screen.getByText("Live incident").parentElement;
+    re({ rows: [predRow({ peakDeviationBps: -129, currentDeviationBps: -742 }, { peakDeviationBps: -129, currentDeviationBps: -742, currentDeviationObservedAtSec: observedAt })] });
+    const liveFacts = gt("Live incident").parentElement;
     expect(liveFacts?.textContent).toContain("Peak -742 bps");
     expect(liveFacts?.textContent).toContain("Now -742 bps (as of 2026-11-24 13:15 UTC)");
 
-    rerender(<StablecoinDepegResolverRows stablecoinId="lusd-liquity" data={response({ _meta: { ...meta, degraded: true, degradedReason: "missing-cache" }, rows: [row] })} />);
+    re({ _meta: degMeta("missing-cache"), rows: [row] });
     expect(screen.queryByLabelText(/Depeg Duration Resolver/)).toBeNull();
-    expect(screen.queryByText(/Stress signals|Resolver snapshot is stale/)).toBeNull();
+    expect(qt(/Stress signals|Resolver snapshot is stale/)).toBeNull();
   });
 
   it.each(["resolver list", "stablecoin detail"] as const)("retains frozen duration over stale-cache overlay without private notice (%s)", (surface) => {
-    const sourceRow = makeSourceRow({ duration: { suppressed: false, suppressedReason: null, stratum: "below · moderate · USD", medianSec: 7200, iqrSec: [3600, 10_800], ageStatus: "ordinary", horizons: [] } });
-    const data = response({ _meta: { ...meta, degraded: true, degradedReason: "stale-cache" }, rows: [makePredictionRow(sourceRow, { stale: true, degradedReason: "stale-cache" })] });
-    render(surface === "resolver list" ? <DepegResolverModule data={data} /> : <StablecoinDepegResolverRows stablecoinId="lusd-liquity" data={data} />);
-    expect(screen.queryByText(/live overlay is stale|Live overlay:|duration estimates are suppressed/i)).toBeNull();
-    expect(screen.getByText("anchored duration")).toBeTruthy();
-    expect(screen.getByText("~2h (1h-3h)")).toBeTruthy();
+    const data = response({ _meta: degMeta("stale-cache"), rows: [predRow({ duration: activeDuration() }, { stale: true, degradedReason: "stale-cache" })] });
+    render(surface === "resolver list" ? <DepegResolverModule data={data} /> : <StablecoinDepegResolverRows stablecoinId={LUSD} data={data} />);
+    expect(qt(/live overlay is stale|Live overlay:|duration estimates are suppressed/i)).toBeNull();
+    expect(gt("anchored duration")).toBeTruthy();
+    expect(gt("~2h (1h-3h)")).toBeTruthy();
   });
 
   it.each(["stale-cache", "errata-overlay-read-failed", "lock-deferral-overlay-read-failed", "manifest-fallback:missing-cache"])(
     "keeps infrastructure reason %s out of the live-incident caption",
     (degradedReason) => {
-      renderCoinRows({ rows: [makePredictionRow(makeSourceRow(), { degradedReason })] });
-      expect(screen.getByText("Live incident")).toBeTruthy();
-      expect(screen.queryByText(/Live overlay:/)).toBeNull();
+      renderCoinRows({ rows: [predRow({}, { degradedReason })] });
+      expect(gt("Live incident")).toBeTruthy();
+      expect(qt(/Live overlay:/)).toBeNull();
     },
   );
 
@@ -424,7 +391,7 @@ describe("StablecoinDepegResolverRows", () => {
     ["closed-pending-review", "Live overlay: closed, pending review."],
     ["lock-deferred", "Live overlay: lock deferred."],
   ])("keeps incident reason %s in the live-incident caption", (degradedReason, caption) => {
-    renderCoinRows({ rows: [makePredictionRow(makeSourceRow(), { degradedReason })] });
-    expect(screen.getByText(caption)).toBeTruthy();
+    renderCoinRows({ rows: [predRow({}, { degradedReason })] });
+    expect(gt(caption)).toBeTruthy();
   });
 });

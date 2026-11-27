@@ -18,7 +18,7 @@ vi.mock("./client", () => ({ DepegClient: () => <div>depeg client</div>, default
 vi.mock("./depeg-event-archive", () => ({ DepegEventArchivePreview: () => null }));
 
 const QUESTION = "What counts as a depeg event on Pharos?";
-const ANSWER = "A depeg event is triggered when a stablecoin's price deviates from its peg by more than 1% (100 bps) for USD-pegged coins, or 1.5% (150 bps) for non-USD pegs. Every new event is pending at first: the deviation must hold for at least 15 minutes and be backed by a trusted or multi-source primary price, or by same-direction secondary evidence, before it is confirmed. Opposite-direction evidence never counts as confirmation and can reject a pending event.";
+const ANSWER = "A depeg event is triggered when a stablecoin's price deviates from its peg by more than 1% (100 bps) for USD-pegged coins, or 1.5% (150 bps) for non-USD pegs. Every new event is pending at first: the deviation must hold for at least 15 minutes and be backed by a trusted or multi-source primary price, or by same-direction secondary evidence, before it is confirmed. Opposite-direction evidence never counts as confirmation and can reject a pending event. Open incidents older than 30 days stay in the full active count but are split out as long-running unless two trusted primary or native observations at least 15 minutes apart confirm a fresh re-escalation, which promotes them back into Recent for 7 days.";
 
 describe("depeg FAQ pending confirmation", () => {
   it("states universal pending confirmation identically in visible copy and FAQPage JSON-LD", () => {
@@ -52,6 +52,6 @@ describe("depeg FAQ pending confirmation", () => {
 
   it("keeps the contextual help line consistent with the FAQ minimum", () => {
     expect(METHODOLOGY_CONTEXT.activeDepegs.detail)
-      .toBe("Every new depeg must hold for at least 15 minutes and pass source-trust checks before it counts as live.");
+      .toBe("Every new depeg must hold for at least 15 minutes and pass source-trust checks before it counts as live. Open incidents older than 30 days are separated as long-running unless two trusted primary or native observations at least 15 minutes apart confirm a fresh re-escalation, which promotes them back into Recent for 7 days.");
   });
 });

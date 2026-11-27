@@ -1,5 +1,16 @@
 import Link from "next/link";
 import {
+  DEPEG_LONG_RUNNING_AGE_DAYS,
+  DEPEG_RECOVERY_THRESHOLD_RATIO,
+  DEPEG_REESCALATION_CONFIRM_MIN_AGE_SEC,
+  DEPEG_REESCALATION_MAX_STEP_BPS,
+  DEPEG_REESCALATION_MIN_STEP_BPS,
+  DEPEG_REESCALATION_STEP_RATIO,
+  DEPEG_REESCALATION_WINDOW_DAYS,
+  DEPEG_THRESHOLD_BPS,
+  DEPEG_THRESHOLD_BPS_NON_USD,
+} from "@shared/lib/depeg-config";
+import {
   DEWS_SIGNAL_DESCRIPTIONS,
   DEWS_SIGNAL_LABELS,
   DEWS_SIGNAL_SHORT_LABELS,
@@ -216,6 +227,39 @@ function PegScoreTechnicalDetails() {
             },
           ]}
         />
+      </div>
+
+      <div className="space-y-2">
+        <h3 className="text-foreground font-medium">Open-Incident Horizon Split &amp; Re-Escalation (v6.56)</h3>
+        <p>
+          Open confirmed incidents remain in the full active census (<code>activeDepegCount</code>), while live views
+          partition them against one assessment clock into <strong>Recent</strong> (canonical onset &le;{" "}
+          {DEPEG_LONG_RUNNING_AGE_DAYS} days, or confirmed re-escalated within {DEPEG_REESCALATION_WINDOW_DAYS} days)
+          and <strong>Long-running (&gt;{DEPEG_LONG_RUNNING_AGE_DAYS}d)</strong>. Missing or future-dated onset metadata
+          fails closed to the unsplit view rather than inventing fresh age.
+        </p>
+        <MethodologyFormula>
+          stepBps = clamp({DEPEG_REESCALATION_MIN_STEP_BPS}, {DEPEG_REESCALATION_MAX_STEP_BPS}, round(anchorBps &times;{" "}
+          {DEPEG_REESCALATION_STEP_RATIO.toFixed(2)})); confirm when consecutive trusted primary/native ticks spanning
+          &ge;{DEPEG_REESCALATION_CONFIRM_MIN_AGE_SEC / 60}m reach |bps| &ge; anchorBps + stepBps
+        </MethodologyFormula>
+        <p>
+          Re-escalation arms strictly after canonical age exceeds {DEPEG_LONG_RUNNING_AGE_DAYS} days, seeding{" "}
+          <code>anchorBps = max(|bps|, pegThreshold)</code> on the first trusted off-peg observation after Day{" "}
+          {DEPEG_LONG_RUNNING_AGE_DAYS} (and carrying the anchor forward across same-direction reopenings within 6
+          hours). Single-tick wicks clear the candidate clock without moving the anchor; confirmed crossings ratchet{" "}
+          <code>anchorBps</code> upward only and badge the row <code>Escalating</code> in Recent for{" "}
+          {DEPEG_REESCALATION_WINDOW_DAYS} days.
+        </p>
+        <p>
+          Two-tier materiality ranks confirmed off-peg (<code>outside</code>) and unconfirmed rows with{" "}
+          <code>|bps| &gt; recoveryBand</code> ({Math.round(DEPEG_THRESHOLD_BPS * DEPEG_RECOVERY_THRESHOLD_RATIO)} bps
+          USD / {Math.round(DEPEG_THRESHOLD_BPS_NON_USD * DEPEG_RECOVERY_THRESHOLD_RATIO)} bps non-USD) or unavailable
+          deviation ahead of confirmed recovering (<code>inside</code>) and measured near-par rows (
+          <code>|bps| &le; recoveryBand</code>), then orders by USD off-peg holder exposure with confirmed{" "}
+          <code>outside</code> evidence as tie-break. PegScore, Safety Score, PSI, DEWS, and DDR/DDRR core scoring are
+          unaffected.
+        </p>
       </div>
     </>
   );

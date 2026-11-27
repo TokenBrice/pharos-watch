@@ -4,14 +4,26 @@ import {
   getTierVocabulary,
   isCurrentForecast,
 } from "@/components/depeg/depeg-resolver-row-card-model";
-import { readPublishedDeviation } from "@/lib/current-peg";
-import type { DdrTierVocabulary } from "@shared/lib/classification";
+import { readUnroundedPublishedDeviation } from "@/lib/current-peg";
+import {
+  classifyOpenIncidentCoverage,
+  classifyOpenIncidentEvidence,
+  classifyOpenIncidentTier,
+  compareOpenIncidentRows,
+  isRecentOpenIncidentTier,
+  type RankableOpenIncidentRow,
+} from "@shared/lib/active-depegs";
+import type {
+  DdrTierVocabulary,
+  OpenIncidentEvidence,
+  OpenIncidentTier,
+} from "@shared/lib/classification";
 import {
   DDR_RESOLUTION_TIER_VALUES,
   type DdrResolutionTier,
   type DdrV2ResponseRow,
 } from "@shared/types/depeg-resolver";
-import type { PegSummaryCoin } from "@shared/types/peg";
+import type { DepegEvent, OpenIncidentSnapshot, PegSummaryCoin } from "@shared/types/peg";
 
 /**
  * Below this the "past peak" test is snapshot jitter, not a real move. A bare
@@ -78,20 +90,74 @@ function verdictUrgency(row: DdrV2ResponseRow): number {
   return VERDICT_URGENCY[isCurrentForecast(row) ? getResolution(row).tier : "insufficient_signal"];
 }
 
+export interface CompareResolverUrgencyOptions {
+  openIncidents?: Readonly<Record<string, OpenIncidentSnapshot>> | null;
+  clockSec?: number;
+}
+
 /**
- * Worklist order: verdict severity, then incidents now at a new worst, then
- * holder exposure (unavailable last), then the widest live gap to peg, then a
- * stable identity so equally urgent rows cannot reshuffle between refreshes on
- * API row order. DDR rows are not control-board rows, so the board's attention
- * comparator does not apply.
+ * Join a live DDR row to `/api/peg-summary` `openIncidents` strictly by matching
+ * `eventId` (`incident.eventId === row.live.currentEventId`), never bare coin ID.
+ */
+export function matchOpenIncidentForResolverRow(
+  row: DdrV2ResponseRow,
+  openIncidents: Readonly<Record<string, OpenIncidentSnapshot>> | null | undefined,
+): OpenIncidentSnapshot | null {
+  if (!openIncidents || row.live.eventState !== "active") return null;
+  const incident = openIncidents[row.stablecoinId];
+  if (!incident) return null;
+  return row.live.currentEventId != null && incident.eventId === row.live.currentEventId
+    ? incident
+    : null;
+}
+
+/**
+ * Classify a DDR row's open-incident horizon tier via exact `eventId` join on a
+ * single assessment clock. Returns `null` when unmatched, closed, or unclocked.
+ */
+export function resolveResolverRowIncidentTier(
+  row: DdrV2ResponseRow,
+  openIncidents: Readonly<Record<string, OpenIncidentSnapshot>> | null | undefined,
+  clockSec: number | undefined,
+): OpenIncidentTier | null {
+  if (!clockSec || !(clockSec > 0)) return null;
+  const incident = matchOpenIncidentForResolverRow(row, openIncidents);
+  return classifyOpenIncidentTier(incident, clockSec);
+}
+
+function resolverHorizonRank(tier: OpenIncidentTier | null): number {
+  if (isRecentOpenIncidentTier(tier)) return 2;
+  if (tier === "long_running") return 0;
+  return 1;
+}
+
+/**
+ * Worklist order: verdict severity first; within equal verdict urgency, when
+ * split metadata is available, active `recent`/`escalating` rows (matched by
+ * `eventId`) lead quiet `>30d` long-running rows; then incidents now at a new
+ * worst, then holder exposure (unavailable last), then the widest live gap to
+ * peg, then a stable identity so equally urgent rows cannot reshuffle between
+ * refreshes on API row order. DDR rows are not control-board rows, so the
+ * board's attention comparator does not apply.
  */
 export function compareResolverUrgency(
   a: DdrV2ResponseRow,
   b: DdrV2ResponseRow,
   marketCaps?: MarketCapById | null,
+  options?: CompareResolverUrgencyOptions,
 ): number {
   const verdictDelta = verdictUrgency(b) - verdictUrgency(a);
   if (verdictDelta !== 0) return verdictDelta;
+  if (options?.openIncidents && options.clockSec && options.clockSec > 0) {
+    const activeDelta = Number(b.live.eventState === "active") - Number(a.live.eventState === "active");
+    if (activeDelta !== 0) return activeDelta;
+    if (a.live.eventState === "active" && b.live.eventState === "active") {
+      const aTier = resolveResolverRowIncidentTier(a, options.openIncidents, options.clockSec);
+      const bTier = resolveResolverRowIncidentTier(b, options.openIncidents, options.clockSec);
+      const horizonDelta = resolverHorizonRank(bTier) - resolverHorizonRank(aTier);
+      if (horizonDelta !== 0) return horizonDelta;
+    }
+  }
   const pastPeakDelta = Number(isPastEventPeak(b)) - Number(isPastEventPeak(a));
   if (pastPeakDelta !== 0) return pastPeakDelta;
   const exposureDelta = compareExposure(
@@ -162,43 +228,83 @@ export function summarizeResolverBook(rows: readonly DdrV2ResponseRow[]): Resolv
   return { total, rowCount: rows.length, tierCounts, tierGroups: groupTiersByVocabulary(tiered), pastPeakCount };
 }
 
-export interface OpenIncidentRow {
+export interface OpenIncidentRow extends RankableOpenIncidentRow {
   id: string;
   symbol: string;
+  pegCurrency: string;
   /** Admitted live deviation, or null when unavailable. */
   deviationBps: number | null;
+  /** Live deviation alias required by `RankableOpenIncidentRow` / `compareOpenIncidentRows`. */
+  bps: number | null;
   referenceNote: string | null;
   marketCapUsd: number | null;
-  /** The resolver row for the coin's active incident, a current forecast first. */
+  /** Holder exposure in USD off peg, or null when supply or deviation is unavailable. */
+  exposureUsd: number | null;
+  /** Latest trusted observation coverage classification for this open incident. */
+  evidence: OpenIncidentEvidence;
+  /** Elapsed seconds since canonical incident onset, or null when unavailable/future. */
+  ageSec: number | null;
+  /** Display horizon tier (`recent`, `escalating`, `long_running`), or null when unsplit. */
+  tier: OpenIncidentTier | null;
+  /** The resolver row for the coin's active incident, matched by `eventId` when available, current forecast first. */
   ddr: DdrV2ResponseRow | null;
 }
 
 /**
- * The hero's named open incidents: the peg summary's confirmed census, largest
- * holder exposure first (unavailable exposure last), then the wider live
- * deviation, then identity. Callers show a slice and count the whole list.
+ * The hero's named open incidents: the peg summary's confirmed census, ranked
+ * by shared `compareOpenIncidentRows` (two-tier materiality, holder exposure,
+ * confirmed off-peg tie-break, widest deviation, then identity).
  */
 export function rankOpenIncidents(
   coins: readonly PegSummaryCoin[],
   resolverRows: readonly DdrV2ResponseRow[],
   marketCaps: MarketCapById | null,
+  openIncidents?: Readonly<Record<string, OpenIncidentSnapshot>> | null,
+  clockSec = 0,
+  activeEvents?: readonly DepegEvent[] | null,
+  horizonClockSec = clockSec,
 ): OpenIncidentRow[] {
+  const deviationClockSec = clockSec > 0 ? clockSec : undefined;
   return coins
     .filter((coin) => coin.activeDepeg)
     .map((coin) => {
-      const { deviationBps, referenceNote } = readPublishedDeviation(coin.pegCurrency, coin);
+      const { deviationBps: rawBps, referenceNote } = readUnroundedPublishedDeviation(
+        coin.pegCurrency,
+        coin,
+        undefined,
+        deviationClockSec,
+      );
+      const deviationBps = rawBps == null ? null : Math.round(rawBps);
+      const marketCapUsd = marketCaps?.get(coin.id) ?? null;
+      const exposureUsd = holderExposureUsd(marketCapUsd, rawBps);
+      const incident = openIncidents?.[coin.id] ?? null;
+      const evidence =
+        openIncidents === undefined && activeEvents
+          ? classifyOpenIncidentEvidence(activeEvents, coin.id, clockSec)
+          : classifyOpenIncidentCoverage(incident?.coverage, clockSec);
+      const tier = classifyOpenIncidentTier(incident, horizonClockSec);
+      const ageSec =
+        incident && horizonClockSec > 0 && Number.isFinite(incident.startedAt) && incident.startedAt <= horizonClockSec
+          ? horizonClockSec - incident.startedAt
+          : null;
       const active = resolverRows.filter((row) => row.stablecoinId === coin.id && row.live.eventState === "active");
+      const matched = incident
+        ? active.filter((row) => row.live.currentEventId === incident.eventId)
+        : active;
       return {
         id: coin.id,
         symbol: coin.symbol,
+        pegCurrency: coin.pegCurrency,
         deviationBps,
+        bps: rawBps,
         referenceNote,
-        marketCapUsd: marketCaps?.get(coin.id) ?? null,
-        ddr: active.find(isCurrentForecast) ?? active[0] ?? null,
+        marketCapUsd,
+        exposureUsd,
+        evidence,
+        ageSec,
+        tier,
+        ddr: matched.find(isCurrentForecast) ?? matched[0] ?? null,
       };
     })
-    .sort((a, b) =>
-      compareExposure(holderExposureUsd(a.marketCapUsd, a.deviationBps), holderExposureUsd(b.marketCapUsd, b.deviationBps))
-      || Math.abs(b.deviationBps ?? 0) - Math.abs(a.deviationBps ?? 0)
-      || a.id.localeCompare(b.id));
+    .sort(compareOpenIncidentRows);
 }

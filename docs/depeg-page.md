@@ -83,9 +83,8 @@ is always rendered before the history handoff; the resolver header's track-recor
 KPI" shape required by `design-language.md#feature-page-heroes`.
 
 - **Left command rail**, top to bottom, hairline-separated: the headline count =
-  `PegSummaryStats.activeDepegCount` in neutral ink (`.pharos-hero-kpi`), with the clickable signed worst live
-  move beside it as the one semantic-coloured element and a `Peg catalog` `UniverseChip` under it (catalog size = rows in the live peg summary, omitted while unread);
-  **Open incidents** — the census the headline counts (peg-summary `activeDepeg` rows) ranked by `rankOpenIncidents()` on holder exposure (circulating supply × |live deviation|, unavailable exposure last), naming the top five as `Top 5 of N` with live deviation in basis points (as the worst-move chip), compact DDR verdict and market cap, each linking to the dossier's `#depeg-resolver`;
+  `PegSummaryStats.activeDepegCount` in neutral ink (`.pharos-hero-kpi`) paired with the inline recent (`<=30d` or confirmed re-escalated within `7d`) vs. long-running (`>30d`) split derived from `openIncidents` on a single clock, with the clickable signed worst live move across the peg catalog beside it as the one semantic-coloured element and a `Peg catalog` `UniverseChip` under it (catalog size = rows in the live peg summary, omitted while unread);
+  **Open incidents** — the census the headline counts (peg-summary `activeDepeg` rows) partitioned into `Recent` and `>30d` via a compact `.pharos-segmented` toggle (with latched auto-fallback to `>30d` when `recent === 0 && longRunning > 0`) and ranked by `compareOpenIncidentRows()` (two-tier materiality placing confirmed `outside` and unconfirmed off-peg/unpriced rows ahead of `inside` and measured near-par rows, then holder exposure, then `outside` tie-break, then widest deviation), naming the top five of the active segment as `Top 5 of N` with live deviation in basis points, incident age, `Escalating` / `Near par` / `Unconfirmed` qualifiers, compact DDR verdict and market cap, each linking to the dossier's `#depeg-resolver`;
   a four-cell figure grid (awaiting confirmation, meaning the `pending[]` threshold crossings; DEWS ALERT-or-worse; holding peg; median deviation). **Recovery outlook · DDR** and **Forecast track record · DDRR** summaries live in `DepegResolverModule` below the hero (with dense DDRR grading tables collapsed behind a 1-row `Track Record` disclosure linked to `#forecast-grading`). Supporting
   figures stay neutral. `DEPEG_PENDING_STATE_LABELS` (`shared/lib/classification/depeg.ts`) keeps the two pending states apart: crossings read “Awaiting confirmation” (board pill `awaiting`) and DDR `pending_lock` rows “Forecast not locked yet”, never a bare “pending”.
 - **Right field:** `DEWSRadarPanel` (`src/components/dews/dews-summary.tsx`) paired beside the left command rail so both halves balance in height on desktop. Radial ring encodes DEWS band, mark size encodes market cap, mark colour encodes
@@ -151,7 +150,7 @@ Two eligibility caveats:
 `DepegResolverModule` renders the `DEFAULT_VISIBLE_ROWS` most urgent forecasts and keeps the rest
 behind an explicit toggle that mounts them only when opened.
 
-- **Urgency order:** verdict severity first — terminal evidence / no recovery expected, then stress signals / at risk, then an active incident without a current verdict (forecast not locked yet, no-call, insufficient signal), then no break signals / recovery likely; an incident no longer active ranks last.
+- **Urgency order:** active `recent`/`escalating` incidents (matched by `eventId` against `openIncidents`) rank ahead of quiet `>30d` long-running rows so fresh breaks lead the default 4-card slice while matched rows carry `Escalating` / `>30d` pills and `ResolverHeader` retains whole-book totals. Within each horizon group, verdict severity leads — terminal evidence / no recovery expected, then stress signals / at risk, then an active incident without a current verdict (forecast not locked yet, no-call, insufficient signal), then no break signals / recovery likely; an incident no longer active ranks last.
   Then incidents at a new worst — **live** deviation beyond the **live** event peak (`row.live.peakDeviationBps`) — then holder exposure (circulating supply × |live deviation|, unavailable exposure after every observation), then the widest live deviation, then `stablecoinId`/`eventId` so equally urgent rows cannot reshuffle between refreshes.
   Each card shows the coin's market cap under its name (“Market cap unavailable” without an observed supply). The new-worst comparisons use live fields, never `getCurrentDeviationBps()`/`getPeakDeviationBps()` — those
   return lock-time evidence for frozen predictions, and a frozen lock peak can be far shallower
@@ -190,15 +189,15 @@ behind an explicit toggle that mounts them only when opened.
 `DepegControlBoard` is the exact-value workbench: URL-backed filters, sort modes, ranked rows,
 pagination. It owns per-coin values only; page-level aggregates belong to the hero.
 
-An open confirmed incident's lifecycle pill reads `open`. Beside it,
-`classifyOpenIncidentEvidence()` (`shared/lib/active-depegs.ts`, labels in
+An open confirmed incident's lifecycle pill reads `open`, paired with a sibling `Escalating` or `>30d` tier pill (`OPEN_INCIDENT_TIER_BADGES` in `shared/lib/classification/depeg.ts`) when `openIncidents` establishes its horizon and canonical onset age. Beside it,
+`classifyOpenIncidentCoverage()` / `classifyOpenIncidentEvidence()` (`shared/lib/active-depegs.ts`, labels in
 `shared/lib/classification/depeg.ts`) names the latest trusted observation of the coin's
-unique open event from the active-events detail read: a gap-free off-peg observation within
+unique open event from the peg-summary live coverage overlay (falling back to the active-events detail read when absent): a gap-free off-peg observation within
 `DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC` reads "Observed outside recovery band"; a trusted
 at-par observation within that limit reads "Inside recovery band, awaiting confirmation";
 missing, ambiguous, blind, expired or future evidence reads "Recovery unconfirmed". Spot
 bps never classify the band, the page minute clock expires the readings, and the census
-stays `summary.activeDepegCount`, never the capped event detail. A threshold crossing awaiting confirmation reads `awaiting`.
+stays `summary.activeDepegCount`, never the capped event detail. A threshold crossing awaiting confirmation reads `awaiting`. Default `__attention` ordering uses the lexicographic comparator in `src/lib/depeg-sort.ts` (active incident → two-tier materiality → recent/escalating before quiet `>30d` → pending crossing → DEWS band → `|deviationBps|` → id), and CSV/NDJSON/Markdown exports include an `Incident Horizon` column (`recent` | `escalating` | `long_running` | `null`).
 Each row's meta line adds the coin's market cap (`cap unavailable` without an observed supply), a label rather than a sort key.
 
 An absent live deviation or DEWS reading yields a neutral `unknown` status, never green `clear`;
@@ -226,6 +225,7 @@ Managed through `useUrlFilters()` in `src/app/depeg/client.tsx`:
 
 - `peg` — one peg-currency filter, validated against `PEG_LABELS_SHORT`, invalid values normalize to `all`
 - `type` — one governance filter, validated against `GOVERNANCE_LABELS`, invalid values normalize to `all`
+- `status` — one board status filter (`all` | `recent_pending` | `long_running` | `dews_alert` | `at_peg`, plus legacy `active_pending` accepted as an inclusive alias matching all open and pending rows); invalid values normalize to `all`
 - `q` — free-text symbol/name search
 
 Unrelated query parameters are preserved by the shared hook.

@@ -16,23 +16,17 @@ import { makeInactiveMintBurnFlowCoin, makeMintBurnCoinValuation } from "@/test-
 type MonitoringState = "loading" | "ready" | "empty" | "unavailable" | "stale-with-data";
 
 const m = vi.hoisted(() => ({
-  tableProps: vi.fn(), activeDepegs: vi.fn(), blEvents: vi.fn(), blSummary: vi.fn(),
-  coinStates: vi.fn(), dex: vi.fn(), filters: vi.fn(), flows: vi.fn(),
-  peg: vi.fn(), pinned: vi.fn(), reportCards: vi.fn(), psi: vi.fn(),
-  stablecoins: vi.fn(), stress: vi.fn(),
+  tableProps: vi.fn(), activeDepegs: vi.fn(), blEvents: vi.fn(), blSummary: vi.fn(), coinStates: vi.fn(),
+  dex: vi.fn(), filters: vi.fn(), flows: vi.fn(), peg: vi.fn(), pinned: vi.fn(), reportCards: vi.fn(),
+  psi: vi.fn(), stablecoins: vi.fn(), stress: vi.fn(),
 }));
-
 vi.mock("next/dynamic", () => ({
   default: () => function MockStablecoinTable(props: Record<string, unknown>) {
-    m.tableProps(props);
-    return <div data-testid="stablecoin-table">{props.isLoading ? "table loading" : "table ready"}</div>;
+    m.tableProps(props); return <div data-testid="stablecoin-table">{props.isLoading ? "table loading" : "table ready"}</div>;
   },
 }));
 vi.mock("next/image", () => ({ default: ({ alt = "", ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => <img alt={alt} {...props} /> }));
-vi.mock("@/hooks/api-hooks", () => ({
-  useDexLiquidityTable: m.dex, usePegSummary: m.peg, useReportCardsV9Table: m.reportCards,
-  useStabilityIndex: m.psi, useStressSignals: m.stress,
-}));
+vi.mock("@/hooks/api-hooks", () => ({ useDexLiquidityTable: m.dex, usePegSummary: m.peg, useReportCardsV9Table: m.reportCards, useStabilityIndex: m.psi, useStressSignals: m.stress }));
 vi.mock("@/hooks/use-blacklist-events", () => ({ useBlacklistEventsPage: m.blEvents, useBlacklistSummary: m.blSummary }));
 vi.mock("@/hooks/use-depeg-events", () => ({ useActiveDepegEvents: m.activeDepegs }));
 vi.mock("@/hooks/use-depeg-resolver-surfaces", () => ({ useDepegResolverSurfaces: () => ({ resolver: { data: undefined } }) }));
@@ -41,10 +35,7 @@ vi.mock("@/hooks/use-home-alt-filters", () => ({ useHomeAltFilters: m.filters })
 vi.mock("@/hooks/use-mint-burn-flows", () => ({ useMintBurnFlows: m.flows }));
 vi.mock("@/hooks/use-pinned-stablecoins", () => ({ usePinnedStablecoins: m.pinned }));
 vi.mock("@/hooks/use-stablecoins", () => ({ useStablecoins: m.stablecoins }));
-vi.mock("@/lib/stablecoin-static-data", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/lib/stablecoin-static-data")>()),
-  ACTIVE_STABLECOIN_ID_SET: new Set(["usdc-circle"]),
-}));
+vi.mock("@/lib/stablecoin-static-data", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/lib/stablecoin-static-data")>()), ACTIVE_STABLECOIN_ID_SET: new Set(["usdc-circle"]) }));
 vi.mock("@/components/homepage/homepage-client-view-model", () => ({
   buildHomepageCriticalViewModel: ({ stablecoinsData, eligibleIds }: { stablecoinsData?: { peggedAssets?: Array<{ id?: string }> }; eligibleIds?: ReadonlySet<string> }) => ({
     filteredRowCount: stablecoinsData ? (stablecoinsData.peggedAssets ?? []).filter((coin) => !eligibleIds || (coin.id ? eligibleIds.has(coin.id) : false)).length : 0,
@@ -54,37 +45,30 @@ vi.mock("@/components/homepage/homepage-client-view-model", () => ({
 }));
 vi.mock("@/components/chart-primitives/peg-distribution-grid", () => ({ PegBrowseStrip: () => <div /> }));
 
-const retry = vi.fn();
-const UPDATED_AT = 1_700_000_000_000;
-const stateError = new Error("refresh failed");
-
-function queryFor<T>(state: MonitoringState, readyData: T, emptyData: T) {
-  return {
-    data: state === "loading" || state === "unavailable" ? undefined : state === "empty" ? emptyData : readyData,
-    dataUpdatedAt: state === "loading" || state === "unavailable" ? 0 : UPDATED_AT,
-    error: state === "unavailable" || state === "stale-with-data" ? stateError : null,
-    isLoading: state === "loading",
-    refetch: retry,
-  };
-}
-
+const retry = vi.fn(), UPDATED_AT = 1_700_000_000_000, stateError = new Error("refresh failed");
+const queryFor = <T,>(state: MonitoringState, readyData: T, emptyData: T) => ({
+  data: state === "loading" || state === "unavailable" ? undefined : state === "empty" ? emptyData : readyData,
+  dataUpdatedAt: state === "loading" || state === "unavailable" ? 0 : UPDATED_AT,
+  error: state === "unavailable" || state === "stale-with-data" ? stateError : null,
+  isLoading: state === "loading", refetch: retry,
+});
 function expectNoBanners(noRetry = false) {
   expect(screen.queryByRole("alert")).toBeNull();
   expect(screen.queryByRole("status")).toBeNull();
   if (noRetry) expect(screen.queryByRole("button", { name: /retry/i })).toBeNull();
 }
-
 function setupRankings(stablecoinState: MonitoringState, pegState: MonitoringState = stablecoinState, opts: { setActivePeg?: ReturnType<typeof vi.fn>; pinnedIds?: string[] } = {}) {
+  const s = stablecoinState === "loading" ? "ready" : stablecoinState;
   m.filters.mockReturnValue({ activeFilters: [], activePeg: "all", setActivePeg: opts.setActivePeg ?? vi.fn(), activeUniverse: "core", setActiveUniverse: vi.fn() });
   m.pinned.mockReturnValue({ pinnedIds: opts.pinnedIds ?? [], togglePinned: vi.fn() });
   m.stablecoins.mockReturnValue(queryFor(stablecoinState, stablecoinReady, { peggedAssets: [] }));
   m.peg.mockReturnValue(queryFor(pegState, pegReady, pegEmpty));
-  m.dex.mockReturnValue(queryFor(stablecoinState === "loading" ? "ready" : stablecoinState, {}, {}));
-  m.reportCards.mockReturnValue(queryFor(stablecoinState === "loading" ? "ready" : stablecoinState, { cards: [] }, { cards: [] }));
-  m.stress.mockReturnValue(queryFor(stablecoinState === "loading" ? "ready" : stablecoinState, { signals: {} }, { signals: {} }));
+  m.dex.mockReturnValue(queryFor(s, {}, {}));
+  m.reportCards.mockReturnValue(queryFor(s, { cards: [] }, { cards: [] }));
+  m.stress.mockReturnValue(queryFor(s, { signals: {} }, { signals: {} }));
 }
 
-const pegReady = { coins: [{ id: "usdc-circle", activeDepeg: true, currentDeviationBps: -75 }], summary: { activeDepegCount: 1, coinsAtPeg: 0, medianDeviationBps: 75 as number | null, totalTracked: 1 } };
+const pegReady = { coins: [{ id: "usdc-circle", symbol: "USDC", activeDepeg: true, currentDeviationBps: -75 }], summary: { activeDepegCount: 1, coinsAtPeg: 0, medianDeviationBps: 75 as number | null, totalTracked: 1 } };
 const pegEmpty = { coins: [], summary: { activeDepegCount: 0, coinsAtPeg: 0, medianDeviationBps: null, totalTracked: 0 } };
 const activeReady = { events: [{ id: 1, stablecoinId: "usdc-circle", symbol: "USDC", startedAt: 1_699_999_900 }] };
 const psiReady = {
@@ -93,125 +77,53 @@ const psiReady = {
 };
 const flowReady = { coins: [{ has24hActivity: true, netFlow24hUsd: 1_000_000, stablecoinId: "usdc-circle", symbol: "USDC" }], gauge: { band: "MINTING", score: 10 } };
 const flowEmpty = { coins: [], gauge: { band: "NEUTRAL", score: 0 } };
-const stablecoinReady = {
-  peggedAssets: [{
-    circulating: { peggedUSD: 20_000_000 }, circulatingNative: 20_000_000, supplyObservedAt: UPDATED_AT / 1000,
-    supplyChangeBaselines: { week: { observedAt: UPDATED_AT / 1000 - 7 * 86400, circulatingUsd: 10_000_000, circulatingNative: 10_000_000 } },
-    id: "usdc-circle", name: "USD Coin", symbol: "USDC",
-  }],
-};
+const stablecoinReady = { peggedAssets: [{ circulating: { peggedUSD: 20_000_000 }, circulatingNative: 20_000_000, supplyObservedAt: UPDATED_AT / 1000, supplyChangeBaselines: { week: { observedAt: UPDATED_AT / 1000 - 7 * 86400, circulatingUsd: 10_000_000, circulatingNative: 10_000_000 } }, id: "usdc-circle", name: "USD Coin", symbol: "USDC" }] };
 const stablecoinQuiet = { peggedAssets: stablecoinReady.peggedAssets.map((c) => ({ ...c, circulating: { peggedUSD: 10_000_000 }, circulatingNative: 10_000_000 })) };
 const freezesReady = { events: [{ amountUsdAtEvent: 1_000, eventType: "blacklist", id: "freeze-1", stablecoin: "USDC", stablecoinId: "usdc-circle", timestamp: Math.floor(UPDATED_AT / 1000) - 60 }] };
-const makeFreezeSummary = (c24: number, a24: number, c7 = c24, a7 = a24) => ({
-  stats: {
-    recentFreezeCount24h: c24, recentFreezeCount7d: c7, recentFreezeAmount24hUsd: a24, recentFreezeAmount7dUsd: a7,
-    valuationCoverage: { recent24h: { knownCount: c24, unavailableCount: 0 }, recent7d: { knownCount: c7, unavailableCount: 0 } },
-  },
-});
-const freezeSummaryReady = makeFreezeSummary(1, 1_000);
-const freezeSummaryEmpty = makeFreezeSummary(0, 0);
+const makeFreezeSummary = (c24: number, a24: number, c7 = c24, a7 = a24) => ({ stats: { recentFreezeCount24h: c24, recentFreezeCount7d: c7, recentFreezeAmount24hUsd: a24, recentFreezeAmount7dUsd: a7, valuationCoverage: { recent24h: { knownCount: c24, unavailableCount: 0 }, recent7d: { knownCount: c7, unavailableCount: 0 } } } });
+const freezeSummaryReady = makeFreezeSummary(1, 1_000), freezeSummaryEmpty = makeFreezeSummary(0, 0);
 
-interface SurfaceCase {
-  Component: ComponentType;
-  configure: (state: MonitoringState) => void;
-  emptyText: string | RegExp;
-  emptyExtraText?: string;
-  readyText: string;
-  unavailableText?: string;
-  statesOwnedElsewhere?: MonitoringState[];
-}
+interface SurfaceCase { Component: ComponentType; configure: (state: MonitoringState) => void; emptyText: string | RegExp; emptyExtraText?: string; readyText: string; unavailableText?: string; statesOwnedElsewhere?: MonitoringState[]; }
 
 const SURFACES: SurfaceCase[] = [
-  {
-    Component: ActiveDepegsCard,
-    configure(state) {
-      const active = queryFor(state, activeReady, { events: [] });
-      m.activeDepegs.mockReturnValue({ ...active, loadedCount: active.data?.events.length ?? 0 });
-      m.peg.mockReturnValue(queryFor(state, pegReady, pegEmpty));
-      m.stablecoins.mockReturnValue(queryFor(state, stablecoinReady, { peggedAssets: [] }));
-    },
-    emptyText: "No open confirmed incidents", readyText: "USDC", statesOwnedElsewhere: ["ready", "empty"],
-  },
+  { Component: ActiveDepegsCard, configure(state) { const active = queryFor(state, activeReady, { events: [] }); m.activeDepegs.mockReturnValue({ ...active, loadedCount: active.data?.events.length ?? 0 }); m.peg.mockReturnValue(queryFor(state, pegReady, pegEmpty)); m.stablecoins.mockReturnValue(queryFor(state, stablecoinReady, { peggedAssets: [] })); }, emptyText: "No open confirmed incidents", readyText: "USDC", statesOwnedElsewhere: ["ready", "empty"] },
   { Component: PegHealthCard, configure: (state) => { m.peg.mockReturnValue(queryFor(state, pegReady, pegEmpty)); }, emptyText: "No coin-level deviation rows", readyText: "Mild" },
   { Component: PsiBandCard, configure: (state) => { m.psi.mockReturnValue(queryFor<Record<string, unknown>>(state, psiReady, { current: null, history: [] })); }, emptyText: /90d/, readyText: "39.0", statesOwnedElsewhere: ["ready"] },
   { Component: MintBurnCard, configure: (state) => { m.flows.mockReturnValue(queryFor(state, flowReady, flowEmpty)); }, emptyText: "No 24h activity", readyText: "USDC" },
   { Component: SupplyMovesCard, configure: (state) => { m.stablecoins.mockReturnValue(queryFor(state, stablecoinReady, stablecoinQuiet)); }, emptyText: "No qualifying 7-day supply moves", readyText: "USDC" },
-  {
-    Component: RecentFreezesCard,
-    configure(state) {
-      m.blEvents.mockReturnValue(queryFor(state, freezesReady, { events: [] }));
-      m.blSummary.mockReturnValue(queryFor(state, freezeSummaryReady, freezeSummaryEmpty));
-      m.stablecoins.mockReturnValue(queryFor(state, stablecoinReady, { peggedAssets: [] }));
-    },
-    emptyText: "$0", emptyExtraText: "0 freezes", readyText: "$1K",
-  },
-  {
-    Component: (() => <HomeAltRankingsSection titleId="rankings-title" />) as ComponentType,
-    configure(state) {
-      m.stablecoins.mockReturnValue(queryFor(state, stablecoinReady, { peggedAssets: [] }));
-      m.peg.mockReturnValue(queryFor(state, pegReady, pegEmpty));
-      m.dex.mockReturnValue(queryFor(state, {}, {}));
-      m.reportCards.mockReturnValue(queryFor(state, { cards: [] }, { cards: [] }));
-      m.stress.mockReturnValue(queryFor(state, { signals: {} }, { signals: {} }));
-    },
-    emptyText: "table ready", readyText: "table ready", unavailableText: "Stablecoin rankings are updating.",
-  },
+  { Component: RecentFreezesCard, configure(state) { m.blEvents.mockReturnValue(queryFor(state, freezesReady, { events: [] })); m.blSummary.mockReturnValue(queryFor(state, freezeSummaryReady, freezeSummaryEmpty)); m.stablecoins.mockReturnValue(queryFor(state, stablecoinReady, { peggedAssets: [] })); }, emptyText: "$0", emptyExtraText: "0 freezes", readyText: "$1K" },
+  { Component: (() => <HomeAltRankingsSection titleId="rankings-title" />) as ComponentType, configure(state) { m.stablecoins.mockReturnValue(queryFor(state, stablecoinReady, { peggedAssets: [] })); m.peg.mockReturnValue(queryFor(state, pegReady, pegEmpty)); m.dex.mockReturnValue(queryFor(state, {}, {})); m.reportCards.mockReturnValue(queryFor(state, { cards: [] }, { cards: [] })); m.stress.mockReturnValue(queryFor(state, { signals: {} }, { signals: {} })); }, emptyText: "table ready", readyText: "table ready", unavailableText: "Stablecoin rankings are updating." },
 ];
 
 const CARD_HOOKS = [m.activeDepegs, m.peg, m.flows, m.psi, m.stablecoins, m.blEvents, m.blSummary];
-function attachMeta(meta: ApiMeta) {
-  for (const hook of CARD_HOOKS) {
-    const result = hook.getMockImplementation()?.();
-    if (result) hook.mockReturnValue({ ...result, dataUpdatedAt: UPDATED_AT, meta });
-  }
-}
-
-beforeEach(() => {
-  vi.useFakeTimers();
-  vi.setSystemTime(UPDATED_AT);
-  m.coinStates.mockReturnValue({ byId: new Map(), liveReady: false, clockReady: true });
-});
+function attachMeta(meta: ApiMeta) { for (const hook of CARD_HOOKS) { const result = hook.getMockImplementation()?.(); if (result) hook.mockReturnValue({ ...result, dataUpdatedAt: UPDATED_AT, meta }); } }
+beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(UPDATED_AT); m.coinStates.mockReturnValue({ byId: new Map(), liveReady: false, clockReady: true }); });
 afterEach(() => { vi.clearAllMocks(); vi.useRealTimers(); });
 
 describe.each(SURFACES)("$Component.name semantic query states", ({ Component, configure, emptyText, emptyExtraText, readyText, unavailableText, statesOwnedElsewhere = [] }) => {
   function renderState(state: MonitoringState) {
     m.filters.mockReturnValue({ activeFilters: [], activePeg: "all", setActivePeg: vi.fn(), activeUniverse: "core", setActiveUniverse: vi.fn() });
-    m.pinned.mockReturnValue({ pinnedIds: [], togglePinned: vi.fn() });
-    configure(state);
-    return render(<Component />);
+    m.pinned.mockReturnValue({ pinnedIds: [], togglePinned: vi.fn() }); configure(state); return render(<Component />);
   }
-
   it("renders loading without making a status claim", () => {
     const view = renderState("loading");
     expect(view.container.querySelector('[data-slot="skeleton"], [data-testid="stablecoin-table"]')).toBeTruthy();
     expectNoBanners();
   });
-
   it.skipIf(statesOwnedElsewhere.includes("ready"))("renders ready data", () => {
-    renderState("ready");
-    expect(screen.queryAllByText(readyText).length).toBeGreaterThan(0);
-    expectNoBanners();
+    renderState("ready"); expect(screen.queryAllByText(readyText).length).toBeGreaterThan(0); expectNoBanners();
   });
-
   it.skipIf(statesOwnedElsewhere.includes("empty"))("renders a valid empty state", () => {
-    renderState("empty");
-    expect(screen.queryAllByText(emptyText).length).toBeGreaterThan(0);
-    if (emptyExtraText) expect(screen.getByText(emptyExtraText)).toBeTruthy();
-    expectNoBanners();
+    renderState("empty"); expect(screen.queryAllByText(emptyText).length).toBeGreaterThan(0);
+    if (emptyExtraText) expect(screen.getByText(emptyExtraText)).toBeTruthy(); expectNoBanners();
   });
-
   it("renders unavailable as a neutral placeholder without a healthy or empty claim", () => {
-    renderState("unavailable");
-    expect(screen.queryAllByText(/^Updating$|rankings are updating/).length).toBeGreaterThan(0);
+    renderState("unavailable"); expect(screen.queryAllByText(/^Updating$|rankings are updating/).length).toBeGreaterThan(0);
     if (unavailableText) expect(screen.queryAllByText(unavailableText).length).toBeGreaterThan(0);
-    expect(screen.queryAllByText(emptyText)).toHaveLength(0);
-    expectNoBanners(true);
+    expect(screen.queryAllByText(emptyText)).toHaveLength(0); expectNoBanners(true);
   });
-
   it("keeps retained data visible without a stale warning", () => {
-    renderState("stale-with-data");
-    expect(screen.queryAllByText(readyText).length).toBeGreaterThan(0);
-    expectNoBanners(true);
+    renderState("stale-with-data"); expect(screen.queryAllByText(readyText).length).toBeGreaterThan(0); expectNoBanners(true);
   });
 });
 
@@ -223,11 +135,9 @@ describe("PegHealthCard median availability", () => {
     expect(screen.getByText("No coin-level deviation rows")).toBeTruthy();
     expect(view.container.textContent).not.toMatch(/0 bps median|Updating/);
   });
-
   it("retains a measured zero median for a live observation at parity", () => {
     const atParity = { coins: [{ id: "usdc-circle", activeDepeg: false, currentDeviationBps: 0 }], summary: { activeDepegCount: 0, coinsAtPeg: 1, medianDeviationBps: 0, totalTracked: 1 } };
-    m.peg.mockReturnValue(queryFor("ready", atParity, atParity));
-    render(<PegHealthCard />);
+    m.peg.mockReturnValue(queryFor("ready", atParity, atParity)); render(<PegHealthCard />);
     expect(screen.getByText("0 bps").closest("p")?.textContent).toContain("At peg (per-coin threshold) · 0 bps median");
     expect(screen.getByText("priced non-NAV coins")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Open Depeg monitor" }).getAttribute("href")).toMatch(/^\/depeg\/?$/);
@@ -238,59 +148,42 @@ describe("PegHealthCard median availability", () => {
 
 describe("HomeAltRankingsSection loading and quick filters", () => {
   it("suppresses Showing 0 while loading and wires peg + triage quick filters", () => {
-    const setActivePeg = vi.fn();
-    setupRankings("loading", "ready", { setActivePeg, pinnedIds: ["usdc-circle"] });
+    const setActivePeg = vi.fn(); setupRankings("loading", "ready", { setActivePeg, pinnedIds: ["usdc-circle"] });
     const view = render(<HomeAltRankingsSection titleId="rankings-title" />);
     expect(view.container.textContent).not.toMatch(/Showing 0/);
-    fireEvent.click(screen.getByRole("button", { name: "USD" }));
-    expect(setActivePeg).toHaveBeenCalledWith("usd-peg");
+    fireEvent.click(screen.getByRole("button", { name: "USD" })); expect(setActivePeg).toHaveBeenCalledWith("usd-peg");
     const starredBtn = screen.getByRole("button", { name: /Starred/ });
-    fireEvent.click(starredBtn);
-    expect(starredBtn.getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(starredBtn); expect(starredBtn.getAttribute("aria-pressed")).toBe("true");
     fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
-    expect(starredBtn.getAttribute("aria-pressed")).toBe("false");
-    expect(setActivePeg).toHaveBeenCalledWith("all");
+    expect(starredBtn.getAttribute("aria-pressed")).toBe("false"); expect(setActivePeg).toHaveBeenCalledWith("all");
   });
-
   it("keeps coin-state signals passive on cold load, fetches on Active alerts, and avoids false zero-alert claims while pending", () => {
-    setupRankings("ready", "empty");
-    const view = render(<HomeAltRankingsSection titleId="rankings-title" />);
+    setupRankings("ready", "empty"); const view = render(<HomeAltRankingsSection titleId="rankings-title" />);
     expect(m.coinStates).toHaveBeenLastCalledWith({ enabled: false });
-
     fireEvent.click(screen.getByRole("button", { name: "Active alerts" }));
     expect(m.coinStates).toHaveBeenLastCalledWith({ enabled: true });
     expect(screen.getByText("Updating active alerts…")).toBeTruthy();
     expect(screen.getByText("Active alert signals are updating.")).toBeTruthy();
     expect(view.container.textContent).not.toMatch(/Showing 0/);
-    expect(screen.queryByTestId("stablecoin-table")).toBeNull();
-    expectNoBanners();
-
+    expect(screen.queryByTestId("stablecoin-table")).toBeNull(); expectNoBanners();
     m.coinStates.mockReturnValue({ byId: new Map([["usdc-circle", [{ kind: "dews", band: "ALERT", score: 55 }]]]), liveReady: true, clockReady: true });
     view.rerender(<HomeAltRankingsSection titleId="rankings-title" />);
     expect(screen.queryByText("Updating active alerts…")).toBeNull();
     expect(screen.getByTestId("stablecoin-table")).toBeTruthy();
     expect((m.tableProps.mock.calls.at(-1)?.[0] as { eligibleIds?: ReadonlySet<string> }).eligibleIds?.has("usdc-circle")).toBe(true);
   });
-
   it("exposes Tokenized funds universe and excludes tokenized funds from Core and All stablecoins", () => {
-    const setActiveUniverse = vi.fn();
-    setupRankings("ready", "empty");
+    const setActiveUniverse = vi.fn(); setupRankings("ready", "empty");
     m.filters.mockReturnValue({ activeFilters: [], activePeg: "all", setActivePeg: vi.fn(), activeUniverse: "catalog", setActiveUniverse });
     const view = render(<HomeAltRankingsSection titleId="rankings-title" />);
-
     expect(screen.getByRole("button", { name: "All stablecoins" })).toBeTruthy();
     const catalogIds = (m.tableProps.mock.calls.at(-1)?.[0] as { eligibleIds?: ReadonlySet<string> }).eligibleIds!;
-    expect(catalogIds.has("usdc-circle")).toBe(true);
-    expect(catalogIds.has("buidl-blackrock")).toBe(false);
-
-    fireEvent.click(screen.getByRole("button", { name: "Tokenized funds" }));
-    expect(setActiveUniverse).toHaveBeenCalledWith("funds");
-
+    expect(catalogIds.has("usdc-circle")).toBe(true); expect(catalogIds.has("buidl-blackrock")).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Tokenized funds" })); expect(setActiveUniverse).toHaveBeenCalledWith("funds");
     m.filters.mockReturnValue({ activeFilters: [], activePeg: "all", setActivePeg: vi.fn(), activeUniverse: "funds", setActiveUniverse });
     view.rerender(<HomeAltRankingsSection titleId="rankings-title" />);
     const fundIds = (m.tableProps.mock.calls.at(-1)?.[0] as { eligibleIds?: ReadonlySet<string> }).eligibleIds!;
-    expect(fundIds.has("buidl-blackrock")).toBe(true);
-    expect(fundIds.has("usdc-circle")).toBe(false);
+    expect(fundIds.has("buidl-blackrock")).toBe(true); expect(fundIds.has("usdc-circle")).toBe(false);
     expect(view.container.textContent).toContain("tracked tokenized funds");
   });
 });
@@ -305,11 +198,8 @@ describe("RecentFreezesCard authoritative totals", () => {
     m.blSummary.mockReturnValue(queryFor("ready", makeFreezeSummary(2, 3_000_000.4), freezeSummaryEmpty));
     render(<RecentFreezesCard />);
     expect(screen.getByRole("list", { name: "Latest valued freezes, newest first" })).toBeTruthy();
-    expect(screen.getByText("<$1")).toBeTruthy();
-    expect(screen.queryByText("$0")).toBeNull();
-    expect(screen.getByText("2 freezes")).toBeTruthy();
+    expect(screen.getByText("<$1")).toBeTruthy(); expect(screen.queryByText("$0")).toBeNull(); expect(screen.getByText("2 freezes")).toBeTruthy();
   });
-
   it("uses freeze-only summary windows when a release and later freezes saturate the 200-row page", () => {
     const nowSec = Math.floor(UPDATED_AT / 1000);
     const pageEvents = [
@@ -320,13 +210,9 @@ describe("RecentFreezesCard authoritative totals", () => {
     m.blSummary.mockReturnValue(queryFor("ready", makeFreezeSummary(200, 123_456, 350, 456_789), freezeSummaryEmpty));
     render(<RecentFreezesCard />);
     expect(m.blEvents).toHaveBeenCalledWith(expect.objectContaining({ limit: 200 }));
-    expect(screen.getByText("200 freezes")).toBeTruthy();
-    expect(screen.getByText("$123K")).toBeTruthy();
-    expect(screen.queryByText("199 freezes")).toBeNull();
-
+    expect(screen.getByText("200 freezes")).toBeTruthy(); expect(screen.getByText("$123K")).toBeTruthy(); expect(screen.queryByText("199 freezes")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "7d" }));
-    expect(screen.getByText("350 freezes")).toBeTruthy();
-    expect(screen.getByText("$457K")).toBeTruthy();
+    expect(screen.getByText("350 freezes")).toBeTruthy(); expect(screen.getByText("$457K")).toBeTruthy();
   });
 });
 
@@ -336,27 +222,19 @@ describe.each(SURFACES.slice(0, 6))("$Component.name producer health stays off t
     ["quality warning", { updatedAt: UPDATED_AT / 1000, ageSeconds: 0, status: "fresh", warning: "199 pharos source degraded" } satisfies ApiMeta],
     ["non-fresh dependency", { updatedAt: UPDATED_AT / 1000, ageSeconds: 0, status: "fresh", dependencies: { source: { updatedAt: UPDATED_AT / 1000, ageSeconds: 0, status: "stale" } } } satisfies ApiMeta],
   ] as const)("renders a successful response with %s without a homepage warning", (_case, meta) => {
-    configure("ready");
-    attachMeta(meta);
-    const view = render(<Component />);
-    expect(screen.queryByRole("status")).toBeNull();
-    expect(view.container.textContent).not.toMatch(/quality warning|older snapshot/i);
+    configure("ready"); attachMeta(meta); const view = render(<Component />);
+    expect(screen.queryByRole("status")).toBeNull(); expect(view.container.textContent).not.toMatch(/quality warning|older snapshot/i);
   });
-
   it("renders an observed empty result under a degraded producer without a warning", () => {
-    configure("empty");
-    attachMeta({ updatedAt: UPDATED_AT / 1000, ageSeconds: 0, status: "degraded" });
-    render(<Component />);
-    expect(screen.queryByRole("status")).toBeNull();
-    expect(screen.queryAllByText(emptyText).length).toBeGreaterThan(0);
+    configure("empty"); attachMeta({ updatedAt: UPDATED_AT / 1000, ageSeconds: 0, status: "degraded" }); render(<Component />);
+    expect(screen.queryByRole("status")).toBeNull(); expect(screen.queryAllByText(emptyText).length).toBeGreaterThan(0);
   });
 });
 
 describe("MintBurnCard activity and valuation", () => {
   const quiet = "No 24h activity", balanced = "Balanced 24h mint / burn activity", unavailable = "Net flows unavailable";
   it.each([
-    ["no events", {}, quiet],
-    ["stale quiet", {}, quiet, "stale-with-data"],
+    ["no events", {}, quiet], ["stale quiet", {}, quiet, "stale-with-data"],
     ["balanced events", { has24hActivity: true, mintCount24h: 1, burnCount24h: 1, mintVolume24hUsd: 100_000_000, burnVolume24hUsd: 100_000_000 }, balanced],
     ["inferred balanced events", { has24hActivity: undefined, mintCount24h: 1, burnCount24h: 1, mintVolume24hUsd: 100_000_000, burnVolume24hUsd: 100_000_000 }, balanced],
     ["nonzero flow", { has24hActivity: true, mintCount24h: 1, mintVolume24hUsd: 100_000_000, netFlow24hUsd: 100_000_000 }, "USDC"],
@@ -364,13 +242,8 @@ describe("MintBurnCard activity and valuation", () => {
     ["unknown scan activity", { has24hActivity: null, netFlow24hUsd: null }, unavailable],
   ] as const)("distinguishes %s", (_label, overrides, expected, state?: MonitoringState) => {
     const activity = makeInactiveMintBurnFlowCoin(overrides);
-    const data = {
-      coins: [{ ...activity, valuation: makeMintBurnCoinValuation({ completeness: activity.netFlow24hUsd == null ? "partial" : "complete", unpricedMintEventCount: activity.netFlow24hUsd == null ? 1 : 0 }) }],
-      gauge: { band: "NEUTRAL", score: 0 },
-    };
-    m.flows.mockReturnValue(queryFor(state ?? "ready", data, flowEmpty));
-    render(<MintBurnCard />);
-    expect(screen.getByText(expected)).toBeTruthy();
+    m.flows.mockReturnValue(queryFor(state ?? "ready", { coins: [{ ...activity, valuation: makeMintBurnCoinValuation({ completeness: activity.netFlow24hUsd == null ? "partial" : "complete", unpricedMintEventCount: activity.netFlow24hUsd == null ? 1 : 0 }) }], gauge: { band: "NEUTRAL", score: 0 } }, flowEmpty));
+    render(<MintBurnCard />); expect(screen.getByText(expected)).toBeTruthy();
     for (const other of [quiet, balanced, unavailable]) if (other !== expected) expect(screen.queryByText(other)).toBeNull();
   });
 });

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DEPEG_EXPORT_COLUMNS } from "@/components/depeg/depeg-control-board";
 import {
   compareDepegTrackerRows,
   type DepegTableSortKey,
@@ -43,6 +44,14 @@ describe("compareDepegTrackerRows — __attention sort", () => {
     const inactive = makeRow({ activeDepeg: false });
     const result = compareDepegTrackerRows(active, inactive, sort("__attention", "asc"));
     expect(result).toBeGreaterThan(0);
+  });
+
+  it("orders horizon and exports Incident Horizon", () => {
+    const r: DepegTrackerRow = { ...makeRow({ id: "r", activeDepeg: true, currentDeviationBps: -200 }), openIncidentEvidence: "outside", openIncidentTier: "recent" };
+    const o: DepegTrackerRow = { ...makeRow({ id: "o", activeDepeg: true, currentDeviationBps: -900 }), openIncidentEvidence: "outside", openIncidentTier: "long_running" };
+    expect(compareDepegTrackerRows(r, o, sort("__attention"))).toBeLessThan(0);
+    const col = DEPEG_EXPORT_COLUMNS.find((c) => c.header === "Incident Horizon")!;
+    expect([col.accessor(r, 0), col.accessor(o, 1), col.accessor(makeRow(), 2)]).toEqual(["recent", "long_running", null]);
   });
 });
 

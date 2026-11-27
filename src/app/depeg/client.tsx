@@ -27,7 +27,11 @@ import { trackEvent, trackSearch } from "@/lib/analytics";
 import { extractPendingDepegIncidents, mapPendingIncidentsByCoin } from "@/lib/depeg-incident-utils";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
 import type { ApiMeta } from "@/lib/api";
-import { classifyOpenIncidentEvidence } from "@shared/lib/active-depegs";
+import {
+  classifyOpenIncidentCoverage,
+  classifyOpenIncidentEvidence,
+  classifyOpenIncidentTier,
+} from "@shared/lib/active-depegs";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { PegCurrency } from "@shared/types/core";
@@ -37,6 +41,7 @@ import { PEG_LABELS_SHORT, GOVERNANCE_LABELS, THREAT_BAND_ORDER, isThreatBand } 
 import type { DepegTrackerRow } from "@/lib/depeg-sort";
 import { DepegContentLoadingState } from "./loading-state";
 import { useStablecoins } from "@/hooks/use-stablecoins";
+import { useOpenIncidentHorizonClock } from "@/hooks/use-minute-clock-sec";
 import { DEFAULT_REQUEST_TIMEOUT_MS } from "@/lib/request-lifecycle";
 
 function isProducerClock(value: number | undefined): value is number {
@@ -102,8 +107,10 @@ export function DepegClient() {
     meta: eventsMeta,
     refetch: refetchEvents,
   } = useInfiniteDepegEvents({ includePending: true });
-  // Detail for open incidents only: the board's evidence labels, never the census.
-  const { data: activeEventsData } = useActiveDepegEvents();
+  // Detail for open incidents only: legacy evidence fallback when `/api/peg-summary` omits `openIncidents`.
+  const { data: activeEventsData } = useActiveDepegEvents({
+    enabled: pegData != null && pegData.openIncidents === undefined,
+  });
   const { resolverEnabled, resolverReviewerEnabled, resolver, resolverReview } = useDepegResolverSurfaces();
   const resolverSlice = useQuerySlice(resolver);
   const resolverReviewSlice = useQuerySlice(resolverReview);
@@ -179,18 +186,35 @@ export function DepegClient() {
   const pendingIncidents = useMemo(() => extractPendingDepegIncidents(eventsData), [eventsData]);
   const pendingByCoin = useMemo(() => mapPendingIncidentsByCoin(pendingIncidents), [pendingIncidents]);
 
+  const openIncidentMap = pegData?.openIncidents;
+  const openIncidentsAsOfSec = pegData?.openIncidentsAsOfSec;
+  const clockSec = nowSeconds > 0 ? nowSeconds : (openIncidentsAsOfSec ?? 0);
+  const horizonClockSec = useOpenIncidentHorizonClock(
+    openIncidentMap,
+    openIncidentsAsOfSec,
+    clockSec,
+    refetchPeg,
+  );
+
   // Merge peg coins with DEWS data for table rows
   const tableRows = useMemo((): DepegTrackerRow[] => {
-    return filteredPegCoins.map((coin) => ({
-      coin,
-      dews: dewsData?.signals?.[coin.id] ?? null,
-      pendingIncident: pendingByCoin.get(coin.id) ?? null,
-      openIncidentEvidence: coin.activeDepeg
-        ? classifyOpenIncidentEvidence(activeEventsData?.events, coin.id, nowSeconds)
-        : null,
-      marketCapUsd: marketCapById ? marketCapById.get(coin.id) ?? null : undefined,
-    }));
-  }, [filteredPegCoins, dewsData, pendingByCoin, activeEventsData, nowSeconds, marketCapById]);
+    return filteredPegCoins.map((coin) => {
+      const incident = openIncidentMap?.[coin.id];
+      return {
+        coin,
+        dews: dewsData?.signals?.[coin.id] ?? null,
+        pendingIncident: pendingByCoin.get(coin.id) ?? null,
+        openIncidentEvidence: coin.activeDepeg
+          ? openIncidentMap !== undefined
+            ? classifyOpenIncidentCoverage(incident?.coverage, clockSec)
+            : classifyOpenIncidentEvidence(activeEventsData?.events, coin.id, clockSec)
+          : null,
+        openIncidentTier: coin.activeDepeg ? classifyOpenIncidentTier(incident, horizonClockSec) : null,
+        openIncidentStartedAt: coin.activeDepeg ? (incident?.startedAt ?? null) : null,
+        marketCapUsd: marketCapById ? marketCapById.get(coin.id) ?? null : undefined,
+      };
+    });
+  }, [filteredPegCoins, dewsData, pendingByCoin, openIncidentMap, activeEventsData, clockSec, horizonClockSec, marketCapById]);
   const trackedIds = useMemo(
     () => (pegData?.coins ? new Set(pegData.coins.map((coin) => coin.id)) : undefined),
     [pegData],
@@ -206,16 +230,20 @@ export function DepegClient() {
     () => (eventsData?.events ?? []).filter((event) => event.endedAt !== null),
     [eventsData],
   );
-  // The census the headline counts, ranked by holder exposure for the hero's named rows.
-  const openIncidents = useMemo(
+  // The census the headline counts, ranked by materiality and holder exposure for the hero's named rows.
+  const rankedOpenIncidents = useMemo(
     () => pegData
       ? rankOpenIncidents(
         pegData.coins,
         resolverEnabled && isResolverBookAvailable(resolverData) ? resolverData.rows : [],
         marketCapById ?? null,
+        openIncidentMap,
+        clockSec,
+        activeEventsData?.events,
+        horizonClockSec,
       )
       : null,
-    [pegData, resolverEnabled, resolverData, marketCapById],
+    [pegData, resolverEnabled, resolverData, marketCapById, openIncidentMap, clockSec, activeEventsData?.events, horizonClockSec],
   );
 
   // The worker answers an unreadable DEWS publication with an empty `signals`
@@ -348,7 +376,9 @@ export function DepegClient() {
         activeDepegIds={activeDepegIds}
         catalogCount={pegData?.coins ? pegData.coins.length : null}
         pendingCount={eventsData ? pendingIncidents.length : null}
-        openIncidents={openIncidents}
+        openIncidents={rankedOpenIncidents}
+        openIncidentMap={openIncidentMap}
+        clockSec={horizonClockSec}
         dewsAlertCount={dewsAlertCount}
         logos={logos}
         alertQueue={(reserveSpace) =>
@@ -368,6 +398,8 @@ export function DepegClient() {
             data={resolverData}
             logos={logos}
             marketCaps={marketCapById}
+            openIncidents={openIncidentMap}
+            clockSec={horizonClockSec}
             review={resolverReviewerEnabled ? resolverReviewData?.summary ?? null : null}
             resolverPending={resolverPending}
             reviewPending={reviewPending}
@@ -393,7 +425,7 @@ export function DepegClient() {
             onSearchChange={setSearchQuery}
             onClearFilters={clearBoardFilters}
             onRowClick={handleRowClick}
-            nowSeconds={nowSeconds}
+            nowSeconds={clockSec}
             asOfSec={pegAsOfSec}
           />
         </SectionErrorBoundary>

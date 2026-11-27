@@ -129,7 +129,7 @@ export function readUnroundedPublishedDeviation(
   const observedAtSec = resolvePriceObservedAtSec(current) ?? resolvePriceObservedAtSec(legacyClock);
   const held = isCurrentDeviationHeld(pegCurrency, observedAtSec, raw);
   return {
-    deviationBps: held || !Number.isFinite(published) ? null : published,
+    deviationBps: held || !Number.isFinite(raw) ? null : raw,
     referenceNote: held ? "Reference market closed" : null,
   };
 }
@@ -141,7 +141,7 @@ export function readPublishedDeviation(
   nowSec?: number,
 ): CurrentDeviationRead {
   const read = readUnroundedPublishedDeviation(pegCurrency, current, legacyClock, nowSec);
-  return read.deviationBps == null || !hasPublishedDeviation(current) ? read : { ...read, deviationBps: Math.round(read.deviationBps) };
+  return read.deviationBps == null ? read : { ...read, deviationBps: Math.round(read.deviationBps) };
 }
 
 export function resolveQuoteReference(row: CurrentPriceRow | undefined, summary: PegSummaryCoin | null | undefined) {

@@ -104,4 +104,11 @@ describe("homepage evidence after hydration", () => {
     expect(document.body.textContent).not.toMatch(/Retained|retained/);
     expect(queryClient.getQueryData(["homepage-snapshot"])).toEqual(makeHomepageEvidence());
   });
+
+  it("renders split counts without warnings", async () => {
+    const s = makeHomepageEvidence(); s.incidents.data = { activeDepegCount: 17, recentActiveDepegCount: 4, longRunningActiveDepegCount: 13 };
+    render(<Page queryClient={client()} />); await act(async () => { live.resolve(s); });
+    await waitFor(() => expect(screen.getByRole("link", { name: /active depegs/ }).textContent).toContain("(4 recent · 13 >30d)"));
+    expect(document.body.textContent).not.toMatch(/retained|stale|degraded/i);
+  });
 });

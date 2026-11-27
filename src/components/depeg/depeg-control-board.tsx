@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useCallback, useId, useMemo, useState } from "react";
 import { RotateCcw } from "lucide-react";
 import { FilterSearchInput } from "@/components/filter-search-input";
 import { ControlPillToggle } from "@/components/control-pill-toggle";
@@ -27,27 +27,62 @@ import { DeviationBar, LinearGauge, EventLoadMeter } from "@/components/depeg/de
 import type { PegCurrency } from "@shared/types/core";
 import type { GovernanceType } from "@shared/types/stablecoin-taxonomy";
 import { DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
+import { isRecentOpenIncidentTier } from "@shared/lib/active-depegs";
 import { DEPEG_DEWS_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
-import { GOVERNANCE_FILTER_OPTIONS, OPEN_INCIDENT_EVIDENCE_LABELS, PEG_FILTER_OPTIONS, THREAT_BAND_ORDER, isThreatBand } from "@shared/lib/classification";
+import {
+  GOVERNANCE_FILTER_OPTIONS,
+  OPEN_INCIDENT_EVIDENCE_LABELS,
+  OPEN_INCIDENT_TIER_BADGES,
+  PEG_FILTER_OPTIONS,
+  THREAT_BAND_ORDER,
+  isThreatBand,
+} from "@shared/lib/classification";
 import { formatCompactUsdShort, formatCurrency, formatElapsedSeconds, formatTrackingSpanDays } from "@shared/lib/format";
 import { formatPegOccupancy } from "@shared/lib/peg-format";
 import type { ThreatBand } from "@shared/lib/classification";
 
-export type DepegStatusFilter = "all" | "active_pending" | "dews_alert" | "at_peg";
+export type DepegStatusFilter =
+  | "all"
+  | "recent_pending"
+  | "long_running"
+  | "active_pending"
+  | "dews_alert"
+  | "at_peg";
 
 export const DEPEG_STATUS_FILTER_OPTIONS: ReadonlyArray<{ value: DepegStatusFilter; label: string }> = [
   { value: "all", label: "All" },
-  { value: "active_pending", label: "Active/Pending" },
+  { value: "recent_pending", label: "Recent / Pending" },
+  { value: "long_running", label: "Long-running (>30d)" },
   { value: "dews_alert", label: "DEWS Alert+" },
   { value: "at_peg", label: "At peg" },
 ];
 
 export function isDepegStatusFilter(value: string): value is DepegStatusFilter {
-  return value === "all" || value === "active_pending" || value === "dews_alert" || value === "at_peg";
+  return (
+    value === "all" ||
+    value === "recent_pending" ||
+    value === "long_running" ||
+    value === "active_pending" ||
+    value === "dews_alert" ||
+    value === "at_peg"
+  );
 }
 
-export function matchesDepegStatusFilter(row: DepegTrackerRow, filter: DepegStatusFilter): boolean {
+export function matchesDepegStatusFilter(
+  row: DepegTrackerRow,
+  filter: DepegStatusFilter,
+  nowSec?: number,
+): boolean {
   if (filter === "all") return true;
+  if (filter === "recent_pending") {
+    return Boolean(
+      row.pendingIncident ||
+      (row.coin.activeDepeg && (row.openIncidentTier == null || isRecentOpenIncidentTier(row.openIncidentTier))),
+    );
+  }
+  if (filter === "long_running") {
+    return Boolean(row.coin.activeDepeg && row.openIncidentTier === "long_running");
+  }
   if (filter === "active_pending") {
     return Boolean(row.coin.activeDepeg || row.pendingIncident);
   }
@@ -56,7 +91,7 @@ export function matchesDepegStatusFilter(row: DepegTrackerRow, filter: DepegStat
   }
   // R1/R2: an unavailable or held deviation is never classified as at peg.
   if (row.coin.activeDepeg || row.pendingIncident) return false;
-  const { deviationBps } = readTrackerDeviation(row);
+  const { deviationBps } = readTrackerDeviation(row, nowSec);
   if (deviationBps == null) return false;
   const threshold = row.coin.pegCurrency === "USD" ? DEPEG_THRESHOLD_BPS : DEPEG_THRESHOLD_BPS_NON_USD;
   return Math.abs(deviationBps) < threshold;
@@ -83,7 +118,7 @@ interface DepegControlBoardProps {
 const BOARD_PAGE_SIZE = 12;
 
 const METRIC_HELP = {
-  attention: "Priority order: active depegs, awaiting confirmations, DEWS stress band, and current deviation magnitude.",
+  attention: "Priority order: active depegs (material off-peg and recent or escalating ahead of quiet >30d or near-par), awaiting confirmations, DEWS stress band, and current deviation magnitude.",
   deviation: "Current deviation from the peg in basis points. 100 bps equals 1%.",
   dews: "DEWS is the Depeg Early Warning Score, a 0-100 stress score. Higher is more stressed.",
   pegHealth: "Peg Health shows Peg Score, where 100 is best, alongside a recorded-window peg occupancy estimate. Tracking closure can leave unobserved time, so occupancy is not proof of recovery or continuous observation.",
@@ -137,26 +172,31 @@ const BOARD_COLUMNS: readonly DataTableColumn<DepegTableSortKey>[] = [
   },
 ];
 
-const DEPEG_EXPORT_COLUMNS: CsvColumn<DepegTrackerRow>[] = [
-  { header: "Rank", accessor: (_row, index) => index + 1 },
-  { header: "Symbol", accessor: (row) => row.coin.symbol },
-  { header: "Name", accessor: (row) => row.coin.name },
-  { header: "Peg", accessor: (row) => row.coin.pegCurrency },
-  { header: "Status", accessor: (row) => statusLabel(row) },
-  { header: "Current Deviation (bps)", accessor: (row) => readTrackerDeviation(row).deviationBps },
-  { header: "Worst Deviation (bps)", accessor: (row) => row.coin.worstDeviationBps },
-  { header: "DEWS Score", accessor: (row) => row.dews?.score ?? null },
-  { header: "DEWS Band", accessor: (row) => row.dews?.band ?? null },
-  { header: "Peg Score", accessor: (row) => row.coin.pegScore },
-  { header: "At Peg (%)", accessor: (row) => row.coin.pegPct },
-  { header: "Events", accessor: (row) => row.coin.eventCount },
-  { header: "Market Cap (USD)", accessor: (row) => row.marketCapUsd ?? null },
-  {
-    header: "DEX Check",
-    accessor: (row) =>
-      row.coin.dexPriceCheck ? (row.coin.dexPriceCheck.agrees ? "agree" : "diverge") : null,
-  },
-];
+export function buildDepegExportColumns(nowSec?: number): CsvColumn<DepegTrackerRow>[] {
+  return [
+    { header: "Rank", accessor: (_row, index) => index + 1 },
+    { header: "Symbol", accessor: (row) => row.coin.symbol },
+    { header: "Name", accessor: (row) => row.coin.name },
+    { header: "Peg", accessor: (row) => row.coin.pegCurrency },
+    { header: "Status", accessor: (row) => statusLabel(row) },
+    { header: "Incident Horizon", accessor: (row) => (row.coin.activeDepeg ? (row.openIncidentTier ?? null) : null) },
+    { header: "Current Deviation (bps)", accessor: (row) => readTrackerDeviation(row, nowSec).deviationBps },
+    { header: "Worst Deviation (bps)", accessor: (row) => row.coin.worstDeviationBps },
+    { header: "DEWS Score", accessor: (row) => row.dews?.score ?? null },
+    { header: "DEWS Band", accessor: (row) => row.dews?.band ?? null },
+    { header: "Peg Score", accessor: (row) => row.coin.pegScore },
+    { header: "At Peg (%)", accessor: (row) => row.coin.pegPct },
+    { header: "Events", accessor: (row) => row.coin.eventCount },
+    { header: "Market Cap (USD)", accessor: (row) => row.marketCapUsd ?? null },
+    {
+      header: "DEX Check",
+      accessor: (row) =>
+        row.coin.dexPriceCheck ? (row.coin.dexPriceCheck.agrees ? "agree" : "diverge") : null,
+    },
+  ];
+}
+
+export const DEPEG_EXPORT_COLUMNS: CsvColumn<DepegTrackerRow>[] = buildDepegExportColumns();
 
 function InstrumentTableRow({
   row,
@@ -174,7 +214,7 @@ function InstrumentTableRow({
   const prefetch = usePrefetchStablecoin();
   const occupancyBasisId = useId();
   const coin = row.coin;
-  const { deviationBps, referenceNote } = readTrackerDeviation(row);
+  const { deviationBps, referenceNote } = readTrackerDeviation(row, nowSeconds > 0 ? nowSeconds : undefined);
   const deviationClass = deviationBps == null
     ? "text-muted-foreground"
     : deviationColorClass(Math.abs(deviationBps));
@@ -189,12 +229,24 @@ function InstrumentTableRow({
       </span>
     );
   // The response's pending ageSec is request-frozen; derive from firstSeenAt
-  // so the row follows the same display clock as the last-event age.
+  // so the row follows the same display clock as the canonical onset / last-event age.
+  const openIncidentAge =
+    coin.activeDepeg && row.openIncidentStartedAt != null
+      ? Number.isFinite(row.openIncidentStartedAt) && nowSeconds > 0 && row.openIncidentStartedAt <= nowSeconds
+        ? `${formatElapsedSeconds(nowSeconds - row.openIncidentStartedAt)} ago`
+        : "—"
+      : null;
   const eventAge = row.pendingIncident
     ? formatElapsedSeconds(Math.max(0, nowSeconds - row.pendingIncident.firstSeenAt))
-    : coin.lastEventAt != null
-      ? `${formatElapsedSeconds(Math.max(0, nowSeconds - coin.lastEventAt))} ago`
-      : "clear";
+    : openIncidentAge != null
+      ? openIncidentAge
+      : coin.lastEventAt != null
+        ? `${formatElapsedSeconds(Math.max(0, nowSeconds - coin.lastEventAt))} ago`
+        : "clear";
+  const tierBadge =
+    coin.activeDepeg && (row.openIncidentTier === "escalating" || row.openIncidentTier === "long_running")
+      ? OPEN_INCIDENT_TIER_BADGES[row.openIncidentTier]
+      : null;
 
   return (
     <InteractiveTableRow
@@ -229,6 +281,21 @@ function InstrumentTableRow({
           <span className={cn("inline-flex items-center rounded-sm border px-1.5 py-0.5 text-xs font-semibold uppercase leading-none", statusClassName(row))}>
             {statusLabel(row)}
           </span>
+          {tierBadge ? (
+            <span
+              className={cn(
+                "inline-flex items-center rounded-sm border px-1.5 py-0.5 text-xs font-semibold leading-none",
+                tierBadge.className,
+              )}
+              title={
+                row.openIncidentTier === "escalating"
+                  ? "Re-escalated >30d incident (confirmed within 7d)"
+                  : "Open incident older than 30 days"
+              }
+            >
+              {tierBadge.short}
+            </span>
+          ) : null}
           {coin.activeDepeg ? (
             <span className="pharos-meta">{OPEN_INCIDENT_EVIDENCE_LABELS[row.openIncidentEvidence ?? "unconfirmed"]}</span>
           ) : null}
@@ -341,9 +408,11 @@ export function DepegControlBoard({
     onClearFilters();
   };
 
+  const deviationClockSec = nowSeconds > 0 ? nowSeconds : undefined;
+
   const statusFilteredRows = useMemo(
-    () => rows.filter((row) => matchesDepegStatusFilter(row, activeStatusFilter)),
-    [rows, activeStatusFilter],
+    () => rows.filter((row) => matchesDepegStatusFilter(row, activeStatusFilter, deviationClockSec)),
+    [rows, activeStatusFilter, deviationClockSec],
   );
 
   const warningCount = statusFilteredRows.filter((row) => row.coin.activeDepeg || row.pendingIncident ||
@@ -353,6 +422,12 @@ export function DepegControlBoard({
   const eventFloorCount = statusFilteredRows.filter((row) => row.coin.depegEventCoverageLimited).length;
   const filtersActive =
     pegFilter !== "all" || typeFilter !== "all" || activeStatusFilter !== "all" || searchQuery.length > 0;
+
+  const compareRows = useCallback(
+    (a: DepegTrackerRow, b: DepegTrackerRow, sort: Parameters<typeof compareDepegTrackerRows>[2]) =>
+      compareDepegTrackerRows(a, b, sort, deviationClockSec),
+    [deviationClockSec],
+  );
 
   const {
     sortKey,
@@ -372,22 +447,36 @@ export function DepegControlBoard({
   } = useSortedPaginatedTable<DepegTrackerRow, DepegTableSortKey>(statusFilteredRows, {
     defaultKey: "__attention",
     defaultDirection: "desc",
-    compareRows: compareDepegTrackerRows,
+    compareRows,
     pageSize: BOARD_PAGE_SIZE,
     resetPageOnTotalChange: true,
   });
+
+  const exportColumns = useMemo(() => buildDepegExportColumns(deviationClockSec), [deviationClockSec]);
 
   const exportAsOfISO =
     asOfSec != null && Number.isFinite(asOfSec) && asOfSec > 0
       ? new Date(asOfSec * 1000).toISOString()
       : "unknown";
 
+  const splitUnavailableForActive = useMemo(
+    () => rows.some((row) => row.coin.activeDepeg) && rows.every((row) => !row.coin.activeDepeg || row.openIncidentTier == null),
+    [rows],
+  );
+  const statusFilterOptions = useMemo(
+    () =>
+      activeStatusFilter === "active_pending"
+        ? [...DEPEG_STATUS_FILTER_OPTIONS, { value: "active_pending" as const, label: "Active / Pending" }]
+        : DEPEG_STATUS_FILTER_OPTIONS,
+    [activeStatusFilter],
+  );
+
   const toolbar = (
     <div className="pharos-table-toolbar space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <ControlPillToggle
           variant="segmented"
-          options={DEPEG_STATUS_FILTER_OPTIONS}
+          options={statusFilterOptions}
           value={activeStatusFilter}
           onChange={handleStatusChange}
           ariaLabel="Filter by peg status"
@@ -399,7 +488,7 @@ export function DepegControlBoard({
           </span>
           <TableExportMenu
             data={sortedRows}
-            columns={DEPEG_EXPORT_COLUMNS}
+            columns={exportColumns}
             filename="pharos-depeg-board"
             asOfISO={exportAsOfISO}
             endpoint="peg-summary"
@@ -442,6 +531,13 @@ export function DepegControlBoard({
           </button>
         ) : null}
       </div>
+      {splitUnavailableForActive && paginatedRows.length > 0 && (activeStatusFilter === "recent_pending" || activeStatusFilter === "long_running") ? (
+        <p className="text-xs text-muted-foreground">
+          {activeStatusFilter === "recent_pending"
+            ? "Open-incident horizon split is unavailable for this snapshot; showing all active and pending incidents."
+            : "Open-incident horizon split is unavailable for this snapshot. Clear filters or select All to inspect active incidents."}
+        </p>
+      ) : null}
     </div>
   );
 
@@ -492,7 +588,11 @@ export function DepegControlBoard({
       >
         {paginatedRows.length === 0 ? (
           <DataTableEmptyRow colSpan={BOARD_COLUMNS.length}>
-            <p className="text-sm text-muted-foreground">No stablecoins match these filters.</p>
+            <p className="text-sm text-muted-foreground">
+              {splitUnavailableForActive && activeStatusFilter === "long_running"
+                ? "Open-incident horizon split is unavailable for this snapshot. Clear filters or select All to inspect active incidents."
+                : "No stablecoins match these filters."}
+            </p>
             {filtersActive ? (
               <button
                 type="button"

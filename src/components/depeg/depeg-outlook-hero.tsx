@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { DEWSRadarPanel } from "@/components/dews/dews-summary";
 import { MethodologyLabel } from "@/components/methodology-hint";
@@ -10,10 +10,19 @@ import { RailHeroFigureTransition } from "@/components/view-transitions";
 import type { OpenIncidentRow } from "@/components/depeg/depeg-resolver-book-summary";
 import { cn } from "@/lib/utils";
 import { deviationBorderClass, deviationColorClass } from "@/lib/severity-colors";
-import { DEPEG_PENDING_STATE_LABELS } from "@shared/lib/classification";
-import { formatCompactUsdShort } from "@shared/lib/format";
+import {
+  isNearParUnconfirmedOpenIncident,
+  partitionActiveDepegRows,
+  type PartitionedActiveDepegRows,
+} from "@shared/lib/active-depegs";
+import {
+  DEPEG_PENDING_STATE_LABELS,
+  OPEN_INCIDENT_EVIDENCE_LABELS,
+  OPEN_INCIDENT_TIER_BADGES,
+} from "@shared/lib/classification";
+import { formatCompactUsdShort, formatElapsedSeconds } from "@shared/lib/format";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import type { PegSummaryStats } from "@shared/types/peg";
+import type { OpenIncidentSnapshot, PegSummaryStats } from "@shared/types/peg";
 
 interface DepegOutlookHeroProps {
   stats: PegSummaryStats | null | undefined;
@@ -23,8 +32,12 @@ interface DepegOutlookHeroProps {
   catalogCount?: number | null;
   /** Threshold crossings still awaiting confirmation. */
   pendingCount: number | null;
-  /** The confirmed census ranked by holder exposure; null while the peg summary is unread. */
+  /** The confirmed census ranked by shared open-incident materiality and exposure; null while unread. */
   openIncidents?: readonly OpenIncidentRow[] | null;
+  /** Raw open-incident metadata from `/api/peg-summary` for single-clock split partitioning. */
+  openIncidentMap?: Readonly<Record<string, OpenIncidentSnapshot>> | null;
+  /** Assessment clock (unix seconds) aligned with `openIncidents` and `openIncidentMap`. */
+  clockSec?: number;
   /** DEWS ALERT-or-worse coins, restricted to the peg catalog. */
   dewsAlertCount: number | null;
   /** First reads still needed by each figure or rail group. */
@@ -51,45 +64,176 @@ function StatCell({ label, value, detail, reserve }: { label: ReactNode; value: 
 /** Open incidents named under the headline; the headline counts the whole census. */
 const OPEN_INCIDENT_ROWS = 5;
 
-function OpenIncidentList({ rows }: { rows: readonly OpenIncidentRow[] }) {
-  const visible = rows.slice(0, OPEN_INCIDENT_ROWS);
+type IncidentSegment = "recent" | "long_running";
+
+function OpenIncidentList({
+  partitioned,
+  splitAvailable,
+}: {
+  partitioned: PartitionedActiveDepegRows<OpenIncidentRow>;
+  splitAvailable: boolean;
+}) {
+  const recentCount = splitAvailable ? (partitioned.recentCount ?? 0) : 0;
+  const longRunningCount = splitAvailable ? (partitioned.longRunningCount ?? 0) : 0;
+  const showToggle = splitAvailable && longRunningCount > 0;
+
+  // Latch initial tab once split data arrives (auto-fallback to `long_running`
+  // when `recentCount === 0`), preserve explicit clicks across refreshes, and
+  // follow recent availability when the user has not overridden.
+  const [selectedSegment, setSelectedSegment] = useState<IncidentSegment | null>(null);
+  const [manualOverride, setManualOverride] = useState(false);
+  if (showToggle) {
+    if (selectedSegment === null) {
+      setSelectedSegment(recentCount > 0 ? "recent" : "long_running");
+    } else if (!manualOverride && selectedSegment === "recent" && recentCount === 0) {
+      setSelectedSegment("long_running");
+    } else if (!manualOverride && selectedSegment === "long_running" && recentCount > 0) {
+      setSelectedSegment("recent");
+    }
+  } else if (selectedSegment !== null || manualOverride) {
+    setSelectedSegment(null);
+    setManualOverride(false);
+  }
+  const activeSegment: IncidentSegment = showToggle
+    ? (selectedSegment ?? (recentCount > 0 ? "recent" : "long_running"))
+    : "recent";
+
+  const segmentRows = !showToggle
+    ? partitioned.allRows
+    : activeSegment === "recent"
+      ? partitioned.recentRows
+      : partitioned.longRunningRows;
+  const visible = segmentRows.slice(0, OPEN_INCIDENT_ROWS);
+  const showEmptyRecent = showToggle && activeSegment === "recent" && recentCount === 0;
+
+  const metaLine = !showToggle
+    ? segmentRows.length > visible.length
+      ? `Top ${visible.length} of ${segmentRows.length} by materiality, then holder exposure`
+      : "By materiality, then holder exposure"
+    : activeSegment === "long_running" && recentCount === 0
+      ? segmentRows.length > visible.length
+        ? `No recent open incidents · Top ${visible.length} of ${segmentRows.length} >30d by materiality, then holder exposure`
+        : `No recent open incidents · ${segmentRows.length} >30d by materiality, then holder exposure`
+      : segmentRows.length > visible.length
+        ? `Top ${visible.length} of ${segmentRows.length} ${activeSegment === "recent" ? "recent" : ">30d"} by materiality, then holder exposure`
+        : `${activeSegment === "recent" ? "Recent" : ">30d"} by materiality, then holder exposure`;
+
   return (
     <div className="border-t border-border/60 pt-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
         <h3 className="pharos-section-title">Open incidents</h3>
-        <p className="pharos-meta">
-          {rows.length > visible.length ? `Top ${visible.length} of ${rows.length} by holder exposure` : "By holder exposure"}
-        </p>
+        {showToggle ? (
+          <div role="group" aria-label="Open incident horizon" className="pharos-segmented">
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedSegment("recent");
+                setManualOverride(true);
+              }}
+              aria-pressed={activeSegment === "recent"}
+              className="pharos-focus-ring pharos-segmented-item min-h-11 px-2 font-mono text-2xs leading-none sm:min-h-7"
+            >
+              Recent ({recentCount})
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedSegment("long_running");
+                setManualOverride(true);
+              }}
+              aria-pressed={activeSegment === "long_running"}
+              className="pharos-focus-ring pharos-segmented-item min-h-11 px-2 font-mono text-2xs leading-none sm:min-h-7"
+            >
+              &gt;30d ({longRunningCount})
+            </button>
+          </div>
+        ) : (
+          <p className="pharos-meta">{metaLine}</p>
+        )}
       </div>
-      <ul className="mt-1.5">
-        {visible.map((row) => {
-          // Basis points, like the worst-move chip and the homepage card.
-          const deviation = row.referenceNote ?? (row.deviationBps == null
-            ? "—"
-            : `${row.deviationBps < 0 ? "−" : row.deviationBps > 0 ? "+" : ""}${Math.abs(row.deviationBps).toFixed(0)} bps`);
-          const verdict = row.ddr ? describeDdrVerdict(row.ddr, true) : { label: "—", accent: "text-muted-foreground" };
-          const cap = row.marketCapUsd == null ? "—" : formatCompactUsdShort(row.marketCapUsd);
-          return (
-            <li key={row.id}>
-              <Link
-                prefetch={false}
-                href={buildStablecoinUrl(row.id, "#depeg-resolver")}
-                aria-label={`${row.symbol}: ${row.referenceNote ?? (row.deviationBps == null ? "deviation unavailable" : deviation)}, DDR ${row.ddr ? verdict.label : "no forecast read"}, market cap ${row.marketCapUsd == null ? "unavailable" : cap}`}
-                className="pharos-focus-ring -mx-1 flex min-h-11 items-center gap-x-2 rounded-sm px-1 text-xs hover:bg-muted/50 sm:min-h-8"
-              >
-                <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{row.symbol}</span>
-                <span className="pharos-numeric w-18 shrink-0 text-right text-foreground" title={row.referenceNote ?? undefined}>
-                  {deviation}
-                </span>
-                <span className={cn("max-w-32 shrink-0 truncate", verdict.accent)} title={verdict.label}>
-                  {verdict.label}
-                </span>
-                <span className="pharos-numeric w-14 shrink-0 text-right text-muted-foreground">{cap}</span>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
+      {showToggle && !showEmptyRecent ? (
+        <p className="pharos-meta mt-1">{metaLine}</p>
+      ) : null}
+      {showEmptyRecent ? (
+        <div className="mt-2 rounded-md border border-border/60 bg-muted/20 px-3 py-2.5 text-xs text-muted-foreground">
+          <p>No open incidents started in the last 30d or re-escalated in the last 7d</p>
+          <button
+            type="button"
+            onClick={() => setSelectedSegment("long_running")}
+            className="pharos-focus-ring mt-1.5 inline-flex min-h-11 items-center font-medium text-foreground underline underline-offset-2 hover:opacity-80 sm:min-h-7"
+          >
+            View {longRunningCount} long-running (&gt;30d)
+          </button>
+        </div>
+      ) : (
+        <ul className="mt-1.5">
+          {visible.map((row) => {
+            // Basis points, like the worst-move chip and the homepage card.
+            const deviation = row.referenceNote ?? (row.deviationBps == null
+              ? "—"
+              : `${row.deviationBps < 0 ? "−" : row.deviationBps > 0 ? "+" : ""}${Math.abs(row.deviationBps).toFixed(0)} bps`);
+            const verdict = row.ddr ? describeDdrVerdict(row.ddr, true) : { label: "—", accent: "text-muted-foreground" };
+            const cap = row.marketCapUsd == null ? "—" : formatCompactUsdShort(row.marketCapUsd);
+            const age = row.ageSec != null ? formatElapsedSeconds(row.ageSec) : null;
+            const qualifier = isNearParUnconfirmedOpenIncident(row.evidence, row.bps, row.pegCurrency)
+              ? "Near par"
+              : row.evidence === "unconfirmed" && row.bps != null
+                ? "Unconfirmed"
+                : null;
+            const evidenceLabel = OPEN_INCIDENT_EVIDENCE_LABELS[row.evidence];
+            return (
+              <li key={row.id}>
+                <Link
+                  prefetch={false}
+                  href={buildStablecoinUrl(row.id, "#depeg-resolver")}
+                  title={evidenceLabel}
+                  aria-label={`${row.symbol}: ${row.referenceNote ?? (row.deviationBps == null ? "deviation unavailable" : deviation)}, ${evidenceLabel}${row.tier === "escalating" ? ", escalating" : ""}${age ? `, open ${age}` : ""}, DDR ${row.ddr ? verdict.label : "no forecast read"}, market cap ${row.marketCapUsd == null ? "unavailable" : cap}`}
+                  className="pharos-focus-ring -mx-1 flex min-h-11 flex-col justify-center gap-0.5 rounded-sm px-1 py-1 text-xs hover:bg-muted/50 sm:min-h-8"
+                >
+                  <span className="flex items-center justify-between gap-x-2">
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <span className="truncate text-sm font-medium text-foreground">{row.symbol}</span>
+                      {row.tier === "escalating" ? (
+                        <span
+                          title="Re-escalated >30d incident (confirmed within 7d)"
+                          className={cn(
+                            "shrink-0 rounded-sm border px-1 py-0.5 text-3xs font-semibold leading-none",
+                            OPEN_INCIDENT_TIER_BADGES.escalating.className,
+                          )}
+                        >
+                          {OPEN_INCIDENT_TIER_BADGES.escalating.short}
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="pharos-numeric shrink-0 text-right font-medium text-foreground" title={row.referenceNote ?? undefined}>
+                      {deviation}
+                    </span>
+                  </span>
+                  <span className="flex flex-wrap items-center gap-x-1.5 text-2xs text-muted-foreground">
+                    <span className={cn("max-w-36 truncate", verdict.accent)} title={verdict.label}>
+                      {verdict.label}
+                    </span>
+                    <span aria-hidden="true">·</span>
+                    <span className="pharos-numeric">{cap}</span>
+                    {age ? (
+                      <>
+                        <span aria-hidden="true">·</span>
+                        <span className="pharos-numeric">{age}</span>
+                      </>
+                    ) : null}
+                    {qualifier ? (
+                      <>
+                        <span aria-hidden="true">·</span>
+                        <span>{qualifier}</span>
+                      </>
+                    ) : null}
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }
@@ -111,6 +255,8 @@ export function DepegOutlookHero({
   catalogCount,
   pendingCount,
   openIncidents,
+  openIncidentMap,
+  clockSec = 0,
   dewsAlertCount,
   pendingSources,
   logos,
@@ -129,6 +275,20 @@ export function DepegOutlookHero({
     ? buildStablecoinUrl(worst.id, activeDepegIds.has(worst.id) ? "#depeg-resolver" : undefined)
     : null;
   const pegMissing = pendingSources?.peg ? "Loading peg summary…" : "peg summary unavailable";
+
+  const partitioned = useMemo(
+    () => partitionActiveDepegRows(openIncidents ?? [], openIncidentMap, clockSec),
+    [openIncidents, openIncidentMap, clockSec],
+  );
+  const splitAvailable = Boolean(
+    stats &&
+    openIncidents != null &&
+    partitioned.splitAvailable &&
+    partitioned.recentCount != null &&
+    partitioned.longRunningCount != null &&
+    partitioned.recentCount + partitioned.longRunningCount === activeCount,
+  );
+  const showSplitSummary = splitAvailable && (partitioned.longRunningCount ?? 0) > 0;
 
   return (
     <section id="live-outlook" aria-label="Live depeg outlook" className="pharos-card-shell scroll-mt-24 overflow-hidden">
@@ -166,14 +326,19 @@ export function DepegOutlookHero({
                     deviationBorderClass(Math.abs(worst.bps)),
                     deviationColorClass(Math.abs(worst.bps)),
                   )}
-                  title={`Worst live move: ${signedWorstBps} bps (${worst.symbol})`}
-                  aria-label={`Worst live move: ${signedWorstBps} bps ${worst.symbol}, open coin detail`}
+                  title={`Worst live move across peg catalog: ${signedWorstBps} bps (${worst.symbol})`}
+                  aria-label={`Worst live move across peg catalog: ${signedWorstBps} bps ${worst.symbol}, open coin detail`}
                 >
                   <span className="pharos-numeric">{signedWorstBps} bps</span>
                   <span className="opacity-85">{worst.symbol}</span>
                 </Link>
               ) : null}
             </div>
+            {showSplitSummary ? (
+              <p className="pharos-numeric mt-1 text-xs text-muted-foreground">
+                {partitioned.recentCount} recent · {partitioned.longRunningCount} long-running (&gt;30d)
+              </p>
+            ) : null}
             {/* The headline counts the peg catalog minus NAV tokens; the chip names
                 the catalog's size as read this render. */}
             <UniverseChip
@@ -186,8 +351,10 @@ export function DepegOutlookHero({
           {/* The first question is "what is off peg": name the largest incidents
               under the count, before the precursor queue. */}
           {openIncidents?.length || reservedSources?.peg ? (
-            <div className={reservedSources?.peg ? "min-h-67 sm:min-h-52" : undefined}>
-              {openIncidents?.length ? <OpenIncidentList rows={openIncidents} /> : null}
+            <div className={reservedSources?.peg ? "min-h-88 sm:min-h-76" : undefined}>
+              {openIncidents?.length ? (
+                <OpenIncidentList partitioned={partitioned} splitAvailable={splitAvailable} />
+              ) : null}
             </div>
           ) : null}
 

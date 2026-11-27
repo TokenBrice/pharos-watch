@@ -10,7 +10,14 @@ import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildPublicDatasetMirrorJsonLd } from "@/lib/analytics-dataset-json-ld";
 import { safeJsonLd } from "@/lib/json-ld";
 import type { FaqItem } from "@/lib/faq";
-import { DEPEG_PENDING_MIN_AGE_SEC, DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
+import {
+  DEPEG_LONG_RUNNING_AGE_DAYS,
+  DEPEG_PENDING_MIN_AGE_SEC,
+  DEPEG_REESCALATION_CONFIRM_MIN_AGE_SEC,
+  DEPEG_REESCALATION_WINDOW_DAYS,
+  DEPEG_THRESHOLD_BPS,
+  DEPEG_THRESHOLD_BPS_NON_USD,
+} from "@shared/lib/depeg-config";
 import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { DEWS_SIGNAL_WEIGHTS } from "@shared/lib/dews-config";
@@ -40,7 +47,7 @@ const FAQ_ITEMS = [
   {
     question: "What counts as a depeg event on Pharos?",
     answer:
-      `A depeg event is triggered when a stablecoin's price deviates from its peg by more than ${DEPEG_THRESHOLD_BPS / 100}% (${DEPEG_THRESHOLD_BPS} bps) for USD-pegged coins, or ${DEPEG_THRESHOLD_BPS_NON_USD / 100}% (${DEPEG_THRESHOLD_BPS_NON_USD} bps) for non-USD pegs. Every new event is pending at first: the deviation must hold for at least ${DEPEG_PENDING_MIN_AGE_SEC / 60} minutes and be backed by a trusted or multi-source primary price, or by same-direction secondary evidence, before it is confirmed. Opposite-direction evidence never counts as confirmation and can reject a pending event.`,
+      `A depeg event is triggered when a stablecoin's price deviates from its peg by more than ${DEPEG_THRESHOLD_BPS / 100}% (${DEPEG_THRESHOLD_BPS} bps) for USD-pegged coins, or ${DEPEG_THRESHOLD_BPS_NON_USD / 100}% (${DEPEG_THRESHOLD_BPS_NON_USD} bps) for non-USD pegs. Every new event is pending at first: the deviation must hold for at least ${DEPEG_PENDING_MIN_AGE_SEC / 60} minutes and be backed by a trusted or multi-source primary price, or by same-direction secondary evidence, before it is confirmed. Opposite-direction evidence never counts as confirmation and can reject a pending event. Open incidents older than ${DEPEG_LONG_RUNNING_AGE_DAYS} days stay in the full active count but are split out as long-running unless two trusted primary or native observations at least ${DEPEG_REESCALATION_CONFIRM_MIN_AGE_SEC / 60} minutes apart confirm a fresh re-escalation, which promotes them back into Recent for ${DEPEG_REESCALATION_WINDOW_DAYS} days.`,
   },
 ] as const satisfies readonly FaqItem[];
 

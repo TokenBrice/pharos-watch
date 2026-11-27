@@ -1,5 +1,5 @@
 import { vi, type Mock } from "vitest";
-import type { DepegPendingIncident } from "@shared/types/peg";
+import type { DepegPendingIncident, OpenIncidentSnapshot } from "@shared/types/peg";
 import type { ApiMeta } from "@/lib/api";
 
 /**
@@ -68,8 +68,15 @@ export function makeCoin(
 export function makePegSummaryResult(options: {
   coins: DepegCoinFixture[];
   summary?: Record<string, unknown>;
+  openIncidents?: Record<string, OpenIncidentSnapshot>;
+  openIncidentsAsOfSec?: number;
   isLoading?: boolean;
-}): QueryEnvelope<{ coins: DepegCoinFixture[]; summary: Record<string, unknown> }> & { isLoading: boolean } {
+}): QueryEnvelope<{
+  coins: DepegCoinFixture[];
+  summary: Record<string, unknown>;
+  openIncidents?: Record<string, OpenIncidentSnapshot>;
+  openIncidentsAsOfSec?: number;
+}> & { isLoading: boolean } {
   return {
     data: {
       coins: options.coins,
@@ -83,6 +90,8 @@ export function makePegSummaryResult(options: {
         depegEventsYesterday: 0,
         ...options.summary,
       },
+      ...(options.openIncidents !== undefined ? { openIncidents: options.openIncidents } : {}),
+      ...(options.openIncidentsAsOfSec !== undefined ? { openIncidentsAsOfSec: options.openIncidentsAsOfSec } : {}),
     },
     isLoading: options.isLoading ?? false,
     error: null,

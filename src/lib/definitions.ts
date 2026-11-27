@@ -15,7 +15,14 @@
  * runtime constant exists, so a methodology change cannot leave this copy stale.
  */
 import { DEWS_SIGNAL_LABELS, DEWS_THREAT_BANDS } from "@shared/lib/dews-config";
-import { DEPEG_PENDING_MIN_AGE_SEC, DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
+import {
+  DEPEG_LONG_RUNNING_AGE_DAYS,
+  DEPEG_PENDING_MIN_AGE_SEC,
+  DEPEG_REESCALATION_CONFIRM_MIN_AGE_SEC,
+  DEPEG_REESCALATION_WINDOW_DAYS,
+  DEPEG_THRESHOLD_BPS,
+  DEPEG_THRESHOLD_BPS_NON_USD,
+} from "@shared/lib/depeg-config";
 import { DEPEG_ARCHIVE_EPOCH_DATE, MIN_DEPEG_PAGE_DEVIATION_BPS } from "@/lib/depeg-event-config";
 import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
 import { PSI_CONDITION_BANDS } from "@shared/lib/psi-policy";
@@ -249,7 +256,7 @@ export const DEFINITIONS = {
     label: "Active Depegs",
     short: "Open depeg events that have crossed Pharos thresholds and passed the live confirmation rules.",
     detail:
-      `Every new depeg must hold for at least ${DEPEG_PENDING_MIN_AGE_SEC / 60} minutes and pass source-trust checks before it counts as live.`,
+      `Every new depeg must hold for at least ${DEPEG_PENDING_MIN_AGE_SEC / 60} minutes and pass source-trust checks before it counts as live. Open incidents older than ${DEPEG_LONG_RUNNING_AGE_DAYS} days are separated as long-running unless two trusted primary or native observations at least ${DEPEG_REESCALATION_CONFIRM_MIN_AGE_SEC / 60} minutes apart confirm a fresh re-escalation, which promotes them back into Recent for ${DEPEG_REESCALATION_WINDOW_DAYS} days.`,
     ...PEG,
   },
   coinsAtPeg: {

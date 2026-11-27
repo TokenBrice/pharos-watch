@@ -42,9 +42,16 @@ export function HomeMarketStateLine({ nowMs }: { nowMs?: number }): React.JSX.El
     meta: usingFallbackPsi ? psiFallbackQuery.meta : psiLane?.meta,
   }, nowMs);
   const psiCurrent = psi !== null && psiHealth.state === "fresh";
-  const activeDepegCount = incidentLane?.data?.activeDepegCount
-    ?? pegFallbackQuery.data?.summary?.activeDepegCount
-    ?? null;
+  const incidentData = incidentLane?.data ?? pegFallbackQuery.data?.summary ?? null;
+  const activeDepegCount = incidentData?.activeDepegCount ?? null;
+  const hasIncidentSplit =
+    incidentData != null
+    && incidentData.recentActiveDepegCount != null
+    && incidentData.longRunningActiveDepegCount != null
+    && incidentData.recentActiveDepegCount + incidentData.longRunningActiveDepegCount === incidentData.activeDepegCount;
+  const recentActiveDepegCount = hasIncidentSplit ? incidentData.recentActiveDepegCount! : null;
+  const longRunningActiveDepegCount = hasIncidentSplit ? incidentData.longRunningActiveDepegCount! : null;
+  const showIncidentSplit = longRunningActiveDepegCount !== null && longRunningActiveDepegCount > 0;
 
   const psiBandClass = psi && psiCurrent && isConditionBand(psi.band)
     ? PSI_BAND_CLASSES[psi.band]
@@ -73,6 +80,13 @@ export function HomeMarketStateLine({ nowMs }: { nowMs?: number }): React.JSX.El
           <>
             <span className="pharos-numeric font-medium text-foreground">{activeDepegCount}</span>
             <span>active {activeDepegCount === 1 ? "depeg" : "depegs"}</span>
+            {showIncidentSplit ? (
+              <span className="pharos-numeric text-xs text-muted-foreground">
+                {recentActiveDepegCount === 0
+                  ? "(all >30d)"
+                  : `(${recentActiveDepegCount} recent · ${longRunningActiveDepegCount} >30d)`}
+              </span>
+            ) : null}
           </>
         ) : (
           <>
