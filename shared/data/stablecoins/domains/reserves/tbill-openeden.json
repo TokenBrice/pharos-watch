@@ -63,7 +63,7 @@
     "compositionBasis": "Pinned OpenEden TBILL daily NAV balance sheet",
     "compositionAsOf": "2026-10-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "The retained October 28 balance-sheet categories are classified but do not establish provider safeguards or a separate assurance opinion. The close packet is an independently dated issuer report and must not be mixed with live positions/aggregates API observations; the 2026-10-07 live-book check left $1,001.58 (0.0003%) unidentified versus the live account. Ethereum details/1 supply is not the full multichain fund denominator, and estimated/on-chain exchange rates are distinct. Listing remains quarantined: producer implementation does not activate lifecycle. Candidate 3-day source/48-hour fetch requires full scope and liability reconciliation; holiday cadence is unverified and cannot justify widening to 4 days. New API observations do not replace retained composition weights or dates.",
+    "knownUnknownExposure": "The retained October 28 balance-sheet categories are classified but do not establish provider safeguards or a separate assurance opinion. The close packet is an independently dated issuer report and must not be mixed with live positions/aggregates API observations; the 2026-10-07 live-book check left $1,001.58 (0.0003%) unidentified versus the live account. Ethereum details/1 supply is not the full multichain fund denominator, and estimated/on-chain exchange rates are distinct. New API observations do not replace retained composition weights or dates.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

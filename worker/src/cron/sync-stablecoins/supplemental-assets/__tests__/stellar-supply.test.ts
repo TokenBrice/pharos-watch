@@ -10,9 +10,12 @@ const fixture = () => ({ _embedded: { records: [{
 }] } });
 const signal = () => new AbortController().signal;
 const classicRead = () => fetchStellarSupply(`USDY-${issuer}`, 7, signal());
-const horizon = (age = 0) => ({ history_latest_ledger_closed_at: new Date(Date.now() - age * 1000).toISOString() });
+const horizonLedger = (age = 0, sequence = 65696398) => ({ sequence, closed_at: new Date(Date.now() - age * 1000).toISOString() });
+const classicAssetResponse = (body: unknown, seq: string | null = "65696398") =>
+  Response.json(body, seq == null ? undefined : { headers: { "Latest-Ledger": seq } });
 const ledger = (age = 0) => ({ jsonrpc: "2.0", id: 1, result: { status: "healthy", latestLedger: 123, latestLedgerCloseTime: String(Math.floor(Date.now() / 1000) - age) } });
-const classicFetcher = (body: unknown) => vi.fn().mockResolvedValueOnce(Response.json(horizon())).mockResolvedValueOnce(Response.json(body));
+const classicFetcher = (body: unknown, age = 0, seq: string | null = "65696398") =>
+  vi.fn().mockResolvedValueOnce(classicAssetResponse(body, seq)).mockResolvedValueOnce(Response.json(horizonLedger(age)));
 const freshnessCases = ["classic", "soroban"] as const;
 function scval(type: 3 | 10, n: bigint): string {
   const bytes = new Uint8Array(type === 3 ? 8 : 20), view = new DataView(bytes.buffer);
@@ -30,10 +33,10 @@ describe("Stellar supply", () => {
   it("sums all six disjoint Horizon amounts exactly, including SAC, pools and frozen balances", async () => {
     const fetcher = classicFetcher(fixture()); vi.stubGlobal("fetch", fetcher);
     expect(await classicRead()).toBe(1200000003n);
-    expect(fetcher.mock.calls[0][0]).toBe("https://horizon.stellar.org");
-    const url = new URL(fetcher.mock.calls[1][0]);
+    const url = new URL(fetcher.mock.calls[0][0]);
     expect(url.searchParams.get("asset_issuer")).toBe(issuer);
     expect(url.searchParams.get("asset_code")).toBe("USDY");
+    expect(fetcher.mock.calls[1][0]).toBe("https://horizon.stellar.org/ledgers/65696398");
   });
   it("admits an observed zero", async () => {
     const body = fixture(), asset = body._embedded.records[0];
@@ -75,23 +78,33 @@ describe("Stellar supply", () => {
   it.each(freshnessCases)("checks %s ledger freshness boundaries", async kind => {
     vi.useFakeTimers(); vi.setSystemTime(new Date("2026-10-26T00:00:00Z"));
     for (const age of [600, -60, 601, -61]) {
-      const fetcher = vi.fn().mockResolvedValueOnce(Response.json(kind === "classic" ? horizon(age) : ledger(age)));
-      if (kind === "classic") fetcher.mockResolvedValueOnce(Response.json(fixture()));
-      else fetcher.mockResolvedValueOnce(Response.json(simulation(3, 5n))).mockResolvedValueOnce(Response.json(simulation(10, 1n)));
+      const fetcher = kind === "classic"
+        ? classicFetcher(fixture(), age)
+        : vi.fn().mockResolvedValueOnce(Response.json(ledger(age)))
+          .mockResolvedValueOnce(Response.json(simulation(3, 5n))).mockResolvedValueOnce(Response.json(simulation(10, 1n)));
       vi.stubGlobal("fetch", fetcher);
       const result = kind === "classic" ? classicRead() : fetchStellarSupply(contract, 5, signal());
       if (age > 600 || age < -60) {
         await expect(result).rejects.toThrow("stellar-ledger-stale-or-future");
-        expect(fetcher).toHaveBeenCalledTimes(1);
+        expect(fetcher).toHaveBeenCalledTimes(kind === "classic" ? 2 : 1);
       } else await expect(result).resolves.toBe(kind === "classic" ? 1200000003n : 1n);
     }
   });
   it.each(freshnessCases)("rejects missing, malformed or failed %s ledger evidence", async kind => {
-    const malformed = kind === "classic" ? { history_latest_ledger_closed_at: "invalid" }
+    const malformed = kind === "classic" ? { sequence: 65696398, closed_at: "invalid" }
       : { ...ledger(), result: { ...ledger().result, latestLedgerCloseTime: "invalid" } };
-    for (const response of [Response.json(null), Response.json({}), Response.json(malformed), new Response("unavailable", { status: 503 })]) {
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(response));
+    const cases = kind === "classic"
+      ? [Response.json(null), Response.json({}), Response.json(malformed), Response.json(horizonLedger(0, 65696399)), new Response("unavailable", { status: 503 })]
+      : [Response.json(null), Response.json({}), Response.json(malformed), new Response("unavailable", { status: 503 })];
+    for (const response of cases) {
+      vi.stubGlobal("fetch", kind === "classic"
+        ? vi.fn().mockResolvedValueOnce(classicAssetResponse(fixture())).mockResolvedValueOnce(response)
+        : vi.fn().mockResolvedValueOnce(response));
       await expect(kind === "classic" ? classicRead() : fetchStellarSupply(contract, 5, signal())).rejects.toThrow();
+    }
+    if (kind === "classic") {
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(classicAssetResponse(fixture(), null)));
+      await expect(classicRead()).rejects.toThrow("stellar-missing-latest-ledger");
     }
   });
   it("rejects unhealthy Soroban nodes even with a fresh head", async () => {
@@ -115,7 +128,7 @@ describe("Stellar supply", () => {
     "bounds %s response %s bodies and timeouts", async (kind, index) => {
       for (const stalled of [false, true]) {
         vi.useFakeTimers();
-        const responses = kind === "classic" ? [Response.json(horizon()), Response.json(fixture())]
+        const responses = kind === "classic" ? [classicAssetResponse(fixture()), Response.json(horizonLedger())]
           : [Response.json(ledger()), Response.json(simulation(3, 5n)), Response.json(simulation(10, 1n))];
         responses[index] = stalled ? new Response(new ReadableStream({ start() {} })) : new Response(" ".repeat(64 * 1024 + 1));
         const fetcher = vi.fn();
@@ -132,9 +145,7 @@ describe("Stellar supply", () => {
     vi.useFakeTimers();
     const nowSec = Math.floor(Date.parse("2026-11-23T14:00:00Z") / 1000);
     vi.setSystemTime(nowSec * 1000);
-    vi.stubGlobal("fetch", vi.fn()
-      .mockResolvedValueOnce(Response.json(horizon(12)))
-      .mockResolvedValueOnce(Response.json(fixture())));
+    vi.stubGlobal("fetch", classicFetcher(fixture(), 12));
     await expect(observeStellarSupply(`USDY-${issuer}`, 7, signal())).resolves.toEqual({
       rawSupply: 1200000003n, observedAt: nowSec - 12,
     });

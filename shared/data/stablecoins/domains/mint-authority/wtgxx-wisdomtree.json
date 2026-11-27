@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "WTGXX has six independently mint-capable native EVM deployments on Arbitrum, Avalanche, Base, Ethereum, Optimism, and Plume. Each local token gates mint/burn through REGISTRAR_ROLE held by 0x726D3b3e18e301719b383FdE4F99A5d31B9438e5, while DEFAULT_ADMIN_ROLE held by 0x6257759edD99f677052727f7Ef3a055029DFA58a can administer roles and upgrade the local custom beacon. The Stellar issuer account is excluded from scoreable WTGXX scope pending resolution of Horizon's WTGX-versus-WTGXX asset-code mismatch.",
+    "summary": "WTGXX has eight independently mint-capable native deployments across Arbitrum, Avalanche, Base, Ethereum, Optimism, Plume, Stellar, and Solana. Each EVM token gates mint/burn through REGISTRAR_ROLE held by 0x726D3b3e18e301719b383FdE4F99A5d31B9438e5, while DEFAULT_ADMIN_ROLE held by 0x6257759edD99f677052727f7Ef3a055029DFA58a administers roles and upgrades the local custom beacon. Stellar WTGX (anchored to WTGXX per stellar.toml) issues directly under the issuer master/operational Ed25519 signers, and Solana Token-2022 mint Em46fxxwgY2RRoUbBMSbEjJwY62x3ESMNdhnsGpEKewm retains a live EOA mintAuthority.",
     "upgradeability": {
       "model": "beacon",
       "deploymentRefs": [
@@ -37,7 +37,7 @@
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "WTGXX Arbitrum DEFAULT_ADMIN_ROLE holder",
-      "observedAt": "2026-08-16",
+      "observedAt": "2026-11-27",
       "sources": [
         {
           "label": "WisdomTree WTGXX digital fund fact sheet",
@@ -90,8 +90,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "observedBlock": 495304232,
+        "observedAt": "2026-11-27",
+        "observedBlock": 527933933,
         "sources": [
           {
             "label": "WTGXX Arbitrum deployment",
@@ -102,7 +102,7 @@
             "url": "https://sourcify.dev/server/v2/contract/42161/0x6e46c98c4805b7cad59d557e1c47af535f1706b1?fields=sources%2Cabi%2Cmetadata"
           }
         ],
-        "evidence": "At Arbitrum block 495304232 on 2026-08-16, hasRole(REGISTRAR_ROLE, 0x726d3b3e18e301719b383fde4f99a5d31b9438e5) returned true. The verified WTGXX BaseERC20 implementation gates mint(address,uint256) and burn(address,uint256) with REGISTRAR_ROLE, making this a local native issuance control rather than bridge-mint accounting."
+        "evidence": "Re-verified at Arbitrum block 527933933 on 2026-11-27 (unchanged since block 495304232 on 2026-08-16), hasRole(REGISTRAR_ROLE, 0x726d3b3e18e301719b383fde4f99a5d31b9438e5) returned true. The verified WTGXX BaseERC20 implementation gates mint(address,uint256) and burn(address,uint256) with REGISTRAR_ROLE, making this a local native issuance control rather than bridge-mint accounting."
       },
       {
         "chain": "avalanche",
@@ -116,8 +116,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "observedBlock": 92984819,
+        "observedAt": "2026-11-27",
+        "observedBlock": 101517617,
         "sources": [
           {
             "label": "WTGXX Avalanche deployment",
@@ -128,7 +128,7 @@
             "url": "https://www.wisdomtree.com/-/media/us-media-files/documents/resource-library/fund-fact-sheets/digital/wtgxx.pdf"
           }
         ],
-        "evidence": "At Avalanche block 92984819 on 2026-08-16, hasRole(REGISTRAR_ROLE, 0x726d3b3e18e301719b383fde4f99a5d31b9438e5) returned true. The verified WTGXX BaseERC20 implementation gates mint(address,uint256) and burn(address,uint256) with REGISTRAR_ROLE, making this a local native issuance control rather than bridge-mint accounting."
+        "evidence": "Re-verified at Avalanche block 101517617 on 2026-11-27 (unchanged since block 92984819 on 2026-08-16), hasRole(REGISTRAR_ROLE, 0x726d3b3e18e301719b383fde4f99a5d31b9438e5) returned true. The verified WTGXX BaseERC20 implementation gates mint(address,uint256) and burn(address,uint256) with REGISTRAR_ROLE, making this a local native issuance control rather than bridge-mint accounting."
       },
       {
         "chain": "base",
@@ -142,8 +142,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "observedBlock": 50067802,
+        "observedAt": "2026-11-27",
+        "observedBlock": 62852192,
         "sources": [
           {
             "label": "WTGXX Base deployment",
@@ -154,7 +154,7 @@
             "url": "https://www.wisdomtree.com/-/media/us-media-files/documents/resource-library/fund-fact-sheets/digital/wtgxx.pdf"
           }
         ],
-        "evidence": "At Base block 50067802 on 2026-08-16, hasRole(REGISTRAR_ROLE, 0x726d3b3e18e301719b383fde4f99a5d31b9438e5) returned true. The verified WTGXX BaseERC20 implementation gates mint(address,uint256) and burn(address,uint256) with REGISTRAR_ROLE, making this a local native issuance control rather than bridge-mint accounting."
+        "evidence": "Re-verified at Base block 62852192 on 2026-11-27 (unchanged since block 50067802 on 2026-08-16), hasRole(REGISTRAR_ROLE, 0x726d3b3e18e301719b383fde4f99a5d31b9438e5) returned true. The verified WTGXX BaseERC20 implementation gates mint(address,uint256) and burn(address,uint256) with REGISTRAR_ROLE, making this a local native issuance control rather than bridge-mint accounting."
       },
       {
         "chain": "ethereum",
@@ -168,8 +168,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "observedBlock": 25771084,
+        "observedAt": "2026-11-27",
+        "observedBlock": 26504747,
         "sources": [
           {
             "label": "WTGXX Ethereum deployment",
@@ -180,7 +180,7 @@
             "url": "https://sourcify.dev/server/v2/contract/1/0xC2A8ca84BC363605c36757f9409b214b6ee710c9?fields=sources%2Cabi%2Cmetadata"
           }
         ],
-        "evidence": "At Ethereum block 25771084 on 2026-08-16, hasRole(REGISTRAR_ROLE, 0x726d3b3e18e301719b383fde4f99a5d31b9438e5) returned true. The Sourcify-verified WTGXX BaseERC20 implementation gates mint(address,uint256) and burn(address,uint256) with REGISTRAR_ROLE, making this a local native issuance control rather than bridge-mint accounting."
+        "evidence": "Re-verified at Ethereum block 26504747 on 2026-11-27 (unchanged since block 25771084 on 2026-08-16), hasRole(REGISTRAR_ROLE, 0x726d3b3e18e301719b383fde4f99a5d31b9438e5) returned true. The Sourcify-verified WTGXX BaseERC20 implementation gates mint(address,uint256) and burn(address,uint256) with REGISTRAR_ROLE, making this a local native issuance control rather than bridge-mint accounting."
       },
       {
         "chain": "optimism",
@@ -194,8 +194,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "observedBlock": 155663088,
+        "observedAt": "2026-11-27",
+        "observedBlock": 160080926,
         "sources": [
           {
             "label": "WTGXX Optimism deployment",
@@ -206,7 +206,7 @@
             "url": "https://www.wisdomtree.com/-/media/us-media-files/documents/resource-library/fund-fact-sheets/digital/wtgxx.pdf"
           }
         ],
-        "evidence": "At Optimism block 155663088 on 2026-08-16, hasRole(REGISTRAR_ROLE, 0x726d3b3e18e301719b383fde4f99a5d31b9438e5) returned true. The verified WTGXX BaseERC20 implementation gates mint(address,uint256) and burn(address,uint256) with REGISTRAR_ROLE, making this a local native issuance control rather than bridge-mint accounting."
+        "evidence": "Re-verified at Optimism block 160080926 on 2026-11-27 (unchanged since block 155663088 on 2026-08-16), hasRole(REGISTRAR_ROLE, 0x726d3b3e18e301719b383fde4f99a5d31b9438e5) returned true. The verified WTGXX BaseERC20 implementation gates mint(address,uint256) and burn(address,uint256) with REGISTRAR_ROLE, making this a local native issuance control rather than bridge-mint accounting."
       },
       {
         "chain": "plume",
@@ -220,8 +220,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "observedBlock": 87697435,
+        "observedAt": "2026-11-27",
+        "observedBlock": 108481461,
         "sources": [
           {
             "label": "WTGXX Plume deployment",
@@ -232,7 +232,7 @@
             "url": "https://www.wisdomtree.com/-/media/us-media-files/documents/resource-library/fund-fact-sheets/digital/wtgxx.pdf"
           }
         ],
-        "evidence": "At Plume block 87697435 on 2026-08-16, hasRole(REGISTRAR_ROLE, 0x726d3b3e18e301719b383fde4f99a5d31b9438e5) returned true. The verified WTGXX BaseERC20 implementation gates mint(address,uint256) and burn(address,uint256) with REGISTRAR_ROLE, making this a local native issuance control rather than bridge-mint accounting."
+        "evidence": "Re-verified at Plume block 108481461 on 2026-11-27 (unchanged since block 87697435 on 2026-08-16), hasRole(REGISTRAR_ROLE, 0x726d3b3e18e301719b383fde4f99a5d31b9438e5) returned true. The verified WTGXX BaseERC20 implementation gates mint(address,uint256) and burn(address,uint256) with REGISTRAR_ROLE, making this a local native issuance control rather than bridge-mint accounting."
       },
       {
         "chain": "arbitrum",
@@ -246,8 +246,8 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "observedBlock": 495304232,
+        "observedAt": "2026-11-27",
+        "observedBlock": 527933933,
         "sources": [
           {
             "label": "WTGXX Arbitrum deployment",
@@ -258,7 +258,7 @@
             "url": "https://sourcify.dev/server/v2/contract/42161/0x6e46c98c4805b7cad59d557e1c47af535f1706b1?fields=sources%2Cabi%2Cmetadata"
           }
         ],
-        "evidence": "At Arbitrum block 495304232 on 2026-08-16, hasRole(DEFAULT_ADMIN_ROLE, 0x6257759edd99f677052727f7ef3a055029dfa58a) returned true. The verified WTGXX implementation gates role administration and upgradeBeaconToAndCall(address,bytes) with DEFAULT_ADMIN_ROLE, so this EOA can authorize mint-role changes and replace mint-critical logic on Arbitrum."
+        "evidence": "Re-verified at Arbitrum block 527933933 on 2026-11-27 (unchanged since block 495304232 on 2026-08-16), hasRole(DEFAULT_ADMIN_ROLE, 0x6257759edd99f677052727f7ef3a055029dfa58a) returned true. The verified WTGXX implementation gates role administration and upgradeBeaconToAndCall(address,bytes) with DEFAULT_ADMIN_ROLE, so this EOA can authorize mint-role changes and replace mint-critical logic on Arbitrum."
       },
       {
         "chain": "avalanche",
@@ -272,8 +272,8 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "observedBlock": 92984819,
+        "observedAt": "2026-11-27",
+        "observedBlock": 101517617,
         "sources": [
           {
             "label": "WTGXX Avalanche deployment",
@@ -284,7 +284,7 @@
             "url": "https://www.wisdomtree.com/-/media/us-media-files/documents/resource-library/fund-fact-sheets/digital/wtgxx.pdf"
           }
         ],
-        "evidence": "At Avalanche block 92984819 on 2026-08-16, hasRole(DEFAULT_ADMIN_ROLE, 0x6257759edd99f677052727f7ef3a055029dfa58a) returned true. The verified WTGXX implementation gates role administration and upgradeBeaconToAndCall(address,bytes) with DEFAULT_ADMIN_ROLE, so this EOA can authorize mint-role changes and replace mint-critical logic on Avalanche."
+        "evidence": "Re-verified at Avalanche block 101517617 on 2026-11-27 (unchanged since block 92984819 on 2026-08-16), hasRole(DEFAULT_ADMIN_ROLE, 0x6257759edd99f677052727f7ef3a055029dfa58a) returned true. The verified WTGXX implementation gates role administration and upgradeBeaconToAndCall(address,bytes) with DEFAULT_ADMIN_ROLE, so this EOA can authorize mint-role changes and replace mint-critical logic on Avalanche."
       },
       {
         "chain": "base",
@@ -298,8 +298,8 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "observedBlock": 50067802,
+        "observedAt": "2026-11-27",
+        "observedBlock": 62852192,
         "sources": [
           {
             "label": "WTGXX Base deployment",
@@ -310,7 +310,7 @@
             "url": "https://www.wisdomtree.com/-/media/us-media-files/documents/resource-library/fund-fact-sheets/digital/wtgxx.pdf"
           }
         ],
-        "evidence": "At Base block 50067802 on 2026-08-16, hasRole(DEFAULT_ADMIN_ROLE, 0x6257759edd99f677052727f7ef3a055029dfa58a) returned true. The verified WTGXX implementation gates role administration and upgradeBeaconToAndCall(address,bytes) with DEFAULT_ADMIN_ROLE, so this EOA can authorize mint-role changes and replace mint-critical logic on Base."
+        "evidence": "Re-verified at Base block 62852192 on 2026-11-27 (unchanged since block 50067802 on 2026-08-16), hasRole(DEFAULT_ADMIN_ROLE, 0x6257759edd99f677052727f7ef3a055029dfa58a) returned true. The verified WTGXX implementation gates role administration and upgradeBeaconToAndCall(address,bytes) with DEFAULT_ADMIN_ROLE, so this EOA can authorize mint-role changes and replace mint-critical logic on Base."
       },
       {
         "chain": "ethereum",
@@ -324,8 +324,8 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "observedBlock": 25771084,
+        "observedAt": "2026-11-27",
+        "observedBlock": 26504747,
         "sources": [
           {
             "label": "WTGXX Ethereum deployment",
@@ -336,7 +336,7 @@
             "url": "https://sourcify.dev/server/v2/contract/1/0xC2A8ca84BC363605c36757f9409b214b6ee710c9?fields=sources%2Cabi%2Cmetadata"
           }
         ],
-        "evidence": "At Ethereum block 25771084 on 2026-08-16, hasRole(DEFAULT_ADMIN_ROLE, 0x6257759edd99f677052727f7ef3a055029dfa58a) returned true. The Sourcify-verified WTGXX implementation gates role administration and upgradeBeaconToAndCall(address,bytes) with DEFAULT_ADMIN_ROLE, so this EOA can authorize mint-role changes and replace mint-critical logic on Ethereum."
+        "evidence": "Re-verified at Ethereum block 26504747 on 2026-11-27 (unchanged since block 25771084 on 2026-08-16), hasRole(DEFAULT_ADMIN_ROLE, 0x6257759edd99f677052727f7ef3a055029dfa58a) returned true. The Sourcify-verified WTGXX implementation gates role administration and upgradeBeaconToAndCall(address,bytes) with DEFAULT_ADMIN_ROLE, so this EOA can authorize mint-role changes and replace mint-critical logic on Ethereum."
       },
       {
         "chain": "optimism",
@@ -350,8 +350,8 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "observedBlock": 155663088,
+        "observedAt": "2026-11-27",
+        "observedBlock": 160080926,
         "sources": [
           {
             "label": "WTGXX Optimism deployment",
@@ -362,7 +362,7 @@
             "url": "https://www.wisdomtree.com/-/media/us-media-files/documents/resource-library/fund-fact-sheets/digital/wtgxx.pdf"
           }
         ],
-        "evidence": "At Optimism block 155663088 on 2026-08-16, hasRole(DEFAULT_ADMIN_ROLE, 0x6257759edd99f677052727f7ef3a055029dfa58a) returned true. The verified WTGXX implementation gates role administration and upgradeBeaconToAndCall(address,bytes) with DEFAULT_ADMIN_ROLE, so this EOA can authorize mint-role changes and replace mint-critical logic on Optimism."
+        "evidence": "Re-verified at Optimism block 160080926 on 2026-11-27 (unchanged since block 155663088 on 2026-08-16), hasRole(DEFAULT_ADMIN_ROLE, 0x6257759edd99f677052727f7ef3a055029dfa58a) returned true. The verified WTGXX implementation gates role administration and upgradeBeaconToAndCall(address,bytes) with DEFAULT_ADMIN_ROLE, so this EOA can authorize mint-role changes and replace mint-critical logic on Optimism."
       },
       {
         "chain": "plume",
@@ -376,8 +376,8 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "observedBlock": 87697435,
+        "observedAt": "2026-11-27",
+        "observedBlock": 108481461,
         "sources": [
           {
             "label": "WTGXX Plume deployment",
@@ -388,7 +388,85 @@
             "url": "https://www.wisdomtree.com/-/media/us-media-files/documents/resource-library/fund-fact-sheets/digital/wtgxx.pdf"
           }
         ],
-        "evidence": "At Plume block 87697435 on 2026-08-16, hasRole(DEFAULT_ADMIN_ROLE, 0x6257759edd99f677052727f7ef3a055029dfa58a) returned true. The verified WTGXX implementation gates role administration and upgradeBeaconToAndCall(address,bytes) with DEFAULT_ADMIN_ROLE, so this EOA can authorize mint-role changes and replace mint-critical logic on Plume."
+        "evidence": "Re-verified at Plume block 108481461 on 2026-11-27 (unchanged since block 87697435 on 2026-08-16), hasRole(DEFAULT_ADMIN_ROLE, 0x6257759edd99f677052727f7ef3a055029dfa58a) returned true. The verified WTGXX implementation gates role administration and upgradeBeaconToAndCall(address,bytes) with DEFAULT_ADMIN_ROLE, so this EOA can authorize mint-role changes and replace mint-critical logic on Plume."
+      },
+      {
+        "chain": "stellar",
+        "address": "GDMBNMFJ3TRFLASJ6UGETFME3PJPNKPU24C7KFDBEBPQFG2CI6UC3JG6",
+        "deploymentRefs": [
+          "stellar:WTGX-GDMBNMFJ3TRFLASJ6UGETFME3PJPNKPU24C7KFDBEBPQFG2CI6UC3JG6"
+        ],
+        "label": "WTGXX Stellar WTGX issuer master account",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-27",
+        "observedBlock": 65695144,
+        "sources": [
+          {
+            "label": "WisdomTree Stellar TOML (WTGX anchor_asset WTGXX)",
+            "url": "https://stellar.wisdomtree.com/.well-known/stellar.toml"
+          },
+          {
+            "label": "Stellar Horizon WTGX issuer account",
+            "url": "https://horizon.stellar.org/accounts/GDMBNMFJ3TRFLASJ6UGETFME3PJPNKPU24C7KFDBEBPQFG2CI6UC3JG6"
+          }
+        ],
+        "evidence": "At Stellar Horizon ledger 65695144 (2026-11-27T06:43:12Z), issuer account GDMBNMFJ3TRFLASJ6UGETFME3PJPNKPU24C7KFDBEBPQFG2CI6UC3JG6 retains master-key weight 255 against thresholds low=25, med=50, high=150, enabling direct native issuance and signer administration without a supply cap. WisdomTree's stellar.toml explicitly binds code WTGX to anchor_asset WTGXX."
+      },
+      {
+        "chain": "stellar",
+        "address": "GDXISS7IIZCTN4VQSPGHSQABLR5RRCQYAMAODEE2QBOCRHBIAV5KIS2N",
+        "deploymentRefs": [
+          "stellar:WTGX-GDMBNMFJ3TRFLASJ6UGETFME3PJPNKPU24C7KFDBEBPQFG2CI6UC3JG6"
+        ],
+        "label": "WTGXX Stellar WTGX operational issuance signer",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-27",
+        "observedBlock": 65695144,
+        "sources": [
+          {
+            "label": "WisdomTree Stellar TOML (WTGX anchor_asset WTGXX)",
+            "url": "https://stellar.wisdomtree.com/.well-known/stellar.toml"
+          },
+          {
+            "label": "Stellar Horizon WTGX issuer account",
+            "url": "https://horizon.stellar.org/accounts/GDMBNMFJ3TRFLASJ6UGETFME3PJPNKPU24C7KFDBEBPQFG2CI6UC3JG6"
+          }
+        ],
+        "evidence": "At Stellar Horizon ledger 65695144 (2026-11-27T06:43:12Z), signer GDXISS7IIZCTN4VQSPGHSQABLR5RRCQYAMAODEE2QBOCRHBIAV5KIS2N held weight 50 on issuer GDMBNMFJ3TRFLASJ6UGETFME3PJPNKPU24C7KFDBEBPQFG2CI6UC3JG6, meeting med_threshold=50 for direct native WTGX issuance payments without a cap."
+      },
+      {
+        "chain": "solana",
+        "address": "2zuuNGN3G5dcZnYYzuB69hryW4S3e4XrFvuS9TcCvAJS",
+        "deploymentRefs": [
+          "solana:Em46fxxwgY2RRoUbBMSbEjJwY62x3ESMNdhnsGpEKewm"
+        ],
+        "label": "WTGXX Solana Token-2022 mint authority",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-27",
+        "observedBlock": 474453823,
+        "sources": [
+          {
+            "label": "Solana mainnet JSON-RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "WTGXX Solana token metadata JSON",
+            "url": "https://gateway.pinata.cloud/ipfs/bafkreihnnhylzhkciuwik5hn25mglaigxlsjeqvw5lmpmpu3ioyoe32y74"
+          }
+        ],
+        "evidence": "At finalized Solana slot 474453823 (2026-11-27T06:43:18Z, blockhash A7ev51A7WNthGsYZSeCQ5kAxs5snee4FS4YRCuhw9Acp), Token-2022 mint Em46fxxwgY2RRoUbBMSbEjJwY62x3ESMNdhnsGpEKewm (9 decimals, supply 566,482.692834566 WTGXX) had live mintAuthority 2zuuNGN3G5dcZnYYzuB69hryW4S3e4XrFvuS9TcCvAJS (uninitialized system/EOA address). Separate freezeAuthority (8nsmpDcJEfrzELoC4w5SN8MKqNuWgdjbQC1BrRaeaLaN), pausableConfig authority (4VcAXBXEyKeHsKkeS4Cdp3h6bEVpP8XEH4VDzaAddtms), and permanentDelegate/transferHook/scaledUiAmountConfig/metadata authority (24NPdbDAaLN6VSW3xo9dPyNRGmTpq1jNWyS4XEY7z53J, multiplier 1) are transfer/compliance controls rather than additional mint authorities."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -417,12 +495,24 @@
           "url": "https://sourcify.dev/server/v2/contract/42161/0x6e46c98c4805b7cad59d557e1c47af535f1706b1?fields=sources%2Cabi%2Cmetadata"
         },
         {
+          "label": "WisdomTree Stellar TOML (WTGX anchor_asset WTGXX)",
+          "url": "https://stellar.wisdomtree.com/.well-known/stellar.toml"
+        },
+        {
           "label": "Stellar Horizon WTGX issuer account",
           "url": "https://horizon.stellar.org/accounts/GDMBNMFJ3TRFLASJ6UGETFME3PJPNKPU24C7KFDBEBPQFG2CI6UC3JG6"
         },
         {
           "label": "Stellar Horizon WTGX asset record",
           "url": "https://horizon.stellar.org/assets?asset_code=WTGX&asset_issuer=GDMBNMFJ3TRFLASJ6UGETFME3PJPNKPU24C7KFDBEBPQFG2CI6UC3JG6"
+        },
+        {
+          "label": "Solana mainnet JSON-RPC",
+          "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "WTGXX Solana token metadata JSON",
+          "url": "https://gateway.pinata.cloud/ipfs/bafkreihnnhylzhkciuwik5hn25mglaigxlsjeqvw5lmpmpu3ioyoe32y74"
         },
         {
           "label": "SEC-filed WTGXX audited annual report",
@@ -433,9 +523,9 @@
           "url": "https://www.sec.gov/Archives/edgar/data/1859001/000121465926005986/wtd51126485apos.htm"
         }
       ],
-      "evidence": "At the 2026-08-16 UTC observations, the six authored EVM deployments had live code and returned the WTGXX role and supply calls. REGISTRAR_ROLE = keccak256('REGISTRAR_ROLE') gates local mint(address,uint256) and burn(address,uint256), and 0x726d3b3e18e301719b383fde4f99a5d31b9438e5 held it on Arbitrum block 495304232, Avalanche block 92984819, Base block 50067802, Ethereum block 25771084, Optimism block 155663088, and Plume block 87697435. DEFAULT_ADMIN_ROLE was held by 0x6257759edd99f677052727f7ef3a055029dfa58a on all six deployments; the verified implementation gates role administration and upgradeBeaconToAndCall(address,bytes) with that role. Current custom beacon and implementation reads were Arbitrum 0x9a289c9976215664c265a35ecb2fa733295369e7 -> 0x6e46c98c4805b7cad59d557e1c47af535f1706b1, Avalanche 0xc2f490d5ab8e918686ad4bb795b1bd7f60dbf7b1 -> 0xc2a8ca84bc363605c36757f9409b214b6ee710c9, Base 0x1fecf3d9d4fee7f2c02917a66028a48c6706c179 -> 0xc2f490d5ab8e918686ad4bb795b1bd7f60dbf7b1, Ethereum 0xf89aa0ae2b6c47c0eaefb49abcc266a44a1b61cb -> 0xc2a8ca84bc363605c36757f9409b214b6ee710c9, Optimism 0xc2f490d5ab8e918686ad4bb795b1bd7f60dbf7b1 -> 0xc2a8ca84bc363605c36757f9409b214b6ee710c9, and Plume 0x507d898226e6a3e5eb8dbecae0b9e8fd51337656 -> 0x6e46c98c4805b7cad59d557e1c47af535f1706b1. No economic cap or cross-chain conservation invariant was established, so the canonical posture remains unbounded with periodic off-chain reconciliation and prudential SEC oversight. Horizon verifies the authored Stellar issuer account and a live WTGX asset, but WTGXX returns no asset record; the Stellar row is therefore excluded from this scoreable WTGXX native scope pending issuer-side identity confirmation.",
-      "reviewer": "Pharos mint-bridge boundary migration; WTGXX verified finding",
-      "reviewedAt": "2026-08-16"
+      "evidence": "Re-verified at pinned 2026-11-27 blocks across all eight native deployments. All six EVM deployments retain REGISTRAR_ROLE (0x726d3b3e18e301719b383fde4f99a5d31b9438e5), DEFAULT_ADMIN_ROLE (0x6257759edd99f677052727f7ef3a055029dfa58a), and unchanged custom beacon-to-implementation bindings: Arbitrum (block 527933933) 0x9a289c9976215664c265a35ecb2fa733295369e7 -> 0x6e46c98c4805b7cad59d557e1c47af535f1706b1, Avalanche (block 101517617) 0xc2f490d5ab8e918686ad4bb795b1bd7f60dbf7b1 -> 0xc2a8ca84bc363605c36757f9409b214b6ee710c9, Base (block 62852192) 0x1fecf3d9d4fee7f2c02917a66028a48c6706c179 -> 0xc2f490d5ab8e918686ad4bb795b1bd7f60dbf7b1, Ethereum (block 26504747) 0xf89aa0ae2b6c47c0eaefb49abcc266a44a1b61cb -> 0xc2a8ca84bc363605c36757f9409b214b6ee710c9, Optimism (block 160080926) 0xc2f490d5ab8e918686ad4bb795b1bd7f60dbf7b1 -> 0xc2a8ca84bc363605c36757f9409b214b6ee710c9, and Plume (block 108481461) 0x507d898226e6a3e5eb8dbecae0b9e8fd51337656 -> 0x6e46c98c4805b7cad59d557e1c47af535f1706b1. Stellar WTGX identity is resolved via WisdomTree's stellar.toml (code WTGX, anchor_asset WTGXX, display_decimals 7) and pinned at Horizon ledger 65695144 (2026-11-27T06:43:12Z): issuer GDMBNMFJ3TRFLASJ6UGETFME3PJPNKPU24C7KFDBEBPQFG2CI6UC3JG6 (master weight 255) and operational signer GDXISS7IIZCTN4VQSPGHSQABLR5RRCQYAMAODEE2QBOCRHBIAV5KIS2N (weight 50, med_threshold 50) hold direct uncapped issuance over 1,822,872.1213428 authorized WTGX. Solana Token-2022 mint Em46fxxwgY2RRoUbBMSbEjJwY62x3ESMNdhnsGpEKewm (9 decimals, 566,482.692834566 WTGXX) is pinned at finalized slot 474453823 (2026-11-27T06:43:18Z) with EOA mintAuthority 2zuuNGN3G5dcZnYYzuB69hryW4S3e4XrFvuS9TcCvAJS. No economic cap or cross-chain conservation invariant was established, so posture remains concentrated-admin / unbounded with periodic off-chain reconciliation and prudential SEC oversight.",
+      "reviewer": "Pharos Listing Policy v2 PR-1B pinned 8-chain review",
+      "reviewedAt": "2026-11-27"
     }
   }
 }

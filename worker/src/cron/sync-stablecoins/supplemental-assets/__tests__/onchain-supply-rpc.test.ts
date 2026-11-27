@@ -291,8 +291,8 @@ describe("XRPL issued-currency supply", () => {
                 claimable_balances_amount: "0.0000000", liquidity_pools_amount: "0.0000000", contracts_amount: "0.0000000",
               }],
             },
-          })
-          : Response.json({ history_latest_ledger_closed_at: xrplFixture.ledgerClosedAt });
+          }, { headers: { "Latest-Ledger": "123" } })
+          : Response.json({ sequence: 123, closed_at: xrplFixture.ledgerClosedAt });
       }
       const request = JSON.parse(String(init?.body));
       if (request.method === "gateway_balances") return Response.json(xrplAvailable

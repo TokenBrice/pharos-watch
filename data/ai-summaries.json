@@ -97,11 +97,11 @@
   },
   "jltxx-jpmorgan": {
     "title": "Government fund, issuer-controlled tokens",
-    "text": "JLTXX represents Token Class shares in JPMorgan's government money-market fund, which targets a $1 net asset value and distributes income in additional same-class shares. Treasury securities, overnight collateralized repos and cash support the fund; published class assets do not certify circulating token supply or executable redemption capacity. The legal Investor Register determines ownership. Ordinary redemption pays USD cash, with optional third-party stablecoin conversion. For redemptions worth $250,000 or more, the Fund may instead deliver part or all in readily marketable securities valued at NAV. Converting those securities to cash can expose investors to market risk and may entail taxable gains, brokerage costs or other charges. Ordinary payment within seven days remains subject to suspension exceptions. Pinned Ethereum reads bind minting and upgrades to single-owner accounts without an on-chain collateral ceiling or execution delay; administrators can restrict transfers and redemptions. Pharos keeps the token quarantined while the native-share perimeter, including Solana, and runtime price and supply admission remain unresolved. The prospectus and statement of additional information name an annual auditor, but no current audit report for the exact fund was retrieved, so the class-asset figures remain issuer-published and do not reconcile token liabilities.",
-    "updatedAt": "2026-10-19",
+    "text": "JLTXX represents Token Class shares in JPMorgan's SEC-registered government {{term:money-market-fund}}money market fund{{/term}}, which targets a $1 net asset value and distributes income in additional same-class shares. Treasury securities, overnight collateralized repos, and cash support the fund; published class assets do not certify circulating token supply or executable redemption capacity. Tracked by Pharos as a tokenized fund outside core stablecoin totals and Safety Score grades, JLTXX restricts transfers to allowlisted wallets across Ethereum and Solana under the legal Investor Register. Ordinary {{term:redemption}}redemption{{/term}} pays USD cash, with optional third-party stablecoin conversion; redemptions of $250,000 or more may deliver marketable securities at NAV, exposing holders to market risk or transaction costs, and payment within seven days stays subject to suspension exceptions. Pinned Ethereum and Solana reads bind minting, transfer hooks, permanent delegation, and upgrades to issuer-controlled accounts without an on-chain collateral ceiling or execution delay.",
+    "updatedAt": "2026-11-27",
     "authoredBy": "ai",
-    "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19"
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
   },
   "armusdcs-wintermute": {
     "title": "Wintermute USDC lending with private-credit collateral",
@@ -301,12 +301,12 @@
     "factsAsOf": "2026-10-15"
   },
   "jpydf-deltaforesight": {
-    "title": "Immutable yen CDP on a USDC-heavy, multisig-run vault layer",
-    "text": "JPYdf is a yen-targeted token borrowed against wstETH or USDC through JPY DeFi, a Liquity v2 fork that DeltaForesight helped build and launched on Ethereum on October 15, 2026. Pharos still lists it as upcoming because neither DefiLlama nor CoinGecko prices it. The token and borrowing core cannot be upgraded, and no function freezes a holder's balance. Control sits one layer down: the dToken vaults holding collateral are upgradeable and pausable, and governance can recognize losses and swap oracle sources. All three governance, operator and guardian Safes are 2-of-3 with the same signers. USDC made up about 71% of collateral value on launch day, so most backing inherits Circle's freeze power. Redemption pays out in dTokens worth ¥1 before fees, with no claim to yen and no entity committed to buy JPYdf back at face value.",
-    "updatedAt": "2026-10-15",
+    "title": "Immutable yen CDP over a USDC-heavy, strategy-deployed vault layer",
+    "text": "JPYdf is a yen-targeted Liquity v2 fork on Ethereum, borrowed against wstETH or USDC with no fiat yen claim or issuer buyback obligation. The token and borrowing core are immutable with renounced ownership, and no function freezes a holder's balance. Governance control sits around the core: a two-of-three Safe behind a twelve-hour timelock can upgrade the dToken vaults and strategies, replace oracle sources, and authorize an uncapped bridge minter after an additional forty-eight-hour token delay, while a two-of-five operator Safe manages external lending. Most backing sits in the dUSDC branch, where nearly all USDC principal is deployed into Aave V3 and a Gauntlet Morpho vault, inheriting Circle freeze risk and a three-day withdrawal waiting period when the vault buffer runs dry. Permissionless {{term:redemption}}redemptions{{/term}} burn JPYdf for branch dTokens valued at one yen before dynamic Liquity fees, priced through a shared Chainlink JPY/USD feed.",
+    "updatedAt": "2026-11-27",
     "authoredBy": "ai",
-    "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-15"
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
   },
   "kpkusdcprime-kpk": {
     "title": "Blue-chip collateral, variable lending shares",
@@ -1896,12 +1896,12 @@
     ]
   },
   "tbill-openeden": {
-    "title": "Whitelisted T-bill fund, supply unproven",
-    "text": "OpenEden's TBILL is a tokenized BVI professional fund holding short-dated {{term:treasury}}Treasury{{/term}} bills managed by BNY Investment Management under BNY custody. Subscriptions and transfers are whitelisted, and the token drifts above its original dollar as NAV accrues to holders rather than resetting to par. The paperwork is thinner than the institutional nameplates suggest. Daily NAV figures come from fund administrator Protege Fund Services, the annual auditor has published no report, and the only named controls work is a one-off Ernst & Young procedures review rather than a recurring {{term:attestation}}attestation{{/term}}. Pharos's July 2026 reserve review pinned the balance sheet at almost entirely direct Treasury bills, with small money-market fund and USDC cash balances. The listing has nevertheless been quarantined since mid-July 2026. Price resolves, but CoinGecko reports no market cap, DefiLlama carries no list row, and no permitted source yet covers supply across the Ethereum, Arbitrum, Solana and XRPL deployments plus the issuer-listed BNB one. TBILL therefore carries no report card. Until that denominator is proven, Pharos can price the fund share but cannot rate the token.",
-    "updatedAt": "2026-10-19",
+    "title": "OpenEden's BNY-custodied Treasury fund",
+    "text": "OpenEden's TBILL is the share token of a BVI-registered professional fund holding short-dated U.S. {{term:treasury}}Treasury{{/term}} bills managed by BNY Investment Management under BNY custody, with yield accruing into a rising NAV rather than rebasing to par. Subscriptions, transfers, and FIFO USDC {{term:redemption}}redemptions{{/term}} (5 bps transaction fee, next U.S. business day typical settlement) are restricted to KYC-whitelisted accredited and professional investors. Daily and monthly NAV reports come from fund administrator Protege Fund Services, while Pharos tracks TBILL as a tokenized fund outside core stablecoin totals and Safety Score grades, reading Chainlink's NAV feed and aggregating native on-chain supply across BNB Chain, Ethereum, XRPL (excluding the issuer operational hotwallet), Arbitrum, and Solana. EVM vault upgrades sit behind 24-hour timelocks proposed by 4-of-5 Safes, but uncapped maintainer minting, a single-key Solana mint authority, a 2-of-3 XRPL signer list, and whitelisted-only exit remain the structural constraints.",
+    "updatedAt": "2026-11-27",
     "authoredBy": "ai",
-    "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19"
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
   },
   "a7a5-old-vector": {
     "title": "Ruble token under sanctions",
@@ -2601,17 +2601,17 @@
   },
   "usdgo-osl": {
     "title": "OSL's bank-issued enterprise dollar",
-    "text": "OSL's USDGO is an enterprise dollar issued by Anchorage Digital Bank under an OCC charter, with monthly Deloitte examinations reconciling reserves against the full token liability. The reserve is fund shares rather than bills held outright. At the August 2026 examination, JPMorgan's JLTXX carried about half, BlackRock's tokenized BUIDL fund more than a third, Goldman Sachs' STBXX most of the rest, and bank cash about one percent, all in segregated fiduciary trust accounts. The BUIDL slice is a tracked dependency in its own right, held in Anchorage's self-custody on Solana. The peg record shows no depeg episodes so far, over a short tracking window that began with the February 2026 launch. The {{grade}} overall grade is held down by exit, the weakest of the three pillars. {{term:redemption}}Redemption{{/term}} runs only through Anchorage for onboarded clients, net of fees, and Pharos recognizes no DEX venue that can absorb a same-notional sale, so this is an issuer-API exit rather than an on-chain arbitrage market. Ethereum and Morph deployments now sit beside Solana, which still carries most of the float, but issuer-controlled keys can raise mint limits and upgrade contracts on each chain. The durable constraint is access: holders who are not Anchorage clients depend on a secondary market Pharos cannot yet measure.",
-    "updatedAt": "2026-10-19",
+    "text": "OSL's USDGO is an enterprise dollar issued by Anchorage Digital Bank under an OCC charter, with monthly Deloitte examinations reconciling reserves against the full token liability. The reserve is held in segregated fiduciary trust accounts across fund shares and bank cash rather than direct bills. Both JPMorgan's JLTXX and BlackRock's tokenized BUIDL fund are tracked collateral dependencies in their own right, alongside Goldman Sachs STBXX and FDIC-insured bank deposits. The {{grade}} overall grade is held down by exit, the weakest of the three pillars. {{term:redemption}}Redemption{{/term}} runs only through Anchorage for onboarded clients, net of fees, and Pharos recognizes no DEX venue that can absorb a same-notional sale, so this is an issuer-API exit rather than an on-chain arbitrage market. Issuer-controlled keys retain mint-limit and contract-upgrade authority across deployments. The durable constraint is access: holders outside Anchorage's onboarded client set depend on secondary markets Pharos cannot yet measure.",
+    "updatedAt": "2026-11-27",
     "authoredBy": "ai",
-    "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27",
     "claimTokens": [
       {
         "token": "grade",
         "placeholder": "{{grade}}",
         "source": "report-card.grade",
-        "factsAsOf": "2026-10-19"
+        "factsAsOf": "2026-11-27"
       }
     ]
   },
@@ -2777,11 +2777,11 @@
   },
   "cetes-etherfuse": {
     "title": "Mexican Treasury bills, accruing in pesos",
-    "text": "CETES is Etherfuse's tokenized claim on Mexico's short-term {{term:treasury}}Treasury bills{{/term}}: zero-coupon federal debt with maturities set at government auctions, held in segregated INDEVAL {{term:custody}}custody{{/term}} through participating brokerages. The token accretes in MXN rather than holding a fixed price, and subscription and redemption run through Etherfuse at current NAV behind KYC. Holders therefore carry three dependencies at once: the BBB- sovereign, the issuer and, for anyone measuring in dollars, the peso, whose moves never appear in the {{term:yield-bearing}}yield{{/term}} headline. The reserve side is well evidenced. BHR México publishes monthly reasonable-assurance {{term:attestation}}examinations{{/term}} that fully reconcile assets against liabilities. Circulation is the open question. The token runs on five chains from Solana to Stellar, and Pharos holds it in quarantine because the issuer's mint totals and positive CoinGecko data disagree on MXN versus USD denomination and on which supply counts as circulating. Live scoring stays withheld until identity-bound pricing and a double-count-safe multichain census agree, which leaves the backing easier to verify than the float.",
-    "updatedAt": "2026-10-19",
+    "text": "CETES is Etherfuse's tokenized claim on short-term Mexican federal {{term:treasury}}Treasury bills{{/term}}, held in segregated INDEVAL {{term:custody}}custody{{/term}} across BBVA Mexico, Casa de Bolsa BASE, and Actinver. Tracked by Pharos as a tokenized fund outside core stablecoin totals and Safety Score grades, the token accretes in MXN rather than holding a fixed peg, with subscription and {{term:redemption}}redemption{{/term}} running through Etherfuse at current NAV behind KYC. Holders therefore carry sovereign credit risk, issuer operational risk, and peso exchange-rate exposure that does not appear in local {{term:yield-bearing}}yield{{/term}} figures. BHR Mexico publishes periodic reasonable-assurance {{term:attestation}}examinations{{/term}} reconciling aggregate reserves against net token liabilities. Native supply spans Solana, Stellar, Base, Polygon, Monad, and Avalanche via burn-and-mint LayerZero OFTs on EVM networks and issuer-managed mint authorities on Solana and Stellar, leaving KYC-gated issuer redemption as the primary exit.",
+    "updatedAt": "2026-11-27",
     "authoredBy": "ai",
-    "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19"
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
   },
   "zarp-zarp": {
     "title": "Rand cash reserve with an uneven peg",
@@ -3043,11 +3043,11 @@
   },
   "usdpt-western-union": {
     "title": "Western Union's settlement dollar",
-    "text": "USDPT is Western Union's on-chain dollar for agent and treasury settlement. Anchorage Digital Bank issues it on Solana, and Deloitte examines the reserve every month against the redeemable-token liability. The latest examination puts about four-fifths of the reserve in money-market funds identified only by CUSIP and the rest in demand deposits, most of them above the FDIC insurance limit, with a small surplus over tokens outstanding. The launch use case was B2B agent settlement, starting in the Philippines and Bolivia. The consumer leg followed on August 4, 2026, when Western Union and Rain launched Stablecard in 37 markets: a USDPT wallet paired with a USDPT-backed Visa secured credit card that receives Western Union transfers and spends wherever Visa is accepted. On-chain circulation is still small next to that network. On the card, reserve quality scores near the top of the class while exit is the weakest of the three pillars by a wide margin, because the only measured route is an issuer {{term:redemption}}redemption{{/term}} gated to eligible parties and slow to settle. The Solana mint also carries a freeze authority and a permanent delegate that can move or burn any holder's balance. Stablecard widens where USDPT can be spent, but holders outside the eligible set still have no exit route that Pharos measures.",
-    "updatedAt": "2026-10-19",
+    "text": "USDPT is Western Union's on-chain dollar for agent and treasury settlement. Anchorage Digital Bank issues it on Solana, and Deloitte examines the reserve every month against the redeemable-token liability. Examinations put nearly nine-tenths of the reserve in money-market funds (including tracked JPMorgan JLTXX and a larger fund disclosed by CUSIP only) and the rest in bank demand deposits, most above the FDIC insurance limit, with a small surplus over tokens outstanding. The launch use case was B2B agent settlement, followed by the consumer Stablecard program with Rain pairing a USDPT wallet with a Visa secured credit card. On the card, reserve quality scores near the top of the class while exit lags by a wide margin because the measured route is an issuer {{term:redemption}}redemption{{/term}} gated to eligible parties. The Solana mint carries a freeze authority and permanent delegate capable of moving or burning balances. Stablecard widens spendability, but non-eligible holders still lack a Pharos-measured cash exit.",
+    "updatedAt": "2026-11-27",
     "authoredBy": "ai",
-    "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19"
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
   },
   "roughrider-bnd": {
     "title": "A state bank's permissioned settlement coin",
@@ -5153,12 +5153,12 @@
     "factsAsOf": "2026-11-26"
   },
   "wtgxx-wisdomtree": {
-    "title": "WisdomTree's 24/7 dealer-traded Treasury fund",
-    "text": "WTGXX is the digital share class of WisdomTree's Treasury Money Market Digital Fund, renamed from 'Government' in late 2025, a Rule 2a-7 '40 Act-registered {{term:money-market-fund}}money market fund{{/term}} that received SEC approval in early 2026 to support 24/7 dealer trading at a fixed $1.00 NAV. Subscriptions and {{term:redemption}}redemptions{{/term}} are gated to WisdomTree Connect users with USDC dealer settlement and USD-wire alternatives; holdings are short-duration U.S. government obligations: {{term:treasury}}Treasury bills{{/term}}, floating-rate notes, and repos, which are the {{term:rwa}}real-world asset{{/term}} backing. The open problem is visibility: since mid-July 2026 Pharos has held WTGXX in quarantine because none of its permitted runtime sources report a positive circulating supply or market cap, so the token sits ungraded while the fund side keeps publishing its daily NAV. The share token spans seven networks from Ethereum to Stellar, and the Stellar shares have no runtime reader at all. Chainlink's NAV feed still prices the reserves. Until a runtime source counts the on-chain shares, the fund's reported holdings cannot be matched to a tokenized float.",
-    "updatedAt": "2026-10-19",
+    "title": "WisdomTree's dealer-traded Treasury fund",
+    "text": "WTGXX is the digital share class of WisdomTree's SEC-registered Treasury Money Market Digital Fund, a Rule 2a-7 '40 Act government {{term:money-market-fund}}money market fund{{/term}} maintaining a stable $1.00 NAV with SEC-approved dealer trading. Subscriptions and {{term:redemption}}redemptions{{/term}} run through WisdomTree Connect and WisdomTree Prime via USDC dealer settlement or USD wire, backed by short-duration U.S. {{term:treasury}}Treasury bills{{/term}}, floating-rate notes, and tri-party repos. Tracked by Pharos as a tokenized fund outside core stablecoin totals and Safety Score grades, WTGXX aggregates native supply across eight deployments (Ethereum, Arbitrum, Stellar, Avalanche, Solana, Base, Plume, and Optimism) and reads Chainlink's WTGXX NAV feed for live reserve freshness. Primary access remains restricted to onboarded platform holders, and issuance stays uncapped under issuer-controlled EVM registrar and admin keys, Stellar issuer signers, and a Solana Token-2022 mint authority alongside SEC fund oversight.",
+    "updatedAt": "2026-11-27",
     "authoredBy": "ai",
-    "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19"
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
   },
   "vbill-vaneck": {
     "title": "VanEck's Securitize-administered Treasury share",
@@ -5954,17 +5954,17 @@
   },
   "mxne-real-mxn": {
     "title": "Brale and Etherfuse's MXN rail",
-    "text": "MXNe is a Mexican peso token issued by Brale in partnership with Etherfuse, deployed on Base, Solana, and Stellar with issuer-managed mint and {{term:redemption}}redemption{{/term}} through Brale onboarding. The backing is the Etherfuse CETES Stablebond, a token over short-duration Mexican federal Treasury bills held at regulated Mexican {{term:custody}}custodians{{/term}}, mostly BBVA Mexico, through INDEVAL. BHR Mexico publishes monthly reasonable-assurance {{term:attestation}}attestations{{/term}} reconciling CETES tokens in circulation to backing assets, but that examination covers Etherfuse's whole CETES program rather than an MXNe-specific ledger, so Pharos records the backing category without an MXNe balance claim. The {{grade}} overall grade reflects an exit pillar that is the weakest of the three, with redemption gated to onboarded customers. Control risk is concrete: on each chain a single issuer-controlled key holds all mint and admin rights, and the Base contract is an upgradeable proxy under that key. The durable constraint is that the reserve assurance belongs to Etherfuse while the token liability belongs to Brale.",
-    "updatedAt": "2026-10-19",
+    "text": "MXNe is a Mexican peso token issued by Brale in partnership with Etherfuse, deployed on Base, Solana, and Stellar with issuer-managed mint and {{term:redemption}}redemption{{/term}} through Brale onboarding. The backing is the tracked Etherfuse CETES Stablebond, a token over short-duration Mexican federal Treasury bills held at regulated Mexican {{term:custody}}custodians{{/term}}, mostly BBVA Mexico, through INDEVAL. BHR Mexico publishes periodic reasonable-assurance {{term:attestation}}attestations{{/term}} reconciling CETES tokens in circulation to backing assets, though that examination covers Etherfuse's whole CETES program rather than an MXNe-specific ledger, so Pharos links the CETES dependency without an MXNe-only balance claim. The {{grade}} overall grade reflects an exit pillar constrained by KYC-gated redemption for onboarded customers. Control risk is concrete: on each chain a single issuer-controlled key holds mint and admin rights, and the Base contract is an upgradeable proxy under that key. The durable constraint is that reserve assurance belongs to Etherfuse while the token liability belongs to Brale.",
+    "updatedAt": "2026-11-27",
     "authoredBy": "ai",
-    "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27",
     "claimTokens": [
       {
         "token": "grade",
         "placeholder": "{{grade}}",
         "source": "report-card.grade",
-        "factsAsOf": "2026-10-19"
+        "factsAsOf": "2026-11-27"
       }
     ]
   },

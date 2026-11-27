@@ -6,6 +6,8 @@
       "name": "WTGXX (WisdomTree Government Money Market)",
       "pct": 25.868155781925577,
       "risk": "low",
+      "coinId": "wtgxx-wisdomtree",
+      "depType": "collateral",
       "assetClass": "money-market-fund",
       "issuerOrObligor": "WisdomTree Government Money Market Fund",
       "riskFactors": [
@@ -810,16 +812,6 @@
     "knownUnknownExposure": "Unreviewed positive source categories: axlusdc, dai, pyusd, sdai, usdt. The remainder is kept at its denominator share. Older ticker-only FRAX snapshots cannot identify the legacy and frxUSD split.",
     "knownUnknownExposurePct": 0.3750475976590151,
     "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "WTGXX (WisdomTree Government Money Market)",
-        "pct": 25.868155781925577,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "WTGXX is a disclosed WisdomTree government money-market-fund exposure outside the active tracked stablecoin set.",
-        "candidateCoinIds": [
-          "wtgxx-wisdomtree"
-        ]
-      },
       {
         "disposition": "self-reserve",
         "ownLiability": true,

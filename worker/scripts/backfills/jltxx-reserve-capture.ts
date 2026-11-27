@@ -4,7 +4,7 @@ import { getReserveAdapter } from "../../src/cron/reserve-adapters/index";
 import { createReserveAdapterRunner } from "../../src/cron/reserve-adapter-runner";
 import { createAdapterLatencyCollector, syncReserveCoin } from "../../src/cron/sync-live-reserves-core";
 import { resolveLiveReserveSyncBudgetConfig } from "../../src/cron/sync-live-reserves-config";
-import { STAGED_BOOTSTRAP_COINS } from "../../src/cron/sync-live-reserves-shared";
+import { CONFIGURED_COINS } from "../../src/cron/sync-live-reserves-shared";
 import { getReserveCompositionRow, getReserveSyncState, didReserveSyncSuccessBecomeAuthoritative } from "../../src/lib/live-reserves/store";
 import { parseReserveCompositionRow } from "../../src/lib/live-reserves/store-row-decoding";
 import { decodeReserveNavPrice, reserveNavSupplyScopeReason } from "../../src/lib/reserve-nav-price";
@@ -12,12 +12,12 @@ import { fetchPinnedNativeShares } from "../../src/cron/sync-stablecoins/supplem
 import type { ChainRpcConfig } from "../../src/lib/chain-registry";
 import { throwIfAborted } from "../../src/lib/abort";
 
-/** Fixed allowlist: capture a staged row without touching active membership or scoring generations. */
+/** Fixed allowlist: operator-triggered JLTXX jpmorgan-nav + pinned native share capture under ordinary lease. */
 export async function bootstrapJltxxReserves(db: D1Database, chainRpcs: Map<string, ChainRpcConfig>, signal: AbortSignal) {
-  const tracked = STAGED_BOOTSTRAP_COINS.find((coin) => coin.id === "jltxx-jpmorgan");
+  const tracked = CONFIGURED_COINS.find((coin) => coin.id === "jltxx-jpmorgan" && coin.liveReservesConfig.adapter === "jpmorgan-nav");
   const config = LiveReservesConfigSchema.safeParse(tracked?.liveReservesConfig);
   if (!tracked || !config.success) {
-    throw new Error("JLTXX bootstrap requires the quarantined tracked jpmorgan-nav binding");
+    throw new Error("JLTXX capture requires the active tracked jpmorgan-nav binding");
   }
   const coin = { ...tracked, liveReservesConfig: config.data };
   const adapter = getReserveAdapter("jpmorgan-nav");

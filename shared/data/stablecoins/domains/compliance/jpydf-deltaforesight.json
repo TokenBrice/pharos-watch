@@ -1,0 +1,169 @@
+{
+  "id": "jpydf-deltaforesight",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "JPY DeFi: What is JPYdf (overcollateralized CDP with no yen claim or redemption right)",
+        "url": "https://jpydf.gitbook.io/jpy-defi/readme.md"
+      },
+      {
+        "label": "JPY DeFi Interface Terms of Use (version 2026-11-06; JPYdf Foundation DAO LLC app scope and restricted jurisdictions including Japan and the United States)",
+        "url": "https://jpydf.gitbook.io/jpy-defi/reference/interface-terms.md"
+      },
+      {
+        "label": "DeltaForesight mainnet launch announcement (October 15, 2026)",
+        "url": "https://deltaforesight.com/en/news/jpy-defi-mainnet-20261015/"
+      },
+      {
+        "label": "ESMA Q&A 2404: MiCA offering scope requires case-by-case assessment",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2404"
+      },
+      {
+        "label": "ESMA Q&A 2552: interpretation of crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "JPYdf is a decentralized overcollateralized CDP token minted by borrowers on immutable Liquity v2 smart contracts against wstETH and USDC. Primary documentation and interface terms explicitly disclaim any fiat currency status, yen-denominated monetary claim, yen redemption right, or issuer buyback obligation; protocol redemptions exchange JPYdf only for variable quantities of dToken crypto collateral, which falls outside the GENIUS Act section 2(22)(A)(ii) fixed monetary-value issuer redemption requirement. The web app operated by JPYdf Foundation DAO LLC also excludes all U.S. persons and territories.",
+      "references": [
+        {
+          "label": "Public Law 119-27, approved July 18, 2025; section 2 definitions of monetary value and payment stablecoin",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "JPY DeFi: What is JPYdf (no yen monetary claim or yen redemption right)",
+          "url": "https://jpydf.gitbook.io/jpy-defi/readme.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "JPY DeFi Interface Terms of Use (version 2026-11-06; U.S. and Japan restricted jurisdictions, no issuer redemption promise)",
+          "url": "https://jpydf.gitbook.io/jpy-defi/reference/interface-terms.md",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-11-06",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "JPY DeFi: Redemptions (dToken collateral payout, no fixed yen floor)",
+          "url": "https://jpydf.gitbook.io/jpy-defi/borrowing-and-trove-management/redemptions.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "Reviewed 2026-11-27. Token identity is anchored to Ethereum contract 0xb122f4a154f84708407213d6a715181180012f45 (JpydfToken). DeltaForesight is the protocol developer and JPYdf Foundation DAO LLC operates only the web interface (app.jpydf.com, referencing Marshall Islands domestic sanctions in its November 6, 2026 Terms of Use while excluding Japan and the United States) and explicitly disclaims any issuer obligation to redeem JPYdf or make up shortfalls; therefore issuerEntity, issuerDomicile, and licensingRegulator are omitted rather than attributed to a legal issuer. Protocol collateral redemptions return dTokens (dUSDC or dwstETH) rather than fixed monetary value, so redemptionPolicyPresent is false under the tracker definition. No conventional issuer reserve-attestation series exists. Authorization, pathway, foreign exception, and enforcement findings are dated bounded public-evidence negatives as of 2026-11-27.",
+    "references": [
+      {
+        "label": "Public Law 119-27, approved July 18, 2025; section 2 definitions of monetary value and payment stablecoin",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "OCC GENIUS Act implementation page; no named JPYdf, DeltaForesight, or JPYdf Foundation approval, application, or foreign registration",
+        "url": "https://occ.treas.gov/topics/charters-and-licensing/genius-act/index-genius-act.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "OCC digital-assets licensing applications table; no JPYdf or DeltaForesight applicant listed",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "Federal Register exact-term search for JPYdf; zero documents",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22JPYdf%22&per_page=5",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "Federal Register exact-term search for DeltaForesight; zero documents",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22DeltaForesight%22&per_page=5",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "FinCEN enforcement actions index; no JPYdf or DeltaForesight entry",
+        "url": "https://www.fincen.gov/news/enforcement-actions",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "JPY DeFi: What is JPYdf",
+        "url": "https://jpydf.gitbook.io/jpy-defi/readme.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "JPY DeFi Interface Terms of Use (version 2026-11-06)",
+        "url": "https://jpydf.gitbook.io/jpy-defi/reference/interface-terms.md",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-11-06",
+        "accessedAt": "2026-11-27"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act implementation page checked 2026-11-27; program information only with no JPYdf, DeltaForesight, or JPYdf Foundation approval, application, or foreign registration.",
+        "OCC digital-assets licensing applications table checked 2026-11-27; no JPYdf or DeltaForesight applicant listed (table is not an exhaustive GENIUS issuer register).",
+        "Federal Register API exact-term searches on 2026-11-27 for \"JPYdf\", \"DeltaForesight\", and \"JPYdf Foundation\"; each returned zero documents.",
+        "FinCEN enforcement actions index checked 2026-11-27; no JPYdf, DeltaForesight, or JPYdf Foundation entry.",
+        "JPY DeFi primary documentation and November 6, 2026 Interface Terms of Use checked 2026-11-27; U.S. persons and territories are excluded from the app, yen redemption rights are disclaimed, and no GENIUS application, state qualification, or foreign registration is disclosed."
+      ],
+      "summary": "As of 2026-11-27, the checked OCC materials, Federal Register exact-term searches, FinCEN enforcement index, and primary JPY DeFi documentation disclosed no public GENIUS Act permitted payment stablecoin issuer approval, state qualification, official application, registered foreign exception, or token-specific enforcement action naming JPYdf, DeltaForesight, or JPYdf Foundation DAO LLC. This is a dated bounded public-evidence finding and does not rule out confidential filings.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-11-27",
+      "references": [
+        {
+          "label": "OCC GENIUS Act implementation page",
+          "url": "https://occ.treas.gov/topics/charters-and-licensing/genius-act/index-genius-act.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "OCC digital-assets licensing applications table",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "Federal Register exact-term search for JPYdf; zero documents",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22JPYdf%22&per_page=5",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "Federal Register exact-term search for DeltaForesight; zero documents",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22DeltaForesight%22&per_page=5",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "FinCEN enforcement actions index",
+          "url": "https://www.fincen.gov/news/enforcement-actions",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-11-27"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-11-27"
+  }
+}

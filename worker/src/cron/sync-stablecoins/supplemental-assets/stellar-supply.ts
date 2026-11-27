@@ -5,7 +5,7 @@ import { fetchJsonPostWithRetry, fetchJsonWithRetry } from "../../../lib/json-re
 
 const STELLAR_RPC = "https://soroban-rpc.mainnet.stellar.gateway.fm";
 const BOUNDED_READ = { maxRetries: 0, maxResponseBytes: 64 * 1024 };
-const HorizonSchema = z.object({ history_latest_ledger_closed_at: z.string().datetime() });
+const HorizonLedgerSchema = z.object({ sequence: z.number().int().positive(), closed_at: z.string().datetime() });
 const LedgerSchema = z.object({ jsonrpc: z.literal("2.0"), id: z.literal(1), result: z.object({
   status: z.literal("healthy"), latestLedger: z.number().int().positive(), latestLedgerCloseTime: z.string().regex(/^[1-9]\d{0,15}$/),
 }), error: z.never().optional() });
@@ -80,13 +80,22 @@ export async function observeStellarSupply(address: string, decimals: number, si
     const [, code, issuer] = classic;
     strKeyBytes(issuer, 48);
     if (decimals !== 7) throw new Error("stellar-classic-decimals-mismatch");
-    const ledger = HorizonSchema.parse(await fetchJsonWithRetry<unknown>(STELLAR_HORIZON_API, signal, 10_000, undefined, BOUNDED_READ));
-    const observedAt = Math.floor(Date.parse(ledger.history_latest_ledger_closed_at) / 1000);
-    requireFreshLedger(observedAt);
     const query = new URLSearchParams({ asset_code: code, asset_issuer: issuer, limit: "2" });
-    const response = await fetchJsonWithRetry<unknown>(`${STELLAR_HORIZON_API}/assets?${query}`, signal, 10_000, undefined, BOUNDED_READ);
+    let latestLedgerHeader: string | null = null;
+    const response = await fetchJsonWithRetry<unknown>(`${STELLAR_HORIZON_API}/assets?${query}`, signal, 10_000, undefined, {
+      ...BOUNDED_READ,
+      onResponse: (res) => { latestLedgerHeader = res.headers.get("latest-ledger"); },
+    });
     const [asset] = AssetResponseSchema.parse(response)._embedded.records;
     if (asset.asset_code !== code || asset.asset_issuer !== issuer) throw new Error("stellar-asset-identity-mismatch");
+    if (!latestLedgerHeader || !/^[1-9]\d{0,15}$/.test(latestLedgerHeader)) throw new Error("stellar-missing-latest-ledger");
+    const ledgerSeq = Number(latestLedgerHeader);
+    const ledger = HorizonLedgerSchema.parse(await fetchJsonWithRetry<unknown>(
+      `${STELLAR_HORIZON_API}/ledgers/${latestLedgerHeader}`, signal, 10_000, undefined, BOUNDED_READ,
+    ));
+    if (ledger.sequence !== ledgerSeq) throw new Error("stellar-ledger-sequence-mismatch");
+    const observedAt = Math.floor(Date.parse(ledger.closed_at) / 1000);
+    requireFreshLedger(observedAt);
     // Disjoint Horizon custody buckets; do not add the deprecated amount field.
     const rawSupply = [...Object.values(asset.balances), asset.claimable_balances_amount, asset.liquidity_pools_amount, asset.contracts_amount]
       .reduce((sum, amount) => sum + BigInt(amount.replace(".", "")), 0n);

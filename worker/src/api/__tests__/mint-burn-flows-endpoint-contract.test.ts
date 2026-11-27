@@ -4,7 +4,7 @@ import { registerStablecoinParameterContract } from "../../test-helpers/__shared
 import { mintBurnScenario } from "../../test-helpers/__shared/mint-burn";
 import { handleMintBurnFlows } from "../mint-burn-flows";
 import { MintBurnFlowsResponseSchema, MintBurnPerCoinResponseSchema } from "@shared/types/mint-burn";
-import { flowResponse, makeFlowHourlyRow } from "./mint-burn-flows.test-support";
+import { flowResponse, makeFlowHourlyRow, withoutActiveMintBurn } from "./mint-burn-flows.test-support";
 import { aggregateFlowCacheKey, perCoinFlowCacheKey } from "../../lib/mint-burn-flow-cache-keys";
 import { MINT_BURN_RECEIPT_CLASSIFICATION_VERSION } from "../../lib/mint-burn-published-gauge";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
@@ -51,7 +51,7 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(body).toHaveProperty("hourly");
     expect(Array.isArray(body.coins)).toBe(true);
     expect(body).not.toHaveProperty("stablecoinId");
-    expect(parsed.data?.publication).toMatchObject({ legsScope: "non-admitted", admittedCount: 119, pendingAdmissionCount: 4 });
+    expect(parsed.data?.publication).toMatchObject({ legsScope: "non-admitted", admittedCount: 120, pendingAdmissionCount: 4 });
     expect(parsed.data?.publication?.legs).toContainEqual(expect.objectContaining({
       stablecoinId: "meusd-mezo", chainId: "ethereum", status: "disabled", reason: "operator-disabled",
     }));
@@ -79,7 +79,7 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(body).not.toHaveProperty("gauge");
   });
 
-  it.each(["tbill-openeden"])("retains quarantined %s history after the cron policy write", async (id) => {
+  it.each(["tbill-openeden"])("retains quarantined %s history after the cron policy write", (id) => withoutActiveMintBurn(id, async () => {
     const { db, sqlite } = fixtures.open();
     const config = getMintBurnConfigsForStablecoin(id)[0];
     const hour = Math.floor(nowSec / 3600) * 3600 - 3600;
@@ -92,7 +92,6 @@ describe("handleMintBurnFlows contract tests", () => {
       VALUES ('historical', ?, ?, 'ethereum', 'mint', 1000000, 1000000, ?,
         'standard', '0xtest', 1, 'https://example.com')`).run(id, config.symbol, hour);
     await syncMintBurnPublicationPolicy(db, [], nowSec, ACTIVE_MINT_BURN_CONFIGS.map(mintBurnConfigKey));
-    // The inactive key keeps a latent pause for its re-admission; retained detail still reads.
     expect(JSON.parse(String((sqlite.prepare("SELECT paused_keys FROM mint_burn_publication_policy WHERE id = 1")
       .get() as { paused_keys: string }).paused_keys))).toContain(mintBurnConfigKey(config));
     const response = await flowResponse(db, `?stablecoin=${id}`);
@@ -104,9 +103,9 @@ describe("handleMintBurnFlows contract tests", () => {
     const events = await readJsonResponse(await handleMintBurnEvents(db,
       new URL(`https://x/api/mint-burn-events?stablecoin=${id}`)), 200);
     expect(events).toMatchObject({ total: 1, events: [expect.objectContaining({ id: "historical" })] });
-  });
+  }));
 
-  it.each(["tbill-openeden"])("keeps disabled %s detail available without exposing stored hourly values", async (id) => {
+  it.each(["tbill-openeden"])("keeps disabled %s detail available without exposing stored hourly values", (id) => withoutActiveMintBurn(id, async () => {
     const { sqlite, db } = fixtures.open();
     const configs = getMintBurnConfigsForStablecoin(id);
     sqlite.prepare(`INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
@@ -122,7 +121,7 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(body.hourly).toHaveLength(24);
     expect(body.hourly.every((hour) => hour.netFlowUsd === null && !hour.scanCoverage?.complete)).toBe(true);
     expect(body.publication?.legs.every((leg) => leg.status === "disabled")).toBe(true);
-  });
+  }));
 
   it("serves the last valid per-coin cache when the initial admission context read fails", async () => {
     const url = new URL("https://x/api/mint-burn-flows?stablecoin=usdt-tether");
@@ -131,15 +130,11 @@ describe("handleMintBurnFlows contract tests", () => {
       flowCache: { key: perCoinFlowCacheKey("usdt-tether", 24), value, updatedAt: nowSec },
       overrides: [{ match: "pharos:mint-burn-scan-coverage:read", rows: [], throwError: new Error("D1 overloaded") }],
     });
-    const response = await handleMintBurnFlows(fallbackDb, url);
-    const body = MintBurnPerCoinResponseSchema.parse(await readJsonResponse(response, 200));
-    expect(body.stablecoinId).toBe("usdt-tether");
+    expect(MintBurnPerCoinResponseSchema.parse(await readJsonResponse(await handleMintBurnFlows(fallbackDb, url), 200)).stablecoinId).toBe("usdt-tether");
   });
 
   it("retains the producer's declared unavailable reason through the authoritative shared DTO", async () => {
-    const unavailableDb = mintBurnScenario({ rows: { scanCoverage: [] } });
-    const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(
-      await flowResponse(unavailableDb), 200));
+    const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(await flowResponse(mintBurnScenario({ rows: { scanCoverage: [] } })), 200));
     expect(body.coins.length).toBeGreaterThan(0);
     for (const coin of body.coins) {
       expect(coin.coverage?.unavailableReason).toBe("scan-coverage-incomplete");
@@ -151,21 +146,12 @@ describe("handleMintBurnFlows contract tests", () => {
     }
   });
 
-  registerStablecoinParameterContract({
-    name: "mint/burn flows",
-    path: "/api/mint-burn-flows",
-    invoke: handleMintBurnFlows,
-    cases: [{ kind: "unknown", stablecoin: "99999" }],
-  });
+  registerStablecoinParameterContract({ name: "mint/burn flows", path: "/api/mint-burn-flows", invoke: handleMintBurnFlows, cases: [{ kind: "unknown", stablecoin: "99999" }] });
 
   it("returns 404 for a valid stablecoin that is not tracked for mint/burn flows", async () => {
-    const url = new URL("https://x/api/mint-burn-flows?stablecoin=susdai-usd-ai");
-    const res = await handleMintBurnFlows(db, url);
-
+    const res = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows?stablecoin=susdai-usd-ai"));
     expect(res.status).toBe(404);
-    await expect(res.json()).resolves.toEqual({
-      error: 'Stablecoin "susdai-usd-ai" is not tracked for mint/burn flows',
-    });
+    await expect(res.json()).resolves.toEqual({ error: 'Stablecoin "susdai-usd-ai" is not tracked for mint/burn flows' });
   });
 
   it("rejects out-of-range hours instead of clamping them", async () => {
@@ -176,11 +162,8 @@ describe("handleMintBurnFlows contract tests", () => {
 
   it("returns 503 when stablecoins cache is unavailable and no flow fallback cache exists", async () => {
     const res = await flowResponse(mintBurnScenario({ stablecoinsCache: null }));
-
     expect(res.status).toBe(503);
-    await expect(res.json()).resolves.toEqual({
-      error: "Stablecoins data not yet available",
-    });
+    await expect(res.json()).resolves.toEqual({ error: "Stablecoins data not yet available" });
   });
 
   it("publishes tracked-chain windowStartSupplyUsd from chainCirculating in aggregate responses", async () => {
@@ -188,47 +171,21 @@ describe("handleMintBurnFlows contract tests", () => {
       nowSec,
       rows: { hourly: [makeFlowHourlyRow(nowSec)] },
       stablecoinsCache: JSON.stringify({
-        peggedAssets: [
-          {
-            id: "usds-sky",
-            symbol: "USDS",
-            circulating: { peggedUSD: 3_225_687_137 },
-            chainCirculating: {
-              Ethereum: {
-                current: 3_217_038_523,
-                circulatingPrevDay: 3_098_830_292,
-                circulatingPrevWeek: 5_347_528_879,
-                circulatingPrevMonth: 6_729_591_624,
-              },
-              Base: {
-                current: 4_023_973,
-                circulatingPrevDay: 4_023_973,
-                circulatingPrevWeek: 3_923_965,
-                circulatingPrevMonth: 3_396_663,
-              },
-            },
+        peggedAssets: [{
+          id: "usds-sky", symbol: "USDS", circulating: { peggedUSD: 3_225_687_137 },
+          chainCirculating: {
+            Ethereum: { current: 3_217_038_523, circulatingPrevDay: 3_098_830_292, circulatingPrevWeek: 5_347_528_879, circulatingPrevMonth: 6_729_591_624 },
+            Base: { current: 4_023_973, circulatingPrevDay: 4_023_973, circulatingPrevWeek: 3_923_965, circulatingPrevMonth: 3_396_663 },
           },
-        ],
+        }],
       }),
     });
-    const res = await handleMintBurnFlows(scenarioDb, new URL("https://x/api/mint-burn-flows"));
-    const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
+    const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(await handleMintBurnFlows(scenarioDb, new URL("https://x/api/mint-burn-flows")), 200));
     const usds = body.coins.find((coin) => coin.stablecoinId === "usds-sky");
     expect(usds?.gaugeWeightUsd).toBe(3_217_038_523);
-    expect(usds?.windowStartSupplyUsd).toEqual({
-      window24h: 3_098_830_292,
-      window7d: 5_347_528_879,
-      window30d: 6_729_591_624,
-      window90d: null,
-    });
-    // Coins absent from stablecoins cache publish explicit nulls rather than omitting keys.
+    expect(usds?.windowStartSupplyUsd).toEqual({ window24h: 3_098_830_292, window7d: 5_347_528_879, window30d: 6_729_591_624, window90d: null });
     const usdc = body.coins.find((coin) => coin.stablecoinId === "usdc-circle");
-    expect(usdc?.windowStartSupplyUsd).toEqual({
-      window24h: null,
-      window7d: null,
-      window30d: null,
-      window90d: null,
-    });
+    expect(usdc?.windowStartSupplyUsd).toEqual({ window24h: null, window7d: null, window30d: null, window90d: null });
   });
 });
 
@@ -266,15 +223,9 @@ describe("aggregate flight-to-quality cohorts", () => {
     for (const [config, historyDays] of [[ftqSafeConfig, 90], [ftqRiskyConfig, 90], [ftqUnadmittedConfig, 31]] as const) {
       const toBlock = config.startBlock + 3_000_000;
       await upsertMintBurnSyncState(db, mintBurnConfigKey(config), toBlock, "monotonic-max", {
-        configKey: mintBurnConfigKey(config),
-        configFingerprint: mintBurnScanFingerprint(config),
-        chainId: config.chain.chainId,
-        fromBlock: config.startBlock,
-        toBlock,
-        fromTimestamp: end - historyDays * DAY,
-        toTimestamp: end,
-        finalizedBlock: toBlock,
-        acceptedAt: end,
+        configKey: mintBurnConfigKey(config), configFingerprint: mintBurnScanFingerprint(config),
+        chainId: config.chain.chainId, fromBlock: config.startBlock, toBlock,
+        fromTimestamp: end - historyDays * DAY, toTimestamp: end, finalizedBlock: toBlock, acceptedAt: end,
       });
     }
     const hourly = sqlite.prepare(`INSERT INTO mint_burn_hourly

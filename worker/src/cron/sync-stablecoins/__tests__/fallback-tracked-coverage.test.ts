@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { FROZEN_SNAPSHOTS } from "@shared/lib/stablecoins/frozen-snapshots";
-import { getOnchainSupplyHoldReason, prefersOnChainSupplyMcap } from "@shared/lib/onchain-supply-probe";
+import { getOnchainSupplyHoldReason, isPinnedNativeSharesWorkflow, prefersOnChainSupplyMcap } from "@shared/lib/onchain-supply-probe";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { getCirculatingRawOrNull, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC } from "@shared/lib/supply";
 import { StablecoinListResponseSchema, type StablecoinData } from "@shared/types/supply";
@@ -30,10 +30,10 @@ const MAIN_CLOCK = MAIN_SEC - 60;
 const fixtures = createLatestSchemaFixtureTracker();
 
 /** The outage feed covers commodity and CoinGecko-detail coins only, like `fetchCoinGeckoMarketData`. */
-const COINGECKO_FEED = ACTIVE_STABLECOINS.filter((meta) => meta.geckoId && meta.id !== "hbd-hive" && meta.id !== "xaut-tether"
+const COINGECKO_FEED = ACTIVE_STABLECOINS.filter((meta) => meta.geckoId && meta.id !== "hbd-hive" && meta.id !== "xaut-tether" && meta.id !== "jltxx-jpmorgan"
   && (meta.detailProvider === "coingecko" || meta.flags.pegCurrency === "GOLD" || meta.flags.pegCurrency === "SILVER"));
 const OMITTED = ACTIVE_STABLECOINS.filter((meta) => !COINGECKO_FEED.includes(meta));
-const isPreferredOrHeld = (id: string) => prefersOnChainSupplyMcap({ id }) || getOnchainSupplyHoldReason(id) != null;
+const isPreferredOrHeld = (id: string) => prefersOnChainSupplyMcap({ id }) || isPinnedNativeSharesWorkflow({ id }) || getOnchainSupplyHoldReason(id) != null;
 /** An ordinary coin whose previous supply observation is past the restore ceiling: nothing can vouch for it. */
 const EXPIRED_ID = OMITTED.find((meta) => !isPreferredOrHeld(meta.id))!.id;
 const RESTORABLE = OMITTED.filter((meta) => meta.id !== EXPIRED_ID && !isPreferredOrHeld(meta.id));

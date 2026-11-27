@@ -3,14 +3,256 @@
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
     "sources": [
-      { "label": "JPYdf Ethereum token verified source", "url": "https://etherscan.io/address/0xb122f4a154f84708407213d6a715181180012f45#code" },
-      { "label": "JPY DeFi: What is JPYdf (scope of permissions)", "url": "https://jpydf.gitbook.io/jpy-defi" },
-      { "label": "JPY DeFi: Collateral Assets", "url": "https://jpydf.gitbook.io/jpy-defi/collateral-and-pricing/collateral-assets.md" },
-      { "label": "JPY DeFi: dToken", "url": "https://jpydf.gitbook.io/jpy-defi/collateral-and-pricing/dtoken.md" },
-      { "label": "DeltaForesight: JPY DeFi mainnet launch", "url": "https://deltaforesight.com/en/news/jpy-defi-mainnet-20261015/" }
+      {
+        "label": "JPYdf Ethereum token verified source",
+        "url": "https://etherscan.io/address/0xb122f4a154f84708407213d6a715181180012f45#code"
+      },
+      {
+        "label": "JPY DeFi: What is JPYdf (scope of permissions)",
+        "url": "https://jpydf.gitbook.io/jpy-defi"
+      },
+      {
+        "label": "JPY DeFi: Collateral Assets",
+        "url": "https://jpydf.gitbook.io/jpy-defi/collateral-and-pricing/collateral-assets.md"
+      },
+      {
+        "label": "JPY DeFi: dToken",
+        "url": "https://jpydf.gitbook.io/jpy-defi/collateral-and-pricing/dtoken.md"
+      },
+      {
+        "label": "Ethereum PublicNode RPC (finalized block 26504779)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
     ],
-    "evidence": "Verified source for the immutable Ethereum token 0xb122f4a154f84708407213d6a715181180012f45 restricts minting and burning to registered branch BorrowerOperations and ActivePool contracts and exposes no holder blacklist, freeze, seizure or global transfer pause; owner() returned the zero address and the EIP-1967 implementation slot was empty at block 26196851 (October 15 2026). The protocol documentation states the token and Liquity v2 core cannot freeze a particular user's JPYdf. The inherited verdict reflects backing rather than a direct holder control: at the same block the dUSDC branch held 586,394 USDC against 79.39 wstETH in the dwstETH branch, so freezable USDC made up about 71% of collateral value at the oracle's last good prices. The governance-upgradeable and pausable dToken vault layer can also halt collateral exits during an impairment.",
-    "reviewer": "Claude pre-launch update 2026-10-15",
-    "reviewedAt": "2026-10-15"
+    "evidence": "Verified source for the immutable Ethereum token 0xb122f4a154f84708407213d6a715181180012f45 (sole deployment, 100% of circulating supply) restricts standard minting and burning to registered branch BorrowerOperations and ActivePool contracts and exposes no holder blacklist, freeze, seizure, or global transfer pause; owner() was the zero address and EIP-1967 implementation/admin slots were empty at finalized block 26504779 (hash 0x4ac055a16485bc1e6b67a114d68cb669ff809ba2ebd7043c3e884c7bf7ea7fbd, 2026-11-27T06:33:59Z). The inherited verdict reflects backing rather than a direct holder control: at block 26504779, the dUSDC branch accounted for 81.38% of branch debt (71.08M of 87.35M JPYdf) and 77.9% of total collateral USD value ($601.76K of $772.70K across 601,835.83 dUSDC and 78.92 dwstETH), exceeding the 50% majority threshold with freezable Circle USDC. Additionally, the upgradeable and pausable dToken CollateralVault and strategy layer can halt collateral deposits, in-kind redemptions, and claims during an emergency or loss confirmation.",
+    "reviewer": "Pharos Listing Policy v2 PR-1B review",
+    "reviewedAt": "2026-11-27"
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "Both live JPYdf collateral branches convert USD collateral prices into yen via a shared Chainlink JPY/USD rate provider and multiply by the dToken backing ratio. The dUSDC branch relies on a single Chainlink USDC/USD feed plus JPY/USD, while dwstETH uses single Chainlink stETH/USD for borrowing/liquidation and max(stETH/USD, ETH/USD * stETH/ETH) for redemptions; a 2-of-3 governance Safe can replace PriceFeedProxy sources after a 12-hour timelock (including an emergency switch skipping the 1% deviation check) and resume paused branches without delay.",
+    "role": "collateral-pricing",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-11-27",
+      "reviewer": "Pharos Listing Policy v2 PR-1B oracle review",
+      "rationale": "JPYdf operates isolated dwstETH and dUSDC Liquity v2 collateral branches (plus six unfinalized zero-debt reserved branches) with distinct collateral USD feeds, MCR/CCR/SCR thresholds, Stability Pools, and dToken strategy backing-ratio exposure.",
+      "sources": [
+        {
+          "label": "JPY DeFi: How Prices Are Determined (Oracle)",
+          "url": "https://jpydf.gitbook.io/jpy-defi/collateral-and-pricing/oracle.md"
+        },
+        {
+          "label": "JPY DeFi: Collateral Assets",
+          "url": "https://jpydf.gitbook.io/jpy-defi/collateral-and-pricing/collateral-assets.md"
+        },
+        {
+          "label": "JPY DeFi: Contract Addresses",
+          "url": "https://jpydf.gitbook.io/jpy-defi/technical-information/contract-addresses.md"
+        }
+      ]
+    },
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 PR-1B oracle review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "JPY DeFi: How Prices Are Determined (Oracle)",
+        "url": "https://jpydf.gitbook.io/jpy-defi/collateral-and-pricing/oracle.md"
+      },
+      {
+        "label": "JPY DeFi: Collateral Assets",
+        "url": "https://jpydf.gitbook.io/jpy-defi/collateral-and-pricing/collateral-assets.md"
+      },
+      {
+        "label": "JPY DeFi: Contract Addresses",
+        "url": "https://jpydf.gitbook.io/jpy-defi/technical-information/contract-addresses.md"
+      },
+      {
+        "label": "JpyUsdRateProvider verified source",
+        "url": "https://etherscan.io/address/0x11c2fa2e43634da8cd079500c793dafad0488a89#code"
+      },
+      {
+        "label": "Ethereum PublicNode RPC (finalized block 26504779)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ],
+    "branches": [
+      {
+        "id": "dusdc",
+        "label": "dUSDC branch",
+        "tier": "standard-external",
+        "summary": "dUSDC collateral is priced in yen by dividing the single Chainlink USDC/USD feed by the shared Chainlink JPY/USD feed and multiplying by the dUSDC CollateralVault backing ratio (capped at 1.0). Stale or invalid feeds pause the branch rather than triggering permanent shutdown, while governance can replace PriceFeedProxy source after a 12-hour timelock.",
+        "collateralAssets": [
+          "USDC"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink",
+            "path": "USDC / USD push oracle",
+            "address": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+            "chain": "ethereum",
+            "heartbeatSec": 86400,
+            "stalenessBoundSec": 172800,
+            "observedAt": "2026-11-27",
+            "observedBlock": 26504779
+          },
+          {
+            "provider": "Chainlink",
+            "path": "JPY / USD push oracle via shared JpyUsdRateProvider (0x11c2fa2e43634da8cd079500c793dafad0488a89)",
+            "address": "0xBcE206caE7f0ec07b545EddE332A47C2F75bbeb3",
+            "chain": "ethereum",
+            "heartbeatSec": 86400,
+            "stalenessBoundSec": 108000,
+            "observedAt": "2026-11-27",
+            "observedBlock": 26504779
+          }
+        ],
+        "fallbackBehavior": "If USDC/USD or the dToken backing ratio fails, the branch enters a resumable pause. If JPY/USD exceeds the deployed 30-hour (108000s) stalenessThreshold, normal redemptions stop automatically while borrowing and liquidation fall back to lastGoodJpyRate for a 24-hour (86400s) MAX_JPY_FREEZE_DURATION grace window before pausing until governance resumes the branch. PriceFeedProxy (0xad059553) lets the 2-of-3 governance Safe swap the price source after a 12-hour timelock (with an emergency path that skips the 1% deviation check).",
+        "observedAt": "2026-11-27",
+        "observedBlock": 26504779,
+        "collateralParameters": [
+          {
+            "asset": "USDC",
+            "maximumLtvPct": 89.62,
+            "minimumCollateralRatioPct": 111.58,
+            "shutdownCollateralRatioPct": 105,
+            "note": "CCR is 124.50%, BCR is 10.00%, SP liquidation penalty 5.00%, redistribution penalty 10.00%; verified on AddressesRegistry 0xbdda51ebfbcf517e951b3775e0d7b550eaf86e64 at block 26504779."
+          }
+        ],
+        "liquidationMechanism": "Immediate Stability Pool offset, then permissionless just-in-time liquidation or same-branch debt and collateral redistribution.",
+        "liquidationDelaySec": 0,
+        "backstop": "Dedicated dUSDC Stability Pool (12.90M JPYdf at block 26504779, 18.15% of branch debt); uncovered liquidated debt redistributes across remaining Troves in the dUSDC branch.",
+        "shutdownOrBadDebtBehavior": "Oracle failure pauses the branch without forcing permanent shutdown. If a healthy oracle price puts branch TCR below the 105% SCR, anyone can permanently shut down the branch and enable urgent redemptions; unbacked debt or confirmed external strategy losses reduce backing for all JPYdf holders.",
+        "debtSharePct": 81.38,
+        "sources": [
+          {
+            "label": "JPY DeFi: How Prices Are Determined (Oracle)",
+            "url": "https://jpydf.gitbook.io/jpy-defi/collateral-and-pricing/oracle.md"
+          },
+          {
+            "label": "JPY DeFi: Collateral Assets",
+            "url": "https://jpydf.gitbook.io/jpy-defi/collateral-and-pricing/collateral-assets.md"
+          },
+          {
+            "label": "DFUSDCPriceFeed verified source",
+            "url": "https://etherscan.io/address/0x63b255d782880bd352cb420ea9571782db77ed31#code"
+          },
+          {
+            "label": "dUSDC PriceFeedProxy verified source",
+            "url": "https://etherscan.io/address/0xad0595534139016fcccae5c080cbf1ce28a4ad79#code"
+          },
+          {
+            "label": "Ethereum PublicNode RPC (finalized block 26504779)",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ]
+      },
+      {
+        "id": "dwsteth",
+        "label": "dwstETH branch",
+        "tier": "standard-external",
+        "summary": "dwstETH borrowing and liquidation use the single Chainlink stETH/USD feed multiplied by Lido's canonical wstETH/stETH exchange rate, divided by the shared Chainlink JPY/USD feed and multiplied by the dToken backing ratio. Normal and urgent redemptions take max(stETH/USD, ETH/USD * stETH/ETH) to limit stale-low collateral payout.",
+        "collateralAssets": [
+          "wstETH"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink",
+            "path": "stETH / USD push oracle multiplied by canonical wstETH / stETH rate",
+            "address": "0xCfE54B5cD566aB89272946F602D76Ea879CAb4a8",
+            "chain": "ethereum",
+            "heartbeatSec": 3600,
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-11-27",
+            "observedBlock": 26504779
+          },
+          {
+            "provider": "Chainlink",
+            "path": "ETH / USD push oracle (redemption upper-bound leg)",
+            "address": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+            "chain": "ethereum",
+            "heartbeatSec": 3600,
+            "stalenessBoundSec": 7200,
+            "observedAt": "2026-11-27",
+            "observedBlock": 26504779
+          },
+          {
+            "provider": "Chainlink",
+            "path": "stETH / ETH push oracle (redemption upper-bound leg)",
+            "address": "0x86392dC19c0b719886221c78AB11eb8Cf5c52812",
+            "chain": "ethereum",
+            "heartbeatSec": 86400,
+            "stalenessBoundSec": 90000,
+            "observedAt": "2026-11-27",
+            "observedBlock": 26504779
+          },
+          {
+            "provider": "Lido",
+            "path": "wstETH / stETH canonical exchange rate (stEthPerToken)",
+            "address": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+            "chain": "ethereum",
+            "observedAt": "2026-11-27",
+            "observedBlock": 26504779
+          },
+          {
+            "provider": "Chainlink",
+            "path": "JPY / USD push oracle via shared JpyUsdRateProvider (0x11c2fa2e43634da8cd079500c793dafad0488a89)",
+            "address": "0xBcE206caE7f0ec07b545EddE332A47C2F75bbeb3",
+            "chain": "ethereum",
+            "heartbeatSec": 86400,
+            "stalenessBoundSec": 108000,
+            "observedAt": "2026-11-27",
+            "observedBlock": 26504779
+          }
+        ],
+        "fallbackBehavior": "Failure of stETH/USD, the canonical wstETH rate, or the dToken backing ratio pauses the branch; attempting a normal redemption while ETH/USD (>7200s) or stETH/ETH (>90000s) is expired also pauses the branch. Shared JPY/USD staleness past 30 hours (108000s) halts normal redemptions and activates a 24-hour (86400s) last-good-price freeze grace before branch pause. PriceFeedProxy (0x8d1bb1cb) lets the 2-of-3 governance Safe swap sources after a 12-hour timelock.",
+        "observedAt": "2026-11-27",
+        "observedBlock": 26504779,
+        "collateralParameters": [
+          {
+            "asset": "wstETH",
+            "maximumLtvPct": 81.18,
+            "minimumCollateralRatioPct": 123.18,
+            "shutdownCollateralRatioPct": 110,
+            "note": "CCR is 141.67%, BCR is 10.00%, SP liquidation penalty 5.00%, redistribution penalty 20.00%; verified on AddressesRegistry 0xf30dce7fd7bcccd31ae13eab29aec7dacf1b31c4 at block 26504779."
+          }
+        ],
+        "liquidationMechanism": "Immediate Stability Pool offset, then permissionless just-in-time liquidation or same-branch debt and collateral redistribution.",
+        "liquidationDelaySec": 0,
+        "backstop": "Dedicated dwstETH Stability Pool (2.27M JPYdf at block 26504779, 13.97% of branch debt); uncovered liquidated debt redistributes across remaining Troves in the dwstETH branch.",
+        "shutdownOrBadDebtBehavior": "Oracle failure pauses the branch without forcing permanent shutdown. If a healthy oracle price puts branch TCR below the 110% SCR, anyone can permanently shut down the branch and enable urgent redemptions; residual unbacked debt remains a risk to all JPYdf holders.",
+        "debtSharePct": 18.62,
+        "sources": [
+          {
+            "label": "JPY DeFi: How Prices Are Determined (Oracle)",
+            "url": "https://jpydf.gitbook.io/jpy-defi/collateral-and-pricing/oracle.md"
+          },
+          {
+            "label": "JPY DeFi: Collateral Assets",
+            "url": "https://jpydf.gitbook.io/jpy-defi/collateral-and-pricing/collateral-assets.md"
+          },
+          {
+            "label": "DFWstETHPriceFeed verified source",
+            "url": "https://etherscan.io/address/0xcdbe2c623639f32d615177d5f4cbf3300e2ecfac#code"
+          },
+          {
+            "label": "dwstETH PriceFeedProxy verified source",
+            "url": "https://etherscan.io/address/0x8d1bb1cb05f8c09a177946a1c12c578e313058fe#code"
+          },
+          {
+            "label": "Ethereum PublicNode RPC (finalized block 26504779)",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ]
+      }
+    ]
   }
 }

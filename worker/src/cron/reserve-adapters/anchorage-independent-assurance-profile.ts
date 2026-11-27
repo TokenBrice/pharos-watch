@@ -59,7 +59,7 @@ export const USDPT_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = 
   adapterName: "anchorage-independent-assurance",
   product: "USDPT",
   profile: "usdpt-v1",
-  requiredAssetCodes: ["cash", "money-market-funds"],
+  requiredAssetCodes: ["cash", "mmf-09250c572", "mmf-46655r119"],
   classifications: {
     cash: {
       name: "Demand deposits at FDIC-insured depository institutions",
@@ -70,12 +70,23 @@ export const USDPT_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = 
       riskFactors: ["credit", "counterparty", "custody", "legal"],
       liquidityHorizon: "immediate",
     },
-    "money-market-funds": {
-      name: "Money market funds, at net asset value",
+    "mmf-09250c572": {
+      name: "Money market fund (CUSIP 09250C572)",
       risk: "low",
       assetClass: "money-market-fund",
       issuerOrObligor:
-        "JPMorgan OnChain Liquidity-Token Money Market Fund (JLTXX; CUSIP 46655R119) and further funds disclosed by CUSIP only",
+        "Money market fund identified only by CUSIP 09250C572 in Deloitte Schedule II (fund manager not named in report)",
+      riskFactors: ["credit", "duration", "liquidity", "custody", "counterparty"],
+      liquidityHorizon: "one-day",
+    },
+    "mmf-46655r119": {
+      name: "JPMorgan JLTXX (CUSIP 46655R119)",
+      risk: "low",
+      coinId: "jltxx-jpmorgan",
+      depType: "collateral",
+      assetClass: "money-market-fund",
+      issuerOrObligor:
+        "JPMorgan OnChain Liquidity-Token Money Market Fund (JLTXX; CUSIP 46655R119)",
       riskFactors: ["credit", "duration", "liquidity", "custody", "counterparty"],
       liquidityHorizon: "one-day",
     },

@@ -24,13 +24,35 @@ export const CORE_AGGREGATE_V1_NON_ACTIVE_MEMBER_IDS: ReadonlySet<string> = new 
 
 /**
  * Preserved v1 exit dates (YYYY-MM-DD UTC) for frozen v1 non-active members whose
- * current `listingStatusReview.changedAt` later advanced on a terminal lifecycle
- * transition (e.g. quarantined -> delisted), so historical v1 PSI replays do not
- * retroactively extend their pre-cutover eligibility window.
+ * current `listingStatusReview.changedAt` later advanced or cleared on a lifecycle
+ * transition (e.g. quarantined -> delisted or quarantined -> active), so historical
+ * v1 PSI replays do not lose or retroactively extend their pre-cutover eligibility window.
  */
 export const CORE_AGGREGATE_V1_NON_ACTIVE_EXIT_DATES: Readonly<Record<string, string>> = {
   "benji-franklin-templeton": "2026-10-30",
+  "wtgxx-wisdomtree": "2026-10-30",
+  "tbill-openeden": "2026-10-30",
+  "jltxx-jpmorgan": "2026-10-03",
+  "cetes-etherfuse": "2026-11-10",
 };
+
+/**
+ * Effective UTC admission dates (YYYY-MM-DD, inclusive at 00:00:00Z) for core
+ * stablecoins promoted or newly admitted after `CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE`,
+ * so Pharos-added structural chart overlays, non-USD share series, and PSI replays
+ * do not backdate post-cutover admissions to the v2 cutover day (DefiLlama's own
+ * provider-backed chart series retains upstream history for DefiLlama-listed coins).
+ */
+const CORE_AGGREGATE_V2_POST_CUTOVER_ENTRY_DATES: Readonly<Record<string, string>> = {
+  "jpydf-deltaforesight": "2026-11-27",
+};
+
+export function getCoreAggregatePostCutoverEntrySec(stablecoinId: string): number | null {
+  const date = CORE_AGGREGATE_V2_POST_CUTOVER_ENTRY_DATES[stablecoinId];
+  if (!date) return null;
+  const parsed = Date.parse(`${date}T00:00:00Z`) / 1000;
+  return Number.isFinite(parsed) ? parsed : null;
+}
 
 /**
  * Effective UTC exclusion dates (YYYY-MM-DD, exclusive at 00:00:00Z) for v1 core

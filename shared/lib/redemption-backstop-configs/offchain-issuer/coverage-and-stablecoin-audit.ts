@@ -436,6 +436,38 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       "Same-day settlement depends on U.S. trading-day cutoffs; 24/7 dealer settlement is modeled as platform primary-market access, not independent on-chain liquidity.",
     ],
   },
+  "tbill-openeden": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull("2026-11-27"),
+    settlementModel: "days",
+    outputAssetType: "stable-single",
+    outputAssets: ["usdc-circle"],
+    routeStatus: "open",
+    costModel: fixedFee(
+      5,
+      "OpenEden TBILL docs publish a 5 bps transaction fee on subscriptions and redemptions (paid in USDC); annualized 35 bps TER accrues separately in NAV.",
+    ),
+    docs: [
+      sourceRef("OpenEden TBILL Redemptions", "https://docs.openeden.com/tbill/redemptions", [
+        "route",
+        "capacity",
+        "settlement",
+      ]),
+      sourceRef("OpenEden TBILL Fees", "https://docs.openeden.com/tbill/fees", ["fees"]),
+      sourceRef("OpenEden TBILL FAQ", "https://docs.openeden.com/tbill/faq", [
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
+      sourceRef("OpenEden TBILL Investor Onboarding", "https://docs.openeden.com/tbill/investor-onboarding", [
+        "access",
+      ]),
+    ],
+    notes: [
+      "KYC-whitelisted accredited/professional investors redeem TBILL for USDC via the FIFO vault redemption queue (minimum 1 USDC), typically processed on the next U.S. business day at prevailing NAV net of the 5 bps transaction fee.",
+    ],
+  },
   "vbill-vaneck": {
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),

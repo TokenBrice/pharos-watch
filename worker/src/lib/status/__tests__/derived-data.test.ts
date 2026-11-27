@@ -3,6 +3,7 @@ import * as conservationModule from "../../mint-burn-conservation";
 import { getMintBurnConfigsForStablecoin as byId, MINT_BURN_CONFIGS } from "../../mint-burn-contracts";
 import { MintBurnConservationRecordSchema, MintBurnReconciliationSummarySchema } from "@shared/types/status";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { getDatasetCadenceSec } from "@shared/lib/status-dataset-freshness";
 import * as safetySourceModule from "../../safety-score-index";
 import { makeWorkerReportCardsV9Response } from "../../../test-helpers/report-cards-v9";
@@ -133,11 +134,14 @@ describe("getMintBurnReconciliation verified conservation", () => {
   });
 
   it.each(["tbill-openeden"])("excludes inactive %s just like the producer", async (id) => {
-    expect(MINT_BURN_CONFIGS.some((config) => config.stablecoinId === id)).toBe(true);
-    expect(ACTIVE_IDS.has(id)).toBe(false);
-    const result = await reconcile({ id });
-    expect(result.rows).toEqual([]);
-    expect(result.readConfigs.some((config) => config.stablecoinId === id)).toBe(false);
+    const origW = WORKER_ACTIVE_IDS.has.bind(WORKER_ACTIVE_IDS);
+    const spy = vi.spyOn(WORKER_ACTIVE_IDS, "has").mockImplementation((c) => c !== id && origW(c));
+    try {
+      expect(MINT_BURN_CONFIGS.some((config) => config.stablecoinId === id)).toBe(true);
+      const result = await reconcile({ id, disabledKeys: [] });
+      expect(result.rows).toEqual([]);
+      expect(result.readConfigs.some((config) => config.stablecoinId === id)).toBe(false);
+    } finally { spy.mockRestore(); }
   });
 
   it("uses native evidence without reading circulating supply or USD-flow comparisons", async () => {

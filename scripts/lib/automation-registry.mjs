@@ -543,6 +543,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
       "shared/lib/api-endpoints/paths.ts",
       "shared/lib/detail-snapshot-inputs.ts",
       "shared/lib/stablecoin-live-summary.ts",
+      "shared/lib/stablecoin-live-summary-normalize.ts",
       "shared/types/detail-snapshot-inputs.ts",
       "shared/types/stablecoin-live-summary.ts",
       "shared/types/market.ts",

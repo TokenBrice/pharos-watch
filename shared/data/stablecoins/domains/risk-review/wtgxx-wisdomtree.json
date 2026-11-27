@@ -14,9 +14,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "WTGXX has six verified native issuer deployments on Arbitrum, Avalanche, Base, Ethereum, Optimism, and Plume. The token contracts expose issuer REGISTRAR_ROLE mint/burn and DEFAULT_ADMIN_ROLE beacon-upgrade paths, but no OFT/OToken adapter, lockbox, escrow, peer, validator, DVN, bridge pause, or route-specific rate-limit machinery was found. Unsupported generic Across and canonical-bridge candidates are removed; no WTGXX representation route is verified. The authored Stellar issuer account is excluded because Horizon identifies its live asset as WTGX rather than WTGXX, leaving an explicit identity gap.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Pharos mint-bridge boundary migration; WTGXX verified finding",
+    "summary": "WTGXX has eight verified native issuer deployments across Arbitrum, Avalanche, Base, Ethereum, Optimism, Plume, Stellar, and Solana. The six EVM contracts expose issuer REGISTRAR_ROLE mint/burn and DEFAULT_ADMIN_ROLE beacon-upgrade paths; Stellar WTGX (anchored to WTGXX per WisdomTree's stellar.toml) and Solana Token-2022 mint Em46fxxwgY2RRoUbBMSbEjJwY62x3ESMNdhnsGpEKewm are direct issuer-native deployments. No OFT/OToken adapter, lockbox, escrow, peer, validator, DVN, bridge pause, or route-specific rate-limit machinery was found; no representation route is verified.",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 PR-1B pinned 8-chain review",
     "confidence": "verified",
     "sources": [
       {
@@ -40,8 +40,20 @@
         "url": "https://sourcify.dev/server/v2/contract/42161/0x6e46c98c4805b7cad59d557e1c47af535f1706b1?fields=sources%2Cabi%2Cmetadata"
       },
       {
+        "label": "WisdomTree Stellar TOML (WTGX anchor_asset WTGXX)",
+        "url": "https://stellar.wisdomtree.com/.well-known/stellar.toml"
+      },
+      {
         "label": "Stellar Horizon WTGX asset record",
         "url": "https://horizon.stellar.org/assets?asset_code=WTGX&asset_issuer=GDMBNMFJ3TRFLASJ6UGETFME3PJPNKPU24C7KFDBEBPQFG2CI6UC3JG6"
+      },
+      {
+        "label": "Solana mainnet JSON-RPC",
+        "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "WTGXX Solana token metadata JSON",
+        "url": "https://gateway.pinata.cloud/ipfs/bafkreihnnhylzhkciuwik5hn25mglaigxlsjeqvw5lmpmpu3ioyoe32y74"
       }
     ],
     "routes": [
@@ -204,6 +216,60 @@
           {
             "label": "WisdomTree WTGXX digital fund fact sheet",
             "url": "https://www.wisdomtree.com/-/media/us-media-files/documents/resource-library/fund-fact-sheets/digital/wtgxx.pdf"
+          }
+        ]
+      },
+      {
+        "id": "stellar:WTGX-GDMBNMFJ3TRFLASJ6UGETFME3PJPNKPU24C7KFDBEBPQFG2CI6UC3JG6",
+        "destinationChain": "stellar",
+        "canonicalChain": "stellar",
+        "contractAddress": "WTGX-GDMBNMFJ3TRFLASJ6UGETFME3PJPNKPU24C7KFDBEBPQFG2CI6UC3JG6",
+        "protocol": "WisdomTree native Stellar WTGX issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native WTGXX Stellar classic issuance: WisdomTree's stellar.toml explicitly maps code WTGX on issuer GDMBNMFJ3TRFLASJ6UGETFME3PJPNKPU24C7KFDBEBPQFG2CI6UC3JG6 to anchor_asset WTGXX (7 decimals, auth_required/auth_revocable/auth_clawback_enabled). Pinned at Horizon ledger 65695144 on 2026-11-27 with 1,822,872.1213428 authorized WTGX and no bridge lockbox or representation machinery.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-27",
+        "observedBlock": 65695144,
+        "sources": [
+          {
+            "label": "WisdomTree Stellar TOML (WTGX anchor_asset WTGXX)",
+            "url": "https://stellar.wisdomtree.com/.well-known/stellar.toml"
+          },
+          {
+            "label": "Stellar Horizon WTGX asset record",
+            "url": "https://horizon.stellar.org/assets?asset_code=WTGX&asset_issuer=GDMBNMFJ3TRFLASJ6UGETFME3PJPNKPU24C7KFDBEBPQFG2CI6UC3JG6"
+          }
+        ]
+      },
+      {
+        "id": "solana:Em46fxxwgY2RRoUbBMSbEjJwY62x3ESMNdhnsGpEKewm",
+        "destinationChain": "solana",
+        "canonicalChain": "solana",
+        "contractAddress": "Em46fxxwgY2RRoUbBMSbEjJwY62x3ESMNdhnsGpEKewm",
+        "protocol": "WisdomTree native Solana Token-2022 issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native WTGXX Solana Token-2022 mint (9 decimals, 566,482.692834566 WTGXX at finalized slot 474453823 on 2026-11-27): live issuer mintAuthority 2zuuNGN3G5dcZnYYzuB69hryW4S3e4XrFvuS9TcCvAJS with transferHook/pausable/permanentDelegate compliance extensions and no bridge program or cross-chain representation machinery.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-27",
+        "observedBlock": 474453823,
+        "sources": [
+          {
+            "label": "Solana mainnet JSON-RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "WTGXX Solana token metadata JSON",
+            "url": "https://gateway.pinata.cloud/ipfs/bafkreihnnhylzhkciuwik5hn25mglaigxlsjeqvw5lmpmpu3ioyoe32y74"
           }
         ]
       }

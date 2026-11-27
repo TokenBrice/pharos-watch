@@ -149,6 +149,7 @@ export const RATE_DERIVED_CONFIGS: RateDerivedConfig[] = [
   { stablecoinId: "fusd-finchain", spreadBps: 0, label: "Tokenized T-bill/MMF reserve-yield proxy", benchmarkOverrideKey: "USD_EFFR" },
   { stablecoinId: "witry-brix", spreadBps: 0, label: "BIST TLREF overnight proxy (TRY)", benchmarkCurrency: "TRY" },
   { stablecoinId: "a7a5-old-vector", spreadBps: 100, label: "CBR key-rate reserve-yield proxy (net of 1.00pp)", benchmarkCurrency: "RUB", benchmarkOverrideKey: "RUB" },
+  { stablecoinId: "cetes-etherfuse", spreadBps: 0, label: "Banxico CETES 28-day proxy (MXN)", benchmarkCurrency: "MXN", benchmarkOverrideKey: "MXN" },
 ];
 RATE_DERIVED_CONFIGS.sort((a, b) => a.stablecoinId.localeCompare(b.stablecoinId));
 

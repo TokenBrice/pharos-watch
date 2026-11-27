@@ -6,6 +6,8 @@
       "name": "WTGXX (WisdomTree Government Money Market)",
       "pct": 68.87139333674182,
       "risk": "low",
+      "coinId": "wtgxx-wisdomtree",
+      "depType": "collateral",
       "assetClass": "fund-share",
       "issuerOrObligor": "WisdomTree Treasury Money Market Digital Fund",
       "riskFactors": [
@@ -170,16 +172,6 @@
     "knownUnknownExposure": "Every disclosed balance-sheet asset is represented, including AUSD, USDC and USDB. The arithmetic refresh does not establish portfolio-wide legal custody safeguards or stressed cash-out bounds; existing mappings are not upgraded.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "WTGXX (WisdomTree Government Money Market)",
-        "pct": 68.87139333674182,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "wtgxx-wisdomtree is a quarantined no-supply record (permitted runtime sources report no positive circulating supply or market cap) that can never carry a live score, so this slice is scored on its own fund-share asset class rather than linked as a dependency edge.",
-        "candidateCoinIds": [
-          "wtgxx-wisdomtree"
-        ]
-      },
       {
         "reserveIndex": 3,
         "reserveName": "EREBOR_USD (Erebor Bank frxUSD reserve account)",

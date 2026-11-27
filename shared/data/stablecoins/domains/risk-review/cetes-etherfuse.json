@@ -9,9 +9,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "CETES has two native issuance routes and three LayerZero V2 OFT representations. Solana Token-2022 and the classic Stellar CETES issuer are native and remain in Mint Authority; Base, Polygon, and Monad burn source representations and mint destination representations through Etherfuse's TESOURO_OFT / RateLimitedOFTUpgradeable LayerZero path. The same owner EOA controls each EVM OFT's peers, delegate, and rate limits, and a shared ProxyAdmin controls implementation replacement. The EVM route observations are verified, but Monad's implementation source, the complete Monad EID mesh, the Solana-side LayerZero program permissions, and DVN/ULN configuration remain open evidence gaps. Horizon's Stellar authorized balance also differs from Etherfuse's API total and is retained as a separate reconciliation gap rather than bridge evidence.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Pharos mint/bridge boundary migration; Codex FIX2-03",
+    "summary": "CETES has two native issuance routes (Solana Token-2022 and classic Stellar) and four LayerZero V2 OFT representations (Base, Polygon, Monad, and Avalanche). Native Solana and Stellar controls remain in Mint Authority; the four EVM deployments burn source representations and mint destination representations through Etherfuse's LayerZero V2 OFT contracts. Base, Polygon, and Monad share one owner EOA and shared ProxyAdmin, while Avalanche's CETES_OFT proxy and ProxyAdmin are governed by a 3-of-5 Safe v1.4.1. Monad's unverified implementation source, the Solana-side LayerZero program permissions, and DVN/ULN configuration remain open evidence gaps.",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos mint/bridge boundary migration; Codex FIX2-03; 2026-11-27 Avalanche and Stellar pin",
     "confidence": "verified",
     "protocols": [
       {
@@ -69,6 +69,14 @@
       {
         "label": "Stellar CETES issuer account",
         "url": "https://horizon.stellar.org/accounts/GCRYUGD5NVARGXT56XEZI5CIFCQETYHAPQQTHO2O3IQZTHDH4LATMYWC"
+      },
+      {
+        "label": "Avalanche CETES_OFT implementation (Sourcify/Routescan verified)",
+        "url": "https://snowtrace.io/address/0x2ee5dbaa6556bbe88fdaf13c5898d370e9061318"
+      },
+      {
+        "label": "Avalanche C-Chain JSON-RPC",
+        "url": "https://api.avax.network/ext/bc/C/rpc"
       }
     ],
     "routes": [
@@ -236,15 +244,15 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At Horizon ledger 63986106, closed 2026-08-16T22:05:15Z, the authored Stellar CETES asset was issued by GCRYUGD5NVARGXT56XEZI5CIFCQETYHAPQQTHO2O3IQZTHDH4LATMYWC, which had a self signer of weight 1, zero thresholds, and auth_required=false, auth_revocable=false, and auth_clawback_enabled=false. No LayerZero endpoint or peer was identified on this native Stellar asset.",
+        "reviewNote": "Re-pinned at Horizon ledger 65695159 (hash 21a86b3613d79da5b4e4e05a8d5c480a6d6a0305ca5859621da7497ab55c569b; 2026-11-27T06:44:27Z), issuer GCRYUGD5NVARGXT56XEZI5CIFCQETYHAPQQTHO2O3IQZTHDH4LATMYWC uses 3-of-5 thresholds (five weight-1 signers, master weight 0) with auth_required=false, auth_revocable=true, and auth_clawback_enabled=true. Total supply across all disjoint Horizon buckets (including Soroban SAC contracts_amount 18,725,577.0818831) is 53,718,273.2725086 CETES. No LayerZero endpoint or peer exists on this native Stellar asset.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "stellar",
         "controllerAddress": "GCRYUGD5NVARGXT56XEZI5CIFCQETYHAPQQTHO2O3IQZTHDH4LATMYWC",
         "failureDomainKeys": [
           "eoa:stellar:GCRYUGD5NVARGXT56XEZI5CIFCQETYHAPQQTHO2O3IQZTHDH4LATMYWC"
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 63986106,
+        "observedAt": "2026-11-27",
+        "observedBlock": 65695159,
         "sources": [
           {
             "label": "CETES Stellar issuer account",
@@ -253,6 +261,47 @@
           {
             "label": "CETES Stellar asset",
             "url": "https://horizon.stellar.org/assets?asset_code=CETES&asset_issuer=GCRYUGD5NVARGXT56XEZI5CIFCQETYHAPQQTHO2O3IQZTHDH4LATMYWC"
+          }
+        ]
+      },
+      {
+        "id": "avalanche:0xa51e029a76c58e102360836193481d41363a8352",
+        "sourceChain": "solana",
+        "destinationChain": "avalanche",
+        "canonicalChain": "solana",
+        "contractAddress": "0xa51e029a76c58e102360836193481d41363a8352",
+        "protocol": "LayerZero V2 OFT (CETES_OFT / VaultProxy)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Avalanche finalized block 101517639 (0x9fcfb3e8c0f095ec60e1862868449a71e7a8a114c6d9320f526faa0a397096ad; 2026-11-27T06:44:23Z), VaultProxy 0xa51e029a76c58e102360836193481d41363a8352 delegates to Sourcify/Routescan-verified CETES_OFT 0x2ee5dbaa6556bbe88fdaf13c5898d370e9061318 (decimals=6, totalSupply=19.705886), LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c, ProxyAdmin 0x90a495ebc2ce2620da2e5bec7ed4060389219cee, and 3-of-5 Safe owner 0x14b928243340033db1abad1adab4727c11d027d7. Solana EID 30168 peer is G26XjZN79HvpTCJKwKCBqw1EWSurUAdTjLwXjB89yBAc with 8,441,397 CETES daily rate limit; Base, Polygon, and Monad peers are zero.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "avalanche",
+        "controllerAddress": "0x14b928243340033db1abad1adab4727c11d027d7",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "safe:avalanche:0x14b928243340033db1abad1adab4727c11d027d7",
+          "eoa:solana:G26XjZN79HvpTCJKwKCBqw1EWSurUAdTjLwXjB89yBAc",
+          "contract:avalanche:0xa51e029a76c58e102360836193481d41363a8352",
+          "contract:avalanche:0x90a495ebc2ce2620da2e5bec7ed4060389219cee"
+        ],
+        "observedAt": "2026-11-27",
+        "observedBlock": 101517639,
+        "sources": [
+          {
+            "label": "Avalanche CETES VaultProxy on Snowtrace",
+            "url": "https://snowtrace.io/address/0xa51e029a76c58e102360836193481d41363a8352"
+          },
+          {
+            "label": "Avalanche CETES_OFT implementation (Sourcify/Routescan verified)",
+            "url": "https://snowtrace.io/address/0x2ee5dbaa6556bbe88fdaf13c5898d370e9061318"
+          },
+          {
+            "label": "Avalanche C-Chain JSON-RPC",
+            "url": "https://api.avax.network/ext/bc/C/rpc"
           }
         ]
       }
@@ -264,7 +313,8 @@
         "routeRefs": [
           "base:0x834df4c1d8f51be24322e39e4766697be015512f",
           "polygon:0x834df4c1d8f51be24322e39e4766697be015512f",
-          "monad:0x834df4c1d8f51be24322e39e4766697be015512f"
+          "monad:0x834df4c1d8f51be24322e39e4766697be015512f",
+          "avalanche:0xa51e029a76c58e102360836193481d41363a8352"
         ],
         "capabilities": [
           "bridge-mint",
@@ -275,7 +325,8 @@
           "eoa:solana:G26XjZN79HvpTCJKwKCBqw1EWSurUAdTjLwXjB89yBAc",
           "contract:base:0x834df4c1d8f51be24322e39e4766697be015512f",
           "contract:polygon:0x834df4c1d8f51be24322e39e4766697be015512f",
-          "contract:monad:0x834df4c1d8f51be24322e39e4766697be015512f"
+          "contract:monad:0x834df4c1d8f51be24322e39e4766697be015512f",
+          "contract:avalanche:0xa51e029a76c58e102360836193481d41363a8352"
         ],
         "authorityType": "contract",
         "routeChecks": {
@@ -470,6 +521,107 @@
           }
         ],
         "evidence": "At Base block 50064297, Polygon block 92141955, and Monad block 96604174, the three transparent OFT proxies resolved to the shared ProxyAdmin address 0x322922f0e1675a8e7be2a38b0636a7c184082ca8. Its owner was the same code-empty EOA 0xf0a5e0932f2a648dbe6e5089ea37e178dc16600f. No Safe threshold, timelock, or bounded upgrade delay was verified, so the upgrade failure domain remains adverse and route-scoped."
+      },
+      {
+        "id": "cetes-avalanche-oft-owner-safe",
+        "label": "CETES Avalanche OFT owner Safe (3-of-5)",
+        "routeRefs": [
+          "avalanche:0xa51e029a76c58e102360836193481d41363a8352"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config",
+          "rate-limit",
+          "pause"
+        ],
+        "controllerChain": "avalanche",
+        "controllerAddress": "0x14b928243340033db1abad1adab4727c11d027d7",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "safe:avalanche:0x14b928243340033db1abad1adab4727c11d027d7",
+          "eoa:solana:G26XjZN79HvpTCJKwKCBqw1EWSurUAdTjLwXjB89yBAc",
+          "contract:avalanche:0xa51e029a76c58e102360836193481d41363a8352"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x8aab8767cf48f05ac279e194f16c72d07f325641",
+            "0x88d0cff3281d5f95f58549a0b33a28a42b731a09",
+            "0x99c0d59e2e6b0563fb81a5ad3e8b26d499969232",
+            "0xda95406639296bb5052ab28715ab42ad1031e547",
+            "0xface94539a882e333741c7e021513bef032f1e55"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "observedBlock": 101517724,
+          "observedAt": "2026-11-27",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "The 3-of-5 Safe can update LayerZero peers, delegate configuration, pausers, and route rate limits on Avalanche CETES_OFT; no timelock delay is enforced.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Avalanche block 101517639, EID 30168 peer resolved to Solana key G26XjZN79HvpTCJKwKCBqw1EWSurUAdTjLwXjB89yBAc; Base, Polygon, and Monad peers were zero.",
+          "rateLimits": "At Avalanche block 101517639, rateLimits(30168) returned limit 8,441,397 CETES (8441397000000 raw) over an 86,400-second window; getAmountCanBeSent(30168) returned 8,441,397 CETES available.",
+          "pausersAdminsUpgraders": "owner() on CETES_OFT and its ProxyAdmin both returned Safe 0x14b928243340033db1abad1adab4727c11d027d7 (3-of-5, v1.4.1, zero modules, zero guard) at block 101517724."
+        },
+        "observedAt": "2026-11-27",
+        "observedBlock": 101517724,
+        "sources": [
+          {
+            "label": "Avalanche CETES VaultProxy on Snowtrace",
+            "url": "https://snowtrace.io/address/0xa51e029a76c58e102360836193481d41363a8352"
+          },
+          {
+            "label": "Avalanche C-Chain JSON-RPC",
+            "url": "https://api.avax.network/ext/bc/C/rpc"
+          }
+        ],
+        "evidence": "At Avalanche finalized block 101517724 (0x37878a174aa1fd120355f41b4d38d26dd11217e95d6baf74bf43b474d4f0c883; 2026-11-27T06:45:49Z), owner() on CETES_OFT returned Safe v1.4.1 0x14b928243340033db1abad1adab4727c11d027d7 with threshold 3 of 5 owners, zero enabled modules, and zero guard. Verified CETES_OFT exposes setPeer, setDelegate, setRateLimits, setPauser, and pause to the owner; no public direct mint exists."
+      },
+      {
+        "id": "cetes-avalanche-proxy-admin",
+        "label": "CETES Avalanche ProxyAdmin",
+        "routeRefs": [
+          "avalanche:0xa51e029a76c58e102360836193481d41363a8352"
+        ],
+        "capabilities": [
+          "admin",
+          "upgrade"
+        ],
+        "controllerChain": "avalanche",
+        "controllerAddress": "0x90a495ebc2ce2620da2e5bec7ed4060389219cee",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "safe:avalanche:0x14b928243340033db1abad1adab4727c11d027d7",
+          "contract:avalanche:0x90a495ebc2ce2620da2e5bec7ed4060389219cee"
+        ],
+        "authorityType": "contract",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The Avalanche ProxyAdmin can replace the VaultProxy CETES_OFT implementation immediately when authorized by its 3-of-5 Safe owner.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At Avalanche block 101517639, EIP-1967 admin slot resolved to 0x90a495ebc2ce2620da2e5bec7ed4060389219cee, whose owner() is the 3-of-5 Safe 0x14b928243340033db1abad1adab4727c11d027d7, and implementation resolved to verified CETES_OFT 0x2ee5dbaa6556bbe88fdaf13c5898d370e9061318."
+        },
+        "observedAt": "2026-11-27",
+        "observedBlock": 101517639,
+        "sources": [
+          {
+            "label": "Avalanche CETES_OFT implementation (Sourcify/Routescan verified)",
+            "url": "https://snowtrace.io/address/0x2ee5dbaa6556bbe88fdaf13c5898d370e9061318"
+          },
+          {
+            "label": "Avalanche C-Chain JSON-RPC",
+            "url": "https://api.avax.network/ext/bc/C/rpc"
+          }
+        ],
+        "evidence": "At Avalanche finalized block 101517639 (2026-11-27T06:44:23Z), VaultProxy EIP-1967 admin slot returned 0x90a495ebc2ce2620da2e5bec7ed4060389219cee, whose owner() is 3-of-5 Safe 0x14b928243340033db1abad1adab4727c11d027d7. No timelock delay is enforced on proxy upgrades."
       }
     ]
   }

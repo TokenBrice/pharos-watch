@@ -1,8 +1,13 @@
 import type { StablecoinDetailResponse } from "../types/supply";
 import { StablecoinLiveSummarySchema, type StablecoinLiveSummary } from "../types/stablecoin-live-summary";
 import { isObservedPrice } from "./pricing-source-policy";
+import { normalizeStablecoinLiveSummary } from "./stablecoin-live-summary-normalize";
+import { chainSupplyReconciles } from "./chains/circulating";
+import { getStrictCanonicalNativePegBucket, hasValidOriginalSupplyObservedAt, isAdmittedCanonicalNativeSupplySource, isPinnedNativeSharesWorkflow, requiresCanonicalNativeSupply, requiresOriginalSupplyObservedAt } from "./onchain-supply-probe";
 import { admitSupplyBuckets, projectUsdMarketCapBaselineBuckets, sumPegBucketsOrNull } from "./supply";
 import { isAmbiguousSupplyPerimeterDay, isEarlierSupplyPerimeter } from "./supply-perimeter-changes";
+
+export { normalizeStablecoinLiveSummary };
 
 const DETAIL_BUCKET_MAX_BACKFILL_SEC = 86_400;
 const NATIVE_SUPPLY_BASELINE_SOURCES = new Set([
@@ -10,22 +15,6 @@ const NATIVE_SUPPLY_BASELINE_SOURCES = new Set([
   "onchain-circulating-supply",
   "zephyr-scanner",
 ]);
-
-/** Nominal references never become observed display prices, regardless of transport. */
-export function normalizeStablecoinLiveSummary(summary: StablecoinLiveSummary): StablecoinLiveSummary {
-  if (isObservedPrice(summary)) return summary;
-  const { priceDerivation: _derivation, pricePublicationReason: _publicationReason, ...rest } = summary;
-  return {
-    ...rest,
-    price: null,
-    priceConfidence: null,
-    priceUpdatedAt: null,
-    priceObservedAt: null,
-    ...(summary.priceSyncedAt !== undefined ? { priceSyncedAt: null } : {}),
-    ...(summary.consensusSources !== undefined ? { consensusSources: [] } : {}),
-    ...(summary.agreeSources !== undefined ? { agreeSources: [] } : {}),
-  };
-}
 
 function admittedDetailBuckets(buckets: Record<string, number> | undefined): Record<string, number> {
   return admitSupplyBuckets(buckets).status === "observed" ? buckets! : {};
@@ -55,7 +44,11 @@ function detailBucketsAt(
 }
 
 /** Shared by the compact live endpoint, per-coin acquisition and cache-only bulk acquisition. */
-export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse, stablecoinId = ""): StablecoinLiveSummary {
+export function projectStablecoinLiveSummary(
+  detail: StablecoinDetailResponse,
+  stablecoinId = "",
+  nowSec = Math.floor(Date.now() / 1000),
+): StablecoinLiveSummary {
   const datedTokens = (detail.tokens ?? []).filter(
     (token): token is typeof token & { date: number } => token.date != null,
   );
@@ -67,10 +60,38 @@ export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse, s
   const historyClock = detail.commodityHistoryObservedAt;
   const historyObservedAt = typeof historyClock === "number" && Number.isSafeInteger(historyClock) && historyClock > 0
     ? historyClock : latestDate;
-  // An explicit unavailable current overlay must never back-fill from provider history.
-  const supplyUnavailable = detail.currentSupplyUnavailableReason != null ||
-    (detail.currentCirculatingUSD !== undefined && admitSupplyBuckets(detail.currentCirculatingUSD).status !== "observed");
-  const hasCurrentSupply = !supplyUnavailable && admitSupplyBuckets(detail.currentCirculatingUSD).status === "observed";
+  // An explicit unavailable current overlay (or a reviewed canonical-native plan lacking an admitted
+  // canonical native packet) must never back-fill from provider history.
+  const requiresCanonicalNative = Boolean(stablecoinId) && requiresCanonicalNativeSupply({ id: stablecoinId });
+  const requiresOriginalClock = Boolean(stablecoinId) && requiresOriginalSupplyObservedAt({ id: stablecoinId });
+  const strictPegBucket = stablecoinId ? getStrictCanonicalNativePegBucket({ id: stablecoinId }) : null;
+  const requiresPinnedNative = Boolean(stablecoinId) && isPinnedNativeSharesWorkflow({ id: stablecoinId });
+  const currentBucketEntries = Object.entries(detail.currentCirculatingUSD ?? {});
+  const strictBucketUsd = strictPegBucket
+    ? (currentBucketEntries.length === 1 && currentBucketEntries[0][0] === strictPegBucket
+      && typeof currentBucketEntries[0][1] === "number" && Number.isFinite(currentBucketEntries[0][1]) && currentBucketEntries[0][1] > 0
+      ? currentBucketEntries[0][1] : null)
+    : null;
+  const hasValidStrictBucket = !strictPegBucket || strictBucketUsd !== null;
+  const hasValidPinnedNative = !requiresPinnedNative || (
+    strictBucketUsd !== null
+    && typeof detail.currentCirculatingNative === "number"
+    && Number.isFinite(detail.currentCirculatingNative)
+    && detail.currentCirculatingNative > 0
+    && typeof detail.currentSupplyValuationPriceUsd === "number"
+    && Number.isFinite(detail.currentSupplyValuationPriceUsd)
+    && detail.currentSupplyValuationPriceUsd > 0
+    && chainSupplyReconciles(detail.currentCirculatingNative * detail.currentSupplyValuationPriceUsd, strictBucketUsd)
+  );
+  const hasAdmittedCurrentSupply = admitSupplyBuckets(detail.currentCirculatingUSD).status === "observed"
+    && hasValidStrictBucket
+    && (!requiresCanonicalNative || isAdmittedCanonicalNativeSupplySource({ id: stablecoinId }, detail.currentSupplySource))
+    && (!requiresOriginalClock || hasValidOriginalSupplyObservedAt(detail.currentSupplyObservedAt, nowSec))
+    && hasValidPinnedNative;
+  const supplyUnavailable = detail.currentSupplyUnavailableReason != null
+    || (detail.currentCirculatingUSD !== undefined && !hasAdmittedCurrentSupply)
+    || (requiresCanonicalNative && !hasAdmittedCurrentSupply);
+  const hasCurrentSupply = !supplyUnavailable && hasAdmittedCurrentSupply;
   let circulating = supplyUnavailable ? {} : hasCurrentSupply ? detail.currentCirculatingUSD! : latest?.totalCirculatingUSD ?? {};
   // Older detail responses may have only native history. Never assume a $1 peg.
   if (!supplyUnavailable && admitSupplyBuckets(circulating).status !== "observed") {

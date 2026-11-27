@@ -5,6 +5,7 @@ import { MintBurnPerCoinResponseSchema } from "@shared/types/mint-burn";
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { getMintBurnConfigsForStablecoin, MINT_BURN_CONFIGS, type MintBurnContractConfig } from "../mint-burn-contracts";
 import { ACTIVE_MINT_BURN_CONFIGS } from "../mint-burn-pipeline/flow-aggregate";
+import { withoutActiveMintBurn } from "../../api/__tests__/mint-burn-flows.test-support";
 import { handleMintBurnFlows } from "../../api/mint-burn-flows";
 import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config";
 import { mintBurnConfigKey } from "../mint-burn-contract-identity";
@@ -386,14 +387,12 @@ describe("mint/burn durable publication admission", () => {
     expect(after.watermark).toEqual(before.watermark);
   });
 
-  it("keeps a quarantined grandfathered key readable after its operator switch is removed", async () => {
+  it("keeps a quarantined grandfathered key readable after its operator switch is removed", () => withoutActiveMintBurn("tbill-openeden", async () => {
     const { db, sqlite } = fixtures.open();
-    // Inactive coins retain per-coin history while pauses gate future re-admission.
     const quarantined = getMintBurnConfigsForStablecoin("tbill-openeden")[0]!;
     const key = mintBurnConfigKey(quarantined);
     expect(isGrandfatheredMintBurnConfig(quarantined)).toBe(true);
     expect(ACTIVE_MINT_BURN_CONFIGS.some((entry) => entry.stablecoinId === "tbill-openeden")).toBe(false);
-
     const nowSec = Math.floor(Date.now() / 1000);
     const hourTs = Math.floor(nowSec / 3600) * 3600 - 3600;
     sqlite.prepare(`INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
@@ -404,21 +403,18 @@ describe("mint/burn durable publication admission", () => {
        flow_type, tx_hash, block_number, explorer_tx_url)
       VALUES ('retained', ?, ?, ?, 'mint', 1000000, 1000000, ?,
         'standard', '0xfeed', 1, 'https://example.com')`).run(quarantined.stablecoinId, quarantined.symbol, quarantined.chain.chainId, hourTs);
-
     const activeKeys = ACTIVE_MINT_BURN_CONFIGS.map(mintBurnConfigKey);
     await syncMintBurnPublicationPolicy(db, [key], hourTs, activeKeys);
     await syncMintBurnPublicationPolicy(db, [], hourTs + 60, activeKeys);
-    expect(sqlite.prepare("SELECT disabled_keys FROM mint_burn_publication_policy WHERE id = 1").get())
-      .toEqual({ disabled_keys: "[]" });
+    expect(sqlite.prepare("SELECT disabled_keys FROM mint_burn_publication_policy WHERE id = 1").get()).toEqual({ disabled_keys: "[]" });
     expect(pausedKeys(sqlite)).toContain(key);
-
-    const response = await handleMintBurnFlows(db, new URL(`https://x/api/mint-burn-flows?stablecoin=${quarantined.stablecoinId}`));
-    const body = MintBurnPerCoinResponseSchema.parse(await readJsonResponse(response, 200));
+    const body = MintBurnPerCoinResponseSchema.parse(await readJsonResponse(
+      await handleMintBurnFlows(db, new URL(`https://x/api/mint-burn-flows?stablecoin=${quarantined.stablecoinId}`)), 200));
     expect(body.chains.map((chain) => chain.chainId)).toEqual([quarantined.chain.chainId]);
     expect(body.mintCount).toBe(1);
     expect(body.mintVolumeUsd).toBe(1_000_000);
     expect(body.publication).toMatchObject({ admittedCount: 1, legs: [] });
-  });
+  }));
 
   it("fails closed on an undecodable paused_keys value instead of lifting a pause", async () => {
     const { db, sqlite } = fixtures.open();

@@ -3,29 +3,34 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "TBILL is the share token of OpenEden's BVI-registered professional fund; mint/redeem is KYC-gated institutional subscription at NAV. The authored Ethereum and Arbitrum OpenEdenVaultV5 deployments are independent native vault liabilities with owner/maintainer-controlled UUPS logic and max uint256 supply caps, while the authored Solana Token-2022 mint and XRPL TBL issuer retain direct native issuance authorities. No bridge representation is included in Mint Authority; the single-chain canonical designation and an untracked BNB deployment remain open catalog questions.",
+    "confidence": "verified",
+    "summary": "TBILL is the share token of OpenEden's BVI-registered professional fund; mint/redeem is KYC-gated institutional subscription at NAV across five independent native deployments on Ethereum, Arbitrum, BNB Chain, Solana, and XRPL. Each EVM vault uses a UUPS proxy owned by a 24-hour TimelockController (proposed/executed by a chain-specific 4-of-5 Safe sharing the same five signers) with that Safe also holding maintainer() and controller DEFAULT_ADMIN_ROLE under an unbounded totalSupplyCap. Solana Token-2022 mint 4MmJVdwYN8LwvbGeCowYjSx7KoEi6BJWg8XXnW4fDDp6 retains an EOA mintAuthority (zero supply) and XRPL TBL issuer rJNE2NNz83GJYtWVLwMvchDWEon3huWnFn issues directly under a 2-of-3 SignerList.",
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [
         "ethereum:0xdd50c053c096cb04a3e3362e2b622529ec5f2e8a",
-        "arbitrum:0xf84d28a8d28292842dd73d1c5f99476a80b6666a"
+        "arbitrum:0xf84d28a8d28292842dd73d1c5f99476a80b6666a",
+        "bsc:0x5b4681f0d7a01b817675f25892d3ad73572fd1d9"
       ],
       "proxyAddresses": [
         "0xdd50c053c096cb04a3e3362e2b622529ec5f2e8a",
-        "0xf84d28a8d28292842dd73d1c5f99476a80b6666a"
+        "0xf84d28a8d28292842dd73d1c5f99476a80b6666a",
+        "0x5b4681f0d7a01b817675f25892d3ad73572fd1d9"
       ],
       "implementationAddresses": [
         "0xc4545bf80f935894cbe138d86b506923dab7c048",
-        "0x78365404fc5edabef6eca2f6b2f1ba1471727a07"
+        "0x78365404fc5edabef6eca2f6b2f1ba1471727a07",
+        "0xf3c7bbd9f91de0664a3e2ec5063e45872da472d9"
       ],
       "adminAddresses": [
-        "0x8ec4dd2df01c188ac5a5d870029e9cbb820d5844",
-        "0xca7f64e77bc422b1913afb0065bfc0d8b3561bf3"
+        "0x6e8559afd41f8f9971828aa8b0c25b65ca6a5567",
+        "0x93794a1c593fd22acb106232f4422b405f2b7fcd",
+        "0x60df3ffaeac48b94c0dd174eadf6fa5860da791a"
       ],
       "canChangeMintLogic": true,
-      "controlRef": "OpenEden Ethereum vault owner/maintainer Safe (4-of-5)",
-      "observedAt": "2026-08-16",
+      "delaySec": 86400,
+      "controlRef": "OpenEden Ethereum vault TimelockController (24h)",
+      "observedAt": "2026-11-27",
       "sources": [
         {
           "label": "OpenEden Ethereum vault",
@@ -36,12 +41,20 @@
           "url": "https://arbiscan.io/address/0xf84d28a8d28292842dd73d1c5f99476a80b6666a"
         },
         {
+          "label": "OpenEden BNB Chain vault",
+          "url": "https://bscscan.com/address/0x5b4681f0d7a01b817675f25892d3ad73572fd1d9"
+        },
+        {
           "label": "Ethereum verified OpenEdenVaultV5 source",
           "url": "https://eth.blockscout.com/address/0xc4545bf80f935894cbe138d86b506923dab7c048?tab=contract"
         },
         {
           "label": "Arbitrum verified OpenEdenVaultV5 source",
           "url": "https://arbitrum.blockscout.com/address/0x78365404fc5edabef6eca2f6b2f1ba1471727a07?tab=contract"
+        },
+        {
+          "label": "OpenEden TBILL smart contract addresses",
+          "url": "https://docs.openeden.com/tbill/smart-contract-addresses"
         }
       ]
     },
@@ -55,19 +68,50 @@
           "ethereum:0xdd50c053c096cb04a3e3362e2b622529ec5f2e8a",
           "arbitrum:0xf84d28a8d28292842dd73d1c5f99476a80b6666a",
           "solana:4MmJVdwYN8LwvbGeCowYjSx7KoEi6BJWg8XXnW4fDDp6",
-          "xrpl:TBL.rJNE2NNz83GJYtWVLwMvchDWEon3huWnFn"
+          "xrpl:TBL.rJNE2NNz83GJYtWVLwMvchDWEon3huWnFn",
+          "bsc:0x5b4681f0d7a01b817675f25892d3ad73572fd1d9"
         ],
         "canRaiseCap": "unknown",
-        "evidence": "OpenEden's BVI Registered Professional Fund issues/redeems TBILL for KYC-verified institutional subscribers at NAV against BNY-custodied T-bills. This issuer backend remains a native issuance control across the four authored deployments; it is not evidence of a bridge or cross-chain burn/mint route.",
+        "evidence": "OpenEden's BVI Registered Professional Fund issues and redeems TBILL for KYC-verified institutional subscribers at NAV against BNY-custodied T-bills across all five authored native deployments; this issuer workflow is native issuance, not a bridge or cross-chain burn/mint route.",
         "sources": [
           {
             "label": "OpenEden TBILL transparency",
             "url": "https://openeden.com/tbill/transparency"
+          },
+          {
+            "label": "OpenEden TBILL smart contract addresses",
+            "url": "https://docs.openeden.com/tbill/smart-contract-addresses"
           }
         ]
       },
       {
-        "label": "OpenEden Ethereum vault owner/maintainer Safe (4-of-5)",
+        "label": "OpenEden Ethereum vault TimelockController (24h)",
+        "role": "timelock",
+        "authorityType": "timelock",
+        "address": "0x6e8559afd41f8f9971828aa8b0c25b65ca6a5567",
+        "chain": "ethereum",
+        "deploymentRefs": [
+          "ethereum:0xdd50c053c096cb04a3e3362e2b622529ec5f2e8a"
+        ],
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 86400,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-27",
+        "observedBlock": 26504747,
+        "evidence": "At finalized Ethereum block 26504747 (2026-11-27T06:27:35Z), owner() on 0xdd50c053c096cb04a3e3362e2b622529ec5f2e8a returned TimelockController 0x6e8559afd41f8f9971828aa8b0c25b65ca6a5567 with getMinDelay() = 86400s. The 4-of-5 Ethereum Safe 0x8ec4dd2df01c188ac5a5d870029e9cbb820d5844 holds PROPOSER_ROLE, EXECUTOR_ROLE, and CANCELLER_ROLE (open executor is false).",
+        "sources": [
+          {
+            "label": "TBILL Ethereum vault on Etherscan",
+            "url": "https://etherscan.io/address/0xdd50c053c096cb04a3e3362e2b622529ec5f2e8a"
+          },
+          {
+            "label": "Ethereum verified OpenEdenVaultV5 source",
+            "url": "https://eth.blockscout.com/address/0xc4545bf80f935894cbe138d86b506923dab7c048?tab=contract"
+          }
+        ]
+      },
+      {
+        "label": "OpenEden Ethereum vault maintainer Safe (4-of-5)",
         "role": "minter-admin",
         "authorityType": "safe",
         "address": "0x8ec4dd2df01c188ac5a5d870029e9cbb820d5844",
@@ -75,7 +119,7 @@
         "deploymentRefs": [
           "ethereum:0xdd50c053c096cb04a3e3362e2b622529ec5f2e8a"
         ],
-        "directMintAbility": "none",
+        "directMintAbility": "direct",
         "canRaiseCap": true,
         "threshold": 4,
         "signerCount": 5,
@@ -91,13 +135,14 @@
           "threshold": 4,
           "enabledModules": [],
           "guard": null,
-          "fallbackHandler": null,
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
           "version": "1.3.0",
-          "observedBlock": 25770864,
+          "observedBlock": 26504747,
           "source": "onchain"
         },
-        "observedAt": "2026-08-16",
-        "evidence": "At Ethereum block 25770864, owner() and maintainer() on 0xdd50c053c096cb04a3e3362e2b622529ec5f2e8a returned 0x8ec4dd2df01c188ac5a5d870029e9cbb820d5844. The Safe is 4-of-5 with the reviewed five owners, no enabled modules, and no separate EIP-1967 proxy admin. controller() returned 0x377de6729507bb0e56e0aac666bd8522e4a3fe41, whose DEFAULT_ADMIN_ROLE is held by the same Safe. The UUPS implementation is 0xc4545bf80f935894cbe138d86b506923dab7c048; onlyOwner authorizes upgrades, and the maintainer-controlled totalSupplyCap was type(uint256).max.",
+        "observedAt": "2026-11-27",
+        "observedBlock": 26504747,
+        "evidence": "At finalized Ethereum block 26504747 (2026-11-27T06:27:35Z), maintainer() on 0xdd50c053c096cb04a3e3362e2b622529ec5f2e8a returned Safe v1.3.0 0x8ec4dd2df01c188ac5a5d870029e9cbb820d5844 (4-of-5, zero modules, no guard). It holds DEFAULT_ADMIN_ROLE on controller 0x377de6729507bb0e56e0aac666bd8522e4a3fe41, proposes/executes for owner Timelock 0x6e8559afd41f8f9971828aa8b0c25b65ca6a5567, and controls totalSupplyCap (type(uint256).max).",
         "sources": [
           {
             "label": "TBILL contract on Etherscan",
@@ -110,38 +155,20 @@
         ]
       },
       {
-        "label": "OpenEden Arbitrum vault owner/maintainer Safe (4-of-5)",
-        "role": "minter-admin",
-        "authorityType": "safe",
-        "address": "0xca7f64e77bc422b1913afb0065bfc0d8b3561bf3",
+        "label": "OpenEden Arbitrum vault TimelockController (24h)",
+        "role": "timelock",
+        "authorityType": "timelock",
+        "address": "0x93794a1c593fd22acb106232f4422b405f2b7fcd",
         "chain": "arbitrum",
         "deploymentRefs": [
           "arbitrum:0xf84d28a8d28292842dd73d1c5f99476a80b6666a"
         ],
-        "directMintAbility": "none",
-        "canRaiseCap": true,
-        "threshold": 4,
-        "signerCount": 5,
-        "modulesOrGuardsStatus": "none-detected",
-        "safe": {
-          "owners": [
-            "0x39736ba27dae1dc551ef1593ccf53f57798ef424",
-            "0x40214ae3c737cc61088b087e15a41ffcdbd5ad05",
-            "0x2e8abe537b0e8fc57f5d7d319ce315c5fb91fac0",
-            "0x818566e881e762beac64dc32f81ffc380680251a",
-            "0xbdada500ef197dde58a6efb5dc8ec84989e4c2c8"
-          ],
-          "threshold": 4,
-          "enabledModules": [],
-          "guard": null,
-          "fallbackHandler": null,
-          "version": "1.3.0",
-          "observedBlock": 495293895,
-          "source": "onchain"
-        },
-        "observedAt": "2026-08-16",
-        "observedBlock": 495293895,
-        "evidence": "At Arbitrum block 495293895, owner() and maintainer() on 0xf84d28a8d28292842dd73d1c5f99476a80b6666a returned 0xca7f64e77bc422b1913afb0065bfc0d8b3561bf3. The Safe is 4-of-5 with the same five reviewed signers, an empty module list, and no separate proxy-admin slot. controller() returned 0xc6773ba1ff30cc9b14972225924a21ff7fdcd01f, whose DEFAULT_ADMIN_ROLE is held by this Safe. The UUPS implementation is 0x78365404fc5edabef6eca2f6b2f1ba1471727a07; onlyOwner authorizes upgrades, and the maintainer-controlled totalSupplyCap was type(uint256).max.",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 86400,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-27",
+        "observedBlock": 527933933,
+        "evidence": "At finalized Arbitrum block 527933933 (2026-11-27T06:24:03Z, totalSupply 0), owner() on 0xf84d28a8d28292842dd73d1c5f99476a80b6666a returned TimelockController 0x93794a1c593fd22acb106232f4422b405f2b7fcd with getMinDelay() = 86400s. The 4-of-5 Arbitrum Safe 0xca7f64e77bc422b1913afb0065bfc0d8b3561bf3 holds PROPOSER_ROLE, EXECUTOR_ROLE, and CANCELLER_ROLE (open executor is false).",
         "sources": [
           {
             "label": "TBILL contract on Arbiscan",
@@ -150,6 +177,120 @@
           {
             "label": "Arbitrum verified OpenEdenVaultV5 source",
             "url": "https://arbitrum.blockscout.com/address/0x78365404fc5edabef6eca2f6b2f1ba1471727a07?tab=contract"
+          }
+        ]
+      },
+      {
+        "label": "OpenEden Arbitrum vault maintainer Safe (4-of-5)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "address": "0xca7f64e77bc422b1913afb0065bfc0d8b3561bf3",
+        "chain": "arbitrum",
+        "deploymentRefs": [
+          "arbitrum:0xf84d28a8d28292842dd73d1c5f99476a80b6666a"
+        ],
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "threshold": 4,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x39736ba27dae1dc551ef1593ccf53f57798ef424",
+            "0x818566e881e762beac64dc32f81ffc380680251a",
+            "0xbdada500ef197dde58a6efb5dc8ec84989e4c2c8",
+            "0x2e8abe537b0e8fc57f5d7d319ce315c5fb91fac0",
+            "0x40214ae3c737cc61088b087e15a41ffcdbd5ad05"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "version": "1.3.0",
+          "observedBlock": 527933933,
+          "source": "onchain"
+        },
+        "observedAt": "2026-11-27",
+        "observedBlock": 527933933,
+        "evidence": "At finalized Arbitrum block 527933933 (2026-11-27T06:24:03Z, totalSupply 0), maintainer() on 0xf84d28a8d28292842dd73d1c5f99476a80b6666a returned Safe v1.3.0 0xca7f64e77bc422b1913afb0065bfc0d8b3561bf3 (4-of-5, same five signers, zero modules, no guard). It holds DEFAULT_ADMIN_ROLE on controller 0xc6773ba1ff30cc9b14972225924a21ff7fdcd01f, proposes/executes for owner Timelock 0x93794a1c593fd22acb106232f4422b405f2b7fcd, and controls totalSupplyCap (type(uint256).max).",
+        "sources": [
+          {
+            "label": "TBILL contract on Arbiscan",
+            "url": "https://arbiscan.io/address/0xf84d28a8d28292842dd73d1c5f99476a80b6666a"
+          },
+          {
+            "label": "Arbitrum verified OpenEdenVaultV5 source",
+            "url": "https://arbitrum.blockscout.com/address/0x78365404fc5edabef6eca2f6b2f1ba1471727a07?tab=contract"
+          }
+        ]
+      },
+      {
+        "label": "OpenEden BNB Chain vault TimelockController (24h)",
+        "role": "timelock",
+        "authorityType": "timelock",
+        "address": "0x60df3ffaeac48b94c0dd174eadf6fa5860da791a",
+        "chain": "bsc",
+        "deploymentRefs": [
+          "bsc:0x5b4681f0d7a01b817675f25892d3ad73572fd1d9"
+        ],
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 86400,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-27",
+        "observedBlock": 135992714,
+        "evidence": "At BSC block 135992714 (2026-11-27T06:44:04Z), owner() on UUPS proxy 0x5b4681f0d7a01b817675f25892d3ad73572fd1d9 (implementation 0xf3c7bbd9f91de0664a3e2ec5063e45872da472d9, 18 decimals) returned TimelockController 0x60df3ffaeac48b94c0dd174eadf6fa5860da791a with getMinDelay() = 86400s. The 4-of-5 BSC Safe 0x3ba6c5437232156baacba5c084c8a746e3217ed6 holds PROPOSER_ROLE, EXECUTOR_ROLE, and CANCELLER_ROLE (open executor is false).",
+        "sources": [
+          {
+            "label": "OpenEden TBILL smart contract addresses (BNB Chain v3)",
+            "url": "https://docs.openeden.com/tbill/smart-contract-addresses"
+          },
+          {
+            "label": "TBILL contract on BscScan",
+            "url": "https://bscscan.com/address/0x5b4681f0d7a01b817675f25892d3ad73572fd1d9"
+          }
+        ]
+      },
+      {
+        "label": "OpenEden BNB Chain vault maintainer Safe (4-of-5)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "address": "0x3ba6c5437232156baacba5c084c8a746e3217ed6",
+        "chain": "bsc",
+        "deploymentRefs": [
+          "bsc:0x5b4681f0d7a01b817675f25892d3ad73572fd1d9"
+        ],
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "threshold": 4,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x2e8abe537b0e8fc57f5d7d319ce315c5fb91fac0",
+            "0xbdada500ef197dde58a6efb5dc8ec84989e4c2c8",
+            "0x40214ae3c737cc61088b087e15a41ffcdbd5ad05",
+            "0x39736ba27dae1dc551ef1593ccf53f57798ef424",
+            "0x818566e881e762beac64dc32f81ffc380680251a"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "version": "1.4.1",
+          "observedBlock": 135992714,
+          "source": "onchain"
+        },
+        "observedAt": "2026-11-27",
+        "observedBlock": 135992714,
+        "evidence": "At BSC block 135992714 (2026-11-27T06:44:04Z), maintainer() on 0x5b4681f0d7a01b817675f25892d3ad73572fd1d9 returned Safe v1.4.1 0x3ba6c5437232156baacba5c084c8a746e3217ed6 (4-of-5, sharing the exact five signers of Ethereum/Arbitrum, zero modules, no guard). It holds DEFAULT_ADMIN_ROLE on controller 0xdae70f90620bcbb7d7b3b536683bb2ba257e0fc9, proposes/executes for owner Timelock 0x60df3ffaeac48b94c0dd174eadf6fa5860da791a, and controls totalSupplyCap (type(uint256).max).",
+        "sources": [
+          {
+            "label": "OpenEden TBILL smart contract addresses (BNB Chain v3)",
+            "url": "https://docs.openeden.com/tbill/smart-contract-addresses"
+          },
+          {
+            "label": "TBILL contract on BscScan",
+            "url": "https://bscscan.com/address/0x5b4681f0d7a01b817675f25892d3ad73572fd1d9"
           }
         ]
       },
@@ -165,9 +306,9 @@
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "observedBlock": 439734298,
-        "evidence": "At finalized Solana slot 439734298, the Token-2022 mint 4MmJVdwYN8LwvbGeCowYjSx7KoEi6BJWg8XXnW4fDDp6 had live mintAuthority CPNEkz5SaAcWqGMezXTti39ekErzMpDCtuPMGw9tt4CZ, 6 decimals, and supply 200,173.955278 TBILL. The same key is also the freeze, metadata, and transfer-hook authority; those transfer and blacklist powers are not counted as additional Mint Authority.",
+        "observedAt": "2026-11-27",
+        "observedBlock": 474453823,
+        "evidence": "At finalized Solana slot 474453823 (2026-11-27T06:43:18Z, blockhash A7ev51A7WNthGsYZSeCQ5kAxs5snee4FS4YRCuhw9Acp), Token-2022 mint 4MmJVdwYN8LwvbGeCowYjSx7KoEi6BJWg8XXnW4fDDp6 retained live mintAuthority CPNEkz5SaAcWqGMezXTti39ekErzMpDCtuPMGw9tt4CZ, 6 decimals, and zero circulating supply. The same key holds freeze, metadata, and transfer-hook authorities; those transfer/blacklist powers are not counted as additional Mint Authority.",
         "sources": [
           {
             "label": "OpenEden Solana token metadata",
@@ -192,9 +333,9 @@
         "threshold": 2,
         "signerCount": 3,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "observedBlock": 106343204,
-        "evidence": "At validated XRPL ledger 106343204, issuer account rJNE2NNz83GJYtWVLwMvchDWEon3huWnFn had requireAuthorization true, disableMasterKey true, and a 2-of-3 SignerList with rJhciXT9adcG9BfRurfW41GtLQ6yUC6sD, r3WbjWPqbm5D3h7HawDdTFDzppZsELSbTM, and rKBAzCK9NBCBYvZKspy5Q3Pb87rYCRykCh. XRPL TBL has no authored supply cap in the issuer account state; this is issuer-native issuance, not bridge administration.",
+        "observedAt": "2026-11-27",
+        "observedBlock": 108600483,
+        "evidence": "At validated XRPL ledger 108600483 (2026-11-27T06:43:11Z, hash 38FA0E578489C968DF0132BF6DCE37796599AB53DEFBCF08C51D0048EAF98733), issuer account rJNE2NNz83GJYtWVLwMvchDWEon3huWnFn retained requireAuthorization/disableMasterKey flags and a 2-of-3 SignerList with rJhciXT9adcG9BfRurfW41GtLQ6yUC6sD, r3WbjWPqbm5D3h7HawDdTFDzppZsELSbTM, and rKBAzCK9NBCBYvZKspy5Q3Pb87rYCRykCh. Excluding operational hotwallet rB56JZWRKvpWNeyqM3QYfZwW4fS9YEyPWM (9,890,971,837.514543 TBL), circulating obligations are 9,811,253.825176 TBL with zero frozen or locked balances.",
         "sources": [
           {
             "label": "XRPL validated JSON-RPC",
@@ -207,9 +348,9 @@
     "reconciliation": "periodic",
     "supervision": "prudential",
     "review": {
-      "evidence": "Reviewed as four independent native issuance deployments, not bridge representations. At Ethereum block 25770864, OpenEdenVaultV5 proxy 0xdd50c053c096cb04a3e3362e2b622529ec5f2e8a used implementation 0xc4545bf80f935894cbe138d86b506923dab7c048; owner() and maintainer() were the 4-of-5 Safe 0x8ec4dd2df01c188ac5a5d870029e9cbb820d5844, controller() was 0x377de6729507bb0e56e0aac666bd8522e4a3fe41 with DEFAULT_ADMIN_ROLE held by that Safe, the EIP-1967 admin slot was zero, and totalSupplyCap was type(uint256).max. At Arbitrum block 495293895, the separate proxy 0xf84d28a8d28292842dd73d1c5f99476a80b6666a used implementation 0x78365404fc5edabef6eca2f6b2f1ba1471727a07; owner() and maintainer() were the distinct 4-of-5 Safe 0xca7f64e77bc422b1913afb0065bfc0d8b3561bf3, controller() was 0xc6773ba1ff30cc9b14972225924a21ff7fdcd01f with DEFAULT_ADMIN_ROLE held by that Safe, the proxy-admin slot was zero, and totalSupplyCap was type(uint256).max. At finalized Solana slot 439734298, Token-2022 mint 4MmJVdwYN8LwvbGeCowYjSx7KoEi6BJWg8XXnW4fDDp6 retained mintAuthority CPNEkz5SaAcWqGMezXTti39ekErzMpDCtuPMGw9tt4CZ. At validated XRPL ledger 106343204, issuer rJNE2NNz83GJYtWVLwMvchDWEon3huWnFn retained direct TBL issuance under a 2-of-3 signer list. These native authorities support economicCapSemantics unbounded. OpenEden's daily and monthly administrator NAV reports and BVI FSC registered professional-fund supervision support reconciliation periodic and supervision prudential. No bridge administrator or public bridge contract was identified; any off-chain issuer burn/mint workflow remains an unresolved route-level question. The canonical single-chain designation and the official BNB v3 deployment absent from contracts[] remain outside this four-deployment review.",
-      "reviewer": "Codex mint-bridge-boundary migration",
-      "reviewedAt": "2026-08-16",
+      "evidence": "Reviewed across all five independent native issuance deployments at pinned 2026-11-27 blocks/slots/ledgers. On Ethereum (finalized block 26504747), Arbitrum (finalized block 527933933, zero supply), and BNB Chain (block 135992714, 18 decimals, 217,941,772.69 TBILL), each OpenEden UUPS proxy (implementations 0xc4545bf80f935894cbe138d86b506923dab7c048, 0x78365404fc5edabef6eca2f6b2f1ba1471727a07, and 0xf3c7bbd9f91de0664a3e2ec5063e45872da472d9 respectively; zero EIP-1967 admin slot) is now owned by a 24-hour (86400s) TimelockController (0x6e8559afd41f8f9971828aa8b0c25b65ca6a5567, 0x93794a1c593fd22acb106232f4422b405f2b7fcd, and 0x60df3ffaeac48b94c0dd174eadf6fa5860da791a). On each EVM chain, a chain-specific 4-of-5 Safe sharing the exact same five signers (0x8ec4dd2df01c188ac5a5d870029e9cbb820d5844 v1.3.0, 0xca7f64e77bc422b1913afb0065bfc0d8b3561bf3 v1.3.0, and 0x3ba6c5437232156baacba5c084c8a746e3217ed6 v1.4.1; zero modules, no guard) holds PROPOSER_ROLE, EXECUTOR_ROLE, and CANCELLER_ROLE on the Timelock, holds vault maintainer() (with totalSupplyCap = type(uint256).max), and holds DEFAULT_ADMIN_ROLE on the vault controller. At finalized Solana slot 474453823, Token-2022 mint 4MmJVdwYN8LwvbGeCowYjSx7KoEi6BJWg8XXnW4fDDp6 retained EOA mintAuthority CPNEkz5SaAcWqGMezXTti39ekErzMpDCtuPMGw9tt4CZ with zero supply. At validated XRPL ledger 108600483, issuer rJNE2NNz83GJYtWVLwMvchDWEon3huWnFn retained direct TBL issuance under a 2-of-3 signer list. These uncapped native authorities support economicCapSemantics unbounded and authorityPosture concentrated-admin, with Protege daily/monthly administrator NAV reports and BVI FSC Registered Professional Fund supervision supporting reconciliation periodic and supervision prudential.",
+      "reviewer": "Pharos Listing Policy v2 PR-1B pinned 5-chain review",
+      "reviewedAt": "2026-11-27",
       "sources": [
         {
           "label": "OpenEden TBILL transparency",
@@ -220,8 +361,12 @@
           "url": "https://docs.openeden.com/"
         },
         {
-          "label": "TBILL contract on Blockscout",
+          "label": "TBILL Ethereum contract on Blockscout",
           "url": "https://eth.blockscout.com/address/0xdd50c053c096cb04a3e3362e2b622529ec5f2e8a"
+        },
+        {
+          "label": "TBILL BNB Chain contract on BscScan",
+          "url": "https://bscscan.com/address/0x5b4681f0d7a01b817675f25892d3ad73572fd1d9"
         },
         {
           "label": "OpenEden TBILL trust and transparency: daily and monthly administrator NAV reports",
@@ -234,6 +379,10 @@
         {
           "label": "OpenEden TBILL smart-contract addresses",
           "url": "https://docs.openeden.com/tbill/smart-contract-addresses.md"
+        },
+        {
+          "label": "OpenEden on-chain governance and controls",
+          "url": "https://docs.openeden.com/tbill/on-chain-governance-and-controls-i"
         },
         {
           "label": "OpenEden Ethereum verified OpenEdenVaultV5 source",

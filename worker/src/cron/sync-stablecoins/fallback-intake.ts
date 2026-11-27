@@ -1,7 +1,7 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { FROZEN_SNAPSHOTS } from "@shared/lib/stablecoins/frozen-snapshots";
-import { getOnchainSupplyHoldReason, isKinesisWrapperSupplyId, isOnchainSupplyPartitionExcluded, prefersOnChainSupplyMcap, selectCuratedAggregateOnchainSupplyProbeContracts, SFRAX_STOCK_PERIMETER } from "@shared/lib/onchain-supply-probe";
+import { getOnchainSupplyHoldReason, isKinesisWrapperSupplyId, isOnchainSupplyPartitionExcluded, isPinnedNativeSharesWorkflow, prefersOnChainSupplyMcap, selectCuratedAggregateOnchainSupplyProbeContracts, SFRAX_STOCK_PERIMETER } from "@shared/lib/onchain-supply-probe";
 import { isKinesisWrapperSupplyCutoverActive } from "@shared/lib/supply-perimeter-changes";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { MIN_VALID_ASSET_COUNT } from "../../lib/stablecoin-intake-policy";
@@ -80,8 +80,14 @@ export function buildFallbackAssetsFromCoinGecko(
   const assets: PeggedAsset[] = [];
 
   for (const meta of stablecoins) {
-    // Parent-only price quotes, native Hive supply, and issuer-reconciled XAUT supply cannot admit CoinGecko supply.
-    if (!meta.geckoId || NAV_PARENT_ONLY_GECKO_IDS.has(meta.geckoId) || meta.id === "hbd-hive" || meta.id === "xaut-tether") continue;
+    // Parent-only price quotes, native Hive/pinned-share supply, and issuer-reconciled XAUT supply cannot admit CoinGecko supply.
+    if (
+      !meta.geckoId
+      || NAV_PARENT_ONLY_GECKO_IDS.has(meta.geckoId)
+      || meta.id === "hbd-hive"
+      || meta.id === "xaut-tether"
+      || isPinnedNativeSharesWorkflow(meta)
+    ) continue;
     const entry = resolveFreshCoinGeckoFallbackEntry(input.cgData[meta.geckoId], input.syncStartSec);
     if (!entry) continue;
 
@@ -163,7 +169,13 @@ export async function overlayFallbackCuratedAggregateSupply(
     throwIfAborted(signal);
     if (isKinesisWrapperSupplyId(asset.id) && !isKinesisWrapperSupplyCutoverActive(asset.id, Math.floor(Date.now() / 1000))) continue;
     const meta = ACTIVE_META_BY_ID.get(String(asset.id));
-    if (!meta || (!prefersOnChainSupplyMcap(meta) && !selectCuratedAggregateOnchainSupplyProbeContracts(meta))) continue;
+    if (!meta) continue;
+    if (isPinnedNativeSharesWorkflow(meta)) {
+      // Pinned-native-shares workflows never inherit a CoinGecko outage cap; restore an eligible native packet or withhold.
+      Object.assign(asset, restorePreferredNativeSupply(asset, previousAssetsById?.get(meta.id), Math.floor(Date.now() / 1000)));
+      continue;
+    }
+    if (!prefersOnChainSupplyMcap(meta) && !selectCuratedAggregateOnchainSupplyProbeContracts(meta)) continue;
     if (isOnchainSupplyPartitionExcluded(meta.id) && asset.supplySource === "coingecko-fallback"
       && getCirculatingRawOrNull(asset) !== null) continue;
 

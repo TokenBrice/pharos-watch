@@ -59,7 +59,11 @@ interface TokenDisplayConfig {
 const TOKEN_DISPLAY: Record<string, TokenDisplayConfig> = {
   AUSD: { label: "AUSD (Agora Dollar)", risk: getCanonicalReserveAssetRisk("AUSD") ?? "low" },
   AVAX: { label: "AVAX", risk: getCanonicalReserveAssetRisk("AVAX") ?? "high" },
-  WTGXX: { label: "WTGXX (WisdomTree Government Money Market)", risk: "low" },
+  WTGXX: {
+    label: "WTGXX (WisdomTree Government Money Market)",
+    risk: "low",
+    coinId: "wtgxx-wisdomtree",
+  },
   USTB: {
     label: "USTB (Superstate tokenized T-bills)",
     risk: getCanonicalReserveAssetRisk("USTB") ?? "low",

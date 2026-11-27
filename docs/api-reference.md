@@ -1130,7 +1130,7 @@ Yield-bearing stablecoin rankings with safety, benchmark-aware context, and opti
 
 ```json
 {
-  "currentVersion": "8.62",
+  "currentVersion": "8.63",
   "methodologyVersion": "10.57"
 }
 ```
@@ -1149,7 +1149,7 @@ Machine-readable source-list manifest for every yield-bearing asset, including a
 
 ```json
 {
-  "methodologyVersion": "8.62"
+  "methodologyVersion": "8.63"
 }
 ```
 
@@ -1167,8 +1167,8 @@ Historical yield observations for a stablecoin, with optional publication/source
 
 ```json
 {
-  "currentVersion": "8.62",
-  "methodologyVersion": "8.62"
+  "currentVersion": "8.63",
+  "methodologyVersion": "8.63"
 }
 ```
 

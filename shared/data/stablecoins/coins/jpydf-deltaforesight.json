@@ -2,15 +2,17 @@
   "id": "jpydf-deltaforesight",
   "name": "JPYdf",
   "symbol": "JPYdf",
-  "oneLiner": "JPYdf is a yen-targeted Liquity v2 fork on Ethereum, borrowed against wstETH or USDC, with no yen redemption claim and no admitted runtime price yet.",
+  "oneLiner": "JPYdf is a yen-targeted Liquity v2 fork on Ethereum, borrowed against wstETH or USDC, with no yen redemption claim.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "JPY",
     "governance": "centralized-dependent"
   },
-  "collateral": "User-deposited wstETH and USDC in two isolated Liquity v2 branches, held through 18-decimal dToken wrappers that the protocol treats as 1:1 claims on the underlying. Minimum collateral ratios are 123.18% for wstETH and 111.58% for USDC, with critical ratios of 141.67% and 124.50%. At Ethereum block 26196851 (October 15 2026), the branches held 586,394 USDC and 79.39 wstETH, putting USDC at about 71% of collateral value at the oracle's last good prices. An upgradeable vault and strategy layer may lend USDC through Aave V3 or Morpho V2; no principal was deployed at that block. DeltaForesight's corporate financing is not token collateral.",
-  "pegMechanism": "Only registered BorrowerOperations and ActivePool contracts can mint JPYdf, which users borrow against overcollateralized troves at user-set interest rates. Undercollateralized troves are liquidated against the branch Stability Pool or redistributed to other troves in the branch. Any holder can redeem JPYdf for dToken collateral valued at ¥1 per JPYdf, less a fee of at least 0.5% plus a base rate that decays with a six-hour half-life. Chainlink JPY/USD, stETH/USD, ETH/USD, stETH/ETH and USDC/USD feeds price collateral. The yen is a value target only: JPYdf carries no yen monetary claim, no yen redemption right and no face-value buyback commitment.",
+  "collateral": "User-deposited wstETH and USDC in two isolated Liquity v2 branches, held through 18-decimal dToken wrappers that the protocol treats as 1:1 claims on the underlying while backingRatio equals 1.0. Minimum collateral ratios are 123.18% for dwstETH and 111.58% for dUSDC, with critical ratios of 141.67% and 124.50% and shutdown ratios of 110.00% and 105.00%. At Ethereum block 26504779 (November 27, 2026), the branches held 601,835.83 dUSDC and 78.92 dwstETH, putting USDC at 77.9% of collateral value ($601.8K of $772.7K) and 81.4% of branch debt. Within the upgradeable dUSDC CollateralVault, 20,041 USDC sat in the idle withdrawal buffer while 290,897 USDC principal each was deployed to Aave V3 and a Gauntlet Morpho Vault V2; all 78.92 wstETH sat idle in the dwstETH CollateralVault. Six additional branches in CollateralRegistry remain unfinalized with zero debt and collateral. DeltaForesight's corporate financing is not token collateral.",
+  "pegMechanism": "Only registered BorrowerOperations and ActivePool contracts can mint JPYdf through the borrowing core (with an inactive timelocked bridgeAdmin path on JpydfToken), and users borrow JPYdf against overcollateralized troves at user-set interest rates. Undercollateralized troves are liquidated against the branch Stability Pool or redistributed to other troves in the branch. Any holder can redeem JPYdf for dToken collateral valued at ¥1 per JPYdf, less a fee of at least 0.5% plus a base rate that decays with a six-hour half-life. Chainlink JPY/USD, stETH/USD, ETH/USD, stETH/ETH and USDC/USD feeds price collateral. The yen is a value target only: JPYdf carries no yen monetary claim, no yen redemption right and no face-value buyback commitment.",
   "mechanismArchetype": "cdp",
+  "detailProvider": "defillama",
+  "llamaId": "448",
   "infrastructures": [
     "liquity-v2"
   ],
@@ -30,11 +32,85 @@
       "decimals": 18
     }
   ],
+  "liveReservesConfig": {
+    "adapter": "evm-branch-balances",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "jpydf-deltaforesight",
+    "inputs": {
+      "primary": { "kind": "onchain-evm", "chain": "ethereum", "rpcMode": "public-rpc" }
+    },
+    "params": {
+      "sourceUrls": [
+        "https://jpydf.gitbook.io/jpy-defi/technical-information/contract-addresses.md",
+        "https://jpydf.gitbook.io/jpy-defi/collateral-and-pricing/collateral-assets.md",
+        "https://jpydf.gitbook.io/jpy-defi/collateral-and-pricing/dtoken.md"
+      ],
+      "census": {
+        "kind": "reviewed-roster",
+        "reviewedAt": "2026-11-27",
+        "sourceUrls": [
+          "https://jpydf.gitbook.io/jpy-defi/technical-information/contract-addresses.md",
+          "https://jpydf.gitbook.io/jpy-defi/collateral-and-pricing/collateral-assets.md"
+        ]
+      },
+      "redemptionRateProbe": {
+        "contract": "0x9bd92516f419965da7f3670aca5d070f9721e319",
+        "selector": "0xc52861f2",
+        "decimals": 18
+      },
+      "branches": [
+        {
+          "name": "USDC collateral in dUSDC branch (CollateralVault, Aave V3 and Morpho V2)",
+          "holder": "0x23e7582cc75c10bce92adbb6fb4909747f6282b8",
+          "balanceRead": {
+            "contract": "0xd95924a5368d1c1dafcd6b7753d4ac333661b68a",
+            "selector": "0x3ecaaa3f"
+          },
+          "token": { "chain": "ethereum", "address": "0x01dd27d3422df99a56c60945e561243a8027262c", "decimals": 18 },
+          "priceToken": { "chain": "ethereum", "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" },
+          "receipt": { "kind": "backing-ratio-vault", "vault": "0x087ebaf3f1b094b2046912a5e5f0bad78df3eaa7" },
+          "underlyingPrice1to1": true,
+          "risk": "medium",
+          "coinId": "usdc-circle",
+          "depType": "collateral"
+        },
+        {
+          "name": "Lido wstETH collateral in dwstETH branch (CollateralVault)",
+          "holder": "0xcdc86e2b6ba7ec314b96aadaf6c1d65e1b63bc24",
+          "balanceRead": {
+            "contract": "0x77c43f2636d12861d1c1a9e986e1344de66326d3",
+            "selector": "0x3ecaaa3f"
+          },
+          "token": { "chain": "ethereum", "address": "0xb1f83c8e22f8644858c99675260c642403fae85c", "decimals": 18 },
+          "priceToken": { "chain": "ethereum", "address": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0" },
+          "receipt": { "kind": "backing-ratio-vault", "vault": "0x6042755ecca71a1be9c7091441ca5beaa6b520e4" },
+          "underlyingPrice1to1": true,
+          "risk": "low"
+        }
+      ]
+    }
+  },
   "jurisdiction": { "country": "Japan" },
-  "status": "pre-launch",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "onchain",
+  "governanceQuality": "multisig",
+  "status": "active",
   "announcedDate": "2026-09-25",
-  "launchPhase": "launched",
-  "launchPhaseDetail": "JPY DeFi launched on Ethereum mainnet on October 15 2026, so JPYdf is live. Pharos tracks it pre-launch only because no runtime price source admits it: on launch day DefiLlama and CoinGecko listed neither the token nor the protocol, and the DefiLlama contract-price endpoint returned no quote. The token is 0xb122f4a154f84708407213d6a715181180012f45 (18 decimals, Ethereum only, no registered bridge minter). At block 26196851 (08:54 UTC on October 15), supply was 91,738,933 JPYdf, about $581,000 at that day's yen rate, with 69.4 million borrowed against USDC and 22.3 million against wstETH. Trading was confined to one Uniswap v4 JPYdf/USDC pool created that morning with about $552,000 of liquidity. The token and the Liquity v2 core are non-upgradeable and the token owner is renounced. The dToken vault and strategy layer is upgradeable and pausable, and governance can recognize collateral losses, replace oracle sources after a 12-hour timelock and resume paused branches without delay. The governance, operator and guardian Safes are each 2-of-3 with the same three signers, although the documentation describes a higher quorum for loss recognition. The deployed JPY/USD staleness threshold is 30 hours, while the documentation describes 72 hours. Chain Defenders and Guardian reviewed the JPYdf-specific code. The docs list a Guardian Defender bounty contest with a submission period from October 14 to November 13 2026, and GitHub private vulnerability reporting for the SDK. JPYdf Foundation DAO LLC operates the app, which excludes Japanese residents, and does not disclose its domicile.",
+  "launchDate": "2026-10-15",
+  "notices": [
+    {
+      "type": "info",
+      "title": "No yen redemption claim and restricted app access",
+      "message": "JPYdf tracks the yen as a value target only and carries no fiat yen claim or issuer buyback right. Redemptions return dTokens whose underlying USDC is largely deployed into Aave V3 and Morpho V2, where buffer depletion triggers a three-day withdrawal waiting period. The JPYdf Foundation DAO LLC web interface excludes residents of Japan, the United States, and sanctioned jurisdictions.",
+      "asOf": "2026-11-27",
+      "sources": [
+        { "label": "JPY DeFi: What is JPYdf", "url": "https://jpydf.gitbook.io/jpy-defi/readme.md" },
+        { "label": "JPY DeFi: dToken", "url": "https://jpydf.gitbook.io/jpy-defi/collateral-and-pricing/dtoken.md" },
+        { "label": "JPY DeFi Interface Terms of Use (2026-11-06)", "url": "https://jpydf.gitbook.io/jpy-defi/reference/interface-terms.md" }
+      ]
+    }
+  ],
   "featuredContent": [
     {
       "type": "blog",
@@ -108,11 +184,5 @@
       "description": "DefiLlama added JPYdf as stablecoin 448 on October 22 2026, reporting about 93.3 million JPYdf on Ethereum, matching on-chain total supply. DefiLlama carries no price for it and CoinGecko has no listing.",
       "sourceUrl": "https://stablecoins.llama.fi/stablecoin/448"
     }
-  ],
-  "launchDate": "2026-10-15",
-  "listingStatusReview": {
-    "changedAt": "2026-10-25",
-    "reason": "Missing lane: price. No admissible source quotes JPYdf: there is no CoinGecko listing, DefiLlama 448 has a null price, and coins.llama.fi has no contract quote. Supply is observable.",
-    "reviewBy": "2026-12-24"
-  }
+  ]
 }

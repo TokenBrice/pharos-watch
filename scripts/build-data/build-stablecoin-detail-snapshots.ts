@@ -429,6 +429,8 @@ export async function generateSnapshots(
     resolveApiPathUrl(apiBase, API_PATHS.supplyHistory(id, STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS)),
     SupplyHistoryResponseSchema,
   );
+  const assessedAt = options.generatedAt ?? Date.now();
+  const assessedAtSec = Math.floor(assessedAt / 1000);
   const fetchCoin = async (id: string, detailLane = true): Promise<SnapshotCoinLanes> => {
     const [detail, history] = await Promise.all([
       detailLane ? fetchDetailLane(id) : Promise.resolve(null),
@@ -439,7 +441,7 @@ export async function generateSnapshots(
     }
     return {
       id,
-      liveSummary: detail ? projectStablecoinLiveSummary(detail.data, id) : null,
+      liveSummary: detail ? projectStablecoinLiveSummary(detail.data, id, assessedAtSec) : null,
       supplyHistory: history?.data ?? null,
       updatedAt: {
         ...(detail?.updatedAt != null ? { liveSummary: detail.updatedAt } : {}),
@@ -448,7 +450,6 @@ export async function generateSnapshots(
     };
   };
   const lanes: SnapshotCoinLanes[] = [];
-  const assessedAt = options.generatedAt ?? Date.now();
   const acquisition: Array<{
     id: string;
     source: "per-coin" | "bulk-cache-only" | "bulk-history-only" | "bulk-unavailable-fallback"
@@ -598,7 +599,7 @@ export async function generateSnapshots(
             const detail = await fetchDetailLane(entry.id);
             lane = {
               id: entry.id,
-              liveSummary: detail ? projectStablecoinLiveSummary(detail.data, entry.id) : null,
+              liveSummary: detail ? projectStablecoinLiveSummary(detail.data, entry.id, assessedAtSec) : null,
               supplyHistory: entry.supplyHistory,
               updatedAt: {
                 ...(detail?.updatedAt != null ? { liveSummary: detail.updatedAt } : {}),

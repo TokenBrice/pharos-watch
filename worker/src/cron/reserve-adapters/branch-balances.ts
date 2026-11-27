@@ -10,6 +10,7 @@ import {
   fetchDefiLlamaPrices,
   fetchErc20Balance,
   fetchOnchainMulticall3,
+  fetchOnchainRawCall,
   fetchOnchainUint256,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
@@ -20,6 +21,7 @@ import {
   valueUsdFromBigIntPrice,
 } from "./helpers";
 import { decodeUint256Word } from "./abi-decode";
+import { decodeWords } from "./evm-branch-observation";
 
 export interface BranchPriceObservation {
   sourceKind: "configured-nominal" | "pinned-oracle" | "market-api";
@@ -38,6 +40,10 @@ export type BranchConfig = BranchBalanceParams["branches"][number];
 export interface BranchBalanceEntry {
   branch: BranchConfig;
   balanceRaw: bigint | null;
+  /** Valuation-adjusted raw balance when a vault backing ratio applies; preserves raw holdings in `balanceRaw`. */
+  valuationBalanceRaw?: bigint | null;
+  /** Backing ratio in 1e18 WAD scale when read from a `backing-ratio-vault` receipt. */
+  backingRatioRaw?: bigint | null;
   /** decimals() read from the branch token; undefined = not probed, null = call reverted. */
   observedDecimals?: bigint | null;
   /** Converted underlying scale; the original token scale remains the identity gate. */
@@ -134,14 +140,15 @@ async function fetchCachedTrackedBranchPrices(
   warnings: LiveReserveWarning[],
   ctx?: AdapterContext,
 ): Promise<Map<string, number>> {
-  const branchesNeedingCachedPrices = branches.filter(({ branch, balanceRaw }) =>
-    balanceRaw != null
-    && balanceRaw > 0n
-    && branch.priceUsd == null
-    && branch.coinId != null
-    && branch.underlyingPrice1to1 === true
-    && !priceMap.has(branch.name)
-  );
+  const branchesNeedingCachedPrices = branches.filter(({ branch, balanceRaw, valuationBalanceRaw }) => {
+    const effectiveBalance = valuationBalanceRaw === undefined ? balanceRaw : valuationBalanceRaw;
+    return effectiveBalance != null
+      && effectiveBalance > 0n
+      && branch.priceUsd == null
+      && branch.coinId != null
+      && branch.underlyingPrice1to1 === true
+      && !priceMap.has(branch.name);
+  });
   if (branchesNeedingCachedPrices.length === 0) return new Map();
 
   const cachedPricesById = await loadCachedStablecoinPricesById(warnings, ctx);
@@ -172,12 +179,40 @@ export async function fetchBranchBalances(
       const { branch } = entry;
       if (!branch.receipt || entry.balanceRaw == null || entry.balanceRaw === 0n) return entry;
       if (!branch.priceToken || branch.priceToken.chain !== input.chain) {
-        throw new Error(`Compound receipt ${branch.name} requires a same-chain underlying priceToken`);
+        throw new Error(`Receipt ${branch.name} requires a same-chain underlying priceToken`);
       }
       const read = (contract: string, data: string) => fetchOnchainUint256({
         contract, data, chain: input.chain, signal, ctx,
         rpcUrl: params.rpcUrl, fallbackRpcUrl: params.fallbackRpcUrl,
       });
+      if (branch.receipt.kind === "backing-ratio-vault") {
+        const [vaultAddr, underlying, pricingRaw] = await Promise.all([
+          read(branch.token.address, "0xfbfa77cf"), // vault()
+          read(branch.token.address, "0x6f307dc3"), // underlying()
+          fetchOnchainRawCall({
+            contract: branch.receipt.vault, data: "0x08a7e3e1", // backingRatioForPricing() -> (uint256,bool)
+            chain: input.chain, signal, ctx, rpcUrl: params.rpcUrl, fallbackRpcUrl: params.fallbackRpcUrl,
+          }),
+        ]);
+        if (vaultAddr !== BigInt(branch.receipt.vault) || underlying !== BigInt(branch.priceToken.address)) {
+          throw new Error(`Backing-ratio receipt ${branch.name} vault or underlying identity mismatch`);
+        }
+        let words: bigint[];
+        try {
+          words = decodeWords(pricingRaw, `${branch.name} backingRatioForPricing`);
+        } catch {
+          return { ...entry, valuationBalanceRaw: null, backingRatioRaw: null };
+        }
+        if (words.length !== 2 || words[1] !== 1n || words[0]! > 10n ** 18n) {
+          // Withhold branch valuation fail-closed when vault pricing availability is false, malformed, or out of bounds.
+          return { ...entry, valuationBalanceRaw: null, backingRatioRaw: null };
+        }
+        return {
+          ...entry,
+          valuationBalanceRaw: (entry.balanceRaw * words[0]!) / 10n ** 18n,
+          backingRatioRaw: words[0]!,
+        };
+      }
       const [rate, underlying, decimals] = await Promise.all([
         read(branch.token.address, branch.receipt.exchangeRateSelector ?? "0x182df0f5"),
         read(branch.token.address, "0x6f307dc3"),
@@ -258,8 +293,10 @@ export async function fetchBranchPriceMap(
   ctx?: AdapterContext,
   observations?: Map<string, BranchPriceObservation>,
 ): Promise<Map<string, number>> {
-  const branchesNeedingPrices = balances
-    .filter(({ branch, balanceRaw }) => balanceRaw != null && balanceRaw > 0n && branch.priceUsd == null);
+  const branchesNeedingPrices = balances.filter(({ branch, balanceRaw, valuationBalanceRaw }) => {
+    const effectiveBalance = valuationBalanceRaw === undefined ? balanceRaw : valuationBalanceRaw;
+    return effectiveBalance != null && effectiveBalance > 0n && branch.priceUsd == null;
+  });
   if (branchesNeedingPrices.length === 0) return new Map();
 
   const { prices: wrapperPriceMap, warnings: wrapperWarnings, observations: wrapperObservations } = await fetchDefiLlamaPrices(
@@ -342,11 +379,15 @@ export function adaptBranchBalanceReserves(input: AdaptBranchBalanceInput): Adap
     coinId?: string; depType?: BranchConfig["depType"]; selfReferential?: true;
   }> = [];
 
-  for (const { branch, balanceRaw, observedDecimals, balanceDecimals } of balances) {
+  for (const { branch, balanceRaw, valuationBalanceRaw, backingRatioRaw, observedDecimals, balanceDecimals } of balances) {
     const price = branch.priceUsd ?? priceMap.get(branch.name);
     const observation: Record<string, unknown> = {
       name: branch.name, token: branch.token.address, chain: branch.chain ?? branch.token.chain,
       balanceRaw: balanceRaw == null ? null : balanceRaw.toString(),
+      ...(backingRatioRaw !== undefined ? {
+        backingRatioRaw: backingRatioRaw == null ? null : backingRatioRaw.toString(),
+        valuationBalanceRaw: valuationBalanceRaw == null ? null : valuationBalanceRaw.toString(),
+      } : {}),
       decimals: branch.token.decimals, observedDecimals: observedDecimals == null ? null : Number(observedDecimals),
       priceUsd: price ?? null,
       priceObservation: branch.priceUsd != null
@@ -381,8 +422,13 @@ export function adaptBranchBalanceReserves(input: AdaptBranchBalanceInput): Adap
         continue;
       }
     }
+    if (valuationBalanceRaw === null) {
+      unavailableBranches.push({ name: branch.name, reason: "backing-ratio-unavailable" });
+      continue;
+    }
+    const effectiveBalance = valuationBalanceRaw === undefined ? balanceRaw : valuationBalanceRaw;
     // An observed zero needs no price and is not an unavailable constituent.
-    if (balanceRaw === 0n) continue;
+    if (effectiveBalance === 0n) continue;
     if (branch.unclassifiedSelfReferential === true) {
       observation.classification = "unclassified-self-referential";
       unclassifiedBranches.push(branch.name);
@@ -394,7 +440,7 @@ export function adaptBranchBalanceReserves(input: AdaptBranchBalanceInput): Adap
     // Own-liability claims are measured and published, never credited as
     // independent backing in the collateralization numerator.
     if (branch.unclassifiedSelfReferential === true) {
-      const value = valueUsdFromBigIntPrice(balanceRaw, balanceDecimals ?? branch.token.decimals, price);
+      const value = valueUsdFromBigIntPrice(effectiveBalance, balanceDecimals ?? branch.token.decimals, price);
       selfReferentialValues.push({ name: branch.name, value });
       values.push({
         sourceKey: `${adapterKey}:${branch.chain ?? branch.token.chain}:${branch.token.address.toLowerCase()}`,
@@ -420,7 +466,7 @@ export function adaptBranchBalanceReserves(input: AdaptBranchBalanceInput): Adap
     }
     values.push({
       sourceKey: `${adapterKey}:${branch.chain ?? branch.token.chain}:${branch.token.address.toLowerCase()}`,
-      value: valueUsdFromBigIntPrice(balanceRaw, balanceDecimals ?? branch.token.decimals, price),
+      value: valueUsdFromBigIntPrice(effectiveBalance, balanceDecimals ?? branch.token.decimals, price),
       name: branch.name,
       risk: branch.risk,
       ...(branch.coinId ? { coinId: branch.coinId } : {}),

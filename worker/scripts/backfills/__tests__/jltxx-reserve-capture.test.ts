@@ -28,7 +28,15 @@ beforeEach(() => {
     slices: [{ name: "JLTXX government fund shares", pct: 100, risk: "low" }],
     metadata: {
       navPerToken: 1, sourceTimestamp: midnight, freshnessMode: "verified",
-      details: { cusip: "46655R119", shareClassNumber: "4397", ticker: "JLTXX", classAssetsUsd: 600_000_000, dealingDate: new Date(midnight * 1000).toISOString().slice(0, 10) },
+      details: {
+        cusip: "46655R119", shareClassNumber: "4397", ticker: "JLTXX", classAssetsUsd: 600_000_000,
+        dealingDate: new Date(midnight * 1000).toISOString().slice(0, 10),
+        supplyAdmissionReview: {
+          maxNavSupplySkewSec: 432000, reviewedAt: "2026-11-27",
+          evidenceRef: "https://am.jpmorgan.com/FundsMarketingHandler/slim/product.md?cusip=46655r119&country=us&role=adv&language=en",
+          perimeterRef: "https://www.sec.gov/Archives/edgar/data/1659326/000119312526410014/d172947d497.htm",
+        },
+      },
     },
   });
   shares.mockResolvedValue({
@@ -51,18 +59,18 @@ function runFinalize(db: D1Database, runStartedAt: number) {
   });
 }
 
-describe("staged JLTXX canonical reserve writer", () => {
-  it("writes a matched current staged attempt without adding active membership or an accepted generation", async () => {
+describe("active JLTXX canonical reserve writer", () => {
+  it("writes a matched active attempt without creating an accepted generation", async () => {
     const { db, sqlite } = fixtures.open();
-    expect(await runBootstrap(db)).toMatchObject({ evidenceCaptured: true, admissionAllowed: false, runtimePriceMarketcapPass: false, reason: "native-class-temporal-review-unavailable" });
+    expect(await runBootstrap(db)).toMatchObject({ evidenceCaptured: true, admissionAllowed: false, runtimePriceMarketcapPass: false, scopePassed: true, reason: "explicit-admission-review-and-runtime-price-marketcap-pass-required" });
     const current = sqlite.prepare("SELECT c.source, c.attempt_id, c.config_fingerprint, c.fetched_at, s.last_success_at, s.last_success_attempt_id, s.config_fingerprint AS state_fingerprint FROM reserve_composition c JOIN reserve_sync_state s USING (stablecoin_id) WHERE c.stablecoin_id = ?").get(ID) as Record<string, unknown>;
     const fp = computeLiveReserveConfigFingerprint(WORKER_TRACKED_META_BY_ID.get(ID)!.liveReservesConfig!);
     expect(current).toMatchObject({ config_fingerprint: fp, state_fingerprint: fp, attempt_id: current.last_success_attempt_id, fetched_at: current.last_success_at });
-    expect(CONFIGURED_COINS.some((c) => c.id === ID)).toBe(false);
+    expect(CONFIGURED_COINS.some((c) => c.id === ID)).toBe(true);
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM reserve_composition_history WHERE stablecoin_id = ?").get(ID)).toEqual({ n: 1 });
   });
 
-  it("retains staged JLTXX evidence through ordinary finalization but deletes retired adapter rows", async () => {
+  it("retains active JLTXX evidence through ordinary finalization but deletes retired adapter rows", async () => {
     const { db, sqlite } = fixtures.open();
     expect((await runBootstrap(db)).evidenceCaptured).toBe(true);
     const getRow = (table: string, id = ID) => sqlite.prepare(`SELECT * FROM ${table} WHERE stablecoin_id = ?`).get(id);
@@ -100,8 +108,8 @@ describe("staged JLTXX canonical reserve writer", () => {
       expect(getRow("reserve_composition", id)).toBeUndefined();
       expect(getRow("reserve_sync_state", id)).toBeUndefined();
     }
-    expect(WORKER_TRACKED_META_BY_ID.get(ID)?.status).toBe("quarantined");
-    expect(CONFIGURED_COINS.some((c) => c.id === ID)).toBe(false);
+    expect(WORKER_TRACKED_META_BY_ID.get(ID)?.status).toBe("active");
+    expect(CONFIGURED_COINS.some((c) => c.id === ID)).toBe(true);
     expect(sqlite.prepare("SELECT key FROM cache WHERE key = 'live-reserves:accepted-generation:v1'").get()).toBeUndefined();
   });
 
@@ -123,7 +131,7 @@ describe("staged JLTXX canonical reserve writer", () => {
       ],
     });
     const packet = await runBootstrap(fixtures.open().db);
-    expect(packet).toMatchObject({ evidenceCaptured: true, admissionAllowed: false, reason: "native-class-temporal-review-unavailable", nativeShares: { rawShares: "60000000000", observedAt: now - 900 } });
+    expect(packet).toMatchObject({ evidenceCaptured: true, admissionAllowed: false, scopePassed: true, reason: "explicit-admission-review-and-runtime-price-marketcap-pass-required", nativeShares: { rawShares: "60000000000", observedAt: now - 900 } });
     expect(packet.nativeShares?.legs).toHaveLength(2);
   });
 });

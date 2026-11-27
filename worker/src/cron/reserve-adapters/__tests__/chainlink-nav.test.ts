@@ -130,7 +130,7 @@ describe("adaptChainlinkNavResponse", () => {
     sourceKey: "chainlink-nav:test",
   };
 
-  // WTGXX is quarantined today; its keyed row keeps a reactivated feed classified.
+  // Both active funds project keyed slices onto their reviewed singleton classifications.
   it.each(["vbill-vaneck", "wtgxx-wisdomtree"])("projects %s's native fund-share slice onto its reviewed singleton classification", (id) => {
     const coin = TRACKED_META_BY_ID.get(id)!;
     const config = coin.liveReservesConfig!;

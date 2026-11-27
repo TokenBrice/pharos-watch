@@ -3,18 +3,12 @@ import { CORE_AGGREGATE_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/aggre
 import { mockD1 as baseMockD1 } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import {
-  CORE_STABLECOIN_AGGREGATE_UNIVERSE,
-  CORE_STABLECOIN_AGGREGATE_UNIVERSE_V1,
-  CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE,
-  CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC,
+  CORE_STABLECOIN_AGGREGATE_UNIVERSE, CORE_STABLECOIN_AGGREGATE_UNIVERSE_V1,
+  CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE, CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC,
 } from "@shared/lib/stablecoins/aggregate-universe";
+import { CORE_AGGREGATE_V1_MEMBER_LIST, CORE_AGGREGATE_V1_NON_ACTIVE_MEMBER_LIST } from "@shared/lib/stablecoins/aggregate-universe-v1";
 import {
-  CORE_AGGREGATE_V1_MEMBER_LIST,
-  CORE_AGGREGATE_V1_NON_ACTIVE_MEMBER_LIST,
-} from "@shared/lib/stablecoins/aggregate-universe-v1";
-import {
-  buildNonUsdShareCoreMembers,
-  computeNonUsdShareHistory, sampleNonUsdShareHistory, publishNonUsdShareHistory,
+  buildNonUsdShareCoreMembers, computeNonUsdShareHistory, sampleNonUsdShareHistory, publishNonUsdShareHistory,
   readNonUsdShareHistory, NON_USD_SHARE_COHORT_IDENTITY, NON_USD_SHARE_HISTORY_KEY,
 } from "../non-usd-share-history";
 import { D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
@@ -22,37 +16,23 @@ import { SUPPLY_HISTORY_UPSERT_SQL, writeSupplyHistoryBatch } from "../supply-hi
 
 function mockD1(tables: Parameters<typeof baseMockD1>[0]) {
   const db = baseMockD1(tables);
-  // This producer batch contains three reads, including CTEs; the generic mock's
-  // auto-mode recognizes only SELECT-leading SQL. Real transaction behavior is
-  // exercised by the SQLite fixtures below.
-  db.batch = async <T>(statements: Parameters<typeof db.batch>[0]) =>
-    Promise.all(statements.map((statement) => statement.all<T>()));
+  db.batch = async <T>(statements: Parameters<typeof db.batch>[0]) => Promise.all(statements.map((s) => s.all<T>()));
   return db;
 }
 
 const fixtures = createLatestSchemaFixtureTracker();
 const COIN_HISTORY_GAPS = { match: "LEAD(snapshot_date)", rows: [] };
 const COMPLETE_COVERAGE = { basis: "interior-gap-prior-value", total: 1, commodity: 1, fiatNonUsd: 1 };
-
-
-function unix(iso: string): number {
-  return Math.floor(new Date(iso).getTime() / 1000);
-}
-
+const unix = (iso: string) => Math.floor(new Date(iso).getTime() / 1000);
 const COMMODITY_PEGS = new Set(["GOLD", "SILVER"]);
-const COMMODITY_IDS = CORE_AGGREGATE_ACTIVE_STABLECOINS.filter((c) => COMMODITY_PEGS.has(c.flags.pegCurrency)).map(
-  (c) => c.id,
-);
-const FIAT_NON_USD_IDS = CORE_AGGREGATE_ACTIVE_STABLECOINS.filter(
-  (c) => c.flags.pegCurrency !== "USD" && !COMMODITY_PEGS.has(c.flags.pegCurrency),
-).map((c) => c.id);
+const COMMODITY_IDS = CORE_AGGREGATE_ACTIVE_STABLECOINS.filter((c) => COMMODITY_PEGS.has(c.flags.pegCurrency)).map((c) => c.id);
+const FIAT_NON_USD_IDS = CORE_AGGREGATE_ACTIVE_STABLECOINS.filter((c) => c.flags.pegCurrency !== "USD" && !COMMODITY_PEGS.has(c.flags.pegCurrency)).map((c) => c.id);
 const USD_IDS = CORE_AGGREGATE_ACTIVE_STABLECOINS.filter((c) => c.flags.pegCurrency === "USD").map((c) => c.id);
 
 async function computeHistory(db: D1Database, days = 5000) {
   const nowSec = Math.floor(Date.now() / 1000);
   const cutoff = nowSec - days * 86400;
-  const history = await computeNonUsdShareHistory(db, nowSec, cutoff);
-  return sampleNonUsdShareHistory(history.points, cutoff, nowSec);
+  return sampleNonUsdShareHistory((await computeNonUsdShareHistory(db, nowSec, cutoff)).points, cutoff, nowSec);
 }
 
 describe("non-USD share chronological sampling parity", () => {
@@ -128,92 +108,33 @@ describe("non-USD share producer aggregation", () => {
     const completedSnapshotDate = unix("2026-04-07T00:00:00Z");
     vi.spyOn(Date, "now").mockReturnValue(nowMs);
 
-    const db = mockD1(
-      [
-        {
-          match: "FROM cache",
-          matchBinds: ["snapshot-supply:last-write"],
-          rows: [
-            {
-              key: "snapshot-supply:last-write",
-              value: JSON.stringify({ snapshotDate: completedSnapshotDate }),
-              updated_at: Math.floor(nowMs / 1000) - 600,
-            },
-          ],
-          first: {
-            key: "snapshot-supply:last-write",
-            value: JSON.stringify({ snapshotDate: completedSnapshotDate }),
-            updated_at: Math.floor(nowMs / 1000) - 600,
-          },
-        },
-        COIN_HISTORY_GAPS,
-        {
-          match: "FROM supply_history",
-          rows: [
-            {
-              snapshot_date: unix("2021-04-10T00:00:00Z"),
-              total: 64_785_915_681.46,
-              commodity: 1_873_999_608.17,
-              fiat_non_usd: 132_274_790.42,
-            },
-            {
-              snapshot_date: unix("2024-06-04T00:00:00Z"),
-              total: 162_264_669_603.31,
-              commodity: 2_812_795_250.77,
-              fiat_non_usd: 352_546_495.83,
-            },
-            {
-              snapshot_date: unix("2026-04-07T00:00:00Z"),
-              total: 327_905_730_184.74,
-              commodity: 5_936_875_143.74,
-              fiat_non_usd: 1_826_608_786.57,
-            },
-          ],
-        },
-      ],
-    );
+    const db = mockD1([
+      {
+        match: "FROM cache", matchBinds: ["snapshot-supply:last-write"],
+        rows: [{ key: "snapshot-supply:last-write", value: JSON.stringify({ snapshotDate: completedSnapshotDate }), updated_at: Math.floor(nowMs / 1000) - 600 }],
+        first: { key: "snapshot-supply:last-write", value: JSON.stringify({ snapshotDate: completedSnapshotDate }), updated_at: Math.floor(nowMs / 1000) - 600 },
+      },
+      COIN_HISTORY_GAPS,
+      {
+        match: "FROM supply_history",
+        rows: [
+          { snapshot_date: unix("2021-04-10T00:00:00Z"), total: 64_785_915_681.46, commodity: 1_873_999_608.17, fiat_non_usd: 132_274_790.42 },
+          { snapshot_date: unix("2024-06-04T00:00:00Z"), total: 162_264_669_603.31, commodity: 2_812_795_250.77, fiat_non_usd: 352_546_495.83 },
+          { snapshot_date: unix("2026-04-07T00:00:00Z"), total: 327_905_730_184.74, commodity: 5_936_875_143.74, fiat_non_usd: 1_826_608_786.57 },
+        ],
+      },
+    ]);
 
     const body = await computeHistory(db);
     const aggregate = db.getHistory().find((entry) => entry.sql.includes("GROUP BY snapshot_date"));
     expect(aggregate?.binds.slice(1)).toEqual([cutoff, completedSnapshotDate]);
-    expect(JSON.parse(String(aggregate?.binds[0]))["aeur-anchored-coins"]).toEqual({
-      bucket: "fiat-non-usd", inactiveFrom: unix("2026-07-11T00:00:00Z"),
-    });
-    expect(
-      db
-        .getHistory()
-        .filter((entry) => entry.sql.includes("FROM supply_history"))
-        .every((entry) => entry.binds.length <= D1_MAX_BOUND_PARAMETERS),
-    ).toBe(true);
+    expect(JSON.parse(String(aggregate?.binds[0]))["aeur-anchored-coins"]).toEqual({ bucket: "fiat-non-usd", inactiveFrom: unix("2026-07-11T00:00:00Z") });
+    expect(db.getHistory().filter((entry) => entry.sql.includes("FROM supply_history")).every((entry) => entry.binds.length <= D1_MAX_BOUND_PARAMETERS)).toBe(true);
 
     expect(body).toEqual([
-      {
-        date: unix("2021-04-10T00:00:00Z"),
-        commodityShare: 2.8926,
-        fiatNonUsdShare: 0.2042,
-        commodity: 1_873_999_608.17,
-        fiatNonUsd: 132_274_790.42,
-        total: 64_785_915_681.46,
-        coverage: COMPLETE_COVERAGE,
-      },
-      {
-        date: unix("2024-06-04T00:00:00Z"),
-        commodityShare: 1.7335,
-        fiatNonUsdShare: 0.2173,
-        commodity: 2_812_795_250.77,
-        fiatNonUsd: 352_546_495.83,
-        total: 162_264_669_603.31,
-        coverage: COMPLETE_COVERAGE,
-      },
-      {
-        date: unix("2026-04-07T00:00:00Z"),
-        commodityShare: 1.8105,
-        fiatNonUsdShare: 0.5571,
-        commodity: 5_936_875_143.74,
-        fiatNonUsd: 1_826_608_786.57,
-        total: 327_905_730_184.74,
-        coverage: COMPLETE_COVERAGE,
-      },
+      { date: unix("2021-04-10T00:00:00Z"), commodityShare: 2.8926, fiatNonUsdShare: 0.2042, commodity: 1_873_999_608.17, fiatNonUsd: 132_274_790.42, total: 64_785_915_681.46, coverage: COMPLETE_COVERAGE },
+      { date: unix("2024-06-04T00:00:00Z"), commodityShare: 1.7335, fiatNonUsdShare: 0.2173, commodity: 2_812_795_250.77, fiatNonUsd: 352_546_495.83, total: 162_264_669_603.31, coverage: COMPLETE_COVERAGE },
+      { date: unix("2026-04-07T00:00:00Z"), commodityShare: 1.8105, fiatNonUsdShare: 0.5571, commodity: 5_936_875_143.74, fiatNonUsd: 1_826_608_786.57, total: 327_905_730_184.74, coverage: COMPLETE_COVERAGE },
     ]);
     db.assertAllMatchesUsed();
   });
@@ -464,6 +385,7 @@ describe("non-USD share producer aggregation", () => {
     expect(actualMembers.get("fpi-frax")).toEqual({ bucket: "fiat-non-usd", inactiveFrom: cutover });
     expect(actualMembers.get("eutbl-spiko")).toEqual({ bucket: "fiat-non-usd", inactiveFrom: cutover });
     expect(actualMembers.get("usdcx-movement")).toEqual({ bucket: "usd", inactiveFrom: unix("2026-11-27T00:00:00Z") });
+    expect(actualMembers.get("jpydf-deltaforesight")).toEqual({ bucket: "fiat-non-usd", activeFrom: unix("2026-11-27T00:00:00Z"), inactiveFrom: null });
     expect(actualMembers.get("aeur-anchored-coins")).toEqual({
       bucket: "fiat-non-usd",
       inactiveFrom: unix("2026-07-11T00:00:00Z"),

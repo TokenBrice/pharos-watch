@@ -6,6 +6,8 @@
       "name": "OpenEden TBILL tokens (tokenized U.S. T-bills)",
       "pct": 93.75726776,
       "risk": "very-low",
+      "coinId": "tbill-openeden",
+      "depType": "collateral",
       "assetClass": "tokenized-security",
       "issuerOrObligor": "OpenEden Digital and United States Treasury",
       "riskFactors": [
@@ -84,15 +86,7 @@
     "scope": "full-composition",
     "knownUnknownExposure": "All positive reserve components reported by the issuer API are identified.",
     "knownUnknownExposurePct": 0,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "OpenEden TBILL tokens (tokenized U.S. T-bills)",
-        "pct": 93.75726776,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "The TBILL reserve token is identified by issuer documentation but is outside the active tracked stablecoin set."
-      }
-    ]
+    "nonLinkDispositions": []
   },
   "custodyProfile": {
     "providers": [

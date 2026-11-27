@@ -5,11 +5,94 @@
     "sources": [
       { "label": "Verified StopCodesFacet, ACCOUNT_ADMIN-controlled holder restrictions", "url": "https://eth.blockscout.com/address/0x996440281f77b4d664878b0b14a10e909fc3310b?tab=contract" },
       { "label": "Exact JLTXX FactTokenDiamond", "url": "https://eth.blockscout.com/address/0x09864f52b035ae22ee739dfa5c748fa080d07bd8?tab=contract" },
-      { "label": "Pinned restriction facet, ACCOUNT_ADMIN role and owner reads at Ethereum block 26197393, 2026-10-15T10:43:47Z", "url": "https://api-ethereum-mainnet.n.dwellir.com" }
+      { "label": "JLTXX Solana Token-2022 mint on Solscan", "url": "https://solscan.io/token/J4cTuCH6frt4AnEmKfMS2k8hsUf7K94PV62sjUJno8Cz" },
+      { "label": "Pinned restriction facet, ACCOUNT_ADMIN role and owner reads at Ethereum block 26197393, 2026-10-15T10:43:47Z", "url": "https://api-ethereum-mainnet.n.dwellir.com" },
+      { "label": "Pinned finalized Solana Token-2022 mint extension reads at slot 474455032, 2026-11-27T06:47:39Z", "url": "https://solana-rpc.publicnode.com" }
     ],
-    "evidence": "At Ethereum block 26197393 (0xecbf2725b507c952ede92d3161c1eed163f3e2adf32cc70b0e541f381ad82cbb; 2026-10-15T10:43:47Z), facetAddress(0xcfd5c5d1) on JLTXX token 0x09864f52b035ae22ee739dfa5c748fa080d07bd8 returns StopCodesFacet 0x996440281f77b4d664878b0b14a10e909fc3310b, whose pinned runtime exactly matches verified deployed bytecode. Its updateStopCodes(address,(bool,bool,bool,bool)) requires ACCOUNT_ADMIN to set stopSubscriptionTo, stopTransferFrom, stopTransferTo and stopRedemptionFrom. hasRole confirms ACCOUNT_ADMIN LightAccount 0x20aab6c346ac47f6b7f8c5d76f1f85d7367197d8; owner() remains 0x09d3a27bc30cf916ccfaa80a878b3e46098b8147. These are explicit holder transfer/redemption restrictions on the authored Ethereum deployment, not evidence for an unbound Solana mint.",
-    "reviewer": "Batch64 primary-source and pinned-RPC review",
-    "reviewedAt": "2026-10-15"
+    "evidence": "Ethereum: at block 26197393 (0xecbf2725b507c952ede92d3161c1eed163f3e2adf32cc70b0e541f381ad82cbb; 2026-10-15T10:43:47Z), facetAddress(0xcfd5c5d1) on 0x09864f52b035ae22ee739dfa5c748fa080d07bd8 returns StopCodesFacet 0x996440281f77b4d664878b0b14a10e909fc3310b, where ACCOUNT_ADMIN LightAccount 0x20aab6c346ac47f6b7f8c5d76f1f85d7367197d8 (owner 0x09d3a27bc30cf916ccfaa80a878b3e46098b8147) sets per-address subscription, transfer and redemption stop codes. Solana: at finalized slot 474455032 (2026-11-27T06:47:39Z), Token-2022 mint J4cTuCH6frt4AnEmKfMS2k8hsUf7K94PV62sjUJno8Cz enforces DefaultAccountState Frozen (state 2) and binds freezeAuthority, PermanentDelegate, Pausable authority, and TransferHook authority (program HAfaMsQFvoDYNSBdHUhkEHLWxcTnmWCXE6nk2aMufVmD) to 32E9ipXM6YoC7n12auPtXL4Z1STBposTmVuvt3btMdmT.",
+    "reviewer": "Batch64 primary-source and pinned-RPC review; 2026-11-27 Solana Token-2022 pin",
+    "reviewedAt": "2026-11-27"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "JLTXX issues natively on Ethereum (FactTokenDiamond) and Solana (SPL Token-2022) under the fund's off-chain Investor Register with no third-party bridge representation or lockbox between chains. Both deployments are issuer-operated native registers reviewed in Mint Authority.",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos PR-1B pinned multi-chain review",
+    "confidence": "verified",
+    "sources": [
+      { "label": "SEC Form 497 Solana availability supplement, October 1, 2026", "url": "https://www.sec.gov/Archives/edgar/data/1659326/000119312526410014/d172947d497.htm" },
+      { "label": "Exact JLTXX Ethereum FactTokenDiamond", "url": "https://eth.blockscout.com/address/0x09864f52b035ae22ee739dfa5c748fa080d07bd8?tab=contract" },
+      { "label": "JLTXX Solana Token-2022 mint on Solscan", "url": "https://solscan.io/token/J4cTuCH6frt4AnEmKfMS2k8hsUf7K94PV62sjUJno8Cz" },
+      { "label": "Pinned finalized Ethereum RPC read at block 26504747, 2026-11-27T06:27:35Z", "url": "https://ethereum-rpc.publicnode.com" },
+      { "label": "Pinned finalized Solana RPC read at slot 474454152, 2026-11-27T06:44:28Z", "url": "https://solana-rpc.publicnode.com" }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x09864f52b035ae22ee739dfa5c748fa080d07bd8",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x09864f52b035ae22ee739dfa5c748fa080d07bd8",
+        "protocol": "JPMorgan Morgan Money native FactTokenDiamond issuance",
+        "rail": "issuer-operated",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At finalized Ethereum block 26504747 (0x848fea9685f636b5468bba43d88122d1e634d8fedc87e9aea5786eea672139b6; 2026-11-27T06:27:35Z), FactTokenDiamond reported 29,525,341.49 shares at 2 decimals. Native issuer-operated register governed by Morgan Money LightAccounts; no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x9f5252058521e7458195a0350a0dc361c225857a",
+        "failureDomainKeys": ["jpmorgan-morgan-money-fact-token-control"],
+        "observedAt": "2026-11-27",
+        "observedBlock": 26504747,
+        "sources": [
+          { "label": "Exact JLTXX Ethereum FactTokenDiamond", "url": "https://eth.blockscout.com/address/0x09864f52b035ae22ee739dfa5c748fa080d07bd8?tab=contract" },
+          { "label": "Pinned finalized Ethereum RPC read at block 26504747", "url": "https://ethereum-rpc.publicnode.com" }
+        ]
+      },
+      {
+        "id": "solana:J4cTuCH6frt4AnEmKfMS2k8hsUf7K94PV62sjUJno8Cz",
+        "destinationChain": "solana",
+        "canonicalChain": "solana",
+        "contractAddress": "J4cTuCH6frt4AnEmKfMS2k8hsUf7K94PV62sjUJno8Cz",
+        "protocol": "JPMorgan Morgan Money native SPL Token-2022 issuance",
+        "rail": "issuer-operated",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At finalized Solana slot 474454152 (2026-11-27T06:44:28Z), SPL Token-2022 mint J4cTuCH6frt4AnEmKfMS2k8hsUf7K94PV62sjUJno8Cz reported 677,799,970.75 shares at 2 decimals with single-keypair mint/freeze/permanent-delegate/pausable/transfer-hook authority 32E9ipXM6YoC7n12auPtXL4Z1STBposTmVuvt3btMdmT. Native issuer-operated register per SEC Form 497 supplement; no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "solana",
+        "controllerAddress": "32E9ipXM6YoC7n12auPtXL4Z1STBposTmVuvt3btMdmT",
+        "failureDomainKeys": ["jpmorgan-morgan-money-fact-token-control", "eoa:solana:32E9ipXM6YoC7n12auPtXL4Z1STBposTmVuvt3btMdmT"],
+        "observedAt": "2026-11-27",
+        "observedBlock": 474454152,
+        "sources": [
+          { "label": "JLTXX Solana Token-2022 mint on Solscan", "url": "https://solscan.io/token/J4cTuCH6frt4AnEmKfMS2k8hsUf7K94PV62sjUJno8Cz" },
+          { "label": "SEC Form 497 Solana availability supplement", "url": "https://www.sec.gov/Archives/edgar/data/1659326/000119312526410014/d172947d497.htm" },
+          { "label": "Pinned finalized Solana RPC read at slot 474454152", "url": "https://solana-rpc.publicnode.com" }
+        ]
+      }
+    ],
+    "nativeInventoryReview": {
+      "kind": "exhaustive-material-native-census",
+      "exhaustive": true,
+      "reviewedAt": "2026-11-27",
+      "reviewer": "Pharos PR-1B pinned multi-chain review",
+      "routeIds": [
+        "ethereum:0x09864f52b035ae22ee739dfa5c748fa080d07bd8",
+        "solana:J4cTuCH6frt4AnEmKfMS2k8hsUf7K94PV62sjUJno8Cz"
+      ],
+      "rationale": "SEC Form 497 supplement dated October 1, 2026 states that Ethereum and Solana are currently the only public blockchains available for JLTXX Token Class shares, and their combined finalized supply (707,325,312.24 shares on 2026-11-27) covers the entire native share class.",
+      "sources": [
+        { "label": "SEC Form 497 Solana availability supplement", "url": "https://www.sec.gov/Archives/edgar/data/1659326/000119312526410014/d172947d497.htm" }
+      ]
+    }
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",

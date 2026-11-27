@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 3,
+  "receiptMode": "prospective-offline",
+  "kind": "safety-score-v9-new-asset-admission-receipt",
+  "assetId": "jpydf-deltaforesight",
+  "prospectiveInputId": "prospective-admission:v1:609e36a2c48b76b413b9819845bc0389ed31ef9ca2076f9c35ab09a0be1434c7",
+  "admissionClockSec": 1795773041,
+  "evaluatedCohortIds": [
+    "jpydf-deltaforesight",
+    "usdc-circle"
+  ],
+  "absentRuntimeLanes": [
+    "chain-supply",
+    "dex",
+    "live-reserves",
+    "peg",
+    "redemption"
+  ],
+  "supplyObservation": {
+    "circulating": {
+      "peggedJPY": 548141.2561046564
+    },
+    "observedAtSec": 1795737600,
+    "url": "https://stablecoins.llama.fi/stablecoins?includePrices=true",
+    "field": "circulating",
+    "retrievedAtSec": 1795761693
+  },
+  "registryFingerprint": "53d5575ffe3bc0087e0f0131cf8280a0990975ad1c6c5789631b3c0ab7cd7dac",
+  "evaluationBuildDigest": "095b96e5e3457a36fffa2f75b89f7a69b6f46d59b1ef6e7289a164ff9d6251c8",
+  "card": {
+    "id": "jpydf-deltaforesight",
+    "openBucketQuestionsCarried": 4,
+    "inheritedOpenBucketQuestionsCarried": 0,
+    "openBucketObligationsCarried": 4,
+    "documentationObligationsCarried": 1,
+    "issuerNondisclosureReviewedAtSec": 1791066758
+  },
+  "questions": [
+    {
+      "questionKey": "jpydf-deltaforesight|component|exit-routes",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-runtime-route-evidence",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "jpydf-deltaforesight|component|mechanism-risk-review",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "bounded-mechanism-review",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "jpydf-deltaforesight|component|peg",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-peg-input",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "jpydf-deltaforesight|reserve-exposure|reserve:5663cd4884974a2f08d149dd",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "material-reserve-slice-unstructured",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "usdc-circle|reserve-exposure|reserve:b842f343c9aa3c612f5caafc",
+      "bucket": "issuer",
+      "inherited": true,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "material-reserve-slice-unstructured",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "jpydf-deltaforesight|component|access:transfer",
+      "bucket": "documentation",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-access-review",
+          "obligations": 1,
+          "documentation": true
+        }
+      ]
+    }
+  ]
+}

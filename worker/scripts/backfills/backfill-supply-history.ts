@@ -9,13 +9,21 @@ import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/p
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixMillisecondsToUtcDay, bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { admitSupplyBuckets } from "@shared/lib/supply";
-import { isAmbiguousSupplyPerimeterDay, isEarlierSupplyPerimeter, isKinesisWrapperSupplyCutoverActive } from "@shared/lib/supply-perimeter-changes";
+import {
+  isAmbiguousSupplyPerimeterDay,
+  isEarlierSupplyPerimeter,
+  isKinesisWrapperSupplyCutoverActive,
+} from "@shared/lib/supply-perimeter-changes";
 import { isCommodityPeg } from "@shared/lib/filter-tags";
 import { isDedicatedSingleTokenGoldProtocolSlug } from "@shared/lib/commodity-protocols";
 import { toTokenUnits } from "@shared/lib/math";
 import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import type { SupplyObservationProvenance } from "@shared/types/supply";
-import { isKinesisWrapperSupplyId, onchainSupplyProbeFamily } from "@shared/lib/onchain-supply-probe";
+import {
+  isKinesisWrapperSupplyId,
+  isProviderBackfillFencedByNativeCutover,
+  onchainSupplyProbeFamily,
+} from "@shared/lib/onchain-supply-probe";
 import { D1_BATCH_SIZE, DEFILLAMA_BASE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../../src/lib/constants";
 import { chunkArray } from "@shared/lib/collections";
 import { fetchCoinGeckoMarketHistory } from "../../src/lib/coingecko-market-history";
@@ -718,6 +726,7 @@ async function backfillCommodity(
   });
 
   let fallthroughReason = "CoinGecko market_chart returned no data";
+  let fencedNativeCutoverDays = 0;
   if (marketHistory?.prices.length) {
     fallthroughReason =
       "CoinGecko market caps all zero and historical on-chain totalSupply unavailable";
@@ -733,21 +742,28 @@ async function backfillCommodity(
 
     const stmts: D1PreparedStatement[] = [];
     const seenSnapshotDates = new Set<number>();
-    let missingMarketCapDays = 0;
+    const missingMarketCapDates = new Set<number>();
 
     for (const [ts, price] of screenedPricePairs) {
       const snapshotDate = bucketUnixMillisecondsToUtcDay(ts) / 1000;
       if (seenSnapshotDates.has(snapshotDate)) continue;
       if (!isWithinBackfillWindow(snapshotDate, config.window)) continue;
       if (kinesis && (isAmbiguousSupplyPerimeterDay(id, snapshotDate) || isKinesisWrapperSupplyCutoverActive(id, snapshotDate))) continue;
+      if (!kinesis && isProviderBackfillFencedByNativeCutover(id, snapshotDate)) {
+        seenSnapshotDates.add(snapshotDate);
+        missingMarketCapDates.delete(snapshotDate);
+        fencedNativeCutoverDays += 1;
+        continue;
+      }
       const cgMcap = cgMcapByTimestamp.get(ts);
       const resolvedMcap = resolveMarketCap(cgMcap, undefined, price);
       if (!Number.isFinite(resolvedMcap) || resolvedMcap <= 0) {
-        missingMarketCapDays += 1;
+        missingMarketCapDates.add(snapshotDate);
         continue;
       }
 
       seenSnapshotDates.add(snapshotDate);
+      missingMarketCapDates.delete(snapshotDate);
       const native = resolvedMcap / price;
       const observedAt = Math.floor(ts / 1000);
       pushSupplyUpsert(stmts, db, id, snapshotDate, resolvedMcap, price, observedAt, config, kinesis ? undefined : {
@@ -757,6 +773,8 @@ async function backfillCommodity(
         supplySource: "coingecko", stockObservedAt: observedAt,
       });
     }
+
+    const missingMarketCapDays = missingMarketCapDates.size;
 
     if (kinesis) {
       const programRows = stmts.length ? await config.write(db, stmts) : 0;
@@ -786,14 +804,28 @@ async function backfillCommodity(
           return {
             rows: inserted + historicalTotalSupply.rows,
             skippedExisting: (stmts.length - inserted) + (historicalTotalSupply.skippedExisting ?? 0),
-            skippedDays: historicalTotalSupply.skippedDays,
+            skippedDays: fencedNativeCutoverDays + (historicalTotalSupply.skippedDays ?? 0),
           };
         }
         logWorkerEventArgs("api", "warn",
           `[backfill-commodity] ${id}: skipped ${missingMarketCapDays} day(s) without CoinGecko market caps; historical totalSupply fallback failed (${historicalTotalSupply.error})`,
         );
+        return {
+          rows: inserted,
+          skippedExisting: stmts.length - inserted,
+          ...(fencedNativeCutoverDays > 0 ? { skippedDays: fencedNativeCutoverDays } : {}),
+          error: `skipped ${missingMarketCapDays} day(s) without CoinGecko market caps (${historicalTotalSupply.error})`,
+        };
       }
-      return { rows: inserted, skippedExisting: stmts.length - inserted };
+      return {
+        rows: inserted,
+        skippedExisting: stmts.length - inserted,
+        ...(fencedNativeCutoverDays > 0 ? { skippedDays: fencedNativeCutoverDays } : {}),
+      };
+    }
+
+    if (fencedNativeCutoverDays > 0 && missingMarketCapDays === 0) {
+      return { rows: 0, skippedExisting: 0, skippedDays: fencedNativeCutoverDays };
     }
 
     const historicalTotalSupply = await backfillHistoricalTotalSupply(db, meta, {
@@ -807,7 +839,10 @@ async function backfillCommodity(
       signal: config.signal,
     });
     if (!historicalTotalSupply.error) {
-      return historicalTotalSupply;
+      return {
+        ...historicalTotalSupply,
+        ...(fencedNativeCutoverDays > 0 ? { skippedDays: fencedNativeCutoverDays + (historicalTotalSupply.skippedDays ?? 0) } : {}),
+      };
     }
     fallthroughReason = `${fallthroughReason} (${historicalTotalSupply.error})`;
     // Fell through: CG had prices but no usable mcap and historical on-chain supply
@@ -816,11 +851,12 @@ async function backfillCommodity(
   }
 
   // Fallback: protocol TVL (only if TVL ≈ mcap)
+  const fencedSkip = fencedNativeCutoverDays > 0 ? { skippedDays: fencedNativeCutoverDays } : {};
   if (!config.protocolSlug) {
-    return { rows: 0, error: `${fallthroughReason}; no protocolSlug for TVL fallback` };
+    return { rows: 0, error: `${fallthroughReason}; no protocolSlug for TVL fallback`, ...fencedSkip };
   }
   if (!isCommodityPeg(meta.flags.pegCurrency) || !isDedicatedSingleTokenGoldProtocolSlug(config.protocolSlug)) {
-    return { rows: 0, error: `${fallthroughReason}; protocol TVL fallback requires a dedicated commodity-token mapping` };
+    return { rows: 0, error: `${fallthroughReason}; protocol TVL fallback requires a dedicated commodity-token mapping`, ...fencedSkip };
   }
 
   const priceRange = config.window ? backfillWindowToFetchRange(config.window) : null;
@@ -1034,12 +1070,11 @@ async function executeBackfillSupplyHistory(
         window: supplyBackfillWindow,
         signal,
       });
+      totalRows += result.rows;
+      rowsSkippedExisting += result.skippedExisting ?? 0;
+      skippedDays += result.skippedDays ?? 0;
       if (result.error) {
         errors.push(`${meta.symbol}: ${result.error}`);
-        skippedDays += result.skippedDays ?? 0;
-      } else {
-        totalRows += result.rows;
-        rowsSkippedExisting += result.skippedExisting ?? 0;
       }
     } catch (err) {
       rethrowIfAborted(err, signal);
@@ -1113,12 +1148,20 @@ async function executeBackfillSupplyHistory(
       .filter(({ timestamp, price }) => Number.isSafeInteger(timestamp) && timestamp > 0 && Number.isFinite(price) && price > 0)
       .sort((a, b) => a.timestamp - b.timestamp)).prices;
     const stmts: D1PreparedStatement[] = [];
+    const fencedDefiLlamaDates = new Set<number>();
 
     for (const entry of tokens) {
       throwIfAborted(signal);
       if (!Number.isSafeInteger(entry.date) || entry.date <= 0) continue;
       const snapshotDate = bucketUnixSecondsToUtcDay(entry.date);
       if (!isWithinBackfillWindow(snapshotDate, supplyBackfillWindow)) continue;
+      if (isProviderBackfillFencedByNativeCutover(meta.id, snapshotDate)) {
+        if (!fencedDefiLlamaDates.has(snapshotDate)) {
+          fencedDefiLlamaDates.add(snapshotDate);
+          skippedDays++;
+        }
+        continue;
+      }
       const usdBuckets = admitSupplyBuckets(entry.totalCirculatingUSD);
       if (usdBuckets.status === "invalid") {
         skippedDays++;
