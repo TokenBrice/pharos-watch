@@ -30,7 +30,7 @@ export default function PrivacyPage() {
       title="Privacy Policy"
       variant="longform"
       containerClassName="max-w-2xl"
-      leadParagraphs={["Last updated: November 20, 2026"]}
+      leadParagraphs={["Last updated: November 27, 2026"]}
     >
       <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
         <div className="pharos-card-shell px-5 py-4">
@@ -238,7 +238,8 @@ export default function PrivacyPage() {
             traffic. The cookie proves the browser passed that check, holds a random session ID and expiry with no
             personal data, and lasts 7 days. Only its expiry is saved in localStorage so the browser can renew it;
             the cookie itself cannot be read by page scripts. If the check does not complete, build-time data remains
-            available without live refresh.
+            available without live refresh. When GA4 is enabled, it also records at most once per page load that the
+            check passed, without the session ID or any other detail.
           </p>
           <p>
             On GA4-enabled public website routes, Pharos also uses cookies required by Google Analytics
