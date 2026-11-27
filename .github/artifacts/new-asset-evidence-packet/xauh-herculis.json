@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 3,
+  "receiptMode": "prospective-offline",
+  "kind": "safety-score-v9-new-asset-admission-receipt",
+  "assetId": "xauh-herculis",
+  "prospectiveInputId": "prospective-admission:v1:bb25adb0e055985514bb06664d4889d0ef28984be3d97e5dc4e9f5d6f57c3c6c",
+  "admissionClockSec": 1795782700,
+  "evaluatedCohortIds": [
+    "xauh-herculis"
+  ],
+  "absentRuntimeLanes": [
+    "chain-supply",
+    "dex",
+    "live-reserves",
+    "peg",
+    "redemption"
+  ],
+  "supplyObservation": {
+    "circulating": {
+      "peggedGOLD": 1831551.67
+    },
+    "observedAtSec": 1795776285,
+    "url": "https://api.coingecko.com/api/v3/simple/price?ids=herculis-gold-coin&vs_currencies=usd&include_market_cap=true&include_24hr_vol=true&include_last_updated_at=true",
+    "field": "herculis-gold-coin.usd_market_cap",
+    "retrievedAtSec": 1795776296
+  },
+  "registryFingerprint": "2ff0895c889e9abe802b4f3777ecf9f3010422f6c1a4e2a523b75788d9661731",
+  "evaluationBuildDigest": "13072d453521985a6cf316591bd02764550fb227ca12200e9f49aaad174db4fc",
+  "card": {
+    "id": "xauh-herculis",
+    "openBucketQuestionsCarried": 6,
+    "inheritedOpenBucketQuestionsCarried": 0,
+    "openBucketObligationsCarried": 7,
+    "documentationObligationsCarried": 2
+  },
+  "questions": [
+    {
+      "questionKey": "xauh-herculis|component|mechanism-review:custodyContinuity",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "bounded-mechanism-review",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "xauh-herculis|component|mechanism-review:physicalRedemption",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "bounded-mechanism-review",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "xauh-herculis|component|mechanism-review:titleAndAllocation",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "bounded-mechanism-review",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "xauh-herculis|component|peg",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-peg-input",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "xauh-herculis|reserve-exposure|reserve:291ace9f76b4059d0b0b80ba",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "material-reserve-slice-unstructured",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "xauh-herculis|route|redemption|physical-to-usd:xauh-herculis",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 2,
+      "codes": [
+        {
+          "code": "missing-same-notional-route",
+          "obligations": 1,
+          "documentation": false
+        },
+        {
+          "code": "unresolved-exit-output",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "xauh-herculis|component|access:transfer",
+      "bucket": "documentation",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-access-review",
+          "obligations": 1,
+          "documentation": true
+        }
+      ]
+    },
+    {
+      "questionKey": "xauh-herculis|component|exit-portfolio-coverage",
+      "bucket": "documentation",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "incomplete-dex-route-coverage",
+          "obligations": 1,
+          "documentation": true
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 3,
+  "receiptMode": "prospective-offline",
+  "kind": "safety-score-v9-new-asset-admission-receipt",
+  "assetId": "usdv-delpho",
+  "prospectiveInputId": "prospective-admission:v1:8ab4ab7ae290fcea43bd98fa3ffdf9bef80baf1382d577a9b776c5aeff08664f",
+  "admissionClockSec": 1795782708,
+  "evaluatedCohortIds": [
+    "usdc-circle",
+    "usdt-tether",
+    "usdv-delpho"
+  ],
+  "absentRuntimeLanes": [
+    "chain-supply",
+    "dex",
+    "live-reserves",
+    "peg",
+    "redemption"
+  ],
+  "supplyObservation": {
+    "circulating": {
+      "peggedUSD": 363919.74729132943
+    },
+    "observedAtSec": null,
+    "url": "https://stablecoins.llama.fi/stablecoins?includePrices=true",
+    "field": "peggedAssets[id=431].circulating",
+    "retrievedAtSec": 1795776344
+  },
+  "registryFingerprint": "2ff0895c889e9abe802b4f3777ecf9f3010422f6c1a4e2a523b75788d9661731",
+  "evaluationBuildDigest": "13072d453521985a6cf316591bd02764550fb227ca12200e9f49aaad174db4fc",
+  "card": {
+    "id": "usdv-delpho",
+    "openBucketQuestionsCarried": 3,
+    "inheritedOpenBucketQuestionsCarried": 0,
+    "openBucketObligationsCarried": 3,
+    "documentationObligationsCarried": 2,
+    "issuerNondisclosureReviewedAtSec": 1790987105
+  },
+  "questions": [
+    {
+      "questionKey": "usdv-delpho|component|exit-routes",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-runtime-route-evidence",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "usdv-delpho|component|mechanism-risk-review",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "bounded-mechanism-review",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "usdv-delpho|component|peg",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-peg-input",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "usdc-circle|reserve-exposure|reserve:b842f343c9aa3c612f5caafc",
+      "bucket": "issuer",
+      "inherited": true,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "material-reserve-slice-unstructured",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "usdt-tether|reserve-exposure|reserve:00ba64c1c785371a2101903f",
+      "bucket": "issuer",
+      "inherited": true,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "material-reserve-slice-unstructured",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "usdv-delpho|component|access:transfer",
+      "bucket": "documentation",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-access-review",
+          "obligations": 1,
+          "documentation": true
+        }
+      ]
+    },
+    {
+      "questionKey": "usdv-delpho|component|chain-supply",
+      "bucket": "documentation",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-pillar-evidence",
+          "obligations": 1,
+          "documentation": true
+        }
+      ]
+    }
+  ]
+}

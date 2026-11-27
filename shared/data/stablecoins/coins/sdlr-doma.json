@@ -1,0 +1,150 @@
+{
+  "id": "sdlr-doma",
+  "status": "active",
+  "name": "SDollar",
+  "symbol": "SDLR",
+  "brand": "Doma",
+  "oneLiner": "SDLR is Doma's Ethereum silver token, representing 1 g of fine silver as a contractual redemption claim against Lumina Secure S.A. in Panama.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "SILVER",
+    "governance": "centralized",
+    "rwa": true
+  },
+  "collateral": "Allocated physical silver bars (999.0 or 999.9 fineness) held in segregated vault sub-accounts through an undisclosed custodian and owned by KSTN Capital Ltd, an affiliate of issuer Lumina Secure S.A. (Panama). Each SDLR represents 1 g of fine silver and is backed on-chain by ERC-3643 SReserve (SLVR) tokens locked in the SDLR VaultContract.",
+  "pegMechanism": "Each SDLR represents a contractual redemption right against Lumina Secure S.A. for 1 g of fine silver, not proprietary or trust ownership of the bullion. Onboarded, KYC-verified holders outside excluded jurisdictions may redeem whole physical bars (minimum 100 troy oz / 3,110.35 SDLR) for collection at a designated vault or redeem digitally for USDC or USDT, targeting 10 Panama business days. Schedule A charges a $200 application fee plus 10% for physical redemption or 10.7% for digital redemption. On-chain transfers also carry an admin-configurable transfer tax (currently 0.10%, capped at 1.00%).",
+  "mechanismArchetype": "commodity-claim",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Wave 1A commodity addition review",
+    "rationale": "SDLR is a direct silver-referenced commodity claim: Doma General Terms and Conditions v3.0 (effective 2026-11-13) and Reserve Policy v2.0 (updated 2026-10-26) define each SDLR token as a contractual redemption right against Lumina Secure S.A. (Panama) for 1 g of fine physical silver (0.0321507466 troy oz), backed 1:1 on a fine-mass basis by allocated physical silver owned by group entity KSTN Capital Ltd and evidenced on-chain by locked ERC-3643 SReserve tokens.",
+    "sources": [
+      {
+        "label": "Doma General Terms and Conditions v3.0 (effective 2026-11-13)",
+        "url": "https://doma.io/terms-of-service"
+      },
+      {
+        "label": "Doma Reserve Policy v2.0 (updated 2026-10-26)",
+        "url": "https://doma.io/reserve-policy"
+      },
+      {
+        "label": "Doma SDollar product specification",
+        "url": "https://doma.io/sdollar"
+      }
+    ]
+  },
+  "commodityOunces": 0.0321507466,
+  "detailProvider": "commodity",
+  "geckoId": "sdollar",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://doma.io/proof-of-reserves",
+    "provider": "Lumina Secure S.A. on-chain proof-of-reserves dashboard comparing ERC-20 SDLR supply against ERC-3643 SReserve vault balances (no independent third-party physical vault audit or attestation report published)",
+    "attestorTier": "self",
+    "cadence": "real-time",
+    "attestorJurisdiction": "Panama",
+    "latestReport": {
+      "periodEnd": "2026-10-26",
+      "publishedAt": "2026-10-26",
+      "assuranceMethod": "self-verification",
+      "scope": "assets-only",
+      "liabilityReconciliation": "none",
+      "reviewer": "Pharos Wave 1A addition review 2026-11-27 (Reserve Policy v2.0 updated 2026-10-26 and live on-chain PoR read; no published third-party vault attestation PDF located on doma.io)",
+      "confidence": "probable",
+      "sources": [
+        {
+          "label": "Doma Proof of Reserves dashboard",
+          "url": "https://doma.io/proof-of-reserves"
+        },
+        {
+          "label": "Doma Reserve Policy v2.0 (updated 2026-10-26)",
+          "url": "https://doma.io/reserve-policy"
+        },
+        {
+          "label": "Doma Reserve Policy JSON payload (rev mi50riUajCAAvkj4uhFE4l)",
+          "url": "https://doma.io/content/reserve-policy.en.json"
+        }
+      ]
+    }
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://doma.io/sdollar"
+    },
+    {
+      "label": "Whitepaper",
+      "url": "https://doma.io/whitepaper"
+    },
+    {
+      "label": "Proof of Reserves",
+      "url": "https://doma.io/proof-of-reserves"
+    },
+    {
+      "label": "Terms of Service",
+      "url": "https://doma.io/terms-of-service"
+    },
+    {
+      "label": "Reserve Policy",
+      "url": "https://doma.io/reserve-policy"
+    },
+    {
+      "label": "CertiK Audit",
+      "url": "https://doma.io/uploads/certik-doma-rwa-2026-08.pdf"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/doma_rwa"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Panama"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x0b57b7333c43fe900d17a81bddc67c88c825afd6",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "unknown",
+  "governanceQuality": "single-entity",
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "sdlr-doma",
+    "display": {
+      "url": "https://doma.io/proof-of-reserves",
+      "label": "Doma Proof of Reserves"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  },
+  "notices": [
+    {
+      "type": "info",
+      "title": "On-chain transfer tax and high redemption fees",
+      "message": "Non-exempt SDLR transfers currently incur a 0.10% on-chain transfer tax (configurable up to 1.00% by the admin EOA). Primary redemption through Lumina Secure S.A. requires KYC onboarding outside excluded jurisdictions, a 100 troy oz minimum, a $200 application fee, and 10% physical or 10.7% digital processing fees.",
+      "asOf": "2026-11-27",
+      "sources": [
+        {
+          "label": "Doma General Terms and Conditions v3.0 Schedule A",
+          "url": "https://doma.io/terms-of-service"
+        },
+        {
+          "label": "Verified Ethereum SDLR TokenContract on Blockscout",
+          "url": "https://eth.blockscout.com/address/0x0b57b7333c43fe900d17a81bddc67c88c825afd6"
+        }
+      ]
+    }
+  ],
+  "launchDate": "2026-07-14"
+}

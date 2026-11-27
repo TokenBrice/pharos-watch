@@ -1,0 +1,94 @@
+{
+  "id": "sdlr-doma",
+  "reserves": [
+    {
+      "sourceKey": "curated-validated:sdlr-doma:allocated-silver",
+      "name": "Allocated physical silver bars (999.0+ fineness, undisclosed vault custodian via KSTN Capital Ltd)",
+      "pct": 100,
+      "risk": "medium",
+      "assetClass": "commodity-allocated",
+      "issuerOrObligor": "Lumina Secure S.A. (issuer) and KSTN Capital Ltd (group asset-holding entity owning the physical silver pool)",
+      "riskFactors": [
+        "custody",
+        "counterparty",
+        "legal",
+        "liquidity",
+        "market",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Wave 1A addition review 2026-11-27",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Doma Reserve Policy v2.0 (updated 2026-10-26)",
+        "url": "https://doma.io/reserve-policy"
+      },
+      {
+        "label": "Doma Reserve Policy JSON payload (rev mi50riUajCAAvkj4uhFE4l)",
+        "url": "https://doma.io/content/reserve-policy.en.json"
+      },
+      {
+        "label": "Doma General Terms and Conditions v3.0 (effective 2026-11-13)",
+        "url": "https://doma.io/terms-of-service"
+      },
+      {
+        "label": "Doma Proof of Reserves dashboard",
+        "url": "https://doma.io/proof-of-reserves"
+      },
+      {
+        "label": "SDLR VaultContract on Blockscout",
+        "url": "https://eth.blockscout.com/address/0xac313bc5acdb47ae20c9bb77900f581d66bc3cd7"
+      }
+    ],
+    "rationale": "Doma Reserve Policy v2.0 (last updated 2026-10-26) states that the customer-backing reserve consists exclusively of investment-grade allocated physical silver meeting 999.0 or 999.9 parts-per-thousand purity standards, with no cash, securities, receivables, or derivatives, and that aggregate fine-mass equals or exceeds circulating SDLR supply at 1 g per token. At Ethereum block 26506037 (2026-11-27T10:47:11Z), SDLR totalSupply was 476,443.336249 SDLR (15,318.008958 troy oz fine silver) against 17,972.094165 troy oz of ERC-3643 SReserve (0x91f18b52d84bbce7ba0930cc2772399ce4adef72) held in VaultContract 0xac313bc5acdb47ae20c9bb77900f581d66bc3cd7 (15,318.008958 troy oz locked). Confidence is capped at probable because no independent third-party physical vault audit or attestation PDF is published on doma.io, the physical vault custodian is unnamed in operative legal terms, and Reserve Policy v2.0 makes independent verification discretionary.",
+    "compositionBasis": "Doma Reserve Policy v2.0 (updated 2026-10-26) and on-chain ERC-3643 vault collateral reconciliation; no published independent physical vault audit",
+    "compositionAsOf": "2026-10-26",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The issuer discloses 100% allocated physical silver backing owned by group entity KSTN Capital Ltd, but operative legal documents do not name the physical vault custodian, vault locations, bar serial lists, or insurer, and no independent third-party vault attestation or audit report is published.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Allocated physical silver bars (999.0+ fineness, undisclosed vault custodian via KSTN Capital Ltd)",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Allocated physical silver bullion is an exogenous commodity reserve rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "KSTN Capital Ltd (issuer group asset-holding entity; underlying physical vault custodian unnamed in operative terms)",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Wave 1A addition review 2026-11-27",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Doma Reserve Policy v2.0 (updated 2026-10-26)",
+        "url": "https://doma.io/reserve-policy"
+      },
+      {
+        "label": "Doma General Terms and Conditions v3.0 (clauses 5.3, 5.5, 19)",
+        "url": "https://doma.io/terms-of-service"
+      },
+      {
+        "label": "Doma Whitepaper (October 2026)",
+        "url": "https://doma.io/whitepaper"
+      }
+    ],
+    "uncertainty": "Reserve Policy v2.0 states that physical silver is held in allocated form in a segregated sub-account at an unnamed professional vault operator through an unnamed custodian, with legal and beneficial title held by KSTN Capital Ltd as its own asset rather than in trust for token holders. Terms clause 5.5 keeps key service providers confidential upon request, and no vault agreement, insolvency opinion, or independent physical audit is published. Although Reserve Policy v2.0 states the reserve will not be traded, lent, or encumbered, the whitepaper qualifies non-rehypothecation with 'unless expressly agreed to by the user' and no independent assurance verifies non-encumbrance.",
+    "knownUnknownExposurePct": 100
+  }
+}

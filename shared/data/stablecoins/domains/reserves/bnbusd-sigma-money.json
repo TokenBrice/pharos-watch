@@ -1,0 +1,99 @@
+{
+  "id": "bnbusd-sigma-money",
+  "reserves": [
+    {
+      "sourceKey": "evm-branch-balances:bsc:0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c",
+      "name": "WBNB (PoolManager long-pool collateral)",
+      "pct": 86.39,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "BNB Chain native wrapped BNB (WBNB)",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "sourceKey": "evm-branch-balances:bsc:0x8b98563d66b74e5a644bff78fc72c86bba847a29",
+      "name": "SY-clisBNB / slisBNB (PoolManager long-pool collateral)",
+      "pct": 13.61,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Lista DAO slisBNB wrapped in SigmaClisBNBSY",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "custody",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos listing v2 Wave 1A review 2026-11-27",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Pinned BSC PoolManager and long-pool reads at block 136026125 (2026-11-27T10:54:42Z, hash 0xdbaac2f825105d7159c5eb16b8dff59da18d424377cf7de0eab7dae63282577b): WBNB.balanceOf(PM) 592.630959, SY.balanceOf(PM) 90.001398, wbnbPool debt 309474.44, syPool debt 38131.78, bnbUSD totalSupply 347648.32",
+        "url": "https://bscscan.com/address/0x0a43ca87954ed1799b7b072f6e9d51d88cca600e#readProxyContract"
+      },
+      {
+        "label": "Sigma Money PoolManager exact-match verified source on Sourcify",
+        "url": "https://sourcify.dev/server/v2/contract/56/0xa9cab826b5b471bdcae7186cfe988327fe873929?fields=sources"
+      },
+      {
+        "label": "Sigma Money smart contracts directory",
+        "url": "https://docs.sigma.money/other/resources/smart-contracts"
+      },
+      {
+        "label": "Sigma Money idle asset strategy (sunset) documentation",
+        "url": "https://docs.sigma.money/sigma-money-mechanism/protocol-revenue-and-distribution/idle-asset-strategy-sunset"
+      }
+    ],
+    "rationale": "At BSC blocks 136026125 to 136026382 (2026-11-27T10:54:42Z to 10:56:37Z), Sigma Money's PoolManager (0x0a43ca87954ed1799b7b072f6e9d51d88cca600e) directly held 592.630959489545409660 WBNB (333,455.59 USD at 562.67 USD/WBNB, 86.39%) and 90.001398405087421594 SY-clisBNB (52,530.96 USD at 583.67 USD/SY-clisBNB, 13.61%), totalling 385,986.55 USD against bnbUSD totalSupply of 347,648.321911941000961794 (111.03% on-chain collateralization). Accounting reconciles completely across both registered SigmaLongPool markets: WBNB long pool (0x31c464cfe506d44ceaa86c05cdbb94b5c94f70fb) recorded 597.331914 WBNB collateral and 309,474.44 bnbUSD debt, with the 4.70 WBNB above PoolManager's idle balance accounted for by 4.601916 WBNB lent to ShortPoolManager (0x8e473cdcdeb8dfaa41f92e3b4a284e134ac4acb2) and 0.10 WBNB in YieldStrategy (0xd69a0ab6dfe41ba46e9f75e49a5349c8a2daa0ca); SY-clisBNB long pool (0xe8a16f808412c4341f692b49c81d64c374187b7d) recorded 90.101398 SY-clisBNB collateral (93.629231 BNB equivalent via Lista StakeManager rate 1.039784) and 38,131.78 bnbUSD debt, with 0.10 SY-clisBNB in its allocation contract. Pool debt sums to 347,606.22 bnbUSD (99.988% of totalSupply; 42.10 bnbUSD residual). Sigma's documented Lista DAO idle-asset yield strategy (ListaStrategyV2 0x6dbc0204fd0bb1e7941f08392d13963534936668) is marked sunset in official docs and read principal=0 and totalSupply=0 at the pin. The live evm-branch-balances adapter monitors direct PoolManager WBNB and SY-clisBNB balances against bnbUSD.totalSupply() every run, conservatively excluding the small short-pool and YieldStrategy allocations.",
+    "compositionBasis": "Pinned BSC evm-branch-balances read at block 136026382: PoolManager WBNB and SY-clisBNB ERC-20 balances valued via DefiLlama BSC contract prices and reconciled against both SigmaLongPool debt totals and bnbUSD.totalSupply()",
+    "compositionAsOf": "2026-11-27",
+    "compositionSource": "live-adapter",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Both registered long-pool collateral tokens (WBNB and SY-clisBNB over Lista slisBNB) are identified and measured on-chain with zero unclassified residual; the live adapter conservatively excludes 4.60 WBNB lent to the short pool and 0.10 WBNB / 0.10 SY-clisBNB in YieldStrategy allocations. Open items outside composition gaps: PoolManager and SigmaClisBNBSY are upgradeable under a 6-of-9 Safe with no timelock; idle assets could be reallocated via PoolManager.alloc() / manage() (up to 80% documented cap in prior Lista strategy); and no independent reserve attestation exists.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": []
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Sigma Money PoolManager 0x0a43ca87954ed1799b7b072f6e9d51d88cca600e (upgradeable proxy under 6-of-9 Safe)",
+        "role": "other",
+        "jurisdiction": "BSC"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos listing v2 Wave 1A review 2026-11-27",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Pinned BSC PoolManager collateral holdings at block 136026125",
+        "url": "https://bscscan.com/address/0x0a43ca87954ed1799b7b072f6e9d51d88cca600e"
+      },
+      {
+        "label": "Sigma Money PoolManager exact-match verified source on Sourcify",
+        "url": "https://sourcify.dev/server/v2/contract/56/0xa9cab826b5b471bdcae7186cfe988327fe873929?fields=sources"
+      },
+      {
+        "label": "Sigma Money idle asset strategy (sunset) documentation",
+        "url": "https://docs.sigma.money/sigma-money-mechanism/protocol-revenue-and-distribution/idle-asset-strategy-sunset"
+      }
+    ],
+    "uncertainty": "Collateral sits in an upgradeable on-chain PoolManager contract controlled by a 6-of-9 Safe with zero timelock rather than a regulated custodian; legal segregation, bankruptcy remoteness and rehypothecation restrictions are absent. PoolManager also supports allocating collateral to external yield strategies and lending WBNB to the ShortPoolManager counterparty.",
+    "knownUnknownExposurePct": 100
+  }
+}

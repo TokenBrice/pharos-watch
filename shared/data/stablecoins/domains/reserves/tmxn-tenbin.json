@@ -1,0 +1,112 @@
+{
+  "id": "tmxn-tenbin",
+  "reserves": [
+    {
+      "name": "Unallocated reserve mix (on-chain Steakhouse Morpho V2 USDC vault + cross-product Ripple Prime / FCM USD cash, USDC, and CME MXN futures margin)",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Circle USDC (on-chain Morpho V2 vault) and Ripple Prime / undisclosed Futures Commission Merchant (FCM) clearing partners (cross-product unallocated off-chain balance)",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "market",
+        "basis",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown",
+      "unclassifiedResidual": true,
+      "residualReason": "insufficient-evidence"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 PR-2 pinned reserve audit",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Tenbin: Proof of Reserves",
+        "url": "https://docs.tenbinlabs.xyz/hedging-and-risk/proof-of-reserves.md"
+      },
+      {
+        "label": "Tenbin: Collateral Management",
+        "url": "https://docs.tenbinlabs.xyz/hedging-and-risk/collateral-management.md"
+      },
+      {
+        "label": "Tenbin: Future Commission Merchants and Custodians",
+        "url": "https://docs.tenbinlabs.xyz/custody-and-partners/future-commission-merchants-and-custodians.md"
+      },
+      {
+        "label": "Tenbin contracts: deployments.json",
+        "url": "https://github.com/tenbinlabs/tenbin-contracts/blob/master/deployments.json"
+      },
+      {
+        "label": "Ethereum PublicNode RPC (finalized block 26505955)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Base PublicNode RPC (finalized block 62923312, Chainlink Aggregated PoR)",
+        "url": "https://base-rpc.publicnode.com"
+      }
+    ],
+    "rationale": "At finalized Ethereum block 26505955 (hash 0xa50e54c6703eaed980d65280d5d8eb0d0bda24f104ed8f48d94814aafedd0767, 2026-11-27T10:30:47Z), tMXN totalSupply was 10,013,064.064462747 tMXN (~$512,571 USD at DefiLlama's $0.05119019 quote, or ~$512,278 USD at Chainlink MXN/USD $0.05116097). The deployed tMXN Morpho V2 Vault (0x43e3f5e27422c3a938269368eb7c3a3b545bb6ca, Steakhouse USDC adapter) held totalAssets() = 451,180.52 USDC (an on-chain liability-coverage ratio of ~88.0% of tMXN value), while CollateralManager (0x2a21014b89f72de3ffa6d645f89b8ca5a6effe75) held 0 idle USDC and Controller.ratio() was set to 0.135 (13.5% routed to CustodianModule for off-chain hedging). Separately, at finalized Base block 62923312, Chainlink's Tenbin Aggregated Off-Chain Reserves feed (0x7b1c8c60c05913af3aa21bae3b32a02ab4f39bd3) reported $291,208.36 (updated 2026-11-27T10:06:07Z) across all Tenbin assets combined at Ripple Prime, combining USD cash, USDC, and unrealized futures P&L. Because per-token off-chain asset totals are not segregated across tGLD, tMXN, and tBRL, neither tMXN's total reserves nor its off-chain share is established; whole-book reserve weights are therefore withheld as a single 100% unclassified residual pending per-token reserve totals.",
+    "compositionBasis": "Issuer collateral architecture and pinned Ethereum Morpho V2 Vault totalAssets() at block 26505955 (451,180.52 USDC, ~88.0% liability coverage); whole-book reserve denominator unobserved because off-chain Chainlink PoR is aggregated across products",
+    "compositionAsOf": "2026-11-27",
+    "scope": "classification-only",
+    "knownUnknownExposure": "Whole-book reserve weights are withheld because Tenbin reports off-chain reserves at Ripple Prime and undisclosed FCM clearing accounts (combining USD cash, USDC, and unrealized CME futures P&L) only as one combined cross-product Chainlink PoR figure ($291,208.36 across tGLD, tMXN, and tBRL). Pinned on-chain Morpho V2 USDC (451,180.52 USDC) equals ~88.0% of tMXN liabilities, not a whole-book reserve weight.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Unallocated reserve mix (on-chain Steakhouse Morpho V2 USDC vault + cross-product Ripple Prime / FCM USD cash, USDC, and CME MXN futures margin)",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "Pinned on-chain Morpho V2 vault balances (451,180.52 USDC, ~88.0% of tMXN liability value) cannot be converted into whole-book reserve weights without a segregated per-token off-chain reserve total; Chainlink's Base feed reports only one cross-product off-chain balance across tGLD, tMXN, and tBRL."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Tenbin tMXN Morpho V2 Vault (0x43e3f5e27422c3a938269368eb7c3a3b545bb6ca, Steakhouse USDC adapter)",
+        "role": "other",
+        "jurisdiction": "Onchain protocol"
+      },
+      {
+        "name": "Ripple Prime (digital asset custodian and prime broker)",
+        "role": "prime-broker"
+      },
+      {
+        "name": "Undisclosed Futures Commission Merchant (FCM) clearing partner(s)",
+        "role": "prime-broker"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 PR-2 pinned reserve audit",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Tenbin: Future Commission Merchants and Custodians",
+        "url": "https://docs.tenbinlabs.xyz/custody-and-partners/future-commission-merchants-and-custodians.md"
+      },
+      {
+        "label": "Tenbin: Legal and Regulatory",
+        "url": "https://docs.tenbinlabs.xyz/legal-and-transparency/legal-and-regulatory.md"
+      },
+      {
+        "label": "Tenbin: Collateral Manager",
+        "url": "https://docs.tenbinlabs.xyz/solution-overview/collateral-manager.md"
+      },
+      {
+        "label": "Tenbin Foundation Terms of Use (updated July 13, 2026)",
+        "url": "https://tenbinlabs.xyz/terms-of-use"
+      }
+    ],
+    "uncertainty": "Tenbin's documentation describes BVI segregated-portfolio statutory asset segregation under Tenbin AssetCo (BVI) SPC Ltd. and a bankruptcy-remote structure, but no independent legal opinion is published and the Terms of Use classify each token as an unsecured debt obligation. On-chain USDC is lent via the Steakhouse USDC Morpho V2 vault and off-chain collateral margins CME futures at Ripple Prime and undisclosed FCM partners, so rehypothecation/deployment of collateral is permitted and per-asset off-chain custody shares remain unverified."
+  }
+}

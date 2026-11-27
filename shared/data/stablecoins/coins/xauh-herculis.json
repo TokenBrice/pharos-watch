@@ -1,0 +1,156 @@
+{
+  "id": "xauh-herculis",
+  "status": "active",
+  "name": "Herculis Gold Coin",
+  "symbol": "XAUH",
+  "brand": "Herculis",
+  "oneLiner": "XAUH is Herculis Tokens SA's gold token backed 1:1 by one gram of Swiss-vaulted LBMA 999.9 fine gold across Ethereum, TON, and Tron.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "GOLD",
+    "governance": "centralized",
+    "rwa": true
+  },
+  "collateral": "LBMA-certified 999.9 fine gold bars produced by PX Precinox SA and held in segregated Swiss vault custody; each token represents one gram of fine gold (0.0321507466 fine troy ounces)",
+  "pegMechanism": "Direct physical redemption through Herculis Tokens S.A. after KYC/AML onboarding, starting at 500 XAUH (500 grams of fine gold) in compatible bar denominations. Published terms charge a 3% redemption fee for 500g orders and 1% for 1kg or more, with transport, insurance, assay, customs, and taxes additional; on-chain Ethereum and Tron transfers also apply a 0.02% protocol fee (feeRate 200 / 1,000,000). Quarterly KPMG SA factual-findings reports inspect physical Swiss vault bars under Swiss NAS 920 agreed-upon procedures without an assurance opinion or token-liability reconciliation.",
+  "mechanismArchetype": "commodity-claim",
+  "commodityOunces": 0.0321507466,
+  "detailProvider": "commodity",
+  "geckoId": "herculis-gold-coin",
+  "cmcSlug": "herculis-gold-coin",
+  "proofOfReserves": {
+    "type": "agreed-upon-procedures",
+    "url": "https://xauh.gold/audit-reports/08-28-2026.pdf",
+    "provider": "KPMG SA (Switzerland; PS 920 / NAS 920 agreed-upon procedures physically inspecting gold bars and certificates with no assurance opinion and no token-liability reconciliation)",
+    "attestorTier": "big4",
+    "cadence": "quarterly",
+    "attestorJurisdiction": "Switzerland",
+    "attestorLicense": "Swiss Licensed Audit Experts (PS 920 / NAS 920)",
+    "latestReport": {
+      "periodEnd": "2026-08-26",
+      "publishedAt": "2026-08-28",
+      "publishedAtBasis": "signed-date-standin",
+      "assuranceMethod": "agreed-upon-procedures",
+      "scope": "assets-only",
+      "liabilityReconciliation": "none",
+      "reviewer": "Listing Policy v2 PR-2 authoring 2026-11-27; KPMG SA August 28, 2026 AUP PDF read directly",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "KPMG SA Report of Factual Findings as of August 26, 2026 (signed August 28, 2026)",
+          "url": "https://xauh.gold/audit-reports/08-28-2026.pdf"
+        },
+        {
+          "label": "Herculis Gold Coin official site and audit archive",
+          "url": "https://www.xauh.gold/"
+        }
+      ]
+    }
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.xauh.gold/"
+    },
+    {
+      "label": "Whitepaper",
+      "url": "https://www.xauh.gold/whitepaper.pdf"
+    },
+    {
+      "label": "Terms and Conditions",
+      "url": "https://www.xauh.gold/xauh-terms-and-conditions.pdf"
+    },
+    {
+      "label": "KPMG Factual Findings Report",
+      "url": "https://xauh.gold/audit-reports/08-28-2026.pdf"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/HerculisCoin"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Panama",
+    "regulator": "UAF (AML/CFT reporting)",
+    "license": "AML/CFT reportable issuer (non-prudential)"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xa9b17f572341219703bc951725bdb3ca756b1a65",
+      "decimals": 18
+    },
+    {
+      "chain": "ton",
+      "address": "EQCMk4_OujCnk46jApHnIRbmTtYTkSmfujV9X8Ye0qvsHVKh",
+      "decimals": 18
+    },
+    {
+      "chain": "tron",
+      "address": "TJ9x3d4v8Cot4zFLYj8rkH3ZVSaEiXtjyC",
+      "decimals": 18
+    }
+  ],
+  "custodyModel": "unknown",
+  "governanceQuality": "single-entity",
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "xauh-herculis",
+    "display": {
+      "url": "https://xauh.gold/audit-reports/08-28-2026.pdf",
+      "label": "KPMG SA Factual Findings"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  },
+  "launchDate": "2025-10-16",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Reported circulating supply exceeds tracked on-chain mints",
+      "message": "At the November 27, 2026 review, pinned on-chain supply across Ethereum (4,109.2 XAUH), TON (3,350.3898 XAUH), and Tron (3,179.4 XAUH) totaled 10,638.9898 XAUH, while CoinGecko reported 15,500 XAUH in circulating supply matching the 15.5 kg of bars inspected by KPMG SA on August 26, 2026. KPMG's agreed-upon-procedures report performs no token-liability reconciliation, so the 4,861.0102 XAUH difference remains unreconciled on-chain.",
+      "asOf": "2026-11-27",
+      "sources": [
+        {
+          "label": "KPMG SA Report of Factual Findings as of August 26, 2026",
+          "url": "https://xauh.gold/audit-reports/08-28-2026.pdf"
+        },
+        {
+          "label": "CoinGecko Herculis Gold Coin market-cap and circulating supply feed",
+          "url": "https://www.coingecko.com/en/coins/herculis-gold-coin"
+        },
+        {
+          "label": "Herculis Gold Coin official site",
+          "url": "https://www.xauh.gold/"
+        }
+      ]
+    }
+  ],
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Listing Policy v2 PR-2 authoring 2026-11-27",
+    "rationale": "XAUH is a direct allocated-commodity claim tracking one gram of LBMA 999.9 fine gold per token. Herculis Terms and Conditions sections 2 and 9 obligate Herculis Tokens S.A. to maintain at least one gram of fine gold in segregated Swiss vault custody per valid XAUH in circulation and grant KYC-verified customers physical redemption from 500 XAUH (500 grams), while KPMG SA's August 28, 2026 agreed-upon-procedures report physically verified 15.5 kg of PX Precinox SA 999.9 fine gold bars in a Swiss vault on August 26, 2026.",
+    "sources": [
+      {
+        "label": "Herculis Gold Coin Terms and Conditions",
+        "url": "https://www.xauh.gold/xauh-terms-and-conditions.pdf"
+      },
+      {
+        "label": "Herculis Gold Coin White Paper v4.0 (2026-05-21)",
+        "url": "https://www.xauh.gold/whitepaper.pdf"
+      },
+      {
+        "label": "KPMG SA Report of Factual Findings as of August 26, 2026",
+        "url": "https://xauh.gold/audit-reports/08-28-2026.pdf"
+      }
+    ]
+  }
+}

@@ -6311,5 +6311,85 @@
     "authoredBy": "ai",
     "model": "gpt-6",
     "factsAsOf": "2026-11-16"
+  },
+  "xauh-herculis": {
+    "title": "Swiss-vaulted gold token split across three chains",
+    "text": "Herculis Gold Coin is a physical gold token issued by Panama-registered Herculis Tokens S.A., with each XAUH representing one gram of LBMA 999.9 fine gold produced by PX Precinox SA. On-chain issuance runs natively across Ethereum, TON, and Tron through separate three-of-four multisig controls with no supply cap and no upgrade timelock. Ethereum and Tron transfers also levy a 0.02% protocol fee, and both implementations expose address freezing and balance wiping that the owner multisig can activate immediately. Quarterly KPMG SA agreed-upon-procedures reports physically verify 15.5 kg of Swiss-vaulted bars as of August 26, 2026, without expressing an assurance opinion, naming the vault operator, or reconciling token supply. At the November 27, 2026 review, combined supply across the three tracked chains stood at 10,639 XAUH against 15,500 XAUH reported circulating supply matching the vaulted bar count, leaving an unreconciled gap. Direct physical redemption requires KYC and at least 500 XAUH, with a 3% fee at 500 grams and 1% from one kilogram.",
+    "updatedAt": "2026-11-27",
+    "authoredBy": "ai",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
+  },
+  "stt-silvertimes": {
+    "title": "Hong Kong silver token with issuer-reported reserve certificates",
+    "text": "SilverTimes Token is an Ethereum silver claim issued by Hong Kong entity STT Assets Limited, with each STT tracking one troy ounce of physical silver. Monthly issuer transparency reports affirm 1,019.3233 kg of LBMA Good Delivery 99.99% fine silver stored at Brink's Hong Kong Limited under consignment AG42840, matching Ethereum supply of 32,771.957 STT at the November 27, 2026 review. Those reports are management affirmations attaching May and July 2026 Brink's holding confirmations rather than independent accounting-firm audits, and the described Hong Kong Orphan Trust deed and trustee identity remain unpublished. On Ethereum, a two-of-three Safe holds uncapped mint and burn rights, while a two-of-three admin Safe sharing two signers can grant roles immediately and a four-of-six Safe controls upgrades and forced transfers. Single-key EOAs hold blocklist and pause powers. Secondary trading remains thin, leaving exit depth reliant on KYC-gated physical bar redemption at a 0.35% fee.",
+    "updatedAt": "2026-11-27",
+    "authoredBy": "ai",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
+  },
+  "gdlr-doma": {
+    "title": "Contractual gold claim with undisclosed vault custodian",
+    "text": "GDLR is Doma's Ethereum gold token, structured as a contractual redemption claim against Panama-based Lumina Secure rather than direct bullion ownership. Each token tracks a tiny fraction of a troy ounce of allocated fine gold held by affiliate KSTN Capital inside segregated vault sub-accounts. The underlying vault custodian and storage locations stay undisclosed in operative legal terms, and Doma publishes no independent third-party physical vault attestation; its transparency dashboard compares token circulation only against issuer-minted vault receipts on Ethereum. On the technical side, the token and vault contracts are immutable and enforce a two-day role-grant delay, yet single-key accounts still sign mints, register vaults, pause transfers, and blocklist wallets despite terms prose claiming no token-layer freeze controls. Non-exempt transfers also incur an admin-configurable transfer tax. Primary {{term:redemption}}redemption{{/term}} excludes residents of the United States, the European Union, the United Kingdom, the United Arab Emirates, and Panama, while charging steep processing percentages plus a flat application fee. The durable constraint is that holders rely on an unaudited contractual claim whose custody chain and exit costs sit behind issuer discretion.",
+    "updatedAt": "2026-11-27",
+    "authoredBy": "ai",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
+  },
+  "sdlr-doma": {
+    "title": "Contractual silver gram with steep redemption fees",
+    "text": "SDLR is Doma's Ethereum silver token, structured as a contractual redemption claim against Panama-based Lumina Secure rather than proprietary ownership of metal. Each token tracks a single gram of allocated fine silver owned by affiliate KSTN Capital inside segregated vault sub-accounts. Operative legal terms omit the physical vault custodian and storage locations, and Doma publishes no independent third-party physical vault audit; its transparency dashboard reconciles circulating supply only against issuer-controlled vault receipts on Ethereum. While the token and vault contracts are immutable and enforce a two-day delay on role grants, single-key accounts retain authority to sign mints, register vaults, pause transfers, and blocklist addresses despite terms prose stating no token-layer freeze controls exist. Ordinary transfers also pay an admin-configurable transfer tax. Primary {{term:redemption}}redemption{{/term}} excludes residents of the United States, the European Union, the United Kingdom, the United Arab Emirates, and Panama, and pairs a whole-bar minimum with steep percentage charges plus a flat application fee. The durable constraint is that silver exposure rests on an unaudited Panamanian contractual claim with costly primary exit.",
+    "updatedAt": "2026-11-27",
+    "authoredBy": "ai",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
+  },
+  "tmxn-tenbin": {
+    "title": "Synthetic Mexican peso backed by USDC and CME futures",
+    "text": "Tenbin Mexican Peso is an Ethereum token issued by a segregated portfolio of Tenbin AssetCo in the British Virgin Islands as an unsecured debt-note tracking the dollar value of one Mexican peso. Rather than holding peso bank deposits, the protocol backs most circulating value with Circle USDC in an on-chain Morpho vault alongside unallocated off-chain cash, USDC, and CME peso futures margin held at Ripple Prime and undisclosed futures commission merchants. Approved, identity-verified participants mint and redeem through an immutable controller contract using backend-cosigned orders that settle on-chain in USDC, never local fiat. Secondary token transfers carry no on-chain freeze or pause, though dominant on-chain USDC backing and prime-broker custody leave holders exposed to upstream freezes. Public decentralized exchange liquidity remains minimal, and the Chainlink Proof of Reserve feed reports one combined off-chain reserve total across all Tenbin assets rather than a token-specific breakdown. Holders therefore rely on concentrated multisig administration, prime-broker hedging execution, and whitelisted USDC redemptions.",
+    "updatedAt": "2026-11-27",
+    "authoredBy": "ai",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
+  },
+  "tbrl-tenbin": {
+    "title": "Synthetic Brazilian real backed by USDC and CME futures",
+    "text": "Tenbin Brazilian Real is an Ethereum debt-note issued through a British Virgin Islands segregated portfolio of Tenbin AssetCo to track the dollar value of one Brazilian real. Instead of holding local bank cash, Tenbin backs most circulating value with Circle USDC in an on-chain Morpho vault alongside unallocated off-chain cash, USDC, and CME real futures margin held at Ripple Prime and undisclosed futures commission merchants. Onboarded, identity-verified participants execute mints and redemptions through an immutable controller contract using backend-cosigned orders that settle in USDC rather than fiat reals. The token contract exposes no transfer freeze or pause, though dominant on-chain USDC backing and prime-broker custody create upstream freeze exposure. Public decentralized exchange pools remain thin, and Tenbin's Chainlink Proof of Reserve feed publishes a single combined off-chain reserve balance across all protocol assets rather than a token-specific breakdown. Holders therefore depend on multisig governance, off-chain futures hedging, and whitelisted USDC redemptions.",
+    "updatedAt": "2026-11-27",
+    "authoredBy": "ai",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
+  },
+  "invusd-inverse-finance": {
+    "title": "Staked governance collateral with a USDS swap floor",
+    "text": "invUSD is Inverse Finance's dollar stablecoin deployed through its Monolith V1 factory on Ethereum, pairing a single-collateral sINV lending market with an in-contract USDS peg stability module. Borrowers mint invUSD up to 65% of sINV value against an oracle that multiplies the sINV vault rate by a single Curve INV/WETH pool EMA and Chainlink ETH/USD with a RedStone fallback. Holding sINV ties over three quarters of reserve value to Inverse Finance's own staked governance token, while the remaining reserve sits in Sky's sUSDS vault and backs permissionless, fee-free 1:1 USDS exits up to freePsmAssets. Coin and Lender bytecode are immutable with no blacklist or pause, yet a 3-of-6 manager Safe without a timelock can push the target free-debt band and interest half-life onto an unbounded accrual branch before the April 2030 immutability deadline. Liquidity on Curve stays modest relative to supply, making the sUSDS PSM buffer and sINV market depth the durable exit constraints.",
+    "updatedAt": "2026-11-27",
+    "authoredBy": "ai",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
+  },
+  "bnbusd-sigma-money": {
+    "title": "BNB volatility-tranched dollar stalled by an expired oracle",
+    "text": "bnbUSD is Sigma Money's BSC stablecoin built on an f(x) Protocol V2 architecture, backed by WBNB and Lista slisBNB wrapped as SY-clisBNB inside PoolManager. Leveraged long traders post BNB collateral up to 7x while a Stability Pool of USDT and bnbUSD backstops rebalancing at 88% LTV and liquidations at 95% LTV, supplemented by 0.5% collateral redemptions during below-peg states. Both bnbUSD and PoolManager are transparent proxies under a ProxyAdmin owned directly by a 6-of-9 Safe with no timelock, which also administers PoolManager roles capable of registering arbitrary minting modules. Both long-pool BNBPriceOracle contracts require fresh answers from Chainlink and Binance Oracle in strict conjunction with no failover. Because Binance Oracle's BNB/USD feed stopped updating in October 2026, both pool oracles revert with expired, halting liquidations and collateral redemptions while thin BSC Curve pools leave secondary exit depth severely constrained.",
+    "updatedAt": "2026-11-27",
+    "authoredBy": "ai",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
+  },
+  "usdv-delpho": {
+    "title": "HyperEVM CDP dollar backed by hedged collateral vaults",
+    "text": "Delpho USDV is an overcollateralized dollar on HyperEVM minted at zero borrow interest across two isolated markets for stablecoin and HYPE-family collateral, alongside a USDC peg stability module. On-chain accounting shows USDC making up most of the backing, with kHYPE, WHYPE, and a small USDT0 balance deployed through CoreWriter into HyperCore funding-rate and portfolio-margin strategies rather than sitting idle in EVM vaults. Holders can swap out via the PSM while its idle USDC buffer lasts or queue direct market redemptions on a daily epoch cycle, subject to per-market fees and volume caps. Standard transfers are not directly pausable or freezable, yet the three-of-four admin multisig can upgrade the token contract or add minters with no timelock, while upstream stablecoin collateral carries issuer freeze risk. Stability pools held zero balances at review, leaving uncovered liquidation losses to borrower redistribution across each market. USDV trades zero borrow fees for active HyperCore venue exposure and no-delay multisig control.",
+    "updatedAt": "2026-11-27",
+    "authoredBy": "ai",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
+  },
+  "usdhl-felix": {
+    "title": "Sunset HyperEVM dollar wrapper over Treasury-backed M",
+    "text": "Hyper USD is Felix Protocol's non-rebasing dollar wrapper on HyperEVM, backed one-for-one by canonical M0 M tokens held inside its local extension contract. Any non-blacklisted holder can wrap M into USDhl or unwrap back into M directly on-chain with zero fee, while accrued M yield above circulating supply flows to Felix's configured yield recipient rather than token holders. By December 18, 2025, Felix had posted a sunset notice ending active USDhl maintenance, concluding monthly rewards on December 20, 2025, and originally encouraging migration to USDH, which Bridge subsequently announced it was winding down in May 2026. The USDhl contract remains live and unwrappable. Direct holder blacklisting is active through an operational wallet, and the Transparent Proxy remains upgradeable without a timelock by Felix's three-of-six multisig. Downstream holders inherit M0's upstream Treasury collateral and Hyperlane Portal bridge perimeter without a token-specific fiat redemption obligor. USDhl remains mechanically backed by M on-chain, but carries sunset maintenance risk alongside active freeze and proxy-upgrade controls.",
+    "updatedAt": "2026-11-27",
+    "authoredBy": "ai",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
   }
 }

@@ -1,0 +1,163 @@
+{
+  "id": "gdlr-doma",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-adverse",
+    "confidence": "verified",
+    "headline": "Immutable Ethereum token with EOA EIP-712 minter, two-day role-grant delay, and issuer-gated ERC-3643 vault collateral.",
+    "summary": "GDLR is an immutable, non-proxy Ethereum TokenContract whose mint() path accepts EIP-712 signatures from a single EOA holding MINTER_ROLE, locking ERC-3643 GReserve collateral inside the registered VaultContract. Post-deployment role grants on both TokenContract and VaultContract enforce a 2-day (172,800s) ROLE_GRANT_DELAY, but single EOAs hold DEFAULT_ADMIN_ROLE on both contracts, can immediately register vaults or whitelist collateral tokens, and control the upgradeable EIP-1822 GReserve supply with no independent reserve attestation.",
+    "upgradeability": {
+      "model": "immutable",
+      "deploymentRefs": [
+        "ethereum:0xa038a26bf960451b8ce75ec4c92013c6307f8e4e"
+      ],
+      "canChangeMintLogic": false,
+      "observedAt": "2026-11-27",
+      "observedBlock": 26506037,
+      "sources": [
+        {
+          "label": "Verified GDLR TokenContract source on Blockscout",
+          "url": "https://eth.blockscout.com/address/0xa038a26bf960451b8ce75ec4c92013c6307f8e4e"
+        },
+        {
+          "label": "CertiK Doma RWA security assessment (August 8, 2026)",
+          "url": "https://doma.io/uploads/certik-doma-rwa-2026-08.pdf"
+        },
+        {
+          "label": "Ethereum PublicNode pinned RPC read (block 26506037)",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xe4041a4774007c0a2ecd070dcf0810270bf28b3c",
+        "deploymentRefs": [
+          "ethereum:0xa038a26bf960451b8ce75ec4c92013c6307f8e4e"
+        ],
+        "label": "GDLR MINTER_ROLE signer EOA",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "No hardcoded supply cap on TokenContract. Each mint requires a valid MINTER_ROLE EIP-712 signature and locks corresponding ERC-3643 GReserve collateral in the registered VaultContract; GReserve itself is an issuer-controlled EIP-1822 TREX proxy owned by 0x8d2d9a0db9aebd39a86f31ca902d46e3109e8bf4.",
+        "observedAt": "2026-11-27",
+        "observedBlock": 26506037,
+        "failureDomainKeys": [
+          "eoa:ethereum:0xe4041a4774007c0a2ecd070dcf0810270bf28b3c"
+        ],
+        "sources": [
+          {
+            "label": "Verified GDLR TokenContract on Blockscout",
+            "url": "https://eth.blockscout.com/address/0xa038a26bf960451b8ce75ec4c92013c6307f8e4e"
+          },
+          {
+            "label": "Ethereum PublicNode pinned RPC read (block 26506037)",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 26506037 (2026-11-27T10:47:11Z, hash 0x53867165de3e65dd0b94c966bc5c30c80465dfdb0020c6c94de03a37b3c753ac), getRoleMemberCount(MINTER_ROLE) is 1 with sole member 0xe4041a4774007c0a2ecd070dcf0810270bf28b3c (eth_getCode = 0x, EOA). Verified TokenContract.mint() validates an EIP-712 signature from a MINTER_ROLE holder, calls VaultContract.lock(), increments lockedByVault, and mints GDLR with no numeric supply ceiling."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xbfdf8a08222d388a9b3cfe6f85863bd502e9132f",
+        "deploymentRefs": [
+          "ethereum:0xa038a26bf960451b8ce75ec4c92013c6307f8e4e"
+        ],
+        "label": "GDLR TokenContract DEFAULT_ADMIN_ROLE EOA",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "timelockDelaySec": 172800,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Can queue MINTER_ROLE, BURNER_ROLE, PAUSER_ROLE, or DEFAULT_ADMIN_ROLE grants subject to the hardcoded 2-day (172,800s) ROLE_GRANT_DELAY, and can immediately call registerVault, addToBlocklist, setTransferTax (up to 100 bps), and setTaxRecipient.",
+        "bypassSurfaces": [
+          "registerVault(address) has no timelock delay; DEFAULT_ADMIN_ROLE can register a new VaultContract immediately without waiting for ROLE_GRANT_DELAY."
+        ],
+        "observedAt": "2026-11-27",
+        "observedBlock": 26506037,
+        "failureDomainKeys": [
+          "eoa:ethereum:0xbfdf8a08222d388a9b3cfe6f85863bd502e9132f"
+        ],
+        "sources": [
+          {
+            "label": "Verified GDLR TokenContract on Blockscout",
+            "url": "https://eth.blockscout.com/address/0xa038a26bf960451b8ce75ec4c92013c6307f8e4e"
+          },
+          {
+            "label": "Ethereum PublicNode pinned RPC read (block 26506037)",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 26506037 (2026-11-27T10:47:11Z), getRoleMemberCount(DEFAULT_ADMIN_ROLE) is 1 with sole member 0xbfdf8a08222d388a9b3cfe6f85863bd502e9132f (eth_getCode = 0x, EOA). ROLE_GRANT_DELAY() returns 172800 seconds, enforced in grantRole()/executeRoleGrant(). Separate EOAs hold BURNER_ROLE (0x1d94b5cf6b4f073d0748911b64479060e47c684d) and PAUSER_ROLE (0xc2769b50d030cfde1db836e918836613a49e82fb)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xa3c6c2dbeafd85096b4faba881cdb3618825643c",
+        "deploymentRefs": [
+          "ethereum:0xa038a26bf960451b8ce75ec4c92013c6307f8e4e"
+        ],
+        "label": "GDLR VaultContract (ERC-3643 collateral lock)",
+        "role": "custodian",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Immutable VaultContract holding 243.214439 troy oz of ERC-3643 GReserve (188.448585 troy oz locked against 586,140.620019 GDLR). Its DEFAULT_ADMIN_ROLE EOA (0xcb4519738b2e6deb4a86a97658992b3f40cf0f32) can immediately whitelist up to 15 ERC-3643 tokens and conversion rates via addWhitelistedToken.",
+        "observedAt": "2026-11-27",
+        "observedBlock": 26506037,
+        "failureDomainKeys": [
+          "contract:ethereum:0xa3c6c2dbeafd85096b4faba881cdb3618825643c",
+          "eoa:ethereum:0xcb4519738b2e6deb4a86a97658992b3f40cf0f32"
+        ],
+        "sources": [
+          {
+            "label": "Verified GDLR VaultContract on Blockscout",
+            "url": "https://eth.blockscout.com/address/0xa3c6c2dbeafd85096b4faba881cdb3618825643c"
+          },
+          {
+            "label": "Ethereum PublicNode pinned RPC read (block 26506037)",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 26506037 (2026-11-27T10:47:11Z), VaultContract 0xa3c6c2dbeafd85096b4faba881cdb3618825643c has EIP-1967 implementation slot 0x0 (immutable), registeredVaults=true on GDLR, lockedByVault=586,140.620019 GDLR (100% of totalSupply), ROLE_GRANT_DELAY=172800s, DEFAULT_ADMIN_ROLE EOA 0xcb4519738b2e6deb4a86a97658992b3f40cf0f32, PAUSER_ROLE EOA 0x016a7011ca58414161a13755bf4c1ace9508f5b1, and agent 0x29a8d17485bb256a79215536e261d403b43bd859. Whitelisted ERC-3643 GReserve (0xaec17f764438fecfae1cdc7c40a8658f71686570) is an EIP-1822 TREX proxy owned by 0x8d2d9a0db9aebd39a86f31ca902d46e3109e8bf4."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "internal-ledger",
+    "supervision": "none",
+    "review": {
+      "disposition": "scoreable",
+      "reviewedAt": "2026-11-27",
+      "reviewer": "Pharos Wave 1A mint-authority review 2026-11-27",
+      "evidence": "Pinned Ethereum RPC reads at block 26506037 (2026-11-27T10:47:11Z, hash 0x53867165de3e65dd0b94c966bc5c30c80465dfdb0020c6c94de03a37b3c753ac, https://ethereum-rpc.publicnode.com) and verified Blockscout Solidity v0.8.34 source establish that GDLR (0xa038a26bf960451b8ce75ec4c92013c6307f8e4e, deployed block 25530163) and its VaultContract (0xa3c6c2dbeafd85096b4faba881cdb3618825643c, deployed block 25530164) are immutable non-proxy contracts (EIP-1967 implementation and admin slots zero). Both enforce a 2-day (172,800s) timelock on role grants. Issuance is controlled by single-EOA roles: MINTER_ROLE 0xe4041a4774007c0a2ecd070dcf0810270bf28b3c signs EIP-712 mints against ERC-3643 GReserve collateral locked in the vault, while GDLR DEFAULT_ADMIN_ROLE 0xbfdf8a08222d388a9b3cfe6f85863bd502e9132f and Vault DEFAULT_ADMIN_ROLE 0xcb4519738b2e6deb4a86a97658992b3f40cf0f32 hold immediate vault-registration and token-whitelisting powers. On-chain proof-of-reserves reconciles ERC-20 supply against issuer-minted ERC-3643 balances only (internal-ledger), and no independent vault attestation or prudential licensing is disclosed for Lumina Secure S.A. (Panama).",
+      "sources": [
+        {
+          "label": "Verified GDLR TokenContract on Blockscout",
+          "url": "https://eth.blockscout.com/address/0xa038a26bf960451b8ce75ec4c92013c6307f8e4e"
+        },
+        {
+          "label": "Verified GDLR VaultContract on Blockscout",
+          "url": "https://eth.blockscout.com/address/0xa3c6c2dbeafd85096b4faba881cdb3618825643c"
+        },
+        {
+          "label": "CertiK Doma RWA security assessment (August 8, 2026)",
+          "url": "https://doma.io/uploads/certik-doma-rwa-2026-08.pdf"
+        },
+        {
+          "label": "Doma Reserve Policy v2.0 (updated 2026-10-26)",
+          "url": "https://doma.io/reserve-policy"
+        },
+        {
+          "label": "Ethereum PublicNode pinned RPC read (block 26506037)",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    }
+  }
+}

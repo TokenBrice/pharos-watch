@@ -1,0 +1,103 @@
+{
+  "id": "invusd-inverse-finance",
+  "status": "active",
+  "name": "invUSD",
+  "symbol": "invUSD",
+  "brand": "Inverse Finance",
+  "oneLiner": "invUSD is Inverse Finance's sINV-backed dollar, minted in a Monolith V1 CDP with 1:1 USDS swaps and borrower-specific collateral redemptions.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized-dependent"
+  },
+  "collateral": "Single-collateral Monolith V1 Lender on Ethereum (0xf8b349da9244253288f6853835e6582955fd49c9) holding staked INV (sINV, 0x08d23468a467d2bb86fae0e32f247a26c7e2e994) at a 65% collateral factor; the same contract holds a USDS peg-stability reserve through sUSDS, which funds 1:1 PSM sells and is not borrower collateral.",
+  "pegMechanism": "Borrowers mint invUSD against sINV up to 65% of collateral value, priced by ERC4626Feed multiplying the sINV vault exchange rate by a Timelock-switchable DynamicFeeCurveFeed (Curve INV/WETH EMA multiplied by Chainlink ETH/USD with a RedStone fallback, less the dynamic Curve fee capped at 2%). Paid debt accrues interest steered by the Monolith V1 InterestModel around a 15% to 35% target free-debt band; free debt pays no interest and is the only debt redeemable, with holders burning invUSD against an opted-in borrower at the oracle price less a 2.5% fee that the manager Safe or Timelock operator can raise to 5% before the 2030-04-23 immutability deadline. Liquidations are permissionless above 65% LTV with a 0 to 10% incentive, and a write-off rail socialises debt above 100 times collateral value. The in-Lender PSM mints and burns 1:1 against USDS held as sUSDS at 0 bps sell fee, capped on the sell side by freePsmAssets, with buys disabled at the immutability deadline. sInvUSD stakers receive borrower interest net of local and global reserve fees.",
+  "mechanismArchetype": "cdp",
+  "llamaId": "394",
+  "detailProvider": "defillama",
+  "geckoId": "inverse-usd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.inverse.finance/"
+    },
+    {
+      "label": "App",
+      "url": "https://app.monolith.market/1/coin/0"
+    },
+    {
+      "label": "Monolith docs",
+      "url": "https://docs.monolith.market"
+    },
+    {
+      "label": "Monolith audits",
+      "url": "https://docs.monolith.market/security/audits"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/InverseFinance"
+    },
+    {
+      "label": "Token contract",
+      "url": "https://etherscan.io/address/0x5377680b5986296aa4f9e684e5315a4f24832e56"
+    },
+    {
+      "label": "Lender contract",
+      "url": "https://etherscan.io/address/0xf8b349da9244253288f6853835e6582955fd49c9"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x5377680b5986296aa4f9e684e5315a4f24832e56",
+      "decimals": 18
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "monolith-lender",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "invusd-inverse-finance",
+    "display": {
+      "url": "https://app.monolith.market/1/coin/0",
+      "label": "Monolith Lender"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "lenderAddress": "0xf8b349da9244253288f6853835e6582955fd49c9",
+      "collateral": {
+        "address": "0x08d23468a467d2bb86fae0e32f247a26c7e2e994",
+        "decimals": 18,
+        "name": "sINV collateral (Monolith Lender)",
+        "risk": "very-high"
+      },
+      "psmAsset": {
+        "address": "0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+        "decimals": 18,
+        "name": "USDS"
+      },
+      "psmVault": {
+        "address": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+        "name": "sUSDS PSM reserve (Monolith Lender)",
+        "risk": "low",
+        "coinId": "susds-sky",
+        "depType": "collateral"
+      },
+      "psmAssetUnitValueUsd": 1,
+      "redemptionOutputAssetKey": "usds-sky",
+      "sourceUrls": [
+        "https://docs.monolith.market/protocol/peg-stability-module",
+        "https://sourcify.dev/server/v2/contract/1/0xf8b349da9244253288f6853835e6582955fd49c9?fields=sources"
+      ]
+    }
+  },
+  "collateralQuality": "exotic",
+  "custodyModel": "onchain",
+  "governanceQuality": "multisig",
+  "launchDate": "2026-04-24"
+}

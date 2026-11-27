@@ -695,6 +695,38 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
       "The second holder rail is collateral redemption, described here because only one route config per id is allowed. redeem(borrower, amountIn, minAmountOut) burns swanUSD and transfers wstETH at the oracle price minus redeemFeeBps, which read 175 bps at the same block and can be set up to 500 bps before the deadline, against isRedeemable borrowers only. That rail held 4,561.00 swanUSD of free debt across 4 borrowers (1.09% of supply). It reverts when the composite wstETH feed reverts or returns a non-positive price; a feed older than the 30-hour stalenessThreshold does not pause it, it unwinds the price linearly toward zero over the following 24 hours. It is not modeled because it pays volatile collateral and is capped by borrowers' opt-in free debt.",
     ],
   },
+  "invusd-inverse-finance": {
+    ...psmSwapBase,
+    outputAssets: ["usds-sky"],
+    capacityModel: {
+      kind: "reserve-sync-metadata",
+      basis: "live-direct-telemetry",
+      requiredOutputAssetKeys: ["usds-sky"],
+    },
+    costModel: fixedFee(
+      0,
+      "Monolith charges no PSM sell fee: getSellAmountOut() only converts decimals, the PSM page states the sell fee is none, and the Lender exposes no sell-side fee setter. Network gas and ERC-4626 share rounding in the sUSDS withdrawal are separate from that bps schedule.",
+    ),
+    reviewedAt: "2026-11-27",
+    docs: [
+      sourceRefFull("Monolith Peg Stability Module", "https://docs.monolith.market/protocol/peg-stability-module"),
+      sourceRefFull(
+        "Verified invUSD Monolith V1 Lender sell() source (Sourcify exact match)",
+        "https://sourcify.dev/server/v2/contract/1/0xf8b349da9244253288f6853835e6582955fd49c9?fields=sources",
+      ),
+      sourceRef("Monolith redemptions (second holder rail)", "https://docs.monolith.market/protocol/redemptions", [
+        "route",
+        "access",
+        "fees",
+        "settlement",
+      ]),
+    ],
+    notes: [
+      "Modeled 2026-11-27 as the Monolith PSM sell rail (Lender.sell) because it is the larger and par-paying of invUSD's two holder exits: it burns invUSD and pays USDS 1:1, permissionlessly, in one transaction, and continues working after the 2030-04-23T10:22:47Z immutability deadline although buys stop then. sell() carries no pause, allowlist or sell-fee branch. Verified at Ethereum block 26506036 (2026-11-27T10:46:59Z): psmAsset() is USDS 0xdc035d45d973e3ec169d2276ddab16f1e407384f (usds-sky) and psmVault() is sUSDS 0xa3931d71877c0e7a3148cb7eb4463524fec27fbd.",
+      "Capacity is measured live every run by the monolith-lender adapter as the lower of freePsmAssets() (259,316.53 USDS at block 26506036, 48.48% of the 534,884.56 supply) and sUSDS.maxWithdraw(lender) (259,454.11 USDS). A zero balance publishes measured zero with a degraded route status.",
+      "The second holder rail is borrower-specific sINV collateral redemption via redeem(borrower, amountIn, minAmountOut) at oracle price minus redeemFeeBps (250 bps at block 26506036, cap 500 bps before deadline), limited to opted-in free debt (2,556.23 invUSD, 0.48% of supply). It is not modeled because it pays volatile sINV and is tiny relative to the PSM leg.",
+    ],
+  },
 };
 
 const FINALIZED_PSM_AND_BASKET_BACKSTOP_REGISTRY = finalizeBackstopRegistry(

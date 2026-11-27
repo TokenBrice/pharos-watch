@@ -1244,6 +1244,39 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "At that pinned block, escrow owed 46,899.380174 USDC but held 45,946.339767 USDC, a 953.040407 USDC shortfall. Fresh observer balances and obligations are diagnostics only: operator funding, existing requests and separate user/operator pause flags prevent a new-holder capacity or completion guarantee. No 10%-ratio fallback or blanket closed-route claim is inferred.",
     ],
   }),
+  "usdv-delpho": defineQueueRedeemConfig({
+    outputAssetType: "mixed-collateral",
+    outputAssets: ["asset:usdc", "asset:usdt", "asset:whype", "asset:khype"],
+    settlementModel: "days",
+    executionModel: "rules-based-nav",
+    capacityModel: { kind: "unquantified" },
+    costModel: {
+      ...documentedVariableFee(
+        "0.20% redemption fee for the Stablecoin market (USDC/USDT0) and 0.50% for the HYPE/kHYPE market; the separate 25 bps USDC PSM is outside this queued route.",
+        "formula",
+      ),
+      feeBpsMin: 20,
+      feeBpsMax: 50,
+    },
+    reviewedAt: "2026-11-27",
+    docs: [
+      sourceRef("Delpho redemptions and the peg documentation", "https://delpho.gitbook.io/delpho-docs/how-delpho-works/redemptions-and-the-peg", [
+        "route",
+        "access",
+        "fees",
+        "settlement",
+      ]),
+      sourceRef("Delpho parameters documentation", "https://delpho.gitbook.io/delpho-docs/parameters", [
+        "capacity",
+        "fees",
+        "settlement",
+      ]),
+    ],
+    notes: [
+      "Any USDV holder may queue direct market redemptions on a 24-hour epoch cycle; requests in the final 12 hours of an epoch settle in the next epoch (up to ~48 hours).",
+      "Per-24h caps apply (Stablecoin market: 5 to 50,000 USDV/tx, 150,000/wallet, 250,000 global; HYPE market: 100 to 10,000 USDV/tx, 50,000/wallet and global). A separate USDC PSM (25 bps) serves instant exits only up to its idle HyperEVM buffer (~$20.9K at review).",
+    ],
+  }),
 };
 
 const FINALIZED_QUEUE_REDEEM_BACKSTOP_REGISTRY = finalizeBackstopRegistry(

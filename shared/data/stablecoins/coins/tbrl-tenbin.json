@@ -1,0 +1,100 @@
+{
+  "id": "tbrl-tenbin",
+  "llamaId": "486",
+  "detailProvider": "defillama",
+  "name": "Tenbin Brazilian Real",
+  "symbol": "tBRL",
+  "oneLiner": "tBRL is Tenbin's synthetic Brazilian real token on Ethereum, backed by USDC reserves hedged with CME BRL futures under KYC-gated USDC mint and redemption.",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "BRL",
+    "governance": "centralized"
+  },
+  "collateral": "Synthetic Brazilian real exposure, not Brazilian real bank deposits: each token represents an unsecured Tenbin AssetCo (BVI) SPC Ltd. segregated-portfolio debt-note (a UCC Article 12 controllable electronic record) referencing the USD value of one Brazilian real at the spot price. Backed by Circle USDC held on-chain in a Steakhouse USDC Morpho V2 vault (355,144.70 USDC at Ethereum block 26505955) and off-chain at prime broker Ripple Prime and FCM accounts margining CME Brazilian real futures hedges.",
+  "pegMechanism": "KYC-gated mint and redemption through the immutable Ethereum Controller contract using EIP-712 orders signed by approved participants and cosigned by a Tenbin backend HSM minter key in standard (backend-executed) or cosigned (user-executed) modes. Redemptions burn tBRL and settle atomically on-chain in USDC once Tenbin's backend approves and cosigns the order (approval timing is discretionary and unbounded on-chain) at the BRL/USD reference value rather than fiat reals, subject to a Chainlink BRL/USD 8% backstop tolerance, a 50,000,000 tBRL per-block limit, and pass-through execution costs plus a conditional market adjustment fee.",
+  "mechanismArchetype": "synthetic-delta-neutral",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 PR-2 addition review",
+    "rationale": "Tenbin primary documentation and binding Terms of Use specify that tBRL is a USDC-collateralized synthetic FX debt-note whose Brazilian real price exposure is hedged off-chain with delta-one CME futures via regulated FCM counterparties and prime broker Ripple Prime, with on-chain USDC held in a Morpho V2 vault. The peg relies on a centrally operated delta-neutral hedging program rather than Brazilian real bank cash or sovereign bills, matching synthetic-delta-neutral.",
+    "sources": [
+      {
+        "label": "Tenbin: What is a Tenbin Asset?",
+        "url": "https://docs.tenbinlabs.xyz/product/what-is-a-tenbin-asset.md"
+      },
+      {
+        "label": "Tenbin: Peg Mechanism",
+        "url": "https://docs.tenbinlabs.xyz/hedging-and-risk/peg-mechanism.md"
+      },
+      {
+        "label": "Tenbin: Proof of Reserves",
+        "url": "https://docs.tenbinlabs.xyz/hedging-and-risk/proof-of-reserves.md"
+      },
+      {
+        "label": "Tenbin Foundation Terms of Use (updated July 13, 2026)",
+        "url": "https://tenbinlabs.xyz/terms-of-use"
+      }
+    ]
+  },
+  "geckoId": "tenbin-brazilian-real",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://tenbinlabs.xyz"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.tenbinlabs.xyz"
+    },
+    {
+      "label": "Transparency",
+      "url": "https://app.tenbinlabs.xyz/transparency"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/tenbinlabs/tenbin-contracts"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/tenbinlabs"
+    }
+  ],
+  "jurisdiction": {
+    "country": "British Virgin Islands"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x4c1b46adb8877e389171ec6ef67b385094c0afad",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "exotic",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "multisig",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Synthetic BRL debt-note, aggregate PoR only, and thin DEX liquidity",
+      "message": "tBRL is an unsecured Tenbin AssetCo (BVI) SPC debt-note backed by USDC and hedged with CME BRL futures, redeemable only in USDC under KYC rather than fiat Brazilian reals. No asset-specific independent reserve attestation is published; Tenbin's Base Chainlink Proof of Reserve feed reports one combined off-chain reserve figure across all Tenbin assets. Public on-chain AMM liquidity is minimal, with near-zero DEX trading volume.",
+      "asOf": "2026-11-27",
+      "sources": [
+        {
+          "label": "Tenbin Foundation Terms of Use (updated July 13, 2026)",
+          "url": "https://tenbinlabs.xyz/terms-of-use"
+        },
+        {
+          "label": "Tenbin: Proof of Reserves",
+          "url": "https://docs.tenbinlabs.xyz/hedging-and-risk/proof-of-reserves.md"
+        },
+        {
+          "label": "Tenbin: Minting and Redemption",
+          "url": "https://docs.tenbinlabs.xyz/solution-overview/minting-and-redemption.md"
+        }
+      ]
+    }
+  ],
+  "status": "active",
+  "launchDate": "2026-06-23"
+}

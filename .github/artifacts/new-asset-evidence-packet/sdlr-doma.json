@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 3,
+  "receiptMode": "prospective-offline",
+  "kind": "safety-score-v9-new-asset-admission-receipt",
+  "assetId": "sdlr-doma",
+  "prospectiveInputId": "prospective-admission:v1:45ab00167407a0c8affe3ca3f57cc029f14f6489db34a0f0d7c2fc16ab1530cd",
+  "admissionClockSec": 1795782703,
+  "evaluatedCohortIds": [
+    "sdlr-doma"
+  ],
+  "absentRuntimeLanes": [
+    "chain-supply",
+    "dex",
+    "live-reserves",
+    "peg",
+    "redemption"
+  ],
+  "supplyObservation": {
+    "circulating": {
+      "peggedSILVER": 710223.6161713061
+    },
+    "observedAtSec": 1795776295,
+    "url": "https://api.coingecko.com/api/v3/simple/price?ids=sdollar&vs_currencies=usd&include_market_cap=true&include_24hr_vol=true&include_last_updated_at=true",
+    "field": "sdollar.usd_market_cap",
+    "retrievedAtSec": 1795776304
+  },
+  "registryFingerprint": "2ff0895c889e9abe802b4f3777ecf9f3010422f6c1a4e2a523b75788d9661731",
+  "evaluationBuildDigest": "13072d453521985a6cf316591bd02764550fb227ca12200e9f49aaad174db4fc",
+  "card": {
+    "id": "sdlr-doma",
+    "openBucketQuestionsCarried": 6,
+    "inheritedOpenBucketQuestionsCarried": 0,
+    "openBucketObligationsCarried": 7,
+    "documentationObligationsCarried": 2
+  },
+  "questions": [
+    {
+      "questionKey": "sdlr-doma|component|mechanism-review:custodyContinuity",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "bounded-mechanism-review",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "sdlr-doma|component|mechanism-review:physicalRedemption",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "bounded-mechanism-review",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "sdlr-doma|component|mechanism-review:titleAndAllocation",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "bounded-mechanism-review",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "sdlr-doma|component|peg",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-peg-input",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "sdlr-doma|component|reserve-composition",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-reserve-composition",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "sdlr-doma|route|redemption|physical-to-usd:sdlr-doma",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 2,
+      "codes": [
+        {
+          "code": "missing-same-notional-route",
+          "obligations": 1,
+          "documentation": false
+        },
+        {
+          "code": "unresolved-exit-output",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "sdlr-doma|component|economic-control:mint",
+      "bucket": "documentation",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-mint-authority",
+          "obligations": 1,
+          "documentation": true
+        }
+      ]
+    },
+    {
+      "questionKey": "sdlr-doma|component|exit-portfolio-coverage",
+      "bucket": "documentation",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "incomplete-dex-route-coverage",
+          "obligations": 1,
+          "documentation": true
+        }
+      ]
+    }
+  ]
+}

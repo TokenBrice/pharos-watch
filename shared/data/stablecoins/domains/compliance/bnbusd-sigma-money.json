@@ -1,0 +1,94 @@
+{
+  "id": "bnbusd-sigma-money",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Sigma Money Terms of Service: Bitdrome Foundation provides the web interface only and disclaims operating or controlling the decentralized protocol",
+        "url": "https://docs.sigma.money/terms-policies-and-disclosures/terms-of-service"
+      },
+      {
+        "label": "Sigma Money Legal Notice: informational materials with no fiat redemption obligation or regulated offer",
+        "url": "https://docs.sigma.money/terms-policies-and-disclosures/legal-notice"
+      },
+      {
+        "label": "Sigma Money redemption documentation: on-chain redemption pays underlying BNB/slisBNB collateral, not fiat par",
+        "url": "https://docs.sigma.money/risk-management/peg-protection/redemption"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      },
+      {
+        "label": "ESMA MiCA Q&A: EMT offering or admission to trading requires an authorized issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2404"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "bnbUSD is a decentralized crypto-collateralized CDP stablecoin minted on BNB Smart Chain against WBNB and Lista slisBNB (SY-clisBNB) through Sigma Money smart contracts. Bitdrome Foundation is disclosed only as the front-end interface provider and expressly disclaims operating the protocol or undertaking any obligation to redeem bnbUSD for a fixed amount of national currency or bank-deposit monetary value, placing it outside the GENIUS Act section 2(22) payment-stablecoin issuer regime.",
+      "references": [
+        {
+          "label": "GENIUS Act Public Law 119-27: payment stablecoin definition",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "Sigma Money Terms of Service",
+          "url": "https://docs.sigma.money/terms-policies-and-disclosures/terms-of-service",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-07-21",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "Sigma Money redemption mechanics",
+          "url": "https://docs.sigma.money/risk-management/peg-protection/redemption",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Reviewed 2026-11-27. bnbUSD is a decentralized BSC CDP token backed by WBNB and SY-clisBNB with on-chain collateral redemption and no legal issuer obligated to redeem for fiat currency. Bitdrome Foundation is named in the Terms of Service solely as the interface provider and is therefore not assigned as issuerEntity. No GENIUS PPSI approval, state qualification or monthly attestation applies.",
+    "references": [
+      {
+        "label": "GENIUS Act Public Law 119-27 section 2 definitions",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "Sigma Money Terms of Service",
+        "url": "https://docs.sigma.money/terms-policies-and-disclosures/terms-of-service",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-07-21",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "Sigma Money Legal Notice",
+        "url": "https://docs.sigma.money/terms-policies-and-disclosures/legal-notice",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "Sigma Money redemption mechanics",
+        "url": "https://docs.sigma.money/risk-management/peg-protection/redemption",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-11-27"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-11-27"
+  }
+}

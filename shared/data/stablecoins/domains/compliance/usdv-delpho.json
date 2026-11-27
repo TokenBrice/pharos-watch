@@ -1,0 +1,105 @@
+{
+  "id": "usdv-delpho",
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "USDV is an overcollateralized on-chain CDP stablecoin minted against crypto and stablecoin collateral (USDC, USDT0, kHYPE, WHYPE) on HyperEVM with no legal issuer obligated to redeem holders for fixed fiat monetary value under GENIUS Act Section 2(22). Redemptions return underlying on-chain collateral assets rather than bank-wired US dollars.",
+      "references": [
+        {
+          "label": "GENIUS Act: payment stablecoin definition",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "Delpho architecture documentation",
+          "url": "https://delpho.gitbook.io/delpho-docs/for-developers/architecture",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "Delpho redemptions and the peg documentation",
+          "url": "https://delpho.gitbook.io/delpho-docs/how-delpho-works/redemptions-and-the-peg",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://delpho.gitbook.io/delpho-docs/for-developers/contract-addresses",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Delpho operates as an overcollateralized CDP protocol on HyperEVM without a licensed fiat issuer or fixed-money fiat redemption obligation. Delpho publishes on-chain contract addresses, collateral parameters, and restricted-jurisdiction disclosures for its web interface, and relies on smart-contract redemptions into collateral rather than regulated bank reserves or monthly CPA attestations.",
+    "references": [
+      {
+        "label": "GENIUS Act: payment stablecoin definition",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "Delpho regulatory and venue risk documentation",
+        "url": "https://delpho.gitbook.io/delpho-docs/risk/regulatory-and-venue-risk",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "Delpho restricted jurisdictions",
+        "url": "https://delpho.gitbook.io/delpho-docs/legal/restricted-jurisdictions",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-11-27"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "Public Law 119-27, Section 2(22) payment stablecoin definition",
+        "https://delpho.gitbook.io/delpho-docs/risk/regulatory-and-venue-risk",
+        "https://delpho.gitbook.io/delpho-docs/legal/restricted-jurisdictions",
+        "https://delpho.gitbook.io/delpho-docs/how-delpho-works/redemptions-and-the-peg"
+      ],
+      "summary": "As of 2026-11-27, Delpho's primary documentation and verified HyperEVM contracts establish an overcollateralized on-chain CDP and PSM protocol returning crypto/stablecoin collateral rather than a legal fiat redemption obligation; no GENIUS PPSI authorization or public enforcement action applies or was found.",
+      "reviewer": "Wave 1A HyperEVM addition review 2026-11-27",
+      "reviewedAt": "2026-11-27",
+      "references": [
+        {
+          "label": "Delpho regulatory and venue risk documentation",
+          "url": "https://delpho.gitbook.io/delpho-docs/risk/regulatory-and-venue-risk",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "Delpho restricted jurisdictions",
+          "url": "https://delpho.gitbook.io/delpho-docs/legal/restricted-jurisdictions",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        }
+      ]
+    },
+    "reviewer": "Wave 1A HyperEVM addition review 2026-11-27",
+    "reviewedAt": "2026-11-27"
+  },
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Delpho regulatory and venue risk documentation",
+        "url": "https://delpho.gitbook.io/delpho-docs/risk/regulatory-and-venue-risk"
+      },
+      {
+        "label": "Delpho restricted jurisdictions",
+        "url": "https://delpho.gitbook.io/delpho-docs/legal/restricted-jurisdictions"
+      },
+      {
+        "label": "ESMA Q&A: offering an EMT to the public requires an authorised issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2404"
+      }
+    ]
+  }
+}

@@ -45,6 +45,15 @@ export const CORE_AGGREGATE_V1_NON_ACTIVE_EXIT_DATES: Readonly<Record<string, st
  */
 const CORE_AGGREGATE_V2_POST_CUTOVER_ENTRY_DATES: Readonly<Record<string, string>> = {
   "jpydf-deltaforesight": "2026-11-27",
+  "xauh-herculis": "2026-11-27",
+  "stt-silvertimes": "2026-11-27",
+  "gdlr-doma": "2026-11-27",
+  "sdlr-doma": "2026-11-27",
+  "tmxn-tenbin": "2026-11-27",
+  "tbrl-tenbin": "2026-11-27",
+  "invusd-inverse-finance": "2026-11-27",
+  "usdv-delpho": "2026-11-27",
+  "bnbusd-sigma-money": "2026-11-27",
 };
 
 export function getCoreAggregatePostCutoverEntrySec(stablecoinId: string): number | null {

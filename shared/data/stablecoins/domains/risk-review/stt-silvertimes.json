@@ -1,0 +1,23 @@
+{
+  "id": "stt-silvertimes",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Blockscout verified ComplianceToken implementation (addToBlocklist, removeFromBlocklist, forceTransfer, pause)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x67a9499cc6fe9f87a48371fae95c6f221177e0e8"
+      },
+      {
+        "label": "Beosin Post-TGE Smart Contract Audit Report",
+        "url": "https://www.silvertimes.io/docs/Beosin_Audit_Report_SilverTimes_Post_TGE_20260716.pdf"
+      },
+      {
+        "label": "Ethereum PublicNode pinned read at block 26505987",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ],
+    "evidence": "At finalized Ethereum block 26505987 (2026-11-27T10:37:11Z, hash 0x2b4fdfa8d374fad9409afe381d9e555acc8af9cfe407080de32e0506a4928cbb), STT TransparentUpgradeableProxy 0x9f13a262ac5be07a8e6eac09d01daf00be5e0fce delegates to verified ComplianceToken implementation 0x67a9499cc6fe9f87a48371fae95c6f221177e0e8, accounting for 100% of the 32,771.957000 STT supply. Verified source exposes BLOCKLIST_MANAGER_ROLE addToBlocklist(address,string) and removeFromBlocklist(address), blocking both sender and recipient transfers in _update; ENFORCER_ROLE forceTransfer(address,address,uint256), which bypasses both pause and blocklist checks (exercised on-chain at block 25529483); and PAUSER_ROLE pause(). Pinned hasRole reads confirm active holders: BLOCKLIST_MANAGER_ROLE EOA 0xa0e3b87c8a622c8757a0edfd3f608518be5aafa4, PAUSER_ROLE EOA 0x579173cf3e901d89ea1bc65b9a3bec8d08e6eef1, and ENFORCER_ROLE 4-of-6 Safe 0x685401a541bdcb65b1b3bdfef1e074e3c02c1ed3. Event topics: AddressBlocklisted(address,string) 0xe6903f62a072433b0468fae0bd56b14d092dfdd4f6ce667dd896061cc721b38b; AddressUnblocklisted(address) 0x6aa12fece129abcce316cbd448229b1720b8441f5f3e228c9ce0b71a2f21b829; ForceTransfer(address,address,uint256) 0xc05c33099d205635ae8e44a7f065878b3f249efeb4edf562d095e2a091da6aa0.",
+    "reviewer": "Listing Policy v2 PR-2 authoring 2026-11-27",
+    "reviewedAt": "2026-11-27"
+  }
+}

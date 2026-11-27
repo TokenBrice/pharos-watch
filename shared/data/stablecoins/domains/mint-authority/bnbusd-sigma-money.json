@@ -1,0 +1,219 @@
+{
+  "id": "bnbusd-sigma-money",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "unbounded-adverse",
+    "confidence": "verified",
+    "headline": "bnbUSD ordinarily mints from BNB collateral, but a 6-of-9 Safe can immediately upgrade proxies or register arbitrary minting pools with no timelock.",
+    "summary": "BSC bnbUSD is an EIP-1967 TransparentUpgradeableProxy (L2FxUSD implementation) that restricts mint() and burn() to its immutable PoolManager proxy. Under normal operation, borrowers mint bnbUSD through PoolManager.operate() against WBNB or SY-clisBNB collateral in registered SigmaLongPool markets. However, both the bnbUSD token proxy and the PoolManager proxy share ProxyAdmin 0x2f0927654de5856bfada529c800eba78cc032c11, whose owner is a 6-of-9 Gnosis Safe 1.4.1 (0xfcddb2c54ca8a1a12eedd83efd027f7b47e83428) with no timelock, no enabled modules and no guard. The same 6-of-9 Safe holds DEFAULT_ADMIN_ROLE directly on bnbUSD, PoolManager and PegKeeper, where DEFAULT_ADMIN_ROLE administers OPERATOR_ROLE, EMERGENCY_ROLE, ASSET_MANAGER_ROLE and SP_ROLE. Even without upgrading code, the Safe can grant OPERATOR_ROLE, call PoolManager.registerPool() with an arbitrary module address (the verified source omits the fxUSD check to save bytecode) and raise debtCapacity, allowing an arbitrary module to return unbacked debt that triggers PoolManager._handleBorrow() -> bnbUSD.mint(). Native economic issuance is therefore unbounded with zero delay, and no reconciliation regime or prudential supervision applies.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "deploymentRefs": [
+        "bsc:0x5519a479da8ce3af7f373c16f14870bbeafda265"
+      ],
+      "proxyAddresses": [
+        "0x5519a479da8ce3af7f373c16f14870bbeafda265",
+        "0x0a43ca87954ed1799b7b072f6e9d51d88cca600e"
+      ],
+      "implementationAddresses": [
+        "0x4429ee0c38b8cbc9c1d6d8bab5751618b0751998",
+        "0xa9cab826b5b471bdcae7186cfe988327fe873929"
+      ],
+      "adminAddresses": [
+        "0x2f0927654de5856bfada529c800eba78cc032c11",
+        "0xfcddb2c54ca8a1a12eedd83efd027f7b47e83428"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "Sigma Money ProxyAdmin (bnbUSD token and PoolManager)",
+      "observedAt": "2026-11-27",
+      "observedBlock": 136025505,
+      "sources": [
+        {
+          "label": "L2FxUSD implementation exact-match verified source on Sourcify",
+          "url": "https://sourcify.dev/server/v2/contract/56/0x4429ee0c38b8cbc9c1d6d8bab5751618b0751998?fields=sources"
+        },
+        {
+          "label": "PoolManager implementation exact-match verified source on Sourcify",
+          "url": "https://sourcify.dev/server/v2/contract/56/0xa9cab826b5b471bdcae7186cfe988327fe873929?fields=sources"
+        },
+        {
+          "label": "bnbUSD token proxy on BscScan",
+          "url": "https://bscscan.com/address/0x5519a479da8ce3af7f373c16f14870bbeafda265"
+        },
+        {
+          "label": "Sigma ProxyAdmin on BscScan",
+          "url": "https://bscscan.com/address/0x2f0927654de5856bfada529c800eba78cc032c11"
+        },
+        {
+          "label": "BSC evidence pin 136025505 (2026-11-27T10:50:03Z)",
+          "url": "https://bscscan.com/block/136025505"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "bsc",
+        "address": "0x2f0927654de5856bfada529c800eba78cc032c11",
+        "deploymentRefs": [
+          "bsc:0x5519a479da8ce3af7f373c16f14870bbeafda265"
+        ],
+        "label": "Sigma Money ProxyAdmin (bnbUSD token and PoolManager)",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-27",
+        "observedBlock": 136025505,
+        "failureDomainKeys": [
+          "contract:bsc:0x2f0927654de5856bfada529c800eba78cc032c11",
+          "safe:bsc:0xfcddb2c54ca8a1a12eedd83efd027f7b47e83428"
+        ],
+        "bypassSurfaces": [
+          "Both bnbUSD and PoolManager proxies share this ProxyAdmin owned directly by the 6-of-9 Safe with zero timelock delay, allowing immediate replacement of mint-critical bytecode."
+        ],
+        "sources": [
+          {
+            "label": "Sigma ProxyAdmin on BscScan",
+            "url": "https://bscscan.com/address/0x2f0927654de5856bfada529c800eba78cc032c11"
+          },
+          {
+            "label": "BSC evidence pin 136025505 (2026-11-27T10:50:03Z)",
+            "url": "https://bscscan.com/block/136025505"
+          }
+        ],
+        "evidence": "At BSC blocks 136025382 and 136025505 (2026-11-27T10:49:07Z to 10:50:03Z), EIP-1967 admin slots on bnbUSD (0x5519a479da8ce3af7f373c16f14870bbeafda265), PoolManager (0x0a43ca87954ed1799b7b072f6e9d51d88cca600e), WBNB long pool (0x31c464cfe506d44ceaa86c05cdbb94b5c94f70fb) and SY-clisBNB long pool (0xe8a16f808412c4341f692b49c81d64c374187b7d) all returned this ProxyAdmin. ProxyAdmin.owner() returned the 6-of-9 Safe 0xfcddb2c54ca8a1a12eedd83efd027f7b47e83428 directly with no timelock contract in front of it."
+      },
+      {
+        "chain": "bsc",
+        "address": "0x0a43ca87954ed1799b7b072f6e9d51d88cca600e",
+        "deploymentRefs": [
+          "bsc:0x5519a479da8ce3af7f373c16f14870bbeafda265"
+        ],
+        "label": "Sigma Money PoolManager (only bnbUSD minter)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-27",
+        "observedBlock": 136025505,
+        "capDescription": "L2FxUSD restricts mint() and burn() to poolManager. PoolManager enforces per-pool debtCapacity (100,000,000 bnbUSD for WBNB long pool and 1,000,000 bnbUSD for SY-clisBNB long pool at the pin), but OPERATOR_ROLE (administered by DEFAULT_ADMIN_ROLE) can call registerPool() with any arbitrary address without collateral validation and call updatePoolCapacity() without a timelock.",
+        "sources": [
+          {
+            "label": "L2FxUSD exact-match verified source on Sourcify",
+            "url": "https://sourcify.dev/server/v2/contract/56/0x4429ee0c38b8cbc9c1d6d8bab5751618b0751998?fields=sources"
+          },
+          {
+            "label": "PoolManager exact-match verified source on Sourcify",
+            "url": "https://sourcify.dev/server/v2/contract/56/0xa9cab826b5b471bdcae7186cfe988327fe873929?fields=sources"
+          },
+          {
+            "label": "PoolManager proxy on BscScan",
+            "url": "https://bscscan.com/address/0x0a43ca87954ed1799b7b072f6e9d51d88cca600e"
+          }
+        ],
+        "evidence": "At BSC block 136025505, bnbUSD.poolManager() returned 0x0a43ca87954ed1799b7b072f6e9d51d88cca600e, PoolManager.fxUSD() returned bnbUSD and paused() was false. Verified PoolManager.sol calls IFxUSDRegeneracy(fxUSD).mint() inside _handleBorrow() and _handleRepay() (fee share) based on the debt returned by the registered pool contract; registerPool() explicitly comments out the fxUSD check to save bytecode and accepts any pool address and capacities from OPERATOR_ROLE."
+      },
+      {
+        "chain": "bsc",
+        "address": "0xfcddb2c54ca8a1a12eedd83efd027f7b47e83428",
+        "deploymentRefs": [
+          "bsc:0x5519a479da8ce3af7f373c16f14870bbeafda265"
+        ],
+        "label": "Sigma Money governance multisig (6-of-9 Safe, no timelock)",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 6,
+        "signerCount": 9,
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x13a0008d9c53d887fe365d11f57169e4e2178720",
+            "0x2210ef8fe0b56a7ea0d3ae77ac6fd1c1dec8a9ba",
+            "0x58c0c064a89138bf3216c20f4e4827ec0fe78e87",
+            "0x2d6f029d42ecc2f8c3c3adbc5424aefce7cc879d",
+            "0x87022fe49b5582cfd6e79a76a0b67d1de694d928",
+            "0x37d961f0f49d565a8d729ee56062791311c5810a",
+            "0x7bb8527b0630fa00205651b9a91d94eb9ba1244a",
+            "0xb962e31bceb9540e99387c293d9fed8c4deb8166",
+            "0x01194fa5077847960dadc2edf23e7e4466222c5a"
+          ],
+          "threshold": 6,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "observedAt": "2026-11-27",
+          "observedBlock": 136025505,
+          "source": "onchain"
+        },
+        "observedAt": "2026-11-27",
+        "observedBlock": 136025505,
+        "failureDomainKeys": [
+          "safe:bsc:0xfcddb2c54ca8a1a12eedd83efd027f7b47e83428"
+        ],
+        "bypassSurfaces": [
+          "No timelock stands between this 6-of-9 Safe and ProxyAdmin upgrades or PoolManager role grants and arbitrary pool registration."
+        ],
+        "sources": [
+          {
+            "label": "Sigma governance multisig on BscScan",
+            "url": "https://bscscan.com/address/0xfcddb2c54ca8a1a12eedd83efd027f7b47e83428"
+          },
+          {
+            "label": "Sigma Money Governance M signer table (two signers have rotated on-chain since publication)",
+            "url": "https://docs.sigma.money/other/resources/governance-m"
+          },
+          {
+            "label": "BSC evidence pin 136025505 (2026-11-27T10:50:03Z)",
+            "url": "https://bscscan.com/block/136025505"
+          }
+        ],
+        "evidence": "At BSC blocks 136025382 and 136025505, this Safe 1.4.1 (masterCopy 0x29fcb43b46531bca003ddc8fcb67ffe91900c762, nonce 38) returned getThreshold()=6, getOwners() with the nine listed EOAs (all verified zero bytecode via eth_getCode), empty getModulesPaginated(), zero GuardManager slot (0x4a20...c8), zero ModuleGuard slot (0xb104...47) and CompatibilityFallbackHandler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. It holds ProxyAdmin.owner() and DEFAULT_ADMIN_ROLE on bnbUSD, PoolManager and PegKeeper, where getRoleAdmin() for OPERATOR_ROLE, EMERGENCY_ROLE, ASSET_MANAGER_ROLE and SP_ROLE is DEFAULT_ADMIN_ROLE. It is also owner() of SigmaClisBNBSY and BNBPriceOracle (0x45dcdfce8c0d163708eaa47ab5e72280af3efa3e). Two of the nine on-chain owners (0x87022f... and 0x01194f...) differ from the older Governance M docs table."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "review": {
+      "evidence": "Reviewed at BSC blocks 136025382 to 136026125 (2026-11-27T10:49:07Z to 10:54:42Z) against Sourcify exact-match verified sources for L2FxUSD (0x4429ee0c38b8cbc9c1d6d8bab5751618b0751998), PoolManager (0xa9cab826b5b471bdcae7186cfe988327fe873929), PegKeeper (0x6dc9fdecbf56fb7ec08670c60cc11ab606db6b34) and both SigmaLongPool implementations. bnbUSD is an upgradeable TransparentUpgradeableProxy under ProxyAdmin 0x2f0927654de5856bfada529c800eba78cc032c11, owned directly by the 6-of-9 Safe 1.4.1 at 0xfcddb2c54ca8a1a12eedd83efd027f7b47e83428 with zero timelock, no enabled modules and zero guard/moduleGuard slots. The Safe also holds DEFAULT_ADMIN_ROLE on bnbUSD, PoolManager and PegKeeper, administering PoolManager OPERATOR_ROLE which can register arbitrary mint-dispatching pool modules and raise capacities without collateral validation. Both immediate proxy upgradeability and arbitrary pool authorization make native economic issuance unbounded with zero delay (posture unbounded-adverse). Signer human independence and hardware-wallet custody were not independently established. Reconciliation is not applicable to an on-chain CDP with no off-chain reserve report, and no prudential supervision applies.",
+      "reviewer": "Pharos listing v2 Wave 1A review 2026-11-27",
+      "reviewedAt": "2026-11-27",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "BSC evidence pin 136025505 (2026-11-27T10:50:03Z)",
+          "url": "https://bscscan.com/block/136025505"
+        },
+        {
+          "label": "L2FxUSD exact-match verified source on Sourcify",
+          "url": "https://sourcify.dev/server/v2/contract/56/0x4429ee0c38b8cbc9c1d6d8bab5751618b0751998?fields=sources"
+        },
+        {
+          "label": "PoolManager exact-match verified source on Sourcify",
+          "url": "https://sourcify.dev/server/v2/contract/56/0xa9cab826b5b471bdcae7186cfe988327fe873929?fields=sources"
+        },
+        {
+          "label": "Sigma ProxyAdmin on BscScan",
+          "url": "https://bscscan.com/address/0x2f0927654de5856bfada529c800eba78cc032c11"
+        },
+        {
+          "label": "Sigma governance 6-of-9 Safe on BscScan",
+          "url": "https://bscscan.com/address/0xfcddb2c54ca8a1a12eedd83efd027f7b47e83428"
+        },
+        {
+          "label": "Sigma Money Governance M signer table",
+          "url": "https://docs.sigma.money/other/resources/governance-m"
+        }
+      ]
+    }
+  }
+}

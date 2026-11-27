@@ -1913,6 +1913,120 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "The reviewed 10% strategy-buffer heuristic avoids treating suiUSDe's delta-neutral reserve stack as immediately redeemable full supply; enablement, pause state, global/collateral/benefactor limits, and current redeem balance remain operational controls outside this static bound.",
     ],
   }),
+  ...defineConfigFamily(
+    [
+      {
+        id: "tmxn-tenbin",
+        controllerAddress: "0xb5ebdec6da02119dd7beb4782c181261f8bfecc2",
+        vaultAddress: "0x43e3f5e27422c3a938269368eb7c3a3b545bb6ca",
+        symbol: "tMXN",
+        blockRedeemLimit: "300,000,000 tMXN",
+        vaultUsdcObserved: "451,180.52 USDC",
+      },
+      {
+        id: "tbrl-tenbin",
+        controllerAddress: "0x0ef47cc8e244dbc8628fdeffd4ee4dd747d14081",
+        vaultAddress: "0xe275a69b93a5745e1560ee82d033205d323bfad9",
+        symbol: "tBRL",
+        blockRedeemLimit: "50,000,000 tBRL",
+        vaultUsdcObserved: "355,144.70 USDC",
+      },
+    ],
+    ({ id: _id, controllerAddress, vaultAddress, symbol, blockRedeemLimit, vaultUsdcObserved }) => {
+      const docs = [
+        sourceRef("Tenbin: Minting and Redemption", "https://docs.tenbinlabs.xyz/solution-overview/minting-and-redemption.md", [
+          "route",
+          "access",
+          "settlement",
+        ]),
+        sourceRef("Tenbin: Protocol Pricing", "https://docs.tenbinlabs.xyz/solution-overview/minting-and-redemption/protocol-pricing.md", [
+          "fees",
+        ]),
+        sourceRef("Tenbin: Conditional Market Adjustment Fee", "https://docs.tenbinlabs.xyz/hedging-and-risk/peg-mechanism/conditional-market-adjustment-fee.md", [
+          "fees",
+        ]),
+        sourceRef("Tenbin: Collateral Management", "https://docs.tenbinlabs.xyz/hedging-and-risk/collateral-management.md", [
+          "capacity",
+          "settlement",
+        ]),
+        sourceRef("Tenbin: Cosigned vs Standard Orders", "https://docs.tenbinlabs.xyz/solution-overview/minting-and-redemption/cosigned-vs-standard-orders.md", [
+          "route",
+          "fees",
+          "settlement",
+        ]),
+        sourceRef("Tenbin Foundation Terms of Use (updated July 13, 2026)", "https://tenbinlabs.xyz/terms-of-use", [
+          "route",
+          "access",
+          "fees",
+          "settlement",
+        ]),
+        sourceRef(`Tenbin ${symbol} Controller verified source (block 26505955)`, `https://eth.blockscout.com/api/v2/smart-contracts/${controllerAddress}`, [
+          "route",
+          "access",
+          "capacity",
+          "settlement",
+        ]),
+      ];
+      return defineStablecoinRedeemConfig({
+        reviewedAt: "2026-11-27",
+        accessModel: "whitelisted-onchain",
+        holderEligibility: "whitelisted-primary",
+        executionModel: "rules-based-nav",
+        settlementModel: "queued",
+        outputAssets: ["usdc-circle"],
+        capacityModel: { kind: "unquantified" },
+        costModel: documentedVariableFee(
+          "Tenbin charges no fixed default redemption fee under normal market conditions, but passes through gas, FCM/NFA commissions, and hedge-unwind execution costs, plus a volatility spread on cosigned user-executed orders and a Conditional Market Adjustment Fee when hedge carry diverges.",
+          "formula",
+        ),
+        v9RouteReviewTerms: {
+          scoringDisposition: "bounded-terms-gap",
+          missingScoringFields: ["capacity", "cost", "settlement"],
+          rationale: `KYC-approved signers submit EIP-712 orders that settle on-chain through Controller ${controllerAddress} only after discretionary cosigning by Tenbin's backend HSM key, burning ${symbol} for USDC. Executable capacity depends on live CollateralManager/Morpho V2 vault liquidity (${vaultAddress}, ${vaultUsdcObserved} at block 26505955) and off-chain hedge unwind capacity, backend approval timing is not bounded on-chain, and pass-through execution costs and conditional adjustment fees are not bounded statically.`,
+          reviewedAt: "2026-11-27",
+          docs,
+        },
+        docs,
+        notes: [
+          `Verified Ethereum block 26505955 (2026-11-27T10:30:47Z): Controller ${controllerAddress} had pauseStatus=0, blockRedeemLimit=${blockRedeemLimit}, and CollateralManager idle USDC=0 with ${vaultUsdcObserved} in Morpho V2 Vault ${vaultAddress} (curated withdrawals can bundle atomically via MultiCall).`,
+          "Redemptions are restricted to KYC/KYB-approved non-U.S. Eligible Investors with approved signers and recipients, require discretionary backend HSM order approval before the atomic on-chain settlement leg (classified as queued because approval timing is unbounded on-chain), and settle in USDC rather than local fiat currency.",
+          "Executable capacity remains unquantified because no live redemption-capacity adapter measures withdrawable Morpho vault liquidity or off-chain Ripple Prime/FCM margin availability.",
+        ],
+      });
+    },
+  ),
+  "usdhl-felix": defineStablecoinRedeemConfig({
+    outputAssets: ["m-m0"],
+    capacityModel: {
+      kind: "reserve-sync-metadata",
+      requiredOutputAssetKeys: ["m-m0"],
+    },
+    reviewedAt: "2026-11-27",
+    totalScoreCap: 70,
+    costModel: fixedFee(
+      0,
+      "Zero protocol fee to unwrap USDhl 1:1 into M0 M directly on HyperEVM (gas only).",
+    ),
+    docs: [
+      sourceRef("USDhl architecture documentation", "https://usefelix.gitbook.io/usdhl/usdhl-architecture", [
+        "route",
+        "capacity",
+        "settlement",
+      ]),
+      sourceRef(
+        "Verified USDHL MExtension source on HyperEVMScan",
+        "https://hyperevmscan.io/address/0xdb170bfe627a39145147e6ff9b258bdb59e6b4e8#code",
+        ["route", "access", "fees", "settlement"],
+      ),
+      sourceRef("Felix USDhl sunsetting documentation", "https://usefelix.gitbook.io/usdhl/sunsetting-usdhl", [
+        "access",
+      ]),
+    ],
+    notes: [
+      "Verified USDHL/MExtension unwrap() burns USDhl and transfers canonical M0 M 1:1 with zero fee on HyperEVM for any non-blacklisted holder.",
+      "Live m0-wrapper-underlying telemetry verifies M.balanceOf(USDhl) >= USDhl.totalSupply() (100.08% at review). Final fiat liquidity inherits parent m-m0 constraints, and Felix has placed USDhl in sunset maintenance mode.",
+    ],
+  }),
 };
 
 const FINALIZED_STABLECOIN_REDEEM_BACKSTOP_REGISTRY = finalizeBackstopRegistry(

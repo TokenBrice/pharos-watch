@@ -1,0 +1,160 @@
+{
+  "id": "usdhl-felix",
+  "status": "active",
+  "name": "Hyper USD",
+  "symbol": "USDhl",
+  "launchDate": "2025-06-12",
+  "windDownAnnouncedAt": "2025-12-18",
+  "windDownSourceUrl": "https://usefelix.gitbook.io/usdhl/sunsetting-usdhl",
+  "oneLiner": "Felix's M0-backed HyperEVM dollar wrapper (1:1 over M), placed in unmaintained sunset mode with rewards ended.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized",
+    "rwa": true
+  },
+  "variantOf": "m-m0",
+  "variantKind": "pure-wrapper",
+  "pegReferenceId": "m-m0",
+  "collateral": "M0 M tokens held 1:1 by the USDhl HyperEVM MExtension contract; the parent M token provides the Treasury-backed issuance and custody layer.",
+  "pegMechanism": "Non-blacklisted holders can wrap M into USDhl or unwrap USDhl back into M 1:1 with zero fee directly on the USDhl MExtension contract, and bridge between Ethereum Wrapped M and HyperEVM USDhl via M0's Hyperlane Portal Lite. Accrued M yield above outstanding USDhl supply is claimable to Felix's yieldRecipient rather than distributed to token balances.",
+  "mechanismArchetype": "tbill",
+  "geckoId": "hyper-usd",
+  "detailProvider": "coingecko",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://usdhl.xyz/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://usefelix.gitbook.io/usdhl/"
+    },
+    {
+      "label": "Token explorer",
+      "url": "https://hyperevmscan.io/address/0xb50a96253abdf803d85efcdce07ad8becbc52bd5"
+    },
+    {
+      "label": "Audits (M0 framework)",
+      "url": "https://usefelix.gitbook.io/usdhl/advanced/security"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/felixprotocol"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "hyperevm",
+      "address": "0xb50a96253abdf803d85efcdce07ad8becbc52bd5",
+      "decimals": 6
+    }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "unknown",
+  "governanceQuality": "multisig",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://hyperevmscan.io/address/0xb50a96253abdf803d85efcdce07ad8becbc52bd5",
+    "provider": "On-chain parent M balance held by USDhl contract; not independent financial assurance",
+    "cadence": "real-time"
+  },
+  "liveReservesConfig": {
+    "adapter": "m0-wrapper-underlying",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "usdhl-felix",
+    "display": {
+      "url": "https://usefelix.gitbook.io/usdhl/usdhl-architecture",
+      "label": "USDhl on-chain M custody"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "hyperevm",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "mode": "wrapped-m-token",
+      "wrapperAddress": "0xb50a96253abdf803d85efcdce07ad8becbc52bd5",
+      "expectedMTokenAddress": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+      "slice": {
+        "name": "M token held by USDhl",
+        "risk": "very-low",
+        "coinId": "m-m0",
+        "depType": "wrapper"
+      },
+      "sourceUrls": [
+        "https://usefelix.gitbook.io/usdhl/usdhl-architecture",
+        "https://usefelix.gitbook.io/usdhl/advanced/developers",
+        "https://hyperevmscan.io/address/0xdb170bfe627a39145147e6ff9b258bdb59e6b4e8#code"
+      ],
+      "rpcUrl": "https://rpc.hyperliquid.xyz/evm"
+    }
+  },
+  "dependencyReview": {
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Wave 1A HyperEVM addition review 2026-11-27",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "USDhl architecture documentation",
+        "url": "https://usefelix.gitbook.io/usdhl/usdhl-architecture"
+      },
+      {
+        "label": "Verified USDHL implementation on HyperEVMScan",
+        "url": "https://hyperevmscan.io/address/0xdb170bfe627a39145147e6ff9b258bdb59e6b4e8#code"
+      },
+      {
+        "label": "Pinned HyperEVM JSON-RPC read at block 52378224 (2026-11-27T10:49:26Z)",
+        "url": "https://rpc.hyperliquid.xyz/evm"
+      }
+    ],
+    "rationale": "At HyperEVM block 52378224 (2026-11-27T10:49:26Z), the USDhl Transparent Proxy (0xb50a96253abdf803d85efcdce07ad8becbc52bd5, verified implementation 0xdb170bfe627a39145147e6ff9b258bdb59e6b4e8) pointed to canonical HyperEVM M token 0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b and held 327,843.601117 M against 327,573.275619 USDhl total supply (100.08% backing; exact 270.325498 M excess equals USDHL.yield()). Verified MExtension source transfers M 1:1 on wrap() and returns M 1:1 on unwrap(), making the immediate serial claim the parent M token rather than a direct off-chain Treasury allocation.",
+    "relationships": [
+      {
+        "id": "m-m0",
+        "weight": 1,
+        "type": "wrapper",
+        "reason": "The immediate serial claim is canonical M0 M held by the HyperEVM USDhl MExtension contract, not a separate off-chain Treasury portfolio."
+      }
+    ]
+  },
+  "infrastructures": [
+    "m0"
+  ],
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Felix sunsetting active USDhl maintenance",
+      "message": "By December 18, 2025, Felix had posted a sunset notice ending active USDhl maintenance and concluding monthly rewards on December 20, 2025, originally encouraging holders to migrate to USDH (which Bridge announced on May 14, 2026 it would stop routine issuance for from May 19, 2026). The on-chain USDhl contract remains live and unwrappable 1:1 into M0 M on HyperEVM.",
+      "asOf": "2026-11-27",
+      "sources": [
+        {
+          "label": "Felix USDhl sunsetting documentation (last updated 2025-12-18)",
+          "url": "https://usefelix.gitbook.io/usdhl/sunsetting-usdhl"
+        },
+        {
+          "label": "Bridge update on winding down USDH (2026-05-14)",
+          "url": "https://www.bridge.xyz/blog/an-update-on-usdh"
+        }
+      ]
+    }
+  ],
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Wave 1A HyperEVM addition review 2026-11-27",
+    "rationale": "USDhl is a non-rebasing pure wrapper around M0's M token on HyperEVM, inheriting M's short-term Treasury backing while routing accrued M yield to Felix's configured yieldRecipient. The tbill archetype matches the tracked m-m0 parent without asserting direct holder seniority over off-chain SPV collateral.",
+    "sources": [
+      {
+        "label": "USDhl architecture documentation",
+        "url": "https://usefelix.gitbook.io/usdhl/usdhl-architecture"
+      },
+      {
+        "label": "Verified USDHL implementation on HyperEVMScan",
+        "url": "https://hyperevmscan.io/address/0xdb170bfe627a39145147e6ff9b258bdb59e6b4e8#code"
+      }
+    ]
+  }
+}

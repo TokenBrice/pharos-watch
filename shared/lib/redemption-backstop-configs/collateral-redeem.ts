@@ -1095,6 +1095,30 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "supply-full is a documented eventual system bound rather than guaranteed immediate underlying liquidity; live evm-branch-balances telemetry tracks branch collateral mix and current redemption fee bps without publishing executable redemption capacity.",
       ],
     }),
+    "bnbusd-sigma-money": defineCollateralConfig({
+      reviewedAt: "2026-11-27",
+      capacityModel: { kind: "unquantified" },
+      routeStatus: "unknown",
+      outputAssetType: "mixed-collateral",
+      outputAssets: ["asset:bnb", "asset:slisbnb"],
+      costModel: fixedFee(
+        50,
+        "Sigma Money PoolManager.getRedeemFeeRatio() reads 5,000,000 on a 1e9 scale (50 bps / 0.5%), matching published Risk Parameters; gas and SY-clisBNB unwrapping to slisBNB are separate.",
+      ),
+      docs: [
+        sourceRefFull("Sigma Money Redemption mechanics", "https://docs.sigma.money/risk-management/peg-protection/redemption"),
+        sourceRefFull("Sigma Money Risk Parameters", "https://docs.sigma.money/risk-management/risk-parameters"),
+        sourceRefFull(
+          "Verified Sigma PoolManager redeem() source (Sourcify exact match)",
+          "https://sourcify.dev/server/v2/contract/56/0xa9cab826b5b471bdcae7186cfe988327fe873929?fields=sources",
+        ),
+        sourceRef("Sigma Money Fee Structure", "https://docs.sigma.money/sigma-money-mechanism/fee-structure", ["fees"]),
+      ],
+      notes: [
+        "Modeled 2026-11-27 as Sigma Money's PoolManager.redeem(pool, debts, minColls) rail on BSC, which burns caller bnbUSD and pays WBNB (0xbb4cdb...) from the WBNB long pool or SY-clisBNB (0x8b9856..., unwrappable to slisBNB) from the SY-clisBNB long pool at the oracle max/anchor price minus a 50 bps fee, capped at 20% of each tick per call (maxRedeemRatioPerTick = 200,000,000 / 1e9).",
+        "Redemption is conditionally gated by PoolConfiguration.isRedeemAllowed() (below-peg threshold 0.998, which read false at BSC block 136026125 when Curve price was 1.0002). Furthermore, at BSC blocks 136025859 to 136026270 both pool BNBPriceOracle contracts reverted with expired because the immutable Binance Oracle BNB/USD feed had not updated since 2026-10-14T07:46:07Z. Route status therefore remains unknown and capacity unquantified until oracle liveness is restored and executable same-notional telemetry is observed.",
+      ],
+    }),
   }),
 ];
 

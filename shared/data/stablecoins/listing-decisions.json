@@ -521,6 +521,16 @@
     "eurod-oddo-bhf": "core-stablecoin",
     "eursm-stable-mint": "core-stablecoin",
     "eury-eurodollar": "core-stablecoin",
-    "heur-heuro": "core-stablecoin"
+    "heur-heuro": "core-stablecoin",
+    "xauh-herculis": "core-stablecoin",
+    "stt-silvertimes": "core-stablecoin",
+    "gdlr-doma": "core-stablecoin",
+    "sdlr-doma": "core-stablecoin",
+    "tmxn-tenbin": "core-stablecoin",
+    "tbrl-tenbin": "core-stablecoin",
+    "invusd-inverse-finance": "core-stablecoin",
+    "usdv-delpho": "core-stablecoin",
+    "bnbusd-sigma-money": "core-stablecoin",
+    "usdhl-felix": "stablecoin-variant"
   }
 }

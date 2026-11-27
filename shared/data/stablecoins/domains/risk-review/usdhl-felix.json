@@ -1,0 +1,128 @@
+{
+  "id": "usdhl-felix",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Verified USDHL implementation on HyperEVMScan",
+        "url": "https://hyperevmscan.io/address/0xdb170bfe627a39145147e6ff9b258bdb59e6b4e8#code"
+      },
+      {
+        "label": "USDhl Transparent Proxy on HyperEVMScan",
+        "url": "https://hyperevmscan.io/address/0xb50a96253abdf803d85efcdce07ad8becbc52bd5"
+      },
+      {
+        "label": "Pinned HyperEVM JSON-RPC read at block 52378224 (2026-11-27T10:49:26Z)",
+        "url": "https://rpc.hyperliquid.xyz/evm"
+      }
+    ],
+    "evidence": "Reviewed 2026-11-27 at HyperEVM block 52378224. USDhl (0xb50a96253abdf803d85efcdce07ad8becbc52bd5) resolves to verified implementation 0xdb170bfe627a39145147e6ff9b258bdb59e6b4e8, which directly inherits Blacklistable and checks isBlacklisted on transfers, wraps, unwraps, and approvals. At the pinned block, operational EOA 0x2157f54f7a745c772e686aa691fa590b49171ec9 (code 0x) holds BLACKLIST_MANAGER_ROLE, and the Felix 3-of-6 Gnosis Safe (0x699090e73c4077ef2af42773b31788c6564f079c) holds DEFAULT_ADMIN_ROLE and owns ProxyAdmin 0x9f834dd902cef1a0341bcc538cbbd8c38abe808f. Because active on-chain blacklist managers can directly freeze arbitrary holder balances across 100% of HyperEVM supply, the verdict is Yes.",
+    "reviewer": "Wave 1A HyperEVM addition review 2026-11-27",
+    "reviewedAt": "2026-11-27"
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "USDhl has no external price feed and no borrower-liquidation branch. Verified USDHL/MExtension code on HyperEVM wraps and unwraps M0 M deterministically at a 1:1 quantity ratio with zero oracle calls. USDhl's dollar value is therefore set by permissioned mechanisms inside the M parent (threshold-multisigned Validator collateral attestations inside MinterGateway and governance-set minter/earner rates), not by an independent market feed. Felix claiming accrued M surplus to its yieldRecipient is a revenue split, not a price input.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-11-27",
+      "reviewer": "Wave 1A HyperEVM addition review 2026-11-27",
+      "rationale": "USDhl pricing is top-level only: wrap() escrows M and unwrap() returns M at a fixed 1:1 quantity ratio directly on HyperEVM. Verified USDHL source exposes blacklist, yield-recipient, and proxy-upgrade controls but no price-feed, collateral-parameter, liquidation, backstop, or shutdown function, so no borrower-collateral branch applies.",
+      "sources": [
+        {
+          "label": "USDhl architecture documentation",
+          "url": "https://usefelix.gitbook.io/usdhl/usdhl-architecture"
+        },
+        {
+          "label": "Verified USDHL implementation on HyperEVMScan",
+          "url": "https://hyperevmscan.io/address/0xdb170bfe627a39145147e6ff9b258bdb59e6b4e8#code"
+        },
+        {
+          "label": "M0 minting and burning documentation",
+          "url": "https://docs.m0.org/protocol/minting-burning"
+        }
+      ]
+    },
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Wave 1A HyperEVM addition review 2026-11-27",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "USDhl architecture documentation",
+        "url": "https://usefelix.gitbook.io/usdhl/usdhl-architecture"
+      },
+      {
+        "label": "Verified USDHL implementation on HyperEVMScan",
+        "url": "https://hyperevmscan.io/address/0xdb170bfe627a39145147e6ff9b258bdb59e6b4e8#code"
+      },
+      {
+        "label": "M0 M Token documentation",
+        "url": "https://docs.m0.org/protocol/m-token"
+      },
+      {
+        "label": "M0 minting and burning documentation",
+        "url": "https://docs.m0.org/protocol/minting-burning"
+      },
+      {
+        "label": "Pinned HyperEVM JSON-RPC read at block 52378224 (2026-11-27T10:49:26Z)",
+        "url": "https://rpc.hyperliquid.xyz/evm"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "Sole authored child-token deployment on HyperEVM (0xb50a96253abdf803d85efcdce07ad8becbc52bd5), locally minted 1:1 against HyperEVM M0 M. Cross-chain movement of parent M between Ethereum and HyperEVM occurs through M0's Hyperlane Portal Lite (0x36f586a30502ae3afb555b8aa4dcc05d233c2ece) and is inherited from the parent M0 perimeter. HyperCore spot USDHL (index 291, tokenId 0xd289c79872a9eace15cc4cadb030661f) shares Hyperliquid L1 consensus via same-chain system escrow 0x2000000000000000000000000000000000000123 (holding 28,294.781196 USDhl at block 52378224, included in HyperEVM totalSupply()).",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Wave 1A HyperEVM addition review 2026-11-27",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "USDhl developer documentation",
+        "url": "https://usefelix.gitbook.io/usdhl/advanced/developers"
+      },
+      {
+        "label": "USDhl Transparent Proxy on HyperEVMScan",
+        "url": "https://hyperevmscan.io/address/0xb50a96253abdf803d85efcdce07ad8becbc52bd5"
+      },
+      {
+        "label": "Hyperliquid spotMeta registry",
+        "url": "https://api.hyperliquid.xyz/info"
+      },
+      {
+        "label": "Pinned HyperEVM JSON-RPC read at block 52378224 (2026-11-27T10:49:26Z)",
+        "url": "https://rpc.hyperliquid.xyz/evm"
+      }
+    ],
+    "routes": [
+      {
+        "id": "hyperevm:0xb50a96253abdf803d85efcdce07ad8becbc52bd5",
+        "destinationChain": "hyperevm",
+        "canonicalChain": "hyperevm",
+        "contractAddress": "0xb50a96253abdf803d85efcdce07ad8becbc52bd5",
+        "protocol": "M0 local MExtension (USDhl on HyperEVM)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Sole disclosed USDhl token contract on HyperEVM, locally wrapping HyperEVM M 1:1. Cross-chain bridging between Ethereum wM and HyperEVM USDhl uses M0 Hyperlane Portal Lite (0x36f586a30502ae3afb555b8aa4dcc05d233c2ece), which belongs to the parent M0 cross-chain perimeter; HyperCore spot USDHL index 291 transfers against existing HyperEVM escrow at 0x2000000000000000000000000000000000000123 under the same HyperBFT consensus.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-27",
+        "observedBlock": 52378224,
+        "sources": [
+          {
+            "label": "USDhl developer documentation",
+            "url": "https://usefelix.gitbook.io/usdhl/advanced/developers"
+          },
+          {
+            "label": "Verified USDHL implementation on HyperEVMScan",
+            "url": "https://hyperevmscan.io/address/0xdb170bfe627a39145147e6ff9b258bdb59e6b4e8#code"
+          }
+        ]
+      }
+    ]
+  }
+}

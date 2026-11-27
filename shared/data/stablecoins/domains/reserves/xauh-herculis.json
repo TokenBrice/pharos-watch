@@ -1,0 +1,99 @@
+{
+  "id": "xauh-herculis",
+  "reserves": [
+    {
+      "name": "Physical gold bars (LBMA 999.9 fine gold, PX Precinox SA, Swiss vaults)",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "commodity-allocated",
+      "issuerOrObligor": "Herculis Tokens S.A. and Swiss vault custody providers (Herculis House, Brink's, Loomis)",
+      "riskFactors": [
+        "custody",
+        "legal",
+        "liquidity",
+        "market",
+        "concentration",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Listing Policy v2 PR-2 authoring 2026-11-27; KPMG SA August 28, 2026 AUP PDF read directly",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "KPMG SA Report of Factual Findings as of August 26, 2026 (signed August 28, 2026)",
+        "url": "https://xauh.gold/audit-reports/08-28-2026.pdf"
+      },
+      {
+        "label": "Herculis Gold Coin Terms and Conditions",
+        "url": "https://www.xauh.gold/xauh-terms-and-conditions.pdf"
+      },
+      {
+        "label": "Herculis Gold Coin White Paper v4.0 (2026-05-21)",
+        "url": "https://www.xauh.gold/whitepaper.pdf"
+      },
+      {
+        "label": "CoinGecko Herculis Gold Coin market-cap and circulating supply feed",
+        "url": "https://www.coingecko.com/en/coins/herculis-gold-coin"
+      }
+    ],
+    "rationale": "KPMG SA's PS 920 / NAS 920 agreed-upon-procedures report signed August 28, 2026 physically inspected 18 gold bars (five 500g bars and thirteen 1,000g bars, all 999.9 fine gold produced by PX Precinox SA, Switzerland) totalling 15.5 kg (15,500 grams) in a secure Swiss vault on August 26, 2026, matching every certificate serial number in Schedule 1. KPMG obtained purchase-invoice ownership justification by a group entity for 15.49845 kg (noting a 0.00155 kg impurity variance and that ten earlier invoices do not cross-reference certificate numbers). The engagement expresses no audit or review assurance opinion and performs no token-liability reconciliation. Pinned on-chain supply across Ethereum (4,109.2 XAUH at block 26505987), TON (3,350.3898 XAUH at seqno 108119820), and Tron (3,179.4 XAUH at block 88367386) totals 10,638.9898 XAUH against 15,500 XAUH reported on CoinGecko matching the 15.5 kg vaulted bar count; the 4,861.0102 XAUH difference is not minted across these three tracked chains and remains unreconciled.",
+    "compositionBasis": "KPMG SA PS 920 factual-findings inspection of 15.5 kg physical Swiss gold bullion on August 26, 2026",
+    "compositionAsOf": "2026-08-26",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The entire physical reserve asset class is inspected as 999.9 fine gold bars produced by PX Precinox SA, but the KPMG report does not name the specific Swiss vault operator, does not reconcile on-chain XAUH liabilities across networks, and ten of the 18 earlier bar certificates lack direct invoice-to-certificate cross-references.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Physical gold bars (LBMA 999.9 fine gold, PX Precinox SA, Swiss vaults)",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Physical gold bullion held in Swiss vaults is an exogenous commodity reserve rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Herculis House",
+        "role": "custodian",
+        "jurisdiction": "Switzerland"
+      },
+      {
+        "name": "Brink's",
+        "role": "subcustodian",
+        "jurisdiction": "Switzerland"
+      },
+      {
+        "name": "Loomis",
+        "role": "subcustodian",
+        "jurisdiction": "Switzerland"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "contractual-only",
+    "rehypothecation": "prohibited",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Listing Policy v2 PR-2 authoring 2026-11-27",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Herculis Gold Coin Terms and Conditions (sections 2.3 and 3)",
+        "url": "https://www.xauh.gold/xauh-terms-and-conditions.pdf"
+      },
+      {
+        "label": "Herculis Gold Coin White Paper v4.0 (sections 4.3 and 5.2)",
+        "url": "https://www.xauh.gold/whitepaper.pdf"
+      },
+      {
+        "label": "KPMG SA Report of Factual Findings as of August 26, 2026",
+        "url": "https://xauh.gold/audit-reports/08-28-2026.pdf"
+      }
+    ],
+    "uncertainty": "The whitepaper and Terms section 3.1 identify Herculis House, Brink's, and Loomis as Swiss custody or vault providers without publishing provider-level shares, vault-account identifiers, or which vault KPMG inspected on August 26, 2026. Terms section 2.3 covenants segregation and prohibits lending, pledging, or rehypothecation, while explicitly noting that insolvency remoteness remains contractual and subject to unreviewed Swiss custody agreements and Swiss/Panamanian law."
+  }
+}

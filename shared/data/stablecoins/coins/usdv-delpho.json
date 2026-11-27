@@ -1,0 +1,97 @@
+{
+  "id": "usdv-delpho",
+  "status": "active",
+  "name": "Delpho USDV",
+  "symbol": "USDV",
+  "launchDate": "2026-07-02",
+  "oneLiner": "HyperEVM CDP dollar backed by USDC, USDT0, kHYPE, and WHYPE collateral deployed into HyperCore funding-rate hedging vaults.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized-dependent",
+    "rwa": false
+  },
+  "collateral": "Overcollateralized USDC, USDT0, kHYPE, and WHYPE collateral vaults plus a USDC peg stability module; vault collateral is deployed into HyperCore delta-neutral and portfolio-margin strategies via CoreWriter.",
+  "pegMechanism": "Borrowers mint USDV at 0% interest against stablecoin collateral (up to 95% LTV, 97% liquidation threshold) or HYPE and kHYPE collateral (up to 65% LTV, 80% liquidation threshold). Holders can swap USDC at 25 bps via the PSM while idle buffer remains, or queue direct market redemptions settled on a 24-hour epoch cycle (0.20% fee for stablecoins, 0.50% for HYPE).",
+  "mechanismArchetype": "cdp",
+  "llamaId": "431",
+  "geckoId": "delpho-usdv",
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.delpho.xyz/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://delpho.gitbook.io/delpho-docs/"
+    },
+    {
+      "label": "Token explorer",
+      "url": "https://hyperevmscan.io/address/0x8c6eb3c8d1fddc752684274fb4a3eb98dbe9cd26"
+    },
+    {
+      "label": "Audits (Sherlock)",
+      "url": "https://delpho.gitbook.io/delpho-docs/audits-and-security/audit-register"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/delphoprotocol"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "hyperevm",
+      "address": "0x8c6eb3c8d1fddc752684274fb4a3eb98dbe9cd26",
+      "decimals": 6
+    }
+  ],
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "onchain",
+  "governanceQuality": "multisig",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://hyperevmscan.io/address/0x79a86a652b6dec1e7f5727c9aa1c02e1c8af6e78",
+    "provider": "On-chain HyperEVM vault and PSM accounting; not independent financial assurance",
+    "cadence": "real-time"
+  },
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "usdv-delpho",
+    "display": {
+      "url": "https://delpho.gitbook.io/delpho-docs/for-developers/contract-addresses",
+      "label": "Delpho HyperEVM vaults and PSM"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "hyperevm",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "rpcUrl": "https://rpc.hyperliquid.xyz/evm"
+    }
+  },
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Wave 1A HyperEVM addition review 2026-11-27",
+    "rationale": "USDV is minted as overcollateralized borrower debt across isolated stablecoin (95% max LTV) and HYPE/kHYPE (65% max LTV) CDP markets, alongside a USDC peg stability module. Protocol revenue from HyperCore funding and portfolio-margin strategies flows to optional sUSDV stakers rather than rebasing USDV itself. The cdp archetype matches the verified DelphoVault and DelphoStableManager architecture.",
+    "sources": [
+      {
+        "label": "Delpho architecture documentation",
+        "url": "https://delpho.gitbook.io/delpho-docs/for-developers/architecture"
+      },
+      {
+        "label": "Delpho parameters documentation",
+        "url": "https://delpho.gitbook.io/delpho-docs/parameters"
+      },
+      {
+        "label": "Delpho USDV contract addresses",
+        "url": "https://delpho.gitbook.io/delpho-docs/for-developers/contract-addresses"
+      }
+    ]
+  }
+}

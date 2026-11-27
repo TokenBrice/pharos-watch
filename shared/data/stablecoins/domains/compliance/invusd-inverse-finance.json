@@ -1,0 +1,86 @@
+{
+  "id": "invusd-inverse-finance",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Monolith risks disclosure: permissionless Factory deployment with no legal issuer entity or EU EMT authorization",
+        "url": "https://docs.monolith.market/security/risks.md"
+      },
+      {
+        "label": "Monolith redemptions: any holder redeems Coin for borrower collateral or swaps 1:1 into USDS via the on-chain PSM",
+        "url": "https://docs.monolith.market/protocol/redemptions.md"
+      },
+      {
+        "label": "Inverse Finance Foundation funding proposal: operating entity only, not a designated token issuer",
+        "url": "https://forum.inverse.finance/t/inverse-finance-foundation-funding-proposal/664"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      },
+      {
+        "label": "ESMA MiCA Q&A: EMT offering or admission to trading requires an authorized issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2404"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "invUSD is a decentralized crypto-collateralized CDP stablecoin minted permissionlessly against staked INV (sINV) or swapped 1:1 against USDS through an immutable Ethereum Monolith V1 Lender governed by Inverse Finance DAO. No identifiable legal issuer undertakes to issue or redeem invUSD for a fixed amount of national-currency or bank-deposit monetary value, placing it outside the GENIUS Act section 2(22) payment-stablecoin issuer framework.",
+      "references": [
+        {
+          "label": "GENIUS Act Public Law 119-27: payment stablecoin definition",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "Monolith risks disclosure",
+          "url": "https://docs.monolith.market/security/risks",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "Monolith peg stability module and redemption mechanics",
+          "url": "https://docs.monolith.market/protocol/peg-stability-module",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Reviewed 2026-11-27. invUSD is a decentralized Ethereum CDP token collateralized by sINV with an on-chain USDS/sUSDS PSM rail and no designated legal issuer or fiat redemption obligation. No GENIUS PPSI approval, state qualification or monthly attestation applies, and no issuerEntity or issuerDomicile is assigned. On-chain redemption mechanics are documented in Monolith protocol docs.",
+    "references": [
+      {
+        "label": "GENIUS Act Public Law 119-27 section 2 definitions",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "Monolith risks disclosure",
+        "url": "https://docs.monolith.market/security/risks",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "Monolith redemptions",
+        "url": "https://docs.monolith.market/protocol/redemptions",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-11-27"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-11-27"
+  }
+}
