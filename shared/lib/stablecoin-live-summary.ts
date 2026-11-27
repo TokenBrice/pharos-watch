@@ -1,10 +1,13 @@
 import type { StablecoinDetailResponse } from "../types/supply";
 import { StablecoinLiveSummarySchema, type StablecoinLiveSummary } from "../types/stablecoin-live-summary";
 import { isObservedPrice } from "./pricing-source-policy";
+import { normalizeStablecoinLiveSummary } from "./stablecoin-live-summary-normalize";
 import { chainSupplyReconciles } from "./chains/circulating";
 import { getStrictCanonicalNativePegBucket, hasValidOriginalSupplyObservedAt, isAdmittedCanonicalNativeSupplySource, isPinnedNativeSharesWorkflow, requiresCanonicalNativeSupply, requiresOriginalSupplyObservedAt } from "./onchain-supply-probe";
 import { admitSupplyBuckets, projectUsdMarketCapBaselineBuckets, sumPegBucketsOrNull } from "./supply";
 import { isAmbiguousSupplyPerimeterDay, isEarlierSupplyPerimeter } from "./supply-perimeter-changes";
+
+export { normalizeStablecoinLiveSummary };
 
 const DETAIL_BUCKET_MAX_BACKFILL_SEC = 86_400;
 const NATIVE_SUPPLY_BASELINE_SOURCES = new Set([
@@ -12,22 +15,6 @@ const NATIVE_SUPPLY_BASELINE_SOURCES = new Set([
   "onchain-circulating-supply",
   "zephyr-scanner",
 ]);
-
-/** Nominal references never become observed display prices, regardless of transport. */
-export function normalizeStablecoinLiveSummary(summary: StablecoinLiveSummary): StablecoinLiveSummary {
-  if (isObservedPrice(summary)) return summary;
-  const { priceDerivation: _derivation, pricePublicationReason: _publicationReason, ...rest } = summary;
-  return {
-    ...rest,
-    price: null,
-    priceConfidence: null,
-    priceUpdatedAt: null,
-    priceObservedAt: null,
-    ...(summary.priceSyncedAt !== undefined ? { priceSyncedAt: null } : {}),
-    ...(summary.consensusSources !== undefined ? { consensusSources: [] } : {}),
-    ...(summary.agreeSources !== undefined ? { agreeSources: [] } : {}),
-  };
-}
 
 function admittedDetailBuckets(buckets: Record<string, number> | undefined): Record<string, number> {
   return admitSupplyBuckets(buckets).status === "observed" ? buckets! : {};

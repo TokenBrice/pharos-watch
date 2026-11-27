@@ -13,14 +13,17 @@ import {
   isAmbiguousSupplyPerimeterDay,
   isEarlierSupplyPerimeter,
   isKinesisWrapperSupplyCutoverActive,
-  isProviderBackfillFencedByNativeCutover,
 } from "@shared/lib/supply-perimeter-changes";
 import { isCommodityPeg } from "@shared/lib/filter-tags";
 import { isDedicatedSingleTokenGoldProtocolSlug } from "@shared/lib/commodity-protocols";
 import { toTokenUnits } from "@shared/lib/math";
 import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import type { SupplyObservationProvenance } from "@shared/types/supply";
-import { isKinesisWrapperSupplyId, onchainSupplyProbeFamily } from "@shared/lib/onchain-supply-probe";
+import {
+  isKinesisWrapperSupplyId,
+  isProviderBackfillFencedByNativeCutover,
+  onchainSupplyProbeFamily,
+} from "@shared/lib/onchain-supply-probe";
 import { D1_BATCH_SIZE, DEFILLAMA_BASE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../../src/lib/constants";
 import { chunkArray } from "@shared/lib/collections";
 import { fetchCoinGeckoMarketHistory } from "../../src/lib/coingecko-market-history";

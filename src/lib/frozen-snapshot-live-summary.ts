@@ -1,5 +1,5 @@
 import { deriveSupplyFromMarketCap } from "@/lib/stablecoin-detail-derive";
-import { normalizeStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
+import { normalizeStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary-normalize";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { StablecoinLiveSummarySchema } from "@shared/types/stablecoin-live-summary";
 import type { StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";

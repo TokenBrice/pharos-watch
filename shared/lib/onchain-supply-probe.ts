@@ -6,6 +6,7 @@ import { PUBLIC_RPC_URLS, SUPPLY_RPC_DEFAULTS } from "./chain-rpc-registry";
 import { chainSupplyReconciles } from "./chains/circulating";
 import { HYPEREVM_HISTORY_RPC_URL } from "./evm-rpc-capabilities";
 import { isFixedDecimalDeployment } from "./deployment-amounts";
+import { isKinesisWrapperSupplyId, SUPPLY_PERIMETER_CHANGES } from "./supply-perimeter-changes";
 import { XrplIssuedCurrencyAmountSchema } from "../types/deployment-amounts";
 
 export type OnchainSupplyContract = NonNullable<StablecoinMeta["contracts"]>[number];
@@ -322,8 +323,14 @@ export function prefersReviewedNativeFiatSupply(
     && prefersOnChainSupplyMcap(meta);
 }
 
-export function isKinesisWrapperSupplyId(id: string): boolean {
-  return id === "kau-kinesis" || id === "kag-kinesis";
+export { isKinesisWrapperSupplyId };
+
+/** Provider supply backfills must not overwrite or fill on/after a preferred native-stock cutover day. */
+export function isProviderBackfillFencedByNativeCutover(stablecoinId: string, snapshotDateSec: number): boolean {
+  const plan = REVIEWED_ONCHAIN_SUPPLY_PLANS[stablecoinId];
+  if (!plan || (plan.preferMcap !== true && plan.nativeWorkflow == null)) return false;
+  return SUPPLY_PERIMETER_CHANGES.some((change) =>
+    change.stablecoinId === stablecoinId && snapshotDateSec >= Math.floor(change.changedAt / 86_400) * 86_400);
 }
 
 export type SupplementalOnChainSupplySource = "onchain-total-supply" | "onchain-circulating-supply";

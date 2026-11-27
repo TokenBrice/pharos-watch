@@ -1,9 +1,12 @@
-import { isKinesisWrapperSupplyId, REVIEWED_ONCHAIN_SUPPLY_PLANS } from "./onchain-supply-probe";
 import {
   CORE_STABLECOIN_AGGREGATE_UNIVERSE,
   CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE,
   CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC,
 } from "../types/aggregate-universe-constants";
+
+export function isKinesisWrapperSupplyId(id: string): boolean {
+  return id === "kau-kinesis" || id === "kag-kinesis";
+}
 
 const UTC_SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
 
@@ -257,12 +260,4 @@ export function isAmbiguousSupplyPerimeterDay(stablecoinId: string, observedAt: 
 export function getLatestSupplyPerimeterChange(start: number, end: number): number | null {
   const changes = SUPPLY_PERIMETER_CHANGES.filter((change) => change.marketWide && change.changedAt > start && change.changedAt <= end);
   return changes.length ? Math.max(...changes.map((change) => change.changedAt)) : null;
-}
-
-/** Provider supply backfills must not overwrite or fill on/after a preferred native-stock cutover day. */
-export function isProviderBackfillFencedByNativeCutover(stablecoinId: string, snapshotDateSec: number): boolean {
-  const plan = REVIEWED_ONCHAIN_SUPPLY_PLANS[stablecoinId];
-  if (!plan || (plan.preferMcap !== true && plan.nativeWorkflow == null)) return false;
-  return SUPPLY_PERIMETER_CHANGES.some((change) =>
-    change.stablecoinId === stablecoinId && snapshotDateSec >= Math.floor(change.changedAt / 86_400) * 86_400);
 }
