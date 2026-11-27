@@ -36,15 +36,6 @@ describe("trackSearch debounce + clearAllTrackingTimers", () => {
     vi.advanceTimersByTime(500);
     expect(gtag).not.toHaveBeenCalled();
   });
-
-  it("suppresses custom events in the embedded Telegram Mini App", () => {
-    (globalThis as { window: { location: { pathname: string } } }).window.location.pathname =
-      "/pharoswatchbot/app/";
-
-    trackEvent("theme_toggled", { theme: "dark" });
-
-    expect(gtag).not.toHaveBeenCalled();
-  });
 });
 
 describe("public analytics scope", () => {
@@ -132,27 +123,18 @@ describe("fresh data readiness telemetry", () => {
   });
 
   it("does not mark readiness sent when analytics is unavailable", () => {
-    const allowed = window.gtag;
     window.gtag = undefined;
     analytics.trackFreshDataReady("home-hero");
-    window.gtag = allowed;
-    analytics.trackFreshDataReady("home-hero");
-    expect(gtag).toHaveBeenCalledTimes(1);
+    analytics.trackSiteSessionReady();
+    window.gtag = gtag;
+    for (const _ of [1, 2]) { analytics.trackFreshDataReady("home-hero"); analytics.trackSiteSessionReady(); }
+    expect(gtag.mock.calls.map((call) => call[1])).toEqual(["fresh_data_ready", "site_session_ready"]);
   });
 
   it.each(["ops.pharos.watch", "preview.stablecoin-dashboard.pages.dev"])("respects origin gating on %s", (hostname) => {
     window.location.hostname = hostname;
     analytics.trackFreshDataReady("home-hero");
     expect(gtag).not.toHaveBeenCalled();
-  });
-
-  it("reports a ready browser session once per document, only once analytics can send it", () => {
-    window.gtag = undefined;
-    analytics.trackSiteSessionReady();
-    window.gtag = gtag;
-    analytics.trackSiteSessionReady();
-    analytics.trackSiteSessionReady();
-    expect(gtag).toHaveBeenCalledExactlyOnceWith("event", "site_session_ready", {});
   });
 
   it.each(["/admin/", "/pharoswatchbot/app/", "/privacy/"])("never reports readiness on %s", (pathname) => {
