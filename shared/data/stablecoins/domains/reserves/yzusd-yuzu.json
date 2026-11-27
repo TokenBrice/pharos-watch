@@ -150,6 +150,8 @@
       "name": "Fasanara mGLO loop",
       "pct": 1.407969,
       "risk": "high",
+      "coinId": "mglo-midas-fasanara",
+      "depType": "collateral",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Midas mGLO (Fasanara Global Diversified Alternative Debt strategy) held in leveraged loop strategies",
       "riskFactors": [
@@ -602,7 +604,7 @@
         "url": "https://developers.skyeco.com/protocol/tokens/susds/"
       }
     ],
-    "rationale": "Renewed on 2026-11-22 from the live Accountable dashboard API (dashboard ts 2026-11-22T15:31:11.623Z; exposure_split_ts 2026.11.17 07:50:11 UTC). The Alpha exposure_split reports 21 buckets (20 positive totaling $49,714,082.39 and one signed negative [Ethena]_USDe_Loop entry of -$10,088,325.50, netting to $39,625,756.89). Cross-checking reserves_breakdown_defi.Reserves.Ethena ($21,115,792.79) matches the exact net of [Ethena]_sUSDe_Loop (+$31,204,118.30) plus [Ethena]_USDe_Loop (-$10,088,325.50 = $21,115,792.80), so net Ethena loop equity is assigned to Ethena sUSDe loop (51.238320%) while retaining the Ethena USDe loop sourceKey row at 0% for live-adapter classification. Denominated against the nearest contemporaneous timeline reserve total ($41,210,938.74 at 2026-11-16T23:46:10.812Z, 8.07 hours before exposure_split_ts; the +15.93h bracket at 2026-11-17T23:46:09.935Z is $40,955,301.48), an unattributed reconciliation shortfall of $1,585,181.85 (3.846507%) persists (3.246331% against the later bracket). Rather than normalizing attributed buckets to 100%, that exact 3.846507% gap is preserved explicitly as an Unattributed backing unclassifiedResidual slice alongside Rest_of_Assets ($205,698.44, 0.499136%) and unverified [Re]_PT_reUSD ($179,025.31, 0.434412%), totaling 4.780055% knownUnknownExposurePct. Prime RWA exposure_split_rwa ($7.71M) remains excluded from Alpha (yzUSD). All previously reviewed sourceKey classification rows that currently sit at zero are retained at 0% so live adapter matching stays intact. Confidence remains probable because both the 3.846507% unattributed shortfall (exceeding the 2% maxUnattributedResidualShare ceiling so the live accountable adapter fails closed) and the -$10.09M signed negative Ethena leg persist without gross asset-versus-debt or contract-level disclosure.",
+    "rationale": "Renewed on 2026-11-22 from the live Accountable dashboard API (dashboard ts 2026-11-22T15:31:11.623Z; exposure_split_ts 2026.11.17 07:50:11 UTC). The Alpha exposure_split reports 21 buckets (20 positive totaling $49,714,082.39 and one signed negative [Ethena]_USDe_Loop entry of -$10,088,325.50, netting to $39,625,756.89). Cross-checking reserves_breakdown_defi.Reserves.Ethena ($21,115,792.79) matches the exact net of [Ethena]_sUSDe_Loop (+$31,204,118.30) plus [Ethena]_USDe_Loop (-$10,088,325.50 = $21,115,792.80), so net Ethena loop equity is assigned to Ethena sUSDe loop (51.238320%) while retaining the Ethena USDe loop sourceKey row at 0% for live-adapter classification. Denominated against the nearest contemporaneous timeline reserve total ($41,210,938.74 at 2026-11-16T23:46:10.812Z, 8.07 hours before exposure_split_ts; the +15.93h bracket at 2026-11-17T23:46:09.935Z is $40,955,301.48), an unattributed reconciliation shortfall of $1,585,181.85 (3.846507%) persists (3.246331% against the later bracket). Rather than normalizing attributed buckets to 100%, that exact 3.846507% gap is preserved explicitly as an Unattributed backing unclassifiedResidual slice alongside Rest_of_Assets ($205,698.44, 0.499136%) and unverified [Re]_PT_reUSD ($179,025.31, 0.434412%), totaling 4.780055% knownUnknownExposurePct. Prime RWA exposure_split_rwa ($7.71M) remains excluded from Alpha (yzUSD). All previously reviewed sourceKey classification rows that currently sit at zero are retained at 0% so live adapter matching stays intact. Confidence remains probable because both the 3.846507% unattributed shortfall (exceeding the 2% maxUnattributedResidualShare ceiling so the live accountable adapter fails closed) and the -$10.09M signed negative Ethena leg persist without gross asset-versus-debt or contract-level disclosure. On 2026-11-27, row 8 (Fasanara mGLO loop, 1.407969%) was linked directly to newly admitted mglo-midas-fasanara while keeping composition weights and knownUnknownExposurePct (4.780055%) unchanged.",
     "compositionBasis": "Accountable Alpha exposure_split snapshot dated 2026-11-17 07:50:11 UTC (with Ethena sUSDe/USDe loop legs netted to match reserves_breakdown_defi.Reserves.Ethena), divided by the nearest contemporaneous timeline reserve total ($41,210,938.74 at 2026-11-16T23:46:10.812Z) with the exact 3.846507% ($1,585,181.85) unattributed reconciliation shortfall preserved as an explicit slice",
     "compositionAsOf": "2026-11-17",
     "scope": "full-composition",
@@ -622,13 +624,6 @@
         "pct": 3.846507,
         "disposition": "insufficient-evidence",
         "rationale": "Exact $1,585,181.85 gap between the net 2026-11-17 Accountable exposure_split ($39,625,756.89) and the nearest contemporaneous timeline reserve total ($41,210,938.74); retained explicitly rather than normalized away."
-      },
-      {
-        "reserveIndex": 8,
-        "reserveName": "Fasanara mGLO loop",
-        "pct": 1.407969,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "Midas mGLO (Fasanara Global Diversified Alternative Debt strategy) is not a tracked Pharos asset, so no dependency edge can be linked; the sister mGLOBAL token is tracked as mglobal-midas-fasanara."
       },
       {
         "reserveIndex": 10,

@@ -1185,17 +1185,17 @@
   },
   "pyusd-paypal": {
     "title": "PayPal's Paxos-issued dollar",
-    "text": "PayPal's PYUSD is issued by Paxos Trust Company under an OCC national trust charter, and its reserve is examined monthly by KPMG: mostly overnight Treasury-collateralized reverse repos, with Treasury bills and a small cash sleeve, held for token holders in segregated accounts that Paxos's terms describe as bankruptcy remote. The exit pillar is the strongest line on the card, with permissionless 1:1 issuer {{term:redemption}}redemption{{/term}}. What holds the {{grade}} overall grade below the reserve quality is the economic-control pillar, the weakest of the three. Issuer-direct minting across four native surfaces is economically unbounded and reconciled only against reserves, and Paxos administrator paths can change controllers, caps, and token logic. In October 2025 a technical error during an internal transfer minted about 300 trillion PYUSD, burned the same day. Pharos also records a live freeze-and-wipe power on the main Ethereum and Solana deployments. Most other chains carry LayerZero omnichain representations, plus a Wanchain bridge to Cardano, so the multichain surface adds external validation risk on top of issuer controls. The reserve is checked monthly; the controls over issuance and holder balances rest on Paxos's own operations.",
-    "updatedAt": "2026-10-19",
+    "text": "PayPal's PYUSD is issued by Paxos Trust Company under an OCC national trust charter, and its reserve is examined monthly by KPMG: mostly overnight Treasury-collateralized reverse repos, with Treasury bills and a small cash sleeve, held for token holders in segregated accounts that Paxos's terms describe as bankruptcy remote. The exit pillar is the strongest line on the card, with permissionless 1:1 issuer {{term:redemption}}redemption{{/term}}. What holds the {{grade}} overall grade below the reserve quality is the economic-control pillar, the weakest of the three. Issuer-direct minting across five native surfaces is economically unbounded and reconciled only against reserves, and Paxos administrator paths can change controllers, caps, and token logic. In October 2025 a technical error during an internal transfer minted about 300 trillion PYUSD, burned the same day. Pharos also records a live freeze-and-wipe power on the main Ethereum and Solana deployments. Most other chains carry LayerZero omnichain representations, plus a Wanchain bridge to Cardano, so the multichain surface adds external validation risk on top of issuer controls. The reserve is checked monthly; the controls over issuance and holder balances rest on Paxos's own operations.",
+    "updatedAt": "2026-11-27",
     "authoredBy": "ai",
     "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19",
+    "factsAsOf": "2026-11-27",
     "claimTokens": [
       {
         "token": "grade",
         "placeholder": "{{grade}}",
         "source": "report-card.grade",
-        "factsAsOf": "2026-10-19"
+        "factsAsOf": "2026-11-27"
       }
     ]
   },
@@ -2145,17 +2145,17 @@
   },
   "iusd-infinifi": {
     "title": "Credit book behind a redemption queue",
-    "text": "infiniFi's iUSD is minted against USDC and deployed across a book of DeFi lending positions and longer-dated private credit, with the siUSD wrapper passing the yield to stakers. Pharos's reserve data puts the larger share in Fasanara funds and New Silver and FalconX credit positions that unwind over a week or more, while the Spark and Aave lending positions classed as immediately liquid form a minority buffer. Withdrawals are paid from that buffer and queue when it runs short. Pharos treats those private-credit holdings as material credit exposure on the {{grade}} card. On the control side, governance can grant a new minter whose mint call checks no collateral or supply ceiling, with a 4-of-8 admin Safe behind a seven-day timelock at the root. The peg has no recorded depeg events and stress readings sit at the calm end of the scale, but both measure price, not the liquidity wall a credit book of this shape can meet. Holders of {{term:yield-bearing}}yield-bearing{{/term}} siUSD earn private-credit {{term:rwa}}RWA{{/term}} returns through a stablecoin interface, with the buffer-driven {{term:redemption}}redemption{{/term}} queue as the gate.",
-    "updatedAt": "2026-11-14",
+    "text": "infiniFi's iUSD is minted against USDC and deployed across a book of DeFi lending positions and longer-dated private credit, while holders seeking yield stake into the separately tracked siUSD or untracked locked liUSD tranches. Pharos's reserve data puts the larger share in Fasanara funds and New Silver and FalconX credit positions that unwind over a week or more, while the Spark and Aave lending positions classed as immediately liquid form a minority buffer. Withdrawals are paid from that buffer and queue when it runs short. Pharos treats those private-credit holdings as material credit exposure on the {{grade}} card. On the control side, governance can grant a new minter whose mint call checks no collateral or supply ceiling, with a 4-of-7 admin Safe behind a seven-day timelock at the root. The peg has no recorded depeg events and stress readings sit at the calm end of the scale, but both measure price, not the liquidity wall a credit book of this shape can meet. Unstaked iUSD sits senior to both liUSD and siUSD in infiniFi's on-chain loss waterfall, leaving the buffer-driven {{term:redemption}}redemption{{/term}} queue and underlying {{term:rwa}}RWA{{/term}} credit exposure as its main constraints.",
+    "updatedAt": "2026-11-27",
     "authoredBy": "ai",
-    "model": "deepseek-v4.1-flash",
-    "factsAsOf": "2026-11-14",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27",
     "claimTokens": [
       {
         "token": "grade",
         "placeholder": "{{grade}}",
         "source": "report-card.grade",
-        "factsAsOf": "2026-11-14"
+        "factsAsOf": "2026-11-27"
       }
     ]
   },
@@ -6387,6 +6387,86 @@
   "usdhl-felix": {
     "title": "Sunset HyperEVM dollar wrapper over Treasury-backed M",
     "text": "Hyper USD is Felix Protocol's non-rebasing dollar wrapper on HyperEVM, backed one-for-one by canonical M0 M tokens held inside its local extension contract. Any non-blacklisted holder can wrap M into USDhl or unwrap back into M directly on-chain with zero fee, while accrued M yield above circulating supply flows to Felix's configured yield recipient rather than token holders. By December 18, 2025, Felix had posted a sunset notice ending active USDhl maintenance, concluding monthly rewards on December 20, 2025, and originally encouraging migration to USDH, which Bridge subsequently announced it was winding down in May 2026. The USDhl contract remains live and unwrappable. Direct holder blacklisting is active through an operational wallet, and the Transparent Proxy remains upgradeable without a timelock by Felix's three-of-six multisig. Downstream holders inherit M0's upstream Treasury collateral and Hyperlane Portal bridge perimeter without a token-specific fiat redemption obligor. USDhl remains mechanically backed by M on-chain, but carries sunset maintenance risk alongside active freeze and proxy-upgrade controls.",
+    "updatedAt": "2026-11-27",
+    "authoredBy": "ai",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
+  },
+  "mglo-midas-fasanara": {
+    "title": "Tokenized private-credit certificate backed by Fasanara receivables",
+    "text": "Midas Fasanara Global Open (mGLO) is a NAV-accreting tokenized certificate issued through Midas's Luxembourg securitisation Compartment mGLO and linked to ISIN LU3357216087. Its backing references Class A USD ACC shares of Fasanara SA SICAV-RAIF mGLOBAL Fund SF 36, an open-ended private-credit strategy focused on short-dated SME trade receivables, digital invoices, and asset-based lending. Rather than targeting a fixed dollar peg, mGLO appreciates against its independently calculated net asset value published to a Base Chainlink custom aggregator oracle. Token supply spans six EVM chains via native DepositVaults and LayerZero burn-and-mint adapters, led by Base, Robinhood Chain, and Ethereum. Transfers are open on-chain but subject to issuer blacklist, pause, and privileged burn controls, while primary issuance and redemption require permissioned Midas primary rails.",
+    "updatedAt": "2026-11-27",
+    "authoredBy": "ai",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
+  },
+  "bread-bread-coop": {
+    "title": "Gnosis xDAI wrapper routing savings yield to cooperative grants",
+    "text": "Bread (BREAD) is Bread Cooperative's 1:1 ERC-20 wrapper around native xDAI on Gnosis Chain, backed 100% by tracked Gnosis Savings xDAI (sDAI) ERC-4626 shares. Calling mint wraps native xDAI into WXDAI, deposits it into sDAI, and issues BREAD at par with zero fee. Calling burn withdraws the exact WXDAI principal from sDAI, unwraps it, and returns native xDAI atomically with zero fee. Holders keep fixed 1:1 xDAI balances while accrued savings yield above total supply is claimed separately by the YieldDistributor contract to fund cooperative solidarity grants. Bread.sol includes no holder blacklist, pause, or privileged burn functions, and rescueToken explicitly blocks removing sDAI vault shares, though a 5-of-10 Bread Cooperative Safe controls the EIP-173 proxy admin slot with zero timelock.",
+    "updatedAt": "2026-11-27",
+    "authoredBy": "ai",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
+  },
+  "siusd-infinifi": {
+    "title": "Second-loss staking share over iUSD",
+    "text": "siUSD is infiniFi's immutable ERC-4626 staking share over iUSD, holding 56.19M iUSD on Ethereum at a 1.103 exchange rate to pass protocol yield from private credit and DeFi lending to stakers. The catch sits in YieldSharingV3's on-chain loss waterfall. When farm impairments exceed the 25,000 iUSD safety buffer and 14.53M iUSD locked in liUSD, YieldSharing calls applyLosses on StakedToken to burn siUSD rewards and principal before unstaked iUSD takes a haircut. Ordinary holders also cannot call StakedToken.redeem directly: exits route through InfiniFiGatewayV4 with zero wrapper fee, halt whenever unaccrued yield turns negative, and still leave holders facing iUSD's buffer-gated redemption queue into USDC. The token contract itself is immutable and carries no transfer freeze, inheriting freeze exposure from iUSD's custodial credit book. Pharos rates the share {{grade}}, reflecting private-credit risk and explicit subordination below unstaked iUSD.",
+    "updatedAt": "2026-11-27",
+    "authoredBy": "ai",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27",
+    "claimTokens": [
+      {
+        "token": "grade",
+        "placeholder": "{{grade}}",
+        "source": "report-card.grade",
+        "factsAsOf": "2026-11-27"
+      }
+    ]
+  },
+  "fliteusd-fluid": {
+    "title": "Administered NAV vault over Fluid strategies",
+    "text": "fLiteUSD is Fluid's UUPS-upgradeable ERC-4626 strategy vault over Ethereum USDC, reporting $40.98M in accounted vault assets. Incoming USDC routes straight into Fluid fUSDC, where $11.55M (28.17% of vault assets) stood available for instant withdrawals at review, while the remaining 71.83% ($29.44M net) sits in StrategyHandler deployments across Ethereum and Solana proxies; StrategyHandler's total gross reported balances ($53.52M, including the $11.60M idle fUSDC and USDC buffer) exceed vault totalAssets by $12.54M while getNetAssets reverts. Unlike mark-to-market lending vaults, fLiteUSD prices shares from an internal auto-accruing exchange price set to the higher of a 6.00% fixed rate or $3M in annual rewards, reconciled upward only by StrategyHandler. Redemptions draw on-chain from the fUSDC buffer for a 0.05% exit fee, configurable up to 0.50%, and revert when that buffer runs dry or withdrawals are paused. Governance sits with a 24-hour timelock proposed by a 6-of-12 Avocado multisig and executed by a 3-of-5 Safe with overlapping signers, earning {{grade}} due to governance and strategy-opacity constraints.",
+    "updatedAt": "2026-11-27",
+    "authoredBy": "ai",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27",
+    "claimTokens": [
+      {
+        "token": "grade",
+        "placeholder": "{{grade}}",
+        "source": "report-card.grade",
+        "factsAsOf": "2026-11-27"
+      }
+    ]
+  },
+  "svzchf-frankencoin": {
+    "title": "Frankencoin savings shares on Ethereum",
+    "text": "svZCHF is an immutable ERC-4626 wrapper that deposits ZCHF into Frankencoin's onchain Savings module and compounds the governance-set Leadrate into share value. Vault ownership was permanently renounced on deployment day, locking the referral fee at zero and leaving no local admin, pause, or upgrade hook. Holders redeem shares synchronously into ZCHF with no withdrawal lockup, though new deposits face Savings' three-day weighted interest-accrual delay. All collateral, auction-liquidation, and minter-admission risks remain inherited from parent ZCHF, whose backing mixes wrapped Bitcoin, liquid-staked ETH, and tokenized Swiss equities governed by minority-veto FPS holders. Qualified equity voters can also change the Leadrate after a seven-day delay. The durable constraint is that wrapper immutability protects share accounting, not the solvency or CHF liquidity of the underlying ZCHF.",
+    "updatedAt": "2026-11-27",
+    "authoredBy": "ai",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
+  },
+  "steakusdc-steakhouse-base": {
+    "title": "Steakhouse USDC lending shares on Base",
+    "text": "Steakhouse Prime USDC on Base is an immutable Morpho Vault V2 receipt over Base native USDC, distinct from Steakhouse's Ethereum deployment. Shares accrue borrower interest and absorb lending bad debt at NAV rather than carrying a fixed-dollar claim on Circle reserves. At the November 27, 2026 Base review, all $249.6M of vault assets were deployed across four Chainlink-priced Morpho markets, with 90.86% lent against Coinbase-custodied cbBTC alongside WETH, cbETH, and wstETH. Performance and management fees read zero, while share-transfer and withdrawal gate setters are permanently abdicated. Ordinary withdrawals draw on idle USDC and the configured cbBTC/USDC liquidity adapter, so exit speed depends on available market liquidity. A three-of-nine curator Safe and five-of-ten Supervisor-owner Safe govern market parameters, with seven-day delays on cap increases but immediate curator replacement and fee changes. Underlying USDC freeze exposure remains inherited from Circle.",
+    "updatedAt": "2026-11-27",
+    "authoredBy": "ai",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
+  },
+  "gpyusdse-galaxy": {
+    "title": "Looped PYUSD lending vault on Stable",
+    "text": "gPYUSDse is a Galaxy-curated Morpho V2 vault on StableChain that issues ERC-4626 shares over Paxos's native Stable PYUSD deployment. Share value rises with borrower interest and falls if Morpho realizes bad debt. As of November 27, 2026, 19.26% of its $78.57M in claims sat as idle PYUSD while 80.74% backed a single Morpho Blue market lending PYUSD against LayerZero-bridged weETH at 86% LLTV and roughly 90% utilization. Because total native PYUSD supply on StableChain is only $23.96M, the vault's $78.57M balance reflects looped borrowing and redepositing. Ordinary withdrawals draw only from idle PYUSD while liquidityAdapter remains unset, leaving larger exits dependent on allocator deallocation or forceDeallocate against unborrowed market cash. Three RedStone feeds share one upgradeable 3-of-5 adapter, and owner, curator, and human allocator roles sit with EOAs whose key custody is undisclosed.",
+    "updatedAt": "2026-11-27",
+    "authoredBy": "ai",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-27"
+  },
+  "eusd-own": {
+    "title": "Robinhood Chain CDP dollar backed mostly by USDG",
+    "text": "Own eUSD is a ~$141.5K overcollateralized dollar stablecoin on Robinhood Chain minted through four risk-grouped collateral managers, two Fables concentrated-liquidity LP managers, and a 1:1 USDG peg stability module. On-chain reads show net external backing dominated by Paxos USDG across the PSM and Fables LP vaults, alongside smaller frxUSD LP, legacy tokenized S&P 500 (eSPY), and WETH collateral positions; protocol-minted eUSD sitting inside LP ranges is excluded from external reserves. Holders can swap out 1:1 for USDG at zero fee while PSM reserves last or redeem permissionlessly against riskiest positions at oracle price. The eUSD token contract is non-proxy with no transfer freeze list, yet a three-of-five Safe holds DEFAULT_ADMIN_ROLE without a timelock, permitting immediate minter-proxy upgrades or allowance-free burn grants. In addition, frxUSD collateral currently prices off the USDG Chainlink feed. Security reports published in Own's repository are multi-agent adversarial reviews rather than named third-party firm audits, leaving governance custody and oracle proxy basis as the durable constraints.",
     "updatedAt": "2026-11-27",
     "authoredBy": "ai",
     "model": "gemini-4-neon",

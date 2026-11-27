@@ -1,0 +1,134 @@
+{
+  "id": "gpyusdse-galaxy",
+  "launchDate": "2026-10-27",
+  "name": "StableEarn Prime PYUSD",
+  "symbol": "gPYUSDse",
+  "oneLiner": "gPYUSDse is Galaxy's PYUSD lending vault on Stable; shares accrue interest, absorb bad debt, and withdraw from idle PYUSD unless deallocated.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "navToken": true
+  },
+  "variantOf": "pyusd-paypal",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "pyusd-paypal",
+  "collateral": "Native Stable PYUSD held idle in the vault or supplied through a single MorphoMarketV1AdapterV2 to one Morpho Blue market secured by bridged weETH borrower collateral at 86% LLTV; weETH is borrower collateral, not an asset held directly by the vault.",
+  "pegMechanism": "ERC-4626 shares represent a proportional PYUSD-denominated lending claim on Stable. Borrower interest and fee-share accrual change assets per share; realized Morpho bad debt reduces NAV. Because liquidityAdapter is unset as of 2026-11-27, ordinary withdraw and redeem calls draw only from idle PYUSD unless allocators deallocate or callers invoke forceDeallocate against available market liquidity. VaultV2 maxWithdraw and maxRedeem deliberately return zero as conservative underestimates, not measurements of exit liquidity. As of 2026-11-27, forceDeallocatePenalty is 0% of assets deallocated; this separate route still requires unborrowed PYUSD in the Morpho market and is not an ordinary withdrawal fee.",
+  "mechanismArchetype": "protocol-position",
+  "archetypeOverride": true,
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 PR-3 Batch 4 review (gpyusdse-galaxy)",
+    "rationale": "StableEarn Prime PYUSD (gPYUSDse) is a native StableChain Morpho VaultV2 ERC-4626 lending position over Paxos native Stable PYUSD (0x28f1f38a9f7db1f769a71af0a13e8bace2ab0e9f), not direct ownership of Paxos reserves. At Stable block 48443292 (hash 0xaff14f79efb92787c2a370a147f7dd5a6b98c2e15a527145713b403f9536f6a8, 2026-11-27T13:06:01Z), totalSupply() is 78423725872575146561234953 raw 18-decimal shares, totalAssets() is 78572448141989 raw 6-decimal PYUSD, convertToAssets(1e18) is 1001896 raw PYUSD, idle PYUSD is 15134224238568, and sole adapter 0xd5f963aea47f502b7c4ec4bcd6b4ba08d7f44cd6 realAssets() is 63438223903421, reconciling totalAssets() exactly. Both VaultV2 (21808 bytes) and MorphoMarketV1AdapterV2 (11784 bytes) are Sourcify-verified on chain 988 with zero EIP-1967 proxy slots. Morpho creationTimestamp 1793123545 establishes deployment on 2026-10-27. Total vault PYUSD claims ($78.57M) exceed total native Stable PYUSD supply ($23.96M) due to looped borrowing and redepositing; realized bad debt reduces share NAV, supporting protocol-position rather than the parent fiat-cash archetype.",
+    "sources": [
+      {
+        "label": "Morpho: StableEarn Prime PYUSD exact vault",
+        "url": "https://app.morpho.org/stable/vault/0x8c3250f028a2c8d29319eb3ee3214b90462394ba"
+      },
+      {
+        "label": "Sourcify verified VaultV2 on Stable (chain 988, 0x8c3250f028a2c8d29319eb3ee3214b90462394ba)",
+        "url": "https://sourcify.dev/server/v2/contract/988/0x8c3250f028a2c8d29319eb3ee3214b90462394ba?fields=all"
+      },
+      {
+        "label": "Sourcify verified MorphoMarketV1AdapterV2 on Stable (chain 988, 0xd5f963aea47f502b7c4ec4bcd6b4ba08d7f44cd6)",
+        "url": "https://sourcify.dev/server/v2/contract/988/0xd5f963aea47f502b7c4ec4bcd6b4ba08d7f44cd6?fields=all"
+      },
+      {
+        "label": "Morpho API exact StableEarn Prime PYUSD vault state and creationTimestamp",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Galaxy Curation: Terms of use",
+        "url": "https://docs.curation.galaxy.com/legal/terms-of-use"
+      },
+      {
+        "label": "Stable block 48443292 (2026-11-27T13:06:01Z) pinned RPC census",
+        "url": "https://rpc.stable.xyz"
+      }
+    ]
+  },
+  "detailProvider": "coingecko",
+  "links": [
+    {
+      "label": "Morpho: Vault",
+      "url": "https://app.morpho.org/stable/vault/0x8c3250f028a2c8d29319eb3ee3214b90462394ba"
+    },
+    {
+      "label": "Morpho: Vault V2 documentation",
+      "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+    },
+    {
+      "label": "Morpho: Framework audits",
+      "url": "https://docs.morpho.org/get-started/resources/audits/"
+    },
+    {
+      "label": "Explorer",
+      "url": "https://stablescan.xyz/address/0x8c3250f028a2c8d29319eb3ee3214b90462394ba"
+    },
+    {
+      "label": "Galaxy Curation: Terms of use",
+      "url": "https://docs.curation.galaxy.com/legal/terms-of-use"
+    },
+    {
+      "label": "Curator",
+      "url": "https://curation.galaxy.com/"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/galaxyhq"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "stable",
+      "address": "0x8c3250f028a2c8d29319eb3ee3214b90462394ba",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "mixed",
+  "governanceQuality": "wrapper",
+  "yieldConfig": {
+    "yieldSource": "StableEarn Prime PYUSD Morpho lending vault",
+    "yieldType": "lending-vault"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 2,
+    "semantics": "single-asset",
+    "breakerScope": "gpyusdse-galaxy",
+    "display": {
+      "url": "https://app.morpho.org/stable/vault/0x8c3250f028a2c8d29319eb3ee3214b90462394ba",
+      "label": "StableEarn Prime PYUSD"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "stable",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "PYUSD-denominated Galaxy Morpho lending claim",
+        "risk": "high",
+        "coinId": "pyusd-paypal",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0x28f1f38a9f7db1f769a71af0a13e8bace2ab0e9f"
+      },
+      "deployedExposure": {
+        "basis": "At Stable block 48443292 (2026-11-27T13:06:01Z), idle native PYUSD is 15134224238568 raw units (19.26%) and the sole MorphoMarketV1AdapterV2 allocates 63438223903421 raw units (80.74%) to one weETH/PYUSD Morpho market at 86% LLTV, reconciling totalAssets (78572448141989) exactly. Deployed exposure is a PYUSD-denominated lending claim, not direct ownership of weETH collateral or Paxos cash reserves.",
+        "reviewedAt": "2026-11-27",
+        "sourceUrl": "https://stablescan.xyz/block/48443292"
+      },
+      "redemptionLiquidity": {
+        "source": "morpho-vault-v2",
+        "chainId": 988
+      },
+      "rpcUrl": "https://rpc.stable.xyz",
+      "fallbackRpcUrl": "https://stable.drpc.org"
+    }
+  }
+}

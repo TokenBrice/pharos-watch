@@ -68211,6 +68211,32 @@
         "surface:37a60a5b8d249cb3b61e99cf"
       ],
       "rationale": "No binding executable redemption capacity bound is published for VNX British Pound (VGBP) on its offchain-issuer redemption route. Although VNX Global Ltd.'s non-binding institutional GitBook pages state a \">=10% of total reserves\" (\"at least 10%\") T+0 fiat cash floor and a \">10% of supply\" daily redemption-pressure review trigger (alongside a GBP 100,000 institutional minimum), the governing VNX Global Terms (VNX-Global-Terms.pdf, Clause 3.2) place reserve composition \"within the sole control and at the sole and absolute discretion of the Company\", reserve \"the right to delay the redemption or withdrawal of VNX Stablecoins if such delay is necessitated by the illiquidity or unavailability or loss of any VNX Stablecoin Reserves\", and reserve \"the right to redeem VNX Stablecoins by in-kind redemptions of securities and other assets held in VNX Stablecoin Reserves\". In addition, VNX's own GitBook pages contradict each other—and liquidity-buffers contradicts itself on the same page—stating \"15%\" (\"a further 15% redeemable within 48 hours\" on reserve-transparency; \"The additional 15% layer\" and \"~25% of reserves\" in liquidity-buffers prose) versus \"90%\" (\"90% of total reserves\" / \">=90%\" in 48-hour deposits in liquidity-buffers overview/table, reserve-management table, investment-policy, and stablecoin-specific-risks). Consequently, the published \">=10%\" T+0 cash floor is not a binding capacity bound, and no binding same-notional executable capacity bound is published."
+    },
+    {
+      "id": "pr3-mglo-midas-fasanara-reserve-composition-20261127",
+      "assetId": "mglo-midas-fasanara",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-composition",
+        "factorKey": null,
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "reserve-composition"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-27T13:57:00Z",
+      "reviewer": "Pharos Listing Policy v2 PR-3 review 2026-11-27",
+      "sourcesRefs": [
+        "source:60567cf2a90879df70f274d4",
+        "source:ff55857e37b1a4034f0b3c1a"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:b9e63521fc8b4ef7529f6107",
+        "surface:403a0a4120d63705207c39eb",
+        "surface:28b6e6a5e5081420fc0bc61e"
+      ],
+      "rationale": "Midas publishes the Compartment mGLO strategy envelope and an aggregate vlayer-notarized monthly JTC Luxembourg Fund Value ($193,415,658.76 as of 2026-10-31 against 186.82M tokens, plus $188.95 in 1token general_wallet) in SAVE attestation CID QmeNwyuVyhM5HvEFfKZH9j7zCCvGrLwCBf1hYeWsTocMt1, and midas-por-v2 tokens.json declares no on-chain reserve wallets or itemized constituent holdings. Loan-level receivables obligors, originators, cash-versus-receivables split, and post-October 31 subscriptions bridging to the 220.64M six-chain supply are unpublished by the issuer. Inaccessible Cloudflare-protected web pages (midas.app/mglo, docs.midas.app returning HTTP 403) are not treated as negative facts; nondisclosure is established directly from the canonical PoR v2 registry and SAVE attestation."
     }
   ],
   "sourceObservations": [
@@ -103457,6 +103483,28 @@
         "excerpt": "Redemption pressure — daily redemptions >10% of supply trigger liquidity-position review and emergency reserve-tranche access. ... Customer eligibility — VCHF/VGBP minimum transaction threshold is CHF/GBP 100,000; verified Customers only.",
         "assertion": "The institutional Minting and Redemption page defines daily redemptions above 10% of supply as an internal liquidity-position review trigger and sets a CHF/GBP 100,000 minimum threshold, without publishing a binding capacity bound, daily payout floor, or queue limit."
       }
+    },
+    {
+      "id": "source:60567cf2a90879df70f274d4",
+      "value": {
+        "url": "https://gateway.pinata.cloud/ipfs/QmeNwyuVyhM5HvEFfKZH9j7zCCvGrLwCBf1hYeWsTocMt1",
+        "observedAt": "2026-11-27T13:54:41Z",
+        "datumAsOf": "2026-10-31",
+        "location": "Midas mGLO SAVE attestation (CID QmeNwyuVyhM5HvEFfKZH9j7zCCvGrLwCBf1hYeWsTocMt1) claims 8-11",
+        "excerpt": "email_nav.navUSD = 193415658.76 (JTC Luxembourg Fund Value for LU3357216087 / mGLO as of 2026-10-31); onetoken_report equity.general_wallet = 188.9472560012, equity.total = 188.947351.",
+        "assertion": "The canonical Midas SAVE attestation publishes one aggregate JTC Luxembourg fund valuation ($193.42M) plus $188.95 1token general_wallet equity, with no underlying obligor weights, originator exposures, cash-versus-receivables split, or post-October 31 subscription itemization."
+      }
+    },
+    {
+      "id": "source:ff55857e37b1a4034f0b3c1a",
+      "value": {
+        "url": "https://raw.githubusercontent.com/midas-apps/midas-por-v2/main/tokens.json",
+        "observedAt": "2026-11-27T13:54:41Z",
+        "datumAsOf": null,
+        "location": "tokens[0x31d6a336f57a665c1010b680ca88509ba3184edb8425c4e20789cf0697af5dee] (mGLO)",
+        "excerpt": "fundManager.navFields = [\"Fund Value\"]; oneTokenApi.offchainEquityKeys = [\"general_wallet\"]; reserveOnchainWallets absent.",
+        "assertion": "Midas PoR v2 canonical registry configures mGLO solely around the aggregate monthly JTC Fund Value email and 1token general_wallet, publishing no itemized reserve sleeves, constituent holdings, or on-chain liquidity-reserve wallets."
+      }
     }
   ],
   "searchedSurfaceObservations": [
@@ -118787,6 +118835,14 @@
     {
       "id": "surface:37a60a5b8d249cb3b61e99cf",
       "value": "https://vnx.io/british-pound"
+    },
+    {
+      "id": "surface:b9e63521fc8b4ef7529f6107",
+      "value": "https://raw.githubusercontent.com/midas-apps/midas-por-v2/main/tokens.json"
+    },
+    {
+      "id": "surface:403a0a4120d63705207c39eb",
+      "value": "https://gateway.pinata.cloud/ipfs/QmeNwyuVyhM5HvEFfKZH9j7zCCvGrLwCBf1hYeWsTocMt1"
     }
   ]
 }

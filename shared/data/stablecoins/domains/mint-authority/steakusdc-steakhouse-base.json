@@ -1,0 +1,328 @@
+{
+  "id": "steakusdc-steakhouse-base",
+  "mintAuthority": {
+    "capSemanticsReview": {
+      "verdict": "bounded-by-construction",
+      "rationale": "Pinned Base block 62967570, hash 0x8bbf4b8ae78175d5ff06b8bd91b66f1cbc7f7cc5deb8f3fe11b63be4fb9740c1, timestamp 2026-11-27T12:51:29Z. Runtime bytecode (sha256:02ba0c485b5b0fef947f487deffb48fc15aef65b08ba63b0bea5d252d94fafff) matches Sourcify-verified immutable VaultV2 source with zero EIP-1967 implementation and admin slots. enter() transfers USDC before createShares(); accrueInterest() can create formula-bound fee shares under immutable 50% performance-fee and 5% annualized management-fee maxima (both currently zero). Allocation-cap increases, new adapters, allocator appointments, fee settings, and gates cannot create arbitrary unbacked user shares or native USDC. Core adapter and cap increases wait 604,800 seconds (7 days); fee and allocator selectors have zero delay; setAdapterRegistry and share-transfer/withdrawal gate setters are permanently abdicated. Upstream USDC issuer authority remains inherited from usdc-circle.",
+      "reviewedAt": "2026-11-27",
+      "reviewer": "Pharos Listing Policy v2 PR-3 primary-source review",
+      "sources": [
+        {
+          "label": "Exact verified VaultV2 source (base, 0xbeef0e0834849acc03f0089f01f4f1eeb06873c9)",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0xbeef0e0834849acc03f0089f01f4f1eeb06873c9?fields=all"
+        },
+        {
+          "label": "Base block 62967570, 2026-11-27T12:51:29Z; exact vault, controller, Safe, and adapter census",
+          "url": "https://basescan.org/block/62967570"
+        }
+      ]
+    },
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "none-resolved-mint",
+    "confidence": "verified",
+    "summary": "steakUSDC (Base) user shares mint against deposited Base USDC; interest accrual can mint fee shares under immutable fee ceilings. Immutable core and owner/curator parameter powers cannot create native USDC, whose issuance remains inherited from Circle.",
+    "headline": "Deposits back user shares; fee dilution and curator-controlled strategy parameters remain, while native USDC issuance stays upstream.",
+    "inheritedFrom": "usdc-circle",
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "upgradeability": {
+      "model": "immutable",
+      "deploymentRefs": [
+        "base:0xbeef0e0834849acc03f0089f01f4f1eeb06873c9"
+      ],
+      "canChangeMintLogic": false,
+      "controlRef": "steakUSDC (Base) immutable VaultV2 share issuance",
+      "observedAt": "2026-11-27",
+      "observedBlock": 62967570,
+      "sources": [
+        {
+          "label": "Morpho exact Steakhouse Prime USDC Base deployment",
+          "url": "https://app.morpho.org/base/vault/0xbeef0e0834849acc03f0089f01f4f1eeb06873c9"
+        },
+        {
+          "label": "Exact verified VaultV2 source (base, 0xbeef0e0834849acc03f0089f01f4f1eeb06873c9)",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0xbeef0e0834849acc03f0089f01f4f1eeb06873c9?fields=all"
+        },
+        {
+          "label": "Base block 62967570, 2026-11-27T12:51:29Z; exact vault, controller, Safe, and adapter census",
+          "url": "https://basescan.org/block/62967570"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "base",
+        "address": "0xbeef0e0834849acc03f0089f01f4f1eeb06873c9",
+        "deploymentRefs": [
+          "base:0xbeef0e0834849acc03f0089f01f4f1eeb06873c9"
+        ],
+        "label": "steakUSDC (Base) immutable VaultV2 share issuance",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-27",
+        "observedBlock": 62967570,
+        "sources": [
+          {
+            "label": "Morpho exact Steakhouse Prime USDC Base deployment",
+            "url": "https://app.morpho.org/base/vault/0xbeef0e0834849acc03f0089f01f4f1eeb06873c9"
+          },
+          {
+            "label": "Exact verified VaultV2 source (base, 0xbeef0e0834849acc03f0089f01f4f1eeb06873c9)",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xbeef0e0834849acc03f0089f01f4f1eeb06873c9?fields=all"
+          },
+          {
+            "label": "Base block 62967570, 2026-11-27T12:51:29Z; exact vault, controller, Safe, and adapter census",
+            "url": "https://basescan.org/block/62967570"
+          }
+        ],
+        "evidence": "Sourcify-verified immutable VaultV2 enters only after USDC transfer and can mint formula-bound fee shares on accrual. EIP-1967 implementation and admin slots are zero. At Base block 62967570, performanceFee=0, managementFee=0, performanceFeeRecipient=0x0, managementFeeRecipient=0x0; receiveShares, sendShares, and receiveAssets gates are zero with all three setters permanently abdicated. Ordinary exits have no separate withdrawal fee; forceDeallocatePenalty(adapter)=10000000000000/1e18 (0.001%)."
+      },
+      {
+        "chain": "base",
+        "address": "0x639bfa26472906ccd40513408284a8ad292bc5d6",
+        "deploymentRefs": [
+          "base:0xbeef0e0834849acc03f0089f01f4f1eeb06873c9"
+        ],
+        "label": "steakUSDC (Base) vault owner",
+        "role": "governor",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-11-27",
+        "observedBlock": 62967570,
+        "sources": [
+          {
+            "label": "Exact verified VaultV2Supervisor source (base, 0x639bfa26472906ccd40513408284a8ad292bc5d6)",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x639bfa26472906ccd40513408284a8ad292bc5d6"
+          },
+          {
+            "label": "Steakhouse Supervisor v2 action delays and Guardian veto",
+            "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md"
+          },
+          {
+            "label": "Base block 62967570, 2026-11-27T12:51:29Z; exact vault, controller, Safe, and adapter census",
+            "url": "https://basescan.org/block/62967570"
+          }
+        ],
+        "evidence": "At Base block 62967570, VaultV2Supervisor.owner() is 0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd, TIMELOCK()=1209600 seconds (14 days), and getGuardians(vault) returns 0x6439fe614fe981225c4fe91a9681169af2467e6f (an Aragon DAO proxy pointing to verified DAO implementation 0xbeb2271224d22bda388b513268873387e5bfc27f; not itself a vault sentinel). The Supervisor is an active vault sentinel (isSentinel=true). Supervisor delays setOwner and removeGuardian by 14 days while curator replacement is immediate. Native issuance remains asset-backed."
+      },
+      {
+        "chain": "base",
+        "address": "0x827e86072b06674a077f592a531dce4590adecdb",
+        "deploymentRefs": [
+          "base:0xbeef0e0834849acc03f0089f01f4f1eeb06873c9"
+        ],
+        "label": "steakUSDC (Base) curator",
+        "role": "other",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "threshold": 3,
+        "signerCount": 9,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x1710932cf538f38e7bcfc30aaae389b24dd004f6",
+            "0xfb3e98b5d59505ceb259e9874b4553fd27fcce3c",
+            "0x44e6e4152a60d594c175bfed42e68ad62ffb5871",
+            "0x1936552b58be97ffd9c7c1dd28e675b7b022f16d",
+            "0x7307bf07641a794fdbc2391d0983a7f1cfa36e4b",
+            "0xd824031d4a115590e6ff26e4e23fc346ab4cb2db",
+            "0x4c23e86a9d8506a43046c15be1b7fa0b6f3427de",
+            "0x5868aaa8d66023137365adae9634a9d8834d488d",
+            "0x1dc4354b39554251d4a2c4b571906e7ebae535a3"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "observedBlock": 62967570,
+          "observedAt": "2026-11-27",
+          "source": "onchain"
+        },
+        "observedAt": "2026-11-27",
+        "observedBlock": 62967570,
+        "sources": [
+          {
+            "label": "Base block 62967570, 2026-11-27T12:51:29Z; exact vault, controller, Safe, and adapter census",
+            "url": "https://basescan.org/block/62967570"
+          },
+          {
+            "label": "Exact verified VaultV2 source (base, 0xbeef0e0834849acc03f0089f01f4f1eeb06873c9)",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xbeef0e0834849acc03f0089f01f4f1eeb06873c9?fields=all"
+          }
+        ],
+        "evidence": "At Base block 62967570 (2026-11-27T12:51:29Z), getOwners() and getThreshold() establish 3-of-9 cryptographic owners; getModulesPaginated(0x1,100) is terminal and empty, guard and moduleGuard slots are zero, and fallback handler is 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Curator schedules adapters, allocation caps, gates, fees, and allocators: adapter and cap increases wait 604,800 seconds, while fee and allocator changes have zero delay. Parameter authority cannot create native USDC; human signer independence and key custody remain unestablished."
+      },
+      {
+        "chain": "base",
+        "address": "0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd",
+        "deploymentRefs": [
+          "base:0xbeef0e0834849acc03f0089f01f4f1eeb06873c9"
+        ],
+        "label": "steakUSDC (Base) ultimate supervisor-owner Safe",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "threshold": 5,
+        "signerCount": 10,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0xc04f9610694a9e07e0d6a361bec53abeadf9cf9e",
+            "0x005398827d00c2951ffb52bd91164ef402bcf105",
+            "0x2e8c25a6f7f7f34666b998813abf97d8b617f111",
+            "0x5571a6fef340a9d26f1428684b9e893ea84b46ac",
+            "0x32e5cb1a68761a0cff88d4baa21e398422b5166e",
+            "0x21c1e5be991bf1544ca9759a601f66dc60083f7d",
+            "0x9a86713145f38cd688969c0ecc87b314b23254b2",
+            "0xbc27046213d34d4a153cf57a48c74d74239e8968",
+            "0x394e6ef80c6f4ad14a891a3987d8bd1387afa0b1",
+            "0x86bd534a95fb2cc36d526ba149464c4477315c32"
+          ],
+          "threshold": 5,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "observedBlock": 62967570,
+          "observedAt": "2026-11-27",
+          "source": "onchain"
+        },
+        "observedAt": "2026-11-27",
+        "observedBlock": 62967570,
+        "sources": [
+          {
+            "label": "Base block 62967570, 2026-11-27T12:51:29Z; exact vault, controller, Safe, and adapter census",
+            "url": "https://basescan.org/block/62967570"
+          },
+          {
+            "label": "Steakhouse Supervisor v2 action delays and Guardian veto",
+            "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md"
+          }
+        ],
+        "evidence": "At Base block 62967570 (2026-11-27T12:51:29Z), getOwners() and getThreshold() establish 5-of-10 cryptographic owners; getModulesPaginated(0x1,100) is terminal and empty, guard and moduleGuard slots are zero, and fallback handler is 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Controls VaultV2Supervisor with 14-day delay on vault ownership transfer and Guardian removal, and immediate curator replacement. Parameter authority cannot create native USDC; human signer independence and offchain custody remain unestablished."
+      },
+      {
+        "chain": "base",
+        "address": "0xaed282b8ad9257bb1272e93ae63a32a53621e412",
+        "deploymentRefs": [
+          "base:0xbeef0e0834849acc03f0089f01f4f1eeb06873c9"
+        ],
+        "label": "steakUSDC (Base) BluePublicAllocator",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-27",
+        "observedBlock": 62967570,
+        "sources": [
+          {
+            "label": "Base block 62967570, 2026-11-27T12:51:29Z; pinned isAllocator(address)=true check",
+            "url": "https://basescan.org/block/62967570"
+          },
+          {
+            "label": "Exact Sourcify verification for BluePublicAllocator on Base",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xaed282b8ad9257bb1272e93ae63a32a53621e412?fields=compilation"
+          }
+        ],
+        "evidence": "Pinned isAllocator(0xaed282b8ad9257bb1272e93ae63a32a53621e412)=true at Base block 62967570. Sourcify-verified immutable BluePublicAllocator allows permissionless reallocation between configured markets subject to vault caps and public-allocator limits; it cannot raise vault caps, replace immutable share accounting, or mint native USDC."
+      },
+      {
+        "chain": "base",
+        "address": "0xbeef5f9f39e684cf39e0770fa57a43fa46a3beef",
+        "deploymentRefs": [
+          "base:0xbeef0e0834849acc03f0089f01f4f1eeb06873c9"
+        ],
+        "label": "steakUSDC (Base) SteakhouseOperator allocator",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-11-27",
+        "observedBlock": 62967570,
+        "sources": [
+          {
+            "label": "Base block 62967570, 2026-11-27T12:51:29Z; pinned isAllocator(address)=true check",
+            "url": "https://basescan.org/block/62967570"
+          },
+          {
+            "label": "Exact Sourcify verification for SteakhouseOperator on Base",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xbeef5f9f39e684cf39e0770fa57a43fa46a3beef?fields=compilation"
+          }
+        ],
+        "evidence": "Pinned isAllocator(0xbeef5f9f39e684cf39e0770fa57a43fa46a3beef)=true at Base block 62967570. Sourcify-verified SteakhouseOperator diamond has owner() equal to the 3-of-9 curator Safe (0x827e86072b06674a077f592a531dce4590adecdb). Every parent operation remains bounded by the VaultV2 allocator role and immutable core; facet reachability is not treated as closed execution-scope evidence."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Morpho exact Steakhouse Prime USDC Base deployment",
+          "url": "https://app.morpho.org/base/vault/0xbeef0e0834849acc03f0089f01f4f1eeb06873c9"
+        },
+        {
+          "label": "Exact verified VaultV2 source (base, 0xbeef0e0834849acc03f0089f01f4f1eeb06873c9)",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0xbeef0e0834849acc03f0089f01f4f1eeb06873c9?fields=all"
+        },
+        {
+          "label": "Exact verified MorphoMarketV1AdapterV2 source (base, 0xfdd31cdf6712c47a4e67037d9f2e35587f5404c0)",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0xfdd31cdf6712c47a4e67037d9f2e35587f5404c0?fields=all"
+        },
+        {
+          "label": "Steakhouse DeFi vault governing terms",
+          "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+        },
+        {
+          "label": "Steakhouse Supervisor v2 action delays and Guardian veto",
+          "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md"
+        },
+        {
+          "label": "Base block 62967570, 2026-11-27T12:51:29Z; exact vault, controller, Safe, and adapter census",
+          "url": "https://basescan.org/block/62967570"
+        }
+      ],
+      "evidence": "Pinned Base block 62967570 (2026-11-27T12:51:29Z; hash 0x8bbf4b8ae78175d5ff06b8bd91b66f1cbc7f7cc5deb8f3fe11b63be4fb9740c1) verifies Sourcify-matched immutable VaultV2 and MorphoMarketV1AdapterV2 runtimes, zero EIP-1967 slots, deposit-backed user share minting, zero current performance and management fees, 0.001% forceDeallocatePenalty, owner VaultV2Supervisor (0x639bfa26472906ccd40513408284a8ad292bc5d6, also sentinel), 3-of-9 curator Safe (0x827e86072b06674a077f592a531dce4590adecdb), 5-of-10 supervisor-owner Safe (0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd), and Supervisor Guardian Aragon DAO proxy (0x6439fe614fe981225c4fe91a9681169af2467e6f, not a vault sentinel). Selector-specific (delay seconds, abdicated) census: {\"addAdapter(address)\":[604800,0],\"increaseAbsoluteCap(bytes,uint256)\":[604800,0],\"increaseRelativeCap(bytes,uint256)\":[604800,0],\"removeAdapter(address)\":[604800,0],\"setAdapterRegistry(address)\":[604800,1],\"setForceDeallocatePenalty(address,uint256)\":[0,0],\"setIsAllocator(address,bool)\":[0,0],\"setManagementFee(uint256)\":[0,0],\"setPerformanceFee(uint256)\":[0,0],\"setReceiveAssetsGate(address)\":[604800,1],\"setReceiveSharesGate(address)\":[604800,1],\"setSendAssetsGate(address)\":[604800,0],\"setSendSharesGate(address)\":[604800,1]}. Direct onchain isAllocator/isSentinel checks against known Steakhouse Base addresses confirmed BluePublicAllocator and SteakhouseOperator as active allocators and Supervisor as active sentinel; a full creation-to-pin historical SetIsAllocator/SetIsSentinel log replay was not completed because Base archive log indexers were unavailable during this pass, so additional non-mint allocators or sentinels remain possible within immutable core caps. Independent human signer custody and maximal controller execution scope remain unestablished.",
+      "reviewer": "Pharos Listing Policy v2 PR-3 primary-source review",
+      "reviewedAt": "2026-11-27",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [],
+      "scopedQuestions": [
+        {
+          "controlRef": "base:0x827e86072b06674a077f592a531dce4590adecdb",
+          "question": "For steakUSDC (Base) curator (base:0x827e86072b06674a077f592a531dce4590adecdb): Safe signer independence and offchain key-custody attestations are not published; onchain 3-of-9 ownership and empty modules do not resolve those facts.",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-11-27",
+          "reviewer": "Pharos Listing Policy v2 PR-3 primary-source review",
+          "sources": [
+            {
+              "label": "Base block 62967570, 2026-11-27T12:51:29Z; exact vault, controller, Safe, and adapter census",
+              "url": "https://basescan.org/block/62967570"
+            }
+          ]
+        },
+        {
+          "controlRef": "base:0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd",
+          "question": "For steakUSDC (Base) ultimate supervisor-owner Safe (base:0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd): Safe signer independence and offchain key-custody attestations are not published; onchain 5-of-10 ownership and empty modules do not resolve those facts.",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-11-27",
+          "reviewer": "Pharos Listing Policy v2 PR-3 primary-source review",
+          "sources": [
+            {
+              "label": "Base block 62967570, 2026-11-27T12:51:29Z; exact vault, controller, Safe, and adapter census",
+              "url": "https://basescan.org/block/62967570"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -231,6 +231,9 @@ export async function fetchEscrowBalanceReserves(
           ...(params.settlementDelaySec != null
             ? { settlementDelaySec: params.settlementDelaySec }
             : {}),
+          ...(params.redemptionOutputAssetKey
+            ? { outputAssetKeys: [params.redemptionOutputAssetKey] }
+            : {}),
           sourceUrls: params.sourceUrls,
         }),
       },
@@ -281,6 +284,9 @@ export async function fetchEscrowBalanceReserves(
         ...(params.holderEligibility ? { holderEligibility: params.holderEligibility } : {}),
         ...(params.settlementDelaySec != null
           ? { settlementDelaySec: params.settlementDelaySec }
+          : {}),
+        ...(params.redemptionOutputAssetKey
+          ? { outputAssetKeys: [params.redemptionOutputAssetKey] }
           : {}),
         sourceUrls: params.sourceUrls,
       }),

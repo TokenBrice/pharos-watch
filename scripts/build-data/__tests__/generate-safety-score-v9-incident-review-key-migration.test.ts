@@ -36,7 +36,7 @@ describe("incident review key migration", () => {
     expect(generated.counts.skipped).toBe(registry.negativeReviews.length - subjects.length);
     expect(generated.counts.total + generated.counts.skipped).toBe(registry.negativeReviews.length);
     expect(generated.counts.orphans).toBe(23);
-    expect(generated.counts.authoredRetired).toBe(3);
+    expect(generated.counts.authoredRetired).toBe(4);
     expect(generated.counts.orphans + generated.counts.authoredRetired).toBe(generated.counts.retired);
     expect(generated.counts.mapped + generated.counts.retired).toBe(generated.counts.total);
   });
@@ -59,7 +59,7 @@ describe("incident review key migration", () => {
       new Set(Object.keys(INCIDENT_REVIEW_ORPHAN_ADJUDICATIONS)),
     );
     expect(adjudicated).toHaveLength(23);
-    expect(retired).toHaveLength(26);
+    expect(retired).toHaveLength(27);
     expect(retired.filter((row) => row.collidesWithCurrentCandidate)).toHaveLength(11);
     expect(retired.every((row) => row.authored === null && row.reason.length > 0 && row.applied === "retired")).toBe(true);
     expect(retired.find((row) => row.reviewId === "i203-cngn-compliant-naira-3ed94b7a7d58976299ac-20261011"))
@@ -69,17 +69,17 @@ describe("incident review key migration", () => {
   });
 
   it.each([false, true])("applies every authored scope and retires the adjudicated orphans with provenance (already retired: %s)", (alreadyRetired) => {
-    const reviews = readJson(INCIDENT_REVIEWS_PATH) as { negativeReviews: RawReview[] };
+    const neg = (readJson(INCIDENT_REVIEWS_PATH) as { negativeReviews: RawReview[] }).negativeReviews;
     const generated = buildIncidentReviewKeyMigration(ROOT);
-    const authored = reviews.negativeReviews.filter((review) =>
-      review.scope.kind === "control" && review.scope.controlKey === undefined && review.retired === undefined);
-    const retired = reviews.negativeReviews.filter((review) =>
-      review.retired !== undefined && review.scope.kind !== "issuer-surface" && review.scope.kind !== "provider");
-    const adjudicatedRetirements = retired.filter((review) => typeof review.scope.controlKey === "string");
-    const authoredRetirements = retired.filter((review) => typeof review.scope.controlKey !== "string");
-    const legacyDigests = reviews.negativeReviews.filter((review) =>
-      typeof review.scope.controlKey === "string");
-    expect(authored).toHaveLength(738);
+    const authored = neg.filter((r) =>
+      r.scope.kind === "control" && r.scope.controlKey === undefined && r.retired === undefined);
+    const retired = neg.filter((r) =>
+      r.retired !== undefined && r.scope.kind !== "issuer-surface" && r.scope.kind !== "provider");
+    const adjudicatedRetirements = retired.filter((r) => typeof r.scope.controlKey === "string");
+    const authoredRetirements = retired.filter((r) => typeof r.scope.controlKey !== "string");
+    const legacyDigests = neg.filter((r) =>
+      typeof r.scope.controlKey === "string");
+    expect(authored).toHaveLength(744);
     expect(authored).toHaveLength(generated.counts.authoredApplied + generated.counts.legacyBlocked);
     expect(authored.every((review) => typeof review.scope.routeId === "string" || review.scope.controlId !== undefined)).toBe(true);
     expect(retired).toHaveLength(generated.counts.retired);
@@ -87,6 +87,7 @@ describe("incident review key migration", () => {
     expect(adjudicatedRetirements.every((review) =>
       review.retired?.reviewedAt === REVIEW_KEY_MIGRATION_RETIRED_AT && review.retired.reason.length > 0)).toBe(true);
     expect(authoredRetirements.map((r) => r.reviewId)).toEqual([
+      "i04usatb-pyusd-paypal-60fb9286ab31a208f644-20261011",
       "j14susde-susde-ethena-4757f6af08b19cd8b007-20261011",
       "i203-cngn-compliant-naira-3ed94b7a7d58976299ac-20261011",
       "ir-iss-m-fusd-finchain-solana-mint-authority-20261030",

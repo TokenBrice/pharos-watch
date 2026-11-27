@@ -4,7 +4,7 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "IUSD user issuance is receipt-token accounting, but Core GOVERNOR can grant RECEIPT_TOKEN_MINTER to an arbitrary address whose ReceiptToken.mint call checks no collateral or durable supply ceiling. At Ethereum block 26113561, GOVERNOR includes the seven-day timelock and FluidRewardsClaimer; the timelock's sole Core proposer is the 4-of-8 admin Safe. The Safe root fails governed issuance qualification even though its delay exceeds two days; continuous reconciliation yields unbounded-reconciled.",
+    "summary": "IUSD user issuance is receipt-token accounting, but Core GOVERNOR can grant RECEIPT_TOKEN_MINTER to an arbitrary address whose ReceiptToken.mint call checks no collateral or durable supply ceiling. At Ethereum block 26113561, GOVERNOR includes the seven-day timelock and FluidRewardsClaimer; the timelock's sole Core proposer is the admin Safe (re-observed 4-of-7 at Ethereum finalized block 26507042 on 2026-11-27, down from 4-of-8 in August 2026). The Safe root fails governed issuance qualification even though its delay exceeds two days; continuous reconciliation yields unbounded-reconciled.",
     "upgradeability": {
       "model": "custom",
       "deploymentRefs": [
@@ -121,13 +121,12 @@
         "timelockDelaySec": 604800,
         "modulesOrGuardsStatus": "none-detected",
         "threshold": 4,
-        "signerCount": 8,
+        "signerCount": 7,
         "safe": {
           "owners": [
             "0xcc30e7d9dfbc29613e2a1e272cd624afc3abe1e9",
             "0x7a823623b18335a9c1284ac45315fe89972fd421",
             "0xdadb38219425c761dd0f3a4d684fc36f533af7bd",
-            "0xa9bdbeb17c81677cb1830b74b1832c16ec5cef61",
             "0x6dfa1a32604088eb969242aaffb92420f78373f6",
             "0xd53ffb2db125015ab4d461bad3fa959ef1a1e685",
             "0xfd4691dfa327adb0d6f3c7b4224b3cc881d4f6fa",
@@ -138,13 +137,13 @@
           "guard": null,
           "fallbackHandler": null,
           "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
-          "observedBlock": 25771089,
-          "observedAt": "2026-08-16",
+          "observedBlock": 26507042,
+          "observedAt": "2026-11-27",
           "source": "onchain"
         },
         "observedAt": "2026-08-16",
         "observedBlock": 25771089,
-        "evidence": "At Ethereum block 25771089, RECEIPT_TOKEN_MINTER's admin was GOVERNOR. Safe 0x80608f852d152024c0a2087b16939235fec2400c had MINOR_ROLES_MANAGER but not GOVERNOR; direct Safe grantRole/revokeRole calls reverted requiring GOVERNOR, and ReceiptToken.setCore reverted UNAUTHORIZED. Timelock 0x3d18480cc32b6ab3b833dcabd80e76cfd41c48a9 held GOVERNOR, had getMinDelay() = 604800, and the current 4-of-8 Safe was its sole proposer. Core role enumeration listed the four native protocol minters plus OutlandVault 0xf0d0f1fdee5595628de17b37e4134a5bac4441c3; OutlandVault's portal reconciliation is bridge machinery and is therefore excluded from native Mint Authority scoring. YieldSharing ProxyAdmin 0x094227ee5e9c3877860ac212f1e5218441e5b4eb was owned by that Timelock; a direct Safe upgrade call reverted as unauthorized.",
+        "evidence": "At Ethereum block 25771089, RECEIPT_TOKEN_MINTER's admin was GOVERNOR. Safe 0x80608f852d152024c0a2087b16939235fec2400c had MINOR_ROLES_MANAGER but not GOVERNOR; direct Safe grantRole/revokeRole calls reverted requiring GOVERNOR, and ReceiptToken.setCore reverted UNAUTHORIZED. Timelock 0x3d18480cc32b6ab3b833dcabd80e76cfd41c48a9 held GOVERNOR, had getMinDelay() = 604800, and the admin Safe was its sole proposer. Re-observed at Ethereum finalized block 26507042 (2026-11-27, hash 0x6bbf043d3be19b4192d9ef9ce204cbb5f0fd79b2d3e39b382c2c51e9d28d4f95): Safe getThreshold() = 4 and getOwners() = 7 (former owner 0xa9bdbeb17c81677cb1830b74b1832c16ec5cef61 removed). Core role enumeration listed the four native protocol minters plus OutlandVault 0xf0d0f1fdee5595628de17b37e4134a5bac4441c3; OutlandVault's portal reconciliation is bridge machinery and is therefore excluded from native Mint Authority scoring. YieldSharing ProxyAdmin 0x094227ee5e9c3877860ac212f1e5218441e5b4eb was owned by that Timelock; a direct Safe upgrade call reverted as unauthorized.",
         "sources": [
           {
             "label": "infiniFi Core verified source",
@@ -215,7 +214,7 @@
           "url": "https://docs.infinifi.xyz/vaults.md"
         }
       ],
-      "evidence": "Historical review at Ethereum block 25771089 established direct ReceiptToken/Core deployments, four native minters and Outland bridge machinery; YieldSharing implementation was 0x0d5dbf208a9a7540018d204a9a0ad08a091407e5 with ProxyAdmin 0x094227ee5e9c3877860ac212f1e5218441e5b4eb. D14/D29 sweep 2026-10-03 at Ethereum block 26113561 (hash 0xf8669491a2d5c3e0dfe4c4233ed6861dcbe45f046fac9804a60c40ae5ee6846e): verified InfiniFiCore makes GOVERNOR the admin of RECEIPT_TOKEN_MINTER, and verified ReceiptToken.mint(address,uint256) accepts that role without checking collateral or a durable supply ceiling. Authorization of a new arbitrary minter is therefore economically unbounded; the previous raiseable inference from the seven-day delay is superseded. Core enumeration returned six receipt minters, including OutlandVaults 0x4197f2adfce9fdeb36b02e96737ddf646c841e45 and 0x77776f422b7eb0a95ccd35fbd088a5957d4408ea, while GOVERNOR returned Timelock 0x3d18480cc32b6ab3b833dcabd80e76cfd41c48a9 and FluidRewardsClaimer 0xd0ec80032c0da717bd78b9569321d9069365241e. The latter's verified claim entrypoint has fixed Fluid claim/transfer targets, not an arbitrary Core.grantRole entrypoint; its inherited emergencyAction and caller closure are not certified here. Timelock getMinDelay() remains 604800 and hasRole confirms the admin Safe as proposer/executor; Core PROPOSER_ROLE enumeration returns that Safe alone. Safe getThreshold/getOwners remains 4-of-8. D29 G1 fails because proposal power is rooted in that Safe, not a token-vote governor; seven days passes the nominal delay gate but cannot cure G1. Every-control execution closure, including the additional GOVERNOR contract, is not certified. No governedIssuance certificate is authored; continuous reconciliation yields unbounded-reconciled. Current issuer Accounting documentation and published YieldSharingV3 source at commit aeb468ebc18433f4b4bf62ed14c8bd271a0404c8 disclose a native protocol ledger workflow: unaccruedYield compares enabled-farm accounting value divided by receipt price with ReceiptToken.totalSupply, and accrue mints or burns receipt tokens to restore that accounting equality. Supervision is unknown because the searched issuer contract, vault, security and risk disclosures do not establish a named prudential regime or independent whole-liability financial attestor.",
+      "evidence": "Historical review at Ethereum block 25771089 established direct ReceiptToken/Core deployments, four native minters and Outland bridge machinery; YieldSharing implementation was 0x0d5dbf208a9a7540018d204a9a0ad08a091407e5 with ProxyAdmin 0x094227ee5e9c3877860ac212f1e5218441e5b4eb. D14/D29 sweep 2026-10-03 at Ethereum block 26113561 (hash 0xf8669491a2d5c3e0dfe4c4233ed6861dcbe45f046fac9804a60c40ae5ee6846e): verified InfiniFiCore makes GOVERNOR the admin of RECEIPT_TOKEN_MINTER, and verified ReceiptToken.mint(address,uint256) accepts that role without checking collateral or a durable supply ceiling. Authorization of a new arbitrary minter is therefore economically unbounded; the previous raiseable inference from the seven-day delay is superseded. Core enumeration returned six receipt minters, including OutlandVaults 0x4197f2adfce9fdeb36b02e96737ddf646c841e45 and 0x77776f422b7eb0a95ccd35fbd088a5957d4408ea, while GOVERNOR returned Timelock 0x3d18480cc32b6ab3b833dcabd80e76cfd41c48a9 and FluidRewardsClaimer 0xd0ec80032c0da717bd78b9569321d9069365241e. The latter's verified claim entrypoint has fixed Fluid claim/transfer targets, not an arbitrary Core.grantRole entrypoint; its inherited emergencyAction and caller closure are not certified here. Timelock getMinDelay() remains 604800 and hasRole confirms the admin Safe as proposer/executor; Core PROPOSER_ROLE enumeration returns that Safe alone. Safe getThreshold/getOwners was 4-of-8 at block 26113561 and was re-observed as 4-of-7 at Ethereum finalized block 26507042 on 2026-11-27 (0xa9bdbeb1... removed). D29 G1 fails because proposal power is rooted in that Safe, not a token-vote governor; seven days passes the nominal delay gate but cannot cure G1. Every-control execution closure, including the additional GOVERNOR contract, is not certified. No governedIssuance certificate is authored; continuous reconciliation yields unbounded-reconciled. Current issuer Accounting documentation and published YieldSharingV3 source at commit aeb468ebc18433f4b4bf62ed14c8bd271a0404c8 disclose a native protocol ledger workflow: unaccruedYield compares enabled-farm accounting value divided by receipt price with ReceiptToken.totalSupply, and accrue mints or burns receipt tokens to restore that accounting equality. Supervision is unknown because the searched issuer contract, vault, security and risk disclosures do not establish a named prudential regime or independent whole-liability financial attestor.",
       "reviewer": "Sol v10.02 D14/D29 sweep (U6GovAmbiguousB)",
       "reviewedAt": "2026-10-03"
     }

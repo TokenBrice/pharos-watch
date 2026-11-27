@@ -91,7 +91,8 @@ export async function fetchErc4626SingleAssetReserves(
   });
   const usesSfrxusdCrosschainRoute =
     params.redemptionLiquidity?.source === "fraxtal-hop-withdrawable";
-  const usesExecutableRedemptionRoute = hasExecutableRedemptionObserver(coin.id);
+  const usesGatewayOnlyRoute = params.redemptionRoute === "gateway-only";
+  const usesExecutableRedemptionRoute = !usesGatewayOnlyRoute && hasExecutableRedemptionObserver(coin.id);
   const usesGenericBatch = !usesExecutableRedemptionRoute && !usesSfrxusdCrosschainRoute;
   const probesYearnShutdown =
     params.redemptionLiquidity?.source === "yearn-v3-withdrawable";
@@ -238,7 +239,7 @@ export async function fetchErc4626SingleAssetReserves(
   let redemptionCapacity: RedemptionCapacityTelemetry | null = null;
   let executableObservation: ExecutableRedemptionObservation | null = null;
   let configuredCapacity: Erc4626CapacityObservation | null = null;
-  if (assetAddress) {
+  if (assetAddress && !usesGatewayOnlyRoute) {
     const supplyAssetsRaw = convertToAssetsRaw ?? totalAssetsRaw;
     executableObservation = usesExecutableRedemptionRoute ? await observeExecutableRedemptionRoute(
       coin.id,
@@ -445,7 +446,7 @@ export async function fetchErc4626SingleAssetReserves(
     }
   }
 
-  const onchainPaused = lockPaused || pauseProbe.paused === true || pauseProbe.shutdown === true;
+  const onchainPaused = !usesGatewayOnlyRoute && (lockPaused || pauseProbe.paused === true || pauseProbe.shutdown === true);
   const observedRoute = redemptionCapacity ?? configuredCapacity?.route;
   const routeStatus = onchainPaused ? "paused" as const : observedRoute?.routeStatus ?? "unknown" as const;
   const routeStatusSource = onchainPaused ? "onchain" as const : observedRoute?.routeStatusSource;
@@ -456,7 +457,7 @@ export async function fetchErc4626SingleAssetReserves(
   const unboundedCrosschainRoute = !redemptionCapacity && configuredCapacity?.route.settlementBoundUnproven
     ? configuredCapacity.route
     : null;
-  if (routeStatus === "paused") {
+  if (!usesGatewayOnlyRoute && routeStatus === "paused") {
     const warning = unknownExposurePct === 0 && !hasDegradingWarnings(warnings)
       ? reserveInfoWarning
       : reserveDegradedWarning;
@@ -475,7 +476,7 @@ export async function fetchErc4626SingleAssetReserves(
     metadata: {
       ...notApplicableFreshnessMetadata({
         proofKind: "erc4626-total-assets",
-        ...(params.redemptionRoute
+        ...(params.redemptionRoute === "async-request"
           ? { redemptionMechanism: "async-request", settlementBoundReason: "Per-request withdrawal or receipt maturity; no global settlement bound observed" }
           : {}),
         ...(params.pooledClaim
@@ -506,24 +507,26 @@ export async function fetchErc4626SingleAssetReserves(
         : {}),
       ...(totalSupplyRaw != null ? { totalSupplyRaw: totalSupplyRaw.toString() } : {}),
       ...(convertToAssetsRaw != null ? { convertToAssetsRaw: convertToAssetsRaw.toString() } : {}),
-      redemption: {
-        ...(redemptionCapacity
-          ? projectErc4626RedemptionTelemetry(redemptionCapacity)
-          : { capacityKind: unboundedCrosschainRoute ? "documented-bound" as const : "documented-eventual" as const }),
-        ...(unboundedCrosschainRoute ? {
-          settlementBoundUnproven: true,
-          freshnessKind: unboundedCrosschainRoute.freshnessKind,
-          sourceTimestamp: unboundedCrosschainRoute.sourceTimestamp,
-          sourceUrls: unboundedCrosschainRoute.sourceUrls,
-          holderEligibility: unboundedCrosschainRoute.holderEligibility,
-        } : {}),
-        routeStatus,
-        ...(routeStatusSource != null ? { routeStatusSource } : {}),
-        ...(routeStatusReason != null ? { routeStatusReason } : {}),
-        ...(configuredCapacity?.v9RouteAttempt
-          ? { v9RouteAttempt: configuredCapacity.v9RouteAttempt }
-          : {}),
-      },
+      ...(!usesGatewayOnlyRoute ? {
+        redemption: {
+          ...(redemptionCapacity
+            ? projectErc4626RedemptionTelemetry(redemptionCapacity)
+            : { capacityKind: unboundedCrosschainRoute ? "documented-bound" as const : "documented-eventual" as const }),
+          ...(unboundedCrosschainRoute ? {
+            settlementBoundUnproven: true,
+            freshnessKind: unboundedCrosschainRoute.freshnessKind,
+            sourceTimestamp: unboundedCrosschainRoute.sourceTimestamp,
+            sourceUrls: unboundedCrosschainRoute.sourceUrls,
+            holderEligibility: unboundedCrosschainRoute.holderEligibility,
+          } : {}),
+          routeStatus,
+          ...(routeStatusSource != null ? { routeStatusSource } : {}),
+          ...(routeStatusReason != null ? { routeStatusReason } : {}),
+          ...(configuredCapacity?.v9RouteAttempt
+            ? { v9RouteAttempt: configuredCapacity.v9RouteAttempt }
+            : {}),
+        },
+      } : {}),
     },
   };
 }

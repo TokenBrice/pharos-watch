@@ -1,0 +1,219 @@
+{
+  "id": "eusd-own",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "unbounded-adverse",
+    "confidence": "verified",
+    "headline": "Collateral managers and a USDG PSM mint eUSD, while a three-of-five Safe can upgrade every minter proxy or grant MINTER_ROLE with no timelock.",
+    "summary": "EUSD (0x8b84d644) is a non-proxy ERC-20 token whose MINTER_ROLE is currently held by eight UUPS-upgradeable contracts: four EUSDManager risk groups (A through D), two EUSDLiquidityManager contracts (USDG and low-vol), EUSDPsm, and the mint-paused legacy eSPY manager. The 3-of-5 Governance Safe (0x470f35a7, SafeL2 1.4.1, zero guard, zero modules) holds DEFAULT_ADMIN_ROLE directly on EUSD with zero timelock, allowing it to grant MINTER_ROLE to arbitrary addresses, enable ERC-7802 bridges, or immediately upgrade all minter proxies and FablesAdapter vault beacons via ProtocolRegistry ADMIN_ROLE (only registry DEFAULT_ADMIN_ROLE transfer carries a 10,800-second delay).",
+    "upgradeability": {
+      "model": "uups",
+      "deploymentRefs": [
+        "robinhood:0x8b84d644cecaee6d21373f37e1ba00f85ed7cdb7"
+      ],
+      "proxyAddresses": [
+        "0xa24a434b7dae50e24e92b19e0907f8878458ccad",
+        "0x64bf85f7f55c9c66e42ac70d970e01b9cd163554",
+        "0x62f482452340e5a4beb2bc910248dffcf8f59c4b",
+        "0xf9c9a09ef44b9003f4e9cd76c30431389848cbf5",
+        "0xbd0a8dea2964c61dbc225db3c1b4ce341a0c32c2",
+        "0x6d491928bbec0c508a939b103753a3472b63cc8c",
+        "0x948df8d22c8025f587697d02b4888fe432758d0e",
+        "0x9748964d733ff5d47f1d7e3fea620af014da5a9b"
+      ],
+      "implementationAddresses": [
+        "0x28f8be8c9ad4010f092f4b3438819669e9ac370c",
+        "0x41ecaed014b019c54093891abb54a77311d1e75d",
+        "0xe6fa9a49e66237e446db1c1dedfcdfb61a5ab207",
+        "0x8f0eb3331da1ba72a7451601fc9e197d6551674e"
+      ],
+      "adminAddresses": [
+        "0x470f35a7e5d4cd490d74799ac01e7beea7f478e2"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "Own Governance Safe (EUSD DEFAULT_ADMIN_ROLE and UUPS upgrade authority)",
+      "observedAt": "2026-11-27",
+      "observedBlock": 124271952,
+      "sources": [
+        {
+          "label": "Own Robinhood Chain deployment record",
+          "url": "https://github.com/own-protocol/own-v2/blob/main/docs/contracts-robinhood.md"
+        },
+        {
+          "label": "Own governance and trust model documentation",
+          "url": "https://docs.own.money/protocol/governance"
+        },
+        {
+          "label": "Pinned Robinhood Chain JSON-RPC read at block 124271952 (2026-11-27T13:09:50Z)",
+          "url": "https://robinhood-rpc.publicnode.com"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "Own Governance Safe (EUSD DEFAULT_ADMIN_ROLE and UUPS upgrade authority)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "deploymentRefs": [
+          "robinhood:0x8b84d644cecaee6d21373f37e1ba00f85ed7cdb7"
+        ],
+        "chain": "robinhood",
+        "address": "0x470f35a7e5d4cd490d74799ac01e7beea7f478e2",
+        "threshold": 3,
+        "signerCount": 5,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "capDescription": "Holds DEFAULT_ADMIN_ROLE directly on EUSD with zero timelock (can grant MINTER_ROLE to arbitrary addresses and raise ERC-7802 bridge caps) and ADMIN_ROLE on ProtocolRegistry (can raise manager and PSM debt ceilings and execute immediate UUPS upgrades on all eight minter proxies and vault beacons). ProtocolRegistry.defaultAdminDelay() applies a 10,800-second (3-hour) delay only to transferring registry DEFAULT_ADMIN_ROLE.",
+        "safe": {
+          "owners": [
+            "0x4df6da674bd46e0cb7c959b75fc46bbac29d51a5",
+            "0xb36187c74ecba740e6ae9805a44f2d4a28cab8b9",
+            "0x4369f06473996718f0a19d20881b6c3faeae2e21",
+            "0xd2fbddfe557cc3f771a427e8bacb00a9f1a4be5b",
+            "0xb049a73928554098cd2d0c57f111c4d68996ef7d"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "version": "1.4.1",
+          "observedAt": "2026-11-27",
+          "observedBlock": 124274762,
+          "source": "onchain"
+        },
+        "observedAt": "2026-11-27",
+        "observedBlock": 124274762,
+        "sources": [
+          {
+            "label": "Own Robinhood Chain deployment record",
+            "url": "https://github.com/own-protocol/own-v2/blob/main/docs/contracts-robinhood.md"
+          },
+          {
+            "label": "Own governance and trust model documentation",
+            "url": "https://docs.own.money/protocol/governance"
+          },
+          {
+            "label": "Pinned Robinhood Chain JSON-RPC read at block 124274762 (2026-11-27T13:14:50Z)",
+            "url": "https://robinhood-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Robinhood Chain blocks 124271952 and 124274762, hasRole(DEFAULT_ADMIN_ROLE, 0x470f35a7e5d4cd490d74799ac01e7beea7f478e2) returned true on EUSD (0x8b84d644...) and ProtocolRegistry.defaultAdmin() returned the same Safe with defaultAdminDelay() = 10,800s. Safe reads confirmed SafeL2 1.4.1 singleton 0x29fcb43b46531bca003ddc8fcb67ffe91900c762, threshold 3 over 5 owners, empty getModulesPaginated(0x1, 10), zero guard slot, and CompatibilityFallbackHandler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. The separate Treasury Safe (0x8f974d82...) shares the identical 5 signers and 3-of-5 threshold. Signer independence and legal key custody are not publicly established."
+      },
+      {
+        "label": "Own EUSDPsm (USDG and frxUSD peg stability module)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "deploymentRefs": [
+          "robinhood:0x8b84d644cecaee6d21373f37e1ba00f85ed7cdb7"
+        ],
+        "chain": "robinhood",
+        "address": "0xa24a434b7dae50e24e92b19e0907f8878458ccad",
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": false,
+        "capDescription": "Mints eUSD 1:1 against deposited USDG up to a 1,000,000 eUSD asset debt ceiling (0 bps mint and redeem fees, frxUSD ceiling currently 0); ceiling and UUPS implementation (0x28f8be8c...) are controlled without delay by the Governance Safe.",
+        "observedAt": "2026-11-27",
+        "observedBlock": 124274762,
+        "sources": [
+          {
+            "label": "Own Robinhood Chain deployment record",
+            "url": "https://github.com/own-protocol/own-v2/blob/main/docs/contracts-robinhood.md"
+          },
+          {
+            "label": "Own EUSDPsm source code",
+            "url": "https://github.com/own-protocol/own-v2/blob/main/src/eusd/EUSDPsm.sol"
+          }
+        ],
+        "evidence": "At Robinhood Chain block 124274762, hasRole(MINTER_ROLE, 0xa24a434b...) returned true, EIP-1967 implementation was 0x28f8be8c9ad4010f092f4b3438819669e9ac370c, totalDebt() was 65,879.28 eUSD backed 1:1 by 65,879.28 USDG, and assetConfig(USDG) showed debtCeiling = 1,000,000 eUSD."
+      },
+      {
+        "label": "Own EUSDLiquidityManager USDG (Fables USDG and frxUSD LP minter)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "deploymentRefs": [
+          "robinhood:0x8b84d644cecaee6d21373f37e1ba00f85ed7cdb7"
+        ],
+        "chain": "robinhood",
+        "address": "0x64bf85f7f55c9c66e42ac70d970e01b9cd163554",
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": false,
+        "capDescription": "Mints eUSD directly into Fables USDG/eUSD and frxUSD/eUSD concentrated-liquidity vaults up to a 2,000,000 eUSD debt ceiling (190% MCR, 120% liquidation threshold); ceiling and UUPS implementation (0x41ecaed0...) are controlled without delay by the Governance Safe.",
+        "observedAt": "2026-11-27",
+        "observedBlock": 124275851,
+        "sources": [
+          {
+            "label": "Own Robinhood Chain deployment record",
+            "url": "https://github.com/own-protocol/own-v2/blob/main/docs/contracts-robinhood.md"
+          },
+          {
+            "label": "Own EUSDLiquidityManager source code",
+            "url": "https://github.com/own-protocol/own-v2/blob/main/src/eusd/EUSDLiquidityManager.sol"
+          }
+        ],
+        "evidence": "At Robinhood Chain blocks 124271952 and 124275851, hasRole(MINTER_ROLE, 0x64bf85f7...) returned true, EIP-1967 implementation was 0x41ecaed014b019c54093891abb54a77311d1e75d, and totalDebt() was 75,101.23 eUSD across two Pool 0 (USDG/eUSD) vaults and one Pool 1 (frxUSD/eUSD) vault."
+      },
+      {
+        "label": "Own EUSDManagers A through D and Low-Vol LiquidityManager (collateral CDP minters)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "deploymentRefs": [
+          "robinhood:0x8b84d644cecaee6d21373f37e1ba00f85ed7cdb7"
+        ],
+        "chain": "robinhood",
+        "address": "0xbd0a8dea2964c61dbc225db3c1b4ce341a0c32c2",
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": false,
+        "capDescription": "Five active UUPS minter proxies with MINTER_ROLE: EUSDManager A (0xf9c9a09e, 2,000,000 cap, 0 debt), EUSDManager B (0xbd0a8dea, WETH, 2,000,000 cap, 149.62 eUSD debt), EUSDManager C (0x6d491928, 2,000,000 cap, 0 debt), EUSDManager D (0x948df8d2, 1,000,000 cap, 0 debt), and EUSDLiquidityManager Low Vol (0x62f48245, 0 debt), plus mint-paused legacy eSPY EUSDManager (0x9748964d, 383.60 eUSD debt). All proxies remain UUPS-upgradeable without delay by the Governance Safe.",
+        "observedAt": "2026-11-27",
+        "observedBlock": 124275851,
+        "sources": [
+          {
+            "label": "Own Robinhood Chain deployment record",
+            "url": "https://github.com/own-protocol/own-v2/blob/main/docs/contracts-robinhood.md"
+          },
+          {
+            "label": "Own legacy Robinhood Chain contracts record",
+            "url": "https://github.com/own-protocol/own-v2/blob/main/docs/legacy-contracts-rh.md"
+          }
+        ],
+        "evidence": "At Robinhood Chain blocks 124271952 and 124275851, hasRole(MINTER_ROLE) returned true for Managers A (0xf9c9a09e), B (0xbd0a8dea), C (0x6d491928), D (0x948df8d2), Low-Vol LiquidityManager (0x62f48245), and legacy eSPY manager (0x9748964d). Managers A through D share UUPS implementation 0xe6fa9a49e66237e446db1c1dedfcdfb61a5ab207; legacy eSPY manager uses 0x8f0eb3331da1ba72a7451601fc9e197d6551674e with mintPaused() = true."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "review": {
+      "evidence": "Pinned Robinhood Chain reads at blocks 124271952, 124274762, and 124275851 (2026-11-27) confirmed EUSD (0x8b84d644cecaee6d21373f37e1ba00f85ed7cdb7) is a non-proxy ERC-20 token (EIP-1967 slot zero) matching own-protocol/own-v2 EUSD.sol, with maxNetBridgedIn() = 0 and totalSupply() = 141,513.73 eUSD reconciling exactly to totalDebt() across EUSDPsm (65,879.28), EUSDLiquidityManager USDG (75,101.23), legacy eSPY manager (383.60, mint paused), and EUSDManager B (149.62). All eight MINTER_ROLE holders are UUPS proxies controlled through ProtocolRegistry (0x348c4267...) by the 3-of-5 Governance Safe (0x470f35a7e5d4cd490d74799ac01e7beea7f478e2, SafeL2 1.4.1, zero guard, zero modules), which also holds DEFAULT_ADMIN_ROLE directly on EUSD with zero timelock. Because the Governance Safe can immediately grant MINTER_ROLE, raise caps, or upgrade any minter proxy without delay, economicCapSemantics is unbounded and authorityPosture is unbounded-adverse. Security reports published in own-protocol/own-v2/audits (September 9, November 1, and November 14, 2026) document multi-agent adversarial security reviews rather than audits by a named independent human security firm.",
+      "reviewer": "Listing Policy v2 PR-3 Batch 5 addition review 2026-11-27",
+      "reviewedAt": "2026-11-27",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Own EUSD token Solidity source",
+          "url": "https://github.com/own-protocol/own-v2/blob/main/src/eusd/EUSD.sol"
+        },
+        {
+          "label": "Own Robinhood Chain deployment record",
+          "url": "https://github.com/own-protocol/own-v2/blob/main/docs/contracts-robinhood.md"
+        },
+        {
+          "label": "Own governance and trust model documentation",
+          "url": "https://docs.own.money/protocol/governance"
+        },
+        {
+          "label": "Own security and multi-agent audit reports directory",
+          "url": "https://github.com/own-protocol/own-v2/tree/main/audits"
+        },
+        {
+          "label": "Pinned Robinhood Chain JSON-RPC read at block 124275851 (2026-11-27T13:16:48Z)",
+          "url": "https://robinhood-rpc.publicnode.com"
+        }
+      ]
+    }
+  }
+}

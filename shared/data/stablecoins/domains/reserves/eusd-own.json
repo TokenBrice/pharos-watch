@@ -1,0 +1,143 @@
+{
+  "id": "eusd-own",
+  "reserves": [
+    {
+      "name": "USDG (PSM and Fables LP vaults)",
+      "pct": 89.37,
+      "risk": "low",
+      "coinId": "usdg-paxos",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Paxos Digital Singapore (held in Own EUSDPsm and FablesAdapter USDG/eUSD LP vaults on Robinhood Chain)",
+      "riskFactors": [
+        "smart-contract",
+        "counterparty",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "frxUSD (Fables LP vault)",
+      "pct": 6.3,
+      "risk": "low",
+      "coinId": "frxusd-frax",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Frax Finance (held in FablesAdapter frxUSD/eUSD LP vault on Robinhood Chain)",
+      "riskFactors": [
+        "smart-contract",
+        "counterparty",
+        "liquidity"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "eSPY (Own tokenized S&P 500 ETF, legacy v1 CDP)",
+      "pct": 4.18,
+      "risk": "medium",
+      "assetClass": "tokenized-security",
+      "issuerOrObligor": "Own Protocol tokenized S&P 500 ETF exposure (held in mint-paused legacy EUSDManager)",
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "counterparty",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "WETH (Wrapped Ether, Manager B CDP)",
+      "pct": 0.15,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Robinhood Chain wrapped Ether (held in EUSDManager B)",
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Listing Policy v2 PR-3 Batch 5 addition review 2026-11-27",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Own Robinhood Chain deployment record",
+        "url": "https://github.com/own-protocol/own-v2/blob/main/docs/contracts-robinhood.md"
+      },
+      {
+        "label": "Own contract addresses documentation",
+        "url": "https://docs.own.money/resources/addresses"
+      },
+      {
+        "label": "Own EUSDPsm source code",
+        "url": "https://github.com/own-protocol/own-v2/blob/main/src/eusd/EUSDPsm.sol"
+      },
+      {
+        "label": "Own EUSDLiquidityManager source code",
+        "url": "https://github.com/own-protocol/own-v2/blob/main/src/eusd/EUSDLiquidityManager.sol"
+      },
+      {
+        "label": "Pinned Robinhood Chain JSON-RPC read at block 124275851 (2026-11-27T13:16:48Z)",
+        "url": "https://robinhood-rpc.publicnode.com"
+      }
+    ],
+    "rationale": "At Robinhood Chain block 124275851 (2026-11-27T13:16:48Z, hash 0xbacbb39bba8763c547877f6e4abdbd08cfefa2f46c6c2de3731503e95fbdac0c), EUSD totalSupply() was 141,513.729828 eUSD, reconciling exactly to totalDebt() across all active minters: EUSDPsm (65,879.28 eUSD), EUSDLiquidityManager USDG (75,101.23 eUSD across two USDG/eUSD vaults and one frxUSD/eUSD vault), legacy eSPY EUSDManager (383.60 eUSD, mint paused), and EUSDManager B (149.62 eUSD), with zero debt in Managers A, C, D, and EUSDLiquidityManager Low Vol. Measuring external collateral only and excluding self-referential minted eUSD held inside FablesAdapter LP ranges (69,831.61 eUSD in USDG/eUSD vaults and 5,711.01 eUSD in the frxUSD/eUSD vault, which auto-burns on unwind), net external collateral totaled $147,472.63 (104.2% of gross supply, 223.5% of net non-vault float): 131,811.86 USDG ($131,798.68 at $0.9999 Chainlink oracle, 89.37%: 65,879.28 in EUSDPsm plus 65,932.58 in Fables USDG/eUSD vaults), 9,288.59 frxUSD ($9,287.66 at $0.9999 oracle, 6.30%), 8.436286 eSPY ($6,158.36 at $729.9847 legacy Chainlink oracle, 4.18%), and 0.1323 WETH ($227.93 at $1,722.8095 Chainlink oracle, 0.15%). Because EUSDLiquidityManager vaults hold concentrated-liquidity positions whose external-token vs self-minted eUSD mix shifts with Fables pool ticks, Pharos uses curated-validated with live Robinhood Chain totalSupply() checks.",
+    "compositionBasis": "Pinned Robinhood Chain on-chain reads of EUSDPsm ERC-20 reserves, FablesAdapter vault holdings() excluding self-minted eUSD, and EUSDManager totalCollateral() valued via Own's on-chain ChainlinkOracleVerifier at block 124275851 (2026-11-27T13:16:48Z)",
+    "compositionAsOf": "2026-11-27",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All active collateral buckets and debt totals are read directly from Robinhood Chain contracts, with self-minted eUSD inside Fables LP ranges excluded from external reserves. Concentrated-liquidity LP vault composition shifts dynamically as pool prices move, and security reviews published in own-protocol/own-v2/audits were multi-agent adversarial reviews rather than audits by a named independent human security firm.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 2,
+        "reserveName": "eSPY (Own tokenized S&P 500 ETF, legacy v1 CDP)",
+        "pct": 4.18,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "eSPY is Own's tokenized S&P 500 equity exposure token on Robinhood Chain, not a stablecoin tracked in the Pharos catalog."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "WETH (Wrapped Ether, Manager B CDP)",
+        "pct": 0.15,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "WETH is wrapped Ether on Robinhood Chain, a volatile cryptoasset not tracked as a stablecoin in the Pharos catalog."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Own Robinhood Chain smart contracts (EUSDPsm, EUSDManagers, and FablesAdapter LP beacon vaults)",
+        "role": "other",
+        "sharePct": 100
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Listing Policy v2 PR-3 Batch 5 addition review 2026-11-27",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Own Robinhood Chain deployment record",
+        "url": "https://github.com/own-protocol/own-v2/blob/main/docs/contracts-robinhood.md"
+      },
+      {
+        "label": "Own governance and trust model documentation",
+        "url": "https://docs.own.money/protocol/governance"
+      },
+      {
+        "label": "Own EUSDLiquidityManager documentation",
+        "url": "https://docs.own.money/eusd/lp"
+      }
+    ],
+    "uncertainty": "Collateral sits in Robinhood Chain smart contracts: idle USDG in EUSDPsm, isolated ERC-20 balances in EUSDManagers, and concentrated-liquidity Fables DEX ranges inside per-user beacon proxy vaults (making DEX deployment inherent to EUSDLiquidityManager positions). All minter managers, PSM, and vault beacons remain upgradeable without delay by the 3-of-5 Governance Safe, with no statutory bankruptcy-remote custody wrapper."
+  }
+}

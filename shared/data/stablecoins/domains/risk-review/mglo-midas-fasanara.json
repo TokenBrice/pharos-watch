@@ -1,0 +1,816 @@
+{
+  "id": "mglo-midas-fasanara",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Midas contracts deployment registry (addresses.ts)",
+        "url": "https://github.com/midas-apps/contracts/blob/main/config/constants/addresses.ts"
+      },
+      {
+        "label": "Midas PoR v2 canonical token registry (tokens.json)",
+        "url": "https://raw.githubusercontent.com/midas-apps/midas-por-v2/main/tokens.json"
+      },
+      {
+        "label": "Base mGLO verified implementation source (Sourcify exact match)",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0xa311dce4469159300abe083fdba21431ec690753?fields=all"
+      },
+      {
+        "label": "Robinhood Chain mGLO verified implementation source (Sourcify exact match)",
+        "url": "https://sourcify.dev/server/v2/contract/4663/0xf29aef8cbe31e5d257d6d3afab1580de8210f650?fields=all"
+      },
+      {
+        "label": "Ethereum mGLO verified implementation source (Sourcify exact match)",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xeeb64d1431c9297a3c77c3660be2195bfae553ac?fields=all"
+      },
+      {
+        "label": "Pinned Base RPC reads (block 62967570)",
+        "url": "https://mainnet.base.org"
+      },
+      {
+        "label": "Pinned Robinhood Chain RPC reads (block 124271103)",
+        "url": "https://rpc.mainnet.chain.robinhood.com"
+      }
+    ],
+    "evidence": "Reviewed 2026-11-27 at Base finalized block 62967570 (2026-11-27T12:51:29Z), Robinhood Chain block 124271103, and Ethereum finalized block 26506658. Unlike sister token mGLOBAL (which inherits mTokenPermissioned with a transfer greenlist), Sourcify exact-match mGLO.sol (Base impl 0xa311dce4469159300abe083fdba21431ec690753, Robinhood impl 0xf29aef8cbe31e5d257d6d3afab1580de8210f650, Ethereum impl 0xeeb64d1431c9297a3c77c3660be2195bfae553ac) inherits mToken and Blacklistable: _beforeTokenTransfer enforces _onlyNotBlacklisted against BLACKLISTED_ROLE on both sender and recipient, while M_GLO_PAUSE_OPERATOR_ROLE can pause transfers and M_GLO_BURN_OPERATOR_ROLE can burn tokens from arbitrary accounts. On Base MidasAccessControl 0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b, BLACKLIST_OPERATOR_ROLE is held by 0x2facac0cda0225d7acca792821164b398c26bbd2 and DEFAULT_ADMIN_ROLE is held by 1-of-3 Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89 and EOA 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227. On Robinhood Chain MidasAccessControl 0xe5f087203f9e7a6104c821ec25b1f0a4505d3cb5, DEFAULT_ADMIN_ROLE is held by 1-of-3 Safe 0x563e0fc290d535fc5549873aece97a16b001b9ed and EOA 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227, and M_GLO_BURN_OPERATOR_ROLE is held by operator EOA 0xa13f82f679e24ad08e014f8af6ece32023b14f07. Because issuer operators can blacklist any holder, pause transfers, or burn balances directly, reviewedStatus is true.",
+    "reviewer": "Pharos Listing Policy v2 PR-3 Batch 1",
+    "reviewedAt": "2026-11-27"
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "mGLO is an issuer NAV-accreting tokenized certificate, not a market-priced asset. On Base, the canonical mGLO/USD oracle proxy 0x6b593a5fabb90f36e125562db833f761d274fcbc delegates to MGloCustomAggregatorFeed implementation 0x4a0a3eab5c75173c760b5a50a8570e5d20d9cc94 behind ProxyAdmin 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac, where Midas feed admins manually submit NAV updates validated against strategy-manager and JTC Luxembourg valuations. Third-party oracle networks are documented only for payment-token pricing; the certificate's own valuation authority is internal. At Base finalized block 62965587 (2026-11-27T12:44:53Z), latestRoundData() returned $1.01720039 (roundId 8, 8 decimals, updatedAt 2026-11-25T13:41:55Z).",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-11-27",
+      "reviewer": "Pharos Listing Policy v2 PR-3 Batch 1",
+      "rationale": "mGLO represents a managed private-credit fund share whose mint and redemption pricing come from the issuer NAV. No borrower market is owned by mGLO itself; external lending markets such as Morpho Base vaults that accept mGLO as collateral are downstream integrations rather than the certificate's own pricing mechanism.",
+      "sources": [
+        {
+          "label": "Base MGloCustomAggregatorFeed implementation (Blockscout)",
+          "url": "https://base.blockscout.com/address/0x4a0a3eab5c75173c760b5a50a8570e5d20d9cc94"
+        },
+        {
+          "label": "Pinned Base mGLO/USD oracle read at block 62965587 (0x6b593a5f...fcbc -> impl 0x4a0a3eab...cc94)",
+          "url": "https://mainnet.base.org"
+        }
+      ]
+    },
+    "paths": [
+      {
+        "id": "mglo-usd-oracle-base",
+        "chain": "base",
+        "address": "0x6b593a5fabb90f36e125562db833f761d274fcbc",
+        "pricingAuthority": "internal-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-11-27",
+          "reviewer": "Pharos Listing Policy v2 PR-3 Batch 1",
+          "confidence": "verified",
+          "rationale": "The Base mGLO/USD oracle proxy 0x6b593a5fabb90f36e125562db833f761d274fcbc (MGloCustomAggregatorFeed implementation 0x4a0a3eab5c75173c760b5a50a8570e5d20d9cc94) is the on-chain carrier of Midas's manually submitted NAV rather than an independently medianized market feed.",
+          "sources": [
+            {
+              "label": "Base mGLO/USD oracle proxy (Blockscout)",
+              "url": "https://base.blockscout.com/address/0x6b593a5fabb90f36e125562db833f761d274fcbc"
+            },
+            {
+              "label": "Base MGloCustomAggregatorFeed implementation (Blockscout)",
+              "url": "https://base.blockscout.com/address/0x4a0a3eab5c75173c760b5a50a8570e5d20d9cc94"
+            }
+          ]
+        }
+      }
+    ],
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 PR-3 Batch 1",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Midas mGLO November 25, 2026 SAVE attestation (JTC Luxembourg valuation email)",
+        "url": "https://gateway.pinata.cloud/ipfs/QmeNwyuVyhM5HvEFfKZH9j7zCCvGrLwCBf1hYeWsTocMt1"
+      },
+      {
+        "label": "Base MGloCustomAggregatorFeed implementation (Blockscout)",
+        "url": "https://base.blockscout.com/address/0x4a0a3eab5c75173c760b5a50a8570e5d20d9cc94"
+      },
+      {
+        "label": "Base mGLO/USD oracle proxy 0x6b593a5fabb90f36e125562db833f761d274fcbc",
+        "url": "https://base.blockscout.com/address/0x6b593a5fabb90f36e125562db833f761d274fcbc"
+      },
+      {
+        "label": "Pinned Base block 62965587 latestRoundData and EIP-1967 reads",
+        "url": "https://mainnet.base.org"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "mGLO has native issuer deployments on Base, Robinhood Chain, and Ethereum, interconnected with X Layer, Optimism, and Monad through immutable 27,366-byte LayerZero V2 MidasLzMintBurnOFTAdapter contracts. Verified adapters directly burn source-chain mGLO and mint destination-chain mGLO with zero locked token escrow across all six chains, making supply additive across all six deployments. Adapter owners (1-of-3 Midas Safes) can change peers, endpoint configuration, and rate limits, while X Layer, Optimism, and Monad representation-chain operator, admin, and proxy-upgrade controls remain material Bridge Risk surfaces.",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 PR-3 Batch 1",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "Midas LzMintBurnOFTAdapter",
+        "slug": "midas-lz-mint-burn-oft-adapter",
+        "url": "https://github.com/midas-apps/contracts/blob/main/config/constants/addresses.ts",
+        "bridgeTypes": [
+          "burn-mint",
+          "LayerZero V2"
+        ]
+      },
+      {
+        "source": "docs",
+        "name": "LayerZero V2",
+        "slug": "layerzero",
+        "url": "https://docs.layerzero.network/v2/get-started/overview",
+        "bridgeTypes": [
+          "external-validated-network"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Midas PoR v2 canonical token registry",
+        "url": "https://raw.githubusercontent.com/midas-apps/midas-por-v2/main/tokens.json"
+      },
+      {
+        "label": "Base MidasLzMintBurnOFTAdapter verified source (Sourcify)",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0xd9b8f9352078e1259adcdc390add39bc3063bf07?fields=all"
+      },
+      {
+        "label": "Robinhood Chain MidasLzMintBurnOFTAdapter verified source (Sourcify)",
+        "url": "https://sourcify.dev/server/v2/contract/4663/0xc7d9168e70faf282aa6b0ecbef7af2c9c5c146f9?fields=all"
+      },
+      {
+        "label": "Ethereum MidasLzMintBurnOFTAdapter verified source (Sourcify)",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xa54712d1699258a85d91abd47ed9d1aa2bb00191?fields=all"
+      },
+      {
+        "label": "X Layer MidasLzMintBurnOFTAdapter verified source (Sourcify)",
+        "url": "https://sourcify.dev/server/v2/contract/196/0xbe9207ba066042caeab7a5f957a61bcb357f2cbc?fields=all"
+      },
+      {
+        "label": "Optimism MidasLzMintBurnOFTAdapter verified source (Sourcify)",
+        "url": "https://sourcify.dev/server/v2/contract/10/0x969b3d76a925402faca4d905f78ef9922ad8158e?fields=all"
+      },
+      {
+        "label": "LayerZero V2 overview",
+        "url": "https://docs.layerzero.network/v2/get-started/overview"
+      }
+    ],
+    "routes": [
+      {
+        "id": "base:0xfcc9cc1209651ed8867332d6f664cf82743a2584",
+        "destinationChain": "base",
+        "canonicalChain": "base",
+        "contractAddress": "0xfcc9cc1209651ed8867332d6f664cf82743a2584",
+        "protocol": "Midas native issuance with canonical-side LayerZero V2 adapter",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Base is the primary canonical mGLO deployment listed in midas-por-v2 tokens.json and hosts the canonical mGLO/USD NAV oracle (0x6b593a5f...fcbc). At finalized Base block 62967570 (2026-11-27T12:51:29Z), totalSupply was 102,420,370.864525 mGLO, operator EOA 0xa13f82f6... held M_GLO_MINT_OPERATOR_ROLE, and canonical-side immutable MidasLzMintBurnOFTAdapter 0xd9b8f9352078e1259adcdc390add39bc3063bf07 (Sourcify verified, zero locked token balance) used LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c under owner Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-27",
+        "observedBlock": 62967570,
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:base:0xd9b8f9352078e1259adcdc390add39bc3063bf07",
+          "safe:base:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89"
+        ],
+        "sources": [
+          {
+            "label": "Midas PoR v2 canonical token registry",
+            "url": "https://raw.githubusercontent.com/midas-apps/midas-por-v2/main/tokens.json"
+          },
+          {
+            "label": "Base mGLO verified implementation (Sourcify)",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xa311dce4469159300abe083fdba21431ec690753?fields=all"
+          },
+          {
+            "label": "Base MidasLzMintBurnOFTAdapter verified source (Sourcify)",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xd9b8f9352078e1259adcdc390add39bc3063bf07?fields=all"
+          },
+          {
+            "label": "Pinned Base block 62967570 RPC reads",
+            "url": "https://mainnet.base.org"
+          }
+        ]
+      },
+      {
+        "id": "robinhood:0xfed493f38c1aacb4ea4e6a11f8b9287849ee0096",
+        "destinationChain": "robinhood",
+        "canonicalChain": "robinhood",
+        "contractAddress": "0xfed493f38c1aacb4ea4e6a11f8b9287849ee0096",
+        "protocol": "Midas native issuance with canonical-side LayerZero V2 adapter",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Robinhood Chain is a canonical native Midas mGLO issuance deployment, not a bridge-locked wrapper. At block 124269432 (2026-11-27T13:05:24Z), totalSupply was 76,814,424.187131 mGLO (34.81% of six-chain supply). M_GLO_MINT_OPERATOR_ROLE on Robinhood MidasAccessControl 0xe5f08720...3cb5 is held by shared operator EOA 0xa13f82f6..., local DepositVault proxy 0x2a3b139ea78cc54290c672162e2b6a8c486f4791 (impl 0x51a8a7d93e832d3288bf77cd4a47fa41003e3536), and immutable MidasLzMintBurnOFTAdapter 0xc7d9168e70faf282aa6b0ecbef7af2c9c5c146f9 (Sourcify verified, EID 30416, endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, owner Robinhood 1-of-3 Safe 0x563e0fc290d535fc5549873aece97a16b001b9ed, zero locked mGLO balance). Direct burn-and-mint semantics prove additive supply.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-27",
+        "observedBlock": 124269432,
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:robinhood:0xc7d9168e70faf282aa6b0ecbef7af2c9c5c146f9",
+          "safe:robinhood:0x563e0fc290d535fc5549873aece97a16b001b9ed"
+        ],
+        "sources": [
+          {
+            "label": "Robinhood Chain mGLO verified implementation (Sourcify)",
+            "url": "https://sourcify.dev/server/v2/contract/4663/0xf29aef8cbe31e5d257d6d3afab1580de8210f650?fields=all"
+          },
+          {
+            "label": "Robinhood Chain MidasLzMintBurnOFTAdapter verified source (Sourcify)",
+            "url": "https://sourcify.dev/server/v2/contract/4663/0xc7d9168e70faf282aa6b0ecbef7af2c9c5c146f9?fields=all"
+          },
+          {
+            "label": "Pinned Robinhood Chain block 124269432 RPC reads",
+            "url": "https://rpc.mainnet.chain.robinhood.com"
+          }
+        ]
+      },
+      {
+        "id": "ethereum:0x1dd91a111606382b77a917633ed90feaf25e0f76",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x1dd91a111606382b77a917633ed90feaf25e0f76",
+        "protocol": "Midas native issuance with canonical-side LayerZero V2 adapter",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Ethereum is a canonical native Midas mGLO issuance deployment. At finalized Ethereum block 26506658 (2026-11-27T12:51:35Z), totalSupply was 38,514,074.249042 mGLO (17.46% of six-chain supply). M_GLO_MINT_OPERATOR_ROLE on Ethereum MidasAccessControl 0x0312a9d1...ac4b is held by shared operator EOA 0xa13f82f6..., verified MGloDepositVault proxy 0xe6522c0b034eb725bb03d5cf957abec1d2566e91 (impl 0x2e37f3adbc7c22b0c31ce31e878af6d67439a04d), and immutable MidasLzMintBurnOFTAdapter 0xa54712d1699258a85d91abd47ed9d1aa2bb00191 (Sourcify verified, zero locked balance, endpoint 0x1a44076050125825900e736c501f859c50fe728c, owner Safe 0xb60842e9...).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-27",
+        "observedBlock": 26506658,
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0xa54712d1699258a85d91abd47ed9d1aa2bb00191",
+          "safe:ethereum:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89"
+        ],
+        "sources": [
+          {
+            "label": "Ethereum mGLO verified implementation (Sourcify)",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xeeb64d1431c9297a3c77c3660be2195bfae553ac?fields=all"
+          },
+          {
+            "label": "Ethereum MGloDepositVault verified implementation (Sourcify)",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x2e37f3adbc7c22b0c31ce31e878af6d67439a04d?fields=all"
+          },
+          {
+            "label": "Ethereum MidasLzMintBurnOFTAdapter verified source (Sourcify)",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xa54712d1699258a85d91abd47ed9d1aa2bb00191?fields=all"
+          },
+          {
+            "label": "Pinned Ethereum block 26506658 RPC reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ]
+      },
+      {
+        "id": "xlayer:0x45ec1a004142e1874ceb8f022ee4bb14edf37b4a",
+        "sourceChain": "ethereum",
+        "destinationChain": "xlayer",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x45ec1a004142e1874ceb8f022ee4bb14edf37b4a",
+        "protocol": "Midas LzMintBurnOFTAdapter (LayerZero V2)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "X Layer is a LayerZero V2 burn-and-mint extension of mGLO peering exclusively with the Ethereum hub adapter (EID 30101 = 0xa54712d1699258a85d91abd47ed9d1aa2bb00191). At X Layer block 77015690 (2026-11-27T13:05:26Z), totalSupply was 2,891,408.006517 mGLO (1.31% of six-chain supply), verified impl 0xe8194b507a01b3b1bcc53418e58ed6830fa9bd24. Immutable MidasLzMintBurnOFTAdapter 0xbe9207ba066042caeab7a5f957a61bcb357f2cbc (Sourcify verified, EID 30274, endpoint 0x1a440760..., owner Safe 0xb60842e9..., zero locked balance, 5M mGLO / 86400s rate limit) holds M_GLO_MINT_OPERATOR_ROLE and M_GLO_BURN_OPERATOR_ROLE alongside operator EOA 0xa13f82f6.... ProxyAdmin 0xc17d1b3b... is owned by Timelock 0xa2f07f6c... (604800s delay, 1-of-3 Safe proposer).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-27",
+        "observedBlock": 77015690,
+        "controllerChain": "xlayer",
+        "controllerAddress": "0xbe9207ba066042caeab7a5f957a61bcb357f2cbc",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:ethereum:0xa54712d1699258a85d91abd47ed9d1aa2bb00191",
+          "contract:xlayer:0xbe9207ba066042caeab7a5f957a61bcb357f2cbc",
+          "safe:xlayer:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+          "access-control:xlayer:0x4b150a2f57b898c64f6f8d0b3fefa9faf22b8994"
+        ],
+        "sources": [
+          {
+            "label": "X Layer mGLO verified implementation (Sourcify)",
+            "url": "https://sourcify.dev/server/v2/contract/196/0xe8194b507a01b3b1bcc53418e58ed6830fa9bd24?fields=all"
+          },
+          {
+            "label": "X Layer MidasLzMintBurnOFTAdapter verified source (Sourcify)",
+            "url": "https://sourcify.dev/server/v2/contract/196/0xbe9207ba066042caeab7a5f957a61bcb357f2cbc?fields=all"
+          },
+          {
+            "label": "Pinned X Layer block 77015690 RPC reads",
+            "url": "https://rpc.xlayer.tech"
+          }
+        ]
+      },
+      {
+        "id": "optimism:0x1eaf7cceaa5dc6d605760718722fbcc58579b3ff",
+        "sourceChain": "ethereum",
+        "destinationChain": "optimism",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x1eaf7cceaa5dc6d605760718722fbcc58579b3ff",
+        "protocol": "Midas LzMintBurnOFTAdapter (LayerZero V2)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Optimism is a LayerZero V2 burn-and-mint extension of mGLO peering exclusively with the Ethereum hub adapter (EID 30101 = 0xa54712d1699258a85d91abd47ed9d1aa2bb00191) with dust supply (0.199960 mGLO at block 160093004, 2026-11-27T13:06:25Z). Verified impl 0x6a2a00b07fef2beeca67c454b093963789d9d194. Immutable MidasLzMintBurnOFTAdapter 0x969b3d76a925402faca4d905f78ef9922ad8158e (Sourcify verified, EID 30111, endpoint 0x1a440760..., owner Safe 0xb60842e9..., zero locked balance, 5M mGLO / 86400s rate limit) holds M_GLO_MINT_OPERATOR_ROLE and M_GLO_BURN_OPERATOR_ROLE alongside operator EOA 0xa13f82f6....",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-27",
+        "observedBlock": 160093004,
+        "controllerChain": "optimism",
+        "controllerAddress": "0x969b3d76a925402faca4d905f78ef9922ad8158e",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:ethereum:0xa54712d1699258a85d91abd47ed9d1aa2bb00191",
+          "contract:optimism:0x969b3d76a925402faca4d905f78ef9922ad8158e",
+          "safe:optimism:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+          "access-control:optimism:0x08d0016ac2cf7027d460b2816ea3d0e74617bef8"
+        ],
+        "sources": [
+          {
+            "label": "Optimism mGLO verified implementation (Sourcify)",
+            "url": "https://sourcify.dev/server/v2/contract/10/0x6a2a00b07fef2beeca67c454b093963789d9d194?fields=all"
+          },
+          {
+            "label": "Optimism MidasLzMintBurnOFTAdapter verified source (Sourcify)",
+            "url": "https://sourcify.dev/server/v2/contract/10/0x969b3d76a925402faca4d905f78ef9922ad8158e?fields=all"
+          },
+          {
+            "label": "Pinned Optimism block 160093004 RPC reads",
+            "url": "https://mainnet.optimism.io"
+          }
+        ]
+      },
+      {
+        "id": "monad:0x785175a1ae5a8bcd3230e01178ba375f5f2125fe",
+        "sourceChain": "ethereum",
+        "destinationChain": "monad",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x785175a1ae5a8bcd3230e01178ba375f5f2125fe",
+        "protocol": "Midas LzMintBurnOFTAdapter (LayerZero V2)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Monad is a LayerZero V2 burn-and-mint extension of mGLO peering exclusively with the Ethereum hub adapter (EID 30101 = 0xa54712d1699258a85d91abd47ed9d1aa2bb00191) with dust supply (0.034851 mGLO at block 125868406, 2026-11-27T13:05:28Z). Adapter 0xa69bfcc664e808176484fa427fb2bfcb096531ef (27,366-byte non-proxy runtime matching MidasLzMintBurnOFTAdapter, EID 30390, endpoint 0x6f475642..., owner Safe 0xb60842e9..., zero locked balance, 1M mGLO / 86400s rate limit) holds M_GLO_MINT_OPERATOR_ROLE and M_GLO_BURN_OPERATOR_ROLE alongside operator EOA 0xa13f82f6....",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-27",
+        "observedBlock": 125868406,
+        "controllerChain": "monad",
+        "controllerAddress": "0xa69bfcc664e808176484fa427fb2bfcb096531ef",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:ethereum:0xa54712d1699258a85d91abd47ed9d1aa2bb00191",
+          "contract:monad:0xa69bfcc664e808176484fa427fb2bfcb096531ef",
+          "safe:monad:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+          "access-control:monad:0x9379dbb132131c0a9e719a4d74e54b8dd0a4a75f"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Monad block 125868406 RPC reads",
+            "url": "https://monad-mainnet.drpc.org"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "mglo-base-layerzero-adapter",
+        "label": "mGLO Base LayerZero mint/burn adapter",
+        "routeRefs": [
+          "base:0xfcc9cc1209651ed8867332d6f664cf82743a2584"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xd9b8f9352078e1259adcdc390add39bc3063bf07",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:base:0xd9b8f9352078e1259adcdc390add39bc3063bf07",
+          "safe:base:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c links Base EID 30184 exclusively to Ethereum hub adapter 0xa54712d1699258a85d91abd47ed9d1aa2bb00191 (EID 30101).",
+          "rateLimits": "Configured 15,000,000 mGLO per 86,400-second window to Ethereum EID 30101 (observed at Base block 62986936).",
+          "lockboxOrEscrow": "Direct burn-and-mint adapter; locked mGLO balance on the adapter contract is zero.",
+          "pausersAdminsUpgraders": "Immutable non-proxy 27,366-byte runtime owned by 1-of-3 Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89, which can reconfigure peers and rate limits."
+        },
+        "capDescription": "Burns source mGLO and mints destination mGLO via authenticated LayerZero V2 messages; route rate limits are owner-configurable and do not cap native issuer minting.",
+        "canRaiseCap": false,
+        "observedAt": "2026-11-27",
+        "observedBlock": 62967570,
+        "sources": [
+          {
+            "label": "Base MidasLzMintBurnOFTAdapter verified source (Sourcify)",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xd9b8f9352078e1259adcdc390add39bc3063bf07?fields=all"
+          },
+          {
+            "label": "Pinned Base RPC reads",
+            "url": "https://mainnet.base.org"
+          }
+        ],
+        "evidence": "At Base block 62967570 (peers and rateLimits re-confirmed at block 62986936), immutable MidasLzMintBurnOFTAdapter 0xd9b8f9352078e1259adcdc390add39bc3063bf07 pointed to Base mGLO 0xfcc9cc1209651ed8867332d6f664cf82743a2584, peered exclusively with Ethereum EID 30101 (15M mGLO / 86400s rate limit), held M_GLO_MINT_OPERATOR_ROLE and M_GLO_BURN_OPERATOR_ROLE, held zero locked mGLO, and was owned by 1-of-3 Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89."
+      },
+      {
+        "id": "mglo-robinhood-layerzero-adapter",
+        "label": "mGLO Robinhood Chain LayerZero mint/burn adapter",
+        "routeRefs": [
+          "robinhood:0xfed493f38c1aacb4ea4e6a11f8b9287849ee0096"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "robinhood",
+        "controllerAddress": "0xc7d9168e70faf282aa6b0ecbef7af2c9c5c146f9",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:robinhood:0xc7d9168e70faf282aa6b0ecbef7af2c9c5c146f9",
+          "safe:robinhood:0x563e0fc290d535fc5549873aece97a16b001b9ed"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "LayerZero V2 endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b links Robinhood Chain EID 30416 exclusively to Ethereum hub adapter 0xa54712d1699258a85d91abd47ed9d1aa2bb00191 (EID 30101).",
+          "rateLimits": "Configured 15,000,000 mGLO per 86,400-second window to Ethereum EID 30101 (observed at Robinhood block 124298215).",
+          "lockboxOrEscrow": "Direct burn-and-mint adapter; locked mGLO balance is zero.",
+          "pausersAdminsUpgraders": "Immutable 27,366-byte runtime owned by Robinhood 1-of-3 Safe 0x563e0fc290d535fc5549873aece97a16b001b9ed."
+        },
+        "capDescription": "Canonical-side LayerZero burn-and-mint adapter for Robinhood Chain mGLO; route limits are owner-configurable and do not replace Robinhood native minting.",
+        "canRaiseCap": false,
+        "observedAt": "2026-11-27",
+        "observedBlock": 124269432,
+        "sources": [
+          {
+            "label": "Robinhood Chain MidasLzMintBurnOFTAdapter verified source (Sourcify)",
+            "url": "https://sourcify.dev/server/v2/contract/4663/0xc7d9168e70faf282aa6b0ecbef7af2c9c5c146f9?fields=all"
+          },
+          {
+            "label": "Pinned Robinhood Chain RPC reads",
+            "url": "https://rpc.mainnet.chain.robinhood.com"
+          }
+        ],
+        "evidence": "At Robinhood Chain block 124269432 (peers and rateLimits re-confirmed at block 124298215), Sourcify-verified MidasLzMintBurnOFTAdapter 0xc7d9168e70faf282aa6b0ecbef7af2c9c5c146f9 pointed to Robinhood mGLO 0xfed493f38c1aacb4ea4e6a11f8b9287849ee0096, peered exclusively with Ethereum EID 30101 (15M mGLO / 86400s rate limit), held M_GLO_MINT_OPERATOR_ROLE and M_GLO_BURN_OPERATOR_ROLE, held zero locked tokens, and was owned by 1-of-3 Safe 0x563e0fc290d535fc5549873aece97a16b001b9ed."
+      },
+      {
+        "id": "mglo-ethereum-layerzero-adapter",
+        "label": "mGLO Ethereum LayerZero hub mint/burn adapter",
+        "routeRefs": [
+          "ethereum:0x1dd91a111606382b77a917633ed90feaf25e0f76",
+          "base:0xfcc9cc1209651ed8867332d6f664cf82743a2584",
+          "robinhood:0xfed493f38c1aacb4ea4e6a11f8b9287849ee0096",
+          "xlayer:0x45ec1a004142e1874ceb8f022ee4bb14edf37b4a",
+          "optimism:0x1eaf7cceaa5dc6d605760718722fbcc58579b3ff",
+          "monad:0x785175a1ae5a8bcd3230e01178ba375f5f2125fe"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xa54712d1699258a85d91abd47ed9d1aa2bb00191",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:ethereum:0xa54712d1699258a85d91abd47ed9d1aa2bb00191",
+          "safe:ethereum:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c links Ethereum hub EID 30101 to all five spoke mGLO adapters: Base (30184), Robinhood Chain (30416), Optimism (30111), X Layer (30274), and Monad (30390).",
+          "rateLimits": "Configured 86,400-second windows: 15M mGLO for Base (30184) and Robinhood (30416), 5M mGLO for X Layer (30274) and Optimism (30111), and 1M mGLO for Monad (30390) (observed at Ethereum block 26506980).",
+          "lockboxOrEscrow": "Direct burn-and-mint adapter; locked mGLO balance is zero.",
+          "pausersAdminsUpgraders": "Immutable 27,366-byte runtime owned by 1-of-3 Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89."
+        },
+        "capDescription": "Canonical-side Ethereum LayerZero hub burn-and-mint adapter routing all five spoke chains; owner Safe configures peer mappings and daily rate limits.",
+        "canRaiseCap": false,
+        "observedAt": "2026-11-27",
+        "observedBlock": 26506658,
+        "sources": [
+          {
+            "label": "Ethereum MidasLzMintBurnOFTAdapter verified source (Sourcify)",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xa54712d1699258a85d91abd47ed9d1aa2bb00191?fields=all"
+          },
+          {
+            "label": "Pinned Ethereum block 26506658 RPC reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 26506658 (peers and rateLimits re-confirmed at block 26506980), Sourcify-verified MidasLzMintBurnOFTAdapter 0xa54712d1699258a85d91abd47ed9d1aa2bb00191 pointed to Ethereum mGLO 0x1dd91a111606382b77a917633ed90feaf25e0f76, held M_GLO_MINT_OPERATOR_ROLE and M_GLO_BURN_OPERATOR_ROLE, held zero locked mGLO, and functioned as the hub adapter peering with all five spoke mGLO chains."
+      },
+      {
+        "id": "mglo-xlayer-layerzero-adapter",
+        "label": "mGLO X Layer LayerZero mint/burn adapter",
+        "routeRefs": [
+          "xlayer:0x45ec1a004142e1874ceb8f022ee4bb14edf37b4a"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "xlayer",
+        "controllerAddress": "0xbe9207ba066042caeab7a5f957a61bcb357f2cbc",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:xlayer:0xbe9207ba066042caeab7a5f957a61bcb357f2cbc",
+          "safe:xlayer:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c links X Layer EID 30274 exclusively to Ethereum hub adapter 0xa54712d1699258a85d91abd47ed9d1aa2bb00191 (EID 30101).",
+          "rateLimits": "Configured 5,000,000 mGLO per 86,400-second window to Ethereum EID 30101 (observed at X Layer block 77018727).",
+          "lockboxOrEscrow": "Direct burn-and-mint adapter; locked mGLO balance is zero.",
+          "pausersAdminsUpgraders": "Immutable 27,366-byte runtime owned by 1-of-3 Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89."
+        },
+        "capDescription": "Authenticated X Layer burn-and-mint bridge rail; separate operator EOA mint role and admin roles remain active on X Layer.",
+        "canRaiseCap": false,
+        "observedAt": "2026-11-27",
+        "observedBlock": 77015690,
+        "sources": [
+          {
+            "label": "X Layer MidasLzMintBurnOFTAdapter verified source (Sourcify)",
+            "url": "https://sourcify.dev/server/v2/contract/196/0xbe9207ba066042caeab7a5f957a61bcb357f2cbc?fields=all"
+          },
+          {
+            "label": "Pinned X Layer RPC reads",
+            "url": "https://rpc.xlayer.tech"
+          }
+        ],
+        "evidence": "At X Layer block 77015690 (peers and rateLimits re-confirmed at block 77018727), Sourcify-verified MidasLzMintBurnOFTAdapter 0xbe9207ba066042caeab7a5f957a61bcb357f2cbc held M_GLO_MINT_OPERATOR_ROLE and M_GLO_BURN_OPERATOR_ROLE with zero locked mGLO, peered exclusively with Ethereum EID 30101 (5M mGLO / 86400s rate limit), under owner Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89."
+      },
+      {
+        "id": "mglo-optimism-layerzero-adapter",
+        "label": "mGLO Optimism LayerZero mint/burn adapter",
+        "routeRefs": [
+          "optimism:0x1eaf7cceaa5dc6d605760718722fbcc58579b3ff"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "optimism",
+        "controllerAddress": "0x969b3d76a925402faca4d905f78ef9922ad8158e",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:optimism:0x969b3d76a925402faca4d905f78ef9922ad8158e",
+          "safe:optimism:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c links Optimism EID 30111 exclusively to Ethereum hub adapter 0xa54712d1699258a85d91abd47ed9d1aa2bb00191 (EID 30101).",
+          "rateLimits": "Configured 5,000,000 mGLO per 86,400-second window to Ethereum EID 30101 (observed at Optimism block 160094493).",
+          "lockboxOrEscrow": "Direct burn-and-mint adapter; locked mGLO balance is zero.",
+          "pausersAdminsUpgraders": "Immutable 27,366-byte runtime owned by 1-of-3 Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89."
+        },
+        "capDescription": "Authenticated Optimism burn-and-mint bridge rail.",
+        "canRaiseCap": false,
+        "observedAt": "2026-11-27",
+        "observedBlock": 160093004,
+        "sources": [
+          {
+            "label": "Optimism MidasLzMintBurnOFTAdapter verified source (Sourcify)",
+            "url": "https://sourcify.dev/server/v2/contract/10/0x969b3d76a925402faca4d905f78ef9922ad8158e?fields=all"
+          },
+          {
+            "label": "Pinned Optimism RPC reads",
+            "url": "https://mainnet.optimism.io"
+          }
+        ],
+        "evidence": "At Optimism block 160093004 (peers and rateLimits re-confirmed at block 160094493), Sourcify-verified MidasLzMintBurnOFTAdapter 0x969b3d76a925402faca4d905f78ef9922ad8158e held M_GLO_MINT_OPERATOR_ROLE and M_GLO_BURN_OPERATOR_ROLE with zero locked mGLO, peered exclusively with Ethereum EID 30101 (5M mGLO / 86400s rate limit), under owner Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89."
+      },
+      {
+        "id": "mglo-monad-layerzero-adapter",
+        "label": "mGLO Monad LayerZero mint/burn adapter",
+        "routeRefs": [
+          "monad:0x785175a1ae5a8bcd3230e01178ba375f5f2125fe"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0xa69bfcc664e808176484fa427fb2bfcb096531ef",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:monad:0xa69bfcc664e808176484fa427fb2bfcb096531ef",
+          "safe:monad:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "LayerZero V2 endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b links Monad EID 30390 exclusively to Ethereum hub adapter 0xa54712d1699258a85d91abd47ed9d1aa2bb00191 (EID 30101).",
+          "rateLimits": "Configured 1,000,000 mGLO per 86,400-second window to Ethereum EID 30101 (observed at Monad block 125878459).",
+          "lockboxOrEscrow": "Direct burn-and-mint adapter; locked mGLO balance is zero.",
+          "pausersAdminsUpgraders": "Immutable 27,366-byte runtime owned by 1-of-3 Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89."
+        },
+        "capDescription": "Authenticated Monad burn-and-mint bridge rail.",
+        "canRaiseCap": false,
+        "observedAt": "2026-11-27",
+        "observedBlock": 125868406,
+        "sources": [
+          {
+            "label": "Pinned Monad RPC reads",
+            "url": "https://monad-mainnet.drpc.org"
+          }
+        ],
+        "evidence": "At Monad block 125868406 (peers and rateLimits re-confirmed at block 125878459), immutable 27,366-byte adapter 0xa69bfcc664e808176484fa427fb2bfcb096531ef pointed to Monad mGLO 0x785175a1ae5a8bcd3230e01178ba375f5f2125fe, peered exclusively with Ethereum EID 30101 (1M mGLO / 86400s rate limit), held M_GLO_MINT_OPERATOR_ROLE and M_GLO_BURN_OPERATOR_ROLE with zero locked mGLO, and was owned by Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89."
+      },
+      {
+        "id": "mglo-layerzero-adapter-owner-safe",
+        "label": "mGLO LayerZero adapter owner Safe (Base, Ethereum, X Layer, Optimism, Monad)",
+        "routeRefs": [
+          "base:0xfcc9cc1209651ed8867332d6f664cf82743a2584",
+          "ethereum:0x1dd91a111606382b77a917633ed90feaf25e0f76",
+          "xlayer:0x45ec1a004142e1874ceb8f022ee4bb14edf37b4a",
+          "optimism:0x1eaf7cceaa5dc6d605760718722fbcc58579b3ff",
+          "monad:0x785175a1ae5a8bcd3230e01178ba375f5f2125fe"
+        ],
+        "capabilities": [
+          "admin",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "safe:base:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+          "safe:ethereum:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+          "safe:xlayer:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+          "safe:optimism:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+          "safe:monad:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89"
+        ],
+        "authorityType": "safe",
+        "threshold": 1,
+        "signerCount": 3,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x8003544d32ee074aa8a1fb72129fa8ef7fe02e5f",
+            "0x82b30194beae06d991bc71850f949ec8cb7e0cb7",
+            "0xc50bd8430545c80a681c7cb33e6560fb0bd86880"
+          ],
+          "threshold": 1,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "version": "1.4.1",
+          "observedBlock": 62967570,
+          "observedAt": "2026-11-27",
+          "source": "onchain"
+        },
+        "routeChecks": {
+          "trustedPeerOrRemote": "Owns the Base, Ethereum, X Layer, Optimism, and Monad MidasLzMintBurnOFTAdapter deployments and configures all peer mappings.",
+          "pausersAdminsUpgraders": "1-of-3 Safe v1.4.1 with no enabled modules and zero guard observed on Base, Ethereum, X Layer, and Optimism."
+        },
+        "capDescription": "Can change LayerZero peer mappings, endpoint delegates, and route rate limits without timelock across five chains.",
+        "canRaiseCap": true,
+        "observedAt": "2026-11-27",
+        "observedBlock": 62967570,
+        "sources": [
+          {
+            "label": "Pinned Base block 62967570 Safe and adapter reads",
+            "url": "https://mainnet.base.org"
+          }
+        ],
+        "evidence": "On 2026-11-27, Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89 (1-of-3, v1.4.1, zero modules, zero guard) owned the LayerZero adapters on Base, Ethereum, X Layer, Optimism, and Monad."
+      },
+      {
+        "id": "mglo-robinhood-layerzero-adapter-owner-safe",
+        "label": "mGLO Robinhood Chain LayerZero adapter owner Safe",
+        "routeRefs": [
+          "robinhood:0xfed493f38c1aacb4ea4e6a11f8b9287849ee0096"
+        ],
+        "capabilities": [
+          "admin",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "robinhood",
+        "controllerAddress": "0x563e0fc290d535fc5549873aece97a16b001b9ed",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "safe:robinhood:0x563e0fc290d535fc5549873aece97a16b001b9ed"
+        ],
+        "authorityType": "safe",
+        "threshold": 1,
+        "signerCount": 3,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x8003544d32ee074aa8a1fb72129fa8ef7fe02e5f",
+            "0xc50bd8430545c80a681c7cb33e6560fb0bd86880",
+            "0x1eafc8db09345084e8f567a85eb8b701b5070306"
+          ],
+          "threshold": 1,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "version": "1.4.1",
+          "observedBlock": 124271103,
+          "observedAt": "2026-11-27",
+          "source": "onchain"
+        },
+        "routeChecks": {
+          "trustedPeerOrRemote": "Owns the Robinhood Chain MidasLzMintBurnOFTAdapter 0xc7d9168e70faf282aa6b0ecbef7af2c9c5c146f9 and configures its LayerZero peers and rate limits.",
+          "pausersAdminsUpgraders": "1-of-3 Safe v1.4.1 on Robinhood Chain with no enabled modules and zero guard."
+        },
+        "capDescription": "Can change Robinhood Chain LayerZero peer mappings and rate limits immediately without a timelock.",
+        "canRaiseCap": true,
+        "observedAt": "2026-11-27",
+        "observedBlock": 124271103,
+        "sources": [
+          {
+            "label": "Pinned Robinhood Chain RPC reads",
+            "url": "https://rpc.mainnet.chain.robinhood.com"
+          }
+        ],
+        "evidence": "At Robinhood Chain block 124271103, 1-of-3 Safe 0x563e0fc290d535fc5549873aece97a16b001b9ed (v1.4.1, zero modules, zero guard) owned the local MidasLzMintBurnOFTAdapter."
+      },
+      {
+        "id": "mglo-representation-operator-eoa",
+        "label": "mGLO X Layer, Optimism, and Monad representation mint operator EOA",
+        "routeRefs": [
+          "xlayer:0x45ec1a004142e1874ceb8f022ee4bb14edf37b4a",
+          "optimism:0x1eaf7cceaa5dc6d605760718722fbcc58579b3ff",
+          "monad:0x785175a1ae5a8bcd3230e01178ba375f5f2125fe"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "xlayer",
+        "controllerAddress": "0xa13f82f679e24ad08e014f8af6ece32023b14f07",
+        "failureDomainKeys": [
+          "eoa:xlayer:0xa13f82f679e24ad08e014f8af6ece32023b14f07",
+          "eoa:optimism:0xa13f82f679e24ad08e014f8af6ece32023b14f07",
+          "eoa:monad:0xa13f82f679e24ad08e014f8af6ece32023b14f07"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Holds M_GLO_MINT_OPERATOR_ROLE and M_GLO_BURN_OPERATOR_ROLE directly on the X Layer, Optimism, and Monad representation tokens with no on-chain cap.",
+        "canRaiseCap": false,
+        "observedAt": "2026-11-27",
+        "observedBlock": 77015690,
+        "sources": [
+          {
+            "label": "Pinned X Layer RPC reads",
+            "url": "https://rpc.xlayer.tech"
+          },
+          {
+            "label": "Pinned Optimism RPC reads",
+            "url": "https://mainnet.optimism.io"
+          },
+          {
+            "label": "Pinned Monad RPC reads",
+            "url": "https://monad-mainnet.drpc.org"
+          }
+        ],
+        "evidence": "On 2026-11-27, EOA 0xa13f82f679e24ad08e014f8af6ece32023b14f07 held M_GLO_MINT_OPERATOR_ROLE and M_GLO_BURN_OPERATOR_ROLE on X Layer, Optimism, and Monad MidasAccessControl deployments. Its native-chain mint roles on Base, Robinhood Chain, and Ethereum are separately scoped in Mint Authority."
+      }
+    ]
+  }
+}

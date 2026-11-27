@@ -13463,7 +13463,12 @@
         "source:80fe818516d947f4ed4b4ddf",
         "source:e53be4f55f26217e008cb06e",
         "source:d6e8c9fd4d7139105a208d4d"
-      ]
+      ],
+      "retired": {
+        "reviewedAt": "2026-11-27",
+        "reviewer": "Pharos Listing Policy v2 PR-3 review 2026-11-27",
+        "reason": "pyusd-paypal Stable deployment was reconciled from legacy Stargate Hydra PYUSD0 OFT representation (stable:0x99af3eea856556646c98c8b9b2548fe815240750, $1.14 supply) to Paxos native PYUSDUUPS deployment (stable:0x28f1f38a9f7db1f769a71af0a13e8bace2ab0e9f, $23.96M supply)"
+      }
     },
     {
       "reviewId": "i04usatb-pyusd-paypal-874bc47dc0d3c2e696da-20261011",
@@ -31444,6 +31449,224 @@
         "source:b54bc920bda8a483f14a26b8",
         "source:3f6f2c7646edc4cdd28b9800",
         "source:6abace2f5c4b2f54aef8cdcf"
+      ]
+    },
+    {
+      "reviewId": "pr3-mglo-midas-fasanara-base-20261127",
+      "assetId": "mglo-midas-fasanara",
+      "scope": {
+        "kind": "control",
+        "routeId": "base:0xfcc9cc1209651ed8867332d6f664cf82743a2584",
+        "controlIds": [
+          "mglo-base-layerzero-adapter",
+          "mglo-ethereum-layerzero-adapter",
+          "mglo-layerzero-adapter-owner-safe"
+        ]
+      },
+      "reviewedAt": "2026-11-27T13:57:00Z",
+      "reviewer": "Pharos Listing Policy v2 PR-3 review 2026-11-27",
+      "windowStartSec": 1781481600,
+      "windowEndSec": 1795787764,
+      "conclusion": "no-known-incident",
+      "searchedSurfacesRefs": [
+        "surface:8be57012c93beedb7d1929bb",
+        "surface:e4f6f47631d02e038746e5b9",
+        "surface:8eea6b8fa3745a5b02082301",
+        "surface:1b4686288b5e367de2ace188",
+        "surface:257c13e1618f0cae55c66acd"
+      ],
+      "sourcesRefs": [
+        "source:c6f54f5d8cfbdaf24166fe08",
+        "source:b3b1ba3583823cfc0b931671",
+        "source:8b70e9a66ba9fba1fd77eeed",
+        "source:da825238863dca8c8ba6f656",
+        "source:f260e1088102b5e7f094dee6"
+      ]
+    },
+    {
+      "reviewId": "pr3-mglo-midas-fasanara-ethereum-20261127",
+      "assetId": "mglo-midas-fasanara",
+      "scope": {
+        "kind": "control",
+        "routeId": "ethereum:0x1dd91a111606382b77a917633ed90feaf25e0f76",
+        "controlIds": [
+          "mglo-ethereum-layerzero-adapter",
+          "mglo-layerzero-adapter-owner-safe"
+        ]
+      },
+      "reviewedAt": "2026-11-27T13:57:00Z",
+      "reviewer": "Pharos Listing Policy v2 PR-3 review 2026-11-27",
+      "windowStartSec": 1781481600,
+      "windowEndSec": 1795787764,
+      "conclusion": "no-known-incident",
+      "searchedSurfacesRefs": [
+        "surface:8be57012c93beedb7d1929bb",
+        "surface:e4f6f47631d02e038746e5b9",
+        "surface:8eea6b8fa3745a5b02082301",
+        "surface:1b4686288b5e367de2ace188",
+        "surface:62d2fe2277bd7f48ae27b2d9"
+      ],
+      "sourcesRefs": [
+        "source:c6f54f5d8cfbdaf24166fe08",
+        "source:b3b1ba3583823cfc0b931671",
+        "source:8b70e9a66ba9fba1fd77eeed",
+        "source:da825238863dca8c8ba6f656",
+        "source:2d3ff3af056448ff702928da"
+      ]
+    },
+    {
+      "reviewId": "pr3-mglo-midas-fasanara-robinhood-20261127",
+      "assetId": "mglo-midas-fasanara",
+      "scope": {
+        "kind": "control",
+        "routeId": "robinhood:0xfed493f38c1aacb4ea4e6a11f8b9287849ee0096",
+        "controlIds": [
+          "mglo-ethereum-layerzero-adapter",
+          "mglo-robinhood-layerzero-adapter",
+          "mglo-robinhood-layerzero-adapter-owner-safe"
+        ]
+      },
+      "reviewedAt": "2026-11-27T13:57:00Z",
+      "reviewer": "Pharos Listing Policy v2 PR-3 review 2026-11-27",
+      "windowStartSec": 1781481600,
+      "windowEndSec": 1795787764,
+      "conclusion": "no-known-incident",
+      "searchedSurfacesRefs": [
+        "surface:8be57012c93beedb7d1929bb",
+        "surface:e4f6f47631d02e038746e5b9",
+        "surface:8eea6b8fa3745a5b02082301",
+        "surface:1b4686288b5e367de2ace188",
+        "surface:c42901abd6f0553c9920f1f9"
+      ],
+      "sourcesRefs": [
+        "source:c6f54f5d8cfbdaf24166fe08",
+        "source:b3b1ba3583823cfc0b931671",
+        "source:8b70e9a66ba9fba1fd77eeed",
+        "source:da825238863dca8c8ba6f656",
+        "source:4111ba949dd12cf7b67da33a"
+      ]
+    },
+    {
+      "reviewId": "pr3-mglo-midas-fasanara-xlayer-20261127",
+      "assetId": "mglo-midas-fasanara",
+      "scope": {
+        "kind": "control",
+        "routeId": "xlayer:0x45ec1a004142e1874ceb8f022ee4bb14edf37b4a",
+        "controlIds": [
+          "mglo-ethereum-layerzero-adapter",
+          "mglo-layerzero-adapter-owner-safe",
+          "mglo-representation-operator-eoa",
+          "mglo-xlayer-layerzero-adapter"
+        ]
+      },
+      "reviewedAt": "2026-11-27T13:57:00Z",
+      "reviewer": "Pharos Listing Policy v2 PR-3 review 2026-11-27",
+      "windowStartSec": 1781481600,
+      "windowEndSec": 1795787764,
+      "conclusion": "no-known-incident",
+      "searchedSurfacesRefs": [
+        "surface:8be57012c93beedb7d1929bb",
+        "surface:e4f6f47631d02e038746e5b9",
+        "surface:8eea6b8fa3745a5b02082301",
+        "surface:1b4686288b5e367de2ace188",
+        "surface:865a0fd54f63da1ec462f58a"
+      ],
+      "sourcesRefs": [
+        "source:c6f54f5d8cfbdaf24166fe08",
+        "source:b3b1ba3583823cfc0b931671",
+        "source:8b70e9a66ba9fba1fd77eeed",
+        "source:da825238863dca8c8ba6f656",
+        "source:1b2c90fac28f1321a93e43ca"
+      ]
+    },
+    {
+      "reviewId": "pr3-mglo-midas-fasanara-optimism-20261127",
+      "assetId": "mglo-midas-fasanara",
+      "scope": {
+        "kind": "control",
+        "routeId": "optimism:0x1eaf7cceaa5dc6d605760718722fbcc58579b3ff",
+        "controlIds": [
+          "mglo-ethereum-layerzero-adapter",
+          "mglo-layerzero-adapter-owner-safe",
+          "mglo-optimism-layerzero-adapter",
+          "mglo-representation-operator-eoa"
+        ]
+      },
+      "reviewedAt": "2026-11-27T13:57:00Z",
+      "reviewer": "Pharos Listing Policy v2 PR-3 review 2026-11-27",
+      "windowStartSec": 1781481600,
+      "windowEndSec": 1795787764,
+      "conclusion": "no-known-incident",
+      "searchedSurfacesRefs": [
+        "surface:8be57012c93beedb7d1929bb",
+        "surface:e4f6f47631d02e038746e5b9",
+        "surface:8eea6b8fa3745a5b02082301",
+        "surface:1b4686288b5e367de2ace188",
+        "surface:6b35d9bce1a9938ab4c42198"
+      ],
+      "sourcesRefs": [
+        "source:c6f54f5d8cfbdaf24166fe08",
+        "source:b3b1ba3583823cfc0b931671",
+        "source:8b70e9a66ba9fba1fd77eeed",
+        "source:da825238863dca8c8ba6f656",
+        "source:ad7e42d6a1a1ce7d713aecbd"
+      ]
+    },
+    {
+      "reviewId": "pr3-mglo-midas-fasanara-monad-20261127",
+      "assetId": "mglo-midas-fasanara",
+      "scope": {
+        "kind": "control",
+        "routeId": "monad:0x785175a1ae5a8bcd3230e01178ba375f5f2125fe",
+        "controlIds": [
+          "mglo-ethereum-layerzero-adapter",
+          "mglo-layerzero-adapter-owner-safe",
+          "mglo-monad-layerzero-adapter",
+          "mglo-representation-operator-eoa"
+        ]
+      },
+      "reviewedAt": "2026-11-27T13:57:00Z",
+      "reviewer": "Pharos Listing Policy v2 PR-3 review 2026-11-27",
+      "windowStartSec": 1781481600,
+      "windowEndSec": 1795787764,
+      "conclusion": "no-known-incident",
+      "searchedSurfacesRefs": [
+        "surface:8be57012c93beedb7d1929bb",
+        "surface:e4f6f47631d02e038746e5b9",
+        "surface:8eea6b8fa3745a5b02082301",
+        "surface:1b4686288b5e367de2ace188",
+        "surface:014e18a7f27c888ce5f6be13"
+      ],
+      "sourcesRefs": [
+        "source:c6f54f5d8cfbdaf24166fe08",
+        "source:b3b1ba3583823cfc0b931671",
+        "source:8b70e9a66ba9fba1fd77eeed",
+        "source:da825238863dca8c8ba6f656",
+        "source:6ee93c3c01d0757eac1388c3"
+      ]
+    },
+    {
+      "reviewId": "pr3-pyusd-paypal-stable-native-20261127",
+      "assetId": "pyusd-paypal",
+      "scope": {
+        "kind": "control",
+        "routeId": "stable:0x28f1f38a9f7db1f769a71af0a13e8bace2ab0e9f",
+        "controlId": "*"
+      },
+      "reviewedAt": "2026-11-27T14:41:00Z",
+      "reviewer": "Pharos Listing Policy v2 PR-3 review 2026-11-27",
+      "windowStartSec": 1790812800,
+      "windowEndSec": 1795790460,
+      "conclusion": "no-known-incident",
+      "searchedSurfacesRefs": [
+        "surface:43128f3ddbb9fee4381101c8",
+        "surface:d11a9f881d0a7263dd827421",
+        "surface:a424d2de59b0d3e74960be1f"
+      ],
+      "sourcesRefs": [
+        "source:26463ba95c5faedf75b7a70d",
+        "source:a62f752821ece6a7263c61e5",
+        "source:a8882a40333eecdcf2cd7f26"
       ]
     }
   ],
@@ -74877,6 +75100,136 @@
         "location": "Solana slots 438647697, 438761195, 440056964, and finalized slot 473166769 (2026-11-24T01:51:41.000Z)",
         "excerpt": "Console OFT program BQ7nDFGKN4cYqmBkMXFCEzk3zPJhR6bNK9Maf8sQXrQm deployed slot 438647697 (2026-08-11T17:18:41.000Z), Token-2022 mint USDai5XCUzNebYzUk6EuRiFCvnyoyEdj7VSyijYcz2A created slot 438761195 (2026-08-12T06:34:11.000Z, tx 5Em2UHivRvZcnKDUH2JbX68AvKKoDWJgLdmn39HtqzcGZhtaXkXQPbn5CZtTiKdNpe92SiT7QuyzNZo6ezpxeesh, 12411 lifetime signatures), and OFTStore 5JZFgHYyVYuNk3BXYbKHiSzrk6EEVV9FLFPJmYvuPfis + SPL multisig Arfba7hUdhuVjs4TPfDqkxDCJDajpCzM8eezm46hir3V initialized slot 440056964 (2026-08-18T12:23:50.000Z), nearly 3 months after KelpDAO exposure ended (2026-05-20). At finalized slot 473166769 (2026-11-24T01:51:41.000Z, contextSlot 473166771): pausableConfig.paused=false, supply=100,590.514634 USDai, mintAuthority=Arfba7hUdhuVjs4TPfDqkxDCJDajpCzM8eezm46hir3V."
       }
+    },
+    {
+      "id": "source:c6f54f5d8cfbdaf24166fe08",
+      "value": {
+        "label": "DefiLlama full hacks response search for mGLO, Midas, Fasanara, LayerZero, and deployment chains",
+        "url": "https://api.llama.fi/hacks",
+        "observedAt": "2026-11-27T13:54:01Z",
+        "location": "Full 1,378-row JSON response; case-insensitive search",
+        "excerpt": "mglo: 0; fasanara: 0; xlayer/x layer: 0; midas: 2 (Midas Capital 2023); layerzero: 6 (CyberConnect, Stake DAO Yield x2, GriffinAI, The Sandbox, Kelp 2026-04-18); robinhood: 5 (unrelated apps); monad: 1 (Echo Bridge 2026-05-18)."
+      }
+    },
+    {
+      "id": "source:b3b1ba3583823cfc0b931671",
+      "value": {
+        "label": "Rekt leaderboard search for mGLO, Midas, Fasanara, and LayerZero",
+        "url": "https://rekt.news/leaderboard/",
+        "observedAt": "2026-11-27T13:54:01Z",
+        "location": "Full leaderboard HTML (HTTP 200, 304,587 bytes)",
+        "excerpt": "mglo: 0; fasanara: 0; midas: Midas Capital - REKT (unrelated 2023 protocol); layerzero/kelp: KelpDao - Rekt (2026-04-18, pre-launch)."
+      }
+    },
+    {
+      "id": "source:8b70e9a66ba9fba1fd77eeed",
+      "value": {
+        "label": "Midas April 2026 recap confirming resolved precautionary LayerZero OFT pause prior to mGLO launch",
+        "url": "https://blog.midas.app/midas-in-april-2026-recap/",
+        "observedAt": "2026-11-27T13:54:01Z",
+        "location": "Midas Response to the rsETH/KelpDAO Incident (HTTP 200)",
+        "excerpt": "Precautionary mToken and OFT pause resolved April 28, 2026 with 4/4 DVN upgrade, predating mGLO launch on 2026-06-15."
+      }
+    },
+    {
+      "id": "source:da825238863dca8c8ba6f656",
+      "value": {
+        "label": "LayerZero Labs primary KelpDAO incident report",
+        "url": "https://layerzero.network/blog/layerzero-labs-kelpdao-incident-report",
+        "observedAt": "2026-11-27T13:54:01Z",
+        "location": "Scope section (HTTP 200)",
+        "excerpt": "Explicitly excludes other OApps, channels, and transactions from the April 18, 2026 rsETH incident."
+      }
+    },
+    {
+      "id": "source:f260e1088102b5e7f094dee6",
+      "value": {
+        "label": "Pinned base mGLO token and LayerZero adapter emergency/rate-limit state",
+        "url": "https://mainnet.base.org",
+        "observedAt": "2026-11-27T13:56:02Z",
+        "location": "eth_call paused(), owner(), peers(uint32), rateLimits(uint32), totalSupply() at block 62986936 (ref hash 0xabcc9bab3d7e126e33d474a94d2394b5f951e447dc4afeadd373cf389bed374c)",
+        "excerpt": "Base token paused()=false; adapter 0xd9b8f935... owner=0xb60842e9..., peer(30101)=0xa54712d1..., rateLimits(30101) limit=15000000e18 window=86400s."
+      }
+    },
+    {
+      "id": "source:2d3ff3af056448ff702928da",
+      "value": {
+        "label": "Pinned ethereum mGLO token and LayerZero adapter emergency/rate-limit state",
+        "url": "https://ethereum-rpc.publicnode.com",
+        "observedAt": "2026-11-27T13:55:59Z",
+        "location": "eth_call paused(), owner(), peers(uint32), rateLimits(uint32), totalSupply() at block 26506980 (ref hash 0x69f72b3ca8ba62f21dc161c85b04118e4327a26058726ddf3971c5490f36e099)",
+        "excerpt": "Ethereum token paused()=false; hub adapter 0xa54712d1... owner=0xb60842e9..., 5 spoke peers configured with 86400s rateLimits (15M/15M/5M/5M/1M)."
+      }
+    },
+    {
+      "id": "source:4111ba949dd12cf7b67da33a",
+      "value": {
+        "label": "Pinned robinhood mGLO token and LayerZero adapter emergency/rate-limit state",
+        "url": "https://rpc.mainnet.chain.robinhood.com",
+        "observedAt": "2026-11-27T13:56:02Z",
+        "location": "eth_call paused(), owner(), peers(uint32), rateLimits(uint32), totalSupply() at block 124298215 (ref hash 0xe072e5a45482af78f521bb9debf749e91271850f97ee81a8870751f579cc6b9a)",
+        "excerpt": "Robinhood token paused()=false; adapter 0xc7d9168e... owner=0x563e0fc2..., peer(30101)=0xa54712d1..., rateLimits(30101) limit=15000000e18 window=86400s."
+      }
+    },
+    {
+      "id": "source:1b2c90fac28f1321a93e43ca",
+      "value": {
+        "label": "Pinned xlayer mGLO token and LayerZero adapter emergency/rate-limit state",
+        "url": "https://rpc.xlayer.tech",
+        "observedAt": "2026-11-27T13:56:03Z",
+        "location": "eth_call paused(), owner(), peers(uint32), rateLimits(uint32), totalSupply() at block 77018727 (ref hash 0x029e52c7d7eb10a05fb3f94b0a7c4bbfa92987c67971272f3f71f12a0ec70fb7)",
+        "excerpt": "X Layer token paused()=false; adapter 0xbe9207ba... owner=0xb60842e9..., peer(30101)=0xa54712d1..., rateLimits(30101) limit=5000000e18 window=86400s."
+      }
+    },
+    {
+      "id": "source:ad7e42d6a1a1ce7d713aecbd",
+      "value": {
+        "label": "Pinned optimism mGLO token and LayerZero adapter emergency/rate-limit state",
+        "url": "https://mainnet.optimism.io",
+        "observedAt": "2026-11-27T13:56:03Z",
+        "location": "eth_call paused(), owner(), peers(uint32), rateLimits(uint32), totalSupply() at block 160094493 (ref hash 0xaef73134a2586aea93e56606c4bd13b30a56db077301564c4bb58c573848f39b)",
+        "excerpt": "Optimism token paused()=false; adapter 0x969b3d76... owner=0xb60842e9..., peer(30101)=0xa54712d1..., rateLimits(30101) limit=5000000e18 window=86400s."
+      }
+    },
+    {
+      "id": "source:6ee93c3c01d0757eac1388c3",
+      "value": {
+        "label": "Pinned monad mGLO token and LayerZero adapter emergency/rate-limit state",
+        "url": "https://monad-mainnet.drpc.org",
+        "observedAt": "2026-11-27T13:56:04Z",
+        "location": "eth_call paused(), owner(), peers(uint32), rateLimits(uint32), totalSupply() at block 125878459 (ref hash 0xf5c2348d43ca6ec2fcfc0d8aa0350ba6bdf1c7ac50c0ffd94d6a0f08f782ca17)",
+        "excerpt": "Monad token paused()=false; adapter 0xa69bfcc6... owner=0xb60842e9..., peer(30101)=0xa54712d1..., rateLimits(30101) limit=1000000e18 window=86400s."
+      }
+    },
+    {
+      "id": "source:26463ba95c5faedf75b7a70d",
+      "value": {
+        "label": "Pinned StableChain RPC reads for native Paxos PYUSDUUPS proxy 0x28f1f38a9f7db1f769a71af0a13e8bace2ab0e9f",
+        "url": "https://rpc.stable.xyz",
+        "observedAt": "2026-11-27T13:06:00Z",
+        "location": "Stable blocks 48443477 and 48449828: PYUSDUUPS proxy, SupplyControl 0x4fa5f914c132bef506bc3afb583186211a3c0ea2, and defaultAdmin 0xe9c7cc2da8ce6efee8015c9322e5f9891312ea07",
+        "excerpt": "Point-in-time read confirms unpaused native Paxos PYUSDUUPS implementation 0xe13878e40f845253d06b24e7cd086af347f7c446 ($23.96M totalSupply) and three cap-limited SupplyControl controllers (not a full historical log census)."
+      }
+    },
+    {
+      "id": "source:a62f752821ece6a7263c61e5",
+      "value": {
+        "label": "Sourcify exact-match PYUSDUUPS implementation on Stable (chain 988)",
+        "url": "https://sourcify.dev/server/v2/contract/988/0xe13878e40f845253d06b24e7cd086af347f7c446?fields=all",
+        "observedAt": "2026-11-27T13:06:00Z",
+        "location": "Chain 988 exact-match verification for 0xe13878e40f845253d06b24e7cd086af347f7c446",
+        "excerpt": "Verified Paxos PYUSDUUPS contract source on StableChain replacing superseded Stargate Hydra PYUSD0 (0x99af3eea...)."
+      }
+    },
+    {
+      "id": "source:a8882a40333eecdcf2cd7f26",
+      "value": {
+        "label": "DefiLlama hacks API query for PYUSD / Paxos / StableChain PYUSDUUPS",
+        "url": "https://api.llama.fi/hacks",
+        "observedAt": "2026-11-27T14:40:00Z",
+        "location": "Full 1378-row DefiLlama /hacks JSON query",
+        "excerpt": "0 matching entries for native StableChain PYUSDUUPS (0x28f1f38a9f7db1f769a71af0a13e8bace2ab0e9f); total pyusd/paxos hits across all chains: 0."
+      }
     }
   ],
   "searchedSurfaceObservations": [
@@ -93454,6 +93807,110 @@
         "kind": "explorer-events",
         "url": "https://solscan.io/token/USDai5XCUzNebYzUk6EuRiFCvnyoyEdj7VSyijYcz2A",
         "finding": "Solana USDai Console OFT program BQ7nDFGK... deployed slot 438647697 (2026-08-11T17:18:41.000Z), Token-2022 mint USDai5XC... created slot 438761195 (2026-08-12T06:34:11.000Z, 12,411 lifetime signatures), OFTStore 5JZFgHYy... initialized slot 440056964 (2026-08-18T12:23:50.000Z). At finalized slot 473166769 (2026-11-24T01:51:41.000Z): pausableConfig.paused=false, supply=100,590.514634 USDai, mintAuthority=Arfba7hUdhuVjs4TPfDqkxDCJDajpCzM8eezm46hir3V, 50 recent finalized signatures show normal activity with no compromise or pause."
+      }
+    },
+    {
+      "id": "surface:8be57012c93beedb7d1929bb",
+      "value": {
+        "kind": "issuer-announcements",
+        "url": "https://blog.midas.app/midas-in-april-2026-recap/",
+        "finding": "Reviewed Midas issuer recap confirming the April 18-28 precautionary LayerZero OFT pause was resolved with a 4/4 DVN upgrade prior to mGLO launch (2026-06-15). No mGLO mint, adapter, or supply-integrity incident is disclosed."
+      }
+    },
+    {
+      "id": "surface:e4f6f47631d02e038746e5b9",
+      "value": {
+        "kind": "incident-tracker",
+        "url": "https://api.llama.fi/hacks",
+        "finding": "Searched full 1,378-row DefiLlama hacks response on 2026-11-27T13:54:01Z for Midas, mGLO, Fasanara, LayerZero, Kelp, Robinhood, X Layer, and Monad. Zero matches for mGLO, Fasanara, or X Layer; Midas matches are unrelated 2023 Midas Capital entries; LayerZero matches are unrelated apps (CyberConnect, Stake DAO Yield, GriffinAI, The Sandbox) plus pre-launch April 18 Kelp rsETH; Robinhood and Monad matches are unrelated protocols."
+      }
+    },
+    {
+      "id": "surface:8eea6b8fa3745a5b02082301",
+      "value": {
+        "kind": "incident-tracker",
+        "url": "https://rekt.news/leaderboard/",
+        "finding": "Searched full Rekt leaderboard (304,587 bytes, HTTP 200) on 2026-11-27T13:54:01Z for Midas, mGLO, Fasanara, LayerZero, and Kelp. Zero matches for mGLO or Fasanara; only unrelated 2023 Midas Capital and pre-launch April 2026 KelpDao entries appear."
+      }
+    },
+    {
+      "id": "surface:1b4686288b5e367de2ace188",
+      "value": {
+        "kind": "incident-tracker",
+        "url": "https://layerzero.network/blog/layerzero-labs-kelpdao-incident-report",
+        "finding": "Primary LayerZero KelpDAO incident report (HTTP 200) explicitly states no other OApps, channels, or transactions were compromised; the April 18 event also predates mGLO deployment."
+      }
+    },
+    {
+      "id": "surface:257c13e1618f0cae55c66acd",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://mainnet.base.org",
+        "finding": "Pinned Base reads at block 62986936 (2026-11-27T13:56:02Z; peers verified at block 62986379 hash 0xabcc9bab3d7e126e33d474a94d2394b5f951e447dc4afeadd373cf389bed374c): token 0xfcc9cc1209651ed8867332d6f664cf82743a2584 paused()=false, totalSupply=102,420,370.864525 mGLO; immutable adapter 0xd9b8f9352078e1259adcdc390add39bc3063bf07 owner=0xb60842e9dabcd1c52e354ac30e82a97661cb7e89, peer EID 30101=0xa54712d1699258a85d91abd47ed9d1aa2bb00191, rateLimits(30101) limit=15,000,000 mGLO / 86400s (amountInFlight=2,336,677.115 mGLO). Live unpaused state and configured peer/rate limit corroborate no active pause or unauthorized takeover; this point-in-time state read is not an exhaustive historical log census."
+      }
+    },
+    {
+      "id": "surface:62d2fe2277bd7f48ae27b2d9",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://ethereum-rpc.publicnode.com",
+        "finding": "Pinned Ethereum hub reads at block 26506980 (2026-11-27T13:55:59Z; peers verified at block 26506971 hash 0x69f72b3ca8ba62f21dc161c85b04118e4327a26058726ddf3971c5490f36e099; token created 2026-07-13T11:48:35Z at block 25523509): token 0x1dd91a111606382b77a917633ed90feaf25e0f76 paused()=false, totalSupply=38,514,074.249042 mGLO; immutable hub adapter 0xa54712d1699258a85d91abd47ed9d1aa2bb00191 owner=0xb60842e9dabcd1c52e354ac30e82a97661cb7e89, configured peers and 86400s rateLimits for Base 30184 (15M), Robinhood 30416 (15M), X Layer 30274 (5M), Optimism 30111 (5M), Monad 30390 (1M). Live unpaused state and active hub rate limits corroborate no active suspension or unauthorized peer change; this state pin is not an exhaustive log census."
+      }
+    },
+    {
+      "id": "surface:c42901abd6f0553c9920f1f9",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://rpc.mainnet.chain.robinhood.com",
+        "finding": "Pinned Robinhood Chain reads at block 124298215 (2026-11-27T13:56:02Z; peers verified at block 124297189 hash 0xe072e5a45482af78f521bb9debf749e91271850f97ee81a8870751f579cc6b9a): token 0xfed493f38c1aacb4ea4e6a11f8b9287849ee0096 paused()=false, totalSupply=76,814,424.187131 mGLO; immutable adapter 0xc7d9168e70faf282aa6b0ecbef7af2c9c5c146f9 owner=0x563e0fc290d535fc5549873aece97a16b001b9ed, peer EID 30101=0xa54712d1699258a85d91abd47ed9d1aa2bb00191, rateLimits(30101) limit=15,000,000 mGLO / 86400s. Live unpaused state and configured peer/rate limit corroborate no active pause or unauthorized takeover; this point-in-time read is not an exhaustive log census."
+      }
+    },
+    {
+      "id": "surface:865a0fd54f63da1ec462f58a",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://rpc.xlayer.tech",
+        "finding": "Pinned X Layer reads at block 77018727 (2026-11-27T13:56:03Z; peers verified at block 77018620 hash 0x029e52c7d7eb10a05fb3f94b0a7c4bbfa92987c67971272f3f71f12a0ec70fb7): token 0x45ec1a004142e1874ceb8f022ee4bb14edf37b4a paused()=false, totalSupply=2,891,408.006517 mGLO; immutable adapter 0xbe9207ba066042caeab7a5f957a61bcb357f2cbc owner=0xb60842e9dabcd1c52e354ac30e82a97661cb7e89, peer EID 30101=0xa54712d1699258a85d91abd47ed9d1aa2bb00191, rateLimits(30101) limit=5,000,000 mGLO / 86400s. Live unpaused state and configured peer/rate limit corroborate no active pause or unauthorized takeover; this point-in-time read is not an exhaustive log census."
+      }
+    },
+    {
+      "id": "surface:6b35d9bce1a9938ab4c42198",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://mainnet.optimism.io",
+        "finding": "Pinned Optimism reads at block 160094493 (2026-11-27T13:56:03Z; peers verified at block 160094443 hash 0xaef73134a2586aea93e56606c4bd13b30a56db077301564c4bb58c573848f39b; token created 2026-07-30T11:01:13Z at block 154905248): token 0x1eaf7cceaa5dc6d605760718722fbcc58579b3ff paused()=false, totalSupply=0.199960 mGLO; immutable adapter 0x969b3d76a925402faca4d905f78ef9922ad8158e owner=0xb60842e9dabcd1c52e354ac30e82a97661cb7e89, peer EID 30101=0xa54712d1699258a85d91abd47ed9d1aa2bb00191, rateLimits(30101) limit=5,000,000 mGLO / 86400s. Live unpaused state and configured peer/rate limit corroborate no active pause or unauthorized takeover; this point-in-time read is not an exhaustive log census."
+      }
+    },
+    {
+      "id": "surface:014e18a7f27c888ce5f6be13",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://monad-mainnet.drpc.org",
+        "finding": "Pinned Monad reads at block 125878459 (2026-11-27T13:56:04Z; peers verified at block 125878128 hash 0xf5c2348d43ca6ec2fcfc0d8aa0350ba6bdf1c7ac50c0ffd94d6a0f08f782ca17): token 0x785175a1ae5a8bcd3230e01178ba375f5f2125fe paused()=false, totalSupply=0.034851 mGLO; immutable adapter 0xa69bfcc664e808176484fa427fb2bfcb096531ef owner=0xb60842e9dabcd1c52e354ac30e82a97661cb7e89, peer EID 30101=0xa54712d1699258a85d91abd47ed9d1aa2bb00191, rateLimits(30101) limit=1,000,000 mGLO / 86400s. Live unpaused state and configured peer/rate limit corroborate no active pause or unauthorized takeover; this point-in-time read is not an exhaustive log census."
+      }
+    },
+    {
+      "id": "surface:43128f3ddbb9fee4381101c8",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://stablescan.xyz/token/0x28f1f38a9f7db1f769a71af0a13e8bace2ab0e9f",
+        "finding": "Point-in-time StableChain state check at blocks 48443477 and 48449828 confirmed native Paxos PYUSDUUPS proxy is unpaused with canonical implementation 0xe13878e4... and cap-limited SupplyControl 0x4fa5f914...; bounded point-in-time read, not an exhaustive event log census."
+      }
+    },
+    {
+      "id": "surface:d11a9f881d0a7263dd827421",
+      "value": {
+        "kind": "issuer-announcements",
+        "url": "https://www.paxos.com/pyusd",
+        "finding": "Checked Paxos PYUSD disclosures as of 2026-11-27; no reported exploit, unauthorized mint, or security incident affecting the native StableChain PYUSDUUPS deployment (0x28f1f38a9f7db1f769a71af0a13e8bace2ab0e9f) was found."
+      }
+    },
+    {
+      "id": "surface:a424d2de59b0d3e74960be1f",
+      "value": {
+        "kind": "incident-tracker",
+        "url": "https://api.llama.fi/hacks",
+        "finding": "Queried full DefiLlama /hacks dataset (1378 entries on 2026-11-27) for pyusd, paxos, and 0x28f1f38a9f7db1f769a71af0a13e8bace2ab0e9f; found 0 matching entries, zero involving StableChain PYUSDUUPS."
       }
     }
   ]

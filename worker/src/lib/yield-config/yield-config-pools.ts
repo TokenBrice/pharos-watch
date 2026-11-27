@@ -79,8 +79,8 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   //         (DL symbol is FXUSDSTABILITYPOOLV2.0, not fxUSD — must use static map)
   "fxusd-f-x-protocol": "abd6c9e1-3b52-459a-a31b-9022a4dcf7e2",
   // ── Stablewatch Wave 1: New wrapper pools ─────────────────────────
-  // infiniFi USD -> siUSD - infinifi native savings, Ethereum, $121M TVL, ~4.8% APY
-  "iusd-infinifi": "8fa2e60e-365a-41fc-8d50-fadde5041f94",
+  // infiniFi siUSD - infinifi native savings, Ethereum (handed off from iusd-infinifi)
+  "siusd-infinifi": "8fa2e60e-365a-41fc-8d50-fadde5041f94",
   // Tracked Falcon sUSDf owns native savings yield, not its USDf parent.
   "susdf-falcon": "0f67a08c-3f24-4a4b-963e-541f5a5c0364",
   // Unitas -> sUSDu - unitas native savings, Solana, $49M TVL, ~12.9% APY
@@ -120,4 +120,8 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   "yvusdc-yearn": "7d89af7a-24c9-4292-aa38-7c71b05fbd6d",
   // apyUSD holder vault; DL labels its apxUSD deposit asset. RateView measures vested holder income.
   "apyusd-apyx": "cb6139f9-4a68-4efd-8245-0312a92aee55",
+  // Fluid Lite USD Vault (fLiteUSD) - fluid-lite, Ethereum, $41.0M TVL, ~7.3% APY
+  "fliteusd-fluid": "488f06db-5a36-450e-9ba9-b4321be39c7c",
+  // StableEarn Prime PYUSD (gPYUSDse) - morpho-blue on Stable, $77.5M TVL
+  "gpyusdse-galaxy": "7fd83ff8-a794-53fc-8652-7453a856c2b9",
 };

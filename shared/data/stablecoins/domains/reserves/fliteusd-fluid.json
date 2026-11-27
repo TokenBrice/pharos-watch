@@ -1,0 +1,115 @@
+{
+  "id": "fliteusd-fluid",
+  "reserves": [
+    {
+      "name": "Fluid fUSDC lending buffer (Ethereum USDC)",
+      "pct": 28.17,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "wrapper",
+      "blacklistable": true,
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Fluid Lending fUSDC vault (0x9fb7b447...51b33) over Circle USDC",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0x273da948aca9261043fbdb2a857bc255ecc29012:pooled-claim",
+      "name": "Fluid Lite StrategyHandler multi-strategy deployments",
+      "pct": 71.83,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Fluid Lite StrategyHandler (0x066e84ca...) multi-strategy deployments (FluidMainnetStrategyProxy and FluidSolanaStrategyL1Proxy)",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "liquidity",
+        "smart-contract",
+        "leverage",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 Batch 2 review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Verified FluidLiteVaultProxy source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x273da948aca9261043fbdb2a857bc255ecc29012"
+      },
+      {
+        "label": "Verified FluidLiteVault UUPS implementation source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16ccc91a8134d428e7b6240177f9e2b227b9743"
+      },
+      {
+        "label": "Verified StrategyHandlerDummy implementation interface",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x968505c71ec9f258d5d48e59a48486b866b5ce96"
+      },
+      {
+        "label": "Verified Fluid fUSDC lending vault source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9fb7b4477576fe5b32be4c1843afb1e55f251b33"
+      },
+      {
+        "label": "Ethereum PublicNode RPC: pinned reads at finalized block 26506658 (2026-11-27T12:51:35Z)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ],
+    "rationale": "At finalized Ethereum block 26506658 (hash 0x2b69b7934b1e88fb42e9f10e6d0bff1f9114b5f1334c87ee41cc2aa8c9210f31, timestamp 2026-11-27T12:51:35Z), FluidLiteVaultProxy 0x273da948aca9261043fbdb2a857bc255ecc29012 (UUPS implementation 0xe16ccc91a8134d428e7b6240177f9e2b227b9743) reports asset() = Ethereum USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 (6 decimals), share decimals = 18, totalSupply() = 38,621,881.585504031808279587 fLiteUSD, totalAssets() = 40,983,976.383404 USDC, and raw USDC.balanceOf(vault) = 0. Verified source deposits incoming USDC immediately into immutable Fluid fUSDC 0x9fb7b4477576fe5b32be4c1843afb1e55f251b33, where the vault holds 9,377,749.854660 fUSDC shares worth 11,546,560.395369 USDC (28.17% of vault totalAssets; fUSDC.maxWithdraw(vault) = 11,546,560.395369 USDC). The remaining 29,437,415.988035 USDC (71.83% of vault totalAssets) represents the net StrategyHandler (0x066e84ca92529b500592867d0be89e78563fa965) multi-strategy residual. StrategyHandler.getIdleAssets() returned 11,597,101.635369 USDC, which equals the vault's 28.17% Fluid fUSDC buffer (slice 0, 11,546,560.395369 USDC) plus 50,541.24 USDC held directly at StrategyHandler. Meanwhile, the four registered strategy contracts returned gross balances of 41,926,972.96 USDC (FluidMainnetStrategyProxy 0xf3c971c659b8651fd6721de759b4048aea3cd6a2 13,453,462.24, FluidSolanaStrategyL1Proxy 0x442287daff78d5491a93d537ac96f38732bf7d6f 28,473,504.71, Arbitrum 3.00, Plasma 3.01), making total gross StrategyHandler assets (idle plus strategies) 53,524,074.60 USDC versus 40,983,976.38 USDC vault totalAssets() (a 12,540,098.21 USDC or 30.60% gross-versus-net discrepancy between the 41.93M gross strategy balances plus 50.54K StrategyHandler cash and the 29.44M net residual while StrategyHandler.getNetAssets() reverted on-chain). Vault totalAssets() reflects administered exchange-price accrual rather than live strategy mark-to-market, so only the 28.17% Fluid fUSDC buffer is linked to usdc-circle, confidence is probable, and the 71.83% net strategy residual is retained as an unlinked basket-needs-split slice.",
+    "compositionBasis": "Pinned eth_call reads of FluidLiteVault, Fluid fUSDC (28.17% verified buffer), and StrategyHandler (71.83% unresolved multi-strategy residual; 41.93M gross strategy balances plus 50.54K StrategyHandler cash vs 29.44M net residual, or 53.52M total gross vs 40.98M vault totalAssets) at finalized Ethereum block 26506658 (2026-11-27T12:51:35Z).",
+    "compositionAsOf": "2026-11-27",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Only the 28.17% ($11.55M) Fluid fUSDC buffer is directly verified on-chain as withdrawable USDC backing. StrategyHandler.getIdleAssets() ($11.60M) equals that 28.17% buffer (slice 0) plus $50,541.24 held at StrategyHandler, while the remaining 71.83% ($29.44M net of vault totalAssets()) sits in StrategyHandler multi-strategy deployments whose gross strategy balances ($13.45M FluidMainnetStrategyProxy + $28.47M FluidSolanaStrategyL1Proxy + $6.01 Arbitrum/Plasma = $41.93M, plus $50.54K StrategyHandler cash) exceed the $29.44M net residual by $12.54M (30.60% of vault totalAssets()) while StrategyHandler.getNetAssets() reverted. Internal sub-positions, leverage/debt legs, cross-chain Solana bridge/custody exposures, and live net solvency inside those strategy contracts are unpublished.",
+    "knownUnknownExposurePct": 71.83,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 1,
+        "reserveName": "Fluid Lite StrategyHandler multi-strategy deployments",
+        "pct": 71.83,
+        "disposition": "basket-needs-split",
+        "rationale": "Represents the 71.83% ($29.44M net) non-fUSDC residual of vault totalAssets() deployed via StrategyHandler (0x066e84ca...) across Ethereum and Solana strategies; StrategyHandler.getIdleAssets() (11.60M) equals slice 0's fUSDC buffer (11.55M) plus 50.54K at StrategyHandler, leaving 41.93M in gross strategy balances plus 50.54K against 29.44M net (a 12.54M / 30.60% discrepancy while getNetAssets() reverted), and constituent sub-positions, leverage, and Solana custody are unpublished."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "FluidLiteVault proxy 0x273da948aca9261043fbdb2a857bc255ecc29012 and Fluid fUSDC 0x9fb7b4477576fe5b32be4c1843afb1e55f251b33",
+        "role": "other"
+      },
+      {
+        "name": "StrategyHandler 0x066e84ca92529b500592867d0be89e78563fa965 and registered strategy proxies (FluidMainnetStrategyProxy 0xf3c971c6..., FluidSolanaStrategyL1Proxy 0x442287da...)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 Batch 2 review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Verified FluidLiteVault UUPS implementation source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16ccc91a8134d428e7b6240177f9e2b227b9743"
+      },
+      {
+        "label": "Verified Fluid fUSDC lending vault source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9fb7b4477576fe5b32be4c1843afb1e55f251b33"
+      },
+      {
+        "label": "Ethereum PublicNode RPC: pinned reads at finalized block 26506658 (2026-11-27T12:51:35Z)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ],
+    "uncertainty": "User USDC is deposited into Fluid fUSDC and pulled by StrategyHandler into upgradeable Ethereum and cross-chain Solana, Arbitrum, and Plasma strategy contracts; StrategyHandler can swap among 18 supported stablecoins and yield-bearing tokens. Both FluidLiteVault and StrategyHandler are upgradeable via governance timelock. Legal segregation, bankruptcy remoteness, and reuse restrictions are not established."
+  }
+}

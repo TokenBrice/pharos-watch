@@ -889,14 +889,14 @@ describe("v10.19 lender-book wire and policy admission", () => {
     expect(LenderCollateralBookPolicySchema.safeParse({ ...policy, collateralClasses: [] }).success).toBe(false);
   });
 
-  it("resolves exact active savUSD/USD3/ftUSD without aliasing siUSD or PT-siUSD to iUSD", () => {
+  it("resolves exact active savUSD/USD3/ftUSD/siUSD without aliasing PT-siUSD to iUSD", () => {
     const index = resolveLenderTokenIds(ACTIVE_STABLECOINS.flatMap(coin => (coin.contracts ?? []).map(contract => ({
       assetId: coin.id, chain: contract.chain, address: contract.address,
     }))));
     expect(index.get(`ethereum:${SAVUSD}`)).toEqual(["savusd-avant"]);
     expect(index.get("ethereum:0x056b269eb1f75477a8666ae8c7fe01b64dd55ecc")).toEqual(["usd3-3jane"]);
     expect(index.get(`ethereum:${FTUSD}`)).toEqual(["ftusd-flying-tulip"]);
-    expect(index.get("ethereum:0xdbdc1ef57537e34680b898e1febd3d68c7389bcb")).toBeUndefined();
+    expect(index.get("ethereum:0xdbdc1ef57537e34680b898e1febd3d68c7389bcb")).toEqual(["siusd-infinifi"]);
     expect(index.get("ethereum:0x76543ac61ba84c6feeee76c6a918127bf0ca5fd1")).toBeUndefined();
     expect(index.get(`base:${SAVUSD}`)).toBeUndefined();
     const ambiguous = resolveLenderTokenIds([

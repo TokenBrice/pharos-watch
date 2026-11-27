@@ -1,0 +1,121 @@
+{
+  "id": "steakusdc-steakhouse-base",
+  "reserves": [
+    {
+      "sourceKey": "erc4626-single-asset:base:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+      "name": "Steakhouse Prime USDC (Base) idle USDC",
+      "pct": 0,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "wrapper",
+      "blacklistable": true,
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle USDC",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "sourceKey": "erc4626-single-asset:base:0xbeef0e0834849acc03f0089f01f4f1eeb06873c9:deployed",
+      "name": "USDC-denominated Steakhouse Morpho lending claim",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "usdc-circle",
+      "depType": "wrapper",
+      "blacklistable": true,
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "USDC parent issuer and borrowers in Steakhouse-curated Morpho markets",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "liquidity",
+        "smart-contract",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 PR-3 primary-source review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Morpho exact Steakhouse Prime USDC Base deployment",
+        "url": "https://app.morpho.org/base/vault/0xbeef0e0834849acc03f0089f01f4f1eeb06873c9"
+      },
+      {
+        "label": "Exact verified VaultV2 source (base, 0xbeef0e0834849acc03f0089f01f4f1eeb06873c9)",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0xbeef0e0834849acc03f0089f01f4f1eeb06873c9?fields=all"
+      },
+      {
+        "label": "Exact verified MorphoMarketV1AdapterV2 source (base, 0xfdd31cdf6712c47a4e67037d9f2e35587f5404c0)",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0xfdd31cdf6712c47a4e67037d9f2e35587f5404c0?fields=all"
+      },
+      {
+        "label": "Morpho current vault identity and asset API",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Steakhouse DeFi vault governing terms",
+        "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+      },
+      {
+        "label": "Base block 62967570, 2026-11-27T12:51:29Z; complete vault, controller, and four-market census",
+        "url": "https://basescan.org/block/62967570"
+      }
+    ],
+    "rationale": "At finalized Base block 62967570 (2026-11-27T12:51:29Z; hash 0x8bbf4b8ae78175d5ff06b8bd91b66f1cbc7f7cc5deb8f3fe11b63be4fb9740c1), asset() is Base native USDC (0x833589fcd6edb6e08f4c7c32d4f71b54bda02913) with 6 decimals, share decimals are 18, totalSupply() is 237598682316125491581361159 raw shares, totalAssets() is 249592239914363 raw USDC, and convertToAssets(1e18) is 1050478 raw USDC. The sole MorphoMarketV1AdapterV2 (0xfdd31cdf6712c47a4e67037d9f2e35587f5404c0) enumerates four funded markets totaling 249,592,239,914,363 raw USDC: cbBTC market 0x9103c3b4e834476c9a62ea009ba2c884ee42e94e6e314a26f04d312434191836 (226,791,444,831,781 raw USDC, 90.864782%), WETH market 0x8793cf302b8ffd655ab97bd1c695dbd967807e8367a65cb2f4edaf1380ba1bda (18,479,467,399,073 raw USDC, 7.403863%), cbETH market 0x0ca10126f6c94cbd9cf0a48cc9516ae5e3dec5aa68303e6d988ee37c5149bf0d (3,441,238,955,394 raw USDC, 1.378744%), and wstETH market 0x13c42741a359ac4a8aa8287d2be109dcf28344484f91185f9a79bd5a805a55ae (880,088,728,115 raw USDC, 0.352611%). Idle USDC is zero, and adapter.realAssets() matches totalAssets() to the exact base unit. All four adapter positions have zero borrowShares and zero posted collateral. Both performanceFee and managementFee read zero at the pin. Under the config-version-2 measured split, idle USDC is classified under the underlying key at 0% and non-idle lender claims under the vault :deployed key at 100%.",
+    "compositionBasis": "Complete same-block four-market expectedSupplyAssets census plus idle underlying; Sourcify-matched immutable vault and adapter code; Base block 62967570, 2026-11-27T12:51:29Z",
+    "compositionAsOf": "2026-11-27",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current lender-asset allocations are fully enumerated. Borrower-collateral custody, legal priority, future liquidity, and stressed realizability remain separate unknowns; no signed vault financial assurance or funded recovery is established.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Steakhouse Prime USDC (Base) VaultV2 and Morpho adapter 0xfdd31cdf6712c47a4e67037d9f2e35587f5404c0",
+        "role": "other"
+      },
+      {
+        "name": "Carniceria Tropical SA (Steakhouse vault service operator and curator)",
+        "role": "other",
+        "jurisdiction": "Panama"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 PR-3 primary-source review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Morpho exact Steakhouse Prime USDC Base deployment",
+        "url": "https://app.morpho.org/base/vault/0xbeef0e0834849acc03f0089f01f4f1eeb06873c9"
+      },
+      {
+        "label": "Exact verified VaultV2 source (base, 0xbeef0e0834849acc03f0089f01f4f1eeb06873c9)",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0xbeef0e0834849acc03f0089f01f4f1eeb06873c9?fields=all"
+      },
+      {
+        "label": "Steakhouse DeFi vault governing terms",
+        "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+      },
+      {
+        "label": "Base block 62967570, 2026-11-27T12:51:29Z; complete vault, controller, and four-market census",
+        "url": "https://basescan.org/block/62967570"
+      },
+      {
+        "label": "Coinbase cbBTC backed by BTC held in Coinbase custody",
+        "url": "https://www.coinbase.com/cbbtc"
+      }
+    ],
+    "uncertainty": "Immediate assets sit in vault and adapter/market contracts; the curator terms deny custody and fiduciary obligations. Ultimate parent reserve custody, borrower-collateral custody, legal priority, continuity resources, and legal reuse rights are not fully established for this exact share. Whole-book custody is mixed: onchain lending positions are heavily concentrated in Coinbase-custodied borrower collateral (cbBTC 90.86% and cbETH 1.38% of lender assets) alongside onchain WETH (7.40%) and wstETH (0.35%); safeguards of those layers remain unestablished. Lending deployment is intentional strategy reuse; it does not establish custodians' contractual rights to repledge collateral, which remain unknown."
+  }
+}

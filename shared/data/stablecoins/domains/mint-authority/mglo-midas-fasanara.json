@@ -1,0 +1,408 @@
+{
+  "id": "mglo-midas-fasanara",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "headline": "mGLO allows unbounded direct operator minting across Base, Robinhood Chain, and Ethereum behind two-day upgrade timelocks.",
+    "summary": "mGLO has native issuer deployments on Base, Robinhood Chain, and Ethereum. Shared operator EOA 0xa13f82f679e24ad08e014f8af6ece32023b14f07 can mint directly on all three native deployments alongside verified DepositVault proxies on Robinhood Chain and Ethereum. Chain-local 1-of-3 Safes and a shared EOA hold immediate DEFAULT_ADMIN_ROLE to rotate minters, while native token, vault, and MidasAccessControl proxies upgrade through chain-local ProxyAdmins owned by two-day timelocks. X Layer, Optimism, and Monad LayerZero extensions are scored separately in Bridge Risk.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "deploymentRefs": [
+        "base:0xfcc9cc1209651ed8867332d6f664cf82743a2584",
+        "robinhood:0xfed493f38c1aacb4ea4e6a11f8b9287849ee0096",
+        "ethereum:0x1dd91a111606382b77a917633ed90feaf25e0f76"
+      ],
+      "proxyAddresses": [
+        "0xfcc9cc1209651ed8867332d6f664cf82743a2584",
+        "0xfed493f38c1aacb4ea4e6a11f8b9287849ee0096",
+        "0x1dd91a111606382b77a917633ed90feaf25e0f76",
+        "0x2a3b139ea78cc54290c672162e2b6a8c486f4791",
+        "0xe6522c0b034eb725bb03d5cf957abec1d2566e91",
+        "0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b",
+        "0xe5f087203f9e7a6104c821ec25b1f0a4505d3cb5"
+      ],
+      "implementationAddresses": [
+        "0xa311dce4469159300abe083fdba21431ec690753",
+        "0xf29aef8cbe31e5d257d6d3afab1580de8210f650",
+        "0xeeb64d1431c9297a3c77c3660be2195bfae553ac",
+        "0x51a8a7d93e832d3288bf77cd4a47fa41003e3536",
+        "0x2e37f3adbc7c22b0c31ce31e878af6d67439a04d",
+        "0xefb2e28b69a29a39067b20af633d04a2857a4d9d",
+        "0x1428567e9d9748aad701f8bccd801ceb34972e7a",
+        "0xdd5a54ba2ab379a5e642c58f98ad793a183960e2"
+      ],
+      "adminAddresses": [
+        "0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac",
+        "0x9230f9cbaca32bad2b19cab331d3e6509b8eb0cb",
+        "0x1e7d13e72263605a6daea12111414c6ed183fbef",
+        "0xb821e46abbb8112e28d1d7c58e086550177ac7f3",
+        "0xe3eee3e0d2398799c884a47fc40c029c8e241852",
+        "0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+        "0x563e0fc290d535fc5549873aece97a16b001b9ed"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "Midas Base, Robinhood, and Ethereum native upgrade path (1/3 Safes through 2-day timelocks)",
+      "observedAt": "2026-11-27",
+      "observedBlock": 62967570,
+      "sources": [
+        {
+          "label": "Base mGLO verified implementation (Sourcify)",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0xa311dce4469159300abe083fdba21431ec690753?fields=all"
+        },
+        {
+          "label": "Robinhood Chain mGLO verified implementation (Sourcify)",
+          "url": "https://sourcify.dev/server/v2/contract/4663/0xf29aef8cbe31e5d257d6d3afab1580de8210f650?fields=all"
+        },
+        {
+          "label": "Ethereum mGLO verified implementation (Sourcify)",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xeeb64d1431c9297a3c77c3660be2195bfae553ac?fields=all"
+        },
+        {
+          "label": "Pinned Base block 62967570 RPC reads",
+          "url": "https://mainnet.base.org"
+        },
+        {
+          "label": "Pinned Robinhood Chain block 124271103 RPC reads",
+          "url": "https://rpc.mainnet.chain.robinhood.com"
+        },
+        {
+          "label": "Pinned Ethereum block 26506658 RPC reads",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "base",
+        "deploymentRefs": [
+          "base:0xfcc9cc1209651ed8867332d6f664cf82743a2584",
+          "robinhood:0xfed493f38c1aacb4ea4e6a11f8b9287849ee0096",
+          "ethereum:0x1dd91a111606382b77a917633ed90feaf25e0f76"
+        ],
+        "label": "mGLO native direct-minter operator EOA",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "capDescription": "Holds M_GLO_MINT_OPERATOR_ROLE directly on Base, Robinhood Chain, and Ethereum MidasAccessControl with no on-chain supply cap.",
+        "address": "0xa13f82f679e24ad08e014f8af6ece32023b14f07",
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "base:0xa13f82f679e24ad08e014f8af6ece32023b14f07",
+          "robinhood:0xa13f82f679e24ad08e014f8af6ece32023b14f07",
+          "ethereum:0xa13f82f679e24ad08e014f8af6ece32023b14f07"
+        ],
+        "observedAt": "2026-11-27",
+        "observedBlock": 62967570,
+        "sources": [
+          {
+            "label": "Pinned Base block 62967570 MidasAccessControl reads",
+            "url": "https://mainnet.base.org"
+          },
+          {
+            "label": "Pinned Robinhood Chain block 124271103 MidasAccessControl reads",
+            "url": "https://rpc.mainnet.chain.robinhood.com"
+          },
+          {
+            "label": "Pinned Ethereum block 26506658 MidasAccessControl reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "On 2026-11-27, hasRole(M_GLO_MINT_OPERATOR_ROLE, 0xa13f82f679e24ad08e014f8af6ece32023b14f07) returned true on Base, Robinhood Chain, and Ethereum MidasAccessControl contracts, and eth_getCode returned 0x on each chain. Its representation-chain roles on X Layer, Optimism, and Monad are scoped in Bridge Risk."
+      },
+      {
+        "chain": "robinhood",
+        "deploymentRefs": [
+          "robinhood:0xfed493f38c1aacb4ea4e6a11f8b9287849ee0096"
+        ],
+        "label": "mGLO Robinhood Chain DepositVault proxy",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "capDescription": "Holds M_GLO_MINT_OPERATOR_ROLE on Robinhood Chain MidasAccessControl 0xe5f08720...3cb5 for primary-market issuance.",
+        "address": "0x2a3b139ea78cc54290c672162e2b6a8c486f4791",
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "robinhood:0x2a3b139ea78cc54290c672162e2b6a8c486f4791"
+        ],
+        "observedAt": "2026-11-27",
+        "observedBlock": 124271103,
+        "sources": [
+          {
+            "label": "Pinned Robinhood Chain RPC reads",
+            "url": "https://rpc.mainnet.chain.robinhood.com"
+          }
+        ],
+        "evidence": "At Robinhood Chain block 124271103, transparent proxy 0x2a3b139ea78cc54290c672162e2b6a8c486f4791 (impl 0x51a8a7d93e832d3288bf77cd4a47fa41003e3536, ProxyAdmin 0x1e7d13e72263605a6daea12111414c6ed183fbef, accessControl 0xe5f087203f9e7a6104c821ec25b1f0a4505d3cb5, paused=false) held active M_GLO_MINT_OPERATOR_ROLE."
+      },
+      {
+        "chain": "ethereum",
+        "deploymentRefs": [
+          "ethereum:0x1dd91a111606382b77a917633ed90feaf25e0f76"
+        ],
+        "label": "mGLO Ethereum MGloDepositVault proxy",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "capDescription": "Holds M_GLO_MINT_OPERATOR_ROLE on Ethereum MidasAccessControl 0x0312a9d1...ac4b for primary-market issuance.",
+        "address": "0xe6522c0b034eb725bb03d5cf957abec1d2566e91",
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "ethereum:0xe6522c0b034eb725bb03d5cf957abec1d2566e91"
+        ],
+        "observedAt": "2026-11-27",
+        "observedBlock": 26506658,
+        "sources": [
+          {
+            "label": "Ethereum MGloDepositVault verified implementation (Sourcify)",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x2e37f3adbc7c22b0c31ce31e878af6d67439a04d?fields=all"
+          },
+          {
+            "label": "Pinned Ethereum block 26506658 RPC reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 26506658, transparent proxy 0xe6522c0b034eb725bb03d5cf957abec1d2566e91 (Sourcify exact-match MGloDepositVault impl 0x2e37f3adbc7c22b0c31ce31e878af6d67439a04d) held active M_GLO_MINT_OPERATOR_ROLE on Ethereum MidasAccessControl."
+      },
+      {
+        "chain": "base",
+        "deploymentRefs": [
+          "base:0xfcc9cc1209651ed8867332d6f664cf82743a2584",
+          "ethereum:0x1dd91a111606382b77a917633ed90feaf25e0f76"
+        ],
+        "label": "Midas Base and Ethereum DEFAULT_ADMIN_ROLE Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "address": "0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+        "threshold": 1,
+        "signerCount": 3,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "base:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+          "ethereum:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89"
+        ],
+        "safe": {
+          "owners": [
+            "0x8003544d32ee074aa8a1fb72129fa8ef7fe02e5f",
+            "0x82b30194beae06d991bc71850f949ec8cb7e0cb7",
+            "0xc50bd8430545c80a681c7cb33e6560fb0bd86880"
+          ],
+          "threshold": 1,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "version": "1.4.1",
+          "observedBlock": 62967570,
+          "observedAt": "2026-11-27",
+          "source": "onchain"
+        },
+        "observedAt": "2026-11-27",
+        "observedBlock": 62967570,
+        "sources": [
+          {
+            "label": "Pinned Base block 62967570 Safe and MidasAccessControl reads",
+            "url": "https://mainnet.base.org"
+          },
+          {
+            "label": "Pinned Ethereum block 26506658 Safe and MidasAccessControl reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Base block 62967570 and Ethereum block 26506658, 1-of-3 Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89 (v1.4.1, zero modules, zero guard) held DEFAULT_ADMIN_ROLE on MidasAccessControl and could grant or revoke M_GLO_MINT_OPERATOR_ROLE without delay."
+      },
+      {
+        "chain": "robinhood",
+        "deploymentRefs": [
+          "robinhood:0xfed493f38c1aacb4ea4e6a11f8b9287849ee0096"
+        ],
+        "label": "Midas Robinhood Chain DEFAULT_ADMIN_ROLE Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "address": "0x563e0fc290d535fc5549873aece97a16b001b9ed",
+        "threshold": 1,
+        "signerCount": 3,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "robinhood:0x563e0fc290d535fc5549873aece97a16b001b9ed"
+        ],
+        "safe": {
+          "owners": [
+            "0x8003544d32ee074aa8a1fb72129fa8ef7fe02e5f",
+            "0xc50bd8430545c80a681c7cb33e6560fb0bd86880",
+            "0x1eafc8db09345084e8f567a85eb8b701b5070306"
+          ],
+          "threshold": 1,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "version": "1.4.1",
+          "observedBlock": 124271103,
+          "observedAt": "2026-11-27",
+          "source": "onchain"
+        },
+        "observedAt": "2026-11-27",
+        "observedBlock": 124271103,
+        "sources": [
+          {
+            "label": "Pinned Robinhood Chain block 124271103 Safe and MidasAccessControl reads",
+            "url": "https://rpc.mainnet.chain.robinhood.com"
+          }
+        ],
+        "evidence": "At Robinhood Chain block 124271103, 1-of-3 Safe 0x563e0fc290d535fc5549873aece97a16b001b9ed (v1.4.1, zero modules, zero guard) held DEFAULT_ADMIN_ROLE on Robinhood MidasAccessControl 0xe5f08720...3cb5 and could grant or revoke M_GLO_MINT_OPERATOR_ROLE immediately."
+      },
+      {
+        "chain": "base",
+        "deploymentRefs": [
+          "base:0xfcc9cc1209651ed8867332d6f664cf82743a2584",
+          "robinhood:0xfed493f38c1aacb4ea4e6a11f8b9287849ee0096",
+          "ethereum:0x1dd91a111606382b77a917633ed90feaf25e0f76"
+        ],
+        "label": "Midas native DEFAULT_ADMIN_ROLE EOA",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "address": "0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "base:0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227",
+          "robinhood:0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227",
+          "ethereum:0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227"
+        ],
+        "observedAt": "2026-11-27",
+        "observedBlock": 62967570,
+        "sources": [
+          {
+            "label": "Pinned Base block 62967570 MidasAccessControl reads",
+            "url": "https://mainnet.base.org"
+          },
+          {
+            "label": "Pinned Robinhood Chain block 124271103 MidasAccessControl reads",
+            "url": "https://rpc.mainnet.chain.robinhood.com"
+          },
+          {
+            "label": "Pinned Ethereum block 26506658 MidasAccessControl reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "On 2026-11-27, EOA 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227 held DEFAULT_ADMIN_ROLE across Base, Robinhood Chain, and Ethereum MidasAccessControl deployments and could grant or revoke M_GLO_MINT_OPERATOR_ROLE without delay."
+      },
+      {
+        "chain": "base",
+        "deploymentRefs": [
+          "base:0xfcc9cc1209651ed8867332d6f664cf82743a2584",
+          "robinhood:0xfed493f38c1aacb4ea4e6a11f8b9287849ee0096",
+          "ethereum:0x1dd91a111606382b77a917633ed90feaf25e0f76"
+        ],
+        "label": "Midas Base, Robinhood, and Ethereum native upgrade path (1/3 Safes through 2-day timelocks)",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "address": "0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+        "threshold": 1,
+        "signerCount": 3,
+        "timelockDelaySec": 172800,
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "base:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+          "robinhood:0x563e0fc290d535fc5549873aece97a16b001b9ed",
+          "ethereum:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89"
+        ],
+        "safe": {
+          "owners": [
+            "0x8003544d32ee074aa8a1fb72129fa8ef7fe02e5f",
+            "0x82b30194beae06d991bc71850f949ec8cb7e0cb7",
+            "0xc50bd8430545c80a681c7cb33e6560fb0bd86880"
+          ],
+          "threshold": 1,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "version": "1.4.1",
+          "observedBlock": 62967570,
+          "observedAt": "2026-11-27",
+          "source": "onchain"
+        },
+        "observedAt": "2026-11-27",
+        "observedBlock": 62967570,
+        "sources": [
+          {
+            "label": "Pinned Base block 62967570 ProxyAdmin and Timelock reads",
+            "url": "https://mainnet.base.org"
+          },
+          {
+            "label": "Pinned Robinhood Chain block 124271103 ProxyAdmin and Timelock reads",
+            "url": "https://rpc.mainnet.chain.robinhood.com"
+          },
+          {
+            "label": "Pinned Ethereum block 26506658 ProxyAdmin and Timelock reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "On 2026-11-27, native mGLO token, MidasAccessControl, and DepositVault proxies resolved through chain-local ProxyAdmins owned by 172800-second TimelockControllers: Base ProxyAdmin 0xbf25b58c... owned by Timelock 0x9230f9cb... (sole proposer/executor/canceller 1-of-3 Safe 0xb60842e9...), Robinhood ProxyAdmin 0x1e7d13e7... owned by Timelock 0xb821e46a... (sole proposer/executor/canceller 1-of-3 Safe 0x563e0fc2...), and Ethereum ProxyAdmin 0xbf25b58c... owned by Timelock 0xe3eee3e0... (sole proposer/executor/canceller 1-of-3 Safe 0xb60842e9...)."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
+    "review": {
+      "evidence": "Pinned on-chain reads on 2026-11-27 across Base (finalized block 62967570), Robinhood Chain (block 124271103), and Ethereum (finalized block 26506658) established that mGLO has canonical native issuance on all three chains. Shared operator EOA 0xa13f82f679e24ad08e014f8af6ece32023b14f07 holds M_GLO_MINT_OPERATOR_ROLE on all three chains without an on-chain supply cap, alongside DepositVault proxies on Robinhood Chain (0x2a3b139e...4791) and Ethereum (0xe6522c0b...6e91). Immediate minter rotation is controlled by DEFAULT_ADMIN_ROLE held by 1-of-3 Safes (0xb60842e9... on Base and Ethereum; 0x563e0fc2... on Robinhood Chain) and shared EOA 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227. Native transparent proxies resolve through chain-local ProxyAdmins owned by 172800-second TimelockControllers controlled by those 1-of-3 Safes. X Layer, Optimism, and Monad are interconnected via immutable 27,366-byte LayerZero V2 MidasLzMintBurnOFTAdapters with zero locked escrow and are reviewed in bridgeRouteRisk. Economic-control evidence: JTC Luxembourg independently values Compartment mGLO (ISIN LU3357216087) monthly; SAVE attestation CID QmeNwyuVyhM5HvEFfKZH9j7zCCvGrLwCBf1hYeWsTocMt1 (created 2026-11-25, expires 2026-12-02) notarizes the 2026-10-31 JTC valuation ($193,415,658.76 against 186,822,750.69 tokens, ratio 1.017784) via vlayer TLS-Notary and Chainlink CRE. The exempt Luxembourg securitisation compartment is not evidenced as a prudentially supervised fund, and unbounded issuer direct-mint and immediate admin paths establish unbounded-reconciled posture.",
+      "reviewer": "Pharos Listing Policy v2 PR-3 Batch 1",
+      "reviewedAt": "2026-11-27",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Base mGLO verified implementation (Sourcify)",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0xa311dce4469159300abe083fdba21431ec690753?fields=all"
+        },
+        {
+          "label": "Robinhood Chain mGLO verified implementation (Sourcify)",
+          "url": "https://sourcify.dev/server/v2/contract/4663/0xf29aef8cbe31e5d257d6d3afab1580de8210f650?fields=all"
+        },
+        {
+          "label": "Ethereum mGLO verified implementation (Sourcify)",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xeeb64d1431c9297a3c77c3660be2195bfae553ac?fields=all"
+        },
+        {
+          "label": "Ethereum MGloDepositVault verified implementation (Sourcify)",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x2e37f3adbc7c22b0c31ce31e878af6d67439a04d?fields=all"
+        },
+        {
+          "label": "Midas PoR v2 canonical token registry",
+          "url": "https://raw.githubusercontent.com/midas-apps/midas-por-v2/main/tokens.json"
+        },
+        {
+          "label": "Midas mGLO November 25, 2026 SAVE attestation (CID QmeNwyuVyhM5HvEFfKZH9j7zCCvGrLwCBf1hYeWsTocMt1)",
+          "url": "https://gateway.pinata.cloud/ipfs/QmeNwyuVyhM5HvEFfKZH9j7zCCvGrLwCBf1hYeWsTocMt1"
+        },
+        {
+          "label": "Pinned Base block 62967570 RPC reads",
+          "url": "https://mainnet.base.org"
+        },
+        {
+          "label": "Pinned Robinhood Chain block 124271103 RPC reads",
+          "url": "https://rpc.mainnet.chain.robinhood.com"
+        },
+        {
+          "label": "Pinned Ethereum block 26506658 RPC reads",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    }
+  }
+}

@@ -10,14 +10,6 @@ export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
     yieldSource: "Neutrl savings (sNUSD)",
     yieldType: "lending-vault",
   },
-  // infiniFi USD -> siUSD (savings wrapper, $157M TVL)
-  "iusd-infinifi": {
-    variantSymbol: "siUSD",
-    variantAddress: "0xDBDC1Ef57537E34680B898E1FEBD3D68c7389bCB",
-    variantChain: "ethereum",
-    yieldSource: "infiniFi savings (siUSD)",
-    yieldType: "lending-vault",
-  },
   // Unitas -> sUSDu (savings wrapper, $64M TVL — governance-set rate)
   "usdu-unitas": {
     variantSymbol: "sUSDu",

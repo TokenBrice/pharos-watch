@@ -1,0 +1,116 @@
+{
+  "id": "fliteusd-fluid",
+  "name": "Fluid Lite USD Vault",
+  "symbol": "fLiteUSD",
+  "oneLiner": "fLiteUSD is Fluid's USDC strategy vault; deposits route to Fluid fUSDC and multi-strategy deployments, with a 0.05% exit fee and administered NAV accrual.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "navToken": true
+  },
+  "variantOf": "usdc-circle",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "usdc-circle",
+  "collateral": "USDC deposited into Fluid's UUPS-upgradeable FluidLiteVault; deposits auto-route into Fluid Lending fUSDC while StrategyHandler (0x066e84ca...) pulls funds into Ethereum and cross-chain yield strategies including FluidMainnetStrategyProxy (0xf3c971c6...) and SolanaStrategyL1",
+  "pegMechanism": "ERC-4626 NAV shares over USDC with an auto-accruing exchange price governed by the maximum of a configurable fixed rate (6.00% APR as of 2026-11-27) and an annual reward distribution ($3M per year), reconciled upward by StrategyHandler up to 200 bps per call; instant withdrawals draw from the vault's fUSDC buffer subject to a 0.05% withdrawal fee (configurable up to 0.50%, retained in the vault) and revert when fUSDC buffer liquidity is insufficient or withdrawals are paused",
+  "mechanismArchetype": "protocol-position",
+  "archetypeOverride": true,
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 Batch 2 review",
+    "rationale": "The operational ERC-4626 claim is the UUPS-upgradeable Ethereum FluidLiteVault proxy (0x273da948aca9261043fbdb2a857bc255ecc29012 -> implementation 0xe16ccc91a8134d428e7b6240177f9e2b227b9743), not direct ownership of Circle fiat reserves. At finalized Ethereum block 26506658 (2026-11-27T12:51:35Z), verified implementation source routes deposited USDC immediately into Fluid fUSDC (0x9fb7b4477576fe5b32be4c1843afb1e55f251b33) and lets StrategyHandler (0x066e84ca92529b500592867d0be89e78563fa965) pull USDC into Ethereum and cross-chain yield strategies while pricing shares from an administered exchange-price accumulator. Creation transaction 0xe1fde0e2171ce5d6b02d6070ace63d6f581fc0a5ba5ff3b2695c70d4d75ecf61 deployed the proxy at block 24616005 on 2026-03-08T23:22:59Z.",
+    "sources": [
+      {
+        "label": "Verified FluidLiteVaultProxy source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x273da948aca9261043fbdb2a857bc255ecc29012"
+      },
+      {
+        "label": "Verified FluidLiteVault UUPS implementation source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16ccc91a8134d428e7b6240177f9e2b227b9743"
+      },
+      {
+        "label": "FluidLiteVaultProxy creation transaction (block 24616005)",
+        "url": "https://eth.blockscout.com/tx/0xe1fde0e2171ce5d6b02d6070ace63d6f581fc0a5ba5ff3b2695c70d4d75ecf61"
+      },
+      {
+        "label": "Ethereum PublicNode RPC: pinned reads at finalized block 26506658 (2026-11-27T12:51:35Z)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ]
+  },
+  "detailProvider": "coingecko",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://fluid.io/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.fluid.instadapp.io/"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/Instadapp"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/0xfluid"
+    },
+    {
+      "label": "Ethereum explorer",
+      "url": "https://eth.blockscout.com/address/0x273da948aca9261043fbdb2a857bc255ecc29012"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x273da948aca9261043fbdb2a857bc255ecc29012",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "unknown",
+  "governanceQuality": "wrapper",
+  "yieldConfig": {
+    "yieldSource": "Fluid Lite USD Vault (fLiteUSD)",
+    "yieldType": "lending-vault"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "fliteusd-fluid",
+    "display": {
+      "url": "https://fluid.io/",
+      "label": "Fluid Lite"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "Fluid Lite StrategyHandler multi-strategy deployments",
+        "risk": "high",
+        "expectedAssetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+      },
+      "pooledClaim": {
+        "basis": "At finalized Ethereum block 26506658 (2026-11-27T12:51:35Z), raw USDC held directly by FluidLiteVault is zero because deposits route into Fluid fUSDC (11,546,560.40 USDC, 28.17% of 40,983,976.38 USDC vault totalAssets). StrategyHandler.getIdleAssets() (11,597,101.64 USDC) equals that 28.17% fUSDC buffer plus 50,541.24 USDC at StrategyHandler (0x066e84ca92529b500592867d0be89e78563fa965), while four registered strategy proxies reported 41.93M gross (FluidMainnetStrategyProxy 0xf3c971c6... 13.45M, FluidSolanaStrategyL1Proxy 28.47M, dust on Arbitrum and Plasma) against the 29.44M (71.83%) net residual (a 12.54M / 30.60% gross-vs-net gap while StrategyHandler.getNetAssets() reverted). Because sub-strategies and Solana custody are opaque at live runtime, live reserve telemetry publishes a pooled claim without asserting 100% USDC look-through.",
+        "reviewedAt": "2026-11-27",
+        "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16ccc91a8134d428e7b6240177f9e2b227b9743"
+      },
+      "redemptionLock": [
+        {
+          "selector": "isWithdrawalsPaused()",
+          "kind": "paused-bool"
+        }
+      ]
+    }
+  },
+  "launchDate": "2026-03-08"
+}

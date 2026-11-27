@@ -1,0 +1,85 @@
+{
+  "id": "bread-bread-coop",
+  "reserves": [
+    {
+      "name": "Gnosis Savings xDAI (sDAI) vault balance held by BREAD",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "sdai-gnosis",
+      "depType": "wrapper",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Gnosis Savings xDAI (sDAI) ERC-4626 vault over xDAI bridge (Sky USDS/sUSDS underlying)",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "counterparty",
+        "custody"
+      ],
+      "liquidityHorizon": "immediate",
+      "sourceKey": "escrow-balance:0xaf204776c7245bf4147c2612bf6e5972ee483701"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 addition review (2026-11-27)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Sourcify exact-match verified Bread implementation (0x3146b62466b76642127b9f4fe34fa7cd9968bf96)",
+        "url": "https://repo.sourcify.dev/100/0x3146b62466b76642127b9f4fe34fa7cd9968bf96"
+      },
+      {
+        "label": "Gnosis Chain BREAD proxy contract (0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3)",
+        "url": "https://gnosisscan.io/address/0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3"
+      },
+      {
+        "label": "Gnosis Chain Savings xDAI ERC-4626 vault (0xaf204776c7245bf4147c2612bf6e5972ee483701)",
+        "url": "https://gnosisscan.io/address/0xaf204776c7245bf4147c2612bf6e5972ee483701"
+      },
+      {
+        "label": "Gnosis Chain block 49496158 (2026-11-27T13:02:20Z)",
+        "url": "https://gnosisscan.io/block/49496158"
+      },
+      {
+        "label": "Gnosis Chain public JSON-RPC used for pinned reads",
+        "url": "https://rpc.gnosischain.com"
+      }
+    ],
+    "rationale": "Pinned on-chain reads at Gnosis Chain block 49496158 (hash 0xdd83760990e1c78618018f9ff8f7753fa4a66a462b652b871466bb4a1a691bb0, 2026-11-27T13:02:20Z) confirm that BREAD (0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3) has totalSupply of 352,321.934827943929587427 BREAD and holds 278,202.259961592974037404 shares of the Gnosis Savings xDAI ERC-4626 vault (0xaf204776c7245bf4147c2612bf6e5972ee483701, asset()=WXDAI 0xe91d153e0b41518a2ce8dd3d7944fa863463a97d). Both maxWithdraw(BREAD) and convertToAssets(balanceOf(BREAD)) return 352,988.180659617054703073 WXDAI (100.189% of totalSupply), with 666.245831673125115646 xDAI of claimable accrued yield surplus, zero idle WXDAI, and zero native xDAI held directly. Verified Bread.sol source confirms burn() withdraws strictly from the Savings xDAI vault and unwraps to native xDAI 1:1 atomically, while claimYield() is capped at convertToAssets(balance) minus totalSupply and rescueToken() explicitly reverts for the savings vault token.",
+    "compositionBasis": "Pinned Gnosis Chain block 49496158 Savings xDAI maxWithdraw and BREAD totalSupply reconciliation plus verified Bread.sol source.",
+    "compositionAsOf": "2026-11-27",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No unidentified local reserve constituent exists; 100% of backing sits in tracked Gnosis Savings xDAI (sDAI, sdai-gnosis) ERC-4626 vault shares. Underlying xDAI bridge collateralization and Sky USDS/sUSDS exposures propagate serially via sdai-gnosis into xdai-gnosis.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "BREAD EIP-173 proxy contract (0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3) and Gnosis Savings xDAI vault (0xaf204776c7245bf4147c2612bf6e5972ee483701)",
+        "role": "other",
+        "sharePct": 100
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 addition review (2026-11-27)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Sourcify exact-match verified Bread implementation (0x3146b62466b76642127b9f4fe34fa7cd9968bf96)",
+        "url": "https://repo.sourcify.dev/100/0x3146b62466b76642127b9f4fe34fa7cd9968bf96"
+      },
+      {
+        "label": "Gnosis Chain BREAD proxy contract (0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3)",
+        "url": "https://gnosisscan.io/address/0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3"
+      },
+      {
+        "label": "Gnosis Chain block 49496158 (2026-11-27T13:02:20Z)",
+        "url": "https://gnosisscan.io/block/49496158"
+      }
+    ],
+    "uncertainty": "Smart-contract custody on Gnosis Chain provides technical separation of Savings xDAI vault shares under Bread.sol rules, including the rescueToken() guard against withdrawing the savings vault token. However, the proxy is upgradeable with zero timelock by the 5-of-10 Bread Cooperative Safe, and no legal segregation, bankruptcy-remoteness opinion, or enforceable off-chain prohibition against governance-initiated reuse exists."
+  }
+}

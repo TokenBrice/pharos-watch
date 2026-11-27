@@ -1,0 +1,99 @@
+{
+  "id": "eusd-own",
+  "status": "active",
+  "name": "Own eUSD",
+  "symbol": "eUSD",
+  "brand": "Own",
+  "launchDate": "2026-09-09",
+  "oneLiner": "Robinhood Chain overcollateralized dollar minted via a USDG peg stability module, Fables LP vaults, and tokenized-equity and WETH CDPs.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized-dependent",
+    "rwa": false
+  },
+  "collateral": "1:1 Paxos USDG held in the eUSD PSM, concentrated-liquidity USDG/eUSD and frxUSD/eUSD Fables LP vaults managed by EUSDLiquidityManager, plus overcollateralized WETH and legacy tokenized S&P 500 (eSPY) CDP positions on Robinhood Chain.",
+  "pegMechanism": "Holders swap USDG and eUSD 1:1 with 0 bps fee through EUSDPsm (cannot pause redemptions up to available USDG reserves, 1,000,000 eUSD cap), or redeem eUSD permissionlessly against the riskiest CDP or LP positions at oracle price (50 bps fee on EUSDLiquidityManager, 100 bps on Managers A and B, 200 bps on Managers C and D). Overcollateralized positions pay 6% to 8% annual stability fees and face permissionless liquidation with a 5% bonus.",
+  "mechanismArchetype": "cdp",
+  "llamaId": "484",
+  "geckoId": "own-eusd",
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://own.money/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.own.money/eusd"
+    },
+    {
+      "label": "GitHub (own-v2 contracts and reviews)",
+      "url": "https://github.com/own-protocol/own-v2"
+    },
+    {
+      "label": "Token explorer (Robinhood Blockscout)",
+      "url": "https://robinhoodchain.blockscout.com/address/0x8b84d644cecaee6d21373f37e1ba00f85ed7cdb7"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/owndotmoney"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "robinhood",
+      "address": "0x8b84d644cecaee6d21373f37e1ba00f85ed7cdb7",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "onchain",
+  "governanceQuality": "multisig",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://github.com/own-protocol/own-v2/blob/main/docs/contracts-robinhood.md",
+    "provider": "On-chain Robinhood Chain PSM, LiquidityManager, and EUSDManager accounting; not independent financial assurance",
+    "cadence": "real-time"
+  },
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "eusd-own",
+    "display": {
+      "url": "https://docs.own.money/resources/addresses",
+      "label": "Own Robinhood Chain PSM, LP vaults, and CDP managers"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "robinhood",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "rpcUrl": "https://rpc.mainnet.chain.robinhood.com",
+      "fallbackRpcUrl": "https://robinhood-rpc.publicnode.com"
+    }
+  },
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Listing Policy v2 PR-3 Batch 5 addition review 2026-11-27",
+    "rationale": "Own eUSD is minted as overcollateralized debt across risk-grouped EUSDManager CDP contracts (Managers A through D plus legacy eSPY v1) and concentrated-liquidity EUSDLiquidityManager vaults, supplemented by a 1:1 USDG EUSDPsm module (with frxUSD supported in PSM configuration). Stability fees accrue to the protocol treasury and fund optional seUSD staking rewards rather than rebasing eUSD itself. The cdp archetype matches the verified multi-manager CDP and PSM architecture.",
+    "sources": [
+      {
+        "label": "Own eUSD documentation",
+        "url": "https://docs.own.money/eusd"
+      },
+      {
+        "label": "Own eUSD risk parameters",
+        "url": "https://docs.own.money/eusd/parameters"
+      },
+      {
+        "label": "Own Robinhood Chain deployment record",
+        "url": "https://github.com/own-protocol/own-v2/blob/main/docs/contracts-robinhood.md"
+      }
+    ]
+  }
+}

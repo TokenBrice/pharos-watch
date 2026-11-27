@@ -418,6 +418,41 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ],
   },
   ...MIDAS_LYT_CONFIGS,
+  "mglo-midas-fasanara": {
+    ...issuerBase,
+    reviewedAt: "2026-11-27",
+    capacityModel: { kind: "unquantified" },
+    settlementModel: "days",
+    outputAssetType: "nav",
+    unresolvedOutputAssetKeys: ["usdc-circle", "usdg-paxos"],
+    costModel: undisclosedReviewedFee(
+      "On-chain mGLO RedemptionVaultSwappers on Base, Ethereum, and Robinhood Chain pause fiat redemption (fnPaused(redeemFiatRequest)=true; configured fiatAdditionalFee=10 bps plus 30 mGLO flat fee) while leaving standard token requests unpaused with 0 bps configured token fee (USDC on Base/Ethereum, USDG on Robinhood Chain) and 50 bps instant fee; no offering prospectus establishing binding all-in fees or settlement deadlines was recovered because Midas web pages returned HTTP 403.",
+    ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale:
+        "Live pinned reads on Base (block 62994714), Ethereum (block 26507108), and Robinhood Chain (block 124312872) confirm fnPaused(redeemFiatRequest(uint256)) = true on the issuer-registered mGLO redemption vaults (with fiatAdditionalFee = 10 bps and fiatFlatFee = 30 mGLO), while standard token requests remain unpaused with 0 bps configured token fee (paying USDC on Base/Ethereum and USDG on Robinhood Chain) and 50 bps instant fee. Because Midas web product and legal documentation returned HTTP 403 and no offering prospectus establishing binding settlement deadlines, capacity limits, or complete fees was recovered, capacity, settlement, cost, and unified payout identity remain withheld.",
+      reviewedAt: "2026-11-27",
+      docs: [
+        sourceRef("Midas contracts deployment registry", "https://github.com/midas-apps/contracts/blob/main/config/constants/addresses.ts", ["route", "access"]),
+        sourceRef("Midas PoR v2 canonical token registry", "https://raw.githubusercontent.com/midas-apps/midas-por-v2/main/tokens.json", ["route", "capacity"]),
+        sourceRef("Midas mGLO November 25, 2026 SAVE attestation", "https://gateway.pinata.cloud/ipfs/QmeNwyuVyhM5HvEFfKZH9j7zCCvGrLwCBf1hYeWsTocMt1", ["capacity", "settlement"]),
+        sourceRef("Base mGLO RedemptionVaultSwapper", "https://base.blockscout.com/address/0xa80f9bffff91cbc13314fefd05560032af018f18", ["route", "fees", "access"]),
+        sourceRef("Ethereum mGLO RedemptionVaultSwapper", "https://eth.blockscout.com/address/0x55f3ab43e49ffb6b1fff5e2b310c21278bdaf0f5", ["route", "fees", "access"]),
+      ],
+    },
+    docs: [
+      sourceRef("Midas contracts deployment registry", "https://github.com/midas-apps/contracts/blob/main/config/constants/addresses.ts", ["route", "access"]),
+      sourceRef("Midas PoR v2 canonical token registry", "https://raw.githubusercontent.com/midas-apps/midas-por-v2/main/tokens.json", ["route", "capacity"]),
+      sourceRef("Midas mGLO November 25, 2026 SAVE attestation", "https://gateway.pinata.cloud/ipfs/QmeNwyuVyhM5HvEFfKZH9j7zCCvGrLwCBf1hYeWsTocMt1", ["capacity", "settlement"]),
+      sourceRef("Base mGLO RedemptionVaultSwapper", "https://base.blockscout.com/address/0xa80f9bffff91cbc13314fefd05560032af018f18", ["route", "fees", "access"]),
+      sourceRef("Ethereum mGLO RedemptionVaultSwapper", "https://eth.blockscout.com/address/0x55f3ab43e49ffb6b1fff5e2b310c21278bdaf0f5", ["route", "fees", "access"]),
+    ],
+    notes: [
+      "mGLO is a NAV-accreting Midas strategy certificate whose on-chain RedemptionVaultSwappers keep fiat redemption paused while exposing chain-specific token redemption requests (USDC on Base and Ethereum, USDG on Robinhood Chain). Because no single unified payout token or readable offering prospectus establishes binding settlement, capacity, and all-in fee terms, the payout identity stays unresolved rather than defaulting to fiat USD.",
+    ],
+  },
   "wtgxx-wisdomtree": {
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),

@@ -1,0 +1,91 @@
+{
+  "id": "fliteusd-fluid",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Verified FluidLiteVaultProxy source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x273da948aca9261043fbdb2a857bc255ecc29012"
+      },
+      {
+        "label": "Verified FluidLiteVault UUPS implementation source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16ccc91a8134d428e7b6240177f9e2b227b9743"
+      },
+      {
+        "label": "Verified FluidTimelockController source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4d6ce4f4498d59eed397bcbc687805a07f9b2346"
+      },
+      {
+        "label": "Ethereum PublicNode RPC: pinned reads at finalized block 26506658 (2026-11-27T12:51:35Z)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ],
+    "evidence": "At finalized Ethereum block 26506658 (2026-11-27T12:51:35Z), FluidLiteVaultProxy 0x273da948aca9261043fbdb2a857bc255ecc29012 delegates to verified UUPS implementation FluidLiteVault 0xe16ccc91a8134d428e7b6240177f9e2b227b9743. The current implementation exposes ordinary OpenZeppelin ERC20 transfers without a holder blacklist, freeze, or transfer pause, while pauseDeposits() and pauseWithdrawals() (callable immediately by _secondaryOwner / AUTH_LEVEL 0x4f6f977acdd1177dcd81ab83074855ecb9c2d49e) can halt minting and redemptions. Crucially, _authorizeUpgrade() is active and gated only by _owner (FluidTimelockController 0x4d6ce4f4498d59eed397bcbc687805a07f9b2346, 24-hour delay, proposed by the 6-of-12 Fluid team Avocado multisig), allowing governance to replace token transfer and redemption logic. Direct active upgradeability classifies as possible and takes precedence over inherited upstream Circle USDC freeze exposure. Verdict: possible.",
+    "reviewer": "Pharos Listing Policy v2 Batch 2 review",
+    "reviewedAt": "2026-11-27"
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "summary": "FluidLiteVault.convertToAssets() and totalAssets() price shares exclusively from an internal auto-accruing _exchangePrice (the maximum of _fixedRate, 6.00% APR as of 2026-11-27, and _rewardAmountPerYear, $3M per year divided by totalSupply), updated upward during StrategyHandler reconciliations via updateExchangePrice() up to +200 bps per call. updateExchangePrice() explicitly reverts on downward updates, and vault totalAssets() does not read live strategy mark-to-market balances; StrategyHandler separately references upgradeable FluidPriceOracleProxy 0x9b9dba36eb22586c228c3bf81138373096036300 for off-vault strategy accounting. No borrower liquidation engine consumes the fLiteUSD share price directly.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-11-27",
+      "reviewer": "Pharos Listing Policy v2 Batch 2 review",
+      "rationale": "fLiteUSD minting and redemption convert shares at the contract's internal auto-accruing exchange price controlled by StrategyHandler rate and reconciliation calls; the vault has no borrower positions or collateral liquidation branches, so oracle risk applies to the top-level conversion path only.",
+      "sources": [
+        {
+          "label": "Verified FluidLiteVault UUPS implementation source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16ccc91a8134d428e7b6240177f9e2b227b9743"
+        },
+        {
+          "label": "Verified FluidPriceOracleProxy source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9b9dba36eb22586c228c3bf81138373096036300"
+        },
+        {
+          "label": "Ethereum PublicNode RPC: pinned reads at finalized block 26506658 (2026-11-27T12:51:35Z)",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 Batch 2 review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Verified FluidLiteVault UUPS implementation source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16ccc91a8134d428e7b6240177f9e2b227b9743"
+      },
+      {
+        "label": "Verified StrategyHandlerDummy interface",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x968505c71ec9f258d5d48e59a48486b866b5ce96"
+      },
+      {
+        "label": "Verified FluidPriceOracleProxy source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9b9dba36eb22586c228c3bf81138373096036300"
+      },
+      {
+        "label": "Ethereum PublicNode RPC: pinned reads at finalized block 26506658 (2026-11-27T12:51:35Z)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "Only the canonical native Ethereum FluidLiteVaultProxy deployment (0x273da948aca9261043fbdb2a857bc255ecc29012) is authored; no fLiteUSD share bridge representation exists. Underlying strategy capital deployed by StrategyHandler includes cross-chain exposure through FluidSolanaStrategyL1Proxy plus dust Arbitrum and Plasma strategy registrations, which are strategy custody risks rather than share-token bridge representations.",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 Batch 2 review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Verified FluidLiteVaultProxy source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x273da948aca9261043fbdb2a857bc255ecc29012"
+      },
+      {
+        "label": "Ethereum PublicNode RPC: pinned reads at finalized block 26506658 (2026-11-27T12:51:35Z)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ]
+  }
+}

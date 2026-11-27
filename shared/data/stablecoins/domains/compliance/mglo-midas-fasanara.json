@@ -1,0 +1,122 @@
+{
+  "id": "mglo-midas-fasanara",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Midas PoR v2 canonical token registry (Compartment mGLO proof configuration)",
+        "url": "https://raw.githubusercontent.com/midas-apps/midas-por-v2/main/tokens.json"
+      },
+      {
+        "label": "Midas mGLO November 25, 2026 SAVE attestation (JTC Luxembourg Compartment mGLO / Fasanara SA SICAV-RAIF mGLOBAL Fund SF 36)",
+        "url": "https://gateway.pinata.cloud/ipfs/QmeNwyuVyhM5HvEFfKZH9j7zCCvGrLwCBf1hYeWsTocMt1"
+      },
+      {
+        "label": "ESMA MiCA Article 2 scope: financial instruments and securitisation positions excluded",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "mGLO is structured as a NAV-linked Luxembourg securitisation-compartment security token (Compartment mGLO, ISIN LU3357216087) referencing Fasanara SA SICAV-RAIF mGLOBAL Fund SF 36 Class A USD ACC, with NAV-priced issuance and redemption. Foreign structuring and variable NAV do not by themselves establish a categorical security exclusion under the U.S. securities statutes incorporated by GENIUS Act section 2(22), and the exact offering memorandum naming the legal issuer and redemption covenants was not independently recovered because Midas web pages returned HTTP 403. Applicability therefore remains unclear.",
+      "references": [
+        {
+          "label": "Midas PoR v2 canonical token registry",
+          "url": "https://raw.githubusercontent.com/midas-apps/midas-por-v2/main/tokens.json",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "Midas mGLO November 25, 2026 SAVE attestation (JTC Luxembourg valuation email for LU3357216087)",
+          "url": "https://gateway.pinata.cloud/ipfs/QmeNwyuVyhM5HvEFfKZH9j7zCCvGrLwCBf1hYeWsTocMt1",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27",
+          "sourceDate": "2026-11-25"
+        },
+        {
+          "label": "GENIUS Act section 2(22): payment definition and U.S. securities exclusions",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-11-27",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerDomicile": "Luxembourg",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://raw.githubusercontent.com/midas-apps/midas-por-v2/main/tokens.json",
+    "monthlyAttestationPresent": false,
+    "notes": "The November 25, 2026 Midas SAVE attestation (CID QmeNwyuVyhM5HvEFfKZH9j7zCCvGrLwCBf1hYeWsTocMt1) anchors a vlayer TLS-Notary proof of JTC Luxembourg's October 31 valuation email identifying Compartment mGLO (ISIN LU3357216087) referencing Fasanara SA SICAV-RAIF mGLOBAL Fund SF 36 Class A USD ACC. Its security-token label and Luxembourg securitisation structure are not a qualified U.S. securities determination under GENIUS Act section 2(22), so applicability stays unclear. Monthly JTC NAV valuation and Chainlink CRE attestation workflows do not constitute a GENIUS-compliant monthly CPA reserve examination of cash/Treasury backing. Because Midas web product and legal pages returned HTTP 403, redemptionPolicyPresent is omitted as unknown and the exact legal issuer entity name is omitted until primary offering documents for LU3357216087 are independently recovered.",
+    "references": [
+      {
+        "label": "Midas mGLO November 25, 2026 SAVE attestation",
+        "url": "https://gateway.pinata.cloud/ipfs/QmeNwyuVyhM5HvEFfKZH9j7zCCvGrLwCBf1hYeWsTocMt1",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-11-27",
+        "sourceDate": "2026-11-25"
+      },
+      {
+        "label": "Midas PoR v2 canonical token registry",
+        "url": "https://raw.githubusercontent.com/midas-apps/midas-por-v2/main/tokens.json",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "GENIUS Act enacted text",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-11-27",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "OCC GENIUS implementing proposed rule, 91 FR 10202",
+        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-11-27",
+        "sourceDate": "2026-03-02"
+      }
+    ],
+    "reviewer": "Pharos Listing Policy v2 PR-3 Batch 1",
+    "reviewedAt": "2026-11-27",
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS implementing proposed rule (91 FR 10202) and pending Digital Assets Licensing Applications table",
+        "Federal Reserve September 24, 2026 GENIUS proposed-rule release",
+        "Treasury SCRC procedural IFR, Federal Register September 30, 2026",
+        "NYDFS regulated virtual-currency entities and stablecoin greenlist",
+        "Midas PoR v2 canonical registry and November 25, 2026 mGLO SAVE attestation (CID QmeNwyuVyhM5HvEFfKZH9j7zCCvGrLwCBf1hYeWsTocMt1)"
+      ],
+      "summary": "As of 2026-11-27, no public GENIUS PPSI approval, state qualification, pending application, or registered foreign-issuer exception was found for mGLO (ISIN LU3357216087) in the consulted federal and NYDFS records or Midas public disclosures. This bounded negative review is not an exhaustive issuer census or a finding of illegality; U.S. payment-stablecoin applicability remains unresolved.",
+      "reviewer": "Pharos Listing Policy v2 PR-3 Batch 1",
+      "reviewedAt": "2026-11-27",
+      "references": [
+        {
+          "label": "OCC GENIUS implementing proposed rule, 91 FR 10202",
+          "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-03-02",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "OCC public pending digital-asset licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "NYDFS regulated virtual-currency entities and stablecoin greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-11-27"
+        }
+      ]
+    }
+  }
+}

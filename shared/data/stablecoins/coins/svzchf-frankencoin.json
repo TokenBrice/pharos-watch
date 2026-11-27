@@ -1,0 +1,117 @@
+{
+  "id": "svzchf-frankencoin",
+  "name": "SavingsVault ZCHF",
+  "symbol": "svZCHF",
+  "oneLiner": "svZCHF is Frankencoin's immutable ERC-4626 ZCHF savings vault; shares accrue Leadrate interest and redeem into ZCHF without a withdrawal lock.",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "CHF",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "navToken": true
+  },
+  "variantOf": "zchf-frankencoin",
+  "variantKind": "savings-passthrough",
+  "pegReferenceId": "zchf-frankencoin",
+  "collateral": "ZCHF deposited into Frankencoin's immutable Ethereum Savings module (0x27d9ad987bde08a0d083ef7e0e4043c857a17b38); upstream CDP collateral and veto-governed issuer risk remain with ZCHF.",
+  "pegMechanism": "ERC-4626 shares represent a proportional claim on the vault's ZCHF balance plus accrued Leadrate interest inside Frankencoin's Savings module. Deposits transfer ZCHF into Savings and mint shares at the current ZCHF-per-share price; withdrawals burn shares and call Savings.withdraw synchronously with no withdrawal lockup or local fee. Fresh deposits apply Savings' three-day weighted interest-accrual delay (INTEREST_DELAY = 259,200 seconds) before new principal earns interest. Conversion out of ZCHF into fiat or other stablecoins remains a separate parent ZCHF market or bridge route.",
+  "mechanismArchetype": "protocol-position",
+  "archetypeOverride": true,
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 PR-3 primary-source review",
+    "rationale": "The exact Ethereum contract 0xe5f130253ff137f9917c0107659a4c5262abf6b0 (SavingsVaultZCHF_2) is an immutable ERC-4626 savings receipt over ZCHF rather than a standalone CDP engine. At finalized Ethereum block 26506626 (2026-11-27T12:45:11Z; hash 0x8a14b3254f4a6a1c2454fbd9739baaf3823a59480b0200eade9f94a35bf59260), asset() resolves to Ethereum ZCHF (0xb58e61c3098d85632df34eecfb899a1ed80921cb), share and asset decimals are 18, savings() resolves to immutable Frankencoin Savings (0x27d9ad987bde08a0d083ef7e0e4043c857a17b38), and owner() is zero following permanent renunciation at block 24118275. Deposits transfer ZCHF into Savings before minting shares, and withdrawals burn shares before calling Savings.withdraw. This protocol-position classification intentionally departs from parent zchf-frankencoin's cdp archetype while preserving the 100% parent ZCHF dependency.",
+    "sources": [
+      {
+        "label": "Exact verified SavingsVaultZCHF_2 source on Ethereum Blockscout",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe5f130253ff137f9917c0107659a4c5262abf6b0"
+      },
+      {
+        "label": "Exact Sourcify verification for SavingsVaultZCHF_2",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xe5f130253ff137f9917c0107659a4c5262abf6b0?fields=all"
+      },
+      {
+        "label": "Verified Frankencoin Savings and Leadrate contract source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x27d9ad987bde08a0d083ef7e0e4043c857a17b38"
+      },
+      {
+        "label": "Frankencoin Savings application",
+        "url": "https://app.frankencoin.com/savings?chain=ethereum"
+      },
+      {
+        "label": "Ethereum block 26506626, 2026-11-27T12:45:11Z; pinned svZCHF and Savings state reads",
+        "url": "https://etherscan.io/block/26506626"
+      }
+    ]
+  },
+  "detailProvider": "coingecko",
+  "links": [
+    {
+      "label": "Frankencoin: Savings app",
+      "url": "https://app.frankencoin.com/savings?chain=ethereum"
+    },
+    {
+      "label": "Website",
+      "url": "https://www.frankencoin.com/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.frankencoin.com/"
+    },
+    {
+      "label": "Ethereum vault contract",
+      "url": "https://etherscan.io/address/0xe5f130253ff137f9917c0107659a4c5262abf6b0"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/frankencoinzchf"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xe5f130253ff137f9917c0107659a4c5262abf6b0",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "unknown",
+  "governanceQuality": "wrapper",
+  "yieldConfig": {
+    "yieldSource": "Frankencoin Savings (svZCHF)",
+    "yieldType": "nav-appreciation"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 2,
+    "semantics": "single-asset",
+    "breakerScope": "svzchf-frankencoin",
+    "display": {
+      "url": "https://app.frankencoin.com/savings?chain=ethereum",
+      "label": "Frankencoin Savings"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "ZCHF deposited in Frankencoin Savings module",
+        "risk": "medium",
+        "coinId": "zchf-frankencoin",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0xb58e61c3098d85632df34eecfb899a1ed80921cb"
+      },
+      "deployedExposure": {
+        "basis": "At Ethereum block 26506626 (2026-11-27T12:45:11Z), immutable SavingsVaultZCHF_2 deploys all deposited ZCHF into the immutable Frankencoin Savings module (0x27d9ad987bde08a0d083ef7e0e4043c857a17b38). Idle ZCHF held directly by the vault is zero; savings.savings(vault).saved (908345228456448794237728 raw ZCHF) plus accrued interest (35708385739558096239 raw ZCHF) reconciles totalAssets() (908380936842188352333967 raw ZCHF) exactly.",
+        "reviewedAt": "2026-11-27",
+        "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0xe5f130253ff137f9917c0107659a4c5262abf6b0"
+      }
+    }
+  },
+  "launchDate": "2025-12-29"
+}

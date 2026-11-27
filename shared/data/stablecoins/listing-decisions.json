@@ -531,6 +531,14 @@
     "invusd-inverse-finance": "core-stablecoin",
     "usdv-delpho": "core-stablecoin",
     "bnbusd-sigma-money": "core-stablecoin",
-    "usdhl-felix": "stablecoin-variant"
+    "usdhl-felix": "stablecoin-variant",
+    "mglo-midas-fasanara": "tokenized-fund",
+    "bread-bread-coop": "stablecoin-variant",
+    "siusd-infinifi": "stablecoin-variant",
+    "fliteusd-fluid": "stablecoin-variant",
+    "svzchf-frankencoin": "stablecoin-variant",
+    "steakusdc-steakhouse-base": "stablecoin-variant",
+    "gpyusdse-galaxy": "stablecoin-variant",
+    "eusd-own": "core-stablecoin"
   }
 }

@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 3,
+  "receiptMode": "prospective-offline",
+  "kind": "safety-score-v9-new-asset-admission-receipt",
+  "assetId": "bread-bread-coop",
+  "prospectiveInputId": "prospective-admission:v1:03af2186520b92e0332201c89c1eaa16f91f1d847c8753f75eb536cdd9fa938f",
+  "admissionClockSec": 1795793113,
+  "evaluatedCohortIds": [
+    "bread-bread-coop",
+    "sdai-gnosis",
+    "susds-sky",
+    "usdc-circle",
+    "usds-sky",
+    "xdai-gnosis"
+  ],
+  "absentRuntimeLanes": [
+    "chain-supply",
+    "dex",
+    "live-reserves",
+    "peg",
+    "redemption"
+  ],
+  "supplyObservation": {
+    "circulating": {
+      "peggedUSD": 351462.98
+    },
+    "observedAtSec": 1795784540,
+    "url": "https://rpc.gnosischain.com",
+    "field": "eth_call(0xa555d5344f6fb6c65da19e403cb4c1ec4a1a5ee3,totalSupply)*coingecko:bread-3",
+    "retrievedAtSec": 1795784540
+  },
+  "registryFingerprint": "d5e6338d30391aaee8fb68d2f7ac274ebab64cfa601fad56cead31ebe6a1489d",
+  "evaluationBuildDigest": "1d128bc5598b6daf4323f12076661a2247488a5f44f9d0da168209746163a9e5",
+  "card": {
+    "id": "bread-bread-coop",
+    "openBucketQuestionsCarried": 5,
+    "inheritedOpenBucketQuestionsCarried": 0,
+    "openBucketObligationsCarried": 6,
+    "documentationObligationsCarried": 1
+  },
+  "questions": [
+    {
+      "questionKey": "bread-bread-coop|component|economic-control:oracle",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 2,
+      "codes": [
+        {
+          "code": "missing-oracle-profile",
+          "obligations": 2,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "bread-bread-coop|component|exit-routes",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-runtime-route-evidence",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "bread-bread-coop|component|mechanism-risk-review",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-archetype",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "bread-bread-coop|component|peg",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-peg-input",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "bread-bread-coop|path|material-dependency-unavailable",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "material-dependency-unavailable",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "bread-bread-coop|component|access:transfer",
+      "bucket": "documentation",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-access-review",
+          "obligations": 1,
+          "documentation": true
+        }
+      ]
+    }
+  ]
+}

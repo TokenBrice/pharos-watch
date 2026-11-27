@@ -315,7 +315,7 @@ describe("matchAllDlPools", () => {
     expect(result).toHaveLength(1);
   });
 
-  it.each(["ftusd-flying-tulip", "iusd-infinifi"])("rejects deposit-matched PT and LP markets for %s wrappers", (id) => {
+  it.each(["ftusd-flying-tulip", "thusd-theo"])("rejects deposit-matched PT and LP markets for %s wrappers", (id) => {
     const variant = YIELD_VARIANT_MAP[id];
     for (const project of ["pendle-v2", "spectra-v2"]) {
       for (const symbol of [variant.variantSymbol, `PT-${variant.variantSymbol}`]) {

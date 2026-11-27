@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 3,
+  "receiptMode": "prospective-offline",
+  "kind": "safety-score-v9-new-asset-admission-receipt",
+  "assetId": "steakusdc-steakhouse-base",
+  "prospectiveInputId": "prospective-admission:v1:c6cc579019d4bc86c44017d67d834ce9b1a43ec9459fafb82770a90e27cb6cd5",
+  "admissionClockSec": 1795793124,
+  "evaluatedCohortIds": [
+    "steakusdc-steakhouse-base",
+    "usdc-circle"
+  ],
+  "absentRuntimeLanes": [
+    "chain-supply",
+    "dex",
+    "live-reserves",
+    "peg",
+    "redemption"
+  ],
+  "supplyObservation": {
+    "circulating": {
+      "peggedUSD": 249554370.49
+    },
+    "observedAtSec": 1795783889,
+    "url": "https://mainnet.base.org",
+    "field": "eth_call(0xbeef0e0834849acc03f0089f01f4f1eeb06873c9,totalSupply)*convertToAssets*usdc-price",
+    "retrievedAtSec": 1795784500
+  },
+  "registryFingerprint": "d5e6338d30391aaee8fb68d2f7ac274ebab64cfa601fad56cead31ebe6a1489d",
+  "evaluationBuildDigest": "1d128bc5598b6daf4323f12076661a2247488a5f44f9d0da168209746163a9e5",
+  "card": {
+    "id": "steakusdc-steakhouse-base",
+    "openBucketQuestionsCarried": 3,
+    "inheritedOpenBucketQuestionsCarried": 0,
+    "openBucketObligationsCarried": 3,
+    "documentationObligationsCarried": 3
+  },
+  "questions": [
+    {
+      "questionKey": "steakusdc-steakhouse-base|component|exit-routes",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-runtime-route-evidence",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "steakusdc-steakhouse-base|component|mechanism-risk-review",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-archetype",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "steakusdc-steakhouse-base|reserve-exposure|reserve:877fa492c0247d205f96a5d5",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "material-reserve-slice-unstructured",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "steakusdc-steakhouse-base|component|access:transfer",
+      "bucket": "documentation",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-access-review",
+          "obligations": 1,
+          "documentation": true
+        }
+      ]
+    },
+    {
+      "questionKey": "steakusdc-steakhouse-base|control|authored:steakusdc-steakhouse-base|asset:steakusdc-steakhouse-base|steakUSDC (Base) curator",
+      "bucket": "documentation",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "unresolved-control-identity",
+          "obligations": 1,
+          "documentation": true
+        }
+      ]
+    },
+    {
+      "questionKey": "steakusdc-steakhouse-base|control|authored:steakusdc-steakhouse-base|asset:steakusdc-steakhouse-base|steakUSDC (Base) ultimate supervisor-owner Safe",
+      "bucket": "documentation",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "unresolved-control-identity",
+          "obligations": 1,
+          "documentation": true
+        }
+      ]
+    }
+  ]
+}

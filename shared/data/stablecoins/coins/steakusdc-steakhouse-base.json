@@ -1,0 +1,133 @@
+{
+  "id": "steakusdc-steakhouse-base",
+  "name": "Steakhouse Prime USDC (Base)",
+  "symbol": "steakUSDC",
+  "brand": "Steakhouse",
+  "oneLiner": "steakUSDC on Base is Steakhouse's Morpho Vault V2 over USDC; shares accrue borrower interest, absorb lending losses, and redeem against available liquidity.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "navToken": true
+  },
+  "variantOf": "usdc-circle",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "usdc-circle",
+  "collateral": "USDC held idle or supplied on Base through a sole MorphoMarketV1AdapterV2. As of 2026-11-27, the book is concentrated in cbBTC-backed lending alongside WETH, cbETH, and wstETH borrower markets; these are borrower collateral, not assets held directly by the vault.",
+  "pegMechanism": "ERC-4626 shares represent a proportional USDC-denominated lending position on Base. Interest and fee-share accrual change assets per share; bad debt reduces NAV. Ordinary withdrawals burn shares for idle USDC plus liquidity available through the selected liquidity adapter (currently pointing to the cbBTC/USDC market). VaultV2 maxWithdraw and maxRedeem deliberately return zero as conservative underestimates, not measurements of available exit liquidity. As of 2026-11-27, the current adapter's force-deallocation penalty is 0.001% of assets deallocated; this separate route still requires market liquidity and is not an ordinary withdrawal fee.",
+  "mechanismArchetype": "protocol-position",
+  "archetypeOverride": true,
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 PR-3 primary-source review",
+    "rationale": "The exact Base contract 0xbeef0e0834849acc03f0089f01f4f1eeb06873c9 is an immutable Morpho VaultV2 USDC lending position, not direct ownership of Circle reserves. At finalized Base block 62967570 (2026-11-27T12:51:29Z; hash 0x8bbf4b8ae78175d5ff06b8bd91b66f1cbc7f7cc5deb8f3fe11b63be4fb9740c1), asset() resolves to Base native USDC (0x833589fcd6edb6e08f4c7c32d4f71b54bda02913), share decimals are 18, asset decimals are 6, and the sole MorphoMarketV1AdapterV2 (0xfdd31cdf6712c47a4e67037d9f2e35587f5404c0) holds four funded Morpho lender positions. Sourcify-verified VaultV2 enter() pulls USDC before user minting, accrueInterest() realizes lending gains and losses, and exit() burns shares for available USDC. Morpho's deployment metadata dates creation to Base block 37404640 (2025-10-27T20:57:07Z). This protocol-position archetype intentionally departs from parent usdc-circle's fiat-cash archetype.",
+    "sources": [
+      {
+        "label": "Morpho exact Steakhouse Prime USDC Base deployment",
+        "url": "https://app.morpho.org/base/vault/0xbeef0e0834849acc03f0089f01f4f1eeb06873c9"
+      },
+      {
+        "label": "Exact verified VaultV2 source (base, 0xbeef0e0834849acc03f0089f01f4f1eeb06873c9)",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0xbeef0e0834849acc03f0089f01f4f1eeb06873c9?fields=all"
+      },
+      {
+        "label": "Morpho current vault identity and asset API",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Steakhouse DeFi vault governing terms",
+        "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+      },
+      {
+        "label": "Base block 62967570, 2026-11-27T12:51:29Z; complete vault, controller, and four-market census",
+        "url": "https://basescan.org/block/62967570"
+      }
+    ]
+  },
+  "detailProvider": "coingecko",
+  "links": [
+    {
+      "label": "Morpho: Vault",
+      "url": "https://app.morpho.org/base/vault/0xbeef0e0834849acc03f0089f01f4f1eeb06873c9"
+    },
+    {
+      "label": "Steakhouse documentation",
+      "url": "https://www.steakhouse.financial/docs"
+    },
+    {
+      "label": "Morpho: Vault V2 documentation",
+      "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+    },
+    {
+      "label": "Curator",
+      "url": "https://www.steakhouse.financial/"
+    },
+    {
+      "label": "Steakhouse: Vault terms",
+      "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+    },
+    {
+      "label": "Morpho: Framework audits",
+      "url": "https://docs.morpho.org/get-started/resources/audits/"
+    },
+    {
+      "label": "Base explorer",
+      "url": "https://basescan.org/address/0xbeef0e0834849acc03f0089f01f4f1eeb06873c9"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/SteakhouseFi"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "base",
+      "address": "0xbeef0e0834849acc03f0089f01f4f1eeb06873c9",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "mixed",
+  "governanceQuality": "wrapper",
+  "yieldConfig": {
+    "yieldSource": "Steakhouse Morpho USDC lending vault (Base)",
+    "yieldType": "lending-vault"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 2,
+    "semantics": "single-asset",
+    "breakerScope": "steakusdc-steakhouse-base",
+    "display": {
+      "url": "https://app.morpho.org/base/vault/0xbeef0e0834849acc03f0089f01f4f1eeb06873c9",
+      "label": "Steakhouse Prime USDC (Base)"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "base",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "USDC-denominated Steakhouse Morpho lending claim",
+        "risk": "high",
+        "coinId": "usdc-circle",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+      },
+      "deployedExposure": {
+        "basis": "At Base block 62967570 (2026-11-27T12:51:29Z), the sole MorphoMarketV1AdapterV2 (0xfdd31cdf6712c47a4e67037d9f2e35587f5404c0) enumerates four USDC-denominated Morpho lender markets (cbBTC, WETH, cbETH, wstETH); expectedSupplyAssets sum to 249592239914363 raw USDC and idle USDC is zero, reconciling adapter.realAssets() and totalAssets() exactly. The reviewed descriptor covers the loan-denominated protocol claim, not cash or borrower-collateral weights.",
+        "reviewedAt": "2026-11-27",
+        "sourceUrl": "https://sourcify.dev/server/v2/contract/8453/0xbeef0e0834849acc03f0089f01f4f1eeb06873c9?fields=all"
+      },
+      "redemptionLiquidity": {
+        "source": "morpho-vault-v2",
+        "chainId": 8453
+      }
+    }
+  },
+  "launchDate": "2025-10-27"
+}

@@ -3062,6 +3062,105 @@
         "redeemReturns": "gross-before-fee",
         "pausedSelector": "0x5c975abb"
       }
+    },
+    {
+      "modelId": "erc4626-instant",
+      "identity": {
+        "assetId": "fliteusd-fluid",
+        "deployment": "ethereum:0x273da948aca9261043fbdb2a857bc255ecc29012",
+        "endpoint": "ethereum:0x273da948aca9261043fbdb2a857bc255ecc29012",
+        "outputAssetKeys": [
+          "usdc-circle"
+        ],
+        "implementationIdentity": "sha256:58c2f22b1a690e9f2b7ad367da9ba6293ad14bce7393bab16a4fdb39184e03f2"
+      },
+      "holder": "any-holder",
+      "reviewedAt": "2026-11-27T12:51:35.000Z",
+      "expiresAt": "2026-12-27T00:00:00.000Z",
+      "evidenceIds": [
+        "verified-source:35b48826b3d14368e888d6090e8c0e0e426b5324c7ca4522bd2ac489665327fe",
+        "pinned-identity:ethereum:26506658:0x2b69b7934b1e88fb42e9f10e6d0bff1f9114b5f1334c87ee41cc2aa8c9210f31",
+        "balance-layout:account-slot:0x0000000000000000000000000000000000000000000000000000000000000000",
+        "pinned-ordinary-holder-simulation:ethereum:26506658:0xd8b2a759690d5068efed3d6088bd07b54168ab08:redeem(1000000000000000000)"
+      ],
+      "sourceUrls": [
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x273da948aca9261043fbdb2a857bc255ecc29012",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe16ccc91a8134d428e7b6240177f9e2b227b9743",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9fb7b4477576fe5b32be4c1843afb1e55f251b33",
+        "https://docs.fluid.instadapp.io/",
+        "https://ethereum-rpc.publicnode.com"
+      ],
+      "producer": {
+        "kind": "erc4626-instant",
+        "chain": "ethereum",
+        "chainId": 1,
+        "contract": "0x273da948aca9261043fbdb2a857bc255ecc29012",
+        "outputToken": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "inputDecimals": 18,
+        "outputDecimals": 6,
+        "codeSha256": "e8ccf9bf82d7b9c0fce7f3c6042988515901a0d81aeb7f0d83e34113c1afec08",
+        "implementation": {
+          "address": "0xe16ccc91a8134d428e7b6240177f9e2b227b9743",
+          "slot": "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc",
+          "codeSha256": "58c2f22b1a690e9f2b7ad367da9ba6293ad14bce7393bab16a4fdb39184e03f2"
+        },
+        "balanceStorage": {
+          "slot": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "keyOrder": "account-slot"
+        },
+        "maxFunctions": "binding",
+        "pausedSelector": "0x5398d2c2",
+        "unrestrictedGateSelectors": [],
+        "multicallCodeSha256": "0fb6a9dbcc4e17098c35d4b821bfc8cc404ab2dbd195d75bee6ce914979ddbfd"
+      }
+    },
+    {
+      "modelId": "erc4626-instant",
+      "identity": {
+        "assetId": "steakusdc-steakhouse-base",
+        "deployment": "base:0xbeef0e0834849acc03f0089f01f4f1eeb06873c9",
+        "endpoint": "base:0xbeef0e0834849acc03f0089f01f4f1eeb06873c9",
+        "outputAssetKeys": [
+          "usdc-circle"
+        ],
+        "implementationIdentity": "sha256:1315f3b10efb23de1289f02d5e4f06b3de12f8293d3abaa84370e49b228c87e7"
+      },
+      "holder": "any-holder",
+      "reviewedAt": "2026-11-27T12:51:29.000Z",
+      "expiresAt": "2026-12-27T00:00:00.000Z",
+      "evidenceIds": [
+        "verified-source:841512790db80b45388de51bb47ceef2af6cad36ddd5e1f10aa95894a85c7b25",
+        "pinned-identity:base:62967570:0x8bbf4b8ae78175d5ff06b8bd91b66f1cbc7f7cc5deb8f3fe11b63be4fb9740c1",
+        "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c"
+      ],
+      "sourceUrls": [
+        "https://sourcify.dev/server/v2/contract/8453/0xbeef0e0834849acc03f0089f01f4f1eeb06873c9?fields=all",
+        "https://app.morpho.org/base/vault/0xbeef0e0834849acc03f0089f01f4f1eeb06873c9",
+        "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol",
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://mainnet.base.org"
+      ],
+      "producer": {
+        "kind": "erc4626-instant",
+        "chain": "base",
+        "chainId": 8453,
+        "contract": "0xbeef0e0834849acc03f0089f01f4f1eeb06873c9",
+        "outputToken": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+        "inputDecimals": 18,
+        "outputDecimals": 6,
+        "codeSha256": "1315f3b10efb23de1289f02d5e4f06b3de12f8293d3abaa84370e49b228c87e7",
+        "balanceStorage": {
+          "slot": "0x000000000000000000000000000000000000000000000000000000000000000c",
+          "keyOrder": "account-slot"
+        },
+        "maxFunctions": "reviewed-non-binding-zero",
+        "unrestrictedGateSelectors": [
+          "0x7e729ac4",
+          "0x93ab2ab7",
+          "0x54cde13e"
+        ],
+        "multicallCodeSha256": "0fb6a9dbcc4e17098c35d4b821bfc8cc404ab2dbd195d75bee6ce914979ddbfd"
+      }
     }
   ]
 }

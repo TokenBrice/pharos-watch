@@ -1,0 +1,87 @@
+{
+  "id": "svzchf-frankencoin",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Exact verified SavingsVaultZCHF_2 source on Ethereum Blockscout",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe5f130253ff137f9917c0107659a4c5262abf6b0"
+      },
+      {
+        "label": "Exact Sourcify verification for SavingsVaultZCHF_2",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xe5f130253ff137f9917c0107659a4c5262abf6b0?fields=all"
+      },
+      {
+        "label": "Verified Frankencoin Savings and Leadrate contract source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x27d9ad987bde08a0d083ef7e0e4043c857a17b38"
+      },
+      {
+        "label": "Ethereum block 26506626, 2026-11-27T12:45:11Z; pinned svZCHF runtime and renounced owner read",
+        "url": "https://etherscan.io/block/26506626"
+      }
+    ],
+    "evidence": "At finalized Ethereum block 26506626 (2026-11-27T12:45:11Z), 0xe5f130253ff137f9917c0107659a4c5262abf6b0 matches the exact verified nonproxy SavingsVaultZCHF_2 source with zero EIP-1967 implementation and admin slots. OpenZeppelin ERC4626/ERC20 and SavingsVaultZCHF_2 expose no local holder blacklist, transfer pause, seizure, upgrade, or arbitrary-holder burn; ownership was permanently renounced to 0x0 at block 24118275 (tx 0x4033568d1bb97ab2ab9de69e3ed31e49ae55a55b945b4de3ae87ccbe72b8f3a6). However, svZCHF is a 100% wrapper claim on parent zchf-frankencoin, whose own reviewed status is possible because Frankencoin.sol permits veto-gated minter admission with minterOnly burnFrom without allowance and holds custodial collateral. svZCHF therefore carries inherited upstream exposure rather than direct share-level freezing.",
+    "reviewer": "Pharos Listing Policy v2 PR-3 primary-source review",
+    "reviewedAt": "2026-11-27"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "Only the exact native Ethereum SavingsVaultZCHF_2 share contract is authored. No bridged svZCHF share representation is included; underlying ZCHF Chainlink CCIP routes remain upstream on zchf-frankencoin.",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 PR-3 primary-source review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Exact verified SavingsVaultZCHF_2 source on Ethereum Blockscout",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe5f130253ff137f9917c0107659a4c5262abf6b0"
+      },
+      {
+        "label": "Ethereum block 26506626, 2026-11-27T12:45:11Z; pinned native svZCHF deployment read",
+        "url": "https://etherscan.io/block/26506626"
+      }
+    ]
+  },
+  "oracleRisk": {
+    "tier": "oracleless",
+    "summary": "svZCHF computes its ZCHF share price deterministically onchain from its Savings principal plus Leadrate tick-based interest divided by totalSupply(). Neither the vault nor parent Frankencoin positions rely on an external price oracle.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-11-27",
+      "reviewer": "Pharos Listing Policy v2 PR-3 primary-source review",
+      "rationale": "The ERC-4626 exchange rate derived from Frankencoin Savings principal and Leadrate ticks is the sole local valuation path. There are no borrower collateral liquidation branches on the savings vault.",
+      "sources": [
+        {
+          "label": "Exact verified SavingsVaultZCHF_2 source on Ethereum Blockscout",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe5f130253ff137f9917c0107659a4c5262abf6b0"
+        },
+        {
+          "label": "Verified Frankencoin Savings and Leadrate contract source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x27d9ad987bde08a0d083ef7e0e4043c857a17b38"
+        },
+        {
+          "label": "Ethereum block 26506626, 2026-11-27T12:45:11Z; pinned svZCHF price() and totalAssets() read",
+          "url": "https://etherscan.io/block/26506626"
+        }
+      ]
+    },
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 PR-3 primary-source review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Exact verified SavingsVaultZCHF_2 source on Ethereum Blockscout",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe5f130253ff137f9917c0107659a4c5262abf6b0"
+      },
+      {
+        "label": "Verified Frankencoin Savings and Leadrate contract source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x27d9ad987bde08a0d083ef7e0e4043c857a17b38"
+      },
+      {
+        "label": "Ethereum block 26506626, 2026-11-27T12:45:11Z; pinned svZCHF price() and totalAssets() read",
+        "url": "https://etherscan.io/block/26506626"
+      }
+    ]
+  }
+}

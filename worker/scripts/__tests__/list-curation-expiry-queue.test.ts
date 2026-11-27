@@ -216,7 +216,7 @@ describe("buildCurationExpiryReport evidence families", () => {
     ["pyusd-paypal", null],
   ] as const)("queues only report-derived assurance for %s (last admitted %s)", (assetId, date) => {
     const metaById = new Map([[assetId, ACTIVE_META_BY_ID.get(assetId)!]]);
-    const initial = makeV9FixedInput({ assetId, clockSec: Date.parse("2026-11-18T12:00:00Z") / 1_000 });
+    const initial = makeV9FixedInput({ assetId, clockSec: Date.parse("2026-11-27T16:00:00Z") / 1_000 });
     const extension = buildSafetyScoreV9BaselineExtension(initial, { metaById });
     const compiled = extension.assets[0];
     const governing = compiled?.componentEvidence.find(row => row.componentKey === "mechanism-risk-review:governing-assurance:assuranceAndReconciliation");
@@ -254,7 +254,7 @@ describe("buildCurationExpiryReport evidence families", () => {
     ["mechanism-risk-review-history", true, null],
   ] as const)("uses the captured PYUSD overlay under %s (evidence present: %s)", (componentKey, hasEvidence, diagnostic) => {
     const assetId = "pyusd-paypal";
-    const clockSec = Date.parse("2026-11-18T12:00:00Z") / 1_000;
+    const clockSec = Date.parse("2026-11-27T16:00:00Z") / 1_000;
     const metaById = new Map([[assetId, ACTIVE_META_BY_ID.get(assetId)!]]);
     const { assets: [asset] } = buildSafetyScoreV9BaselineExtension(makeV9FixedInput({ assetId, clockSec }), { metaById });
     const overlay = getSafetyScoreV9MechanismOverlayEvidence(assetId, "fiat-cash", clockSec)!;

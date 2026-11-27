@@ -1,0 +1,62 @@
+{
+  "id": "siusd-infinifi",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "infiniFi StakedToken documentation",
+        "url": "https://docs.infinifi.xyz/dev-docs/tokens/staked-token"
+      },
+      {
+        "label": "Verified StakedToken (siUSD) Ethereum source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdbdc1ef57537e34680b898e1febd3d68c7389bcb"
+      },
+      {
+        "label": "ESMA MiCA Article 3 definitions: structural ART/EMT scope exclusion for variable-value staking shares",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "siUSD is an ERC-4626 risk-absorbing staking share over infiniFi's iUSD receipt token at 0xdbdc1ef57537e34680b898e1febd3d68c7389bcb. Its redemption rate appreciates with protocol yield and can be slashed via StakedToken.applyLosses() when protocol losses exceed the safety buffer and locked liUSD tranche. It does not represent a fixed-monetary-value redemption promise from a payment-stablecoin issuer under GENIUS Act section 2(22).",
+      "references": [
+        {
+          "label": "infiniFi StakedToken documentation",
+          "url": "https://docs.infinifi.xyz/dev-docs/tokens/staked-token",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "Verified StakedToken (siUSD) Ethereum source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdbdc1ef57537e34680b898e1febd3d68c7389bcb",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "Verified YieldSharingV3 loss-propagation implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d5dbf208a9a7540018d204a9a0ad08a091407e5",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Classification concerns the siUSD ERC-4626 staking share independently of underlying iUSD. Variable-value, slashable DeFi vault shares are treated as non-payment tokens under this tracker. No GENIUS authorization, issuer identity, or securities/other legal characterization is asserted.",
+    "references": [
+      {
+        "label": "GENIUS Act Public Law 119-27, section 2(22)",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-11-27"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-11-27"
+  }
+}

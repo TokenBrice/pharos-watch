@@ -1257,15 +1257,18 @@ describe("ERC4626 redemption locks", () => {
     const result = await runTrackedVault("syrupusdc-maple", withLocks);
     expect(result.metadata?.redemption).toMatchObject({ capacityKind: "live-direct", settlementDelaySec: 0 });
   });
-  it("does not present asynchronous request backing as executable redemption capacity", async () => {
+  it("handles async-request and gateway-only routes", async () => {
     installErc4626Network({ idleBalance: 100_000_000n });
-    const result = await runTrackedVault("syrupusdc-maple", (config) => ({
-      ...config, params: { ...config.params, redemptionRoute: "async-request" },
-    }));
-    expect(result.metadata?.redemption).toMatchObject({
-      capacityKind: "documented-bound", settlementBoundUnproven: true, capacityRatioOfSupply: 1,
-    });
-    expect(result.metadata?.redemption).not.toHaveProperty("settlementDelaySec");
+    const run = (redemptionRoute: "async-request" | "gateway-only") =>
+      runTrackedVault("syrupusdc-maple", (c) => ({ ...c, params: { ...c.params, redemptionRoute } }));
+    const m = (await run("async-request")).metadata?.redemption;
+    expect(m).toMatchObject({ capacityKind: "documented-bound", settlementBoundUnproven: true, capacityRatioOfSupply: 1 });
+    expect(m).not.toHaveProperty("settlementDelaySec");
+    const gw = await run("gateway-only");
+    expect(gw.metadata?.redemption).toBeUndefined();
+    expect(gw.slices).toEqual([expect.objectContaining({ pct: 100 })]);
+    expect(nonInfoWarnings(gw.warnings)).toEqual([]);
+    await expect(runTrackedVault("syrupusdc-maple", (c) => withLocks({ ...c, params: { ...c.params, redemptionRoute: "gateway-only" } }))).rejects.toThrow(/Gateway-only/);
   });
   it("does not interpret a malformed pause word as an open or paused route", async () => {
     mockLocks(86400n, 2);

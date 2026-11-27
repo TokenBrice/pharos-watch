@@ -1,0 +1,143 @@
+{
+  "schemaVersion": 3,
+  "receiptMode": "prospective-offline",
+  "kind": "safety-score-v9-new-asset-admission-receipt",
+  "assetId": "fliteusd-fluid",
+  "prospectiveInputId": "prospective-admission:v1:104e9553e19c8ff4225c6e90cdd5a0430db43689ea90759d11e11fb751513fb7",
+  "admissionClockSec": 1795793119,
+  "evaluatedCohortIds": [
+    "fliteusd-fluid",
+    "usdc-circle"
+  ],
+  "absentRuntimeLanes": [
+    "chain-supply",
+    "dex",
+    "live-reserves",
+    "peg",
+    "redemption"
+  ],
+  "supplyObservation": {
+    "circulating": {
+      "peggedUSD": 40977747.37
+    },
+    "observedAtSec": 1795783895,
+    "url": "https://ethereum-rpc.publicnode.com",
+    "field": "eth_call(0x273da948aca9261043fbdb2a857bc255ecc29012,totalSupply)*convertToAssets*usdc-price",
+    "retrievedAtSec": 1795784605
+  },
+  "registryFingerprint": "d5e6338d30391aaee8fb68d2f7ac274ebab64cfa601fad56cead31ebe6a1489d",
+  "evaluationBuildDigest": "1d128bc5598b6daf4323f12076661a2247488a5f44f9d0da168209746163a9e5",
+  "card": {
+    "id": "fliteusd-fluid",
+    "openBucketQuestionsCarried": 5,
+    "inheritedOpenBucketQuestionsCarried": 0,
+    "openBucketObligationsCarried": 5,
+    "documentationObligationsCarried": 3
+  },
+  "questions": [
+    {
+      "questionKey": "fliteusd-fluid|component|deployment-controls",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "scoped-control-question",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "fliteusd-fluid|component|exit-routes",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-runtime-route-evidence",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "fliteusd-fluid|component|mechanism-risk-review",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-archetype",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "fliteusd-fluid|component|reserve-composition",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-reserve-composition",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "fliteusd-fluid|control|authored:fliteusd-fluid|asset:fliteusd-fluid|StrategyHandler (STRATEGY_HANDLER)",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "scoped-control-question",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "fliteusd-fluid|component|access:transfer",
+      "bucket": "documentation",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-access-review",
+          "obligations": 1,
+          "documentation": true
+        }
+      ]
+    },
+    {
+      "questionKey": "fliteusd-fluid|control|authored:fliteusd-fluid|asset:fliteusd-fluid|Fluid Timelock executor Safe",
+      "bucket": "documentation",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "unresolved-control-identity",
+          "obligations": 1,
+          "documentation": true
+        }
+      ]
+    },
+    {
+      "questionKey": "fliteusd-fluid|control|authored:fliteusd-fluid|asset:fliteusd-fluid|Fluid team Avocado multisig (secondary owner, AUTH_LEVEL, Timelock proposer)",
+      "bucket": "documentation",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "unresolved-control-identity",
+          "obligations": 1,
+          "documentation": true
+        }
+      ]
+    }
+  ]
+}

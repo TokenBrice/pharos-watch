@@ -41,12 +41,14 @@ const morphoVaultRoutes = defineConfigFamily(
     { id: "armusdcs-wintermute", assetId: "usdc-circle", symbol: "USDC", chain: "ethereum", address: "0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd" },
     { id: "kpkusdcyield-kpk", assetId: "usdc-circle", symbol: "USDC", chain: "ethereum", address: "0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13" },
     { id: "sparkusdtbc-spark", assetId: "usdt-tether", symbol: "USDT", chain: "ethereum", address: "0xb0c424116172b55cbb6dd3136f5989f7959e5b91" },
-  ],
+    { id: "steakusdc-steakhouse-base", assetId: "usdc-circle", symbol: "USDC", chain: "base", address: "0xbeef0e0834849acc03f0089f01f4f1eeb06873c9", reviewedAt: "2026-11-27" },
+    { id: "gpyusdse-galaxy", assetId: "pyusd-paypal", symbol: "PYUSD", chain: "stable", address: "0x8c3250f028a2c8d29319eb3ee3214b90462394ba", reviewedAt: "2026-11-27" },
+  ] as readonly { id: string; assetId: string; symbol: string; chain: string; address: string; reviewedAt?: string }[],
   (row) => {
-    const { assetId, symbol, chain, address } = row;
+    const { assetId, symbol, chain, address, reviewedAt = REVIEWED_AT } = row;
     return erc4626InstantConfig({
       symbol,
-      reviewedAt: REVIEWED_AT,
+      reviewedAt,
       outputAssets: [assetId],
       feeDescription: `The reviewed Morpho Vault V2 ordinary exit burns shares and transfers ${symbol} without a separate withdrawal fee; yield fees affect NAV, while gas, rounding and emergency force-deallocation penalties are separate.`,
       routeExitCorrelation: "same-protocol-liquidity",

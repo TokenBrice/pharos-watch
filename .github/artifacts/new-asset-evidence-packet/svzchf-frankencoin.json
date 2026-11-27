@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 3,
+  "receiptMode": "prospective-offline",
+  "kind": "safety-score-v9-new-asset-admission-receipt",
+  "assetId": "svzchf-frankencoin",
+  "prospectiveInputId": "prospective-admission:v1:b433126921c598d2188dc5b87ab9d593ace2d52e2f38a4b66aa8405cb71f93f1",
+  "admissionClockSec": 1795793121,
+  "evaluatedCohortIds": [
+    "bold-liquity",
+    "paxg-paxos",
+    "svzchf-frankencoin",
+    "xaut-tether",
+    "ybold-yearn",
+    "zchf-frankencoin"
+  ],
+  "absentRuntimeLanes": [
+    "chain-supply",
+    "dex",
+    "live-reserves",
+    "peg",
+    "redemption"
+  ],
+  "supplyObservation": {
+    "circulating": {
+      "peggedCHF": 1087613.31
+    },
+    "observedAtSec": 1795783511,
+    "url": "https://ethereum-rpc.publicnode.com",
+    "field": "eth_call(0xe5f130253ff137f9917c0107659a4c5262abf6b0,totalSupply)*convertToAssets*zchf-price",
+    "retrievedAtSec": 1795784500
+  },
+  "registryFingerprint": "d5e6338d30391aaee8fb68d2f7ac274ebab64cfa601fad56cead31ebe6a1489d",
+  "evaluationBuildDigest": "1d128bc5598b6daf4323f12076661a2247488a5f44f9d0da168209746163a9e5",
+  "card": {
+    "id": "svzchf-frankencoin",
+    "openBucketQuestionsCarried": 2,
+    "inheritedOpenBucketQuestionsCarried": 0,
+    "openBucketObligationsCarried": 2,
+    "documentationObligationsCarried": 1
+  },
+  "questions": [
+    {
+      "questionKey": "svzchf-frankencoin|component|exit-routes",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-runtime-route-evidence",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "svzchf-frankencoin|component|mechanism-risk-review",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-archetype",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "svzchf-frankencoin|component|access:transfer",
+      "bucket": "documentation",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-access-review",
+          "obligations": 1,
+          "documentation": true
+        }
+      ]
+    }
+  ]
+}

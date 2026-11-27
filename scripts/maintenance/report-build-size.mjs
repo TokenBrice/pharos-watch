@@ -87,7 +87,11 @@ const DEFAULT_BUDGETS = {
   // Screener (635 KiB / ~650.4 KiB) and Portfolio (614 KiB / ~628.6 KiB) were
   // re-baselined 2026-11-22 in #2247 for compare-tray, concentration, upstream
   // exposure, and Telegram-follow handoff additions (~5% headroom).
-  depegEagerJsGzipBytes: 787_000,
+  // Re-baselined 2026-11-27 from 787,000 B for the Listing Policy v2 rollout
+  // (#2406): PR-3 adds 8 active listings, pushing the /depeg shared client
+  // registry chunk +462 B over 787,000 B (787,462 B gzip on 6cc510a81).
+  // Sized with ~2.2% headroom for PR-3/4 without changing other route ceilings.
+  depegEagerJsGzipBytes: 805_000,
   safetyScoresEagerJsGzipBytes: 781_000,
   stablecoinsEagerJsGzipBytes: 368_000,
   statusEagerJsGzipBytes: 661_000,

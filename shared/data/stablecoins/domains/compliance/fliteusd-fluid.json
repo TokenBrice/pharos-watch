@@ -1,0 +1,56 @@
+{
+  "id": "fliteusd-fluid",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Verified FluidLiteVault UUPS implementation source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16ccc91a8134d428e7b6240177f9e2b227b9743"
+      },
+      {
+        "label": "Fluid protocol documentation",
+        "url": "https://docs.fluid.instadapp.io/"
+      },
+      {
+        "label": "ESMA MiCA Article 3 definitions: structural ART/EMT exclusion for variable-value strategy vault shares",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "fLiteUSD represents Ethereum FluidLiteVaultProxy 0x273da948aca9261043fbdb2a857bc255ecc29012, a yield-accruing USDC strategy vault share. Verified implementation source calculates redemption from an auto-accruing exchange price less a configurable withdrawal fee (5 bps as of 2026-11-27), drawing from a Fluid fUSDC liquidity buffer while the 71.83% strategy residual is deployed in multi-strategy contracts. Holders burn shares for available USDC without a fixed-monetary-value payment-stablecoin redemption obligation under GENIUS Act section 2(22).",
+      "references": [
+        {
+          "label": "Verified FluidLiteVault UUPS implementation source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16ccc91a8134d428e7b6240177f9e2b227b9743",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "Fluid protocol documentation",
+          "url": "https://docs.fluid.instadapp.io/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Assessment applies to the fLiteUSD strategy vault share separately from underlying Circle USDC. Variable-value ERC-4626 strategy vault shares are treated as non-payment tokens under this tracker. Underlying USDC authorizations and reserve reports are not attributed to fLiteUSD, and this scope assessment does not decide securities, investment-company, or other legal treatment.",
+    "references": [
+      {
+        "label": "GENIUS Act Public Law 119-27, section 2(22)",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-11-27"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-11-27"
+  }
+}

@@ -1,3 +1,4 @@
+import { SUPPLY_RPC_DEFAULTS } from "@shared/lib/chain-rpc-registry";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import type { ChainRpcConfig } from "../chain-registry";
 import { logWorkerEventArgs } from "../structured-log";
@@ -97,6 +98,17 @@ const ERC4626_NAV_VAULTS: readonly Erc4626NavVaultConfig[] = [
   defineRegistryErc4626NavVault({ id: "hyperusdca-hyperithm", parentId: USDC_CIRCLE_ID, chain: "monad" }),
   defineRegistryErc4626NavVault({ id: "ethenausdc-steakhouse", parentId: USDC_CIRCLE_ID, chain: "base" }),
   defineRegistryErc4626NavVault({ id: "stusds-sky", parentId: USDS_SKY_ID, chain: ETHEREUM_CHAIN }),
+  defineRegistryErc4626NavVault({ id: "siusd-infinifi", parentId: "iusd-infinifi", chain: ETHEREUM_CHAIN }),
+  defineRegistryErc4626NavVault({ id: "fliteusd-fluid", parentId: USDC_CIRCLE_ID, chain: ETHEREUM_CHAIN }),
+  defineRegistryErc4626NavVault({ id: "svzchf-frankencoin", parentId: "zchf-frankencoin", chain: ETHEREUM_CHAIN, allowFreshReplaySafeSingleSourceParent: true }),
+  defineRegistryErc4626NavVault({ id: "steakusdc-steakhouse-base", parentId: USDC_CIRCLE_ID, chain: "base" }),
+  defineRegistryErc4626NavVault({
+    id: "gpyusdse-galaxy",
+    parentId: "pyusd-paypal",
+    chain: "stable",
+    allowFreshReplaySafeSingleSourceParent: true,
+    rpcUrls: [SUPPLY_RPC_DEFAULTS.stable.rpcUrl, SUPPLY_RPC_DEFAULTS.stable.fallbackRpcUrl],
+  }),
 ];
 
 const ERC4626_NAV_VAULTS_BY_ID = new Map<string, Erc4626NavVaultConfig>(

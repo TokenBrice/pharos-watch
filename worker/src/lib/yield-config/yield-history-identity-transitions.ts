@@ -49,6 +49,10 @@ export const YIELD_HISTORY_IDENTITY_TRANSITIONS: YieldHistoryIdentityTransitions
     "reusd-re-protocol": [
       "protocol-api:re-protocol-reusde",
     ],
+    "iusd-infinifi": [
+      buildOnChainSourceKey("iusd-infinifi"),
+      "8fa2e60e-365a-41fc-8d50-fadde5041f94",
+    ],
   },
   linkedVariantFalseSwitchRepair: {
     lookbackDays: 7,

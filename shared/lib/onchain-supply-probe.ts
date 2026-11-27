@@ -448,6 +448,22 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
     ],
   },
   "jltxx-jpmorgan": { nativeWorkflow: "pinned-native-shares" },
+  // Reviewed 2026-11-27: Midas Fasanara Global Open (mGLO, ISIN LU3357216087)
+  // six-chain additive native deployments via native DepositVaults and zero-balance
+  // LayerZero MidasLzMintBurnOFTAdapters. Pinned 2026-11-27 sum: 220,640,277.54 mGLO
+  // ($224.44M at $1.01720039 NAV; Base 102.42M, Robinhood 76.81M, Ethereum 38.51M,
+  // X Layer 2.89M, Optimism 0.20, Monad 0.03), within 0.27% of CoinGecko (220.05M).
+  "mglo-midas-fasanara": {
+    preferMcap: true,
+    aggregateContracts: [
+      { chain: "base" },
+      supplyProbeChain("robinhood"),
+      { chain: "ethereum" },
+      supplyProbeChain("xlayer"),
+      { chain: "optimism", allowZeroSupply: true },
+      supplyProbeChain("monad", { allowZeroSupply: true }),
+    ],
+  },
   "cdp-enosys": {
     aggregateContracts: [supplyProbeChain("flare")],
   },
