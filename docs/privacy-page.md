@@ -22,6 +22,8 @@ Web Vitals retain document-lifetime meaning and current allowed path attribution
 
 Share-menu `social_share` events carry only bounded action, success/error outcome and broad surface. They contain no share URL, copied content, coin ID or snapshot ID, and cancelled/superseded attempts do not emit completion.
 
+`site_session_ready` is sent at most once per document, through the same gate, when the browser check passed in that document or a stored session is still valid. It has no parameters (no token, session ID or expiry); reports use it to separate checked browsers from automated page loads. The visible Cookies section discloses it.
+
 ### Browser-local preferences
 
 There is no website account. Optional supporter-claim wallet interaction is the only wallet connection. Browser state includes shortcuts, portfolio, shared watchlist, Picker dismissal/session recovery, table/show-work/motion/history/Timeline preferences. Feature owners define exact keys: [Homepage](./homepage.md), [Portfolio](./portfolio-page.md#persistence-and-sharing), [Picker](./screener-page.md#browser-storage). Portfolio/shortcut state is not sent to API; shared snapshots are separate server-side storage.

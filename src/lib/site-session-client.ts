@@ -1,4 +1,5 @@
 import { setSiteSessionGate } from "@/lib/site-session-gate";
+import { trackSiteSessionReady } from "@/lib/analytics";
 import { isSiteSessionCheckEnabled } from "@/lib/feature-flags";
 import { SITE_SESSION_BROWSER_TTL_SEC, SITE_SESSION_EXPIRES_HEADER } from "@shared/lib/site-session-constants";
 import { getStoredSiteSessionExpiry, SITE_SESSION_EXPIRY_KEY, SITE_SESSION_RENEW_WINDOW_SEC } from "@/lib/site-session-script";
@@ -16,6 +17,7 @@ let recoverQueries: (() => void) | null = null;
 
 function publish(next: SessionState) {
   state = next;
+  if (next === "ready") trackSiteSessionReady();
   for (const listener of listeners) listener();
 }
 

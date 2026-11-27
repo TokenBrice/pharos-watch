@@ -71,6 +71,8 @@ type EventMap = {
     navigation_type: "navigate" | "route-change";
     page_path: string;
   };
+  // Parameterless: the Turnstile browser check passed in this document or within the stored session.
+  site_session_ready: Record<string, never>;
   web_vital: {
     name:
       | "CLS"
@@ -145,6 +147,15 @@ export function trackFreshDataReady(surface: "home-hero" | "detail-summary"): vo
     surface, value: Math.round(value), id: `${performance.timeOrigin}:${navigation.sequence}:${surface}`,
     navigation_type: navigation.sequence === 0 ? "navigate" : "route-change", page_path: path,
   });
+}
+
+let siteSessionReadySent = false;
+
+/** Once per document, so reports can separate browsers that passed the check from automated page loads. */
+export function trackSiteSessionReady(): void {
+  if (siteSessionReadySent || typeof window === "undefined" || !window.gtag || !isAnalyticsAllowed(window.location.pathname)) return;
+  siteSessionReadySent = true;
+  trackEvent("site_session_ready", {});
 }
 
 // ---------------------------------------------------------------------------

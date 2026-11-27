@@ -774,6 +774,8 @@ describe("browser session gate", () => {
 
   it.each([-600, 600, -605400])("shares local expiry (skew %s)", async (skew) => {
     const { api, session, storage } = await setup();
+    const gtag = vi.fn();
+    window.gtag = gtag;
     const mark = vi.spyOn(performance, "mark");
     let send!: (token: string) => void;
     const solve = vi.fn(() => new Promise<string>((done) => { send = done; }));
@@ -795,6 +797,7 @@ describe("browser session gate", () => {
     expect(storage.setItem).toHaveBeenCalledWith("pharos-site-session-exp", expect.stringMatching(/^\d+$/));
     expect(session.getSiteSessionState()).toBe("ready");
     expect(mark.mock.calls.map(([name]) => name)).toEqual(["pharos-session-token", "pharos-session-ready"]);
+    expect(gtag).toHaveBeenCalledExactlyOnceWith("event", "site_session_ready", {});
     expect(Number(storage.setItem.mock.calls[0]![1])).toBeCloseTo(Math.floor(Date.now() / 1000) + 604800, 0);
   });
 
