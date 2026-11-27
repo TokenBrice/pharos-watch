@@ -6,6 +6,7 @@ export interface PublicApiResponseExample {
 }
 
 const SAMPLE_TS = 1795200000;
+const SAMPLE_PEG_SUMMARY_TS = 1795777200;
 const SAMPLE_DAY_TS = 1795132800;
 
 const SAMPLE_META = {
@@ -330,19 +331,62 @@ export const PUBLIC_API_RESPONSE_EXAMPLES: Record<
             activeDepeg: false,
             lastEventAt: 1678492800,
             trackingSpanDays: 1460,
-            methodologyVersion: "6.38",
+            methodologyVersion: "6.56",
+          },
+          {
+            id: "usdd-tron-dao-reserve",
+            symbol: "USDD",
+            name: "USDD",
+            pegType: "peggedUSD",
+            pegCurrency: "USD",
+            governance: "centralized-dependent",
+            listingClass: "core-stablecoin",
+            currentDeviationBps: -140,
+            pegScore: 84.2,
+            pegPct: 96.4,
+            severityScore: 14.5,
+            spreadPenalty: 1.3,
+            eventCount: 4,
+            worstDeviationBps: -520,
+            activeDepeg: true,
+            lastEventAt: SAMPLE_PEG_SUMMARY_TS - 7_200,
+            trackingSpanDays: 920,
+            methodologyVersion: "6.56",
           },
         ],
         summary: {
-          activeDepegCount: 0,
-          medianDeviationBps: -1,
-          worstCurrent: { id: "usdc-circle", symbol: "USDC", bps: -1 },
+          activeDepegCount: 1,
+          recentActiveDepegCount: 1,
+          longRunningActiveDepegCount: 0,
+          medianDeviationBps: 71,
+          worstCurrent: { id: "usdd-tron-dao-reserve", symbol: "USDD", bps: -140 },
           coinsAtPeg: 1,
-          totalTracked: 1,
-          depegEventsToday: 0,
+          totalTracked: 2,
+          depegEventsToday: 1,
           depegEventsYesterday: 0,
         },
-        methodology: SAMPLE_METHODOLOGY,
+        openIncidents: {
+          "usdd-tron-dao-reserve": {
+            eventId: 91402,
+            startedAt: SAMPLE_PEG_SUMMARY_TS - 7_200,
+            escalatedAt: null,
+            coverage: {
+              lastObservationKind: "trusted-off-peg" as const,
+              lastTrustedObservationAt: SAMPLE_PEG_SUMMARY_TS - 120,
+              gapStartedAt: null,
+            },
+          },
+        },
+        openIncidentsAsOfSec: SAMPLE_PEG_SUMMARY_TS,
+        methodology: {
+          ...SAMPLE_METHODOLOGY,
+          version: "6.56",
+          versionLabel: "v6.56",
+          currentVersion: "6.56",
+          currentVersionLabel: "v6.56",
+          changelogPath: "/methodology/depeg-changelog/",
+          asOf: SAMPLE_PEG_SUMMARY_TS,
+        },
       },
     },
   },

@@ -16,7 +16,11 @@ import {
   type PegAnalyticsCachePayload,
 } from "./peg-analytics-cache-decode";
 
-export type { PegAnalyticsCacheLoadResult, PegAnalyticsCachePayload } from "./peg-analytics-cache-decode";
+export type {
+  PegAnalyticsCacheLoadResult,
+  PegAnalyticsCachePayload,
+  PegAnalyticsOpenIncident,
+} from "./peg-analytics-cache-decode";
 
 export interface PegEventDayCounts {
   todayStartSec: number;
@@ -87,7 +91,7 @@ async function writePegAnalyticsCache(
  */
 export async function publishPegAnalyticsCache(
   db: D1Database,
-  pegAnalytics: Pick<PegAnalyticsSnapshot, "nowSec" | "allEvents" | "pegDataById">,
+  pegAnalytics: Pick<PegAnalyticsSnapshot, "nowSec" | "allEvents" | "pegDataById" | "openIncidents" | "openIncidentCandidates">,
 ): Promise<boolean> {
   const { today, yesterday } = countPegEventDays(pegAnalytics.allEvents ?? [], pegAnalytics.nowSec);
   try {
@@ -96,6 +100,10 @@ export async function publishPegAnalyticsCache(
       depegEventsToday: today,
       depegEventsYesterday: yesterday,
       pegData: [...pegAnalytics.pegDataById.values()],
+      ...(pegAnalytics.openIncidents !== undefined ? { openIncidents: pegAnalytics.openIncidents } : {}),
+      ...(pegAnalytics.openIncidentCandidates !== undefined && Object.keys(pegAnalytics.openIncidentCandidates).length > 0
+        ? { openIncidentCandidates: pegAnalytics.openIncidentCandidates }
+        : {}),
     });
     return result.written;
   } catch (error) {
