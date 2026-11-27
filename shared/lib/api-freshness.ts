@@ -73,7 +73,6 @@ export const API_FRESHNESS_MAX_AGE_SEC = {
   // `daily-digest` runs once per day (05:08 UTC lane).
   dailyDigest: DAY_SECONDS,
   digestArchive: DAY_SECONDS,
-  bluechip: CACHE_FRESHNESS_LANES.bluechipRatings.endpointMaxAgeSec,
   usdsStatus: CACHE_FRESHNESS_LANES.usdsStatus.endpointMaxAgeSec,
   // Reads `supply_history`, written daily by `snapshot-supply`.
   nonUsdShare: DAY_SECONDS,

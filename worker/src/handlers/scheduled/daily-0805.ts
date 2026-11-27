@@ -1,13 +1,11 @@
 /**
  * Daily 08:05 UTC trigger (5 8 * * *):
- *   sync-bluechip (3)          ← parallel chain
- *   daily-digest (1)           ← independent parallel chain
+ *   daily-digest (1)
  *
  * Weekly recap runs in the separate 08:10 UTC slot so both LLM jobs receive
  * their full scheduled-event runtime budget on Mondays.
- * Connection budget: 4/6 peak.
+ * Connection budget: 1/6 peak.
  */
-import { syncBluechip } from "../../cron/sync-bluechip";
 import { generateDailyDigest } from "../../cron/daily-digest";
 import {
   buildTelegramCreds,
@@ -22,9 +20,8 @@ const SLOT_LABEL = "daily 08:05 slot";
 
 function buildDaily0805SlotGroups(runtime: ScheduledRuntimeContext) {
   return bindScheduledSlotPlan("daily0805Utc", {
-    chainLabels: ["sync-bluechip", "daily-digest"],
+    chainLabels: ["daily-digest"],
     implementations: {
-      "sync-bluechip": (signal) => syncBluechip(runtime.db, signal),
       "daily-digest": (signal, reportProgress) =>
         generateDailyDigest(
           runtime.db,

@@ -74,9 +74,6 @@ import type {
   SelectorOutputSchema,
 } from "./snapshot-schemas";
 import type {
-  BluechipGrade,
-} from "../../types/bluechip";
-import type {
   CustodyModel,
 } from "../../types/custody";
 import type {
@@ -307,7 +304,6 @@ export interface MergedRow {
   safetyDecentralizationScore: number | null;
   safetyLiquidityScore: number | null;
   custodyModel: string | null;
-  bluechipGrade: BluechipGrade | null;
 
   liquidityScore: number | null;
   effectiveTvlUsd: number | null;

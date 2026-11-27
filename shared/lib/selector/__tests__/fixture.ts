@@ -29,7 +29,6 @@ export const FIXTURE_DATASET: DatasetMetadata = {
     safetyScore: "safety-v1.0",
     pegScoreAndDews: "peg-dews-v1.0",
     yieldIntelligence: "yield-v1.0",
-    bluechipAlignment: "bluechip-v1.0",
     exclusionFilters: SELECTOR_VERSION,
   },
 };
@@ -76,7 +75,6 @@ export function makeMergedRow(overrides: Partial<MergedRow> = {}): MergedRow {
     safetyDecentralizationScore: 80,
     safetyLiquidityScore: 80,
     custodyModel: "onchain",
-    bluechipGrade: "A",
     liquidityScore: 80,
     effectiveTvlUsd: 50_000_000,
     concentrationHhi: 0.2,

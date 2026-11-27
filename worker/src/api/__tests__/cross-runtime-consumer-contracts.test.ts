@@ -3,13 +3,11 @@ import { z } from "zod";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { ApiMetaEnvelopeSchema } from "@pharos/contracts/api-meta";
-import { BluechipRatingsMapSchema } from "@shared/types/bluechip";
 import { ChainsResponseSchema } from "@shared/types/chains";
 import { StablecoinListResponseSchema } from "@shared/types/supply";
 import { ReportCardsV9AcceptedResponseSchema, ReportCardsV9ReaderResponseSchema } from "@shared/types/report-cards-v9-accepted";
 import { ReportCardsV9CurrentResponseSchema } from "@shared/types/report-cards-v9-current";
 import { handleStablecoins } from "../cache-handlers";
-import { handleBluechipRatings } from "../../lib/bluechip-cache";
 import { handleChains } from "../chains";
 import { handleReportCardsV9 } from "../report-cards-v9";
 import { validateAndWriteStablecoinsCache } from "../../cron/sync-stablecoins/cache-publication";
@@ -130,40 +128,6 @@ describe("GET /api/chains readers", () => {
     const body = await response.json() as { chains: unknown[] };
     expect(body.chains.length).toBeGreaterThan(0);
     expectParses(ChainsResponseSchema, body, "Pharosville/frontend chains");
-  });
-});
-
-describe("GET /api/bluechip-ratings readers", () => {
-  it("serves the rating map the Pages selector snapshot parses", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const rating = {
-      grade: "A",
-      slug: "tether",
-      lastObservedAt: nowSec - 60,
-      observationState: "current",
-      observationReason: null,
-      collateralization: 100,
-      smartContractAudit: true,
-      dateOfRating: "2026-01-01",
-      dateLastChange: "2026-01-01",
-      smidge: {
-        stability: "4", management: "4", implementation: "4",
-        decentralization: "4", governance: "4", externals: "4",
-      },
-    };
-    const db = mockD1([{
-      match: "cache",
-      rows: [{ key: "bluechip-ratings", value: JSON.stringify({ "usdt-tether": rating }), updated_at: nowSec - 60 }],
-      first: { key: "bluechip-ratings", value: JSON.stringify({ "usdt-tether": rating }), updated_at: nowSec - 60 },
-    }]);
-
-    const response = await handleBluechipRatings(db);
-    expect(response.status).toBe(200);
-    const { _meta, ...payload } = await response.json() as Record<string, unknown>;
-    expect(_meta).toMatchObject({ freshBudgetSec: 43_200 * 8, degradedBudgetSec: 43_200 * 12 });
-    expectParses(BluechipRatingsMapSchema, payload, "Pages/frontend bluechip ratings");
-    const parsed = BluechipRatingsMapSchema.parse(payload);
-    expect(parsed["usdt-tether"]?.observationState).toBe("current");
   });
 });
 

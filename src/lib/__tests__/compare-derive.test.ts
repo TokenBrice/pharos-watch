@@ -197,19 +197,6 @@ describe("buildCompareRadarCohortBaseline", () => {
 });
 
 describe("deriveComparisonCoins", () => {
-  it.each([
-    { name: "absent", bluechipMap: undefined, available: false },
-    { name: "null", bluechipMap: null, available: false },
-    { name: "published empty", bluechipMap: {}, available: true },
-  ])("preserves $name Bluechip publication separately from coin membership", ({ bluechipMap, available }) => {
-    const [coin] = deriveComparisonCoins(comparisonInput({
-      selectedIds: ["usdc"], assetMap: assetMapFor("usdc"), metaMap: metaMapFor("usdc"), bluechipMap,
-    }));
-    expect(coin.bluechipPublicationAvailable).toBe(available);
-    expect(coin.bluechipRating).toBeNull();
-    expect(coin.data.circulating).toEqual({ peggedUSD: 1_000_000 });
-  });
-
   it.each<{ name: string; input: Partial<ComparisonInput>; expectedIds: string[] }>([
     {
       name: "returns no coins when assetMap is empty",

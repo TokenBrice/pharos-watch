@@ -286,7 +286,7 @@ describe("tracked holder source contracts", () => {
           expect(priorRate.get(parentId, linkedKey)).toEqual({ exchange_rate_prev: 1.2525 });
           const { rows: selectorRows } = buildSelectorRows({
             yieldData: previewRankingsPayload, now: observedAt, stablecoinsData: null, pegData: null,
-            reportData: null, stressData: null, dexData: null, bluechipData: null,
+            reportData: null, stressData: null, dexData: null,
           });
           for (const [coinId, fallbackKey] of [[id, onchainKey], [parentId, linkedKey]]) {
             expect.soft(selectYieldSource(selectorRows.get(coinId)!, makeInput({ profile: "yield", minApy: 3 })))
@@ -331,7 +331,7 @@ describe("tracked holder source contracts", () => {
         });
         const { rows } = buildSelectorRows({
           yieldData: previewRankingsPayload, now: input.startSec, stablecoinsData: null, pegData: null,
-          reportData: null, stressData: null, dexData: null, bluechipData: null,
+          reportData: null, stressData: null, dexData: null,
         });
         for (const [coinId, sourceKey] of [[id, "price-derived"], ["usdc-circle", `linked-variant:${id}:price-derived`]]) {
           expect.soft(selectYieldSource(rows.get(coinId)!, makeInput({ profile: "yield", minApy: 3 })))

@@ -62,7 +62,6 @@ const cronMocks = vi.hoisted(() => ({
     "syncDexShadowMeasuredExecution",
     "syncYieldData",
     "syncYieldSupplemental",
-    "syncBluechip",
     "generateDailyDigest",
     "generateWeeklyRecap",
     "runPruneStatusProbeRuns",
@@ -291,7 +290,6 @@ vi.mock("../cron/dex-exit-route-turnover-watchdog", () => ({
 }));
 vi.mock("../cron/sync-yield-data", () => ({ syncYieldData: cronMocks.syncYieldData }));
 vi.mock("../cron/sync-yield-supplemental", () => ({ syncYieldSupplemental: cronMocks.syncYieldSupplemental }));
-vi.mock("../cron/sync-bluechip", () => ({ syncBluechip: cronMocks.syncBluechip }));
 vi.mock("../cron/daily-digest", () => ({ generateDailyDigest: cronMocks.generateDailyDigest }));
 vi.mock("../cron/weekly-recap", () => ({ generateWeeklyRecap: cronMocks.generateWeeklyRecap }));
 vi.mock("../cron/cron-sentinel", () => ({

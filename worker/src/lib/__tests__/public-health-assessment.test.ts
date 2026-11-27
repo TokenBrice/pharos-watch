@@ -192,11 +192,9 @@ describe("assessPublicHealth upstream provider enrichment", () => {
 
     const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
 
-    // `fx-rates` and `bluechip-ratings` exist in CACHE_FRESHNESS_THRESHOLDS;
-    // pick one that also has a mapping to verify attribution works for more
-    // than just the stablecoins lane.
+    // `fx-rates` exists in CACHE_FRESHNESS_THRESHOLDS; it also has a mapping,
+    // which verifies attribution works for more than just the stablecoins lane.
     expect(result.caches["fx-rates"]?.upstreamProvider).toBe("Frankfurter");
-    expect(result.caches["bluechip-ratings"]?.upstreamProvider).toBe("Bluechip");
   });
 
   it("surfaces cached D1 warning capacity as degraded health", async () => {

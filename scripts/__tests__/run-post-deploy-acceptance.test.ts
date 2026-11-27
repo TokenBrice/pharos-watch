@@ -129,7 +129,7 @@ describe("runPostDeployAcceptance", () => {
     expect(deps.fetchJson.mock.calls.slice(3).map(([, path]) => path).sort()).toEqual(`
       stablecoins stablecoin/pyusd-paypal stablecoin-summary/usdt-tether stablecoin-reserves/iusd-infinifi
       stablecoin-charts peg-summary health public-status-history blacklist blacklist-summary
-      depeg-events events usds-status bluechip-ratings dex-liquidity
+      depeg-events events usds-status dex-liquidity
       dex-liquidity-history?stablecoin=usdt-tether supply-history?stablecoin=usdt-tether
       daily-digest digest-archive snapshots/index yield-rankings yield-adapter-manifest
       yield-history?stablecoin=usdt-tether safety-score-history?stablecoin=usdt-tether

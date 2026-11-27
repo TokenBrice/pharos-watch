@@ -161,10 +161,6 @@ This is intentionally narrower than the general classification system:
 
 The `infrastructures` field is an array because a coin could in principle belong to multiple infrastructures (e.g., a hypothetical Liquity v2 fork that also wraps M0); in practice every currently-tagged coin has exactly one entry.
 
-### Bluechip Grade
-
-`BluechipGrade` in `shared/types/core.ts` owns the grade vocabulary; `GRADE_ORDER` in `src/lib/bluechip.ts` checks complete ordering. It is a separate external rating, not a Safety Score.
-
 ## Non-USD Peg Handling
 
 Peg deviation for non-USD stablecoins requires the peg currency's USD value. `shared/lib/peg-rates.ts` prefers usable `fxFallbackRates` from `sync-fx-rates.ts` for fiat pegs regardless of peer count; without FX it uses the same-`pegType` median. Peers must have an observed, positive finite price and at least $1M circulating USD. With metadata supplied, commodity prices are normalized by `commodityOunces` and `COMMODITY_MEDIAN_EXCLUDES` removes reviewed outliers. Gold/silver use the qualifying median at three contributors or more; thinner groups prefer an available metals/FX fallback, otherwise retain the median. `PegRatesResult` contains `rates`, per-currency `sources`, and qualifying-contributor `counts`. Deviation is `((price / pegRef) - 1) * 10000` basis points.

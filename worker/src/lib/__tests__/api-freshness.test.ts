@@ -34,7 +34,7 @@ const sentinelRow = (key: keyof typeof SRC, updatedAt: number, ov: Record<string
   return { ...cacheRow(`freshness:${key}`, updatedAt, { updatedAt, source: SRC[key], publishStatus: "ok", generationId, ...ov }), served_generation_id: generationId };
 };
 const dewsPtr = (updatedAt: number) => cacheRow("dews:published-generation", updatedAt, { updatedAt, source: "compute-dews", publishStatus: "published", coverageVersion: 2, expectedRowCount: 2, stablecoinIdsDigest: "a".repeat(64) });
-const baseCacheRows = (now = N) => [cacheRow("stablecoins", now - 60), cacheRow("stablecoin-charts", now - 60), cacheRow("usds-status", now - 60), ...fxRatesCacheRows(now - 60), cacheRow("bluechip-ratings", now - 60)];
+const baseCacheRows = (now = N) => [cacheRow("stablecoins", now - 60), cacheRow("stablecoin-charts", now - 60), cacheRow("usds-status", now - 60), ...fxRatesCacheRows(now - 60)];
 const stdCaches = (now = N, ov: { dex?: Record<string, unknown> | null; yld?: Record<string, unknown> | null; dews?: Record<string, unknown> | null; extra?: Record<string, unknown>[] } = {}) => [
   ...baseCacheRows(now),
   ...(ov.dex === null ? [] : [ov.dex ?? sentinelRow("dex-liquidity", now - 120)]),
@@ -339,7 +339,7 @@ describe("buildCacheStatuses", () => {
     const ptrAt = nowS(), runClk = ptrAt - 30, prevAt = ptrAt - 1_800, freshAt = runClk - 60;
     const sv = (updatedAt: number, source: string, generationId: string) => js({ updatedAt, source, publishStatus: "ok", generationId });
     const ins = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
-    for (const k of ["stablecoins", "stablecoin-charts", "usds-status", "bluechip-ratings"]) ins.run(k, "{}", freshAt);
+    for (const k of ["stablecoins", "stablecoin-charts", "usds-status"]) ins.run(k, "{}", freshAt);
     for (const r of fxRatesCacheRows(freshAt)) ins.run(r.key, r.value, r.updated_at);
     ins.run("freshness:dex-liquidity", sv(freshAt, "sync-dex-liquidity", "dex:global"), freshAt);
     ins.run("freshness:yield-data", sv(freshAt, "sync-yield-data", "yield:current"), freshAt);
@@ -399,7 +399,7 @@ describe("buildCacheStatuses", () => {
 
   it("uses fx-rates-meta usableSyncAt for cache freshness and keeps cadence-aware source warnings separate", async () => {
     const now = nowS();
-    const db = freshnessDb({ tableAge: 60, pointer: dewsPtr(now - 60), cacheRows: [cacheRow("stablecoins", now - 60), cacheRow("stablecoin-charts", now - 60), cacheRow("usds-status", now - 60), ...fxRatesCacheRows(now - 30, { peggedEUR: 1.08 }, { usableSyncAt: now - 180, mode: "cached-fallback", sourceUpdatedAtByPeg: { peggedEUR: now - 8 * 3600 }, sourceModeByPeg: { peggedEUR: "cached" }, sourceCadenceByPeg: { peggedEUR: "intraday" }, consecutiveFallbackRuns: 4 }), cacheRow("bluechip-ratings", now - 60)] });
+    const db = freshnessDb({ tableAge: 60, pointer: dewsPtr(now - 60), cacheRows: [cacheRow("stablecoins", now - 60), cacheRow("stablecoin-charts", now - 60), cacheRow("usds-status", now - 60), ...fxRatesCacheRows(now - 30, { peggedEUR: 1.08 }, { usableSyncAt: now - 180, mode: "cached-fallback", sourceUpdatedAtByPeg: { peggedEUR: now - 8 * 3600 }, sourceModeByPeg: { peggedEUR: "cached" }, sourceCadenceByPeg: { peggedEUR: "intraday" }, consecutiveFallbackRuns: 4 })] });
     const { caches, statusFloor, warnings } = await buildStatuses(db, now);
     expect(caches["fx-rates"]).toMatchObject({ ageSeconds: 180, mode: "cached-fallback", sourceStatus: "degraded", consecutiveFallbackRuns: 4 });
     expect(statusFloor).toBe("degraded"); expect(warnings[0]).toContain("cached fallback FX rates");

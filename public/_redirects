@@ -302,9 +302,9 @@
 /start/ / 301
 /start / 301
 
-# The Bluechip explainer folded into a section of /about/ (2026-10-11).
-/about/bluechip/ /about/#bluechip 301
-/about/bluechip /about/#bluechip 301
+# The retired Bluechip explainer lands on /about/ (section removed 2026-11-27).
+/about/bluechip/ /about/ 301
+/about/bluechip /about/ 301
 
 # Coins removed from the tracked catalog (bed599cc4). A retired coin ID with a
 # cemetery record lands on its /cemetery/#<id> anchor; other single-peg coin IDs
@@ -428,8 +428,8 @@
 # /start/ duplicated the nav and methodology copy (2026-10-11); its walkthrough (dynamic rules)
 /start/* / 301
 
-# The Bluechip explainer folded into a section of /about/ (2026-10-11). (dynamic rules)
-/about/bluechip/* /about/#bluechip 301
+# The retired Bluechip explainer lands on /about/ (section removed 2026-11-27). (dynamic rules)
+/about/bluechip/* /about/ 301
 
 # Coins removed from the tracked catalog (bed599cc4); /coverage/ documents (dynamic rules)
 /stablecoin/pusd-pleasing/* /stablecoins/usd/ 301

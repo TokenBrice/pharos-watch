@@ -23,13 +23,13 @@ export const WHY_KEYS_SET: ReadonlySet<WhyKey> = new Set(WHY_KEYS);
  *
  * `low-dependency-risk` left the Treasury list at `selector-v2.0`: it graded a
  * dependency scalar the Selector re-derived from V9's raw graph, and that
- * re-derivation is gone. `WHY_KEYS` still lists the key so stored snapshots
- * that recorded it stay readable and renderable.
+ * re-derivation is gone. `strong-bluechip` left Treasury and Yield at
+ * `selector-v2.16` with the external Bluechip input. `WHY_KEYS` still lists
+ * both keys so stored snapshots that recorded them stay readable and renderable.
  */
 export const whyKeysByProfile: Readonly<Record<SelectorProfile, readonly WhyKey[]>> = {
   treasury: [
     "top-safety",
-    "strong-bluechip",
     "low-dews",
     "clean-peg-history",
     "strong-resilience",
@@ -41,7 +41,6 @@ export const whyKeysByProfile: Readonly<Record<SelectorProfile, readonly WhyKey[
   ],
   yield: [
     "top-safety",
-    "strong-bluechip",
     "low-dews",
     "clean-peg-history",
     "strong-resilience",

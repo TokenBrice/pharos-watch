@@ -469,12 +469,6 @@ const BASE_ENDPOINT_DEFINITIONS = [
     probeGroup: "public",
   }),
   publicGet({
-    key: "bluechip-ratings",
-    path: API_PATHS.bluechipRatings(),
-    cacheKeyIgnoresQuery: true,
-    probeGroup: "public",
-  }),
-  publicGet({
     key: "dex-liquidity",
     path: API_PATHS.dexLiquidity(),
     cacheKeyIgnoresQuery: true,

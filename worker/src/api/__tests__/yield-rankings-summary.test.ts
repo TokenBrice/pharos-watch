@@ -214,7 +214,7 @@ describe("handleYieldRankings summary projection", () => {
     expect(full.rankings[0].altSources[1].sourceRisk?.sourceAgeSeconds).toBeNull();
     const selector = buildSelectorRows({
       stablecoinsData: null, pegCurrency: null, pegData: null, reportData: null,
-      stressData: null, dexData: null, yieldData: full, bluechipData: null,
+      stressData: null, dexData: null, yieldData: full,
       yieldAgeAssessedAt: (UPDATED_AT + 14401) * 1000,
       now: (UPDATED_AT + 14401) * 1000,
     }).rows.get("usdc-circle")!;

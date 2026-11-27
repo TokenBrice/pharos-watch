@@ -72,7 +72,7 @@ export const CIRCUIT_SOURCE_REGISTRY = {
   UNISWAP_V3_BSC_SHADOW: { key: "uniswap-v3-bsc-shadow", scope: "source-wide" },
   TRONGRID: { key: "trongrid", scope: "source-wide" },
   ANTHROPIC: { key: "anthropic-api", scope: "source-wide" },
-  BLUECHIP: { key: "bluechip-api", scope: "source-wide" },
+  BLUECHIP: { key: "bluechip-api", scope: "retired" },
   CG_TICKER: { key: "coingecko-ticker", scope: "retired" },
   KINESIS_KAU: { key: "kinesis-kau-horizon", scope: "source-wide" },
   KINESIS_KAG: { key: "kinesis-kag-horizon", scope: "source-wide" },

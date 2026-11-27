@@ -56,7 +56,7 @@ export function resolveScoreTier5(score: number | null): ScoreTier5 | null {
 
 export type ScoreTier4 = "t80" | "t60" | "t40" | "t0";
 
-/** Four-step score ramp (liquidity 80/60/40, Bluechip grade order). */
+/** Four-step score ramp (liquidity 80/60/40). */
 export const SCORE_TIER_4_CLASSES = {
   t80: { text: "text-emerald-700 dark:text-emerald-400", fill: "bg-emerald-500/70", scoreText: "text-state-positive", pill: "border-state-positive bg-state-positive-subtle text-state-positive" },
   t60: { text: "text-blue-700 dark:text-blue-400", fill: "bg-blue-500/70", scoreText: "text-blue-700 dark:text-blue-400", pill: "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400" },

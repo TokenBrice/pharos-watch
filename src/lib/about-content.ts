@@ -14,7 +14,6 @@ import {
   Rocket,
   Ship,
   ShieldAlert,
-  ShieldCheck,
   Skull,
   TrendingUp,
   Unlink,
@@ -86,10 +85,10 @@ export const DATA_SOURCE_GROUPS = [
       "Dwellir, Alchemy, dRPC, Etherscan v2, TronGrid, selected public EVM and non-EVM RPC/indexer endpoints (Solana, Starknet, Sui, Aptos, Stellar Horizon/Soroban, Noble LCD, XRPL, Initia, ICP), pinned vault and redemption-queue contract reads, and reconciled freeze-ledger bootstrap records from kyc.rip / stables.rip.",
   },
   {
-    label: "Ratings & reference",
-    summary: "External ratings, chain-risk snapshots, central-bank FX feeds, commodity marks, and currency benchmark rates.",
+    label: "Reference data",
+    summary: "Chain-risk snapshots, central-bank FX feeds, commodity marks, and currency benchmark rates.",
     sources:
-      "Bluechip, eurostablecoins.xyz, L2BEAT chain-risk and Interop snapshots, Chainlink Data Feeds, ECB (Frankfurter and ECB Data API), Open Exchange Rates, fawazahmed0/currency-api, ExchangeRate-API, gold-api.com, FRED, New York Fed EFFR, Treasury.gov, SIX SARON, Bank of England SONIA, Bank of Japan, Banxico CETES, BCB SELIC, Reserve Bank of Australia, Bank of Canada CORRA, Central Bank of Russia, and CBRT TLREF.",
+      "eurostablecoins.xyz, L2BEAT chain-risk and Interop snapshots, Chainlink Data Feeds, ECB (Frankfurter and ECB Data API), Open Exchange Rates, fawazahmed0/currency-api, ExchangeRate-API, gold-api.com, FRED, New York Fed EFFR, Treasury.gov, SIX SARON, Bank of England SONIA, Bank of Japan, Banxico CETES, BCB SELIC, Reserve Bank of Australia, Bank of Canada CORRA, Central Bank of Russia, and CBRT TLREF.",
   },
   {
     label: "Regulatory registers",
@@ -264,15 +263,6 @@ export function getTrackedFeatures({
       linkLabel: "Open depeg tracker",
     },
     {
-      title: "Bluechip safety ratings",
-      description:
-        "Independent SMIDGE (Stability, Management, Implementation, Decentralization, Governance, Externals) coverage for rated stablecoins, pulled in as an outside reference signal.",
-      icon: ShieldCheck,
-      href: "https://bluechip.org",
-      external: true,
-      linkLabel: "Review source",
-    },
-    {
       title: "DEX liquidity",
       description: "Pool depth, volume, quality-adjusted TVL, durability, and pair diversity scored 0-100.",
       icon: Droplets,
@@ -328,7 +318,7 @@ export function getAboutFaqItems({
     {
       question: "Where does Pharos get its data?",
       answer:
-        "Pharos aggregates data from DefiLlama, CoinGecko, on-chain RPC nodes, Etherscan, TronGrid, protocol-native APIs, public regulatory registers, and curated sources like Bluechip. Details on all data sources are available on the About page.",
+        "Pharos aggregates data from DefiLlama, CoinGecko, on-chain RPC nodes, Etherscan, TronGrid, protocol-native APIs, and public regulatory registers. Details on all data sources are available on the About page.",
     },
   ];
 }

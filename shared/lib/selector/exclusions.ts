@@ -213,9 +213,6 @@ function treasuryExclusions(row: MergedRow, input: SelectorInput): ExclusionReco
   if (treasuryFloorRecord != null) {
     return treasuryFloorRecord;
   }
-  if (row.bluechipGrade === "D" || row.bluechipGrade === "F") {
-    return fail(row.id, "bluechip-d-or-f");
-  }
   return null;
 }
 
@@ -410,7 +407,6 @@ export const PROFILE_DEFINING_EXCLUSIONS: Record<
     "safety-resilience-floor",
     "dews-ceiling",
     "peg-score-floor",
-    "bluechip-d-or-f",
   ],
   yield: [
     "pys-null",

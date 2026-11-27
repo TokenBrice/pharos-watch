@@ -64,7 +64,6 @@ const baseRecommendation: SelectorRecommendation = {
   },
   chainHints: { topByLiquidity: ["Ethereum"], topByYield: [], primary: "Ethereum" },
   isRecentListing: false,
-  bluechipGrade: "A",
   safetyGrade: "A",
   supplyUsd: 32_000_000_000,
   isBeta: true,

@@ -33,8 +33,6 @@ import {
   PRINCIPLES_CORRECTIONS,
   type PrincipleAxiom,
 } from "@/lib/about-principles-content";
-import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
-import { BLUECHIP_GATES, BLUECHIP_LEDE, BLUECHIP_REFUSALS, BLUECHIP_WHAT_IT_MEANS } from "./bluechip-content";
 import {
   ACTIVE_TOKENIZED_FUND_COUNT,
   ACTIVE_VARIANT_STABLECOIN_COUNT,
@@ -845,86 +843,6 @@ export function AboutPageContent() {
                   </p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </section>
-
-        <section id="bluechip" className="scroll-mt-24">
-          <Card variant="shell" className="gap-6 py-6">
-            <CardHeader
-              className="px-5 sm:px-6"
-              kicker="Editorial designation"
-              heading="Pharos Bluechip"
-              actions={
-                <span className="inline-flex items-center rounded-full border border-state-warn bg-state-warn-subtle px-2.5 py-1 text-xs font-medium text-state-warn-strong">
-                  Roster suspended &middot; floor under review
-                </span>
-              }
-            />
-            <CardContent className="space-y-6 px-5 text-sm leading-relaxed text-muted-foreground sm:px-6">
-              <div className="space-y-3">
-                <p className="text-foreground/90">{BLUECHIP_LEDE}</p>
-                <div className="pharos-subtle-band rounded-lg text-xs leading-relaxed text-muted-foreground">
-                  <p>
-                    <span className="font-semibold text-foreground">Roster suspended</span> while the grade floor is
-                    under review. It resumes under the same rule: the live intersection of external Bluechip A-tier
-                    ratings and Pharos A-tier report cards, current-state rather than historical. Bluechip rides the
-                    Safety Score methodology ({SAFETY_SCORE_METHODOLOGY_VERSION_LABEL}) and is re-derived, never
-                    grandfathered, when a floor changes. The per-coin badge still links to the external Bluechip report.
-                  </p>
-                </div>
-                {BLUECHIP_WHAT_IT_MEANS.map((paragraph) => (
-                  <p key={paragraph}>{paragraph}</p>
-                ))}
-              </div>
-              <div className="grid gap-6 border-t border-border/60 pt-6 lg:grid-cols-2 lg:items-start">
-                <div className="space-y-3">
-                  <div className="space-y-1">
-                    <h3 className="text-sm font-semibold tracking-tight text-foreground">The gates</h3>
-                    <p className="text-xs leading-relaxed text-muted-foreground">
-                      Each gate is independent. A coin clears Bluechip only when every gate clears at the same moment,
-                      and only while it continues to do so.
-                    </p>
-                  </div>
-                  <ol className="divide-y divide-border/60 border-y border-border/60">
-                    {BLUECHIP_GATES.map((gate, index) => (
-                      <li key={gate.id} className="grid gap-1 py-3 sm:grid-cols-[2.25rem_minmax(0,1fr)] sm:gap-3">
-                        <span className="pharos-numeric text-xs font-semibold text-muted-foreground">
-                          {String(index + 1).padStart(2, "0")}
-                        </span>
-                        <p className="text-xs leading-relaxed text-muted-foreground">
-                          <span className="font-semibold text-foreground">{gate.title}.</span> {gate.body}
-                        </p>
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-                <div className="space-y-3">
-                  <h3 className="text-sm font-semibold tracking-tight text-foreground">
-                    What Bluechip refuses to grant
-                  </h3>
-                  <ul className="divide-y divide-border/60 border-y border-border/60">
-                    {BLUECHIP_REFUSALS.map((entry) => (
-                      <li key={entry.title} className="py-3 text-xs leading-relaxed text-muted-foreground">
-                        <span className="font-semibold text-foreground">{entry.title}.</span> {entry.body}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-border/60 pt-4 text-xs">
-                <Link href="/methodology/#safety-scores-methodology" className={INLINE_PROSE_LINK_CLASS}>
-                  Safety Scores methodology
-                </Link>
-                <span aria-hidden="true">&middot;</span>
-                <Link href="/methodology/scoring-changelog/" className={INLINE_PROSE_LINK_CLASS}>
-                  Scoring changelog
-                </Link>
-                <span aria-hidden="true">&middot;</span>
-                <Link href="/methodology/#def-bluechip" className={INLINE_PROSE_LINK_CLASS}>
-                  Definition
-                </Link>
-              </p>
             </CardContent>
           </Card>
         </section>

@@ -17,7 +17,7 @@ export const RETIRED_PUBLIC_ROUTES = [
   { prefix: "/about/style", replacement: "/about/", forms: ["", "/*"] },
   { prefix: "/sitemap-tree", replacement: "/", forms: ["", "/", "/*"] },
   { prefix: "/start", replacement: "/", forms: ["", "/", "/*"] },
-  { prefix: "/about/bluechip", replacement: "/about/#bluechip", forms: ["", "/", "/*"] },
+  { prefix: "/about/bluechip", replacement: "/about/", forms: ["", "/", "/*"] },
   { prefix: "/docs/architecture", replacement: "/docs/", forms: ["", "/", "/*"] },
   { prefix: "/docs/worker-and-api-limits", replacement: "/docs/", forms: ["", "/", "/*"] },
   { prefix: "/docs/data-flow-map", replacement: "/docs/", forms: ["", "/", "/*"] },

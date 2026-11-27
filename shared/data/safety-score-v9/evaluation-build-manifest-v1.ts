@@ -138,7 +138,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/cron-jobs.ts",
-      "sha256": "231e77c0c32b13be73f73ea356187c236de66fd5f046b2463b99bb40e3eb6ad8"
+      "sha256": "0548ab46dc1d565fbab655cf89e99fdb448f3eb3d2316fe0d6bc5aa6f79c0c10"
     },
     {
       "path": "shared/lib/curve-composite-identities.ts",
@@ -774,7 +774,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/bluechip.ts",
-      "sha256": "3cd71c8a48dd57567443531d972dbef11333fc62ad1671265f9292203abbd108"
+      "sha256": "610a64b0bb49a7d0c1c46c6d70e5ca192484fa83d76683a2abe1d5c61558226d"
     },
     {
       "path": "shared/types/bridge-risk.ts",
@@ -902,7 +902,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/report-card-grade.ts",
-      "sha256": "d419f878dbcd778e36f009f6510f156ff611209ad6dc7ea5292d36778d65a74a"
+      "sha256": "c0bd7f1177b81979314297b979d696756cd2f5b428f7b664b64c7c21d150ed07"
     },
     {
       "path": "shared/types/report-cards-base-input.ts",
@@ -1379,7 +1379,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-11-26-block-26499490-shock-coverage.json.gz"
     }
   ],
-  "digest": "095b96e5e3457a36fffa2f75b89f7a69b6f46d59b1ef6e7289a164ff9d6251c8"
+  "digest": "7218ea4163e60dc3c4271304e4118b6155e4f26f234fa4e134fb8bda2555a4d7"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

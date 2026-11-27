@@ -13,7 +13,6 @@ const mocks = vi.hoisted(() => ({
   snapshotPublicDataset: vi.fn(),
   fetchTbillRate: vi.fn(),
   syncUsdsStatus: vi.fn(),
-  syncBluechip: vi.fn(),
   generateDailyDigest: vi.fn(),
 }));
 
@@ -23,7 +22,6 @@ vi.mock("../../../cron/snapshot-psi", () => ({ snapshotPsiDaily: mocks.snapshotP
 vi.mock("../../../cron/snapshot-public-dataset", () => ({ snapshotPublicDataset: mocks.snapshotPublicDataset }));
 vi.mock("../../../cron/fetch-tbill-rate", () => ({ fetchTbillRate: mocks.fetchTbillRate }));
 vi.mock("../../../cron/sync-usds-status", () => ({ syncUsdsStatus: mocks.syncUsdsStatus }));
-vi.mock("../../../cron/sync-bluechip", () => ({ syncBluechip: mocks.syncBluechip }));
 vi.mock("../../../cron/daily-digest", () => ({ generateDailyDigest: mocks.generateDailyDigest }));
 
 import { runDaily0800Slot } from "../daily-0800";
@@ -53,7 +51,6 @@ describe("runDaily0800Slot", () => {
     mocks.snapshotPublicDataset.mockResolvedValue({ status: "ok", itemCount: 1 });
     mocks.fetchTbillRate.mockResolvedValue({ status: "ok", itemCount: 1 });
     mocks.syncUsdsStatus.mockResolvedValue({ status: "ok", itemCount: 1 });
-    mocks.syncBluechip.mockResolvedValue({ status: "ok", itemCount: 1 });
     mocks.generateDailyDigest.mockResolvedValue({ status: "ok", itemCount: 1 });
   });
 
@@ -89,7 +86,7 @@ describe("runDaily0800Slot", () => {
 });
 
 describe("runDaily0805Slot", () => {
-  it("contains a daily digest failure while bluechip still runs", async () => {
+  it("contains a daily digest failure in the slot summary", async () => {
     mocks.generateDailyDigest.mockRejectedValue(new Error("digest failed"));
     const signal = new AbortController().signal;
     const rt = makeScheduledRuntime({
@@ -102,9 +99,7 @@ describe("runDaily0805Slot", () => {
 
     const summary = await runDaily0805Slot(rt);
 
-    expect(mocks.syncBluechip).toHaveBeenCalledOnce();
     expect(mocks.generateDailyDigest).toHaveBeenCalledOnce();
     expect(summary.jobs.find((job) => job.job === "daily-digest")?.outcome).toBe("error");
-    expect(summary.jobs.find((job) => job.job === "sync-bluechip")?.outcome).toBe("ok");
   });
 });

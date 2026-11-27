@@ -26,9 +26,8 @@ export type CronSentinelRuleSource =
  *   `safety-publication-held` (the Safety Score publication is held),
  *   `fx-source-stale` (the FX cache's worst per-peg source is stale),
  *   `fx-cached-fallback` (FX rates are republished from cache),
- *   `daily-lane-completion` (a daily cache lane missed its slot),
- *   `bluechip-coverage` (a mapped Bluechip constituent is past its observation
- *   budget) and the supply-integrity family: `supply-value-drift`,
+ *   `daily-lane-completion` (a daily cache lane missed its slot) and the
+ *   supply-integrity family: `supply-value-drift`,
  *   `supply-availability`, `supply-carry`, `supply-snapshot-overdue`,
  *   `supply-snapshot-partial`, `supply-charts-history` (two-run confirmed
  *   findings on cached supply values, carry, the daily snapshot, and
@@ -83,7 +82,6 @@ export const CRON_SENTINEL_RULE_IDS: Record<CronSentinelRuleSource, readonly str
     "fx-source-stale",
     "fx-cached-fallback",
     "daily-lane-completion",
-    "bluechip-coverage",
     "supply-value-drift",
     "supply-availability",
     "supply-carry",

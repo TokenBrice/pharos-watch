@@ -6,7 +6,6 @@ import {
   type SelectorOutput,
 } from "@shared/lib/selector";
 import {
-  useBluechipRatings,
   useDexLiquidity,
   usePegSummary,
   useReportCardsV9Table,
@@ -91,7 +90,6 @@ export function useSelector(
   const stressSignals = useStressSignals({ enabled });
   const dexLiquidity = useDexLiquidity({ enabled });
   const yieldRankings = useLiveYieldRankings(useYieldRankings({ enabled }));
-  const bluechipRatings = useBluechipRatings({ enabled });
   const snapshotRequests = useRef(new RequestSequence());
 
   const [snapshotState, setSnapshotState] = useState<
@@ -159,7 +157,6 @@ export function useSelector(
     queryDataOrErrorSettled(pegSummary) &&
     queryDataOrErrorSettled(stressSignals) &&
     queryDataOrErrorSettled(dexLiquidity) &&
-    queryDataOrErrorSettled(bluechipRatings) &&
     (liveInput?.profile !== "yield" || queryDataOrErrorSettled(yieldRankings));
 
   const selectorTimestamp = Math.max(
@@ -169,7 +166,6 @@ export function useSelector(
     stressSignals.dataUpdatedAt ?? 0,
     dexLiquidity.dataUpdatedAt ?? 0,
     yieldRankings.dataUpdatedAt ?? 0,
-    bluechipRatings.dataUpdatedAt ?? 0,
   );
 
   // Answer changes rerank the same admitted universe; only peg selection or
@@ -186,11 +182,9 @@ export function useSelector(
       dexData: dexLiquidity.data ?? null,
       yieldData: yieldRankings.data ?? null,
       yieldAgeAssessedAt: yieldRankings.dataUpdatedAt,
-      bluechipData: bluechipRatings.data ?? null,
       now: selectorTimestamp,
     });
   }, [
-    bluechipRatings.data,
     datasetReady,
     dexLiquidity.data,
     enabled,

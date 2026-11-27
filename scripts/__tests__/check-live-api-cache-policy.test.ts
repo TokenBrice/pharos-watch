@@ -14,7 +14,7 @@ const effectiveProfiles: Record<string, string> = {
 function responseFor(url: string, override?: string, status = 200) {
   const path = new URL(url).pathname;
   const profile = path.endsWith("/health") ? "realtime" : path.endsWith("/stablecoins") ? "producerBacked"
-    : path.endsWith("/bluechip-ratings") ? "slow" : "noStore";
+    : path.endsWith("/non-usd-share") ? "slow" : "noStore";
   return new Response("{}", { status, headers: {
     "Content-Type": "application/json", "Cache-Control": override ?? effectiveProfiles[profile],
   } });
@@ -74,7 +74,7 @@ describe("live API Cache-Control drift", () => {
       if (url.includes("api.pharos.watch/api/health")) throw new Error("network unavailable");
       if (url.includes("/_site-data/health")) return responseFor(url, "public, max-age=1200, s-maxage=60");
       if (url.includes("/_site-data/stablecoins")) return responseFor(url, effectiveProfiles.producerBacked, 503);
-      if (url.includes("/_site-data/bluechip-ratings")) return new Response("challenge", { headers: { "Content-Type": "text/html" } });
+      if (url.includes("/_site-data/non-usd-share")) return new Response("challenge", { headers: { "Content-Type": "text/html" } });
       return responseFor(url);
     });
     const report = await runLiveApiCachePolicyCheck({ manifest, fetchImpl, consoleImpl: { log } });

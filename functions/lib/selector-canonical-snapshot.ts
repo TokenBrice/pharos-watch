@@ -7,10 +7,6 @@ import { runSelector } from "@shared/lib/selector/engine";
 import { createVerifiedSelectorSnapshot } from "@shared/lib/selector/snapshot";
 import type { SelectorCanonicalSourceEvidence, SelectorInput, SelectorOutput } from "@shared/lib/selector/types";
 import {
-  BluechipRatingsMapSchema,
-  type BluechipRatingsMap,
-} from "@shared/types/bluechip";
-import {
   DexLiquidityMapSchema,
   type DexLiquidityMap,
 } from "@shared/types/dex-liquidity";
@@ -112,14 +108,13 @@ async function loadCanonicalSelectorSources(request: Request, env: SelectorCanon
       StressSignalsAllResponseSchema,
     ),
   ]);
-  const [dexData, yieldResponse, bluechipData] = await Promise.all([
+  const [dexData, yieldResponse] = await Promise.all([
     fetchCanonicalSource<DexLiquidityMap>(request, env, API_PATHS.dexLiquidity(), DexLiquidityMapSchema),
     fetchCanonicalSource<YieldRankingsResponse>(request, env, API_PATHS.yieldRankings(), YieldRankingsResponseSchema)
       .then((yieldData) => ({ yieldData, yieldAgeAssessedAt: Date.now() })),
-    fetchCanonicalSource<BluechipRatingsMap>(request, env, API_PATHS.bluechipRatings(), BluechipRatingsMapSchema),
   ]);
   return {
-    stablecoinsData, pegData, reportData, stressData, dexData, ...yieldResponse, bluechipData,
+    stablecoinsData, pegData, reportData, stressData, dexData, ...yieldResponse,
     canonicalSources: [stablecoinsEvidence],
   };
 }

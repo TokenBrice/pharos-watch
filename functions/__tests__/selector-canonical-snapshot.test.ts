@@ -81,7 +81,6 @@ function canonicalPayloads(
         methodology: methodology("yield-v8"),
       },
     ],
-    [API_PATHS.bluechipRatings(), {}],
   ]);
 }
 

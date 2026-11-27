@@ -34,7 +34,6 @@ export const baseRecommendation = {
   },
   chainHints: { topByLiquidity: ["Ethereum"], topByYield: [], primary: "Ethereum" },
   isRecentListing: false,
-  bluechipGrade: "A" as const,
   safetyGrade: "A" as const,
   supplyUsd: 32_000_000_000,
   isBeta: true as const,
@@ -100,7 +99,6 @@ export function mockSelectorOutput(
       safetyScore: "v7.25",
       pegScoreAndDews: "v3",
       yieldIntelligence: "v8",
-      bluechipAlignment: "v1",
       exclusionFilters: "selector-v1.2",
     },
     datasetHash: "a".repeat(64),
@@ -115,7 +113,6 @@ export function makePickerQueryData() {
     useStressSignals: () => query({ signals: {} }),
     useDexLiquidity: () => query({}),
     useYieldRankings: () => query({ rankings: [] }),
-    useBluechipRatings: () => query({}),
     useRedemptionBackstops: () => query({ coins: {} }),
   };
 }

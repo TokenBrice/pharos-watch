@@ -45,9 +45,6 @@ import {
   BlacklistSummaryResponseSchema,
 } from "@shared/types/blacklist";
 import {
-  BluechipRatingSchema,
-} from "@shared/types/bluechip";
-import {
   DepegEventSchema,
   DepegEventsResponseSchema,
   PegSummaryResponseSchema,
@@ -267,7 +264,6 @@ export const PUBLIC_API_RESPONSE_SCHEMAS = {
   StablecoinReservesResponse: StablecoinReservesResponseSchema,
   StablecoinChartResponse: StablecoinChartResponseSchema,
   PegSummaryResponse: PegSummaryResponseSchema,
-  BluechipRatingsResponse: z.object(FreshnessEnvelopeShape).catchall(BluechipRatingSchema),
   DexLiquidityResponse: DexLiquidityMapSchema,
   DepegEventsResponse: DepegEventsResponseSchema.extend({
     events: z.array(DepegEventSchema.safeExtend({

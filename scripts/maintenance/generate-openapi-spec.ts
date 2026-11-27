@@ -47,7 +47,7 @@ const TAG_DESCRIPTIONS = {
   Stablecoins: "Current stablecoin registry, per-asset detail, reserves, summaries, and chart surfaces.",
   "Peg Monitoring": "Peg summaries, depeg incidents, and stress signals for stablecoin peg stability.",
   Liquidity: "DEX liquidity scores, history, pool quality, and exit-capacity analytics.",
-  Risk: "Safety reports, bluechip ratings, redemption backstops, events, and cross-signal risk surfaces.",
+  Risk: "Safety reports, redemption backstops, events, and cross-signal risk surfaces.",
   Compliance: "Structured EU MiCA and U.S. GENIUS Act regulatory assessments and regime status.",
   Blacklist: "Issuer freeze, blacklist, unblacklist, destroy, and exposure summary data.",
   Flows: "Mint and burn flow aggregates plus normalized issuance-chain event streams.",

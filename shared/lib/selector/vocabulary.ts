@@ -46,6 +46,7 @@ export const WEIGHT_KEYS = [
   "pegScoreNow",
   "decentralization",
   "dewsInverted",
+  /** Retired in `selector-v2.16`; kept so older Treasury snapshots still replay. */
   "bluechip",
   "supplyLog",
   "pharosYieldScore",
@@ -74,6 +75,7 @@ export const LOWEST_SUB_DIMENSION_KEYS = [
 export const CONTEXT_KEYS = [
   "recent-listing",
   "yield-source-switched",
+  /** Retired in `selector-v2.16`; kept so older snapshots still replay. */
   "bluechip-weakness",
   "depeg-history",
   "high-venue-risk",
@@ -86,6 +88,7 @@ export const CONTEXT_KEYS = [
 export const WHY_KEYS = [
   // Universal
   "top-safety",
+  /** Retired in `selector-v2.16`; kept so older snapshots still replay. */
   "strong-bluechip",
   "low-dews",
   "clean-peg-history",
@@ -135,6 +138,7 @@ export const EXCLUSION_REASONS = [
   /** Retired before `selector-v2.0`; kept so v1.x snapshots still replay. */
   "safety-dependency-risk-floor",
   "dews-ceiling",
+  /** Retired in `selector-v2.16`; kept so older snapshots still replay. */
   "bluechip-d-or-f",
   "peg-score-floor",
   "pys-null",

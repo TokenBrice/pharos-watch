@@ -14,9 +14,6 @@ import type {
   BlacklistSummaryResponse,
 } from "@shared/types/blacklist";
 import type {
-  BluechipRatingsMap,
-} from "@shared/types/bluechip";
-import type {
   DexLiquidityHistoryPoint,
   DexLiquidityMap,
   DexLiquidityTableMap,
@@ -69,7 +66,6 @@ import {
   CRON_15MIN,
   CRON_1MIN,
   CRON_BLACKLIST,
-  CRON_BLUECHIP,
   CRON_CHARTS,
   CRON_DAILY_DIGEST,
   CRON_MINT_BURN,
@@ -206,15 +202,6 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       path: API_PATHS.chainsDetail(chainId),
       producerIntervalMs: CRON_15MIN,
     }),
-  ),
-  bluechipRatings: defineApiQuery(
-    {
-      queryKey: ["bluechip-ratings"] as const,
-      path: API_PATHS.bluechipRatings(),
-      producerIntervalMs: CRON_BLUECHIP,
-    },
-    "meta",
-    createLazySchema<BluechipRatingsMap>(async () => (await import("@shared/types/bluechip")).BluechipRatingsMapSchema),
   ),
   dailyDigest: defineApiQuery(
     {

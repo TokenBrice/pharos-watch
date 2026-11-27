@@ -20,7 +20,7 @@ const SAMPLES = [
   { lane: "direct", path: "/api/dependency-scenarios/v1", profile: "noStore" },
   { lane: "site-data", path: "/api/health", profile: "realtime" },
   { lane: "site-data", path: "/api/stablecoins", profile: "producerBacked" },
-  { lane: "site-data", path: "/api/bluechip-ratings", profile: "slow" },
+  { lane: "site-data", path: "/api/non-usd-share", profile: "slow" },
   { lane: "site-data", path: "/api/dependency-scenarios/v1", profile: "noStore" },
 ];
 

@@ -7,9 +7,6 @@ import type { CompareRadarCohort } from "@/lib/compare-data-model-types";
 import { getQuoteMatchedNavPriceReference } from "@/lib/nav-price-reference";
 import { COMPARE_COLORS } from "@/lib/compare-config";
 import type {
-  BluechipRating,
-} from "@shared/types/bluechip";
-import type {
   DexLiquidityData,
   DexLiquidityMap,
 } from "@shared/types/dex-liquidity";
@@ -91,9 +88,6 @@ export interface ComparisonCoinEntry {
   yield?: YieldRanking | null;
   stress?: StressSignalEntry | null;
   flow?: MintBurnCoinFlow | null;
-  /** A usable whole-feed publication exists, even when it contains no ratings. */
-  bluechipPublicationAvailable: boolean;
-  bluechipRating?: BluechipRating | null;
   /** Exceptional states, highest first (`useCoinStates`); null while none is known and the live inputs have not loaded. */
   coinStates?: readonly CoinState[] | null;
 }
@@ -198,7 +192,6 @@ export function deriveComparisonCoins({
   dexData,
   cardMap,
   flowCoinMap,
-  bluechipMap,
   redemptionMap,
   yieldMap,
   stressMap,
@@ -212,7 +205,6 @@ export function deriveComparisonCoins({
   dexData: DexLiquidityMap | undefined;
   cardMap: Map<string, V9ConsumerCard>;
   flowCoinMap: Map<string, MintBurnCoinFlow>;
-  bluechipMap?: Record<string, BluechipRating> | null;
   redemptionMap?: Record<string, RedemptionBackstopEntry>;
   yieldMap?: Map<string, YieldRanking>;
   stressMap?: Record<string, StressSignalEntry>;
@@ -246,8 +238,6 @@ export function deriveComparisonCoins({
         yield: yieldMap?.get(id) ?? null,
         stress: stressMap?.[id] ?? null,
         flow: flowCoin ?? null,
-        bluechipPublicationAvailable: bluechipMap != null,
-        bluechipRating: bluechipMap?.[id] ?? null,
         coinStates: coinStates.length > 0 || coinStatesReady ? coinStates : null,
       };
     })

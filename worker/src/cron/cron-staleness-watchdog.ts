@@ -750,7 +750,6 @@ export async function runCronStalenessWatchdog(
   const pricingConditions = await buildPricingOperatorConditions(
     db,
     { caches: status.caches, nowSec },
-    signal,
   );
   const blacklistConfigStale = blacklistConfigWatch.conditions.some((condition) => condition.active);
   const mintBurnConfigStuck = mintBurnStuckWatch.conditions.some((condition) => condition.active);

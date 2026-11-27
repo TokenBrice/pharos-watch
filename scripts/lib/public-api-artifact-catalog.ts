@@ -465,13 +465,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = {
     tags: ["Risk"],
     responseSchema: "UsdsStatusResponse",
   },
-  "bluechip-ratings": {
-    referenceOrder: 15,
-    summary: "Bluechip ratings",
-    description: "Safety ratings from bluechip.org joined to Pharos identities for covered stablecoins.",
-    tags: ["Risk"],
-    responseSchema: "BluechipRatingsResponse",
-  },
   "dex-liquidity": {
     referenceOrder: 16,
     summary: "DEX liquidity",

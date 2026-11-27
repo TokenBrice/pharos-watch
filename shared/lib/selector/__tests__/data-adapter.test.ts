@@ -9,9 +9,6 @@ import { asRawDeviationBps } from "../../../types/reference-admission";
 import { selectYieldSource } from "../yield-source";
 import { makeInput } from "./fixture";
 import type * as ClientRegistry from "../../stablecoins/client-registry";
-import { BluechipRatingSchema } from "../../../types/bluechip";
-import { BLUECHIP_OBSERVATION_MAX_AGE_SEC } from "../../bluechip-freshness";
-import { whyKeyTriggers } from "../recommendation";
 
 // Non-isolated suites may have loaded the adapter before this registry mock.
 vi.hoisted(() => vi.resetModules());
@@ -49,9 +46,6 @@ vi.mock("../../stablecoins/client-registry", async (importOriginal) => {
   };
 });
 import type {
-  BluechipRatingsMap,
-} from "../../../types/bluechip";
-import type {
   DexLiquidityMap,
 } from "../../../types/dex-liquidity";
 import type {
@@ -69,7 +63,7 @@ import type {
 
 const EMPTY_ARGS: BuildSelectorRowsArgs = {
   stablecoinsData: null, pegCurrency: null, pegData: null, reportData: null,
-  stressData: null, dexData: null, yieldData: null, bluechipData: null, now: 1_700_000_000_000,
+  stressData: null, dexData: null, yieldData: null, now: 1_700_000_000_000,
 };
 
 function adaptYield(
@@ -100,45 +94,6 @@ describe("buildSelectorRows", () => {
     expect(eligibleIds("onchain-only")).toEqual(["structural", ...morphoIds]);
     expect(eligibleIds("regulated-only")).toEqual([]);
     expect(eligibleIds("any")).toEqual(["usdc-circle", "unreviewed", "structural", "halted", ...morphoIds]);
-  });
-
-  it.each([
-    { label: "missing row", rating: null, expected: null },
-    { label: "legacy unknown clock", rating: {}, expected: null },
-    { label: "expired current", rating: { observationState: "current", lastObservedAt: NOW / 1000 - BLUECHIP_OBSERVATION_MAX_AGE_SEC - 1 }, expected: null },
-    { label: "explicit stale", rating: { observationState: "stale", lastObservedAt: NOW / 1000 - 60 }, expected: null },
-    { label: "future clock", rating: { observationState: "current", lastObservedAt: NOW / 1000 + 1 }, expected: null },
-    { label: "fresh retained", rating: { observationState: "retained", observationReason: "http-503", lastObservedAt: NOW / 1000 - 60 }, expected: "A" },
-    { label: "unresolved 404", rating: { observationState: "retained", observationReason: "http-404", lastObservedAt: NOW / 1000 - 60 }, expected: null },
-    { label: "unresolved no grade", rating: { observationState: "retained", observationReason: "no-grade", lastObservedAt: NOW / 1000 - 60 }, expected: null },
-    { label: "unresolved empty data", rating: { observationState: "retained", observationReason: "empty-data", lastObservedAt: NOW / 1000 - 60 }, expected: null },
-  ])("admits only usable Bluechip evidence: $label", ({ rating, expected }) => {
-    const bluechipData: BluechipRatingsMap = rating === null ? {} : {
-      "usdc-circle": BluechipRatingSchema.parse({
-        grade: "A", slug: "usdc", collateralization: null, smartContractAudit: null,
-        dateOfRating: null, dateLastChange: null,
-        smidge: { stability: null, management: null, implementation: null, decentralization: null, governance: null, externals: null },
-        ...rating,
-      }),
-    };
-    for (const now of [NOW, NOW / 1000]) {
-      const row = buildSelectorRows({ ...EMPTY_ARGS, bluechipData, now }).rows.get("usdc-circle")!;
-      expect(row.bluechipGrade).toBe(expected);
-      expect(whyKeyTriggers("strong-bluechip", row)).toBe(expected === "A");
-    }
-  });
-
-  it("does not expose expired failing grades to grade exclusions", () => {
-    const row = buildSelectorRows({
-      ...EMPTY_ARGS,
-      bluechipData: {
-        "usdc-circle": {
-          grade: "F", lastObservedAt: NOW / 1000 - BLUECHIP_OBSERVATION_MAX_AGE_SEC - 1,
-          observationState: "current", observationReason: null,
-        },
-      } as unknown as BluechipRatingsMap,
-    }).rows.get("usdc-circle")!;
-    expect(row.bluechipGrade).toBeNull();
   });
 
   it("maps current V9 report-card fields into selector rows", () => {
@@ -219,11 +174,6 @@ describe("buildSelectorRows", () => {
         },
       } as unknown as DexLiquidityMap,
       yieldData: null,
-      bluechipData: {
-        "usdc-circle": {
-          grade: "A", lastObservedAt: NOW / 1000, observationState: "current", observationReason: null,
-        },
-      } as unknown as BluechipRatingsMap,
       now: NOW,
     });
 
@@ -245,7 +195,6 @@ describe("buildSelectorRows", () => {
       liquidityScore: 88,
       canBeBlacklisted: true,
       custodyModel: "cex",
-      bluechipGrade: "A",
       currentDeviationBps: 4,
       supplyUsd: 32_000_000_000,
     });
@@ -283,8 +232,8 @@ describe("buildSelectorRows", () => {
 
 
 describe("yield ingestion", () => {
-  it("stamps the Morpho quote exclusion policy as selector-v2.15", () => {
-    expect(buildSelectorRows(EMPTY_ARGS).methodologyVersions.exclusionFilters).toBe("selector-v2.15");
+  it("stamps the Morpho quote exclusion policy as selector-v2.16", () => {
+    expect(buildSelectorRows(EMPTY_ARGS).methodologyVersions.exclusionFilters).toBe("selector-v2.16");
   });
 
   it.each(Object.values(MORPHO_NET_YIELD_SOURCES).flatMap(({ stablecoinId, sourceKey, corroboratingPoolId }) => [

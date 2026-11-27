@@ -22,5 +22,4 @@ export const DATA_HEALTH_PRESETS = {
   yieldRankings: { label: "Yield Rankings", staleTime: API_FRESHNESS_MAX_AGE_SEC.yieldRankings * 1000 },
   dailyDigest: { label: "Daily Digest", staleTime: API_FRESHNESS_MAX_AGE_SEC.dailyDigest * 1000 },
   digestArchive: { label: "Digests", staleTime: API_FRESHNESS_MAX_AGE_SEC.digestArchive * 1000 },
-  bluechip: { label: "Bluechip", staleTime: API_FRESHNESS_MAX_AGE_SEC.bluechip * 1000 },
 } as const satisfies Record<string, DataHealthPreset>;

@@ -520,17 +520,6 @@ export const DEFINITIONS = {
     seeAlso: ["freezable"],
     methodologyPath: "/methodology/#blacklist-tracker-methodology",
   },
-  bluechip: {
-    label: "Bluechip Rating",
-    term: "Bluechip",
-    short:
-      "Pharos editorial roster of stablecoins rated A-tier by both the external Bluechip rating and the Pharos Safety Score.",
-    long:
-      "Pharos's editorial roster of stablecoins that are A-tier in both the external Bluechip reference rating and the Pharos Safety Score. It is an intersection of two current feeds, not an average or a separate floor model: if either input stops clearing A-tier, the asset leaves the roster.",
-    listed: true,
-    seeAlso: ["safetyScore"],
-    methodologyPath: SAFETY_PATH,
-  },
   proofOfReserves: {
     label: "Proof of Reserves",
     short:
