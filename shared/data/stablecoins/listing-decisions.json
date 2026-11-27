@@ -539,6 +539,18 @@
     "svzchf-frankencoin": "stablecoin-variant",
     "steakusdc-steakhouse-base": "stablecoin-variant",
     "gpyusdse-galaxy": "stablecoin-variant",
-    "eusd-own": "core-stablecoin"
+    "eusd-own": "core-stablecoin",
+    "usdcx-canton": "core-stablecoin",
+    "wylds-hastra": "review-hold",
+    "musd-mercadopago": "core-stablecoin",
+    "usds-arq": "core-stablecoin",
+    "tako-takenos": "core-stablecoin",
+    "lavausd-lava": "core-stablecoin",
+    "fusd-falcon": "core-stablecoin",
+    "beatusd-hyperbeat": "core-stablecoin",
+    "eub-bison-bank": "core-stablecoin",
+    "bancomat-coin-flowpay": "core-stablecoin",
+    "gbp-monee": "core-stablecoin",
+    "thslvr-theo": "core-stablecoin"
   }
 }

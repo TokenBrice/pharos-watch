@@ -71,7 +71,9 @@ export const KRAKEN_MARKETS: readonly KrakenMarketConfig[] = [
   // 2026-10-30: Kraken's USDPT/USD book is Western Union's USDPT; CoinGecko's
   // `usdpt-western-union` ticker set lists this exact market.
   { symbol: "USDPT", requestPair: "USDPTUSD", responseKeys: ["USDPTUSD"] },
-  { symbol: "USDS", requestPair: "USDSUSD", responseKeys: ["USDSUSD"] },
+  // 2026-11-27: Both Sky (`usds-sky`) and pre-launch ARQ (`usds-arq`) use symbol
+  // USDS; Kraken's online USDS/USD book is Sky USDS.
+  { symbol: "USDS", stablecoinId: "usds-sky", requestPair: "USDSUSD", responseKeys: ["USDSUSD"] },
   // 2026-10-30: Kraken lists Stable Mint (USDSM) as USDSMUSD; CoinGecko's
   // `stable-mint-usd` ticker set names this market. Very thin flow, standing book.
   { symbol: "USDSM", requestPair: "USDSMUSD", responseKeys: ["USDSMUSD"] },
@@ -114,10 +116,19 @@ export const BITSTAMP_MARKETS = [
   { pair: "USDT/USD", symbol: "USDT" },
 ] as const;
 
-export const COINBASE_PRODUCTS = [
+export interface CoinbaseProductConfig {
+  readonly symbol: string;
+  readonly productId: string;
+  readonly quoteAsset: "USD" | "USDC";
+  /** Exact tracked stablecoin id when multiple tracked assets share `symbol`. */
+  readonly stablecoinId?: string;
+}
+
+export const COINBASE_PRODUCTS: readonly CoinbaseProductConfig[] = [
   { symbol: "USDT", productId: "USDT-USD", quoteAsset: "USD" },
   { symbol: "PAXG", productId: "PAXG-USD", quoteAsset: "USD" },
-  { symbol: "USDS", productId: "USDS-USD", quoteAsset: "USD" },
+  // 2026-11-27: Coinbase's USDS-USD book is Sky USDS (`usds-sky`), not ARQ USDs (`usds-arq`).
+  { symbol: "USDS", stablecoinId: "usds-sky", productId: "USDS-USD", quoteAsset: "USD" },
   { symbol: "USD1", productId: "USD1-USD", quoteAsset: "USD" },
   // Coinbase HONEY-USD is Solana Hivemapper, not Berachain's Bera USD.
   // 2026-09-27: Coinbase lists AUDD on its USDC-quoted FX-stablecoin book
@@ -136,6 +147,23 @@ export const COINBASE_PRODUCTS = [
   // contract 0x27f6c828..., matching tgbp-tokenised.
   { symbol: "TGBP", productId: "TGBP-USDC", quoteAsset: "USDC" },
 ] as const;
+
+export function coinbaseProductMatchesAsset(
+  product: CoinbaseProductConfig,
+  symbol: string | undefined,
+  stablecoinId?: string,
+): boolean {
+  const normalizedSymbol = symbol?.trim().toUpperCase();
+  if (!normalizedSymbol || product.symbol !== normalizedSymbol) return false;
+  return product.stablecoinId == null || product.stablecoinId === stablecoinId;
+}
+
+export function matchesCuratedCoinbaseAsset(
+  symbol: string | undefined,
+  stablecoinId?: string,
+): boolean {
+  return COINBASE_PRODUCTS.some((product) => coinbaseProductMatchesAsset(product, symbol, stablecoinId));
+}
 
 // 2026-10-30 venue inventory identified Kraken USD as the only CoinGecko market for each asset.
 export const REVIEWED_COINGECKO_KRAKEN_MIRRORS: ReadonlySet<string> = new Set([

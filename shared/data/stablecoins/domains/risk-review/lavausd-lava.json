@@ -1,0 +1,23 @@
+{
+  "id": "lavausd-lava",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "LavaUSD Solana mint",
+        "url": "https://solscan.io/token/ENiQN61NU5Sq2h3QY5ZpV9SJpyfRvRCNGNgUdB3Lr6yP"
+      },
+      {
+        "label": "Token-2022 permanent-delegate authority",
+        "url": "https://solana.com/docs/tokens/extensions/permanent-delegate"
+      },
+      {
+        "label": "Observed freezeAccount transaction",
+        "url": "https://solscan.io/tx/6zAZ9sxR3sFngaG2vmtCjLyzmJYadu5RUswbVsrWo69DhUipGaMKLZjrnUJ88rGTXHYVnkrAoEv8MZqotBy7GVZ"
+      }
+    ],
+    "evidence": "Read at finalized Solana slot 474608552, blockhash 5e2JUwXuFBd35YCWLDVga1zqhnNPxrdhgqTBS7K4NpFo, 2026-11-27T15:57:19Z. Token-2022 mint ENiQN61NU5Sq2h3QY5ZpV9SJpyfRvRCNGNgUdB3Lr6yP retains permanentDelegate EwgtojtLQkmrhauFPnFpE8SwkdGudxyqmiYJwBbXEqKw, an active on-curve signing key holding 0.9923 SOL, which Token-2022 permits to transfer or burn arbitrary holder balances. In addition, freezeAuthority 3getEm73HNahMHFGyFhXvpwxAWr2hMoNXxbJbcAj7Lva executed live freezeAccount instructions on November 6, 2026. Default account state is initialized and the transfer-hook program is unset, so no closed-loop transfer allowlist is present.",
+    "reviewer": "Pharos Wave 4 pre-launch review",
+    "reviewedAt": "2026-11-27"
+  }
+}

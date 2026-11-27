@@ -23,7 +23,7 @@ import {
   fetchKrakenPrices,
 } from "../cex-tickers";
 import { ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { KRAKEN_MARKETS } from "@shared/lib/pricing-provider-config";
+import { COINBASE_PRODUCTS, KRAKEN_MARKETS } from "@shared/lib/pricing-provider-config";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { createDeferredPromise } from "./deferred.test-support";
 
@@ -1127,22 +1127,23 @@ describe("exchange symbol allowlists", () => {
   });
 
   it("maps every curated CEX symbol to one tracked owner or an explicit active stablecoinId", () => {
-    const scopedKrakenBySymbol = new Map(
-      KRAKEN_MARKETS.filter((market) => market.stablecoinId != null).map((market) => [market.symbol, market.stablecoinId!]),
-    );
-    const nonKrakenSymbols = new Set([...BINANCE_KNOWN_SYMBOLS, ...BITSTAMP_KNOWN_SYMBOLS, ...COINBASE_KNOWN_SYMBOLS]);
-    for (const symbol of allKnownSymbols) {
-      const scopedId = scopedKrakenBySymbol.get(symbol);
-      if (scopedId && !nonKrakenSymbols.has(symbol)) {
-        const owner = ACTIVE_STABLECOINS.find((stablecoin) => stablecoin.id === scopedId);
-        expect(owner?.symbol.toUpperCase(), `${symbol} scoped Kraken id ${scopedId} must match an active coin`).toBe(symbol);
-        continue;
+    const scopedByVenue = [["Kraken", KRAKEN_MARKETS], ["Coinbase", COINBASE_PRODUCTS]] as const;
+    const unscopedVenues = new Set([...BINANCE_KNOWN_SYMBOLS, ...BITSTAMP_KNOWN_SYMBOLS]);
+    for (const [venue, rows] of scopedByVenue) {
+      for (const row of rows.filter((r) => r.stablecoinId != null)) {
+        const owner = ACTIVE_STABLECOINS.find((s) => s.id === row.stablecoinId);
+        expect(owner?.symbol.toUpperCase(), `${venue} ${row.symbol} scoped id ${row.stablecoinId}`).toBe(row.symbol);
       }
-      const matchingIds = TRACKED_STABLECOINS
-        .filter((stablecoin) => stablecoin.symbol.toUpperCase() === symbol)
-        .map((stablecoin) => stablecoin.id);
-
-      expect(matchingIds, `${symbol} CEX symbol must have exactly one tracked owner`).toHaveLength(1);
+    }
+    for (const symbol of allKnownSymbols) {
+      const matchingIds = TRACKED_STABLECOINS.filter((s) => s.symbol.toUpperCase() === symbol).map((s) => s.id);
+      if (matchingIds.length === 1) continue;
+      expect(unscopedVenues.has(symbol), `${symbol} collides across ${matchingIds.join(", ")} on unscoped venue`).toBe(false);
+      for (const [venue, rows] of scopedByVenue) {
+        for (const row of rows.filter((r) => r.symbol === symbol)) {
+          expect(row.stablecoinId, `${venue} ${symbol} must scope to an active stablecoinId`).toBeDefined();
+        }
+      }
     }
   });
 });

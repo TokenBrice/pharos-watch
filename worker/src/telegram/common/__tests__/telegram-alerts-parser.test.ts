@@ -10,34 +10,17 @@ import {
 } from "../alerts-parser";
 
 describe("resolveTicker", () => {
-  it("resolves unique ticker", () => {
-    const result = resolveTicker("USDC");
-    expect(result.status).toBe("unique");
-    expect(result.matches[0].id).toBe("usdc-circle");
-  });
-
-  it("resolves exact coin ids uniquely", () => {
-    const result = resolveTicker("usdc-circle");
-    expect(result.status).toBe("unique");
-    expect(result.matches[0].symbol).toBe("USDC");
-  });
-
-  it("resolves pre-launch tickers for explicit launch subscriptions", () => {
-    const result = resolveTicker("USDPT");
-    expect(result.status).toBe("unique");
-    expect(result.matches[0].id).toBe("usdpt-western-union");
-  });
-
-  it("returns ambiguous for duplicate tickers", () => {
-    const result = resolveTicker("USDQ");
-    expect(result.status).toBe("ambiguous");
-    expect(result.matches.length).toBe(2);
-  });
-
-  it("returns not_found for unknown ticker", () => {
-    const result = resolveTicker("ZZZZZ");
-    expect(result.status).toBe("not_found");
-    expect(result.matches).toEqual([]);
+  it.each([
+    ["resolves unique ticker", "USDC", "unique", 1, { id: "usdc-circle" }],
+    ["resolves exact coin ids uniquely", "usdc-circle", "unique", 1, { symbol: "USDC" }],
+    ["resolves pre-launch tickers for explicit launch subscriptions", "USDPT", "unique", 1, { id: "usdpt-western-union" }],
+    ["returns ambiguous for duplicate tickers", "USDQ", "ambiguous", 2, undefined],
+    ["returns not_found for unknown ticker", "ZZZZZ", "not_found", 0, undefined],
+  ] as const)("%s", (_name, query, status, count, first) => {
+    const result = resolveTicker(query);
+    expect(result.status).toBe(status);
+    expect(result.matches).toHaveLength(count);
+    if (first) expect(result.matches[0]).toMatchObject(first);
   });
 
   it("can resolve frozen exact ids when the tracked scope is requested", () => {
@@ -54,71 +37,19 @@ describe("resolveTicker", () => {
 });
 
 describe("parseSubscribeArgs", () => {
-  it("separates alert types from tickers", () => {
-    const result = parseSubscribeArgs("dews depeg USDC BOLD");
-    expect(result.alertTypes).toEqual(new Set(["dews", "depeg"]));
-    expect(result.subscribeAll).toBe(false);
-    expect(result.presetIds).toEqual([]);
-    expect(result.tickers).toEqual(["USDC", "BOLD"]);
-  });
-
-  it("recognizes the all-stablecoin token", () => {
-    const result = parseSubscribeArgs("dews all");
-    expect(result.alertTypes).toEqual(new Set(["dews"]));
-    expect(result.subscribeAll).toBe(true);
-    expect(result.presetIds).toEqual([]);
-    expect(result.tickers).toEqual([]);
-    expect(result.invalidTargets).toEqual([]);
-  });
-
-  it("classifies preset aliases separately from tickers", () => {
-    const result = parseSubscribeArgs("dews usd-top25 USDC");
-    expect(result.alertTypes).toEqual(new Set(["dews"]));
-    expect(result.subscribeAll).toBe(false);
-    expect(result.presetIds).toEqual(["usd-top25"]);
-    expect(result.tickers).toEqual(["USDC"]);
-    expect(result.invalidTargets).toEqual([]);
-  });
-
-  it("accepts dashed preset aliases and canonicalizes them", () => {
-    const result = parseSubscribeArgs("dews usd-top-25");
-    expect(result.alertTypes).toEqual(new Set(["dews"]));
-    expect(result.subscribeAll).toBe(false);
-    expect(result.presetIds).toEqual(["usd-top25"]);
-    expect(result.tickers).toEqual([]);
-    expect(result.invalidTargets).toEqual([]);
-  });
-
-  it("classifies unknown tokens as invalidTargets", () => {
-    const result = parseSubscribeArgs("foo dews USDC");
-    expect(result.alertTypes).toEqual(new Set(["dews"]));
-    expect(result.subscribeAll).toBe(false);
-    expect(result.presetIds).toEqual([]);
-    expect(result.tickers).toEqual(["USDC"]);
-    expect(result.invalidTargets).toEqual(["foo"]);
-  });
-
-  it("parses depeg-step after preset targets and implies depeg", () => {
-    const result = parseSubscribeArgs("usd-top-50 depeg-step 250");
-    expect(result.alertTypes).toEqual(new Set(["depeg"]));
-    expect(result.presetIds).toEqual(["usd-top50"]);
-    expect(result.tickers).toEqual([]);
-    expect(result.depegWorseningBpsStep).toBe(250);
-    expect(result.invalidTargets).toEqual([]);
-  });
-
-  it("parses depeg-step off", () => {
-    const result = parseSubscribeArgs("depeg-step off USDC");
-    expect(result.alertTypes).toEqual(new Set(["depeg"]));
-    expect(result.tickers).toEqual(["USDC"]);
-    expect(result.depegWorseningBpsStep).toBeNull();
-  });
-
-  it("captures invalid depeg-step values", () => {
-    const result = parseSubscribeArgs("usd-top-50 depeg-step 75");
-    expect(result.alertTypes).toEqual(new Set(["depeg"]));
-    expect(result.invalidDepegWorseningBpsStep).toBe("75");
-    expect(validateSubscribeArgs(result)).toContain("Depeg-step values");
+  it.each<[string, string, Partial<ParsedSubscribeArgs>, string?]>([
+    ["separates alert types from tickers", "dews depeg USDC BOLD", { alertTypes: new Set(["dews", "depeg"]), subscribeAll: false, presetIds: [], tickers: ["USDC", "BOLD"] }],
+    ["recognizes the all-stablecoin token", "dews all", { alertTypes: new Set(["dews"]), subscribeAll: true, presetIds: [], tickers: [], invalidTargets: [] }],
+    ["classifies preset aliases separately from tickers", "dews usd-top25 USDC", { alertTypes: new Set(["dews"]), subscribeAll: false, presetIds: ["usd-top25"], tickers: ["USDC"], invalidTargets: [] }],
+    ["accepts dashed preset aliases and canonicalizes them", "dews usd-top-25", { alertTypes: new Set(["dews"]), subscribeAll: false, presetIds: ["usd-top25"], tickers: [], invalidTargets: [] }],
+    ["classifies unknown tokens as invalidTargets", "foo dews USDC", { alertTypes: new Set(["dews"]), subscribeAll: false, presetIds: [], tickers: ["USDC"], invalidTargets: ["foo"] }],
+    ["parses depeg-step after preset targets and implies depeg", "usd-top-50 depeg-step 250", { alertTypes: new Set(["depeg"]), presetIds: ["usd-top50"], tickers: [], depegWorseningBpsStep: 250, invalidTargets: [] }],
+    ["parses depeg-step off", "depeg-step off USDC", { alertTypes: new Set(["depeg"]), tickers: ["USDC"], depegWorseningBpsStep: null }],
+    ["captures invalid depeg-step values", "usd-top-50 depeg-step 75", { alertTypes: new Set(["depeg"]), invalidDepegWorseningBpsStep: "75" }, "Depeg-step values"],
+  ])("%s", (_name, input, expected, err) => {
+    const result = parseSubscribeArgs(input);
+    expect(result).toMatchObject(expected);
+    if (err) expect(validateSubscribeArgs(result)).toContain(err);
   });
 });
 
@@ -212,8 +143,9 @@ describe("validateSubscribeArgs", () => {
     expect(validateSubscribeArgs({ ...baseArgs(), alertTypes: new Set(["dews"]), tickers: ["USDC"] })).toBeNull();
   });
 
-  it("resolves real USDCx uniquely and suggests presets/tickers without matching single-char coins", () => {
-    expect(resolveTicker("USDCx")).toMatchObject({ status: "unique", matches: [expect.objectContaining({ id: "usdcx-movement" })] });
+  it("disambiguates USDCx across chains and suggests presets/tickers without matching single-char coins", () => {
+    expect(resolveTicker("USDCx")).toMatchObject({ status: "ambiguous", matches: expect.arrayContaining([expect.objectContaining({ id: "usdcx-movement" }), expect.objectContaining({ id: "usdcx-canton" })]) });
+    expect(resolveTicker("usdcx-movement")).toMatchObject({ status: "unique", matches: [expect.objectContaining({ id: "usdcx-movement" })] });
     expect(resolveTicker("USDTX")).toMatchObject({ status: "not_found", suggestion: expect.objectContaining({ symbol: "USDT" }) });
     expect(suggestClosestPreset("usd-top24")).toBe("usd-top25");
     expect(suggestClosestPreset("usd-top20")).toBe("usd-top10");

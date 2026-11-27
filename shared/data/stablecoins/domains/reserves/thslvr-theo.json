@@ -1,0 +1,55 @@
+{
+  "id": "thslvr-theo",
+  "reserves": [
+    {
+      "name": "Physical silver (allocated vault bullion and institutional silver leases)",
+      "pct": 100,
+      "risk": "medium",
+      "assetClass": "other",
+      "issuerOrObligor": "Theo physical silver holdings kept in allocated vault accounts or leased on short and longer tenors to institutional counterparties (refiners, mints, and industrial fabricators); all thSLVR backing may be lent whether or not staked",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "custody",
+        "market",
+        "concentration",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed precious-metals vault custodians",
+        "role": "custodian"
+      },
+      {
+        "name": "Undisclosed institutional silver lessees (refiners, mints, and industrial fabricators)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 PR-4 review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Theo thGOLD & thSLVR documentation (allocated and leased metal states)",
+        "url": "https://docs.theo.xyz/products/thgold-and-thslvr"
+      },
+      {
+        "label": "Theo thGOLD & thSLVR risks documentation (counterparty, custodian, and recall risk)",
+        "url": "https://docs.theo.xyz/products/thgold-and-thslvr/risks"
+      },
+      {
+        "label": "Theo: Introducing thSLVR (silver lease structure)",
+        "url": "https://theo.xyz/articles/introducing-thslvr-silver-that-works-for-you"
+      }
+    ],
+    "uncertainty": "Theo's documentation states that physical silver backing thSLVR is held in allocated vault accounts with insured custodians or lent to institutional lessees on short or longer tenors, and explicitly warns that lending applies to all thSLVR backing whether or not staked. Specific vault custodians, split between allocated and leased ounces, lessee identities, legal title-retention terms per jurisdiction, and independent reserve attestations are unpublished ahead of public launch.",
+    "knownUnknownExposurePct": 100
+  }
+}

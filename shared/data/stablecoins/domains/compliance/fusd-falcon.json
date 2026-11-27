@@ -1,0 +1,93 @@
+{
+  "id": "fusd-falcon",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "Anchorage Digital Bank, N.A. issues fUSD as a U.S. dollar payment stablecoin backed 1:1 by cash, short-dated U.S. Treasuries, and Treasury-backed repo under its Covered Stablecoin Terms, redeemable at USD 1 for onboarded bank clients.",
+      "references": [
+        {
+          "label": "Anchorage Digital Bank: fUSD launch announcement with Falcon Finance",
+          "url": "https://www.anchorage.com/press-room/anchorage-digital-issues-fusd-falcon-finances-new-u-s-federally-regulated-stablecoin",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-05-27",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "Anchorage Digital Bank Covered Stablecoin Terms",
+          "url": "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-10-13",
+          "accessedAt": "2026-11-27"
+        }
+      ]
+    },
+    "authorizationStatus": "issuer-announced-intent",
+    "issuerPathway": "federal-qualified-nonbank",
+    "issuerEntity": "Anchorage Digital Bank, N.A.",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "OCC",
+    "primaryFederalRegulator": "OCC",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Reviewed 2026-11-27. Anchorage Digital Bank, N.A. is an OCC-chartered uninsured national trust bank and announces fUSD as aligned with the GENIUS Act framework, supporting issuer-announced-intent on the federal-qualified-nonbank pathway rather than an existing token-specific PPSI approval. Covered Stablecoin Terms establish 1:1 USD redemption terms for onboarded bank clients. Although Anchorage's reserve transparency hub lists USDtb, USAT, USDPT, USDGO, and ZLUSD, no fUSD-specific reserve holdings page or independent examination report was published there as of November 27, 2026, so reserveDisclosurePresent and monthlyAttestationPresent are false. Treasury identifies January 18, 2027 as the expected Act effective date and July 18, 2028 for the general DASP offer/sale restriction. Falcon Finance operates as commercial distribution partner and separately from USDf.",
+    "references": [
+      {
+        "label": "OCC: Anchorage national trust bank charter (January 2021)",
+        "url": "https://www.occ.gov/news-issuances/news-releases/2021/nr-occ-2021-6.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2021-01-13",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "OCC GENIUS Act NPRM Bulletin 2026-3",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "Treasury section 3 GENIUS proposed rule",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "Anchorage Digital Bank: fUSD launch announcement with Falcon Finance",
+        "url": "https://www.anchorage.com/press-room/anchorage-digital-issues-fusd-falcon-finances-new-u-s-federally-regulated-stablecoin",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-05-27",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "Anchorage Digital Bank Covered Stablecoin Terms",
+        "url": "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-10-13",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "Anchorage Digital Bank stablecoin reserves transparency hub",
+        "url": "https://www.anchorage.com/platform/transparency-stablecoin-reserves",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-11-27"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "Anchorage Digital Bank May 27, 2026 fUSD press release and Covered Stablecoin Terms",
+        "Anchorage Digital Bank stablecoin reserves transparency hub checked 2026-11-27: lists USDtb, USAT, USDPT, USDGO, and ZLUSD with no fUSD reserve page or attestation link",
+        "OCC January 2021 Anchorage charter notice, OCC Bulletin 2026-3 GENIUS proposal, and Treasury August 17, 2026 section 3 proposal"
+      ],
+      "summary": "As of 2026-11-27, no fUSD-specific GENIUS PPSI approval, official GENIUS application acknowledgment, published reserve examination, or GENIUS enforcement action was located in these sources. Anchorage's existing national trust bank charter establishes federal bank supervision, not a separate GENIUS PPSI grant.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-11-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-11-27"
+  }
+}

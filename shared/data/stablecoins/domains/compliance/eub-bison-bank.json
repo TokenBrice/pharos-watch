@@ -1,0 +1,24 @@
+{
+  "id": "eub-bison-bank",
+  "mica": {
+    "status": "authorized",
+    "tokenType": "EMT",
+    "authorizationType": "credit-institution",
+    "competentAuthority": "Banco de Portugal (BdP)",
+    "authorizedEntity": "BISON BANK, S.A.",
+    "references": [
+      {
+        "label": "ESMA interim MiCA EMT register (EMTWP.csv): BISON BANK, S.A., Banco de Portugal (BdP), LEI 549300V4H4USWZUCE073, FFG DTI JQNWG6VL5, DTI H5MHNTQW9, EUB white paper notified 2026-03-12, updated 2026-10-21 (accessed 2026-11-27)",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "Bison Bank EUB MiCA White Paper (dated 2026-03-12, offer start 2026-04-10)",
+        "url": "https://bisonbank.com/wp-content/uploads/2026/04/Bison-Bank-EUB-White-Paper_20260312-1.pdf"
+      },
+      {
+        "label": "Bison Bank EUB product page",
+        "url": "https://bisonbank.com/en/eub/"
+      }
+    ]
+  }
+}

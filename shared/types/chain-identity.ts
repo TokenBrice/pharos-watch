@@ -236,6 +236,11 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   // Identity does not establish token-pool provider coverage or a local logo.
   exsat:          { name: "exSat",            explorerUrl: "https://scan.exsat.network",                    evmChainId: 7200,     type: "evm",   logoPath: ""                            },
   "0g":          { name: "0G",               explorerUrl: "https://chainscan.0g.ai",                     evmChainId: 16661,    type: "evm",   logoPath: "/chains/0g.png", darkInvert: true },
+  // Canton Network is a Daml / CIP-0056 institutional settlement ledger whose
+  // Global Synchronizer is operated by permissioned Super Validators. No
+  // token-pool provider supports exact Canton instrument IDs, so `providers`
+  // is intentionally omitted.
+  canton:        { name: "Canton Network",   explorerUrl: "https://lighthouse.cantonloop.com",           evmChainId: null,     type: "other", logoPath: "/chains/canton.png"          },
 };
 
 /**
@@ -245,6 +250,7 @@ export const CHAIN_META: Record<string, ChainMeta> = {
  */
 const CHAIN_ALIASES: Record<string, string> = {
   "hyperliquid-l1": "hyperliquid",
+  "canton-network": "canton",
   // DL display names that differ from our CHAIN_META names
   "OP Mainnet": "optimism",
   "Plume Mainnet": "plume",

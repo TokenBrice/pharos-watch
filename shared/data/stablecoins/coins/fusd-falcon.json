@@ -1,0 +1,90 @@
+{
+  "id": "fusd-falcon",
+  "name": "Falcon Finance USD",
+  "symbol": "fUSD",
+  "brand": "Falcon Finance",
+  "status": "pre-launch",
+  "llamaId": "395",
+  "geckoId": "falcon-finance-usd",
+  "oneLiner": "fUSD is an institutional dollar stablecoin issued by OCC-chartered Anchorage Digital Bank, N.A. with Falcon Finance, live on Ethereum and BSC with seed supply.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "mechanismArchetype": "fiat-cash",
+  "collateral": "Anchorage Digital Bank, N.A. states fUSD is backed by short-dated U.S. Treasuries, cash, and Treasury-backed repo held under its federal bank framework. No fUSD-specific reserve holdings report or independent attestation has been published on Anchorage's reserve hub as of November 2026.",
+  "pegMechanism": "Anchorage Digital Bank, N.A. is the sole issuer under its Covered Stablecoin Terms, with 1:1 USD redemption for onboarded bank clients and open-loop ERC-20 transfers on Ethereum and BSC subject to blocklist and pause controls. Separate institutional rewards are arranged bilaterally through Falcon Finance rather than built into the token.",
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x1676b80edd36b18a3c3432c11ed25d37fde9c92a",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x1676b80edd36b18a3c3432c11ed25d37fde9c92a",
+      "decimals": 18
+    }
+  ],
+  "links": [
+    {
+      "label": "Issuer announcement",
+      "url": "https://www.anchorage.com/press-room/anchorage-digital-issues-fusd-falcon-finances-new-u-s-federally-regulated-stablecoin"
+    },
+    {
+      "label": "Anchorage reserve transparency",
+      "url": "https://www.anchorage.com/platform/transparency-stablecoin-reserves"
+    },
+    {
+      "label": "Covered Stablecoin Terms",
+      "url": "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms"
+    },
+    {
+      "label": "Website",
+      "url": "https://falcon.finance/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/falconfinance"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "OCC",
+    "license": "Federal Bank Charter"
+  },
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "single-entity",
+  "launchDate": "2026-05-08",
+  "launchPhase": "launched",
+  "launchPhaseDetail": "Anchorage Digital Bank, N.A. recorded initial Ethereum issuance of fUSD on May 8, 2026 and announced live launch with Falcon Finance on May 27, 2026 across Ethereum and BSC using verified open-loop AnchorageToken UUPS proxies. Circulating supply remains at seed scale with no admitted market price lane or published fUSD reserve report.",
+  "milestones": [
+    {
+      "date": "2026-05-08",
+      "type": "milestone",
+      "title": "Initial fUSD issuance is recorded on Ethereum",
+      "description": "The AnchorageToken UUPS proxy mints its initial 1 fUSD on Ethereum mainnet at block 25051466.",
+      "sourceUrl": "https://etherscan.io/tx/0xbd08b06961e400b627f6c373b238a790b6c034e04f09569b832d3f8ca83a6f7b"
+    },
+    {
+      "date": "2026-05-27",
+      "type": "announcement",
+      "title": "Anchorage Digital Bank announces fUSD live launch with Falcon Finance",
+      "description": "Anchorage Digital Bank, N.A. announces fUSD live for institutional trading, collateral via Ceffu MirrorRSV, and treasury workflows under its federal bank charter.",
+      "sourceUrl": "https://www.anchorage.com/press-room/anchorage-digital-issues-fusd-falcon-finances-new-u-s-federally-regulated-stablecoin"
+    }
+  ],
+  "listingStatusReview": {
+    "changedAt": "2026-11-27",
+    "reason": "No admitted price lane and seed-only supply across Ethereum and BSC: DefiLlama price is null, CoinGecko market_data price and mcap are absent, and DexScreener reports zero pools.",
+    "reviewBy": "2027-01-26",
+    "source": {
+      "label": "Anchorage fUSD announcement",
+      "url": "https://www.anchorage.com/press-room/anchorage-digital-issues-fusd-falcon-finances-new-u-s-federally-regulated-stablecoin"
+    }
+  }
+}

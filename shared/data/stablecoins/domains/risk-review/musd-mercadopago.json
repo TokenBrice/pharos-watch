@@ -1,0 +1,23 @@
+{
+  "id": "musd-mercadopago",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "MUSD Ethereum proxy contract",
+        "url": "https://etherscan.io/address/0x9d64324644cf6deb25731c7344ce9ef6607a7a47"
+      },
+      {
+        "label": "Verified MeliDolar implementation on Sourcify",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x08881ba9b22236ed4eef2afe3995626db757d052"
+      },
+      {
+        "label": "Verified MeliDolar implementation on Blockscout",
+        "url": "https://eth.blockscout.com/address/0x08881ba9b22236ed4eef2afe3995626db757d052"
+      }
+    ],
+    "evidence": "Read live at Ethereum block 26507592, hash 0x398d84af896bc46f7d0b2b5b3b21e2ca856a36af4ffe626609d47f3539f9f82f, 2026-11-27T15:58:35Z. Proxy 0x9d64324644cf6deb25731c7344ce9ef6607a7a47 delegates to verified MeliDolar implementation 0x08881ba9b22236ed4eef2afe3995626db757d052 (ERC20PresetMinterPauserUpgradeable). Source code implements denylist(address) and unDenylist(address) gated by DENYLISTER_ROLE, and _beforeTokenTransfer plus _approve revert when either sender or recipient is denylisted. Live DENYLISTER_ROLE and PAUSER_ROLE are held by 0x349a7452e21b9158c21d97eaf3d75e2ef5b2b965 and 0xf10b66199cdddd9b162f26aca0978542cd7df26a, respectively; paused() is false. No transfer allowlist exists in _beforeTokenTransfer. No actual denylist transaction was sent.",
+    "reviewer": "Pharos Wave 4 pre-launch review",
+    "reviewedAt": "2026-11-27"
+  }
+}

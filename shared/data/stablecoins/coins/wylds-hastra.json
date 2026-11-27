@@ -1,0 +1,115 @@
+{
+  "id": "wylds-hastra",
+  "name": "Hastra Wrapped YLDS",
+  "symbol": "wYLDS",
+  "brand": "Hastra",
+  "status": "pre-launch",
+  "geckoId": "hastra-wrapped-ylds",
+  "oneLiner": "Hastra wYLDS is a fixed-dollar yield-bearing token on Ethereum and Solana backed by Figure YLDS and Prime (formerly Democratized Prime) lending reserves.",
+  "mechanismArchetypeReview": {
+    "disposition": "unresolved",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 PR-4 review",
+    "rationale": "Hastra describes wYLDS as a proportionate ownership interest in a reserve pool referencing tracked Figure YLDS (ylds-figure), yet combined Ethereum and Solana wYLDS supply ($540.80M as of 2026-11-27) exceeds total Provenance YLDS supply ($301.34M) because reserves also allocate to Figure Prime (formerly Democratized Prime) private-credit pools. Until reserve deduplication against ylds-figure and the exact holder-claim mechanism are verified, wYLDS remains in review-hold rather than core-stablecoin.",
+    "sources": [
+      {
+        "label": "Hastra wYLDS documentation",
+        "url": "https://help.hastra.io/wylds/what-is-wylds"
+      },
+      {
+        "label": "Hastra Proof of Reserves",
+        "url": "https://hastra.io/proof-of-reserves"
+      }
+    ]
+  },
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "Hastra deploys wYLDS backing across Figure Certificate Company YLDS on Provenance (tracked as ylds-figure) and Figure Prime (formerly Democratized Prime) private-credit lending pools (HELOC, auto, and SMB credit pools) alongside minor USDC balances. As of 2026-11-27, combined Ethereum and Solana wYLDS supply ($540.80M) exceeds total Provenance uylds.fcc bank supply ($301.34M), reflecting direct credit-pool allocation rather than a 1:1 YLDS wrapper.",
+  "pegMechanism": "Fixed $1.00 par ERC-4626 and SPL wrapper (Ethereum convertToAssets(1e6) = 1.000000 USDC as of 2026-11-27) whose accrued yield is claimed separately via monthly merkle distributions rather than NAV appreciation. Primary redemptions follow a two-step admin-completed request queue.",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://hastra.io/proof-of-reserves",
+    "provider": "Hastra Pulse live reserve and supply telemetry",
+    "attestorTier": "self",
+    "cadence": "real-time"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x6ad038ca6c04e885630851278ca0a856ad9a66cc",
+      "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "8fr7WGTVFszfyNWRMXj6fRjZZAnDwmXwEpCrtzmUkdih",
+      "decimals": 6
+    }
+  ],
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://hastra.io/wylds"
+    },
+    {
+      "label": "Docs",
+      "url": "https://help.hastra.io/wylds/what-is-wylds"
+    },
+    {
+      "label": "Proof of Reserves",
+      "url": "https://hastra.io/proof-of-reserves"
+    },
+    {
+      "label": "GitHub (Solana)",
+      "url": "https://github.com/provenance-io/hastra-sol-vault"
+    },
+    {
+      "label": "GitHub (Ethereum)",
+      "url": "https://github.com/provenance-io/hastra-eth-vault"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States"
+  },
+  "collateralQuality": "exotic",
+  "custodyModel": "institutional-unregulated",
+  "launchDate": "2025-11-20",
+  "launchPhase": "launched",
+  "launchPhaseDetail": "Hastra wYLDS is publicly issued and open-loop transferable on Ethereum ($307.11M at block 26507604) and Solana ($233.69M at slot 474607859 as of 2026-11-27). Active admission remains blocked by stale and illiquid market pricing (CoinGecko stale since 2026-10-30 with empty tickers; $737 Solana DEX liquidity) and unresolved reserve deduplication and classification scope between Provenance YLDS ($301.34M total supply) and Prime (formerly Democratized Prime) credit-pool claims ($527.08M reported by Hastra Pulse).",
+  "milestones": [
+    {
+      "date": "2025-11-20",
+      "type": "milestone",
+      "title": "Hastra deploys Solana vault-mint program for wYLDS on mainnet",
+      "description": "Hastra deploys the Solana vault-mint program (9WUyNREiPDMgwMh5Gt81Fd3JpiCKxpjZ5Dpq9Bo1RhMV) at slot 381402724 governing wYLDS issuance, merkle yield claims, and freeze-administrator controls ahead of CoinGecko market tracking in December 2025.",
+      "sourceUrl": "https://solscan.io/tx/5Kg9npX1AubZDh7boXvaaus1fqtvdRiS8br3RR8tpoFqx5J1YhqTqZASHedwKHo949E6KJ9THy7qvio1ZyJch1kz"
+    },
+    {
+      "date": "2026-03-05",
+      "type": "milestone",
+      "title": "Hastra publishes Solana vault-mint release v0.0.4",
+      "description": "Open-source GitHub release v0.0.4 of Hastra's Solana vault-mint program governing 1:1 USDC-to-wYLDS minting, monthly merkle yield claims, and freeze-administrator controls.",
+      "sourceUrl": "https://github.com/provenance-io/hastra-sol-vault/releases/tag/v0.0.4"
+    },
+    {
+      "date": "2026-04-17",
+      "type": "milestone",
+      "title": "Hastra deploys wYLDS UUPS YieldVault proxy on Ethereum",
+      "description": "Hastra deploys the Ethereum wYLDS ERC-4626 UUPS proxy (0x6ad038ca6c04e885630851278ca0a856ad9a66cc) at block 24901860, expanding wYLDS issuance beyond Solana.",
+      "sourceUrl": "https://eth.blockscout.com/tx/0x04f894c85b6b235015d5fd61e9f85e9d3d333f4973449ca257b7659e945983cc"
+    }
+  ],
+  "listingStatusReview": {
+    "changedAt": "2026-11-27",
+    "reason": "No admitted price lane (CoinGecko stale since 2026-10-30; $737 Solana DEX liquidity) and unresolved reserve deduplication and classification scope between Provenance YLDS ($301.34M total supply) and Prime credit pools ($527.08M reported).",
+    "reviewBy": "2027-01-26",
+    "source": {
+      "label": "Hastra Proof of Reserves",
+      "url": "https://hastra.io/proof-of-reserves"
+    }
+  }
+}

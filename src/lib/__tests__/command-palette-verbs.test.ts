@@ -118,7 +118,7 @@ describe("palette verb coin resolution", () => {
   });
 
   it("parses the portfolio verb and routes through mergeCoinsParam", () => {
-    const parsed = parsePaletteInput("portfolio USDC USDS");
+    const parsed = parsePaletteInput("portfolio USDC usds-sky");
     expect(parsed.kind).toBe("portfolio");
     if (parsed.kind !== "portfolio") return;
     expect(parsed.resolvedCoinIds).toEqual(["usdc-circle", "usds-sky"]);

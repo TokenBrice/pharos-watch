@@ -1,0 +1,57 @@
+{
+  "id": "lavausd-lava",
+  "reserves": [
+    {
+      "name": "USD cash, banks undisclosed",
+      "pct": 27.7546,
+      "risk": "low",
+      "assetClass": "cash",
+      "liquidityHorizon": "unknown",
+      "riskFactors": [
+        "custody",
+        "counterparty"
+      ]
+    },
+    {
+      "name": "Treasury category including money-market funds, fund split undisclosed",
+      "pct": 72.2454,
+      "risk": "low",
+      "assetClass": "other",
+      "liquidityHorizon": "unknown",
+      "riskFactors": [
+        "custody",
+        "counterparty"
+      ]
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Wave 4 pre-launch review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Bridge LavaUSD reserve JSON",
+        "url": "https://transparency.bridge.xyz/v0/stablecoins/lava_usd"
+      },
+      {
+        "label": "Bridge Treasury category definition",
+        "url": "https://reserves.bridge.xyz/lava_usd"
+      }
+    ],
+    "rationale": "Issuer-published amounts were read from the Bridge LavaUSD feed on 2026-11-27, upstream last_updated 2026-11-27T15:50:29Z. Cash of $2,133,583.88 plus the Treasury category of $5,553,741.53 totals $7,687,325.41, matching reported reserve assets of $7,687,325.41 against 7,677,369.41 LavaUSD on-chain supply (1.0013 collateralization ratio). Each category is divided by the reported reserve total and rounded to four decimals. Issuer-only evidence with no independent LavaUSD attestation retrieved keeps confidence probable. The Treasury category includes money-market funds with Treasury-bill ladders of less than three-month duration; direct securities versus fund shares are undisclosed, so no Treasury-bill look-through is assigned.",
+    "compositionBasis": "Issuer self-reported reserve category amounts, not an audit or independent attestation",
+    "compositionAsOf": "2026-11-27",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Named cash banks, custody structure, and the composition and fund counterparties inside the Treasury category are undisclosed. Category totals do not establish look-through or legal reserve protections.",
+    "knownUnknownExposurePct": 72.2454,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 1,
+        "reserveName": "Treasury category including money-market funds, fund split undisclosed",
+        "pct": 72.2454,
+        "disposition": "basket-needs-split",
+        "rationale": "Issuer groups direct Treasury exposure and money-market funds without constituent weights or instrument identities; no tracked stablecoin dependency is established."
+      }
+    ]
+  }
+}

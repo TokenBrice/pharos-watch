@@ -1,0 +1,82 @@
+{
+  "id": "lavausd-lava",
+  "name": "LavaUSD",
+  "symbol": "LavaUSD",
+  "brand": "Lava",
+  "status": "pre-launch",
+  "llamaId": "471",
+  "oneLiner": "LavaUSD is Lava's Solana dollar stablecoin issued through Bridge, backed by issuer-reported cash and Treasury reserves, awaiting an admitted price lane.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "mechanismArchetype": "fiat-cash",
+  "collateral": "Bridge reports U.S. dollar cash and a Treasury category that includes money-market funds with Treasury-bill ladders of less than three-month duration. Named cash banks, fund allocations, and an independent LavaUSD reserve attestation were not retrieved.",
+  "pegMechanism": "Bridge issues LavaUSD on Solana as a Token-2022 stablecoin used to fund Lava accounts, payments, and stablecoin conversions. Default token accounts are initialized with no transfer hook; token-specific direct redemption terms outside the Lava app remain unverified.",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://reserves.bridge.xyz/lava_usd",
+    "provider": "Bridge issuer dashboard and reserve JSON; no independently reconciled LavaUSD reserve report retrieved",
+    "attestorTier": "self",
+    "cadence": "real-time"
+  },
+  "contracts": [
+    {
+      "chain": "solana",
+      "address": "ENiQN61NU5Sq2h3QY5ZpV9SJpyfRvRCNGNgUdB3Lr6yP",
+      "decimals": 6
+    }
+  ],
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.lava.xyz/"
+    },
+    {
+      "label": "Bridge reserve dashboard",
+      "url": "https://reserves.bridge.xyz/lava_usd"
+    },
+    {
+      "label": "Reserve data",
+      "url": "https://transparency.bridge.xyz/v0/stablecoins/lava_usd"
+    },
+    {
+      "label": "Official token metadata",
+      "url": "https://token-metadata.bridge.xyz/solana/lava_usd.json"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/lava_xyz"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States"
+  },
+  "collateralQuality": "rwa",
+  "custodyModel": "unknown",
+  "governanceQuality": "single-entity",
+  "launchDate": "2026-06-10",
+  "launchPhase": "launched",
+  "launchPhaseDetail": "LavaUSD is issued on Solana as an open-loop Token-2022 mint with initialized default accounts and no transfer hook. The recorded launch date reflects the first observed mint by its current mint authority; Bridge publishes live supply and reserve categories, but no admitted price lane exists.",
+  "milestones": [
+    {
+      "date": "2026-06-10",
+      "type": "milestone",
+      "title": "LavaUSD issuance is recorded on Solana",
+      "description": "A Token-2022 mintToChecked instruction mints 1 LavaUSD at the Bridge-linked Solana mint alongside Bridge reserve-ledger issuance.",
+      "sourceUrl": "https://solscan.io/tx/3aoAn7T7AW2Z4tMh7XJnWVzoqJiJXTCh1ELb5bwWUwu8uSMp1Enjzyc2twrpGi6PxnqQf86iw8ihVmWCLThhzxXV"
+    }
+  ],
+  "listingStatusReview": {
+    "changedAt": "2026-11-27",
+    "reason": "No admitted price lane: DefiLlama price is null, the exact-mint quote is empty, CoinGecko returns 404 for lavausd, and DexScreener reports zero pools. DefiLlama supply and pinned Solana issuance are positive.",
+    "reviewBy": "2027-01-26",
+    "source": {
+      "label": "Issuer supply and reserves",
+      "url": "https://reserves.bridge.xyz/lava_usd"
+    }
+  }
+}

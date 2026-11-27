@@ -1,0 +1,64 @@
+{
+  "id": "gbp-monee",
+  "name": "Monee GBP stablecoin",
+  "symbol": "GBP-MONEE",
+  "brand": "Monee",
+  "oneLiner": "Monee's pre-launch UK stablecoin proposal targets digital securities settlement in the FCA Regulatory Sandbox; denomination is unpublished (GBP assumed).",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "GBP",
+    "governance": "centralized",
+    "yieldBearing": false
+  },
+  "collateral": "Proposed UK settlement stablecoin under the FCA Regulatory Sandbox; currency denomination is not yet published (GBP assumed from the UK FCA cohort), and exact reserve composition, custodians, segregation terms, and attestation cadence remain unpublished.",
+  "pegMechanism": "Monee Financial Technologies Ltd proposes a UK stablecoin for atomic delivery-versus-payment settlement and cross-border issuance, trading, and settlement of digital securities. Direct holder redemption terms, fees, settlement cutoffs, and production blockchain details are unpublished.",
+  "mechanismArchetype": "fiat-cash",
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.monee.io/"
+    },
+    {
+      "label": "FCA sandbox selection",
+      "url": "https://www.fca.org.uk/news/press-releases/4-firms-selected-test-stablecoin-regulatory-sandbox"
+    },
+    {
+      "label": "FCA Stablecoins Cohort",
+      "url": "https://www.fca.org.uk/firms/innovation/regulatory-sandbox/stablecoins-cohort"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United Kingdom",
+    "regulator": "FCA"
+  },
+  "custodyModel": "unknown",
+  "status": "pre-launch",
+  "announcedDate": "2026-02-25",
+  "launchPhase": "announced",
+  "launchPhaseDetail": "The UK Financial Conduct Authority selected Monee Financial Technologies Ltd (UK company number 16398284, incorporated April 22, 2025) on February 25, 2026 as one of four firms in its Regulatory Sandbox Stablecoins Cohort alongside Revolut, ReStabilise, and VVTX. The FCA cohort page describes Monee as building a stablecoin for settlement and cross-border issuance, trading, and settlement of digital securities; Monee also participates in the joint Bank of England and FCA Digital Securities Sandbox (Gate 1), the Bank of England RTGS Synchronisation Lab, and the Central Bank of Ireland Innovation Sandbox. Neither the FCA nor Monee has published the token's exact currency denomination yet; Pharos tracks it under GBP by UK FCA cohort assumption with GBP-MONEE as a descriptive display label because no official ticker is published. Sandbox selection is not full stablecoin authorization, and no production chain, contract, or commercial launch date is verified.",
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://www.fca.org.uk/news/press-releases/4-firms-selected-test-stablecoin-regulatory-sandbox",
+      "title": "FCA selects 4 firms to test stablecoin innovation in its Regulatory Sandbox",
+      "source": "FCA"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2025-04-22",
+      "type": "milestone",
+      "title": "Monee Financial Technologies Ltd incorporated in the United Kingdom",
+      "description": "Companies House records incorporation of Monee Financial Technologies Ltd (company 16398284) in London; Monee subsequently entered Gate 1 of the Bank of England and FCA Digital Securities Sandbox.",
+      "sourceUrl": "https://find-and-update.company-information.service.gov.uk/company/16398284"
+    },
+    {
+      "date": "2026-02-25",
+      "type": "regulatory",
+      "title": "FCA selects Monee Financial Technologies for stablecoin Regulatory Sandbox",
+      "description": "Selected from 20 applicants alongside Revolut, ReStabilise, and VVTX to test a stablecoin for digital securities settlement under proposed UK rules; sandbox participation does not grant full issuance authorization.",
+      "sourceUrl": "https://www.fca.org.uk/news/press-releases/4-firms-selected-test-stablecoin-regulatory-sandbox"
+    }
+  ]
+}

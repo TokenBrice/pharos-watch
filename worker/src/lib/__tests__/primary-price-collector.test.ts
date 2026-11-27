@@ -636,13 +636,23 @@ describe("buildPrimarySourceCandidates", () => {
   });
 
   it("normalizes mixed-case symbols in directUsdVenueKeys and primary source lineage", () => {
-    expect(directUsdVenueKeys("coinbase", "tGBP")).toEqual(["venue:coinbase", "venue:bitstamp"]);
-    expect(directUsdVenueKeys("kraken", "tGBP")).toEqual(["venue:kraken"]);
-    expect(directUsdVenueKeys("kraken", "USDsui")).toEqual(["venue:kraken"]);
-    expect(directUsdVenueKeys("coinbase", "EURC")).toEqual(["venue:coinbase", "venue:bitstamp"]);
-    expect(directUsdVenueKeys("kraken", "OUSD", "ousd-open-standard")).toEqual(["venue:kraken"]);
-    expect(directUsdVenueKeys("kraken", "OUSD", "ousd-origin-protocol")).toBeUndefined();
-    expect(directUsdVenueKeys("kraken", "OUSD")).toBeUndefined();
+    for (const [venue, sym, id, expected] of [
+      ["coinbase", "tGBP", undefined, ["venue:coinbase", "venue:bitstamp"]],
+      ["kraken", "tGBP", undefined, ["venue:kraken"]],
+      ["kraken", "USDsui", undefined, ["venue:kraken"]],
+      ["coinbase", "EURC", undefined, ["venue:coinbase", "venue:bitstamp"]],
+      ["kraken", "OUSD", "ousd-open-standard", ["venue:kraken"]],
+      ["kraken", "OUSD", "ousd-origin-protocol", undefined],
+      ["kraken", "OUSD", undefined, undefined],
+      ["kraken", "USDS", "usds-sky", ["venue:kraken"]],
+      ["coinbase", "USDS", "usds-sky", ["venue:coinbase"]],
+      ["kraken", "USDS", "usds-arq", undefined],
+      ["coinbase", "USDS", "usds-arq", undefined],
+      ["kraken", "USDS", undefined, undefined],
+      ["coinbase", "USDS", undefined, undefined],
+    ] as const) {
+      expect(directUsdVenueKeys(venue, sym, id)).toEqual(expected);
+    }
 
     const nowSec = 1_800_000_000;
     const { sources } = buildPrimarySourceCandidates(

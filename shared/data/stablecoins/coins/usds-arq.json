@@ -1,0 +1,113 @@
+{
+  "id": "usds-arq",
+  "name": "ARQ USDs",
+  "symbol": "USDS",
+  "brand": "ARQ",
+  "status": "pre-launch",
+  "llamaId": "467",
+  "oneLiner": "USDS is ARQ's Tempo dollar stablecoin issued by Bridge Building Inc., backed by U.S. bank cash and government money-market funds, awaiting an admitted price.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "mechanismArchetype": "fiat-cash",
+  "collateral": "Bridge Building Inc. backs USDS with segregated U.S. dollar cash and cash equivalents at U.S. regulated commercial banks plus U.S. government money market funds (CUSIP 09248U551 in the September 30, 2026 BPM LLP examination). ARQ names BlackRock, BNY Mellon, and Lead Bank as custodians; live Bridge API categories update continuously.",
+  "pegMechanism": "Bridge Building Inc. issues USDS natively on Tempo as an open-loop TIP-20 token under chain-global TIP-403 blacklist policy 2, distributed exclusively through ARQ for 1:1 dollar parity. Direct non-ARQ redemption terms are governed by Bridge terms and remain unverified for third-party holders.",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.arqfinance.com/en-MX/transparency",
+    "provider": "BPM LLP (monthly AICPA examinations) alongside Bridge real-time reserve JSON",
+    "attestorTier": "regional",
+    "cadence": "monthly",
+    "attestorJurisdiction": "United States",
+    "attestorLicense": "PCAOB-registered",
+    "latestReport": {
+      "periodEnd": "2026-09-30",
+      "publishedAt": "2026-10-30",
+      "publishedAtBasis": "signed-date-standin",
+      "assuranceMethod": "examination",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "Pharos Wave 4 pre-launch review 2026-11-27 (PDF, letterhead, signature, and exhibits reviewed)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "BPM LLP USDS Reserves Report as of September 30, 2026",
+          "url": "https://cdn.arqfinance.com/attestations/USDS_reserves_report_september_2026.pdf"
+        }
+      ]
+    }
+  },
+  "contracts": [
+    {
+      "chain": "tempo",
+      "address": "0x20c000000000000000000000301ecc78ead01357",
+      "decimals": 6
+    }
+  ],
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.arqfinance.com/"
+    },
+    {
+      "label": "Transparency",
+      "url": "https://www.arqfinance.com/en-MX/transparency"
+    },
+    {
+      "label": "Bridge reserve dashboard",
+      "url": "https://reserves.bridge.xyz/usds_arq"
+    },
+    {
+      "label": "Bridge reserve JSON",
+      "url": "https://transparency.bridge.xyz/v0/stablecoins/usds_arq"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/arq_finance"
+    },
+    {
+      "label": "Tempo token list",
+      "url": "https://tokenlist.tempo.xyz/list/4217"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "FinCEN",
+    "license": "Money Services Business (Bridge Building Inc.)"
+  },
+  "collateralQuality": "rwa",
+  "custodyModel": "unknown",
+  "governanceQuality": "single-entity",
+  "launchDate": "2026-03-20",
+  "launchPhase": "launched",
+  "launchPhaseDetail": "USDS is live on Tempo as an open-loop TIP-20 token under chain-global TIP-403 blacklist policy 2. Bridge publishes real-time reserve totals and BPM LLP signs monthly AICPA examinations, but no admitted market price lane exists yet.",
+  "milestones": [
+    {
+      "date": "2026-03-20",
+      "type": "milestone",
+      "title": "Initial USDS issuance is recorded on Tempo",
+      "description": "The TIP-20 contract records its first positive on-chain supply of 10 USDS at Tempo block 10390552.",
+      "sourceUrl": "https://explorer.tempo.xyz/tx/0xd80184cab9f368b34d88579c60507696a44471bc94abdff953c11c80956b3c81"
+    },
+    {
+      "date": "2026-10-30",
+      "type": "audit",
+      "title": "BPM LLP signs September 2026 USDS reserves examination",
+      "description": "BPM LLP issues an unqualified AICPA examination report verifying $22,202,587 in reserves matching 22,202,587 USDS outstanding on Tempo as of September 30, 2026.",
+      "sourceUrl": "https://cdn.arqfinance.com/attestations/USDS_reserves_report_september_2026.pdf"
+    }
+  ],
+  "listingStatusReview": {
+    "changedAt": "2026-11-27",
+    "reason": "No admitted price lane: DefiLlama price is null, the exact-contract quote is empty, CoinGecko returns 404 for arq-usds, and DexScreener reports zero pools. DefiLlama supply and Tempo totalSupply are positive.",
+    "reviewBy": "2027-01-26",
+    "source": {
+      "label": "ARQ USDs transparency",
+      "url": "https://www.arqfinance.com/en-MX/transparency"
+    }
+  }
+}

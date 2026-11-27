@@ -1,0 +1,15 @@
+{
+  "id": "bancomat-coin-flowpay",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "BANCOMAT Coin unveiling press release (2026-11-24)",
+        "url": "https://bancomat.it/en/press-releases/nasce-bancomat-coin-la-nuova-stablecoin-in-euro"
+      }
+    ],
+    "evidence": "BANCOMAT announces a centralized, MiCA-oriented euro stablecoin issued by FlowPay under a BANCOMAT governance and security framework with Arbitrum as the public blockchain layer, but no production smart contract, freeze, blacklist, or seizure interface has been published yet. Holder-control powers remain unresolved pending contract deployment and white paper publication.",
+    "reviewer": "Pharos Listing Policy v2 PR-4 review",
+    "reviewedAt": "2026-11-27"
+  }
+}

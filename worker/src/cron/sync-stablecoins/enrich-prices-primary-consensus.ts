@@ -24,7 +24,7 @@ import {
   isHardPricingTrustTier,
   isListAggregatorOnlyPair,
 } from "@shared/lib/pricing-source-policy";
-import { matchesCuratedKrakenAsset } from "@shared/lib/pricing-provider-config";
+import { matchesCuratedCoinbaseAsset, matchesCuratedKrakenAsset } from "@shared/lib/pricing-provider-config";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { validatePricingSourceFreshness } from "../../lib/pricing-source-freshness";
 import {
@@ -219,6 +219,7 @@ export function buildPrimaryConsensusResults(params: {
 
     const symbol = asset.symbol.toUpperCase();
     const krakenAllowedForAsset = matchesCuratedKrakenAsset(symbol, asset.id);
+    const coinbaseAllowedForAsset = matchesCuratedCoinbaseAsset(symbol, asset.id);
     const krakenUpstreamObservedAt = krakenAllowedForAsset
       ? params.quoteMaps.krakenObservedAtBySymbol.get(symbol)
       : undefined;
@@ -254,8 +255,8 @@ export function buildPrimaryConsensusResults(params: {
           : params.quoteMaps.krakenQuoteBasisBySymbol.get(symbol),
       bitstampPrice: params.quoteMaps.bitstampPrices.get(asset.symbol.toUpperCase()) ?? null,
       bitstampObservedAt: params.quoteMaps.bitstampObservedAtBySymbol.get(asset.symbol.toUpperCase()) ?? null,
-      coinbasePrice: params.quoteMaps.coinbasePrices.get(asset.symbol.toUpperCase()) ?? null,
-      coinbaseObservedAt: params.quoteMaps.coinbaseObservedAtBySymbol.get(asset.symbol.toUpperCase()) ?? null,
+      coinbasePrice: coinbaseAllowedForAsset ? (params.quoteMaps.coinbasePrices.get(symbol) ?? null) : null,
+      coinbaseObservedAt: coinbaseAllowedForAsset ? (params.quoteMaps.coinbaseObservedAtBySymbol.get(symbol) ?? null) : null,
       curvePrice: params.quoteMaps.curvePrices.get(asset.id) ?? null,
       curveObservedAt: params.quoteMaps.curveObservedAtByCoinId.get(asset.id) ?? null,
       curvePricePoolKeys: params.quoteMaps.curvePricePoolKeysByCoinId.get(asset.id),

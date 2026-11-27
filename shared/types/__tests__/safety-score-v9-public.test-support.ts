@@ -595,7 +595,8 @@ function assertPreviousReaderSource() {
   // Notices upgrade (#2396): stablecoin-meta-primitives.ts adds optional sources/chains and paused deadline on CoinNoticeSchema only; no public card/breakdown/trace schema changed (substituting origin/main restores 964de1f7…).
   // PR-1A NZD: core.ts adds "NZD" to PEG_CURRENCY_VALUES (vocabulary-additive); no public card/breakdown/trace schema changed (substituting origin/main restores de9af139…).
   // Bluechip retirement: report-card-grade.ts drops its comment on the retired vendor grade enum; comment-only, no schema changed (substituting origin/main restores 5a7816d1…).
-  if (hash.digest("hex") !== "7f0a6279e3b22b982d9c11a72c971e1d6349562a5ad3c93458382366065a3fcb") throw new Error("Pre-dust reader source/refinement inputs changed");
+  // PR-4 Canton onboarding: chain-identity.ts adds `canton` and `canton-network` alias (additive chain identity only; no public card/breakdown/trace schema changed; substituting origin/main restores 7f0a6279…).
+  if (hash.digest("hex") !== "d7886218f1d9f237550dcd23adab2394f23cb665a642ae5e118e2cd4a4e717fe") throw new Error("Pre-dust reader source/refinement inputs changed");
 }
 
 export async function previousReader() {

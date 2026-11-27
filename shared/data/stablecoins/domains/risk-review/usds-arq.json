@@ -1,0 +1,23 @@
+{
+  "id": "usds-arq",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Tempo TIP-20 specification",
+        "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+      },
+      {
+        "label": "Tempo ARQ USDs token",
+        "url": "https://explorer.tempo.xyz/address/0x20c000000000000000000000301ecc78ead01357"
+      },
+      {
+        "label": "Tempo TIP-20 implementation",
+        "url": "https://github.com/tempoxyz/tempo/tree/main/crates/precompiles/src/tip20"
+      }
+    ],
+    "evidence": "Read live at Tempo block 51093713, hash 0xd5d7de6eea34275b5783a4855b95ebb5f21657d428f5c70cd54486860a293cf5, 2026-11-27T15:57:47Z. Native TIP-20 contract 0x20c000000000000000000000301ecc78ead01357 returns paused=false and transferPolicyId=2. TIP-403 policyData(2) returns policy type 1 (BLACKLIST) with active admin 0x251d2711ebeb0a09fdb8992f5506f3d949175246, the same chain-global blacklist policy used by pathUSD. TIP-403 isAuthorized(2, 0x000000000000000000000000000000000000dead) returns true, confirming open-loop transferability unless an account is blacklisted. TIP-20 transfers enforce the policy on both senders and recipients, establishing direct blacklistability. No actual blacklist transaction was sent.",
+    "reviewer": "Pharos Wave 4 pre-launch review",
+    "reviewedAt": "2026-11-27"
+  }
+}

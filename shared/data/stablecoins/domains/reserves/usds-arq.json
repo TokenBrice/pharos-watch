@@ -1,0 +1,67 @@
+{
+  "id": "usds-arq",
+  "reserves": [
+    {
+      "name": "Cash and cash equivalents at U.S. regulated commercial banks",
+      "pct": 90,
+      "risk": "low",
+      "assetClass": "cash",
+      "liquidityHorizon": "unknown",
+      "riskFactors": [
+        "custody",
+        "counterparty",
+        "concentration"
+      ]
+    },
+    {
+      "name": "U.S. government money market fund (CUSIP 09248U551)",
+      "pct": 10,
+      "risk": "very-low",
+      "assetClass": "money-market-fund",
+      "liquidityHorizon": "one-day",
+      "riskFactors": [
+        "custody",
+        "counterparty",
+        "duration"
+      ]
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Wave 4 pre-launch review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "BPM LLP USDS Reserves Report as of September 30, 2026",
+        "url": "https://cdn.arqfinance.com/attestations/USDS_reserves_report_september_2026.pdf"
+      },
+      {
+        "label": "ARQ USDs transparency page",
+        "url": "https://www.arqfinance.com/en-MX/transparency"
+      },
+      {
+        "label": "Bridge USDs reserve JSON",
+        "url": "https://transparency.bridge.xyz/v0/stablecoins/usds_arq"
+      },
+      {
+        "label": "Bridge USDs reserve dashboard",
+        "url": "https://reserves.bridge.xyz/usds_arq"
+      }
+    ],
+    "rationale": "Percentages reflect the BPM LLP independent accountants' examination as of September 30, 2026 (signed October 30, 2026), which reports $19,982,328 (90.0000%) in U.S. regulated commercial bank cash and cash equivalents and $2,220,259 (10.0000%) in U.S. government money market fund CUSIP 09248U551 (weighted-average maturity 60 days or less), matching 22,202,587 USDS outstanding on Tempo with zero timing or temporary differences. Separately, Bridge's self-reported live JSON read at 2026-11-27T15:50:50Z shows supply expanded to 65,290,959.30 USDS against $65,360,334.30 in reserves ($5,292,651.74 cash or 8.0977% and $60,067,682.56 Treasury category or 91.9023%), demonstrating that the cash-to-Treasury mix shifts materially between monthly examination dates.",
+    "compositionBasis": "BPM LLP September 30, 2026 independent examination Exhibit B fair values divided by $22,202,587 total reserves",
+    "compositionAsOf": "2026-09-30",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Individual depository bank allocations inside the $19,982,328 cash balance ($19,732,328 above FDIC limits) are unnamed in Exhibit B, though ARQ's transparency page names BlackRock, BNY Mellon, and Lead Bank as custodians. Curated slices stay pinned to the September 30, 2026 examination per PoR lockstep, while Bridge's live feed on November 27, 2026 shows 2.94x larger supply ($65.29M) shifted to 8.10% cash and 91.90% unaudited Treasury category, lowering confidence to probable and leaving the 90% unnamed cash slice unresolved.",
+    "knownUnknownExposurePct": 90,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Cash and cash equivalents at U.S. regulated commercial banks",
+        "pct": 90,
+        "disposition": "insufficient-evidence",
+        "rationale": "Exhibit B omits per-bank allocations inside the 90% cash balance ($19.73M above FDIC limits), and Bridge's same-day live feed on 2026-11-27 shows the book expanded 2.94x and shifted to 8.10% cash / 91.90% Treasury category since the September 30 examination."
+      }
+    ]
+  }
+}
