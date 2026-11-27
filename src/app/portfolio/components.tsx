@@ -156,6 +156,52 @@ export function PortfolioStateCallout({ holdings, totalUsd }: { holdings: readon
   );
 }
 
+/**
+ * Compact neutral callout linking held coins that have a published failure
+ * scenario to their dossier `#how-it-breaks` section plus the `/learn/scenarios/`
+ * hub. Renders nothing when no held coins match.
+ */
+export function PortfolioFailureScenariosCallout({ coinIds }: { coinIds: readonly string[] }) {
+  if (coinIds.length === 0) return null;
+  return (
+    <section
+      aria-labelledby="portfolio-failure-scenarios-heading"
+      className={cn("rounded-xl border px-4 py-3 text-sm text-foreground", SEVERITY_TONE_CLASS.neutral.banner)}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <p id="portfolio-failure-scenarios-heading" className="font-medium">
+          Failure scenarios for your holdings ({coinIds.length})
+        </p>
+        <Link
+          href="/learn/scenarios/"
+          className="pharos-focus-ring inline-flex min-h-9 items-center rounded-sm text-xs font-medium text-brand-accent-text underline-offset-4 hover:underline sm:min-h-7"
+        >
+          All scenarios
+        </Link>
+      </div>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Curated hypothetical failure paths in each coin&apos;s dossier. Not Safety Score inputs.
+      </p>
+      <ul className="mt-2.5 flex flex-wrap items-center gap-2">
+        {coinIds.map((coinId) => {
+          const symbol = TRACKED_META_BY_ID.get(coinId)?.symbol ?? coinId;
+          return (
+            <li key={coinId}>
+              <Link
+                href={`${buildStablecoinUrl(coinId)}#how-it-breaks`}
+                className="pharos-focus-ring pharos-control-pill inline-flex min-h-9 items-center gap-1 px-2.5 py-1 text-xs font-medium sm:min-h-7"
+              >
+                <span>{symbol}</span>
+                <span className="sr-only"> failure scenario</span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
 export function PortfolioLoadingState() {
   return (
     <div className="space-y-6" role="status" aria-label="Loading portfolio data">

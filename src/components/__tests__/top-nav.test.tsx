@@ -32,6 +32,12 @@ function pointerLeaveMouse(element: Element) {
   fireEvent.pointerOut(element, { pointerType: "mouse" });
 }
 
+const expanded = (el: Element) => el.getAttribute("aria-expanded");
+const tick = (ms: number) => act(() => vi.advanceTimersByTime(ms));
+const btn = (name: string | RegExp) => screen.getByRole("button", { name });
+const lnk = (name: string | RegExp) => screen.getByRole("link", { name });
+const key = (el: Element, k: string) => fireEvent.keyDown(el, { key: k });
+
 afterEach(cleanupFrontendTest);
 
 describe("TopNav", () => {
@@ -46,7 +52,7 @@ describe("TopNav", () => {
   it("renders the 5-item quick rail without a duplicate Home pill and marks the brand link current on /", () => {
     const { rerender } = render(<TopNav />);
 
-    const brandLink = screen.getByRole("link", { name: "Pharos home" });
+    const brandLink = lnk("Pharos home");
     expect(brandLink.getAttribute("aria-current")).toBe("page");
 
     const primaryNav = screen.getByRole("navigation", { name: "Primary" });
@@ -66,7 +72,7 @@ describe("TopNav", () => {
 
     pathnameMock.current = "/compliance/";
     rerender(<TopNav />);
-    expect(screen.getByRole("link", { name: "Pharos home" }).getAttribute("aria-current")).toBeNull();
+    expect(lnk("Pharos home").getAttribute("aria-current")).toBeNull();
   });
 
   it("mounts every closed panel hidden and inert with Pharos sections, companion PharosVille, and pure Learn rows", () => {
@@ -76,8 +82,8 @@ describe("TopNav", () => {
     expect(NAV_GROUPS.map((group) => group.label)).toEqual(["Markets", "Risk", "Tools", "Learn", "Pharos"]);
 
     for (const menu of NAV_GROUPS) {
-      const trigger = screen.getByRole("button", { name: menu.label });
-      expect(trigger.getAttribute("aria-expanded")).toBe("false");
+      const trigger = btn(menu.label);
+      expect(expanded(trigger)).toBe("false");
       const panel = document.getElementById(trigger.getAttribute("aria-controls")!);
       expect(panel).not.toBeNull();
       expect([panel!.hidden, panel!.hasAttribute("inert")]).toEqual([true, true]);
@@ -89,20 +95,20 @@ describe("TopNav", () => {
     expect(screen.queryByRole("link", { name: NAV_GROUPS[0].items[0].label })).toBeNull();
     expect(useHealthMock).not.toHaveBeenCalled();
 
-    // Learn has 4 pure rows with no subheads.
-    fireEvent.click(screen.getByRole("button", { name: "Learn" }));
+    // Learn has 5 pure rows with no subheads.
+    fireEvent.click(btn("Learn"));
     expect(document.querySelectorAll('[data-section-menu="learn"] p.pharos-label')).toHaveLength(0);
     const learnLinks = [...document.querySelectorAll<HTMLAnchorElement>('[data-section-menu="learn"] a[href]')];
-    expect(learnLinks).toHaveLength(4);
+    expect(learnLinks).toHaveLength(5);
 
     // Pharos has Trust & operations (aria-labelledby) + PharosVille companion row with external safeguards.
-    const pharosTrigger = screen.getByRole("button", { name: "Pharos" });
+    const pharosTrigger = btn("Pharos");
     fireEvent.click(pharosTrigger);
     const trustHeading = document.querySelector<HTMLElement>('[data-section-menu="pharos"] p.pharos-label');
     expect(trustHeading?.textContent).toBe("Trust & operations");
     expect(document.querySelector(`[data-section-menu="pharos"] ul[aria-labelledby="${trustHeading!.id}"]`)).not.toBeNull();
 
-    const pharosVilleLink = screen.getByRole("link", { name: "PharosVille (opens in new tab)" });
+    const pharosVilleLink = lnk("PharosVille (opens in new tab)");
     expect(pharosVilleLink.getAttribute("target")).toBe("_blank");
     expect(pharosVilleLink.getAttribute("rel")).toBe("noopener noreferrer");
     const desc = document.getElementById(pharosVilleLink.getAttribute("aria-describedby")!);
@@ -112,7 +118,7 @@ describe("TopNav", () => {
 
     // Internal Pharos link reports nav_click and Status stays neutral without useHealth.
     fireEvent.click(pharosTrigger);
-    const statusLink = screen.getByRole("link", { name: "Status" });
+    const statusLink = lnk("Status");
     expect(statusLink.textContent).toContain("Status");
     expect(useHealthMock).not.toHaveBeenCalled();
     fireEvent.click(statusLink);
@@ -134,15 +140,15 @@ describe("TopNav", () => {
     ] as const) {
       pathnameMock.current = route;
       rerender(<TopNav />);
-      const trigger = screen.getByRole("button", { name: sectionLabel });
+      const trigger = btn(sectionLabel);
       expect(trigger.getAttribute("aria-current")).toBeNull();
     }
 
     pathnameMock.current = "/safety-scores/";
     rerender(<TopNav />);
-    fireEvent.click(screen.getByRole("button", { name: "Risk" }));
+    fireEvent.click(btn("Risk"));
     expect(document.querySelector('[data-section-menu="risk"] p.pharos-label')?.textContent).toBe("On the quick bar");
-    expect(screen.getByRole("link", { name: "Depeg & Recovery" })).toBeTruthy();
+    expect(lnk("Depeg & Recovery")).toBeTruthy();
   });
 
   it("handles mouse hover intent, click-to-pin, brief neighbor sweeps, and pinned-menu protection", () => {
@@ -157,57 +163,57 @@ describe("TopNav", () => {
       const learnMenu = document.querySelector('[data-section-menu="learn"]')!;
       const marketsMenu = document.querySelector('[data-section-menu="markets"]')!;
       const riskMenu = document.querySelector('[data-section-menu="risk"]')!;
-      const learnTrigger = screen.getByRole("button", { name: "Learn" });
-      const marketsTrigger = screen.getByRole("button", { name: "Markets" });
-      const riskTrigger = screen.getByRole("button", { name: "Risk" });
+      const learnTrigger = btn("Learn");
+      const marketsTrigger = btn("Markets");
+      const riskTrigger = btn("Risk");
 
       // Touch pointerEnter never opens hover panels.
       fireEvent.pointerOver(learnMenu, { pointerType: "touch" });
-      act(() => vi.advanceTimersByTime(500));
-      expect(learnTrigger.getAttribute("aria-expanded")).toBe("false");
+      tick(500);
+      expect(expanded(learnTrigger)).toBe("false");
 
       // Mouse hover opens after 350ms and elevates header to z-modal + dismisses other chrome overlays.
       pointerEnterMouse(learnMenu);
-      act(() => vi.advanceTimersByTime(349));
-      expect(learnTrigger.getAttribute("aria-expanded")).toBe("false");
-      act(() => vi.advanceTimersByTime(1));
-      expect(learnTrigger.getAttribute("aria-expanded")).toBe("true");
+      tick(349);
+      expect(expanded(learnTrigger)).toBe("false");
+      tick(1);
+      expect(expanded(learnTrigger)).toBe("true");
       expect(header.className).toContain("z-modal");
       expect(dismissSpy).toHaveBeenCalledTimes(1);
 
       // Brief neighbor sweep (<100ms) followed by mouse leave must NOT leave Learn stuck open.
       pointerLeaveMouse(learnMenu);
       pointerEnterMouse(marketsMenu);
-      act(() => vi.advanceTimersByTime(50));
-      expect(learnTrigger.getAttribute("aria-expanded")).toBe("true");
-      expect(marketsTrigger.getAttribute("aria-expanded")).toBe("false");
+      tick(50);
+      expect(expanded(learnTrigger)).toBe("true");
+      expect(expanded(marketsTrigger)).toBe("false");
       pointerLeaveMouse(marketsMenu);
-      act(() => vi.advanceTimersByTime(449));
-      expect(learnTrigger.getAttribute("aria-expanded")).toBe("true");
-      act(() => vi.advanceTimersByTime(1));
-      expect(learnTrigger.getAttribute("aria-expanded")).toBe("false");
+      tick(449);
+      expect(expanded(learnTrigger)).toBe("true");
+      tick(1);
+      expect(expanded(learnTrigger)).toBe("false");
 
       // Clicking a hover-opened trigger pins it open instead of closing it.
       pointerEnterMouse(learnMenu);
-      act(() => vi.advanceTimersByTime(350));
-      expect(learnTrigger.getAttribute("aria-expanded")).toBe("true");
+      tick(350);
+      expect(expanded(learnTrigger)).toBe("true");
       fireEvent.pointerDown(learnTrigger);
       fireEvent.click(learnTrigger);
-      expect(learnTrigger.getAttribute("aria-expanded")).toBe("true");
+      expect(expanded(learnTrigger)).toBe("true");
       pointerLeaveMouse(learnMenu);
-      act(() => vi.advanceTimersByTime(600));
-      expect(learnTrigger.getAttribute("aria-expanded")).toBe("true");
+      tick(600);
+      expect(expanded(learnTrigger)).toBe("true");
 
       // Hovering a neighbor while click-pinned must NOT hijack the pinned menu.
       pointerEnterMouse(riskMenu);
-      act(() => vi.advanceTimersByTime(500));
-      expect(learnTrigger.getAttribute("aria-expanded")).toBe("true");
-      expect(riskTrigger.getAttribute("aria-expanded")).toBe("false");
+      tick(500);
+      expect(expanded(learnTrigger)).toBe("true");
+      expect(expanded(riskTrigger)).toBe("false");
 
       // Second click on the pinned trigger toggles it closed.
       fireEvent.pointerDown(learnTrigger);
       fireEvent.click(learnTrigger);
-      expect(learnTrigger.getAttribute("aria-expanded")).toBe("false");
+      expect(expanded(learnTrigger)).toBe("false");
       expect(header.className).toContain("z-chrome-header");
     } finally {
       window.removeEventListener(CHROME_DISMISS_EVENT, dismissSpy);
@@ -216,25 +222,25 @@ describe("TopNav", () => {
 
   it("supports ArrowDown/Up/Home/End roving, ArrowLeft/Right trigger switching, and Escape with stopPropagation", () => {
     render(<TopNav />);
-    const marketsTrigger = screen.getByRole("button", { name: "Markets" });
-    const riskTrigger = screen.getByRole("button", { name: "Risk" });
-    const pharosTrigger = screen.getByRole("button", { name: "Pharos" });
+    const marketsTrigger = btn("Markets");
+    const riskTrigger = btn("Risk");
+    const pharosTrigger = btn("Pharos");
 
     // ArrowLeft/Right moves across triggers even when closed.
     marketsTrigger.focus();
-    fireEvent.keyDown(marketsTrigger, { key: "ArrowRight" });
+    key(marketsTrigger, "ArrowRight");
     expect(document.activeElement).toBe(riskTrigger);
-    expect(riskTrigger.getAttribute("aria-expanded")).toBe("false");
-    fireEvent.keyDown(riskTrigger, { key: "ArrowLeft" });
+    expect(expanded(riskTrigger)).toBe("false");
+    key(riskTrigger, "ArrowLeft");
     expect(document.activeElement).toBe(marketsTrigger);
-    fireEvent.keyDown(marketsTrigger, { key: "ArrowLeft" });
+    key(marketsTrigger, "ArrowLeft");
     expect(document.activeElement).toBe(pharosTrigger);
-    fireEvent.keyDown(pharosTrigger, { key: "ArrowRight" });
+    key(pharosTrigger, "ArrowRight");
     expect(document.activeElement).toBe(marketsTrigger);
 
     // ArrowDown opens Markets pinned and roves links.
-    fireEvent.keyDown(marketsTrigger, { key: "ArrowDown" });
-    expect(marketsTrigger.getAttribute("aria-expanded")).toBe("true");
+    key(marketsTrigger, "ArrowDown");
+    expect(expanded(marketsTrigger)).toBe("true");
     expect(document.querySelector('nav[aria-label="Primary"] [role="menu"], nav[aria-label="Primary"] [role="menuitem"]')).toBeNull();
 
     const links = [...document.querySelectorAll<HTMLAnchorElement>('[data-section-menu="markets"] a[href]')];
@@ -242,16 +248,16 @@ describe("TopNav", () => {
     const last = links.length - 1;
     expect(document.activeElement).toBe(links[0]);
 
-    for (const [key, expectedIndex] of [["ArrowDown", 1], ["End", last], ["ArrowDown", 0], ["ArrowUp", last], ["Home", 0]] as const) {
-      fireEvent.keyDown(document.activeElement!, { key });
+    for (const [k, expectedIndex] of [["ArrowDown", 1], ["End", last], ["ArrowDown", 0], ["ArrowUp", last], ["Home", 0]] as const) {
+      key(document.activeElement!, k);
       expect(document.activeElement).toBe(links[expectedIndex]);
     }
 
     // ArrowRight while open switches to Risk and keeps the adjacent panel open.
-    fireEvent.keyDown(document.activeElement!, { key: "ArrowRight" });
+    key(document.activeElement!, "ArrowRight");
     expect(document.activeElement).toBe(riskTrigger);
-    expect(marketsTrigger.getAttribute("aria-expanded")).toBe("false");
-    expect(riskTrigger.getAttribute("aria-expanded")).toBe("true");
+    expect(expanded(marketsTrigger)).toBe("false");
+    expect(expanded(riskTrigger)).toBe("true");
 
     // Escape closes Risk, restores focus to trigger, and prevents bubbling to document listeners.
     const docEscapeSpy = vi.fn();
@@ -259,8 +265,8 @@ describe("TopNav", () => {
     try {
       const riskLink = document.querySelector<HTMLAnchorElement>('[data-section-menu="risk"] a[href]')!;
       riskLink.focus();
-      fireEvent.keyDown(riskLink, { key: "Escape" });
-      expect(riskTrigger.getAttribute("aria-expanded")).toBe("false");
+      key(riskLink, "Escape");
+      expect(expanded(riskTrigger)).toBe("false");
       expect(document.activeElement).toBe(riskTrigger);
       expect(docEscapeSpy).not.toHaveBeenCalled();
     } finally {
@@ -295,23 +301,23 @@ describe("TopNav", () => {
       expect(screen.queryByRole("button", { name: "Keyboard shortcuts" })).toBeNull();
 
       // Clicking a page-level popover trigger closes an open TopNav section menu.
-      const marketsTrigger = screen.getByRole("button", { name: "Markets" });
+      const marketsTrigger = btn("Markets");
       fireEvent.click(marketsTrigger);
-      expect(marketsTrigger.getAttribute("aria-expanded")).toBe("true");
-      fireEvent.pointerDown(screen.getByRole("button", { name: "Page popover" }));
-      expect(marketsTrigger.getAttribute("aria-expanded")).toBe("false");
+      expect(expanded(marketsTrigger)).toBe("true");
+      fireEvent.pointerDown(btn("Page popover"));
+      expect(expanded(marketsTrigger)).toBe("false");
 
       // Open a section menu first, then open Appearance on the very first click.
       fireEvent.click(marketsTrigger);
-      expect(marketsTrigger.getAttribute("aria-expanded")).toBe("true");
+      expect(expanded(marketsTrigger)).toBe("true");
 
-      const appearanceTrigger = screen.getByRole("button", { name: "Appearance" });
-      expect(appearanceTrigger.getAttribute("aria-expanded")).toBe("false");
+      const appearanceTrigger = btn("Appearance");
+      expect(expanded(appearanceTrigger)).toBe("false");
       fireEvent.pointerDown(appearanceTrigger);
       fireEvent.click(appearanceTrigger);
 
-      expect(marketsTrigger.getAttribute("aria-expanded")).toBe("false");
-      expect(appearanceTrigger.getAttribute("aria-expanded")).toBe("true");
+      expect(expanded(marketsTrigger)).toBe("false");
+      expect(expanded(appearanceTrigger)).toBe("true");
       expect(container.querySelector("header")!.className).toContain("z-modal");
       const panel = document.querySelector("[data-top-nav-appearance]")!;
       expect(panel).not.toBeNull();
@@ -319,15 +325,15 @@ describe("TopNav", () => {
       expect(screen.getByRole("group", { name: "Theme" })).toBeTruthy();
 
       // Escape inside Appearance closes it and restores focus to Appearance trigger.
-      const shortcutsButton = screen.getByRole("button", { name: /Keyboard shortcuts/ });
+      const shortcutsButton = btn(/Keyboard shortcuts/);
       shortcutsButton.focus();
-      fireEvent.keyDown(shortcutsButton, { key: "Escape" });
-      expect(appearanceTrigger.getAttribute("aria-expanded")).toBe("false");
+      key(shortcutsButton, "Escape");
+      expect(expanded(appearanceTrigger)).toBe("false");
       expect(document.activeElement).toBe(appearanceTrigger);
 
       // Opening Keyboard shortcuts closes Appearance without stealing focus back.
       fireEvent.click(appearanceTrigger);
-      fireEvent.click(screen.getByRole("button", { name: /Keyboard shortcuts/ }));
+      fireEvent.click(btn(/Keyboard shortcuts/));
       expect(openShortcutsSpy).toHaveBeenCalledTimes(1);
       expect(document.querySelector("[data-top-nav-appearance]")).toBeNull();
     } finally {
@@ -340,7 +346,7 @@ describe("TopNav", () => {
     Object.defineProperty(navigator, "userAgent", { value: "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0)", configurable: true });
     try {
       const { rerender } = render(<TopNav />);
-      const searchBtn = screen.getByRole("button", { name: "Search coin or page" });
+      const searchBtn = btn("Search coin or page");
       expect(searchBtn.className).toContain("xl:w-[10rem]");
       expect(searchBtn.querySelector("kbd")?.textContent).toBe("Ctrl K");
       const visibleLabels = [...searchBtn.querySelectorAll("span")].map((span) => span.textContent);
@@ -352,7 +358,7 @@ describe("TopNav", () => {
 
       hydratedMock.current = true;
       rerender(<TopNav />);
-      expect(screen.getByRole("button", { name: "Search coin or page" }).querySelector("kbd")?.textContent).toBe("⌘K");
+      expect(btn("Search coin or page").querySelector("kbd")?.textContent).toBe("⌘K");
     } finally {
       Object.defineProperty(navigator, "userAgent", { value: originalUserAgent, configurable: true });
     }

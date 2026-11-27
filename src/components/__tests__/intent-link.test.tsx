@@ -98,27 +98,14 @@ describe("Footer route discovery", () => {
 describe("SeeAlsoFooter cross-hub discovery", () => {
   it("renders curated non-self-linking cross-hub links on analytics hubs and avoids duplicating /coverage/", () => {
     for (const [route, links] of Object.entries(SEE_ALSO_GRAPH)) {
-      expect(links.length).toBeGreaterThanOrEqual(3);
-      expect(links.length).toBeLessThanOrEqual(4);
+      expect(links, route).toHaveLength(4);
       expect(links.every((link) => link.href !== route)).toBe(true);
     }
-
-    // All newly added Learn & Pharos hubs are present with 4 non-self-linking destinations.
-    for (const route of [
-      "/cemetery/",
-      "/timeline/",
-      "/upcoming/",
-      "/pharoswatchbot/",
-      "/learn/mechanisms/",
-      "/learn/case-studies/",
-      "/methodology/",
-      "/docs/",
-      "/about/",
-      "/blog/",
-      "/changelog/",
-      "/status/",
+    for (const r of [
+      "/cemetery/", "/timeline/", "/upcoming/", "/pharoswatchbot/", "/learn/mechanisms/", "/learn/case-studies/",
+      "/learn/scenarios/", "/methodology/", "/docs/", "/about/", "/blog/", "/changelog/", "/status/",
     ]) {
-      expect(SEE_ALSO_GRAPH[route]).toHaveLength(4);
+      expect(SEE_ALSO_GRAPH[r], r).toBeDefined();
     }
     expect(SEE_ALSO_GRAPH["/coverage/"]?.map((link) => link.label)).toEqual([
       "Methodology",
@@ -135,17 +122,11 @@ describe("SeeAlsoFooter cross-hub discovery", () => {
     expect(within(aside).getAllByRole("link")).toHaveLength(4);
     expect(within(aside).getByRole("link", { name: /Dependency Map/i }).getAttribute("href")).toBe("/dependency-map/");
 
-    pathnameMock.current = "/coverage/";
-    rerender(<RouteSeeAlsoFooter />);
-    expect(screen.queryByRole("complementary", { name: "See also" })).toBeNull();
-
-    pathnameMock.current = "/depeg/";
-    rerender(<RouteSeeAlsoFooter />);
-    expect(screen.queryByRole("complementary", { name: "See also" })).toBeNull();
-
-    pathnameMock.current = "/learn/mechanisms/";
-    rerender(<RouteSeeAlsoFooter />);
-    expect(screen.queryByRole("complementary", { name: "See also" })).toBeNull();
+    for (const route of ["/coverage/", "/depeg/", "/learn/mechanisms/"]) {
+      pathnameMock.current = route;
+      rerender(<RouteSeeAlsoFooter />);
+      expect(screen.queryByRole("complementary", { name: "See also" })).toBeNull();
+    }
 
     rerender(<SeeAlsoFooter route="/depeg/" />);
     expect(screen.getByRole("link", { name: /Stability Index/i }).getAttribute("href")).toBe("/stability-index/");

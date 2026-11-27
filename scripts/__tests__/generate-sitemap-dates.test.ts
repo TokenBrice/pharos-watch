@@ -129,23 +129,8 @@ const LAYOUT_PATH = "src/app/layout.tsx";
 
 async function scannedHistoryFiles(): Promise<string[]> {
   const { execFileSync } = await vi.importActual<typeof import("node:child_process")>("node:child_process");
-  const scanPaths = [
-    "src/app",
-    "src/lib/case-studies",
-    "src/lib/chain-indexing.ts",
-    "src/lib/peg-hub-content.ts",
-    "src/lib/peg-landing.ts",
-    "src/lib/peg-taxonomy.ts",
-    "src/lib/stablecoin-taxonomy-urls.ts",
-    "src/lib/stablecoin-taxonomy.ts",
-    "src/data/blog",
-    SCHEMA_PATH,
-    "shared/data/stablecoins/coins",
-    "shared/data/stablecoins/domains",
-    "shared/data/methodology-changelogs",
-  ];
   // Every path with history, including deleted shared renderers the generator still dates.
-  const history = String(execFileSync("git", ["log", "--format=", "--name-only", "--", ...scanPaths], {
+  const history = String(execFileSync("git", ["log", "--format=", "--name-only", "--", ...GIT_DATE_SCAN_PATHS], {
     cwd: REPO_ROOT,
     encoding: "utf-8",
     maxBuffer: 64 * 1024 * 1024,

@@ -32,6 +32,14 @@ const reportQueryOptions = vi.hoisted(() => vi.fn());
 const coinStates = vi.hoisted(() => ({ byId: new Map() as ReadonlyMap<string, readonly unknown[]> }));
 const copyTextMock = vi.hoisted(() => vi.fn());
 const bootstrapScript = readFileSync("public/portfolio-bootstrap.js", "utf8");
+const runBootstrap = () => { new Function(bootstrapScript)(); };
+const emptyAttr = () => document.documentElement.hasAttribute("data-portfolio-empty");
+const clearEmptyAttr = () => document.documentElement.removeAttribute("data-portfolio-empty");
+const setPath = (path: string) => window.history.replaceState(null, "", path);
+const USDC = "usdc-circle";
+const USDT = "usdt-tether";
+const h = (coinId: string, amount: number): Holding => ({ coinId, amount });
+const res = (...cards: ReturnType<typeof makeV9Card>[]) => makeReportCardsV9Response({ cards });
 
 vi.mock("@/hooks/api-hooks", () => ({
   useReportCardsV9Table: (options: { enabled: boolean }) => { reportQueryOptions(options); return { ...reportCardsState, refetch: vi.fn() }; },
@@ -70,12 +78,12 @@ function basePortfolioState(holdings: Holding[] = [], initialized = true): typeo
 function renderPortfolio(
   holdings: Holding[] = [],
   data?: ReportCardsV9Response | ReportCardsV9TableResponse,
-  opts: { isLoading?: boolean; initialized?: boolean } = {},
+  opts: { isLoading?: boolean; initialized?: boolean; scenarioCoinIds?: readonly string[] } = {},
 ) {
   portfolioState = basePortfolioState(holdings, opts.initialized ?? true);
   reportCardsState.data = data;
   reportCardsState.isLoading = opts.isLoading ?? false;
-  return render(<PortfolioClient />);
+  return render(<PortfolioClient scenarioCoinIds={opts.scenarioCoinIds} />);
 }
 
 describe("PortfolioClient URL sync and risk workspace", () => {
@@ -88,7 +96,7 @@ describe("PortfolioClient URL sync and risk workspace", () => {
     coinStates.byId = new Map();
     mutateWatchlist(() => []);
     window.localStorage.clear();
-    window.history.replaceState(null, "", "/portfolio/");
+    setPath("/portfolio/");
   });
 
   afterEach(() => {
@@ -98,15 +106,13 @@ describe("PortfolioClient URL sync and risk workspace", () => {
   });
 
   it("leads with exceptional holdings and names what known-only subtotals leave out", () => {
-    coinStates.byId = new Map([["usdc-circle", [{ kind: "dews", band: "ALERT" }]], ["usdt-tether", [{ kind: "critical", notice: { type: "danger", title: "Halted" } }]]]);
-    renderPortfolio(
-      [{ coinId: "usdc-circle", amount: 100 }, { coinId: "usdt-tether", amount: 300 }],
-      makeReportCardsV9Response({ cards: [makeV9Card({ id: "usdc-circle" }), makeReportCardsV9PipelineGapCard("control", "A", { id: "usdt-tether" })] }),
-    );
+    coinStates.byId = new Map([[USDC, [{ kind: "dews", band: "ALERT" }]], [USDT, [{ kind: "critical", notice: { type: "danger", title: "Halted" } }]]]);
+    renderPortfolio([h(USDC, 100), h(USDT, 300)], res(makeV9Card({ id: USDC }), makeReportCardsV9PipelineGapCard("control", "A", { id: USDT })));
     const callout = screen.getByRole("region", { name: "Holdings in an exceptional state" });
     expect(within(callout).getAllByRole("listitem").map((item) => item.textContent)).toEqual(["USDT$300Critical notice · Halted", "USDC$100DEWS Alert"]);
     screen.getByText("Sum of your entered amounts at face value, not live prices");
     expect(screen.getByText("Exit · known-only subtotal").parentElement?.parentElement?.textContent).toContain("100 USD of 400 USD · excludes USDT");
+    expect(screen.queryByRole("region", { name: /Failure scenarios for your holdings/i })).toBeNull();
   });
 
   it("drops the Modelable stablecoins empty hero and surfaces starter mixes without requesting report cards", () => {
@@ -120,16 +126,16 @@ describe("PortfolioClient URL sync and risk workspace", () => {
   });
 
   it("shows Import my Watchlist (N) when starred coins exist and imports them into the portfolio", () => {
-    mutateWatchlist(() => ["usdc-circle", "usdt-tether"]);
+    mutateWatchlist(() => [USDC, USDT]);
     renderPortfolio();
     fireEvent.click(screen.getByRole("button", { name: /Import my Watchlist \(2\)/i }));
-    expect(portfolioState.addCoin).toHaveBeenCalledWith("usdc-circle", 0);
-    expect(portfolioState.addCoin).toHaveBeenCalledWith("usdt-tether", 0);
+    expect(portfolioState.addCoin).toHaveBeenCalledWith(USDC, 0);
+    expect(portfolioState.addCoin).toHaveBeenCalledWith(USDT, 0);
   });
 
   it("auto-focuses newly added holding inputs, debounces amount edits, and shows live % weights", () => {
     vi.useFakeTimers();
-    const { rerender } = renderPortfolio([{ coinId: "usdc-circle", amount: 750 }, { coinId: "usdt-tether", amount: 250 }]);
+    const { rerender } = renderPortfolio([h(USDC, 750), h(USDT, 250)]);
     expect(screen.getByLabelText("USDC portfolio weight 75.0%").textContent).toBe("75.0%");
     expect(screen.getByLabelText("USDT portfolio weight 25.0%").textContent).toBe("25.0%");
 
@@ -142,20 +148,18 @@ describe("PortfolioClient URL sync and risk workspace", () => {
     fireEvent.change(usdcInput, { target: { value: "1250" } });
     expect(portfolioState.setAmount).not.toHaveBeenCalled();
     act(() => { vi.advanceTimersByTime(260); });
-    expect(portfolioState.setAmount).toHaveBeenCalledWith("usdc-circle", 1250);
+    expect(portfolioState.setAmount).toHaveBeenCalledWith(USDC, 1250);
   });
 
   it("renders grouped dependencyExposure[], concentration strips, and outbound Compare / Dependency / Telegram links", () => {
-    const table = projectV9Table(makeReportCardsV9Response({
-      cards: [makeV9Card({ id: "dai-makerdao", score: 85 }), makeV9Card({ id: "frax-frax", score: 75 }), makeV9Card({ id: "usdc-circle", score: 90 })],
-    }));
+    const table = projectV9Table(res(makeV9Card({ id: "dai-makerdao", score: 85 }), makeV9Card({ id: "frax-frax", score: 75 }), makeV9Card({ id: USDC, score: 90 })));
     table.dependencyGraph = {
       edges: [
-        { from: "usdc-circle", to: "dai-makerdao", kind: "basket", weight: 0.25, upstreamScore: 90, materiality: "basket-weighted" },
-        { from: "usdc-circle", to: "frax-frax", kind: "basket", weight: null, upstreamScore: 90, materiality: "basket-bounded-unknown" },
+        { from: USDC, to: "dai-makerdao", kind: "basket", weight: 0.25, upstreamScore: 90, materiality: "basket-weighted" },
+        { from: USDC, to: "frax-frax", kind: "basket", weight: null, upstreamScore: 90, materiality: "basket-bounded-unknown" },
       ],
     };
-    renderPortfolio([{ coinId: "dai-makerdao", amount: 6000 }, { coinId: "frax-frax", amount: 4000 }], table);
+    renderPortfolio([h("dai-makerdao", 6000), h("frax-frax", 4000)], table, { scenarioCoinIds: ["dai-makerdao", USDC] });
 
     const upstreamList = screen.getByRole("list", { name: "Upstream collateral exposure by asset" });
     for (const text of ["USDC", "$1,500", "15.0%", "+1 unmeasured route", "DAI", "FRAX"]) {
@@ -169,6 +173,9 @@ describe("PortfolioClient URL sync and risk workspace", () => {
     }
     expect(screen.getByRole("link", { name: /Compare holdings/i }).getAttribute("href")).toMatch(/^\/compare\/?\?coins=dai-makerdao,frax-frax$/);
     expect(screen.getByRole("link", { name: /Trace upstream risks/i }).getAttribute("href")).toMatch(/^\/dependency-map\/?\?mode=exposure&root=usdc-circle$/);
+    const scenarios = screen.getByRole("region", { name: /Failure scenarios for your holdings/i });
+    expect(within(scenarios).getAllByRole("link").map((el) => el.getAttribute("href")?.replace(/\/(?=#|$)/, "")))
+      .toEqual(["/learn/scenarios", "/stablecoin/dai-makerdao#how-it-breaks"]);
     expect(screen.getByRole("heading", { name: "Follow book in Telegram" })).toBeTruthy();
     expect(screen.getByText("/subscribe dews, depeg, safety DAI, FRAX")).toBeTruthy();
     expect(screen.queryByText(/V10|V9/)).toBeNull();
@@ -177,7 +184,7 @@ describe("PortfolioClient URL sync and risk workspace", () => {
   it("uses an inline share fallback instead of window.prompt when clipboard access fails", async () => {
     const promptSpy = vi.spyOn(window, "prompt").mockImplementation(() => null);
     copyTextMock.mockResolvedValue({ ok: false });
-    renderPortfolio([{ coinId: "usdc-circle", amount: 100 }]);
+    renderPortfolio([h(USDC, 100)]);
     fireEvent.click(screen.getByRole("button", { name: /Share/i }));
 
     const fallbackRegion = await screen.findByRole("region", { name: "Shareable portfolio link" });
@@ -187,7 +194,7 @@ describe("PortfolioClient URL sync and risk workspace", () => {
   });
 
   it("uses Economic Control in the live subtotals and the empty preview without V10 prefixes", async () => {
-    renderPortfolio([{ coinId: "usdc-circle", amount: 100 }], makeReportCardsV9Response({ cards: [makeV9Card({ id: "usdc-circle" })] }));
+    renderPortfolio([h(USDC, 100)], res(makeV9Card({ id: USDC })));
     expect(screen.getByText("Economic Control")).toBeTruthy();
     expect(screen.getByText("Weighted safety aggregate")).toBeTruthy();
 
@@ -207,13 +214,13 @@ describe("PortfolioClient URL sync and risk workspace", () => {
     ["?coins=usdc-circle", "[]", true, false],
   ] as const)("prerenders safely (%s, %s, bootstrap %s)", async (search, stored, runs, firstVisit) => {
     portfolioState.initialized = false;
-    window.history.replaceState(null, "", `/portfolio/${search}`);
+    setPath(`/portfolio/${search}`);
     window.localStorage.setItem("pharos:portfolio", stored);
     const html = renderToString(<PortfolioPage />);
     expect(html).toContain("portfolio-empty-state");
     expect(html).toContain("Add holdings manually or load a starter mix below.");
     expect(html).not.toContain("<!--$");
-    if (runs) new Function(bootstrapScript)();
+    if (runs) runBootstrap();
     const container = document.createElement("div");
     container.innerHTML = html;
     document.body.append(container);
@@ -231,7 +238,7 @@ describe("PortfolioClient URL sync and risk workspace", () => {
     expect(container.querySelector(".pharos-empty-note")).toBe(note);
     expect(screen.getAllByText(/Add holdings manually/)).toHaveLength(1);
     style.remove();
-    document.documentElement.removeAttribute("data-portfolio-empty");
+    clearEmptyAttr();
     expect(reportQueryOptions).toHaveBeenLastCalledWith({ enabled: false });
   });
 
@@ -240,17 +247,17 @@ describe("PortfolioClient URL sync and risk workspace", () => {
     const { container, rerender } = renderPortfolio([], undefined, { initialized: false });
     const root = container.firstElementChild;
     expect(container.children).toHaveLength(1);
-    portfolioState = basePortfolioState([{ coinId: "usdc-circle", amount: 100 }]);
+    portfolioState = basePortfolioState([h(USDC, 100)]);
     rerender(<PortfolioClient />);
     expect(container.firstElementChild).toBe(root);
     expect(container.innerHTML).not.toContain("data-portfolio-empty");
     expect(screen.queryByText("portfolio-empty-state")).toBeNull();
     expect(screen.getByText("Total portfolio value")).toBeTruthy();
-    document.documentElement.removeAttribute("data-portfolio-empty");
+    clearEmptyAttr();
   });
 
   it("keeps holdings editable while risk enrichment is pending", () => {
-    renderPortfolio([{ coinId: "usdc-circle", amount: 100 }], undefined, { isLoading: true });
+    renderPortfolio([h(USDC, 100)], undefined, { isLoading: true });
     expect(reportQueryOptions).toHaveBeenLastCalledWith({ enabled: true });
     expect(screen.getByText("coin-selector")).toBeTruthy();
     expect(screen.getByText("Loading holdings safety evidence…")).toBeTruthy();
@@ -258,18 +265,18 @@ describe("PortfolioClient URL sync and risk workspace", () => {
   });
 
   it.each([false, true])("normalizes legacy URL holdings (retained %s)", async (retained) => {
-    window.history.replaceState(null, "", "/portfolio/?p=1:25");
-    renderPortfolio(retained ? [{ coinId: "usdt-tether", amount: 25 }] : []);
+    setPath("/portfolio/?p=1:25");
+    renderPortfolio(retained ? [h(USDT, 25)] : []);
     await waitFor(() => expect(window.location.search).toBe(retained ? "?p=usdt-tether%3A25" : ""));
   });
 
   it("consumes ?coins= handoff into ?p= and clears ?coins= when holdings are removed or cleared", async () => {
-    window.history.replaceState(null, "", "/portfolio/?coins=usdc-circle,usdt-tether");
-    const { rerender } = renderPortfolio([{ coinId: "usdc-circle", amount: 0 }, { coinId: "usdt-tether", amount: 0 }]);
+    setPath("/portfolio/?coins=usdc-circle,usdt-tether");
+    const { rerender } = renderPortfolio([h(USDC, 0), h(USDT, 0)]);
 
     for (const [next, expectedP] of [
       [null, "usdc-circle:0,usdt-tether:0"],
-      [[{ coinId: "usdt-tether", amount: 0 }], "usdt-tether:0"],
+      [[h(USDT, 0)], "usdt-tether:0"],
       [[], null],
     ] as const) {
       if (next !== null) {
@@ -289,10 +296,10 @@ describe("PortfolioClient URL sync and risk workspace", () => {
 
   it("labels partial score and pillar averages by their own known-only holding coverage", () => {
     const base = makeV9Card().pillars;
-    const complete = makeV9Card({ id: "usdc-circle", score: 80, pillars: { ...base, backing: { ...base.backing, score: 80 }, exit: { ...base.exit, score: 60 }, control: { ...base.control, score: 80 } } });
+    const complete = makeV9Card({ id: USDC, score: 80, pillars: { ...base, backing: { ...base.backing, score: 80 }, exit: { ...base.exit, score: 60 }, control: { ...base.control, score: 80 } } });
     const pp = makeReportCardsV9PartialCard("exit", "B").pillars;
-    const partial = makeReportCardsV9PartialCard("exit", "B", { id: "usdt-tether", score: 90, pillars: { ...pp, backing: { ...pp.backing, score: 90 }, control: { ...pp.control, score: 90 } } });
-    renderPortfolio([{ coinId: "usdc-circle", amount: 100 }, { coinId: "usdt-tether", amount: 300 }], makeReportCardsV9Response({ cards: [complete, partial] }));
+    const partial = makeReportCardsV9PartialCard("exit", "B", { id: USDT, score: 90, pillars: { ...pp, backing: { ...pp.backing, score: 90 }, control: { ...pp.control, score: 90 } } });
+    renderPortfolio([h(USDC, 100), h(USDT, 300)], res(complete, partial));
 
     expect(screen.getByText("Known-only weighted safety subtotal")).toBeTruthy();
     const exitCard = screen.getByText("Exit · known-only subtotal").parentElement?.parentElement;
@@ -305,7 +312,7 @@ describe("PortfolioClient URL sync and risk workspace", () => {
   });
 
   it("does not manufacture a grade or aggregate when every holding has a Pipeline gap", () => {
-    renderPortfolio([{ coinId: "usdc-circle", amount: 100 }], makeReportCardsV9Response({ cards: [makeReportCardsV9PipelineGapCard("control", "A", { id: "usdc-circle" })] }));
+    renderPortfolio([h(USDC, 100)], res(makeReportCardsV9PipelineGapCard("control", "A", { id: USDC })));
     expect(screen.getByText("Pipeline gap")).toBeTruthy();
     expect(screen.getAllByText("Unavailable")).toHaveLength(3);
     expect(screen.getByText(/Pipeline gap · fewer than two pillars available/)).toBeTruthy();
@@ -313,7 +320,7 @@ describe("PortfolioClient URL sync and risk workspace", () => {
   });
 
   it("keeps every carded holding's grade visible when one holding has no card", () => {
-    renderPortfolio([{ coinId: "usdc-circle", amount: 100 }, { coinId: "usdv-solomon", amount: 300 }], makeReportCardsV9Response({ cards: [makeV9Card({ id: "usdc-circle", score: 80 })] }));
+    renderPortfolio([h(USDC, 100), h("usdv-solomon", 300)], res(makeV9Card({ id: USDC, score: 80 })));
     expect(screen.getByRole("alert").textContent).toContain("portfolio-card-unavailable");
     expect(screen.getByLabelText("Safety grade A-, score 80")).toBeTruthy();
   });
@@ -323,18 +330,13 @@ describe("PortfolioClient URL sync and risk workspace", () => {
     const cards = [...treasury.holdings]
       .sort((a, b) => a.coinId.localeCompare(b.coinId))
       .map((holding) => makeV9Card({ id: holding.coinId, score: 80 }));
-    const view = renderPortfolio([...treasury.holdings], makeReportCardsV9Response({ cards }));
+    const view = renderPortfolio([...treasury.holdings], res(...cards));
     expect(screen.queryByRole("alert")).toBeNull();
     expect(view.container.textContent).not.toContain("portfolio-card-not-rated");
     view.unmount();
 
-    const fundCard = makeV9Card({
-      id: "buidl-blackrock",
-      grade: "NR",
-      score: null,
-      ratingStatus: "not-rated",
-    });
-    renderPortfolio([{ coinId: "buidl-blackrock", amount: 100 }], makeReportCardsV9Response({ cards: [fundCard] }));
+    const fundCard = makeV9Card({ id: "buidl-blackrock", grade: "NR", score: null, ratingStatus: "not-rated" });
+    renderPortfolio([h("buidl-blackrock", 100)], res(fundCard));
     expect(screen.getByText("Tokenized fund · not graded")).toBeTruthy();
     expect(screen.queryByLabelText("Safety grade NR")).toBeNull();
   });
@@ -343,34 +345,34 @@ describe("PortfolioClient URL sync and risk workspace", () => {
 describe("portfolio pre-paint selector", () => {
   beforeEach(() => {
     window.localStorage.clear();
-    document.documentElement.removeAttribute("data-portfolio-empty");
-    window.history.replaceState(null, "", "/portfolio/");
+    clearEmptyAttr();
+    setPath("/portfolio/");
   });
 
   it.each([null, "[]", "not json", "{}"])("keeps the static empty state for storage %s", (stored) => {
     if (stored !== null) window.localStorage.setItem("pharos:portfolio", stored);
-    new Function(bootstrapScript)();
-    expect(document.documentElement.hasAttribute("data-portfolio-empty")).toBe(true);
+    runBootstrap();
+    expect(emptyAttr()).toBe(true);
   });
 
   it.each(["", "?p=usdc-circle:100", "?coins=usdc-circle"])("hides the empty state for saved/shared holdings (%s)", (search) => {
-    window.history.replaceState(null, "", `/portfolio/${search}`);
+    setPath(`/portfolio/${search}`);
     if (!search) window.localStorage.setItem("pharos:portfolio", '[{"coinId":"usdc-circle","amount":100}]');
-    new Function(bootstrapScript)();
-    expect(document.documentElement.hasAttribute("data-portfolio-empty")).toBe(false);
+    runBootstrap();
+    expect(emptyAttr()).toBe(false);
   });
 
   it("keeps first visits visible when storage access is blocked", () => {
     const read = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => { throw new Error("blocked"); });
     try {
-      expect(() => new Function(bootstrapScript)()).not.toThrow();
-      expect(document.documentElement.hasAttribute("data-portfolio-empty")).toBe(true);
-      window.history.replaceState(null, "", "/portfolio/?p=usdc-circle:100");
-      new Function(bootstrapScript)();
-      expect(document.documentElement.hasAttribute("data-portfolio-empty")).toBe(false);
+      expect(runBootstrap).not.toThrow();
+      expect(emptyAttr()).toBe(true);
+      setPath("/portfolio/?p=usdc-circle:100");
+      runBootstrap();
+      expect(emptyAttr()).toBe(false);
     } finally {
       read.mockRestore();
-      document.documentElement.removeAttribute("data-portfolio-empty");
+      clearEmptyAttr();
     }
   });
 });

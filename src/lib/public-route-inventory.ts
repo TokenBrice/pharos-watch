@@ -77,6 +77,7 @@ export const PUBLIC_REFERENCE_ROUTES = [
   ["/stablecoins/infrastructure/", "weekly", 0.6],
   ["/privacy/", "yearly", 0.3],
   ["/docs/", "monthly", 0.6],
+  ["/learn/scenarios/", "monthly", 0.6],
 ] as const;
 
 export const PUBLIC_ROUTE_FAMILY_PATHS = {

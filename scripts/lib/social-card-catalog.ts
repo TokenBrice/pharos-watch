@@ -525,6 +525,11 @@ const RECORDS: Readonly<Record<string, RecordEntry>> = {
     dek: "Historical incidents: the mechanism, the sequence and what happened next.",
     description: "Case studies of stablecoin depegs and failures: what happened, why it mattered and what the evidence shows.",
   },
+  "/learn/scenarios/": {
+    label: "Failure scenarios", accent: "ink", title: "How stablecoins could break",
+    dek: "Curated hypothetical failure paths: each step, the missing safeguard and what would invalidate it.",
+    description: "Curated hypothetical failure scenarios for selected stablecoins: each step, missing safeguards, who could stop it and what would invalidate it.",
+  },
 };
 
 /** Acronyms spelled out in reference titles. */

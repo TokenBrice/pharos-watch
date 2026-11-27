@@ -269,6 +269,28 @@ const SERVER_ROUTE_SEE_ALSO_GRAPH: Readonly<Record<string, ReadonlyArray<SeeAlso
       description: "Chronological wire of depegs, freezes, and grade changes.",
     },
   ],
+  "/learn/scenarios/": [
+    {
+      href: "/learn/case-studies/",
+      label: "Case Studies",
+      description: "Historical retrospectives of depegs and failures that happened.",
+    },
+    {
+      href: "/learn/mechanisms/",
+      label: "Mechanisms",
+      description: "How each stablecoin architecture holds or loses its peg.",
+    },
+    {
+      href: "/dependency-map/",
+      label: "Dependency Map",
+      description: "Collateral and wrapper dependencies across tracked stablecoins.",
+    },
+    {
+      href: "/portfolio/",
+      label: "Portfolio",
+      description: "Check which holdings in your book have published failure scenarios.",
+    },
+  ],
   "/methodology/": [
     {
       href: "/docs/",

@@ -244,7 +244,8 @@ export function getTrackedFeatures({
       description:
         "On selected coins, a curated narrative of one hypothetical way the coin could break: each step, the safeguard missing at it, who could stop it, and what would invalidate the story. Every scenario is approved by a maintainer and re-checked on a schedule. It is not a simulator and never changes a Safety Score.",
       icon: Unlink,
-      metaLabel: "In-dossier",
+      href: "/learn/scenarios/",
+      linkLabel: "Browse scenarios",
     },
     {
       title: "FreezeWatch",

@@ -15,6 +15,7 @@ const SOURCE_ROOTS = {
   coins: { path: "shared/data/stablecoins/coins", recursive: true },
   domains: { path: "shared/data/stablecoins/domains", recursive: true },
   methodology: { path: "shared/data/methodology-changelogs", recursive: true },
+  failureScenarios: { path: "data/failure-scenarios.json", recursive: false },
 } as const;
 
 export const CASE_STUDY_DETAIL_SHARED_SOURCES = [

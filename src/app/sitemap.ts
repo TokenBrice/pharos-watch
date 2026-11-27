@@ -27,6 +27,7 @@ import {
 } from "@/lib/depeg-event-page-data";
 import { API_ACCESS_PAGE_PATH, PUBLIC_PRIMARY_ROUTES, PUBLIC_REFERENCE_ROUTES, PUBLIC_ROUTE_FAMILY_PATHS } from "@/lib/public-route-inventory";
 import { PUBLIC_DATASET_CURRENT_EXPORTS } from "@/lib/datasets/public-dataset-current";
+import { PUBLISHED_FAILURE_SCENARIOS } from "@/lib/failure-scenario-index";
 import { getSafetyScoresPreview } from "@/lib/safety-grade-snapshot";
 
 export const dynamic = "force-static";
@@ -107,6 +108,16 @@ function depegIndexLastModified(): Date {
   );
 }
 
+/** The failure-scenarios hub lists approved dossiers; its newest review dates it alongside page edits. */
+function failureScenariosIndexLastModified(path: string): Date {
+  return new Date(
+    Math.max(
+      lastEdited(path).getTime(),
+      ...PUBLISHED_FAILURE_SCENARIOS.map((entry) => Date.parse(entry.reviewedAt)).filter(Number.isFinite),
+    ),
+  );
+}
+
 /** A summary edit belongs to this profile, not every row in its shared JSON file. */
 function stablecoinLastModified(id: string): Date {
   const edited = lastEdited(buildStablecoinUrl(id));
@@ -171,6 +182,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/depeg/archive/": (path) => lastEdited(path, "/depeg/"),
     "/api/reference/": (path) => lastEdited(path, API_ACCESS_PAGE_PATH),
     "/docs/": docsIndexLastModified,
+    "/learn/scenarios/": failureScenariosIndexLastModified,
   };
   const withDateResolver = ([path, changeFrequency, priority]: readonly [string, SitemapChangeFrequency, number]): StaticPageSpec =>
     [path, changeFrequency, priority, staticDateResolvers[path]];

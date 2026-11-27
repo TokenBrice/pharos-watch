@@ -266,6 +266,12 @@ export function generateSitemapDates(options: GenerateSitemapDatesOptions = {}):
   // module under the cluster changes — per-archetype Article JSON-LD sources
   // its dateModified from this entry — not only when the hub page.tsx does.
   dates["/learn/mechanisms/"] = getLastModified(join(APP_DIR, "learn/mechanisms"));
+  // Failure-scenario withdrawals or edits in `data/failure-scenarios.json` must
+  // also move `/learn/scenarios/` even when no newer `reviewedAt` remains.
+  dates["/learn/scenarios/"] = latestIso(
+    getLastModified(join(APP_DIR, "learn/scenarios/page.tsx")),
+    getLastModified(join(REPO_ROOT, "data/failure-scenarios.json")),
+  );
 
   syncGeneratedArtifacts({
     artifacts: [

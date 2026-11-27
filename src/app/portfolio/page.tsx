@@ -1,5 +1,6 @@
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
+import { PUBLISHED_FAILURE_SCENARIO_IDS } from "@/lib/failure-scenario-index";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { PortfolioClient } from "./client";
 
@@ -28,7 +29,7 @@ export default function PortfolioPage() {
       {/* eslint-disable-next-line @next/next/no-sync-scripts */}
       <script src="/portfolio-bootstrap.js" />
       <SectionErrorBoundary name="Portfolio" supportingText="This section failed to load. Try refreshing the page.">
-        <PortfolioClient />
+        <PortfolioClient scenarioCoinIds={PUBLISHED_FAILURE_SCENARIO_IDS} />
       </SectionErrorBoundary>
     </FeaturePageShell>
   );
