@@ -51789,26 +51789,6 @@
       ]
     },
     {
-      "id": "rs2008-idrx-bsc-minter-safe-execution-scope-20261030",
-      "assetId": "idrx-idrx",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "control:mint-meta:idrx-idrx:9a5b02878a8a6ea3b440",
-        "factorKey": "executionScope",
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "executionScope"
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-30T11:02:57Z",
-      "reviewer": "RS2-008 research sprint 2026-10-30 (IDRX, GUSD, USDP, AutoUSD control identity)",
-      "sourcesRefs": [
-        "source:fdd220dc325feb763e13228a",
-        "source:3563e7c80bd0aa0d80d10314"
-      ]
-    },
-    {
       "id": "rs2008-gusd-deployment-controls-20261030",
       "assetId": "gusd-gemini",
       "scope": {

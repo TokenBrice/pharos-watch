@@ -656,12 +656,11 @@
       },
       {
         "id": "idrx-bsc-minter-safe",
-        "label": "IDRX BSC bridge-mint Safe A",
+        "label": "IDRX BSC DEFAULT_ADMIN Safe A (2-of-3; MINTER_ROLE revoked)",
         "routeRefs": [
           "bsc:0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
         ],
         "capabilities": [
-          "bridge-mint",
           "admin"
         ],
         "controllerChain": "bsc",
@@ -672,21 +671,45 @@
         "authorityType": "safe",
         "threshold": 2,
         "signerCount": 3,
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0xe51b67864a38f42126231d30ed8f3e72ec7f32f4",
+            "0xb4fca8725a9e65b4cd1ef27d71e7c7537148061b",
+            "0x0f9f4cbbec64524deb0d743f9caf34be81bd1576"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "masterCopy": "0x3e5c63644e683549055b9be8653de26e0b4cd36e",
+          "observedBlock": 136126254,
+          "observedAt": "2026-11-27",
+          "source": "onchain"
+        },
         "modulesOrGuardsStatus": "none-detected",
         "canRaiseCap": true,
         "routeChecks": {
-          "caps": "The role has no economic token cap; generic mint() remains unbounded even though mintBridge carries burn/nonce accounting.",
-          "pausersAdminsUpgraders": "At BSC block 113086546 this 2-of-3 Safe held MINTER_ROLE and DEFAULT_ADMIN_ROLE; the Safe had no modules and a zero guard."
+          "caps": "The Safe holds no mint role, but DEFAULT_ADMIN_ROLE can grant MINTER_ROLE (unbounded generic mint() and mintBridge) to any account without delay.",
+          "pausersAdminsUpgraders": "At BSC block 136126254 this 2-of-3 Safe held DEFAULT_ADMIN_ROLE only (MINTER_ROLE, UPGRADER_ROLE, PAUSER_ROLE, BLACKLIST_ROLE and PLATFORM_FEE_SETTER_ROLE false) after MINTER_ROLE was revoked at block 131940992; DEFAULT_ADMIN_ROLE can grant or revoke MINTER_ROLE and UPGRADER_ROLE without delay."
         },
-        "observedAt": "2026-07-30",
-        "observedBlock": 113086546,
+        "observedAt": "2026-11-27",
+        "observedBlock": 136126254,
         "sources": [
           {
             "label": "BSC IDRX proxy",
             "url": "https://bscscan.com/address/0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
+          },
+          {
+            "label": "BSC MINTER_ROLE revocation tx for 0xfcdd2816 at block 131940992 (2026-11-06T04:00:01Z)",
+            "url": "https://bscscan.com/tx/0xac5b37ecb88f352593652ce33733d49db45d3dd73501a8174ef8f872ddc45e98"
+          },
+          {
+            "label": "Pinned BSC block 136126254 (hash 0xcadffc7dea5776189be5832eaf2be8a8ac3dbd8a293df987c33d4a86bd32546b, 2026-11-27T23:25:58Z) role and Safe state read",
+            "url": "https://api-bsc-mainnet-full.n.dwellir.com"
           }
         ],
-        "evidence": "The BSC 2-of-3 Safe was confirmed as both MINTER_ROLE and DEFAULT_ADMIN_ROLE at block 113086546."
+        "evidence": "Re-verified at pinned BSC block 136126254 (hash 0xcadffc7dea5776189be5832eaf2be8a8ac3dbd8a293df987c33d4a86bd32546b, 2026-11-27T23:25:58Z): hasRole(DEFAULT_ADMIN_ROLE) = true and the other five token roles false; EIP-1967 implementation 0x20fad183dc35f4ae0d1d125ae2f3c4c43a53bbd0, admin slot zero. Safe VERSION 1.3.0 (singleton slot 0x3e5c63644e683549055b9be8653de26e0b4cd36e), getThreshold = 2, getOwners = 3, getModulesPaginated(0x1,10) empty with terminal 0x1, guard slot zero, fallbackHandler 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4, nonce 32. A RoleGranted/RoleRevoked/RoleAdminChanged/Upgraded scan of [135641119,136126254] in 98 pinned 5,000-block ranges returned no events (empty results are not lifetime proof), so the roster is unchanged since the reviewed 2026-11-25 pin at block 135641119. No signer independence, key custody or execution-scope closure is asserted."
       },
       {
         "id": "idrx-bsc-minter-safe-b",
@@ -753,8 +776,8 @@
         "evidence": "The BSC 2-of-5 Safe was confirmed as a current MINTER_ROLE holder at block 113086546, with no modules and a zero guard."
       },
       {
-        "id": "idrx-bsc-inert-minter-assignment",
-        "label": "IDRX BSC inert bridge-mint role assignment",
+        "id": "idrx-bsc-minter-safe-d",
+        "label": "IDRX BSC bridge-mint Safe D (2-of-6, Safe 1.5.0)",
         "routeRefs": [
           "bsc:0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
         ],
@@ -762,24 +785,126 @@
           "bridge-mint"
         ],
         "controllerChain": "bsc",
-        "controllerAddress": "0xf80fdf246928b7862b23e094b3a14c4e36ee117e",
+        "controllerAddress": "0x74fc44f2c470fe460f1943e83df689ef2ef2cdd2",
         "failureDomainKeys": [
-          "eoa:bsc:0xf80fdf246928b7862b23e094b3a14c4e36ee117e"
+          "safe:bsc:0x74fc44f2c470fe460f1943e83df689ef2ef2cdd2"
         ],
-        "authorityType": "eoa",
+        "authorityType": "safe",
+        "threshold": 2,
+        "signerCount": 6,
+        "safe": {
+          "version": "1.5.0",
+          "owners": [
+            "0x451dbfecb35bd6c5dbb8e274803e9f5277dea7b1",
+            "0xb894f7a6f6c25a0e10b61ee595b979bd80934ff3",
+            "0xcdeb29d4554b4ba8ce4937b4774e5ce2aeac3b01",
+            "0x989cce728f0c7a13412d48b03d19b986b44c0bd8",
+            "0x22c9ec74654841aa15be0e0ff7bdd7754bcee735",
+            "0x5515be1db2a513888f5cf375bf5c7956ee93c779"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x3efcbb83a4a7afcb4f68d501e2c2203a38be77f4",
+          "masterCopy": "0xedd160febbd92e350d4d398fb636302fccd67c7e",
+          "observedBlock": 136126254,
+          "observedAt": "2026-11-27",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
         "canRaiseCap": true,
         "routeChecks": {
-          "caps": "The MINTER_ROLE assignment has no economic token cap, but eth_getCode is empty on BSC so this assignment is currently inert unless code is deployed at the address."
+          "caps": "The Safe's MINTER_ROLE has no economic token cap; generic mint() remains unbounded even though mintBridge carries burn/nonce accounting.",
+          "pausersAdminsUpgraders": "At BSC block 136126254 this 2-of-6 Safe held MINTER_ROLE only (DEFAULT_ADMIN_ROLE, UPGRADER_ROLE, PAUSER_ROLE, BLACKLIST_ROLE and PLATFORM_FEE_SETTER_ROLE false); its owner set includes the BSC DEFAULT_ADMIN EOA 0x5515be1db2a513888f5cf375bf5c7956ee93c779."
         },
-        "observedAt": "2026-07-30",
-        "observedBlock": 113086546,
+        "observedAt": "2026-11-27",
+        "observedBlock": 136126254,
         "sources": [
           {
             "label": "BSC IDRX proxy",
             "url": "https://bscscan.com/address/0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
+          },
+          {
+            "label": "BSC MINTER_ROLE grant tx for Safe 0x74fc44f2 at block 134627818 (2026-11-20T04:02:32Z)",
+            "url": "https://bscscan.com/tx/0x026fa4a4391ed7305741fb35d6e9707fde501c0d06933eafefa1bd95293c0b1a"
+          },
+          {
+            "label": "Sourcify exact-match BSC SafeL2 1.5.0 singleton 0xedd160febbd92e350d4d398fb636302fccd67c7e (runtime and creation exact_match, read 2026-11-27)",
+            "url": "https://sourcify.dev/server/v2/contract/56/0xedd160febbd92e350d4d398fb636302fccd67c7e"
+          },
+          {
+            "label": "Pinned BSC block 136126254 (hash 0xcadffc7dea5776189be5832eaf2be8a8ac3dbd8a293df987c33d4a86bd32546b, 2026-11-27T23:25:58Z) role and Safe state read",
+            "url": "https://api-bsc-mainnet-full.n.dwellir.com"
           }
         ],
-        "evidence": "The BSC role history showed MINTER_ROLE true at block 113086546, but eth_getCode was 0x and the assignment was not currently executable."
+        "evidence": "Granted MINTER_ROLE by DEFAULT_ADMIN EOA 0x5515be1db2a513888f5cf375bf5c7956ee93c779 at BSC block 134627818 (2026-11-20T04:02:32Z, tx 0x026fa4a4391ed7305741fb35d6e9707fde501c0d06933eafefa1bd95293c0b1a). Re-verified at pinned BSC block 136126254 (hash 0xcadffc7dea5776189be5832eaf2be8a8ac3dbd8a293df987c33d4a86bd32546b, 2026-11-27T23:25:58Z): hasRole(MINTER_ROLE) = true and the other five token roles false. Safe VERSION 1.5.0, singleton slot 0xedd160febbd92e350d4d398fb636302fccd67c7e (Sourcify exact-match SafeL2), getThreshold = 2, getOwners = 6, getModulesPaginated(0x1,10) empty with terminal 0x1, guard and module-guard storage slots zero, fallbackHandler 0x3efcbb83a4a7afcb4f68d501e2c2203a38be77f4 (Sourcify exact-match CompatibilityFallbackHandler), nonce 1. At BSC block 136126635 (hash 0xff33515f2a4bdab98c7f26fbf0d7642b64cff9e9f596ec6bad8539729de0019c) the 123-byte proxy runtime hashed to sha256 65cedaa2f11564271df8dc0c105817ad693d119253dd50eb8ca2b232e97f7b7f and the singleton slot was unchanged. No role event was emitted in [135641119,136126254] (98 pinned ranges; empty results are not lifetime proof). No signer independence, key custody or execution-scope closure is asserted."
+      },
+      {
+        "id": "idrx-bsc-minter-safe-e",
+        "label": "IDRX BSC bridge-mint Safe E (2-of-7, Safe 1.5.0)",
+        "routeRefs": [
+          "bsc:0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x691e35e2c120f0bb5df572ff6be59aff5950802a",
+        "failureDomainKeys": [
+          "safe:bsc:0x691e35e2c120f0bb5df572ff6be59aff5950802a"
+        ],
+        "authorityType": "safe",
+        "threshold": 2,
+        "signerCount": 7,
+        "safe": {
+          "version": "1.5.0",
+          "owners": [
+            "0x451dbfecb35bd6c5dbb8e274803e9f5277dea7b1",
+            "0x3678718d01e37bfee1423f727e6238597a02c3d5",
+            "0xb894f7a6f6c25a0e10b61ee595b979bd80934ff3",
+            "0xcdeb29d4554b4ba8ce4937b4774e5ce2aeac3b01",
+            "0x3cd8edab9b98cfcba432e0993cf7d7650fa0c7b5",
+            "0x49b8342e23abeb8d497967c9216714586b521a8c",
+            "0x989cce728f0c7a13412d48b03d19b986b44c0bd8"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x3efcbb83a4a7afcb4f68d501e2c2203a38be77f4",
+          "masterCopy": "0xedd160febbd92e350d4d398fb636302fccd67c7e",
+          "observedBlock": 136126254,
+          "observedAt": "2026-11-27",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The Safe's MINTER_ROLE has no economic token cap; generic mint() remains unbounded even though mintBridge carries burn/nonce accounting.",
+          "pausersAdminsUpgraders": "At BSC block 136126254 this 2-of-7 Safe held MINTER_ROLE only (DEFAULT_ADMIN_ROLE, UPGRADER_ROLE, PAUSER_ROLE, BLACKLIST_ROLE and PLATFORM_FEE_SETTER_ROLE false)."
+        },
+        "observedAt": "2026-11-27",
+        "observedBlock": 136126254,
+        "sources": [
+          {
+            "label": "BSC IDRX proxy",
+            "url": "https://bscscan.com/address/0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
+          },
+          {
+            "label": "BSC MINTER_ROLE grant tx for Safe 0x691e35e2 at block 134627897 (2026-11-20T04:03:07Z)",
+            "url": "https://bscscan.com/tx/0xc7af01adce772bb9c9bfd9b1089dc781e7ae16cb10b9cd679406e3519a944ebd"
+          },
+          {
+            "label": "Sourcify exact-match BSC SafeL2 1.5.0 singleton 0xedd160febbd92e350d4d398fb636302fccd67c7e (runtime and creation exact_match, read 2026-11-27)",
+            "url": "https://sourcify.dev/server/v2/contract/56/0xedd160febbd92e350d4d398fb636302fccd67c7e"
+          },
+          {
+            "label": "Pinned BSC block 136126254 (hash 0xcadffc7dea5776189be5832eaf2be8a8ac3dbd8a293df987c33d4a86bd32546b, 2026-11-27T23:25:58Z) role and Safe state read",
+            "url": "https://api-bsc-mainnet-full.n.dwellir.com"
+          }
+        ],
+        "evidence": "Granted MINTER_ROLE by DEFAULT_ADMIN EOA 0x5515be1db2a513888f5cf375bf5c7956ee93c779 at BSC block 134627897 (2026-11-20T04:03:07Z, tx 0xc7af01adce772bb9c9bfd9b1089dc781e7ae16cb10b9cd679406e3519a944ebd). Re-verified at pinned BSC block 136126254 (hash 0xcadffc7dea5776189be5832eaf2be8a8ac3dbd8a293df987c33d4a86bd32546b, 2026-11-27T23:25:58Z): hasRole(MINTER_ROLE) = true and the other five token roles false. Safe VERSION 1.5.0, singleton slot 0xedd160febbd92e350d4d398fb636302fccd67c7e (Sourcify exact-match SafeL2), getThreshold = 2, getOwners = 7, getModulesPaginated(0x1,10) empty with terminal 0x1, guard and module-guard storage slots zero, fallbackHandler 0x3efcbb83a4a7afcb4f68d501e2c2203a38be77f4 (Sourcify exact-match CompatibilityFallbackHandler), nonce 2. At BSC block 136126635 (hash 0xff33515f2a4bdab98c7f26fbf0d7642b64cff9e9f596ec6bad8539729de0019c) the 123-byte proxy runtime hashed to sha256 65cedaa2f11564271df8dc0c105817ad693d119253dd50eb8ca2b232e97f7b7f and the singleton slot was unchanged. No role event was emitted in [135641119,136126254] (98 pinned ranges; empty results are not lifetime proof). No signer independence, key custody or execution-scope closure is asserted."
       },
       {
         "id": "idrx-bsc-default-admin",
