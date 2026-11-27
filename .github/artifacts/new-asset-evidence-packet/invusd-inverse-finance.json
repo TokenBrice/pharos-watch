@@ -3,8 +3,8 @@
   "receiptMode": "prospective-offline",
   "kind": "safety-score-v9-new-asset-admission-receipt",
   "assetId": "invusd-inverse-finance",
-  "prospectiveInputId": "prospective-admission:v1:fdfdefc98512722f2c182b69b4b744a940e844ffcb24cbf1fcbf1fed2bb0552c",
-  "admissionClockSec": 1795782706,
+  "prospectiveInputId": "prospective-admission:v1:70d4ed3d13495d2ddd8faa24d354ed62edc1634c565e1d7d17ddb482ded3eb29",
+  "admissionClockSec": 1795783282,
   "evaluatedCohortIds": [
     "invusd-inverse-finance",
     "susds-sky",
@@ -27,8 +27,8 @@
     "field": "peggedAssets[id=394].circulating",
     "retrievedAtSec": 1795776338
   },
-  "registryFingerprint": "2ff0895c889e9abe802b4f3777ecf9f3010422f6c1a4e2a523b75788d9661731",
-  "evaluationBuildDigest": "13072d453521985a6cf316591bd02764550fb227ca12200e9f49aaad174db4fc",
+  "registryFingerprint": "427709ce7af65fc3a1d014ca7ece09cedff985330af3cf1d42007b3b36bd566f",
+  "evaluationBuildDigest": "909e89e4d82193e1306a8857461b26b32220838f02bad545623d795fe543408a",
   "card": {
     "id": "invusd-inverse-finance",
     "openBucketQuestionsCarried": 3,

@@ -3,8 +3,8 @@
   "receiptMode": "prospective-offline",
   "kind": "safety-score-v9-new-asset-admission-receipt",
   "assetId": "tbrl-tenbin",
-  "prospectiveInputId": "prospective-admission:v1:b990263e3ec63e69c9faababc9c4b3a8861e364e9f5bd09708bd98ccefa66b6e",
-  "admissionClockSec": 1795782705,
+  "prospectiveInputId": "prospective-admission:v1:b84053985d68476286f2313d9217dc86740ffa8beb9b123226ae28b421c50ad6",
+  "admissionClockSec": 1795783281,
   "evaluatedCohortIds": [
     "tbrl-tenbin"
   ],
@@ -24,8 +24,8 @@
     "field": "peggedAssets[id=486].circulating",
     "retrievedAtSec": 1795776330
   },
-  "registryFingerprint": "2ff0895c889e9abe802b4f3777ecf9f3010422f6c1a4e2a523b75788d9661731",
-  "evaluationBuildDigest": "13072d453521985a6cf316591bd02764550fb227ca12200e9f49aaad174db4fc",
+  "registryFingerprint": "427709ce7af65fc3a1d014ca7ece09cedff985330af3cf1d42007b3b36bd566f",
+  "evaluationBuildDigest": "909e89e4d82193e1306a8857461b26b32220838f02bad545623d795fe543408a",
   "card": {
     "id": "tbrl-tenbin",
     "openBucketQuestionsCarried": 4,

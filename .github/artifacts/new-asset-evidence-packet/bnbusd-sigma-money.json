@@ -3,8 +3,8 @@
   "receiptMode": "prospective-offline",
   "kind": "safety-score-v9-new-asset-admission-receipt",
   "assetId": "bnbusd-sigma-money",
-  "prospectiveInputId": "prospective-admission:v1:a56264d67202f5ce900e540b0935e8b07fde26f2b1ad6deaf8426ede935ed168",
-  "admissionClockSec": 1795782707,
+  "prospectiveInputId": "prospective-admission:v1:2def6b553749338f4d9e45df80ce39c28a59ceba9c16da29cc77bde25a1ca6f1",
+  "admissionClockSec": 1795783284,
   "evaluatedCohortIds": [
     "bnbusd-sigma-money"
   ],
@@ -24,8 +24,8 @@
     "field": "peggedAssets[id=293].circulating",
     "retrievedAtSec": 1795776338
   },
-  "registryFingerprint": "2ff0895c889e9abe802b4f3777ecf9f3010422f6c1a4e2a523b75788d9661731",
-  "evaluationBuildDigest": "13072d453521985a6cf316591bd02764550fb227ca12200e9f49aaad174db4fc",
+  "registryFingerprint": "427709ce7af65fc3a1d014ca7ece09cedff985330af3cf1d42007b3b36bd566f",
+  "evaluationBuildDigest": "909e89e4d82193e1306a8857461b26b32220838f02bad545623d795fe543408a",
   "card": {
     "id": "bnbusd-sigma-money",
     "openBucketQuestionsCarried": 4,

@@ -2,7 +2,7 @@
   "id": "tbrl-tenbin",
   "reserves": [
     {
-      "name": "Unallocated reserve mix (on-chain Steakhouse Morpho V2 USDC vault + cross-product Ripple Prime / FCM USD cash, USDC, and CME BRL futures margin)",
+      "name": "Unallocated reserve mix (on-chain Morpho V2 stablecoin vault + cross-product Ripple Prime / FCM USD cash, stablecoins, and CME BRL futures margin)",
       "pct": 100,
       "risk": "high",
       "assetClass": "other",
@@ -60,7 +60,7 @@
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Unallocated reserve mix (on-chain Steakhouse Morpho V2 USDC vault + cross-product Ripple Prime / FCM USD cash, USDC, and CME BRL futures margin)",
+        "reserveName": "Unallocated reserve mix (on-chain Morpho V2 stablecoin vault + cross-product Ripple Prime / FCM USD cash, stablecoins, and CME BRL futures margin)",
         "pct": 100,
         "disposition": "basket-needs-split",
         "rationale": "Pinned on-chain Morpho V2 vault balances (355,144.70 USDC, ~77.0% of tBRL liability value) cannot be converted into whole-book reserve weights without a segregated per-token off-chain reserve total; Chainlink's Base feed reports only one cross-product off-chain balance across tGLD, tMXN, and tBRL."

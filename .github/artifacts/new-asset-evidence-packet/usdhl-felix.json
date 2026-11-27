@@ -3,8 +3,8 @@
   "receiptMode": "prospective-offline",
   "kind": "safety-score-v9-new-asset-admission-receipt",
   "assetId": "usdhl-felix",
-  "prospectiveInputId": "prospective-admission:v1:69ba6d4ff015f028318fd6c5ede3561f67f72a32eceb3396d059e403d531bb8b",
-  "admissionClockSec": 1795782710,
+  "prospectiveInputId": "prospective-admission:v1:d4805989fb7a4201170a899823fb015f343ea51fbae371e74e326d55a5cda42a",
+  "admissionClockSec": 1795783286,
   "evaluatedCohortIds": [
     "m-m0",
     "usdhl-felix"
@@ -25,8 +25,8 @@
     "field": "eth_call(0xb50a96253abdf803d85efcdce07ad8becbc52bd5,totalSupply)*coingecko:hyper-usd",
     "retrievedAtSec": 1795776566
   },
-  "registryFingerprint": "2ff0895c889e9abe802b4f3777ecf9f3010422f6c1a4e2a523b75788d9661731",
-  "evaluationBuildDigest": "13072d453521985a6cf316591bd02764550fb227ca12200e9f49aaad174db4fc",
+  "registryFingerprint": "427709ce7af65fc3a1d014ca7ece09cedff985330af3cf1d42007b3b36bd566f",
+  "evaluationBuildDigest": "909e89e4d82193e1306a8857461b26b32220838f02bad545623d795fe543408a",
   "card": {
     "id": "usdhl-felix",
     "openBucketQuestionsCarried": 6,

@@ -3,8 +3,8 @@
   "receiptMode": "prospective-offline",
   "kind": "safety-score-v9-new-asset-admission-receipt",
   "assetId": "gdlr-doma",
-  "prospectiveInputId": "prospective-admission:v1:440760a442121710c194a05d01b03424352e793bad07e2ac29ccd0cb49ec73ec",
-  "admissionClockSec": 1795782702,
+  "prospectiveInputId": "prospective-admission:v1:e9c778bcbbfc4ac0b74a6492feb31ec91b9a174d47c1957934b9d763afca3439",
+  "admissionClockSec": 1795783279,
   "evaluatedCohortIds": [
     "gdlr-doma"
   ],
@@ -24,8 +24,8 @@
     "field": "gdollar.usd_market_cap",
     "retrievedAtSec": 1795776304
   },
-  "registryFingerprint": "2ff0895c889e9abe802b4f3777ecf9f3010422f6c1a4e2a523b75788d9661731",
-  "evaluationBuildDigest": "13072d453521985a6cf316591bd02764550fb227ca12200e9f49aaad174db4fc",
+  "registryFingerprint": "427709ce7af65fc3a1d014ca7ece09cedff985330af3cf1d42007b3b36bd566f",
+  "evaluationBuildDigest": "909e89e4d82193e1306a8857461b26b32220838f02bad545623d795fe543408a",
   "card": {
     "id": "gdlr-doma",
     "openBucketQuestionsCarried": 6,
