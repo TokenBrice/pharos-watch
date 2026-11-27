@@ -38,6 +38,7 @@ const CHAIN_RESILIENCE_TIER: Partial<Record<string, ChainResilienceTier>> = {
   rise: 3,          // newer Ethereum L2
   somnia: 3,        // newer high-performance L1
   "0g": 3,         // newer high-performance L1, like RISE/Somnia/Arc; unproven security
+  canton: 3,       // permissioned 13-SV / 11-entity institutional Global Synchronizer (9-of-13 BFT)
 };
 
 /** Get the resilience tier for a chain (defaults to 2). */

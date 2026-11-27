@@ -58,6 +58,12 @@ const TEST_ASSET: PeggedAsset = {
   pegType: "peggedUSD",
 };
 
+const mockBitstampUsdc = (price: number, observedAt: number | null) =>
+  vi.mocked(fetchBitstampPrices).mockResolvedValue({ kind: "ok", value: { prices: new Map([["USDC", price]]), observedAtBySymbol: new Map(observedAt == null ? [] : [["USDC", observedAt]]), diagnostics: [] } });
+
+const mockCoinbaseOk = (entries: readonly [string, number, number, "USD" | "USDC", "book" | "trade"][], diagnostics: NonNullable<Awaited<ReturnType<typeof fetchCoinbasePrices>>["value"]["diagnostics"]> = []) =>
+  vi.mocked(fetchCoinbasePrices).mockResolvedValue({ kind: "ok", value: { prices: new Map(entries.map(([s, p]) => [s, p])), observedAtBySymbol: new Map(entries.map(([s, , t]) => [s, t])), quoteAssetBySymbol: new Map(entries.map(([s, , , q]) => [s, q])), clockBySymbol: new Map(entries.map(([s, , , , c]) => [s, c])), diagnostics } });
+
 describe("critical publication provider collection", () => {
   it("adds one HIVE batch dependency only for eligible HBD, never a candidate row", async () => {
     const plain = await buildPrimaryPricePlan([TEST_ASSET], mockD1([]));
@@ -167,38 +173,32 @@ describe("critical publication provider collection", () => {
     expect(messages.includes("[primary-prices] CG price API failed:")).toBe(warnsFetchFail);
   });
 
-  it("carries Kraken Depth upstream clocks and scopes colliding OUSD symbols to ousd-open-standard", async () => {
-    const db = mockD1([]);
-    const now = 1_800_000_000;
+  it("carries Kraken Depth upstream clocks and scopes colliding OUSD and USDS symbols", async () => {
+    const db = mockD1([]), now = 1_800_000_000, observedAt = now - 12;
     vi.spyOn(Date, "now").mockReturnValue(now * 1000);
-    vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, key) => key === CIRCUIT_SOURCE.KRAKEN_PRICES);
-    const originOnly = await buildPrimaryPricePlan([{ id: "ousd-origin-protocol", name: "Origin Dollar", symbol: "OUSD" }], db);
-    expect(originOnly.krakenSymbols).toEqual([]);
+    vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, k) => k === CIRCUIT_SOURCE.KRAKEN_PRICES || k === CIRCUIT_SOURCE.COINBASE_PRICES);
+    expect((await buildPrimaryPricePlan([{ id: "ousd-origin-protocol", name: "Origin Dollar", symbol: "OUSD" }], db)).krakenSymbols).toEqual([]);
+    const arqOnly = await buildPrimaryPricePlan([{ id: "usds-arq", name: "ARQ USDs", symbol: "USDS" }], db);
+    expect([arqOnly.krakenSymbols, arqOnly.coinbaseSymbols]).toEqual([[], []]);
     const assets: PeggedAsset[] = [
       { ...TEST_ASSET, id: "eurcv-societe-generale-forge", symbol: "EURCV", pegType: "peggedEUR" },
       { ...TEST_ASSET, id: "ousd-open-standard", symbol: "OUSD", geckoId: "open-usd" },
       { ...TEST_ASSET, id: "ousd-origin-protocol", symbol: "OUSD", geckoId: "origin-dollar" },
+      { ...TEST_ASSET, id: "usds-sky", symbol: "USDS", geckoId: "usds" },
+      { ...TEST_ASSET, id: "usds-arq", symbol: "USDS" },
     ];
     const plan = await buildPrimaryPricePlan(assets, db);
-    expect(plan.krakenSymbols).toEqual(["EURCV", "OUSD"]);
-    const observedAt = now - 12;
-    vi.mocked(fetchKrakenPrices).mockResolvedValue({
-      kind: "ok",
-      value: {
-        prices: new Map([["EURCV", 1.0975], ["OUSD", 0.99995]]),
-        observedAtBySymbol: new Map([["EURCV", observedAt], ["OUSD", observedAt]]),
-        quoteBasisBySymbol: new Map([["EURCV", "bid-ask-midpoint"], ["OUSD", "bid-ask-midpoint"]]),
-        diagnostics: [],
-      },
-    });
+    expect([plan.krakenSymbols, plan.coinbaseSymbols]).toEqual([["EURCV", "OUSD", "USDS"], ["USDS"]]);
+    vi.mocked(fetchKrakenPrices).mockResolvedValue({ kind: "ok", value: { prices: new Map([["EURCV", 1.0975], ["OUSD", 0.99995], ["USDS", 0.9999]]), observedAtBySymbol: new Map([["EURCV", observedAt], ["OUSD", observedAt], ["USDS", observedAt]]), quoteBasisBySymbol: new Map([["EURCV", "bid-ask-midpoint"], ["OUSD", "bid-ask-midpoint"]]), diagnostics: [] } });
+    mockCoinbaseOk([["USDS", 1.0001, observedAt, "USD", "book"]]);
     const outcomes = vi.spyOn(circuit, "recordOutcomeSafe");
-    const { quoteMaps } = await collectPrimaryProviderQuotes({ db, plan });
-    expect(quoteMaps.krakenObservedAt).toBeNull();
-    expect(outcomes.mock.calls.map(([, key, ok]) => [key, ok])).toEqual([[CIRCUIT_SOURCE.KRAKEN_PRICES, true]]);
+    expect((await collectPrimaryProviderQuotes({ db, plan })).quoteMaps.krakenObservedAt).toBeNull();
+    expect(outcomes.mock.calls.map(([, k, ok]) => [k, ok])).toEqual([[CIRCUIT_SOURCE.KRAKEN_PRICES, true], [CIRCUIT_SOURCE.COINBASE_PRICES, true]]);
     const { results } = await fetchPrimaryPrices(assets, db);
     expect(results.get("eurcv-societe-generale-forge")).toMatchObject({ source: "kraken", observedAt, observedAtMode: "upstream" });
     expect(results.get("ousd-open-standard")).toMatchObject({ source: "kraken", observedAt, observedAtMode: "upstream" });
-    expect(results.has("ousd-origin-protocol")).toBe(false);
+    expect(results.get("usds-sky")).toMatchObject({ source: "coinbase+kraken", agreeSources: ["kraken", "coinbase"] });
+    expect([results.has("ousd-origin-protocol"), results.has("usds-arq")]).toEqual([false, false]);
   });
 
   it("keeps a collected quote when no-candidate breaker recovery cannot persist its circuit record", async () => {
@@ -293,7 +293,7 @@ describe("critical publication provider collection", () => {
     vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) => source === CIRCUIT_SOURCE.COINBASE_PRICES);
     const db = mockD1([]), plan = await buildPrimaryPricePlan([{ id: "test-usdt", name: "Test USDT", symbol: "USDT" }], db);
     expect(plan.coinbaseSymbols).toEqual(["USDT"]);
-    vi.mocked(fetchCoinbasePrices).mockResolvedValue({ kind: "ok", value: { prices: new Map([["USDT", 1.0004]]), quoteAssetBySymbol: new Map([["USDT", "USD"]]), clockBySymbol: new Map([["USDT", "trade"]]), observedAtBySymbol: new Map([["USDT", 1_700_000_000]]), diagnostics: [{ source: "coinbase", stage: "primary", endpoint: "api.exchange.coinbase.com/products", status: null, ok: true, success: true, rejectionReasonCounts: { "wide-spread": 1 } }] } });
+    mockCoinbaseOk([["USDT", 1.0004, 1_700_000_000, "USD", "trade"]], [{ source: "coinbase", stage: "primary", endpoint: "api.exchange.coinbase.com/products", status: null, ok: true, success: true, rejectionReasonCounts: { "wide-spread": 1 } }]);
     const result = await collectPrimaryProviderQuotes({ db, plan });
     expect([result.quoteMaps.coinbasePrices.get("USDT"), result.quoteMaps.coinbaseObservedAtBySymbol.get("USDT")]).toEqual([1.0004, 1_700_000_000]);
     expect(result.providerDiagnostics).toContainEqual(expect.objectContaining({ source: "coinbase", rejectionReasonCounts: { "wide-spread": 1 } }));
@@ -301,25 +301,14 @@ describe("critical publication provider collection", () => {
 
   it.each([[60, true], [-1, true], [-6, false], [601, false], [null, false]] as const)(
     "requires a fresh independent USDC/USD anchor for Coinbase (anchor age %s)", async (age, accepted) => {
-      vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) =>
-        source === CIRCUIT_SOURCE.COINBASE_PRICES || source === CIRCUIT_SOURCE.BITSTAMP_PRICES);
-      const db = mockD1([]);
-      const plan = await buildPrimaryPricePlan([{ ...TEST_ASSET, id: "audd-novatti", symbol: "AUDD" }], db);
-      const now = Math.floor(Date.now() / 1000);
-      vi.mocked(fetchBitstampPrices).mockResolvedValue({ kind: "ok", value: {
-        prices: new Map([["USDC", 0.87]]),
-        observedAtBySymbol: new Map(age == null ? [] : [["USDC", now - age]]), diagnostics: [],
-      } });
-      vi.mocked(fetchCoinbasePrices).mockResolvedValue({ kind: "ok", value: {
-        prices: new Map([["AUDD", 0.65 / 0.87]]), observedAtBySymbol: new Map([["AUDD", now - 20]]),
-        quoteAssetBySymbol: new Map([["AUDD", "USDC"]]), clockBySymbol: new Map([["AUDD", "book"]]), diagnostics: [],
-      } });
+      vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) => source === CIRCUIT_SOURCE.COINBASE_PRICES || source === CIRCUIT_SOURCE.BITSTAMP_PRICES);
+      const db = mockD1([]), plan = await buildPrimaryPricePlan([{ ...TEST_ASSET, id: "audd-novatti", symbol: "AUDD" }], db), now = Math.floor(Date.now() / 1000);
+      mockBitstampUsdc(0.87, age == null ? null : now - age);
+      mockCoinbaseOk([["AUDD", 0.65 / 0.87, now - 20, "USDC", "book"]]);
       const { quoteMaps, providerDiagnostics } = await collectPrimaryProviderQuotes({ db, plan });
       expect(fetchBitstampPrices).toHaveBeenCalledOnce();
       expect(quoteMaps.coinbasePrices.has("AUDD")).toBe(accepted);
-      expect(providerDiagnostics).toContainEqual(expect.objectContaining({
-        quoteClock: "book", quoteObservedAt: now - 20, resolvedCount: accepted ? 1 : 0,
-      }));
+      expect(providerDiagnostics).toContainEqual(expect.objectContaining({ quoteClock: "book", quoteObservedAt: now - 20, resolvedCount: accepted ? 1 : 0 }));
       if (accepted) {
         expect(quoteMaps.coinbasePrices.get("AUDD")).toBeCloseTo(0.65, 8);
         expect(quoteMaps.coinbaseObservedAtBySymbol.get("AUDD")).toBe(Math.min(now - 20, now - age!));
@@ -335,8 +324,8 @@ describe("critical publication provider collection", () => {
     const db = mockD1([]), assets: PeggedAsset[] = [{ id: "eurc-circle", name: "EURC", symbol: "EURC", pegType: "peggedEUR" }, { id: "tgbp-tokenised", name: "Tokenised GBP", symbol: "tGBP", pegType: "peggedGBP" }];
     const plan = await buildPrimaryPricePlan(assets, db);
     expect([plan.coinbaseSymbols, plan.shouldFetchBitstamp]).toEqual([["EURC", "TGBP"], true]);
-    vi.mocked(fetchBitstampPrices).mockResolvedValue({ kind: "ok", value: { prices: new Map([["USDC", 0.9998]]), observedAtBySymbol: new Map([["USDC", now - 30]]), diagnostics: [] } });
-    vi.mocked(fetchCoinbasePrices).mockResolvedValue({ kind: "ok", value: { prices: new Map([["EURC", 1.0943], ["TGBP", 1.30815]]), observedAtBySymbol: new Map([["EURC", now - 10], ["TGBP", now - 45]]), quoteAssetBySymbol: new Map([["EURC", "USDC"], ["TGBP", "USDC"]]), clockBySymbol: new Map([["EURC", "book"], ["TGBP", "book"]]), diagnostics: [] } });
+    mockBitstampUsdc(0.9998, now - 30);
+    mockCoinbaseOk([["EURC", 1.0943, now - 10, "USDC", "book"], ["TGBP", 1.30815, now - 45, "USDC", "book"]]);
     const { results, providerDiagnostics } = await fetchPrimaryPrices(assets, db);
     expect(results.get("eurc-circle")).toMatchObject({ source: "coinbase", observedAt: now - 30, observedAtMode: "upstream" });
     expect(results.get("eurc-circle")?.price).toBeCloseTo(1.0943 * 0.9998, 8);
@@ -362,9 +351,7 @@ describe("critical publication provider collection", () => {
     vi.spyOn(circuit, "recordOutcomeSafe").mockResolvedValue(null);
     vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, key) =>
       key === CIRCUIT_SOURCE.BITSTAMP_PRICES || key === circuitSource);
-    vi.mocked(fetchBitstampPrices).mockResolvedValue({ kind: "ok", value: {
-      prices: new Map([["USDC", 0.87]]), observedAtBySymbol: new Map([["USDC", anchorAt]]), diagnostics: [],
-    } });
+    mockBitstampUsdc(0.87, anchorAt);
     if (clock) vi.mocked(fetchCoinbasePrices).mockImplementation(async () => {
       date.mockReturnValue((now + delay) * 1000);
       return { kind: "ok", value: { prices: new Map([["AUDD", 1 / 0.87]]), observedAtBySymbol: new Map([["AUDD", now]]),
@@ -397,9 +384,7 @@ describe("critical publication provider collection", () => {
       { id: coinId, name: "Curve coin", symbol: "CRVCOIN" },
     ], db);
     const anchorAt = Math.floor(Date.now() / 1000) - 60;
-    vi.mocked(fetchBitstampPrices).mockResolvedValue({ kind: "ok", value: {
-      prices: new Map([["USDC", 0.87]]), observedAtBySymbol: new Map([["USDC", anchorAt]]), diagnostics: [],
-    } });
+    mockBitstampUsdc(0.87, anchorAt);
     vi.mocked(fetchCurveOnchainPrices).mockResolvedValue({
       kind: "ok",
       value: {

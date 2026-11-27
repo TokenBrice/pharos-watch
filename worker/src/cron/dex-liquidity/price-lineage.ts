@@ -5,6 +5,7 @@ import {
   BITSTAMP_MARKETS,
   COINBASE_PRODUCTS,
   KRAKEN_MARKETS,
+  coinbaseProductMatchesAsset,
   krakenMarketMatchesAsset,
 } from "@shared/lib/pricing-provider-config";
 import { CURVE_POOL_CONFIGS, type CurvePoolConfig } from "@shared/lib/curve-pool-configs";
@@ -130,7 +131,7 @@ export function directUsdVenueKeys(source: string, symbol: string | undefined, s
     return ["venue:bitstamp"];
   }
   if (source !== "coinbase") return;
-  const product = COINBASE_PRODUCTS.find((row) => row.symbol === normalizedSymbol);
+  const product = COINBASE_PRODUCTS.find((row) => coinbaseProductMatchesAsset(row, normalizedSymbol, stablecoinId));
   if (product?.quoteAsset === "USD") return ["venue:coinbase"];
   if (product?.quoteAsset === "USDC") return ["venue:coinbase", "venue:bitstamp"];
 }

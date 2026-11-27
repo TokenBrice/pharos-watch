@@ -5,8 +5,10 @@ import type { ContractDeployment } from "../types/stablecoin-meta-primitives";
  * Entity type for block-explorer URL construction.
  *
  * Note: `'contract'` is only a distinct path segment on tron, starknet, and iota.
- * On EVM and Solana chains it falls through to the same `/address/` (or `/account/`)
- * URL as `'address'` — this is an intentional graceful fallback, not a defect.
+ * On canton, transactions route to `/transactions/`, `::` PartyIds route to `/party/`,
+ * and contract IDs route to `/contracts/`. On EVM and Solana chains `'contract'` falls
+ * through to the same `/address/` (or `/account/`) URL as `'address'` — this is an
+ * intentional graceful fallback, not a defect.
  */
 export type ExplorerEntityType = "tx" | "address" | "contract";
 
@@ -30,6 +32,13 @@ export function buildExplorerUrl(input: ExplorerUrlInput): string | null {
   const explorerUrl = input.explorerUrl ?? meta?.explorerUrl;
   const chainType = input.chainType ?? meta?.type;
   if (!explorerUrl || !chainType) return null;
+
+  if (input.chainKey === "canton") {
+    const encoded = encodeURIComponent(input.value);
+    if (input.entityType === "tx") return `${explorerUrl}/transactions/${encoded}`;
+    const segment = input.value.includes("::") ? "party" : "contracts";
+    return `${explorerUrl}/${segment}/${encoded}`;
+  }
 
   if (input.entityType === "tx") {
     return chainType === "tron"
