@@ -15,7 +15,6 @@ const NON_ETHEREUM_CANONICAL_CHAIN_BY_STABLECOIN = new Map<string, string>([
   ["bd-basedollar", "base"],
   ["copm-minteo", "polygon"],
   ["meusd-mezo", "mezo"],
-  ["steakusdc-steakhouse-base", "base"],
   ["usdai-usd-ai", "arbitrum"],
 ]);
 

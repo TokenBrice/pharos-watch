@@ -13,7 +13,7 @@ vi.mock("@shared/lib/tracked-stablecoin-utils", async (importOriginal) => {
     ...actual,
     // Exercise the wrapper configuration contract explicitly even when current
     // catalog parents are not in the production yield-bearing cohort.
-    ACTIVE_YIELD_BEARING_STABLECOINS: ["ftusd-flying-tulip", "iusd-infinifi", "susde-ethena", "ybold-yearn", "gtusdc-gauntlet", "bbqusdc-steakhouse", "stusds-sky"]
+    ACTIVE_YIELD_BEARING_STABLECOINS: ["ftusd-flying-tulip", "thusd-theo", "susde-ethena", "ybold-yearn", "gtusdc-gauntlet", "bbqusdc-steakhouse", "stusds-sky"]
       .map((id) => registry.TRACKED_META_BY_ID.get(id)!),
   };
 });
@@ -355,7 +355,7 @@ describe("tracked holder source contracts", () => {
     expect(onchain?.chain).toBeUndefined();
   });
 
-  it.each(["ftusd-flying-tulip", "iusd-infinifi"])("does not assign %s wrapper labels or types to a tokenization market", async (id) => {
+  it.each(["ftusd-flying-tulip", "thusd-theo"])("does not assign %s wrapper labels or types to a tokenization market", async (id) => {
     const variant = YIELD_VARIANT_MAP[id];
     for (const project of ["pendle-v2", "spectra-v2"]) {
       const rejected = makeDlYieldPool({

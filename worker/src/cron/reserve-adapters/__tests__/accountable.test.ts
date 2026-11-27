@@ -625,7 +625,7 @@ describe("adaptAccountableDashboard", () => {
     }).valid).toBe(true);
   });
 
-  it("keeps current-shaped Yuzu mGLO exposure unlinked while preserving the reviewed risk label", async () => {
+  it("links Yuzu mGLOBAL and mGLO exposures with reviewed risk labels", async () => {
     const config = yzusd.liveReservesConfig as LiveReservesConfig;
 
     const result = await runAccountablePayload(config, {
@@ -651,6 +651,8 @@ describe("adaptAccountableDashboard", () => {
       name: "Fasanara mGLO loop",
       pct: 40,
       risk: "high",
+      coinId: "mglo-midas-fasanara",
+      depType: "collateral",
     });
     expect(validateAdapterOutput(result, {
       adapter: getReserveAdapter("accountable") ?? undefined,

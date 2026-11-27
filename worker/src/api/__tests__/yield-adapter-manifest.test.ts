@@ -147,10 +147,10 @@ describe("handleYieldAdapterManifest", () => {
     );
     expect(scrvusdQuarantined).toBeUndefined();
 
-    expect(YIELD_VARIANT_MAP["iusd-infinifi"]).toMatchObject({
-      variantSymbol: "siUSD",
+    expect(YIELD_VARIANT_MAP["thusd-theo"]).toMatchObject({
+      variantSymbol: "sthUSD",
     });
-    expect(body.entries.some((entry) => entry.stablecoinId === "iusd-infinifi")).toBe(false);
+    expect(body.entries.some((entry) => entry.stablecoinId === "thusd-theo")).toBe(false);
 
     for (const baseAssetId of ["dola-inverse-finance", "gho-aave", "reusd-re-protocol"]) {
       expect(
