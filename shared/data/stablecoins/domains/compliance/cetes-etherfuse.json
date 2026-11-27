@@ -1,0 +1,72 @@
+{
+  "id": "cetes-etherfuse",
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "Etherfuse CETES is a NAV-accruing tokenized claim backed by Mexican federal CETES Treasury bonds, priced in MXN at an appreciating net asset value rather than maintained or redeemable at a fixed monetary value of national currency. Because it is not designed to maintain a stable fixed value for payment or settlement under GENIUS Act section 2(22)(A), it falls outside the GENIUS payment-stablecoin authorization regime. Etherfuse also restricts primary onboarding to KYC-verified non-U.S. persons.",
+      "references": [
+        {
+          "label": "GENIUS Act, Public Law 119-27, Section 2(22): payment stablecoin definition",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "Etherfuse CETES Stablebond overview and NAV mechanism",
+          "url": "https://docs.etherfuse.com/stablebonds/cetes-or-mexico",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "BHR México reasonable-assurance report - November 25, 2026",
+          "url": "https://api.etherfuse.com/statement/attestation/9fa9cef5-3077-435d-9bcf-9f3990256ab3.pdf",
+          "sourceKind": "auditor-report",
+          "sourceDate": "2026-11-25",
+          "accessedAt": "2026-11-27"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Etherfuse MX, S.A. de C.V.",
+    "issuerDomicile": "Mexico",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://app.etherfuse.com/legal/proof-of-reserves",
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": true,
+    "notes": "Etherfuse MX, S.A. de C.V. (operating with Etherfuse Liquid Mx, S.A.P.I. de C.V.) issues CETES as a NAV-accruing tokenized Mexican sovereign-bond claim backed by CETES held in segregated Mexican brokerage accounts via INDEVAL. Because CETES accrues yield in NAV rather than promising fixed 1:1 national-currency redemption, it is classified as non-payment-token for GENIUS tracking without asserting a U.S. securities-law determination. Monthly BHR México reasonable-assurance examinations reconcile total CETES tokens in circulation against brokerage custody balances; redemptionPolicyPresent remains false because the tracker reserves that flag for a fixed 1:1 payment-stablecoin redemption policy. MiCA status remains unassessed pending primary EU/EEA legal or offering documentation.",
+    "references": [
+      {
+        "label": "GENIUS Act, Public Law 119-27, Section 2(22)",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "Etherfuse CETES Stablebond overview",
+        "url": "https://docs.etherfuse.com/stablebonds/cetes-or-mexico",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "Etherfuse Proof of Reserves portal",
+        "url": "https://app.etherfuse.com/legal/proof-of-reserves",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "BHR México reasonable-assurance report - November 25, 2026",
+        "url": "https://api.etherfuse.com/statement/attestation/9fa9cef5-3077-435d-9bcf-9f3990256ab3.pdf",
+        "sourceKind": "auditor-report",
+        "sourceDate": "2026-11-25",
+        "accessedAt": "2026-11-27"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-11-27"
+  }
+}

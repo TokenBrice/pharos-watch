@@ -1,5 +1,21 @@
+import { vi } from "vitest";
+import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { ACTIVE_MINT_BURN_CONFIGS } from "../../lib/mint-burn-pipeline/flow-aggregate";
 import { handleMintBurnFlows } from "../mint-burn-flows";
 import { mintBurnScenario } from "../../test-helpers/__shared/mint-burn";
+
+export async function withoutActiveMintBurn(id: string, run: () => Promise<void>) {
+  const removed: Array<{ idx: number; item: (typeof ACTIVE_MINT_BURN_CONFIGS)[number] }> = [];
+  for (let i = ACTIVE_MINT_BURN_CONFIGS.length - 1; i >= 0; i--) {
+    if (ACTIVE_MINT_BURN_CONFIGS[i].stablecoinId === id) removed.push({ idx: i, item: ACTIVE_MINT_BURN_CONFIGS.splice(i, 1)[0] });
+  }
+  const origHas = WORKER_ACTIVE_IDS.has.bind(WORKER_ACTIVE_IDS);
+  const spy = vi.spyOn(WORKER_ACTIVE_IDS, "has").mockImplementation((c) => c !== id && origHas(c));
+  try { await run(); } finally {
+    spy.mockRestore();
+    for (let i = removed.length - 1; i >= 0; i--) ACTIVE_MINT_BURN_CONFIGS.splice(removed[i].idx, 0, removed[i].item);
+  }
+}
 
 export function makeFlowHourlyRow(nowSec: number) {
   return {

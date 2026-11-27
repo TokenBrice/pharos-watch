@@ -111,7 +111,7 @@ describe("handleYieldAdapterManifest", () => {
       body.entries.some((entry) => entry.stablecoinId === "susde-ethena" && entry.sourceKey === "defillama:susde-ethena"),
     ).toBe(false);
 
-    for (const stablecoinId of ["cgusd-cygnus-finance"]) {
+    for (const stablecoinId of ["cgusd-cygnus-finance", "cetes-etherfuse"]) {
       expect(RATE_DERIVED_CONFIGS.some((config) => config.stablecoinId === stablecoinId)).toBe(true);
       expect(
         body.entries.find((entry) =>
@@ -124,8 +124,6 @@ describe("handleYieldAdapterManifest", () => {
         body.entries.some((entry) => entry.stablecoinId === stablecoinId && entry.sourceKey === `rate-derived:${stablecoinId}`),
       ).toBe(false);
     }
-
-    expect(body.entries.some((entry) => entry.stablecoinId === "cetes-etherfuse")).toBe(false);
 
     expect(body.entries.some((entry) => entry.stablecoinId === "sdusd-dtrinity")).toBe(false);
   });

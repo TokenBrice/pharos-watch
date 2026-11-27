@@ -6,15 +6,7 @@ import { mockD1Strict } from "@shared/test-utils/mock-d1";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import babelFish from "@shared/data/stablecoins/coins/xusd-babelfish.json";
 import usual from "@shared/data/stablecoins/coins/usd0-usual.json";
-import {
-  runAdapter,
-  expectWarnings,
-  installAdapterNetwork,
-  type AdapterNetwork,
-  type AdapterNetworkSpec,
-  type AdapterRpcCall,
-  type AdapterRpcValue,
-} from "./reserve-adapter.test-support";
+import { runAdapter, expectWarnings, installAdapterNetwork, type AdapterNetwork, type AdapterNetworkSpec, type AdapterRpcCall, type AdapterRpcValue } from "./reserve-adapter.test-support";
 import { hasFatalWarnings } from "../validate";
 import { adaptBranchBalanceReserves, readBranchBalanceParams } from "../branch-balances";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -24,7 +16,6 @@ import usualWire from "./fixtures/usual-circular-oct7-2026.json";
 import usualContext from "./fixtures/usual-production-oct7-2026.json";
 
 const coin = { id: "test-coin" } as unknown as StablecoinMeta;
-
 const ADDR_A = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const ADDR_B = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 const ADDR_C = "0xcccccccccccccccccccccccccccccccccccccccc";
@@ -33,16 +24,12 @@ const HONEY_FACTORY = "0xa4afef880f5ce1f63c9fb48f661e27f8b4216401";
 const HONEY_TOKEN = "0xfcbd14dc51f0a4d49d5e53c2e0950e0bc26d0dce";
 const HONEY_ASSET = "0x549943e04f40284185054145c6e4e9568c1d3241";
 const HONEY_VAULT = "0x90bc07408f5b5eac4de38af76ea6069e1fcee363";
-const WAD = 10n ** 18n;
-const NOW_SEC = 1_700_000_000;
-const BERACHAIN_RPC_URL = "https://rpc.example/berachain";
-const ROOTSTOCK_RPC_URL = "https://rpc.example/rootstock";
-const BALANCE_OF_SELECTOR = toFunctionSelector("balanceOf(address)");
-const DECIMALS_SELECTOR = toFunctionSelector("decimals()");
+const WAD = 10n ** 18n, NOW_SEC = 1_700_000_000;
+const BERACHAIN_RPC_URL = "https://rpc.example/berachain", ROOTSTOCK_RPC_URL = "https://rpc.example/rootstock";
+const BALANCE_OF_SELECTOR = toFunctionSelector("balanceOf(address)"), DECIMALS_SELECTOR = toFunctionSelector("decimals()");
 const PRICES_BASE = "https://coins.llama.fi/prices/current";
 const REVIEWED_CENSUS = { kind: "reviewed-roster", reviewedAt: "2023-11-13", sourceUrls: ["https://example.com/census"] };
 const UNKNOWN_SLICE = { name: "Unclassified or unavailable reserve residual", pct: 100, risk: "high" };
-
 const addressWord = (address: string) => BigInt(address);
 const abiWords = (...words: bigint[]) => `0x${words.map((w) => w.toString(16).padStart(64, "0")).join("")}`;
 const word = (value: bigint): `0x${string}` => `0x${value.toString(16).padStart(64, "0")}`;
@@ -50,24 +37,12 @@ const uintArrayResult = (values: bigint[]) => abiWords(32n, BigInt(values.length
 const callArg = (call: AdapterRpcCall) => BigInt(`0x${call.data.slice(10)}`);
 const callAddressArg = (call: AdapterRpcCall) => `0x${call.data.slice(-40)}`;
 const assetKey = (chain: string, address: string) => `${chain}:${address.toLowerCase()}`;
+const wstEthBranch = (overrides: Record<string, unknown> = {}) => ({ name: "wstETH", holder: ADDR_A, token: { chain: "ethereum", address: ADDR_B, decimals: 18 }, risk: "low", ...overrides });
+const wbtcBranch = (overrides: Record<string, unknown> = {}) => ({ name: "WBTC", holder: ADDR_C, token: { chain: "ethereum", address: ADDR_D, decimals: 8 }, risk: "medium", ...overrides });
+const honeyBranch = (overrides: Record<string, unknown> = {}) => ({ name: "USDC.e", holder: HONEY_VAULT, token: { chain: "berachain", address: HONEY_ASSET, decimals: 6 }, risk: "low", priceUsd: 1, ...overrides });
+const usdcBranch = (overrides: Record<string, unknown> = {}) => ({ name: "USDC branch", holder: ADDR_A, token: { chain: "ethereum", address: ADDR_B, decimals: 6 }, risk: "low", coinId: "usdc-circle", ...overrides });
 
-const wstEthBranch = (overrides: Record<string, unknown> = {}) => ({
-  name: "wstETH", holder: ADDR_A, token: { chain: "ethereum", address: ADDR_B, decimals: 18 }, risk: "low", ...overrides,
-});
-const wbtcBranch = (overrides: Record<string, unknown> = {}) => ({
-  name: "WBTC", holder: ADDR_C, token: { chain: "ethereum", address: ADDR_D, decimals: 8 }, risk: "medium", ...overrides,
-});
-const honeyBranch = (overrides: Record<string, unknown> = {}) => ({
-  name: "USDC.e", holder: HONEY_VAULT, token: { chain: "berachain", address: HONEY_ASSET, decimals: 6 }, risk: "low", priceUsd: 1, ...overrides,
-});
-const usdcBranch = (overrides: Record<string, unknown> = {}) => ({
-  name: "USDC branch", holder: ADDR_A, token: { chain: "ethereum", address: ADDR_B, decimals: 6 }, risk: "low", coinId: "usdc-circle", ...overrides,
-});
-
-function makeBranchConfig(
-  branches?: unknown[],
-  options: { chain?: string; params?: Record<string, unknown> } = {},
-): LiveReservesConfig {
+function makeBranchConfig(branches?: unknown[], options: { chain?: string; params?: Record<string, unknown> } = {}): LiveReservesConfig {
   return {
     adapter: "evm-branch-balances", version: 1, semantics: "collateral-mix",
     inputs: { primary: { kind: "onchain-evm", chain: options.chain ?? "ethereum", rpcMode: "public-rpc" } },
@@ -75,22 +50,14 @@ function makeBranchConfig(
   } as LiveReservesConfig;
 }
 
-function makeHoneyConfig(opts: {
-  branches?: unknown[];
-  maxAssets?: number;
-  stableAssets?: Array<{ address: string; decimals: number }>;
-  census?: boolean;
-} = {}): LiveReservesConfig {
+function makeHoneyConfig(opts: { branches?: unknown[]; maxAssets?: number; stableAssets?: Array<{ address: string; decimals: number }>; census?: boolean } = {}): LiveReservesConfig {
   return makeBranchConfig(opts.branches ?? [honeyBranch()], {
     chain: "berachain",
     params: {
       ...(opts.census ? { census: REVIEWED_CENSUS } : {}),
       redemptionCapacity: {
-        kind: "honey-factory-vaults",
-        factoryAddress: HONEY_FACTORY,
-        expectedHoneyAddress: HONEY_TOKEN,
-        maxAssets: opts.maxAssets ?? 4,
-        stableAssets: opts.stableAssets ?? [{ address: HONEY_ASSET, decimals: 6 }],
+        kind: "honey-factory-vaults", factoryAddress: HONEY_FACTORY, expectedHoneyAddress: HONEY_TOKEN,
+        maxAssets: opts.maxAssets ?? 4, stableAssets: opts.stableAssets ?? [{ address: HONEY_ASSET, decimals: 6 }],
         sourceUrls: ["https://docs.berachain.com/general/tokens/honey"],
       },
     },
@@ -102,12 +69,7 @@ function priceJson(entries: Record<string, number>): Record<string, unknown> {
   return { [`${PRICES_BASE}/${Object.keys(coins).sort().join(",")}`]: { coins } };
 }
 
-interface BranchRpcOptions {
-  balances?: Record<string, bigint | null>;
-  decimals?: Record<string, bigint | null>;
-  extra?: Record<string, AdapterRpcValue>;
-}
-
+interface BranchRpcOptions { balances?: Record<string, bigint | null>; decimals?: Record<string, bigint | null>; extra?: Record<string, AdapterRpcValue>; }
 function branchRpc(options: BranchRpcOptions = {}): Record<string, AdapterRpcValue> {
   const rpc: Record<string, AdapterRpcValue> = {};
   for (const [token, balance] of Object.entries(options.balances ?? {})) rpc[`${token}:${BALANCE_OF_SELECTOR}`] = balance;
@@ -116,19 +78,10 @@ function branchRpc(options: BranchRpcOptions = {}): Record<string, AdapterRpcVal
 }
 
 interface HoneyOptions {
-  assetCount?: number;
-  assetAddresses?: string[];
-  vaultAddresses?: string[];
-  custody?: boolean;
-  failVaultAsset?: boolean;
-  failConvertToAssets?: boolean;
-  convertToAssets?: bigint | null;
-  factoryShares?: bigint;
-  collectedFees?: bigint;
-  factoryPaused?: boolean;
-  globalCap?: bigint;
-  relativeCap?: bigint;
-  assetBalanceByHolder?: (holder: string) => bigint;
+  assetCount?: number; assetAddresses?: string[]; vaultAddresses?: string[]; custody?: boolean;
+  failVaultAsset?: boolean; failConvertToAssets?: boolean; convertToAssets?: bigint | null;
+  factoryShares?: bigint; collectedFees?: bigint; factoryPaused?: boolean;
+  globalCap?: bigint; relativeCap?: bigint; assetBalanceByHolder?: (holder: string) => bigint;
 }
 
 function honeyNetwork(options: HoneyOptions = {}): AdapterNetworkSpec {
@@ -138,23 +91,15 @@ function honeyNetwork(options: HoneyOptions = {}): AdapterNetworkSpec {
   const custodyHolders = Array.from({ length: assetCount }, (_, i) => `0x${(0xc1 + i).toString(16).padStart(40, "0")}`);
   const custody = options.custody ?? false;
   const vaultOfAsset = Object.fromEntries(assets.map((a, i) => [a.toLowerCase(), vaults[i]]));
-
   const rpc: Record<string, AdapterRpcValue> = {
-    [`${HONEY_ASSET}:balanceOf(address)`]: 8_000_000n,
-    [`${HONEY_ASSET}:decimals()`]: 6n,
-    [`${HONEY_FACTORY}:honey()`]: HONEY_TOKEN,
-    [`${HONEY_FACTORY}:numRegisteredAssets()`]: BigInt(assetCount),
+    [`${HONEY_ASSET}:balanceOf(address)`]: 8_000_000n, [`${HONEY_ASSET}:decimals()`]: 6n,
+    [`${HONEY_FACTORY}:honey()`]: HONEY_TOKEN, [`${HONEY_FACTORY}:numRegisteredAssets()`]: BigInt(assetCount),
     [`${HONEY_FACTORY}:registeredAssets(uint256)`]: (call: AdapterRpcCall) => assets[Number(callArg(call))],
     [`${HONEY_FACTORY}:vaults(address)`]: (call: AdapterRpcCall) => vaultOfAsset[callAddressArg(call).toLowerCase()],
-    [`${HONEY_FACTORY}:paused()`]: options.factoryPaused ? 1n : 0n,
-    [`${HONEY_FACTORY}:forcedBasketMode()`]: 0n,
-    [`${HONEY_FACTORY}:isBasketModeEnabled(bool)`]: 0n,
-    [`${HONEY_FACTORY}:getWeights()`]: uintArrayResult(Array.from({ length: assetCount }, () => WAD)),
-    [`${HONEY_FACTORY}:globalCap()`]: options.globalCap ?? WAD,
-    [`${HONEY_FACTORY}:collectedAssetFees(address)`]: options.collectedFees ?? 0n,
-    [`${HONEY_FACTORY}:redeemRates(address)`]: 999_500_000_000_000_000n,
-    [`${HONEY_FACTORY}:isPegged(address)`]: 1n,
-    [`${HONEY_FACTORY}:relativeCap(address)`]: options.relativeCap ?? WAD,
+    [`${HONEY_FACTORY}:paused()`]: options.factoryPaused ? 1n : 0n, [`${HONEY_FACTORY}:forcedBasketMode()`]: 0n,
+    [`${HONEY_FACTORY}:isBasketModeEnabled(bool)`]: 0n, [`${HONEY_FACTORY}:getWeights()`]: uintArrayResult(Array.from({ length: assetCount }, () => WAD)),
+    [`${HONEY_FACTORY}:globalCap()`]: options.globalCap ?? WAD, [`${HONEY_FACTORY}:collectedAssetFees(address)`]: options.collectedFees ?? 0n,
+    [`${HONEY_FACTORY}:redeemRates(address)`]: 999_500_000_000_000_000n, [`${HONEY_FACTORY}:isPegged(address)`]: 1n, [`${HONEY_FACTORY}:relativeCap(address)`]: options.relativeCap ?? WAD,
   };
   assets.forEach((asset, i) => {
     const vault = vaults[i];
@@ -165,26 +110,17 @@ function honeyNetwork(options: HoneyOptions = {}): AdapterNetworkSpec {
     rpc[`${vault}:convertToAssets(uint256)`] = options.failConvertToAssets ? null : options.convertToAssets ?? 10_000_000n;
     rpc[`${asset}:${DECIMALS_SELECTOR}`] = 6n;
     if (options.assetBalanceByHolder) {
-      for (const h of [vault, custodyHolders[i]]) {
-        rpc[`${asset}:${BALANCE_OF_SELECTOR}${word(addressWord(h)).slice(2)}`] = options.assetBalanceByHolder(h.toLowerCase());
-      }
-    } else {
-      rpc[`${asset}:${BALANCE_OF_SELECTOR}`] = 8_000_000n;
-    }
+      for (const h of [vault, custodyHolders[i]]) rpc[`${asset}:${BALANCE_OF_SELECTOR}${word(addressWord(h)).slice(2)}`] = options.assetBalanceByHolder(h.toLowerCase());
+    } else rpc[`${asset}:${BALANCE_OF_SELECTOR}`] = 8_000_000n;
     if (custody) rpc[`${asset}:allowance(address,address)`] = 7_000_000n;
   });
   return { chains: { berachain: BERACHAIN_RPC_URL }, rpc };
 }
 
-async function runBranches(
-  config: LiveReservesConfig,
-  network: AdapterNetworkSpec | AdapterNetwork = {},
-  options: { ctx?: Record<string, unknown>; validate?: false } = {},
-) {
+async function runBranches(config: LiveReservesConfig, network: AdapterNetworkSpec | AdapterNetwork = {}, options: { ctx?: Record<string, unknown>; validate?: false } = {}) {
   return runAdapter("evm-branch-balances", "jpyt-dephaser", {
     network, config, nowSec: NOW_SEC,
-    ...(options.ctx ? { ctx: options.ctx } : {}),
-    ...(options.validate === false ? { validate: false as const } : {}),
+    ...(options.ctx ? { ctx: options.ctx } : {}), ...(options.validate === false ? { validate: false as const } : {}),
   });
 }
 
@@ -1067,6 +1003,42 @@ describe("branch multichain and receipt observations", () => {
     expect(priced.result.slices.map(({ pct }) => pct)).toEqual([80, 20]);
     rate = null;
     await expect(runOpt([receipt], network)).rejects.toThrow("exchange rate unavailable");
+  });
+
+  it("scales backing-ratio-vault receipts and withholds when pricing is unavailable", async () => {
+    const vault = "0x087ebaf3f1b094b2046912a5e5f0bad78df3eaa7";
+    const dBranch = {
+      ...optBranch("dUSDC"), token: { chain: "optimism", address: token, decimals: 18 },
+      priceUsd: 1, priceToken: { chain: "optimism", address: underlying },
+      receipt: { kind: "backing-ratio-vault" as const, vault },
+    };
+    let ratio: string | null = `0x${(8n * 10n ** 17n).toString(16).padStart(64, "0")}${"1".padStart(64, "0")}`;
+    const network: AdapterNetworkSpec = {
+      rpc: {
+        [`${token}:decimals()`]: 18n, [`${token}:${BALANCE_OF_SELECTOR}`]: 100n * 10n ** 18n,
+        [`${token}:0xfbfa77cf`]: BigInt(vault), [`${token}:0x6f307dc3`]: BigInt(underlying),
+        [`${vault}:0x08a7e3e1`]: () => ratio,
+        [`${usdcToken}:decimals()`]: 6n, [`${usdcToken}:${BALANCE_OF_SELECTOR}`]: 20_000_000n,
+      },
+    };
+    const priced = await runOpt([dBranch, optBranch("USDC", "optimism", usdcToken)], network);
+    expect(priced.result.slices.map(({ pct }) => pct)).toEqual([80, 20]);
+    expect((priced.result.metadata?.details as { branchObservations: Array<Record<string, unknown>> }).branchObservations[0]).toMatchObject({
+      balanceRaw: (100n * 10n ** 18n).toString(), backingRatioRaw: (8n * 10n ** 17n).toString(), valuationBalanceRaw: (80n * 10n ** 18n).toString(),
+    });
+    for (const bad of [`0x${"0".repeat(128)}`, `${ratio}${"1".padStart(64, "0")}`]) {
+      ratio = bad;
+      const degraded = await runOpt([dBranch, optBranch("USDC", "optimism", usdcToken)], network);
+      expect(degraded.result.warnings?.some((w) => w.code === "branch-reserve-book-partial")).toBe(true);
+      expect(degraded.result.metadata?.details).toMatchObject({ unavailableBranches: [{ name: "dUSDC", reason: "backing-ratio-unavailable" }] });
+    }
+    ratio = `0x${"0".repeat(64)}${"1".padStart(64, "0")}`;
+    const zeroValued = await runOpt([dBranch, optBranch("USDC", "optimism", usdcToken)], network);
+    expect(zeroValued.result.slices).toEqual([expect.objectContaining({ name: "USDC", pct: 100 })]);
+    expect((zeroValued.result.metadata?.details as { branchObservations: Array<Record<string, unknown>> }).branchObservations[0]).toMatchObject({
+      balanceRaw: (100n * 10n ** 18n).toString(), backingRatioRaw: "0", valuationBalanceRaw: "0",
+    });
+    await expect(runOpt([{ ...dBranch, receipt: { kind: "backing-ratio-vault" as const, vault: usdcToken } }], network)).rejects.toThrow("identity mismatch");
   });
 });
 

@@ -50,6 +50,8 @@ export const StablecoinDetailResponseSchema = z.object({
   /** Current admitted list USD buckets; distinct from the provider's dated token history. */
   currentCirculatingUSD: PegBucketsSchema.optional(),
   currentCirculatingNative: NonNegativeFiniteSchema.nullish(),
+  /** Canonical USD valuation price paired with currentCirculatingNative on pinned native overlays. */
+  currentSupplyValuationPriceUsd: z.number().finite().positive().optional(),
   /** Canonical producer source of the admitted current supply overlay. */
   currentSupplySource: z.string().optional(),
   commodityHistoryObservedAt: UnixSecondsSchema.positive().optional(),

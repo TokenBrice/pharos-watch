@@ -1049,6 +1049,52 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "The reviewed deployments are Polygon and Linea; Base was not present in the official registries checked and is intentionally not implied by this config.",
       ],
     }),
+    "jpydf-deltaforesight": defineReviewedCollateralConfig("2026-11-27", {
+      outputAssetType: "mixed-collateral",
+      outputAssets: ["asset:dusdc", "asset:dwsteth"],
+      costModel: documentedVariableFee(
+        "Liquity v2 dynamic redemption fee: 50 bps (0.50%) floor plus decaying baseRate (6-hour half-life), capped at 100% (CollateralRegistry.getRedemptionRateWithDecay() read 50 bps at Ethereum block 26504779 on 2026-11-27); redemptions pay out branch dTokens (dUSDC or dwstETH), and in-kind conversion to underlying USDC/wstETH may require a 3-day waiting period when Vault buffer liquidity is exhausted",
+        "formula",
+      ),
+      routeStatus: "open",
+      docs: [
+        sourceRefFull(
+          "JPY DeFi Redemptions",
+          "https://jpydf.gitbook.io/jpy-defi/borrowing-and-trove-management/redemptions.md",
+        ),
+        sourceRef(
+          "JPY DeFi dToken custody and in-kind withdrawal buffer",
+          "https://jpydf.gitbook.io/jpy-defi/collateral-and-pricing/dtoken.md",
+          ["route", "capacity", "settlement"],
+        ),
+        sourceRef(
+          "JPY DeFi Collateral Assets and branch parameters",
+          "https://jpydf.gitbook.io/jpy-defi/collateral-and-pricing/collateral-assets.md",
+          ["route", "capacity", "settlement"],
+        ),
+        sourceRef(
+          "JPY DeFi Oracle price checks and 30-hour JPY/USD redemption cutoff",
+          "https://jpydf.gitbook.io/jpy-defi/collateral-and-pricing/oracle.md",
+          ["route", "access", "settlement"],
+        ),
+        sourceRef(
+          "JPY DeFi Contract Addresses",
+          "https://jpydf.gitbook.io/jpy-defi/technical-information/contract-addresses.md",
+          ["route", "access"],
+        ),
+        sourceRef(
+          "Verified Ethereum CollateralRegistry source",
+          "https://etherscan.io/address/0x9bd92516f419965da7f3670aca5d070f9721e319#code",
+          ["route", "fees", "access"],
+        ),
+      ],
+      notes: [
+        "Any Ethereum holder can permissionlessly redeem JPYdf through CollateralRegistry (0x9bd92516f419965da7f3670aca5d070f9721e319) against lowest-rate Troves split proportionally across unbacked branch debt (dUSDC and dwstETH), valued at 1 JPY per JPYdf before fees.",
+        "Redemption delivers branch dTokens (dUSDC or dwstETH) atomically; converting dTokens into underlying USDC or wstETH via CollateralVault is immediate only while the Vault liquidity buffer suffices, otherwise burning dTokens into a withdrawal request subject to a 3-day waiting period (at block 26504779, dUSDC buffer held 20,041 USDC vs 601,836 dUSDC supply, with 581,795 USDC principal deployed to Aave V3 and Morpho V2).",
+        "Normal redemptions halt automatically if the shared Chainlink JPY/USD feed exceeds its 30-hour staleness threshold, and dToken in-kind exits pause if the branch backing ratio falls below 1.0 or during governance emergency pauses.",
+        "supply-full is a documented eventual system bound rather than guaranteed immediate underlying liquidity; live evm-branch-balances telemetry tracks branch collateral mix and current redemption fee bps without publishing executable redemption capacity.",
+      ],
+    }),
   }),
 ];
 

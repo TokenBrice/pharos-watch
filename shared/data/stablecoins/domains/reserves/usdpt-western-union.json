@@ -4,7 +4,7 @@
     {
       "sourceKey": "anchorage-independent-assurance:usdpt:cash",
       "name": "Demand deposits at FDIC-insured depository institutions",
-      "pct": 16.894198,
+      "pct": 11.574033,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "FDIC-insured depository institutions",
@@ -18,12 +18,30 @@
       "maturityDaysMax": 0
     },
     {
-      "sourceKey": "anchorage-independent-assurance:usdpt:money-market-funds",
-      "name": "Money market funds at net asset value (CUSIP 09250C572 $7,440,000; CUSIP 46655R119 $1,942,429)",
-      "pct": 83.105802,
+      "sourceKey": "anchorage-independent-assurance:usdpt:mmf-09250c572",
+      "name": "Money market fund (CUSIP 09250C572)",
+      "pct": 79.769553,
       "risk": "low",
       "assetClass": "money-market-fund",
-      "issuerOrObligor": "Money market funds identified by CUSIPs 09250C572 and 46655R119",
+      "issuerOrObligor": "Money market fund identified by CUSIP 09250C572 (fund manager not named in report)",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "sourceKey": "anchorage-independent-assurance:usdpt:mmf-46655r119",
+      "name": "JPMorgan JLTXX (CUSIP 46655R119)",
+      "pct": 8.656414,
+      "risk": "low",
+      "coinId": "jltxx-jpmorgan",
+      "depType": "collateral",
+      "assetClass": "money-market-fund",
+      "issuerOrObligor": "JPMorgan OnChain Liquidity-Token Money Market Fund",
       "riskFactors": [
         "credit",
         "duration",
@@ -35,51 +53,55 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-07",
-    "reviewer": "Sol unknown-resolver wave 2026-10-07 (RESERVE_1)",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 PR-1B reserve alignment (2026-11-27): September 30, 2026 Deloitte Schedule II CUSIP split in lockstep with live anchorage-independent-assurance manifest",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Deloitte USDPT reserve examination for August 2026",
-        "url": "https://learn.anchorage.com/08.31.26_USDPT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf"
+        "label": "Deloitte USDPT reserve examination for September 2026",
+        "url": "https://learn.anchorage.com/09.30.26_USDPT-Stablecoin-Attestation-Report-signed.pdf"
       },
       {
         "label": "Anchorage Digital USDPT reserve-attestation index",
         "url": "https://www.anchorage.com/platform/usdpt-reserve-attestations-anchorage-digital"
+      },
+      {
+        "label": "JPMorgan JLTXX fund identity (CUSIP 46655R119)",
+        "url": "https://am.jpmorgan.com/us/en/asset-management/adv/products/jpmorgan-onchain-liquidity-token-money-market-fund-token-class-46655r119"
       }
     ],
-    "rationale": "Deloitte's August 31, 2026 11:59:59 PM UTC examination, signed September 28, 2026: reserves $11,289,740 against 11,179,088 redeemable USDPT on Solana. Schedule II reports $1,907,311 demand deposits ($1,657,311 uninsured) and $9,382,429 money-market funds at NAV, split between CUSIP 09250C572 $7,440,000 and CUSIP 46655R119 $1,942,429. Schedule III reports surplus $110,652 with no timing or temporary differences. Re-reviewed on October 7: page 5 expressly classifies the entire cash balance as Demand deposit accounts at FDIC-insured depository institutions, held directly. This on-demand account category has no contractual term lock, supporting zero-day asset tenor for the cash slice only. The funds' N/A share maturity does not establish their underlying portfolio maximum maturity, which remains unknown. The August 31 composition date and amounts are unchanged.",
-    "compositionBasis": "Deloitte examination of the USDPT Reserve Report as of August 31, 2026",
-    "compositionAsOf": "2026-08-31",
+    "rationale": "Deloitte's September 30, 2026 11:59:59 PM UTC examination, signed October 26, 2026: reserves $22,505,889 against 22,400,125 redeemable USDPT on Solana. Schedule II reports $2,604,839 demand deposits at FDIC-insured depository institutions held directly (11.574033%; $2,354,839 uninsured) and $19,901,050 money market funds at NAV, split explicitly into CUSIP 09250C572 $17,952,847 (79.769553%; fund manager not named in report) and CUSIP 46655R119 $1,948,203 (8.656414%; JPMorgan OnChain Liquidity-Token Money Market Fund, linked to active jltxx-jpmorgan). Schedule III reports surplus $105,764 with no timing or temporary differences. Every slice carries the exact live anchorage-independent-assurance sourceKey and aligns in lockstep with proofOfReserves.latestReport and the live manifest.",
+    "compositionBasis": "Deloitte examination of the USDPT Reserve Report as of September 30, 2026",
+    "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "All positive reserve categories and values are identified. The report does not name the depository institutions or fund managers; funds are identified by CUSIP only.",
+    "knownUnknownExposure": "All positive reserve categories and values are identified. The report does not name the depository institutions or fund managers; CUSIP 46655R119 is matched to JPMorgan's primary JLTXX disclosure while CUSIP 09250C572 remains identified by CUSIP only.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Demand deposits at FDIC-insured depository institutions",
-        "pct": 16.894198,
+        "pct": 11.574033,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The examination identifies the deposit category and exact value; the depository institutions are not tracked stablecoin dependencies."
       },
       {
         "reserveIndex": 1,
-        "reserveName": "Money market funds at net asset value (CUSIP 09250C572 $7,440,000; CUSIP 46655R119 $1,942,429)",
-        "pct": 83.105802,
+        "reserveName": "Money market fund (CUSIP 09250C572)",
+        "pct": 79.769553,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "The examination identifies money market funds by CUSIP at disclosed NAVs; these are untracked exogenous assets, not tracked stablecoins."
+        "rationale": "CUSIP 09250C572 is an untracked institutional money-market fund disclosed by CUSIP only in Deloitte Schedule II, not a tracked stablecoin."
       }
     ]
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "FDIC-insured depository institutions (not named in the May 2026 report)",
+        "name": "FDIC-insured depository institutions (not named in the report)",
         "role": "bank",
         "jurisdiction": "United States"
       },
       {
-        "name": "Custodian or subcustodian for JLTXX fund shares (not disclosed)",
+        "name": "Custodian or subcustodian for money-market fund shares (not disclosed)",
         "role": "custodian",
         "jurisdiction": "United States"
       }
@@ -94,13 +116,9 @@
       {
         "label": "Deloitte USDPT reserve examination for May 2026",
         "url": "https://learn.anchorage.com/05.31.26_USDPT_Stablecoin_Attestation_Report_signed.pdf"
-      },
-      {
-        "label": "BlackRock Select Treasury Based Liquidity Fund",
-        "url": "https://www.blackrock.com/cash/en-us/products/282772/fed-trust-%28institutional%29-fund"
       }
     ],
-    "uncertainty": "Deloitte states that the assets were unencumbered and held in segregated fiduciary accounts for USDPT holders at the examination date, but does not name the depository institutions or the custodian/subcustodian of JLTXX shares. The point-in-time unencumbered finding does not establish a contractual prohibition on reuse or bankruptcy-remoteness terms.",
+    "uncertainty": "Deloitte states that the assets were unencumbered and held in segregated fiduciary accounts for USDPT holders at the examination date, but does not name the depository institutions or the custodian/subcustodian of money-market fund shares. The point-in-time unencumbered finding does not establish a contractual prohibition on reuse or bankruptcy-remoteness terms.",
     "knownUnknownExposurePct": 100
   }
 }

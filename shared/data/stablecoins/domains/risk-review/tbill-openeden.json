@@ -9,14 +9,18 @@
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "The five authored TBILL deployments are reviewed as independent native-issuance routes: Ethereum and Arbitrum OpenEdenVaultV5 vaults, the BNB Chain TBILL Vault, the Solana Token-2022 mint, and the XRPL TBL issuer. No public bridge contract, representation token, lockbox, adapter, relay, validator/DVN, rate limit, or burn-before-mint route was identified in the reviewed primary sources, so no bridge controls are authored. Whether OpenEden operates an off-chain issuer-native burn/mint service remains unresolved and is not asserted by this profile.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex mint-bridge-boundary migration",
+    "summary": "All five authored TBILL deployments are reviewed as independent native-issuance routes: Ethereum, Arbitrum (zero supply), and BNB Chain (18 decimals) OpenEden UUPS vaults, the Solana Token-2022 mint (zero supply), and the XRPL TBL issuer. No public bridge contract, representation token, lockbox, adapter, relay, validator/DVN, rate limit, or burn-before-mint route was identified in the reviewed primary sources, so no bridge controls are authored. Whether OpenEden operates an off-chain issuer-native burn/mint service remains unresolved and is not asserted by this profile.",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 PR-1B pinned 5-chain review",
     "confidence": "manual-review",
     "sources": [
       {
         "label": "OpenEden TBILL page",
         "url": "https://openeden.com/tbill"
+      },
+      {
+        "label": "OpenEden TBILL smart contract addresses",
+        "url": "https://docs.openeden.com/tbill/smart-contract-addresses"
       },
       {
         "label": "OpenEden app TBILL vault",
@@ -36,10 +40,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Independent native TBILL liability: OpenEdenVaultV5 deposit and maintainer-controlled mintTo issue shares against the Ethereum vault's USDC accounting; no bridge representation was identified.",
+        "reviewNote": "Independent native TBILL liability (16,938,350.016315 TBILL, 6 decimals at finalized block 26504747 on 2026-11-27): OpenEdenVaultV5 UUPS proxy owned by a 24h TimelockController with 4-of-5 Safe maintainer; no bridge representation was identified.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770864,
+        "observedAt": "2026-11-27",
+        "observedBlock": 26504747,
         "sources": [
           {
             "label": "OpenEden Ethereum vault",
@@ -63,10 +67,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Independent native TBILL liability: OpenEdenVaultV5 deposit and maintainer-controlled mintTo issue shares against the Arbitrum vault's USDC accounting; no bridge representation was identified.",
+        "reviewNote": "Independent native TBILL liability (reviewed zero supply at finalized block 527933933 on 2026-11-27, 6 decimals): OpenEdenVaultV5 UUPS proxy owned by a 24h TimelockController with 4-of-5 Safe maintainer; no bridge representation was identified.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-08-16",
-        "observedBlock": 495293895,
+        "observedAt": "2026-11-27",
+        "observedBlock": 527933933,
         "sources": [
           {
             "label": "OpenEden Arbitrum vault",
@@ -90,10 +94,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Independent native TBILL liability: the Token-2022 mint retains a live issuer mintAuthority; its transfer hook is not a bridge route and no cross-chain mint program was identified.",
+        "reviewNote": "Independent native TBILL liability (reviewed zero supply at finalized slot 474453823 on 2026-11-27, 6 decimals): Token-2022 mint retains live issuer mintAuthority CPNEkz5SaAcWqGMezXTti39ekErzMpDCtuPMGw9tt4CZ; its transfer hook is not a bridge route and no cross-chain mint program was identified.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-08-16",
-        "observedBlock": 439734298,
+        "observedAt": "2026-11-27",
+        "observedBlock": 474453823,
         "sources": [
           {
             "label": "OpenEden Solana token metadata",
@@ -117,10 +121,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Independent native TBILL liability: the XRPL issuer account creates TBL under its signer list; no cross-ledger burn/mint or bridge machinery was identified.",
+        "reviewNote": "Independent native TBILL liability (9,811,253.825176 TBL excluding hotwallet rB56JZWRKvpWNeyqM3QYfZwW4fS9YEyPWM at validated ledger 108600483 on 2026-11-27): XRPL issuer account creates TBL under a 2-of-3 signer list; no cross-ledger burn/mint or bridge machinery was identified.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-08-16",
-        "observedBlock": 106343204,
+        "observedAt": "2026-11-27",
+        "observedBlock": 108600483,
         "sources": [
           {
             "label": "XRPL validated JSON-RPC",
@@ -131,6 +135,7 @@
       {
         "id": "bsc:0x5b4681f0d7a01b817675f25892d3ad73572fd1d9",
         "destinationChain": "bsc",
+        "canonicalChain": "bsc",
         "contractAddress": "0x5b4681f0d7a01b817675f25892d3ad73572fd1d9",
         "protocol": "OpenEden TBILL native BNB Chain vault",
         "issuanceModel": "native-issuance",
@@ -139,21 +144,18 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "OpenEden's TBILL smart-contract page lists this exact BNB Chain address as the TBILL Vault alongside a dedicated price oracle, KYC manager and the tbill-v3-prod-bnb subgraph, the same issuer-operated vault architecture as the reviewed Ethereum and Arbitrum deployments; BscScan shows a live verified BEP-20 proxy and DefiLlama coin metadata reports 18 decimals (2026-10-30). No bridge pool, adapter or representation contract was identified. Vault controller roles and limits were not read.",
+        "reviewNote": "Independent native TBILL liability (217,941,772.693685 TBILL, 18 decimals at block 135992714 on 2026-11-27): OpenEden v3 UUPS proxy (implementation 0xf3c7bbd9f91de0664a3e2ec5063e45872da472d9) owned by 24h TimelockController 0x60df3ffaeac48b94c0dd174eadf6fa5860da791a with 4-of-5 Safe v1.4.1 maintainer 0x3ba6c5437232156baacba5c084c8a746e3217ed6; no bridge pool, adapter, or representation contract was identified.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-30",
+        "observedAt": "2026-11-27",
+        "observedBlock": 135992714,
         "sources": [
           {
-            "label": "OpenEden TBILL smart contract addresses (BNB Chain vault)",
+            "label": "OpenEden TBILL smart contract addresses (BNB Chain v3)",
             "url": "https://docs.openeden.com/tbill/smart-contract-addresses"
           },
           {
-            "label": "TBILL on BscScan (verified 2026-10-30)",
+            "label": "TBILL on BscScan",
             "url": "https://bscscan.com/address/0x5b4681F0d7A01B817675F25892D3Ad73572FD1D9"
-          },
-          {
-            "label": "DefiLlama coin metadata for the BNB Chain TBILL deployment (18 decimals)",
-            "url": "https://coins.llama.fi/prices/current/bsc:0x5b4681F0d7A01B817675F25892D3Ad73572FD1D9"
           }
         ]
       }

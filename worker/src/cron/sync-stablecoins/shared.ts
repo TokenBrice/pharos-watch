@@ -10,7 +10,7 @@ import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
-import { CURATED_AGGREGATE_ESCROW_RESIDUALS, getOnchainSupplyHoldReason, isKinesisWrapperSupplyId, isOnchainSupplyPartitionExcluded, prefersOnChainSupplyMcap, selectCuratedAggregateOnchainSupplyProbeContracts, selectSupplementalOnchainSupplyProbeContract, SFRAX_STOCK_PERIMETER, isSfraxStockContractRoster } from "@shared/lib/onchain-supply-probe";
+import { CURATED_AGGREGATE_ESCROW_RESIDUALS, getOnchainSupplyHoldReason, hasReconciledStrictNativeSupplyPacket, isAdmittedCanonicalNativeSupplySource, isKinesisWrapperSupplyId, isOnchainSupplyPartitionExcluded, isPinnedNativeSharesWorkflow, prefersOnChainSupplyMcap, requiresOriginalSupplyObservedAt, selectCuratedAggregateOnchainSupplyProbeContracts, selectSupplementalOnchainSupplyProbeContract, SFRAX_STOCK_PERIMETER, isSfraxStockContractRoster } from "@shared/lib/onchain-supply-probe";
 import { isKinesisWrapperSupplyCutoverActive } from "@shared/lib/supply-perimeter-changes";
 import { deriveSfraxStockPerimeter } from "@shared/lib/sfrax-supply";
 import { chainSupplyReconciles } from "@shared/lib/chains/circulating";
@@ -140,7 +140,7 @@ export function reviewedOnchainSupplyHoldFields(asset: Pick<PeggedAsset,
 > | null {
   const assetId = String(asset.id);
   const reason = getOnchainSupplyHoldReason(assetId);
-  if (!reason && !(prefersOnChainSupplyMcap(asset) && asset.supplySource === "onchain-supply-withheld")) return null;
+  if (!reason && !((prefersOnChainSupplyMcap(asset) || isPinnedNativeSharesWorkflow(asset)) && asset.supplySource === "onchain-supply-withheld")) return null;
   const meta = ACTIVE_META_BY_ID.get(assetId);
   if (meta && runStartedAt != null && asset.supplyPerimeter && !asset.supplyRestored && !asset.supplyUnavailableReason
     && asset.supplySource === "onchain-circulating-supply" && isSfraxStockContractRoster(meta)) {
@@ -430,10 +430,9 @@ function stampPreviousSupplyObservedAt(asset: PeggedAsset, cacheUpdatedAt: numbe
     return cloned;
   }
   const observedAt = supplyObservationClock(asset);
-  if (observedAt == null && asset.supplyRestored === true) {
-    // A carried value was observed by an earlier read, so this publication's
-    // clock is not its observation clock. Leave it unclocked: no restore may
-    // carry it and no consumer may age it from the payload.
+  if (observedAt == null && (asset.supplyRestored === true || requiresOriginalSupplyObservedAt(asset))) {
+    // A carried value or clocked/pinned native packet must carry its own
+    // original observation clock, never inherit the cache-write timestamp.
     delete cloned.supplyObservedAt;
     return cloned;
   }
@@ -546,6 +545,11 @@ function isWithinRestoreCeiling(previous: PeggedAsset, nowSec: number): boolean 
     return false;
   }
   if (previous.id === "xaut-tether" && previous.supplySource !== "onchain-circulating-supply") return false;
+  if (requiresOriginalSupplyObservedAt(previous)) {
+    const meta = ACTIVE_META_BY_ID.get(String(previous.id));
+    if (!hasReconciledStrictNativeSupplyPacket(previous, meta, nowSec)) return false;
+    return isSupplyObservationWithinRestoreCeiling(previous.supplyObservedAt!, nowSec);
+  }
   if (previous.supplySource === "coingecko-fallback" && prefersOnChainSupplyMcap(previous) && !kinesis) return false;
   // Cached on-chain packets must still satisfy today's deployment roster. A
   // removed or expanded aggregate, an ambiguous multi-contract footprint or a
@@ -583,8 +587,10 @@ export function restorePreferredNativeSupply(
   // replaces that cache lineage; fresh provider rows never enter this path.
   const legacyBootstrap = asset.id === "buidl-blackrock" && previous?.id === asset.id
     && previous.supplySource === "defillama" && previous.supplyRestored === true;
-  const restorableSource = previous?.supplySource === "onchain-total-supply"
-    || previous?.supplySource === "onchain-circulating-supply" || legacyBootstrap;
+  const restorableSource = (
+    (previous?.supplySource === "onchain-total-supply" || previous?.supplySource === "onchain-circulating-supply")
+    && isAdmittedCanonicalNativeSupplySource(previous, previous.supplySource)
+  ) || legacyBootstrap;
   const restored = restorableSource && !previous.supplyUnavailableReason
     && getCirculatingRawOrNull(previous) !== null && isWithinRestoreCeiling(previous, nowSec)
     ? markRestoredSupply(previous, nowSec) : null;
@@ -936,7 +942,7 @@ export function restoreMissingTrackedAssets(
       });
       continue;
     }
-    if (prefersOnChainSupplyMcap(meta) && (!isKinesisWrapperSupplyId(id) || isKinesisWrapperSupplyCutoverActive(id, nowSec))) {
+    if ((prefersOnChainSupplyMcap(meta) || isPinnedNativeSharesWorkflow(meta)) && (!isKinesisWrapperSupplyId(id) || isKinesisWrapperSupplyCutoverActive(id, nowSec))) {
       const restoredBase = previous ? markRestoredSupply(previous, nowSec) : null;
       // A prior row that cannot name its observation clock keeps only identity
       // and price: the native supply packet is withheld, never re-dated.

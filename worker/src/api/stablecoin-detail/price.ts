@@ -2,7 +2,8 @@ import { LEGACY_SOLOMON_USDV_ID, isSolomonPriceIdentityAllowed } from "../../lib
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { isKinesisWrapperSupplyCutoverActive } from "@shared/lib/supply-perimeter-changes";
-import { isKinesisWrapperSupplyId, prefersOnChainSupplyMcap } from "@shared/lib/onchain-supply-probe";
+import { WORKER_ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { hasReconciledStrictNativeSupplyPacket, isAdmittedCanonicalNativeSupplySource, isKinesisWrapperSupplyId, isPinnedNativeSharesWorkflow, prefersOnChainSupplyMcap, requiresCanonicalNativeSupply, requiresOriginalSupplyObservedAt } from "@shared/lib/onchain-supply-probe";
 import { admitSupplyBuckets, getUsdMarketCapBaselineOrNull, projectUsdMarketCapBaselineBuckets, type SupplyChangeBaselines } from "@shared/lib/supply";
 import { parseDetailSnapshotSourceClock } from "@shared/lib/detail-snapshot-inputs";
 import { addFreshnessHeaders } from "../../lib/api-freshness-headers";
@@ -74,7 +75,7 @@ async function applyCanonicalDetailOverlay(
     }
     // Only the admitted publication can set canonical checkpoints and provenance.
     if ("currentSupplyRestored" in detail || "currentSupplyUnavailableReason" in detail || "currentSupplyExcludedChains" in detail
-      || "currentSupplyComparisonExcludedChains" in detail || "currentSupplySource" in detail
+      || "currentSupplyComparisonExcludedChains" in detail || "currentSupplySource" in detail || "currentSupplyValuationPriceUsd" in detail
       || "currentCirculatingPrevWeekUSD" in detail || "currentCirculatingPrevMonthUSD" in detail
       || "currentCirculatingNative" in detail || "supplyChangeBaselines" in detail || "priceDerivation" in detail || "pricePublicationReason" in detail || "nominalPriceReference" in detail || "currentPeg" in detail) {
       delete detail.currentPeg;
@@ -86,6 +87,7 @@ async function applyCanonicalDetailOverlay(
       delete detail.currentSupplyExcludedChains;
       delete detail.currentSupplyComparisonExcludedChains;
       delete detail.currentSupplySource;
+      delete detail.currentSupplyValuationPriceUsd;
       delete detail.currentCirculatingNative;
       delete detail.currentCirculatingPrevWeekUSD;
       delete detail.currentCirculatingPrevMonthUSD;
@@ -110,12 +112,30 @@ async function applyCanonicalDetailOverlay(
       headers.delete("Content-Length");
       mutated = true;
     }
+    const strictNative = requiresOriginalSupplyObservedAt({ id: stablecoinId });
+    const canonicalNativeOnly = requiresCanonicalNativeSupply({ id: stablecoinId });
+    const markCanonicalSupplyUnavailable = () => {
+      detail.currentCirculatingNative = null;
+      detail.currentCirculatingUSD = {};
+      delete detail.currentSupplyValuationPriceUsd;
+      delete detail.currentCirculatingPrevDayUSD;
+      delete detail.currentSupplyObservedAt;
+      delete detail.currentSupplyRestored;
+      headers.delete("Content-Length");
+      mutated = true;
+    };
     // Read the publication, not price_cache: a last-good replay could resurrect
     // a quote that the current pricing pipeline deliberately withheld.
     const canonical = publication ?? await loadStablecoinsCache(db, { mode: "strict", contract: "published" });
-    if (canonical.kind !== "ok") return currentResult();
+    if (canonical.kind !== "ok") {
+      if (canonicalNativeOnly) markCanonicalSupplyUnavailable();
+      return currentResult();
+    }
     const cacheAge = now - canonical.updatedAt;
-    if (!Number.isFinite(cacheAge) || canonical.updatedAt <= 0 || cacheAge < 0) return currentResult();
+    if (!Number.isFinite(cacheAge) || canonical.updatedAt <= 0 || cacheAge < 0) {
+      if (canonicalNativeOnly) markCanonicalSupplyUnavailable();
+      return currentResult();
+    }
 
     const coin = canonical.payload.peggedAssets.find((asset) => asset.id === stablecoinId);
     // Reuse the already-read publication: current USD supply must match the list,
@@ -124,11 +144,19 @@ async function applyCanonicalDetailOverlay(
     const wrapperSupplyUnverified = (isKinesisWrapperSupplyId(stablecoinId) && wrapper !== (coin?.supplySource === "onchain-total-supply")) || (wrapper && (
       typeof wrapperSupplyClock !== "number" || !Number.isSafeInteger(wrapperSupplyClock) ||
       wrapperSupplyClock <= 0 || wrapperSupplyClock > now || now - wrapperSupplyClock > API_FRESHNESS_MAX_AGE_SEC.stablecoins));
+    const strictNativeAdmitted = !strictNative
+      || (coin != null && hasReconciledStrictNativeSupplyPacket(coin, WORKER_ACTIVE_META_BY_ID.get(stablecoinId), now));
+    const canonicalNativeSourceAdmitted = !canonicalNativeOnly
+      || (coin != null && isAdmittedCanonicalNativeSupplySource(coin, coin.supplySource));
     const hasCurrentSupply = coin != null && !coin.frozen && !wrapperSupplyUnverified && stablecoinId !== LEGACY_SOLOMON_USDV_ID &&
-      !coin.supplyUnavailableReason && admitSupplyBuckets(coin.circulating).status === "observed";
+      !coin.supplyUnavailableReason && strictNativeAdmitted && canonicalNativeSourceAdmitted &&
+      admitSupplyBuckets(coin.circulating).status === "observed";
     if (hasCurrentSupply) {
       detail.currentCirculatingUSD = coin.circulating;
       if (coin.circulatingNative !== undefined) detail.currentCirculatingNative = coin.circulatingNative;
+      if (typeof coin.valuationPriceUsd === "number" && Number.isFinite(coin.valuationPriceUsd) && coin.valuationPriceUsd > 0) {
+        detail.currentSupplyValuationPriceUsd = coin.valuationPriceUsd;
+      }
       if (coin.supplySource !== undefined) detail.currentSupplySource = coin.supplySource;
       detail.currentSupplyRestored = coin.supplyRestored === true;
       if (coin.supplyChainGuard?.partialCoverage === true) {
@@ -154,15 +182,17 @@ async function applyCanonicalDetailOverlay(
     // A canonical producer refusal must not be resurrected from provider history.
     const supplyUnavailableReason = coin?.supplyUnavailableReason
       ?? (coin?.supplyChainGuard?.status === "unavailable" ? coin.supplyChainGuard.reason : undefined);
-    const preferredSupplyUnavailable = coin != null && (prefersOnChainSupplyMcap(coin) || coin.id === "xaut-tether") &&
+    const preferredSupplyUnavailable = coin != null && (prefersOnChainSupplyMcap(coin) || isPinnedNativeSharesWorkflow(coin) || coin.id === "xaut-tether") &&
       coin.supplySource === "onchain-supply-withheld" && admitSupplyBuckets(coin.circulating).status !== "observed";
-    const supplyUnavailable = coin != null && !coin.frozen && stablecoinId !== LEGACY_SOLOMON_USDV_ID &&
-      !hasCurrentSupply && (supplyUnavailableReason != null || preferredSupplyUnavailable || wrapperSupplyUnverified);
+    const supplyUnavailable = !coin?.frozen && stablecoinId !== LEGACY_SOLOMON_USDV_ID && !hasCurrentSupply && (
+      canonicalNativeOnly || (coin != null && (supplyUnavailableReason != null || preferredSupplyUnavailable || wrapperSupplyUnverified))
+    );
     if (supplyUnavailable) {
       detail.currentCirculatingNative = null;
       detail.currentSupplyUnavailableReason = supplyUnavailableReason;
       if (supplyUnavailableReason == null) detail.currentCirculatingUSD = {};
       else delete detail.currentCirculatingUSD;
+      delete detail.currentSupplyValuationPriceUsd;
       delete detail.currentCirculatingPrevDayUSD;
       delete detail.currentSupplyObservedAt;
       delete detail.currentSupplyRestored;

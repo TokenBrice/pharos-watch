@@ -22,6 +22,8 @@
       "name": "JPMorgan JLTXX (CUSIP 46655R119)",
       "pct": 44.069459,
       "risk": "low",
+      "coinId": "jltxx-jpmorgan",
+      "depType": "collateral",
       "assetClass": "money-market-fund",
       "issuerOrObligor": "JPMorgan OnChain Liquidity-Token Money Market Fund",
       "riskFactors": [

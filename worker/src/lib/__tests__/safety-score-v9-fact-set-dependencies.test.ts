@@ -438,29 +438,26 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
     expect(compiled.dependencies.status.observationState).toBe("known");
   });
 
-  it("preserves the reviewed Frax WTGXX non-link", () => {
+  it("preserves the reviewed Frax USDB non-link", () => {
     const frax = {
       ...fraxMetaSource, reserves: fraxReserveSource.reserves, reserveReview: fraxReserveSource.reserveReview,
     } as unknown as V9ExtensionRegistryMeta;
-    const wtgxx = frax.reserves!.find((reserve) => reserve.name.startsWith("WTGXX"))!;
+    const usdb = frax.reserves!.find((reserve) => reserve.name.startsWith("USDB"))!;
     expect(frax.reserveReview?.nonLinkDispositions).toContainEqual(
       expect.objectContaining({
-        reserveIndex: frax.reserves!.indexOf(wtgxx),
+        reserveIndex: frax.reserves!.indexOf(usdb),
         disposition: "untracked-exogenous-asset",
-        candidateCoinIds: ["wtgxx-wisdomtree"],
+        candidateCoinIds: ["usdb-bridge"],
       }),
     );
-    // W3R04 refreshed the review date without changing this non-link. Admit
-    // the current reviewed evidence rather than testing before its date gate.
     const classifications = buildReviewedReserveClassifications(
-      [{ ...wtgxx, coinId: "wtgxx-wisdomtree", depType: "collateral" }],
+      [{ ...usdb, coinId: "usdb-bridge", depType: "collateral" }],
       frax,
       Date.parse(`${frax.reserveReview!.reviewedAt}T00:00:00.000Z`) / 1_000,
     );
     expect(classifications).toEqual([
       expect.objectContaining({
         trackedAssetDisposition: "reviewed-non-link",
-        // The reviewed non-link must strip the candidate edge, never publish it.
         trackedAssetId: null,
       }),
     ]);

@@ -8,7 +8,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-yield-methodology -->`v8.62`<!-- GENERATED-END: methodology-version-yield-methodology -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-yield-methodology -->`v8.63`<!-- GENERATED-END: methodology-version-yield-methodology -->
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/methodology-versions/registry.ts`
 
@@ -219,7 +219,7 @@ The dormant BIMA sUSBD matcher and consumed USBD-to-sUSBD variant have been reti
 
 The Royco Dawn adapter maps APY ratios to percent APY, measured tranche-vault TVL to `sourceTvlUsd`, and market coverage/utilization/status/drawdown plus share-token addresses into nested `sourceRisk` fields. Royco rows carry `venueRiskTier: "unknown"` until a reviewed venue-risk audit assigns a sourced tier. They also carry investability flags for withdrawal constraints, verified listing status, and whether the row is senior protected or junior first-loss. KYC/access booleans are nullable; the current Dawn market payload does not expose explicit KYC or jurisdiction restriction fields, so those penalties apply only if future source evidence populates them. The universal measured-TVL gate augments Royco's bespoke market/vault floors.
 
-The dormant Etherfuse CETES issuance reader has been retired without changing the CETES coin, catalog quarantine, or retained yield history. Banxico remains the independent MXN CETES benchmark authority. Re-admission would require a newly reviewed source and catalog eligibility evidence; missed observations are not synthesized.
+The dormant Etherfuse CETES issuance reader remains retired; missed historical observations are not synthesized. Following CETES's 2026-11-27 re-admission as an active `tokenized-fund` (Yield v8.63), `cetes-etherfuse` publishes via `RATE_DERIVED_CONFIGS` using Banxico's independent 28-day MXN CETES benchmark (`benchmarkCurrency: "MXN"`, `benchmarkOverrideKey: "MXN"`).
 
 The Yearn yBOLD adapter reads Yearn's first-party ydaemon vault endpoint twice: the yBOLD vault (`0x9f43…a3d8`) supplies `sourceTvlUsd`, and the Staked yBOLD vault (`0x2334…91cd`) supplies the net APR. yBOLD's own price-per-share is flat because Yearn routes the Liquity V2 Stability Pool return to holders who stake into `ysyBOLD`, so the staked net APR is the advertised yBOLD yield. The adapter fails closed unless the staked vault's underlying asset is still the tracked yBOLD vault, and rejects APR outside `(0, 100]%` or TVL below the 100k publication floor. It publishes `protocol-api:yearn:ybold` as a `lending-vault` row; the curated DeFiLlama pool `4c29f645-…` stays pinned as a lower-evidence corroborating alternative.
 
@@ -503,7 +503,7 @@ Exact feed URLs are owned by the [benchmark constants](https://github.com/TokenB
 
 **Fallback:** `RISK_FREE_RATE_FALLBACK = 3.75%` applies to USD only. Other benchmarks prefer a retained last-known source-backed value when available; otherwise they remain unavailable and rows fall back to USD when selection requires it. MXN does not use issuer-controlled product pages as benchmark fallbacks.
 
-**Tokenized-treasury benchmark overrides:** Some rate-derived treasury-like products tokenize the same instrument as their local benchmark, which can compress excess-yield and PYS context toward zero. `benchmarkOverrideKey` lets a rate-derived row compute APY from its configured product benchmark while comparing PYS/excess-yield against an explicit benchmark hurdle. USD T-bill/MMF-style proxies use `USD_EFFR` as the comparison hurdle; EUTBL carries an explicit same-currency override key (UKTBL was delisted under listing policy 2.0). CETES has no active issuance reader; its retained MXN benchmark mapping does not authorize source or catalog activation.
+**Tokenized-treasury benchmark overrides:** Some rate-derived treasury-like products tokenize the same instrument as their local benchmark, which can compress excess-yield and PYS context toward zero. `benchmarkOverrideKey` lets a rate-derived row compute APY from its configured product benchmark while comparing PYS/excess-yield against an explicit benchmark hurdle. USD T-bill/MMF-style proxies use `USD_EFFR` as the comparison hurdle; EUTBL carries an explicit same-currency override key (UKTBL was delisted under listing policy 2.0), and re-admitted CETES (`cetes-etherfuse`, Yield v8.63) uses `benchmarkOverrideKey: "MXN"` on its Banxico 28-day CETES rate-derived row while keeping the retired Etherfuse issuance reader disabled.
 
 **Currencies still falling back to USD:** AED, IDR, ZAR, SGD (and any other peg currency not listed above). These remain as `benchmarkSelectionMode: "fallback-usd"` until a stable public feed is wired for each.
 

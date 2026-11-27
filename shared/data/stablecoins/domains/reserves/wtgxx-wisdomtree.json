@@ -34,10 +34,11 @@
       }
     ],
     "rationale": "WisdomTree's fact sheet lists WTGXX top holdings as 79.57% Treasury bills and Treasury floating-rate notes and 20.43% tri-party repurchase agreements as of December 31, 2025. Holdings are subject to change without notice, so the dated source is not a current balance assertion. Since 2026-10-24 the reviewed reserve is the single keyed fund-share row matching the chainlink-nav native-fund-share feed (one WTGXX share per token); the dated December 31, 2025 look-through mix is retained here, not as slices: U.S. Treasury bills and Treasury floating-rate notes 79.57% (United States Treasury), Repurchase Agreements 20.43% (Deutsche Bank AG and Royal Bank of Canada NY repo counterparties).",
+    "compositionSource": "live-adapter",
     "compositionBasis": "WisdomTree WTGXX top-holdings disclosure",
     "compositionAsOf": "2025-12-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "The retained December 31, 2025 top-holdings snapshot does not establish current inventory, safeguards or token-specific assurance. Source-maintenance check 2026-10-07: official dataspanapi WTGXX_2/WTGXX_3 PDFs are reachable and dated June 30, with 80.72% Treasury bills/FRNs and 19.28% Deutsche Bank/RBC repos; these are a different period, not replacement weights for the retained 79.57/20.43 mix. FAQ distinguishes monthly holdings, daily 4pm ET NAV and dealer-inventory liquidity. Current NAV or institutional API access cannot renew holdings. Lifecycle quarantine and native multichain liabilities including Stellar remain unresolved; no activation or freshness budget for a skipped nonexistent snapshot is authorized.",
+    "knownUnknownExposure": "The retained December 31, 2025 top-holdings snapshot does not establish current inventory, safeguards or token-specific assurance. Source-maintenance check 2026-10-07: official dataspanapi WTGXX_2/WTGXX_3 PDFs are reachable and dated June 30, with 80.72% Treasury bills/FRNs and 19.28% Deutsche Bank/RBC repos; these are a different period, not replacement weights for the retained 79.57/20.43 mix. FAQ distinguishes monthly holdings, daily 4pm ET NAV and dealer-inventory liquidity. Current NAV or institutional API access cannot renew holdings; live reserve sync publishes the single keyed Chainlink WTGXX NAV fund-share slice.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

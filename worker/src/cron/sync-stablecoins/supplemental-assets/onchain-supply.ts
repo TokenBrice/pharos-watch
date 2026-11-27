@@ -533,7 +533,10 @@ async function fetchOnChainSupplyForContract(input: {
       throwIfAborted(supplySignal);
       const mcap = observation.supply * input.priceUsd;
       if (!Number.isFinite(mcap) || mcap < 0 || (mcap === 0 && !allowZeroSupply)) return reject("supply-valuation-invalid");
-      return { mcap, nativeSupply: observation.supply, supplySource: "onchain-total-supply", observedAt: observation.observedAt,
+      const supplySource: SupplementalOnChainSupplySource = input.curated?.hotwallet?.length
+        ? "onchain-circulating-supply"
+        : "onchain-total-supply";
+      return { mcap, nativeSupply: observation.supply, supplySource, observedAt: observation.observedAt,
         chain: supplyContract.chain, chainLabel: contractChainLabel(supplyContract) };
     }
     if (!isFixedDecimalDeployment(supplyContract)) return reject("amount-encoding-unavailable");
@@ -542,7 +545,9 @@ async function fetchOnChainSupplyForContract(input: {
     const stateClockRequired = input.meta.id === "buidl-blackrock" || isKinesisWrapperSupplyId(input.meta.id)
       || input.meta.id === "susds-sky" || input.meta.id === "paxg-paxos"
       || input.meta.id === "eurc-circle" || input.meta.id === "eurcv-societe-generale-forge"
-      || input.meta.id === "brla-brla-digital" || input.meta.id === "wm-m0";
+      || input.meta.id === "brla-brla-digital" || input.meta.id === "wm-m0"
+      || input.meta.id === "wtgxx-wisdomtree" || input.meta.id === "tbill-openeden"
+      || input.meta.id === "cetes-etherfuse";
     const needsJoinedBlock = family === "evm" && (
       stateClockRequired || !!CURATED_ONCHAIN_SUPPLY_EXCLUSIONS[input.meta.id] ||
       (!!CURATED_AGGREGATE_ESCROW_RESIDUALS[input.meta.id] &&

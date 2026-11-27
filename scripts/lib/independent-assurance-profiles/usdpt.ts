@@ -20,10 +20,16 @@ export const PROFILE: CompilerProfile = {
       pattern: /^\s*Cash\s+\$([\d,]+(?:\.\d{2})?)\s*$/m,
     },
     {
-      code: "money-market-funds",
-      label: "Money market funds, at net asset value",
+      code: "mmf-09250c572",
+      label: "Money market fund (CUSIP 09250C572), at net asset value",
       // eslint-disable-next-line security/detect-unsafe-regex -- anchored per-line pattern over an offline reviewed PDF text dump; bounded digit runs, no nested quantifier ambiguity.
-      pattern: /^\s*Money market funds, at net asset value\s+\$([\d,]+(?:\.\d{2})?)\s*$/m,
+      pattern: /^\s*a\.\s+09250C572\s+N\/A\s+\$([\d,]+(?:\.\d{2})?)\s*$/m,
+    },
+    {
+      code: "mmf-46655r119",
+      label: "JPMorgan JLTXX money market fund (CUSIP 46655R119), at net asset value",
+      // eslint-disable-next-line security/detect-unsafe-regex -- anchored per-line pattern over an offline reviewed PDF text dump; bounded digit runs, no nested quantifier ambiguity.
+      pattern: /^\s*b\.\s+46655R119\s+N\/A\s+\$([\d,]+(?:\.\d{2})?)\s*$/m,
     },
   ],
   liabilityRows: [

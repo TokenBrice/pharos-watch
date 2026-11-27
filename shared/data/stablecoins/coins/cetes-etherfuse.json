@@ -24,17 +24,17 @@
     "provider": "BHR México",
     "attestorJurisdiction": "Mexico",
     "latestReport": {
-      "periodEnd": "2026-10-26",
-      "publishedAt": "2026-10-26",
+      "periodEnd": "2026-11-25",
+      "publishedAt": "2026-11-25",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "owner-triage",
+      "reviewer": "Pharos PR-1B reserve verification",
       "confidence": "verified",
       "sources": [
         {
-          "label": "BHR México reasonable-assurance report - October 26, 2026",
-          "url": "https://api.etherfuse.com/statement/attestation/66199909-b7ce-4539-ab08-2b132cb648e3.pdf"
+          "label": "BHR México reasonable-assurance report - November 25, 2026",
+          "url": "https://api.etherfuse.com/statement/attestation/9fa9cef5-3077-435d-9bcf-9f3990256ab3.pdf"
         },
         {
           "label": "Etherfuse attestation history",
@@ -89,6 +89,11 @@
       "chain": "stellar",
       "address": "CETES-GCRYUGD5NVARGXT56XEZI5CIFCQETYHAPQQTHO2O3IQZTHDH4LATMYWC",
       "decimals": 7
+    },
+    {
+      "chain": "avalanche",
+      "address": "0xa51e029a76c58e102360836193481d41363a8352",
+      "decimals": 6
     }
   ],
   "collateralQuality": "rwa",
@@ -119,15 +124,24 @@
     "yieldSource": "Mexican government CETES bonds",
     "yieldType": "nav-appreciation"
   },
-  "launchDate": "2024-04-12",
-  "status": "quarantined",
-  "listingStatusReview": {
-    "changedAt": "2026-11-10",
-    "reviewBy": "2026-12-10",
-    "reason": "October 26 attestation: 67.46M net CETES at MXN 1.188; CoinGecko on November 10: 12.73M circulating at MXN 1.19. Denomination now agrees, but supply scope differs about 5.3x. Keep quarantined until a double-count-safe multichain circulating census agrees.",
-    "source": {
-      "label": "Etherfuse attestation history: October 26 exact CETES mint totals, reviewed November 10",
-      "url": "https://api.etherfuse.com/statement/attestation"
+  "notices": [
+    {
+      "type": "info",
+      "title": "KYC onboarding, U.S. restriction and issuer-backed claim",
+      "message": "Primary CETES minting and redemption require Etherfuse KYC/KYB onboarding, and U.S. persons are excluded from Etherfuse Stablebonds. CETES represents a contractual claim on Etherfuse backed by Mexican federal CETES bonds held through participating brokerages via INDEVAL; neither the Mexican federal government nor INDEVAL guarantees the token.",
+      "asOf": "2026-11-27",
+      "sources": [
+        {
+          "label": "Etherfuse Stablebonds CETES overview",
+          "url": "https://docs.etherfuse.com/stablebonds/cetes-or-mexico"
+        },
+        {
+          "label": "Etherfuse Proof of Reserves",
+          "url": "https://app.etherfuse.com/legal/proof-of-reserves"
+        }
+      ]
     }
-  }
+  ],
+  "launchDate": "2024-04-12",
+  "status": "active"
 }

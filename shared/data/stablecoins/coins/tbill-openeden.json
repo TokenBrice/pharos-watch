@@ -106,15 +106,24 @@
       "maxOracleAgeSec": 345600
     }
   },
-  "launchDate": "2023-03-24",
-  "status": "quarantined",
-  "listingStatusReview": {
-    "changedAt": "2026-10-30",
-    "reviewBy": "2026-12-13",
-    "reason": "2026-10-30: price resolves, CoinGecko mcap/supply zero, DefiLlama ends 2026-06-04; multi-chain supply unproven (XRPL, BNB). Reviewed 2026-11-26: hold continued pending a complete runtime supply path; review due 2026-12-13.",
-    "source": {
-      "label": "OpenEden deployments accessed 2026-09-30",
-      "url": "https://docs.openeden.com/tbill/smart-contract-addresses"
+  "notices": [
+    {
+      "type": "info",
+      "title": "Whitelisted fund shares and multi-chain issuance",
+      "asOf": "2026-11-27",
+      "message": "TBILL represents shares of OpenEden's BVI-registered professional fund and is restricted to KYC-whitelisted accredited and professional investors across Ethereum, Arbitrum, BNB Chain, Solana, and XRPL. Pharos aggregates native on-chain supply across all five deployments, excluding the documented XRPL operational hotwallet, and tracks reserve NAV through Chainlink.",
+      "sources": [
+        {
+          "label": "OpenEden TBILL FAQ and investor eligibility",
+          "url": "https://docs.openeden.com/tbill/faq"
+        },
+        {
+          "label": "OpenEden TBILL smart contract addresses",
+          "url": "https://docs.openeden.com/tbill/smart-contract-addresses"
+        }
+      ]
     }
-  }
+  ],
+  "launchDate": "2023-03-24",
+  "status": "active"
 }

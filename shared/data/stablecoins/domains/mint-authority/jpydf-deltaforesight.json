@@ -1,0 +1,176 @@
+{
+  "id": "jpydf-deltaforesight",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "headline": "Immutable Liquity core minting, with a governance-timelocked bridge minter admin.",
+    "summary": "Core JPYdf minting is restricted to registered Liquity v2 BorrowerOperations and ActivePool contracts with token owner() permanently renounced, but JpydfToken also exposes an uncapped bridgeMint() path whose bridgeAdmin is the 12-hour TimelockController controlled by a 2-of-3 Governance Safe behind a 48-hour bridge-minter confirmation delay.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-11-27",
+      "observedBlock": 26504779,
+      "sources": [
+        {
+          "label": "JPYdf verified Ethereum token source (JpydfToken)",
+          "url": "https://etherscan.io/address/0xb122f4a154f84708407213d6a715181180012f45#code"
+        },
+        {
+          "label": "JPY DeFi Contract Addresses",
+          "url": "https://jpydf.gitbook.io/jpy-defi/technical-information/contract-addresses.md"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xb122f4a154f84708407213d6a715181180012f45",
+        "deploymentRefs": [
+          "ethereum:0xb122f4a154f84708407213d6a715181180012f45"
+        ],
+        "label": "JPYdf token / registered Liquity v2 branch minters",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "JpydfToken.mint() is restricted to registered BorrowerOperations and ActivePool contracts after CollateralRegistry setup; owner() is renounced to the zero address.",
+        "observedAt": "2026-11-27",
+        "observedBlock": 26504779,
+        "sources": [
+          {
+            "label": "JPYdf verified Ethereum token source (JpydfToken)",
+            "url": "https://etherscan.io/address/0xb122f4a154f84708407213d6a715181180012f45#code"
+          },
+          {
+            "label": "JPY DeFi Contract Addresses",
+            "url": "https://jpydf.gitbook.io/jpy-defi/technical-information/contract-addresses.md"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At finalized Ethereum block 26504779 (hash 0x4ac055a16485bc1e6b67a114d68cb669ff809ba2ebd7043c3e884c7bf7ea7fbd, 2026-11-27T06:33:59Z), JpydfToken (0xb122f4a154f84708407213d6a715181180012f45) returned owner() = 0x0, collateralRegistryAddress() = 0x9bd92516f419965da7f3670aca5d070f9721e319, and zero EIP-1967 implementation and admin slots. Both live branch AddressesRegistries (dwstETH 0xf30dce7f and dUSDC 0xbdda51eb) returned owner() = 0x0 and riskParamsFinalized() = 1, and both BorrowerOperations and ActivePool contracts returned zero EIP-1967 implementation slots. Six additional reserved branches in CollateralRegistry held zero debt and zero collateral."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xf27de84f11e089b838769edfcff9872bc45c84fe",
+        "deploymentRefs": [
+          "ethereum:0xb122f4a154f84708407213d6a715181180012f45"
+        ],
+        "label": "JPY DeFi TimelockController (JpydfToken bridgeAdmin)",
+        "role": "minter-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "timelockDelaySec": 172800,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Holds JpydfToken.bridgeAdmin(); can propose and, after the 48-hour BRIDGE_MINTER_TIMELOCK (172800s) plus 12-hour TimelockController delay (43200s), confirm any contract as a bridgeMinter authorized to call uncapped bridgeMint(). Currently bridgeMinterCount() = 0 and proposedBridgeMinter() = 0x0.",
+        "observedAt": "2026-11-27",
+        "observedBlock": 26504779,
+        "sources": [
+          {
+            "label": "JPYdf verified Ethereum token source (JpydfToken)",
+            "url": "https://etherscan.io/address/0xb122f4a154f84708407213d6a715181180012f45#code"
+          },
+          {
+            "label": "JPY DeFi TimelockController verified source",
+            "url": "https://etherscan.io/address/0xf27de84f11e089b838769edfcff9872bc45c84fe#code"
+          },
+          {
+            "label": "JPY DeFi Governance and Timelock docs",
+            "url": "https://jpydf.gitbook.io/jpy-defi/governance/governance-and-timelock.md"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At finalized Ethereum block 26504779 (2026-11-27T06:33:59Z), JpydfToken.bridgeAdmin() returned TimelockController 0xf27de84f11e089b838769edfcff9872bc45c84fe, pendingBridgeAdmin() = 0x0, bridgeMinterCount() = 0, proposedBridgeMinter() = 0x0, and BRIDGE_MINTER_TIMELOCK() = 172800 (48h). TimelockController.getMinDelay() returned 43200 (12h). Verified JpydfToken source shows confirmBridgeMinter() enables bridgeMint(address,uint256) with no on-chain supply cap. TimelockController also holds DEFAULT_ADMIN_ROLE on both CollateralVault proxies and can finalize reserved branches once."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xa8331cfa52bc67a468d6126b4a18419c6d830b4e",
+        "deploymentRefs": [
+          "ethereum:0xb122f4a154f84708407213d6a715181180012f45"
+        ],
+        "label": "JPY DeFi Governance Safe (Timelock proposer and executor)",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 2,
+        "signerCount": 3,
+        "timelockDelaySec": 172800,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0xcC31936c238410fE508868a1AD31561C9D53939E",
+            "0xB9Dc859b37616a05989cABBB83C47F87a9dE4255",
+            "0x391DA35a293A224Ced4255ad41B9196D0204C7fB"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 26504779,
+          "observedAt": "2026-11-27",
+          "source": "onchain"
+        },
+        "capDescription": "2-of-3 Gnosis Safe v1.4.1 holding PROPOSER_ROLE, EXECUTOR_ROLE and CANCELLER_ROLE on TimelockController (0xf27de84f), enabling it to queue proposeBridgeMinter() and confirmBridgeMinter() after Timelock and 48-hour token delays.",
+        "observedAt": "2026-11-27",
+        "observedBlock": 26504779,
+        "sources": [
+          {
+            "label": "JPY DeFi Governance and Timelock docs",
+            "url": "https://jpydf.gitbook.io/jpy-defi/governance/governance-and-timelock.md"
+          },
+          {
+            "label": "JPY DeFi TimelockController verified source",
+            "url": "https://etherscan.io/address/0xf27de84f11e089b838769edfcff9872bc45c84fe#code"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At finalized Ethereum block 26504779 (2026-11-27T06:33:59Z), Safe 0xa8331cfa52bc67a468d6126b4a18419c6d830b4e returned VERSION() = 1.4.1, getThreshold() = 2, 3 owners, empty getModulesPaginated(), zero guard slot, fallbackHandler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99, and masterCopy 0x41675c099f32341bf84bfc5382af534df5c7461a. TimelockController confirmed hasRole(PROPOSER_ROLE) = true, hasRole(EXECUTOR_ROLE) = true, hasRole(CANCELLER_ROLE) = true, and hasRole(DEFAULT_ADMIN_ROLE) = false for both the Safe and TimelockController (with EXECUTOR_ROLE not open to 0x0)."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "review": {
+      "sources": [
+        {
+          "label": "JPYdf verified Ethereum token source (JpydfToken)",
+          "url": "https://etherscan.io/address/0xb122f4a154f84708407213d6a715181180012f45#code"
+        },
+        {
+          "label": "JPY DeFi Contract Addresses",
+          "url": "https://jpydf.gitbook.io/jpy-defi/technical-information/contract-addresses.md"
+        },
+        {
+          "label": "JPY DeFi Governance and Timelock docs",
+          "url": "https://jpydf.gitbook.io/jpy-defi/governance/governance-and-timelock.md"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ],
+      "evidence": "Pinned Ethereum reads at finalized block 26504779 (hash 0x4ac055a16485bc1e6b67a114d68cb669ff809ba2ebd7043c3e884c7bf7ea7fbd, 2026-11-27T06:33:59Z) and verified Blockscout/Etherscan source for JpydfToken (0xb122f4a154f84708407213d6a715181180012f45) confirm that token and Liquity v2 core contracts are non-upgradeable and token owner() is permanently renounced to 0x0, confining standard mint() to registered branch BorrowerOperations and ActivePool contracts. However, JpydfToken also includes bridgeMint(address,uint256) with no on-chain supply cap, governed by bridgeAdmin = TimelockController (0xf27de84f, 12h delay) controlled by 2-of-3 Governance Safe (0xa8331cfa). Authorizing a bridge minter requires a 48-hour BRIDGE_MINTER_TIMELOCK (172800s) in addition to TimelockController scheduling; zero bridge minters are currently registered or proposed. Economic-posture fields reflect that the live bridgeAdmin path can authorize uncapped contract minting after timelock, while no off-chain reserve reconciliation or supervisory regime applies.",
+      "reviewer": "Pharos Listing Policy v2 PR-1B mint-authority review",
+      "reviewedAt": "2026-11-27",
+      "disposition": "scoreable"
+    }
+  }
+}

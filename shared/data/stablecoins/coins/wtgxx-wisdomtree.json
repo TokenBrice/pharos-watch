@@ -73,6 +73,16 @@
       "chain": "plume",
       "address": "0xcf7a8813bd3bdaf70a9f46d310ce1ee8d80a4f5a",
       "decimals": 18
+    },
+    {
+      "chain": "stellar",
+      "address": "WTGX-GDMBNMFJ3TRFLASJ6UGETFME3PJPNKPU24C7KFDBEBPQFG2CI6UC3JG6",
+      "decimals": 7
+    },
+    {
+      "chain": "solana",
+      "address": "Em46fxxwgY2RRoUbBMSbEjJwY62x3ESMNdhnsGpEKewm",
+      "decimals": 9
     }
   ],
   "collateralQuality": "rwa",
@@ -112,19 +122,21 @@
   "notices": [
     {
       "type": "info",
-      "title": "Multi-chain fund with limited on-chain telemetry",
-      "message": "WTGXX is the digital share token of WisdomTree's '40 Act government money market fund, deployed across Arbitrum, Avalanche, Base, Ethereum, Optimism, Plume, and Stellar via WisdomTree Connect. Pharos tracks the verified contract set; live reserves use Chainlink's WTGXX NAV feed for score-grade reserve freshness."
+      "title": "Eligibility and multi-chain issuance",
+      "asOf": "2026-11-27",
+      "message": "WTGXX represents digital shares of WisdomTree's SEC-registered government money market fund, restricted to onboarded WisdomTree Connect and WisdomTree Prime holders across Arbitrum, Avalanche, Base, Ethereum, Optimism, Plume, Solana, and Stellar. Pharos aggregates native on-chain supply across all eight deployments and tracks reserve freshness through Chainlink's WTGXX NAV feed.",
+      "sources": [
+        {
+          "label": "WisdomTree WTGXX product page",
+          "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx"
+        },
+        {
+          "label": "WisdomTree Stellar identity (WTGX anchor_asset WTGXX)",
+          "url": "https://stellar.wisdomtree.com/.well-known/stellar.toml"
+        }
+      ]
     }
   ],
   "launchDate": "2023-11-07",
-  "status": "quarantined",
-  "listingStatusReview": {
-    "changedAt": "2026-10-30",
-    "reviewBy": "2026-12-13",
-    "reason": "2026-10-30: CoinGecko supply/mcap zero, no DefiLlama row; 7-chain supply reconciles to 660.8M shares (CoinGecko +75.8M, Stellar unreadable). Reviewed 2026-11-26: hold continued pending a complete runtime supply path; review due 2026-12-13.",
-    "source": {
-      "label": "WisdomTree Stellar identity accessed 2026-09-30",
-      "url": "https://stellar.wisdomtree.com/.well-known/stellar.toml"
-    }
-  }
+  "status": "active"
 }

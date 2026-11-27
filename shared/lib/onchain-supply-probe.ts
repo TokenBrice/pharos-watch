@@ -3,6 +3,7 @@ import { CHAIN_META } from "../types/chain-identity";
 import type { StablecoinMeta } from "../types/stablecoin-meta-schemas";
 import type { SupplyUnavailableReason } from "../types/supply";
 import { PUBLIC_RPC_URLS, SUPPLY_RPC_DEFAULTS } from "./chain-rpc-registry";
+import { chainSupplyReconciles } from "./chains/circulating";
 import { HYPEREVM_HISTORY_RPC_URL } from "./evm-rpc-capabilities";
 import { isFixedDecimalDeployment } from "./deployment-amounts";
 import { XrplIssuedCurrencyAmountSchema } from "../types/deployment-amounts";
@@ -144,6 +145,174 @@ export function prefersOnChainSupplyMcap(meta: Pick<StablecoinMeta, "id">): bool
   return REVIEWED_ONCHAIN_SUPPLY_PLANS[meta.id]?.preferMcap === true;
 }
 
+export function isPinnedNativeSharesWorkflow(meta: Pick<StablecoinMeta, "id">): boolean {
+  return REVIEWED_ONCHAIN_SUPPLY_PLANS[meta.id]?.nativeWorkflow === "pinned-native-shares";
+}
+
+interface StrictCanonicalNativeSpec {
+  supplySource: SupplementalOnChainSupplySource;
+  pegBucket: string;
+}
+
+const STRICT_CANONICAL_NATIVE_SPEC_BY_ID: Readonly<Record<string, StrictCanonicalNativeSpec>> = {
+  "wtgxx-wisdomtree": { supplySource: "onchain-total-supply", pegBucket: "peggedUSD" },
+  "tbill-openeden": { supplySource: "onchain-circulating-supply", pegBucket: "peggedUSD" },
+  "cetes-etherfuse": { supplySource: "onchain-total-supply", pegBucket: "peggedMXN" },
+  "jltxx-jpmorgan": { supplySource: "onchain-total-supply", pegBucket: "peggedUSD" },
+};
+
+/** Reviewed native plans whose current supply must come from canonical native publication, never provider history. */
+export function requiresCanonicalNativeSupply(meta: Pick<StablecoinMeta, "id">): boolean {
+  if (isPinnedNativeSharesWorkflow(meta)) return true;
+  return prefersOnChainSupplyMcap(meta) && !isKinesisWrapperSupplyId(meta.id);
+}
+
+/** Clocked and pinned native plans must carry an original observation clock, never cache write timestamps. */
+export function requiresOriginalSupplyObservedAt(meta: Pick<StablecoinMeta, "id">): boolean {
+  return isPinnedNativeSharesWorkflow(meta)
+    || Object.prototype.hasOwnProperty.call(STRICT_CANONICAL_NATIVE_SPEC_BY_ID, meta.id);
+}
+
+export function getStrictCanonicalNativePegBucket(meta: Pick<StablecoinMeta, "id">): string | null {
+  return STRICT_CANONICAL_NATIVE_SPEC_BY_ID[meta.id]?.pegBucket ?? null;
+}
+
+export function hasValidOriginalSupplyObservedAt(
+  observedAt: number | null | undefined,
+  nowSec: number,
+): observedAt is number {
+  return typeof observedAt === "number"
+    && Number.isSafeInteger(observedAt)
+    && observedAt > 0
+    && Number.isFinite(nowSec)
+    && observedAt <= nowSec;
+}
+
+export function isAdmittedCanonicalNativeSupplySource(
+  meta: Pick<StablecoinMeta, "id">,
+  supplySource: string | null | undefined,
+): boolean {
+  const strict = STRICT_CANONICAL_NATIVE_SPEC_BY_ID[meta.id];
+  if (strict) return supplySource === strict.supplySource;
+  if (isPinnedNativeSharesWorkflow(meta)) return supplySource === "onchain-total-supply";
+  if (prefersOnChainSupplyMcap(meta) && !isKinesisWrapperSupplyId(meta.id)) {
+    return supplySource !== "coingecko-fallback" && supplySource !== "onchain-supply-withheld";
+  }
+  return true;
+}
+
+interface StrictNativeSupplyPacketLike {
+  id: string;
+  price?: number | null;
+  supplySource?: string;
+  supplyObservedAt?: number | null;
+  supplyUnavailableReason?: string;
+  circulating?: Record<string, number>;
+  circulatingNative?: number | null;
+  valuationPriceUsd?: number | null;
+  chainCirculating?: Record<string, {
+    chainId?: string;
+    current?: number | null;
+    circulatingPrevDay?: number | null;
+    circulatingPrevWeek?: number | null;
+    circulatingPrevMonth?: number | null;
+  }>;
+}
+
+/** Single packet-integrity authority for pinned-native-shares restoration and detail overlay. */
+function hasReconciledPinnedNativeSharesPacket(
+  asset: StrictNativeSupplyPacketLike,
+  meta: Pick<StablecoinMeta, "id" | "contracts"> | undefined,
+  nowSec: number,
+): boolean {
+  if (!meta || !isPinnedNativeSharesWorkflow(meta) || !meta.contracts?.length) return false;
+  if (asset.supplySource !== "onchain-total-supply" || asset.supplyUnavailableReason) return false;
+  if (!hasValidOriginalSupplyObservedAt(asset.supplyObservedAt, nowSec)) return false;
+  const expectedPegBucket = STRICT_CANONICAL_NATIVE_SPEC_BY_ID[meta.id]?.pegBucket;
+  const buckets = Object.entries(asset.circulating ?? {});
+  if (buckets.length !== 1 || (expectedPegBucket && buckets[0][0] !== expectedPegBucket)) return false;
+  const [, aggregateSupply] = buckets[0];
+  if (typeof aggregateSupply !== "number" || !Number.isFinite(aggregateSupply) || aggregateSupply <= 0) return false;
+
+  const expectedByLabel = new Map<string, string>();
+  for (const contract of meta.contracts) {
+    const label = CHAIN_META[contract.chain]?.name ?? contract.chain;
+    if (expectedByLabel.has(label)) return false;
+    expectedByLabel.set(label, contract.chain);
+  }
+  const rows = asset.chainCirculating;
+  if (!rows) return false;
+  const rowEntries = Object.entries(rows);
+  if (rowEntries.length !== expectedByLabel.size) return false;
+  let chainSum = 0;
+  for (const [label, row] of rowEntries) {
+    const expectedChainId = expectedByLabel.get(label);
+    if (!expectedChainId || !row || row.chainId !== expectedChainId) return false;
+    if (typeof row.current !== "number" || !Number.isFinite(row.current) || row.current <= 0) return false;
+    for (const hist of [row.circulatingPrevDay, row.circulatingPrevWeek, row.circulatingPrevMonth]) {
+      if (hist !== undefined && (typeof hist !== "number" || !Number.isFinite(hist) || hist < 0)) return false;
+    }
+    chainSum += row.current;
+  }
+  if (!Number.isFinite(chainSum) || !chainSupplyReconciles(chainSum, aggregateSupply)) return false;
+
+  if (typeof asset.circulatingNative !== "number" || !Number.isFinite(asset.circulatingNative) || asset.circulatingNative <= 0) {
+    return false;
+  }
+  if (typeof asset.valuationPriceUsd !== "number" || !Number.isFinite(asset.valuationPriceUsd) || asset.valuationPriceUsd <= 0) {
+    return false;
+  }
+  const implied = asset.circulatingNative * asset.valuationPriceUsd;
+  if (!Number.isFinite(implied) || !chainSupplyReconciles(implied, aggregateSupply)) return false;
+  return true;
+}
+
+/** Shared roster, chain-ID, allowed-zero, peg-bucket and clock check for strict native supply plans. */
+export function hasReconciledStrictNativeSupplyPacket(
+  asset: StrictNativeSupplyPacketLike,
+  meta: Pick<StablecoinMeta, "id" | "contracts"> | undefined,
+  nowSec: number,
+): boolean {
+  if (!meta) return false;
+  if (isPinnedNativeSharesWorkflow(meta)) return hasReconciledPinnedNativeSharesPacket(asset, meta, nowSec);
+  const spec = STRICT_CANONICAL_NATIVE_SPEC_BY_ID[meta.id];
+  if (!spec) return true;
+  if (asset.supplySource !== spec.supplySource || asset.supplyUnavailableReason) return false;
+  if (!hasValidOriginalSupplyObservedAt(asset.supplyObservedAt, nowSec)) return false;
+  const buckets = Object.entries(asset.circulating ?? {});
+  if (buckets.length !== 1 || buckets[0][0] !== spec.pegBucket) return false;
+  const [, aggregateSupply] = buckets[0];
+  if (typeof aggregateSupply !== "number" || !Number.isFinite(aggregateSupply) || aggregateSupply <= 0) return false;
+  const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta);
+  if (!selected?.length) return false;
+  const expectedByLabel = new Map<string, { chainId: string; allowZeroSupply: boolean }>();
+  for (const { config, contract } of selected) {
+    const label = CHAIN_META[contract.chain]?.name ?? contract.chain;
+    const prev = expectedByLabel.get(label);
+    if (prev && prev.chainId !== contract.chain) return false;
+    expectedByLabel.set(label, {
+      chainId: contract.chain,
+      allowZeroSupply: prev ? (prev.allowZeroSupply && config.allowZeroSupply === true) : config.allowZeroSupply === true,
+    });
+  }
+  const rows = asset.chainCirculating;
+  if (!rows) return false;
+  const rowEntries = Object.entries(rows);
+  if (rowEntries.length !== expectedByLabel.size) return false;
+  let chainSum = 0;
+  for (const [label, row] of rowEntries) {
+    const expected = expectedByLabel.get(label);
+    if (!expected || !row || row.chainId !== expected.chainId) return false;
+    if (typeof row.current !== "number" || !Number.isFinite(row.current)) return false;
+    if (expected.allowZeroSupply ? row.current < 0 : row.current <= 0) return false;
+    for (const hist of [row.circulatingPrevDay, row.circulatingPrevWeek, row.circulatingPrevMonth]) {
+      if (hist !== undefined && (typeof hist !== "number" || !Number.isFinite(hist) || hist < 0)) return false;
+    }
+    chainSum += row.current;
+  }
+  return Number.isFinite(chainSum) && chainSum > 0 && chainSupplyReconciles(chainSum, aggregateSupply);
+}
+
 /** Non-commodity preferred-native plans run through the shared fiat-cg native-supply lane. */
 export function prefersReviewedNativeFiatSupply(
   meta: Pick<StablecoinMeta, "id" | "flags">,
@@ -218,6 +387,59 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
   "kag-kinesis": { preferMcap: true, aggregateContracts: [{ chain: "ethereum", allowZeroSupply: true }] },
   [ZEPHYR_ZSD_ASSET_ID]: { nativeWorkflow: "zephyr-scanner" },
   [ZEPHYR_ZYS_ASSET_ID]: { nativeWorkflow: "zephyr-scanner" },
+  // Reviewed 2026-11-27: WisdomTree WTGXX independent issuer-native deployments
+  // across six EVM chains, Stellar classic WTGX (anchored to WTGXX per
+  // stellar.wisdomtree.com/.well-known/stellar.toml; composite address avoids
+  // stellarAssetCode), and Solana Token-2022. No lock/mint bridge exists.
+  // Pinned 2026-11-27 total: 675,440,887.67 WTGXX (ETH 657.93M, ARB 14.06M,
+  // Stellar 1.82M, AVAX 0.91M, SOL 0.57M, BASE 0.15M, PLUME 1.08, OP 1.00).
+  "wtgxx-wisdomtree": {
+    preferMcap: true,
+    aggregateContracts: [
+      { chain: "arbitrum" },
+      { chain: "avalanche" },
+      { chain: "base" },
+      { chain: "ethereum" },
+      { chain: "optimism", allowZeroSupply: true },
+      supplyProbeChain("plume", { allowZeroSupply: true }),
+      { chain: "stellar" },
+      { chain: "solana" },
+    ],
+  },
+  // Reviewed 2026-11-27: OpenEden TBILL independent issuer-native deployments
+  // across Ethereum (6 dec), Arbitrum (6 dec, observed 0), Solana Token-2022
+  // (6 dec, observed 0), XRPL TBL (excluding operational hotwallet
+  // rB56JZWRKvpWNeyqM3QYfZwW4fS9YEyPWM holding 9.89B pre-mint inventory), and
+  // BNB Chain v3 (18 dec, 89.07% of supply). No lock/mint bridge exists.
+  // Pinned 2026-11-27 total: 244,691,376.54 TBILL ($285.07M at $1.16500612 NAV).
+  "tbill-openeden": {
+    preferMcap: true,
+    aggregateContracts: [
+      { chain: "ethereum" },
+      { chain: "arbitrum", allowZeroSupply: true },
+      { chain: "solana", allowZeroSupply: true },
+      supplyProbeChain("xrpl", { hotwallet: ["rB56JZWRKvpWNeyqM3QYfZwW4fS9YEyPWM"] }),
+      { chain: "bsc" },
+    ],
+  },
+  // Reviewed 2026-11-27: Etherfuse CETES six-chain additive census (Solana
+  // Token-2022 + Base/Polygon/Monad/Avalanche burn-and-mint LayerZero OFTs +
+  // Stellar Horizon including Soroban SAC contracts_amount). Pinned 2026-11-27
+  // sum (66,717,804.69 CETES) reconciles within 0.0046% of Etherfuse
+  // /lookup/stablebonds netAmountDecimal (66,720,810.36) and 0.187% of BHR Mexico
+  // 2026-11-25 attestation (66,593,867.42); no Solana treasury exclusion applies.
+  // CoinGecko circulating_supply (~13.0M) omits Stellar.
+  "cetes-etherfuse": {
+    preferMcap: true,
+    aggregateContracts: [
+      { chain: "solana" },
+      { chain: "base" },
+      { chain: "polygon" },
+      supplyProbeChain("monad"),
+      { chain: "stellar" },
+      { chain: "avalanche", allowZeroSupply: true },
+    ],
+  },
   "jltxx-jpmorgan": { nativeWorkflow: "pinned-native-shares" },
   "cdp-enosys": {
     aggregateContracts: [supplyProbeChain("flare")],
@@ -1516,7 +1738,7 @@ export function selectSupplementalOnchainSupplyProbeContract(meta: StablecoinMet
 }
 
 export function selectCuratedAggregateOnchainSupplyProbeContracts(
-  meta: StablecoinMeta,
+  meta: Pick<StablecoinMeta, "id" | "contracts">,
 ): readonly CuratedAggregateOnchainSupplyContract[] | null {
   if (getOnchainSupplyHoldReason(meta.id)) return null;
   const curatedContracts = REVIEWED_ONCHAIN_SUPPLY_PLANS[meta.id]?.aggregateContracts;

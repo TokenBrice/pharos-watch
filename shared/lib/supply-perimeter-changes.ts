@@ -1,4 +1,4 @@
-import { isKinesisWrapperSupplyId } from "./onchain-supply-probe";
+import { isKinesisWrapperSupplyId, REVIEWED_ONCHAIN_SUPPLY_PLANS } from "./onchain-supply-probe";
 import {
   CORE_STABLECOIN_AGGREGATE_UNIVERSE,
   CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_DATE,
@@ -189,6 +189,39 @@ export const SUPPLY_PERIMETER_CHANGES = [
     evidenceUrl: "https://github.com/TokenBrice/pharos-watch/issues/2306",
     marketWide: false,
   },
+  // === Listing Policy v2 PR-1B Wave-0 tokenized-fund re-admissions (Pricing v6.99) ===
+  // Re-admit WTGXX (8-chain native), TBILL (5-chain native excl. XRPL hotwallet),
+  // JLTXX (2-chain finalized Ethereum + Solana Token-2022 pinned shares), and CETES
+  // (6-chain native incl. Stellar Horizon SAC) on preferred native supply plans.
+  // Provisional cutover aligned to 2026-11-27T09:00:00Z PR-1B release window; reconcile to first observed native sync.
+  {
+    stablecoinId: "wtgxx-wisdomtree",
+    changedAt: Date.parse("2026-11-27T09:00:00Z") / 1000,
+    chainIds: ["arbitrum", "avalanche", "base", "ethereum", "optimism", "plume", "stellar", "solana"],
+    evidenceUrl: "https://stellar.wisdomtree.com/.well-known/stellar.toml",
+    marketWide: false,
+  },
+  {
+    stablecoinId: "tbill-openeden",
+    changedAt: Date.parse("2026-11-27T09:00:00Z") / 1000,
+    chainIds: ["ethereum", "arbitrum", "solana", "xrpl", "bsc"],
+    evidenceUrl: "https://docs.openeden.com/tbill/smart-contract-addresses",
+    marketWide: false,
+  },
+  {
+    stablecoinId: "jltxx-jpmorgan",
+    changedAt: Date.parse("2026-11-27T09:00:00Z") / 1000,
+    chainIds: ["ethereum", "solana"],
+    evidenceUrl: "https://www.sec.gov/Archives/edgar/data/1659326/000119312526410014/d172947d497.htm",
+    marketWide: false,
+  },
+  {
+    stablecoinId: "cetes-etherfuse",
+    changedAt: Date.parse("2026-11-27T09:00:00Z") / 1000,
+    chainIds: ["solana", "base", "polygon", "monad", "stellar", "avalanche"],
+    evidenceUrl: "https://api.etherfuse.com/statement/attestation/9fa9cef5-3077-435d-9bcf-9f3990256ab3.pdf",
+    marketWide: false,
+  },
   // Listing policy v2 (core-stablecoins-v2): Pharos stablecoin totals and non-USD cohorts exclude
   // tokenized fund shares from the cutover without restating pre-cutover core-stablecoins-v1
   // history; provider-sourced /api/stablecoin-charts may still include llamaId fund shares while
@@ -224,4 +257,12 @@ export function isAmbiguousSupplyPerimeterDay(stablecoinId: string, observedAt: 
 export function getLatestSupplyPerimeterChange(start: number, end: number): number | null {
   const changes = SUPPLY_PERIMETER_CHANGES.filter((change) => change.marketWide && change.changedAt > start && change.changedAt <= end);
   return changes.length ? Math.max(...changes.map((change) => change.changedAt)) : null;
+}
+
+/** Provider supply backfills must not overwrite or fill on/after a preferred native-stock cutover day. */
+export function isProviderBackfillFencedByNativeCutover(stablecoinId: string, snapshotDateSec: number): boolean {
+  const plan = REVIEWED_ONCHAIN_SUPPLY_PLANS[stablecoinId];
+  if (!plan || (plan.preferMcap !== true && plan.nativeWorkflow == null)) return false;
+  return SUPPLY_PERIMETER_CHANGES.some((change) =>
+    change.stablecoinId === stablecoinId && snapshotDateSec >= Math.floor(change.changedAt / 86_400) * 86_400);
 }

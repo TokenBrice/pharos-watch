@@ -1,0 +1,137 @@
+{
+  "id": "jpydf-deltaforesight",
+  "reserves": [
+    {
+      "name": "USDC collateral in dUSDC branch (CollateralVault, Aave V3 and Morpho V2)",
+      "sourceKey": "evm-branch-balances:ethereum:0x01dd27d3422df99a56c60945e561243a8027262c",
+      "pct": 77.9,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "blacklistable": true,
+      "blacklistabilityExposure": "upstream",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle USDC held via JPY DeFi dUSDC CollateralVault (0x087ebaf3f1b094b2046912a5e5f0bad78df3eaa7) and deployed across Aave V3 (aEthUSDC) and Gauntlet Morpho Vault V2",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Lido wstETH collateral in dwstETH branch (CollateralVault)",
+      "sourceKey": "evm-branch-balances:ethereum:0xb1f83c8e22f8644858c99675260c642403fae85c",
+      "pct": 22.1,
+      "risk": "low",
+      "blacklistable": false,
+      "blacklistabilityExposure": "no",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Lido wstETH held in JPY DeFi dwstETH CollateralVault (0x6042755ecca71a1be9c7091441ca5beaa6b520e4)",
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 PR-1B pinned reserve audit",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "JPY DeFi Collateral Assets",
+        "url": "https://jpydf.gitbook.io/jpy-defi/collateral-and-pricing/collateral-assets.md"
+      },
+      {
+        "label": "JPY DeFi dToken custody and backing ratio",
+        "url": "https://jpydf.gitbook.io/jpy-defi/collateral-and-pricing/dtoken.md"
+      },
+      {
+        "label": "JPY DeFi Collateral Strategies",
+        "url": "https://jpydf.gitbook.io/jpy-defi/collateral-and-pricing/strategies.md"
+      },
+      {
+        "label": "JPY DeFi Contract Addresses",
+        "url": "https://jpydf.gitbook.io/jpy-defi/technical-information/contract-addresses.md"
+      },
+      {
+        "label": "Ethereum PublicNode RPC (finalized block 26504779)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ],
+    "rationale": "Measured at finalized Ethereum block 26504779 (hash 0x4ac055a16485bc1e6b67a114d68cb669ff809ba2ebd7043c3e884c7bf7ea7fbd, 2026-11-27T06:33:59Z). Branch TroveManager.getEntireBranchColl() totals (ActivePool plus DefaultPool accounting; both DefaultPools held zero) matched ActivePool dToken balances: 601,835.830934 dUSDC (TroveManager 0xd95924a5368d1c1dafcd6b7753d4ac333661b68a / ActivePool 0x23e7582cc75c10bce92adbb6fb4909747f6282b8; dUSDC totalSupply 601,835.831739; CollateralVault totalUnderlying 601,836.831739 USDC, comprising 20,041.13 USDC idle vault buffer, 290,897.35 USDC principal in Aave V3 aEthUSDC 0x98c23e9d, 290,897.35 USDC principal in Gauntlet Morpho Vault V2 0x8c106eed, and 1.00 USDC accrued strategy surplus, giving capped backingRatio 1.0) and 78.920029 dwstETH (TroveManager 0x77c43f2636d12861d1c1a9e986e1344de66326d3 / ActivePool 0xcdc86e2b6ba7ec314b96aadaf6c1d65e1b63bc24; CollateralVault holding 78.920029 wstETH idle with zero external strategy deployment, backingRatio 1.0). All six reserved branches in CollateralRegistry returned zero debt and zero collateral. Valued using same-block Chainlink feeds (USDC/USD $0.99987004 -> $601,757.62; stETH/USD $1,732.559933 * stEthPerToken 1.25020264 = $2,166.0510/wstETH -> $170,944.81; total $772,702.43), collateral mix is 77.88% (77.9%) USDC and 22.12% (22.1%) wstETH.",
+    "compositionBasis": "Pinned Ethereum TroveManager getEntireBranchColl() branch totals and CollateralVault underlying holdings at finalized block 26504779 (2026-11-27T06:33:59Z)",
+    "compositionAsOf": "2026-11-27",
+    "compositionSource": "live-adapter",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Withdrawal latency for externally deployed dUSDC under Aave V3 or Morpho V2 utilization stress and governance discretion over vault upgrades and loss recognition are not quantified as static legal terms; branch weights are measured on-chain.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 1,
+        "reserveName": "Lido wstETH collateral in dwstETH branch (CollateralVault)",
+        "pct": 22.1,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Lido wstETH is a non-stablecoin liquid-staked ETH collateral asset not tracked as a stablecoin in Pharos."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "JPY DeFi dUSDC CollateralVault (ERC-1967 proxy 0x087ebaf3f1b094b2046912a5e5f0bad78df3eaa7) idle USDC buffer",
+        "role": "other",
+        "sharePct": 2.6,
+        "jurisdiction": "Onchain protocol"
+      },
+      {
+        "name": "Aave V3 Ethereum Pool via AaveV3Strategy proxy (0xf91acaa3dd75044fa2abd4e9226e8d7631fe7c63) holding aEthUSDC",
+        "role": "other",
+        "sharePct": 37.64,
+        "jurisdiction": "Onchain protocol"
+      },
+      {
+        "name": "Gauntlet Morpho Vault V2 (0x8c106eedad96553e64287a5a6839c3cc78afa3d0) via MorphoV2Strategy proxy (0x7be8e8e316827bc2dcaf0862ee234985f80c1946)",
+        "role": "other",
+        "sharePct": 37.64,
+        "jurisdiction": "Onchain protocol"
+      },
+      {
+        "name": "JPY DeFi dwstETH CollateralVault (ERC-1967 proxy 0x6042755ecca71a1be9c7091441ca5beaa6b520e4) holding idle wstETH",
+        "role": "other",
+        "sharePct": 22.12,
+        "jurisdiction": "Onchain protocol"
+      }
+    ],
+    "segregation": "mixed",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 PR-1B pinned reserve audit",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "JPY DeFi dToken custody and liquidity buffer",
+        "url": "https://jpydf.gitbook.io/jpy-defi/collateral-and-pricing/dtoken.md"
+      },
+      {
+        "label": "JPY DeFi Collateral Strategies",
+        "url": "https://jpydf.gitbook.io/jpy-defi/collateral-and-pricing/strategies.md"
+      },
+      {
+        "label": "JPY DeFi Governance and Timelock",
+        "url": "https://jpydf.gitbook.io/jpy-defi/governance/governance-and-timelock.md"
+      },
+      {
+        "label": "Ethereum PublicNode RPC (finalized block 26504779)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ],
+    "uncertainty": "Underlying collateral is held in upgradeable ERC-1967 CollateralVault and Strategy proxies administered by the 12-hour TimelockController (2-of-3 Governance Safe) and operated by a 2-of-5 Safe (0xc89592b3); 96.7% of dUSDC principal is deployed into Aave V3 and Gauntlet Morpho Vault V2, which lend assets to borrowers. No off-chain segregated trust or bankruptcy-remoteness legal opinion applies."
+  }
+}

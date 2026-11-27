@@ -200,7 +200,7 @@ export async function handleDetailSnapshotInputs(db: D1Database, url: URL): Prom
           entries.push(boundSnapshotEntry({
             id,
             status: "available",
-            liveSummary: projectStablecoinLiveSummary(StablecoinDetailResponseSchema.parse(overlaid.detail), id),
+            liveSummary: projectStablecoinLiveSummary(StablecoinDetailResponseSchema.parse(overlaid.detail), id, now),
             supplyHistory,
             updatedAt: { liveSummary: liveSummaryUpdatedAt, supplyHistory: supplyHistoryUpdatedAt },
             freshness: {
@@ -267,7 +267,7 @@ export async function handleDetailSnapshotInputs(db: D1Database, url: URL): Prom
       entries.push(boundSnapshotEntry({
         id,
         status: "available",
-        liveSummary: projectStablecoinLiveSummary(StablecoinDetailResponseSchema.parse(detail), id),
+        liveSummary: projectStablecoinLiveSummary(StablecoinDetailResponseSchema.parse(detail), id, now),
         supplyHistory,
         updatedAt: { liveSummary: liveSummaryUpdatedAt, supplyHistory: supplyHistoryUpdatedAt },
         freshness: {

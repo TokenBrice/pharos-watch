@@ -42,9 +42,12 @@ describe("ArchetypeExplainerBody representative coins", () => {
   });
 
   it("omits quarantined coins from tracked examples", () => {
-    render(<ArchetypeExplainerBody content={ARCHETYPE_CONTENT.tbill} />);
-
-    expect(screen.queryByRole("link", { name: /WTGXX/ })).toBeNull();
+    const tbill = ARCHETYPE_CONTENT.tbill;
+    render(<ArchetypeExplainerBody content={{
+      ...tbill,
+      representativeCoins: [...tbill.representativeCoins, { coinId: "jusd-jusd-stable-token", note: "" }],
+    }} />);
+    expect(screen.queryByRole("link", { name: /JUSD/ })).toBeNull();
     expect(screen.getAllByRole("link", { name: /BUIDL/ }).length).toBeGreaterThan(0);
   });
 

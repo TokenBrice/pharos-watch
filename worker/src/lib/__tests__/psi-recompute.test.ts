@@ -486,5 +486,10 @@ describe("buildStabilityInputForDay", () => {
     const live = buildPsiHistoricalMembership();
     expect(live.get("usdcx-movement")?.windows).toEqual([{ from: -Infinity, until: Date.UTC(2026, 10, 27) / 1000 }]);
     expect(live.get("benji-franklin-templeton")?.windows).toEqual([{ from: Date.UTC(2021, 3, 6) / 1000, until: Date.UTC(2026, 9, 30) / 1000 }]);
+    expect(live.get("jpydf-deltaforesight")?.windows).toEqual([{ from: Date.UTC(2026, 10, 27) / 1000, until: Infinity }]);
+    for (const [id, until] of [
+      ["wtgxx-wisdomtree", Date.UTC(2026, 9, 30) / 1000], ["tbill-openeden", Date.UTC(2026, 9, 30) / 1000],
+      ["jltxx-jpmorgan", Date.UTC(2026, 9, 3) / 1000], ["cetes-etherfuse", Date.UTC(2026, 10, 10) / 1000],
+    ] as const) expect(live.get(id)?.windows[0]?.until).toBe(until);
   });
 });

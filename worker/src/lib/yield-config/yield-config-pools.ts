@@ -39,7 +39,7 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   // BUIDL (173) - no DL pool; Blackrock/Securitize fund not tracked by DL Yields
   // YLDS (272) - no DL pool; Figure Markets not tracked by DL Yields
   // reUSD -> reUSDe uses the Re Protocol API; no verified DeFiLlama pool UUID
-  // TBILL - openeden-tbill native, Ethereum, $27M TVL, ~3.0% APY
+  // TBILL - openeden-tbill native, Ethereum (primary NAV fund yield pool; BSC carries most supply)
   "tbill-openeden": "e140f3b2-0327-46ea-93f5-88b17b0a0a16",
   // USDO - openeden-usdo BSC rebase, $144k TVL; pins the pick Layer 3 used to
   // make now that lending-venue matches are skipped. The Ethereum pool

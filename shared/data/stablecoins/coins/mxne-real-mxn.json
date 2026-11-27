@@ -113,7 +113,9 @@
     },
     "params": {
       "label": "CETES Stablebonds",
-      "risk": "low"
+      "risk": "low",
+      "coinId": "cetes-etherfuse",
+      "depType": "collateral"
     }
   },
   "launchDate": "2024-05-22"

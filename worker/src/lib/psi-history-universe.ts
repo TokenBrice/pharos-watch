@@ -8,6 +8,7 @@ import {
   CORE_AGGREGATE_V1_MEMBER_IDS,
   CORE_AGGREGATE_V1_NON_ACTIVE_EXIT_DATES,
   CORE_AGGREGATE_V1_NON_ACTIVE_MEMBER_IDS,
+  getCoreAggregatePostCutoverEntrySec,
   getCoreAggregatePostCutoverExitSec,
 } from "@shared/lib/stablecoins/aggregate-universe-v1";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
@@ -84,7 +85,8 @@ export function buildPsiHistoricalMembership(options: {
       const rawUntil = coin.frozenAt ?? (isLiveEligible ? undefined : coin.listingStatusReview?.changedAt);
       if (isLiveEligible || rawUntil != null) {
         const parsedUntil = rawUntil == null ? Infinity : Date.parse(rawUntil) / 1000;
-        const v2From = Math.max(launchFrom, cutoverSec);
+        const postCutoverEntrySec = isHistoricalShadow ? null : getCoreAggregatePostCutoverEntrySec(coin.id);
+        const v2From = Math.max(launchFrom, cutoverSec, postCutoverEntrySec ?? -Infinity);
         if (Number.isFinite(v2From) && v2From < parsedUntil) {
           const prev = windows[windows.length - 1];
           if (prev && prev.until === v2From) {

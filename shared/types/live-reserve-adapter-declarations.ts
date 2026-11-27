@@ -1468,10 +1468,16 @@ const evmBranchBalanceBranchSchema = z
       selector: EvmSelectorSchema,
       args: z.array(EvmWordSchema).optional(),
     }).strict().optional(),
-    receipt: z.object({
-      kind: z.literal("compound-v2"),
-      exchangeRateSelector: EvmSelectorSchema.optional(),
-    }).strict().optional(),
+    receipt: z.discriminatedUnion("kind", [
+      z.object({
+        kind: z.literal("compound-v2"),
+        exchangeRateSelector: EvmSelectorSchema.optional(),
+      }).strict(),
+      z.object({
+        kind: z.literal("backing-ratio-vault"),
+        vault: EvmAddressSchema,
+      }).strict(),
+    ]).optional(),
     name: z.string(),
     holder: EvmAddressSchema,
     token: z
@@ -2432,10 +2438,8 @@ const ADAPTER_DECLARATIONS = {
     configValidation: CONFIG_SINGLE_ASSET_V1,
     redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     provenance: {
-      status: "staged",
-      rationale: "quarantined JLTXX evidence capture only; catalog admission requires pinned native shares, reviewed temporal/legal class perimeter, current fingerprint/runtime price-mcap PASS and explicit approval",
-      parkedSince: "2026-10-03",
-      nextReview: "2026-10-10",
+      status: "active",
+      rationale: "Bound to jltxx-jpmorgan: exact CUSIP 46655R119 / Token Class 4397 NAV and class-assets publisher reconciled against 2-leg finalized Ethereum and Solana Token-2022 pinned native shares under reviewed supplyAdmissionReview.",
     },
     validation: BUSINESS_DAY_VERIFIED_VALIDATION,
   },

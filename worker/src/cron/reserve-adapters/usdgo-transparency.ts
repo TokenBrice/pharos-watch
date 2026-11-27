@@ -48,8 +48,10 @@ export const USDGO_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = 
     jltxx: {
       name: "JPMorgan JLTXX (CUSIP 46655R119)",
       risk: "low",
+      coinId: "jltxx-jpmorgan",
+      depType: "collateral",
       assetClass: "money-market-fund",
-      issuerOrObligor: "JPMorgan Liquidity Funds",
+      issuerOrObligor: "JPMorgan OnChain Liquidity-Token Money Market Fund",
       riskFactors: ["credit", "liquidity", "custody", "counterparty", "duration"],
       liquidityHorizon: "one-day",
     },

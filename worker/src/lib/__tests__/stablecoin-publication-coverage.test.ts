@@ -36,16 +36,10 @@ const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
 
 const QUARANTINED = [
-  // benji-franklin-templeton was delisted on 2026-11-26 under listing policy v2.
-  "wtgxx-wisdomtree",
-  "tbill-openeden",
-  "cetes-etherfuse",
+  // benji-franklin-templeton delisted (2026-11-26); wtgxx, tbill, cetes reactivated (2026-11-27).
   "jusd-jusd-stable-token",
   "vndc-jade-labs",
-  // sofid-sofi left this list on 2026-09-29: CoinGecko market cap and the
-  // DefiLlama 430 row restored a positive supply path, so it is active again.
-  // busd0-usual left this list on 2026-10-30: CoinGecko usd0-liquid-bond
-  // restored a positive price and market cap, so it is active again.
+  // sofid-sofi (2026-09-29) and busd0-usual (2026-10-30) restored positive supply and returned active.
   "gramg-token-teknoloji",
   "grams-token-teknoloji",
 ] as const;

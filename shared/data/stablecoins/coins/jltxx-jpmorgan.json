@@ -41,6 +41,7 @@
     { "label": "Factsheet", "url": "https://am.jpmorgan.com/content/dam/jpm-am-aem/americas/us/en/literature/fact-sheet/money-market/fs-ocltmm-t.pdf" },
     { "label": "Issuer launch announcement", "url": "https://am.jpmorgan.com/us/en/asset-management/institutional/about-us/media/press-releases/jp-morgan-asset-management-launches-second-tokenized-fund-on-ethereum/" },
     { "label": "Ethereum contract", "url": "https://eth.blockscout.com/address/0x09864f52b035ae22ee739dfa5c748fa080d07bd8?tab=contract" },
+    { "label": "Solana contract", "url": "https://solscan.io/token/J4cTuCH6frt4AnEmKfMS2k8hsUf7K94PV62sjUJno8Cz" },
     { "label": "Current prospectus", "url": "https://am.jpmorgan.com/JPMorgan/TVT/46655R119/P?site=JPMorganv3" },
     { "label": "Current statement of additional information", "url": "https://am.jpmorgan.com/JPMorgan/TVT/46655R119/S?site=JPMorganv3" }
   ],
@@ -50,7 +51,8 @@
     "license": "Registered government money-market fund under the Investment Company Act of 1940; a series of JPMorgan Trust IV"
   },
   "contracts": [
-    { "chain": "ethereum", "address": "0x09864f52b035ae22ee739dfa5c748fa080d07bd8", "decimals": 2 }
+    { "chain": "ethereum", "address": "0x09864f52b035ae22ee739dfa5c748fa080d07bd8", "decimals": 2 },
+    { "chain": "solana", "address": "J4cTuCH6frt4AnEmKfMS2k8hsUf7K94PV62sjUJno8Cz", "decimals": 2 }
   ],
   "collateralQuality": "rwa",
   "custodyModel": "unknown",
@@ -75,17 +77,33 @@
       }
     },
     "scoring": { "maxSourceAgeSec": 432000 },
-    "params": {}
-  },
-  "launchDate": "2026-05-13",
-  "status": "quarantined",
-  "listingStatusReview": {
-    "changedAt": "2026-10-03",
-    "reason": "2026-10-30: CoinGecko unpriced/no mcap; Solana mint holds most shares, Ethereum ~7%; perimeter/NAV skew unresolved. Reviewed 2026-11-26: hold continued pending verified multi-chain supply admission; review due 2026-12-13.",
-    "reviewBy": "2026-12-13",
-    "source": {
-      "label": "JPMorgan JLTXX Token Class NAV and class assets",
-      "url": "https://am.jpmorgan.com/FundsMarketingHandler/slim/product.md?cusip=46655r119&country=us&role=adv&language=en"
+    "params": {
+      "supplyAdmissionReview": {
+        "maxNavSupplySkewSec": 432000,
+        "reviewedAt": "2026-11-27",
+        "evidenceRef": "https://am.jpmorgan.com/FundsMarketingHandler/slim/product.md?cusip=46655r119&country=us&role=adv&language=en",
+        "perimeterRef": "https://www.sec.gov/Archives/edgar/data/1659326/000119312526410014/d172947d497.htm"
+      }
     }
-  }
+  },
+  "notices": [
+    {
+      "type": "info",
+      "title": "Institutional allowlist and securities-in-kind redemption",
+      "message": "JLTXX requires an approved Morgan Money account and an allowlisted Ethereum or Solana wallet, and the off-chain Investor Register determines legal share ownership. The waivable initial investment minimum is $1,000,000, and redemptions of $250,000 or more may be paid partly or wholly in marketable securities valued at NAV.",
+      "asOf": "2026-11-27",
+      "sources": [
+        {
+          "label": "SEC Form 497 Solana availability and allowlist supplement",
+          "url": "https://www.sec.gov/Archives/edgar/data/1659326/000119312526410014/d172947d497.htm"
+        },
+        {
+          "label": "SEC-filed JLTXX prospectus and redemption terms",
+          "url": "https://www.sec.gov/Archives/edgar/data/1659326/000119312526217424/d44657d485bpos.htm"
+        }
+      ]
+    }
+  ],
+  "launchDate": "2026-05-13",
+  "status": "active"
 }

@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "CETES has native issuer-controlled issuance on Solana and Stellar. Solana Token-2022 minting is held by a 1-of-2 Etherfuse multisig, while the Stellar CETES asset is issued by its classic Stellar issuer account with clawback enabled. Etherfuse's issuer backend supports the native subscription/redemption process; Base, Polygon, and Monad are LayerZero OFT representations whose owner, rate-limit, peer, and proxy-upgrade powers are reviewed separately under Bridge Risk.",
+    "summary": "CETES has native issuer-controlled issuance on Solana and Stellar. Solana Token-2022 minting is held by a 1-of-2 Etherfuse multisig, while the Stellar CETES asset is issued by its 3-of-5 classic Stellar issuer account with clawback enabled. Etherfuse's issuer backend supports the native subscription/redemption process; Base, Polygon, Monad, and Avalanche are LayerZero V2 OFT representations whose owner, rate-limit, peer, and proxy-upgrade powers are reviewed separately under Bridge Risk.",
     "controls": [
       {
         "label": "Etherfuse issuance backend",
@@ -17,7 +17,7 @@
         ],
         "canRaiseCap": "unknown",
         "evidence": "Etherfuse mints native Solana Token-2022 and Stellar CETES on KYC'd subscription and burns on redemption at NAV against CETES bonds custodied via INDEVAL; supply creation is issuer-controlled with no permissionless native route. EVM destination minting is LayerZero OFT receive-path behavior and is excluded from this control.",
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-11-27",
         "sources": [
           {
             "label": "Etherfuse developer documentation",
@@ -74,9 +74,9 @@
         "canRaiseCap": true,
         "capDescription": "The classic Stellar CETES asset has no verified immutable numeric supply cap; the issuer can issue it and now has auth_revocable and auth_clawback_enabled true (auth_required false).",
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "At Horizon ledger 65219142 on 2026-10-30 the CETES issuer account had five weight-1 signers, master weight 0, and thresholds 3/3/3; the asset reported auth_required=false, auth_revocable=true, auth_clawback_enabled=true (flags set at ledger 64807581 on 2026-10-06).",
-        "observedAt": "2026-10-30",
-        "observedBlock": 65219142,
+        "evidence": "At Horizon ledger 65695159 (hash 21a86b3613d79da5b4e4e05a8d5c480a6d6a0305ca5859621da7497ab55c569b; 2026-11-27T06:44:27Z), the CETES issuer account retained five weight-1 signers, master weight 0, and thresholds 3/3/3; the asset reported auth_required=false, auth_revocable=true, auth_clawback_enabled=true (flags set at ledger 64807581 on 2026-10-06).",
+        "observedAt": "2026-11-27",
+        "observedBlock": 65695159,
         "sources": [
           {
             "label": "CETES Stellar issuer account",
@@ -93,9 +93,9 @@
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "Solana: at finalized slots 439724560 and 439725250 on 2026-08-16, CETES mintAuthority is the 1-of-2 Token-2022 multisig A6nFyQb2ywFZe23yEC4JQtLLe9aLXtt7EUAD8MFftHYP with the two reviewed signers. Stellar: Horizon ledger 65219142 on 2026-10-30 shows a 3-of-5 issuer with auth_revocable and auth_clawback_enabled set (absent 2026-08-16). The Base, Polygon, and Monad owner/ProxyAdmin path is a LayerZero OFT representation control and is reviewed only under Bridge Risk. Horizon's authorized Stellar balance of 51,721,119.0011752 differs from the Etherfuse API's 69,826,427.500366 Stellar total, so periodic reconciliation remains unresolved for that supply view. Economic posture remains issuer-controlled and unbounded with periodic BHR México examinations and attestation-only supervision, without a named prudential supervisor.",
-      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15; Stellar flag re-read 2026-10-30",
-      "reviewedAt": "2026-10-30",
+      "evidence": "Solana: re-pinned at finalized slots 474454153 and 474454559 on 2026-11-27 (2026-11-27T06:44:29Z), CETES mintAuthority remains A6nFyQb2ywFZe23yEC4JQtLLe9aLXtt7EUAD8MFftHYP (supply 10,073,822.904581 CETES, freezeAuthority None); the 1-of-2 Token-2022 multisig signer-list control pin remains unchanged since 2026-08-16 slot 439725250. Stellar: Horizon ledger 65695159 on 2026-11-27T06:44:27Z confirms the 3-of-5 issuer with auth_revocable and auth_clawback_enabled set; summing all disjoint Horizon custody buckets (authorized 34,978,290.3674642 + contracts_amount 18,725,577.0818831 + liquidity_pools_amount 13,813.2786225 + claimable_balances_amount 592.5445388 = 53,718,273.2725086) reconciles within 0.016% of Etherfuse's 53,726,454.9271707 Stellar total. The Base, Polygon, Monad, and Avalanche (0xa51e029a76c58e102360836193481d41363a8352, CETES_OFT) owner/ProxyAdmin paths are LayerZero V2 OFT representation controls reviewed solely under Bridge Risk. Economic posture remains issuer-controlled and unbounded with monthly BHR México reasonable-assurance examinations (latest 2026-11-25) and attestation-only supervision, without a named prudential supervisor.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15; Stellar flag re-read 2026-10-30; 2026-11-27 6-chain pin",
+      "reviewedAt": "2026-11-27",
       "sources": [
         {
           "label": "Etherfuse Proof of Reserves",

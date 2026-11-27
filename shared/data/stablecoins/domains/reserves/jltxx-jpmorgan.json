@@ -13,22 +13,23 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-15",
-    "reviewer": "Batch64 primary-source review",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Batch64 primary-source review; re-verified 2026-11-27 against Oct 30 SEC N-MFP3 and 2-chain finalized census",
     "confidence": "verified",
     "sources": [
       { "label": "Current JLTXX prospectus: Treasury mandate, shareholder claim and cash/securities-in-kind redemption", "url": "https://am.jpmorgan.com/JPMorgan/TVT/46655R119/P?site=JPMorganv3" },
       { "label": "JPMorgan exact-class NAV publisher", "url": "https://am.jpmorgan.com/FundsMarketingHandler/slim/product.md?cusip=46655r119&country=us&role=adv&language=en" },
       { "label": "Issuer JLTXX launch and Ethereum identity", "url": "https://am.jpmorgan.com/us/en/asset-management/institutional/about-us/media/press-releases/jp-morgan-asset-management-launches-second-tokenized-fund-on-ethereum/" },
+      { "label": "SEC Form 497 Solana availability supplement, October 1, 2026", "url": "https://www.sec.gov/Archives/edgar/data/1659326/000119312526410014/d172947d497.htm" },
       { "label": "September 30, 2026 Token Class factsheet and sector allocation", "url": "https://am.jpmorgan.com/content/dam/jpm-am-aem/americas/us/en/literature/fact-sheet/money-market/fs-ocltmm-t.pdf" },
-      { "label": "SEC N-MFP3, series S000101820: September 30, 2026 portfolio securities and repo counterparties, filed October 7", "url": "https://www.sec.gov/Archives/edgar/data/1659326/000207169126023653/primary_doc.xml" }
+      { "label": "SEC N-MFP3, series S000101820: October 30, 2026 portfolio securities and repo counterparties, filed November 6, 2026", "url": "https://www.sec.gov/Archives/edgar/data/1659326/000207169126025495/primary_doc.xml" }
     ],
-    "rationale": "The single slice identifies the direct government-MMF shareholder claim, matching the live adapter's exact class 4397 key, rather than fabricating current Treasury/repo/cash percentages from NAV. The September 30 factsheet reports 55.3% U.S. Treasury debt and 44.7% U.S. Treasury repos; these are dated sector weights, not October 14 holdings. The series S000101820 N-MFP3 for September 30, filed October 7, discloses ten portfolio-security lines comprising Treasury debt and Treasury repos, with Citigroup Global Markets, BofA Securities and Wells Fargo Securities named on the repo positions. This monthly regulatory schedule establishes dated security-level composition and counterparties, not current holdings or independent assurance. The current prospectus confirms the 93-day Treasury purchase limit, fully collateralized overnight repos and cash held primarily for redemptions. The October 14 issuer reports NAV $1, WAM/WAL 9 days and daily/weekly liquid assets 99.99%. These are issuer disclosures, not independent assurance or unconditional cash capacity. Redemptions worth $250,000 or more may be paid partly or wholly in readily marketable securities valued at NAV; selling them adds market, tax and transaction-cost exposure.",
-    "compositionBasis": "Direct Token Class fund-share exposure, valued by the exact issuer class publisher; no position-level look-through allocation asserted",
-    "compositionAsOf": "2026-10-14",
+    "rationale": "The single slice identifies the direct government-MMF shareholder claim, matching the live adapter's exact class 4397 key, rather than fabricating current Treasury/repo/cash percentages from NAV. The series S000101820 N-MFP3 for October 30, 2026, filed November 6, 2026, reports $795,054,961.55 in Token Class net assets across 795,054,873.99 shares and discloses 15 portfolio-security lines comprising U.S. Treasury debt and U.S. Treasury repurchase agreements with BofA Securities, Citigroup Global Markets and Wells Fargo Securities. This monthly regulatory schedule establishes dated security-level composition and counterparties, not current daily holdings or independent assurance. The current prospectus confirms the 93-day Treasury purchase limit, fully collateralized overnight repos and cash held primarily for redemptions; the October 1, 2026 Form 497 supplement establishes Ethereum and Solana as the two available public blockchains. On November 27, 2026, finalized on-chain reads measured 29,525,341.49 shares on Ethereum (block 26504747) and 677,799,970.75 shares on Solana Token-2022 (slot 474454152), totaling 707,325,312.24 shares. Redemptions worth $250,000 or more may be paid partly or wholly in readily marketable securities valued at NAV; selling them adds market, tax and transaction-cost exposure.",
+    "compositionBasis": "Direct Token Class fund-share exposure, valued by the exact issuer class publisher and corroborated by the October 30, 2026 SEC Form N-MFP3 schedule; no intraday look-through allocation asserted",
+    "compositionAsOf": "2026-10-30",
     "compositionSource": "live-adapter",
     "scope": "full-composition",
-    "knownUnknownExposure": "The direct instrument is fully identified. The September 30 factsheet discloses Treasury/repo sector weights, and the same-date series S000101820 N-MFP3 discloses individual securities and repo counterparties. Intra-period portfolio changes, subcustody allocation, encumbrance and an exact-fund independent reserve-to-liability report remain unverified; this monthly point-in-time schedule does not establish current look-through weights, and the single fund-share slice does not claim a complete current look-through census.",
+    "knownUnknownExposure": "The direct instrument is fully identified. The October 30, 2026 series S000101820 N-MFP3 discloses individual Treasury and repo securities and counterparties. Intra-period portfolio changes, subcustody allocation, encumbrance and an exact-fund independent reserve-to-liability report remain unverified; this monthly point-in-time schedule does not establish current look-through weights, and the single fund-share slice does not claim a complete current look-through census.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

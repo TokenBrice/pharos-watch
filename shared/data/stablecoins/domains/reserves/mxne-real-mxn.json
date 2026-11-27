@@ -5,6 +5,8 @@
       "name": "Etherfuse CETES Stablebond",
       "pct": 100,
       "risk": "low",
+      "coinId": "cetes-etherfuse",
+      "depType": "collateral",
       "assetClass": "tokenized-security",
       "issuerOrObligor": "Etherfuse MX, S.A. de C.V. and the Mexican federal government",
       "riskFactors": [
@@ -45,19 +47,7 @@
     "compositionAsOf": "2026-07-24",
     "scope": "full-composition",
     "knownUnknownExposure": "The full backing category is identified as the Etherfuse CETES Stablebond; the current attestation covers Etherfuse's CETES issuance rather than a separately published MXNe sub-ledger, so no MXNe-specific balance claim is made.",
-    "knownUnknownExposurePct": 0,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "Etherfuse CETES Stablebond",
-        "pct": 100,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "cetes-etherfuse is a tracked but quarantined upstream record outside the active scoring set, so the reviewed Etherfuse CETES Stablebond slice remains an exogenous reserve classification and does not create a dependency edge.",
-        "candidateCoinIds": [
-          "cetes-etherfuse"
-        ]
-      }
-    ]
+    "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [

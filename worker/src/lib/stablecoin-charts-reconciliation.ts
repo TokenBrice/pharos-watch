@@ -5,6 +5,7 @@ import { CORE_AGGREGATE_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/aggre
 import { CORE_STABLECOIN_AGGREGATE_V2_CUTOVER_SEC } from "@shared/lib/stablecoins/aggregate-universe";
 import {
   CORE_AGGREGATE_V1_MEMBER_IDS,
+  getCoreAggregatePostCutoverEntrySec,
   getCoreAggregatePostCutoverExitSec,
 } from "@shared/lib/stablecoins/aggregate-universe-v1";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -87,7 +88,15 @@ export function buildDateFencedSupplementalChartConfigs(
     const base = toStructuralSupplementalConfig(meta);
     if (!base) continue;
     seen.add(meta.id);
-    configs.push(v1ActiveIds.has(meta.id) ? base : { ...base, activeFrom: cutoverSec });
+    if (v1ActiveIds.has(meta.id)) {
+      configs.push(base);
+    } else {
+      const postCutoverEntrySec = getCoreAggregatePostCutoverEntrySec(meta.id);
+      const activeFrom = postCutoverEntrySec != null && postCutoverEntrySec > cutoverSec
+        ? postCutoverEntrySec
+        : cutoverSec;
+      configs.push({ ...base, activeFrom });
+    }
   }
 
   for (const id of v1ActiveIds) {

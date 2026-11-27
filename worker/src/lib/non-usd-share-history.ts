@@ -11,6 +11,7 @@ import {
   CORE_AGGREGATE_V1_MEMBER_LIST,
   CORE_AGGREGATE_V1_NON_ACTIVE_MEMBER_IDS,
   CORE_AGGREGATE_V1_NON_ACTIVE_MEMBER_LIST,
+  getCoreAggregatePostCutoverEntrySec,
   getCoreAggregatePostCutoverExitSec,
 } from "@shared/lib/stablecoins/aggregate-universe-v1";
 import { isActiveStablecoinMeta, isFrozenStablecoinMeta } from "@shared/lib/stablecoins/status";
@@ -100,7 +101,11 @@ export function buildNonUsdShareCoreMembers(options: {
     } else if (inV1) {
       members.set(coin.id, { bucket, inactiveFrom: v1InactiveFrom });
     } else {
-      members.set(coin.id, { bucket, activeFrom: cutoverSec, inactiveFrom: v2InactiveFrom });
+      const postCutoverEntrySec = getCoreAggregatePostCutoverEntrySec(coin.id);
+      const activeFrom = postCutoverEntrySec != null && postCutoverEntrySec > cutoverSec
+        ? postCutoverEntrySec
+        : cutoverSec;
+      members.set(coin.id, { bucket, activeFrom, inactiveFrom: v2InactiveFrom });
     }
   }
   return members;

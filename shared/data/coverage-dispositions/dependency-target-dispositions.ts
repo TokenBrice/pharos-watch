@@ -189,10 +189,20 @@ export const DEPENDENCY_ADAPTER_MAPPING_REVIEWS: readonly DependencyAdapterMappi
   },
   {
     adapter: "usdgo-transparency",
-    reviewer: "pharos-live-reserve-upgrade",
-    reviewedAt: "2026-09-09",
+    reviewer: "Pharos PR-1B dependency mapping review",
+    reviewedAt: "2026-11-27",
     sourceFiles: ["worker/src/cron/reserve-adapters/usdgo-transparency.ts"],
-    rationale: "Maps the explicitly disclosed BUIDL fund share reserve to buidl-blackrock; cash and other issuer reserve categories remain unlinked.",
+    rationale: "Maps the explicitly disclosed BlackRock BUIDL (buidl-blackrock) and JPMorgan JLTXX (CUSIP 46655R119, jltxx-jpmorgan) fund-share reserves with collateral depType; cash and Goldman Sachs STBXX remain unlinked.",
+  },
+  {
+    adapter: "anchorage-independent-assurance",
+    reviewer: "Pharos PR-1B dependency mapping review",
+    reviewedAt: "2026-11-27",
+    sourceFiles: [
+      "worker/src/cron/reserve-adapters/independent-assurance.ts",
+      "worker/src/cron/reserve-adapters/anchorage-independent-assurance-profile.ts",
+    ],
+    rationale: "Publishes exact manifest asset rows verified against Deloitte PDF hashes without inferring unextracted token dependencies. USAT maps cash and reverse-repo rows unlinked. USDPT splits Schedule II money-market funds by CUSIP, mapping mmf-46655r119 (CUSIP 46655R119) to jltxx-jpmorgan (collateral) on both live and static paths while leaving mmf-09250c572 (CUSIP 09250C572) and demand deposits unlinked.",
   },
   {
     adapter: "makina-strategy",
