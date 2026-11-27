@@ -8,6 +8,7 @@ import { getTierMeta } from "@/components/depeg/depeg-resolver-row-card-model";
 import {
   compareResolverUrgency,
   isResolverBookAvailable,
+  resolveResolverRowIncidentTier,
   summarizeResolverBook,
   type MarketCapById,
   type ResolverBookSummary,
@@ -15,6 +16,7 @@ import {
 import { describePromotedAccuracy, formatPromotedAccuracyLines } from "@/lib/ddr-promoted-accuracy";
 import { isDepegResolverEnabled } from "@/lib/feature-flags";
 import { cn } from "@/lib/utils";
+import { OPEN_INCIDENT_TIER_BADGES } from "@shared/lib/classification";
 import { formatPercent } from "@shared/lib/format";
 import { DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import {
@@ -24,12 +26,17 @@ import {
   type DdrResponse,
 } from "@shared/types/depeg-resolver";
 import type { DdrrSummary } from "@shared/types/depeg-resolver-review";
+import type { OpenIncidentSnapshot } from "@shared/types/peg";
 
 interface DepegResolverModuleProps {
   data: DdrResponse | undefined;
   logos?: Record<string, string>;
   /** Circulating supply for exposure ranking and the card cap line; undefined while unread. */
   marketCaps?: MarketCapById;
+  /** Open confirmed incidents from `/api/peg-summary` for eventId-matched horizon badges and urgency ordering. */
+  openIncidents?: Readonly<Record<string, OpenIncidentSnapshot>> | null;
+  /** Assessment clock (unix seconds) paired with `openIncidents`. */
+  clockSec?: number;
   /** DDRR headline accuracy summary moved from the hero into the resolver header. */
   review?: DdrrSummary | null;
   /** True while the first DDR read is still pending after the route skeleton releases. */
@@ -218,6 +225,8 @@ export function DepegResolverModule({
   data,
   logos,
   marketCaps,
+  openIncidents,
+  clockSec,
   review,
   resolverPending = false,
   reviewPending = false,
@@ -225,7 +234,10 @@ export function DepegResolverModule({
   const [showAll, setShowAll] = useState(false);
   const rows = useMemo(() => data?.rows ?? [], [data]);
 
-  const ordered = useMemo(() => [...rows].sort((a, b) => compareResolverUrgency(a, b, marketCaps)), [rows, marketCaps]);
+  const ordered = useMemo(
+    () => [...rows].sort((a, b) => compareResolverUrgency(a, b, marketCaps, { openIncidents, clockSec })),
+    [rows, marketCaps, openIncidents, clockSec],
+  );
   const book = useMemo(() => summarizeResolverBook(rows), [rows]);
 
   if (!isDepegResolverEnabled()) return null;
@@ -276,15 +288,44 @@ export function DepegResolverModule({
       ) : (
         <>
           <div className="pharos-stagger-entrance grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
-            {visible.map((row, i) => (
-              <div key={`${row.stablecoinId}:${row.eventId}`} style={{ "--stagger-index": i } as CSSProperties}>
-                <DepegResolverRowCard
-                  row={row}
-                  logos={logos}
-                  marketCapUsd={marketCaps ? marketCaps.get(row.stablecoinId) ?? null : undefined}
-                />
-              </div>
-            ))}
+            {visible.map((row, i) => {
+              const incidentTier = resolveResolverRowIncidentTier(row, openIncidents, clockSec);
+              const tierBadge =
+                incidentTier === "escalating" || incidentTier === "long_running"
+                  ? OPEN_INCIDENT_TIER_BADGES[incidentTier]
+                  : null;
+              return (
+                <div
+                  key={`${row.stablecoinId}:${row.eventId}`}
+                  data-incident-tier={incidentTier ?? undefined}
+                  style={{ "--stagger-index": i } as CSSProperties}
+                  className="relative"
+                >
+                  {tierBadge ? (
+                    <span className="pointer-events-auto absolute -top-2.5 right-4 z-10 inline-flex rounded-full bg-background">
+                      <span
+                        title={
+                          incidentTier === "escalating"
+                            ? "Re-escalated >30d incident (confirmed within 7d)"
+                            : "Open incident older than 30 days"
+                        }
+                        className={cn(
+                          "inline-flex items-center rounded-full border px-2 py-0.5 text-2xs font-semibold leading-none",
+                          tierBadge.className,
+                        )}
+                      >
+                        {tierBadge.short}
+                      </span>
+                    </span>
+                  ) : null}
+                  <DepegResolverRowCard
+                    row={row}
+                    logos={logos}
+                    marketCapUsd={marketCaps ? marketCaps.get(row.stablecoinId) ?? null : undefined}
+                  />
+                </div>
+              );
+            })}
           </div>
           {hiddenCount > 0 || showAll ? (
             <button

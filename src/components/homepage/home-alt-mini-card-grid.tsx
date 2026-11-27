@@ -16,9 +16,11 @@ import {
   selectPeakSupplyMover,
 } from "@/components/home-alt-mini-cards/supply-moves-card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { holderExposureUsd } from "@/components/depeg/depeg-resolver-book-summary";
 import { usePegSummary, useStabilityIndex } from "@/hooks/api-hooks";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { useBlacklistSummary } from "@/hooks/use-blacklist-events";
+import { useMinuteClockSec, useOpenIncidentHorizonClock } from "@/hooks/use-minute-clock-sec";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { usePsiBeaconState } from "@/hooks/use-psi-beacon-state";
 import { bucketByDeviationBps } from "@/lib/home-alt-aggregates";
@@ -26,9 +28,16 @@ import { getDisplayedPsi } from "@shared/lib/psi-view-model";
 import { aggregateCoinFlows24h, inferHas24hActivity } from "@shared/lib/mint-burn-coin-helpers";
 import { buildBlacklistStatusBuckets } from "@shared/lib/blacklist-status-buckets";
 import { computeFreezableSummary, formatShare } from "@shared/lib/freezewatch/freezable-summary";
-import { selectActiveDepegCoins } from "@shared/lib/active-depegs";
+import {
+  classifyOpenIncidentCoverage,
+  classifyOpenIncidentTier,
+  isNearParUnconfirmedOpenIncident,
+  partitionActiveDepegRows,
+  selectActiveDepegCoins,
+} from "@shared/lib/active-depegs";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { ACTIVE_STABLECOIN_ID_SET } from "@/lib/stablecoin-static-data";
-import { readPublishedDeviation } from "@/lib/current-peg";
+import { readUnroundedPublishedDeviation } from "@/lib/current-peg";
 import { formatScore, formatSignedCompactUsd } from "@shared/lib/format";
 import {
   type ConditionBand,
@@ -97,21 +106,66 @@ function MobilePulseKpiGrid(): React.JSX.Element {
   const flowsQuery = useMintBurnFlows();
   const stablecoinsQuery = useStablecoins();
   const blacklistSummaryQuery = useBlacklistSummary();
+  const nowSec = useMinuteClockSec();
 
   const pegSummary = pegQuery.data?.summary;
   const activeCount = pegSummary?.activeDepegCount ?? null;
-  const leadDepeg = useMemo(() => {
+  const openIncidents = pegQuery.data?.openIncidents;
+  const openIncidentsAsOfSec = pegQuery.data?.openIncidentsAsOfSec;
+  const clockSec = nowSec > 0 ? nowSec : (openIncidentsAsOfSec ?? 0);
+  const horizonClockSec = useOpenIncidentHorizonClock(
+    openIncidents,
+    openIncidentsAsOfSec,
+    clockSec,
+    pegQuery.refetch,
+  );
+  const marketCaps = useMemo(
+    () => new Map((stablecoinsQuery.data?.peggedAssets ?? []).map((coin) => [coin.id, getCirculatingRawOrNull(coin)])),
+    [stablecoinsQuery.data?.peggedAssets],
+  );
+  const activeDepegState = useMemo(() => {
     const coins = selectActiveDepegCoins(pegQuery.data?.coins ?? [], ACTIVE_STABLECOIN_ID_SET);
-    let worst: { symbol: string; bps: number } | null = null;
-    for (const coin of coins) {
-      const { deviationBps } = readPublishedDeviation(coin.pegCurrency, coin);
-      if (deviationBps == null) continue;
-      if (!worst || Math.abs(deviationBps) > Math.abs(worst.bps)) {
-        worst = { symbol: coin.symbol ?? coin.id, bps: deviationBps };
-      }
-    }
-    return worst;
-  }, [pegQuery.data?.coins]);
+    const deviationClockSec = clockSec > 0 ? clockSec : undefined;
+    const rows = coins.map((coin) => {
+      const incident = openIncidents?.[coin.id];
+      const { deviationBps: bps, referenceNote } = readUnroundedPublishedDeviation(
+        coin.pegCurrency,
+        coin,
+        undefined,
+        deviationClockSec,
+      );
+      const marketCapUsd = marketCaps.get(coin.id) ?? null;
+      return {
+        id: coin.id,
+        symbol: coin.symbol ?? coin.id,
+        pegCurrency: coin.pegCurrency,
+        bps,
+        referenceNote,
+        exposureUsd: holderExposureUsd(marketCapUsd, bps),
+        evidence: classifyOpenIncidentCoverage(incident?.coverage, clockSec),
+        tier: classifyOpenIncidentTier(incident, horizonClockSec),
+      };
+    });
+    const partitioned = partitionActiveDepegRows(rows, openIncidents, horizonClockSec);
+    const splitConsistent =
+      activeCount === null
+      || (partitioned.recentCount !== null
+        && partitioned.longRunningCount !== null
+        && partitioned.recentCount + partitioned.longRunningCount === activeCount);
+    const splitAvailable = partitioned.splitAvailable && splitConsistent;
+    const hasLongRunning = splitAvailable && (partitioned.longRunningCount ?? 0) > 0;
+    const leadPool = hasLongRunning
+      ? (partitioned.recentRows.length > 0 ? partitioned.recentRows : partitioned.longRunningRows)
+      : partitioned.allRows;
+    const lead = leadPool[0] ?? null;
+    const leadIsLongRunning = hasLongRunning && partitioned.recentRows.length === 0 && lead !== null;
+    return {
+      hasLongRunning,
+      recentCount: partitioned.recentCount,
+      lead,
+      leadIsLongRunning,
+    };
+  }, [pegQuery.data?.coins, openIncidents, clockSec, horizonClockSec, marketCaps, activeCount]);
 
   const pegBuckets = useMemo(() => bucketByDeviationBps(pegQuery.data?.coins ?? []), [pegQuery.data?.coins]);
   const pegBucketTotal = pegBuckets.healthy + pegBuckets.mild + pegBuckets.moderate + pegBuckets.severe;
@@ -168,17 +222,56 @@ function MobilePulseKpiGrid(): React.JSX.Element {
         label="Active depegs"
         isLoading={pegQuery.isLoading && !pegQuery.data}
         unavailable={!pegQuery.data || activeCount === null}
-        value={activeCount ?? "—"}
+        value={
+          activeCount !== null ? (
+            activeDepegState.hasLongRunning ? (
+              <span className="inline-flex flex-wrap items-baseline gap-x-1.5">
+                <span>{activeCount}</span>
+                <span className="text-xs font-normal text-muted-foreground">
+                  {activeDepegState.recentCount && activeDepegState.recentCount > 0
+                    ? `· ${activeDepegState.recentCount} recent`
+                    : "· all >30d"}
+                </span>
+              </span>
+            ) : (
+              activeCount
+            )
+          ) : (
+            "—"
+          )
+        }
         subline={
           activeCount === 0 ? (
             <span className={DIRECTION_TONE_CLASSES.up}>No open incidents</span>
-          ) : leadDepeg ? (
+          ) : activeDepegState.lead ? (
             <span>
-              {leadDepeg.symbol}{" "}
-              <span className={leadDepeg.bps < 0 ? DEPEG_DIRECTION_CLASSES.below.text : DEPEG_DIRECTION_CLASSES.above.text}>
-                {leadDepeg.bps < 0 ? "↓" : "↑"}{Math.abs(leadDepeg.bps).toFixed(0)} bps
-              </span>
+              {activeDepegState.leadIsLongRunning ? ">30d · " : null}
+              {activeDepegState.lead.symbol}{" "}
+              {activeDepegState.lead.bps != null ? (
+                <>
+                  <span className={activeDepegState.lead.bps < 0 ? DEPEG_DIRECTION_CLASSES.below.text : DEPEG_DIRECTION_CLASSES.above.text}>
+                    {activeDepegState.lead.bps < 0 ? "↓" : "↑"}{Math.abs(Math.round(activeDepegState.lead.bps))} bps
+                  </span>
+                  {openIncidents !== undefined ? (
+                    isNearParUnconfirmedOpenIncident(
+                      activeDepegState.lead.evidence,
+                      activeDepegState.lead.bps,
+                      activeDepegState.lead.pegCurrency,
+                    ) ? (
+                      <span className="text-muted-foreground"> · Near par</span>
+                    ) : activeDepegState.lead.evidence === "unconfirmed" ? (
+                      <span className="text-muted-foreground"> · Unconfirmed</span>
+                    ) : null
+                  ) : null}
+                </>
+              ) : (
+                <span className="text-muted-foreground">
+                  {activeDepegState.lead.referenceNote ?? "Current deviation unavailable"}
+                </span>
+              )}
             </span>
+          ) : activeDepegState.hasLongRunning && activeDepegState.recentCount === 0 ? (
+            "All >30d open"
           ) : (
             "Confirmed incidents"
           )

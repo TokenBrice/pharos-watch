@@ -251,10 +251,19 @@ function PinnedAllEventsLink({ placement }: { placement: HomepageTapePlacement }
 
 export function HomepageTape({ placement = "inline" }: { placement?: HomepageTapePlacement }) {
   const { data, isLoading, error } = useLatestEvents({ limit: 100, severityFloor: "notice" });
-  const snapshotActiveDepegCount = useHomepageSnapshot().data?.incidents.data?.activeDepegCount ?? null;
-  // Passive cache fallback: if another mounted surface already fetched peg-summary, reuse its count.
-  const pegFallbackCount = usePegSummary({ enabled: false }).data?.summary?.activeDepegCount ?? null;
-  const activeDepegCount = snapshotActiveDepegCount ?? pegFallbackCount;
+  const snapshotIncidents = useHomepageSnapshot().data?.incidents.data ?? null;
+  // Passive cache fallback: if another mounted surface already fetched peg-summary, reuse its summary.
+  const pegFallbackSummary = usePegSummary({ enabled: false }).data?.summary ?? null;
+  const incidentData = snapshotIncidents ?? pegFallbackSummary;
+  const activeDepegCount = incidentData?.activeDepegCount ?? null;
+  const hasIncidentSplit =
+    incidentData != null
+    && incidentData.recentActiveDepegCount != null
+    && incidentData.longRunningActiveDepegCount != null
+    && incidentData.recentActiveDepegCount + incidentData.longRunningActiveDepegCount === incidentData.activeDepegCount;
+  const recentActiveDepegCount = hasIncidentSplit ? incidentData.recentActiveDepegCount! : null;
+  const longRunningActiveDepegCount = hasIncidentSplit ? incidentData.longRunningActiveDepegCount! : null;
+  const showIncidentSplit = longRunningActiveDepegCount !== null && longRunningActiveDepegCount > 0;
   const nowSec = useMinuteClockSec();
   const nowMs = nowSec * 1000;
   const logos = logosById;
@@ -286,10 +295,27 @@ export function HomepageTape({ placement = "inline" }: { placement?: HomepageTap
               <Link
                 prefetch={false}
                 href="/depeg/"
+                aria-label={
+                  showIncidentSplit
+                    ? `${activeDepegCount} active ${activeDepegCount === 1 ? "depeg" : "depegs"}: ${recentActiveDepegCount} recent, ${longRunningActiveDepegCount} long-running`
+                    : undefined
+                }
                 className="pharos-focus-ring inline-flex h-6 items-center gap-1 rounded-sm px-1 text-xs text-muted-foreground hover:text-foreground"
               >
-                <span className="pharos-numeric font-semibold text-foreground/90">{activeDepegCount}</span>{" "}
-                <span>active {activeDepegCount === 1 ? "depeg" : "depegs"}</span>
+                {showIncidentSplit ? (
+                  <>
+                    <span className="pharos-numeric font-semibold text-foreground/90">{recentActiveDepegCount}</span>
+                    <span>recent</span>
+                    <span aria-hidden="true">·</span>
+                    <span className="pharos-numeric font-semibold text-foreground/90">{longRunningActiveDepegCount}</span>
+                    <span>&gt;30d</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="pharos-numeric font-semibold text-foreground/90">{activeDepegCount}</span>{" "}
+                    <span>active {activeDepegCount === 1 ? "depeg" : "depegs"}</span>
+                  </>
+                )}
               </Link>
             ) : (
               TAPE_STATS.map((stat) => <TapeStatChip key={stat.label} {...stat} />)

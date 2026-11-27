@@ -3,7 +3,7 @@ import { assessFreshnessTimestamp } from "./api-freshness-age";
 import { validatePayloadWithSchema } from "./api-schema";
 import { decodeCachedJson } from "./cache-json";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
-import { PegSummaryCoinSchema, type PegSummaryCoin } from "@shared/types/peg";
+import { DepegTimestampSchema, PegSummaryCoinSchema, type PegSummaryCoin } from "@shared/types/peg";
 import { z } from "zod";
 
 // Pure row admission for the `peg-analytics` cache, kept apart from the
@@ -15,12 +15,27 @@ export const PEG_ANALYTICS_CACHE_KEY = "peg-analytics";
 // :16 and standalone at :46.
 export const PEG_ANALYTICS_CACHE_MAX_AGE_MS = 30 * 60 * 1000;
 
+export const PegAnalyticsOpenIncidentSchema = z.object({
+  eventId: z.number().int().positive(),
+  startedAt: DepegTimestampSchema,
+  escalatedAt: DepegTimestampSchema.nullable(),
+});
+export type PegAnalyticsOpenIncident = z.infer<typeof PegAnalyticsOpenIncidentSchema>;
+
 export interface PegAnalyticsCachePayload {
   computedAtSec: number;
   depegEventsToday: number;
   depegEventsYesterday: number;
   /** Nav-token-inclusive; consumers filter as needed. */
   pegData: PegSummaryCoin[];
+  /** Optional open-incident sidecar keyed by stablecoin ID (absent on pre-deploy rows). */
+  openIncidents?: Record<string, PegAnalyticsOpenIncident>;
+  /**
+   * Optional open-incident candidates per coin retained whenever a coin has multiple
+   * scored open rows so cached `/api/peg-summary` reads can re-apply the Section 2.3
+   * tie-break across all candidates at request time.
+   */
+  openIncidentCandidates?: Record<string, PegAnalyticsOpenIncident[]>;
 }
 
 export type PegAnalyticsCacheFailureReason =
@@ -36,6 +51,8 @@ export type PegAnalyticsCacheLoadResult =
   | { kind: "miss"; reason: PegAnalyticsCacheFailureReason };
 
 const PEG_DATA_SCHEMA = z.array(PegSummaryCoinSchema);
+const OPEN_INCIDENTS_SCHEMA = z.record(z.string(), PegAnalyticsOpenIncidentSchema);
+const OPEN_INCIDENT_CANDIDATES_SCHEMA = z.record(z.string(), z.array(PegAnalyticsOpenIncidentSchema).min(1));
 
 function parsePayload(value: unknown): PegAnalyticsCachePayload | null {
   if (!value || typeof value !== "object") return null;
@@ -57,11 +74,37 @@ function parsePayload(value: unknown): PegAnalyticsCachePayload | null {
     "peg-analytics:pegData",
   );
   if (!rows.ok) return null;
+  let openIncidents: Record<string, PegAnalyticsOpenIncident> | undefined;
+  let openIncidentCandidates: Record<string, PegAnalyticsOpenIncident[]> | undefined;
+  if (parsed.openIncidents !== undefined) {
+    const validatedOpenIncidents = validatePayloadWithSchema(
+      OPEN_INCIDENTS_SCHEMA,
+      parsed.openIncidents,
+      "peg-analytics:openIncidents",
+    );
+    if (validatedOpenIncidents.ok) {
+      if (parsed.openIncidentCandidates !== undefined) {
+        const validatedCandidates = validatePayloadWithSchema(
+          OPEN_INCIDENT_CANDIDATES_SCHEMA,
+          parsed.openIncidentCandidates,
+          "peg-analytics:openIncidentCandidates",
+        );
+        if (validatedCandidates.ok) {
+          openIncidents = validatedOpenIncidents.data;
+          openIncidentCandidates = validatedCandidates.data;
+        }
+      } else {
+        openIncidents = validatedOpenIncidents.data;
+      }
+    }
+  }
   return {
     computedAtSec: parsed.computedAtSec,
     depegEventsToday: parsed.depegEventsToday,
     depegEventsYesterday: parsed.depegEventsYesterday,
     pegData: rows.data,
+    ...(openIncidents !== undefined ? { openIncidents } : {}),
+    ...(openIncidentCandidates !== undefined ? { openIncidentCandidates } : {}),
   };
 }
 

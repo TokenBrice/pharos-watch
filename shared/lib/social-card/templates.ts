@@ -484,24 +484,38 @@ export function buildSocialCardElement(input: SocialCardSpec, assets: SocialCard
 export function buildSocialDepegBriefingElement(card: {
   assessedAt: string; marketAt: string | null; nativeAt: string | null;
   total: number; recoveredToday: number; newToday: number | null;
-  rows: readonly { symbol: string; current: string; peak: string; peakNote?: string }[];
+  recentCount?: number; longRunningCount?: number; showingLongRunningFallback?: boolean;
+  rows: readonly { symbol: string; current: string; currentNote?: string; peak: string; peakNote?: string }[];
 }, assets: SocialCardAssets): SocialCardElement {
   const { measure } = assets;
   const hasPeakNote = card.rows.some(row => row.peakNote);
+  const hasSplit = card.recentCount != null && card.longRunningCount != null;
+  const rightHeader = !hasSplit
+    ? `Top ${card.rows.length} of ${card.total} open events`
+    : card.showingLongRunningFallback
+      ? `Top ${card.rows.length} of ${card.longRunningCount} long-running (>30d)`
+      : card.recentCount! > 0
+        ? `Top ${card.rows.length} of ${card.recentCount} recent`
+        : `Top ${card.rows.length} of ${card.total} open events`;
   return canvas(DARK.ground,
     h("div", { ...at(COLUMN.left, 50, 1008, 44), alignItems: "center", justifyContent: "space-between" },
       lockup(assets, "Depeg briefing", "dark").node,
       label(measure, `${card.assessedAt} UTC`, "mono-500", 24, DARK.muted).node),
     h("div", { ...at(COLUMN.left, 158, 448, 336), flexDirection: "column", justifyContent: "center", gap: 10 },
       label(measure, `${card.total}`, "display-800", 96, DARK.text).node,
-      label(measure, "Open incidents", "display-600", 38, DARK.text).node,
+      label(measure, "Open events", "display-600", 38, DARK.text).node,
+      hasSplit ? label(measure, `${card.recentCount} recent · ${card.longRunningCount} >30d`, "mono-500", 24, DARK.soft).node : null,
       label(measure, `${card.recoveredToday} recovered in 24h`, "mono-500", 24, DARK.soft).node,
       label(measure, card.newToday == null ? "New in 24h unavailable" : `${card.newToday} new in 24h`, "mono-500", 24, DARK.soft).node),
     h("div", { ...at(550, hasPeakNote ? 113 : 123, 554, 385), flexDirection: "column", justifyContent: "center", gap: hasPeakNote ? 4 : 11 },
-      label(measure, `Top ${card.rows.length} of ${card.total} open incidents`, "mono-500", 22, DARK.muted).node,
+      label(measure, rightHeader, "mono-500", 22, DARK.muted).node,
       ...card.rows.map(row => h("div", { flexDirection: "column" },
         label(measure, row.symbol, "display-800", 32, DARK.text).node,
-        label(measure, row.current, "mono-700", 26, DARK.text).node,
+        row.currentNote
+          ? h("div", { alignItems: "baseline", gap: 10 },
+              label(measure, row.current, "mono-700", 26, DARK.text).node,
+              label(measure, row.currentNote, "mono-500", 20, DARK.muted).node)
+          : label(measure, row.current, "mono-700", 26, DARK.text).node,
         label(measure, row.peak, "mono-500", row.peakNote ? 20 : 22, DARK.muted).node,
         row.peakNote ? label(measure, row.peakNote, "mono-500", 20, DARK.muted).node : null))),
     h("div", { ...at(COLUMN.left, 501, 1008, 34), alignItems: "center", gap: 30 },

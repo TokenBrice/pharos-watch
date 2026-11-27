@@ -6,9 +6,9 @@ import { buildLiveHomepageHeroSnapshot } from "@shared/lib/homepage-hero-snapsho
 import { getDisplayedPsi } from "@shared/lib/psi-view-model";
 import { buildTotalMcapChartRows, TOTAL_MCAP_COHORT_IDS, TOTAL_MCAP_MAJOR_COHORT_HISTORY_DAYS } from "@shared/lib/total-mcap-chart";
 import { StablecoinListResponseSchema, StablecoinChartResponseSchema, SupplyHistoryResponseSchema } from "@shared/types/supply";
-import { PegSummaryResponseSchema, PegSummaryStatsSchema } from "@shared/types/peg";
 import { StabilityIndexResponseSchema } from "@shared/types/stability";
-import { HomepageHistorySchema, HomepageSnapshotSchema, type HomepageLaneMeta } from "@shared/types/homepage";
+import { PegSummaryResponseSchema, PegSummaryStatsSchema } from "@shared/types/peg";
+import { HomepageHistorySchema, HomepageSnapshotSchema, type HomepageLaneMeta, type HomepageSnapshot } from "@shared/types/homepage";
 import { addFreshnessHeaders, buildFreshnessMeta } from "../lib/api-freshness";
 import { assessFreshnessTimestamp } from "../lib/api-freshness-age";
 import { jsonResponse } from "../lib/api-response";
@@ -17,10 +17,42 @@ import { handleSupplyHistory } from "./supply-history";
 import { handlePegSummary } from "./peg-summary";
 import { handleStabilityIndex } from "./stability-index";
 
-
-const HomepagePegSummaryInputSchema = PegSummaryResponseSchema.extend({
-  summary: PegSummaryStatsSchema.extend({ activeDepegCount: z.number().int().nonnegative() }).nullable(),
+/**
+ * Full `peg-summary` lane parser with optional split fields validated separately:
+ * preserves full `PegSummaryResponseSchema` validation (`coins`, `methodology`, summary stats)
+ * while isolating malformed optional split metadata so it cannot discard `activeDepegCount` (R8).
+ */
+const HomepagePegSummaryLaneSchema = PegSummaryResponseSchema.extend({
+  summary: PegSummaryStatsSchema.extend({
+    recentActiveDepegCount: z.unknown().optional(),
+    longRunningActiveDepegCount: z.unknown().optional(),
+  }).nullable(),
+  openIncidents: z.unknown().optional(),
+  openIncidentsAsOfSec: z.unknown().optional(),
 });
+
+function buildHomepageIncidentsData(
+  summary: {
+    activeDepegCount: number;
+    recentActiveDepegCount?: unknown;
+    longRunningActiveDepegCount?: unknown;
+  } | null | undefined,
+): NonNullable<HomepageSnapshot["incidents"]["data"]> | null {
+  if (!summary) return null;
+  const { activeDepegCount, recentActiveDepegCount, longRunningActiveDepegCount } = summary;
+  const splitValid =
+    typeof recentActiveDepegCount === "number" &&
+    Number.isSafeInteger(recentActiveDepegCount) &&
+    recentActiveDepegCount >= 0 &&
+    typeof longRunningActiveDepegCount === "number" &&
+    Number.isSafeInteger(longRunningActiveDepegCount) &&
+    longRunningActiveDepegCount >= 0 &&
+    recentActiveDepegCount + longRunningActiveDepegCount === activeDepegCount;
+  return splitValid
+    ? { activeDepegCount, recentActiveDepegCount, longRunningActiveDepegCount }
+    : { activeDepegCount };
+}
+
 /** Owner handlers retain admission, completion fencing and publication health semantics. */
 async function readLane<T>(source: string, maxAgeSec: number, schema: z.ZodType<T>, read: () => Promise<Response>): Promise<{ data: T | null; meta: HomepageLaneMeta }> {
   const now = Math.floor(Date.now() / 1000);
@@ -77,7 +109,7 @@ export async function handleHomepageSnapshot(db: D1Database): Promise<Response> 
   const [market, psi, incidents] = await Promise.all([
     readLane("stablecoins", API_FRESHNESS_MAX_AGE_SEC.stablecoins, StablecoinListResponseSchema, () => handleStablecoins(db)),
     readLane("stability-index", API_FRESHNESS_MAX_AGE_SEC.stabilityIndex, StabilityIndexResponseSchema, () => handleStabilityIndex(db, new URL(API_PATHS.stabilityIndex(), "https://internal.invalid"))),
-    readLane("peg-summary", API_FRESHNESS_MAX_AGE_SEC.pegSummary, HomepagePegSummaryInputSchema, () => handlePegSummary(db)),
+    readLane("peg-summary", API_FRESHNESS_MAX_AGE_SEC.pegSummary, HomepagePegSummaryLaneSchema, () => handlePegSummary(db)),
   ]);
   // The PSI sample clock can precede the response clock; never renew it.
   if (psi.data?.current && psi.meta.updatedAt !== null) {
@@ -92,7 +124,7 @@ export async function handleHomepageSnapshot(db: D1Database): Promise<Response> 
     market: { data: market.data ? buildLiveHomepageHeroSnapshot(market.data, market.meta.updatedAt ?? undefined) : null, meta: market.meta },
     psi: { data: psi.data?.current ? { ...getDisplayedPsi(psi.data.current), computedAt: psi.data.current.computedAt } : null,
       meta: psi.data?.current ? psi.meta : { ...psi.meta, status: psi.meta.updatedAt === null ? "unknown" : "degraded", reason: psi.meta.reason ?? "no-psi-observation" } },
-    incidents: { data: incidents.data?.summary ? { activeDepegCount: incidents.data.summary.activeDepegCount } : null,
+    incidents: { data: buildHomepageIncidentsData(incidents.data?.summary),
       meta: incidents.data?.summary ? incidents.meta : { ...incidents.meta, status: incidents.meta.updatedAt === null ? "unknown" : "degraded", reason: incidents.meta.reason ?? "incident-summary-unavailable" } },
   });
   return jsonResponse(payload, { headers: responseHeaders([payload.market.meta, payload.psi.meta, payload.incidents.meta]) });

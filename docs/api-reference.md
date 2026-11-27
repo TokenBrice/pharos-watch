@@ -742,7 +742,7 @@ Historical and active depeg incidents with constituent threshold-crossing counts
 
 ```json
 {
-  "currentVersion": "6.55"
+  "currentVersion": "6.56"
 }
 ```
 
@@ -780,7 +780,7 @@ Per-coin peg scores, reference evidence, coverage-aware recent metrics, and aggr
 
 ```json
 {
-  "currentVersion": "6.55"
+  "currentVersion": "6.56"
 }
 ```
 
@@ -1191,8 +1191,8 @@ Freshness threshold: 3600 s.
 
 ```json
 {
-  "currentVersion": "6.55",
-  "methodologyVersion": "6.55"
+  "currentVersion": "6.56",
+  "methodologyVersion": "6.56"
 }
 ```
 
@@ -1350,6 +1350,8 @@ A verified carried legacy FX peg can use `currentDeviationBps` in a mixed genera
 For legacy FX publications, an explicit per-asset `currentPeg.pegReferenceUnavailable` withholds the peg reference and deviation from peg summary and excludes that asset from the assessed cohort. The observed quote can still be available.
 
 An explicit `currentPeg.currentPriceUnavailable` clears the price, observation clock and deviation and excludes the asset from the assessed census. A fixed-USD asset can still carry a fresh DEX comparison against $1 when only the primary price is unavailable. A refused clocked primary comparison can still carry a separately admitted DEX comparison with its dated reference. The legacy census uses the fixed UTC closure calendar and the unrounded deviation for the severe-move exception. A valid market quote in daily supply provenance counts as a recent observation during a live quote outage.
+
+`GET /api/peg-summary` also publishes optional response-level `openIncidents` (keyed by stablecoin ID with `eventId`, canonical onset `startedAt`, confirmed `>30d` re-escalation timestamp `escalatedAt`, and live `coverage`), `openIncidentsAsOfSec`, and additive `summary.recentActiveDepegCount` / `summary.longRunningActiveDepegCount` totals summing to `summary.activeDepegCount`. `activeDepeg` and `activeDepegCount` remain the full open-confirmed census from `peg-analytics`; the live coverage overlay reads open rows solely to keep `coverage` within the 20-minute observation-gap budget without altering census membership or degrading availability when unreadable.
 
 ### DEX liquidity
 

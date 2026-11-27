@@ -330,8 +330,29 @@ export const DepegEventsResponseSchema = z.object({
 });
 export type DepegEventsResponse = z.infer<typeof DepegEventsResponseSchema>;
 
+export const OpenIncidentCoverageSchema = z.object({
+  lastObservationKind: z.enum(["trusted-off-peg", "trusted-at-par", "blind"]).nullable(),
+  lastTrustedObservationAt: DepegTimestampSchema.nullable(),
+  gapStartedAt: DepegTimestampSchema.nullable(),
+});
+export type OpenIncidentCoverage = z.infer<typeof OpenIncidentCoverageSchema>;
+
+export const OpenIncidentSnapshotSchema = z.object({
+  /** Effective open event ID (used to match live coverage overlays and DDR rows). */
+  eventId: z.number().int().positive(),
+  /** Canonical DDR-projected incident onset (`first_started_at`, unix seconds). */
+  startedAt: DepegTimestampSchema,
+  /** Most recent confirmed >30d re-escalation timestamp (`peak_escalated_at`), or null. */
+  escalatedAt: DepegTimestampSchema.nullable(),
+  /** Live observation coverage when uniquely matched to `eventId`; null when unavailable or ambiguous. */
+  coverage: OpenIncidentCoverageSchema.nullable(),
+});
+export type OpenIncidentSnapshot = z.infer<typeof OpenIncidentSnapshotSchema>;
+
 export const PegSummaryStatsSchema = z.object({
-  activeDepegCount: z.number(),
+  activeDepegCount: z.number().int().nonnegative(),
+  recentActiveDepegCount: z.number().int().nonnegative().optional(),
+  longRunningActiveDepegCount: z.number().int().nonnegative().optional(),
   medianDeviationBps: z.number().nullable(),
   worstCurrent: z.object({ id: z.string(), symbol: z.string(), bps: z.number() }).nullable(),
   coinsAtPeg: z.number(),
@@ -346,6 +367,10 @@ export type PegSummaryStats = z.infer<typeof PegSummaryStatsSchema>;
 export const PegSummaryResponseSchema = z.object({
   coins: z.array(PegSummaryCoinSchema),
   summary: PegSummaryStatsSchema.nullable(),
+  /** Open confirmed incident metadata keyed by stablecoin ID, sidecar to `coins[]` for V9 isolation. */
+  openIncidents: z.record(z.string(), OpenIncidentSnapshotSchema).optional(),
+  /** Server assessment clock (unix seconds) paired with `openIncidents` / split counts. */
+  openIncidentsAsOfSec: DepegTimestampSchema.optional(),
   methodology: MethodologyEnvelopeSchema,
   /** Present when the 200 body carries retained analytics or missing cross-checks; names the reason. */
   degradedReason: z.string().min(1).optional(),

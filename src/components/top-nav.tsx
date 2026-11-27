@@ -131,9 +131,35 @@ export function TopNav() {
   const isApplePlatform =
     hydrated && typeof navigator !== "undefined" && /Mac|iPhone|iPad|iPod/i.test(navigator.userAgent);
   const searchShortcutLabel = isApplePlatform ? "⌘K" : "Ctrl K";
-  // Neutral count of open confirmed incidents on the Depeg item: the compact
-  // snapshot's incidents lane (the /depeg/ census), absent while unavailable.
-  const activeDepegCount = useHomepageSnapshot().data?.incidents.data?.activeDepegCount ?? null;
+  // Recent/escalating open-incident badge on the Depeg item (Decision D):
+  // visually shown only when split counts are present and recent > 0 so the
+  // pill never flaps between recent and total across degraded/legacy reads.
+  const incidentsData = useHomepageSnapshot().data?.incidents.data ?? null;
+  const hasIncidentSplit =
+    incidentsData != null
+    && incidentsData.recentActiveDepegCount != null
+    && incidentsData.longRunningActiveDepegCount != null
+    && incidentsData.recentActiveDepegCount + incidentsData.longRunningActiveDepegCount === incidentsData.activeDepegCount;
+  const recentDepegCount = hasIncidentSplit ? incidentsData.recentActiveDepegCount! : null;
+  const longRunningDepegCount = hasIncidentSplit ? incidentsData.longRunningActiveDepegCount! : null;
+  const depegSrText = !hasIncidentSplit
+    ? null
+    : recentDepegCount! > 0
+      ? longRunningDepegCount! > 0
+        ? `, ${recentDepegCount} recent ${recentDepegCount === 1 ? "depeg" : "depegs"}, ${longRunningDepegCount} long-running`
+        : `, ${recentDepegCount} recent ${recentDepegCount === 1 ? "depeg" : "depegs"}`
+      : longRunningDepegCount! > 0
+        ? `, 0 recent, ${longRunningDepegCount} long-running active ${longRunningDepegCount === 1 ? "depeg" : "depegs"}`
+        : null;
+  const depegTitle = !hasIncidentSplit
+    ? null
+    : recentDepegCount! > 0
+      ? longRunningDepegCount! > 0
+        ? `${recentDepegCount} recent · ${longRunningDepegCount} long-running (>30d) active depegs`
+        : `${recentDepegCount} recent active ${recentDepegCount === 1 ? "depeg" : "depegs"}`
+      : longRunningDepegCount! > 0
+        ? `0 recent · ${longRunningDepegCount} long-running (>30d) active ${longRunningDepegCount === 1 ? "depeg" : "depegs"}`
+        : null;
 
   // Desktop hover-to-open for the section disclosures is gated per-event on
   // `pointerType === "mouse"`, so hybrid touch laptops keep tap-to-open without
@@ -432,14 +458,15 @@ export function TopNav() {
           {DESKTOP_QUICK_NAV_ITEMS.map((item) => {
             const isActive = isNavItemActive(pathname, item);
             const Icon = item.icon;
-            const badge = item.href === "/depeg/" && activeDepegCount ? activeDepegCount : null;
+            const isDepeg = item.href === "/depeg/";
+            const badge = isDepeg && recentDepegCount && recentDepegCount > 0 ? recentDepegCount : null;
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 prefetch={false}
                 aria-current={isActive ? "page" : undefined}
-                title={item.description}
+                title={isDepeg && depegTitle ? depegTitle : item.description}
                 onClick={() => trackEvent("nav_click", { surface: "rail", group: "rail", href: item.href })}
                 className={cn(
                   "group pharos-focus-ring inline-flex h-8 cursor-pointer items-center gap-1 rounded-md px-1.5 text-sm font-semibold whitespace-nowrap transition-colors min-[90rem]:px-2 2xl:gap-1.5 2xl:px-2.5",
@@ -473,8 +500,8 @@ export function TopNav() {
                     {badge}
                   </span>
                 ) : null}
-                {badge ? (
-                  <span className="sr-only">{`, ${badge} active ${badge === 1 ? "depeg" : "depegs"}`}</span>
+                {isDepeg && depegSrText ? (
+                  <span className="sr-only">{depegSrText}</span>
                 ) : null}
               </Link>
             );

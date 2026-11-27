@@ -43,6 +43,7 @@
     "worker/src/cron/confirm-pending-depegs.ts": 98.3,
     "worker/src/cron/daily-digest.ts": 95.2,
     "worker/src/cron/depeg-detection/decision-engine.ts": 99,
+    "worker/src/cron/depeg-detection/escalation.ts": 96,
     "worker/src/cron/depeg-detection/hydration.ts": 100,
     "worker/src/cron/depeg-detection/native-quote-policy.ts": 100,
     "worker/src/cron/depeg-detection/persistence.ts": 96.7,

@@ -7,13 +7,17 @@ import { ListFilter } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HomeAltTrackerLink } from "@/components/homepage/home-alt-tracker-link";
 import { HomeSectionHeader } from "@/components/homepage/home-section-header";
+import { usePegSummary } from "@/hooks/api-hooks";
 import { useDepegResolverSurfaces } from "@/hooks/use-depeg-resolver-surfaces";
+import { useMinuteClockSec } from "@/hooks/use-minute-clock-sec";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 import { cn } from "@/lib/utils";
 import { formatPercentFromRatio } from "@shared/lib/format";
 import { describePromotedAccuracy, formatPromotedAccuracyLines } from "@/lib/ddr-promoted-accuracy";
+import { classifyOpenIncidentTier } from "@shared/lib/active-depegs";
+import type { OpenIncidentSnapshot } from "@shared/types/peg";
 import {
   type DdrResolutionTier,
   type DdrPublicPredictionState,
@@ -30,7 +34,13 @@ import {
   NOW_DOT_TONE,
 } from "@/components/depeg/depeg-resolver-row-card-model";
 import { groupTiersByVocabulary, isResolverBookAvailable } from "@/components/depeg/depeg-resolver-book-summary";
-import { DDR_VERDICT_CLASSES, DEPEG_PENDING_STATE_LABELS, type DdrTierVocabulary } from "@shared/lib/classification";
+import {
+  DDR_VERDICT_CLASSES,
+  DEPEG_PENDING_STATE_LABELS,
+  OPEN_INCIDENT_TIER_BADGES,
+  type DdrTierVocabulary,
+  type OpenIncidentTier,
+} from "@shared/lib/classification";
 
 // Above this many open depegs the board splits into two balanced columns so all
 // forecasts stay visible without an over-tall single list.
@@ -53,6 +63,8 @@ interface ForecastItem {
   tier: DdrResolutionTier | null;
   /** Label vocabulary the forecast was locked under (DDRv5 evidence classes or legacy). */
   vocabulary: DdrTierVocabulary;
+  /** Open-incident horizon matched strictly by `eventId`, or null when unmatched/unavailable. */
+  incidentTier: OpenIncidentTier | null;
   nowBps: number | null;
   /** Benchmarked median time-to-repeg, seconds; null when no duration band. */
   medianSec: number | null;
@@ -60,6 +72,24 @@ interface ForecastItem {
   medianResolveAt: number | null;
   degradedReason: string | null;
   severity: number;
+}
+
+/**
+ * Match a DDR row to `/api/peg-summary` `openIncidents` strictly by `eventId`
+ * (never bare coin ID) so closed or earlier rows never borrow a different incident's badge.
+ */
+function resolveMatchedIncidentTier(
+  row: DdrV2ResponseRow,
+  openIncidents: Readonly<Record<string, OpenIncidentSnapshot>> | undefined,
+  clockSec: number,
+): OpenIncidentTier | null {
+  if (!openIncidents || !(clockSec > 0)) return null;
+  if (row.live.eventState !== undefined && row.live.eventState !== "active") return null;
+  const currentEventId = row.live.currentEventId;
+  if (currentEventId == null) return null;
+  const incident = openIncidents[row.stablecoinId];
+  if (!incident || incident.eventId !== currentEventId) return null;
+  return classifyOpenIncidentTier(incident, clockSec);
 }
 
 /**
@@ -73,7 +103,11 @@ function rowSeverity(row: DdrV2ResponseRow): number {
   return peak == null ? -1 : Math.abs(peak);
 }
 
-function toForecastItem(row: DdrV2ResponseRow): ForecastItem {
+function toForecastItem(
+  row: DdrV2ResponseRow,
+  openIncidents: Readonly<Record<string, OpenIncidentSnapshot>> | undefined,
+  clockSec: number,
+): ForecastItem {
   const currentForecast = isCurrentForecast(row);
   const duration = isCurrentForecast(row) ? row.frozen.duration : null;
   const nowBps = getLiveCurrentDeviationBps(row);
@@ -85,6 +119,7 @@ function toForecastItem(row: DdrV2ResponseRow): ForecastItem {
     state: row.prediction.state,
     tier: currentForecast ? getResolution(row).tier : null,
     vocabulary: getTierVocabulary(row),
+    incidentTier: resolveMatchedIncidentTier(row, openIncidents, clockSec),
     nowBps,
     medianSec: benchmarked ? duration.medianSec : null,
     remainingAsOf: benchmarked ? duration.remainingAsOf : null,
@@ -171,6 +206,21 @@ function ForecastRow({ item, logoSrc }: { item: ForecastItem; logoSrc: string | 
         <span className="truncate font-mono text-xs font-semibold text-foreground group-hover:underline">
           {item.symbol}
         </span>
+        {item.incidentTier === "escalating" || item.incidentTier === "long_running" ? (
+          <span
+            title={
+              item.incidentTier === "escalating"
+                ? "Re-escalated >30d incident (confirmed within 7d)"
+                : "Open incident older than 30 days"
+            }
+            className={cn(
+              "shrink-0 rounded-sm border px-1 font-sans text-3xs font-semibold leading-tight",
+              OPEN_INCIDENT_TIER_BADGES[item.incidentTier].className,
+            )}
+          >
+            {OPEN_INCIDENT_TIER_BADGES[item.incidentTier].short}
+          </span>
+        ) : null}
         <span className="shrink-0 font-mono text-2xs tabular-nums text-muted-foreground">{signedBps(item.nowBps)}</span>
       </span>
       <span className="flex shrink-0 items-center justify-end gap-2.5">
@@ -370,13 +420,20 @@ function SourceStatus({ label, computedAt, usable, loading }: {
 
 export function HomeAltDdrOverview(): React.JSX.Element | null {
   const { resolverEnabled, resolverReviewerEnabled, resolver, resolverReview } = useDepegResolverSurfaces();
+  const pegSummaryQuery = usePegSummary({ enabled: false });
+  const nowSec = useMinuteClockSec();
   const { data: resolverData, error: resolverError } = resolver;
   const { data: resolverReviewData, error: resolverReviewError } = resolverReview;
+  const openIncidents = pegSummaryQuery.data?.openIncidents;
+  const clockSec = nowSec > 0 ? nowSec : (pegSummaryQuery.data?.openIncidentsAsOfSec ?? 0);
 
-  // Every ongoing depeg, worst gap first.
+  // Every ongoing depeg, worst gap first; whole-book rows passively join `openIncidents` by `eventId`.
   const items = useMemo(
-    () => [...(resolverData?.rows ?? [])].map(toForecastItem).sort((a, b) => b.severity - a.severity),
-    [resolverData],
+    () =>
+      [...(resolverData?.rows ?? [])]
+        .map((row) => toForecastItem(row, openIncidents, clockSec))
+        .sort((a, b) => b.severity - a.severity),
+    [resolverData, openIncidents, clockSec],
   );
 
   const logos = logosById;

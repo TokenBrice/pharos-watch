@@ -20,6 +20,11 @@ const now = 1_800_000_000;
 const method = { version: "1.0", versionLabel: "v1.0", currentVersion: "1.0", currentVersionLabel: "v1.0", changelogPath: "/methodology/", asOf: now, isCurrent: true };
 const data = { peggedAssets: [makeStablecoin({ id: "usdt-tether", circulating: { peggedUSD: 100 } })] };
 const current = { score: 80, band: "STEADY", avg24h: 91.9, avg24hBand: "BEDROCK", components: { severity: 0, breadth: 0, trend: 0 }, computedAt: now, methodologyVersion: "1.0" };
+const pegBody = (summary: Record<string, unknown> = {}) => ({
+  coins: [],
+  summary: { activeDepegCount: 2, medianDeviationBps: null, worstCurrent: null, coinsAtPeg: 0, totalTracked: 0, depegEventsToday: 0, depegEventsYesterday: 0, ...summary },
+  methodology: method,
+});
 function response(body: unknown, updatedAt: number | null = now, warning?: string) {
   return new Response(JSON.stringify(body), { headers: {
     "Content-Type": "application/json", ...(updatedAt === null ? {} : { "X-Data-Updated-At": String(updatedAt) }),
@@ -33,11 +38,10 @@ beforeEach(() => {
   owners.supply.mockImplementation(async (_db, url: URL) => {
     const id = url.searchParams.get("stablecoin");
     const entry = Object.entries(TOTAL_MCAP_COHORT_IDS).find(([, value]) => value === id);
-    const history = entry ? fixture.histories[`${entry[0]}History` as keyof typeof fixture.histories] : null;
-    return response(history);
+    return response(entry ? fixture.histories[`${entry[0]}History` as keyof typeof fixture.histories] : null);
   });
   owners.psi.mockImplementation(async () => response({ current, history: [], methodology: method }));
-  owners.peg.mockImplementation(async () => response({ coins: [], summary: { activeDepegCount: 2, medianDeviationBps: null, worstCurrent: null, coinsAtPeg: 0, totalTracked: 0, depegEventsToday: 0, depegEventsYesterday: 0 }, methodology: method }));
+  owners.peg.mockImplementation(async () => response(pegBody()));
 });
 afterEach(() => { vi.restoreAllMocks(); vi.clearAllMocks(); vi.unstubAllGlobals(); });
 
@@ -83,18 +87,32 @@ describe("compact homepage snapshot", () => {
   it("does not invent generation time when a validated lane lacks its clock", async () => {
     owners.stablecoins.mockImplementation(async () => response(data, null));
     const body = HomepageSnapshotSchema.parse(await (await handleHomepageSnapshot(mockD1())).json());
-    expect(body.market.data?.totalUsd).toBe(100);
-    expect(body.market.data?.asOfISO).toBeNull();
+    expect(body.market.data).toMatchObject({ totalUsd: 100, asOfISO: null });
     expect(body.market.meta).toMatchObject({ updatedAt: null, ageSeconds: null, status: "unknown", reason: "missing-timestamp" });
   });
 
   it("preserves an old PSI sample clock and explicit degraded owner warnings", async () => {
     owners.psi.mockImplementation(async () => response({ current: { ...current, computedAt: now - 86400 }, history: [], methodology: method }));
-    owners.peg.mockImplementation(async () => response({ coins: [], summary: { activeDepegCount: 0, medianDeviationBps: null, worstCurrent: null, coinsAtPeg: 0, totalTracked: 0, depegEventsToday: 0, depegEventsYesterday: 0 }, methodology: method }, now, '199 - "retained analytics"'));
+    owners.peg.mockImplementation(async () => response(pegBody({ activeDepegCount: 0 }), now, '199 - "retained analytics"'));
     const body = HomepageSnapshotSchema.parse(await (await handleHomepageSnapshot(mockD1())).json());
     expect(body.psi.meta).toMatchObject({ updatedAt: now - 86400, status: "stale", reason: "stale-generation" });
     expect(body.incidents.data?.activeDepegCount).toBe(0);
     expect(body.incidents.meta).toMatchObject({ status: "degraded", reason: "source-warning" });
+  });
+
+  it("forwards coherent incident horizon split counts and omits mismatched or partial splits without crashing lanes", async () => {
+    owners.peg.mockImplementation(async () => response(pegBody({ activeDepegCount: 17, recentActiveDepegCount: 4, longRunningActiveDepegCount: 13 })));
+    expect(HomepageSnapshotSchema.parse(await (await handleHomepageSnapshot(mockD1())).json()).incidents.data).toEqual({ activeDepegCount: 17, recentActiveDepegCount: 4, longRunningActiveDepegCount: 13 });
+    for (const badSplit of [{ recentActiveDepegCount: 4, longRunningActiveDepegCount: 10 }, { recentActiveDepegCount: 4 }, { longRunningActiveDepegCount: 13 }, { recentActiveDepegCount: -1, longRunningActiveDepegCount: 18 }]) {
+      owners.peg.mockImplementation(async () => response({ ...pegBody({ activeDepegCount: 17, ...badSplit }), openIncidents: { "usdt-tether": { eventId: "bad" } } }));
+      const body = HomepageSnapshotSchema.parse(await (await handleHomepageSnapshot(mockD1())).json());
+      expect(body.market.data?.totalUsd).toBe(100); expect(body.psi.data?.score).toBe(91.9);
+      expect(body.incidents.data).toEqual({ activeDepegCount: 17 }); expect(body.incidents.meta.status).toBe("fresh");
+    }
+    owners.peg.mockImplementation(async () => response({ ...pegBody(), coins: "invalid" }));
+    expect(HomepageSnapshotSchema.parse(await (await handleHomepageSnapshot(mockD1())).json()).incidents).toMatchObject({ data: null, meta: { status: "unknown", reason: "invalid-source-payload" } });
+    owners.peg.mockImplementation(async () => response({ ...pegBody(), summary: null }));
+    expect(HomepageSnapshotSchema.parse(await (await handleHomepageSnapshot(mockD1())).json()).incidents).toMatchObject({ data: null, meta: { status: "degraded", reason: "incident-summary-unavailable" } });
   });
 });
 
@@ -102,16 +120,12 @@ describe("composed homepage cache deadlines", () => {
   it.each(["snapshot", "history"] as const)("never renews the %s producer deadline through Date or a conditional", async (kind) => {
     const clock = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
     const handler = kind === "snapshot" ? handleHomepageSnapshot : handleHomepageHistory;
-    const first = await handler(mockD1());
-    const payload: unknown = await first.json();
+    const payload: unknown = await (await handler(mockD1())).json();
     const metas = kind === "snapshot"
       ? Object.values(HomepageSnapshotSchema.parse(payload)).map((lane) => lane.meta)
       : Object.values(HomepageHistorySchema.parse(payload).sources);
     const budget = Math.min(...metas.map((meta) => meta.freshBudgetSec));
-    // Slow source work consumes all but one second of the shortest lane's
-    // runway; dispatch/conditional work then crosses that deadline.
-    const delayedOwner = kind === "snapshot" ? owners.stablecoins : owners.charts;
-    delayedOwner.mockImplementation(async () => {
+    (kind === "snapshot" ? owners.stablecoins : owners.charts).mockImplementation(async () => {
       clock.mockReturnValue((now + budget - 1) * 1000);
       return response(kind === "snapshot" ? data : fixture.chartPoints);
     });
@@ -133,14 +147,8 @@ describe("composed homepage cache deadlines", () => {
   it.each([handleHomepageSnapshot, handleHomepageHistory])("does not cache a composition completed after a required lane expires", async (handler) => {
     const clock = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
     const original = owners.stablecoins.getMockImplementation()!;
-    owners.stablecoins.mockImplementation(async (...args) => {
-      clock.mockReturnValue((now + 100_000) * 1000);
-      return original(...args);
-    });
-    owners.charts.mockImplementation(async () => {
-      clock.mockReturnValue((now + 100_000) * 1000);
-      return response(fixture.chartPoints);
-    });
+    owners.stablecoins.mockImplementation(async (...args) => { clock.mockReturnValue((now + 100_000) * 1000); return original(...args); });
+    owners.charts.mockImplementation(async () => { clock.mockReturnValue((now + 100_000) * 1000); return response(fixture.chartPoints); });
     expect((await handler(mockD1())).headers.get("Cache-Control")).toBe("no-store");
   });
 });

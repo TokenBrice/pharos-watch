@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { Suspense, lazy, type ComponentType, type ReactNode } from "react";
-import { act, cleanup, render as rtlRender, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render as rtlRender, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -34,137 +34,70 @@ import { makeStablecoin } from "@shared/test-utils/stablecoin";
 // the homepage renders fails here even though lint only sees direct imports.
 
 const hooks = vi.hoisted(() => ({
-  useActiveDepegEvents: vi.fn(),
-  useBlacklistEventsPage: vi.fn(),
-  useBlacklistSummary: vi.fn(),
-  useDepegResolverSurfaces: vi.fn(),
-  useDexLiquidityTable: vi.fn(),
-  useDigestPromo: vi.fn(),
-  useHomepageHistory: vi.fn(),
-  useHomepageSnapshot: vi.fn(),
-  useMintBurnFlows: vi.fn(),
-  usePegSummary: vi.fn(),
-  useReportCardsV9Table: vi.fn(),
-  useStabilityIndex: vi.fn(),
-  useStablecoins: vi.fn(),
-  useTelegramPulse: vi.fn(),
-  useYieldRankingsSummary: vi.fn(),
+  useActiveDepegEvents: vi.fn(), useBlacklistEventsPage: vi.fn(), useBlacklistSummary: vi.fn(),
+  useDepegResolverSurfaces: vi.fn(), useDexLiquidityTable: vi.fn(), useDigestPromo: vi.fn(),
+  useHomepageHistory: vi.fn(), useHomepageSnapshot: vi.fn(), useMintBurnFlows: vi.fn(),
+  usePegSummary: vi.fn(), useReportCardsV9Table: vi.fn(), useStabilityIndex: vi.fn(),
+  useStablecoins: vi.fn(), useTelegramPulse: vi.fn(), useYieldRankingsSummary: vi.fn(),
 }));
 vi.mock("@/hooks/api-hooks", () => ({
-  useDexLiquidityTable: hooks.useDexLiquidityTable,
-  useDigestPromo: hooks.useDigestPromo,
-  useHomepageHistory: hooks.useHomepageHistory,
-  useHomepageSnapshot: hooks.useHomepageSnapshot,
-  usePegSummary: hooks.usePegSummary,
-  useReportCardsV9Table: hooks.useReportCardsV9Table,
-  useStabilityIndex: hooks.useStabilityIndex,
-  useTelegramPulse: hooks.useTelegramPulse,
+  useDexLiquidityTable: hooks.useDexLiquidityTable, useDigestPromo: hooks.useDigestPromo,
+  useHomepageHistory: hooks.useHomepageHistory, useHomepageSnapshot: hooks.useHomepageSnapshot,
+  usePegSummary: hooks.usePegSummary, useReportCardsV9Table: hooks.useReportCardsV9Table,
+  useStabilityIndex: hooks.useStabilityIndex, useTelegramPulse: hooks.useTelegramPulse,
   useYieldRankingsSummary: hooks.useYieldRankingsSummary,
 }));
-vi.mock("@/hooks/use-blacklist-events", () => ({
-  useBlacklistEventsPage: hooks.useBlacklistEventsPage,
-  useBlacklistSummary: hooks.useBlacklistSummary,
-}));
+vi.mock("@/hooks/use-blacklist-events", () => ({ useBlacklistEventsPage: hooks.useBlacklistEventsPage, useBlacklistSummary: hooks.useBlacklistSummary }));
 vi.mock("@/hooks/use-depeg-events", () => ({ useActiveDepegEvents: hooks.useActiveDepegEvents }));
 vi.mock("@/hooks/use-depeg-resolver-surfaces", () => ({ useDepegResolverSurfaces: hooks.useDepegResolverSurfaces }));
 vi.mock("@/hooks/use-coin-states", () => ({ useCoinStates: () => ({ byId: new Map(), liveReady: false }) }));
 vi.mock("@/hooks/use-mint-burn-flows", () => ({ useMintBurnFlows: hooks.useMintBurnFlows }));
 vi.mock("@/hooks/use-stablecoins", () => ({ useStablecoins: hooks.useStablecoins }));
-vi.mock("@/hooks/use-home-alt-filters", () => ({
-  useHomeAltFilters: () => ({
-    activeFilters: [],
-    activePeg: "all",
-    setActivePeg: vi.fn(),
-    activeUniverse: "catalog",
-    setActiveUniverse: vi.fn(),
-  }),
-}));
+vi.mock("@/hooks/use-home-alt-filters", () => ({ useHomeAltFilters: () => ({ activeFilters: [], activePeg: "all", setActivePeg: vi.fn(), activeUniverse: "catalog", setActiveUniverse: vi.fn() }) }));
 vi.mock("@/hooks/use-pinned-stablecoins", () => ({ usePinnedStablecoins: () => ({ pinnedIds: [], togglePinned: vi.fn() }) }));
 vi.mock("@/hooks/use-hydrated", () => ({ useHydrated: () => true }));
 vi.mock("@/components/homepage/home-alt-hero-chart-gate", () => ({ HomeAltHeroChartGate: () => <div /> }));
 vi.mock("@/lib/analytics", () => ({ trackFreshDataReady: vi.fn() }));
 vi.mock("@/lib/fonts/digest", () => ({ digestDisplay: { className: "digest-font" } }));
 vi.mock("@/lib/logos", () => ({ logosById: {}, getLogoSrc: () => undefined }));
-vi.mock("next/navigation", () => ({
-  usePathname: () => "/",
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn(), back: vi.fn() }),
-  useSearchParams: () => new URLSearchParams(),
-}));
-vi.mock("next/image", () => ({
-  default: ({ alt = "", ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => <img alt={alt} {...props} />,
-}));
-// Resolve dynamic imports for real so shared descendants (e.g. StablecoinTable) render.
+vi.mock("next/navigation", () => ({ usePathname: () => "/", useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn(), back: vi.fn() }), useSearchParams: () => new URLSearchParams() }));
+vi.mock("next/image", () => ({ default: ({ alt = "", ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => <img alt={alt} {...props} /> }));
 vi.mock("next/dynamic", () => ({
   default: (loader: () => Promise<unknown>) => {
     const Lazy = lazy(async () => {
       const loaded = (await loader()) as { default?: ComponentType<object> } | ComponentType<object>;
       return { default: (typeof loaded === "object" && loaded && "default" in loaded ? loaded.default : loaded) as ComponentType<object> };
     });
-    return function Dynamic(props: object) {
-      return <Suspense fallback={null}><Lazy {...props} /></Suspense>;
-    };
+    return function Dynamic(props: object) { return <Suspense fallback={null}><Lazy {...props} /></Suspense>; };
   },
 }));
 
-// Shared descendants may own extra queries; they stay idle (no network in tests).
-function render(ui: ReactNode) {
-  const client = new QueryClient({ defaultOptions: { queries: { enabled: false, retry: false } } });
-  return rtlRender(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
-}
+const render = (ui: ReactNode) => rtlRender(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { enabled: false, retry: false } } })}>{ui}</QueryClientProvider>);
 
-const NOW = Date.parse("2026-10-10T12:00:00Z");
-const NOW_SEC = NOW / 1000;
-const WARNING_COPY =
-  /data quality warning|quality check|refresh failed|last successful update|\bstale\b|degraded|retained|freshness unavailable|temporarily unavailable|older snapshot|saved data|initial data|retry|try again|ratings are held|warnings?\b/i;
-
-const HEALTH_TONE =
-  /bg-state-warn-subtle|border-state-warn(?=[\s"])|bg-state-warn-solid\/15|text-state-warn-(ink|strong)|state-danger-subtle|bg-amber-500\/(8|15)\b|border-amber-500\/30|text-amber-800/;
+const NOW = Date.parse("2026-10-10T12:00:00Z"), NOW_SEC = NOW / 1000;
+const WARNING_COPY = /data quality warning|quality check|refresh failed|last successful update|\bstale\b|degraded|retained|freshness unavailable|temporarily unavailable|older snapshot|saved data|initial data|retry|try again|ratings are held|warnings?\b/i;
+const HEALTH_TONE = /bg-state-warn-subtle|border-state-warn(?=[\s"])|bg-state-warn-solid\/15|text-state-warn-(ink|strong)|state-danger-subtle|bg-amber-500\/(8|15)\b|border-amber-500\/30|text-amber-800/;
 
 type HealthCase = { label: string; meta: ApiMeta | undefined; error: Error | null; hasData: boolean };
 const CASES: HealthCase[] = [
   { label: "stale producer", meta: { updatedAt: NOW_SEC - 7 * 86_400, ageSeconds: 7 * 86_400, status: "stale" }, error: null, hasData: true },
-  {
-    label: "source degradation",
-    meta: { updatedAt: NOW_SEC, ageSeconds: 0, status: "degraded", warning: "199 pharos source degraded",
-      dependencies: { source: { updatedAt: NOW_SEC - 86_400, ageSeconds: 86_400, status: "stale" } } },
-    error: null,
-    hasData: true,
-  },
+  { label: "source degradation", meta: { updatedAt: NOW_SEC, ageSeconds: 0, status: "degraded", warning: "199 pharos source degraded", dependencies: { source: { updatedAt: NOW_SEC - 86_400, ageSeconds: 86_400, status: "stale" } } }, error: null, hasData: true },
   { label: "failed refresh with retained data", meta: { updatedAt: NOW_SEC - 60, ageSeconds: 60, status: "fresh" }, error: new Error("refresh failed"), hasData: true },
   { label: "503 unavailable", meta: undefined, error: new Error("503"), hasData: false },
 ];
 
-const stablecoins = {
-  peggedAssets: [makeStablecoin({
-    id: "usdc-circle", name: "USD Coin", symbol: "USDC",
-    circulating: { peggedUSD: 20_000_000 }, circulatingPrevWeek: { peggedUSD: 10_000_000 },
-  })],
-};
-const pegSummary = {
-  coins: [{ id: "usdc-circle", activeDepeg: true, currentDeviationBps: -75 }],
-  summary: { activeDepegCount: 1, coinsAtPeg: 0, medianDeviationBps: 75, totalTracked: 1 },
-};
+const stablecoins = { peggedAssets: [makeStablecoin({ id: "usdc-circle", name: "USD Coin", symbol: "USDC", circulating: { peggedUSD: 20_000_000 }, circulatingPrevWeek: { peggedUSD: 10_000_000 } })] };
+const pegSummary = { coins: [{ id: "usdc-circle", activeDepeg: true, currentDeviationBps: -75 }], summary: { activeDepegCount: 1, coinsAtPeg: 0, medianDeviationBps: 75, totalTracked: 1 } };
 const activeEvents = { events: [{ id: 1, stablecoinId: "usdc-circle", symbol: "USDC", startedAt: NOW_SEC - 100 }] };
 const psi = {
-  current: {
-    avg24h: 39, avg24hBand: "BEDROCK", band: "BEDROCK", components: { breadth: 1, severity: 1, stressBreadth: 1, trend: 1 },
-    computedAt: NOW_SEC - 7 * 86_400, contributors: [], methodologyVersion: "test", score: 40, totalMcapUsd: 1,
-  },
+  current: { avg24h: 39, avg24hBand: "BEDROCK", band: "BEDROCK", components: { breadth: 1, severity: 1, stressBreadth: 1, trend: 1 }, computedAt: NOW_SEC - 7 * 86_400, contributors: [], methodologyVersion: "test", score: 40, totalMcapUsd: 1 },
   history: [{ date: NOW_SEC - 8 * 86_400, score: 38, band: "BEDROCK", methodologyVersion: "test" }],
 };
 const flows = { coins: [makeMintBurnFlowCoin({ has24hActivity: true, netFlow24hUsd: 1_000_000 })], gauge: { band: "MINTING", score: 10 } };
 const freezes = { events: [{ amountUsdAtEvent: 1_000, eventType: "blacklist", id: "f-1", stablecoin: "USDC", stablecoinId: "usdc-circle", timestamp: NOW_SEC - 60 }] };
-const freezeSummary = {
-  stats: {
-    recentFreezeCount24h: 1, recentFreezeCount7d: 1, recentFreezeAmount24hUsd: 1_000, recentFreezeAmount7dUsd: 1_000,
-    valuationCoverage: { recent24h: { knownCount: 1, unavailableCount: 0 }, recent7d: { knownCount: 1, unavailableCount: 0 } },
-  },
-};
+const freezeSummary = { stats: { recentFreezeCount24h: 1, recentFreezeCount7d: 1, recentFreezeAmount24hUsd: 1_000, recentFreezeAmount7dUsd: 1_000, valuationCoverage: { recent24h: { knownCount: 1, unavailableCount: 0 }, recent7d: { knownCount: 1, unavailableCount: 0 } } } };
 const yieldRow = (id: string, symbol: string, apy: number, pys: number) => ({
-  id, symbol, name: `${symbol} Stablecoin`, currentApy: apy, apy30d: apy, yieldSource: "Compound V3",
-  yieldType: "lending-opportunity", dataSource: "protocol-api", sourceTvlUsd: 1_000_000, pharosYieldScore: pys,
-  pysNullReason: null, safetyScore: 80, safetyGrade: "B+", benchmarkKey: "USD", benchmarkLabel: "USD 3M T-Bill",
-  benchmarkRate: 4, yieldStability: 0.9, apyMin30d: 3, apyMax30d: 6, warningSignals: [], alternateSourceCount: 0, altSources: [],
+  id, symbol, name: `${symbol} Stablecoin`, currentApy: apy, apy30d: apy, yieldSource: "Compound V3", yieldType: "lending-opportunity", dataSource: "protocol-api", sourceTvlUsd: 1_000_000, pharosYieldScore: pys, pysNullReason: null, safetyScore: 80, safetyGrade: "B+", benchmarkKey: "USD", benchmarkLabel: "USD 3M T-Bill", benchmarkRate: 4, yieldStability: 0.9, apyMin30d: 3, apyMax30d: 6, warningSignals: [], alternateSourceCount: 0, altSources: [],
 });
 const yieldSummary = {
   projection: "summary", rankings: [yieldRow("usdc-circle", "USDC", 4.2, 61), yieldRow("usdt-tether", "USDT", 3.1, 55)],
@@ -172,22 +105,9 @@ const yieldSummary = {
   provenance: { safetySnapshot: { coveredCount: 2, trackedCount: 3 } },
   warnings: [{ code: "benchmark-unavailable", message: "USD reference evidence unavailable", reasons: ["reference-source-missing"] }],
 };
-const historyRows = [0, 1, 2].map((index) => ({
-  ts: NOW - (3 - index) * 86_400_000, total: 100 + index, usdt: 60, usdc: 20, sky: 10, others: 10 + index, nonUsd: 1,
-}));
+const historyRows = [0, 1, 2].map((i) => ({ ts: NOW - (3 - i) * 86_400_000, total: 100 + i, usdt: 60, usdc: 20, sky: 10, others: 10 + i, nonUsd: 1 }));
 const digestPromo = { latest: { digestTitle: "USDT sheds", editionNumber: 9, excerpt: "Excerpt." }, previousEditions: [] };
-
-function query<T>(c: HealthCase, data: T) {
-  return {
-    data: c.hasData ? data : undefined,
-    dataUpdatedAt: c.hasData ? NOW : 0,
-    error: c.error,
-    isError: c.error !== null && !c.hasData,
-    isLoading: false,
-    meta: c.meta,
-    refetch: vi.fn(),
-  };
-}
+const query = <T,>(c: HealthCase, data: T) => ({ data: c.hasData ? data : undefined, dataUpdatedAt: c.hasData ? NOW : 0, error: c.error, isError: c.error !== null && !c.hasData, isLoading: false, meta: c.meta, refetch: vi.fn() });
 
 function configure(c: HealthCase) {
   const stale = c.meta?.status !== "fresh";
@@ -200,7 +120,6 @@ function configure(c: HealthCase) {
   hooks.useMintBurnFlows.mockReturnValue(query(c, flows));
   hooks.useBlacklistEventsPage.mockReturnValue(query(c, freezes));
   hooks.useBlacklistSummary.mockReturnValue(query(c, freezeSummary));
-  // Optional ranking lanes fail independently of the market lane.
   hooks.useDexLiquidityTable.mockReturnValue({ ...query({ ...c, hasData: false }, {}), error: new Error("503") });
   hooks.useReportCardsV9Table.mockReturnValue({ ...query({ ...c, hasData: false }, {}), error: new Error("503") });
   hooks.useYieldRankingsSummary.mockReturnValue(query(c, yieldSummary));
@@ -215,75 +134,41 @@ function configure(c: HealthCase) {
   hooks.useDepegResolverSurfaces.mockReturnValue({
     resolverEnabled: true, resolverReviewerEnabled: true,
     resolver: { ...query(c, { _meta: ddrMeta, rows: [] }) },
-    resolverReview: { ...query(c, {
-      _meta: ddrMeta,
-      rows: [],
-      summary: { headline: { recoveryLikelihoodScoredCount: 10, recoveryLikelihoodAccuracyPct: 0.8,
-        lockedPredictionCount: 12, durationScoredCount: 5, horizonHitRates: [] } },
-    }) },
+    resolverReview: { ...query(c, { _meta: ddrMeta, rows: [], summary: { headline: { recoveryLikelihoodScoredCount: 10, recoveryLikelihoodAccuracyPct: 0.8, lockedPredictionCount: 12, durationScoredCount: 5, horizonHitRates: [] } } }) },
   });
 }
 
 function expectNoHealthUi(container: HTMLElement) {
   expect(container.querySelector('[role="alert"]')).toBeNull();
-  // An idle SWR TableBackgroundRefreshingBar keeps an empty opacity-0 live region;
-  // any visible or text-bearing status landmark on the homepage is banned.
-  const visibleStatuses = Array.from(container.querySelectorAll('[role="status"]')).filter(
-    (el) => (el.textContent ?? "").trim().length > 0 || !el.className.includes("opacity-0"),
-  );
+  const visibleStatuses = Array.from(container.querySelectorAll('[role="status"]')).filter((el) => (el.textContent ?? "").trim().length > 0 || !el.className.includes("opacity-0"));
   expect(visibleStatuses).toHaveLength(0);
   expect(container.textContent).not.toMatch(WARNING_COPY);
-  for (const element of container.querySelectorAll("[aria-label], [title]")) {
-    expect(`${element.getAttribute("aria-label") ?? ""} ${element.getAttribute("title") ?? ""}`).not.toMatch(WARNING_COPY);
-  }
-  // Health-notice tones (tinted warning boxes/chips), not data bands like the Mild peg band.
+  for (const el of container.querySelectorAll("[aria-label], [title]")) expect(`${el.getAttribute("aria-label") ?? ""} ${el.getAttribute("title") ?? ""}`).not.toMatch(WARNING_COPY);
   expect(container.innerHTML).not.toMatch(HEALTH_TONE);
   for (const button of container.querySelectorAll("button")) expect(button.textContent).not.toMatch(/retry|try again/i);
 }
 
 const SECTIONS: [string, () => ReactNode][] = [
-  ["Market Pulse hero + state line", () => (
-    <HomeAltHero snapshot={buildLiveHomepageHeroSnapshot(stablecoins, NOW_SEC - 30 * 86_400)} fallbackSelectedAtMs={NOW} />
-  )],
+  ["Market Pulse hero + state line", () => <HomeAltHero snapshot={buildLiveHomepageHeroSnapshot(stablecoins, NOW_SEC - 30 * 86_400)} fallbackSelectedAtMs={NOW} />],
   ["hero history chart", () => <HomeAltHeroLiveChart nowMs={NOW} />],
-  ["Peg health card", () => <PegHealthCard />],
-  ["Stability Index card", () => <PsiBandCard />],
-  ["Mint / Burn card", () => <MintBurnCard />],
-  ["Daily Digest card", () => <DailyDigestCard />],
-  ["Supply moves card", () => <SupplyMovesCard />],
-  ["FreezeWatch card", () => <RecentFreezesCard />],
-  ["Active depegs card", () => <ActiveDepegsCard />],
-  ["Stablecoin Overview rankings", () => <HomeAltRankingsSection titleId="rankings-title" />],
-  ["Upcoming teaser", () => <HomeAltUpcomingHorizonConstellation />],
-  ["Depeg Duration Resolver overview", () => <HomeAltDdrOverview />],
-  ["Yield Intelligence overview", () => <HomeAltYieldOverview />],
-  ["status bar", () => <HomeAltStatusTelegram />],
-  // Global chrome rendered on the homepage too; the PSI fixture is a week old.
+  ["Peg health card", () => <PegHealthCard />], ["Stability Index card", () => <PsiBandCard />],
+  ["Mint / Burn card", () => <MintBurnCard />], ["Daily Digest card", () => <DailyDigestCard />],
+  ["Supply moves card", () => <SupplyMovesCard />], ["FreezeWatch card", () => <RecentFreezesCard />],
+  ["Active depegs card", () => <ActiveDepegsCard />], ["Stablecoin Overview rankings", () => <HomeAltRankingsSection titleId="rankings-title" />],
+  ["Upcoming teaser", () => <HomeAltUpcomingHorizonConstellation />], ["Depeg Duration Resolver overview", () => <HomeAltDdrOverview />],
+  ["Yield Intelligence overview", () => <HomeAltYieldOverview />], ["status bar", () => <HomeAltStatusTelegram />],
   ["global regime bar", () => <RegimeBar />],
 ];
 
-// Preloaded once so lazily resolved shared descendants mount within a settle tick.
 async function settleLazyChildren() {
   for (let pass = 0; pass < 3; pass++) await act(async () => { await new Promise((done) => setTimeout(done, 0)); });
 }
-
 beforeAll(async () => {
   await Promise.all([import("@/components/stablecoin-directory/stablecoin-table"), import("@/components/homepage/home-alt-hero-chart")]);
-  globalThis.ResizeObserver ??= class {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  } as unknown as typeof ResizeObserver;
+  globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} } as unknown as typeof ResizeObserver;
 }, 60_000);
-beforeEach(() => {
-  vi.useFakeTimers({ toFake: ["Date"] });
-  vi.setSystemTime(NOW);
-});
-afterEach(() => {
-  cleanup();
-  vi.useRealTimers();
-  vi.clearAllMocks();
-});
+beforeEach(() => { vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(NOW); });
+afterEach(() => { cleanup(); vi.useRealTimers(); vi.clearAllMocks(); });
 
 describe.each(CASES)("homepage under $label", (c) => {
   it.each(SECTIONS)("%s renders without data-health UI", async (_name, renderSection) => {
@@ -310,6 +195,14 @@ describe.each(CASES)("homepage under $label", (c) => {
       expect(container.textContent).not.toMatch(/\b0 graded/);
       expect(container.textContent).toContain("Updating");
     }
+  });
+
+  it("keeps split ActiveDepegsCard states free of health UI", () => {
+    configure(c);
+    const set = (d: number, e: number | null) => hooks.usePegSummary.mockReturnValue(query(c, { ...pegSummary, openIncidentsAsOfSec: NOW_SEC, openIncidents: { "usdc-circle": { eventId: 1, startedAt: NOW_SEC - d * 86_400, escalatedAt: e, coverage: null } } }));
+    set(60, null); const v = render(<ActiveDepegsCard />); expectNoHealthUi(v.container);
+    const b = v.queryByRole("button", { name: "Recent (0)" }); if (b) { fireEvent.click(b); expectNoHealthUi(v.container); }
+    set(45, NOW_SEC - 2 * 86_400); v.rerender(<ActiveDepegsCard />); expectNoHealthUi(v.container);
   });
 });
 

@@ -18,7 +18,7 @@ export function PegScoreDewsMethodologySection() {
       liveHref="/depeg/"
       liveLabel="Depeg & Recovery"
       docsPath="/docs/depeg-detection/"
-      versionNote="Version increments when depeg thresholds, confirmation policy, peg-score formula terms, or DEWS signal composition or score-affecting input semantics (including TVL-measurement comparability) change."
+      versionNote="Version increments when depeg thresholds, confirmation policy, open-incident horizon and re-escalation semantics, peg-score formula terms, or DEWS signal composition or score-affecting input semantics (including TVL-measurement comparability) change."
       changelogClassName={METHODOLOGY_SECTION_ACCENT_CLASSES.pegscoreDews.changelogHover}
     >
       <PegScoreDewsOverview />

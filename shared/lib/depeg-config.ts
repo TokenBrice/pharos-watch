@@ -1,4 +1,5 @@
 import type { PegCurrency } from "../types/core";
+import { DAY_SECONDS } from "./time-constants";
 
 // 100bps (1%) minimum deviation to consider a depeg event for USD-pegged stablecoins.
 // Below this, price movement is within normal market noise (bid-ask spreads,
@@ -94,3 +95,63 @@ export const DEPEG_PENDING_EXPIRY_SEC = 2700;
 export const DEPEG_PENDING_EXTENDED_EXPIRY_SEC = DEPEG_PENDING_EXPIRY_SEC * 3;
 export const DEPEG_PENDING_SEVERE_EXPIRY_SEC = DEPEG_PENDING_EXPIRY_SEC * 4;
 export const DEPEG_SECONDARY_THRESHOLD_RATIO = 1;
+
+/** Returns the trigger threshold (bps) for a pegType string (peggedUSD vs non-USD). */
+export function getDepegThresholdBps(pegType: string | undefined): number {
+  return pegType === "peggedUSD" ? DEPEG_THRESHOLD_BPS : DEPEG_THRESHOLD_BPS_NON_USD;
+}
+
+/** Returns the trigger threshold (bps) for a pegCurrency code (USD vs non-USD). */
+export function getDepegThresholdBpsForPegCurrency(pegCurrency: string | undefined): number {
+  return getDepegThresholdBps(pegCurrency === "USD" ? "peggedUSD" : undefined);
+}
+
+/** Returns the recovery-band ceiling (bps) for a pegType string (50 USD / 75 non-USD). */
+export function getDepegRecoveryThresholdBps(pegType: string | undefined): number {
+  return Math.round(getDepegThresholdBps(pegType) * DEPEG_RECOVERY_THRESHOLD_RATIO);
+}
+
+/** Returns the recovery-band ceiling (bps) for a pegCurrency code (50 USD / 75 non-USD). */
+export function getDepegRecoveryThresholdBpsForPegCurrency(pegCurrency: string | undefined): number {
+  return getDepegRecoveryThresholdBps(pegCurrency === "USD" ? "peggedUSD" : undefined);
+}
+
+/** Open incidents older than 30 days classify as long-running unless re-escalated. */
+export const DEPEG_LONG_RUNNING_AGE_DAYS = 30;
+export const DEPEG_LONG_RUNNING_AGE_SEC = DEPEG_LONG_RUNNING_AGE_DAYS * DAY_SECONDS;
+
+/**
+ * Upward-ratcheting re-escalation step for long-running (>30d) incidents:
+ * clamp(250 bps, 1500 bps, round(anchor * 25%)).
+ * Capping at 1500 bps keeps downside anchors under 8500 bps reachable below 10000 bps.
+ */
+export const DEPEG_REESCALATION_MIN_STEP_BPS = 250;
+export const DEPEG_REESCALATION_MAX_STEP_BPS = 1500;
+export const DEPEG_REESCALATION_STEP_RATIO = 0.25;
+
+/** Duration a confirmed re-escalated >30d incident remains promoted in the Recent bucket. */
+export const DEPEG_REESCALATION_WINDOW_DAYS = 7;
+export const DEPEG_REESCALATION_WINDOW_SEC = DEPEG_REESCALATION_WINDOW_DAYS * DAY_SECONDS;
+
+/**
+ * Minimum separation between two consecutive trusted qualifying observations
+ * required to confirm a re-escalation (prevents single-tick wick spam).
+ */
+export const DEPEG_REESCALATION_CONFIRM_MIN_AGE_SEC = DEPEG_PENDING_MIN_AGE_SEC;
+
+/**
+ * Shared DDR canonical-incident reopen merge window and sealed-tail regime-split
+ * thresholds (re-exported by `worker/src/lib/depeg-resolver-incident-store.ts`).
+ */
+export const DDR_INCIDENT_REOPEN_MERGE_WINDOW_SEC = 6 * 3600;
+export const DDR_SEALED_TAIL_REGIME_ESCALATION_MIN_PEAK_BPS_V1 = 1_000;
+export const DDR_SEALED_TAIL_REGIME_ESCALATION_MULTIPLIER_V1 = 4;
+
+/** Compute the bounded upward-ratcheting re-escalation step (bps) for an anchor magnitude. */
+export function computeReescalationStepBps(anchorBps: number): number {
+  const absAnchor = Number.isFinite(anchorBps) ? Math.abs(anchorBps) : 0;
+  return Math.min(
+    DEPEG_REESCALATION_MAX_STEP_BPS,
+    Math.max(DEPEG_REESCALATION_MIN_STEP_BPS, Math.round(absAnchor * DEPEG_REESCALATION_STEP_RATIO)),
+  );
+}

@@ -74,7 +74,11 @@ export const HomepageSnapshotSchema = z.object({
     meta: HomepageLaneMetaSchema,
   }),
   incidents: z.object({
-    data: z.object({ activeDepegCount: z.number().int().nonnegative() }).nullable(),
+    data: z.object({
+      activeDepegCount: z.number().int().nonnegative(),
+      recentActiveDepegCount: z.number().int().nonnegative().optional(),
+      longRunningActiveDepegCount: z.number().int().nonnegative().optional(),
+    }).nullable(),
     meta: HomepageLaneMetaSchema,
   }),
 }).refine(

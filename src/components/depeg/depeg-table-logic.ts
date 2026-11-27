@@ -1,6 +1,6 @@
 import type { TableSortState } from "@/hooks/use-sorted-table-rows";
 import { createTableComparator } from "@/lib/table-comparator";
-import { attentionScore, readTrackerDeviation, type DepegTrackerRow } from "@/lib/depeg-sort";
+import { compareDepegAttention, readTrackerDeviation, type DepegTrackerRow } from "@/lib/depeg-sort";
 
 export type DepegTableSortKey =
   | "__attention"
@@ -16,31 +16,37 @@ export type DepegTableSortKey =
 
 type DepegFieldKey = Exclude<DepegTableSortKey, "__attention">;
 
-const fieldExtractors: Record<DepegFieldKey, (r: DepegTrackerRow) => number | null> = {
-  pegScore: (r) => r.coin.pegScore,
-  dewsScore: (r) => r.dews?.score ?? null,
-  currentDeviationBps: (r) => {
-    const { deviationBps } = readTrackerDeviation(r);
-    return deviationBps == null ? null : Math.abs(deviationBps);
-  },
-  pegPct: (r) => r.coin.pegPct,
-  eventCount: (r) => r.coin.eventCount,
-  worstDeviationBps: (r) => r.coin.worstDeviationBps == null ? null : Math.abs(r.coin.worstDeviationBps),
-  activeDepeg: (r) => (r.coin.activeDepeg ? 1 : 0),
-  dexAgrees: (r) => (r.coin.dexPriceCheck?.agrees ? 1 : 0),
-  trackingSpanDays: (r) => r.coin.trackingSpanDays,
-};
+function buildFieldExtractors(nowSec?: number): Record<DepegFieldKey, (r: DepegTrackerRow) => number | null> {
+  return {
+    pegScore: (r) => r.coin.pegScore,
+    dewsScore: (r) => r.dews?.score ?? null,
+    currentDeviationBps: (r) => {
+      const { deviationBps } = readTrackerDeviation(r, nowSec);
+      return deviationBps == null ? null : Math.abs(deviationBps);
+    },
+    pegPct: (r) => r.coin.pegPct,
+    eventCount: (r) => r.coin.eventCount,
+    worstDeviationBps: (r) => r.coin.worstDeviationBps == null ? null : Math.abs(r.coin.worstDeviationBps),
+    activeDepeg: (r) => (r.coin.activeDepeg ? 1 : 0),
+    dexAgrees: (r) => (r.coin.dexPriceCheck?.agrees ? 1 : 0),
+    trackingSpanDays: (r) => r.coin.trackingSpanDays,
+  };
+}
 
-const compareByField = createTableComparator<DepegFieldKey, DepegTrackerRow>(fieldExtractors);
+const defaultFieldExtractors = buildFieldExtractors();
+const compareByDefaultField = createTableComparator<DepegFieldKey, DepegTrackerRow>(defaultFieldExtractors);
 
 export function compareDepegTrackerRows(
   a: DepegTrackerRow,
   b: DepegTrackerRow,
   sort: TableSortState<DepegTableSortKey>,
+  nowSec?: number,
 ): number {
-  if (sort.key === "__attention" || !(sort.key in fieldExtractors)) {
-    const delta = attentionScore(a) - attentionScore(b);
-    return sort.direction === "asc" ? delta : -delta;
+  if (sort.key === "__attention" || !(sort.key in defaultFieldExtractors)) {
+    const delta = compareDepegAttention(a, b, nowSec);
+    return sort.direction === "asc" ? -delta : delta;
   }
-  return compareByField(a, b, sort as TableSortState<DepegFieldKey>);
+  const comparator =
+    nowSec == null ? compareByDefaultField : createTableComparator<DepegFieldKey, DepegTrackerRow>(buildFieldExtractors(nowSec));
+  return comparator(a, b, sort as TableSortState<DepegFieldKey>);
 }

@@ -1319,10 +1319,15 @@ export async function loadSealedIncidentFingerprint(
   return await db
     .prepare(
       `SELECT outcome_kind,
-              json_extract(
-                sealed_payload_json,
-                '$.frozen.sourceRow.peakDeviationBps'
-              ) AS lock_time_peak_deviation_bps
+              CASE
+                WHEN typeof(sealed_payload_json) = 'text'
+                 AND json_valid(sealed_payload_json)
+                 AND json_type(sealed_payload_json, '$.frozen.sourceRow.peakDeviationBps') IN ('integer', 'real')
+                THEN json_extract(
+                  sealed_payload_json,
+                  '$.frozen.sourceRow.peakDeviationBps'
+                )
+              END AS lock_time_peak_deviation_bps
        FROM depeg_resolver_public_predictions
        WHERE incident_key = ?
        LIMIT 1`,

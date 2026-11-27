@@ -683,7 +683,7 @@ async function seedClosure(db: SimulatorDb, at: number, market: ReferenceMarket,
         .bind(row.id, row.source, quoteMode, at, at).run();
     }
   }
-  await persistDepegCommands(db, buildDuplicateOpenEventRepair(open).commands);
+  await persistDepegCommands(db, buildDuplicateOpenEventRepair(open, { allowUnverifiedRows: true }).commands);
   for (const row of seed?.rows ?? []) {
     if (marketOf(row.peg_type) !== market) continue;
     const receipt = readPendingObservationReceipt(row.peer_basis_json);

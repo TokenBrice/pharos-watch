@@ -1,4 +1,5 @@
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
+import { classifyOpenIncidentTier } from "@shared/lib/active-depegs";
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { derivePegRates, normalizePegType } from "@shared/lib/peg-rates";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
@@ -11,15 +12,22 @@ import { parseSupplyObservationProvenance } from "@shared/lib/supply-provenance"
 import { WORKER_ACTIVE_IDS, WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { getListingClass } from "@shared/lib/stablecoins/listing-governance";
 import type { StablecoinData } from "@shared/types/supply";
-import type { PegSummaryCoin } from "@shared/types/peg";
+import { OpenIncidentSnapshotSchema, type DepegEvent, type OpenIncidentCoverage, type OpenIncidentSnapshot, type PegSummaryCoin } from "@shared/types/peg";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { addFreshnessHeaders } from "../lib/api-freshness";
 import { errorResponse, jsonResponse } from "../lib/api-response";
 import { buildMethodologyEnvelope } from "../lib/api-methodology";
-import { getDepegThresholdBpsForPegCurrency } from "../lib/depeg-threshold-policy";
+import { getDepegThresholdBpsForPegCurrency, MAX_OPEN_DEPEG_EVENTS } from "../lib/depeg-threshold-policy";
+import { rowPriceCoverage, type DepegRow } from "../lib/depeg-helpers";
+import { parseJson } from "../lib/json-parse";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
-import { derivePegAnalyticsSnapshot } from "../lib/peg-analytics";
+import {
+  derivePegAnalyticsSnapshot,
+  pickPrimaryOpenIncidentAtClock,
+  type PegAnalyticsOpenIncident,
+} from "../lib/peg-analytics";
 import { countPegEventDays, loadPegAnalyticsCache } from "../lib/peg-analytics-cache";
+import { PegAnalyticsOpenIncidentSchema } from "../lib/peg-analytics-cache-decode";
 import { signalCrossesThreshold } from "@shared/lib/depeg-signals";
 import { getLegacyReferenceClosureStart, getReferenceMarket } from "@shared/lib/reference-market-hours";
 import { deriveCurrentPegObservationMap, selectCurrentPegDexPrices } from "../lib/current-peg-observations";
@@ -170,6 +178,207 @@ function eventDayCountsUnavailable(reason: "peg-event-day-count-read-failed"): R
   }, { status: 503, headers: { "Cache-Control": CACHE_PROFILES.noStore } });
 }
 
+type OpenCoverageRow = Pick<
+  DepegRow,
+  "id" | "stablecoin_id" | "price_coverage_json" | "last_trusted_price_at" | "price_coverage_gap_started_at"
+>;
+
+interface LiveOpenCoverageEntry {
+  count: number;
+  eventId: number;
+  coverage: OpenIncidentCoverage | null;
+}
+
+function toOpenIncidentCoverage(coverage: DepegEvent["priceCoverage"]): OpenIncidentCoverage | null {
+  if (!coverage) return null;
+  const lastObservationKind = coverage.lastObservationKind ?? null;
+  const lastTrustedObservationAt = coverage.lastTrustedObservationAt ?? null;
+  const gapStartedAt = coverage.gapStartedAt ?? null;
+  if (lastObservationKind === null && lastTrustedObservationAt === null && gapStartedAt === null) {
+    return null;
+  }
+  return { lastObservationKind, lastTrustedObservationAt, gapStartedAt };
+}
+
+function parseOpenCoverageRow(row: OpenCoverageRow): OpenIncidentCoverage | null {
+  let priceCoverageJson = row.price_coverage_json ?? null;
+  if (priceCoverageJson?.includes('"referenceHold"')) {
+    const decoded = parseJson(priceCoverageJson);
+    if (
+      decoded.ok &&
+      decoded.value != null &&
+      typeof decoded.value === "object" &&
+      !Array.isArray(decoded.value) &&
+      "referenceHold" in decoded.value
+    ) {
+      const { referenceHold: _referenceHold, ...coverage } = decoded.value as Record<string, unknown>;
+      priceCoverageJson = JSON.stringify(coverage);
+    }
+  }
+  const parsed = rowPriceCoverage({
+    id: row.id,
+    price_coverage_json: priceCoverageJson,
+    last_trusted_price_at: row.last_trusted_price_at ?? null,
+    price_coverage_gap_started_at: row.price_coverage_gap_started_at ?? null,
+  } as DepegRow);
+  return toOpenIncidentCoverage(parsed);
+}
+
+/**
+ * Lightweight live coverage overlay for cached peg-analytics snapshots so
+ * `lastTrustedObservationAt` stays fresh within the 20m continuous-observation
+ * window rather than aging inside the 30m analytics cache. Failures and
+ * truncation degrade coverage to `null` ("unconfirmed") without warning headers
+ * or `no-store`, avoiding cascading homepage-snapshot degradation.
+ */
+async function loadOpenDepegCoverageMap(
+  db: D1Database,
+): Promise<ReadonlyMap<string, LiveOpenCoverageEntry> | null> {
+  try {
+    const result = await db
+      .prepare(
+        `SELECT /* pharos:peg-summary:open-coverage */
+           id, stablecoin_id, price_coverage_json, last_trusted_price_at, price_coverage_gap_started_at
+           FROM depeg_events
+          WHERE ended_at IS NULL
+          LIMIT ?`,
+      )
+      .bind(MAX_OPEN_DEPEG_EVENTS + 1)
+      .all<OpenCoverageRow>();
+    if (result.success !== true || !Array.isArray(result.results)) {
+      logWorkerEventArgs(
+        "api",
+        "warn",
+        "[peg-summary] open-coverage query returned invalid result; omitting live coverage overlays",
+      );
+      return null;
+    }
+    if (result.results.length > MAX_OPEN_DEPEG_EVENTS) {
+      logWorkerEventArgs(
+        "api",
+        "warn",
+        "[peg-summary] open-coverage query truncated; omitting live coverage overlays",
+      );
+      return null;
+    }
+    const byCoin = new Map<string, LiveOpenCoverageEntry>();
+    for (const row of result.results) {
+      const existing = byCoin.get(row.stablecoin_id);
+      if (existing) {
+        existing.count += 1;
+        existing.coverage = null;
+      } else {
+        byCoin.set(row.stablecoin_id, {
+          count: 1,
+          eventId: row.id,
+          coverage: parseOpenCoverageRow(row),
+        });
+      }
+    }
+    return byCoin;
+  } catch (error) {
+    logWorkerEventArgs(
+      "api",
+      "warn",
+      "[peg-summary] open-coverage query failed; omitting live coverage overlays:",
+      error instanceof Error ? error.message : error,
+    );
+    return null;
+  }
+}
+
+function reconcileOpenIncidents(
+  sidecarOpenIncidents: Readonly<Record<string, PegAnalyticsOpenIncident>> | undefined,
+  sidecarOpenIncidentCandidates: Readonly<Record<string, readonly PegAnalyticsOpenIncident[]>> | undefined,
+  activeOpenCoinIds: ReadonlySet<string>,
+  emittedNonNavCoinIds: ReadonlySet<string>,
+  liveCoverageByCoin: ReadonlyMap<string, LiveOpenCoverageEntry> | null,
+  now: number,
+  activeDepegCount: number,
+): {
+  openIncidents: Record<string, OpenIncidentSnapshot>;
+  openIncidentsAsOfSec: number;
+  recentActiveDepegCount: number;
+  longRunningActiveDepegCount: number;
+} | null {
+  if (sidecarOpenIncidents === undefined) {
+    if (activeDepegCount > 0) {
+      logWorkerEventArgs("api", "warn", "[peg-summary] omitting open-incident split:", "sidecar-absent");
+    }
+    return null;
+  }
+  const scopedSidecarKeys = Object.keys(sidecarOpenIncidents).filter((id) => emittedNonNavCoinIds.has(id));
+  if (scopedSidecarKeys.length !== activeOpenCoinIds.size) {
+    logWorkerEventArgs("api", "warn", "[peg-summary] omitting open-incident split:", "sidecar-mismatch");
+    return null;
+  }
+  for (const id of activeOpenCoinIds) {
+    if (!Object.prototype.hasOwnProperty.call(sidecarOpenIncidents, id)) {
+      logWorkerEventArgs("api", "warn", "[peg-summary] omitting open-incident split:", "sidecar-mismatch");
+      return null;
+    }
+  }
+
+  const openIncidents: Record<string, OpenIncidentSnapshot> = {};
+  let recentActiveDepegCount = 0;
+  let longRunningActiveDepegCount = 0;
+  for (const id of activeOpenCoinIds) {
+    const candidateList = sidecarOpenIncidentCandidates?.[id];
+    let entry: PegAnalyticsOpenIncident | null;
+    if (candidateList && candidateList.length > 0) {
+      if (!candidateList.every((item) => PegAnalyticsOpenIncidentSchema.safeParse(item).success)) {
+        logWorkerEventArgs("api", "warn", "[peg-summary] omitting open-incident split:", "invalid-entry");
+        return null;
+      }
+      entry = pickPrimaryOpenIncidentAtClock(candidateList, now);
+    } else {
+      const rawEntry = sidecarOpenIncidents[id]!;
+      if (!PegAnalyticsOpenIncidentSchema.safeParse(rawEntry).success) {
+        logWorkerEventArgs("api", "warn", "[peg-summary] omitting open-incident split:", "invalid-entry");
+        return null;
+      }
+      entry = rawEntry;
+    }
+    if (!entry) {
+      logWorkerEventArgs("api", "warn", "[peg-summary] omitting open-incident split:", "tier-null");
+      return null;
+    }
+    const tier = classifyOpenIncidentTier(entry, now);
+    if (tier === null) {
+      logWorkerEventArgs("api", "warn", "[peg-summary] omitting open-incident split:", "tier-null");
+      return null;
+    }
+    if (tier === "long_running") longRunningActiveDepegCount++;
+    else recentActiveDepegCount++;
+    const liveEntry = liveCoverageByCoin?.get(id);
+    const coverage =
+      liveEntry && liveEntry.count === 1 && liveEntry.eventId === entry.eventId
+        ? liveEntry.coverage
+        : null;
+    const snapshot: OpenIncidentSnapshot = {
+      eventId: entry.eventId,
+      startedAt: entry.startedAt,
+      escalatedAt: entry.escalatedAt,
+      coverage,
+    };
+    if (!OpenIncidentSnapshotSchema.safeParse(snapshot).success) {
+      logWorkerEventArgs("api", "warn", "[peg-summary] omitting open-incident split:", "invalid-entry");
+      return null;
+    }
+    openIncidents[id] = snapshot;
+  }
+  if (recentActiveDepegCount + longRunningActiveDepegCount !== activeDepegCount) {
+    logWorkerEventArgs("api", "warn", "[peg-summary] omitting open-incident split:", "sum-mismatch");
+    return null;
+  }
+  return {
+    openIncidents,
+    openIncidentsAsOfSec: now,
+    recentActiveDepegCount,
+    longRunningActiveDepegCount,
+  };
+}
+
 export const __pegSummaryTestHooks = {
   deriveDexDeviationBps,
   normalizePegTypeFromCurrency: pegTypeFromCurrency,
@@ -224,6 +433,9 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
   ]);
 
   let pegDataById: ReadonlyMap<string, PegSummaryCoin>;
+  let sidecarOpenIncidents: Record<string, PegAnalyticsOpenIncident> | undefined;
+  let sidecarOpenIncidentCandidates: Record<string, PegAnalyticsOpenIncident[]> | undefined;
+  let liveCoverageByCoin: ReadonlyMap<string, LiveOpenCoverageEntry> | null = null;
   let depegEventsToday: number;
   let depegEventsYesterday: number;
   // Historical peg fields can lag the live stablecoins cache by up to 30 min,
@@ -234,8 +446,16 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
 
   if (pegAnalyticsCache.kind === "ok") {
     pegDataById = pegAnalyticsCache.pegDataById;
-    const counts = await resolveCachedEventDayCounts(db, pegAnalyticsCache.payload, now);
+    sidecarOpenIncidents = pegAnalyticsCache.payload.openIncidents;
+    sidecarOpenIncidentCandidates = pegAnalyticsCache.payload.openIncidentCandidates;
+    const needsLiveCoverage =
+      sidecarOpenIncidents !== undefined && Object.keys(sidecarOpenIncidents).length > 0;
+    const [counts, liveCoverage] = await Promise.all([
+      resolveCachedEventDayCounts(db, pegAnalyticsCache.payload, now),
+      needsLiveCoverage ? loadOpenDepegCoverageMap(db) : Promise.resolve(null),
+    ]);
     if (counts.kind !== "ok") return eventDayCountsUnavailable(counts.reason);
+    liveCoverageByCoin = liveCoverage;
     depegEventsToday = counts.today;
     depegEventsYesterday = counts.yesterday;
     freshnessAsOf = Math.min(freshnessAsOf, pegAnalyticsCache.payload.computedAtSec);
@@ -260,13 +480,26 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
         }, { status: 503, headers: { "Cache-Control": CACHE_PROFILES.noStore } });
       }
       pegDataById = retained.pegDataById;
-      const counts = await resolveCachedEventDayCounts(db, retained.payload, now);
+      sidecarOpenIncidents = retained.payload.openIncidents;
+      sidecarOpenIncidentCandidates = retained.payload.openIncidentCandidates;
+      const needsLiveCoverage =
+        sidecarOpenIncidents !== undefined && Object.keys(sidecarOpenIncidents).length > 0;
+      const [counts, liveCoverage] = await Promise.all([
+        resolveCachedEventDayCounts(db, retained.payload, now),
+        needsLiveCoverage ? loadOpenDepegCoverageMap(db) : Promise.resolve(null),
+      ]);
       if (counts.kind !== "ok") return eventDayCountsUnavailable(counts.reason);
+      liveCoverageByCoin = liveCoverage;
       depegEventsToday = counts.today;
       depegEventsYesterday = counts.yesterday;
       freshnessAsOf = Math.min(freshnessAsOf, retained.payload.computedAtSec);
     } else {
       pegDataById = pegAnalytics.pegDataById;
+      sidecarOpenIncidents = pegAnalytics.openIncidents;
+      sidecarOpenIncidentCandidates = pegAnalytics.openIncidentCandidates;
+      const needsLiveCoverage =
+        sidecarOpenIncidents !== undefined && Object.keys(sidecarOpenIncidents).length > 0;
+      liveCoverageByCoin = needsLiveCoverage ? await loadOpenDepegCoverageMap(db) : null;
       // Count depeg events started today vs yesterday (UTC day boundaries)
       const counts = countPegEventDays(pegAnalytics.allEvents, pegAnalytics.nowSec);
       depegEventsToday = counts.today;
@@ -322,6 +555,8 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
   const coins: PegSummaryCoin[] = [];
 
   let activeDepegCount = 0;
+  const activeOpenCoinIds = new Set<string>();
+  const emittedNonNavCoinIds = new Set<string>();
   const allAbsBps: number[] = [];
   let worstCurrent: { id: string; symbol: string; rawBps: number } | null = null;
   let coinsAtPeg = 0;
@@ -400,7 +635,13 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       dexPriceCheck: observation?.dexPriceCheck ?? undefined,
     });
 
-    if (!isNavToken && pegData.activeDepeg) activeDepegCount++;
+    if (!isNavToken) {
+      emittedNonNavCoinIds.add(meta.id);
+      if (pegData.activeDepeg) {
+        activeDepegCount++;
+        activeOpenCoinIds.add(meta.id);
+      }
+    }
     const censusBps = admissionEnabled ? admittedBps : currentBps;
     const legacyQuoteAt = asset?.priceObservedAt ?? asset?.priceUpdatedAt;
     const market = getReferenceMarket(meta.flags.pegCurrency);
@@ -423,6 +664,15 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
   }
 
   const medianBps = medianOfRounded(allAbsBps);
+  const openIncidentSplit = reconcileOpenIncidents(
+    sidecarOpenIncidents,
+    sidecarOpenIncidentCandidates,
+    activeOpenCoinIds,
+    emittedNonNavCoinIds,
+    liveCoverageByCoin,
+    now,
+    activeDepegCount,
+  );
 
   // Flag peg types using fallback rates so frontend can signal stale data
   const fallbackPegTypes = Object.entries(pegRates.sources)
@@ -450,6 +700,12 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
     coins,
     summary: {
       activeDepegCount,
+      ...(openIncidentSplit
+        ? {
+            recentActiveDepegCount: openIncidentSplit.recentActiveDepegCount,
+            longRunningActiveDepegCount: openIncidentSplit.longRunningActiveDepegCount,
+          }
+        : {}),
       medianDeviationBps: medianBps,
       worstCurrent: worstCurrent && { id: worstCurrent.id, symbol: worstCurrent.symbol, bps: Math.round(worstCurrent.rawBps) },
       coinsAtPeg,
@@ -459,6 +715,12 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       ...(fallbackPegTypes.length > 0 ? { fallbackPegRates: fallbackPegTypes } : {}),
       ...(fxPegTypes.length > 0 ? { fxPegRates: fxPegTypes } : {}),
     },
+    ...(openIncidentSplit
+      ? {
+          openIncidents: openIncidentSplit.openIncidents,
+          openIncidentsAsOfSec: openIncidentSplit.openIncidentsAsOfSec,
+        }
+      : {}),
     methodology: buildMethodologyEnvelope({
       version: methodologyVersion,
       versionLabel: toMethodologyVersionLabel(methodologyVersion),

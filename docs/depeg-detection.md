@@ -6,12 +6,12 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 runs every 15 minute
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.55`<!-- GENERATED-END: methodology-version-depeg-detection -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.56`<!-- GENERATED-END: methodology-version-depeg-detection -->
 - **Runtime/version source:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-dews/`
 
-DEWS v6.45 admits independently proven isolated canonical-leg outflows only when they raise stress; v6.46 caps a lone Mento Broker observation at WATCH unless independent qualifying evidence releases the cap. See [DEWS](./dews.md) for both evidence rules. Shared Depeg/DEWS v6.55 registers `NZD` (`peggedNZD`) in `REFERENCE_CLOSURE_HOLD_BANDS_BPS` (`{ weekend: 2500, extended: 2500 }`) and `CALIBRATED_FIXING_BANDS` (`{ 1: 500, 2: 500, 3: 500 }`) under the conservative `"Other supported FX units"` fallback bands until NZD completes historical L18 calibration.
+DEWS v6.45 admits independently proven isolated canonical-leg outflows only when they raise stress; v6.46 caps a lone Mento Broker observation at WATCH unless independent qualifying evidence releases the cap. See [DEWS](./dews.md) for both evidence rules. Shared Depeg/DEWS v6.55 registered `NZD` (`peggedNZD`) in `REFERENCE_CLOSURE_HOLD_BANDS_BPS` and `CALIBRATED_FIXING_BANDS`. Shared Depeg/DEWS v6.56 adds the 30-day long-running open-incident horizon split (`DEPEG_LONG_RUNNING_AGE_DAYS = 30`), a Day-30-seeded upward-ratcheting two-sample re-escalation rule (`0323_depeg_event_peak_escalation.sql`, `DEPEG_REESCALATION_*`), and two-tier materiality ranking (`shared/lib/active-depegs.ts`) without changing PegScore, Safety Score V10, PSI, DEWS, or DDR/DDRR core scoring.
 
 Pending release obligations are tracked by [DEWS](./dews.md#methodology-versioning).
 
@@ -43,6 +43,10 @@ Confirmed events feed DDR's canonical incidents and immutable public forecasts o
 | `DEPEG_DEX_PROTOCOL_CORROBORATION_MIN` | 2 protocol groups | Aggregate DEX corroboration minimum; per-source evidence uses `DEX_PROTOCOL_SOURCE_FRESHNESS_SEC` (35 min), distinct from the aggregate row's 75 min |
 | `POOL_CHALLENGE_CONFIRM_MIN` | 2 protocol/source-family groups | Challenger group minimum; pools require `POOL_CHALLENGE_MIN_TVL` ($100k). Confirming/diverging groups must match or outnumber opposing/recovery groups, except the recovery high-TVL veto below |
 | `POOL_CHALLENGE_HIGH_TVL_USD` | $5,000,000 | Pending confirmation: replaces the second-group minimum but not the opposing vote. Live recovery: a single qualifying pool vetoes directly |
+| `DEPEG_LONG_RUNNING_AGE_DAYS` | 30 days | Canonical onset age past which an open confirmed incident classifies as long-running unless re-escalated |
+| `DEPEG_REESCALATION_MIN_STEP_BPS` / `MAX_STEP_BPS` / `STEP_RATIO` | 250 / 1,500 bps / 25% | Upward-ratcheting step above the Day-30-seeded anchor required to re-escalate a `>30d` open incident |
+| `DEPEG_REESCALATION_CONFIRM_MIN_AGE_SEC` | 900 (15 min) | Minimum separation between two consecutive trusted primary/native qualifying observations to confirm re-escalation |
+| `DEPEG_REESCALATION_WINDOW_DAYS` | 7 days | Window during which a confirmed re-escalated `>30d` incident remains promoted in the Recent bucket (`Escalating`) |
 
 `getDepegThresholdBps(pegType)` returns 100 for `peggedUSD`, 150 for all other peg types.
 
@@ -111,8 +115,11 @@ The closure columns apply to corroborated benchmark moves with an independent co
 Exact DDL and indexes are owned by `worker/migrations/0000_baseline.sql` plus the
 active tail in `worker/migrations/MANIFEST.md`. The baseline alone is not the
 cumulative schema: `0232_depeg_recovery_continuity.sql` adds recovery continuity,
-`0252_depeg_audit_verdict_vocabulary.sql` guards audit verdicts, and
-`0255_depeg_trusted_price_coverage.sql` adds nullable trusted-price coverage.
+`0252_depeg_audit_verdict_vocabulary.sql` guards audit verdicts,
+`0255_depeg_trusted_price_coverage.sql` adds nullable trusted-price coverage, and
+`0323_depeg_event_peak_escalation.sql` adds nullable `peak_escalated_at`,
+`peak_escalation_anchor_bps`, `peak_escalation_candidate_at`, and `peak_escalation_candidate_seen_at` columns for
+Day-30-seeded upward-ratcheting two-sample re-escalation tracking on long-running open events.
 The semantics below distinguish recovery, unobserved time and immutable audit evidence.
 
 ### depeg_events
@@ -288,6 +295,15 @@ Threshold decisions use `abs(rawBps)` so a value that merely rounds to the bound
 - Same direction: mark as legitimately open (add to `seen` set); update peak only when the primary input is authoritative or a corroborated trusted DEX row corroborates the move
 - For a live event opened in the native quote domain (`peg_reference = 1` on a non-USD peg), update the peak only from a same-direction native quote; never write the USD primary price into that row
 - Same-direction DEX disagreement is now advisory only: detection logs the mismatch but does **not** auto-close the event from that contradiction alone
+
+### Long-Running Re-Escalation (v6.56)
+
+Open incidents older than 30 days (`DEPEG_LONG_RUNNING_AGE_SEC`) classify into the `long_running` display bucket unless a confirmed re-escalation promotes them back into `Recent` (`Escalating`) for 7 days (`DEPEG_REESCALATION_WINDOW_SEC`). Re-escalation state lives on `depeg_events` (`peak_escalated_at`, `peak_escalation_anchor_bps`, `peak_escalation_candidate_at`, `peak_escalation_candidate_seen_at`, migration `0323_depeg_event_peak_escalation.sql`) and is evaluated through a dedicated `update-escalation` command in `worker/src/cron/depeg-detection/escalation.ts`, completely decoupled from `update-peak` and duplicate repair (`repair.ts`):
+
+- **Day-30 gate & fresh-incident reset:** Re-escalation never arms or fires while canonical incident age is `<= 30d`, and seeding/advancing requires the admitted observation clock itself to be strictly past `incidentStartedAt + 30d`. If DDR later assigns a reopened row to a fresh `<= 30d` incident, hydration detects the fresh onset and resets all four columns to `NULL`. When enriched metadata hydration falls back to the base open-event query, detection preserves stored anchor and confirmed escalation, clears transient candidate clocks on newer observations, and defers seeding, arming, confirmation, and unverified duplicate repair until metadata hydration succeeds.
+- **Trusted same-direction observation & deadband seeding:** USD-domain events require an authoritative primary quote with an admitted `quoteObservedAt` timestamp (never a `now` fallback, DEX-only, `confirm_required`, peer-relative, or closed-session reading, and never contradicted by an at-par native quote). Native-domain events require a fresh admitted same-direction native quote. On the first qualifying post-Day-30 observation (including same-direction deadband readings between the recovery band and opening threshold), `peak_escalation_anchor_bps` seeds at `max(|bps|, pegThreshold)` and keeps both candidate clocks `NULL`. Stored or carried anchors below `pegThreshold` are rejected and reseeded rather than lowering the target.
+- **Two-sample confirmation & continuity:** Once seeded, target magnitude is `anchor + clamp(250, 1500, round(anchor * 25%))` (capping the step at `1500 bps` keeps downside anchors under `8500 bps` reachable below `10000 bps`). The first qualifying observation at or above target arms `peak_escalation_candidate_at = observedAt` and `peak_escalation_candidate_seen_at = observedAt`. Each consecutive distinct qualifying observation within the 20-minute continuity budget (`DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC`, requiring gap-free `trusted-off-peg` prior coverage, no active reference hold, and exact `priorLastTrusted === peak_escalation_candidate_seen_at`) either advances `peak_escalation_candidate_seen_at = observedAt` while keeping `peak_escalation_candidate_at` anchored when `observedAt < candidate_at + 15m`, or confirms `peak_escalated_at = observedAt` once `observedAt >= candidate_at + 15m` (`DEPEG_REESCALATION_CONFIRM_MIN_AGE_SEC`), ratcheting `peak_escalation_anchor_bps` upward only (`max(anchor, |bps|)`) and clearing both candidate clocks. Re-evaluating an unchanged observation clock is a no-op. Any intervening escalation-ineligible tick (non-authoritative, missing clock, closed session, peer move, native veto, deadband/recovery, or below-target reversion) clears both candidate clocks immediately, and any gap exceeding 20 minutes or unaccounted coverage advance (`priorLastTrusted !== peak_escalation_candidate_seen_at`, e.g. from a rolled-back writer) restarts the candidate window rather than confirming across it.
+- **Reopen & family carry-forward:** Open-event hydration, pending promotion (`confirm-pending-depegs.ts` fail-open wrapper), analytics sidecar derivation (`worker/src/lib/peg-analytics.ts`), and OG briefing (`worker/src/api/og-depeg.ts`) share indexed lookup helpers (`worker/src/lib/depeg-escalation-metadata.ts`) that resolve canonical onset and the maximum clean `peak_escalation_anchor_bps` / `peak_escalated_at` across linked active DDR incident families (including superseded aliases) and eligible non-disputed `<= 6h` same-direction predecessors. Inheritance is withheld whenever a sealed DDR prediction triggers a regime-escalation split (`>= 1000 bps` and `>= 4x` lock-time peak) or has indeterminate/unreadable frozen peak evidence.
 
 **Path B -- Deviation beyond the trigger threshold AND no event open**
 

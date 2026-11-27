@@ -26,7 +26,7 @@ export function makeHomepageEvidence(updatedAt = HOMEPAGE_EVIDENCE_TEST_NOW / 10
       meta: meta("stability-index", API_FRESHNESS_MAX_AGE_SEC.stabilityIndex),
     },
     incidents: {
-      data: { activeDepegCount: 1 },
+      data: { activeDepegCount: 1, recentActiveDepegCount: 1, longRunningActiveDepegCount: 0 },
       meta: meta("peg-summary", API_FRESHNESS_MAX_AGE_SEC.pegSummary),
     },
   };

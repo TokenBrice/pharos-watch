@@ -15,8 +15,25 @@ const MOBILE_ROUTE_ITEMS = QUICK_NAV_ITEMS.filter((item) => getRouteCapabilities
 
 export function MobileBottomNav() {
   const pathname = usePathname();
-  // Same neutral open-incident count as the desktop rail; absent while unavailable.
-  const activeDepegCount = useHomepageSnapshot().data?.incidents.data?.activeDepegCount ?? null;
+  // Recent/escalating open-incident badge matching the desktop rail (Decision D):
+  // omitted at zero recent or when split counts are unavailable so it never flaps.
+  const incidentsData = useHomepageSnapshot().data?.incidents.data ?? null;
+  const hasIncidentSplit =
+    incidentsData != null
+    && incidentsData.recentActiveDepegCount != null
+    && incidentsData.longRunningActiveDepegCount != null
+    && incidentsData.recentActiveDepegCount + incidentsData.longRunningActiveDepegCount === incidentsData.activeDepegCount;
+  const recentDepegCount = hasIncidentSplit ? incidentsData.recentActiveDepegCount! : null;
+  const longRunningDepegCount = hasIncidentSplit ? incidentsData.longRunningActiveDepegCount! : null;
+  const depegSrText = !hasIncidentSplit
+    ? null
+    : recentDepegCount! > 0
+      ? longRunningDepegCount! > 0
+        ? `, ${recentDepegCount} recent ${recentDepegCount === 1 ? "depeg" : "depegs"}, ${longRunningDepegCount} long-running`
+        : `, ${recentDepegCount} recent ${recentDepegCount === 1 ? "depeg" : "depegs"}`
+      : longRunningDepegCount! > 0
+        ? `, 0 recent, ${longRunningDepegCount} long-running active ${longRunningDepegCount === 1 ? "depeg" : "depegs"}`
+        : null;
   const drawerOpen = useNavDrawerOpen();
   const isBottomRouteActive = MOBILE_ROUTE_ITEMS.some((item) => isNavItemActive(pathname, item));
   const menuActive = drawerOpen || !isBottomRouteActive;
@@ -30,7 +47,8 @@ export function MobileBottomNav() {
         {MOBILE_ROUTE_ITEMS.map((item) => {
           const Icon = item.icon;
           const active = isNavItemActive(pathname, item);
-          const badge = item.href === "/depeg/" && activeDepegCount ? activeDepegCount : null;
+          const isDepeg = item.href === "/depeg/";
+          const badge = isDepeg && recentDepegCount && recentDepegCount > 0 ? recentDepegCount : null;
 
           return (
             <Link
@@ -67,7 +85,7 @@ export function MobileBottomNav() {
               <span className={active ? "text-2xs font-semibold leading-none" : "text-2xs font-medium leading-none"}>
                 {item.shortLabel ?? item.label}
               </span>
-              {badge ? <span className="sr-only">{`, ${badge} active ${badge === 1 ? "depeg" : "depegs"}`}</span> : null}
+              {isDepeg && depegSrText ? <span className="sr-only">{depegSrText}</span> : null}
             </Link>
           );
         })}

@@ -24,11 +24,17 @@ import {
   type PromotionDecisionInput,
 } from "./pending-depeg-confirmation";
 import { getPendingExpiryLimitSec, readPendingObservationReceipt, type DepegObservationReceipt } from "../lib/depeg-pending";
+import {
+  resolvePromotionEscalationCarryForward,
+  type ReopenEscalationCandidate,
+} from "./depeg-detection/escalation";
 
 const TEMPORAL_CONFIRMATION_LABEL = `temporal:${Math.round(DEPEG_PENDING_MIN_AGE_SEC / 60)}m`;
 
-export function evaluatePromotionDecision(args: PromotionDecisionInput): D1PreparedStatement[] {
-  const { db, plan, evidence, now } = args;
+export function evaluatePromotionDecision(
+  args: PromotionDecisionInput & { reopenEscalationCandidate?: ReopenEscalationCandidate | null },
+): D1PreparedStatement[] {
+  const { db, plan, evidence, now, reopenEscalationCandidate } = args;
   const {
     row,
     pendingState,
@@ -157,8 +163,13 @@ export function evaluatePromotionDecision(args: PromotionDecisionInput): D1Prepa
     const eventReceipt = pendingReceipt || plan.independentConfirmation?.nativeReceipt || currentCorroboration || peak.receipt
       ? JSON.stringify({ onset: pendingReceipt?.onset, latest: pendingReceipt?.latest, peak: peak.receipt ?? null, confirmation: plan.independentConfirmation?.nativeReceipt ?? currentCorroboration })
       : null;
+    const escalationCarryForward = resolvePromotionEscalationCarryForward(
+      event.peakDeviationBps,
+      reopenEscalationCandidate,
+      event.pegType,
+    );
     return [
-      buildInsertDepegEventStmt(db, event, eventReceipt),
+      buildInsertDepegEventStmt(db, event, eventReceipt, escalationCarryForward),
       buildPendingOutcomeStmt(
         db,
         row,

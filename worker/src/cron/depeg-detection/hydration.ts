@@ -1,20 +1,32 @@
 import type { FxRateState } from "../../lib/fx-rate-state";
-import { DEX_PROTOCOL_SOURCE_FRESHNESS_SEC, DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
+import {
+  DDR_INCIDENT_REOPEN_MERGE_WINDOW_SEC,
+  DEX_PROTOCOL_SOURCE_FRESHNESS_SEC,
+  DEX_FRESHNESS_SEC,
+} from "@shared/lib/depeg-config";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import type { PegAssetBase } from "@shared/types/price";
 import { MAX_OPEN_DEPEG_EVENTS } from "../../lib/depeg-threshold-policy";
 import { POOL_CHALLENGE_MIN_TVL } from "../../lib/price-depeg-voting-policy";
 import { throwIfAborted } from "../../lib/abort";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   loadDexPoolChallengers,
   loadDexPrices,
   logOpenDepegEventLimitReached,
 } from "../../lib/depeg-helpers";
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import {
   fetchCurrentNativePegQuotes,
   type NativePegQuoteSession,
 } from "../../lib/native-peg-quotes";
 import type { DepegDetectionRow, HydratedDepegDetection } from "./types";
+import {
+  applyHydratedEscalationMetadata,
+  OPEN_DEPEG_EVENTS_BASE_SELECT,
+  OPEN_DEPEG_EVENTS_HYDRATION_SELECT,
+  type HydratedOpenEventRawRow,
+} from "./escalation";
 import { deriveDetectionPegRates } from "./reference-policy";
 import { persistActiveNativeEventQuotes } from "../../lib/native-peg-quote-cache";
 
@@ -51,18 +63,35 @@ export async function hydrateDepegDetection(
   );
 
   throwIfAborted(signal);
-  const openResult = await db
-    .prepare(`SELECT open_event.*, COALESCE(provenance.quote_mode,
-      CASE WHEN open_event.source = 'live' AND open_event.pending_reason IS NOT NULL
-        THEN CASE WHEN instr('+' || open_event.pending_reason || '+', '+native-origin+') > 0 THEN 'native-peg' ELSE 'usd' END
-      END) AS quote_mode
-      FROM (
-        SELECT * FROM depeg_events WHERE ended_at IS NULL LIMIT ?
-      ) AS open_event
-      LEFT JOIN depeg_event_provenance AS provenance ON provenance.event_id = open_event.id`)
-    .bind(MAX_OPEN_DEPEG_EVENTS)
-    .all<DepegDetectionRow>();
-  const openRows = openResult.results ?? [];
+  let rawOpenRows: HydratedOpenEventRawRow[];
+  let usedBaseFallback = false;
+  try {
+    const openResult = await db
+      .prepare(OPEN_DEPEG_EVENTS_HYDRATION_SELECT)
+      .bind(DDR_INCIDENT_REOPEN_MERGE_WINDOW_SEC, DDR_INCIDENT_REOPEN_MERGE_WINDOW_SEC, MAX_OPEN_DEPEG_EVENTS)
+      .all<HydratedOpenEventRawRow>();
+    rawOpenRows = openResult.results ?? [];
+  } catch (err) {
+    // Any auxiliary metadata failure (missing table, malformed JSON/BLOB in DDR tables)
+    // falls back to the base open-event query without marking onset as canonically hydrated,
+    // so display-only escalation metadata never aborts detection or wipes carried state.
+    if (toErrorMessage(err).toLowerCase().includes("depeg_events")) throw err;
+    logWorkerEventArgs(
+      "handler",
+      "warn",
+      "[depeg-hydration] Enriched open-event metadata read failed; falling back to base open-event query:",
+      toErrorMessage(err),
+    );
+    usedBaseFallback = true;
+    const fallbackResult = await db
+      .prepare(OPEN_DEPEG_EVENTS_BASE_SELECT)
+      .bind(MAX_OPEN_DEPEG_EVENTS)
+      .all<DepegDetectionRow>();
+    rawOpenRows = fallbackResult.results ?? [];
+  }
+  const openRows = usedBaseFallback
+    ? rawOpenRows.map((row) => ({ ...row, escalation_metadata_hydrated: false }))
+    : rawOpenRows.map(applyHydratedEscalationMetadata);
   const openRowsLimitReached = openRows.length >= MAX_OPEN_DEPEG_EVENTS;
   if (openRowsLimitReached) {
     logOpenDepegEventLimitReached("detection");

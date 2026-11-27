@@ -88,4 +88,10 @@ describe("HomeMarketStateLine compact lanes", () => {
     expect(screen.getByRole("link", { name: /PSI/ }).textContent).toContain("Steady89.4");
     expect(screen.getByRole("link", { name: /active depegs/ }).textContent).toContain("3active depegs");
   });
+
+  it.each([[17, 4, 13, "17active depegs(4 recent · 13 >30d)"], [5, 0, 5, "5active depegs(all >30d)"], [4, 4, 0, "4active depegs"]])("split %s/%s/%s", (activeDepegCount, recentActiveDepegCount, longRunningActiveDepegCount, expected) => {
+    useHomepageSnapshotMock.mockReturnValue({ data: { psi: { data: null, meta: meta("psi") }, incidents: { data: { activeDepegCount, recentActiveDepegCount, longRunningActiveDepegCount }, meta: meta("peg") } }, dataUpdatedAt: now, error: null, isLoading: false });
+    render(<HomeMarketStateLine nowMs={now} />);
+    expect(screen.getByRole("link", { name: /active depegs/ }).textContent).toBe(expected);
+  });
 });

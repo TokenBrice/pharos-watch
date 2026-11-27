@@ -107,6 +107,22 @@ export interface DepegDetectionRow extends DepegRow {
   recovery_evidence_source?: "dex" | "native" | null;
   recovery_usd_observed_at?: number | null;
   recovery_usd_first_seen_at?: number | null;
+  /** Canonical incident onset from DDR or <=6h reopen predecessor (falls back to started_at). */
+  incident_started_at?: number | null;
+  /** Carry-forward anchor from DDR family or <=6h reopen predecessor, if higher than stored anchor. */
+  carry_forward_escalation_anchor_bps?: number | null;
+  /** Carry-forward peak_escalated_at from DDR family or <=6h reopen predecessor, if newer than stored. */
+  carry_forward_peak_escalated_at?: number | null;
+  /**
+   * Reviewed-dispute status projected during enriched hydration:
+   * `false` = verified clean, `true` = reviewed-disputed, `undefined` = unverified.
+   */
+  reviewed_disputed?: boolean;
+  /**
+   * Explicitly `false` when open-event hydration fell back to the base query
+   * without DDR family / reopen metadata; `true` or `undefined` otherwise.
+   */
+  escalation_metadata_hydrated?: boolean;
 }
 
 export interface DepegAssetDecisionInput {
@@ -142,6 +158,14 @@ export type DepegPersistenceCommand =
       closeReason: DepegEventCloseReason;
     }
   | { type: "update-peak"; id: number; peakDeviationBps: number; peakPrice: number | null; peakPegReference?: number | null; peakQuoteDomain?: DepegEventQuoteDomain | null; peakReceipt?: string }
+  | {
+      type: "update-escalation";
+      id: number;
+      peakEscalatedAt: number | null;
+      peakEscalationAnchorBps: number | null;
+      peakEscalationCandidateAt: number | null;
+      peakEscalationCandidateSeenAt: number | null;
+    }
   | { type: "record-price-coverage"; id: number; coverage: DepegPriceCoverage; referenceHold?: StoredReferenceHold; admittedCoverage?: DepegAdmittedCoverage }
   | { type: "begin-recovery"; id: number; firstSeenAt: number; lastSeenAt: number; source?: "dex" | "native"; usdObservedAt?: number }
   | { type: "continue-recovery"; id: number; lastSeenAt: number; usdObservedAt?: number }
