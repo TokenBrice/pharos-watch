@@ -1,0 +1,94 @@
+{
+  "id": "gdlr-doma",
+  "reserves": [
+    {
+      "sourceKey": "curated-validated:gdlr-doma:allocated-gold",
+      "name": "Allocated physical gold bars (995.0+ fineness, undisclosed vault custodian via KSTN Capital Ltd)",
+      "pct": 100,
+      "risk": "medium",
+      "assetClass": "commodity-allocated",
+      "issuerOrObligor": "Lumina Secure S.A. (issuer) and KSTN Capital Ltd (group asset-holding entity owning the physical gold pool)",
+      "riskFactors": [
+        "custody",
+        "counterparty",
+        "legal",
+        "liquidity",
+        "market",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Wave 1A addition review 2026-11-27",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Doma Reserve Policy v2.0 (updated 2026-10-26)",
+        "url": "https://doma.io/reserve-policy"
+      },
+      {
+        "label": "Doma Reserve Policy JSON payload (rev mi50riUajCAAvkj4uhFE4l)",
+        "url": "https://doma.io/content/reserve-policy.en.json"
+      },
+      {
+        "label": "Doma General Terms and Conditions v3.0 (effective 2026-11-13)",
+        "url": "https://doma.io/terms-of-service"
+      },
+      {
+        "label": "Doma Proof of Reserves dashboard",
+        "url": "https://doma.io/proof-of-reserves"
+      },
+      {
+        "label": "GDLR VaultContract on Blockscout",
+        "url": "https://eth.blockscout.com/address/0xa3c6c2dbeafd85096b4faba881cdb3618825643c"
+      }
+    ],
+    "rationale": "Doma Reserve Policy v2.0 (last updated 2026-10-26) states that the customer-backing reserve consists exclusively of investment-grade allocated physical gold meeting 995.0+ parts-per-thousand purity standards, with no cash, securities, receivables, or derivatives, and that aggregate fine-mass equals or exceeds circulating GDLR supply at 10 mg per token. At Ethereum block 26506037 (2026-11-27T10:47:11Z), GDLR totalSupply was 586,140.620019 GDLR (188.448585 troy oz fine gold) against 243.214439 troy oz of ERC-3643 GReserve (0xaec17f764438fecfae1cdc7c40a8658f71686570) held in VaultContract 0xa3c6c2dbeafd85096b4faba881cdb3618825643c (188.448585 troy oz locked). Confidence is capped at probable because no independent third-party physical vault audit or attestation PDF is published on doma.io, the physical vault custodian is unnamed in operative legal terms, and Reserve Policy v2.0 makes independent verification discretionary.",
+    "compositionBasis": "Doma Reserve Policy v2.0 (updated 2026-10-26) and on-chain ERC-3643 vault collateral reconciliation; no published independent physical vault audit",
+    "compositionAsOf": "2026-10-26",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The issuer discloses 100% allocated physical gold backing owned by group entity KSTN Capital Ltd, but operative legal documents do not name the physical vault custodian, vault locations, bar serial lists, or insurer, and no independent third-party vault attestation or audit report is published.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Allocated physical gold bars (995.0+ fineness, undisclosed vault custodian via KSTN Capital Ltd)",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Allocated physical gold bullion is an exogenous commodity reserve rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "KSTN Capital Ltd (issuer group asset-holding entity; underlying physical vault custodian unnamed in operative terms)",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Wave 1A addition review 2026-11-27",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Doma Reserve Policy v2.0 (updated 2026-10-26)",
+        "url": "https://doma.io/reserve-policy"
+      },
+      {
+        "label": "Doma General Terms and Conditions v3.0 (clauses 5.3, 5.5, 19)",
+        "url": "https://doma.io/terms-of-service"
+      },
+      {
+        "label": "Doma Whitepaper (October 2026)",
+        "url": "https://doma.io/whitepaper"
+      }
+    ],
+    "uncertainty": "Reserve Policy v2.0 states that physical gold is held in allocated form in a segregated sub-account at an unnamed professional vault operator through an unnamed custodian, with legal and beneficial title held by KSTN Capital Ltd as its own asset rather than in trust for token holders. Terms clause 5.5 keeps key service providers confidential upon request, and no vault agreement, insolvency opinion, or independent physical audit is published. Although Reserve Policy v2.0 states the reserve will not be traded, lent, or encumbered, the whitepaper qualifies non-rehypothecation with 'unless expressly agreed to by the user' and no independent assurance verifies non-encumbrance.",
+    "knownUnknownExposurePct": 100
+  }
+}

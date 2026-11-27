@@ -1,0 +1,200 @@
+{
+  "id": "tmxn-tenbin",
+  "mintAuthority": {
+    "mintPath": "offchain-attested-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "headline": "Immutable token with multisig-appointed Controller minting via backend-approved orders.",
+    "summary": "tMXN is a non-proxy AssetToken whose sole on-chain minter is the non-upgradeable Controller; a Tenbin backend EOA holds MINTER_ROLE on the Controller to execute KYC-signed orders, while a 3-of-5 Owner Safe can immediately replace the token minter, grant Controller roles, or change the per-block mint limit without timelock.",
+    "upgradeability": {
+      "model": "immutable",
+      "deploymentRefs": [
+        "ethereum:0x8d015afcb6f437010653352eb1e58152c4e23734"
+      ],
+      "canChangeMintLogic": false,
+      "observedAt": "2026-11-27",
+      "observedBlock": 26505955,
+      "sources": [
+        {
+          "label": "tMXN AssetToken verified source on Blockscout",
+          "url": "https://eth.blockscout.com/address/0x8d015afcb6f437010653352eb1e58152c4e23734"
+        },
+        {
+          "label": "tMXN Controller verified source on Blockscout",
+          "url": "https://eth.blockscout.com/address/0xb5ebdec6da02119dd7beb4782c181261f8bfecc2"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x698c6d3726846c4ad4dc9331862b92cd80d2fb99",
+        "deploymentRefs": [
+          "ethereum:0x8d015afcb6f437010653352eb1e58152c4e23734"
+        ],
+        "label": "Tenbin Owner Safe (AssetToken owner and Controller DEFAULT_ADMIN_ROLE)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 5,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x4f9476459ef8cd306169c334cad181553160442a",
+            "0x31af09cb34dc7ff6391cd6640653fb99dd50a812",
+            "0xe73548a19dda7faf8c89cdae4e6f2ff0494fc442",
+            "0x90c9b9860083cbfb9d6ab2d2c6eaecaf4d79963e",
+            "0x6e5abe15ed9c910f0bbbfeb44a74ebf201a2cb68"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "moduleGuard": null,
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 26505955,
+          "observedAt": "2026-11-27",
+          "source": "onchain"
+        },
+        "capDescription": "Holds AssetToken.owner() with zero-delay setMinter() authority to appoint any minter directly, and holds Controller.DEFAULT_ADMIN_ROLE with authority to grant or revoke MINTER_ROLE and set blockMintLimit (currently 300,000,000 tMXN per block).",
+        "observedAt": "2026-11-27",
+        "observedBlock": 26505955,
+        "sources": [
+          {
+            "label": "Tenbin contracts: deployments.json",
+            "url": "https://github.com/tenbinlabs/tenbin-contracts/blob/master/deployments.json"
+          },
+          {
+            "label": "tMXN AssetToken verified source on Blockscout",
+            "url": "https://eth.blockscout.com/address/0x8d015afcb6f437010653352eb1e58152c4e23734"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At finalized Ethereum block 26505955 (hash 0xa50e54c6703eaed980d65280d5d8eb0d0bda24f104ed8f48d94814aafedd0767, 2026-11-27T10:30:47Z), AssetToken.owner() returned 0x698c6d3726846c4ad4dc9331862b92cd80d2fb99 (pendingOwner = 0x0) and Controller.hasRole(DEFAULT_ADMIN_ROLE, 0x698c6d3726846c4ad4dc9331862b92cd80d2fb99) returned true. Safe reads confirmed VERSION() = 1.4.1, getThreshold() = 3, 5 owners, empty getModulesPaginated(), zero guard and moduleGuard slots, fallbackHandler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99, and masterCopy 0x41675c099f32341bf84bfc5382af534df5c7461a."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x1b24074ceb5d4a911e9eff77c90601c12b98a8be",
+        "deploymentRefs": [
+          "ethereum:0x8d015afcb6f437010653352eb1e58152c4e23734"
+        ],
+        "label": "tMXN backend minter EOA (Controller MINTER_ROLE)",
+        "role": "backend-signer",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Executes KYC-signed EIP-712 mint orders through Controller (0xb5ebdec6da02119dd7beb4782c181261f8bfecc2), bounded on-chain by blockMintLimit (300,000,000 tMXN per block) and an 8% Chainlink MXN/USD oracle tolerance. Also holds MULTICALLER_ROLE on MultiCall (0xbe4b8f1ceb7710f896c963b0452335394efac166), which likewise holds MINTER_ROLE.",
+        "observedAt": "2026-11-27",
+        "observedBlock": 26505955,
+        "sources": [
+          {
+            "label": "Tenbin contracts: deployments.json",
+            "url": "https://github.com/tenbinlabs/tenbin-contracts/blob/master/deployments.json"
+          },
+          {
+            "label": "Tenbin: Minting and Redemption",
+            "url": "https://docs.tenbinlabs.xyz/solution-overview/minting-and-redemption.md"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At finalized Ethereum block 26505955, AssetToken.minter() returned Controller 0xb5ebdec6da02119dd7beb4782c181261f8bfecc2, and Controller.hasRole(MINTER_ROLE) returned true for EOA 0x1b24074ceb5d4a911e9eff77c90601c12b98a8be (eth_getCode = 0x) and MultiCall 0xbe4b8f1ceb7710f896c963b0452335394efac166. Controller.blockMintLimit() returned 300,000,000 tMXN and pauseStatus() returned 0."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x48fa008bd2660974d55ee9b7a9eca1ce61347614",
+        "deploymentRefs": [
+          "ethereum:0x8d015afcb6f437010653352eb1e58152c4e23734"
+        ],
+        "label": "Tenbin Dev Safe (Controller SIGNER_MANAGER_ROLE)",
+        "role": "other",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "threshold": 2,
+        "signerCount": 6,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0xb51bbe762318b626c69e0ea96199eb7246bd5cfa",
+            "0xacdf294ab853696b02c940c4c98e946c7b307dfb",
+            "0xb41b0d90b7d5f2183a096a9ca7fbb98fda605847",
+            "0xedb3c1b1cee291d63b73f16df047e0b07fe21beb",
+            "0x7a32abd2258b32f0b4f552c28a298deccc03505d",
+            "0x4e83b548434c057c33a995045a2eae32575d38a4"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": null,
+          "moduleGuard": null,
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 26505955,
+          "observedAt": "2026-11-27",
+          "source": "onchain"
+        },
+        "capDescription": "Holds Controller.SIGNER_MANAGER_ROLE to whitelist or revoke authorized off-chain order signers, and CollateralManager.CAP_ADJUSTER_ROLE for rebalancing caps; cannot directly mint or alter Controller.blockMintLimit.",
+        "observedAt": "2026-11-27",
+        "observedBlock": 26505955,
+        "sources": [
+          {
+            "label": "Tenbin contracts: deployments.json",
+            "url": "https://github.com/tenbinlabs/tenbin-contracts/blob/master/deployments.json"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At finalized Ethereum block 26505955, Controller.hasRole(SIGNER_MANAGER_ROLE, 0x48fa008bd2660974d55ee9b7a9eca1ce61347614) returned true and CollateralManager.hasRole(CAP_ADJUSTER_ROLE, 0x48fa008bd2660974d55ee9b7a9eca1ce61347614) returned true. Safe reads confirmed VERSION() = 1.4.1, getThreshold() = 2, 6 owners, empty getModulesPaginated(), zero guard and moduleGuard slots, fallbackHandler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99, and masterCopy 0x41675c099f32341bf84bfc5382af534df5c7461a."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
+    "review": {
+      "sources": [
+        {
+          "label": "Tenbin contracts: deployments.json",
+          "url": "https://github.com/tenbinlabs/tenbin-contracts/blob/master/deployments.json"
+        },
+        {
+          "label": "tMXN AssetToken verified source on Blockscout",
+          "url": "https://eth.blockscout.com/address/0x8d015afcb6f437010653352eb1e58152c4e23734"
+        },
+        {
+          "label": "tMXN Controller verified source on Blockscout",
+          "url": "https://eth.blockscout.com/address/0xb5ebdec6da02119dd7beb4782c181261f8bfecc2"
+        },
+        {
+          "label": "Tenbin: Minting and Redemption",
+          "url": "https://docs.tenbinlabs.xyz/solution-overview/minting-and-redemption.md"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ],
+      "evidence": "Pinned Ethereum reads at finalized block 26505955 (hash 0xa50e54c6703eaed980d65280d5d8eb0d0bda24f104ed8f48d94814aafedd0767, 2026-11-27T10:30:47Z) and verified Blockscout source confirm that tMXN AssetToken (0x8d015afcb6f437010653352eb1e58152c4e23734) and Controller (0xb5ebdec6da02119dd7beb4782c181261f8bfecc2) are non-proxy immutable contracts (zero EIP-1967 implementation slots). AssetToken.minter() is the Controller, while AssetToken.owner() and Controller.DEFAULT_ADMIN_ROLE are held by the 3-of-5 Owner Safe v1.4.1 (0x698c6d3726846c4ad4dc9331862b92cd80d2fb99, no modules or guards), which can appoint a new minter or raise blockMintLimit (currently 300,000,000 tMXN per block, ~30x circulating supply) with zero delay. Operational minting runs through the backend EOA (0x1b24074ceb5d4a911e9eff77c90601c12b98a8be) and MultiCall, and the 2-of-6 Dev Safe (0x48fa008bd2660974d55ee9b7a9eca1ce61347614, no modules or guards) manages whitelisted order signers. Economic posture is unbounded with unknown reconciliation and no prudential supervision because Base Chainlink PoR publishes only one aggregate off-chain total across all Tenbin assets and no independent financial audit is published.",
+      "reviewer": "Pharos Listing Policy v2 PR-2 mint-authority review",
+      "reviewedAt": "2026-11-27",
+      "disposition": "scoreable"
+    }
+  }
+}

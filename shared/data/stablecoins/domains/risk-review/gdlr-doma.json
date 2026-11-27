@@ -1,0 +1,27 @@
+{
+  "id": "gdlr-doma",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Verified GDLR TokenContract source on Blockscout",
+        "url": "https://eth.blockscout.com/address/0xa038a26bf960451b8ce75ec4c92013c6307f8e4e"
+      },
+      {
+        "label": "CertiK Doma RWA security assessment (DOR-02, DOR-15)",
+        "url": "https://doma.io/uploads/certik-doma-rwa-2026-08.pdf"
+      },
+      {
+        "label": "Doma General Terms and Conditions v3.0 (clauses 5.2, 5.6, 8.2)",
+        "url": "https://doma.io/terms-of-service"
+      },
+      {
+        "label": "Ethereum PublicNode pinned RPC read (block 26506037)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ],
+    "evidence": "Although Doma General Terms and Conditions v3.0 clauses 5.2 and 8.2 state that no administrative or freeze controls operate at the ERC-20 layer, verified deployed Solidity source for Ethereum GDLR TokenContract 0xa038a26bf960451b8ce75ec4c92013c6307f8e4e (sole deployment, 100% of supply, 586,140.620019 GDLR at block 26506037 on 2026-11-27T10:47:11Z, hash 0x53867165de3e65dd0b94c966bc5c30c80465dfdb0020c6c94de03a37b3c753ac) directly implements holder-level blocklisting and global pause. DEFAULT_ADMIN_ROLE (held by active EOA 0xbfdf8a08222d388a9b3cfe6f85863bd502e9132f) can call addToBlocklist(address) and removeFromBlocklist(address) immediately, emitting AddressBlocklisted(address indexed account) (topic 0xdb9ecf6896ed025e58391b82cd67e321fcb310ee63af415b58efe93c7dde8577) and AddressUnblocklisted(address indexed account) (topic 0x6aa12fece129abcce316cbd448229b1720b8441f5f3e228c9ce0b71a2f21b829). _beforeTokenTransfer reverts with AddressIsBlocklisted for blocklisted senders or recipients on transfers and mints, transferFrom rejects blocklisted spenders, and burnAndRedeem rejects blocklisted owners. PAUSER_ROLE EOA 0xc2769b50d030cfde1db836e918836613a49e82fb can also call pause() globally (paused()=false at pinned block). Deployed code governs over prose and establishes Yes.",
+    "reviewer": "Pharos Wave 1A blacklistability review 2026-11-27",
+    "reviewedAt": "2026-11-27"
+  }
+}

@@ -1,0 +1,302 @@
+{
+  "id": "bnbusd-sigma-money",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "bnbUSD token proxy on BscScan",
+        "url": "https://bscscan.com/address/0x5519a479da8ce3af7f373c16f14870bbeafda265"
+      },
+      {
+        "label": "L2FxUSD exact-match verified implementation on Sourcify",
+        "url": "https://sourcify.dev/server/v2/contract/56/0x4429ee0c38b8cbc9c1d6d8bab5751618b0751998?fields=sources"
+      },
+      {
+        "label": "PoolManager exact-match verified implementation on Sourcify",
+        "url": "https://sourcify.dev/server/v2/contract/56/0xa9cab826b5b471bdcae7186cfe988327fe873929?fields=sources"
+      },
+      {
+        "label": "Sigma ProxyAdmin and 6-of-9 Safe on BscScan",
+        "url": "https://bscscan.com/address/0xfcddb2c54ca8a1a12eedd83efd027f7b47e83428"
+      },
+      {
+        "label": "BSC evidence pin 136025505 (2026-11-27T10:50:03Z)",
+        "url": "https://bscscan.com/block/136025505"
+      }
+    ],
+    "evidence": "bnbUSD is Possible because its sole material deployment on BSC (0x5519a479da8ce3af7f373c16f14870bbeafda265, holding 100% of the 347,648.321911941000961794 supply at block 136025505 on 2026-11-27T10:50:03Z) is an EIP-1967 TransparentUpgradeableProxy administered with zero timelock. EIP-1967 implementation resolved to verified L2FxUSD 0x4429ee0c38b8cbc9c1d6d8bab5751618b0751998, and EIP-1967 admin resolved to ProxyAdmin 0x2f0927654de5856bfada529c800eba78cc032c11, whose owner() is the 6-of-9 Safe 1.4.1 at 0xfcddb2c54ca8a1a12eedd83efd027f7b47e83428 with no timelock, no modules and no guard. Current L2FxUSD and inherited ERC20Upgradeable code exposes no transfer blacklist, freeze or token-level pause. burn(address,uint256) is restricted to immutable poolManager 0x0a43ca87954ed1799b7b072f6e9d51d88cca600e (verified PoolManager 0xa9cab826b5b471bdcae7186cfe988327fe873929), whose current code burns only _msgSender() and not arbitrary third-party balances, though PoolManager is upgradeable by the same zero-delay ProxyAdmin. Direct immediate proxy upgradeability on the material deployment establishes Possible.",
+    "reviewer": "Pharos listing v2 Wave 1A review 2026-11-27",
+    "reviewedAt": "2026-11-27"
+  },
+  "oracleRisk": {
+    "tier": "single-source-or-laggy",
+    "summary": "Both Sigma Long Pools rely on dual-source BNBPriceOracle contracts that combine Chainlink BNB/USD and centralized Binance Oracle BNB/USD in strict conjunction: both feeds must return positive answers within an immutable 810,000-second (9.375-day) heartbeat, with zero failover if either feed expires. At BSC blocks 136025859 to 136026270 on 2026-11-27, the centralized Binance Oracle BNB/USD feed (0xc5a35fc58efdc4b88ddca51acacd2e8f593504be) had not updated since 2026-10-14T07:46:07Z (44 days stale), causing getPrice(), getLiquidatePrice() and getRedeemPrice() on both pool oracles to revert with expired and rendering liquidations and redemptions uncallable until governance updates the oracles or Binance resumes updates.",
+    "role": "collateral-pricing",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-11-27",
+      "reviewer": "Pharos listing v2 Wave 1A review 2026-11-27",
+      "rationale": "bnbUSD is backed by two registered SigmaLongPool markets on BSC (WBNB and SY-clisBNB/slisBNB) with distinct pool proxies, separate BNBPriceOracle deployments and an additional Lista StakeManager rate provider on the SY-clisBNB branch, so collateral pricing, liquidation, backstop and bad-debt behavior require branch-level review.",
+      "sources": [
+        {
+          "label": "Sigma Oracle documentation",
+          "url": "https://docs.sigma.money/risk-management/oracle-for-bnb-and-wbnb-price"
+        },
+        {
+          "label": "WBNB pool BNBPriceOracle exact-match verified source on Sourcify",
+          "url": "https://sourcify.dev/server/v2/contract/56/0xfd1de9bfda269c68a9bc332ccfaa55c55d0c2746?fields=sources"
+        },
+        {
+          "label": "SY-clisBNB pool BNBPriceOracle exact-match verified source on Sourcify",
+          "url": "https://sourcify.dev/server/v2/contract/56/0x45dcdfce8c0d163708eaa47ab5e72280af3efa3e?fields=sources"
+        }
+      ]
+    },
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos listing v2 Wave 1A review 2026-11-27",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Sigma Oracle documentation (Chainlink + Binance Oracle BNB/USD)",
+        "url": "https://docs.sigma.money/risk-management/oracle-for-bnb-and-wbnb-price"
+      },
+      {
+        "label": "Sigma Risk Parameters documentation",
+        "url": "https://docs.sigma.money/risk-management/risk-parameters"
+      },
+      {
+        "label": "Sigma Risk Framework documentation",
+        "url": "https://docs.sigma.money/risk-management/risk-framework"
+      },
+      {
+        "label": "WBNB pool BNBPriceOracle exact-match verified source on Sourcify",
+        "url": "https://sourcify.dev/server/v2/contract/56/0xfd1de9bfda269c68a9bc332ccfaa55c55d0c2746?fields=sources"
+      },
+      {
+        "label": "SY-clisBNB pool BNBPriceOracle exact-match verified source on Sourcify",
+        "url": "https://sourcify.dev/server/v2/contract/56/0x45dcdfce8c0d163708eaa47ab5e72280af3efa3e?fields=sources"
+      },
+      {
+        "label": "SigmaClisBNBSYBNBRateProvider exact-match verified source on Sourcify",
+        "url": "https://sourcify.dev/server/v2/contract/56/0x1cf9bf3506cba6ec27cc0ccc0b04ec0fdca92095?fields=sources"
+      },
+      {
+        "label": "BSC evidence pin 136026125 (2026-11-27T10:54:42Z)",
+        "url": "https://bscscan.com/block/136026125"
+      }
+    ],
+    "branches": [
+      {
+        "id": "wbnb-long-pool",
+        "label": "WBNB long-pool collateral branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The WBNB long pool (0x31c464cfe506d44ceaa86c05cdbb94b5c94f70fb, 89.03% of pool debt) prices WBNB via BNBPriceOracle (0xfd1de9bfda269c68a9bc332ccfaa55c55d0c2746), which requires both Chainlink BNB/USD and centralized Binance Oracle BNB/USD to be within an 810,000-second heartbeat and clamps deviations above 1% (maxPriceDeviation = 1e16) to Chainlink. Because Binance Oracle BNB/USD stopped updating on 2026-10-14, getPrice() currently reverts with expired.",
+        "collateralAssets": [
+          "WBNB"
+        ],
+        "chains": [
+          "bsc"
+        ],
+        "feeds": [
+          {
+            "provider": "Sigma BNBPriceOracle (WBNB pool) over Chainlink + Binance Oracle",
+            "path": "Reads Chainlink BNB/USD (0x0567f2323251f0aab15c8dfb1967e4e8a7d42aee) and Binance Oracle BNB/USD (0xc5a35fc58efdc4b88ddca51acacd2e8f593504be) in strict conjunction; returns (anchorPrice, minPrice, maxPrice) with 1% deviation clamp to Chainlink anchor; reverts expired when either feed exceeds 810,000s",
+            "address": "0xfd1de9bfda269c68a9bc332ccfaa55c55d0c2746",
+            "chain": "bsc",
+            "stalenessBoundSec": 810000,
+            "observedAt": "2026-11-27",
+            "observedBlock": 136026125,
+            "failureDomainKeys": [
+              "sigma:wbnb-price-oracle",
+              "chainlink:bsc:bnb-usd",
+              "binance-oracle:bsc:bnb-usd",
+              "bsc"
+            ]
+          },
+          {
+            "provider": "Chainlink",
+            "path": "BNB / USD push feed on BSC; 8-decimal answer read 563.58646666 updated at 2026-11-27T10:52:53Z",
+            "address": "0x0567f2323251f0aab15c8dfb1967e4e8a7d42aee",
+            "chain": "bsc",
+            "stalenessBoundSec": 810000,
+            "observedAt": "2026-11-27",
+            "observedBlock": 136026125,
+            "failureDomainKeys": [
+              "chainlink:bsc:bnb-usd",
+              "bsc"
+            ]
+          },
+          {
+            "provider": "Binance Oracle (CEX-operated feed)",
+            "path": "BNB / USD push feed operated by Binance; 8-decimal answer read 741.09894137, last updated 2026-10-14T07:46:07Z (stale >44 days, exceeding the 810,000s heartbeat and reverting BNBPriceOracle)",
+            "address": "0xc5a35fc58efdc4b88ddca51acacd2e8f593504be",
+            "chain": "bsc",
+            "stalenessBoundSec": 810000,
+            "observedAt": "2026-11-27",
+            "observedBlock": 136026125,
+            "failureDomainKeys": [
+              "binance-oracle:bsc:bnb-usd",
+              "bsc"
+            ]
+          }
+        ],
+        "fallbackBehavior": "There is no failover when either feed is stale or invalid: SpotPriceOracleBase._readSpotPriceByChainlink() reverts with invalid on non-positive answers and expired when block.timestamp - updatedAt exceeds the 810,000-second heartbeat on either Chainlink or Binance Oracle. When both feeds are fresh, min/max values deviating from the Chainlink anchor by more than maxPriceDeviation (1% on-chain) clamp back to Chainlink. At BSC block 136026125, the stale Binance Oracle leg causes all getPrice() calls to revert.",
+        "observedAt": "2026-11-27",
+        "observedBlock": 136026125,
+        "collateralParameters": [
+          {
+            "asset": "WBNB",
+            "maximumLtvPct": 95,
+            "minimumCollateralRatioPct": 105.26,
+            "note": "WBNB SigmaLongPool 0x31c464cfe506d44ceaa86c05cdbb94b5c94f70fb at BSC block 136026125: debt ratio range 9.09% to 86.49%, rebalance at 88% LTV (2.5% bounty), liquidation at 95% LTV (4% bounty), maxRedeemRatioPerTick 20%, getTotalRawDebts 309,474.44 bnbUSD (89.03% of total pool debt) against 597.33 WBNB."
+          }
+        ],
+        "liquidationMechanism": "By design, keepers invoke BnbUSDBasePool (Stability Pool) or permissionless liquidation once a tick reaches 95% LTV (after 88% LTV rebalancing) to repay debt and seize WBNB plus a 4% bounty. However, at BSC block 136026125 liquidation calls are currently uncallable because BNBPriceOracle.getLiquidatePrice() reverts with expired on the stale Binance Oracle feed.",
+        "liquidationState": "uncallable",
+        "backstop": "BnbUSDBasePool (Stability Pool holding 469,201.20 USDT and 52,603.11 bnbUSD at block 136025751) supplies rebalancing and liquidation liquidity, backed by ReservePool (0x490ed661bd1ba7d401a313fc9e60fcc1f642b0fd) before bad-debt socialisation.",
+        "shutdownOrBadDebtBehavior": "If collateral plus ReservePool cannot cover a tick's debt, BasePool writes off exhausted collateral and socialises remaining bad debt across active borrowers through the pool debt index. PoolManager.setPause(true) can halt operations, and an expired oracle currently blocks price-dependent borrowing, rebalancing, liquidations and redemptions.",
+        "debtSharePct": 89.03,
+        "failureDomainKeys": [
+          "sigma:wbnb-price-oracle",
+          "chainlink:bsc:bnb-usd",
+          "binance-oracle:bsc:bnb-usd",
+          "sigma:wbnb-long-pool",
+          "sigma:pool-manager",
+          "sigma:stability-pool",
+          "bsc"
+        ],
+        "sources": [
+          {
+            "label": "WBNB pool BNBPriceOracle exact-match verified source on Sourcify",
+            "url": "https://sourcify.dev/server/v2/contract/56/0xfd1de9bfda269c68a9bc332ccfaa55c55d0c2746?fields=sources"
+          },
+          {
+            "label": "WBNB SigmaLongPool exact-match verified source on Sourcify",
+            "url": "https://sourcify.dev/server/v2/contract/56/0xa2559504975deea4fc73ba255d28b20349c3c017?fields=sources"
+          },
+          {
+            "label": "Sigma Oracle documentation",
+            "url": "https://docs.sigma.money/risk-management/oracle-for-bnb-and-wbnb-price"
+          },
+          {
+            "label": "BSC evidence pin 136026125 (2026-11-27T10:54:42Z)",
+            "url": "https://bscscan.com/block/136026125"
+          }
+        ]
+      },
+      {
+        "id": "sy-clisbnb-long-pool",
+        "label": "SY-clisBNB / slisBNB long-pool collateral branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The SY-clisBNB long pool (0xe8a16f808412c4341f692b49c81d64c374187b7d, 10.97% of pool debt) converts SY-clisBNB to BNB via Lista StakeManager (SigmaClisBNBSYBNBRateProvider) and prices BNB via BNBPriceOracle (0x45dcdfce8c0d163708eaa47ab5e72280af3efa3e, owned by the 6-of-9 Safe) combining Chainlink BNB/USD and centralized Binance Oracle BNB/USD. Because Binance Oracle BNB/USD stopped updating on 2026-10-14, getPrice() currently reverts with expired.",
+        "collateralAssets": [
+          "SY-clisBNB"
+        ],
+        "chains": [
+          "bsc"
+        ],
+        "feeds": [
+          {
+            "provider": "Sigma BNBPriceOracle (SY-clisBNB pool) over Chainlink + Binance Oracle",
+            "path": "Reads Chainlink BNB/USD (0x0567f2323251f0aab15c8dfb1967e4e8a7d42aee) and Binance Oracle BNB/USD (0xc5a35fc58efdc4b88ddca51acacd2e8f593504be) in strict conjunction with 1% deviation clamp to Chainlink; owned by 6-of-9 Safe; reverts expired when either feed exceeds 810,000s",
+            "address": "0x45dcdfce8c0d163708eaa47ab5e72280af3efa3e",
+            "chain": "bsc",
+            "stalenessBoundSec": 810000,
+            "observedAt": "2026-11-27",
+            "observedBlock": 136026125,
+            "failureDomainKeys": [
+              "sigma:sy-bnb-price-oracle",
+              "chainlink:bsc:bnb-usd",
+              "binance-oracle:bsc:bnb-usd",
+              "bsc"
+            ]
+          },
+          {
+            "provider": "Lista DAO StakeManager via SigmaClisBNBSYBNBRateProvider",
+            "path": "Converts SY-clisBNB / slisBNB units to BNB via Lista StakeManager (0x1adb950d8bb3da4be104211d5ab038628e477fe6); getRate() read 1.039784031004812523 BNB per SY-clisBNB at block 136025751",
+            "address": "0x1cf9bf3506cba6ec27cc0ccc0b04ec0fdca92095",
+            "chain": "bsc",
+            "observedAt": "2026-11-27",
+            "observedBlock": 136025751,
+            "failureDomainKeys": [
+              "lista:slisbnb-rate",
+              "sigma:sy-rate-provider",
+              "bsc"
+            ]
+          },
+          {
+            "provider": "Chainlink",
+            "path": "BNB / USD push feed on BSC; 8-decimal answer read 563.58646666 updated at 2026-11-27T10:52:53Z",
+            "address": "0x0567f2323251f0aab15c8dfb1967e4e8a7d42aee",
+            "chain": "bsc",
+            "stalenessBoundSec": 810000,
+            "observedAt": "2026-11-27",
+            "observedBlock": 136026125,
+            "failureDomainKeys": [
+              "chainlink:bsc:bnb-usd",
+              "bsc"
+            ]
+          },
+          {
+            "provider": "Binance Oracle (CEX-operated feed)",
+            "path": "BNB / USD push feed operated by Binance; 8-decimal answer read 741.09894137, last updated 2026-10-14T07:46:07Z (stale >44 days, reverting BNBPriceOracle)",
+            "address": "0xc5a35fc58efdc4b88ddca51acacd2e8f593504be",
+            "chain": "bsc",
+            "stalenessBoundSec": 810000,
+            "observedAt": "2026-11-27",
+            "observedBlock": 136026125,
+            "failureDomainKeys": [
+              "binance-oracle:bsc:bnb-usd",
+              "bsc"
+            ]
+          }
+        ],
+        "fallbackBehavior": "No failover exists if either Chainlink or Binance Oracle expires beyond 810,000 seconds or returns a non-positive answer: SpotPriceOracleBase reverts with expired or invalid. The Lista StakeManager rate leg carries no independent market-price check against slisBNB secondary discounts. At BSC block 136025859, the stale Binance Oracle feed causes all getPrice() calls on 0x45dcdfce8c0d163708eaa47ab5e72280af3efa3e to revert.",
+        "observedAt": "2026-11-27",
+        "observedBlock": 136026125,
+        "collateralParameters": [
+          {
+            "asset": "SY-clisBNB",
+            "maximumLtvPct": 95,
+            "minimumCollateralRatioPct": 105.26,
+            "note": "SY-clisBNB SigmaLongPool 0xe8a16f808412c4341f692b49c81d64c374187b7d at BSC block 136026125: debt ratio range 9.09% to 86.67%, rebalance at 88% LTV (2.5% bounty), liquidation at 95% LTV (4% bounty), maxRedeemRatioPerTick 20%, getTotalRawDebts 38,131.78 bnbUSD (10.97% of total pool debt) against 90.10 SY-clisBNB (93.63 BNB raw collateral)."
+          }
+        ],
+        "liquidationMechanism": "By design, keepers invoke BnbUSDBasePool (Stability Pool) or permissionless liquidation once a tick reaches 95% LTV (after 88% LTV rebalancing) to repay debt and seize SY-clisBNB plus a 4% bounty. At BSC blocks 136025859 to 136026125 liquidation calls are uncallable because BNBPriceOracle.getLiquidatePrice() reverts with expired on the stale Binance Oracle feed.",
+        "liquidationState": "uncallable",
+        "backstop": "BnbUSDBasePool (Stability Pool) and ReservePool (0x490ed661bd1ba7d401a313fc9e60fcc1f642b0fd) backstop rebalancing and liquidation shortfalls before bad-debt socialisation.",
+        "shutdownOrBadDebtBehavior": "Uncovered bad debt after ReservePool depletion is socialised across remaining borrowers via the pool debt index. PoolManager.setPause(true) halts pool operations, and the currently expired Binance Oracle feed blocks price-dependent borrowing, rebalancing, liquidations and redemptions.",
+        "debtSharePct": 10.97,
+        "failureDomainKeys": [
+          "sigma:sy-bnb-price-oracle",
+          "lista:slisbnb-rate",
+          "chainlink:bsc:bnb-usd",
+          "binance-oracle:bsc:bnb-usd",
+          "sigma:sy-long-pool",
+          "sigma:pool-manager",
+          "sigma:stability-pool",
+          "bsc"
+        ],
+        "sources": [
+          {
+            "label": "SY-clisBNB pool BNBPriceOracle exact-match verified source on Sourcify",
+            "url": "https://sourcify.dev/server/v2/contract/56/0x45dcdfce8c0d163708eaa47ab5e72280af3efa3e?fields=sources"
+          },
+          {
+            "label": "SY-clisBNB SigmaLongPool exact-match verified source on Sourcify",
+            "url": "https://sourcify.dev/server/v2/contract/56/0x61bdf50bb95b23df497a79c6b3070517f79a9657?fields=sources"
+          },
+          {
+            "label": "SigmaClisBNBSYBNBRateProvider exact-match verified source on Sourcify",
+            "url": "https://sourcify.dev/server/v2/contract/56/0x1cf9bf3506cba6ec27cc0ccc0b04ec0fdca92095?fields=sources"
+          },
+          {
+            "label": "BSC evidence pin 136026125 (2026-11-27T10:54:42Z)",
+            "url": "https://bscscan.com/block/136026125"
+          }
+        ]
+      }
+    ]
+  }
+}

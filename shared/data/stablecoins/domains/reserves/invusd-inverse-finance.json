@@ -1,0 +1,108 @@
+{
+  "id": "invusd-inverse-finance",
+  "reserves": [
+    {
+      "sourceKey": "monolith-lender:ethereum:0x08d23468a467d2bb86fae0e32f247a26c7e2e994",
+      "name": "sINV collateral (Monolith Lender)",
+      "pct": 76.51,
+      "risk": "very-high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Inverse Finance DAO (sINV ERC-4626 vault over INV)",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "sourceKey": "monolith-lender:ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+      "name": "sUSDS PSM reserve (Monolith Lender)",
+      "pct": 23.49,
+      "risk": "low",
+      "coinId": "susds-sky",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Sky Protocol (sUSDS savings vault over USDS)",
+      "riskFactors": [
+        "smart-contract",
+        "market",
+        "liquidity",
+        "counterparty"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos listing v2 Wave 1A review 2026-11-27",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Pinned invUSD Lender state at Ethereum block 26506036 (2026-11-27T10:46:59Z, hash 0xc35e3cea0bc5fe66eb85be9e5416719ba6d1a0e348d8becad1cc4cd387f7fad1): sINV.balanceOf(lender) 106203.866529545160323534, sUSDS.balanceOf(lender) 232114.050860386413278135, freePsmAssets 259316.532348023987267945, totalPaidDebt 274250.939699127464806994, totalFreeDebt 2556.229609264083031379, accruedLocalReserves 1239.137612356378285246, Coin.totalSupply 534884.564044059156821072",
+        "url": "https://etherscan.io/address/0xf8b349da9244253288f6853835e6582955fd49c9#readContract"
+      },
+      {
+        "label": "Pinned sUSDS vault and sINV oracle reads at Ethereum blocks 26506036 to 26506041: sUSDS convertToAssets 1.117787085996113852, sUSDS maxWithdraw(lender) 259454.106940457276548943 against freePsmAssets 259316.532348023987267945, Lender.getCollateralPrice() 7.953034170619199928 USD per sINV (reduceOnly=false, allowLiquidations=true)",
+        "url": "https://etherscan.io/address/0xa3931d71877c0e7a3148cb7eb4463524fec27fbd#readContract"
+      },
+      {
+        "label": "invUSD Coin exact-match verified source on Sourcify",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x5377680b5986296aa4f9e684e5315a4f24832e56?fields=sources"
+      },
+      {
+        "label": "invUSD Lender exact-match verified source on Sourcify",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xf8b349da9244253288f6853835e6582955fd49c9?fields=sources"
+      },
+      {
+        "label": "Monolith peg stability module: the Lender holds PSM assets as sUSDS and pays USDS 1:1 through buy and sell",
+        "url": "https://docs.monolith.market/protocol/peg-stability-module.md"
+      },
+      {
+        "label": "Monolith Lender reference: immutable collateral, psmAsset and psmVault",
+        "url": "https://docs.monolith.market/reference/Lender.md"
+      }
+    ],
+    "rationale": "At Ethereum blocks 26506036 to 26506041 (2026-11-27T10:46:59Z to 10:47:59Z) the invUSD Monolith V1 Lender held exactly two reserve assets. sINV collateral: 106,203.866529545160323534 sINV valued by Lender.getCollateralPrice() at 7.953034170619199928 USD per sINV equals 844,642.96 USD (76.51% of measured reserves). PSM reserve: 232,114.050860386413278135 sUSDS with sUSDS.maxWithdraw(lender) of 259,454.11 USDS against Lender.freePsmAssets() of 259,316.532348023987267945 USDS (23.49% of measured reserves); the 137.57 USDS difference is unrecognised sUSDS yield that pullLocalReserves() has not yet booked into accruedLocalReserves and freePsmAssets. Accounting conservation is exact: totalPaidDebt 274,250.939699127464806994 plus totalFreeDebt 2,556.229609264083031379 plus freePsmAssets 259,316.532348023987267945 equals 536,123.701656415535106318, which equals Coin.totalSupply 534,884.564044059156821072 plus unpulled accruedLocalReserves 1,239.137612356378285246 to the wei (with accruedGlobalReserves zero). Total measured reserves of 1,103,959.49 USD cover Coin.totalSupply at 206.39%, and sINV collateral covers CDP debt (276,807.17 invUSD) at 305.14%. The live monolith-lender adapter re-reads all 13 contract views in one block-pinned Multicall each run, emitting both slices and live direct PSM sell capacity bounded by the lower of freePsmAssets and sUSDS.maxWithdraw(). Because sINV is staked governance token collateral of the same protocol ecosystem (Inverse Finance INV), it carries very-high reserve risk and reflexive market-liquidity risk under stress. This review does not establish independent assurance or legal segregation.",
+    "compositionBasis": "Same-block Ethereum Multicall reads via the live monolith-lender adapter at blocks 26506036 to 26506041: sINV balance valued by Lender.getCollateralPrice() and PSM reserve valued by freePsmAssets cross-checked against sUSDS.maxWithdraw()",
+    "compositionAsOf": "2026-11-27",
+    "compositionSource": "live-adapter",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Both protocol-accounted reserve assets (sINV collateral and sUSDS PSM reserve) are identified and measured with zero unclassified residual. collateral, psmAsset and psmVault are immutable constructor state on the verified non-proxy Lender. Open items outside composition gaps: no independent proof-of-reserves attestation exists; sINV is a thin-liquidity governance token derivative priced via a single Curve INV/WETH EMA; and PSM exits depend on freePsmAssets and Sky sUSDS liquidity.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": []
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Monolith V1 Lender 0xf8b349da9244253288f6853835e6582955fd49c9 (immutable, non-proxy)",
+        "role": "other",
+        "jurisdiction": "Ethereum"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos listing v2 Wave 1A review 2026-11-27",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Pinned invUSD Lender identity and reserve reads at Ethereum block 26506036: collateral()=sINV, psmVault()=sUSDS, held directly by the Lender",
+        "url": "https://etherscan.io/address/0xf8b349da9244253288f6853835e6582955fd49c9#readContract"
+      },
+      {
+        "label": "Monolith Lender reference: collateral and PSM vault addresses are immutable constructor state",
+        "url": "https://docs.monolith.market/reference/Lender.md"
+      },
+      {
+        "label": "Monolith security and risk documentation",
+        "url": "https://docs.monolith.market/security/risks.md"
+      }
+    ],
+    "uncertainty": "Reserve assets sit in an immutable on-chain Monolith Lender contract rather than with a regulated custodian, so on-chain holding is verified while legal segregation, bankruptcy remoteness and rehypothecation terms are absent and remain unknown. The sINV leg is further subject to Inverse Finance's sINV ERC-4626 vault mechanics and the sUSDS leg to Sky Protocol's savings vault.",
+    "knownUnknownExposurePct": 100
+  }
+}

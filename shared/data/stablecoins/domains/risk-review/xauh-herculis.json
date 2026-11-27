@@ -1,0 +1,135 @@
+{
+  "id": "xauh-herculis",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Blockscout verified Ethereum XAUHImplementation source (freeze, unfreeze, wipeFrozenAddress, setAssetProtectionRole, pause)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xcafe1ebf45f32b6302ff15e1e9c2026b54c0ec45"
+      },
+      {
+        "label": "TronScan verified Tron XAUHImplementation source",
+        "url": "https://tronscan.org/#/contract/TQgg6hLS7m5rbXEVSqkQvj4eQYRMLYxgQ7"
+      },
+      {
+        "label": "Herculis Gold Coin Terms and Conditions section 8.5 (freeze, blacklist, and confiscation powers)",
+        "url": "https://www.xauh.gold/xauh-terms-and-conditions.pdf"
+      },
+      {
+        "label": "Ethereum PublicNode pinned read at block 26505987",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ],
+    "evidence": "At finalized Ethereum block 26505987 (2026-11-27T10:37:11Z, hash 0x2b4fdfa8d374fad9409afe381d9e555acc8af9cfe407080de32e0506a4928cbb) and Tron block 88367386 (2026-11-27T10:47:18Z), both verified Paxos-derived XAUHImplementation deployments expose freeze(address), unfreeze(address), wipeFrozenAddress(address), and pause(). Because assetProtectionRole() currently returns the zero address on both chains, no active operator can freeze addresses directly today; however, the active 3-of-4 owner multisig (Safe 0xcfdb103596d55a9c896093ea5c49280c2e3e123b on Ethereum; native multisig TQjfg49gLwMEYWaG3gX9r32kXDJxEoW6iM on Tron) can call setAssetProtectionRole(address) with zero delay to grant an operator and activate address freezing and balance wiping. Under Pharos's FreezeWatch ladder, granting a blacklist operator first classifies as Possible rather than Yes. Terms section 8.5 also reserves freeze, blacklist, and legal confiscation powers. Ethereum (4,109.2 XAUH) and Tron (3,179.4 XAUH) account for 68.51% of the 10,638.9898 XAUH measured on-chain across Ethereum, TON, and Tron (and 47.02% of the 15,500 reported circulating total), well above the 10% materiality threshold. Event topics match the PAXG V1 family: AddressFrozen(address) 0x90811a8edd3b3c17eeaefffc17f639cc69145d41a359c9843994dc2538203690, AddressUnfrozen(address) 0xc3776b472ebf54114339eec9e4dc924e7ce307a97f5c1ee72b6d474e6e5e8b7c, FrozenAddressWiped(address) 0xfc5960f1c5a5d2b60f031bf534af053b1bf7d9881989afaeb8b1d164db23aede.",
+    "reviewer": "Listing Policy v2 PR-2 authoring 2026-11-27",
+    "reviewedAt": "2026-11-27"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "XAUH is natively issued by Herculis Tokens S.A. on Ethereum, TON, and Tron via independent chain-local 3-of-4 multisig issuance contracts with no cross-chain lockbox or third-party bridge wrapper. Pinned supplies on 2026-11-27 are 4,109.2 XAUH on Ethereum, 3,350.3898 XAUH on TON, and 3,179.4 XAUH on Tron (10,638.9898 XAUH combined). Native issuance authorities are reviewed under Mint Authority.",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Listing Policy v2 PR-2 authoring 2026-11-27",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Ethereum PublicNode pinned read at block 26505987",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "TONAPI XAUH jetton master",
+        "url": "https://tonapi.io/v2/jettons/EQCMk4_OujCnk46jApHnIRbmTtYTkSmfujV9X8Ye0qvsHVKh"
+      },
+      {
+        "label": "TronScan verified XAUH TRC-20 proxy",
+        "url": "https://tronscan.org/#/contract/TJ9x3d4v8Cot4zFLYj8rkH3ZVSaEiXtjyC"
+      },
+      {
+        "label": "Herculis Gold Coin White Paper v4.0 (native multi-chain issuance)",
+        "url": "https://www.xauh.gold/whitepaper.pdf"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xa9b17f572341219703bc951725bdb3ca756b1a65",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xa9b17f572341219703bc951725bdb3ca756b1a65",
+        "protocol": "Herculis issuer-native XAUH Ethereum deployment",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Pinned Ethereum finalized block 26505987 (2026-11-27T10:37:11Z) confirms AdminUpgradeabilityProxy delegating to verified XAUHImplementation 0xcafe1ebf45f32b6302ff15e1e9c2026b54c0ec45 with 4,109.2 XAUH totalSupply (18 decimals) and direct issuer-native minting via 3-of-4 supplyController Safe 0xd59747dce47444c7f2c96dbdefe521b447e9ccbb. No bridge adapter or lockbox.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-27",
+        "observedBlock": 26505987,
+        "sources": [
+          {
+            "label": "Blockscout verified XAUH Ethereum proxy",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa9b17f572341219703bc951725bdb3ca756b1a65"
+          },
+          {
+            "label": "Ethereum PublicNode pinned read at block 26505987",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ]
+      },
+      {
+        "id": "ton:EQCMk4_OujCnk46jApHnIRbmTtYTkSmfujV9X8Ye0qvsHVKh",
+        "destinationChain": "ton",
+        "canonicalChain": "ton",
+        "contractAddress": "EQCMk4_OujCnk46jApHnIRbmTtYTkSmfujV9X8Ye0qvsHVKh",
+        "protocol": "Herculis issuer-native XAUH TON jetton deployment",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Pinned TON masterchain seqno 108119820 (2026-11-27T10:47:22Z) confirms TEP-74 jetton master with 3,350.3898 XAUH total_supply (18 decimals), mintable=true, and admin 3-of-4 multisig_v2 0:f4ac1f2644500f2d74497d9691acb2c0909db180a9ab7117483466ebc622f4b5. Earliest XAUH deployment (2025-10-16) with direct issuer-native minting and no bridge wrapper.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-27",
+        "observedBlock": 108119820,
+        "sources": [
+          {
+            "label": "TONAPI XAUH jetton master",
+            "url": "https://tonapi.io/v2/jettons/EQCMk4_OujCnk46jApHnIRbmTtYTkSmfujV9X8Ye0qvsHVKh"
+          },
+          {
+            "label": "Tonviewer XAUH jetton master",
+            "url": "https://tonviewer.com/EQCMk4_OujCnk46jApHnIRbmTtYTkSmfujV9X8Ye0qvsHVKh"
+          }
+        ]
+      },
+      {
+        "id": "tron:TJ9x3d4v8Cot4zFLYj8rkH3ZVSaEiXtjyC",
+        "destinationChain": "tron",
+        "canonicalChain": "tron",
+        "contractAddress": "TJ9x3d4v8Cot4zFLYj8rkH3ZVSaEiXtjyC",
+        "protocol": "Herculis issuer-native XAUH Tron TRC-20 deployment",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Pinned Tron block 88367386 (2026-11-27T10:47:18Z) confirms verified AdminUpgradeabilityProxy delegating to verified XAUHImplementation TQgg6hLS7m5rbXEVSqkQvj4eQYRMLYxgQ7 with 3,179.4 XAUH totalSupply (18 decimals) and direct issuer-native minting via 3-of-4 Tron multisig TWQZBX8HheP3gN7jM5cUWJZBmUR9zZdGU3. No bridge adapter or lockbox.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-27",
+        "observedBlock": 88367386,
+        "sources": [
+          {
+            "label": "TronScan verified XAUH TRC-20 proxy",
+            "url": "https://tronscan.org/#/contract/TJ9x3d4v8Cot4zFLYj8rkH3ZVSaEiXtjyC"
+          },
+          {
+            "label": "TronGrid RPC pinned read at block 88367386",
+            "url": "https://api.trongrid.io/wallet/getnowblock"
+          }
+        ]
+      }
+    ]
+  }
+}

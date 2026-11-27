@@ -1,0 +1,131 @@
+{
+  "id": "bnbusd-sigma-money",
+  "status": "active",
+  "name": "bnbUSD",
+  "symbol": "bnbUSD",
+  "brand": "Sigma Money",
+  "oneLiner": "bnbUSD is Sigma Money's BNB and slisBNB-backed dollar on BSC, minted through an f(x) V2-style PoolManager with Stability Pool liquidations.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized-dependent"
+  },
+  "collateral": "Overcollateralized WBNB (0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c) and Lista slisBNB wrapped as SY-clisBNB (0x8b98563d66b74e5a644bff78fc72c86bba847a29) held by PoolManager (0x0a43ca87954ed1799b7b072f6e9d51d88cca600e) across two SigmaLongPool markets on BSC. Small residual allocations sit in YieldStrategy contracts (0.1 WBNB and 0.1 SY-clisBNB) and WBNB short-pool lending (4.60 WBNB); Sigma's earlier Lista DAO idle-asset yield strategy is marked sunset in protocol docs and holds zero principal in ListaStrategyV2.",
+  "pegMechanism": "Borrowers open leveraged xBNB or sigmaClisBNBSY long positions (1.1x to 7x) in PoolManager to mint bnbUSD against WBNB or SY-clisBNB collateral, priced by dual-source BNBPriceOracle contracts that combine Chainlink BNB/USD and Binance Oracle BNB/USD with a 1% on-chain deviation clamp (2% in docs). Positions rebalance at 88% LTV (2.5% bounty) and liquidate at 95% LTV (4% bounty) through BnbUSDBasePool (Stability Pool) and ReservePool, with residual bad debt socialised via the pool debt index. PegKeeper arbitrages the Curve bnbUSD/USDT pool around a 0.998 downward threshold, and PoolManager.redeem() permits bnbUSD holders to redeem for pool collateral at a 0.5% fee (up to 20% per tick) when PoolConfiguration.isRedeemAllowed() is active during below-peg states. Both BNBPriceOracle contracts revert with expired whenever either Chainlink or Binance Oracle exceeds its 810,000-second heartbeat.",
+  "mechanismArchetype": "cdp",
+  "llamaId": "293",
+  "detailProvider": "defillama",
+  "geckoId": "sigma-bnb-usd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://sigma.money/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.sigma.money/"
+    },
+    {
+      "label": "Audits",
+      "url": "https://docs.sigma.money/risk-management/audit-reports"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/sigmadotmoney"
+    },
+    {
+      "label": "Token contract",
+      "url": "https://bscscan.com/address/0x5519a479da8ce3af7f373c16f14870bbeafda265"
+    },
+    {
+      "label": "PoolManager contract",
+      "url": "https://bscscan.com/address/0x0a43ca87954ed1799b7b072f6e9d51d88cca600e"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "bsc",
+      "address": "0x5519a479da8ce3af7f373c16f14870bbeafda265",
+      "decimals": 18
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "evm-branch-balances",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "bnbusd-sigma-money",
+    "display": {
+      "url": "https://sigma.money/",
+      "label": "Sigma Money PoolManager"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "bsc",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "rpcUrl": "https://bsc-rpc.publicnode.com",
+      "fallbackRpcUrl": "https://bsc-dataseed.binance.org",
+      "debtContract": "0x5519a479da8ce3af7f373c16f14870bbeafda265",
+      "debtSelector": "0x18160ddd",
+      "debtDecimals": 18,
+      "census": {
+        "kind": "reviewed-roster",
+        "reviewedAt": "2026-11-27",
+        "sourceUrls": [
+          "https://docs.sigma.money/other/resources/smart-contracts",
+          "https://sourcify.dev/server/v2/contract/56/0xa9cab826b5b471bdcae7186cfe988327fe873929?fields=sources"
+        ]
+      },
+      "branches": [
+        {
+          "name": "WBNB (PoolManager long-pool collateral)",
+          "holder": "0x0a43ca87954ed1799b7b072f6e9d51d88cca600e",
+          "token": {
+            "chain": "bsc",
+            "address": "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c",
+            "decimals": 18
+          },
+          "risk": "medium"
+        },
+        {
+          "name": "SY-clisBNB / slisBNB (PoolManager long-pool collateral)",
+          "holder": "0x0a43ca87954ed1799b7b072f6e9d51d88cca600e",
+          "token": {
+            "chain": "bsc",
+            "address": "0x8b98563d66b74e5a644bff78fc72c86bba847a29",
+            "decimals": 18
+          },
+          "risk": "high"
+        }
+      ]
+    }
+  },
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Stale Binance Oracle reverts pool pricing calls",
+      "message": "Both Sigma BNBPriceOracle contracts require fresh answers from Chainlink and Binance Oracle within an 810,000-second heartbeat. On November 27, 2026, the Binance Oracle BNB/USD feed had not updated since October 14, 2026, causing getPrice(), liquidations, and collateral redemptions to revert until governance replaces the oracle or the feed resumes.",
+      "asOf": "2026-11-27",
+      "sources": [
+        {
+          "label": "Sigma BNBPriceOracle verified source (SY-clisBNB pool)",
+          "url": "https://sourcify.dev/server/v2/contract/56/0x45dcdfce8c0d163708eaa47ab5e72280af3efa3e?fields=sources"
+        },
+        {
+          "label": "Sigma BNBPriceOracle verified source (WBNB pool)",
+          "url": "https://sourcify.dev/server/v2/contract/56/0xfd1de9bfda269c68a9bc332ccfaa55c55d0c2746?fields=sources"
+        },
+        {
+          "label": "Sigma Oracle documentation",
+          "url": "https://docs.sigma.money/risk-management/oracle-for-bnb-and-wbnb-price"
+        }
+      ]
+    }
+  ],
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "onchain",
+  "governanceQuality": "multisig",
+  "launchDate": "2025-07-22"
+}

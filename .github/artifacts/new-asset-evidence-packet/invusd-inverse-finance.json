@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 3,
+  "receiptMode": "prospective-offline",
+  "kind": "safety-score-v9-new-asset-admission-receipt",
+  "assetId": "invusd-inverse-finance",
+  "prospectiveInputId": "prospective-admission:v1:70d4ed3d13495d2ddd8faa24d354ed62edc1634c565e1d7d17ddb482ded3eb29",
+  "admissionClockSec": 1795783282,
+  "evaluatedCohortIds": [
+    "invusd-inverse-finance",
+    "susds-sky",
+    "usdc-circle",
+    "usds-sky"
+  ],
+  "absentRuntimeLanes": [
+    "chain-supply",
+    "dex",
+    "live-reserves",
+    "peg",
+    "redemption"
+  ],
+  "supplyObservation": {
+    "circulating": {
+      "peggedUSD": 535037.122368231
+    },
+    "observedAtSec": null,
+    "url": "https://stablecoins.llama.fi/stablecoins?includePrices=true",
+    "field": "peggedAssets[id=394].circulating",
+    "retrievedAtSec": 1795776338
+  },
+  "registryFingerprint": "427709ce7af65fc3a1d014ca7ece09cedff985330af3cf1d42007b3b36bd566f",
+  "evaluationBuildDigest": "909e89e4d82193e1306a8857461b26b32220838f02bad545623d795fe543408a",
+  "card": {
+    "id": "invusd-inverse-finance",
+    "openBucketQuestionsCarried": 3,
+    "inheritedOpenBucketQuestionsCarried": 0,
+    "openBucketObligationsCarried": 3,
+    "documentationObligationsCarried": 2
+  },
+  "questions": [
+    {
+      "questionKey": "invusd-inverse-finance|component|exit-routes",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-runtime-route-evidence",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "invusd-inverse-finance|component|mechanism-risk-review",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "bounded-mechanism-review",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "invusd-inverse-finance|component|peg",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-peg-input",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "invusd-inverse-finance|component|access:transfer",
+      "bucket": "documentation",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-access-review",
+          "obligations": 1,
+          "documentation": true
+        }
+      ]
+    },
+    {
+      "questionKey": "invusd-inverse-finance|component|chain-supply",
+      "bucket": "documentation",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-pillar-evidence",
+          "obligations": 1,
+          "documentation": true
+        }
+      ]
+    }
+  ]
+}

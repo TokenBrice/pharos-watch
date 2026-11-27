@@ -1,0 +1,74 @@
+{
+  "id": "tmxn-tenbin",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "tMXN AssetToken verified source on Blockscout",
+        "url": "https://eth.blockscout.com/address/0x8d015afcb6f437010653352eb1e58152c4e23734"
+      },
+      {
+        "label": "tMXN Controller verified source on Blockscout",
+        "url": "https://eth.blockscout.com/address/0xb5ebdec6da02119dd7beb4782c181261f8bfecc2"
+      },
+      {
+        "label": "Tenbin: Proof of Reserves",
+        "url": "https://docs.tenbinlabs.xyz/hedging-and-risk/proof-of-reserves.md"
+      },
+      {
+        "label": "Ethereum PublicNode RPC (finalized block 26505955)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ],
+    "evidence": "Single deployment on Ethereum (100% of circulating supply: 10,013,064.064462747 tMXN at finalized block 26505955, hash 0xa50e54c6703eaed980d65280d5d8eb0d0bda24f104ed8f48d94814aafedd0767, 2026-11-27T10:30:47Z). Verified Blockscout source and pinned bytecode reads confirm AssetToken (0x8d015afcb6f437010653352eb1e58152c4e23734, 6,176 bytes, Solidity 0.8.30, zero EIP-1967 implementation and admin slots) is an immutable OpenZeppelin ERC20Permit + Ownable2Step token with only setMinter, mint, burn, burnFrom (allowance-gated), and setNotice; it has no transfer blacklist, address freeze, global transfer pause, or arbitrary-holder burn. Although Tenbin's Terms of Use mention wallet blacklisting and Controller (0xb5ebdec6da02119dd7beb4782c181261f8bfecc2) exposes setIsRestricted(address,bool) under RESTRICTER_ROLE (held by the 3-of-5 Admin Safe 0xe6eb534f33a635e8d867414af32f766d221f30d1), that restriction gates only KYC primary mint/redeem and staking flows rather than secondary ERC-20 transfers. The inherited verdict follows the FreezeWatch reserve test: pinned on-chain USDC alone (451,180.52 USDC in the Steakhouse Morpho V2 vault, ~88.0% of tMXN liability value) strictly exceeds the >50% threshold in issuer-freezable Circle USDC (usdc-circle) even under the worst-case denominator attributing 100% of Tenbin's entire $291,208.36 cross-product off-chain Chainlink PoR balance to tMXN (451,180.52 / (451,180.52 + 291,208.36) = 60.77% > 50%), while exact whole-book reserve weights remain withheld.",
+    "reviewer": "Pharos Listing Policy v2 PR-2 FreezeWatch review",
+    "reviewedAt": "2026-11-27"
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "tMXN does not price mint or redemption orders directly from an on-chain oracle; off-chain signed orders are checked against an on-chain Chainlink MXN/USD price feed backstop (0xdb4881ab0ad6b8423f76dd8c9d65542749a1db77 via OracleAdapter 0xb5c72c24794bbcc2cab1773b7fe05c77194f7273) with an 8% Controller deviation tolerance.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-11-27",
+      "reviewer": "Pharos Listing Policy v2 PR-2 oracle review",
+      "rationale": "Tenbin operates a single Controller mint/redeem path with an on-chain Chainlink MXN/USD sanity backstop (8% tolerance at block 26505955) and off-chain CME futures hedging. Holders do not open borrower-specific collateralized debt positions or liquidation branches.",
+      "sources": [
+        {
+          "label": "Tenbin: Oracle Risk",
+          "url": "https://docs.tenbinlabs.xyz/hedging-and-risk/key-risks/oracle-risk.md"
+        },
+        {
+          "label": "Tenbin: Oracle and Price Data",
+          "url": "https://docs.tenbinlabs.xyz/custody-and-partners/oracle-and-price-data.md"
+        },
+        {
+          "label": "tMXN Controller verified source on Blockscout",
+          "url": "https://eth.blockscout.com/address/0xb5ebdec6da02119dd7beb4782c181261f8bfecc2"
+        }
+      ]
+    },
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos Listing Policy v2 PR-2 oracle review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Tenbin: Oracle Risk",
+        "url": "https://docs.tenbinlabs.xyz/hedging-and-risk/key-risks/oracle-risk.md"
+      },
+      {
+        "label": "Tenbin: Oracle and Price Data",
+        "url": "https://docs.tenbinlabs.xyz/custody-and-partners/oracle-and-price-data.md"
+      },
+      {
+        "label": "tMXN Controller verified source on Blockscout",
+        "url": "https://eth.blockscout.com/address/0xb5ebdec6da02119dd7beb4782c181261f8bfecc2"
+      },
+      {
+        "label": "Ethereum PublicNode RPC (finalized block 26505955)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ]
+  }
+}

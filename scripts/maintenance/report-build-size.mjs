@@ -48,7 +48,11 @@ const DEFAULT_BUDGETS = {
   // (#2247): the PR build measured 14.4 MiB (~15,097 KiB raw across all chunks,
   // +3.1%) while cutting largest JS chunk (-65%), total CSS (-24%), and home
   // eager JS (-55%). Rounded up with ~2% headroom.
-  totalJsBytes: 15_400_000,
+  // Re-baselined 2026-11-27 from 15,400,000 B for the Listing Policy v2 rollout
+  // (#2406): PR-2 adds 10 active listings (+10 lazy coins.client.detail chunks,
+  // 15,474,598 B across 847 chunks on 31dab80b0, +74.6 KB over 15.4M) with
+  // no per-route eager JS gzip ceiling changes. Sized with headroom for PR-3/4.
+  totalJsBytes: 15_800_000,
   // Keep generated client-registry growth reviewable.
   largestJsBytes: 1_560_000,
   totalCssBytes: 650_000,

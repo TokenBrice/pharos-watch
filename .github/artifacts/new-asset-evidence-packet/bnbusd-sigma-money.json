@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 3,
+  "receiptMode": "prospective-offline",
+  "kind": "safety-score-v9-new-asset-admission-receipt",
+  "assetId": "bnbusd-sigma-money",
+  "prospectiveInputId": "prospective-admission:v1:2def6b553749338f4d9e45df80ce39c28a59ceba9c16da29cc77bde25a1ca6f1",
+  "admissionClockSec": 1795783284,
+  "evaluatedCohortIds": [
+    "bnbusd-sigma-money"
+  ],
+  "absentRuntimeLanes": [
+    "chain-supply",
+    "dex",
+    "live-reserves",
+    "peg",
+    "redemption"
+  ],
+  "supplyObservation": {
+    "circulating": {
+      "peggedUSD": 347302.1009456243
+    },
+    "observedAtSec": null,
+    "url": "https://stablecoins.llama.fi/stablecoins?includePrices=true",
+    "field": "peggedAssets[id=293].circulating",
+    "retrievedAtSec": 1795776338
+  },
+  "registryFingerprint": "427709ce7af65fc3a1d014ca7ece09cedff985330af3cf1d42007b3b36bd566f",
+  "evaluationBuildDigest": "909e89e4d82193e1306a8857461b26b32220838f02bad545623d795fe543408a",
+  "card": {
+    "id": "bnbusd-sigma-money",
+    "openBucketQuestionsCarried": 4,
+    "inheritedOpenBucketQuestionsCarried": 0,
+    "openBucketObligationsCarried": 4,
+    "documentationObligationsCarried": 2
+  },
+  "questions": [
+    {
+      "questionKey": "bnbusd-sigma-money|component|exit-routes",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-runtime-route-evidence",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "bnbusd-sigma-money|component|mechanism-risk-review",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "bounded-mechanism-review",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "bnbusd-sigma-money|component|peg",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-peg-input",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "bnbusd-sigma-money|reserve-exposure|reserve:809ad67cb924e9bae102c80d",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "material-reserve-slice-unstructured",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "bnbusd-sigma-money|component|access:transfer",
+      "bucket": "documentation",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-access-review",
+          "obligations": 1,
+          "documentation": true
+        }
+      ]
+    },
+    {
+      "questionKey": "bnbusd-sigma-money|component|chain-supply",
+      "bucket": "documentation",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-pillar-evidence",
+          "obligations": 1,
+          "documentation": true
+        }
+      ]
+    }
+  ]
+}

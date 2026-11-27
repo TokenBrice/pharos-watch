@@ -1,0 +1,164 @@
+{
+  "id": "tbrl-tenbin",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Tenbin: Legal and Regulatory",
+        "url": "https://docs.tenbinlabs.xyz/legal-and-transparency/legal-and-regulatory.md"
+      },
+      {
+        "label": "Tenbin Foundation Terms of Use (updated July 13, 2026)",
+        "url": "https://tenbinlabs.xyz/terms-of-use"
+      },
+      {
+        "label": "ESMA Q&A 2404: MiCA offering scope requires case-by-case assessment",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2404"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "Tenbin AssetCo (BVI) SPC Ltd. issues tBRL as a Brazilian real-denominated unsecured debt-note (UCC Article 12 CER) entitling eligible KYC-approved holders to repayment of the U.S. dollar value of one Brazilian real at the spot price, settled in approved stablecoins such as USDC rather than national fiat currency. Binding Terms of Use exclude U.S. Persons from minting, redeeming, or holding interest-bearing tokens and disclaim bank-deposit status. Whether a BVI SPC synthetic FX debt-note redeemable in stablecoins satisfies the GENIUS Act section 2(22) fixed monetary-value payment-stablecoin definition remains unresolved.",
+      "references": [
+        {
+          "label": "Public Law 119-27, approved July 18, 2025; section 2 definitions of monetary value and payment stablecoin",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "Tenbin Foundation Terms of Use (updated July 13, 2026)",
+          "url": "https://tenbinlabs.xyz/terms-of-use",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-07-13",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "Tenbin: Legal and Regulatory",
+          "url": "https://docs.tenbinlabs.xyz/legal-and-transparency/legal-and-regulatory.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Tenbin AssetCo (BVI) SPC Ltd.",
+    "issuerDomicile": "British Virgin Islands",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://app.tenbinlabs.xyz/transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Reviewed 2026-11-27. Tenbin Foundation Terms of Use (updated July 13, 2026) and Legal docs identify Tenbin AssetCo (BVI) SPC Ltd. (owned by Tenbin Foundation, a Cayman Islands foundation company) acting for a segregated portfolio as the tBRL issuer. U.S. Persons are excluded from minting and redeeming under Tenbin's Geographic Restrictions and Terms of Use; U.S. geo-blocking is an issuer eligibility restriction rather than a GENIUS DASP prohibition while the Act remains pre-effective. Tenbin publishes a live transparency dashboard and an aggregated Base Chainlink PoR feed covering all assets' off-chain reserves together, plus KYC-gated USDC redemption terms, but no monthly independent CPA reserve attestation is published yet. Authorization, pathway, foreign exception, and enforcement findings are dated bounded public-evidence negatives as of 2026-11-27.",
+    "references": [
+      {
+        "label": "Public Law 119-27, approved July 18, 2025; section 2 definitions of monetary value and payment stablecoin",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "Tenbin Foundation Terms of Use (updated July 13, 2026)",
+        "url": "https://tenbinlabs.xyz/terms-of-use",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-07-13",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "Tenbin: Legal and Regulatory",
+        "url": "https://docs.tenbinlabs.xyz/legal-and-transparency/legal-and-regulatory.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "Tenbin: Geographic Restrictions",
+        "url": "https://docs.tenbinlabs.xyz/legal-and-transparency/geographic-restrictions.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "OCC GENIUS Act implementation page",
+        "url": "https://occ.treas.gov/topics/charters-and-licensing/genius-act/index-genius-act.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "OCC digital-assets licensing applications table",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "Federal Register exact-term search for Tenbin; zero documents",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Tenbin%22&per_page=5",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "Federal Register exact-term search for tBRL; two unrelated 1998 and 2000 EAR notices",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22tBRL%22&per_page=5",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "FinCEN enforcement actions index",
+        "url": "https://www.fincen.gov/news/enforcement-actions",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-11-27"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act implementation page checked 2026-11-27; no Tenbin, Tenbin AssetCo, Tenbin Foundation, or tBRL approval, application, or foreign registration listed.",
+        "OCC digital-assets licensing applications table checked 2026-11-27; no Tenbin or Tenbin AssetCo applicant listed (table is not an exhaustive GENIUS issuer register).",
+        "Federal Register API exact-term searches on 2026-11-27 for \"Tenbin\", \"Tenbin AssetCo\", \"Tenbin Foundation\" (zero documents each), and \"tBRL\" (two unrelated 1998 and 2000 Export Administration Regulations notices).",
+        "FinCEN enforcement actions index checked 2026-11-27; no Tenbin, Tenbin AssetCo, or tBRL entry.",
+        "Tenbin Foundation Terms of Use (July 13, 2026), Legal and Regulatory docs, and Geographic Restrictions checked 2026-11-27; U.S. Persons are excluded from minting and redeeming, and no GENIUS application, state qualification, or foreign registration is disclosed."
+      ],
+      "summary": "As of 2026-11-27, the checked OCC materials, Federal Register exact-term searches, FinCEN enforcement index, and primary Tenbin legal disclosures disclosed no public GENIUS Act permitted payment stablecoin issuer approval, state qualification, official application, registered foreign exception, or token-specific enforcement action naming Tenbin AssetCo (BVI) SPC Ltd., Tenbin Foundation, or tBRL. This is a dated bounded public-evidence finding and does not rule out confidential filings.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-11-27",
+      "references": [
+        {
+          "label": "OCC GENIUS Act implementation page",
+          "url": "https://occ.treas.gov/topics/charters-and-licensing/genius-act/index-genius-act.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "OCC digital-assets licensing applications table",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "Federal Register exact-term search for Tenbin; zero documents",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Tenbin%22&per_page=5",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "Federal Register exact-term search for tBRL; two unrelated 1998 and 2000 EAR notices",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22tBRL%22&per_page=5",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "FinCEN enforcement actions index",
+          "url": "https://www.fincen.gov/news/enforcement-actions",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-11-27"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-11-27"
+  }
+}

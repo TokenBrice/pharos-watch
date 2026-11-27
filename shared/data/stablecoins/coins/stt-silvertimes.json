@@ -1,0 +1,118 @@
+{
+  "id": "stt-silvertimes",
+  "status": "active",
+  "name": "SilverTimes Token",
+  "symbol": "STT",
+  "brand": "SilverTimes",
+  "oneLiner": "STT is STT Assets Limited's Ethereum silver token backed 1:1 by physical LBMA Good Delivery silver vaulted at Brink's Hong Kong.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "SILVER",
+    "governance": "centralized",
+    "rwa": true
+  },
+  "collateral": "Physical LBMA Good Delivery 99.99% fine silver bars (1,019.32330 kg net weight under consignment AG42840, Pallet #11B, 12) vaulted at Brink's Hong Kong Limited in an issuer-described Hong Kong Orphan Trust structure; each token represents one troy ounce of silver",
+  "pegMechanism": "Each STT tracks one troy ounce of physical silver. KYC-verified holders may mint STT (1% fee; website FAQ notes a 1-ton mint minimum) or redeem for physical LBMA Good Delivery silver bars at a 0.35% redemption fee with typical 3-5 business-day processing (delivery, vault release, and logistics terms remain separate). Monthly issuer Transparency Reports affirm 1:1 backing alongside Brink's Hong Kong holding certificates, without an independent accounting-firm audit or attestation.",
+  "mechanismArchetype": "commodity-claim",
+  "commodityOunces": 1,
+  "detailProvider": "commodity",
+  "geckoId": "silvertimes-token",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://www.silvertimes.io/docs/SilverTimes_Transparency_Report_STT-TR-2026-SEP.pdf",
+    "provider": "STT Assets Limited management affirmation backed by Brink's Hong Kong Ltd. vault holding certificates (May 15 and July 15, 2026); no independent accounting firm audit or attestation",
+    "attestorTier": "self",
+    "cadence": "monthly",
+    "latestReport": {
+      "periodEnd": "2026-09-30",
+      "publishedAt": "2026-10-15",
+      "assuranceMethod": "self-verification",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "Listing Policy v2 PR-2 authoring 2026-11-27; September 30, 2026 Transparency Report PDF and Brink's Hong Kong holding letters read directly",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "SilverTimes Transparency and Reserves Report STT-TR-2026-SEP (as of September 30, 2026; dated October 15, 2026)",
+          "url": "https://www.silvertimes.io/docs/SilverTimes_Transparency_Report_STT-TR-2026-SEP.pdf"
+        },
+        {
+          "label": "Brink's Hong Kong Holding Certificate AG42840 (May 15, 2026)",
+          "url": "https://www.silvertimes.io/docs/Brinks_SilverTimes_Holding_Certificate_STT_Assets_Limited_1019.pdf"
+        }
+      ]
+    }
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.silvertimes.io/"
+    },
+    {
+      "label": "Whitepaper",
+      "url": "https://www.silvertimes.io/docs/SilverTimes_Token_whitepaper_v9.2.pdf"
+    },
+    {
+      "label": "Transparency Report",
+      "url": "https://www.silvertimes.io/docs/SilverTimes_Transparency_Report_STT-TR-2026-SEP.pdf"
+    },
+    {
+      "label": "Beosin Smart Contract Audit",
+      "url": "https://www.silvertimes.io/docs/Beosin_Audit_Report_SilverTimes_Post_TGE_20260716.pdf"
+    },
+    {
+      "label": "Terms and Conditions",
+      "url": "https://www.silvertimes.io/terms"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/SilvertimesSTT"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Hong Kong"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x9f13a262ac5be07a8e6eac09d01daf00be5e0fce",
+      "decimals": 18
+    }
+  ],
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "stt-silvertimes",
+    "display": {
+      "url": "https://www.silvertimes.io/docs/SilverTimes_Transparency_Report_STT-TR-2026-SEP.pdf",
+      "label": "SilverTimes Transparency Report"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  },
+  "launchDate": "2026-07-13",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Listing Policy v2 PR-2 authoring 2026-11-27",
+    "rationale": "STT is a direct allocated-commodity claim on physical silver: Whitepaper v9.2 and the September 30, 2026 Transparency Report describe 1:1 backing of 32,771.957 STT by 1,019.32330 kg of LBMA Good Delivery 99.99% fine silver held at Brink's Hong Kong Limited in an Orphan Trust with beneficial ownership for STT token holders, and exact Ethereum totalSupply at finalized block 26505987 matches 32,771.957 STT.",
+    "sources": [
+      {
+        "label": "SilverTimes Token Whitepaper v9.2 (July 2026)",
+        "url": "https://www.silvertimes.io/docs/SilverTimes_Token_whitepaper_v9.2.pdf"
+      },
+      {
+        "label": "SilverTimes Transparency and Reserves Report STT-TR-2026-SEP",
+        "url": "https://www.silvertimes.io/docs/SilverTimes_Transparency_Report_STT-TR-2026-SEP.pdf"
+      }
+    ]
+  }
+}

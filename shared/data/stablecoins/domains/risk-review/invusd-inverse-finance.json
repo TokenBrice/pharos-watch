@@ -1,0 +1,218 @@
+{
+  "id": "invusd-inverse-finance",
+  "blacklistabilityReview": {
+    "reviewedStatus": false,
+    "sources": [
+      {
+        "label": "invUSD Coin exact-match verified source on Sourcify",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x5377680b5986296aa4f9e684e5315a4f24832e56?fields=sources"
+      },
+      {
+        "label": "invUSD Lender exact-match verified source on Sourcify",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xf8b349da9244253288f6853835e6582955fd49c9?fields=sources"
+      },
+      {
+        "label": "sINV exact-match verified source on Sourcify",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x08d23468a467d2bb86fae0e32f247a26c7e2e994?fields=sources"
+      },
+      {
+        "label": "Pinned Ethereum block 26506036",
+        "url": "https://etherscan.io/block/26506036"
+      },
+      {
+        "label": "Monolith risks disclosure",
+        "url": "https://docs.monolith.market/security/risks"
+      }
+    ],
+    "evidence": "invUSD has a single deployment: Ethereum 0x5377680b5986296aa4f9e684e5315a4f24832e56, holding the entire 534,884.564044059156821072 supply at block 26506036 (2026-11-27T10:46:59Z). Pinned reads returned minter() = Lender 0xf8b349da9244253288f6853835e6582955fd49c9 and zero EIP-1967 implementation, admin and beacon slots on Coin, Lender, sINV and INV. The exact-match Coin source is non-proxy and exposes only ERC-20, permit, minter-only mint() and caller-only burn(), with no owner, blacklist, freeze, seizure, allowlist or transfer pause. Reserve test: sINV (76.51% of measured reserves) is a non-proxy ERC-4626 vault over non-proxy INV with no holder-targeted freeze, blacklist or transfer pause; its governance and guardian roles control deposit limits and auction parameters only. The sUSDS PSM reserve leg (0xa3931d71877c0e7a3148cb7eb4463524fec27fbd over USDS 0xdc035d45d973e3ec169d2276ddab16f1e407384f) is Sky-upgradeable (a Possible basis rather than an active holder blacklist) and represents 23.49% of measured reserves (48.48% of totalSupply via freePsmAssets 259,316.53 USDS), below the strict >50% reserve-majority threshold. Neither the 3-of-6 manager Safe nor the Inverse Timelock operator can target or freeze invUSD holder balances. Verdict: No.",
+    "reviewer": "Pharos listing v2 Wave 1A review 2026-11-27",
+    "reviewedAt": "2026-11-27"
+  },
+  "oracleRisk": {
+    "tier": "single-source-or-laggy",
+    "summary": "One composite feed prices sINV collateral: ERC4626Feed multiplies the sINV vault exchange rate by a governance-switchable SwitchFeed currently pointing to DynamicFeeCurveFeed, which combines a single Curve INV/WETH pool EMA (price_oracle()) with Chainlink ETH/USD (and a RedStone ETH/USD fallback), discounted by the Curve dynamic fee up to 2%. Although the ETH/USD leg has a fallback, INV/ETH relies solely on one Curve pool EMA and SwitchFeed lets the Inverse 2-day Timelock swap the underlying feed within a 10% divergence check. Stale answers older than 86,400 seconds force reduce-only and linearly unwind the price over 24 hours; reverting or non-positive answers disable liquidations and redemptions.",
+    "role": "collateral-pricing",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-11-27",
+      "reviewer": "Pharos listing v2 Wave 1A review 2026-11-27",
+      "rationale": "invUSD operates a single sINV borrower market whose collateral is valued by a multi-hop composite oracle inside an automated liquidation and redemption engine, so collateral pricing, liquidation parameters, backstop and bad-debt behavior require branch-level evidence. The market carried all 276,807.17 invUSD of CDP debt and 106,203.87 sINV of collateral at block 26506036.",
+      "sources": [
+        {
+          "label": "invUSD Lender exact-match verified source on Sourcify",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xf8b349da9244253288f6853835e6582955fd49c9?fields=sources"
+        },
+        {
+          "label": "ERC4626Feed exact-match verified source on Sourcify",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x5221571fb2c1eb20e905110fbad3a274529f58af?fields=sources"
+        },
+        {
+          "label": "SwitchFeed exact-match verified source on Sourcify",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xeca2f329a011a4d464f8ef97e493974964911ed0?fields=sources"
+        },
+        {
+          "label": "DynamicFeeCurveFeed exact-match verified source on Sourcify",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x4c871e951228c2f7224416c921e742a86ef8eecb?fields=sources"
+        }
+      ]
+    },
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Pharos listing v2 Wave 1A review 2026-11-27",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "invUSD Lender exact-match verified source on Sourcify",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xf8b349da9244253288f6853835e6582955fd49c9?fields=sources"
+      },
+      {
+        "label": "ERC4626Feed exact-match verified source on Sourcify",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x5221571fb2c1eb20e905110fbad3a274529f58af?fields=sources"
+      },
+      {
+        "label": "SwitchFeed exact-match verified source on Sourcify",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xeca2f329a011a4d464f8ef97e493974964911ed0?fields=sources"
+      },
+      {
+        "label": "DynamicFeeCurveFeed exact-match verified source on Sourcify",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x4c871e951228c2f7224416c921e742a86ef8eecb?fields=sources"
+      },
+      {
+        "label": "ChainlinkBasePriceFeed exact-match verified source on Sourcify",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x22390b88c53d1631f673b8dcd91860267137b2c8?fields=sources"
+      },
+      {
+        "label": "Monolith liquidations documentation",
+        "url": "https://docs.monolith.market/protocol/liquidations"
+      },
+      {
+        "label": "Monolith bad debt socialization documentation",
+        "url": "https://docs.monolith.market/protocol/bad-debt-socialization"
+      }
+    ],
+    "branches": [
+      {
+        "id": "sinv",
+        "label": "sINV Lender market",
+        "tier": "single-source-or-laggy",
+        "summary": "The market's sole collateral asset is sINV, priced in USD by ERC4626Feed -> SwitchFeed -> DynamicFeeCurveFeed -> ChainlinkBasePriceFeed. INV/WETH pricing comes solely from a single Curve INV/WETH pool EMA with no alternate INV venue and is subject to Timelock feed switching via SwitchFeed; only the ETH/USD base leg carries a RedStone fallback.",
+        "collateralAssets": [
+          "sINV"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Inverse ERC4626Feed",
+            "path": "sINV.previewRedeem(1e18) (fallback convertToAssets) * SwitchFeed.latestRoundData() / 1e18; returned 7.953034 USD at block 26506036",
+            "address": "0x5221571fb2c1eb20e905110fbad3a274529f58af",
+            "chain": "ethereum",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-11-27",
+            "observedBlock": 26506036,
+            "failureDomainKeys": [
+              "monolith:invusd-sinv-oracle",
+              "inverse:sinv-vault",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Inverse SwitchFeed",
+            "path": "Pass-through feed operated by Inverse 2-day Timelock (0x926df14a23be491164dcf93f4c468a50ef659d5b) that can switch underlying feeds within 1,000 bps divergence; currently points to DynamicFeeCurveFeed",
+            "address": "0xeca2f329a011a4d464f8ef97e493974964911ed0",
+            "chain": "ethereum",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-11-27",
+            "observedBlock": 26506036,
+            "failureDomainKeys": [
+              "inverse:inv-switch-feed",
+              "inverse:timelock",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Inverse DynamicFeeCurveFeed + Curve INV/WETH pool",
+            "path": "Curve INV/WETH pool (0xdcd90d866ff9636e5a04768825d05d27b3fb19ec) price_oracle() EMA (0.00446557 ETH/INV) * ETH/USD less dynamic Curve fee (1.086%, capped at gov-set maxFee 2%); single DEX venue for INV/ETH with no alternate INV feed",
+            "address": "0x4c871e951228c2f7224416c921e742a86ef8eecb",
+            "chain": "ethereum",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-11-27",
+            "observedBlock": 26506036,
+            "failureDomainKeys": [
+              "curve:ethereum:inv-weth",
+              "inverse:dynamic-fee-curve-feed",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Chainlink ETH/USD with RedStone fallback (ChainlinkBasePriceFeed)",
+            "path": "Chainlink ETH/USD (0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419, heartbeat 3,660s, read 1,728.60 USD updated 2026-11-27T09:54:59Z) falling back to RedStone ETH/USD (0x67f6838e58859d612e4ddf04da396d6dabb66dc4, read 1,726.20 USD) on staleness or aggregator bounds breach",
+            "address": "0x22390b88c53d1631f673b8dcd91860267137b2c8",
+            "chain": "ethereum",
+            "heartbeatSec": 3660,
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-11-27",
+            "observedBlock": 26506036,
+            "failureDomainKeys": [
+              "chainlink:ethereum:eth-usd",
+              "redstone:ethereum:eth-usd",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "ChainlinkBasePriceFeed automatically falls back from Chainlink ETH/USD to RedStone ETH/USD when the Chainlink ETH/USD answer is stale beyond 3,660 seconds or out of aggregator bounds. However, the INV/WETH leg has no alternate DEX or CEX oracle fallback, and SwitchFeed requires an Inverse 2-day Timelock governance action to switch feeds. On the Lender, an updatedAt older than the immutable 86,400-second stalenessThreshold forces reduce-only and linearly unwinds the collateral price toward 1 wei over 24 hours; a reverting or non-positive answer disables liquidations, redemptions and write-offs until the feed recovers.",
+        "observedAt": "2026-11-27",
+        "observedBlock": 26506036,
+        "collateralParameters": [
+          {
+            "asset": "sINV",
+            "maximumLtvPct": 65,
+            "minimumCollateralRatioPct": 153.85,
+            "note": "Lender 0xf8b349da9244253288f6853835e6582955fd49c9 at block 26506036: immutable collateralFactor() 6,500 bps (65% max LTV, 153.85% MCR), minDebt() 500 invUSD, MIN_LIQUIDATION_DEBT 10,000 invUSD, liquidation incentive 0% at 65% LTV rising linearly to 10% at 70% LTV, and per-call repay cap min(debt, max(debt/4, 10,000)). Single borrower market accounts for 100% of CDP debt."
+          }
+        ],
+        "liquidationMechanism": "Anyone may call liquidate() once a borrower's debt exceeds 65% of sINV collateral value. Each call repays up to min(debt, max(debt/4, 10,000)) capped by remaining collateral value, burns the repaid invUSD and seizes sINV at the oracle price plus a 0 to 10% incentive scaling linearly between 65% and 70% LTV.",
+        "liquidationDelaySec": 0,
+        "backstop": "No funded Stability Pool, insurance fund or bad-debt auction exists. Liquidators seize borrower sINV at a discount funded from that borrower's collateral; residual shortfalls beyond 100x collateral value are socialised pro rata across surviving borrowers via writeOff().",
+        "shutdownOrBadDebtBehavior": "No pause, emergency shutdown or bad-debt auction exists. A reverting or non-positive feed disables liquidations, redemptions and write-offs; staleness past 86,400 seconds triggers reduce-only and a 24-hour linear price unwind. When writeOff() fires at >100x debt-to-collateral, bad debt is socialised across surviving borrowers (or deleted unbacked if the last borrower is written off).",
+        "debtSharePct": 100,
+        "failureDomainKeys": [
+          "monolith:invusd-sinv-oracle",
+          "curve:ethereum:inv-weth",
+          "chainlink:ethereum:eth-usd",
+          "redstone:ethereum:eth-usd",
+          "inverse:sinv-vault",
+          "monolith:invusd-lender",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "invUSD Lender exact-match verified source on Sourcify",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xf8b349da9244253288f6853835e6582955fd49c9?fields=sources"
+          },
+          {
+            "label": "ERC4626Feed exact-match verified source on Sourcify",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x5221571fb2c1eb20e905110fbad3a274529f58af?fields=sources"
+          },
+          {
+            "label": "SwitchFeed exact-match verified source on Sourcify",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xeca2f329a011a4d464f8ef97e493974964911ed0?fields=sources"
+          },
+          {
+            "label": "DynamicFeeCurveFeed exact-match verified source on Sourcify",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x4c871e951228c2f7224416c921e742a86ef8eecb?fields=sources"
+          },
+          {
+            "label": "ChainlinkBasePriceFeed exact-match verified source on Sourcify",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x22390b88c53d1631f673b8dcd91860267137b2c8?fields=sources"
+          },
+          {
+            "label": "Pinned Ethereum block 26506036",
+            "url": "https://etherscan.io/block/26506036"
+          }
+        ]
+      }
+    ]
+  }
+}

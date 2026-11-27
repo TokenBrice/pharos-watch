@@ -1,0 +1,131 @@
+{
+  "id": "usdhl-felix",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "USDhl is a non-rebasing dollar-stable M0 extension wrapper on HyperEVM backed 1:1 by M0 M, with direct on-chain unwrapping returning M and Hyperlane Portal bridging returning Ethereum wM. Neither Felix's USDhl documentation nor M0 Foundation terms identify a legal USDhl issuer obligated to redeem holders directly for fixed US dollar monetary value under GENIUS Act Section 2(22), which expressly excludes redemption solely into another fixed-value digital asset. Applicability remains unclear pending a token-specific monetary redemption obligor.",
+      "references": [
+        {
+          "label": "USDhl architecture documentation",
+          "url": "https://usefelix.gitbook.io/usdhl/usdhl-architecture",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "Felix USDhl sunsetting documentation",
+          "url": "https://usefelix.gitbook.io/usdhl/sunsetting-usdhl",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "M0 Foundation website Terms and Conditions",
+          "url": "https://www.m0.org/terms-conditions",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "GENIUS Act: payment stablecoin definition",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-11-27"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://dashboard.m0.org/",
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "USDhl wraps M0 M 1:1 on HyperEVM and is now in unmaintained sunset mode per Felix documentation. Direct unwrapping returns M rather than fixed fiat currency, and M0's permissioned minter or partner authorizations do not transfer to downstream wrappers. The M0 reserve dashboard is retained as a disclosure link, not verified live reserve figures or wrapper-scoped monthly CPA attestations. No token-specific GENIUS approval, official application, or registered foreign exception was located.",
+    "references": [
+      {
+        "label": "USDhl architecture documentation",
+        "url": "https://usefelix.gitbook.io/usdhl/usdhl-architecture",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "Felix USDhl sunsetting documentation",
+        "url": "https://usefelix.gitbook.io/usdhl/sunsetting-usdhl",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "M0 reserve dashboard",
+        "url": "https://dashboard.m0.org/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "M0 Foundation website Terms and Conditions",
+        "url": "https://www.m0.org/terms-conditions",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "GENIUS Act: payment stablecoin definition",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-11-27"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "Public Law 119-27, Section 2(22) payment stablecoin definition",
+        "https://usefelix.gitbook.io/usdhl/usdhl-architecture",
+        "https://usefelix.gitbook.io/usdhl/sunsetting-usdhl",
+        "https://usefelix.gitbook.io/usdhl/advanced/developers",
+        "https://www.m0.org/terms-conditions",
+        "https://dashboard.m0.org/"
+      ],
+      "summary": "As of 2026-11-27, reviewed Felix USDhl documentation and M0 protocol disclosures did not identify a qualifying public GENIUS PPSI approval, state-qualified designation, official application, registered foreign exception, or public GENIUS enforcement action for Hyper USD (USDhl). The legal fiat-redemption obligor remains unresolved, and Felix has placed USDhl into sunset maintenance mode.",
+      "reviewer": "Wave 1A HyperEVM addition review 2026-11-27",
+      "reviewedAt": "2026-11-27",
+      "references": [
+        {
+          "label": "USDhl architecture documentation",
+          "url": "https://usefelix.gitbook.io/usdhl/usdhl-architecture",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "Felix USDhl sunsetting documentation",
+          "url": "https://usefelix.gitbook.io/usdhl/sunsetting-usdhl",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "M0 Foundation website Terms and Conditions",
+          "url": "https://www.m0.org/terms-conditions",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        }
+      ]
+    },
+    "reviewer": "Wave 1A HyperEVM addition review 2026-11-27",
+    "reviewedAt": "2026-11-27"
+  },
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "USDhl architecture documentation",
+        "url": "https://usefelix.gitbook.io/usdhl/usdhl-architecture"
+      },
+      {
+        "label": "Felix USDhl sunsetting documentation",
+        "url": "https://usefelix.gitbook.io/usdhl/sunsetting-usdhl"
+      },
+      {
+        "label": "ESMA Q&A: offering an EMT to the public requires an authorised issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2404"
+      }
+    ]
+  }
+}

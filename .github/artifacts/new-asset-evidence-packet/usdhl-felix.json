@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 3,
+  "receiptMode": "prospective-offline",
+  "kind": "safety-score-v9-new-asset-admission-receipt",
+  "assetId": "usdhl-felix",
+  "prospectiveInputId": "prospective-admission:v1:d4805989fb7a4201170a899823fb015f343ea51fbae371e74e326d55a5cda42a",
+  "admissionClockSec": 1795783286,
+  "evaluatedCohortIds": [
+    "m-m0",
+    "usdhl-felix"
+  ],
+  "absentRuntimeLanes": [
+    "chain-supply",
+    "dex",
+    "live-reserves",
+    "peg",
+    "redemption"
+  ],
+  "supplyObservation": {
+    "circulating": {
+      "peggedUSD": 326456.58
+    },
+    "observedAtSec": 1795776566,
+    "url": "https://rpc.hyperliquid.xyz/evm",
+    "field": "eth_call(0xb50a96253abdf803d85efcdce07ad8becbc52bd5,totalSupply)*coingecko:hyper-usd",
+    "retrievedAtSec": 1795776566
+  },
+  "registryFingerprint": "427709ce7af65fc3a1d014ca7ece09cedff985330af3cf1d42007b3b36bd566f",
+  "evaluationBuildDigest": "909e89e4d82193e1306a8857461b26b32220838f02bad545623d795fe543408a",
+  "card": {
+    "id": "usdhl-felix",
+    "openBucketQuestionsCarried": 6,
+    "inheritedOpenBucketQuestionsCarried": 0,
+    "openBucketObligationsCarried": 6,
+    "documentationObligationsCarried": 0
+  },
+  "questions": [
+    {
+      "questionKey": "usdhl-felix|component|exit-routes",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-runtime-route-evidence",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "usdhl-felix|component|mechanism-review:durationAndLiquidity",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "bounded-mechanism-review",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "usdhl-felix|component|mechanism-review:lossRecoveryDesign",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "bounded-mechanism-review",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "usdhl-felix|component|mechanism-review:navValuation",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "bounded-mechanism-review",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "usdhl-felix|component|peg",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-peg-input",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "usdhl-felix|reserve-exposure|reserve:cd90caea07dec56c93f5e7e6",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "material-reserve-slice-unstructured",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    }
+  ]
+}

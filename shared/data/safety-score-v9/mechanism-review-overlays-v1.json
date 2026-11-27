@@ -26330,6 +26330,55 @@
           "sourceUrl": "https://dinari.com/terms-conditions-usdplus-stusdplus-tokens"
         }
       }
+    },
+    {
+      "assetId": "usdhl-felix",
+      "archetype": "tbill",
+      "reviewedAt": "2026-11-27T10:49:26Z",
+      "sources": [
+        {
+          "label": "Felix USDhl architecture documentation reviewed 2026-11-27",
+          "url": "https://usefelix.gitbook.io/usdhl/usdhl-architecture"
+        },
+        {
+          "label": "Felix USDhl sunsetting documentation reviewed 2026-11-27",
+          "url": "https://usefelix.gitbook.io/usdhl/sunsetting-usdhl"
+        },
+        {
+          "label": "Verified USDHL MExtension implementation on HyperEVMScan",
+          "url": "https://hyperevmscan.io/address/0xdb170bfe627a39145147e6ff9b258bdb59e6b4e8#code"
+        },
+        {
+          "label": "M0 minting and burning collateral documentation",
+          "url": "https://docs.m0.org/protocol/minting-burning"
+        },
+        {
+          "label": "Pinned HyperEVM JSON-RPC read at block 52378224 (2026-11-27T10:49:26Z)",
+          "url": "https://rpc.hyperliquid.xyz/evm"
+        }
+      ],
+      "notes": "Reviewed Felix USDhl documentation, verified HyperEVM USDHL/MExtension implementation 0xdb170bfe627a39145147e6ff9b258bdb59e6b4e8, and pinned HyperEVM JSON-RPC state at block 52378224 (2026-11-27T10:49:26Z). At that block, M.balanceOf(USDhl 0xb50a96253abdf803d85efcdce07ad8becbc52bd5) read 327,843.601117 M against 327,573.275619 USDhl totalSupply() (1.000825x coverage), with the exact 270.325498 M surplus matching USDHL.yield(). Verified wrap() and unwrap() conserve M 1:1 with zero protocol fee for non-blacklisted holders, supporting limited fundClaimAndSeniority: holders hold a deterministic contract claim on local HyperEVM M, not direct legal seniority, bankruptcy remoteness, or segregation over M0's off-chain SPV Treasury collateral, and the Transparent Proxy remains upgradeable without delay by Felix's 3-of-6 Safe. Accessible Felix materials do not publish an independently administered USDhl-specific valuation/reconciliation method, a current portfolio maturity/liquidity schedule, or an enforceable USDhl holder loss waterfall, so navValuation, durationAndLiquidity, and lossRecoveryDesign remain sourced unavailable.",
+      "metrics": {},
+      "components": {
+        "fundClaimAndSeniority": {
+          "quality": "limited"
+        },
+        "navValuation": {
+          "applicability": "unavailable",
+          "rationale": "Felix USDhl wraps M0 M at a 1:1 quantity ratio on HyperEVM without an independently administered USDhl-specific NAV or whole-book reserve-to-liability valuation engagement. The pinned on-chain M.balanceOf(USDhl) read is local contract evidence, not independent financial valuation of off-chain SPV collateral.",
+          "sourceUrl": "https://usefelix.gitbook.io/usdhl/usdhl-architecture"
+        },
+        "durationAndLiquidity": {
+          "applicability": "unavailable",
+          "rationale": "Felix USDhl documentation describes short-term U.S. Treasury backing through M0 without publishing a USDhl-specific current holdings maturity ladder, hard maturity maximum, or whole-reserve cash-realization deadline. Local on-chain M balance and HyperEVM DEX pools do not establish those terms.",
+          "sourceUrl": "https://usefelix.gitbook.io/usdhl/usdhl-architecture"
+        },
+        "lossRecoveryDesign": {
+          "applicability": "unavailable",
+          "rationale": "Felix USDhl disclosures describe M0 backing and sunset maintenance status without publishing an enforceable USDhl holder loss waterfall, insolvency priority over upstream SPV collateral, or recapitalization commitment. No USDhl-specific independent financial assurance report was established.",
+          "sourceUrl": "https://usefelix.gitbook.io/usdhl/sunsetting-usdhl"
+        }
+      }
     }
   ]
 }

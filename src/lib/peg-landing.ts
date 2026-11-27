@@ -75,6 +75,8 @@ export const PEG_INTRO: Partial<Record<PegCurrency, string>> = {
 
   CNH: `Offshore Yuan stablecoins provide on-chain CNH exposure for cross-border settlement and Asian DeFi markets. Because CNH trades separately from onshore CNY, Pharos evaluates CNH-pegged tokens against a dedicated offshore yuan FX reference rather than folding them into the CNY bucket.`,
 
+  MXN: `Mexican peso stablecoins provide on-chain MXN exposure for Latin American payments, remittances, and DeFi markets. Pharos tracks peg deviation, circulating supply, and safety metrics for MXN-pegged tokens against a live Mexican peso FX reference.`,
+
   PHP: `Philippine Peso stablecoins serve the Southeast Asian remittance and DeFi market. Pharos tracks peg deviation and supply for PHP-pegged tokens.`,
 
   RUB: `The Russian Ruble stablecoin peg provides on-chain RUB exposure. Pharos tracks peg performance and supply data for RUB-pegged tokens.`,

@@ -1,0 +1,217 @@
+{
+  "id": "invusd-inverse-finance",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "unbounded-adverse",
+    "confidence": "verified",
+    "headline": "Supply is collateral-, deposit- or debt-matched; the 3-of-6 manager Safe can still drive interest issuance with no practical ceiling.",
+    "summary": "invUSD is issued by a single immutable Monolith V1 Lender on Ethereum. Coin.minter() is a constructor-immutable pointer to that Lender, and Coin, Lender, Vault, InterestModel and Factory are all non-proxy deployments with zero EIP-1967 slots, so no role can authorize another minter or upgrade mint logic. Five paths call coin.mint(), verified from exact-match Sourcify source at Ethereum block 26506036. Borrowers mint against sINV collateral up to the constructor-immutable 65% collateral factor; anyone may mint 1:1 through the in-Lender PSM against USDS held as sUSDS until the immutability deadline on 23 April 2030; pullLocalReserves() is permissionless and mints already-accrued local fees and PSM profit to the operator; pullGlobalReserves() mints already-accrued global fees when called by the V1 Factory; and accrueInterest() mints newly accrued interest to the sInvUSD vault and reserve buckets while adding the full interest to totalPaidDebt without re-running the collateral solvency check. Because the InterestModel borrow rate has a 0.5% floor and no practical ceiling below the uint88 cast, a single manager transaction with no timelock can raise the target free-debt band to 9,500 bps and cut the half-life to 12 hours, placing paid debt on a rising exponential branch that compounds unbounded debt and interest supply even after the immutability deadline freezes the setters. The Lender manager is a 3-of-6 Gnosis Safe 1.3.0 of six EOAs with no timelock, no enabled modules and no guard. Both Lender.operator() and V1 Factory.operator() are the Inverse Finance 2-day Timelock (172,800-second delay, administered by the Inverse Governor), which can set local reserve fees up to 1,000 bps on this V1 Lender, set global Factory fees up to 1,000 bps (currently 0 bps with zero feeRecipient), pull local reserves, replace the manager, transfer operator via two-step pending acceptance or advance the immutability deadline. Conservation at block 26506036 is exact: totalPaidDebt plus totalFreeDebt plus freePsmAssets equals totalSupply plus unpulled accruedLocalReserves (1,239.14 invUSD) to the wei. No prudential supervision or whole-supply attestation applies.",
+    "upgradeability": {
+      "model": "immutable",
+      "deploymentRefs": [
+        "ethereum:0x5377680b5986296aa4f9e684e5315a4f24832e56"
+      ],
+      "canChangeMintLogic": false,
+      "observedAt": "2026-11-27",
+      "observedBlock": 26506036,
+      "sources": [
+        {
+          "label": "invUSD Coin exact-match verified source on Sourcify",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x5377680b5986296aa4f9e684e5315a4f24832e56?fields=sources"
+        },
+        {
+          "label": "invUSD Lender exact-match verified source on Sourcify",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xf8b349da9244253288f6853835e6582955fd49c9?fields=sources"
+        },
+        {
+          "label": "invUSD Coin on Etherscan",
+          "url": "https://etherscan.io/address/0x5377680b5986296aa4f9e684e5315a4f24832e56#code"
+        },
+        {
+          "label": "invUSD Lender on Etherscan",
+          "url": "https://etherscan.io/address/0xf8b349da9244253288f6853835e6582955fd49c9#code"
+        },
+        {
+          "label": "Ethereum evidence pin 26506036 (2026-11-27T10:46:59Z)",
+          "url": "https://etherscan.io/block/26506036"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xf8b349da9244253288f6853835e6582955fd49c9",
+        "deploymentRefs": [
+          "ethereum:0x5377680b5986296aa4f9e684e5315a4f24832e56"
+        ],
+        "label": "Monolith V1 Lender (only Coin minter and in-Lender PSM)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-27",
+        "observedBlock": 26506036,
+        "capDescription": "No numeric supply cap exists. Four mint paths are gated by collateral, equal USDS deposits or already-accrued reserves: adjust() enforces the immutable 65% sINV collateral factor; buy() requires an equal USDS deposit held as sUSDS before the 2030-04-23 immutability deadline; pullLocalReserves() and pullGlobalReserves() mint only fees and PSM profit already accrued. The fifth path, accrueInterest(), mints newly accrued interest to the sInvUSD vault and reserve buckets and adds the full interest to totalPaidDebt without re-running the collateral solvency check. Because InterestModel has a 0.5% floor and no practical ceiling below the uint88 rate cast, setting a high target free-debt band and 12-hour half-life lets paid debt and minted interest grow far beyond collateral value.",
+        "sources": [
+          {
+            "label": "invUSD Lender exact-match verified source on Sourcify",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xf8b349da9244253288f6853835e6582955fd49c9?fields=sources"
+          },
+          {
+            "label": "Monolith V1 InterestModel exact-match verified source on Sourcify",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x5b679ddd0eddce323f74aec38e3849d70d57c113?fields=sources"
+          },
+          {
+            "label": "invUSD Coin exact-match verified source on Sourcify",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x5377680b5986296aa4f9e684e5315a4f24832e56?fields=sources"
+          },
+          {
+            "label": "Monolith Lender reference",
+            "url": "https://docs.monolith.market/reference/Lender.md"
+          },
+          {
+            "label": "Ethereum evidence pin 26506036 (2026-11-27T10:46:59Z)",
+            "url": "https://etherscan.io/block/26506036"
+          }
+        ],
+        "evidence": "At Ethereum block 26506036 (hash 0xc35e3cea0bc5fe66eb85be9e5416719ba6d1a0e348d8becad1cc4cd387f7fad1, 2026-11-27T10:46:59Z), Coin.minter() returned this Lender and Coin.sol restricts mint() to msg.sender == minter with self-only burn(). Lender, Coin and Vault (0x3ff361197036ae1d24b939146d8a449a80f8427d) returned zero EIP-1967 implementation, admin and beacon slots. Constructor-immutable parameters read collateralFactor 6,500 bps, minDebt 500 invUSD, stalenessThreshold 86,400 seconds, collateral sINV 0x08d23468a467d2bb86fae0e32f247a26c7e2e994, psmAsset USDS 0xdc035d45d973e3ec169d2276ddab16f1e407384f and psmVault sUSDS 0xa3931d71877c0e7a3148cb7eb4463524fec27fbd. Conservation held to the wei: totalPaidDebt 274,250.939699127464806994 plus totalFreeDebt 2,556.229609264083031379 plus freePsmAssets 259,316.532348023987267945 equalled Coin.totalSupply 534,884.564044059156821072 plus accruedLocalReserves 1,239.137612356378285246, with accruedGlobalReserves zero."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x9d5df30f475cea915b1ed4c0cca59255c897b61b",
+        "deploymentRefs": [
+          "ethereum:0x5377680b5986296aa4f9e684e5315a4f24832e56"
+        ],
+        "label": "invUSD Lender manager Safe (3-of-6, no timelock)",
+        "role": "other",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "threshold": 3,
+        "signerCount": 6,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0x2723723fdd3db8ba2d6f0e1b333e90a7e60a0411",
+            "0x52f63971afd2a32524c859c29943f9bea38ca907",
+            "0x9f3614afb3df9f899cadbffaa05c6c908059f726",
+            "0x962228a90eac69238c7d1f216d80037e61ea9255",
+            "0x6535020cceb810bdb3f3ca5e93de2460ff7989bb",
+            "0x3fcb35a1cbfb6007f9bc638d388958bc4550cb28"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+          "observedAt": "2026-11-27",
+          "observedBlock": 26506036,
+          "source": "onchain"
+        },
+        "observedAt": "2026-11-27",
+        "observedBlock": 26506036,
+        "capDescription": "The manager Safe cannot mint directly, add a minter, alter the 65% collateral factor, change the oracle feed, pause or upgrade contracts. Before the 2030-04-23 immutability deadline it can immediately set redeemFeeBps up to 500, half-life between 12 hours and 30 days, target free-debt ratio band between 500 and 9,500 bps and maxBorrowDeltaBps between 50 and 200, and it can replace itself at any time with no deadline. Setting the band to 9,500 bps and half-life to 12 hours creates an unbounded interest-issuance lever with no timelock.",
+        "sources": [
+          {
+            "label": "invUSD Lender exact-match verified source on Sourcify",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xf8b349da9244253288f6853835e6582955fd49c9?fields=sources"
+          },
+          {
+            "label": "invUSD manager Safe on Etherscan",
+            "url": "https://etherscan.io/address/0x9d5df30f475cea915b1ed4c0cca59255c897b61b"
+          },
+          {
+            "label": "Monolith immutability deadline documentation",
+            "url": "https://docs.monolith.market/protocol/immutability-deadline.md"
+          },
+          {
+            "label": "Ethereum evidence pin 26506036 (2026-11-27T10:46:59Z)",
+            "url": "https://etherscan.io/block/26506036"
+          }
+        ],
+        "evidence": "At Ethereum block 26506036, Lender.manager() returned this Safe 1.3.0. getThreshold() returned 3, getOwners() returned the six listed EOAs (all verified zero bytecode via eth_getCode), getModulesPaginated() returned an empty array, VERSION() returned 1.3.0 and nonce() returned 4,247. GuardManager slot 0x4a204f620c8c5ccdca3fd54d003badd85ba500436a431f0cbda4f558c93c34c8 read zero; FallbackManager slot 0x6c9a6c4a39284e37ed1cf53d337577d14212a4870fb976a4366c693b939918d5 returned CompatibilityFallbackHandler 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4; singleton slot 0 read GnosisSafe 1.3.0 0xd9db270c1b5e3bd161e8c8503c55ceabee709552."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x926df14a23be491164dcf93f4c468a50ef659d5b",
+        "deploymentRefs": [
+          "ethereum:0x5377680b5986296aa4f9e684e5315a4f24832e56"
+        ],
+        "label": "Inverse Finance 2-day Timelock (Lender and V1 Factory operator)",
+        "role": "timelock",
+        "authorityType": "timelock",
+        "directMintAbility": "parameter-only",
+        "timelockDelaySec": 172800,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-27",
+        "observedBlock": 26506036,
+        "capDescription": "Holds both Lender.operator() and Monolith V1 Factory.operator() behind a 172,800-second delay administered by the Inverse Governor (0xbeccb6bb0aa4ab551966a7e4b97cec74bb359bf6). On the V1 Lender it can set local reserve feeBps up to 1,000 bps (currently 0 bps), invoke all manager setters before 2030-04-23, advance immutabilityDeadline, replace the manager, nominate a pendingOperator and receive minted accruedLocalReserves. On the V1 Factory (0x6d961c9dcf1ad73566822ba4b087892e3839b849) it can set global feeBps or customFeeBps up to 1,000 bps and feeRecipient (both currently zero). It also operates SwitchFeed (0xeca2f329a011a4d464f8ef97e493974964911ed0), DynamicFeeCurveFeed and ChainlinkBasePriceFeed.",
+        "sources": [
+          {
+            "label": "invUSD Lender exact-match verified source on Sourcify",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xf8b349da9244253288f6853835e6582955fd49c9?fields=sources"
+          },
+          {
+            "label": "Monolith V1 Factory verified source on Sourcify",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x6d961c9dcf1ad73566822ba4b087892e3839b849?fields=sources"
+          },
+          {
+            "label": "Inverse Timelock on Etherscan",
+            "url": "https://etherscan.io/address/0x926df14a23be491164dcf93f4c468a50ef659d5b#code"
+          },
+          {
+            "label": "Ethereum evidence pin 26506036 (2026-11-27T10:46:59Z)",
+            "url": "https://etherscan.io/block/26506036"
+          }
+        ],
+        "evidence": "At Ethereum block 26506036, Lender.operator() returned 0x926df14a23be491164dcf93f4c468a50ef659d5b, pendingOperator() was zero, Lender.factory() returned V1 Factory 0x6d961c9dcf1ad73566822ba4b087892e3839b849, Factory.operator() returned the same Timelock, and Factory.feeBps() and feeRecipient() were zero. Timelock.delay() returned 172800 seconds, admin() returned Inverse Governor 0xbeccb6bb0aa4ab551966a7e4b97cec74bb359bf6 and pendingAdmin() was zero. Verified V1 Lender.sol caps setLocalReserveFeeBps() at 1,000 bps (currently 0 bps)."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "review": {
+      "evidence": "Reviewed at Ethereum block 26506036 (hash 0xc35e3cea0bc5fe66eb85be9e5416719ba6d1a0e348d8becad1cc4cd387f7fad1, 2026-11-27T10:46:59Z) against Sourcify exact-match sources for Coin, Monolith V1 Lender, Vault, InterestModel and SwitchFeed, plus match-verified V1 Factory source. Coin.minter() is the immutable Lender and Coin, Lender, Vault, InterestModel and Factory carry zero EIP-1967 implementation, admin and beacon slots. Supply of 534,884.564044059156821072 invUSD plus unpulled accruedLocalReserves 1,239.137612356378285246 equals totalPaidDebt 274,250.939699127464806994 plus totalFreeDebt 2,556.229609264083031379 plus freePsmAssets 259,316.532348023987267945 exactly to the wei. Manager is Safe 1.3.0 0x9d5df30f475cea915b1ed4c0cca59255c897b61b (3-of-6 EOAs, nonce 4,247, no modules, zero guard slot, CompatibilityFallbackHandler, no timelock). Operator of both Lender and V1 Factory is Inverse Timelock 0x926df14a23be491164dcf93f4c468a50ef659d5b (172,800-second delay, Inverse Governor admin). Immutability deadline is 2030-04-23T10:22:47Z (1903172567). Because accrueInterest() re-runs no solvency check and the borrow rate has no practical ceiling below uint88, the manager Safe's half-life and target-band setters create an unbounded debt-and-interest issuance lever, keeping economicCapSemantics unbounded and posture unbounded-adverse. Reconciliation is not applicable to an on-chain CDP with no off-chain reserve report, and no prudential supervisor exists.",
+      "reviewer": "Pharos listing v2 Wave 1A review 2026-11-27",
+      "reviewedAt": "2026-11-27",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Ethereum evidence pin 26506036 (2026-11-27T10:46:59Z)",
+          "url": "https://etherscan.io/block/26506036"
+        },
+        {
+          "label": "invUSD Coin exact-match verified source on Sourcify",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x5377680b5986296aa4f9e684e5315a4f24832e56?fields=sources"
+        },
+        {
+          "label": "invUSD Lender exact-match verified source on Sourcify",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xf8b349da9244253288f6853835e6582955fd49c9?fields=sources"
+        },
+        {
+          "label": "Monolith V1 InterestModel exact-match verified source on Sourcify",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x5b679ddd0eddce323f74aec38e3849d70d57c113?fields=sources"
+        },
+        {
+          "label": "Monolith V1 Factory verified source on Sourcify",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x6d961c9dcf1ad73566822ba4b087892e3839b849?fields=sources"
+        },
+        {
+          "label": "invUSD manager Safe on Etherscan",
+          "url": "https://etherscan.io/address/0x9d5df30f475cea915b1ed4c0cca59255c897b61b"
+        },
+        {
+          "label": "Inverse Timelock on Etherscan",
+          "url": "https://etherscan.io/address/0x926df14a23be491164dcf93f4c468a50ef659d5b#code"
+        },
+        {
+          "label": "Monolith contract addresses reference",
+          "url": "https://docs.monolith.market/developers/contract-addresses.md"
+        }
+      ]
+    }
+  }
+}

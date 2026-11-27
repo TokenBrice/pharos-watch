@@ -1,0 +1,229 @@
+{
+  "id": "stt-silvertimes",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "headline": "SilverTimes mints STT on Ethereum via a two-of-three Safe with immediate admin role control and four-of-six Safe proxy upgrades.",
+    "summary": "STT is an OpenZeppelin TransparentUpgradeableProxy on Ethereum delegating to verified ComplianceToken. MINTER_ROLE and BURNER_ROLE sit with a 2-of-3 Safe v1.5.0 with no on-chain supply cap, while DEFAULT_ADMIN_ROLE sits with a 2-of-3 Safe v1.4.1 that shares two signers with the minter Safe and can grant or revoke any role immediately. ProxyAdmin upgrades, ENFORCER_ROLE forceTransfer, and FEE_MANAGER_ROLE sit with a 4-of-6 Safe v1.4.1 with zero timelock. All three Safes have empty modules and zero guards; reserve verification is self-reported management affirmation with Brink's holding slips rather than independent accounting assurance.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0x9f13a262ac5be07a8e6eac09d01daf00be5e0fce"
+      ],
+      "proxyAddresses": [
+        "0x9f13a262ac5be07a8e6eac09d01daf00be5e0fce"
+      ],
+      "implementationAddresses": [
+        "0x67a9499cc6fe9f87a48371fae95c6f221177e0e8"
+      ],
+      "adminAddresses": [
+        "0x2ce3520a523c5492ae3646c9a50b94d33509731d"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "STT ProxyAdmin owner Safe",
+      "observedAt": "2026-11-27",
+      "observedBlock": 26505987,
+      "sources": [
+        {
+          "label": "Blockscout verified STT TransparentUpgradeableProxy",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9f13a262ac5be07a8e6eac09d01daf00be5e0fce"
+        },
+        {
+          "label": "Blockscout verified ComplianceToken implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x67a9499cc6fe9f87a48371fae95c6f221177e0e8"
+        },
+        {
+          "label": "Beosin Post-TGE Smart Contract Audit Report",
+          "url": "https://www.silvertimes.io/docs/Beosin_Audit_Report_SilverTimes_Post_TGE_20260716.pdf"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x46b02aa0fcf6f130edb816a2098473b522a65bed",
+        "deploymentRefs": [
+          "ethereum:0x9f13a262ac5be07a8e6eac09d01daf00be5e0fce"
+        ],
+        "label": "STT MINTER_ROLE and BURNER_ROLE Safe",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "threshold": 2,
+        "signerCount": 3,
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.5.0",
+          "owners": [
+            "0x5de01ed105e446d10d07f1f61ede0d270e838d23",
+            "0x579173cf3e901d89ea1bc65b9a3bec8d08e6eef1",
+            "0xa0e3b87c8a622c8757a0edfd3f608518be5aafa4"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": null,
+          "moduleGuard": null,
+          "fallbackHandler": "0x3efcbb83a4a7afcb4f68d501e2c2203a38be77f4",
+          "masterCopy": "0xff51a5898e281db6dfc7855790607438df2ca44b",
+          "observedBlock": 26505987,
+          "observedAt": "2026-11-27",
+          "source": "onchain"
+        },
+        "capDescription": "ComplianceToken mint(uint256,address) has no on-chain supply ceiling; the 2-of-3 MINTER_ROLE Safe can mint arbitrary STT immediately.",
+        "observedAt": "2026-11-27",
+        "observedBlock": 26505987,
+        "failureDomainKeys": [
+          "safe:ethereum:0x46b02aa0fcf6f130edb816a2098473b522a65bed",
+          "eoa:ethereum:0x579173cf3e901d89ea1bc65b9a3bec8d08e6eef1",
+          "eoa:ethereum:0xa0e3b87c8a622c8757a0edfd3f608518be5aafa4"
+        ],
+        "sources": [
+          {
+            "label": "Ethereum PublicNode pinned read at block 26505987",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Blockscout verified ComplianceToken implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x67a9499cc6fe9f87a48371fae95c6f221177e0e8"
+          }
+        ],
+        "evidence": "Complete RoleGranted/RoleRevoked history from deployment block 25521339 through finalized block 26505987 (hash 0x2b4fdfa8d374fad9409afe381d9e555acc8af9cfe407080de32e0506a4928cbb, 2026-11-27T10:37:11Z) and pinned hasRole reads confirm Safe v1.5.0 0x46b02aa0fcf6f130edb816a2098473b522a65bed (2-of-3, empty modules, zero guards) is the sole holder of MINTER_ROLE and BURNER_ROLE. Two of its three signers (0x579173cf... and 0xa0e3b87c...) also sit on DEFAULT_ADMIN_ROLE Safe and ProxyAdmin owner Safe."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x91ee0f5ad33a6ffddf2e6eae5b4844123bdbd71e",
+        "deploymentRefs": [
+          "ethereum:0x9f13a262ac5be07a8e6eac09d01daf00be5e0fce"
+        ],
+        "label": "STT DEFAULT_ADMIN_ROLE Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 2,
+        "signerCount": 3,
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x579173cf3e901d89ea1bc65b9a3bec8d08e6eef1",
+            "0xa0e3b87c8a622c8757a0edfd3f608518be5aafa4",
+            "0x19b79d2df62e7ba6f25879ce1ea0d2a7d997e664"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": null,
+          "moduleGuard": null,
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 26505987,
+          "observedAt": "2026-11-27",
+          "source": "onchain"
+        },
+        "observedAt": "2026-11-27",
+        "observedBlock": 26505987,
+        "failureDomainKeys": [
+          "safe:ethereum:0x91ee0f5ad33a6ffddf2e6eae5b4844123bdbd71e",
+          "eoa:ethereum:0x579173cf3e901d89ea1bc65b9a3bec8d08e6eef1",
+          "eoa:ethereum:0xa0e3b87c8a622c8757a0edfd3f608518be5aafa4"
+        ],
+        "sources": [
+          {
+            "label": "Ethereum PublicNode pinned read at block 26505987",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Blockscout verified ComplianceToken implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x67a9499cc6fe9f87a48371fae95c6f221177e0e8"
+          }
+        ],
+        "evidence": "At finalized Ethereum block 26505987, DEFAULT_ADMIN_ROLE is held solely by Safe v1.4.1 0x91ee0f5ad33a6ffddf2e6eae5b4844123bdbd71e (2-of-3, empty modules, zero guards; deployer 0xc16a55de... revoked its own DEFAULT_ADMIN_ROLE at block 25521367). getRoleAdmin for all six operational roles returns DEFAULT_ADMIN_ROLE, allowing immediate MINTER_ROLE grants without timelock."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x685401a541bdcb65b1b3bdfef1e074e3c02c1ed3",
+        "deploymentRefs": [
+          "ethereum:0x9f13a262ac5be07a8e6eac09d01daf00be5e0fce"
+        ],
+        "label": "STT ProxyAdmin owner Safe",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "threshold": 4,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0xd6d8ee8020476c82735f09232e265691e6d37674",
+            "0xa0e3b87c8a622c8757a0edfd3f608518be5aafa4",
+            "0x5de01ed105e446d10d07f1f61ede0d270e838d23",
+            "0x19b79d2df62e7ba6f25879ce1ea0d2a7d997e664",
+            "0x579173cf3e901d89ea1bc65b9a3bec8d08e6eef1",
+            "0xb466d58e03b1a7b585883e1f18d2ba09e8270475"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": null,
+          "moduleGuard": null,
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 26505987,
+          "observedAt": "2026-11-27",
+          "source": "onchain"
+        },
+        "observedAt": "2026-11-27",
+        "observedBlock": 26505987,
+        "failureDomainKeys": [
+          "safe:ethereum:0x685401a541bdcb65b1b3bdfef1e074e3c02c1ed3",
+          "contract:ethereum:0x2ce3520a523c5492ae3646c9a50b94d33509731d"
+        ],
+        "sources": [
+          {
+            "label": "Ethereum PublicNode pinned read at block 26505987",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Blockscout verified STT TransparentUpgradeableProxy",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9f13a262ac5be07a8e6eac09d01daf00be5e0fce"
+          }
+        ],
+        "evidence": "At finalized Ethereum block 26505987, EIP-1967 admin slot resolves to ProxyAdmin 0x2ce3520a523c5492ae3646c9a50b94d33509731d, whose owner() is Safe v1.4.1 0x685401a541bdcb65b1b3bdfef1e074e3c02c1ed3 (4-of-6, empty modules, zero guards). This Safe can upgrade ComplianceToken immediately without a timelock and also holds ENFORCER_ROLE and FEE_MANAGER_ROLE."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "internal-ledger",
+    "supervision": "none",
+    "review": {
+      "sources": [
+        {
+          "label": "Ethereum PublicNode pinned read at block 26505987",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Blockscout verified ComplianceToken implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x67a9499cc6fe9f87a48371fae95c6f221177e0e8"
+        },
+        {
+          "label": "Beosin Post-TGE Smart Contract Audit Report",
+          "url": "https://www.silvertimes.io/docs/Beosin_Audit_Report_SilverTimes_Post_TGE_20260716.pdf"
+        },
+        {
+          "label": "SilverTimes Transparency and Reserves Report STT-TR-2026-SEP",
+          "url": "https://www.silvertimes.io/docs/SilverTimes_Transparency_Report_STT-TR-2026-SEP.pdf"
+        }
+      ],
+      "evidence": "Pinned Ethereum reads at finalized block 26505987 (2026-11-27T10:37:11Z) and full RoleGranted/RoleRevoked history since deployment block 25521339 establish uncapped 2-of-3 Safe minting, immediate 2-of-3 Safe role administration (sharing two signers with the minter Safe), and immediate 4-of-6 Safe TransparentUpgradeableProxy upgrades. Monthly management Transparency Reports compare Brink's Hong Kong silver weight (1,019.32330 kg) to on-chain supply (32,771.957 STT), supporting internal-ledger reconciliation without independent accounting-firm assurance or prudential supervision.",
+      "reviewer": "Listing Policy v2 PR-2 authoring 2026-11-27",
+      "reviewedAt": "2026-11-27",
+      "disposition": "scoreable"
+    }
+  }
+}

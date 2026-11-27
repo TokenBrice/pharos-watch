@@ -1,0 +1,86 @@
+{
+  "id": "stt-silvertimes",
+  "reserves": [
+    {
+      "name": "Physical silver bars (LBMA Good Delivery 99.99% fine silver, Brink's Hong Kong)",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "commodity-allocated",
+      "issuerOrObligor": "STT Assets Limited (Orphan Trust structure) and Brink's Hong Kong Limited",
+      "riskFactors": [
+        "custody",
+        "legal",
+        "liquidity",
+        "market",
+        "concentration",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Listing Policy v2 PR-2 authoring 2026-11-27; September 30, 2026 Transparency Report PDF read directly",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "SilverTimes Transparency and Reserves Report STT-TR-2026-SEP (as of September 30, 2026; dated October 15, 2026)",
+        "url": "https://www.silvertimes.io/docs/SilverTimes_Transparency_Report_STT-TR-2026-SEP.pdf"
+      },
+      {
+        "label": "Brink's Hong Kong Holding Certificate AG42840 (May 15, 2026)",
+        "url": "https://www.silvertimes.io/docs/Brinks_SilverTimes_Holding_Certificate_STT_Assets_Limited_1019.pdf"
+      },
+      {
+        "label": "SilverTimes Token Whitepaper v9.2 (July 2026)",
+        "url": "https://www.silvertimes.io/docs/SilverTimes_Token_whitepaper_v9.2.pdf"
+      }
+    ],
+    "rationale": "STT Assets Limited's September 30, 2026 Transparency and Reserves Report (dated October 15, 2026) affirms 1,019.32330 kg of LBMA Good Delivery 99.99% fine silver vaulted at Brink's Hong Kong Limited under consignment reference AG42840 (Pallet #11B, 12) backing 32,771.957 circulating STT tokens (1,019.32330 kg / 0.0311034768 kg per troy ounce = 32,771.957 troy oz). The report appends a Brink's Hong Kong Ltd. confirmation letter dated July 15, 2026 and the May 15, 2026 Holding Certificate for 1,019.3233 kg. Pinned Ethereum totalSupply at finalized block 26505987 (2026-11-27T10:37:11Z) is exactly 32,771.957000 STT. No independent CPA or third-party accounting-firm attestation has been published, and no October 2026 report was live as of November 27, 2026.",
+    "compositionBasis": "STT Assets Limited Transparency and Reserves Report STT-TR-2026-SEP as of September 30, 2026, corroborated by Brink's Hong Kong confirmation letters",
+    "compositionAsOf": "2026-09-30",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The complete backing asset is identified as 1,019.32330 kg of physical silver at Brink's Hong Kong Limited, matching Ethereum supply 1:1. However, the September 2026 report is a management affirmation attaching July 15 and May 15 Brink's vault confirmations rather than an independent accounting-firm audit, and individual bar serial lists and trust deeds are not published.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Physical silver bars (LBMA Good Delivery 99.99% fine silver, Brink's Hong Kong)",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Physical silver bullion stored at Brink's Hong Kong is an exogenous commodity reserve rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Brink's Hong Kong Limited",
+        "role": "custodian",
+        "sharePct": 100,
+        "jurisdiction": "Hong Kong"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "contractual-only",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Listing Policy v2 PR-2 authoring 2026-11-27",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "SilverTimes Transparency and Reserves Report STT-TR-2026-SEP (with Brink's Hong Kong July 15 and May 15, 2026 confirmations)",
+        "url": "https://www.silvertimes.io/docs/SilverTimes_Transparency_Report_STT-TR-2026-SEP.pdf"
+      },
+      {
+        "label": "Brink's Hong Kong Holding Certificate AG42840 (May 15, 2026)",
+        "url": "https://www.silvertimes.io/docs/Brinks_SilverTimes_Holding_Certificate_STT_Assets_Limited_1019.pdf"
+      },
+      {
+        "label": "SilverTimes Token Whitepaper v9.2 (Orphan Trust and Brink's Hong Kong custody)",
+        "url": "https://www.silvertimes.io/docs/SilverTimes_Token_whitepaper_v9.2.pdf"
+      }
+    ],
+    "uncertainty": "Brink's Hong Kong Limited confirms holding 1,019.3233 kg of silver under reference AG42840 (Pallet #11B, 12) for STT Assets Limited (note the standalone May 15 certificate initially named Best Power Development Limited in the body while the September report's re-issued May 15 certificate and July 15 letter name STT Assets Limited). Whitepaper v9.2 describes an Orphan Trust under a Hong Kong TCSP-licensed trustee with beneficial ownership for STT holders, but neither the trustee's identity, the trust deed, an insolvency opinion, nor an explicit rehypothecation prohibition is publicly published. Legacy landing-page copy still references Brink's London despite the Brink's Hong Kong vault certificates."
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "id": "gdlr-doma",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Doma General Terms and Conditions v3.0 (effective 2026-11-13): issued by Lumina Secure S.A. (Republic of Panama) on a reverse-solicitation basis; EU and EEA member states are Excluded Jurisdictions",
+        "url": "https://doma.io/terms-of-service"
+      },
+      {
+        "label": "Doma Reserve Policy v2.0 (updated 2026-10-26): Panamanian issuer Lumina Secure S.A. and allocated gold reserve structure",
+        "url": "https://doma.io/reserve-policy"
+      },
+      {
+        "label": "ESMA MiCA interim register index (accessed 2026-11-27)",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "GDLR represents a contractual redemption claim for 10 mg of fine physical gold whose value tracks the gold spot market rather than maintaining a fixed amount of national currency as required by the GENIUS Act payment-stablecoin definition.",
+      "references": [
+        {
+          "label": "GENIUS Act: Public Law 119-27",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "Doma General Terms and Conditions v3.0: contractual gold redemption claim",
+          "url": "https://doma.io/terms-of-service",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-11-13",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "Doma GDollar product specification",
+          "url": "https://doma.io/gdollar",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Lumina Secure S.A.",
+    "issuerDomicile": "Panama",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://doma.io/proof-of-reserves",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Doma General Terms and Conditions v3.0 (effective 2026-11-13) identify Lumina Secure S.A. (Panama City, Republic of Panama) as issuer and KSTN Capital Ltd as group owner of the physical gold backing pool. The United States, UK, EU/EEA, UAE, and Panama are listed as Excluded Jurisdictions under reverse-solicitation terms. Because GDLR tracks 10 mg of physical gold rather than a fixed monetary value in national currency, GENIUS payment-stablecoin authorization is not applicable. Doma publishes an on-chain proof-of-reserves dashboard and written redemption terms, but no independent monthly reserve-to-liability attestation reports are published.",
+    "references": [
+      {
+        "label": "Doma General Terms and Conditions v3.0",
+        "url": "https://doma.io/terms-of-service",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-11-13",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "Doma Reserve Policy v2.0",
+        "url": "https://doma.io/reserve-policy",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-10-26",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "Doma Proof of Reserves dashboard",
+        "url": "https://doma.io/proof-of-reserves",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "GENIUS Act: Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-11-27"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-11-27"
+  }
+}

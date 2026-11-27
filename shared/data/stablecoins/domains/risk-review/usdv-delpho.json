@@ -1,0 +1,372 @@
+{
+  "id": "usdv-delpho",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Verified DelphoStable implementation on HyperEVMScan",
+        "url": "https://hyperevmscan.io/address/0xb4616e1814c74f9528aadddc23d45780fa453ccb#code"
+      },
+      {
+        "label": "Delpho USDV proxy on HyperEVMScan",
+        "url": "https://hyperevmscan.io/address/0x8c6eb3c8d1fddc752684274fb4a3eb98dbe9cd26"
+      },
+      {
+        "label": "Delpho trust assumptions and multisig documentation",
+        "url": "https://delpho.gitbook.io/delpho-docs/risk/trust-assumptions-and-multisig"
+      },
+      {
+        "label": "Pinned HyperEVM JSON-RPC read at block 52378877 (2026-11-27T11:00:22Z)",
+        "url": "https://rpc.hyperliquid.xyz/evm"
+      }
+    ],
+    "evidence": "Reviewed 2026-11-27 at HyperEVM blocks 52378604 and 52378877. Delpho USDV (0x8c6eb3c8d1fddc752684274fb4a3eb98dbe9cd26) is an EIP-1967 UUPS proxy pointing to verified implementation 0xb4616e1814c74f9528aadddc23d45780fa453ccb. Standard ERC-20 transfers are not directly pausable or blacklistable in the current implementation; setPaused() gates only mint() and burn(). However, the V1 admin Safe (0x590fec6d69508da8498f10d3401ffc0b538fae09, Gnosis Safe 1.4.1, 3-of-4, zero modules, zero guard) can upgrade the token implementation without a timelock or grant MINTER_ROLE to an operator that invokes burn(from, amount) without holder allowance. In addition, 72.8% of measured collateral is freezable upstream stablecoins (72.7% USDC and 0.1% USDT0). Under Pharos's taxonomy, both the no-delay upgrade/role-grant surface and >50% freezable upstream collateral resolve to Possible, not Yes.",
+    "reviewer": "Wave 1A HyperEVM addition review 2026-11-27",
+    "reviewedAt": "2026-11-27"
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "Delpho USDV values all four collateral assets across its isolated Stablecoin and HYPE/kHYPE markets via dedicated HyperEVM Chainlink AggregatorV3 feeds (24-hour heartbeat, 0.5% deviation). Strict staleness checks block vault mints, withdrawals, and PSM operations when feeds go stale, while vault redemptions and permissionless liquidations intentionally remain executable on stale answers.",
+    "role": "collateral-pricing",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-11-27",
+      "reviewer": "Wave 1A HyperEVM addition review 2026-11-27",
+      "rationale": "Delpho maintains four distinct collateral assets across two isolated CDP markets (USDC and USDT0 in the Stablecoin market with 95% max LTV / 97% liquidation threshold; kHYPE and WHYPE in the HYPE/kHYPE market with 65% max LTV / 80% liquidation threshold), each wired to its own HyperEVM Chainlink feed and per-collateral supply cap. Each collateral branch therefore requires its own oracle and liquidation evidence row.",
+      "sources": [
+        {
+          "label": "Delpho oracles documentation",
+          "url": "https://delpho.gitbook.io/delpho-docs/how-delpho-works/oracles"
+        },
+        {
+          "label": "Delpho parameters documentation",
+          "url": "https://delpho.gitbook.io/delpho-docs/parameters"
+        },
+        {
+          "label": "Delpho liquidations documentation",
+          "url": "https://delpho.gitbook.io/delpho-docs/how-delpho-works/liquidations"
+        }
+      ]
+    },
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Wave 1A HyperEVM addition review 2026-11-27",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Delpho oracles documentation",
+        "url": "https://delpho.gitbook.io/delpho-docs/how-delpho-works/oracles"
+      },
+      {
+        "label": "Delpho oracle risk documentation",
+        "url": "https://delpho.gitbook.io/delpho-docs/risk/oracle-risk"
+      },
+      {
+        "label": "Delpho parameters documentation",
+        "url": "https://delpho.gitbook.io/delpho-docs/parameters"
+      },
+      {
+        "label": "Delpho liquidations documentation",
+        "url": "https://delpho.gitbook.io/delpho-docs/how-delpho-works/liquidations"
+      },
+      {
+        "label": "Pinned HyperEVM JSON-RPC read at block 52378604 (2026-11-27T10:55:54Z)",
+        "url": "https://rpc.hyperliquid.xyz/evm"
+      }
+    ],
+    "branches": [
+      {
+        "id": "usdc",
+        "label": "USDC collateral branch (Stablecoin Market + PSM)",
+        "tier": "standard-external",
+        "summary": "Stablecoin Market DelphoOracle (0x87c56286) reads HyperEVM Chainlink USDC/USD (capped at $1.00, 86,460s staleness window) to value USDC in both the Stablecoin Vault and DelphoPSM.",
+        "collateralAssets": [
+          "USDC"
+        ],
+        "chains": [
+          "hyperevm"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink AggregatorV3 via DelphoOracle",
+            "path": "Chainlink USDC/USD (8 dec, 24h heartbeat, 0.5% dev) -> Stablecoin DelphoOracle (0x87c56286, maxPrice=$1.00) -> Stablecoin Vault and DelphoPSM",
+            "address": "0xa0adc43ce7afe3ee7d7eac3c994e178d0620223b",
+            "chain": "hyperevm",
+            "observedAt": "2026-11-27",
+            "failureDomainKeys": [
+              "chainlink-usdc-usd-hyperevm",
+              "delpho-stable-oracle",
+              "hyperevm"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Strict staleness check (86,460s) reverts vault mints, collateral withdrawals, and PSM mint/redeem calls on stale or invalid prices. Vault redemptions and liquidations intentionally skip staleness checks per Sherlock audit recommendations so deleveraging remains executable during feed delays.",
+        "observedAt": "2026-11-27",
+        "collateralParameters": [
+          {
+            "asset": "USDC",
+            "note": "95% max LTV, 97% liquidation threshold, 10,000,000 USDC supply cap, 0% borrow APR, up to 10% liquidation penalty, 1% caller reward capped at $50; parameters adjustable without delay by the 3-of-4 V1 admin Safe."
+          }
+        ],
+        "liquidationMechanism": "Permissionless liquidation triggers immediately when a borrower's LTV exceeds the 97% liquidation threshold. The Stablecoin Market Stability Pool absorbs bad positions first; uncovered debt and collateral redistribute equally across up to 50 solvent borrowers in the same market.",
+        "liquidationDelaySec": 0,
+        "backstop": "Stablecoin Market Stability Pool (0x3bd10d1f0eac488bf26ab36c84fba434ccf7db5e, protocol-owned treasury sUSDV; observed 0 USDV / 0 sUSDV on-chain balance at block 52378804) followed by equal-share redistribution across up to 50 solvent borrowers in the Stablecoin market.",
+        "shutdownOrBadDebtBehavior": "No automated global shutdown; the 3-of-4 V1 admin Safe can pause protocol operations via emergency carve-outs. Residual bad debt exceeding Stability Pool capacity is socialized across up to 50 active borrowers in the same market, with a ~5% TVL treasury reserve target as secondary protocol buffer.",
+        "failureDomainKeys": [
+          "chainlink-usdc-usd-hyperevm",
+          "delpho-stable-oracle",
+          "delpho-stable-stability-pool",
+          "delpho-corewriter-hypercore",
+          "hyperevm"
+        ],
+        "sources": [
+          {
+            "label": "Delpho oracles documentation",
+            "url": "https://delpho.gitbook.io/delpho-docs/how-delpho-works/oracles"
+          },
+          {
+            "label": "Delpho parameters documentation",
+            "url": "https://delpho.gitbook.io/delpho-docs/parameters"
+          },
+          {
+            "label": "Delpho liquidations documentation",
+            "url": "https://delpho.gitbook.io/delpho-docs/how-delpho-works/liquidations"
+          },
+          {
+            "label": "Chainlink USDC/USD feed on HyperEVMScan",
+            "url": "https://hyperevmscan.io/address/0xa0adc43ce7afe3ee7d7eac3c994e178d0620223b"
+          }
+        ]
+      },
+      {
+        "id": "usdt0",
+        "label": "USDT0 collateral branch (Stablecoin Market)",
+        "tier": "standard-external",
+        "summary": "Stablecoin Market DelphoOracle (0x87c56286) reads HyperEVM Chainlink USDT/USD (capped at $1.00, 86,460s staleness window) to value USDT0 in the Stablecoin Vault.",
+        "collateralAssets": [
+          "USDT0"
+        ],
+        "chains": [
+          "hyperevm"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink AggregatorV3 via DelphoOracle",
+            "path": "Chainlink USDT/USD (8 dec, 24h heartbeat, 0.5% dev) -> Stablecoin DelphoOracle (0x87c56286, maxPrice=$1.00) -> Stablecoin Vault",
+            "address": "0x9114446540b4f8e0e310041981f7c1be6181ed07",
+            "chain": "hyperevm",
+            "observedAt": "2026-11-27",
+            "failureDomainKeys": [
+              "chainlink-usdt-usd-hyperevm",
+              "delpho-stable-oracle",
+              "hyperevm"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Strict staleness check (86,460s) reverts vault mints and collateral withdrawals on stale or invalid prices. Vault redemptions and liquidations intentionally skip staleness checks so deleveraging remains executable during feed delays.",
+        "observedAt": "2026-11-27",
+        "collateralParameters": [
+          {
+            "asset": "USDT0",
+            "note": "95% max LTV, 97% liquidation threshold, 10,000,000 USDT0 supply cap, 0% borrow APR, up to 10% liquidation penalty, 1% caller reward capped at $50; parameters adjustable without delay by the 3-of-4 V1 admin Safe."
+          }
+        ],
+        "liquidationMechanism": "Permissionless liquidation triggers immediately when a borrower's LTV exceeds the 97% liquidation threshold. The Stablecoin Market Stability Pool absorbs bad positions first; uncovered debt and collateral redistribute equally across up to 50 solvent borrowers in the same market.",
+        "liquidationDelaySec": 0,
+        "backstop": "Stablecoin Market Stability Pool (0x3bd10d1f0eac488bf26ab36c84fba434ccf7db5e; observed 0 USDV / 0 sUSDV on-chain balance at block 52378804) followed by equal-share redistribution across up to 50 solvent borrowers in the Stablecoin market.",
+        "shutdownOrBadDebtBehavior": "No automated global shutdown; the 3-of-4 V1 admin Safe can pause protocol operations. Uncovered bad debt redistributes across up to 50 active borrowers in the Stablecoin market.",
+        "failureDomainKeys": [
+          "chainlink-usdt-usd-hyperevm",
+          "delpho-stable-oracle",
+          "delpho-stable-stability-pool",
+          "delpho-corewriter-hypercore",
+          "hyperevm"
+        ],
+        "sources": [
+          {
+            "label": "Delpho oracles documentation",
+            "url": "https://delpho.gitbook.io/delpho-docs/how-delpho-works/oracles"
+          },
+          {
+            "label": "Delpho parameters documentation",
+            "url": "https://delpho.gitbook.io/delpho-docs/parameters"
+          },
+          {
+            "label": "Chainlink USDT/USD feed on HyperEVMScan",
+            "url": "https://hyperevmscan.io/address/0x9114446540b4f8e0e310041981f7c1be6181ed07"
+          }
+        ]
+      },
+      {
+        "id": "khype",
+        "label": "kHYPE collateral branch (HYPE/kHYPE Market)",
+        "tier": "standard-external",
+        "summary": "HYPE/kHYPE Market DelphoOracle (0xbF87f246) reads HyperEVM Chainlink KHYPE/USD (18 decimals, 86,400s staleness window) directly on-chain to value kHYPE collateral.",
+        "collateralAssets": [
+          "kHYPE"
+        ],
+        "chains": [
+          "hyperevm"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink AggregatorV3 via DelphoOracle",
+            "path": "Chainlink KHYPE/USD (18 dec, 24h heartbeat, 0.5% dev; on-chain description returns KHYPE / USD) -> HYPE/kHYPE DelphoOracle (0xbF87f246) -> HYPE/kHYPE Vault",
+            "address": "0xe364373ce59f7689425e648d57036428087b5d93",
+            "chain": "hyperevm",
+            "observedAt": "2026-11-27",
+            "failureDomainKeys": [
+              "chainlink-khype-usd-hyperevm",
+              "delpho-hype-oracle",
+              "khype-staking",
+              "hyperevm"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Strict staleness check (86,400s) reverts vault mints and collateral withdrawals on stale or invalid answers. Vault redemptions and liquidations intentionally skip staleness checks so deleveraging remains executable during feed delays.",
+        "observedAt": "2026-11-27",
+        "collateralParameters": [
+          {
+            "asset": "kHYPE",
+            "note": "65% max LTV, 80% liquidation threshold, 13,721 kHYPE supply cap, 0% borrow APR, up to 10% liquidation penalty, 1% caller reward capped at $50; parameters adjustable without delay by the 3-of-4 V1 admin Safe."
+          }
+        ],
+        "liquidationMechanism": "Permissionless liquidation triggers immediately when a borrower's LTV exceeds the 80% liquidation threshold. The HYPE/kHYPE Market Stability Pool absorbs bad positions first; uncovered debt and collateral redistribute equally across up to 50 solvent borrowers in the same market.",
+        "liquidationDelaySec": 0,
+        "backstop": "HYPE/kHYPE Market Stability Pool (0x88700bbaf170574adf0d1248e825fa1269072d63; observed 0 USDV / 0 sUSDV on-chain balance at block 52378804) followed by equal-share redistribution across up to 50 solvent borrowers in the HYPE/kHYPE market.",
+        "shutdownOrBadDebtBehavior": "No automated global shutdown; the 3-of-4 V1 admin Safe can pause protocol operations. Uncovered bad debt redistributes across up to 50 active borrowers in the HYPE/kHYPE market.",
+        "failureDomainKeys": [
+          "chainlink-khype-usd-hyperevm",
+          "delpho-hype-oracle",
+          "delpho-hype-stability-pool",
+          "delpho-corewriter-hypercore",
+          "khype-staking",
+          "hyperevm"
+        ],
+        "sources": [
+          {
+            "label": "Delpho oracles documentation",
+            "url": "https://delpho.gitbook.io/delpho-docs/how-delpho-works/oracles"
+          },
+          {
+            "label": "Delpho parameters documentation",
+            "url": "https://delpho.gitbook.io/delpho-docs/parameters"
+          },
+          {
+            "label": "Chainlink KHYPE/USD feed on HyperEVMScan",
+            "url": "https://hyperevmscan.io/address/0xe364373ce59f7689425e648d57036428087b5d93"
+          }
+        ]
+      },
+      {
+        "id": "whype",
+        "label": "WHYPE collateral branch (HYPE/kHYPE Market)",
+        "tier": "standard-external",
+        "summary": "HYPE/kHYPE Market DelphoOracle (0xbF87f246) reads HyperEVM Chainlink HYPE/USD (18 decimals, 86,400s staleness window) to value WHYPE collateral.",
+        "collateralAssets": [
+          "WHYPE"
+        ],
+        "chains": [
+          "hyperevm"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink AggregatorV3 via DelphoOracle",
+            "path": "Chainlink HYPE/USD (18 dec, 24h heartbeat, 0.5% dev) -> HYPE/kHYPE DelphoOracle (0xbF87f246) -> HYPE/kHYPE Vault",
+            "address": "0x2b25bc41d55de29f3a2e163f8eebf63966b25b57",
+            "chain": "hyperevm",
+            "observedAt": "2026-11-27",
+            "failureDomainKeys": [
+              "chainlink-hype-usd-hyperevm",
+              "delpho-hype-oracle",
+              "hyperevm"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Strict staleness check (86,400s) reverts vault mints and collateral withdrawals on stale or invalid answers. Vault redemptions and liquidations intentionally skip staleness checks so deleveraging remains executable during feed delays.",
+        "observedAt": "2026-11-27",
+        "collateralParameters": [
+          {
+            "asset": "WHYPE",
+            "note": "65% max LTV, 80% liquidation threshold, 14,119 HYPE supply cap, 0% borrow APR, up to 10% liquidation penalty, 1% caller reward capped at $50; parameters adjustable without delay by the 3-of-4 V1 admin Safe."
+          }
+        ],
+        "liquidationMechanism": "Permissionless liquidation triggers immediately when a borrower's LTV exceeds the 80% liquidation threshold. The HYPE/kHYPE Market Stability Pool absorbs bad positions first; uncovered debt and collateral redistribute equally across up to 50 solvent borrowers in the same market.",
+        "liquidationDelaySec": 0,
+        "backstop": "HYPE/kHYPE Market Stability Pool (0x88700bbaf170574adf0d1248e825fa1269072d63; observed 0 USDV / 0 sUSDV on-chain balance at block 52378804) followed by equal-share redistribution across up to 50 solvent borrowers in the HYPE/kHYPE market.",
+        "shutdownOrBadDebtBehavior": "No automated global shutdown; the 3-of-4 V1 admin Safe can pause protocol operations. Uncovered bad debt redistributes across up to 50 active borrowers in the HYPE/kHYPE market.",
+        "failureDomainKeys": [
+          "chainlink-hype-usd-hyperevm",
+          "delpho-hype-oracle",
+          "delpho-hype-stability-pool",
+          "delpho-corewriter-hypercore",
+          "hyperevm"
+        ],
+        "sources": [
+          {
+            "label": "Delpho oracles documentation",
+            "url": "https://delpho.gitbook.io/delpho-docs/how-delpho-works/oracles"
+          },
+          {
+            "label": "Delpho parameters documentation",
+            "url": "https://delpho.gitbook.io/delpho-docs/parameters"
+          },
+          {
+            "label": "Chainlink HYPE/USD feed on HyperEVMScan",
+            "url": "https://hyperevmscan.io/address/0x2b25bc41d55de29f3a2e163f8eebf63966b25b57"
+          }
+        ]
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "Delpho USDV is issued solely on HyperEVM (0x8c6eb3c8d1fddc752684274fb4a3eb98dbe9cd26) with no cross-chain bridge representation or HyperCore spot-token linkage. HyperCore spotMeta token USDV (index 448) has evmContract null and is an unrelated token.",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Wave 1A HyperEVM addition review 2026-11-27",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Delpho contract addresses",
+        "url": "https://delpho.gitbook.io/delpho-docs/for-developers/contract-addresses"
+      },
+      {
+        "label": "Hyperliquid spotMeta registry",
+        "url": "https://api.hyperliquid.xyz/info"
+      },
+      {
+        "label": "Pinned HyperEVM JSON-RPC read at block 52378604 (2026-11-27T10:55:54Z)",
+        "url": "https://rpc.hyperliquid.xyz/evm"
+      }
+    ],
+    "routes": [
+      {
+        "id": "hyperevm:0x8c6eb3c8d1fddc752684274fb4a3eb98dbe9cd26",
+        "destinationChain": "hyperevm",
+        "canonicalChain": "hyperevm",
+        "contractAddress": "0x8c6eb3c8d1fddc752684274fb4a3eb98dbe9cd26",
+        "protocol": "Delpho USDV (native issuance on HyperEVM)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain at HyperEVM block 52378604 (2026-11-27): name Delpho Stable Token, symbol USDV, 6 decimals, UUPS implementation 0xb4616e1814c74f9528aadddc23d45780fa453ccb. Sole native deployment; no bridge route or HyperCore linkage exists.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-27",
+        "observedBlock": 52378604,
+        "sources": [
+          {
+            "label": "Delpho contract addresses",
+            "url": "https://delpho.gitbook.io/delpho-docs/for-developers/contract-addresses"
+          },
+          {
+            "label": "Delpho USDV proxy on HyperEVMScan",
+            "url": "https://hyperevmscan.io/address/0x8c6eb3c8d1fddc752684274fb4a3eb98dbe9cd26"
+          }
+        ]
+      }
+    ]
+  }
+}

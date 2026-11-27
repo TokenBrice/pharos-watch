@@ -1,0 +1,147 @@
+{
+  "id": "usdv-delpho",
+  "reserves": [
+    {
+      "name": "USDC (Stablecoin Vault + PSM)",
+      "pct": 72.7,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle (held in Delpho Stablecoin Vault and DelphoPSM HyperCore/HyperEVM accounts)",
+      "riskFactors": [
+        "smart-contract",
+        "counterparty",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "kHYPE (Kinetiq Staked HYPE)",
+      "pct": 22.9,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Kinetiq Protocol on HyperEVM (held in Delpho HYPE/kHYPE Vault)",
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "liquidity",
+        "basis"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "WHYPE (Wrapped HYPE)",
+      "pct": 4.3,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Hyperliquid native HYPE wrapper (held in Delpho HYPE/kHYPE Vault)",
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "USDT0 (Stablecoin Vault)",
+      "pct": 0.1,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether / USDT0 OFT on HyperEVM (held in Delpho Stablecoin Vault)",
+      "riskFactors": [
+        "smart-contract",
+        "counterparty",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "seven-days"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Wave 1A HyperEVM addition review 2026-11-27",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Delpho contract addresses",
+        "url": "https://delpho.gitbook.io/delpho-docs/for-developers/contract-addresses"
+      },
+      {
+        "label": "Delpho parameters documentation",
+        "url": "https://delpho.gitbook.io/delpho-docs/parameters"
+      },
+      {
+        "label": "Delpho Stablecoin Vault on HyperEVMScan",
+        "url": "https://hyperevmscan.io/address/0x79a86a652b6dec1e7f5727c9aa1c02e1c8af6e78"
+      },
+      {
+        "label": "Delpho HYPE/kHYPE Vault on HyperEVMScan",
+        "url": "https://hyperevmscan.io/address/0xd09f0725dbb6bfc93d0ad34c3163923d1bb7f96d"
+      },
+      {
+        "label": "Delpho PSM on HyperEVMScan",
+        "url": "https://hyperevmscan.io/address/0x4f5cdd08efdcf0e9a09e0ed10849f1102b17882d"
+      },
+      {
+        "label": "Pinned HyperEVM JSON-RPC read at block 52378604 (2026-11-27T10:55:54Z)",
+        "url": "https://rpc.hyperliquid.xyz/evm"
+      }
+    ],
+    "rationale": "At HyperEVM block 52378604 (2026-11-27T10:55:54Z, hash 0xa9b0c1ba9f6c84d8631f39ebaf8481da888d018971d5992b2416b2a3a00c4b00), USDV totalSupply() was 364,591.267813 USDV against $557,802.57 in measured collateral (~153.0% collateralization) across the Stablecoin Vault (300,895.928332 USDC = $300,857.41 and 501.380526 USDT0 = $500.76 plus negligible residual WHYPE/kHYPE), the USDC PSM (104,727.579629 USDC total: 20,862.887243 idle EVM buffer plus 83,864.692386 deployed to its HyperCore executor against 104,715.460475 USDV PSM liabilities; USDT0 PSM liabilities were zero), and the HYPE/kHYPE Vault (1,883.330409 kHYPE = $127,807.43 and 360.628722 WHYPE = $23,780.48 valued at live Chainlink answers). Because vault and PSM collateral is deployed via CoreWriter into HyperCore strategy executors rather than held as static ERC-20 balances on HyperEVM adapters, Pharos uses curated-validated with live HyperEVM totalSupply() checks rather than evm-branch-balances.",
+    "compositionBasis": "Pinned HyperEVM totalCollateral() and PSM balance accounting valued via Delpho's on-chain Chainlink feeds at block 52378604 (2026-11-27T10:55:54Z)",
+    "compositionAsOf": "2026-11-27",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All four collateral types and amounts are read directly from Delpho's on-chain vault and PSM accounting contracts; real-time HyperCore perpetual margin PnL and executor position state outside EVM vault accounting are not independently verified by a third-party auditor.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 1,
+        "reserveName": "kHYPE (Kinetiq Staked HYPE)",
+        "pct": 22.9,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "kHYPE is a volatile liquid-staking token for HYPE issued by Kinetiq Protocol, not a stablecoin tracked in the Pharos catalog."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "WHYPE (Wrapped HYPE)",
+        "pct": 4.3,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "WHYPE is the wrapped native gas token of Hyperliquid L1, not a stablecoin tracked in the Pharos catalog."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Delpho HyperEVM vaults, PSM, and HyperCore CoreWriter strategy executors",
+        "role": "other",
+        "sharePct": 100
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-11-27",
+    "reviewer": "Wave 1A HyperEVM addition review 2026-11-27",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Delpho architecture documentation",
+        "url": "https://delpho.gitbook.io/delpho-docs/for-developers/architecture"
+      },
+      {
+        "label": "Delpho Stablecoin Vault on HyperEVMScan",
+        "url": "https://hyperevmscan.io/address/0x79a86a652b6dec1e7f5727c9aa1c02e1c8af6e78"
+      },
+      {
+        "label": "Delpho PSM on HyperEVMScan",
+        "url": "https://hyperevmscan.io/address/0x4f5cdd08efdcf0e9a09e0ed10849f1102b17882d"
+      }
+    ],
+    "uncertainty": "Collateral is deposited into smart contracts on HyperEVM and actively deployed via CoreWriter into HyperCore strategy and delta-neutral hedging executors (rehypothecation is inherent to the yield-generating vault and PSM design). There is no legal bankruptcy-remote custody wrapper, and protocol contracts remain UUPS-upgradeable by the 3-of-4 V1 admin multisig without a timelock."
+  }
+}

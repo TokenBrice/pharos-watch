@@ -1,0 +1,77 @@
+{
+  "id": "stt-silvertimes",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "SilverTimes Website Terms and Conditions sections 3.1 and 14 (Hong Kong governing law; access prohibited where unlawful)",
+        "url": "https://www.silvertimes.io/terms"
+      },
+      {
+        "label": "SilverTimes Transparency and Reserves Report STT-TR-2026-SEP (Hong Kong issuer STT Assets Limited)",
+        "url": "https://www.silvertimes.io/docs/SilverTimes_Transparency_Report_STT-TR-2026-SEP.pdf"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "STT represents a claim on one troy ounce of physical silver whose value tracks the silver spot market rather than a fixed amount of national currency under GENIUS Act sections 2(17) and 2(22).",
+      "references": [
+        {
+          "label": "SilverTimes Token Whitepaper v9.2 (July 2026)",
+          "url": "https://www.silvertimes.io/docs/SilverTimes_Token_whitepaper_v9.2.pdf",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-07-01",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "SilverTimes Transparency and Reserves Report STT-TR-2026-SEP",
+          "url": "https://www.silvertimes.io/docs/SilverTimes_Transparency_Report_STT-TR-2026-SEP.pdf",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-10-15",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-11-27"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "STT Assets Limited",
+    "issuerDomicile": "Hong Kong",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "STT is a physical-silver commodity token issued by STT Assets Limited (Hong Kong) and promoted through Silver Times Global Inc., backed 1:1 by physical silver vaulted at Brink's Hong Kong. Because its claim tracks silver rather than a fixed national currency redemption obligation, GENIUS Act payment-stablecoin authorization is not applicable.",
+    "references": [
+      {
+        "label": "SilverTimes Token Whitepaper v9.2",
+        "url": "https://www.silvertimes.io/docs/SilverTimes_Token_whitepaper_v9.2.pdf",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-07-01",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "SilverTimes Transparency and Reserves Report STT-TR-2026-SEP",
+        "url": "https://www.silvertimes.io/docs/SilverTimes_Transparency_Report_STT-TR-2026-SEP.pdf",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-10-15",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-11-27"
+      }
+    ],
+    "reviewer": "Listing Policy v2 PR-2 authoring 2026-11-27",
+    "reviewedAt": "2026-11-27"
+  }
+}

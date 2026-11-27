@@ -1,0 +1,83 @@
+{
+  "id": "xauh-herculis",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Herculis Gold Coin Terms and Conditions section 4.4 (no unlawful EU/EEA offering without required authorization) and section 23 (Panama governing law)",
+        "url": "https://www.xauh.gold/xauh-terms-and-conditions.pdf"
+      },
+      {
+        "label": "Herculis Gold Coin White Paper v4.0 section 6.1 (Panama issuer Herculis Tokens S.A. under Panama AML/CFT and UAF guidelines)",
+        "url": "https://www.xauh.gold/whitepaper.pdf"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "XAUH represents a claim on one gram of physical LBMA 999.9 fine gold whose value floats with gold spot prices, rather than a fixed-value national currency payment stablecoin under GENIUS Act sections 2(17) and 2(22).",
+      "references": [
+        {
+          "label": "Herculis Gold Coin Terms and Conditions",
+          "url": "https://www.xauh.gold/xauh-terms-and-conditions.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "Herculis Gold Coin White Paper v4.0",
+          "url": "https://www.xauh.gold/whitepaper.pdf",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-05-21",
+          "accessedAt": "2026-11-27"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-11-27"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Herculis Tokens S.A.",
+    "issuerDomicile": "Panama",
+    "licensingRegulator": "UAF (Unidad de Analisis Financiero, Panama; AML/CFT reporting only)",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "XAUH is a physical-gold commodity token backed 1:1 by one gram of Swiss-vaulted fine gold and issued by Herculis Tokens S.A. in Panama. Because its reference value tracks gold rather than a fixed amount of national currency, GENIUS Act payment-stablecoin authorization is not applicable. Panama UAF reporting is an AML/CFT obligation rather than a prudential Swiss FINMA or U.S. banking license.",
+    "references": [
+      {
+        "label": "Herculis Gold Coin Terms and Conditions",
+        "url": "https://www.xauh.gold/xauh-terms-and-conditions.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "Herculis Gold Coin White Paper v4.0",
+        "url": "https://www.xauh.gold/whitepaper.pdf",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-05-21",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "KPMG SA Report of Factual Findings as of August 26, 2026",
+        "url": "https://xauh.gold/audit-reports/08-28-2026.pdf",
+        "sourceKind": "auditor-report",
+        "sourceDate": "2026-08-28",
+        "accessedAt": "2026-11-27"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-11-27"
+      }
+    ],
+    "reviewer": "Listing Policy v2 PR-2 authoring 2026-11-27",
+    "reviewedAt": "2026-11-27"
+  }
+}
