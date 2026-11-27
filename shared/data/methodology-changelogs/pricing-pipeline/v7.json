@@ -3,7 +3,7 @@
     "version": "7.0",
     "title": "ERC-4626 NAV vaults, mGLO six-chain preferred native supply, and Paxos Stable PYUSD reconciliation",
     "date": "2026-11-27",
-    "effectiveAt": 1795784400,
+    "effectiveAt": 1795795229,
     "summary": "Adds five reviewed ERC-4626 NAV vaults (siUSD, fLiteUSD, svZCHF, Base Steakhouse Prime USDC, and StableEarn Prime PYUSD with explicit non-archive Stable RPC fallbacks) to authoritative convertToAssets pricing, activates six-chain preferred native supply for tokenized fund mGLO, reconciles PYUSD's StableChain contract from Stargate PYUSD0 to Paxos native PYUSDUUPS, and admits Own eUSD with a post-cutover core-aggregate entry date.",
     "impact": [
       "Authoritative ERC-4626 NAV pricing (`worker/src/lib/authoritative-price-sources/erc4626-nav.ts`, `worker/src/lib/authoritative-price-sources/helpers.ts`): registers `siusd-infinifi` (parent `iusd-infinifi`), `fliteusd-fluid` (`usdc-circle`), `svzchf-frankencoin` (`zchf-frankencoin`, `allowFreshReplaySafeSingleSourceParent`), `steakusdc-steakhouse-base` (`usdc-circle` on Base), and `gpyusdse-galaxy` (`pyusd-paypal` on StableChain, extending `defineRegistryErc4626NavVault` with explicit `rpcUrls` backed by `SUPPLY_RPC_DEFAULTS.stable` rather than expanding archive-assuming `PUBLIC_RPC_URLS`).",

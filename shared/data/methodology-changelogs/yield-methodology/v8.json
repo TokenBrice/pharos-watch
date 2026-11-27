@@ -3,12 +3,12 @@
     "version": "8.63",
     "title": "CETES Banxico 28-Day Rate-Derived Source on Wave 0 Re-Admission",
     "date": "2026-11-27",
-    "effectiveAt": 1795770000,
+    "effectiveAt": 1795776948,
     "summary": "Activates a Banxico 28-day CETES rate-derived yield source for re-admitted tokenized fund cetes-etherfuse (CETES), using the existing independent MXN benchmark authority while keeping the retired Etherfuse issuance reader out of runtime.",
     "impact": [
       "`RATE_DERIVED_CONFIGS` (`worker/src/lib/yield-config/yield-config-rate-sources.ts`) adds `cetes-etherfuse` with `benchmarkCurrency: \"MXN\"`, `benchmarkOverrideKey: \"MXN\"`, `spreadBps: 0`, and `label: \"Banxico CETES 28-day proxy (MXN)\"` following CETES's 2026-11-27 catalog re-admission as an active `tokenized-fund`.",
       "The retired Etherfuse issuance reader remains retired; Banxico remains the sole independent MXN CETES benchmark authority, and missed historical observations are not synthesized.",
-      "PYS weights, benchmark feeds, safety-score suppression on tokenized funds, and all other yield sources are unchanged. Activation is provisional at 2026-11-27 09:00 UTC (`1795770000`); re-date `effectiveAt` on first observed `sync-yield-data` publication."
+      "PYS weights, benchmark feeds, safety-score suppression on tokenized funds, and all other yield sources are unchanged. Activated 2026-11-27 10:55:48 UTC (`1795776948`), the first `sync-yield-data` run on the released Worker (published `1795776949`)."
     ],
     "commits": [],
     "reconstructed": false
