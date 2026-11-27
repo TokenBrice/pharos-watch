@@ -23,7 +23,6 @@ export const POST_DEPLOY_ROUTE_SWEEP_PATHS = Object.freeze([
   "/api/depeg-events",
   "/api/events",
   "/api/usds-status",
-  "/api/bluechip-ratings",
   "/api/dex-liquidity",
   "/api/dex-liquidity-history?stablecoin=usdt-tether",
   "/api/supply-history?stablecoin=usdt-tether",

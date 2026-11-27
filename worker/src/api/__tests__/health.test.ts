@@ -76,7 +76,6 @@ function makeHealthyHealthDb(now: number, options: HealthDbOptions = {}) {
         { key: "stablecoin-charts", updated_at: now - 60, value: "{}" },
         { key: "usds-status", updated_at: now - 60, value: "{}" },
         ...fxRatesCacheRows(now - 60),
-        { key: "bluechip-ratings", updated_at: now - 60, value: "{}" },
         // Sentinel-backed lanes attest their own published generation; without
         // one the reader can only fall back and must publish a degraded quality
         // verdict, so the steady-state fixture carries them.

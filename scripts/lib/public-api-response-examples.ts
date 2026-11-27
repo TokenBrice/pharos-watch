@@ -419,36 +419,6 @@ export const PUBLIC_API_RESPONSE_EXAMPLES: Record<
       },
     },
   },
-  BluechipRatingsResponse: {
-    sample: {
-      summary: "Bluechip safety rating entry keyed by Pharos ID",
-      value: {
-        "usdc-circle": {
-          grade: "A-",
-          slug: "usdc",
-          collateralization: 100,
-          smartContractAudit: true,
-          collateral: 92,
-          decentralization: 42,
-          governance: 78,
-          backwards: 88,
-          financial: 91,
-          regulatory: 95,
-          security: 90,
-          dateOfRating: "2026-10-01",
-          dateLastChange: null,
-          smidge: {
-            stability: "High",
-            management: "High",
-            implementation: "High",
-            decentralization: "Low",
-            governance: "Medium",
-            externals: "High",
-          },
-        },
-      },
-    },
-  },
   DexLiquidityResponse: {
     sample: {
       summary: "DEX liquidity metrics keyed by Pharos ID",

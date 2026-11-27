@@ -207,7 +207,6 @@ function mockCacheStatus(ages: Record<string, number | null>) {
       dews: { ageSeconds: ages.dews ?? 0 },
       "stablecoin-charts": { ageSeconds: ages["stablecoin-charts"] ?? 0 },
       "usds-status": { ageSeconds: ages["usds-status"] ?? 0 },
-      "bluechip-ratings": { ageSeconds: ages["bluechip-ratings"] ?? 0 },
     },
     warnings: [],
     failures: [],
@@ -508,14 +507,14 @@ describe("cron staleness watchdog", () => {
   it("flags watched freshness lanes beyond twice their producer interval", () => {
     expect(evaluateCronStaleness({
       stablecoins: { ageSeconds: 1_801 }, "fx-rates": { ageSeconds: 1_799 }, "dex-liquidity": { ageSeconds: 14_401 }, "yield-data": { ageSeconds: 3_600 }, dews: { ageSeconds: 1_000 },
-      "stablecoin-charts": { ageSeconds: 0 }, "usds-status": { ageSeconds: 0 }, "bluechip-ratings": { ageSeconds: 0 },
+      "stablecoin-charts": { ageSeconds: 0 }, "usds-status": { ageSeconds: 0 },
     }).map((entry) => entry.cacheKey)).toEqual(["stablecoins", "dex-liquidity"]);
   });
 
   it("treats missing or malformed watched cache freshness as stale", () => {
     expect(evaluateCronStaleness({
       stablecoins: { ageSeconds: Number.NaN }, "fx-rates": { ageSeconds: Number.POSITIVE_INFINITY }, "dex-liquidity": { ageSeconds: 0 }, dews: { ageSeconds: 0 },
-      "stablecoin-charts": { ageSeconds: 0 }, "usds-status": { ageSeconds: 0 }, "bluechip-ratings": { ageSeconds: 0 },
+      "stablecoin-charts": { ageSeconds: 0 }, "usds-status": { ageSeconds: 0 },
     }).map((entry) => entry.cacheKey)).toEqual(["stablecoins", "fx-rates", "yield-data"]);
   });
 
@@ -546,7 +545,6 @@ describe("cron staleness watchdog", () => {
           warning: "peggedEUR business-daily reference is 2 publishes behind",
         },
         "usds-status": { ageSeconds: 1_000, publishedAt: slotStart - 86_400 },
-        "bluechip-ratings": { ageSeconds: 1_000, publishedAt: slotStart + 300 },
       },
       warnings: [], failures: [], diagnostics: [],
     });
@@ -579,7 +577,6 @@ describe("cron staleness watchdog", () => {
           consecutiveFallbackRuns: 0,
         },
         "usds-status": { ageSeconds: 60, publishedAt: slotStart + 60 },
-        "bluechip-ratings": { ageSeconds: 60, publishedAt: slotStart + 300 },
       },
       warnings: [], failures: [], diagnostics: [],
     });

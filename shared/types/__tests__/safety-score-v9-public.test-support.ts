@@ -594,7 +594,8 @@ function assertPreviousReaderSource() {
   // #1827 moves fact-set validation into reusable header and asset checks. Public schemas are unchanged.
   // Notices upgrade (#2396): stablecoin-meta-primitives.ts adds optional sources/chains and paused deadline on CoinNoticeSchema only; no public card/breakdown/trace schema changed (substituting origin/main restores 964de1f7…).
   // PR-1A NZD: core.ts adds "NZD" to PEG_CURRENCY_VALUES (vocabulary-additive); no public card/breakdown/trace schema changed (substituting origin/main restores de9af139…).
-  if (hash.digest("hex") !== "5a7816d1f4e04555e0605a090792e4bddc55fcde2de238e506081b63ba64b3cc") throw new Error("Pre-dust reader source/refinement inputs changed");
+  // Bluechip retirement: report-card-grade.ts drops its comment on the retired vendor grade enum; comment-only, no schema changed (substituting origin/main restores 5a7816d1…).
+  if (hash.digest("hex") !== "7f0a6279e3b22b982d9c11a72c971e1d6349562a5ad3c93458382366065a3fcb") throw new Error("Pre-dust reader source/refinement inputs changed");
 }
 
 export async function previousReader() {

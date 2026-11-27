@@ -241,7 +241,7 @@ The Worker renders dated scorecards for explicit creation and active dossier pre
 
 Timestamp validity is separate from retention and age bands. The freshness oracle, policy cache and status snapshot/probe/state readers reject missing, invalid or excessively future generation clocks rather than call them fresh age zero. Their default allowance is explicit and overridable; DEWS hydration validates against read-time wall clock, not its earlier captured run clock, so an overlapping producer's legitimate publication remains admissible. A cache retention TTL of `null` still means no expiry, not exemption from timestamp validity.
 
-`shared/lib/api-freshness.ts` separates public endpoint advisory budgets (`API_FRESHNESS_MAX_AGE_SEC`, including `stablecoins` 600 s and `bluechip` 43,200 s for HTTP response freshness only) from consumer admission budgets (`STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC` 1,800 s, shared by daily-digest and Telegram supply context), Telegram six-hour flow tolerated-context, and four-hour PSI/DEWS canary incident policies; daily-digest USD quote admission uses `DEPEG_PRIMARY_PRICE_MAX_AGE_SEC` (1,800 s). Operator env warning thresholds remain a separate policy. Centralization does not tighten Telegram primary-alert eligibility or force all consumers to use one number.
+`shared/lib/api-freshness.ts` separates public endpoint advisory budgets (`API_FRESHNESS_MAX_AGE_SEC`, including `stablecoins` 600 s for HTTP response freshness only) from consumer admission budgets (`STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC` 1,800 s, shared by daily-digest and Telegram supply context), Telegram six-hour flow tolerated-context, and four-hour PSI/DEWS canary incident policies; daily-digest USD quote admission uses `DEPEG_PRIMARY_PRICE_MAX_AGE_SEC` (1,800 s). Operator env warning thresholds remain a separate policy. Centralization does not tighten Telegram primary-alert eligibility or force all consumers to use one number.
 
 The top-level `fetch` and `scheduled` handlers load dispatchers lazily. HTTP keeps metadata/loader closures eager and initializes implementation only on invocation; scheduled slots load only their selected runner. `worker/src/routes/__tests__/lazy-route-loading.test.ts` guards unrelated graph retention. Retired Workflow shells/observer suites must not return through a compatibility import.
 
@@ -667,8 +667,7 @@ Chain/task positions below are one-based. Separate chains run independently; tas
 | `daily0800Utc` | `snapshot-public-dataset` | chain 2, task 3 | scheduled-job | 0 | 600 | 30 / 3 | every occurrence |
 | `daily0800Utc` | `fetch-tbill-rate` | chain 3, task 1 | scheduled-job | 1 | 300 | TTL-derived defaults | every occurrence |
 | `daily0800Utc` | `sync-usds-status` | chain 3, task 2 | scheduled-job | 1 | 300 | TTL-derived defaults | every occurrence |
-| `daily0805Utc` | `sync-bluechip` | chain 1, task 1 | scheduled-job | 3 | 300 | TTL-derived defaults | every occurrence |
-| `daily0805Utc` | `daily-digest` | chain 2, task 1 | scheduled-job | 1 | 840 | 30 / 3 | every occurrence |
+| `daily0805Utc` | `daily-digest` | chain 1, task 1 | scheduled-job | 1 | 840 | 30 / 3 | every occurrence |
 | `daily0810Utc` | `weekly-recap` | chain 1, task 1 | scheduled-job | 1 | 840 | 30 / 3 | Monday UTC |
 | `daily0810Utc` | `sync-cl-exit-depth` | chain 2, task 1 | scheduled-job | 3 | 540 | 30 / 3 | every occurrence |
 | `monthlyYieldAudit` | `yield-coverage-audit` | chain 1, task 1 | scheduled-job | 1 | 300 | TTL-derived defaults | every occurrence |

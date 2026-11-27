@@ -93,7 +93,6 @@ export const API_PATHS = {
     }),
   events: (params?: Record<string, QueryParamValue>) => buildQueryPath("/api/events", params),
   usdsStatus: () => "/api/usds-status",
-  bluechipRatings: () => "/api/bluechip-ratings",
   dexLiquidity: () => "/api/dex-liquidity",
   dexLiquidityCoin: (stablecoinId?: string) => buildQueryPath("/api/dex-liquidity-coin", { stablecoin: stablecoinId }),
   dexLiquidityTable: () => "/api/dex-liquidity-table",

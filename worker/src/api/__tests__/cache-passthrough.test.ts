@@ -12,7 +12,6 @@ import {
   handleStablecoinCharts,
   handleUsdsStatus,
 } from "../cache-handlers";
-import { handleBluechipRatings } from "../../lib/bluechip-cache";
 import { encodeResponseReadyCacheValue, getResponseReadyCacheKey } from "../../lib/api-cache-read";
 import { RESPONSE_READY_CACHE_SCHEMA_IDS } from "../../lib/response-ready-cache-contracts";
 import { buildOpenApiDocument } from "../../../../scripts/maintenance/generate-openapi-spec";
@@ -322,19 +321,6 @@ describe("cache-passthrough: handleUsdsStatus", () => {
 
 });
 
-describe("cache-passthrough: handleBluechipRatings", () => {
-  it("returns 503 when cached bluechip payload shape is malformed", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const db = makeCacheDb("bluechip-ratings", { "usdt-tether": { grade: "A" } }, nowSec - 120);
-    const res = await handleBluechipRatings(db);
-
-    expect(res.status).toBe(503);
-    await expect(res.json()).resolves.toEqual({
-      error: "Cached bluechip-ratings payload is malformed",
-    });
-  });
-});
-
 describe("cache-handlers: public cache wire schemas", () => {
   const IMPLEMENTATION_ADDRESS = "0x1923dfee706a8e78157416c29cbccfde7cdf4102";
 
@@ -371,14 +357,8 @@ describe("cache-handlers: public cache wire schemas", () => {
         .replaceAll("#/components/schemas/", "#/$defs/"),
     ));
     const now = Math.floor(Date.now() / 1000);
-    const rating = {
-      grade: "A", slug: "usdc", collateralization: null, smartContractAudit: null,
-      dateOfRating: null, dateLastChange: null,
-      smidge: { stability: null, management: null, implementation: null, decentralization: null, governance: null, externals: null },
-    };
     const cases = [
       { name: "StablecoinListResponse", key: "stablecoins", handler: handleStablecoins, payload: { peggedAssets: [] } },
-      { name: "BluechipRatingsResponse", key: "bluechip-ratings", handler: handleBluechipRatings, payload: { "usdc-circle": rating } },
       { name: "UsdsStatusResponse", key: "usds-status", handler: handleUsdsStatus,
         payload: { freezeCapabilityPresent: false, implementationAddress: "0x1923dfee706a8e78157416c29cbccfde7cdf4102", lastChecked: now } },
     ];
@@ -390,10 +370,6 @@ describe("cache-handlers: public cache wire schemas", () => {
       const body = z.record(z.string(), z.unknown()).parse(await response.json());
       expect(validate.safeParse(body).success).toBe(true);
       expect(validate.safeParse({ ...body, _meta: { updatedAt: now, ageSeconds: 0, status: "invented" } }).success).toBe(false);
-      if (testCase.key === "bluechip-ratings") {
-        expect(validate.safeParse({ ...body, unrelated: { updatedAt: now, ageSeconds: 0, status: "fresh" } }).success).toBe(false);
-        expect(validate.safeParse({ ...body, "usdc-circle": { ...rating, grade: "invalid" } }).success).toBe(false);
-      }
     }
     // A matching trusted companion bypasses canonical body parsing, but serves
     // the same freshness envelope and public wire schema.

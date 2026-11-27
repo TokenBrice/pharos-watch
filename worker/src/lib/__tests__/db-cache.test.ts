@@ -294,11 +294,11 @@ describe("shouldSkipFreshCache", () => {
     try {
       const { sqlite, db } = fixtures.open();
       sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
-        .run("bluechip-ratings", "{}", NOW_SEC + 86_400);
-      expect(await shouldSkipFreshCache(db, "bluechip-ratings", 6 * 3600)).toBe(false);
+        .run("usds-status", "{}", NOW_SEC + 86_400);
+      expect(await shouldSkipFreshCache(db, "usds-status", 6 * 3600)).toBe(false);
       // The if-newer producer write would keep rejecting a poisoned clock, so
       // the rejected row is dropped rather than left to absorb the refresh.
-      expect(await getCache(db, "bluechip-ratings")).toBeNull();
+      expect(await getCache(db, "usds-status")).toBeNull();
     } finally {
       vi.useRealTimers();
     }
@@ -310,11 +310,11 @@ describe("shouldSkipFreshCache", () => {
     try {
       const { sqlite, db } = fixtures.open();
       sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
-        .run("bluechip-ratings", "{}", NOW_SEC - 6 * 3600 + 1);
-      expect(await shouldSkipFreshCache(db, "bluechip-ratings", 6 * 3600)).toBe(true);
+        .run("usds-status", "{}", NOW_SEC - 6 * 3600 + 1);
+      expect(await shouldSkipFreshCache(db, "usds-status", 6 * 3600)).toBe(true);
       sqlite.prepare("UPDATE cache SET updated_at = ? WHERE key = ?")
-        .run(NOW_SEC - 6 * 3600, "bluechip-ratings");
-      expect(await shouldSkipFreshCache(db, "bluechip-ratings", 6 * 3600)).toBe(false);
+        .run(NOW_SEC - 6 * 3600, "usds-status");
+      expect(await shouldSkipFreshCache(db, "usds-status", 6 * 3600)).toBe(false);
     } finally {
       vi.useRealTimers();
     }

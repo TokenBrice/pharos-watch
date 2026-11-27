@@ -65,8 +65,7 @@ export type V9ConsumerUnavailableReason =
   | "portfolio-card-not-rated"
   | "portfolio-empty"
   | "v9-publication-held"
-  | "v9-stress-mapping-unapproved"
-  | "v9-bluechip-floor-unreviewed";
+  | "v9-stress-mapping-unapproved";
 
 export type V9ConsumerResult<T> =
   | { status: "available"; identity: V9ConsumerIdentity; value: T }

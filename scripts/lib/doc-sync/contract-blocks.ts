@@ -162,7 +162,6 @@ const workerLimitBlocks: readonly DocContractBlock[] = [
 const apiMetaBlocks: readonly DocContractBlock[] = [
   ["stablecoins", API_FRESHNESS_MAX_AGE_SEC.stablecoins],
   ["chains", API_FRESHNESS_MAX_AGE_SEC.chains],
-  ["bluechip-ratings", API_FRESHNESS_MAX_AGE_SEC.bluechip],
   ["usds-status", API_FRESHNESS_MAX_AGE_SEC.usdsStatus],
   ["yield-rankings", API_FRESHNESS_MAX_AGE_SEC.yieldRankings],
 ].map(([route, value]) => ({

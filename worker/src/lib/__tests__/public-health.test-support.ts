@@ -253,7 +253,6 @@ export function makeMintBurnAssessmentDb(
       updated_at: nowSec,
       value: JSON.stringify({ version: 1, assessment: assessD1Capacity({ observedAt: nowSec, databaseSizeBytes: 1_000_000_000 }) }),
     },
-    { key: "bluechip-ratings", updated_at: nowSec - 60, value: "{}" },
     { key: "freshness:dex-liquidity", updated_at: nowSec - 60, value: JSON.stringify({ updatedAt: nowSec - 60, source: "sync-dex-liquidity", publishStatus: "ok", generationId: "fixture-generation" }), served_generation_id: "fixture-generation" },
     { key: "freshness:yield-data", updated_at: nowSec - 60, value: JSON.stringify({ updatedAt: nowSec - 60, source: "sync-yield-data", publishStatus: "ok", generationId: "fixture-generation" }), served_generation_id: "fixture-generation" },
     { key: "freshness:dews", updated_at: nowSec - 60, value: JSON.stringify({ updatedAt: nowSec - 60, source: "compute-dews", publishStatus: "ok", generationId: "fixture-generation" }), served_generation_id: "fixture-generation" },

@@ -217,7 +217,6 @@ Yield history may include a top-level `warning` explaining publication-cutoff fa
 | `GET /api/stablecoins`           | <!-- GENERATED-START: api-meta-stablecoins-max-age -->600<!-- GENERATED-END: api-meta-stablecoins-max-age -->           | `createCacheHandler`                         |
 | `GET /api/chains`                | <!-- GENERATED-START: api-meta-chains-max-age -->1800<!-- GENERATED-END: api-meta-chains-max-age -->          | `worker/src/api/chains.ts`                   |
 | `GET /api/events`                | 600           | `worker/src/api/events.ts`                   |
-| `GET /api/bluechip-ratings`      | <!-- GENERATED-START: api-meta-bluechip-ratings-max-age -->43200<!-- GENERATED-END: api-meta-bluechip-ratings-max-age -->         | `createCacheHandler`                         |
 | `GET /api/usds-status`           | <!-- GENERATED-START: api-meta-usds-status-max-age -->86400<!-- GENERATED-END: api-meta-usds-status-max-age -->         | `createCacheHandler`                         |
 | `GET /api/yield-rankings`        | <!-- GENERATED-START: api-meta-yield-rankings-max-age -->7200<!-- GENERATED-END: api-meta-yield-rankings-max-age -->          | Manual injection after live safety hydration |
 
@@ -246,7 +245,7 @@ Profile strings below come from `API_CACHE_PROFILES` (`shared/lib/api-cache-prof
 | standard           | `public, s-maxage=300, max-age=60`                             | stablecoin-charts, depeg-resolver, depeg-resolver-review, redemption-backstops, usds-status, daily-digest, digest-archive, stability-index, yield-rankings, yield-adapter-manifest, mint-burn-flows, stress-signals. `/api/report-cards/v9` uses this profile only for a current handler response, uses `no-store` while held, and always bypasses the edge cache. |
 | custom             | `public, s-maxage=300, max-age=300`                            | dex-liquidity (browser-side max-age extended to match CDN TTL); telegram-pulse uses route-local `public, max-age=300, s-maxage=300`                                                                                                                                                                                                                                                                 |
 | per-coin           | `public, s-maxage=300, max-age=10`                             | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1)                                                                                                                                                                                                                                                                                                                                          |
-| slow               | `public, s-maxage=3600, max-age=300`                           | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, safety-score-history, non-usd-share, safety-score-history-v2, compliance, compliance-coin, resolve |
+| slow               | `public, s-maxage=3600, max-age=300`                           | supply-history, dex-liquidity-history, yield-history, safety-score-history, non-usd-share, safety-score-history-v2, compliance, compliance-coin, resolve |
 | archive            | `public, s-maxage=86400, max-age=3600`                         | digest-snapshot (elapsed UTC days), snapshots-index                                                                                                                                                                                                                                                                                                                                                                    |
 | immutable-snapshot | `public, s-maxage=31536000, max-age=31536000, immutable`       | snapshots/:date.json, snapshot/:date/stablecoin/:id                                                                                                                                                                                                                                                                                                                                                 |
 | public-status      | `public, max-age=60`                                           | public-status-history                                                                                                                                                                                                                                                                                                                                                                               |
@@ -553,7 +552,7 @@ DEX [price publication](./dex-liquidity.md#dex-price-cross-validation). Malforme
 
 ### Public Endpoints Quick Reference
 
-Generated from `public/openapi.json` (`Pharos API` v2026-11). Total OpenAPI operations: **46**.
+Generated from `public/openapi.json` (`Pharos API` v2026-11). Total OpenAPI operations: **45**.
 
 | Method | Path | Summary | Tags | Auth | Parameters | Status codes |
 | ------ | ---- | ------- | ---- | ---- | ---------- | ------------ |
@@ -572,7 +571,6 @@ Generated from `public/openapi.json` (`Pharos API` v2026-11). Total OpenAPI oper
 | GET | `/api/depeg-resolver-review` | Depeg Duration Resolver Reviewer | Risk, Peg Monitoring | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
 | GET | `/api/peg-summary` | Peg summary | Peg Monitoring | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
 | GET | `/api/usds-status` | USDS freeze status | Risk | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
-| GET | `/api/bluechip-ratings` | Bluechip ratings | Risk | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
 | GET | `/api/dex-liquidity` | DEX liquidity | Liquidity | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
 | GET | `/api/dex-liquidity-history` | DEX liquidity history | Liquidity, History | `X-API-Key` required | `stablecoin` (query, required, string); `days` (query, optional, integer) | 200, 400, 401, 429, 503 |
 | GET | `/api/supply-history` | Supply history | History | `X-API-Key` required | `stablecoin` (query, required, string); `days` (query, optional, integer); `range` (query, optional, string) | 200, 400, 401, 429, 503 |
@@ -796,16 +794,6 @@ Sky/USDS protocol status, including whether the freeze module is currently activ
 - **Success response schema:** [`UsdsStatusResponse`](https://pharos.watch/openapi.json#/components/schemas/UsdsStatusResponse)
 - **Policy:** authentication `X-API-Key` required; shared endpoint caching allowed (`cacheBypass: false`).
 
-### `GET /api/bluechip-ratings`
-
-Safety ratings from bluechip.org joined to Pharos identities for covered stablecoins. [Full endpoint contract](https://pharos.watch/openapi.json#/paths/~1api~1bluechip-ratings/get).
-
-- **Operation ID:** `bluechipRatings`
-- **Path:** `/api/bluechip-ratings`
-- **Parameters:** None.
-- **Success response schema:** [`BluechipRatingsResponse`](https://pharos.watch/openapi.json#/components/schemas/BluechipRatingsResponse)
-- **Policy:** authentication `X-API-Key` required; shared endpoint caching allowed (`cacheBypass: false`).
-
 ### `GET /api/dex-liquidity`
 
 DEX liquidity scores, top pools, chain/protocol breakdowns, and quality metadata. [Full endpoint contract](https://pharos.watch/openapi.json#/paths/~1api~1dex-liquidity/get).
@@ -932,11 +920,6 @@ No-key availability canary for the public API host; it is not the operator statu
       "maxAge": 1800,
       "endpointMaxAge": 1800,
       "producerIntervalSec": 1800
-    },
-    "bluechip-ratings": {
-      "maxAge": 86400,
-      "endpointMaxAge": 43200,
-      "producerIntervalSec": 86400
     },
     "dex-liquidity": {
       "maxAge": 43200,

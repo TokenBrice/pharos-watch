@@ -76,17 +76,13 @@ Check metric explanations against their producers: yield consistency distinguish
 
 ## Methodology-Context Anchors
 
-`src/lib/methodology-context.ts` projects definitions into `METHODOLOGY_CONTEXT`; shared `MethodologyHint`/`ScoreBadgeWrapper` owns tooltip routing. Retain every public fragment referenced by app/help links or migrate all callers. Blacklist context maps to `#blacklist-tracker-methodology`; Bluechip and PoR map to `#safety-scores-methodology`, not invented standalone sections.
+`src/lib/methodology-context.ts` projects definitions into `METHODOLOGY_CONTEXT`; shared `MethodologyHint`/`ScoreBadgeWrapper` owns tooltip routing. Retain every public fragment referenced by app/help links or migrate all callers. Blacklist context maps to `#blacklist-tracker-methodology`; PoR maps to `#safety-scores-methodology`, not an invented standalone section.
 
 Safety Score identity intentionally has no inline version superscript; table rows use tooltip-only badges with header context. Retired mint terminal history does not expose a standalone Version history link; current mint hints use Safety Score identity/changelog.
 
 ### Blacklist tracker {#blacklist-tracker}
 
 [Blacklist tracker](./blacklist-tracker.md) owns freeze/release/destroy interpretation. UI/archive identity is distinct from reviewed live scanner admission: never infer scanning from UI membership, or absence of freeze controls from scanner omission.
-
-### Bluechip rating {#bluechip}
-
-[Bluechip](./bluechip-ratings.md) owns external ratings. About's roster is an intersection of current external and Pharos A-tier grades, not a hidden safety/liquidity model; respect its explicit publication hold rather than infer membership from one feed.
 
 ### Proof of Reserves
 

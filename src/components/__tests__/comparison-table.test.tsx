@@ -6,9 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { ComparisonTable } from "@/components/compare/comparison-table";
 import type { StablecoinData } from "@shared/types/supply";
 import { makeChainGapGuard, makeStablecoin } from "@shared/test-utils/stablecoin";
-import { makeUnreportedBluechipRating } from "@shared/test-utils/bluechip.test-support";
 import type { ComparisonCoinEntry } from "@/lib/compare-derive";
-import { BLUECHIP_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/bluechip-freshness";
 import { computeRecentPegStats } from "@shared/lib/peg-score";
 import { makeReportCardsV9Card, makeReportCardsV9Pillars, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import { loadClientStablecoinDetail } from "@shared/lib/stablecoins/client-detail";
@@ -38,7 +36,6 @@ function makeCoin(id: string, symbol: string): ComparisonCoinEntry {
     id,
     symbol,
     name: symbol,
-    bluechipPublicationAvailable: false,
     data: makeData(100_000_000_000),
     meta: {
       id,
@@ -238,44 +235,6 @@ describe("ComparisonTable", () => {
     coin.data = { ...coin.data, pegType: "peggedIDR", priceSource: "coingecko", price: 0.0000551640254 };
     const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} />);
     expect(metricRow(html, "Price")).toContain("$0.00005516");
-  });
-
-  it.each([false, true])("distinguishes whole-feed availability (%s) from an unrated coin", (available) => {
-    const coin = makeCoin("usdt", "USDT");
-    coin.bluechipPublicationAvailable = available;
-    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} logos={{}} />);
-    const row = html.match(/<tr\b[^>]*>(?:(?!<\/tr>)[\s\S])*External Bluechip(?:(?!<\/tr>)[\s\S])*<\/tr>/)?.[0];
-    expect(row).toContain(available ? "Not rated" : "No comparable data available");
-    if (!available) {
-      expect(row).toContain("—");
-      expect(row).not.toContain("Not rated");
-    }
-  });
-
-  it.each([
-    { state: "current", age: 0, text: "Observed 2026-09-21" },
-    { state: "retained", age: BLUECHIP_OBSERVATION_MAX_AGE_SEC, text: "Observed 2026-09-19" },
-    { state: "stale", age: 3 * 86_400, text: "Observed 2026-09-18" },
-    { state: "retained", age: 12 * 86_400 + 1, text: "Observed 2026-09-09" },
-    { state: "unknown", age: null, text: "Observation date unavailable" },
-    { state: "current", age: -1, text: "Observation date unavailable" },
-  ] as const)("keeps $state age=$age neutral provenance with the external grade", ({ state, age, text }) => {
-    const now = 1_790_000_000;
-    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
-    const coin = makeCoin("usdt", "USDT");
-    coin.bluechipPublicationAvailable = true;
-    coin.bluechipRating = {
-      ...makeUnreportedBluechipRating(),
-      lastObservedAt: age == null ? null : now - age,
-      observationState: state,
-      observationReason: state === "retained" ? "http-500" : null,
-    };
-    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} logos={{}} />);
-    const externalRow = html.match(/<tr\b[^>]*>(?:(?!<\/tr>)[\s\S])*External Bluechip(?:(?!<\/tr>)[\s\S])*<\/tr>/)?.[0];
-    expect(externalRow).toBeDefined();
-    expect(externalRow).toContain(`<span title="${text}">A · audit not reported<span class="sr-only"> · ${text}</span></span></td>`);
-    expect(externalRow).not.toContain("Not rated");
-    expect(externalRow).not.toMatch(/retained|stale|observation unknown/);
   });
 
   function occupancyRow(html: string): string | undefined {

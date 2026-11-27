@@ -4,7 +4,7 @@ Reference for adding a tracked asset to Pharos.
 
 Current source of truth is the per-coin JSON registry under `shared/data/stablecoins/coins/*.json` plus selective research sidecars under `shared/data/stablecoins/domains/<domain>/*.json`, loaded through the generated runtime aggregate `shared/data/stablecoins/coins.generated.json`, and validated by `shared/lib/stablecoins/schema.ts`. Pre-launch entries are ordinary per-coin files with `status: "pre-launch"`. Eligibility and lifecycle decisions follow [Stablecoin Listing Policy](../listing-policy.md). The older top-level stablecoin barrel, helper-constructor paths, and legacy category-shard edit paths are obsolete; the maintained agent skills (`stablecoin-addition-orchestrator`, `stablecoin-runtime-price-marketcap-gate`, `stablecoin-identity-contracts`, `reserve-research`, `compliance-research`, `mint-authority-research`, `write-ai-summaries`, `pre-launch-update`) remain optional workflow aids. Sidecar ownership and migrations are documented in [Stablecoin Research Sidecars](./stablecoin-research-sidecars.md).
 
-> Completion gate: evaluate every phase below. A new addition changes the per-coin source, `canonical-order.json`, and `listing-decisions.json`; add logos/summaries or record the allowed gaps. Materialize Phase 4a projections, update applicable Phase 4b snapshots, and commit changed Phase 4c artifacts. `coins.generated.json` is required but gitignored. Evaluate yield, live reserves, redemption, mint/burn, Mint Authority, Bluechip, Safety Score scoreability, and history backfill explicitly.
+> Completion gate: evaluate every phase below. A new addition changes the per-coin source, `canonical-order.json`, and `listing-decisions.json`; add logos/summaries or record the allowed gaps. Materialize Phase 4a projections, update applicable Phase 4b snapshots, and commit changed Phase 4c artifacts. `coins.generated.json` is required but gitignored. Evaluate yield, live reserves, redemption, mint/burn, Mint Authority, Safety Score scoreability, and history backfill explicitly.
 
 > **Agent navigation** — Grep the phase you need instead of reading wholesale: Source Of Truth · Guardrails · Phase 0 Decide What You Are Adding · Phase 1 Eligibility · Phase 2 Research Packet · Phase 3 Classification · Phase 3.5 Editorial Coverage Gate · Phase 4 Edit The Registry (4a generated client projections · 4b test snapshots · 4c checked-in artifacts) · Phase 5 Downstream Coverage Branches · Phase 6 Static Assets And Editorial Copy · Phase 7 Validate · Phase 8 Push, Merge, Deploy, Then Backfill · Phase 9 Post-Deploy Verification · Source Reference.
 
@@ -35,7 +35,6 @@ Useful repo references before editing:
 - `docs/upcoming-page.md`
 - `docs/stablecoin-detail-page.md`
 - `docs/shadow-stablecoins.md` for off-catalog PSI historical assets
-- `docs/bluechip-ratings.md`
 - `docs/about-page.md` when a new data source is introduced
 - `docs/deployment-process.md` when verifying the post-merge backfill path
 
@@ -213,7 +212,6 @@ Evaluate optional metadata against the asset's actual mechanism and supported pi
 - Is Ethereum a canonical issuance chain worth tracking for mint/burn?
 - For each supported `contracts[]` or high-signal `tradedContracts[]` chain, does the chain resolve to a L2BEAT project? If yes, record L2BEAT layer, category, host chain, stage, under-review flag, and weak risk fields as chain-route review context.
 - Which deployment(s) create native liabilities, and which are bridge or wrapped representations? For native issuance, identify users, issuer/operator, minter roles, facilitators, proxy/cap admins, backend signers, governance, timelocks, Safes/multisigs, wrapper parents, or unresolved authority. Review bridge mint/burn, adapters, lockboxes, messaging, limits, upgrades, and administrators separately.
-- Does Bluechip publish a rating for it?
 - Does it belong to an existing infrastructure cohort such as `liquity-v1`, `liquity-v2`, or `m0`?
 - If the asset is active, what admits it into `/api/stablecoins`: `llamaId`, commodity `geckoId`, or `detailProvider: "coingecko"` with `geckoId` or `hasRuntimeOnchainSupplyPath()` (single supported deployment, curated aggregate, or Zephyr Scanner)?
 
@@ -434,7 +432,7 @@ assertion. Finish source integration before the coordinator refreshes generation
 
 Do not assume every branch applies. Evaluate each one explicitly.
 
-Before validation, record every branch as added, not applicable, or intentional gap with a reason: logo/summary, live reserves, yield, redemption backstop, mint/burn, Mint Authority, blacklistability, bridge routes, Bluechip, price/discovery, Safety Score V9 scoreability, and history backfill.
+Before validation, record every branch as added, not applicable, or intentional gap with a reason: logo/summary, live reserves, yield, redemption backstop, mint/burn, Mint Authority, blacklistability, bridge routes, price/discovery, Safety Score V9 scoreability, and history backfill.
 
 For a recent-launch addition or promotion, record a sourced `launch` candidate in `agents/annotation-candidates.md` for human review. The producer's lookback is owned by `scripts/maintenance/build-annotation-candidates.ts`; historical additions need a candidate only when a meaningful event is established. Candidate intake does not publish an annotation.
 
@@ -493,12 +491,6 @@ npm run audit:mint-bridge-ownership
 For a saved Mint Authority review queue, use `npm run audit:mint-authority-review -- --json --report agents/mint-authority-review/audit.json`. To probe cited source URLs, add `-- --live --live-limit 50` to the bare audit command; live probes are advisory and Markdown-only.
 
 These audits check authored review breadth and ownership; they do not discover authority facts or replace pinned source, proxy, role, and Safe evidence. Historical unknown scanner candidates are archival non-evidence.
-
-### 5g. Bluechip ratings
-
-If Bluechip covers the asset, update `shared/lib/bluechip-slugs.ts` (the worker imports `BLUECHIP_SLUG_MAP` from there).
-
-Important: the map is `bluechip-slug -> pharos-id`, not the other way around.
 
 ### 5h. Price and discovery edge cases
 
@@ -712,7 +704,7 @@ After all authorized specialist edits land, the coordinator owns the single gene
 - a listing or pre-launch -> active promotion has a committed Safety Score admission receipt replayed after the last coin edit (Phase 5j), and `npm run check:new-asset-evidence-packet` passes
 - the source inputs and applicable Phase 4b test snapshots are ready for Phase 4a/4c generation
 - downstream coverage decision notes cover every Phase 5 branch
-- every per-coin or per-chain map this addition touches (native-peg currency, canonical mint/burn chain, Bluechip slug, redemption-backstop config) is derived from the registry or covered by a registry-iterating test that fails on the next unmapped addition — rule R5, ADR-32 in [../architecture.md](../architecture.md#adr-32); a "keep in sync" comment is not a mechanism
+- every per-coin or per-chain map this addition touches (native-peg currency, canonical mint/burn chain, redemption-backstop config) is derived from the registry or covered by a registry-iterating test that fails on the next unmapped addition — rule R5, ADR-32 in [../architecture.md](../architecture.md#adr-32); a "keep in sync" comment is not a mechanism
 
 For a normal stablecoin addition, generate the working-tree projections once and run focused checks:
 

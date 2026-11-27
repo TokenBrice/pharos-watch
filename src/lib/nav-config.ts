@@ -127,7 +127,7 @@ const SAFETY_SCORES_NAV_ITEM: NavItem = {
   label: "Safety Scores",
   icon: ShieldCheck,
   description: "Safety grades and upstream risk",
-  keywords: "safety score grade rating risk report card bluechip",
+  keywords: "safety score grade rating risk report card",
 };
 
 const YIELD_NAV_ITEM: NavItem = {

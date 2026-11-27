@@ -26,7 +26,7 @@
  *      always "what to monitor if this pattern recurs."
  *
  *   5. **No proprietary names without the band.** When referring to Pharos
- *      grades or signals, use the proper-noun form (PegScore, DEWS, Bluechip).
+ *      grades or signals, use the proper-noun form (PegScore, DEWS).
  */
 
 export interface DepegEditorial {

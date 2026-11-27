@@ -159,7 +159,6 @@ function createRegisteredStaticQueryOptions<T>(
   return createStaticQueryOptions(descriptor.queryKey, createApiQueryFn<T>(descriptor.path, descriptor.schema), opts);
 }
 
-export const useBluechipRatings = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.bluechipRatings, undefined);
 export const useDailyDigest = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.dailyDigest);
 export const useHomepageSnapshot = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.homepageSnapshot);
 export const useHomepageHistory = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.homepageHistory);

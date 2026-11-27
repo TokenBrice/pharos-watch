@@ -281,7 +281,6 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
   daily0805Utc: {
     worker: "public",
     jobChains: [
-      ["sync-bluechip"],
       ["daily-digest"],
     ],
     taskPolicies: { "daily-digest": DIGEST_TASK_POLICY },

@@ -371,7 +371,7 @@ Local request-budget or deadline denial is not a provider failure. The fetch hel
 
 ### Response-Body Limits
 
-`fetchJsonWithRetry()` / `fetchTextWithRetry()` / `fetchBinaryWithRetry()` default to a `16 MiB` body cap (`DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES`). Native-peg/address providers, Bluechip, Telegram member/registration reads, and HTTP health self-probes use the same strict default, preserving their failure boundaries and timeouts. Raw 429 passthrough is capped before rebuilding a Response. The DEX source stage names tighter measured caps; strict data reads reject rather than truncate.
+`fetchJsonWithRetry()` / `fetchTextWithRetry()` / `fetchBinaryWithRetry()` default to a `16 MiB` body cap (`DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES`). Native-peg/address providers, Telegram member/registration reads, and HTTP health self-probes use the same strict default, preserving their failure boundaries and timeouts. Raw 429 passthrough is capped before rebuilding a Response. The DEX source stage names tighter measured caps; strict data reads reject rather than truncate.
 
 Reserve issuer index pages use a `1 MiB` cap (`MAX_INDEX_BYTES` in `independent-assurance.ts` / `attestation-pdf-index.ts`; reviewed indexes run under 300 KB). Their assurance readers also re-check the reviewed index/PDF host in `validateResponse` before the body is consumed, so a redirect to an unreviewed host fails before intake rather than after reading up to the PDF cap. Adapter parse errors omit upstream body text because the message is published as `sync.lastError`.
 

@@ -4,7 +4,7 @@ Public `/about/` is Pharos's product, trust and source-disclosure hub. `src/app/
 
 ## Route Shell Contract
 
-Keep canonical `/about/`, public indexability, AboutPage schema and FAQPage schema matching visible FAQ. Source summaries and full evidence caveats remain in static HTML even behind details. Preserve trust anchors `#principles`, `#editorial-ai-policy`, `#corrections-policy`, `#media` and `#bluechip`; attribution/redirect/inbound links rely on them. Recorded walkthroughs stay with media; legacy Bluechip URLs redirect to its inline section.
+Keep canonical `/about/`, public indexability, AboutPage schema and FAQPage schema matching visible FAQ. Source summaries and full evidence caveats remain in static HTML even behind details. Preserve trust anchors `#principles`, `#editorial-ai-policy`, `#corrections-policy` and `#media`; attribution/redirect/inbound links rely on them. Recorded walkthroughs stay with media; legacy Bluechip URLs redirect to `/about/`.
 
 ## Section Contract
 
@@ -12,7 +12,7 @@ Explain what is directly tracked, what is computed and where evidence/methodolog
 
 The team section discloses that the owner also works on Polaris, and that Polaris-related coverage, like everything else on Pharos, remains purely data-driven. No dossier link, affiliation table, independent-review claim or scoring intervention follows from that disclosure.
 
-Failure scenarios describe a maintainer-approved hypothetical path per coin in How it breaks and link from their tracked-features card to `/learn/scenarios/`: no computation, score change or universal availability. Dependency Exposure uses publication-bound supply and is not a loss estimate. The About computed roster does not promise a failure-scenario scoreboard/stress panel. Bluechip copy obeys its explicit publication hold and external/Pharos grade intersection, not an invented hidden floor model.
+Failure scenarios describe a maintainer-approved hypothetical path per coin in How it breaks and link from their tracked-features card to `/learn/scenarios/`: no computation, score change or universal availability. Dependency Exposure uses publication-bound supply and is not a loss estimate. The About computed roster does not promise a failure-scenario scoreboard/stress panel.
 
 ## Navigation Contract
 

@@ -1,19 +1,14 @@
 import { CACHE_FRESHNESS_LANES, type CacheFreshnessLaneConfig } from "@shared/lib/api-freshness";
 import { CRON_JOB_DEFINITIONS, getCronSlotStartedAtForSchedule } from "@shared/lib/cron-jobs";
-import { BLUECHIP_SLUG_MAP } from "@shared/lib/bluechip-slugs";
-import { assessBluechipRating } from "@shared/lib/bluechip-freshness";
 import { formatIsoDate } from "@shared/lib/format";
-import type { BluechipRatingsMap } from "@shared/types/bluechip";
 import type { CacheStatus } from "@shared/types/status";
 import { HOUR_SECONDS } from "@shared/lib/time-constants";
 import { getReferenceSessionState } from "@shared/lib/reference-market-hours";
-import { getCache, getCaches } from "../lib/db-cache";
+import { getCaches } from "../lib/db-cache";
 import { cronEventCacheKey } from "../lib/cron-logger";
 import { loadFxAdmissionCoverage } from "../lib/fx-admission-coverage";
 import { OXR_LAST_SUCCESS_KEY, REALTIME_FX_CURRENCY_TO_PEG } from "../lib/fx-config";
 import { parseJsonObject } from "../lib/json-parse";
-import { readBluechipRatingsCache } from "../lib/bluechip-cache";
-import { includeActiveTrackedIds } from "./shared/exclude-frozen";
 import type { OperatorWatchCondition } from "./operator-watch-types";
 
 /**
@@ -22,8 +17,6 @@ import type { OperatorWatchCondition } from "./operator-watch-types";
  * FX alerts use committed producer events and the admission coverage of the
  * served stablecoins generation. An unreadable coverage row remains unknown.
  */
-
-const BLUECHIP_COVERAGE_LABEL_LIMIT = 5;
 
 type CachedStatus = Pick<CacheStatus, "publishedAt"> & Partial<Pick<
   CacheStatus,
@@ -135,65 +128,6 @@ function dailyLaneConditions(input: PricingOperatorWatchInput): OperatorWatchCon
   return conditions;
 }
 
-function countBluechipCoverageGaps(
-  ratings: BluechipRatingsMap,
-  expectedIds: readonly string[],
-  nowSec: number,
-): string[] {
-  const gaps: string[] = [];
-  for (const stablecoinId of expectedIds) {
-    const rating = ratings[stablecoinId];
-    if (!rating) {
-      gaps.push(`${stablecoinId}:missing`);
-      continue;
-    }
-    const assessed = assessBluechipRating(rating, nowSec);
-    if (assessed.observationState === "stale" || assessed.observationState === "unknown") {
-      gaps.push(`${stablecoinId}:${assessed.observationReason ?? assessed.observationState}`);
-    }
-  }
-  return gaps;
-}
-
-async function bluechipCoverageCondition(
-  db: D1Database,
-  nowSec: number,
-  signal?: AbortSignal,
-): Promise<OperatorWatchCondition> {
-  const cacheKey = CACHE_FRESHNESS_LANES.bluechipRatings.cacheKey;
-  const expectedIds = includeActiveTrackedIds(
-    Object.entries(BLUECHIP_SLUG_MAP),
-    ([, pharosId]) => pharosId,
-  ).map(([, pharosId]) => pharosId);
-  const id = `${cacheKey}-coverage`;
-  let cache: { value: string; updatedAt: number } | null;
-  try {
-    cache = await getCache(db, cacheKey, signal);
-  } catch {
-    return { section: "daily-lane", id, active: false, unknown: true };
-  }
-  const read = cache?.value
-    ? readBluechipRatingsCache(cache.value, "operator-watch-pricing:bluechip")
-    : { ratings: {}, droppedIds: [] };
-  // A missing or unusable map is not evidence that a constituent went stale:
-  // `producer-stale` owns an absent cache, and a corrupt payload keeps this
-  // condition's prior state instead of paging as a coverage failure. A dropped
-  // expected entry is unreadable evidence, not a missing constituent.
-  if (Object.keys(read.ratings).length === 0
-    || read.droppedIds.some((stablecoinId) => expectedIds.includes(stablecoinId))) {
-    return { section: "daily-lane", id, active: false, unknown: true };
-  }
-  const gaps = countBluechipCoverageGaps(read.ratings, expectedIds, nowSec);
-  return {
-    section: "daily-lane",
-    id,
-    label: `${cacheKey} (${gaps.length}/${expectedIds.length} unobserved: ${
-      gaps.slice(0, BLUECHIP_COVERAGE_LABEL_LIMIT).join(", ")}${gaps.length > BLUECHIP_COVERAGE_LABEL_LIMIT ? ", +more" : ""})`,
-    active: gaps.length > 0,
-    unknown: false,
-  };
-}
-
 /** Freshness rule ids this module can raise, for the sentinel's `firedRuleIds`. */
 export function pricingOperatorRuleIds(conditions: readonly OperatorWatchCondition[]): string[] {
   const fired = new Set<string>();
@@ -203,7 +137,7 @@ export function pricingOperatorRuleIds(conditions: readonly OperatorWatchConditi
       const [rule] = condition.id.split(":");
       fired.add(rule === "source-stale" || rule === "cached-fallback" ? `fx-${rule}` : rule);
     } else if (condition.section === "daily-lane") {
-      fired.add(condition.id.endsWith("-coverage") ? "bluechip-coverage" : "daily-lane-completion");
+      fired.add("daily-lane-completion");
     }
   }
   return [...fired];
@@ -212,12 +146,10 @@ export function pricingOperatorRuleIds(conditions: readonly OperatorWatchConditi
 export async function buildPricingOperatorConditions(
   db: D1Database,
   input: PricingOperatorWatchInput,
-  signal?: AbortSignal,
 ): Promise<OperatorWatchCondition[]> {
   return [
     ...fxConditions(input.caches[CACHE_FRESHNESS_LANES.fxRates.cacheKey]),
     ...await fxEvidenceConditions(db, input.nowSec),
     ...dailyLaneConditions(input),
-    await bluechipCoverageCondition(db, input.nowSec, signal),
   ];
 }

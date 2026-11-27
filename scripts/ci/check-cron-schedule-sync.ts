@@ -398,12 +398,6 @@ export const REVIEWED_TIGHTER_ADVISORY_BUDGETS: Readonly<Record<string, Reviewed
     reason: "Stricter public endpoint advisory budget (600 s vs 900 s sync-stablecoins).",
     consumerAlternative: "STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC",
   },
-  bluechipRatings: {
-    apiFreshnessKey: "bluechip",
-    producerJob: "sync-bluechip",
-    reason: "Stricter public advisory budget (43,200 s vs 86,400 s sync-bluechip); availability retains 86,400 s.",
-    consumerAlternative: "CACHE_FRESHNESS_LANES.bluechipRatings.availabilityMaxAgeSec",
-  },
   mintBurnEvents: {
     apiFreshnessKey: "mintBurnEvents",
     producerJob: "sync-mint-burn",
@@ -834,7 +828,6 @@ export function evaluateCadenceFreshnessAuthority(options: {
     ["stabilityIndex", "stability-index", "stabilityIndex"],
     ["dailyDigest", "daily-digest", "dailyDigest"],
     ["digestArchive", "daily-digest", "digestArchive"],
-    ["bluechip", "sync-bluechip", "bluechipRatings"],
     ["usdsStatus", "sync-usds-status", "usdsStatus"],
     ["nonUsdShare", "snapshot-supply", "nonUsdShare"],
   ];

@@ -2,8 +2,8 @@
  * Stable methodology deep-links for inline `(method)` badges next to scored
  * values. Anchors are verified against the IDs in
  * `src/lib/methodology-content.ts`. Metrics without a
- * dedicated section anchor to the closest parent (e.g. report-card / bluechip /
- * redemption-backstop all live within Safety Scores).
+ * dedicated section anchor to the closest parent (e.g. report-card /
+ * redemption-backstop both live within Safety Scores).
  */
 export type MetricKey =
   | "safety-score"
@@ -12,7 +12,6 @@ export type MetricKey =
   | "psi"
   | "liquidity-score"
   | "chain-health"
-  | "bluechip"
   | "redemption-backstop"
   | "report-card";
 
@@ -31,7 +30,6 @@ const ANCHORS: Record<MetricKey, keyof typeof METHODOLOGY_METRIC_SECTION_IDS> = 
   psi: "stability",
   "liquidity-score": "liquidity",
   "chain-health": "chainHealth",
-  bluechip: "safety",
   "redemption-backstop": "safety",
   "report-card": "safety",
 };

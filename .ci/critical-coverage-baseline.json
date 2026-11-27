@@ -7,7 +7,6 @@
     "functions/lib/proxy-utils.ts": 96.2,
     "functions/lib/upstream-proxy.ts": 100,
     "shared/lib/api-freshness.ts": 100,
-    "shared/lib/bluechip-freshness.ts": 100,
     "shared/lib/exit-route-scoring.ts": 97.4,
     "shared/lib/liquidity-score-weights.ts": 100,
     "shared/lib/live-reserve-freshness.ts": 100,

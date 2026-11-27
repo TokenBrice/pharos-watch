@@ -618,7 +618,6 @@
           { "path": "docs/api-reference.md", "anchor": "get-apistablecoins" },
           { "path": "docs/api-reference.md", "anchor": "get-apistablecoin-charts" },
           { "path": "docs/api-reference.md", "anchor": "get-apiusds-status" },
-          { "path": "docs/api-reference.md", "anchor": "get-apibluechip-ratings" },
           { "path": "docs/api-reference.md", "anchor": "get-apiyield-rankings" }
         ] },
         { "sources": ["worker/src/api/stablecoin-detail.ts", "worker/src/api/stablecoin-detail/**", "worker/src/api/__tests__/stablecoin-detail*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apistablecoinid" }] },
@@ -1034,7 +1033,6 @@
         "src/app/methodology/**",
         "docs/process/ddrr-calibration.md",
         "docs/process/mechanism-overlay-evidence-standard.md",
-        "docs/bluechip-ratings.md",
         "docs/chain-health.md",
         "docs/depeg-detection.md",
         "docs/depeg-resolver.md",
@@ -1107,7 +1105,6 @@
         {"path": "docs/process/mechanism-overlay-evidence-standard.md", "anchor": "component-applicability-states"},
         {"path": "docs/process/dex-liquidity-appendix.md", "anchor": "methodology-versioning"},
         "docs/chain-health.md",
-        "docs/bluechip-ratings.md",
         { "path": "docs/runbooks/depeg-artifact-removal.md", "runbook": { "label": "Reviewed depeg artifact removal", "kind": "procedure" } },
         { "path": "docs/runbooks/depeg-lifecycle-review.md", "runbook": { "label": "Depeg lifecycle review", "kind": "procedure" } },
         { "path": "docs/runbooks/mint-burn-integrity.md", "runbook": { "label": "Mint/burn integrity diagnosis", "kind": "symptom" } }

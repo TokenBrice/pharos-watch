@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
 import {
-  useBluechipRatings,
   useDexLiquidity,
   usePegSummary,
   useRedemptionBackstops,
@@ -108,7 +107,6 @@ export function useCompareDataModel({
   const listQuery = useStablecoins();
   const metricsEnabled = selectedIds.length > 0;
   const pegQuery = usePegSummary({ enabled: metricsEnabled });
-  const bluechipQuery = useBluechipRatings({ enabled: metricsEnabled });
   const dexQuery = useDexLiquidity({ enabled: metricsEnabled });
   const reportCardsQuery = useReportCardsV9({ enabled: metricsEnabled });
   const redemptionQuery = useRedemptionBackstops({ enabled: metricsEnabled });
@@ -120,7 +118,6 @@ export function useCompareDataModel({
 
   const list = useQuerySlice(listQuery);
   const peg = useQuerySlice(pegQuery);
-  const bluechip = useQuerySlice(bluechipQuery);
   const dex = useQuerySlice(dexQuery);
   const reportCards = useQuerySlice(reportCardsQuery);
   const redemption = useQuerySlice(redemptionQuery);
@@ -134,7 +131,7 @@ export function useCompareDataModel({
   const reportCardsData = reportCards.data;
 
   const globalError = list.error ?? (metricsEnabled
-    ? peg.error ?? bluechip.error ?? dex.error ?? reportCards.error
+    ? peg.error ?? dex.error ?? reportCards.error
       ?? redemption.error ?? yieldRankings.error ?? stress.error ?? flow.error
     : null);
   const hasPrimaryData = !!listData?.peggedAssets?.length;
@@ -160,13 +157,12 @@ export function useCompareDataModel({
       toFreshnessQuery("pegSummary", peg, !!pegSummary?.coins?.length),
       toFreshnessQuery("dexLiquidity", dex, !!dexData),
       toFreshnessQuery("reportCards", reportCards, !!reportCardsData?.cards?.length),
-      toFreshnessQuery("bluechip", bluechip, !!bluechip.data),
       toFreshnessQuery("redemptionBackstops", redemption, !!redemption.data?.coins),
       toFreshnessQuery("yieldRankings", yieldRankings, !!yieldRankings.data?.rankings?.length),
       toFreshnessQuery("stressSignals", stress, !!stress.data?.signals),
       toFreshnessQuery("mintBurnFlows", flow, flowData !== undefined),
     ] : []),
-  ], [bluechip, dex, dexData, flow, flowData, hasPrimaryData, list, metricsEnabled, peg, pegSummary, redemption, reportCards, reportCardsData, stress, yieldRankings]);
+  ], [dex, dexData, flow, flowData, hasPrimaryData, list, metricsEnabled, peg, pegSummary, redemption, reportCards, reportCardsData, stress, yieldRankings]);
 
   const cardMap = useMemo(() => {
     if (!reportCardsData?.cards) return new Map<string, V9ConsumerCard>();
@@ -236,8 +232,6 @@ export function useCompareDataModel({
       dexData,
       cardMap,
       flowCoinMap,
-      // Preserve absent vs empty publications, including retained data after a failed refresh.
-      bluechipMap: bluechip.data,
       redemptionMap: redemption.data?.coins,
       yieldMap,
       stressMap: stress.data?.signals,
@@ -246,7 +240,6 @@ export function useCompareDataModel({
     });
   }, [
     assetMap,
-    bluechip.data,
     cardMap,
     coinStates.byId,
     coinStates.liveReady,
@@ -308,7 +301,6 @@ export function useCompareDataModel({
       listQuery.refetch,
       ...(metricsEnabled ? [
         pegQuery.refetch,
-        bluechipQuery.refetch,
         dexQuery.refetch,
         reportCardsQuery.refetch,
         redemptionQuery.refetch,
@@ -324,7 +316,6 @@ export function useCompareDataModel({
   }, [
     detailQueries,
     flowCoinQueries,
-    bluechipQuery.refetch,
     flowQuery.refetch,
     dexQuery.refetch,
     listQuery.refetch,

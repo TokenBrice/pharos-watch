@@ -132,7 +132,7 @@ function makeMinimalLiveStatusRows(now: number, stateRow: Record<string, unknown
     { match: "AS last_any", rows: [], first: { observed_at: now, last_any: now - 30, reserve: now - 30, telegram: now - 30, digest: now - 30, heavy: now - 30 } },
     { match: "cache WHERE key IN", rows: healthy
       ? [
-          ...["stablecoins", "stablecoin-charts", "usds-status", "bluechip-ratings"].map((key) => makeCacheRow(key)),
+          ...["stablecoins", "stablecoin-charts", "usds-status"].map((key) => makeCacheRow(key)),
           ...fxRatesCacheRows(now - 300),
         ]
       : ["stablecoins", "stablecoin-charts"].map((key) => makeCacheRow(key)) },

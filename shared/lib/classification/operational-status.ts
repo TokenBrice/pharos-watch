@@ -53,7 +53,7 @@ export const PUBLIC_COMPONENT_SCOPE = {
   "website-api": "Pages, the public API and the primary database.",
   "stablecoin-data": "Market caps, rankings, listings, live prices and FX conversion.",
   charts: "Historical supply and price charts.",
-  "risk-signals": "Depeg early warnings, stress signals and third-party safety ratings.",
+  "risk-signals": "Depeg early warnings and stress signals.",
   "safety-scores": "Pharos Safety Scores and their publication.",
   liquidity: "DEX liquidity scores and pool data.",
   yield: "Yield rankings, yield history and their safety ratings.",

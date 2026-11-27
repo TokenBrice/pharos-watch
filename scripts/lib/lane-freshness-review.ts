@@ -36,7 +36,6 @@ export const LANE_FRESHNESS_REVIEW_NOTES: Readonly<Record<string, string>> = {
   "sync-live-reserves": "Continuation is normal; **full cohort ≤30m p95**, alert beyond. Per-asset retained fallback remains aged and explicit.",
   "sync-redemption-backstops": "Named unavailable/impaired routes allowed; unresolved capacity/read failures retain reasons and coverage.",
   "sync-kinesis-supply": "Partial metal feed remains explicit; unavailable KAU/KAG observation never becomes zero supply.",
-  "sync-bluechip": "Partial-cache merge allowed with per-entry provenance and quality findings, not a whole-cohort refresh claim.",
   "daily-digest": "Publication phases may retry durably; idle conditional poll is no obligation, started/required failure stays visible.",
   "weekly-recap": "Existing-period proven readback allowed; no duplicate recap, delivery retains its own evidence.",
   "yield-coverage-audit": "Calendar-month schedule; incomplete audit names unmeasured cohort, never counts unknown as covered.",

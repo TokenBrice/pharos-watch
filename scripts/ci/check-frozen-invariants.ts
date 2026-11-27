@@ -18,7 +18,6 @@ import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 // Independent registries that the freeze runbook requires us to clean up.
 import { MINT_BURN_CONFIG_SPECS } from "../../worker/src/lib/mint-burn-contracts-data";
 import { CONTRACT_CONFIGS } from "../../worker/src/lib/blacklist-contracts";
-import { BLUECHIP_SLUG_MAP } from "@shared/lib/bluechip-slugs";
 import { assertStaticComparePairs } from "../../src/lib/compare-pages";
 
 const failures: string[] = [];
@@ -33,7 +32,7 @@ for (const id of FROZEN_IDS) {
   }
 }
 
-// Independent mint/burn, blacklist, Bluechip and compare registries exclude frozen IDs.
+// Independent mint/burn, blacklist and compare registries exclude frozen IDs.
 for (const config of MINT_BURN_CONFIG_SPECS) {
   if (FROZEN_IDS.has(config.stablecoinId)) {
     failures.push(
@@ -51,11 +50,6 @@ for (const config of CONTRACT_CONFIGS) {
     failures.push(
       `${id}: still in CONTRACT_CONFIGS (worker/src/lib/blacklist-contracts.ts) — remove per freeze runbook`,
     );
-  }
-}
-for (const id of Object.keys(BLUECHIP_SLUG_MAP)) {
-  if (FROZEN_IDS.has(id)) {
-    failures.push(`${id}: still in BLUECHIP_SLUG_MAP (shared/lib/bluechip-slugs.ts) — remove per freeze runbook`);
   }
 }
 assertStaticComparePairs();

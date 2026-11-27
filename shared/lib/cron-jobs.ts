@@ -419,7 +419,7 @@ export const CRON_GROUPS: readonly CronGroupDefinition[] = [
     title: "Daily slot",
     badge: "daily",
     description:
-      "03:00 retention pruning plus 08:00 snapshots/monitors, 08:05 digest/Bluechip, and 08:10 weekly recap lanes.",
+      "03:00 retention pruning plus 08:00 snapshots/monitors, 08:05 digest, and 08:10 weekly recap lanes.",
   },
   {
     key: "other",
@@ -791,15 +791,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     // Runs beside the reserve-adapter chain, not behind it, so its peak adds
     // to the trigger total instead of folding into max().
     connectionGroup: "reserve-kinesis-chain",
-  },
-  {
-    job: "sync-bluechip",
-    operatorCompletionGraceSec: 2 * 3600,
-    label: "Bluechip sync",
-    group: "daily",
-    scheduleKey: "daily0805Utc",
-    triggerMode: "shared",
-    maxConnections: 3, // Bluechip fetches in parallel batches of 3
   },
   {
     job: "daily-digest",

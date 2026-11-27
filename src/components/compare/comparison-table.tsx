@@ -50,7 +50,6 @@ import { humanizeSafetyScoreV9Value } from "@/lib/stablecoin-safety-score-v9-pre
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { ComparisonCoinEntry } from "@/lib/compare-derive";
 import { stablecoinLabel } from "@/lib/stablecoin-label";
-import { bluechipObservationText } from "@/lib/bluechip";
 import { FlowSignedNetValue } from "@/components/mint-burn/flow-valuation-value";
 import {
   resolveCoinNetFlow,
@@ -569,24 +568,6 @@ function buildSections(): ComparisonSection[] {
         { key: "primary-exit", label: "Primary exit access", render: (coin) => humanize(coin.safetyCard?.accessPosture.primaryExit), compareValue: (coin) => humanizeText(coin.safetyCard?.accessPosture.primaryExit) ?? NULL_KEY },
         { key: "freeze-exposure", label: "Freeze exposure", render: (coin) => humanize(coin.safetyCard?.accessPosture.freezeExposure), compareValue: (coin) => humanizeText(coin.safetyCard?.accessPosture.freezeExposure) ?? NULL_KEY },
         { key: "dependencies", label: "Scored dependencies", render: dependencySummary, compareValue: (coin) => dependencySummaryText(coin) ?? NULL_KEY },
-        {
-          key: "bluechip",
-          label: "External Bluechip",
-          render: (coin) => {
-            if (!coin.bluechipRating) return coin.bluechipPublicationAvailable ? "Not rated" : NULL_VALUE;
-            const audit = coin.bluechipRating.smartContractAudit == null
-              ? "audit not reported"
-              : coin.bluechipRating.smartContractAudit
-                ? "audit recorded"
-                : "no audit flag";
-            const observationText = bluechipObservationText(coin.bluechipRating.lastObservedAt, Math.floor(Date.now() / 1000));
-            return <span title={observationText}>{`${coin.bluechipRating.grade} · ${audit}`}<span className="sr-only">{` · ${observationText}`}</span></span>;
-          },
-          compareValue: (coin) => {
-            if (!coin.bluechipRating) return coin.bluechipPublicationAvailable ? "not-rated" : NULL_KEY;
-            return `${coin.bluechipRating.grade}:${String(coin.bluechipRating.smartContractAudit)}`;
-          },
-        },
       ],
     },
     {

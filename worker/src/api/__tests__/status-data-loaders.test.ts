@@ -484,7 +484,6 @@ describe("handleStatus", () => {
           makeCacheRow("stablecoin-charts"),
           makeCacheRow("usds-status"),
           ...fxRatesCacheRows(now - 300),
-          makeCacheRow("bluechip-ratings"),
         ],
       },
       { match: "cron_runs", rows: [makeCronRow("sync-stablecoins")] },

@@ -144,7 +144,6 @@ function pegSummary(): PegSummaryCoin {
 function snapshotInputs() {
   return {
     stablecoinsCached: stablecoinsCache(),
-    bluechipCached: null,
     dexLiquiditySnapshot: {
       map: {
         [ASSET_ID]: {

@@ -1057,7 +1057,6 @@ describe("handleStatus", () => {
           makeCacheRow("stablecoins"),
           makeCacheRow("stablecoin-charts"),
           makeCacheRow("usds-status"),
-          makeCacheRow("bluechip-ratings"),
           {
             key: "fx-rates",
             updated_at: now - 300,

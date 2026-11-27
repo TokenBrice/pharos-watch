@@ -269,6 +269,5 @@ Feature guides own producer-specific algorithms and schemas; this document owns 
 | Live reserves        | `worker/src/cron/sync-live-reserves.ts`        | [Live Reserve Sync](./live-reserves.md)           |
 | Redemption backstops | `worker/src/cron/sync-redemption-backstops.ts` | [Redemption Backstops](./redemption-backstops.md) |
 | Kinesis supply       | `worker/src/cron/sync-kinesis-supply.ts`       | [On-chain monitoring](./status-dashboard.md#data-quality-status) (monitoring only) |
-| Bluechip ratings     | `worker/src/cron/sync-bluechip.ts`             | [Bluechip Ratings](./bluechip-ratings.md)         |
 | Yield benchmarks     | `worker/src/cron/fetch-tbill-rate.ts`          | [Benchmark publication and recovery validation](./runbooks/yield-benchmark-fallback-stale.md#validation) |
 

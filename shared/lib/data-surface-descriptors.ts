@@ -12,7 +12,7 @@ import type { PublicStatusComponentId, DependencyCriticality } from "../types/st
  * `api-freshness.ts`, which re-exports them for compatibility) so the
  * descriptors below can spread the lane fields without an import cycle:
  * `api-freshness.ts` reads the descriptors, and the descriptors read the lanes.
- * Not every lane has a descriptor — charts, FX, USDS status and Bluechip are
+ * Not every lane has a descriptor — charts, FX and USDS status are
  * cached surfaces with no frontend data-surface entry.
  */
 export interface CacheFreshnessLaneConfig {
@@ -84,20 +84,6 @@ export const CACHE_FRESHNESS_LANES = {
     availabilityMaxAgeSec: CRON_INTERVALS["sync-fx-rates"],
     endpointBudgetReason: "FX writes are internally cooldown-gated to 30 minutes.",
     availabilityBudgetReason: "Matches the 30-minute usable FX publication cadence.",
-  },
-  bluechipRatings: {
-    bootstrapProbePath: API_PATHS.bluechipRatings(),
-    cacheKey: "bluechip-ratings",
-    upstreamProvider: "Bluechip",
-    publicComponent: "risk-signals",
-    publicImpactSummary: "Third-party safety ratings",
-    publicStatusOrder: 5,
-    producerJob: "sync-bluechip",
-    producerIntervalSec: CRON_INTERVALS["sync-bluechip"],
-    endpointMaxAgeSec: 12 * 3600,
-    availabilityMaxAgeSec: DAY_SECONDS,
-    endpointBudgetReason: "Public Bluechip reads use a stricter advisory budget than the daily writer.",
-    availabilityBudgetReason: "Availability follows the daily Bluechip producer cadence.",
   },
   dexLiquidity: {
     cacheKey: "dex-liquidity",
