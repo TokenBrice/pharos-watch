@@ -1,3 +1,8 @@
+import {
+  DDR_INCIDENT_REOPEN_MERGE_WINDOW_SEC,
+  DDR_SEALED_TAIL_REGIME_ESCALATION_MIN_PEAK_BPS_V1,
+  DDR_SEALED_TAIL_REGIME_ESCALATION_MULTIPLIER_V1,
+} from "@shared/lib/depeg-config";
 import { loadSealedIncidentFingerprint } from "./depeg-resolver-publication-store";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { DDR_INELIGIBLE_AUDIT_VERDICTS } from "@shared/types/depeg-audit";
@@ -39,12 +44,14 @@ export type DdrPolicyUniverseReason =
   | "not_public_tracked";
 // Unix ts for 2100-01-01T00:00:00Z; far-future sentinel = effectively non-expiring.
 const REPAIR_AUTHORIZATION_LONG_EXPIRY_AT = 4_102_444_800;
-export const DDR_INCIDENT_REOPEN_MERGE_WINDOW_SEC = 6 * 3600;
+export {
+  DDR_INCIDENT_REOPEN_MERGE_WINDOW_SEC,
+  DDR_SEALED_TAIL_REGIME_ESCALATION_MIN_PEAK_BPS_V1,
+  DDR_SEALED_TAIL_REGIME_ESCALATION_MULTIPLIER_V1,
+};
 export const DDR_PRE_LOCK_CLOSE_SETTLE_MARGIN_SEC_V1 = 20 * 60;
 export const DDR_FLAP_TOLERANT_MAX_LINK_COUNT_V1 = 30;
 export const DDR_FLAP_TOLERANT_MAX_INCIDENT_SPAN_SEC_V1 = 21 * 24 * 3600;
-export const DDR_SEALED_TAIL_REGIME_ESCALATION_MIN_PEAK_BPS_V1 = 1_000;
-export const DDR_SEALED_TAIL_REGIME_ESCALATION_MULTIPLIER_V1 = 4;
 const AUTOMATED_SEALED_TAIL_REPAIR_CREATED_BY = "ddr-worker:auto-sealed-tail";
 const AUTOMATED_SEALED_TAIL_LINK_NOTE = "sealed incident live tail linked through automated repair authorization";
 const AUTOMATED_SEALED_TAIL_CURRENT_REASON = "sealed incident live tail adopted as current source event";

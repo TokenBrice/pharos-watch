@@ -65,11 +65,15 @@ export interface DepegRow {
   provenance_audit_verdict?: string | null;
   provenance_replay_run_id?: string | null;
   provenance_replay_version?: string | null;
+  peak_escalated_at?: number | null;
+  peak_escalation_anchor_bps?: number | null;
+  peak_escalation_candidate_at?: number | null;
+  peak_escalation_candidate_seen_at?: number | null;
 }
 
 /** Column list for the detector's depeg_events SELECT shape. */
 export const DEPEG_EVENTS_DEPEGROW_COLUMNS =
-  "id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source, recovery_first_seen_at, price_coverage_json, last_trusted_price_at, price_coverage_gap_started_at, peak_peg_reference, peak_quote_domain, recovery_peg_reference, admitted_coverage_json, disposition";
+  "id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source, recovery_first_seen_at, price_coverage_json, last_trusted_price_at, price_coverage_gap_started_at, peak_peg_reference, peak_quote_domain, recovery_peg_reference, admitted_coverage_json, disposition, peak_escalated_at, peak_escalation_anchor_bps, peak_escalation_candidate_at, peak_escalation_candidate_seen_at";
 
 const OPEN_DEPEG_LIMIT_MESSAGES = {
   detection: "Skipped depeg detection because the open-event query reached its limit",
@@ -437,16 +441,22 @@ export async function loadDexPrices(
   }
 }
 
+export interface DepegEscalationCarryForward {
+  peakEscalatedAt?: number | null;
+  peakEscalationAnchorBps?: number | null;
+}
+
 export function buildInsertDepegEventStmt(
   db: D1Database,
   event: DepegEvent,
   peerBasis?: string | null,
+  escalationCarryForward?: DepegEscalationCarryForward | null,
 ): D1PreparedStatement {
   return db
     .prepare(
       `INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peak_price, peg_reference, source, confirmation_sources, pending_reason, price_coverage_json, last_trusted_price_at, price_coverage_gap_started_at,
-        peak_peg_reference, peak_quote_domain, peer_basis_json, admitted_coverage_json)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'live', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        peak_peg_reference, peak_quote_domain, peer_basis_json, admitted_coverage_json, peak_escalated_at, peak_escalation_anchor_bps)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'live', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       event.stablecoinId,
@@ -467,6 +477,8 @@ export function buildInsertDepegEventStmt(
       event.peakQuoteDomain ?? null,
       peerBasis ?? null,
       event.admittedCoverage === undefined ? null : JSON.stringify(DepegAdmittedCoverageSchema.parse(event.admittedCoverage)),
+      escalationCarryForward?.peakEscalatedAt ?? null,
+      escalationCarryForward?.peakEscalationAnchorBps ?? null,
     );
 }
 

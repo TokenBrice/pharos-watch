@@ -12,7 +12,7 @@ function buildDepegPersistenceStatement(
       return buildUpsertPendingDepegStmt(db, command.payload);
     case "close-event":
       return db
-        .prepare("UPDATE depeg_events SET ended_at = ?, recovery_price = ?, close_reason = ?, recovery_peg_reference = ?, recovery_first_seen_at = NULL, recovery_last_seen_at = NULL, recovery_evidence_source = NULL, recovery_usd_first_seen_at = NULL, recovery_usd_observed_at = NULL, reference_hold_json = NULL WHERE id = ?")
+        .prepare("UPDATE depeg_events SET ended_at = ?, recovery_price = ?, close_reason = ?, recovery_peg_reference = ?, recovery_first_seen_at = NULL, recovery_last_seen_at = NULL, recovery_evidence_source = NULL, recovery_usd_first_seen_at = NULL, recovery_usd_observed_at = NULL, reference_hold_json = NULL, peak_escalation_candidate_at = NULL, peak_escalation_candidate_seen_at = NULL WHERE id = ?")
         .bind(command.endedAt, command.recoveryPrice, command.closeReason, command.recoveryPegReference ?? null, command.id);
     case "update-peak":
       return db
@@ -20,6 +20,10 @@ function buildDepegPersistenceStatement(
           ELSE json_set(CASE WHEN (CASE WHEN json_valid(peer_basis_json) THEN json_type(peer_basis_json) END) = 'object' THEN peer_basis_json ELSE '{}' END, '$.peak', json(?)) END WHERE id = ?`)
         .bind(command.peakDeviationBps, command.peakPrice, command.peakPegReference ?? null, command.peakQuoteDomain ?? null,
           command.peakReceipt ?? null, command.peakReceipt ?? null, command.id);
+    case "update-escalation":
+      return db
+        .prepare("UPDATE depeg_events SET peak_escalated_at = ?, peak_escalation_anchor_bps = ?, peak_escalation_candidate_at = ?, peak_escalation_candidate_seen_at = ? WHERE id = ? AND ended_at IS NULL")
+        .bind(command.peakEscalatedAt, command.peakEscalationAnchorBps, command.peakEscalationCandidateAt, command.peakEscalationCandidateSeenAt, command.id);
     case "record-price-coverage":
       return db.prepare(
         "UPDATE depeg_events SET price_coverage_json = ?, last_trusted_price_at = ?, price_coverage_gap_started_at = ?, reference_hold_json = ?, admitted_coverage_json = COALESCE(?, admitted_coverage_json) WHERE id = ?",

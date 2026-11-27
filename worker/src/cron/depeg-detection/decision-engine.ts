@@ -66,6 +66,10 @@ import {
   resolveDirectRecovery,
   resolvePeakUpdateCommand,
 } from "./native-quote-policy";
+import {
+  resolveEscalationCandidateClearCommand,
+  resolveEscalationUpdateCommand,
+} from "./escalation";
 import { deriveAuthoritativePegSignal } from "../authoritative-peg-signal";
 import { isNativePegEvent } from "@shared/lib/depeg-quote-domain";
 import { assessDetectionReference, assessIndependentPeerMove, benchmarkAdmission, canPersistPeerEvents, getClockedTradedNativeQuote, getTradedNativeEvidence, hasIncompatibleParityPrice, independentPrimaryTrustInput, observationPegMeta, independenceKey, isIndependentDexObservation, isIndependentVenue, primaryVenueKeys, sourceObservationClock } from "./reference-policy";
@@ -833,8 +837,10 @@ function decideExistingEvent(
         `confirm-required opposite reading: existing=${existing.direction}, ` +
         `primary=${direction} (${bps}bps)`,
       ));
+      appendCandidateClearOnIneligibleExit(commands, existing, now);
     } else {
       seenEventIds.push(existing.id);
+      appendCandidateClearOnIneligibleExit(commands, existing, now);
     }
     return { seenEventIds, commands, diagnostics };
   }
@@ -869,6 +875,21 @@ function decideExistingEvent(
         : ctx.peerMove ? { corroboration: JSON.parse(ctx.peerMove.receipt) as unknown } : {}),
     }) } : {}),
   });
+
+  const escalationUpdate = resolveEscalationUpdateCommand({
+    now,
+    existing,
+    nativeEvent,
+    eventSignal,
+    primaryTrust,
+    nativeSignal: ctx.nativeSignal,
+    recoveryThreshold: ctx.recoveryThreshold,
+    quoteObservedAt: ctx.quoteObservedAt,
+    nativeObservedAt: ctx.nativeObservedAt,
+    closedSessionEvidence: ctx.closedSessionEvidence,
+    peerMoveActive: ctx.peerMove != null,
+  });
+  if (escalationUpdate) commands.push(escalationUpdate);
 
   // Keep the event open when the current primary sample still shows a same-direction depeg.
   // Aggregate DEX disagreement can still suppress brand-new events and confirm recoveries,
@@ -1125,17 +1146,68 @@ function decideRecovery(
     }
   }
 
+  if (!commands.some((command) => command.type === "close-event")) {
+    const clearCandidate = resolveEscalationCandidateClearCommand({
+      now,
+      existing,
+    });
+    if (clearCandidate) commands.push(clearCandidate);
+  }
+
   return { seenEventIds, commands, diagnostics };
 }
 
-function decideRecoveryDeadband(existing: DepegDetectionRow): Omit<DepegAssetDecision, "trackedCoinId"> {
+function decideRecoveryDeadband(ctx: DecisionContext, existing: DepegDetectionRow): Omit<DepegAssetDecision, "trackedCoinId"> {
+  const commands: DepegPersistenceCommand[] =
+    existing.recovery_first_seen_at == null && existing.recovery_last_seen_at == null
+      ? []
+      : [{ type: "clear-recovery", id: existing.id }];
+  const nativeEvent = isNativePegEvent(existing) || ctx.independentNativeBasis;
+  const eventSignal = nativeEvent ? ctx.nativeSignal : ctx.primarySignal;
+  if (eventSignal != null && eventSignal.direction === existing.direction) {
+    // Same-direction trusted off-peg deadband ticks (between recoveryThreshold and
+    // openThreshold) can seed the Day-30+ anchor at max(|bps|, openThreshold) and
+    // clear any armed candidate since |bps| < targetBps.
+    const escalationUpdate = resolveEscalationUpdateCommand({
+      now: ctx.now,
+      existing,
+      nativeEvent,
+      eventSignal,
+      primaryTrust: ctx.primaryTrust,
+      nativeSignal: ctx.nativeSignal,
+      recoveryThreshold: ctx.recoveryThreshold,
+      quoteObservedAt: ctx.quoteObservedAt,
+      nativeObservedAt: ctx.nativeObservedAt,
+      closedSessionEvidence: ctx.closedSessionEvidence,
+      peerMoveActive: ctx.peerMove != null,
+    });
+    if (escalationUpdate) commands.push(escalationUpdate);
+  } else {
+    const clearCandidate = resolveEscalationCandidateClearCommand({
+      now: ctx.now,
+      existing,
+    });
+    if (clearCandidate) commands.push(clearCandidate);
+  }
   return {
     seenEventIds: [existing.id],
-    commands: existing.recovery_first_seen_at == null && existing.recovery_last_seen_at == null
-      ? []
-      : [{ type: "clear-recovery", id: existing.id }],
+    commands,
     diagnostics: [],
   };
+}
+
+function appendCandidateClearOnIneligibleExit(
+  commands: DepegPersistenceCommand[],
+  existing: DepegDetectionRow | undefined,
+  now: number,
+): void {
+  if (!existing) return;
+  const lastTrustedAt = rowPriceCoverage(existing)?.lastTrustedObservationAt ?? null;
+  // Preserve strict no-op semantics for replayed/older clocks while clearing any armed
+  // candidate when a newer ineligible run/veto arrives so non-consecutive ticks cannot confirm.
+  if (lastTrustedAt != null && now <= lastTrustedAt) return;
+  const clearCandidate = resolveEscalationCandidateClearCommand({ now, existing });
+  if (clearCandidate) commands.push(clearCandidate);
 }
 
 function withPriceCoverage(
@@ -1250,7 +1322,10 @@ export function decideDepegAsset(input: DepegAssetDecisionInput): DepegAssetDeci
   const meta = observationPegMeta(input.asset, input.meta);
   if (input.meta && (!meta || normalizePegType(input.asset.pegType) !== normalizePegTypeFromCurrency(meta.flags.pegCurrency))) {
     const decision = emptyDecision(input.asset.id, { kind: "unavailable", reason: "invalid-reference" });
-    if (input.existing) decision.seenEventIds.push(input.existing.id);
+    if (input.existing) {
+      decision.seenEventIds.push(input.existing.id);
+      appendCandidateClearOnIneligibleExit(decision.commands, input.existing, input.now);
+    }
     return withPriceCoverage(decision, { ...input, meta: undefined });
   }
   if (input.asset.id === "xagm-matrixdock") {
@@ -1264,11 +1339,18 @@ export function decideDepegAsset(input: DepegAssetDecisionInput): DepegAssetDeci
     input = { ...input, asset: { ...input.asset, price: null, priceObservedAt: null } };
   }
   const derived = deriveDecisionContext(input);
-  if (derived.kind === "skip") return withPriceCoverage(derived.decision, input);
+  if (derived.kind === "skip") {
+    if (input.existing && !derived.decision.commands.some((command) => command.type === "close-event" || command.type === "delete-event")) {
+      appendCandidateClearOnIneligibleExit(derived.decision.commands, input.existing, input.now);
+    }
+    return withPriceCoverage(derived.decision, input);
+  }
 
   const { ctx } = derived;
   const withheldNativeDiagnostic = withheldNativeQuoteDiagnostic(ctx);
   if (input.existing && isNativePegEvent(input.existing) && ctx.nativeSignal == null) {
+    const commands: DepegPersistenceCommand[] = [];
+    appendCandidateClearOnIneligibleExit(commands, input.existing, input.now);
     return withPriceCoverage({
       trackedCoinId: ctx.trackedCoinId,
       observation: {
@@ -1276,7 +1358,7 @@ export function decideDepegAsset(input: DepegAssetDecisionInput): DepegAssetDeci
         reason: ctx.nativeQuoteImplausibility != null ? "native-quote-implausible" : "native-quote-unavailable",
       },
       seenEventIds: [input.existing.id],
-      commands: [],
+      commands,
       diagnostics: withheldNativeDiagnostic ? [withheldNativeDiagnostic] : [],
     }, input);
   }
@@ -1290,8 +1372,13 @@ export function decideDepegAsset(input: DepegAssetDecisionInput): DepegAssetDeci
     ? null
     : applyNativeQuoteVeto(nativeVetoContext, input.existing);
   if (nativeVeto) {
+    const vetoCommands = [...nativeVeto.commands];
+    if (input.existing && !vetoCommands.some((command) => command.type === "close-event" || command.type === "delete-event")) {
+      appendCandidateClearOnIneligibleExit(vetoCommands, input.existing, input.now);
+    }
     return withPriceCoverage({
       ...nativeVeto,
+      commands: vetoCommands,
       observation: observed,
       diagnostics: withheldNativeDiagnostic
         ? [withheldNativeDiagnostic, ...nativeVeto.diagnostics]
@@ -1312,7 +1399,7 @@ export function decideDepegAsset(input: DepegAssetDecisionInput): DepegAssetDeci
       ? decideRecovery(ctx, input.existing)
       : signalCrossesThreshold(existingSignal, ctx.threshold)
         ? decideExistingEvent(ctx, input.existing)
-        : decideRecoveryDeadband(input.existing)
+        : decideRecoveryDeadband(ctx, input.existing)
     : nativeOpening
       ? nativeOpening
     : ctx.rawAbsBps >= ctx.threshold

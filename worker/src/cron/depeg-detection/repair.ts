@@ -3,7 +3,8 @@ import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { isNativePegEvent } from "@shared/lib/depeg-quote-domain";
 import { isPairedDepegPeak, parsePendingReason, rowPriceCoverage, serializeDepegPriceCoverage, type DepegRow } from "../../lib/depeg-helpers";
 import { mergeDepegIntervals } from "@shared/lib/peg-utils";
-import type { DepegDiagnostic, DepegPersistenceCommand } from "./types";
+import { maxNullableInt } from "../../lib/depeg-escalation-metadata";
+import type { DepegDetectionRow, DepegDiagnostic, DepegPersistenceCommand } from "./types";
 
 export interface OrphanDepegRow {
   id: number;
@@ -11,8 +12,8 @@ export interface OrphanDepegRow {
   started_at: number;
 }
 
-export interface DuplicateRepairResult {
-  openEvents: Map<string, DepegRow>;
+export interface DuplicateRepairResult<T extends DepegRow = DepegRow> {
+  openEvents: Map<string, T>;
   commands: DepegPersistenceCommand[];
 }
 
@@ -64,10 +65,19 @@ function isPeakComparable(keeper: DepegRow, dupe: DepegRow): boolean {
     <= Math.max(keeperReference, dupeReference) * DUPLICATE_PEAK_REFERENCE_TOLERANCE;
 }
 
-export function buildDuplicateOpenEventRepair(openRows: DepegRow[]): DuplicateRepairResult {
-  const openByCoin = new Map<string, Map<string, DepegRow[]>>();
+export interface DuplicateRepairOptions {
+  /** Only for offline boundary-seed tools whose synthetic rows have no DDR dispute table. */
+  allowUnverifiedRows?: boolean;
+}
+
+export function buildDuplicateOpenEventRepair<T extends DepegRow>(
+  openRows: T[],
+  options?: DuplicateRepairOptions,
+): DuplicateRepairResult<T> {
+  const allowUnverifiedRows = options?.allowUnverifiedRows === true;
+  const openByCoin = new Map<string, Map<string, T[]>>();
   for (const row of openRows) {
-    const directionGroups = openByCoin.get(row.stablecoin_id) ?? new Map<string, DepegRow[]>();
+    const directionGroups = openByCoin.get(row.stablecoin_id) ?? new Map<string, T[]>();
     const list = directionGroups.get(row.direction) ?? [];
     list.push(row);
     directionGroups.set(row.direction, list);
@@ -75,9 +85,9 @@ export function buildDuplicateOpenEventRepair(openRows: DepegRow[]): DuplicateRe
   }
 
   const commands: DepegPersistenceCommand[] = [];
-  const openEvents = new Map<string, DepegRow>();
+  const openEvents = new Map<string, T>();
   for (const [coinId, directionGroups] of openByCoin) {
-    const directionKeepers: DepegRow[] = [];
+    const directionKeepers: T[] = [];
 
     for (const rows of directionGroups.values()) {
       if (rows.length === 1) {
@@ -85,43 +95,123 @@ export function buildDuplicateOpenEventRepair(openRows: DepegRow[]): DuplicateRe
         continue;
       }
 
-      // Sort by started_at ascending - keep the earliest same-direction event.
+      // Sort by started_at ascending; prefer verified-clean rows as keeper so a
+      // reviewed-disputed row never deletes or absorbs a clean open event.
       rows.sort((a, b) => a.started_at - b.started_at || a.id - b.id);
-      const keeper = rows[0];
-      if (!keeper) continue;
-      const coverages = rows.map(rowPriceCoverage).filter((coverage) => coverage != null);
-      if (coverages.length > 0) {
-        const latest = coverages.reduce((a, b) =>
-          (b.lastTrustedObservationAt ?? -1) > (a.lastTrustedObservationAt ?? -1) ? b : a);
-        const intervals = mergeDepegIntervals(coverages.flatMap((coverage) => coverage.intervals));
-        const atParIntervals = mergeDepegIntervals(coverages.flatMap((coverage) => coverage.atParIntervals ?? []));
-        keeper.last_trusted_price_at = latest.lastTrustedObservationAt;
-        // Preserve unresolved blind gaps, but do not discard known at-par intervals.
-        keeper.price_coverage_gap_started_at = coverages.reduce<number | null>((gap, coverage) =>
-          coverage.gapStartedAt == null ? gap : Math.min(gap ?? Infinity, coverage.gapStartedAt), null);
-        const coverage = {
-          intervals,
-          atParIntervals,
-          lastTrustedObservationAt: keeper.last_trusted_price_at,
-          gapStartedAt: keeper.price_coverage_gap_started_at,
-          lastObservationKind: coverages.some((value) => value.gapStartedAt != null && value.lastObservationKind !== "trusted-at-par")
-            ? "blind" as const : latest.lastObservationKind,
-        };
-        keeper.price_coverage_json = serializeDepegPriceCoverage(coverage);
-        commands.push({
-          type: "record-price-coverage",
-          id: keeper.id,
-          coverage,
-        });
+      const isRowUnverified = (row: T): boolean => {
+        const det = row as DepegDetectionRow;
+        if (det.escalation_metadata_hydrated === false) return true;
+        return !allowUnverifiedRows && det.reviewed_disputed === undefined;
+      };
+      const cleanRows = rows.filter((row) => !isRowUnverified(row) && (row as DepegDetectionRow).reviewed_disputed !== true);
+      const disputedRows = rows.filter((row) => !isRowUnverified(row) && (row as DepegDetectionRow).reviewed_disputed === true);
+
+      // Defer destructive repair when no verified-clean keeper can be established
+      // (e.g. base hydration fallback or all rows verified reviewed-disputed).
+      const keeper = cleanRows[0];
+      if (!keeper) {
+        if (rows[0]) directionKeepers.push(rows[0]);
+        continue;
       }
+      const keeperDetection = keeper as DepegDetectionRow;
+      // Only verified-clean duplicates contribute evidence; unverified duplicates
+      // are deferred completely (no coverage/peak/escalation merge and no delete),
+      // and verified-disputed duplicates contribute zero evidence before deletion.
+      const cleanDupes = cleanRows.slice(1);
+      const deletableDupes = [...cleanDupes, ...disputedRows];
+      if (deletableDupes.length === 0) {
+        directionKeepers.push(keeper);
+        continue;
+      }
+
+      const initialCoverage = rowPriceCoverage(keeper);
+      const normalizeCoverageForCompare = (
+        cov: ReturnType<typeof rowPriceCoverage>,
+      ): string | null =>
+        cov == null
+          ? null
+          : JSON.stringify({
+              intervals: cov.intervals,
+              atParIntervals: cov.atParIntervals ?? [],
+              lastTrustedObservationAt: cov.lastTrustedObservationAt ?? null,
+              gapStartedAt: cov.gapStartedAt ?? null,
+              lastObservationKind: cov.lastObservationKind ?? null,
+            });
+      const initialCoverageComparable = normalizeCoverageForCompare(initialCoverage);
+      let coverageChanged = false;
+      if (cleanDupes.length > 0) {
+        const coverages = [keeper, ...cleanDupes].map(rowPriceCoverage).filter((coverage) => coverage != null);
+        if (coverages.length > 0) {
+          const latest = coverages.reduce((a, b) =>
+            (b.lastTrustedObservationAt ?? -1) > (a.lastTrustedObservationAt ?? -1) ? b : a);
+          const intervals = mergeDepegIntervals(coverages.flatMap((coverage) => coverage.intervals));
+          const atParIntervals = mergeDepegIntervals(coverages.flatMap((coverage) => coverage.atParIntervals ?? []));
+          const nextLastTrusted = latest.lastTrustedObservationAt;
+          // Preserve unresolved blind gaps, but do not discard known at-par intervals.
+          const nextGapStarted = coverages.reduce<number | null>((gap, coverage) =>
+            coverage.gapStartedAt == null ? gap : Math.min(gap ?? Infinity, coverage.gapStartedAt), null);
+          const coverage = {
+            intervals,
+            atParIntervals,
+            lastTrustedObservationAt: nextLastTrusted,
+            gapStartedAt: nextGapStarted,
+            lastObservationKind: coverages.some((value) => value.gapStartedAt != null && value.lastObservationKind !== "trusted-at-par")
+              ? "blind" as const : latest.lastObservationKind,
+          };
+          const serializedCoverage = serializeDepegPriceCoverage(coverage);
+          coverageChanged = normalizeCoverageForCompare(coverage) !== initialCoverageComparable;
+          keeper.last_trusted_price_at = nextLastTrusted;
+          keeper.price_coverage_gap_started_at = nextGapStarted;
+          keeper.price_coverage_json = serializedCoverage;
+          if (coverageChanged) {
+            commands.push({
+              type: "record-price-coverage",
+              id: keeper.id,
+              coverage,
+            });
+          }
+        }
+      }
+
       let peakReceipt: string | undefined;
-      for (let i = 1; i < rows.length; i++) {
-        const dupe = rows[i];
-        if (!dupe) continue;
+      let peakChanged = false;
+      const initialAnchor = keeper.peak_escalation_anchor_bps ?? null;
+      const initialEscalatedAt = keeper.peak_escalated_at ?? null;
+      const initialCandidateAt = keeper.peak_escalation_candidate_at ?? null;
+      const initialCandidateSeenAt = keeper.peak_escalation_candidate_seen_at ?? null;
+      let mergedAnchor = initialAnchor;
+      let mergedEscalatedAt = initialEscalatedAt;
+
+      for (const dupe of cleanDupes) {
+        const dupeDetection = dupe as DepegDetectionRow;
+        // Only verified-clean pairs may propagate escalation state or canonical onset;
+        // an indeterminate keeper stays undefined so it never inherits a younger onset.
+        if (keeperDetection.reviewed_disputed === false && dupeDetection.reviewed_disputed === false) {
+          mergedAnchor = maxNullableInt(mergedAnchor, dupe.peak_escalation_anchor_bps ?? null);
+          mergedEscalatedAt = maxNullableInt(mergedEscalatedAt, dupe.peak_escalated_at ?? null);
+          if (keeperDetection.incident_started_at != null && dupeDetection.incident_started_at != null) {
+            keeperDetection.incident_started_at = Math.min(
+              keeper.started_at,
+              keeperDetection.incident_started_at,
+              dupeDetection.incident_started_at,
+            );
+          }
+          const mergedCarryAnchor = maxNullableInt(
+            keeperDetection.carry_forward_escalation_anchor_bps ?? null,
+            dupeDetection.carry_forward_escalation_anchor_bps ?? null,
+          );
+          if (mergedCarryAnchor != null) keeperDetection.carry_forward_escalation_anchor_bps = mergedCarryAnchor;
+          const mergedCarryEscalated = maxNullableInt(
+            keeperDetection.carry_forward_peak_escalated_at ?? null,
+            dupeDetection.carry_forward_peak_escalated_at ?? null,
+          );
+          if (mergedCarryEscalated != null) keeperDetection.carry_forward_peak_escalated_at = mergedCarryEscalated;
+        }
         // Absorb worse peak deviation into the same-direction keeper only when
-        // both rows price the same quote domain and reference scale.
+        // both rows are verified clean and price the same quote domain and reference scale.
         if (isPeakComparable(keeper, dupe) && (pairedPeakMagnitude(dupe) ?? Math.abs(dupe.peak_deviation_bps)) >
           (pairedPeakMagnitude(keeper) ?? Math.abs(keeper.peak_deviation_bps))) {
+          peakChanged = true;
           keeper.peak_deviation_bps = dupe.peak_deviation_bps;
           keeper.peak_price = dupe.peak_price;
           keeper.peak_peg_reference = dupe.peak_peg_reference ?? null;
@@ -141,19 +231,54 @@ export function buildDuplicateOpenEventRepair(openRows: DepegRow[]): DuplicateRe
             keeper.peer_basis_json = JSON.stringify({ ...receipt, peak });
           }
         }
-        // Persistence retains duplicates referenced by canonical incidents/links;
-        // this detector repair never authorizes incident identity changes.
+      }
+      // Persistence retains duplicates referenced by canonical incidents/links;
+      // this detector repair never authorizes incident identity changes.
+      for (const dupe of deletableDupes) {
         commands.push({ type: "delete-event", id: dupe.id });
       }
-      commands.push({
-        type: "update-peak",
-        id: keeper.id,
-        peakDeviationBps: keeper.peak_deviation_bps,
-        peakPrice: keeper.peak_price,
-        ...(keeper.peak_peg_reference !== undefined ? { peakPegReference: keeper.peak_peg_reference } : {}),
-        ...(peakReceipt != null ? { peakReceipt } : {}),
-        ...(keeper.peak_quote_domain !== undefined ? { peakQuoteDomain: keeper.peak_quote_domain } : {}),
-      });
+      if (cleanDupes.length > 0) {
+        commands.push({
+          type: "update-peak",
+          id: keeper.id,
+          peakDeviationBps: keeper.peak_deviation_bps,
+          peakPrice: keeper.peak_price,
+          ...(keeper.peak_peg_reference !== undefined ? { peakPegReference: keeper.peak_peg_reference } : {}),
+          ...(peakReceipt != null ? { peakReceipt } : {}),
+          ...(keeper.peak_quote_domain !== undefined ? { peakQuoteDomain: keeper.peak_quote_domain } : {}),
+        });
+      }
+      // Clear an armed candidate only when repair mutates persisted columns (coverage,
+      // peak, anchor, or confirmed escalation). In-memory-only hydrated fields
+      // (`incident_started_at`, carry-forward) are enforced directly by `escalation.ts`
+      // so a retained DDR-referenced duplicate cannot wipe an armed candidate every tick.
+      const evidenceChanged =
+        coverageChanged ||
+        peakChanged ||
+        mergedAnchor !== initialAnchor ||
+        mergedEscalatedAt !== initialEscalatedAt;
+      const hasCandidate = initialCandidateAt !== null || initialCandidateSeenAt !== null;
+      const shouldClearCandidate = hasCandidate && evidenceChanged;
+      if (
+        mergedAnchor !== initialAnchor ||
+        mergedEscalatedAt !== initialEscalatedAt ||
+        shouldClearCandidate
+      ) {
+        const nextCandidateAt = shouldClearCandidate ? null : initialCandidateAt;
+        const nextCandidateSeenAt = shouldClearCandidate ? null : initialCandidateSeenAt;
+        keeper.peak_escalation_anchor_bps = mergedAnchor;
+        keeper.peak_escalated_at = mergedEscalatedAt;
+        keeper.peak_escalation_candidate_at = nextCandidateAt;
+        keeper.peak_escalation_candidate_seen_at = nextCandidateSeenAt;
+        commands.push({
+          type: "update-escalation",
+          id: keeper.id,
+          peakEscalatedAt: mergedEscalatedAt,
+          peakEscalationAnchorBps: mergedAnchor,
+          peakEscalationCandidateAt: nextCandidateAt,
+          peakEscalationCandidateSeenAt: nextCandidateSeenAt,
+        });
+      }
       directionKeepers.push(keeper);
     }
 
@@ -163,21 +288,36 @@ export function buildDuplicateOpenEventRepair(openRows: DepegRow[]): DuplicateRe
       continue;
     }
 
-    // Opposite-direction open rows are not true duplicates. Keep the most
-    // recent direction live and close older direction keepers at that boundary.
-    directionKeepers.sort((a, b) => b.started_at - a.started_at || b.id - a.id);
-    const keeper = directionKeepers[0];
+    // Opposite-direction open rows are not true duplicates. Prefer verified-clean
+    // keepers when present and defer superseding if any opposite-direction row is unverified.
+    const hasUnverifiedDirection = directionKeepers.some((row) => {
+      const det = row as DepegDetectionRow;
+      return det.escalation_metadata_hydrated === false || (!allowUnverifiedRows && det.reviewed_disputed === undefined);
+    });
+    if (hasUnverifiedDirection) {
+      directionKeepers.sort((a, b) => b.started_at - a.started_at || b.id - a.id);
+      if (directionKeepers[0]) openEvents.set(coinId, directionKeepers[0]);
+      continue;
+    }
+    const cleanDirections = directionKeepers.filter((row) => (row as DepegDetectionRow).reviewed_disputed !== true);
+    const eligibleDirections = cleanDirections.length > 0 ? cleanDirections : directionKeepers;
+    eligibleDirections.sort((a, b) => b.started_at - a.started_at || b.id - a.id);
+    const keeper = eligibleDirections[0];
     if (!keeper) continue;
-    for (let i = 1; i < directionKeepers.length; i++) {
-      const stale = directionKeepers[i];
-      if (!stale) continue;
-      commands.push({
-        type: "close-event",
-        id: stale.id,
-        endedAt: keeper.started_at,
-        recoveryPrice: null,
-        closeReason: "superseded-direction",
-      });
+    if (cleanDirections.length > 0) {
+      for (const stale of directionKeepers) {
+        if (stale.id === keeper.id) continue;
+        // Preserve strict chronology (`endedAt > startedAt`): never close a newer
+        // disputed opposite-direction row (or same-second tie) at or before its onset.
+        if (keeper.started_at <= stale.started_at) continue;
+        commands.push({
+          type: "close-event",
+          id: stale.id,
+          endedAt: keeper.started_at,
+          recoveryPrice: null,
+          closeReason: "superseded-direction",
+        });
+      }
     }
     openEvents.set(coinId, keeper);
   }

@@ -36,6 +36,7 @@ import {
 } from "./pending-depeg-confirmation";
 import { evaluatePromotionDecision } from "./pending-depeg-confirmation-decision";
 import { collectConfirmationEvidence } from "./pending-depeg-confirmation-evidence";
+import { loadReopenEscalationCandidate } from "./depeg-detection/escalation";
 import { deriveDetectionPegRates } from "./depeg-detection/reference-policy";
 import type { DepegStageResult } from "./depeg-detection/types";
 
@@ -191,11 +192,30 @@ export async function confirmPendingDepegs(
       now,
     });
 
+    let reopenEscalationCandidate = null;
+    if (plan.temporalSameDirectionConfirmed) {
+      try {
+        reopenEscalationCandidate = await loadReopenEscalationCandidate(db, {
+          stablecoinId: row.stablecoin_id,
+          direction: plan.pendingState.direction,
+          startedAt: plan.eventStartedAt ?? plan.pendingState.firstSeenAt,
+        });
+      } catch (err) {
+        logWorkerEventArgs(
+          "handler",
+          "warn",
+          `[depeg-confirm] Failed to load reopen escalation carry-forward for ${row.stablecoin_id}; continuing promotion without carry-forward:`,
+          err instanceof Error ? err.message : err,
+        );
+      }
+    }
+
     await executeCandidateMutations([...holdWrites, ...evaluatePromotionDecision({
       db,
       plan,
       evidence,
       now,
+      reopenEscalationCandidate,
     })]);
   }
 
