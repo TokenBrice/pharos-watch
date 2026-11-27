@@ -5,6 +5,7 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import ts from "typescript";
 import { classifyChangedFiles } from "../ci/classify-deploy-changes.ts";
+import { readTypedLintPatterns, selectTypedLintFiles } from "../ci/run-changed-eslint.ts";
 import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
 import { selectCheckableArtifactIds } from "../lib/automation-registry.mjs";
 import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mts";
@@ -54,6 +55,20 @@ const STRUCTURAL_TEST_PATH_PATTERNS = [
   /(^|\/)fixtures(?:\/|$)/,
 ];
 const DEFAULT_STRUCTURAL_CONCURRENCY = 3;
+// The typed config, its parser projects' tsconfig chain, the manifest and
+// lockfile that define `lint:typed` and pin its parser and rules, and the
+// contracts manifest whose exports in-scope consumers resolve can move the
+// verdict of any in-scope file, so a change to one runs the full `lint:typed`.
+const TYPED_LINT_CONFIG_INPUTS = new Set([
+  "eslint.typed.config.mjs",
+  "package.json",
+  "package-lock.json",
+  "shared/contracts/package.json",
+  "tsconfig.base.json",
+  "tsconfig.json",
+  "tsconfig.typecheck.json",
+  "worker/tsconfig.json",
+]);
 // Config, dependency and generated inputs can change what `tsconfig.typecheck.json`
 // resolves even when no changed source file is part of its current program.
 const ROOT_TYPECHECK_WIDENED_TRIGGERS = [
@@ -89,12 +104,15 @@ export type PrStaticCheckGroup = "compile" | "guards";
 const COMPILE_STATIC_CHECKS: Record<string, true> = {
   lint: true,
   "lint:changed": true,
+  "lint:typed": true,
+  "lint:typed:changed": true,
   typecheck: true,
   "typecheck:worker": true,
 };
 
-// ESLint stays on the dedicated sequential track so `compile` runs it alongside
-// the compiler pool (`typecheck`, `typecheck:worker`). Every `guards` check runs
+// The cached ESLint lanes stay on the dedicated sequential track so `compile`
+// runs them alongside the compiler pool (`typecheck`, `typecheck:worker` and the
+// uncached typed lint, which builds TypeScript programs). Every `guards` check runs
 // in the worker pool and is read-only over repository state, writing only its own
 // isolated temp or `.cache/release-check/worker-bundle-*` directory, except
 // `doc-ownership-invariants`: its pharos-change-contract suite briefly creates and
@@ -110,12 +128,16 @@ const SEQUENTIAL_STATIC_CHECKS = new Set([
 // stranding guards in a single sequential chain; unknown checks default to 1
 // and ties preserve declaration order.
 const PARALLEL_STATIC_CHECK_WEIGHTS = new Map<string, number>([
+  // Hosted nightly `lint:typed` took 99 s on 2026-11-26 (0.65x local); a
+  // changed-file run builds one or both parser programs (local 26-53 s).
+  ["lint:typed", 99],
   ["check:structural", 75],
   ["check:unused-code", 65],
   ["check:dependency-audit", 63],
   ["doc-ownership-invariants", 40],
   ["check:generated-artifacts", 38],
   ["check:env-contract", 25],
+  ["lint:typed:changed", 35],
   ["typecheck", 20],
   ["check:critical-coverage-completeness", 15],
   ["check:worker-package", 13],
@@ -310,6 +332,16 @@ export function buildPrStaticCheckPlan(
         : "lint:changed",
     },
   ];
+  // Changed files inside the `lint:typed` globs get the typed config on the PR
+  // tier (#2423); the full run stays nightly unless a typed-config input
+  // changes. No in-scope file selects neither.
+  // Validate the typed scope before either lane is chosen: a glob-less script fails closed.
+  const typedLintPatterns = readTypedLintPatterns();
+  if (changedFiles.some((file) => TYPED_LINT_CONFIG_INPUTS.has(file))) {
+    commands.push({ name: "lint:typed" });
+  } else if (selectTypedLintFiles(changedFiles, { exists: (file) => existsSync(resolve(cwd, file)), patterns: typedLintPatterns }).length > 0) {
+    commands.push({ name: "lint:typed:changed" });
+  }
   if (selectsRootTypecheck(changedFiles, cwd)) commands.push({ name: "typecheck" });
   commands.push(
     { name: "check:env-contract" },
@@ -447,7 +479,9 @@ export function prStaticLeafArgs(
   command: { name: string; args?: readonly string[] },
   refs: { base: string; head: string; auditBase?: () => string },
 ): string[] {
-  if (command.name === "lint:changed") return [`--base=${refs.base}`, `--head=${refs.head}`];
+  if (command.name === "lint:changed" || command.name === "lint:typed:changed") {
+    return [`--base=${refs.base}`, `--head=${refs.head}`];
+  }
   if (command.name === "check:dependency-audit") return [`--new-since=${refs.auditBase ? refs.auditBase() : refs.base}`];
   return [...(command.args ?? [])];
 }

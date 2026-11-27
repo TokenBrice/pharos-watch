@@ -8,6 +8,7 @@ import {
   createPrStaticLeafCommand,
   buildPrStaticCheckPlan,
   partitionPrStaticCheckPlan,
+  prStaticLeafArgs,
   runPrStaticChecks,
   STRUCTURAL_CHECKS,
 } from "../maintenance/run-pr-static-checks.ts";
@@ -198,10 +199,10 @@ describe("adaptive PR checks", () => {
     ];
     const compile = buildPrStaticCheckPlan(changedFiles, { group: "compile" });
     expect(names(compile.commands)).toEqual([
-      "lint:changed", "typecheck", "typecheck:worker",
+      "lint:changed", "lint:typed:changed", "typecheck", "typecheck:worker",
     ]);
     const partition = partitionPrStaticCheckPlan(compile.commands);
-    expect(names(partition.parallel)).toEqual(["typecheck", "typecheck:worker"]);
+    expect(names(partition.parallel)).toEqual(["lint:typed:changed", "typecheck", "typecheck:worker"]);
     expect(names(partition.sequential)).toEqual(["lint:changed"]);
     const fullLintCompile = buildPrStaticCheckPlan(["eslint.config.mjs", "worker/src/cron/x.ts"], { group: "compile" });
     expect(names(partitionPrStaticCheckPlan(fullLintCompile.commands).sequential)).toEqual(["lint"]);
@@ -514,10 +515,15 @@ describe("adaptive PR checks", () => {
     });
   });
 
-  it("runs full-repository lint when the boundary policy changes", () => {
-    const names = staticNames(["eslint.config.mjs"], { group: "compile" });
-    expect(names).toContain("lint");
-    expect(names).not.toContain("lint:changed");
+  it("selects changed-file typed lint for existing in-scope files and the full lane for typed-config inputs", () => {
+    const typed = (...files: string[]) => staticNames(files, { group: "compile" }).filter((name) => name.startsWith("lint:typed"));
+    expect(typed("eslint.typed.config.mjs", "worker/src/lib/auth.ts")).toEqual(["lint:typed"]);
+    expect(typed("worker/tsconfig.json")).toEqual(["lint:typed"]);
+    for (const input of ["package.json", "package-lock.json", "shared/contracts/package.json"]) expect(typed(input), input).toEqual(["lint:typed"]);
+    // The typed config's own test ignores apply when ESLint runs.
+    expect(typed("shared/lib/supply.ts", "worker/src/lib/__tests__/auth.test.ts")).toEqual(["lint:typed:changed"]);
+    expect(typed("scripts/ci/run-changed-eslint.ts", "src/components/x.tsx", "worker/src/lib/deleted.ts")).toEqual([]);
+    expect(prStaticLeafArgs({ name: "lint:typed:changed" }, { base: "B", head: "H" })).toEqual(["--base=B", "--head=H"]);
   });
 
   it("selects sql-safety, cron-connections, and lint for script/baseline triggers", () => {
